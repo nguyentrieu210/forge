@@ -1,12 +1,14 @@
 import {
   createTrustedIdentity,
+  deriveAppCallKey,
   IDENTITY_HEADER,
   IDENTITY_SIGNATURE_HEADER,
   staticDevelopmentActor,
   stripUntrustedPlatformHeaders,
   verifyBearerJwt,
+  verifyTrustedIdentity,
 } from "../../../packages/auth/src/index.js";
-import { errorResponse, errors, jsonResponse, randomId } from "../../../packages/core/src/index.js";
+import { errorResponse, errors, jsonResponse, randomId, timingSafeEqualString } from "../../../packages/core/src/index.js";
 import { isFrappePath, LOGIN_PATH } from "../../../packages/frappe-api/src/index.js";
 
 interface GatewayEnv {
@@ -43,7 +45,12 @@ export default {
       const route = JSON.parse(raw) as TenantRoute;
       if (route.status !== "active") return jsonResponse({ error: { code: "TENANT_NOT_ACTIVE", status: route.status }, trace_id: traceId }, 423);
 
-      const actor = await resolveActor(request, env, url, route.tenant_id);
+      // An app Worker calling back into the platform on behalf of the user who invoked
+      // it. Null for every ordinary request, so nothing about the normal path changes.
+      const callback = await resolveAppCallback(request, env, url, route.tenant_id);
+
+      const actor = callback ? callback.actor : await resolveActor(request, env, url, route.tenant_id);
+      const inbound = callback ? new Request(callback.url, request) : request;
       const trusted = await createTrustedIdentity({
         tenantId: route.tenant_id,
         actor,
@@ -51,7 +58,10 @@ export default {
         masterSecret: env.INTERNAL_AUTH_SECRET,
         keyId: env.INTERNAL_AUTH_KEY_ID ?? "k1",
       });
-      const forwarded = withPlatformHeaders(request, route.tenant_id, traceId, trusted.encoded, trusted.signature);
+      // Freshly minted, and `withPlatformHeaders` strips whatever the caller sent — so
+      // the identity the tenant sees is one this gateway just issued, never one an app
+      // handed us. The app's copy is only ever an assertion we re-verify above.
+      const forwarded = withPlatformHeaders(inbound, route.tenant_id, traceId, trusted.encoded, trusted.signature);
       if (env.FALLBACK_TENANT && route.worker_name === "__fallback__") return env.FALLBACK_TENANT.fetch(forwarded);
       const worker = env.DISPATCHER.get(route.worker_name, {}, { limits: limitsFor(route.plan, url.pathname) });
       return worker.fetch(forwarded);
@@ -60,6 +70,59 @@ export default {
     }
   },
 };
+
+/**
+ * The one path an app Worker may use to call back into the platform.
+ *
+ * Deliberately a distinct prefix rather than a header on the normal API path: the
+ * decision "trust the identity in this request" must be visible in the URL, not hidden
+ * in a header that an ordinary caller could also set.
+ */
+const APP_CALLBACK_PREFIX = "/_app/";
+
+/**
+ * Resolves an app's callback into the user it may act as, or null for a normal request.
+ *
+ * This is the only inbound path where the gateway accepts an identity it did not mint,
+ * so it is also the only place a mistake becomes privilege escalation. Three proofs are
+ * required, and each closes a different hole:
+ *
+ * 1. A credential derived for (this tenant, this app). Proves the caller is an app the
+ *    platform installed HERE — an app on another tenant holds a different key, so it
+ *    cannot reach into this one.
+ * 2. A signed trusted identity. `verifyTrustedIdentity` checks the signature against
+ *    the master, that the identity names THIS tenant, and that it has not expired —
+ *    the platform issues it with a TTL barely longer than the app's call budget, so a
+ *    captured one is useless within seconds.
+ * 3. Nothing else. The actor comes from the verified identity, never from a header the
+ *    app chose, so an app cannot name a user it was not invoked by.
+ *
+ * The result is that an app can do exactly what the user who invoked it could do, for
+ * as long as that call lasts, and no more. It never gains rights of its own.
+ */
+async function resolveAppCallback(
+  request: Request,
+  env: GatewayEnv,
+  url: URL,
+  tenantId: string,
+): Promise<{ actor: Awaited<ReturnType<typeof verifyTrustedIdentity>>["actor"]; url: URL } | null> {
+  if (!url.pathname.startsWith(APP_CALLBACK_PREFIX)) return null;
+
+  const appId = request.headers.get("x-cloudforge-app") ?? "";
+  if (!appId) throw errors.authentication("App callback is missing its app id");
+
+  const presented = (request.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
+  const expected = await deriveAppCallKey(env.INTERNAL_AUTH_SECRET, tenantId, appId);
+  if (!timingSafeEqualString(presented, expected)) {
+    throw errors.authentication("App callback credential is not valid for this tenant");
+  }
+
+  const identity = await verifyTrustedIdentity(request, { tenantId, masterSecret: env.INTERNAL_AUTH_SECRET });
+
+  const target = new URL(url);
+  target.pathname = `/api/${url.pathname.slice(APP_CALLBACK_PREFIX.length)}`;
+  return { actor: identity.actor, url: target };
+}
 
 function routeKeyFromRequest(url: URL, suffix: string, allowTenantOverride: boolean): string {
   // The ?tenant override is a development convenience only. In production the

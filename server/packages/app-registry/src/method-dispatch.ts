@@ -20,10 +20,11 @@
  * cookie — an app that could replay that would act as the user everywhere, for twelve
  * hours, rather than for this call.
  *
- * WHAT THE APP CANNOT DO YET: read or write documents. That needs a callback path into
- * the platform, which is a new inbound trust boundary and is deliberately NOT part of
- * this step. Until then an app method computes over what it is given and returns a
- * result. See ROADMAP "app callback".
+ * HOW AN APP READS OR WRITES: it calls back through the gateway's `/_app/` prefix,
+ * presenting the two things it was given — its per-app credential and the signed
+ * identity. The gateway re-verifies both and forwards as that user, so an app can do
+ * exactly what the caller could do, for as long as the call lasts, and nothing more.
+ * It never holds rights of its own. See `resolveAppCallback` in the gateway.
  */
 
 import type { Actor, JsonObject, JsonValue } from "../../contracts/src/index.js";
@@ -44,6 +45,13 @@ export interface AppMethodEnv {
   DISPATCHER?: DispatchNamespace;
   INTERNAL_AUTH_SECRET?: string;
   INTERNAL_AUTH_KEY_ID?: string;
+  /**
+   * Public origin of the gateway, so the app knows where to call back.
+   *
+   * Told rather than configured in the app: an app that hard-coded its platform's URL
+   * would break the moment it was installed on a tenant reached by another hostname.
+   */
+  PUBLIC_ORIGIN?: string;
 }
 
 export interface AppMethodTarget {
@@ -129,6 +137,9 @@ export async function dispatchAppMethod(input: {
         authorization: `Bearer ${callKey}`,
         [IDENTITY_HEADER]: identity.encoded,
         [IDENTITY_SIGNATURE_HEADER]: identity.signature,
+        // Where to call back, and under which prefix. Both are sent so an app never
+        // has to know how this platform is deployed.
+        ...(env.PUBLIC_ORIGIN ? { "x-cloudforge-callback": `${env.PUBLIC_ORIGIN.replace(/\/$/, "")}/_app/` } : {}),
       },
       body: JSON.stringify({ method: methodName, args }),
     }), APP_METHOD_TIMEOUT_MS);
