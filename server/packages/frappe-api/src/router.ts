@@ -27,11 +27,12 @@ import {
   childDocTypeNames, maskedFieldNames, tableFieldNames, toFrappeDocType, toFrappeMetaBundle, toFrappeWorkflow,
 } from "./meta-shape.js";
 import {
-  mergeCustomizations, parseCustomField, parseDocTypeMeta, parsePropertySetter, renderPrintFormat,
-  resolveAutoname, validateWorkflow,
+  mergeCustomizations, parseCsvImport, parseCustomField, parseDocTypeMeta, parsePropertySetter,
+  renderPrintFormat, resolveAutoname, validateWorkflow,
 } from "../../frappe-model/src/index.js";
 import type { CustomFieldRecord, CustomizationStore, D1SearchStore, PropertySetterRecord } from "../../frappe-model/src/index.js";
 import type { D1UserStore } from "../../auth/src/index.js";
+import type { D1ReportService, QueryFilter } from "../../query/src/index.js";
 import { hashPassword, verifyPassword } from "./password.js";
 import { combinedNavigation, type AppInstaller } from "../../app-registry/src/index.js";
 import type { D1TranslationStore } from "./translations.js";
@@ -68,6 +69,8 @@ export interface FrappeRouterContext {
   users: D1UserStore;
   /** Global-search candidate index. Never an authorisation decision. */
   search: D1SearchStore;
+  /** Server-defined report engine. */
+  reports: D1ReportService;
   /** CSRF nonce of the current session, for the boot payload. */
   csrfToken: string;
   fullName: string;
@@ -647,6 +650,35 @@ async function dispatchMethod(
     case "frappe.desk.notifications.get_open_count":
       return methodResponse(await openCount(args, context));
 
+    // ---- tree view ---------------------------------------------------------
+    case "frappe.desk.treeview.get_children":
+      return methodResponse(await treeChildren(args, context));
+
+    case "frappe.desk.treeview.add_node":
+      // Frappe's own endpoint returns nothing and the client refetches.
+      await addTreeNode(args, context);
+      return methodResponse(null);
+
+    case "metaforge.api.add_tree_node":
+      return methodResponse(await addTreeNode(args, context));
+
+    // ---- query report ------------------------------------------------------
+    case "frappe.desk.query_report.run":
+      return methodResponse(await runQueryReport(args, context));
+
+    case "frappe.desk.query_report.get_script":
+      // No server-side report scripts exist on this platform, and none can: a
+      // report script is arbitrary code. Reported as an empty script rather than
+      // 404 so the client renders the plain table instead of an error.
+      return methodResponse({ script: "", html_format: null, execution_time: 0 });
+
+    // ---- data import -------------------------------------------------------
+    case "frappe.core.doctype.data_import.data_import.get_preview_from_template":
+      return methodResponse(await importPreview(args, context));
+
+    case "frappe.core.doctype.data_import.data_import.form_start_import":
+      return methodResponse(await importApply(args, context));
+
     case "frappe.desk.search.search_link":
       return methodResponse(await searchLink(args, context));
 
@@ -961,15 +993,24 @@ async function workflowTransitions(args: FrappeArgs, context: FrappeRouterContex
 
   const document = await loadReadable(doctype, name, context);
   const workflow = await context.metadata.getWorkflow(context.tenantId, doctype);
-  if (!workflow) return { state: null, transitions: [] };
+  // `has_workflow` is load-bearing and separate from the transition list: an empty
+  // list cannot distinguish "this doctype has no workflow" from "it has one, but
+  // this state/role leaves no action available". Without the flag the client cannot
+  // tell a plain document from one sitting in a terminal state.
+  if (!workflow) return { has_workflow: false, state: null, transitions: [] };
   const state = String(document.data[workflow.state_field] ?? workflow.states[0]?.state ?? "");
   const transitions = workflow.transitions
     .filter((entry) => entry.state === state && (context.actor.roles.includes(entry.allowed_role) || isPlatformAdmin(context)))
     // An action the actor could not complete is omitted rather than offered and
     // then refused on click.
     .filter((entry) => entry.allow_self_approval || document.owner !== context.actor.user_id || isPlatformAdmin(context))
-    .map((entry) => ({ action: entry.action, next_state: entry.next_state, allowed: entry.allowed_role }));
-  return { state, transitions };
+    .map((entry) => ({
+      action: entry.action,
+      next_state: entry.next_state,
+      allowed: entry.allowed_role,
+      allow_self_approval: entry.allow_self_approval ? 1 : 0,
+    }));
+  return { has_workflow: true, state, transitions };
 }
 
 /** Workflow action plus a comment, as one call so the comment cannot be orphaned. */
@@ -1364,6 +1405,236 @@ async function openCount(args: FrappeArgs, context: FrappeRouterContext): Promis
     // rather than failing the whole sidebar.
     return { count: 0, open_count: 0 };
   }
+}
+
+// ---- tree view --------------------------------------------------------------
+
+/**
+ * The self-referencing Link field that makes a doctype a tree.
+ *
+ * Frappe's convention, and the one the client already assumes when it reparents a
+ * node: `parent_<doctype in snake_case>`. Derived rather than configured so the two
+ * sides cannot disagree about which field holds the parent.
+ */
+function parentFieldFor(doctype: string): string {
+  return `parent_${doctype.toLowerCase().replace(/ /g, "_")}`;
+}
+
+function assertTreeDoctype(meta: DocTypeMeta): string {
+  const parentField = parentFieldFor(meta.name);
+  const field = meta.fields.find((entry) => entry.fieldname === parentField);
+  // Refused rather than returning an empty tree: an empty tree reads as "no data",
+  // while the real problem is that the doctype was never modelled as one.
+  if (!field || (field.fieldtype !== "Link" && field.fieldtype !== "Data")) {
+    throw errors.validation(`${meta.name} is not a tree: it has no ${parentField} field`);
+  }
+  return parentField;
+}
+
+/**
+ * Children of a tree node.
+ *
+ * `expandable` is computed from `is_group` when the doctype has it, because that is
+ * what lets the UI show a disclosure arrow without fetching a level it does not
+ * need. Falls back to "expandable" so a group is never rendered as a leaf that
+ * cannot be opened.
+ */
+async function treeChildren(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject[]> {
+  const doctype = args.requireText("doctype", 160);
+  const meta = await requireMeta(doctype, context);
+  const parentField = assertTreeDoctype(meta);
+  const parent = args.text("parent") ?? "";
+  const hasIsGroup = meta.fields.some((field) => field.fieldname === "is_group");
+  const titleField = meta.title_field;
+
+  const page = await context.listService.list(context.actor, context.tenantId, {
+    doctype,
+    fields: dedupe(["name", parentField, ...(hasIsGroup ? ["is_group"] : []), ...(titleField ? [titleField] : [])]),
+    // A root query asks for nodes with no parent; Frappe passes the doctype name
+    // itself as `parent` for the root, so both forms are treated as "root".
+    filters: (parent && parent !== doctype
+      ? [{ field: parentField, operator: "eq", value: parent }]
+      : [{ field: parentField, operator: "is_null" }]) as unknown as JsonValue,
+    limit: 100,
+  });
+
+  return page.rows.map((row) => {
+    const record = row as JsonObject;
+    const name = String(record.name ?? "");
+    return {
+      value: name,
+      title: titleField && typeof record[titleField] === "string" && record[titleField] ? String(record[titleField]) : name,
+      expandable: hasIsGroup ? Boolean(record.is_group) : true,
+    };
+  });
+}
+
+/**
+ * Creates a tree node.
+ *
+ * The parent is set from the tree argument, not from the document body, so a node
+ * cannot be created claiming a parent the caller did not navigate to.
+ */
+async function addTreeNode(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const doctype = args.requireText("doctype", 160);
+  const meta = await requireMeta(doctype, context);
+  const parentField = assertTreeDoctype(meta);
+  const isRoot = args.bool("is_root", false) || !args.text("parent");
+  const parent = isRoot ? null : args.requireText("parent", 320);
+
+  if (parent) {
+    // The parent must exist and be readable, or the new node would dangle.
+    await loadReadable(doctype, parent, context);
+  }
+
+  const body = args.all(new Set(["cmd", "doctype", "parent", "is_root", "_"]));
+  const payload: JsonObject = { ...body, ...(parent ? { [parentField]: parent } : {}) };
+  delete payload.value;
+
+  await context.permissions.assert({ actor: context.actor, tenantId: context.tenantId, doctype, action: "create" });
+  const name = await resolveNewName(doctype, meta, payload, context);
+  await context.runCommand(await buildCommand({
+    tenantId: context.tenantId, actor: context.actor, doctype, name,
+    action: "create", expectedVersion: null,
+    document: toKernelPayload(payload, meta),
+  }));
+
+  const created = await loadReadable(doctype, name, context);
+  const titleField = meta.title_field;
+  const title = titleField && typeof created.data[titleField] === "string" ? String(created.data[titleField]) : name;
+  return { value: name, title, expandable: Boolean(created.data.is_group) };
+}
+
+// ---- query report -----------------------------------------------------------
+
+/**
+ * Runs a server-defined report.
+ *
+ * `ignore_prepared_report` is honoured: the client re-runs synchronously when the
+ * server queued a heavy report and has no cached result, because showing an empty
+ * table would be read as "there is no stock" rather than "still calculating".
+ */
+async function runQueryReport(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const report = args.requireText("report_name", 160);
+  const forceSynchronous = args.bool("ignore_prepared_report", false);
+  const rawFilters = args.json<JsonValue>("filters");
+
+  await context.permissions.assert({
+    actor: context.actor, tenantId: context.tenantId,
+    // Report access is gated on the report permission of the doctype the report is
+    // named after when one exists; otherwise on being able to read reports at all.
+    doctype: report, action: "report",
+  }).catch(async () => {
+    if (!isPlatformAdmin(context)) throw errors.permission(`Report ${report} is not permitted`);
+  });
+
+  const result = await context.reports.run({
+    tenant_id: context.tenantId,
+    report,
+    filters: normalizeReportFilters(rawFilters),
+    order_by: [],
+    limit: 500,
+    offset: 0,
+  }, forceSynchronous);
+
+  if (result.prepared === true) {
+    // Frappe's shape for "queued, nothing cached": no columns, no result, `doc`
+    // null. The client detects exactly this and re-runs synchronously.
+    return { prepared_report: true, doc: null, columns: [], result: [] };
+  }
+  return {
+    result: result.result ?? [],
+    columns: result.columns ?? [],
+    message: result.message ?? null,
+    chart: result.chart ?? null,
+    report_summary: result.report_summary ?? [],
+    skip_total_row: result.skip_total_row === true ? 1 : 0,
+  };
+}
+
+/** Frappe report filters arrive as an object; the report engine wants a list. */
+function normalizeReportFilters(raw: JsonValue | undefined): QueryFilter[] {
+  if (raw === undefined || raw === null || raw === "") return [];
+  if (Array.isArray(raw)) return raw as unknown as QueryFilter[];
+  if (typeof raw !== "object") throw errors.validation("filters must be an object or array");
+  const filters: QueryFilter[] = [];
+  for (const [field, value] of Object.entries(raw as JsonObject)) {
+    if (value === undefined || value === null || value === "") continue;
+    if (Array.isArray(value) && value.length === 2 && typeof value[0] === "string") {
+      filters.push({ field, operator: value[0] as QueryFilter["operator"], value: value[1] ?? null });
+      continue;
+    }
+    filters.push({ field, operator: "=", value });
+  }
+  return filters;
+}
+
+// ---- data import ------------------------------------------------------------
+
+/**
+ * Previews an import without writing anything.
+ *
+ * Unknown columns are refused here rather than silently ignored during apply: a
+ * dropped column means rows import with fields missing, and the user has no way to
+ * see which.
+ */
+async function importPreview(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const doctype = args.requireText("doctype", 160);
+  const csv = args.text("csv") ?? args.text("content") ?? "";
+  if (!csv) throw errors.validation("csv content is required");
+  await context.permissions.assert({ actor: context.actor, tenantId: context.tenantId, doctype, action: "import" });
+  const meta = await requireMeta(doctype, context);
+  if (meta.is_child) throw errors.validation("A child doctype cannot be imported directly");
+
+  const preview = parseCsvImport(csv);
+  const known = new Set(meta.fields.map((field) => field.fieldname));
+  const unknown = preview.headers.filter((header) => header !== "name" && !known.has(header));
+  if (unknown.length) throw errors.validation(`Unknown import columns: ${unknown.join(", ")}`);
+  return preview as unknown as JsonObject;
+}
+
+/**
+ * Applies an import row by row.
+ *
+ * Each row is its own command, so a bad row fails alone and the outcome is
+ * reported per row. Importing as one transaction would mean one typo on row 400
+ * discards the 399 valid rows before it.
+ */
+async function importApply(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const doctype = args.requireText("doctype", 160);
+  const csv = args.text("csv") ?? args.text("content") ?? "";
+  if (!csv) throw errors.validation("csv content is required");
+  await context.permissions.assert({ actor: context.actor, tenantId: context.tenantId, doctype, action: "import" });
+  await context.permissions.assert({ actor: context.actor, tenantId: context.tenantId, doctype, action: "create" });
+  const meta = await requireMeta(doctype, context);
+  if (meta.is_child) throw errors.validation("A child doctype cannot be imported directly");
+
+  const preview = parseCsvImport(csv, 100);
+  if (preview.errors.length) throw errors.validation("The CSV contains malformed rows", { error_count: preview.errors.length });
+
+  const results: JsonObject[] = [];
+  let imported = 0;
+  let failed = 0;
+  for (let index = 0; index < preview.rows.length; index += 1) {
+    const row = preview.rows[index] as JsonObject;
+    const rowNumber = index + 2;
+    try {
+      const payload = toKernelPayload(row, meta);
+      const name = typeof row.name === "string" && row.name.trim()
+        ? row.name.trim()
+        : await resolveNewName(doctype, meta, payload, context);
+      await context.runCommand(await buildCommand({
+        tenantId: context.tenantId, actor: context.actor, doctype, name,
+        action: "create", expectedVersion: null, document: payload,
+      }));
+      results.push({ row: rowNumber, name, status: "imported" });
+      imported += 1;
+    } catch (error) {
+      failed += 1;
+      results.push({ row: rowNumber, status: "failed", error: error instanceof Error ? error.message : "Row failed" });
+    }
+  }
+  return { imported, failed, results, status: failed ? "Partial Success" : "Success" };
 }
 
 function isPlatformAdmin(context: FrappeRouterContext): boolean {

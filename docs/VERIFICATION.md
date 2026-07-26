@@ -15,7 +15,7 @@ Cập nhật: 2026-07-26.
 | Typecheck worker (server) | `pnpm --filter cloudforge run typecheck:workers` | exit 0 |
 | Test Node/domain | `node --test tests/*.test.mjs` | **248/248 PASS** |
 | Gate SQL | `pnpm --filter cloudforge run test:sql` | **6/6 PASS** |
-| **Workerd tenant-worker** | `vitest run --config apps/tenant-worker/vitest.config.mts` | **52/52 PASS** (23 gốc + 29 E2E lớp vỏ) |
+| **Workerd tenant-worker** | `vitest run --config apps/tenant-worker/vitest.config.mts` | **59/59 PASS** (23 gốc + 36 E2E lớp vỏ) |
 | **Workerd query-worker** | `vitest run --config apps/query-worker/vitest.config.mts` | **3/3 PASS** |
 | **Web typecheck** | `pnpm --filter @cloudforge/web run typecheck` | exit 0 |
 | **Web Vite production build** | `pnpm --filter @cloudforge/web run build` | exit 0 — 55 module, 238 kB js |
@@ -56,7 +56,7 @@ kiếm theo document, hạn mức đồng thời 100 luồng).
 
 ## E2E lớp vỏ Frappe — đã chạy trên workerd thật
 
-`apps/tenant-worker/test/frappe-facade.integration.test.mts` — 29 kịch bản đi hết
+`apps/tenant-worker/test/frappe-facade.integration.test.mts` — 36 kịch bản đi hết
 đường thật của một request Desk: phiên → dịch hình dạng → tầng quyền → aggregate
 Durable Object → D1. Không mock gì.
 
@@ -88,6 +88,13 @@ Durable Object → D1. Không mock gì.
 - Xoá hàng loạt: báo kết quả TỪNG item (1 xoá được, 1 đã huỷ nên không, 1 không
   tồn tại) chứ không gộp thành pass/fail
 - Workspace suy từ app đã cài; đếm chứng từ mở trong phạm vi đọc của actor
+- `get_workflow_transitions` trả `has_workflow` riêng biệt với danh sách transition
+- Tree view: đi cây, field cha suy theo quy ước `parent_<snake>`; lá không báo
+  expandable; doctype không phải cây thì TỪ CHỐI chứ không trả cây rỗng
+- Query report: chạy đúng cột đã khai; report không tồn tại và filter ngoài
+  whitelist đều bị TỪ CHỐI, không âm thầm bỏ qua
+- Data import: từng dòng một command nên dòng lỗi chết một mình, kết quả báo theo
+  dòng; cột không thuộc doctype bị từ chối chứ không bị bỏ
 - API native vẫn chạy song song, không bị lớp vỏ che
 
 ## Ranh giới — không tuyên bố quá
@@ -96,10 +103,12 @@ Durable Object → D1. Không mock gì.
   mong đợi, nhưng chưa có lần nào MetaForge Desk thật vẽ màn hình từ nó.
 - Lớp vỏ Frappe hiện thực **Tier 1 + Tier 2 + builder (Tier 3)** và phần Tier 4 mà
   Desk cần để dùng được (print, xoá hàng loạt, workspace, open count).
-  **Chưa làm**: kanban, treeview, data import qua giao thức Frappe, query report,
-  notification log, dashboard chart, number card, business context (4 endpoint đặc
-  thù MetaForge) — xem [API_SURFACE.md](API_SURFACE.md). Mỗi cái gọi vào sẽ trả 404
-  `DoesNotExistError` chứ không trả rỗng.
+  và phần lớn Tier 4: print, xoá hàng loạt, workspace, open count, **tree view**,
+  **query report**, **data import**.
+  **Chưa làm**: kanban (3), notification log (4), dashboard chart, number card,
+  email, backups, export_query, business context (4 endpoint đặc thù MetaForge) —
+  xem [API_SURFACE.md](API_SURFACE.md). Mỗi cái gọi vào trả 404 `DoesNotExistError`
+  chứ không trả rỗng, nên màn hình không render như thể có dữ liệu.
 - `is_single`, `track_seen` vẫn là metadata chưa có consumer.
 - Hooks app là **phản ứng sau commit**, không phải validator trước commit. Việc
   kiểm tra cần chặn lệnh ghi phải khai báo bằng metadata.

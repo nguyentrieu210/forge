@@ -44,6 +44,11 @@ async function method(name: string, args: Record<string, unknown> = {}, verb: "G
   });
 }
 
+/** Builds CSV text with a trailing newline, as a real upload would carry. */
+function csvOf(lines: string[]): string {
+  return `${lines.join("\n")}\n`;
+}
+
 /** Frappe wraps every method payload under `message`. */
 async function unwrap(response: Response): Promise<any> {
   const body: any = await response.json();
@@ -451,6 +456,115 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     expect(Array.isArray(spaces.pages)).toBe(true);
     const counts = await unwrap(await method("frappe.desk.notifications.get_open_count", { doctype: "Field Visit" }, "GET"));
     expect(Number(counts.open_count)).toBeGreaterThanOrEqual(0);
+  });
+
+  it("reports has_workflow separately from the transition list", async () => {
+    // An empty list cannot distinguish "no workflow" from "a terminal state", and
+    // the client needs to tell those apart to know whether to show an action bar.
+    const result = await unwrap(await method("metaforge.api.get_workflow_transitions", {
+      doctype: "Field Visit", name: `${createdName}-1`,
+    }, "GET"));
+    expect(result.has_workflow).toBe(false);
+    expect(result.transitions).toEqual([]);
+  });
+
+  it("walks a tree doctype, deriving the parent field by convention", async () => {
+    const treeMeta = {
+      name: "Visit Region", module: "Custom",
+      autoname: "prompt",
+      title_field: "region_name",
+      fields: [
+        { fieldname: "region_name", label: "Region", fieldtype: "Data", required: true },
+        { fieldname: "is_group", label: "Is Group", fieldtype: "Check" },
+        { fieldname: "parent_visit_region", label: "Parent", fieldtype: "Link", options: "Visit Region" },
+      ],
+      permissions: [{ role: "System Manager", read: true, write: true, create: true, report: true }],
+      revision: 1,
+    };
+    await env.DB.prepare(
+      `INSERT INTO doctype_definitions(tenant_id,doctype,module,revision,metadata_json,modified_by,modified_at)
+       VALUES('demo','Visit Region','Custom',1,?1,'Administrator',?2)
+       ON CONFLICT(tenant_id,doctype) DO UPDATE SET metadata_json=excluded.metadata_json`,
+    ).bind(JSON.stringify(treeMeta), NOW).run();
+
+    const root = await unwrap(await method("metaforge.api.add_tree_node", {
+      doctype: "Visit Region", is_root: true, name: "North", region_name: "North", is_group: 1,
+    }));
+    expect(root.value).toBe("North");
+    expect(root.expandable).toBe(true);
+
+    const child = await unwrap(await method("metaforge.api.add_tree_node", {
+      doctype: "Visit Region", parent: "North", name: "Hanoi", region_name: "Hanoi",
+    }));
+    expect(child.value).toBe("Hanoi");
+    // A leaf must not be reported as expandable, or the UI offers an arrow that
+    // opens nothing.
+    expect(child.expandable).toBe(false);
+
+    const roots = await unwrap(await method("frappe.desk.treeview.get_children", { doctype: "Visit Region", parent: "" }, "GET"));
+    expect(roots.map((node: any) => node.value)).toEqual(["North"]);
+    const children = await unwrap(await method("frappe.desk.treeview.get_children", { doctype: "Visit Region", parent: "North" }, "GET"));
+    expect(children.map((node: any) => node.value)).toEqual(["Hanoi"]);
+  });
+
+  it("refuses to walk a doctype that was never modelled as a tree", async () => {
+    // An empty tree would read as "no data" while the real problem is the model.
+    const response = await method("frappe.desk.treeview.get_children", { doctype: "Field Visit", parent: "" }, "GET");
+    expect(response.status).toBe(417);
+    expect(String((await response.json() as any).message)).toMatch(/is not a tree/i);
+  });
+
+  it("runs a server-defined report with its declared columns", async () => {
+    const report = await unwrap(await method("frappe.desk.query_report.run", {
+      report_name: "General Ledger", filters: { account: "Debtors" },
+    }, "GET"));
+    // Either real rows, or Frappe's queued shape — never a silently empty table
+    // with no explanation.
+    expect(report.prepared_report === true || Array.isArray(report.result)).toBe(true);
+    if (!report.prepared_report) {
+      expect(report.columns.map((column: any) => column.field)).toContain("posting_at");
+    }
+  });
+
+  it("refuses an unknown report and a filter outside the report's whitelist", async () => {
+    // Silently dropping an unsupported filter would show every row while the UI
+    // claims the report is filtered — worse than refusing.
+    const missing = await method("frappe.desk.query_report.run", { report_name: "No Such Report" }, "GET");
+    expect(missing.status).toBeGreaterThanOrEqual(400);
+    expect(String((await missing.json() as any).message)).toMatch(/Unknown report/i);
+
+    const badFilter = await method("frappe.desk.query_report.run", {
+      report_name: "General Ledger", filters: { company: "Demo" },
+    }, "GET");
+    expect(badFilter.status).toBeGreaterThanOrEqual(400);
+    expect(String((await badFilter.json() as any).message)).toMatch(/Filter is not allowed/i);
+  });
+
+  it("imports a CSV row by row, so one bad row does not discard the good ones", async () => {
+    const preview = await unwrap(await method("frappe.core.doctype.data_import.data_import.get_preview_from_template", {
+      doctype: "Field Visit", csv: csvOf(["subject,customer", "Imported A,CUST-1", "Imported B,CUST-2"]),
+    }));
+    expect(preview.headers).toEqual(["subject", "customer"]);
+
+    // Row 2 omits the mandatory subject; row 1 is valid. (A bad Link is NOT the
+    // right example here: the kernel validates references at submit, not at create,
+    // so a draft may legitimately carry a reference that is not resolvable yet.)
+    const applied = await unwrap(await method("frappe.core.doctype.data_import.data_import.form_start_import", {
+      doctype: "Field Visit", csv: csvOf(["subject,customer", "Imported OK,CUST-1", ",CUST-2"]),
+    }));
+    expect(applied.imported).toBe(1);
+    expect(applied.failed).toBe(1);
+    expect(applied.status).toBe("Partial Success");
+    expect(applied.results[1].error).toBeTruthy();
+  });
+
+  it("rejects an import column the doctype does not have, rather than dropping it", async () => {
+    // A dropped column means rows import with fields missing and no way to see which.
+    const response = await method("frappe.core.doctype.data_import.data_import.get_preview_from_template", {
+      doctype: "Field Visit", csv: csvOf(["subject,not_a_field", "X,Y"]),
+    });
+    expect(response.status).toBe(417);
+    expect(String((await response.json() as any).message)).toMatch(/Unknown import columns/i);
   });
 
   it("fails an unimplemented method loudly instead of returning an empty success", async () => {

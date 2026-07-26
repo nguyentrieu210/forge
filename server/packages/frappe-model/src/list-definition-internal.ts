@@ -21,7 +21,16 @@ export function metadataToListDefinition(meta: DocTypeMeta): DocumentListDefinit
   const listFields = meta.fields.filter((field) => field.in_list_view && Object.hasOwn(fields, field.fieldname)).map((field) => field.fieldname);
   const defaultFields = ["name", ...(meta.title_field && Object.hasOwn(fields, meta.title_field) ? [meta.title_field] : []), ...listFields, "status", "docstatus", "version", "modified_at"];
   const searchFields = [...new Set(["name", ...(meta.search_fields ?? []), ...meta.fields.filter((field) => field.search_index).map((field) => field.fieldname)])].filter((field) => Object.hasOwn(fields, field));
-  const filterFields = ["docstatus", "status", ...meta.fields.filter((field) => field.in_standard_filter || field.in_list_view).map((field) => field.fieldname)].filter((field) => Object.hasOwn(fields, field));
+  // A tree's parent field is structurally filterable — walking the tree IS a
+  // filter on it. Requiring the author to also flag it `in_standard_filter` turns
+  // a correct tree definition into a "filter field is not allowed" error, so it is
+  // included whenever the conventional field exists.
+  const treeParentField = `parent_${meta.name.toLowerCase().replace(/ /g, "_")}`;
+  const filterFields = [
+    "docstatus", "status",
+    ...(Object.hasOwn(fields, treeParentField) ? [treeParentField] : []),
+    ...meta.fields.filter((field) => field.in_standard_filter || field.in_list_view).map((field) => field.fieldname),
+  ].filter((field) => Object.hasOwn(fields, field));
   const sortField = meta.sort_field && Object.hasOwn(fields, meta.sort_field) ? meta.sort_field : "modified_at";
   return {
     doctype: meta.name,

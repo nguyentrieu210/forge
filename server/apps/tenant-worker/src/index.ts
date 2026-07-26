@@ -24,6 +24,7 @@ import {
 } from "../../../packages/frappe-model/src/index.js";
 import { AggregateCoordinator } from "./aggregate-do.js";
 import { publishPendingOutbox } from "../../../packages/outbox/src/index.js";
+import { D1ReportService } from "../../../packages/query/src/index.js";
 import type { TenantEnv } from "./env.js";
 
 export { AggregateCoordinator };
@@ -614,6 +615,7 @@ async function serveFrappeApiInner(
     apps: new AppInstaller(env.DB, metadata, users),
     users,
     search: new D1SearchStore(env.DB),
+    reports: new D1ReportService(env.DB),
     async runCommand(command) {
       const stub = env.AGGREGATES.getByName(`${tenantId}:${command.aggregate.doctype}:${command.aggregate.name}`) as AggregateStub;
       const result = typeof stub.mutate === "function" ? await stub.mutate(command) : await callDoFetch(stub, command);
