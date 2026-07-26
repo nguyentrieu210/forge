@@ -2781,7 +2781,7 @@
               "customer_group": "Commercial",
               "customer_name": "_OM-CUST",
               "customer_primary_contact": null,
-              "due_date": "2026-07-24",
+              "due_date": "2026-07-27",
               "invoice_grand_total": 500.0,
               "invoiced": 500.0,
               "invoiced_in_account_currency": 500.0,
@@ -2793,7 +2793,7 @@
               "party_account": "Debtors - _OM",
               "party_type": "Customer",
               "po_no": "",
-              "posting_date": "2026-07-24",
+              "posting_date": "2026-07-27",
               "project": null,
               "range0": 0.0,
               "range1": 500.0,
@@ -2858,7 +2858,7 @@
               "customer_group": "Commercial",
               "customer_name": "_OM-CUST",
               "customer_primary_contact": null,
-              "due_date": "2026-07-24",
+              "due_date": "2026-07-27",
               "invoice_grand_total": 500.0,
               "invoiced": 500.0,
               "invoiced_in_account_currency": 500.0,
@@ -2870,7 +2870,7 @@
               "party_account": "Debtors - _OM",
               "party_type": "Customer",
               "po_no": "",
-              "posting_date": "2026-07-24",
+              "posting_date": "2026-07-27",
               "project": null,
               "range0": 0.0,
               "range1": 300.0,
@@ -2950,7 +2950,7 @@
               "customer_group": "Commercial",
               "customer_name": "_OM-CUST",
               "customer_primary_contact": null,
-              "due_date": "2026-07-24",
+              "due_date": "2026-07-27",
               "invoice_grand_total": 500.0,
               "invoiced": 500.0,
               "invoiced_in_account_currency": 500.0,
@@ -2962,7 +2962,7 @@
               "party_account": "Debtors - _OM",
               "party_type": "Customer",
               "po_no": "",
-              "posting_date": "2026-07-24",
+              "posting_date": "2026-07-27",
               "project": null,
               "range0": 0.0,
               "range1": 500.0,
@@ -3253,8 +3253,8 @@
             "warehouse": "Stores - _OM"
           }
         ],
-        "dn1_time": "18:35:04.777311",
-        "dn2_time": "18:35:05.076245"
+        "dn1_time": "4:30:26.369646",
+        "dn2_time": "4:30:26.647261"
       },
       "full": {
         "dn1_sle": [
@@ -3277,16 +3277,16 @@
             "warehouse": "Stores - _OM"
           }
         ],
-        "dn1_time": "18:35:04.777311",
-        "dn2_time": "18:35:05.076245"
+        "dn1_time": "4:30:26.369646",
+        "dn2_time": "4:30:26.647261"
       }
     },
     "O2C-G-TIMEZONE-BOUNDARY-067": {
       "captured": true,
       "summary": {
         "kind": "state",
-        "posting_date": "2026-07-24",
-        "posting_time": "18:35:05.610061",
+        "posting_date": "2026-07-27",
+        "posting_time": "4:30:27.227570",
         "sle": [
           {
             "actual_qty": -2.0,
@@ -3299,8 +3299,8 @@
         ]
       },
       "full": {
-        "posting_date": "2026-07-24",
-        "posting_time": "18:35:05.610061",
+        "posting_date": "2026-07-27",
+        "posting_time": "4:30:27.227570",
         "sle": [
           {
             "actual_qty": -2.0,
@@ -3320,7 +3320,7 @@
         "raised": true,
         "error_type": "TimestampMismatchError",
         "error_class": "frappe.exceptions.TimestampMismatchError",
-        "message": "Error: SAL-ORD-2026-00001 (Sales Order) has been modified after you have opened it (2026-07-24 18:35:05.914320, 2026-07-24 18:35:05.990565). Please refresh to g",
+        "message": "Error: SAL-ORD-2026-00001 (Sales Order) has been modified after you have opened it (2026-07-27 04:30:27.558073, 2026-07-27 04:30:27.665640). Please refresh to g",
         "note": "second save on a stale in-memory copy (optimistic-lock probe)"
       },
       "full": {
@@ -3328,7 +3328,7 @@
           "raised": true,
           "type": "TimestampMismatchError",
           "frappe_class": "frappe.exceptions.TimestampMismatchError",
-          "msg": "Error: SAL-ORD-2026-00001 (Sales Order) has been modified after you have opened it (2026-07-24 18:35:05.914320, 2026-07-24 18:35:05.990565). Please refresh to get the latest document."
+          "msg": "Error: SAL-ORD-2026-00001 (Sales Order) has been modified after you have opened it (2026-07-27 04:30:27.558073, 2026-07-27 04:30:27.665640). Please refresh to get the latest document."
         },
         "note": "second save on a stale in-memory copy (optimistic-lock probe)"
       }

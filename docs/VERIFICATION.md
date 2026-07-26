@@ -75,10 +75,40 @@ Trạng thái đối chiếu: 72 implemented · 17 partial · 26 missing.
 Không có tuyên bố `parity: true` nào; mỗi fixture mang claim riêng của nó.
 
 Phủ **chỉ O2C** (SO/DN/SI/PE, vòng đời, báo cáo, số học, đồng thời, thuế nâng cao,
-đa tiền tệ, giá vốn, repost, batch/serial). Bề rộng v0.8–v1.0 (ngân hàng, lương,
-subscription, hoá đơn điện tử, sản xuất, tài sản) **KHÔNG có oracle** — cần dựng
-bench ERPNext thật để capture fixture mới; môi trường hiện tại không có
-bench/MariaDB/Redis.
+đa tiền tệ, giá vốn, repost, batch/serial).
+
+### Capture nay đã TỰ TÁI LẬP trên bench thật — 2026-07-27
+
+Trước đây capture là **thừa hưởng**: một artifact đã commit sẵn từ bản CloudForge gốc,
+không ai trong dự án này từng chạy lại. Nay đã dựng bench và chạy lại từ đầu.
+
+| | |
+|---|---|
+| Bench | `frappe/erpnext:v16.20.0` (Docker Hub) — chứa **đúng** frappe 16.19.0 + erpnext 16.20.0 |
+| Xác minh | **nội dung**, không phải commit id: 5 file controller O2C băm **trùng từng byte** với cây nguồn đã ghim |
+| Runner | cả **năm** — matrix 71 · advanced 15 · valuation 11 · repost 6 · batch/serial 12 |
+| Kết quả | **115/115 captured, 0 handler failure** |
+| Đối chiếu với bản thừa hưởng | **112/115 trùng từng byte** |
+
+Ba cái lệch **chỉ lệch ở dấu thời gian** mà chính fixture nhúng vào (ngày chạy capture, và
+thông điệp `TimestampMismatchError` có ngày trong đó). Giá trị nghiệp vụ — SLE, giá vốn,
+loại lỗi — giống hệt. **Capture thừa hưởng là thật.**
+
+Hai điều học được, đã ghi vào [oracle-bench/README.md](../server/docs/spec/tools/oracle-bench/README.md):
+image chính thức bỏ được bước build nặng nhưng **không có `.git`** nên phép kiểm fail-closed
+phải đổi sang so nội dung; và builder gấp **năm** file raw — chạy mỗi matrix runner cho ra
+một capture **trông như đủ** (vẫn `ORACLE_OK`, vẫn cùng claim) trong khi **âm thầm mất 44
+fixture thật**. Tôi đã mắc đúng lỗi đó ở lần chạy đầu.
+
+Bench là **dùng một lần**: dựng không publish cổng nào (máy đó chạy production), chạy xong
+xoá cả volume; 9 container production giữ nguyên uptime.
+
+### Bề rộng v0.8–v1.0 — nay KHÔNG còn bị chặn bởi hạ tầng
+
+Ngân hàng, lương, subscription, hoá đơn điện tử, sản xuất, tài sản vẫn **chưa có oracle**.
+Nhưng lý do đã đổi: trước là *"không có bench"*, nay là **chưa ai viết fixture runner cho
+các phân hệ đó**. Bench dựng lại được bằng một quy trình đã ghi và đã chạy. Đó là việc
+viết code, không phải việc chờ hạ tầng.
 
 ## Lộ trình "100% hợp đồng client" — bảy commit, mỗi pha deploy + smoke live
 
