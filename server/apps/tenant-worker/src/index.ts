@@ -9,7 +9,7 @@ import {
   routeFrappeApi, routeFrappeAuth, slideSession, type AuthRouteContext, type EstablishedSession,
 } from "../../../packages/frappe-api/src/index.js";
 import {
-  AppHookDispatcher, AppInstaller, subscribersFor,
+  AppHookDispatcher, AppInstaller, runAppValidators, subscribersFor, validatorsFor,
   type AppManifest, type HookDeliveryOutcome,
 } from "../../../packages/app-registry/src/index.js";
 import type { TrustedIdentityKey } from "../../../packages/auth/src/index.js";
@@ -664,6 +664,21 @@ async function serveFrappeApiInner(
   const access = new D1DocumentAccessStore(env.DB);
   const permissions = new MetadataPermissionService(metadata, undefined, access);
   const documents = new D1MutationStore(env.DB);
+  const installedApps = new AppInstaller(env.DB, metadata, users);
+
+  /**
+   * Bindings for reaching app Workers, shared by app methods and pre-commit validators.
+   *
+   * Empty when this deployment has no dispatch namespace: app methods then stay a plain
+   * 404, and a manifest that declares validators is refused at install rather than
+   * silently having its rules ignored.
+   */
+  const appMethodEnv = {
+    ...(env.DISPATCHER ? { DISPATCHER: env.DISPATCHER } : {}),
+    ...(env.INTERNAL_AUTH_SECRET ? { INTERNAL_AUTH_SECRET: env.INTERNAL_AUTH_SECRET } : {}),
+    ...(env.INTERNAL_AUTH_KEY_ID ? { INTERNAL_AUTH_KEY_ID: env.INTERNAL_AUTH_KEY_ID } : {}),
+    ...(env.PUBLIC_ORIGIN ? { PUBLIC_ORIGIN: env.PUBLIC_ORIGIN } : {}),
+  };
 
   const response = await routeFrappeApi(request, url, {
     tenantId,
@@ -677,12 +692,32 @@ async function serveFrappeApiInner(
     listService: new DocumentListService(new D1DocumentListStore(env.DB), permissions, new MetadataDocumentListDefinitionResolver(metadata)),
     customizations: metadata.customizationStore,
     translations: new D1TranslationStore(env.DB),
-    apps: new AppInstaller(env.DB, metadata, users),
+    apps: installedApps,
     users,
     search: new D1SearchStore(env.DB),
     reports: new D1ReportService(env.DB),
     deskViews: new D1DeskViewStore(env.DB),
     async runCommand(command) {
+      // Every write in the façade funnels through here, so this is where an app's
+      // pre-commit check belongs: nine call sites in the router today, and any handler
+      // added later, are covered without each one remembering to ask.
+      //
+      // Before the Durable Object, deliberately. Inside it, a slow app would stall every
+      // write to that aggregate and a timeout would leave "did it commit?" unanswerable.
+      await runAppValidators({
+        env: appMethodEnv,
+        tenantId,
+        actor,
+        traceId,
+        subject: {
+          doctype: command.aggregate.doctype,
+          name: command.aggregate.name,
+          action: command.action,
+          payload: (command.document ?? {}) as JsonObject,
+        },
+        targets: validatorsFor(await installedApps.list(tenantId), command.aggregate.doctype, command.action),
+      });
+
       const stub = env.AGGREGATES.getByName(`${tenantId}:${command.aggregate.doctype}:${command.aggregate.name}`) as AggregateStub;
       const result = typeof stub.mutate === "function" ? await stub.mutate(command) : await callDoFetch(stub, command);
       return result as MutationReceipt;

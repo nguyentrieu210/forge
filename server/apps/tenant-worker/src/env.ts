@@ -17,6 +17,13 @@ export interface TenantEnv {
   INTERNAL_AUTH_KEY_ID_PREVIOUS?: string;
   INTERNAL_SERVICE_TOKEN?: string;
   /**
+   * Public origin of the gateway, told to app Workers so they know where to call back.
+   *
+   * An app that hard-coded its platform's URL would break the moment it was installed
+   * on a tenant reached by a different hostname.
+   */
+  PUBLIC_ORIGIN?: string;
+  /**
    * Signing secret for Frappe-shaped `sid` cookies.
    *
    * Kept distinct from INTERNAL_AUTH_SECRET so that rotating platform-internal

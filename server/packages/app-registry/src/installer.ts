@@ -21,6 +21,9 @@ export interface InstalledAppRecord {
   installed_at: string;
   nav: AppManifest["nav"];
   worker: string | null;
+  /** Pre-commit checks this app registered. Carried on the record so the write path
+   * does not have to re-parse every manifest on every write. */
+  validators: AppManifest["validators"];
 }
 
 export interface InstallResult {
@@ -67,6 +70,7 @@ export class AppInstaller {
         installed_at: row.installed_at,
         nav: manifest.nav ?? [],
         worker: manifest.worker ?? null,
+        validators: manifest.validators ?? [],
       };
     });
   }

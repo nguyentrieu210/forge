@@ -53,6 +53,22 @@ export interface AppHook {
   event: string;
 }
 
+/**
+ * A write this app wants to inspect BEFORE it is committed — Frappe's `validate`.
+ *
+ * `doctype` is an exact name or `*`. `actions` narrows it further; omitted means every
+ * write action. An app that registers a validator is asked on every matching write and
+ * can refuse it, which is the one thing an after-commit hook can never do.
+ *
+ * Kept separate from `hooks` because the two have opposite failure modes: a hook that
+ * cannot be delivered is retried for hours, while a validator that cannot be reached
+ * must decide the write immediately. Conflating them would make one of those wrong.
+ */
+export interface AppValidator {
+  doctype: string;
+  actions?: string[];
+}
+
 export interface AppManifest {
   id: string;
   name: string;
@@ -72,6 +88,8 @@ export interface AppManifest {
    */
   worker?: string;
   hooks: AppHook[];
+  /** Pre-commit checks. Like `hooks`, useless without a `worker`. */
+  validators: AppValidator[];
 }
 
 /** True when an event type matches a subscription pattern. */
@@ -147,6 +165,12 @@ export function parseAppManifest(value: unknown): AppManifest {
   // misdeclared app.
   if (hooks.length && !worker) throw errors.validation(`${id} declares hooks but no worker to deliver them to`);
 
+  const validators = array(input.validators ?? [], "validators").map((entry, index) => parseValidator(entry, index));
+  // A validator with nowhere to ask would have to be treated as either always-allow —
+  // silently dropping the rule the app declared — or always-deny, which bricks the
+  // doctype. Refusing the manifest is the only answer that is not a surprise later.
+  if (validators.length && !worker) throw errors.validation(`${id} declares validators but no worker to run them`);
+
   return {
     id,
     name: text(input.name, "name", 160),
@@ -159,8 +183,30 @@ export function parseAppManifest(value: unknown): AppManifest {
     fixtures,
     nav,
     hooks,
+    validators,
     ...(worker === undefined ? {} : { worker }),
   };
+}
+
+const WRITE_ACTIONS = new Set(["create", "save", "submit", "cancel", "amend", "delete"]);
+
+function parseValidator(value: JsonValue, index: number): AppValidator {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw errors.validation(`validators[${index}] must be an object`);
+  }
+  const entry = value as JsonObject;
+  const doctype = text(entry.doctype, `validators[${index}].doctype`, 160);
+  if (entry.actions === undefined) return { doctype };
+  const actions = array(entry.actions, `validators[${index}].actions`).map((action, position) => {
+    const name = text(action, `validators[${index}].actions[${position}]`, 32);
+    // An unknown action would never match, so the rule would silently never run —
+    // exactly the failure a declarative manifest is supposed to make impossible.
+    if (!WRITE_ACTIONS.has(name)) {
+      throw errors.validation(`validators[${index}].actions[${position}] is not a write action: ${name}`);
+    }
+    return name;
+  });
+  return { doctype, actions };
 }
 
 function parseHook(value: JsonValue, index: number): AppHook {
