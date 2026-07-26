@@ -18,3 +18,10 @@ docs/spec/source-exact/runtime/
 
 # Packed app output — regenerable from apps-src/ via `npm run app:pack`
 apps-src/**/*-[0-9]*.json
+
+# Local wrangler dev artefacts — regenerable, and .dev.vars holds local secrets
+apps/*/.dev.vars
+wrangler-dev.log
+seed-local.sql
+cookies.txt
+.httpcheck/

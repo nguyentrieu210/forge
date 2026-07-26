@@ -41,6 +41,48 @@ Migration 0001–0015 chạy tuần tự trên database trắng, kèm diễn t�
 tồn tại ở tầng SQL (chuỗi amend, cấp role, hình dạng property setter, index tìm
 kiếm theo document, hạn mức đồng thời 100 luồng).
 
+## Chạy thật qua HTTP với wrangler dev
+
+Bổ sung cho suite Workerd chứ không lặp lại nó: suite kia gọi worker qua dispatch
+nội bộ của workerd, còn đây đi qua **HTTP thật với cookie jar thật** — cách duy nhất
+kiểm được phần thuộc về transport: parse `Set-Cookie`, gửi lại cookie ở request sau,
+chữ hoa/thường của header, URL-encode tên doctype có dấu cách, và status code như
+client thật quan sát được.
+
+```
+npx wrangler d1 migrations apply cloudforge-demo --local --config apps/tenant-worker/wrangler.jsonc
+npm run dev:seed
+npx wrangler dev --config apps/tenant-worker/wrangler.jsonc --port 8799 --local
+npm run smoke:http
+```
+
+| Kiểm tra | Kết quả |
+|---|---|
+| Migration 0001–0015 lên D1 cục bộ qua **wrangler thật** | 15/15 ✅ (không phải dry-run Python) |
+| `npm run smoke:http` | **HTTP_SMOKE_PASS checks=24 failures=0** |
+| Lặp lại từ D1 trắng (xoá `.wrangler/state` → migrate → seed → smoke) | PASS |
+
+24 kiểm tra: guest bị chặn đúng cách · sai mật khẩu không set cookie · cookie
+HttpOnly+Secure trên dây · cookie gửi lại được ở request sau · boot khớp csrf ·
+ghi thiếu header CSRF bị chặn dù có cookie · tạo cấp tên từ server · **token
+`modified` mang version** (`...830001` cho version 1) · token cũ và token thiếu đều
+417 TimestampMismatchError · lưu đúng token thì token tiến lên · submit · chứng từ
+đã submit không xoá được · metadata đúng tên Frappe · list trả tên field Frappe ·
+CSV có BOM và content-disposition · method chưa làm là 404 · API native không bị che ·
+logout xoá cookie và phiên hết tác dụng ngay.
+
+### LỖI THẬT tìm ra ở đây
+
+`wrangler@4.0.0` được pin **không chạy nổi chính code nó phải deploy**. workerd đi
+kèm nó là `1.20250310.0`, nên nó âm thầm hạ compat date từ `2026-07-23` xuống
+`2025-03-10` và `env.AGGREGATES.getByName` biến thành `is not a function` — mọi lệnh
+ghi 417. Suite Workerd không thấy vì `@cloudflare/vitest-pool-workers` kéo một
+workerd khác, mới hơn (`1.20260710.1`).
+
+Nghĩa là **không có bước này thì Pha 7 sẽ deploy bằng một runtime cũ 16 tháng**. Đã
+nâng lên `wrangler@4.114.0`; cảnh báo hạ compat date biến mất, và toàn bộ gate chạy
+lại xanh sau khi nâng.
+
 ## Đóng gói app — CLI chạy thật
 
 `node scripts/pack-app.mjs <dir> [--out x.json] [--check]`, và app mẫu thật ở
@@ -61,11 +103,11 @@ không thể mục đi mà không ai biết.
 
 | Hạng mục | Trạng thái | Cần gì |
 |---|---|---|
-| Deploy Cloudflare, smoke staging | ☐ chưa | **API token + account Cloudflare của bạn** |
+| Deploy Cloudflare, smoke staging **trên hạ tầng thật** | ☐ chưa | **API token + account Cloudflare của bạn** |
 | Sức khoẻ queue/outbox trên môi trường thật | ☐ chưa | môi trường đã deploy |
 | Test tải, đa tenant trên hạ tầng thật | ☐ chưa | môi trường đã deploy |
 | Diễn tập rollback + khôi phục tenant | ☐ chưa | môi trường đã deploy |
-| E2E với **trình duyệt** thật (FE render) | ☐ chưa | `wrangler dev` + client trỏ vào |
+| E2E với **trình duyệt** thật (MetaForge Desk vẽ màn hình) | ☐ chưa | trình duyệt + client trỏ vào `wrangler dev` |
 | `npm ci` sạch trên Linux | ☐ chưa | repo dùng pnpm; cần CI Linux |
 | Đối chiếu ERPNext oracle v0.8–v1.0 | ☐ chưa | `pnpm run source:fetch` — cần clone Frappe/ERPNext v16 đã khoá SHA |
 | Review pháp lý hoá đơn điện tử / lương | ☐ chưa | không phải việc kỹ thuật |

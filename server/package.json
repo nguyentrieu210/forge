@@ -48,13 +48,15 @@
     "verify:business-suite": "node scripts/verify-business-suite-readiness.mjs",
     "check:business-suite": "npm run test && npm run typecheck:workers && npm run source:test && npm run report && npm run verify && npm run app:check && npm run verify:business-suite",
     "app:pack": "node scripts/pack-app.mjs",
-    "app:check": "node scripts/pack-app.mjs apps-src/visits --check"
+    "app:check": "node scripts/pack-app.mjs apps-src/visits --check",
+    "dev:seed": "node scripts/seed-local.mjs",
+    "smoke:http": "node scripts/http-smoke.mjs"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "0.18.5",
     "typescript": "5.8.3",
     "vitest": "4.1.0",
-    "wrangler": "4.0.0"
+    "wrangler": "4.114.0"
   },
   "engines": {
     "node": ">=22"
