@@ -4,7 +4,7 @@ Mọi dòng dưới đây là **lệnh đã chạy thật** trên máy phát tri
 v24.17.0, Python 3.14.6, pnpm 9.15.0), không phải tự khai. Chỗ nào chưa chạy thì
 ghi rõ là chưa.
 
-Cập nhật: 2026-07-27.
+Cập nhật: 2026-07-27 (sau 7 commit của lộ trình 100% hợp đồng client).
 
 ## Đã chạy — xanh
 
@@ -13,10 +13,10 @@ Cập nhật: 2026-07-27.
 | Cài đặt workspace | `pnpm install` | 399 gói, symlink `@metaforge/*` đúng workspace |
 | Build TS strict (server) | `pnpm --filter cloudforge run build` | exit 0 |
 | Typecheck worker (server) | `pnpm --filter cloudforge run typecheck:workers` | exit 0 |
-| Test Node/domain | `node --test tests/*.test.mjs` | **266/266 PASS** |
+| Test Node/domain | `node --test tests/*.test.mjs` | **336/336 PASS** |
 | **Cổng phát hành tổng hợp** | `pnpm --filter cloudforge run check:business-suite` | **ok:true missing:[] exit 0** |
-| Gate SQL (migration 0001–0015) | `pnpm --filter cloudforge run test:sql` | **6/6 PASS** |
-| **Workerd tenant-worker** | `vitest run --config apps/tenant-worker/vitest.config.mts` | **72/72 PASS** (23 gốc + 49 E2E lớp vỏ) |
+| Gate SQL (migration 0001–0017) | `pnpm --filter cloudforge run test:sql` | **6/6 PASS** |
+| **Workerd tenant-worker** | `vitest run --config apps/tenant-worker/vitest.config.mts` | **79/79 PASS** |
 | **Workerd query-worker** | `vitest run --config apps/query-worker/vitest.config.mts` | **3/3 PASS** |
 | **Web typecheck** | `pnpm --filter @cloudforge/web run typecheck` | exit 0 |
 | **Web Vite production build** | `pnpm --filter @cloudforge/web run build` | exit 0 — 55 module, 238 kB js |
@@ -79,6 +79,56 @@ Phủ **chỉ O2C** (SO/DN/SI/PE, vòng đời, báo cáo, số học, đồng t
 subscription, hoá đơn điện tử, sản xuất, tài sản) **KHÔNG có oracle** — cần dựng
 bench ERPNext thật để capture fixture mới; môi trường hiện tại không có
 bench/MariaDB/Redis.
+
+## Lộ trình "100% hợp đồng client" — bảy commit, mỗi pha deploy + smoke live
+
+Mục tiêu đã chốt: làm đủ mọi cơ chế một client Frappe quan sát được. **Không** chạy app
+Python — điều đó bất khả trên Workers và đã ghi rõ trong [ARCHITECTURE.md](ARCHITECTURE.md).
+
+| Pha | Nội dung | Kiểm chứng |
+|---|---|---|
+| 0 | App Worker không còn nhận `INTERNAL_SERVICE_TOKEN` của nền. Khoá dẫn xuất riêng từng cặp (tenant, app) | test chốt đúng header |
+| 1a | App phơi API method riêng — `<app_id>.*` dispatch đồng bộ **trong** request | 11 test |
+| 1b | App gọi ngược qua `/_app/` với **quyền của chính người dùng đã gọi nó** | 8 test, gồm các ca leo thang |
+| 2 | App **chặn được lệnh ghi** — hook trước commit, nối ở `runCommand` (một điểm nghẽn, phủ 9 chỗ ghi) | 11 test |
+| 3 | **43/43 fieldtype**, mỗi loại có hành vi server thật | 4 + 3 test workerd |
+| 4 | Thuộc tính DocField: giữ tầng trình bày, cưỡng chế 4 thuộc tính có hành vi | 4 + 2 test workerd |
+| 5 | Notification rules · Auto Repeat · Web Form · PDF (từ chối có lý do) | 16 + 11 test, migration 0016–0017 |
+
+### Ba lỗ bảo mật tìm ra trong lúc làm
+
+| Lỗ | Bản chất |
+|---|---|
+| App Worker cầm credential nội bộ của nền | `INTERNAL_SERVICE_TOKEN` xác thực `/internal/*` trên **mọi** tenant và dùng chung toàn nền. Gửi nó cho app là đảo chiều tin cậy: chứng minh "nền đang gọi bạn" đồng thời cấp "bạn gọi được vào nội bộ nền, mọi tenant, với tư cách nền" |
+| `Password` trả về khi đọc | Nay không bao giờ trả, và **không truy vấn được** — `like` trên bí mật moi ra từng ký tự, cùng mức lộ như đọc thẳng |
+| Web Form có thể thành đường vòng quyền | Nay **không có** đường vòng: submission chạy dưới role mà tenant phải cấp bằng DocPerm thường |
+
+### Ranh giới cố ý — không làm, có lý do
+
+- **PDF**: Workers không có trình render PDF. Trả một file *gọi là* PDF mà không phải PDF
+  thì tệ hơn không có — nó đi vào hợp đồng, email, lưu trữ, rồi hỏng ở nơi không ai còn
+  nhớ nó từ đâu ra. `get_html_and_style` trả HTML+CSS để **client** in.
+- **Email**: không có mail transport. Notification rule khai `channel: Email` được nhận và
+  **ghi nhận là đã bỏ qua kèm lý do**, không bao giờ báo đã gửi.
+- **`is_virtual`, `link_filters`, `fetch_if_empty`, `ignore_user_permissions`**: chuyển
+  tiếp tới client, chưa có cơ chế server. Chúng cần máy móc mới chứ không phải một
+  trường — tách ra thay vì làm nửa vời.
+
+### Smoke chạy được trên **cả hai** tenant
+
+`http-smoke.mjs` từng đóng cứng payload theo hình dạng `Field Visit`, nên trỏ vào tenant
+khác cho ra sáu lỗi dây chuyền **trông như lỗi sản phẩm** mà thực ra là một document không
+hợp lệ bị từ chối đúng. Nay nhận `--payload`, `--edit-field`, `--skip-submit`.
+
+`--skip-submit` tồn tại vì một lý do cụ thể: doctype **có workflow không submit thẳng
+được**, và đó là ĐÚNG — server trả `"Workflow action is required to submit from <state>"`,
+state machine là đường duy nhất. Bỏ qua tường minh thay vì nới lỏng cho qua, vì một check
+đã được nới đến mức đâu cũng pass là check không chứng minh gì.
+
+| Tenant | Kết quả |
+|---|---|
+| `demo` (Field Visit) | **HTTP_SMOKE_PASS 26/26** |
+| `hrm` (Leave Application, có workflow) | **HTTP_SMOKE_PASS 24/24** |
 
 ## Trình duyệt thật — MetaForge Desk vẽ trên lớp vỏ
 

@@ -25,6 +25,21 @@ const BASE = argOf("base", "http://127.0.0.1:8799");
 const USER = argOf("user", "dev@example.com");
 const PASSWORD = argOf("password", "local-dev-password-1");
 const DOCTYPE = argOf("doctype", "Field Visit");
+/**
+ * The document this smoke creates, and the text field it edits.
+ *
+ * Parameterised because the payload used to be hard-coded to `Field Visit`'s shape, so
+ * pointing the smoke at any other tenant produced six cascading failures that looked
+ * like product defects and were actually an invalid document being correctly refused.
+ * A multi-tenant platform needs a smoke that runs against whatever the tenant has.
+ *
+ *   --payload '{"employee":"NV-1","leave_type":"Phép năm",…}'  --edit-field reason
+ */
+const EDIT_FIELD = argOf("edit-field", "subject");
+/** See the lifecycle section: a workflow owns docstatus, so a direct submit is refused. */
+const SKIP_SUBMIT = args.includes("--skip-submit");
+const BASE_DOC = JSON.parse(argOf("payload", JSON.stringify({ [EDIT_FIELD]: "HTTP smoke" })));
+const withEdit = (text) => ({ ...BASE_DOC, [EDIT_FIELD]: text });
 
 let cookie = "";
 let csrf = "";
@@ -112,7 +127,7 @@ console.log("\ncsrf");
   const response = await fetch(`${BASE}/api/resource/${encoded}`, {
     method: "POST",
     headers: { "content-type": "application/json", cookie },
-    body: JSON.stringify({ subject: "No CSRF" }),
+    body: JSON.stringify(withEdit("No CSRF")),
   });
   const payload = await response.json().catch(() => null);
   check("a write without the CSRF header is refused even with a valid cookie",
@@ -124,7 +139,7 @@ console.log("\nlifecycle");
 let name = "";
 let modified = "";
 {
-  const created = await call(`/api/resource/${encoded}`, { method: "POST", body: { subject: "HTTP smoke" } });
+  const created = await call(`/api/resource/${encoded}`, { method: "POST", body: BASE_DOC });
   const doc = created.body?.data;
   check("create returns 201 with a server-allocated name", created.status === 201 && Boolean(doc?.name), `${created.status} ${doc?.name}`);
   check("owner and modified_by are the authenticated user", doc?.owner === USER && doc?.modified_by === USER);
@@ -138,35 +153,51 @@ let modified = "";
 
 if (name) {
   const stale = await call(`/api/resource/${encoded}/${encodeURIComponent(name)}`, {
-    method: "PUT", body: { subject: "Stale write", modified: "2020-01-01 00:00:00.000000" },
+    method: "PUT", body: { ...withEdit("Stale write"), modified: "2020-01-01 00:00:00.000000" },
   });
   check("a stale modified token is TimestampMismatchError/417",
     stale.status === 417 && stale.body?.exc_type === "TimestampMismatchError", `${stale.status} ${stale.body?.exc_type}`);
 
   const missing = await call(`/api/resource/${encoded}/${encodeURIComponent(name)}`, {
-    method: "PUT", body: { subject: "No token" },
+    method: "PUT", body: withEdit("No token"),
   });
   check("a missing modified token is refused, not treated as a force-write",
     missing.status === 417 && missing.body?.exc_type === "TimestampMismatchError", `${missing.status}`);
 
   const saved = await call(`/api/resource/${encoded}/${encodeURIComponent(name)}`, {
-    method: "PUT", body: { subject: "Saved over HTTP", modified },
+    method: "PUT", body: { ...withEdit("Saved over HTTP"), modified },
   });
   check("a correct modified token saves and advances the token",
-    saved.status === 200 && saved.body?.data?.subject === "Saved over HTTP" && saved.body?.data?.modified !== modified,
+    saved.status === 200 && saved.body?.data?.[EDIT_FIELD] === "Saved over HTTP" && saved.body?.data?.modified !== modified,
     `${saved.status}`);
   modified = saved.body?.data?.modified ?? modified;
 
-  const submitted = await call("/api/method/frappe.client.submit", {
-    method: "POST", body: { doc: { doctype: DOCTYPE, name, modified } },
-  });
-  check("submit moves the document to docstatus 1", submitted.status === 200 && unwrap(submitted)?.docstatus === 1,
-    `${submitted.status} docstatus=${unwrap(submitted)?.docstatus}`);
-  modified = unwrap(submitted)?.modified ?? modified;
+  /**
+   * A workflow-governed doctype does not submit directly, and that is CORRECT.
+   *
+   * When a workflow owns `docstatus`, the server answers a direct submit with
+   * "Workflow action is required to submit from <state>" — the state machine is the
+   * only way to move, exactly as in Frappe. Running these two checks against such a
+   * doctype produced three cascading failures that looked like defects and were the
+   * platform behaving properly.
+   *
+   * So they are skipped explicitly rather than made to pass, because a check that has
+   * been loosened until it passes everywhere is a check that proves nothing.
+   */
+  if (SKIP_SUBMIT) {
+    console.log("  skip submit/delete — this doctype's docstatus is governed by a workflow");
+  } else {
+    const submitted = await call("/api/method/frappe.client.submit", {
+      method: "POST", body: { doc: { doctype: DOCTYPE, name, modified } },
+    });
+    check("submit moves the document to docstatus 1", submitted.status === 200 && unwrap(submitted)?.docstatus === 1,
+      `${submitted.status} docstatus=${unwrap(submitted)?.docstatus}`);
+    modified = unwrap(submitted)?.modified ?? modified;
 
-  const deleted = await call(`/api/resource/${encoded}/${encodeURIComponent(name)}`, { method: "DELETE" });
-  check("a submitted document cannot be deleted", deleted.status === 417 && /submitted document cannot be deleted/i.test(String(deleted.body?.message)),
-    `${deleted.status}`);
+    const deleted = await call(`/api/resource/${encoded}/${encodeURIComponent(name)}`, { method: "DELETE" });
+    check("a submitted document cannot be deleted", deleted.status === 417 && /submitted document cannot be deleted/i.test(String(deleted.body?.message)),
+      `${deleted.status}`);
+  }
 }
 
 // ---- reads ------------------------------------------------------------------
@@ -194,11 +225,11 @@ console.log("\nreads");
     doc && doc.issingle === 0 && doc.fields.some((field) => field.reqd === 1 || field.reqd === 0),
     `found=${Boolean(doc)}`);
 
-  const list = unwrap(await call(`/api/method/frappe.client.get_list?doctype=${encoded}&fields=%5B%22name%22%2C%22subject%22%5D`));
+  const list = unwrap(await call(`/api/method/frappe.client.get_list?doctype=${encoded}&fields=${encodeURIComponent(JSON.stringify(["name", EDIT_FIELD]))}`));
   check("list returns rows with frappe field names", Array.isArray(list) && list.length > 0 && !("modified_at" in (list[0] ?? {})),
     `rows=${Array.isArray(list) ? list.length : "n/a"}`);
 
-  const csvResponse = await fetch(`${BASE}/api/method/frappe.desk.reportview.export_query?doctype=${encoded}&fields=%5B%22name%22%2C%22subject%22%5D`, {
+  const csvResponse = await fetch(`${BASE}/api/method/frappe.desk.reportview.export_query?doctype=${encoded}&fields=${encodeURIComponent(JSON.stringify(["name", EDIT_FIELD]))}`, {
     headers: { cookie },
   });
   const bytes = new Uint8Array(await csvResponse.arrayBuffer());
