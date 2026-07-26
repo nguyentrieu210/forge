@@ -15,6 +15,7 @@ for migration in [
     root / "migrations/tenant/0007_erpnext_core.sql",
     root / "migrations/tenant/0008_erpnext_breadth.sql",
     root / "migrations/tenant/0009_business_suite.sql",
+    root / "migrations/tenant/0010_frappe_compat.sql",
 ]:
     connection.executescript(migration.read_text())
 
@@ -25,7 +26,7 @@ connection.execute(
     ("demo", "create-1", "Sales Order:SO-1", None, "create", HASH, "2026-07-23"),
 )
 connection.execute(
-    "INSERT INTO documents VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+    "INSERT INTO documents(tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,payload_json) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
     ("demo", "Sales Order:SO-1", "Sales Order", "SO-1", "Administrator", 0, "Draft", 1, "2026-07-23", "2026-07-23", "{}"),
 )
 connection.execute(
@@ -70,7 +71,7 @@ assert connection.execute("SELECT COUNT(*) FROM mutation_guard").fetchone()[0] =
 
 # Database-level cross-aggregate constraints.
 connection.execute(
-    "INSERT INTO documents VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+    "INSERT INTO documents(tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,payload_json) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
     ("demo", "Sales Order:SO-LIMIT", "Sales Order", "SO-LIMIT", "Administrator", 1, "To Deliver and Bill", 2, "2026-07-23", "2026-07-23", '{"grand_total_minor":10000}'),
 )
 connection.execute(
@@ -91,7 +92,7 @@ except sqlite3.DatabaseError as error:
     assert "REFERENCE_QUANTITY_EXCEEDED" in str(error)
 
 connection.execute(
-    "INSERT INTO documents VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+    "INSERT INTO documents(tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,payload_json) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
     ("demo", "Sales Invoice:SI-LIMIT", "Sales Invoice", "SI-LIMIT", "Administrator", 1, "Submitted", 2, "2026-07-23", "2026-07-23", '{"grand_total_minor":10000}'),
 )
 connection.execute(
@@ -163,7 +164,7 @@ assert connection.execute("SELECT COUNT(*) FROM doctype_definitions WHERE tenant
 
 # Procurement progress is guarded at commit time, like O2C fulfillment.
 connection.execute(
-    "INSERT INTO documents VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+    "INSERT INTO documents(tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,payload_json) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
     ("demo", "Purchase Order:PO-LIMIT", "Purchase Order", "PO-LIMIT", "Administrator", 1, "To Receive and Bill", 2, "2026-07-23", "2026-07-23", '{"grand_total_minor":10000}'),
 )
 connection.execute(
@@ -185,7 +186,7 @@ except sqlite3.DatabaseError as error:
 
 # Payable transaction/base outstanding are independently guarded.
 connection.execute(
-    "INSERT INTO documents VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+    "INSERT INTO documents(tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,payload_json) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
     ("demo", "Purchase Invoice:PI-LIMIT", "Purchase Invoice", "PI-LIMIT", "Administrator", 1, "Unpaid", 2, "2026-07-23", "2026-07-23", '{"grand_total_minor":10000}'),
 )
 connection.execute(
@@ -223,7 +224,7 @@ for view in ["batch_stock_balance", "serial_stock_state", "asset_depreciation_ba
     assert connection.execute("SELECT 1 FROM sqlite_master WHERE type='view' AND name=?", (view,)).fetchone(), view
 
 # A Serial/Batch Bundle is single-use while active, but cancellation releases it for deterministic reuse.
-connection.execute("INSERT INTO documents VALUES(?,?,?,?,?,?,?,?,?,?,?)", ("demo","Serial and Batch Bundle:BUNDLE-SQL","Serial and Batch Bundle","BUNDLE-SQL","Administrator",1,"Submitted",2,"2026-07-25","2026-07-25",'{"item_code":"SERIAL-ITEM","warehouse":"Stores","type":"Inward"}'))
+connection.execute("INSERT INTO documents(tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,payload_json) VALUES(?,?,?,?,?,?,?,?,?,?,?)", ("demo","Serial and Batch Bundle:BUNDLE-SQL","Serial and Batch Bundle","BUNDLE-SQL","Administrator",1,"Submitted",2,"2026-07-25","2026-07-25",'{"item_code":"SERIAL-ITEM","warehouse":"Stores","type":"Inward"}'))
 connection.execute("INSERT INTO stock_bundle_usage_entries VALUES(?,?,?,?,?,?,?,?,?,?,?)", ("demo","Stock Entry","STE-BUNDLE-1",2,"USE","BUNDLE-SQL","SERIAL-ITEM","Stores","Inward",1,"2026-07-25"))
 try:
     connection.execute("INSERT INTO stock_bundle_usage_entries VALUES(?,?,?,?,?,?,?,?,?,?,?)", ("demo","Stock Entry","STE-BUNDLE-2",2,"USE","BUNDLE-SQL","SERIAL-ITEM","Stores","Inward",1,"2026-07-25"))
@@ -263,7 +264,7 @@ try:
 except sqlite3.DatabaseError as error:
     assert "BATCH_NEGATIVE_STOCK" in str(error)
 
-connection.execute("INSERT INTO documents VALUES(?,?,?,?,?,?,?,?,?,?,?)", ("demo","Sales Invoice:SI-RETURN","Sales Invoice","SI-RETURN","Administrator",1,"Unpaid",2,"2026-07-25","2026-07-25",'{"grand_total_minor":10000}'))
+connection.execute("INSERT INTO documents(tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,payload_json) VALUES(?,?,?,?,?,?,?,?,?,?,?)", ("demo","Sales Invoice:SI-RETURN","Sales Invoice","SI-RETURN","Administrator",1,"Unpaid",2,"2026-07-25","2026-07-25",'{"grand_total_minor":10000}'))
 connection.execute("INSERT INTO document_children VALUES(?,?,?,?,?,?,?)", ("demo","Sales Invoice:SI-RETURN","items","Sales Invoice Item","1",1,'{"item_code":"ITEM-R","qty_micros":10000000}'))
 connection.execute("INSERT INTO return_progress_entries VALUES(?,?,?,?,?,?,?,?,?,?,?)", ("demo","Credit Note","CN-1",2,"1","Sales Invoice","SI-RETURN","Sales Credit","ITEM-R",6000000,"2026-07-25"))
 try:
@@ -272,7 +273,7 @@ try:
 except sqlite3.DatabaseError as error:
     assert "RETURN_QUANTITY_EXCEEDED" in str(error)
 
-connection.execute("INSERT INTO documents VALUES(?,?,?,?,?,?,?,?,?,?,?)", ("demo","Work Order:WO-1","Work Order","WO-1","Administrator",1,"Not Started",2,"2026-07-25","2026-07-25",'{"qty_micros":5000000}'))
+connection.execute("INSERT INTO documents(tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,payload_json) VALUES(?,?,?,?,?,?,?,?,?,?,?)", ("demo","Work Order:WO-1","Work Order","WO-1","Administrator",1,"Not Started",2,"2026-07-25","2026-07-25",'{"qty_micros":5000000}'))
 connection.execute("INSERT INTO document_children VALUES(?,?,?,?,?,?,?)", ("demo","Work Order:WO-1","required_items","Work Order Required Item","1",1,'{"item_code":"RAW","required_qty_micros":10000000}'))
 try:
     connection.execute("INSERT INTO manufacturing_progress_entries VALUES(?,?,?,?,?,?,?,?,?,?)", ("demo","Stock Entry","MFG-OVER",2,"1","WO-1","Manufacture","FG",6000000,"2026-07-25"))
@@ -280,7 +281,7 @@ try:
 except sqlite3.DatabaseError as error:
     assert "WORK_ORDER_OVER_PRODUCTION" in str(error)
 
-connection.execute("INSERT INTO documents VALUES(?,?,?,?,?,?,?,?,?,?,?)", ("demo","Asset:A-1","Asset","A-1","Administrator",1,"Active",2,"2026-07-25","2026-07-25",'{"gross_purchase_amount_minor":100000,"salvage_value_minor":10000}'))
+connection.execute("INSERT INTO documents(tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,payload_json) VALUES(?,?,?,?,?,?,?,?,?,?,?)", ("demo","Asset:A-1","Asset","A-1","Administrator",1,"Active",2,"2026-07-25","2026-07-25",'{"gross_purchase_amount_minor":100000,"salvage_value_minor":10000}'))
 connection.execute("INSERT INTO asset_depreciation_entries VALUES(?,?,?,?,?,?,?,?,?,?)", ("demo","Asset Depreciation Entry","DEP-1",2,"1","A-1",90000,"USD",2,"2026-07-25"))
 try:
     connection.execute("INSERT INTO asset_depreciation_entries VALUES(?,?,?,?,?,?,?,?,?,?)", ("demo","Asset Depreciation Entry","DEP-2",2,"1","A-1",1,"USD",2,"2026-07-25"))
@@ -289,22 +290,22 @@ except sqlite3.DatabaseError as error:
     assert "ASSET_DEPRECIATION_EXCEEDED" in str(error)
 
 # Job Card completion and POS session state are protected at commit time.
-connection.execute("INSERT INTO documents VALUES(?,?,?,?,?,?,?,?,?,?,?)", ("demo","Work Order:WO-JC","Work Order","WO-JC","Administrator",1,"In Process",2,"2026-07-25","2026-07-25",'{"qty_micros":5000000}'))
-connection.execute("INSERT INTO documents VALUES(?,?,?,?,?,?,?,?,?,?,?)", ("demo","Job Card:JC-SQL-1","Job Card","JC-SQL-1","Administrator",1,"Completed",2,"2026-07-25","2026-07-25",'{"work_order":"WO-JC","completed_qty_micros":3000000}'))
+connection.execute("INSERT INTO documents(tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,payload_json) VALUES(?,?,?,?,?,?,?,?,?,?,?)", ("demo","Work Order:WO-JC","Work Order","WO-JC","Administrator",1,"In Process",2,"2026-07-25","2026-07-25",'{"qty_micros":5000000}'))
+connection.execute("INSERT INTO documents(tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,payload_json) VALUES(?,?,?,?,?,?,?,?,?,?,?)", ("demo","Job Card:JC-SQL-1","Job Card","JC-SQL-1","Administrator",1,"Completed",2,"2026-07-25","2026-07-25",'{"work_order":"WO-JC","completed_qty_micros":3000000}'))
 try:
-    connection.execute("INSERT INTO documents VALUES(?,?,?,?,?,?,?,?,?,?,?)", ("demo","Job Card:JC-SQL-2","Job Card","JC-SQL-2","Administrator",1,"Completed",2,"2026-07-25","2026-07-25",'{"work_order":"WO-JC","completed_qty_micros":3000000}'))
+    connection.execute("INSERT INTO documents(tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,payload_json) VALUES(?,?,?,?,?,?,?,?,?,?,?)", ("demo","Job Card:JC-SQL-2","Job Card","JC-SQL-2","Administrator",1,"Completed",2,"2026-07-25","2026-07-25",'{"work_order":"WO-JC","completed_qty_micros":3000000}'))
     raise AssertionError("job card cumulative completion guard did not abort")
 except sqlite3.DatabaseError as error:
     assert "JOB_CARD_OVER_COMPLETION" in str(error)
 
-connection.execute("INSERT INTO documents VALUES(?,?,?,?,?,?,?,?,?,?,?)", ("demo","POS Opening Entry:POS-OPEN-SQL-1","POS Opening Entry","POS-OPEN-SQL-1","Administrator",1,"Open",2,"2026-07-25","2026-07-25",'{"pos_profile":"MAIN"}'))
+connection.execute("INSERT INTO documents(tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,payload_json) VALUES(?,?,?,?,?,?,?,?,?,?,?)", ("demo","POS Opening Entry:POS-OPEN-SQL-1","POS Opening Entry","POS-OPEN-SQL-1","Administrator",1,"Open",2,"2026-07-25","2026-07-25",'{"pos_profile":"MAIN"}'))
 try:
-    connection.execute("INSERT INTO documents VALUES(?,?,?,?,?,?,?,?,?,?,?)", ("demo","POS Opening Entry:POS-OPEN-SQL-2","POS Opening Entry","POS-OPEN-SQL-2","Administrator",1,"Open",2,"2026-07-25","2026-07-25",'{"pos_profile":"MAIN"}'))
+    connection.execute("INSERT INTO documents(tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,payload_json) VALUES(?,?,?,?,?,?,?,?,?,?,?)", ("demo","POS Opening Entry:POS-OPEN-SQL-2","POS Opening Entry","POS-OPEN-SQL-2","Administrator",1,"Open",2,"2026-07-25","2026-07-25",'{"pos_profile":"MAIN"}'))
     raise AssertionError("POS open-session uniqueness guard did not abort")
 except sqlite3.DatabaseError as error:
     assert "POS_PROFILE_ALREADY_OPEN" in str(error)
-connection.execute("INSERT INTO documents VALUES(?,?,?,?,?,?,?,?,?,?,?)", ("demo","POS Closing Entry:POS-CLOSE-SQL-1","POS Closing Entry","POS-CLOSE-SQL-1","Administrator",1,"Closed",2,"2026-07-25","2026-07-25",'{"opening_entry":"POS-OPEN-SQL-1"}'))
-connection.execute("INSERT INTO documents VALUES(?,?,?,?,?,?,?,?,?,?,?)", ("demo","POS Opening Entry:POS-OPEN-SQL-2","POS Opening Entry","POS-OPEN-SQL-2","Administrator",1,"Open",2,"2026-07-25","2026-07-25",'{"pos_profile":"MAIN"}'))
+connection.execute("INSERT INTO documents(tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,payload_json) VALUES(?,?,?,?,?,?,?,?,?,?,?)", ("demo","POS Closing Entry:POS-CLOSE-SQL-1","POS Closing Entry","POS-CLOSE-SQL-1","Administrator",1,"Closed",2,"2026-07-25","2026-07-25",'{"opening_entry":"POS-OPEN-SQL-1"}'))
+connection.execute("INSERT INTO documents(tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,payload_json) VALUES(?,?,?,?,?,?,?,?,?,?,?)", ("demo","POS Opening Entry:POS-OPEN-SQL-2","POS Opening Entry","POS-OPEN-SQL-2","Administrator",1,"Open",2,"2026-07-25","2026-07-25",'{"pos_profile":"MAIN"}'))
 
 # v0.9 breadth invariants.
 connection.execute("INSERT INTO asset_lifecycle_entries VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)", ("demo","Asset Disposal","AD-1",2,"DISPOSAL","ASSET-1","Disposal","2026-07-25",None,None,100,"USD",2))
@@ -322,7 +323,7 @@ except sqlite3.DatabaseError as error:
 
 
 # v1.0 business-suite database invariants.
-connection.execute("INSERT INTO documents VALUES(?,?,?,?,?,?,?,?,?,?,?)", ("demo","Bank Transaction:BT-SQL","Bank Transaction","BT-SQL","Administrator",1,"Unreconciled",2,"2026-07-26","2026-07-26",'{"amount_minor":10000,"currency":"USD"}'))
+connection.execute("INSERT INTO documents(tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,payload_json) VALUES(?,?,?,?,?,?,?,?,?,?,?)", ("demo","Bank Transaction:BT-SQL","Bank Transaction","BT-SQL","Administrator",1,"Unreconciled",2,"2026-07-26","2026-07-26",'{"amount_minor":10000,"currency":"USD"}'))
 connection.execute("INSERT INTO bank_reconciliation_entries VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)", ("demo","Bank Reconciliation","BREC-SQL-1",2,"1","MAIN-BANK","BT-SQL","Payment Entry","PE-1",6000,"USD",2,"2026-07-26"))
 try:
     connection.execute("INSERT INTO bank_reconciliation_entries VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)", ("demo","Bank Reconciliation","BREC-SQL-2",2,"1","MAIN-BANK","BT-SQL","Payment Entry","PE-2",5000,"USD",2,"2026-07-26"))
@@ -336,20 +337,20 @@ try:
 except sqlite3.DatabaseError as error:
     assert "BANK_RECONCILIATION_NEGATIVE" in str(error)
 
-connection.execute("INSERT INTO documents VALUES(?,?,?,?,?,?,?,?,?,?,?)", ("demo","Salary Slip:SS-SQL","Salary Slip","SS-SQL","Administrator",1,"Unpaid",2,"2026-07-26","2026-07-26",'{"employee":"EMP-1","net_pay_minor":10000}'))
-connection.execute("INSERT INTO documents VALUES(?,?,?,?,?,?,?,?,?,?,?)", ("demo","Payroll Entry:PAY-SQL-1","Payroll Entry","PAY-SQL-1","Administrator",1,"Submitted",2,"2026-07-26","2026-07-26",'{}'))
+connection.execute("INSERT INTO documents(tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,payload_json) VALUES(?,?,?,?,?,?,?,?,?,?,?)", ("demo","Salary Slip:SS-SQL","Salary Slip","SS-SQL","Administrator",1,"Unpaid",2,"2026-07-26","2026-07-26",'{"employee":"EMP-1","net_pay_minor":10000}'))
+connection.execute("INSERT INTO documents(tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,payload_json) VALUES(?,?,?,?,?,?,?,?,?,?,?)", ("demo","Payroll Entry:PAY-SQL-1","Payroll Entry","PAY-SQL-1","Administrator",1,"Submitted",2,"2026-07-26","2026-07-26",'{}'))
 connection.execute("INSERT INTO document_children VALUES(?,?,?,?,?,?,?)", ("demo","Payroll Entry:PAY-SQL-1","salary_slips","Payroll Entry Salary Slip","1",1,'{"salary_slip":"SS-SQL"}'))
-connection.execute("INSERT INTO documents VALUES(?,?,?,?,?,?,?,?,?,?,?)", ("demo","Payroll Entry:PAY-SQL-2","Payroll Entry","PAY-SQL-2","Administrator",1,"Submitted",2,"2026-07-26","2026-07-26",'{}'))
+connection.execute("INSERT INTO documents(tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,payload_json) VALUES(?,?,?,?,?,?,?,?,?,?,?)", ("demo","Payroll Entry:PAY-SQL-2","Payroll Entry","PAY-SQL-2","Administrator",1,"Submitted",2,"2026-07-26","2026-07-26",'{}'))
 try:
     connection.execute("INSERT INTO document_children VALUES(?,?,?,?,?,?,?)", ("demo","Payroll Entry:PAY-SQL-2","salary_slips","Payroll Entry Salary Slip","1",1,'{"salary_slip":"SS-SQL"}'))
     raise AssertionError("salary slip payroll uniqueness guard did not abort")
 except sqlite3.DatabaseError as error:
     assert "SALARY_SLIP_ALREADY_IN_PAYROLL" in str(error)
 
-connection.execute("INSERT INTO documents VALUES(?,?,?,?,?,?,?,?,?,?,?)", ("demo","Sales Invoice:SI-EINV","Sales Invoice","SI-EINV","Administrator",1,"Unpaid",2,"2026-07-26","2026-07-26",'{"company":"Demo"}'))
-connection.execute("INSERT INTO documents VALUES(?,?,?,?,?,?,?,?,?,?,?)", ("demo","E-Invoice Submission:EINV-SQL-1","E-Invoice Submission","EINV-SQL-1","Administrator",1,"Queued",2,"2026-07-26","2026-07-26",'{"source_doctype":"Sales Invoice","source_name":"SI-EINV"}'))
+connection.execute("INSERT INTO documents(tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,payload_json) VALUES(?,?,?,?,?,?,?,?,?,?,?)", ("demo","Sales Invoice:SI-EINV","Sales Invoice","SI-EINV","Administrator",1,"Unpaid",2,"2026-07-26","2026-07-26",'{"company":"Demo"}'))
+connection.execute("INSERT INTO documents(tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,payload_json) VALUES(?,?,?,?,?,?,?,?,?,?,?)", ("demo","E-Invoice Submission:EINV-SQL-1","E-Invoice Submission","EINV-SQL-1","Administrator",1,"Queued",2,"2026-07-26","2026-07-26",'{"source_doctype":"Sales Invoice","source_name":"SI-EINV"}'))
 try:
-    connection.execute("INSERT INTO documents VALUES(?,?,?,?,?,?,?,?,?,?,?)", ("demo","E-Invoice Submission:EINV-SQL-2","E-Invoice Submission","EINV-SQL-2","Administrator",1,"Queued",2,"2026-07-26","2026-07-26",'{"source_doctype":"Sales Invoice","source_name":"SI-EINV"}'))
+    connection.execute("INSERT INTO documents(tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,payload_json) VALUES(?,?,?,?,?,?,?,?,?,?,?)", ("demo","E-Invoice Submission:EINV-SQL-2","E-Invoice Submission","EINV-SQL-2","Administrator",1,"Queued",2,"2026-07-26","2026-07-26",'{"source_doctype":"Sales Invoice","source_name":"SI-EINV"}'))
     raise AssertionError("e-invoice uniqueness guard did not abort")
 except sqlite3.DatabaseError as error:
     assert "E_INVOICE_ALREADY_SUBMITTED" in str(error)

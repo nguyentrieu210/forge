@@ -24,7 +24,7 @@ with tempfile.TemporaryDirectory() as directory:
     ]:
         connection.executescript(migration.read_text())
     connection.execute(
-        "INSERT INTO documents VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+        "INSERT INTO documents(tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,payload_json) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
         ("demo", "Sales Order:SO-RACE", "Sales Order", "SO-RACE", "Administrator", 0, "Draft", 1, "2026-07-23", "2026-07-23", "{}"),
     )
     connection.commit()
@@ -91,7 +91,7 @@ with tempfile.TemporaryDirectory() as directory:
     # Cross-aggregate fulfillment race: distinct Delivery Notes may both pass an
     # application precheck, but only one 6/10 quantity reservation may commit.
     db.execute(
-        "INSERT INTO documents VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+        "INSERT INTO documents(tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,payload_json) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
         ("demo", "Sales Order:SO-FULFILL", "Sales Order", "SO-FULFILL", "Administrator", 1, "To Deliver and Bill", 2, "2026-07-23", "2026-07-23", '{"grand_total_minor":10000}'),
     )
     db.execute(
@@ -125,7 +125,7 @@ with tempfile.TemporaryDirectory() as directory:
 
     # Cross-aggregate payment race: only one 60/100 allocation may commit.
     db.execute(
-        "INSERT INTO documents VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+        "INSERT INTO documents(tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,payload_json) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
         ("demo", "Sales Invoice:SI-PAY-RACE", "Sales Invoice", "SI-PAY-RACE", "Administrator", 1, "Submitted", 2, "2026-07-23", "2026-07-23", '{"grand_total_minor":10000}'),
     )
     db.execute(
@@ -165,7 +165,7 @@ with tempfile.TemporaryDirectory() as directory:
     # Cross-aggregate base-currency race: transaction outstanding may still be
     # non-negative while rounded company-currency allocations would over-clear.
     db.execute(
-        "INSERT INTO documents VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+        "INSERT INTO documents(tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,payload_json) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
         ("demo", "Sales Invoice:SI-BASE-RACE", "Sales Invoice", "SI-BASE-RACE", "Administrator", 1, "Submitted", 2, "2026-07-23", "2026-07-23", '{"grand_total_minor":100,"base_grand_total_minor":125}'),
     )
     db.execute(

@@ -15,7 +15,7 @@ for number, name in [
 
 # Preserve representative existing documents and metadata while introducing v1.0 breadth.
 db.execute(
-    "INSERT INTO documents VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+    "INSERT INTO documents(tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,payload_json) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
     ("demo", "Sales Invoice:SI-MIG", "Sales Invoice", "SI-MIG", "Administrator", 1, "Unpaid", 2,
      "2026-07-01", "2026-07-01", '{"company":"Demo","grand_total_minor":10000}'),
 )
