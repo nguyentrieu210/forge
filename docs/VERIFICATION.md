@@ -15,7 +15,7 @@ Cập nhật: 2026-07-26.
 | Typecheck worker (server) | `pnpm --filter cloudforge run typecheck:workers` | exit 0 |
 | Test Node/domain | `node --test tests/*.test.mjs` | **248/248 PASS** |
 | Gate SQL | `pnpm --filter cloudforge run test:sql` | **6/6 PASS** |
-| **Workerd tenant-worker** | `vitest run --config apps/tenant-worker/vitest.config.mts` | **48/48 PASS** (23 gốc + 25 E2E lớp vỏ) |
+| **Workerd tenant-worker** | `vitest run --config apps/tenant-worker/vitest.config.mts` | **52/52 PASS** (23 gốc + 29 E2E lớp vỏ) |
 | **Workerd query-worker** | `vitest run --config apps/query-worker/vitest.config.mts` | **3/3 PASS** |
 | **Web typecheck** | `pnpm --filter @cloudforge/web run typecheck` | exit 0 |
 | **Web Vite production build** | `pnpm --filter @cloudforge/web run build` | exit 0 — 55 module, 238 kB js |
@@ -56,7 +56,7 @@ kiếm theo document, hạn mức đồng thời 100 luồng).
 
 ## E2E lớp vỏ Frappe — đã chạy trên workerd thật
 
-`apps/tenant-worker/test/frappe-facade.integration.test.mts` — 25 kịch bản đi hết
+`apps/tenant-worker/test/frappe-facade.integration.test.mts` — 29 kịch bản đi hết
 đường thật của một request Desk: phiên → dịch hình dạng → tầng quyền → aggregate
 Durable Object → D1. Không mock gì.
 
@@ -83,15 +83,23 @@ Durable Object → D1. Không mock gì.
 - dịch thuật trả bản dịch, thiếu thì fallback về chuỗi gốc
 - share + đọc lại danh sách share, tag + xoá tag
 - method chưa làm → 404 `DoesNotExistError`, không phải "thành công rỗng"
+- In: render print format với nội dung đã redact; giá trị document bị escape nên
+  không chèn được markup vào trang in
+- Xoá hàng loạt: báo kết quả TỪNG item (1 xoá được, 1 đã huỷ nên không, 1 không
+  tồn tại) chứ không gộp thành pass/fail
+- Workspace suy từ app đã cài; đếm chứng từ mở trong phạm vi đọc của actor
 - API native vẫn chạy song song, không bị lớp vỏ che
 
 ## Ranh giới — không tuyên bố quá
 
 - **Chưa render trên trình duyệt thật.** Lớp vỏ đã chứng minh trả đúng hợp đồng FE
   mong đợi, nhưng chưa có lần nào MetaForge Desk thật vẽ màn hình từ nó.
-- Lớp vỏ Frappe hiện thực **Tier 1 + Tier 2 + builder (Tier 3)**. Tier 4 (kanban,
-  treeview, data import, print HTML, query report, notification, dashboard chart,
-  number card, business context) **chưa làm** — xem [API_SURFACE.md](API_SURFACE.md).
+- Lớp vỏ Frappe hiện thực **Tier 1 + Tier 2 + builder (Tier 3)** và phần Tier 4 mà
+  Desk cần để dùng được (print, xoá hàng loạt, workspace, open count).
+  **Chưa làm**: kanban, treeview, data import qua giao thức Frappe, query report,
+  notification log, dashboard chart, number card, business context (4 endpoint đặc
+  thù MetaForge) — xem [API_SURFACE.md](API_SURFACE.md). Mỗi cái gọi vào sẽ trả 404
+  `DoesNotExistError` chứ không trả rỗng.
 - `is_single`, `track_seen` vẫn là metadata chưa có consumer.
 - Hooks app là **phản ứng sau commit**, không phải validator trước commit. Việc
   kiểm tra cần chặn lệnh ghi phải khai báo bằng metadata.

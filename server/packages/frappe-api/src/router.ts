@@ -27,7 +27,8 @@ import {
   childDocTypeNames, maskedFieldNames, tableFieldNames, toFrappeDocType, toFrappeMetaBundle, toFrappeWorkflow,
 } from "./meta-shape.js";
 import {
-  mergeCustomizations, parseCustomField, parseDocTypeMeta, parsePropertySetter, resolveAutoname, validateWorkflow,
+  mergeCustomizations, parseCustomField, parseDocTypeMeta, parsePropertySetter, renderPrintFormat,
+  resolveAutoname, validateWorkflow,
 } from "../../frappe-model/src/index.js";
 import type { CustomFieldRecord, CustomizationStore, D1SearchStore, PropertySetterRecord } from "../../frappe-model/src/index.js";
 import type { D1UserStore } from "../../auth/src/index.js";
@@ -629,6 +630,22 @@ async function dispatchMethod(
 
     case "frappe.core.doctype.user.user.update_password":
       return methodResponse(await updatePassword(args, context));
+
+    // ---- printing, bulk actions, workspaces --------------------------------
+    case "frappe.www.printview.get_html_and_style":
+      return methodResponse(await printView(args, context));
+
+    case "frappe.desk.reportview.delete_items":
+      return methodResponse(await bulkDelete(args, context));
+
+    case "frappe.desk.desktop.get_workspaces":
+      return methodResponse(await workspaces(context));
+
+    case "frappe.desk.desktop.get_desktop_page":
+      return methodResponse(await desktopPage(args, context));
+
+    case "frappe.desk.notifications.get_open_count":
+      return methodResponse(await openCount(args, context));
 
     case "frappe.desk.search.search_link":
       return methodResponse(await searchLink(args, context));
@@ -1233,6 +1250,120 @@ async function updatePassword(args: FrappeArgs, context: FrappeRouterContext): P
   // working after the owner rotated their credential.
   const epoch = await context.users.bumpSessionEpoch(context.tenantId, targetUser, now);
   return { user: targetUser, session_epoch: epoch, reauthenticate_required: true };
+}
+
+// ---- printing, bulk actions, workspaces -------------------------------------
+
+/**
+ * Renders a print format.
+ *
+ * The document is redacted by the permission layer before rendering, so a field
+ * the actor may not read cannot appear in a printout — a printed page is the
+ * easiest place for a leak to escape the system entirely.
+ */
+async function printView(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const doctype = args.requireText("doctype", 160);
+  const name = args.requireText("name", 320);
+  const document = await context.documents.getDocument(context.tenantId, doctype, name);
+  if (!document) throw errors.notFound();
+  await context.permissions.assert({
+    actor: context.actor, tenantId: context.tenantId, doctype, name,
+    owner: document.owner, data: document.data, action: "print",
+  });
+
+  const meta = await requireMeta(doctype, context);
+  const share = await context.access.getShare(context.tenantId, doctype, name, context.actor.user_id);
+  const printable = context.permissions.redactDocument(meta, document, context.actor, Boolean(share?.read));
+  const format = await context.metadata.getPrintFormat(context.tenantId, doctype, args.text("format"));
+  if (!format) throw errors.notFound("No print format is configured for this doctype");
+
+  // HTML is returned as a string for the client to sandbox, matching Frappe. The
+  // renderer escapes every interpolated value, so document content cannot inject
+  // markup into the page.
+  return { html: renderPrintFormat(format, printable, context.actor.locale), style: format.css ?? "" };
+}
+
+/**
+ * Deletes several documents.
+ *
+ * Each is deleted through the same guarded path as a single delete, and the
+ * outcome is reported per item rather than as one pass/fail — a partial result is
+ * the truth, and collapsing it would leave the caller unsure what happened.
+ */
+async function bulkDelete(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const doctype = args.requireText("doctype", 160);
+  const names = args.array<string>("items") ?? [];
+  if (!names.length) throw errors.validation("items is required");
+  if (names.length > 100) throw errors.validation("At most 100 documents may be deleted at once");
+
+  const results: JsonObject[] = [];
+  for (const raw of names) {
+    const name = String(raw);
+    try {
+      await loadWritable(doctype, name, context);
+      results.push({ name, deleted: await context.documents.deleteDraftDocument(context.tenantId, doctype, name) });
+    } catch (error) {
+      results.push({ name, deleted: false, error: error instanceof Error ? error.message : "Delete failed" });
+    }
+  }
+  return { results, deleted: results.filter((entry) => entry.deleted).length, failed: results.filter((entry) => !entry.deleted).length };
+}
+
+/**
+ * Workspaces, derived from installed apps rather than stored separately.
+ *
+ * A separate workspace table would drift from the apps that own the screens; here
+ * uninstalling an app removes its workspace by construction.
+ */
+async function workspaces(context: FrappeRouterContext): Promise<JsonObject> {
+  const catalog = await applicationCatalog(context);
+  const nav = Array.isArray(catalog.nav) ? catalog.nav as JsonObject[] : [];
+  const pages: JsonObject[] = [];
+  const seen = new Set<string>();
+  for (const item of nav) {
+    const group = typeof item.group === "string" && item.group ? item.group : String(item.app_id ?? "App");
+    if (seen.has(group)) continue;
+    seen.add(group);
+    pages.push({ name: group, title: group, label: group, public: 1 });
+  }
+  return { pages, has_access: true };
+}
+
+async function desktopPage(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const page = args.text("page") ?? args.text("name") ?? "";
+  const catalog = await applicationCatalog(context);
+  const nav = (Array.isArray(catalog.nav) ? catalog.nav as JsonObject[] : [])
+    .filter((item) => !page || String(item.group ?? item.app_id ?? "") === page);
+  return {
+    // Frappe's shortcut/card shape, filled from app navigation.
+    shortcuts: { items: nav.map((item) => ({ label: item.label, type: item.kind === "doctype" ? "DocType" : "Page", link_to: item.key, doc_view: "List" })) },
+    cards: { items: [] },
+    charts: { items: [] },
+    number_cards: { items: [] },
+  };
+}
+
+/**
+ * Open-document counts for the sidebar badges.
+ *
+ * Counted through the list service, so the number respects the actor's read scope
+ * — a badge showing documents the user cannot open would be worse than no badge.
+ */
+async function openCount(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const doctype = args.text("doctype");
+  if (!doctype) return { count: 0, open_count: 0 };
+  try {
+    const result = await context.listService.count(context.actor, context.tenantId, {
+      doctype,
+      filters: [{ field: "docstatus", operator: "eq", value: 0 }] as unknown as JsonValue,
+    });
+    const count = typeof result === "number" ? result : Number((result as { count?: number }).count ?? 0);
+    return { count, open_count: count };
+  } catch {
+    // A doctype without a list definition or without read access reports zero
+    // rather than failing the whole sidebar.
+    return { count: 0, open_count: 0 };
+  }
 }
 
 function isPlatformAdmin(context: FrappeRouterContext): boolean {

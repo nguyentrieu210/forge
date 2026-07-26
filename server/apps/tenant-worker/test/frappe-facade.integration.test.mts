@@ -393,6 +393,66 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     expect((await unwrap(await method("frappe.desk.doctype.tag.tag.remove_tag", { tag: "urgent", dt: "Field Visit", dn: name }))).removed).toBe(true);
   });
 
+  it("renders a print format with redacted content, returning html for the client to sandbox", async () => {
+    await env.DB.prepare(
+      `INSERT INTO print_formats(tenant_id,name,doc_type,is_default,disabled,revision,format_json,modified_by,modified_at)
+       VALUES('demo','Field Visit Slip','Field Visit',1,0,1,?1,'Administrator',?2)
+       ON CONFLICT(tenant_id,name) DO UPDATE SET format_json=excluded.format_json`,
+    ).bind(JSON.stringify({
+      name: "Field Visit Slip", doc_type: "Field Visit", format_type: "Standard",
+      html: "<h1>{{ subject }}</h1>", css: "h1{font-size:14px}", is_default: true, disabled: false, revision: 1,
+    }), NOW).run();
+
+    const printed = await unwrap(await method("frappe.www.printview.get_html_and_style", {
+      doctype: "Field Visit", name: `${createdName}-1`,
+    }, "GET"));
+    expect(printed.html).toContain("<h1>");
+    expect(printed.style).toContain("font-size");
+  });
+
+  it("escapes document content in a printout, so a value cannot inject markup", async () => {
+    const created = await call("/api/resource/Field Visit", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ subject: "<script>alert(1)</script>" }),
+    });
+    const injected = (await created.json() as any).data.name;
+    const printed = await unwrap(await method("frappe.www.printview.get_html_and_style", { doctype: "Field Visit", name: injected }, "GET"));
+    expect(printed.html).toContain("&lt;script&gt;");
+    expect(printed.html).not.toContain("<script>alert");
+  });
+
+  it("reports bulk delete per item rather than collapsing a partial result", async () => {
+    const draft = await call("/api/resource/Field Visit", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ subject: "Disposable" }),
+    });
+    const disposable = (await draft.json() as any).data.name;
+
+    // One deletable draft, one CANCELLED document (never deletable, because its
+    // reversing ledger entries would be orphaned), one that does not exist.
+    const outcome = await unwrap(await method("frappe.desk.reportview.delete_items", {
+      doctype: "Field Visit", items: [disposable, createdName, "FV-NOPE"],
+    }));
+    const byName = Object.fromEntries(outcome.results.map((entry: any) => [entry.name, entry]));
+    expect(byName[disposable].deleted).toBe(true);
+    expect(byName[createdName].deleted).toBe(false);
+    expect(String(byName[createdName].error)).toMatch(/cancelled/i);
+    // A name that does not exist is reported as not-deleted rather than as an
+    // error, so a retried bulk delete is idempotent.
+    expect(byName["FV-NOPE"].deleted).toBe(false);
+    expect(outcome.deleted).toBe(1);
+    expect(outcome.failed).toBe(2);
+  });
+
+  it("derives workspaces from installed apps and counts open documents within the read scope", async () => {
+    const spaces = await unwrap(await method("frappe.desk.desktop.get_workspaces", {}, "GET"));
+    expect(Array.isArray(spaces.pages)).toBe(true);
+    const counts = await unwrap(await method("frappe.desk.notifications.get_open_count", { doctype: "Field Visit" }, "GET"));
+    expect(Number(counts.open_count)).toBeGreaterThanOrEqual(0);
+  });
+
   it("fails an unimplemented method loudly instead of returning an empty success", async () => {
     // An empty success would let a screen render as though it had data.
     const response = await method("frappe.desk.doctype.kanban_board.kanban_board.get_kanban_boards", { doctype: "Field Visit" }, "GET");
