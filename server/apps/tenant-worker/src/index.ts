@@ -528,6 +528,7 @@ async function serveFrappeApi(
     access,
     collaboration: new D1CollaborationService(env.DB),
     listService: new DocumentListService(new D1DocumentListStore(env.DB), permissions, new MetadataDocumentListDefinitionResolver(metadata)),
+    customizations: metadata.customizationStore,
     async runCommand(command) {
       const stub = env.AGGREGATES.getByName(`${tenantId}:${command.aggregate.doctype}:${command.aggregate.name}`) as AggregateStub;
       const result = typeof stub.mutate === "function" ? await stub.mutate(command) : await callDoFetch(stub, command);

@@ -117,6 +117,14 @@ export interface DocTypeMeta extends JsonObject {
   permissions: DocPermissionMeta[];
   revision: number;
   modified_at?: string;
+  /**
+   * Version of the EFFECTIVE schema: `<definitionRevision>.<customizationRevision>`.
+   *
+   * `revision` alone versions the standard definition, so a cache keyed on it
+   * would keep serving a stale schema after a Custom Field or Property Setter
+   * change. Present only on metadata that has been through the overlay merge.
+   */
+  effective_revision?: string;
 }
 
 export interface PrintFormatMeta extends JsonObject {

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Migration 0010 rehearsal: user store, role grants and the amend chain.
+"""Migration 0010-0011 rehearsal: user store, role grants, amend chain, customisation.
 
-Runs migrations 0001-0010 in order against a fresh database, then exercises the
+Runs migrations 0001-0011 in order against a fresh database, then exercises the
 guards that only exist in SQL. A guard that is only enforced in TypeScript is not
 a guard: the aggregate Durable Object is not the sole writer over a database
 lifetime (imports, migrations and future app workers also write), so these
@@ -13,7 +13,7 @@ from pathlib import Path
 root = Path(__file__).resolve().parents[1]
 connection = sqlite3.connect(":memory:")
 connection.execute("PRAGMA foreign_keys=ON")
-for index in range(1, 11):
+for index in range(1, 12):
     migration = next(iter(sorted((root / "migrations/tenant").glob(f"{index:04d}_*.sql"))))
     connection.executescript(migration.read_text(encoding="utf-8"))
 
@@ -120,4 +120,70 @@ assert connection.execute(
     "SELECT translated_text FROM translations WHERE tenant_id='demo' AND language='vi' AND source_text='Sales Order'"
 ).fetchone()[0] == "Đơn bán hàng"
 
-print("FRAPPE_COMPAT_MIGRATION_0010_DRY_RUN_PASS")
+# ---- customisation overlay (0011) ------------------------------------------
+connection.execute(
+    "INSERT INTO custom_fields(tenant_id,name,dt,fieldname,metadata_json,insert_after,modified_by,modified_at)"
+    " VALUES(?,?,?,?,?,?,?,?)",
+    ("demo", "Sales Order-po_no", "Sales Order", "po_no",
+     '{"fieldname":"po_no","fieldtype":"Data","label":"PO No"}', "customer", "Administrator", NOW),
+)
+connection.commit()
+
+# Two custom fields claiming the same fieldname would make the effective schema
+# depend on row order.
+expect_abort("UNIQUE", lambda: connection.execute(
+    "INSERT INTO custom_fields(tenant_id,name,dt,fieldname,metadata_json,modified_by,modified_at)"
+    " VALUES(?,?,?,?,?,?,?)",
+    ("demo", "Sales Order-po_no-copy", "Sales Order", "po_no", "{}", "Administrator", NOW)))
+
+# Field metadata must be valid JSON, or the merge would fail on every read.
+expect_abort("CHECK", lambda: connection.execute(
+    "INSERT INTO custom_fields(tenant_id,name,dt,fieldname,metadata_json,modified_by,modified_at)"
+    " VALUES(?,?,?,?,?,?,?)",
+    ("demo", "Sales Order-bad", "Sales Order", "bad", "not json", "Administrator", NOW)))
+
+connection.execute(
+    "INSERT INTO property_setters(tenant_id,name,doc_type,doctype_or_field,field_name,property,property_type,value,modified_by,modified_at)"
+    " VALUES(?,?,?,?,?,?,?,?,?,?)",
+    ("demo", "Sales Order-customer-label", "Sales Order", "DocField", "customer", "label", "Data", "Khach hang", "Administrator", NOW),
+)
+connection.execute(
+    "INSERT INTO property_setters(tenant_id,name,doc_type,doctype_or_field,field_name,property,property_type,value,modified_by,modified_at)"
+    " VALUES(?,?,?,?,?,?,?,?,?,?)",
+    ("demo", "Sales Order-main-title_field", "Sales Order", "DocType", "", "title_field", "Data", "customer", "Administrator", NOW),
+)
+connection.commit()
+
+# A setter with the wrong shape would apply to nothing and look like a
+# customisation that silently does not work.
+expect_abort("PROPERTY_SETTER_FIELD_REQUIRED", lambda: connection.execute(
+    "INSERT INTO property_setters(tenant_id,name,doc_type,doctype_or_field,field_name,property,property_type,value,modified_by,modified_at)"
+    " VALUES(?,?,?,?,?,?,?,?,?,?)",
+    ("demo", "bad-1", "Sales Order", "DocField", "", "label", "Data", "x", "Administrator", NOW)))
+expect_abort("PROPERTY_SETTER_FIELD_NOT_ALLOWED", lambda: connection.execute(
+    "INSERT INTO property_setters(tenant_id,name,doc_type,doctype_or_field,field_name,property,property_type,value,modified_by,modified_at)"
+    " VALUES(?,?,?,?,?,?,?,?,?,?)",
+    ("demo", "bad-2", "Sales Order", "DocType", "customer", "title_field", "Data", "x", "Administrator", NOW)))
+
+# Two setters for the same target property: the winner would depend on scan order.
+expect_abort("UNIQUE", lambda: connection.execute(
+    "INSERT INTO property_setters(tenant_id,name,doc_type,doctype_or_field,field_name,property,property_type,value,modified_by,modified_at)"
+    " VALUES(?,?,?,?,?,?,?,?,?,?)",
+    ("demo", "other-name", "Sales Order", "DocField", "customer", "label", "Data", "Other", "Administrator", NOW)))
+
+connection.execute(
+    "INSERT INTO customization_revisions(tenant_id,doctype,revision,modified_at) VALUES(?,?,1,?)"
+    " ON CONFLICT(tenant_id,doctype) DO UPDATE SET revision=revision+1",
+    ("demo", "Sales Order", NOW),
+)
+connection.execute(
+    "INSERT INTO customization_revisions(tenant_id,doctype,revision,modified_at) VALUES(?,?,1,?)"
+    " ON CONFLICT(tenant_id,doctype) DO UPDATE SET revision=revision+1",
+    ("demo", "Sales Order", NOW),
+)
+connection.commit()
+assert connection.execute(
+    "SELECT revision FROM customization_revisions WHERE tenant_id='demo' AND doctype='Sales Order'"
+).fetchone()[0] == 2, "each customisation write must advance the effective-schema revision"
+
+print("FRAPPE_COMPAT_MIGRATION_0010_0011_DRY_RUN_PASS")

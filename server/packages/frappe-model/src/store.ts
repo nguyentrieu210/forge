@@ -3,6 +3,8 @@ import { errors } from "../../core/src/index.js";
 import type { DocTypeMeta, PrintFormatMeta, WorkflowMeta } from "./types.js";
 import { parseDocTypeMeta, validateWorkflow } from "./validate.js";
 import { formatSeriesName, resolveAutoname } from "./autoname.js";
+import { mergeCustomizations } from "./customization.js";
+import { D1CustomizationStore, type CustomizationStore } from "./customization-store.js";
 
 export interface MetadataStore {
   getDocType(tenantId: string, doctype: string): Promise<DocTypeMeta | null>;
@@ -23,15 +25,42 @@ interface PrintRow { format_json: string; revision: number }
 
 export class D1MetadataStore implements MetadataStore {
   private readonly db: D1Database | D1DatabaseSession;
-  constructor(db: D1Database) { this.db = db.withSession?.("first-primary") ?? db; }
+  private readonly customizations: CustomizationStore;
 
+  constructor(db: D1Database, customizations?: CustomizationStore) {
+    this.db = db.withSession?.("first-primary") ?? db;
+    this.customizations = customizations ?? new D1CustomizationStore(db);
+  }
+
+  /**
+   * Returns the EFFECTIVE DocType: the standard definition with the tenant's
+   * Custom Fields and Property Setters merged in.
+   *
+   * Merging here rather than at each call site is what makes customisation
+   * transparent — controllers, permission checks and list projections all read
+   * one schema and none of them has to know an overlay exists. A consumer that
+   * bypassed this would silently ignore every customisation.
+   */
   async getDocType(tenantId: string, doctype: string): Promise<DocTypeMeta | null> {
     const row = await this.db.prepare(
       `SELECT metadata_json, revision, modified_at FROM doctype_definitions WHERE tenant_id=?1 AND doctype=?2 AND disabled=0`,
     ).bind(tenantId, doctype).first<MetaRow>();
     if (!row) return null;
     const parsed = parseDocTypeMeta(JSON.parse(row.metadata_json), doctype);
-    return { ...parsed, revision: row.revision, modified_at: row.modified_at };
+    const base = { ...parsed, revision: row.revision, modified_at: row.modified_at };
+
+    const [customFields, propertySetters, customizationRevision] = await Promise.all([
+      this.customizations.listCustomFields(tenantId, doctype),
+      this.customizations.listPropertySetters(tenantId, doctype),
+      this.customizations.revision(tenantId, doctype),
+    ]);
+    if (!customFields.length && !propertySetters.length) return base;
+    return mergeCustomizations({ base, customFields, propertySetters, customizationRevision });
+  }
+
+  /** The overlay store, for callers that manage customisations. */
+  get customizationStore(): CustomizationStore {
+    return this.customizations;
   }
 
   async listDocTypes(tenantId: string): Promise<DocTypeMeta[]> {

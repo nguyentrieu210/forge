@@ -23,8 +23,13 @@ import { assertModifiedMatches, buildCommand, stripServerOwnedFields } from "./c
 import { fromFrappeDoc, toFrappeDoc, toFrappeListRow } from "./doc-shape.js";
 import { faultResponse, methodResponse, resourceResponse } from "./envelope.js";
 import { toKernelFilters, toKernelSearch, toKernelSort } from "./filters.js";
-import { childDocTypeNames, maskedFieldNames, tableFieldNames, toFrappeMetaBundle } from "./meta-shape.js";
-import { resolveAutoname } from "../../frappe-model/src/index.js";
+import {
+  childDocTypeNames, maskedFieldNames, tableFieldNames, toFrappeDocType, toFrappeMetaBundle, toFrappeWorkflow,
+} from "./meta-shape.js";
+import {
+  mergeCustomizations, parseCustomField, parseDocTypeMeta, parsePropertySetter, resolveAutoname, validateWorkflow,
+} from "../../frappe-model/src/index.js";
+import type { CustomFieldRecord, CustomizationStore, PropertySetterRecord } from "../../frappe-model/src/index.js";
 
 /**
  * Contract version, surfaced to the client as `frappe_version`.
@@ -48,10 +53,35 @@ export interface FrappeRouterContext {
   /** Routes a command through the aggregate Durable Object. */
   runCommand(command: MutationCommand): Promise<MutationReceipt>;
   now(): string;
+  /** Overlay store for Custom Field / Property Setter. */
+  customizations: CustomizationStore;
   /** CSRF nonce of the current session, for the boot payload. */
   csrfToken: string;
   fullName: string;
   language: string;
+}
+
+/**
+ * Doctypes that describe the platform rather than live in it.
+ *
+ * They are stored as metadata, not as documents, so they are routed to the
+ * metadata stores instead of the document kernel. Frappe presents them as
+ * ordinary resources and the builder addresses them that way, which is why they
+ * are intercepted here rather than exposed under a different path.
+ */
+const META_RESOURCES = new Set(["DocType", "Custom Field", "Property Setter", "Workflow", "Print Format"]);
+
+/**
+ * Only a System Manager may reshape the platform.
+ *
+ * Checked separately from DocPerm because these resources have no DocPerm rows of
+ * their own: without this, metadata writes would fall through to a permission
+ * check that finds nothing to deny.
+ */
+function requireMetadataAdmin(context: FrappeRouterContext): void {
+  const { user_id: userId, roles } = context.actor;
+  if (userId === "Administrator" || roles.includes("Administrator") || roles.includes("System Manager")) return;
+  throw errors.permission("System Manager is required to change metadata");
 }
 
 const RESOURCE_PATH = /^\/api\/resource\/([^/]+)(?:\/([^/]+))?$/;
@@ -91,6 +121,7 @@ async function dispatchResource(
   args: FrappeArgs,
   context: FrappeRouterContext,
 ): Promise<Response> {
+  if (META_RESOURCES.has(doctype)) return dispatchMetaResource(httpMethod, doctype, name, args, context);
   if (!name) {
     if (httpMethod === "GET") return resourceResponse(await listDocuments(doctype, args, context));
     if (httpMethod === "POST") return resourceResponse(await createDocument(doctype, args, context), 201);
@@ -100,6 +131,252 @@ async function dispatchResource(
   if (httpMethod === "PUT") return resourceResponse(await saveDocument(doctype, name, args, context));
   if (httpMethod === "DELETE") return resourceResponse(await deleteDocument(doctype, name, context));
   throw errors.validation(`${httpMethod} is not supported on a document`);
+}
+
+/**
+ * Metadata resources: DocType, Custom Field, Property Setter, Workflow, Print Format.
+ *
+ * These back the builder. Writes are gated on System Manager and go to the
+ * metadata/overlay stores, never to the document kernel.
+ */
+async function dispatchMetaResource(
+  httpMethod: string,
+  doctype: string,
+  name: string | null,
+  args: FrappeArgs,
+  context: FrappeRouterContext,
+): Promise<Response> {
+  const body = documentArgument(args);
+
+  if (doctype === "DocType") {
+    if (httpMethod === "GET") {
+      if (!name) {
+        const all = await context.metadata.listDocTypes(context.tenantId);
+        return resourceResponse(all.map((meta) => ({ name: meta.name, module: meta.module, custom: meta.custom ? 1 : 0, revision: meta.revision })));
+      }
+      const meta = await requireMeta(name, context);
+      return resourceResponse(toFrappeDocType(meta, await context.metadata.getWorkflow(context.tenantId, name)));
+    }
+    requireMetadataAdmin(context);
+    if (httpMethod === "POST" || httpMethod === "PUT") {
+      const target = name ?? (typeof body.name === "string" ? body.name : "");
+      if (!target) throw errors.validation("DocType requires a name");
+      const saved = await context.metadata.putDocType(context.tenantId, fromFrappeDocTypeInput(body, target), context.actor.user_id, context.now());
+      return resourceResponse(toFrappeDocType(saved, null), httpMethod === "POST" ? 201 : 200);
+    }
+    throw errors.validation(`${httpMethod} is not supported on DocType`);
+  }
+
+  if (doctype === "Custom Field") {
+    requireMetadataAdmin(context);
+    if (httpMethod === "POST" || httpMethod === "PUT") {
+      const record = parseCustomField({ ...body, ...(name ? { name } : {}) });
+      // The merge is attempted before the write so an overlay that would produce
+      // an invalid effective schema is rejected, rather than stored and then
+      // making the doctype unreadable on every subsequent request.
+      await assertOverlayMerges(record.dt, context, { extraField: record });
+      await context.customizations.putCustomField(context.tenantId, record, context.actor.user_id, context.now());
+      return resourceResponse({ name: record.name, dt: record.dt, fieldname: record.fieldname }, httpMethod === "POST" ? 201 : 200);
+    }
+    if (httpMethod === "DELETE") {
+      if (!name) throw errors.validation("Custom Field requires a name");
+      // Frappe names the row `<DocType>-<fieldname>`; the doctype may itself
+      // contain a hyphen, so split on the LAST one.
+      const separator = name.lastIndexOf("-");
+      if (separator <= 0) throw errors.validation("Custom Field name must be <DocType>-<fieldname>");
+      const deleted = await context.customizations.deleteCustomField(context.tenantId, name.slice(0, separator), name.slice(separator + 1), context.now());
+      return resourceResponse({ name, deleted });
+    }
+    throw errors.validation(`${httpMethod} is not supported on Custom Field`);
+  }
+
+  if (doctype === "Property Setter") {
+    requireMetadataAdmin(context);
+    if (httpMethod === "POST" || httpMethod === "PUT") {
+      const record = parsePropertySetter({ ...body, ...(name ? { name } : {}) });
+      await assertOverlayMerges(record.doc_type, context, { extraSetter: record });
+      await context.customizations.putPropertySetter(context.tenantId, record, context.actor.user_id, context.now());
+      return resourceResponse({ name: record.name, doc_type: record.doc_type, property: record.property }, httpMethod === "POST" ? 201 : 200);
+    }
+    if (httpMethod === "DELETE") {
+      if (!name) throw errors.validation("Property Setter requires a name");
+      const docType = args.text("doc_type") ?? name.split("-")[0] ?? "";
+      const deleted = await context.customizations.deletePropertySetter(context.tenantId, name, docType, context.now());
+      return resourceResponse({ name, deleted });
+    }
+    throw errors.validation(`${httpMethod} is not supported on Property Setter`);
+  }
+
+  if (doctype === "Workflow") {
+    requireMetadataAdmin(context);
+    if (httpMethod === "POST" || httpMethod === "PUT") {
+      const saved = await context.metadata.putWorkflow(
+        context.tenantId,
+        validateWorkflow({ ...body, ...(name ? { name } : {}) }),
+        context.actor.user_id,
+        context.now(),
+      );
+      return resourceResponse(toFrappeWorkflow(saved), httpMethod === "POST" ? 201 : 200);
+    }
+    throw errors.validation(`${httpMethod} is not supported on Workflow`);
+  }
+
+  // Print Format
+  requireMetadataAdmin(context);
+  if (httpMethod === "POST" || httpMethod === "PUT") {
+    const formatName = name ?? (typeof body.name === "string" ? body.name : "");
+    if (!formatName) throw errors.validation("Print Format requires a name");
+    const saved = await context.metadata.putPrintFormat(context.tenantId, {
+      name: formatName,
+      doc_type: String(body.doc_type ?? ""),
+      format_type: body.format_type === "Jinja" ? "Jinja" : "Standard",
+      html: String(body.html ?? ""),
+      ...(typeof body.css === "string" ? { css: body.css } : {}),
+      is_default: Boolean(body.is_default),
+      disabled: Boolean(body.disabled),
+      revision: typeof body.revision === "number" ? body.revision : 0,
+    }, context.actor.user_id, context.now());
+    return resourceResponse(saved as unknown as JsonObject, httpMethod === "POST" ? 201 : 200);
+  }
+  throw errors.validation(`${httpMethod} is not supported on Print Format`);
+}
+
+/**
+ * Proves the overlay still produces a valid effective schema with a pending change
+ * applied.
+ *
+ * Validating before the write is what keeps a doctype from being bricked: a
+ * customisation stored first and validated later would make every subsequent read
+ * of that doctype fail, including the read needed to remove the bad overlay.
+ */
+async function assertOverlayMerges(
+  doctype: string,
+  context: FrappeRouterContext,
+  pending: { extraField?: CustomFieldRecord; extraSetter?: PropertySetterRecord },
+): Promise<void> {
+  const base = await requireMeta(doctype, context);
+  const customFields = await context.customizations.listCustomFields(context.tenantId, doctype);
+  const propertySetters = await context.customizations.listPropertySetters(context.tenantId, doctype);
+  mergeCustomizations({
+    // `base` already has the current overlay merged in, so the stored overlay is
+    // replayed against the ORIGINAL definition rather than doubled.
+    base: { ...base, fields: base.fields.filter((field) => !customFields.some((custom) => custom.fieldname === field.fieldname)) },
+    customFields: pending.extraField
+      ? [...customFields.filter((entry) => entry.name !== pending.extraField!.name), pending.extraField]
+      : customFields,
+    propertySetters: pending.extraSetter
+      ? [...propertySetters.filter((entry) => entry.name !== pending.extraSetter!.name), pending.extraSetter]
+      : propertySetters,
+    customizationRevision: await context.customizations.revision(context.tenantId, doctype),
+  });
+}
+
+/**
+ * Applies a whole customisation plan.
+ *
+ * Frappe's Customize Form posts the complete set of changes; the builder produces
+ * it from a diff. Each item is validated before ANY is written, so a plan with one
+ * bad entry leaves the doctype untouched instead of half-customised.
+ */
+async function saveCustomization(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  requireMetadataAdmin(context);
+  const doctype = args.requireText("doctype", 160);
+  await requireMeta(doctype, context);
+
+  const fields = (args.array<JsonObject>("fields") ?? []).map((entry) => parseCustomField({ dt: doctype, ...entry, field: fieldFromOp(entry) }, doctype));
+  const setters = (args.array<JsonObject>("propertySetters") ?? []).map((entry) => parsePropertySetter({
+    ...entry,
+    doc_type: doctype,
+    // The builder sends null for a doctype-level setter; the parser wants the
+    // discriminator to be explicit.
+    doctype_or_field: entry.doctype_or_field === "DocType" || entry.field_name === null ? "DocType" : "DocField",
+    ...(entry.field_name === null ? { field_name: "" } : {}),
+  }, doctype));
+  const deletions = (args.array<string>("deletions") ?? []).map((entry) => String(entry));
+
+  for (const field of fields) await assertOverlayMerges(doctype, context, { extraField: field });
+  for (const setter of setters) await assertOverlayMerges(doctype, context, { extraSetter: setter });
+
+  const now = context.now();
+  for (const fieldname of deletions) await context.customizations.deleteCustomField(context.tenantId, doctype, fieldname, now);
+  for (const field of fields) await context.customizations.putCustomField(context.tenantId, field, context.actor.user_id, now);
+  for (const setter of setters) await context.customizations.putPropertySetter(context.tenantId, setter, context.actor.user_id, now);
+
+  return {
+    doctype,
+    custom_fields: fields.length,
+    property_setters: setters.length,
+    deletions: deletions.length,
+    effective_revision: (await requireMeta(doctype, context)).effective_revision ?? null,
+  };
+}
+
+/** The builder's flat `CustomFieldOp` → a DocField definition. */
+function fieldFromOp(entry: JsonObject): JsonObject {
+  if (entry.field && typeof entry.field === "object" && !Array.isArray(entry.field)) return entry.field;
+  const field: JsonObject = {
+    fieldname: String(entry.fieldname ?? ""),
+    fieldtype: String(entry.fieldtype ?? "Data"),
+  };
+  if (typeof entry.label === "string") field.label = entry.label;
+  if (typeof entry.options === "string") field.options = entry.options;
+  // The builder speaks Frappe's `reqd` (0/1); the kernel's field metadata uses a
+  // boolean `required`.
+  if (entry.reqd !== undefined) field.required = entry.reqd === 1 || entry.reqd === true;
+  return field;
+}
+
+/** A Frappe DocType body → kernel DocType metadata. */
+function fromFrappeDocTypeInput(body: JsonObject, name: string): DocTypeMeta {
+  const fields = Array.isArray(body.fields) ? body.fields : [];
+  return parseDocTypeMeta({
+    ...body,
+    name,
+    module: typeof body.module === "string" && body.module ? body.module : "Custom",
+    // Frappe's integer flags and `reqd` spelling are translated back.
+    is_child: flagToBool(body.istable ?? body.is_child),
+    is_single: flagToBool(body.issingle ?? body.is_single),
+    is_submittable: flagToBool(body.is_submittable),
+    track_changes: flagToBool(body.track_changes),
+    track_seen: flagToBool(body.track_seen),
+    allow_rename: flagToBool(body.allow_rename),
+    custom: flagToBool(body.custom),
+    ...(typeof body.search_fields === "string"
+      ? { search_fields: body.search_fields.split(",").map((entry) => entry.trim()).filter(Boolean) }
+      : {}),
+    fields: fields.map((field) => {
+      if (!field || typeof field !== "object" || Array.isArray(field)) return field;
+      const input = field as JsonObject;
+      const output: JsonObject = { ...input };
+      if (input.reqd !== undefined) { output.required = flagToBool(input.reqd); delete output.reqd; }
+      for (const flag of ["read_only", "hidden", "allow_on_submit", "no_copy", "unique", "in_list_view", "in_standard_filter", "search_index"]) {
+        if (input[flag] !== undefined) output[flag] = flagToBool(input[flag]);
+      }
+      if (typeof input.precision === "string" && input.precision !== "") output.precision = Number(input.precision);
+      else if (input.precision === "") delete output.precision;
+      return output;
+    }),
+    permissions: Array.isArray(body.permissions)
+      ? body.permissions.map((permission) => {
+        if (!permission || typeof permission !== "object" || Array.isArray(permission)) return permission;
+        const input = permission as JsonObject;
+        const output: JsonObject = { role: input.role };
+        for (const key of ["read", "write", "create", "submit", "cancel", "amend", "print", "email", "report", "import", "export", "share", "if_owner"]) {
+          if (input[key] !== undefined) output[key] = flagToBool(input[key]);
+        }
+        if (input.permlevel !== undefined) output.permlevel = Number(input.permlevel);
+        return output;
+      })
+      : [],
+    revision: typeof body.revision === "number" ? body.revision : 1,
+  } as unknown as JsonObject, name);
+}
+
+function flagToBool(value: JsonValue | undefined): boolean {
+  if (value === undefined || value === null || value === "") return false;
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value !== 0;
+  return ["1", "true", "yes"].includes(String(value).trim().toLowerCase());
 }
 
 async function listDocuments(doctype: string, args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject[]> {
@@ -272,6 +549,9 @@ async function dispatchMethod(
     case "frappe.model.rename_doc":
     case "frappe.client.rename_doc":
       return methodResponse(await renameDocument(args, context));
+
+    case "frappe.custom.doctype.customize_form.customize_form.save_customization":
+      return methodResponse(await saveCustomization(args, context));
 
     case "frappe.desk.search.search_link":
       return methodResponse(await searchLink(args, context));

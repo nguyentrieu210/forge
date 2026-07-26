@@ -16,6 +16,7 @@ for migration in [
     root / "migrations/tenant/0008_erpnext_breadth.sql",
     root / "migrations/tenant/0009_business_suite.sql",
     root / "migrations/tenant/0010_frappe_compat.sql",
+    root / "migrations/tenant/0011_customization.sql",
 ]:
     connection.executescript(migration.read_text())
 
