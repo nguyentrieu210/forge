@@ -20,10 +20,22 @@ cũng cắm vào được.
 
 ## Trạng thái
 
-Pha 0 (gộp repo) — xem [docs/ROADMAP.md](docs/ROADMAP.md) cho lộ trình đầy đủ và
-[docs/API_SURFACE.md](docs/API_SURFACE.md) cho 68 endpoint phải hiện thực.
+| Pha | Nội dung | Trạng thái |
+|---|---|---|
+| 0 | Gộp repo, workspace, tài liệu | ✅ cổng xanh |
+| 1 | Lớp vỏ Frappe Tier 1 + phiên cookie | ✅ source + test; **chưa chạy live** |
+| 2 | Vá tầng framework (amend, rename, autoname, Dynamic Link, mandatory_depends_on, modified_by) | ✅ trừ `is_single`, `track_seen`, global search |
+| 3 | Custom Field + Property Setter | ✅ source + test |
+| 4 | Gói app + cài app | ◐ manifest + installer xong, chưa có endpoint/CLI |
+| 5 | Hooks qua Workers for Platforms | ☐ |
+| 6 | Bề rộng view + i18n | ☐ |
+| 7 | Deploy + cổng phát hành | ☐ |
 
-**Chưa có gì chạy end-to-end.** Backend chưa deploy lần nào, lớp vỏ Frappe chưa viết.
+Cổng đã chạy thật trên máy: **238/238 test PASS**, SQL 6/6 gate PASS, typecheck
+server + client exit 0.
+
+**Chưa chạy end-to-end với FE, chưa deploy lần nào.** Xem [docs/ROADMAP.md](docs/ROADMAP.md)
+cho lộ trình và [docs/API_SURFACE.md](docs/API_SURFACE.md) cho 68 endpoint.
 
 ## Chạy
 
