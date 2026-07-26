@@ -653,6 +653,11 @@ async function dispatchMethod(
     case "frappe.desk.notifications.get_open_count":
       return methodResponse(await openCount(args, context));
 
+    case "frappe.desk.reportview.export_query":
+      // Returns CSV rather than a JSON envelope, because the client requests it as
+      // a blob and hands it straight to a download.
+      return exportQuery(args, context);
+
     // ---- tree view ---------------------------------------------------------
     case "frappe.desk.treeview.get_children":
       return methodResponse(await treeChildren(args, context));
@@ -1673,6 +1678,83 @@ async function importApply(args: FrappeArgs, context: FrappeRouterContext): Prom
     }
   }
   return { imported, failed, results, status: failed ? "Partial Success" : "Success" };
+}
+
+/**
+ * Exports a filtered list as CSV.
+ *
+ * Gated on the `export` permission specifically, not on read: taking a whole list
+ * out of the system is a different act from looking at a page of it, and Frappe
+ * models it as a separate permission for exactly that reason.
+ *
+ * Rows are paged through the same list service, so the export can never contain a
+ * row the actor could not have seen on screen.
+ */
+async function exportQuery(args: FrappeArgs, context: FrappeRouterContext): Promise<Response> {
+  const doctype = args.requireText("doctype", 160);
+  await context.permissions.assert({
+    actor: context.actor, tenantId: context.tenantId, doctype,
+    action: "export", owner: context.actor.user_id,
+  });
+
+  const requested = (args.array<string>("fields") ?? []).map((field) => stripFieldQualifier(String(field)));
+  const filters = toKernelFilters(args.json("filters"), doctype);
+  const search = toKernelSearch(args.json("or_filters"));
+  const maxRows = Math.min(Math.max(args.int("max_rows", 1000), 1), 5000);
+
+  const rows: JsonObject[] = [];
+  let offset = 0;
+  // Paged rather than one large query: the list service caps a page, and a single
+  // unbounded read would exceed both the row cap and the query budget.
+  while (rows.length < maxRows) {
+    const body: JsonObject = {
+      doctype,
+      ...(requested.length ? { fields: dedupe(requested) } : {}),
+      filters: filters as unknown as JsonValue,
+      ...(search ? { search } : {}),
+      limit: 100,
+      offset,
+    };
+    const page = await context.listService.list(context.actor, context.tenantId, body);
+    for (const row of page.rows) {
+      if (rows.length < maxRows) rows.push(toFrappeListRow(row as JsonObject));
+    }
+    if (!page.has_more || page.rows.length === 0) break;
+    offset += page.rows.length;
+  }
+
+  const columns = requested.length ? dedupe(requested) : [...new Set(rows.flatMap((row) => Object.keys(row)))];
+  const csv = encodeCsv(columns, rows);
+  return new Response(`﻿${csv}`, {
+    status: 200,
+    headers: {
+      "content-type": "text/csv; charset=utf-8",
+      "content-disposition": `attachment; filename="${doctype.replace(/[^A-Za-z0-9 _-]/g, "_")}.csv"`,
+      "cache-control": "private, no-store",
+      "x-content-type-options": "nosniff",
+    },
+  });
+}
+
+/**
+ * CSV encoding with formula-injection defence.
+ *
+ * A value beginning `=`, `+`, `-` or `@` is prefixed with an apostrophe: without
+ * that, opening the export in a spreadsheet EXECUTES it, which turns "download
+ * your data" into remote code execution on the analyst's machine.
+ */
+function encodeCsv(columns: string[], rows: JsonObject[]): string {
+  const escape = (value: unknown): string => {
+    const text = value === null || value === undefined
+      ? ""
+      : typeof value === "object" ? JSON.stringify(value) : String(value);
+    const guarded = /^[=+@-]/.test(text) ? `'${text}` : text;
+    return /[",\r\n]/.test(guarded) ? `"${guarded.replace(/"/g, '""')}"` : guarded;
+  };
+  return [
+    columns.map(escape).join(","),
+    ...rows.map((row) => columns.map((column) => escape(row[column])).join(",")),
+  ].join("\r\n");
 }
 
 // ---- kanban -----------------------------------------------------------------

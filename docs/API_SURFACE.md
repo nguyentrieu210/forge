@@ -1,82 +1,99 @@
-# Bề mặt API phải hiện thực
+# Bề mặt API — trạng thái thực tế
 
 Danh sách rút **tự động** từ [client/packages/adapter-frappe/src/frappe-adapter.ts](../client/packages/adapter-frappe/src/frappe-adapter.ts)
-— đây là toàn bộ endpoint MetaForge FE thực sự gọi. 47 endpoint Frappe thuần + 21 endpoint
-`metaforge.api.*` (app Frappe đi kèm, nguồn `client/frappe-app/metaforge/metaforge/api.py`) + REST
-`/api/resource/*`.
+— toàn bộ endpoint MetaForge FE thực sự gọi: 47 endpoint Frappe thuần + 21
+endpoint `metaforge.api.*` + REST `/api/resource/*`.
 
-Trạng thái: ☐ chưa làm · ◐ đang làm · ☑ xong + có test
+Trạng thái: ☑ xong, có test E2E trên workerd thật · ✖ **cố ý không làm**, kèm lý do
 
-## Nền transport (bắt buộc trước mọi thứ)
+Bằng chứng chạy thật: [VERIFICATION.md](VERIFICATION.md).
 
-| Bề mặt | Ghi chú | TT |
-|---|---|---|
-| `POST /api/method/login` · `logout` | Phiên cookie `sid`, không phải Bearer. CloudForge hiện dùng JWT Bearer → phải bắc cầu | ☐ |
-| `X-Frappe-CSRF-Token` | Header CSRF trên mọi mutation | ☐ |
-| Envelope `{ "message": … }` | Mọi `/api/method/*` bọc trong `message` | ☐ |
-| `GET/POST/PUT/DELETE /api/resource/:doctype[/:name]` | CRUD của `frappe-react-sdk` | ☐ |
-| **HTTP 417 TimestampMismatch** | Xung đột ghi. FE bắt mã này để hiện "bản ghi đã đổi" | ☐ |
-| Lỗi: `exc_type`, `_server_messages` | `mapError` của FE phân nhánh theo các trường này | ☐ |
+## Nền transport
 
-## Tier 1 — Desk boot được, xem và sửa được chứng từ (15)
+| Bề mặt | TT |
+|---|---|
+| `POST /api/method/login` · `logout` — phiên cookie `sid` | ☑ |
+| `X-Frappe-CSRF-Token` — double-submit có ràng buộc nonce trong phiên | ☑ |
+| Envelope `{ "message": … }` cho mọi `/api/method/*` | ☑ |
+| `/api/resource/:doctype[/:name]` GET/POST/PUT/DELETE | ☑ |
+| **HTTP 417 TimestampMismatchError** cho xung đột ghi | ☑ |
+| `exc_type` + `_server_messages` (lồng 2 lớp, mang `fieldname`) | ☑ |
+| Guest gọi method cần đăng nhập → `PermissionError`/403 kèm "Login to access" | ☑ |
 
-| Endpoint | Cần gì ở kernel | TT |
-|---|---|---|
-| `metaforge.api.get_boot` | user, roles, sysdefaults, locale, danh sách doctype | ☐ |
-| `frappe.desk.form.load.getdoctype` | dịch `DocTypeMeta` → hình dạng DocType của Frappe | ☐ |
-| `frappe.desk.form.load.getdoc` | trả `{docs:[doc], docinfo}` — docinfo gồm comment/assign/share/version | ☐ |
-| `/api/resource/:dt` GET (list) | có sẵn `documents/list`, cần dịch filter/order | ☐ |
-| `/api/resource/:dt` POST | có sẵn `commands` action=create | ☐ |
-| `/api/resource/:dt/:name` PUT | action=save + dịch `modified` ⇄ `version` | ☐ |
-| `/api/resource/:dt/:name` DELETE | **kernel chưa có xoá** — phải thêm | ☐ |
-| `frappe.client.submit` · `cancel` | có sẵn action=submit/cancel | ☐ |
-| `frappe.client.get_value` | đọc 1 field theo filter | ☐ |
-| `frappe.desk.reportview.get_count` | có sẵn `documents/count` | ☐ |
-| `frappe.desk.search.search_link` | tìm cho Link field, có `filters` + `reference_doctype` | ☐ |
-| `metaforge.api.get_capabilities` | quyền hiệu dụng theo doctype/doc — kernel đã có engine | ☐ |
-| `metaforge.api.resolve_display_values` | tra `title_field` hàng loạt | ☐ |
-| `metaforge.api.global_search` | **kernel chưa có** — cần index tìm kiếm | ☐ |
-| `frappe.desk.form.utils.add_comment` | có sẵn `document_comments` | ☐ |
+## Tier 1 — Desk boot, xem và sửa chứng từ
 
-## Tier 2 — Workflow, chia sẻ, phân quyền, đa ngữ (20)
+| Endpoint | TT |
+|---|---|
+| `metaforge.api.get_boot` — `site_name` = tenant | ☑ |
+| `frappe.desk.form.load.getdoctype` (+`with_parent`, `masked_fields`) | ☑ |
+| `frappe.desk.form.load.getdoc` (+`docinfo`, quyền hiệu dụng) | ☑ |
+| `/api/resource/:dt` GET list · POST create | ☑ |
+| `/api/resource/:dt/:name` PUT save · DELETE | ☑ |
+| `frappe.client.submit` · `cancel` | ☑ |
+| `frappe.client.get_value` · `get_count` | ☑ |
+| `frappe.desk.reportview.get` · `get_count` | ☑ |
+| `frappe.desk.search.search_link` | ☑ |
+| `metaforge.api.get_capabilities` (fail-closed) | ☑ |
+| `metaforge.api.resolve_display_values` | ☑ |
+| `metaforge.api.global_search` (permission-aware, fail-closed) | ☑ |
+| `frappe.desk.form.utils.add_comment` | ☑ |
 
-| Endpoint | Ghi chú | TT |
-|---|---|---|
-| `frappe.model.workflow.apply_workflow` | kernel đã có workflow engine | ☐ |
-| `metaforge.api.get_workflow_transitions` | transition hợp lệ theo role | ☐ |
-| `metaforge.api.workflow_action_with_comment` | | ☐ |
-| `frappe.share.add` · `get_users` · `remove` | bảng `document_shares` đã có | ☐ |
-| `frappe.desk.form.assign_to.add` · `remove` | bảng `assignments` đã có | ☐ |
-| `metaforge.api.add_user_permission` · `remove_user_permission` | bảng `user_permissions` đã có | ☐ |
-| `metaforge.api.set_user_roles` · `get_access_profile` · `explain_permission` | | ☐ |
-| `permission_manager.*` (6 endpoint) | sửa DocPerm chuẩn — cần tầng tuỳ biến (Tier 3) | ☐ |
-| `metaforge.api.translate_strings` | **kernel chưa có i18n** — cần bảng catalog dịch | ☐ |
-| `frappe.client.rename_doc` | **kernel chưa có rename** (`allow_rename` là metadata chết) | ☐ |
+## Tier 2 — Workflow, chia sẻ, phân quyền, đa ngữ
 
-## Tier 3 — Builder: chỗ quyết định "cài app nhanh" (9)
+| Endpoint | TT |
+|---|---|
+| `frappe.model.workflow.apply_workflow` | ☑ |
+| `metaforge.api.get_workflow_transitions` (kèm `has_workflow`) | ☑ |
+| `metaforge.api.workflow_action_with_comment` | ☑ |
+| `frappe.share.add` · `get_users` · `remove` | ☑ |
+| `frappe.desk.form.assign_to.add` · `remove` | ☑ |
+| `frappe.desk.doctype.tag.tag.add_tag` · `remove_tag` | ☑ |
+| `metaforge.api.add_user_permission` · `remove_user_permission` | ☑ |
+| `metaforge.api.set_user_roles` · `get_access_profile` · `explain_permission` | ☑ |
+| `metaforge.api.logout_other_sessions` | ☑ |
+| `frappe.core.doctype.user.user.update_password` | ☑ |
+| `metaforge.api.translate_strings` | ☑ |
+| `frappe.client.rename_doc` / `frappe.model.rename_doc` | ☑ |
+| `frappe.core.page.permission_manager.permission_manager.*` (6) | ✖ DocPerm sửa qua Property Setter / DocType resource; endpoint riêng sẽ là con đường thứ hai vào cùng dữ liệu, dễ lệch nhau |
 
-| Endpoint | Chặn bởi | TT |
-|---|---|---|
-| `/api/resource/DocType` POST/PUT | kernel đã có `doctype_definitions` | ☐ |
-| `/api/resource/Custom Field` | **kernel chưa có Custom Field** | ☐ |
-| `/api/resource/Property Setter` | **kernel chưa có Property Setter** | ☐ |
-| `customize_form.save_customization` | cần cả hai cái trên | ☐ |
-| `/api/resource/Workflow` | đã có bảng `workflows` | ☐ |
-| `/api/resource/Print Format` | đã có bảng `print_formats` | ☐ |
-| `/api/resource/Dashboard Chart` · `Number Card` | chưa có | ☐ |
-| `frappe.desk.desktop.get_workspaces` · `get_desktop_page` | chưa có khái niệm workspace | ☐ |
+## Tier 3 — Builder
 
-## Tier 4 — Bề rộng view (24)
+| Endpoint | TT |
+|---|---|
+| `/api/resource/DocType` GET/POST/PUT | ☑ |
+| `/api/resource/Custom Field` POST/PUT/DELETE | ☑ |
+| `/api/resource/Property Setter` POST/PUT/DELETE | ☑ |
+| `frappe.custom.doctype.customize_form.customize_form.save_customization` | ☑ |
+| `/api/resource/Workflow` · `/api/resource/Print Format` | ☑ |
+| `frappe.desk.desktop.get_workspaces` · `get_desktop_page` (suy từ app đã cài) | ☑ |
 
-Kanban (3) · treeview (2 + `metaforge.api.add_tree_node`) · notification log (4) ·
-`get_open_count` · data import (3 + 2 tải mẫu) · print (`printview.get_html_and_style`,
-`download_pdf`) · email (`communication.email.make`) · query report (`run`, `get_script`) ·
-tag (2) · `reportview.delete_items` · `export_query` · `dashboard_chart.get` ·
-`number_card.get_result` · `backups.fetch_latest_backups` · `user.update_password` ·
-`metaforge.api.logout_other_sessions` · `get_business_context` · `get_application_catalog` ·
-`get_overview` · `get_processes` · `get_contextual_list` · `get_contextual_count` ·
-`kanban_move_with_comment`
+## Tier 4 — Bề rộng view
 
-Bốn endpoint `get_business_context` / `get_application_catalog` / `get_overview` / `get_processes` là
-**đặc thù MetaForge**, không có trong Frappe gốc — đọc `client/frappe-app/metaforge/metaforge/api.py`
-để lấy hình dạng chính xác trước khi làm.
+| Endpoint | TT |
+|---|---|
+| `frappe.www.printview.get_html_and_style` | ☑ |
+| `frappe.desk.reportview.delete_items` (báo theo từng item) | ☑ |
+| `frappe.desk.reportview.export_query` (CSV, chống formula injection) | ☑ |
+| `frappe.desk.notifications.get_open_count` | ☑ |
+| `frappe.desk.treeview.get_children` · `add_node` · `metaforge.api.add_tree_node` | ☑ |
+| `frappe.desk.query_report.run` | ☑ |
+| `frappe.desk.query_report.get_script` | ☑ trả script rỗng — platform không thể chạy report script (code tuỳ ý); rỗng để FE vẽ bảng thường thay vì báo lỗi |
+| `data_import.get_preview_from_template` · `form_start_import` | ☑ |
+| `kanban_board.get_kanban_boards` · `update_order_for_single_card` · `metaforge.api.kanban_move_with_comment` | ☑ |
+| `notification_log.*` (4) | ☑ |
+| `metaforge.api.get_business_context` · `get_contextual_list` · `get_contextual_count` | ☑ |
+| `metaforge.api.get_application_catalog` | ☑ |
+| `data_import.download_template` · `download_errored_template` · `get_import_status` | ✖ import ở đây là đồng bộ một lượt, không có job nền nên không có "status" để hỏi; mẫu tải về là file tĩnh, thuộc FE |
+| `metaforge.api.get_overview` · `get_processes` | ✖ **nội dung nghiệp vụ của APP**, không phải của nền tảng. Nền tảng dựng ra là bịa số liệu. Đúng chỗ là Worker của app (Pha 5) |
+| `dashboard_chart.get` · `number_card.get_result` | ✖ cùng lý do trên — định nghĩa biểu đồ là cấu hình của app |
+| `communication.email.make` | ✖ chưa cấu hình mail transport. Trả rỗng "đã gửi" là nói dối về một việc người dùng tin là đã xảy ra |
+| `frappe.utils.backups.fetch_latest_backups` | ✖ backup của D1 là Time Travel phía Cloudflare, không phải file tải về. Trả đường dẫn giả sẽ khiến người ta tin có bản sao lưu mà không có |
+
+Mọi endpoint ✖ khi gọi vào đều trả **404 `DoesNotExistError`**, không bao giờ trả
+"thành công rỗng" — màn hình phải báo lỗi chứ không được render như thể có dữ liệu.
+
+## Metadata chưa có consumer
+
+`is_single` (trang Settings kiểu Single DocType) và `track_seen` vẫn là metadata
+được validate và lưu nhưng chưa tầng nào đọc. Ghi ra đây để không ai tưởng nó đã
+có tác dụng.

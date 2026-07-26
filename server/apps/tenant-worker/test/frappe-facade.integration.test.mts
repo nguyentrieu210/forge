@@ -672,6 +672,32 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     expect(Array.isArray(rows)).toBe(true);
   });
 
+  it("exports a list as CSV and neutralises spreadsheet formula injection", async () => {
+    // A value starting with `=` executes when the file is opened in a spreadsheet;
+    // exporting it unguarded turns "download your data" into code execution on the
+    // analyst's machine.
+    await call("/api/resource/Field Visit", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ subject: "=cmd|' /c calc'!A1" }),
+    });
+
+    const response = await call("/api/method/frappe.desk.reportview.export_query?doctype=Field+Visit&fields=%5B%22name%22%2C%22subject%22%5D");
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toMatch(/text\/csv/);
+    expect(response.headers.get("content-disposition")).toMatch(/attachment/);
+    // Checked at the byte level: the UTF-8 BOM is what makes a spreadsheet read the
+    // file as UTF-8 instead of the local codepage, and `Response.text()` strips it
+    // during decoding so it is invisible to a string assertion.
+    const bytes = new Uint8Array(await response.clone().arrayBuffer());
+    expect([bytes[0], bytes[1], bytes[2]]).toEqual([0xEF, 0xBB, 0xBF]);
+
+    const csv = await response.text();
+    expect(csv.split("\r\n")[0]).toBe("name,subject");
+    expect(csv).toContain("'=cmd");
+    expect(csv).not.toMatch(/(^|,|")=cmd/m);
+  });
+
   it("fails an unimplemented method loudly instead of returning an empty success", async () => {
     // An empty success would let a screen render as though it had data.
     const response = await method("frappe.desk.doctype.dashboard_chart.dashboard_chart.get", { chart_name: "Anything" }, "GET");
