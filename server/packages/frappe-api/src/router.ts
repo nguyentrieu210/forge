@@ -30,6 +30,8 @@ import {
   mergeCustomizations, parseCustomField, parseDocTypeMeta, parsePropertySetter, resolveAutoname, validateWorkflow,
 } from "../../frappe-model/src/index.js";
 import type { CustomFieldRecord, CustomizationStore, PropertySetterRecord } from "../../frappe-model/src/index.js";
+import { combinedNavigation, type AppInstaller } from "../../app-registry/src/index.js";
+import type { D1TranslationStore } from "./translations.js";
 
 /**
  * Contract version, surfaced to the client as `frappe_version`.
@@ -55,6 +57,10 @@ export interface FrappeRouterContext {
   now(): string;
   /** Overlay store for Custom Field / Property Setter. */
   customizations: CustomizationStore;
+  /** Server-side translation catalogue. */
+  translations: D1TranslationStore;
+  /** Installed-app registry. */
+  apps: AppInstaller;
   /** CSRF nonce of the current session, for the boot payload. */
   csrfToken: string;
   fullName: string;
@@ -553,6 +559,12 @@ async function dispatchMethod(
     case "frappe.custom.doctype.customize_form.customize_form.save_customization":
       return methodResponse(await saveCustomization(args, context));
 
+    case "metaforge.api.translate_strings":
+      return methodResponse(await translateStrings(args, context));
+
+    case "metaforge.api.get_application_catalog":
+      return methodResponse(await applicationCatalog(context));
+
     case "frappe.desk.search.search_link":
       return methodResponse(await searchLink(args, context));
 
@@ -811,6 +823,41 @@ async function resolveDisplayValues(args: FrappeArgs, context: FrappeRouterConte
     output.push({ doctype, name, label });
   }
   return output;
+}
+
+async function translateStrings(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const strings = args.array<string>("strings") ?? [];
+  const language = args.text("lang") ?? (context.language || context.actor.locale || "en");
+  const translated = await context.translations.translate(context.tenantId, language, strings.map((entry) => String(entry)));
+  return translated as unknown as JsonObject;
+}
+
+/**
+ * The installed-app catalogue: what this tenant has, and the navigation it
+ * contributes.
+ *
+ * Filtered by role, so a user without an app's roles does not see menu entries
+ * that would only fail on click.
+ */
+async function applicationCatalog(context: FrappeRouterContext): Promise<JsonObject> {
+  const apps = await context.apps.list(context.tenantId);
+  const readable: JsonObject[] = [];
+  const navigable: typeof apps = [];
+  for (const app of apps) {
+    const permitted: typeof app.nav = [];
+    for (const item of app.nav) {
+      if (item.kind !== "doctype") { permitted.push(item); continue; }
+      try {
+        await context.permissions.getReadScope(context.actor, context.tenantId, item.key);
+        permitted.push(item);
+      } catch {
+        // Omitted rather than shown-and-broken.
+      }
+    }
+    readable.push({ id: app.app_id, name: app.app_name, version: app.version, installed_at: app.installed_at });
+    navigable.push({ ...app, nav: permitted });
+  }
+  return { apps: readable, nav: combinedNavigation(navigable) };
 }
 
 async function addComment(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {

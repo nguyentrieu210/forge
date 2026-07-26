@@ -5,9 +5,10 @@ import {
   verifyTrustedIdentity,
 } from "../../../packages/auth/src/index.js";
 import {
-  assertSessionCsrf, establishSession, isFrappePath, isPublicFrappePath, routeFrappeApi, routeFrappeAuth,
-  slideSession, type AuthRouteContext, type EstablishedSession,
+  assertSessionCsrf, D1TranslationStore, establishSession, isFrappePath, isPublicFrappePath, routeFrappeApi,
+  routeFrappeAuth, slideSession, type AuthRouteContext, type EstablishedSession,
 } from "../../../packages/frappe-api/src/index.js";
+import { AppInstaller } from "../../../packages/app-registry/src/index.js";
 import type { TrustedIdentityKey } from "../../../packages/auth/src/index.js";
 import type { Actor, CanonicalDocument, DomainEvent, JsonObject, MutationCommand, MutationReceipt } from "../../../packages/contracts/src/index.js";
 import { parseMutationCommandInput } from "../../../packages/contracts/src/index.js";
@@ -529,6 +530,8 @@ async function serveFrappeApi(
     collaboration: new D1CollaborationService(env.DB),
     listService: new DocumentListService(new D1DocumentListStore(env.DB), permissions, new MetadataDocumentListDefinitionResolver(metadata)),
     customizations: metadata.customizationStore,
+    translations: new D1TranslationStore(env.DB),
+    apps: new AppInstaller(env.DB, metadata, users),
     async runCommand(command) {
       const stub = env.AGGREGATES.getByName(`${tenantId}:${command.aggregate.doctype}:${command.aggregate.name}`) as AggregateStub;
       const result = typeof stub.mutate === "function" ? await stub.mutate(command) : await callDoFetch(stub, command);
