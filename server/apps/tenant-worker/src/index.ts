@@ -8,7 +8,10 @@ import {
   assertSessionCsrf, D1TranslationStore, establishSession, isFrappePath, isPublicFrappePath, routeFrappeApi,
   routeFrappeAuth, slideSession, type AuthRouteContext, type EstablishedSession,
 } from "../../../packages/frappe-api/src/index.js";
-import { AppInstaller } from "../../../packages/app-registry/src/index.js";
+import {
+  AppHookDispatcher, AppInstaller, subscribersFor,
+  type AppManifest, type HookDeliveryOutcome,
+} from "../../../packages/app-registry/src/index.js";
 import type { TrustedIdentityKey } from "../../../packages/auth/src/index.js";
 import type { Actor, CanonicalDocument, DomainEvent, JsonObject, MutationCommand, MutationReceipt } from "../../../packages/contracts/src/index.js";
 import { parseMutationCommandInput } from "../../../packages/contracts/src/index.js";
@@ -66,7 +69,28 @@ export default {
         // The confirmation reflects the actual write result — a fresh insert or an
         // already-present row (both durably committed) — never a bare body echo.
         const inserted = (result.meta?.changes ?? 0) === 1;
-        return jsonResponse({ committed: true, event_id: idempotencyKey, inserted }, 200, { "x-cloudforge-event-committed": idempotencyKey });
+
+        // Fan out to app Workers AFTER the event is durably recorded. Deliveries are
+        // tracked per app, so a failing app is retried by the scheduled sweep
+        // without holding up this confirmation — the queue must not redeliver the
+        // platform event just because one app's Worker is down.
+        let hookOutcomes: HookDeliveryOutcome[] = [];
+        try {
+          hookOutcomes = await fanOutAppHooks(env, tenant, event);
+        } catch (error) {
+          // A fan-out failure is logged and left to the sweep. Failing the response
+          // here would make the queue redeliver an event the platform already
+          // committed.
+          console.error(JSON.stringify({
+            level: "error", trace_id: traceId, code: "APP_HOOK_FANOUT_FAILED",
+            detail: error instanceof Error ? error.message : String(error),
+          }));
+        }
+        return jsonResponse(
+          { committed: true, event_id: idempotencyKey, inserted, hooks: hookOutcomes },
+          200,
+          { "x-cloudforge-event-committed": idempotencyKey },
+        );
       }
 
       const tenantId = env.TENANT_ID ?? request.headers.get("x-cloudforge-tenant");
@@ -459,10 +483,41 @@ export default {
     }
   },
   async scheduled(_controller: unknown, env: TenantEnv, ctx: ExecutionContext): Promise<void> {
-    if (!env.OUTBOX_QUEUE || !env.TENANT_ID) return;
-    ctx.waitUntil(publishPendingOutbox(env.DB, env.OUTBOX_QUEUE, env.TENANT_ID).then(() => undefined));
+    if (!env.TENANT_ID) return;
+    if (env.OUTBOX_QUEUE) ctx.waitUntil(publishPendingOutbox(env.DB, env.OUTBOX_QUEUE, env.TENANT_ID).then(() => undefined));
+    // Retries app hook deliveries that failed. Without this, a single outage in an
+    // app's Worker would drop every event that arrived during it.
+    if (env.DISPATCHER) {
+      const tenantId = env.TENANT_ID;
+      ctx.waitUntil(new AppHookDispatcher(env.DB, {
+        DISPATCHER: env.DISPATCHER,
+        ...(env.INTERNAL_SERVICE_TOKEN ? { INTERNAL_SERVICE_TOKEN: env.INTERNAL_SERVICE_TOKEN } : {}),
+      }).sweep(tenantId, new Date().toISOString()).then(() => undefined));
+    }
   },
 };
+
+/**
+ * Delivers one domain event to every app that subscribed to it.
+ *
+ * Reads the installed manifests rather than a separate subscription table, so a
+ * subscription cannot drift out of step with the app that declared it.
+ */
+async function fanOutAppHooks(env: TenantEnv, tenantId: string, event: DomainEvent): Promise<HookDeliveryOutcome[]> {
+  if (!env.DISPATCHER) return [];
+  const rows = await env.DB.prepare(
+    `SELECT app_id, manifest_json FROM installed_apps WHERE tenant_id=?1`,
+  ).bind(tenantId).all<{ app_id: string; manifest_json: string }>();
+  const manifests = (rows.results ?? []).map((row) => ({ app_id: row.app_id, manifest: JSON.parse(row.manifest_json) as AppManifest }));
+  const targets = subscribersFor(manifests, event.event_type);
+  if (!targets.length) return [];
+
+  const dispatcher = new AppHookDispatcher(env.DB, {
+    DISPATCHER: env.DISPATCHER,
+    ...(env.INTERNAL_SERVICE_TOKEN ? { INTERNAL_SERVICE_TOKEN: env.INTERNAL_SERVICE_TOKEN } : {}),
+  });
+  return dispatcher.fanOut(tenantId, event, targets, new Date().toISOString());
+}
 
 /**
  * Serves the Frappe-compatible surface.

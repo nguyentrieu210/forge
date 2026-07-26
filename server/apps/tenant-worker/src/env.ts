@@ -24,4 +24,11 @@ export interface TenantEnv {
    * other. Absent means cookie sessions are disabled and only bearer auth works.
    */
   SESSION_SECRET?: string;
+  /**
+   * Workers-for-Platforms dispatch namespace, used to deliver hook events to app
+   * Workers. Absent means apps cannot carry their own logic — hooks are simply
+   * never delivered rather than silently dropped, since the delivery rows remain
+   * pending for the sweep.
+   */
+  DISPATCHER?: DispatchNamespace;
 }

@@ -13,7 +13,7 @@ from pathlib import Path
 root = Path(__file__).resolve().parents[1]
 connection = sqlite3.connect(":memory:")
 connection.execute("PRAGMA foreign_keys=ON")
-for index in range(1, 13):
+for index in range(1, 14):
     migration = next(iter(sorted((root / "migrations/tenant").glob(f"{index:04d}_*.sql"))))
     connection.executescript(migration.read_text(encoding="utf-8"))
 

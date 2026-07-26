@@ -41,6 +41,18 @@ export interface AppNavItem {
   route?: string;
 }
 
+/**
+ * An event subscription.
+ *
+ * `event` is an exact event type (`sales_order.submitted`) or a prefix wildcard
+ * (`sales_order.*`, or `*` for everything). Only a trailing `*` is allowed:
+ * arbitrary patterns would make it impossible to tell, by reading a manifest,
+ * which events an app actually receives.
+ */
+export interface AppHook {
+  event: string;
+}
+
 export interface AppManifest {
   id: string;
   name: string;
@@ -52,8 +64,21 @@ export interface AppManifest {
   roles: AppRoleDefinition[];
   fixtures: AppFixture[];
   nav: AppNavItem[];
-  /** Optional Worker in the dispatch namespace that receives lifecycle events. */
+  /**
+   * Worker in the dispatch namespace that receives this app's hook events.
+   *
+   * Required when `hooks` is non-empty: a subscription with nowhere to deliver
+   * would queue events that can never be processed.
+   */
   worker?: string;
+  hooks: AppHook[];
+}
+
+/** True when an event type matches a subscription pattern. */
+export function hookMatches(pattern: string, eventType: string): boolean {
+  if (pattern === "*") return true;
+  if (pattern.endsWith(".*")) return eventType.startsWith(pattern.slice(0, -1));
+  return pattern === eventType;
 }
 
 const ID_PATTERN = /^[a-z][a-z0-9-]*$/;
@@ -115,6 +140,13 @@ export function parseAppManifest(value: unknown): AppManifest {
     return { id: dependencyId, version: text(dependency.version, `requires[${index}].version`, 32) };
   });
 
+  const hooks = array(input.hooks ?? [], "hooks").map((entry, index) => parseHook(entry, index));
+  const worker = input.worker === undefined ? undefined : text(input.worker, "worker", 128);
+  // A subscription with nowhere to deliver would queue events that can never be
+  // processed, and the backlog would look like a broken platform rather than a
+  // misdeclared app.
+  if (hooks.length && !worker) throw errors.validation(`${id} declares hooks but no worker to deliver them to`);
+
   return {
     id,
     name: text(input.name, "name", 160),
@@ -126,8 +158,20 @@ export function parseAppManifest(value: unknown): AppManifest {
     roles,
     fixtures,
     nav,
-    ...(input.worker === undefined ? {} : { worker: text(input.worker, "worker", 128) }),
+    hooks,
+    ...(worker === undefined ? {} : { worker }),
   };
+}
+
+function parseHook(value: JsonValue, index: number): AppHook {
+  const pattern = typeof value === "string" ? value : (value && typeof value === "object" && !Array.isArray(value) ? (value as JsonObject).event : undefined);
+  const event = text(pattern, `hooks[${index}].event`, 160);
+  // Only a trailing wildcard: an arbitrary pattern would make it impossible to
+  // tell from a manifest which events an app actually receives.
+  if (event !== "*" && !/^[a-z0-9_]+(\.[a-z0-9_]+)*(\.\*)?$/.test(event)) {
+    throw errors.validation(`hooks[${index}].event must be an event type or a trailing wildcard: ${event}`);
+  }
+  return { event };
 }
 
 /** Roles the platform always provides, so an app need not redeclare them. */

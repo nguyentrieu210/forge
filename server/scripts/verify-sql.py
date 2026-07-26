@@ -18,6 +18,7 @@ for migration in [
     root / "migrations/tenant/0010_frappe_compat.sql",
     root / "migrations/tenant/0011_customization.sql",
     root / "migrations/tenant/0012_app_registry.sql",
+    root / "migrations/tenant/0013_app_hooks.sql",
 ]:
     connection.executescript(migration.read_text())
 
