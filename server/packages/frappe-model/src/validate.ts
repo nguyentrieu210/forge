@@ -1,6 +1,7 @@
 import type { JsonObject, JsonValue } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
 import type { DocFieldMeta, DocPermissionMeta, DocTypeMeta, MetaFieldType, WorkflowMeta } from "./types.js";
+import { assertFieldConditionSupported } from "./field-condition.js";
 
 const FIELD_TYPES = new Set<MetaFieldType>([
   "Data", "Small Text", "Text", "Long Text", "Code", "Int", "Float", "Currency", "Percent", "Check",
@@ -26,6 +27,17 @@ export function parseDocTypeMeta(value: unknown, expectedName?: string): DocType
       throw errors.validation(`${field.fieldtype} field ${field.fieldname} requires options`);
     }
     if (field.fieldtype === "Select" && !field.options) throw errors.validation(`Select field ${field.fieldname} requires options`);
+    if (field.fieldtype === "Dynamic Link") {
+      // The target doctype is read from another field, so that field must exist —
+      // otherwise the link can never be validated and would accept anything.
+      if (!field.options) throw errors.validation(`Dynamic Link field ${field.fieldname} requires options naming the doctype field`);
+      if (!fields.some((entry) => entry.fieldname === field.options)) {
+        throw errors.validation(`Dynamic Link field ${field.fieldname} points at unknown field ${field.options}`);
+      }
+    }
+    // Refused at save time, not ignored at runtime: a condition the server cannot
+    // evaluate would be a validation rule that appears to exist but never fires.
+    if (field.mandatory_depends_on) assertFieldConditionSupported(field.mandatory_depends_on, field.fieldname, "mandatory_depends_on");
   }
   if (!permissions.length) permissions.push({ role: "System Manager", read: true, write: true, create: true, submit: true, cancel: true, amend: true, print: true, email: true, report: true, import: true, export: true, share: true });
   const searchFields = input.search_fields === undefined ? undefined : array(input.search_fields, "search_fields").map((entry, index) => text(entry, `search_fields[${index}]`, 160));

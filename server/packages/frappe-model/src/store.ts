@@ -2,6 +2,7 @@ import type { JsonObject } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
 import type { DocTypeMeta, PrintFormatMeta, WorkflowMeta } from "./types.js";
 import { parseDocTypeMeta, validateWorkflow } from "./validate.js";
+import { formatSeriesName, resolveAutoname } from "./autoname.js";
 
 export interface MetadataStore {
   getDocType(tenantId: string, doctype: string): Promise<DocTypeMeta | null>;
@@ -11,7 +12,8 @@ export interface MetadataStore {
   putWorkflow(tenantId: string, workflow: WorkflowMeta, actor: string, now: string): Promise<WorkflowMeta>;
   getPrintFormat(tenantId: string, doctype: string, name?: string): Promise<PrintFormatMeta | null>;
   putPrintFormat(tenantId: string, format: PrintFormatMeta, actor: string, now: string): Promise<PrintFormatMeta>;
-  nextName(tenantId: string, doctype: string, pattern: string, now: string): Promise<string>;
+  /** `document` supplies values for field-, series- and format-based patterns. */
+  nextName(tenantId: string, doctype: string, pattern: string, now: string, document?: JsonObject): Promise<string>;
   provisionStandardCatalog(tenantId: string, actor: string, now: string): Promise<{ doctypes: number; print_formats: number }>;
 }
 
@@ -107,21 +109,29 @@ export class D1MetadataStore implements MetadataStore {
     return { doctypes: doctypes.meta?.changes ?? 0, print_formats: formats.meta?.changes ?? 0 };
   }
 
-  async nextName(tenantId: string, doctype: string, pattern: string, now: string): Promise<string> {
-    if (pattern === "hash") return `${doctype.replace(/\s+/g, "-").toUpperCase()}-${crypto.randomUUID()}`;
-    if (pattern === "field:name") throw errors.validation("field:name autoname requires the client to supply the name field");
-    const match = pattern.match(/^([A-Za-z0-9 _./-]*?)(#+)$/);
-    if (!match) throw errors.validation(`Unsupported autoname pattern: ${pattern}`);
-    const prefix = match[1]!.replace(/YYYY/g, now.slice(0, 4)).replace(/MM/g, now.slice(5, 7)).replace(/DD/g, now.slice(8, 10));
-    const digits = match[2]!.length;
-    const key = `${doctype}:${prefix}:${digits}`;
+  async nextName(tenantId: string, doctype: string, pattern: string, now: string, document: JsonObject = {}): Promise<string> {
+    const plan = resolveAutoname({ doctype, pattern, document, now });
+    if (plan.kind === "literal") return plan.name;
+    if (plan.kind === "prompt") throw errors.validation(`${doctype} requires the caller to supply a name`);
+    const value = await this.allocate(tenantId, plan.seriesKey, now);
+    return plan.kind === "autoincrement" ? String(value) : formatSeriesName(plan.prefix, plan.digits, value);
+  }
+
+  /**
+   * Allocates the next value for a series.
+   *
+   * A single upsert with RETURNING: read-then-write would let two concurrent
+   * creates observe the same value and mint the same name, which the unique index
+   * on (tenant, doctype, name) would then reject as a spurious duplicate.
+   */
+  private async allocate(tenantId: string, seriesKey: string, now: string): Promise<number> {
     const row = await this.db.prepare(
       `INSERT INTO naming_series(tenant_id,series_key,current_value,modified_at) VALUES(?1,?2,1,?3)
        ON CONFLICT(tenant_id,series_key) DO UPDATE SET current_value=current_value+1,modified_at=excluded.modified_at
        RETURNING current_value`,
-    ).bind(tenantId, key, now).first<{ current_value: number }>();
+    ).bind(tenantId, seriesKey, now).first<{ current_value: number }>();
     if (!row) throw new Error("Unable to allocate naming series");
-    return `${prefix}${String(row.current_value).padStart(digits, "0")}`;
+    return row.current_value;
   }
 }
 
@@ -145,12 +155,16 @@ export class InMemoryMetadataStore implements MetadataStore {
   async putPrintFormat(tenantId: string, format: PrintFormatMeta): Promise<PrintFormatMeta> { this.formats.set(this.key(tenantId, format.name), structuredClone(format)); return structuredClone(format); }
   async provisionStandardCatalog(_tenantId: string, _actor: string, _now: string): Promise<{ doctypes: number; print_formats: number }> { return { doctypes: 0, print_formats: 0 }; }
   
-  async nextName(tenantId: string, doctype: string, pattern: string, now: string): Promise<string> {
-    if (pattern === "hash") return `${doctype}-${crypto.randomUUID()}`;
-    const match = pattern.match(/^([A-Za-z0-9 _./-]*?)(#+)$/); if (!match) throw errors.validation("Unsupported autoname pattern");
-    const prefix = match[1]!.replace(/YYYY/g, now.slice(0, 4)).replace(/MM/g, now.slice(5, 7)).replace(/DD/g, now.slice(8, 10));
-    const key = this.key(tenantId, `${doctype}:${prefix}`); const next = (this.counters.get(key) ?? 0) + 1; this.counters.set(key, next);
-    return `${prefix}${String(next).padStart(match[2]!.length, "0")}`;
+  // Resolution is shared with the D1 store so both allocate identical names; only
+  // the counter storage differs.
+  async nextName(tenantId: string, doctype: string, pattern: string, now: string, document: JsonObject = {}): Promise<string> {
+    const plan = resolveAutoname({ doctype, pattern, document, now });
+    if (plan.kind === "literal") return plan.name;
+    if (plan.kind === "prompt") throw errors.validation(`${doctype} requires the caller to supply a name`);
+    const key = this.key(tenantId, plan.seriesKey);
+    const next = (this.counters.get(key) ?? 0) + 1;
+    this.counters.set(key, next);
+    return plan.kind === "autoincrement" ? String(next) : formatSeriesName(plan.prefix, plan.digits, next);
   }
 }
 

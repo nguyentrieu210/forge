@@ -99,8 +99,11 @@ test("generic metadata rejects unknown fields and invalid Link references at the
 
 test("metadata naming, safe print rendering and CSV import preview are deterministic", async () => {
   const { metadata, store } = await setup();
-  assert.equal(await metadata.nextName("demo", "Inspection Request", "INSP-.YYYY.-####", NOW), "INSP-.2026.-0001");
-  assert.equal(await metadata.nextName("demo", "Inspection Request", "INSP-.YYYY.-####", NOW), "INSP-.2026.-0002");
+  // In a Frappe naming series the dots are SEPARATORS between literal and
+  // placeholder segments, not literal characters: `INSP-.YYYY.-####` yields
+  // `INSP-2026-0001`. The earlier implementation left them in the name.
+  assert.equal(await metadata.nextName("demo", "Inspection Request", "INSP-.YYYY.-####", NOW), "INSP-2026-0001");
+  assert.equal(await metadata.nextName("demo", "Inspection Request", "INSP-.YYYY.-####", NOW), "INSP-2026-0002");
   const document = {
     tenant_id: "demo", doctype: "Inspection Request", name: "INSP-1", owner: "Administrator", docstatus: 0,
     status: "Draft", version: 1, created_at: NOW, modified_at: NOW, data: { subject: "<script>alert(1)</script>" }, children: [],

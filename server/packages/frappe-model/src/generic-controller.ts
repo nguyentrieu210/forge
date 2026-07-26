@@ -6,6 +6,7 @@ import { domainEvent } from "../../outbox/src/index.js";
 import type { MetadataStore } from "./store.js";
 import type { DocFieldMeta, DocTypeMeta, WorkflowMeta } from "./types.js";
 import { isLayoutField } from "./validate.js";
+import { evaluateFieldCondition } from "./field-condition.js";
 import { canWriteField } from "./permission.js";
 
 export class GenericMetadataController implements DocumentController<JsonObject> {
@@ -85,6 +86,14 @@ async function normalizeDocument(context: ControllerContext<JsonObject>, meta: D
     else if (prior !== undefined && context.command.action === "save") value = structuredClone(prior);
     else if (field.default !== undefined) value = structuredClone(field.default);
     if (field.required && isEmpty(value)) throw errors.validation(`${field.label} is required`);
+    // `mandatory_depends_on` is enforced HERE, on the server. The client evaluates
+    // the same expression to drive its UI, but a client-side check is a hint, not
+    // a rule: a direct API call would otherwise submit a document missing a field
+    // the business logic treats as required.
+    if (!field.required && isEmpty(value) && field.mandatory_depends_on
+      && evaluateFieldCondition(field.mandatory_depends_on, input, context.existing?.data)) {
+      throw errors.validation(`${field.label} is required`, { fieldname: field.fieldname });
+    }
     if (value !== undefined) output[field.fieldname] = value;
     if (context.command.action === "submit") await validateReference(context, field, value);
   }
@@ -148,6 +157,18 @@ async function validateReference(context: ControllerContext<JsonObject>, field: 
     const exists = await context.reader.hasMasterRecord(context.command.tenant_id, field.options, String(value))
       || Boolean(await context.reader.getDocument(context.command.tenant_id, field.options, String(value)));
     if (!exists) throw errors.reference(`${field.options} reference is invalid or unavailable`);
+  }
+  if (field.fieldtype === "Dynamic Link" && field.options) {
+    // The target doctype is named by ANOTHER field on the same document. This was
+    // previously unvalidated entirely: a Dynamic Link could point at a doctype
+    // that does not exist, or at a record that does not, and nothing objected.
+    const targetDoctype = context.command.document[field.options];
+    if (typeof targetDoctype !== "string" || !targetDoctype) {
+      throw errors.reference(`${field.label} needs ${field.options} to name its target doctype`, { fieldname: field.options });
+    }
+    const exists = await context.reader.hasMasterRecord(context.command.tenant_id, targetDoctype, String(value))
+      || Boolean(await context.reader.getDocument(context.command.tenant_id, targetDoctype, String(value)));
+    if (!exists) throw errors.reference(`${targetDoctype} reference is invalid or unavailable`, { fieldname: field.fieldname });
   }
   if (field.fieldtype === "Table" && field.options && Array.isArray(value)) {
     for (const row of value) if (!row || typeof row !== "object" || Array.isArray(row)) throw errors.validation(`${field.label} contains an invalid child row`);

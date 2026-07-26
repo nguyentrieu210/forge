@@ -24,6 +24,7 @@ import { fromFrappeDoc, toFrappeDoc, toFrappeListRow } from "./doc-shape.js";
 import { faultResponse, methodResponse, resourceResponse } from "./envelope.js";
 import { toKernelFilters, toKernelSearch, toKernelSort } from "./filters.js";
 import { childDocTypeNames, maskedFieldNames, tableFieldNames, toFrappeMetaBundle } from "./meta-shape.js";
+import { resolveAutoname } from "../../frappe-model/src/index.js";
 
 /**
  * Contract version, surfaced to the client as `frappe_version`.
@@ -611,11 +612,14 @@ function toKernelPayload(submitted: JsonObject, meta: DocTypeMeta): JsonObject {
  */
 async function resolveNewName(doctype: string, meta: DocTypeMeta, submitted: JsonObject, context: FrappeRouterContext): Promise<string> {
   const requested = typeof submitted.name === "string" ? submitted.name.trim() : "";
-  if (!meta.autoname || meta.autoname === "field:name") {
+  // `prompt` (and an absent pattern) is the only case where the client chooses.
+  // Every other pattern is resolved server-side so a client cannot pick where it
+  // lands in a sequence, or reuse a name a series would later allocate.
+  if (resolveAutoname({ doctype, pattern: meta.autoname, document: submitted, now: context.now() }).kind === "prompt") {
     if (!requested) throw errors.validation(`${doctype} requires a name`);
     return requested;
   }
-  return context.metadata.nextName(context.tenantId, doctype, meta.autoname, context.now());
+  return context.metadata.nextName(context.tenantId, doctype, meta.autoname ?? "", context.now(), submitted);
 }
 
 async function systemDefaults(context: FrappeRouterContext): Promise<JsonObject> {

@@ -208,7 +208,10 @@ export default {
           if (!fieldValue) throw errors.validation("field_value is required for field:name autoname");
           return jsonResponse({ name: fieldValue, metadata_revision: meta.revision });
         }
-        return jsonResponse({ name: await metadata.nextName(tenantId, doctype, meta.autoname ?? "hash", new Date().toISOString()), metadata_revision: meta.revision });
+        // The document is forwarded so field-, series- and format-based patterns
+        // can read the values they name from.
+        const namingDocument = body.document && typeof body.document === "object" && !Array.isArray(body.document) ? body.document : {};
+        return jsonResponse({ name: await metadata.nextName(tenantId, doctype, meta.autoname ?? "hash", new Date().toISOString(), namingDocument), metadata_revision: meta.revision });
       }
 
       const workflowMatch = url.pathname.match(/^\/api\/v1\/workflows\/([^/]+)$/);
@@ -371,7 +374,7 @@ export default {
             if (!name) {
               if (!meta.autoname) throw errors.validation(`Row ${index + 2} requires name because ${doctype} has no autoname`);
               if (meta.autoname === "field:name") throw errors.validation(`Row ${index + 2} requires name for field:name autoname`);
-              name = await metadata.nextName(tenantId, doctype, meta.autoname, new Date().toISOString());
+              name = await metadata.nextName(tenantId, doctype, meta.autoname, new Date().toISOString(), row);
             }
             const command: MutationCommand = { schema_version: 1, command_id: randomId("import"), tenant_id: tenantId, actor, aggregate: { doctype, name }, action: "create", expected_version: null, payload_hash: "", document: row };
             command.payload_hash = await commandPayloadHash(command as unknown as Record<string, unknown>);
