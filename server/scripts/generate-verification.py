@@ -34,14 +34,17 @@ files = collect(root)
 
 def count(exts):
     selected = [path for path in files if path.suffix in exts]
-    return len(selected), sum(len(path.read_text(errors="ignore").splitlines()) for path in selected)
+    # Encoding is explicit: `read_text()` without it uses the platform locale, which
+    # on Windows is cp1252 and fails on any UTF-8 source file. The counts are the
+    # same on every platform only if the decode is.
+    return len(selected), sum(len(path.read_text(encoding="utf-8", errors="ignore").splitlines()) for path in selected)
 
 ts_files, ts_lines = count({".ts", ".tsx", ".mts"})
 sql_files, sql_lines = count({".sql"})
 md_files, md_lines = count({".md"})
 py_files, py_lines = count({".py"})
 js_files, js_lines = count({".mjs"})
-node_tests = sum(len(re.findall(r"^test\(", path.read_text(), flags=re.MULTILINE)) for path in (root / "tests").glob("*.test.mjs"))
+node_tests = sum(len(re.findall(r"^test\(", path.read_text(encoding="utf-8"), flags=re.MULTILINE)) for path in (root / "tests").glob("*.test.mjs"))
 web_verified = os.environ.get("CLOUDFORGE_WEB_TYPECHECK_VERIFIED") == "1"
 workerd_verified = os.environ.get("CLOUDFORGE_WORKERD_VERIFIED") == "1"
 

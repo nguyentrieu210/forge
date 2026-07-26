@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0.0",
+  "repository": "https://github.com/frappe/erpnext",
+  "tag": "v16.20.0",
+  "resolved_commit": "ff46d20b259a2d65a7ded959df9f9a42991a3562",
+  "archive_sha256": "63bf23ee4121a043729f8e60052ed7cdf15556ec15f8bd481b0f0241e81f3a8c",
+  "archive_size_bytes": 21061732,
+  "download_final_host": "codeload.github.com",
+  "tree_sha256": "c75b1ac0e7cc0487456b87f72929bc1fb262069803802cff2e2d4723feb3d9ff",
+  "file_count": 4826,
+  "destination": "C:\\Forge\\upstream\\erpnext-v16.20.0"
+}

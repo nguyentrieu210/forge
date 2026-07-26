@@ -14,6 +14,7 @@ Cập nhật: 2026-07-26.
 | Build TS strict (server) | `pnpm --filter cloudforge run build` | exit 0 |
 | Typecheck worker (server) | `pnpm --filter cloudforge run typecheck:workers` | exit 0 |
 | Test Node/domain | `node --test tests/*.test.mjs` | **249/249 PASS** |
+| **Cổng phát hành tổng hợp** | `pnpm --filter cloudforge run check:business-suite` | **ok:true missing:[] exit 0** |
 | Gate SQL (migration 0001–0015) | `pnpm --filter cloudforge run test:sql` | **6/6 PASS** |
 | **Workerd tenant-worker** | `vitest run --config apps/tenant-worker/vitest.config.mts` | **70/70 PASS** (23 gốc + 47 E2E lớp vỏ) |
 | **Workerd query-worker** | `vitest run --config apps/query-worker/vitest.config.mts` | **3/3 PASS** |
@@ -40,6 +41,44 @@ SQLITE_100_WAY_AND_CROSS_AGGREGATE_RACES_PASS
 Migration 0001–0015 chạy tuần tự trên database trắng, kèm diễn tập các guard chỉ
 tồn tại ở tầng SQL (chuỗi amend, cấp role, hình dạng property setter, index tìm
 kiếm theo document, hạn mức đồng thời 100 luồng).
+
+## Cổng phát hành tổng hợp — PASS lần đầu
+
+`npm run check:business-suite` là cổng promotion mà bản gốc khai. **Chưa từng chạy
+trọn** trước đây, và nó vỡ ở hai chỗ khi chạy thật:
+
+| Lỗi | Bản chất |
+|---|---|
+| `generate-verification.py` UnicodeDecodeError | `read_text()` không chỉ định encoding → dùng locale, trên Windows là cp1252 và chết ở byte UTF-8. Cổng chỉ chạy được trên máy locale UTF-8. |
+| `verify-secrets.mjs` chặn `.dev.vars` | Thông điệp nói "must not be **committed**" nhưng chỉ kiểm sự tồn tại trên đĩa. `.dev.vars` là chỗ wrangler quy định cho secret CỤC BỘ và `wrangler dev` không chạy được nếu thiếu — nên cổng xanh và môi trường local chạy được loại trừ nhau, đúng thứ đẩy người ta đi tắt vô hiệu hoá cổng. Nay hỏi git đúng câu cần hỏi: bị track → FAIL; không track mà cũng không ignore → FAIL (lần `git add .` sau là commit); chỉ untracked-VÀ-ignored mới chấp nhận, và vẫn được **công bố** ra output. |
+
+Kết quả: `ok: true`, `missing: []`, exit 0 — 15 check con đều xanh.
+
+## Đối chiếu ERPNext oracle — đã chạy thật
+
+```
+npm run source:fetch    # tải zipball từ GitHub API, bắt buộc khớp SHA 40 ký tự đã khoá
+npm run source:verify
+npm run oracle:o2c
+```
+
+| Kiểm tra | Kết quả |
+|---|---|
+| Fetch + content-verify Frappe v16.19.0 / ERPNext v16.20.0 | `failures: []` |
+| Scan source-exact | 1.872 file parsed, 706 parsed_static, 637 text, 87 binary |
+| `oracle:o2c` | **ORACLE_OK runtime=CAPTURED_MATRIX claim=DIFFERENTIAL_PASS** |
+
+**Phạm vi chính xác — không tuyên bố quá:** 115 fixture O2C, trong đó **48
+DIFFERENTIAL_PASS** (khớp CloudForge trên mọi chiều áp dụng được) và **67
+ORACLE_CAPTURED** (phân kỳ đã phân loại, 27 trong số đó là `CLOUDFORGE_MISSING`).
+Trạng thái đối chiếu: 72 implemented · 17 partial · 26 missing.
+Không có tuyên bố `parity: true` nào; mỗi fixture mang claim riêng của nó.
+
+Phủ **chỉ O2C** (SO/DN/SI/PE, vòng đời, báo cáo, số học, đồng thời, thuế nâng cao,
+đa tiền tệ, giá vốn, repost, batch/serial). Bề rộng v0.8–v1.0 (ngân hàng, lương,
+subscription, hoá đơn điện tử, sản xuất, tài sản) **KHÔNG có oracle** — cần dựng
+bench ERPNext thật để capture fixture mới; môi trường hiện tại không có
+bench/MariaDB/Redis.
 
 ## Chạy thật qua HTTP với wrangler dev
 
@@ -109,7 +148,7 @@ không thể mục đi mà không ai biết.
 | Diễn tập rollback + khôi phục tenant | ☐ chưa | môi trường đã deploy |
 | E2E với **trình duyệt** thật (MetaForge Desk vẽ màn hình) | ☐ chưa | trình duyệt + client trỏ vào `wrangler dev` |
 | `npm ci` sạch trên Linux | ☐ chưa | repo dùng pnpm; cần CI Linux |
-| Đối chiếu ERPNext oracle v0.8–v1.0 | ☐ chưa | `pnpm run source:fetch` — cần clone Frappe/ERPNext v16 đã khoá SHA |
+| Oracle cho bề rộng v0.8–v1.0 (ngân hàng, lương, subscription, sản xuất) | ☐ chưa | bench ERPNext thật để capture fixture mới (cần MariaDB + Redis + bench) |
 | Review pháp lý hoá đơn điện tử / lương | ☐ chưa | không phải việc kỹ thuật |
 
 ## E2E lớp vỏ Frappe — đã chạy trên workerd thật

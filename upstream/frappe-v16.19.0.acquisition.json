@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0.0",
+  "repository": "https://github.com/frappe/frappe",
+  "tag": "v16.19.0",
+  "resolved_commit": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+  "archive_sha256": "460ad8205f0e40109d78cc67543ee818fd9f22f433f0de59fbd0685db5aa9dbd",
+  "archive_size_bytes": 23175248,
+  "download_final_host": "codeload.github.com",
+  "tree_sha256": "afed582b5d0ecbc8c32c44561ef72904c89cfd00bc1869cf598cb09fc9b6f8f5",
+  "file_count": 3303,
+  "destination": "C:\\Forge\\upstream\\frappe-v16.19.0"
+}

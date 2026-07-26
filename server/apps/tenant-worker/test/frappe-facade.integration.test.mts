@@ -578,7 +578,10 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
       name: "Visit Stage", module: "Custom", autoname: "prompt", title_field: "label",
       fields: [
         { fieldname: "label", label: "Label", fieldtype: "Data", required: true, in_list_view: true },
-        { fieldname: "stage", label: "Stage", fieldtype: "Select", options: "Todo\nDoing\nDone", in_standard_filter: true },
+        // "Backlog" rather than the obvious word: the repo-hygiene gate treats
+        // \bTODO\b as a placeholder marker, and the column name is incidental to what
+        // this test proves — so the test bends, not the gate.
+        { fieldname: "stage", label: "Stage", fieldtype: "Select", options: "Backlog\nDoing\nDone", in_standard_filter: true },
       ],
       permissions: [{ role: "System Manager", read: true, write: true, create: true }],
       revision: 1,
@@ -588,12 +591,12 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
       `INSERT INTO kanban_boards(tenant_id,name,reference_doctype,field_name,columns_json,owner,modified_at)
        VALUES('demo','Stage Board','Visit Stage','stage',?1,'sales@example.com',?2)
        ON CONFLICT(tenant_id,name) DO UPDATE SET columns_json=excluded.columns_json`,
-    ).bind(JSON.stringify([{ column_name: "Todo" }, { column_name: "Doing" }, { column_name: "Done" }]), NOW).run();
+    ).bind(JSON.stringify([{ column_name: "Backlog" }, { column_name: "Doing" }, { column_name: "Done" }]), NOW).run();
 
     const created = await call("/api/resource/Visit Stage", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "VS-1", label: "First", stage: "Todo" }),
+      body: JSON.stringify({ name: "VS-1", label: "First", stage: "Backlog" }),
     });
     expect(created.status).toBe(201);
     const beforeVersion = (await created.json() as any).data.modified;
@@ -603,7 +606,7 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
 
     // Reordering is view state: it must not bump the document's version.
     const reordered = await unwrap(await method("frappe.desk.doctype.kanban_board.kanban_board.update_order_for_single_card", {
-      board_name: "Stage Board", column_name: "Todo", order: ["VS-1"],
+      board_name: "Stage Board", column_name: "Backlog", order: ["VS-1"],
     }));
     expect(reordered.cards).toBe(1);
     const unchanged = (await (await call("/api/resource/Visit Stage/VS-1")).json() as any).data;
@@ -611,7 +614,7 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
 
     // Moving IS a business change, so it writes the field through the command path.
     const moved = await unwrap(await method("metaforge.api.kanban_move_with_comment", {
-      board: "Stage Board", docname: "VS-1", from: "Todo", to: "Doing", comment: "Started work",
+      board: "Stage Board", docname: "VS-1", from: "Backlog", to: "Doing", comment: "Started work",
     }));
     expect(moved.stage).toBe("Doing");
     expect(moved.modified).not.toBe(beforeVersion);
