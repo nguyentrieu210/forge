@@ -13,8 +13,8 @@ Cập nhật: 2026-07-26.
 | Cài đặt workspace | `pnpm install` | 399 gói, symlink `@metaforge/*` đúng workspace |
 | Build TS strict (server) | `pnpm --filter cloudforge run build` | exit 0 |
 | Typecheck worker (server) | `pnpm --filter cloudforge run typecheck:workers` | exit 0 |
-| Test Node/domain | `node --test tests/*.test.mjs` | **248/248 PASS** |
-| Gate SQL | `pnpm --filter cloudforge run test:sql` | **6/6 PASS** |
+| Test Node/domain | `node --test tests/*.test.mjs` | **249/249 PASS** |
+| Gate SQL (migration 0001–0015) | `pnpm --filter cloudforge run test:sql` | **6/6 PASS** |
 | **Workerd tenant-worker** | `vitest run --config apps/tenant-worker/vitest.config.mts` | **70/70 PASS** (23 gốc + 47 E2E lớp vỏ) |
 | **Workerd query-worker** | `vitest run --config apps/query-worker/vitest.config.mts` | **3/3 PASS** |
 | **Web typecheck** | `pnpm --filter @cloudforge/web run typecheck` | exit 0 |
@@ -33,13 +33,29 @@ FRAPPE_PLATFORM_AND_ERP_CORE_SCHEMA_PASS
 SQLITE_SCHEMA_TRIGGER_FIXED_POINT_AND_REFERENCE_GUARDS_PASS
 COMMERCIAL_ACCOUNTING_MIGRATION_DRY_RUN_PASS
 BUSINESS_SUITE_MIGRATION_0009_DRY_RUN_PASS
-FRAPPE_COMPAT_MIGRATION_0010_0011_DRY_RUN_PASS
+FRAPPE_COMPAT_MIGRATION_0010_0015_DRY_RUN_PASS
 SQLITE_100_WAY_AND_CROSS_AGGREGATE_RACES_PASS
 ```
 
-Migration 0001–0013 chạy tuần tự trên database trắng, kèm diễn tập các guard chỉ
+Migration 0001–0015 chạy tuần tự trên database trắng, kèm diễn tập các guard chỉ
 tồn tại ở tầng SQL (chuỗi amend, cấp role, hình dạng property setter, index tìm
 kiếm theo document, hạn mức đồng thời 100 luồng).
+
+## Đóng gói app — CLI chạy thật
+
+`node scripts/pack-app.mjs <dir> [--out x.json] [--check]`, và app mẫu thật ở
+[server/apps-src/visits/](../server/apps-src/visits/).
+
+| Kiểm tra | Kết quả |
+|---|---|
+| Pack app mẫu | `PACK_CHECK_PASS app=visits@1.0.0 doctypes=1 roles=2 fixtures=2 nav=1` |
+| Hai lần pack cùng nguồn | **byte giống hệt** — content hash không đổi nên cài lại là no-op thật |
+| Pack app có `Link` thiếu `options` | `PACK_FAILED: Link field ref requires options`, exit 1 |
+
+Validate bằng **chính parser của server**, không phải bản sao luật: hai bản hiện thực
+rồi sẽ lệch nhau, và chỗ lệch sẽ hiện ra thành cài thất bại trên tenant của khách chứ
+không phải ở đây. `npm run app:check` nằm trong gate `check:business-suite` nên app mẫu
+không thể mục đi mà không ai biết.
 
 ## Chưa chạy — và vì sao
 
@@ -133,7 +149,8 @@ Durable Object → D1. Không mock gì.
   lưu mà không có. Lý do từng cái ở
   xem [API_SURFACE.md](API_SURFACE.md). Mỗi cái gọi vào trả 404 `DoesNotExistError`
   chứ không trả rỗng, nên màn hình không render như thể có dữ liệu.
-- `track_seen` vẫn là metadata chưa có consumer (`is_single` đã hiện thực).
+- Không còn metadata nào ở trạng thái "khai báo mà không ai đọc": `is_single` và
+  `track_seen` đều đã hiện thực.
 - Hooks app là **phản ứng sau commit**, không phải validator trước commit. Việc
   kiểm tra cần chặn lệnh ghi phải khai báo bằng metadata.
 - Đây vẫn **không phải** ERPNext. Không có tương thích app Python, không có HR

@@ -1,0 +1,10 @@
+{
+  "id": "visits",
+  "name": "Quản lý viếng thăm",
+  "version": "1.0.0",
+  "requires": [],
+  "nav": [
+    { "key": "Visit Note", "label": "Ghi chú viếng thăm", "kind": "doctype", "icon": "notebook-pen", "group": "Viếng thăm" }
+  ],
+  "hooks": []
+}

@@ -13,7 +13,7 @@ from pathlib import Path
 root = Path(__file__).resolve().parents[1]
 connection = sqlite3.connect(":memory:")
 connection.execute("PRAGMA foreign_keys=ON")
-for index in range(1, 15):
+for index in range(1, 16):
     migration = next(iter(sorted((root / "migrations/tenant").glob(f"{index:04d}_*.sql"))))
     connection.executescript(migration.read_text(encoding="utf-8"))
 
@@ -239,4 +239,37 @@ unread = connection.execute(
 ).fetchone()[0]
 assert unread == 1, f"unread badge must exclude read and other users' rows, got {unread}"
 
-print("FRAPPE_COMPAT_MIGRATION_0010_0014_DRY_RUN_PASS")
+# ---- document views (0015) --------------------------------------------------
+insert_document("SO-SEEN", 0)
+connection.commit()
+connection.execute(
+    "INSERT INTO document_views(tenant_id,doctype,name,viewer,first_seen_at,last_seen_at)"
+    " VALUES(?,?,?,?,?,?)",
+    ("demo", "Sales Order", "SO-SEEN", "u1@example.com", NOW, NOW),
+)
+connection.execute(
+    "INSERT INTO document_views(tenant_id,doctype,name,viewer,first_seen_at,last_seen_at,view_count)"
+    " VALUES(?,?,?,?,?,?,?)"
+    " ON CONFLICT(tenant_id,doctype,name,viewer) DO UPDATE SET view_count=view_count+1",
+    ("demo", "Sales Order", "SO-SEEN", "u1@example.com", NOW, NOW, 1),
+)
+connection.commit()
+
+# One row per viewer: refreshing must not grow the table without bound.
+rows = connection.execute(
+    "SELECT view_count FROM document_views WHERE tenant_id='demo' AND name='SO-SEEN'"
+).fetchall()
+assert rows == [(2,)], f"a repeat view must increment, not append: {rows}"
+
+# A view of a document that does not exist must be impossible.
+expect_abort("FOREIGN KEY", lambda: connection.execute(
+    "INSERT INTO document_views(tenant_id,doctype,name,viewer,first_seen_at,last_seen_at)"
+    " VALUES(?,?,?,?,?,?)",
+    ("demo", "Sales Order", "SO-NOPE", "u1@example.com", NOW, NOW)))
+
+# Views follow their document out.
+connection.execute("DELETE FROM documents WHERE tenant_id='demo' AND doctype='Sales Order' AND name='SO-SEEN'")
+assert connection.execute("SELECT COUNT(*) FROM document_views WHERE name='SO-SEEN'").fetchone()[0] == 0
+connection.commit()
+
+print("FRAPPE_COMPAT_MIGRATION_0010_0015_DRY_RUN_PASS")

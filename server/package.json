@@ -46,7 +46,9 @@
     "verify:erpnext-suite": "node scripts/verify-erpnext-suite-readiness.mjs",
     "check:erpnext-suite": "npm run test && npm run typecheck:workers && npm run source:test && npm run report && npm run verify && npm run verify:erpnext-suite",
     "verify:business-suite": "node scripts/verify-business-suite-readiness.mjs",
-    "check:business-suite": "npm run test && npm run typecheck:workers && npm run source:test && npm run report && npm run verify && npm run verify:business-suite"
+    "check:business-suite": "npm run test && npm run typecheck:workers && npm run source:test && npm run report && npm run verify && npm run app:check && npm run verify:business-suite",
+    "app:pack": "node scripts/pack-app.mjs",
+    "app:check": "node scripts/pack-app.mjs apps-src/visits --check"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "0.18.5",

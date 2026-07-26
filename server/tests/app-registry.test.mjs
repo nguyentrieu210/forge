@@ -178,3 +178,42 @@ test("an app with no navigation contributes nothing rather than breaking the men
     { app_id: "core", app_name: "Core", version: "1.0.0", content_hash: "", installed_at: "", worker: null, nav: [] },
   ]), []);
 });
+
+// ---- the sample app on disk -------------------------------------------------
+
+test("the sample app in apps-src packs and parses, so it cannot rot unnoticed", async () => {
+  // Packing runs through the same parser the installer uses, so this also proves a
+  // real on-disk app layout stays installable as the platform's rules evolve.
+  const { readFile, readdir } = await import("node:fs/promises");
+  const root = new URL("../apps-src/visits/", import.meta.url);
+
+  const header = JSON.parse(await readFile(new URL("app.json", root), "utf8"));
+  const roles = JSON.parse(await readFile(new URL("roles.json", root), "utf8"));
+
+  const readDir = async (folder) => {
+    const names = (await readdir(new URL(`${folder}/`, root))).filter((name) => name.endsWith(".json")).sort();
+    return Promise.all(names.map(async (name) => JSON.parse(await readFile(new URL(`${folder}/${name}`, root), "utf8"))));
+  };
+  const doctypes = await readDir("doctypes");
+  const fixtureFiles = await readDir("fixtures");
+
+  const manifest = parseAppManifest({
+    ...header,
+    roles,
+    doctypes,
+    workflows: [],
+    print_formats: [],
+    fixtures: fixtureFiles.flat(),
+  });
+
+  assert.equal(manifest.id, "visits");
+  assert.equal(manifest.doctypes.length, 1);
+  assert.equal(manifest.fixtures.length, 2);
+  // Every role a DocPerm names is defined by the app itself.
+  const declared = new Set(manifest.roles.map((role) => role.role));
+  for (const permission of manifest.doctypes[0].permissions) {
+    assert.ok(declared.has(permission.role), `role ${permission.role} must be declared`);
+  }
+  // The nav entry points at a doctype the app actually ships.
+  assert.equal(manifest.nav[0].key, manifest.doctypes[0].name);
+});

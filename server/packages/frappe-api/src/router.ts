@@ -917,7 +917,16 @@ async function getDoc(args: FrappeArgs, context: FrappeRouterContext): Promise<J
   const doctype = args.requireText("doctype", 160);
   const name = args.requireText("name", 320);
   const document = await loadReadable(doctype, name, context);
+  const meta = await requireMeta(doctype, context);
   const timeline = await context.collaboration.listTimeline(context.tenantId, doctype, name);
+
+  // `track_seen` was previously validated and stored but read by nothing. Recorded
+  // only when the doctype asks for it — tracking every read of every doctype would
+  // add a write to the hottest path on the platform for information nobody shows.
+  const views = meta.track_seen
+    ? await recordAndListViews(doctype, name, context)
+    : [];
+
   return {
     docs: [toFrappeDoc(document)],
     docinfo: {
@@ -926,9 +935,27 @@ async function getDoc(args: FrappeArgs, context: FrappeRouterContext): Promise<J
       communications: [],
       assignments: timeline.assignments ?? [],
       attachments: timeline.files ?? [],
+      tags: await context.collaboration.listTags(context.tenantId, doctype, name),
+      views: views as unknown as JsonValue,
       permissions: await effectivePermissionFlags(doctype, name, context),
     },
   };
+}
+
+/**
+ * Records this read and returns everyone who has seen the document.
+ *
+ * A failure to record must not fail the read: knowing who looked at a document is
+ * strictly less important than being able to open it.
+ */
+async function recordAndListViews(doctype: string, name: string, context: FrappeRouterContext): Promise<JsonObject[]> {
+  try {
+    await context.collaboration.recordView(context.tenantId, doctype, name, context.actor.user_id, context.now());
+    return (await context.collaboration.listViewers(context.tenantId, doctype, name))
+      .map((entry) => ({ owner: entry.viewer, creation: entry.last_seen_at }));
+  } catch {
+    return [];
+  }
 }
 
 async function countDocuments(args: FrappeArgs, context: FrappeRouterContext): Promise<number> {

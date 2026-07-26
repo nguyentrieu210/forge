@@ -32,10 +32,18 @@ chỉ chủ tài khoản có, hoặc một môi trường đã deploy, hoặc th
 
 ## Việc còn mở, không chặn bởi gì
 
-- CLI đóng gói app từ thư mục nguồn (nối với `create-metaforge-app` bên FE).
-- Đóng gói lại chính bộ ERP hiện tại (`clouderp-*`) thành app đầu tiên, để tự chứng
-  minh cơ chế cài app trên một bộ thật thay vì một app mẫu.
-- `track_seen`.
+Không còn. Ba việc cuối đã xử lý:
+
+- **CLI đóng gói app** — `npm run app:pack <dir>`, output tất định, validate bằng
+  chính parser của server. App mẫu thật ở `server/apps-src/visits/`.
+- **`track_seen`** — hiện thực, lưu ở bảng riêng để một lần ĐỌC không bump version
+  document (Frappe lưu `_seen` trên chính row, tức mỗi lần mở là một lần sửa trong
+  vết kiểm toán).
+- **Đóng gói lại `clouderp-*` thành app** — **không làm, có lý do**: 26 DocType của
+  bộ ERP là controller TypeScript trong kernel, không phải metadata. Sổ cái, giá vốn
+  FIFO, khoá kỳ kế toán không diễn đạt được bằng JSON. Ranh giới thật của mô hình app
+  ghi ở [ARCHITECTURE.md](ARCHITECTURE.md#vì-sao-bộ-erp-hiện-tại-không-thể-là-một-app-dữ-liệu).
+  Tóm lại: app dữ liệu mở rộng được **bề rộng**, không mở rộng được **tầng kế toán**.
 
 ---
 

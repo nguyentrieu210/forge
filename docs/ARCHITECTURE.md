@@ -86,7 +86,36 @@ build lại, không deploy lại, không downtime.
 CloudForge đã có sẵn). Kernel phát sự kiện vòng đời qua outbox; Worker của app nhận và xử lý. Sandbox
 mỗi app tách biệt, không sập lẫn nhau.
 
-Xem [ROADMAP.md](ROADMAP.md) Pha 4–5.
+Xem [ROADMAP.md](ROADMAP.md) Pha 4–5. Nguồn app mẫu thật: [server/apps-src/visits/](../server/apps-src/visits/),
+đóng gói bằng `npm run app:pack apps-src/visits`.
+
+### Vì sao bộ ERP hiện tại KHÔNG thể là một app dữ liệu
+
+Lộ trình ban đầu định "đóng gói lại `clouderp-*` thành app đầu tiên để tự chứng minh
+cơ chế". Khi làm tới thì thấy điều đó **không đúng về bản chất**, nên ghi lại thay vì
+làm cho có:
+
+26 DocType của bộ ERP (Sales Order, Payment Entry, Stock Entry, Salary Slip…) không
+phải metadata. Chúng là **controller TypeScript** trong kernel: `SalesOrderController`
+tính thành tiền theo số nguyên scaled, dựng bút toán cân đối, trừ tồn theo FIFO, kiểm
+khoá kỳ kế toán. Không có cách nào diễn đạt những thứ đó bằng JSON.
+
+Nghĩa là ranh giới thật của mô hình app là:
+
+| Loại | Cơ chế |
+|---|---|
+| DocType chỉ có dữ liệu + form + workflow + quyền | ✅ app dữ liệu, cài bằng một lần ghi metadata |
+| Logic nghiệp vụ đứng ngoài (gửi mail, đồng bộ, tính toán phái sinh) | ✅ Worker của app qua hook (Pha 5) |
+| Logic phải chạy **trong** giao dịch ghi — sổ cái, giá vốn, tồn kho, guard tính toàn vẹn | ❌ phải là controller trong kernel |
+
+Cột thứ ba là lý do bộ `clouderp-*` ở lại trong kernel. Cố nhồi nó vào app dữ liệu sẽ
+phải hoặc bịa ra một ngôn ngữ tính toán trong JSON, hoặc cho app chạy code tuỳ ý bên
+trong đường ghi của aggregate — thứ mà [ADR về hook](#) đã bác vì một app chậm là treo
+mọi lệnh ghi lên aggregate đó.
+
+Nói cách khác: **app dữ liệu mở rộng được bề rộng, không mở rộng được tầng kế toán.**
+Thêm một ngành mới (viếng thăm, bảo trì, tuyển sinh) là gói app. Thêm một cách tính giá
+vốn mới thì phải sửa kernel.
 
 ## Tin tốt phát hiện lúc khảo sát
 

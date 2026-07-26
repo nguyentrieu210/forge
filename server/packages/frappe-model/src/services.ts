@@ -117,6 +117,33 @@ export class D1CollaborationService {
     return (result.meta?.changes ?? 0) > 0;
   }
 
+  /**
+   * Records that a user opened a document (`track_seen`).
+   *
+   * Upserts one row per viewer rather than appending a log: the question the UI
+   * asks is "who has seen this", and a per-open log would grow without bound every
+   * time somebody refreshed.
+   *
+   * Deliberately NOT stored on the document — see migration 0015. A read must never
+   * bump the document's version.
+   */
+  async recordView(tenantId: string, doctype: string, name: string, viewer: string, now: string): Promise<void> {
+    await this.db.prepare(
+      `INSERT INTO document_views(tenant_id,doctype,name,viewer,first_seen_at,last_seen_at,view_count)
+       VALUES(?1,?2,?3,?4,?5,?5,1)
+       ON CONFLICT(tenant_id,doctype,name,viewer) DO UPDATE SET
+         last_seen_at=excluded.last_seen_at, view_count=view_count+1`,
+    ).bind(tenantId, doctype, name, viewer, now).run();
+  }
+
+  async listViewers(tenantId: string, doctype: string, name: string): Promise<Array<{ viewer: string; last_seen_at: string }>> {
+    const result = await this.db.prepare(
+      `SELECT viewer, last_seen_at FROM document_views
+       WHERE tenant_id=?1 AND doctype=?2 AND name=?3 ORDER BY last_seen_at DESC LIMIT 50`,
+    ).bind(tenantId, doctype, name).all<{ viewer: string; last_seen_at: string }>();
+    return result.results ?? [];
+  }
+
   async listTags(tenantId: string, doctype: string, name: string): Promise<string[]> {
     const result = await this.db.prepare(
       `SELECT tag FROM document_tags WHERE tenant_id=?1 AND doctype=?2 AND name=?3 ORDER BY tag`,

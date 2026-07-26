@@ -15,3 +15,6 @@ docs/spec/source-exact/generated/
 docs/spec/source-exact/oracle/fixtures/O2C-*.json
 docs/spec/source-exact/oracle/differential/O2C-*.json
 docs/spec/source-exact/runtime/
+
+# Packed app output — regenerable from apps-src/ via `npm run app:pack`
+apps-src/**/*-[0-9]*.json

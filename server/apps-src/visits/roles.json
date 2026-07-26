@@ -1,0 +1,4 @@
+[
+  { "role": "Visit User", "desk_access": true },
+  { "role": "Visit Manager", "desk_access": true }
+]
