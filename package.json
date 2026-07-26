@@ -7,6 +7,16 @@
   "engines": {
     "node": ">=22"
   },
+  "pnpm": {
+    "overrides": {
+      "@metaforge/adapter-frappe": "workspace:*",
+      "@metaforge/controls": "workspace:*",
+      "@metaforge/core": "workspace:*",
+      "@metaforge/shell": "workspace:*",
+      "@metaforge/ui": "workspace:*",
+      "@metaforge/views": "workspace:*"
+    }
+  },
   "scripts": {
     "server:build": "pnpm --filter cloudforge run build",
     "server:test": "pnpm --filter cloudforge run test",
