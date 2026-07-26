@@ -16,4 +16,12 @@ export interface TenantEnv {
   INTERNAL_AUTH_SECRET_PREVIOUS?: string;
   INTERNAL_AUTH_KEY_ID_PREVIOUS?: string;
   INTERNAL_SERVICE_TOKEN?: string;
+  /**
+   * Signing secret for Frappe-shaped `sid` cookies.
+   *
+   * Kept distinct from INTERNAL_AUTH_SECRET so that rotating platform-internal
+   * signing does not log every user out, and so a leak of one does not forge the
+   * other. Absent means cookie sessions are disabled and only bearer auth works.
+   */
+  SESSION_SECRET?: string;
 }

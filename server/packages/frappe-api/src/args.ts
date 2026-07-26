@@ -79,6 +79,22 @@ export class FrappeArgs {
     return parsed as T[];
   }
 
+  /**
+   * Every argument as a plain object.
+   *
+   * Used where the request body IS the payload (REST document writes) rather than
+   * a bag of named method arguments. Control parameters must be excluded by the
+   * caller, since this cannot tell a field named `name` from a routing parameter.
+   */
+  all(exclude: ReadonlySet<string> = new Set()): JsonObject {
+    const output: JsonObject = {};
+    for (const [key, value] of this.values) {
+      if (exclude.has(key)) continue;
+      output[key] = value as JsonValue;
+    }
+    return output;
+  }
+
   /** Structured argument constrained to an object. */
   object(name: string): JsonObject | undefined {
     const parsed = this.json<JsonValue>(name);

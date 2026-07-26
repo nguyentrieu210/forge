@@ -322,7 +322,10 @@ export class InMemoryMutationStore implements MutationStore {
       this.assertSuiteBreadthInvariants(plan);
       this.assertBankReconciliationInvariants(plan);
 
-      this.documents.set(key, structuredClone(plan.document));
+      // Attribution is stamped by the store, not the controller, so the in-memory
+      // adapter must match D1 exactly or tests would pass against behaviour that
+      // does not exist in production.
+      this.documents.set(key, { ...structuredClone(plan.document), modified_by: command.actor.user_id });
       this.glEntries.push(...structuredClone(plan.gl_entries));
       this.stockEntries.push(...structuredClone(plan.stock_entries));
       this.paymentEntries.push(...structuredClone(plan.payment_entries));

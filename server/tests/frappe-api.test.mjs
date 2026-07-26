@@ -378,6 +378,41 @@ test("offset zero stays on the keyset path", () => {
   assert.doesNotMatch(new DocumentListCompiler().compileList("t1", request, SO_DEFINITION).sql, /OFFSET/);
 });
 
+// ---- modified_by attribution ------------------------------------------------
+
+test("the store stamps modified_by from the authenticated actor on every write", async () => {
+  const { DocumentKernel, InMemoryMutationStore } = await import("../dist/packages/document-kernel/src/index.js");
+  const { createO2CControllerRegistry } = await import("../dist/packages/clouderp-selling/src/index.js");
+  const { makeCommand } = await import("../dist/packages/test-harness/src/index.js");
+  const { seedStandardMasters, orderDocument } = await import("./helpers.mjs");
+
+  const store = new InMemoryMutationStore();
+  seedStandardMasters(store);
+  const kernel = new DocumentKernel(createO2CControllerRegistry(), store, undefined, () => "2026-07-26T00:00:00.000Z");
+
+  const creator = { user_id: "creator@example.com", roles: ["System Manager"] };
+  const editor = { user_id: "editor@example.com", roles: ["System Manager"] };
+
+  await kernel.execute(await makeCommand({
+    commandId: "c1", actor: creator, doctype: "Sales Order", name: "SO-ATTR",
+    action: "create", expectedVersion: null, document: orderDocument(),
+  }));
+  const created = await store.getDocument("demo", "Sales Order", "SO-ATTR");
+  assert.equal(created.owner, "creator@example.com");
+  assert.equal(created.modified_by, "creator@example.com");
+
+  await kernel.execute(await makeCommand({
+    commandId: "c2", actor: editor, doctype: "Sales Order", name: "SO-ATTR",
+    action: "save", expectedVersion: 1, document: orderDocument("11"),
+  }));
+  const edited = await store.getDocument("demo", "Sales Order", "SO-ATTR");
+  // The creator must not be rewritten, and the editor must be recorded — before
+  // this column existed an audit could not tell who changed a document.
+  assert.equal(edited.owner, "creator@example.com");
+  assert.equal(edited.modified_by, "editor@example.com");
+  assert.equal(toFrappeDoc(edited).modified_by, "editor@example.com");
+});
+
 // ---- envelope / faults ------------------------------------------------------
 
 test("method responses wrap the payload under message", async () => {

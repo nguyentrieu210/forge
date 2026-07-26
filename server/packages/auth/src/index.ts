@@ -218,3 +218,5 @@ function base64UrlDecodeBytes(value: string): Uint8Array {
   catch { throw errors.authentication("Invalid base64url value"); }
   return Uint8Array.from(binary, (character) => character.charCodeAt(0));
 }
+
+export * from "./user-store.js";

@@ -35,14 +35,15 @@ export function toFrappeDoc(document: CanonicalDocument): JsonObject {
     owner: document.owner,
     creation: toFrappeDatetime(document.created_at),
     modified: toFrappeModified(document.modified_at, document.version),
-    // The kernel does not yet persist who wrote last (`documents` has `owner`
-    // only). Reported as the owner until the column exists, rather than inventing
-    // an actor — see docs/ROADMAP.md Pha 2.
-    modified_by: typeof document.data.modified_by === "string" ? document.data.modified_by : document.owner,
+    // Stamped by the store from the authenticated actor. Documents written before
+    // the column existed have none, and fall back to the creator rather than
+    // reporting an empty author.
+    modified_by: document.modified_by ?? document.owner,
     docstatus: document.docstatus,
     idx: 0,
     status: document.status,
   };
+  if (document.amended_from) doc.amended_from = document.amended_from;
   for (const [fieldname, rows] of groupChildren(document).entries()) {
     doc[fieldname] = rows.map((row) => toFrappeChildRow(document, fieldname, row));
   }

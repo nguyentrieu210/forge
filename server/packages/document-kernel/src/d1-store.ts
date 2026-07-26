@@ -20,6 +20,8 @@ interface DocumentRow {
   version: number;
   created_at: string;
   modified_at: string;
+  modified_by: string;
+  amended_from: string | null;
   payload_json: string;
 }
 
@@ -46,7 +48,8 @@ export class D1MutationStore implements MutationStore {
 
   async getDocument<T extends JsonObject>(tenantId: string, doctype: string, name: string): Promise<CanonicalDocument<T> | null> {
     const row = await this.writer.prepare(
-      `SELECT tenant_id, doctype, name, owner, docstatus, status, version, created_at, modified_at, payload_json
+      `SELECT tenant_id, doctype, name, owner, docstatus, status, version, created_at, modified_at,
+              modified_by, amended_from, payload_json
        FROM documents WHERE tenant_id=?1 AND doc_key=?2`,
     ).bind(tenantId, documentKey(doctype, name)).first<DocumentRow>();
     if (!row) return null;
@@ -66,6 +69,8 @@ export class D1MutationStore implements MutationStore {
       version: row.version,
       created_at: row.created_at,
       modified_at: row.modified_at,
+      ...(row.modified_by ? { modified_by: row.modified_by } : {}),
+      ...(row.amended_from ? { amended_from: row.amended_from } : {}),
       data: JSON.parse(row.payload_json) as T,
       children: (children.results ?? []).map((child) => ({
         fieldname: child.fieldname,
@@ -304,6 +309,56 @@ export class D1MutationStore implements MutationStore {
     return Number(row?.total ?? 0);
   }
 
+  /**
+   * Deletes a DRAFT document and everything attached to it.
+   *
+   * Deliberately narrower than Frappe, which also allows deleting a cancelled
+   * document. Here a cancelled document still owns its reversing ledger rows
+   * (`gl_entries` and friends are keyed by voucher + revision, not by a
+   * foreign key), so removing it would leave those reversals pointing at nothing
+   * and silently unbalance the books. A submitted document is never deletable.
+   *
+   * Returns false when the document is already gone, so a retried delete is
+   * idempotent rather than a 404 the caller has to special-case.
+   */
+  async deleteDraftDocument(tenantId: string, doctype: string, name: string): Promise<boolean> {
+    const key = documentKey(doctype, name);
+    const row = await this.writer.prepare(
+      `SELECT docstatus FROM documents WHERE tenant_id=?1 AND doc_key=?2`,
+    ).bind(tenantId, key).first<{ docstatus: number }>();
+    if (!row) return false;
+    if (row.docstatus === 1) throw errors.lifecycle("A submitted document cannot be deleted; cancel it instead");
+    if (row.docstatus === 2) throw errors.lifecycle("A cancelled document cannot be deleted because its reversing ledger entries would be orphaned");
+
+    // A draft has no ledger of its own, but an unposted projection would still
+    // orphan; check rather than assume.
+    const ledger = await this.writer.prepare(
+      `SELECT (SELECT COUNT(*) FROM gl_entries WHERE tenant_id=?1 AND voucher_type=?2 AND voucher_no=?3)
+            + (SELECT COUNT(*) FROM stock_ledger_entries WHERE tenant_id=?1 AND voucher_type=?2 AND voucher_no=?3)
+            + (SELECT COUNT(*) FROM payment_ledger_entries WHERE tenant_id=?1 AND voucher_type=?2 AND voucher_no=?3) AS total`,
+    ).bind(tenantId, doctype, name).first<{ total: number }>();
+    if (Number(ledger?.total ?? 0) > 0) {
+      throw errors.lifecycle("The document has posted ledger entries and cannot be deleted");
+    }
+
+    // `document_children` and `document_search` cascade from `documents`; the
+    // collaboration tables carry no foreign key, so they are cleared explicitly.
+    // Receipts and `mutation_guard` rows are KEPT: they are the idempotency and
+    // audit record of what happened, and deleting them would let a replayed
+    // command re-create the document as if new.
+    await this.writer.batch([
+      this.writer.prepare(`DELETE FROM versions WHERE tenant_id=?1 AND doc_key=?2`).bind(tenantId, key),
+      this.writer.prepare(`DELETE FROM document_comments WHERE tenant_id=?1 AND doctype=?2 AND name=?3`).bind(tenantId, doctype, name),
+      this.writer.prepare(`DELETE FROM assignments WHERE tenant_id=?1 AND doctype=?2 AND name=?3`).bind(tenantId, doctype, name),
+      this.writer.prepare(`DELETE FROM document_shares WHERE tenant_id=?1 AND doctype=?2 AND name=?3`).bind(tenantId, doctype, name),
+      this.writer.prepare(`DELETE FROM document_tags WHERE tenant_id=?1 AND doctype=?2 AND name=?3`).bind(tenantId, doctype, name),
+      this.writer.prepare(`UPDATE files SET attached_to_doctype=NULL, attached_to_name=NULL
+                           WHERE tenant_id=?1 AND attached_to_doctype=?2 AND attached_to_name=?3`).bind(tenantId, doctype, name),
+      this.writer.prepare(`DELETE FROM documents WHERE tenant_id=?1 AND doc_key=?2 AND docstatus=0`).bind(tenantId, key),
+    ]);
+    return true;
+  }
+
   async hasMasterRecord(tenantId: string, recordType: string, name: string): Promise<boolean> {
     const row = await this.writer.prepare(
       `SELECT 1 AS found FROM master_records WHERE tenant_id=?1 AND record_type=?2 AND name=?3 AND disabled=0
@@ -365,20 +420,29 @@ export class D1MutationStore implements MutationStore {
     if (command.expected_version === null) {
       statements.push(database.prepare(
         `INSERT INTO documents
-         (tenant_id, doc_key, doctype, name, owner, docstatus, status, version, created_at, modified_at, payload_json)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)`,
+         (tenant_id, doc_key, doctype, name, owner, docstatus, status, version, created_at, modified_at,
+          modified_by, amended_from, payload_json)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)`,
       ).bind(
         command.tenant_id, key, plan.document.doctype, plan.document.name, plan.document.owner,
         plan.document.docstatus, plan.document.status, plan.document.version, plan.document.created_at,
-        plan.document.modified_at, JSON.stringify(plan.document.data),
+        plan.document.modified_at,
+        // Attribution comes from the authenticated actor on the command, never
+        // from the controller output — a controller cannot credit the change to
+        // someone else, and cannot omit it.
+        command.actor.user_id,
+        plan.document.amended_from ?? null,
+        JSON.stringify(plan.document.data),
       ));
     } else {
       statements.push(database.prepare(
-        `UPDATE documents SET owner=?3, docstatus=?4, status=?5, version=?6, modified_at=?7, payload_json=?8
+        `UPDATE documents SET owner=?3, docstatus=?4, status=?5, version=?6, modified_at=?7, payload_json=?8,
+                              modified_by=?10
          WHERE tenant_id=?1 AND doc_key=?2 AND version=?9`,
       ).bind(
         command.tenant_id, key, plan.document.owner, plan.document.docstatus, plan.document.status,
         plan.document.version, plan.document.modified_at, JSON.stringify(plan.document.data), command.expected_version,
+        command.actor.user_id,
       ));
     }
 

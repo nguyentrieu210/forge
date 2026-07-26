@@ -7,6 +7,7 @@ import {
   verifyBearerJwt,
 } from "../../../packages/auth/src/index.js";
 import { errorResponse, errors, jsonResponse, randomId } from "../../../packages/core/src/index.js";
+import { isFrappePath, LOGIN_PATH } from "../../../packages/frappe-api/src/index.js";
 
 interface GatewayEnv {
   ROUTES: KVNamespace;
@@ -42,15 +43,7 @@ export default {
       const route = JSON.parse(raw) as TenantRoute;
       if (route.status !== "active") return jsonResponse({ error: { code: "TENANT_NOT_ACTIVE", status: route.status }, trace_id: traceId }, 423);
 
-      const actor = env.AUTH_MODE === "development"
-        ? staticDevelopmentActor(env.DEV_ACTOR_JSON)
-        : claimsToActor(await verifyBearerJwt(request, {
-          secret: requireSecret(env.JWT_SECRET, "JWT_SECRET"),
-          // Issuer and audience are mandatory in production: without them a token
-          // minted for another audience under a shared secret would be accepted.
-          issuer: requireSecret(env.JWT_ISSUER, "JWT_ISSUER"),
-          audience: requireSecret(env.JWT_AUDIENCE, "JWT_AUDIENCE"),
-        }), route.tenant_id);
+      const actor = await resolveActor(request, env, url, route.tenant_id);
       const trusted = await createTrustedIdentity({
         tenantId: route.tenant_id,
         actor,
@@ -60,7 +53,7 @@ export default {
       });
       const forwarded = withPlatformHeaders(request, route.tenant_id, traceId, trusted.encoded, trusted.signature);
       if (env.FALLBACK_TENANT && route.worker_name === "__fallback__") return env.FALLBACK_TENANT.fetch(forwarded);
-      const worker = env.DISPATCHER.get(route.worker_name, {}, { limits: limitsFor(route.plan) });
+      const worker = env.DISPATCHER.get(route.worker_name, {}, { limits: limitsFor(route.plan, url.pathname) });
       return worker.fetch(forwarded);
     } catch (error) {
       return errorResponse(error, traceId);
@@ -99,10 +92,44 @@ function withPlatformHeaders(request: Request, tenantId: string, traceId: string
   return new Request(request, { headers });
 }
 
-function limitsFor(plan: TenantRoute["plan"]): { cpuMs: number; subRequests: number } {
-  if (plan === "enterprise") return { cpuMs: 200, subRequests: 1000 };
-  if (plan === "pro") return { cpuMs: 100, subRequests: 500 };
-  return { cpuMs: 50, subRequests: 100 };
+/**
+ * Resolves the actor for a request.
+ *
+ * A Frappe-shaped request may legitimately arrive with no bearer token: the Desk
+ * authenticates with a `sid` cookie that the tenant worker verifies itself
+ * (it holds the user directory, so it alone can check revocation). The gateway
+ * therefore forwards those as GUEST rather than rejecting them — the identity it
+ * asserts is deliberately the lowest one, so a tenant worker that ever fell back
+ * to the trusted identity on a session path would fail closed rather than
+ * inherit somebody's privileges.
+ */
+async function resolveActor(request: Request, env: GatewayEnv, url: URL, tenantId: string) {
+  if (env.AUTH_MODE === "development") return staticDevelopmentActor(env.DEV_ACTOR_JSON);
+  if (isFrappePath(url.pathname) && !request.headers.get("authorization")) {
+    return { user_id: "Guest", roles: ["Guest"] };
+  }
+  return claimsToActor(await verifyBearerJwt(request, {
+    secret: requireSecret(env.JWT_SECRET, "JWT_SECRET"),
+    // Issuer and audience are mandatory in production: without them a token
+    // minted for another audience under a shared secret would be accepted.
+    issuer: requireSecret(env.JWT_ISSUER, "JWT_ISSUER"),
+    audience: requireSecret(env.JWT_AUDIENCE, "JWT_AUDIENCE"),
+  }), tenantId);
+}
+
+function limitsFor(plan: TenantRoute["plan"], pathname: string): { cpuMs: number; subRequests: number } {
+  const base = plan === "enterprise"
+    ? { cpuMs: 200, subRequests: 1000 }
+    : plan === "pro"
+      ? { cpuMs: 100, subRequests: 500 }
+      : { cpuMs: 50, subRequests: 100 };
+  // Password verification is deliberately expensive (PBKDF2), and the free-plan
+  // budget is smaller than one hash. Without a larger allowance here the login
+  // would be killed mid-derivation and read as a server fault rather than a slow
+  // but correct login. Raised only for this one path, which is unauthenticated
+  // and therefore also the one that must stay rate-limited upstream.
+  if (pathname === LOGIN_PATH) return { cpuMs: Math.max(base.cpuMs, 400), subRequests: base.subRequests };
+  return base;
 }
 
 function requireSecret(value: string | undefined, name: string): string {

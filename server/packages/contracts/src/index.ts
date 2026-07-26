@@ -45,6 +45,18 @@ export interface CanonicalDocument<T extends JsonObject = JsonObject> {
   version: number;
   created_at: string;
   modified_at: string;
+  /**
+   * Who wrote this version. Framework-owned, not controller-owned: the store sets
+   * it from the authenticated actor on every write, so a controller can neither
+   * forget it nor attribute a change to somebody else. Absent only on documents
+   * written before the column existed.
+   */
+  modified_by?: string;
+  /**
+   * The cancelled document this one amends, if any. Set once at creation; the
+   * storage layer enforces that the source is cancelled and amended at most once.
+   */
+  amended_from?: string;
   data: T;
   children: ChildRow[];
 }

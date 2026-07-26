@@ -1,10 +1,15 @@
 import {
   assertInternalService,
+  D1UserStore,
   staticDevelopmentActor,
   verifyTrustedIdentity,
 } from "../../../packages/auth/src/index.js";
+import {
+  assertSessionCsrf, establishSession, isFrappePath, isPublicFrappePath, routeFrappeApi, routeFrappeAuth,
+  slideSession, type AuthRouteContext, type EstablishedSession,
+} from "../../../packages/frappe-api/src/index.js";
 import type { TrustedIdentityKey } from "../../../packages/auth/src/index.js";
-import type { Actor, CanonicalDocument, DomainEvent, JsonObject, MutationCommand } from "../../../packages/contracts/src/index.js";
+import type { Actor, CanonicalDocument, DomainEvent, JsonObject, MutationCommand, MutationReceipt } from "../../../packages/contracts/src/index.js";
 import { parseMutationCommandInput } from "../../../packages/contracts/src/index.js";
 import { D1CommercialReconciliationService, D1DocumentListStore, D1MutationStore, DocumentListService } from "../../../packages/document-kernel/src/index.js";
 import { asCloudForgeError, commandPayloadHash, errorResponse, errors, jsonResponse, randomId, readJson } from "../../../packages/core/src/index.js";
@@ -65,6 +70,16 @@ export default {
 
       const tenantId = env.TENANT_ID ?? request.headers.get("x-cloudforge-tenant");
       if (!tenantId) throw new Error("Missing tenant context");
+
+      // ---- Frappe-shaped surface -------------------------------------------
+      // Mounted ahead of the native routes and authenticated by cookie session
+      // rather than by the gateway's trusted identity, so that revocation is
+      // checked against the live user directory on every request.
+      if (isFrappePath(url.pathname)) {
+        const frappeResponse = await serveFrappeApi(request, url, env, tenantId, traceId);
+        if (frappeResponse) return frappeResponse;
+      }
+
       const actor = await authenticate(request, env, tenantId, traceId);
       const metadata = new D1MetadataStore(env.DB);
       const access = new D1DocumentAccessStore(env.DB);
@@ -444,6 +459,92 @@ export default {
     ctx.waitUntil(publishPendingOutbox(env.DB, env.OUTBOX_QUEUE, env.TENANT_ID).then(() => undefined));
   },
 };
+
+/**
+ * Serves the Frappe-compatible surface.
+ *
+ * Returns null only when cookie sessions are not configured at all, so the caller
+ * falls through to the native routes rather than failing a request the platform
+ * could still answer with bearer auth.
+ */
+async function serveFrappeApi(
+  request: Request,
+  url: URL,
+  env: TenantEnv,
+  tenantId: string,
+  traceId: string,
+): Promise<Response | null> {
+  const sessionSecret = env.SESSION_SECRET;
+  if (!sessionSecret && env.AUTH_MODE !== "development") return null;
+
+  const now = (): string => new Date().toISOString();
+  const users = new D1UserStore(env.DB);
+  const authContext: AuthRouteContext = { tenantId, users, sessionSecret: sessionSecret ?? "", traceId, now };
+
+  if (isPublicFrappePath(url.pathname)) {
+    if (!sessionSecret) return jsonResponse({ error: { code: "SESSION_NOT_CONFIGURED" }, trace_id: traceId }, 503);
+    return routeFrappeAuth(request, url, authContext);
+  }
+
+  let established: EstablishedSession | null = null;
+  if (sessionSecret) established = await establishSession(request, authContext);
+
+  let actor;
+  let fullName = "";
+  let language = "";
+  let csrfToken = "";
+  if (established) {
+    assertSessionCsrf(request, established);
+    actor = established.actor;
+    fullName = established.user.full_name;
+    language = established.user.language;
+    csrfToken = established.session.csrfToken;
+  } else if (env.AUTH_MODE === "development") {
+    actor = staticDevelopmentActor(env.DEV_ACTOR_JSON);
+    fullName = actor.user_id;
+  } else {
+    // Frappe answers an unauthenticated call to a login-required method with
+    // PermissionError/403 whose message contains "Login to access" — NOT 401.
+    // The client keys its session-expiry detection off exactly that, so a
+    // "more correct" 401 here would leave a re-login prompt unreachable.
+    throw errors.permission("Login to access this resource");
+  }
+
+  const metadata = new D1MetadataStore(env.DB);
+  const access = new D1DocumentAccessStore(env.DB);
+  const permissions = new MetadataPermissionService(metadata, undefined, access);
+  const documents = new D1MutationStore(env.DB);
+
+  const response = await routeFrappeApi(request, url, {
+    tenantId,
+    actor,
+    traceId,
+    metadata,
+    permissions,
+    documents,
+    access,
+    collaboration: new D1CollaborationService(env.DB),
+    listService: new DocumentListService(new D1DocumentListStore(env.DB), permissions, new MetadataDocumentListDefinitionResolver(metadata)),
+    async runCommand(command) {
+      const stub = env.AGGREGATES.getByName(`${tenantId}:${command.aggregate.doctype}:${command.aggregate.name}`) as AggregateStub;
+      const result = typeof stub.mutate === "function" ? await stub.mutate(command) : await callDoFetch(stub, command);
+      return result as MutationReceipt;
+    },
+    now,
+    csrfToken,
+    fullName,
+    language,
+  });
+  if (!response) return null;
+
+  // Slide the cookie only when it is close to expiring, so an active user is not
+  // logged out mid-session and an idle one still ages out.
+  if (established) {
+    const refreshed = await slideSession(established, authContext);
+    if (refreshed) response.headers.append("set-cookie", refreshed);
+  }
+  return response;
+}
 
 function coerceImportRow(row: JsonObject, fields: Array<{ fieldname: string; fieldtype: string }>): JsonObject {
   const output: JsonObject = {}; const types = new Map(fields.map((field) => [field.fieldname, field.fieldtype]));
