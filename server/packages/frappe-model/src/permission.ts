@@ -185,7 +185,14 @@ export class MetadataPermissionService {
 
   redactDocument(meta: DocTypeMeta, document: CanonicalDocument<JsonObject>, actor: Actor, shared = false): CanonicalDocument<JsonObject> {
     const levels = this.readablePermlevels(meta, actor, document.owner, shared);
-    const allowed = new Set(meta.fields.filter((field) => levels.has(field.permlevel ?? 0)).map((field) => field.fieldname));
+    const allowed = new Set(meta.fields
+      // A Password is never readable, by anyone, at any permlevel. Frappe keeps these
+      // out of the document entirely, and a field declared `Password` that came back on
+      // a read would be a secret handed to every client that can see the record —
+      // including its own owner's browser, its print format, and its CSV export.
+      .filter((field) => field.fieldtype !== "Password")
+      .filter((field) => levels.has(field.permlevel ?? 0))
+      .map((field) => field.fieldname));
     const data: JsonObject = {};
     for (const [key, value] of Object.entries(document.data)) {
       if (allowed.has(key) || key === "_metadata_revision" || key === "workflow_state") data[key] = structuredClone(value as JsonValue);

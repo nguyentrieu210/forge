@@ -45,8 +45,18 @@ export function metadataToListDefinition(meta: DocTypeMeta): DocumentListDefinit
 }
 
 function listType(field: DocFieldMeta): FieldType | null {
-  if (["Data", "Small Text", "Text", "Long Text", "Code", "Select", "Link", "Dynamic Link", "Attach", "Attach Image", "Currency", "Float", "Percent"].includes(field.fieldtype)) return "string";
-  if (["Int", "Check"].includes(field.fieldtype)) return "int";
+  // A Password is never queryable. Filtering on it would let anyone recover the value a
+  // character at a time with `like`, which is the same disclosure as reading it.
+  if (field.fieldtype === "Password") return null;
+  if ([
+    "Data", "Small Text", "Text", "Long Text", "Code", "Select", "Link", "Dynamic Link",
+    "Attach", "Attach Image", "Currency", "Float", "Percent",
+    "Text Editor", "Markdown Editor", "HTML Editor", "Autocomplete", "Read Only",
+    "Barcode", "Icon", "Image", "Signature", "Phone", "Color",
+  ].includes(field.fieldtype)) return "string";
+  if (["Int", "Check", "Duration"].includes(field.fieldtype)) return "int";
+  // A fraction from 0 to 1, so it sorts and ranges as a number.
+  if (field.fieldtype === "Rating") return "string";
   if (["Date", "Datetime", "Time"].includes(field.fieldtype)) return "date";
   return null;
 }

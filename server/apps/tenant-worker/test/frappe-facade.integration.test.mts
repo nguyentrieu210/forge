@@ -109,6 +109,9 @@ async function seed(): Promise<void> {
       { fieldname: "is_billable", label: "Billable", fieldtype: "Check" },
       { fieldname: "billing_note", label: "Billing Note", fieldtype: "Data", mandatory_depends_on: "eval:doc.is_billable == 1" },
       { fieldname: "external_ref", label: "External Ref", fieldtype: "Data", no_copy: true },
+      { fieldname: "portal_secret", label: "Portal Secret", fieldtype: "Password" },
+      { fieldname: "notes_html", label: "Notes", fieldtype: "Text Editor" },
+      { fieldname: "visit_seconds", label: "Duration", fieldtype: "Duration" },
     ],
     permissions: [{ role: "System Manager", read: true, write: true, create: true, submit: true, cancel: true, amend: true, share: true, report: true }],
     revision: 1,
@@ -956,4 +959,59 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     }
   });
 
+});
+
+describe("fieldtypes that carry real server behaviour", () => {
+  it("a Password is stored but NEVER returned on any read", async () => {
+    // Frappe keeps these out of the document entirely. A `Password` that came back on a
+    // read would be a secret handed to every client that can see the record — its
+    // owner's browser, its print format, and its CSV export alike.
+    const created = (await (await call("/api/resource/Field Visit", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ subject: "Secret holder", portal_secret: "s3cr3t-value", visit_seconds: 5400 }),
+    })).json() as any).data;
+    expect(created.portal_secret).toBeUndefined();
+
+    // Not on the form load either.
+    const loaded = await (await method("frappe.desk.form.load.getdoc", { doctype: "Field Visit", name: created.name }, "GET")).json() as any;
+    expect(loaded.docs[0].portal_secret).toBeUndefined();
+    // And the value the caller sent is not silently echoed back as if stored elsewhere.
+    expect(JSON.stringify(loaded)).not.toMatch(/s3cr3t-value/);
+
+    // Nor through a list, even when explicitly asked for.
+    const listed = await method("frappe.client.get_list", {
+      doctype: "Field Visit", fields: JSON.stringify(["name", "portal_secret"]),
+    }, "GET");
+    // Asking for it is refused outright rather than answered with nulls: a Password is
+    // not a queryable field, because `like` on one recovers it a character at a time.
+    expect(listed.status).toBe(417);
+  });
+
+  it("a Duration is seconds, and a document using the new types submits", async () => {
+    // The `default:` branch used to refuse an unknown fieldtype on SUBMIT, so a doctype
+    // with a Text Editor could be filled in and never completed.
+    const created = (await (await call("/api/resource/Field Visit", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ subject: "Rich", notes_html: "<p>ghi chú</p>", visit_seconds: 3600 }),
+    })).json() as any).data;
+    expect(created.visit_seconds).toBe(3600);
+
+    const submitted = await unwrap(await method("frappe.client.submit", {
+      doc: { doctype: "Field Visit", name: created.name, modified: created.modified },
+    }));
+    expect(submitted.docstatus).toBe(1);
+  });
+
+  it("a Duration refuses anything that is not a whole number of seconds", async () => {
+    for (const bad of [-1, 1.5, "3600"]) {
+      const response = await call("/api/resource/Field Visit", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ subject: "Bad duration", visit_seconds: bad }),
+      });
+      expect(response.status, String(bad)).toBe(417);
+    }
+  });
 });

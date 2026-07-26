@@ -25,7 +25,37 @@ export type MetaFieldType =
   | "Heading"
   | "Section Break"
   | "Column Break"
-  | "HTML";
+  | "HTML"
+  // Rich text. Stored as a string like any other; the DIFFERENCE is that its content is
+  // markup the client will render, so it must never be interpolated into a print format
+  // unescaped — see `renderPrintFormat`, which escapes every document value.
+  | "Text Editor"
+  | "Markdown Editor"
+  | "HTML Editor"
+  // A secret. Never returned on a read — see `maskedFieldNames`. Kept a real fieldtype
+  // rather than left to convention so the masking cannot be forgotten per doctype.
+  | "Password"
+  // Constrained strings. Validated for shape so a malformed value is refused at the
+  // boundary rather than reaching a client that assumes the format.
+  | "Phone"
+  | "Color"
+  | "Icon"
+  | "Signature"
+  | "Barcode"
+  | "Autocomplete"
+  | "Image"
+  | "Read Only"
+  // Numeric. `Duration` is a count of SECONDS, and `Rating` a fraction from 0 to 1 —
+  // both match how Frappe stores them, so a value copied from a Frappe site means the
+  // same thing here.
+  | "Duration"
+  | "Rating"
+  // A GeoJSON object.
+  | "Geolocation"
+  // Layout only: they carry no value at all.
+  | "Tab Break"
+  | "Fold"
+  | "Button";
 
 export interface DocFieldMeta extends JsonObject {
   fieldname: string;

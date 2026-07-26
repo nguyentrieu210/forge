@@ -3,12 +3,35 @@ import { errors } from "../../core/src/index.js";
 import type { DocFieldMeta, DocPermissionMeta, DocTypeMeta, MetaFieldType, WorkflowMeta } from "./types.js";
 import { assertFieldConditionSupported } from "./field-condition.js";
 
+/**
+ * Every fieldtype this platform will accept in a DocType.
+ *
+ * A name is only added here once `normalizeValue` knows what a valid value looks like
+ * and `listType` knows whether it can be queried. Adding one without those makes the
+ * document saveable and then unsubmittable — the generic controller refuses an unknown
+ * type on submit — which is a far worse failure than refusing the DocType outright.
+ */
 const FIELD_TYPES = new Set<MetaFieldType>([
   "Data", "Small Text", "Text", "Long Text", "Code", "Int", "Float", "Currency", "Percent", "Check",
   "Date", "Datetime", "Time", "Select", "Link", "Dynamic Link", "Table", "Table MultiSelect", "JSON",
   "Attach", "Attach Image", "Heading", "Section Break", "Column Break", "HTML",
+  "Text Editor", "Markdown Editor", "HTML Editor", "Password", "Phone", "Color", "Icon",
+  "Signature", "Barcode", "Autocomplete", "Image", "Read Only", "Duration", "Rating",
+  "Geolocation", "Tab Break", "Fold", "Button",
 ]);
-const LAYOUT_FIELDS = new Set<MetaFieldType>(["Heading", "Section Break", "Column Break", "HTML"]);
+/**
+ * Fieldtypes that carry no value.
+ *
+ * They are skipped when a document is normalised and exempt from the "unsupported
+ * executable field type" refusal on submit — a layout marker must never be able to fail
+ * a submit, because there is nothing about it that could be wrong.
+ */
+const LAYOUT_FIELDS = new Set<MetaFieldType>([
+  "Heading", "Section Break", "Column Break", "HTML",
+  // `Button` triggers a client action and stores nothing; `Tab Break` and `Fold` are
+  // purely visual grouping.
+  "Tab Break", "Fold", "Button",
+]);
 const SYSTEM_FIELDS = new Set(["name", "owner", "creation", "modified", "modified_by", "docstatus", "idx", "doctype", "version"]);
 
 export function parseDocTypeMeta(value: unknown, expectedName?: string): DocTypeMeta {

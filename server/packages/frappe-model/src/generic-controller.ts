@@ -105,7 +105,12 @@ async function normalizeDocument(context: ControllerContext<JsonObject>, meta: D
 function normalizeValue(field: DocFieldMeta, value: JsonValue, action: string): JsonValue {
   if (value === null) return null;
   switch (field.fieldtype) {
-    case "Data": case "Small Text": case "Text": case "Long Text": case "Code": case "Select": case "Link": case "Dynamic Link": case "Attach": case "Attach Image": {
+    case "Data": case "Small Text": case "Text": case "Long Text": case "Code": case "Select": case "Link": case "Dynamic Link": case "Attach": case "Attach Image":
+    // Rich text and secrets are stored exactly like a string. What differs is what
+    // happens to them AFTERWARDS: markup is escaped by the print renderer, and a
+    // Password is stripped from every read.
+    case "Text Editor": case "Markdown Editor": case "HTML Editor": case "Password":
+    case "Autocomplete": case "Read Only": case "Barcode": case "Icon": case "Image": case "Signature": {
       if (typeof value !== "string") throw errors.validation(`${field.label} must be a string`);
       if (field.length && value.length > field.length) throw errors.validation(`${field.label} exceeds ${field.length} characters`);
       if (field.fieldtype === "Select" && field.options) {
@@ -116,6 +121,42 @@ function normalizeValue(field: DocFieldMeta, value: JsonValue, action: string): 
     }
     case "Int": {
       if (typeof value !== "number" || !Number.isSafeInteger(value)) throw errors.validation(`${field.label} must be an integer`); return value;
+    }
+    case "Duration": {
+      // Seconds, as Frappe stores it — so a value moved from a Frappe site keeps its
+      // meaning. Negative would be a duration running backwards.
+      if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) {
+        throw errors.validation(`${field.label} must be a whole number of seconds`);
+      }
+      return value;
+    }
+    case "Rating": {
+      // Frappe stores a FRACTION from 0 to 1, not a star count. Accepting 5 here would
+      // store something a Frappe client renders as five times full marks.
+      if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > 1) {
+        throw errors.validation(`${field.label} must be a fraction between 0 and 1`);
+      }
+      return value;
+    }
+    case "Phone": {
+      if (typeof value !== "string") throw errors.validation(`${field.label} must be a string`);
+      // Deliberately permissive: digits, spaces and the usual separators. Anything
+      // stricter rejects a legitimate international number somewhere in the world.
+      if (value && !/^[+()\-.\s\d]{3,32}$/.test(value)) throw errors.validation(`${field.label} is not a usable phone number`);
+      return value;
+    }
+    case "Color": {
+      if (typeof value !== "string") throw errors.validation(`${field.label} must be a string`);
+      if (value && !/^#[0-9a-fA-F]{6}$/.test(value)) throw errors.validation(`${field.label} must be a #rrggbb colour`);
+      return value;
+    }
+    case "Geolocation": {
+      // GeoJSON. Only the envelope is checked: validating geometry here would duplicate
+      // a specification the client and any map library already implement.
+      if (!value || typeof value !== "object" || Array.isArray(value)) {
+        throw errors.validation(`${field.label} must be a GeoJSON object`);
+      }
+      return value;
     }
     case "Float": case "Currency": case "Percent": {
       if ((typeof value !== "number" || !Number.isFinite(value)) && (typeof value !== "string" || !/^-?\d+(\.\d+)?$/.test(value))) throw errors.validation(`${field.label} must be numeric`); return typeof value === "number" ? String(value) : value;
