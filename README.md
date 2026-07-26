@@ -35,7 +35,7 @@ Cổng đã chạy thật trên máy — chi tiết ở [docs/VERIFICATION.md](d
 
 | | |
 |---|---|
-| Test Node/domain | **248/248 PASS** |
+| Test Node/domain | **258/258 PASS** |
 | Gate SQL (migration 0001–0013) | **6/6 PASS** |
 | Workerd tenant-worker / query-worker | **70/70 · 3/3 PASS** — gồm 47 E2E lớp vỏ |
 | Web typecheck + Vite production build | exit 0 |

@@ -96,17 +96,22 @@ test.describe("Desk on the Forge facade (real browser, cookie session)", () => {
    *   produces no console or page error. The only failures are the expected guest 403
    *   and the two deliberate 404s for `metaforge.api.get_overview`.
    *
-   * So the client is choosing not to query — the query is gated, not failing. The
-   * remaining suspects are the demo's own live list glue and the business-context
-   * readiness gate (`get_business_context` reports `fiscal_year` as unavailable because
-   * this tenant has no Fiscal Year master data). Both live in client code this work has
-   * not touched.
+   * So the client is choosing not to query — the query is gated, not failing.
    *
-   * Two façade contract gaps WERE found and fixed while chasing this, so the hunt was
-   * not wasted: `getdoctype` returned an empty `permissions` array (the native API
-   * deliberately withholds DocPerm rows, but the Frappe contract carries them and the
-   * client derives its columns from them), and `sort_field` was omitted when the kernel
-   * metadata lacked it, where Frappe always sends one.
+   * The metadata contract has since been RULED OUT as the cause, by feeding the façade's
+   * own `getdoctype` output into the client's real `normalizeMeta` and `deriveColumns`
+   * (`server/tests/client-contract.test.mjs`, 9 assertions): they accept it and produce
+   * exactly the declared columns — Subject and Customer, not an ID fallback. So whatever
+   * gates the query lives further into the demo's own live list wiring.
+   *
+   * One hypothesis was disproved along the way and is recorded so it is not chased
+   * twice: an empty `permissions` array does NOT collapse the list to an ID column. The
+   * client treats permlevel 0 as readable regardless; DocPerm rows decide WRITABILITY.
+   *
+   * Two real façade contract gaps were found and fixed during the hunt, so it was not
+   * wasted: `getdoctype` returned an empty `permissions` array (the Frappe contract
+   * carries the rows and field editability depends on them), and `sort_field` was
+   * omitted when the kernel metadata lacked it, where Frappe always sends one.
    */
   test.fixme("the list view renders rows from server metadata", async ({ page }) => {
     await signInAndOpenList(page);

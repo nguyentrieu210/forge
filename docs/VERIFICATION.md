@@ -13,7 +13,7 @@ Cập nhật: 2026-07-26.
 | Cài đặt workspace | `pnpm install` | 399 gói, symlink `@metaforge/*` đúng workspace |
 | Build TS strict (server) | `pnpm --filter cloudforge run build` | exit 0 |
 | Typecheck worker (server) | `pnpm --filter cloudforge run typecheck:workers` | exit 0 |
-| Test Node/domain | `node --test tests/*.test.mjs` | **249/249 PASS** |
+| Test Node/domain | `node --test tests/*.test.mjs` | **258/258 PASS** |
 | **Cổng phát hành tổng hợp** | `pnpm --filter cloudforge run check:business-suite` | **ok:true missing:[] exit 0** |
 | Gate SQL (migration 0001–0015) | `pnpm --filter cloudforge run test:sql` | **6/6 PASS** |
 | **Workerd tenant-worker** | `vitest run --config apps/tenant-worker/vitest.config.mts` | **70/70 PASS** (23 gốc + 47 E2E lớp vỏ) |
@@ -112,19 +112,37 @@ client/e2e-forge/  npx playwright test
 | `getdoctype` trả `permissions: []` rỗng | `filterMetaForActor` cố ý xoá DocPerm — đúng cho API native (nó không bao giờ tiết lộ ma trận quyền), nhưng hợp đồng Frappe **có** mang DocPerm và client suy cột list + quyền sửa field từ đó. Nay trả lại, **lọc theo role actor đang có**: actor biết mình làm được gì (điều họ có thể tự thử ra), không biết role khác làm được gì. |
 | `sort_field` bị bỏ khi kernel metadata không có | Frappe **luôn** gửi cả `sort_field` và `sort_order` (mặc định `modified desc`), và client ghép `order_by` trực tiếp từ đó. Thiếu nó cho ra `"undefined desc"` hoặc TypeError. |
 
+### Hợp đồng metadata — nạp thẳng vào normaliser THẬT của client
+
+`server/tests/client-contract.test.mjs` nạp output `getdoctype` của lớp vỏ vào
+**`normalizeMeta` và `deriveColumns` thật** import từ `client/packages/*/dist` — không
+phải bản sao luật. Đây là chỗ bịt khe mà mọi test phía server khác để hở: chúng khẳng
+định lớp vỏ **phát ra** gì, không chứng minh client **dùng được** hay không.
+
+9 assertion PASS, gồm: normaliser không ném lỗi · `title_field` sống sót (thiếu nó là
+list bị đặt tiêu đề bằng `ID` trần) · DocPerm tới được client · `sort_field`/`sort_order`
+luôn có · **`deriveColumns` cho ra đúng cột đã khai (Subject + Customer), không phải
+fallback ID** · field bị mask thì cột bị bỏ · cờ vẫn là số nguyên qua vòng round-trip ·
+child doctype trong bundle tìm được theo TÊN.
+
+Một giả thuyết đã bị BÁC BỎ và ghi lại để không ai truy lại lần hai: `permissions: []`
+rỗng **không** làm list co về một cột ID. Client coi permlevel 0 là đọc được bất kể;
+DocPerm quyết định quyền **GHI**.
+
 ### Known gap — list view chưa nạp dữ liệu
 
 Đánh `test.fixme` chứ không xoá hay nới lỏng: một suite âm thầm ngừng kiểm còn tệ hơn
 suite ghi rõ điều nó chưa chứng minh được.
 
-Đã khoanh vùng được: `getdoctype` trả đúng (title_field, cờ số, DocPerm, sort_field —
-đã verify qua HTTP); **không có request list nào được gửi** (không `/api/resource`,
-không `get_list`, không `reportview`, không `get_contextual_list`); và **không phải
-exception** — bản vite dev không minify, đầy đủ message React, không có lỗi console
-hay page error nào. Nghĩa là client **chủ động không query** — query bị gate, không
-phải fail. Nghi vấn còn lại nằm ở glue list riêng của demo và cổng readiness của
-business-context (`fiscal_year` báo unavailable vì tenant chưa có master data Fiscal
-Year) — cả hai đều là code client mà việc này chưa chạm tới.
+Đã khoanh vùng được: `getdoctype` trả đúng (verify qua HTTP); **không có request list
+nào được gửi** (không `/api/resource`, không `get_list`, không `reportview`, không
+`get_contextual_list`); và **không phải exception** — bản vite dev không minify, đầy đủ
+message React, không có lỗi console hay page error nào. Client **chủ động không query**.
+
+**Hợp đồng metadata đã bị loại khỏi danh sách nghi vấn** bằng test ở mục trên: chính
+`normalizeMeta` + `deriveColumns` của client nhận output của lớp vỏ và cho ra đúng cột
+Subject + Customer. Vậy thứ gate query nằm sâu hơn, trong wiring list riêng của demo —
+code client mà việc này chưa chạm tới.
 
 ## Chạy thật qua HTTP với wrangler dev
 
