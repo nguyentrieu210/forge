@@ -19,6 +19,9 @@ export default defineConfig({
           DEV_ACTOR_JSON: JSON.stringify({ user_id: "Administrator", roles: ["System Manager"] }),
           INTERNAL_AUTH_SECRET: "test-internal-auth-secret-at-least-32-characters",
           INTERNAL_SERVICE_TOKEN: "test-internal-service-token",
+          // Present so the Frappe surface exercises real cookie sessions rather
+          // than the development actor; the native routes still use the dev actor.
+          SESSION_SECRET: "test-session-secret-at-least-32-characters-long",
           TEST_MIGRATIONS: await readD1Migrations(path.join(directory, "../../migrations/tenant")),
         },
       },

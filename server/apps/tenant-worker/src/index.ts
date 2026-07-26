@@ -5,8 +5,8 @@ import {
   verifyTrustedIdentity,
 } from "../../../packages/auth/src/index.js";
 import {
-  assertSessionCsrf, D1TranslationStore, establishSession, isFrappePath, isPublicFrappePath, routeFrappeApi,
-  routeFrappeAuth, slideSession, type AuthRouteContext, type EstablishedSession,
+  assertSessionCsrf, D1TranslationStore, establishSession, faultResponse, isFrappePath, isPublicFrappePath,
+  routeFrappeApi, routeFrappeAuth, slideSession, type AuthRouteContext, type EstablishedSession,
 } from "../../../packages/frappe-api/src/index.js";
 import {
   AppHookDispatcher, AppInstaller, subscribersFor,
@@ -536,7 +536,27 @@ async function serveFrappeApi(
 ): Promise<Response | null> {
   const sessionSecret = env.SESSION_SECRET;
   if (!sessionSecret && env.AUTH_MODE !== "development") return null;
+  try {
+    return await serveFrappeApiInner(request, url, env, tenantId, traceId, sessionSecret);
+  } catch (error) {
+    // Faults raised OUTSIDE the router — failed authentication, a revoked session,
+    // a missing CSRF header — must still be reported in Frappe's error shape.
+    // Letting them reach the outer handler would return the native
+    // `{error:{code}}` envelope, which the client's normaliser cannot read: it
+    // branches on `exc_type`, so the whole error would collapse to "unknown" and
+    // a lost session would never surface as one.
+    return faultResponse(error, traceId);
+  }
+}
 
+async function serveFrappeApiInner(
+  request: Request,
+  url: URL,
+  env: TenantEnv,
+  tenantId: string,
+  traceId: string,
+  sessionSecret: string | undefined,
+): Promise<Response | null> {
   const now = (): string => new Date().toISOString();
   const users = new D1UserStore(env.DB);
   const authContext: AuthRouteContext = { tenantId, users, sessionSecret: sessionSecret ?? "", traceId, now };
@@ -559,7 +579,11 @@ async function serveFrappeApi(
     fullName = established.user.full_name;
     language = established.user.language;
     csrfToken = established.session.csrfToken;
-  } else if (env.AUTH_MODE === "development") {
+  } else if (!sessionSecret && env.AUTH_MODE === "development") {
+    // The development actor is a fallback for when cookie sessions are NOT
+    // configured — never an override for them. A deployment carrying both would
+    // otherwise authenticate every caller as the dev actor while appearing to
+    // have real sessions enabled.
     actor = staticDevelopmentActor(env.DEV_ACTOR_JSON);
     fullName = actor.user_id;
   } else {
