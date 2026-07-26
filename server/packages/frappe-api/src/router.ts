@@ -141,6 +141,13 @@ async function dispatchResource(
   context: FrappeRouterContext,
 ): Promise<Response> {
   if (META_RESOURCES.has(doctype)) return dispatchMetaResource(httpMethod, doctype, name, args, context);
+
+  // A Single DocType holds exactly one document, named after the doctype itself.
+  // Both `/api/resource/X` and `/api/resource/X/X` address it, which is how the
+  // client reaches a Settings page.
+  const singleMeta = await context.metadata.getDocType(context.tenantId, doctype);
+  if (singleMeta?.is_single) return dispatchSingle(httpMethod, singleMeta, args, context);
+
   if (!name) {
     if (httpMethod === "GET") return resourceResponse(await listDocuments(doctype, args, context));
     if (httpMethod === "POST") return resourceResponse(await createDocument(doctype, args, context), 201);
@@ -398,6 +405,107 @@ function flagToBool(value: JsonValue | undefined): boolean {
   return ["1", "true", "yes"].includes(String(value).trim().toLowerCase());
 }
 
+/**
+ * Installs or upgrades an app.
+ *
+ * Reshaping a tenant's schema is the most consequential thing this API can do, so
+ * it requires System Manager — the same bar as editing a DocType, which installing
+ * an app does wholesale.
+ *
+ * Namespaced `forge.*` rather than `frappe.*`: Frappe installs apps with a CLI
+ * against the filesystem, so there is no endpoint to imitate, and pretending
+ * otherwise would invite a Frappe client to call something that means
+ * something else here.
+ */
+async function installApp(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  requireMetadataAdmin(context);
+  const manifest = args.object("app") ?? args.object("manifest");
+  if (!manifest) throw errors.validation("app package is required");
+  return await context.apps.install(context.tenantId, manifest, context.actor.user_id, context.now()) as unknown as JsonObject;
+}
+
+async function uninstallApp(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  requireMetadataAdmin(context);
+  const appId = args.requireText("app_id", 64);
+  return await context.apps.uninstall(context.tenantId, appId, context.now()) as unknown as JsonObject;
+}
+
+/**
+ * Single DocTypes — the Settings-page pattern.
+ *
+ * `is_single` was previously validated and stored but read by nothing, so a
+ * doctype declared Single behaved as an ordinary list. Here the one document is
+ * named after the doctype, so there is exactly one and its name is predictable.
+ *
+ * A read before the document exists returns an EMPTY SHELL rather than 404: a
+ * Settings page that has never been saved must render its form so the user can
+ * fill it in, not an error telling them the settings do not exist.
+ */
+async function dispatchSingle(
+  httpMethod: string,
+  meta: DocTypeMeta,
+  args: FrappeArgs,
+  context: FrappeRouterContext,
+): Promise<Response> {
+  const doctype = meta.name;
+  const name = doctype;
+
+  if (httpMethod === "GET") {
+    await context.permissions.getReadScope(context.actor, context.tenantId, doctype);
+    const existing = await context.documents.getDocument(context.tenantId, doctype, name);
+    if (!existing) return resourceResponse(emptySingleDocument(meta));
+    return resourceResponse(toFrappeDoc(await loadReadable(doctype, name, context)));
+  }
+
+  if (httpMethod === "PUT" || httpMethod === "POST") {
+    const submitted = documentArgument(args);
+    const current = await context.documents.getDocument(context.tenantId, doctype, name);
+    const payload = toKernelPayload(submitted, meta);
+
+    if (!current) {
+      await context.permissions.assert({ actor: context.actor, tenantId: context.tenantId, doctype, action: "create" });
+      await context.runCommand(await buildCommand({
+        tenantId: context.tenantId, actor: context.actor, doctype, name,
+        action: "create", expectedVersion: null, document: payload,
+      }));
+    } else {
+      await context.permissions.assert({
+        actor: context.actor, tenantId: context.tenantId, doctype, name,
+        owner: current.owner, data: current.data, action: "save",
+      });
+      // The concurrency rule still applies: two admins on one Settings page must
+      // not silently overwrite each other.
+      assertModifiedMatches(current, submitted.modified);
+      await context.runCommand(await buildCommand({
+        tenantId: context.tenantId, actor: context.actor, doctype, name,
+        action: "save", expectedVersion: current.version, document: payload,
+      }));
+    }
+    return resourceResponse(toFrappeDoc(await loadReadable(doctype, name, context)));
+  }
+
+  // Deleting a Single would leave the doctype with no document at all, and the next
+  // read would silently start from defaults — losing configuration without saying so.
+  throw errors.validation(`${httpMethod} is not supported on a single doctype`);
+}
+
+/** The unsaved form of a Single: field defaults only, no framework identity yet. */
+function emptySingleDocument(meta: DocTypeMeta): JsonObject {
+  const doc: JsonObject = {
+    doctype: meta.name,
+    name: meta.name,
+    docstatus: 0,
+    // Marked so the client treats it as unsaved rather than as a stored document
+    // whose fields all happen to be blank.
+    __islocal: 1,
+    __unsaved: 1,
+  };
+  for (const field of meta.fields) {
+    if (field.default !== undefined) doc[field.fieldname] = field.default;
+  }
+  return doc;
+}
+
 async function listDocuments(doctype: string, args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject[]> {
   const requested = args.array<string>("fields") ?? ["name"];
   const body: JsonObject = {
@@ -577,6 +685,16 @@ async function dispatchMethod(
 
     case "metaforge.api.get_application_catalog":
       return methodResponse(await applicationCatalog(context));
+
+    // ---- app registry -------------------------------------------------------
+    case "forge.apps.list":
+      return methodResponse({ apps: await context.apps.list(context.tenantId) });
+
+    case "forge.apps.install":
+      return methodResponse(await installApp(args, context));
+
+    case "forge.apps.uninstall":
+      return methodResponse(await uninstallApp(args, context));
 
     // ---- workflow ---------------------------------------------------------
     case "frappe.model.workflow.apply_workflow":
@@ -2067,6 +2185,9 @@ function toKernelPayload(submitted: JsonObject, meta: DocTypeMeta): JsonObject {
  * client cannot choose where it lands in the sequence.
  */
 async function resolveNewName(doctype: string, meta: DocTypeMeta, submitted: JsonObject, context: FrappeRouterContext): Promise<string> {
+  // A Single is named after its doctype, so there is exactly one and its name is
+  // predictable. Honouring an autoname here would mint a second one.
+  if (meta.is_single) return doctype;
   const requested = typeof submitted.name === "string" ? submitted.name.trim() : "";
   // `prompt` (and an absent pattern) is the only case where the client chooses.
   // Every other pattern is resolved server-side so a client cannot pick where it

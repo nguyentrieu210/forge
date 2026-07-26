@@ -24,9 +24,9 @@ cũng cắm vào được.
 |---|---|---|
 | 0 | Gộp repo, workspace, tài liệu | ✅ cổng xanh |
 | 1 | Lớp vỏ Frappe Tier 1 + phiên cookie | ✅ source + test; **chưa chạy live** |
-| 2 | Vá tầng framework (amend, rename, autoname, Dynamic Link, mandatory_depends_on, modified_by) | ✅ trừ `is_single`, `track_seen`, global search |
+| 2 | Vá tầng framework (amend, rename, autoname, Dynamic Link, mandatory_depends_on, modified_by, is_single) | ✅ trừ `track_seen` |
 | 3 | Custom Field + Property Setter | ✅ source + test |
-| 4 | Gói app + cài app | ✅ manifest + installer; chưa có CLI đóng gói |
+| 4 | Gói app + cài app + endpoint install/uninstall | ✅ (chưa có CLI đóng gói) |
 | 5 | Hooks qua Workers for Platforms | ✅ |
 | 6 | Tier 2 + i18n + search + Tier 4 | ✅ — phần còn lại **cố ý không làm**, lý do ở API_SURFACE.md |
 | 7 | Deploy + cổng phát hành | ◐ xem bảng dưới |
@@ -37,7 +37,7 @@ Cổng đã chạy thật trên máy — chi tiết ở [docs/VERIFICATION.md](d
 |---|---|
 | Test Node/domain | **248/248 PASS** |
 | Gate SQL (migration 0001–0013) | **6/6 PASS** |
-| Workerd tenant-worker / query-worker | **65/65 · 3/3 PASS** — gồm 42 E2E lớp vỏ |
+| Workerd tenant-worker / query-worker | **70/70 · 3/3 PASS** — gồm 47 E2E lớp vỏ |
 | Web typecheck + Vite production build | exit 0 |
 | Client build production (7 package + 2 app) | exit 0 |
 | Client selfcheck | 74 nhóm assert xanh |

@@ -698,6 +698,116 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     expect(csv).not.toMatch(/(^|,|")=cmd/m);
   });
 
+  it("serves an unsaved Single DocType as an empty form, not a 404", async () => {
+    // A Settings page that has never been saved must render its form so the user can
+    // fill it in, not an error telling them the settings do not exist.
+    await env.DB.prepare(
+      `INSERT INTO doctype_definitions(tenant_id,doctype,module,revision,metadata_json,modified_by,modified_at)
+       VALUES('demo','Visit Settings','Custom',1,?1,'Administrator',?2)
+       ON CONFLICT(tenant_id,doctype) DO UPDATE SET metadata_json=excluded.metadata_json`,
+    ).bind(JSON.stringify({
+      name: "Visit Settings", module: "Custom", is_single: true,
+      fields: [
+        { fieldname: "default_customer", label: "Default Customer", fieldtype: "Link", options: "Customer" },
+        { fieldname: "require_photo", label: "Require Photo", fieldtype: "Check", default: false },
+      ],
+      permissions: [{ role: "System Manager", read: true, write: true, create: true }],
+      revision: 1,
+    }), NOW).run();
+
+    const bundle = await unwrap(await method("frappe.desk.form.load.getdoctype", { doctype: "Visit Settings" }, "GET"));
+    expect(bundle.docs.find((entry: any) => entry.name === "Visit Settings").issingle).toBe(1);
+
+    const empty = (await (await call("/api/resource/Visit Settings")).json() as any).data;
+    expect(empty.name).toBe("Visit Settings");
+    expect(empty.__islocal).toBe(1);
+    expect(empty.require_photo).toBe(false);
+  });
+
+  it("saves a Single under its own name and keeps the concurrency check", async () => {
+    const saved = (await (await call("/api/resource/Visit Settings/Visit Settings", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ default_customer: "CUST-1", require_photo: true }),
+    })).json() as any).data;
+    // Named after the doctype, so there is exactly one and its name is predictable.
+    expect(saved.name).toBe("Visit Settings");
+    expect(saved.default_customer).toBe("CUST-1");
+    expect(saved.__islocal).toBeUndefined();
+
+    // Two admins on one Settings page must not silently overwrite each other.
+    const stale = await call("/api/resource/Visit Settings/Visit Settings", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ require_photo: false, modified: "2020-01-01 00:00:00.000000" }),
+    });
+    expect(stale.status).toBe(417);
+    expect((await stale.json() as any).exc_type).toBe("TimestampMismatchError");
+
+    const fresh = await call("/api/resource/Visit Settings/Visit Settings", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ default_customer: "CUST-2", modified: saved.modified }),
+    });
+    expect(fresh.status).toBe(200);
+    expect((await fresh.json() as any).data.default_customer).toBe("CUST-2");
+  });
+
+  it("refuses to delete a Single, which would silently reset configuration", async () => {
+    const response = await call("/api/resource/Visit Settings/Visit Settings", { method: "DELETE" });
+    expect(response.status).toBe(417);
+    expect(String((await response.json() as any).message)).toMatch(/not supported on a single doctype/i);
+  });
+
+  it("installs an app, and re-installing the identical package is a no-op", async () => {
+    const pkg = {
+      id: "visits", name: "Visits", version: "1.0.0",
+      roles: [{ role: "Visit User" }],
+      doctypes: [{
+        name: "Visit Note", module: "Visits",
+        fields: [{ fieldname: "body", label: "Body", fieldtype: "Data", required: true }],
+        permissions: [{ role: "Visit User", read: true, write: true, create: true }],
+        revision: 1,
+      }],
+      fixtures: [{ record_type: "Visit Category", name: "Routine", data: { label: "Routine" } }],
+      nav: [{ key: "Visit Note", label: "Ghi chú", kind: "doctype" }],
+    };
+
+    const first = await unwrap(await method("forge.apps.install", { app: pkg }));
+    expect(first.outcome).toBe("installed");
+    expect(first.doctypes).toBe(1);
+
+    // Re-installing the identical bytes must not churn metadata revisions and
+    // invalidate every client cache for nothing.
+    expect((await unwrap(await method("forge.apps.install", { app: pkg }))).outcome).toBe("unchanged");
+
+    // The app's doctype is immediately usable through the same REST surface.
+    const created = await call("/api/resource/Visit Note", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "VN-1", body: "First note" }),
+    });
+    expect(created.status).toBe(201);
+
+    const catalog = await unwrap(await method("metaforge.api.get_application_catalog", {}, "GET"));
+    expect(catalog.apps.map((app: any) => app.id)).toContain("visits");
+  });
+
+  it("refuses to uninstall an app whose doctypes still hold documents", async () => {
+    // Removing the definition would leave rows whose schema no longer exists:
+    // unreadable, unexportable, unrecoverable without the exact package.
+    const response = await method("forge.apps.uninstall", { app_id: "visits" });
+    expect(response.status).toBe(417);
+    expect(String((await response.json() as any).message)).toMatch(/still holds documents/i);
+
+    // With the document gone, the app uninstalls and takes its doctype with it.
+    await call("/api/resource/Visit Note/VN-1", { method: "DELETE" });
+    const removed = await unwrap(await method("forge.apps.uninstall", { app_id: "visits" }));
+    expect(removed.removed.doctypes).toBe(1);
+    const gone = await method("frappe.desk.form.load.getdoctype", { doctype: "Visit Note" }, "GET");
+    expect(gone.status).toBe(404);
+  });
+
   it("fails an unimplemented method loudly instead of returning an empty success", async () => {
     // An empty success would let a screen render as though it had data.
     const response = await method("frappe.desk.doctype.dashboard_chart.dashboard_chart.get", { chart_name: "Anything" }, "GET");

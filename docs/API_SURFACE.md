@@ -92,8 +92,19 @@ Bằng chứng chạy thật: [VERIFICATION.md](VERIFICATION.md).
 Mọi endpoint ✖ khi gọi vào đều trả **404 `DoesNotExistError`**, không bao giờ trả
 "thành công rỗng" — màn hình phải báo lỗi chứ không được render như thể có dữ liệu.
 
+## Ngoài giao thức Frappe
+
+Frappe cài app bằng CLI trên filesystem nên không có endpoint để bắt chước. Ba
+endpoint dưới đây đặt tên `forge.*` chứ không `frappe.*`, để một client Frappe
+không gọi vào thứ mang nghĩa khác ở đây:
+
+| Endpoint | TT |
+|---|---|
+| `forge.apps.list` | ☑ |
+| `forge.apps.install` (cài/nâng cấp; gói giống hệt là no-op) | ☑ |
+| `forge.apps.uninstall` (từ chối khi doctype còn dữ liệu) | ☑ |
+
 ## Metadata chưa có consumer
 
-`is_single` (trang Settings kiểu Single DocType) và `track_seen` vẫn là metadata
-được validate và lưu nhưng chưa tầng nào đọc. Ghi ra đây để không ai tưởng nó đã
-có tác dụng.
+`track_seen` vẫn là metadata được validate và lưu nhưng chưa tầng nào đọc. Ghi ra
+đây để không ai tưởng nó đã có tác dụng. (`is_single` **đã** hiện thực.)

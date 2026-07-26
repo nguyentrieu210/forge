@@ -15,7 +15,7 @@ Cập nhật: 2026-07-26.
 | Typecheck worker (server) | `pnpm --filter cloudforge run typecheck:workers` | exit 0 |
 | Test Node/domain | `node --test tests/*.test.mjs` | **248/248 PASS** |
 | Gate SQL | `pnpm --filter cloudforge run test:sql` | **6/6 PASS** |
-| **Workerd tenant-worker** | `vitest run --config apps/tenant-worker/vitest.config.mts` | **65/65 PASS** (23 gốc + 42 E2E lớp vỏ) |
+| **Workerd tenant-worker** | `vitest run --config apps/tenant-worker/vitest.config.mts` | **70/70 PASS** (23 gốc + 47 E2E lớp vỏ) |
 | **Workerd query-worker** | `vitest run --config apps/query-worker/vitest.config.mts` | **3/3 PASS** |
 | **Web typecheck** | `pnpm --filter @cloudforge/web run typecheck` | exit 0 |
 | **Web Vite production build** | `pnpm --filter @cloudforge/web run build` | exit 0 — 55 module, 238 kB js |
@@ -56,7 +56,7 @@ kiếm theo document, hạn mức đồng thời 100 luồng).
 
 ## E2E lớp vỏ Frappe — đã chạy trên workerd thật
 
-`apps/tenant-worker/test/frappe-facade.integration.test.mts` — 42 kịch bản đi hết
+`apps/tenant-worker/test/frappe-facade.integration.test.mts` — 47 kịch bản đi hết
 đường thật của một request Desk: phiên → dịch hình dạng → tầng quyền → aggregate
 Durable Object → D1. Không mock gì.
 
@@ -106,6 +106,13 @@ Durable Object → D1. Không mock gì.
 - Export CSV: BOM UTF-8 kiểm ở tầng BYTE (Response.text() strip nó khi decode), và
   giá trị mở đầu `=` bị vô hiệu hoá — mở file trong spreadsheet là nó CHẠY, tức
   "tải dữ liệu về" biến thành thực thi mã trên máy người phân tích
+- **Single DocType**: chưa lưu thì trả FORM RỖNG chứ không 404 — trang Settings
+  chưa từng lưu phải vẽ được form để người dùng điền, không phải báo lỗi "không tồn
+  tại". Lưu dưới đúng tên doctype, vẫn kiểm xung đột (hai admin trên một trang
+  Settings không được ghi đè nhau âm thầm), và KHÔNG cho xoá — xoá đi thì lần đọc
+  sau âm thầm về mặc định, mất cấu hình mà không nói gì
+- **Cài app**: cài xong doctype dùng được ngay qua cùng REST; cài lại đúng gói cũ là
+  no-op; gỡ app còn dữ liệu bị TỪ CHỐI; xoá dữ liệu rồi gỡ thì doctype đi theo
 - API native vẫn chạy song song, không bị lớp vỏ che
 
 ## Ranh giới — không tuyên bố quá
@@ -126,7 +133,7 @@ Durable Object → D1. Không mock gì.
   lưu mà không có. Lý do từng cái ở
   xem [API_SURFACE.md](API_SURFACE.md). Mỗi cái gọi vào trả 404 `DoesNotExistError`
   chứ không trả rỗng, nên màn hình không render như thể có dữ liệu.
-- `is_single`, `track_seen` vẫn là metadata chưa có consumer.
+- `track_seen` vẫn là metadata chưa có consumer (`is_single` đã hiện thực).
 - Hooks app là **phản ứng sau commit**, không phải validator trước commit. Việc
   kiểm tra cần chặn lệnh ghi phải khai báo bằng metadata.
 - Đây vẫn **không phải** ERPNext. Không có tương thích app Python, không có HR
