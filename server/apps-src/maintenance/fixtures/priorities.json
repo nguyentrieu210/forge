@@ -1,0 +1,5 @@
+[
+  { "record_type": "Maintenance Priority", "name": "P1", "data": { "label": "Khẩn cấp", "response_hours": 4 } },
+  { "record_type": "Maintenance Priority", "name": "P2", "data": { "label": "Cao", "response_hours": 24 } },
+  { "record_type": "Maintenance Priority", "name": "P3", "data": { "label": "Thường", "response_hours": 72 } }
+]

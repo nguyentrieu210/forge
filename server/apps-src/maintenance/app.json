@@ -1,0 +1,10 @@
+{
+  "id": "maintenance",
+  "name": "Yêu cầu bảo trì",
+  "version": "1.0.0",
+  "requires": [],
+  "nav": [
+    { "key": "Maintenance Request", "label": "Yêu cầu bảo trì", "kind": "doctype", "icon": "wrench", "group": "Bảo trì" }
+  ],
+  "hooks": []
+}

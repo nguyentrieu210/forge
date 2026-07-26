@@ -1,0 +1,4 @@
+[
+  { "role": "Maintenance User", "desk_access": true },
+  { "role": "Maintenance Manager", "desk_access": true }
+]

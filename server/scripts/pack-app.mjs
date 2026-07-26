@@ -120,9 +120,32 @@ if (checkOnly) {
   process.exit(0);
 }
 
-// Emitted with sorted keys and a trailing newline so two packs of the same source
-// produce identical bytes, and therefore an identical content hash at install.
-const serialized = `${JSON.stringify(manifest, Object.keys(manifest).sort(), 2)}\n`;
+/**
+ * Recursively key-sorted clone, so two packs of the same source emit identical bytes
+ * and therefore an identical content hash at install.
+ *
+ * NOT `JSON.stringify(value, keys.sort(), 2)`. That second argument is a REPLACER,
+ * and an array replacer is a property ALLOWLIST applied at every level of the tree —
+ * not a key order. It previously silently stripped every nested object down to the
+ * handful of names that happened to appear at the top level: DocTypes lost their
+ * fields and permissions, print formats lost their html, workflows lost their
+ * transitions, and `nav`/`roles` entries became `{}`.
+ *
+ * Nothing caught it. `--check` exits before serialising and only counts objects; the
+ * determinism test compared two packs of the same source, and empty is deterministic
+ * too; and the install tests build a manifest in memory rather than reading a packed
+ * file. So the only artifact this CLI exists to produce was unusable, and every gate
+ * was green.
+ */
+function canonicalize(value) {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonicalize(value[key])]));
+  }
+  return value;
+}
+
+const serialized = `${JSON.stringify(canonicalize(manifest), null, 2)}\n`;
 const target = outFile ?? path.join(root, `${manifest.id}-${manifest.version}.json`);
 await writeFile(target, serialized, "utf8");
 console.log(`PACK_PASS ${summary} out=${target}`);

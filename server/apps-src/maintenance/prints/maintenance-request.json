@@ -1,0 +1,9 @@
+{
+  "name": "Phiếu bảo trì",
+  "doc_type": "Maintenance Request",
+  "format_type": "Jinja",
+  "html": "<h1>Phiếu yêu cầu bảo trì</h1><p><strong>Số:</strong> {{ doc.name }}</p><p><strong>Khách hàng:</strong> {{ doc.customer }}</p><p><strong>Tóm tắt:</strong> {{ doc.summary }}</p><p><strong>Mức ưu tiên:</strong> {{ doc.priority }}</p><p><strong>Thời điểm báo:</strong> {{ doc.reported_at }}</p><p><strong>Trạng thái:</strong> {{ doc.workflow_state }}</p><hr /><p>{{ doc.detail }}</p>",
+  "css": "h1 { font-size: 18px; margin-bottom: 12px; } p { margin: 4px 0; }",
+  "is_default": true,
+  "revision": 1
+}
