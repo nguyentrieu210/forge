@@ -33,6 +33,36 @@ interface AggregateStub extends DurableObjectStub {
   mutate<T extends JsonObject>(command: MutationCommand<T>): Promise<unknown>;
 }
 
+/**
+ * The tenant this request belongs to — and a refusal when the two sources disagree.
+ *
+ * `env.TENANT_ID` is what this Worker script was DEPLOYED as; `x-cloudforge-tenant` is
+ * what the gateway ROUTED, derived from the hostname and signed into the trusted
+ * identity. In a correct deployment they are the same value.
+ *
+ * When they differ, the script is bound to the wrong database, and serving the request
+ * is a CROSS-TENANT DATA BREACH: a customer reaching their own hostname is handed
+ * another customer's records, with nothing in any log to say so.
+ *
+ * It is not hypothetical. `wrangler deploy --config <other tenant's config> --name
+ * cloudforge-tenant-hrm` overrides only the SCRIPT NAME — vars and D1 bindings come
+ * from the config — so one careless flag silently pointed the `hrm` script at `demo`'s
+ * database. It answered logins with demo's credentials and served demo's documents.
+ *
+ * Neither value can be trusted over the other, so neither is used: `env.TENANT_ID`
+ * would serve the wrong tenant, and preferring the header would let anything that can
+ * reach this Worker name its own tenant. The only safe answer is to fail.
+ */
+function resolveTenant(request: Request, env: TenantEnv): string | null {
+  const routed = request.headers.get("x-cloudforge-tenant");
+  if (env.TENANT_ID && routed && routed !== env.TENANT_ID) {
+    // Deliberately not naming either tenant in the message: the caller must not learn
+    // which other tenant this script is bound to.
+    throw errors.misconfigured("Tenant binding mismatch");
+  }
+  return env.TENANT_ID ?? routed;
+}
+
 export default {
   async fetch(request: Request, env: TenantEnv): Promise<Response> {
     const traceId = request.headers.get("x-cloudforge-trace-id") ?? randomId("trace");
@@ -43,7 +73,7 @@ export default {
       if (request.method === "POST" && url.pathname === "/internal/outbox/flush") {
         assertInternalService(request, env.INTERNAL_SERVICE_TOKEN);
         if (!env.OUTBOX_QUEUE) throw new Error("OUTBOX_QUEUE binding is missing");
-        const tenant = env.TENANT_ID ?? request.headers.get("x-cloudforge-tenant");
+        const tenant = resolveTenant(request, env);
         if (!tenant) throw new Error("Missing tenant context");
         return jsonResponse(await publishPendingOutbox(env.DB, env.OUTBOX_QUEUE, tenant));
       }
@@ -51,13 +81,13 @@ export default {
       // Kept separate from /internal/outbox/flush, which drains the outbox only.
       if (request.method === "POST" && url.pathname === "/internal/maintenance") {
         assertInternalService(request, env.INTERNAL_SERVICE_TOKEN);
-        const tenant = env.TENANT_ID ?? request.headers.get("x-cloudforge-tenant");
+        const tenant = resolveTenant(request, env);
         if (!tenant) throw new Error("Missing tenant context");
         return jsonResponse(await runMaintenance(env, tenant));
       }
       if (request.method === "GET" && url.pathname === "/internal/reconciliation") {
         assertInternalService(request, env.INTERNAL_SERVICE_TOKEN);
-        const tenant = env.TENANT_ID ?? request.headers.get("x-cloudforge-tenant");
+        const tenant = resolveTenant(request, env);
         if (!tenant) throw new Error("Missing tenant context");
         const report = await new D1CommercialReconciliationService(env.DB).run(tenant);
         return jsonResponse(report, report.ok ? 200 : 409, { "x-cloudforge-trace-id": traceId });
@@ -66,7 +96,7 @@ export default {
       if (request.method === "POST" && url.pathname === "/internal/events") {
         assertInternalService(request, env.INTERNAL_SERVICE_TOKEN);
         const event = await readJson<JsonObject>(request, 512_000) as unknown as DomainEvent;
-        const tenant = env.TENANT_ID ?? request.headers.get("x-cloudforge-tenant");
+        const tenant = resolveTenant(request, env);
         if (!tenant || event.tenant_id !== tenant) throw new Error("Inbound event tenant mismatch");
         // Dedup and the committed-confirmation key off the trusted idempotency-key
         // header (bound by the caller to this event), not the request body alone.
@@ -103,7 +133,7 @@ export default {
         );
       }
 
-      const tenantId = env.TENANT_ID ?? request.headers.get("x-cloudforge-tenant");
+      const tenantId = resolveTenant(request, env);
       if (!tenantId) throw new Error("Missing tenant context");
 
       // ---- Frappe-shaped surface -------------------------------------------

@@ -1,0 +1,18 @@
+{
+  "name": "Duyệt đơn nghỉ phép",
+  "document_type": "Leave Application",
+  "state_field": "workflow_state",
+  "is_active": true,
+  "states": [
+    { "state": "Nháp", "docstatus": 0, "allow_edit": "Employee" },
+    { "state": "Chờ duyệt", "docstatus": 0, "allow_edit": "HR User" },
+    { "state": "Đã duyệt", "docstatus": 1, "allow_edit": "HR Manager" },
+    { "state": "Từ chối", "docstatus": 2, "allow_edit": "HR Manager" }
+  ],
+  "transitions": [
+    { "state": "Nháp", "action": "Gửi duyệt", "next_state": "Chờ duyệt", "allowed_role": "Employee" },
+    { "state": "Chờ duyệt", "action": "Duyệt", "next_state": "Đã duyệt", "allowed_role": "HR Manager", "allow_self_approval": false },
+    { "state": "Chờ duyệt", "action": "Từ chối", "next_state": "Từ chối", "allowed_role": "HR Manager" }
+  ],
+  "revision": 1
+}

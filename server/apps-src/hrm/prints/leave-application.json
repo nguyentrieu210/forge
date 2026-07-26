@@ -1,0 +1,9 @@
+{
+  "name": "Đơn xin nghỉ phép",
+  "doc_type": "Leave Application",
+  "format_type": "Jinja",
+  "html": "<h1>ĐƠN XIN NGHỈ PHÉP</h1><p><strong>Số đơn:</strong> {{ doc.name }}</p><p><strong>Nhân viên:</strong> {{ doc.employee }}</p><p><strong>Loại nghỉ:</strong> {{ doc.leave_type }}</p><p><strong>Từ ngày:</strong> {{ doc.from_date }} &nbsp;&nbsp; <strong>Đến ngày:</strong> {{ doc.to_date }}</p><p><strong>Số ngày:</strong> {{ doc.total_days }}</p><p><strong>Lý do:</strong> {{ doc.reason }}</p><p><strong>Người duyệt:</strong> {{ doc.approver }}</p><p><strong>Trạng thái:</strong> {{ doc.workflow_state }}</p><hr /><table class=\"sign\"><tr><td>Người làm đơn</td><td>Quản lý trực tiếp</td><td>Phòng nhân sự</td></tr></table>",
+  "css": "h1 { font-size: 18px; text-align: center; margin-bottom: 16px; } p { margin: 4px 0; } table.sign { width: 100%; margin-top: 40px; text-align: center; } table.sign td { padding-top: 8px; }",
+  "is_default": true,
+  "revision": 1
+}

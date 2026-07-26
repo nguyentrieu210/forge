@@ -1,0 +1,23 @@
+[
+  { "record_type": "Department", "name": "Nhân sự", "data": { "label": "Phòng Nhân sự" } },
+  { "record_type": "Department", "name": "Kế toán", "data": { "label": "Phòng Kế toán" } },
+  { "record_type": "Department", "name": "Kinh doanh", "data": { "label": "Phòng Kinh doanh" } },
+  { "record_type": "Department", "name": "Kỹ thuật", "data": { "label": "Phòng Kỹ thuật" } },
+
+  { "record_type": "Designation", "name": "Nhân viên", "data": { "label": "Nhân viên" } },
+  { "record_type": "Designation", "name": "Trưởng nhóm", "data": { "label": "Trưởng nhóm" } },
+  { "record_type": "Designation", "name": "Trưởng phòng", "data": { "label": "Trưởng phòng" } },
+  { "record_type": "Designation", "name": "Giám đốc", "data": { "label": "Giám đốc" } },
+
+  { "record_type": "Leave Type", "name": "Phép năm", "data": { "label": "Nghỉ phép năm", "max_days_per_year": 12, "is_paid": 1 } },
+  { "record_type": "Leave Type", "name": "Nghỉ ốm", "data": { "label": "Nghỉ ốm", "max_days_per_year": 30, "is_paid": 1 } },
+  { "record_type": "Leave Type", "name": "Nghỉ không lương", "data": { "label": "Nghỉ không lương", "max_days_per_year": 0, "is_paid": 0 } },
+  { "record_type": "Leave Type", "name": "Nghỉ thai sản", "data": { "label": "Nghỉ thai sản", "max_days_per_year": 180, "is_paid": 1 } },
+
+  { "record_type": "Currency", "name": "VND", "data": { "currency_scale": 0 } },
+
+  { "record_type": "Company", "name": "Kairo", "data": { "label": "Công ty Kairo", "default_currency": "VND" } },
+
+  { "record_type": "Fiscal Year", "name": "2026", "data": { "label": "Năm tài chính 2026", "year_start_date": "2026-01-01", "year_end_date": "2026-12-31" } },
+  { "record_type": "Fiscal Year", "name": "2027", "data": { "label": "Năm tài chính 2027", "year_start_date": "2027-01-01", "year_end_date": "2027-12-31" } }
+]

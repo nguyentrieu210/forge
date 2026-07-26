@@ -1,0 +1,5 @@
+[
+  { "role": "Employee", "desk_access": true },
+  { "role": "HR User", "desk_access": true },
+  { "role": "HR Manager", "desk_access": true }
+]

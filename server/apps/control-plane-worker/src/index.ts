@@ -68,6 +68,30 @@ export default {
         const now = new Date().toISOString();
         const current = await env.CONTROL_DB.prepare("SELECT tenant_id, routing_version FROM tenant_routes WHERE route_key=?1")
           .bind(routeKey).first<{ tenant_id: string; routing_version: number }>();
+
+        /**
+         * A tenant has exactly one route — `idx_tenant_routes_tenant` is UNIQUE, because
+         * the reverse index `__tenant__:<id>` is one key and two routes would make it
+         * ambiguous. So a PUT naming a route key this tenant does not currently hold is
+         * unambiguously a MOVE: the tenant is changing hostname.
+         *
+         * Handled explicitly rather than left to the constraint. The bare insert failed
+         * with `DATABASE_ERROR: Storage operation failed` — an opaque internal fault for
+         * a condition the operator can act on, and one with no way out: without this,
+         * a tenant's hostname could never be changed at all, and a wrong one would be
+         * permanent.
+         */
+        const previous = await env.CONTROL_DB.prepare("SELECT route_key FROM tenant_routes WHERE tenant_id=?1 AND route_key<>?2")
+          .bind(tenant_id, routeKey).first<{ route_key: string }>();
+        let moved: string | null = null;
+        if (previous?.route_key) {
+          await env.CONTROL_DB.prepare("DELETE FROM tenant_routes WHERE route_key=?1").bind(previous.route_key).run();
+          // The stale hostname must stop resolving to this tenant in the same breath,
+          // or the old name keeps serving the tenant it was supposedly moved off.
+          await env.ROUTES.delete(previous.route_key);
+          moved = previous.route_key;
+        }
+
         const version = (current?.routing_version ?? 0) + 1;
         await env.CONTROL_DB.prepare(
           `INSERT INTO tenant_routes(route_key, tenant_id, worker_name, status, plan, routing_version, modified_at)
@@ -85,7 +109,9 @@ export default {
           await env.ROUTES.delete(`__tenant__:${current.tenant_id}`);
         }
         await env.ROUTES.put(`__tenant__:${tenant_id}`, routeRecord);
-        return jsonResponse({ route_key: routeKey, routing_version: version });
+        // `moved_from` is reported rather than left silent: deleting a hostname is not
+        // something an operator should discover afterwards from a 404.
+        return jsonResponse({ route_key: routeKey, routing_version: version, ...(moved ? { moved_from: moved } : {}) });
       }
       return jsonResponse({ error: { code: "ROUTE_NOT_FOUND" } }, 404);
     } catch (error) {

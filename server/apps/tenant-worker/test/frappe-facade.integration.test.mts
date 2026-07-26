@@ -191,6 +191,27 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     expect((await response.json() as any).exc_type).toBe("PermissionError");
   });
 
+  it("refuses a request routed for a different tenant than this script is bound to", async () => {
+    // `env.TENANT_ID` is what the script was DEPLOYED as; `x-cloudforge-tenant` is what
+    // the gateway ROUTED from the hostname. If they disagree the script is bound to the
+    // wrong database, and answering is a cross-tenant breach — a customer on their own
+    // hostname handed another customer's records, silently.
+    //
+    // This happened for real: `wrangler deploy --config <demo's config> --name
+    // cloudforge-tenant-hrm` overrides only the SCRIPT NAME, so the hrm script ran with
+    // demo's TENANT_ID and demo's D1. It accepted demo's password on hrm's hostname.
+    //
+    // Preferring either value is wrong — env would serve the wrong tenant, the header
+    // would let a caller choose one — so the only safe answer is to fail.
+    const response = await exports.default.fetch(new Request("https://tenant.test/api/method/metaforge.api.get_boot", {
+      headers: { "x-cloudforge-tenant": "some-other-tenant", cookie: `sid=${sid}` },
+    }));
+    expect(response.status).toBe(500);
+    const body = await response.json() as any;
+    // Masked: the caller must not learn which tenant this script is really bound to.
+    expect(JSON.stringify(body)).not.toMatch(/demo/);
+  });
+
   it("puts getdoctype's keys at the top level, as frappe.response does", async () => {
     // frappe/desk/form/load.py does `frappe.response.docs.extend(docs)` — it does not
     // return, so nothing is wrapped in `message`. Wrapping it is an HTTP 200 that
@@ -846,6 +867,21 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
 
     const catalog = await unwrap(await method("metaforge.api.get_application_catalog", {}, "GET"));
     expect(catalog.apps.map((app: any) => app.id)).toContain("visits");
+
+    // Every app MUST carry `workspaces`. The client flattens the catalog with
+    // `for (const ws of app.workspaces)`, so an app without it throws
+    // "workspaces is not iterable" and the entire Desk renders blank — not a degraded
+    // menu, a white screen. It hid for a long time because the loop never runs on a
+    // tenant with no apps: the first app installed is what breaks the Desk.
+    const app = catalog.apps.find((entry: any) => entry.id === "visits");
+    expect(Array.isArray(app.workspaces)).toBe(true);
+    expect(app.workspaces.length).toBeGreaterThan(0);
+    const workspace = app.workspaces[0];
+    expect(typeof workspace.key).toBe("string");
+    expect(typeof workspace.route).toBe("string");
+    expect(Array.isArray(workspace.sections)).toBe(true);
+    expect(workspace.sections[0].items.length).toBeGreaterThan(0);
+    expect(workspace.sections[0].items[0].route).toMatch(/^\/app\//);
   });
 
   it("refuses to uninstall an app whose doctypes still hold documents", async () => {

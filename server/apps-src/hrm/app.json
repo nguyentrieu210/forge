@@ -1,0 +1,13 @@
+{
+  "id": "hrm",
+  "name": "Quản lý nhân sự",
+  "version": "1.0.0",
+  "requires": [],
+  "nav": [
+    { "key": "Employee", "label": "Nhân viên", "kind": "doctype", "icon": "users", "group": "Nhân sự" },
+    { "key": "Leave Application", "label": "Đơn nghỉ phép", "kind": "doctype", "icon": "calendar-off", "group": "Nhân sự" },
+    { "key": "Attendance", "label": "Chấm công", "kind": "doctype", "icon": "clock", "group": "Nhân sự" },
+    { "key": "Employee Advance", "label": "Tạm ứng", "kind": "doctype", "icon": "wallet", "group": "Nhân sự" }
+  ],
+  "hooks": []
+}

@@ -35,6 +35,12 @@ export const errors = {
   ledger: (message: string) => new CloudForgeError("LEDGER_INVARIANT_FAILED", message, 422),
   overloaded: (message = "Storage is temporarily overloaded") => new CloudForgeError("D1_OVERLOADED", message, 503, true),
   database: (message = "Storage operation failed") => new CloudForgeError("DATABASE_ERROR", message, 500, false),
+  /**
+   * The deployment is wrong, not the request. Distinct from DATABASE_ERROR so it is
+   * greppable in logs, and NOT retryable: retrying a misbound Worker just serves the
+   * wrong data again.
+   */
+  misconfigured: (message: string) => new CloudForgeError("DEPLOYMENT_MISCONFIGURED", message, 500, false),
 } as const;
 
 export function asCloudForgeError(value: unknown): CloudForgeError {

@@ -2179,10 +2179,66 @@ async function applicationCatalog(context: FrappeRouterContext): Promise<JsonObj
         // Omitted rather than shown-and-broken.
       }
     }
-    readable.push({ id: app.app_id, name: app.app_name, version: app.version, installed_at: app.installed_at });
+    readable.push({
+      id: app.app_id,
+      name: app.app_name,
+      version: app.version,
+      installed_at: app.installed_at,
+      // `key` and `label` are what the client's catalog reads; `id`/`name` are kept
+      // because the install and uninstall responses use those names.
+      key: app.app_id,
+      label: app.app_name,
+      workspaces: workspacesFromNav(app.app_id, app.app_name, permitted),
+    });
     navigable.push({ ...app, nav: permitted });
   }
   return { apps: readable, nav: combinedNavigation(navigable) };
+}
+
+/**
+ * An app's nav entries as the catalog workspaces the client expects.
+ *
+ * `workspaces` was missing entirely, and its absence is not a degraded menu — the
+ * client does `for (const ws of app.workspaces)` while flattening the catalog, so an
+ * app without it throws `workspaces is not iterable` and the WHOLE Desk renders blank.
+ *
+ * It stayed hidden because the loop never runs when no app is installed: a tenant with
+ * an empty catalog works perfectly, and the first app installed is what breaks it.
+ *
+ * Nav entries are grouped by their declared `group`, which is the only structure an app
+ * gives us. An app that declares no groups gets one workspace named after itself rather
+ * than none — a workspace-less app would silently vanish from the catalog.
+ */
+function workspacesFromNav(appId: string, appName: string, nav: { key: string; label: string; kind?: string; icon?: string; group?: string }[]): JsonObject[] {
+  const groups = new Map<string, typeof nav>();
+  for (const item of nav) {
+    const group = item.group?.trim() || appName;
+    const bucket = groups.get(group);
+    if (bucket) bucket.push(item);
+    else groups.set(group, [item]);
+  }
+
+  return [...groups.entries()].map(([group, items], index) => ({
+    key: `${appId}:${group}`,
+    label: group,
+    module: appName,
+    route: `/app/${encodeURIComponent(items[0]?.key ?? appId)}`,
+    order: index,
+    sections: [{
+      key: `${appId}:${group}:items`,
+      label: group,
+      kind: "transactions",
+      items: items.map((item, position) => ({
+        key: item.key,
+        label: item.label,
+        kind: item.kind ?? "doctype",
+        route: `/app/${encodeURIComponent(item.key)}`,
+        ...(item.icon ? { icon: item.icon } : {}),
+        ...(item.kind === "doctype" || !item.kind ? { doctype: item.key } : {}),
+        order: position,
+      })),
+    }],
+  })) as unknown as JsonObject[];
 }
 
 async function addComment(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {

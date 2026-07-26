@@ -1,0 +1,25 @@
+{
+  "name": "Attendance",
+  "module": "HR",
+  "is_submittable": true,
+  "autoname": "CC-.YYYY.-#####",
+  "title_field": "employee",
+  "search_fields": ["employee"],
+  "sort_field": "attendance_date",
+  "sort_order": "DESC",
+  "fields": [
+    { "fieldname": "employee", "label": "Nhân viên", "fieldtype": "Link", "options": "Employee", "required": true, "in_list_view": true, "in_standard_filter": true, "search_index": true },
+    { "fieldname": "attendance_date", "label": "Ngày", "fieldtype": "Date", "required": true, "in_list_view": true },
+    { "fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Có mặt\nVắng\nNửa ngày\nNghỉ phép", "default": "Có mặt", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "working_hours", "label": "Số giờ làm", "fieldtype": "Float", "in_list_view": true },
+    { "fieldname": "late_entry", "label": "Vào muộn", "fieldtype": "Check" },
+    { "fieldname": "late_reason", "label": "Lý do vào muộn", "fieldtype": "Data", "mandatory_depends_on": "eval:doc.late_entry == 1" }
+  ],
+  "permissions": [
+    { "role": "Employee", "read": true },
+    { "role": "HR User", "read": true, "write": true, "create": true, "submit": true, "report": true },
+    { "role": "HR Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true }
+  ],
+  "revision": 1
+}

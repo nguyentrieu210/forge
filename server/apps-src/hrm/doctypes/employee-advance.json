@@ -1,0 +1,27 @@
+{
+  "name": "Employee Advance",
+  "module": "HR",
+  "is_submittable": true,
+  "autoname": "TU-.YYYY.-#####",
+  "title_field": "employee",
+  "search_fields": ["employee"],
+  "sort_field": "posting_date",
+  "sort_order": "DESC",
+  "fields": [
+    { "fieldname": "employee", "label": "Nhân viên", "fieldtype": "Link", "options": "Employee", "required": true, "in_list_view": true, "in_standard_filter": true, "search_index": true },
+    { "fieldname": "posting_date", "label": "Ngày đề nghị", "fieldtype": "Date", "required": true, "in_list_view": true },
+    { "fieldname": "purpose", "label": "Mục đích", "fieldtype": "Text", "required": true },
+    { "fieldname": "advance_amount", "label": "Số tiền", "fieldtype": "Currency", "required": true, "in_list_view": true },
+    { "fieldname": "currency", "label": "Tiền tệ", "fieldtype": "Link", "options": "Currency", "required": true },
+    { "fieldname": "repay_from_salary", "label": "Trừ vào lương", "fieldtype": "Check" },
+    { "fieldname": "repay_months", "label": "Số tháng trừ", "fieldtype": "Int", "mandatory_depends_on": "eval:doc.repay_from_salary == 1" },
+    { "fieldname": "workflow_state", "label": "Trạng thái", "fieldtype": "Data", "read_only": true, "in_list_view": true, "in_standard_filter": true }
+  ],
+  "permissions": [
+    { "role": "Employee", "read": true, "create": true, "write": true },
+    { "role": "HR User", "read": true, "write": true, "create": true, "report": true },
+    { "role": "HR Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "print": true, "report": true, "export": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "print": true, "report": true, "export": true }
+  ],
+  "revision": 1
+}
