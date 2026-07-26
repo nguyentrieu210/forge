@@ -558,7 +558,7 @@ export async function runMaintenance(
   const hooks = env.DISPATCHER
     ? (await new AppHookDispatcher(env.DB, {
       DISPATCHER: env.DISPATCHER,
-      ...(env.INTERNAL_SERVICE_TOKEN ? { INTERNAL_SERVICE_TOKEN: env.INTERNAL_SERVICE_TOKEN } : {}),
+      ...(env.INTERNAL_AUTH_SECRET ? { INTERNAL_AUTH_SECRET: env.INTERNAL_AUTH_SECRET } : {}),
     }).sweep(tenantId, new Date().toISOString())).length
     : 0;
   return { outbox, hooks };
@@ -581,7 +581,7 @@ async function fanOutAppHooks(env: TenantEnv, tenantId: string, event: DomainEve
 
   const dispatcher = new AppHookDispatcher(env.DB, {
     DISPATCHER: env.DISPATCHER,
-    ...(env.INTERNAL_SERVICE_TOKEN ? { INTERNAL_SERVICE_TOKEN: env.INTERNAL_SERVICE_TOKEN } : {}),
+    ...(env.INTERNAL_AUTH_SECRET ? { INTERNAL_AUTH_SECRET: env.INTERNAL_AUTH_SECRET } : {}),
   });
   return dispatcher.fanOut(tenantId, event, targets, new Date().toISOString());
 }

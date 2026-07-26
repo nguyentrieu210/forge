@@ -7,7 +7,9 @@ import {
   nextAttemptDelaySeconds,
   parseAppManifest,
   subscribersFor,
+  AppHookDispatcher,
 } from "../dist/packages/app-registry/src/index.js";
+import { deriveAppCallKey } from "../dist/packages/auth/src/index.js";
 
 function manifest(overrides = {}) {
   return parseAppManifest({
@@ -114,4 +116,71 @@ test("the schedule is monotonic, so each retry waits at least as long as the las
     assert.ok(delay >= previous, `attempt ${attempts}`);
     previous = delay;
   }
+});
+
+// ---- what the platform presents to an app Worker ----------------------------
+
+/** At least 32 characters: the HMAC helper refuses a shorter secret. */
+const MASTER = "platform-master-secret-value-0123456789";
+
+/** A domain event of the shape the dispatcher forwards. */
+function domainEvent() {
+  return {
+    event_id: "evt-1", event_type: "stock_request.submitted", tenant_id: "acme",
+    aggregate: { doctype: "Stock Request", name: "SR-1" }, aggregate_version: 1,
+    actor: "user@example.com", command_id: "cmd-1",
+    occurred_at: "2026-07-27T00:00:00.000Z", schema_version: 1, payload: {},
+  };
+}
+
+/** Minimal D1 stand-in: one pending delivery row, and writes that succeed. */
+function hookDb() {
+  const statement = {
+    bind: () => statement,
+    first: async () => ({ status: "pending", attempts: 0 }),
+    run: async () => ({ success: true, meta: { changes: 1 } }),
+    all: async () => ({ results: [] }),
+  };
+  return { prepare: () => statement, batch: async () => [] };
+}
+
+test("an app Worker is never given the platform's own internal credential", async () => {
+  // INTERNAL_SERVICE_TOKEN authenticates /internal/events, /internal/maintenance,
+  // /internal/outbox/flush and /internal/reconciliation on EVERY tenant Worker, and
+  // this deployment shares one value across all tenants. It used to be sent to app
+  // Workers as their `authorization`, which inverts the trust direction: a credential
+  // meant to prove "the platform is calling you" also granted "you may call the
+  // platform's internals, on any tenant, as the platform".
+  let sent;
+  const dispatcher = {
+    get: () => ({
+      fetch: async (_url, init) => {
+        sent = init.headers.authorization;
+        return new Response("{}", { status: 200 });
+      },
+    }),
+  };
+
+  const outcomes = await new AppHookDispatcher(hookDb(), {
+    DISPATCHER: dispatcher,
+    INTERNAL_AUTH_SECRET: MASTER,
+  }).fanOut("acme", domainEvent(), [{ appId: "kho", worker: "app-kho" }], "2026-07-27T00:00:00.000Z");
+
+  assert.equal(outcomes[0].status, "delivered");
+  assert.match(sent ?? "", /^Bearer /);
+  const presented = (sent ?? "").slice("Bearer ".length);
+
+  // Exactly the key derived for THIS tenant and THIS app — nothing else.
+  assert.equal(presented, await deriveAppCallKey(MASTER, "acme", "kho"));
+  assert.notEqual(presented, MASTER);
+});
+
+test("each app gets its own credential, so one leak cannot impersonate the platform to another", async () => {
+  const [kho, hrm, otherTenant] = await Promise.all([
+    deriveAppCallKey(MASTER, "acme", "kho"),
+    deriveAppCallKey(MASTER, "acme", "hrm"),
+    deriveAppCallKey(MASTER, "beta", "kho"),
+  ]);
+  assert.notEqual(kho, hrm, "two apps on one tenant must not share a credential");
+  assert.notEqual(kho, otherTenant, "one app on two tenants must not share a credential");
 });

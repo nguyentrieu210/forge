@@ -68,6 +68,26 @@ export async function deriveIdentityKey(masterSecret: string, tenantId: string, 
   return bytesToHex(await hmacSha256(`cf-trusted-identity:v1:${keyId}:${tenantId}`, masterSecret));
 }
 
+/**
+ * The credential the platform presents to an APP's Worker, so the app can tell a real
+ * platform call from anything else that reaches it.
+ *
+ * Derived per (tenant, app) and NOT shared with anything else. It previously was
+ * `INTERNAL_SERVICE_TOKEN` — the platform's own service credential, the one that
+ * authenticates `/internal/events`, `/internal/maintenance`, `/internal/outbox/flush`
+ * and `/internal/reconciliation` on every tenant Worker, and which this deployment
+ * shares across all tenants. Handing that to third-party app code inverts the trust
+ * direction: a credential meant to prove "the platform is calling you" also grants
+ * "you may call the platform's internals", on every tenant, as the platform.
+ *
+ * Domain-separated from `deriveIdentityKey` by the label, so an app credential can
+ * never be replayed as a trusted identity. Per-app, so one leaked app key does not
+ * let its holder impersonate the platform to a DIFFERENT app.
+ */
+export async function deriveAppCallKey(masterSecret: string, tenantId: string, appId: string): Promise<string> {
+  return bytesToHex(await hmacSha256(`cf-app-call:v1:${tenantId}:${appId}`, masterSecret));
+}
+
 export async function createTrustedIdentity(input: {
   tenantId: string;
   actor: Actor;

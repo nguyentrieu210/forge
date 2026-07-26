@@ -20,6 +20,7 @@
  */
 
 import type { DomainEvent } from "../../contracts/src/index.js";
+import { deriveAppCallKey } from "../../auth/src/index.js";
 import { hookMatches, type AppManifest } from "./manifest.js";
 
 /**
@@ -77,7 +78,13 @@ export function nextAttemptDelaySeconds(attempts: number): number {
 
 export interface HookDispatcherEnv {
   DISPATCHER?: DispatchNamespace;
-  INTERNAL_SERVICE_TOKEN?: string;
+  /**
+   * Master the per-app call credential is derived from — NOT a secret an app ever
+   * receives. `INTERNAL_SERVICE_TOKEN` deliberately does not appear here: it used to
+   * be handed to app Workers as their `authorization`, which gave third-party code the
+   * platform's own internal credential. See `deriveAppCallKey`.
+   */
+  INTERNAL_AUTH_SECRET?: string;
 }
 
 export class AppHookDispatcher {
@@ -174,7 +181,12 @@ export class AppHookDispatcher {
           "x-cloudforge-tenant": tenantId,
           "x-cloudforge-app": target.appId,
           "x-cloudforge-idempotency-key": event.event_id,
-          ...(this.env.INTERNAL_SERVICE_TOKEN ? { authorization: `Bearer ${this.env.INTERNAL_SERVICE_TOKEN}` } : {}),
+          // A credential derived for THIS tenant and THIS app. It proves the call came
+          // from the platform and nothing more; it grants no access back into the
+          // platform's internals, which is what sending INTERNAL_SERVICE_TOKEN did.
+          ...(this.env.INTERNAL_AUTH_SECRET
+            ? { authorization: `Bearer ${await deriveAppCallKey(this.env.INTERNAL_AUTH_SECRET, tenantId, target.appId)}` }
+            : {}),
         },
         body: JSON.stringify(event),
       }));
