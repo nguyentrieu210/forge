@@ -925,4 +925,35 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     const at = "2026-07-26T10:30:00.250Z";
     expect(toFrappeModified(at, 3)).not.toBe(toFrappeModified(at, 4));
   });
+  it("never offers a workflow transition the write path would then refuse", async () => {
+    // The offer and the enforcement must agree. They did not: get_workflow_transitions
+    // exempted a platform administrator from the self-approval rule and ignored its
+    // docstatus condition, while the write path exempts nobody. So the server offered
+    // "Duyệt", the client rendered the button it was told to render, and the tap came
+    // back 403 "Self approval is not allowed" — a failure with nothing in the client
+    // to fix.
+    //
+    // Whatever the listing offers, applying it must not fail on permission. That is the
+    // invariant, and it is asserted rather than the specific filter, so any future
+    // divergence is caught regardless of which side changes.
+    const created = (await (await call("/api/resource/Field Visit", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ subject: "Workflow offer/enforce agreement" }),
+    })).json() as any).data;
+
+    const offered = await unwrap(await method("metaforge.api.get_workflow_transitions", {
+      doc: JSON.stringify({ doctype: "Field Visit", name: created.name }),
+    }));
+    if (!offered.has_workflow) return; // nothing to check on a doctype without a workflow
+
+    for (const transition of offered.transitions ?? []) {
+      const response = await method("frappe.model.workflow.apply_workflow", {
+        doc: JSON.stringify({ doctype: "Field Visit", name: created.name, modified: created.modified }),
+        action: transition.action,
+      });
+      expect(response.status, `offered "${transition.action}" then refused it`).not.toBe(403);
+    }
+  });
+
 });

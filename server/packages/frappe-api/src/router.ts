@@ -27,8 +27,8 @@ import {
   childDocTypeNames, maskedFieldNames, tableFieldNames, toFrappeDocType, toFrappeMetaBundle, toFrappeWorkflow,
 } from "./meta-shape.js";
 import {
-  mergeCustomizations, parseCsvImport, parseCustomField, parseDocTypeMeta, parsePropertySetter,
-  renderPrintFormat, resolveAutoname, validateWorkflow,
+  blocksSelfApproval, mergeCustomizations, parseCsvImport, parseCustomField, parseDocTypeMeta,
+  parsePropertySetter, renderPrintFormat, resolveAutoname, validateWorkflow,
 } from "../../frappe-model/src/index.js";
 import type { CustomFieldRecord, CustomizationStore, D1SearchStore, PropertySetterRecord } from "../../frappe-model/src/index.js";
 import type { D1UserStore } from "../../auth/src/index.js";
@@ -1200,14 +1200,20 @@ async function applyWorkflow(args: FrappeArgs, context: FrappeRouterContext): Pr
     && (context.actor.roles.includes(entry.allowed_role) || isPlatformAdmin(context)));
   if (!transition) throw errors.permission(`Workflow action ${action} is not permitted from ${state}`);
 
-  // Self-approval is refused when the workflow forbids it. Checked server-side
-  // because it is the whole point of an approval step.
-  if (!transition.allow_self_approval && current.owner === context.actor.user_id && !isPlatformAdmin(context)) {
-    throw errors.permission("You cannot approve a document you created");
-  }
-
   const target = workflow.states.find((entry) => entry.state === transition.next_state);
   if (!target) throw errors.validation("Workflow target state is invalid");
+
+  // Self-approval, by the SAME rule the kernel enforces and the listing offers.
+  //
+  // This copy had drifted twice over: it exempted a platform administrator — defeating
+  // a segregation-of-duties control for exactly the account it exists to constrain —
+  // and it omitted the docstatus condition, so it also blocked an author from moving
+  // their OWN DRAFT forward. "Gửi duyệt" does not change docstatus and is not an
+  // approval, yet it was refused with "You cannot approve a document you created",
+  // which left no way for anyone to submit their own request at all.
+  if (blocksSelfApproval(transition, current.owner, context.actor.user_id, current.docstatus, target.docstatus)) {
+    throw errors.permission("You cannot approve a document you created");
+  }
   const lifecycle: MutationAction = target.docstatus === 2 ? "cancel"
     : target.docstatus === 1 && current.docstatus === 0 ? "submit" : "save";
 
@@ -1233,11 +1239,17 @@ async function workflowTransitions(args: FrappeArgs, context: FrappeRouterContex
   // tell a plain document from one sitting in a terminal state.
   if (!workflow) return { has_workflow: false, state: null, transitions: [] };
   const state = String(document.data[workflow.state_field] ?? workflow.states[0]?.state ?? "");
+  const currentDocstatus = Number(document.docstatus ?? 0);
+  const docstatusOf = (stateName: string): number =>
+    Number(workflow.states.find((entry) => entry.state === stateName)?.docstatus ?? currentDocstatus);
+
   const transitions = workflow.transitions
     .filter((entry) => entry.state === state && (context.actor.roles.includes(entry.allowed_role) || isPlatformAdmin(context)))
-    // An action the actor could not complete is omitted rather than offered and
-    // then refused on click.
-    .filter((entry) => entry.allow_self_approval || document.owner !== context.actor.user_id || isPlatformAdmin(context))
+    // An action the actor could not complete is omitted rather than offered and then
+    // refused on click. This MUST use the same rule the write path enforces: it used to
+    // exempt a platform admin and ignore the docstatus condition, so the server offered
+    // "Duyệt" and then answered the tap with 403 "Self approval is not allowed".
+    .filter((entry) => !blocksSelfApproval(entry, document.owner, context.actor.user_id, currentDocstatus, docstatusOf(entry.next_state)))
     .map((entry) => ({
       action: entry.action,
       next_state: entry.next_state,

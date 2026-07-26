@@ -213,13 +213,43 @@ function applyWorkflow(context: ControllerContext<JsonObject>, data: JsonObject,
   const transitions = workflow.transitions.filter((transition) => transition.state === current && transition.next_state === requested);
   const transition = transitions.find((entry) => context.command.actor.roles.includes(entry.allowed_role) || isAdministrator(context));
   if (!transition) throw errors.permission(`No permitted workflow transition from ${current} to ${requested}`);
-  if (!transition.allow_self_approval && context.existing.owner === context.command.actor.user_id && target.docstatus > context.existing.docstatus) {
+  if (blocksSelfApproval(transition, context.existing.owner, context.command.actor.user_id, context.existing.docstatus, target.docstatus)) {
     throw errors.permission("Self approval is not allowed for this transition");
   }
   if (transition.condition && !evaluateCondition(transition.condition, data)) throw errors.validation(`Workflow condition is not satisfied for ${transition.action}`);
   const expectedAction = target.docstatus === 2 ? "cancel" : target.docstatus === 1 && context.existing.docstatus === 0 ? "submit" : "save";
   if (context.command.action !== expectedAction) throw errors.lifecycle(`Transition to ${requested} requires ${expectedAction}`);
   return { state: requested, docstatus: target.docstatus };
+}
+
+/**
+ * Whether segregation of duties forbids this actor from taking this transition.
+ *
+ * Exported and shared because the OFFER and the ENFORCEMENT must agree. They did not:
+ * `get_workflow_transitions` exempted a platform administrator and ignored the
+ * docstatus condition, while this check exempts nobody. The result was a button the
+ * server had offered and then refused on tap — the client behaving correctly and still
+ * failing, which is the worst kind of contract bug because nothing in the client is
+ * wrong to fix.
+ *
+ * There is deliberately NO administrator bypass. Self-approval is a segregation-of-
+ * duties control; an administrator who could bypass it would make the control decorative,
+ * and administrators are exactly who such a control exists to constrain.
+ *
+ * Only transitions that ADVANCE the docstatus are covered: approving or cancelling your
+ * own request is the decision that needs a second pair of eyes, whereas moving your own
+ * draft along is not.
+ */
+export function blocksSelfApproval(
+  transition: { allow_self_approval?: boolean },
+  ownerId: string,
+  actorId: string,
+  currentDocstatus: number,
+  targetDocstatus: number,
+): boolean {
+  if (transition.allow_self_approval) return false;
+  if (ownerId !== actorId) return false;
+  return targetDocstatus > currentDocstatus;
 }
 
 function evaluateCondition(condition: string, data: JsonObject): boolean {

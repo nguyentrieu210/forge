@@ -42,8 +42,11 @@ await page.goto(`${BASE}${PATHNAME}`, { waitUntil: "networkidle", timeout: 60_00
 if (process.env.FORGE_LOGIN === "1") {
   const user = process.env.FORGE_USER ?? "dev@example.com";
   const password = process.env.FORGE_PASSWORD ?? "local-dev-password-1";
-  await page.locator("#usr").fill(user);
-  await page.locator("#pwd").fill(password);
+  // The demo's own login screen uses `#usr`/`#pwd`; an app scaffolded by
+  // create-metaforge-app uses the shell's `LoginForm`, whose ids are `#mf-login-*`.
+  // Both are accepted so one diagnostic works against either kind of app.
+  await page.locator("#usr, #mf-login-usr").first().fill(user);
+  await page.locator("#pwd, #mf-login-pwd").first().fill(password);
   await page.getByRole("button", { name: "Đăng nhập" }).click();
   await page.waitForTimeout(4000);
   await page.goto(`${BASE}${PATHNAME}`, { waitUntil: "networkidle", timeout: 60_000 });

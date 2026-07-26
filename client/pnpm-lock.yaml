@@ -79,6 +79,61 @@ importers:
         specifier: 5.4.11
         version: 5.4.11(@types/node@22.9.0)(lightningcss@1.32.0)
 
+  apps/hrm:
+    dependencies:
+      '@metaforge/adapter-frappe':
+        specifier: workspace:*
+        version: link:../../packages/adapter-frappe
+      '@metaforge/controls':
+        specifier: workspace:*
+        version: link:../../packages/controls
+      '@metaforge/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@metaforge/shell':
+        specifier: workspace:*
+        version: link:../../packages/shell
+      '@metaforge/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      '@metaforge/views':
+        specifier: workspace:*
+        version: link:../../packages/views
+      lucide-react:
+        specifier: ^0.460.0
+        version: 0.460.0(react@18.3.1)
+      react:
+        specifier: 18.3.1
+        version: 18.3.1
+      react-dom:
+        specifier: 18.3.1
+        version: 18.3.1(react@18.3.1)
+      react-router-dom:
+        specifier: ^6.28.0
+        version: 6.30.4(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+    devDependencies:
+      '@tailwindcss/vite':
+        specifier: ^4.0.0
+        version: 4.3.3(vite@5.4.11(@types/node@22.9.0)(lightningcss@1.32.0))
+      '@types/react':
+        specifier: 18.3.12
+        version: 18.3.12
+      '@types/react-dom':
+        specifier: 18.3.1
+        version: 18.3.1
+      '@vitejs/plugin-react':
+        specifier: 4.3.4
+        version: 4.3.4(vite@5.4.11(@types/node@22.9.0)(lightningcss@1.32.0))
+      tailwindcss:
+        specifier: ^4.0.0
+        version: 4.3.3
+      typescript:
+        specifier: 5.6.3
+        version: 5.6.3
+      vite:
+        specifier: 5.4.11
+        version: 5.4.11(@types/node@22.9.0)(lightningcss@1.32.0)
+
   apps/kho:
     dependencies:
       '@metaforge/adapter-frappe':
@@ -312,6 +367,15 @@ importers:
         version: 5.4.11(@types/node@22.9.0)(lightningcss@1.32.0)
 
   e2e-factory:
+    devDependencies:
+      '@playwright/test':
+        specifier: ^1.61.1
+        version: 1.61.1
+      '@types/node':
+        specifier: 22.9.0
+        version: 22.9.0
+
+  e2e-forge:
     devDependencies:
       '@playwright/test':
         specifier: ^1.61.1
