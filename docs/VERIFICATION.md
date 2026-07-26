@@ -103,12 +103,41 @@ fixture thật**. Tôi đã mắc đúng lỗi đó ở lần chạy đầu.
 Bench là **dùng một lần**: dựng không publish cổng nào (máy đó chạy production), chạy xong
 xoá cả volume; 9 container production giữ nguyên uptime.
 
-### Bề rộng v0.8–v1.0 — nay KHÔNG còn bị chặn bởi hạ tầng
+### Bề rộng v0.8–v1.0 — lý do bị chặn đã đổi, và một mục thì KHÔNG BAO GIỜ đối chiếu được
 
-Ngân hàng, lương, subscription, hoá đơn điện tử, sản xuất, tài sản vẫn **chưa có oracle**.
-Nhưng lý do đã đổi: trước là *"không có bench"*, nay là **chưa ai viết fixture runner cho
-các phân hệ đó**. Bench dựng lại được bằng một quy trình đã ghi và đã chạy. Đó là việc
-viết code, không phải việc chờ hạ tầng.
+Trước đây tôi ghi cả nhóm này là *"cần bench ERPNext thật"*. Đó **chưa chính xác**. Sau khi
+dựng bench và tra source đã ghim:
+
+| Phân hệ | Có trong `erpnext-v16.20.0`? | Trạng thái thật |
+|---|---|---|
+| Sản xuất (Work Order, BOM) | **có** | chưa viết fixture runner |
+| Tài sản (Asset, khấu hao) | **có** | chưa viết fixture runner |
+| Subscription | **có** | chưa viết fixture runner |
+| Đối chiếu ngân hàng | **có** | chưa viết fixture runner |
+| **Lương** | **KHÔNG** | **không đối chiếu được, theo cấu tạo** |
+
+**Lương nằm trọn trong app `hrms`, không nằm trong ERPNext.** Source lock của oracle chỉ
+ghim `frappe` + `erpnext`, nên không có gì để so. Dựng thêm bao nhiêu bench cũng không đổi
+điều đó — muốn đối chiếu lương thì phải **mở rộng source lock sang `hrms`**, tức là một
+quyết định về phạm vi, không phải một việc kỹ thuật.
+
+Cổng phát hành **không khai sai** ở đây: `payroll_core_preview` là cờ tự khai nghĩa là
+"CloudForge có hạch toán lương", và phần `boundary` đã ghi "full HR lifecycle nằm ngoài".
+Nó chưa bao giờ tuyên bố ngang bằng ERPNext về lương.
+
+Bốn phân hệ còn lại nay **không còn bị chặn bởi hạ tầng**. Mỗi cái cần đủ **bốn** mắt xích,
+và mắt xích thứ tư mới là cái làm tuyên bố có nghĩa:
+
+1. Khai fixture trong `MATRIX` của `oracle_fixtures.py` — cơ học
+2. Runner chạy trong bench, sinh `<x>-raw.json` — viết code
+3. Thêm tên file vào `RAW_FILES` của `build_matrix_oracle.py` — cơ học
+4. **`differential-records.json`** — chạy CÙNG kịch bản trên CloudForge, so từng chiều
+   (document · lifecycle · ledger · report · error_semantics), phân loại
+   DIFFERENTIAL_PASS / ORACLE_CAPTURED_ONLY / CLOUDFORGE_MISSING
+
+Làm 1–3 mà bỏ 4 sẽ cho ra một nhóm fixture **đã capture nhưng chưa đối chiếu** — hệ thống
+biểu diễn được trạng thái đó (`ORACLE_CAPTURED` ≠ `DIFFERENTIAL_PASS`), nên nó trung thực,
+nhưng nó chưa chứng minh CloudForge đúng ở đâu cả.
 
 ## Lộ trình "100% hợp đồng client" — bảy commit, mỗi pha deploy + smoke live
 
