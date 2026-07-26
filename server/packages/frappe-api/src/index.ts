@@ -13,3 +13,4 @@ export * from "./translations.js";
 export * from "./desk-views.js";
 export * from "./notification-runner.js";
 export * from "./auto-repeat-runner.js";
+export * from "./web-form-routes.js";

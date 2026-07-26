@@ -6,7 +6,7 @@ import {
 } from "../../../packages/auth/src/index.js";
 import {
   assertSessionCsrf, D1DeskViewStore, D1TranslationStore, establishSession, faultResponse, isFrappePath, isPublicFrappePath,
-  buildCommand, routeFrappeApi, routeFrappeAuth, runAutoRepeat, runNotificationRules, slideSession,
+  buildCommand, isWebFormPath, routeFrappeApi, routeFrappeAuth, runAutoRepeat, runNotificationRules, slideSession,
   type AuthRouteContext, type AutoRepeatRunResult, type EstablishedSession,
 } from "../../../packages/frappe-api/src/index.js";
 import {
@@ -711,6 +711,17 @@ async function serveFrappeApiInner(
     // have real sessions enabled.
     actor = staticDevelopmentActor(env.DEV_ACTOR_JSON);
     fullName = actor.user_id;
+  } else if (isWebFormPath(url.pathname)) {
+    /**
+     * The one surface a visitor with no session may reach.
+     *
+     * The actor is Guest with NO roles: whatever the submission is allowed to do comes
+     * from the form's own `submit_as_role`, applied inside the handler after the form
+     * has been loaded and found published. Granting anything here would make every web
+     * form as powerful as the most permissive one.
+     */
+    actor = { user_id: "Guest", roles: [] };
+    fullName = "Guest";
   } else {
     // Frappe answers an unauthenticated call to a login-required method with
     // PermissionError/403 whose message contains "Login to access" — NOT 401.
@@ -793,6 +804,20 @@ async function serveFrappeApiInner(
           DISPATCHER: env.DISPATCHER,
           INTERNAL_AUTH_SECRET: env.INTERNAL_AUTH_SECRET,
           ...(env.INTERNAL_AUTH_KEY_ID ? { INTERNAL_AUTH_KEY_ID: env.INTERNAL_AUTH_KEY_ID } : {}),
+        },
+      }
+      : {}),
+    // Public web forms. The salt is derived from the platform master so the visitor
+    // counter can tell people apart without ever storing an address. `CF-Connecting-IP`
+    // is set by Cloudflare itself and cannot be spoofed by the caller — an
+    // `X-Forwarded-For` here would let one visitor spend everyone else's allowance, or
+    // evade their own ceiling by inventing a new address per request.
+    ...(env.INTERNAL_AUTH_SECRET
+      ? {
+        webForms: {
+          db: env.DB,
+          salt: env.INTERNAL_AUTH_SECRET,
+          clientAddress: request.headers.get("CF-Connecting-IP") ?? "unknown",
         },
       }
       : {}),

@@ -1149,3 +1149,75 @@ describe("mechanisms that must actually run, not merely exist", () => {
     expect(created!.next_schedule_date).toBe("2026-02-01");
   });
 });
+
+describe("public web form — the one surface with no session", () => {
+  const FORM = `INSERT INTO web_forms(tenant_id,name,route,doc_type,title,success_message,fields_json,submit_as_role,login_required,published,max_per_day,modified_at)
+     VALUES('demo',?1,?2,'Field Visit','Liên hệ','Cảm ơn bạn','["subject","customer"]',?3,0,?4,?5,?6)`;
+
+  it("an unpublished form is indistinguishable from one that does not exist", async () => {
+    await env.DB.prepare(FORM).bind("Draft form", "draft", "System Manager", 0, 20, NOW).run();
+    // Same answer for both, so the existence of a draft cannot be probed from outside.
+    const draft = await method("metaforge.api.get_web_form", { route: "draft" }, "GET");
+    const missing = await method("metaforge.api.get_web_form", { route: "nope" }, "GET");
+    expect(draft.status).toBe(404);
+    expect(missing.status).toBe(404);
+  });
+
+  it("a published form is readable WITHOUT a session, and hides what an attacker would use", async () => {
+    await env.DB.prepare(FORM).bind("Contact", "contact", "System Manager", 1, 20, NOW).run();
+    const response = await exports.default.fetch(new Request(
+      "https://tenant.test/api/method/metaforge.api.get_web_form?route=contact",
+    ));
+    expect(response.status, "a guest must be able to render the form").toBe(200);
+    const form = (await response.json() as any).message;
+    expect(form.fields).toEqual(["subject", "customer"]);
+    // Neither tells the submitter anything they need — both tell an attacker which role
+    // to target and how much room they have.
+    expect(form.submit_as_role).toBeUndefined();
+    expect(form.max_per_day).toBeUndefined();
+  });
+
+  it("a guest submission creates the document under the form's role", async () => {
+    const response = await exports.default.fetch(new Request("https://tenant.test/api/method/frappe.website.doctype.web_form.web_form.accept", {
+      method: "POST",
+      headers: { "content-type": "application/json", "CF-Connecting-IP": "203.0.113.10" },
+      body: JSON.stringify({ route: "contact", data: { subject: "Khách gửi từ web" } }),
+    }));
+    expect(response.status).toBe(200);
+    expect((await response.json() as any).message.message).toBe("Cảm ơn bạn");
+
+    // It really landed — and the submitter was never told its name, which would let
+    // anyone who can post to a public form enumerate the series.
+    const row = await env.DB.prepare(
+      `SELECT COUNT(*) AS total FROM documents WHERE tenant_id='demo' AND doctype='Field Visit' AND json_extract(payload_json,'$.subject')='Khách gửi từ web'`,
+    ).first<{ total: number }>();
+    expect(row!.total).toBe(1);
+  });
+
+  it("a field the form does not expose is REFUSED, not dropped", async () => {
+    const response = await exports.default.fetch(new Request("https://tenant.test/api/method/frappe.website.doctype.web_form.web_form.accept", {
+      method: "POST",
+      headers: { "content-type": "application/json", "CF-Connecting-IP": "203.0.113.11" },
+      body: JSON.stringify({ route: "contact", data: { subject: "x", external_ref: "escalate" } }),
+    }));
+    expect(response.status).toBe(417);
+    expect(String((await response.json() as any).message)).toMatch(/not accepted by this form/i);
+  });
+
+  it("the daily ceiling stops a visitor, and counts them separately", async () => {
+    await env.DB.prepare(FORM).bind("Tiny", "tiny", "System Manager", 1, 2, NOW).run();
+    const send = (address: string) => exports.default.fetch(new Request("https://tenant.test/api/method/frappe.website.doctype.web_form.web_form.accept", {
+      method: "POST",
+      headers: { "content-type": "application/json", "CF-Connecting-IP": address },
+      body: JSON.stringify({ route: "tiny", data: { subject: "spam" } }),
+    }));
+
+    expect((await send("198.51.100.1")).status).toBe(200);
+    expect((await send("198.51.100.1")).status).toBe(200);
+    // A public write endpoint with no ceiling is a way to fill a tenant's database from
+    // the outside.
+    expect((await send("198.51.100.1")).status).toBe(417);
+    // Another visitor still has their own allowance.
+    expect((await send("198.51.100.2")).status).toBe(200);
+  });
+});

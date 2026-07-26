@@ -22,6 +22,7 @@ import { readFrappeArgs, type FrappeArgs } from "./args.js";
 import { assertModifiedMatches, buildCommand, stripServerOwnedFields } from "./command.js";
 import { fromFrappeDoc, toFrappeDoc, toFrappeListRow } from "./doc-shape.js";
 import { faultResponse, methodResponse, resourceResponse, responseFieldsResponse } from "./envelope.js";
+import { consumeSubmissionAllowance, loadPublishedForm, publicFormShape, submissionActor, submissionDocument } from "./web-form-routes.js";
 import { toKernelField, toKernelFilters, toKernelSearch, toKernelSort } from "./filters.js";
 import {
   childDocTypeNames, maskedFieldNames, tableFieldNames, toFrappeDocType, toFrappeMetaBundle, toFrappeWorkflow,
@@ -88,6 +89,14 @@ export interface FrappeRouterContext {
    * an unknown method stays a 404 rather than becoming a confusing binding error.
    */
   appMethods?: AppMethodEnv;
+  /**
+   * What public web forms need: the database, a per-deployment salt for the visitor
+   * counter, and the caller's address.
+   *
+   * Optional — absent, the web-form methods answer 404 like any other method this
+   * deployment does not serve, rather than failing obscurely.
+   */
+  webForms?: { db: D1Database; salt: string; clientAddress: string };
 }
 
 /**
@@ -681,6 +690,17 @@ async function dispatchMethod(
   context: FrappeRouterContext,
 ): Promise<Response> {
   switch (methodName) {
+    // ---- public web forms ---------------------------------------------------
+    // Reachable without a session. Everything they may do comes from the form's own
+    // `submit_as_role` and the tenant's ordinary DocPerm grant for it.
+    case "metaforge.api.get_web_form":
+      return methodResponse(publicFormShape(
+        await loadPublishedForm(webFormStore(context), args.requireText("route", 200)),
+      ));
+
+    case "frappe.website.doctype.web_form.web_form.accept":
+      return methodResponse(await acceptWebForm(args, context));
+
     case "metaforge.api.get_boot":
       return methodResponse(await bootPayload(context));
 
@@ -2299,6 +2319,52 @@ async function callAppMethod(methodName: string, args: FrappeArgs, context: Frap
     traceId: context.traceId,
   });
   return methodResponse(result.value);
+}
+
+function webFormStore(context: FrappeRouterContext) {
+  if (!context.webForms) throw errors.notFound("Web forms are not available on this deployment");
+  return { db: context.webForms.db, tenantId: context.tenantId, now: context.now(), salt: context.webForms.salt };
+}
+
+/**
+ * Accepts a public submission.
+ *
+ * Order matters and is deliberate: published → login requirement → CEILING → payload
+ * validation → write. The ceiling is consumed before anything expensive, so a visitor
+ * cannot make the platform do work it will then refuse to keep.
+ */
+async function acceptWebForm(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const store = webFormStore(context);
+  const form = await loadPublishedForm(store, args.requireText("route", 200));
+
+  // A form marked `login_required` is an internal one served through the same
+  // machinery; a guest reaching it gets the ordinary refusal, not a form-specific one.
+  if (form.login_required && context.actor.user_id === "Guest") {
+    throw errors.permission("Login to access this resource");
+  }
+
+  await consumeSubmissionAllowance(store, form, context.webForms!.clientAddress);
+
+  const meta = await requireMeta(form.doc_type, context);
+  const document = submissionDocument(form, meta, args.object("data") ?? {});
+
+  // The submission's own actor — Guest carrying only the form's role — so the ordinary
+  // permission layer decides. Nothing here grants anything.
+  const actor = submissionActor(form);
+  await context.permissions.assert({
+    actor, tenantId: context.tenantId, doctype: form.doc_type,
+    action: "create", owner: actor.user_id,
+  });
+
+  const name = await resolveNewName(form.doc_type, meta, document, context);
+  await context.runCommand(await buildCommand({
+    tenantId: context.tenantId, actor, doctype: form.doc_type, name,
+    action: "create", expectedVersion: null, document,
+  }));
+
+  // The submitter is told their submission landed and nothing else — not the document's
+  // name, which would let anyone who can post to a public form enumerate the series.
+  return { ok: true, message: form.success_message || "Đã ghi nhận" };
 }
 
 async function addComment(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
