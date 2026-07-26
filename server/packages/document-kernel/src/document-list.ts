@@ -38,7 +38,7 @@ export interface DocumentListDefinition {
   defaultSort: SortSpec[];
 }
 
-export type ListOperator = "eq" | "ne" | "lt" | "lte" | "gt" | "gte" | "in" | "is_null";
+export type ListOperator = "eq" | "ne" | "lt" | "lte" | "gt" | "gte" | "in" | "is_null" | "like";
 export interface ListFilter {
   field: string;
   operator: ListOperator;
@@ -53,6 +53,15 @@ export interface DocumentListRequest {
   sort?: SortSpec[];
   limit?: number;
   cursor?: string | null;
+  /**
+   * Offset pagination, for Frappe clients that page with `limit_start`.
+   *
+   * Keyset (`cursor`) is the correct mechanism and stays the default: it cannot
+   * skip or duplicate rows when the underlying data shifts between pages. Offset
+   * exists only because the Frappe list protocol has no cursor concept, and the
+   * two are mutually exclusive so a request can never mix positions.
+   */
+  offset?: number;
 }
 
 export interface DocumentListPage {
@@ -85,6 +94,8 @@ const MAX_FIELDS = 40;
 // D1 caps bound parameters per query at 100; keep a safe margin so an in-budget
 // request can never build a statement the store rejects (which would 500).
 const MAX_BIND_PARAMS = 90;
+/** Deep offset paging degrades into a full scan; past this, use a prepared report. */
+export const MAX_OFFSET = 10_000;
 
 const SQL_OPERATOR: Record<Exclude<ListOperator, "in" | "is_null">, string> = {
   eq: "=",
@@ -93,6 +104,10 @@ const SQL_OPERATOR: Record<Exclude<ListOperator, "in" | "is_null">, string> = {
   lte: "<=",
   gt: ">",
   gte: ">=",
+  // Always emitted with ESCAPE '\' so a literal % or _ in the pattern can be
+  // escaped by the caller. Unlike `search`, the wildcards here are intentional —
+  // the pattern is the caller's, so it is bounded by length but not escaped.
+  like: "LIKE",
 };
 
 // ---- static definitions -----------------------------------------------------
@@ -240,6 +255,17 @@ export function parseDocumentListRequest(body: JsonObject, definition: DocumentL
     request.cursor = body.cursor;
   }
 
+  if (body.offset !== undefined && body.offset !== null && body.offset !== 0) {
+    const offset = body.offset;
+    if (typeof offset !== "number" || !Number.isInteger(offset) || offset < 0 || offset > MAX_OFFSET) {
+      throw errors.validation(`offset must be an integer from 0 to ${MAX_OFFSET}`);
+    }
+    // Two positions in one request cannot both be honoured; failing closed is
+    // better than silently ignoring one and returning a page the caller did not ask for.
+    if (request.cursor) throw errors.validation("offset and cursor cannot be combined");
+    request.offset = offset;
+  }
+
   return request;
 }
 
@@ -260,6 +286,15 @@ function parseFilter(entry: JsonValue, index: number, definition: DocumentListDe
     filter.value = object.value.map((value) => assertScalarType(value, fieldDef.type, index));
     return filter;
   }
+  if (operator === "like") {
+    // A LIKE against an integer column would force SQLite to coerce every row,
+    // defeating the index and returning results the caller cannot predict.
+    if (fieldDef.type === "int") throw errors.validation(`filters[${index}] "like" cannot be applied to a numeric field`);
+    if (typeof object.value !== "string") throw errors.validation(`filters[${index}] "like" expects a string pattern`);
+    if (object.value.length > MAX_VALUE_LEN) throw errors.validation(`filters[${index}] value exceeds the maximum length`);
+    filter.value = object.value;
+    return filter;
+  }
   filter.value = assertScalarType(object.value, fieldDef.type, index);
   return filter;
 }
@@ -275,7 +310,7 @@ function parseSort(entry: JsonValue, index: number, definition: DocumentListDefi
 
 function isOperator(value: string): value is ListOperator {
   return value === "eq" || value === "ne" || value === "lt" || value === "lte"
-    || value === "gt" || value === "gte" || value === "in" || value === "is_null";
+    || value === "gt" || value === "gte" || value === "in" || value === "is_null" || value === "like";
 }
 
 /** Values are validated against the field's declared type — never trusted as SQL. */
@@ -436,8 +471,14 @@ export class DocumentListCompiler {
     const limit = request.limit ?? DEFAULT_LIMIT;
     // Fetch one extra row to detect whether a further page exists.
     params.push(limit + 1);
+    const limitParam = params.length;
+    let tail = `LIMIT ?${limitParam}`;
+    if (request.offset) {
+      params.push(request.offset);
+      tail += ` OFFSET ?${params.length}`;
+    }
     assertParamBudget(params);
-    const sql = `SELECT ${selectSql} FROM documents WHERE ${where.join(" AND ")} ORDER BY ${orderSql} LIMIT ?${params.length}`;
+    const sql = `SELECT ${selectSql} FROM documents WHERE ${where.join(" AND ")} ORDER BY ${orderSql} ${tail}`;
     return { sql, params, projection, effectiveSort: sort, limit };
   }
 
@@ -469,7 +510,8 @@ export class DocumentListCompiler {
         continue;
       }
       params.push(filter.value ?? null);
-      where.push(`${expression} ${SQL_OPERATOR[filter.operator]} ?${params.length}`);
+      const escape = filter.operator === "like" ? " ESCAPE '\\'" : "";
+      where.push(`${expression} ${SQL_OPERATOR[filter.operator]} ?${params.length}${escape}`);
     }
     if (request.search) {
       params.push(`%${escapeLike(request.search)}%`);

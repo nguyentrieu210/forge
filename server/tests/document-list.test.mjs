@@ -46,7 +46,18 @@ test("a sort field outside the whitelist is rejected", () => {
 
 test("an operator outside the whitelist is rejected", () => {
   assert.throws(() => parse({ doctype: "Sales Order", filters: [{ field: "docstatus", operator: "regex", value: 1 }] }), (e) => e.code === "VALIDATION_ERROR");
-  assert.throws(() => parse({ doctype: "Sales Order", filters: [{ field: "customer", operator: "like", value: "x" }] }), (e) => e.code === "VALIDATION_ERROR");
+  assert.throws(() => parse({ doctype: "Sales Order", filters: [{ field: "customer", operator: "glob", value: "x" }] }), (e) => e.code === "VALIDATION_ERROR");
+});
+
+test("like is allowed on text fields only, and never widens the whitelist", () => {
+  // `like` was added for the Frappe list protocol, which has no equivalent of the
+  // server-owned `search` term. It stays inside the same field whitelist, and a
+  // LIKE against a numeric column is refused because SQLite would coerce every
+  // row and return results the caller cannot predict.
+  const request = parse({ doctype: "Sales Order", filters: [{ field: "customer", operator: "like", value: "%acme%" }] });
+  assert.deepEqual(request.filters, [{ field: "customer", operator: "like", value: "%acme%" }]);
+  assert.throws(() => parse({ doctype: "Sales Order", filters: [{ field: "docstatus", operator: "like", value: "1" }] }), (e) => e.code === "VALIDATION_ERROR");
+  assert.throws(() => parse({ doctype: "Sales Order", filters: [{ field: "not_a_field", operator: "like", value: "x" }] }), (e) => e.code === "VALIDATION_ERROR");
 });
 
 test("limit and filter budgets are enforced", () => {
