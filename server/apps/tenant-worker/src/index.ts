@@ -18,7 +18,8 @@ import { parseMutationCommandInput } from "../../../packages/contracts/src/index
 import { D1CommercialReconciliationService, D1DocumentListStore, D1MutationStore, DocumentListService } from "../../../packages/document-kernel/src/index.js";
 import { asCloudForgeError, commandPayloadHash, errorResponse, errors, jsonResponse, randomId, readJson } from "../../../packages/core/src/index.js";
 import {
-  D1CollaborationService, D1DocumentAccessStore, D1MetadataStore, MetadataDocumentListDefinitionResolver, MetadataPermissionService,
+  D1CollaborationService, D1DocumentAccessStore, D1MetadataStore, D1SearchStore,
+  MetadataDocumentListDefinitionResolver, MetadataPermissionService,
   metadataSummary, parseCsvImport, parseDocTypeMeta, renderPrintFormat, validateWorkflow,
 } from "../../../packages/frappe-model/src/index.js";
 import { AggregateCoordinator } from "./aggregate-do.js";
@@ -587,6 +588,8 @@ async function serveFrappeApi(
     customizations: metadata.customizationStore,
     translations: new D1TranslationStore(env.DB),
     apps: new AppInstaller(env.DB, metadata, users),
+    users,
+    search: new D1SearchStore(env.DB),
     async runCommand(command) {
       const stub = env.AGGREGATES.getByName(`${tenantId}:${command.aggregate.doctype}:${command.aggregate.name}`) as AggregateStub;
       const result = typeof stub.mutate === "function" ? await stub.mutate(command) : await callDoFetch(stub, command);

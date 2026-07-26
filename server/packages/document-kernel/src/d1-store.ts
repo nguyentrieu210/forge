@@ -487,6 +487,30 @@ export class D1MutationStore implements MutationStore {
       ));
     }
 
+    // Search index, refreshed in the SAME batch as the document.
+    //
+    // Indexing separately would let the two diverge on any partial failure, and a
+    // stale index is worse than none: it surfaces titles for content that no
+    // longer matches, and search results the permission layer then has to reject.
+    // A cancelled document is removed from the index rather than reindexed — it is
+    // history, and offering it in search invites acting on a void voucher.
+    if (plan.document.docstatus === 2) {
+      statements.push(database.prepare(
+        `DELETE FROM document_search WHERE tenant_id=?1 AND doctype=?2 AND name=?3`,
+      ).bind(command.tenant_id, plan.document.doctype, plan.document.name));
+    } else {
+      statements.push(database.prepare(
+        `INSERT INTO document_search(tenant_id,doctype,name,title,content,modified_at) VALUES(?1,?2,?3,?4,?5,?6)
+         ON CONFLICT(tenant_id,doctype,name) DO UPDATE SET
+           title=excluded.title, content=excluded.content, modified_at=excluded.modified_at`,
+      ).bind(
+        command.tenant_id, plan.document.doctype, plan.document.name,
+        plan.document.name.slice(0, 320),
+        searchableContent(plan.document.data),
+        plan.document.modified_at,
+      ));
+    }
+
     const existingChildren = await database.prepare(
       `SELECT fieldname, row_id FROM document_children WHERE tenant_id=?1 AND parent_key=?2`,
     ).bind(command.tenant_id, key).all<{ fieldname: string; row_id: string }>();
@@ -787,4 +811,28 @@ export class D1MutationStore implements MutationStore {
       }
     }
   }
+}
+
+/**
+ * Flattens a document's text into one searchable string.
+ *
+ * Only top-level string values, and only ones short enough to be a label or code
+ * rather than a body of prose: indexing every note and address would make the
+ * index larger than the documents it points at, and a LIKE scan over it slower
+ * than scanning them. Numbers are excluded because a search for "100" matching
+ * every quantity is noise, not a result.
+ */
+function searchableContent(data: JsonObject): string {
+  const parts: string[] = [];
+  let budget = 4000;
+  for (const [key, value] of Object.entries(data)) {
+    if (budget <= 0) break;
+    if (key.startsWith("_")) continue;
+    if (typeof value !== "string") continue;
+    const trimmed = value.trim();
+    if (!trimmed || trimmed.length > 200) continue;
+    parts.push(trimmed);
+    budget -= trimmed.length + 1;
+  }
+  return parts.join(" ").slice(0, 4000);
 }

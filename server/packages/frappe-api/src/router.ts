@@ -29,7 +29,9 @@ import {
 import {
   mergeCustomizations, parseCustomField, parseDocTypeMeta, parsePropertySetter, resolveAutoname, validateWorkflow,
 } from "../../frappe-model/src/index.js";
-import type { CustomFieldRecord, CustomizationStore, PropertySetterRecord } from "../../frappe-model/src/index.js";
+import type { CustomFieldRecord, CustomizationStore, D1SearchStore, PropertySetterRecord } from "../../frappe-model/src/index.js";
+import type { D1UserStore } from "../../auth/src/index.js";
+import { hashPassword, verifyPassword } from "./password.js";
 import { combinedNavigation, type AppInstaller } from "../../app-registry/src/index.js";
 import type { D1TranslationStore } from "./translations.js";
 
@@ -61,6 +63,10 @@ export interface FrappeRouterContext {
   translations: D1TranslationStore;
   /** Installed-app registry. */
   apps: AppInstaller;
+  /** User directory, for roles, password changes and session revocation. */
+  users: D1UserStore;
+  /** Global-search candidate index. Never an authorisation decision. */
+  search: D1SearchStore;
   /** CSRF nonce of the current session, for the boot payload. */
   csrfToken: string;
   fullName: string;
@@ -565,6 +571,65 @@ async function dispatchMethod(
     case "metaforge.api.get_application_catalog":
       return methodResponse(await applicationCatalog(context));
 
+    // ---- workflow ---------------------------------------------------------
+    case "frappe.model.workflow.apply_workflow":
+      return methodResponse(await applyWorkflow(args, context));
+
+    case "metaforge.api.get_workflow_transitions":
+      return methodResponse(await workflowTransitions(args, context));
+
+    case "metaforge.api.workflow_action_with_comment":
+      return methodResponse(await workflowActionWithComment(args, context));
+
+    // ---- sharing and assignment -------------------------------------------
+    case "frappe.share.get_users":
+      return methodResponse(await listShares(args, context));
+
+    case "frappe.share.add":
+      return methodResponse(await addShare(args, context));
+
+    case "frappe.share.remove":
+      return methodResponse(await removeShare(args, context));
+
+    case "frappe.desk.form.assign_to.add":
+      return methodResponse(await addAssignment(args, context));
+
+    case "frappe.desk.form.assign_to.remove":
+      return methodResponse(await removeAssignment(args, context));
+
+    // ---- tags --------------------------------------------------------------
+    case "frappe.desk.doctype.tag.tag.add_tag":
+      return methodResponse(await addTag(args, context));
+
+    case "frappe.desk.doctype.tag.tag.remove_tag":
+      return methodResponse(await removeTag(args, context));
+
+    // ---- global search -----------------------------------------------------
+    case "metaforge.api.global_search":
+      return methodResponse(await globalSearch(args, context));
+
+    // ---- users and permissions --------------------------------------------
+    case "metaforge.api.get_access_profile":
+      return methodResponse(await accessProfile(args, context));
+
+    case "metaforge.api.explain_permission":
+      return methodResponse(await explainPermission(args, context));
+
+    case "metaforge.api.add_user_permission":
+      return methodResponse(await addUserPermission(args, context));
+
+    case "metaforge.api.remove_user_permission":
+      return methodResponse(await removeUserPermission(args, context));
+
+    case "metaforge.api.set_user_roles":
+      return methodResponse(await setUserRoles(args, context));
+
+    case "metaforge.api.logout_other_sessions":
+      return methodResponse(await logoutOtherSessions(context));
+
+    case "frappe.core.doctype.user.user.update_password":
+      return methodResponse(await updatePassword(args, context));
+
     case "frappe.desk.search.search_link":
       return methodResponse(await searchLink(args, context));
 
@@ -823,6 +888,356 @@ async function resolveDisplayValues(args: FrappeArgs, context: FrappeRouterConte
     output.push({ doctype, name, label });
   }
   return output;
+}
+
+// ---- workflow ---------------------------------------------------------------
+
+/**
+ * Applies a workflow action.
+ *
+ * The transition, target docstatus and resulting lifecycle action are all decided
+ * from server-held workflow metadata. The client names an ACTION only — it never
+ * chooses the next state, or it could walk a document into a state its role is not
+ * allowed to reach.
+ */
+async function applyWorkflow(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const submitted = args.has("doc") ? (args.object("doc") ?? {}) : {};
+  const doctype = args.text("doctype") ?? String(submitted.doctype ?? "");
+  const name = args.text("name") ?? String(submitted.name ?? "");
+  const action = args.requireText("action", 160);
+  if (!doctype || !name) throw errors.validation("doctype and name are required");
+
+  const current = await loadWritable(doctype, name, context);
+  if (args.has("doc")) assertModifiedMatches(current, submitted.modified);
+
+  const workflow = await context.metadata.getWorkflow(context.tenantId, doctype);
+  if (!workflow) throw errors.validation(`${doctype} has no active workflow`);
+  const state = String(current.data[workflow.state_field] ?? workflow.states[0]?.state ?? "");
+  const transition = workflow.transitions.find((entry) => entry.state === state && entry.action === action
+    && (context.actor.roles.includes(entry.allowed_role) || isPlatformAdmin(context)));
+  if (!transition) throw errors.permission(`Workflow action ${action} is not permitted from ${state}`);
+
+  // Self-approval is refused when the workflow forbids it. Checked server-side
+  // because it is the whole point of an approval step.
+  if (!transition.allow_self_approval && current.owner === context.actor.user_id && !isPlatformAdmin(context)) {
+    throw errors.permission("You cannot approve a document you created");
+  }
+
+  const target = workflow.states.find((entry) => entry.state === transition.next_state);
+  if (!target) throw errors.validation("Workflow target state is invalid");
+  const lifecycle: MutationAction = target.docstatus === 2 ? "cancel"
+    : target.docstatus === 1 && current.docstatus === 0 ? "submit" : "save";
+
+  await context.runCommand(await buildCommand({
+    tenantId: context.tenantId, actor: context.actor, doctype, name,
+    action: lifecycle, expectedVersion: current.version,
+    document: { ...current.data, [workflow.state_field]: transition.next_state, workflow_state: transition.next_state },
+  }));
+  return toFrappeDoc(await loadReadable(doctype, name, context));
+}
+
+async function workflowTransitions(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const submitted = args.has("doc") ? (args.object("doc") ?? {}) : {};
+  const doctype = args.text("doctype") ?? String(submitted.doctype ?? "");
+  const name = args.text("name") ?? String(submitted.name ?? "");
+  if (!doctype || !name) throw errors.validation("doctype and name are required");
+
+  const document = await loadReadable(doctype, name, context);
+  const workflow = await context.metadata.getWorkflow(context.tenantId, doctype);
+  if (!workflow) return { state: null, transitions: [] };
+  const state = String(document.data[workflow.state_field] ?? workflow.states[0]?.state ?? "");
+  const transitions = workflow.transitions
+    .filter((entry) => entry.state === state && (context.actor.roles.includes(entry.allowed_role) || isPlatformAdmin(context)))
+    // An action the actor could not complete is omitted rather than offered and
+    // then refused on click.
+    .filter((entry) => entry.allow_self_approval || document.owner !== context.actor.user_id || isPlatformAdmin(context))
+    .map((entry) => ({ action: entry.action, next_state: entry.next_state, allowed: entry.allowed_role }));
+  return { state, transitions };
+}
+
+/** Workflow action plus a comment, as one call so the comment cannot be orphaned. */
+async function workflowActionWithComment(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const document = await applyWorkflow(args, context);
+  const comment = args.text("comment");
+  if (comment) {
+    await context.collaboration.addComment(
+      context.tenantId, context.actor,
+      String(document.doctype), String(document.name), comment, context.now(),
+    );
+  }
+  return document;
+}
+
+// ---- sharing and assignment -------------------------------------------------
+
+async function listShares(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject[]> {
+  const doctype = args.requireText("doctype", 160);
+  const name = args.requireText("name", 320);
+  // Reading the share list requires read on the document itself, or it would
+  // disclose who has access to something the caller cannot see.
+  await loadReadable(doctype, name, context);
+  return (await context.collaboration.listShares(context.tenantId, doctype, name)).map((share) => ({
+    user: share.user,
+    read: share.read ? 1 : 0,
+    write: share.write ? 1 : 0,
+    share: share.share ? 1 : 0,
+  }));
+}
+
+async function addShare(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const doctype = args.requireText("doctype", 160);
+  const name = args.requireText("name", 320);
+  const user = args.requireText("user", 320);
+  const document = await context.documents.getDocument(context.tenantId, doctype, name);
+  if (!document) throw errors.notFound();
+  // Sharing is its own permission: a user who can edit a document is not
+  // automatically entitled to widen who else can see it.
+  await context.permissions.assert({
+    actor: context.actor, tenantId: context.tenantId, doctype, name,
+    owner: document.owner, data: document.data, action: "share",
+  });
+  const record = await context.collaboration.share(context.tenantId, context.actor, doctype, name, {
+    user,
+    read: args.bool("read", true),
+    write: args.bool("write", false),
+    share: args.bool("share", false),
+  }, context.now());
+  return record as unknown as JsonObject;
+}
+
+async function removeShare(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const doctype = args.requireText("doctype", 160);
+  const name = args.requireText("name", 320);
+  const user = args.requireText("user", 320);
+  const document = await context.documents.getDocument(context.tenantId, doctype, name);
+  if (!document) throw errors.notFound();
+  await context.permissions.assert({
+    actor: context.actor, tenantId: context.tenantId, doctype, name,
+    owner: document.owner, data: document.data, action: "share",
+  });
+  return { removed: await context.collaboration.removeShare(context.tenantId, doctype, name, user) };
+}
+
+async function addAssignment(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const doctype = args.requireText("doctype", 160);
+  const name = args.requireText("name", 320);
+  await loadWritable(doctype, name, context);
+  const assignees = args.array<string>("assign_to") ?? (args.text("assign_to") ? [args.text("assign_to")!] : []);
+  if (!assignees.length) throw errors.validation("assign_to is required");
+  const created: JsonObject[] = [];
+  for (const assignee of assignees) {
+    created.push(await context.collaboration.assign(context.tenantId, context.actor, doctype, name, {
+      assigned_to: String(assignee),
+      ...(args.text("description") ? { description: args.text("description") } : {}),
+    }, context.now()) as unknown as JsonObject);
+  }
+  return { assignments: created };
+}
+
+async function removeAssignment(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const doctype = args.requireText("doctype", 160);
+  const name = args.requireText("name", 320);
+  const assignee = args.requireText("assign_to", 320);
+  await loadWritable(doctype, name, context);
+  return { removed: await context.collaboration.removeAssignment(context.tenantId, doctype, name, assignee, context.now()) };
+}
+
+// ---- tags -------------------------------------------------------------------
+
+async function addTag(args: FrappeArgs, context: FrappeRouterContext): Promise<string> {
+  const doctype = args.requireText("dt", 160);
+  const name = args.requireText("dn", 320);
+  const tag = args.requireText("tag", 140);
+  await loadWritable(doctype, name, context);
+  await context.collaboration.addTag(context.tenantId, context.actor, doctype, name, tag, context.now());
+  return tag;
+}
+
+async function removeTag(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const doctype = args.requireText("dt", 160);
+  const name = args.requireText("dn", 320);
+  const tag = args.requireText("tag", 140);
+  await loadWritable(doctype, name, context);
+  return { removed: await context.collaboration.removeTag(context.tenantId, doctype, name, tag) };
+}
+
+// ---- global search ----------------------------------------------------------
+
+/**
+ * Cross-doctype search, permission-aware and FAIL-CLOSED.
+ *
+ * Candidates come from the search index, but every hit is re-checked against the
+ * permission layer before being returned. The index is a shortlist, never an
+ * authorisation decision — a document the actor cannot read must not surface even
+ * as a title.
+ */
+async function globalSearch(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject[]> {
+  const text = args.text("text");
+  if (!text || text.length < 2) return [];
+  const doctype = args.text("doctype");
+  const limit = Math.min(Math.max(args.int("limit", 20), 1), 50);
+
+  const candidates = await context.search.candidates(context.tenantId, text, doctype ?? null, limit * 4);
+  const results: JsonObject[] = [];
+  for (const candidate of candidates) {
+    if (results.length >= limit) break;
+    try {
+      await loadReadable(candidate.doctype, candidate.name, context);
+    } catch {
+      continue;
+    }
+    results.push({ doctype: candidate.doctype, name: candidate.name, title: candidate.title || candidate.name, content: candidate.snippet });
+  }
+  return results;
+}
+
+// ---- users and permissions --------------------------------------------------
+
+async function accessProfile(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const requested = args.text("user");
+  // Inspecting somebody else's access is an administrative act.
+  if (requested && requested !== context.actor.user_id) requireMetadataAdmin(context);
+  const user = requested ?? context.actor.user_id;
+  const roles = user === context.actor.user_id ? [...context.actor.roles] : await context.users.listRoles(context.tenantId, user);
+  const permissions = await context.access.listUserPermissions(context.tenantId, user);
+  return {
+    user,
+    roles,
+    user_permissions: permissions.map((record) => ({
+      allow: record.allow_doctype,
+      for_value: record.allow_name,
+      applicable_for: record.applicable_for_doctype || null,
+      is_default: record.is_default ? 1 : 0,
+      hide_descendants: record.hide_descendants ? 1 : 0,
+    })),
+  };
+}
+
+/**
+ * Explains an effective permission decision.
+ *
+ * Reports the same capability flags the UI gates on, so a "why can't I?" question
+ * is answered by the authority that made the decision rather than by a second
+ * implementation that could disagree with it.
+ */
+async function explainPermission(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const doctype = args.requireText("doctype", 160);
+  const name = args.text("name");
+  const meta = await requireMeta(doctype, context);
+  const document = name ? await context.documents.getDocument(context.tenantId, doctype, name) : null;
+  if (name && !document) throw errors.notFound();
+  const scope = await context.permissions.getReadScope(context.actor, context.tenantId, doctype).catch(() => null);
+  return {
+    doctype,
+    ...(name ? { name } : {}),
+    roles: [...context.actor.roles],
+    read_scope: scope?.mode ?? "denied",
+    user_permissions: (scope?.user_permissions ?? []).map((constraint) => ({
+      allow: constraint.allow_doctype, fields: constraint.fields, allowed_values: constraint.allowed_values,
+    })),
+    capabilities: await capabilityFlags(doctype, meta, document, context),
+  };
+}
+
+async function addUserPermission(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  requireMetadataAdmin(context);
+  const user = args.requireText("user", 320);
+  const allow = args.requireText("allow", 160);
+  const forValue = args.requireText("for_value", 320);
+  const applicable = args.text("applicable_for") ?? "";
+
+  // The referenced value must exist, or the restriction would silently deny
+  // everything rather than restricting to something.
+  const exists = await context.documents.hasMasterRecord(context.tenantId, allow, forValue)
+    || Boolean(await context.documents.getDocument(context.tenantId, allow, forValue));
+  if (!exists) throw errors.reference(`${allow} ${forValue} does not exist`);
+
+  if (applicable) {
+    const target = await context.metadata.getDocType(context.tenantId, applicable);
+    // Without a Link field to restrict on, the permission can never be applied.
+    if (!target || !target.fields.some((field) => field.fieldtype === "Link" && field.options === allow)) {
+      throw errors.validation(`${applicable} has no Link field to ${allow}`);
+    }
+  }
+
+  const record = await context.access.putUserPermission?.(context.tenantId, {
+    user,
+    allow_doctype: allow,
+    allow_name: forValue,
+    applicable_for_doctype: applicable,
+    is_default: args.bool("is_default", false),
+    hide_descendants: args.bool("hide_descendants", false),
+    created_by: context.actor.user_id,
+    created_at: context.now(),
+  });
+  if (!record) throw errors.validation("User permissions are not writable on this deployment");
+  return record as unknown as JsonObject;
+}
+
+async function removeUserPermission(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  requireMetadataAdmin(context);
+  const user = args.requireText("user", 320);
+  const allow = args.requireText("allow", 160);
+  const forValue = args.requireText("for_value", 320);
+  await context.access.deleteUserPermission?.(context.tenantId, user, allow, forValue, args.text("applicable_for") ?? "");
+  return { removed: true };
+}
+
+async function setUserRoles(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  requireMetadataAdmin(context);
+  const user = args.requireText("user", 320);
+  const roles = args.array<string>("roles") ?? [];
+  const applied = await context.users.setRoles(context.tenantId, user, roles.map((role) => String(role)), context.now());
+  return { user, roles: applied };
+}
+
+/**
+ * Revokes every other session for the caller.
+ *
+ * Implemented by bumping the credential epoch, which invalidates ALL sessions
+ * including this one — the client re-authenticates. That is deliberate: keeping
+ * the current session alive would require tracking individual sessions, and a
+ * user asking to log out everywhere is better served by an over-broad revocation
+ * than by one that might miss a session.
+ */
+async function logoutOtherSessions(context: FrappeRouterContext): Promise<JsonObject> {
+  const epoch = await context.users.bumpSessionEpoch(context.tenantId, context.actor.user_id, context.now());
+  return { revoked: true, session_epoch: epoch, reauthenticate_required: true };
+}
+
+/**
+ * Changes a password.
+ *
+ * Changing your own requires the old one — a stolen session must not be enough to
+ * lock the real owner out. An administrator may reset another user's without it,
+ * which is the recovery path.
+ */
+async function updatePassword(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const targetUser = args.text("user") ?? context.actor.user_id;
+  const newPassword = args.requireText("new_password", 256);
+  const isSelf = targetUser === context.actor.user_id;
+  if (!isSelf) requireMetadataAdmin(context);
+
+  if (isSelf) {
+    const oldPassword = args.text("old_password");
+    if (!oldPassword) throw errors.validation("old_password is required to change your own password");
+    const found = await context.users.findByLogin(context.tenantId, targetUser);
+    if (!found || !found.passwordHash || !await verifyPassword(oldPassword, found.passwordHash)) {
+      throw errors.authentication("Current password is incorrect");
+    }
+  }
+
+  const now = context.now();
+  await context.users.upsert(context.tenantId, { userId: targetUser, passwordHash: await hashPassword(newPassword) }, now);
+  // A password change must end every existing session, or a stolen one would keep
+  // working after the owner rotated their credential.
+  const epoch = await context.users.bumpSessionEpoch(context.tenantId, targetUser, now);
+  return { user: targetUser, session_epoch: epoch, reauthenticate_required: true };
+}
+
+function isPlatformAdmin(context: FrappeRouterContext): boolean {
+  const { user_id: userId, roles } = context.actor;
+  return userId === "Administrator" || roles.includes("Administrator") || roles.includes("System Manager");
 }
 
 async function translateStrings(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {

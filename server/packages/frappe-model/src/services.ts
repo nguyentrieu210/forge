@@ -69,6 +69,119 @@ export class D1CollaborationService {
     await this.db.prepare(`INSERT INTO document_shares(tenant_id,doctype,name,user,can_read,can_write,can_share,submitted_by,created_at) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9) ON CONFLICT(tenant_id,doctype,name,user) DO UPDATE SET can_read=excluded.can_read,can_write=excluded.can_write,can_share=excluded.can_share,submitted_by=excluded.submitted_by,created_at=excluded.created_at`).bind(tenantId, doctype, name, user, record.read ? 1 : 0, record.write ? 1 : 0, record.share ? 1 : 0, actor.user_id, now).run();
     return record;
   }
+
+  async listShares(tenantId: string, doctype: string, name: string): Promise<ShareRecord[]> {
+    const result = await this.db.prepare(
+      `SELECT user,can_read,can_write,can_share,submitted_by,created_at FROM document_shares
+       WHERE tenant_id=?1 AND doctype=?2 AND name=?3 ORDER BY user`,
+    ).bind(tenantId, doctype, name).all<{ user: string; can_read: number; can_write: number; can_share: number; submitted_by: string; created_at: string }>();
+    return (result.results ?? []).map((row) => ({
+      doctype, name, user: row.user,
+      read: row.can_read === 1, write: row.can_write === 1, share: row.can_share === 1,
+      submitted_by: row.submitted_by, created_at: row.created_at,
+    }));
+  }
+
+  async removeShare(tenantId: string, doctype: string, name: string, user: string): Promise<boolean> {
+    const result = await this.db.prepare(
+      `DELETE FROM document_shares WHERE tenant_id=?1 AND doctype=?2 AND name=?3 AND user=?4`,
+    ).bind(tenantId, doctype, name, user).run();
+    return (result.meta?.changes ?? 0) > 0;
+  }
+
+  /**
+   * Closes an assignment rather than deleting it.
+   *
+   * The record is the history of who was asked to act on a document; deleting it
+   * would erase that, so removal is a status change.
+   */
+  async removeAssignment(tenantId: string, doctype: string, name: string, assignedTo: string, now: string): Promise<boolean> {
+    const result = await this.db.prepare(
+      `UPDATE assignments SET status='Cancelled', modified_at=?5
+       WHERE tenant_id=?1 AND doctype=?2 AND name=?3 AND assigned_to=?4 AND status='Open'`,
+    ).bind(tenantId, doctype, name, assignedTo, now).run();
+    return (result.meta?.changes ?? 0) > 0;
+  }
+
+  async addTag(tenantId: string, actor: Actor, doctype: string, name: string, tag: string, now: string): Promise<void> {
+    await this.db.prepare(
+      `INSERT INTO document_tags(tenant_id,doctype,name,tag,owner,created_at) VALUES(?1,?2,?3,?4,?5,?6)
+       ON CONFLICT(tenant_id,doctype,name,tag) DO NOTHING`,
+    ).bind(tenantId, doctype, name, tag, actor.user_id, now).run();
+  }
+
+  async removeTag(tenantId: string, doctype: string, name: string, tag: string): Promise<boolean> {
+    const result = await this.db.prepare(
+      `DELETE FROM document_tags WHERE tenant_id=?1 AND doctype=?2 AND name=?3 AND tag=?4`,
+    ).bind(tenantId, doctype, name, tag).run();
+    return (result.meta?.changes ?? 0) > 0;
+  }
+
+  async listTags(tenantId: string, doctype: string, name: string): Promise<string[]> {
+    const result = await this.db.prepare(
+      `SELECT tag FROM document_tags WHERE tenant_id=?1 AND doctype=?2 AND name=?3 ORDER BY tag`,
+    ).bind(tenantId, doctype, name).all<{ tag: string }>();
+    return (result.results ?? []).map((row) => row.tag);
+  }
+}
+
+/**
+ * The global-search candidate index.
+ *
+ * A shortlist, never an authorisation decision: callers MUST re-check every hit
+ * against the permission layer, because a title alone can disclose the existence
+ * and subject of a document the actor may not see.
+ */
+export class D1SearchStore {
+  private readonly db: D1Database | D1DatabaseSession;
+  constructor(db: D1Database) { this.db = db.withSession?.("first-primary") ?? db; }
+
+  async candidates(tenantId: string, term: string, doctype: string | null, limit: number): Promise<Array<{ doctype: string; name: string; title: string; snippet: string }>> {
+    // Wildcards in the caller's term are escaped: a search for "50%" must look for
+    // that text, not match everything.
+    const pattern = `%${term.replace(/[\\%_]/g, (character) => `\\${character}`)}%`;
+    const bounded = Math.min(Math.max(limit, 1), 200);
+    const result = doctype
+      ? await this.db.prepare(
+        `SELECT doctype, name, title, content FROM document_search
+         WHERE tenant_id=?1 AND doctype=?2 AND (title LIKE ?3 ESCAPE '\\' OR content LIKE ?3 ESCAPE '\\')
+         ORDER BY modified_at DESC LIMIT ?4`,
+      ).bind(tenantId, doctype, pattern, bounded).all<{ doctype: string; name: string; title: string; content: string }>()
+      : await this.db.prepare(
+        `SELECT doctype, name, title, content FROM document_search
+         WHERE tenant_id=?1 AND (title LIKE ?2 ESCAPE '\\' OR content LIKE ?2 ESCAPE '\\')
+         ORDER BY modified_at DESC LIMIT ?3`,
+      ).bind(tenantId, pattern, bounded).all<{ doctype: string; name: string; title: string; content: string }>();
+
+    return (result.results ?? []).map((row) => ({
+      doctype: row.doctype,
+      name: row.name,
+      title: row.title,
+      snippet: snippetAround(row.content, term),
+    }));
+  }
+
+  /**
+   * Refreshes a document's index row.
+   *
+   * Content is capped: an unbounded concatenation of every field would make the
+   * index larger than the documents it points at, and LIKE over it slower than
+   * scanning them.
+   */
+  async index(tenantId: string, doctype: string, name: string, title: string, content: string, modifiedAt: string): Promise<void> {
+    await this.db.prepare(
+      `INSERT INTO document_search(tenant_id,doctype,name,title,content,modified_at) VALUES(?1,?2,?3,?4,?5,?6)
+       ON CONFLICT(tenant_id,doctype,name) DO UPDATE SET
+         title=excluded.title, content=excluded.content, modified_at=excluded.modified_at`,
+    ).bind(tenantId, doctype, name, title.slice(0, 320), content.slice(0, 4000), modifiedAt).run();
+  }
+}
+
+function snippetAround(content: string, term: string, radius = 60): string {
+  const position = content.toLowerCase().indexOf(term.toLowerCase());
+  if (position < 0) return content.slice(0, radius * 2);
+  const start = Math.max(0, position - radius);
+  return `${start > 0 ? "…" : ""}${content.slice(start, position + term.length + radius)}`;
 }
 
 export function renderPrintFormat(format: PrintFormatMeta, document: CanonicalDocument, locale = "en"): string {
