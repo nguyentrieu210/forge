@@ -85,6 +85,19 @@ async function normalizeDocument(context: ControllerContext<JsonObject>, meta: D
     else if (provided !== undefined) value = normalizeValue(field, provided, context.command.action);
     else if (prior !== undefined && context.command.action === "save") value = structuredClone(prior);
     else if (field.default !== undefined) value = structuredClone(field.default);
+    // `set_only_once` is enforced HERE rather than by making the field read-only,
+    // because the two differ on the case that matters: a read-only field can never be
+    // set, while this one is set exactly once and then frozen. Silently keeping the old
+    // value instead of refusing would let a caller believe an edit landed.
+    if (field.set_only_once && context.existing && changed && !isEmpty(prior)) {
+      throw errors.validation(`${field.label} cannot be changed after it is set`, { fieldname: field.fieldname });
+    }
+    if (field.not_nullable && value === null) {
+      throw errors.validation(`${field.label} cannot be empty`, { fieldname: field.fieldname });
+    }
+    if (field.non_negative && isNegative(value)) {
+      throw errors.validation(`${field.label} cannot be negative`, { fieldname: field.fieldname });
+    }
     if (field.required && isEmpty(value)) throw errors.validation(`${field.label} is required`);
     // `mandatory_depends_on` is enforced HERE, on the server. The client evaluates
     // the same expression to drive its UI, but a client-side check is a hint, not
@@ -100,6 +113,19 @@ async function normalizeDocument(context: ControllerContext<JsonObject>, meta: D
   if (input.workflow_state !== undefined) output.workflow_state = input.workflow_state;
   output._metadata_revision = meta.revision;
   return output;
+}
+
+/**
+ * Whether a stored value is below zero.
+ *
+ * Numerics are stored as STRINGS by `normalizeValue` (Currency, Float, Percent) so the
+ * ledger keeps exact decimals, which means a naive `value < 0` would compare strings
+ * and quietly pass "-5".
+ */
+function isNegative(value: JsonValue | undefined): boolean {
+  if (typeof value === "number") return value < 0;
+  if (typeof value === "string" && /^-?\d+(\.\d+)?$/.test(value)) return Number(value) < 0;
+  return false;
 }
 
 function normalizeValue(field: DocFieldMeta, value: JsonValue, action: string): JsonValue {

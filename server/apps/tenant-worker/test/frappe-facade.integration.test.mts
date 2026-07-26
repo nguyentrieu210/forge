@@ -112,6 +112,8 @@ async function seed(): Promise<void> {
       { fieldname: "portal_secret", label: "Portal Secret", fieldtype: "Password" },
       { fieldname: "notes_html", label: "Notes", fieldtype: "Text Editor" },
       { fieldname: "visit_seconds", label: "Duration", fieldtype: "Duration" },
+      { fieldname: "contract_no", label: "Contract", fieldtype: "Data", set_only_once: true },
+      { fieldname: "fee", label: "Fee", fieldtype: "Currency", non_negative: true },
     ],
     permissions: [{ role: "System Manager", read: true, write: true, create: true, submit: true, cancel: true, amend: true, share: true, report: true }],
     revision: 1,
@@ -1013,5 +1015,50 @@ describe("fieldtypes that carry real server behaviour", () => {
       });
       expect(response.status, String(bad)).toBe(417);
     }
+  });
+});
+
+describe("DocField properties the server enforces", () => {
+  it("set_only_once freezes a field after it is first set, and REFUSES a later change", async () => {
+    // Not the same as read_only, which can never be set at all. The difference matters
+    // on exactly the case this exists for: set once, then frozen. Quietly keeping the
+    // old value instead of refusing would let a caller believe their edit landed.
+    const created = (await (await call("/api/resource/Field Visit", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ subject: "Contracted", contract_no: "HD-001" }),
+    })).json() as any).data;
+    expect(created.contract_no).toBe("HD-001");
+
+    const changed = await call(`/api/resource/Field Visit/${encodeURIComponent(created.name)}`, {
+      method: "PUT", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ contract_no: "HD-002", modified: created.modified }),
+    });
+    expect(changed.status).toBe(417);
+    expect(String((await changed.json() as any).message)).toMatch(/cannot be changed after it is set/i);
+
+    // Re-sending the SAME value is not a change, so it must not be refused — otherwise
+    // any client that PUTs the whole document could never save it again.
+    const resent = await call(`/api/resource/Field Visit/${encodeURIComponent(created.name)}`, {
+      method: "PUT", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ subject: "Contracted again", contract_no: "HD-001", modified: created.modified }),
+    });
+    expect(resent.status).toBe(200);
+  });
+
+  it("non_negative refuses a negative amount, including one sent as a string", async () => {
+    // Currency is stored as a STRING to keep exact decimals, so a naive `value < 0`
+    // compares text and lets "-5" through.
+    for (const fee of [-1, "-0.01"]) {
+      const response = await call("/api/resource/Field Visit", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ subject: "Negative fee", fee }),
+      });
+      expect(response.status, String(fee)).toBe(417);
+    }
+    const ok = await call("/api/resource/Field Visit", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ subject: "Fine fee", fee: "12.50" }),
+    });
+    expect(ok.status).toBe(201);
   });
 });

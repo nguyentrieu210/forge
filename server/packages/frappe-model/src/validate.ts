@@ -125,8 +125,60 @@ function parseField(value: unknown, index: number): DocFieldMeta {
     ...(input.read_only_depends_on === undefined ? {} : { read_only_depends_on: text(input.read_only_depends_on, `fields[${index}].read_only_depends_on`, 500) }),
     permlevel,
     ...(input.description === undefined ? {} : { description: text(input.description, `fields[${index}].description`, 2000) }),
+    // Value rules the SERVER enforces. Grouped here rather than scattered so it stays
+    // obvious which properties change behaviour and which only change appearance.
+    set_only_once: bool(input.set_only_once, false),
+    non_negative: bool(input.non_negative, false),
+    not_nullable: bool(input.not_nullable, false),
+    print_hide: bool(input.print_hide, false),
+    print_hide_if_no_value: bool(input.print_hide_if_no_value, false),
+    ...presentation(input, index),
     idx: index + 1,
   };
+}
+
+/**
+ * Boolean presentation properties, carried through untouched.
+ *
+ * The parser builds an allow-listed object, so anything not named here is DROPPED. That
+ * silently cost every imported Frappe DocType its entire presentation layer — column
+ * widths, collapsible sections, print visibility, quick-entry flags — and the loss was
+ * invisible, because the document still saved and the list still rendered. It just
+ * rendered wrong, in a way no test asserted.
+ *
+ * These have no server behaviour and are not invented here: the names and meanings are
+ * Frappe's, so a DocType exported from a Frappe site keeps working when it lands here.
+ */
+const PRESENTATION_FLAGS = [
+  "bold", "collapsible", "in_preview", "allow_in_quick_entry", "remember_last_selected_value",
+  "report_hide", "hide_border", "hide_days", "hide_seconds", "show_dashboard", "in_filter",
+  "translatable", "ignore_user_permissions", "allow_bulk_edit", "ignore_xss_filter",
+  "in_global_search", "show_on_timeline", "sort_options", "make_attachment_public",
+  "sticky", "show_description_on_click", "is_virtual",
+] as const;
+
+const PRESENTATION_TEXT: Array<[key: string, max: number]> = [
+  ["collapsible_depends_on", 500], ["placeholder", 240], ["documentation_url", 500],
+  ["mask", 64], ["button_color", 32], ["alignment", 16], ["link_filters", 2000],
+  ["fetch_if_empty", 8], ["oldfieldname", 140], ["oldfieldtype", 64],
+];
+
+const PRESENTATION_INT: Array<[key: string, min: number, max: number]> = [
+  ["columns", 0, 11], ["width", 0, 4000], ["print_width", 0, 4000], ["max_height", 0, 4000],
+];
+
+function presentation(input: Record<string, unknown>, index: number): Record<string, JsonValue> {
+  const out: Record<string, JsonValue> = {};
+  for (const key of PRESENTATION_FLAGS) {
+    if (input[key] !== undefined) out[key] = bool(input[key], false);
+  }
+  for (const [key, max] of PRESENTATION_TEXT) {
+    if (input[key] !== undefined) out[key] = text(input[key], `fields[${index}].${key}`, max);
+  }
+  for (const [key, min, max] of PRESENTATION_INT) {
+    if (input[key] !== undefined) out[key] = safeInt(input[key], `fields[${index}].${key}`, min, max);
+  }
+  return out;
 }
 
 function parsePermission(value: unknown, index: number): DocPermissionMeta {

@@ -57,6 +57,14 @@ export type MetaFieldType =
   | "Fold"
   | "Button";
 
+/**
+ * A DocField.
+ *
+ * Extends JsonObject, so presentation properties Frappe defines but this platform only
+ * carries — column widths, collapsible groups, print visibility — travel through
+ * untouched without each needing a declaration here. The ones named below are the ones
+ * something on the SERVER reads.
+ */
 export interface DocFieldMeta extends JsonObject {
   fieldname: string;
   label: string;
@@ -80,6 +88,16 @@ export interface DocFieldMeta extends JsonObject {
   read_only_depends_on?: string;
   permlevel?: number;
   description?: string;
+  /** Immutable after the first save — enforced by the generic controller. */
+  set_only_once?: boolean;
+  /** Refuses a negative value. */
+  non_negative?: boolean;
+  /** Refuses an explicit null. */
+  not_nullable?: boolean;
+  /** Omitted from a rendered print format. */
+  print_hide?: boolean;
+  /** Omitted from a print format only when empty. */
+  print_hide_if_no_value?: boolean;
   idx?: number;
 }
 

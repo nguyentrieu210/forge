@@ -1,7 +1,7 @@
 import type { Actor, CanonicalDocument, JsonObject, JsonValue } from "../../contracts/src/index.js";
 import { errors, randomId } from "../../core/src/index.js";
 import type { MetadataStore } from "./store.js";
-import type { AssignmentRecord, CommentRecord, FileRecord, PrintFormatMeta, ShareRecord } from "./types.js";
+import type { AssignmentRecord, CommentRecord, DocTypeMeta, FileRecord, PrintFormatMeta, ShareRecord } from "./types.js";
 
 export interface VersionSummary extends JsonObject {
   version: number;
@@ -211,8 +211,26 @@ function snippetAround(content: string, term: string, radius = 60): string {
   return `${start > 0 ? "…" : ""}${content.slice(start, position + term.length + radius)}`;
 }
 
-export function renderPrintFormat(format: PrintFormatMeta, document: CanonicalDocument, locale = "en"): string {
+/**
+ * Renders a print format.
+ *
+ * `meta` is optional only for callers that have none; when it is given, `print_hide` and
+ * `print_hide_if_no_value` are honoured. Those are not decoration: a field marked
+ * `print_hide` is one the author decided must not appear on a printed document — an
+ * internal margin, a private note — and printing it anyway puts it in front of whoever
+ * receives the paper.
+ */
+export function renderPrintFormat(format: PrintFormatMeta, document: CanonicalDocument, locale = "en", meta?: DocTypeMeta): string {
   const context: Record<string, JsonValue> = { ...document.data, name: document.name, doctype: document.doctype, owner: document.owner, docstatus: document.docstatus, status: document.status, version: document.version, locale };
+  for (const field of meta?.fields ?? []) {
+    if (!field.print_hide && !field.print_hide_if_no_value) continue;
+    const value = context[field.fieldname];
+    const empty = value === undefined || value === null || value === "";
+    // `print_hide` always; `print_hide_if_no_value` only when there is nothing to show.
+    // Blanked rather than deleted so a template referencing it renders an empty space
+    // instead of the literal placeholder text.
+    if (field.print_hide || empty) context[field.fieldname] = "";
+  }
   const interpolate = (template: string): string => template.replace(/{{\s*([a-zA-Z0-9_.]+)\s*}}/g, (_match, path: string) => escapeHtml(resolvePath(context, path)));
   return `<!doctype html><html><head><meta charset="utf-8"><style>${format.css ?? ""}</style></head><body>${interpolate(format.html)}</body></html>`;
 }

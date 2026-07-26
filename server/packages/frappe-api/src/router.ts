@@ -1584,7 +1584,10 @@ async function printView(args: FrappeArgs, context: FrappeRouterContext): Promis
   // HTML is returned as a string for the client to sandbox, matching Frappe. The
   // renderer escapes every interpolated value, so document content cannot inject
   // markup into the page.
-  return { html: renderPrintFormat(format, printable, context.actor.locale), style: format.css ?? "" };
+  // `meta` is passed so `print_hide` is honoured: a field the author marked as not for
+  // print — an internal margin, a private note — must not reach the paper the customer
+  // is handed.
+  return { html: renderPrintFormat(format, printable, context.actor.locale, meta), style: format.css ?? "" };
 }
 
 /**
