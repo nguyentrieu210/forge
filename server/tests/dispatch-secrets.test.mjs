@@ -39,6 +39,41 @@ test("dispatch secret list returns names only", async () => {
   assert.doesNotMatch(output, /hidden/);
 });
 
+test("a `wrangler login` session is accepted when no API token is set", async () => {
+  // The default auth path stores an OAuth token and never sets CLOUDFLARE_API_TOKEN.
+  // Requiring the env var alone locked out exactly the people most likely to run this.
+  let authorization;
+  const fetchImpl = async (url, init) => {
+    authorization = init.headers.get("authorization");
+    return new Response(JSON.stringify({ success: true, result: [] }), { status: 200, headers: { "content-type": "application/json" } });
+  };
+  await captureStdout(() => main(
+    ["list", "--account", "acc", "--namespace", "ns", "--script", "w"],
+    {}, fetchImpl, Readable.from([""]), () => "oauth-from-wrangler",
+  ));
+  assert.equal(authorization, "Bearer oauth-from-wrangler");
+});
+
+test("an explicit API token still wins over a stored session", async () => {
+  let authorization;
+  const fetchImpl = async (url, init) => {
+    authorization = init.headers.get("authorization");
+    return new Response(JSON.stringify({ success: true, result: [] }), { status: 200, headers: { "content-type": "application/json" } });
+  };
+  await captureStdout(() => main(
+    ["list", "--account", "acc", "--namespace", "ns", "--script", "w"],
+    { CLOUDFLARE_API_TOKEN: "explicit" }, fetchImpl, Readable.from([""]), () => "oauth-from-wrangler",
+  ));
+  assert.equal(authorization, "Bearer explicit");
+});
+
+test("neither credential present is reported as such, not as an API failure", async () => {
+  await assert.rejects(
+    main(["list", "--account", "acc", "--namespace", "ns", "--script", "w"], {}, async () => new Response(), Readable.from([""]), () => undefined),
+    /CLOUDFLARE_API_TOKEN \(or a `wrangler login` session\) is required/,
+  );
+});
+
 test("dispatch secret CLI validates binding names and a single secret source", async () => {
   await assert.rejects(main(["put", "--account", "acc", "--namespace", "ns", "--script", "w", "--name", "bad-name", "--stdin"], { CLOUDFLARE_API_TOKEN: "t" }, async () => new Response(), Readable.from(["x"])), /uppercase Worker binding/);
   await assert.rejects(main(["put", "--account", "acc", "--namespace", "ns", "--script", "w", "--name", "GOOD"], { CLOUDFLARE_API_TOKEN: "t" }, async () => new Response(), Readable.from(["x"])), /exactly one/);

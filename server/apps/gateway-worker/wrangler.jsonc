@@ -7,7 +7,13 @@
   "vars": {
     "PLATFORM_SUFFIX": "example.com",
     "AUTH_MODE": "production",
-    "INTERNAL_AUTH_KEY_ID": "k1"
+    "INTERNAL_AUTH_KEY_ID": "k1",
+    // Identifiers, not secrets, so they belong in vars where they are auditable.
+    // Both are mandatory on the bearer path: without them a token minted for
+    // another audience under the same JWT_SECRET would verify. They must match
+    // the query worker's, which validates the same tokens.
+    "JWT_ISSUER": "cloudforge-platform",
+    "JWT_AUDIENCE": "cloudforge-api"
   },
   "kv_namespaces": [
     { "binding": "ROUTES", "id": "b4607d01c54042dcbc3d6cb3e1ad2da4" }

@@ -13,7 +13,7 @@ Cập nhật: 2026-07-26.
 | Cài đặt workspace | `pnpm install` | 399 gói, symlink `@metaforge/*` đúng workspace |
 | Build TS strict (server) | `pnpm --filter cloudforge run build` | exit 0 |
 | Typecheck worker (server) | `pnpm --filter cloudforge run typecheck:workers` | exit 0 |
-| Test Node/domain | `node --test tests/*.test.mjs` | **258/258 PASS** |
+| Test Node/domain | `node --test tests/*.test.mjs` | **266/266 PASS** |
 | **Cổng phát hành tổng hợp** | `pnpm --filter cloudforge run check:business-suite` | **ok:true missing:[] exit 0** |
 | Gate SQL (migration 0001–0015) | `pnpm --filter cloudforge run test:sql` | **6/6 PASS** |
 | **Workerd tenant-worker** | `vitest run --config apps/tenant-worker/vitest.config.mts` | **70/70 PASS** (23 gốc + 47 E2E lớp vỏ) |
@@ -186,6 +186,88 @@ Nghĩa là **không có bước này thì Pha 7 sẽ deploy bằng một runtime
 nâng lên `wrangler@4.114.0`; cảnh báo hạ compat date biến mất, và toàn bộ gate chạy
 lại xanh sau khi nâng.
 
+## Deploy Cloudflare thật — 2026-07-26
+
+Account `d4d5a24d…`, subdomain `trieu-nt93.workers.dev`, wrangler 4.114.0. 5 worker,
+3 database D1, 3 queue, 1 dispatch namespace, 8 secret.
+
+```
+node scripts/d1-migrate-remote.mjs --config apps/tenant-worker/wrangler.jsonc
+node scripts/bootstrap-remote-secrets.mjs --account <id>
+npx wrangler deploy --config apps/tenant-worker/wrangler.jsonc \
+  --name cloudforge-tenant-demo --dispatch-namespace cloudforge-production
+node scripts/seed-remote-admin.mjs --config apps/tenant-worker/wrangler.jsonc
+node scripts/http-smoke.mjs --base https://cloudforge-gateway.trieu-nt93.workers.dev ...
+```
+
+| Kiểm tra | Kết quả |
+|---|---|
+| Migration D1 remote (tenant / control / jobs) | **15/15 · 1/1 · 1/1** — `migrations list --remote` báo "No migrations to apply!"; tenant 17 → **53 bảng** |
+| Route tenant qua chính Control Plane (`PUT /v1/routes/…`) | `routing_version: 2`, ghi cả khoá thuận và khoá đảo `__tenant__:` |
+| **Smoke HTTP qua Internet công cộng** | **HTTP_SMOKE_PASS checks=24 failures=0** |
+| **Đường bất đồng bộ, từ backlog nguội** | outbox **30 pending → 0 pending / 30 published**; jobs `processed_events` **30/30**; tenant `inbound_events` **30/30**; DLQ trống |
+| Cron thật sự chạy (qua `wrangler tail`) | `"*/1 * * * *" - Ok` → `POST /internal/maintenance - Ok` → `Queue cloudforge-outbox (18 messages) - Ok` |
+
+### HAI LỖI CHẶN PHÁT HÀNH mà chỉ deploy thật mới lộ
+
+**1. Không ai đăng nhập được — Workers từ chối PBKDF2 trên 100.000 vòng.**
+
+`PASSWORD_ITERATIONS` là 210.000. Production Workers từ chối một lệnh
+`crypto.subtle.deriveBits` PBKDF2 vượt 100.000 vòng, và cú throw xảy ra **trước** khi so
+mật khẩu — nên mọi login trả HTTP 500 bị che, **kể cả mật khẩu sai**, vì vậy nó còn
+không trông giống lỗi xác thực.
+
+Đo thật, không suy diễn: account hash ở 100.000 vòng → login **200**; cùng account ở
+210.000 vòng → **500**.
+
+workerd local **không** áp giới hạn này. 258 test Node, 70 test Workerd và một smoke
+HTTP **local** 24/24 đều xanh trên một bản build mà login không thể chạy sau khi deploy.
+Suite còn hash ở 1.000 vòng cho nhanh, nên **work factor production chưa từng được thực
+thi ở đâu cả**.
+
+Đã sửa: dẫn xuất theo nhiều vòng nối chuỗi, mỗi vòng tối đa 100.000, output vòng trước
+làm input vòng sau. Kẻ tấn công vẫn phải trả đủ 210.000 vòng HMAC-SHA256. Số vòng ở dưới
+ngưỡng thì dẫn xuất đúng một vòng và **giống hệt từng bit** dạng cũ, nên hash lưu trước
+khi sửa vẫn xác thực được — có test chốt.
+
+**2. Outbox chưa bao giờ được rút — worker trong dispatch namespace không chạy cron.**
+
+Tenant worker khai `triggers.crons`, và `scheduled()` rút outbox vào queue rồi quét lại
+các app hook thất bại. Worker nạp vào dispatch namespace **chỉ** được gọi qua dispatcher;
+cron của nó được nhận lúc deploy rồi **âm thầm không bao giờ chạy**.
+
+Không có lỗi ở đâu. Sự kiện chỉ đơn giản dồn lại ở `pending`. Phát hiện trên môi trường
+live đang giữ **27 sự kiện hai ngày tuổi**, `processed_events` trống rỗng — **toàn bộ nửa
+bất đồng bộ của hệ thống chưa từng chạy**.
+
+Đã sửa: chuyển lịch sang jobs worker — worker thường, cron có chạy, và sẵn có đúng hai
+binding cần để tới mọi tenant (KV route index + dispatcher). Nó gọi endpoint mới
+`POST /internal/maintenance` có gác token trên từng tenant đang hoạt động. Cả endpoint đó
+và `scheduled()` đều gọi **cùng một** `runMaintenance` nên không thể lệch nhau. Tenant bị
+treo thì bỏ qua, KV list phân trang, và một tenant không tới được không làm chết các
+tenant khác.
+
+`/internal/*` **không lộ ra Internet**: gateway từ chối header `Authorization` không phải
+JWT trên đường non-Frappe, nên các endpoint này chỉ tới được qua dispatcher.
+
+### Giới hạn của bản deploy này
+
+- **Một hostname, nên một tenant.** Gateway suy tenant từ host, mà workers.dev chỉ cấp
+  một hostname cho mỗi worker. Định tuyến vhost đa tenant cần custom domain wildcard;
+  credential đang dùng chỉ có `zone (read)`, không tạo được DNS record. `PLATFORM_SUFFIX`
+  giữ giá trị mẫu và route key là **cả hostname** của gateway.
+- **Không bind R2**, nên upload file trả "File storage is not configured" (có gác, không
+  crash). Credential không có quyền R2.
+- **`wrangler d1 migrations apply --remote` KHÔNG dùng được cho dự án này** — không phải
+  do thích hay không. Lệnh đó gửi cả file migration làm một chuỗi `sql` để **server D1 tự
+  tách**, và bộ tách phía server đóng block khi gặp `CASE … END;` lồng trong thân trigger,
+  làm `CREATE TRIGGER` bị cắt cụt → `incomplete input: SQLITE_ERROR [7500]`. **Mười trong
+  mười lăm** migration tenant dùng đúng dạng đó (là cách duy nhất trong SQLite để raise
+  lỗi riêng cho từng điều kiện), nên lệnh chuẩn chết ở 0005 và không bao giờ tới 0006.
+  `d1 execute --remote --file` không bị, vì nó tách ở phía client. Thay thế:
+  [server/scripts/d1-migrate-remote.mjs](../server/scripts/d1-migrate-remote.mjs), có
+  giữ luôn bookkeeping `d1_migrations` nên `migrations list` vẫn đúng sự thật.
+
 ## Đóng gói app — CLI chạy thật
 
 `node scripts/pack-app.mjs <dir> [--out x.json] [--check]`, và app mẫu thật ở
@@ -206,11 +288,8 @@ không thể mục đi mà không ai biết.
 
 | Hạng mục | Trạng thái | Cần gì |
 |---|---|---|
-| Deploy Cloudflare, smoke staging **trên hạ tầng thật** | ☐ chưa | **API token + account Cloudflare của bạn** |
-| Sức khoẻ queue/outbox trên môi trường thật | ☐ chưa | môi trường đã deploy |
-| Test tải, đa tenant trên hạ tầng thật | ☐ chưa | môi trường đã deploy |
-| Diễn tập rollback + khôi phục tenant | ☐ chưa | môi trường đã deploy |
-
+| Test tải, đa tenant trên hạ tầng thật | ☐ chưa | tenant thứ hai; workers.dev chỉ cho một hostname |
+| Diễn tập rollback + khôi phục tenant | ☐ chưa | chưa chạy |
 | `npm ci` sạch trên Linux | ☐ chưa | repo dùng pnpm; cần CI Linux |
 | Oracle cho bề rộng v0.8–v1.0 (ngân hàng, lương, subscription, sản xuất) | ☐ chưa | bench ERPNext thật để capture fixture mới (cần MariaDB + Redis + bench) |
 | Review pháp lý hoá đơn điện tử / lương | ☐ chưa | không phải việc kỹ thuật |
@@ -278,8 +357,9 @@ Durable Object → D1. Không mock gì.
 
 ## Ranh giới — không tuyên bố quá
 
-- **Chưa render trên trình duyệt thật.** Lớp vỏ đã chứng minh trả đúng hợp đồng FE
-  mong đợi, nhưng chưa có lần nào MetaForge Desk thật vẽ màn hình từ nó.
+- **Đã render trên trình duyệt thật**, nhưng chưa trọn: shell Desk vẽ được và phiên
+  đăng nhập chạy đầu-cuối trong Chromium thật (mục trên), còn **list view chưa nạp
+  dữ liệu** — known gap, ghi bằng `test.fixme`.
 - Lớp vỏ Frappe hiện thực **Tier 1 + Tier 2 + builder (Tier 3)** và phần Tier 4 mà
   Desk cần để dùng được (print, xoá hàng loạt, workspace, open count).
   và phần lớn Tier 4: print, xoá hàng loạt, workspace, open count, **tree view**,

@@ -22,8 +22,26 @@ const argOf = (name, fallback) => {
   return index >= 0 ? args[index + 1] : fallback;
 };
 
-if (args.includes("--remote")) {
-  console.error("refusing: this seed carries a known password and is local-only");
+/**
+ * The refusal is about the PASSWORD, not about remote databases.
+ *
+ * Seeding the fixed password below into a real tenant would hand a working account
+ * to anyone who read this file, so `--remote` alone stays refused. But the demo
+ * DocType and master records are just metadata, and a live deployment needs them to
+ * have anything to smoke-test — so `--remote --no-user` is allowed and seeds
+ * everything except the account. Use `seed-remote-admin.mjs` for the account: it
+ * generates a password instead of carrying one.
+ *
+ * Kept in this script rather than copied into another so the `Field Visit` metadata
+ * below has exactly one definition. A second copy would drift, and the drift would
+ * only show up as a confusing smoke-test failure against one environment.
+ */
+const remote = args.includes("--remote");
+const withUser = !args.includes("--no-user");
+if (remote && withUser) {
+  console.error("refusing: this seed carries a known password, so --remote needs --no-user");
+  console.error("  metadata only:  node scripts/seed-local.mjs --remote --no-user");
+  console.error("  the account:    node scripts/seed-remote-admin.mjs --config apps/tenant-worker/wrangler.jsonc");
   process.exit(2);
 }
 
@@ -66,12 +84,16 @@ const masters = [
   ["System Settings", "System Settings", { currency: "USD", date_format: "dd-mm-yyyy", time_zone: "Asia/Ho_Chi_Minh" }],
 ];
 
-const statements = [
+const accountStatements = [
   `INSERT INTO roles(tenant_id,role,modified_at) VALUES('${quote(tenant)}','System Manager','${now}') ON CONFLICT(tenant_id,role) DO NOTHING;`,
   `INSERT INTO users(tenant_id,user_id,full_name,email,password_hash,language,time_zone,created_at,modified_at)
    VALUES('${quote(tenant)}','${quote(user)}','Dev User','${quote(user)}','${quote(hash)}','vi','Asia/Ho_Chi_Minh','${now}','${now}')
    ON CONFLICT(tenant_id,user_id) DO UPDATE SET password_hash=excluded.password_hash, modified_at=excluded.modified_at;`,
   `INSERT INTO user_roles(tenant_id,user_id,role) VALUES('${quote(tenant)}','${quote(user)}','System Manager') ON CONFLICT DO NOTHING;`,
+];
+
+const statements = [
+  ...(withUser ? accountStatements : []),
   ...masters.map(([type, name, data]) =>
     `INSERT INTO master_records(tenant_id,record_type,name,data_json,modified_at)
      VALUES('${quote(tenant)}','${quote(type)}','${quote(name)}','${quote(JSON.stringify(data))}','${now}')
@@ -100,7 +122,7 @@ const wranglerEntry = path.join(
 );
 const result = spawnSync(
   process.execPath,
-  [wranglerEntry, "d1", "execute", "cloudforge-demo", "--local", "--config", "apps/tenant-worker/wrangler.jsonc", "--file", "seed-local.sql"],
+  [wranglerEntry, "d1", "execute", "cloudforge-demo", remote ? "--remote" : "--local", "--config", "apps/tenant-worker/wrangler.jsonc", "--file", "seed-local.sql"],
   { stdio: ["ignore", "pipe", "pipe"], encoding: "utf8" },
 );
 
@@ -110,10 +132,17 @@ try { unlinkSync(sqlFile); } catch { /* already gone */ }
 
 if (result.status !== 0) {
   console.error(result.stderr || result.stdout);
-  console.error("SEED_FAILED — has `wrangler d1 migrations apply cloudforge-demo --local` been run?");
+  console.error(remote
+    ? "SEED_FAILED — has `node scripts/d1-migrate-remote.mjs --config apps/tenant-worker/wrangler.jsonc` been run?"
+    : "SEED_FAILED — has `wrangler d1 migrations apply cloudforge-demo --local` been run?");
   process.exit(1);
 }
 
-console.log(`SEED_PASS tenant=${tenant} user=${user} password=${password} doctype="Field Visit"`);
-console.log("next: npx wrangler dev --config apps/tenant-worker/wrangler.jsonc --port 8799 --local");
-console.log("then: npm run smoke:http");
+// The password is echoed only when this seed actually created the account; printing it
+// for a metadata-only run would name a credential that does not exist.
+const target = remote ? "REMOTE" : "local";
+console.log(`SEED_PASS target=${target} tenant=${tenant} doctype="Field Visit"${withUser ? ` user=${user} password=${password}` : " (metadata only, no account)"}`);
+if (!remote) {
+  console.log("next: npx wrangler dev --config apps/tenant-worker/wrangler.jsonc --port 8799 --local");
+  console.log("then: npm run smoke:http");
+}

@@ -67,6 +67,15 @@ declare interface KVNamespace {
   get(key: string): Promise<string | null>;
   put(key: string, value: string, options?: unknown): Promise<void>;
   delete(key: string): Promise<void>;
+  /**
+   * Paginated: `list_complete` is false when a `cursor` must be passed back for the
+   * rest. Typed here rather than left off so a caller cannot forget the second page.
+   */
+  list(options?: { prefix?: string; limit?: number; cursor?: string }): Promise<{
+    keys: { name: string; expiration?: number; metadata?: unknown }[];
+    list_complete: boolean;
+    cursor?: string;
+  }>;
 }
 
 declare interface Fetcher {

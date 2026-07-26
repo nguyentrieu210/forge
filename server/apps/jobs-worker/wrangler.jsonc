@@ -11,6 +11,10 @@
       "migrations_dir": "../../migrations/jobs"
     }
   ],
+  // The tenant Worker declares its own cron, but it is deployed into a dispatch
+  // namespace where crons never fire, so this ordinary Worker drives the tenants'
+  // periodic maintenance instead. See `sweepTenantMaintenance`.
+  "triggers": { "crons": ["*/1 * * * *"] },
   "queues": {
     "consumers": [
       {

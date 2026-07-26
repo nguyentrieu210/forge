@@ -6,6 +6,7 @@ import {
   establishSession,
   hashPassword,
   mintSession,
+  PASSWORD_ITERATIONS,
   parsePasswordHash,
   readSid,
   routeFrappeAuth,
@@ -16,8 +17,14 @@ import {
 
 const SECRET = "platform-session-secret-value";
 const TENANT = "acme";
-// Real work factor is 210k; tests use a smaller one so the suite stays fast. The
-// count is stored per hash, which is exactly why this is safe to vary.
+// Real work factor is 210k; most tests use a smaller one so the suite stays fast,
+// which is safe because the count is stored per hash.
+//
+// It is NOT sufficient, though: running everything at 1,000 iterations meant the
+// production count was never exercised, and production Workers reject a single
+// PBKDF2 call above 100,000 — so every login on the deployed platform failed while
+// this suite stayed green. The tests at the end of this section cover the real count
+// for that reason; do not convert them to TEST_ITERATIONS.
 const TEST_ITERATIONS = 1_000;
 
 // ---- password hashing -------------------------------------------------------
@@ -49,6 +56,47 @@ test("a malformed or truncated stored hash fails closed instead of throwing", as
   for (const stored of ["", "garbage", "pbkdf2-sha256$abc$x$y", "md5$1$a$b", "pbkdf2-sha256$1000$only-three"]) {
     assert.equal(await verifyPassword("anything", stored), false, stored);
   }
+});
+
+/** One PBKDF2 call, the way `derive` worked before it was split into rounds. */
+async function singleCallDerive(password, saltBase64, iterations) {
+  const salt = Uint8Array.from(atob(saltBase64), (char) => char.charCodeAt(0));
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations, hash: "SHA-256" }, key, 256);
+  let binary = "";
+  for (const byte of new Uint8Array(bits)) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+test("the REAL work factor verifies, though it exceeds one PBKDF2 call's limit", async () => {
+  // The check that was missing. Production Workers reject a single deriveBits above
+  // 100,000 iterations, and PASSWORD_ITERATIONS is 210,000 — so this must be reached
+  // by chained rounds or no deployed login can ever succeed. Node has no such limit,
+  // so this test does not prove the platform accepts it; it pins the mechanism that
+  // keeps every individual call under the ceiling.
+  assert.ok(PASSWORD_ITERATIONS > 100_000, "otherwise this test no longer guards anything");
+  const hash = await hashPassword("correct horse battery", PASSWORD_ITERATIONS);
+  assert.equal(parsePasswordHash(hash).iterations, PASSWORD_ITERATIONS);
+  assert.equal(await verifyPassword("correct horse battery", hash), true);
+  assert.equal(await verifyPassword("wrong horse battery", hash), false);
+});
+
+test("a work factor within one call's limit is bit-identical to the single-call form", async () => {
+  // Backward compatibility: credentials stored before the rounds were introduced
+  // must keep verifying. At or below the ceiling there is exactly one round, whose
+  // input is the password itself, so the bits cannot differ.
+  const hash = await hashPassword("correct horse battery", 100_000);
+  const parsed = parsePasswordHash(hash);
+  assert.equal(parsed.hash, await singleCallDerive("correct horse battery", parsed.salt, 100_000));
+});
+
+test("above the limit the rounds deliberately change the bits", async () => {
+  // Recorded so it is not mistaken for a bug: a hash stored at 210,000 under the old
+  // single-call code will NOT verify now. Nothing is lost, because such a hash could
+  // never be verified in production either — the call threw before any comparison.
+  const hash = await hashPassword("correct horse battery", 200_000);
+  const parsed = parsePasswordHash(hash);
+  assert.notEqual(parsed.hash, await singleCallDerive("correct horse battery", parsed.salt, 200_000));
 });
 
 test("passwords that cannot be hashed meaningfully are refused at the boundary", async () => {

@@ -47,6 +47,14 @@ export default {
         if (!tenant) throw new Error("Missing tenant context");
         return jsonResponse(await publishPendingOutbox(env.DB, env.OUTBOX_QUEUE, tenant));
       }
+      // Everything `scheduled()` would have done, for a caller whose crons do fire.
+      // Kept separate from /internal/outbox/flush, which drains the outbox only.
+      if (request.method === "POST" && url.pathname === "/internal/maintenance") {
+        assertInternalService(request, env.INTERNAL_SERVICE_TOKEN);
+        const tenant = env.TENANT_ID ?? request.headers.get("x-cloudforge-tenant");
+        if (!tenant) throw new Error("Missing tenant context");
+        return jsonResponse(await runMaintenance(env, tenant));
+      }
       if (request.method === "GET" && url.pathname === "/internal/reconciliation") {
         assertInternalService(request, env.INTERNAL_SERVICE_TOKEN);
         const tenant = env.TENANT_ID ?? request.headers.get("x-cloudforge-tenant");
@@ -486,18 +494,45 @@ export default {
   },
   async scheduled(_controller: unknown, env: TenantEnv, ctx: ExecutionContext): Promise<void> {
     if (!env.TENANT_ID) return;
-    if (env.OUTBOX_QUEUE) ctx.waitUntil(publishPendingOutbox(env.DB, env.OUTBOX_QUEUE, env.TENANT_ID).then(() => undefined));
-    // Retries app hook deliveries that failed. Without this, a single outage in an
-    // app's Worker would drop every event that arrived during it.
-    if (env.DISPATCHER) {
-      const tenantId = env.TENANT_ID;
-      ctx.waitUntil(new AppHookDispatcher(env.DB, {
-        DISPATCHER: env.DISPATCHER,
-        ...(env.INTERNAL_SERVICE_TOKEN ? { INTERNAL_SERVICE_TOKEN: env.INTERNAL_SERVICE_TOKEN } : {}),
-      }).sweep(tenantId, new Date().toISOString()).then(() => undefined));
-    }
+    ctx.waitUntil(runMaintenance(env, env.TENANT_ID).then(() => undefined));
   },
 };
+
+/**
+ * The periodic work a tenant owes: drain its outbox into the queue, and retry app
+ * hook deliveries that failed.
+ *
+ * Called from BOTH `scheduled()` and `POST /internal/maintenance`, because this
+ * Worker's cron trigger never fires in the deployment that matters. A Worker
+ * uploaded into a dispatch namespace is only ever invoked through the dispatcher —
+ * its `triggers.crons` are accepted at deploy time and silently never run. The
+ * symptom is not an error anywhere: events simply accumulate in `outbox` with status
+ * `pending` forever. It was found on the live deployment with 27 events two days old.
+ *
+ * So the jobs Worker — an ordinary Worker, whose crons do fire — calls the endpoint
+ * on a schedule for every active tenant. Both entry points run THIS function so the
+ * two can never drift into doing different work.
+ *
+ * Awaited rather than fire-and-forget, so an HTTP caller learns what happened and a
+ * failure surfaces instead of vanishing into a discarded promise.
+ */
+export async function runMaintenance(
+  env: TenantEnv,
+  tenantId: string,
+): Promise<{ outbox: { published: number; failed: number; skipped: number } | null; hooks: number }> {
+  const outbox = env.OUTBOX_QUEUE
+    ? await publishPendingOutbox(env.DB, env.OUTBOX_QUEUE, tenantId)
+    : null;
+  // Without this a single outage in an app's Worker would drop every event that
+  // arrived during it.
+  const hooks = env.DISPATCHER
+    ? (await new AppHookDispatcher(env.DB, {
+      DISPATCHER: env.DISPATCHER,
+      ...(env.INTERNAL_SERVICE_TOKEN ? { INTERNAL_SERVICE_TOKEN: env.INTERNAL_SERVICE_TOKEN } : {}),
+    }).sweep(tenantId, new Date().toISOString())).length
+    : 0;
+  return { outbox, hooks };
+}
 
 /**
  * Delivers one domain event to every app that subscribed to it.

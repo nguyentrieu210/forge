@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import jobs, { assertDomainEvent, resolveTenantCallback, tenantRouteIndexKey } from "../dist/apps/jobs-worker/src/index.js";
+import jobs, { assertDomainEvent, resolveTenantCallback, sweepTenantMaintenance, tenantRouteIndexKey } from "../dist/apps/jobs-worker/src/index.js";
 
 function event(overrides = {}) {
   return {
@@ -99,6 +99,72 @@ test("jobs acknowledges a previously processed event without delivering it again
   });
   assert.equal(msg.acked, true);
   assert.equal(fetched, false);
+});
+
+/** A ROUTES stand-in whose `list` pages, so pagination is actually exercised. */
+function routesKv(entries, { pageSize = 1 } = {}) {
+  const names = Object.keys(entries);
+  return {
+    async get(key) { return entries[key] ?? null; },
+    async list({ prefix = "", cursor } = {}) {
+      const matching = names.filter((name) => name.startsWith(prefix));
+      const start = cursor ? Number(cursor) : 0;
+      const slice = matching.slice(start, start + pageSize);
+      const end = start + slice.length;
+      return {
+        keys: slice.map((name) => ({ name })),
+        list_complete: end >= matching.length,
+        ...(end >= matching.length ? {} : { cursor: String(end) }),
+      };
+    },
+  };
+}
+
+const activeRoute = (tenant) => JSON.stringify({
+  tenant_id: tenant, worker_name: `cloudforge-tenant-${tenant}`, status: "active", routing_version: 1,
+});
+
+test("maintenance is driven for every active tenant, across KV pages", async () => {
+  // The tenant Worker's own cron never fires: it lives in a dispatch namespace, which
+  // is invoke-only. This sweep is the reason the outbox drains at all.
+  const called = [];
+  const kv = routesKv({
+    [tenantRouteIndexKey("demo")]: activeRoute("demo"),
+    [tenantRouteIndexKey("acme")]: activeRoute("acme"),
+    // Must be skipped: draining a suspended tenant would emit events for an
+    // account that is meant to be inert.
+    [tenantRouteIndexKey("frozen")]: JSON.stringify({ tenant_id: "frozen", worker_name: "w", status: "suspended", routing_version: 1 }),
+    // Not part of the tenant index, so the prefix must exclude it.
+    "some.host.example": activeRoute("demo"),
+  });
+  const dispatcher = { get(name) {
+    return { async fetch(url, init) {
+      called.push({ name, url, method: init.method, authorization: init.headers.authorization, tenant: init.headers["x-cloudforge-tenant"] });
+      return new Response("{}", { status: 200 });
+    } };
+  } };
+
+  const result = await sweepTenantMaintenance({ ROUTES: kv, DISPATCHER: dispatcher, INTERNAL_SERVICE_TOKEN: "svc" });
+  assert.deepEqual(result, { swept: 2, failed: 0 });
+  assert.deepEqual(called.map((call) => call.name).sort(), ["cloudforge-tenant-acme", "cloudforge-tenant-demo"]);
+  assert.equal(called[0].method, "POST");
+  assert.match(called[0].url, /\/internal\/maintenance$/);
+  assert.equal(called[0].authorization, "Bearer svc");
+});
+
+test("one unreachable tenant does not stop maintenance for the others", async () => {
+  const kv = routesKv({
+    [tenantRouteIndexKey("broken")]: activeRoute("broken"),
+    [tenantRouteIndexKey("fine")]: activeRoute("fine"),
+  });
+  const dispatcher = { get(name) {
+    return { async fetch() {
+      if (name.endsWith("broken")) return new Response("nope", { status: 500 });
+      return new Response("{}", { status: 200 });
+    } };
+  } };
+  const result = await sweepTenantMaintenance({ ROUTES: kv, DISPATCHER: dispatcher, INTERNAL_SERVICE_TOKEN: "svc" });
+  assert.deepEqual(result, { swept: 1, failed: 1 });
 });
 
 test("domain events are fully shape-validated before routing", () => {

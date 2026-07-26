@@ -59,7 +59,73 @@ export default {
       }
     }
   },
+
+  /**
+   * Runs each active tenant's periodic maintenance.
+   *
+   * This lives here, and not in the tenant Worker that owns the work, because a
+   * Worker uploaded into a dispatch namespace never runs its own cron: it is only
+   * reachable through the dispatcher. Its `triggers.crons` are accepted at deploy
+   * time and silently ignored, so the tenant outbox filled up and nothing ever
+   * drained it — no error, just events stuck at `pending` indefinitely.
+   *
+   * This Worker is deployed normally, so its cron does fire. It holds the only two
+   * bindings needed to reach every tenant: the route index in KV and the dispatcher.
+   */
+  async scheduled(_controller: unknown, env: JobsEnv, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(sweepTenantMaintenance(env));
+  },
 };
+
+/** Prefix of the reverse route index — see `tenantRouteIndexKey`. */
+const TENANT_INDEX_PREFIX = "__tenant__:";
+
+export async function sweepTenantMaintenance(env: JobsEnv): Promise<{ swept: number; failed: number }> {
+  if (!env.ROUTES || !env.DISPATCHER) return { swept: 0, failed: 0 };
+  let swept = 0;
+  let failed = 0;
+  let cursor: string | undefined;
+
+  // Paginated, because a platform with more tenants than one KV page would
+  // otherwise silently maintain only the first page of them.
+  do {
+    const page = await env.ROUTES.list({ prefix: TENANT_INDEX_PREFIX, ...(cursor ? { cursor } : {}) });
+    for (const key of page.keys) {
+      const raw = await env.ROUTES.get(key.name);
+      if (!raw) continue;
+      let route: TenantRoute;
+      try {
+        route = JSON.parse(raw) as TenantRoute;
+      } catch {
+        failed += 1;
+        continue;
+      }
+      // A suspended tenant is deliberately left alone: draining its outbox would
+      // deliver events for an account that is supposed to be inert.
+      if (route.status !== "active" || !route.worker_name) continue;
+      try {
+        const response = await env.DISPATCHER.get(route.worker_name).fetch(
+          "https://tenant.internal/internal/maintenance",
+          {
+            method: "POST",
+            headers: {
+              "authorization": `Bearer ${requireSecret(env.INTERNAL_SERVICE_TOKEN, "INTERNAL_SERVICE_TOKEN")}`,
+              "x-cloudforge-tenant": route.tenant_id,
+            },
+          },
+        );
+        if (!response.ok) throw new Error(`maintenance returned ${response.status}`);
+        swept += 1;
+      } catch {
+        // One unreachable tenant must not stop the others; the next tick retries it.
+        failed += 1;
+      }
+    }
+    cursor = page.list_complete ? undefined : page.cursor;
+  } while (cursor);
+
+  return { swept, failed };
+}
 
 export async function resolveTenantCallback(env: JobsEnv, tenantId: string): Promise<Fetcher> {
   if (env.TENANT_CALLBACK) return env.TENANT_CALLBACK;

@@ -11,6 +11,9 @@
  * exceeds it is killed rather than slow. The gateway therefore grants the login
  * path a larger budget (see gateway-worker), and this count is chosen to fit
  * inside that budget with margin.
+ *
+ * The work factor is reached by CHAINED ROUNDS, not one deriveBits call — see
+ * MAX_ITERATIONS_PER_CALL. Do not "simplify" that back into a single call.
  */
 
 import { errors, timingSafeEqualString } from "../../core/src/index.js";
@@ -18,6 +21,29 @@ import { errors, timingSafeEqualString } from "../../core/src/index.js";
 export const PASSWORD_ITERATIONS = 210_000;
 const SALT_BYTES = 16;
 const KEY_BITS = 256;
+
+/**
+ * The most iterations production Workers will accept in ONE `deriveBits` call.
+ *
+ * Above this the call throws, and because the throw happens before any password
+ * comparison, EVERY login fails — including wrong ones, with a masked 500 rather
+ * than a 401. Measured on the live deployment: a hash at 100,000 iterations logs in
+ * (HTTP 200), the identical account at 210,000 answers 500.
+ *
+ * Local workerd does NOT enforce the limit. That is why the Node suite, the Workerd
+ * suite and the local HTTP smoke were all green while the deployed product could not
+ * authenticate anybody — no test that stops at workerd can catch this.
+ *
+ * So the work factor is built from repeated rounds of at most this many iterations,
+ * each round's output becoming the next round's input key material. An attacker still
+ * pays the full PASSWORD_ITERATIONS of HMAC-SHA256, so the cost is unchanged.
+ *
+ * A count at or below this limit derives in exactly one round, which is bit-identical
+ * to the single-call form this replaced — so hashes stored before the change still
+ * verify. Only counts above it produce different bits, and those could never be
+ * verified in production anyway.
+ */
+const MAX_ITERATIONS_PER_CALL = 100_000;
 
 export interface PasswordHash {
   algorithm: "pbkdf2-sha256";
@@ -78,13 +104,23 @@ export function assertPasswordShape(password: string): void {
 }
 
 async function derive(password: string, salt: Uint8Array, iterations: number): Promise<string> {
-  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
-  const bits = await crypto.subtle.deriveBits(
-    { name: "PBKDF2", salt: salt as unknown as BufferSource, iterations, hash: "SHA-256" },
-    key,
-    KEY_BITS,
-  );
-  return toBase64(new Uint8Array(bits));
+  // Rounds of at most MAX_ITERATIONS_PER_CALL, each fed the previous round's output.
+  // The same salt throughout: it exists to make the derivation account-specific, and
+  // varying it per round would add nothing while making the scheme harder to state.
+  let material: Uint8Array = new TextEncoder().encode(password);
+  let remaining = iterations;
+  while (remaining > 0) {
+    const round = Math.min(remaining, MAX_ITERATIONS_PER_CALL);
+    const key = await crypto.subtle.importKey("raw", material as unknown as BufferSource, "PBKDF2", false, ["deriveBits"]);
+    const bits = await crypto.subtle.deriveBits(
+      { name: "PBKDF2", salt: salt as unknown as BufferSource, iterations: round, hash: "SHA-256" },
+      key,
+      KEY_BITS,
+    );
+    material = new Uint8Array(bits);
+    remaining -= round;
+  }
+  return toBase64(material);
 }
 
 function toBase64(bytes: Uint8Array): string {

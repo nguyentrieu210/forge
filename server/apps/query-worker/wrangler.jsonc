@@ -5,7 +5,11 @@
   "compatibility_date": "2026-07-23",
   "vars": {
     "TENANT_ID": "demo",
-    "AUTH_MODE": "production"
+    "AUTH_MODE": "production",
+    // Must match the gateway's: the two verify the same tokens, and a mismatch
+    // rejects every report request with an opaque authentication failure.
+    "JWT_ISSUER": "cloudforge-platform",
+    "JWT_AUDIENCE": "cloudforge-api"
   },
   "d1_databases": [
     { "binding": "DB", "database_name": "cloudforge-demo", "database_id": "54f6fcc3-8767-429c-8ecd-5e0c71543d33", "migrations_dir": "../../migrations/tenant" }

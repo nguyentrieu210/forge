@@ -1,12 +1,29 @@
 #!/usr/bin/env node
 import { readFile } from "node:fs/promises";
+import { readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import path from "node:path";
 
 const API_BASE = "https://api.cloudflare.com/client/v4";
 
-export async function main(argv = process.argv.slice(2), env = process.env, fetchImpl = fetch, stdin = process.stdin) {
+export async function main(
+  argv = process.argv.slice(2),
+  env = process.env,
+  fetchImpl = fetch,
+  stdin = process.stdin,
+  storedToken = readStoredWranglerToken,
+) {
   const args = parseArgs(argv);
   const accountId = requireValue(args.account ?? env.CLOUDFLARE_ACCOUNT_ID, "CLOUDFLARE_ACCOUNT_ID or --account");
-  const token = requireValue(env.CLOUDFLARE_API_TOKEN, "CLOUDFLARE_API_TOKEN");
+  // `wrangler login` (the default auth path) stores an OAuth token and never sets
+  // CLOUDFLARE_API_TOKEN, so requiring the env var alone made this script unusable
+  // for exactly the people most likely to reach for it. The API accepts either as a
+  // bearer credential, so an explicit API token still wins and the OAuth token is
+  // only a fallback.
+  const token = requireValue(
+    env.CLOUDFLARE_API_TOKEN ?? storedToken(env),
+    "CLOUDFLARE_API_TOKEN (or a `wrangler login` session)",
+  );
   const namespace = requireValue(args.namespace ?? env.CLOUDFLARE_DISPATCH_NAMESPACE, "--namespace or CLOUDFLARE_DISPATCH_NAMESPACE");
   const script = requireValue(args.script, "--script");
   const base = `${API_BASE}/accounts/${encodeURIComponent(accountId)}/workers/dispatch/namespaces/${encodeURIComponent(namespace)}/scripts/${encodeURIComponent(script)}/secrets`;
@@ -68,6 +85,46 @@ async function request(fetchImpl, url, token, init) {
     throw new Error(`Cloudflare API request failed (${response.status})${errors ? `: ${errors}` : ""}`);
   }
   return body?.result ?? body;
+}
+
+/**
+ * The OAuth token `wrangler login` left behind, or undefined.
+ *
+ * Injected as a parameter of `main` so tests never touch a real developer's
+ * credentials, and returns undefined rather than throwing on every miss — an absent
+ * session is a normal state, reported once by `requireValue`.
+ *
+ * An expired token IS reported, because letting it through produces an opaque
+ * "Cloudflare API request failed (401)" that reads like a permissions problem.
+ */
+export function readStoredWranglerToken(env = process.env) {
+  const candidates = [
+    env.WRANGLER_HOME && path.join(env.WRANGLER_HOME, "config", "default.toml"),
+    env.XDG_CONFIG_HOME && path.join(env.XDG_CONFIG_HOME, ".wrangler", "config", "default.toml"),
+    // Wrangler's Windows default: %APPDATA%\xdg.config\.wrangler\…
+    env.APPDATA && path.join(env.APPDATA, "xdg.config", ".wrangler", "config", "default.toml"),
+    path.join(homedir(), ".config", ".wrangler", "config", "default.toml"),
+    path.join(homedir(), ".wrangler", "config", "default.toml"),
+  ].filter(Boolean);
+
+  for (const file of candidates) {
+    let text;
+    try {
+      text = readFileSync(file, "utf8");
+    } catch {
+      continue;
+    }
+    const token = text.match(/^\s*oauth_token\s*=\s*"([^"]+)"/m)?.[1];
+    if (!token) continue;
+    const expiry = text.match(/^\s*expiration_time\s*=\s*"([^"]+)"/m)?.[1];
+    if (expiry && Date.parse(expiry) < Date.now()) {
+      throw new Error(
+        `the stored wrangler session expired at ${expiry} — run any wrangler command (or \`wrangler login\`) to refresh it, or set CLOUDFLARE_API_TOKEN`,
+      );
+    }
+    return token;
+  }
+  return undefined;
 }
 
 function requireValue(value, name) {
