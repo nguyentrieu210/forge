@@ -1,0 +1,10 @@
+packages:
+  # --- Backend: Cloudflare-native kernel (nguồn: CloudForge v1.0.0) ---
+  - "server"
+  - "server/apps/*"
+  - "server/packages/*"
+  # --- Frontend: meta-driven Desk + builder (nguồn: MetaForge v1.0.0-rc.1) ---
+  - "client"
+  - "client/packages/*"
+  - "client/apps/*"
+  - "client/e2e-factory"

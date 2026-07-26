@@ -1,0 +1,14 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/core" },
+    { "path": "packages/adapter-frappe" },
+    { "path": "packages/ui" },
+    { "path": "packages/controls" },
+    { "path": "packages/views" },
+    { "path": "packages/builder" },
+    { "path": "packages/shell" },
+    { "path": "packages/stock-vn" },
+    { "path": "apps/demo" }
+  ]
+}

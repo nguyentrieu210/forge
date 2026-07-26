@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cloudforge.dev/schema/source-exact/behavior-case.schema.json",
+  "title": "Behavioral oracle case",
+  "type": "object",
+  "required": ["case_id", "scope", "preconditions", "actor", "steps", "expected", "normalization"],
+  "properties": {
+    "case_id": {"type": "string"},
+    "scope": {"type": "object"},
+    "source_artifacts": {"type": "array", "items": {"type": "string"}},
+    "preconditions": {"type": "array", "items": {"type": "object"}},
+    "actor": {"type": "object"},
+    "steps": {"type": "array", "items": {"type": "object"}, "minItems": 1},
+    "expected": {
+      "type": "object",
+      "properties": {
+        "documents": {"type": "array"},
+        "gl_entries": {"type": "array"},
+        "stock_ledger_entries": {"type": "array"},
+        "payment_ledger_entries": {"type": "array"},
+        "reports": {"type": "array"},
+        "events": {"type": "array"},
+        "error": {"type": ["object", "null"]}
+      }
+    },
+    "normalization": {"type": "object"},
+    "profiles": {"type": "array", "items": {"type": "string"}},
+    "status": {"enum": ["SPECIFIED", "SOURCE_CAPTURED", "CLOUDFORGE_CAPTURED", "MATCH", "DIVERGED", "WAIVED", "BLOCKED"]}
+  },
+  "additionalProperties": true
+}

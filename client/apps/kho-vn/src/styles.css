@@ -1,0 +1,54 @@
+/* Nạp design system của kit TRƯỚC, rồi mới tới tailwind của app — thứ tự này quan trọng:
+ * đảo lại sẽ đẩy các @import bên trong styles.css xuống sau rule khác và bị trình duyệt bỏ qua. */
+@import "@metaforge/ui/styles.css";
+@source "./";
+@source "../node_modules/@metaforge/ui/dist";
+@source "../node_modules/@metaforge/views/dist";
+@source "../node_modules/@metaforge/shell/dist";
+@source "../node_modules/@metaforge/controls/dist";
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+/* ── In tem ──────────────────────────────────────────────────────────────────
+ * Khi in: giấu toàn bộ khung app (thanh trên, menu, nút bấm) và chỉ để lại vùng tem.
+ * Không làm thế thì mỗi trang tem in kèm cả sidebar và thanh công cụ — tốn giấy và
+ * tem bị đẩy lệch khỏi khổ.
+ */
+@media print {
+  .mf-noprint {
+    display: none !important;
+  }
+
+  /* Vùng tem thoát khỏi mọi khung cuộn/viền của app và chiếm trọn trang giấy. */
+  .mf-print-area {
+    position: absolute !important;
+    inset: 0 !important;
+    overflow: visible !important;
+    border: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Ẩn mọi thứ KHÔNG nằm trong nhánh chứa vùng in. */
+  body * {
+    visibility: hidden;
+  }
+  .mf-print-area,
+  .mf-print-area * {
+    visibility: visible;
+  }
+
+  /* Một con tem không bao giờ được cắt đôi qua hai trang. */
+  .mf-print-area > div > div {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  @page {
+    margin: 8mm;
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "gate": "2E-S4",
+  "roots": [
+    {
+      "doctype": "Sales Order",
+      "static_field_count": 171,
+      "runtime_field_count": 171,
+      "static_only": [],
+      "runtime_only": [],
+      "custom_fields_at_runtime": [],
+      "controller": {
+        "error": "AttributeError: module 'frappe' has no attribute 'get_controller'"
+      },
+      "verdict": "STATIC_MATCHES_RUNTIME"
+    },
+    {
+      "doctype": "Delivery Note",
+      "static_field_count": 165,
+      "runtime_field_count": 165,
+      "static_only": [],
+      "runtime_only": [],
+      "custom_fields_at_runtime": [],
+      "controller": {
+        "error": "AttributeError: module 'frappe' has no attribute 'get_controller'"
+      },
+      "verdict": "STATIC_MATCHES_RUNTIME"
+    },
+    {
+      "doctype": "Sales Invoice",
+      "static_field_count": 234,
+      "runtime_field_count": 234,
+      "static_only": [],
+      "runtime_only": [],
+      "custom_fields_at_runtime": [],
+      "controller": {
+        "error": "AttributeError: module 'frappe' has no attribute 'get_controller'"
+      },
+      "verdict": "STATIC_MATCHES_RUNTIME"
+    },
+    {
+      "doctype": "Payment Entry",
+      "static_field_count": 93,
+      "runtime_field_count": 93,
+      "static_only": [],
+      "runtime_only": [],
+      "custom_fields_at_runtime": [],
+      "controller": {
+        "error": "AttributeError: module 'frappe' has no attribute 'get_controller'"
+      },
+      "verdict": "STATIC_MATCHES_RUNTIME"
+    }
+  ]
+}

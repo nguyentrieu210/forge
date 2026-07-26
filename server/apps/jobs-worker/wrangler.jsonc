@@ -1,0 +1,39 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cloudforge-jobs",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-23",
+  "d1_databases": [
+    {
+      "binding": "JOBS_DB",
+      "database_name": "cloudforge-jobs",
+      "database_id": "bd99d10c-da26-49fd-a30a-040e9ecc130e",
+      "migrations_dir": "../../migrations/jobs"
+    }
+  ],
+  "queues": {
+    "consumers": [
+      {
+        "queue": "cloudforge-outbox",
+        "max_batch_size": 25,
+        "max_batch_timeout": 5,
+        "max_retries": 8,
+        "dead_letter_queue": "cloudforge-outbox-dlq",
+        "max_concurrency": 20
+      }
+    ]
+  },
+  "kv_namespaces": [
+    {
+      "binding": "ROUTES",
+      "id": "b4607d01c54042dcbc3d6cb3e1ad2da4"
+    }
+  ],
+  "dispatch_namespaces": [
+    {
+      "binding": "DISPATCHER",
+      "namespace": "cloudforge-production",
+      "remote": true
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "name": "@metaforge/adapter-frappe",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc -b",
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@metaforge/core": "workspace:*",
+    "frappe-js-sdk": "^1.14.0"
+  },
+  "files": [
+    "dist",
+    "src"
+  ]
+}

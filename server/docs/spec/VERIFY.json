@@ -1,0 +1,14 @@
+{
+  "generated_at": "2026-07-23",
+  "markdown_files": 186,
+  "json_files": 5,
+  "markdown_lines": 11405,
+  "screen_cards": 89,
+  "business_rule_ledgers": 36,
+  "oracle_slices": 6,
+  "declared_manifest_artifacts": 199,
+  "semantic_placeholder_issues": [],
+  "document_quality_score": 91,
+  "source_exact_claim_allowed": false,
+  "pass_structure": true
+}

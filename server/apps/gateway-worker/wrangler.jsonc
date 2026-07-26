@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cloudforge-gateway",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-23",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "PLATFORM_SUFFIX": "example.com",
+    "AUTH_MODE": "production",
+    "INTERNAL_AUTH_KEY_ID": "k1"
+  },
+  "kv_namespaces": [
+    { "binding": "ROUTES", "id": "b4607d01c54042dcbc3d6cb3e1ad2da4" }
+  ],
+  "dispatch_namespaces": [
+    { "binding": "DISPATCHER", "namespace": "cloudforge-production", "remote": true }
+  ]
+}

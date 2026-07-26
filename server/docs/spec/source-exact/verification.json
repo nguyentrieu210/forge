@@ -1,0 +1,168 @@
+{
+  "ok": true,
+  "apps": [
+    "erpnext",
+    "frappe"
+  ],
+  "results": [
+    {
+      "app": "erpnext",
+      "summary": {
+        "files": 4826,
+        "doctypes": 521,
+        "reports": 183,
+        "python_modules": 2575,
+        "client_modules": 626,
+        "hooks_files": 1,
+        "dependencies": 20694,
+        "whitelisted_methods": 770,
+        "parse_errors": 0
+      },
+      "coverage": {
+        "schema_version": "1.0.0",
+        "app": "erpnext",
+        "commit": "ff46d20b259a2d65a7ded959df9f9a42991a3562",
+        "tag": "v16.20.0",
+        "generated_at": "2026-07-24T07:44:23+00:00",
+        "source_inventory": {
+          "files_seen": 4826,
+          "unreadable_files": 0,
+          "coverage_percent": 100.0,
+          "claim": "COMPLETE"
+        },
+        "static_extraction": {
+          "structured_artifacts": 3245,
+          "successfully_extracted": 3245,
+          "coverage_percent": 100.0,
+          "parse_errors": 0,
+          "dynamic_sql_markers": 229,
+          "claim": "COMPLETE_FOR_SUPPORTED_STATIC_SYNTAX"
+        },
+        "behavioral_parity": {
+          "coverage_percent": null,
+          "claim": "NOT_PROVEN_BY_STATIC_SCAN",
+          "requires": [
+            "runtime metadata export from a pinned Frappe site",
+            "controller call tracing",
+            "golden document/ledger/report fixtures",
+            "differential tests",
+            "manual review of dynamic and external integrations"
+          ]
+        },
+        "counts_by_kind": {
+          "client_module": 11,
+          "config": 1,
+          "dashboard_chart": 43,
+          "doctype_client": 381,
+          "doctype_controller": 1408,
+          "doctype_schema": 536,
+          "documentation": 207,
+          "fixture": 1,
+          "hooks": 1,
+          "json_data": 249,
+          "notification": 2,
+          "number_card": 41,
+          "other": 136,
+          "page": 28,
+          "patches": 1,
+          "print_format": 44,
+          "public_asset": 61,
+          "python_module": 707,
+          "report_client": 164,
+          "report_controller": 396,
+          "report_schema": 183,
+          "template": 137,
+          "test": 35,
+          "translation_or_data": 36,
+          "web_form": 3,
+          "workspace": 14
+        },
+        "counts_by_parse_status": {
+          "binary_inventoried": 19,
+          "parsed": 3697,
+          "parsed_static": 626,
+          "text_inventoried": 484
+        }
+      }
+    },
+    {
+      "app": "frappe",
+      "summary": {
+        "files": 3302,
+        "doctypes": 279,
+        "reports": 9,
+        "python_modules": 1468,
+        "client_modules": 706,
+        "hooks_files": 1,
+        "dependencies": 12538,
+        "whitelisted_methods": 485,
+        "parse_errors": 0
+      },
+      "coverage": {
+        "schema_version": "1.0.0",
+        "app": "frappe",
+        "commit": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+        "tag": "v16.19.0",
+        "generated_at": "2026-07-24T07:44:14+00:00",
+        "source_inventory": {
+          "files_seen": 3302,
+          "unreadable_files": 0,
+          "coverage_percent": 100.0,
+          "claim": "COMPLETE"
+        },
+        "static_extraction": {
+          "structured_artifacts": 1373,
+          "successfully_extracted": 1373,
+          "coverage_percent": 100.0,
+          "parse_errors": 0,
+          "dynamic_sql_markers": 120,
+          "claim": "COMPLETE_FOR_SUPPORTED_STATIC_SYNTAX"
+        },
+        "behavioral_parity": {
+          "coverage_percent": null,
+          "claim": "NOT_PROVEN_BY_STATIC_SCAN",
+          "requires": [
+            "runtime metadata export from a pinned Frappe site",
+            "controller call tracing",
+            "golden document/ledger/report fixtures",
+            "differential tests",
+            "manual review of dynamic and external integrations"
+          ]
+        },
+        "counts_by_kind": {
+          "client_module": 91,
+          "dashboard_chart": 6,
+          "doctype_client": 227,
+          "doctype_controller": 744,
+          "doctype_schema": 303,
+          "documentation": 118,
+          "fixture": 31,
+          "hooks": 1,
+          "json_data": 55,
+          "number_card": 9,
+          "other": 214,
+          "page": 36,
+          "patches": 1,
+          "public_asset": 464,
+          "python_module": 575,
+          "report_client": 9,
+          "report_controller": 21,
+          "report_schema": 9,
+          "sql": 2,
+          "template": 243,
+          "test": 101,
+          "translation_or_data": 35,
+          "web_form": 3,
+          "workspace": 4
+        },
+        "counts_by_parse_status": {
+          "binary_inventoried": 87,
+          "parsed": 1872,
+          "parsed_static": 706,
+          "text_inventoried": 637
+        }
+      }
+    }
+  ],
+  "failures": []
+}

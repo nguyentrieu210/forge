@@ -1,0 +1,45 @@
+{
+  "artifact_key": "{app}:{commit}:{kind}:{source_path}:{symbol_or_name}",
+  "required": [
+    "app",
+    "commit",
+    "license",
+    "module",
+    "kind",
+    "source_path",
+    "source_hash",
+    "dependencies",
+    "public_contract",
+    "target_package",
+    "compatibility_level",
+    "implementation_ref",
+    "oracle_fixture",
+    "status",
+    "owner",
+    "waiver"
+  ],
+  "status": [
+    "DECLARED",
+    "DISCOVERED",
+    "SOURCE_RESOLVED",
+    "SPECIFIED",
+    "PORTED",
+    "ORACLE_GREEN",
+    "BLOCKED",
+    "WAIVED"
+  ],
+  "disposition": [
+    "PORT",
+    "REIMPLEMENT",
+    "REPLACE",
+    "NOT_APPLICABLE",
+    "WAIVE"
+  ],
+  "release_rules": [
+    "zero SOURCE_SCAN_PENDING for source-exact claim",
+    "zero UNMAPPED_BEHAVIOR critical",
+    "critical ORACLE_GREEN",
+    "source diff invalidates evidence",
+    "license provenance"
+  ]
+}

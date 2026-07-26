@@ -1,0 +1,6407 @@
+{
+  "gate": "2E-S5-matrix",
+  "provenance": {
+    "frappe": "16.19.0",
+    "erpnext": "16.20.0"
+  },
+  "base": {
+    "company": "_OMatrixCo",
+    "cost_center": "Main - _OM",
+    "price_list": "Standard Selling",
+    "accounts": {
+      "cogs": "Cost of Goods Sold - _OM",
+      "income": "Sales - _OM",
+      "debtors": "Debtors - _OM",
+      "cash": "Cash - _OM"
+    },
+    "opening_qty": {
+      "_OM-ITEM": 100000.0,
+      "_OM-ITEM2": 100000.0
+    }
+  },
+  "note": "full 71-fixture O2C behavioral capture on a pinned bench (Frappe v16.19.0 / ERPNext v16.20.0); synthetic _OM-* data; rollback-isolated per fixture; secrets redacted at source",
+  "summary": {
+    "total": 115,
+    "captured": 115,
+    "handler_failures": 0
+  },
+  "fixtures": {
+    "O2C-A-CREATE-DRAFT-001": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "doc": {
+          "docstatus": 0,
+          "status": "Draft",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": 500.0
+        }
+      },
+      "full": {
+        "doc": {
+          "doctype": "Sales Order",
+          "docstatus": 0,
+          "status": "Draft",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": 500.0,
+          "net_total": 500.0,
+          "rounded_total": 500.0,
+          "gl_entries": [],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": []
+        }
+      }
+    },
+    "O2C-A-UPDATE-DRAFT-002": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "doc": {
+          "docstatus": 0,
+          "status": "Draft",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": 700.0
+        },
+        "qty": 7.0,
+        "total": 700.0
+      },
+      "full": {
+        "doc": {
+          "doctype": "Sales Order",
+          "docstatus": 0,
+          "status": "Draft",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": 700.0,
+          "net_total": 700.0,
+          "rounded_total": 700.0,
+          "gl_entries": [],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": []
+        },
+        "qty": 7.0,
+        "total": 700.0
+      }
+    },
+    "O2C-A-SUBMIT-003": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "doc": {
+          "docstatus": 1,
+          "status": "To Deliver and Bill",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": 500.0
+        }
+      },
+      "full": {
+        "doc": {
+          "doctype": "Sales Order",
+          "docstatus": 1,
+          "status": "To Deliver and Bill",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": 500.0,
+          "net_total": 500.0,
+          "rounded_total": 500.0,
+          "gl_entries": [],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": []
+        }
+      }
+    },
+    "O2C-A-CANCEL-004": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "doc": {
+          "docstatus": 2,
+          "status": "Cancelled",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": 500.0
+        }
+      },
+      "full": {
+        "doc": {
+          "doctype": "Sales Order",
+          "docstatus": 2,
+          "status": "Cancelled",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": 500.0,
+          "net_total": 500.0,
+          "rounded_total": 500.0,
+          "gl_entries": [],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": []
+        }
+      }
+    },
+    "O2C-A-AMEND-005": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "cancelled": {
+          "doctype": "Sales Order",
+          "docstatus": 2,
+          "status": "Cancelled",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": 500.0,
+          "net_total": 500.0,
+          "rounded_total": 500.0,
+          "gl_entries": [],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": []
+        },
+        "amended": {
+          "doctype": "Sales Order",
+          "docstatus": 1,
+          "status": "To Deliver and Bill",
+          "per_delivered": 0.0,
+          "per_billed": 0.0,
+          "outstanding_amount": null,
+          "grand_total": 500.0,
+          "net_total": 500.0,
+          "rounded_total": 500.0,
+          "gl_entries": [],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": []
+        }
+      },
+      "full": {
+        "cancelled": {
+          "doctype": "Sales Order",
+          "docstatus": 2,
+          "status": "Cancelled",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": 500.0,
+          "net_total": 500.0,
+          "rounded_total": 500.0,
+          "gl_entries": [],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": []
+        },
+        "amended": {
+          "doctype": "Sales Order",
+          "docstatus": 1,
+          "status": "To Deliver and Bill",
+          "per_delivered": 0.0,
+          "per_billed": 0.0,
+          "outstanding_amount": null,
+          "grand_total": 500.0,
+          "net_total": 500.0,
+          "rounded_total": 500.0,
+          "gl_entries": [],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": []
+        }
+      }
+    },
+    "O2C-A-INVALID-ITEM-006": {
+      "captured": true,
+      "summary": {
+        "kind": "error",
+        "raised": true,
+        "error_type": "LinkValidationError",
+        "error_class": "frappe.exceptions.LinkValidationError",
+        "message": "Could not find Row #1: Item Code: _OM-NOPE"
+      },
+      "full": {
+        "observed_error": {
+          "raised": true,
+          "type": "LinkValidationError",
+          "frappe_class": "frappe.exceptions.LinkValidationError",
+          "msg": "Could not find Row #1: Item Code: _OM-NOPE"
+        }
+      }
+    },
+    "O2C-A-INVALID-QTY-007": {
+      "captured": true,
+      "summary": {
+        "kind": "error",
+        "raised": true,
+        "error_type": "InvalidQtyError",
+        "error_class": "erpnext.controllers.accounts_controller.InvalidQtyError",
+        "message": "Row #1: Quantity for Item <strong>_OM-ITEM</strong> cannot be zero."
+      },
+      "full": {
+        "observed_error": {
+          "raised": true,
+          "type": "InvalidQtyError",
+          "frappe_class": "erpnext.controllers.accounts_controller.InvalidQtyError",
+          "msg": "Row #1: Quantity for Item <strong>_OM-ITEM</strong> cannot be zero."
+        }
+      }
+    },
+    "O2C-A-MISSING-MANDATORY-008": {
+      "captured": true,
+      "summary": {
+        "kind": "error",
+        "raised": true,
+        "error_type": "MandatoryError",
+        "error_class": "frappe.exceptions.MandatoryError",
+        "message": "[Sales Order, SAL-ORD-2026-00001]: customer"
+      },
+      "full": {
+        "observed_error": {
+          "raised": true,
+          "type": "MandatoryError",
+          "frappe_class": "frappe.exceptions.MandatoryError",
+          "msg": "[Sales Order, SAL-ORD-2026-00001]: customer"
+        }
+      }
+    },
+    "O2C-A-PRICE-RATE-009": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "doc": {
+          "docstatus": 1,
+          "status": "To Deliver and Bill",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": 99.99
+        },
+        "rate": 33.33,
+        "amount": 99.99,
+        "net_amount": 99.99,
+        "net_total": 99.99,
+        "grand_total": 99.99
+      },
+      "full": {
+        "doc": {
+          "doctype": "Sales Order",
+          "docstatus": 1,
+          "status": "To Deliver and Bill",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": 99.99,
+          "net_total": 99.99,
+          "rounded_total": 99.99,
+          "gl_entries": [],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": []
+        },
+        "rate": 33.33,
+        "amount": 99.99,
+        "net_amount": 99.99,
+        "net_total": 99.99,
+        "grand_total": 99.99
+      }
+    },
+    "O2C-A-REPLAY-EQUIV-010": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "observation": "ERPNext has no built-in idempotency; two identical submits create two distinct vouchers",
+        "so1": true,
+        "so1_status": "To Deliver and Bill",
+        "so2_status": "To Deliver and Bill",
+        "distinct": true
+      },
+      "full": {
+        "observation": "ERPNext has no built-in idempotency; two identical submits create two distinct vouchers",
+        "so1": true,
+        "so1_status": "To Deliver and Bill",
+        "so2_status": "To Deliver and Bill",
+        "distinct": true
+      }
+    },
+    "O2C-A-PERMISSION-DENIED-011": {
+      "captured": true,
+      "summary": {
+        "kind": "error",
+        "raised": true,
+        "error_type": "PermissionError",
+        "error_class": "frappe.exceptions.PermissionError",
+        "message": ""
+      },
+      "full": {
+        "observed_error": {
+          "raised": true,
+          "type": "PermissionError",
+          "frappe_class": "frappe.exceptions.PermissionError",
+          "msg": ""
+        }
+      }
+    },
+    "O2C-B-CREATE-FROM-SO-012": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "dn": {
+          "docstatus": 0,
+          "status": "Draft",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": 500.0
+        },
+        "mapped_qty": [
+          5.0
+        ],
+        "against_so": "SAL-ORD-2026-00001"
+      },
+      "full": {
+        "dn": {
+          "doctype": "Delivery Note",
+          "docstatus": 0,
+          "status": "Draft",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": 500.0,
+          "net_total": 500.0,
+          "rounded_total": 500.0,
+          "gl_entries": [],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": []
+        },
+        "mapped_qty": [
+          5.0
+        ],
+        "against_so": "SAL-ORD-2026-00001"
+      }
+    },
+    "O2C-B-PARTIAL-013": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "so": {
+          "docstatus": 1,
+          "status": "To Deliver and Bill",
+          "per_delivered": 40.0,
+          "per_billed": 0.0,
+          "outstanding_amount": null,
+          "grand_total": 1000.0
+        },
+        "dn": {
+          "docstatus": 1,
+          "status": "To Bill",
+          "per_delivered": null,
+          "per_billed": 0.0,
+          "outstanding_amount": null,
+          "grand_total": 400.0,
+          "gl": [
+            {
+              "account": "Cost of Goods Sold - _OM",
+              "debit": 400.0,
+              "credit": 0.0
+            },
+            {
+              "account": "Stock In Hand - _OM",
+              "debit": 0.0,
+              "credit": 400.0
+            }
+          ],
+          "sle": [
+            {
+              "item": "_OM-ITEM",
+              "actual_qty": -4.0
+            }
+          ]
+        }
+      },
+      "full": {
+        "dn": {
+          "doctype": "Delivery Note",
+          "docstatus": 1,
+          "status": "To Bill",
+          "per_delivered": null,
+          "per_billed": 0.0,
+          "outstanding_amount": null,
+          "grand_total": 400.0,
+          "net_total": 400.0,
+          "rounded_total": 400.0,
+          "gl_entries": [
+            {
+              "account": "Cost of Goods Sold - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 0.0,
+              "debit": 400.0,
+              "party": null,
+              "party_type": null
+            },
+            {
+              "account": "Stock In Hand - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 400.0,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            }
+          ],
+          "stock_ledger_entries": [
+            {
+              "actual_qty": -4.0,
+              "item_code": "_OM-ITEM",
+              "qty_after_transaction": 99996.0,
+              "stock_value_difference": -400.0,
+              "valuation_rate": 100.0,
+              "warehouse": "Stores - _OM"
+            }
+          ],
+          "payment_ledger_entries": []
+        },
+        "so": {
+          "doctype": "Sales Order",
+          "docstatus": 1,
+          "status": "To Deliver and Bill",
+          "per_delivered": 40.0,
+          "per_billed": 0.0,
+          "outstanding_amount": null,
+          "grand_total": 1000.0,
+          "net_total": 1000.0,
+          "rounded_total": 1000.0,
+          "gl_entries": [],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": []
+        }
+      }
+    },
+    "O2C-B-FULL-014": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "so": {
+          "docstatus": 1,
+          "status": "To Bill",
+          "per_delivered": 100.0,
+          "per_billed": 0.0,
+          "outstanding_amount": null,
+          "grand_total": 1000.0
+        },
+        "dn": {
+          "docstatus": 1,
+          "status": "To Bill",
+          "per_delivered": null,
+          "per_billed": 0.0,
+          "outstanding_amount": null,
+          "grand_total": 1000.0,
+          "gl": [
+            {
+              "account": "Cost of Goods Sold - _OM",
+              "debit": 1000.0,
+              "credit": 0.0
+            },
+            {
+              "account": "Stock In Hand - _OM",
+              "debit": 0.0,
+              "credit": 1000.0
+            }
+          ],
+          "sle": [
+            {
+              "item": "_OM-ITEM",
+              "actual_qty": -10.0
+            }
+          ]
+        }
+      },
+      "full": {
+        "dn": {
+          "doctype": "Delivery Note",
+          "docstatus": 1,
+          "status": "To Bill",
+          "per_delivered": null,
+          "per_billed": 0.0,
+          "outstanding_amount": null,
+          "grand_total": 1000.0,
+          "net_total": 1000.0,
+          "rounded_total": 1000.0,
+          "gl_entries": [
+            {
+              "account": "Cost of Goods Sold - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 0.0,
+              "debit": 1000.0,
+              "party": null,
+              "party_type": null
+            },
+            {
+              "account": "Stock In Hand - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 1000.0,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            }
+          ],
+          "stock_ledger_entries": [
+            {
+              "actual_qty": -10.0,
+              "item_code": "_OM-ITEM",
+              "qty_after_transaction": 99990.0,
+              "stock_value_difference": -1000.0,
+              "valuation_rate": 100.0,
+              "warehouse": "Stores - _OM"
+            }
+          ],
+          "payment_ledger_entries": []
+        },
+        "so": {
+          "doctype": "Sales Order",
+          "docstatus": 1,
+          "status": "To Bill",
+          "per_delivered": 100.0,
+          "per_billed": 0.0,
+          "outstanding_amount": null,
+          "grand_total": 1000.0,
+          "net_total": 1000.0,
+          "rounded_total": 1000.0,
+          "gl_entries": [],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": []
+        }
+      }
+    },
+    "O2C-B-OVER-DELIVERY-015": {
+      "captured": true,
+      "summary": {
+        "kind": "error",
+        "raised": true,
+        "error_type": "OverAllowanceError",
+        "error_class": "erpnext.controllers.status_updater.OverAllowanceError",
+        "message": "This document is over limit by <strong>Qty</strong> <strong>994.0</strong> for item <strong>_OM-ITEM</strong>. Are you making another <strong>Delivery Note</str"
+      },
+      "full": {
+        "observed_error": {
+          "raised": true,
+          "type": "OverAllowanceError",
+          "frappe_class": "erpnext.controllers.status_updater.OverAllowanceError",
+          "msg": "This document is over limit by <strong>Qty</strong> <strong>994.0</strong> for item <strong>_OM-ITEM</strong>. Are you making another <strong>Delivery Note</strong> against the same <strong>Sales Order Item</strong>?<br><br>To allow over receipt / delivery, update \"Over Receipt/Delivery Allowance\" i"
+        }
+      }
+    },
+    "O2C-B-WAREHOUSE-MISSING-016": {
+      "captured": true,
+      "summary": {
+        "kind": "error",
+        "raised": false,
+        "error_type": null,
+        "error_class": null,
+        "message": ""
+      },
+      "full": {
+        "observed_error": {
+          "raised": false,
+          "result": null
+        }
+      }
+    },
+    "O2C-B-INSUFFICIENT-STOCK-017": {
+      "captured": true,
+      "summary": {
+        "kind": "error",
+        "raised": true,
+        "error_type": "NegativeStockError",
+        "error_class": "erpnext.stock.stock_ledger.NegativeStockError",
+        "message": "<strong>5.0</strong> units of <a href=\"/desk/item/_OM-ITEM2\" style=\"font-weight: bold;\">Item _OM-ITEM2</a> needed in <a href=\"/desk/warehouse/Finished%20Goods%2",
+        "note": "empty warehouse to provoke NegativeStock"
+      },
+      "full": {
+        "observed_error": {
+          "raised": true,
+          "type": "NegativeStockError",
+          "frappe_class": "erpnext.stock.stock_ledger.NegativeStockError",
+          "msg": "<strong>5.0</strong> units of <a href=\"/desk/item/_OM-ITEM2\" style=\"font-weight: bold;\">Item _OM-ITEM2</a> needed in <a href=\"/desk/warehouse/Finished%20Goods%20-%20_OM\" style=\"font-weight: bold;\">Warehouse Finished Goods - _OM</a> to complete this transaction."
+        },
+        "note": "empty warehouse to provoke NegativeStock"
+      }
+    },
+    "O2C-B-SUBMIT-018": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "dn": {
+          "docstatus": 1,
+          "status": "To Bill",
+          "per_delivered": null,
+          "per_billed": 0.0,
+          "outstanding_amount": null,
+          "grand_total": 600.0,
+          "gl": [
+            {
+              "account": "Cost of Goods Sold - _OM",
+              "debit": 600.0,
+              "credit": 0.0
+            },
+            {
+              "account": "Stock In Hand - _OM",
+              "debit": 0.0,
+              "credit": 600.0
+            }
+          ],
+          "sle": [
+            {
+              "item": "_OM-ITEM",
+              "actual_qty": -6.0
+            }
+          ]
+        }
+      },
+      "full": {
+        "dn": {
+          "doctype": "Delivery Note",
+          "docstatus": 1,
+          "status": "To Bill",
+          "per_delivered": null,
+          "per_billed": 0.0,
+          "outstanding_amount": null,
+          "grand_total": 600.0,
+          "net_total": 600.0,
+          "rounded_total": 600.0,
+          "gl_entries": [
+            {
+              "account": "Cost of Goods Sold - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 0.0,
+              "debit": 600.0,
+              "party": null,
+              "party_type": null
+            },
+            {
+              "account": "Stock In Hand - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 600.0,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            }
+          ],
+          "stock_ledger_entries": [
+            {
+              "actual_qty": -6.0,
+              "item_code": "_OM-ITEM",
+              "qty_after_transaction": 99994.0,
+              "stock_value_difference": -600.0,
+              "valuation_rate": 100.0,
+              "warehouse": "Stores - _OM"
+            }
+          ],
+          "payment_ledger_entries": []
+        }
+      }
+    },
+    "O2C-B-CANCEL-019": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "dn": {
+          "docstatus": 2,
+          "status": "Cancelled",
+          "per_delivered": null,
+          "per_billed": 0.0,
+          "outstanding_amount": null,
+          "grand_total": 600.0
+        },
+        "so_after_cancel": {
+          "doctype": "Sales Order",
+          "docstatus": 1,
+          "status": "To Deliver and Bill",
+          "per_delivered": 0.0,
+          "per_billed": 0.0,
+          "outstanding_amount": null,
+          "grand_total": 600.0,
+          "net_total": 600.0,
+          "rounded_total": 600.0,
+          "gl_entries": [],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": []
+        }
+      },
+      "full": {
+        "dn": {
+          "doctype": "Delivery Note",
+          "docstatus": 2,
+          "status": "Cancelled",
+          "per_delivered": null,
+          "per_billed": 0.0,
+          "outstanding_amount": null,
+          "grand_total": 600.0,
+          "net_total": 600.0,
+          "rounded_total": 600.0,
+          "gl_entries": [],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": []
+        },
+        "so_after_cancel": {
+          "doctype": "Sales Order",
+          "docstatus": 1,
+          "status": "To Deliver and Bill",
+          "per_delivered": 0.0,
+          "per_billed": 0.0,
+          "outstanding_amount": null,
+          "grand_total": 600.0,
+          "net_total": 600.0,
+          "rounded_total": 600.0,
+          "gl_entries": [],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": []
+        }
+      }
+    },
+    "O2C-B-FULFILLMENT-ROLLBACK-020": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "so": {
+          "docstatus": 1,
+          "status": "To Deliver and Bill",
+          "per_delivered": 0.0,
+          "per_billed": 0.0,
+          "outstanding_amount": null,
+          "grand_total": 800.0
+        },
+        "per_delivered_after_dn": 100.0,
+        "per_delivered_after_cancel": 0.0
+      },
+      "full": {
+        "per_delivered_after_dn": 100.0,
+        "per_delivered_after_cancel": 0.0,
+        "so": {
+          "doctype": "Sales Order",
+          "docstatus": 1,
+          "status": "To Deliver and Bill",
+          "per_delivered": 0.0,
+          "per_billed": 0.0,
+          "outstanding_amount": null,
+          "grand_total": 800.0,
+          "net_total": 800.0,
+          "rounded_total": 800.0,
+          "gl_entries": [],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": []
+        }
+      }
+    },
+    "O2C-B-MULTI-ITEM-021": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "dn": {
+          "docstatus": 1,
+          "status": "To Bill",
+          "per_delivered": null,
+          "per_billed": 0.0,
+          "outstanding_amount": null,
+          "grand_total": 400.0,
+          "gl": [
+            {
+              "account": "Cost of Goods Sold - _OM",
+              "debit": 500.0,
+              "credit": 0.0
+            },
+            {
+              "account": "Stock In Hand - _OM",
+              "debit": 0.0,
+              "credit": 500.0
+            }
+          ],
+          "sle": [
+            {
+              "item": "_OM-ITEM",
+              "actual_qty": -3.0
+            },
+            {
+              "item": "_OM-ITEM2",
+              "actual_qty": -2.0
+            }
+          ]
+        },
+        "rows": 2
+      },
+      "full": {
+        "dn": {
+          "doctype": "Delivery Note",
+          "docstatus": 1,
+          "status": "To Bill",
+          "per_delivered": null,
+          "per_billed": 0.0,
+          "outstanding_amount": null,
+          "grand_total": 400.0,
+          "net_total": 400.0,
+          "rounded_total": 400.0,
+          "gl_entries": [
+            {
+              "account": "Cost of Goods Sold - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 0.0,
+              "debit": 500.0,
+              "party": null,
+              "party_type": null
+            },
+            {
+              "account": "Stock In Hand - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 500.0,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            }
+          ],
+          "stock_ledger_entries": [
+            {
+              "actual_qty": -3.0,
+              "item_code": "_OM-ITEM",
+              "qty_after_transaction": 99997.0,
+              "stock_value_difference": -300.0,
+              "valuation_rate": 100.0,
+              "warehouse": "Stores - _OM"
+            },
+            {
+              "actual_qty": -2.0,
+              "item_code": "_OM-ITEM2",
+              "qty_after_transaction": 99998.0,
+              "stock_value_difference": -200.0,
+              "valuation_rate": 100.0,
+              "warehouse": "Stores - _OM"
+            }
+          ],
+          "payment_ledger_entries": []
+        },
+        "rows": 2
+      }
+    },
+    "O2C-B-PERMISSION-DENIED-022": {
+      "captured": true,
+      "summary": {
+        "kind": "error",
+        "raised": true,
+        "error_type": "PermissionError",
+        "error_class": "frappe.exceptions.PermissionError",
+        "message": ""
+      },
+      "full": {
+        "observed_error": {
+          "raised": true,
+          "type": "PermissionError",
+          "frappe_class": "frappe.exceptions.PermissionError",
+          "msg": ""
+        }
+      }
+    },
+    "O2C-C-CREATE-FROM-SO-023": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "si": {
+          "docstatus": 0,
+          "status": "Draft",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 500.0,
+          "grand_total": 500.0
+        },
+        "mapped_qty": [
+          5.0
+        ]
+      },
+      "full": {
+        "si": {
+          "doctype": "Sales Invoice",
+          "docstatus": 0,
+          "status": "Draft",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 500.0,
+          "grand_total": 500.0,
+          "net_total": 500.0,
+          "rounded_total": 500.0,
+          "gl_entries": [],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": []
+        },
+        "mapped_qty": [
+          5.0
+        ]
+      }
+    },
+    "O2C-C-CREATE-AFTER-DN-024": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "dn": {
+          "docstatus": 1,
+          "status": "To Bill",
+          "per_delivered": null,
+          "per_billed": 0.0,
+          "outstanding_amount": null,
+          "grand_total": 500.0,
+          "gl": [
+            {
+              "account": "Cost of Goods Sold - _OM",
+              "debit": 500.0,
+              "credit": 0.0
+            },
+            {
+              "account": "Stock In Hand - _OM",
+              "debit": 0.0,
+              "credit": 500.0
+            }
+          ],
+          "sle": [
+            {
+              "item": "_OM-ITEM",
+              "actual_qty": -5.0
+            }
+          ]
+        },
+        "si": {
+          "docstatus": 1,
+          "status": "Unpaid",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 500.0,
+          "grand_total": 500.0,
+          "gl": [
+            {
+              "account": "Debtors - _OM",
+              "debit": 500.0,
+              "credit": 0.0
+            },
+            {
+              "account": "Sales - _OM",
+              "debit": 0.0,
+              "credit": 500.0
+            }
+          ]
+        }
+      },
+      "full": {
+        "si": {
+          "doctype": "Sales Invoice",
+          "docstatus": 1,
+          "status": "Unpaid",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 500.0,
+          "grand_total": 500.0,
+          "net_total": 500.0,
+          "rounded_total": 500.0,
+          "gl_entries": [
+            {
+              "account": "Debtors - _OM",
+              "against_voucher": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "credit": 0.0,
+              "debit": 500.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            },
+            {
+              "account": "Sales - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 500.0,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            }
+          ],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": [
+            {
+              "account": "Debtors - _OM",
+              "account_type": "Receivable",
+              "against_voucher_no": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "amount": 500.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            }
+          ]
+        },
+        "dn": {
+          "doctype": "Delivery Note",
+          "docstatus": 1,
+          "status": "To Bill",
+          "per_delivered": null,
+          "per_billed": 0.0,
+          "outstanding_amount": null,
+          "grand_total": 500.0,
+          "net_total": 500.0,
+          "rounded_total": 500.0,
+          "gl_entries": [
+            {
+              "account": "Cost of Goods Sold - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 0.0,
+              "debit": 500.0,
+              "party": null,
+              "party_type": null
+            },
+            {
+              "account": "Stock In Hand - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 500.0,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            }
+          ],
+          "stock_ledger_entries": [
+            {
+              "actual_qty": -5.0,
+              "item_code": "_OM-ITEM",
+              "qty_after_transaction": 99995.0,
+              "stock_value_difference": -500.0,
+              "valuation_rate": 100.0,
+              "warehouse": "Stores - _OM"
+            }
+          ],
+          "payment_ledger_entries": []
+        }
+      }
+    },
+    "O2C-C-PARTIAL-BILLING-025": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "so": {
+          "docstatus": 1,
+          "status": "To Deliver and Bill",
+          "per_delivered": 0.0,
+          "per_billed": 40.0,
+          "outstanding_amount": null,
+          "grand_total": 1000.0
+        },
+        "si": {
+          "docstatus": 1,
+          "status": "Unpaid",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 400.0,
+          "grand_total": 400.0,
+          "gl": [
+            {
+              "account": "Debtors - _OM",
+              "debit": 400.0,
+              "credit": 0.0
+            },
+            {
+              "account": "Sales - _OM",
+              "debit": 0.0,
+              "credit": 400.0
+            }
+          ]
+        }
+      },
+      "full": {
+        "si": {
+          "doctype": "Sales Invoice",
+          "docstatus": 1,
+          "status": "Unpaid",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 400.0,
+          "grand_total": 400.0,
+          "net_total": 400.0,
+          "rounded_total": 400.0,
+          "gl_entries": [
+            {
+              "account": "Debtors - _OM",
+              "against_voucher": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "credit": 0.0,
+              "debit": 400.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            },
+            {
+              "account": "Sales - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 400.0,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            }
+          ],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": [
+            {
+              "account": "Debtors - _OM",
+              "account_type": "Receivable",
+              "against_voucher_no": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "amount": 400.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            }
+          ]
+        },
+        "so": {
+          "doctype": "Sales Order",
+          "docstatus": 1,
+          "status": "To Deliver and Bill",
+          "per_delivered": 0.0,
+          "per_billed": 40.0,
+          "outstanding_amount": null,
+          "grand_total": 1000.0,
+          "net_total": 1000.0,
+          "rounded_total": 1000.0,
+          "gl_entries": [],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": []
+        }
+      }
+    },
+    "O2C-C-FULL-BILLING-026": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "so": {
+          "docstatus": 1,
+          "status": "To Deliver",
+          "per_delivered": 0.0,
+          "per_billed": 100.0,
+          "outstanding_amount": null,
+          "grand_total": 1000.0
+        },
+        "si": {
+          "docstatus": 1,
+          "status": "Unpaid",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 1000.0,
+          "grand_total": 1000.0,
+          "gl": [
+            {
+              "account": "Debtors - _OM",
+              "debit": 1000.0,
+              "credit": 0.0
+            },
+            {
+              "account": "Sales - _OM",
+              "debit": 0.0,
+              "credit": 1000.0
+            }
+          ]
+        }
+      },
+      "full": {
+        "si": {
+          "doctype": "Sales Invoice",
+          "docstatus": 1,
+          "status": "Unpaid",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 1000.0,
+          "grand_total": 1000.0,
+          "net_total": 1000.0,
+          "rounded_total": 1000.0,
+          "gl_entries": [
+            {
+              "account": "Debtors - _OM",
+              "against_voucher": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "credit": 0.0,
+              "debit": 1000.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            },
+            {
+              "account": "Sales - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 1000.0,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            }
+          ],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": [
+            {
+              "account": "Debtors - _OM",
+              "account_type": "Receivable",
+              "against_voucher_no": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "amount": 1000.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            }
+          ]
+        },
+        "so": {
+          "doctype": "Sales Order",
+          "docstatus": 1,
+          "status": "To Deliver",
+          "per_delivered": 0.0,
+          "per_billed": 100.0,
+          "outstanding_amount": null,
+          "grand_total": 1000.0,
+          "net_total": 1000.0,
+          "rounded_total": 1000.0,
+          "gl_entries": [],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": []
+        }
+      }
+    },
+    "O2C-C-OVER-BILLING-027": {
+      "captured": true,
+      "summary": {
+        "kind": "error",
+        "raised": true,
+        "error_type": "OverAllowanceError",
+        "error_class": "erpnext.controllers.status_updater.OverAllowanceError",
+        "message": "This document is over limit by <strong>Amount</strong> <strong>99400.0</strong> for item <strong>_OM-ITEM</strong>. Are you making another <strong>Sales Invoice"
+      },
+      "full": {
+        "observed_error": {
+          "raised": true,
+          "type": "OverAllowanceError",
+          "frappe_class": "erpnext.controllers.status_updater.OverAllowanceError",
+          "msg": "This document is over limit by <strong>Amount</strong> <strong>99400.0</strong> for item <strong>_OM-ITEM</strong>. Are you making another <strong>Sales Invoice</strong> against the same <strong>Sales Order Item</strong>?<br><br>To allow over billing, update \"Over Billing Allowance\" in Accounts Sett"
+        }
+      }
+    },
+    "O2C-C-SUBMIT-GL-028": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "si": {
+          "docstatus": 1,
+          "status": "Unpaid",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 500.0,
+          "grand_total": 500.0,
+          "gl": [
+            {
+              "account": "Debtors - _OM",
+              "debit": 500.0,
+              "credit": 0.0
+            },
+            {
+              "account": "Sales - _OM",
+              "debit": 0.0,
+              "credit": 500.0
+            }
+          ]
+        }
+      },
+      "full": {
+        "si": {
+          "doctype": "Sales Invoice",
+          "docstatus": 1,
+          "status": "Unpaid",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 500.0,
+          "grand_total": 500.0,
+          "net_total": 500.0,
+          "rounded_total": 500.0,
+          "gl_entries": [
+            {
+              "account": "Debtors - _OM",
+              "against_voucher": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "credit": 0.0,
+              "debit": 500.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            },
+            {
+              "account": "Sales - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 500.0,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            }
+          ],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": [
+            {
+              "account": "Debtors - _OM",
+              "account_type": "Receivable",
+              "against_voucher_no": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "amount": 500.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            }
+          ]
+        }
+      }
+    },
+    "O2C-C-TAX-FREE-BASELINE-029": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "si": {
+          "docstatus": 1,
+          "status": "Unpaid",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 500.0,
+          "grand_total": 500.0,
+          "gl": [
+            {
+              "account": "Debtors - _OM",
+              "debit": 500.0,
+              "credit": 0.0
+            },
+            {
+              "account": "Sales - _OM",
+              "debit": 0.0,
+              "credit": 500.0
+            }
+          ]
+        },
+        "total_taxes": 0.0
+      },
+      "full": {
+        "si": {
+          "doctype": "Sales Invoice",
+          "docstatus": 1,
+          "status": "Unpaid",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 500.0,
+          "grand_total": 500.0,
+          "net_total": 500.0,
+          "rounded_total": 500.0,
+          "gl_entries": [
+            {
+              "account": "Debtors - _OM",
+              "against_voucher": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "credit": 0.0,
+              "debit": 500.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            },
+            {
+              "account": "Sales - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 500.0,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            }
+          ],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": [
+            {
+              "account": "Debtors - _OM",
+              "account_type": "Receivable",
+              "against_voucher_no": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "amount": 500.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            }
+          ]
+        },
+        "total_taxes": 0.0
+      }
+    },
+    "O2C-C-SINGLE-TAX-BASELINE-030": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "si": {
+          "docstatus": 1,
+          "status": "Unpaid",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 550.0,
+          "grand_total": 550.0,
+          "gl": [
+            {
+              "account": "Debtors - _OM",
+              "debit": 550.0,
+              "credit": 0.0
+            },
+            {
+              "account": "Sales - _OM",
+              "debit": 0.0,
+              "credit": 500.0
+            },
+            {
+              "account": "ST 6.25% - _OM",
+              "debit": 0.0,
+              "credit": 50.0
+            }
+          ]
+        },
+        "total_taxes": 50.0,
+        "tax_account": "ST 6.25% - _OM"
+      },
+      "full": {
+        "si": {
+          "doctype": "Sales Invoice",
+          "docstatus": 1,
+          "status": "Unpaid",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 550.0,
+          "grand_total": 550.0,
+          "net_total": 500.0,
+          "rounded_total": 550.0,
+          "gl_entries": [
+            {
+              "account": "Debtors - _OM",
+              "against_voucher": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "credit": 0.0,
+              "debit": 550.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            },
+            {
+              "account": "Sales - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 500.0,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            },
+            {
+              "account": "ST 6.25% - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 50.0,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            }
+          ],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": [
+            {
+              "account": "Debtors - _OM",
+              "account_type": "Receivable",
+              "against_voucher_no": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "amount": 550.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            }
+          ]
+        },
+        "total_taxes": 50.0,
+        "tax_account": "ST 6.25% - _OM"
+      }
+    },
+    "O2C-C-OUTSTANDING-031": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "outstanding": 500.0,
+        "grand_total": 500.0,
+        "status": "Unpaid"
+      },
+      "full": {
+        "outstanding": 500.0,
+        "grand_total": 500.0,
+        "status": "Unpaid"
+      }
+    },
+    "O2C-C-CANCEL-032": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "si": {
+          "docstatus": 2,
+          "status": "Cancelled",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 500.0,
+          "grand_total": 500.0
+        }
+      },
+      "full": {
+        "si": {
+          "doctype": "Sales Invoice",
+          "docstatus": 2,
+          "status": "Cancelled",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 500.0,
+          "grand_total": 500.0,
+          "net_total": 500.0,
+          "rounded_total": 500.0,
+          "gl_entries": [],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": []
+        }
+      }
+    },
+    "O2C-C-PERMISSION-DENIED-033": {
+      "captured": true,
+      "summary": {
+        "kind": "error",
+        "raised": true,
+        "error_type": "PermissionError",
+        "error_class": "frappe.exceptions.PermissionError",
+        "message": ""
+      },
+      "full": {
+        "observed_error": {
+          "raised": true,
+          "type": "PermissionError",
+          "frappe_class": "frappe.exceptions.PermissionError",
+          "msg": ""
+        }
+      }
+    },
+    "O2C-D-RECEIVE-FULL-034": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "pe": {
+          "docstatus": 1,
+          "status": "Submitted",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": null,
+          "gl": [
+            {
+              "account": "Cash - _OM",
+              "debit": 500.0,
+              "credit": 0.0
+            },
+            {
+              "account": "Debtors - _OM",
+              "debit": 0.0,
+              "credit": 500.0
+            }
+          ]
+        }
+      },
+      "full": {
+        "pe": {
+          "doctype": "Payment Entry",
+          "docstatus": 1,
+          "status": "Submitted",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": null,
+          "net_total": null,
+          "rounded_total": null,
+          "gl_entries": [
+            {
+              "account": "Cash - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 0.0,
+              "debit": 500.0,
+              "party": null,
+              "party_type": null
+            },
+            {
+              "account": "Debtors - _OM",
+              "against_voucher": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "credit": 500.0,
+              "debit": 0.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            }
+          ],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": [
+            {
+              "account": "Debtors - _OM",
+              "account_type": "Receivable",
+              "against_voucher_no": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "amount": -500.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            }
+          ]
+        },
+        "si_after": {
+          "doctype": "Sales Invoice",
+          "docstatus": 1,
+          "status": "Paid",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 0.0,
+          "grand_total": 500.0,
+          "net_total": 500.0,
+          "rounded_total": 500.0,
+          "gl_entries": [
+            {
+              "account": "Debtors - _OM",
+              "against_voucher": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "credit": 0.0,
+              "debit": 500.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            },
+            {
+              "account": "Sales - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 500.0,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            }
+          ],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": [
+            {
+              "account": "Debtors - _OM",
+              "account_type": "Receivable",
+              "against_voucher_no": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "amount": 500.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            }
+          ]
+        }
+      }
+    },
+    "O2C-D-RECEIVE-PARTIAL-035": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "pe": {
+          "docstatus": 1,
+          "status": "Submitted",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": null,
+          "gl": [
+            {
+              "account": "Cash - _OM",
+              "debit": 200.0,
+              "credit": 0.0
+            },
+            {
+              "account": "Debtors - _OM",
+              "debit": 0.0,
+              "credit": 200.0
+            }
+          ]
+        },
+        "si_outstanding_after": 300.0,
+        "si_status": "Partly Paid"
+      },
+      "full": {
+        "pe": {
+          "doctype": "Payment Entry",
+          "docstatus": 1,
+          "status": "Submitted",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": null,
+          "net_total": null,
+          "rounded_total": null,
+          "gl_entries": [
+            {
+              "account": "Cash - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 0.0,
+              "debit": 200.0,
+              "party": null,
+              "party_type": null
+            },
+            {
+              "account": "Debtors - _OM",
+              "against_voucher": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "credit": 200.0,
+              "debit": 0.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            }
+          ],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": [
+            {
+              "account": "Debtors - _OM",
+              "account_type": "Receivable",
+              "against_voucher_no": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "amount": -200.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            }
+          ]
+        },
+        "si_outstanding_after": 300.0,
+        "si_status": "Partly Paid"
+      }
+    },
+    "O2C-D-OVER-PAYMENT-036": {
+      "captured": true,
+      "summary": {
+        "kind": "error",
+        "raised": true,
+        "error_type": "ValidationError",
+        "error_class": "frappe.exceptions.ValidationError",
+        "message": "Row #1: Allocated Amount cannot be greater than outstanding amount."
+      },
+      "full": {
+        "observed_error": {
+          "raised": true,
+          "type": "ValidationError",
+          "frappe_class": "frappe.exceptions.ValidationError",
+          "msg": "Row #1: Allocated Amount cannot be greater than outstanding amount."
+        }
+      }
+    },
+    "O2C-D-ALLOCATION-MISMATCH-037": {
+      "captured": true,
+      "summary": {
+        "kind": "error",
+        "raised": true,
+        "error_type": "ValidationError",
+        "error_class": "frappe.exceptions.ValidationError",
+        "message": "Difference Amount must be zero"
+      },
+      "full": {
+        "observed_error": {
+          "raised": true,
+          "type": "ValidationError",
+          "frappe_class": "frappe.exceptions.ValidationError",
+          "msg": "Difference Amount must be zero"
+        }
+      }
+    },
+    "O2C-D-PAID-RECEIVED-BEHAVIOR-038": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "paid_amount": 500.0,
+        "received_amount": 500.0,
+        "source_exchange_rate": 1,
+        "target_exchange_rate": 1,
+        "equal_single_currency": true
+      },
+      "full": {
+        "paid_amount": 500.0,
+        "received_amount": 500.0,
+        "source_exchange_rate": 1,
+        "target_exchange_rate": 1,
+        "equal_single_currency": true
+      }
+    },
+    "O2C-D-SUBMIT-PLE-GL-039": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "pe": {
+          "docstatus": 1,
+          "status": "Submitted",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": null,
+          "gl": [
+            {
+              "account": "Cash - _OM",
+              "debit": 500.0,
+              "credit": 0.0
+            },
+            {
+              "account": "Debtors - _OM",
+              "debit": 0.0,
+              "credit": 500.0
+            }
+          ]
+        }
+      },
+      "full": {
+        "pe": {
+          "doctype": "Payment Entry",
+          "docstatus": 1,
+          "status": "Submitted",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": null,
+          "net_total": null,
+          "rounded_total": null,
+          "gl_entries": [
+            {
+              "account": "Cash - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 0.0,
+              "debit": 500.0,
+              "party": null,
+              "party_type": null
+            },
+            {
+              "account": "Debtors - _OM",
+              "against_voucher": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "credit": 500.0,
+              "debit": 0.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            }
+          ],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": [
+            {
+              "account": "Debtors - _OM",
+              "account_type": "Receivable",
+              "against_voucher_no": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "amount": -500.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            }
+          ]
+        }
+      }
+    },
+    "O2C-D-CANCEL-040": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "pe": {
+          "docstatus": 2,
+          "status": "Cancelled",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": null
+        }
+      },
+      "full": {
+        "pe": {
+          "doctype": "Payment Entry",
+          "docstatus": 2,
+          "status": "Cancelled",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": null,
+          "net_total": null,
+          "rounded_total": null,
+          "gl_entries": [],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": []
+        },
+        "si_after_pe_cancel": {
+          "doctype": "Sales Invoice",
+          "docstatus": 1,
+          "status": "Unpaid",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 500.0,
+          "grand_total": 500.0,
+          "net_total": 500.0,
+          "rounded_total": 500.0,
+          "gl_entries": [
+            {
+              "account": "Debtors - _OM",
+              "against_voucher": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "credit": 0.0,
+              "debit": 500.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            },
+            {
+              "account": "Sales - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 500.0,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            }
+          ],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": [
+            {
+              "account": "Debtors - _OM",
+              "account_type": "Receivable",
+              "against_voucher_no": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "amount": 500.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            }
+          ]
+        }
+      }
+    },
+    "O2C-D-OUTSTANDING-ROLLBACK-041": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "outstanding_initial": 500.0,
+        "after_payment": 0.0,
+        "after_pe_cancel": 500.0,
+        "si_status": "Unpaid"
+      },
+      "full": {
+        "outstanding_initial": 500.0,
+        "after_payment": 0.0,
+        "after_pe_cancel": 500.0,
+        "si_status": "Unpaid"
+      }
+    },
+    "O2C-D-PERMISSION-DENIED-042": {
+      "captured": true,
+      "summary": {
+        "kind": "error",
+        "raised": true,
+        "error_type": "PermissionError",
+        "error_class": "frappe.exceptions.PermissionError",
+        "message": ""
+      },
+      "full": {
+        "observed_error": {
+          "raised": true,
+          "type": "PermissionError",
+          "frappe_class": "frappe.exceptions.PermissionError",
+          "msg": ""
+        }
+      }
+    },
+    "O2C-E-SO-DN-SI-PE-HAPPY-043": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "so": {
+          "docstatus": 1,
+          "status": "Completed",
+          "per_delivered": 100.0,
+          "per_billed": 100.0,
+          "outstanding_amount": null,
+          "grand_total": 500.0
+        },
+        "dn": {
+          "docstatus": 1,
+          "status": "To Bill",
+          "per_delivered": null,
+          "per_billed": 0.0,
+          "outstanding_amount": null,
+          "grand_total": 500.0,
+          "gl": [
+            {
+              "account": "Cost of Goods Sold - _OM",
+              "debit": 500.0,
+              "credit": 0.0
+            },
+            {
+              "account": "Stock In Hand - _OM",
+              "debit": 0.0,
+              "credit": 500.0
+            }
+          ],
+          "sle": [
+            {
+              "item": "_OM-ITEM",
+              "actual_qty": -5.0
+            }
+          ]
+        },
+        "si": {
+          "docstatus": 1,
+          "status": "Paid",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 0.0,
+          "grand_total": 500.0,
+          "gl": [
+            {
+              "account": "Debtors - _OM",
+              "debit": 500.0,
+              "credit": 0.0
+            },
+            {
+              "account": "Sales - _OM",
+              "debit": 0.0,
+              "credit": 500.0
+            }
+          ]
+        },
+        "pe": {
+          "docstatus": 1,
+          "status": "Submitted",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": null,
+          "gl": [
+            {
+              "account": "Cash - _OM",
+              "debit": 500.0,
+              "credit": 0.0
+            },
+            {
+              "account": "Debtors - _OM",
+              "debit": 0.0,
+              "credit": 500.0
+            }
+          ]
+        },
+        "ar_after": {
+          "row_count": 0,
+          "rows": []
+        }
+      },
+      "full": {
+        "so": {
+          "doctype": "Sales Order",
+          "docstatus": 1,
+          "status": "Completed",
+          "per_delivered": 100.0,
+          "per_billed": 100.0,
+          "outstanding_amount": null,
+          "grand_total": 500.0,
+          "net_total": 500.0,
+          "rounded_total": 500.0,
+          "gl_entries": [],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": []
+        },
+        "dn": {
+          "doctype": "Delivery Note",
+          "docstatus": 1,
+          "status": "To Bill",
+          "per_delivered": null,
+          "per_billed": 0.0,
+          "outstanding_amount": null,
+          "grand_total": 500.0,
+          "net_total": 500.0,
+          "rounded_total": 500.0,
+          "gl_entries": [
+            {
+              "account": "Cost of Goods Sold - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 0.0,
+              "debit": 500.0,
+              "party": null,
+              "party_type": null
+            },
+            {
+              "account": "Stock In Hand - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 500.0,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            }
+          ],
+          "stock_ledger_entries": [
+            {
+              "actual_qty": -5.0,
+              "item_code": "_OM-ITEM",
+              "qty_after_transaction": 99995.0,
+              "stock_value_difference": -500.0,
+              "valuation_rate": 100.0,
+              "warehouse": "Stores - _OM"
+            }
+          ],
+          "payment_ledger_entries": []
+        },
+        "si": {
+          "doctype": "Sales Invoice",
+          "docstatus": 1,
+          "status": "Paid",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 0.0,
+          "grand_total": 500.0,
+          "net_total": 500.0,
+          "rounded_total": 500.0,
+          "gl_entries": [
+            {
+              "account": "Debtors - _OM",
+              "against_voucher": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "credit": 0.0,
+              "debit": 500.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            },
+            {
+              "account": "Sales - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 500.0,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            }
+          ],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": [
+            {
+              "account": "Debtors - _OM",
+              "account_type": "Receivable",
+              "against_voucher_no": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "amount": 500.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            }
+          ]
+        },
+        "pe": {
+          "doctype": "Payment Entry",
+          "docstatus": 1,
+          "status": "Submitted",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": null,
+          "net_total": null,
+          "rounded_total": null,
+          "gl_entries": [
+            {
+              "account": "Cash - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 0.0,
+              "debit": 500.0,
+              "party": null,
+              "party_type": null
+            },
+            {
+              "account": "Debtors - _OM",
+              "against_voucher": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "credit": 500.0,
+              "debit": 0.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            }
+          ],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": [
+            {
+              "account": "Debtors - _OM",
+              "account_type": "Receivable",
+              "against_voucher_no": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "amount": -500.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            }
+          ]
+        },
+        "ar_after": {
+          "row_count": 0,
+          "rows": []
+        }
+      }
+    },
+    "O2C-E-PARTIAL-CHAIN-044": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "so": {
+          "docstatus": 1,
+          "status": "To Deliver and Bill",
+          "per_delivered": 60.0,
+          "per_billed": 60.0,
+          "outstanding_amount": null,
+          "grand_total": 1000.0
+        },
+        "dn": {
+          "docstatus": 1,
+          "status": "To Bill",
+          "per_delivered": null,
+          "per_billed": 0.0,
+          "outstanding_amount": null,
+          "grand_total": 600.0,
+          "gl": [
+            {
+              "account": "Cost of Goods Sold - _OM",
+              "debit": 600.0,
+              "credit": 0.0
+            },
+            {
+              "account": "Stock In Hand - _OM",
+              "debit": 0.0,
+              "credit": 600.0
+            }
+          ],
+          "sle": [
+            {
+              "item": "_OM-ITEM",
+              "actual_qty": -6.0
+            }
+          ]
+        },
+        "si": {
+          "docstatus": 1,
+          "status": "Partly Paid",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 300.0,
+          "grand_total": 600.0,
+          "gl": [
+            {
+              "account": "Debtors - _OM",
+              "debit": 600.0,
+              "credit": 0.0
+            },
+            {
+              "account": "Sales - _OM",
+              "debit": 0.0,
+              "credit": 600.0
+            }
+          ]
+        },
+        "pe": {
+          "docstatus": 1,
+          "status": "Submitted",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": null,
+          "gl": [
+            {
+              "account": "Cash - _OM",
+              "debit": 300.0,
+              "credit": 0.0
+            },
+            {
+              "account": "Debtors - _OM",
+              "debit": 0.0,
+              "credit": 300.0
+            }
+          ]
+        }
+      },
+      "full": {
+        "so": {
+          "doctype": "Sales Order",
+          "docstatus": 1,
+          "status": "To Deliver and Bill",
+          "per_delivered": 60.0,
+          "per_billed": 60.0,
+          "outstanding_amount": null,
+          "grand_total": 1000.0,
+          "net_total": 1000.0,
+          "rounded_total": 1000.0,
+          "gl_entries": [],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": []
+        },
+        "dn": {
+          "doctype": "Delivery Note",
+          "docstatus": 1,
+          "status": "To Bill",
+          "per_delivered": null,
+          "per_billed": 0.0,
+          "outstanding_amount": null,
+          "grand_total": 600.0,
+          "net_total": 600.0,
+          "rounded_total": 600.0,
+          "gl_entries": [
+            {
+              "account": "Cost of Goods Sold - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 0.0,
+              "debit": 600.0,
+              "party": null,
+              "party_type": null
+            },
+            {
+              "account": "Stock In Hand - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 600.0,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            }
+          ],
+          "stock_ledger_entries": [
+            {
+              "actual_qty": -6.0,
+              "item_code": "_OM-ITEM",
+              "qty_after_transaction": 99994.0,
+              "stock_value_difference": -600.0,
+              "valuation_rate": 100.0,
+              "warehouse": "Stores - _OM"
+            }
+          ],
+          "payment_ledger_entries": []
+        },
+        "si": {
+          "doctype": "Sales Invoice",
+          "docstatus": 1,
+          "status": "Partly Paid",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 300.0,
+          "grand_total": 600.0,
+          "net_total": 600.0,
+          "rounded_total": 600.0,
+          "gl_entries": [
+            {
+              "account": "Debtors - _OM",
+              "against_voucher": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "credit": 0.0,
+              "debit": 600.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            },
+            {
+              "account": "Sales - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 600.0,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            }
+          ],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": [
+            {
+              "account": "Debtors - _OM",
+              "account_type": "Receivable",
+              "against_voucher_no": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "amount": 600.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            }
+          ]
+        },
+        "pe": {
+          "doctype": "Payment Entry",
+          "docstatus": 1,
+          "status": "Submitted",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": null,
+          "net_total": null,
+          "rounded_total": null,
+          "gl_entries": [
+            {
+              "account": "Cash - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 0.0,
+              "debit": 300.0,
+              "party": null,
+              "party_type": null
+            },
+            {
+              "account": "Debtors - _OM",
+              "against_voucher": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "credit": 300.0,
+              "debit": 0.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            }
+          ],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": [
+            {
+              "account": "Debtors - _OM",
+              "account_type": "Receivable",
+              "against_voucher_no": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "amount": -300.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            }
+          ]
+        }
+      }
+    },
+    "O2C-E-CANCEL-PE-045": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "pe": {
+          "docstatus": 2,
+          "status": "Cancelled",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": null
+        }
+      },
+      "full": {
+        "pe": {
+          "doctype": "Payment Entry",
+          "docstatus": 2,
+          "status": "Cancelled",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": null,
+          "net_total": null,
+          "rounded_total": null,
+          "gl_entries": [],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": []
+        },
+        "si_after": {
+          "doctype": "Sales Invoice",
+          "docstatus": 1,
+          "status": "Unpaid",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 500.0,
+          "grand_total": 500.0,
+          "net_total": 500.0,
+          "rounded_total": 500.0,
+          "gl_entries": [
+            {
+              "account": "Debtors - _OM",
+              "against_voucher": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "credit": 0.0,
+              "debit": 500.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            },
+            {
+              "account": "Sales - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 500.0,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            }
+          ],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": [
+            {
+              "account": "Debtors - _OM",
+              "account_type": "Receivable",
+              "against_voucher_no": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "amount": 500.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            }
+          ]
+        }
+      }
+    },
+    "O2C-E-CANCEL-SI-046": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "si": {
+          "docstatus": 2,
+          "status": "Cancelled",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 500.0,
+          "grand_total": 500.0
+        },
+        "so_after": {
+          "doctype": "Sales Order",
+          "docstatus": 1,
+          "status": "To Bill",
+          "per_delivered": 100.0,
+          "per_billed": 0.0,
+          "outstanding_amount": null,
+          "grand_total": 500.0,
+          "net_total": 500.0,
+          "rounded_total": 500.0,
+          "gl_entries": [],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": []
+        }
+      },
+      "full": {
+        "si": {
+          "doctype": "Sales Invoice",
+          "docstatus": 2,
+          "status": "Cancelled",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 500.0,
+          "grand_total": 500.0,
+          "net_total": 500.0,
+          "rounded_total": 500.0,
+          "gl_entries": [],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": []
+        },
+        "so_after": {
+          "doctype": "Sales Order",
+          "docstatus": 1,
+          "status": "To Bill",
+          "per_delivered": 100.0,
+          "per_billed": 0.0,
+          "outstanding_amount": null,
+          "grand_total": 500.0,
+          "net_total": 500.0,
+          "rounded_total": 500.0,
+          "gl_entries": [],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": []
+        }
+      }
+    },
+    "O2C-E-CANCEL-DN-047": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "dn": {
+          "docstatus": 2,
+          "status": "Cancelled",
+          "per_delivered": null,
+          "per_billed": 0.0,
+          "outstanding_amount": null,
+          "grand_total": 500.0
+        },
+        "so_after": {
+          "doctype": "Sales Order",
+          "docstatus": 1,
+          "status": "To Deliver and Bill",
+          "per_delivered": 0.0,
+          "per_billed": 0.0,
+          "outstanding_amount": null,
+          "grand_total": 500.0,
+          "net_total": 500.0,
+          "rounded_total": 500.0,
+          "gl_entries": [],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": []
+        }
+      },
+      "full": {
+        "dn": {
+          "doctype": "Delivery Note",
+          "docstatus": 2,
+          "status": "Cancelled",
+          "per_delivered": null,
+          "per_billed": 0.0,
+          "outstanding_amount": null,
+          "grand_total": 500.0,
+          "net_total": 500.0,
+          "rounded_total": 500.0,
+          "gl_entries": [],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": []
+        },
+        "so_after": {
+          "doctype": "Sales Order",
+          "docstatus": 1,
+          "status": "To Deliver and Bill",
+          "per_delivered": 0.0,
+          "per_billed": 0.0,
+          "outstanding_amount": null,
+          "grand_total": 500.0,
+          "net_total": 500.0,
+          "rounded_total": 500.0,
+          "gl_entries": [],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": []
+        }
+      }
+    },
+    "O2C-E-CANCEL-SO-BLOCKED-048": {
+      "captured": true,
+      "summary": {
+        "kind": "error",
+        "raised": true,
+        "error_type": "LinkExistsError",
+        "error_class": "frappe.exceptions.LinkExistsError",
+        "message": "Cannot delete or cancel because Sales Order <a href=\"http://oracle.localhost/desk/sales-order/SAL-ORD-2026-00001\">SAL-ORD-2026-00001</a> is linked with Delivery"
+      },
+      "full": {
+        "observed_error": {
+          "raised": true,
+          "type": "LinkExistsError",
+          "frappe_class": "frappe.exceptions.LinkExistsError",
+          "msg": "Cannot delete or cancel because Sales Order <a href=\"http://oracle.localhost/desk/sales-order/SAL-ORD-2026-00001\">SAL-ORD-2026-00001</a> is linked with Delivery Note <a href=\"http://oracle.localhost/desk/delivery-note/MAT-DN-2026-00001\">MAT-DN-2026-00001</a> "
+        }
+      }
+    },
+    "O2C-E-STATUS-RECALC-049": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "so": {
+          "docstatus": 1,
+          "status": "To Deliver",
+          "per_delivered": 50.0,
+          "per_billed": 100.0,
+          "outstanding_amount": null,
+          "grand_total": 1000.0
+        },
+        "steps": {
+          "initial": {
+            "status": "To Deliver and Bill",
+            "per_delivered": null,
+            "per_billed": null
+          },
+          "after_partial_dn": {
+            "status": "To Deliver and Bill",
+            "per_delivered": 50.0
+          },
+          "after_full_si": {
+            "status": "To Deliver",
+            "per_billed": 100.0
+          }
+        }
+      },
+      "full": {
+        "steps": {
+          "initial": {
+            "status": "To Deliver and Bill",
+            "per_delivered": null,
+            "per_billed": null
+          },
+          "after_partial_dn": {
+            "status": "To Deliver and Bill",
+            "per_delivered": 50.0
+          },
+          "after_full_si": {
+            "status": "To Deliver",
+            "per_billed": 100.0
+          }
+        },
+        "so": {
+          "doctype": "Sales Order",
+          "docstatus": 1,
+          "status": "To Deliver",
+          "per_delivered": 50.0,
+          "per_billed": 100.0,
+          "outstanding_amount": null,
+          "grand_total": 1000.0,
+          "net_total": 1000.0,
+          "rounded_total": 1000.0,
+          "gl_entries": [],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": []
+        }
+      }
+    },
+    "O2C-E-OUTSTANDING-CHANGES-050": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "outstanding_sequence": [
+          500.0,
+          300.0,
+          0.0
+        ],
+        "final_status": "Paid"
+      },
+      "full": {
+        "outstanding_sequence": [
+          500.0,
+          300.0,
+          0.0
+        ],
+        "final_status": "Paid"
+      }
+    },
+    "O2C-F-AR-BEFORE-INVOICE-051": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "report": {
+          "row_count": 0,
+          "rows": []
+        }
+      },
+      "full": {
+        "report": {
+          "row_count": 0,
+          "rows": []
+        }
+      }
+    },
+    "O2C-F-AR-AFTER-INVOICE-052": {
+      "captured": true,
+      "summary": {
+        "kind": "state"
+      },
+      "full": {
+        "report": {
+          "row_count": 2,
+          "rows": [
+            {
+              "account_currency": "USD",
+              "age": 0,
+              "cost_center": null,
+              "credit_note": 0.0,
+              "credit_note_in_account_currency": 0.0,
+              "currency": "USD",
+              "customer_group": "Commercial",
+              "customer_name": "_OM-CUST",
+              "customer_primary_contact": null,
+              "due_date": "2026-07-24",
+              "invoice_grand_total": 500.0,
+              "invoiced": 500.0,
+              "invoiced_in_account_currency": 500.0,
+              "outstanding": 500.0,
+              "outstanding_in_account_currency": 500.0,
+              "paid": 0.0,
+              "paid_in_account_currency": 0.0,
+              "party": "_OM-CUST",
+              "party_account": "Debtors - _OM",
+              "party_type": "Customer",
+              "po_no": "",
+              "posting_date": "2026-07-24",
+              "project": null,
+              "range0": 0.0,
+              "range1": 500.0,
+              "range2": 0.0,
+              "range3": 0.0,
+              "range4": 0.0,
+              "range5": 0.0,
+              "remarks": null,
+              "territory": "Rest Of The World",
+              "total_due": 500.0,
+              "voucher_no": "ACC-SINV-2026-00001",
+              "voucher_type": "Sales Invoice"
+            },
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              500.0,
+              "",
+              "",
+              500.0,
+              "",
+              "",
+              500.0,
+              "",
+              "",
+              "",
+              "",
+              "USD",
+              "",
+              "",
+              ""
+            ]
+          ]
+        },
+        "si": 500.0
+      }
+    },
+    "O2C-F-AR-AFTER-PARTIAL-PAYMENT-053": {
+      "captured": true,
+      "summary": {
+        "kind": "state"
+      },
+      "full": {
+        "report": {
+          "row_count": 2,
+          "rows": [
+            {
+              "account_currency": "USD",
+              "age": 0,
+              "cost_center": null,
+              "credit_note": 0.0,
+              "credit_note_in_account_currency": 0.0,
+              "currency": "USD",
+              "customer_group": "Commercial",
+              "customer_name": "_OM-CUST",
+              "customer_primary_contact": null,
+              "due_date": "2026-07-24",
+              "invoice_grand_total": 500.0,
+              "invoiced": 500.0,
+              "invoiced_in_account_currency": 500.0,
+              "outstanding": 300.0,
+              "outstanding_in_account_currency": 300.0,
+              "paid": 200.0,
+              "paid_in_account_currency": 200.0,
+              "party": "_OM-CUST",
+              "party_account": "Debtors - _OM",
+              "party_type": "Customer",
+              "po_no": "",
+              "posting_date": "2026-07-24",
+              "project": null,
+              "range0": 0.0,
+              "range1": 300.0,
+              "range2": 0.0,
+              "range3": 0.0,
+              "range4": 0.0,
+              "range5": 0.0,
+              "remarks": null,
+              "territory": "Rest Of The World",
+              "total_due": 300.0,
+              "voucher_no": "ACC-SINV-2026-00001",
+              "voucher_type": "Sales Invoice"
+            },
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              500.0,
+              200.0,
+              "",
+              300.0,
+              "",
+              "",
+              300.0,
+              "",
+              "",
+              "",
+              "",
+              "USD",
+              "",
+              "",
+              ""
+            ]
+          ]
+        }
+      }
+    },
+    "O2C-F-AR-AFTER-FULL-PAYMENT-054": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "report": {
+          "row_count": 0,
+          "rows": []
+        }
+      },
+      "full": {
+        "report": {
+          "row_count": 0,
+          "rows": []
+        }
+      }
+    },
+    "O2C-F-AR-AFTER-PAYMENT-CANCEL-055": {
+      "captured": true,
+      "summary": {
+        "kind": "state"
+      },
+      "full": {
+        "report": {
+          "row_count": 2,
+          "rows": [
+            {
+              "account_currency": "USD",
+              "age": 0,
+              "cost_center": null,
+              "credit_note": 0.0,
+              "credit_note_in_account_currency": 0.0,
+              "currency": "USD",
+              "customer_group": "Commercial",
+              "customer_name": "_OM-CUST",
+              "customer_primary_contact": null,
+              "due_date": "2026-07-24",
+              "invoice_grand_total": 500.0,
+              "invoiced": 500.0,
+              "invoiced_in_account_currency": 500.0,
+              "outstanding": 500.0,
+              "outstanding_in_account_currency": 500.0,
+              "paid": 0.0,
+              "paid_in_account_currency": 0.0,
+              "party": "_OM-CUST",
+              "party_account": "Debtors - _OM",
+              "party_type": "Customer",
+              "po_no": "",
+              "posting_date": "2026-07-24",
+              "project": null,
+              "range0": 0.0,
+              "range1": 500.0,
+              "range2": 0.0,
+              "range3": 0.0,
+              "range4": 0.0,
+              "range5": 0.0,
+              "remarks": null,
+              "territory": "Rest Of The World",
+              "total_due": 500.0,
+              "voucher_no": "ACC-SINV-2026-00001",
+              "voucher_type": "Sales Invoice"
+            },
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              500.0,
+              "",
+              "",
+              500.0,
+              "",
+              "",
+              500.0,
+              "",
+              "",
+              "",
+              "",
+              "USD",
+              "",
+              "",
+              ""
+            ]
+          ]
+        }
+      }
+    },
+    "O2C-F-STOCK-BEFORE-DN-056": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "bin_qty": 100000.0,
+        "report_rows": [
+          {
+            "item_code": "_OM-ITEM2",
+            "warehouse": "Stores - _OM",
+            "bal_qty": 100000.0,
+            "bal_val": 10000000.0,
+            "in_qty": 0.0,
+            "out_qty": 0.0,
+            "opening_qty": 100000.0
+          }
+        ]
+      },
+      "full": {
+        "bin_qty": 100000.0,
+        "report_rows": [
+          {
+            "item_code": "_OM-ITEM2",
+            "warehouse": "Stores - _OM",
+            "bal_qty": 100000.0,
+            "bal_val": 10000000.0,
+            "in_qty": 0.0,
+            "out_qty": 0.0,
+            "opening_qty": 100000.0
+          }
+        ]
+      }
+    },
+    "O2C-F-STOCK-AFTER-DN-057": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "bin_qty": 99993.0,
+        "report_rows": [
+          {
+            "item_code": "_OM-ITEM2",
+            "warehouse": "Stores - _OM",
+            "bal_qty": 99993.0,
+            "bal_val": 9999300.0,
+            "in_qty": 0.0,
+            "out_qty": 0.0,
+            "opening_qty": 99993.0
+          }
+        ]
+      },
+      "full": {
+        "bin_qty": 99993.0,
+        "report_rows": [
+          {
+            "item_code": "_OM-ITEM2",
+            "warehouse": "Stores - _OM",
+            "bal_qty": 99993.0,
+            "bal_val": 9999300.0,
+            "in_qty": 0.0,
+            "out_qty": 0.0,
+            "opening_qty": 99993.0
+          }
+        ]
+      }
+    },
+    "O2C-F-STOCK-AFTER-DN-CANCEL-058": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "bin_qty": 100000.0,
+        "report_rows": [
+          {
+            "item_code": "_OM-ITEM2",
+            "warehouse": "Stores - _OM",
+            "bal_qty": 100000.0,
+            "bal_val": 10000000.0,
+            "in_qty": 0.0,
+            "out_qty": 0.0,
+            "opening_qty": 100000.0
+          }
+        ]
+      },
+      "full": {
+        "bin_qty": 100000.0,
+        "report_rows": [
+          {
+            "item_code": "_OM-ITEM2",
+            "warehouse": "Stores - _OM",
+            "bal_qty": 100000.0,
+            "bal_val": 10000000.0,
+            "in_qty": 0.0,
+            "out_qty": 0.0,
+            "opening_qty": 100000.0
+          }
+        ]
+      }
+    },
+    "O2C-G-ZERO-059": {
+      "captured": true,
+      "summary": {
+        "kind": "error",
+        "raised": true,
+        "error_type": "InvalidQtyError",
+        "error_class": "erpnext.controllers.accounts_controller.InvalidQtyError",
+        "message": "Row #1: Quantity for Item <strong>_OM-ITEM</strong> cannot be zero."
+      },
+      "full": {
+        "observed_error": {
+          "raised": true,
+          "type": "InvalidQtyError",
+          "frappe_class": "erpnext.controllers.accounts_controller.InvalidQtyError",
+          "msg": "Row #1: Quantity for Item <strong>_OM-ITEM</strong> cannot be zero."
+        }
+      }
+    },
+    "O2C-G-NEGATIVE-INPUT-060": {
+      "captured": true,
+      "summary": {
+        "kind": "error",
+        "raised": true,
+        "error_type": "ValidationError",
+        "error_class": "frappe.exceptions.ValidationError",
+        "message": "Incorrect value:Grand Total must be >= 0.0"
+      },
+      "full": {
+        "observed_error": {
+          "raised": true,
+          "type": "ValidationError",
+          "frappe_class": "frappe.exceptions.ValidationError",
+          "msg": "Incorrect value:Grand Total must be >= 0.0"
+        }
+      }
+    },
+    "O2C-G-FRACTIONAL-QTY-061": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "uom": "_OM-FracUnit",
+        "qty": 2.5,
+        "amount": 250.0,
+        "net_total": 250.0,
+        "grand_total": 250.0,
+        "note": "fractional-capable UOM (_OM-FracUnit, whole-number guard off)"
+      },
+      "full": {
+        "uom": "_OM-FracUnit",
+        "qty": 2.5,
+        "amount": 250.0,
+        "net_total": 250.0,
+        "grand_total": 250.0,
+        "note": "fractional-capable UOM (_OM-FracUnit, whole-number guard off)"
+      }
+    },
+    "O2C-G-FRACTIONAL-RATE-062": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "rate": 10.33,
+        "amount": 30.99,
+        "net_total": 30.99,
+        "grand_total": 30.99
+      },
+      "full": {
+        "rate": 10.33,
+        "amount": 30.99,
+        "net_total": 30.99,
+        "grand_total": 30.99
+      }
+    },
+    "O2C-G-ROUNDING-BOUNDARY-063": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "item_amount": 30.03,
+        "net_total": 30.03,
+        "grand_total": 30.03,
+        "rounded_total": 30.03,
+        "rounding_adjustment": 0.0
+      },
+      "full": {
+        "item_amount": 30.03,
+        "net_total": 30.03,
+        "grand_total": 30.03,
+        "rounded_total": 30.03,
+        "rounding_adjustment": 0.0
+      }
+    },
+    "O2C-G-LARGE-AMOUNT-064": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "amount": 999999990.0,
+        "net_total": 999999990.0,
+        "grand_total": 999999990.0
+      },
+      "full": {
+        "amount": 999999990.0,
+        "net_total": 999999990.0,
+        "grand_total": 999999990.0
+      }
+    },
+    "O2C-G-DUPLICATE-ITEM-ROWS-065": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "rows": 2,
+        "qtys": [
+          2.0,
+          3.0
+        ],
+        "net_total": 500.0,
+        "grand_total": 500.0
+      },
+      "full": {
+        "rows": 2,
+        "qtys": [
+          2.0,
+          3.0
+        ],
+        "net_total": 500.0,
+        "grand_total": 500.0
+      }
+    },
+    "O2C-G-SAME-TIMESTAMP-066": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "dn1_sle": [
+          {
+            "actual_qty": -1.0,
+            "item_code": "_OM-ITEM2",
+            "qty_after_transaction": 99999.0,
+            "stock_value_difference": -100.0,
+            "valuation_rate": 100.0,
+            "warehouse": "Stores - _OM"
+          }
+        ],
+        "dn2_sle": [
+          {
+            "actual_qty": -1.0,
+            "item_code": "_OM-ITEM2",
+            "qty_after_transaction": 99998.0,
+            "stock_value_difference": -100.0,
+            "valuation_rate": 100.0,
+            "warehouse": "Stores - _OM"
+          }
+        ],
+        "dn1_time": "18:35:04.777311",
+        "dn2_time": "18:35:05.076245"
+      },
+      "full": {
+        "dn1_sle": [
+          {
+            "actual_qty": -1.0,
+            "item_code": "_OM-ITEM2",
+            "qty_after_transaction": 99999.0,
+            "stock_value_difference": -100.0,
+            "valuation_rate": 100.0,
+            "warehouse": "Stores - _OM"
+          }
+        ],
+        "dn2_sle": [
+          {
+            "actual_qty": -1.0,
+            "item_code": "_OM-ITEM2",
+            "qty_after_transaction": 99998.0,
+            "stock_value_difference": -100.0,
+            "valuation_rate": 100.0,
+            "warehouse": "Stores - _OM"
+          }
+        ],
+        "dn1_time": "18:35:04.777311",
+        "dn2_time": "18:35:05.076245"
+      }
+    },
+    "O2C-G-TIMEZONE-BOUNDARY-067": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "posting_date": "2026-07-24",
+        "posting_time": "18:35:05.610061",
+        "sle": [
+          {
+            "actual_qty": -2.0,
+            "item_code": "_OM-ITEM2",
+            "qty_after_transaction": 99998.0,
+            "stock_value_difference": -200.0,
+            "valuation_rate": 100.0,
+            "warehouse": "Stores - _OM"
+          }
+        ]
+      },
+      "full": {
+        "posting_date": "2026-07-24",
+        "posting_time": "18:35:05.610061",
+        "sle": [
+          {
+            "actual_qty": -2.0,
+            "item_code": "_OM-ITEM2",
+            "qty_after_transaction": 99998.0,
+            "stock_value_difference": -200.0,
+            "valuation_rate": 100.0,
+            "warehouse": "Stores - _OM"
+          }
+        ]
+      }
+    },
+    "O2C-H-TWO-UPDATES-068": {
+      "captured": true,
+      "summary": {
+        "kind": "error",
+        "raised": true,
+        "error_type": "TimestampMismatchError",
+        "error_class": "frappe.exceptions.TimestampMismatchError",
+        "message": "Error: SAL-ORD-2026-00001 (Sales Order) has been modified after you have opened it (2026-07-24 18:35:05.914320, 2026-07-24 18:35:05.990565). Please refresh to g",
+        "note": "second save on a stale in-memory copy (optimistic-lock probe)"
+      },
+      "full": {
+        "observed_error": {
+          "raised": true,
+          "type": "TimestampMismatchError",
+          "frappe_class": "frappe.exceptions.TimestampMismatchError",
+          "msg": "Error: SAL-ORD-2026-00001 (Sales Order) has been modified after you have opened it (2026-07-24 18:35:05.914320, 2026-07-24 18:35:05.990565). Please refresh to get the latest document."
+        },
+        "note": "second save on a stale in-memory copy (optimistic-lock probe)"
+      }
+    },
+    "O2C-H-TWO-DELIVERIES-069": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "so_after_both": {
+          "doctype": "Sales Order",
+          "docstatus": 1,
+          "status": "To Bill",
+          "per_delivered": 100.0,
+          "per_billed": 0.0,
+          "outstanding_amount": null,
+          "grand_total": 1000.0,
+          "net_total": 1000.0,
+          "rounded_total": 1000.0,
+          "gl_entries": [],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": []
+        },
+        "note": "sequential: ERPNext allows multiple DNs until ordered qty is met"
+      },
+      "full": {
+        "dn1": {
+          "doctype": "Delivery Note",
+          "docstatus": 1,
+          "status": "To Bill",
+          "per_delivered": null,
+          "per_billed": 0.0,
+          "outstanding_amount": null,
+          "grand_total": 600.0,
+          "net_total": 600.0,
+          "rounded_total": 600.0,
+          "gl_entries": [
+            {
+              "account": "Cost of Goods Sold - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 0.0,
+              "debit": 600.0,
+              "party": null,
+              "party_type": null
+            },
+            {
+              "account": "Stock In Hand - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 600.0,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            }
+          ],
+          "stock_ledger_entries": [
+            {
+              "actual_qty": -6.0,
+              "item_code": "_OM-ITEM",
+              "qty_after_transaction": 99994.0,
+              "stock_value_difference": -600.0,
+              "valuation_rate": 100.0,
+              "warehouse": "Stores - _OM"
+            }
+          ],
+          "payment_ledger_entries": []
+        },
+        "dn2": {
+          "doctype": "Delivery Note",
+          "docstatus": 1,
+          "status": "To Bill",
+          "per_delivered": null,
+          "per_billed": 0.0,
+          "outstanding_amount": null,
+          "grand_total": 400.0,
+          "net_total": 400.0,
+          "rounded_total": 400.0,
+          "gl_entries": [
+            {
+              "account": "Cost of Goods Sold - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 0.0,
+              "debit": 400.0,
+              "party": null,
+              "party_type": null
+            },
+            {
+              "account": "Stock In Hand - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 400.0,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            }
+          ],
+          "stock_ledger_entries": [
+            {
+              "actual_qty": -4.0,
+              "item_code": "_OM-ITEM",
+              "qty_after_transaction": 99990.0,
+              "stock_value_difference": -400.0,
+              "valuation_rate": 100.0,
+              "warehouse": "Stores - _OM"
+            }
+          ],
+          "payment_ledger_entries": []
+        },
+        "so_after_both": {
+          "doctype": "Sales Order",
+          "docstatus": 1,
+          "status": "To Bill",
+          "per_delivered": 100.0,
+          "per_billed": 0.0,
+          "outstanding_amount": null,
+          "grand_total": 1000.0,
+          "net_total": 1000.0,
+          "rounded_total": 1000.0,
+          "gl_entries": [],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": []
+        },
+        "note": "sequential: ERPNext allows multiple DNs until ordered qty is met"
+      }
+    },
+    "O2C-H-TWO-PAYMENTS-070": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "si_outstanding_final": 0.0,
+        "si_status": "Paid"
+      },
+      "full": {
+        "pe1": {
+          "doctype": "Payment Entry",
+          "docstatus": 1,
+          "status": "Submitted",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": null,
+          "net_total": null,
+          "rounded_total": null,
+          "gl_entries": [
+            {
+              "account": "Cash - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 0.0,
+              "debit": 200.0,
+              "party": null,
+              "party_type": null
+            },
+            {
+              "account": "Debtors - _OM",
+              "against_voucher": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "credit": 200.0,
+              "debit": 0.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            }
+          ],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": [
+            {
+              "account": "Debtors - _OM",
+              "account_type": "Receivable",
+              "against_voucher_no": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "amount": -200.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            }
+          ]
+        },
+        "pe2": {
+          "doctype": "Payment Entry",
+          "docstatus": 1,
+          "status": "Submitted",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": null,
+          "net_total": null,
+          "rounded_total": null,
+          "gl_entries": [
+            {
+              "account": "Cash - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 0.0,
+              "debit": 300.0,
+              "party": null,
+              "party_type": null
+            },
+            {
+              "account": "Debtors - _OM",
+              "against_voucher": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "credit": 300.0,
+              "debit": 0.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            }
+          ],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": [
+            {
+              "account": "Debtors - _OM",
+              "account_type": "Receivable",
+              "against_voucher_no": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "amount": -300.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            }
+          ]
+        },
+        "si_outstanding_final": 0.0,
+        "si_status": "Paid"
+      }
+    },
+    "O2C-H-TWO-STOCK-MUTATIONS-071": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "bin_after_dn1": 99998.0,
+        "bin_after_dn2": 99997.0,
+        "delta": 1.0,
+        "note": "sequential stock mutations; Bin decremented per delivery"
+      },
+      "full": {
+        "bin_after_dn1": 99998.0,
+        "bin_after_dn2": 99997.0,
+        "delta": 1.0,
+        "note": "sequential stock mutations; Bin decremented per delivery"
+      }
+    },
+    "O2C-I-MULTI-TAX-ROWS-072": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "si": {
+          "docstatus": 1,
+          "status": "Unpaid",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 575.0,
+          "grand_total": 575.0,
+          "gl": [
+            {
+              "account": "Debtors - _OM",
+              "debit": 575.0,
+              "credit": 0.0
+            },
+            {
+              "account": "Output Tax A - _OM",
+              "debit": 0.0,
+              "credit": 50.0
+            },
+            {
+              "account": "Output Tax B - _OM",
+              "debit": 0.0,
+              "credit": 25.0
+            },
+            {
+              "account": "Sales - _OM",
+              "debit": 0.0,
+              "credit": 500.0
+            }
+          ]
+        },
+        "total_taxes": 75.0,
+        "tax_rows": [
+          {
+            "acct": "Output Tax A - _OM",
+            "rate": 10.0,
+            "amount": 50.0,
+            "total": 550.0
+          },
+          {
+            "acct": "Output Tax B - _OM",
+            "rate": 5.0,
+            "amount": 25.0,
+            "total": 575.0
+          }
+        ]
+      },
+      "full": {
+        "si": {
+          "doctype": "Sales Invoice",
+          "docstatus": 1,
+          "status": "Unpaid",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 575.0,
+          "grand_total": 575.0,
+          "net_total": 500.0,
+          "rounded_total": 575.0,
+          "gl_entries": [
+            {
+              "account": "Debtors - _OM",
+              "against_voucher": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "credit": 0.0,
+              "debit": 575.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            },
+            {
+              "account": "Output Tax A - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 50.0,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            },
+            {
+              "account": "Output Tax B - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 25.0,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            },
+            {
+              "account": "Sales - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 500.0,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            }
+          ],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": [
+            {
+              "account": "Debtors - _OM",
+              "account_type": "Receivable",
+              "against_voucher_no": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "amount": 575.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            }
+          ]
+        },
+        "total_taxes": 75.0,
+        "tax_rows": [
+          {
+            "acct": "Output Tax A - _OM",
+            "rate": 10.0,
+            "amount": 50.0,
+            "total": 550.0
+          },
+          {
+            "acct": "Output Tax B - _OM",
+            "rate": 5.0,
+            "amount": 25.0,
+            "total": 575.0
+          }
+        ]
+      }
+    },
+    "O2C-I-INCLUSIVE-TAX-073": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "si": {
+          "docstatus": 1,
+          "status": "Unpaid",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 500.0,
+          "grand_total": 500.0,
+          "gl": [
+            {
+              "account": "Debtors - _OM",
+              "debit": 500.0,
+              "credit": 0.0
+            },
+            {
+              "account": "Output Tax A - _OM",
+              "debit": 0.0,
+              "credit": 45.46
+            },
+            {
+              "account": "Round Off - _OM",
+              "debit": 0.01,
+              "credit": 0.0
+            },
+            {
+              "account": "Sales - _OM",
+              "debit": 0.0,
+              "credit": 454.55
+            }
+          ]
+        },
+        "net_total": 454.55,
+        "grand_total": 500.0,
+        "total_taxes": 45.46,
+        "note": "tax included in the 100 rate -> net back-calculated"
+      },
+      "full": {
+        "si": {
+          "doctype": "Sales Invoice",
+          "docstatus": 1,
+          "status": "Unpaid",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 500.0,
+          "grand_total": 500.0,
+          "net_total": 454.55,
+          "rounded_total": 500.0,
+          "gl_entries": [
+            {
+              "account": "Debtors - _OM",
+              "against_voucher": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "credit": 0.0,
+              "debit": 500.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            },
+            {
+              "account": "Output Tax A - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 45.46,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            },
+            {
+              "account": "Round Off - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 0.0,
+              "debit": 0.01,
+              "party": null,
+              "party_type": null
+            },
+            {
+              "account": "Sales - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 454.55,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            }
+          ],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": [
+            {
+              "account": "Debtors - _OM",
+              "account_type": "Receivable",
+              "against_voucher_no": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "amount": 500.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            }
+          ]
+        },
+        "net_total": 454.55,
+        "grand_total": 500.0,
+        "total_taxes": 45.46,
+        "note": "tax included in the 100 rate -> net back-calculated"
+      }
+    },
+    "O2C-I-TAX-ON-PREVIOUS-ROW-TOTAL-074": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "si": {
+          "docstatus": 1,
+          "status": "Unpaid",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 577.5,
+          "grand_total": 577.5,
+          "gl": [
+            {
+              "account": "Debtors - _OM",
+              "debit": 577.5,
+              "credit": 0.0
+            },
+            {
+              "account": "Output Tax A - _OM",
+              "debit": 0.0,
+              "credit": 50.0
+            },
+            {
+              "account": "Output Tax B - _OM",
+              "debit": 0.0,
+              "credit": 27.5
+            },
+            {
+              "account": "Sales - _OM",
+              "debit": 0.0,
+              "credit": 500.0
+            }
+          ]
+        },
+        "tax_rows": [
+          {
+            "ct": "On Net Total",
+            "rate": 10.0,
+            "amount": 50.0,
+            "total": 550.0
+          },
+          {
+            "ct": "On Previous Row Total",
+            "rate": 5.0,
+            "amount": 27.5,
+            "total": 577.5
+          }
+        ]
+      },
+      "full": {
+        "si": {
+          "doctype": "Sales Invoice",
+          "docstatus": 1,
+          "status": "Unpaid",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 577.5,
+          "grand_total": 577.5,
+          "net_total": 500.0,
+          "rounded_total": 577.5,
+          "gl_entries": [
+            {
+              "account": "Debtors - _OM",
+              "against_voucher": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "credit": 0.0,
+              "debit": 577.5,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            },
+            {
+              "account": "Output Tax A - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 50.0,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            },
+            {
+              "account": "Output Tax B - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 27.5,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            },
+            {
+              "account": "Sales - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 500.0,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            }
+          ],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": [
+            {
+              "account": "Debtors - _OM",
+              "account_type": "Receivable",
+              "against_voucher_no": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "amount": 577.5,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            }
+          ]
+        },
+        "tax_rows": [
+          {
+            "ct": "On Net Total",
+            "rate": 10.0,
+            "amount": 50.0,
+            "total": 550.0
+          },
+          {
+            "ct": "On Previous Row Total",
+            "rate": 5.0,
+            "amount": 27.5,
+            "total": 577.5
+          }
+        ]
+      }
+    },
+    "O2C-I-ACTUAL-TAX-075": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "si": {
+          "docstatus": 1,
+          "status": "Unpaid",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 537.5,
+          "grand_total": 537.5,
+          "gl": [
+            {
+              "account": "Debtors - _OM",
+              "debit": 537.5,
+              "credit": 0.0
+            },
+            {
+              "account": "Output Tax A - _OM",
+              "debit": 0.0,
+              "credit": 37.5
+            },
+            {
+              "account": "Sales - _OM",
+              "debit": 0.0,
+              "credit": 500.0
+            }
+          ]
+        },
+        "total_taxes": 37.5,
+        "grand_total": 537.5
+      },
+      "full": {
+        "si": {
+          "doctype": "Sales Invoice",
+          "docstatus": 1,
+          "status": "Unpaid",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 537.5,
+          "grand_total": 537.5,
+          "net_total": 500.0,
+          "rounded_total": 537.5,
+          "gl_entries": [
+            {
+              "account": "Debtors - _OM",
+              "against_voucher": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "credit": 0.0,
+              "debit": 537.5,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            },
+            {
+              "account": "Output Tax A - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 37.5,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            },
+            {
+              "account": "Sales - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 500.0,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            }
+          ],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": [
+            {
+              "account": "Debtors - _OM",
+              "account_type": "Receivable",
+              "against_voucher_no": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "amount": 537.5,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            }
+          ]
+        },
+        "total_taxes": 37.5,
+        "grand_total": 537.5
+      }
+    },
+    "O2C-I-ON-ITEM-QUANTITY-076": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "si": {
+          "docstatus": 1,
+          "status": "Unpaid",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 515.0,
+          "grand_total": 515.0,
+          "gl": [
+            {
+              "account": "Debtors - _OM",
+              "debit": 515.0,
+              "credit": 0.0
+            },
+            {
+              "account": "Output Tax A - _OM",
+              "debit": 0.0,
+              "credit": 15.0
+            },
+            {
+              "account": "Sales - _OM",
+              "debit": 0.0,
+              "credit": 500.0
+            }
+          ]
+        },
+        "total_taxes": 15.0,
+        "note": "per-unit tax 3 x 5 qty = 15 expected"
+      },
+      "full": {
+        "si": {
+          "doctype": "Sales Invoice",
+          "docstatus": 1,
+          "status": "Unpaid",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 515.0,
+          "grand_total": 515.0,
+          "net_total": 500.0,
+          "rounded_total": 515.0,
+          "gl_entries": [
+            {
+              "account": "Debtors - _OM",
+              "against_voucher": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "credit": 0.0,
+              "debit": 515.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            },
+            {
+              "account": "Output Tax A - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 15.0,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            },
+            {
+              "account": "Sales - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 500.0,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            }
+          ],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": [
+            {
+              "account": "Debtors - _OM",
+              "account_type": "Receivable",
+              "against_voucher_no": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "amount": 515.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            }
+          ]
+        },
+        "total_taxes": 15.0,
+        "note": "per-unit tax 3 x 5 qty = 15 expected"
+      }
+    },
+    "O2C-I-ADDITIONAL-DISCOUNT-ON-GRAND-077": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "si": {
+          "docstatus": 1,
+          "status": "Unpaid",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 495.0,
+          "grand_total": 495.0,
+          "gl": [
+            {
+              "account": "Debtors - _OM",
+              "debit": 495.0,
+              "credit": 0.0
+            },
+            {
+              "account": "Output Tax A - _OM",
+              "debit": 0.0,
+              "credit": 45.0
+            },
+            {
+              "account": "Sales - _OM",
+              "debit": 0.0,
+              "credit": 450.0
+            }
+          ]
+        },
+        "net_total": 450.0,
+        "grand_total": 495.0,
+        "discount_amount": 55.0,
+        "apply_on": "Grand Total"
+      },
+      "full": {
+        "si": {
+          "doctype": "Sales Invoice",
+          "docstatus": 1,
+          "status": "Unpaid",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 495.0,
+          "grand_total": 495.0,
+          "net_total": 450.0,
+          "rounded_total": 495.0,
+          "gl_entries": [
+            {
+              "account": "Debtors - _OM",
+              "against_voucher": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "credit": 0.0,
+              "debit": 495.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            },
+            {
+              "account": "Output Tax A - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 45.0,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            },
+            {
+              "account": "Sales - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 450.0,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            }
+          ],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": [
+            {
+              "account": "Debtors - _OM",
+              "account_type": "Receivable",
+              "against_voucher_no": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "amount": 495.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            }
+          ]
+        },
+        "net_total": 450.0,
+        "grand_total": 495.0,
+        "discount_amount": 55.0,
+        "apply_on": "Grand Total"
+      }
+    },
+    "O2C-I-ADDITIONAL-DISCOUNT-ON-NET-078": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "si": {
+          "docstatus": 1,
+          "status": "Unpaid",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 495.0,
+          "grand_total": 495.0,
+          "gl": [
+            {
+              "account": "Debtors - _OM",
+              "debit": 495.0,
+              "credit": 0.0
+            },
+            {
+              "account": "Output Tax A - _OM",
+              "debit": 0.0,
+              "credit": 45.0
+            },
+            {
+              "account": "Sales - _OM",
+              "debit": 0.0,
+              "credit": 450.0
+            }
+          ]
+        },
+        "net_total": 450.0,
+        "grand_total": 495.0,
+        "discount_amount": 50.0,
+        "apply_on": "Net Total"
+      },
+      "full": {
+        "si": {
+          "doctype": "Sales Invoice",
+          "docstatus": 1,
+          "status": "Unpaid",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 495.0,
+          "grand_total": 495.0,
+          "net_total": 450.0,
+          "rounded_total": 495.0,
+          "gl_entries": [
+            {
+              "account": "Debtors - _OM",
+              "against_voucher": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "credit": 0.0,
+              "debit": 495.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            },
+            {
+              "account": "Output Tax A - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 45.0,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            },
+            {
+              "account": "Sales - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 450.0,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            }
+          ],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": [
+            {
+              "account": "Debtors - _OM",
+              "account_type": "Receivable",
+              "against_voucher_no": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "amount": 495.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            }
+          ]
+        },
+        "net_total": 450.0,
+        "grand_total": 495.0,
+        "discount_amount": 50.0,
+        "apply_on": "Net Total"
+      }
+    },
+    "O2C-I-DEDUCT-TAX-079": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "si": {
+          "docstatus": 1,
+          "status": "Unpaid",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 550.0,
+          "grand_total": 550.0,
+          "gl": [
+            {
+              "account": "Debtors - _OM",
+              "debit": 550.0,
+              "credit": 0.0
+            },
+            {
+              "account": "Output Tax A - _OM",
+              "debit": 0.0,
+              "credit": 50.0
+            },
+            {
+              "account": "Sales - _OM",
+              "debit": 0.0,
+              "credit": 500.0
+            }
+          ]
+        },
+        "total_taxes": 50.0,
+        "grand_total": 550.0,
+        "note": "deduct-type tax (withholding-like) reduces grand total"
+      },
+      "full": {
+        "si": {
+          "doctype": "Sales Invoice",
+          "docstatus": 1,
+          "status": "Unpaid",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 550.0,
+          "grand_total": 550.0,
+          "net_total": 500.0,
+          "rounded_total": 550.0,
+          "gl_entries": [
+            {
+              "account": "Debtors - _OM",
+              "against_voucher": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "credit": 0.0,
+              "debit": 550.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            },
+            {
+              "account": "Output Tax A - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 50.0,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            },
+            {
+              "account": "Sales - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 500.0,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            }
+          ],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": [
+            {
+              "account": "Debtors - _OM",
+              "account_type": "Receivable",
+              "against_voucher_no": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "amount": 550.0,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            }
+          ]
+        },
+        "total_taxes": 50.0,
+        "grand_total": 550.0,
+        "note": "deduct-type tax (withholding-like) reduces grand total"
+      }
+    },
+    "O2C-I-TAX-ROUNDING-080": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "si": {
+          "docstatus": 1,
+          "status": "Unpaid",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 31.91,
+          "grand_total": 31.91,
+          "gl": [
+            {
+              "account": "Debtors - _OM",
+              "debit": 31.91,
+              "credit": 0.0
+            },
+            {
+              "account": "Output Tax A - _OM",
+              "debit": 0.0,
+              "credit": 1.88
+            },
+            {
+              "account": "Sales - _OM",
+              "debit": 0.0,
+              "credit": 30.03
+            }
+          ]
+        },
+        "net_total": 30.03,
+        "grand_total": 31.91,
+        "rounded_total": 31.91,
+        "rounding_adjustment": 0.0,
+        "total_taxes": 1.88
+      },
+      "full": {
+        "si": {
+          "doctype": "Sales Invoice",
+          "docstatus": 1,
+          "status": "Unpaid",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 31.91,
+          "grand_total": 31.91,
+          "net_total": 30.03,
+          "rounded_total": 31.91,
+          "gl_entries": [
+            {
+              "account": "Debtors - _OM",
+              "against_voucher": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "credit": 0.0,
+              "debit": 31.91,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            },
+            {
+              "account": "Output Tax A - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 1.88,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            },
+            {
+              "account": "Sales - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 30.03,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            }
+          ],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": [
+            {
+              "account": "Debtors - _OM",
+              "account_type": "Receivable",
+              "against_voucher_no": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "amount": 31.91,
+              "party": "_OM-CUST",
+              "party_type": "Customer"
+            }
+          ]
+        },
+        "net_total": 30.03,
+        "grand_total": 31.91,
+        "rounded_total": 31.91,
+        "rounding_adjustment": 0.0,
+        "total_taxes": 1.88
+      }
+    },
+    "O2C-J-FOREIGN-SO-081": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "so": {
+          "docstatus": 1,
+          "status": "To Deliver and Bill",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": 500.0
+        },
+        "currency": "EUR",
+        "conversion_rate": 1.1,
+        "grand_total": 500.0,
+        "base_grand_total": 550.0
+      },
+      "full": {
+        "so": {
+          "doctype": "Sales Order",
+          "docstatus": 1,
+          "status": "To Deliver and Bill",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": 500.0,
+          "net_total": 500.0,
+          "rounded_total": 500.0,
+          "gl_entries": [],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": []
+        },
+        "currency": "EUR",
+        "conversion_rate": 1.1,
+        "grand_total": 500.0,
+        "base_grand_total": 550.0
+      }
+    },
+    "O2C-J-FOREIGN-SI-GL-082": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "si": {
+          "docstatus": 1,
+          "status": "Unpaid",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 500.0,
+          "grand_total": 500.0,
+          "gl": [
+            {
+              "account": "Debtors EUR - _OM",
+              "debit": 550.0,
+              "credit": 0.0
+            },
+            {
+              "account": "Sales - _OM",
+              "debit": 0.0,
+              "credit": 550.0
+            }
+          ]
+        },
+        "currency": "EUR",
+        "conversion_rate": 1.1,
+        "grand_total": 500.0,
+        "base_grand_total": 550.0,
+        "note": "GL posts base (USD) amounts; grand_total is EUR"
+      },
+      "full": {
+        "si": {
+          "doctype": "Sales Invoice",
+          "docstatus": 1,
+          "status": "Unpaid",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": 500.0,
+          "grand_total": 500.0,
+          "net_total": 500.0,
+          "rounded_total": 500.0,
+          "gl_entries": [
+            {
+              "account": "Debtors EUR - _OM",
+              "against_voucher": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "credit": 0.0,
+              "debit": 550.0,
+              "party": "_OM-CUST-EUR",
+              "party_type": "Customer"
+            },
+            {
+              "account": "Sales - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 550.0,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            }
+          ],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": [
+            {
+              "account": "Debtors EUR - _OM",
+              "account_type": "Receivable",
+              "against_voucher_no": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "amount": 550.0,
+              "party": "_OM-CUST-EUR",
+              "party_type": "Customer"
+            }
+          ]
+        },
+        "currency": "EUR",
+        "conversion_rate": 1.1,
+        "grand_total": 500.0,
+        "base_grand_total": 550.0,
+        "note": "GL posts base (USD) amounts; grand_total is EUR"
+      }
+    },
+    "O2C-J-OUTSTANDING-TXN-VS-BASE-083": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "currency": "EUR",
+        "outstanding_amount": 500.0,
+        "base_grand_total": 550.0,
+        "grand_total": 500.0
+      },
+      "full": {
+        "currency": "EUR",
+        "outstanding_amount": 500.0,
+        "base_grand_total": 550.0,
+        "grand_total": 500.0
+      }
+    },
+    "O2C-J-PE-SAME-RATE-084": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "pe": {
+          "docstatus": 1,
+          "status": "Submitted",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": null,
+          "gl": [
+            {
+              "account": "Cash - _OM",
+              "debit": 550.0,
+              "credit": 0.0
+            },
+            {
+              "account": "Debtors EUR - _OM",
+              "debit": 0.0,
+              "credit": 550.0
+            }
+          ]
+        },
+        "si_outstanding_after": 0.0,
+        "si_status": "Paid",
+        "note": "payment at the invoice rate -> no exchange gain/loss expected"
+      },
+      "full": {
+        "pe": {
+          "doctype": "Payment Entry",
+          "docstatus": 1,
+          "status": "Submitted",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": null,
+          "net_total": null,
+          "rounded_total": null,
+          "gl_entries": [
+            {
+              "account": "Cash - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 0.0,
+              "debit": 550.0,
+              "party": null,
+              "party_type": null
+            },
+            {
+              "account": "Debtors EUR - _OM",
+              "against_voucher": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "credit": 550.0,
+              "debit": 0.0,
+              "party": "_OM-CUST-EUR",
+              "party_type": "Customer"
+            }
+          ],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": [
+            {
+              "account": "Debtors EUR - _OM",
+              "account_type": "Receivable",
+              "against_voucher_no": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "amount": -550.0,
+              "party": "_OM-CUST-EUR",
+              "party_type": "Customer"
+            }
+          ]
+        },
+        "si_outstanding_after": 0.0,
+        "si_status": "Paid",
+        "note": "payment at the invoice rate -> no exchange gain/loss expected"
+      }
+    },
+    "O2C-J-PE-DIFF-RATE-GAIN-085": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "pe": {
+          "docstatus": 1,
+          "status": "Submitted",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": null,
+          "gl": [
+            {
+              "account": "Cash - _OM",
+              "debit": 550.0,
+              "credit": 0.0
+            },
+            {
+              "account": "Debtors EUR - _OM",
+              "debit": 0.0,
+              "credit": 600.0
+            },
+            {
+              "account": "Exchange Gain/Loss - _OM",
+              "debit": 50.0,
+              "credit": 0.0
+            }
+          ]
+        },
+        "si_outstanding_after": 0.0,
+        "note": "settled at 1.20 vs invoice 1.10 -> exchange gain GL line expected"
+      },
+      "full": {
+        "pe": {
+          "doctype": "Payment Entry",
+          "docstatus": 1,
+          "status": "Submitted",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": null,
+          "net_total": null,
+          "rounded_total": null,
+          "gl_entries": [
+            {
+              "account": "Cash - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 0.0,
+              "debit": 550.0,
+              "party": null,
+              "party_type": null
+            },
+            {
+              "account": "Debtors EUR - _OM",
+              "against_voucher": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "credit": 600.0,
+              "debit": 0.0,
+              "party": "_OM-CUST-EUR",
+              "party_type": "Customer"
+            },
+            {
+              "account": "Exchange Gain/Loss - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 0.0,
+              "debit": 50.0,
+              "party": null,
+              "party_type": null
+            }
+          ],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": [
+            {
+              "account": "Debtors EUR - _OM",
+              "account_type": "Receivable",
+              "against_voucher_no": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "amount": -600.0,
+              "party": "_OM-CUST-EUR",
+              "party_type": "Customer"
+            }
+          ]
+        },
+        "si_outstanding_after": 0.0,
+        "note": "settled at 1.20 vs invoice 1.10 -> exchange gain GL line expected"
+      }
+    },
+    "O2C-J-PE-DIFF-RATE-LOSS-086": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "pe": {
+          "docstatus": 1,
+          "status": "Submitted",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": null,
+          "gl": [
+            {
+              "account": "Cash - _OM",
+              "debit": 550.0,
+              "credit": 0.0
+            },
+            {
+              "account": "Debtors EUR - _OM",
+              "debit": 0.0,
+              "credit": 500.0
+            },
+            {
+              "account": "Exchange Gain/Loss - _OM",
+              "debit": 0.0,
+              "credit": 50.0
+            }
+          ]
+        },
+        "si_outstanding_after": 0.0,
+        "note": "settled at 1.00 vs invoice 1.10 -> exchange loss GL line expected"
+      },
+      "full": {
+        "pe": {
+          "doctype": "Payment Entry",
+          "docstatus": 1,
+          "status": "Submitted",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": null,
+          "net_total": null,
+          "rounded_total": null,
+          "gl_entries": [
+            {
+              "account": "Cash - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 0.0,
+              "debit": 550.0,
+              "party": null,
+              "party_type": null
+            },
+            {
+              "account": "Debtors EUR - _OM",
+              "against_voucher": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "credit": 500.0,
+              "debit": 0.0,
+              "party": "_OM-CUST-EUR",
+              "party_type": "Customer"
+            },
+            {
+              "account": "Exchange Gain/Loss - _OM",
+              "against_voucher": null,
+              "against_voucher_type": null,
+              "credit": 50.0,
+              "debit": 0.0,
+              "party": null,
+              "party_type": null
+            }
+          ],
+          "stock_ledger_entries": [],
+          "payment_ledger_entries": [
+            {
+              "account": "Debtors EUR - _OM",
+              "account_type": "Receivable",
+              "against_voucher_no": "ACC-SINV-2026-00001",
+              "against_voucher_type": "Sales Invoice",
+              "amount": -500.0,
+              "party": "_OM-CUST-EUR",
+              "party_type": "Customer"
+            }
+          ]
+        },
+        "si_outstanding_after": 0.0,
+        "note": "settled at 1.00 vs invoice 1.10 -> exchange loss GL line expected"
+      }
+    },
+    "O2C-K-FIFO-LAYERS-087": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "dn": {
+          "docstatus": 1,
+          "status": "To Bill",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": null
+        },
+        "note": "FIFO consumes 10@100 then 5@120 -> COGS 1600, 5@120 left"
+      },
+      "full": {
+        "dn": {
+          "docstatus": 1,
+          "status": "To Bill",
+          "sle": [
+            {
+              "actual_qty": -15.0,
+              "item_code": "_OM-VFIFO",
+              "qty_after_transaction": 5.0,
+              "stock_value": 600.0,
+              "stock_value_difference": -1600.0,
+              "valuation_rate": 120.0
+            }
+          ],
+          "gl": [
+            {
+              "account": "Cost of Goods Sold - _OM",
+              "credit": 0.0,
+              "debit": 1600.0
+            },
+            {
+              "account": "Stock In Hand - _OM",
+              "credit": 1600.0,
+              "debit": 0.0
+            }
+          ],
+          "bin_after": {
+            "actual_qty": 5.0,
+            "valuation_rate": 120.0,
+            "stock_value": 600.0
+          }
+        },
+        "note": "FIFO consumes 10@100 then 5@120 -> COGS 1600, 5@120 left"
+      }
+    },
+    "O2C-K-MAVG-LAYERS-088": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "dn": {
+          "docstatus": 1,
+          "status": "To Bill",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": null
+        },
+        "note": "Moving Average rate 110 -> COGS 1650, 5@110 left"
+      },
+      "full": {
+        "dn": {
+          "docstatus": 1,
+          "status": "To Bill",
+          "sle": [
+            {
+              "actual_qty": -15.0,
+              "item_code": "_OM-VMAVG",
+              "qty_after_transaction": 5.0,
+              "stock_value": 550.0,
+              "stock_value_difference": -1650.0,
+              "valuation_rate": 110.0
+            }
+          ],
+          "gl": [
+            {
+              "account": "Cost of Goods Sold - _OM",
+              "credit": 0.0,
+              "debit": 1650.0
+            },
+            {
+              "account": "Stock In Hand - _OM",
+              "credit": 1650.0,
+              "debit": 0.0
+            }
+          ],
+          "bin_after": {
+            "actual_qty": 5.0,
+            "valuation_rate": 110.0,
+            "stock_value": 550.0
+          }
+        },
+        "note": "Moving Average rate 110 -> COGS 1650, 5@110 left"
+      }
+    },
+    "O2C-K-LIFO-LAYERS-089": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "dn": {
+          "docstatus": 1,
+          "status": "To Bill",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": null
+        },
+        "note": "LIFO consumes 10@120 then 5@100 -> COGS 1700"
+      },
+      "full": {
+        "dn": {
+          "docstatus": 1,
+          "status": "To Bill",
+          "sle": [
+            {
+              "actual_qty": -15.0,
+              "item_code": "_OM-VLIFO",
+              "qty_after_transaction": 5.0,
+              "stock_value": 500.0,
+              "stock_value_difference": -1700.0,
+              "valuation_rate": 100.0
+            }
+          ],
+          "gl": [
+            {
+              "account": "Cost of Goods Sold - _OM",
+              "credit": 0.0,
+              "debit": 1700.0
+            },
+            {
+              "account": "Stock In Hand - _OM",
+              "credit": 1700.0,
+              "debit": 0.0
+            }
+          ],
+          "bin_after": {
+            "actual_qty": 5.0,
+            "valuation_rate": 100.0,
+            "stock_value": 500.0
+          }
+        },
+        "note": "LIFO consumes 10@120 then 5@100 -> COGS 1700"
+      }
+    },
+    "O2C-K-PARTIAL-DELIVERY-090": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "dn": {
+          "docstatus": 1,
+          "status": "To Bill",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": null
+        },
+        "note": "partial: COGS 500, 15@100 left"
+      },
+      "full": {
+        "dn": {
+          "docstatus": 1,
+          "status": "To Bill",
+          "sle": [
+            {
+              "actual_qty": -5.0,
+              "item_code": "_OM-VFIFO",
+              "qty_after_transaction": 15.0,
+              "stock_value": 1500.0,
+              "stock_value_difference": -500.0,
+              "valuation_rate": 100.0
+            }
+          ],
+          "gl": [
+            {
+              "account": "Cost of Goods Sold - _OM",
+              "credit": 0.0,
+              "debit": 500.0
+            },
+            {
+              "account": "Stock In Hand - _OM",
+              "credit": 500.0,
+              "debit": 0.0
+            }
+          ],
+          "bin_after": {
+            "actual_qty": 15.0,
+            "valuation_rate": 100.0,
+            "stock_value": 1500.0
+          }
+        },
+        "note": "partial: COGS 500, 15@100 left"
+      }
+    },
+    "O2C-K-FULL-DELIVERY-091": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "dn": {
+          "docstatus": 1,
+          "status": "To Bill",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": null
+        },
+        "note": "full: COGS 1000, stock 0"
+      },
+      "full": {
+        "dn": {
+          "docstatus": 1,
+          "status": "To Bill",
+          "sle": [
+            {
+              "actual_qty": -10.0,
+              "item_code": "_OM-VFIFO",
+              "qty_after_transaction": 0.0,
+              "stock_value": 0.0,
+              "stock_value_difference": -1000.0,
+              "valuation_rate": 100.0
+            }
+          ],
+          "gl": [
+            {
+              "account": "Cost of Goods Sold - _OM",
+              "credit": 0.0,
+              "debit": 1000.0
+            },
+            {
+              "account": "Stock In Hand - _OM",
+              "credit": 1000.0,
+              "debit": 0.0
+            }
+          ],
+          "bin_after": {
+            "actual_qty": 0.0,
+            "valuation_rate": 100.0,
+            "stock_value": 0.0
+          }
+        },
+        "note": "full: COGS 1000, stock 0"
+      }
+    },
+    "O2C-K-MULTI-LINE-092": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "sle": [
+          {
+            "actual_qty": -4.0,
+            "item_code": "_OM-VFIFO",
+            "qty_after_transaction": 6.0,
+            "stock_value": 600.0,
+            "stock_value_difference": -400.0,
+            "valuation_rate": 100.0
+          },
+          {
+            "actual_qty": -3.0,
+            "item_code": "_OM-VMAVG",
+            "qty_after_transaction": 7.0,
+            "stock_value": 350.0,
+            "stock_value_difference": -150.0,
+            "valuation_rate": 50.0
+          }
+        ],
+        "gl": [
+          {
+            "account": "Cost of Goods Sold - _OM",
+            "credit": 0.0,
+            "debit": 550.0
+          },
+          {
+            "account": "Stock In Hand - _OM",
+            "credit": 550.0,
+            "debit": 0.0
+          }
+        ],
+        "bin_fifo": {
+          "actual_qty": 6.0,
+          "valuation_rate": 100.0,
+          "stock_value": 600.0
+        },
+        "bin_mavg": {
+          "actual_qty": 7.0,
+          "valuation_rate": 50.0,
+          "stock_value": 350.0
+        },
+        "note": "FIFO 4@100=400 + MAVG 3@50=150 -> COGS 550"
+      },
+      "full": {
+        "sle": [
+          {
+            "actual_qty": -4.0,
+            "item_code": "_OM-VFIFO",
+            "qty_after_transaction": 6.0,
+            "stock_value": 600.0,
+            "stock_value_difference": -400.0,
+            "valuation_rate": 100.0
+          },
+          {
+            "actual_qty": -3.0,
+            "item_code": "_OM-VMAVG",
+            "qty_after_transaction": 7.0,
+            "stock_value": 350.0,
+            "stock_value_difference": -150.0,
+            "valuation_rate": 50.0
+          }
+        ],
+        "gl": [
+          {
+            "account": "Cost of Goods Sold - _OM",
+            "credit": 0.0,
+            "debit": 550.0
+          },
+          {
+            "account": "Stock In Hand - _OM",
+            "credit": 550.0,
+            "debit": 0.0
+          }
+        ],
+        "bin_fifo": {
+          "actual_qty": 6.0,
+          "valuation_rate": 100.0,
+          "stock_value": 600.0
+        },
+        "bin_mavg": {
+          "actual_qty": 7.0,
+          "valuation_rate": 50.0,
+          "stock_value": 350.0
+        },
+        "note": "FIFO 4@100=400 + MAVG 3@50=150 -> COGS 550"
+      }
+    },
+    "O2C-K-DELIVERY-CANCEL-093": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "bin_after_delivery": {
+          "actual_qty": 5.0,
+          "valuation_rate": 100.0,
+          "stock_value": 500.0
+        },
+        "bin_after_cancel": {
+          "actual_qty": 10.0,
+          "valuation_rate": 100.0,
+          "stock_value": 1000.0
+        },
+        "sle_incl_cancelled": [
+          {
+            "actual_qty": -5.0,
+            "is_cancelled": 1,
+            "stock_value_difference": -500.0,
+            "valuation_rate": 100.0
+          },
+          {
+            "actual_qty": 5.0,
+            "is_cancelled": 1,
+            "stock_value_difference": 0.0,
+            "valuation_rate": 0.0
+          }
+        ]
+      },
+      "full": {
+        "bin_after_delivery": {
+          "actual_qty": 5.0,
+          "valuation_rate": 100.0,
+          "stock_value": 500.0
+        },
+        "bin_after_cancel": {
+          "actual_qty": 10.0,
+          "valuation_rate": 100.0,
+          "stock_value": 1000.0
+        },
+        "sle_incl_cancelled": [
+          {
+            "actual_qty": -5.0,
+            "is_cancelled": 1,
+            "stock_value_difference": -500.0,
+            "valuation_rate": 100.0
+          },
+          {
+            "actual_qty": 5.0,
+            "is_cancelled": 1,
+            "stock_value_difference": 0.0,
+            "valuation_rate": 0.0
+          }
+        ]
+      }
+    },
+    "O2C-K-RETURN-REVERSAL-094": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "bin_after": {
+          "actual_qty": 7.0,
+          "valuation_rate": 100.0,
+          "stock_value": 700.0
+        },
+        "note": "sales return of 2 units brings stock back; capture return valuation"
+      },
+      "full": {
+        "delivery": {
+          "docstatus": 1,
+          "status": "To Bill",
+          "sle": [
+            {
+              "actual_qty": -5.0,
+              "item_code": "_OM-VFIFO",
+              "qty_after_transaction": 5.0,
+              "stock_value": 500.0,
+              "stock_value_difference": -500.0,
+              "valuation_rate": 100.0
+            }
+          ],
+          "gl": [
+            {
+              "account": "Cost of Goods Sold - _OM",
+              "credit": 0.0,
+              "debit": 500.0
+            },
+            {
+              "account": "Stock In Hand - _OM",
+              "credit": 500.0,
+              "debit": 0.0
+            }
+          ],
+          "bin_after": {
+            "actual_qty": 7.0,
+            "valuation_rate": 100.0,
+            "stock_value": 700.0
+          }
+        },
+        "return": {
+          "docstatus": 1,
+          "status": "Return",
+          "sle": [
+            {
+              "actual_qty": 2.0,
+              "item_code": "_OM-VFIFO",
+              "qty_after_transaction": 7.0,
+              "stock_value": 700.0,
+              "stock_value_difference": 200.0,
+              "valuation_rate": 100.0
+            }
+          ],
+          "gl": [
+            {
+              "account": "Cost of Goods Sold - _OM",
+              "credit": 200.0,
+              "debit": 0.0
+            },
+            {
+              "account": "Stock In Hand - _OM",
+              "credit": 0.0,
+              "debit": 200.0
+            }
+          ],
+          "bin_after": {
+            "actual_qty": 7.0,
+            "valuation_rate": 100.0,
+            "stock_value": 700.0
+          }
+        },
+        "bin_after": {
+          "actual_qty": 7.0,
+          "valuation_rate": 100.0,
+          "stock_value": 700.0
+        },
+        "note": "sales return of 2 units brings stock back; capture return valuation"
+      }
+    },
+    "O2C-K-NEGATIVE-STOCK-095": {
+      "captured": true,
+      "summary": {
+        "kind": "error",
+        "raised": true,
+        "error_type": "NegativeStockError",
+        "error_class": "erpnext.stock.stock_ledger.NegativeStockError",
+        "message": "<strong>5.0</strong> units of <a href=\"/desk/item/_OM-VFIFO\" style=\"font-weight: bold;\">Item _OM-VFIFO</a> needed in <a href=\"/desk/warehouse/Stores%20-%20_OM\" "
+      },
+      "full": {
+        "observed_error": {
+          "raised": true,
+          "type": "NegativeStockError",
+          "frappe_class": "erpnext.stock.stock_ledger.NegativeStockError",
+          "msg": "<strong>5.0</strong> units of <a href=\"/desk/item/_OM-VFIFO\" style=\"font-weight: bold;\">Item _OM-VFIFO</a> needed in <a href=\"/desk/warehouse/Stores%20-%20_OM\" style=\"font-weight: bold;\">Warehouse Stores - _OM</a> to complete this transaction."
+        },
+        "bin": {
+          "actual_qty": -5.0,
+          "valuation_rate": 0.0,
+          "stock_value": 0.0
+        }
+      }
+    },
+    "O2C-K-ROUNDING-BOUNDARY-096": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "dn": {
+          "docstatus": 1,
+          "status": "To Bill",
+          "per_delivered": null,
+          "per_billed": null,
+          "outstanding_amount": null,
+          "grand_total": null
+        },
+        "note": "fractional valuation rates -> rounding at precision boundary"
+      },
+      "full": {
+        "dn": {
+          "docstatus": 1,
+          "status": "To Bill",
+          "sle": [
+            {
+              "actual_qty": -4.0,
+              "item_code": "_OM-VFIFO",
+              "qty_after_transaction": 2.0,
+              "stock_value": 20.04,
+              "stock_value_difference": -40.03,
+              "valuation_rate": 10.02
+            }
+          ],
+          "gl": [
+            {
+              "account": "Cost of Goods Sold - _OM",
+              "credit": 0.0,
+              "debit": 40.03
+            },
+            {
+              "account": "Stock In Hand - _OM",
+              "credit": 40.03,
+              "debit": 0.0
+            }
+          ],
+          "bin_after": {
+            "actual_qty": 2.0,
+            "valuation_rate": 10.02,
+            "stock_value": 20.04
+          }
+        },
+        "note": "fractional valuation rates -> rounding at precision boundary"
+      }
+    },
+    "O2C-K-STOCK-BALANCE-STEPS-097": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "steps": {
+          "after_receipt1": {
+            "actual_qty": 10.0,
+            "valuation_rate": 100.0,
+            "stock_value": 1000.0
+          },
+          "after_receipt2": {
+            "actual_qty": 20.0,
+            "valuation_rate": 110.0,
+            "stock_value": 2200.0
+          },
+          "after_delivery": {
+            "actual_qty": 5.0,
+            "valuation_rate": 120.0,
+            "stock_value": 600.0
+          }
+        },
+        "stock_balance_report": [
+          {
+            "item_code": "_OM-VFIFO",
+            "bal_qty": 5.0,
+            "bal_val": 600.0,
+            "val_rate": 120.0,
+            "in_qty": 0.0,
+            "out_qty": 0.0
+          }
+        ],
+        "dn_sle": [
+          {
+            "actual_qty": -15.0,
+            "item_code": "_OM-VFIFO",
+            "qty_after_transaction": 5.0,
+            "stock_value": 600.0,
+            "stock_value_difference": -1600.0,
+            "valuation_rate": 120.0
+          }
+        ]
+      },
+      "full": {
+        "steps": {
+          "after_receipt1": {
+            "actual_qty": 10.0,
+            "valuation_rate": 100.0,
+            "stock_value": 1000.0
+          },
+          "after_receipt2": {
+            "actual_qty": 20.0,
+            "valuation_rate": 110.0,
+            "stock_value": 2200.0
+          },
+          "after_delivery": {
+            "actual_qty": 5.0,
+            "valuation_rate": 120.0,
+            "stock_value": 600.0
+          }
+        },
+        "stock_balance_report": [
+          {
+            "item_code": "_OM-VFIFO",
+            "bal_qty": 5.0,
+            "bal_val": 600.0,
+            "val_rate": 120.0,
+            "in_qty": 0.0,
+            "out_qty": 0.0
+          }
+        ],
+        "dn_sle": [
+          {
+            "actual_qty": -15.0,
+            "item_code": "_OM-VFIFO",
+            "qty_after_transaction": 5.0,
+            "stock_value": 600.0,
+            "stock_value_difference": -1600.0,
+            "valuation_rate": 120.0
+          }
+        ]
+      }
+    },
+    "O2C-M-BACKDATED-INCOMING-RECALC-098": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "riv_queued_before_insert": [],
+        "riv_queued_after_insert": [],
+        "repost_jobs": [],
+        "note": "FIFO delivery@D3 posted 5@100 (COGS 500). After 10@80 is inserted at D1 and repost COMPLETES, the delivery COGS/valuation are PRESERVED at 500/100; only the Bin absorbs the difference -> 15 units @ 86.67 (stock_value 1300 = 1800 in - 500 out)."
+      },
+      "full": {
+        "before_repost": {
+          "delivery_sle": [
+            {
+              "actual_qty": -5.0,
+              "item_code": "_OM-RPSTX-1",
+              "qty_after_transaction": 5.0,
+              "stock_value": 500.0,
+              "stock_value_difference": -500.0,
+              "valuation_rate": 100.0
+            }
+          ],
+          "delivery_gl": [
+            {
+              "account": "Cost of Goods Sold - _OM",
+              "credit": 0.0,
+              "debit": 500.0
+            },
+            {
+              "account": "Stock In Hand - _OM",
+              "credit": 500.0,
+              "debit": 0.0
+            }
+          ],
+          "bin": {
+            "actual_qty": 5.0,
+            "valuation_rate": 100.0,
+            "stock_value": 500.0
+          }
+        },
+        "riv_queued_before_insert": [],
+        "riv_queued_after_insert": [],
+        "repost_jobs": [],
+        "after_repost": {
+          "delivery_sle": [
+            {
+              "actual_qty": -5.0,
+              "item_code": "_OM-RPSTX-1",
+              "qty_after_transaction": 5.0,
+              "stock_value": 500.0,
+              "stock_value_difference": -500.0,
+              "valuation_rate": 100.0
+            }
+          ],
+          "delivery_gl": [
+            {
+              "account": "Cost of Goods Sold - _OM",
+              "credit": 0.0,
+              "debit": 500.0
+            },
+            {
+              "account": "Stock In Hand - _OM",
+              "credit": 500.0,
+              "debit": 0.0
+            }
+          ],
+          "bin": {
+            "actual_qty": 15.0,
+            "valuation_rate": 86.666666667,
+            "stock_value": 1300.0
+          }
+        },
+        "note": "FIFO delivery@D3 posted 5@100 (COGS 500). After 10@80 is inserted at D1 and repost COMPLETES, the delivery COGS/valuation are PRESERVED at 500/100; only the Bin absorbs the difference -> 15 units @ 86.67 (stock_value 1300 = 1800 in - 500 out)."
+      }
+    },
+    "O2C-M-FORWARD-MULTI-OUTGOING-099": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "before_repost": {
+          "dn1": [
+            {
+              "actual_qty": -5.0,
+              "item_code": "_OM-RPSTX-2",
+              "qty_after_transaction": 15.0,
+              "stock_value": 1500.0,
+              "stock_value_difference": -500.0,
+              "valuation_rate": 100.0
+            }
+          ],
+          "dn2": [
+            {
+              "actual_qty": -5.0,
+              "item_code": "_OM-RPSTX-2",
+              "qty_after_transaction": 10.0,
+              "stock_value": 1000.0,
+              "stock_value_difference": -500.0,
+              "valuation_rate": 100.0
+            }
+          ]
+        },
+        "repost_jobs": [],
+        "note": "both forward deliveries PRESERVE their posted valuation after the backdated 10@60 insert + repost; the on-hand Bin absorbs the difference (historical outgoing unchanged)"
+      },
+      "full": {
+        "before_repost": {
+          "dn1": [
+            {
+              "actual_qty": -5.0,
+              "item_code": "_OM-RPSTX-2",
+              "qty_after_transaction": 15.0,
+              "stock_value": 1500.0,
+              "stock_value_difference": -500.0,
+              "valuation_rate": 100.0
+            }
+          ],
+          "dn2": [
+            {
+              "actual_qty": -5.0,
+              "item_code": "_OM-RPSTX-2",
+              "qty_after_transaction": 10.0,
+              "stock_value": 1000.0,
+              "stock_value_difference": -500.0,
+              "valuation_rate": 100.0
+            }
+          ]
+        },
+        "repost_jobs": [],
+        "after_repost": {
+          "dn1": [
+            {
+              "actual_qty": -5.0,
+              "item_code": "_OM-RPSTX-2",
+              "qty_after_transaction": 15.0,
+              "stock_value": 1500.0,
+              "stock_value_difference": -500.0,
+              "valuation_rate": 100.0
+            }
+          ],
+          "dn2": [
+            {
+              "actual_qty": -5.0,
+              "item_code": "_OM-RPSTX-2",
+              "qty_after_transaction": 10.0,
+              "stock_value": 1000.0,
+              "stock_value_difference": -500.0,
+              "valuation_rate": 100.0
+            }
+          ],
+          "bin": {
+            "actual_qty": 20.0,
+            "valuation_rate": 80.0,
+            "stock_value": 1600.0
+          }
+        },
+        "note": "both forward deliveries PRESERVE their posted valuation after the backdated 10@60 insert + repost; the on-hand Bin absorbs the difference (historical outgoing unchanged)"
+      }
+    },
+    "O2C-M-BACKDATED-CANCEL-100": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "repost_jobs": [
+          {
+            "based_on": "Item and Warehouse",
+            "status_before": "Queued",
+            "status_after": "Completed"
+          }
+        ],
+        "note": "delivery COGS stays 500 throughout; the backdated insert only changed the Bin (15@86.67), and cancelling it reverts the Bin to 5@100 (delivery valuation never moved)"
+      },
+      "full": {
+        "after_backdated_insert": {
+          "delivery_sle": [
+            {
+              "actual_qty": -5.0,
+              "item_code": "_OM-RPSTX-3",
+              "qty_after_transaction": 5.0,
+              "stock_value": 500.0,
+              "stock_value_difference": -500.0,
+              "valuation_rate": 100.0
+            }
+          ],
+          "delivery_gl": [
+            {
+              "account": "Cost of Goods Sold - _OM",
+              "credit": 0.0,
+              "debit": 500.0
+            },
+            {
+              "account": "Stock In Hand - _OM",
+              "credit": 500.0,
+              "debit": 0.0
+            }
+          ],
+          "bin": {
+            "actual_qty": 15.0,
+            "valuation_rate": 86.666666667,
+            "stock_value": 1300.0
+          }
+        },
+        "repost_jobs": [
+          {
+            "based_on": "Item and Warehouse",
+            "status_before": "Queued",
+            "status_after": "Completed"
+          }
+        ],
+        "after_cancel": {
+          "delivery_sle": [
+            {
+              "actual_qty": -5.0,
+              "item_code": "_OM-RPSTX-3",
+              "qty_after_transaction": 5.0,
+              "stock_value": 500.0,
+              "stock_value_difference": -500.0,
+              "valuation_rate": 100.0
+            }
+          ],
+          "delivery_gl": [
+            {
+              "account": "Cost of Goods Sold - _OM",
+              "credit": 0.0,
+              "debit": 500.0
+            },
+            {
+              "account": "Stock In Hand - _OM",
+              "credit": 500.0,
+              "debit": 0.0
+            }
+          ],
+          "bin": {
+            "actual_qty": 5.0,
+            "valuation_rate": 100.0,
+            "stock_value": 500.0
+          }
+        },
+        "note": "delivery COGS stays 500 throughout; the backdated insert only changed the Bin (15@86.67), and cancelling it reverts the Bin to 5@100 (delivery valuation never moved)"
+      }
+    },
+    "O2C-M-REPOST-IDEMPOTENT-101": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "idempotent": true,
+        "note": "re-reposting the same item/warehouse must not change valuation/COGS"
+      },
+      "full": {
+        "first_repost": {
+          "delivery_sle": [
+            {
+              "actual_qty": -5.0,
+              "item_code": "_OM-RPSTX-4",
+              "qty_after_transaction": 5.0,
+              "stock_value": 500.0,
+              "stock_value_difference": -500.0,
+              "valuation_rate": 100.0
+            }
+          ],
+          "delivery_gl": [
+            {
+              "account": "Cost of Goods Sold - _OM",
+              "credit": 0.0,
+              "debit": 500.0
+            },
+            {
+              "account": "Stock In Hand - _OM",
+              "credit": 500.0,
+              "debit": 0.0
+            }
+          ],
+          "bin": {
+            "actual_qty": 15.0,
+            "valuation_rate": 86.666666667,
+            "stock_value": 1300.0
+          }
+        },
+        "second_repost": {
+          "delivery_sle": [
+            {
+              "actual_qty": -5.0,
+              "item_code": "_OM-RPSTX-4",
+              "qty_after_transaction": 5.0,
+              "stock_value": 500.0,
+              "stock_value_difference": -500.0,
+              "valuation_rate": 100.0
+            }
+          ],
+          "delivery_gl": [
+            {
+              "account": "Cost of Goods Sold - _OM",
+              "credit": 0.0,
+              "debit": 500.0
+            },
+            {
+              "account": "Stock In Hand - _OM",
+              "credit": 500.0,
+              "debit": 0.0
+            }
+          ],
+          "bin": {
+            "actual_qty": 15.0,
+            "valuation_rate": 86.666666667,
+            "stock_value": 1300.0
+          }
+        },
+        "idempotent": true,
+        "note": "re-reposting the same item/warehouse must not change valuation/COGS"
+      }
+    },
+    "O2C-M-REPOST-JOB-STATUS-102": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "riv_count_delta": 0,
+        "riv_for_item": [],
+        "pending_after": [],
+        "note": "a backdated transaction auto-creates a Repost Item Valuation (based_on Transaction) which runs inline under in_test; capture its status + fields (status ends 'Completed')"
+      },
+      "full": {
+        "riv_count_delta": 0,
+        "riv_for_item": [],
+        "pending_after": [],
+        "note": "a backdated transaction auto-creates a Repost Item Valuation (based_on Transaction) which runs inline under in_test; capture its status + fields (status ends 'Completed')"
+      }
+    },
+    "O2C-M-BACKDATED-NEGATIVE-103": {
+      "captured": true,
+      "summary": {
+        "kind": "error",
+        "raised": true,
+        "error_type": "NegativeStockError",
+        "error_class": "erpnext.stock.stock_ledger.NegativeStockError",
+        "message": "<strong>3.0</strong> units of <a href=\"/desk/item/_OM-RPSTX-6\" style=\"font-weight: bold;\">Item _OM-RPSTX-6</a> needed in <a href=\"/desk/warehouse/Stores%20-%20_",
+        "note": "backdated outgoing creating an intermediate negative balance"
+      },
+      "full": {
+        "observed_error": {
+          "raised": true,
+          "type": "NegativeStockError",
+          "frappe_class": "erpnext.stock.stock_ledger.NegativeStockError",
+          "msg": "<strong>3.0</strong> units of <a href=\"/desk/item/_OM-RPSTX-6\" style=\"font-weight: bold;\">Item _OM-RPSTX-6</a> needed in <a href=\"/desk/warehouse/Stores%20-%20_OM\" style=\"font-weight: bold;\">Warehouse Stores - _OM</a> to complete this transaction."
+        },
+        "bin": {
+          "actual_qty": -3.0,
+          "valuation_rate": 100.0,
+          "stock_value": 200.0
+        },
+        "note": "backdated outgoing creating an intermediate negative balance"
+      }
+    },
+    "O2C-L-BATCH-DELIVERY-104": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "batch": "_OMB-0001",
+        "bundle": [
+          {
+            "type": "Outward",
+            "entries": [
+              {
+                "batch_no": "_OMB-0001",
+                "incoming_rate": 100.0,
+                "qty": -5.0,
+                "serial_no": null
+              }
+            ]
+          }
+        ],
+        "sle": [
+          {
+            "actual_qty": -5.0,
+            "item_code": "_OM-LBATCH2",
+            "qty_after_transaction": 5.0,
+            "stock_value": 500.0,
+            "stock_value_difference": -500.0,
+            "valuation_rate": 100.0
+          }
+        ],
+        "batch_qty_after": 5.0,
+        "bin": {
+          "actual_qty": 5.0,
+          "valuation_rate": 100.0,
+          "stock_value": 500.0
+        }
+      },
+      "full": {
+        "batch": "_OMB-0001",
+        "bundle": [
+          {
+            "type": "Outward",
+            "entries": [
+              {
+                "batch_no": "_OMB-0001",
+                "incoming_rate": 100.0,
+                "qty": -5.0,
+                "serial_no": null
+              }
+            ]
+          }
+        ],
+        "sle": [
+          {
+            "actual_qty": -5.0,
+            "item_code": "_OM-LBATCH2",
+            "qty_after_transaction": 5.0,
+            "stock_value": 500.0,
+            "stock_value_difference": -500.0,
+            "valuation_rate": 100.0
+          }
+        ],
+        "batch_qty_after": 5.0,
+        "bin": {
+          "actual_qty": 5.0,
+          "valuation_rate": 100.0,
+          "stock_value": 500.0
+        }
+      }
+    },
+    "O2C-L-BATCH-MULTI-105": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "b1": "_OMB-0001",
+        "b2": "_OMB-0002",
+        "delivered_from": "_OMB-0001",
+        "bundle": [
+          {
+            "type": "Outward",
+            "entries": [
+              {
+                "batch_no": "_OMB-0001",
+                "incoming_rate": 100.0,
+                "qty": -6.0,
+                "serial_no": null
+              }
+            ]
+          }
+        ],
+        "b1_qty_after": 4.0,
+        "b2_qty_after": 10.0
+      },
+      "full": {
+        "b1": "_OMB-0001",
+        "b2": "_OMB-0002",
+        "delivered_from": "_OMB-0001",
+        "bundle": [
+          {
+            "type": "Outward",
+            "entries": [
+              {
+                "batch_no": "_OMB-0001",
+                "incoming_rate": 100.0,
+                "qty": -6.0,
+                "serial_no": null
+              }
+            ]
+          }
+        ],
+        "b1_qty_after": 4.0,
+        "b2_qty_after": 10.0
+      }
+    },
+    "O2C-L-BATCH-OVER-DELIVERY-106": {
+      "captured": true,
+      "summary": {
+        "kind": "error",
+        "raised": true,
+        "error_type": "BatchNegativeStockError",
+        "error_class": "erpnext.stock.doctype.serial_and_batch_bundle.serial_and_batch_bundle.BatchNegativeStockError",
+        "message": "Batch No <strong>_OMB-0001</strong> of an Item <strong>_OM-LBATCH2</strong>\n\t\t\t\thas negative stock\n\t\t\t\tof quantity <strong>-4.0</strong> in the\n\t\t\t\twarehouse St"
+      },
+      "full": {
+        "observed_error": {
+          "raised": true,
+          "type": "BatchNegativeStockError",
+          "frappe_class": "erpnext.stock.doctype.serial_and_batch_bundle.serial_and_batch_bundle.BatchNegativeStockError",
+          "msg": "Batch No <strong>_OMB-0001</strong> of an Item <strong>_OM-LBATCH2</strong>\n\t\t\t\thas negative stock\n\t\t\t\tof quantity <strong>-4.0</strong> in the\n\t\t\t\twarehouse Stores - _OM"
+        },
+        "batch_qty": 5.0
+      }
+    },
+    "O2C-L-BATCH-EXPIRED-107": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "batch": "_OM-BEXP2",
+        "observed_error_or_ok": {
+          "raised": false,
+          "result": "Delivery Note (MAT-DN-2026-00006)"
+        },
+        "batch_qty": 7.0,
+        "note": "batch expired 2026-12-31; delivery posting 2027-01-04 -> capture whether ERPNext blocks expired-batch delivery"
+      },
+      "full": {
+        "batch": "_OM-BEXP2",
+        "observed_error_or_ok": {
+          "raised": false,
+          "result": "Delivery Note (MAT-DN-2026-00006)"
+        },
+        "batch_qty": 7.0,
+        "note": "batch expired 2026-12-31; delivery posting 2027-01-04 -> capture whether ERPNext blocks expired-batch delivery"
+      }
+    },
+    "O2C-L-BATCH-CANCEL-108": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "batch_qty_after_delivery": 6.0,
+        "batch_qty_after_cancel": 10.0,
+        "bin": {
+          "actual_qty": 10.0,
+          "valuation_rate": 100.0,
+          "stock_value": 1000.0
+        }
+      },
+      "full": {
+        "batch_qty_after_delivery": 6.0,
+        "batch_qty_after_cancel": 10.0,
+        "bin": {
+          "actual_qty": 10.0,
+          "valuation_rate": 100.0,
+          "stock_value": 1000.0
+        }
+      }
+    },
+    "O2C-L-BATCH-VALUATION-109": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "delivered_from": "_OMB-0002",
+        "bundle": [
+          {
+            "type": "Outward",
+            "entries": [
+              {
+                "batch_no": "_OMB-0002",
+                "incoming_rate": 200.0,
+                "qty": -5.0,
+                "serial_no": null
+              }
+            ]
+          }
+        ],
+        "sle": [
+          {
+            "actual_qty": -5.0,
+            "item_code": "_OM-LBATCH2",
+            "qty_after_transaction": 15.0,
+            "stock_value": 2000.0,
+            "stock_value_difference": -1000.0,
+            "valuation_rate": 133.333333333
+          }
+        ],
+        "note": "batch-specific valuation: delivering from B2@200 should COGS 1000, not FIFO 100"
+      },
+      "full": {
+        "delivered_from": "_OMB-0002",
+        "bundle": [
+          {
+            "type": "Outward",
+            "entries": [
+              {
+                "batch_no": "_OMB-0002",
+                "incoming_rate": 200.0,
+                "qty": -5.0,
+                "serial_no": null
+              }
+            ]
+          }
+        ],
+        "sle": [
+          {
+            "actual_qty": -5.0,
+            "item_code": "_OM-LBATCH2",
+            "qty_after_transaction": 15.0,
+            "stock_value": 2000.0,
+            "stock_value_difference": -1000.0,
+            "valuation_rate": 133.333333333
+          }
+        ],
+        "note": "batch-specific valuation: delivering from B2@200 should COGS 1000, not FIFO 100"
+      }
+    },
+    "O2C-L-SERIAL-DELIVERY-110": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "received_serials": [
+          "_OMS-0001",
+          "_OMS-0002",
+          "_OMS-0003",
+          "_OMS-0004",
+          "_OMS-0005"
+        ],
+        "delivered": [
+          "_OMS-0001",
+          "_OMS-0002"
+        ],
+        "bundle": [
+          {
+            "type": "Outward",
+            "entries": [
+              {
+                "batch_no": null,
+                "incoming_rate": 100.0,
+                "qty": -1.0,
+                "serial_no": "_OMS-0001"
+              },
+              {
+                "batch_no": null,
+                "incoming_rate": 100.0,
+                "qty": -1.0,
+                "serial_no": "_OMS-0002"
+              }
+            ]
+          }
+        ],
+        "serial_status_after": {
+          "_OMS-0001": {
+            "status": "Delivered",
+            "warehouse": null
+          },
+          "_OMS-0002": {
+            "status": "Delivered",
+            "warehouse": null
+          }
+        },
+        "bin": {
+          "actual_qty": 3.0,
+          "valuation_rate": 100.0,
+          "stock_value": 300.0
+        }
+      },
+      "full": {
+        "received_serials": [
+          "_OMS-0001",
+          "_OMS-0002",
+          "_OMS-0003",
+          "_OMS-0004",
+          "_OMS-0005"
+        ],
+        "delivered": [
+          "_OMS-0001",
+          "_OMS-0002"
+        ],
+        "bundle": [
+          {
+            "type": "Outward",
+            "entries": [
+              {
+                "batch_no": null,
+                "incoming_rate": 100.0,
+                "qty": -1.0,
+                "serial_no": "_OMS-0001"
+              },
+              {
+                "batch_no": null,
+                "incoming_rate": 100.0,
+                "qty": -1.0,
+                "serial_no": "_OMS-0002"
+              }
+            ]
+          }
+        ],
+        "serial_status_after": {
+          "_OMS-0001": {
+            "status": "Delivered",
+            "warehouse": null
+          },
+          "_OMS-0002": {
+            "status": "Delivered",
+            "warehouse": null
+          }
+        },
+        "bin": {
+          "actual_qty": 3.0,
+          "valuation_rate": 100.0,
+          "stock_value": 300.0
+        }
+      }
+    },
+    "O2C-L-SERIAL-NONEXISTENT-111": {
+      "captured": true,
+      "summary": {
+        "kind": "error",
+        "raised": true,
+        "error_type": "LinkValidationError",
+        "error_class": "frappe.exceptions.LinkValidationError",
+        "message": "Could not find Row #1: Serial No: _OMS-NOPE-9999"
+      },
+      "full": {
+        "observed_error": {
+          "raised": true,
+          "type": "LinkValidationError",
+          "frappe_class": "frappe.exceptions.LinkValidationError",
+          "msg": "Could not find Row #1: Serial No: _OMS-NOPE-9999"
+        }
+      }
+    },
+    "O2C-L-SERIAL-ALREADY-DELIVERED-112": {
+      "captured": true,
+      "summary": {
+        "kind": "error",
+        "raised": true,
+        "error_type": "ValidationError",
+        "error_class": "frappe.exceptions.ValidationError",
+        "message": "You cannot outward following Serial No as either they are Delivered, Inactive or located in a different warehouse.<hr>_OMS-0001",
+        "note": "re-delivering an already-delivered serial must fail"
+      },
+      "full": {
+        "serial": "_OMS-0001",
+        "observed_error": {
+          "raised": true,
+          "type": "ValidationError",
+          "frappe_class": "frappe.exceptions.ValidationError",
+          "msg": "You cannot outward following Serial No as either they are Delivered, Inactive or located in a different warehouse.<hr>_OMS-0001"
+        },
+        "note": "re-delivering an already-delivered serial must fail"
+      }
+    },
+    "O2C-L-SERIAL-MULTIPLE-113": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "delivered": [
+          "_OMS-0001",
+          "_OMS-0002",
+          "_OMS-0003"
+        ],
+        "bundle": [
+          {
+            "type": "Outward",
+            "entries": [
+              {
+                "batch_no": null,
+                "incoming_rate": 100.0,
+                "qty": -1.0,
+                "serial_no": "_OMS-0001"
+              },
+              {
+                "batch_no": null,
+                "incoming_rate": 100.0,
+                "qty": -1.0,
+                "serial_no": "_OMS-0002"
+              },
+              {
+                "batch_no": null,
+                "incoming_rate": 100.0,
+                "qty": -1.0,
+                "serial_no": "_OMS-0003"
+              }
+            ]
+          }
+        ],
+        "qty": 3,
+        "bin": {
+          "actual_qty": 2.0,
+          "valuation_rate": 100.0,
+          "stock_value": 200.0
+        }
+      },
+      "full": {
+        "delivered": [
+          "_OMS-0001",
+          "_OMS-0002",
+          "_OMS-0003"
+        ],
+        "bundle": [
+          {
+            "type": "Outward",
+            "entries": [
+              {
+                "batch_no": null,
+                "incoming_rate": 100.0,
+                "qty": -1.0,
+                "serial_no": "_OMS-0001"
+              },
+              {
+                "batch_no": null,
+                "incoming_rate": 100.0,
+                "qty": -1.0,
+                "serial_no": "_OMS-0002"
+              },
+              {
+                "batch_no": null,
+                "incoming_rate": 100.0,
+                "qty": -1.0,
+                "serial_no": "_OMS-0003"
+              }
+            ]
+          }
+        ],
+        "qty": 3,
+        "bin": {
+          "actual_qty": 2.0,
+          "valuation_rate": 100.0,
+          "stock_value": 200.0
+        }
+      }
+    },
+    "O2C-L-SERIAL-CANCEL-114": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "serial": "_OMS-0001",
+        "status_after_delivery": {
+          "status": "Delivered",
+          "warehouse": null
+        },
+        "status_after_cancel": {
+          "status": "Active",
+          "warehouse": "Stores - _OM"
+        },
+        "note": "cancel must return the serial to Active/in-warehouse"
+      },
+      "full": {
+        "serial": "_OMS-0001",
+        "status_after_delivery": {
+          "status": "Delivered",
+          "warehouse": null
+        },
+        "status_after_cancel": {
+          "status": "Active",
+          "warehouse": "Stores - _OM"
+        },
+        "note": "cancel must return the serial to Active/in-warehouse"
+      }
+    },
+    "O2C-L-SERIAL-DOWNSTREAM-115": {
+      "captured": true,
+      "summary": {
+        "kind": "state",
+        "delivered": [
+          "_OMS-0001",
+          "_OMS-0002"
+        ],
+        "serial_status_after": {
+          "_OMS-0001": {
+            "status": "Delivered",
+            "warehouse": null
+          },
+          "_OMS-0002": {
+            "status": "Delivered",
+            "warehouse": null
+          }
+        },
+        "delivery_bundle": [
+          {
+            "type": "Outward",
+            "entries": [
+              {
+                "batch_no": null,
+                "incoming_rate": 100.0,
+                "qty": -1.0,
+                "serial_no": "_OMS-0001"
+              },
+              {
+                "batch_no": null,
+                "incoming_rate": 100.0,
+                "qty": -1.0,
+                "serial_no": "_OMS-0002"
+              }
+            ]
+          }
+        ],
+        "note": "serial-to-voucher linkage is via the delivery's Serial and Batch Bundle entries; Serial No.status flips out-of-warehouse on delivery"
+      },
+      "full": {
+        "delivered": [
+          "_OMS-0001",
+          "_OMS-0002"
+        ],
+        "serial_status_after": {
+          "_OMS-0001": {
+            "status": "Delivered",
+            "warehouse": null
+          },
+          "_OMS-0002": {
+            "status": "Delivered",
+            "warehouse": null
+          }
+        },
+        "delivery_bundle": [
+          {
+            "type": "Outward",
+            "entries": [
+              {
+                "batch_no": null,
+                "incoming_rate": 100.0,
+                "qty": -1.0,
+                "serial_no": "_OMS-0001"
+              },
+              {
+                "batch_no": null,
+                "incoming_rate": 100.0,
+                "qty": -1.0,
+                "serial_no": "_OMS-0002"
+              }
+            ]
+          }
+        ],
+        "note": "serial-to-voucher linkage is via the delivery's Serial and Batch Bundle entries; Serial No.status flips out-of-warehouse on delivery"
+      }
+    }
+  }
+}

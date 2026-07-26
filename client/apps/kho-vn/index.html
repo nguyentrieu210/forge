@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- viewport-fit=cover: máy có tai thỏ/bo góc, không có cờ này thì nội dung bị đai an toàn cắt. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- Màu thanh trạng thái trình duyệt di động khớp nền app, tránh vệt trắng trên đầu ở theme tối. -->
+    <meta name="theme-color" content="#f4f4f5" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#09090b" media="(prefers-color-scheme: dark)" />
+    <!--
+      KHÔNG nạp font từ Google Fonts.
+
+      Đây là app cho thủ kho: người dùng đứng giữa kho với 3G/4G chập chờn, có nơi chạy mạng nội
+      bộ không ra được Internet. Một <link rel="stylesheet"> tới fonts.googleapis.com là tài nguyên
+      CHẶN RENDER — mạng kém thì màn hình trắng cho tới khi nó timeout; mạng nội bộ thì trắng tới
+      tận khi trình duyệt bỏ cuộc. Đổi vài pixel khác biệt về dáng chữ lấy rủi ro đó là sai.
+
+      Font hệ thống còn có lợi: sẵn trong máy (0 byte, hiện ngay), và trên điện thoại Việt Nam thì
+      dấu tiếng Việt vốn được các bộ font hệ thống dựng tốt.
+    -->
+    <!--
+      Favicon vẽ bằng SVG nội tuyến (data URI): không thêm một request nào, không phụ thuộc file
+      rời có thể quên copy lúc deploy, và nét ở mọi kích thước. Trước đây không khai gì nên trình
+      duyệt hiện icon quả cầu mặc định — tab trông như một trang web lạ, không phải phần mềm nội bộ.
+    -->
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232563eb'/%3E%3Cpath d='M6 14.5 16 8l10 6.5V25a1 1 0 0 1-1 1h-5v-7h-8v7H7a1 1 0 0 1-1-1z' fill='white'/%3E%3C/svg%3E"
+    />
+    <script>
+      /*
+       * Chống NHÁY THEME. useTheme()/useBrand() chỉ stamp data-theme/data-brand trong useEffect,
+       * tức là SAU lần vẽ đầu tiên — người để theme tối sẽ thấy một nháy trắng toàn màn hình mỗi
+       * lần tải trang. Script này chạy đồng bộ trước khi vẽ nên trang hiện đúng màu ngay từ đầu.
+       * Phải khớp đúng khoá + giá trị mặc định với packages/shell/src/{theme,brand}.ts.
+       */
+      (function () {
+        try {
+          var el = document.documentElement;
+          var mode = localStorage.getItem("metaforge-theme") || "system";
+          var dark = mode === "dark" || (mode === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+          el.setAttribute("data-theme", dark ? "dark" : "light");
+          var brand = localStorage.getItem("metaforge-brand");
+          if (brand === "zinc") el.removeAttribute("data-brand");
+          else el.setAttribute("data-brand", brand === "warm" ? "warm" : "blue");
+        } catch (e) {
+          /* localStorage bị chặn (chế độ riêng tư) — rơi về mặc định của CSS, không phải lỗi. */
+        }
+      })();
+    </script>
+    <title>Quản lý kho</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

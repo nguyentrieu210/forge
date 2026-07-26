@@ -1,0 +1,13 @@
+
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cloudforge-control-plane",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-23",
+  "d1_databases": [
+    { "binding": "CONTROL_DB", "database_name": "cloudforge-control", "database_id": "65fa6833-c1da-4924-81cd-ab9a44d98c38", "migrations_dir": "../../migrations/control" }
+  ],
+  "kv_namespaces": [
+    { "binding": "ROUTES", "id": "b4607d01c54042dcbc3d6cb3e1ad2da4" }
+  ]
+}

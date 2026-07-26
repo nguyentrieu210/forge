@@ -1,0 +1,63 @@
+{
+  "generated_at": "2026-07-23",
+  "policy": "Release tag + immutable commit when published. CI must resolve and verify full 40-char SHA before Gate 3.",
+  "sources": [
+    {
+      "app": "frappe",
+      "repo": "https://github.com/frappe/frappe",
+      "branch": "version-16",
+      "tag": "v16.19.0",
+      "published_short_sha": "ba18090",
+      "target": "CloudForge kernel",
+      "license": "MIT",
+      "compatibility": "native v16 baseline"
+    },
+    {
+      "app": "erpnext",
+      "repo": "https://github.com/frappe/erpnext",
+      "branch": "version-16",
+      "tag": "v16.20.0",
+      "published_short_sha": "ff46d20",
+      "target": "CloudERP",
+      "license": "GPL-3.0",
+      "compatibility": "native v16 baseline"
+    },
+    {
+      "app": "hrms",
+      "repo": "https://github.com/frappe/hrms",
+      "branch": "version-16",
+      "tag": "v16.7.1",
+      "published_short_sha": "fe9ad9d",
+      "target": "CloudHR",
+      "license": "GPL-3.0",
+      "compatibility": "native v16 baseline"
+    },
+    {
+      "app": "crm",
+      "repo": "https://github.com/frappe/crm",
+      "branch": "main",
+      "tag": "v1.72.0",
+      "published_short_sha": null,
+      "target": "CloudCRM",
+      "license": "AGPL-3.0",
+      "compatibility": "official matrix: main v1.x supports Frappe/ERPNext v15 and v16"
+    },
+    {
+      "app": "insights",
+      "repo": "https://github.com/frappe/insights",
+      "branch": "version-3",
+      "tag": "v3.9.11",
+      "published_short_sha": "e0a1d98",
+      "target": "CloudInsights",
+      "license": "AGPL-3.0",
+      "compatibility": "behavior baseline only; official matrix does not declare Frappe v16 compatibility"
+    }
+  ],
+  "hard_gates": [
+    "CI resolves tag to full 40-char SHA",
+    "source archive hash stored",
+    "manifest generated from pinned checkout",
+    "zero source artifacts without disposition",
+    "license profile selected before direct port"
+  ]
+}

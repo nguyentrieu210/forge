@@ -1,0 +1,55 @@
+                    GNU GENERAL PUBLIC LICENSE
+                       Version 3, 29 June 2007
+
+ Copyright (C) 2007 Free Software Foundation, Inc. <https://fsf.org/>
+ Everyone is permitted to copy and distribute verbatim copies
+ of this license document, but changing it is not allowed.
+
+  MetaForge / Quản lý kho
+  Copyright (C) 2026  MetaForge contributors
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+--------------------------------------------------------------------------
+VÌ SAO GPL-3.0 — đọc trước khi định giá / bán
+--------------------------------------------------------------------------
+
+Phần `frappe-app/metaforge/` là một app Frappe: nó `import frappe` và chạy
+trong tiến trình của Frappe. Frappe Framework và ERPNext đều phát hành theo
+GPL-3.0, nên phần này là TÁC PHẨM PHÁI SINH và bắt buộc mang GPL-3.0. Toàn
+bộ kho mã giữ chung một giấy phép cho nhất quán.
+
+Điều đó ảnh hưởng trực tiếp tới cách bán:
+
+  * BÁN DỊCH VỤ (SaaS) — AN TOÀN.
+    GPL-3.0 KHÔNG phải AGPL. Cho khách dùng qua mạng không tính là "phát
+    tán" (distribution), nên không phát sinh nghĩa vụ giao mã nguồn. Đây là
+    mô hình thương mại phù hợp nhất với sản phẩm này.
+
+  * GIAO BẢN CÀI CHO KHÁCH (on-premise) — PHẢI MỞ NGUỒN.
+    Khi giao phần mềm cho bên khác, phải kèm mã nguồn tương ứng và chính
+    giấy phép GPL-3.0 này. Khách có quyền sửa và phát tán tiếp. Bán được,
+    nhưng KHÔNG bán được dưới dạng độc quyền/đóng.
+
+  * Được phép THU TIỀN. GPL không cấm bán; nó chỉ ràng buộc điều kiện đi
+    kèm khi phát tán.
+
+NHÃN HIỆU: "ERPNext" và "Frappe" là nhãn hiệu của Frappe Technologies
+Pvt. Ltd. Giấy phép GPL cho phép dùng MÃ NGUỒN, không cho phép dùng TÊN.
+Không đặt tên sản phẩm, tên miền hay tài liệu tiếp thị theo hai chữ đó.
+
+--------------------------------------------------------------------------
+Toàn văn giấy phép: https://www.gnu.org/licenses/gpl-3.0.txt
+Bản đầy đủ nên được chép vào file này trước khi phát hành ra ngoài.
+--------------------------------------------------------------------------

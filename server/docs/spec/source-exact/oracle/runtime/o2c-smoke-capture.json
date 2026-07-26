@@ -1,0 +1,245 @@
+{
+  "gate": "2E-S5",
+  "fixture_id": "O2C-E-SO-DN-SI-PE-HAPPY",
+  "provenance": {
+    "frappe": "16.19.0",
+    "erpnext": "16.20.0"
+  },
+  "steps": [
+    "SO submitted SAL-ORD-2026-00004 v1",
+    "DN submitted MAT-DN-2026-00003",
+    "SI submitted ACC-SINV-2026-00002",
+    "PE submitted ACC-PAY-2026-00001"
+  ],
+  "captures": {
+    "sales_order": {
+      "doctype": "Sales Order",
+      "docstatus": 1,
+      "status": "Completed",
+      "per_delivered": 100.0,
+      "per_billed": 100.0,
+      "outstanding_amount": null,
+      "grand_total": 500.0,
+      "gl_entries": [],
+      "stock_ledger_entries": [],
+      "payment_ledger_entries": []
+    },
+    "delivery_note": {
+      "doctype": "Delivery Note",
+      "docstatus": 1,
+      "status": "Completed",
+      "per_delivered": null,
+      "per_billed": 100.0,
+      "outstanding_amount": null,
+      "grand_total": 500.0,
+      "gl_entries": [
+        {
+          "account": "Cost of Goods Sold - _OC",
+          "against_voucher": null,
+          "against_voucher_type": null,
+          "credit": 0.0,
+          "debit": 500.0,
+          "party": null,
+          "party_type": null
+        },
+        {
+          "account": "Stock In Hand - _OC",
+          "against_voucher": null,
+          "against_voucher_type": null,
+          "credit": 500.0,
+          "debit": 0.0,
+          "party": null,
+          "party_type": null
+        }
+      ],
+      "stock_ledger_entries": [
+        {
+          "actual_qty": -5.0,
+          "item_code": "_OC-ITEM",
+          "qty_after_transaction": 785.0,
+          "stock_value_difference": -500.0,
+          "valuation_rate": 100.0,
+          "warehouse": "Stores - _OC"
+        }
+      ],
+      "payment_ledger_entries": []
+    },
+    "sales_invoice": {
+      "doctype": "Sales Invoice",
+      "docstatus": 1,
+      "status": "Paid",
+      "per_delivered": null,
+      "per_billed": null,
+      "outstanding_amount": 0.0,
+      "grand_total": 500.0,
+      "gl_entries": [
+        {
+          "account": "Debtors - _OC",
+          "against_voucher": "ACC-SINV-2026-00002",
+          "against_voucher_type": "Sales Invoice",
+          "credit": 0.0,
+          "debit": 500.0,
+          "party": "_OC-CUST",
+          "party_type": "Customer"
+        },
+        {
+          "account": "Sales - _OC",
+          "against_voucher": null,
+          "against_voucher_type": null,
+          "credit": 500.0,
+          "debit": 0.0,
+          "party": null,
+          "party_type": null
+        }
+      ],
+      "stock_ledger_entries": [],
+      "payment_ledger_entries": [
+        {
+          "account": "Debtors - _OC",
+          "account_type": "Receivable",
+          "against_voucher_no": "ACC-SINV-2026-00002",
+          "against_voucher_type": "Sales Invoice",
+          "amount": 500.0,
+          "party": "_OC-CUST",
+          "party_type": "Customer"
+        }
+      ]
+    },
+    "payment_entry": {
+      "doctype": "Payment Entry",
+      "docstatus": 1,
+      "status": "Submitted",
+      "per_delivered": null,
+      "per_billed": null,
+      "outstanding_amount": null,
+      "grand_total": null,
+      "gl_entries": [
+        {
+          "account": "Cash - _OC",
+          "against_voucher": null,
+          "against_voucher_type": null,
+          "credit": 0.0,
+          "debit": 500.0,
+          "party": null,
+          "party_type": null
+        },
+        {
+          "account": "Debtors - _OC",
+          "against_voucher": "ACC-SINV-2026-00002",
+          "against_voucher_type": "Sales Invoice",
+          "credit": 500.0,
+          "debit": 0.0,
+          "party": "_OC-CUST",
+          "party_type": "Customer"
+        }
+      ],
+      "stock_ledger_entries": [],
+      "payment_ledger_entries": [
+        {
+          "account": "Debtors - _OC",
+          "account_type": "Receivable",
+          "against_voucher_no": "ACC-SINV-2026-00002",
+          "against_voucher_type": "Sales Invoice",
+          "amount": -500.0,
+          "party": "_OC-CUST",
+          "party_type": "Customer"
+        }
+      ]
+    }
+  },
+  "reports": {
+    "accounts_receivable_after_payment": {
+      "columns": [
+        "Posting Date",
+        "Party Type",
+        "Party",
+        "Receivable Account",
+        "Customer Contact",
+        "Cost Center",
+        "Project",
+        "Voucher Type",
+        "Voucher No",
+        "Due Date",
+        "Invoiced Amount",
+        "Paid Amount",
+        "Credit Note",
+        "Outstanding Amount",
+        "Age (Days)",
+        "<0",
+        "0-30",
+        "31-60",
+        "61-90",
+        "91-120",
+        "121-Above",
+        "Currency",
+        "Customer LPO",
+        "Territory",
+        "Customer Group"
+      ],
+      "row_count": 0,
+      "rows": []
+    },
+    "stock_balance_after_delivery": {
+      "columns": [
+        "Item",
+        "Item Name",
+        "Item Group",
+        "Warehouse",
+        "Stock UOM",
+        "Balance Qty",
+        "Balance Value",
+        "Opening Qty",
+        "Opening Value",
+        "In Qty",
+        "In Value",
+        "Out Qty",
+        "Out Value",
+        "Valuation Rate",
+        "Reserved Stock",
+        "Company"
+      ],
+      "row_count": 2,
+      "rows": [
+        {
+          "bal_qty": 785.0,
+          "bal_val": 78500.0,
+          "company": "_OracleCo",
+          "currency": 0.0,
+          "in_qty": 0.0,
+          "in_val": 0.0,
+          "item_code": "_OC-ITEM",
+          "item_group": "Products",
+          "item_name": "_OC-ITEM",
+          "opening_fifo_queue": [],
+          "opening_qty": 785.0,
+          "opening_val": 78500.0,
+          "out_qty": 0.0,
+          "out_val": 0.0,
+          "reserved_stock": 0.0,
+          "stock_uom": "Nos",
+          "val_rate": 100.0,
+          "warehouse": "Stores - _OC"
+        },
+        [
+          "Total",
+          "",
+          "",
+          "",
+          "",
+          785.0,
+          78500.0,
+          785.0,
+          78500.0,
+          "",
+          "",
+          "",
+          "",
+          100.0,
+          "",
+          ""
+        ]
+      ]
+    }
+  },
+  "errors": []
+}

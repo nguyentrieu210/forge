@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0.0",
+  "scope": [
+    "frappe",
+    "erpnext"
+  ],
+  "baseline_lock": {
+    "frappe": {
+      "tag": "v16.19.0",
+      "full_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "status": "LOCKED"
+    },
+    "erpnext": {
+      "tag": "v16.20.0",
+      "full_sha": "ff46d20b259a2d65a7ded959df9f9a42991a3562",
+      "status": "LOCKED"
+    }
+  },
+  "documentation_contract": "COMPLETE",
+  "source_acquisition": "BLOCKED_IN_CURRENT_BUILD_ENVIRONMENT_DNS",
+  "source_inventory": "NOT_RUN",
+  "static_extraction": "PARSER_IMPLEMENTED_AND_FIXTURE_TESTED",
+  "runtime_export": "SPECIFIED_NOT_RUN",
+  "behavioral_oracle": "SPECIFIED_NOT_COMPLETE",
+  "full_parity_claim_allowed": false,
+  "next_machine_action": "Run run_source_exact_pipeline.py on an internet-connected environment or provide the two pinned source checkouts.",
+  "artifact_coverage_matrix": "COMPLETE_90_CLASSES",
+  "traceability_contract": "COMPLETE"
+}

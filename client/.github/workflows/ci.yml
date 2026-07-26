@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # pnpm version cố định qua "packageManager" trong package.json (pnpm@9.15.0)
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Secret scan
+        run: node scripts/scan-secrets.mjs
+
+      - name: Clean install (frozen lockfile)
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint (no-native-UI gate)
+        run: pnpm lint
+
+      - name: Test (selfcheck)
+        run: pnpm test
+
+      # Library dist (.d.ts + .js) theo dependency order + demo bundle.
+      # Đây là gate chống type-leak/missing-export/circular chỉ lộ khi build dist độc lập.
+      - name: Build (packages dist + demo)
+        run: pnpm -r run build
+
+      - name: Install Playwright Chromium
+        run: pnpm --filter @metaforge/demo exec playwright install --with-deps chromium
+
+      - name: E2E (mock)
+        run: pnpm e2e
+
+      # Review độc lập (checkpoint 453d322): CI trước đây chỉ rebuild sample-wms/sample-sales
+      # (đã sinh sẵn, commit trong repo) — không CHẠY THẬT CLI để sinh app MỚI, nên regression trong
+      # scaffold()/template có thể lọt (sample app cũ vẫn build được dù CLI hỏng). Sinh app THẬT vào
+      # thư mục tạm trong workspace (apps/* nằm trong pnpm-workspace glob) → install → typecheck →
+      # build → dọn sạch (không commit lockfile churn từ bước install tạm này).
+      - name: Generator smoke test — create-metaforge-app sinh app MỚI, install+typecheck+build thật
+        run: pnpm run verify:generator

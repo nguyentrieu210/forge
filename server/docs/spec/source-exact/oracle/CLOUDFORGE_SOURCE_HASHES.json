@@ -1,0 +1,98 @@
+{
+  "gate": "2E-source-anchor",
+  "note": "SHA-256 of every CloudForge source file cited by the O2C differential, captured at the current repo state; anchors file:line references to content.",
+  "referenced_files": 18,
+  "missing_referenced_paths": [],
+  "files": {
+    "migrations/tenant/0001_core.sql": {
+      "sha256": "99df84e94b15eb24ad7bb9527d1ffac77450cd87e7694cabe09871d0241acc55",
+      "lines": 315,
+      "bytes": 12063
+    },
+    "migrations/tenant/0002_o2c_projections.sql": {
+      "sha256": "35c2e70678b813aaccc20d4ec18f30dcb12be13d448ee24c05011af8d3bf1d6c",
+      "lines": 38,
+      "bytes": 1827
+    },
+    "packages/clouderp-selling/src/controllers.ts": {
+      "sha256": "8f880d4a805676f7d6d45c13a26fb0316bb1efdeafb0f0175fd39211774073c5",
+      "lines": 612,
+      "bytes": 30423
+    },
+    "packages/clouderp-selling/src/registry.ts": {
+      "sha256": "eb6a64d8af83bb04ffbf1396a35b2918baef466253346f6a24cf4e35d1218316",
+      "lines": 12,
+      "bytes": 483
+    },
+    "packages/clouderp-selling/src/totals.ts": {
+      "sha256": "3cb15f2789ba07bec5b218885e9a3b8ed92be89e74cd176ed581911a55a93020",
+      "lines": 64,
+      "bytes": 2902
+    },
+    "packages/clouderp-selling/src/types.ts": {
+      "sha256": "de1e68027eeced3c56c20084d0b42c8ecff02a6f01006435409cac64afcb920e",
+      "lines": 107,
+      "bytes": 2689
+    },
+    "packages/contracts/src/index.ts": {
+      "sha256": "9c816a854e92bbebb8acbf5a3fc2b9d9c986336af746cfc6ba9d27603c380c03",
+      "lines": 262,
+      "bytes": 8379
+    },
+    "packages/core/src/errors.ts": {
+      "sha256": "28b376413f834447fb7e0d902f8766d23fbba80c7955dfa1bf21fb1d8c91f909",
+      "lines": 81,
+      "bytes": 4944
+    },
+    "packages/document-kernel/src/d1-store.ts": {
+      "sha256": "f6c8e2833ad7d475b1c80579a4432df87e4b647f9e13039889dd65778f9d6a5c",
+      "lines": 356,
+      "bytes": 17717
+    },
+    "packages/document-kernel/src/in-memory-store.ts": {
+      "sha256": "4055412b9b074989ebcbae1b6a5759b80053e5d82e998472cda49281fa58a517",
+      "lines": 308,
+      "bytes": 15159
+    },
+    "packages/document-kernel/src/kernel.ts": {
+      "sha256": "23a94f2fbfd915b33d50da66240c6629c6dd294e035a75c24dc6199c95ab5932",
+      "lines": 59,
+      "bytes": 2957
+    },
+    "packages/document-kernel/src/lifecycle.ts": {
+      "sha256": "030c192bd5199308b32342a810242feed18049bc29b939600aecfb537fc4e517",
+      "lines": 26,
+      "bytes": 1099
+    },
+    "packages/document-kernel/src/status.ts": {
+      "sha256": "30a03f38308f9a7405cf45455ed660d0c60cca68cf77226df61cd249bece14ed",
+      "lines": 56,
+      "bytes": 2216
+    },
+    "packages/ledger/src/index.ts": {
+      "sha256": "b31e3df94f929603485808c6edd61a0de6a98f638d5e999438da1d39eb6fce56",
+      "lines": 46,
+      "bytes": 1921
+    },
+    "packages/money/src/index.ts": {
+      "sha256": "d7363a917821285a3d89d0b7c21d58440e9d6616532ddccef25e1c4fec6987d0",
+      "lines": 120,
+      "bytes": 5103
+    },
+    "packages/policy/src/index.ts": {
+      "sha256": "43806da70f5a57c31917ba745f1ace8a972b40b5c6956dbcc23c381d09e884dd",
+      "lines": 65,
+      "bytes": 2487
+    },
+    "packages/query/src/index.ts": {
+      "sha256": "e7988e9fb950bb5d00c2b57150a75f9f8f08d753beb4e7308182bb6aae5ce92f",
+      "lines": 186,
+      "bytes": 8508
+    },
+    "tests/o2c.test.mjs": {
+      "sha256": "9ac07bad73105224a9f1bd8a2a12c1803a7c65a8c17b37c3ea73d3edfbbad75d",
+      "lines": 315,
+      "bytes": 23845
+    }
+  }
+}

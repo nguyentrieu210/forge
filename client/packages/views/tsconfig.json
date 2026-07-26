@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "noEmit": false
+  },
+  "references": [
+    { "path": "../core" },
+    { "path": "../adapter-frappe" },
+    { "path": "../ui" },
+    { "path": "../controls" }
+  ],
+  "include": ["src/**/*"]
+}

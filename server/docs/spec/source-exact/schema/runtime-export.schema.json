@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cloudforge.dev/schema/source-exact/runtime-export.schema.json",
+  "title": "Pinned Frappe runtime export",
+  "type": "object",
+  "required": ["schema_version", "environment", "installed_apps", "doctypes", "hooks", "reports"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "generated_at": {"type": "string"},
+    "environment": {"type": "object"},
+    "installed_apps": {"type": "array", "items": {"type": "object"}},
+    "doctypes": {"type": "array", "items": {"type": "object"}},
+    "hooks": {"type": "object"},
+    "reports": {"type": "array", "items": {"type": "object"}},
+    "workspaces": {"type": "array", "items": {"type": "object"}},
+    "workflows": {"type": "array", "items": {"type": "object"}},
+    "print_formats": {"type": "array", "items": {"type": "object"}},
+    "database": {"type": "object"},
+    "export_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  },
+  "additionalProperties": true
+}

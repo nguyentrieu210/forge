@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cloudforge.dev/schema/source-exact/coverage.schema.json",
+  "title": "Source exact coverage report",
+  "type": "object",
+  "required": ["app", "commit", "source_inventory", "static_extraction", "behavioral_parity"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "app": {"type": "string"},
+    "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "tag": {"type": ["string", "null"]},
+    "generated_at": {"type": "string"},
+    "source_inventory": {
+      "type": "object",
+      "required": ["files_seen", "unreadable_files", "coverage_percent", "claim"],
+      "properties": {
+        "files_seen": {"type": "integer", "minimum": 0},
+        "unreadable_files": {"type": "integer", "minimum": 0},
+        "coverage_percent": {"type": "number", "minimum": 0, "maximum": 100},
+        "claim": {"enum": ["COMPLETE", "INCOMPLETE"]}
+      }
+    },
+    "static_extraction": {
+      "type": "object",
+      "required": ["structured_artifacts", "successfully_extracted", "coverage_percent", "parse_errors", "claim"],
+      "properties": {
+        "structured_artifacts": {"type": "integer", "minimum": 0},
+        "successfully_extracted": {"type": "integer", "minimum": 0},
+        "coverage_percent": {"type": "number", "minimum": 0, "maximum": 100},
+        "parse_errors": {"type": "integer", "minimum": 0},
+        "dynamic_sql_markers": {"type": "integer", "minimum": 0},
+        "claim": {"type": "string"}
+      }
+    },
+    "behavioral_parity": {
+      "type": "object",
+      "required": ["coverage_percent", "claim", "requires"],
+      "properties": {
+        "coverage_percent": {"type": ["number", "null"], "minimum": 0, "maximum": 100},
+        "claim": {"type": "string", "not": {"const": "PROVEN"}},
+        "requires": {"type": "array", "items": {"type": "string"}}
+      }
+    }
+  },
+  "additionalProperties": true
+}

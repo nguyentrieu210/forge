@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": ".",
+    "types": []
+  },
+  "include": [
+    "apps/tenant-worker/src/**/*.ts",
+    "apps/tenant-worker/test/**/*.mts",
+    "apps/tenant-worker/vitest.config.mts",
+    "packages/**/*.ts",
+    "types/**/*.d.ts"
+  ],
+  "exclude": ["dist", "node_modules"]
+}

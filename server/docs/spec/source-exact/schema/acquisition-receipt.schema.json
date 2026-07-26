@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cloudforge.dev/schema/source-exact/acquisition-receipt.schema.json",
+  "title": "Source acquisition receipt",
+  "type": "object",
+  "required": ["schema_version", "repository", "tag", "resolved_commit", "archive_sha256", "tree_sha256", "file_count"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "repository": {"type": "string", "format": "uri"},
+    "tag": {"type": "string", "minLength": 1},
+    "resolved_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "archive_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "archive_size_bytes": {"type": "integer", "minimum": 1},
+    "download_final_host": {"type": ["string", "null"]},
+    "tree_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "file_count": {"type": "integer", "minimum": 1},
+    "destination": {"type": "string"}
+  },
+  "additionalProperties": false
+}

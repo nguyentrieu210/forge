@@ -1,0 +1,32 @@
+{
+  "gate": "2E-oracle-environment",
+  "note": "Disposable, commit-pinned Frappe/ERPNext oracle bench used to capture the O2C behavioral matrix (groups A-M). Content-verified against the SHA-locked source trees.",
+  "image": {
+    "repository": "frappe/erpnext",
+    "tag": "v16.20.0",
+    "repo_digest": "frappe/erpnext@sha256:0515daf0d095172776f3acf7f122d48d62c5e8d8d8e67b527c2594610d207431",
+    "local_image_id": "sha256:97d6f6c525d410d92f37567cf57b2a02190eac91daee4fff945188bf608a2326"
+  },
+  "app_versions": { "frappe": "16.19.0", "erpnext": "16.20.0" },
+  "source_lock": {
+    "frappe_commit": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+    "erpnext_commit": "ff46d20b259a2d65a7ded959df9f9a42991a3562",
+    "verification": "content-hash: 7 O2C controller/report files byte-for-byte identical to the SHA-verified local source trees (.git stripped from the image)"
+  },
+  "services": { "db": "mariadb:11.8", "cache": "redis:7-alpine" },
+  "host": { "docker_server": "28.2.2", "os": "Linux 6.14.0 (kairo-cwwh)" },
+  "site": { "name": "oracle.localhost", "installed_apps": ["frappe", "erpnext"] },
+  "rebuild": {
+    "note": "Reproduce the oracle bench from scratch on any Docker host.",
+    "steps": [
+      "docker network create oraclenet",
+      "docker run -d --name oracle-db --network oraclenet -e MARIADB_ROOT_PASSWORD=<pw> mariadb:11.8 --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --skip-character-set-client-handshake",
+      "docker run -d --name oracle-redis --network oraclenet redis:7-alpine",
+      "docker run -d --name oracle-backend --network oraclenet frappe/erpnext:v16.20.0 sleep infinity",
+      "docker exec oracle-backend bench new-site oracle.localhost --mariadb-root-password <pw> --admin-password <pw> --db-host oracle-db --no-mariadb-socket --install-app erpnext",
+      "docker exec oracle-backend bench set-config -g redis_cache redis://oracle-redis:6379 && bench set-config -g redis_queue redis://oracle-redis:6379",
+      "# copy the runners: docs/spec/tools/o2c_{matrix,advanced,valuation,repost,batchserial}_runner.py -> apps/frappe/frappe/{matrix,adv,val,rpst,bs}_o2c.py",
+      "# then: bench --site oracle.localhost execute frappe.matrix_o2c.run  (and adv/val/rpst/bs)"
+    ]
+  }
+}

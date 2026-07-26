@@ -1,0 +1,17 @@
+
+node_modules/
+dist/
+.wrangler/
+.dev.vars
+*.log
+.DS_Store
+coverage/
+
+# Source-exact upstream evidence: derived from GPL-3.0 ERPNext / MIT Frappe source,
+# regenerable via `npm run source:fetch` / `npm run oracle:o2c`. Kept local.
+docs/spec/source-exact/generated/
+# Oracle per-fixture / per-differential artifacts (regenerable via `npm run oracle:o2c`).
+# The summaries (fixture-matrix.json, differential-report.json, ORACLE_REPORT.json) are kept.
+docs/spec/source-exact/oracle/fixtures/O2C-*.json
+docs/spec/source-exact/oracle/differential/O2C-*.json
+docs/spec/source-exact/runtime/

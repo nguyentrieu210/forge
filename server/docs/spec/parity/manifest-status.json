@@ -1,0 +1,9 @@
+{
+  "declared_artifacts": 199,
+  "source_resolved": 0,
+  "source_scan_pending": 199,
+  "critical_rule_ledgers": 36,
+  "oracle_vertical_slices": 6,
+  "gate_2_document_quality": "EXCELLENT_CANDIDATE",
+  "source_exact_full_parity_claim_allowed": false
+}

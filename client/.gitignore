@@ -1,0 +1,39 @@
+node_modules/
+dist/
+.selfcheck.cjs
+.selfcheck.mjs
+.selfcheck.css
+*.tsbuildinfo
+.turbo/
+.env
+.env.*
+!.env.example
+coverage/
+*.log
+.DS_Store
+Thumbs.db
+
+# python (frappe-app)
+__pycache__/
+*.pyc
+.venv/
+
+# playwright (E2E artifacts — spec/config được commit, kết quả thì không)
+test-results/
+playwright-report/
+.playwright/
+blob-report/
+
+# scratch
+docs.zip
+*.zip
+
+# scratch debug (script chẩn đoán dùng-một-lần trong lúc sửa lỗi live, không phải test)
+apps/*/diag*.mjs
+apps/*/shot2.mjs
+apps/*/err.mjs
+apps/*/final.mjs
+apps/demo/screenshots/
+
+# tar deploy tạm (sinh ra mỗi lần build, KHÔNG phải nguồn)
+apps/*/dist.tar

@@ -1,0 +1,103 @@
+{
+  "gate": "2E-S3..S6-O2C",
+  "runtime_stage": "CAPTURED_MATRIX",
+  "runtime_blocker": null,
+  "environment": {
+    "python": "3.14.6",
+    "platform": "win32",
+    "bench_on_path": false,
+    "mariadb_on_path": false,
+    "redis_on_path": false,
+    "docker_on_path": true,
+    "oracle_site_env": null
+  },
+  "source_lock": null,
+  "s3_counts": {
+    "closure_doctypes": 24,
+    "child_tables": 16,
+    "controllers": 24,
+    "client_scripts": 8,
+    "reports": 2,
+    "whitelisted_methods": 69,
+    "files_hashed": 62,
+    "link_boundaries": 67,
+    "gaps": {
+      "DYNAMIC_EVAL_REQUIRED": 242,
+      "RUNTIME_REQUIRED": 52,
+      "OUT_OF_SCOPE": 67
+    }
+  },
+  "s5_matrix": {
+    "total": 71,
+    "groups": {
+      "A-sales-order": 11,
+      "B-delivery-note": 11,
+      "C-sales-invoice": 11,
+      "D-payment-entry": 9,
+      "E-lifecycle": 8,
+      "F-report": 8,
+      "G-numeric": 9,
+      "H-concurrency": 4
+    }
+  },
+  "s6": {
+    "total_fixtures": 115,
+    "erpnext_captured": 115,
+    "adversarially_verified": true,
+    "claim_level_counts": {
+      "DIFFERENTIAL_PASS": 48,
+      "ORACLE_CAPTURED": 67
+    },
+    "cloudforge_status_counts": {
+      "implemented": 72,
+      "partial": 17,
+      "missing": 26
+    },
+    "gap_counts_by_type": {
+      "INTENTIONAL_ARCHITECTURE_DIFFERENCE": 58,
+      "MISSING_FEATURE": 50,
+      "ERROR_SEMANTICS_DIFFERENCE": 18,
+      "BUSINESS_RULE_MISMATCH": 17,
+      "ROUNDING_MISMATCH": 1
+    },
+    "differential_pass_count": 48,
+    "highest_claim": "DIFFERENTIAL_PASS"
+  },
+  "claim_levels": {
+    "SOURCE_INVENTORIED": true,
+    "STATIC_EXTRACTED": true,
+    "RUNTIME_RESOLVED": true,
+    "ORACLE_CAPTURED": true,
+    "CLOUDFORGE_MAPPED": true,
+    "DIFFERENTIAL_PASS": true
+  },
+  "highest_claim": "DIFFERENTIAL_PASS",
+  "validation_failures": [],
+  "stage_returncodes": {
+    "source_lock": 0,
+    "s3_static": 0,
+    "s5_fixtures": 0,
+    "s6_differential": 0
+  },
+  "runtime_capture": {
+    "bench": "remote pinned bench (frappe v16.19.0 / erpnext v16.20.0, content-verified)",
+    "s4_runtime_export_hash": "a36c209d791bd5eee26e9d6376e04d66a782b3f9a18151bcb39a10777b0b7a77",
+    "s5_fixtures_captured": [
+      "O2C-E-SO-DN-SI-PE-HAPPY"
+    ],
+    "s5_fixtures_total": 71,
+    "differential_pass": [
+      "O2C-E-SO-DN-SI-PE-HAPPY"
+    ]
+  },
+  "matrix_capture": {
+    "provenance": {
+      "frappe": "16.19.0",
+      "erpnext": "16.20.0"
+    },
+    "total": 115,
+    "captured": 115,
+    "handler_failures": 0,
+    "artifact": "docs/spec/source-exact/oracle/runtime/o2c-matrix-capture.json"
+  }
+}

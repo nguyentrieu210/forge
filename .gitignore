@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.wrangler/
+.dev.vars
+*.log
+.DS_Store
+coverage/
+*.tsbuildinfo
+
+# Bằng chứng source-exact sinh lại được từ ERPNext (GPL-3.0) / Frappe (MIT)
+server/docs/spec/source-exact/generated/
+server/docs/spec/source-exact/oracle/fixtures/O2C-*.json
+server/docs/spec/source-exact/oracle/differential/O2C-*.json
+server/docs/spec/source-exact/runtime/

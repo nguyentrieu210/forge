@@ -1,0 +1,60 @@
+{
+  "name": "cloudforge",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "clean": "node scripts/clean.mjs",
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run test:unit && npm run test:sql",
+    "verify": "node scripts/verify-repo.mjs && node scripts/verify-secrets.mjs",
+    "check": "npm run check:business-suite",
+    "types:tenant": "npx wrangler types --config apps/tenant-worker/wrangler.jsonc",
+    "dev:tenant": "npx wrangler dev --config apps/tenant-worker/wrangler.jsonc",
+    "dev:gateway": "npx wrangler dev --config apps/gateway-worker/wrangler.jsonc",
+    "deploy:tenant": "wrangler deploy --config apps/tenant-worker/wrangler.jsonc --name cloudforge-tenant-demo --dispatch-namespace cloudforge-production",
+    "deploy:gateway": "npx wrangler deploy --config apps/gateway-worker/wrangler.jsonc",
+    "test:unit": "npm run clean && npm run build && node --test tests/*.test.mjs",
+    "test:sql": "python3 scripts/verify-sql.py && python3 scripts/test-commercial-migration.py && python3 scripts/test-business-suite-migration.py && python3 scripts/test-sql-concurrency.py",
+    "test:workers": "vitest run --config apps/tenant-worker/vitest.config.mts && vitest run --config apps/query-worker/vitest.config.mts",
+    "check:full": "npm run check:business-suite && npm run typecheck:web && npm run test:workers",
+    "typecheck:workers": "tsc -p tsconfig.worker-tests.json",
+    "report": "python3 scripts/generate-verification.py",
+    "source:test": "python3 tests/test_source_exact_parser.py -v",
+    "source:fetch": "python3 docs/spec/tools/run_source_exact_pipeline.py --project-root . --sources-dir ../upstream --apps frappe,erpnext --fetch",
+    "source:scan": "python3 docs/spec/tools/run_source_exact_pipeline.py --project-root . --sources-dir ../upstream --apps frappe,erpnext",
+    "source:verify": "python3 docs/spec/tools/verify_source_exact.py --project-root . --apps frappe,erpnext",
+    "oracle:o2c": "python3 docs/spec/tools/run_o2c_oracle.py --sources-dir ../upstream",
+    "oracle:o2c:bench": "python3 docs/spec/tools/run_o2c_oracle.py --sources-dir ../upstream --run-bench --require-bench",
+    "dispatch-secret:put": "node scripts/manage-dispatch-secrets.mjs put",
+    "dispatch-secret:list": "node scripts/manage-dispatch-secrets.mjs list",
+    "verify:commercial": "node scripts/verify-commercial-readiness.mjs",
+    "verify:promotion": "node scripts/verify-commercial-readiness.mjs --require-promotion",
+    "typecheck:web": "npm --prefix apps/web run typecheck",
+    "release:manifest": "python3 scripts/release-manifest.py",
+    "verify:manifest": "python3 scripts/release-manifest.py --verify",
+    "verify:platform": "node scripts/verify-platform-readiness.mjs",
+    "check:platform": "npm run test && npm run typecheck:workers && npm run source:test && npm run report && npm run verify && npm run verify:platform",
+    "verify:frappe-core": "node scripts/verify-frappe-core-readiness.mjs",
+    "check:frappe-core": "npm run test && npm run typecheck:workers && npm run source:test && npm run report && npm run verify && npm run verify:frappe-core",
+    "verify:erpnext-core": "node scripts/verify-erpnext-core-readiness.mjs",
+    "check:erpnext-core": "npm run test && npm run typecheck:workers && npm run typecheck:web && npm run source:test && npm run report && npm run verify && npm run verify:erpnext-core",
+    "verify:erpnext-suite": "node scripts/verify-erpnext-suite-readiness.mjs",
+    "check:erpnext-suite": "npm run test && npm run typecheck:workers && npm run source:test && npm run report && npm run verify && npm run verify:erpnext-suite",
+    "verify:business-suite": "node scripts/verify-business-suite-readiness.mjs",
+    "check:business-suite": "npm run test && npm run typecheck:workers && npm run source:test && npm run report && npm run verify && npm run verify:business-suite"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "0.18.5",
+    "typescript": "5.8.3",
+    "vitest": "4.1.0",
+    "wrangler": "4.0.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

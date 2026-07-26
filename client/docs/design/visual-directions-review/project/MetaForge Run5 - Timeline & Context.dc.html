@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<style>
+  body { margin:0; background:#eceef1; font-family:'Geist',system-ui,sans-serif; }
+  a { color:var(--mf-soft-text,#1740cc); text-decoration:none; } a:hover { text-decoration:underline; }
+  kbd { font-family:'Geist Mono',monospace; }
+</style>
+</helmet>
+
+<div style="min-height:100vh; --mf-bg:{{t.bg}}; --mf-surface:{{t.surface}}; --mf-surface2:{{t.surface2}}; --mf-sidebar:{{t.sidebar}}; --mf-border:{{t.border}}; --mf-text:{{t.text}}; --mf-text-muted:{{t.muted}}; --mf-text-subtle:{{t.subtle}}; --mf-primary:{{t.primary}}; --mf-primary-fg:{{t.primaryFg}}; --mf-soft:{{t.soft}}; --mf-soft-text:{{t.softText}}; --mf-ring:{{t.ring}}; --mf-green:{{t.green}}; --mf-amber:{{t.amber}}; --mf-red:{{t.red}}; --mf-blue:{{t.blue}};">
+
+  <div style="position:sticky; top:0; z-index:60; background:#fff; border-bottom:1px solid #e4e4e7; box-shadow:0 1px 3px rgba(0,0,0,.05); padding:12px 28px; display:flex; align-items:center; gap:12px 20px; flex-wrap:wrap;">
+    <div style="display:flex; align-items:center; gap:11px;">
+      <div style="width:32px; height:32px; border-radius:9px; background:#1B4DFF; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:17px;">M</div>
+      <div><div style="font-size:14.5px; font-weight:700; color:#18181b; line-height:1.1;">MetaForge · Run 5</div><div style="font-size:11px; color:#71717a; font-family:'Geist Mono',monospace;">Timeline · Workflow · Context · AI placeholder</div></div>
+    </div>
+    <div style="display:flex; align-items:center; gap:8px;">
+      <span style="font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#a1a1aa;">Palette</span>
+      <div style="display:flex; gap:6px;">
+        <button type="button" onClick="{{ setNeutral }}" style="{{ segNeutral }}"><span style="width:10px;height:10px;border-radius:50%;background:#18181b;flex-shrink:0;"></span>Neutral</button>
+        <button type="button" onClick="{{ setBlue }}" style="{{ segBlue }}"><span style="width:10px;height:10px;border-radius:50%;background:#1B4DFF;flex-shrink:0;"></span>MetaForge Blue</button>
+        <button type="button" onClick="{{ setWarm }}" style="{{ segWarm }}"><span style="width:10px;height:10px;border-radius:50%;background:#b15b2e;flex-shrink:0;"></span>Warm</button>
+      </div>
+    </div>
+    <div style="margin-left:auto; display:flex; align-items:center; gap:4px; padding:4px; border:1px solid #e4e4e7; border-radius:11px; background:#f4f4f5;">
+      <button type="button" onClick="{{ setLight }}" style="{{ apLight }}">Sáng</button>
+      <button type="button" onClick="{{ setDark }}" style="{{ apDark }}">Tối</button>
+    </div>
+  </div>
+
+  <div style="padding:26px 28px 70px; display:flex; flex-direction:column; gap:42px; color:var(--mf-text);">
+
+    <section style="display:flex; flex-direction:column; gap:12px;">
+      <div style="display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;">
+        <span style="font-family:'Geist Mono',monospace; font-size:13px; font-weight:600; color:var(--mf-primary);">M11 · ContextPanel (live tab) + Workflow + AI</span>
+        <span style="font-size:12px; color:var(--mf-text-subtle);">MF-M11-CONTEXT-01 · icon+màu semantic theo loại · grouping ngày · composer sticky · AI chưa cấu hình</span>
+      </div>
+
+      <div style="display:flex; gap:20px; flex-wrap:wrap; align-items:flex-start;">
+
+        <!-- CONTEXT PANEL live -->
+        <div style="width:360px; height:640px; border:1px solid var(--mf-border); border-radius:12px; overflow:hidden; background:var(--mf-surface2); box-shadow:0 1px 2px rgba(0,0,0,.05),0 24px 48px -30px rgba(0,0,0,.3); display:flex; flex-direction:column; flex-shrink:0;">
+          <div style="display:flex; align-items:center; gap:1px; padding:6px 8px; border-bottom:1px solid var(--mf-border); background:var(--mf-surface); overflow:auto;">
+            <button type="button" onClick="{{ ctxTimeline }}" style="{{ ctxTL }}"><i data-lucide="history" width="14" height="14"></i>Lịch sử</button>
+            <button type="button" onClick="{{ ctxContext }}" style="{{ ctxCX }}"><i data-lucide="panel-right" width="14" height="14"></i>Ngữ cảnh</button>
+            <button type="button" onClick="{{ ctxAI }}" style="{{ ctxAIStyle }}"><i data-lucide="sparkles" width="14" height="14"></i>AI</button>
+          </div>
+
+          <!-- TIMELINE -->
+          <sc-if value="{{ isTimeline }}" hint-placeholder-val="{{ true }}">
+            <div style="flex:1; overflow:auto; padding:14px;">
+              <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px;"><span style="font-size:11px; padding:2px 9px; border-radius:99px; background:var(--mf-primary); color:var(--mf-primary-fg); font-weight:600;">Tất cả</span><span style="font-size:11px; padding:2px 9px; border-radius:99px; background:var(--mf-surface); border:1px solid var(--mf-border); color:var(--mf-text-muted);">Bình luận</span><span style="font-size:11px; padding:2px 9px; border-radius:99px; background:var(--mf-surface); border:1px solid var(--mf-border); color:var(--mf-text-muted);">Thay đổi</span></div>
+              <div style="font-size:10.5px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--mf-text-subtle); margin-bottom:10px;">Hôm nay</div>
+              <div style="display:flex; flex-direction:column; gap:0;">
+                <sc-for list="{{ timeline }}" as="e" hint-placeholder-count="7">
+                  <div style="display:flex; gap:10px;">
+                    <div style="display:flex; flex-direction:column; align-items:center; flex-shrink:0;">
+                      <span style="width:26px; height:26px; border-radius:50%; background:{{ e.avBg }}; border:{{ e.avBorder }}; color:{{ e.avColor }}; display:flex; align-items:center; justify-content:center; font-size:9.5px; font-weight:600;"><sc-if value="{{ e.isText }}" hint-placeholder-val="{{ true }}">{{ e.avatar }}</sc-if><sc-if value="{{ e.isIcon }}" hint-placeholder-val="{{ false }}"><i data-lucide="{{ e.icon }}" width="13" height="13"></i></sc-if></span>
+                      <span style="width:1px; flex:1; background:var(--mf-border); margin-top:4px; min-height:8px;"></span>
+                    </div>
+                    <div style="padding-bottom:16px; min-width:0; flex:1;">
+                      <div style="font-size:12.5px; line-height:1.4;"><span style="font-weight:600;">{{ e.who }}</span> <span style="color:var(--mf-text-muted);">{{ e.action }} · {{ e.time }}</span></div>
+                      <sc-if value="{{ e.hasBody }}" hint-placeholder-val="{{ false }}"><div style="margin-top:5px; padding:8px 10px; border:1px solid var(--mf-border); border-radius:8px; background:var(--mf-surface); font-size:12px; line-height:1.45;">{{ e.body }}</div></sc-if>
+                      <sc-if value="{{ e.hasTransition }}" hint-placeholder-val="{{ false }}"><div style="margin-top:5px; font-size:11.5px; display:flex; align-items:center; gap:6px;"><span style="padding:1px 6px; border-radius:5px; background:var(--mf-surface); border:1px solid var(--mf-border); color:var(--mf-text-muted);">{{ e.from }}</span><i data-lucide="arrow-right" width="12" height="12" style="color:var(--mf-text-subtle);"></i><span style="padding:1px 6px; border-radius:5px; background:var(--mf-soft); color:var(--mf-soft-text);">{{ e.to }}</span></div></sc-if>
+                      <sc-if value="{{ e.hasFile }}" hint-placeholder-val="{{ false }}"><div style="margin-top:5px; display:inline-flex; align-items:center; gap:8px; padding:5px 9px; border:1px solid var(--mf-border); border-radius:8px; background:var(--mf-surface); font-size:11.5px;"><i data-lucide="file-text" width="14" height="14" style="color:var(--mf-red);"></i>{{ e.file }}</div></sc-if>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="border-top:1px solid var(--mf-border); padding:10px; background:var(--mf-surface); display:flex; flex-direction:column; gap:8px;">
+              <div style="min-height:38px; border:1px solid var(--mf-border); border-radius:8px; background:var(--mf-surface); padding:8px 10px; font-size:12px; color:var(--mf-text-subtle);">Viết bình luận… @ nhắc người, gõ / lệnh</div>
+              <div style="display:flex; align-items:center; gap:6px;"><button style="width:30px; height:30px; display:flex; align-items:center; justify-content:center; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface); color:var(--mf-text-muted); cursor:pointer;"><i data-lucide="paperclip" width="15" height="15"></i></button><button style="width:30px; height:30px; display:flex; align-items:center; justify-content:center; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface); color:var(--mf-text-muted); cursor:pointer;"><i data-lucide="at-sign" width="15" height="15"></i></button><button style="margin-left:auto; display:inline-flex; align-items:center; gap:6px; height:30px; padding:0 13px; border:none; border-radius:7px; background:var(--mf-primary); color:var(--mf-primary-fg); font-size:12px; font-weight:600; font-family:inherit; cursor:pointer;">Gửi<i data-lucide="send-horizontal" width="14" height="14"></i></button></div>
+            </div>
+          </sc-if>
+
+          <!-- CONTEXT -->
+          <sc-if value="{{ isContext }}" hint-placeholder-val="{{ false }}">
+            <div style="flex:1; overflow:auto; padding:14px; display:flex; flex-direction:column; gap:16px;">
+              <div>
+                <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;"><span style="font-size:10.5px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--mf-text-subtle);">Giao việc</span><button style="margin-left:auto; width:22px; height:22px; display:flex; align-items:center; justify-content:center; border:1px solid var(--mf-border); border-radius:6px; background:var(--mf-surface); color:var(--mf-text-muted); cursor:pointer;"><i data-lucide="plus" width="13" height="13"></i></button></div>
+                <div style="display:flex; gap:6px; flex-wrap:wrap;"><span style="display:inline-flex; align-items:center; gap:6px; padding:3px 9px 3px 3px; border-radius:99px; background:var(--mf-surface); border:1px solid var(--mf-border); font-size:12px;"><span style="width:20px;height:20px;border-radius:50%;background:var(--mf-soft);color:var(--mf-soft-text);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;">MT</span>Minh Trần<i data-lucide="x" width="12" height="12" style="color:var(--mf-text-subtle);"></i></span><span style="display:inline-flex; align-items:center; gap:6px; padding:3px 9px 3px 3px; border-radius:99px; background:var(--mf-surface); border:1px solid var(--mf-border); font-size:12px;"><span style="width:20px;height:20px;border-radius:50%;background:var(--mf-soft);color:var(--mf-soft-text);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;">HĐ</span>Huy Đỗ<i data-lucide="x" width="12" height="12" style="color:var(--mf-text-subtle);"></i></span></div>
+              </div>
+              <div>
+                <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;"><span style="font-size:10.5px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--mf-text-subtle);">Tệp đính kèm</span><span style="font-size:10px; color:var(--mf-text-subtle);">2</span><button style="margin-left:auto; width:22px; height:22px; display:flex; align-items:center; justify-content:center; border:1px solid var(--mf-border); border-radius:6px; background:var(--mf-surface); color:var(--mf-text-muted); cursor:pointer;"><i data-lucide="upload" width="13" height="13"></i></button></div>
+                <div style="display:flex; flex-direction:column; gap:6px;"><div style="display:flex; align-items:center; gap:9px; padding:7px 10px; border:1px solid var(--mf-border); border-radius:8px; background:var(--mf-surface);"><i data-lucide="file-text" width="16" height="16" style="color:var(--mf-red);"></i><div style="flex:1; min-width:0;"><div style="font-size:12px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">flow-thanh-toan-v2.pdf</div><div style="font-size:10.5px; color:var(--mf-text-subtle);">1.2 MB · Lan Phạm</div></div><i data-lucide="download" width="14" height="14" style="color:var(--mf-text-subtle);"></i></div><div style="display:flex; align-items:center; gap:9px; padding:7px 10px; border:1px solid var(--mf-border); border-radius:8px; background:var(--mf-surface);"><i data-lucide="image" width="16" height="16" style="color:var(--mf-green);"></i><div style="flex:1; min-width:0;"><div style="font-size:12px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">mockup-checkout.png</div><div style="font-size:10.5px; color:var(--mf-text-subtle);">640 KB · Minh Trần</div></div><i data-lucide="download" width="14" height="14" style="color:var(--mf-text-subtle);"></i></div></div>
+              </div>
+              <div>
+                <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;"><span style="font-size:10.5px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--mf-text-subtle);">Nhãn</span></div>
+                <div style="display:flex; gap:6px; flex-wrap:wrap;"><span style="font-size:11px; padding:2px 9px; border-radius:6px; background:var(--mf-soft); color:var(--mf-soft-text); border:1px solid var(--mf-border);">thanh-toán</span><span style="font-size:11px; padding:2px 9px; border-radius:6px; background:var(--mf-surface2); color:var(--mf-text-muted); border:1px solid var(--mf-border);">Q3</span><button style="font-size:11px; padding:2px 9px; border-radius:6px; background:transparent; color:var(--mf-text-muted); border:1px dashed var(--mf-border); cursor:pointer; font-family:inherit;">+ Nhãn</button></div>
+              </div>
+              <div>
+                <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;"><span style="font-size:10.5px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--mf-text-subtle);">Chia sẻ với</span></div>
+                <div style="display:flex; align-items:center; gap:-6px;"><span style="width:26px;height:26px;border-radius:50%;background:var(--mf-soft);color:var(--mf-soft-text);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;border:2px solid var(--mf-surface2);">MT</span><span style="width:26px;height:26px;border-radius:50%;background:var(--mf-soft);color:var(--mf-soft-text);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;border:2px solid var(--mf-surface2);margin-left:-6px;">LP</span><span style="width:26px;height:26px;border-radius:50%;background:var(--mf-surface);border:1px dashed var(--mf-border);color:var(--mf-text-subtle);display:flex;align-items:center;justify-content:center;margin-left:-6px;"><i data-lucide="plus" width="13" height="13"></i></span></div>
+              </div>
+              <div>
+                <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;"><span style="font-size:10.5px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--mf-text-subtle);">Liên kết (Connections)</span></div>
+                <div style="display:flex; flex-direction:column; gap:6px;"><a style="display:flex; align-items:center; gap:9px; padding:7px 10px; border:1px solid var(--mf-border); border-radius:8px; background:var(--mf-surface); font-size:12px; color:var(--mf-text);"><i data-lucide="receipt" width="15" height="15" style="color:var(--mf-soft-text);"></i>Sales Invoice<span style="margin-left:auto; font-size:11px; color:var(--mf-primary-fg); background:var(--mf-primary); padding:0 7px; border-radius:8px; font-weight:600;">1</span></a><a style="display:flex; align-items:center; gap:9px; padding:7px 10px; border:1px solid var(--mf-border); border-radius:8px; background:var(--mf-surface); font-size:12px; color:var(--mf-text);"><i data-lucide="wallet" width="15" height="15" style="color:var(--mf-soft-text);"></i>Payment Entry<span style="margin-left:auto; font-size:11px; color:var(--mf-primary-fg); background:var(--mf-primary); padding:0 7px; border-radius:8px; font-weight:600;">2</span></a></div>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- AI (chưa cấu hình) -->
+          <sc-if value="{{ isAI }}" hint-placeholder-val="{{ false }}">
+            <div style="flex:1; display:flex; flex-direction:column;">
+              <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:28px 22px; gap:14px;">
+                <div style="width:52px; height:52px; border-radius:14px; background:var(--mf-soft); color:var(--mf-primary); display:flex; align-items:center; justify-content:center;"><i data-lucide="sparkles" width="24" height="24"></i></div>
+                <div><div style="font-size:14px; font-weight:600;">Chưa cấu hình nhà cung cấp AI</div><div style="font-size:12.5px; color:var(--mf-text-muted); margin-top:6px; line-height:1.5;">Bật tóm tắt bản ghi, "Điền từ ảnh/tệp" (OCR) và "Viết giúp" bằng cách kết nối nhà cung cấp trong Cài đặt.</div></div>
+                <button style="display:inline-flex; align-items:center; gap:7px; height:34px; padding:0 15px; border:none; border-radius:8px; background:var(--mf-primary); color:var(--mf-primary-fg); font-size:12.5px; font-weight:600; font-family:inherit; cursor:pointer;"><i data-lucide="settings" width="14" height="14"></i>Mở cài đặt AI</button>
+                <span style="font-size:10.5px; color:var(--mf-amber); background:var(--mf-surface2); border:1px solid var(--mf-border); padding:3px 9px; border-radius:6px; font-family:'Geist Mono',monospace;">Requires backend contract</span>
+              </div>
+              <div style="border-top:1px solid var(--mf-border); padding:12px;">
+                <div style="font-size:10px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--mf-text-subtle); margin-bottom:8px;">Gợi ý (khi bật)</div>
+                <div style="display:flex; flex-direction:column; gap:6px;"><div style="display:flex; align-items:center; gap:8px; padding:7px 10px; border:1px solid var(--mf-border); border-radius:8px; background:var(--mf-surface); font-size:12px; opacity:.7;"><i data-lucide="text" width="14" height="14" style="color:var(--mf-text-subtle);"></i>Tóm tắt bản ghi này</div><div style="display:flex; align-items:center; gap:8px; padding:7px 10px; border:1px solid var(--mf-border); border-radius:8px; background:var(--mf-surface); font-size:12px; opacity:.7;"><i data-lucide="scan-text" width="14" height="14" style="color:var(--mf-text-subtle);"></i>Điền từ ảnh/tệp (OCR)</div><div style="display:flex; align-items:center; gap:8px; padding:7px 10px; border:1px solid var(--mf-border); border-radius:8px; background:var(--mf-surface); font-size:12px; opacity:.7;"><i data-lucide="pen-line" width="14" height="14" style="color:var(--mf-text-subtle);"></i>Viết giúp mô tả</div></div>
+                <div style="margin-top:10px; display:flex; align-items:center; gap:8px; padding:8px 10px; border:1px solid var(--mf-border); border-radius:8px; background:var(--mf-surface2); font-size:11.5px; color:var(--mf-text-muted);"><i data-lucide="shield" width="14" height="14" style="color:var(--mf-text-subtle);"></i>AI đọc dữ liệu theo đúng quyền của bạn.</div>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+
+        <!-- WORKFLOW column -->
+        <div style="flex:1; min-width:400px; display:flex; flex-direction:column; gap:16px;">
+          <!-- workflow bar -->
+          <div style="border:1px solid var(--mf-border); border-radius:12px; background:var(--mf-surface); padding:16px;">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px;"><span style="font-size:12px; font-weight:600; letter-spacing:.03em; text-transform:uppercase; color:var(--mf-text-muted);">Workflow · WorkflowActionBar</span><span style="margin-left:auto; font-size:10px; font-family:'Geist Mono',monospace; color:var(--mf-text-subtle);">apply_workflow · role-gated</span></div>
+            <!-- state pipeline -->
+            <div style="display:flex; align-items:center; gap:0; margin-bottom:16px; overflow:auto;">
+              <div style="display:flex; align-items:center; gap:6px; padding:5px 11px; border-radius:8px; background:var(--mf-surface2); border:1px solid var(--mf-border); font-size:12px; color:var(--mf-text-muted); flex-shrink:0;"><i data-lucide="check" width="13" height="13" style="color:var(--mf-green);"></i>Mở</div>
+              <div style="width:22px; height:1px; background:var(--mf-border); flex-shrink:0;"></div>
+              <div style="display:flex; align-items:center; gap:6px; padding:5px 11px; border-radius:8px; background:var(--mf-soft); border:1px solid var(--mf-primary); font-size:12px; color:var(--mf-soft-text); font-weight:600; flex-shrink:0;"><span style="width:7px;height:7px;border-radius:50%;background:var(--mf-blue);"></span>Đang làm</div>
+              <div style="width:22px; height:1px; background:var(--mf-border); flex-shrink:0;"></div>
+              <div style="display:flex; align-items:center; gap:6px; padding:5px 11px; border-radius:8px; background:var(--mf-surface); border:1px dashed var(--mf-border); font-size:12px; color:var(--mf-text-subtle); flex-shrink:0;">Chờ duyệt</div>
+              <div style="width:22px; height:1px; background:var(--mf-border); flex-shrink:0;"></div>
+              <div style="display:flex; align-items:center; gap:6px; padding:5px 11px; border-radius:8px; background:var(--mf-surface); border:1px dashed var(--mf-border); font-size:12px; color:var(--mf-text-subtle); flex-shrink:0;">Hoàn thành</div>
+            </div>
+            <!-- transition buttons (allowed for role) -->
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button style="display:inline-flex; align-items:center; gap:7px; height:36px; padding:0 15px; border:none; border-radius:8px; background:var(--mf-primary); color:var(--mf-primary-fg); font-size:12.5px; font-weight:600; font-family:inherit; cursor:pointer;"><i data-lucide="arrow-right" width="15" height="15"></i>Gửi duyệt</button>
+              <button style="display:inline-flex; align-items:center; gap:7px; height:36px; padding:0 15px; border:1px solid var(--mf-border); border-radius:8px; background:var(--mf-surface); color:var(--mf-text); font-size:12.5px; font-weight:500; font-family:inherit; cursor:pointer;"><i data-lucide="rotate-ccw" width="15" height="15"></i>Trả về Mở</button>
+              <button style="display:inline-flex; align-items:center; gap:7px; height:36px; padding:0 15px; border:1px solid var(--mf-border); border-radius:8px; background:var(--mf-surface); color:var(--mf-red); font-size:12.5px; font-weight:500; font-family:inherit; cursor:pointer;"><i data-lucide="x-circle" width="15" height="15"></i>Hủy</button>
+            </div>
+            <div style="margin-top:12px; display:flex; align-items:flex-start; gap:8px; padding:9px 11px; border:1px solid var(--mf-amber); border-radius:8px; background:var(--mf-surface2);"><i data-lucide="info" width="15" height="15" style="color:var(--mf-amber); flex-shrink:0; margin-top:1px;"></i><span style="font-size:11.5px; color:var(--mf-text-muted); line-height:1.45;">Bước <strong>lùi/hủy</strong> bắt buộc nhập <strong>lý do</strong> (comment) — ghi vào timeline + audit. Nút chỉ hiện với role trong <code style="font-family:'Geist Mono',monospace; font-size:10.5px;">transition.allowed</code>.</span></div>
+          </div>
+
+          <!-- reason chip dialog -->
+          <div style="border:1px solid var(--mf-border); border-radius:12px; background:var(--mf-surface); overflow:hidden;">
+            <div style="padding:10px 14px; border-bottom:1px solid var(--mf-border); font-size:11px; font-family:'Geist Mono',monospace; color:var(--mf-text-subtle);">Confirm chuyển trạng thái lùi (bắt buộc lý do)</div>
+            <div style="padding:16px;">
+              <div style="display:flex; align-items:center; gap:8px; font-size:13px; margin-bottom:12px;"><span style="padding:2px 9px; border-radius:6px; background:var(--mf-soft); color:var(--mf-soft-text); font-weight:500;">Đang làm</span><i data-lucide="arrow-right" width="14" height="14" style="color:var(--mf-text-subtle);"></i><span style="padding:2px 9px; border-radius:6px; background:var(--mf-surface2); border:1px solid var(--mf-border); color:var(--mf-text-muted);">Mở</span></div>
+              <label style="font-size:11px; font-weight:500; color:var(--mf-red); display:block; margin-bottom:5px;">Lý do trả về <span>*</span></label>
+              <div style="min-height:60px; border:1px solid var(--mf-border); border-radius:8px; background:var(--mf-surface); padding:9px 11px; font-size:12.5px; color:var(--mf-text-subtle);">Thiếu tài liệu đối soát VNPay…</div>
+              <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:12px;"><button style="height:32px; padding:0 13px; border:1px solid var(--mf-border); border-radius:8px; background:var(--mf-surface); color:var(--mf-text); font-size:12px; font-weight:500; font-family:inherit; cursor:pointer;">Hủy</button><button style="height:32px; padding:0 13px; border:none; border-radius:8px; background:var(--mf-primary); color:var(--mf-primary-fg); font-size:12px; font-weight:600; font-family:inherit; cursor:pointer;">Xác nhận trả về</button></div>
+            </div>
+          </div>
+
+          <!-- Timeline item types legend -->
+          <div style="border:1px solid var(--mf-border); border-radius:12px; background:var(--mf-surface); padding:16px;">
+            <div style="font-size:12px; font-weight:600; letter-spacing:.03em; text-transform:uppercase; color:var(--mf-text-muted); margin-bottom:12px;">MetaTimeline — 8 loại item (icon + màu semantic)</div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:9px;">
+              <div style="display:flex; align-items:center; gap:9px; font-size:12px;"><span style="width:26px;height:26px;border-radius:50%;background:var(--mf-soft);color:var(--mf-soft-text);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;">LP</span>Comment</div>
+              <div style="display:flex; align-items:center; gap:9px; font-size:12px;"><span style="width:26px;height:26px;border-radius:50%;background:var(--mf-surface);border:1px solid var(--mf-border);color:var(--mf-blue);display:flex;align-items:center;justify-content:center;"><i data-lucide="git-branch" width="13" height="13"></i></span>Workflow</div>
+              <div style="display:flex; align-items:center; gap:9px; font-size:12px;"><span style="width:26px;height:26px;border-radius:50%;background:var(--mf-surface);border:1px solid var(--mf-border);color:var(--mf-text-muted);display:flex;align-items:center;justify-content:center;"><i data-lucide="user-plus" width="13" height="13"></i></span>Assignment</div>
+              <div style="display:flex; align-items:center; gap:9px; font-size:12px;"><span style="width:26px;height:26px;border-radius:50%;background:var(--mf-surface);border:1px solid var(--mf-border);color:var(--mf-text-muted);display:flex;align-items:center;justify-content:center;"><i data-lucide="paperclip" width="13" height="13"></i></span>Attachment</div>
+              <div style="display:flex; align-items:center; gap:9px; font-size:12px;"><span style="width:26px;height:26px;border-radius:50%;background:var(--mf-surface);border:1px solid var(--mf-border);color:var(--mf-text-muted);display:flex;align-items:center;justify-content:center;"><i data-lucide="mail" width="13" height="13"></i></span>Communication</div>
+              <div style="display:flex; align-items:center; gap:9px; font-size:12px;"><span style="width:26px;height:26px;border-radius:50%;background:var(--mf-surface);border:1px solid var(--mf-border);color:var(--mf-text-subtle);display:flex;align-items:center;justify-content:center;"><i data-lucide="pen-line" width="12" height="12"></i></span>Version (field)</div>
+              <div style="display:flex; align-items:center; gap:9px; font-size:12px;"><span style="width:26px;height:26px;border-radius:50%;background:var(--mf-surface);border:1px solid var(--mf-border);color:var(--mf-green);display:flex;align-items:center;justify-content:center;"><i data-lucide="plus" width="13" height="13"></i></span>Creation</div>
+              <div style="display:flex; align-items:center; gap:9px; font-size:12px;"><span style="width:26px;height:26px;border-radius:50%;background:var(--mf-surface);border:1px solid var(--mf-border);color:var(--mf-text-subtle);display:flex;align-items:center;justify-content:center;"><i data-lucide="settings-2" width="13" height="13"></i></span>System action</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:11px; font-family:'Geist Mono',monospace; color:var(--mf-text-subtle);">Nguồn: get_docinfo (versions/comments/communications/assignments/workflow) · gộp theo thời gian, mới nhất trên · lazy load · empty "Chưa có lịch sử"</div>
+    </section>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { palette:"blue", mode:"light", ctx:"timeline" };
+  componentDidMount(){ this._icons(); }
+  componentDidUpdate(){ this._icons(); }
+  _icons(){ const r=()=>window.lucide&&window.lucide.createIcons&&window.lucide.createIcons(); if(window.lucide) r(); else setTimeout(()=>this._icons(),150); }
+
+  _pal(){ return {
+    neutral:{ light:{bg:"#f4f4f5",surface:"#ffffff",surface2:"#fafafa",sidebar:"#fafafa",border:"#e4e4e7",text:"#18181b",muted:"#71717a",subtle:"#a1a1aa",primary:"#18181b",primaryFg:"#fafafa",soft:"#f1f1f3",softText:"#18181b",ring:"#71717a",green:"#16a34a",amber:"#ca8a04",red:"#dc2626",blue:"#2563eb"},
+              dark:{bg:"#09090b",surface:"#131316",surface2:"#1c1c20",sidebar:"#0c0c0e",border:"#2a2a2e",text:"#fafafa",muted:"#a1a1aa",subtle:"#71717a",primary:"#fafafa",primaryFg:"#18181b",soft:"#27272a",softText:"#fafafa",ring:"#a1a1aa",green:"#22c55e",amber:"#eab308",red:"#f87171",blue:"#60a5fa"} },
+    blue:{ light:{bg:"#eef2f6",surface:"#ffffff",surface2:"#f6f8fb",sidebar:"#ffffff",border:"#e2e8f0",text:"#0f172a",muted:"#64748b",subtle:"#94a3b8",primary:"#1B4DFF",primaryFg:"#ffffff",soft:"#edf1ff",softText:"#1740cc",ring:"#1B4DFF",green:"#16a34a",amber:"#d97706",red:"#dc2626",blue:"#1B4DFF"},
+           dark:{bg:"#0a0f1c",surface:"#0f1729",surface2:"#152037",sidebar:"#0c1424",border:"#1e2a44",text:"#e2e8f0",muted:"#93a3bb",subtle:"#64748b",primary:"#4d7cff",primaryFg:"#0a0f1c",soft:"#182352",softText:"#adc0ff",ring:"#4d7cff",green:"#22c55e",amber:"#f59e0b",red:"#f87171",blue:"#4d7cff"} },
+    warm:{ light:{bg:"#f5f2ec",surface:"#ffffff",surface2:"#faf7f1",sidebar:"#faf7f1",border:"#e8e0d3",text:"#292524",muted:"#78716c",subtle:"#a8a29e",primary:"#b15b2e",primaryFg:"#ffffff",soft:"#f6ece0",softText:"#9a4f24",ring:"#b15b2e",green:"#4d7c0f",amber:"#b45309",red:"#b91c1c",blue:"#2563eb"},
+           dark:{bg:"#1a1613",surface:"#241f1b",surface2:"#2c2621",sidebar:"#1f1a16",border:"#443c34",text:"#faf6f0",muted:"#a8a29e",subtle:"#78716c",primary:"#e08442",primaryFg:"#1a1613",soft:"#382a1e",softText:"#f0b483",ring:"#e08442",green:"#84cc16",amber:"#f59e0b",red:"#f87171",blue:"#60a5fa"} }
+  }; }
+
+  _timeline(){
+    const txt=(avatar,who,action,time,body)=>({isText:true,isIcon:false,avatar,avBg:"var(--mf-soft)",avColor:"var(--mf-soft-text)",avBorder:"none",who,action,time,hasBody:!!body,body:body||"",hasTransition:false,hasFile:false});
+    const ic=(icon,color,who,action,time,extra={})=>({isText:false,isIcon:true,icon,avBg:"var(--mf-surface)",avColor:color,avBorder:"1px solid var(--mf-border)",who,action,time,hasBody:false,body:"",hasTransition:false,hasFile:false,...extra});
+    return [
+      txt("LP","Lan Phạm","bình luận","1 giờ","Sandbox VNPay đã hoạt động ✓. @Minh Trần review giúp phần refund nhé."),
+      ic("git-branch","var(--mf-blue)","Minh Trần","chuyển trạng thái","2 giờ",{hasTransition:true,from:"Mở",to:"Đang làm"}),
+      ic("user-plus","var(--mf-text-muted)","Hệ thống","giao việc cho Huy Đỗ","3 giờ"),
+      ic("paperclip","var(--mf-text-muted)","Lan Phạm","đính kèm","5 giờ",{hasFile:true,file:"flow-thanh-toan-v2.pdf"}),
+      ic("mail","var(--mf-text-muted)","Minh Trần","gửi email cho khách","6 giờ"),
+      ic("pen-line","var(--mf-text-subtle)","Minh Trần","sửa Ưu tiên: Trung bình → Cao","Hôm qua"),
+      ic("plus","var(--mf-green)","Minh Trần","tạo bản ghi","Hôm qua")
+    ];
+  }
+
+  renderVals(){
+    const dir=this.state.palette, mode=this.state.mode, t=this._pal()[dir][mode];
+    const seg=(a,c)=>"display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 14px;border-radius:9px;border:1px solid "+(a?c:"#e4e4e7")+";background:"+(a?c:"#fff")+";color:"+(a?"#fff":"#3f3f46")+";font-size:12.5px;font-weight:"+(a?600:500)+";cursor:pointer;font-family:inherit;";
+    const md=(a)=>"display:inline-flex;align-items:center;justify-content:center;min-width:52px;height:30px;padding:0 13px;border:none;border-radius:8px;background:"+(a?"#18181b":"transparent")+";color:"+(a?"#fff":"#52525b")+";font-size:12.5px;font-weight:"+(a?600:500)+";cursor:pointer;font-family:inherit;";
+    const ct=(a)=>"display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:7px;border:none;background:"+(a?"var(--mf-soft)":"transparent")+";color:"+(a?"var(--mf-soft-text)":"var(--mf-text-muted)")+";font-size:12px;font-weight:"+(a?600:500)+";cursor:pointer;font-family:inherit;flex-shrink:0;";
+    const c=this.state.ctx;
+    return {
+      t, timeline:this._timeline(),
+      segNeutral:seg(dir==="neutral","#18181b"), segBlue:seg(dir==="blue","#1B4DFF"), segWarm:seg(dir==="warm","#b15b2e"),
+      apLight:md(mode==="light"), apDark:md(mode==="dark"),
+      setNeutral:()=>this.setState({palette:"neutral"}), setBlue:()=>this.setState({palette:"blue"}), setWarm:()=>this.setState({palette:"warm"}),
+      setLight:()=>this.setState({mode:"light"}), setDark:()=>this.setState({mode:"dark"}),
+      isTimeline:c==="timeline", isContext:c==="context", isAI:c==="ai",
+      ctxTL:ct(c==="timeline"), ctxCX:ct(c==="context"), ctxAIStyle:ct(c==="ai"),
+      ctxTimeline:()=>this.setState({ctx:"timeline"}), ctxContext:()=>this.setState({ctx:"context"}), ctxAI:()=>this.setState({ctx:"ai"})
+    };
+  }
+}
+</script>
+</body>
+</html>

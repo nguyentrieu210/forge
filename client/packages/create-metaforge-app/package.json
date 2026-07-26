@@ -1,0 +1,19 @@
+{
+  "name": "create-metaforge-app",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Scaffold a thin MetaForge app (consumes @metaforge/* via dist; app = manifest + mount).",
+  "bin": { "create-metaforge-app": "dist/cli.js" },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc -b"
+  },
+  "dependencies": {
+    "@metaforge/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "22.9.0",
+    "typescript": "5.6.3"
+  }
+}

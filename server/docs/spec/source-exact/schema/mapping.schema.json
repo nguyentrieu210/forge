@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cloudforge.dev/schema/source-exact/mapping.schema.json",
+  "title": "Source behavior to CloudForge mapping",
+  "type": "object",
+  "required": ["mapping_id", "source", "behavior_ids", "disposition", "cloudforge", "license_profile", "status"],
+  "properties": {
+    "mapping_id": {"type": "string", "pattern": "^MAP-"},
+    "source": {
+      "type": "object",
+      "required": ["app", "commit", "paths", "hashes"],
+      "properties": {
+        "app": {"type": "string"},
+        "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "paths": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+        "hashes": {"type": "array", "items": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "minItems": 1}
+      }
+    },
+    "behavior_ids": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "disposition": {"enum": ["PORT", "REIMPLEMENT", "DEFER", "NOT_APPLICABLE", "EXTERNAL_SERVICE", "WAIVER"]},
+    "cloudforge": {
+      "type": "object",
+      "properties": {
+        "packages": {"type": "array", "items": {"type": "string"}},
+        "symbols": {"type": "array", "items": {"type": "string"}},
+        "migrations": {"type": "array", "items": {"type": "string"}},
+        "routes": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "license_profile": {"enum": ["CLEAN_ROOM", "GPL_DERIVATIVE", "MIT_PORT", "INTERFACE_ONLY", "LICENSE_PROFILE_PENDING"]},
+    "oracle_cases": {"type": "array", "items": {"type": "string"}},
+    "status": {"enum": ["MAPPED", "IMPLEMENTED", "ORACLE_GREEN", "BLOCKED"]},
+    "owner": {"type": "string"},
+    "reviewers": {"type": "array", "items": {"type": "string"}},
+    "notes": {"type": "string"}
+  },
+  "additionalProperties": false
+}

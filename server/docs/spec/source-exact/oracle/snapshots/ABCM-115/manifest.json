@@ -1,0 +1,1227 @@
+{
+  "label": "ABCM-115",
+  "note": "A-M final: 115 fixtures, 48 DIFFERENTIAL_PASS / 67 ORACLE_CAPTURED; INVALID-ITEM reclassified to intentional defer-to-submit design (documented + characterization test)",
+  "gate": "2E-evidence-freeze",
+  "counts": {
+    "files": 239,
+    "fixtures": 115,
+    "differential_pass": 48,
+    "claim_level_counts": {
+      "DIFFERENTIAL_PASS": 48,
+      "ORACLE_CAPTURED": 67
+    },
+    "cloudforge_status_counts": {
+      "implemented": 72,
+      "partial": 17,
+      "missing": 26
+    }
+  },
+  "matrix_capture": {
+    "provenance": {
+      "frappe": "16.19.0",
+      "erpnext": "16.20.0"
+    },
+    "total": 115,
+    "captured": 115,
+    "handler_failures": 0,
+    "artifact": "docs/spec/source-exact/oracle/runtime/o2c-matrix-capture.json"
+  },
+  "files": [
+    {
+      "path": "docs/spec/source-exact/oracle/CLOUDFORGE_SOURCE_HASHES.json",
+      "sha256": "b3157957c8eb30289ecf79711be35174668e1d95efaad7e1027b14679f3c5549",
+      "bytes": 3527
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/differential-report.json",
+      "sha256": "0fac8666a3425b5fae6bdea2e341020d1a99e67683757515b9e35d4fb9b19e84",
+      "bytes": 2647
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-A-AMEND-005.json",
+      "sha256": "6a39e37e8f7351b925104898a2b33e6babc52909f2fe4344e773908d6551ada2",
+      "bytes": 1857
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-A-CANCEL-004.json",
+      "sha256": "4bcdfe69b5b6f26bcb7163d3db7a59d599924f78629c0b2130f7cdc41a16f2fa",
+      "bytes": 1149
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-A-CREATE-DRAFT-001.json",
+      "sha256": "e0a849a9aaa1534a81a9c93a7fad6d23c783115ce1a688ede852aad6abc73bfe",
+      "bytes": 1578
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-A-INVALID-ITEM-006.json",
+      "sha256": "da25c86c30e3d75a996a36b0e8b378c6fb159e6952ad8052dba8ea605b7e2d7f",
+      "bytes": 2315
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-A-INVALID-QTY-007.json",
+      "sha256": "c13c5db5bbb2c31343bd2c0e512abc74e1af2c595e65eb4df621fffef6cf7b4a",
+      "bytes": 2162
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-A-MISSING-MANDATORY-008.json",
+      "sha256": "ae030a0245df9fb0e3f995220551cd3c51f96bdf807070db52f8daeb65dca2b5",
+      "bytes": 2143
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-A-PERMISSION-DENIED-011.json",
+      "sha256": "fd787d76faccbdc9102f64f2f45fd9549ff979aedb71a8871f33b296afb93b68",
+      "bytes": 1689
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-A-PRICE-RATE-009.json",
+      "sha256": "1e5870b4542a8e5d413f4b724e0d0a3b4f01eb407a8ced5caf9c28fd6f9c5c1e",
+      "bytes": 1142
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-A-REPLAY-EQUIV-010.json",
+      "sha256": "5574c06d13df4a7de4ad765905bb890d7901ef29579ac62851caf541bfd0862f",
+      "bytes": 1867
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-A-SUBMIT-003.json",
+      "sha256": "84afaa671f3578d860b60bf58677211842540f2b39673411f37f51c3350e7ba4",
+      "bytes": 1173
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-A-UPDATE-DRAFT-002.json",
+      "sha256": "ed92453f54affafe6306cc76072f7fb40a09f079f159a55fdacc3a806c4dfe1b",
+      "bytes": 1115
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-B-CANCEL-019.json",
+      "sha256": "6151c1f5df1f0ae5d1526f8a4b23293b5dab95ef837d07c23d2469c87909eaaf",
+      "bytes": 1803
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-B-CREATE-FROM-SO-012.json",
+      "sha256": "f3510e2ca2e7be3e56ea5d2e3e6098a2be52e9886ebde64f9cd9165ca2d4924e",
+      "bytes": 2465
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-B-FULFILLMENT-ROLLBACK-020.json",
+      "sha256": "098f44ce3cba2da257247f6d3c1a49ee66c5150281adc22c642ff0ed945e3d31",
+      "bytes": 1932
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-B-FULL-014.json",
+      "sha256": "355bdd9c9a4740769b3fa4d13255b6179e433a4579ecf2fded172b393bff2e4b",
+      "bytes": 2073
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-B-INSUFFICIENT-STOCK-017.json",
+      "sha256": "7e2a681aa7e0eb9c3a597e268860ec0c46d950b78d9cf77ea224e2223bbca188",
+      "bytes": 2749
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-B-MULTI-ITEM-021.json",
+      "sha256": "f206347d808a60be76da9bb0b6e87b559cd4e4fa30fff46b82b84539d27f20a2",
+      "bytes": 2153
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-B-OVER-DELIVERY-015.json",
+      "sha256": "59955b166eb1ef4d220fc63dd5be6f2a94b94e67064daa90f203ed215a95d6a3",
+      "bytes": 4437
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-B-PARTIAL-013.json",
+      "sha256": "8cae370dd0ad8151371edf68913d52a7d5f1a02ee76740356805b0137b5d1c0e",
+      "bytes": 2225
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-B-PERMISSION-DENIED-022.json",
+      "sha256": "64eb38ad6825f454195785ca98f7d2652dc30ccf60ca13b796ff2762bc4a89f5",
+      "bytes": 1612
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-B-SUBMIT-018.json",
+      "sha256": "4aa86acac76751ff1ed31a96fc245337059a7bd8e0a094cddb6c5df060bc5b6d",
+      "bytes": 1996
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-B-WAREHOUSE-MISSING-016.json",
+      "sha256": "18c510ea6385ef73917de7048ce70e2fc76e3e7b5dc03e25f69c814dab42a02d",
+      "bytes": 1726
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-C-CANCEL-032.json",
+      "sha256": "f6ee1394ef17a565324b1bbab727ea59e007c6c88ca8c83e6bc8f1edb936e3c1",
+      "bytes": 3241
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-C-CREATE-AFTER-DN-024.json",
+      "sha256": "5fc276298a81394e3b1dac408ecee6d8e383834ee1220ce7bce0ba27b0066d7c",
+      "bytes": 3523
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-C-CREATE-FROM-SO-023.json",
+      "sha256": "ce8ba5df37c1cb0cb95a810a376ea3236b705563989e3f8342339b1f0efa2dfd",
+      "bytes": 2058
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-C-FULL-BILLING-026.json",
+      "sha256": "bfd6d4c6fb0804e6294a1eda256d722b6b8009e363125852738f2deb85ea08d3",
+      "bytes": 1218
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-C-OUTSTANDING-031.json",
+      "sha256": "9be0e0f26cca0909c75820056f6a2867874d8e97c64544cb2217b6b82ff01a9c",
+      "bytes": 1227
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-C-OVER-BILLING-027.json",
+      "sha256": "d50562718bbc75c84851d1492eefe6099fbe4ff2375ac19ccc57815dba7508ee",
+      "bytes": 2230
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-C-PARTIAL-BILLING-025.json",
+      "sha256": "b39dfe8b357ddc6b9f887f4f1e85d56d3b1a324b721c3ea9e03f505f340e8bf4",
+      "bytes": 1337
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-C-PERMISSION-DENIED-033.json",
+      "sha256": "baee602af25c19eb79be95f98719e8a71c2d94a1de91ddf050f633bf1c4cfb14",
+      "bytes": 4521
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-C-SINGLE-TAX-BASELINE-030.json",
+      "sha256": "9faecdc8a7ac1453d5374b03b788c3caafa1acae09855a351d50c06baada15d1",
+      "bytes": 3754
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-C-SUBMIT-GL-028.json",
+      "sha256": "09665a0ce3b63c591602b3dbf317f071e33369caa0416e25ecece6db1e85e2f8",
+      "bytes": 1082
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-C-TAX-FREE-BASELINE-029.json",
+      "sha256": "e955537dafab0eac552f45950ed5666730d5bb33f1293362a074326a07cac475",
+      "bytes": 1391
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-D-ALLOCATION-MISMATCH-037.json",
+      "sha256": "180b245df38ddf40b5b6ddd56dc39e368bbca7435353b9587fd7fff72c4daf94",
+      "bytes": 5286
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-D-CANCEL-040.json",
+      "sha256": "b9f7d9546d168ea8649fe563933f152111da3947c615480f747b0a45c382764f",
+      "bytes": 1713
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-D-OUTSTANDING-ROLLBACK-041.json",
+      "sha256": "229cbc169e2760ac7df82605eaa99f7193997e6a775afd2555f4b0c1a95edc21",
+      "bytes": 2127
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-D-OVER-PAYMENT-036.json",
+      "sha256": "18c3c1c15f91c9e946a61566cebe316df28038e0a1e24aeb32401346aaa5a1af",
+      "bytes": 2002
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-D-PAID-RECEIVED-BEHAVIOR-038.json",
+      "sha256": "986044b39513f4bacfa79d73f21c814ab089c32ea13d4140913f82c6de409262",
+      "bytes": 1717
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-D-PERMISSION-DENIED-042.json",
+      "sha256": "e8ff4db1025cae16c3644084e2ca73006c66bdb9477f559e2c505ceb282711c2",
+      "bytes": 3896
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-D-RECEIVE-FULL-034.json",
+      "sha256": "374b9fd01d4d8498d37f6e4882802b9e993c22d70f5c21861272249b6230d469",
+      "bytes": 2541
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-D-RECEIVE-PARTIAL-035.json",
+      "sha256": "4768a65c727fcdaaffbb11a22446c1143b92733b5e59688b51cef0b774eefe7a",
+      "bytes": 2593
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-D-SUBMIT-PLE-GL-039.json",
+      "sha256": "a5f0ec07cd7c96a7243863102f9f6236564b2614b6a9939c88c6bd74bc851b37",
+      "bytes": 2010
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-E-CANCEL-DN-047.json",
+      "sha256": "2857931642a72f97165d9708fa4a69246dd62b143539830ffbd9b1eb5d25c6f7",
+      "bytes": 4189
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-E-CANCEL-PE-045.json",
+      "sha256": "2c961a9ab81cc0c96de64fac4ab7bd0996957472bfc7b179ae2409e3507c3de9",
+      "bytes": 2795
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-E-CANCEL-SI-046.json",
+      "sha256": "bd5fbc764a9ecd58759540a14dd763e15d65042ece0a0b02865d1cc479ce00e8",
+      "bytes": 2173
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-E-CANCEL-SO-BLOCKED-048.json",
+      "sha256": "63c85bb9ab8bc6192659cccbbe6a1af50cad91e841b7892184b596544f2966f4",
+      "bytes": 3374
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-E-OUTSTANDING-CHANGES-050.json",
+      "sha256": "4f492e65dd6e2dee0eccafe627614b5ee0a93a094f8de5da7c8fc97787cc5f38",
+      "bytes": 2627
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-E-PARTIAL-CHAIN-044.json",
+      "sha256": "ac5d33f4225bc86a6338157a95c8497fcd3e78d64443f473a93479f40e6a67b8",
+      "bytes": 1960
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-E-SO-DN-SI-PE-HAPPY-043.json",
+      "sha256": "c59aed180d52031f8e172434debc9f3dee6908f83f4bc8a890a0f3d91694103e",
+      "bytes": 2100
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-E-STATUS-RECALC-049.json",
+      "sha256": "17edb061d9e58ea849dcf11815e233968250dc29c8df271a969b28397e735cff",
+      "bytes": 1439
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-F-AR-AFTER-FULL-PAYMENT-054.json",
+      "sha256": "a7def2db44b35f3c6a2d3e87c5b0abb3800df45a62372346e6807b858d24da57",
+      "bytes": 2998
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-F-AR-AFTER-INVOICE-052.json",
+      "sha256": "c51ddba3aed32438a94ab64362ad84543421f8ef2c13adfc7560c9a8a671947c",
+      "bytes": 1599
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-F-AR-AFTER-PARTIAL-PAYMENT-053.json",
+      "sha256": "85a3bf17fa3fe07e4bb2965e832735f39f9f401d449ace6bbc3b3eccf6b29179",
+      "bytes": 1518
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-F-AR-AFTER-PAYMENT-CANCEL-055.json",
+      "sha256": "16980f8d51c4f0b004a53c606db99db1926691873c9775d7d03b9cbf8734caf6",
+      "bytes": 1398
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-F-AR-BEFORE-INVOICE-051.json",
+      "sha256": "76d8c2559a555c879a8978981fc9b9806a62e1311aa6ccfbe2a759bdd5055745",
+      "bytes": 1442
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-F-STOCK-AFTER-DN-057.json",
+      "sha256": "ce280d529845efc6a8a0956e76c6e1d19a1aa9ceb7712e40ce44bb92adb37e23",
+      "bytes": 1598
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-F-STOCK-AFTER-DN-CANCEL-058.json",
+      "sha256": "4f66e86e34d60079dd3753c6c87ea79b96c322c262be8b2ccc8f4410040c2c05",
+      "bytes": 1529
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-F-STOCK-BEFORE-DN-056.json",
+      "sha256": "72a4703360cc6ec48081b6fe810f06c2de8ec907ff698ae9a2bf4f54d4c0d39a",
+      "bytes": 2063
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-G-DUPLICATE-ITEM-ROWS-065.json",
+      "sha256": "6cf54cd77382c8a5ed6e26824f92ca0d1f5d4bedb5e0f3a9962373f5db6534a6",
+      "bytes": 1221
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-G-FRACTIONAL-QTY-061.json",
+      "sha256": "2b791122dd7d9e6589b3f86f66a609b31376af909eabb6987651762361852ef0",
+      "bytes": 1645
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-G-FRACTIONAL-RATE-062.json",
+      "sha256": "e3b206fe938dc582de3cdd487ae6283ad182470c8b4e33f4bbd8aa739fa6b788",
+      "bytes": 1048
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-G-LARGE-AMOUNT-064.json",
+      "sha256": "19c6b6eb85710bcee80c0506bd3bbac65aa5c6301c0c2bc08b53e4e2c11bb023",
+      "bytes": 1173
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-G-NEGATIVE-INPUT-060.json",
+      "sha256": "ebd91a664f7f4c1f8fc0836081404c3f541edbcbb895a7c90a9fc6c546969803",
+      "bytes": 5282
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-G-ROUNDING-BOUNDARY-063.json",
+      "sha256": "81ad26c40cd2f50f34f07d50c759e053d534f2203e577071981f82369438f80a",
+      "bytes": 3356
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-G-SAME-TIMESTAMP-066.json",
+      "sha256": "8a60089dfb9cb64f9509262f33efb2c2e34d5220142b498b050aeb1a9e7b3373",
+      "bytes": 2348
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-G-TIMEZONE-BOUNDARY-067.json",
+      "sha256": "6dc5fed4026b8d18ebe0816765218fa6b1791b0bcb380be93f61d250ef64fc38",
+      "bytes": 2148
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-G-ZERO-059.json",
+      "sha256": "aa26394570a1cd9eac75b13677814064b8da16639398f59f4885fa4b814ba9ab",
+      "bytes": 1635
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-H-TWO-DELIVERIES-069.json",
+      "sha256": "08bb0b8bc73d2ffacb9f5fa94a0c9ee0e70adf50f6099ea523a407fd5839ff90",
+      "bytes": 2568
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-H-TWO-PAYMENTS-070.json",
+      "sha256": "80ebdb096de70d371a608219164fc4f0e610c5f4f6d7599ba187d9fb551012ad",
+      "bytes": 3121
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-H-TWO-STOCK-MUTATIONS-071.json",
+      "sha256": "08ad4b94a763dee0e9a19ea3f650da6731703f9939501dcd01cb490069e01e10",
+      "bytes": 2363
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-H-TWO-UPDATES-068.json",
+      "sha256": "b2fe23d87e3d42de4b36ab61419c88cf5234880e16881ccb6700f71ff10a59c9",
+      "bytes": 3020
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-I-ACTUAL-TAX-075.json",
+      "sha256": "3010e4fac58435262be9ba56f01fde538f969eb42bec4f8f6dc9e8352ca46aa7",
+      "bytes": 1322
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-I-ADDITIONAL-DISCOUNT-ON-GRAND-077.json",
+      "sha256": "e7f1162c86f34c3dda3922a524dbb5d521c662595f899b258194151ce123bd09",
+      "bytes": 1386
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-I-ADDITIONAL-DISCOUNT-ON-NET-078.json",
+      "sha256": "76b4b73c1726014f227e46dc0e870a25052a49407cd9b255a572ec3ee0309fa3",
+      "bytes": 1373
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-I-DEDUCT-TAX-079.json",
+      "sha256": "6e7fcea63ff2bf8bae14849da0d9362818abb160dd48c9fbc35d9400cd924e9b",
+      "bytes": 1814
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-I-INCLUSIVE-TAX-073.json",
+      "sha256": "5cc7167c31278e6ad7e6896cd240ca1506389674fcbe4c1b912c513af8b7655c",
+      "bytes": 1770
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-I-MULTI-TAX-ROWS-072.json",
+      "sha256": "883a69719b46fe94d6df7ec2759d1a7048d4418b0714d758dd887a6a91a3ad26",
+      "bytes": 2512
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-I-ON-ITEM-QUANTITY-076.json",
+      "sha256": "25e46adeb562b8a958f4f95e12a67d8e7ba1248109580d8b41283cf0cb6227f0",
+      "bytes": 1501
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-I-TAX-ON-PREVIOUS-ROW-TOTAL-074.json",
+      "sha256": "cef42628194f96a8ba5e8a2ab615ed88afb3d8891fe6827f759ba9b70d928e74",
+      "bytes": 1380
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-I-TAX-ROUNDING-080.json",
+      "sha256": "f7850848ef2b5c21f3c735847bec768bd4eae9bbf2657ad372656b9eee3a6bc0",
+      "bytes": 4696
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-J-FOREIGN-SI-GL-082.json",
+      "sha256": "85487d25e4bf9d9869c65ae32169155523cb76b693ff43f33bf967cff5abe237",
+      "bytes": 1950
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-J-FOREIGN-SO-081.json",
+      "sha256": "b885358d16fbe38b339c678cc3dad9c8d785ca0c535c0619a614b4dc683744a3",
+      "bytes": 1955
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-J-OUTSTANDING-TXN-VS-BASE-083.json",
+      "sha256": "263d0747d64e79e3d2b89a8a68a3e8eb017c9175ecccc795be03ac9b4fee1d13",
+      "bytes": 1960
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-J-PE-DIFF-RATE-GAIN-085.json",
+      "sha256": "6731daaa2881d25efbbbacb4b94be2ecaea68225bed43a36b9b7c847e20f339d",
+      "bytes": 2065
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-J-PE-DIFF-RATE-LOSS-086.json",
+      "sha256": "768e4cfc8ef89bc3792d19f5f20fd34a286aed8dd9e21df410e29b2b17d6e3bd",
+      "bytes": 1906
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-J-PE-SAME-RATE-084.json",
+      "sha256": "4a63f8d62123a92d0a6d11233eec99cf4574267f02ec2b30db6d2b9c827f57f8",
+      "bytes": 2055
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-K-DELIVERY-CANCEL-093.json",
+      "sha256": "16b626c743c13a7225860b13d44e077dd56e2f9a48cb2aa768bcf2877c8a120d",
+      "bytes": 2512
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-K-FIFO-LAYERS-087.json",
+      "sha256": "b3319a3b616b75b7694074476d81d6a12591d101127a3c88539e056acf52a076",
+      "bytes": 1849
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-K-FULL-DELIVERY-091.json",
+      "sha256": "827b68eb2b8f58807c4fceeb61e54d5c8765dd17979547440dfc213e24f35ce9",
+      "bytes": 1305
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-K-LIFO-LAYERS-089.json",
+      "sha256": "79fb67fdb18c487a87894c00cd6d92c88cbab003f86fee72a6b1f680d4be4870",
+      "bytes": 1548
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-K-MAVG-LAYERS-088.json",
+      "sha256": "e839e745a191a1d1517f38621c8456d33184276735f45eefb036f78e332eeec6",
+      "bytes": 1603
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-K-MULTI-LINE-092.json",
+      "sha256": "17a11f257abc212c3e3c9e3ed9b28d24116c1e9eb901f456b8eeaa0c89205d85",
+      "bytes": 1677
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-K-NEGATIVE-STOCK-095.json",
+      "sha256": "06335a9bf43e63271f865d02016b588ebada0d8a0ebfbe065ebb77a704f728da",
+      "bytes": 1798
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-K-PARTIAL-DELIVERY-090.json",
+      "sha256": "bb4137e50269fb271507466e7b91204d5f836cab2484ac20a8a863b933c3658d",
+      "bytes": 1771
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-K-RETURN-REVERSAL-094.json",
+      "sha256": "ac0d261e18fe49f2d17f9325f65b5ffb944df98779d2a8da97cc6f92a2d8dd5b",
+      "bytes": 1678
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-K-ROUNDING-BOUNDARY-096.json",
+      "sha256": "b80f35b0bf28f1bacc31feb96bb12bdf0faa1d015390c17aa8eea65a0db1edf7",
+      "bytes": 1770
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-K-STOCK-BALANCE-STEPS-097.json",
+      "sha256": "87da601a18979f152babacbc26790ad7c5295f61bae49da0fe125fc8359866ad",
+      "bytes": 2137
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-L-BATCH-CANCEL-108.json",
+      "sha256": "ab2add0e0f7c1b7e0fdb979b671595bd5daeba3581be040108ef6708c3dc90c4",
+      "bytes": 1511
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-L-BATCH-DELIVERY-104.json",
+      "sha256": "e10bf8802dd4c488be1b5e0a3c92d09e9d74a722893fad6f619a277662031825",
+      "bytes": 1701
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-L-BATCH-EXPIRED-107.json",
+      "sha256": "eae52d74d75526b6aa7de2210f1b865ccabd590206e6ccc8d8cd0923288169f8",
+      "bytes": 1454
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-L-BATCH-MULTI-105.json",
+      "sha256": "58571cad4faf836ad0f1572c1313dc494ed2a490b0f8a2c400dba14db36cf330",
+      "bytes": 1433
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-L-BATCH-OVER-DELIVERY-106.json",
+      "sha256": "a37f899c893b7cbe7b65b5aeb87d2a204fede47d685d04dd74b96ed0cfcdc10d",
+      "bytes": 1565
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-L-BATCH-VALUATION-109.json",
+      "sha256": "27cf020a7e3dfe33ebbcf548651a253c56ab54091d4081517b7953995c446e58",
+      "bytes": 1552
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-L-SERIAL-ALREADY-DELIVERED-112.json",
+      "sha256": "634aa7af4795a9c634fff47ea62512320f384c920bcc1a98d1c715355884e94d",
+      "bytes": 1344
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-L-SERIAL-CANCEL-114.json",
+      "sha256": "9453d1fc0773c647eaa735b2001a2400872927e161aed51ccf3c87c419e71c45",
+      "bytes": 1313
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-L-SERIAL-DELIVERY-110.json",
+      "sha256": "23e63577c041c311c1478a2e537a929d4b5263599d0d7adb5ccb6da7c88c1b1d",
+      "bytes": 1516
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-L-SERIAL-DOWNSTREAM-115.json",
+      "sha256": "34f6c4ba570096e98af8814e3db78648d24b727a8a9e79ecb18d0b0d108ee9ed",
+      "bytes": 1446
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-L-SERIAL-MULTIPLE-113.json",
+      "sha256": "281e61448464d879bd992cc5754eb452fd50c8ad8bcc6083c2b3ff9185bb4ba2",
+      "bytes": 1349
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-L-SERIAL-NONEXISTENT-111.json",
+      "sha256": "3b711dfbdee5b15c9dc1545c8f18563cb94ae3e797fe102e6601c97233d559c3",
+      "bytes": 1390
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-M-BACKDATED-CANCEL-100.json",
+      "sha256": "84d3764cc063e2f8ce81ef61fad497e84eb66f5e97756af50f8f734ed5c51acc",
+      "bytes": 1904
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-M-BACKDATED-INCOMING-RECALC-098.json",
+      "sha256": "c9c84ded0a7b0c9add93e2c5e4808efeee48f6b69caafa8fa20f4bdc064cc8e9",
+      "bytes": 2414
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-M-BACKDATED-NEGATIVE-103.json",
+      "sha256": "f1450b3c3d05a855d7404153e92c811d504eb0f1a2a26d842c4d439eabf4ff68",
+      "bytes": 2557
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-M-FORWARD-MULTI-OUTGOING-099.json",
+      "sha256": "7e299f8a1aefb3d9b574d397d863e9a909905addea5f99c18a156b7375e14586",
+      "bytes": 1931
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-M-REPOST-IDEMPOTENT-101.json",
+      "sha256": "57d8ab6971836f541bac9d798a73e2cbf91c235fa7a5cedd881224ba971d321c",
+      "bytes": 1295
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/differential/O2C-M-REPOST-JOB-STATUS-102.json",
+      "sha256": "d5155f8b1d60f92deaad8209cc7cf5452388d6b3a67e5c6d5e367bca0df5fc2b",
+      "bytes": 1386
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/ENVIRONMENT.json",
+      "sha256": "46af595b90434449147738681e3cfd8feb83d825c78d20183e37200bd1232c3c",
+      "bytes": 2247
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/fixture-matrix.json",
+      "sha256": "a2c2fc2b0b4c97ec65ada079aaa2fcdaedec88e15cabd05a9c96d766ac315f48",
+      "bytes": 27713
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-A-AMEND-005.json",
+      "sha256": "5f0501a7c7c48a399e16c7ffcf3f207e97297c9f164c7147df144de7f24c2c43",
+      "bytes": 2546
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-A-CANCEL-004.json",
+      "sha256": "39c86f2360e8e783e6f6bbcb2dc70efa987a97bac3bb84ce8d0c97ada17a0f6b",
+      "bytes": 1918
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-A-CREATE-DRAFT-001.json",
+      "sha256": "35ded841fb970f542e13b619f12e99a682f3539fb6879b41bc51c77b354561f1",
+      "bytes": 1898
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-A-INVALID-ITEM-006.json",
+      "sha256": "524f63255c578aaec591d92d98e42f7dac1297ccda4798a325e2c111229cb1c3",
+      "bytes": 1902
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-A-INVALID-QTY-007.json",
+      "sha256": "e36811e6c16af5ac7fbb1e41d3721f98f501ca89bdcc6e874145d4928dc55d73",
+      "bytes": 1940
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-A-MISSING-MANDATORY-008.json",
+      "sha256": "dfaa1755ba14dd3c52fb2623a4c9d0dfe8988ea930f74b73b2c8c14c3992f2d3",
+      "bytes": 1909
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-A-PERMISSION-DENIED-011.json",
+      "sha256": "8407c814694f898c7e2c53e3020191e86c2e950f07195666c7386c9cb92986f2",
+      "bytes": 1868
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-A-PRICE-RATE-009.json",
+      "sha256": "ec65731ef783a51d9458fa98bc7f70501bd6c39289526c51259584a01e3b177a",
+      "bytes": 2050
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-A-REPLAY-EQUIV-010.json",
+      "sha256": "2166c3a34cc79f6dc5a944ca4c2dbdf337bb48ae16a22038d62de9489d9b59a4",
+      "bytes": 1961
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-A-SUBMIT-003.json",
+      "sha256": "d2acbe225109f8cda27db185dcc81bce8d6ff1ead7a88dd06677532cfd590fb7",
+      "bytes": 1897
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-A-UPDATE-DRAFT-002.json",
+      "sha256": "9912886ef0d06c33389703768af04653d039d42cd6de0896140dee8362fbd38d",
+      "bytes": 1944
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-B-CANCEL-019.json",
+      "sha256": "8139ef226b8b0f93c73ce4ebfa2b120e0f5ebd32d89ab359376ef4b93147dfc9",
+      "bytes": 2337
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-B-CREATE-FROM-SO-012.json",
+      "sha256": "c26e77df3407b8a4be1b8d7f6b0a367119311428938a35473beeb62068a97f19",
+      "bytes": 2007
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-B-FULFILLMENT-ROLLBACK-020.json",
+      "sha256": "02b9724ef236878d19adbae945b39186be8859c4d94a89e2a0ea661c4959577c",
+      "bytes": 2017
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-B-FULL-014.json",
+      "sha256": "00185f2f225b36fa8b6120312b57f108229a98142f9a3bb915b7c54c3c5d86e9",
+      "bytes": 2520
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-B-INSUFFICIENT-STOCK-017.json",
+      "sha256": "d9341fcfa3ff4dd1128719511269b5d98b27116a61d4c8975d57450df5cb5f2c",
+      "bytes": 2101
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-B-MULTI-ITEM-021.json",
+      "sha256": "791e2660cf51fb0d1def93b07f6159a01fd4333f07285c928a0a75635b252806",
+      "bytes": 2424
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-B-OVER-DELIVERY-015.json",
+      "sha256": "05882066c698383e392361eba825181f50e94f4f9afaed6d09173ea33144dd79",
+      "bytes": 2053
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-B-PARTIAL-013.json",
+      "sha256": "15886c6d474d1e1afd499cfc6cc205ea8d4d0abe411b9484c36651f7b092cdef",
+      "bytes": 2533
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-B-PERMISSION-DENIED-022.json",
+      "sha256": "0be3e6ac0eaafdf849dfee85ca0c4ab5d9d9399191a71156ac1d25dd7a31e63f",
+      "bytes": 1863
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-B-SUBMIT-018.json",
+      "sha256": "20e6d101a905688bcb2c1b3490f2376c5d1e23af6e5f3e5f9531e21197942c73",
+      "bytes": 2324
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-B-WAREHOUSE-MISSING-016.json",
+      "sha256": "d44e02d0dc8687384044dd916d849d1a93a0291ed279e376789bc4843b13cbd8",
+      "bytes": 1811
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-C-CANCEL-032.json",
+      "sha256": "ecbe73999cb94cdc93293e3393dc4440068381400c898cb2c4086263ee890918",
+      "bytes": 1905
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-C-CREATE-AFTER-DN-024.json",
+      "sha256": "1f7ecb49d1e7ed131f93ff2a215180fc4e5c6b3a5410f87cfdf125789af9e6c7",
+      "bytes": 2812
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-C-CREATE-FROM-SO-023.json",
+      "sha256": "6b80d7568ef0cda01bf249d615153716ca9fd722545c643a817dec562edc37ec",
+      "bytes": 1965
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-C-FULL-BILLING-026.json",
+      "sha256": "b5c8aca973cca54ed57d65e922935693e66ca659fc9dded146532929dd40d2ae",
+      "bytes": 2381
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-C-OUTSTANDING-031.json",
+      "sha256": "024fb5a72f8391c1877c8f82f2c8b679fe365e2d26ba6c3d4c6ea4821cc719e6",
+      "bytes": 1781
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-C-OVER-BILLING-027.json",
+      "sha256": "ac9b5ad27e971d59dc5c0f1d7bec367d655f499322b2ba38d9c55e9033276e07",
+      "bytes": 2049
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-C-PARTIAL-BILLING-025.json",
+      "sha256": "0cc87edd48a1bad2e5fe3ec1c020a386d003ba48613f4524c77796253408e972",
+      "bytes": 2409
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-C-PERMISSION-DENIED-033.json",
+      "sha256": "543d69fc951a23bd73debc3cdfee16d923203f2230bd9ef928ef422816357864",
+      "bytes": 1863
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-C-SINGLE-TAX-BASELINE-030.json",
+      "sha256": "de84c3aca06782f9f3fedd2d899feb0bfa0885186516ed6e025bf0ee0c2eb0e2",
+      "bytes": 2388
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-C-SUBMIT-GL-028.json",
+      "sha256": "c6417f81cc638117aadcfb504e98778b392646f8ecf8deb7d1047d5b0243bb04",
+      "bytes": 2174
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-C-TAX-FREE-BASELINE-029.json",
+      "sha256": "46b523a143fc4b1878bcbec7b07e9a8681f8b897caeaa09f24ea73502240f159",
+      "bytes": 2213
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-D-ALLOCATION-MISMATCH-037.json",
+      "sha256": "8cd0f01198ea3816064ce57b1b65821b9b881457d636d076cd2c456109495eeb",
+      "bytes": 1891
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-D-CANCEL-040.json",
+      "sha256": "c7c2146cb2537791745628a63c2fa7e9a32bff9565d082b6bca4299c10df3398",
+      "bytes": 1907
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-D-OUTSTANDING-ROLLBACK-041.json",
+      "sha256": "5f86f5f66da0268f467fd28034800db4ddd95a379ed4e13e01472a6790707c4d",
+      "bytes": 1847
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-D-OVER-PAYMENT-036.json",
+      "sha256": "e192db42642ae9afa3640c21e894bcc084e9c039de034f7b2e739a041ea9b0fc",
+      "bytes": 1920
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-D-PAID-RECEIVED-BEHAVIOR-038.json",
+      "sha256": "88a18f867aa7d09b6e8d9698f6cc724dca5c688469231b0f61639c6a73a62e99",
+      "bytes": 1892
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-D-PERMISSION-DENIED-042.json",
+      "sha256": "5b0a103e15098500c0ff1cb4ca729c788b75173e333ade4d919b48deb9909942",
+      "bytes": 1863
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-D-RECEIVE-FULL-034.json",
+      "sha256": "506c45249fd036776ac4a9565c5ee05fbb8fbf6450293d9b7df739c191915dbe",
+      "bytes": 2194
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-D-RECEIVE-PARTIAL-035.json",
+      "sha256": "c96149bb5c3e6e53c36072a17f27abcecf4793e6262984962ed6b1c787a7e3e2",
+      "bytes": 2247
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-D-SUBMIT-PLE-GL-039.json",
+      "sha256": "060a9e217cb9a7ee8a512d454549765618fba8db025e700a91fb6812987645f0",
+      "bytes": 2195
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-E-CANCEL-DN-047.json",
+      "sha256": "d895568ef44cede65dce418b6323bdad0064a555968f4966ab4bb705cf5a61c4",
+      "bytes": 2323
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-E-CANCEL-PE-045.json",
+      "sha256": "37721f7751ea289600204f8f0c8ac6e04ef8fc7bbf37806d546e53d73a8b7a29",
+      "bytes": 1909
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-E-CANCEL-SI-046.json",
+      "sha256": "1e984bc67e0d2ed88eb3961a0a4687432a649a435fc46a7585ab47d299bc3047",
+      "bytes": 2315
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-E-CANCEL-SO-BLOCKED-048.json",
+      "sha256": "24245b433cacb57443cfca9ea4b7f1421ed76fd1369cc05d4630fedbd0c1df73",
+      "bytes": 2028
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-E-OUTSTANDING-CHANGES-050.json",
+      "sha256": "46bc92539fb5de1553d5f540d5753e077b589f6063fb17c82bbf6bee67e5d8be",
+      "bytes": 1824
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-E-PARTIAL-CHAIN-044.json",
+      "sha256": "a466fa2f7d75054ff37dac5936c4f678cf355ccd41969018a212cf49d766bce7",
+      "bytes": 3512
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-E-SO-DN-SI-PE-HAPPY-043.json",
+      "sha256": "048514a31b180182f38c7465fcfb5144529b81295332f26747cd44fdcd315e5f",
+      "bytes": 3566
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-E-STATUS-RECALC-049.json",
+      "sha256": "8d785cfe8de0d8df769eebc7be0a283eeaa517dd48789eb140eee117153817d5",
+      "bytes": 2318
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-F-AR-AFTER-FULL-PAYMENT-054.json",
+      "sha256": "38ebfbb379700359dcfe025e6b5a975a10abe028d382347d43d1575d1e23eb39",
+      "bytes": 1763
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-F-AR-AFTER-INVOICE-052.json",
+      "sha256": "ed51c93b313efe3ef73830b435b946ff68a05923ff6c236c92b9f06f20806299",
+      "bytes": 1686
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-F-AR-AFTER-PARTIAL-PAYMENT-053.json",
+      "sha256": "7191723c44cdd86b41d7d2198f03a07b8daf9242ce0f67935f6a7a60c74bdcd0",
+      "bytes": 1695
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-F-AR-AFTER-PAYMENT-CANCEL-055.json",
+      "sha256": "86028bafbef6e82dee791abd6e35557bc28199295e864f92be34a75466bb2ab8",
+      "bytes": 1699
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-F-AR-BEFORE-INVOICE-051.json",
+      "sha256": "6cecb87666d5164f39e744ca2a9f138c2019a0dcada8f09b21b21fc7ac7b28e6",
+      "bytes": 1776
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-F-STOCK-AFTER-DN-057.json",
+      "sha256": "a1f52b41ceba2c987420dcc8470c859841f9d54fc92024968598609d56284f85",
+      "bytes": 2000
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-F-STOCK-AFTER-DN-CANCEL-058.json",
+      "sha256": "e273743d16bee513c81a1191995301aebff5743635ec1947df5b28d6a47db60a",
+      "bytes": 2024
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-F-STOCK-BEFORE-DN-056.json",
+      "sha256": "d56bc623b7f1e42ecc7186b2e521df015cf9f74ed1e1fd31b20c44826d3f5f3c",
+      "bytes": 2006
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-G-DUPLICATE-ITEM-ROWS-065.json",
+      "sha256": "a772710aa37d332417be183909ac8ba3b8436e7a053b6ac10edabe10273322f9",
+      "bytes": 1814
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-G-FRACTIONAL-QTY-061.json",
+      "sha256": "7bd56aecba725d4a99f457ca2b155fdfc26175b91a3f0bd7b192a9cc34d2c424",
+      "bytes": 1890
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-G-FRACTIONAL-RATE-062.json",
+      "sha256": "ce8b2196aab9243a2e2c07657fa5d124c54a4976d31838a8e3dd8a85aa5cde5c",
+      "bytes": 1780
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-G-LARGE-AMOUNT-064.json",
+      "sha256": "c9a561e350626899017c816245411f59afcf062205b7b377be037fee588484e3",
+      "bytes": 1780
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-G-NEGATIVE-INPUT-060.json",
+      "sha256": "78af836c81d5711e95b57a61c334430f0040ee9c9417dfa527e0fe1f96cd7740",
+      "bytes": 1884
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-G-ROUNDING-BOUNDARY-063.json",
+      "sha256": "f7dfdac38ce8f29b26fe00f0bd5488fd58e28d6a39495f5d39cb68324a02d6c3",
+      "bytes": 1853
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-G-SAME-TIMESTAMP-066.json",
+      "sha256": "672ba6b83dc361ece52e4131cb4ee385e6db2d2513e8fd9a635543934a3c637b",
+      "bytes": 2343
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-G-TIMEZONE-BOUNDARY-067.json",
+      "sha256": "bda9aa15b7b3534494028deddc8b2c428c32dc38b137779f4167ede49e28e37e",
+      "bytes": 2060
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-G-ZERO-059.json",
+      "sha256": "c5dd3667e6d960bdd10551705ad80b81e4ea066a8869564a5cc9b786239600c4",
+      "bytes": 1909
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-H-TWO-DELIVERIES-069.json",
+      "sha256": "5a5a16d2a690052655662354cec3c7db8b434bd88256f1424e65c34a231a8e10",
+      "bytes": 2209
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-H-TWO-PAYMENTS-070.json",
+      "sha256": "6bbba4fd08634bb4bb8991576f2d9b71079851f610e5f0dfb0f737882c563b9f",
+      "bytes": 1764
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-H-TWO-STOCK-MUTATIONS-071.json",
+      "sha256": "6ec7ab1c810f8d981af867a8bef7706cff7a6e269fd929f2b017977e296f429a",
+      "bytes": 1862
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-H-TWO-UPDATES-068.json",
+      "sha256": "9561006c2745e4a92a64618444577c960302791e058fec8539567a6d7fa2c975",
+      "bytes": 2106
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-I-ACTUAL-TAX-075.json",
+      "sha256": "961d40b249fa957af397d4ea60c545900b13962e0652e9ed05ed457c0ac53e0c",
+      "bytes": 2354
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-I-ADDITIONAL-DISCOUNT-ON-GRAND-077.json",
+      "sha256": "9cff78756232703a38bd73987dc1708ad516041f241049fad19999b7e07b90fe",
+      "bytes": 2455
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-I-ADDITIONAL-DISCOUNT-ON-NET-078.json",
+      "sha256": "7431b9d7e5225f9e3a24e7652699bee9fd71a2cb00f4c39fa588796189a694dc",
+      "bytes": 2449
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-I-DEDUCT-TAX-079.json",
+      "sha256": "a6f7f3dd6058252b8980d459412e91434fe4c6f762b3aad812e4fd96afaad39d",
+      "bytes": 2437
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-I-INCLUSIVE-TAX-073.json",
+      "sha256": "9d9a55ea37b4a39c34cf3da0e4d056119b34a4f3d9d534a9d4066541d83e08ec",
+      "bytes": 2610
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-I-MULTI-TAX-ROWS-072.json",
+      "sha256": "882f361217e7042eec7001c08cf447aa36cd178f92f09a795ffc494512f32e8a",
+      "bytes": 2791
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-I-ON-ITEM-QUANTITY-076.json",
+      "sha256": "fa0b526b9fa8fe4dcda0b8b48ea9cae9a50a9b03903d0e3078438cd9a714c242",
+      "bytes": 2391
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-I-TAX-ON-PREVIOUS-ROW-TOTAL-074.json",
+      "sha256": "cb265fe7d24b2f31087eb3229f10ecb7ae1d280eb2b952054794d7c9f131e111",
+      "bytes": 2762
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-I-TAX-ROUNDING-080.json",
+      "sha256": "e9dd5106c4ff5091172609ae633baffd888ef12c461b01b6dc37ce29c7d91f89",
+      "bytes": 2456
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-J-FOREIGN-SI-GL-082.json",
+      "sha256": "b3b37600edcd3faa455f290ddb8116dc3b9f0d28b3efb1dfb2f3c5f3e4d93fee",
+      "bytes": 2386
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-J-FOREIGN-SO-081.json",
+      "sha256": "e236337967f82519a7b95237b380aae4b8e7cebdb3e7bf0fc146aef1ac6e3593",
+      "bytes": 2043
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-J-OUTSTANDING-TXN-VS-BASE-083.json",
+      "sha256": "a8a897e560df3ea69898d9f7346da08d0118585ff1053e662e62d3a5fe430395",
+      "bytes": 1845
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-J-PE-DIFF-RATE-GAIN-085.json",
+      "sha256": "20ff04c1ee4acee763dc3f13ba339481ab2404f016f3e15928ea648fbb9513c9",
+      "bytes": 2452
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-J-PE-DIFF-RATE-LOSS-086.json",
+      "sha256": "69265ed3fc5718d10b0dd5ae16747cd5854dc34b976b0328799429b27ae2e6f4",
+      "bytes": 2451
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-J-PE-SAME-RATE-084.json",
+      "sha256": "3bf027b7b56429a498c2af6aaa576b083b4d6f5a8603078da320be1bb3600ee3",
+      "bytes": 2347
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-K-DELIVERY-CANCEL-093.json",
+      "sha256": "5b864fac927ad19b2f92a1cd40ede299e94f20d2a0e1350b5e5dab2f905aa845",
+      "bytes": 2335
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-K-FIFO-LAYERS-087.json",
+      "sha256": "481038cd2ed3cea656abefb7884c3909f344585a11bbe9b244818bdeae63e026",
+      "bytes": 1983
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-K-FULL-DELIVERY-091.json",
+      "sha256": "1f2cb416add8ca50e401b1977c0ac41951657731a8bce4916c1523f5ce13ced1",
+      "bytes": 1947
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-K-LIFO-LAYERS-089.json",
+      "sha256": "aead27108f3065941d01a4efecb72e2030e9a3eeffad363c812a74232c5336b8",
+      "bytes": 1971
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-K-MAVG-LAYERS-088.json",
+      "sha256": "245e4301e575e412bebc92c929987452b0f18d9548c15bc18b6c07d04bcbfedb",
+      "bytes": 1973
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-K-MULTI-LINE-092.json",
+      "sha256": "91e901a0e4e98a8174047745805512f41ad42921773276d8cacc29064c442b5b",
+      "bytes": 2778
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-K-NEGATIVE-STOCK-095.json",
+      "sha256": "e68dc3d7c10d3eee003b98a2d086f486305ebdfde81e7b8bb4c749ff88f9382d",
+      "bytes": 2053
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-K-PARTIAL-DELIVERY-090.json",
+      "sha256": "7683fd7db13319a584f68a7aafdd7b9b5f2dca8fa864874d79c1b0296a3b2ea9",
+      "bytes": 1966
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-K-RETURN-REVERSAL-094.json",
+      "sha256": "395ad2898c199a2e1b4c00baef207ce021dad15b8bffdddea1bd3fe539f9e04c",
+      "bytes": 1919
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-K-ROUNDING-BOUNDARY-096.json",
+      "sha256": "dbaf36e86e7e0aa8bcaecc7323383cba7396cd37a971c5eb2be2a93bd7000f9f",
+      "bytes": 1993
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-K-STOCK-BALANCE-STEPS-097.json",
+      "sha256": "729fd3e1b686d97f07a5722a6efc606d1dce0db783b5260c4c9dd6461215b2fe",
+      "bytes": 2673
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-L-BATCH-CANCEL-108.json",
+      "sha256": "cc9a7dbda7d7da51519af2e44e7a3031dc4a326cc2b50e5d9a6a49cdf8503e50",
+      "bytes": 1901
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-L-BATCH-DELIVERY-104.json",
+      "sha256": "6c6e2f046d92567b9cd4914a6f66e6eefecc2d17876f3bb3d138b3402dd9b240",
+      "bytes": 2434
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-L-BATCH-EXPIRED-107.json",
+      "sha256": "59ec505351f9ba49398a0b539698bcf64283b9eacc5f49a19a6bd84882610f1e",
+      "bytes": 2002
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-L-BATCH-MULTI-105.json",
+      "sha256": "1f760c87a37029f2881f487235a923e2fcff5f9f452bb64a45fd9e9ecde2b2c3",
+      "bytes": 2128
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-L-BATCH-OVER-DELIVERY-106.json",
+      "sha256": "f2805f11fb71dad3d4ea87ce63a746abceec1048336debce4e36698e38655a76",
+      "bytes": 2111
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-L-BATCH-VALUATION-109.json",
+      "sha256": "f634fe21cd735a62cb042f67fa00086232ad6a52030537c5beca3cb0520b17fd",
+      "bytes": 2411
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-L-SERIAL-ALREADY-DELIVERED-112.json",
+      "sha256": "c1491837382ed0c3aeec6b792ea17614871d0021ea7b3b4b31b57e8124819c50",
+      "bytes": 2069
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-L-SERIAL-CANCEL-114.json",
+      "sha256": "be9e547cffefea9b49c4b99d54febf0f75cf5c93f5766481190edf901ab24686",
+      "bytes": 2010
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-L-SERIAL-DELIVERY-110.json",
+      "sha256": "bc9d0f706c3a1d764ae2a43bab05c52137fb49c55db0182d37a27e69d3c83829",
+      "bytes": 2738
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-L-SERIAL-DOWNSTREAM-115.json",
+      "sha256": "378d06b09f60445dc07b3c1265135c42cb55b354ccd68d6e6f8ed565e46c25d2",
+      "bytes": 2636
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-L-SERIAL-MULTIPLE-113.json",
+      "sha256": "232b85d62d46a0c3451178ae90e9ee2df117b9b1a0a647c1749dabccf401b155",
+      "bytes": 2567
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-L-SERIAL-NONEXISTENT-111.json",
+      "sha256": "da6e6ac7855289a2c06dd08760997ac5194351e62b382c55cd4dbc5fc3321f62",
+      "bytes": 1913
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-M-BACKDATED-CANCEL-100.json",
+      "sha256": "6c171886807a8ee580327289846db85928ee7cc60b96c985936b84a1ba0ef555",
+      "bytes": 2058
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-M-BACKDATED-INCOMING-RECALC-098.json",
+      "sha256": "ece821e91488091d90fc40f2177d65afea316060609f0af3670e0e419ce72d34",
+      "bytes": 2088
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-M-BACKDATED-NEGATIVE-103.json",
+      "sha256": "9a28d2a270aabfeddf39b568f6351d8d80fbf9b49bc4344eaf4e3a98dd874747",
+      "bytes": 2132
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-M-FORWARD-MULTI-OUTGOING-099.json",
+      "sha256": "24a3670baa872aabdf48f41e7d3e0eef98220b72d518e6293ef7ba345f031ad1",
+      "bytes": 2549
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-M-REPOST-IDEMPOTENT-101.json",
+      "sha256": "ff99a63a4d08b9123614b14278470945daffa7a76ac34ebfe9ca38212f5f9cf5",
+      "bytes": 1808
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/fixtures/O2C-M-REPOST-JOB-STATUS-102.json",
+      "sha256": "3ed3080de8772ca9173b7ef669796d6cfc3395cb3c1a2f1b035d98b1c569c192",
+      "bytes": 1976
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/ORACLE_REPORT.json",
+      "sha256": "d603159a7d375019bc71fa10a4e33a12c576b55d76c60352a894eae0bf7247c4",
+      "bytes": 2666
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/runtime/environment.json",
+      "sha256": "f85c42ef53a78c47638c55e37477cf284a8a9704ce3d33aa31c6fcb80332f64d",
+      "bytes": 877
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/runtime/o2c-matrix-capture.json",
+      "sha256": "34a7331c18fd3e4d33f233c2031c191b82c3f9080ba745b95ce743a12c60c9ac",
+      "bytes": 190314
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/runtime/o2c-smoke-capture.json",
+      "sha256": "f054683944ba99d7c265a0d7faa5e12f5a51f90960156aadcc3f1043240467a0",
+      "bytes": 6285
+    },
+    {
+      "path": "docs/spec/source-exact/oracle/runtime/static-runtime-diff.json",
+      "sha256": "2acc6cabb9078c0f0c9b5242914b308ba2fa9acc242fa5667971c4d153e84e68",
+      "bytes": 1532
+    }
+  ],
+  "bundle_sha256": "8583d90d3e4cc364e530ace7c2b252cb1b39a75774f1a00c446dc2ff0d5b35d8"
+}

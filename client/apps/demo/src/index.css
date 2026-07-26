@@ -1,0 +1,8 @@
+/* Demo — nạp design system của kit (tokens + Tailwind), rồi override riêng cho demo. */
+@import "@metaforge/ui/styles.css";
+
+html,
+body,
+#root {
+  height: 100%;
+}

@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<style>
+  body { margin:0; background:#eceef1; font-family:'Geist',system-ui,sans-serif; }
+  a { color:var(--mf-soft-text,#1740cc); text-decoration:none; } a:hover { text-decoration:underline; }
+  kbd { font-family:'Geist Mono',monospace; }
+</style>
+</helmet>
+
+<div style="min-height:100vh; --mf-bg:{{t.bg}}; --mf-surface:{{t.surface}}; --mf-surface2:{{t.surface2}}; --mf-sidebar:{{t.sidebar}}; --mf-border:{{t.border}}; --mf-text:{{t.text}}; --mf-text-muted:{{t.muted}}; --mf-text-subtle:{{t.subtle}}; --mf-primary:{{t.primary}}; --mf-primary-fg:{{t.primaryFg}}; --mf-soft:{{t.soft}}; --mf-soft-text:{{t.softText}}; --mf-ring:{{t.ring}}; --mf-green:{{t.green}}; --mf-amber:{{t.amber}}; --mf-red:{{t.red}}; --mf-blue:{{t.blue}};">
+
+  <div style="position:sticky; top:0; z-index:60; background:#fff; border-bottom:1px solid #e4e4e7; box-shadow:0 1px 3px rgba(0,0,0,.05); padding:12px 28px; display:flex; align-items:center; gap:12px 20px; flex-wrap:wrap;">
+    <div style="display:flex; align-items:center; gap:11px;">
+      <div style="width:32px; height:32px; border-radius:9px; background:#1B4DFF; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:17px;">M</div>
+      <div><div style="font-size:14.5px; font-weight:700; color:#18181b; line-height:1.1;">MetaForge · Run 4</div><div style="font-size:11px; color:#71717a; font-family:'Geist Mono',monospace;">M11 Three-column Detail + Form ⭐</div></div>
+    </div>
+    <div style="display:flex; align-items:center; gap:8px;">
+      <span style="font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#a1a1aa;">Palette</span>
+      <div style="display:flex; gap:6px;">
+        <button type="button" onClick="{{ setNeutral }}" style="{{ segNeutral }}"><span style="width:10px;height:10px;border-radius:50%;background:#18181b;flex-shrink:0;"></span>Neutral</button>
+        <button type="button" onClick="{{ setBlue }}" style="{{ segBlue }}"><span style="width:10px;height:10px;border-radius:50%;background:#1B4DFF;flex-shrink:0;"></span>MetaForge Blue</button>
+        <button type="button" onClick="{{ setWarm }}" style="{{ segWarm }}"><span style="width:10px;height:10px;border-radius:50%;background:#b15b2e;flex-shrink:0;"></span>Warm</button>
+      </div>
+    </div>
+    <div style="margin-left:auto; display:flex; align-items:center; gap:4px; padding:4px; border:1px solid #e4e4e7; border-radius:11px; background:#f4f4f5;">
+      <button type="button" onClick="{{ setLight }}" style="{{ apLight }}">Sáng</button>
+      <button type="button" onClick="{{ setDark }}" style="{{ apDark }}">Tối</button>
+    </div>
+  </div>
+
+  <div style="padding:26px 28px 70px; display:flex; flex-direction:column; gap:42px; color:var(--mf-text);">
+
+    <!-- ============ A · THREE-COLUMN DETAIL LIVE ============ -->
+    <section style="display:flex; flex-direction:column; gap:12px;">
+      <div style="display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;">
+        <span style="font-family:'Geist Mono',monospace; font-size:13px; font-weight:600; color:var(--mf-primary);">M11 · Split Detail — Desktop 3 cột (live)</span>
+        <span style="font-size:12px; color:var(--mf-text-subtle);">MF-M11-SPLIT-DETAIL-DESKTOP-01 · tab · section gập · Save combo · dirty · nút Chuyển trạng thái mở 417</span>
+      </div>
+
+      <div style="width:1280px; max-width:100%; height:740px; border:1px solid var(--mf-border); border-radius:12px; overflow:hidden; background:var(--mf-surface); box-shadow:0 1px 2px rgba(0,0,0,.05),0 24px 48px -30px rgba(0,0,0,.3); display:flex; position:relative;">
+
+        <!-- LIST PANE -->
+        <div style="width:280px; flex-shrink:0; border-right:1px solid var(--mf-border); background:var(--mf-surface); display:flex; flex-direction:column; min-width:0;">
+          <div style="padding:10px 12px; border-bottom:1px solid var(--mf-border); display:flex; flex-direction:column; gap:9px;">
+            <div style="display:flex; align-items:center; gap:8px;"><a style="display:inline-flex; align-items:center; gap:5px; font-size:12px; color:var(--mf-text-muted);"><i data-lucide="arrow-left" width="14" height="14"></i>Công việc</a><span style="margin-left:auto; font-size:11px; color:var(--mf-text-subtle); background:var(--mf-surface2); border:1px solid var(--mf-border); padding:1px 6px; border-radius:5px;">128</span></div>
+            <div style="display:flex; align-items:center; gap:7px; height:30px; padding:0 9px; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface2);"><i data-lucide="search" width="14" height="14" style="color:var(--mf-text-subtle);"></i><span style="font-size:12px; color:var(--mf-text-subtle);">Lọc nhanh…</span></div>
+          </div>
+          <div style="flex:1; overflow:auto;">
+            <sc-for list="{{ listRows }}" as="r" hint-placeholder-count="6">
+              <button type="button" onClick="{{ r.select }}" style="width:100%; display:flex; flex-direction:column; gap:4px; text-align:left; padding:9px 12px; border:none; border-bottom:1px solid var(--mf-border); background:{{ r.bg }}; color:var(--mf-text); cursor:pointer; box-shadow:{{ r.shadow }};">
+                <div style="display:flex; align-items:center; gap:7px;"><span style="width:7px; height:7px; border-radius:50%; background:{{ r.dot }}; flex-shrink:0;"></span><span style="font-size:13px; font-weight:{{ r.w }}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:{{ r.color }};">{{ r.title }}</span><span style="margin-left:auto; font-size:10.5px; color:var(--mf-text-subtle); flex-shrink:0;">{{ r.time }}</span></div>
+                <div style="font-size:11.5px; color:var(--mf-text-muted); padding-left:14px;">{{ r.meta }}</div>
+              </button>
+            </sc-for>
+          </div>
+          <div style="height:32px; display:flex; align-items:center; justify-content:center; gap:6px; border-top:1px solid var(--mf-border); font-size:10.5px; color:var(--mf-text-subtle); font-family:'Geist Mono',monospace;"><kbd style="padding:0 4px; border:1px solid var(--mf-border); border-radius:3px;">↑↓</kbd>chuyển bản ghi · queue mode</div>
+        </div>
+
+        <!-- DETAIL PANE -->
+        <div style="flex:1; min-width:520px; display:flex; flex-direction:column; background:var(--mf-surface);">
+          <div style="border-bottom:1px solid var(--mf-border); background:var(--mf-surface);">
+            <div style="padding:12px 18px 0;">
+              <div style="display:flex; align-items:center; gap:7px; font-size:11.5px; color:var(--mf-text-muted); margin-bottom:8px;"><a>Dự án</a><i data-lucide="chevron-right" width="12" height="12" style="opacity:.5;"></i><a>Công việc</a><i data-lucide="chevron-right" width="12" height="12" style="opacity:.5;"></i><span style="color:var(--mf-text); font-family:'Geist Mono',monospace;">TASK-2043</span></div>
+              <div style="display:flex; align-items:flex-start; gap:12px;">
+                <div style="flex:1; min-width:0;">
+                  <div style="display:flex; align-items:center; gap:9px;">
+                    <span style="font-size:19px; font-weight:600; letter-spacing:-.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Thiết kế lại luồng thanh toán</span>
+                    <span style="flex-shrink:0; display:inline-flex; align-items:center; gap:5px; padding:2px 9px; border-radius:6px; font-size:11px; font-weight:600; color:var(--mf-blue); background:var(--mf-soft); border:1px solid var(--mf-border);"><span style="width:6px;height:6px;border-radius:50%;background:var(--mf-blue);"></span>Đang làm</span>
+                    <sc-if value="{{ dirty }}" hint-placeholder-val="{{ false }}"><span style="flex-shrink:0; display:inline-flex; align-items:center; gap:5px; padding:2px 8px; border-radius:6px; font-size:10.5px; font-weight:600; color:var(--mf-amber); background:var(--mf-surface2); border:1px solid var(--mf-border);"><span style="width:6px;height:6px;border-radius:50%;background:var(--mf-amber);"></span>Chưa lưu</span></sc-if>
+                  </div>
+                  <div style="display:flex; align-items:center; gap:8px; font-size:11.5px; color:var(--mf-text-muted); margin-top:4px;"><span style="font-family:'Geist Mono',monospace;">TASK-2043</span><span style="color:var(--mf-text-subtle);">·</span><span>docstatus: Nháp</span><span style="color:var(--mf-text-subtle);">·</span><span>Minh Trần</span><span style="color:var(--mf-text-subtle);">·</span><span>Sửa 2 giờ trước</span></div>
+                </div>
+                <div style="display:flex; align-items:center; gap:7px; flex-shrink:0;">
+                  <button type="button" onClick="{{ openConflict }}" style="display:inline-flex; align-items:center; gap:6px; height:32px; padding:0 12px; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface); color:var(--mf-text); font-size:12.5px; font-weight:500; font-family:inherit; cursor:pointer;"><i data-lucide="git-branch" width="14" height="14"></i>Chuyển: Chờ duyệt</button>
+                  <button type="button" onClick="{{ toggleMore }}" style="width:32px; height:32px; display:flex; align-items:center; justify-content:center; border:1px solid var(--mf-border); border-radius:7px; background:{{ moreBg }}; color:var(--mf-text-muted); cursor:pointer;"><i data-lucide="ellipsis" width="16" height="16"></i></button>
+                  <div style="display:inline-flex; align-items:center;">
+                    <button type="button" onClick="{{ save }}" style="display:inline-flex; align-items:center; gap:7px; height:32px; padding:0 13px; border:none; border-radius:7px 0 0 7px; background:var(--mf-primary); color:var(--mf-primary-fg); font-size:12.5px; font-weight:600; font-family:inherit; cursor:pointer;"><sc-if value="{{ saving }}" hint-placeholder-val="{{ false }}"><span style="width:12px;height:12px;border:2px solid var(--mf-primary-fg);border-right-color:transparent;border-radius:50%;display:inline-block;"></span></sc-if>{{ saveLabel }}<kbd style="opacity:.7; font-size:10px;">⌘S</kbd></button>
+                    <button type="button" onClick="{{ toggleSaveMenu }}" style="width:28px; height:32px; display:inline-flex; align-items:center; justify-content:center; border:none; border-left:1px solid rgba(255,255,255,.25); border-radius:0 7px 7px 0; background:var(--mf-primary); color:var(--mf-primary-fg); cursor:pointer;"><i data-lucide="chevron-down" width="15" height="15"></i></button>
+                  </div>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; gap:2px; margin-top:11px;">
+                <button type="button" onClick="{{ tabDetails }}" style="{{ tabDetailsStyle }}">Chi tiết</button>
+                <button type="button" onClick="{{ tabPayment }}" style="{{ tabPaymentStyle }}">Thanh toán <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--mf-red); margin-left:4px; vertical-align:middle;"></span></button>
+                <button type="button" onClick="{{ tabSub }}" style="{{ tabSubStyle }}">Công việc con</button>
+                <span style="margin-left:auto; align-self:center; font-size:10px; font-family:'Geist Mono',monospace; color:var(--mf-text-subtle);">↳ Tab Break metadata</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="flex:1; overflow:auto; padding:18px; display:flex; flex-direction:column; gap:20px;">
+            <sc-if value="{{ isDetails }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex; flex-direction:column; gap:20px;">
+                <div style="display:flex; flex-direction:column; gap:12px;">
+                  <button type="button" onClick="{{ toggleSec1 }}" style="display:flex; align-items:center; gap:8px; border:none; background:transparent; padding:0; cursor:pointer; font-family:inherit;"><i data-lucide="{{ sec1Icon }}" width="14" height="14" style="color:var(--mf-text-subtle);"></i><span style="font-size:12px; font-weight:600; letter-spacing:.02em; text-transform:uppercase; color:var(--mf-text-muted);">Thông tin chung</span><span style="flex:1; height:1px; background:var(--mf-border);"></span></button>
+                  <sc-if value="{{ sec1Open }}" hint-placeholder-val="{{ true }}">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px 24px;">
+                      <div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:11px; font-weight:500; color:var(--mf-text-muted);">Chủ đề <span style="color:var(--mf-red);">*</span></label><div style="height:34px; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface); display:flex; align-items:center; padding:0 11px; font-size:13px;">Thiết kế lại luồng thanh toán</div></div>
+                      <div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:11px; font-weight:500; color:var(--mf-text-muted);">Dự án <span style="color:var(--mf-red);">*</span> <span style="font-size:9px; color:var(--mf-text-subtle); font-family:'Geist Mono',monospace;">Link</span></label><div style="height:34px; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface); display:flex; align-items:center; gap:7px; padding:0 11px; font-size:13px;"><i data-lucide="folder-kanban" width="14" height="14" style="color:var(--mf-soft-text);"></i><span style="color:var(--mf-soft-text); font-weight:500;">MetaForge Q3</span><i data-lucide="chevron-down" width="14" height="14" style="margin-left:auto; color:var(--mf-text-subtle);"></i></div></div>
+                      <div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:11px; font-weight:500; color:var(--mf-text-muted);">Người phụ trách <span style="font-size:9px; color:var(--mf-text-subtle); font-family:'Geist Mono',monospace;">Link→User</span></label><div style="height:34px; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface); display:flex; align-items:center; gap:7px; padding:0 8px; font-size:13px;"><span style="width:20px; height:20px; border-radius:50%; background:var(--mf-soft); color:var(--mf-soft-text); display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:600;">MT</span>Minh Trần<i data-lucide="chevron-down" width="14" height="14" style="margin-left:auto; color:var(--mf-text-subtle);"></i></div></div>
+                      <div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:11px; font-weight:500; color:var(--mf-text-muted);">Ngày hết hạn <span style="font-size:9px; color:var(--mf-text-subtle); font-family:'Geist Mono',monospace;">Date</span></label><div style="height:34px; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface); display:flex; align-items:center; gap:7px; padding:0 11px; font-size:13px;"><i data-lucide="calendar" width="14" height="14" style="color:var(--mf-text-subtle);"></i>28/07/2026</div></div>
+                    </div>
+                  </sc-if>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:12px;">
+                  <div style="display:flex; align-items:center; gap:8px;"><span style="font-size:12px; font-weight:600; letter-spacing:.02em; text-transform:uppercase; color:var(--mf-text-muted);">Trạng thái field (6 loại — không dùng chung 1 visual)</span><span style="flex:1; height:1px; background:var(--mf-border);"></span></div>
+                  <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px 20px;">
+                    <div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:11px; font-weight:500; color:var(--mf-red);">Người duyệt <span>*</span> · <span style="font-family:'Geist Mono',monospace; font-size:9px;">validation</span></label><div style="height:34px; border:1.5px solid var(--mf-red); border-radius:7px; background:var(--mf-surface); display:flex; align-items:center; padding:0 11px; font-size:13px; color:var(--mf-text-subtle);">Chọn người duyệt…</div><span style="font-size:10.5px; color:var(--mf-red); display:flex; align-items:center; gap:4px;"><i data-lucide="circle-alert" width="11" height="11"></i>Bắt buộc nhập</span></div>
+                    <div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:11px; font-weight:500; color:var(--mf-text-subtle); display:flex; align-items:center; gap:5px;">Mã công việc <i data-lucide="lock" width="11" height="11"></i> · <span style="font-family:'Geist Mono',monospace; font-size:9px;">readonly</span></label><div style="height:34px; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface2); display:flex; align-items:center; padding:0 11px; font-size:13px; color:var(--mf-text-muted); font-family:'Geist Mono',monospace;">TASK-2043</div></div>
+                    <div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:11px; font-weight:500; color:var(--mf-text-subtle); display:flex; align-items:center; gap:5px;">Khóa API <i data-lucide="eye-off" width="11" height="11"></i> · <span style="font-family:'Geist Mono',monospace; font-size:9px;">permlevel-mask</span></label><div style="height:34px; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface2); display:flex; align-items:center; padding:0 11px; font-size:14px; letter-spacing:2px; color:var(--mf-text-muted);">••••••••</div></div>
+                    <div style="display:flex; flex-direction:column; gap:5px; opacity:.55;"><label style="font-size:11px; font-weight:500; color:var(--mf-text-subtle);">Lý do hủy · <span style="font-family:'Geist Mono',monospace; font-size:9px;">depends_on ẩn</span></label><div style="height:34px; border:1px dashed var(--mf-border); border-radius:7px; background:transparent; display:flex; align-items:center; padding:0 11px; font-size:12px; color:var(--mf-text-subtle); font-style:italic;">Ẩn tới khi trạng thái = Hủy</div></div>
+                    <div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:11px; font-weight:500; color:var(--mf-text-muted);">Ưu tiên · <span style="font-family:'Geist Mono',monospace; font-size:9px;">Select</span></label><div style="height:34px; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface); display:flex; align-items:center; padding:0 11px; font-size:13px;"><span style="display:inline-flex; align-items:center; gap:6px;"><span style="width:6px;height:6px;border-radius:50%;background:var(--mf-red);"></span>Cao</span><i data-lucide="chevron-down" width="14" height="14" style="margin-left:auto; color:var(--mf-text-subtle);"></i></div></div>
+                    <div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:11px; font-weight:500; color:var(--mf-text-subtle);">Đã ghi sổ · <span style="font-family:'Geist Mono',monospace; font-size:9px;">docstatus-lock</span></label><div style="height:34px; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface2); display:flex; align-items:center; gap:7px; padding:0 11px; font-size:13px; color:var(--mf-text-muted);"><i data-lucide="lock" width="13" height="13"></i>Khóa sau khi Submit</div></div>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isPayment }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; flex-direction:column; gap:16px;">
+                <div style="display:flex; align-items:center; gap:8px;"><span style="font-size:12px; font-weight:600; letter-spacing:.02em; text-transform:uppercase; color:var(--mf-text-muted);">Cấu hình thanh toán</span><span style="flex:1; height:1px; background:var(--mf-border);"></span></div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px 24px;">
+                  <div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:11px; font-weight:500; color:var(--mf-text-muted);">Chi phí (VND) · <span style="font-family:'Geist Mono',monospace; font-size:9px;">Currency</span></label><div style="height:34px; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface); display:flex; align-items:center; padding:0 11px; font-size:13px; font-variant-numeric:tabular-nums; justify-content:flex-end;">48.500.000 <span style="color:var(--mf-text-subtle); margin-left:4px;">₫</span></div></div>
+                  <div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:11px; font-weight:500; color:var(--mf-red);">Cổng thanh toán <span>*</span></label><div style="height:34px; border:1.5px solid var(--mf-red); border-radius:7px; background:var(--mf-surface); display:flex; align-items:center; padding:0 11px; font-size:13px; color:var(--mf-text-subtle);">Chọn cổng…</div><span style="font-size:10.5px; color:var(--mf-red); display:flex; align-items:center; gap:4px;"><i data-lucide="circle-alert" width="11" height="11"></i>Tab này có lỗi → chấm đỏ trên tab</span></div>
+                  <div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:11px; font-weight:500; color:var(--mf-text-muted);">% Hoàn tiền · <span style="font-family:'Geist Mono',monospace; font-size:9px;">Percent</span></label><div style="height:34px; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface); display:flex; align-items:center; padding:0 11px; font-size:13px;">15 <span style="color:var(--mf-text-subtle); margin-left:auto;">%</span></div></div>
+                  <div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:11px; font-weight:500; color:var(--mf-text-muted);">SĐT hỗ trợ · <span style="font-family:'Geist Mono',monospace; font-size:9px;">Phone</span></label><div style="height:34px; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface); display:flex; align-items:center; gap:7px; padding:0 11px; font-size:13px;">0912 345 678<span style="margin-left:auto; display:flex; gap:4px;"><i data-lucide="phone" width="13" height="13" style="color:var(--mf-green);"></i></span></div></div>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isSub }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; flex-direction:column; gap:12px;">
+                <div style="display:flex; align-items:center; gap:8px;"><span style="font-size:12px; font-weight:600; letter-spacing:.02em; text-transform:uppercase; color:var(--mf-text-muted);">Công việc con</span><span style="flex:1; height:1px; background:var(--mf-border);"></span><span style="font-size:10px; color:var(--mf-text-subtle); font-family:'Geist Mono',monospace;">Table field · M12 ChildGrid</span></div>
+                <div style="border:1px solid var(--mf-border); border-radius:8px; overflow:hidden;">
+                  <div style="display:grid; grid-template-columns:34px 1fr 120px 130px 100px 64px; background:var(--mf-surface2); border-bottom:1px solid var(--mf-border); font-size:10px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--mf-text-subtle);"><div style="padding:8px 10px;">#</div><div style="padding:8px 10px;">Tiêu đề</div><div style="padding:8px 10px;">Trạng thái</div><div style="padding:8px 10px;">Phụ trách</div><div style="padding:8px 10px; text-align:right;">Giờ</div><div></div></div>
+                  <div style="display:grid; grid-template-columns:34px 1fr 120px 130px 100px 64px; border-bottom:1px solid var(--mf-border); font-size:12.5px; align-items:center;"><div style="padding:9px 10px; color:var(--mf-text-subtle);">1</div><div style="padding:9px 10px;">Vẽ wireframe 2 bước</div><div style="padding:9px 10px;"><span style="display:inline-flex; align-items:center; gap:5px; color:var(--mf-green);"><span style="width:6px;height:6px;border-radius:50%;background:var(--mf-green);"></span>Xong</span></div><div style="padding:9px 10px; display:flex; align-items:center; gap:6px;"><span style="width:18px;height:18px;border-radius:50%;background:var(--mf-soft);color:var(--mf-soft-text);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:600;">MT</span>Minh Trần</div><div style="padding:9px 10px; text-align:right; font-variant-numeric:tabular-nums;">8</div><div style="display:flex; justify-content:center; gap:2px; color:var(--mf-text-subtle);"><i data-lucide="copy" width="13" height="13"></i><i data-lucide="grip-vertical" width="13" height="13"></i></div></div>
+                  <div style="display:grid; grid-template-columns:34px 1fr 120px 130px 100px 64px; border-bottom:1px solid var(--mf-border); font-size:12.5px; align-items:center;"><div style="padding:9px 10px; color:var(--mf-text-subtle);">2</div><div style="padding:9px 10px;">Tích hợp SDK VNPay</div><div style="padding:9px 10px;"><span style="display:inline-flex; align-items:center; gap:5px; color:var(--mf-blue);"><span style="width:6px;height:6px;border-radius:50%;background:var(--mf-blue);"></span>Đang làm</span></div><div style="padding:9px 10px; display:flex; align-items:center; gap:6px;"><span style="width:18px;height:18px;border-radius:50%;background:var(--mf-soft);color:var(--mf-soft-text);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:600;">HĐ</span>Huy Đỗ</div><div style="padding:9px 10px; text-align:right; font-variant-numeric:tabular-nums;">16</div><div style="display:flex; justify-content:center; gap:2px; color:var(--mf-text-subtle);"><i data-lucide="copy" width="13" height="13"></i><i data-lucide="grip-vertical" width="13" height="13"></i></div></div>
+                  <div style="display:grid; grid-template-columns:34px 1fr 120px 130px 100px 64px; background:var(--mf-surface2); font-size:11.5px; align-items:center; font-weight:600;"><div style="padding:8px 10px;"></div><div style="padding:8px 10px; color:var(--mf-text-muted);">Tổng 2 dòng</div><div></div><div></div><div style="padding:8px 10px; text-align:right; color:var(--mf-text-muted); font-variant-numeric:tabular-nums;">24</div><div></div></div>
+                  <button style="width:100%; display:flex; align-items:center; gap:7px; padding:8px 10px; border:none; border-top:1px solid var(--mf-border); background:var(--mf-surface); color:var(--mf-text-muted); font-size:12px; font-family:inherit; cursor:pointer;"><i data-lucide="plus" width="14" height="14"></i>Thêm dòng · <span style="color:var(--mf-text-subtle);">Enter ở dòng cuối = thêm · dán Excel nhiều dòng</span></button>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+
+        <!-- CONTEXT PANE -->
+        <div style="width:320px; flex-shrink:0; border-left:1px solid var(--mf-border); background:var(--mf-surface2); display:flex; flex-direction:column; min-width:0;">
+          <div style="display:flex; align-items:center; gap:2px; padding:6px 8px; border-bottom:1px solid var(--mf-border); background:var(--mf-surface);">
+            <span style="display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:7px; font-size:12px; font-weight:600; background:var(--mf-soft); color:var(--mf-soft-text);"><i data-lucide="history" width="14" height="14"></i>Lịch sử</span>
+            <span style="display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:7px; font-size:12px; color:var(--mf-text-muted); cursor:pointer;"><i data-lucide="link" width="14" height="14"></i>Liên kết</span>
+            <span style="display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:7px; font-size:12px; color:var(--mf-text-muted); cursor:pointer;"><i data-lucide="sparkles" width="14" height="14"></i>AI</span>
+          </div>
+          <div style="flex:1; overflow:auto; padding:12px 14px;">
+            <div style="border:1px solid var(--mf-border); border-radius:9px; background:var(--mf-surface); padding:10px; margin-bottom:12px;">
+              <div style="font-size:10px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--mf-text-subtle); margin-bottom:8px;">Liên kết</div>
+              <div style="display:flex; gap:8px; flex-wrap:wrap;"><a style="display:inline-flex; align-items:center; gap:6px; font-size:12px; padding:3px 9px; border-radius:6px; background:var(--mf-surface2); border:1px solid var(--mf-border); color:var(--mf-text);"><i data-lucide="receipt" width="13" height="13" style="color:var(--mf-soft-text);"></i>1 Sales Invoice</a><a style="display:inline-flex; align-items:center; gap:6px; font-size:12px; padding:3px 9px; border-radius:6px; background:var(--mf-surface2); border:1px solid var(--mf-border); color:var(--mf-text);"><i data-lucide="wallet" width="13" height="13" style="color:var(--mf-soft-text);"></i>2 Payment</a></div>
+            </div>
+            <div style="font-size:10.5px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--mf-text-subtle); margin-bottom:10px;">Hôm nay</div>
+            <div style="display:flex; flex-direction:column; gap:0;">
+              <div style="display:flex; gap:10px;"><div style="display:flex; flex-direction:column; align-items:center; flex-shrink:0;"><span style="width:26px; height:26px; border-radius:50%; background:var(--mf-soft); color:var(--mf-soft-text); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:600;">LP</span><span style="width:1px; flex:1; background:var(--mf-border); margin-top:4px;"></span></div><div style="padding-bottom:16px; min-width:0;"><div style="font-size:12px;"><span style="font-weight:600;">Lan Phạm</span> <span style="color:var(--mf-text-muted);">bình luận · 1 giờ</span></div><div style="margin-top:5px; padding:8px 10px; border:1px solid var(--mf-border); border-radius:8px; background:var(--mf-surface); font-size:12px; line-height:1.45;">Sandbox VNPay OK. @Minh Trần review refund nhé.</div></div></div>
+              <div style="display:flex; gap:10px;"><div style="display:flex; flex-direction:column; align-items:center; flex-shrink:0;"><span style="width:26px; height:26px; border-radius:50%; background:var(--mf-surface); border:1px solid var(--mf-border); color:var(--mf-blue); display:flex; align-items:center; justify-content:center;"><i data-lucide="git-branch" width="13" height="13"></i></span><span style="width:1px; flex:1; background:var(--mf-border); margin-top:4px;"></span></div><div style="padding-bottom:16px;"><div style="font-size:12px;"><span style="font-weight:600;">Minh Trần</span> <span style="color:var(--mf-text-muted);">chuyển trạng thái · 2 giờ</span></div><div style="margin-top:5px; font-size:11.5px; display:flex; align-items:center; gap:6px;"><span style="padding:1px 6px; border-radius:5px; background:var(--mf-surface); border:1px solid var(--mf-border); color:var(--mf-text-muted);">Mở</span><i data-lucide="arrow-right" width="12" height="12" style="color:var(--mf-text-subtle);"></i><span style="padding:1px 6px; border-radius:5px; background:var(--mf-soft); color:var(--mf-blue);">Đang làm</span></div></div></div>
+              <div style="display:flex; gap:10px;"><div style="display:flex; flex-direction:column; align-items:center; flex-shrink:0;"><span style="width:26px; height:26px; border-radius:50%; background:var(--mf-surface); border:1px solid var(--mf-border); color:var(--mf-text-subtle); display:flex; align-items:center; justify-content:center;"><i data-lucide="pen-line" width="12" height="12"></i></span></div><div style="min-width:0;"><div style="font-size:12px;"><span style="font-weight:600;">Minh Trần</span> <span style="color:var(--mf-text-muted);">sửa · 2 giờ</span></div><div style="margin-top:3px; font-size:11px; color:var(--mf-text-subtle);">Ưu tiên: Trung bình → <span style="color:var(--mf-text-muted);">Cao</span> <span style="font-family:'Geist Mono',monospace;">(Version field-level)</span></div></div></div>
+            </div>
+          </div>
+          <div style="border-top:1px solid var(--mf-border); padding:10px; background:var(--mf-surface); display:flex; flex-direction:column; gap:8px;">
+            <div style="min-height:36px; border:1px solid var(--mf-border); border-radius:8px; background:var(--mf-surface); padding:8px 10px; font-size:12px; color:var(--mf-text-subtle);">Viết bình luận… @ để nhắc</div>
+            <div style="display:flex; align-items:center; gap:6px;"><button style="width:28px; height:28px; display:flex; align-items:center; justify-content:center; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface); color:var(--mf-text-muted); cursor:pointer;"><i data-lucide="paperclip" width="14" height="14"></i></button><button style="margin-left:auto; display:inline-flex; align-items:center; gap:6px; height:28px; padding:0 12px; border:none; border-radius:7px; background:var(--mf-primary); color:var(--mf-primary-fg); font-size:12px; font-weight:600; font-family:inherit; cursor:pointer;">Gửi</button></div>
+          </div>
+        </div>
+
+        <sc-if value="{{ saveMenuOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ closeMenus }}" style="position:absolute; inset:0; z-index:8;"></div>
+          <div style="position:absolute; top:96px; right:18px; width:196px; z-index:12; border:1px solid var(--mf-border); border-radius:11px; background:var(--mf-surface); box-shadow:0 18px 44px -16px rgba(0,0,0,.4); padding:6px;">
+            <a style="display:flex; align-items:center; gap:9px; height:32px; padding:0 10px; border-radius:7px; font-size:12.5px; color:var(--mf-text); cursor:pointer;"><i data-lucide="copy-plus" width="15" height="15" style="color:var(--mf-text-muted);"></i>Lưu & Tạo tiếp</a>
+            <a style="display:flex; align-items:center; gap:9px; height:32px; padding:0 10px; border-radius:7px; font-size:12.5px; color:var(--mf-text); cursor:pointer;"><i data-lucide="printer" width="15" height="15" style="color:var(--mf-text-muted);"></i>Lưu & In</a>
+            <a style="display:flex; align-items:center; gap:9px; height:32px; padding:0 10px; border-radius:7px; font-size:12.5px; color:var(--mf-text); cursor:pointer;"><i data-lucide="check-check" width="15" height="15" style="color:var(--mf-green);"></i>Lưu & Ghi sổ (Submit)</a>
+          </div>
+        </sc-if>
+        <sc-if value="{{ moreOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ closeMenus }}" style="position:absolute; inset:0; z-index:8;"></div>
+          <div style="position:absolute; top:96px; right:58px; width:186px; z-index:12; border:1px solid var(--mf-border); border-radius:11px; background:var(--mf-surface); box-shadow:0 18px 44px -16px rgba(0,0,0,.4); padding:6px;">
+            <a style="display:flex; align-items:center; gap:9px; height:32px; padding:0 10px; border-radius:7px; font-size:12.5px; color:var(--mf-text); cursor:pointer;"><i data-lucide="printer" width="15" height="15" style="color:var(--mf-text-muted);"></i>In / PDF</a>
+            <a style="display:flex; align-items:center; gap:9px; height:32px; padding:0 10px; border-radius:7px; font-size:12.5px; color:var(--mf-text); cursor:pointer;"><i data-lucide="user-plus" width="15" height="15" style="color:var(--mf-text-muted);"></i>Giao việc</a>
+            <a style="display:flex; align-items:center; gap:9px; height:32px; padding:0 10px; border-radius:7px; font-size:12.5px; color:var(--mf-text); cursor:pointer;"><i data-lucide="copy" width="15" height="15" style="color:var(--mf-text-muted);"></i>Nhân bản</a>
+            <div style="height:1px; background:var(--mf-border); margin:4px 0;"></div>
+            <a style="display:flex; align-items:center; gap:9px; height:32px; padding:0 10px; border-radius:7px; font-size:12.5px; color:var(--mf-red); cursor:pointer;"><i data-lucide="trash-2" width="15" height="15"></i>Xóa</a>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ conflictOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ closeConflict }}" style="position:absolute; inset:0; background:rgba(0,0,0,.34); z-index:20;"></div>
+          <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:440px; max-width:90%; z-index:22; border:1px solid var(--mf-border); border-radius:14px; background:var(--mf-surface); box-shadow:0 28px 64px -18px rgba(0,0,0,.5); overflow:hidden;">
+            <div style="padding:18px 20px 6px; display:flex; gap:13px;"><div style="width:40px; height:40px; border-radius:11px; background:var(--mf-soft); color:var(--mf-amber); display:flex; align-items:center; justify-content:center; flex-shrink:0;"><i data-lucide="git-merge" width="20" height="20"></i></div><div><div style="font-size:15px; font-weight:600;">Bản ghi vừa được sửa</div><div style="font-size:12.5px; color:var(--mf-text-muted); margin-top:5px; line-height:1.5;"><strong>Lan Phạm</strong> đã lưu bản ghi này lúc <strong>14:32</strong>, sau khi bạn mở form. Lưu bây giờ sẽ ghi đè thay đổi của họ.</div><div style="margin-top:8px; font-size:10.5px; font-family:'Geist Mono',monospace; color:var(--mf-text-subtle); background:var(--mf-surface2); border:1px solid var(--mf-border); border-radius:6px; padding:4px 8px;">HTTP 417 · TimestampMismatchError (v16)</div></div></div>
+            <div style="display:flex; justify-content:flex-end; gap:8px; padding:16px 20px;"><button type="button" onClick="{{ closeConflict }}" style="height:34px; padding:0 14px; border:1px solid var(--mf-border); border-radius:8px; background:var(--mf-surface); color:var(--mf-text); font-size:12.5px; font-weight:500; font-family:inherit; cursor:pointer;">Tải lại bản mới</button><button style="height:34px; padding:0 14px; border:1px solid var(--mf-border); border-radius:8px; background:var(--mf-surface); color:var(--mf-text); font-size:12.5px; font-weight:500; font-family:inherit; cursor:pointer;">Xem khác biệt</button><button type="button" onClick="{{ closeConflict }}" style="height:34px; padding:0 14px; border:none; border-radius:8px; background:var(--mf-red); color:#fff; font-size:12.5px; font-weight:600; font-family:inherit; cursor:pointer;">Vẫn ghi đè</button></div>
+          </div>
+        </sc-if>
+      </div>
+    </section>
+
+    <!-- ============ B · MOBILE + LOADING ============ -->
+    <section style="display:flex; flex-direction:column; gap:12px;">
+      <div style="display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;">
+        <span style="font-family:'Geist Mono',monospace; font-size:13px; font-weight:600; color:var(--mf-primary);">M11 · Mobile full-screen stack + Loading skeleton</span>
+        <span style="font-size:12px; color:var(--mf-text-subtle);">390px · header/footer sticky · tab cuộn ngang · Ngữ cảnh = sheet riêng · input ≥16px</span>
+      </div>
+      <div style="display:flex; gap:22px; flex-wrap:wrap; align-items:flex-start;">
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <span style="font-size:11px; font-family:'Geist Mono',monospace; color:var(--mf-text-subtle);">390×844 · Form mobile</span>
+          <div style="width:300px; height:600px; border:1px solid var(--mf-border); border-radius:22px; overflow:hidden; background:var(--mf-bg); box-shadow:0 24px 48px -30px rgba(0,0,0,.4); display:flex; flex-direction:column; position:relative;">
+            <div style="height:52px; display:flex; align-items:center; gap:9px; padding:0 12px; border-bottom:1px solid var(--mf-border); background:var(--mf-surface); flex-shrink:0;"><button style="width:30px; height:30px; display:flex; align-items:center; justify-content:center; border:none; border-radius:7px; background:transparent; color:var(--mf-text-muted);"><i data-lucide="x" width="18" height="18"></i></button><div style="flex:1; min-width:0;"><div style="font-size:13.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Thiết kế lại luồng…</div></div><span style="display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:6px; font-size:10px; font-weight:600; color:var(--mf-blue); background:var(--mf-soft);">Đang làm</span></div>
+            <div style="display:flex; gap:4px; padding:8px 12px; border-bottom:1px solid var(--mf-border); background:var(--mf-surface); overflow:auto; flex-shrink:0;"><span style="flex-shrink:0; font-size:12px; font-weight:600; padding:5px 11px; border-radius:7px; background:var(--mf-soft); color:var(--mf-soft-text);">Chi tiết</span><span style="flex-shrink:0; font-size:12px; padding:5px 11px; border-radius:7px; color:var(--mf-text-muted);">Thanh toán</span><span style="flex-shrink:0; font-size:12px; padding:5px 11px; border-radius:7px; color:var(--mf-text-muted);">Công việc con</span></div>
+            <div style="flex:1; overflow:auto; padding:14px 12px; display:flex; flex-direction:column; gap:13px;">
+              <div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:12px; color:var(--mf-text-muted);">Chủ đề *</label><div style="height:42px; border:1px solid var(--mf-border); border-radius:9px; background:var(--mf-surface); display:flex; align-items:center; padding:0 12px; font-size:15px;">Thiết kế lại luồng…</div></div>
+              <div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:12px; color:var(--mf-text-muted);">Dự án *</label><div style="height:42px; border:1px solid var(--mf-border); border-radius:9px; background:var(--mf-surface); display:flex; align-items:center; gap:7px; padding:0 12px; font-size:15px;"><i data-lucide="folder-kanban" width="15" height="15" style="color:var(--mf-soft-text);"></i>MetaForge Q3</div></div>
+              <div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:12px; color:var(--mf-text-muted);">Ngày hết hạn</label><div style="height:42px; border:1px solid var(--mf-border); border-radius:9px; background:var(--mf-surface); display:flex; align-items:center; gap:7px; padding:0 12px; font-size:15px;"><i data-lucide="calendar" width="15" height="15" style="color:var(--mf-text-subtle);"></i>28/07/2026</div></div>
+            </div>
+            <div style="height:58px; display:flex; align-items:center; gap:8px; padding:0 12px; border-top:1px solid var(--mf-border); background:var(--mf-surface); flex-shrink:0;"><button style="flex:1; height:42px; border:none; border-radius:9px; background:var(--mf-primary); color:var(--mf-primary-fg); font-size:14px; font-weight:600; font-family:inherit;">Lưu</button><button style="width:44px; height:42px; display:flex; align-items:center; justify-content:center; border:1px solid var(--mf-border); border-radius:9px; background:var(--mf-surface); color:var(--mf-text-muted);"><i data-lucide="ellipsis" width="18" height="18"></i></button><button style="width:44px; height:42px; display:flex; align-items:center; justify-content:center; border:1px solid var(--mf-border); border-radius:9px; background:var(--mf-surface); color:var(--mf-text-muted);"><i data-lucide="history" width="18" height="18"></i></button></div>
+          </div>
+        </div>
+
+        <!-- loading skeleton -->
+        <div style="flex:1; min-width:340px; display:flex; flex-direction:column; gap:8px;">
+          <span style="font-size:11px; font-family:'Geist Mono',monospace; color:var(--mf-text-subtle);">Loading — skeleton khớp cấu trúc section/tab (không spinner trơ)</span>
+          <div style="border:1px solid var(--mf-border); border-radius:12px; background:var(--mf-surface); padding:18px; display:flex; flex-direction:column; gap:18px;">
+            <div style="display:flex; align-items:center; gap:12px;"><div style="width:180px; height:18px; border-radius:5px; background:var(--mf-surface2);"></div><div style="width:70px; height:18px; border-radius:6px; background:var(--mf-surface2);"></div><div style="margin-left:auto; width:80px; height:30px; border-radius:7px; background:var(--mf-surface2);"></div></div>
+            <div style="display:flex; gap:8px;"><div style="width:70px; height:26px; border-radius:6px; background:var(--mf-surface2);"></div><div style="width:90px; height:26px; border-radius:6px; background:var(--mf-surface2);"></div><div style="width:100px; height:26px; border-radius:6px; background:var(--mf-surface2);"></div></div>
+            <div style="height:11px; width:130px; border-radius:4px; background:var(--mf-surface2);"></div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px 24px;"><div style="display:flex; flex-direction:column; gap:6px;"><div style="width:60px;height:9px;border-radius:4px;background:var(--mf-surface2);"></div><div style="height:34px;border-radius:7px;background:var(--mf-surface2);"></div></div><div style="display:flex; flex-direction:column; gap:6px;"><div style="width:60px;height:9px;border-radius:4px;background:var(--mf-surface2);"></div><div style="height:34px;border-radius:7px;background:var(--mf-surface2);"></div></div><div style="display:flex; flex-direction:column; gap:6px;"><div style="width:60px;height:9px;border-radius:4px;background:var(--mf-surface2);"></div><div style="height:34px;border-radius:7px;background:var(--mf-surface2);"></div></div><div style="display:flex; flex-direction:column; gap:6px;"><div style="width:60px;height:9px;border-radius:4px;background:var(--mf-surface2);"></div><div style="height:34px;border-radius:7px;background:var(--mf-surface2);"></div></div></div>
+          </div>
+          <div style="border:1px solid var(--mf-border); border-radius:11px; background:var(--mf-surface); padding:18px; display:flex; align-items:center; gap:13px; margin-top:6px;"><div style="width:38px;height:38px;border-radius:10px;background:var(--mf-surface2);color:var(--mf-text-subtle);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i data-lucide="file-question" width="18" height="18"></i></div><div style="flex:1;"><div style="font-size:13px; font-weight:600;">Không tìm thấy Công việc TASK-9999</div><div style="font-size:12px; color:var(--mf-text-muted); margin-top:2px;">Bản ghi không tồn tại hoặc đã bị xóa (404).</div></div><button style="height:32px; padding:0 13px; border:1px solid var(--mf-border); border-radius:8px; background:var(--mf-surface); color:var(--mf-text); font-size:12px; font-weight:500; font-family:inherit; cursor:pointer;">Về danh sách</button></div>
+        </div>
+      </div>
+      <div style="font-size:11px; font-family:'Geist Mono',monospace; color:var(--mf-text-subtle);">Autofill: default/Today · fetch_from (ô chưa dirty, đánh dấu ✨) · naming preview · Client Script executor (lỗi không vỡ form) · fetch gửi kèm khi save, server validate chốt</div>
+    </section>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { palette:"blue", mode:"light", tab:"details", sec1:true, dirty:true, saving:false,
+            saveMenu:false, more:false, conflict:false, sel:"2043" };
+
+  componentDidMount(){ this._icons(); }
+  componentDidUpdate(){ this._icons(); }
+  _icons(){ const r=()=>window.lucide&&window.lucide.createIcons&&window.lucide.createIcons(); if(window.lucide) r(); else setTimeout(()=>this._icons(),150); }
+
+  _pal(){ return {
+    neutral:{ light:{bg:"#f4f4f5",surface:"#ffffff",surface2:"#fafafa",sidebar:"#fafafa",border:"#e4e4e7",text:"#18181b",muted:"#71717a",subtle:"#a1a1aa",primary:"#18181b",primaryFg:"#fafafa",soft:"#f1f1f3",softText:"#18181b",ring:"#71717a",green:"#16a34a",amber:"#ca8a04",red:"#dc2626",blue:"#2563eb"},
+              dark:{bg:"#09090b",surface:"#131316",surface2:"#1c1c20",sidebar:"#0c0c0e",border:"#2a2a2e",text:"#fafafa",muted:"#a1a1aa",subtle:"#71717a",primary:"#fafafa",primaryFg:"#18181b",soft:"#27272a",softText:"#fafafa",ring:"#a1a1aa",green:"#22c55e",amber:"#eab308",red:"#f87171",blue:"#60a5fa"} },
+    blue:{ light:{bg:"#eef2f6",surface:"#ffffff",surface2:"#f6f8fb",sidebar:"#ffffff",border:"#e2e8f0",text:"#0f172a",muted:"#64748b",subtle:"#94a3b8",primary:"#1B4DFF",primaryFg:"#ffffff",soft:"#edf1ff",softText:"#1740cc",ring:"#1B4DFF",green:"#16a34a",amber:"#d97706",red:"#dc2626",blue:"#1B4DFF"},
+           dark:{bg:"#0a0f1c",surface:"#0f1729",surface2:"#152037",sidebar:"#0c1424",border:"#1e2a44",text:"#e2e8f0",muted:"#93a3bb",subtle:"#64748b",primary:"#4d7cff",primaryFg:"#0a0f1c",soft:"#182352",softText:"#adc0ff",ring:"#4d7cff",green:"#22c55e",amber:"#f59e0b",red:"#f87171",blue:"#4d7cff"} },
+    warm:{ light:{bg:"#f5f2ec",surface:"#ffffff",surface2:"#faf7f1",sidebar:"#faf7f1",border:"#e8e0d3",text:"#292524",muted:"#78716c",subtle:"#a8a29e",primary:"#b15b2e",primaryFg:"#ffffff",soft:"#f6ece0",softText:"#9a4f24",ring:"#b15b2e",green:"#4d7c0f",amber:"#b45309",red:"#b91c1c",blue:"#2563eb"},
+           dark:{bg:"#1a1613",surface:"#241f1b",surface2:"#2c2621",sidebar:"#1f1a16",border:"#443c34",text:"#faf6f0",muted:"#a8a29e",subtle:"#78716c",primary:"#e08442",primaryFg:"#1a1613",soft:"#382a1e",softText:"#f0b483",ring:"#e08442",green:"#84cc16",amber:"#f59e0b",red:"#f87171",blue:"#60a5fa"} }
+  }; }
+
+  _list(){ return [
+    {id:"2039",title:"Cấu hình cổng thanh toán VNPay",meta:"TASK-2039 · Minh Trần",time:"2 giờ",dot:"var(--mf-blue)"},
+    {id:"2041",title:"Nhập dữ liệu khách hàng ACME",meta:"TASK-2041 · Lan Phạm",time:"3 giờ",dot:"var(--mf-amber)"},
+    {id:"2043",title:"Thiết kế lại luồng thanh toán",meta:"TASK-2043 · Minh Trần",time:"Hôm qua",dot:"var(--mf-blue)"},
+    {id:"2044",title:"Kiểm thử phân quyền vai trò",meta:"TASK-2044 · Huy Đỗ",time:"2 ngày",dot:"var(--mf-red)"},
+    {id:"2050",title:"Tối ưu truy vấn báo cáo tồn kho",meta:"TASK-2050 · Trang Vũ",time:"3 ngày",dot:"var(--mf-text-subtle)"},
+    {id:"2052",title:"Onboarding khách hàng Beta",meta:"TASK-2052 · Lan Phạm",time:"4 ngày",dot:"var(--mf-green)"}
+  ]; }
+
+  renderVals(){
+    const dir=this.state.palette, mode=this.state.mode, t=this._pal()[dir][mode];
+    const seg=(a,c)=>"display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 14px;border-radius:9px;border:1px solid "+(a?c:"#e4e4e7")+";background:"+(a?c:"#fff")+";color:"+(a?"#fff":"#3f3f46")+";font-size:12.5px;font-weight:"+(a?600:500)+";cursor:pointer;font-family:inherit;";
+    const md=(a)=>"display:inline-flex;align-items:center;justify-content:center;min-width:52px;height:30px;padding:0 13px;border:none;border-radius:8px;background:"+(a?"#18181b":"transparent")+";color:"+(a?"#fff":"#52525b")+";font-size:12.5px;font-weight:"+(a?600:500)+";cursor:pointer;font-family:inherit;";
+    const tab=(a)=>"padding:8px 12px;font-size:13px;font-weight:"+(a?600:400)+";color:"+(a?"var(--mf-text)":"var(--mf-text-muted)")+";border:none;background:transparent;border-bottom:2px solid "+(a?"var(--mf-primary)":"transparent")+";cursor:pointer;font-family:inherit;";
+    const sel=this.state.sel;
+    const rows=this._list().map(d=>{ const on=d.id===sel; return {...d, bg:on?"var(--mf-soft)":"transparent", shadow:on?"inset 2px 0 0 var(--mf-primary)":"none", w:on?600:500, color:on?"var(--mf-soft-text)":"var(--mf-text)", select:()=>this.setState({sel:d.id}) }; });
+
+    return {
+      t, listRows:rows,
+      segNeutral:seg(dir==="neutral","#18181b"), segBlue:seg(dir==="blue","#1B4DFF"), segWarm:seg(dir==="warm","#b15b2e"),
+      apLight:md(mode==="light"), apDark:md(mode==="dark"),
+      setNeutral:()=>this.setState({palette:"neutral"}), setBlue:()=>this.setState({palette:"blue"}), setWarm:()=>this.setState({palette:"warm"}),
+      setLight:()=>this.setState({mode:"light"}), setDark:()=>this.setState({mode:"dark"}),
+      isDetails:this.state.tab==="details", isPayment:this.state.tab==="payment", isSub:this.state.tab==="sub",
+      tabDetailsStyle:tab(this.state.tab==="details"), tabPaymentStyle:tab(this.state.tab==="payment"), tabSubStyle:tab(this.state.tab==="sub"),
+      tabDetails:()=>this.setState({tab:"details"}), tabPayment:()=>this.setState({tab:"payment"}), tabSub:()=>this.setState({tab:"sub"}),
+      sec1Open:this.state.sec1, sec1Icon:this.state.sec1?"chevron-down":"chevron-right", toggleSec1:()=>this.setState(s=>({sec1:!s.sec1})),
+      dirty:this.state.dirty, saving:this.state.saving, saveLabel:this.state.saving?"Đang lưu…":"Lưu",
+      save:()=>{ this.setState({saving:true}); setTimeout(()=>this.setState({saving:false,dirty:false}),1100); },
+      saveMenuOpen:this.state.saveMenu, toggleSaveMenu:()=>this.setState(s=>({saveMenu:!s.saveMenu,more:false})),
+      moreOpen:this.state.more, moreBg:this.state.more?"var(--mf-soft)":"var(--mf-surface)", toggleMore:()=>this.setState(s=>({more:!s.more,saveMenu:false})),
+      closeMenus:()=>this.setState({saveMenu:false,more:false}),
+      conflictOpen:this.state.conflict, openConflict:()=>this.setState({conflict:true}), closeConflict:()=>this.setState({conflict:false})
+    };
+  }
+}
+</script>
+</body>
+</html>

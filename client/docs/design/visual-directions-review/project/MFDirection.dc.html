@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<style>
+  a { color: var(--mf-soft-text); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+</style>
+</helmet>
+<div style="width:1280px; display:flex; flex-direction:column; gap:34px; font-family:'Geist',system-ui,-apple-system,sans-serif; --mf-bg:{{theme.bg}}; --mf-surface:{{theme.surface}}; --mf-surface2:{{theme.surface2}}; --mf-sidebar:{{theme.sidebar}}; --mf-border:{{theme.border}}; --mf-text:{{theme.text}}; --mf-text-muted:{{theme.muted}}; --mf-text-subtle:{{theme.subtle}}; --mf-primary:{{theme.primary}}; --mf-primary-fg:{{theme.primaryFg}}; --mf-soft:{{theme.soft}}; --mf-soft-text:{{theme.softText}}; --mf-ring:{{theme.ring}}; --mf-green:{{theme.green}}; --mf-amber:{{theme.amber}}; --mf-red:{{theme.red}}; --mf-blue:{{theme.blue}}; color:var(--mf-text);">
+
+  <!-- ============ FOUNDATIONS STRIP ============ -->
+  <div style="border:1px solid var(--mf-border); border-radius:12px; background:var(--mf-surface); padding:20px 22px; display:flex; flex-direction:column; gap:16px;">
+    <div style="display:flex; align-items:baseline; gap:10px;">
+      <span style="font-family:'Geist Mono',monospace; font-size:12px; color:var(--mf-text-muted);">01 · Foundations</span>
+      <span style="font-size:12px; color:var(--mf-text-subtle);">Bảng token · Thang chữ · Semantic</span>
+    </div>
+    <div style="display:flex; gap:22px; flex-wrap:wrap;">
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <span style="font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--mf-text-subtle);">Surface & viền</span>
+        <div style="display:flex; gap:8px;">
+          <div style="width:40px;height:40px;border-radius:8px;background:var(--mf-bg);border:1px solid var(--mf-border);" title="bg"></div>
+          <div style="width:40px;height:40px;border-radius:8px;background:var(--mf-surface);border:1px solid var(--mf-border);" title="surface"></div>
+          <div style="width:40px;height:40px;border-radius:8px;background:var(--mf-surface2);border:1px solid var(--mf-border);" title="muted"></div>
+          <div style="width:40px;height:40px;border-radius:8px;background:var(--mf-soft);border:1px solid var(--mf-border);" title="soft/accent"></div>
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <span style="font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--mf-text-subtle);">Primary & semantic</span>
+        <div style="display:flex; gap:8px;">
+          <div style="width:40px;height:40px;border-radius:8px;background:var(--mf-primary);" title="primary"></div>
+          <div style="width:40px;height:40px;border-radius:8px;background:var(--mf-green);" title="success"></div>
+          <div style="width:40px;height:40px;border-radius:8px;background:var(--mf-amber);" title="warning"></div>
+          <div style="width:40px;height:40px;border-radius:8px;background:var(--mf-red);" title="destructive"></div>
+          <div style="width:40px;height:40px;border-radius:8px;background:var(--mf-blue);" title="info"></div>
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:6px; padding-left:22px; border-left:1px solid var(--mf-border);">
+        <span style="font-size:22px; font-weight:600; letter-spacing:-.01em; line-height:1;">Display · Aa 24</span>
+        <span style="font-size:15px; font-weight:600; line-height:1;">Page title · Aa 18</span>
+        <span style="font-size:13px; color:var(--mf-text-muted); line-height:1;">Body · Geist 13/20</span>
+        <span style="font-size:11px; color:var(--mf-text-subtle); font-family:'Geist Mono',monospace; line-height:1;">Mono · caption 11 · TASK-2043</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ FRAME 1 · SHELL + SPLIT DETAIL (LIGHT) ============ -->
+  <div style="display:flex; flex-direction:column; gap:9px;">
+    <div style="font-family:'Geist Mono',monospace; font-size:12px; color:var(--mf-text-muted);">03 · Product Shell + Three-column Split Detail — {{ modeLabel }} · <span style="color:var(--mf-text-subtle);">MF-M11-SPLIT-DETAIL-DESKTOP-LIGHT-01</span></div>
+    <div style="height:780px; border:1px solid var(--mf-border); border-radius:12px; overflow:hidden; background:var(--mf-surface); box-shadow:0 1px 2px rgba(0,0,0,.05), 0 24px 48px -28px rgba(0,0,0,.28); display:flex; flex-direction:column;">
+
+      <!-- TOPBAR -->
+      <div style="height:48px; display:flex; align-items:center; gap:12px; padding:0 12px; border-bottom:1px solid var(--mf-border); background:var(--mf-surface); flex-shrink:0;">
+        <div style="display:flex; align-items:center; gap:7px; font-size:13px; color:var(--mf-text-muted);">
+          <span style="font-weight:600; color:var(--mf-text);">Công việc</span>
+          <i data-lucide="chevron-right" width="14" height="14" style="opacity:.6;"></i>
+          <span>TASK-2043</span>
+        </div>
+        <button style="margin:0 auto; display:flex; align-items:center; gap:8px; width:360px; height:32px; padding:0 10px; border:1px solid var(--mf-border); border-radius:8px; background:var(--mf-surface2); color:var(--mf-text-muted); font-size:12.5px; font-family:inherit; cursor:text;" style-hover="border-color:var(--mf-ring); color:var(--mf-text);">
+          <i data-lucide="search" width="14" height="14"></i>
+          <span>Tìm kiếm hoặc gõ lệnh…</span>
+          <span style="margin-left:auto; display:flex; gap:3px;">
+            <kbd style="padding:1px 5px; border:1px solid var(--mf-border); border-radius:4px; font-size:10px; font-family:'Geist Mono',monospace; background:var(--mf-surface);">⌘</kbd>
+            <kbd style="padding:1px 5px; border:1px solid var(--mf-border); border-radius:4px; font-size:10px; font-family:'Geist Mono',monospace; background:var(--mf-surface);">K</kbd>
+          </span>
+        </button>
+        <div style="display:flex; align-items:center; gap:2px;">
+          <button style="width:30px; height:30px; display:flex; align-items:center; justify-content:center; border:none; border-radius:7px; background:transparent; color:var(--mf-text-muted); cursor:pointer;" style-hover="background:var(--mf-surface2); color:var(--mf-primary);" title="Trợ lý AI"><i data-lucide="sparkles" width="17" height="17"></i></button>
+          <button style="position:relative; width:30px; height:30px; display:flex; align-items:center; justify-content:center; border:none; border-radius:7px; background:transparent; color:var(--mf-text-muted); cursor:pointer;" style-hover="background:var(--mf-surface2);" title="Thông báo">
+            <i data-lucide="bell" width="17" height="17"></i>
+            <span style="position:absolute; top:4px; right:4px; min-width:15px; height:15px; padding:0 3px; border-radius:8px; background:var(--mf-red); color:#fff; font-size:9px; font-weight:600; display:flex; align-items:center; justify-content:center; border:1.5px solid var(--mf-surface);">3</span>
+          </button>
+          <button style="width:30px; height:30px; display:flex; align-items:center; justify-content:center; border:none; border-radius:7px; background:transparent; color:var(--mf-text-muted); cursor:pointer;" style-hover="background:var(--mf-surface2);" title="Giao diện"><i data-lucide="moon" width="16" height="16"></i></button>
+          <button style="display:flex; align-items:center; gap:6px; height:30px; padding:0 5px 0 6px; border:none; border-radius:7px; background:transparent; cursor:pointer;" style-hover="background:var(--mf-surface2);">
+            <span style="width:24px; height:24px; border-radius:50%; background:var(--mf-soft); color:var(--mf-soft-text); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:600;">MT</span>
+            <i data-lucide="chevron-down" width="13" height="13" style="color:var(--mf-text-subtle);"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- BODY: sidebar + list + detail + context -->
+      <div style="flex:1; display:flex; min-height:0;">
+
+        <!-- SIDEBAR (expanded) -->
+        <div style="width:210px; flex-shrink:0; border-right:1px solid var(--mf-border); background:var(--mf-sidebar); display:flex; flex-direction:column;">
+          <div style="height:48px; display:flex; align-items:center; gap:9px; padding:0 12px; border-bottom:1px solid var(--mf-border);">
+            <div style="width:24px; height:24px; border-radius:7px; background:var(--mf-primary); color:var(--mf-primary-fg); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px;">M</div>
+            <span style="font-weight:600; font-size:14px; letter-spacing:-.01em;">MetaForge</span>
+            <button style="margin-left:auto; width:26px; height:26px; display:flex; align-items:center; justify-content:center; border:none; border-radius:6px; background:transparent; color:var(--mf-text-subtle); cursor:pointer;" style-hover="background:var(--mf-surface2);" title="Thu gọn"><i data-lucide="panel-left-close" width="15" height="15"></i></button>
+          </div>
+          <div style="flex:1; overflow:auto; padding:10px 8px; display:flex; flex-direction:column; gap:2px;">
+            <div style="font-size:10px; font-weight:600; letter-spacing:.07em; text-transform:uppercase; color:var(--mf-text-subtle); padding:6px 8px 4px;">Không gian làm việc</div>
+            <a style="display:flex; align-items:center; gap:9px; height:32px; padding:0 10px; border-radius:7px; color:var(--mf-text-muted); font-size:13px;" style-hover="background:var(--mf-surface2); color:var(--mf-text);"><i data-lucide="layout-dashboard" width="16" height="16"></i>Trang chủ</a>
+            <a style="display:flex; align-items:center; gap:9px; height:32px; padding:0 10px; border-radius:7px; color:var(--mf-text-muted); font-size:13px;" style-hover="background:var(--mf-surface2); color:var(--mf-text);"><i data-lucide="star" width="16" height="16"></i>Yêu thích</a>
+            <div style="font-size:10px; font-weight:600; letter-spacing:.07em; text-transform:uppercase; color:var(--mf-text-subtle); padding:12px 8px 4px;">Ứng dụng</div>
+            <a style="display:flex; align-items:center; gap:9px; height:32px; padding:0 10px; border-radius:7px; color:var(--mf-text-muted); font-size:13px;" style-hover="background:var(--mf-surface2); color:var(--mf-text);"><i data-lucide="folder-kanban" width="16" height="16"></i>Dự án</a>
+            <a style="display:flex; align-items:center; gap:9px; height:32px; padding:0 10px; border-radius:7px; background:var(--mf-soft); color:var(--mf-soft-text); font-size:13px; font-weight:600; box-shadow:inset 2px 0 0 var(--mf-primary);"><i data-lucide="square-check-big" width="16" height="16"></i>Công việc<span style="margin-left:auto; font-size:11px; font-weight:500; color:var(--mf-text-subtle);">128</span></a>
+            <a style="display:flex; align-items:center; gap:9px; height:32px; padding:0 10px; border-radius:7px; color:var(--mf-text-muted); font-size:13px;" style-hover="background:var(--mf-surface2); color:var(--mf-text);"><i data-lucide="users" width="16" height="16"></i>Khách hàng</a>
+            <a style="display:flex; align-items:center; gap:9px; height:32px; padding:0 10px; border-radius:7px; color:var(--mf-text-muted); font-size:13px;" style-hover="background:var(--mf-surface2); color:var(--mf-text);"><i data-lucide="receipt" width="16" height="16"></i>Đơn hàng</a>
+            <a style="display:flex; align-items:center; gap:9px; height:32px; padding:0 10px; border-radius:7px; color:var(--mf-text-muted); font-size:13px;" style-hover="background:var(--mf-surface2); color:var(--mf-text);"><i data-lucide="life-buoy" width="16" height="16"></i>Vấn đề</a>
+          </div>
+          <div style="border-top:1px solid var(--mf-border); padding:8px; display:flex; flex-direction:column; gap:2px;">
+            <a style="display:flex; align-items:center; gap:9px; height:30px; padding:0 10px; border-radius:7px; color:var(--mf-text-muted); font-size:12.5px;" style-hover="background:var(--mf-surface2);"><i data-lucide="settings" width="15" height="15"></i>Cài đặt</a>
+            <a style="display:flex; align-items:center; gap:9px; height:30px; padding:0 10px; border-radius:7px; color:var(--mf-text-muted); font-size:12.5px;" style-hover="background:var(--mf-surface2);"><i data-lucide="circle-help" width="15" height="15"></i>Trợ giúp</a>
+          </div>
+        </div>
+
+        <!-- LIST PANE -->
+        <div style="width:264px; flex-shrink:0; border-right:1px solid var(--mf-border); background:var(--mf-surface); display:flex; flex-direction:column; min-width:0;">
+          <div style="padding:10px 12px; border-bottom:1px solid var(--mf-border); display:flex; flex-direction:column; gap:9px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-weight:600; font-size:14px; white-space:nowrap;">Công việc</span>
+              <span style="font-size:11px; color:var(--mf-text-subtle); background:var(--mf-surface2); border:1px solid var(--mf-border); padding:1px 6px; border-radius:5px;">128</span>
+              <button style="margin-left:auto; width:26px; height:26px; display:flex; align-items:center; justify-content:center; border:1px solid var(--mf-border); border-radius:6px; background:var(--mf-surface); color:var(--mf-text-muted); cursor:pointer;" style-hover="background:var(--mf-surface2);" title="Ghim cột"><i data-lucide="pin" width="14" height="14"></i></button>
+            </div>
+            <div style="display:flex; align-items:center; gap:7px; height:30px; padding:0 9px; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface2);">
+              <i data-lucide="search" width="14" height="14" style="color:var(--mf-text-subtle);"></i>
+              <span style="font-size:12.5px; color:var(--mf-text-subtle);">Lọc nhanh…</span>
+            </div>
+            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+              <span style="display:inline-flex; align-items:center; gap:5px; font-size:11px; padding:2px 7px; border-radius:5px; background:var(--mf-soft); color:var(--mf-soft-text); border:1px solid var(--mf-border);">Đang làm<i data-lucide="x" width="11" height="11"></i></span>
+              <span style="display:inline-flex; align-items:center; gap:5px; font-size:11px; padding:2px 7px; border-radius:5px; background:var(--mf-surface2); color:var(--mf-text-muted); border:1px solid var(--mf-border);">MetaForge Q3<i data-lucide="x" width="11" height="11"></i></span>
+            </div>
+          </div>
+          <div style="flex:1; overflow:auto;">
+            <button style="width:100%; display:flex; flex-direction:column; gap:4px; text-align:left; padding:9px 12px; border:none; border-bottom:1px solid var(--mf-border); background:transparent; color:var(--mf-text); cursor:pointer;" style-hover="background:var(--mf-surface2);">
+              <div style="display:flex; align-items:center; gap:7px;"><span style="width:7px; height:7px; border-radius:50%; background:var(--mf-blue); flex-shrink:0;"></span><span style="font-size:13px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Cấu hình cổng thanh toán VNPay</span><span style="margin-left:auto; font-size:10.5px; color:var(--mf-text-subtle); flex-shrink:0;">2 giờ</span></div>
+              <div style="font-size:11.5px; color:var(--mf-text-muted); padding-left:14px;">TASK-2039 · Minh Trần</div>
+            </button>
+            <button style="width:100%; display:flex; flex-direction:column; gap:4px; text-align:left; padding:9px 12px; border:none; border-bottom:1px solid var(--mf-border); background:transparent; color:var(--mf-text); cursor:pointer;" style-hover="background:var(--mf-surface2);">
+              <div style="display:flex; align-items:center; gap:7px;"><span style="width:7px; height:7px; border-radius:50%; background:var(--mf-amber); flex-shrink:0;"></span><span style="font-size:13px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Nhập dữ liệu khách hàng ACME</span><span style="margin-left:auto; font-size:10.5px; color:var(--mf-text-subtle); flex-shrink:0;">3 giờ</span></div>
+              <div style="font-size:11.5px; color:var(--mf-text-muted); padding-left:14px;">TASK-2041 · Lan Phạm</div>
+            </button>
+            <button style="width:100%; display:flex; flex-direction:column; gap:4px; text-align:left; padding:9px 12px; border:none; border-bottom:1px solid var(--mf-border); background:var(--mf-soft); box-shadow:inset 2px 0 0 var(--mf-primary); cursor:pointer;">
+              <div style="display:flex; align-items:center; gap:7px;"><span style="width:7px; height:7px; border-radius:50%; background:var(--mf-blue); flex-shrink:0;"></span><span style="font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--mf-soft-text);">Thiết kế lại luồng thanh toán</span><span style="margin-left:auto; font-size:10.5px; color:var(--mf-text-subtle); flex-shrink:0;">Hôm qua</span></div>
+              <div style="font-size:11.5px; color:var(--mf-text-muted); padding-left:14px;">TASK-2043 · Minh Trần</div>
+            </button>
+            <button style="width:100%; display:flex; flex-direction:column; gap:4px; text-align:left; padding:9px 12px; border:none; border-bottom:1px solid var(--mf-border); background:transparent; color:var(--mf-text); cursor:pointer;" style-hover="background:var(--mf-surface2);">
+              <div style="display:flex; align-items:center; gap:7px;"><span style="width:7px; height:7px; border-radius:50%; background:var(--mf-red); flex-shrink:0;"></span><span style="font-size:13px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Kiểm thử phân quyền vai trò</span><span style="margin-left:auto; font-size:10.5px; color:var(--mf-text-subtle); flex-shrink:0;">2 ngày</span></div>
+              <div style="font-size:11.5px; color:var(--mf-text-muted); padding-left:14px;">TASK-2044 · Huy Đỗ</div>
+            </button>
+            <button style="width:100%; display:flex; flex-direction:column; gap:4px; text-align:left; padding:9px 12px; border:none; border-bottom:1px solid var(--mf-border); background:transparent; color:var(--mf-text); cursor:pointer;" style-hover="background:var(--mf-surface2);">
+              <div style="display:flex; align-items:center; gap:7px;"><span style="width:7px; height:7px; border-radius:50%; background:var(--mf-text-subtle); flex-shrink:0;"></span><span style="font-size:13px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Tối ưu truy vấn báo cáo tồn kho</span><span style="margin-left:auto; font-size:10.5px; color:var(--mf-text-subtle); flex-shrink:0;">3 ngày</span></div>
+              <div style="font-size:11.5px; color:var(--mf-text-muted); padding-left:14px;">TASK-2050 · Trang Vũ</div>
+            </button>
+            <button style="width:100%; display:flex; flex-direction:column; gap:4px; text-align:left; padding:9px 12px; border:none; border-bottom:1px solid var(--mf-border); background:transparent; color:var(--mf-text); cursor:pointer;" style-hover="background:var(--mf-surface2);">
+              <div style="display:flex; align-items:center; gap:7px;"><span style="width:7px; height:7px; border-radius:50%; background:var(--mf-green); flex-shrink:0;"></span><span style="font-size:13px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Onboarding khách hàng Beta</span><span style="margin-left:auto; font-size:10.5px; color:var(--mf-text-subtle); flex-shrink:0;">4 ngày</span></div>
+              <div style="font-size:11.5px; color:var(--mf-text-muted); padding-left:14px;">TASK-2052 · Lan Phạm</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- DETAIL PANE -->
+        <div style="flex:1; min-width:0; display:flex; flex-direction:column; background:var(--mf-surface);">
+          <div style="padding:12px 18px 0; border-bottom:1px solid var(--mf-border); display:flex; flex-direction:column; gap:11px;">
+            <div style="display:flex; align-items:flex-start; gap:12px;">
+              <div style="min-width:0; flex:1;">
+                <div style="display:flex; align-items:center; gap:9px; margin-bottom:4px; min-width:0;">
+                  <span style="font-size:17px; font-weight:600; letter-spacing:-.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0;">Thiết kế lại luồng thanh toán</span>
+                  <span style="display:inline-flex; align-items:center; gap:5px; padding:2px 9px; border-radius:6px; font-size:11.5px; font-weight:600; flex-shrink:0; color:var(--mf-blue); background:var(--mf-soft); border:1px solid var(--mf-border);"><span style="width:6px;height:6px;border-radius:50%;background:var(--mf-blue);"></span>Đang làm</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px; font-size:12px; color:var(--mf-text-muted); white-space:nowrap; overflow:hidden;">
+                  <span style="font-family:'Geist Mono',monospace;">TASK-2043</span><span style="color:var(--mf-text-subtle);">·</span>
+                  <span>Chủ sở hữu Minh Trần</span><span style="color:var(--mf-text-subtle);">·</span>
+                  <span>Sửa 2 giờ trước</span>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; gap:7px; flex-shrink:0;">
+                <button style="display:inline-flex; align-items:center; gap:6px; height:32px; padding:0 12px; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface); color:var(--mf-text); font-size:12.5px; font-weight:500; font-family:inherit; cursor:pointer;" style-hover="background:var(--mf-surface2);"><i data-lucide="git-branch" width="14" height="14"></i>Chuyển: Chờ duyệt</button>
+                <button style="width:32px; height:32px; display:flex; align-items:center; justify-content:center; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface); color:var(--mf-text-muted); cursor:pointer;" style-hover="background:var(--mf-surface2);"><i data-lucide="ellipsis" width="16" height="16"></i></button>
+                <button style="display:inline-flex; align-items:center; gap:6px; height:32px; padding:0 13px; border:none; border-radius:7px; background:var(--mf-primary); color:var(--mf-primary-fg); font-size:12.5px; font-weight:600; font-family:inherit; cursor:pointer; box-shadow:0 1px 2px rgba(0,0,0,.12);"><span style="width:6px;height:6px;border-radius:50%;background:var(--mf-primary-fg);opacity:.85;"></span>Lưu</button>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:2px;">
+              <span style="padding:8px 12px; font-size:13px; font-weight:600; color:var(--mf-text); border-bottom:2px solid var(--mf-primary); cursor:pointer;">Chi tiết</span>
+              <span style="padding:8px 12px; font-size:13px; color:var(--mf-text-muted); border-bottom:2px solid transparent; cursor:pointer;" style-hover="color:var(--mf-text);">Hoạt động</span>
+              <span style="padding:8px 12px; font-size:13px; color:var(--mf-text-muted); border-bottom:2px solid transparent; cursor:pointer;" style-hover="color:var(--mf-text);">Liên quan</span>
+              <span style="margin-left:auto; font-size:10.5px; font-family:'Geist Mono',monospace; color:var(--mf-text-subtle); align-self:center;">↳ Tab Break metadata</span>
+            </div>
+          </div>
+
+          <!-- FORM BODY -->
+          <div style="flex:1; overflow:auto; padding:18px; display:flex; flex-direction:column; gap:22px;">
+            <!-- Section 1 -->
+            <div style="display:flex; flex-direction:column; gap:12px;">
+              <div style="display:flex; align-items:center; gap:10px;"><span style="font-size:12px; font-weight:600; letter-spacing:.02em; text-transform:uppercase; color:var(--mf-text-muted);">Thông tin chung</span><span style="flex:1; height:1px; background:var(--mf-border);"></span></div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px 24px;">
+                <div style="display:flex; flex-direction:column; gap:5px;">
+                  <label style="font-size:11px; font-weight:500; color:var(--mf-text-muted);">Chủ đề <span style="color:var(--mf-red);">*</span></label>
+                  <div style="height:34px; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface); display:flex; align-items:center; padding:0 11px; font-size:13px;">Thiết kế lại luồng thanh toán</div>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:5px;">
+                  <label style="font-size:11px; font-weight:500; color:var(--mf-text-muted);">Dự án <span style="color:var(--mf-red);">*</span></label>
+                  <div style="height:34px; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface); display:flex; align-items:center; gap:7px; padding:0 11px; font-size:13px;"><i data-lucide="folder-kanban" width="14" height="14" style="color:var(--mf-soft-text);"></i><span style="color:var(--mf-soft-text); font-weight:500;">MetaForge Q3</span><i data-lucide="chevron-down" width="14" height="14" style="margin-left:auto; color:var(--mf-text-subtle);"></i></div>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:5px;">
+                  <label style="font-size:11px; font-weight:500; color:var(--mf-text-muted);">Người phụ trách</label>
+                  <div style="height:34px; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface); display:flex; align-items:center; gap:7px; padding:0 8px; font-size:13px;"><span style="width:20px; height:20px; border-radius:50%; background:var(--mf-soft); color:var(--mf-soft-text); display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:600;">MT</span>Minh Trần<i data-lucide="chevron-down" width="14" height="14" style="margin-left:auto; color:var(--mf-text-subtle);"></i></div>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:5px;">
+                  <label style="font-size:11px; font-weight:500; color:var(--mf-text-muted);">Ngày hết hạn</label>
+                  <div style="height:34px; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface); display:flex; align-items:center; gap:7px; padding:0 11px; font-size:13px;"><i data-lucide="calendar" width="14" height="14" style="color:var(--mf-text-subtle);"></i>28/07/2026</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Section 2 -->
+            <div style="display:flex; flex-direction:column; gap:12px;">
+              <div style="display:flex; align-items:center; gap:10px;"><span style="font-size:12px; font-weight:600; letter-spacing:.02em; text-transform:uppercase; color:var(--mf-text-muted);">Chi tiết & trạng thái</span><span style="flex:1; height:1px; background:var(--mf-border);"></span></div>
+              <div style="display:flex; flex-direction:column; gap:5px;">
+                <label style="font-size:11px; font-weight:500; color:var(--mf-text-muted);">Mô tả</label>
+                <div style="min-height:66px; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface); padding:9px 11px; font-size:13px; line-height:1.5; color:var(--mf-text);">Rút gọn từ 4 bước xuống 2 bước. Hỗ trợ VNPay và thẻ quốc tế. Cần đồng bộ với API đơn hàng và trạng thái tồn kho theo thời gian thực.</div>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px 24px;">
+                <div style="display:flex; flex-direction:column; gap:5px;">
+                  <label style="font-size:11px; font-weight:500; color:var(--mf-text-muted);">Ưu tiên</label>
+                  <div style="height:34px; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface); display:flex; align-items:center; padding:0 11px; font-size:13px;"><span style="display:inline-flex; align-items:center; gap:6px;"><span style="width:6px;height:6px;border-radius:50%;background:var(--mf-red);"></span>Cao</span><i data-lucide="chevron-down" width="14" height="14" style="margin-left:auto; color:var(--mf-text-subtle);"></i></div>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:5px;">
+                  <label style="font-size:11px; font-weight:500; color:var(--mf-text-muted);">Chi phí ước tính (VND)</label>
+                  <div style="height:34px; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface); display:flex; align-items:center; padding:0 11px; font-size:13px; font-variant-numeric:tabular-nums;"><span style="color:var(--mf-text-subtle); margin-right:4px;">₫</span>48.500.000</div>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:5px;">
+                  <label style="font-size:11px; font-weight:500; color:var(--mf-text-muted);">Tiến độ</label>
+                  <div style="height:34px; display:flex; align-items:center; gap:9px;">
+                    <div style="flex:1; height:7px; border-radius:4px; background:var(--mf-surface2); overflow:hidden; border:1px solid var(--mf-border);"><div style="width:60%; height:100%; background:var(--mf-primary);"></div></div>
+                    <span style="font-size:12px; font-variant-numeric:tabular-nums; color:var(--mf-text-muted);">60%</span>
+                  </div>
+                </div>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px 24px;">
+                <div style="display:flex; flex-direction:column; gap:5px;">
+                  <label style="font-size:11px; font-weight:500; color:var(--mf-red);">Người duyệt <span>*</span></label>
+                  <div style="height:34px; border:1.5px solid var(--mf-red); border-radius:7px; background:var(--mf-surface); display:flex; align-items:center; padding:0 11px; font-size:13px; color:var(--mf-text-subtle);">Chọn người duyệt…</div>
+                  <span style="font-size:10.5px; color:var(--mf-red); display:flex; align-items:center; gap:4px;"><i data-lucide="circle-alert" width="11" height="11"></i>Bắt buộc nhập</span>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:5px;">
+                  <label style="font-size:11px; font-weight:500; color:var(--mf-text-subtle); display:flex; align-items:center; gap:5px;">Mã công việc <i data-lucide="lock" width="11" height="11"></i></label>
+                  <div style="height:34px; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface2); display:flex; align-items:center; padding:0 11px; font-size:13px; color:var(--mf-text-muted); font-family:'Geist Mono',monospace;">TASK-2043</div>
+                  <span style="font-size:10.5px; color:var(--mf-text-subtle);">Chỉ đọc · sinh tự động</span>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:5px;">
+                  <label style="font-size:11px; font-weight:500; color:var(--mf-text-subtle); display:flex; align-items:center; gap:5px;">Khóa API <i data-lucide="eye-off" width="11" height="11"></i></label>
+                  <div style="height:34px; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface2); display:flex; align-items:center; padding:0 11px; font-size:14px; letter-spacing:2px; color:var(--mf-text-muted);">••••••••••</div>
+                  <span style="font-size:10.5px; color:var(--mf-text-subtle);">Ẩn theo quyền · Permission level 1</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Section 3: child table -->
+            <div style="display:flex; flex-direction:column; gap:12px;">
+              <div style="display:flex; align-items:center; gap:10px;"><span style="font-size:12px; font-weight:600; letter-spacing:.02em; text-transform:uppercase; color:var(--mf-text-muted);">Công việc con</span><span style="flex:1; height:1px; background:var(--mf-border);"></span><span style="font-size:11px; color:var(--mf-text-subtle); font-family:'Geist Mono',monospace;">Table field</span></div>
+              <div style="border:1px solid var(--mf-border); border-radius:8px; overflow:hidden;">
+                <div style="display:grid; grid-template-columns:40px 1fr 140px 150px 40px; background:var(--mf-surface2); border-bottom:1px solid var(--mf-border); font-size:10.5px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--mf-text-subtle);">
+                  <div style="padding:8px 10px;">#</div><div style="padding:8px 10px;">Tiêu đề</div><div style="padding:8px 10px;">Trạng thái</div><div style="padding:8px 10px;">Phụ trách</div><div></div>
+                </div>
+                <div style="display:grid; grid-template-columns:40px 1fr 140px 150px 40px; border-bottom:1px solid var(--mf-border); font-size:12.5px; align-items:center;">
+                  <div style="padding:9px 10px; color:var(--mf-text-subtle);">1</div><div style="padding:9px 10px;">Vẽ wireframe 2 bước</div><div style="padding:9px 10px;"><span style="display:inline-flex; align-items:center; gap:5px; color:var(--mf-green);"><span style="width:6px;height:6px;border-radius:50%;background:var(--mf-green);"></span>Hoàn thành</span></div><div style="padding:9px 10px; display:flex; align-items:center; gap:6px;"><span style="width:18px; height:18px; border-radius:50%; background:var(--mf-soft); color:var(--mf-soft-text); display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:600;">MT</span>Minh Trần</div><div style="text-align:center; color:var(--mf-text-subtle);"><i data-lucide="grip-vertical" width="14" height="14"></i></div>
+                </div>
+                <div style="display:grid; grid-template-columns:40px 1fr 140px 150px 40px; font-size:12.5px; align-items:center;">
+                  <div style="padding:9px 10px; color:var(--mf-text-subtle);">2</div><div style="padding:9px 10px;">Tích hợp SDK VNPay</div><div style="padding:9px 10px;"><span style="display:inline-flex; align-items:center; gap:5px; color:var(--mf-blue);"><span style="width:6px;height:6px;border-radius:50%;background:var(--mf-blue);"></span>Đang làm</span></div><div style="padding:9px 10px; display:flex; align-items:center; gap:6px;"><span style="width:18px; height:18px; border-radius:50%; background:var(--mf-soft); color:var(--mf-soft-text); display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:600;">HĐ</span>Huy Đỗ</div><div style="text-align:center; color:var(--mf-text-subtle);"><i data-lucide="grip-vertical" width="14" height="14"></i></div>
+                </div>
+                <button style="width:100%; display:flex; align-items:center; gap:7px; padding:8px 10px; border:none; border-top:1px solid var(--mf-border); background:var(--mf-surface); color:var(--mf-text-muted); font-size:12px; font-family:inherit; cursor:pointer;" style-hover="background:var(--mf-surface2);"><i data-lucide="plus" width="14" height="14"></i>Thêm dòng</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CONTEXT PANE -->
+        <div style="width:308px; flex-shrink:0; border-left:1px solid var(--mf-border); background:var(--mf-surface2); display:flex; flex-direction:column; min-width:0;">
+          <div style="display:flex; align-items:center; gap:2px; padding:6px 8px; border-bottom:1px solid var(--mf-border); background:var(--mf-surface);">
+            <span style="display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:7px; font-size:12.5px; font-weight:600; background:var(--mf-soft); color:var(--mf-soft-text);"><i data-lucide="history" width="14" height="14"></i>Dòng thời gian</span>
+            <span style="display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:7px; font-size:12.5px; color:var(--mf-text-muted); cursor:pointer;" style-hover="background:var(--mf-surface2);"><i data-lucide="sparkles" width="14" height="14"></i>AI</span>
+            <span style="display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:7px; font-size:12.5px; color:var(--mf-text-muted); cursor:pointer;" style-hover="background:var(--mf-surface2);"><i data-lucide="paperclip" width="14" height="14"></i>Tệp</span>
+            <button style="margin-left:auto; width:28px; height:28px; display:flex; align-items:center; justify-content:center; border:none; border-radius:6px; background:transparent; color:var(--mf-text-subtle); cursor:pointer;" style-hover="background:var(--mf-surface2);" title="Thu gọn"><i data-lucide="panel-right-close" width="15" height="15"></i></button>
+          </div>
+          <div style="flex:1; overflow:auto; padding:14px 14px 4px;">
+            <div style="font-size:10.5px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--mf-text-subtle); margin-bottom:12px;">Hôm nay</div>
+            <div style="display:flex; flex-direction:column; gap:2px;">
+              <!-- comment -->
+              <div style="display:flex; gap:10px;">
+                <div style="display:flex; flex-direction:column; align-items:center; flex-shrink:0;"><span style="width:26px; height:26px; border-radius:50%; background:var(--mf-soft); color:var(--mf-soft-text); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:600;">LP</span><span style="width:1px; flex:1; background:var(--mf-border); margin-top:4px;"></span></div>
+                <div style="padding-bottom:16px; min-width:0;">
+                  <div style="font-size:12.5px;"><span style="font-weight:600;">Lan Phạm</span> <span style="color:var(--mf-text-muted);">bình luận · 1 giờ</span></div>
+                  <div style="margin-top:5px; padding:9px 11px; border:1px solid var(--mf-border); border-radius:8px; background:var(--mf-surface); font-size:12.5px; line-height:1.5;">Đã xác nhận sandbox VNPay hoạt động. @Minh Trần review giúp phần refund nhé.</div>
+                </div>
+              </div>
+              <!-- workflow -->
+              <div style="display:flex; gap:10px;">
+                <div style="display:flex; flex-direction:column; align-items:center; flex-shrink:0;"><span style="width:26px; height:26px; border-radius:50%; background:var(--mf-surface); border:1px solid var(--mf-border); color:var(--mf-blue); display:flex; align-items:center; justify-content:center;"><i data-lucide="git-branch" width="14" height="14"></i></span><span style="width:1px; flex:1; background:var(--mf-border); margin-top:4px;"></span></div>
+                <div style="padding-bottom:16px; min-width:0;">
+                  <div style="font-size:12.5px;"><span style="font-weight:600;">Minh Trần</span> <span style="color:var(--mf-text-muted);">chuyển trạng thái · 2 giờ</span></div>
+                  <div style="margin-top:5px; font-size:12px; display:flex; align-items:center; gap:7px;"><span style="padding:1px 7px; border-radius:5px; background:var(--mf-surface); border:1px solid var(--mf-border); color:var(--mf-text-muted);">Mở</span><i data-lucide="arrow-right" width="13" height="13" style="color:var(--mf-text-subtle);"></i><span style="padding:1px 7px; border-radius:5px; background:var(--mf-soft); border:1px solid var(--mf-border); color:var(--mf-blue); font-weight:500;">Đang làm</span></div>
+                </div>
+              </div>
+              <!-- assignment -->
+              <div style="display:flex; gap:10px;">
+                <div style="display:flex; flex-direction:column; align-items:center; flex-shrink:0;"><span style="width:26px; height:26px; border-radius:50%; background:var(--mf-surface); border:1px solid var(--mf-border); color:var(--mf-text-muted); display:flex; align-items:center; justify-content:center;"><i data-lucide="user-plus" width="14" height="14"></i></span><span style="width:1px; flex:1; background:var(--mf-border); margin-top:4px;"></span></div>
+                <div style="padding-bottom:16px; min-width:0;">
+                  <div style="font-size:12.5px;"><span style="font-weight:600;">Hệ thống</span> <span style="color:var(--mf-text-muted);">giao việc cho Huy Đỗ · 3 giờ</span></div>
+                </div>
+              </div>
+              <!-- attachment -->
+              <div style="display:flex; gap:10px;">
+                <div style="display:flex; flex-direction:column; align-items:center; flex-shrink:0;"><span style="width:26px; height:26px; border-radius:50%; background:var(--mf-surface); border:1px solid var(--mf-border); color:var(--mf-text-muted); display:flex; align-items:center; justify-content:center;"><i data-lucide="paperclip" width="14" height="14"></i></span><span style="width:1px; flex:1; background:var(--mf-border); margin-top:4px;"></span></div>
+                <div style="padding-bottom:16px; min-width:0;">
+                  <div style="font-size:12.5px;"><span style="font-weight:600;">Lan Phạm</span> <span style="color:var(--mf-text-muted);">đính kèm · 5 giờ</span></div>
+                  <div style="margin-top:5px; display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border:1px solid var(--mf-border); border-radius:8px; background:var(--mf-surface); font-size:12px;"><i data-lucide="file-text" width="15" height="15" style="color:var(--mf-red);"></i>flow-thanh-toan-v2.pdf<span style="color:var(--mf-text-subtle);">· 1.2MB</span></div>
+                </div>
+              </div>
+              <!-- version -->
+              <div style="display:flex; gap:10px;">
+                <div style="display:flex; flex-direction:column; align-items:center; flex-shrink:0;"><span style="width:26px; height:26px; border-radius:50%; background:var(--mf-surface); border:1px solid var(--mf-border); color:var(--mf-text-subtle); display:flex; align-items:center; justify-content:center;"><i data-lucide="pen-line" width="13" height="13"></i></span></div>
+                <div style="min-width:0;">
+                  <div style="font-size:12.5px;"><span style="font-weight:600;">Minh Trần</span> <span style="color:var(--mf-text-muted);">tạo bản ghi · Hôm qua</span></div>
+                  <div style="margin-top:3px; font-size:11.5px; color:var(--mf-text-subtle);">Ưu tiên: Trung bình → Cao</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- composer -->
+          <div style="border-top:1px solid var(--mf-border); padding:10px; background:var(--mf-surface); display:flex; flex-direction:column; gap:8px;">
+            <div style="min-height:38px; border:1px solid var(--mf-border); border-radius:8px; background:var(--mf-surface); padding:8px 10px; font-size:12.5px; color:var(--mf-text-subtle);">Viết bình luận… gõ @ để nhắc</div>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <button style="width:30px; height:30px; display:flex; align-items:center; justify-content:center; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface); color:var(--mf-text-muted); cursor:pointer;" style-hover="background:var(--mf-surface2);"><i data-lucide="paperclip" width="15" height="15"></i></button>
+              <button style="width:30px; height:30px; display:flex; align-items:center; justify-content:center; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface); color:var(--mf-text-muted); cursor:pointer;" style-hover="background:var(--mf-surface2);"><i data-lucide="at-sign" width="15" height="15"></i></button>
+              <button style="margin-left:auto; display:inline-flex; align-items:center; gap:6px; height:30px; padding:0 13px; border:none; border-radius:7px; background:var(--mf-primary); color:var(--mf-primary-fg); font-size:12.5px; font-weight:600; font-family:inherit; cursor:pointer;">Gửi<i data-lucide="send-horizontal" width="14" height="14"></i></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ FRAME 2 · LIST VIEW (collapsed rail) ============ -->
+  <div style="display:flex; flex-direction:column; gap:9px;">
+    <div style="font-family:'Geist Mono',monospace; font-size:12px; color:var(--mf-text-muted);">04 · List View + Collapsed Sidebar — {{ modeLabel }} · <span style="color:var(--mf-text-subtle);">MF-M04-LIST-DESKTOP-LIGHT-01</span></div>
+    <div style="height:520px; border:1px solid var(--mf-border); border-radius:12px; overflow:hidden; background:var(--mf-surface); box-shadow:0 1px 2px rgba(0,0,0,.05), 0 24px 48px -28px rgba(0,0,0,.28); display:flex; flex-direction:column;">
+      <div style="height:48px; display:flex; align-items:center; gap:12px; padding:0 12px; border-bottom:1px solid var(--mf-border); background:var(--mf-surface); flex-shrink:0;">
+        <div style="display:flex; align-items:center; gap:7px; font-size:13px; color:var(--mf-text-muted);"><span style="font-weight:600; color:var(--mf-text);">Công việc</span></div>
+        <button style="margin:0 auto; display:flex; align-items:center; gap:8px; width:360px; height:32px; padding:0 10px; border:1px solid var(--mf-border); border-radius:8px; background:var(--mf-surface2); color:var(--mf-text-muted); font-size:12.5px; font-family:inherit; cursor:text;"><i data-lucide="search" width="14" height="14"></i><span>Tìm kiếm hoặc gõ lệnh…</span><span style="margin-left:auto; display:flex; gap:3px;"><kbd style="padding:1px 5px; border:1px solid var(--mf-border); border-radius:4px; font-size:10px; font-family:'Geist Mono',monospace; background:var(--mf-surface);">⌘</kbd><kbd style="padding:1px 5px; border:1px solid var(--mf-border); border-radius:4px; font-size:10px; font-family:'Geist Mono',monospace; background:var(--mf-surface);">K</kbd></span></button>
+        <div style="display:flex; align-items:center; gap:2px;">
+          <button style="width:30px; height:30px; display:flex; align-items:center; justify-content:center; border:none; border-radius:7px; background:transparent; color:var(--mf-text-muted); cursor:pointer;" style-hover="background:var(--mf-surface2);"><i data-lucide="sparkles" width="17" height="17"></i></button>
+          <button style="position:relative; width:30px; height:30px; display:flex; align-items:center; justify-content:center; border:none; border-radius:7px; background:transparent; color:var(--mf-text-muted); cursor:pointer;"><i data-lucide="bell" width="17" height="17"></i><span style="position:absolute; top:4px; right:4px; width:7px; height:7px; border-radius:50%; background:var(--mf-red); border:1.5px solid var(--mf-surface);"></span></button>
+          <span style="width:24px; height:24px; border-radius:50%; background:var(--mf-soft); color:var(--mf-soft-text); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:600; margin-left:4px;">MT</span>
+        </div>
+      </div>
+      <div style="flex:1; display:flex; min-height:0;">
+        <!-- collapsed rail -->
+        <div style="width:52px; flex-shrink:0; border-right:1px solid var(--mf-border); background:var(--mf-sidebar); display:flex; flex-direction:column; align-items:center; padding:10px 0; gap:4px;">
+          <div style="width:28px; height:28px; border-radius:8px; background:var(--mf-primary); color:var(--mf-primary-fg); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:15px; margin-bottom:8px;">M</div>
+          <button style="width:36px; height:36px; display:flex; align-items:center; justify-content:center; border:none; border-radius:8px; background:transparent; color:var(--mf-text-muted); cursor:pointer;" style-hover="background:var(--mf-surface2);"><i data-lucide="layout-dashboard" width="18" height="18"></i></button>
+          <button style="width:36px; height:36px; display:flex; align-items:center; justify-content:center; border:none; border-radius:8px; background:transparent; color:var(--mf-text-muted); cursor:pointer;" style-hover="background:var(--mf-surface2);"><i data-lucide="folder-kanban" width="18" height="18"></i></button>
+          <button style="width:36px; height:36px; display:flex; align-items:center; justify-content:center; border:none; border-radius:8px; background:var(--mf-soft); color:var(--mf-soft-text); cursor:pointer; box-shadow:inset 2px 0 0 var(--mf-primary);"><i data-lucide="square-check-big" width="18" height="18"></i></button>
+          <button style="width:36px; height:36px; display:flex; align-items:center; justify-content:center; border:none; border-radius:8px; background:transparent; color:var(--mf-text-muted); cursor:pointer;" style-hover="background:var(--mf-surface2);"><i data-lucide="users" width="18" height="18"></i></button>
+          <button style="width:36px; height:36px; display:flex; align-items:center; justify-content:center; border:none; border-radius:8px; background:transparent; color:var(--mf-text-muted); cursor:pointer;" style-hover="background:var(--mf-surface2);"><i data-lucide="receipt" width="18" height="18"></i></button>
+        </div>
+        <!-- list main -->
+        <div style="flex:1; display:flex; flex-direction:column; min-width:0;">
+          <div style="height:48px; display:flex; align-items:center; gap:9px; padding:0 16px; border-bottom:1px solid var(--mf-border); flex-shrink:0;">
+            <span style="font-size:15px; font-weight:600;">Công việc</span>
+            <span style="font-size:11px; color:var(--mf-text-subtle); background:var(--mf-surface2); border:1px solid var(--mf-border); padding:1px 7px; border-radius:5px;">128</span>
+            <div style="margin-left:auto; display:flex; align-items:center; gap:6px;">
+              <button style="display:inline-flex; align-items:center; gap:6px; height:30px; padding:0 10px; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface); color:var(--mf-text); font-size:12px; font-family:inherit; cursor:pointer;" style-hover="background:var(--mf-surface2);"><i data-lucide="list-filter" width="14" height="14"></i>Bộ lọc</button>
+              <button style="display:inline-flex; align-items:center; gap:6px; height:30px; padding:0 10px; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface); color:var(--mf-text); font-size:12px; font-family:inherit; cursor:pointer;" style-hover="background:var(--mf-surface2);"><i data-lucide="columns-3" width="14" height="14"></i>Cột</button>
+              <button style="width:30px; height:30px; display:flex; align-items:center; justify-content:center; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface); color:var(--mf-text-muted); cursor:pointer;" style-hover="background:var(--mf-surface2);" title="Mật độ"><i data-lucide="rows-3" width="15" height="15"></i></button>
+              <button style="width:30px; height:30px; display:flex; align-items:center; justify-content:center; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface); color:var(--mf-text-muted); cursor:pointer;" style-hover="background:var(--mf-surface2);" title="Xuất"><i data-lucide="download" width="15" height="15"></i></button>
+              <button style="display:inline-flex; align-items:center; gap:6px; height:30px; padding:0 12px; border:none; border-radius:7px; background:var(--mf-primary); color:var(--mf-primary-fg); font-size:12.5px; font-weight:600; font-family:inherit; cursor:pointer;"><i data-lucide="plus" width="15" height="15"></i>Tạo</button>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px; padding:8px 16px; border-bottom:1px solid var(--mf-border); background:var(--mf-surface2);">
+            <span style="font-size:11px; color:var(--mf-text-subtle); font-family:'Geist Mono',monospace;">Bộ lọc:</span>
+            <span style="display:inline-flex; align-items:center; gap:5px; font-size:11.5px; padding:2px 8px; border-radius:5px; background:var(--mf-soft); color:var(--mf-soft-text); border:1px solid var(--mf-border);">Trạng thái = Đang làm<i data-lucide="x" width="11" height="11"></i></span>
+            <span style="display:inline-flex; align-items:center; gap:5px; font-size:11.5px; padding:2px 8px; border-radius:5px; background:var(--mf-surface); color:var(--mf-text-muted); border:1px solid var(--mf-border);">Dự án = MetaForge Q3<i data-lucide="x" width="11" height="11"></i></span>
+            <button style="display:inline-flex; align-items:center; gap:4px; font-size:11.5px; padding:2px 8px; border-radius:5px; background:transparent; border:1px dashed var(--mf-border); color:var(--mf-text-muted); cursor:pointer; font-family:inherit;"><i data-lucide="plus" width="11" height="11"></i>Thêm bộ lọc</button>
+          </div>
+          <!-- table -->
+          <div style="flex:1; overflow:auto;">
+            <div style="display:grid; grid-template-columns:38px 44px minmax(240px,1fr) 150px 130px 150px 90px 110px; background:var(--mf-surface2); border-bottom:1px solid var(--mf-border); font-size:10.5px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--mf-text-subtle); position:sticky; top:0;">
+              <div style="padding:9px 10px; display:flex; align-items:center;"><span style="width:15px; height:15px; border:1.5px solid var(--mf-border); border-radius:4px; display:block;"></span></div>
+              <div style="padding:9px 10px;">#</div><div style="padding:9px 10px;">Tiêu đề</div><div style="padding:9px 10px;">Dự án</div><div style="padding:9px 10px;">Trạng thái</div><div style="padding:9px 10px;">Phụ trách</div><div style="padding:9px 10px;">Ưu tiên</div><div style="padding:9px 10px;">Sửa lúc</div>
+            </div>
+            <!-- rows -->
+            <div style="display:grid; grid-template-columns:38px 44px minmax(240px,1fr) 150px 130px 150px 90px 110px; border-bottom:1px solid var(--mf-border); font-size:12.5px; align-items:center;" style-hover="background:var(--mf-surface2);">
+              <div style="padding:10px;"><span style="width:15px; height:15px; border:1.5px solid var(--mf-border); border-radius:4px; display:block;"></span></div><div style="padding:10px; color:var(--mf-text-subtle); font-family:'Geist Mono',monospace; font-size:11px;">2039</div><div style="padding:10px; font-weight:500;">Cấu hình cổng thanh toán VNPay</div><div style="padding:10px; color:var(--mf-text-muted);">MetaForge Q3</div><div style="padding:10px;"><span style="display:inline-flex; align-items:center; gap:5px; color:var(--mf-blue);"><span style="width:6px;height:6px;border-radius:50%;background:var(--mf-blue);"></span>Đang làm</span></div><div style="padding:10px; display:flex; align-items:center; gap:6px; color:var(--mf-text-muted);"><span style="width:18px; height:18px; border-radius:50%; background:var(--mf-soft); color:var(--mf-soft-text); display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:600;">MT</span>Minh Trần</div><div style="padding:10px;"><span style="color:var(--mf-red); font-weight:500;">Cao</span></div><div style="padding:10px; color:var(--mf-text-subtle); font-size:11.5px;">24/07/2026</div>
+            </div>
+            <div style="display:grid; grid-template-columns:38px 44px minmax(240px,1fr) 150px 130px 150px 90px 110px; border-bottom:1px solid var(--mf-border); font-size:12.5px; align-items:center;" style-hover="background:var(--mf-surface2);">
+              <div style="padding:10px;"><span style="width:15px; height:15px; border:1.5px solid var(--mf-border); border-radius:4px; display:block;"></span></div><div style="padding:10px; color:var(--mf-text-subtle); font-family:'Geist Mono',monospace; font-size:11px;">2041</div><div style="padding:10px; font-weight:500;">Nhập dữ liệu khách hàng ACME</div><div style="padding:10px; color:var(--mf-text-muted);">Data Migration</div><div style="padding:10px;"><span style="display:inline-flex; align-items:center; gap:5px; color:var(--mf-amber);"><span style="width:6px;height:6px;border-radius:50%;background:var(--mf-amber);"></span>Chờ duyệt</span></div><div style="padding:10px; display:flex; align-items:center; gap:6px; color:var(--mf-text-muted);"><span style="width:18px; height:18px; border-radius:50%; background:var(--mf-soft); color:var(--mf-soft-text); display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:600;">LP</span>Lan Phạm</div><div style="padding:10px; color:var(--mf-text-muted);">Trung bình</div><div style="padding:10px; color:var(--mf-text-subtle); font-size:11.5px;">24/07/2026</div>
+            </div>
+            <div style="display:grid; grid-template-columns:38px 44px minmax(240px,1fr) 150px 130px 150px 90px 110px; border-bottom:1px solid var(--mf-border); font-size:12.5px; align-items:center; background:var(--mf-soft); box-shadow:inset 2px 0 0 var(--mf-primary);">
+              <div style="padding:10px;"><span style="width:15px; height:15px; border:1.5px solid var(--mf-primary); border-radius:4px; background:var(--mf-primary); display:flex; align-items:center; justify-content:center;"><i data-lucide="check" width="11" height="11" style="color:var(--mf-primary-fg);"></i></span></div><div style="padding:10px; color:var(--mf-text-subtle); font-family:'Geist Mono',monospace; font-size:11px;">2043</div><div style="padding:10px; font-weight:600; color:var(--mf-soft-text);">Thiết kế lại luồng thanh toán</div><div style="padding:10px; color:var(--mf-text-muted);">MetaForge Q3</div><div style="padding:10px;"><span style="display:inline-flex; align-items:center; gap:5px; color:var(--mf-blue);"><span style="width:6px;height:6px;border-radius:50%;background:var(--mf-blue);"></span>Đang làm</span></div><div style="padding:10px; display:flex; align-items:center; gap:6px; color:var(--mf-text-muted);"><span style="width:18px; height:18px; border-radius:50%; background:var(--mf-soft); color:var(--mf-soft-text); display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:600;">MT</span>Minh Trần</div><div style="padding:10px;"><span style="color:var(--mf-red); font-weight:500;">Cao</span></div><div style="padding:10px; color:var(--mf-text-subtle); font-size:11.5px;">23/07/2026</div>
+            </div>
+            <div style="display:grid; grid-template-columns:38px 44px minmax(240px,1fr) 150px 130px 150px 90px 110px; border-bottom:1px solid var(--mf-border); font-size:12.5px; align-items:center;" style-hover="background:var(--mf-surface2);">
+              <div style="padding:10px;"><span style="width:15px; height:15px; border:1.5px solid var(--mf-border); border-radius:4px; display:block;"></span></div><div style="padding:10px; color:var(--mf-text-subtle); font-family:'Geist Mono',monospace; font-size:11px;">2044</div><div style="padding:10px; font-weight:500;">Kiểm thử phân quyền vai trò</div><div style="padding:10px; color:var(--mf-text-muted);">Security</div><div style="padding:10px;"><span style="display:inline-flex; align-items:center; gap:5px; color:var(--mf-red);"><span style="width:6px;height:6px;border-radius:50%;background:var(--mf-red);"></span>Quá hạn</span></div><div style="padding:10px; display:flex; align-items:center; gap:6px; color:var(--mf-text-muted);"><span style="width:18px; height:18px; border-radius:50%; background:var(--mf-soft); color:var(--mf-soft-text); display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:600;">HĐ</span>Huy Đỗ</div><div style="padding:10px;"><span style="color:var(--mf-red); font-weight:500;">Cao</span></div><div style="padding:10px; color:var(--mf-text-subtle); font-size:11.5px;">22/07/2026</div>
+            </div>
+            <div style="display:grid; grid-template-columns:38px 44px minmax(240px,1fr) 150px 130px 150px 90px 110px; border-bottom:1px solid var(--mf-border); font-size:12.5px; align-items:center;" style-hover="background:var(--mf-surface2);">
+              <div style="padding:10px;"><span style="width:15px; height:15px; border:1.5px solid var(--mf-border); border-radius:4px; display:block;"></span></div><div style="padding:10px; color:var(--mf-text-subtle); font-family:'Geist Mono',monospace; font-size:11px;">2050</div><div style="padding:10px; font-weight:500;">Tối ưu truy vấn báo cáo tồn kho</div><div style="padding:10px; color:var(--mf-text-muted);">Reporting</div><div style="padding:10px;"><span style="display:inline-flex; align-items:center; gap:5px; color:var(--mf-text-muted);"><span style="width:6px;height:6px;border-radius:50%;background:var(--mf-text-subtle);"></span>Mở</span></div><div style="padding:10px; display:flex; align-items:center; gap:6px; color:var(--mf-text-muted);"><span style="width:18px; height:18px; border-radius:50%; background:var(--mf-soft); color:var(--mf-soft-text); display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:600;">TV</span>Trang Vũ</div><div style="padding:10px; color:var(--mf-text-subtle);">Thấp</div><div style="padding:10px; color:var(--mf-text-subtle); font-size:11.5px;">21/07/2026</div>
+            </div>
+            <div style="display:grid; grid-template-columns:38px 44px minmax(240px,1fr) 150px 130px 150px 90px 110px; font-size:12.5px; align-items:center;" style-hover="background:var(--mf-surface2);">
+              <div style="padding:10px;"><span style="width:15px; height:15px; border:1.5px solid var(--mf-border); border-radius:4px; display:block;"></span></div><div style="padding:10px; color:var(--mf-text-subtle); font-family:'Geist Mono',monospace; font-size:11px;">2052</div><div style="padding:10px; font-weight:500;">Onboarding khách hàng Beta</div><div style="padding:10px; color:var(--mf-text-muted);">Customer Success</div><div style="padding:10px;"><span style="display:inline-flex; align-items:center; gap:5px; color:var(--mf-green);"><span style="width:6px;height:6px;border-radius:50%;background:var(--mf-green);"></span>Hoàn thành</span></div><div style="padding:10px; display:flex; align-items:center; gap:6px; color:var(--mf-text-muted);"><span style="width:18px; height:18px; border-radius:50%; background:var(--mf-soft); color:var(--mf-soft-text); display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:600;">LP</span>Lan Phạm</div><div style="padding:10px; color:var(--mf-text-muted);">Trung bình</div><div style="padding:10px; color:var(--mf-text-subtle); font-size:11.5px;">20/07/2026</div>
+            </div>
+          </div>
+          <div style="height:42px; display:flex; align-items:center; gap:10px; padding:0 16px; border-top:1px solid var(--mf-border); background:var(--mf-surface); font-size:12px; color:var(--mf-text-muted); flex-shrink:0;">
+            <span>Hiển thị <span style="color:var(--mf-text); font-weight:500;">1–20</span> trên 128</span>
+            <div style="margin-left:auto; display:flex; align-items:center; gap:4px;">
+              <button style="width:28px; height:28px; display:flex; align-items:center; justify-content:center; border:1px solid var(--mf-border); border-radius:6px; background:var(--mf-surface); color:var(--mf-text-subtle); cursor:pointer;"><i data-lucide="chevron-left" width="15" height="15"></i></button>
+              <button style="width:28px; height:28px; display:flex; align-items:center; justify-content:center; border:1px solid var(--mf-border); border-radius:6px; background:var(--mf-surface); color:var(--mf-text); cursor:pointer;" style-hover="background:var(--mf-surface2);"><i data-lucide="chevron-right" width="15" height="15"></i></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ FRAME 3 · DARK SAMPLE ============ -->
+  <div style="display:flex; flex-direction:column; gap:9px;">
+    <div style="font-family:'Geist Mono',monospace; font-size:12px; color:var(--mf-text-muted);">09 · Split Detail — {{ contrastLabel }} sample · <span style="color:var(--mf-text-subtle);">MF-M11-SPLIT-DETAIL-DESKTOP-DARK-01</span></div>
+    <div style="height:470px; border-radius:12px; overflow:hidden; box-shadow:0 24px 48px -28px rgba(0,0,0,.5); display:flex; flex-direction:column; --mf-bg:{{dark.bg}}; --mf-surface:{{dark.surface}}; --mf-surface2:{{dark.surface2}}; --mf-sidebar:{{dark.sidebar}}; --mf-border:{{dark.border}}; --mf-text:{{dark.text}}; --mf-text-muted:{{dark.muted}}; --mf-text-subtle:{{dark.subtle}}; --mf-primary:{{dark.primary}}; --mf-primary-fg:{{dark.primaryFg}}; --mf-soft:{{dark.soft}}; --mf-soft-text:{{dark.softText}}; --mf-ring:{{dark.ring}}; --mf-green:{{dark.green}}; --mf-amber:{{dark.amber}}; --mf-red:{{dark.red}}; --mf-blue:{{dark.blue}}; background:var(--mf-surface); color:var(--mf-text); border:1px solid var(--mf-border);">
+      <div style="height:46px; display:flex; align-items:center; gap:12px; padding:0 12px; border-bottom:1px solid var(--mf-border); background:var(--mf-surface); flex-shrink:0;">
+        <div style="display:flex; align-items:center; gap:7px; font-size:13px; color:var(--mf-text-muted);"><span style="font-weight:600; color:var(--mf-text);">Công việc</span><i data-lucide="chevron-right" width="14" height="14" style="opacity:.6;"></i><span>TASK-2043</span></div>
+        <button style="margin:0 auto; display:flex; align-items:center; gap:8px; width:320px; height:31px; padding:0 10px; border:1px solid var(--mf-border); border-radius:8px; background:var(--mf-surface2); color:var(--mf-text-muted); font-size:12.5px; font-family:inherit; cursor:text;"><i data-lucide="search" width="14" height="14"></i><span>Tìm kiếm hoặc gõ lệnh…</span><span style="margin-left:auto; display:flex; gap:3px;"><kbd style="padding:1px 5px; border:1px solid var(--mf-border); border-radius:4px; font-size:10px; font-family:'Geist Mono',monospace; background:var(--mf-surface);">⌘K</kbd></span></button>
+        <div style="display:flex; align-items:center; gap:2px;"><button style="width:30px; height:30px; display:flex; align-items:center; justify-content:center; border:none; border-radius:7px; background:transparent; color:var(--mf-text-muted); cursor:pointer;"><i data-lucide="sparkles" width="17" height="17"></i></button><button style="width:30px; height:30px; display:flex; align-items:center; justify-content:center; border:none; border-radius:7px; background:transparent; color:var(--mf-text-muted); cursor:pointer;"><i data-lucide="sun" width="16" height="16"></i></button><span style="width:24px; height:24px; border-radius:50%; background:var(--mf-soft); color:var(--mf-soft-text); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:600; margin-left:4px;">MT</span></div>
+      </div>
+      <div style="flex:1; display:flex; min-height:0;">
+        <div style="width:190px; flex-shrink:0; border-right:1px solid var(--mf-border); background:var(--mf-sidebar); display:flex; flex-direction:column; padding:10px 8px; gap:2px;">
+          <div style="display:flex; align-items:center; gap:9px; padding:0 6px 10px;"><div style="width:22px; height:22px; border-radius:7px; background:var(--mf-primary); color:var(--mf-primary-fg); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px;">M</div><span style="font-weight:600; font-size:13.5px;">MetaForge</span></div>
+          <a style="display:flex; align-items:center; gap:9px; height:31px; padding:0 10px; border-radius:7px; color:var(--mf-text-muted); font-size:12.5px;" style-hover="background:var(--mf-surface2); color:var(--mf-text);"><i data-lucide="layout-dashboard" width="15" height="15"></i>Trang chủ</a>
+          <a style="display:flex; align-items:center; gap:9px; height:31px; padding:0 10px; border-radius:7px; color:var(--mf-text-muted); font-size:12.5px;" style-hover="background:var(--mf-surface2); color:var(--mf-text);"><i data-lucide="folder-kanban" width="15" height="15"></i>Dự án</a>
+          <a style="display:flex; align-items:center; gap:9px; height:31px; padding:0 10px; border-radius:7px; background:var(--mf-soft); color:var(--mf-soft-text); font-size:12.5px; font-weight:600; box-shadow:inset 2px 0 0 var(--mf-primary);"><i data-lucide="square-check-big" width="15" height="15"></i>Công việc</a>
+          <a style="display:flex; align-items:center; gap:9px; height:31px; padding:0 10px; border-radius:7px; color:var(--mf-text-muted); font-size:12.5px;" style-hover="background:var(--mf-surface2); color:var(--mf-text);"><i data-lucide="users" width="15" height="15"></i>Khách hàng</a>
+        </div>
+        <div style="width:240px; flex-shrink:0; border-right:1px solid var(--mf-border); background:var(--mf-surface); display:flex; flex-direction:column;">
+          <div style="padding:9px 12px; border-bottom:1px solid var(--mf-border); display:flex; align-items:center; gap:8px;"><span style="font-weight:600; font-size:13px;">Công việc</span><span style="font-size:10.5px; color:var(--mf-text-subtle); background:var(--mf-surface2); border:1px solid var(--mf-border); padding:1px 6px; border-radius:5px;">128</span></div>
+          <button style="width:100%; display:flex; flex-direction:column; gap:3px; text-align:left; padding:9px 12px; border:none; border-bottom:1px solid var(--mf-border); background:transparent; color:var(--mf-text); cursor:pointer;" style-hover="background:var(--mf-surface2);"><div style="display:flex; align-items:center; gap:7px;"><span style="width:7px; height:7px; border-radius:50%; background:var(--mf-blue);"></span><span style="font-size:12.5px; font-weight:500;">Cấu hình cổng VNPay</span></div><div style="font-size:11px; color:var(--mf-text-muted); padding-left:14px;">TASK-2039 · Minh Trần</div></button>
+          <button style="width:100%; display:flex; flex-direction:column; gap:3px; text-align:left; padding:9px 12px; border:none; border-bottom:1px solid var(--mf-border); background:var(--mf-soft); box-shadow:inset 2px 0 0 var(--mf-primary); cursor:pointer;"><div style="display:flex; align-items:center; gap:7px;"><span style="width:7px; height:7px; border-radius:50%; background:var(--mf-blue);"></span><span style="font-size:12.5px; font-weight:600; color:var(--mf-soft-text);">Thiết kế lại luồng thanh toán</span></div><div style="font-size:11px; color:var(--mf-text-muted); padding-left:14px;">TASK-2043 · Minh Trần</div></button>
+          <button style="width:100%; display:flex; flex-direction:column; gap:3px; text-align:left; padding:9px 12px; border:none; border-bottom:1px solid var(--mf-border); background:transparent; color:var(--mf-text); cursor:pointer;" style-hover="background:var(--mf-surface2);"><div style="display:flex; align-items:center; gap:7px;"><span style="width:7px; height:7px; border-radius:50%; background:var(--mf-red);"></span><span style="font-size:12.5px; font-weight:500;">Kiểm thử phân quyền</span></div><div style="font-size:11px; color:var(--mf-text-muted); padding-left:14px;">TASK-2044 · Huy Đỗ</div></button>
+        </div>
+        <div style="flex:1; min-width:0; display:flex; flex-direction:column; background:var(--mf-surface);">
+          <div style="padding:12px 18px; border-bottom:1px solid var(--mf-border); display:flex; align-items:center; gap:10px;">
+            <div style="flex:1; min-width:0;"><div style="display:flex; align-items:center; gap:9px;"><span style="font-size:16px; font-weight:600;">Thiết kế lại luồng thanh toán</span><span style="display:inline-flex; align-items:center; gap:5px; padding:2px 9px; border-radius:6px; font-size:11px; font-weight:600; color:var(--mf-blue); background:var(--mf-soft); border:1px solid var(--mf-border);"><span style="width:6px;height:6px;border-radius:50%;background:var(--mf-blue);"></span>Đang làm</span></div><div style="font-size:11.5px; color:var(--mf-text-muted); margin-top:3px;">TASK-2043 · Minh Trần · Sửa 2 giờ trước</div></div>
+            <button style="display:inline-flex; align-items:center; gap:6px; height:31px; padding:0 13px; border:none; border-radius:7px; background:var(--mf-primary); color:var(--mf-primary-fg); font-size:12.5px; font-weight:600; font-family:inherit; cursor:pointer;">Lưu</button>
+          </div>
+          <div style="padding:16px 18px; display:flex; flex-direction:column; gap:14px;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px 20px;">
+              <div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:11px; color:var(--mf-text-muted);">Chủ đề</label><div style="height:33px; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface); display:flex; align-items:center; padding:0 11px; font-size:12.5px;">Thiết kế lại luồng thanh toán</div></div>
+              <div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:11px; color:var(--mf-text-muted);">Dự án</label><div style="height:33px; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface); display:flex; align-items:center; gap:7px; padding:0 11px; font-size:12.5px;"><i data-lucide="folder-kanban" width="13" height="13" style="color:var(--mf-soft-text);"></i><span style="color:var(--mf-soft-text);">MetaForge Q3</span></div></div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:11px; color:var(--mf-text-muted);">Mô tả</label><div style="min-height:54px; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface); padding:8px 11px; font-size:12.5px; line-height:1.5; color:var(--mf-text);">Rút gọn từ 4 bước xuống 2 bước. Hỗ trợ VNPay và thẻ quốc tế.</div></div>
+          </div>
+        </div>
+        <div style="width:270px; flex-shrink:0; border-left:1px solid var(--mf-border); background:var(--mf-surface2); display:flex; flex-direction:column;">
+          <div style="display:flex; align-items:center; gap:2px; padding:6px 8px; border-bottom:1px solid var(--mf-border); background:var(--mf-surface);"><span style="display:inline-flex; align-items:center; gap:6px; padding:5px 9px; border-radius:7px; font-size:12px; font-weight:600; background:var(--mf-soft); color:var(--mf-soft-text);"><i data-lucide="history" width="13" height="13"></i>Dòng thời gian</span><span style="display:inline-flex; align-items:center; gap:6px; padding:5px 9px; border-radius:7px; font-size:12px; color:var(--mf-text-muted); cursor:pointer;"><i data-lucide="sparkles" width="13" height="13"></i>AI</span></div>
+          <div style="flex:1; overflow:hidden; padding:12px;">
+            <div style="display:flex; gap:9px; margin-bottom:14px;"><span style="width:24px; height:24px; border-radius:50%; background:var(--mf-soft); color:var(--mf-soft-text); display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:600; flex-shrink:0;">LP</span><div><div style="font-size:12px;"><span style="font-weight:600;">Lan Phạm</span> <span style="color:var(--mf-text-muted);">· 1 giờ</span></div><div style="margin-top:4px; padding:8px 10px; border:1px solid var(--mf-border); border-radius:8px; background:var(--mf-surface); font-size:12px; line-height:1.45;">Sandbox VNPay đã hoạt động ✓</div></div></div>
+            <div style="display:flex; gap:9px;"><span style="width:24px; height:24px; border-radius:50%; background:var(--mf-surface); border:1px solid var(--mf-border); color:var(--mf-blue); display:flex; align-items:center; justify-content:center; flex-shrink:0;"><i data-lucide="git-branch" width="13" height="13"></i></span><div><div style="font-size:12px;"><span style="font-weight:600;">Minh Trần</span> <span style="color:var(--mf-text-muted);">· 2 giờ</span></div><div style="margin-top:4px; font-size:11.5px; display:flex; align-items:center; gap:6px;"><span style="padding:1px 6px; border-radius:5px; background:var(--mf-surface); border:1px solid var(--mf-border); color:var(--mf-text-muted);">Mở</span><i data-lucide="arrow-right" width="12" height="12" style="color:var(--mf-text-subtle);"></i><span style="padding:1px 6px; border-radius:5px; background:var(--mf-soft); color:var(--mf-blue);">Đang làm</span></div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:900},&quot;theme&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;object&quot;},&quot;dark&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;object&quot;}}">
+class Component extends DCLogic {
+  componentDidMount() { this._paint(); }
+  componentDidUpdate() { this._paint(); }
+  _paint() {
+    const run = () => { if (window.lucide && window.lucide.createIcons) window.lucide.createIcons(); };
+    if (window.lucide) run(); else setTimeout(() => this._paint(), 150);
+  }
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

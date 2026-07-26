@@ -1,0 +1,22 @@
+{
+  "name": "forge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Nền ERP tương thích Frappe chạy trên Cloudflare — kernel CloudForge + Desk/builder MetaForge",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "server:build": "pnpm --filter cloudforge run build",
+    "server:test": "pnpm --filter cloudforge run test",
+    "server:check": "pnpm --filter cloudforge run check:business-suite",
+    "server:typecheck": "pnpm --filter cloudforge run typecheck:workers",
+    "client:build": "pnpm --filter metaforge run build",
+    "client:typecheck": "pnpm --filter metaforge run typecheck",
+    "client:test": "pnpm --filter metaforge run test",
+    "typecheck": "pnpm run server:typecheck && pnpm run client:typecheck",
+    "test": "pnpm run server:test && pnpm run client:test",
+    "build": "pnpm run server:build && pnpm run client:build"
+  }
+}

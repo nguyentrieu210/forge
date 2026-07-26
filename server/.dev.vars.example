@@ -1,0 +1,14 @@
+# Never commit real secrets. Minimum 32 characters for HMAC secrets.
+JWT_SECRET=replace-with-at-least-32-random-characters
+JWT_ISSUER=https://auth.example.com
+JWT_AUDIENCE=cloudforge
+INTERNAL_AUTH_SECRET=replace-with-an-independent-32-char-secret
+# Gateway: the master signing secret + active key id (identity keys are derived per tenant).
+# Hardened tenant workers instead set INTERNAL_AUTH_SECRET to their own derived key and
+# INTERNAL_AUTH_KEY_ID to its generation; add *_PREVIOUS during a rotation overlap.
+INTERNAL_AUTH_KEY_ID=k1
+INTERNAL_SERVICE_TOKEN=replace-with-an-independent-service-token
+CONTROL_TOKEN=replace-with-control-plane-token
+
+# Local-only explicit development identity. Production Wrangler configs use AUTH_MODE=production.
+DEV_ACTOR_JSON={"user_id":"Administrator","roles":["System Manager"]}

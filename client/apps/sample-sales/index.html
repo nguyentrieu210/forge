@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- viewport-fit=cover: máy có tai thỏ/bo góc, không có cờ này thì nội dung bị đai an toàn cắt. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- Màu thanh trạng thái trình duyệt di động khớp nền app, tránh vệt trắng trên đầu ở theme tối. -->
+    <meta name="theme-color" content="#f4f4f5" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#09090b" media="(prefers-color-scheme: dark)" />
+    <!--
+      Font nạp bằng <link> chứ KHÔNG bằng @import trong CSS: app nào import "tailwindcss" trước
+      "@metaforge/ui/styles.css" sẽ đẩy @import url() xuống sau các rule khác ⇒ CSS không hợp lệ,
+      trình duyệt bỏ qua và app chạy bằng font hệ thống. <link> còn tải song song thay vì nối tiếp.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap"
+    />
+    <script>
+      /*
+       * Chống NHÁY THEME. useTheme()/useBrand() chỉ stamp data-theme/data-brand trong useEffect,
+       * tức là SAU lần vẽ đầu tiên — người để theme tối sẽ thấy một nháy trắng toàn màn hình mỗi
+       * lần tải trang. Script này chạy đồng bộ trước khi vẽ nên trang hiện đúng màu ngay từ đầu.
+       * Phải khớp đúng khoá + giá trị mặc định với packages/shell/src/{theme,brand}.ts.
+       */
+      (function () {
+        try {
+          var el = document.documentElement;
+          var mode = localStorage.getItem("metaforge-theme") || "system";
+          var dark = mode === "dark" || (mode === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+          el.setAttribute("data-theme", dark ? "dark" : "light");
+          var brand = localStorage.getItem("metaforge-brand");
+          if (brand === "zinc") el.removeAttribute("data-brand");
+          else el.setAttribute("data-brand", brand === "warm" ? "warm" : "blue");
+        } catch (e) {
+          /* localStorage bị chặn (chế độ riêng tư) — rơi về mặc định của CSS, không phải lỗi. */
+        }
+      })();
+    </script>
+    <title>Sample Sales</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

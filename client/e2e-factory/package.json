@@ -1,0 +1,14 @@
+{
+  "name": "e2e-factory",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Runtime E2E: app do create-metaforge-app sinh ra, chạy LIVE với metaforge.localhost (không dùng apps/demo).",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "@types/node": "22.9.0"
+  }
+}

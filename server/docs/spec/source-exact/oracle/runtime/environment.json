@@ -1,0 +1,28 @@
+{
+  "gate": "2E-S4",
+  "environment": {
+    "db_type": "mariadb",
+    "language": "en",
+    "platform": "Linux-6.14.0-36-generic-x86_64-with-glibc2.36",
+    "python": "3.14.2 (main, Feb  3 2026, 03:09:04) [GCC 12.2.0]",
+    "site": "oracle.localhost",
+    "system_settings": {
+      "country": "",
+      "time_zone": ""
+    }
+  },
+  "installed_apps": [
+    {
+      "app": "frappe",
+      "module_path": "/home/frappe/frappe-bench/apps/frappe/frappe/__init__.py",
+      "version": "16.19.0"
+    },
+    {
+      "app": "erpnext",
+      "module_path": "/home/frappe/frappe-bench/apps/erpnext/erpnext/__init__.py",
+      "version": "16.20.0"
+    }
+  ],
+  "export_hash": "a36c209d791bd5eee26e9d6376e04d66a782b3f9a18151bcb39a10777b0b7a77",
+  "note": "runtime metadata from a pinned bench (Frappe v16.19.0 / ERPNext v16.20.0); secrets redacted at source"
+}

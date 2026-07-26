@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cloudforge.dev/schema/source-exact/source-manifest.schema.json",
+  "title": "Source exact manifest",
+  "type": "object",
+  "required": ["schema_version", "tool_version", "app", "commit", "root_tree_fingerprint", "artifact_count", "artifacts"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "tool_version": {"type": "string"},
+    "generated_at": {"type": "string"},
+    "app": {"type": "string"},
+    "tag": {"type": ["string", "null"]},
+    "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "license": {"type": "string"},
+    "root": {"type": "string"},
+    "root_tree_fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "artifact_count": {"type": "integer", "minimum": 0},
+    "artifacts": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/artifact"}
+    }
+  },
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "required": ["artifact_key", "app", "commit", "kind", "source_path", "source_hash", "size_bytes", "parse_status"],
+      "properties": {
+        "artifact_key": {"type": "string"},
+        "app": {"type": "string"},
+        "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "tag": {"type": ["string", "null"]},
+        "license": {"type": "string"},
+        "module": {"type": "string"},
+        "kind": {"type": "string"},
+        "source_path": {"type": "string"},
+        "source_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "size_bytes": {"type": "integer", "minimum": 0},
+        "extension": {"type": "string"},
+        "parse_status": {"type": "string"},
+        "parse_note": {"type": "string"},
+        "parse_error": {"type": "string"},
+        "json": {},
+        "python": {"type": "object"},
+        "client": {"type": "object"},
+        "patches": {"type": "array"}
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

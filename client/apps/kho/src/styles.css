@@ -1,0 +1,8 @@
+@import "tailwindcss";
+@import "@metaforge/ui/styles.css";
+@source "./";
+@source "../node_modules/@metaforge/ui/dist";
+@source "../node_modules/@metaforge/views/dist";
+@source "../node_modules/@metaforge/shell/dist";
+@source "../node_modules/@metaforge/controls/dist";
+@source "../node_modules/@metaforge/builder/dist";

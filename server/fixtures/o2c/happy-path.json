@@ -1,0 +1,38 @@
+{
+  "tenant_id": "demo",
+  "currency": "USD",
+  "customer": "CUST-0001",
+  "company": "CloudForge Demo",
+  "sales_order": {
+    "name": "SO-0001",
+    "items": [
+      {
+        "row_id": "SOI-1",
+        "item_code": "ITEM-001",
+        "qty": 10,
+        "rate": 25,
+        "warehouse": "Stores",
+        "valuation_rate": 15
+      }
+    ],
+    "taxes": [
+      {
+        "row_id": "TAX-1",
+        "account": "Output Tax",
+        "rate": 10
+      }
+    ]
+  },
+  "delivery_note": {
+    "name": "DN-0001",
+    "qty": 4
+  },
+  "sales_invoice": {
+    "name": "SINV-0001",
+    "qty": 4
+  },
+  "payment_entry": {
+    "name": "PAY-0001",
+    "amount": 110
+  }
+}

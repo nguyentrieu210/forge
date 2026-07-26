@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<style>
+  body { margin:0; background:#eceef1; font-family:'Geist',system-ui,sans-serif; }
+  a { color:var(--mf-soft-text,#1740cc); text-decoration:none; } a:hover { text-decoration:underline; }
+  kbd { font-family:'IBM Plex Mono',monospace; }
+</style>
+</helmet>
+
+<div style="min-height:100vh; --mf-bg:{{t.bg}}; --mf-surface:{{t.surface}}; --mf-surface2:{{t.surface2}}; --mf-sidebar:{{t.sidebar}}; --mf-border:{{t.border}}; --mf-text:{{t.text}}; --mf-text-muted:{{t.muted}}; --mf-text-subtle:{{t.subtle}}; --mf-primary:{{t.primary}}; --mf-primary-fg:{{t.primaryFg}}; --mf-soft:{{t.soft}}; --mf-soft-text:{{t.softText}}; --mf-ring:{{t.ring}}; --mf-green:{{t.green}}; --mf-amber:{{t.amber}}; --mf-red:{{t.red}}; --mf-blue:{{t.blue}};">
+
+  <!-- SWITCHER -->
+  <div style="position:sticky; top:0; z-index:60; background:#fff; border-bottom:1px solid #e4e4e7; box-shadow:0 1px 3px rgba(0,0,0,.05); padding:12px 28px; display:flex; align-items:center; gap:12px 20px; flex-wrap:wrap;">
+    <div style="display:flex; align-items:center; gap:11px;">
+      <div style="width:32px; height:32px; border-radius:9px; background:#1B4DFF; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:17px;">M</div>
+      <div><div style="font-size:14.5px; font-weight:700; color:#18181b; line-height:1.1;">MetaForge · Run 3</div><div style="font-size:11px; color:#71717a; font-family:'IBM Plex Mono',monospace;">Awesomebar (⌘K) + List View</div></div>
+    </div>
+    <div style="display:flex; align-items:center; gap:8px;">
+      <span style="font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#a1a1aa;">Palette</span>
+      <div style="display:flex; gap:6px;">
+        <button type="button" onClick="{{ setNeutral }}" style="{{ segNeutral }}"><span style="width:10px;height:10px;border-radius:50%;background:#18181b;flex-shrink:0;"></span>Neutral</button>
+        <button type="button" onClick="{{ setBlue }}" style="{{ segBlue }}"><span style="width:10px;height:10px;border-radius:50%;background:#1B4DFF;flex-shrink:0;"></span>MetaForge Blue</button>
+        <button type="button" onClick="{{ setWarm }}" style="{{ segWarm }}"><span style="width:10px;height:10px;border-radius:50%;background:#b15b2e;flex-shrink:0;"></span>Warm</button>
+      </div>
+    </div>
+    <div style="margin-left:auto; display:flex; align-items:center; gap:4px; padding:4px; border:1px solid #e4e4e7; border-radius:11px; background:#f4f4f5;">
+      <button type="button" onClick="{{ setLight }}" style="{{ apLight }}">Sáng</button>
+      <button type="button" onClick="{{ setDark }}" style="{{ apDark }}">Tối</button>
+    </div>
+  </div>
+
+  <div style="padding:26px 28px 70px; display:flex; flex-direction:column; gap:42px; color:var(--mf-text);">
+
+    <!-- ============ SECTION A · LIST VIEW LIVE ============ -->
+    <section style="display:flex; flex-direction:column; gap:12px;">
+      <div style="display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;">
+        <span style="font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600; color:var(--mf-primary);">M04 · List View — Desktop (live)</span>
+        <span style="font-size:12px; color:var(--mf-text-subtle);">MF-M04-LIST-DESKTOP-01 · chọn dòng → bulk bar · nút Cột mở picker · ⌘K mở Awesomebar · view switcher</span>
+      </div>
+
+      <div style="border:1px solid var(--mf-border); border-radius:12px; overflow:hidden; background:var(--mf-surface); box-shadow:0 1px 2px rgba(0,0,0,.05),0 24px 48px -30px rgba(0,0,0,.3); display:flex; flex-direction:column; position:relative;">
+        <!-- page header -->
+        <div style="padding:14px 18px 0; display:flex; align-items:flex-start; gap:12px;">
+          <div style="flex:1; min-width:0;">
+            <div style="display:flex; align-items:center; gap:8px;"><span style="font-size:18px; font-weight:600; letter-spacing:-.01em;">Công việc</span><span style="font-size:11px; color:var(--mf-text-subtle); background:var(--mf-surface2); border:1px solid var(--mf-border); padding:1px 7px; border-radius:5px;">128</span></div>
+            <div style="font-size:12px; color:var(--mf-text-muted); margin-top:2px;">Toàn bộ công việc trong các dự án bạn có quyền xem.</div>
+          </div>
+          <button type="button" onClick="{{ openPalette }}" style="display:inline-flex; align-items:center; gap:6px; height:34px; padding:0 13px; border:none; border-radius:8px; background:var(--mf-primary); color:var(--mf-primary-fg); font-size:12.5px; font-weight:600; font-family:inherit; cursor:pointer;"><i data-lucide="plus" width="15" height="15"></i>Tạo mới</button>
+        </div>
+
+        <!-- toolbar -->
+        <div style="padding:12px 18px; display:flex; align-items:center; gap:9px; flex-wrap:wrap;">
+          <button type="button" onClick="{{ openPalette }}" style="display:flex; align-items:center; gap:8px; width:260px; height:32px; padding:0 10px; border:1px solid var(--mf-border); border-radius:8px; background:var(--mf-surface2); color:var(--mf-text-muted); font-size:12.5px; font-family:inherit; cursor:text;"><i data-lucide="search" width="14" height="14"></i><span>Tìm theo Tiêu đề, Mã…</span><span style="margin-left:auto; display:flex; gap:3px;"><kbd style="padding:1px 5px; border:1px solid var(--mf-border); border-radius:4px; font-size:10px; background:var(--mf-surface);">⌘K</kbd></span></button>
+
+          <!-- standard filter segmented -->
+          <div style="display:inline-flex; padding:2px; border:1px solid var(--mf-border); border-radius:8px; background:var(--mf-surface2); gap:2px;">
+            <button type="button" onClick="{{ setF_all }}" style="{{ fAll }}">Tất cả</button>
+            <button type="button" onClick="{{ setF_open }}" style="{{ fOpen }}">Đang làm</button>
+            <button type="button" onClick="{{ setF_review }}" style="{{ fReview }}">Chờ duyệt</button>
+            <button type="button" onClick="{{ setF_done }}" style="{{ fDone }}">Hoàn thành</button>
+          </div>
+
+          <div style="margin-left:auto; display:flex; align-items:center; gap:7px;">
+            <!-- view switcher -->
+            <div style="display:inline-flex; padding:2px; border:1px solid var(--mf-border); border-radius:8px; background:var(--mf-surface2); gap:1px;">
+              <button style="width:28px; height:26px; display:inline-flex; align-items:center; justify-content:center; border:none; border-radius:6px; background:var(--mf-surface); color:var(--mf-primary); box-shadow:0 1px 2px rgba(0,0,0,.1); cursor:pointer;" title="List"><i data-lucide="list" width="15" height="15"></i></button>
+              <button style="width:28px; height:26px; display:inline-flex; align-items:center; justify-content:center; border:none; border-radius:6px; background:transparent; color:var(--mf-text-muted); cursor:pointer;" title="Report"><i data-lucide="table-2" width="15" height="15"></i></button>
+              <button style="width:28px; height:26px; display:inline-flex; align-items:center; justify-content:center; border:none; border-radius:6px; background:transparent; color:var(--mf-text-muted); cursor:pointer;" title="Kanban"><i data-lucide="columns-3" width="15" height="15"></i></button>
+              <button style="width:28px; height:26px; display:inline-flex; align-items:center; justify-content:center; border:none; border-radius:6px; background:transparent; color:var(--mf-text-muted); cursor:pointer;" title="Calendar"><i data-lucide="calendar" width="15" height="15"></i></button>
+            </div>
+            <button type="button" onClick="{{ toggleColumns }}" style="display:inline-flex; align-items:center; gap:6px; height:32px; padding:0 11px; border:1px solid {{ colBtnBorder }}; border-radius:8px; background:{{ colBtnBg }}; color:var(--mf-text); font-size:12px; font-family:inherit; cursor:pointer;"><i data-lucide="columns-3" width="14" height="14"></i>Cột</button>
+            <button style="display:inline-flex; align-items:center; gap:6px; height:32px; padding:0 11px; border:1px solid var(--mf-border); border-radius:8px; background:var(--mf-surface); color:var(--mf-text); font-size:12px; font-family:inherit; cursor:pointer;"><i data-lucide="download" width="14" height="14"></i>Xuất</button>
+            <button style="display:inline-flex; align-items:center; gap:6px; height:32px; padding:0 11px; border:1px solid var(--mf-border); border-radius:8px; background:var(--mf-surface); color:var(--mf-primary); font-size:12px; font-weight:500; font-family:inherit; cursor:pointer;"><i data-lucide="sparkles" width="14" height="14"></i>Hỏi AI</button>
+          </div>
+        </div>
+
+        <!-- bulk bar (conditional) -->
+        <sc-if value="{{ hasSelection }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex; align-items:center; gap:10px; padding:9px 18px; background:var(--mf-soft); border-top:1px solid var(--mf-border); border-bottom:1px solid var(--mf-border);">
+            <span style="font-size:12.5px; font-weight:600; color:var(--mf-soft-text);">Đã chọn {{ selCount }}/128</span>
+            <div style="display:flex; align-items:center; gap:6px; margin-left:6px;">
+              <button style="display:inline-flex; align-items:center; gap:6px; height:30px; padding:0 11px; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface); color:var(--mf-text); font-size:12px; font-family:inherit; cursor:pointer;"><i data-lucide="user-plus" width="14" height="14"></i>Giao việc</button>
+              <button style="display:inline-flex; align-items:center; gap:6px; height:30px; padding:0 11px; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface); color:var(--mf-text); font-size:12px; font-family:inherit; cursor:pointer;"><i data-lucide="git-branch" width="14" height="14"></i>Đổi trạng thái</button>
+              <button style="display:inline-flex; align-items:center; gap:6px; height:30px; padding:0 11px; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface); color:var(--mf-text); font-size:12px; font-family:inherit; cursor:pointer;"><i data-lucide="printer" width="14" height="14"></i>In</button>
+              <button style="display:inline-flex; align-items:center; gap:6px; height:30px; padding:0 11px; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface); color:var(--mf-text); font-size:12px; font-family:inherit; cursor:pointer;"><i data-lucide="download" width="14" height="14"></i>Xuất đã chọn</button>
+              <button style="display:inline-flex; align-items:center; gap:6px; height:30px; padding:0 11px; border:1px solid var(--mf-border); border-radius:7px; background:var(--mf-surface); color:var(--mf-red); font-size:12px; font-family:inherit; cursor:pointer;"><i data-lucide="trash-2" width="14" height="14"></i>Xóa</button>
+            </div>
+            <button type="button" onClick="{{ clearSel }}" style="margin-left:auto; display:inline-flex; align-items:center; gap:5px; height:28px; padding:0 9px; border:none; border-radius:6px; background:transparent; color:var(--mf-text-muted); font-size:11.5px; font-family:inherit; cursor:pointer;"><i data-lucide="x" width="13" height="13"></i>Bỏ chọn</button>
+          </div>
+        </sc-if>
+
+        <!-- table -->
+        <div style="overflow:auto;">
+          <div style="display:grid; grid-template-columns:{{ gridCols }}; background:var(--mf-surface2); border-top:1px solid var(--mf-border); border-bottom:1px solid var(--mf-border); font-size:10.5px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--mf-text-subtle);">
+            <div style="padding:9px 12px;"><button type="button" onClick="{{ toggleAll }}" style="width:15px;height:15px;border:1.5px solid {{ allBorder }};border-radius:4px;background:{{ allBg }};display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;"><i data-lucide="{{ allIcon }}" width="11" height="11" style="color:var(--mf-primary-fg);"></i></button></div>
+            <div style="padding:9px 12px;">#</div>
+            <div style="padding:9px 12px;">Tiêu đề</div>
+            <sc-if value="{{ colProject }}" hint-placeholder-val="{{ true }}"><div style="padding:9px 12px;">Dự án</div></sc-if>
+            <div style="padding:9px 12px;">Trạng thái</div>
+            <sc-if value="{{ colOwner }}" hint-placeholder-val="{{ true }}"><div style="padding:9px 12px;">Phụ trách</div></sc-if>
+            <sc-if value="{{ colPriority }}" hint-placeholder-val="{{ true }}"><div style="padding:9px 12px;">Ưu tiên</div></sc-if>
+            <sc-if value="{{ colModified }}" hint-placeholder-val="{{ true }}"><div style="padding:9px 12px;">Sửa lúc</div></sc-if>
+            <div style="padding:9px 12px;"></div>
+          </div>
+
+          <sc-for list="{{ rows }}" as="r" hint-placeholder-count="6">
+            <div style="display:grid; grid-template-columns:{{ gridCols }}; border-bottom:1px solid var(--mf-border); font-size:12.5px; align-items:center; background:{{ r.rowBg }}; box-shadow:{{ r.rowShadow }};">
+              <div style="padding:10px 12px;"><button type="button" onClick="{{ r.toggle }}" style="width:15px;height:15px;border:1.5px solid {{ r.cbBorder }};border-radius:4px;background:{{ r.cbBg }};display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;"><i data-lucide="{{ r.cbIcon }}" width="11" height="11" style="color:var(--mf-primary-fg);"></i></button></div>
+              <div style="padding:10px 12px; color:var(--mf-text-subtle); font-family:'IBM Plex Mono',monospace; font-size:11px;">{{ r.id }}</div>
+              <div style="padding:10px 12px; display:flex; align-items:center; gap:9px; min-width:0;">
+                <span style="width:24px; height:24px; border-radius:6px; background:var(--mf-soft); color:var(--mf-soft-text); display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; flex-shrink:0;">{{ r.init }}</span>
+                <div style="min-width:0;"><div style="font-weight:{{ r.titleW }}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:{{ r.titleColor }};">{{ r.title }}</div><div style="font-size:10.5px; color:var(--mf-text-subtle);">{{ r.sub }}</div></div>
+              </div>
+              <sc-if value="{{ colProject }}" hint-placeholder-val="{{ true }}"><div style="padding:10px 12px; color:var(--mf-text-muted);">{{ r.project }}</div></sc-if>
+              <div style="padding:10px 12px;"><span style="display:inline-flex; align-items:center; gap:5px; color:{{ r.statusColor }};"><span style="width:6px;height:6px;border-radius:50%;background:{{ r.statusColor }};"></span>{{ r.status }}</span></div>
+              <sc-if value="{{ colOwner }}" hint-placeholder-val="{{ true }}"><div style="padding:10px 12px; color:var(--mf-text-muted);">{{ r.owner }}</div></sc-if>
+              <sc-if value="{{ colPriority }}" hint-placeholder-val="{{ true }}"><div style="padding:10px 12px; color:{{ r.prColor }}; font-weight:{{ r.prW }};">{{ r.priority }}</div></sc-if>
+              <sc-if value="{{ colModified }}" hint-placeholder-val="{{ true }}"><div style="padding:10px 12px; color:var(--mf-text-subtle); font-size:11.5px;">{{ r.modified }}</div></sc-if>
+              <div style="padding:10px 8px; display:flex; justify-content:flex-end;"><button style="width:26px; height:26px; display:inline-flex; align-items:center; justify-content:center; border:none; border-radius:6px; background:transparent; color:var(--mf-text-subtle); cursor:pointer;"><i data-lucide="ellipsis" width="15" height="15"></i></button></div>
+            </div>
+          </sc-for>
+
+          <!-- summary row -->
+          <div style="display:grid; grid-template-columns:{{ gridCols }}; font-size:11.5px; align-items:center; background:var(--mf-surface2); font-weight:600;">
+            <div style="padding:9px 12px;"></div><div style="padding:9px 12px;"></div>
+            <div style="padding:9px 12px; color:var(--mf-text-muted);">Tổng {{ rowCount }} dòng (trang này)</div>
+            <sc-if value="{{ colProject }}" hint-placeholder-val="{{ true }}"><div></div></sc-if>
+            <div style="padding:9px 12px; color:var(--mf-text-muted);">6 nhóm</div>
+            <sc-if value="{{ colOwner }}" hint-placeholder-val="{{ true }}"><div></div></sc-if>
+            <sc-if value="{{ colPriority }}" hint-placeholder-val="{{ true }}"><div></div></sc-if>
+            <sc-if value="{{ colModified }}" hint-placeholder-val="{{ true }}"><div></div></sc-if>
+            <div></div>
+          </div>
+        </div>
+
+        <!-- pagination -->
+        <div style="height:44px; display:flex; align-items:center; gap:12px; padding:0 18px; border-top:1px solid var(--mf-border); background:var(--mf-surface); font-size:12px; color:var(--mf-text-muted);">
+          <span>Hiển thị <span style="color:var(--mf-text); font-weight:500;">1–20</span> / 128</span>
+          <div style="display:flex; align-items:center; gap:6px; margin-left:8px;"><span style="font-size:11.5px;">Mỗi trang</span><div style="height:26px; display:inline-flex; align-items:center; gap:5px; padding:0 8px; border:1px solid var(--mf-border); border-radius:6px; background:var(--mf-surface);">20<i data-lucide="chevron-down" width="12" height="12" style="color:var(--mf-text-subtle);"></i></div></div>
+          <div style="margin-left:auto; display:flex; align-items:center; gap:4px;">
+            <button style="width:28px; height:28px; display:flex; align-items:center; justify-content:center; border:1px solid var(--mf-border); border-radius:6px; background:var(--mf-surface); color:var(--mf-text-subtle); cursor:pointer;"><i data-lucide="chevron-left" width="15" height="15"></i></button>
+            <span style="min-width:26px; height:28px; display:inline-flex; align-items:center; justify-content:center; border-radius:6px; background:var(--mf-primary); color:var(--mf-primary-fg); font-size:12px; font-weight:600;">1</span>
+            <span style="min-width:26px; height:28px; display:inline-flex; align-items:center; justify-content:center; border-radius:6px; background:var(--mf-surface); border:1px solid var(--mf-border); font-size:12px; cursor:pointer;">2</span>
+            <span style="min-width:26px; height:28px; display:inline-flex; align-items:center; justify-content:center; border-radius:6px; background:var(--mf-surface); border:1px solid var(--mf-border); font-size:12px; cursor:pointer;">7</span>
+            <button style="width:28px; height:28px; display:flex; align-items:center; justify-content:center; border:1px solid var(--mf-border); border-radius:6px; background:var(--mf-surface); color:var(--mf-text); cursor:pointer;"><i data-lucide="chevron-right" width="15" height="15"></i></button>
+          </div>
+        </div>
+
+        <!-- column picker popover -->
+        <sc-if value="{{ columnsOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ toggleColumns }}" style="position:absolute; inset:0; z-index:8;"></div>
+          <div style="position:absolute; top:96px; right:120px; width:220px; z-index:12; border:1px solid var(--mf-border); border-radius:11px; background:var(--mf-surface); box-shadow:0 18px 44px -16px rgba(0,0,0,.4); overflow:hidden; padding:6px;">
+            <div style="font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--mf-text-subtle); padding:8px 10px 6px;">Hiển thị cột</div>
+            <label style="display:flex; align-items:center; gap:9px; height:32px; padding:0 10px; border-radius:7px; font-size:12.5px; color:var(--mf-text-subtle);"><span style="width:16px;height:16px;border:1.5px solid var(--mf-primary);border-radius:5px;background:var(--mf-primary);display:flex;align-items:center;justify-content:center;"><i data-lucide="check" width="11" height="11" style="color:var(--mf-primary-fg);"></i></span>Tiêu đề <span style="margin-left:auto; font-size:9.5px; color:var(--mf-text-subtle);">khóa</span></label>
+            <label onClick="{{ togColProject }}" style="display:flex; align-items:center; gap:9px; height:32px; padding:0 10px; border-radius:7px; font-size:12.5px; cursor:pointer;"><span style="width:16px;height:16px;border:1.5px solid {{ pProjBorder }};border-radius:5px;background:{{ pProjBg }};display:flex;align-items:center;justify-content:center;"><i data-lucide="{{ pProjIcon }}" width="11" height="11" style="color:var(--mf-primary-fg);"></i></span>Dự án</label>
+            <label onClick="{{ togColOwner }}" style="display:flex; align-items:center; gap:9px; height:32px; padding:0 10px; border-radius:7px; font-size:12.5px; cursor:pointer;"><span style="width:16px;height:16px;border:1.5px solid {{ pOwnBorder }};border-radius:5px;background:{{ pOwnBg }};display:flex;align-items:center;justify-content:center;"><i data-lucide="{{ pOwnIcon }}" width="11" height="11" style="color:var(--mf-primary-fg);"></i></span>Phụ trách</label>
+            <label onClick="{{ togColPriority }}" style="display:flex; align-items:center; gap:9px; height:32px; padding:0 10px; border-radius:7px; font-size:12.5px; cursor:pointer;"><span style="width:16px;height:16px;border:1.5px solid {{ pPrBorder }};border-radius:5px;background:{{ pPrBg }};display:flex;align-items:center;justify-content:center;"><i data-lucide="{{ pPrIcon }}" width="11" height="11" style="color:var(--mf-primary-fg);"></i></span>Ưu tiên</label>
+            <label onClick="{{ togColModified }}" style="display:flex; align-items:center; gap:9px; height:32px; padding:0 10px; border-radius:7px; font-size:12.5px; cursor:pointer;"><span style="width:16px;height:16px;border:1.5px solid {{ pModBorder }};border-radius:5px;background:{{ pModBg }};display:flex;align-items:center;justify-content:center;"><i data-lucide="{{ pModIcon }}" width="11" height="11" style="color:var(--mf-primary-fg);"></i></span>Sửa lúc</label>
+            <div style="height:1px; background:var(--mf-border); margin:5px 0;"></div>
+            <button style="width:100%; height:30px; border:none; border-radius:7px; background:transparent; color:var(--mf-primary); font-size:12px; font-weight:500; font-family:inherit; cursor:pointer; text-align:left; padding:0 10px;">Đặt lại mặc định</button>
+          </div>
+        </sc-if>
+
+        <!-- AWESOMEBAR overlay -->
+        <sc-if value="{{ paletteOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ closePalette }}" style="position:absolute; inset:0; background:rgba(0,0,0,.3); z-index:20;"></div>
+          <div style="position:absolute; top:56px; left:50%; transform:translateX(-50%); width:600px; max-width:92%; z-index:22; border:1px solid var(--mf-border); border-radius:14px; background:var(--mf-surface); box-shadow:0 28px 64px -18px rgba(0,0,0,.5); overflow:hidden;">
+            <div style="display:flex; align-items:center; gap:11px; padding:13px 16px; border-bottom:1px solid var(--mf-border);"><i data-lucide="search" width="18" height="18" style="color:var(--mf-text-subtle);"></i><span style="flex:1; font-size:14px; color:var(--mf-text);">thanh toan</span><span style="font-size:10.5px; color:var(--mf-text-subtle);">tìm không dấu</span><kbd style="padding:2px 6px; border:1px solid var(--mf-border); border-radius:5px; font-size:10px; background:var(--mf-surface2);">esc</kbd></div>
+            <div style="max-height:340px; overflow:auto; padding:6px;">
+              <div style="font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--mf-text-subtle); padding:9px 10px 4px;">Hành động</div>
+              <div style="display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:8px; background:var(--mf-soft);"><i data-lucide="plus" width="16" height="16" style="color:var(--mf-soft-text);"></i><span style="font-size:13px; font-weight:500; color:var(--mf-soft-text);">Tạo Công việc mới</span><kbd style="margin-left:auto; padding:1px 6px; border:1px solid var(--mf-border); border-radius:4px; font-size:10px; background:var(--mf-surface);">↵</kbd></div>
+              <div style="display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:8px;"><i data-lucide="download" width="16" height="16" style="color:var(--mf-text-subtle);"></i><span style="font-size:13px;">Xuất Excel danh sách hiện tại</span></div>
+              <div style="font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--mf-text-subtle); padding:11px 10px 4px;">Bản ghi</div>
+              <div style="display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:8px;"><i data-lucide="square-check-big" width="16" height="16" style="color:var(--mf-text-subtle);"></i><span style="font-size:13px;">Thiết kế lại luồng thanh toán</span><span style="margin-left:auto; display:flex; align-items:center; gap:6px;"><span style="font-size:10px; color:var(--mf-text-subtle); background:var(--mf-surface2); border:1px solid var(--mf-border); padding:0 6px; border-radius:5px;">Công việc</span><span style="font-size:11px; color:var(--mf-text-subtle); font-family:'IBM Plex Mono',monospace;">2043</span></span></div>
+              <div style="display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:8px;"><i data-lucide="square-check-big" width="16" height="16" style="color:var(--mf-text-subtle);"></i><span style="font-size:13px;">Cấu hình cổng thanh toán VNPay</span><span style="margin-left:auto; display:flex; align-items:center; gap:6px;"><span style="font-size:10px; color:var(--mf-text-subtle); background:var(--mf-surface2); border:1px solid var(--mf-border); padding:0 6px; border-radius:5px;">Công việc</span><span style="font-size:11px; color:var(--mf-text-subtle); font-family:'IBM Plex Mono',monospace;">2039</span></span></div>
+              <div style="display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:8px;"><i data-lucide="folder-kanban" width="16" height="16" style="color:var(--mf-text-subtle);"></i><span style="font-size:13px;">Cổng thanh toán — Dự án</span><span style="margin-left:auto; font-size:10px; color:var(--mf-text-subtle); background:var(--mf-surface2); border:1px solid var(--mf-border); padding:0 6px; border-radius:5px;">Dự án</span></div>
+            </div>
+            <div style="display:flex; align-items:center; gap:14px; padding:9px 14px; border-top:1px solid var(--mf-border); background:var(--mf-surface2); font-size:10.5px; color:var(--mf-text-subtle);"><span><kbd style="padding:0 4px; border:1px solid var(--mf-border); border-radius:3px; background:var(--mf-surface);">↑↓</kbd> di chuyển</span><span><kbd style="padding:0 4px; border:1px solid var(--mf-border); border-radius:3px; background:var(--mf-surface);">↵</kbd> mở</span><span><kbd style="padding:0 4px; border:1px solid var(--mf-border); border-radius:3px; background:var(--mf-surface);">esc</kbd> đóng</span><span style="margin-left:auto;">gõ "new" tạo · "report" báo cáo · câu hỏi → AI</span></div>
+          </div>
+        </sc-if>
+      </div>
+    </section>
+
+    <!-- ============ SECTION B · AWESOMEBAR STATES ============ -->
+    <section style="display:flex; flex-direction:column; gap:12px;">
+      <div style="display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;">
+        <span style="font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600; color:var(--mf-primary);">M03 · Awesomebar — 7 trạng thái</span>
+        <span style="font-size:12px; color:var(--mf-text-subtle);">Ctrl/Cmd+K hoặc `/` · Empty(recent) · Loading · No-result · Natural-language→AI</span>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px;">
+
+        <!-- Empty / recent -->
+        <div style="border:1px solid var(--mf-border); border-radius:12px; background:var(--mf-surface); overflow:hidden;">
+          <div style="padding:8px 12px; border-bottom:1px solid var(--mf-border); font-size:11px; font-family:'IBM Plex Mono',monospace; color:var(--mf-text-subtle);">Empty — chưa gõ</div>
+          <div style="display:flex; align-items:center; gap:11px; padding:13px 16px; border-bottom:1px solid var(--mf-border);"><i data-lucide="search" width="18" height="18" style="color:var(--mf-text-subtle);"></i><span style="flex:1; font-size:14px; color:var(--mf-text-subtle);">Tìm kiếm hoặc gõ lệnh…</span><kbd style="padding:2px 6px; border:1px solid var(--mf-border); border-radius:5px; font-size:10px; background:var(--mf-surface2);">/</kbd></div>
+          <div style="padding:6px;">
+            <div style="font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--mf-text-subtle); padding:8px 10px 4px;">Vừa xem gần đây</div>
+            <div style="display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:8px; background:var(--mf-soft);"><i data-lucide="clock" width="15" height="15" style="color:var(--mf-soft-text);"></i><span style="font-size:12.5px; color:var(--mf-soft-text);">Thiết kế lại luồng thanh toán</span><span style="margin-left:auto; font-size:10.5px; color:var(--mf-text-subtle);">TASK-2043</span></div>
+            <div style="display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:8px;"><i data-lucide="clock" width="15" height="15" style="color:var(--mf-text-subtle);"></i><span style="font-size:12.5px;">Khách hàng ACME</span><span style="margin-left:auto; font-size:10.5px; color:var(--mf-text-subtle);">CUST-0102</span></div>
+            <div style="font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--mf-text-subtle); padding:10px 10px 4px;">Gợi ý</div>
+            <div style="display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:8px;"><i data-lucide="plus" width="15" height="15" style="color:var(--mf-text-subtle);"></i><span style="font-size:12.5px;">Tạo Công việc mới</span></div>
+            <div style="display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:8px;"><i data-lucide="moon" width="15" height="15" style="color:var(--mf-text-subtle);"></i><span style="font-size:12.5px;">Chuyển giao diện tối</span></div>
+          </div>
+        </div>
+
+        <!-- Loading -->
+        <div style="border:1px solid var(--mf-border); border-radius:12px; background:var(--mf-surface); overflow:hidden;">
+          <div style="padding:8px 12px; border-bottom:1px solid var(--mf-border); font-size:11px; font-family:'IBM Plex Mono',monospace; color:var(--mf-text-subtle);">Loading (debounce 200ms)</div>
+          <div style="display:flex; align-items:center; gap:11px; padding:13px 16px; border-bottom:1px solid var(--mf-border);"><i data-lucide="search" width="18" height="18" style="color:var(--mf-text-subtle);"></i><span style="flex:1; font-size:14px; color:var(--mf-text);">khách hàng ha noi</span><span style="width:15px; height:15px; border:2px solid var(--mf-border); border-top-color:var(--mf-primary); border-radius:50%; display:inline-block;"></span></div>
+          <div style="padding:12px 16px; display:flex; flex-direction:column; gap:11px;">
+            <div style="height:9px; width:35%; border-radius:4px; background:var(--mf-surface2);"></div>
+            <div style="display:flex; align-items:center; gap:10px;"><div style="width:16px;height:16px;border-radius:4px;background:var(--mf-surface2);"></div><div style="height:11px; flex:1; border-radius:4px; background:var(--mf-surface2);"></div></div>
+            <div style="display:flex; align-items:center; gap:10px;"><div style="width:16px;height:16px;border-radius:4px;background:var(--mf-surface2);"></div><div style="height:11px; width:75%; border-radius:4px; background:var(--mf-surface2);"></div></div>
+            <div style="display:flex; align-items:center; gap:10px;"><div style="width:16px;height:16px;border-radius:4px;background:var(--mf-surface2);"></div><div style="height:11px; width:60%; border-radius:4px; background:var(--mf-surface2);"></div></div>
+          </div>
+        </div>
+
+        <!-- No result -->
+        <div style="border:1px solid var(--mf-border); border-radius:12px; background:var(--mf-surface); overflow:hidden;">
+          <div style="padding:8px 12px; border-bottom:1px solid var(--mf-border); font-size:11px; font-family:'IBM Plex Mono',monospace; color:var(--mf-text-subtle);">Empty — không kết quả</div>
+          <div style="display:flex; align-items:center; gap:11px; padding:13px 16px; border-bottom:1px solid var(--mf-border);"><i data-lucide="search" width="18" height="18" style="color:var(--mf-text-subtle);"></i><span style="flex:1; font-size:14px; color:var(--mf-text);">xyzq123</span></div>
+          <div style="padding:26px 16px; display:flex; flex-direction:column; align-items:center; text-align:center; gap:12px;">
+            <div style="width:40px; height:40px; border-radius:11px; background:var(--mf-surface2); color:var(--mf-text-subtle); display:flex; align-items:center; justify-content:center;"><i data-lucide="search-x" width="19" height="19"></i></div>
+            <div style="font-size:13px; color:var(--mf-text-muted);">Không tìm thấy "<strong style="color:var(--mf-text);">xyzq123</strong>"</div>
+            <button style="display:inline-flex; align-items:center; gap:7px; height:32px; padding:0 13px; border:1px solid var(--mf-border); border-radius:8px; background:var(--mf-surface); color:var(--mf-text); font-size:12px; font-weight:500; font-family:inherit; cursor:pointer;"><i data-lucide="plus" width="14" height="14"></i>Tạo "xyzq123" mới</button>
+          </div>
+        </div>
+
+        <!-- Natural language → AI -->
+        <div style="border:1px solid var(--mf-border); border-radius:12px; background:var(--mf-surface); overflow:hidden;">
+          <div style="padding:8px 12px; border-bottom:1px solid var(--mf-border); font-size:11px; font-family:'IBM Plex Mono',monospace; color:var(--mf-text-subtle);">Câu hỏi tự nhiên → AI</div>
+          <div style="display:flex; align-items:center; gap:11px; padding:13px 16px; border-bottom:1px solid var(--mf-border);"><i data-lucide="sparkles" width="18" height="18" style="color:var(--mf-primary);"></i><span style="flex:1; font-size:14px; color:var(--mf-text);">công việc nào quá hạn tuần này?</span></div>
+          <div style="padding:6px;">
+            <div style="display:flex; align-items:center; gap:10px; padding:10px; border-radius:8px; background:var(--mf-soft);"><i data-lucide="sparkles" width="16" height="16" style="color:var(--mf-primary);"></i><div style="flex:1;"><div style="font-size:12.5px; font-weight:500; color:var(--mf-soft-text);">Hỏi AI: "công việc nào quá hạn tuần này?"</div><div style="font-size:11px; color:var(--mf-text-subtle); margin-top:2px;">Dịch thành bộ lọc + trả lời tổng hợp</div></div><span style="font-size:10px; color:var(--mf-amber); background:var(--mf-surface2); border:1px solid var(--mf-border); padding:1px 6px; border-radius:5px;">chưa cấu hình</span></div>
+            <div style="font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--mf-text-subtle); padding:10px 10px 4px;">Hoặc lọc thủ công</div>
+            <div style="display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:8px;"><i data-lucide="list-filter" width="15" height="15" style="color:var(--mf-text-subtle);"></i><span style="font-size:12.5px;">Trạng thái = Quá hạn</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ SECTION C · LIST STATES + MOBILE ============ -->
+    <section style="display:flex; flex-direction:column; gap:12px;">
+      <div style="display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;">
+        <span style="font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600; color:var(--mf-primary);">M04 · List — States + Mobile card list</span>
+        <span style="font-size:12px; color:var(--mf-text-subtle);">Empty · Lọc-không-ra · Permission denied · Error · 390px card list + FAB</span>
+      </div>
+      <div style="display:flex; gap:22px; flex-wrap:wrap; align-items:flex-start;">
+        <!-- states -->
+        <div style="flex:1; min-width:360px; display:flex; flex-direction:column; gap:14px;">
+          <div style="border:1px dashed var(--mf-border); border-radius:11px; background:var(--mf-surface); padding:26px; display:flex; flex-direction:column; align-items:center; text-align:center; gap:10px;"><div style="width:44px;height:44px;border-radius:12px;background:var(--mf-surface2);color:var(--mf-text-subtle);display:flex;align-items:center;justify-content:center;"><i data-lucide="inbox" width="21" height="21"></i></div><div><div style="font-size:13.5px; font-weight:600;">Chưa có Công việc nào</div><div style="font-size:12px; color:var(--mf-text-muted); margin-top:3px;">Tạo công việc đầu tiên để bắt đầu.</div></div><button style="display:inline-flex; align-items:center; gap:7px; height:32px; padding:0 14px; border:none; border-radius:8px; background:var(--mf-primary); color:var(--mf-primary-fg); font-size:12px; font-weight:600; font-family:inherit;"><i data-lucide="plus" width="14" height="14"></i>Tạo mới</button></div>
+          <div style="border:1px solid var(--mf-border); border-radius:11px; background:var(--mf-surface); padding:22px; display:flex; align-items:center; gap:13px;"><div style="width:38px;height:38px;border-radius:10px;background:var(--mf-surface2);color:var(--mf-text-subtle);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i data-lucide="filter-x" width="18" height="18"></i></div><div style="flex:1;"><div style="font-size:13px; font-weight:600;">Không có kết quả phù hợp</div><div style="font-size:12px; color:var(--mf-text-muted); margin-top:2px;">Không có công việc nào khớp bộ lọc hiện tại.</div></div><button style="height:32px; padding:0 13px; border:1px solid var(--mf-border); border-radius:8px; background:var(--mf-surface); color:var(--mf-text); font-size:12px; font-weight:500; font-family:inherit; cursor:pointer;">Xóa bộ lọc</button></div>
+          <div style="border:1px solid var(--mf-border); border-radius:11px; background:var(--mf-surface); padding:22px; display:flex; align-items:center; gap:13px;"><div style="width:38px;height:38px;border-radius:10px;background:var(--mf-surface2);color:var(--mf-text-subtle);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i data-lucide="shield-x" width="18" height="18"></i></div><div style="flex:1;"><div style="font-size:13px; font-weight:600;">Bạn không có quyền xem dữ liệu này</div><div style="font-size:12px; color:var(--mf-text-muted); margin-top:2px;">Quyền được chốt ở máy chủ (403). Liên hệ quản trị viên nếu cần truy cập.</div></div></div>
+          <div style="border:1px solid var(--mf-red); border-radius:11px; background:var(--mf-surface); padding:22px; display:flex; align-items:center; gap:13px;"><div style="width:38px;height:38px;border-radius:10px;background:var(--mf-soft);color:var(--mf-red);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i data-lucide="triangle-alert" width="18" height="18"></i></div><div style="flex:1;"><div style="font-size:13px; font-weight:600;">Không tải được danh sách</div><div style="font-size:12px; color:var(--mf-text-muted); margin-top:2px;">Đã xảy ra lỗi khi tải dữ liệu. Vui lòng thử lại.</div></div><button style="height:32px; padding:0 13px; border:1px solid var(--mf-border); border-radius:8px; background:var(--mf-surface); color:var(--mf-text); font-size:12px; font-weight:500; font-family:inherit; cursor:pointer;">Thử lại</button></div>
+        </div>
+
+        <!-- mobile card list -->
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <span style="font-size:11px; font-family:'IBM Plex Mono',monospace; color:var(--mf-text-subtle);">390×844 · MobileRecordList</span>
+          <div style="width:300px; height:600px; border:1px solid var(--mf-border); border-radius:22px; overflow:hidden; background:var(--mf-bg); box-shadow:0 24px 48px -30px rgba(0,0,0,.4); display:flex; flex-direction:column; position:relative;">
+            <div style="padding:12px 14px 8px; background:var(--mf-surface); border-bottom:1px solid var(--mf-border);">
+              <div style="display:flex; align-items:center; gap:8px; margin-bottom:9px;"><span style="font-size:16px; font-weight:600;">Công việc</span><span style="margin-left:auto; font-size:11px; color:var(--mf-text-subtle);">128</span></div>
+              <div style="height:34px; border:1px solid var(--mf-border); border-radius:9px; background:var(--mf-surface2); display:flex; align-items:center; gap:8px; padding:0 11px;"><i data-lucide="search" width="15" height="15" style="color:var(--mf-text-subtle);"></i><span style="font-size:12.5px; color:var(--mf-text-subtle);">Tìm theo Tiêu đề, Mã…</span></div>
+              <div style="display:flex; gap:6px; margin-top:9px; overflow:auto;"><span style="flex-shrink:0; font-size:11px; padding:3px 10px; border-radius:99px; background:var(--mf-primary); color:var(--mf-primary-fg); font-weight:600;">Tất cả</span><span style="flex-shrink:0; font-size:11px; padding:3px 10px; border-radius:99px; background:var(--mf-surface2); border:1px solid var(--mf-border); color:var(--mf-text-muted);">Đang làm</span><span style="flex-shrink:0; font-size:11px; padding:3px 10px; border-radius:99px; background:var(--mf-surface2); border:1px solid var(--mf-border); color:var(--mf-text-muted);">Chờ duyệt</span></div>
+            </div>
+            <div style="flex:1; overflow:auto; padding:11px; display:flex; flex-direction:column; gap:8px;">
+              <div style="border:1px solid var(--mf-border); border-radius:11px; background:var(--mf-surface); padding:12px;"><div style="display:flex; align-items:flex-start; gap:10px;"><span style="width:32px;height:32px;border-radius:8px;background:var(--mf-soft);color:var(--mf-soft-text);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;">TT</span><div style="flex:1; min-width:0;"><div style="font-size:13px; font-weight:600; line-height:1.3;">Thiết kế lại luồng thanh toán</div><div style="font-size:11px; color:var(--mf-text-subtle); margin-top:2px;">TASK-2043 · Minh Trần</div></div></div><div style="display:flex; align-items:center; gap:8px; margin-top:10px;"><span style="display:inline-flex; align-items:center; gap:5px; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:600; color:var(--mf-blue); background:var(--mf-soft);"><span style="width:5px;height:5px;border-radius:50%;background:var(--mf-blue);"></span>Đang làm</span><span style="font-size:11px; color:var(--mf-red); font-weight:500;">Cao</span><span style="margin-left:auto; font-size:10.5px; color:var(--mf-text-subtle);">2 giờ</span></div></div>
+              <div style="border:1px solid var(--mf-border); border-radius:11px; background:var(--mf-surface); padding:12px;"><div style="display:flex; align-items:flex-start; gap:10px;"><span style="width:32px;height:32px;border-radius:8px;background:var(--mf-soft);color:var(--mf-soft-text);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;">ND</span><div style="flex:1; min-width:0;"><div style="font-size:13px; font-weight:600; line-height:1.3;">Nhập dữ liệu khách hàng ACME</div><div style="font-size:11px; color:var(--mf-text-subtle); margin-top:2px;">TASK-2041 · Lan Phạm</div></div></div><div style="display:flex; align-items:center; gap:8px; margin-top:10px;"><span style="display:inline-flex; align-items:center; gap:5px; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:600; color:var(--mf-amber); background:var(--mf-surface2); border:1px solid var(--mf-border);"><span style="width:5px;height:5px;border-radius:50%;background:var(--mf-amber);"></span>Chờ duyệt</span><span style="font-size:11px; color:var(--mf-text-muted);">Trung bình</span><span style="margin-left:auto; font-size:10.5px; color:var(--mf-text-subtle);">3 giờ</span></div></div>
+              <div style="border:1px solid var(--mf-border); border-radius:11px; background:var(--mf-surface); padding:12px;"><div style="display:flex; align-items:flex-start; gap:10px;"><span style="width:32px;height:32px;border-radius:8px;background:var(--mf-soft);color:var(--mf-soft-text);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;">KT</span><div style="flex:1; min-width:0;"><div style="font-size:13px; font-weight:600; line-height:1.3;">Kiểm thử phân quyền vai trò</div><div style="font-size:11px; color:var(--mf-text-subtle); margin-top:2px;">TASK-2044 · Huy Đỗ</div></div></div><div style="display:flex; align-items:center; gap:8px; margin-top:10px;"><span style="display:inline-flex; align-items:center; gap:5px; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:600; color:var(--mf-red); background:var(--mf-surface2); border:1px solid var(--mf-border);"><span style="width:5px;height:5px;border-radius:50%;background:var(--mf-red);"></span>Quá hạn</span><span style="font-size:11px; color:var(--mf-red); font-weight:500;">Cao</span><span style="margin-left:auto; font-size:10.5px; color:var(--mf-text-subtle);">2 ngày</span></div></div>
+            </div>
+            <div style="position:absolute; right:16px; bottom:16px; width:52px; height:52px; border-radius:50%; background:var(--mf-primary); color:var(--mf-primary-fg); display:flex; align-items:center; justify-content:center; box-shadow:0 8px 20px -6px rgba(0,0,0,.5);"><i data-lucide="plus" width="24" height="24"></i></div>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:11px; font-family:'IBM Plex Mono',monospace; color:var(--mf-text-subtle);">URL state: /app/task?status=Working&project=MetaForge-Q3 · sort v16: user setting → sort_field → creation desc · giữ scroll khi Back</div>
+    </section>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { palette:"blue", mode:"light", sel:{}, columnsOpen:false, paletteOpen:false,
+            cols:{project:true,owner:true,priority:true,modified:true}, filter:"all" };
+
+  componentDidMount(){ this._icons(); }
+  componentDidUpdate(){ this._icons(); }
+  _icons(){ const r=()=>window.lucide&&window.lucide.createIcons&&window.lucide.createIcons(); if(window.lucide) r(); else setTimeout(()=>this._icons(),150); }
+
+  _pal(){ return {
+    neutral:{ light:{bg:"#f4f4f5",surface:"#ffffff",surface2:"#fafafa",sidebar:"#fafafa",border:"#e4e4e7",text:"#18181b",muted:"#71717a",subtle:"#a1a1aa",primary:"#18181b",primaryFg:"#fafafa",soft:"#f1f1f3",softText:"#18181b",ring:"#71717a",green:"#16a34a",amber:"#ca8a04",red:"#dc2626",blue:"#2563eb"},
+              dark:{bg:"#09090b",surface:"#131316",surface2:"#1c1c20",sidebar:"#0c0c0e",border:"#2a2a2e",text:"#fafafa",muted:"#a1a1aa",subtle:"#71717a",primary:"#fafafa",primaryFg:"#18181b",soft:"#27272a",softText:"#fafafa",ring:"#a1a1aa",green:"#22c55e",amber:"#eab308",red:"#f87171",blue:"#60a5fa"} },
+    blue:{ light:{bg:"#eef2f6",surface:"#ffffff",surface2:"#f6f8fb",sidebar:"#ffffff",border:"#e2e8f0",text:"#0f172a",muted:"#64748b",subtle:"#94a3b8",primary:"#1B4DFF",primaryFg:"#ffffff",soft:"#edf1ff",softText:"#1740cc",ring:"#1B4DFF",green:"#16a34a",amber:"#d97706",red:"#dc2626",blue:"#1B4DFF"},
+           dark:{bg:"#0a0f1c",surface:"#0f1729",surface2:"#152037",sidebar:"#0c1424",border:"#1e2a44",text:"#e2e8f0",muted:"#93a3bb",subtle:"#64748b",primary:"#4d7cff",primaryFg:"#0a0f1c",soft:"#182352",softText:"#adc0ff",ring:"#4d7cff",green:"#22c55e",amber:"#f59e0b",red:"#f87171",blue:"#4d7cff"} },
+    warm:{ light:{bg:"#f5f2ec",surface:"#ffffff",surface2:"#faf7f1",sidebar:"#faf7f1",border:"#e8e0d3",text:"#292524",muted:"#78716c",subtle:"#a8a29e",primary:"#b15b2e",primaryFg:"#ffffff",soft:"#f6ece0",softText:"#9a4f24",ring:"#b15b2e",green:"#4d7c0f",amber:"#b45309",red:"#b91c1c",blue:"#2563eb"},
+           dark:{bg:"#1a1613",surface:"#241f1b",surface2:"#2c2621",sidebar:"#1f1a16",border:"#443c34",text:"#faf6f0",muted:"#a8a29e",subtle:"#78716c",primary:"#e08442",primaryFg:"#1a1613",soft:"#382a1e",softText:"#f0b483",ring:"#e08442",green:"#84cc16",amber:"#f59e0b",red:"#f87171",blue:"#60a5fa"} }
+  }; }
+
+  _data(){ return [
+    {id:"2039",init:"CV",title:"Cấu hình cổng thanh toán VNPay",sub:"Minh Trần",project:"MetaForge Q3",status:"Đang làm",sc:"blue",owner:"Minh Trần",priority:"Cao",pr:"red",modified:"24/07/2026"},
+    {id:"2041",init:"ND",title:"Nhập dữ liệu khách hàng ACME",sub:"Lan Phạm",project:"Data Migration",status:"Chờ duyệt",sc:"amber",owner:"Lan Phạm",priority:"Trung bình",pr:"muted",modified:"24/07/2026"},
+    {id:"2043",init:"TK",title:"Thiết kế lại luồng thanh toán",sub:"Minh Trần",project:"MetaForge Q3",status:"Đang làm",sc:"blue",owner:"Minh Trần",priority:"Cao",pr:"red",modified:"23/07/2026"},
+    {id:"2044",init:"KT",title:"Kiểm thử phân quyền vai trò",sub:"Huy Đỗ",project:"Security",status:"Quá hạn",sc:"red",owner:"Huy Đỗ",priority:"Cao",pr:"red",modified:"22/07/2026"},
+    {id:"2050",init:"TU",title:"Tối ưu truy vấn báo cáo tồn kho",sub:"Trang Vũ",project:"Reporting",status:"Mở",sc:"subtle",owner:"Trang Vũ",priority:"Thấp",pr:"subtle",modified:"21/07/2026"},
+    {id:"2052",init:"OB",title:"Onboarding khách hàng Beta",sub:"Lan Phạm",project:"Customer Success",status:"Hoàn thành",sc:"green",owner:"Lan Phạm",priority:"Trung bình",pr:"muted",modified:"20/07/2026"}
+  ]; }
+
+  _cbState(on){ return { border:on?"var(--mf-primary)":"var(--mf-border)", bg:on?"var(--mf-primary)":"transparent", icon:on?"check":"" }; }
+
+  renderVals(){
+    const dir=this.state.palette, mode=this.state.mode, t=this._pal()[dir][mode];
+    const seg=(a,c)=>"display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 14px;border-radius:9px;border:1px solid "+(a?c:"#e4e4e7")+";background:"+(a?c:"#fff")+";color:"+(a?"#fff":"#3f3f46")+";font-size:12.5px;font-weight:"+(a?600:500)+";cursor:pointer;font-family:inherit;";
+    const md=(a)=>"display:inline-flex;align-items:center;justify-content:center;min-width:52px;height:30px;padding:0 13px;border:none;border-radius:8px;background:"+(a?"#18181b":"transparent")+";color:"+(a?"#fff":"#52525b")+";font-size:12.5px;font-weight:"+(a?600:500)+";cursor:pointer;font-family:inherit;";
+    const fseg=(a)=>"height:26px;padding:0 11px;border:none;border-radius:6px;background:"+(a?"var(--mf-surface)":"transparent")+";color:"+(a?"var(--mf-text)":"var(--mf-text-muted)")+";font-size:12px;font-weight:"+(a?600:500)+";font-family:inherit;cursor:pointer;box-shadow:"+(a?"0 1px 2px rgba(0,0,0,.1)":"none")+";";
+    const scMap={blue:"var(--mf-blue)",amber:"var(--mf-amber)",red:"var(--mf-red)",green:"var(--mf-green)",subtle:"var(--mf-text-subtle)",muted:"var(--mf-text-muted)"};
+
+    const data=this._data();
+    const selCount=Object.values(this.state.sel).filter(Boolean).length;
+    const allOn=selCount===data.length && data.length>0;
+    const rows=data.map(d=>{
+      const on=!!this.state.sel[d.id]; const cb=this._cbState(on);
+      return { ...d, statusColor:scMap[d.sc], prColor:scMap[d.pr]||"var(--mf-text-muted)", prW:d.pr==="red"?600:400,
+        init:d.init, titleW:on?700:500, titleColor:on?"var(--mf-soft-text)":"var(--mf-text)",
+        rowBg:on?"var(--mf-soft)":"transparent", rowShadow:on?"inset 2px 0 0 var(--mf-primary)":"none",
+        cbBorder:cb.border, cbBg:cb.bg, cbIcon:cb.icon,
+        toggle:()=>this.setState(s=>({sel:{...s.sel,[d.id]:!s.sel[d.id]}})) };
+    });
+
+    const cols=this.state.cols;
+    const parts=["40px","56px","minmax(220px,1fr)"];
+    if(cols.project) parts.push("150px");
+    parts.push("130px");
+    if(cols.owner) parts.push("140px");
+    if(cols.priority) parts.push("92px");
+    if(cols.modified) parts.push("108px");
+    parts.push("44px");
+    const gridCols=parts.join(" ");
+
+    const allCb=this._cbState(allOn);
+    const pk=(on)=>{const c=this._cbState(on);return {b:c.border,bg:c.bg,i:c.icon};};
+    const pProj=pk(cols.project), pOwn=pk(cols.owner), pPr=pk(cols.priority), pMod=pk(cols.modified);
+    const f=this.state.filter;
+
+    return {
+      t, rows, gridCols, rowCount:data.length,
+      segNeutral:seg(dir==="neutral","#18181b"), segBlue:seg(dir==="blue","#1B4DFF"), segWarm:seg(dir==="warm","#b15b2e"),
+      apLight:md(mode==="light"), apDark:md(mode==="dark"),
+      setNeutral:()=>this.setState({palette:"neutral"}), setBlue:()=>this.setState({palette:"blue"}), setWarm:()=>this.setState({palette:"warm"}),
+      setLight:()=>this.setState({mode:"light"}), setDark:()=>this.setState({mode:"dark"}),
+      hasSelection:selCount>0, selCount, clearSel:()=>this.setState({sel:{}}),
+      allBorder:allCb.border, allBg:allCb.bg, allIcon:allCb.icon,
+      toggleAll:()=>this.setState(s=>{ const on=Object.values(s.sel).filter(Boolean).length===data.length; const ns={}; if(!on) data.forEach(d=>ns[d.id]=true); return {sel:ns}; }),
+      columnsOpen:this.state.columnsOpen, toggleColumns:()=>this.setState(s=>({columnsOpen:!s.columnsOpen})),
+      colBtnBg:this.state.columnsOpen?"var(--mf-soft)":"var(--mf-surface)", colBtnBorder:this.state.columnsOpen?"var(--mf-primary)":"var(--mf-border)",
+      colProject:cols.project, colOwner:cols.owner, colPriority:cols.priority, colModified:cols.modified,
+      pProjBorder:pProj.b,pProjBg:pProj.bg,pProjIcon:pProj.i, pOwnBorder:pOwn.b,pOwnBg:pOwn.bg,pOwnIcon:pOwn.i,
+      pPrBorder:pPr.b,pPrBg:pPr.bg,pPrIcon:pPr.i, pModBorder:pMod.b,pModBg:pMod.bg,pModIcon:pMod.i,
+      togColProject:()=>this.setState(s=>({cols:{...s.cols,project:!s.cols.project}})),
+      togColOwner:()=>this.setState(s=>({cols:{...s.cols,owner:!s.cols.owner}})),
+      togColPriority:()=>this.setState(s=>({cols:{...s.cols,priority:!s.cols.priority}})),
+      togColModified:()=>this.setState(s=>({cols:{...s.cols,modified:!s.cols.modified}})),
+      fAll:fseg(f==="all"), fOpen:fseg(f==="open"), fReview:fseg(f==="review"), fDone:fseg(f==="done"),
+      setF_all:()=>this.setState({filter:"all"}), setF_open:()=>this.setState({filter:"open"}), setF_review:()=>this.setState({filter:"review"}), setF_done:()=>this.setState({filter:"done"}),
+      paletteOpen:this.state.paletteOpen, openPalette:()=>this.setState({paletteOpen:true}), closePalette:()=>this.setState({paletteOpen:false})
+    };
+  }
+}
+</script>
+</body>
+</html>

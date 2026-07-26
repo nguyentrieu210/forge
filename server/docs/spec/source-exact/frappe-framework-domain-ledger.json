@@ -1,0 +1,599 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at": "2026-07-24",
+  "baseline": {
+    "app": "frappe",
+    "tag": "v16.19.0",
+    "commit": "ba18090b141740e75d52aa97bfc525ff2f831f6c"
+  },
+  "domain_count": 28,
+  "domains": [
+    {
+      "domain_id": "FRAPPE-01-METADATA-AND-DOCTYPE-RUNTIME",
+      "name": "Metadata and DocType runtime",
+      "baseline_commit": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "required_behaviors": [
+        "DocType schema",
+        "custom fields",
+        "property setters",
+        "meta cache",
+        "controller resolution"
+      ],
+      "source_artifacts": [],
+      "runtime_exports": [],
+      "cloudforge_mappings": [],
+      "oracle_cases": [],
+      "source_status": "PENDING_SCAN",
+      "runtime_status": "PENDING_EXPORT",
+      "mapping_status": "UNMAPPED",
+      "oracle_status": "MISSING",
+      "claim_status": "BLOCKED"
+    },
+    {
+      "domain_id": "FRAPPE-02-DOCUMENT-LIFECYCLE",
+      "name": "Document lifecycle",
+      "baseline_commit": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "required_behaviors": [
+        "insert/save/submit/cancel/amend/delete",
+        "child identity",
+        "standard fields",
+        "hooks ordering"
+      ],
+      "source_artifacts": [],
+      "runtime_exports": [],
+      "cloudforge_mappings": [],
+      "oracle_cases": [],
+      "source_status": "PENDING_SCAN",
+      "runtime_status": "PENDING_EXPORT",
+      "mapping_status": "UNMAPPED",
+      "oracle_status": "MISSING",
+      "claim_status": "BLOCKED"
+    },
+    {
+      "domain_id": "FRAPPE-03-NAMING",
+      "name": "Naming",
+      "baseline_commit": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "required_behaviors": [
+        "autoname",
+        "naming series",
+        "hash/prompt/field/expression rules",
+        "concurrency"
+      ],
+      "source_artifacts": [],
+      "runtime_exports": [],
+      "cloudforge_mappings": [],
+      "oracle_cases": [],
+      "source_status": "PENDING_SCAN",
+      "runtime_status": "PENDING_EXPORT",
+      "mapping_status": "UNMAPPED",
+      "oracle_status": "MISSING",
+      "claim_status": "BLOCKED"
+    },
+    {
+      "domain_id": "FRAPPE-04-PERMISSIONS",
+      "name": "Permissions",
+      "baseline_commit": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "required_behaviors": [
+        "role permissions",
+        "permlevel",
+        "if_owner",
+        "user permissions",
+        "sharing",
+        "permission query conditions"
+      ],
+      "source_artifacts": [],
+      "runtime_exports": [],
+      "cloudforge_mappings": [],
+      "oracle_cases": [],
+      "source_status": "PENDING_SCAN",
+      "runtime_status": "PENDING_EXPORT",
+      "mapping_status": "UNMAPPED",
+      "oracle_status": "MISSING",
+      "claim_status": "BLOCKED"
+    },
+    {
+      "domain_id": "FRAPPE-05-AUTHENTICATION-AND-SESSIONS",
+      "name": "Authentication and sessions",
+      "baseline_commit": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "required_behaviors": [
+        "login/logout",
+        "API key/token",
+        "OAuth",
+        "session limits",
+        "CSRF",
+        "impersonation"
+      ],
+      "source_artifacts": [],
+      "runtime_exports": [],
+      "cloudforge_mappings": [],
+      "oracle_cases": [],
+      "source_status": "PENDING_SCAN",
+      "runtime_status": "PENDING_EXPORT",
+      "mapping_status": "UNMAPPED",
+      "oracle_status": "MISSING",
+      "claim_status": "BLOCKED"
+    },
+    {
+      "domain_id": "FRAPPE-06-REST-AND-RPC",
+      "name": "REST and RPC",
+      "baseline_commit": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "required_behaviors": [
+        "resource API",
+        "v2 document API",
+        "whitelisted methods",
+        "guest methods",
+        "serialization/errors"
+      ],
+      "source_artifacts": [],
+      "runtime_exports": [],
+      "cloudforge_mappings": [],
+      "oracle_cases": [],
+      "source_status": "PENDING_SCAN",
+      "runtime_status": "PENDING_EXPORT",
+      "mapping_status": "UNMAPPED",
+      "oracle_status": "MISSING",
+      "claim_status": "BLOCKED"
+    },
+    {
+      "domain_id": "FRAPPE-07-DATABASE-ABSTRACTION",
+      "name": "Database abstraction",
+      "baseline_commit": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "required_behaviors": [
+        "MariaDB/PostgreSQL behavior",
+        "transactions",
+        "savepoints",
+        "DDL",
+        "query semantics"
+      ],
+      "source_artifacts": [],
+      "runtime_exports": [],
+      "cloudforge_mappings": [],
+      "oracle_cases": [],
+      "source_status": "PENDING_SCAN",
+      "runtime_status": "PENDING_EXPORT",
+      "mapping_status": "UNMAPPED",
+      "oracle_status": "MISSING",
+      "claim_status": "BLOCKED"
+    },
+    {
+      "domain_id": "FRAPPE-08-QUERY-AND-LIST-ENGINE",
+      "name": "Query and list engine",
+      "baseline_commit": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "required_behaviors": [
+        "filters",
+        "or_filters",
+        "fields",
+        "ordering",
+        "pagination",
+        "permissions",
+        "query builder"
+      ],
+      "source_artifacts": [],
+      "runtime_exports": [],
+      "cloudforge_mappings": [],
+      "oracle_cases": [],
+      "source_status": "PENDING_SCAN",
+      "runtime_status": "PENDING_EXPORT",
+      "mapping_status": "UNMAPPED",
+      "oracle_status": "MISSING",
+      "claim_status": "BLOCKED"
+    },
+    {
+      "domain_id": "FRAPPE-09-BACKGROUND-JOBS",
+      "name": "Background jobs",
+      "baseline_commit": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "required_behaviors": [
+        "enqueue",
+        "queues",
+        "timeouts",
+        "deduplication",
+        "retry/failure registry"
+      ],
+      "source_artifacts": [],
+      "runtime_exports": [],
+      "cloudforge_mappings": [],
+      "oracle_cases": [],
+      "source_status": "PENDING_SCAN",
+      "runtime_status": "PENDING_EXPORT",
+      "mapping_status": "UNMAPPED",
+      "oracle_status": "MISSING",
+      "claim_status": "BLOCKED"
+    },
+    {
+      "domain_id": "FRAPPE-10-SCHEDULER",
+      "name": "Scheduler",
+      "baseline_commit": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "required_behaviors": [
+        "cron/all/daily/hourly events",
+        "scheduler state",
+        "job locking"
+      ],
+      "source_artifacts": [],
+      "runtime_exports": [],
+      "cloudforge_mappings": [],
+      "oracle_cases": [],
+      "source_status": "PENDING_SCAN",
+      "runtime_status": "PENDING_EXPORT",
+      "mapping_status": "UNMAPPED",
+      "oracle_status": "MISSING",
+      "claim_status": "BLOCKED"
+    },
+    {
+      "domain_id": "FRAPPE-11-REALTIME",
+      "name": "Realtime",
+      "baseline_commit": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "required_behaviors": [
+        "publish_realtime",
+        "rooms",
+        "authorization",
+        "socket lifecycle"
+      ],
+      "source_artifacts": [],
+      "runtime_exports": [],
+      "cloudforge_mappings": [],
+      "oracle_cases": [],
+      "source_status": "PENDING_SCAN",
+      "runtime_status": "PENDING_EXPORT",
+      "mapping_status": "UNMAPPED",
+      "oracle_status": "MISSING",
+      "claim_status": "BLOCKED"
+    },
+    {
+      "domain_id": "FRAPPE-12-CACHING-AND-LOCKS",
+      "name": "Caching and locks",
+      "baseline_commit": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "required_behaviors": [
+        "Redis cache",
+        "document/meta cache",
+        "invalidations",
+        "distributed locks"
+      ],
+      "source_artifacts": [],
+      "runtime_exports": [],
+      "cloudforge_mappings": [],
+      "oracle_cases": [],
+      "source_status": "PENDING_SCAN",
+      "runtime_status": "PENDING_EXPORT",
+      "mapping_status": "UNMAPPED",
+      "oracle_status": "MISSING",
+      "claim_status": "BLOCKED"
+    },
+    {
+      "domain_id": "FRAPPE-13-FILES-AND-ATTACHMENTS",
+      "name": "Files and attachments",
+      "baseline_commit": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "required_behaviors": [
+        "upload",
+        "private/public access",
+        "file URLs",
+        "dedupe",
+        "delete",
+        "limits"
+      ],
+      "source_artifacts": [],
+      "runtime_exports": [],
+      "cloudforge_mappings": [],
+      "oracle_cases": [],
+      "source_status": "PENDING_SCAN",
+      "runtime_status": "PENDING_EXPORT",
+      "mapping_status": "UNMAPPED",
+      "oracle_status": "MISSING",
+      "claim_status": "BLOCKED"
+    },
+    {
+      "domain_id": "FRAPPE-14-PRINT-AND-PDF",
+      "name": "Print and PDF",
+      "baseline_commit": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "required_behaviors": [
+        "Jinja context",
+        "print formats",
+        "PDF engine",
+        "permissions",
+        "letterheads"
+      ],
+      "source_artifacts": [],
+      "runtime_exports": [],
+      "cloudforge_mappings": [],
+      "oracle_cases": [],
+      "source_status": "PENDING_SCAN",
+      "runtime_status": "PENDING_EXPORT",
+      "mapping_status": "UNMAPPED",
+      "oracle_status": "MISSING",
+      "claim_status": "BLOCKED"
+    },
+    {
+      "domain_id": "FRAPPE-15-DATA-IMPORT-EXPORT",
+      "name": "Data import/export",
+      "baseline_commit": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "required_behaviors": [
+        "templates",
+        "mapping",
+        "validation",
+        "background import",
+        "export permissions"
+      ],
+      "source_artifacts": [],
+      "runtime_exports": [],
+      "cloudforge_mappings": [],
+      "oracle_cases": [],
+      "source_status": "PENDING_SCAN",
+      "runtime_status": "PENDING_EXPORT",
+      "mapping_status": "UNMAPPED",
+      "oracle_status": "MISSING",
+      "claim_status": "BLOCKED"
+    },
+    {
+      "domain_id": "FRAPPE-16-WORKFLOW",
+      "name": "Workflow",
+      "baseline_commit": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "required_behaviors": [
+        "states",
+        "transitions",
+        "actions",
+        "permissions",
+        "email/actions"
+      ],
+      "source_artifacts": [],
+      "runtime_exports": [],
+      "cloudforge_mappings": [],
+      "oracle_cases": [],
+      "source_status": "PENDING_SCAN",
+      "runtime_status": "PENDING_EXPORT",
+      "mapping_status": "UNMAPPED",
+      "oracle_status": "MISSING",
+      "claim_status": "BLOCKED"
+    },
+    {
+      "domain_id": "FRAPPE-17-NOTIFICATIONS-AND-COMMUNICATIONS",
+      "name": "Notifications and communications",
+      "baseline_commit": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "required_behaviors": [
+        "email queue",
+        "Notification rules",
+        "Communication",
+        "templates",
+        "unsubscribe"
+      ],
+      "source_artifacts": [],
+      "runtime_exports": [],
+      "cloudforge_mappings": [],
+      "oracle_cases": [],
+      "source_status": "PENDING_SCAN",
+      "runtime_status": "PENDING_EXPORT",
+      "mapping_status": "UNMAPPED",
+      "oracle_status": "MISSING",
+      "claim_status": "BLOCKED"
+    },
+    {
+      "domain_id": "FRAPPE-18-HOOKS-AND-APP-COMPOSITION",
+      "name": "Hooks and app composition",
+      "baseline_commit": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "required_behaviors": [
+        "hook merge order",
+        "override/extend classes",
+        "doc events",
+        "fixtures",
+        "install hooks"
+      ],
+      "source_artifacts": [],
+      "runtime_exports": [],
+      "cloudforge_mappings": [],
+      "oracle_cases": [],
+      "source_status": "PENDING_SCAN",
+      "runtime_status": "PENDING_EXPORT",
+      "mapping_status": "UNMAPPED",
+      "oracle_status": "MISSING",
+      "claim_status": "BLOCKED"
+    },
+    {
+      "domain_id": "FRAPPE-19-MIGRATIONS-AND-PATCHES",
+      "name": "Migrations and patches",
+      "baseline_commit": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "required_behaviors": [
+        "schema sync",
+        "patch log",
+        "before/after migrate",
+        "data transforms",
+        "rollback/repair"
+      ],
+      "source_artifacts": [],
+      "runtime_exports": [],
+      "cloudforge_mappings": [],
+      "oracle_cases": [],
+      "source_status": "PENDING_SCAN",
+      "runtime_status": "PENDING_EXPORT",
+      "mapping_status": "UNMAPPED",
+      "oracle_status": "MISSING",
+      "claim_status": "BLOCKED"
+    },
+    {
+      "domain_id": "FRAPPE-20-DESK-BOOT-AND-NAVIGATION",
+      "name": "Desk boot and navigation",
+      "baseline_commit": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "required_behaviors": [
+        "bootinfo",
+        "workspaces",
+        "desktop pages",
+        "navbar",
+        "route permissions"
+      ],
+      "source_artifacts": [],
+      "runtime_exports": [],
+      "cloudforge_mappings": [],
+      "oracle_cases": [],
+      "source_status": "PENDING_SCAN",
+      "runtime_status": "PENDING_EXPORT",
+      "mapping_status": "UNMAPPED",
+      "oracle_status": "MISSING",
+      "claim_status": "BLOCKED"
+    },
+    {
+      "domain_id": "FRAPPE-21-FORM-RUNTIME",
+      "name": "Form runtime",
+      "baseline_commit": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "required_behaviors": [
+        "field rendering",
+        "depends_on",
+        "client scripts",
+        "child grid",
+        "save/conflict behavior"
+      ],
+      "source_artifacts": [],
+      "runtime_exports": [],
+      "cloudforge_mappings": [],
+      "oracle_cases": [],
+      "source_status": "PENDING_SCAN",
+      "runtime_status": "PENDING_EXPORT",
+      "mapping_status": "UNMAPPED",
+      "oracle_status": "MISSING",
+      "claim_status": "BLOCKED"
+    },
+    {
+      "domain_id": "FRAPPE-22-LIST-REPORT-DASHBOARD-RUNTIME",
+      "name": "List/report/dashboard runtime",
+      "baseline_commit": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "required_behaviors": [
+        "list settings",
+        "report execution",
+        "prepared reports",
+        "charts",
+        "number cards"
+      ],
+      "source_artifacts": [],
+      "runtime_exports": [],
+      "cloudforge_mappings": [],
+      "oracle_cases": [],
+      "source_status": "PENDING_SCAN",
+      "runtime_status": "PENDING_EXPORT",
+      "mapping_status": "UNMAPPED",
+      "oracle_status": "MISSING",
+      "claim_status": "BLOCKED"
+    },
+    {
+      "domain_id": "FRAPPE-23-WEBSITE-AND-PORTAL",
+      "name": "Website and portal",
+      "baseline_commit": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "required_behaviors": [
+        "routing",
+        "web forms",
+        "templates",
+        "portal permissions",
+        "website cache"
+      ],
+      "source_artifacts": [],
+      "runtime_exports": [],
+      "cloudforge_mappings": [],
+      "oracle_cases": [],
+      "source_status": "PENDING_SCAN",
+      "runtime_status": "PENDING_EXPORT",
+      "mapping_status": "UNMAPPED",
+      "oracle_status": "MISSING",
+      "claim_status": "BLOCKED"
+    },
+    {
+      "domain_id": "FRAPPE-24-LOCALIZATION",
+      "name": "Localization",
+      "baseline_commit": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "required_behaviors": [
+        "translations",
+        "language",
+        "time zone",
+        "number/date/currency formatting"
+      ],
+      "source_artifacts": [],
+      "runtime_exports": [],
+      "cloudforge_mappings": [],
+      "oracle_cases": [],
+      "source_status": "PENDING_SCAN",
+      "runtime_status": "PENDING_EXPORT",
+      "mapping_status": "UNMAPPED",
+      "oracle_status": "MISSING",
+      "claim_status": "BLOCKED"
+    },
+    {
+      "domain_id": "FRAPPE-25-AUDIT-AND-COLLABORATION",
+      "name": "Audit and collaboration",
+      "baseline_commit": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "required_behaviors": [
+        "Version",
+        "Comment",
+        "Assignment",
+        "Tag",
+        "DocShare",
+        "timeline"
+      ],
+      "source_artifacts": [],
+      "runtime_exports": [],
+      "cloudforge_mappings": [],
+      "oracle_cases": [],
+      "source_status": "PENDING_SCAN",
+      "runtime_status": "PENDING_EXPORT",
+      "mapping_status": "UNMAPPED",
+      "oracle_status": "MISSING",
+      "claim_status": "BLOCKED"
+    },
+    {
+      "domain_id": "FRAPPE-26-INTEGRATIONS",
+      "name": "Integrations",
+      "baseline_commit": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "required_behaviors": [
+        "webhooks",
+        "OAuth clients",
+        "connected apps",
+        "data exchange",
+        "request logging"
+      ],
+      "source_artifacts": [],
+      "runtime_exports": [],
+      "cloudforge_mappings": [],
+      "oracle_cases": [],
+      "source_status": "PENDING_SCAN",
+      "runtime_status": "PENDING_EXPORT",
+      "mapping_status": "UNMAPPED",
+      "oracle_status": "MISSING",
+      "claim_status": "BLOCKED"
+    },
+    {
+      "domain_id": "FRAPPE-27-SECURITY-BOUNDARIES",
+      "name": "Security boundaries",
+      "baseline_commit": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "required_behaviors": [
+        "safe_exec",
+        "Jinja sandbox",
+        "file/path safety",
+        "SQL injection",
+        "rate limiting",
+        "audit"
+      ],
+      "source_artifacts": [],
+      "runtime_exports": [],
+      "cloudforge_mappings": [],
+      "oracle_cases": [],
+      "source_status": "PENDING_SCAN",
+      "runtime_status": "PENDING_EXPORT",
+      "mapping_status": "UNMAPPED",
+      "oracle_status": "MISSING",
+      "claim_status": "BLOCKED"
+    },
+    {
+      "domain_id": "FRAPPE-28-TESTING-FRAMEWORK",
+      "name": "Testing framework",
+      "baseline_commit": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "required_behaviors": [
+        "unit/integration fixtures",
+        "test records",
+        "rollback",
+        "parallel execution"
+      ],
+      "source_artifacts": [],
+      "runtime_exports": [],
+      "cloudforge_mappings": [],
+      "oracle_cases": [],
+      "source_status": "PENDING_SCAN",
+      "runtime_status": "PENDING_EXPORT",
+      "mapping_status": "UNMAPPED",
+      "oracle_status": "MISSING",
+      "claim_status": "BLOCKED"
+    }
+  ]
+}

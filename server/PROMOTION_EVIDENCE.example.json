@@ -1,0 +1,60 @@
+{
+  "version": "1.0.0",
+  "release_sha256": "",
+  "generated_at": "2026-07-25T00:00:00.000Z",
+  "environment": "staging",
+  "checks": {
+    "clean_linux_install": {
+      "passed": false,
+      "evidence": ""
+    },
+    "check_full_pass": {
+      "passed": false,
+      "evidence": ""
+    },
+    "workerd_pass": {
+      "passed": false,
+      "evidence": ""
+    },
+    "web_build_pass": {
+      "passed": false,
+      "evidence": ""
+    },
+    "migration_dry_run_pass": {
+      "passed": false,
+      "evidence": ""
+    },
+    "reconciliation_ok": {
+      "passed": false,
+      "evidence": ""
+    },
+    "staging_smoke_pass": {
+      "passed": false,
+      "evidence": ""
+    },
+    "rollback_drill_pass": {
+      "passed": false,
+      "evidence": ""
+    },
+    "backup_restore_drill_pass": {
+      "passed": false,
+      "evidence": ""
+    },
+    "erpnext_oracle_pass": {
+      "passed": false,
+      "evidence": ""
+    },
+    "load_security_pass": {
+      "passed": false,
+      "evidence": ""
+    },
+    "tenant_isolation_pass": {
+      "passed": false,
+      "evidence": ""
+    },
+    "regional_scope_review": {
+      "passed": false,
+      "evidence": ""
+    }
+  }
+}
