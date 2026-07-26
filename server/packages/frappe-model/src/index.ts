@@ -10,3 +10,5 @@ export * from "./autoname.js";
 export * from "./field-condition.js";
 export * from "./customization.js";
 export * from "./customization-store.js";
+export * from "./notification-rules.js";
+export * from "./auto-repeat.js";

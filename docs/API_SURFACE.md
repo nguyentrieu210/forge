@@ -88,6 +88,7 @@ Bằng chứng chạy thật: [VERIFICATION.md](VERIFICATION.md).
 | `dashboard_chart.get` · `number_card.get_result` | ✖ cùng lý do trên — định nghĩa biểu đồ là cấu hình của app |
 | `communication.email.make` | ✖ chưa cấu hình mail transport. Trả rỗng "đã gửi" là nói dối về một việc người dùng tin là đã xảy ra |
 | `frappe.utils.backups.fetch_latest_backups` | ✖ backup của D1 là Time Travel phía Cloudflare, không phải file tải về. Trả đường dẫn giả sẽ khiến người ta tin có bản sao lưu mà không có |
+| `frappe.utils.print_format.download_pdf` | ✖ Workers không có trình render PDF (không headless browser, không wkhtmltopdf, không binary). `get_html_and_style` trả HTML đã render kèm CSS để **client** in — đó là in thật, chỉ khác chỗ render. Trả một file gọi là PDF mà không phải PDF thì tệ hơn không có: nó đi vào hợp đồng, vào email, vào lưu trữ, và hỏng ở nơi không ai còn nhớ nó từ đâu ra |
 
 Mọi endpoint ✖ khi gọi vào đều trả **404 `DoesNotExistError`**, không bao giờ trả
 "thành công rỗng" — màn hình phải báo lỗi chứ không được render như thể có dữ liệu.
