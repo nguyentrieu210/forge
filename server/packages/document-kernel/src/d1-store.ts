@@ -359,6 +359,45 @@ export class D1MutationStore implements MutationStore {
     return true;
   }
 
+  /**
+   * Renames a document, moving its children and collaboration rows with it.
+   *
+   * Refuses when anything still points at the old name. Link values live inside
+   * JSON payloads with no foreign keys, so a rename cannot be cascaded reliably:
+   * rewriting "every payload containing this string" would also corrupt unrelated
+   * text that happens to match. A refused rename is recoverable; a half-rewritten
+   * link graph is not.
+   */
+  async renameDocument(tenantId: string, doctype: string, oldName: string, newName: string, actor: string, now: string): Promise<void> {
+    const oldKey = documentKey(doctype, oldName);
+    const newKey = documentKey(doctype, newName);
+
+    const referenced = await this.writer.prepare(
+      `SELECT (SELECT COUNT(*) FROM documents WHERE tenant_id=?1 AND doc_key<>?2
+                 AND EXISTS(SELECT 1 FROM json_each(payload_json) WHERE json_each.value=?3))
+            + (SELECT COUNT(*) FROM document_children WHERE tenant_id=?1 AND parent_key<>?2
+                 AND EXISTS(SELECT 1 FROM json_each(payload_json) WHERE json_each.value=?3))
+            + (SELECT COUNT(*) FROM documents WHERE tenant_id=?1 AND doctype=?4 AND amended_from=?3) AS total`,
+    ).bind(tenantId, oldKey, oldName, doctype).first<{ total: number }>();
+    if (Number(referenced?.total ?? 0) > 0) {
+      throw errors.reference("The document is referenced elsewhere and cannot be renamed", { document: oldName });
+    }
+
+    await this.writer.batch([
+      this.writer.prepare(
+        `UPDATE documents SET doc_key=?3, name=?4, modified_at=?5, modified_by=?6
+         WHERE tenant_id=?1 AND doc_key=?2`,
+      ).bind(tenantId, oldKey, newKey, newName, now, actor),
+      this.writer.prepare(`UPDATE document_children SET parent_key=?3 WHERE tenant_id=?1 AND parent_key=?2`).bind(tenantId, oldKey, newKey),
+      this.writer.prepare(`UPDATE versions SET doc_key=?3 WHERE tenant_id=?1 AND doc_key=?2`).bind(tenantId, oldKey, newKey),
+      this.writer.prepare(`UPDATE document_comments SET name=?4 WHERE tenant_id=?1 AND doctype=?2 AND name=?3`).bind(tenantId, doctype, oldName, newName),
+      this.writer.prepare(`UPDATE assignments SET name=?4 WHERE tenant_id=?1 AND doctype=?2 AND name=?3`).bind(tenantId, doctype, oldName, newName),
+      this.writer.prepare(`UPDATE document_shares SET name=?4 WHERE tenant_id=?1 AND doctype=?2 AND name=?3`).bind(tenantId, doctype, oldName, newName),
+      this.writer.prepare(`UPDATE document_tags SET name=?4 WHERE tenant_id=?1 AND doctype=?2 AND name=?3`).bind(tenantId, doctype, oldName, newName),
+      this.writer.prepare(`UPDATE files SET attached_to_name=?4 WHERE tenant_id=?1 AND attached_to_doctype=?2 AND attached_to_name=?3`).bind(tenantId, doctype, oldName, newName),
+    ]);
+  }
+
   async hasMasterRecord(tenantId: string, recordType: string, name: string): Promise<boolean> {
     const row = await this.writer.prepare(
       `SELECT 1 AS found FROM master_records WHERE tenant_id=?1 AND record_type=?2 AND name=?3 AND disabled=0
@@ -431,7 +470,9 @@ export class D1MutationStore implements MutationStore {
         // from the controller output — a controller cannot credit the change to
         // someone else, and cannot omit it.
         command.actor.user_id,
-        plan.document.amended_from ?? null,
+        // The command is authoritative: a controller cannot forge a chain link
+        // and cannot drop one the framework established.
+        command.amended_from ?? plan.document.amended_from ?? null,
         JSON.stringify(plan.document.data),
       ));
     } else {

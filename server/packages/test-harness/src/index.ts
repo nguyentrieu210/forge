@@ -11,6 +11,7 @@ export async function makeCommand<T extends JsonObject>(input: {
   action: MutationAction;
   expectedVersion: number | null;
   document: T;
+  amendedFrom?: string;
 }): Promise<MutationCommand<T>> {
   const command: MutationCommand<T> = {
     schema_version: 1,
@@ -22,6 +23,7 @@ export async function makeCommand<T extends JsonObject>(input: {
     expected_version: input.expectedVersion,
     payload_hash: "",
     document: input.document,
+    ...(input.amendedFrom ? { amended_from: input.amendedFrom } : {}),
   };
   command.payload_hash = await commandPayloadHash(command as unknown as Record<string, unknown>);
   return command;

@@ -4,6 +4,7 @@ import type {
   GeneralLedgerEntry,
   FulfillmentEntry,
   JsonObject,
+  MutationCommand,
   MutationPlan,
   MutationReceipt,
   MutationSnapshot,
@@ -321,11 +322,16 @@ export class InMemoryMutationStore implements MutationStore {
       this.assertAssetDepreciationInvariants(plan);
       this.assertSuiteBreadthInvariants(plan);
       this.assertBankReconciliationInvariants(plan);
+      this.assertAmendChain(command);
 
       // Attribution is stamped by the store, not the controller, so the in-memory
       // adapter must match D1 exactly or tests would pass against behaviour that
       // does not exist in production.
-      this.documents.set(key, { ...structuredClone(plan.document), modified_by: command.actor.user_id });
+      this.documents.set(key, {
+        ...structuredClone(plan.document),
+        modified_by: command.actor.user_id,
+        ...(command.amended_from ? { amended_from: command.amended_from } : {}),
+      });
       this.glEntries.push(...structuredClone(plan.gl_entries));
       this.stockEntries.push(...structuredClone(plan.stock_entries));
       this.paymentEntries.push(...structuredClone(plan.payment_entries));
@@ -674,6 +680,29 @@ export class InMemoryMutationStore implements MutationStore {
         && candidate.data.pos_profile === profile).some((opening) => ![...this.documents.values()].some((closing) => closing.tenant_id === document.tenant_id
           && closing.doctype === "POS Closing Entry" && closing.docstatus === 1 && closing.data.opening_entry === opening.name));
       if (anotherOpen) throw errors.reference(`POS Profile ${profile} already has an open session`);
+    }
+  }
+
+  /**
+   * Mirrors the `documents_amend_guard` SQL trigger.
+   *
+   * Kept in step deliberately: if the in-memory adapter were lenient here, the
+   * whole domain suite would pass against behaviour D1 rejects, and the failure
+   * would only appear in production.
+   */
+  private assertAmendChain(command: MutationCommand): void {
+    const source = command.amended_from;
+    if (!source) return;
+    const doctype = command.aggregate.doctype;
+    const original = this.documents.get(this.docKey(command.tenant_id, doctype, source));
+    if (!original || original.docstatus !== 2) {
+      throw errors.reference("AMEND_SOURCE_NOT_CANCELLED", { amended_from: source });
+    }
+    for (const [, document] of this.documents) {
+      if (document.tenant_id !== command.tenant_id || document.doctype !== doctype) continue;
+      if (document.amended_from === source && document.name !== command.aggregate.name) {
+        throw errors.reference("AMEND_SOURCE_ALREADY_AMENDED", { amended_from: source });
+      }
     }
   }
 

@@ -72,6 +72,15 @@ export interface MutationCommandInput<T extends JsonObject = JsonObject> {
   payload_hash: string;
   document: T;
   submitted_at?: string;
+  /**
+   * On a create, the cancelled document this one amends.
+   *
+   * Framework-owned like `modified_by`: it travels on the command rather than in
+   * the document payload so a controller cannot forge or drop it, and so the
+   * storage layer can enforce the chain rules (source must be cancelled, amended
+   * at most once) regardless of which controller ran.
+   */
+  amended_from?: string;
 }
 
 /** Internal command shape after authentication. */
@@ -342,6 +351,15 @@ export function parseMutationCommandInput(value: unknown): MutationCommandInput 
   assertBoundedDocument(document);
   const submittedAt = object.submitted_at;
   if (submittedAt !== undefined && typeof submittedAt !== "string") throw new TypeError("submitted_at must be a string");
+  const amendedFrom = object.amended_from;
+  if (amendedFrom !== undefined) {
+    if (typeof amendedFrom !== "string" || !amendedFrom.trim() || amendedFrom.length > 240) {
+      throw new TypeError("amended_from must be a non-empty document name");
+    }
+    // Amending is only meaningful when creating the successor; on a later save the
+    // chain is already recorded and re-supplying it could rewrite history.
+    if (action !== "create") throw new TypeError("amended_from is only valid on a create");
+  }
   return {
     schema_version: 1,
     command_id: commandId,
@@ -352,6 +370,7 @@ export function parseMutationCommandInput(value: unknown): MutationCommandInput 
     payload_hash: payloadHash,
     document,
     ...(typeof submittedAt === "string" ? { submitted_at: submittedAt } : {}),
+    ...(typeof amendedFrom === "string" ? { amended_from: amendedFrom.trim() } : {}),
   };
 }
 

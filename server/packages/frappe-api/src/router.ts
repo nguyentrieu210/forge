@@ -124,15 +124,88 @@ async function listDocuments(doctype: string, args: FrappeArgs, context: FrappeR
 async function createDocument(doctype: string, args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
   const submitted = documentArgument(args);
   const meta = await requireMeta(doctype, context);
-  await context.permissions.assert({ actor: context.actor, tenantId: context.tenantId, doctype, action: "create" });
 
-  const name = await resolveNewName(doctype, meta, submitted, context);
-  const payload = toKernelPayload(submitted, meta);
+  // An amendment arrives as an ordinary create carrying `amended_from` — that is
+  // how the Desk implements it (copy the cancelled document, clear the name).
+  // It is lifted off the payload here because `amended_from` is framework-owned:
+  // it must travel on the command so the storage guard can enforce the chain.
+  const amendedFrom = typeof submitted.amended_from === "string" ? submitted.amended_from.trim() : "";
+
+  await context.permissions.assert({
+    actor: context.actor, tenantId: context.tenantId, doctype,
+    action: amendedFrom ? "amend" : "create",
+  });
+
+  let payload = toKernelPayload(submitted, meta);
+  if (amendedFrom) {
+    const source = await loadReadable(doctype, amendedFrom, context);
+    if (source.docstatus !== 2) throw errors.lifecycle("Only a cancelled document can be amended");
+    // `no_copy` finally means something: a field marked no_copy must not carry
+    // over into the amendment. Frappe honours this and users rely on it — an
+    // external reference number copied into the successor would double-post.
+    payload = dropNoCopyFields(payload, meta);
+  }
+
+  const name = amendedFrom
+    ? await nextAmendmentName(doctype, amendedFrom, context)
+    : await resolveNewName(doctype, meta, submitted, context);
+
   await context.runCommand(await buildCommand({
     tenantId: context.tenantId, actor: context.actor, doctype, name,
     action: "create", expectedVersion: null, document: payload,
+    ...(amendedFrom ? { amendedFrom } : {}),
   }));
   return toFrappeDoc(await loadReadable(doctype, name, context));
+}
+
+/**
+ * Frappe names an amendment after its source with an incrementing suffix
+ * (`SO-0001-1`, then `-2`), which keeps the chain legible in a list. The storage
+ * guard only permits one live amendment per source, so the suffix search exists
+ * for the case where an earlier amendment was itself cancelled and amended.
+ */
+async function nextAmendmentName(doctype: string, source: string, context: FrappeRouterContext): Promise<string> {
+  for (let suffix = 1; suffix <= 20; suffix += 1) {
+    const candidate = `${source}-${suffix}`;
+    if (!await context.documents.getDocument(context.tenantId, doctype, candidate)) return candidate;
+  }
+  throw errors.validation(`${source} has been amended too many times`);
+}
+
+function dropNoCopyFields(payload: JsonObject, meta: DocTypeMeta): JsonObject {
+  const noCopy = new Set(meta.fields.filter((field) => field.no_copy).map((field) => field.fieldname));
+  if (!noCopy.size) return payload;
+  const output: JsonObject = {};
+  for (const [key, value] of Object.entries(payload)) {
+    if (!noCopy.has(key)) output[key] = value;
+  }
+  return output;
+}
+
+/**
+ * Renames a document.
+ *
+ * Refuses when another document links to it. Frappe rewrites those links across
+ * the whole database; here the link graph is spread across JSON payloads with no
+ * foreign keys, so a partial rewrite would leave dangling references that no
+ * constraint would catch. Refusing is the honest option — a silent half-rename is
+ * worse than a rejected one.
+ */
+async function renameDocument(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const doctype = args.requireText("doctype", 160);
+  const oldName = args.requireText("old_name", 320);
+  const newName = args.requireText("new_name", 320);
+  if (args.bool("merge")) throw errors.validation("Merging documents on rename is not supported");
+  if (oldName === newName) return { doctype, name: newName, renamed: false };
+
+  const meta = await requireMeta(doctype, context);
+  if (!meta.allow_rename) throw errors.validation(`${doctype} does not allow renaming`);
+
+  await loadWritable(doctype, oldName, context);
+  if (await context.documents.getDocument(context.tenantId, doctype, newName)) throw errors.exists();
+
+  await context.documents.renameDocument(context.tenantId, doctype, oldName, newName, context.actor.user_id, context.now());
+  return { doctype, name: newName, renamed: true };
 }
 
 async function saveDocument(doctype: string, name: string, args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
@@ -194,6 +267,10 @@ async function dispatchMethod(
 
     case "frappe.client.cancel":
       return methodResponse(await transition("cancel", args, context));
+
+    case "frappe.model.rename_doc":
+    case "frappe.client.rename_doc":
+      return methodResponse(await renameDocument(args, context));
 
     case "frappe.desk.search.search_link":
       return methodResponse(await searchLink(args, context));
