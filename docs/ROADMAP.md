@@ -1,11 +1,45 @@
-# Lộ trình
+## Trạng thái chốt
 
-Mục tiêu: **nền chuẩn Frappe, cài app mới nhanh, builder viết FE chạy được.**
+| Pha | Nội dung | |
+|---|---|---|
+| 0 | Gộp repo, workspace, ADR-001 | ✅ |
+| 1 | Lớp vỏ Frappe Tier 1 + phiên cookie + xoá tài liệu | ✅ |
+| 2 | amend, rename, autoname 7 dạng, Dynamic Link, mandatory_depends_on, modified_by, is_single | ✅ (trừ `track_seen`) |
+| 3 | Custom Field + Property Setter | ✅ |
+| 4 | Gói app + installer + endpoint install/uninstall | ✅ (chưa có CLI đóng gói) |
+| 5 | Hooks qua Workers for Platforms | ✅ |
+| 6 | Tier 2 + Tier 3 + Tier 4 + i18n + global search | ✅ — phần còn lại **cố ý không làm**, lý do từng cái ở [API_SURFACE.md](API_SURFACE.md) |
+| 7 | Deploy + cổng phát hành | ◐ **chặn bởi thông tin đăng nhập Cloudflare** |
 
-Nguyên tắc: mỗi pha có **cổng chặn** — không sang pha sau khi cổng chưa xanh. Không tuyên bố "xong"
-khi chưa có test hoặc bằng chứng chạy thật.
+Bằng chứng chạy thật: [VERIFICATION.md](VERIFICATION.md) — Workerd 70/70 (47 kịch
+bản E2E lớp vỏ) + 3/3, Node 248/248, SQL 6/6, build production cả hai bên.
+
+## Pha 7 — cái gì chặn, và vì sao tôi không tự làm được
+
+| Việc | Cần |
+|---|---|
+| Deploy Cloudflare, smoke staging, queue/outbox health | **API token + account Cloudflare** |
+| Test tải, đa tenant trên hạ tầng thật | môi trường đã deploy |
+| Diễn tập rollback + khôi phục tenant | môi trường đã deploy |
+| Render thật trên trình duyệt (MetaForge Desk vẽ màn hình) | `wrangler dev` + client trỏ vào |
+| `npm ci` sạch trên Linux | CI Linux (repo dùng pnpm) |
+| Đối chiếu ERPNext oracle v0.8–v1.0 | clone Frappe/ERPNext v16 đã khoá SHA |
+| Review pháp lý hoá đơn điện tử / lương | không phải việc kỹ thuật |
+
+Ba hạng mục bản gốc ghi `NOT VERIFIED`/`NOT RUN` — Workerd, web typecheck, Vite
+build — **đã chạy và xanh**. Phần còn lại của Pha 7 đòi hoặc thông tin đăng nhập
+chỉ chủ tài khoản có, hoặc một môi trường đã deploy, hoặc thẩm định pháp lý.
+
+## Việc còn mở, không chặn bởi gì
+
+- CLI đóng gói app từ thư mục nguồn (nối với `create-metaforge-app` bên FE).
+- Đóng gói lại chính bộ ERP hiện tại (`clouderp-*`) thành app đầu tiên, để tự chứng
+  minh cơ chế cài app trên một bộ thật thay vì một app mẫu.
+- `track_seen`.
 
 ---
+
+# Lộ trình gốc (giữ lại làm hồ sơ)
 
 ## Pha 0 — Gộp repo ✅
 
