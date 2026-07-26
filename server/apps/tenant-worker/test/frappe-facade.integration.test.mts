@@ -1062,3 +1062,90 @@ describe("DocField properties the server enforces", () => {
     expect(ok.status).toBe(201);
   });
 });
+
+describe("mechanisms that must actually run, not merely exist", () => {
+  it("a notification rule fires on a committed event and lands in the right inbox", async () => {
+    // The rules module and its migration landed first, with passing tests, and NOTHING
+    // CALLED IT. That is the same failure this codebase already found twice — is_single
+    // and track_seen were both validated, stored, and read by nobody. A mechanism with
+    // no caller passes every test it has and does nothing in production.
+    await env.DB.prepare(
+      // The 0004 shape: the rule BODY lives in `rule_json`. An earlier draft of the
+      // migration re-declared this table with separate columns and, being
+      // CREATE TABLE IF NOT EXISTS, silently did nothing — the code written against
+      // those columns then failed with "no column named condition".
+      `INSERT INTO notification_rules(tenant_id,name,document_type,event,enabled,rule_json,modified_by,modified_at)
+       VALUES('demo','Big visit','Field Visit','submitted',1,?2,'Administrator',?1)`,
+    ).bind(NOW, JSON.stringify({
+      condition: "eval:doc.is_billable == 1",
+      subject: "Chuyến thăm {{ subject }} cần soát",
+      channel: "Notification",
+      recipients: [{ kind: "user", value: "sales@example.com" }],
+    })).run();
+
+    const event = {
+      event_id: "evt-notify-1", event_type: "field_visit.submitted", tenant_id: "demo",
+      aggregate: { doctype: "Field Visit", name: "FV-NOTIFY" }, aggregate_version: 2,
+      actor: "sales@example.com", command_id: "cmd-notify-1", occurred_at: NOW,
+      schema_version: 1, payload: { subject: "Kiểm tra kho", is_billable: 1 },
+    };
+    const response = await call("/internal/events", {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: "Bearer test-internal-service-token", "x-cloudforge-idempotency-key": event.event_id },
+      body: JSON.stringify(event),
+    }, { auth: false });
+
+    expect(response.status).toBe(200);
+    const body = await response.json() as any;
+    expect(body.notifications.delivered).toBe(1);
+
+    const inbox = await unwrap(await method(
+      "frappe.desk.doctype.notification_log.notification_log.get_notification_logs", { limit: 20 }, "GET",
+    ));
+    const alert = inbox.notification_logs.find((entry: any) => /Kiểm tra kho/.test(entry.subject));
+    expect(alert, "the alert must reach the user's own inbox").toBeTruthy();
+    expect(alert.document_name).toBe("FV-NOTIFY");
+  });
+
+  it("a rule whose condition does not hold produces nothing", async () => {
+    const event = {
+      event_id: "evt-notify-2", event_type: "field_visit.submitted", tenant_id: "demo",
+      aggregate: { doctype: "Field Visit", name: "FV-QUIET" }, aggregate_version: 2,
+      actor: "sales@example.com", command_id: "cmd-notify-2", occurred_at: NOW,
+      schema_version: 1, payload: { subject: "Không tính phí", is_billable: 0 },
+    };
+    const response = await call("/internal/events", {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: "Bearer test-internal-service-token", "x-cloudforge-idempotency-key": event.event_id },
+      body: JSON.stringify(event),
+    }, { auth: false });
+    expect((await response.json() as any).notifications.delivered).toBe(0);
+  });
+
+  it("maintenance creates the document an Auto Repeat schedule owes", async () => {
+    const source = (await (await call("/api/resource/Field Visit", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ subject: "Bảo trì định kỳ", customer: "CUST-1" }),
+    })).json() as any).data;
+
+    await env.DB.prepare(
+      `INSERT INTO auto_repeat(tenant_id,name,reference_doctype,reference_name,frequency,start_date,next_schedule_date,status,owner,modified_at)
+       VALUES('demo','AR-1','Field Visit',?1,'Monthly','2026-01-01','2026-01-01','Active','sales@example.com',?2)`,
+    ).bind(source.name, NOW).run();
+
+    const response = await call("/internal/maintenance", {
+      method: "POST", headers: { authorization: "Bearer test-internal-service-token" },
+    }, { auth: false });
+    expect(response.status).toBe(200);
+    const body = await response.json() as any;
+    expect(body.auto_repeat.created).toBe(1);
+
+    // The copy is a NEW document with its own name, not the source resurfacing.
+    const created = await env.DB.prepare(
+      `SELECT last_created_name, next_schedule_date FROM auto_repeat WHERE tenant_id='demo' AND name='AR-1'`,
+    ).first<{ last_created_name: string; next_schedule_date: string }>();
+    expect(created!.last_created_name).not.toBe(source.name);
+    // The date advanced only because the create succeeded — and by one month, clamped.
+    expect(created!.next_schedule_date).toBe("2026-02-01");
+  });
+});

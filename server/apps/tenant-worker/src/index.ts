@@ -6,7 +6,8 @@ import {
 } from "../../../packages/auth/src/index.js";
 import {
   assertSessionCsrf, D1DeskViewStore, D1TranslationStore, establishSession, faultResponse, isFrappePath, isPublicFrappePath,
-  routeFrappeApi, routeFrappeAuth, slideSession, type AuthRouteContext, type EstablishedSession,
+  buildCommand, routeFrappeApi, routeFrappeAuth, runAutoRepeat, runNotificationRules, slideSession,
+  type AuthRouteContext, type AutoRepeatRunResult, type EstablishedSession,
 } from "../../../packages/frappe-api/src/index.js";
 import {
   AppHookDispatcher, AppInstaller, runAppValidators, subscribersFor, validatorsFor,
@@ -114,6 +115,21 @@ export default {
         // tracked per app, so a failing app is retried by the scheduled sweep
         // without holding up this confirmation — the queue must not redeliver the
         // platform event just because one app's Worker is down.
+        // Notification rules run on the same committed event, for the same reason app
+        // hooks do: an alert is a reaction, and nothing about it can change whether the
+        // write should have happened. It never throws — the client has already been
+        // told the document exists, so a broken rule must not make a successful save
+        // look like a failure.
+        const notifications = await runNotificationRules(
+          env.DB, new D1DeskViewStore(env.DB), tenant, event, new Date().toISOString(),
+        ).catch((error) => {
+          console.error(JSON.stringify({
+            level: "error", trace_id: traceId, code: "NOTIFICATION_RULES_FAILED",
+            detail: error instanceof Error ? error.message : String(error),
+          }));
+          return { matched: 0, delivered: 0, skipped: 0 };
+        });
+
         let hookOutcomes: HookDeliveryOutcome[] = [];
         try {
           hookOutcomes = await fanOutAppHooks(env, tenant, event);
@@ -127,7 +143,7 @@ export default {
           }));
         }
         return jsonResponse(
-          { committed: true, event_id: idempotencyKey, inserted, hooks: hookOutcomes },
+          { committed: true, event_id: idempotencyKey, inserted, hooks: hookOutcomes, notifications },
           200,
           { "x-cloudforge-event-committed": idempotencyKey },
         );
@@ -549,7 +565,11 @@ export default {
 export async function runMaintenance(
   env: TenantEnv,
   tenantId: string,
-): Promise<{ outbox: { published: number; failed: number; skipped: number } | null; hooks: number }> {
+): Promise<{
+  outbox: { published: number; failed: number; skipped: number } | null;
+  hooks: number;
+  auto_repeat: AutoRepeatRunResult;
+}> {
   const outbox = env.OUTBOX_QUEUE
     ? await publishPendingOutbox(env.DB, env.OUTBOX_QUEUE, tenantId)
     : null;
@@ -561,7 +581,46 @@ export async function runMaintenance(
       ...(env.INTERNAL_AUTH_SECRET ? { INTERNAL_AUTH_SECRET: env.INTERNAL_AUTH_SECRET } : {}),
     }).sweep(tenantId, new Date().toISOString())).length
     : 0;
-  return { outbox, hooks };
+
+  // Auto Repeat needs a scheduler, and this Worker's own cron never fires inside a
+  // dispatch namespace — so it lives here, driven by the jobs Worker, exactly like the
+  // outbox drain above.
+  const now = new Date().toISOString();
+  const documents = new D1MutationStore(env.DB);
+  const directory = new D1UserStore(env.DB);
+  const auto_repeat = await runAutoRepeat({
+    db: env.DB,
+    tenantId,
+    today: now.slice(0, 10),
+    now,
+    loadSource: (doctype, name) => documents.getDocument(tenantId, doctype, name),
+    // Through the ORDINARY command path: a scheduled document must pass the same
+    // permissions, validators and workflow rules a person's would. A scheduler that
+    // bypassed them would be a way to create documents nobody is allowed to create.
+    runCommand: async (command) => {
+      const stub = env.AGGREGATES.getByName(`${tenantId}:${command.aggregate.doctype}:${command.aggregate.name}`) as AggregateStub;
+      const result = typeof stub.mutate === "function" ? await stub.mutate(command) : await callDoFetch(stub, command);
+      return result as MutationReceipt;
+    },
+    buildCreate: async (doctype, document, actor) => buildCommand({
+      tenantId, actor, doctype,
+      // The server allocates the name from the doctype's series, exactly as it would
+      // for a person: a scheduler must not invent names of its own.
+      name: "",
+      action: "create",
+      expectedVersion: null,
+      document,
+    }),
+    // The schedule's owner with their REAL roles: a repeat must not be able to create
+    // what the person who set it up could not, and revoking that person's role must
+    // stop their schedules too.
+    actorFor: async (ownerId) => {
+      const userId = ownerId || "Administrator";
+      return { user_id: userId, roles: await directory.listRoles(tenantId, userId) };
+    },
+  });
+
+  return { outbox, hooks, auto_repeat };
 }
 
 /**

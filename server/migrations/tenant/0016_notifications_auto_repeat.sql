@@ -4,36 +4,23 @@
 -- platform stores as tables, for the same reason DocType definitions are: they are
 -- platform machinery read on a hot path, not tenant documents.
 
--- A rule that raises an in-app alert when a document event matches.
+-- `notification_rules` ALREADY EXISTS, from 0004_frappe_platform.sql:
 --
--- DELIBERATELY NOT EMAIL. This platform has no mail transport configured, and a rule
--- that claimed to send mail would be a promise about something a user believes
--- happened. `channel` exists so a rule can say what it wanted, and anything other than
--- 'Notification' is recorded and skipped rather than silently treated as sent.
-CREATE TABLE IF NOT EXISTS notification_rules (
-  tenant_id TEXT NOT NULL,
-  name TEXT NOT NULL,
-  document_type TEXT NOT NULL,
-  -- The domain event suffix this rule reacts to: 'created', 'saved', 'submitted',
-  -- 'cancelled'. Kept as text rather than an enum so a new event type does not need a
-  -- migration to become subscribable.
-  event TEXT NOT NULL,
-  -- Restricted grammar, the same one `mandatory_depends_on` uses. An expression that
-  -- does not parse is refused when the rule is SAVED, so a rule can never be stored
-  -- that will silently never fire.
-  condition TEXT NOT NULL DEFAULT '',
-  subject TEXT NOT NULL DEFAULT '',
-  message TEXT NOT NULL DEFAULT '',
-  channel TEXT NOT NULL DEFAULT 'Notification',
-  -- JSON array. Each entry is {"kind":"user","value":"…"} or {"kind":"field","value":"…"}
-  -- — the latter reads a user id out of the document, which is how "notify the approver"
-  -- works without hard-coding a person into a rule.
-  recipients_json TEXT NOT NULL DEFAULT '[]',
-  enabled INTEGER NOT NULL DEFAULT 1 CHECK (enabled IN (0,1)),
-  modified_by TEXT NOT NULL DEFAULT '',
-  modified_at TEXT NOT NULL,
-  PRIMARY KEY (tenant_id, name)
-);
+--   (tenant_id, name, document_type, event, enabled, rule_json, modified_by, modified_at)
+--
+-- It was created there and read by nothing — a dead table for exactly this feature. So
+-- this migration gives it a reader rather than a rival: the rule body lives in
+-- `rule_json` (condition, subject, message, channel, recipients).
+--
+-- An earlier draft of this file re-declared the table with separate columns. Being
+-- `CREATE TABLE IF NOT EXISTS`, it silently did NOTHING on every database that already
+-- had the 0004 shape — which is all of them — and the code written against those
+-- columns failed at runtime with "no column named condition". A migration that appears
+-- to define a schema and does not is worse than no migration: it makes the file lie
+-- about what the database contains.
+--
+-- DELIBERATELY NOT EMAIL. No mail transport is configured here. A rule may declare
+-- `channel: "Email"`; it is recorded and skipped, never treated as sent.
 CREATE INDEX IF NOT EXISTS idx_notification_rules_target
   ON notification_rules(tenant_id, document_type, event, enabled);
 
