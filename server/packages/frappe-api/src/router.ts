@@ -34,7 +34,10 @@ import type { CustomFieldRecord, CustomizationStore, D1SearchStore, PropertySett
 import type { D1UserStore } from "../../auth/src/index.js";
 import type { D1ReportService, QueryFilter } from "../../query/src/index.js";
 import { hashPassword, verifyPassword } from "./password.js";
-import { combinedNavigation, type AppInstaller } from "../../app-registry/src/index.js";
+import {
+  appMethodTarget, combinedNavigation, dispatchAppMethod,
+  type AppInstaller, type AppMethodEnv,
+} from "../../app-registry/src/index.js";
 import type { D1TranslationStore } from "./translations.js";
 import { assertKanbanField, type D1DeskViewStore } from "./desk-views.js";
 
@@ -78,6 +81,13 @@ export interface FrappeRouterContext {
   csrfToken: string;
   fullName: string;
   language: string;
+  /**
+   * Bindings needed to call an app's own Worker in the dispatch namespace.
+   *
+   * Optional: a deployment without a dispatch namespace simply has no app methods, and
+   * an unknown method stays a 404 rather than becoming a confusing binding error.
+   */
+  appMethods?: AppMethodEnv;
 }
 
 /**
@@ -878,10 +888,17 @@ async function dispatchMethod(
     case "frappe.desk.form.utils.add_comment":
       return methodResponse(await addComment(args, context));
 
-    default:
+    default: {
+      // An app owns its own dotted namespace: `hrm.api.something` goes to the `hrm`
+      // app's Worker. Checked only AFTER every platform method, so an app can never
+      // shadow one of ours by choosing a colliding id.
+      const fromApp = await callAppMethod(methodName, args, context);
+      if (fromApp) return fromApp;
+
       // An unimplemented method must fail loudly. Returning an empty success
       // would let a screen render as if it had data.
       throw errors.notFound(`Method is not implemented on this platform: ${methodName}`);
+    }
   }
 }
 
@@ -2251,6 +2268,34 @@ function workspacesFromNav(appId: string, appName: string, nav: { key: string; l
       })),
     }],
   })) as unknown as JsonObject[];
+}
+
+/**
+ * Forwards a method to the app that owns its namespace, or returns null.
+ *
+ * Null — not a throw — when no app claims it, so the caller still reports the honest
+ * "not implemented on this platform" instead of an app-flavoured error for a method no
+ * app was ever asked about.
+ *
+ * The app's answer is wrapped in `message` like any other method: from the client's
+ * side an app method is indistinguishable from a platform one, which is the point.
+ */
+async function callAppMethod(methodName: string, args: FrappeArgs, context: FrappeRouterContext): Promise<Response | null> {
+  if (!context.appMethods?.DISPATCHER) return null;
+
+  const target = appMethodTarget(await context.apps.list(context.tenantId), methodName);
+  if (!target) return null;
+
+  const result = await dispatchAppMethod({
+    env: context.appMethods,
+    tenantId: context.tenantId,
+    target,
+    methodName,
+    args: args.all(),
+    actor: context.actor,
+    traceId: context.traceId,
+  });
+  return methodResponse(result.value);
 }
 
 async function addComment(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {

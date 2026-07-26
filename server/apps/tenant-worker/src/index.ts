@@ -691,6 +691,17 @@ async function serveFrappeApiInner(
     csrfToken,
     fullName,
     language,
+    // Present only when this deployment can reach app Workers. Absent, an unknown
+    // method stays an honest 404 instead of a binding error.
+    ...(env.DISPATCHER && env.INTERNAL_AUTH_SECRET
+      ? {
+        appMethods: {
+          DISPATCHER: env.DISPATCHER,
+          INTERNAL_AUTH_SECRET: env.INTERNAL_AUTH_SECRET,
+          ...(env.INTERNAL_AUTH_KEY_ID ? { INTERNAL_AUTH_KEY_ID: env.INTERNAL_AUTH_KEY_ID } : {}),
+        },
+      }
+      : {}),
   });
   if (!response) return null;
 

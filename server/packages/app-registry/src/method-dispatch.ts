@@ -1,0 +1,175 @@
+/**
+ * Calling an APP's own API method, synchronously, inside the request.
+ *
+ * This is the seam that replaces Frappe's `@frappe.whitelist()`. An app cannot ship
+ * Python into the kernel, so a method it wants to expose lives in its own Worker in
+ * the dispatch namespace, and the façade forwards `<app_id>.<anything>` to it.
+ *
+ * Without this an app can only REACT: hooks run after commit, so there is nowhere to
+ * put a computed value, a button's action, or a business query. Every such need had to
+ * become platform code — which is what made this a kit rather than a framework.
+ *
+ * WHY IT IS SAFE TO PUT A THIRD PARTY IN THE REQUEST PATH HERE, having refused to put
+ * one inside the aggregate's write path (see hooks.ts): this call happens at the API
+ * layer, outside the Durable Object. A slow app delays its own caller's request and
+ * nothing else — it does not hold an aggregate lock, and a timeout leaves no ambiguity
+ * about whether a write happened, because no write is in flight.
+ *
+ * WHAT THE APP RECEIVES: the method name, the caller's arguments, the tenant, and the
+ * caller's identity SIGNED by the platform. It does NOT receive the user's session
+ * cookie — an app that could replay that would act as the user everywhere, for twelve
+ * hours, rather than for this call.
+ *
+ * WHAT THE APP CANNOT DO YET: read or write documents. That needs a callback path into
+ * the platform, which is a new inbound trust boundary and is deliberately NOT part of
+ * this step. Until then an app method computes over what it is given and returns a
+ * result. See ROADMAP "app callback".
+ */
+
+import type { Actor, JsonObject, JsonValue } from "../../contracts/src/index.js";
+import { createTrustedIdentity, deriveAppCallKey, IDENTITY_HEADER, IDENTITY_SIGNATURE_HEADER } from "../../auth/src/index.js";
+import { errors } from "../../core/src/index.js";
+import type { AppManifest } from "./manifest.js";
+
+/**
+ * Wall-clock budget for one app method call.
+ *
+ * Shorter than the hook budget (10s): a hook runs in the background where a slow app
+ * costs only its own delivery, whereas this is a user waiting for a screen.
+ */
+export const APP_METHOD_TIMEOUT_MS = 5_000;
+
+/** Everything the dispatcher needs, so the router does not reach into bindings itself. */
+export interface AppMethodEnv {
+  DISPATCHER?: DispatchNamespace;
+  INTERNAL_AUTH_SECRET?: string;
+  INTERNAL_AUTH_KEY_ID?: string;
+}
+
+export interface AppMethodTarget {
+  appId: string;
+  worker: string;
+}
+
+/**
+ * The app whose namespace a method name falls in, or null.
+ *
+ * Matched on the FIRST dotted segment and only against apps that declare a worker.
+ * An app called `hrm` owns `hrm.*` and nothing else, so one app can never intercept
+ * another's methods — nor any of the platform's, since `frappe.*`, `metaforge.*` and
+ * `forge.*` are handled before this is reached and no app may take those ids.
+ */
+export function appMethodTarget(
+  installed: Array<{ app_id: string; worker: string | null }>,
+  methodName: string,
+): AppMethodTarget | null {
+  const separator = methodName.indexOf(".");
+  if (separator <= 0) return null;
+  const appId = methodName.slice(0, separator);
+  const entry = installed.find((candidate) => candidate.app_id === appId);
+  // An app with no Worker has no method to call. Returning null rather than throwing
+  // keeps the caller's honest "not implemented" answer for that case too.
+  if (!entry?.worker) return null;
+  return { appId, worker: entry.worker };
+}
+
+export interface AppMethodResult {
+  /** Whatever the app returned, placed under `message` by the caller. */
+  value: JsonValue;
+}
+
+/**
+ * Forwards one method call to an app Worker and normalises its answer.
+ *
+ * Errors from an app are reported AS the app's, never laundered into a platform error:
+ * a tenant debugging a failing screen must be able to tell "the app said no" from "the
+ * platform broke", and an app must not be able to fabricate, say, an authentication
+ * failure that would log the user out.
+ */
+export async function dispatchAppMethod(input: {
+  env: AppMethodEnv;
+  tenantId: string;
+  target: AppMethodTarget;
+  methodName: string;
+  args: JsonObject;
+  actor: Actor;
+  traceId: string;
+}): Promise<AppMethodResult> {
+  const { env, tenantId, target, methodName, args, actor, traceId } = input;
+  if (!env.DISPATCHER) throw errors.misconfigured("DISPATCHER binding is required to call app methods");
+  if (!env.INTERNAL_AUTH_SECRET) throw errors.misconfigured("INTERNAL_AUTH_SECRET is required to call app methods");
+
+  const keyId = env.INTERNAL_AUTH_KEY_ID ?? "k1";
+  const [callKey, identity] = await Promise.all([
+    deriveAppCallKey(env.INTERNAL_AUTH_SECRET, tenantId, target.appId),
+    createTrustedIdentity({
+      tenantId, actor, traceId, masterSecret: env.INTERNAL_AUTH_SECRET, keyId,
+      // Just longer than the call budget. The app is given the caller's identity so it
+      // can act on their behalf; a long-lived one would be a bearer credential for that
+      // user sitting in third-party code.
+      ttlSeconds: Math.ceil(APP_METHOD_TIMEOUT_MS / 1000) + 5,
+    }),
+  ]);
+
+  const worker = env.DISPATCHER.get(target.worker, {}, {
+    // The app runs on its own budget, as hooks do: a runaway app must exhaust its own
+    // allowance rather than the platform's.
+    limits: { cpuMs: 200, subRequests: 50 },
+  });
+
+  let response: Response;
+  try {
+    response = await withTimeout(worker.fetch(`https://app.internal/api/method/${encodeURIComponent(methodName)}`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-cloudforge-tenant": tenantId,
+        "x-cloudforge-app": target.appId,
+        "x-cloudforge-trace-id": traceId,
+        authorization: `Bearer ${callKey}`,
+        [IDENTITY_HEADER]: identity.encoded,
+        [IDENTITY_SIGNATURE_HEADER]: identity.signature,
+      },
+      body: JSON.stringify({ method: methodName, args }),
+    }), APP_METHOD_TIMEOUT_MS);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : "call failed";
+    throw errors.validation(`App ${target.appId} did not answer: ${detail}`);
+  }
+
+  const text = await response.text();
+  let body: JsonObject | null = null;
+  try {
+    body = text ? JSON.parse(text) as JsonObject : null;
+  } catch {
+    body = null;
+  }
+
+  if (!response.ok) {
+    // The app's own message is surfaced, attributed to the app. Its STATUS is not
+    // honoured: letting an app answer 401 would let it log a user out of the platform.
+    const message = typeof body?.message === "string" && body.message
+      ? body.message
+      : `App ${target.appId} returned ${response.status}`;
+    throw errors.validation(message, { app_id: target.appId, method: methodName });
+  }
+
+  // `message` if the app used the Frappe envelope, otherwise the body as-is: an app
+  // author should not have to know which convention the platform prefers.
+  const value = (body && Object.hasOwn(body, "message") ? body.message : body) ?? null;
+  return { value: value as JsonValue };
+}
+
+async function withTimeout(promise: Promise<Response>, ms: number): Promise<Response> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<Response>((_resolve, reject) => {
+        timer = setTimeout(() => reject(new Error(`timed out after ${ms}ms`)), ms);
+      }),
+    ]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
+}
