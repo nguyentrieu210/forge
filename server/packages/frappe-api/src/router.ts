@@ -906,11 +906,29 @@ async function getDocType(args: FrappeArgs, context: FrappeRouterContext): Promi
   }
 
   return toFrappeMetaBundle({
-    meta: filtered,
+    // `filterMetaForActor` strips the DocPerm rows, which is right for the native
+    // API — it deliberately never discloses the permission matrix. But the Frappe
+    // contract carries them, and the client derives its list columns and field
+    // editability from them: with an empty `permissions` array it shows a single
+    // `ID` column and never issues the list query at all. So the rows are restored,
+    // narrowed to the roles this actor actually holds. The actor learns what THEY
+    // can do — which they could discover by trying anyway — not what every other
+    // role can do.
+    meta: { ...filtered, permissions: visiblePermissions(full, context) },
     children,
     workflow,
     maskedFields: maskedFieldNames(full, filtered),
   });
+}
+
+/**
+ * DocPerm rows the actor is entitled to see: their own roles' rows, or all of them
+ * for a platform administrator (who can read the definition anyway).
+ */
+function visiblePermissions(meta: DocTypeMeta, context: FrappeRouterContext): DocTypeMeta["permissions"] {
+  if (isPlatformAdmin(context)) return meta.permissions;
+  const roles = new Set(context.actor.roles);
+  return meta.permissions.filter((permission) => roles.has(permission.role));
 }
 
 async function getDoc(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {

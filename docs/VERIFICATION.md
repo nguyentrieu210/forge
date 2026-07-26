@@ -80,6 +80,52 @@ subscription, hoá đơn điện tử, sản xuất, tài sản) **KHÔNG có or
 bench ERPNext thật để capture fixture mới; môi trường hiện tại không có
 bench/MariaDB/Redis.
 
+## Trình duyệt thật — MetaForge Desk vẽ trên lớp vỏ
+
+`client/e2e-forge/` — Playwright + Chromium thật, cookie thật, proxy same-origin
+**không tiêm token**. Đây là điều duy nhất mà không test phía server nào chứng minh
+được: rằng **client ĐỒNG Ý với hợp đồng**. Một response có thể đúng từng byte mà vẫn
+để lại màn hình trắng, nếu một cờ về dạng boolean ở chỗ client mong 0/1.
+
+```
+server/  npx wrangler dev --config apps/tenant-worker/wrangler.jsonc --port 8801 --local
+client/apps/demo/  VITE_LIVE=1 vite build --outDir dist-live
+client/e2e-forge/  npx playwright test
+```
+
+**4 passed · 1 skipped (known gap, ghi rõ trong spec).**
+
+Đã chứng minh chạy thật trong trình duyệt:
+
+- Guest bị đẩy về màn đăng nhập **do chính 403 `PermissionError` + "Login to access"
+  của lớp vỏ**, không phải do mặc định phía client
+- Đăng nhập bằng hash mật khẩu thật → cookie HttpOnly → boot thành công
+- Sai mật khẩu bị từ chối, vẫn ở màn đăng nhập (401 được hiện ra, không bị nuốt)
+- Đăng xuất → server xoá cookie → client nhận ra và về màn đăng nhập
+- **Toàn bộ shell Desk render**: sidebar, user "Dev User", selector business-context
+  điền từ master data của tenant này (Demo / Stores), badge thông báo, capabilities
+
+### Hai lỗ hợp đồng lớp vỏ tìm ra trong lúc này
+
+| Lỗi | Bản chất |
+|---|---|
+| `getdoctype` trả `permissions: []` rỗng | `filterMetaForActor` cố ý xoá DocPerm — đúng cho API native (nó không bao giờ tiết lộ ma trận quyền), nhưng hợp đồng Frappe **có** mang DocPerm và client suy cột list + quyền sửa field từ đó. Nay trả lại, **lọc theo role actor đang có**: actor biết mình làm được gì (điều họ có thể tự thử ra), không biết role khác làm được gì. |
+| `sort_field` bị bỏ khi kernel metadata không có | Frappe **luôn** gửi cả `sort_field` và `sort_order` (mặc định `modified desc`), và client ghép `order_by` trực tiếp từ đó. Thiếu nó cho ra `"undefined desc"` hoặc TypeError. |
+
+### Known gap — list view chưa nạp dữ liệu
+
+Đánh `test.fixme` chứ không xoá hay nới lỏng: một suite âm thầm ngừng kiểm còn tệ hơn
+suite ghi rõ điều nó chưa chứng minh được.
+
+Đã khoanh vùng được: `getdoctype` trả đúng (title_field, cờ số, DocPerm, sort_field —
+đã verify qua HTTP); **không có request list nào được gửi** (không `/api/resource`,
+không `get_list`, không `reportview`, không `get_contextual_list`); và **không phải
+exception** — bản vite dev không minify, đầy đủ message React, không có lỗi console
+hay page error nào. Nghĩa là client **chủ động không query** — query bị gate, không
+phải fail. Nghi vấn còn lại nằm ở glue list riêng của demo và cổng readiness của
+business-context (`fiscal_year` báo unavailable vì tenant chưa có master data Fiscal
+Year) — cả hai đều là code client mà việc này chưa chạm tới.
+
 ## Chạy thật qua HTTP với wrangler dev
 
 Bổ sung cho suite Workerd chứ không lặp lại nó: suite kia gọi worker qua dispatch
@@ -146,7 +192,7 @@ không thể mục đi mà không ai biết.
 | Sức khoẻ queue/outbox trên môi trường thật | ☐ chưa | môi trường đã deploy |
 | Test tải, đa tenant trên hạ tầng thật | ☐ chưa | môi trường đã deploy |
 | Diễn tập rollback + khôi phục tenant | ☐ chưa | môi trường đã deploy |
-| E2E với **trình duyệt** thật (MetaForge Desk vẽ màn hình) | ☐ chưa | trình duyệt + client trỏ vào `wrangler dev` |
+
 | `npm ci` sạch trên Linux | ☐ chưa | repo dùng pnpm; cần CI Linux |
 | Oracle cho bề rộng v0.8–v1.0 (ngân hàng, lương, subscription, sản xuất) | ☐ chưa | bench ERPNext thật để capture fixture mới (cần MariaDB + Redis + bench) |
 | Review pháp lý hoá đơn điện tử / lương | ☐ chưa | không phải việc kỹ thuật |

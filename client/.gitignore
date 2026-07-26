@@ -37,3 +37,9 @@ apps/demo/screenshots/
 
 # tar deploy tạm (sinh ra mỗi lần build, KHÔNG phải nguồn)
 apps/*/dist.tar
+
+# Browser E2E artefacts — regenerable
+apps/demo/dist-live/
+e2e-forge/test-results/
+e2e-forge/proxy*.log
+apps/demo/vite-dev.log

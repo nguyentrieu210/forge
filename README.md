@@ -45,6 +45,7 @@ Cổng đã chạy thật trên máy — chi tiết ở [docs/VERIFICATION.md](d
 | Migration 0001–0015 lên D1 cục bộ qua wrangler | 15/15 ✅ |
 | **Cổng phát hành `check:business-suite`** | **ok:true · missing:[] · exit 0** |
 | Đối chiếu ERPNext oracle (O2C) | **ORACLE_OK · DIFFERENTIAL_PASS** — 48/115 fixture |
+| **Trình duyệt thật (Playwright + Chromium)** | **4 PASS · 1 skipped** — Desk vẽ trên lớp vỏ, cookie thật |
 
 Ba hạng mục bản CloudForge gốc ghi `NOT VERIFIED` / `NOT RUN` — Workerd, web
 typecheck, Vite build — **nay đã chạy và xanh**.

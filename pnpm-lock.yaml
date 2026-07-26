@@ -330,6 +330,15 @@ importers:
         specifier: 22.9.0
         version: 22.9.0
 
+  client/e2e-forge:
+    devDependencies:
+      '@playwright/test':
+        specifier: ^1.61.1
+        version: 1.62.0
+      '@types/node':
+        specifier: 22.9.0
+        version: 22.9.0
+
   client/packages/adapter-frappe:
     dependencies:
       '@metaforge/core':

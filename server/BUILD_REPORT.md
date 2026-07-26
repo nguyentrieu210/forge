@@ -26,8 +26,8 @@
 
 ## Verification size
 
-- Files excluding dependencies/runtime caches: **529**
-- TypeScript/TSX/MTS: **125 files / 20877 lines**
+- Files excluding dependencies/runtime caches: **533**
+- TypeScript/TSX/MTS: **125 files / 20899 lines**
 - SQL: **17 files / 1728 lines**
 - Markdown: **232 files / 14315 lines**
 - JavaScript/MJS tests and tools: **40 files / 5391 lines**

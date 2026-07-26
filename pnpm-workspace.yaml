@@ -8,3 +8,4 @@ packages:
   - "client/packages/*"
   - "client/apps/*"
   - "client/e2e-factory"
+  - "client/e2e-forge"

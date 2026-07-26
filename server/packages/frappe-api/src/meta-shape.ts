@@ -120,6 +120,11 @@ export function toFrappeDocType(meta: DocTypeMeta, workflow: WorkflowMeta | null
     track_changes: flag(meta.track_changes),
     track_seen: flag(meta.track_seen),
     allow_rename: flag(meta.allow_rename),
+    // Frappe ALWAYS carries both, defaulting to `modified desc`, and clients build an
+    // `order_by` string straight from them. Omitting `sort_field` produces
+    // "undefined desc" at best and a thrown TypeError at worst — which surfaces as a
+    // list that reports "could not load data" without ever issuing a request.
+    sort_field: meta.sort_field ?? "modified",
     sort_order: meta.sort_order ?? "DESC",
     fields: meta.fields.map(toFrappeDocField),
     permissions: meta.permissions.map(toFrappeDocPerm),
@@ -130,7 +135,6 @@ export function toFrappeDocType(meta: DocTypeMeta, workflow: WorkflowMeta | null
   if (meta.autoname !== undefined) doc.autoname = meta.autoname;
   if (meta.title_field !== undefined) doc.title_field = meta.title_field;
   if (meta.image_field !== undefined) doc.image_field = meta.image_field;
-  if (meta.sort_field !== undefined) doc.sort_field = meta.sort_field;
   if (meta.search_fields !== undefined) doc.search_fields = meta.search_fields.join(",");
   if (meta.modified_at !== undefined) doc.modified = meta.modified_at;
   if (workflow) doc.__workflow_docs = [toFrappeWorkflow(workflow)];

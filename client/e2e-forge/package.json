@@ -1,0 +1,14 @@
+{
+  "name": "e2e-forge",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Runtime E2E: MetaForge Desk in a real browser against the Forge Frappe-compatible façade (cookie session, no token).",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "@types/node": "22.9.0"
+  }
+}
