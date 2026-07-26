@@ -13,7 +13,7 @@ from pathlib import Path
 root = Path(__file__).resolve().parents[1]
 connection = sqlite3.connect(":memory:")
 connection.execute("PRAGMA foreign_keys=ON")
-for index in range(1, 14):
+for index in range(1, 15):
     migration = next(iter(sorted((root / "migrations/tenant").glob(f"{index:04d}_*.sql"))))
     connection.executescript(migration.read_text(encoding="utf-8"))
 
@@ -186,4 +186,57 @@ assert connection.execute(
     "SELECT revision FROM customization_revisions WHERE tenant_id='demo' AND doctype='Sales Order'"
 ).fetchone()[0] == 2, "each customisation write must advance the effective-schema revision"
 
-print("FRAPPE_COMPAT_MIGRATION_0010_0011_DRY_RUN_PASS")
+# ---- desk view state (0014) -------------------------------------------------
+connection.execute(
+    "INSERT INTO kanban_boards(tenant_id,name,reference_doctype,field_name,columns_json,owner,modified_at)"
+    " VALUES(?,?,?,?,?,?,?)",
+    ("demo", "SO Pipeline", "Sales Order", "status",
+     '[{"column_name":"Draft"},{"column_name":"Submitted"}]', "Administrator", NOW),
+)
+connection.commit()
+
+# Column definitions must be valid JSON, or the board list becomes unreadable.
+expect_abort("CHECK", lambda: connection.execute(
+    "INSERT INTO kanban_boards(tenant_id,name,reference_doctype,field_name,columns_json,owner,modified_at)"
+    " VALUES(?,?,?,?,?,?,?)",
+    ("demo", "Broken", "Sales Order", "status", "not json", "Administrator", NOW)))
+
+connection.execute(
+    "INSERT INTO kanban_card_order(tenant_id,board,column_name,document_name,position,modified_at)"
+    " VALUES(?,?,?,?,?,?)",
+    ("demo", "SO Pipeline", "Draft", "SO-LIVE", 0, NOW),
+)
+connection.commit()
+
+# One position per (board, document): two rows would make the board order depend
+# on scan order and appear to shuffle itself between reads.
+expect_abort("UNIQUE", lambda: connection.execute(
+    "INSERT INTO kanban_card_order(tenant_id,board,column_name,document_name,position,modified_at)"
+    " VALUES(?,?,?,?,?,?)",
+    ("demo", "SO Pipeline", "Submitted", "SO-LIVE", 0, NOW)))
+
+# Card order cannot outlive its board.
+connection.execute("DELETE FROM kanban_boards WHERE tenant_id='demo' AND name='SO Pipeline'")
+assert connection.execute("SELECT COUNT(*) FROM kanban_card_order WHERE tenant_id='demo'").fetchone()[0] == 0
+connection.commit()
+
+connection.execute(
+    "INSERT INTO notification_log(tenant_id,name,for_user,subject,created_at) VALUES(?,?,?,?,?)",
+    ("demo", "NL-1", "u1@example.com", "Approval needed", NOW),
+)
+connection.execute(
+    "INSERT INTO notification_log(tenant_id,name,for_user,subject,read,created_at) VALUES(?,?,?,?,?,?)",
+    ("demo", "NL-2", "u1@example.com", "Already seen", 1, NOW),
+)
+connection.execute(
+    "INSERT INTO notification_log(tenant_id,name,for_user,subject,created_at) VALUES(?,?,?,?,?)",
+    ("demo", "NL-3", "other@example.com", "Not yours", NOW),
+)
+connection.commit()
+
+unread = connection.execute(
+    "SELECT COUNT(*) FROM notification_log WHERE tenant_id='demo' AND for_user='u1@example.com' AND read=0"
+).fetchone()[0]
+assert unread == 1, f"unread badge must exclude read and other users' rows, got {unread}"
+
+print("FRAPPE_COMPAT_MIGRATION_0010_0014_DRY_RUN_PASS")

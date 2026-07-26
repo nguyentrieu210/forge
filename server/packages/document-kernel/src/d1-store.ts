@@ -409,6 +409,35 @@ export class D1MutationStore implements MutationStore {
     return Boolean(row);
   }
 
+  /**
+   * Lists master records of a type, for pickers and context selectors.
+   *
+   * Disabled records are excluded: offering one would let a user select a value the
+   * business logic then refuses, with no explanation at the point of choice.
+   * `label` prefers a human name from the payload and falls back to the id, so a
+   * record without one still shows something selectable.
+   */
+  async listMasterRecords(tenantId: string, recordType: string, limit = 200): Promise<Array<{ name: string; label: string }>> {
+    const bounded = Math.min(Math.max(limit, 1), 500);
+    const result = await this.writer.prepare(
+      `SELECT name, data_json FROM master_records
+       WHERE tenant_id=?1 AND record_type=?2 AND disabled=0 ORDER BY name LIMIT ?3`,
+    ).bind(tenantId, recordType, bounded).all<{ name: string; data_json: string }>();
+    return (result.results ?? []).map((row) => {
+      let label = row.name;
+      try {
+        const data = JSON.parse(row.data_json) as JsonObject;
+        for (const key of ["title", "label", "full_name", `${recordType.toLowerCase().replace(/ /g, "_")}_name`]) {
+          const candidate = data[key];
+          if (typeof candidate === "string" && candidate.trim()) { label = candidate.trim(); break; }
+        }
+      } catch {
+        // A corrupt payload must not hide the record from a picker.
+      }
+      return { name: row.name, label };
+    });
+  }
+
   async getMasterRecordData(tenantId: string, recordType: string, name: string): Promise<JsonObject | null> {
     const row = await this.writer.prepare(
       `SELECT data_json FROM master_records WHERE tenant_id=?1 AND record_type=?2 AND name=?3 AND disabled=0

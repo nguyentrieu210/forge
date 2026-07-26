@@ -13,7 +13,7 @@
 
 import type { Actor, CanonicalDocument, JsonObject, JsonValue, MutationAction, MutationCommand, MutationReceipt } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
-import type { D1MutationStore, DocumentListService } from "../../document-kernel/src/index.js";
+import type { D1MutationStore, DocumentListService, ListFilter } from "../../document-kernel/src/index.js";
 import type {
   D1CollaborationService, DocTypeMeta, DocumentAccessStore, ExtendedPermissionAction,
   MetadataPermissionService, MetadataStore,
@@ -36,6 +36,7 @@ import type { D1ReportService, QueryFilter } from "../../query/src/index.js";
 import { hashPassword, verifyPassword } from "./password.js";
 import { combinedNavigation, type AppInstaller } from "../../app-registry/src/index.js";
 import type { D1TranslationStore } from "./translations.js";
+import { assertKanbanField, type D1DeskViewStore } from "./desk-views.js";
 
 /**
  * Contract version, surfaced to the client as `frappe_version`.
@@ -71,6 +72,8 @@ export interface FrappeRouterContext {
   search: D1SearchStore;
   /** Server-defined report engine. */
   reports: D1ReportService;
+  /** Kanban boards and the notification log — per-user Desk state. */
+  deskViews: D1DeskViewStore;
   /** CSRF nonce of the current session, for the boot payload. */
   csrfToken: string;
   fullName: string;
@@ -678,6 +681,41 @@ async function dispatchMethod(
 
     case "frappe.core.doctype.data_import.data_import.form_start_import":
       return methodResponse(await importApply(args, context));
+
+    // ---- kanban ------------------------------------------------------------
+    case "frappe.desk.doctype.kanban_board.kanban_board.get_kanban_boards":
+      return methodResponse(await kanbanBoards(args, context));
+
+    case "frappe.desk.doctype.kanban_board.kanban_board.update_order_for_single_card":
+      return methodResponse(await kanbanReorder(args, context));
+
+    case "metaforge.api.kanban_move_with_comment":
+      return methodResponse(await kanbanMove(args, context));
+
+    // ---- notification log ---------------------------------------------------
+    case "frappe.desk.doctype.notification_log.notification_log.get_notification_logs":
+      return methodResponse(await notificationLogs(args, context));
+
+    case "frappe.desk.doctype.notification_log.notification_log.mark_as_read":
+      return methodResponse({ marked: await context.deskViews.markRead(context.tenantId, context.actor.user_id, args.requireText("docname", 320)) });
+
+    case "frappe.desk.doctype.notification_log.notification_log.mark_all_as_read":
+      return methodResponse({ marked: await context.deskViews.markAllRead(context.tenantId, context.actor.user_id) });
+
+    case "frappe.desk.doctype.notification_log.notification_log.trigger_indicator_hide":
+      // A UI-only signal in Frappe; there is no server state behind it, and saying
+      // so is better than inventing some.
+      return methodResponse(null);
+
+    // ---- business context ---------------------------------------------------
+    case "metaforge.api.get_business_context":
+      return methodResponse(await businessContext(args, context));
+
+    case "metaforge.api.get_contextual_list":
+      return methodResponse(await contextualList(args, context));
+
+    case "metaforge.api.get_contextual_count":
+      return methodResponse(await contextualCount(args, context));
 
     case "frappe.desk.search.search_link":
       return methodResponse(await searchLink(args, context));
@@ -1635,6 +1673,198 @@ async function importApply(args: FrappeArgs, context: FrappeRouterContext): Prom
     }
   }
   return { imported, failed, results, status: failed ? "Partial Success" : "Success" };
+}
+
+// ---- kanban -----------------------------------------------------------------
+
+async function kanbanBoards(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject[]> {
+  const doctype = args.text("doctype") ?? null;
+  if (doctype) {
+    // Boards for a doctype the actor cannot read would disclose how that doctype
+    // is organised, so read access is required before any board is listed.
+    await context.permissions.getReadScope(context.actor, context.tenantId, doctype);
+  }
+  const boards = await context.deskViews.listKanbanBoards(context.tenantId, doctype, context.actor.user_id);
+  return boards.map((board) => ({
+    name: board.name,
+    reference_doctype: board.reference_doctype,
+    field_name: board.field_name,
+    columns: board.columns as unknown as JsonValue,
+    private: board.private ? 1 : 0,
+  }));
+}
+
+/** Persists a column's card order. Never touches the documents themselves. */
+async function kanbanReorder(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const boardName = args.requireText("board_name", 160);
+  const columnName = args.requireText("column_name", 160);
+  const order = args.array<string>("order") ?? [];
+  const board = await context.deskViews.getKanbanBoard(context.tenantId, boardName);
+  if (!board) throw errors.notFound("Kanban board not found");
+  await context.permissions.getReadScope(context.actor, context.tenantId, board.reference_doctype);
+  if (board.private && board.owner !== context.actor.user_id) throw errors.permission("This kanban board is private");
+
+  await context.deskViews.setCardOrder(context.tenantId, boardName, columnName, order.map((entry) => String(entry)), context.now());
+  return { board: boardName, column: columnName, cards: order.length };
+}
+
+/**
+ * Moves a card between columns.
+ *
+ * This one DOES write the document, because the column is a real field value — the
+ * move is a business change, not view state. It therefore goes through the normal
+ * command path with its own concurrency check, so dragging a card cannot silently
+ * overwrite an edit somebody else made to the same document.
+ */
+async function kanbanMove(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const boardName = args.requireText("board", 160);
+  const documentName = args.requireText("docname", 320);
+  const toColumn = args.requireText("to", 160);
+
+  const board = await context.deskViews.getKanbanBoard(context.tenantId, boardName);
+  if (!board) throw errors.notFound("Kanban board not found");
+  const meta = await requireMeta(board.reference_doctype, context);
+  const field = meta.fields.find((entry) => entry.fieldname === board.field_name);
+  if (!field) throw errors.validation(`${board.reference_doctype} has no field ${board.field_name}`);
+  assertKanbanField(field.options, board.field_name, [{ column_name: toColumn }]);
+
+  const current = await loadWritable(board.reference_doctype, documentName, context);
+  await context.runCommand(await buildCommand({
+    tenantId: context.tenantId, actor: context.actor,
+    doctype: board.reference_doctype, name: documentName,
+    action: "save", expectedVersion: current.version,
+    document: { ...current.data, [board.field_name]: toColumn },
+  }));
+
+  const comment = args.text("comment");
+  if (comment) {
+    await context.collaboration.addComment(
+      context.tenantId, context.actor, board.reference_doctype, documentName, comment, context.now(),
+    );
+  }
+  return toFrappeDoc(await loadReadable(board.reference_doctype, documentName, context));
+}
+
+// ---- notification log -------------------------------------------------------
+
+async function notificationLogs(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const limit = args.int("limit", 20);
+  // Always the caller's own inbox: a user id argument would be a way to read
+  // somebody else's notifications.
+  const logs = await context.deskViews.listNotifications(context.tenantId, context.actor.user_id, limit);
+  return {
+    notification_logs: logs as unknown as JsonValue,
+    user_info: { [context.actor.user_id]: { fullname: context.fullName || context.actor.user_id } } as unknown as JsonValue,
+  };
+}
+
+// ---- business context -------------------------------------------------------
+
+/**
+ * The dimensions a Desk-wide context selector offers (company, fiscal year, …).
+ *
+ * Each dimension's options come from master data, narrowed by the actor's User
+ * Permissions — so the selector cannot offer a company the user is not permitted
+ * to see, which would produce an empty screen after selecting it.
+ */
+const CONTEXT_DIMENSIONS: Array<{ key: string; label: string; recordType: string; required: boolean; dependsOn?: string }> = [
+  { key: "company", label: "Company", recordType: "Company", required: true },
+  { key: "fiscal_year", label: "Fiscal Year", recordType: "Fiscal Year", required: false },
+  { key: "warehouse", label: "Warehouse", recordType: "Warehouse", required: false, dependsOn: "company" },
+  { key: "branch", label: "Branch", recordType: "Branch", required: false, dependsOn: "company" },
+  { key: "cost_center", label: "Cost Center", recordType: "Cost Center", required: false, dependsOn: "company" },
+  { key: "project", label: "Project", recordType: "Project", required: false },
+  { key: "territory", label: "Territory", recordType: "Territory", required: false },
+  { key: "selling_price_list", label: "Selling Price List", recordType: "Price List", required: false },
+  { key: "buying_price_list", label: "Buying Price List", recordType: "Price List", required: false },
+];
+
+async function businessContext(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const requested = args.array<string>("dimensions");
+  const wanted = requested?.length ? new Set(requested.map((entry) => String(entry))) : null;
+  const permissions = await context.access.listUserPermissions(context.tenantId, context.actor.user_id);
+
+  const dimensions: JsonObject[] = [];
+  for (const dimension of CONTEXT_DIMENSIONS) {
+    if (wanted && !wanted.has(dimension.key)) continue;
+    const restrictions = permissions.filter((record) => record.allow_doctype === dimension.recordType);
+    const options = await context.documents.listMasterRecords(context.tenantId, dimension.recordType, 200);
+    const permitted = restrictions.length
+      ? options.filter((option) => restrictions.some((record) => record.allow_name === option.name))
+      : options;
+    const defaultValue = restrictions.find((record) => record.is_default)?.allow_name ?? permitted[0]?.name;
+
+    dimensions.push({
+      key: dimension.key,
+      label: dimension.label,
+      // A dimension with no master data is reported disabled rather than as an
+      // empty dropdown the user would try to use.
+      enabled: permitted.length > 0,
+      required: dimension.required,
+      // Locked when a User Permission pins exactly one value: the user has no
+      // choice to make, and offering one would imply they do.
+      locked: restrictions.length === 1,
+      ...(dimension.dependsOn ? { dependsOn: dimension.dependsOn } : {}),
+      ...(defaultValue ? { defaultValue } : {}),
+      options: permitted.map((option) => ({ value: option.name, label: option.label })) as unknown as JsonValue,
+    });
+  }
+  return { dimensions: dimensions as unknown as JsonValue, selection: {} };
+}
+
+/**
+ * Translates a context selection into list filters.
+ *
+ * Only dimensions the target doctype actually has a field for are applied. Applying
+ * one it lacks would either error or filter on nothing; skipping it silently is
+ * correct here because the selection is a global preference, not a request-specific
+ * filter the user typed.
+ */
+async function contextFilters(doctype: string, selection: JsonObject, context: FrappeRouterContext): Promise<ListFilter[]> {
+  const meta = await requireMeta(doctype, context);
+  const fieldNames = new Set(meta.fields.map((field) => field.fieldname));
+  const filters: ListFilter[] = [];
+  for (const dimension of CONTEXT_DIMENSIONS) {
+    const value = selection[dimension.key];
+    if (typeof value !== "string" || !value) continue;
+    if (!fieldNames.has(dimension.key)) continue;
+    filters.push({ field: dimension.key, operator: "eq", value });
+  }
+  return filters;
+}
+
+async function contextualList(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject[]> {
+  const doctype = args.requireText("doctype", 160);
+  const selection = args.object("context") ?? {};
+  const contextual = await contextFilters(doctype, selection, context);
+  const explicit = toKernelFilters(args.json("filters"), doctype);
+
+  const body: JsonObject = {
+    doctype,
+    fields: dedupe((args.array<string>("fields") ?? ["name"]).map((field) => stripFieldQualifier(String(field)))),
+    filters: [...explicit, ...contextual] as unknown as JsonValue,
+    limit: clampPageLength(args.int("page_length", 20)),
+    offset: args.int("limit_start", 0),
+  };
+  const search = toKernelSearch(args.json("or_filters"));
+  if (search) body.search = search;
+  const sort = toKernelSort(args.text("order_by"));
+  if (sort.length) body.sort = sort as unknown as JsonValue;
+
+  const page = await context.listService.list(context.actor, context.tenantId, body);
+  return page.rows.map((row) => toFrappeListRow(row as JsonObject));
+}
+
+async function contextualCount(args: FrappeArgs, context: FrappeRouterContext): Promise<number> {
+  const doctype = args.requireText("doctype", 160);
+  const selection = args.object("context") ?? {};
+  const contextual = await contextFilters(doctype, selection, context);
+  const explicit = toKernelFilters(args.json("filters"), doctype);
+  const body: JsonObject = { doctype, filters: [...explicit, ...contextual] as unknown as JsonValue };
+  const search = toKernelSearch(args.json("or_filters"));
+  if (search) body.search = search;
+  const result = await context.listService.count(context.actor, context.tenantId, body);
+  return typeof result === "number" ? result : Number((result as { count?: number }).count ?? 0);
 }
 
 function isPlatformAdmin(context: FrappeRouterContext): boolean {

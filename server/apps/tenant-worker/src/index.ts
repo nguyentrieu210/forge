@@ -5,7 +5,7 @@ import {
   verifyTrustedIdentity,
 } from "../../../packages/auth/src/index.js";
 import {
-  assertSessionCsrf, D1TranslationStore, establishSession, faultResponse, isFrappePath, isPublicFrappePath,
+  assertSessionCsrf, D1DeskViewStore, D1TranslationStore, establishSession, faultResponse, isFrappePath, isPublicFrappePath,
   routeFrappeApi, routeFrappeAuth, slideSession, type AuthRouteContext, type EstablishedSession,
 } from "../../../packages/frappe-api/src/index.js";
 import {
@@ -616,6 +616,7 @@ async function serveFrappeApiInner(
     users,
     search: new D1SearchStore(env.DB),
     reports: new D1ReportService(env.DB),
+    deskViews: new D1DeskViewStore(env.DB),
     async runCommand(command) {
       const stub = env.AGGREGATES.getByName(`${tenantId}:${command.aggregate.doctype}:${command.aggregate.name}`) as AggregateStub;
       const result = typeof stub.mutate === "function" ? await stub.mutate(command) : await callDoFetch(stub, command);

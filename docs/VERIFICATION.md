@@ -15,7 +15,7 @@ Cập nhật: 2026-07-26.
 | Typecheck worker (server) | `pnpm --filter cloudforge run typecheck:workers` | exit 0 |
 | Test Node/domain | `node --test tests/*.test.mjs` | **248/248 PASS** |
 | Gate SQL | `pnpm --filter cloudforge run test:sql` | **6/6 PASS** |
-| **Workerd tenant-worker** | `vitest run --config apps/tenant-worker/vitest.config.mts` | **59/59 PASS** (23 gốc + 36 E2E lớp vỏ) |
+| **Workerd tenant-worker** | `vitest run --config apps/tenant-worker/vitest.config.mts` | **64/64 PASS** (23 gốc + 41 E2E lớp vỏ) |
 | **Workerd query-worker** | `vitest run --config apps/query-worker/vitest.config.mts` | **3/3 PASS** |
 | **Web typecheck** | `pnpm --filter @cloudforge/web run typecheck` | exit 0 |
 | **Web Vite production build** | `pnpm --filter @cloudforge/web run build` | exit 0 — 55 module, 238 kB js |
@@ -56,7 +56,7 @@ kiếm theo document, hạn mức đồng thời 100 luồng).
 
 ## E2E lớp vỏ Frappe — đã chạy trên workerd thật
 
-`apps/tenant-worker/test/frappe-facade.integration.test.mts` — 36 kịch bản đi hết
+`apps/tenant-worker/test/frappe-facade.integration.test.mts` — 41 kịch bản đi hết
 đường thật của một request Desk: phiên → dịch hình dạng → tầng quyền → aggregate
 Durable Object → D1. Không mock gì.
 
@@ -95,6 +95,14 @@ Durable Object → D1. Không mock gì.
   whitelist đều bị TỪ CHỐI, không âm thầm bỏ qua
 - Data import: từng dòng một command nên dòng lỗi chết một mình, kết quả báo theo
   dòng; cột không thuộc doctype bị từ chối chứ không bị bỏ
+- Kanban: **đổi cột thì GHI document** (thay đổi nghiệp vụ, qua command path, có
+  kiểm tra xung đột), **sắp lại thứ tự thì KHÔNG** — kéo thẻ không được bump version
+  hay tạo revision mới trong lịch sử. Cột không thuộc options của field bị từ chối.
+- Notification: chỉ thấy inbox của chính mình; mark đọc của người khác là no-op
+  chứ không lỗi
+- Business context: dimension lấy từ master data, cái nào không có dữ liệu báo
+  disabled thay vì dropdown rỗng; selection chỉ áp lên dimension mà doctype thật
+  sự có field
 - API native vẫn chạy song song, không bị lớp vỏ che
 
 ## Ranh giới — không tuyên bố quá
@@ -105,8 +113,11 @@ Durable Object → D1. Không mock gì.
   Desk cần để dùng được (print, xoá hàng loạt, workspace, open count).
   và phần lớn Tier 4: print, xoá hàng loạt, workspace, open count, **tree view**,
   **query report**, **data import**.
-  **Chưa làm**: kanban (3), notification log (4), dashboard chart, number card,
-  email, backups, export_query, business context (4 endpoint đặc thù MetaForge) —
+  cộng **kanban (3)**, **notification log (4)**, **business context (3)**.
+  **Chưa làm**: dashboard chart, number card, email, backups, export_query, và
+  `get_overview`/`get_processes` — hai cái cuối là **nội dung của APP**, không phải
+  của nền tảng; nền tảng dựng chúng ra sẽ là bịa nội dung nghiệp vụ. Đúng chỗ của
+  chúng là Worker của app (Pha 5) —
   xem [API_SURFACE.md](API_SURFACE.md). Mỗi cái gọi vào trả 404 `DoesNotExistError`
   chứ không trả rỗng, nên màn hình không render như thể có dữ liệu.
 - `is_single`, `track_seen` vẫn là metadata chưa có consumer.

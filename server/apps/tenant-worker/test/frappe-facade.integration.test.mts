@@ -567,9 +567,114 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     expect(String((await response.json() as any).message)).toMatch(/Unknown import columns/i);
   });
 
+  it("moves a kanban card by writing the field, and reorders without touching the document", async () => {
+    // The board charts `subject` only because Field Visit has no Select field; what
+    // matters is that a move writes a real field and a reorder does not.
+    await env.DB.prepare(
+      `INSERT INTO doctype_definitions(tenant_id,doctype,module,revision,metadata_json,modified_by,modified_at)
+       VALUES('demo','Visit Stage','Custom',1,?1,'Administrator',?2)
+       ON CONFLICT(tenant_id,doctype) DO UPDATE SET metadata_json=excluded.metadata_json`,
+    ).bind(JSON.stringify({
+      name: "Visit Stage", module: "Custom", autoname: "prompt", title_field: "label",
+      fields: [
+        { fieldname: "label", label: "Label", fieldtype: "Data", required: true, in_list_view: true },
+        { fieldname: "stage", label: "Stage", fieldtype: "Select", options: "Todo\nDoing\nDone", in_standard_filter: true },
+      ],
+      permissions: [{ role: "System Manager", read: true, write: true, create: true }],
+      revision: 1,
+    }), NOW).run();
+
+    await env.DB.prepare(
+      `INSERT INTO kanban_boards(tenant_id,name,reference_doctype,field_name,columns_json,owner,modified_at)
+       VALUES('demo','Stage Board','Visit Stage','stage',?1,'sales@example.com',?2)
+       ON CONFLICT(tenant_id,name) DO UPDATE SET columns_json=excluded.columns_json`,
+    ).bind(JSON.stringify([{ column_name: "Todo" }, { column_name: "Doing" }, { column_name: "Done" }]), NOW).run();
+
+    const created = await call("/api/resource/Visit Stage", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "VS-1", label: "First", stage: "Todo" }),
+    });
+    expect(created.status).toBe(201);
+    const beforeVersion = (await created.json() as any).data.modified;
+
+    const boards = await unwrap(await method("frappe.desk.doctype.kanban_board.kanban_board.get_kanban_boards", { doctype: "Visit Stage" }, "GET"));
+    expect(boards.map((board: any) => board.name)).toContain("Stage Board");
+
+    // Reordering is view state: it must not bump the document's version.
+    const reordered = await unwrap(await method("frappe.desk.doctype.kanban_board.kanban_board.update_order_for_single_card", {
+      board_name: "Stage Board", column_name: "Todo", order: ["VS-1"],
+    }));
+    expect(reordered.cards).toBe(1);
+    const unchanged = (await (await call("/api/resource/Visit Stage/VS-1")).json() as any).data;
+    expect(unchanged.modified).toBe(beforeVersion);
+
+    // Moving IS a business change, so it writes the field through the command path.
+    const moved = await unwrap(await method("metaforge.api.kanban_move_with_comment", {
+      board: "Stage Board", docname: "VS-1", from: "Todo", to: "Doing", comment: "Started work",
+    }));
+    expect(moved.stage).toBe("Doing");
+    expect(moved.modified).not.toBe(beforeVersion);
+  });
+
+  it("refuses a kanban move into a column the field cannot hold", async () => {
+    // Otherwise the drop appears to succeed and the save fails afterwards.
+    const response = await method("metaforge.api.kanban_move_with_comment", {
+      board: "Stage Board", docname: "VS-1", from: "Doing", to: "Nonexistent",
+    });
+    expect(response.status).toBe(417);
+    expect(String((await response.json() as any).message)).toMatch(/not one of/i);
+  });
+
+  it("serves only the caller's own notifications and marks them read", async () => {
+    for (const [name, forUser, read] of [["NL-A", "sales@example.com", 0], ["NL-B", "sales@example.com", 0], ["NL-C", "someone@example.com", 0]] as const) {
+      await env.DB.prepare(
+        `INSERT INTO notification_log(tenant_id,name,for_user,subject,read,created_at) VALUES('demo',?1,?2,?3,?4,?5)
+         ON CONFLICT(tenant_id,name) DO NOTHING`,
+      ).bind(name, forUser, `Subject ${name}`, read, NOW).run();
+    }
+
+    const logs = await unwrap(await method("frappe.desk.doctype.notification_log.notification_log.get_notification_logs", {}, "GET"));
+    const names = logs.notification_logs.map((entry: any) => entry.name);
+    expect(names).toContain("NL-A");
+    // Another user's notification must never appear.
+    expect(names).not.toContain("NL-C");
+
+    expect((await unwrap(await method("frappe.desk.doctype.notification_log.notification_log.mark_as_read", { docname: "NL-A" }))).marked).toBe(true);
+    // Marking somebody else's is not an error, it is simply a no-op.
+    expect((await unwrap(await method("frappe.desk.doctype.notification_log.notification_log.mark_as_read", { docname: "NL-C" }))).marked).toBe(false);
+    expect((await unwrap(await method("frappe.desk.doctype.notification_log.notification_log.mark_all_as_read", {}))).marked).toBeGreaterThanOrEqual(1);
+  });
+
+  it("offers business-context dimensions from master data, disabling ones with none", async () => {
+    const context = await unwrap(await method("metaforge.api.get_business_context", { app_id: "demo" }, "GET"));
+    const byKey = Object.fromEntries(context.dimensions.map((dimension: any) => [dimension.key, dimension]));
+    // Company and Warehouse were seeded; Territory was not.
+    expect(byKey.company.enabled).toBe(true);
+    expect(byKey.company.options.map((option: any) => option.value)).toContain("Demo");
+    expect(byKey.warehouse.enabled).toBe(true);
+    expect(byKey.territory.enabled).toBe(false);
+    expect(byKey.company.required).toBe(true);
+  });
+
+  it("applies a context selection only to dimensions the doctype actually has", async () => {
+    // Field Visit has a `customer` field but no `company`, so a company selection
+    // must be skipped rather than filtering on a field that does not exist.
+    const all = await unwrap(await method("metaforge.api.get_contextual_count", {
+      doctype: "Field Visit", context: { company: "Demo" },
+    }, "GET"));
+    const unfiltered = await unwrap(await method("frappe.desk.reportview.get_count", { doctype: "Field Visit" }, "GET"));
+    expect(Number(all)).toBe(Number(unfiltered));
+
+    const rows = await unwrap(await method("metaforge.api.get_contextual_list", {
+      doctype: "Field Visit", fields: ["name", "subject"], context: { company: "Demo" }, page_length: 5,
+    }, "GET"));
+    expect(Array.isArray(rows)).toBe(true);
+  });
+
   it("fails an unimplemented method loudly instead of returning an empty success", async () => {
     // An empty success would let a screen render as though it had data.
-    const response = await method("frappe.desk.doctype.kanban_board.kanban_board.get_kanban_boards", { doctype: "Field Visit" }, "GET");
+    const response = await method("frappe.desk.doctype.dashboard_chart.dashboard_chart.get", { chart_name: "Anything" }, "GET");
     expect(response.status).toBe(404);
     expect((await response.json() as any).exc_type).toBe("DoesNotExistError");
   });
