@@ -4,7 +4,7 @@ Mọi dòng dưới đây là **lệnh đã chạy thật** trên máy phát tri
 v24.17.0, Python 3.14.6, pnpm 9.15.0), không phải tự khai. Chỗ nào chưa chạy thì
 ghi rõ là chưa.
 
-Cập nhật: 2026-07-26.
+Cập nhật: 2026-07-27.
 
 ## Đã chạy — xanh
 
@@ -16,7 +16,7 @@ Cập nhật: 2026-07-26.
 | Test Node/domain | `node --test tests/*.test.mjs` | **266/266 PASS** |
 | **Cổng phát hành tổng hợp** | `pnpm --filter cloudforge run check:business-suite` | **ok:true missing:[] exit 0** |
 | Gate SQL (migration 0001–0015) | `pnpm --filter cloudforge run test:sql` | **6/6 PASS** |
-| **Workerd tenant-worker** | `vitest run --config apps/tenant-worker/vitest.config.mts` | **70/70 PASS** (23 gốc + 47 E2E lớp vỏ) |
+| **Workerd tenant-worker** | `vitest run --config apps/tenant-worker/vitest.config.mts` | **72/72 PASS** (23 gốc + 49 E2E lớp vỏ) |
 | **Workerd query-worker** | `vitest run --config apps/query-worker/vitest.config.mts` | **3/3 PASS** |
 | **Web typecheck** | `pnpm --filter @cloudforge/web run typecheck` | exit 0 |
 | **Web Vite production build** | `pnpm --filter @cloudforge/web run build` | exit 0 — 55 module, 238 kB js |
@@ -93,7 +93,7 @@ client/apps/demo/  VITE_LIVE=1 vite build --outDir dist-live
 client/e2e-forge/  npx playwright test
 ```
 
-**4 passed · 1 skipped (known gap, ghi rõ trong spec).**
+**5 passed · 0 skipped** — chạy trên chính bản deploy Cloudflare live.
 
 Đã chứng minh chạy thật trong trình duyệt:
 
@@ -129,20 +129,43 @@ Một giả thuyết đã bị BÁC BỎ và ghi lại để không ai truy lạ
 rỗng **không** làm list co về một cột ID. Client coi permlevel 0 là đọc được bất kể;
 DocPerm quyết định quyền **GHI**.
 
-### Known gap — list view chưa nạp dữ liệu
+### Known gap list view — ĐÃ ĐÓNG (2026-07-27)
 
-Đánh `test.fixme` chứ không xoá hay nới lỏng: một suite âm thầm ngừng kiểm còn tệ hơn
-suite ghi rõ điều nó chưa chứng minh được.
+`5 passed`, không còn skip, **chạy trên bản deploy Cloudflare live**. Màn hình vẽ đúng
+cột đã khai (**Chủ đề**, Customer) và một dòng dữ liệu thật `FV-2026-0001`.
 
-Đã khoanh vùng được: `getdoctype` trả đúng (verify qua HTTP); **không có request list
-nào được gửi** (không `/api/resource`, không `get_list`, không `reportview`, không
-`get_contextual_list`); và **không phải exception** — bản vite dev không minify, đầy đủ
-message React, không có lỗi console hay page error nào. Client **chủ động không query**.
+Nguyên nhân là **hai lỗi trong lớp vỏ**, không phải ở client — và mỗi cái là một **lớp
+lỗi**, không phải ca lẻ:
 
-**Hợp đồng metadata đã bị loại khỏi danh sách nghi vấn** bằng test ở mục trên: chính
-`normalizeMeta` + `deriveColumns` của client nhận output của lớp vỏ và cho ra đúng cột
-Subject + Customer. Vậy thứ gate query nằm sâu hơn, trong wiring list riêng của demo —
-code client mà việc này chưa chạm tới.
+**1. Phong bì.** `getdoctype` và `getdoc` **không `return`** payload. Chính handler của
+Frappe làm `frappe.response.docs.extend(docs)` và `frappe.response["docinfo"] = docinfo`
+(`frappe/desk/form/load.py`, đã tra trong source v16.19.0 tải về), nên các khoá đó nằm ở
+**cấp cao nhất, không có bọc `message`**. Lớp vỏ đã bọc chúng.
+
+Hậu quả **im lặng**: Desk đọc thẳng `r.docs` khỏi body → `undefined` → adapter ném
+`DoesNotExistError` **trên một HTTP 200**, không log ở đâu cả. Và vì list query bị gate
+bởi `ready = Boolean(metaQ.data)`, **không request list nào được gửi** — đúng cái triệu
+chứng từng khiến tôi kết luận nhầm là "client chủ động không query".
+
+**2. Projection.** Desk xin `modified` ở **mọi** list; cột kernel là `modified_at`.
+Filter và sort đã được dịch, riêng projection thì không → server trả
+`Field is not allowed: modified` cho mọi doctype. **Bốn** call site cùng dính: list,
+contextual list, `get_value`, export. `modified` còn không phải cột — nó được đóng gói từ
+`modified_at` **và** `version`, nên xin nó phải kéo theo cả hai; thiếu `version` thì dòng
+trả về không có `modified`, và sửa nhanh trên list sẽ gửi token rỗng khiến **mọi lần lưu
+bị từ chối là xung đột**.
+
+**Vì sao không bộ test nào bắt được.** Lỗi 1 nằm ở **phong bì**, mà
+`client-contract.test.mjs` nạp `toFrappeMetaBundle` trực tiếp nên đi vòng qua nó; còn
+smoke test thì dùng `unwrap()` đọc `message` — tức **nó khẳng định đúng con bug**. Lỗi 2
+chỉ nổ với tên field mà chưa test phía server nào tình cờ xin tới.
+
+Nay đã chốt: smoke kiểm `docs` ở cấp cao nhất **và** không có khoá `message`
+(24 → **26 check**), Workerd có test riêng cho cả hai (70 → **72**).
+
+Một giả thuyết bị BÁC BỎ dọc đường, ghi lại để không ai truy lại lần hai:
+`permissions: []` rỗng **không** làm list co về một cột ID. Client coi permlevel 0 là đọc
+được bất kể; DocPerm quyết định quyền **GHI**.
 
 ## Chạy thật qua HTTP với wrangler dev
 
@@ -162,7 +185,7 @@ npm run smoke:http
 | Kiểm tra | Kết quả |
 |---|---|
 | Migration 0001–0015 lên D1 cục bộ qua **wrangler thật** | 15/15 ✅ (không phải dry-run Python) |
-| `npm run smoke:http` | **HTTP_SMOKE_PASS checks=24 failures=0** |
+| `npm run smoke:http` | **HTTP_SMOKE_PASS checks=26 failures=0** |
 | Lặp lại từ D1 trắng (xoá `.wrangler/state` → migrate → seed → smoke) | PASS |
 
 24 kiểm tra: guest bị chặn đúng cách · sai mật khẩu không set cookie · cookie
@@ -204,7 +227,7 @@ node scripts/http-smoke.mjs --base https://cloudforge-gateway.trieu-nt93.workers
 |---|---|
 | Migration D1 remote (tenant / control / jobs) | **15/15 · 1/1 · 1/1** — `migrations list --remote` báo "No migrations to apply!"; tenant 17 → **53 bảng** |
 | Route tenant qua chính Control Plane (`PUT /v1/routes/…`) | `routing_version: 2`, ghi cả khoá thuận và khoá đảo `__tenant__:` |
-| **Smoke HTTP qua Internet công cộng** | **HTTP_SMOKE_PASS checks=24 failures=0** |
+| **Smoke HTTP qua Internet công cộng** | **HTTP_SMOKE_PASS checks=26 failures=0** |
 | **Đường bất đồng bộ, từ backlog nguội** | outbox **30 pending → 0 pending / 30 published**; jobs `processed_events` **30/30**; tenant `inbound_events` **30/30**; DLQ trống |
 | Cron thật sự chạy (qua `wrangler tail`) | `"*/1 * * * *" - Ok` → `POST /internal/maintenance - Ok` → `Queue cloudforge-outbox (18 messages) - Ok` |
 
@@ -357,9 +380,10 @@ Durable Object → D1. Không mock gì.
 
 ## Ranh giới — không tuyên bố quá
 
-- **Đã render trên trình duyệt thật**, nhưng chưa trọn: shell Desk vẽ được và phiên
-  đăng nhập chạy đầu-cuối trong Chromium thật (mục trên), còn **list view chưa nạp
-  dữ liệu** — known gap, ghi bằng `test.fixme`.
+- **Đã render trên trình duyệt thật, trên hạ tầng thật**: đăng nhập, shell Desk và
+  **list view có dữ liệu** đều chạy trong Chromium trên bản deploy Cloudflare (5/5,
+  không skip). Vẫn chưa chứng minh: một quy trình nghiệp vụ đầu-cuối qua UI (tạo →
+  submit → chứng từ liên quan), và mọi màn hình ngoài list/form của một doctype.
 - Lớp vỏ Frappe hiện thực **Tier 1 + Tier 2 + builder (Tier 3)** và phần Tier 4 mà
   Desk cần để dùng được (print, xoá hàng loạt, workspace, open count).
   và phần lớn Tier 4: print, xoá hàng loạt, workspace, open count, **tree view**,

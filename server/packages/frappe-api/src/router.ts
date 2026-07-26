@@ -21,8 +21,8 @@ import type {
 import { readFrappeArgs, type FrappeArgs } from "./args.js";
 import { assertModifiedMatches, buildCommand, stripServerOwnedFields } from "./command.js";
 import { fromFrappeDoc, toFrappeDoc, toFrappeListRow } from "./doc-shape.js";
-import { faultResponse, methodResponse, resourceResponse } from "./envelope.js";
-import { toKernelFilters, toKernelSearch, toKernelSort } from "./filters.js";
+import { faultResponse, methodResponse, resourceResponse, responseFieldsResponse } from "./envelope.js";
+import { toKernelField, toKernelFilters, toKernelSearch, toKernelSort } from "./filters.js";
 import {
   childDocTypeNames, maskedFieldNames, tableFieldNames, toFrappeDocType, toFrappeMetaBundle, toFrappeWorkflow,
 } from "./meta-shape.js";
@@ -506,13 +506,37 @@ function emptySingleDocument(meta: DocTypeMeta): JsonObject {
   return doc;
 }
 
+/**
+ * Frappe field names in a projection → kernel columns.
+ *
+ * Filters and sort already went through `toKernelField`; the projection did not, so a
+ * client asking for the framework timestamps got "Field is not allowed: modified" —
+ * the kernel column is `modified_at`. The Desk asks for `modified` on EVERY list, so
+ * this made the list view fail outright for every doctype.
+ *
+ * `modified` also needs a companion: it is not a stored column but a token packed
+ * from `modified_at` AND `version` (see `toFrappeModified`), so both must be pulled
+ * or `toFrappeListRow` cannot emit it. Silently omitting it is worse than an error —
+ * the Desk's inline editing would then send an empty token and the server would
+ * refuse every save as a stale write.
+ */
+function toKernelProjection(requested: string[]): string[] {
+  const fields = new Set<string>();
+  for (const raw of requested) {
+    const field = toKernelField(stripFieldQualifier(raw));
+    fields.add(field);
+    if (field === "modified_at") fields.add("version");
+  }
+  return [...fields];
+}
+
 async function listDocuments(doctype: string, args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject[]> {
   const requested = args.array<string>("fields") ?? ["name"];
   const body: JsonObject = {
     doctype,
     // `*` means "everything the whitelist allows"; leaving fields unset gives the
     // server-declared default projection instead of failing on the literal "*".
-    ...(requested.includes("*") ? {} : { fields: dedupe(requested.map(stripFieldQualifier)) }),
+    ...(requested.includes("*") ? {} : { fields: toKernelProjection(requested) }),
     filters: toKernelFilters(args.json("filters"), doctype) as unknown as JsonValue,
     limit: clampPageLength(args.int("limit_page_length", args.int("limit", 20))),
     offset: args.int("limit_start", 0),
@@ -650,11 +674,13 @@ async function dispatchMethod(
     case "metaforge.api.get_boot":
       return methodResponse(await bootPayload(context));
 
+    // Both write onto `frappe.response` rather than returning, so their keys are
+    // top-level with no `message` wrapper — see `responseFieldsResponse`.
     case "frappe.desk.form.load.getdoctype":
-      return methodResponse(await getDocType(args, context));
+      return responseFieldsResponse(await getDocType(args, context));
 
     case "frappe.desk.form.load.getdoc":
-      return methodResponse(await getDoc(args, context));
+      return responseFieldsResponse(await getDoc(args, context));
 
     case "frappe.client.get_list":
     case "frappe.desk.reportview.get":
@@ -991,7 +1017,9 @@ async function countDocuments(args: FrappeArgs, context: FrappeRouterContext): P
 async function getValue(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject | null> {
   const doctype = args.requireText("doctype", 160);
   const fieldname = args.requireText("fieldname", 320);
-  const fields = dedupe(fieldname.split(",").map((field) => stripFieldQualifier(field.trim())).filter(Boolean));
+  // Translated like every other projection: `get_value(dt, filters, "modified")` is
+  // ordinary Frappe client code and must not die on "Field is not allowed".
+  const fields = toKernelProjection(fieldname.split(",").map((field) => field.trim()).filter(Boolean));
   if (!fields.length) throw errors.validation("fieldname is required");
 
   // Straight to the list service rather than through the REST handler: the
@@ -1860,7 +1888,9 @@ async function exportQuery(args: FrappeArgs, context: FrappeRouterContext): Prom
     action: "export", owner: context.actor.user_id,
   });
 
-  const requested = (args.array<string>("fields") ?? []).map((field) => stripFieldQualifier(String(field)));
+  // Same translation as the list projection: an export asking for `modified` must not
+  // die on "Field is not allowed".
+  const requested = toKernelProjection((args.array<string>("fields") ?? []).map(String));
   const filters = toKernelFilters(args.json("filters"), doctype);
   const search = toKernelSearch(args.json("or_filters"));
   const maxRows = Math.min(Math.max(args.int("max_rows", 1000), 1), 5000);
@@ -2086,7 +2116,10 @@ async function contextualList(args: FrappeArgs, context: FrappeRouterContext): P
 
   const body: JsonObject = {
     doctype,
-    fields: dedupe((args.array<string>("fields") ?? ["name"]).map((field) => stripFieldQualifier(String(field)))),
+    // Same translation as `listDocuments`. This is the path the Desk actually takes
+    // whenever a business context is selected, so leaving it untranslated broke the
+    // list view even after the plain list was fixed.
+    fields: toKernelProjection((args.array<string>("fields") ?? ["name"]).map(String)),
     filters: [...explicit, ...contextual] as unknown as JsonValue,
     limit: clampPageLength(args.int("page_length", 20)),
     offset: args.int("limit_start", 0),

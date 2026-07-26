@@ -49,7 +49,15 @@ function csvOf(lines: string[]): string {
   return `${lines.join("\n")}\n`;
 }
 
-/** Frappe wraps every method payload under `message`. */
+/**
+ * Frappe wraps a method's RETURN VALUE under `message` — but not every payload.
+ *
+ * `getdoctype`, `getdoc` and `savedocs` write onto `frappe.response` instead of
+ * returning, so their keys are top-level. Believing "always under `message`" is what
+ * produced a defect that broke the Desk silently; the fallback below tolerates both
+ * shapes, so it must NOT be read as evidence that either is correct. The shape itself
+ * is pinned by `docs at the top level` below and by `scripts/http-smoke.mjs`.
+ */
 async function unwrap(response: Response): Promise<any> {
   const body: any = await response.json();
   return body?.message ?? body;
@@ -183,6 +191,18 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     expect((await response.json() as any).exc_type).toBe("PermissionError");
   });
 
+  it("puts getdoctype's keys at the top level, as frappe.response does", async () => {
+    // frappe/desk/form/load.py does `frappe.response.docs.extend(docs)` — it does not
+    // return, so nothing is wrapped in `message`. Wrapping it is an HTTP 200 that
+    // every Frappe client reads as a missing document: the Desk takes `r.docs` off
+    // the body, gets undefined, and raises DoesNotExistError with nothing logged. Its
+    // list view then shows one `ID` column and never issues a list query at all,
+    // because that query is gated on the metadata having loaded.
+    const meta = await (await method("frappe.desk.form.load.getdoctype", { doctype: "Field Visit", with_parent: 1 }, "GET")).json() as any;
+    expect(Array.isArray(meta.docs)).toBe(true);
+    expect("message" in meta).toBe(false);
+  });
+
   it("serves metadata in frappe shape, with reqd and integer flags", async () => {
     const bundle = await unwrap(await method("frappe.desk.form.load.getdoctype", { doctype: "Field Visit", with_parent: 1 }, "GET"));
     const doc = bundle.docs.find((entry: any) => entry.name === "Field Visit");
@@ -232,6 +252,13 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
   });
 
   it("reads the document back with its docinfo and effective permissions", async () => {
+    const raw = await (await method("frappe.desk.form.load.getdoc", { doctype: "Field Visit", name: createdName }, "GET")).json() as any;
+    // Same rule as getdoctype: `frappe.response.docs.append(doc)` and
+    // `frappe.response["docinfo"] = docinfo`, so both keys are top-level, unwrapped.
+    expect(Array.isArray(raw.docs)).toBe(true);
+    expect(raw.docinfo).toBeTruthy();
+    expect("message" in raw).toBe(false);
+
     const payload = await unwrap(await method("frappe.desk.form.load.getdoc", { doctype: "Field Visit", name: createdName }, "GET"));
     expect(payload.docs[0].subject).toBe("First visit");
     expect(payload.docinfo.permissions.read).toBe(1);
@@ -269,6 +296,31 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     });
     expect(response.status).toBe(417);
     expect((await response.json() as any).exc_type).toBe("TimestampMismatchError");
+  });
+
+  it("accepts the framework timestamps in a list projection, and packs modified from them", async () => {
+    // The Desk requests `modified` on EVERY list — it needs the token to make an
+    // inline edit safe. The kernel column is `modified_at`, and the projection was
+    // not being translated, so every list answered "Field is not allowed: modified"
+    // and the list view stayed empty for every doctype.
+    //
+    // `modified` is also not a stored column: it is packed from `modified_at` AND
+    // `version`, so requesting it must pull both. Were `version` dropped, rows would
+    // arrive with no `modified` at all and the Desk would send an empty token —
+    // turning every inline save into a refused stale write.
+    const rows = await unwrap(await method(
+      "frappe.client.get_list",
+      { doctype: "Field Visit", fields: JSON.stringify(["name", "subject", "modified", "creation"]) },
+      "GET",
+    ));
+    expect(Array.isArray(rows)).toBe(true);
+    expect(rows.length).toBeGreaterThan(0);
+    expect(typeof rows[0].modified).toBe("string");
+    expect(rows[0].modified).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{6}$/);
+    expect(typeof rows[0].creation).toBe("string");
+    // Kernel spellings must not leak back out to a Frappe client.
+    expect("modified_at" in rows[0]).toBe(false);
+    expect("version" in rows[0]).toBe(false);
   });
 
   it("lists and counts documents, honouring filters and search", async () => {

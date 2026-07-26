@@ -64,9 +64,41 @@ const JSON_HEADERS: Record<string, string> = {
   "x-content-type-options": "nosniff",
 };
 
-/** `/api/method/*` success: the payload always sits under `message`. */
+/**
+ * `/api/method/*` success: the payload sits under `message`.
+ *
+ * True for methods that RETURN a value — which is nearly all of them, but not all.
+ * See `responseFieldsResponse` for the exceptions, and do not assume this one.
+ */
 export function methodResponse(value: unknown, status = 200, headers?: Record<string, string>): Response {
   return new Response(JSON.stringify({ message: value ?? null }), { status, headers: { ...JSON_HEADERS, ...headers } });
+}
+
+/**
+ * `/api/method/*` success for the methods that write onto `frappe.response` instead
+ * of returning a value. Their keys land at the TOP LEVEL, with no `message` wrapper.
+ *
+ * From Frappe v16.19.0 itself — `frappe/desk/form/load.py`:
+ *
+ *     frappe.response["user_settings"] = get_user_settings(parent_dt or doctype)
+ *     frappe.response.docs.extend(docs)          # getdoctype
+ *     frappe.response["docinfo"] = docinfo       # get_docinfo, used by getdoc
+ *
+ * and `frappe/desk/form/save.py`: `frappe.response.docs.append(d)`.
+ *
+ * Wrapping these in `message` breaks every real Frappe client, and breaks it
+ * SILENTLY. The Desk reads `r.docs` straight off the body; against a wrapped
+ * response that is `undefined`, so its adapter raises DoesNotExistError on an HTTP
+ * 200. Nothing logs an error. The list view renders a single `ID` column with a
+ * generic "could not load" message and never issues a list query at all, because its
+ * query is gated on the metadata having loaded.
+ *
+ * Server-side tests cannot catch this by calling the payload builders directly — the
+ * defect lives in the envelope, not the payload — and a smoke test that unwraps
+ * `message` will assert the bug rather than the contract.
+ */
+export function responseFieldsResponse(fields: unknown, status = 200, headers?: Record<string, string>): Response {
+  return new Response(JSON.stringify(fields ?? {}), { status, headers: { ...JSON_HEADERS, ...headers } });
 }
 
 /** `/api/resource/*` success: the payload always sits under `data`. */

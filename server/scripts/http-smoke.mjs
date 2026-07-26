@@ -172,7 +172,23 @@ if (name) {
 // ---- reads ------------------------------------------------------------------
 console.log("\nreads");
 {
-  const bundle = unwrap(await call(`/api/method/frappe.desk.form.load.getdoctype?doctype=${encoded}&with_parent=1`));
+  // Shape first, content second. `getdoctype` and `getdoc` write onto
+  // `frappe.response` instead of returning, so `docs` is TOP-LEVEL with no `message`
+  // wrapper. This check exists because its absence let a real defect through: the
+  // façade wrapped them, `unwrap()` here read `message` and passed, and every real
+  // Frappe client broke — the Desk reads `r.docs` off the body, got undefined, and
+  // raised DoesNotExistError on an HTTP 200 with nothing logged anywhere.
+  const metaRaw = await call(`/api/method/frappe.desk.form.load.getdoctype?doctype=${encoded}&with_parent=1`);
+  check("getdoctype puts docs at the top level, as Frappe's own handler does",
+    Array.isArray(metaRaw.body?.docs) && !("message" in (metaRaw.body ?? {})),
+    `keys=${Object.keys(metaRaw.body ?? {}).join(",")}`);
+
+  const docRaw = await call(`/api/method/frappe.desk.form.load.getdoc?doctype=${encoded}&name=${encodeURIComponent(name)}`);
+  check("getdoc puts docs and docinfo at the top level too",
+    Array.isArray(docRaw.body?.docs) && Boolean(docRaw.body?.docinfo) && !("message" in (docRaw.body ?? {})),
+    `keys=${Object.keys(docRaw.body ?? {}).join(",")}`);
+
+  const bundle = unwrap(metaRaw);
   const doc = bundle?.docs?.find((entry) => entry.name === DOCTYPE);
   check("metadata uses frappe field names and integer flags",
     doc && doc.issingle === 0 && doc.fields.some((field) => field.reqd === 1 || field.reqd === 0),

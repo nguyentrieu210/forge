@@ -77,46 +77,41 @@ test.describe("Desk on the Forge facade (real browser, cookie session)", () => {
   });
 
   /**
-   * KNOWN GAP — the list view does not populate against the façade yet.
+   * The list view, end to end: metadata → columns → a server query → rendered rows.
    *
-   * Marked `fixme` rather than deleted or loosened: a suite that quietly stops
-   * checking is worse than one that records what it cannot yet prove.
+   * This was a known gap for a long time, and closing it took two façade defects that
+   * only a real client could expose. Both are recorded here because each is a CLASS of
+   * mistake, not a one-off:
    *
-   * What was established while narrowing it:
-   * - `getdoctype` returns the right thing. `title_field: "subject"`, both
-   *   `in_list_view` fields present with integer flags, DocPerm rows for the actor's
-   *   role, and `sort_field`/`sort_order` — all verified over HTTP.
-   * - The screen renders: shell, sidebar, user, business-context selectors populated
-   *   from this tenant's master data, notification badge, capabilities. Only the table
-   *   body is empty, showing "ID" as its single column.
-   * - No list request is ever issued — not `/api/resource/...`, not
-   *   `frappe.client.get_list`, not `reportview.get`, not
-   *   `metaforge.api.get_contextual_list`.
-   * - It is NOT an exception: a vite dev build (unminified, full React messages)
-   *   produces no console or page error. The only failures are the expected guest 403
-   *   and the two deliberate 404s for `metaforge.api.get_overview`.
+   * 1. ENVELOPE. `getdoctype` and `getdoc` do not return their payload — Frappe's own
+   *    handler does `frappe.response.docs.extend(docs)` (frappe/desk/form/load.py), so
+   *    the keys are TOP-LEVEL with no `message` wrapper. The façade wrapped them. The
+   *    Desk reads `r.docs` off the body, got undefined, and raised DoesNotExistError on
+   *    an HTTP 200 — with nothing logged. Its list query is gated on the metadata
+   *    having loaded, so no list request was ever issued, which is exactly why the
+   *    symptom looked like "the client chooses not to query".
    *
-   * So the client is choosing not to query — the query is gated, not failing.
+   * 2. PROJECTION. The Desk asks for `modified` on every list; the kernel column is
+   *    `modified_at`. Filters and sort were translated, the projection was not, so the
+   *    server answered "Field is not allowed: modified" for every doctype. Four call
+   *    sites had it: list, contextual list, get_value and export.
    *
-   * The metadata contract has since been RULED OUT as the cause, by feeding the façade's
-   * own `getdoctype` output into the client's real `normalizeMeta` and `deriveColumns`
-   * (`server/tests/client-contract.test.mjs`, 9 assertions): they accept it and produce
-   * exactly the declared columns — Subject and Customer, not an ID fallback. So whatever
-   * gates the query lives further into the demo's own live list wiring.
+   * Neither was reachable from a server-side test that builds payloads directly — the
+   * first lives in the envelope, the second only fires for field names no server test
+   * happened to request. A smoke test that unwraps `message` asserts the first bug
+   * rather than the contract.
    *
-   * One hypothesis was disproved along the way and is recorded so it is not chased
-   * twice: an empty `permissions` array does NOT collapse the list to an ID column. The
-   * client treats permlevel 0 as readable regardless; DocPerm rows decide WRITABILITY.
-   *
-   * Two real façade contract gaps were found and fixed during the hunt, so it was not
-   * wasted: `getdoctype` returned an empty `permissions` array (the Frappe contract
-   * carries the rows and field editability depends on them), and `sort_field` was
-   * omitted when the kernel metadata lacked it, where Frappe always sends one.
+   * The column header is asserted in Vietnamese: labels come back through
+   * `metaforge.api.translate_strings`, so "Chủ đề" also proves the translation path is
+   * wired, where "Subject" would have passed with translation broken.
    */
-  test.fixme("the list view renders rows from server metadata", async ({ page }) => {
+  test("the list view renders rows from server metadata", async ({ page }) => {
     await signInAndOpenList(page);
-    await expect(page.getByText("Subject", { exact: false }).first()).toBeVisible({ timeout: 60_000 });
+    // The declared columns, not an ID fallback.
+    await expect(page.getByText("Chủ đề", { exact: false }).first()).toBeVisible({ timeout: 60_000 });
     await expect(page.getByText("Customer", { exact: false }).first()).toBeVisible();
+    // An actual row from the tenant's own data, addressed by its server-allocated name.
+    await expect(page.getByText(/^FV-\d{4}-\d{4}$/).first()).toBeVisible({ timeout: 60_000 });
   });
 
   test("logging out returns the Desk to the login screen", async ({ page }) => {

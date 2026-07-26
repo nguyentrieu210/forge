@@ -84,6 +84,44 @@ listing is paginated, and one unreachable tenant does not stop the others.
 header on non-Frappe paths, so these endpoints are only reachable through the
 dispatcher.
 
+### Two more, found by pointing a real browser at the deployment
+
+The Desk's list view had never populated. Two façade defects, each a CLASS rather than a
+one-off, and neither reachable from a server-side test.
+
+**3. `getdoctype` and `getdoc` were wrapped in `message`, and must not be.**
+
+Frappe's own handler does not return these payloads — `frappe/desk/form/load.py` does
+`frappe.response.docs.extend(docs)` and `frappe.response["docinfo"] = docinfo`, so the
+keys are top-level and unwrapped. Checked against the pinned v16.19.0 source, not from
+memory.
+
+The failure is silent. The Desk reads `r.docs` straight off the body, gets `undefined`,
+and raises DoesNotExistError **on an HTTP 200**, logging nothing. Its list query is gated
+on metadata having loaded, so no list request was ever issued — which is exactly why the
+symptom read as "the client is choosing not to query".
+
+`client-contract.test.mjs` could not catch it: it feeds `toFrappeMetaBundle` directly and
+so bypasses the envelope. The HTTP smoke could not either — its `unwrap()` reads
+`message`, so it asserted the bug rather than the contract.
+
+**4. List projections were not translated, so `modified` was rejected.**
+
+The Desk asks for `modified` on every list; the kernel column is `modified_at`. Filters
+and sort went through `toKernelField`, projections did not, so the server answered
+`Field is not allowed: modified` for every doctype. Four call sites: list, contextual
+list, `get_value`, export.
+
+`modified` is also not a column — it is a token packed from `modified_at` AND `version`,
+so requesting it must pull both. Dropping `version` would have produced rows with no
+`modified` at all, and the Desk's inline editing would then send an empty token, turning
+every inline save into a refused stale write.
+
+Both are now pinned: the smoke asserts `docs` is top-level **and** that no `message` key
+exists (24 → 26 checks), and the Workerd suite covers both shapes and the projection
+(70 → 72). The browser suite went from 4 passed + 1 fixme to **5 passed, 0 skipped**,
+run against this deployment.
+
 ### Known limits of this deployment
 
 - **Single hostname, therefore one tenant.** The gateway derives the tenant from the
