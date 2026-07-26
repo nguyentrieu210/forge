@@ -26,16 +26,28 @@ cũng cắm vào được.
 | 1 | Lớp vỏ Frappe Tier 1 + phiên cookie | ✅ source + test; **chưa chạy live** |
 | 2 | Vá tầng framework (amend, rename, autoname, Dynamic Link, mandatory_depends_on, modified_by) | ✅ trừ `is_single`, `track_seen`, global search |
 | 3 | Custom Field + Property Setter | ✅ source + test |
-| 4 | Gói app + cài app | ◐ manifest + installer xong, chưa có endpoint/CLI |
-| 5 | Hooks qua Workers for Platforms | ☐ |
-| 6 | Bề rộng view + i18n | ☐ |
-| 7 | Deploy + cổng phát hành | ☐ |
+| 4 | Gói app + cài app | ✅ manifest + installer; chưa có CLI đóng gói |
+| 5 | Hooks qua Workers for Platforms | ✅ |
+| 6 | Tier 2 + i18n + global search | ✅ · Tier 4 (kanban/tree/import/print/report) ☐ |
+| 7 | Deploy + cổng phát hành | ◐ xem bảng dưới |
 
-Cổng đã chạy thật trên máy: **238/238 test PASS**, SQL 6/6 gate PASS, typecheck
-server + client exit 0.
+Cổng đã chạy thật trên máy — chi tiết ở [docs/VERIFICATION.md](docs/VERIFICATION.md):
 
-**Chưa chạy end-to-end với FE, chưa deploy lần nào.** Xem [docs/ROADMAP.md](docs/ROADMAP.md)
-cho lộ trình và [docs/API_SURFACE.md](docs/API_SURFACE.md) cho 68 endpoint.
+| | |
+|---|---|
+| Test Node/domain | **248/248 PASS** |
+| Gate SQL (migration 0001–0013) | **6/6 PASS** |
+| Workerd tenant-worker / query-worker | **23/23 · 3/3 PASS** |
+| Web typecheck + Vite production build | exit 0 |
+| Client build production (7 package + 2 app) | exit 0 |
+| Client selfcheck | 74 nhóm assert xanh |
+
+Ba hạng mục bản CloudForge gốc ghi `NOT VERIFIED` / `NOT RUN` — Workerd, web
+typecheck, Vite build — **nay đã chạy và xanh**.
+
+**Chưa chạy end-to-end FE ⇄ lớp vỏ, chưa deploy lần nào.** Deploy cần API token
+Cloudflare của bạn. Xem [docs/ROADMAP.md](docs/ROADMAP.md) và
+[docs/API_SURFACE.md](docs/API_SURFACE.md).
 
 ## Chạy
 
