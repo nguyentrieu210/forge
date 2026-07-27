@@ -2,9 +2,9 @@
   "format": 1,
   "package": "cloudforge",
   "version": "1.0.0",
-  "generated_at": "2026-07-27T05:17:52.185062+00:00",
+  "generated_at": "2026-07-27T05:18:36.982838+00:00",
   "file_count": 640,
-  "tree_sha256": "ee42167dc3424517295530d2c83b4f237d7df977a1a98b740978ec4bff23d347",
+  "tree_sha256": "4f45b0aab1ce0503ba6d43d58dff6ca8875cdb405358be308261f6415b2602ec",
   "excluded": [
     ".git",
     ".wrangler",
@@ -32,7 +32,7 @@
     },
     {
       "path": "BUILD_REPORT.md",
-      "sha256": "3139e3be7e4f31ebee50e15e112896d0d283ba37ffc01e3c4e7e7205e0a264a0",
+      "sha256": "a5ad1bf31e162eeb3e86fc788c07e0c5a98aa4e563f2fb2e138e0270d0442e4d",
       "size": 3051
     },
     {
@@ -157,7 +157,7 @@
     },
     {
       "path": "VERIFY.json",
-      "sha256": "9c2a722fb592048bbd114fb00b66210c7d88f9f617396436c7294ef79eec981e",
+      "sha256": "bddddd3987b82e4a4aa668614c5e36c6f7da3382247a56c2ffe6a4863099994a",
       "size": 3788
     },
     {
@@ -427,8 +427,8 @@
     },
     {
       "path": "apps/gateway-worker/worker-configuration.d.ts",
-      "sha256": "5843e47565b1d99a386680c9e7dcd56f40b3496a0ff0a82a20a0b7d8c9929f94",
-      "size": 1129
+      "sha256": "69f0f91d77c629216f6b99c9e3b41ee33c2bc420a443188b8ee75a2072568edd",
+      "size": 1243
     },
     {
       "path": "apps/gateway-worker/wrangler.jsonc",
