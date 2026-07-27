@@ -2,7 +2,7 @@
   "$schema": "./brief.schema.json",
   "id": "center",
   "name": "CloudForge Center",
-  "version": "1.11.0",
+  "version": "1.12.0",
   "module": "Trung tâm",
   "domain": "center",
   "brand": "blue",
@@ -60,6 +60,50 @@
 
   "fixtures": [
     { "type": "Company", "name": "Hải Đăng", "data": { "label": "Trung tâm Ngoại ngữ Hải Đăng", "abbr": "HD", "default_currency": "VND" } }
+  ],
+
+  "//reports": [
+    "Bốn câu hỏi một chủ trung tâm hỏi hàng tuần. Mỗi báo cáo đọc ĐÚNG MỘT doctype và",
+    "quyền kiểm trên chính doctype đó, nên kế toán thấy học phí còn giáo viên thì không.",
+    "Xuất Excel/CSV do màn báo cáo chung lo, không cần khai gì thêm."
+  ],
+  "reports": [
+    {
+      "name": "Ghi danh theo lớp",
+      "doctype": "Enrollment",
+      "columns": ["class_group:Link Lớp học", "count(name):Int Số ghi danh", "sum(discount_amount):Currency Tổng giảm giá"],
+      "groupBy": "class_group",
+      "orderBy": "count(name) desc",
+      "filters": ["class_group", "tuition_plan", "enrollment_type", "workflow_state"],
+      "icon": "users"
+    },
+    {
+      "name": "Học viên theo nguồn tuyển sinh",
+      "doctype": "Student",
+      "columns": ["source:Data Nguồn", "count(name):Int Số học viên"],
+      "groupBy": "source",
+      "orderBy": "count(name) desc",
+      "filters": ["branch", "student_status", "source"],
+      "icon": "megaphone"
+    },
+    {
+      "name": "Chuyên cần theo buổi",
+      "doctype": "Attendance Record",
+      "columns": ["attendance_status:Data Trạng thái", "count(name):Int Số lượt"],
+      "groupBy": "attendance_status",
+      "orderBy": "count(name) desc",
+      "filters": ["class_session", "student", "attendance_status"],
+      "icon": "clipboard-check"
+    },
+    {
+      "name": "Chi phí giáo viên theo buổi",
+      "doctype": "Teacher",
+      "columns": ["branch:Link Cơ sở", "count(name):Int Số giáo viên", "sum(rate_per_session):Currency Tổng đơn giá/buổi", "avg(rate_per_session):Currency Đơn giá trung bình"],
+      "groupBy": "branch",
+      "orderBy": "sum(rate_per_session) desc",
+      "filters": ["branch", "employment_type", "teacher_status"],
+      "icon": "wallet"
+    }
   ],
 
   "doctypes": [

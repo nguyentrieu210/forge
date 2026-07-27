@@ -50,6 +50,7 @@ export function writeTenantConfig({ tenant, databaseId, databaseName = `cloudfor
     durable_objects: { bindings: [{ name: "AGGREGATES", class_name: "AggregateCoordinator" }] },
     migrations: [{ tag: "v1", new_sqlite_classes: ["AggregateCoordinator"] }],
     queues: { producers: [{ binding: "OUTBOX_QUEUE", queue: "cloudforge-outbox" }] },
+    services: [{ binding: "SOCIAL_INGRESS", service: "cloudforge-social-ingress" }],
     /**
      * Cho tenant gọi được Worker RIÊNG của app (validator, app method, hook).
      *

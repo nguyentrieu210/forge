@@ -26,7 +26,7 @@ import {
 } from "../../../packages/frappe-model/src/index.js";
 import { AggregateCoordinator } from "./aggregate-do.js";
 import { publishPendingOutbox } from "../../../packages/outbox/src/index.js";
-import { D1ReportService } from "../../../packages/query/src/index.js";
+import { AppReportService, D1ReportService } from "../../../packages/query/src/index.js";
 import { ingestFacebookMessage, storeFacebookOAuthPages, type FacebookOAuthPage } from "../../../packages/social-commerce/src/tenant-handler.js";
 import type { SocialQueueMessage } from "../../../packages/social-commerce/src/index.js";
 import { routeSocialCommerceApi } from "../../../packages/social-commerce/src/api.js";
@@ -843,6 +843,7 @@ async function serveFrappeApiInner(
     users,
     search: new D1SearchStore(env.DB),
     reports: new D1ReportService(env.DB),
+    appReports: new AppReportService(env.DB),
     deskViews: new D1DeskViewStore(env.DB),
     async runCommand(command) {
       // Every write in the façade funnels through here, so this is where an app's

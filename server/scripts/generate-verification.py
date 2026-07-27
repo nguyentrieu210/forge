@@ -141,7 +141,22 @@ verification = {
     "dependency_versions_pinned": True,
     "dependency_lockfile_present": (root / "package-lock.json").exists(),
 }
-(root / "VERIFY.json").write_text(json.dumps(verification, indent=2) + "\n", encoding="utf-8")
+
+# Keep generated evidence byte-for-byte stable when the verified facts have not
+# changed.  The release manifest is checked after this script runs, so rewriting
+# only the timestamp would otherwise make every clean release fail its own
+# immutable-content gate.
+verification_path = root / "VERIFY.json"
+if verification_path.exists():
+    try:
+        previous = json.loads(verification_path.read_text(encoding="utf-8"))
+        previous_facts = {key: value for key, value in previous.items() if key != "generated_at"}
+        current_facts = {key: value for key, value in verification.items() if key != "generated_at"}
+        if previous_facts == current_facts and isinstance(previous.get("generated_at"), str):
+            verification["generated_at"] = previous["generated_at"]
+    except (json.JSONDecodeError, OSError):
+        pass
+verification_path.write_text(json.dumps(verification, indent=2) + "\n", encoding="utf-8")
 
 report = f"""# Build Verification Report — v{version}
 

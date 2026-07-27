@@ -363,3 +363,119 @@ function quoteIdentifier(value: string): string {
   if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(value)) throw errors.validation(`Unsafe SQL identifier: ${value}`);
   return `"${value}"`;
 }
+
+// ── Reports an APP declares ──────────────────────────────────────────────────
+/**
+ * Compiling a report that came from an app manifest rather than from `DEFINITIONS`.
+ *
+ * The definitions above read purpose-built SQL views for accounting, where the shape of
+ * a ledger is fixed and the platform owns it. An app's data has no such view: it lives in
+ * `documents` as JSON, one row per record. So an app report is compiled against that
+ * table with `json_extract`, which is the same access path the list view already uses.
+ *
+ * WHAT AN APP CANNOT DO HERE, and why each is closed rather than merely undocumented:
+ *   · Name a table. The source is always `documents`, filtered to ONE doctype.
+ *   · Reach another tenant. `tenant_id` is the first bound parameter, always.
+ *   · Reach another app. The doctype is checked against the app's own at parse time, and
+ *     permission is asserted by the caller before this runs.
+ *   · Inject anything. Every identifier is matched against a strict pattern; every value
+ *     is a bound parameter. Nothing an app or a user writes is concatenated into SQL.
+ *
+ * The result is that a report is data an app carries, with the same blast radius as a
+ * list view — not a hole through which an app can query the database.
+ */
+export interface AppReportSpec {
+  name: string;
+  doctype: string;
+  columns: Array<{ field: string; label: string; type: string; aggregate?: string }>;
+  group_by?: string;
+  order_by?: { column: string; direction: "asc" | "desc" };
+  filters: string[];
+  limit: number;
+}
+
+const APP_REPORT_FIELD = /^[a-z_][a-z0-9_]*$/;
+const APP_REPORT_OPERATORS = new Set<FilterOperator>(["=", "!=", ">", ">=", "<", "<=", "in", "like", "is_null"]);
+/** Real columns of `documents`. Everything else lives inside `payload_json`. */
+const RECORD_COLUMNS = new Set(["name", "owner", "status", "docstatus", "created_at", "modified_at"]);
+const AGGREGATE_SQL: Record<string, (expression: string) => string> = {
+  // `count` counts ROWS, so its field is irrelevant — counting a JSON field would silently
+  // skip records where that field is absent, which is not what "how many" ever means.
+  count: () => "COUNT(*)",
+  sum: (expression) => `COALESCE(SUM(CAST(${expression} AS REAL)),0)`,
+  avg: (expression) => `AVG(CAST(${expression} AS REAL))`,
+  min: (expression) => `MIN(${expression})`,
+  max: (expression) => `MAX(${expression})`,
+};
+
+function fieldExpression(field: string): string {
+  if (!APP_REPORT_FIELD.test(field)) throw errors.validation(`Unsafe report field: ${field}`);
+  if (RECORD_COLUMNS.has(field)) return `"${field}"`;
+  return `json_extract(payload_json,'$.${field}')`;
+}
+
+export function compileAppReport(spec: AppReportSpec, request: QueryRequest): CompiledQuery {
+  const params: unknown[] = [request.tenant_id, spec.doctype];
+  // `docstatus<>2` — a cancelled document is not deleted, but it must not be counted.
+  // Leaving it in makes every total quietly too big, and nothing on the screen says why.
+  const where = ["tenant_id=?1", "doctype=?2", "docstatus<>2"];
+
+  for (const filter of request.filters ?? []) {
+    if (!spec.filters.includes(filter.field)) throw errors.validation(`Filter is not allowed: ${filter.field}`);
+    if (!APP_REPORT_OPERATORS.has(filter.operator)) throw errors.validation(`Filter operator is not allowed: ${String(filter.operator)}`);
+    const expression = fieldExpression(filter.field);
+    if (filter.operator === "is_null") { where.push(`${expression} IS NULL`); continue; }
+    if (filter.operator === "in") {
+      if (!Array.isArray(filter.value) || filter.value.length === 0) throw errors.validation(`IN filter requires a non-empty array: ${filter.field}`);
+      if (filter.value.length > 80) throw errors.validation("IN filter exceeds the parameter budget");
+      where.push(`${expression} IN (${filter.value.map((value) => { params.push(value); return `?${params.length}`; }).join(",")})`);
+      continue;
+    }
+    params.push(filter.value ?? null);
+    where.push(`${expression} ${filter.operator === "like" ? "LIKE" : filter.operator} ?${params.length}`);
+  }
+
+  // Aliased so the client keys rows the same way it does everywhere else; without an
+  // alias, `COALESCE(SUM(...),0)` comes back as the column NAME and nothing matches.
+  const alias = (column: AppReportSpec["columns"][number]) => (column.aggregate ? `${column.aggregate}_${column.field}` : column.field);
+  const selected = spec.columns.map((column) => {
+    const expression = fieldExpression(column.field);
+    const sql = column.aggregate ? AGGREGATE_SQL[column.aggregate]?.(expression) : expression;
+    if (!sql) throw errors.validation(`Unknown aggregate: ${column.aggregate}`);
+    return `${sql} AS "${alias(column)}"`;
+  });
+  const groupSql = spec.group_by ? ` GROUP BY ${fieldExpression(spec.group_by)}` : "";
+  const ordered = spec.order_by ? spec.columns.find((column) => column.field === spec.order_by?.column) : undefined;
+  const orderSql = ordered ? ` ORDER BY "${alias(ordered)}" ${spec.order_by?.direction === "desc" ? "DESC" : "ASC"}` : "";
+
+  const limit = Math.max(1, Math.min(request.limit ?? spec.limit, spec.limit));
+  const offset = Math.max(0, request.offset ?? 0);
+  params.push(limit, offset);
+
+  return {
+    sql: `SELECT ${selected.join(", ")} FROM documents WHERE ${where.join(" AND ")}${groupSql}${orderSql} LIMIT ?${params.length - 1} OFFSET ?${params.length}`,
+    params,
+    columns: spec.columns.map((column) => ({ field: alias(column), label: column.label, type: column.type as ReportColumn["type"] })),
+    prepared: false,
+  };
+}
+
+export class AppReportService {
+  constructor(private readonly db: D1Database) {}
+
+  async run(spec: AppReportSpec, request: QueryRequest): Promise<JsonObject> {
+    const compiled = compileAppReport(spec, request);
+    const result = await this.db.prepare(compiled.sql).bind(...compiled.params).all<Record<string, JsonValue>>();
+    return {
+      prepared: false,
+      report: spec.name,
+      columns: compiled.columns as unknown as JsonValue,
+      result: (result.results ?? []) as unknown as JsonValue,
+      row_count: result.results?.length ?? 0,
+      message: null,
+      chart: null,
+      report_summary: [],
+      skip_total_row: false,
+    };
+  }
+}

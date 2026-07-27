@@ -1,7 +1,20 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import { QueryCompiler } from "../dist/packages/query/src/index.js";
+import { compileAppReport, QueryCompiler } from "../dist/packages/query/src/index.js";
+
+const appReport = {
+  name: "Enrollment by class",
+  doctype: "Enrollment",
+  columns: [
+    { field: "class_group", label: "Class", type: "Link" },
+    { field: "name", label: "Enrollments", type: "Int", aggregate: "count" },
+  ],
+  group_by: "class_group",
+  order_by: { column: "name", direction: "desc" },
+  filters: ["class_group"],
+  limit: 500,
+};
 
 test("query compiler injects tenant scope and parameterizes user values", () => {
   const compiled = new QueryCompiler().compile({
@@ -15,6 +28,25 @@ test("query compiler injects tenant scope and parameterizes user values", () => 
   assert.ok(!compiled.sql.includes("OR 1=1"));
   assert.equal(compiled.params[1], "CUST-1' OR 1=1 --");
   assert.equal(compiled.prepared, false);
+});
+
+test("app report compiler stays on one tenant and one manifest-owned doctype", () => {
+  const compiled = compileAppReport(appReport, {
+    report: appReport.name,
+    tenant_id: "tenant-a",
+    filters: [{ field: "class_group", operator: "=", value: "CLASS-1' OR 1=1 --" }],
+  });
+  assert.match(compiled.sql, /FROM documents WHERE tenant_id=\?1 AND doctype=\?2/);
+  assert.ok(!compiled.sql.includes("OR 1=1"));
+  assert.deepEqual(compiled.params.slice(0, 3), ["tenant-a", "Enrollment", "CLASS-1' OR 1=1 --"]);
+});
+
+test("app report compiler refuses a forged filter operator even if a caller bypasses request parsing", () => {
+  assert.throws(() => compileAppReport(appReport, {
+    report: appReport.name,
+    tenant_id: "tenant-a",
+    filters: [{ field: "class_group", operator: "= ?3 OR 1=1 --", value: "x" }],
+  }), (error) => error.code === "VALIDATION_ERROR");
 });
 
 test("query compiler blocks unknown fields and moves large result requests to prepared mode", () => {

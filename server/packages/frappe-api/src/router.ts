@@ -33,7 +33,7 @@ import {
 } from "../../frappe-model/src/index.js";
 import type { CustomFieldRecord, CustomizationStore, D1SearchStore, PropertySetterRecord } from "../../frappe-model/src/index.js";
 import type { D1UserStore } from "../../auth/src/index.js";
-import type { D1ReportService, QueryFilter } from "../../query/src/index.js";
+import { parseQueryRequest, type AppReportService, type AppReportSpec, type D1ReportService, type QueryFilter } from "../../query/src/index.js";
 import { hashPassword, verifyPassword } from "./password.js";
 import {
   appMethodTarget, combinedNavigation, dispatchAppMethod, navItemPath,
@@ -76,6 +76,15 @@ export interface FrappeRouterContext {
   search: D1SearchStore;
   /** Server-defined report engine. */
   reports: D1ReportService;
+  /**
+   * The same engine for reports an APP declares.
+   *
+   * A second service rather than a case inside the first: the platform's reports read
+   * purpose-built SQL views and an app's read `documents`. Folding both into one compiler
+   * would mean a single function deciding, per report, which of two entirely different
+   * access paths applies — and getting that wrong reads another app's rows.
+   */
+  appReports: AppReportService;
   /** Kanban boards and the notification log — per-user Desk state. */
   deskViews: D1DeskViewStore;
   /** CSRF nonce of the current session, for the boot payload. */
@@ -1841,6 +1850,32 @@ async function runQueryReport(args: FrappeArgs, context: FrappeRouterContext): P
   const forceSynchronous = args.bool("ignore_prepared_report", false);
   const rawFilters = args.json<JsonValue>("filters");
 
+  /**
+   * A report an installed app declares takes precedence over nothing and shadows nothing:
+   * it is looked up FIRST because the platform's own names are fixed and few, so an app
+   * report can only ever be a name the platform does not have.
+   *
+   * Permission is asserted against the DOCTYPE the report reads, not against the report's
+   * name. Frappe conflates the two — the report is named after its doctype — but an app
+   * report is called "Doanh thu theo lớp" and reads `Enrollment`, and checking the name
+   * would look up a doctype that does not exist and let everyone through.
+   */
+  const appReport = await findAppReport(report, context);
+  if (appReport) {
+    await context.permissions.assert({
+      actor: context.actor, tenantId: context.tenantId,
+      doctype: appReport.doctype, action: "report",
+    });
+    return await context.appReports.run(appReport, {
+      tenant_id: context.tenantId,
+      report,
+      filters: normalizeReportFilters(rawFilters),
+      order_by: [],
+      limit: appReport.limit,
+      offset: 0,
+    }) as JsonObject;
+  }
+
   await context.permissions.assert({
     actor: context.actor, tenantId: context.tenantId,
     // Report access is gated on the report permission of the doctype the report is
@@ -1874,10 +1909,31 @@ async function runQueryReport(args: FrappeArgs, context: FrappeRouterContext): P
   };
 }
 
+/**
+ * The installed app that declares this report, or null.
+ *
+ * Reports live in the manifest rather than in `app_objects` because they own no schema:
+ * nothing else can collide with them, and uninstalling the app removes the row that
+ * carries them. Two apps declaring the same report NAME is possible, and the first
+ * installed wins — stated here rather than left to be discovered, but not worth a
+ * migration to prevent, since a report that shadows another is visibly the wrong report
+ * while a missing DocType is a broken app.
+ */
+async function findAppReport(name: string, context: FrappeRouterContext): Promise<AppReportSpec | null> {
+  for (const installed of await context.apps.list(context.tenantId)) {
+    for (const report of installed.reports ?? []) {
+      if (report.name === name) return report;
+    }
+  }
+  return null;
+}
+
 /** Frappe report filters arrive as an object; the report engine wants a list. */
 function normalizeReportFilters(raw: JsonValue | undefined): QueryFilter[] {
   if (raw === undefined || raw === null || raw === "") return [];
-  if (Array.isArray(raw)) return raw as unknown as QueryFilter[];
+  if (Array.isArray(raw)) {
+    return parseQueryRequest({ report: "Report Filter Validation", filters: raw }, "__filter_validation__").filters ?? [];
+  }
   if (typeof raw !== "object") throw errors.validation("filters must be an object or array");
   const filters: QueryFilter[] = [];
   for (const [field, value] of Object.entries(raw as JsonObject)) {
@@ -1888,7 +1944,9 @@ function normalizeReportFilters(raw: JsonValue | undefined): QueryFilter[] {
     }
     filters.push({ field, operator: "=", value });
   }
-  return filters;
+  // Frappe's array form carries the operator as user input. Run both forms through
+  // the query package's parser before a compiler can place that operator in SQL.
+  return parseQueryRequest({ report: "Report Filter Validation", filters }, "__filter_validation__").filters ?? [];
 }
 
 // ---- data import ------------------------------------------------------------

@@ -24,6 +24,8 @@ export interface InstalledAppRecord {
   /** Pre-commit checks this app registered. Carried on the record so the write path
    * does not have to re-parse every manifest on every write. */
   validators: AppManifest["validators"];
+  /** Tabular reports this app declares, so running one needs no second read. */
+  reports: AppManifest["reports"];
   /** Presentation, so the generic client can be told what to render without a build. */
   client: AppManifest["client"] | null;
 }
@@ -74,6 +76,7 @@ export class AppInstaller {
         nav: manifest.nav ?? [],
         worker: manifest.worker ?? null,
         validators: manifest.validators ?? [],
+        reports: manifest.reports ?? [],
         client: manifest.client ?? null,
       };
     });
@@ -94,10 +97,24 @@ export class AppInstaller {
     const contentHash = await sha256Hex(packageValue);
 
     const existing = await this.db.prepare(
-      `SELECT version, content_hash FROM installed_apps WHERE tenant_id=?1 AND app_id=?2`,
-    ).bind(tenantId, manifest.id).first<{ version: string; content_hash: string }>();
+      `SELECT version, content_hash, manifest_json FROM installed_apps WHERE tenant_id=?1 AND app_id=?2`,
+    ).bind(tenantId, manifest.id).first<{ version: string; content_hash: string; manifest_json: string }>();
 
-    if (existing?.content_hash === contentHash) {
+    /**
+     * Unchanged means the package is the same AND this platform reads it the same way.
+     *
+     * The hash alone is not enough, and the gap is not theoretical: the platform gained
+     * app-declared reports, the identical package was re-installed on the upgraded
+     * tenant, and the hash matched — so the stored manifest kept the OLD parse, with no
+     * reports in it, and every report answered "Unknown report". Nothing looked wrong:
+     * the install reported success and the app's version was current.
+     *
+     * Comparing the stored manifest against what the current parser produces catches
+     * exactly that case and nothing else. Both strings come from `JSON.stringify` of the
+     * same function, so they differ only when the parser's OUTPUT differs — which is
+     * precisely when the stored copy is stale.
+     */
+    if (existing?.content_hash === contentHash && existing.manifest_json === JSON.stringify(manifest)) {
       return { app_id: manifest.id, version: manifest.version, outcome: "unchanged", doctypes: 0, workflows: 0, print_formats: 0, roles: 0, fixtures: 0 };
     }
     if (existing && !satisfiesVersion(manifest.version, existing.version)) {

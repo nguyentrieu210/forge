@@ -26,6 +26,9 @@ export default {
       if (!constantTimeEqual(request.headers.get("authorization") ?? "", `Bearer ${env.INTERNAL_SERVICE_TOKEN}`)) {
         return json({ error: { code: "INTERNAL_AUTH_REQUIRED" } }, 401);
       }
+      if (!env.META_APP_ID || !env.META_APP_SECRET || !env.PAGE_DIRECTORY_HMAC_SECRET) {
+        return json({ error: { code: "FACEBOOK_NOT_CONFIGURED" } }, 503);
+      }
       const body = await request.json() as Record<string, unknown>;
       const tenantId = requireText(body.tenant_id, "tenant_id", 128);
       const actorId = requireText(body.actor_id, "actor_id", 320);
@@ -57,12 +60,16 @@ export default {
       return finishFacebookOAuth(url, env);
     }
     if (request.method === "GET" && url.pathname === "/webhooks/facebook") {
+      if (!env.META_VERIFY_TOKEN) return new Response("Facebook integration is not configured", { status: 503 });
       if (url.searchParams.get("hub.mode") !== "subscribe" || url.searchParams.get("hub.verify_token") !== env.META_VERIFY_TOKEN) {
         return new Response("Forbidden", { status: 403 });
       }
       return new Response(url.searchParams.get("hub.challenge") ?? "", { headers: { "content-type": "text/plain" } });
     }
     if (request.method !== "POST" || url.pathname !== "/webhooks/facebook") return new Response("Not found", { status: 404 });
+    if (!env.META_APP_SECRET || !env.PAGE_DIRECTORY_HMAC_SECRET) {
+      return new Response("Facebook integration is not configured", { status: 503 });
+    }
     const rawBody = await readBoundedBody(request, 1_000_000);
     if (!await verifyMetaSignature(rawBody, request.headers.get("x-hub-signature-256"), env.META_APP_SECRET)) {
       return new Response("Invalid signature", { status: 401 });

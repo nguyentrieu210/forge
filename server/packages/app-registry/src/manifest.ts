@@ -71,6 +71,33 @@ export interface AppValidator {
   actions?: string[];
 }
 
+/** Aggregates a report column may apply. `count` ignores its field and counts rows. */
+export type AppReportAggregate = "count" | "sum" | "avg" | "min" | "max";
+
+export interface AppReportColumn {
+  /** A fieldname of the report's doctype, or one of the record's own columns. */
+  field: string;
+  label: string;
+  /** DocField type, so the client formats currency as currency and dates as dates. */
+  type: string;
+  aggregate?: AppReportAggregate;
+}
+
+export interface AppReport {
+  /** Also the id in `/report/<name>` and in `frappe.desk.query_report.run`. */
+  name: string;
+  label: string;
+  /** The doctype read, and the doctype whose `report` permission is required. */
+  doctype: string;
+  columns: AppReportColumn[];
+  /** A single grouping field. Absent means one row per document. */
+  group_by?: string;
+  order_by?: { column: string; direction: "asc" | "desc" };
+  /** Fieldnames a user may filter on. Anything else is refused. */
+  filters: string[];
+  limit: number;
+}
+
 /**
  * How this app wants to be PRESENTED — the half of an app that used to live only in a
  * hand-written client bundle.
@@ -140,6 +167,21 @@ export interface AppManifest {
   hooks: AppHook[];
   /** Pre-commit checks. Like `hooks`, useless without a `worker`. */
   validators: AppValidator[];
+  /**
+   * Tabular reports over this app's OWN doctypes.
+   *
+   * Reports used to be a fixed table inside the platform, over hand-written SQL views
+   * for accounting. That is the right shape for the ledger, and the wrong shape for
+   * everything else: an app shipped as data could not have a single report, so every
+   * customer asking for "doanh thu theo lớp" needed a platform release. Declaring them
+   * here makes a report the same kind of thing as a DocType — data the app carries.
+   *
+   * They are NOT arbitrary SQL. A report names a doctype, fields of that doctype, and
+   * at most one grouping; the compiler builds the statement. An app cannot reach another
+   * app's data, cannot join, and cannot express anything the permission layer would not
+   * already allow it to read.
+   */
+  reports: AppReport[];
   /** Presentation. Absent means "the generic client picks sane defaults". */
   client?: AppClientManifest;
 }
@@ -229,6 +271,9 @@ export function parseAppManifest(value: unknown): AppManifest {
   // doctype. Refusing the manifest is the only answer that is not a surprise later.
   if (validators.length && !worker) throw errors.validation(`${id} declares validators but no worker to run them`);
 
+  const reports = array(input.reports ?? [], "reports").map((entry, index) => parseReport(entry, index, doctypeNames));
+  assertUnique(reports.map((report) => report.name), "report name");
+
   const client = input.client === undefined ? undefined : parseClientManifest(input.client, nav, doctypeNames);
 
   return {
@@ -245,6 +290,7 @@ export function parseAppManifest(value: unknown): AppManifest {
     nav,
     hooks,
     validators,
+    reports,
     ...(worker === undefined ? {} : { worker }),
     ...(client === undefined ? {} : { client }),
   };
@@ -362,6 +408,118 @@ function parseValidator(value: JsonValue, index: number): AppValidator {
     return name;
   });
   return { doctype, actions };
+}
+
+const REPORT_AGGREGATES = new Set<AppReportAggregate>(["count", "sum", "avg", "min", "max"]);
+/**
+ * A fieldname the compiler will place into SQL.
+ *
+ * Checked HERE rather than at compile time because a manifest is stored and re-read: a
+ * name that reaches the database is a name that will be compiled on every run, by code
+ * that has long since lost the context to reject it. The pattern is deliberately narrower
+ * than what a DocField allows — no dots, no quotes, no spaces — so nothing that survives
+ * it can change the shape of a statement.
+ */
+const REPORT_FIELD = /^[a-z_][a-z0-9_]*$/;
+
+/**
+ * The record's own columns, which are real SQL columns rather than JSON payload fields.
+ *
+ * Compiling `name` as `json_extract(payload_json,'$.name')` returns NULL for every row —
+ * a report whose key column is empty, which reads as "no data" rather than as a mistake.
+ */
+export const REPORT_RECORD_COLUMNS = new Set(["name", "owner", "status", "docstatus", "created_at", "modified_at"]);
+
+function parseReport(value: JsonValue, index: number, doctypeNames: Set<string>): AppReport {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw errors.validation(`reports[${index}] must be an object`);
+  }
+  const entry = value as JsonObject;
+  const name = text(entry.name, `reports[${index}].name`, 120);
+  const doctype = text(entry.doctype, `reports[${index}].doctype`, 160);
+  // A report over a doctype the app does not ship would either read another app's data
+  // or read nothing; both are worse than being refused at install.
+  if (!doctypeNames.has(doctype)) {
+    throw errors.validation(`reports[${index}] (${name}) reads ${doctype}, which this app does not define`);
+  }
+
+  const columns = array(entry.columns, `reports[${index}].columns`).map((raw, position) => {
+    const where = `reports[${index}].columns[${position}]`;
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw errors.validation(`${where} must be an object`);
+    const column = raw as JsonObject;
+    const field = text(column.field, `${where}.field`, 120);
+    if (!REPORT_FIELD.test(field)) throw errors.validation(`${where}.field is not a plain fieldname: ${field}`);
+    const aggregate = column.aggregate === undefined ? undefined : text(column.aggregate, `${where}.aggregate`, 16);
+    if (aggregate !== undefined && !REPORT_AGGREGATES.has(aggregate as AppReportAggregate)) {
+      throw errors.validation(`${where}.aggregate must be one of ${[...REPORT_AGGREGATES].join(", ")}`);
+    }
+    return {
+      field,
+      label: text(column.label, `${where}.label`, 160),
+      type: text(column.type ?? "Data", `${where}.type`, 32),
+      ...(aggregate ? { aggregate: aggregate as AppReportAggregate } : {}),
+    };
+  });
+  if (!columns.length) throw errors.validation(`reports[${index}] (${name}) has no columns`);
+  assertUnique(columns.map((column) => `${column.aggregate ?? ""}:${column.field}`), `reports[${index}] column`);
+
+  const groupBy = entry.group_by === undefined ? undefined : text(entry.group_by, `reports[${index}].group_by`, 120);
+  if (groupBy !== undefined && !REPORT_FIELD.test(groupBy)) {
+    throw errors.validation(`reports[${index}].group_by is not a plain fieldname: ${groupBy}`);
+  }
+  const aggregated = columns.some((column) => column.aggregate);
+  if (aggregated && !groupBy) {
+    // SQLite would answer with one arbitrary row per bare column instead of erroring.
+    // A report that quietly reports the wrong number is worse than one that will not load.
+    throw errors.validation(`reports[${index}] (${name}) aggregates but declares no group_by`);
+  }
+  if (groupBy) {
+    const plain = columns.filter((column) => !column.aggregate);
+    for (const column of plain) {
+      if (column.field !== groupBy) {
+        throw errors.validation(`reports[${index}] (${name}) groups by ${groupBy}, so column ${column.field} must be aggregated`);
+      }
+    }
+  }
+
+  let orderBy: AppReport["order_by"];
+  if (entry.order_by !== undefined) {
+    if (!entry.order_by || typeof entry.order_by !== "object" || Array.isArray(entry.order_by)) {
+      throw errors.validation(`reports[${index}].order_by must be an object`);
+    }
+    const order = entry.order_by as JsonObject;
+    const column = text(order.column, `reports[${index}].order_by.column`, 120);
+    const direction = text(order.direction ?? "asc", `reports[${index}].order_by.direction`, 8);
+    if (direction !== "asc" && direction !== "desc") throw errors.validation(`reports[${index}].order_by.direction must be asc or desc`);
+    // Ordering by something the report does not select cannot be rendered, and under a
+    // GROUP BY it is not even meaningful.
+    if (!columns.some((candidate) => candidate.field === column)) {
+      throw errors.validation(`reports[${index}].order_by.column is not one of the report's columns: ${column}`);
+    }
+    orderBy = { column, direction };
+  }
+
+  const filters = array(entry.filters ?? [], `reports[${index}].filters`).map((raw, position) => {
+    const field = text(raw, `reports[${index}].filters[${position}]`, 120);
+    if (!REPORT_FIELD.test(field)) throw errors.validation(`reports[${index}].filters[${position}] is not a plain fieldname: ${field}`);
+    return field;
+  });
+
+  const limit = entry.limit === undefined ? 500 : Number(entry.limit);
+  if (!Number.isInteger(limit) || limit < 1 || limit > 5000) {
+    throw errors.validation(`reports[${index}].limit must be an integer between 1 and 5000`);
+  }
+
+  return {
+    name,
+    label: text(entry.label ?? name, `reports[${index}].label`, 160),
+    doctype,
+    columns,
+    ...(groupBy ? { group_by: groupBy } : {}),
+    ...(orderBy ? { order_by: orderBy } : {}),
+    filters,
+    limit,
+  };
 }
 
 function parseHook(value: JsonValue, index: number): AppHook {

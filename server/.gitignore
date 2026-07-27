@@ -32,4 +32,5 @@ apps/gateway-worker/public/
 
 # Tenant operations: SQL contains customer data; generated configs pin account IDs.
 backups/
+.backups/
 apps/tenant-worker/wrangler.*.generated.jsonc

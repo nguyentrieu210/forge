@@ -72,6 +72,60 @@ const fail = (message) => { throw new BriefError(message); };
  */
 const VALIDATOR_ACTIONS = ["create", "save", "submit", "cancel", "amend", "delete"];
 
+/**
+ * Một cột báo cáo, viết gọn: `<field>:<Type> Nhãn` hoặc `sum(<field>):<Type> Nhãn`.
+ *
+ * Cùng lối viết với field của doctype, vì cùng một người viết cả hai trong một file. Bốn
+ * phép gộp `sum/avg/min/max` tính trên field được nêu; `count(name)` đếm BẢN GHI — field
+ * chỉ để câu viết ra đọc được, server bỏ qua nó.
+ */
+const REPORT_COLUMN = /^(?:(count|sum|avg|min|max)\(([a-z_][a-z0-9_]*)\)|([a-z_][a-z0-9_]*))(?::([A-Za-z ]+))?(?:\s+(.+))?$/;
+
+function compileReportColumn(raw, where) {
+  if (typeof raw !== "string") fail(`${where} phải là chuỗi dạng "field:Type Nhãn".`);
+  const match = REPORT_COLUMN.exec(raw.trim());
+  if (!match) fail(`${where} không đọc được: "${raw}". Ví dụ: "class_group:Link Lớp học", "sum(amount):Currency Tổng tiền".`);
+  const [, aggregate, aggregateField, plainField, type, label] = match;
+  const field = aggregateField ?? plainField;
+  return {
+    field,
+    label: (label ?? titleize(field)).trim(),
+    type: (type ?? (aggregate === "count" ? "Int" : "Data")).trim(),
+    ...(aggregate ? { aggregate } : {}),
+  };
+}
+
+function compileReport(report, index, doctypeNames) {
+  const where = `reports[${index}]`;
+  if (!report?.name) fail(`${where} thiếu \`name\`.`);
+  if (!report.doctype) fail(`${where} (${report.name}) thiếu \`doctype\`.`);
+  if (!doctypeNames.has(report.doctype)) {
+    fail(`${where} (${report.name}) đọc doctype "${report.doctype}" mà brief này không khai. Có: ${[...doctypeNames].join(", ")}.`);
+  }
+  const columns = (report.columns ?? []).map((raw, position) => compileReportColumn(raw, `${where}.columns[${position}]`));
+  if (!columns.length) fail(`${where} (${report.name}) chưa có cột nào.`);
+
+  let orderBy;
+  if (report.orderBy) {
+    // "sum(amount) desc" — cùng cách viết với cột, để không phải nhớ hai cú pháp.
+    const [expression, direction = "asc"] = String(report.orderBy).trim().split(/\s+/);
+    const parsed = compileReportColumn(expression, `${where}.orderBy`);
+    if (direction !== "asc" && direction !== "desc") fail(`${where}.orderBy chỉ nhận "asc" hoặc "desc", nhận được "${direction}".`);
+    orderBy = { column: parsed.field, direction };
+  }
+
+  return {
+    name: report.name,
+    label: report.label ?? report.name,
+    doctype: report.doctype,
+    columns,
+    ...(report.groupBy ? { group_by: report.groupBy } : {}),
+    ...(orderBy ? { order_by: orderBy } : {}),
+    filters: report.filters ?? [],
+    limit: report.limit ?? 500,
+  };
+}
+
 function compileValidators(validators) {
   if (!Array.isArray(validators)) fail("`validators` phải là một mảng.");
   return validators.map((entry, index) => {
@@ -483,6 +537,30 @@ export function compileBrief(brief) {
     });
   }
 
+  /**
+   * Reports, and a menu entry for each.
+   *
+   * Emitted AFTER the doctypes so a report can name any of them, and each gets a nav item
+   * of kind `route` carrying `permission_doctype`. Without that, a report of enrolments
+   * would appear in the menu of a user who cannot read an enrolment — the entry would
+   * still refuse on open, but a menu that lists what you may not see is how people learn
+   * to distrust a menu.
+   */
+  const doctypeNames = new Set(doctypes.map((entry) => entry.name));
+  const reports = (brief.reports ?? []).map((report, index) => compileReport(report, index, doctypeNames));
+  for (const [index, report] of reports.entries()) {
+    const declared = brief.reports[index];
+    nav.push({
+      key: `report:${report.name}`,
+      label: report.label,
+      kind: "route",
+      route: `/report/${encodeURIComponent(report.name)}`,
+      permission_doctype: report.doctype,
+      icon: declared.icon ?? "bar-chart-3",
+      group: declared.group ?? "Báo cáo",
+    });
+  }
+
   // Home: the brief may name a doctype or an inbox by its short form; the encoded route
   // is computed here so an author never has to write `%3A` by hand — getting that wrong
   // is a redirect loop, and it is the kind of mistake nobody spots by reading.
@@ -516,6 +594,7 @@ export function compileBrief(brief) {
     // Validator cần một Worker để hỏi; parser của server từ chối cái này nếu thiếu, nên
     // hai thứ đi cùng nhau hoặc không có gì cả.
     validators: brief.worker ? compileValidators(brief.validators ?? []) : [],
+    reports,
     ...(brief.worker ? { worker: brief.worker } : {}),
     client: {
       ...(brief.brand ? { brand: brief.brand } : {}),
