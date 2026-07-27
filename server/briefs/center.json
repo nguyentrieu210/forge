@@ -2,7 +2,7 @@
   "$schema": "./brief.schema.json",
   "id": "center",
   "name": "CloudForge Center",
-  "version": "1.12.0",
+  "version": "1.13.0",
   "module": "Trung tâm",
   "domain": "center",
   "brand": "blue",
@@ -71,7 +71,7 @@
     {
       "name": "Ghi danh theo lớp",
       "doctype": "Enrollment",
-      "columns": ["class_group:Link Lớp học", "count(name):Int Số ghi danh", "sum(discount_amount):Currency Tổng giảm giá"],
+      "columns": ["class_group:Link(Class Group) Lớp học", "count(name):Int Số ghi danh", "sum(discount_amount):Currency Tổng giảm giá"],
       "groupBy": "class_group",
       "orderBy": "count(name) desc",
       "filters": ["class_group", "tuition_plan", "enrollment_type", "workflow_state"],
@@ -98,7 +98,7 @@
     {
       "name": "Chi phí giáo viên theo buổi",
       "doctype": "Teacher",
-      "columns": ["branch:Link Cơ sở", "count(name):Int Số giáo viên", "sum(rate_per_session):Currency Tổng đơn giá/buổi", "avg(rate_per_session):Currency Đơn giá trung bình"],
+      "columns": ["branch:Link(Branch) Cơ sở", "count(name):Int Số giáo viên", "sum(rate_per_session):Currency Tổng đơn giá/buổi", "avg(rate_per_session):Currency Đơn giá trung bình"],
       "groupBy": "branch",
       "orderBy": "sum(rate_per_session) desc",
       "filters": ["branch", "employment_type", "teacher_status"],

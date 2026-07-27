@@ -79,18 +79,24 @@ const VALIDATOR_ACTIONS = ["create", "save", "submit", "cancel", "amend", "delet
  * phép gộp `sum/avg/min/max` tính trên field được nêu; `count(name)` đếm BẢN GHI — field
  * chỉ để câu viết ra đọc được, server bỏ qua nó.
  */
-const REPORT_COLUMN = /^(?:(count|sum|avg|min|max)\(([a-z_][a-z0-9_]*)\)|([a-z_][a-z0-9_]*))(?::([A-Za-z ]+))?(?:\s+(.+))?$/;
+const REPORT_COLUMN = /^(?:(count|sum|avg|min|max)\(([a-z_][a-z0-9_]*)\)|([a-z_][a-z0-9_]*))(?::([A-Za-z ]+)(?:\(([^)]+)\))?)?(?:\s+(.+))?$/;
 
 function compileReportColumn(raw, where) {
   if (typeof raw !== "string") fail(`${where} phải là chuỗi dạng "field:Type Nhãn".`);
   const match = REPORT_COLUMN.exec(raw.trim());
-  if (!match) fail(`${where} không đọc được: "${raw}". Ví dụ: "class_group:Link Lớp học", "sum(amount):Currency Tổng tiền".`);
-  const [, aggregate, aggregateField, plainField, type, label] = match;
+  if (!match) fail(`${where} không đọc được: "${raw}". Ví dụ: "class_group:Link(Class Group) Lớp học", "sum(amount):Currency Tổng tiền".`);
+  const [, aggregate, aggregateField, plainField, type, options, label] = match;
   const field = aggregateField ?? plainField;
+  const fieldtype = (type ?? (aggregate === "count" ? "Int" : "Data")).trim();
+  // Cùng lối viết với field của doctype: `Link(Class Group)`. Link mà không nêu doctype
+  // đích thì client không giải được nhãn và cột in ra mã — đúng lỗi đã phải sửa ở
+  // danh sách và ở lịch.
+  if (fieldtype === "Link" && !options) fail(`${where} là Link nhưng chưa nêu doctype đích. Viết "${field}:Link(Tên DocType) Nhãn".`);
   return {
     field,
     label: (label ?? titleize(field)).trim(),
-    type: (type ?? (aggregate === "count" ? "Int" : "Data")).trim(),
+    type: fieldtype,
+    ...(options ? { options: options.trim() } : {}),
     ...(aggregate ? { aggregate } : {}),
   };
 }

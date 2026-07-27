@@ -11,6 +11,7 @@ import {
   LoginForm, applyBrand, resolveIcon, useBusinessContext, useTheme, type NavItem,
 } from "@metaforge/shell";
 import { Button } from "@metaforge/ui";
+import { SocialCommerceLanding, type PublicSocialPage } from "./landing/SocialCommerceLanding.js";
 import "./styles.css";
 
 const ApplicationCatalogContainer = lazy(() => import("@metaforge/views/catalog").then((module) => ({ default: module.ApplicationCatalogContainer })));
@@ -168,12 +169,28 @@ function buildNavigation(manifest: AppManifest, catalog: ApplicationCatalog | un
 }
 
 function RootApp() {
+  const publicPage = resolvePublicSocialPage();
+  if (publicPage) return <SocialCommerceLanding page={publicPage} />;
   return <I18nProvider><AuthBoundary
     adapter={adapter}
     renderLoading={() => <Splash>Đang kết nối…</Splash>}
     renderError={(message) => <div className="grid h-screen place-items-center text-destructive">Lỗi kết nối: {message}</div>}
     renderGuest={(retry) => <LoginForm adapter={adapter} onSuccess={retry} title="Đăng nhập" />}
   >{(boot, auth) => <ManifestBoundary boot={boot} logout={auth.logout} />}</AuthBoundary></I18nProvider>;
+}
+
+/**
+ * Marketing is public only on the Social Commerce hostname. Other Forge tenants keep
+ * their existing root redirect, while `?landing=1` gives local visual QA a deterministic
+ * entry point without pretending every tenant is this product.
+ */
+function resolvePublicSocialPage(): PublicSocialPage | undefined {
+  const path = (window.location.pathname.replace(/\/+$/, "") || "/") as PublicSocialPage;
+  const allowed = new Set<PublicSocialPage>(["/", "/features", "/pricing", "/faq", "/privacy", "/terms", "/facebook/data-deletion", "/security"]);
+  const isSocialHost = window.location.hostname.toLowerCase() === "chotdon.kairo.vn";
+  const host = window.location.hostname.toLowerCase();
+  const isLocalPreview = ["localhost", "127.0.0.1"].includes(host) && new URLSearchParams(window.location.search).get("landing") === "1";
+  return allowed.has(path) && (isSocialHost || isLocalPreview) ? path : undefined;
 }
 
 function Splash({ children }: { children: ReactNode }) {

@@ -309,3 +309,104 @@ test("nav paths agree with the routes the client builds", () => {
   // than silently treating it as a doctype.
   assert.equal(navItemPath({ key: "c", label: "x", kind: "route" }), null);
 });
+
+// ---- app-declared reports ---------------------------------------------------
+
+const REPORT = {
+  name: "Doanh thu theo lớp",
+  doctype: "Stock Request",
+  columns: [
+    { field: "title", label: "Lớp", type: "Link", options: "Stock Request" },
+    { field: "name", label: "Số bản ghi", type: "Int", aggregate: "count" },
+  ],
+  group_by: "title",
+  filters: ["title"],
+};
+
+test("an app may declare a report over its own doctype", () => {
+  const parsed = manifest({ reports: [REPORT] });
+  assert.equal(parsed.reports.length, 1);
+  assert.equal(parsed.reports[0].limit, 500, "a report gets a row ceiling even when it declares none");
+  assert.equal(parsed.reports[0].label, "Doanh thu theo lớp", "label defaults to the name");
+});
+
+test("a report over a doctype the app does not ship is refused", () => {
+  assert.throws(
+    () => manifest({ reports: [{ ...REPORT, doctype: "Sales Invoice" }] }),
+    /reads Sales Invoice, which this app does not define/,
+  );
+});
+
+test("a report that aggregates without grouping is refused", () => {
+  // SQLite answers this with one arbitrary row per bare column instead of an error, so
+  // the report would show a plausible WRONG number rather than fail.
+  const { group_by: _omitted, ...ungrouped } = REPORT;
+  assert.throws(() => manifest({ reports: [ungrouped] }), /aggregates but declares no group_by/);
+});
+
+test("a grouped report cannot select a bare column that is not the grouping field", () => {
+  assert.throws(
+    () => manifest({ reports: [{ ...REPORT, columns: [...REPORT.columns, { field: "owner", label: "Người tạo", type: "Data" }] }] }),
+    /column owner must be aggregated/,
+  );
+});
+
+test("a report field that is not a plain fieldname is refused", () => {
+  // The compiler places this into SQL, so anything that is not a bare identifier must
+  // never reach storage — it would be compiled again on every run, by code with no
+  // context left to reject it.
+  assert.throws(
+    () => manifest({ reports: [{ ...REPORT, columns: [{ field: "title\" FROM documents; --", label: "x", type: "Data" }] }] }),
+    /is not a plain fieldname/,
+  );
+});
+
+test("ordering by a column the report does not select is refused", () => {
+  assert.throws(
+    () => manifest({ reports: [{ ...REPORT, order_by: { column: "owner", direction: "desc" } }] }),
+    /order_by.column is not one of the report's columns/,
+  );
+});
+
+test("app reports compile against documents, scoped to tenant and doctype", async () => {
+  const { compileAppReport } = await import("../dist/packages/query/src/index.js");
+  const spec = manifest({ reports: [REPORT] }).reports[0];
+  const compiled = compileAppReport(spec, { tenant_id: "t1", report: spec.name, filters: [{ field: "title", operator: "=", value: "A" }] });
+
+  assert.match(compiled.sql, /FROM documents/);
+  assert.match(compiled.sql, /tenant_id=\?1/, "the tenant is always the first bound parameter");
+  assert.match(compiled.sql, /doctype=\?2/, "a report can only ever read the doctype it names");
+  // A cancelled document still exists. Counting it makes every total quietly too big.
+  assert.match(compiled.sql, /docstatus<>2/);
+  assert.match(compiled.sql, /COUNT\(\*\) AS "count_name"/, "count counts ROWS, not a JSON field that may be absent");
+  assert.deepEqual(compiled.params.slice(0, 3), ["t1", "Stock Request", "A"], "filter values are bound, never concatenated");
+  assert.equal(compiled.columns[0].options, "Stock Request", "the Link target reaches the Frappe facade");
+});
+
+test("an app report refuses a filter it did not declare", async () => {
+  const { compileAppReport } = await import("../dist/packages/query/src/index.js");
+  const spec = manifest({ reports: [REPORT] }).reports[0];
+  assert.throws(
+    () => compileAppReport(spec, { tenant_id: "t1", report: spec.name, filters: [{ field: "owner", operator: "=", value: "x" }] }),
+    /Filter is not allowed: owner/,
+  );
+});
+
+test("a Link report column must name the doctype it points at", () => {
+  // Without a target the client has nothing to resolve against and prints the raw id —
+  // the same defect the list view and the calendar each had to be fixed for.
+  const { options: _dropped, ...untargeted } = REPORT.columns[0];
+  assert.throws(
+    () => manifest({ reports: [{ ...REPORT, columns: [untargeted, REPORT.columns[1]] }] }),
+    /is a Link but names no target doctype/,
+  );
+});
+
+test("a Link column keeps its target through compilation", async () => {
+  // Dropped here once, and the symptom was a report showing ids where names belong —
+  // with nothing failing, because a column without a target simply renders the raw value.
+  const { compileAppReport } = await import("../dist/packages/query/src/index.js");
+  const spec = manifest({ reports: [REPORT] }).reports[0];
+  const compiled = compileAppReport(spec, { tenant_id: "t1", report: spec.name });
+  assert.equal(compiled.columns[0].options, "Stock Request");
+});

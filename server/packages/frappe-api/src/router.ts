@@ -1866,14 +1866,15 @@ async function runQueryReport(args: FrappeArgs, context: FrappeRouterContext): P
       actor: context.actor, tenantId: context.tenantId,
       doctype: appReport.doctype, action: "report",
     });
-    return await context.appReports.run(appReport, {
+    const answer = await context.appReports.run(appReport, {
       tenant_id: context.tenantId,
       report,
-      filters: normalizeReportFilters(rawFilters),
+      filters: await applicableFilters(appReport, normalizeReportFilters(rawFilters), context),
       order_by: [],
       limit: appReport.limit,
       offset: 0,
     }) as JsonObject;
+    return { ...answer, columns: frappeReportColumns(answer.columns) };
   }
 
   await context.permissions.assert({
@@ -1901,12 +1902,42 @@ async function runQueryReport(args: FrappeArgs, context: FrappeRouterContext): P
   }
   return {
     result: result.result ?? [],
-    columns: result.columns ?? [],
+    columns: frappeReportColumns(result.columns),
     message: result.message ?? null,
     chart: result.chart ?? null,
     report_summary: result.report_summary ?? [],
     skip_total_row: result.skip_total_row === true ? 1 : 0,
   };
+}
+
+/**
+ * Report columns in the shape a Frappe client actually reads.
+ *
+ * The report engines describe a column as `{field, label, type}` — their own vocabulary.
+ * Every Frappe consumer reads `{fieldname, label, fieldtype, options}`, and reads the
+ * cell out of the row BY `fieldname`. Handing over the engine's names produced a table
+ * with the right headers, the right row count, and every cell blank: the client asked
+ * each row for `row[undefined]`. Nothing errored, so it read as "no data".
+ *
+ * Translated here, at the façade, because that is what this layer is for — the engines
+ * should not have to know Frappe's field names, and the client should not have to know
+ * theirs.
+ */
+function frappeReportColumns(columns: JsonValue | undefined): JsonValue {
+  if (!Array.isArray(columns)) return [];
+  return columns.map((entry) => {
+    const column = (entry ?? {}) as JsonObject;
+    // Already Frappe-shaped (a report engine may grow to emit it directly) — leave it.
+    if (column.fieldname !== undefined) return column;
+    const fieldtype = String(column.type ?? "Data");
+    return {
+      fieldname: String(column.field ?? ""),
+      label: String(column.label ?? column.field ?? ""),
+      fieldtype,
+      ...(column.options === undefined ? {} : { options: column.options }),
+      width: fieldtype === "Currency" || fieldtype === "Float" || fieldtype === "Int" ? 140 : 180,
+    };
+  }) as JsonValue;
 }
 
 /**
@@ -1926,6 +1957,52 @@ async function findAppReport(name: string, context: FrappeRouterContext): Promis
     }
   }
   return null;
+}
+
+/**
+ * The platform's own context dimensions, which the CLIENT attaches to every report call.
+ *
+ * The shell keeps a business-context selection (company, warehouse, branch, …) and sends
+ * it as report filters without knowing what any given report accepts. For the platform's
+ * fixed reports that is correct — they all carry these columns. For an app's report it is
+ * not: `Enrollment` has no `company`, so the filter arrived, the compiler refused it, and
+ * every app report answered "Filter is not allowed: company" with an empty table.
+ */
+function clientContextFilters(): Set<string> {
+  // Derived from the one list rather than restated, so a dimension added there is
+  // covered here without anyone remembering. A function because `CONTEXT_DIMENSIONS`
+  // is declared further down the file and a top-level constant would read it too early.
+  // `contextToReportFilters` renames the two date bounds on its way out, so they are not
+  // dimension keys and have to be named.
+  return new Set([...CONTEXT_DIMENSIONS.map((dimension) => dimension.key), "from_date", "to_date"]);
+}
+
+/**
+ * Drops a context dimension the report's doctype does not have — and ONLY that.
+ *
+ * The distinction matters more than it looks. If the doctype has no such field, the
+ * dimension does not apply to this data at all and ignoring it changes nothing. If the
+ * doctype DOES have the field but the report did not declare it filterable, then dropping
+ * it would silently widen the report past the scope the user selected — one branch's
+ * manager reading every branch's numbers, with the branch still named on screen. That
+ * stays a refusal, because it is an app defect and must be visible as one.
+ */
+async function applicableFilters(
+  report: AppReportSpec,
+  filters: QueryFilter[],
+  context: FrappeRouterContext,
+): Promise<QueryFilter[]> {
+  const unknown = filters.filter((filter) => !report.filters.includes(filter.field));
+  if (!unknown.length) return filters;
+  const meta = await context.metadata.getDocType(context.tenantId, report.doctype);
+  const fields = new Set((meta?.fields ?? []).map((field) => field.fieldname));
+  const contextual = clientContextFilters();
+  return filters.filter((filter) => {
+    if (report.filters.includes(filter.field)) return true;
+    if (contextual.has(filter.field) && !fields.has(filter.field)) return false;
+    // Anything else reaches the compiler, which refuses it by name.
+    return true;
+  });
 }
 
 /** Frappe report filters arrive as an object; the report engine wants a list. */

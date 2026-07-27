@@ -2,9 +2,9 @@
   "format": 1,
   "package": "cloudforge",
   "version": "1.0.0",
-  "generated_at": "2026-07-27T04:37:17.316678+00:00",
-  "file_count": 641,
-  "tree_sha256": "78b70dc202231e14bad94793ceb9f1ceb6d4df58662003603735415f76105ce0",
+  "generated_at": "2026-07-27T04:56:53.540020+00:00",
+  "file_count": 638,
+  "tree_sha256": "e7a710eb91702bbb2c8598954597234529acf37c8169eab42931e584fdd6c9cf",
   "excluded": [
     ".git",
     ".wrangler",
@@ -21,23 +21,18 @@
   ],
   "files": [
     {
-      "path": ".backups/cloudforge-control-before-social-20260727.sql",
-      "sha256": "3f878a9f60ccac711e156e863fd94ddde5338d182578841595acfd0ae6e71ad3",
-      "size": 1446
-    },
-    {
       "path": ".dev.vars.example",
       "sha256": "d485b342746e01214c4519b4c4136c0c74ca55547e0b956c09259ca48383bc1e",
       "size": 817
     },
     {
       "path": ".gitignore",
-      "sha256": "32b4236e12d9f8fc6b816f394ffbd7269212e99bf9d63c4112f3c93f267e44e4",
-      "size": 1178
+      "sha256": "b31b520f22db3ab4813a6514b25cab868e34899fde3dd0e1f5d74f53343136d5",
+      "size": 1195
     },
     {
       "path": "BUILD_REPORT.md",
-      "sha256": "aa18da97c33f450afb316d86e69375a7498740738908fe2d1f3b974474f06197",
+      "sha256": "fef48ca3638baa53e7d8c52ad9c982036c48163c09998fd2e1fc1f02997a9a21",
       "size": 3051
     },
     {
@@ -162,7 +157,7 @@
     },
     {
       "path": "VERIFY.json",
-      "sha256": "d9fe1faaa7144c14fd827d2596b79e53a607d5dc0773672158a43cab2dcd4672",
+      "sha256": "62079c57e7124cdafc4f9f42009d907b7da1d88461930b78d7dea303c8d53cfe",
       "size": 3788
     },
     {
@@ -537,8 +532,8 @@
     },
     {
       "path": "apps/tenant-worker/test/frappe-facade.integration.test.mts",
-      "sha256": "296261683d48c14708fa9b20ca2b9a48f62b735f3dd7de508c64b32fd68f0176",
-      "size": 72953
+      "sha256": "6e73b607faecce762bd9fabd23aa5282f736e5f559e9b6d17d34d34800623638",
+      "size": 74247
     },
     {
       "path": "apps/tenant-worker/test/health.integration.test.mts",
@@ -559,16 +554,6 @@
       "path": "apps/tenant-worker/worker-configuration.d.ts",
       "sha256": "6ce978fd9e6643622a1b35d511e41b9460b0df96c19b18920445273069b7b347",
       "size": 1259
-    },
-    {
-      "path": "apps/tenant-worker/wrangler.chotdon.generated.jsonc",
-      "sha256": "42c69f7ba31bb83d219d39c82b9674837fbc1a601f100d3547443e28c1714569",
-      "size": 1206
-    },
-    {
-      "path": "apps/tenant-worker/wrangler.edu.generated.jsonc",
-      "sha256": "9b29e462250650e90036b5e9bf3d46f49384068a0aca858ffddc553b52eb28e1",
-      "size": 1190
     },
     {
       "path": "apps/tenant-worker/wrangler.jsonc",
@@ -721,6 +706,11 @@
       "size": 824
     },
     {
+      "path": "backups/cloudforge-control-before-social-20260727.sql",
+      "sha256": "3f878a9f60ccac711e156e863fd94ddde5338d182578841595acfd0ae6e71ad3",
+      "size": 1446
+    },
+    {
       "path": "backups/control/control-20260727-112248.sql",
       "sha256": "3f878a9f60ccac711e156e863fd94ddde5338d182578841595acfd0ae6e71ad3",
       "size": 1446
@@ -767,8 +757,8 @@
     },
     {
       "path": "briefs/center.json",
-      "sha256": "22f4faeea51c3f429c694b71f45644af2b793a688adb6a262bcaa643596fd54d",
-      "size": 19586
+      "sha256": "d89731c0cf9c3ac11da414712038f1e0dcb05dee9786577774805227bb5993c3",
+      "size": 19607
     },
     {
       "path": "docs/implementation-notes.md",
@@ -2247,8 +2237,8 @@
     },
     {
       "path": "packages/app-registry/src/manifest.ts",
-      "sha256": "4c28a4005945f9a9784bf07ab1c0521de0ecdfbd6fbbcbcb2e0a06928deab865",
-      "size": 31271
+      "sha256": "1b7e135e3a9ecb8f0290b6d3f6cf2c71ad6fedf075e70e34584376210de2fe27",
+      "size": 31963
     },
     {
       "path": "packages/app-registry/src/method-dispatch.ts",
@@ -2597,8 +2587,8 @@
     },
     {
       "path": "packages/frappe-api/src/router.ts",
-      "sha256": "58bbbe611c933d6a9217e3c335beed473331f7e2f083ca03dc876423125e8cb2",
-      "size": 133544
+      "sha256": "8beb12ef96b881d7e779f2d0460b3754a367edace0a7518b4c9d8a5c8f01ecea",
+      "size": 137566
     },
     {
       "path": "packages/frappe-api/src/session.ts",
@@ -2762,8 +2752,8 @@
     },
     {
       "path": "packages/query/src/index.ts",
-      "sha256": "215940c68ebff432b442ba596b8f7ced90421f6033adb4e04ea23db5779cf468",
-      "size": 28835
+      "sha256": "21cf06d4589d3ae6286d877fc332fafbfb6771a7796aec8de91bac14e5146a0a",
+      "size": 29537
     },
     {
       "path": "packages/social-commerce/package.json",
@@ -2847,8 +2837,8 @@
     },
     {
       "path": "scripts/lib/compile-brief.mjs",
-      "sha256": "71048a12ba28f28d76423e3b14fdd502fa74e81eb69b02db0addff448e7e9cda",
-      "size": 29525
+      "sha256": "009f567e2776a102aa1a5b1e3efe8c3cd768955d6e78dff54824b7cb2693ec2d",
+      "size": 30037
     },
     {
       "path": "scripts/lib/read-app-source.mjs",
@@ -3027,8 +3017,8 @@
     },
     {
       "path": "tests/app-registry.test.mjs",
-      "sha256": "5ee6bf2054a28f61f14068b62abe6dc135216f13ae81a151a6f0a58e1c8d1144",
-      "size": 14325
+      "sha256": "261d3aca49b666a5e7fc47e5ffb43e0c655a2f30d36fa783b409eb04f174e535",
+      "size": 19634
     },
     {
       "path": "tests/app-validators.test.mjs",
@@ -3219,11 +3209,6 @@
       "path": "types/cloudflare-test-runtime.d.ts",
       "sha256": "7ca810cb57187fc20c56b75ba50fb78ae3967e4e8363197629fd61a35e318ef2",
       "size": 1153
-    },
-    {
-      "path": "wrangler-dev.err",
-      "sha256": "9e5804220aadf12520fd5e7ea48c7cf8fe5fb8d53b699973a6b37783709229ef",
-      "size": 816
     }
   ]
 }

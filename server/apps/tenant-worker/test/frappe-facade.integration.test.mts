@@ -624,7 +624,7 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     // with no explanation.
     expect(report.prepared_report === true || Array.isArray(report.result)).toBe(true);
     if (!report.prepared_report) {
-      expect(report.columns.map((column: any) => column.field)).toContain("posting_at");
+      expect(report.columns.map((column: any) => column.fieldname)).toContain("posting_at");
     }
   });
 
@@ -889,6 +889,28 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     // Re-installing the identical bytes must not churn metadata revisions and
     // invalidate every client cache for nothing.
     expect((await unwrap(await method("forge.apps.install", { app: pkg }))).outcome).toBe("unchanged");
+
+    /**
+     * …but "identical bytes" is not the same as "identical MEANING".
+     *
+     * When the platform learns to read something new out of a package, the stored parse
+     * of an already-installed app is stale — and the package hash cannot see that. It
+     * happened for real: the platform gained app-declared reports, the identical package
+     * was re-installed on the upgraded tenant, the hash matched, so the OLD parse stayed
+     * and every report answered "Unknown report" while the install reported success.
+     *
+     * Simulated the only way a test can simulate a platform upgrade: by putting a stored
+     * manifest in front of the installer that the current parser would not produce.
+     */
+    await env.DB.prepare(
+      `UPDATE installed_apps SET manifest_json=?1 WHERE tenant_id='demo' AND app_id='visits'`,
+    ).bind(JSON.stringify({ ...pkg, nav: [] })).run();
+    const rescued = await unwrap(await method("forge.apps.install", { app: pkg }));
+    expect(rescued.outcome).not.toBe("unchanged");
+    const restored = await env.DB.prepare(
+      `SELECT manifest_json FROM installed_apps WHERE tenant_id='demo' AND app_id='visits'`,
+    ).first<{ manifest_json: string }>();
+    expect(JSON.parse(restored!.manifest_json).nav.length).toBeGreaterThan(0);
 
     // The app's doctype is immediately usable through the same REST surface.
     const created = await call("/api/resource/Visit Note", {

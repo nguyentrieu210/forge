@@ -13,6 +13,9 @@ Ngày: 2026-07-27.
 - Control D1 đã backup trước thay đổi; đã áp `0002_social_commerce_saas.sql` và `0003_facebook_oauth.sql`.
 - Control D1 và KV đều có route thuận `chotdon.kairo.vn` và route ngược `__tenant__:chotdon`; JSON đã đọc lại hợp lệ.
 - Tenant có `SESSION_SECRET` riêng và `SOCIAL_CREDENTIAL_KEK` riêng. Giá trị chỉ nằm trong Cloudflare secret storage.
+- Ba khóa dùng chung `INTERNAL_AUTH_SECRET`, `INTERNAL_SERVICE_TOKEN`, `CONTROL_TOKEN` đã được re-key đồng bộ trên Gateway, Jobs, Control, Social Ingress và bốn tenant `demo`, `edu`, `hrm`, `chotdon`.
+- Đã tạo và xác minh quản trị viên `admin@kairo.vn`; mật khẩu không ghi vào repo/log, chỉ lưu ở Windows User environment `FORGE_CHOTDON_ADMIN_PASSWORD`.
+- Gói `social-commerce@0.1.0` đã cài trên tenant; manifest mở được tại `/x/social-commerce%3Adashboard`.
 
 ## Smoke test
 
@@ -20,13 +23,8 @@ Ngày: 2026-07-27.
 - `HEAD https://chotdon.kairo.vn/` → `200`, runtime assets có chunk Social Commerce.
 - `social-ingress.kairo.vn` nhận request nhưng trả `503 Facebook integration is not configured` đúng fail-closed khi chưa có Meta secrets.
 
-## Blocker để đăng nhập và dùng Facebook
+## Trạng thái đăng nhập và Facebook
 
-Ba secret dùng chung của Forge không còn bản sao cục bộ: `INTERNAL_AUTH_SECRET`, `INTERNAL_SERVICE_TOKEN`, `CONTROL_TOKEN`. Cloudflare không cho đọc lại secret đã ghi. Không tự tạo giá trị khác cho tenant mới vì Gateway/Jobs/Control sẽ không xác thực được.
+Đăng nhập tenant và giao tiếp nội bộ đã được khôi phục sau re-key. Các khóa dùng chung mới có bản sao vận hành ở Windows User environment và bản bí mật tương ứng trong Cloudflare; không có giá trị nào được commit.
 
-Hai cách xử lý:
-
-1. Khôi phục ba giá trị gốc từ kho mật khẩu vận hành và gắn vào tenant/Social Ingress.
-2. Re-key toàn bộ Forge Gateway, Jobs, Control và mọi tenant hiện có trong một maintenance window. Cách này làm đăng xuất phiên hiện tại và có rủi ro ảnh hưởng `demo`, `edu`, `hrm`, nên cần phê duyệt riêng.
-
-Meta production vẫn cần `META_APP_ID`, `META_APP_SECRET`, `META_VERIFY_TOKEN` do nhà vận hành tạo trong Meta for Developers; không gửi qua chat hoặc commit Git.
+Blocker còn lại chỉ thuộc tích hợp Facebook production: cần `META_APP_ID`, `META_APP_SECRET`, `META_VERIFY_TOKEN` do nhà vận hành tạo trong Meta for Developers. Không gửi các giá trị này qua chat hoặc commit Git.

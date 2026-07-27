@@ -13,7 +13,13 @@ export interface QueryRequest {
   limit?: number;
   offset?: number;
 }
-export interface ReportColumn { field: string; label: string; type: "Data" | "Currency" | "Float" | "Int" | "Date" | "Link" }
+export interface ReportColumn {
+  field: string;
+  label: string;
+  type: "Data" | "Currency" | "Float" | "Int" | "Date" | "Link";
+  /** Target doctype for Link columns, carried through to the Frappe facade. */
+  options?: string;
+}
 export interface ReportDefinition {
   name: string;
   source: string;
@@ -387,7 +393,7 @@ function quoteIdentifier(value: string): string {
 export interface AppReportSpec {
   name: string;
   doctype: string;
-  columns: Array<{ field: string; label: string; type: string; aggregate?: string }>;
+  columns: Array<{ field: string; label: string; type: string; options?: string; aggregate?: string }>;
   group_by?: string;
   order_by?: { column: string; direction: "asc" | "desc" };
   filters: string[];
@@ -455,7 +461,12 @@ export function compileAppReport(spec: AppReportSpec, request: QueryRequest): Co
   return {
     sql: `SELECT ${selected.join(", ")} FROM documents WHERE ${where.join(" AND ")}${groupSql}${orderSql} LIMIT ?${params.length - 1} OFFSET ?${params.length}`,
     params,
-    columns: spec.columns.map((column) => ({ field: alias(column), label: column.label, type: column.type as ReportColumn["type"] })),
+    columns: spec.columns.map((column) => ({
+      field: alias(column),
+      label: column.label,
+      type: column.type as ReportColumn["type"],
+      ...(column.options ? { options: column.options } : {}),
+    })),
     prepared: false,
   };
 }

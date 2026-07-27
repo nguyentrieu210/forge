@@ -80,6 +80,14 @@ export interface AppReportColumn {
   label: string;
   /** DocField type, so the client formats currency as currency and dates as dates. */
   type: string;
+  /**
+   * Target doctype for a `Link` column.
+   *
+   * Without it the client has nothing to resolve the value against and prints the id:
+   * a report of enrolments by class reads `LOP-2026-0001` down the key column, which is
+   * the same defect the lists and the calendar each had to be fixed for.
+   */
+  options?: string;
   aggregate?: AppReportAggregate;
 }
 
@@ -453,10 +461,15 @@ function parseReport(value: JsonValue, index: number, doctypeNames: Set<string>)
     if (aggregate !== undefined && !REPORT_AGGREGATES.has(aggregate as AppReportAggregate)) {
       throw errors.validation(`${where}.aggregate must be one of ${[...REPORT_AGGREGATES].join(", ")}`);
     }
+    const type = text(column.type ?? "Data", `${where}.type`, 32);
+    const options = column.options === undefined ? undefined : text(column.options, `${where}.options`, 160);
+    // A Link with nowhere to point resolves to nothing, so the column shows raw ids.
+    if (type === "Link" && !options) throw errors.validation(`${where} is a Link but names no target doctype`);
     return {
       field,
       label: text(column.label, `${where}.label`, 160),
-      type: text(column.type ?? "Data", `${where}.type`, 32),
+      type,
+      ...(options ? { options } : {}),
       ...(aggregate ? { aggregate: aggregate as AppReportAggregate } : {}),
     };
   });
