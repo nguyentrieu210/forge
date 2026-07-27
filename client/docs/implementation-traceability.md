@@ -21,8 +21,8 @@
 |---|---|---|---|---|---|---|
 | M04-LIST-01 render cột từ metadata (in_list_view) | `ListView`/`deriveColumns` | `/app/:dt` | `getMeta`,`getList` | list.spec (TODO) | ✅ list-1280-light/dark | **Wired** |
 | M04-LIST-02 search + standard filters → server | `ListToolbar`/`buildServerQuery` | `/app/:dt` | `getList(filters/orFilters)` | list.spec (TODO) | ✅ list-filter/search-1280 | **Wired** |
-| M04-LIST-03 column picker (ẩn/hiện) lưu localStorage | `ColumnPicker`(trong ListToolbar) | `/app/:dt` | `metaforge:cols:<dt>` | list.spec (TODO) | ✅ (nút Cột) | **Wired** |
-| M04-LIST-04 checkbox+STT+status badge+số phải+ngày | `ListView` cols/`cells.tsx` | `/app/:dt` | `getList` | list.spec (TODO) | ✅ list-1280-light | **Wired** |
+| M04-LIST-03 column picker (ẩn/hiện/resize/order/reset) lưu theo site+user | `ColumnPicker` + `column-preferences` | `/app/:dt` | `metaforge:list-columns:v2:<scope>:<dt>` | list.spec: ẩn→reload→reset + Alt←/→ | ✅ desktop-chromium-list | **Done** |
+| M04-LIST-04 checkbox + STT tách riêng, status badge+số phải+ngày | `ListView` cols/`cells.tsx` | `/app/:dt` | `getList` | list.spec: render metadata | ✅ desktop-chromium-list | **Done** |
 | M04-LIST-05 selection + bulk (xoá/xuất) | `BulkActionBar` | `/app/:dt` | `bulkDelete`(Live) | list.spec (TODO) | ✅ list-bulk-1280 | **Wired** (mock toast; Live bulkDelete nối) |
 | M04-LIST-06 pagination X–Y/Z + summary row Σ | `PaginationBar`,`TableFooter` | `/app/:dt` | `getCount` | list.spec (TODO) | ✅ (1–12/12, Σ=460%) | **Wired** |
 | M04-LIST-07 URL giữ q/filters/sort/page/selected | `useListUrlState`+bridge | `/app/:dt?...` | — | list.spec (TODO) | ✅ reload filter/sel giữ đúng | **Wired** |
@@ -49,8 +49,9 @@
 ## Adapter methods (Checkpoint C.1 — ✅ ĐÃ THÊM, verify 16.x, tsc 0)
 `getTransitions` (`frappe.model.workflow.get_transitions`, POST doc) · `assignRemove` (`assign_to.remove`) · `addTag`/`removeTag` (`frappe.desk.doctype.tag.tag.add_tag`/`remove_tag`, dt/dn) · `globalSearch` (orch `metaforge.api.global_search`). DTO: `WorkflowTransition`, `GlobalSearchResult`. (share/connections: chưa nối — ghi rõ.)
 
-## E2E (Playwright, mock :8099 — `pnpm --filter @metaforge/demo run e2e`) — **8/8 XANH**
-`e2e/list.spec.ts` (4): render cột metadata+STT+badge+summary · standard-filter status + **URL giữ khi reload** + chip · search thu hẹp · chọn dòng → bulk bar.
+## E2E (Playwright, mock :8099 — `pnpm --filter @metaforge/demo run e2e`) — **12/12 XANH**
+`e2e/list.spec.ts` (7): render cột metadata+STT+badge+summary · standard-filter status + **URL giữ khi reload** + chip · search thu hẹp · chọn dòng → bulk bar · ẩn cột→reload→khôi phục mặc định · Alt←/→ đổi thứ tự hai hướng · resize→reload→reset width.
+`e2e/list-responsive.spec.ts` (1): ảnh + overflow + renderer bảng/card tại 390/412/768/1280/1440; desktop kiểm checkbox 44px và STT 56px.
 `e2e/split.spec.ts` (4): **click dòng mở 3 cột (list vẫn còn)** · mở URL `?open=` giữ đúng record · header có **workflow action + form action** (metadata-driven) · **tab AI** "Chưa cấu hình".
 → Các REQ có cả Screenshot + E2E xanh (M04-LIST-01/02/05/07, M11-LAYOUT-03, M11-ACTIONS-01, M11-WF-01, AI-TAB-01) đạt mức **Done**; số còn lại `Wired` (thiếu spec riêng hoặc cần backend Live).
 

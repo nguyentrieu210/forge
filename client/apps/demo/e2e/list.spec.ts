@@ -54,4 +54,65 @@ test.describe("List data-table", () => {
     await expect(page.getByText("1 đã chọn")).toBeVisible();
     await expect(page.getByRole("button", { name: "Xoá" })).toBeVisible();
   });
+
+  test("ẩn cột được ghi nhớ và Khôi phục mặc định phục hồi toàn bộ", async ({ page }) => {
+    test.skip(isMobile(page), "Mobile dùng card riêng, không dùng bộ cột desktop");
+    await page.goto("/view/list");
+
+    await page.getByRole("button", { name: "Cột", exact: true }).click();
+    const priorityToggle = page.getByRole("checkbox", { name: "Ưu tiên" });
+    await expect(priorityToggle).toBeChecked();
+    await priorityToggle.click();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("columnheader", { name: "Ưu tiên" })).toHaveCount(0);
+
+    await page.reload();
+    await expect(page.getByRole("columnheader", { name: "Ưu tiên" })).toHaveCount(0);
+    await page.getByRole("button", { name: "Cột", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Khôi phục mặc định" }).click();
+    await expect(page.getByRole("columnheader", { name: "Ưu tiên" })).toBeVisible();
+  });
+
+  test("Alt + mũi tên đổi cột được cả hai hướng", async ({ page }) => {
+    test.skip(isMobile(page), "Mobile dùng card riêng");
+    await page.goto("/view/list");
+    const header = page.getByRole("row").filter({ has: page.getByRole("columnheader", { name: "Tiêu đề" }) }).first();
+    await expect(header).toBeVisible();
+    // Đọc text NÚT sort, không đọc toàn th: mỗi th còn có separator resize với accessible name
+    // "Đổi bề rộng cột …", làm chuỗi header bị ghép thêm và indexOf(label) luôn = -1.
+    const labels = async () => (await header.locator("th[data-col] > button").allTextContents()).map((text) => text.trim()).filter(Boolean);
+
+    const before = await labels();
+    const statusHeader = page.getByRole("columnheader", { name: "Trạng thái" });
+    await statusHeader.getByRole("button").press("Alt+ArrowRight");
+    const movedRight = await labels();
+    expect(movedRight.indexOf("Trạng thái")).toBe(before.indexOf("Trạng thái") + 1);
+
+    await page.getByRole("columnheader", { name: "Trạng thái" }).getByRole("button").press("Alt+ArrowLeft");
+    await expect.poll(async () => (await labels()).indexOf("Trạng thái")).toBe(before.indexOf("Trạng thái"));
+  });
+
+  test("resize được ghi nhớ và Khôi phục mặc định trả đúng width ban đầu", async ({ page }) => {
+    test.skip(isMobile(page), "Mobile dùng card riêng");
+    await page.goto("/view/list");
+    const statusHeader = page.getByRole("columnheader", { name: "Trạng thái" });
+    await expect(statusHeader).toBeVisible();
+    const initialWidth = Math.round((await statusHeader.boundingBox())!.width);
+    const grip = statusHeader.getByRole("separator", { name: "Đổi bề rộng cột Trạng thái" });
+    const box = await grip.boundingBox();
+    expect(box).not.toBeNull();
+    await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box!.x + box!.width / 2 + 48, box!.y + box!.height / 2, { steps: 6 });
+    await page.mouse.up();
+    await expect.poll(async () => Math.round((await statusHeader.boundingBox())!.width)).toBeGreaterThan(initialWidth + 30);
+
+    const resizedWidth = Math.round((await statusHeader.boundingBox())!.width);
+    await page.reload();
+    await expect.poll(async () => Math.round((await page.getByRole("columnheader", { name: "Trạng thái" }).boundingBox())!.width)).toBe(resizedWidth);
+
+    await page.getByRole("button", { name: "Cột", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Khôi phục mặc định" }).click();
+    await expect.poll(async () => Math.round((await page.getByRole("columnheader", { name: "Trạng thái" }).boundingBox())!.width)).toBe(initialWidth);
+  });
 });

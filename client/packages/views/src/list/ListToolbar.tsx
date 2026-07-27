@@ -5,7 +5,7 @@
  * (do useListUrlState xử lý). Chips hiển thị filter đang bật + "Xoá lọc".
  */
 import { useEffect, useRef, useState } from "react";
-import { Bookmark, CalendarDays, Check, ChevronsUpDown, Group, History, Loader2, Search, SlidersHorizontal, Plus, X, RefreshCw, Rows2, Rows3, Trash2, Undo2 } from "lucide-react";
+import { Bookmark, CalendarDays, Check, ChevronsUpDown, Columns3, Group, History, Loader2, Search, SlidersHorizontal, Plus, X, RefreshCw, Rows2, Rows3, Trash2, Undo2 } from "lucide-react";
 import {
   Button, Input, Badge, PromptDialog, cn, useT,
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
@@ -36,8 +36,9 @@ export interface ListToolbarProps {
   searchLink?: (doctype: string, text: string) => Promise<Array<{ value: string; description?: string }>>;
   density?: "comfortable" | "compact";
   onDensityChange?: (d: "comfortable" | "compact") => void;
-  /** có ⇒ người dùng đang dùng thứ tự cột tự sắp; hiện nút khôi phục thứ tự gốc theo meta. */
-  onResetColumnOrder?: () => void;
+  /** Khôi phục đồng thời thứ tự, cột ẩn, bề rộng, mật độ và gom nhóm. */
+  onResetColumns: () => void;
+  canResetColumns: boolean;
   /** fieldname đang gom nhóm ("" = không gom). */
   groupBy?: string;
   /** cột gom được (Select/Link/Check/trạng thái) — rỗng ⇒ ẩn hẳn nút gom nhóm. */
@@ -103,7 +104,13 @@ export function ListToolbar(props: ListToolbarProps) {
           {props.onGroupByChange && props.groupableColumns?.length ? (
             <GroupByMenu columns={props.groupableColumns} value={props.groupBy ?? ""} onChange={props.onGroupByChange} />
           ) : null}
-          <ColumnPicker columns={columns} hidden={hidden} onToggle={onToggleColumn} onResetOrder={props.onResetColumnOrder} />
+          <ColumnPicker
+            columns={columns}
+            hidden={hidden}
+            onToggle={onToggleColumn}
+            onReset={props.onResetColumns}
+            canReset={props.canResetColumns}
+          />
           {props.onCreate ? (
             <Button className="h-8" onClick={props.onCreate}>
               <Plus /> {t("common.create")}
@@ -411,23 +418,47 @@ function GroupByMenu({ columns, value, onChange }: { columns: ListColumn[]; valu
   );
 }
 
-function ColumnPicker({ columns, hidden, onToggle, onResetOrder }: { columns: ListColumn[]; hidden: string[]; onToggle: (f: string) => void; onResetOrder?: () => void }) {
+function ColumnPicker({
+  columns,
+  hidden,
+  onToggle,
+  onReset,
+  canReset,
+}: {
+  columns: ListColumn[];
+  hidden: string[];
+  onToggle: (f: string) => void;
+  onReset: () => void;
+  canReset: boolean;
+}) {
   const t = useT();
   const hiddenSet = new Set(hidden);
+  const visibleCount = columns.filter((column) => !hiddenSet.has(column.fieldname)).length;
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="icon" className="size-8" title={t("list.columns")} aria-label={t("list.columns")}>
-          <SlidersHorizontal />
+        <Button variant="outline" className="h-8 gap-1.5 px-2" title={t("list.columns")} aria-label={t("list.columns")}>
+          <Columns3 />
+          <span className="hidden xl:inline">{t("list.columns")}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel>{t("list.show_columns")}</DropdownMenuLabel>
+        <DropdownMenuLabel className="flex items-center justify-between gap-2">
+          <span>{t("list.show_columns")}</span>
+          <Badge variant="secondary" className="font-normal">{visibleCount}/{columns.length}</Badge>
+        </DropdownMenuLabel>
         <div className="px-2 pb-1.5 text-[11px] leading-snug text-muted-foreground">{t("list.reorder_hint")}</div>
         <DropdownMenuSeparator />
         <div className="max-h-64 overflow-y-auto">
           {columns.map((c) => (
-            <label key={c.fieldname} className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent">
+            <label
+              key={c.fieldname}
+              className={cn(
+                "flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm",
+                c.isTitle ? "cursor-not-allowed text-muted-foreground" : "cursor-pointer hover:bg-accent",
+              )}
+              title={c.isTitle ? t("list.required_column", "Cột chính luôn hiển thị") : undefined}
+            >
               <Checkbox
                 checked={!hiddenSet.has(c.fieldname)}
                 disabled={c.isTitle}
@@ -437,14 +468,10 @@ function ColumnPicker({ columns, hidden, onToggle, onResetOrder }: { columns: Li
             </label>
           ))}
         </div>
-        {onResetOrder ? (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={onResetOrder}>
-              <Undo2 /> {t("list.reset_column_order")}
-            </DropdownMenuItem>
-          </>
-        ) : null}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem disabled={!canReset} onClick={onReset}>
+          <Undo2 /> {t("list.reset_columns", "Mặc định")}
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

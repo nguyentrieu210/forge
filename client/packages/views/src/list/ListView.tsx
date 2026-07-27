@@ -5,7 +5,8 @@
  * + sort header + selection + BulkActionBar + SummaryRow + pagination "X–Y / Z" + states VN.
  * Không fetch, không URL — chỉ nhận props + phát onStateChange. Toàn bộ UI qua @metaforge/ui.
  */
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useMemo, useRef, useState } from "react";
+import { getCoreRowModel, useReactTable, type ColumnDef, type VisibilityState } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ArrowUp, ArrowDown, ChevronsUpDown, ChevronDown, ChevronLeft, ChevronRight, Trash2, Download, Inbox, SearchX, AlertCircle, RefreshCw, Camera, Loader2 } from "lucide-react";
 import type { DocTypeMeta, Doc, BoundFormatters } from "@metaforge/core";
@@ -14,12 +15,22 @@ import {
   Table, TableHeader, TableBody, TableFooter, TableRow, TableHead, TableCell,
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from "@metaforge/ui";
-import { deriveColumns, imageField, type ListColumn } from "./columns.js";
+import { deriveColumns, type ListColumn } from "./columns.js";
 import { renderCell, RowAvatar, formatValue } from "./cells.js";
 import { deriveStandardFilters, type ListState } from "./filters.js";
 import { ListToolbar } from "./ListToolbar.js";
-import { applyColumnOrder, clearColumnOrder, loadColumnOrder, moveColumn, saveColumnOrder } from "./column-order.js";
-import { clampWidth, loadColumnWidths, saveColumnWidths, type ColumnWidths } from "./column-width.js";
+import {
+  clampWidth,
+  clearColumnPreferences,
+  columnPreferenceKey,
+  defaultColumnPreferences,
+  hasCustomColumnPreferences,
+  loadColumnPreferences,
+  moveColumn,
+  saveColumnPreferences,
+  type ColumnPreferenceSpec,
+  type ListColumnPreferences,
+} from "./column-preferences.js";
 import { usePullToRefresh } from "./pull-to-refresh.js";
 
 export interface ListViewProps {
@@ -30,13 +41,13 @@ export interface ListViewProps {
   error?: string | null;
   state: ListState;
   onStateChange: (patch: Partial<ListState>) => void;
-  hidden?: string[];
-  onToggleColumn?: (fieldname: string) => void;
+  /** scope cache dạng site|user|lang|version; bắt buộc ở luồng production để sở thích không lẫn tenant/user. */
+  preferenceScope?: string;
   onRowClick?: (row: Doc) => void;
   onCreate?: () => void;
   onRefresh?: () => void;
   onBulkDelete?: (names: string[]) => void;
-  onExport?: (names: string[]) => void;
+  onExport?: (names: string[], visibleFields: string[]) => void;
   title?: string;
   /** record đang mở ở cột giữa (split view) → highlight dòng. */
   activeRow?: string;
@@ -55,99 +66,88 @@ export interface ListViewProps {
 
 const PAGE_SIZES = [20, 50, 100];
 
-/**
- * Ô ĐẦU HÀNG đóng băng bên trái (như Excel): ô tick + số thứ tự nằm CHUNG MỘT cột.
- *
- * Vì sao gộp làm một thay vì hai cột dính cạnh nhau: cột thứ hai phải khai `left` bằng đúng bề
- * rộng cột thứ nhất — một CON SỐ PHỎNG ĐOÁN. Bề rộng thật còn phụ thuộc padding, cỡ chữ và thuật
- * toán dàn bảng, nên lệch vài pixel là hai cột hở ra hoặc đè lên nhau, và khi cuộn ngang thì
- * "nhảy". Gộp lại thì chỉ còn một mốc `left: 0` — không có gì để sai.
- *
- * Bảng kho thường 10+ cột nên phải cuộn ngang. Cuộn tới cột thứ tám mà ô tick và số thứ tự đã
- * trôi mất thì không biết đang ở dòng nào, cũng không tick chọn được.
- *
- * `bg-inherit` chứ không màu cố định: hàng đang chọn/đang mở có nền riêng; đặt màu cứng thì ô này
- * lạc tông giữa hàng được tô sáng.
- */
-const STICKY_LEAD = "sticky left-0 z-20 bg-inherit shadow-[inset_-1px_0_0_var(--border)]";
-
-/**
- * Bề rộng ô dính — khai ở HAI nơi và phải khớp nhau, nếu không vạch ngăn cách xê dịch.
- *
- * `LEAD_W` đặt trên `<col>`: có tác dụng ở `table-layout: fixed`.
- * `LEAD_INNER_W` ép bề rộng NỘI DUNG bên trong ô: có tác dụng ở `table-layout: auto`, nơi `<col>`
- * chỉ là gợi ý còn bề rộng thật co theo nội dung. Trước đây nội dung tự do nên ô co còn 62px ở
- * chế độ auto trong khi `<col>` khai 68px ⇒ vạch ngăn cách nhảy 6px ngay khi người dùng chạm vào
- * cột đầu tiên (chạm là bảng đổi sang fixed — xem seedWidths).
- *
- * 4.25rem = 68px; trừ padding `px-2` hai bên (16px) còn 3.25rem = 52px cho nội dung.
- */
-const LEAD_W = "w-[4.25rem]";
-const LEAD_INNER_W = "w-[3.25rem]";
+/** Checkbox và STT là hai cột cố định độc lập. 44px của SELECT_W khớp chính xác `left-11` của STT. */
+const STICKY_SELECT = "sticky left-0 z-20 bg-inherit";
+const STICKY_INDEX = "sticky left-11 z-20 bg-inherit shadow-[inset_-1px_0_0_var(--border)]";
+const SELECT_W = "w-11 min-w-11 max-w-11";
+const INDEX_W = "w-14 min-w-14 max-w-14";
 
 export function ListView(props: ListViewProps) {
   const t = useT();
   const { meta, rows, state, onStateChange, onRowClick } = props;
-  const hidden = props.hidden ?? [];
-  const hiddenSet = useMemo(() => new Set(hidden), [hidden]);
-
-  // Độ giãn dòng — mật độ dữ liệu dày (vd danh sách hàng nghìn dòng) muốn dòng thấp hơn để thấy
-  // nhiều hơn cùng lúc. Lưu 1 lựa chọn chung toàn app (không theo từng doctype) qua localStorage.
-  const [density, setDensityState] = useState<"comfortable" | "compact">(() => {
-    try { return localStorage.getItem("mf-list-density") === "compact" ? "compact" : "comfortable"; } catch { return "comfortable"; }
-  });
-  const setDensity = (d: "comfortable" | "compact") => {
-    setDensityState(d);
-    try { localStorage.setItem("mf-list-density", d); } catch { /* private mode */ }
+  const derivedColumns = useMemo(() => deriveColumns(meta, { roles: props.roles }), [meta, props.roles]);
+  const preferenceSpecs = useMemo<ColumnPreferenceSpec[]>(
+    () => derivedColumns.map((column) => ({
+      fieldname: column.fieldname,
+      isTitle: column.isTitle,
+      minWidth: column.minWidth,
+      groupable: column.isStatus || column.fieldtype === "Select" || column.fieldtype === "Link" || column.fieldtype === "Check",
+    })),
+    [derivedColumns],
+  );
+  // schema signature làm dependency: metadata thêm/xóa field phải lọc lại snapshot ngay, không chờ
+  // component remount. minWidth/groupable cũng nằm trong signature vì chúng ảnh hưởng normalize.
+  const preferenceSchema = preferenceSpecs.map((column) => `${column.fieldname}:${column.isTitle ? 1 : 0}:${column.minWidth ?? 0}:${column.groupable ? 1 : 0}`).join("|");
+  const preferenceScope = props.preferenceScope ?? "local";
+  const preferenceKey = columnPreferenceKey(preferenceScope, meta.name);
+  const storedPreferences = useMemo(
+    () => loadColumnPreferences(preferenceScope, meta.name, preferenceSpecs),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [preferenceKey, preferenceSchema],
+  );
+  /**
+   * Cache override theo KEY, không dùng một state đơn.
+   *
+   * ListContainer có thể đổi doctype mà không remount. Một state đơn sẽ render ít nhất một frame
+   * bằng cột của DocType cũ rồi useEffect mới sửa; map theo key chọn đúng snapshot NGAY trong render.
+   */
+  const [preferenceOverrides, setPreferenceOverrides] = useState<Record<string, ListColumnPreferences>>({});
+  const preferences = preferenceOverrides[preferenceKey] ?? storedPreferences;
+  const updatePreferences = (updater: (current: ListColumnPreferences) => ListColumnPreferences) => {
+    setPreferenceOverrides((overrides) => {
+      const current = overrides[preferenceKey] ?? storedPreferences;
+      const next = saveColumnPreferences(preferenceScope, meta.name, updater(current), preferenceSpecs);
+      return { ...overrides, [preferenceKey]: next };
+    });
   };
+  const hiddenSet = useMemo(() => new Set(preferences.hidden), [preferences.hidden]);
+  const density = preferences.density;
+  const setDensity = (next: "comfortable" | "compact") => updatePreferences((current) => ({ ...current, density: next }));
   const compact = density === "compact";
 
-  // Thứ tự cột do người dùng kéo-thả (localStorage theo doctype). Đổi doctype ⇒ nạp lại đúng bộ của
-  // doctype đó (ListView KHÔNG remount khi chỉ đổi meta nên phải đồng bộ bằng effect).
-  const [colOrder, setColOrder] = useState<string[]>(() => loadColumnOrder(meta.name));
-  useEffect(() => { setColOrder(loadColumnOrder(meta.name)); }, [meta.name]);
-
-  // Bề rộng cột người dùng tự kéo — cùng cơ chế lưu theo doctype như thứ tự cột.
-  const [colWidths, setColWidths] = useState<ColumnWidths>(() => loadColumnWidths(meta.name));
-  useEffect(() => { setColWidths(loadColumnWidths(meta.name)); }, [meta.name]);
+  const colWidths = preferences.widths;
   const resizeColumn = (fieldname: string, px: number) => {
-    setColWidths((prev) => {
-      const next = { ...prev, [fieldname]: clampWidth(px) };
-      saveColumnWidths(meta.name, next);
-      return next;
-    });
+    const column = derivedColumns.find((candidate) => candidate.fieldname === fieldname);
+    if (!column) return;
+    updatePreferences((current) => ({
+      ...current,
+      widths: { ...current.widths, [fieldname]: clampWidth(px, column.minWidth) },
+    }));
   };
 
   /**
    * ĐO bề rộng thật của MỌI cột ngay trước lần kéo đầu tiên.
    *
-   * Vì sao bắt buộc: bảng mặc định chạy `table-layout: auto`, mà ở chế độ đó CSS cho phép trình
-   * duyệt BỎ QUA width/min-width/max-width đặt trên ô — nó tự tính lại theo nội dung. Đây chính là
-   * lý do kéo cột không hề nhúc nhích dù giá trị đã lưu đúng.
-   *
-   * Cách chữa là chuyển sang `table-layout: fixed`. Nhưng nếu chuyển khi chỉ MỘT cột có số đo thì
-   * các cột còn lại (width auto) bị chia đều phần dư — cả bảng nhảy dựng lên ngay lúc người dùng
-   * mới chạm vào một cột. Nên đo và chốt hiện trạng trước, rồi mới chuyển; người dùng chỉ thấy
-   * đúng cái cột mình đang kéo thay đổi.
+   * Bảng luôn chạy `table-layout: fixed`; trước lần kéo đầu tiên vẫn chốt bề rộng đang thấy của
+   * mọi cột không-co-giãn để thao tác chỉ thay đổi đúng cột người dùng cầm.
    */
   const headRowRef = useRef<HTMLTableRowElement>(null);
   const seedWidths = () => {
     const row = headRowRef.current;
     if (!row) return;
-    const measured: ColumnWidths = {};
+    const measured: Record<string, number> = {};
     row.querySelectorAll<HTMLTableCellElement>("th[data-col]").forEach((th) => {
       const f = th.dataset.col;
       // CỐ Ý bỏ qua cột tiêu đề: nó là cột CO GIÃN, giữ bề rộng tự động để hút hết chỗ thừa cho
       // bảng luôn phủ kín màn hình (xem chú thích ở <colgroup>). Đo và chốt cứng nó thì mọi cột
       // đều có số đo, không còn cột nào co giãn, và chỗ thừa dồn sang cột đệm — bảng hụt một
       // khoảng trắng to bên phải.
-      if (f && f !== titleField) measured[f] = clampWidth(th.getBoundingClientRect().width);
+      const column = f ? derivedColumns.find((candidate) => candidate.fieldname === f) : undefined;
+      if (column && f !== titleField) measured[f!] = clampWidth(th.getBoundingClientRect().width, column.minWidth);
     });
-    setColWidths((prev) => {
+    updatePreferences((current) => {
       // Giá trị người dùng đã đặt trước đó THẮNG số vừa đo.
-      const next = { ...measured, ...prev };
-      saveColumnWidths(meta.name, next);
-      return next;
+      return { ...current, widths: { ...measured, ...current.widths } };
     });
   };
   /**
@@ -172,18 +172,45 @@ export function ListView(props: ListViewProps) {
     resizeColumn(fieldname, max + 26); // + padding hai bên và một chút thở
   };
 
-  const hasWidths = Object.keys(colWidths).length > 0;
-
-  const derivedColumns = useMemo(() => deriveColumns(meta, { roles: props.roles }), [meta, props.roles]);
-  const allColumns = useMemo(() => applyColumnOrder(derivedColumns, colOrder), [derivedColumns, colOrder]);
-  const columns = useMemo(() => allColumns.filter((c) => c.isTitle || !hiddenSet.has(c.fieldname)), [allColumns, hiddenSet]);
-
   /**
-   * Cột TIÊU ĐỀ là cột CO GIÃN của bảng — nó nhận hết phần bề ngang còn thừa để bảng luôn phủ kín
-   * màn hình. `titleFlex` = cột đó đang thật sự co giãn (người dùng CHƯA tự kéo riêng nó).
+   * Một TanStack Table instance là nguồn sự thật cho order/visibility/sizing. Renderer desktop và
+   * card mobile đều đọc từ cùng instance này; không còn mỗi chế độ tự lọc/sắp cột một kiểu.
    */
+  const tableColumnDefs = useMemo<ColumnDef<Doc>[]>(
+    () => derivedColumns.map((column) => ({
+      id: column.fieldname,
+      accessorFn: (row) => row[column.fieldname],
+      header: column.label,
+      enableHiding: !column.isTitle,
+      minSize: column.minWidth,
+      maxSize: 720,
+      size: column.defaultWidth,
+    })),
+    [derivedColumns],
+  );
+  const columnVisibility = useMemo<VisibilityState>(
+    () => Object.fromEntries(derivedColumns.map((column) => [column.fieldname, column.isTitle || !hiddenSet.has(column.fieldname)])),
+    [derivedColumns, hiddenSet],
+  );
+  const columnModel = useReactTable({
+    data: rows,
+    columns: tableColumnDefs,
+    state: {
+      columnOrder: preferences.order,
+      columnVisibility,
+      columnSizing: colWidths,
+    },
+    getCoreRowModel: getCoreRowModel(),
+    manualPagination: true,
+    manualSorting: true,
+    columnResizeMode: "onChange",
+  });
+  const columnsByName = useMemo(() => new Map(derivedColumns.map((column) => [column.fieldname, column])), [derivedColumns]);
+  const allColumns = columnModel.getAllLeafColumns().map((column) => columnsByName.get(column.id)).filter((column): column is ListColumn => Boolean(column));
+  const columns = columnModel.getVisibleLeafColumns().map((column) => columnsByName.get(column.id)).filter((column): column is ListColumn => Boolean(column));
+
+  /** Cột tiêu đề luôn có default/min width riêng; cột đệm cuối nhận phần ngang còn thừa. */
   const titleField = useMemo(() => columns.find((c) => c.isTitle)?.fieldname, [columns]);
-  const titleFlex = !titleField || colWidths[titleField] === undefined;
 
   // Kéo-thả header đổi thứ tự cột. Tính trên allColumns (gồm cả cột đang ẨN) để cột ẩn không bị mất
   // vị trí rồi nhảy xuống cuối khi bật hiện lại.
@@ -195,36 +222,34 @@ export function ListView(props: ListViewProps) {
     setDragOverCol(null);
     if (!from || from === target) return;
     const next = moveColumn(allColumns.map((c) => c.fieldname), from, target);
-    setColOrder(next);
-    saveColumnOrder(meta.name, next);
+    updatePreferences((current) => ({ ...current, order: next }));
   };
   const moveColumnByKeyboard = (fieldname: string, offset: -1 | 1) => {
-    const order = allColumns.map((c) => c.fieldname);
-    const index = order.indexOf(fieldname);
-    const target = order[index + offset];
+    // Đích phải là cột NHÌN THẤY kế bên. Nếu dùng allColumns, một cột ẩn chen giữa sẽ nhận thao
+    // tác nhưng màn hình không đổi gì, khiến Alt+←/→ trông như bị hỏng.
+    const visibleOrder = columns.map((c) => c.fieldname);
+    const index = visibleOrder.indexOf(fieldname);
+    const target = visibleOrder[index + offset];
     if (index < 0 || !target) return;
-    const next = moveColumn(order, fieldname, target);
-    setColOrder(next);
-    saveColumnOrder(meta.name, next);
+    const next = moveColumn(allColumns.map((c) => c.fieldname), fieldname, target);
+    updatePreferences((current) => ({ ...current, order: next }));
   };
-  const resetColumnOrder = () => { clearColumnOrder(meta.name); setColOrder([]); };
+  const resetColumns = () => {
+    clearColumnPreferences(preferenceScope, meta.name);
+    setPreferenceOverrides((overrides) => ({
+      ...overrides,
+      [preferenceKey]: defaultColumnPreferences(preferenceSpecs),
+    }));
+    setCollapsedGroups(new Set());
+  };
 
   // Gom nhóm — CHỈ trên các dòng của TRANG hiện tại (server trả từng trang; gom "toàn bộ dataset"
   // sẽ cần aggregate phía server, việc khác hẳn). Nhãn nhóm nói rõ điều này để không hiểu nhầm là
   // tổng toàn bộ. Cột gom được = Select/Link/Check/trạng thái (giá trị rời rạc, hữu hạn).
-  const [groupBy, setGroupByState] = useState<string>(() => {
-    try { return localStorage.getItem(`mf-group-by:${meta.name}`) ?? ""; } catch { return ""; }
-  });
-  useEffect(() => {
-    try { setGroupByState(localStorage.getItem(`mf-group-by:${meta.name}`) ?? ""); } catch { setGroupByState(""); }
-  }, [meta.name]);
+  const groupBy = preferences.groupBy;
   const setGroupBy = (f: string) => {
-    setGroupByState(f);
+    updatePreferences((current) => ({ ...current, groupBy: f }));
     setCollapsedGroups(new Set());
-    try {
-      if (f) localStorage.setItem(`mf-group-by:${meta.name}`, f);
-      else localStorage.removeItem(`mf-group-by:${meta.name}`);
-    } catch { /* private mode */ }
   };
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => new Set());
   const groupableColumns = useMemo(
@@ -245,7 +270,7 @@ export function ListView(props: ListViewProps) {
     return [...map.entries()].map(([key, items]) => ({ key, items }));
   }, [rows, groupCol]);
   const standardFilters = useMemo(() => deriveStandardFilters(meta), [meta]);
-  const imgField = useMemo(() => imageField(meta), [meta]);
+  const imgField = useMemo(() => derivedColumns.find((column) => column.isTitle)?.imageFieldname, [derivedColumns]);
 
   const total = props.total ?? rows.length;
   const pageStart = (state.page - 1) * state.pageSize;
@@ -270,13 +295,20 @@ export function ListView(props: ListViewProps) {
     onStateChange({ sort: nextDir ? `${field}:${nextDir}` : "" });
   }
   function toggleColumn(fieldname: string) {
-    props.onToggleColumn?.(fieldname);
+    const column = derivedColumns.find((candidate) => candidate.fieldname === fieldname);
+    if (!column || column.isTitle) return;
+    updatePreferences((current) => ({
+      ...current,
+      hidden: current.hidden.includes(fieldname)
+        ? current.hidden.filter((field) => field !== fieldname)
+        : [...current.hidden, fieldname],
+    }));
   }
 
   const sortField = state.sort.split(":")[0];
   const sortDir = state.sort.split(":")[1];
   const numericCols = columns.filter((c) => c.align === "right" && !c.isStatus);
-  const totalCols = columns.length + 2; // ô đầu (tick+STT) + cột dữ liệu + cột đệm
+  const totalCols = columns.length + 3; // checkbox + STT + cột dữ liệu + cột đệm
 
   // ── Windowing (ảo hoá tbody) ────────────────────────────────────────────────
   // Khi NHIỀU dòng (>50) ta chỉ render các dòng trong viewport để nghìn dòng/trang
@@ -326,14 +358,13 @@ export function ListView(props: ListViewProps) {
         tabIndex={onRowClick ? 0 : undefined}
         aria-label={onRowClick ? `${t("common.open", "Mở")} ${name}` : undefined}
       >
-        <TableCell className={cn("px-2", STICKY_LEAD, compact && "py-1")}>
-          <span className={cn("flex items-center gap-1.5", LEAD_INNER_W)}>
-            {/* stopPropagation chỉ ở CHECKBOX: bấm vào số thứ tự vẫn mở bản ghi như bấm cả hàng. */}
-            <span onClick={(e) => e.stopPropagation()}>
-              <Checkbox checked={selected} onCheckedChange={() => toggleRow(name)} aria-label={`${t("list.select_row")} ${name}`} />
-            </span>
-            <span className="flex-1 text-right text-xs tabular-nums text-muted-foreground">{pageStart + index + 1}</span>
+        <TableCell className={cn("px-3 text-center", SELECT_W, STICKY_SELECT, compact && "py-1")}>
+          <span onClick={(event) => event.stopPropagation()}>
+            <Checkbox checked={selected} onCheckedChange={() => toggleRow(name)} aria-label={`${t("list.select_row")} ${name}`} />
           </span>
+        </TableCell>
+        <TableCell className={cn("px-3 text-right text-xs tabular-nums text-muted-foreground", INDEX_W, STICKY_INDEX, compact && "py-1")}>
+          {pageStart + index + 1}
         </TableCell>
         {columns.map((c) => (
           <TableCell key={c.fieldname} data-col={c.fieldname} // Bề rộng do <colgroup> quyết định — không đặt w-full/w-px ở ô nữa, hai nguồn tranh nhau
@@ -362,14 +393,15 @@ export function ListView(props: ListViewProps) {
         onChange={onStateChange}
         standardFilters={standardFilters}
         columns={allColumns}
-        hidden={hidden}
+        hidden={preferences.hidden}
         onToggleColumn={toggleColumn}
         onCreate={props.onCreate}
         onRefresh={props.onRefresh}
         searchLink={props.searchLink}
         density={density}
         onDensityChange={setDensity}
-        onResetColumnOrder={colOrder.length > 0 ? resetColumnOrder : undefined}
+        onResetColumns={resetColumns}
+        canResetColumns={hasCustomColumnPreferences(preferences, preferenceSpecs)}
         groupBy={groupBy}
         groupableColumns={groupableColumns}
         onGroupByChange={setGroupBy}
@@ -380,7 +412,7 @@ export function ListView(props: ListViewProps) {
           count={state.selected.length}
           onClear={() => onStateChange({ selected: [] })}
           onDelete={props.onBulkDelete ? () => props.onBulkDelete!(state.selected) : undefined}
-          onExport={props.onExport ? () => props.onExport!(state.selected) : undefined}
+          onExport={props.onExport ? () => props.onExport!(state.selected, columns.map((column) => column.fieldname)) : undefined}
         />
       ) : null}
 
@@ -441,14 +473,10 @@ export function ListView(props: ListViewProps) {
         {/* unwrapped: ListView đã tự có khung cuộn (`scrollRef`) để làm header dính + ảo hoá dòng;
             để Table bọc thêm một `overflow-auto` nữa sẽ thành 2 vùng cuộn lồng nhau (2 thanh cuộn,
             và `sticky` của thead neo vào khung TRONG nên không dính theo khung ngoài). */}
-        {/* `fixed` chỉ bật SAU khi có số đo — xem seedWidths(). Ở `auto`, bề rộng đặt trên ô bị
-            trình duyệt bỏ qua nên kéo cột không có tác dụng gì. */}
         <Table
           unwrapped
-          style={hasWidths ? { tableLayout: "fixed" } : undefined}
-          // Ở table-layout:fixed, nội dung dài KHÔNG nới ô ra nữa mà TRÀN đè lên cột bên
-          // cạnh. Phải tự cắt, nếu không kéo cột hẹp lại là chữ chồng lên nhau.
-          className={cn("max-md:hidden", hasWidths && "[&_td]:overflow-hidden [&_td]:text-ellipsis [&_td]:whitespace-nowrap")}
+          // Fixed từ đầu: cột cố định không co/nhảy; nội dung dài bị cắt trong đúng ô, không đè cột bên.
+          className="table-fixed max-md:hidden [&_td]:overflow-hidden [&_td]:text-ellipsis [&_td]:whitespace-nowrap"
         >
           {/*
             colgroup — cách DUY NHẤT ép cứng bề rộng cột ở cả `table-layout: auto` lẫn `fixed`.
@@ -457,56 +485,32 @@ export function ListView(props: ListViewProps) {
             Hai cột này không chứa dữ liệu người dùng nên không có gì để nới — chốt cứng luôn.
           */}
           <colgroup>
-            {/* Một cột duy nhất cho ô đầu (tick + STT). w-[4.25rem] vừa đủ cho ô tick 16px,
-                khoảng cách 6px, số 2 chữ số và padding hai bên. */}
-            <col className={LEAD_W} />
+            <col className={SELECT_W} />
+            <col className={INDEX_W} />
             {columns.map((c) => (
               <col
                 key={c.fieldname}
                 style={
                   colWidths[c.fieldname]
                     ? { width: colWidths[c.fieldname] }
-                    // Cột TIÊU ĐỀ là chỗ "nuốt" phần bề ngang còn thừa, nhưng cách nuốt khác nhau
-                    // theo chế độ dàn bảng:
-                    //   auto  → `width: 100%` (ở auto, cột không khai gì sẽ co theo nội dung nên
-                    //           phải nói rõ cột nào giành phần thừa; nếu không trình duyệt chia
-                    //           đều cho mọi cột, kể cả cột đã khai cứng như ô dính).
-                    //   fixed → để TRỐNG (auto). Ở fixed, phần thừa dồn hết vào cột nào không khai
-                    //           bề rộng; khai `100%` ở đây lại thành 100% bề ngang bảng, cộng với
-                    //           các cột khác là vượt quá và trình duyệt co tất cả lại.
-                    : c.isTitle && !hasWidths ? { width: "100%" } : undefined
+                    : { width: c.defaultWidth }
                 }
               />
             ))}
             {/*
-              CỘT ĐỆM — lưới an toàn cho ô dính, và chỉ bật khi thật sự cần.
-
-              Ở `table-layout: fixed`, khi TỔNG bề rộng các cột nhỏ hơn bề ngang bảng thì trình
-              duyệt đem phần dư chia cho MỌI cột — kể cả cột đã khai cứng. Đo được: kéo hẹp hết các
-              cột thì ô dính tự phồng từ 68px lên 185px, vạch ngăn cách chạy theo. Nhưng nếu CÒN
-              một cột để bề rộng tự động thì phần dư dồn hết vào đúng cột đó.
-
-              Bình thường cột nhận phần dư đó phải là cột TIÊU ĐỀ (`titleFlex`) — chỗ thừa biến
-              thành chỗ đọc tên hàng, và bảng phủ kín màn hình. Khi ấy cột đệm phải rộng 0, nếu
-              không trình duyệt thấy HAI cột tự động và chia đôi phần dư, để lại một mảng trắng to
-              bên phải (đúng lỗi đã gặp).
-
-              Chỉ khi người dùng tự kéo luôn cả cột tiêu đề thì mới không còn cột co giãn nào; lúc
-              đó cột đệm mới nhận phần dư để ô dính khỏi phồng. Khoảng trắng bên phải khi ấy là hệ
-              quả trực tiếp của việc người dùng tự chốt bề rộng mọi cột — giống hệt Excel.
+              Cột đệm là cột auto DUY NHẤT: nhận phần dư khi bảng rộng, về 0 khi tổng cột vượt khung.
+              Nhờ đó checkbox/STT và các width người dùng đặt không bị thuật toán table phân lại.
             */}
-            <col className={titleFlex ? "w-0" : undefined} />
+            <col />
           </colgroup>
           <TableHeader className="sticky top-0 z-10">
             <TableRow ref={headRowRef} className="hover:bg-transparent">
-              {/* Cột tick và cột STT CỐ ĐỊNH, không kéo được: chúng không chứa dữ liệu người dùng
-                  nên không có gì để nới rộng. `w-10`/`w-12` là đủ — dưới table-layout:fixed thì
-                  width từ class được tôn trọng, không cần inline style. */}
-              <TableHead className={cn("bg-card px-2", STICKY_LEAD, "z-30", compact && "h-7")}>
-                <span className={cn("flex items-center gap-1.5", LEAD_INNER_W)}>
-                  <Checkbox checked={allPageSelected} onCheckedChange={toggleAllPage} aria-label={t("list.select_all_page")} />
-                  <span className="flex-1 text-right tabular-nums">#</span>
-                </span>
+              {/* Checkbox và STT là hai cột độc lập đúng contract: cố định, không resize/ẩn/đổi chỗ. */}
+              <TableHead className={cn("bg-card px-3 text-center", SELECT_W, STICKY_SELECT, "z-30", compact && "h-7")}>
+                <Checkbox checked={allPageSelected} onCheckedChange={toggleAllPage} aria-label={t("list.select_all_page")} />
+              </TableHead>
+              <TableHead className={cn("bg-card px-3 text-right tabular-nums", INDEX_W, STICKY_INDEX, "z-30", compact && "h-7")}>
+                #
               </TableHead>
               {columns.map((c) => (
                 <SortHeader
@@ -599,7 +603,8 @@ export function ListView(props: ListViewProps) {
               {/* Hàng tổng cũng phải có ĐÚNG số ô như các hàng khác, nếu không cột lệch hẳn một
                   nhịp và mọi con số tổng rơi sai cột. */}
               <TableRow className="bg-card hover:bg-transparent">
-                <TableCell className={cn("px-2 text-right text-xs text-muted-foreground", STICKY_LEAD)} title="Tổng hợp trên trang hiện tại">Σ trang</TableCell>
+                <TableCell aria-hidden className={cn("px-3", SELECT_W, STICKY_SELECT)} />
+                <TableCell className={cn("px-3 text-right text-xs text-muted-foreground", INDEX_W, STICKY_INDEX)} title="Tổng hợp trên trang hiện tại">Σ trang</TableCell>
                 {columns.map((c) => (
                   <TableCell key={c.fieldname} className={cn(c.align === "right" && "text-right tabular-nums")}>
                     {c.align === "right" && !c.isStatus ? formatValue(aggregateColumn(rows, c), c) : null}
@@ -737,7 +742,7 @@ function SortHeader({
       ref={thRef}
       data-col={col.fieldname}
       aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
-      style={width ? { width, minWidth: width, maxWidth: width } : undefined}
+      style={width ? { width, minWidth: width, maxWidth: width } : { minWidth: col.minWidth }}
       draggable={Boolean(onDropCol) && !resizing}
       onDragStart={(e) => {
         // setData bắt buộc để Firefox chịu bắt đầu kéo; giá trị thực đọc qua ref (an toàn hơn với
@@ -787,11 +792,13 @@ function SortHeader({
           draggable={false}
           // Vùng BẮT rộng 12px (mép 1px gần như không trúng được bằng chuột), nhưng phần NHÌN THẤY
           // chỉ là một vạch mảnh — to hơn sẽ thành đường kẻ dày chia cắt bảng, rối mắt.
-          className="group/grip absolute right-0 top-0 z-20 flex h-full w-3 translate-x-1/2 cursor-col-resize touch-none items-center justify-center"
+          // Giữ toàn bộ vùng bắt 12px BÊN TRONG header. Translate nửa ra ngoài làm table phát
+          // sinh 5-6px overflow dù tổng cột vừa khung, khiến thanh cuộn ngang hiện vô nghĩa.
+          className="group/grip absolute right-0 top-0 z-20 flex h-full w-3 cursor-col-resize touch-none items-center justify-center"
           role="separator"
           aria-orientation="vertical"
           aria-label={`Đổi bề rộng cột ${col.label}`}
-          aria-valuemin={72}
+          aria-valuemin={col.minWidth}
           aria-valuemax={720}
           aria-valuenow={Math.round(width ?? thRef.current?.getBoundingClientRect().width ?? 0)}
           tabIndex={0}

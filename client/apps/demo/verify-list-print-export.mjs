@@ -30,10 +30,22 @@ const doCot = () => p.evaluate(() => {
   };
 });
 
-console.log("── 1. Cot co gian day man hinh, o dinh van 68px ──");
+const clearColumnPreferences = (dt) => p.evaluate((doctype) => {
+  const suffix = ":" + encodeURIComponent(doctype);
+  for (const key of Object.keys(localStorage)) {
+    if (key.startsWith("metaforge:list-columns:v2:") && key.endsWith(suffix)) localStorage.removeItem(key);
+  }
+}, dt);
+const readColumnPreferences = (dt) => p.evaluate((doctype) => {
+  const suffix = ":" + encodeURIComponent(doctype);
+  const key = Object.keys(localStorage).find((candidate) =>
+    candidate.startsWith("metaforge:list-columns:v2:") && candidate.endsWith(suffix));
+  return key ? localStorage.getItem(key) : null;
+}, dt);
+
+console.log("── 1. Cot co gian day man hinh, checkbox=44px va STT=56px ──");
 for (const dt of ["UOM", "Warehouse"]) {
-  const key = "mf-col-width:" + dt;
-  await p.evaluate((k) => localStorage.removeItem(k), key);
+  await clearColumnPreferences(dt);
   await p.goto(BASE + "/app/" + encodeURIComponent(dt), { waitUntil: "networkidle", timeout: 60000 });
   await p.waitForTimeout(2200);
   const a = await doCot();
@@ -52,18 +64,19 @@ for (const dt of ["UOM", "Warehouse"]) {
   await p.waitForTimeout(900);
   const c = await doCot();
   const demA = a.cot.at(-1).w, demC = c.cot.at(-1).w;
-  const leadA = a.cot[0].w, leadC = c.cot[0].w;
+  const selectA = a.cot[0].w, selectC = c.cot[0].w;
+  const indexA = a.cot[1].w, indexC = c.cot[1].w;
   const phuA = a.cot.reduce((s, x) => s + x.w, 0), phuC = c.cot.reduce((s, x) => s + x.w, 0);
-  const luu = await p.evaluate((k) => localStorage.getItem(k), key);
+  const luu = await readColumnPreferences(dt);
   // Kéo mà không đổi sang `fixed` và không lưu được bề rộng nghĩa là thao tác kéo KHÔNG ăn —
   // khi đó phép kiểm phía dưới chỉ đang đo lại chế độ auto và không chứng minh được gì.
   const keoAn = c.layout === "fixed" && !!luu;
-  const ok = keoAn && leadA === 68 && leadC === 68 && demA < 4 && demC < 4 && Math.abs(phuC - c.khung) < 4;
+  const ok = keoAn && selectA === 44 && selectC === 44 && indexA === 56 && indexC === 56 && demA < 4 && demC < 4 && Math.abs(phuC - c.khung) < 4;
   if (!ok) bad++;
-  console.log(`${ok ? "✓" : "✗"} ${dt.padEnd(10)} chua keo: ${a.layout} dinh=${leadA} dem=${demA} | sau keo: ${c.layout} dinh=${leadC} dem=${demC} tong=${phuC}/${c.khung}`);
+  console.log(`${ok ? "✓" : "✗"} ${dt.padEnd(10)} chua keo: ${a.layout} tick=${selectA} stt=${indexA} dem=${demA} | sau keo: ${c.layout} tick=${selectC} stt=${indexC} dem=${demC} tong=${phuC}/${c.khung}`);
   console.log(`     keo co an? ${keoAn ? "co" : "KHONG"} — da luu: ${String(luu).slice(0, 90)}`);
   console.log(`     sau khi keo: ${c.cot.map((x) => x.t + "=" + x.w).join("  ")}`);
-  await p.evaluate((k) => localStorage.removeItem(k), key);
+  await clearColumnPreferences(dt);
 }
 
 console.log("\n── 2. Tinh nang In ──");

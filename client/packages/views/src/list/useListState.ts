@@ -1,5 +1,6 @@
 /**
- * useListUrlState — trạng thái List sống trong URL (reload/back giữ nguyên) + cột ẩn ở localStorage.
+ * useListUrlState — trạng thái nội dung List sống trong URL (reload/back giữ nguyên).
+ * Sở thích cột nằm riêng trong column-preferences để được scope theo site + user.
  * AC#4/#7: q/filters/sort/page/pageSize/selected qua query-string. Router-agnostic:
  * nhận [searchParams, setSearchParams] (react-router) để package không phụ thuộc cứng router.
  */
@@ -103,24 +104,4 @@ export function useListUrlState(bridge: UrlStateBridge, meta: DocTypeMeta) {
   );
 
   return [state, patch] as const;
-}
-
-// ── Cột ẩn (localStorage per doctype) ─────────────────────────────────────────
-const COL_KEY = (dt: string) => `metaforge:cols:${dt}`;
-
-export function loadHiddenCols(doctype: string): string[] {
-  try {
-    const raw = localStorage.getItem(COL_KEY(doctype));
-    return raw ? (JSON.parse(raw) as string[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-export function saveHiddenCols(doctype: string, hidden: string[]): void {
-  try {
-    localStorage.setItem(COL_KEY(doctype), JSON.stringify(hidden));
-  } catch {
-    /* private mode — bỏ qua */
-  }
 }

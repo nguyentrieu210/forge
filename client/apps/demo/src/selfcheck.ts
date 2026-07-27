@@ -46,6 +46,7 @@ import { ControlRegistry, createDefaultRegistry, DateControl, AttachControl, Geo
 import {
   FormView, groupLayout, ChildGrid, createFullRegistry, KanbanView, TreeView, ReportView, PrintView, DashboardView, CalendarView, GanttView, type TreeNodeItem,
   deriveColumns, applyClientQuery, buildServerQuery, countQuery, deriveStandardFilters, deriveSearchFields, statusVariant, emptyListState,
+  applyColumnOrder, columnPreferenceKey, hasCustomColumnPreferences, moveColumn, normalizeColumnPreferences, stableColumnPreferenceScope,
   resolveFormActions, resolveWorkflowActions, type FormActionCtx,
 } from "@metaforge/views";
 import { History, blankDocType, newField, addField, updateField, moveField, removeField, DocTypeBuilder, diffMeta, metaEqual, hasChanges, diffPermissions, permRuleKey, validateDraft, openDraft, draftStatus, serializeDocTypeForSave, roundTripLocal, planCustomization, serializeWorkflow, validateWorkflow, workflowMasters, serializePrintFormat, validatePrintFormat, printHtml, serializeDashboard, validateDashboard } from "@metaforge/builder";
@@ -581,10 +582,13 @@ check("List logic: deriveColumns từ metadata", () => {
   const listMeta: DocTypeMeta = {
     name: "Task",
     title_field: "subject",
+    image_field: "avatar",
     fields: [
       { fieldname: "subject", fieldtype: "Data", label: "Tiêu đề", in_list_view: 1 },
       { fieldname: "status", fieldtype: "Select", label: "TT", options: "Open\nClosed", in_list_view: 1 },
       { fieldname: "amount", fieldtype: "Currency", label: "Tiền", in_list_view: 1 },
+      { fieldname: "avatar", fieldtype: "Attach Image", label: "Ảnh", in_list_view: 1 },
+      { fieldname: "secret_note", fieldtype: "Data", label: "Ẩn", in_list_view: 1, hidden: 1 },
     ],
     permissions: [],
   };
@@ -593,7 +597,47 @@ check("List logic: deriveColumns từ metadata", () => {
   assert.ok(cols[0]!.isTitle, "cột title đánh dấu isTitle");
   assert.ok(cols.find((c) => c.fieldname === "status")!.isStatus, "Select status → isStatus");
   assert.equal(cols.find((c) => c.fieldname === "amount")!.align, "right", "Currency canh phải");
+  assert.equal(cols[0]!.imageFieldname, "avatar", "ảnh gắn vào cột chính");
+  assert.equal(cols.some((c) => c.fieldname === "avatar"), false, "không sinh cột URL ảnh trùng");
+  assert.equal(cols.some((c) => c.fieldname === "secret_note"), false, "field hidden không lọt vào List");
+  assert.ok((buildServerQuery(listMeta, emptyListState(), cols).fields ?? []).includes("avatar"), "query vẫn nạp ảnh hợp lệ");
+  assert.equal((buildServerQuery(listMeta, emptyListState(), cols).fields ?? []).includes("secret_note"), false, "query không nạp field hidden");
   assert.equal(statusVariant("Cancelled"), "destructive", "Cancelled → badge destructive");
+});
+
+check("List columns: preference được scope + normalize metadata + reset detection", () => {
+  const specs = [
+    { fieldname: "subject", isTitle: true, minWidth: 200 },
+    { fieldname: "status", minWidth: 120, groupable: true },
+    { fieldname: "amount", minWidth: 104 },
+  ];
+  const prefs = normalizeColumnPreferences({
+    hidden: ["subject", "status", "status", "field_da_xoa"],
+    order: ["amount", "field_da_xoa", "amount"],
+    widths: { status: 10, amount: 9_999, field_da_xoa: 300, subject: Number.NaN },
+    density: "compact",
+    groupBy: "status",
+  }, specs);
+  assert.deepEqual(prefs.hidden, ["status"], "title bắt buộc + field cũ không được ẩn");
+  assert.deepEqual(prefs.order, ["amount", "subject", "status"], "order sạch, field mới được nối vào");
+  assert.deepEqual(prefs.widths, { status: 120, amount: 720 }, "width clamp theo min riêng và max chung");
+  assert.equal(prefs.groupBy, "status");
+  assert.equal(prefs.density, "compact");
+  assert.equal(hasCustomColumnPreferences(prefs, specs), true);
+  assert.notEqual(columnPreferenceKey("site-a|user-a", "Task"), columnPreferenceKey("site-a|user-b", "Task"), "khác user phải khác key");
+  assert.notEqual(columnPreferenceKey("site-a|user-a", "Task"), columnPreferenceKey("site-b|user-a", "Task"), "khác tenant phải khác key");
+  assert.equal(stableColumnPreferenceScope("site-a|user-a|vi|16.20"), stableColumnPreferenceScope("site-a|user-a|en|17.0"), "đổi ngôn ngữ/version không làm mất sở thích");
+});
+
+check("List columns: chuyển trái/phải và áp thứ tự không làm mất cột", () => {
+  assert.deepEqual(moveColumn(["a", "b", "c"], "a", "b"), ["b", "a", "c"], "sang phải phải đổi chỗ");
+  assert.deepEqual(moveColumn(["a", "b", "c"], "c", "b"), ["a", "c", "b"], "sang trái phải đổi chỗ");
+  assert.deepEqual(moveColumn(["a", "b", "c"], "a", "c"), ["b", "c", "a"], "kéo xa sang phải đặt sau đích");
+  assert.deepEqual(
+    applyColumnOrder([{ fieldname: "a" }, { fieldname: "b" }, { fieldname: "new" }], ["b", "a"]),
+    [{ fieldname: "b" }, { fieldname: "a" }, { fieldname: "new" }],
+    "field metadata mới vẫn được nối cuối",
+  );
 });
 
 // 14. FormView render thật — required *, depends_on hiện, masked ••••, nút Lưu.

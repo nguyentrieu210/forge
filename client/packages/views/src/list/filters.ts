@@ -88,7 +88,9 @@ function dedupe(a: string[]): string[] {
 export function queryFields(meta: DocTypeMeta, columns: ListColumn[]): string[] {
   const base = ["name", "modified", "docstatus"];
   const cols = columns.map((c) => c.fieldname);
-  const img = meta.image_field ? [meta.image_field] : [];
+  // Ảnh đã được deriveColumns lọc theo hidden + quyền field rồi mới gắn vào title column.
+  // Không đọc thẳng meta.image_field ở đây vì như vậy field bị mask vẫn bị request khỏi server.
+  const img = columns.flatMap((column) => column.imageFieldname ? [column.imageFieldname] : []);
   return dedupe([...base, ...cols, ...img]);
 }
 

@@ -30,8 +30,22 @@ export { ListToolbar, type ListToolbarProps } from "./list/ListToolbar.js";
 // Thuần hàm, không React — báo cáo cũng cần chọn kỳ y hệt danh sách, không dựng lại lần hai.
 export { resolveDateRange, DATE_RANGE_LABELS, primaryDateField, type DateRangeKey, type DateRange } from "./list/date-range.js";
 export {
-  useListUrlState, readState, loadHiddenCols, saveHiddenCols, type UrlStateBridge,
+  useListUrlState, readState, type UrlStateBridge,
 } from "./list/useListState.js";
+export {
+  applyColumnOrder,
+  clampWidth,
+  columnPreferenceKey,
+  defaultColumnPreferences,
+  hasCustomColumnPreferences,
+  moveColumn,
+  normalizeColumnPreferences,
+  stableColumnPreferenceScope,
+  type ColumnPreferenceSpec,
+  type ColumnWidths,
+  type ListColumnPreferences,
+  type ListDensity,
+} from "./list/column-preferences.js";
 export { FormView, type FormViewProps } from "./form/FormView.js";
 export { SplitView, useBreakpoint, type SplitViewProps, type Breakpoint } from "./detail/SplitView.js";
 export { ContextPanel, type ContextPanelProps, type TimelineItem, type TimelineKind, type ContextAttachment, type UserOption, type ContextShare, type ContextConnection } from "./detail/ContextPanel.js";

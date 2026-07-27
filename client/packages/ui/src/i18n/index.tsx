@@ -141,6 +141,8 @@ const DICT: Record<string, { vi: string; en: string }> = {
   "list.show_columns": { vi: "Hiện cột", en: "Show columns" },
   "list.reorder_hint": { vi: "Kéo tiêu đề cột trên bảng để đổi thứ tự.", en: "Drag a column header in the table to reorder." },
   "list.reset_column_order": { vi: "Khôi phục thứ tự gốc", en: "Reset column order" },
+  "list.reset_columns": { vi: "Khôi phục mặc định", en: "Restore defaults" },
+  "list.required_column": { vi: "Cột chính luôn hiển thị", en: "The primary column is always visible" },
   "list.recent_searches": { vi: "Tìm gần đây", en: "Recent searches" },
   "list.clear_history": { vi: "Xoá", en: "Clear" },
   "list.pull_to_refresh": { vi: "Kéo xuống để làm mới", en: "Pull down to refresh" },

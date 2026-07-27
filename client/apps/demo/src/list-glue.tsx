@@ -1,8 +1,8 @@
-import { useCallback, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { Doc, DocTypeMeta } from "@metaforge/core";
 import {
-  ListView, applyClientQuery, useListUrlState, loadHiddenCols, saveHiddenCols,
+  ListView, applyClientQuery, useListUrlState,
   type UrlStateBridge,
 } from "@metaforge/views";
 import { toast } from "@metaforge/ui";
@@ -39,18 +39,6 @@ export function MockList({
 }) {
   const bridge = useUrlBridge();
   const [state, patch] = useListUrlState(bridge, meta);
-  const [hidden, setHidden] = useState<string[]>(() => loadHiddenCols(meta.name));
-
-  const onToggleColumn = useCallback(
-    (field: string) => {
-      setHidden((prev) => {
-        const next = prev.includes(field) ? prev.filter((f) => f !== field) : [...prev, field];
-        saveHiddenCols(meta.name, next);
-        return next;
-      });
-    },
-    [meta.name],
-  );
 
   const { rows, total } = useMemo(() => applyClientQuery(meta, allRows, state), [meta, allRows, state]);
 
@@ -61,8 +49,7 @@ export function MockList({
       total={total}
       state={state}
       onStateChange={patch}
-      hidden={hidden}
-      onToggleColumn={onToggleColumn}
+      preferenceScope="demo"
       onRowClick={onRowClick}
       onCreate={onCreate}
       activeRow={activeRow}

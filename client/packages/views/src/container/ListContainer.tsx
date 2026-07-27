@@ -2,7 +2,7 @@
 /**
  * ListContainer — nối ListView vào backend (server-side filter/sort/paginate).
  * State sống ở URL (AC#4/#7) qua `bridge` injectable → package KHÔNG cứng react-router.
- * Cột ẩn ở localStorage per-doctype. getList + getCount chạy song song (TanStack Query).
+ * Sở thích cột do ListView lưu theo site + user + doctype. getList + getCount chạy song song.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -13,7 +13,8 @@ import { formatValue } from "../list/cells.js";
 import { buildCsv, downloadCsv, downloadXlsx, stampedName } from "../report/export.js";
 import { deriveColumns, imageField } from "../list/columns.js";
 import { buildServerQuery, countQuery } from "../list/filters.js";
-import { useListUrlState, loadHiddenCols, saveHiddenCols, type UrlStateBridge } from "../list/useListState.js";
+import { useListUrlState, type UrlStateBridge } from "../list/useListState.js";
+import { stableColumnPreferenceScope } from "../list/column-preferences.js";
 import { useMetaForge } from "./provider.js";
 import { useMeta, useList, useCount, useCapabilities, NO_CAPS } from "./hooks.js";
 
@@ -43,7 +44,7 @@ export function ListContainer(props: ListContainerProps) {
   // hàng loạt cho tới khi server trả quyền thật, giống FormContainer/NewFormContainer).
   const capsQ = useCapabilities(doctype);
   // Field ảnh của doctype — nơi ghi file_url sau khi tải ảnh lên từ avatar trên danh sách.
-  const imgField = useMemo(() => (metaQ.data ? imageField(metaQ.data) : undefined), [metaQ.data]);
+  const imgField = useMemo(() => (metaQ.data ? imageField(metaQ.data, { roles }) : undefined), [metaQ.data, roles]);
   const caps = capsQ.data ?? NO_CAPS;
 
   const isSingle = Boolean(metaQ.data?.issingle);
@@ -52,18 +53,6 @@ export function ListContainer(props: ListContainerProps) {
   }, [isSingle, props.onSingle]);
 
   const [state, patch] = useListUrlState(bridge, meta);
-
-  const [hidden, setHidden] = useState<string[]>(() => loadHiddenCols(doctype));
-  const onToggleColumn = useCallback(
-    (field: string) => {
-      setHidden((prev) => {
-        const next = prev.includes(field) ? prev.filter((f) => f !== field) : [...prev, field];
-        saveHiddenCols(doctype, next);
-        return next;
-      });
-    },
-    [doctype],
-  );
 
   const columns = useMemo(() => deriveColumns(meta, { roles }), [meta, roles]);
   // Global context is enforced by adapter.getContextualList/getContextualCount on the server,
@@ -124,11 +113,12 @@ export function ListContainer(props: ListContainerProps) {
    * thành tên). Người dùng vừa lọc và sắp xong thì file phải khớp màn hình — gọi lại server
    * để lấy "tất cả" sẽ trả về một tập khác với thứ họ vừa nhìn.
    */
-  const exportSelected = useCallback(async (names: string[]) => {
+  const exportSelected = useCallback(async (names: string[], visibleFields: string[]) => {
     const chosen = new Set(names);
     const rows = (listQ.data ?? []).filter((row) => chosen.size === 0 || chosen.has(String(row.name)));
     if (!rows.length) return;
-    const visible = columns.filter((column) => !hidden.includes(column.fieldname));
+    const visibleSet = new Set(visibleFields);
+    const visible = columns.filter((column) => visibleSet.has(column.fieldname));
     const cols = visible.map((column) => ({ label: column.label, fieldname: column.fieldname, fieldtype: column.fieldtype }));
     const raw = (row: Record<string, unknown> | unknown[], col: { fieldname?: string }) => (Array.isArray(row) ? "" : row[col.fieldname ?? ""]);
     const text = (row: Record<string, unknown> | unknown[], col: { fieldname?: string }, index: number) => {
@@ -150,7 +140,7 @@ export function ListContainer(props: ListContainerProps) {
       downloadCsv(filename, buildCsv(cols, rows as Array<Record<string, unknown>>, text));
       toast.success(t("list.export_done_csv"));
     }
-  }, [listQ.data, columns, hidden, displayValues, fmt, meta, doctype, t]);
+  }, [listQ.data, columns, displayValues, fmt, meta, doctype, t]);
 
   if (metaQ.isLoading) return <ListSkeleton />;
   if (metaQ.error) {
@@ -170,8 +160,7 @@ export function ListContainer(props: ListContainerProps) {
         error={listQ.error ? adapter.mapError(listQ.error).message : null}
         state={state}
         onStateChange={patch}
-        hidden={hidden}
-        onToggleColumn={onToggleColumn}
+        preferenceScope={stableColumnPreferenceScope(scopeKey)}
         onRowClick={props.onRowClick}
         onCreate={caps.create ? props.onCreate : undefined}
         onRefresh={refresh}

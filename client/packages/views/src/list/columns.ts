@@ -29,6 +29,12 @@ export interface ListColumn {
   isTitle: boolean;
   /** field ảnh (Attach Image) đứng riêng như avatar. */
   isImage: boolean;
+  /** field ảnh được ghép vào cột tiêu đề; không tạo thêm một cột URL ảnh trùng lặp. */
+  imageFieldname?: string;
+  /** Kích thước khởi đầu theo kiểu dữ liệu; người dùng vẫn có thể kéo đổi. */
+  defaultWidth: number;
+  /** Ngưỡng riêng theo kiểu dữ liệu để không bóp nát nội dung. */
+  minWidth: number;
   precision?: string;
 }
 
@@ -65,28 +71,45 @@ export function deriveColumns(meta: DocTypeMeta, ctx: DeriveColumnsCtx = {}): Li
   const fields = meta.fields ?? [];
   const readable = (f: DocField): boolean =>
     !ctx.roles || !resolveField(f, meta, { roles: ctx.roles, maskedFields: meta.masked_fields }).masked;
-  const titleName = meta.title_field && fields.some((f) => f.fieldname === meta.title_field) ? meta.title_field : "name";
-  const titleField = fields.find((f) => f.fieldname === titleName);
+  const configuredTitle = meta.title_field ? fields.find((f) => f.fieldname === meta.title_field) : undefined;
+  // Field bị ẩn tĩnh hoặc bị mask không được dùng làm title: nếu cố dùng, List vẫn nạp/hiện một
+  // cột mà chính metadata/quyền nói rằng user không được thấy.
+  const titleField = configuredTitle && configuredTitle.hidden !== 1 && readable(configuredTitle) ? configuredTitle : undefined;
+  const titleName = titleField?.fieldname ?? "name";
   const titleLabel = titleName === "name" ? "ID" : titleField?.label ?? titleName;
+  const imgField = imageField(meta, ctx);
 
   const cols: ListColumn[] = [];
-  // "name" (không có DocField riêng, không permlevel) luôn đọc được; title_field thật thì theo readable().
-  if (!titleField || readable(titleField)) {
-    cols.push({
-      fieldname: titleName,
-      label: titleLabel,
-      fieldtype: (titleField?.fieldtype as Fieldtype) ?? "Data",
-      options: titleField?.options,
-      align: "left",
-      isStatus: false,
-      isTitle: true,
-      isImage: false,
-    });
-  }
+  // "name" (không có DocField riêng, không permlevel) luôn đọc được.
+  cols.push({
+    fieldname: titleName,
+    label: titleLabel,
+    fieldtype: (titleField?.fieldtype as Fieldtype) ?? "Data",
+    options: titleField?.options,
+    align: "left",
+    isStatus: false,
+    isTitle: true,
+    isImage: false,
+    imageFieldname: imgField,
+    defaultWidth: 240,
+    minWidth: 180,
+  });
 
-  const inList = fields.filter((f: DocField) => f.in_list_view === 1 && !isLayout(f.fieldtype) && f.fieldname !== titleName && readable(f));
+  const inList = fields.filter(
+    (f: DocField) =>
+      f.in_list_view === 1 &&
+      f.hidden !== 1 &&
+      !isLayout(f.fieldtype) &&
+      f.fieldname !== titleName &&
+      f.fieldname !== imgField &&
+      readable(f),
+  );
   const chosen = inList.length > 0 ? inList : titleFallback(meta, titleName).filter(readable);
   for (const f of chosen) {
+    // Attach Image đã nằm trong title cell. Nếu fallback chạm đúng field ảnh thì cũng không sinh
+    // thêm cột chứa URL thô.
+    if (f.hidden === 1 || f.fieldname === imgField) continue;
+    const size = sizeFor(f);
     cols.push({
       fieldname: f.fieldname,
       label: f.label ?? f.fieldname,
@@ -98,6 +121,8 @@ export function deriveColumns(meta: DocTypeMeta, ctx: DeriveColumnsCtx = {}): Li
       isStatus: isStatusField(f),
       isTitle: false,
       isImage: f.fieldtype === "Attach Image" || f.fieldname === meta.image_field,
+      defaultWidth: size.defaultWidth,
+      minWidth: size.minWidth,
       precision: typeof f.precision === "string" ? f.precision : undefined,
     });
   }
@@ -108,13 +133,31 @@ function titleFallback(meta: DocTypeMeta, titleName: string): DocField[] {
   // không có in_list_view → thêm vài field Data/Select đầu tiên cho có nội dung
   const fields = meta.fields ?? [];
   return fields
-    .filter((f) => !isLayout(f.fieldtype) && f.fieldname !== titleName && ["Data", "Select", "Link", "Date", "Datetime"].includes(f.fieldtype))
+    .filter((f) => f.hidden !== 1 && !isLayout(f.fieldtype) && f.fieldname !== titleName && ["Data", "Select", "Link", "Date", "Datetime"].includes(f.fieldtype))
     .slice(0, 4);
 }
 
-/** Field ảnh của doctype (avatar cột tiêu đề). */
-export function imageField(meta: DocTypeMeta): string | undefined {
-  if (meta.image_field) return meta.image_field;
-  const f = (meta.fields ?? []).find((x) => x.fieldtype === "Attach Image");
-  return f?.fieldname;
+/** Field ảnh của doctype (avatar cột tiêu đề), đã lọc hidden + field permission như các cột khác. */
+export function imageField(meta: DocTypeMeta, ctx: DeriveColumnsCtx = {}): string | undefined {
+  const fields = meta.fields ?? [];
+  const candidate = meta.image_field
+    ? fields.find((field) => field.fieldname === meta.image_field)
+    : fields.find((field) => field.fieldtype === "Attach Image");
+  if (!candidate || candidate.hidden === 1) return undefined;
+  if (ctx.roles && resolveField(candidate, meta, { roles: ctx.roles, maskedFields: meta.masked_fields }).masked) return undefined;
+  return candidate.fieldname;
+}
+
+function sizeFor(field: DocField): { defaultWidth: number; minWidth: number } {
+  if (field.fieldtype === "Check") return { defaultWidth: 80, minWidth: 72 };
+  if (field.fieldtype === "Date") return { defaultWidth: 112, minWidth: 104 };
+  if (field.fieldtype === "Datetime") return { defaultWidth: 144, minWidth: 128 };
+  if (isNumeric(field.fieldtype)) return { defaultWidth: 112, minWidth: 96 };
+  if (isStatusField(field)) return { defaultWidth: 128, minWidth: 112 };
+  if (field.fieldtype === "Link") return { defaultWidth: 144, minWidth: 120 };
+  if (field.fieldtype === "Select") return { defaultWidth: 128, minWidth: 112 };
+  if (field.fieldtype === "Small Text" || field.fieldtype === "Text" || field.fieldtype === "Long Text") {
+    return { defaultWidth: 200, minWidth: 136 };
+  }
+  return { defaultWidth: 144, minWidth: 104 };
 }
