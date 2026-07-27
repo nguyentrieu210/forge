@@ -2,9 +2,9 @@
   "format": 1,
   "package": "cloudforge",
   "version": "1.0.0",
-  "generated_at": "2026-07-27T05:18:36.982838+00:00",
-  "file_count": 640,
-  "tree_sha256": "4f45b0aab1ce0503ba6d43d58dff6ca8875cdb405358be308261f6415b2602ec",
+  "generated_at": "2026-07-27T05:43:02.526995+00:00",
+  "file_count": 642,
+  "tree_sha256": "7ba831018af5dca28e11eb98acbfc2eaaf06aa6cb0f7852992f8ee2b71affd2a",
   "excluded": [
     ".git",
     ".wrangler",
@@ -32,7 +32,7 @@
     },
     {
       "path": "BUILD_REPORT.md",
-      "sha256": "a5ad1bf31e162eeb3e86fc788c07e0c5a98aa4e563f2fb2e138e0270d0442e4d",
+      "sha256": "55cc16d591ebecffabe1278d4e17531439a1ec87e775325297256bc6c5a82a10",
       "size": 3051
     },
     {
@@ -157,7 +157,7 @@
     },
     {
       "path": "VERIFY.json",
-      "sha256": "bddddd3987b82e4a4aa668614c5e36c6f7da3382247a56c2ffe6a4863099994a",
+      "sha256": "a356a47fda80af6f3f2211d4ceba84d43f85cf4ff8904388b0d8d321dd336ea1",
       "size": 3788
     },
     {
@@ -711,6 +711,11 @@
       "size": 824
     },
     {
+      "path": "backups/cloudforge-control-before-public-signup-20260727.sql",
+      "sha256": "2cb5b36276af57403b3634a4bcd1be5a762759bf526b9a65c0523d8e5c0936a0",
+      "size": 2886
+    },
+    {
       "path": "backups/cloudforge-control-before-social-20260727.sql",
       "sha256": "3f878a9f60ccac711e156e863fd94ddde5338d182578841595acfd0ae6e71ad3",
       "size": 1446
@@ -749,6 +754,11 @@
       "path": "backups/hrm/hrm-2026-07-27T04-22-28-526Z.sql.json",
       "sha256": "67c315d6f112010196c2b7fa2466e7a4b27ddbcf45f552bff512e48d46b28f37",
       "size": 365
+    },
+    {
+      "path": "briefs/alumdoor.json",
+      "sha256": "aa19143a8c759bad1d306375d0915a9283c1866dc3f4d2ebeca158f265d14fef",
+      "size": 15860
     },
     {
       "path": "briefs/assets.json",

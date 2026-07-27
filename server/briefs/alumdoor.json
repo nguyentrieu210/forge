@@ -1,0 +1,406 @@
+{
+  "$schema": "./brief.schema.json",
+  "id": "alumdoor",
+  "name": "Alumdoor — Đơn hàng, Sản xuất, Kho, Công nợ",
+  "version": "0.1.0",
+  "module": "Alumdoor",
+  "domain": "alumdoor",
+  "brand": "warm",
+  "locale": { "currency": "VND", "numberFormat": "#.###,##", "dateFormat": "dd-mm-yyyy" },
+
+  "//vi-sao-khong-tu-khai-logic": [
+    "KHÔNG có validator hay app Worker nào trong bản này, và đó là chủ ý.",
+    "Trừ tồn kho và lên công nợ là BẤT BIẾN TIỀN — không được phép 'kiểm rồi ghi' ngoài giao",
+    "dịch, vì hai người xuất cùng lúc sẽ cùng qua cửa kiểm rồi cùng ghi, và kho âm.",
+    "Nền tảng đã có nhân xử lý việc đó (packages/clouderp-selling + clouderp-stock + ledger):",
+    "Delivery Note tính tồn TRONG giao dịch và TỪ CHỐI khi không đủ; Sales Invoice ghi sổ cái",
+    "và sinh công nợ; Payment Entry phân bổ vào hoá đơn. Tất cả tính theo đơn vị nhỏ nhất",
+    "(micros/minor) nên không có sai số dấu phẩy động.",
+    "Việc của brief này là KHAI ĐÚNG TÊN DocType và tên field mà nhân đó đọc. Sai một tên là",
+    "rơi về controller chung, và khi đó ghi vẫn thành công nhưng KHÔNG có bút toán nào — kho",
+    "không trừ, công nợ không lên, và không có gì báo lỗi."
+  ],
+
+  "roles": [
+    "Chủ xưởng",
+    "Kinh doanh",
+    "Thủ kho",
+    "Kế toán",
+    "Sản xuất"
+  ],
+
+  "home": "Sales Order",
+
+  "fixtures": [
+    { "type": "Company", "name": "Xưởng", "data": { "label": "Công ty", "abbr": "X", "default_currency": "VND" } },
+    { "type": "Currency", "name": "VND", "data": { "currency_scale": 0 } },
+
+    { "type": "Account", "name": "Phải thu khách hàng", "data": { "account_type": "Receivable" } },
+    { "type": "Account", "name": "Doanh thu bán hàng", "data": { "account_type": "Income" } },
+    { "type": "Account", "name": "Giá vốn hàng bán", "data": { "account_type": "Expense" } },
+    { "type": "Account", "name": "Hàng tồn kho", "data": { "account_type": "Asset" } },
+    { "type": "Account", "name": "Tiền mặt", "data": { "account_type": "Asset" } },
+    { "type": "Account", "name": "Tiền gửi ngân hàng", "data": { "account_type": "Asset" } },
+    { "type": "Account", "name": "Chênh lệch làm tròn", "data": { "account_type": "Expense" } }
+  ],
+
+  "doctypes": [
+    {
+      "name": "Item",
+      "label": "Hàng hoá / Vật tư",
+      "icon": "package",
+      "group": "Danh mục",
+      "naming": "field:item_code",
+      "title": "item_name",
+      "list": ["item_code", "item_name", "stock_uom", "item_group", "standard_rate"],
+      "search": ["item_code", "item_name"],
+      "fields": [
+        "item_code:Data*! Mã hàng",
+        "item_name:Data! Tên hàng",
+        "item_group:Select(Cửa cuốn,Cửa nhôm kính,Nan/lá cửa,Mô tơ,Ray và trục,Phụ kiện,Remote và điều khiển,Bộ lưu điện)=(Cửa cuốn) Nhóm hàng",
+        "stock_uom:Select(m2,Bộ,Cái,Mét,Kg,Thanh)=(m2) Đơn vị tính",
+        "standard_rate:Currency Đơn giá chuẩn (theo ĐVT)",
+        "valuation_rate:Currency Giá vốn chuẩn",
+        "min_area_sqm:Float Diện tích tối thiểu tính tiền (m2/bộ)",
+        "description:Small Text Quy cách / xuất xứ",
+        "disabled:Check Ngừng kinh doanh"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Kinh doanh": "r",
+        "Thủ kho": "rwc",
+        "Kế toán": "r",
+        "Sản xuất": "r"
+      }
+    },
+
+    {
+      "name": "Warehouse",
+      "label": "Kho",
+      "icon": "warehouse",
+      "group": "Danh mục",
+      "naming": "field:warehouse_name",
+      "title": "warehouse_name",
+      "list": ["warehouse_name", "address", "keeper"],
+      "fields": [
+        "warehouse_name:Data*! Tên kho",
+        "address:Small Text Địa chỉ",
+        "keeper:Data Thủ kho phụ trách",
+        "disabled:Check Ngừng dùng"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Thủ kho": "rwc",
+        "Kinh doanh": "r",
+        "Kế toán": "r",
+        "Sản xuất": "r"
+      }
+    },
+
+    {
+      "name": "Customer",
+      "label": "Khách hàng",
+      "icon": "users",
+      "group": "Danh mục",
+      "naming": "field:customer_name",
+      "title": "customer_name",
+      "list": ["customer_name", "phone", "tax_id", "credit_limit"],
+      "search": ["customer_name", "phone", "tax_id"],
+      "fields": [
+        "customer_name:Data*! Tên khách hàng",
+        "phone:Data Điện thoại",
+        "email:Data Email",
+        "address:Small Text Địa chỉ",
+        "tax_id:Data Mã số thuế",
+        "credit_limit:Currency Hạn mức công nợ",
+        "payment_terms:Select(Trả ngay,7 ngày,15 ngày,30 ngày,45 ngày)=(Trả ngay) Điều khoản thanh toán",
+        "disabled:Check Ngừng giao dịch"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Kinh doanh": "rwc",
+        "Kế toán": "r",
+        "Thủ kho": "r"
+      }
+    },
+
+    {
+      "//": "Dòng đơn. `qty` và `rate` là hai tên nhân O2C ĐỌC — đổi tên là mất hết bút toán.",
+      "//do": "Cửa cuốn bán theo m2: rộng × cao × số bộ ra `qty`, `rate` là đơn giá/m2. Số đo giữ nguyên trên dòng vì XƯỞNG cắt theo nó, không cắt theo m2.",
+      "name": "Sales Order Item",
+      "label": "Dòng đơn hàng",
+      "group": "Danh mục",
+      "naming": "autoincrement",
+      "title": "item_code",
+      "list": ["item_code", "width_mm", "height_mm", "set_count", "qty", "rate", "amount"],
+      "fields": [
+        "item_code:Link(Item)! Mã hàng",
+        "width_mm:Int Rộng (mm)",
+        "height_mm:Int Cao (mm)",
+        "set_count:Int=(1) Số bộ",
+        "qty:Float! Số lượng tính tiền (m2 hoặc bộ)",
+        "rate:Currency! Đơn giá",
+        "amount:Currency Thành tiền",
+        "color:Data Màu / mã sơn",
+        "motor_model:Link(Item) Mô tơ kèm theo",
+        "accessories:Small Text Phụ kiện kèm theo",
+        "install_note:Small Text Ghi chú lắp đặt",
+        "warehouse:Link(Warehouse) Kho xuất",
+        "delivered_qty:Float Đã giao"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Kinh doanh": "rwc",
+        "Thủ kho": "r",
+        "Kế toán": "r"
+      }
+    },
+
+    {
+      "name": "Sales Order",
+      "label": "Đơn hàng",
+      "icon": "shopping-cart",
+      "group": "Bán hàng",
+      "naming": "DH-.YYYY.-####",
+      "title": "customer",
+      "submittable": true,
+      "list": ["customer", "transaction_date", "grand_total", "delivered_percentage"],
+      "search": ["customer"],
+      "fields": [
+        "customer:Link(Customer)! Khách hàng",
+        "company:Link(Company)!=(Xưởng) Công ty",
+        "currency:Link(Currency)!=(VND) Tiền tệ",
+        "transaction_date:Date! Ngày đặt",
+        "delivery_date:Date Ngày giao dự kiến",
+        "items:Table(Sales Order Item)! Dòng hàng",
+        "grand_total:Currency Tổng tiền",
+        "delivered_percentage:Percent Đã giao (%)",
+        "billed_percentage:Percent Đã xuất hoá đơn (%)",
+        "note:Small Text Ghi chú"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Kinh doanh": "rwc",
+        "Thủ kho": "r",
+        "Kế toán": "r",
+        "Sản xuất": "r"
+      }
+    },
+
+    {
+      "name": "Delivery Note Item",
+      "label": "Dòng phiếu xuất",
+      "group": "Danh mục",
+      "naming": "autoincrement",
+      "title": "item_code",
+      "list": ["item_code", "qty", "warehouse", "rate"],
+      "fields": [
+        "item_code:Link(Item)! Mã hàng",
+        "qty:Float! Số lượng xuất",
+        "warehouse:Link(Warehouse)! Kho xuất",
+        "rate:Currency Đơn giá bán",
+        "valuation_rate:Currency Giá vốn",
+        "amount:Currency Thành tiền"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Thủ kho": "rwc",
+        "Kinh doanh": "r",
+        "Kế toán": "r"
+      }
+    },
+
+    {
+      "//": "Phiếu xuất kho. Nhân kho TỪ CHỐI khi tồn không đủ — đó là chốt chặn kho âm.",
+      "name": "Delivery Note",
+      "label": "Phiếu xuất kho",
+      "icon": "truck",
+      "group": "Kho",
+      "naming": "PXK-.YYYY.-####",
+      "title": "customer",
+      "submittable": true,
+      "list": ["customer", "posting_at", "against_sales_order", "install_date", "installer"],
+      "fields": [
+        "customer:Link(Customer)! Khách hàng",
+        "company:Link(Company)!=(Xưởng) Công ty",
+        "currency:Link(Currency)!=(VND) Tiền tệ",
+        "against_sales_order:Link(Sales Order)! Theo đơn hàng",
+        "posting_at:Datetime! Thời điểm xuất",
+        "items:Table(Delivery Note Item)! Dòng hàng xuất",
+        "install_address:Small Text! Địa chỉ lắp đặt",
+        "install_date:Date Ngày lắp",
+        "installer:Data Đội lắp đặt",
+        "driver:Data Người giao / lái xe",
+        "vehicle:Data Biển số xe",
+        "note:Small Text Ghi chú"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Thủ kho": "rwc",
+        "Kinh doanh": "r",
+        "Kế toán": "r"
+      }
+    },
+
+    {
+      "name": "Sales Invoice Item",
+      "label": "Dòng hoá đơn",
+      "group": "Danh mục",
+      "naming": "autoincrement",
+      "title": "item_code",
+      "list": ["item_code", "qty", "rate", "amount"],
+      "fields": [
+        "item_code:Link(Item)! Mã hàng",
+        "qty:Float! Số lượng",
+        "rate:Currency! Đơn giá",
+        "amount:Currency Thành tiền"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Kế toán": "rwc",
+        "Kinh doanh": "r"
+      }
+    },
+
+    {
+      "//": "Hoá đơn bán hàng — nơi CÔNG NỢ phát sinh. debit_to là tài khoản phải thu.",
+      "name": "Sales Invoice",
+      "label": "Hoá đơn bán hàng",
+      "icon": "receipt",
+      "group": "Công nợ",
+      "naming": "HD-.YYYY.-####",
+      "title": "customer",
+      "submittable": true,
+      "list": ["customer", "posting_at", "grand_total", "outstanding_amount"],
+      "fields": [
+        "customer:Link(Customer)! Khách hàng",
+        "company:Link(Company)!=(Xưởng) Công ty",
+        "currency:Link(Currency)!=(VND) Tiền tệ",
+        "against_sales_order:Link(Sales Order) Theo đơn hàng",
+        "posting_at:Datetime! Ngày hoá đơn",
+        "due_date:Date Hạn thanh toán",
+        "debit_to:Link(Account)!=(Phải thu khách hàng) Tài khoản phải thu",
+        "default_income_account:Link(Account)!=(Doanh thu bán hàng) Tài khoản doanh thu",
+        "round_off_account:Link(Account)=(Chênh lệch làm tròn) Tài khoản làm tròn",
+        "items:Table(Sales Invoice Item)! Dòng hàng",
+        "grand_total:Currency Tổng tiền",
+        "outstanding_amount:Currency Còn nợ"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Kế toán": "rwc",
+        "Kinh doanh": "r"
+      }
+    },
+
+    {
+      "name": "Payment Entry",
+      "label": "Phiếu thu",
+      "icon": "wallet",
+      "group": "Công nợ",
+      "naming": "PT-.YYYY.-####",
+      "title": "party",
+      "submittable": true,
+      "list": ["party", "posting_at", "paid_amount", "mode_of_payment"],
+      "fields": [
+        "party:Link(Customer)! Khách hàng",
+        "company:Link(Company)!=(Xưởng) Công ty",
+        "currency:Link(Currency)!=(VND) Tiền tệ",
+        "posting_at:Datetime! Ngày thu",
+        "paid_amount:Currency! Số tiền thu",
+        "mode_of_payment:Select(Tiền mặt,Chuyển khoản)=(Chuyển khoản) Hình thức",
+        "paid_to:Link(Account)!=(Tiền gửi ngân hàng) Tài khoản nhận",
+        "party_account:Link(Account)!=(Phải thu khách hàng) Tài khoản công nợ",
+        "reference_no:Data Số chứng từ",
+        "note:Small Text Ghi chú"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Kế toán": "rwc",
+        "Kinh doanh": "r"
+      }
+    },
+
+    {
+      "//": "Lệnh sản xuất — tờ lệnh thợ cầm ra máy. Tiến độ do nhân suy từ chứng từ, không gõ tay.",
+      "//do": "Rộng/cao BẮT BUỘC: một lệnh cắt thiếu số đo là một bộ cửa cắt hỏng, và nhôm đã cắt thì không nối lại được.",
+      "name": "Work Order",
+      "label": "Lệnh sản xuất",
+      "icon": "factory",
+      "group": "Sản xuất",
+      "naming": "LSX-.YYYY.-####",
+      "title": "production_item",
+      "submittable": true,
+      "list": ["production_item", "width_mm", "height_mm", "set_count", "produced_qty", "planned_end_date"],
+      "fields": [
+        "production_item:Link(Item)! Thành phẩm",
+        "company:Link(Company)!=(Xưởng) Công ty",
+        "qty:Float! Số lượng cần sản xuất",
+        "produced_qty:Float Đã sản xuất",
+        "width_mm:Int! Rộng (mm)",
+        "height_mm:Int! Cao (mm)",
+        "set_count:Int=(1) Số bộ",
+        "color:Data Màu / mã sơn",
+        "motor_model:Link(Item) Mô tơ",
+        "source_warehouse:Link(Warehouse) Kho nguyên vật liệu",
+        "target_warehouse:Link(Warehouse)! Kho nhập thành phẩm",
+        "against_sales_order:Link(Sales Order) Theo đơn hàng",
+        "planned_start_date:Date Ngày bắt đầu",
+        "planned_end_date:Date Ngày hẹn giao",
+        "install_address:Small Text Địa chỉ lắp đặt",
+        "note:Small Text Ghi chú xưởng"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Sản xuất": "rwc",
+        "Kinh doanh": "r",
+        "Thủ kho": "r",
+        "Kế toán": "r"
+      }
+    }
+  ],
+
+  "//reports": [
+    "Ba câu hỏi vận hành hằng ngày. Tồn kho và công nợ THẬT nằm ở sổ kho / sổ cái do nhân ghi",
+    "— các báo cáo nền tảng `Stock Ledger` và `Accounts Receivable` đọc thẳng chỗ đó. Ba báo",
+    "cáo dưới đây đọc chứng từ, phục vụ điều hành chứ không thay sổ."
+  ],
+  "reports": [
+    {
+      "name": "Đơn hàng theo khách",
+      "doctype": "Sales Order",
+      "columns": ["customer:Link(Customer) Khách hàng", "count(name):Int Số đơn", "sum(grand_total):Currency Tổng giá trị"],
+      "groupBy": "customer",
+      "orderBy": "sum(grand_total) desc",
+      "filters": ["customer", "transaction_date"],
+      "icon": "shopping-cart"
+    },
+    {
+      "name": "Lệnh sản xuất theo mặt hàng",
+      "doctype": "Work Order",
+      "columns": ["production_item:Link(Item) Thành phẩm", "count(name):Int Số lệnh", "sum(set_count):Int Tổng số bộ", "sum(qty):Float Tổng khối lượng"],
+      "groupBy": "production_item",
+      "orderBy": "count(name) desc",
+      "filters": ["production_item", "target_warehouse", "planned_end_date"],
+      "icon": "factory"
+    },
+    {
+      "name": "Lắp đặt theo đội",
+      "doctype": "Delivery Note",
+      "columns": ["installer:Data Đội lắp", "count(name):Int Số phiếu"],
+      "groupBy": "installer",
+      "orderBy": "count(name) desc",
+      "filters": ["installer", "install_date", "customer"],
+      "icon": "truck"
+    },
+    {
+      "name": "Công nợ theo khách hàng",
+      "doctype": "Sales Invoice",
+      "columns": ["customer:Link(Customer) Khách hàng", "count(name):Int Số hoá đơn", "sum(grand_total):Currency Tổng hoá đơn", "sum(outstanding_amount):Currency Còn nợ"],
+      "groupBy": "customer",
+      "orderBy": "sum(outstanding_amount) desc",
+      "filters": ["customer", "posting_at"],
+      "icon": "wallet"
+    }
+  ]
+}
