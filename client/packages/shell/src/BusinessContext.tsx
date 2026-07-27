@@ -60,7 +60,21 @@ export function BusinessContextProvider(props: BusinessContextProviderProps) {
   const seq = useRef(0);
   const selectionRef = useRef<BusinessContextSelection>(readStored(props.storageKey));
 
+  /**
+   * App khai `dimensions: []` là khai KHÔNG có phạm vi dữ liệu — và khi đó không hỏi server.
+   *
+   * Trước đây vẫn hỏi, và server trả về bộ chiều mặc định (có `company` bắt buộc). Hệ quả
+   * trên một app không hề phân theo công ty: thêm một lượt gọi ~340 ms chặn màn hình, cộng
+   * một ô chọn "Công ty" trên thanh trên mà bấm vào cũng chỉ có đúng một lựa chọn.
+   *
+   * Phân biệt được vì `undefined` (không khai gì) khác `[]` (khai là không có): app cần
+   * phạm vi thì khai rõ — `assets` khai `["company"]`, `hrm` khai bộ của nó — nên mảng rỗng
+   * không thể là "quên khai".
+   */
+  const noDimensions = Array.isArray(props.dimensions) && props.dimensions.length === 0;
+
   const load = useCallback(async (requested?: BusinessContextSelection) => {
+    if (noDimensions) { setState(EMPTY_BUSINESS_CONTEXT); setLoading(false); setError(undefined); return; }
     const id = ++seq.current;
     setLoading(true); setError(undefined);
     try {
@@ -77,7 +91,7 @@ export function BusinessContextProvider(props: BusinessContextProviderProps) {
     } finally {
       if (id === seq.current) setLoading(false);
     }
-  }, [props.adapter, props.appId, props.dimensions, props.storageKey]);
+  }, [props.adapter, props.appId, props.dimensions, props.storageKey, noDimensions]);
 
   useEffect(() => { void load(); }, [load]);
 
