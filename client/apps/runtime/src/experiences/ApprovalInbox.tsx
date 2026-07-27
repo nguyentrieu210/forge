@@ -3,7 +3,7 @@ import { CheckCircle2, FileText, Loader2, RefreshCw, ThumbsDown, ThumbsUp } from
 import type { Doc, DocField, DocTypeMeta } from "@metaforge/core";
 import { useMetaForge } from "@metaforge/views/provider";
 import { MobileShell, TouchCard, BigButton } from "@metaforge/shell";
-import { toast, cn } from "@metaforge/ui";
+import { Button, toast, cn } from "@metaforge/ui";
 
 /**
  * Approval inbox — an operational (App-mode) screen for ANY doctype with a workflow.
@@ -225,9 +225,9 @@ export function ApprovalInbox({ doctype, title, onExit }: { doctype: string; tit
       subtitle={rows === null ? "Đang tải…" : `${rows.length} hồ sơ chờ xử lý`}
       onBack={onExit}
       right={
-        <button type="button" onClick={() => void load(meta)} aria-label="Tải lại" className="grid size-10 place-items-center rounded-md hover:bg-accent">
+        <Button type="button" variant="ghost" size="icon" onClick={() => void load(meta)} aria-label="Tải lại" className="size-10">
           <RefreshCw className="size-5" />
-        </button>
+        </Button>
       }
     >
       <div className="space-y-3 p-3">

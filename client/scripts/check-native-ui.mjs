@@ -8,7 +8,7 @@ import { join, relative } from "node:path";
 
 const ROOT = new URL("..", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
 // Quét cả app thật, không chỉ demo — app sinh ra cho khách cũng phải theo design system.
-const SCAN = ["packages", "apps/demo/src", "apps/kho/src", "apps/kho-vn/src"];
+const SCAN = ["packages", "apps/demo/src", "apps/kho/src", "apps/kho-vn/src", "apps/runtime/src"];
 const SKIP_DIR = /node_modules|dist|\.selfcheck|packages[\\/]ui[\\/]/;
 // style động cho phép (bố cục tính runtime): grid cols, gantt bar width/left, %
 // style động cho phép (bố cục tính runtime): grid cols, gantt bar %, chiều cao động (virtualize/gantt), transform.
@@ -46,6 +46,22 @@ for (const f of files) {
     if (/<(button|input|select|table|textarea|option|datalist)\b/.test(line)) violations.push([at, "native element", line.trim().slice(0, 80)]);
     if (/(icon|nav).*[🔍📝📋🗂️🌳📅📊📈📑🖨️🛠️🔀🧾📐]/.test(line)) violations.push([at, "emoji icon", line.trim().slice(0, 60)]);
   });
+}
+
+// Social Commerce là trung tâm điều hành desktop, không phải một màn app-mode độc lập.
+// Giữ cổng này để nó không quay lại màn tự dựng toàn viewport chỉ vì route `/x/*`
+// vẫn hỗ trợ những experience touch-first khác.
+const runtimeMain = readFileSync(join(ROOT, "apps/runtime/src/main.tsx"), "utf8");
+const socialBranchAt = runtimeMain.indexOf('if (kind === "social-commerce")');
+const socialBranch = socialBranchAt >= 0 ? runtimeMain.slice(socialBranchAt, socialBranchAt + 1_800) : "";
+if (!/<Shell[\s\S]*<SocialCommerce/.test(socialBranch)) {
+  violations.push(["apps/runtime/src/main.tsx", "shell", "Social Commerce KHÔNG nằm trong AppShell chuẩn"]);
+}
+const socialScreen = readFileSync(join(ROOT, "apps/runtime/src/experiences/SocialCommerce.tsx"), "utf8");
+for (const primitive of ["Tabs", "StatusBadge", "Skeleton", "Table"]) {
+  if (!new RegExp(`<${primitive}\\b`).test(socialScreen)) {
+    violations.push(["apps/runtime/src/experiences/SocialCommerce.tsx", "design-system", `Social Commerce KHÔNG dùng ${primitive} từ UI kit`]);
+  }
 }
 
 // LiveApp phải dùng AppShell + CommandPalette (qua DemoShell)

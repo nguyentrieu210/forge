@@ -10,7 +10,7 @@ import {
   AppShell, AuthBoundary, BusinessContextBar, BusinessContextProvider, I18nProvider,
   LoginForm, applyBrand, resolveIcon, useBusinessContext, useTheme, type NavItem,
 } from "@metaforge/shell";
-import { Button } from "@metaforge/ui";
+import { Button, Toaster } from "@metaforge/ui";
 import { SocialCommerceLanding, type PublicSocialPage } from "./landing/SocialCommerceLanding.js";
 import "./styles.css";
 
@@ -80,7 +80,6 @@ function renderExperience(key: string, manifest: AppManifest, navigate: Navigate
   const separator = key.indexOf(":");
   const kind = separator < 0 ? key : key.slice(0, separator);
   const argument = separator < 0 ? "" : key.slice(separator + 1);
-  if (kind === "social-commerce") return <SocialCommerce />;
   if (kind === "approval" && argument) {
     // The label the app declared, not the raw DocType name. A screen titled "Asset
     // Request" in an otherwise Vietnamese app reads as a leaked internal identifier.
@@ -210,12 +209,15 @@ function buildNavigation(manifest: AppManifest, catalog: ApplicationCatalog | un
 function RootApp() {
   const publicPage = resolvePublicSocialPage();
   if (publicPage) return <I18nProvider><SocialCommerceLanding page={publicPage} adapter={adapter} /></I18nProvider>;
-  return <I18nProvider><AuthBoundary
-    adapter={adapter}
-    renderLoading={() => <Splash>Đang kết nối…</Splash>}
-    renderError={(message) => <div className="grid h-screen place-items-center text-destructive">Lỗi kết nối: {message}</div>}
-    renderGuest={(retry) => <LoginForm adapter={adapter} onSuccess={retry} title="Đăng nhập" />}
-  >{(boot, auth) => <ManifestBoundary boot={boot} logout={auth.logout} />}</AuthBoundary></I18nProvider>;
+  return <I18nProvider>
+    <AuthBoundary
+      adapter={adapter}
+      renderLoading={() => <Splash>Đang kết nối…</Splash>}
+      renderError={(message) => <div className="grid h-screen place-items-center text-destructive">Lỗi kết nối: {message}</div>}
+      renderGuest={(retry) => <LoginForm adapter={adapter} onSuccess={retry} title="Đăng nhập" />}
+    >{(boot, auth) => <ManifestBoundary boot={boot} logout={auth.logout} />}</AuthBoundary>
+    <Toaster />
+  </I18nProvider>;
 }
 
 /**
@@ -348,9 +350,10 @@ function RuntimeRoutes({ manifest, boot, logout, nav, catalogError }: ScreenProp
       <Route path="/catalog" element={<CatalogScreen {...screen} error={catalogError} />} />
       <Route path="/permissions" element={<PermissionScreen {...screen} />} />
       <Route path="/workspace/:workspace" element={<WorkspaceScreen {...screen} />} />
-      {/* App-mode. Rendered WITHOUT the Desk shell: an operational screen owns the whole
-          viewport, because a sidebar on a phone is a sidebar the user has to dismiss. */}
-      <Route path="/x/:key" element={<ExperienceScreen manifest={manifest} />} />
+      {/* Touch-first experiences may still own the viewport. Social Commerce is a
+          desktop operations center, so ExperienceScreen mounts that one inside the
+          shared Forge shell instead of growing a second navigation system. */}
+      <Route path="/x/:key" element={<ExperienceScreen {...screen} />} />
       <Route path="/app/:doctype" element={<DoctypeScreen {...screen} />} />
       <Route path="/app/:doctype/:name" element={<DoctypeScreen {...screen} />} />
       <Route path="/report/:report" element={<ReportScreen {...screen} />} />
@@ -362,10 +365,37 @@ function RuntimeRoutes({ manifest, boot, logout, nav, catalogError }: ScreenProp
   </Suspense>;
 }
 
-function ExperienceScreen({ manifest }: { manifest: AppManifest }) {
+function ExperienceScreen({ manifest, boot, logout, nav }: ScreenProps) {
   const { key = "" } = useParams();
   const navigate = useNavigate();
-  return <>{renderExperience(decodeURIComponent(key), manifest, navigate)}</>;
+  const experienceKey = decodeURIComponent(key);
+  const kind = experienceKey.split(":", 1)[0];
+  if (kind === "social-commerce") {
+    const active = manifest.nav.find((item) => item.key.startsWith("social-commerce:"))?.key ?? experienceKey;
+    const canManageConnections = boot.user === "Administrator"
+      || boot.roles.includes("Administrator")
+      || boot.roles.includes("System Manager");
+    return (
+      <Shell
+        manifest={manifest}
+        boot={boot}
+        logout={logout}
+        nav={nav}
+        active={active}
+        breadcrumbs={[{ label: "Trung tâm bán hàng" }]}
+      >
+        <SocialCommerce
+          canManageConnections={canManageConnections}
+          onAuthenticationRequired={redirectToLogin}
+        />
+      </Shell>
+    );
+  }
+  return <>{renderExperience(experienceKey, manifest, navigate)}</>;
+}
+
+function redirectToLogin() {
+  window.location.assign("/login");
 }
 
 function DoctypeScreen({ manifest, boot, logout, nav }: ScreenProps) {
