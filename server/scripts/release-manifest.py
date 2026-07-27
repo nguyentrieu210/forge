@@ -8,9 +8,10 @@ from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
 manifest_path = root / "RELEASE_CONTENT_MANIFEST.json"
-excluded_dirs = {"dist", "node_modules", ".git", ".wrangler", "coverage", "__pycache__"}
+excluded_dirs = {"dist", "node_modules", ".git", ".wrangler", "coverage", "__pycache__", "backups"}
 excluded_files = {manifest_path.name, "PROMOTION_EVIDENCE.json"}
 excluded_suffixes = {".log", ".pyc"}
+excluded_secret_prefixes = (".dev.vars", ".env")
 excluded_prefixes = {
     "docs/spec/source-exact/generated",
     "docs/spec/source-exact/oracle/fixtures",
@@ -28,7 +29,12 @@ def files():
             continue
         if any(relative_posix == prefix or relative_posix.startswith(f"{prefix}/") for prefix in excluded_prefixes):
             continue
-        if not path.is_file() or path.name in excluded_files or path.suffix in excluded_suffixes:
+        if (
+            not path.is_file()
+            or path.name in excluded_files
+            or path.suffix in excluded_suffixes
+            or path.name.startswith(excluded_secret_prefixes)
+        ):
             continue
         result.append(path)
     return sorted(result, key=lambda item: item.relative_to(root).as_posix())
@@ -57,7 +63,7 @@ def build():
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "file_count": len(entries),
         "tree_sha256": tree.hexdigest(),
-        "excluded": sorted(excluded_dirs | excluded_files | excluded_prefixes),
+        "excluded": sorted(excluded_dirs | excluded_files | excluded_prefixes | set(excluded_secret_prefixes)),
         "files": entries,
     }
 
