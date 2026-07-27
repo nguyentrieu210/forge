@@ -2,10 +2,17 @@ import { useEffect, useRef, useState } from "react";
 import { Download, Upload, FileSpreadsheet, Loader2, CheckCircle2, XCircle, AlertTriangle, ArrowRight, RotateCcw, FileDown } from "lucide-react";
 import type { ImportPreview, ImportStatus, DataImportUiPhase } from "@metaforge/adapter-frappe";
 import { toUiPhase } from "@metaforge/adapter-frappe";
-import { useMetaForge } from "@metaforge/views";
+import { useMetaForge } from "../container/provider.js";
 import { cn, Button, Input, Label, Badge, Separator, FileButton, Table, TableBody, TableRow, TableCell, toast } from "@metaforge/ui";
 
 /**
+ * MOVED here from the demo app so the generic runtime can serve it too.
+ *
+ * It was app-agnostic all along — doctype is state, everything else comes from the
+ * adapter — but living inside one app meant every OTHER app shipped without an import
+ * screen. "Nhập Excel" was missing from a product not because it was unbuilt but
+ * because it was in the wrong folder.
+ *
  * Data Import (M08) — wizard đầy đủ copy Frappe Data Import Tool:
  *   1. Cấu hình  : DocType + kiểu nhập (thêm mới / cập nhật) + tải MẪU
  *   2. Tải lên   : chọn file → createDoc("Data Import") → uploadFile(import_file) → preview

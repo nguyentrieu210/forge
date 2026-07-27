@@ -160,32 +160,87 @@ thật một lần.
 `FilterOperator` phía client liệt kê `"between"`. Server trả `Filter operator is not supported:
 between`. Màn lịch dùng nó và hỏng trắng. Đã đổi sang hai điều kiện `>=`/`<=`; hợp đồng vẫn còn lệch.
 
-## GAP-13 · App Worker: gọi ĐƯỢC, nhưng chặng gọi NGƯỢC lỗi 522
+## GAP-13 · App Worker: ĐÃ THÔNG cả bốn chặng (đóng)
 
-Đường app-Worker lần đầu được chạy thật. Kết quả từng chặng:
+Đường app-Worker nay chạy đủ vòng trên tenant sống. Bốn chặng, và cả bốn đều hỏng theo một
+kiểu khác nhau trước khi thông:
 
 | Chặng | Kết quả |
 |---|---|
 | Deploy Worker vào dispatch namespace | ✅ `cloudforge-app-center` |
 | Khai `worker` + `validators` trong brief | ✅ compiler + schema + parser đều nhận |
-| Nền tảng GỌI TỚI Worker | ✅ thông báo của chính Worker trả về đúng |
-| Worker gọi NGƯỢC qua `/_app/` | ❌ **HTTP 522** |
+| Nền tảng GỌI TỚI Worker | ✅ |
+| Worker gọi NGƯỢC qua `/_app/` | ✅ đọc **và** ghi với danh tính người gọi |
 
-Hai mắt xích **thiếu trong config tenant** đã phát hiện và vá dọc đường:
+### Năm lỗi phải sửa, không phải một
 
-1. **`DISPATCHER`** — tenant Worker không có binding dispatch namespace nên không gọi nổi app
-   Worker. Nền tảng fail-closed đúng (`App validators are declared but this deployment cannot
-   reach app Workers`) — nhưng đó chính là lý do đường này chưa từng chạy trên deployment nào.
-2. **`PUBLIC_ORIGIN`** — nền tảng dùng nó để báo app biết gọi ngược về đâu. Không có thì app
-   không đọc được gì, mà validator không đọc được thì phải từ chối. Nay suy từ bảng route KV
-   chứ không đoán theo id tenant.
+1. **`DISPATCHER` thiếu trong config tenant** — tenant Worker không có binding dispatch
+   namespace nên không gọi nổi app Worker. Nền tảng fail-closed đúng, nhưng đó là lý do đường
+   này chưa từng chạy trên deployment nào.
+2. **`PUBLIC_ORIGIN` thiếu** — nền tảng dùng nó báo app gọi ngược về đâu. Nay suy từ bảng
+   route KV chứ không đoán theo id tenant.
+3. **`PUBLIC_ORIGIN` có nhưng không tới nơi** — tenant dựng env cho app method ở MỘT CHỖ KHÁC
+   với env cho validator, và bản sao thứ hai đã trôi mất `PUBLIC_ORIGIN`. Hệ quả: validator
+   gọi ngược được còn app method thì không, cùng một cơ chế mà hai kết quả. Nay dùng chung
+   một object.
+4. **522 khi `fetch` qua mạng** — app Worker gọi chính hostname custom-domain trong cùng zone
+   nó đang chạy sau. Thay bằng **service binding** tới gateway: không DNS, không zone, và
+   **không bỏ qua lớp xác thực nào** — gateway vẫn đòi credential theo (tenant, app) và danh
+   tính đã ký, y như khi đi qua mạng. Chỉ chặng mạng biến mất.
+5. **Tầng Frappe của tenant chưa từng nhìn danh tính nền tảng** — nó xác thực bằng cookie
+   phiên, mà app callback thì cố ý KHÔNG có cookie (app không được cầm phiên của người dùng).
+   Nên mọi lời gọi ngược trả `403 Login to access this resource` dù danh tính đã ký chạy suốt
+   từ đầu đến cuối. Nay có `x-cloudforge-app-callback` — header **chỉ gateway đặt được**, sau
+   khi đã tước mọi bản sao do bên ngoài gửi, và chỉ đặt khi đã xác minh xong cả hai bằng
+   chứng. Tenant vẫn tự kiểm lại chữ ký, tenant, hạn và trace trước khi dùng.
 
-**Lỗi còn lại (522):** app Worker `fetch` chính hostname custom-domain trong **cùng zone** mà nó
-đang chạy sau. Đây là hạn chế kiến trúc, không phải lỗi code — cần một quyết định thiết kế:
+### Đã chứng thực trên tenant sống
 
-- service binding từ app Worker tới gateway (nhanh nhất, nhưng bỏ qua lớp xác thực HTTP), hoặc
-- một hostname nội bộ riêng cho callback, không nằm sau cùng zone, hoặc
-- gateway workers.dev + cách chỉ định tenant tin cậy được (hiện `?tenant=` chỉ chạy ở dev).
+- 4 ca xếp lịch: không trùng ✅ tạo được · trùng phòng ❌ từ chối, nêu đúng phòng · trùng giáo
+  viên ❌ từ chối, nêu đúng người · **kề nhau (08:30 bắt đầu đúng lúc 08:30 kết thúc) ✅ tạo
+  được** — ca cuối để luật không thể "đúng" bằng cách từ chối mọi thứ.
+- Vượt sĩ số: từ chối, nêu đúng con số.
+- `center.sessions.generate`: chạy được, ghi thật.
 
-**Đã gỡ khai báo validator khỏi brief** vì fail-closed nghĩa là **chặn mọi ghi** lên `Class Session`
-và `Enrollment` trên tenant sống. Worker vẫn deploy sẵn để nối lại khi chọn xong đường callback.
+### Một lỗi nữa lộ ra nhờ chạy thật
+
+Chú thích trong Worker nói phương thức sinh buổi là *idempotent*. **Nó không.** `count` được
+hiểu là "thêm bấy nhiêu", nên chạy hai lần để lại gấp đôi số buổi — đúng cái hậu quả mà chú
+thích tuyên bố đã ngăn. Đo được, không phải suy đoán: hai lần `count: 2` ra bốn buổi. Nay
+`count` là **tổng số buổi lớp phải có** kể từ ngày bắt đầu; ba lần chạy `count: 3` để lại đúng
+3 buổi.
+
+Toàn bộ đã đóng vào `scripts/verify-center.mjs` §9 — validator không kêu khi nó ngừng chạy, nó
+chỉ ngừng từ chối, và dấu hiệu đầu tiên là một phòng học bị xếp trùng.
+
+## GAP-14 · Báo cáo: app không tự khai được (đã đóng)
+
+Báo cáo từng là một **bảng cứng trong nền tảng** (`packages/query` → `DEFINITIONS`) trên các
+SQL view kế toán dựng sẵn. Đúng cho sổ cái, sai cho mọi thứ khác: một app giao bằng dữ liệu
+không thể có nổi một báo cáo, nên mỗi khách hỏi "doanh thu theo lớp" là một lần phải phát hành
+nền tảng.
+
+Nay app khai báo cáo trong chính brief của mình. Không phải SQL tuỳ ý: báo cáo nêu **một**
+doctype, các field của doctype đó, nhiều nhất **một** phép gộp — trình biên dịch dựng câu lệnh.
+App không với sang được dữ liệu của app khác, không join được, và không nói được điều gì mà
+lớp phân quyền vốn đã không cho phép đọc.
+
+Bốn thứ phải sửa để nó chạy được đến màn hình:
+
+1. **Cột trả về sai hợp đồng.** Máy báo cáo mô tả cột là `{field,label,type}` — từ vựng của
+   chính nó. Mọi client Frappe đọc `{fieldname,label,fieldtype,options}` và **tra ô theo
+   `fieldname`**. Kết quả: bảng đúng tiêu đề, đúng số dòng, **mọi ô trống** — client hỏi mỗi
+   dòng lấy `row[undefined]`. Không có gì báo lỗi, nên nó đọc ra như "không có dữ liệu".
+2. **`options` của cột Link bị rơi mất** trên đường biên dịch, nên cột khoá in ra `LOP-2026-0001`
+   thay vì tên lớp — đúng lỗi mà danh sách và lịch mỗi cái đã phải sửa một lần.
+3. **Shell gắn phạm vi dữ liệu vào mọi lời gọi báo cáo.** `Enrollment` không có `company`, nên
+   bộ lọc đó bị từ chối và mọi báo cáo của app trả về bảng rỗng. Nay: chiều dữ liệu mà doctype
+   **không mang** thì bỏ qua; field doctype **có mang** mà app quên khai thì vẫn từ chối, vì
+   im lặng nới phạm vi là để một quản lý cơ sở đọc số của mọi cơ sở.
+4. **Cài lại app bị coi là "không đổi".** Nền tảng nâng cấp để đọc thêm được `reports`, gói cài
+   y nguyên nên hash trùng, và bản parse CŨ ở lại — mọi báo cáo trả "Unknown report" trong khi
+   lệnh cài báo thành công. Nay "không đổi" nghĩa là gói giống nhau **và** nền tảng hiện tại
+   đọc ra cùng một kết quả.
+
+Center có 4 báo cáo chạy trên dữ liệu thật, xuất Excel/CSV bằng màn báo cáo chung. Đối chiếu
+được: tổng của "Chuyên cần theo buổi" = 288 = đúng số bản ghi điểm danh trong CSDL.

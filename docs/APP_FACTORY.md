@@ -122,6 +122,43 @@ dòng code nào:
 Đoán bất kỳ mục nào ở client đều tạo ra nút bấm vào thì lỗi: user này có được duyệt hay không phụ
 thuộc vai trò và `allow_self_approval`, chỉ server biết.
 
+## Báo cáo — app tự khai, không phải phát hành nền tảng
+
+Báo cáo từng là bảng cứng trong nền tảng, trên các SQL view kế toán. Nay khai trong brief:
+
+```json
+"reports": [{
+  "name": "Ghi danh theo lớp",
+  "doctype": "Enrollment",
+  "columns": ["class_group:Link(Class Group) Lớp học", "count(name):Int Số ghi danh",
+              "sum(discount_amount):Currency Tổng giảm giá"],
+  "groupBy": "class_group",
+  "orderBy": "count(name) desc",
+  "filters": ["class_group", "tuition_plan", "workflow_state"]
+}]
+```
+
+Mỗi báo cáo thành một mục menu (nhóm "Báo cáo"), gắn `permission_doctype` để **không mời** người
+không đọc được dữ liệu vào một màn sẽ từ chối họ. Xuất Excel/CSV do màn báo cáo chung lo — không
+khai gì thêm.
+
+Cột viết gọn `<field>:<Type> Nhãn`, hoặc `<agg>(<field>):<Type> Nhãn` với `count/sum/avg/min/max`.
+`count(name)` đếm **bản ghi** — đếm một field JSON sẽ âm thầm bỏ qua bản ghi thiếu field đó, và
+"bao nhiêu" thì không bao giờ có nghĩa như vậy.
+
+**Bốn ràng buộc, mỗi cái chặn một con số sai chứ không phải một lỗi cú pháp:**
+
+| Ràng buộc | Không có thì |
+|---|---|
+| có cột gộp ⇒ bắt buộc `groupBy` | SQLite trả một dòng tuỳ ý cho mỗi cột trần, không báo lỗi — báo cáo hiện số **sai mà hợp lý** |
+| đã `groupBy` ⇒ cột trần phải chính là field gộp | như trên |
+| `Link` ⇒ phải nêu doctype đích | cột khoá in ra `LOP-2026-0001` thay vì tên lớp |
+| field phải là tên thuần, giá trị lọc luôn tham số ràng buộc | tên field đi thẳng vào SQL, và nó sẽ được biên dịch lại ở **mọi** lần chạy sau |
+
+App không nêu được bảng (luôn là `documents`, lọc đúng một doctype), không với sang tenant khác
+(`tenant_id` luôn là tham số thứ nhất), không với sang app khác (doctype phải là của chính nó).
+Bản ghi đã huỷ (`docstatus=2`) bị loại — để lại thì mọi tổng đều âm thầm lớn hơn thực tế.
+
 ## Bước kiểm 4 và 5 — vì sao có
 
 Cài xong sạch mà app vẫn không mở được là chuyện đã xảy ra thật, nên lệnh không báo thành công khi:

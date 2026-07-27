@@ -9,6 +9,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { displayValueKey, type Doc, type DocTypeMeta, type ListOpts } from "@metaforge/core";
 import { ConfirmDialog, Skeleton, toast, useT } from "@metaforge/ui";
 import { ListView } from "../list/ListView.js";
+import { formatValue } from "../list/cells.js";
+import { buildCsv, downloadCsv, downloadXlsx, stampedName } from "../report/export.js";
 import { deriveColumns, imageField } from "../list/columns.js";
 import { buildServerQuery, countQuery } from "../list/filters.js";
 import { useListUrlState, loadHiddenCols, saveHiddenCols, type UrlStateBridge } from "../list/useListState.js";
@@ -111,6 +113,45 @@ export function ListContainer(props: ListContainerProps) {
     refresh();
   }, [adapter, doctype, pendingDelete, patch, refresh]);
 
+  /**
+   * Xuất Excel từ danh sách.
+   *
+   * `ListView` đã có nút này từ lâu, nhưng nó chỉ hiện khi cha truyền `onExport` — và
+   * KHÔNG cha nào truyền. Nút tồn tại trong mã, không tồn tại trên màn hình; đó là lý do
+   * "xuất Excel" bị coi là chưa làm.
+   *
+   * Xuất đúng những gì đang thấy: cột đang hiện, giá trị đã định dạng (tiền có ₫, Link đã
+   * thành tên). Người dùng vừa lọc và sắp xong thì file phải khớp màn hình — gọi lại server
+   * để lấy "tất cả" sẽ trả về một tập khác với thứ họ vừa nhìn.
+   */
+  const exportSelected = useCallback(async (names: string[]) => {
+    const chosen = new Set(names);
+    const rows = (listQ.data ?? []).filter((row) => chosen.size === 0 || chosen.has(String(row.name)));
+    if (!rows.length) return;
+    const visible = columns.filter((column) => !hidden.includes(column.fieldname));
+    const cols = visible.map((column) => ({ label: column.label, fieldname: column.fieldname, fieldtype: column.fieldtype }));
+    const raw = (row: Record<string, unknown> | unknown[], col: { fieldname?: string }) => (Array.isArray(row) ? "" : row[col.fieldname ?? ""]);
+    const text = (row: Record<string, unknown> | unknown[], col: { fieldname?: string }, index: number) => {
+      const column = visible[index];
+      const value = raw(row, col);
+      if (value === null || value === undefined) return "";
+      // Link: cùng nhãn đang hiện trên màn, không phải mã.
+      if (column?.fieldtype === "Link" && column.options) {
+        return displayValues[displayValueKey(column.options, String(value))] ?? String(value);
+      }
+      return column ? formatValue(value, column, fmt) : String(value);
+    };
+    const filename = stampedName(meta.label || meta.name || doctype);
+    try {
+      await downloadXlsx(filename, cols, rows as Array<Record<string, unknown>>, raw, text);
+      toast.success(t("list.export_done"));
+    } catch {
+      // xlsx là chunk tải riêng; mạng hỏng thì vẫn phải có file, nên rơi về CSV.
+      downloadCsv(filename, buildCsv(cols, rows as Array<Record<string, unknown>>, text));
+      toast.success(t("list.export_done_csv"));
+    }
+  }, [listQ.data, columns, hidden, displayValues, fmt, meta, doctype, t]);
+
   if (metaQ.isLoading) return <ListSkeleton />;
   if (metaQ.error) {
     return <ListView meta={EMPTY_META} rows={[]} state={state} onStateChange={patch} error={adapter.mapError(metaQ.error).message} />;
@@ -135,6 +176,7 @@ export function ListContainer(props: ListContainerProps) {
         onCreate={caps.create ? props.onCreate : undefined}
         onRefresh={refresh}
         onBulkDelete={caps.delete ? confirmBulkDelete : undefined}
+        onExport={exportSelected}
         title={meta.label || meta.name || doctype}
         activeRow={props.activeRow}
         fmt={fmt}

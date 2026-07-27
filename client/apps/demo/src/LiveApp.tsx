@@ -6,7 +6,7 @@ import {
 import { FrappeAdapterImpl, createScopeKey, type MetaForgeBootDTO } from "@metaforge/adapter-frappe";
 import {
   ApplicationCatalogContainer, createFullRegistry, MetaForgeProvider, WorkspaceContainer, DoctypeWorkspace,
-  OverviewContainer, ProcessContainer, ReportContainer, PrintContainer, loadRecentDocs,
+  OverviewContainer, ProcessContainer, ReportContainer, PrintContainer, loadRecentDocs, ImportContent,
 } from "@metaforge/views";
 import {
   AIPanel, AuthBoundary, I18nProvider, createExperienceRegistry, ExperienceRoute, resolveIcon,
@@ -18,7 +18,6 @@ import { DemoShell } from "./DemoShell.js";
 import { useUrlBridge } from "./list-glue.js";
 import { PermissionManagerContent } from "./system/PermissionManager.js";
 import { SettingsContent } from "./system/Settings.js";
-import { ImportContent } from "./system/Import.js";
 import { LoginScreen } from "./system/Login.js";
 import { ReceiveExperience } from "./experiences/ReceiveExperience.js";
 import { Button, Toaster, toast } from "@metaforge/ui";

@@ -168,6 +168,7 @@ const CLIENT_ROUTE_EXACT = new Set([
   "/login",
   "/catalog",
   "/permissions",
+  "/import",
   "/features",
   "/pricing",
   "/faq",

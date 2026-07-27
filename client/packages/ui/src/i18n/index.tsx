@@ -159,6 +159,8 @@ const DICT: Record<string, { vi: string; en: string }> = {
   "list.clear_filters": { vi: "Xoá lọc", en: "Clear filters" },
   "list.selected_count": { vi: "đã chọn", en: "selected" },
   "list.export": { vi: "Xuất", en: "Export" },
+  "list.export_done": { vi: "Đã xuất file Excel", en: "Exported to Excel" },
+  "list.export_done_csv": { vi: "Đã xuất file CSV dự phòng", en: "Exported a CSV fallback" },
   "list.clear_selection": { vi: "Bỏ chọn", en: "Clear selection" },
   "list.compact": { vi: "Thu gọn dòng", en: "Compact rows" },
   "list.comfortable": { vi: "Giãn dòng thoải mái", en: "Comfortable rows" },

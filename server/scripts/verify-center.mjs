@@ -247,5 +247,66 @@ check("running it a second time adds nothing", accepted(second) && Number(second
 check("so the class ends up with exactly the requested number", generated.length === 3, `${generated.length} sessions`);
 for (const row of generated) await admin.call(`/api/resource/Class%20Session/${row.name}`, { method: "DELETE" });
 
+/**
+ * Reports the APP declares — a capability the platform did not have.
+ *
+ * Checked against known totals rather than "returns some rows": a grouped report that
+ * quietly drops or double-counts records still returns rows, and looks entirely normal.
+ */
+console.log(`\n── §11 App-declared reports ─────────────────────────────────────`);
+
+async function runReport(name, filters) {
+  const query = new URLSearchParams({ report_name: name, ignore_prepared_report: "1" });
+  if (filters) query.set("filters", JSON.stringify(filters));
+  const response = await admin.call(`/api/method/frappe.desk.query_report.run?${query}`);
+  // On success the payload sits under `message`; on a refusal `message` is the reason
+  // itself, so both are kept rather than one being read through the other.
+  const payload = response.body?.message;
+  return {
+    status: response.status,
+    body: payload && typeof payload === "object" ? payload : {},
+    reason: typeof payload === "string" ? payload : String(response.body?.exception ?? ""),
+  };
+}
+
+const attendance = await runReport("Chuyên cần theo buổi");
+const attendanceTotal = (attendance.body.result ?? []).reduce((sum, row) => sum + Number(row.count_name ?? 0), 0);
+const attendanceRows = await admin.call("/api/method/frappe.client.get_count?doctype=Attendance%20Record");
+check(
+  "a grouped app report totals to the same number of records the doctype holds",
+  attendanceTotal === Number(attendanceRows.body?.message ?? -1),
+  `report ${attendanceTotal} vs doctype ${attendanceRows.body?.message}`,
+);
+
+const enrolments = await runReport("Ghi danh theo lớp");
+const linkColumn = (enrolments.body.columns ?? []).find((column) => column.fieldtype === "Link");
+check(
+  "columns arrive in the shape a Frappe client reads",
+  Boolean(linkColumn?.fieldname) && Boolean(linkColumn?.options),
+  JSON.stringify(linkColumn ?? null),
+);
+// `field`/`type` render a table with correct headers and every cell blank, because the
+// client looks the value up by `fieldname`. Nothing errors; it reads as "no data".
+check(
+  "every row is keyed by the column fieldnames",
+  (enrolments.body.result ?? []).every((row) => (enrolments.body.columns ?? []).every((column) => column.fieldname in row)),
+  `${(enrolments.body.result ?? []).length} rows`,
+);
+
+const rejected = await runReport("Ghi danh theo lớp", { student: "HV-2026-00001" });
+check(
+  "a filter the report did not declare is refused, not silently ignored",
+  rejected.status !== 200 && /Filter is not allowed/.test(rejected.reason),
+  `http ${rejected.status} ${rejected.reason.slice(0, 60)}`,
+);
+// The shell attaches its business-context selection to every report call. Refusing it
+// left every app report empty with "Filter is not allowed: company".
+const contextual = await runReport("Ghi danh theo lớp", { company: "Hải Đăng" });
+check(
+  "a context dimension the doctype does not carry is dropped rather than refused",
+  contextual.status === 200 && (contextual.body.result ?? []).length > 0,
+  `http ${contextual.status}, ${(contextual.body.result ?? []).length} rows`,
+);
+
 console.log(`\n${failures ? `${failures} CHECK(S) FAILED` : "ALL CHECKS PASSED"}`);
 process.exit(failures ? 1 : 0);

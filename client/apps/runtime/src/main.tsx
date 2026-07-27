@@ -22,6 +22,7 @@ const ProcessContainer = lazy(() => import("@metaforge/views/process").then((mod
 const ReportContainer = lazy(() => import("@metaforge/views/report").then((module) => ({ default: module.ReportContainer })));
 const WorkspaceContainer = lazy(() => import("@metaforge/views/workspace").then((module) => ({ default: module.WorkspaceContainer })));
 const CalendarContainer = lazy(() => import("@metaforge/views/calendar").then((module) => ({ default: module.CalendarContainer })));
+const ImportContent = lazy(() => import("@metaforge/views/import").then((module) => ({ default: module.ImportContent })));
 const ApprovalInbox = lazy(() => import("./experiences/ApprovalInbox.js").then((module) => ({ default: module.ApprovalInbox })));
 const SocialCommerce = lazy(() => import("./experiences/SocialCommerce.js").then((module) => ({ default: module.SocialCommerce })));
 
@@ -151,6 +152,10 @@ function buildNavigation(manifest: AppManifest, catalog: ApplicationCatalog | un
   ];
   if (roles.includes("System Manager") || roles.includes("Administrator")) {
     items.push({ key: "__permissions", label: "Trung tâm phân quyền", group: "Hệ thống", icon: resolveIcon("shield-check"), route: "/permissions" });
+    // Nhập dữ liệu ghi vào BẤT KỲ doctype nào người dùng chọn, nên nó đi cùng quyền quản
+    // trị chứ không mở cho mọi vai trò. Server vẫn kiểm quyền trên từng lệnh ghi; đây chỉ
+    // là chuyện không mời người không dùng được vào một màn sẽ từ chối họ.
+    items.push({ key: "__import", label: "Nhập dữ liệu", group: "Hệ thống", icon: resolveIcon("upload"), route: "/import" });
   }
   const routes = new Set(items.map((item) => item.route));
   for (const app of catalog?.apps ?? []) for (const workspace of app.workspaces) {
@@ -309,6 +314,7 @@ function RuntimeRoutes({ manifest, boot, logout, nav, catalogError }: ScreenProp
       <Route path="/app/:doctype" element={<DoctypeScreen {...screen} />} />
       <Route path="/app/:doctype/:name" element={<DoctypeScreen {...screen} />} />
       <Route path="/report/:report" element={<ReportScreen {...screen} />} />
+      <Route path="/import" element={<ImportScreen {...screen} />} />
       <Route path="/page/:page" element={<DeskFallback {...screen} kind="Page" />} />
       <Route path="/dashboard/:page" element={<DeskFallback {...screen} kind="Dashboard" />} />
       <Route path="*" element={<Navigate to={home} replace />} />
@@ -336,6 +342,17 @@ function PermissionScreen(props: ScreenProps) { return <Shell {...props} active=
 function WorkspaceScreen(props: ScreenProps) { const navigate = useNavigate(); const { workspace = "" } = useParams(); const value = decodeURIComponent(workspace); return <Shell {...props} active={`workspace:${value}`} breadcrumbs={[{ label: "Ứng dụng", onClick: () => navigate("/catalog") }, { label: value }]}><WorkspaceContainer defaultWorkspace={value} onOpenLink={(link) => openWorkspace(navigate, link)} /></Shell>; }
 function openWorkspace(navigate: NavigateFunction, link: { type?: string; link_to?: string }) { if (!link.link_to) return; const type = (link.type ?? "DocType").toLowerCase(); if (type.includes("report")) navigate(`/report/${encodeURIComponent(link.link_to)}`); else if (type.includes("page")) navigate(`/page/${encodeURIComponent(link.link_to)}`); else if (type.includes("dashboard")) navigate(`/dashboard/${encodeURIComponent(link.link_to)}`); else navigate(`/app/${encodeURIComponent(link.link_to)}`); }
 function ReportScreen(props: ScreenProps) { const { report = "" } = useParams(); const value = decodeURIComponent(report); return <Shell {...props} active={`report:${report}`} breadcrumbs={[{ label: "Báo cáo" }, { label: value }]}><div className="h-full overflow-auto p-4"><ReportContainer report={value} /></div></Shell>; }
+/**
+ * Nhập dữ liệu từ CSV/Excel — cùng trình thuật sĩ mà app demo vẫn dùng.
+ *
+ * Không gắn với doctype nào: người dùng chọn doctype ngay trong màn, nên MỘT mục menu
+ * phục vụ mọi bảng của mọi app. Đặt trong nhóm "Hệ thống" cạnh phân quyền vì đây là
+ * thao tác quản trị, không phải nghiệp vụ hằng ngày.
+ */
+function ImportScreen(props: ScreenProps) {
+  return <Shell {...props} active="__import" breadcrumbs={[{ label: "Nhập dữ liệu" }]}><div className="h-full overflow-auto p-4"><ImportContent /></div></Shell>;
+}
+
 function DeskFallback({ kind, ...props }: ScreenProps & { kind: string }) { const { page = "" } = useParams(); const value = decodeURIComponent(page); return <Shell {...props} active={`${kind}:${value}`} breadcrumbs={[{ label: kind }, { label: value }]}><div className="grid h-full place-items-center p-8"><div className="max-w-lg rounded-xl border bg-card p-6 text-center"><h1 className="font-semibold">{value}</h1><p className="mt-2 text-sm text-muted-foreground">Renderer chuyên biệt chưa có cho loại màn này.</p><Button className="mt-4" onClick={() => window.history.back()}>Quay lại</Button></div></div></Shell>; }
 
 createRoot(document.getElementById("root")!).render(<StrictMode><BrowserRouter><RootApp /></BrowserRouter></StrictMode>);
