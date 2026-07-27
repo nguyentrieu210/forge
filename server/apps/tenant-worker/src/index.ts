@@ -26,6 +26,8 @@ import {
 import { AggregateCoordinator } from "./aggregate-do.js";
 import { publishPendingOutbox } from "../../../packages/outbox/src/index.js";
 import { D1ReportService } from "../../../packages/query/src/index.js";
+import { ingestFacebookMessage } from "../../../packages/social-commerce/src/tenant-handler.js";
+import type { SocialQueueMessage } from "../../../packages/social-commerce/src/index.js";
 import type { TenantEnv } from "./env.js";
 
 export { AggregateCoordinator };
@@ -92,6 +94,20 @@ export default {
         if (!tenant) throw new Error("Missing tenant context");
         const report = await new D1CommercialReconciliationService(env.DB).run(tenant);
         return jsonResponse(report, report.ok ? 200 : 409, { "x-cloudforge-trace-id": traceId });
+      }
+
+      if (request.method === "POST" && url.pathname === "/internal/social/events") {
+        assertInternalService(request, env.INTERNAL_SERVICE_TOKEN);
+        const tenant = resolveTenant(request, env);
+        if (!tenant) throw new Error("Missing tenant context");
+        const message = await readJson<JsonObject>(request, 1_100_000) as unknown as SocialQueueMessage;
+        const idempotencyKey = request.headers.get("x-cloudforge-idempotency-key");
+        if (!idempotencyKey || idempotencyKey !== message.event_id) throw new Error("Social event idempotency key mismatch");
+        const result = await ingestFacebookMessage(env.DB, tenant, message);
+        return jsonResponse({ committed: true, event_id: message.event_id, ...result }, 200, {
+          "x-cloudforge-social-event-committed": message.event_id,
+          "x-cloudforge-trace-id": traceId,
+        });
       }
 
       if (request.method === "POST" && url.pathname === "/internal/events") {
