@@ -243,6 +243,57 @@
     },
 
     {
+      "//": "Dòng phiếu kho. `source_warehouse` / `target_warehouse` là hai tên nhân kho ĐỌC.",
+      "name": "Stock Entry Item",
+      "label": "Dòng phiếu kho",
+      "group": "Danh mục",
+      "naming": "autoincrement",
+      "title": "item_code",
+      "list": ["item_code", "qty", "source_warehouse", "target_warehouse"],
+      "fields": [
+        "item_code:Link(Item)! Mã vật tư",
+        "qty:Float! Số lượng",
+        "source_warehouse:Link(Warehouse) Kho xuất",
+        "target_warehouse:Link(Warehouse) Kho nhập",
+        "valuation_rate:Currency Đơn giá vốn",
+        "note:Data Ghi chú dòng"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Thủ kho": "rwc",
+        "Sản xuất": "rwc",
+        "Kế toán": "r"
+      }
+    },
+
+    {
+      "//": "Phiếu kho ba dụng: NHẬP vật tư về, XUẤT vật tư cho sản xuất, CHUYỂN giữa kho.",
+      "//do": "Xuất vật tư cho sản xuất mới là chỗ tồn nguyên vật liệu bị trừ thật. Nhôm, nan, mô tơ hết ở đây chứ không hết lúc giao cửa cho khách.",
+      "name": "Stock Entry",
+      "label": "Phiếu kho (nhập / xuất vật tư)",
+      "icon": "package-open",
+      "group": "Kho",
+      "naming": "PK-.YYYY.-####",
+      "title": "purpose",
+      "submittable": true,
+      "list": ["purpose", "posting_at", "against_work_order", "note"],
+      "fields": [
+        "purpose:Select(Material Receipt,Material Issue,Material Transfer)!=(Material Receipt) Loại phiếu",
+        "company:Link(Company)!=(Xưởng) Công ty",
+        "posting_at:Datetime! Thời điểm",
+        "against_work_order:Link(Work Order) Theo lệnh sản xuất",
+        "items:Table(Stock Entry Item)! Dòng vật tư",
+        "note:Small Text Ghi chú"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Thủ kho": "rwc",
+        "Sản xuất": "rwc",
+        "Kế toán": "r"
+      }
+    },
+
+    {
       "name": "Sales Invoice Item",
       "label": "Dòng hoá đơn",
       "group": "Danh mục",

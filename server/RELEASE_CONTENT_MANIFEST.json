@@ -2,9 +2,9 @@
   "format": 1,
   "package": "cloudforge",
   "version": "1.0.0",
-  "generated_at": "2026-07-27T05:43:02.526995+00:00",
+  "generated_at": "2026-07-27T05:45:31.318946+00:00",
   "file_count": 642,
-  "tree_sha256": "7ba831018af5dca28e11eb98acbfc2eaaf06aa6cb0f7852992f8ee2b71affd2a",
+  "tree_sha256": "6cf147c27b4608d113614a198469b21614cd04c0759e1890ca615ad19b05b19b",
   "excluded": [
     ".git",
     ".wrangler",
@@ -757,8 +757,8 @@
     },
     {
       "path": "briefs/alumdoor.json",
-      "sha256": "aa19143a8c759bad1d306375d0915a9283c1866dc3f4d2ebeca158f265d14fef",
-      "size": 15860
+      "sha256": "f757dea9f264418a60a81e6b63ae7a0661ecbdfe9a82c4d78dbc2daf194c13c4",
+      "size": 17849
     },
     {
       "path": "briefs/assets.json",
