@@ -7,6 +7,9 @@
     "PUBLIC_ORIGIN": "https://social-ingress.kairo.vn",
     "META_GRAPH_VERSION": "v23.0"
   },
+  "routes": [
+    { "pattern": "social-ingress.kairo.vn", "custom_domain": true }
+  ],
   "d1_databases": [{
     "binding": "CONTROL_DB",
     "database_name": "cloudforge-control",
