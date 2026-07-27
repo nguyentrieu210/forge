@@ -175,7 +175,7 @@ function buildNavigation(manifest: AppManifest, catalog: ApplicationCatalog | un
 
 function RootApp() {
   const publicPage = resolvePublicSocialPage();
-  if (publicPage) return <SocialCommerceLanding page={publicPage} />;
+  if (publicPage) return <I18nProvider><SocialCommerceLanding page={publicPage} adapter={adapter} /></I18nProvider>;
   return <I18nProvider><AuthBoundary
     adapter={adapter}
     renderLoading={() => <Splash>Đang kết nối…</Splash>}
@@ -191,7 +191,7 @@ function RootApp() {
  */
 function resolvePublicSocialPage(): PublicSocialPage | undefined {
   const path = (window.location.pathname.replace(/\/+$/, "") || "/") as PublicSocialPage;
-  const allowed = new Set<PublicSocialPage>(["/", "/features", "/pricing", "/faq", "/privacy", "/terms", "/facebook/data-deletion", "/security"]);
+  const allowed = new Set<PublicSocialPage>(["/", "/login", "/signup", "/features", "/pricing", "/faq", "/privacy", "/terms", "/facebook/data-deletion", "/security"]);
   const isSocialHost = window.location.hostname.toLowerCase() === "chotdon.kairo.vn";
   const host = window.location.hostname.toLowerCase();
   const isLocalPreview = ["localhost", "127.0.0.1"].includes(host) && new URLSearchParams(window.location.search).get("landing") === "1";

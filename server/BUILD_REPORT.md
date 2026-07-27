@@ -7,7 +7,7 @@
 - TypeScript strict core build: **PASS**
 - Worker integration source typecheck: **PASS**
 - Web TypeScript/Vite: **NOT VERIFIED IN THIS ENVIRONMENT**
-- Node/domain suite: **391/391 PASS**
+- Node/domain suite: **395/395 PASS**
 - Tenant migrations 0001–0009 and SQL invariant verification: **PASS**
 - Commercial and business-suite migration dry runs: **PASS**
 - Concurrency, repository, plaintext-secret and source-parser gates: **PASS**
@@ -26,11 +26,11 @@
 
 ## Verification size
 
-- Files excluding dependencies/runtime caches: **643**
-- TypeScript/TSX/MTS: **142 files / 25898 lines**
-- SQL: **29 files / 12824 lines**
+- Files excluding dependencies/runtime caches: **644**
+- TypeScript/TSX/MTS: **142 files / 26022 lines**
+- SQL: **30 files / 12851 lines**
 - Markdown: **232 files / 14535 lines**
-- JavaScript/MJS tests and tools: **70 files / 10488 lines**
+- JavaScript/MJS tests and tools: **70 files / 10574 lines**
 - Python verification tools: **33 files / 7036 lines**
 
 ## Honest boundaries

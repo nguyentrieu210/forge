@@ -7,6 +7,7 @@
   "vars": {
     "PLATFORM_SUFFIX": "example.com",
     "AUTH_MODE": "production",
+    "SOCIAL_PUBLIC_HOST": "chotdon.kairo.vn",
     "INTERNAL_AUTH_KEY_ID": "k1",
     // Identifiers, not secrets, so they belong in vars where they are auditable.
     // Both are mandatory on the bearer path: without them a token minted for
@@ -42,5 +43,8 @@
   ],
   "dispatch_namespaces": [
     { "binding": "DISPATCHER", "namespace": "cloudforge-production", "remote": true }
+  ],
+  "services": [
+    { "binding": "CONTROL", "service": "cloudforge-control-plane", "remote": true }
   ]
 }

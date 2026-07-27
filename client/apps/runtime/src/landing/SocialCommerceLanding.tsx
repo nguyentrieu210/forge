@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import {
   ArrowRight,
   BarChart3,
@@ -7,6 +7,7 @@ import {
   Facebook,
   Inbox,
   LockKeyhole,
+  MailCheck,
   Menu,
   MessageCircleMore,
   PackageCheck,
@@ -16,14 +17,29 @@ import {
   ShoppingCart,
   Sparkles,
   Truck,
-  Users,
   X,
   Zap,
 } from "lucide-react";
-import { Button, buttonVariants, cn } from "@metaforge/ui";
+import type { FrappeAdapter } from "@metaforge/adapter-frappe";
+import { LoginForm } from "@metaforge/shell";
+import {
+  Button,
+  Checkbox,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  Input,
+  Label,
+  buttonVariants,
+  cn,
+} from "@metaforge/ui";
 
 export type PublicSocialPage =
   | "/"
+  | "/login"
+  | "/signup"
   | "/features"
   | "/pricing"
   | "/faq"
@@ -73,7 +89,7 @@ const faqs = [
   ["Có dùng được trên điện thoại không?", "Có. Landing page và màn vận hành đều được thiết kế responsive, với thao tác chính được ưu tiên cho màn hình nhỏ."],
 ];
 
-export function SocialCommerceLanding({ page = "/" }: { page?: PublicSocialPage }) {
+export function SocialCommerceLanding({ page = "/", adapter }: { page?: PublicSocialPage; adapter: FrappeAdapter }) {
   useEffect(() => {
     document.documentElement.dataset.brand = "blue";
     document.title = page === "/" ? "Kairo Social Commerce — Chốt đơn đa kênh" : `${pageTitle(page)} — Kairo Social Commerce`;
@@ -84,14 +100,23 @@ export function SocialCommerceLanding({ page = "/" }: { page?: PublicSocialPage 
     return <TrustPage page={page} />;
   }
 
-  return <LandingPage initialSection={page} />;
+  return <LandingPage initialSection={page} adapter={adapter} />;
 }
 
-function LandingPage({ initialSection }: { initialSection: PublicSocialPage }) {
+type AuthMode = "login" | "signup" | null;
+
+function LandingPage({ initialSection, adapter }: { initialSection: PublicSocialPage; adapter: FrappeAdapter }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<AuthMode>(initialSection === "/login" ? "login" : initialSection === "/signup" ? "signup" : null);
   useEffect(() => {
-    if (initialSection !== "/") requestAnimationFrame(() => document.querySelector(sectionId(initialSection))?.scrollIntoView());
+    if (["/features", "/pricing", "/faq"].includes(initialSection)) requestAnimationFrame(() => document.querySelector(sectionId(initialSection))?.scrollIntoView());
+    if (initialSection === "/login") setAuthMode("login");
+    if (initialSection === "/signup") setAuthMode("signup");
   }, [initialSection]);
+  const closeAuth = () => {
+    setAuthMode(null);
+    if (window.location.pathname === "/login" || window.location.pathname === "/signup") window.history.replaceState(null, "", "/");
+  };
 
   return (
     <div className="min-h-dvh overflow-x-hidden bg-background text-foreground">
@@ -106,8 +131,8 @@ function LandingPage({ initialSection }: { initialSection: PublicSocialPage }) {
             <NavLink href="#faq">Câu hỏi</NavLink>
           </nav>
           <div className="hidden items-center gap-2 md:flex">
-            <ButtonLink href="/login" variant="ghost">Đăng nhập</ButtonLink>
-            <ButtonLink href="/login">Bắt đầu dùng thử <ArrowRight /></ButtonLink>
+            <Button variant="ghost" onClick={() => setAuthMode("login")}>Đăng nhập</Button>
+            <Button onClick={() => setAuthMode("signup")}>Bắt đầu dùng thử <ArrowRight /></Button>
           </div>
           <Button className="md:hidden" variant="ghost" size="icon" aria-label={menuOpen ? "Đóng menu" : "Mở menu"} aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}>
             {menuOpen ? <X /> : <Menu />}
@@ -116,7 +141,7 @@ function LandingPage({ initialSection }: { initialSection: PublicSocialPage }) {
         {menuOpen ? <div className="border-t bg-card px-4 py-4 md:hidden">
           <nav className="grid gap-1 text-sm" aria-label="Điều hướng di động">
             {[['#features', 'Tính năng'], ['#workflow', 'Cách hoạt động'], ['#pricing', 'Bảng giá'], ['#faq', 'Câu hỏi']].map(([href, label]) => <a key={href} className="rounded-lg px-3 py-3 hover:bg-secondary" href={href} onClick={() => setMenuOpen(false)}>{label}</a>)}
-            <div className="mt-3 grid grid-cols-2 gap-2 border-t pt-4"><ButtonLink href="/login" variant="outline">Đăng nhập</ButtonLink><ButtonLink href="/login">Dùng thử</ButtonLink></div>
+            <div className="mt-3 grid grid-cols-2 gap-2 border-t pt-4"><Button variant="outline" onClick={() => { setMenuOpen(false); setAuthMode("login"); }}>Đăng nhập</Button><Button onClick={() => { setMenuOpen(false); setAuthMode("signup"); }}>Đăng ký</Button></div>
           </nav>
         </div> : null}
       </header>
@@ -136,7 +161,7 @@ function LandingPage({ initialSection }: { initialSection: PublicSocialPage }) {
                 Kairo Social Commerce gom bình luận, giỏ hàng, đơn giao và COD vào một quy trình rõ ràng để đội ngũ chốt nhanh hơn mà vẫn kiểm soát được dữ liệu.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <ButtonLink href="/login" size="lg" className="h-12 px-6 text-sm">Bắt đầu dùng thử 14 ngày <ArrowRight /></ButtonLink>
+                <Button size="lg" className="h-12 px-6 text-sm" onClick={() => setAuthMode("signup")}>Bắt đầu dùng thử 14 ngày <ArrowRight /></Button>
                 <ButtonLink href="#workflow" size="lg" variant="outline" className="h-12 px-6 text-sm"><Play /> Xem cách hoạt động</ButtonLink>
               </div>
               <div className="mt-7 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted-foreground">
@@ -187,7 +212,7 @@ function LandingPage({ initialSection }: { initialSection: PublicSocialPage }) {
               <div className="absolute right-0 top-0 rounded-bl-2xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground">Khởi động</div>
               <div className="grid gap-8 md:grid-cols-[1fr_auto] md:items-center">
                 <div><p className="text-sm font-semibold text-primary">TRIAL 14 NGÀY</p><h3 className="mt-2 text-3xl font-bold tracking-tight">Chạy thử trên không gian riêng</h3><p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">Trải nghiệm luồng quản lý Page, Inbox, giỏ hàng, đơn giao và COD. Sau giai đoạn dùng thử, đội triển khai sẽ tư vấn gói theo số Page, người dùng và sản lượng đơn thực tế.</p></div>
-                <ButtonLink href="/login" size="lg" className="h-12">Mở không gian dùng thử <ArrowRight /></ButtonLink>
+                <Button size="lg" className="h-12" onClick={() => setAuthMode("signup")}>Mở không gian dùng thử <ArrowRight /></Button>
               </div>
               <div className="mt-8 grid gap-3 border-t pt-6 sm:grid-cols-2">
                 {['Kết nối Facebook bằng OAuth', 'Dữ liệu tenant tách biệt', 'Giao diện desktop và mobile', 'Không hiển thị giá khi chưa công bố'].map((item) => <TrustChip key={item}>{item}</TrustChip>)}
@@ -211,17 +236,81 @@ function LandingPage({ initialSection }: { initialSection: PublicSocialPage }) {
             <p className="text-sm font-semibold uppercase tracking-[0.18em] opacity-80">Sẵn sàng cho ca bán tiếp theo?</p>
             <h2 className="mt-3 max-w-3xl text-3xl font-bold tracking-tight text-balance sm:text-4xl">Tập trung vào khách hàng, để hệ thống giữ nhịp đơn hàng.</h2>
             <p className="mt-4 max-w-2xl text-sm leading-6 opacity-80 sm:text-base">Bắt đầu với tenant dùng thử, sau đó kết nối Page bằng tài khoản Facebook của chính bạn.</p>
-            <ButtonLink href="/login" size="lg" variant="secondary" className="mt-7 h-12 px-6 text-sm">Đăng nhập và bắt đầu <ArrowRight /></ButtonLink>
+            <Button size="lg" variant="secondary" className="mt-7 h-12 px-6 text-sm" onClick={() => setAuthMode("signup")}>Đăng ký và bắt đầu <ArrowRight /></Button>
           </div>
         </section>
       </main>
 
       <Footer />
       <div className="fixed inset-x-3 bottom-3 z-40 rounded-xl border bg-card/95 p-2 shadow-[var(--mf-overlay-shadow)] backdrop-blur md:hidden">
-        <ButtonLink href="/login" className="h-11 w-full">Bắt đầu dùng thử <ArrowRight /></ButtonLink>
+        <Button className="h-11 w-full" onClick={() => setAuthMode("signup")}>Bắt đầu dùng thử <ArrowRight /></Button>
       </div>
+      <AuthDialog mode={authMode} adapter={adapter} onModeChange={setAuthMode} onClose={closeAuth} />
     </div>
   );
+}
+
+function AuthDialog({ mode, adapter, onModeChange, onClose }: { mode: AuthMode; adapter: FrappeAdapter; onModeChange: (mode: AuthMode) => void; onClose: () => void }) {
+  return <Dialog open={mode !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
+    <DialogContent className={cn("gap-0 overflow-hidden p-0", mode === "signup" ? "max-w-[520px]" : "max-w-[420px]")}>
+      <DialogHeader className="sr-only"><DialogTitle>{mode === "signup" ? "Đăng ký shop" : "Đăng nhập"}</DialogTitle><DialogDescription>{mode === "signup" ? "Tạo yêu cầu mở không gian dùng thử" : "Đăng nhập vào Kairo Social Commerce"}</DialogDescription></DialogHeader>
+      {mode === "login" ? <>
+        <LoginForm adapter={adapter} embedded brand="Kairo Social" title="Đăng nhập" subtitle="Tiếp tục vào không gian bán hàng" onSuccess={() => window.location.assign("/x/social-commerce%3Adashboard")} />
+        <div className="border-t bg-card px-6 py-4 text-center text-sm text-muted-foreground">Chưa có tài khoản? <Button variant="link" className="h-auto p-0 text-sm" onClick={() => onModeChange("signup")}>Đăng ký shop</Button></div>
+      </> : mode === "signup" ? <SignupForm onLogin={() => onModeChange("login")} /> : null}
+    </DialogContent>
+  </Dialog>;
+}
+
+function SignupForm({ onLogin }: { onLogin: () => void }) {
+  const [shopName, setShopName] = useState("");
+  const [slug, setSlug] = useState("");
+  const [slugTouched, setSlugTouched] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [accepted, setAccepted] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string>();
+  const [success, setSuccess] = useState<{ signup_id: string; desired_hostname: string }>();
+
+  const changeShopName = (value: string) => {
+    setShopName(value);
+    if (!slugTouched) setSlug(slugify(value));
+  };
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (busy || !accepted) return;
+    setBusy(true); setError(undefined);
+    try {
+      const response = await fetch("/api/v1/public/signup", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ shop_name: shopName, desired_slug: slug, email, password, accepted_terms: accepted }),
+      });
+      const body = await response.json() as { signup_id?: string; desired_hostname?: string; error?: { message?: string; code?: string } };
+      if (!response.ok) throw new Error(body.error?.message ?? body.error?.code ?? `HTTP ${response.status}`);
+      if (!body.signup_id || !body.desired_hostname) throw new Error("Phản hồi đăng ký không hợp lệ");
+      setSuccess({ signup_id: body.signup_id, desired_hostname: body.desired_hostname });
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Không gửi được đăng ký. Vui lòng thử lại.");
+    } finally { setBusy(false); }
+  };
+
+  if (success) return <div className="p-7 text-center sm:p-9"><span className="mx-auto grid size-14 place-items-center rounded-2xl bg-success/10 text-success-text"><MailCheck className="size-7" /></span><h2 className="mt-5 text-xl font-semibold">Đã ghi nhận đăng ký</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">Không gian dự kiến: <strong className="text-foreground">{success.desired_hostname}</strong>. Yêu cầu đang chờ bước xác minh email trước khi hệ thống tạo tenant dùng thử.</p><p className="mt-4 rounded-lg bg-secondary p-3 text-xs text-muted-foreground">Mã yêu cầu: {success.signup_id}</p><Button variant="outline" className="mt-6" onClick={onLogin}>Tôi đã có tài khoản</Button></div>;
+
+  return <form onSubmit={submit} className="p-6 sm:p-8">
+    <div className="mb-6"><div className="flex items-center gap-2.5"><span className="grid size-9 place-items-center rounded-[10px] bg-primary text-primary-foreground"><ShoppingBag className="size-4" /></span><strong className="text-[17px]">Kairo Social</strong></div><h2 className="mt-5 text-xl font-semibold">Tạo shop dùng thử</h2><p className="mt-1 text-sm text-muted-foreground">Đăng ký không gian riêng trong 14 ngày.</p></div>
+    <div className="grid gap-4">
+      <div className="space-y-1.5"><Label htmlFor="signup-shop">Tên shop</Label><Input id="signup-shop" required minLength={2} maxLength={120} value={shopName} onChange={(event) => changeShopName(event.target.value)} placeholder="Ví dụ: Mộc Store" autoComplete="organization" className="h-11" /></div>
+      <div className="space-y-1.5"><Label htmlFor="signup-slug">Tên miền shop</Label><div className="flex items-stretch"><Input id="signup-slug" required minLength={3} maxLength={48} value={slug} onChange={(event) => { setSlugTouched(true); setSlug(slugify(event.target.value)); }} placeholder="moc-store" className="h-11 rounded-r-none" /><span className="flex items-center rounded-r-lg border border-l-0 bg-secondary px-3 text-xs text-muted-foreground">.kairo.vn</span></div></div>
+      <div className="space-y-1.5"><Label htmlFor="signup-email">Email chủ shop</Label><Input id="signup-email" required type="email" maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)} placeholder="ban@shop.vn" autoComplete="email" className="h-11" /></div>
+      <div className="space-y-1.5"><Label htmlFor="signup-password">Mật khẩu</Label><Input id="signup-password" required type="password" minLength={8} maxLength={256} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="new-password" className="h-11" /><p className={cn("text-xs", password.length >= 8 ? "text-success-text" : "text-muted-foreground")}>{password.length >= 8 ? "Đạt độ dài tối thiểu" : "Tối thiểu 8 ký tự; nên kết hợp chữ, số và ký tự đặc biệt."}</p></div>
+      <div className="flex items-start gap-2.5"><Checkbox id="signup-terms" checked={accepted} onCheckedChange={(value) => setAccepted(value === true)} /><Label htmlFor="signup-terms" className="text-xs font-normal leading-5 text-muted-foreground">Tôi đồng ý với <a className="text-primary hover:underline" href="/terms" target="_blank">Điều khoản</a> và <a className="text-primary hover:underline" href="/privacy" target="_blank">Chính sách quyền riêng tư</a>.</Label></div>
+    </div>
+    {error ? <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive" role="alert">{error}</div> : null}
+    <Button type="submit" className="mt-5 h-11 w-full" loading={busy} disabled={!shopName || !slug || !email || password.length < 8 || !accepted}>Tạo tài khoản dùng thử <ArrowRight /></Button>
+    <p className="mt-5 text-center text-sm text-muted-foreground">Đã có tài khoản? <Button type="button" variant="link" className="h-auto p-0 text-sm" onClick={onLogin}>Đăng nhập</Button></p>
+  </form>;
 }
 
 function ProductPreview() {
@@ -266,7 +355,7 @@ function PreviewMessage({ initials, name, text, time, tone }: { initials: string
   return <div className="flex min-w-0 items-center gap-2"><span className={`grid size-7 shrink-0 place-items-center rounded-full text-[9px] font-bold ${tone}`}>{initials}</span><div className="min-w-0 flex-1"><div className="flex justify-between gap-2"><p className="truncate text-[10px] font-semibold">{name}</p><span className="shrink-0 text-[8px] text-muted-foreground">{time}</span></div><p className="truncate text-[9px] text-muted-foreground">{text}</p></div></div>;
 }
 
-function TrustPage({ page }: { page: Exclude<PublicSocialPage, "/" | "/features" | "/pricing" | "/faq"> }) {
+function TrustPage({ page }: { page: Exclude<PublicSocialPage, "/" | "/login" | "/signup" | "/features" | "/pricing" | "/faq"> }) {
   const content = trustContent(page);
   return <div className="min-h-dvh bg-background text-foreground"><header className="border-b bg-card"><div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4 sm:px-6"><Brand /><ButtonLink href="/" variant="outline">Về trang chủ</ButtonLink></div></header><main className="mx-auto max-w-3xl px-4 py-14 sm:px-6 sm:py-20"><p className="text-sm font-semibold text-primary">TRUST CENTER</p><h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">{content.title}</h1><p className="mt-4 text-sm text-muted-foreground">Cập nhật: 27/07/2026</p><div className="mt-10 space-y-8">{content.sections.map((section) => <section key={section.title}><h2 className="text-lg font-semibold">{section.title}</h2><div className="mt-3 space-y-3 text-sm leading-7 text-muted-foreground">{section.body.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}</div></section>)}</div></main><Footer /></div>;
 }
@@ -282,10 +371,11 @@ function WorkflowStep({ number, icon, title, detail }: { number: string; icon: R
 function Footer() { return <footer className="border-t bg-card pb-24 pt-10 md:pb-10"><div className="mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 md:grid-cols-[1fr_auto] lg:px-8"><div><Brand /><p className="mt-4 max-w-md text-sm leading-6 text-muted-foreground">Nền tảng quản lý bán hàng đa kênh được xây trên kiến trúc Forge, ưu tiên tách biệt dữ liệu và tích hợp OAuth chính thức.</p></div><nav className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm text-muted-foreground sm:grid-cols-4" aria-label="Pháp lý"><a className="hover:text-foreground" href="/privacy">Quyền riêng tư</a><a className="hover:text-foreground" href="/terms">Điều khoản</a><a className="hover:text-foreground" href="/security">Bảo mật</a><a className="hover:text-foreground" href="/facebook/data-deletion">Xóa dữ liệu Facebook</a></nav></div><div className="mx-auto mt-8 max-w-7xl border-t px-4 pt-6 text-xs text-muted-foreground sm:px-6 lg:px-8">© 2026 Kairo Social Commerce. Không phải sản phẩm do Meta bảo trợ.</div></footer>; }
 
 function sectionId(page: PublicSocialPage) { return page === "/features" ? "#features" : page === "/pricing" ? "#pricing" : page === "/faq" ? "#faq" : "#main"; }
-function pageTitle(page: PublicSocialPage) { return page === "/features" ? "Tính năng" : page === "/pricing" ? "Bảng giá" : page === "/faq" ? "Câu hỏi thường gặp" : trustContent(page as Exclude<PublicSocialPage, "/" | "/features" | "/pricing" | "/faq">).title; }
+function slugify(value: string) { return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/đ/g, "d").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48); }
+function pageTitle(page: PublicSocialPage) { return page === "/login" ? "Đăng nhập" : page === "/signup" ? "Đăng ký" : page === "/features" ? "Tính năng" : page === "/pricing" ? "Bảng giá" : page === "/faq" ? "Câu hỏi thường gặp" : trustContent(page as Exclude<PublicSocialPage, "/" | "/login" | "/signup" | "/features" | "/pricing" | "/faq">).title; }
 function setMeta(name: string, content: string) { let element = document.querySelector<HTMLMetaElement>(`meta[name="${name}"]`); if (!element) { element = document.createElement("meta"); element.name = name; document.head.appendChild(element); } element.content = content; }
 
-function trustContent(page: Exclude<PublicSocialPage, "/" | "/features" | "/pricing" | "/faq">) {
+function trustContent(page: Exclude<PublicSocialPage, "/" | "/login" | "/signup" | "/features" | "/pricing" | "/faq">) {
   if (page === "/terms") return { title: "Điều khoản sử dụng", sections: [
     { title: "Phạm vi dịch vụ", body: ["Kairo Social Commerce cung cấp công cụ hỗ trợ quản lý tương tác, giỏ hàng, đơn giao và đối soát. Khách hàng chịu trách nhiệm về nội dung bán hàng, quyền quản trị Page và dữ liệu họ nhập vào hệ thống."] },
     { title: "Tài khoản và quyền truy cập", body: ["Chủ tenant quản lý thành viên của mình và phải bảo vệ thông tin đăng nhập. Không chia sẻ tài khoản quản trị hoặc sử dụng dịch vụ để truy cập dữ liệu không thuộc quyền quản lý."] },

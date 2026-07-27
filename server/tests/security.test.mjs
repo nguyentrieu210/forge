@@ -24,16 +24,46 @@ test("gateway serves the SPA shell for public marketing and login routes", async
     ASSETS: { async fetch(request) { served.push(new URL(request.url).pathname); return new Response("<html>client</html>", { headers: { "content-type": "text/html" } }); } },
     PLATFORM_SUFFIX: "example.com",
     AUTH_MODE: "production",
+    JWT_SECRET,
+    JWT_ISSUER,
+    JWT_AUDIENCE,
     INTERNAL_AUTH_SECRET: INTERNAL_SECRET,
   };
 
-  for (const path of ["/", "/login", "/features", "/pricing", "/faq", "/privacy", "/terms", "/security", "/facebook/data-deletion"]) {
+  for (const path of ["/", "/login", "/signup", "/features", "/pricing", "/faq", "/privacy", "/terms", "/security", "/facebook/data-deletion"]) {
     const response = await gateway.fetch(new Request(`https://demo.example.com${path}`), environment);
     assert.equal(response.status, 200, path);
     assert.equal(response.headers.get("cache-control"), "no-cache", path);
     assert.equal(await response.text(), "<html>client</html>", path);
   }
-  assert.deepEqual(served, Array(9).fill("/index.html"));
+  assert.deepEqual(served, Array(10).fill("/index.html"));
+});
+
+test("gateway forwards public signup only on the configured Social Commerce host", async () => {
+  let forwarded;
+  const environment = {
+    ROUTES: { async get() { return JSON.stringify({ tenant_id: "chotdon", worker_name: "tenant-chotdon", status: "active", routing_version: 1 }); } },
+    DISPATCHER: { get() { return { async fetch() { throw new Error("signup must not reach a tenant"); } }; } },
+    CONTROL: { async fetch(request) { forwarded = request; return Response.json({ status: "pending_verification" }, { status: 202 }); } },
+    SOCIAL_PUBLIC_HOST: "chotdon.example.com",
+    PLATFORM_SUFFIX: "example.com",
+    AUTH_MODE: "production",
+    JWT_SECRET,
+    JWT_ISSUER,
+    JWT_AUDIENCE,
+    INTERNAL_AUTH_SECRET: INTERNAL_SECRET,
+  };
+  const response = await gateway.fetch(new Request("https://chotdon.example.com/api/v1/public/signup", {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ shop_name: "Mộc Store" }),
+  }), environment);
+  assert.equal(response.status, 202);
+  assert.equal(new URL(forwarded.url).pathname, "/v1/public/signup");
+  assert.deepEqual(await forwarded.json(), { shop_name: "Mộc Store" });
+
+  const wrongHost = await gateway.fetch(new Request("https://edu.example.com/api/v1/public/signup", {
+    method: "POST", headers: { "content-type": "application/json" }, body: "{}",
+  }), environment);
+  assert.equal(wrongHost.status, 401);
 });
 
 test("gateway ignores forged role headers and forwards a signed server identity", async () => {

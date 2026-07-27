@@ -19,9 +19,11 @@ export interface LoginFormProps {
   brand?: string;
   brandMark?: ReactNode;
   onForgotPassword?: () => void;
+  /** Render only the form card so a product landing page can place it inside a Dialog. */
+  embedded?: boolean;
 }
 
-export function LoginForm({ adapter, onSuccess, title, subtitle, brand = "MetaForge", brandMark, onForgotPassword }: LoginFormProps) {
+export function LoginForm({ adapter, onSuccess, title, subtitle, brand = "MetaForge", brandMark, onForgotPassword, embedded = false }: LoginFormProps) {
   const t = useT();
   const [usr, setUsr] = useState("");
   const [pwd, setPwd] = useState("");
@@ -46,9 +48,8 @@ export function LoginForm({ adapter, onSuccess, title, subtitle, brand = "MetaFo
     }
   };
 
-  return (
-    <div className="mf-login-page grid min-h-screen place-items-center p-4 sm:p-6">
-      <form onSubmit={submit} className="mf-login-card w-full max-w-[380px]">
+  const form = (
+      <form onSubmit={submit} className={cn("w-full max-w-[380px] overflow-hidden", embedded ? "mx-auto" : "mf-login-card")}>
         <div className="space-y-5 px-7 py-8 sm:px-8">
           <div className="flex items-center gap-2.5">
             {brandMark ? <div className="grid size-9 place-items-center overflow-hidden rounded-[10px]">{brandMark}</div> : <div className="mf-brand-mark size-9 rounded-[10px] text-base">{brand.trim().charAt(0).toUpperCase()}</div>}
@@ -101,6 +102,6 @@ export function LoginForm({ adapter, onSuccess, title, subtitle, brand = "MetaFo
           <span className="inline-flex items-center gap-1.5"><ShieldCheck className="size-3.5" /> Phiên đăng nhập được bảo vệ an toàn</span>
         </div>
       </form>
-    </div>
   );
+  return embedded ? form : <div className="mf-login-page grid min-h-screen place-items-center p-4 sm:p-6">{form}</div>;
 }

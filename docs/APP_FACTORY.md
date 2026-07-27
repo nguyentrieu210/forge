@@ -199,8 +199,19 @@ Trên deployment thật, hai tenant (`demo` và `hrm`):
 | **một bundle, hai app khác nhau** | ✅ cùng `index-DgFEryiM.js` phục vụ "Quản lý tài sản CNTT" và "Quản lý nhân sự" |
 | nghiệp vụ đầu-cuối qua đường cookie | ✅ **13/13** — tạo, đặt tên tự động, gửi duyệt, chặn tự duyệt (403 *"You cannot approve a document you created"*) |
 | trình duyệt thật, desktop + mobile, **không proxy** | ✅ **10/10** |
-| test Node | ✅ **366/366** |
-| Workerd | ✅ **88/88** |
+| test Node | ✅ **395/395** |
+| Workerd | ✅ **90/90** |
+
+Trên tenant `edu` (CloudForge Center), thêm hai thứ mà brief một mình không nói được:
+
+| | |
+|---|---|
+| **app Worker chạy đủ vòng** | ✅ nền tảng gọi tới, Worker gọi ngược, đọc **và ghi** với danh tính người dùng đã gọi |
+| luật chống trùng lịch | ✅ 4 ca: không trùng · trùng phòng · trùng giáo viên · **kề nhau vẫn cho qua** |
+| **báo cáo do app tự khai** | ✅ 4 báo cáo, đối chiếu được (tổng chuyên cần = 288 = số bản ghi trong CSDL) |
+| xuất Excel từ báo cáo và từ danh sách | ✅ tải về `.xlsx` thật |
+| nhập CSV/Excel trong runtime | ✅ |
+| trình duyệt thật, desktop + mobile | ✅ **9/9** (1 skip: danh sách mobile là thẻ, không có chọn hàng loạt) |
 
 App HRM cũng đã chuyển sang bundle chung — bản build React riêng của nó không còn cần.
 
@@ -214,10 +225,18 @@ Ghi lại vì mỗi lỗi đều **xanh mọi cổng** trước khi bị bắt:
 | **Server và client mã hoá route khác nhau.** `resolveNavPath` dùng `encodeURIComponent`, còn bộ kiểm manifest giữ **bản sao riêng** không mã hoá → app đầu tiên sinh từ brief mở ra "Không dựng được giao diện", do chính cái guard chống-vòng-lặp bắn nhầm | luật viết hai lần và trôi dạt; **không có test nào cho `validateManifest`**. Nay gộp về `resolveNavPath` và ghim bằng test liên-codebase `nav-path-contract.test.mjs` |
 | **App HRM chưa từng chạy typecheck.** Dùng tên trường theo wire Frappe (`order_by`, `limit_page_length`) thay vì tên adapter (`orderBy`, `pageLength`) | E2E vẫn xanh: bộ lọc đúng, dữ liệu ít nên thứ tự và giới hạn trang bị bỏ âm thầm |
 | **App cài xong vẫn không mở được** vì chiều `company` không có master data | install PASS, manifest PASS, nav PASS. Nay là bước kiểm 5 |
+| **Cùng một env dựng ở hai chỗ, và bản thứ hai trôi mất `PUBLIC_ORIGIN`.** Validator gọi ngược được, app method thì không — cùng cơ chế, hai kết quả | không test nào chạy CẢ HAI đường trên một deployment. Nay dùng chung một object |
+| **Tầng Frappe chưa từng nhìn danh tính nền tảng ký.** Nó xác thực bằng cookie, mà app callback cố ý không có cookie → mọi lời gọi ngược `403 Login to access this resource` dù chữ ký chạy suốt | mỗi tầng đúng phần của nó; **không tầng nào chịu trách nhiệm cho cả đường** |
+| **"Idempotent" chỉ là chú thích.** `count` được hiểu là "thêm bấy nhiêu", nên chạy hai lần để lại gấp đôi số buổi — đúng hậu quả chú thích nói đã ngăn | chỉ lộ ở lần chạy **thứ hai**, và chỉ khi có người đếm |
+| **Cột báo cáo trả về theo từ vựng của máy báo cáo** (`field`/`type`) chứ không phải của client (`fieldname`/`fieldtype`) | bảng đúng tiêu đề, đúng số dòng, **mọi ô trống**. Không gì báo lỗi, nên nó đọc ra như "không có dữ liệu" |
+| **Cài lại app bị coi là "không đổi" theo hash gói.** Nền tảng nâng cấp đọc thêm được `reports`, gói y nguyên → bản parse CŨ ở lại, mọi báo cáo "Unknown report", lệnh cài báo thành công | hash so gói với gói, không so **cách nền tảng đọc gói**. Nay so cả bản parse |
+| **Nút "Xuất" của danh sách chưa từng hiện.** Nó chỉ render khi cha truyền `onExport`, và không cha nào truyền | grep mã nguồn thì thấy; dùng app thì không. Nay ghim bằng test trình duyệt tải file thật |
+| **Màn nhập dữ liệu nằm trong app demo**, nên mọi app khác giao ra không có đường nhập Excel | không phải chưa xây — xây rồi, để nhầm thư mục |
 
 ### Chưa làm
 
-- Chỉ có một loại experience (`approval:`). Nghiệp vụ ghi sổ (xuất/nhập kho, GL) vẫn cần app Worker
-  riêng — cơ chế có từ Pha 1–2 nhưng **chưa app nào dùng end-to-end**.
-- Brief chưa khai được print format, hook, validator.
+- Experience mới có `approval:` và `calendar:`. Điểm danh hàng loạt (`roster:`) chưa có.
+- Brief chưa khai được print format và hook (validator, worker, report thì khai được rồi).
+- Nghiệp vụ TIỀN (học phí, công nợ, phiếu thu) chưa làm — §10.1 đặt ra bất biến tiền tệ mà
+  check-then-act ngoài transaction của app Worker **không** thi hành nổi.
 - `hrm.kairo.vn` vẫn chặn: token thiếu quyền `Zone.DNS: Edit`.

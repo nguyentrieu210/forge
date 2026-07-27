@@ -36,6 +36,62 @@ function put(routeKey, body, { token = TOKEN, contentType = "application/json" }
   });
 }
 
+test("public signup hashes credentials, encrypts the pending payload and never returns a verification token", async () => {
+  const inserts = [];
+  const database = {
+    prepare(sql) {
+      return { bind(...values) { return {
+        async first() {
+          if (sql.includes("COUNT(*)")) return { total: 0 };
+          return null;
+        },
+        async run() { inserts.push({ sql, values }); return { success: true, meta: { changes: 1 } }; },
+      }; } };
+    },
+  };
+  const request = new Request("https://control.test/v1/public/signup", {
+    method: "POST",
+    headers: { "content-type": "application/json", "cf-connecting-ip": "203.0.113.9" },
+    body: JSON.stringify({ shop_name: "Mộc Store", email: "Owner@Example.com", password: "StrongPass123", desired_slug: "moc-store", accepted_terms: true }),
+  });
+  const response = await control.fetch(request, env({
+    CONTROL_DB: database,
+    SIGNUP_DATA_KEY: Buffer.alloc(32, 7).toString("base64"),
+    SIGNUP_LOOKUP_SECRET: "signup-lookup-secret-for-tests",
+  }));
+  assert.equal(response.status, 202);
+  const body = await response.json();
+  assert.equal(body.status, "pending_verification");
+  assert.equal(body.desired_hostname, "moc-store.kairo.vn");
+  assert.equal("verification_token" in body, false);
+  const signupInsert = inserts.find((entry) => entry.sql.includes("INSERT INTO signup_verifications"));
+  assert.ok(signupInsert);
+  assert.equal(signupInsert.values.includes("StrongPass123"), false);
+  assert.equal(JSON.stringify(signupInsert.values).includes("owner@example.com"), false);
+});
+
+test("public signup fails closed until its encryption secrets are configured", async () => {
+  const request = new Request("https://control.test/v1/public/signup", {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({}),
+  });
+  const response = await control.fetch(request, env());
+  assert.equal(response.status, 503);
+  assert.equal((await response.json()).error.code, "SIGNUP_NOT_CONFIGURED");
+});
+
+test("public signup enforces its password floor on the server", async () => {
+  const request = new Request("https://control.test/v1/public/signup", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ shop_name: "Mộc Store", email: "owner@example.com", password: "short", accepted_terms: true }),
+  });
+  const response = await control.fetch(request, env({
+    SIGNUP_DATA_KEY: Buffer.alloc(32, 7).toString("base64"),
+    SIGNUP_LOOKUP_SECRET: "signup-lookup-secret-for-tests",
+  }));
+  assert.equal(response.status, 422);
+});
+
 test("control plane rejects a wrong control token", async () => {
   const res = await control.fetch(put("demo.example.com", { tenant_id: "demo", worker_name: "w", status: "active" }, { token: "nope" }), env());
   assert.equal(res.status, 401);

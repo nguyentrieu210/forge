@@ -59,3 +59,5 @@ export function extractFacebookPageIds(payload: unknown): string[] {
 export async function deriveFacebookEventId(rawBody: string): Promise<string> {
   return `facebook:${await sha256Hex(rawBody)}`;
 }
+
+export * from "./credentials.js";

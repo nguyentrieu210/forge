@@ -28,6 +28,7 @@ interface GatewayEnv {
    * then answers with a plain explanation rather than a silent 404.
    */
   ASSETS?: Fetcher;
+  CONTROL?: Fetcher;
   FALLBACK_TENANT?: Fetcher;
   PLATFORM_SUFFIX?: string;
   AUTH_MODE?: "development" | "production";
@@ -37,6 +38,7 @@ interface GatewayEnv {
   JWT_AUDIENCE?: string;
   INTERNAL_AUTH_SECRET: string;
   INTERNAL_AUTH_KEY_ID?: string;
+  SOCIAL_PUBLIC_HOST?: string;
 }
 
 interface TenantRoute {
@@ -58,6 +60,13 @@ export default {
       if (!raw) return jsonResponse({ error: { code: "TENANT_ROUTE_NOT_FOUND" }, trace_id: traceId }, 404);
       const route = JSON.parse(raw) as TenantRoute;
       if (route.status !== "active") return jsonResponse({ error: { code: "TENANT_NOT_ACTIVE", status: route.status }, trace_id: traceId }, 423);
+
+      if (request.method === "POST" && url.pathname === "/api/v1/public/signup" && url.hostname === env.SOCIAL_PUBLIC_HOST) {
+        if (!env.CONTROL) return jsonResponse({ error: { code: "SIGNUP_NOT_CONFIGURED" }, trace_id: traceId }, 503);
+        const target = new URL(request.url);
+        target.pathname = "/v1/public/signup";
+        return env.CONTROL.fetch(new Request(target, request));
+      }
 
       // Deliberately AFTER the route lookup: a hostname with no tenant gets a 404, not
       // an app shell whose login could never succeed. And before actor resolution,
@@ -166,6 +175,7 @@ const CLIENT_ROUTE_PREFIXES = [
 const CLIENT_ROUTE_EXACT = new Set([
   "/",
   "/login",
+  "/signup",
   "/catalog",
   "/permissions",
   "/import",

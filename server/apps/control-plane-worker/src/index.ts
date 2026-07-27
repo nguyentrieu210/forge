@@ -2,11 +2,15 @@
 import { errorResponse, errors, jsonResponse, randomId, readJson, timingSafeEqualString } from "../../../packages/core/src/index.js";
 import type { JsonObject } from "../../../packages/contracts/src/index.js";
 import { requireIdentifier, requireString } from "../../../packages/contracts/src/index.js";
+import { hashPassword } from "../../../packages/frappe-api/src/index.js";
+import { encryptCredential, hmacHex, sha256Hex } from "../../../packages/social-commerce/src/index.js";
 
 interface ControlEnv {
   CONTROL_DB: D1Database;
   ROUTES: KVNamespace;
   CONTROL_TOKEN?: string;
+  SIGNUP_DATA_KEY?: string;
+  SIGNUP_LOOKUP_SECRET?: string;
 }
 
 const ROUTE_STATUSES = ["active", "suspended", "provisioning"] as const;
@@ -24,10 +28,15 @@ export default {
   async fetch(request: Request, env: ControlEnv): Promise<Response> {
     const traceId = request.headers.get("x-cloudforge-trace-id") ?? randomId("trace");
     try {
+      const url = new URL(request.url);
+      if (request.method === "POST" && url.pathname === "/v1/public/signup") {
+        // Await inside this try so validation/database failures pass through the same
+        // safe error envelope as every authenticated control-plane route.
+        return await createPublicSignup(request, env, traceId);
+      }
       if (!env.CONTROL_TOKEN || !timingSafeEqualString(request.headers.get("authorization") ?? "", `Bearer ${env.CONTROL_TOKEN}`)) {
         return jsonResponse({ error: { code: "CONTROL_AUTH_REQUIRED" }, trace_id: traceId }, 401);
       }
-      const url = new URL(request.url);
       if (request.method === "POST" && url.pathname === "/v1/routes/rebuild-index") {
         const body = await readJson<JsonObject>(request, 4_000);
         const after = body.after_tenant_id === undefined ? "" : requireIdentifier(body.after_tenant_id, "after_tenant_id");
@@ -119,3 +128,106 @@ export default {
     }
   },
 };
+
+export async function createPublicSignup(request: Request, env: ControlEnv, traceId = randomId("trace")): Promise<Response> {
+  if (!env.SIGNUP_DATA_KEY || !env.SIGNUP_LOOKUP_SECRET) {
+    return jsonResponse({ error: { code: "SIGNUP_NOT_CONFIGURED", message: "Đăng ký tạm thời chưa sẵn sàng." }, trace_id: traceId }, 503);
+  }
+  const body = await readJson<JsonObject>(request, 12_000);
+  // Honeypot: browsers never show this field. Answer generically so a bot cannot tune
+  // itself by learning which anti-abuse check it hit.
+  if (typeof body.website === "string" && body.website.trim()) {
+    return jsonResponse({ signup_id: randomId("signup"), status: "pending_verification" }, 202);
+  }
+
+  const shopName = normalizeShopName(body.shop_name);
+  const email = normalizeEmail(body.email);
+  const password = requireString(body.password, "password", 256);
+  if (password.length < 8) throw errors.validation("Mật khẩu phải có ít nhất 8 ký tự");
+  if (body.accepted_terms !== true) throw errors.validation("Bạn cần đồng ý Điều khoản và Chính sách quyền riêng tư");
+  const desiredSlug = normalizeSlug(body.desired_slug, shopName);
+  const now = new Date();
+  const since = new Date(now.getTime() - 60 * 60_000).toISOString();
+  // Email is low-entropy PII, so a plain digest would be reversible by dictionary attack
+  // after a database leak. Use the operator-held lookup secret for both lookup hashes.
+  const emailHash = await hmacHex(env.SIGNUP_LOOKUP_SECRET, `email:${email}`);
+  const ip = request.headers.get("cf-connecting-ip") ?? "unknown";
+  const ipHash = await hmacHex(env.SIGNUP_LOOKUP_SECRET, ip);
+  const emailCount = await env.CONTROL_DB.prepare(
+    "SELECT COUNT(*) AS total FROM signup_verifications WHERE email_hash=?1 AND created_at>=?2",
+  ).bind(emailHash, since).first<{ total: number }>();
+  const ipCount = await env.CONTROL_DB.prepare(
+    "SELECT COUNT(*) AS total FROM signup_verifications WHERE ip_hash=?1 AND created_at>=?2",
+  ).bind(ipHash, since).first<{ total: number }>();
+  if ((emailCount?.total ?? 0) >= 3 || (ipCount?.total ?? 0) >= 10) {
+    return jsonResponse({ error: { code: "SIGNUP_RATE_LIMITED", message: "Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau." }, trace_id: traceId }, 429);
+  }
+  const routeExists = await env.CONTROL_DB.prepare("SELECT tenant_id FROM tenant_routes WHERE route_key=?1")
+    .bind(`${desiredSlug}.kairo.vn`).first<{ tenant_id: string }>();
+  if (routeExists) throw errors.exists("Tên miền shop đã được sử dụng");
+  // The partial unique index cannot compare against the current clock. Retire expired
+  // rows first, otherwise an expired request still blocks the slug at INSERT forever.
+  await env.CONTROL_DB.prepare(
+    "UPDATE signup_verifications SET status='expired' WHERE desired_slug=?1 AND status='pending_verification' AND expires_at<=?2",
+  ).bind(desiredSlug, now.toISOString()).run();
+  const pendingSlug = await env.CONTROL_DB.prepare(
+    "SELECT signup_id FROM signup_verifications WHERE desired_slug=?1 AND status='pending_verification' AND expires_at>?2",
+  ).bind(desiredSlug, now.toISOString()).first<{ signup_id: string }>();
+  if (pendingSlug) throw errors.exists("Tên miền shop đang chờ xác minh");
+
+  const signupId = randomId("signup");
+  const verificationToken = randomToken();
+  const passwordHash = await hashPassword(password);
+  const consentedAt = now.toISOString();
+  const encryptedPayload = await encryptCredential(JSON.stringify({
+    shop_name: shopName,
+    owner_email: email,
+    desired_slug: desiredSlug,
+    password_hash: passwordHash,
+    consented_at: consentedAt,
+  }), env.SIGNUP_DATA_KEY, `signup:${signupId}`);
+  const expiresAt = new Date(now.getTime() + 30 * 60_000).toISOString();
+  await env.CONTROL_DB.prepare(
+    `INSERT INTO signup_verifications(
+       signup_id,email_hash,ip_hash,token_hash,desired_slug,signup_payload_ciphertext,status,expires_at,created_at
+     ) VALUES(?1,?2,?3,?4,?5,?6,'pending_verification',?7,?8)`,
+  ).bind(signupId, emailHash, ipHash, await sha256Hex(verificationToken), desiredSlug, encryptedPayload, expiresAt, consentedAt).run();
+
+  // The one-time token deliberately never goes back to the browser. The email-delivery
+  // adapter consumes it in the next provisioning slice; returning it here would turn
+  // "verify the mailbox" into "press a button in the same unverified session".
+  return jsonResponse({
+    signup_id: signupId,
+    status: "pending_verification",
+    desired_hostname: `${desiredSlug}.kairo.vn`,
+    verification_delivery: "pending_email_service",
+  }, 202);
+}
+
+function normalizeShopName(value: unknown): string {
+  const name = requireString(value, "shop_name", 120).replace(/\s+/g, " ").trim();
+  if (name.length < 2) throw errors.validation("Tên shop phải có ít nhất 2 ký tự");
+  return name;
+}
+
+function normalizeEmail(value: unknown): string {
+  const email = requireString(value, "email", 254).trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw errors.validation("Email không hợp lệ");
+  return email;
+}
+
+function normalizeSlug(value: unknown, shopName: string): string {
+  const source = typeof value === "string" && value.trim() ? value : shopName;
+  const slug = source.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+    .replace(/đ/g, "d").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48);
+  if (!/^[a-z0-9](?:[a-z0-9-]{1,46}[a-z0-9])?$/.test(slug)) throw errors.validation("Tên miền shop phải dài 3–48 ký tự, chỉ gồm chữ thường, số và dấu gạch ngang");
+  if (["www", "api", "admin", "control", "social-ingress", "edu", "hrm", "chotdon"].includes(slug)) throw errors.validation("Tên miền shop này được dành riêng");
+  return slug;
+}
+
+function randomToken(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}

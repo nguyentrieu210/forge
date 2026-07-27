@@ -2,9 +2,9 @@
   "format": 1,
   "package": "cloudforge",
   "version": "1.0.0",
-  "generated_at": "2026-07-27T05:09:14.650117+00:00",
-  "file_count": 639,
-  "tree_sha256": "46d713be55dc7a0261642e7b5074f7aaf45f291854aca6b3d66861faa2f5b1fc",
+  "generated_at": "2026-07-27T05:17:52.185062+00:00",
+  "file_count": 640,
+  "tree_sha256": "ee42167dc3424517295530d2c83b4f237d7df977a1a98b740978ec4bff23d347",
   "excluded": [
     ".git",
     ".wrangler",
@@ -32,7 +32,7 @@
     },
     {
       "path": "BUILD_REPORT.md",
-      "sha256": "fc8069207c59ad6c2b2486a203f304b53dce6a572dbc5aafd300bb21b08181db",
+      "sha256": "3139e3be7e4f31ebee50e15e112896d0d283ba37ffc01e3c4e7e7205e0a264a0",
       "size": 3051
     },
     {
@@ -157,7 +157,7 @@
     },
     {
       "path": "VERIFY.json",
-      "sha256": "2241fb893fa0b2f959e5cf93d7346d82db206fe91e44eebb1451428d464e6887",
+      "sha256": "9c2a722fb592048bbd114fb00b66210c7d88f9f617396436c7294ef79eec981e",
       "size": 3788
     },
     {
@@ -287,8 +287,8 @@
     },
     {
       "path": "apps/control-plane-worker/src/index.ts",
-      "sha256": "5927ddfb1a12b268f1465047a78d8fce9686144c2cc2d3be3ff6617f1f9ddb51",
-      "size": 7022
+      "sha256": "0116fcc9ba861c102252c3ad67197f2f85ec14cc9046b0161f346570f452edf0",
+      "size": 13667
     },
     {
       "path": "apps/control-plane-worker/wrangler.jsonc",
@@ -422,8 +422,8 @@
     },
     {
       "path": "apps/gateway-worker/src/index.ts",
-      "sha256": "b297093796a7f358b12384d85184f755cb9300e6b64a53ef0b62daaa5ed0319c",
-      "size": 13602
+      "sha256": "bbd854e7c9aa2595bc85e5a1ed593292ba3efab7a85f6bd7b9fd6746857c448b",
+      "size": 14075
     },
     {
       "path": "apps/gateway-worker/worker-configuration.d.ts",
@@ -432,8 +432,8 @@
     },
     {
       "path": "apps/gateway-worker/wrangler.jsonc",
-      "sha256": "04dbb18af5478124e9d1dd12643d9c74f51f6b193dbdcb682b64ed20ecfca106",
-      "size": 2058
+      "sha256": "13c7bda926622644309054a5ad23a74b5feb62a1e9e7436813413750434d593c",
+      "size": 2209
     },
     {
       "path": "apps/jobs-worker/package.json",
@@ -2106,6 +2106,11 @@
       "size": 297
     },
     {
+      "path": "migrations/control/0004_public_signup.sql",
+      "sha256": "45079b77d804abf82871474dea97f1feb8b8e8557ada75fc8b3d7334ca173de1",
+      "size": 1010
+    },
+    {
       "path": "migrations/jobs/0001_jobs.sql",
       "sha256": "28d8c4658b2db5520a591c4147b47a956b9f3c15ecf1a5e3b1ea0429b775d310",
       "size": 197
@@ -2777,8 +2782,8 @@
     },
     {
       "path": "packages/social-commerce/src/index.ts",
-      "sha256": "8f9587585a0aae7cf9debb74df7a69923edb89fa3affddf0456a0cb9618b7d5f",
-      "size": 2454
+      "sha256": "aec861ae3daa351278eb19f8740cc7118e6e93561dac6377df2df4a609752196",
+      "size": 2489
     },
     {
       "path": "packages/social-commerce/src/tenant-handler.ts",
@@ -3052,8 +3057,8 @@
     },
     {
       "path": "tests/control.test.mjs",
-      "sha256": "4c6d9bf469decfa24e3dd59ef779b7e2624341788bc8415405a7ac4c56411500",
-      "size": 4054
+      "sha256": "c1d5bda356382ceb9a936737418a4b84d389344e2a48b07d452761b966f2d4a1",
+      "size": 6648
     },
     {
       "path": "tests/customization.test.mjs",
@@ -3172,8 +3177,8 @@
     },
     {
       "path": "tests/security.test.mjs",
-      "sha256": "fd500daafb38afc4b5038bef9877060e451f908a1497da2d58983823034cfc35",
-      "size": 9504
+      "sha256": "cc36109b2018a4f6260a1d8c52c2a4434f69118cba98b5c44f25f8722cdfb414",
+      "size": 10992
     },
     {
       "path": "tests/social-commerce.test.mjs",
