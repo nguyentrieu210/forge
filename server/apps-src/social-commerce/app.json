@@ -1,0 +1,10 @@
+{
+  "id": "social-commerce",
+  "name": "Bán hàng đa kênh",
+  "version": "0.1.0",
+  "requires": [],
+  "nav": [
+    { "key": "social-commerce:dashboard", "label": "Trung tâm bán hàng", "kind": "experience", "icon": "messages-square", "group": "Bán hàng" }
+  ],
+  "hooks": []
+}

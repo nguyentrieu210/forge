@@ -22,6 +22,7 @@ const ReportContainer = lazy(() => import("@metaforge/views/report").then((modul
 const WorkspaceContainer = lazy(() => import("@metaforge/views/workspace").then((module) => ({ default: module.WorkspaceContainer })));
 const CalendarContainer = lazy(() => import("@metaforge/views/calendar").then((module) => ({ default: module.CalendarContainer })));
 const ApprovalInbox = lazy(() => import("./experiences/ApprovalInbox.js").then((module) => ({ default: module.ApprovalInbox })));
+const SocialCommerce = lazy(() => import("./experiences/SocialCommerce.js").then((module) => ({ default: module.SocialCommerce })));
 
 /**
  * The GENERIC runtime — one bundle that serves every app on the platform.
@@ -63,6 +64,7 @@ function renderExperience(key: string, manifest: AppManifest, navigate: Navigate
   const separator = key.indexOf(":");
   const kind = separator < 0 ? key : key.slice(0, separator);
   const argument = separator < 0 ? "" : key.slice(separator + 1);
+  if (kind === "social-commerce") return <SocialCommerce />;
   if (kind === "approval" && argument) {
     // The label the app declared, not the raw DocType name. A screen titled "Asset
     // Request" in an otherwise Vietnamese app reads as a leaked internal identifier.

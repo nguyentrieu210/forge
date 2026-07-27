@@ -120,6 +120,14 @@ test("a data-backed experience carries a validated permission target", () => {
   }), /permission_doctype points at Ghost/);
 });
 
+test("social commerce experience is operational and relies on its server-scoped API", () => {
+  const value = manifest({
+    nav: [{ key: "social-commerce:dashboard", label: "Social", kind: "experience" }],
+  });
+  assert.equal(value.nav[0].key, "social-commerce:dashboard");
+  assert.equal(value.nav[0].permission_doctype, undefined);
+});
+
 test("a route nav item needs an absolute route", () => {
   assert.throws(() => manifest({ nav: [{ key: "reports", label: "R", kind: "route" }] }), /requires a route/);
   // A relative route resolves incorrectly in the client router.

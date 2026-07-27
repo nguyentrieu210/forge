@@ -115,7 +115,7 @@ export const CLIENT_CONTEXT_DIMENSIONS = new Set([
  * the menu entry would install cleanly and then show "chưa được triển khai" on click.
  * Adding a prefix here is the LAST step of shipping one, never the first.
  */
-export const SUPPORTED_EXPERIENCE_KINDS = new Set(["approval", "calendar"]);
+export const SUPPORTED_EXPERIENCE_KINDS = new Set(["approval", "calendar", "social-commerce"]);
 
 export interface AppManifest {
   id: string;
@@ -455,7 +455,7 @@ function parseNav(value: JsonValue, index: number, doctypeNames: ReadonlySet<str
   }
   const inferredPermissionDoctype = kind === "doctype"
     ? key
-    : kind === "experience" && key.includes(":")
+    : kind === "experience" && (key.startsWith("approval:") || key.startsWith("calendar:"))
       // Both `approval:` and `calendar:` name the doctype after the colon, so the menu
       // entry is gated on that doctype's read permission — a calendar of records the
       // user cannot read must not appear at all.
