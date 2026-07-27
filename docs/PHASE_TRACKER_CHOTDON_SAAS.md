@@ -5,7 +5,7 @@ Luồng áp dụng: **B — module lớn trên nền Forge hiện có**.
 ## 7 pha và cổng
 
 - [x] Pha 1 — Audit code + research 5 lớp; Cổng 1 được người dùng chốt Facebook/SaaS/COD và yêu cầu tiếp tục ngày 2026-07-27.
-- [ ] Pha 2 — BRD 360° hoàn tất tại `docs/BRD_SOCIAL_COMMERCE_SAAS.md`; đang chờ duyệt Cổng 2.
+- [ ] Pha 2 — BRD toàn sản phẩm S01–S27 hoàn tất tại `docs/BRD_SOCIAL_COMMERCE_SAAS.md`; đang chờ duyệt Cổng 2.
 - [ ] Pha 3 — Thiết kế kỹ thuật + API + Field Ledger; Cổng 3 cần người dùng duyệt.
 - [ ] Pha 4 — Chuẩn bị nhánh/cổng kiểm tra; Cổng 4: verify chạy được.
 - [ ] Pha 5 — Build slice đầu tiên theo BRD và Field Ledger.

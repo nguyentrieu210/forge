@@ -1,8 +1,8 @@
 # BRD 360° — Forge Social Commerce SaaS
 
-Trạng thái: **Pha 2 — chờ duyệt Cổng 2**  
+Trạng thái: **Pha 2 — bản đầy đủ toàn sản phẩm, chờ duyệt Cổng 2**
 Ngày: 2026-07-27  
-Phạm vi: Facebook Page trước; SaaS self-service nhiều khách; có vận chuyển và COD.
+Phạm vi: toàn bộ sản phẩm SaaS social-commerce tương đương phạm vi công khai của Chotdon.vn, xây độc lập trên kiến trúc Forge; Facebook Page là kênh triển khai đầu tiên; có landing, self-service, livestream, inbox, đơn, khách, kho, vận chuyển, COD, báo cáo, minigame, Customer Portal và Platform Admin.
 
 ## 0. Nhật ký đọc contract
 
@@ -35,6 +35,8 @@ Phạm vi: Facebook Page trước; SaaS self-service nhiều khách; có vận c
 | A06 | Benchmark pain: sót 2% đơn × 200 đơn/ngày × 180.000đ = 720.000đ doanh thu cơ hội/ngày; trùng 1% = 2 ca xử lý/ngày; oversell 0,5% = 1 ca hoàn/đền/ngày. Telemetry thực tế sẽ thay benchmark. |
 | A07 | Self-signup tạo trial 14 ngày. Thanh toán thuê bao tự động không nằm trong slice đầu; control plane vẫn có Plan/Subscription/Entitlement để nối cổng thanh toán sau. |
 | A08 | Commit được phép vào `main`, nhưng commit chỉ stage file thuộc feature; không gom thay đổi có sẵn của người dùng. |
+| A09 | “Clone” nghĩa là đạt feature parity theo thông tin công khai và UX tốt tương đương; không sao chép tên, logo, câu chữ, hình ảnh, HTML/CSS hoặc mã nguồn Chotdon.vn. |
+| A10 | Web/PWA responsive là bề mặt chuẩn đầu tiên; native iOS/Android được thiết kế API-compatible nhưng không chặn web MVP. |
 
 ### Câu hỏi mở không chặn BRD
 
@@ -294,6 +296,146 @@ Control-plane endpoints dùng 5 role chuẩn; Support không có endpoint đọc
 - **Actions:** provision/reconcile/suspend/unsuspend/manual hold/reset link/terminate; dangerous actions require confirm + reason, terminate requires backup evidence.
 - **States:** healthy, drift, job running/failed, degraded, suspended, permission denied, stale health.
 
+### S13 — Landing page công khai
+
+- **Route/actor:** `/`; khách chưa đăng nhập, bot tìm kiếm, khách hiện tại.
+- **Desktop:** header sticky, hero hai cột, pain→solution, feature grid, quy trình 4 bước, social proof có nguồn, báo giá, FAQ, CTA, footer pháp lý. **Mobile:** một cột, CTA sticky nhẹ, không carousel bắt buộc vuốt.
+- **Components:** logo Forge Social; headline gốc; ảnh/screenshot sản phẩm tự tạo; CTA `Dùng thử miễn phí` và `Xem cách hoạt động`; feature: gom comment, tạo/in đơn, tồn, giao hàng, COD, báo cáo; form tư vấn.
+- **Actions/API:** signup, demo request, contact lead; form Zod + consent + rate-limit/Turnstile khi cần; không dùng số liệu khách hàng không kiểm chứng.
+- **SEO:** metadata, canonical, OpenGraph, Product/FAQ structured data, sitemap, robots, performance budget.
+- **7 states:** content loading không cần spinner; form idle/submitting/success/validation/server error/offline/rate-limited.
+
+### S14 — Tính năng, bảng giá và FAQ
+
+- **Routes:** `/features`, `/pricing`, `/faq`; public.
+- **Layout:** feature comparison theo module; pricing cards tháng/năm; mobile cards, không bảng rộng cuộn ngang.
+- **Components:** plan limits (Page, user, order/month, storage, retention, reports, support), calculator, trial terms, FAQ accordion.
+- **Actions:** chọn gói → signup với plan preselected; liên hệ Enterprise; không hiển thị giá chưa được Platform Admin publish.
+- **States:** price available/unavailable, promotion active/expired, public plan inactive, offline, CTA success.
+
+### S15 — Trust center và pháp lý Facebook
+
+- **Routes:** `/privacy`, `/terms`, `/data-policy`, `/facebook/data-deletion`, `/security`.
+- **Components:** mục đích/scopes dữ liệu, thời hạn lưu, quyền truy cập/xóa/xuất, subprocessors, contact, status tra cứu yêu cầu xóa dữ liệu.
+- **Actions:** gửi data deletion request → xác minh chủ thể → ticket SLA → export/delete/anonymize theo retention; Meta callback deletion nhận signed request và trả confirmation URL/code.
+- **States:** request created/verifying/in-progress/completed/rejected-with-reason/expired/permission.
+
+### S16 — Quản lý Fanpage và bài/live
+
+- **Route:** `/social/facebook`; owner/manager/agent-read.
+- **Desktop:** Page switcher trái; danh sách post/live giữa; health/rule summary phải. Mobile stack.
+- **Components:** nhiều Page, post/live status, viewers/comments/orders, sync cursor, webhook health, `Mở phòng chốt đơn`.
+- **Actions:** add/remove Page, sync posts, select live, activate/deactivate capture, assign team.
+- **States:** no Page, no live, live active, ended, scope missing, revoked, sync delayed.
+
+### S17 — Phòng chốt đơn livestream thời gian thực
+
+- **Route:** `/social/live/:sessionId`; owner/manager/agent.
+- **Desktop:** live/comment stream; order basket/customer; product/stock/script panel; realtime KPI header. Mobile ưu tiên comment→basket, panel qua sheets.
+- **Components:** comment filter (all/keyword/phone/unprocessed/VIP), hide sensitive comment, pin, reply template, one-click add, customer running basket, available stock, printer queue.
+- **Actions:** start/pause/end session, assign agent, create/merge/split basket, confirm/print, hide/reply comment, stop accepting SKU at threshold.
+- **Autofill:** Facebook ID identity; regex/AI phone-address extraction; keyword→variant/qty; AI chỉ gợi ý và nêu confidence.
+- **States:** connecting/live/reconnecting/ended/replay/read-only/revoked/overload with backpressure.
+
+### S18 — Kịch bản chốt đơn và cú pháp
+
+- **Route:** `/social/rules`; owner/manager.
+- **Layout:** DataTable rules + drawer; simulator panel nhập comment để xem kết quả trước publish.
+- **Fields:** name, Page/session scope, keyword/aliases, matching exact/prefix/regex-safe, SKU/variant, default qty, duplicate window, priority, auto-reply template, auto-draft flag, active dates.
+- **Actions:** create/clone/version/publish/pause; bulk import/export; conflict detector; rollback version.
+- **Validation:** ReDoS-safe/allowlisted pattern, ambiguous keyword blocked, SKU required, date range valid.
+- **States:** draft/published/conflict/inactive/scheduled/expired/test-failed.
+
+### S19 — Giỏ gom đơn theo khách
+
+- **Route:** `/social/carts`; manager/agent.
+- **Layout:** customer carts list + item timeline + order preview; desktop 3 cột/mobile stack.
+- **Components:** comments from multiple live/posts/pages, identity merge confidence, item/color/size, reservation clock, missing phone/address checklist.
+- **Actions:** merge same identity, propose merge by phone, split cart, remove item reason, extend reservation, convert to order.
+- **Rules:** automatic merge by stable Facebook user ID; cross-ID merge never automatic without verified phone/user confirmation; source lineage retained.
+- **States:** collecting/needs-info/ready/reserved/expired/converted/cancelled.
+
+### S20 — Khách hàng, nhãn và chăm sóc
+
+- **Route:** `/crm/customers`; sales roles/auditor-read.
+- **Table:** checkbox, STT, avatar, name/masked phone, labels, order count/value, return/COD risk, last interaction.
+- **Detail:** profile/order history/conversations/addresses/labels/consent in 3 columns.
+- **Actions:** create/merge duplicate, add labels, assign, opt-out, send approved reply draft, export by permission.
+- **Rules:** phone normalized; Facebook identity unique; merge has preview + reversible mapping/audit; sensitive fields masked by role.
+- **States:** new/repeat/VIP/at-risk/blocked/duplicate-suspected/deletion-requested.
+
+### S21 — Sản phẩm, biến thể và live catalog
+
+- **Route:** `/catalog/products`; owner/manager/warehouse.
+- **Components:** product table with image, SKU, variant matrix (color/size), price, on-hand/reserved/available, Page keyword, live availability, barcode.
+- **Actions:** CRUD/import 5-step, map keyword, bulk price/status, image capture/upload, barcode label, set low-stock alert.
+- **Rules:** SKU unique; variant combination unique; price minor integer; disabled item cannot be added; mapping conflict blocked.
+- **States:** active/draft/out-of-stock/low-stock/disabled/sync-error/import-error.
+
+### S22 — Soạn hàng và in hàng loạt
+
+- **Route:** `/fulfillment/pick-pack`; warehouse/manager.
+- **Layout:** wave list; pick checklist; print queue; mobile scan-first.
+- **Components:** group by SKU/location/order, barcode scan, picked/short/damaged, package weight/dimensions, printer/label profile.
+- **Actions:** create wave, claim, scan/pick, report shortage, substitute with approval, pack, print invoice/label, reprint reason.
+- **Rules:** one active claim per wave; scan idempotent; shortage releases/reallocates reservation; reprint audited.
+- **States:** queued/claimed/picking/blocked/packed/printed/handed-over.
+
+### S23 — Minigame livestream
+
+- **Route:** `/social/minigames`; owner/manager/host.
+- **Components:** game templates (random comment, keyword race, lucky number), eligibility rules, time window, prize, winner draw, public overlay/link optional.
+- **Actions:** draft/start/stop/draw/redraw with reason/publish result/export participants.
+- **Fairness:** immutable participant snapshot and deterministic/verifiable seed committed before draw; exclude staff/duplicate identity; audit every redraw.
+- **States:** draft/scheduled/live/closed/drawing/published/cancelled.
+
+### S24 — Báo cáo livestream và hiệu suất
+
+- **Route:** `/reports/social-commerce`; owner/manager/COD/auditor by scope.
+- **Dashboards:** theo thời gian, Page, post/live, SKU, agent, funnel comment→cart→order→delivered→COD reconciled, return/cancel reasons, response time.
+- **Components:** date compare, Page/session/agent filters, KPI + chart + detail table; all KPI drill down; scheduled report.
+- **Exports:** Excel/PDF; sensitive revenue masked by role; audit export.
+- **States:** no data/demo/calculating/stale/reconciliation-lag/error/permission.
+
+### S25 — Nhân viên, ca và hiệu suất
+
+- **Route:** `/settings/team`; owner/manager.
+- **Components:** invites, roles, Page/warehouse scopes, live shift assignment, active sessions, per-agent KPI.
+- **Actions:** invite/resend/revoke, assign scope/shift, terminate sessions, reset via secure link; no default shared password.
+- **States:** invited/active/locked/off-shift/revoked/pending-2FA.
+
+### S26 — Trung tâm trợ giúp và hỗ trợ
+
+- **Routes:** `/help`, `/account/support`; public help + authenticated tickets.
+- **Components:** searchable guides/videos, setup diagnostics, ticket list/detail, attachment private, system status.
+- **Actions:** create/reply/close ticket, grant time-bounded support access requiring owner consent and audit; support cannot silently enter tenant.
+- **States:** open/pending customer/pending support/resolved/closed/incident active.
+
+### S27 — Ứng dụng PWA/mobile
+
+- **Bề mặt:** installable PWA with BottomNav `Tổng quan · Inbox · [FAB: Tạo đơn] · Đơn hàng · Thêm`.
+- **Capabilities:** push for new hot comment/assignment/shipment exception; camera barcode/address evidence; share/print PDF; offline read cache and draft queue.
+- **Boundary:** reservation/order confirmation and COD posting require online server confirmation; offline never promises stock.
+- **States:** install available/installed/update available/offline/queue pending/sync conflict/push denied.
+
+## 8A. Bản đồ module toàn sản phẩm
+
+| Module | Năng lực đầy đủ |
+|---|---|
+| Marketing website | Landing, features, pricing, FAQ, blog/help, lead form, SEO, legal/trust, Meta review pages. |
+| Identity & SaaS | Signup, verification, login, reset, onboarding, trial, plan, subscription, entitlement, Customer Portal. |
+| Facebook hub | OAuth, multiple Pages, posts/live, webhook health, team assignment, sync/reconciliation. |
+| Live selling | Realtime comments, filters, privacy hide, quick reply, keyword rules, AI extraction, basket, one-click order/print. |
+| Customer CRM | Facebook identity, phone/address, labels, history, duplicate merge, consent/opt-out, risk signals. |
+| Catalog & inventory | Product/variant/image/SKU/barcode, keyword mapping, warehouse, reservation, low stock, import/export. |
+| Orders | Draft/confirmed/cancelled, merge/split, discounts/shipping/COD, audit, Kanban, batch actions. |
+| Fulfillment | Pick-pack waves, scan, print queue, carrier adapters, tracking, returns/exceptions. |
+| COD & finance | Expected vs received, import/provider fetch, auto-match, variance queue, immutable posting. |
+| Engagement | Reply templates, transactional notifications, minigame, customer labels; no unauthorized spam automation. |
+| Analytics | Realtime live KPIs, time/post/Page/SKU/agent reports, funnel, stock, delivery, return, COD, scheduled reports. |
+| Team & security | Roles/scopes/shifts/performance, sessions, 2FA, audit, data export/deletion, support access consent. |
+| Platform operations | Tenant, plan, provisioning, health, usage, lifecycle, support, backup, drift/reconcile, future billing. |
+
 ## 9. Danh sách nghiệp vụ bắt buộc — quyết định
 
 | Nghiệp vụ | Áp dụng |
@@ -317,14 +459,23 @@ Control-plane endpoints dùng 5 role chuẩn; Support không có endpoint đọc
 | Onboarding/demo | Wizard + demo Page/events không gọi Meta thật; xóa demo một nút. |
 | Export/import | Đơn/COD có Excel đúng contract; export-all owner. |
 
-## 10. Out of Scope của slice đầu
+## 10. Out of Scope của toàn sản phẩm và thứ tự delivery
 
-- TikTok Shop/Shopee/Zalo OA connector thực tế; kiến trúc adapter phải sẵn sàng.
-- Facebook Ads/CAPI, livestream video hosting hoặc tải video.
-- Tự động gửi comment/message marketing hàng loạt.
-- Cổng thanh toán thuê bao tự động; slice đầu dùng trial + entitlement/manual activation.
-- Tối ưu tuyến giao, multi-package/split shipment phức tạp.
-- Kế toán Việt Nam đầy đủ ngoài Payment Entry/COD allocation đã có trong kernel.
+- Không sao chép thương hiệu, nội dung, giao diện pixel-perfect hoặc mã nguồn của Chotdon.vn.
+- Không tăng mắt ảo, seeding giả, automation lách chính sách Meta hoặc thu thập dữ liệu ngoài scope được duyệt.
+- Không tự host/relay video livestream; dùng Facebook làm nguồn video/event.
+- TikTok Shop/Shopee/Zalo OA là Wave 4 sau Facebook; provider contract phải cho phép thêm mà không đổi domain core.
+- Native iOS/Android là Wave 5; PWA đầy đủ được giao trước.
+- Cổng thanh toán thuê bao tự động là Wave 3; Wave 1 có trial + entitlement/manual activation.
+- Kế toán/thuế Việt Nam đầy đủ ngoài Sales/Payment/COD kernel không thuộc social-commerce parity.
+
+### Thứ tự delivery không cắt phạm vi BRD
+
+1. **Wave 1 — lát cắt chứng minh:** landing+signup+trial, OAuth Page, webhook, live inbox, basket, reservation, order, manual carrier/COD, dashboard.
+2. **Wave 2 — vận hành quy mô:** keyword rules, multi-Page, CRM labels, catalog variants, pick-pack/printing, carrier thật, COD reconciliation, reports.
+3. **Wave 3 — thương mại SaaS:** pricing checkout/billing, dunning/lifecycle, support portal, minigame, scheduled reports, trust/data deletion automation.
+4. **Wave 4 — đa kênh:** TikTok Shop/Shopee/Zalo through adapters.
+5. **Wave 5 — native/mobile nâng cao:** store apps nếu PWA telemetry chứng minh nhu cầu.
 
 ## 11. Decided và định danh sản phẩm
 
@@ -341,6 +492,7 @@ Control-plane endpoints dùng 5 role chuẩn; Support không có endpoint đọc
 | Token boundary | app secret Cloudflare Secret; credentials mã hóa server-side; không log plaintext |
 | COD | Delivered ≠ Paid; chỉ post tiền sau reconciliation |
 | Commit | User cho phép main; stage chọn lọc file feature, không lấy thay đổi khác |
+| Feature parity | Theo toàn bộ module ở §8A và S01–S27; giao theo Wave, không thu hẹp BRD. |
 
 ## Scorecard Cổng 2
 
@@ -351,12 +503,37 @@ Control-plane endpoints dùng 5 role chuẩn; Support không có endpoint đọc
 | Entities/constraints/idempotency | ✅ | Mục 5 |
 | Per-actor flows + nhánh lỗi | ✅ | Mục 6 |
 | Permission theo endpoint | ✅ | Mục 7 |
-| Screen cards desktop/mobile/actions/states | ✅ | Mục 8, S01–S12 |
+| Screen cards desktop/mobile/actions/states | ✅ | Mục 8, S01–S27 |
 | OAuth không bắt khách nhập secret/token | ✅ | A03, F2, S04 |
 | Multi-tenant/control DB boundary | ✅ | Mục 5 |
 | Shipping + COD end-to-end | ✅ | F5, S08–S09 |
 | Nghiệp vụ bắt buộc rà từng mục | ✅ | Mục 9 |
 | HMAC/license/provisioning được định hướng | ✅ | Control-plane boundary; chi tiết canonical ở Pha 3 |
 | Out of scope rõ | ✅ | Mục 10 |
+| Landing/pricing/legal/help đầy đủ | ✅ | S13–S15, S26 |
+| Multi-Page/live/rules/gom đơn/in | ✅ | S16–S19, S22 |
+| CRM/catalog/minigame/report/team/PWA | ✅ | S20–S25, S27 |
+
+## Phụ lục A — Nhật ký đối chiếu chức năng Chotdon công khai
+
+| Nguồn công khai | Năng lực đưa vào BRD |
+|---|---|
+| Trang chủ Chotdon.vn | Web app Facebook, tạo/quản lý đơn, live/chat, AI nhận diện, báo cáo ngày/tuần/tháng, dùng thử, mobile CTA. |
+| `tinh-nang-in-don-hang` | Tạo đơn trực tiếp từ comment, gom dữ liệu khách/sản phẩm, in khi live. |
+| `tinh-nang-gom-don-hang` | Nhận diện theo Facebook ID, gom các món theo người mua, realtime revenue/agent/stock. |
+| `bi-quyet-nghin-don...` | Nhiều Fanpage, nhãn khách, giao vận, máy in, minigame. |
+| `kinh-doanh-thanh-cong...` | Cú pháp tự tạo đơn, gom qua nhiều live, bắt SĐT, quick reply, nhiều carrier. |
+| `tinh-nang-bao-cao...` | Báo cáo theo thời gian và theo bài viết. |
+| `phan-mem-chot-don-facebook` | Cú pháp comment, lọc tương tác, báo cáo sau live theo sản phẩm/khung giờ. |
+
+Nguồn:
+
+- https://www.chotdon.vn/
+- https://www.chotdon.vn/tinh-nang-in-don-hang
+- https://www.chotdon.vn/tinh-nang-gom-don-hang
+- https://chotdon.vn/bi-quyet-nghin-don-cung-phan-mem-ho-tro-livestream-facebook
+- https://chotdon.vn/kinh-doanh-thanh-cong-nho-cong-cu-ho-tro-ban-hang-online-tren-facebook
+- https://chotdon.vn/tinh-nang-bao-cao-thong-ke-theo-thoi-gian-va-theo-bai-viet
+- https://chotdon.vn/phan-mem-chot-don-facebook
 
 **Kết luận:** BRD đạt điều kiện trình duyệt Cổng 2. Chưa viết code/migration trong Pha 2.
