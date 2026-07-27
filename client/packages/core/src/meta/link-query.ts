@@ -58,8 +58,10 @@ export function buildLinkFilters(
         warnOnce(value, `biểu thức eval ngoài allowlist, bỏ điều kiện: ${value.slice(0, 80)}`);
         continue; // biểu thức ngoài allowlist → bỏ điều kiện này (không lộ, không ném) — ĐÃ cảnh báo
       }
-      // ngữ cảnh chưa set (field phụ thuộc còn rỗng) → KHÔNG ràng buộc (tránh "0 kết quả" khó hiểu).
-      if (value === undefined) continue;
+      // Ngữ cảnh chưa set (field phụ thuộc còn rỗng) → KHÔNG ràng buộc. Form khởi tạo field
+      // trống bằng `""` hoặc `null`, không chỉ `undefined`; gửi các giá trị đó thành filter
+      // thật sẽ tạo truy vấn kiểu `company = ""` và mọi Link phụ thuộc đều báo 0 kết quả.
+      if (value === undefined || value === null || value === "") continue;
     }
     out[fieldname] = op === "=" ? value : [op, value];
   }

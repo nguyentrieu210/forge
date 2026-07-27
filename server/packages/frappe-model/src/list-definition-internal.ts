@@ -20,7 +20,15 @@ export function metadataToListDefinition(meta: DocTypeMeta): DocumentListDefinit
   }
   const listFields = meta.fields.filter((field) => field.in_list_view && Object.hasOwn(fields, field.fieldname)).map((field) => field.fieldname);
   const defaultFields = ["name", ...(meta.title_field && Object.hasOwn(fields, meta.title_field) ? [meta.title_field] : []), ...listFields, "status", "docstatus", "version", "modified_at"];
-  const searchFields = [...new Set(["name", ...(meta.search_fields ?? []), ...meta.fields.filter((field) => field.search_index).map((field) => field.fieldname)])].filter((field) => Object.hasOwn(fields, field));
+  // Link search phải luôn tìm được bằng TÊN người dùng nhìn thấy. App sinh mã tự động thường
+  // có `name = DT-.#####` và chỉ khai `title_field`; nếu tác giả quên lặp lại title trong
+  // `search_fields`, dropdown chỉ tìm được bằng mã kỹ thuật và trông như không có bản ghi.
+  const searchFields = [...new Set([
+    "name",
+    ...(meta.title_field ? [meta.title_field] : []),
+    ...(meta.search_fields ?? []),
+    ...meta.fields.filter((field) => field.search_index).map((field) => field.fieldname),
+  ])].filter((field) => Object.hasOwn(fields, field));
   // A tree's parent field is structurally filterable — walking the tree IS a
   // filter on it. Requiring the author to also flag it `in_standard_filter` turns
   // a correct tree definition into a "filter field is not allowed" error, so it is

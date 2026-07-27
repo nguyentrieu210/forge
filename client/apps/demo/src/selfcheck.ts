@@ -236,6 +236,16 @@ check("buildLinkFilters: static + eval-context + op + malformed→undefined", ()
   // eval: field phụ thuộc chưa set → bỏ điều kiện (không ràng buộc → undefined toàn bộ filter)
   const ev2 = buildLinkFilters(fld(JSON.stringify([["Warehouse", "company", "=", "eval:doc.company"]])), {});
   assert.equal(ev2, undefined);
+  assert.equal(
+    buildLinkFilters(fld(JSON.stringify([["Warehouse", "company", "=", "eval:doc.company"]])), { company: "" }),
+    undefined,
+    "field phụ thuộc là chuỗi rỗng không được biến thành filter company=''",
+  );
+  assert.equal(
+    buildLinkFilters(fld(JSON.stringify([["Warehouse", "company", "=", "eval:doc.company"]])), { company: null }),
+    undefined,
+    "field phụ thuộc null không được làm Link rỗng vĩnh viễn",
+  );
 
   // eval ngoài allowlist (truy cập window) → bỏ điều kiện đó (fail-safe, không ném)
   const evBad = buildLinkFilters(fld(JSON.stringify([["Warehouse", "company", "=", "eval:window.location"]])), {});
@@ -801,6 +811,23 @@ check("datetime: convert Frappe ↔ datetime-local", () => {
     }),
   );
   assert.ok(html.includes('value="2026-07-23T14:30"'), "value chuyển sang datetime-local");
+});
+
+check("datetime: wrapper đủ rộng để không cắt phút và nút lịch", () => {
+  const datetimeMeta: DocTypeMeta = {
+    name: "Event",
+    fields: [{ fieldname: "starts_at", fieldtype: "Datetime", label: "Bắt đầu" }],
+    permissions: [{ role: "All", permlevel: 0, read: 1, write: 1 }],
+  };
+  const html = renderToStaticMarkup(
+    h(FormView, {
+      meta: datetimeMeta,
+      doc: { name: "EVT-1", doctype: "Event", starts_at: "2026-07-23 14:30:00" },
+      registry: createDefaultRegistry(),
+      roles: ["All"],
+    }),
+  );
+  assert.ok(html.includes("max-w-[14rem]"), "Datetime phải rộng hơn Date/Time 11rem");
 });
 
 // 26. FORM: role không quyền write → FormView render field ở trạng thái locked.

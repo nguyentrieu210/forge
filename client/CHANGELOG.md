@@ -12,6 +12,8 @@
 
 ## Unreleased — Visual Directions review import
 
+- Nới riêng trường `Datetime` để không cắt phần phút/nút lịch trên Chromium Windows.
+- Link picker bỏ filter phụ thuộc còn rỗng; backend luôn tìm theo `title_field` ngoài mã bản ghi.
 - Imported the Claude Design review handoff under `docs/design/visual-directions-review/` for traceability.
 - Mapped Run2–Run6 into the shared production design layer instead of copying prototype HTML.
 - Added semantic visual hooks and elevations for shell, login, awesomebar, list, form, split/context, workspace, report, kanban, calendar, gantt, tree, dashboard, print and builders.

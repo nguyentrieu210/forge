@@ -77,16 +77,20 @@ const COL_CLASS: Record<number, string> = {
 /** Rất ngắn — số, ngày giờ, tick, màu: giá trị chỉ vài ký tự, ô dài chỉ tổ trống trải. */
 const TINY_FIELDTYPES = new Set([
   "Check", "Int", "Float", "Currency", "Percent", "Duration",
-  "Date", "Time", "Datetime", "Rating", "Color",
+  "Date", "Time", "Rating", "Color",
 ]);
 /** Ngắn vừa — mã, lựa chọn, quan hệ: cần chỗ đọc tên nhưng không cần cả dòng. */
 const NARROW_FIELDTYPES = new Set([
   "Select", "Link", "Dynamic Link", "Data", "Barcode", "Phone",
 ]);
 const TINY_CLASS = "max-w-[11rem]";
+// `datetime-local` có thêm phần giờ/phút và nút mở lịch của trình duyệt. Ép chung 11rem với
+// Date/Time làm cụm phút hoặc picker bị cắt vài pixel trên Chromium/Windows.
+const DATETIME_CLASS = "max-w-[14rem]";
 const NARROW_CLASS = "max-w-[20rem]";
 
 function widthClass(fieldtype: string): string | undefined {
+  if (fieldtype === "Datetime") return DATETIME_CLASS;
   if (TINY_FIELDTYPES.has(fieldtype)) return TINY_CLASS;
   if (NARROW_FIELDTYPES.has(fieldtype)) return NARROW_CLASS;
   return undefined; // Text/Editor/Table… giữ trọn chiều ngang

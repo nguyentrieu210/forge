@@ -72,6 +72,22 @@ test("layout-only types carry no queryable value", () => {
   }
 });
 
+test("title_field is always searchable for Link pickers", () => {
+  const parsed = parseDocTypeMeta({
+    name: "Class Group",
+    module: "Center",
+    title_field: "class_name",
+    fields: [
+      { fieldname: "class_name", label: "Class Name", fieldtype: "Data", required: true },
+      { fieldname: "code", label: "Code", fieldtype: "Data" },
+    ],
+    permissions: [{ role: "System Manager", read: true, write: true }],
+    revision: 1,
+  });
+  const definition = metadataToListDefinition(parsed);
+  assert.deepEqual(definition.searchFields, ["name", "class_name"]);
+});
+
 // ---- DocField properties the server enforces --------------------------------
 
 import { renderPrintFormat } from "../dist/packages/frappe-model/src/index.js";
