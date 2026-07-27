@@ -52,6 +52,20 @@ const registry = createFullRegistry();
 /** The app to render, when a tenant has several installed. */
 const REQUESTED_APP = new URLSearchParams(window.location.search).get("app") ?? undefined;
 
+/**
+ * Manifest được gọi NGAY khi bundle chạy, song song với boot — không chờ boot xong.
+ *
+ * Trước đây mỗi lớp chỉ bắt đầu gọi sau khi lớp trước trả về: boot → manifest →
+ * phạm vi dữ liệu → catalog. Không lớp nào cần dữ liệu của lớp trước để GỌI, chúng chỉ
+ * cần nó để RENDER. Đo trên tenant thật: 1616 ms mới thấy dòng đầu tiên, trong đó gần
+ * một giây là bốn lần chờ nối đuôi nhau, mỗi lời gọi chỉ ~150 ms.
+ *
+ * Best-effort: chưa đăng nhập thì lời gọi này hỏng, và `ManifestBoundary` gọi lại sau
+ * khi có phiên. Một lời gọi thừa lúc chưa đăng nhập rẻ hơn nhiều so với một lần chờ
+ * xếp hàng ở mọi lần mở app.
+ */
+const manifestPrefetch = adapter.getAppManifest(REQUESTED_APP).catch(() => null);
+
 interface RuntimeNav extends NavItem { route: string; doctype?: string }
 
 /**
@@ -236,7 +250,9 @@ function ManifestBoundary({ boot, logout }: { boot: MetaForgeBootDTO; logout: ()
 
   useEffect(() => {
     let alive = true;
-    adapter.getAppManifest(REQUESTED_APP)
+    // Dùng lại lời gọi đã phát đi lúc bundle chạy; chỉ gọi mới khi nó hỏng (chưa có phiên).
+    manifestPrefetch
+      .then((prefetched) => prefetched ?? adapter.getAppManifest(REQUESTED_APP))
       .then((value) => {
         if (!alive) return;
         // Validated even though the server built it: a manifest that fails here would
@@ -290,7 +306,11 @@ function Runtime({ manifest, boot, logout }: { manifest: AppManifest; boot: Meta
       .then((value) => { if (alive) setCatalog(value); })
       .catch((error) => { if (alive) setCatalogError(adapter.mapError(error).message); });
     return () => { alive = false; };
-  }, [context.cacheSuffix, manifest.id, manifest.catalogMode]);
+    // `context.cacheSuffix` CỐ Ý không nằm trong danh sách phụ thuộc: danh mục ứng dụng
+    // là những app đã cài, không đổi theo phạm vi dữ liệu người dùng chọn. Để nó ở đây
+    // khiến catalog bị gọi lần thứ hai ngay sau khi phạm vi được xác định — đo được trên
+    // tenant thật, hai lời gọi giống hệt nhau cách nhau 326 ms.
+  }, [manifest.id, manifest.catalogMode]);
 
   const nav = useMemo(() => buildNavigation(manifest, catalog, boot.roles), [manifest, catalog, boot.roles]);
   const scopeKey = `${createScopeKey(boot)}|${context.cacheSuffix || "global"}`;
