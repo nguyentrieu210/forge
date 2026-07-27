@@ -14,7 +14,7 @@ Ngày: 2026-07-27.
 - Control D1 và KV đều có route thuận `chotdon.kairo.vn` và route ngược `__tenant__:chotdon`; JSON đã đọc lại hợp lệ.
 - Tenant có `SESSION_SECRET` riêng và `SOCIAL_CREDENTIAL_KEK` riêng. Giá trị chỉ nằm trong Cloudflare secret storage.
 - Ba khóa dùng chung `INTERNAL_AUTH_SECRET`, `INTERNAL_SERVICE_TOKEN`, `CONTROL_TOKEN` đã được re-key đồng bộ trên Gateway, Jobs, Control, Social Ingress và bốn tenant `demo`, `edu`, `hrm`, `chotdon`.
-- Đã tạo và xác minh quản trị viên `admin@kairo.vn`; mật khẩu không ghi vào repo/log, chỉ lưu ở Windows User environment `FORGE_CHOTDON_ADMIN_PASSWORD`.
+- Đã tạo và xác minh quản trị viên đăng nhập `admin`; mật khẩu do chủ hệ thống chọn không ghi vào repo/log, chỉ lưu ở Windows User environment `FORGE_CHOTDON_ADMIN_PASSWORD`.
 - Gói `social-commerce@0.1.0` đã cài trên tenant; manifest mở được tại `/x/social-commerce%3Adashboard`.
 - Landing Kairo Social Commerce đã live tại `/`; các route `/login`, `/features`, `/pricing`, `/faq`, `/privacy`, `/terms`, `/security`, `/facebook/data-deletion` được Gateway phục vụ bằng SPA shell.
 
