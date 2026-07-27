@@ -36,7 +36,8 @@
   "routes": [
     { "pattern": "edu.kairo.vn", "custom_domain": true },
     { "pattern": "hrm.kairo.vn", "custom_domain": true },
-    { "pattern": "chotdon.kairo.vn", "custom_domain": true }
+    { "pattern": "chotdon.kairo.vn", "custom_domain": true },
+    { "pattern": "alu.kairo.vn", "custom_domain": true }
   ],
   "kv_namespaces": [
     { "binding": "ROUTES", "id": "b4607d01c54042dcbc3d6cb3e1ad2da4" }

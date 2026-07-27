@@ -2,9 +2,9 @@
   "format": 1,
   "package": "cloudforge",
   "version": "1.0.0",
-  "generated_at": "2026-07-27T05:45:31.318946+00:00",
-  "file_count": 642,
-  "tree_sha256": "6cf147c27b4608d113614a198469b21614cd04c0759e1890ca615ad19b05b19b",
+  "generated_at": "2026-07-27T06:02:59.471221+00:00",
+  "file_count": 643,
+  "tree_sha256": "e3f5585a7f26c62a59fa7e9e4c579723ff2a119d32b6c8999126b47d566a868d",
   "excluded": [
     ".git",
     ".wrangler",
@@ -32,7 +32,7 @@
     },
     {
       "path": "BUILD_REPORT.md",
-      "sha256": "55cc16d591ebecffabe1278d4e17531439a1ec87e775325297256bc6c5a82a10",
+      "sha256": "adc37b8952a4535880630e32edc6044b970dc33052d5f30bf06074168a37e657",
       "size": 3051
     },
     {
@@ -157,7 +157,7 @@
     },
     {
       "path": "VERIFY.json",
-      "sha256": "a356a47fda80af6f3f2211d4ceba84d43f85cf4ff8904388b0d8d321dd336ea1",
+      "sha256": "60fd1539e83a6d6c96b2aed7beff4935f41e36750049be06eff174c754538f5c",
       "size": 3788
     },
     {
@@ -301,113 +301,113 @@
       "size": 88
     },
     {
-      "path": "apps/gateway-worker/public/assets/ApplicationCatalogContainer-DZpk_QKz.js",
-      "sha256": "40465cf3234f2743c9ecee52717176aea6aa8c85356853c913654929cefd8b53",
+      "path": "apps/gateway-worker/public/assets/ApplicationCatalogContainer-CW-dxpV4.js",
+      "sha256": "355aba73e09fc2d909efcc6306a9b3419b302dc6235148c14364a3caea39de53",
       "size": 6226
     },
     {
-      "path": "apps/gateway-worker/public/assets/ApprovalInbox-DUC3gT4W.js",
-      "sha256": "d43a93cd8c4646060af48c741ebc916665020370281676604720ae3e3e4c61b7",
+      "path": "apps/gateway-worker/public/assets/ApprovalInbox-C6nls8ba.js",
+      "sha256": "a8b252ce371a3f7995d5ecd7f84d0a9a2ae67b79fdd6d2351f369bf338eba755",
       "size": 8787
     },
     {
-      "path": "apps/gateway-worker/public/assets/CalendarContainer-C2Idj_4n.js",
-      "sha256": "1a5d49c1f2a71aea6310b9dae2194685984c579cd9da475998c03e8a478d0e20",
+      "path": "apps/gateway-worker/public/assets/CalendarContainer-kacIUmEi.js",
+      "sha256": "0a78f99cfec629561cd8fe7b5c1b8a5ae670dba68c970c313d57230ca79f9175",
       "size": 8828
     },
     {
-      "path": "apps/gateway-worker/public/assets/DoctypeWorkspace-BYojG8JJ.js",
-      "sha256": "dd09333c5ab8cbdabd40209164f99b75c94ff68dc8fe9a42bcc63707c19f40bc",
+      "path": "apps/gateway-worker/public/assets/DoctypeWorkspace-DDvbOtY1.js",
+      "sha256": "97ed8e50fb999540bef17a3fdc4edeb23ea88396f476a6aea70692d27b634ba3",
       "size": 107420
     },
     {
-      "path": "apps/gateway-worker/public/assets/Import-BK_BSMIl.js",
-      "sha256": "64ed94fbfc24335b9336dc3261ce4faed4cf14611e7e3b4469afeb01c17fd3be",
+      "path": "apps/gateway-worker/public/assets/Import-Pl-zaGc6.js",
+      "sha256": "2e93d9f712f49f0aaabc9971a342e01ab7cd721643f6e3b269de57c0e46cbf32",
       "size": 12648
     },
     {
-      "path": "apps/gateway-worker/public/assets/OverviewContainer-BGWk2NsV.js",
-      "sha256": "4326d423976f8a4e271b3669f3086885fc5c6d3bf1637803e7efb37279378dd0",
+      "path": "apps/gateway-worker/public/assets/OverviewContainer-DTYN7QF1.js",
+      "sha256": "e51fad4b0d1ec0073e54678a456de701d093005a3463dbdf28b4c972f2708860",
       "size": 427925
     },
     {
-      "path": "apps/gateway-worker/public/assets/PermissionCenter-9R94fM0q.js",
-      "sha256": "c96be0f6d9856ca8da646626aa9459331c6267b4630151799c8b5d2a3f1b3b7b",
+      "path": "apps/gateway-worker/public/assets/PermissionCenter-Co1t1GYY.js",
+      "sha256": "c525bf6d4165b0d6b8bbc7f8e838476a5fd038265594038a750db1322c3094e4",
       "size": 20915
     },
     {
-      "path": "apps/gateway-worker/public/assets/ProcessContainer-S8ZfYcdp.js",
-      "sha256": "7a4326e5fe7b9e0f407148f5ac98ba0d737c720abff4ce5042d836436ceadd75",
+      "path": "apps/gateway-worker/public/assets/ProcessContainer-CJoXyfPM.js",
+      "sha256": "7cd15878d41e3f383bd9d400f7e8716163f6023877f3aa505ab5cb786a5f1258",
       "size": 7133
     },
     {
-      "path": "apps/gateway-worker/public/assets/ReportContainer-0PG8HBan.js",
-      "sha256": "d661ce348ee7a8de0878802be8b9eb4948d39b77af2eb8151f52d5a2e2ab960b",
+      "path": "apps/gateway-worker/public/assets/ReportContainer-BNCRh-W8.js",
+      "sha256": "279618bcefa83a5c5f346a35e57159deb279fb9220cce1f2659349b03e67f778",
       "size": 5998
     },
     {
-      "path": "apps/gateway-worker/public/assets/SocialCommerce-CYVowTGA.js",
-      "sha256": "73beaf9778757d9188561f7d2e5ebd8c53557d03172ada413e2ec7d1261facfa",
+      "path": "apps/gateway-worker/public/assets/SocialCommerce-ofZSLlZZ.js",
+      "sha256": "a3f3d6f81e5c00dc07f28ba2cbd5c81f9a706cdfc7ac3d42394b1a2c750aa9ce",
       "size": 7687
     },
     {
-      "path": "apps/gateway-worker/public/assets/WorkspaceContainer-DBVGUHtF.js",
-      "sha256": "534f1a4c3e5697594d476785be3f496209879e0940b8c6f1958076e8287ba40a",
+      "path": "apps/gateway-worker/public/assets/WorkspaceContainer-fc1-bqYr.js",
+      "sha256": "6ce7603516cf1aedced27a2b56b510e1d782fa05f4493f37d857697d121931c6",
       "size": 7812
     },
     {
-      "path": "apps/gateway-worker/public/assets/arrow-left-BIhICUxj.js",
-      "sha256": "8378703d498d95cd3573bf1a767a5d80f434f7e272ef5c143bae6cb3f384fd94",
+      "path": "apps/gateway-worker/public/assets/arrow-left-DKsAunoi.js",
+      "sha256": "effd4b9bb00f2fa76035b60ae8a9be28b6f5d4b3f0a4f53f1810f0b488a50a5d",
       "size": 333
     },
     {
-      "path": "apps/gateway-worker/public/assets/chevron-left-Bru-nPzf.js",
-      "sha256": "8deaed7a206ffe5e3e271a30c25de392c004501354467ec21b813ebce638c351",
+      "path": "apps/gateway-worker/public/assets/chevron-left-pp5sdBxa.js",
+      "sha256": "4e890bbf826e42f50a44cebca006422425ff6701869f135bd5d437e3ce338b21",
       "size": 298
     },
     {
-      "path": "apps/gateway-worker/public/assets/circle-check-BZPr7b1L.js",
-      "sha256": "e6790256e096f1137606c5c7974c15519566add1fd1bdc73093850f239c15f01",
+      "path": "apps/gateway-worker/public/assets/circle-check-ClBrRyqw.js",
+      "sha256": "c76651c0157721fbcb4bab18553bed693479d7e5e1031d780c8eb64d5a0f5195",
       "size": 341
     },
     {
-      "path": "apps/gateway-worker/public/assets/clock-3-D9LAN0IW.js",
-      "sha256": "2c9431492ee4408ec6cc21740b5c33c9ac91982f9528ff66a2ac1f58a4b8ea90",
+      "path": "apps/gateway-worker/public/assets/clock-3-CNmcwCBf.js",
+      "sha256": "469dd48c5955c7f48d5d257aacd755704755b0234d81e90724f4df6477648a7c",
       "size": 350
     },
     {
-      "path": "apps/gateway-worker/public/assets/download-Baa5x7u2.js",
-      "sha256": "248b11fd5d12f0bda32067d586681f112e71323a602cd0e124ec457d27ed6099",
+      "path": "apps/gateway-worker/public/assets/download-CL4mQtvA.js",
+      "sha256": "551cc463fb176e6d39e528a81895d072654efecf8c3eddfbdf89482154926e1c",
       "size": 431
     },
     {
-      "path": "apps/gateway-worker/public/assets/export-CljnLInJ.js",
-      "sha256": "a8b757e6e9ba92e4b19739f8dfe3225e9e794163bed7d5a46d40b2354c13581f",
+      "path": "apps/gateway-worker/public/assets/export-D0Qp4M-E.js",
+      "sha256": "f1cfecc2a6a4377a4b467808e6ccdd80676e79393f1c4f8a084371d3ac816569",
       "size": 3195
     },
     {
-      "path": "apps/gateway-worker/public/assets/index-BoSq4U68.css",
-      "sha256": "9089bbb4843f5053dd30dd740922121d73583c90a413355104199b9ced32d715",
-      "size": 103320
+      "path": "apps/gateway-worker/public/assets/index-0234YKe9.css",
+      "sha256": "89028b29474ad218108f3d9f7726cad1123f3bfc3f6f288a3dee8095d3404f0a",
+      "size": 103749
     },
     {
-      "path": "apps/gateway-worker/public/assets/index-CYL6wWXJ.js",
-      "sha256": "a4bb1a29d241d73de7b065a958d7713f25e1b72b5ad7b34ddfae75712b16e6a9",
-      "size": 870063
+      "path": "apps/gateway-worker/public/assets/index-Ct1kt3Wb.js",
+      "sha256": "1c26f69962fa88c4990bc23349d8de4c251cd2e6a1920c06ab3e69eaf2cf9e36",
+      "size": 877298
     },
     {
-      "path": "apps/gateway-worker/public/assets/refresh-cw-B3UMnOPe.js",
-      "sha256": "9b043c6a489a74f69d3139162850eaeca9b8454b136702875ffdcfdd14fa8ab3",
+      "path": "apps/gateway-worker/public/assets/refresh-cw-CL-ZPYMf.js",
+      "sha256": "e455019ecb6508a53f2d29e730eda5b7b4d84e0eb6490b79037ad58e26414fa9",
       "size": 489
     },
     {
-      "path": "apps/gateway-worker/public/assets/shield-alert-BLxpRljw.js",
-      "sha256": "fc6c9f3ec2f5ea75978e9d2056b370e221d8061a38e00875770d4d96a1a1d67a",
+      "path": "apps/gateway-worker/public/assets/shield-alert-1TKEBXv7.js",
+      "sha256": "970e042a458eea3f46f5ae260df3c88fe13ac1e38e802f2ee5f896ae35e225d9",
       "size": 521
     },
     {
-      "path": "apps/gateway-worker/public/assets/skeleton-C_EcPUIv.js",
-      "sha256": "fddd55770a0ae1aa080309fbffbedb22dbe543091a117558b52ec9fa3049cf72",
+      "path": "apps/gateway-worker/public/assets/skeleton-Dy6tf-mh.js",
+      "sha256": "dc9cf5159f277e6fc8637afdb638f5d4a7e76f6fe12bcf90f9508bec263c4f48",
       "size": 172
     },
     {
@@ -417,7 +417,7 @@
     },
     {
       "path": "apps/gateway-worker/public/index.html",
-      "sha256": "09a201010d57aa6ddd982a79af637554802a09309dc5fa2928bc83158026f613",
+      "sha256": "4eb0305dfadcf265c0ab8c5fb1c7493104263086018d2e080612c4b019ca834b",
       "size": 619
     },
     {
@@ -432,8 +432,8 @@
     },
     {
       "path": "apps/gateway-worker/wrangler.jsonc",
-      "sha256": "13c7bda926622644309054a5ad23a74b5feb62a1e9e7436813413750434d593c",
-      "size": 2209
+      "sha256": "266c641bada5313c6d652bbf0e4b4061d0f08693f3fd6ef161139be18c3edd4e",
+      "size": 2267
     },
     {
       "path": "apps/jobs-worker/package.json",
@@ -2847,8 +2847,8 @@
     },
     {
       "path": "scripts/generate-verification.py",
-      "sha256": "7293aa839e10cc756a21957462631041dd0c265651fe9bd3cdbc51ee2bd6fe3c",
-      "size": 10433
+      "sha256": "6869f6516aed16fc86657adaf189e1b48768e5980bbd13658f6097d892844f59",
+      "size": 10779
     },
     {
       "path": "scripts/http-smoke.mjs",
@@ -2949,6 +2949,11 @@
       "path": "scripts/test-sql-concurrency.py",
       "sha256": "61474c7e39d2f228ef2dd1948caf814c8f5d87e1c68708e9e801156cb889e615",
       "size": 14876
+    },
+    {
+      "path": "scripts/verify-alumdoor.mjs",
+      "sha256": "d90d01040de3cbc29cd36214230e157d4f13247e7f5cda4a797bbc3a3e2eaf81",
+      "size": 12729
     },
     {
       "path": "scripts/verify-business-suite-readiness.mjs",

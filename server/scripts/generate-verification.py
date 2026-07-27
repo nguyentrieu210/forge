@@ -22,6 +22,12 @@ def collect(directory):
     for entry in sorted(directory.iterdir()):
         if entry.name in excluded:
             continue
+        # Tenant deploys create account-bound Wrangler configs just long enough
+        # to compile/deploy, then delete them.  A release report can run while
+        # one exists, so operational scratch files must never change the
+        # source manifest.
+        if entry.is_file() and entry.name.endswith(".generated.jsonc"):
+            continue
         if entry.is_dir():
             if entry == generated_source_exact or entry in oracle_skip or (entry / ".git").exists():
                 continue
