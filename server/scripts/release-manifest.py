@@ -11,13 +11,22 @@ manifest_path = root / "RELEASE_CONTENT_MANIFEST.json"
 excluded_dirs = {"dist", "node_modules", ".git", ".wrangler", "coverage", "__pycache__"}
 excluded_files = {manifest_path.name, "PROMOTION_EVIDENCE.json"}
 excluded_suffixes = {".log", ".pyc"}
+excluded_prefixes = {
+    "docs/spec/source-exact/generated",
+    "docs/spec/source-exact/oracle/fixtures",
+    "docs/spec/source-exact/oracle/differential",
+    "docs/spec/source-exact/runtime",
+}
 
 
 def files():
     result = []
     for path in root.rglob("*"):
         relative = path.relative_to(root)
+        relative_posix = relative.as_posix()
         if any(part in excluded_dirs for part in relative.parts):
+            continue
+        if any(relative_posix == prefix or relative_posix.startswith(f"{prefix}/") for prefix in excluded_prefixes):
             continue
         if not path.is_file() or path.name in excluded_files or path.suffix in excluded_suffixes:
             continue
@@ -48,7 +57,7 @@ def build():
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "file_count": len(entries),
         "tree_sha256": tree.hexdigest(),
-        "excluded": sorted(excluded_dirs | excluded_files),
+        "excluded": sorted(excluded_dirs | excluded_files | excluded_prefixes),
         "files": entries,
     }
 

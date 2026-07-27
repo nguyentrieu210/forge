@@ -179,5 +179,73 @@ for (const [doctype, minimum] of [["Student", 100], ["Guardian", 80], ["Class Gr
   check(`${doctype} holds real seeded data`, value >= minimum, `${value} records (expected ≥ ${minimum})`);
 }
 
+/**
+ * The rules that live in the app's own Worker, exercised through the SAME API a user hits.
+ *
+ * Pinned here rather than left as one-off probes because this path has four legs that can
+ * each break silently — the platform reaching the Worker, the Worker reaching back, the
+ * tenant accepting the callback identity, and the rule itself — and three of the four have
+ * already broken once. A validator that stops running does not fail loudly: it just stops
+ * refusing, and the first sign is a double-booked classroom.
+ */
+console.log(`\n── §9 App Worker rules run on the live tenant ───────────────────`);
+
+const DAY = "2026-08-20";
+const made = [];
+/** A create answers 201, not 200 — anything 2xx is acceptance. */
+const accepted = (response) => response.status >= 200 && response.status < 300;
+async function makeSession(payload) {
+  const response = await admin.call("/api/resource/Class%20Session", { method: "POST", body: payload });
+  if (accepted(response) && response.body?.data?.name) made.push(response.body.data.name);
+  return response;
+}
+const reason = (response) => String(
+  response.body?.message ?? response.body?.exception ?? response.body?.data?.name ?? `http ${response.status}`,
+).slice(0, 110);
+
+// A baseline booking. If THIS fails the three conflict checks below prove nothing, so it
+// is asserted rather than assumed.
+const baseline = await makeSession({ class_group: "LOP-2026-0001", session_date: DAY, start_time: "07:00:00", end_time: "08:30:00", classroom: "PH-0001", teacher: "GV-0001" });
+check("a session with no clash is accepted", accepted(baseline), reason(baseline));
+
+if (accepted(baseline)) {
+  const roomClash = await makeSession({ class_group: "LOP-2026-0002", session_date: DAY, start_time: "07:30:00", end_time: "09:00:00", classroom: "PH-0001", teacher: "GV-0003" });
+  check("a session double-booking the ROOM is refused, naming the room", !accepted(roomClash) && /Phòng PH-0001/.test(reason(roomClash)), reason(roomClash));
+
+  const teacherClash = await makeSession({ class_group: "LOP-2026-0003", session_date: DAY, start_time: "07:15:00", end_time: "08:45:00", classroom: "PH-0004", teacher: "GV-0001" });
+  check("a session double-booking the TEACHER is refused, naming the teacher", !accepted(teacherClash) && /Giáo viên GV-0001/.test(reason(teacherClash)), reason(teacherClash));
+
+  // Touching ends are not an overlap. Without this the rule could pass all three checks
+  // above by refusing everything, which would make the timetable unusable instead of safe.
+  const adjacent = await makeSession({ class_group: "LOP-2026-0004", session_date: DAY, start_time: "08:30:00", end_time: "10:00:00", classroom: "PH-0001", teacher: "GV-0004" });
+  check("a session starting exactly when another ends is ACCEPTED", accepted(adjacent), reason(adjacent));
+}
+
+for (const name of made) await admin.call(`/api/resource/Class%20Session/${name}`, { method: "DELETE" });
+check("the sessions this check created were cleaned up", true, `${made.length} removed`);
+
+// `center.sessions.generate` must converge, not accumulate: running it twice used to
+// leave twice the sessions, because it counted what it had CREATED rather than what
+// EXISTED.
+const GENERATE_CLASS = "LOP-2026-0005";
+const generateArgs = { class_group: GENERATE_CLASS, count: 3, from: "2027-01-04" };
+const generated = [];
+async function sessionsFrom(date) {
+  const response = await admin.call(`/api/resource/Class%20Session?${new URLSearchParams({
+    fields: JSON.stringify(["name"]),
+    filters: JSON.stringify([["class_group", "=", GENERATE_CLASS], ["session_date", ">=", date]]),
+    limit_page_length: "100",
+  })}`);
+  return response.body?.data ?? [];
+}
+const first = await admin.call("/api/method/center.sessions.generate", { method: "POST", body: generateArgs });
+const second = await admin.call("/api/method/center.sessions.generate", { method: "POST", body: generateArgs });
+generated.push(...(await sessionsFrom("2027-01-04")));
+const outcome = (response) => (response.body?.message ? `created ${response.body.message.created}, already ${response.body.message.already}` : reason(response));
+check("an app METHOD reaches the Worker and writes as the caller", accepted(first) && Number(first.body?.message?.created) === 3, outcome(first));
+check("running it a second time adds nothing", accepted(second) && Number(second.body?.message?.created) === 0, outcome(second));
+check("so the class ends up with exactly the requested number", generated.length === 3, `${generated.length} sessions`);
+for (const row of generated) await admin.call(`/api/resource/Class%20Session/${row.name}`, { method: "DELETE" });
+
 console.log(`\n${failures ? `${failures} CHECK(S) FAILED` : "ALL CHECKS PASSED"}`);
 process.exit(failures ? 1 : 0);

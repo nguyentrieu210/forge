@@ -358,7 +358,9 @@ check("Duration parse/format round-trip (giây)", () => {
 check("makeLocaleFormat: config-driven number/currency/date/precision + fallback + switch", () => {
   const vi = makeLocaleFormat({ numberFormat: "#.###,##", currencySymbol: "₫", dateFormat: "dd/mm/yyyy" });
   assert.equal(vi.number(1234567.5), "1.234.567,50", "number theo config EU");
-  assert.equal(vi.currency(1000), "₫ 1.000,00", "currency symbol + EU sep");
+  // Ký hiệu đồng viết SAU số — "₫ 1.000" là sai quy ước tiếng Việt. Vị trí suy từ chính
+  // ký hiệu, nên một app chỉ khai `currencySymbol` vẫn đặt đúng chỗ.
+  assert.equal(vi.currency(1000), "1.000 ₫", "currency symbol đứng sau + VND không có phần lẻ");
   assert.equal(vi.date("2026-07-24"), "24/07/2026", "date theo config");
   assert.equal(vi.number(3.14159, 3), "3,142", "precision override");
   // fallback khi thiếu sysdefaults → default #,###.##, date yyyy-mm-dd, không symbol

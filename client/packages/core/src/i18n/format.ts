@@ -38,14 +38,16 @@ export interface BoundFormatters {
 export function makeLocaleFormat(config: LocaleConfig = {}): BoundFormatters {
   const nf = config.numberFormat;
   const prec = config.floatPrecision;
+  const df = config.dateFormat || "yyyy-mm-dd";
+  // Ký hiệu do app cấp thì dùng, không thì suy từ mã ISO. Trước đây chỉ đọc
+  // `currencySymbol` — thứ mà boot không bao giờ gửi — nên mặc định luôn là chuỗi rỗng.
+  const { symbol: sym, suffix, precision: currencyDefault } = currencyDisplay(config.currency, config.currencySymbol);
   // `??` chứ KHÔNG `||`: currencyPrecision = 0 là giá trị thật (VND không có phần lẻ), dùng `||`
   // sẽ nuốt mất số 0 và rơi về floatPrecision — mọi giá tiền lại hiện thừa ",00".
-  const cprec = config.currencyPrecision ?? prec;
-  const df = config.dateFormat || "yyyy-mm-dd";
-  const sym = config.currencySymbol ?? "";
+  const cprec = config.currencyPrecision ?? currencyDefault ?? prec;
   return {
     number: (v, p) => formatNumber(v, nf, p ?? prec),
-    currency: (v, p) => formatCurrency(v, sym, nf, p ?? cprec),
+    currency: (v, p) => formatCurrency(v, sym, nf, p ?? cprec, suffix),
     date: (v) => formatDate(v, df),
     duration: (s, opts) => formatDuration(s, opts),
     config,
@@ -108,16 +110,77 @@ export function formatNumber(value: number | string | null | undefined, format?:
   return neg ? "-" + out : out;
 }
 
-/** formatCurrency — symbol + số (symbol đứng trước, cách 1 space; âm giữ dấu trước symbol). */
+/**
+ * Ký hiệu và VỊ TRÍ của nó, suy từ mã ISO — vì boot chỉ cấp mã, không cấp ký hiệu.
+ *
+ * Thiếu bảng này thì `currencySymbol` không bao giờ có giá trị, và mọi cột tiền in ra số
+ * trần: `400000` thay vì `400.000 ₫`. Người dùng đọc con số đó không biết là đồng, nghìn
+ * hay đô.
+ *
+ * Vị trí không phải chi tiết trang trí. Tiếng Việt viết ký hiệu SAU số ("400.000 ₫");
+ * viết trước ("₫ 400.000") là sai chính tả tiền tệ và đọc lên như một đơn vị khác.
+ *
+ * Mã không có trong bảng thì dùng chính mã đó, đặt sau số — đúng cho phần lớn mã ba chữ
+ * cái và không bao giờ bịa ra một ký hiệu sai.
+ */
+interface CurrencyDisplay {
+  symbol: string;
+  suffix: boolean;
+  /**
+   * Số chữ số lẻ mặc định cho tiền của mã này.
+   *
+   * VND/JPY/KRW không có đơn vị phụ: "1.000.000,00 ₫" vừa sai vừa khiến cột tiền dài gấp
+   * rưỡi mà không thêm thông tin nào. Chỉ là MẶC ĐỊNH — `currencyPrecision` do site hoặc
+   * app khai vẫn thắng.
+   */
+  precision?: number;
+}
+
+const CURRENCY_SYMBOLS: Record<string, CurrencyDisplay> = {
+  VND: { symbol: "₫", suffix: true, precision: 0 },
+  USD: { symbol: "$", suffix: false },
+  EUR: { symbol: "€", suffix: true },
+  GBP: { symbol: "£", suffix: false },
+  JPY: { symbol: "¥", suffix: false, precision: 0 },
+  CNY: { symbol: "¥", suffix: false },
+  KRW: { symbol: "₩", suffix: false, precision: 0 },
+  THB: { symbol: "฿", suffix: false },
+  SGD: { symbol: "S$", suffix: false },
+  AUD: { symbol: "A$", suffix: false },
+  INR: { symbol: "₹", suffix: false },
+};
+
+/**
+ * Ký hiệu → mã, để một app chỉ khai `currencySymbol` vẫn được đặt đúng vị trí.
+ *
+ * "₫" viết sau số còn "$" viết trước; không tra ngược thì cả hai đều rơi về một quy ước
+ * duy nhất và một trong hai sẽ sai.
+ */
+const SYMBOL_TO_CODE = new Map(Object.entries(CURRENCY_SYMBOLS).map(([code, info]) => [info.symbol, code]));
+
+export function currencyDisplay(code?: string, override?: string): CurrencyDisplay {
+  const known = code ? CURRENCY_SYMBOLS[code.toUpperCase()] : undefined;
+  if (override) {
+    const inferred = known ?? CURRENCY_SYMBOLS[SYMBOL_TO_CODE.get(override) ?? ""];
+    return { ...(inferred ?? { suffix: false }), symbol: override };
+  }
+  if (known) return known;
+  // Mã lạ: in chính mã đó sau số. Không bịa ký hiệu, và vẫn đọc được là tiền gì.
+  return { symbol: code ?? "", suffix: true };
+}
+
+/** formatCurrency — số + ký hiệu, vị trí theo `suffix` (âm giữ dấu ở đầu chuỗi). */
 export function formatCurrency(
   value: number | string | null | undefined,
   symbol = "",
   format?: string,
   precision?: number,
+  suffix = false,
 ): string {
   const num = formatNumber(value, format, precision);
   if (num === "") return "";
   if (!symbol) return num;
+  if (suffix) return num + " " + symbol;
   if (num.startsWith("-")) return "-" + symbol + " " + num.slice(1);
   return symbol + " " + num;
 }

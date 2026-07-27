@@ -24,6 +24,13 @@ export default defineConfig({
           SESSION_SECRET: "test-session-secret-at-least-32-characters-long",
           TEST_MIGRATIONS: await readD1Migrations(path.join(directory, "../../migrations/tenant")),
         },
+        // Production binds the standalone social-ingress Worker by service name. Workerd
+        // tests must provide an explicit local peer; otherwise the runtime refuses to
+        // start before any test can run. Individual ingress behavior is covered by that
+        // Worker's own unit tests, so the tenant suite uses a fail-closed stub here.
+        serviceBindings: {
+          SOCIAL_INGRESS: async () => new Response("Social ingress is unavailable in this test", { status: 503 }),
+        },
       },
     })),
   ],
