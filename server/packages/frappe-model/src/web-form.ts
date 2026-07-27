@@ -122,7 +122,10 @@ export async function visitorKey(clientAddress: string, formName: string, salt: 
   // everyone who ever opened it.
   const data = new TextEncoder().encode(`${salt}:${formName}:${clientAddress}`);
   const digest = await crypto.subtle.digest("SHA-256", data);
-  return [...new Uint8Array(digest)].slice(0, 16).map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  // Keep the full SHA-256 value. Besides avoiding unnecessary collision risk, the
+  // database can enforce a single canonical 64-character representation for every
+  // anonymous throttle key.
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 function optional(value: unknown, field: string, max: number): string {

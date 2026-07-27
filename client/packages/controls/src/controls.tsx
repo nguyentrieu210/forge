@@ -6,7 +6,7 @@
  */
 import { type ChangeEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { Check, ChevronsUpDown, Loader2, Plus, TriangleAlert } from "lucide-react";
-import { buildLinkFilters, formatDuration } from "@metaforge/core";
+import { buildLinkFilters, formatDuration, linkDisplay } from "@metaforge/core";
 import {
   cn, Input, Textarea, Checkbox,
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
@@ -25,6 +25,14 @@ const BLANK = "__blank__"; // Radix Select cấm value rỗng → sentinel
 
 function labelId(p: FieldControlProps): string {
   return p.id ?? `mf-${p.field.fieldname}`;
+}
+
+function a11y(p: FieldControlProps) {
+  return {
+    "aria-describedby": p.describedBy,
+    "aria-required": p.required || undefined,
+    "aria-label": p.label,
+  } as const;
 }
 
 function Masked() {
@@ -47,6 +55,7 @@ export function TextControl(p: FieldControlProps) {
       value={(p.value as string) ?? ""}
       readOnly={p.readOnly}
       aria-invalid={p.error ? true : undefined}
+      {...a11y(p)}
       onChange={(e: ChangeEvent<HTMLInputElement>) => p.onChange(e.target.value)}
     />
   );
@@ -62,6 +71,7 @@ export function TextAreaControl(p: FieldControlProps) {
       readOnly={p.readOnly}
       rows={p.field.fieldtype === "Long Text" || p.field.fieldtype === "Code" ? 6 : 3}
       aria-invalid={p.error ? true : undefined}
+      {...a11y(p)}
       onChange={(e: ChangeEvent<HTMLTextAreaElement>) => p.onChange(e.target.value)}
     />
   );
@@ -108,6 +118,7 @@ export function NumberControl(p: FieldControlProps) {
         value={p.value === null || p.value === undefined ? "" : (p.value as number)}
         readOnly={p.readOnly}
         aria-invalid={p.error ? true : undefined}
+        {...a11y(p)}
         onChange={(e: ChangeEvent<HTMLInputElement>) => p.onChange(e.target.value === "" ? null : Number(e.target.value))}
       />
       {suffix ? <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">{suffix}</span> : null}
@@ -172,6 +183,8 @@ export function CheckControl(p: FieldControlProps) {
         className="mf-control"
         checked={Boolean(p.value)}
         disabled={p.readOnly}
+        aria-invalid={p.error ? true : undefined}
+        {...a11y(p)}
         onCheckedChange={(v) => p.onChange(v ? 1 : 0)}
       />
     </div>
@@ -188,7 +201,7 @@ export function SelectControl(p: FieldControlProps) {
   const labelOf = (o: string) => labels?.[o] ?? o;
   return (
     <Select value={val === "" ? BLANK : val} disabled={p.readOnly} onValueChange={(v) => p.onChange(v === BLANK ? "" : v)}>
-      <SelectTrigger id={labelId(p)} className="mf-control" aria-invalid={p.error ? true : undefined}>
+      <SelectTrigger id={labelId(p)} className="mf-control" aria-invalid={p.error ? true : undefined} {...a11y(p)}>
         <SelectValue placeholder="—" />
       </SelectTrigger>
       <SelectContent>
@@ -224,6 +237,7 @@ export function DateControl(p: FieldControlProps) {
       value={isDatetime ? toDatetimeLocal(raw) : raw}
       readOnly={p.readOnly}
       aria-invalid={p.error ? true : undefined}
+      {...a11y(p)}
       onChange={(e: ChangeEvent<HTMLInputElement>) => p.onChange(isDatetime ? fromDatetimeLocal(e.target.value) : e.target.value)}
     />
   );
@@ -312,7 +326,7 @@ export function LinkControl(p: FieldControlProps) {
     // Static Link thiếu `options` trong metadata DocType — LỖI CẤU HÌNH thật, không phải trạng thái chờ.
     if (devFreeText) {
       return (
-        <Input id={id} className="mf-control mf-link" value={value} readOnly={p.readOnly}
+        <Input id={id} className="mf-control mf-link" value={value} readOnly={p.readOnly} {...a11y(p)}
           aria-invalid={p.error ? true : undefined}
           onChange={(e: ChangeEvent<HTMLInputElement>) => p.onChange(e.target.value)} />
       );
@@ -328,7 +342,7 @@ export function LinkControl(p: FieldControlProps) {
     // phải "chưa cấu hình" — im lặng cho gõ tự do sẽ CHE MẤT lỗi thật này.
     if (devFreeText) {
       return (
-        <Input id={id} className="mf-control mf-link" value={value} readOnly={p.readOnly}
+        <Input id={id} className="mf-control mf-link" value={value} readOnly={p.readOnly} {...a11y(p)}
           aria-invalid={p.error ? true : undefined}
           onChange={(e: ChangeEvent<HTMLInputElement>) => p.onChange(e.target.value)} />
       );
@@ -353,6 +367,9 @@ export function LinkControl(p: FieldControlProps) {
       referenceDoctype={p.parentDoctype}
       readOnly={p.readOnly}
       error={p.error}
+      describedBy={p.describedBy}
+      required={p.required}
+      label={p.label}
       onChange={(v) => p.onChange(v)}
     />
   );
@@ -364,7 +381,7 @@ export function LinkControl(p: FieldControlProps) {
  * và User Permission phía server, chống race khi gõ nhanh, và cả các bản vá giao diện về sau.
  */
 export function LinkCombobox({
-  id, value, target, search, resolveDisplay, quickCreate, filters, referenceDoctype, readOnly, error, onChange,
+  id, value, target, search, resolveDisplay, quickCreate, filters, referenceDoctype, readOnly, error, describedBy, required, label, onChange,
 }: {
   id: string;
   value: string;
@@ -376,6 +393,9 @@ export function LinkCombobox({
   referenceDoctype?: string;
   readOnly?: boolean;
   error?: string;
+  describedBy?: string;
+  required?: boolean;
+  label?: string;
   onChange: (v: string) => void;
 }) {
   const t = useT();
@@ -454,6 +474,9 @@ export function LinkCombobox({
           variant="outline"
           disabled={readOnly}
           aria-invalid={error ? true : undefined}
+          aria-describedby={describedBy}
+          aria-required={required || undefined}
+          aria-label={label}
           title={pickedDesc && pickedDesc !== value ? pickedDesc : undefined}
           className={cn("mf-control mf-link w-full justify-between font-normal", !value && "text-muted-foreground", error && "border-destructive")}
         >
@@ -517,8 +540,8 @@ export function LinkCombobox({
                       <CommandItem key={`recent-${o.value}`} value={`recent-${o.value}`} onSelect={() => { onChange(o.value); setPickedDesc(o.description); recordRecentLink(target, o); setOpen(false); }}>
                         <Check className={cn("mr-2 size-4 shrink-0", o.value === value ? "opacity-100" : "opacity-0")} />
                         <span className="flex min-w-0 flex-col">
-                          <span className="truncate">{o.description && o.description !== o.value ? o.description : o.value}</span>
-                          {o.description && o.description !== o.value ? <span className="truncate text-xs text-muted-foreground">{o.value}</span> : null}
+                          <span className="truncate">{linkDisplay(o).primary}</span>
+                          {linkDisplay(o).secondary ? <span className="truncate text-xs text-muted-foreground">{linkDisplay(o).secondary}</span> : null}
                         </span>
                       </CommandItem>
                     ))}
@@ -529,8 +552,8 @@ export function LinkCombobox({
                   <CommandItem key={o.value} value={o.value} onSelect={() => { onChange(o.value); setPickedDesc(o.description); recordRecentLink(target, o); setOpen(false); }}>
                     <Check className={cn("mr-2 size-4 shrink-0", o.value === value ? "opacity-100" : "opacity-0")} />
                     <span className="flex min-w-0 flex-col">
-                      <span className="truncate">{o.description && o.description !== o.value ? o.description : o.value}</span>
-                      {o.description && o.description !== o.value ? <span className="truncate text-xs text-muted-foreground">{o.value}</span> : null}
+                      <span className="truncate">{linkDisplay(o).primary}</span>
+                      {linkDisplay(o).secondary ? <span className="truncate text-xs text-muted-foreground">{linkDisplay(o).secondary}</span> : null}
                     </span>
                   </CommandItem>
                 ))}
@@ -556,6 +579,8 @@ export function FallbackControl(p: FieldControlProps) {
       title={`Chưa có control chuyên biệt cho ${p.field.fieldtype}`}
       value={p.value === null || p.value === undefined ? "" : String(p.value)}
       readOnly={p.readOnly}
+      aria-invalid={p.error ? true : undefined}
+      {...a11y(p)}
       onChange={(e: ChangeEvent<HTMLInputElement>) => p.onChange(e.target.value)}
     />
   );

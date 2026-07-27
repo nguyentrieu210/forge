@@ -56,6 +56,9 @@ const FAULTS: Record<string, FrappeFault> = {
   INVALID_LIFECYCLE_TRANSITION: { exc_type: "ValidationError", status: 417 },
   IDEMPOTENCY_KEY_REUSED: { exc_type: "ValidationError", status: 417 },
   LEDGER_INVARIANT_FAILED: { exc_type: "ValidationError", status: 417 },
+  // Keep the familiar Frappe envelope while preserving HTTP 429 so clients,
+  // gateways and monitoring can apply retry/backoff semantics correctly.
+  RATE_LIMITED: { exc_type: "ValidationError", status: 429 },
 };
 
 const JSON_HEADERS: Record<string, string> = {

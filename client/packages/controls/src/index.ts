@@ -53,6 +53,11 @@ export interface FieldControlProps<T = unknown> {
   readOnly?: boolean;
   masked?: boolean;
   error?: string;
+  /** Liên kết control với mô tả và thông báo lỗi hiển thị cạnh field. */
+  describedBy?: string;
+  required?: boolean;
+  /** Nhãn đọc được khi control tổng hợp không dùng được liên kết label/htmlFor. */
+  label?: string;
   /** tên document đang mở (doc.name) — KHÔNG phải fieldname. */
   docname?: string;
   id?: string;

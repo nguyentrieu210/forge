@@ -1,6 +1,44 @@
 import { sha256Hex, type SocialEventInput, type SocialQueueMessage } from "./index.js";
+import { encryptCredential } from "./credentials.js";
 
 export interface SocialIngestResult { inserted: number; duplicates: number; cart_updates: number }
+
+export interface FacebookOAuthPage {
+  id: string; name: string; access_token: string; page_key_hmac: string;
+}
+
+export async function storeFacebookOAuthPages(
+  db: D1Database, tenantId: string, actorId: string, pages: FacebookOAuthPage[], kek: string,
+): Promise<{ connected: number }> {
+  if (!actorId || pages.length === 0 || pages.length > 500) throw new Error("Invalid Facebook OAuth payload");
+  const now = new Date().toISOString();
+  let connected = 0;
+  for (const page of pages) {
+    if (!page.id || !page.name || !page.access_token || !/^[a-f0-9]{64}$/.test(page.page_key_hmac)) throw new Error("Invalid Facebook Page payload");
+    const connectionId = `facebook_${page.page_key_hmac.slice(0, 24)}`;
+    const pageId = `page_${page.page_key_hmac.slice(0, 24)}`;
+    const aad = `${tenantId}:${connectionId}:facebook`;
+    const externalId = await encryptCredential(page.id, kek, `${aad}:external-id`);
+    const accessToken = await encryptCredential(page.access_token, kek, `${aad}:access-token`);
+    await db.prepare(
+      `INSERT INTO social_connections(tenant_id,connection_id,provider,external_account_id_ciphertext,access_token_ciphertext,
+       scopes_json,status,created_by,created_at,modified_at)
+       VALUES(?1,?2,'facebook',?3,?4,?5,'active',?6,?7,?7)
+       ON CONFLICT(tenant_id,connection_id) DO UPDATE SET external_account_id_ciphertext=excluded.external_account_id_ciphertext,
+       access_token_ciphertext=excluded.access_token_ciphertext,scopes_json=excluded.scopes_json,status='active',modified_at=excluded.modified_at`,
+    ).bind(tenantId, connectionId, externalId, accessToken,
+      JSON.stringify(["pages_show_list", "pages_manage_metadata", "pages_read_engagement", "pages_manage_engagement"]), actorId, now).run();
+    await db.prepare(
+      `INSERT INTO social_pages(tenant_id,page_id,connection_id,provider,external_page_id_ciphertext,page_name,status,created_at,modified_at,page_key_hmac)
+       VALUES(?1,?2,?3,'facebook',?4,?5,'active',?6,?6,?7)
+       ON CONFLICT(tenant_id,page_id) DO UPDATE SET connection_id=excluded.connection_id,
+       external_page_id_ciphertext=excluded.external_page_id_ciphertext,page_name=excluded.page_name,status='active',
+       modified_at=excluded.modified_at,page_key_hmac=excluded.page_key_hmac`,
+    ).bind(tenantId, pageId, connectionId, externalId, page.name.slice(0, 320), now, page.page_key_hmac).run();
+    connected += 1;
+  }
+  return { connected };
+}
 
 export async function ingestFacebookMessage(db: D1Database, tenantId: string, message: SocialQueueMessage): Promise<SocialIngestResult> {
   if (message.schema_version !== 1 || message.provider !== "facebook" || message.tenant_id !== tenantId) {

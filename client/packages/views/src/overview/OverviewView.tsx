@@ -4,7 +4,7 @@ import {
   Coins, FileText, Package, Plus, RefreshCw, TrendingUp, Truck, Users, Warehouse,
 } from "lucide-react";
 import {
-  Bar, BarChart, CartesianGrid, LabelList, Legend, Line, LineChart, Pie, PieChart,
+  Bar, BarChart, CartesianGrid, Cell, LabelList, Legend, Line, LineChart, Pie, PieChart,
   ResponsiveContainer, Tooltip as ChartTooltip, XAxis, YAxis,
 } from "recharts";
 import type { OverviewChart, OverviewDashboard, OverviewTone } from "@metaforge/core";
@@ -76,7 +76,7 @@ export function OverviewView({ data, loading, error, onNavigate, onRefresh }: Ov
             <div className="flex items-center justify-between"><span className="truncate text-xs text-muted-foreground">{m.label}</span><span className={cn("grid size-6 place-items-center rounded-md", TONE[m.tone ?? "neutral"])}><MetricIcon name={m.icon} /></span></div>
             <div className="mt-1.5 text-xl font-semibold tabular-nums">{m.formatted ?? (typeof m.value === "number" ? new Intl.NumberFormat(tag, { maximumFractionDigits: 2 }).format(m.value) : m.value)}</div>
             {m.description ? <div className="mt-0.5 truncate text-[11px] text-muted-foreground">{m.description}</div> : null}
-            
+
           </Button>
         ))}
       </div>
@@ -139,11 +139,14 @@ function shortNum(v: unknown): string {
 function OverviewChartCard({ chart, onNavigate }: { chart: OverviewChart; onNavigate: (r: string) => void }) {
   const rows = chartRows(chart);
   const content = chart.type === "line" || chart.type === "area" ? (
-    <LineChart data={rows}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="label" tick={{ fontSize: 11 }} /><YAxis allowDecimals={false} tick={{ fontSize: 11 }} /><ChartTooltip /><Legend />{chart.series.map((s, index) => <Line key={s.name} type="monotone" dataKey={s.name} stroke={`hsl(var(--chart-${index % 5 + 1}))`} strokeWidth={2} dot={{ r: 2.5 }}><LabelList dataKey={s.name} position="top" fontSize={11} formatter={shortNum} /></Line>)}</LineChart>
+    <LineChart data={rows}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="label" tick={{ fontSize: 11 }} /><YAxis allowDecimals={false} tick={{ fontSize: 11 }} /><ChartTooltip /><Legend />{chart.series.map((s, index) => <Line key={s.name} type="monotone" dataKey={s.name} stroke={`var(--chart-${index % 5 + 1})`} strokeWidth={2} dot={{ r: 2.5 }}><LabelList dataKey={s.name} position="top" fontSize={11} formatter={shortNum} /></Line>)}</LineChart>
   ) : chart.type === "donut" ? (
-    <PieChart><ChartTooltip /><Legend /><Pie data={rows.map((row) => ({ name: row.label, value: Number(row[chart.series[0]?.name ?? ""] ?? 0) }))} dataKey="value" nameKey="name" innerRadius="45%" outerRadius="75%" fill="hsl(var(--primary))" label={(e: { value?: number }) => shortNum(e.value)} labelLine={false} /></PieChart>
+    /* Một <Cell> mỗi lát. `fill` trên <Pie> chỉ đặt được MỘT màu cho cả bánh, nên biểu đồ
+       sáu trạng thái ra sáu lát đen như nhau — vẽ đúng dữ liệu mà không đọc được gì, đúng
+       kiểu hỏng mà không ai báo lỗi. Cùng bảng màu `--chart-1..5` biểu đồ cột đang dùng. */
+    <PieChart><ChartTooltip /><Legend /><Pie data={rows.map((row) => ({ name: row.label, value: Number(row[chart.series[0]?.name ?? ""] ?? 0) }))} dataKey="value" nameKey="name" innerRadius="45%" outerRadius="75%" label={(e: { value?: number }) => shortNum(e.value)} labelLine={false}>{rows.map((row, index) => <Cell key={String(row.label)} fill={`var(--chart-${index % 5 + 1})`} />)}</Pie></PieChart>
   ) : (
-    <BarChart data={rows}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="label" tick={{ fontSize: 11 }} /><YAxis allowDecimals={false} tick={{ fontSize: 11 }} /><ChartTooltip /><Legend />{chart.series.map((s, index) => <Bar key={s.name} dataKey={s.name} fill={`hsl(var(--chart-${index % 5 + 1}))`} radius={[4, 4, 0, 0]}><LabelList dataKey={s.name} position="top" fontSize={11} formatter={shortNum} /></Bar>)}</BarChart>
+    <BarChart data={rows}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="label" tick={{ fontSize: 11 }} /><YAxis allowDecimals={false} tick={{ fontSize: 11 }} /><ChartTooltip /><Legend />{chart.series.map((s, index) => <Bar key={s.name} dataKey={s.name} fill={`var(--chart-${index % 5 + 1})`} radius={[4, 4, 0, 0]}><LabelList dataKey={s.name} position="top" fontSize={11} formatter={shortNum} /></Bar>)}</BarChart>
   );
   return <Button type="button" variant="ghost" disabled={!chart.route} onClick={() => chart.route && onNavigate(chart.route)} className="h-auto min-w-0 flex-col items-stretch rounded-lg border p-3 text-left font-normal transition hover:border-primary/30 hover:bg-card disabled:pointer-events-none"><div className="text-sm font-medium">{chart.label}</div><div className="mt-3 h-64 w-full"><ResponsiveContainer width="100%" height="100%">{content}</ResponsiveContainer></div></Button>;
 }

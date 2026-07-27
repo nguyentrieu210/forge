@@ -1,0 +1,171 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge.local/schemas/app-brief.schema.json",
+  "title": "Forge application brief",
+  "type": "object",
+  "required": ["id", "name", "doctypes"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$", "maxLength": 64 },
+    "name": { "type": "string", "minLength": 1, "maxLength": 160 },
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?$" },
+    "platformRequires": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?$" },
+    "module": { "type": "string", "minLength": 1 },
+    "domain": { "type": "string", "minLength": 1 },
+    "brand": { "enum": ["zinc", "blue", "warm"] },
+    "catalogMode": { "enum": ["manifest", "workspace", "hybrid"] },
+    "dimensions": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "enum": ["company", "fiscal_year", "warehouse", "branch", "cost_center", "project", "territory", "selling_price_list", "buying_price_list"] }
+    },
+    "worker": {
+      "type": "string",
+      "description": "Worker trong dispatch namespace nhận validator và app method của app này."
+    },
+    "validators": {
+      "type": "array",
+      "description": "Ghi mà app muốn KIỂM trước khi commit. Cần `worker`.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["doctype"],
+        "properties": {
+          "doctype": { "type": "string" },
+          "actions": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "roles": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "home": { "type": "string", "minLength": 1 },
+    "requires": { "type": "array", "items": { "$ref": "#/$defs/dependency" } },
+    "fixtures": { "type": "array", "items": { "$ref": "#/$defs/fixture" } },
+    "locale": {
+      "type": "object",
+      "properties": {
+        "numberFormat": { "type": "string" },
+        "currency": { "type": "string" },
+        "dateFormat": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "doctypes": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/doctype" } }
+  },
+  "patternProperties": { "^//": true },
+  "additionalProperties": false,
+  "$defs": {
+    "dependency": {
+      "type": "object",
+      "required": ["id", "version"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?$" }
+      },
+      "additionalProperties": false
+    },
+    "fixture": {
+      "type": "object",
+      "required": ["type", "name"],
+      "properties": {
+        "type": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "data": { "type": "object" }
+      },
+      "additionalProperties": false
+    },
+    "field": {
+      "oneOf": [
+        { "type": "string", "minLength": 3, "pattern": "^[a-z][a-z0-9_]*:" },
+        {
+          "type": "object",
+          "required": ["fieldname", "fieldtype"],
+          "properties": {
+            "fieldname": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+            "fieldtype": { "type": "string", "minLength": 1 },
+            "label": { "type": "string" },
+            "options": { "type": "string" },
+            "required": { "type": "boolean" },
+            "unique": { "type": "boolean" },
+            "read_only": { "type": "boolean" },
+            "default": {}
+          },
+          "additionalProperties": true
+        }
+      ]
+    },
+    "workflow": {
+      "type": "object",
+      "required": ["states", "transitions"],
+      "properties": {
+        "name": { "type": "string" },
+        "field": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+        "label": { "type": "string" },
+        "states": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": { "enum": [0, 1, 2] }
+        },
+        "transitions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "oneOf": [
+              { "type": "array", "minItems": 4, "maxItems": 5, "items": { "type": "string", "minLength": 1 } },
+              {
+                "type": "object",
+                "required": ["from", "action", "to", "role"],
+                "properties": {
+                  "from": { "type": "string" },
+                  "action": { "type": "string" },
+                  "to": { "type": "string" },
+                  "role": { "type": "string" },
+                  "self": { "type": "boolean" }
+                },
+                "additionalProperties": false
+              }
+            ]
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "doctype": {
+      "type": "object",
+      "required": ["name", "fields", "permissions"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "label": { "type": "string" },
+        "icon": { "type": "string" },
+        "group": { "type": "string" },
+        "naming": { "type": "string" },
+        "title": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+        "search": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" } },
+        "list": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" } },
+        "inbox": { "type": "boolean" },
+        "inboxLabel": { "type": "string" },
+        "inboxIcon": { "type": "string" },
+        "inboxGroup": { "type": "string" },
+        "calendar": {
+          "type": "object",
+          "description": "Thêm màn lịch tuần/tháng cho doctype này. Runtime tự suy field ngày và field giờ từ metadata; app chỉ nói CÓ muốn màn đó hay không.",
+          "additionalProperties": false,
+          "properties": {
+            "label": { "type": "string" },
+            "icon": { "type": "string" },
+            "group": { "type": "string" }
+          }
+        },
+        "submittable": { "type": "boolean" },
+        "fields": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/field" } },
+        "permissions": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": { "type": "string", "pattern": "^(?!.*(.).*\\1)[rwcsxa]+$" }
+        },
+        "workflow": { "$ref": "#/$defs/workflow" }
+      },
+      "patternProperties": { "^//": true },
+      "additionalProperties": false
+    }
+  }
+}

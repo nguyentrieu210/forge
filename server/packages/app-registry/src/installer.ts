@@ -11,7 +11,7 @@ import { errors, sha256Hex } from "../../core/src/index.js";
 import type { JsonObject } from "../../contracts/src/index.js";
 import type { MetadataStore } from "../../frappe-model/src/index.js";
 import type { D1UserStore } from "../../auth/src/index.js";
-import { parseAppManifest, satisfiesVersion, type AppManifest } from "./manifest.js";
+import { navItemPath, parseAppManifest, satisfiesVersion, type AppManifest } from "./manifest.js";
 
 export interface InstalledAppRecord {
   app_id: string;
@@ -24,6 +24,8 @@ export interface InstalledAppRecord {
   /** Pre-commit checks this app registered. Carried on the record so the write path
    * does not have to re-parse every manifest on every write. */
   validators: AppManifest["validators"];
+  /** Presentation, so the generic client can be told what to render without a build. */
+  client: AppManifest["client"] | null;
 }
 
 export interface InstallResult {
@@ -49,8 +51,9 @@ export class AppInstaller {
 
   constructor(
     db: D1Database,
-    private readonly metadata: MetadataStore,
-    private readonly users: D1UserStore,
+    _metadata: MetadataStore,
+    _users: D1UserStore,
+    private readonly platformVersion = "1.0.0",
   ) {
     this.db = db.withSession?.("first-primary") ?? db;
   }
@@ -71,6 +74,7 @@ export class AppInstaller {
         nav: manifest.nav ?? [],
         worker: manifest.worker ?? null,
         validators: manifest.validators ?? [],
+        client: manifest.client ?? null,
       };
     });
   }
@@ -84,6 +88,9 @@ export class AppInstaller {
    */
   async install(tenantId: string, packageValue: unknown, actor: string, now: string): Promise<InstallResult> {
     const manifest = parseAppManifest(packageValue);
+    if (manifest.platform_requires && !satisfiesVersion(this.platformVersion, manifest.platform_requires)) {
+      throw errors.validation(`${manifest.id} requires Forge ${manifest.platform_requires} or later; platform is ${this.platformVersion}`);
+    }
     const contentHash = await sha256Hex(packageValue);
 
     const existing = await this.db.prepare(
@@ -101,27 +108,69 @@ export class AppInstaller {
 
     await this.assertDependencies(tenantId, manifest);
     await this.assertNoForeignOwnership(tenantId, manifest);
+    await this.assertNoNavigationConflicts(tenantId, manifest);
 
-    // Roles first: a DocPerm referencing a role that does not exist yet would be
-    // ungrantable, and the storage trigger on user_roles would reject the grant.
+    /**
+     * The complete install is one D1 batch and therefore one transaction.
+     *
+     * Previously roles and metadata were written one-by-one before `installed_apps`.
+     * A failure on the last workflow left a live DocType with no app record, no owner
+     * and no safe uninstall path. Prevalidation cannot prevent storage failures, so
+     * activation and every object it exposes must commit or roll back together.
+     */
+    const statements: D1PreparedStatement[] = [];
+
+    // Roles lead the batch so DocPerm grants become valid in the same transaction.
     for (const role of manifest.roles) {
-      await this.users.ensureRole(tenantId, role.role, now, { deskAccess: role.desk_access });
+      statements.push(this.db.prepare(
+        `INSERT INTO roles(tenant_id,role,desk_access,is_standard,modified_at) VALUES(?1,?2,?3,0,?4)
+         ON CONFLICT(tenant_id,role) DO NOTHING`,
+      ).bind(tenantId, role.role, role.desk_access ? 1 : 0, now));
     }
 
+    // Package revisions describe source metadata; stored revisions describe writes.
+    // Carry the latter forward so repeated upgrades stay monotonic.
     for (const doctype of manifest.doctypes) {
-      const current = await this.metadata.getDocType(tenantId, doctype.name);
-      // Carry the stored revision so putDocType's optimistic check passes on an
-      // upgrade; a fresh install starts at 0.
-      await this.metadata.putDocType(tenantId, { ...doctype, revision: current?.revision ?? 0 }, actor, now);
+      const current = await this.db.prepare(
+        `SELECT revision FROM doctype_definitions WHERE tenant_id=?1 AND doctype=?2`,
+      ).bind(tenantId, doctype.name).first<{ revision: number }>();
+      const revision = (current?.revision ?? 0) + 1;
+      const normalized = { ...doctype, revision };
+      statements.push(this.db.prepare(
+        `INSERT INTO doctype_definitions(tenant_id,doctype,module,is_custom,is_submittable,is_child,revision,metadata_json,disabled,modified_by,modified_at)
+         VALUES(?1,?2,?3,?4,?5,?6,?7,?8,0,?9,?10)
+         ON CONFLICT(tenant_id,doctype) DO UPDATE SET module=excluded.module,is_custom=excluded.is_custom,is_submittable=excluded.is_submittable,
+           is_child=excluded.is_child,revision=excluded.revision,metadata_json=excluded.metadata_json,disabled=0,modified_by=excluded.modified_by,modified_at=excluded.modified_at`,
+      ).bind(tenantId, doctype.name, doctype.module, doctype.custom ? 1 : 0, doctype.is_submittable ? 1 : 0, doctype.is_child ? 1 : 0, revision, JSON.stringify(normalized), actor, now));
     }
     for (const workflow of manifest.workflows) {
-      await this.metadata.putWorkflow(tenantId, workflow, actor, now);
+      const current = await this.db.prepare(
+        `SELECT revision FROM workflows WHERE tenant_id=?1 AND name=?2`,
+      ).bind(tenantId, workflow.name).first<{ revision: number }>();
+      const revision = (current?.revision ?? 0) + 1;
+      const normalized = { ...workflow, revision };
+      statements.push(this.db.prepare(
+        `INSERT INTO workflows(tenant_id,name,document_type,is_active,revision,workflow_json,modified_by,modified_at)
+         VALUES(?1,?2,?3,?4,?5,?6,?7,?8)
+         ON CONFLICT(tenant_id,name) DO UPDATE SET document_type=excluded.document_type,is_active=excluded.is_active,revision=excluded.revision,
+           workflow_json=excluded.workflow_json,modified_by=excluded.modified_by,modified_at=excluded.modified_at`,
+      ).bind(tenantId, workflow.name, workflow.document_type, workflow.is_active ? 1 : 0, revision, JSON.stringify(normalized), actor, now));
     }
     for (const format of manifest.print_formats) {
-      await this.metadata.putPrintFormat(tenantId, format, actor, now);
+      const current = await this.db.prepare(
+        `SELECT revision FROM print_formats WHERE tenant_id=?1 AND name=?2`,
+      ).bind(tenantId, format.name).first<{ revision: number }>();
+      const revision = (current?.revision ?? 0) + 1;
+      const normalized = { ...format, revision };
+      statements.push(this.db.prepare(
+        `INSERT INTO print_formats(tenant_id,name,doc_type,is_default,disabled,revision,format_json,modified_by,modified_at)
+         VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9)
+         ON CONFLICT(tenant_id,name) DO UPDATE SET doc_type=excluded.doc_type,is_default=excluded.is_default,disabled=excluded.disabled,
+           revision=excluded.revision,format_json=excluded.format_json,modified_by=excluded.modified_by,modified_at=excluded.modified_at`,
+      ).bind(tenantId, format.name, format.doc_type, format.is_default ? 1 : 0, format.disabled ? 1 : 0, revision, JSON.stringify(normalized), actor, now));
     }
 
-    const statements: D1PreparedStatement[] = [
+    statements.push(
       this.db.prepare(
         `INSERT INTO installed_apps(tenant_id,app_id,app_name,version,content_hash,manifest_json,installed_by,installed_at,modified_at)
          VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?8)
@@ -129,7 +178,7 @@ export class AppInstaller {
            app_name=excluded.app_name, version=excluded.version, content_hash=excluded.content_hash,
            manifest_json=excluded.manifest_json, modified_at=excluded.modified_at`,
       ).bind(tenantId, manifest.id, manifest.name, manifest.version, contentHash, JSON.stringify(manifest), actor, now),
-    ];
+    );
 
     for (const fixture of manifest.fixtures) {
       statements.push(this.db.prepare(
@@ -146,6 +195,11 @@ export class AppInstaller {
       statements.push(this.db.prepare(
         `INSERT INTO app_objects(tenant_id,app_id,object_type,object_name,object_scope) VALUES(?1,?2,?3,?4,?5)`,
       ).bind(tenantId, manifest.id, type, name, scope));
+    }
+    // One batch is the atomicity boundary. Refuse an oversized package rather than
+    // splitting it into transactions and reintroducing partial installation.
+    if (statements.length > 100) {
+      throw errors.validation(`${manifest.id} expands to ${statements.length} install statements; maximum atomic package size is 100`);
     }
     await this.db.batch(statements);
 
@@ -259,6 +313,31 @@ export class AppInstaller {
         ).bind(tenantId, name).first<{ found: number }>();
         if (unowned) throw errors.validation(`DocType ${name} already exists and is not owned by an app`);
       }
+    }
+  }
+
+  /**
+   * Refuses custom routes another installed app already owns.
+   *
+   * DocType paths are protected by object ownership and system/catalog paths are
+   * intentionally shared. Route and Experience paths are app-defined; silently keeping
+   * the first would make the later app install successfully with an unreachable screen.
+   */
+  private async assertNoNavigationConflicts(tenantId: string, manifest: AppManifest): Promise<void> {
+    const claimed = new Map<string, string>();
+    for (const app of await this.list(tenantId)) {
+      if (app.app_id === manifest.id) continue;
+      for (const item of app.nav) {
+        if (item.kind !== "route" && item.kind !== "experience") continue;
+        const route = navItemPath(item);
+        if (route) claimed.set(route, app.app_id);
+      }
+    }
+    for (const item of manifest.nav) {
+      if (item.kind !== "route" && item.kind !== "experience") continue;
+      const route = navItemPath(item);
+      const owner = route ? claimed.get(route) : undefined;
+      if (route && owner) throw errors.validation(`Navigation route ${route} is already owned by app ${owner}`);
     }
   }
 

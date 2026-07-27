@@ -4,6 +4,25 @@ import { errors } from "../../core/src/index.js";
 export const IDENTITY_HEADER = "x-cloudforge-identity";
 export const IDENTITY_SIGNATURE_HEADER = "x-cloudforge-identity-signature";
 
+/**
+ * The gateway's assertion that this request is an app Worker calling back as its caller.
+ *
+ * The Frappe surface authenticates by cookie session and DELIBERATELY ignores the trusted
+ * identity, so that a lost or forged session can never be papered over by an identity the
+ * tenant did not check against the live user directory. An app callback carries no cookie
+ * — by design, so an app can never replay a user's session — which left it authenticated
+ * as nobody and every app read answering `403 Login to access this resource`.
+ *
+ * This header is the one narrow exception, and it is safe only because of two properties
+ * together: it is set by the gateway AFTER `stripUntrustedPlatformHeaders`, so no caller
+ * can supply it; and the gateway sets it only once it has verified BOTH the per-(tenant,
+ * app) credential and the platform-signed identity the app presented. The tenant still
+ * verifies the identity's signature, tenant, trace and expiry itself before using it.
+ *
+ * It carries the app id so a tenant can attribute the call, not to decide anything.
+ */
+export const APP_CALLBACK_HEADER = "x-cloudforge-app-callback";
+
 export interface JwtVerificationOptions {
   secret: string;
   issuer?: string;
@@ -169,6 +188,7 @@ export function stripUntrustedPlatformHeaders(headers: Headers): void {
   for (const name of [
     IDENTITY_HEADER,
     IDENTITY_SIGNATURE_HEADER,
+    APP_CALLBACK_HEADER,
     "x-cloudforge-tenant",
     "x-cloudforge-trace-id",
     "x-cloudforge-actor",

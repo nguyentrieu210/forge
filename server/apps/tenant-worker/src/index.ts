@@ -1,4 +1,5 @@
 import {
+  APP_CALLBACK_HEADER,
   assertInternalService,
   D1UserStore,
   staticDevelopmentActor,
@@ -26,7 +27,7 @@ import {
 import { AggregateCoordinator } from "./aggregate-do.js";
 import { publishPendingOutbox } from "../../../packages/outbox/src/index.js";
 import { D1ReportService } from "../../../packages/query/src/index.js";
-import { ingestFacebookMessage } from "../../../packages/social-commerce/src/tenant-handler.js";
+import { ingestFacebookMessage, storeFacebookOAuthPages, type FacebookOAuthPage } from "../../../packages/social-commerce/src/tenant-handler.js";
 import type { SocialQueueMessage } from "../../../packages/social-commerce/src/index.js";
 import type { TenantEnv } from "./env.js";
 
@@ -110,6 +111,16 @@ export default {
         });
       }
 
+      if (request.method === "POST" && url.pathname === "/internal/social/oauth/facebook") {
+        assertInternalService(request, env.INTERNAL_SERVICE_TOKEN);
+        const tenant = resolveTenant(request, env);
+        if (!tenant) throw new Error("Missing tenant context");
+        if (!env.SOCIAL_CREDENTIAL_KEK) throw new Error("SOCIAL_CREDENTIAL_KEK is not configured");
+        const body = await readJson<JsonObject>(request, 1_000_000) as unknown as { actor_id: string; pages: FacebookOAuthPage[] };
+        const result = await storeFacebookOAuthPages(env.DB, tenant, body.actor_id, body.pages, env.SOCIAL_CREDENTIAL_KEK);
+        return jsonResponse({ committed: true, ...result });
+      }
+
       if (request.method === "POST" && url.pathname === "/internal/events") {
         assertInternalService(request, env.INTERNAL_SERVICE_TOKEN);
         const event = await readJson<JsonObject>(request, 512_000) as unknown as DomainEvent;
@@ -182,6 +193,16 @@ export default {
       const access = new D1DocumentAccessStore(env.DB);
       const permissions = new MetadataPermissionService(metadata, undefined, access);
       const documentStore = new D1MutationStore(env.DB);
+
+      if (request.method === "POST" && url.pathname === "/api/v1/social/facebook/oauth/start") {
+        requireSystemManager(actor);
+        if (!env.SOCIAL_INGRESS || !env.PUBLIC_ORIGIN) throw errors.misconfigured("Facebook OAuth service is not configured");
+        const response = await env.SOCIAL_INGRESS.fetch("https://social-ingress.internal/internal/oauth/facebook/start", {
+          method: "POST", headers: { "content-type": "application/json", "authorization": `Bearer ${env.INTERNAL_SERVICE_TOKEN}` },
+          body: JSON.stringify({ tenant_id: tenantId, actor_id: actor.user_id, return_url: `${env.PUBLIC_ORIGIN}/x/social-commerce` }),
+        });
+        return new Response(response.body, { status: response.status, headers: response.headers });
+      }
 
       if (request.method === "POST" && url.pathname === "/api/v1/commands") {
         const raw = await readJson<JsonObject>(request);
@@ -700,15 +721,40 @@ async function serveFrappeApiInner(
 ): Promise<Response | null> {
   const now = (): string => new Date().toISOString();
   const users = new D1UserStore(env.DB);
-  const authContext: AuthRouteContext = { tenantId, users, sessionSecret: sessionSecret ?? "", traceId, now };
+  const authContext: AuthRouteContext = {
+    tenantId, users, sessionSecret: sessionSecret ?? "", traceId, now,
+    rateLimit: {
+      db: env.DB,
+      salt: env.INTERNAL_AUTH_SECRET,
+      clientAddress: request.headers.get("CF-Connecting-IP") ?? "unknown",
+    },
+  };
 
   if (isPublicFrappePath(url.pathname)) {
     if (!sessionSecret) return jsonResponse({ error: { code: "SESSION_NOT_CONFIGURED" }, trace_id: traceId }, 503);
     return routeFrappeAuth(request, url, authContext);
   }
 
+  /**
+   * An app Worker reading or writing as the user who invoked it.
+   *
+   * The gateway sets this header only after verifying the app's per-(tenant, app)
+   * credential AND the platform-signed identity the app presented, and it strips any
+   * copy a caller sent first — so its presence is the gateway's own assertion, not the
+   * app's. The identity is nonetheless re-verified below against this tenant's key: the
+   * gateway proves WHO may act, this proves the assertion reached us unaltered.
+   *
+   * Without this branch the Frappe surface has no way to authenticate an app at all, and
+   * every app callback answered `403 Login to access this resource` — which is why the
+   * app-Worker seam had a signed identity flowing end to end and still could not read a
+   * single document.
+   */
+  const appCallback = request.headers.get(APP_CALLBACK_HEADER);
+
   let established: EstablishedSession | null = null;
-  if (sessionSecret) established = await establishSession(request, authContext);
+  // Not even attempted on an app callback: the gateway deletes the cookie on that path,
+  // and trying both would mean one request with two answers to "who is this".
+  if (sessionSecret && !appCallback) established = await establishSession(request, authContext);
 
   let actor;
   let fullName = "";
@@ -720,6 +766,18 @@ async function serveFrappeApiInner(
     fullName = established.user.full_name;
     language = established.user.language;
     csrfToken = established.session.csrfToken;
+  } else if (appCallback) {
+    const keys = trustedIdentityKeys(env);
+    const identity = await verifyTrustedIdentity(request, {
+      tenantId,
+      traceId,
+      ...(keys.length > 0 ? { keys } : { masterSecret: env.INTERNAL_AUTH_SECRET }),
+    });
+    actor = identity.actor;
+    fullName = actor.user_id;
+    // No CSRF token, and none is checked: CSRF defends a COOKIE-authenticated request
+    // from a cross-site caller. There is no cookie here, so there is nothing a third
+    // party's page could ride on — and issuing a token would imply a session exists.
   } else if (!sessionSecret && env.AUTH_MODE === "development") {
     // The development actor is a fallback for when cookie sessions are NOT
     // configured — never an override for them. A deployment carrying both would
@@ -814,15 +872,14 @@ async function serveFrappeApiInner(
     language,
     // Present only when this deployment can reach app Workers. Absent, an unknown
     // method stays an honest 404 instead of a binding error.
-    ...(env.DISPATCHER && env.INTERNAL_AUTH_SECRET
-      ? {
-        appMethods: {
-          DISPATCHER: env.DISPATCHER,
-          INTERNAL_AUTH_SECRET: env.INTERNAL_AUTH_SECRET,
-          ...(env.INTERNAL_AUTH_KEY_ID ? { INTERNAL_AUTH_KEY_ID: env.INTERNAL_AUTH_KEY_ID } : {}),
-        },
-      }
-      : {}),
+    //
+    // The SAME object the validators use, not a second one assembled here. It was a
+    // second one, and it had drifted: it omitted `PUBLIC_ORIGIN`, so an app method
+    // received no callback address and every app method that needed to read anything
+    // failed with "callback origin was not supplied by the platform" — while the
+    // identical call from a validator worked. Two copies of one env is how that gap
+    // stayed invisible.
+    ...(env.DISPATCHER && env.INTERNAL_AUTH_SECRET ? { appMethods: appMethodEnv } : {}),
     // Public web forms. The salt is derived from the platform master so the visitor
     // counter can tell people apart without ever storing an address. `CF-Connecting-IP`
     // is set by Cloudflare itself and cannot be spoofed by the caller — an

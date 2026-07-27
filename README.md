@@ -50,10 +50,27 @@ Cổng đã chạy thật trên máy — chi tiết ở [docs/VERIFICATION.md](d
 Ba hạng mục bản CloudForge gốc ghi `NOT VERIFIED` / `NOT RUN` — Workerd, web
 typecheck, Vite build — **nay đã chạy và xanh**.
 
-Lớp vỏ Frappe **đã chạy end-to-end trên workerd + D1 + Durable Object thật**.
-Chưa render trên trình duyệt, chưa deploy lần nào — deploy cần API token Cloudflare
-của bạn. Xem [docs/ROADMAP.md](docs/ROADMAP.md) và
-[docs/API_SURFACE.md](docs/API_SURFACE.md).
+## Công xưởng app — mô tả một app, ra một URL sống
+
+Thêm một app **không cần build, không deploy, không host gì thêm**: viết brief, chạy một lệnh, mở URL.
+
+```bash
+FORGE_ADMIN_PASSWORD=… node scripts/forge-app.mjs briefs/assets.json --origin https://<gateway> --admin <user>
+#   → LIVE  https://<gateway>/x/approval%3AAsset%20Request
+```
+
+Được như vậy vì ba mắt xích đã nối: gateway **tự phục vụ bundle client cùng origin với API** (hết
+phụ thuộc proxy loopback), manifest giao diện do **server dựng từ app đã cài** (một bundle phục vụ
+mọi app), và màn tác nghiệp **suy từ workflow metadata** (khai workflow là có màn duyệt).
+
+Đã chạy thật trên Cloudflare: brief 70 dòng → app `assets` sống; **13/13** kiểm nghiệp vụ đầu-cuối
+qua đường cookie (gồm chặn tự duyệt — 403 *"You cannot approve a document you created"*); **10/10**
+trên trình duyệt thật desktop + mobile, **không proxy**.
+
+Cách viết brief, ngôn ngữ trường, chữ quyền và các mặc định an toàn: [docs/APP_FACTORY.md](docs/APP_FACTORY.md).
+
+Lớp vỏ Frappe **đã chạy end-to-end trên workerd + D1 + Durable Object thật** và **đã deploy live**.
+Xem [docs/ROADMAP.md](docs/ROADMAP.md) và [docs/API_SURFACE.md](docs/API_SURFACE.md).
 
 ## Chạy
 

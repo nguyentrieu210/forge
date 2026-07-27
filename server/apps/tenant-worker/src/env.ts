@@ -38,4 +38,6 @@ export interface TenantEnv {
    * pending for the sweep.
    */
   DISPATCHER?: DispatchNamespace;
+  SOCIAL_INGRESS?: Fetcher;
+  SOCIAL_CREDENTIAL_KEK?: string;
 }

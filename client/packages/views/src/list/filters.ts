@@ -165,6 +165,10 @@ export function applyClientQuery(
       if (value === "" || value == null) continue;
       if (String(r[field] ?? "").toLowerCase() !== value.toLowerCase()) return false;
     }
+    if (state.dateRange) {
+      const value = String(r[state.dateRange.field] ?? "");
+      if (value < state.dateRange.from || value > state.dateRange.to) return false;
+    }
     if (q) {
       const hit = search.some((f) => String(r[f] ?? "").toLowerCase().includes(q));
       if (!hit) return false;

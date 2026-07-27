@@ -510,3 +510,33 @@ test("a required argument fails closed and malformed JSON is a validation error"
   assert.throws(() => args.requireText("doctype"), /doctype is required/);
   assert.throws(() => args.array("filters"), /valid JSON/);
 });
+
+// ---- a doctype's own `status` field must survive serialisation -----------------
+//
+// Found on a live tenant: every student showed a status the doctype did not offer, and
+// the SAME field read differently on the list path than on the document path. The derived
+// Draft/Submitted/Cancelled value was overwriting the app's own field.
+
+test("a doctype's own status field wins over the kernel's derived one", () => {
+  const document = {
+    tenant_id: "t1", doctype: "Student", name: "HV-1", owner: "admin",
+    docstatus: 0, status: "Draft", version: 1,
+    created_at: "2026-07-27T00:00:00.000Z", modified_at: "2026-07-27T00:00:00.000Z",
+    data: { student_name: "Nguyễn Minh Anh", status: "Tạm nghỉ" },
+    children: [],
+  };
+  assert.equal(toFrappeDoc(document).status, "Tạm nghỉ");
+});
+
+test("a doctype WITHOUT a status field still gets the derived one", () => {
+  // The whole point of the ordering: existing behaviour must be untouched where there is
+  // nothing to override with.
+  const base = {
+    tenant_id: "t1", doctype: "Note", name: "N-1", owner: "admin", version: 1,
+    created_at: "2026-07-27T00:00:00.000Z", modified_at: "2026-07-27T00:00:00.000Z",
+    data: { title: "x" }, children: [],
+  };
+  assert.equal(toFrappeDoc({ ...base, docstatus: 0, status: "Draft" }).status, "Draft");
+  assert.equal(toFrappeDoc({ ...base, docstatus: 1, status: "Submitted" }).status, "Submitted");
+  assert.equal(toFrappeDoc({ ...base, docstatus: 2, status: "Cancelled" }).status, "Cancelled");
+});

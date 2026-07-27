@@ -82,7 +82,7 @@ export function FormActionBar({
           size="sm"
           variant={a.variant}
           disabled={a.disabled}
-          title={a.disabledReason ? t("form.dirty_guard", a.disabledReason) : undefined}
+          title={a.disabledReason === DIRTY_GUARD_REASON ? t("form.dirty_guard", a.disabledReason) : a.disabledReason}
           onClick={a.kind === "save" ? undefined : () => onAction(a.kind)}
         >
           {a.kind === "save" && ctx.saving ? t("form.saving") : t(`form.action.${a.kind}`, a.label)}
@@ -99,7 +99,7 @@ export function FormActionBar({
             {menu.map((a, i) => (
               <div key={a.kind}>
                 {i > 0 && a.variant === "destructive" ? <DropdownMenuSeparator /> : null}
-                <DropdownMenuItem destructive={a.variant === "destructive"} disabled={a.disabled} title={a.disabledReason ? t("form.dirty_guard", a.disabledReason) : undefined} onClick={() => onAction(a.kind)}>
+                <DropdownMenuItem destructive={a.variant === "destructive"} disabled={a.disabled} title={a.disabledReason === DIRTY_GUARD_REASON ? t("form.dirty_guard", a.disabledReason) : a.disabledReason} onClick={() => onAction(a.kind)}>
                   {t(`form.action.${a.kind}`, a.label)}
                 </DropdownMenuItem>
               </div>

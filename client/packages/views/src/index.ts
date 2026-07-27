@@ -71,14 +71,7 @@ export { NewFormContainer, type NewFormContainerProps } from "./container/NewFor
 export { WorkspaceContainer, type WorkspaceContainerProps } from "./container/WorkspaceContainer.js";
 export { WorkspaceView, type WorkspaceViewProps, type WsItem, type WsPage, type WsShortcut, type WsCard } from "./workspace/WorkspaceView.js";
 
-import { ControlRegistry } from "@metaforge/controls";
-import { createDefaultRegistry } from "@metaforge/controls";
-import { registerTableControls as _registerTable } from "./form/table-controls.js";
-
-/** Registry đầy đủ = control mặc định (controls) + Table/Table MultiSelect (views). */
-export function createFullRegistry(): ControlRegistry {
-  return _registerTable(createDefaultRegistry());
-}
+export { createFullRegistry } from "./registry.js";
 
 export const P0_VIEW_ORDER: ViewKind[] = ["list", "form"];
 

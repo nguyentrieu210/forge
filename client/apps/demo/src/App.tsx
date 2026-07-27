@@ -139,6 +139,8 @@ function Screen() {
   );
 
   const breadcrumbs = [{ label: "Task", onClick: () => navigate("/view/list") }, { label: LABEL[active] ?? active }];
+  const statusLabels = Array.from(new Set(rows.map((row) => String(row.status ?? "Chưa phân loại"))));
+  const statusValues = statusLabels.map((status) => rows.filter((row) => String(row.status ?? "Chưa phân loại") === status).length);
 
   return (
     <DemoShell nav={NAV} activeKey={active} onNavigate={(k) => navigate(`/view/${k}`)} breadcrumbs={breadcrumbs} fullName="Demo User" awesomebar={awesomebar}>
@@ -184,12 +186,12 @@ function Screen() {
         </div>
       ) : (
         <div className="p-4">
-          {active === "form" && <FormView meta={taskMeta} doc={rows[0]!} registry={registry} services={services} roles={["All"]} onSave={(c) => alert(JSON.stringify(c, null, 2))} />}
+          {active === "form" && <FormView meta={taskMeta} doc={rows[0]!} registry={registry} services={services} roles={["All"]} onSave={(c) => toast.success(`Đã lưu ${Object.keys(c).length} thay đổi (mock)`)} />}
           {active === "kanban" && <KanbanView meta={taskMeta} fieldName="status" columns={["Open", "Working", "Closed"]} rows={rows} />}
           {active === "tree" && <TreeView roots={treeRoots} childrenOf={(v) => treeKids[v]} expanded={new Set(["Products"])} onToggle={() => {}} />}
           {active === "calendar" && <CalendarView year={2026} month={7} dateField="exp_date" titleField="subject" events={rows} />}
           {active === "gantt" && <GanttView tasks={[{ name: "t1", label: "BRD", start: "2026-07-01", end: "2026-07-10", progress: 100 }, { name: "t2", label: "Renderer", start: "2026-07-08", end: "2026-07-25", progress: 60 }]} />}
-          {active === "dashboard" && <DashboardView cards={[{ label: "Task mở", value: 2, trend: 10 }, { label: "Đã đóng", value: 1 }]} charts={[{ title: "Theo trạng thái", labels: ["Open", "Working", "Closed"], datasets: [{ values: [1, 1, 1] }] }]} />}
+          {active === "dashboard" && <DashboardView cards={[{ label: "Tổng công việc", value: rows.length }, { label: "Đang làm", value: rows.filter((row) => row.status === "Working").length }, { label: "Đã đóng", value: rows.filter((row) => row.status === "Closed").length }]} charts={[{ title: "Theo trạng thái", labels: statusLabels, datasets: [{ name: "Công việc", values: statusValues }] }]} filterSummary="Toàn bộ dữ liệu demo" />}
           {active === "report" && <ReportView columns={[{ label: "Mã", fieldname: "name" }, { label: "Trạng thái", fieldname: "status" }]} result={rows.map((r) => ({ name: r.name, status: r.status }))} />}
           {active === "print" && <PrintView html={`<div><h3>HÓA ĐƠN — ${String(rows[0]!.name)}</h3></div>`} />}
           {active.startsWith("b-") && <BuilderRoutes which={active} taskMeta={taskMeta} registry={registry} services={services} />}

@@ -82,6 +82,46 @@ test("trusted identity is signed with a per-tenant derived key that other tenant
   );
 });
 
+test("a credential for tenant A cannot cross the hostname boundary into tenant B", async () => {
+  const now = Math.floor(Date.now() / 1000);
+  const tokenA = await signJwt({
+    sub: "owner@a.test", tenant_id: "tenant-a", roles: ["System Manager"],
+    iss: JWT_ISSUER, aud: JWT_AUDIENCE, exp: now + 300,
+  });
+  const routes = {
+    a: { tenant_id: "tenant-a", worker_name: "worker-a", status: "active", routing_version: 1 },
+    b: { tenant_id: "tenant-b", worker_name: "worker-b", status: "active", routing_version: 1 },
+  };
+  const dispatched = [];
+  const environment = {
+    ROUTES: { async get(key) { return routes[key] ? JSON.stringify(routes[key]) : null; } },
+    DISPATCHER: { get(name) { return { async fetch(request) { dispatched.push({ name, request }); return new Response(name); } }; } },
+    PLATFORM_SUFFIX: "example.com",
+    AUTH_MODE: "production",
+    JWT_SECRET,
+    JWT_ISSUER,
+    JWT_AUDIENCE,
+    INTERNAL_AUTH_SECRET: INTERNAL_SECRET,
+  };
+
+  const own = await gateway.fetch(new Request("https://a.example.com/api/v1/whoami", {
+    headers: { authorization: `Bearer ${tokenA}` },
+  }), environment);
+  assert.equal(own.status, 200);
+  assert.equal(dispatched[0].name, "worker-a");
+  const ownIdentity = await verifyTrustedIdentity(dispatched[0].request, {
+    masterSecret: INTERNAL_SECRET, tenantId: "tenant-a",
+    traceId: dispatched[0].request.headers.get("x-cloudforge-trace-id"),
+  });
+  assert.equal(ownIdentity.actor.user_id, "owner@a.test");
+
+  const cross = await gateway.fetch(new Request("https://b.example.com/api/v1/whoami", {
+    headers: { authorization: `Bearer ${tokenA}` },
+  }), environment);
+  assert.equal(cross.status, 401);
+  assert.equal(dispatched.length, 1, "tenant B worker must never receive tenant A's request");
+});
+
 test("gateway fails closed when issuer or audience is not configured in production", async () => {
   const token = await signJwt({ sub: "sales@example.com", tenant_id: "demo", roles: ["Sales User"], iss: JWT_ISSUER, aud: JWT_AUDIENCE, exp: Math.floor(Date.now() / 1000) + 300 });
   let forwarded = false;

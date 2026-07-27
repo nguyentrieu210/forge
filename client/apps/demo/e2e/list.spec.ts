@@ -1,4 +1,12 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
+
+function isMobile(page: Page) {
+  return (page.viewportSize()?.width ?? 1280) < 768;
+}
+
+function visibleList(page: Page) {
+  return isMobile(page) ? page.locator(".mf-list-mobile") : page.getByRole("table");
+}
 
 /**
  * E2E List data-table (M04) — filter/search/sort/URL-state/selection thao tác THẬT trên UI mock.
@@ -7,9 +15,15 @@ import { test, expect } from "@playwright/test";
 test.describe("List data-table", () => {
   test("render cột metadata + STT + status badge + summary", async ({ page }) => {
     await page.goto("/view/list");
-    await expect(page.getByRole("columnheader", { name: "Tiêu đề" })).toBeVisible();
-    await expect(page.getByRole("columnheader", { name: "Trạng thái" })).toBeVisible();
-    await expect(page.getByText("Chuẩn bị demo")).toBeVisible();
+    if (isMobile(page)) {
+      await expect(page.locator(".mf-list-mobile article").first()).toBeVisible();
+      await expect(visibleList(page).getByText("Chuẩn bị demo")).toBeVisible();
+      await expect(visibleList(page).getByText("Trạng thái").first()).toBeVisible();
+    } else {
+      await expect(page.getByRole("columnheader", { name: "Tiêu đề" })).toBeVisible();
+      await expect(page.getByRole("columnheader", { name: "Trạng thái" })).toBeVisible();
+      await expect(visibleList(page).getByText("Chuẩn bị demo")).toBeVisible();
+    }
     // pagination "1–12 / 12"
     await expect(page.getByText("/ 12")).toBeVisible();
   });
@@ -28,13 +42,15 @@ test.describe("List data-table", () => {
   test("search thu hẹp kết quả", async ({ page }) => {
     await page.goto("/view/list");
     await page.getByPlaceholder("Tìm kiếm…").fill("tài liệu");
-    await expect(page.getByText("Viết tài liệu API")).toBeVisible();
+    await expect(visibleList(page).getByText("Viết tài liệu API")).toBeVisible();
     await expect(page.getByText("Chuẩn bị demo")).toHaveCount(0);
   });
 
   test("chọn dòng → bulk action bar hiện", async ({ page }) => {
     await page.goto("/view/list");
-    await page.getByLabel("Chọn TASK-0001").check();
+    // Radix Checkbox là button role=checkbox, không phải <input>; kiểm tra hành vi bằng click.
+    await visibleList(page).getByLabel("Chọn TASK-0001").click();
+    await expect(visibleList(page).getByLabel("Chọn TASK-0001")).toHaveAttribute("aria-checked", "true");
     await expect(page.getByText("1 đã chọn")).toBeVisible();
     await expect(page.getByRole("button", { name: "Xoá" })).toBeVisible();
   });

@@ -5,7 +5,8 @@
  */
 import { ResponsiveContainer, BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, LabelList } from "recharts";
 import type { BoundFormatters } from "@metaforge/core";
-import { Button, useT } from "@metaforge/ui";
+import { AlertCircle, RefreshCw } from "lucide-react";
+import { Button, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, useT } from "@metaforge/ui";
 import { useLocaleFormat } from "../container/provider.js";
 
 export interface DashboardCard {
@@ -15,6 +16,8 @@ export interface DashboardCard {
   trend?: number;
   /** route mở khi bấm vào thẻ (drill-through) — thiếu ⇒ thẻ chỉ để đọc, KHÔNG giả làm nút bấm. */
   route?: string;
+  /** false khi giảm là tốt (ví dụ công nợ, lỗi, thời gian chờ). */
+  higherIsBetter?: boolean;
 }
 export interface DashboardChartData {
   title: string;
@@ -28,6 +31,10 @@ export interface DashboardViewProps {
   cards?: DashboardCard[];
   charts?: DashboardChartData[];
   loading?: boolean;
+  error?: string | null;
+  onRetry?: () => void;
+  updatedAt?: string;
+  filterSummary?: string;
   /** app tự điều hướng (views KHÔNG biết router). Thiếu ⇒ mọi drill-through tắt. */
   onNavigate?: (route: string) => void;
 }
@@ -37,9 +44,12 @@ export function DashboardView(props: DashboardViewProps) {
   // Hook TRƯỚC return sớm (check-hook-order).
   const fmt = useLocaleFormat();
   const { cards = [], charts = [], loading } = props;
-  if (loading) return <div className="mf-dash mf-dash-loading">{t("dashboard.loading")}</div>;
+  if (loading) return <div className="mf-dash mf-dash-loading space-y-3 p-4" aria-busy="true"><div className="h-24 animate-pulse rounded-lg bg-muted" /><div className="h-56 animate-pulse rounded-lg bg-muted" /><span className="sr-only">{t("dashboard.loading")}</span></div>;
+  if (props.error) return <div className="mf-empty-state gap-2"><AlertCircle className="text-destructive" /><div className="font-medium">Không tải được bảng điều hành</div><div className="text-sm text-muted-foreground">{props.error}</div>{props.onRetry ? <Button size="sm" onClick={props.onRetry}><RefreshCw /> Thử lại</Button> : null}</div>;
+  if (!cards.length && !charts.length) return <div className="mf-empty-state text-sm text-muted-foreground">{t("common.no_data")}</div>;
   return (
     <div className="mf-dash p-4 md:p-5">
+      {(props.filterSummary || props.updatedAt) ? <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">{props.filterSummary ? <span>Bộ lọc: {props.filterSummary}</span> : null}{props.updatedAt ? <span>Cập nhật: {props.updatedAt}</span> : null}</div> : null}
       {cards.length > 0 ? (
         <div className="mf-dash-cards" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(160px,1fr))", gap: 12 }}>
           {cards.map((c, i) => {
@@ -49,8 +59,8 @@ export function DashboardView(props: DashboardViewProps) {
                 <div className="text-2xl font-bold tabular-nums">{String(c.value)}</div>
                 <div className="text-sm text-muted-foreground">{c.label}</div>
                 {typeof c.trend === "number" ? (
-                  <div className={`mt-1 text-xs ${c.trend >= 0 ? "text-emerald-600" : "text-destructive"}`}>
-                    {c.trend >= 0 ? "▲" : "▼"} {Math.abs(c.trend)}%
+                  <div className={`mt-1 text-xs ${c.trend === 0 ? "text-muted-foreground" : ((c.trend > 0) === (c.higherIsBetter !== false) ? "text-emerald-600" : "text-destructive")}`} aria-label={`${c.trend > 0 ? "Tăng" : c.trend < 0 ? "Giảm" : "Không đổi"} ${Math.abs(c.trend)} phần trăm`}>
+                    {c.trend > 0 ? "▲" : c.trend < 0 ? "▼" : "●"} {Math.abs(c.trend)}%
                   </div>
                 ) : null}
               </>
@@ -86,8 +96,10 @@ export function DashboardView(props: DashboardViewProps) {
 
 /** Recharts wrapper — data-driven từ {labels, datasets}. */
 function MetaChart({ chart, onNavigate, fmt }: { chart: DashboardChartData; onNavigate?: (route: string) => void; fmt?: BoundFormatters }) {
-  const ds = chart.datasets[0]?.values ?? [];
-  const data = chart.labels.map((label, i) => ({ label, value: ds[i] ?? 0 }));
+  const data = chart.labels.map((label, labelIndex) => Object.assign(
+    { label },
+    ...chart.datasets.map((dataset, datasetIndex) => ({ [`value${datasetIndex}`]: dataset.values[labelIndex] ?? 0 })),
+  ));
   const isLine = chart.type === "line";
   // Drill-through: bấm 1 cột/điểm → mở route của đúng nhãn đó. Dùng onClick ở CẤP BIỂU ĐỒ
   // (state.activeLabel) chứ không phải ở <Bar>: click vào khoảng trống giữa 2 cột vẫn ra đúng nhãn
@@ -101,6 +113,7 @@ function MetaChart({ chart, onNavigate, fmt }: { chart: DashboardChartData; onNa
       }
     : undefined;
   const clickable = Boolean(onChartClick);
+  const palette = ["var(--primary)", "var(--chart-2, #16a34a)", "var(--chart-3, #d97706)", "var(--chart-4, #7c3aed)", "var(--chart-5, #0891b2)"];
 
   /**
    * Số hiển thị trên biểu đồ.
@@ -127,13 +140,13 @@ function MetaChart({ chart, onNavigate, fmt }: { chart: DashboardChartData; onNa
             <XAxis dataKey="label" fontSize={11} />
             <YAxis fontSize={11} tickFormatter={(v) => short(Number(v))} />
             <Tooltip
-              formatter={(v) => [full(v), ""]}
+              formatter={(v, name) => [full(v), String(name)]}
               contentStyle={{ fontSize: 12, borderRadius: 6, border: "1px solid var(--border)", background: "var(--popover)", color: "var(--popover-foreground)" }}
             />
             {/* dot={true}: không có chấm thì không biết đường gãy ở đâu, và nhãn số trôi lơ lửng. */}
-            <Line type="monotone" dataKey="value" stroke="var(--primary)" strokeWidth={2} dot={{ r: 2.5 }}>
-              <LabelList dataKey="value" position="top" fontSize={11} formatter={(v: unknown) => short(Number(v))} />
-            </Line>
+            {chart.datasets.map((dataset, index) => <Line key={index} type="monotone" dataKey={`value${index}`} name={dataset.name ?? `Chuỗi ${index + 1}`} stroke={palette[index % palette.length]} strokeWidth={2} dot={{ r: 2.5 }}>
+              {chart.datasets.length === 1 ? <LabelList dataKey={`value${index}`} position="top" fontSize={11} formatter={(v: unknown) => short(Number(v))} /> : null}
+            </Line>)}
           </LineChart>
         ) : (
           <BarChart data={data} onClick={onChartClick}>
@@ -141,18 +154,24 @@ function MetaChart({ chart, onNavigate, fmt }: { chart: DashboardChartData; onNa
             <XAxis dataKey="label" fontSize={11} />
             <YAxis fontSize={11} tickFormatter={(v) => short(Number(v))} />
             <Tooltip
-              formatter={(v) => [full(v), ""]}
+              formatter={(v, name) => [full(v), String(name)]}
               contentStyle={{ fontSize: 12, borderRadius: 6, border: "1px solid var(--border)", background: "var(--popover)", color: "var(--popover-foreground)" }}
               cursor={{ fill: "var(--muted)", opacity: 0.5 }}
             />
             {/* Số ngay trên đầu cột: bảng chú giải chỉ hiện khi rê chuột, nên khi chụp màn hình
                 hoặc nhìn từ xa (màn hình treo trong kho) biểu đồ không nói lên con số nào cả. */}
-            <Bar dataKey="value" fill="var(--primary)" opacity={0.78} radius={[4, 4, 0, 0]}>
-              <LabelList dataKey="value" position="top" fontSize={11} formatter={(v: unknown) => short(Number(v))} />
-            </Bar>
+            {chart.datasets.map((dataset, index) => <Bar key={index} dataKey={`value${index}`} name={dataset.name ?? `Chuỗi ${index + 1}`} fill={palette[index % palette.length]} opacity={0.78} radius={[4, 4, 0, 0]}>
+              {chart.datasets.length === 1 ? <LabelList dataKey={`value${index}`} position="top" fontSize={11} formatter={(v: unknown) => short(Number(v))} /> : null}
+            </Bar>)}
           </BarChart>
         )}
       </ResponsiveContainer>
+      <Table unwrapped className="sr-only">
+        <caption>{chart.title}</caption>
+        <TableHeader><TableRow><TableHead>Mốc</TableHead>{chart.datasets.map((dataset, index) => <TableHead key={index}>{dataset.name ?? `Chuỗi ${index + 1}`}</TableHead>)}</TableRow></TableHeader>
+        <TableBody>{chart.labels.map((label, labelIndex) => <TableRow key={label}><TableHead>{label}</TableHead>{chart.datasets.map((dataset, datasetIndex) => <TableCell key={datasetIndex}>{full(dataset.values[labelIndex] ?? 0)}</TableCell>)}</TableRow>)}</TableBody>
+      </Table>
+      {routes && onNavigate ? <div className="sr-only">{Object.entries(routes).map(([label, route]) => <Button key={label} type="button" onClick={() => onNavigate(route)}>Mở chi tiết {label}</Button>)}</div> : null}
     </div>
   );
 }

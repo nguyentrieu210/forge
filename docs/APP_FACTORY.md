@@ -1,0 +1,186 @@
+# Công xưởng app — mô tả một app, ra một URL sống
+
+> Nguồn: `server/scripts/forge-app.mjs` · `server/scripts/lib/compile-brief.mjs` ·
+> `server/briefs/` · `client/apps/runtime/` · `server/apps/gateway-worker/`
+
+Một app mới **không cần build, không cần deploy, không cần host gì thêm.** Viết một brief,
+chạy một lệnh, mở URL.
+
+```bash
+FORGE_ADMIN_PASSWORD=… node scripts/forge-app.mjs briefs/assets.json \
+  --origin https://<gateway> --admin <user>
+```
+
+```
+1 compiled   app=assets@1.0.1 doctypes=2 workflows=1 roles=2 fixtures=1 nav=3
+2 validated  through the server's own parser
+3 installing  https://…workers.dev as forge@kairo.vn … installed
+4 verifying   client manifest resolves … ok (3 nav entries, home /x/approval%3AAsset%20Request)
+5 verifying   context dimensions have data … ok (company:2)
+
+LIVE  https://…workers.dev/x/approval%3AAsset%20Request
+```
+
+## Vì sao trước đây chưa phải công xưởng
+
+Backend đã sinh app được từ lâu: khai DocType bằng JSON → có ngay ~60 method + REST, per-tenant,
+không deploy lại. **Nhưng giao diện thì không.** Mỗi app phải có một bản build React riêng, vì
+`src/app-manifest.ts` — brand, màn chủ, nav, chiều dữ liệu — là TypeScript biên dịch cứng vào bundle.
+Và bundle đó **không có chỗ ở trên Cloudflare**: nó chỉ chạy sau một proxy loopback trên máy lập
+trình viên, vì cookie phiên là `Secure`+`SameSite=Lax` nên trình duyệt không gửi qua origin khác.
+
+Nên "cài app" chỉ làm được nửa việc, và hai nửa có thể lệch nhau.
+
+Ba mắt xích đã nối:
+
+| | Trước | Nay |
+|---|---|---|
+| Giao diện ở đâu | máy lập trình viên, sau proxy | gateway phục vụ tĩnh, **cùng origin** với API |
+| Manifest client | file TS biên dịch cứng mỗi app | `metaforge.api.get_app_manifest` — server dựng từ app đã cài |
+| Màn tác nghiệp | React viết tay cho từng DocType | suy từ workflow metadata (`approval:<DocType>`) |
+
+Kết quả: **một bundle duy nhất phục vụ mọi app**, và thêm app là một lệnh ghi dữ liệu.
+
+## Brief: khai cái gì
+
+Brief là mô tả nhỏ nhất mà từ đó suy ra được một app chạy được. Xem `server/briefs/assets.json`
+(~70 dòng → 2 DocType, 1 workflow, 2 vai trò, ma trận quyền, màn duyệt, nav, manifest client).
+
+```jsonc
+{
+  "id": "assets", "name": "Quản lý tài sản CNTT",
+  "domain": "assets", "brand": "warm",
+  "dimensions": ["company"],
+  "roles": ["Nhân viên IT", "Trưởng phòng IT"],
+  "home": "approval:Asset Request",
+  "fixtures": [{ "type": "Company", "name": "Kairo", "data": { … } }],
+  "doctypes": [{
+    "name": "Asset Request", "label": "Yêu cầu cấp tài sản",
+    "naming": "YC-.YYYY.-#####", "title": "requested_for",
+    "list": ["requested_for", "category", "needed_by", "workflow_state"],
+    "fields": [
+      "requested_for:Data! Cấp cho",
+      "category:Select(Máy tính,Màn hình,Khác)! Nhóm tài sản",
+      "quantity:Int! Số lượng",
+      "company:Link(Company)! Công ty",
+      "notes:Small Text Ghi chú"
+    ],
+    "permissions": { "Nhân viên IT": "rwcs", "Trưởng phòng IT": "rwcsxa" },
+    "workflow": {
+      "states": { "Nháp": 0, "Chờ duyệt": 0, "Đã duyệt": 1, "Từ chối": 2 },
+      "transitions": [
+        ["Nháp", "Gửi duyệt", "Chờ duyệt", "Nhân viên IT"],
+        ["Chờ duyệt", "Duyệt", "Đã duyệt", "Trưởng phòng IT"]
+      ]
+    }
+  }]
+}
+```
+
+### Ngôn ngữ trường
+
+`<fieldname>:<Kiểu>[(tuỳ chọn)][modifier][=mặc định][ Nhãn]` — modifier: `!` bắt buộc · `*` duy nhất
+· `~` chỉ đọc. Mặc định có dấu cách thì đặt trong ngoặc: `=(Đang liên hệ)`. Nhãn thiếu thì suy từ
+fieldname. Kiểu hai từ (`Small Text`, `Text Editor`, `Attach Image`) khớp **dài nhất trước** — cắt ở
+dấu cách đầu sẽ đọc `Small Text` thành kiểu `Small`, và với Frappe đó là trường hợp thường chứ không
+phải ngoại lệ.
+
+### Chữ quyền
+
+`r` đọc · `w` ghi · `c` tạo · `s` submit · `x` cancel · `a` amend.
+
+**Không có `d`, và nó bị TỪ CHỐI chứ không bị bỏ qua.** Trong nhân này xoá là hành vi hạng "write"
+(`deleteDocument` xác thực qua đường ghi), nên viết `"rwc"` mà tưởng đã chặn xoá là **sai** — vai trò
+đó xoá được. Chấp nhận `d` sẽ để tác giả mã hoá một chính sách platform không thi hành và không bao
+giờ biết.
+
+`r` tự kéo theo `print`, `email`, `report`, `export`. Giữ lại mấy quyền đó là chính sách rất riêng;
+lấy nó làm mặc định chỉ tạo ra app có nút in bấm vào không làm gì.
+
+### Workflow
+
+`allow_self_approval` mặc định **false** trên mọi transition làm tăng docstatus. Đây là lý do chính
+để biên dịch thay vì viết tay: phân lập trách nhiệm chính là mục đích của workflow duyệt, và workflow
+viết tay quên cờ này sẽ âm thầm cho người tạo tự duyệt đơn của mình. Muốn ngược lại thì phải ghi rõ:
+`["Chờ duyệt","Duyệt","Đã duyệt","Quản lý","self"]`.
+
+Trường trạng thái được **tự thêm** (Select, read-only, options = danh sách state). Quên nó thì
+workflow ghi vào cột DocType không có, và hỏng ngay ở transition đầu tiên.
+
+## Màn tác nghiệp suy từ metadata
+
+Khai một workflow là có luôn màn duyệt (`kind: "experience"`, key `approval:<DocType>`), không viết
+dòng code nào:
+
+| Màn hỏi gì | Lấy từ đâu |
+|---|---|
+| state nào còn việc | `__workflow_docs[0].transitions[].state` — suy từ đồ thị, không cấu hình |
+| hồ sơ nào đang chờ | `get_list` lọc theo state field của chính workflow |
+| nút nào bật cho user này | `get_workflow_transitions` — **SERVER quyết**, không đoán ở client |
+| thẻ hiện trường gì | `in_list_view` của DocType |
+
+Đoán bất kỳ mục nào ở client đều tạo ra nút bấm vào thì lỗi: user này có được duyệt hay không phụ
+thuộc vai trò và `allow_self_approval`, chỉ server biết.
+
+## Bước kiểm 4 và 5 — vì sao có
+
+Cài xong sạch mà app vẫn không mở được là chuyện đã xảy ra thật, nên lệnh không báo thành công khi:
+
+- **home không tới được** → router rơi vào catch-all, catch-all lại điều hướng về home: vòng lặp.
+- **user không thấy nav nào** → ma trận quyền trong brief sai.
+- **chiều dữ liệu bắt buộc không có master data** → shell chặn ở "Cần chọn phạm vi dữ liệu" trên một
+  selector không bao giờ có tuỳ chọn. App cài hoàn hảo, manifest hoàn hảo, và không ai qua nổi màn
+  đầu. Brief sửa bằng cách kèm `fixtures`.
+
+"Lệnh chạy xong" và "người dùng mở được" phải là một câu.
+
+## Deploy nền tảng (chỉ khi platform đổi, không phải khi thêm app)
+
+```bash
+# client bundle
+cd client/apps/runtime && npx vite build
+cd ../../../server && node scripts/stage-client-bundle.mjs
+npx wrangler deploy --config apps/gateway-worker/wrangler.jsonc
+
+# tenant workers
+node scripts/deploy-tenant.mjs --all
+
+# tenant mới (một lệnh)
+node scripts/provision-tenant.mjs --tenant <id> --database-id <uuid> --route <host> …
+```
+
+`apps/gateway-worker/public/` là **sinh ra**, không commit. `not_found_handling: "none"` là cố ý:
+`"single-page-application"` sẽ trả index.html cho cả `/api/method/login`, tức toàn bộ API hoá HTML.
+
+## Đã chứng minh tới đâu
+
+Trên deployment thật, hai tenant (`demo` và `hrm`):
+
+| | |
+|---|---|
+| brief → cài → URL sống | ✅ một lệnh, `assets@1.0.1` |
+| **một bundle, hai app khác nhau** | ✅ cùng `index-DgFEryiM.js` phục vụ "Quản lý tài sản CNTT" và "Quản lý nhân sự" |
+| nghiệp vụ đầu-cuối qua đường cookie | ✅ **13/13** — tạo, đặt tên tự động, gửi duyệt, chặn tự duyệt (403 *"You cannot approve a document you created"*) |
+| trình duyệt thật, desktop + mobile, **không proxy** | ✅ **10/10** |
+| test Node | ✅ **366/366** |
+| Workerd | ✅ **88/88** |
+
+App HRM cũng đã chuyển sang bundle chung — bản build React riêng của nó không còn cần.
+
+## Lỗi bắt được khi làm việc này
+
+Ghi lại vì mỗi lỗi đều **xanh mọi cổng** trước khi bị bắt:
+
+| Lỗi | Vì sao lọt |
+|---|---|
+| **Nâng cấp app chỉ được đúng một lần.** Installer mang theo revision đang lưu cho DocType nhưng không cho workflow/print format, nên lần nâng cấp thứ hai vỡ với `The document changed after it was loaded` | phải nâng cấp **hai lần** mới thấy; mọi test đều chỉ nâng cấp một lần. Nay ghim ở `frappe-facade.integration.test.mts` |
+| **Server và client mã hoá route khác nhau.** `resolveNavPath` dùng `encodeURIComponent`, còn bộ kiểm manifest giữ **bản sao riêng** không mã hoá → app đầu tiên sinh từ brief mở ra "Không dựng được giao diện", do chính cái guard chống-vòng-lặp bắn nhầm | luật viết hai lần và trôi dạt; **không có test nào cho `validateManifest`**. Nay gộp về `resolveNavPath` và ghim bằng test liên-codebase `nav-path-contract.test.mjs` |
+| **App HRM chưa từng chạy typecheck.** Dùng tên trường theo wire Frappe (`order_by`, `limit_page_length`) thay vì tên adapter (`orderBy`, `pageLength`) | E2E vẫn xanh: bộ lọc đúng, dữ liệu ít nên thứ tự và giới hạn trang bị bỏ âm thầm |
+| **App cài xong vẫn không mở được** vì chiều `company` không có master data | install PASS, manifest PASS, nav PASS. Nay là bước kiểm 5 |
+
+### Chưa làm
+
+- Chỉ có một loại experience (`approval:`). Nghiệp vụ ghi sổ (xuất/nhập kho, GL) vẫn cần app Worker
+  riêng — cơ chế có từ Pha 1–2 nhưng **chưa app nào dùng end-to-end**.
+- Brief chưa khai được print format, hook, validator.
+- `hrm.kairo.vn` vẫn chặn: token thiếu quyền `Zone.DNS: Edit`.

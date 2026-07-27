@@ -29,5 +29,8 @@
     "producers": [
       { "binding": "OUTBOX_QUEUE", "queue": "cloudforge-outbox" }
     ]
-  }
+  },
+  "services": [
+    { "binding": "SOCIAL_INGRESS", "service": "cloudforge-social-ingress" }
+  ]
 }

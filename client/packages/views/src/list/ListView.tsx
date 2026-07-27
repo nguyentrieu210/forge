@@ -198,6 +198,15 @@ export function ListView(props: ListViewProps) {
     setColOrder(next);
     saveColumnOrder(meta.name, next);
   };
+  const moveColumnByKeyboard = (fieldname: string, offset: -1 | 1) => {
+    const order = allColumns.map((c) => c.fieldname);
+    const index = order.indexOf(fieldname);
+    const target = order[index + offset];
+    if (index < 0 || !target) return;
+    const next = moveColumn(order, fieldname, target);
+    setColOrder(next);
+    saveColumnOrder(meta.name, next);
+  };
   const resetColumnOrder = () => { clearColumnOrder(meta.name); setColOrder([]); };
 
   // Gom nhóm — CHỈ trên các dòng của TRANG hiện tại (server trả từng trang; gom "toàn bộ dataset"
@@ -309,6 +318,13 @@ export function ListView(props: ListViewProps) {
           isActive && "bg-accent font-medium shadow-[inset_2px_0_0_var(--primary)] hover:bg-accent",
         )}
         onClick={() => onRowClick?.(row)}
+        onKeyDown={(event) => {
+          if (!onRowClick || event.key !== "Enter") return;
+          event.preventDefault();
+          onRowClick(row);
+        }}
+        tabIndex={onRowClick ? 0 : undefined}
+        aria-label={onRowClick ? `${t("common.open", "Mở")} ${name}` : undefined}
       >
         <TableCell className={cn("px-2", STICKY_LEAD, compact && "py-1")}>
           <span className={cn("flex items-center gap-1.5", LEAD_INNER_W)}>
@@ -380,6 +396,48 @@ export function ListView(props: ListViewProps) {
             {pull.refreshing ? t("list.refreshing") : pull.armed ? t("list.release_to_refresh") : t("list.pull_to_refresh")}
           </div>
         ) : null}
+        <div className="mf-list-mobile divide-y md:hidden">
+          {props.error ? (
+            <EmptyState
+              icon={<AlertCircle className="text-destructive" />}
+              title={t("common.error_generic")}
+              desc={props.error}
+              action={props.onRefresh ? <Button size="sm" onClick={props.onRefresh}><RefreshCw /> {t("common.retry", "Thử lại")}</Button> : undefined}
+            />
+          ) : props.loading ? (
+            <div className="space-y-2 p-3">{Array.from({ length: Math.min(state.pageSize, 6) }).map((_, index) => <Skeleton key={index} className="h-24 w-full rounded-lg" />)}</div>
+          ) : rows.length === 0 ? (
+            <EmptyView state={state} onCreate={props.onCreate} onClear={() => onStateChange({ q: "", filters: {}, routeFilters: [], dateRange: undefined, page: 1 })} />
+          ) : rows.map((row, index) => {
+            const name = String(row.name);
+            const selected = selectedSet.has(name);
+            const titleCol = columns.find((column) => column.isTitle) ?? columns[0];
+            const detailCols = columns.filter((column) => column.fieldname !== titleCol?.fieldname).slice(0, 4);
+            return (
+              <article
+                key={name}
+                className={cn("bg-card p-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring", props.activeRow === name && "bg-accent shadow-[inset_3px_0_0_var(--primary)]")}
+                onClick={() => onRowClick?.(row)}
+                onKeyDown={(event) => { if (onRowClick && event.key === "Enter") { event.preventDefault(); onRowClick(row); } }}
+                tabIndex={onRowClick ? 0 : undefined}
+                aria-label={onRowClick ? `${t("common.open", "Mở")} ${name}` : undefined}
+              >
+                <div className="flex items-start gap-3">
+                  <span className="pt-1" onClick={(event) => event.stopPropagation()}>
+                    <Checkbox checked={selected} onCheckedChange={() => toggleRow(name)} aria-label={`${t("list.select_row")} ${name}`} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    {titleCol ? <TitleCell row={row} col={titleCol} imgField={imgField} displayValues={props.displayValues} onUploadImage={props.onUploadImage} /> : <span className="font-medium">{name}</span>}
+                    {detailCols.length ? <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                      {detailCols.map((column) => <div key={column.fieldname} className="min-w-0"><dt className="truncate text-muted-foreground">{column.label}</dt><dd className="mt-0.5 truncate font-medium">{column.fieldtype === "Link" && column.options ? <LinkCell doctype={column.options} value={row[column.fieldname]} displayValues={props.displayValues} /> : renderCell(row[column.fieldname], column, props.fmt)}</dd></div>)}
+                    </dl> : null}
+                  </div>
+                  <span className="text-xs tabular-nums text-muted-foreground">#{pageStart + index + 1}</span>
+                </div>
+              </article>
+            );
+          })}
+        </div>
         {/* unwrapped: ListView đã tự có khung cuộn (`scrollRef`) để làm header dính + ảo hoá dòng;
             để Table bọc thêm một `overflow-auto` nữa sẽ thành 2 vùng cuộn lồng nhau (2 thanh cuộn,
             và `sticky` của thead neo vào khung TRONG nên không dính theo khung ngoài). */}
@@ -390,7 +448,7 @@ export function ListView(props: ListViewProps) {
           style={hasWidths ? { tableLayout: "fixed" } : undefined}
           // Ở table-layout:fixed, nội dung dài KHÔNG nới ô ra nữa mà TRÀN đè lên cột bên
           // cạnh. Phải tự cắt, nếu không kéo cột hẹp lại là chữ chồng lên nhau.
-          className={hasWidths ? "[&_td]:overflow-hidden [&_td]:text-ellipsis [&_td]:whitespace-nowrap" : undefined}
+          className={cn("max-md:hidden", hasWidths && "[&_td]:overflow-hidden [&_td]:text-ellipsis [&_td]:whitespace-nowrap")}
         >
           {/*
             colgroup — cách DUY NHẤT ép cứng bề rộng cột ở cả `table-layout: auto` lẫn `fixed`.
@@ -467,6 +525,8 @@ export function ListView(props: ListViewProps) {
                   onResizeStart={seedWidths}
                   onAutoFit={() => autoFitColumn(c.fieldname)}
                   onResize={(px) => resizeColumn(c.fieldname, px)}
+                  onMoveLeft={() => moveColumnByKeyboard(c.fieldname, -1)}
+                  onMoveRight={() => moveColumnByKeyboard(c.fieldname, 1)}
                 />
               ))}
               {/* ô của cột đệm — xem chú thích ở <colgroup> */}
@@ -477,13 +537,13 @@ export function ListView(props: ListViewProps) {
           <TableBody>
             {props.error ? (
               <StateRow span={totalCols}>
-                <EmptyState icon={<AlertCircle className="text-destructive" />} title={t("common.error_generic")} desc={props.error} />
+                <EmptyState icon={<AlertCircle className="text-destructive" />} title={t("common.error_generic")} desc={props.error} action={props.onRefresh ? <Button size="sm" onClick={props.onRefresh}><RefreshCw /> {t("common.retry", "Thử lại")}</Button> : undefined} />
               </StateRow>
             ) : props.loading ? (
               <SkeletonRows cols={totalCols} rows={Math.min(state.pageSize, 8)} />
             ) : rows.length === 0 ? (
               <StateRow span={totalCols}>
-                <EmptyView state={state} onCreate={props.onCreate} />
+                <EmptyView state={state} onCreate={props.onCreate} onClear={() => onStateChange({ q: "", filters: {}, routeFilters: [], dateRange: undefined, page: 1 })} />
               </StateRow>
             ) : virtualized ? (
               <>
@@ -539,10 +599,10 @@ export function ListView(props: ListViewProps) {
               {/* Hàng tổng cũng phải có ĐÚNG số ô như các hàng khác, nếu không cột lệch hẳn một
                   nhịp và mọi con số tổng rơi sai cột. */}
               <TableRow className="bg-card hover:bg-transparent">
-                <TableCell className={cn("px-2 text-right text-xs text-muted-foreground", STICKY_LEAD)}>Σ</TableCell>
+                <TableCell className={cn("px-2 text-right text-xs text-muted-foreground", STICKY_LEAD)} title="Tổng hợp trên trang hiện tại">Σ trang</TableCell>
                 {columns.map((c) => (
                   <TableCell key={c.fieldname} className={cn(c.align === "right" && "text-right tabular-nums")}>
-                    {c.align === "right" && !c.isStatus ? formatValue(sumColumn(rows, c.fieldname), c) : null}
+                    {c.align === "right" && !c.isStatus ? formatValue(aggregateColumn(rows, c), c) : null}
                   </TableCell>
                 ))}
                 <TableCell aria-hidden className="p-0" />
@@ -607,7 +667,7 @@ function LinkCell({ doctype, value, displayValues }: { doctype: string; value: u
 // ── Sort header ───────────────────────────────────────────────────────────────
 function SortHeader({
   col, active, dir, onClick, compact, dragOver, onDragStart, onDragOverCol, onDragLeaveCol, onDropCol,
-  width, onResize, onResizeStart, onAutoFit,
+  width, onResize, onResizeStart, onAutoFit, onMoveLeft, onMoveRight,
 }: {
   col: ListColumn; active: boolean; dir?: string; onClick: () => void; compact?: boolean;
   dragOver?: boolean;
@@ -622,6 +682,9 @@ function SortHeader({
   onResizeStart?: () => void;
   /** bấm đúp tay nắm ⇒ tự căn vừa nội dung (như Excel). */
   onAutoFit?: () => void;
+  /** Alt + mũi tên đổi thứ tự cột mà không cần chuột. */
+  onMoveLeft?: () => void;
+  onMoveRight?: () => void;
 }) {
   const Icon = active ? (dir === "asc" ? ArrowUp : ArrowDown) : ChevronsUpDown;
   const thRef = useRef<HTMLTableCellElement>(null);
@@ -673,6 +736,7 @@ function SortHeader({
     <TableHead
       ref={thRef}
       data-col={col.fieldname}
+      aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
       style={width ? { width, minWidth: width, maxWidth: width } : undefined}
       draggable={Boolean(onDropCol) && !resizing}
       onDragStart={(e) => {
@@ -702,6 +766,12 @@ function SortHeader({
         variant="ghost"
         size="sm"
         onClick={onClick}
+        onKeyDown={(event) => {
+          if (!event.altKey) return;
+          if (event.key === "ArrowLeft") { event.preventDefault(); onMoveLeft?.(); }
+          if (event.key === "ArrowRight") { event.preventDefault(); onMoveRight?.(); }
+        }}
+        title="Sắp xếp; Alt + ←/→ để đổi vị trí cột"
         className={cn("-ml-2 h-7 max-w-full gap-1 truncate px-2 font-medium data-[active=true]:text-foreground", col.align === "right" && "ml-0")}
         data-active={active}
       >
@@ -721,6 +791,22 @@ function SortHeader({
           role="separator"
           aria-orientation="vertical"
           aria-label={`Đổi bề rộng cột ${col.label}`}
+          aria-valuemin={72}
+          aria-valuemax={720}
+          aria-valuenow={Math.round(width ?? thRef.current?.getBoundingClientRect().width ?? 0)}
+          tabIndex={0}
+          onKeyDown={(event) => {
+            if (!onResize) return;
+            const current = width ?? thRef.current?.getBoundingClientRect().width ?? 120;
+            if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+              event.preventDefault();
+              onResizeStart?.();
+              onResize(current + (event.key === "ArrowRight" ? 12 : -12));
+            } else if (event.key === "Enter") {
+              event.preventDefault();
+              onAutoFit?.();
+            }
+          }}
         >
           {/* Ba trạng thái:
               - bình thường: vạch xám luôn thấy ⇒ người dùng BIẾT là kéo được (trước đây ẩn hẳn
@@ -788,8 +874,9 @@ function PaginationBar({
         {loading ? t("common.loading") : <><span className="font-medium text-foreground">{from}–{to}</span> / {total}</>}
       </span>
       <div className="ml-auto flex items-center gap-2">
+        <span className="hidden text-xs text-muted-foreground sm:inline">{t("list.rows_per_page", "Dòng mỗi trang")}</span>
         <Select value={String(pageSize)} onValueChange={(v) => onPageSize(Number(v))}>
-          <SelectTrigger className="h-8 w-[4.5rem]">
+          <SelectTrigger className="h-8 w-[4.5rem]" aria-label={t("list.rows_per_page", "Dòng mỗi trang")}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -821,10 +908,10 @@ function StateRow({ span, children }: { span: number; children: React.ReactNode 
   );
 }
 
-function EmptyView({ state, onCreate }: { state: ListState; onCreate?: () => void }) {
+function EmptyView({ state, onCreate, onClear }: { state: ListState; onCreate?: () => void; onClear?: () => void }) {
   const t = useT();
-  if (state.q.trim()) return <EmptyState icon={<SearchX />} title={t("list.no_results")} desc={`${t("list.no_results_for")} "${state.q}".`} />;
-  if (Object.values(state.filters).some(Boolean)) return <EmptyState icon={<SearchX />} title={t("list.no_filter_match")} desc={t("list.no_filter_match_hint")} />;
+  if (state.q.trim()) return <EmptyState icon={<SearchX />} title={t("list.no_results")} desc={`${t("list.no_results_for")} "${state.q}".`} action={onClear ? <Button size="sm" variant="outline" onClick={onClear}>{t("list.clear_filters")}</Button> : undefined} />;
+  if (Object.values(state.filters).some(Boolean) || state.routeFilters.length > 0 || state.dateRange) return <EmptyState icon={<SearchX />} title={t("list.no_filter_match")} desc={t("list.no_filter_match_hint")} action={onClear ? <Button size="sm" variant="outline" onClick={onClear}>{t("list.clear_filters")}</Button> : undefined} />;
   return (
     <EmptyState
       icon={<Inbox />}
@@ -862,8 +949,9 @@ function SkeletonRows({ cols, rows }: { cols: number; rows: number }) {
   );
 }
 
-function sumColumn(rows: Doc[], field: string): number {
-  return rows.reduce((acc, r) => acc + (Number(r[field]) || 0), 0);
+function aggregateColumn(rows: Doc[], column: ListColumn): number {
+  const total = rows.reduce((acc, row) => acc + (Number(row[column.fieldname]) || 0), 0);
+  return column.fieldtype === "Percent" && rows.length ? total / rows.length : total;
 }
 
 /** Nhãn hiển thị của 1 nhóm — Link thì đổi sang title đã resolve, Check thì Có/Không, rỗng thì "(trống)". */

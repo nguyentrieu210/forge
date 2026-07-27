@@ -9,7 +9,9 @@ export interface SavedFilterPreset {
   name: string;
   q: string;
   filters: Record<string, string>;
+  routeFilters: ListState["routeFilters"];
   sort: string;
+  dateRange?: ListState["dateRange"];
 }
 
 export function loadSavedFilters(doctype: string): SavedFilterPreset[] {
@@ -21,10 +23,10 @@ export function loadSavedFilters(doctype: string): SavedFilterPreset[] {
   }
 }
 
-export function saveFilterPreset(doctype: string, name: string, state: Pick<ListState, "q" | "filters" | "sort">): void {
+export function saveFilterPreset(doctype: string, name: string, state: Pick<ListState, "q" | "filters" | "routeFilters" | "sort" | "dateRange">): void {
   try {
     const list = loadSavedFilters(doctype).filter((p) => p.name !== name);
-    list.push({ name, q: state.q, filters: state.filters, sort: state.sort });
+    list.push({ name, q: state.q, filters: state.filters, routeFilters: state.routeFilters, sort: state.sort, dateRange: state.dateRange });
     localStorage.setItem(PREFIX + doctype, JSON.stringify(list));
   } catch { /* private mode — bỏ qua, không phá list */ }
 }

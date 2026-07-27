@@ -6,14 +6,14 @@
  * Tôn trọng 6 trạng thái field (hidden/masked/locked/editable). 417 conflict → banner (KHÔNG ghi đè).
  * UI qua @metaforge/ui (header/tabs sticky, card sections). Logic KHÔNG đổi so với bản gốc.
  */
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { useForm, Controller, type FieldValues } from "react-hook-form";
 import { z } from "zod";
 import { AlertTriangle, History, X } from "lucide-react";
 import { resolveMeta, collectFetchFrom, type DocTypeMeta, type Doc, type ResolvedField } from "@metaforge/core";
 import { ControlRegistry, FallbackControl, type FieldServices } from "@metaforge/controls";
 import type { WorkflowTransition } from "@metaforge/adapter-frappe";
-import { Tabs, TabsList, TabsTrigger, Separator, Button, toast, cn, useT } from "@metaforge/ui";
+import { Separator, Button, Badge, toast, cn, useT } from "@metaforge/ui";
 import { FormGuide } from "./FormGuide.js";
 import { useMetaForgeOptional } from "../container/provider.js";
 import { groupLayout, isFullWidthField, type FormTab } from "./layout.js";
@@ -110,6 +110,7 @@ export function FormView(props: FormViewProps) {
   const t = useT();
   const { meta, doc, registry, services, roles, maskedFields, forceReadOnly } = props;
   const form = useForm<FieldValues>({ defaultValues: { ...doc } });
+  const formId = useId().replace(/:/g, "");
   const [activeTab, setActiveTab] = useState(0);
   const fetchRules = useMemo(() => collectFetchFrom(meta), [meta]);
   const prevLinks = useRef<Record<string, unknown>>({}); // giá trị link lần trước → phát hiện user đổi
@@ -235,6 +236,26 @@ export function FormView(props: FormViewProps) {
   const tabs: FormTab[] = useMemo(() => groupLayout(resolved), [resolved]);
   const activeIdx = Math.min(activeTab, tabs.length - 1);
   const tab = tabs[activeIdx] ?? tabs[0];
+  const fieldDomId = (fieldname: string) => `mf-${formId}-${fieldname}`;
+  const tabForField = (fieldname: string) => tabs.findIndex((candidate) => candidate.sections.some((section) => section.columns.some((column) => column.fields.some((item) => item.field.fieldname === fieldname))));
+  const focusField = (fieldname: string) => {
+    const nextTab = tabForField(fieldname);
+    if (nextTab >= 0) setActiveTab(nextTab);
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => document.getElementById(fieldDomId(fieldname))?.focus()));
+  };
+  const errorEntries = Object.entries(form.formState.errors).flatMap(([fieldname, error]) => {
+    const message = typeof error?.message === "string" ? error.message : undefined;
+    if (!message) return [];
+    const field = resolved.find((item) => item.field.fieldname === fieldname)?.field;
+    return [{ fieldname, label: field?.label ?? fieldname, message }];
+  });
+  const tabErrorCount = (candidate: FormTab) => candidate.sections.reduce((count, section) => count + section.columns.reduce((columnCount, column) => columnCount + column.fields.filter((item) => Boolean(form.formState.errors[item.field.fieldname])).length, 0), 0);
+  useEffect(() => {
+    const first = Object.keys(props.fieldErrors ?? {})[0];
+    if (first) focusField(first);
+    // Chỉ phản ứng khi server trả một bộ lỗi mới; focusField phụ thuộc layout hiện tại.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.fieldErrors]);
   // Hướng dẫn nhập do APP cấp qua provider (giống formProfiles) — engine không tự bịa nội dung
   // nghiệp vụ, vì cùng một DocType ở ngành khác lại cần lời dặn khác.
   // Không có provider (test / nhúng lẻ view) ⇒ chỉ là không có hướng dẫn, form vẫn dựng bình thường.
@@ -266,10 +287,15 @@ export function FormView(props: FormViewProps) {
     if (props.conflict) return; // conflict → chặn ghi
     const result = buildSchema(resolved, t).safeParse(vals);
     if (!result.success) {
+      let firstField = "";
       for (const issue of result.error.issues) {
         const key = String(issue.path[0] ?? "");
-        if (key) form.setError(key, { message: issue.message });
+        if (key) {
+          if (!firstField) firstField = key;
+          form.setError(key, { message: issue.message });
+        }
       }
+      if (firstField) focusField(firstField);
       return;
     }
     const dirty = form.formState.dirtyFields;
@@ -284,7 +310,7 @@ export function FormView(props: FormViewProps) {
       {/* HEADER + TABS sticky — bỏ qua khi shell cha (vd modal Create) đã tự hiện tiêu đề riêng. */}
       {!props.hideHeader ? (
         <div className="mf-form-header sticky top-0 z-20 shrink-0 border-b bg-card/95 backdrop-blur">
-          <div className="flex items-center gap-3 px-4 py-2.5">
+          <div className="flex flex-wrap items-center gap-3 px-4 py-2.5">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <span className="truncate text-sm font-semibold">{title}</span>
@@ -296,7 +322,7 @@ export function FormView(props: FormViewProps) {
               </div>
               <div className="truncate text-xs text-muted-foreground">{meta.name}</div>
             </div>
-            <div className="ml-auto flex items-center gap-2">
+            <div className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-2 max-sm:w-full">
               {props.headerActions}
               {!props.hideDefaultActions && props.transitions?.length ? (
                 <WorkflowActionBar transitions={props.transitions} saving={props.saving} dirty={actionCtx.dirty} onAction={guardedWorkflow} />
@@ -318,41 +344,55 @@ export function FormView(props: FormViewProps) {
           </div>
 
           {tabs.length > 1 ? (
-            <Tabs value={String(activeIdx)} onValueChange={(v) => setActiveTab(Number(v))}>
-              <TabsList className="h-8 w-full justify-start rounded-none border-t bg-transparent p-0">
+            <div role="tablist" aria-label={t("form.sections", "Các phần của biểu mẫu")} className="flex h-8 w-full justify-start overflow-x-auto rounded-none border-t bg-transparent p-0">
                 {tabs.map((tb, i) => (
-                  <TabsTrigger
+                  <Button
+                    type="button"
                     key={i}
-                    value={String(i)}
-                    className="h-8 rounded-none border-b-2 border-transparent px-3 text-xs data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                    variant="ghost"
+                    role="tab"
+                    aria-selected={activeIdx === i}
+                    onClick={() => setActiveTab(i)}
+                    className={cn("h-8 shrink-0 rounded-none border-b-2 border-transparent px-3 text-xs", activeIdx === i && "border-primary text-foreground")}
                   >
-                    {tb.label || t("form.tab_general")}
-                  </TabsTrigger>
+                    <span>{tb.label || t("form.tab_general")}</span>
+                    {tabErrorCount(tb) ? <Badge variant="destructive" className="ml-1 h-4 min-w-4 justify-center px-1 text-[10px]">{tabErrorCount(tb)}</Badge> : null}
+                  </Button>
                 ))}
-              </TabsList>
-            </Tabs>
+            </div>
           ) : null}
         </div>
       ) : tabs.length > 1 ? (
         <div className="mf-form-header sticky top-0 z-20 shrink-0 border-b bg-card/95 backdrop-blur">
-          <Tabs value={String(activeIdx)} onValueChange={(v) => setActiveTab(Number(v))}>
-            <TabsList className="h-8 w-full justify-start rounded-none bg-transparent p-0">
+          <div role="tablist" aria-label={t("form.sections", "Các phần của biểu mẫu")} className="flex h-8 w-full justify-start overflow-x-auto rounded-none bg-transparent p-0">
               {tabs.map((tb, i) => (
-                <TabsTrigger
+                <Button
+                  type="button"
                   key={i}
-                  value={String(i)}
-                  className="h-8 rounded-none border-b-2 border-transparent px-3 text-xs data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                  variant="ghost"
+                  role="tab"
+                  aria-selected={activeIdx === i}
+                  onClick={() => setActiveTab(i)}
+                  className={cn("h-8 shrink-0 rounded-none border-b-2 border-transparent px-3 text-xs", activeIdx === i && "border-primary text-foreground")}
                 >
-                  {tb.label || t("form.tab_general")}
-                </TabsTrigger>
+                  <span>{tb.label || t("form.tab_general")}</span>
+                  {tabErrorCount(tb) ? <Badge variant="destructive" className="ml-1 h-4 min-w-4 justify-center px-1 text-[10px]">{tabErrorCount(tb)}</Badge> : null}
+                </Button>
               ))}
-            </TabsList>
-          </Tabs>
+          </div>
         </div>
       ) : null}
 
       {/* BODY scroll */}
       <div className="mf-form-body min-h-0 flex-1 overflow-auto">
+        {errorEntries.length ? (
+          <div className="m-3 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm" role="alert" aria-label={t("form.validation_summary", "Các mục cần kiểm tra")}>
+            <div className="font-semibold text-destructive">{t("form.validation_summary", "Các mục cần kiểm tra")} ({errorEntries.length})</div>
+            <ul className="mt-1 list-disc space-y-0.5 pl-5">
+              {errorEntries.map((entry) => <li key={entry.fieldname}><Button type="button" variant="link" className="h-auto p-0 text-left text-destructive underline" onClick={() => focusField(entry.fieldname)}>{entry.label}: {entry.message}</Button></li>)}
+            </ul>
+          </div>
+        ) : null}
         {draftAvailable ? (
           <div className="mf-draft-banner m-3 flex items-start gap-2 rounded-md border border-amber-400/40 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-400" role="status">
             <History className="mt-0.5 size-4 shrink-0" />
@@ -400,7 +440,7 @@ export function FormView(props: FormViewProps) {
                   return (
                     <div className={cn("grid items-start gap-x-4 gap-y-2", twoCols ? COL_CLASS[2] : COL_CLASS[1])}>
                       {items.map((rf) => (
-                        <Field key={rf.field.fieldname} rf={rf} form={form} registry={registry} services={services} docName={String(doc.name)} parentDoctype={meta.name} roles={roles} values={values} />
+                        <Field key={rf.field.fieldname} id={fieldDomId(rf.field.fieldname)} rf={rf} form={form} registry={registry} services={services} docName={String(doc.name)} parentDoctype={meta.name} roles={roles} values={values} />
                       ))}
                     </div>
                   );
@@ -416,6 +456,7 @@ export function FormView(props: FormViewProps) {
 }
 
 interface FieldProps {
+  id: string;
   rf: ResolvedField;
   form: ReturnType<typeof useForm<FieldValues>>;
   registry: ControlRegistry;
@@ -426,14 +467,13 @@ interface FieldProps {
   values: FieldValues;
 }
 
-function Field({ rf, form, registry, services, docName, parentDoctype, roles, values }: FieldProps) {
+function Field({ id, rf, form, registry, services, docName, parentDoctype, roles, values }: FieldProps) {
   const { field } = rf;
   if (rf.layout) {
     if (field.fieldtype === "Heading") return <h4 className="pt-1 text-sm font-semibold text-foreground">{field.label}</h4>;
     return null;
   }
   const Control = registry.resolve(field.fieldtype) ?? FallbackControl;
-  const id = `mf-${field.fieldname}`;
   const linkTarget = field.fieldtype === "Dynamic Link" ? (values[field.options ?? ""] as string | undefined) : field.options;
 
   return (
@@ -454,6 +494,9 @@ function Field({ rf, form, registry, services, docName, parentDoctype, roles, va
             readOnly={rf.readOnly}
             masked={rf.masked}
             error={fieldState.error?.message}
+            describedBy={[descriptionId(field, id), fieldState.error ? `${id}-error` : undefined].filter(Boolean).join(" ") || undefined}
+            required={rf.required}
+            label={field.label ?? field.fieldname}
             services={services}
             docname={docName}
             linkTarget={linkTarget}
@@ -470,12 +513,13 @@ function Field({ rf, form, registry, services, docName, parentDoctype, roles, va
         );
         {/* field.description (Frappe help text) — ERPNext Desk luôn hiện dòng chú thích này. */}
         const description = typeof field.description === "string" && field.description
-          ? <p id={`${id}-desc`} className="line-clamp-2 text-[11px] leading-tight text-muted-foreground" title={field.description}>{field.description}</p>
+          ? <p id={`${id}-desc`} className="text-[11px] leading-snug text-muted-foreground">{field.description}</p>
           : null;
         const wrapper = cn(
           "mf-field",
           !isCheck && widthClass(field.fieldtype),
           rf.state && `mf-state-${rf.state}`,
+          rf.readOnly && "mf-field-readonly",
           fieldState.error && "mf-field-error",
         );
 
@@ -489,7 +533,7 @@ function Field({ rf, form, registry, services, docName, parentDoctype, roles, va
                   {description}
                 </div>
               </div>
-              {fieldState.error ? <span className="mt-1 block text-xs text-destructive" role="alert">{fieldState.error.message}</span> : null}
+              {fieldState.error ? <span id={`${id}-error`} className="mt-1 block text-xs text-destructive" role="alert">{fieldState.error.message}</span> : null}
             </div>
           );
         }
@@ -499,10 +543,14 @@ function Field({ rf, form, registry, services, docName, parentDoctype, roles, va
             <label htmlFor={id} className="text-[11px] font-medium leading-tight text-muted-foreground">{label}</label>
             {description ? <div className="-mt-0.5">{description}</div> : null}
             {control}
-            {fieldState.error ? <span className="text-xs text-destructive" role="alert">{fieldState.error.message}</span> : null}
+            {fieldState.error ? <span id={`${id}-error`} className="text-xs text-destructive" role="alert">{fieldState.error.message}</span> : null}
           </div>
         );
       }}
     />
   );
+}
+
+function descriptionId(field: ResolvedField["field"], id: string): string | undefined {
+  return typeof field.description === "string" && field.description ? `${id}-desc` : undefined;
 }

@@ -18,7 +18,7 @@ import {
   Command, CommandInput, CommandList, CommandEmpty, CommandItem,
   useT, useI18n,
 } from "@metaforge/ui";
-import { sanitizeHtml } from "@metaforge/core";
+import { sanitizeHtml, linkDisplay } from "@metaforge/core";
 
 export type TimelineKind = "comment" | "edit" | "create" | "workflow" | "comm";
 
@@ -173,7 +173,7 @@ function UserPicker({ searchUsers, onPick, exclude, label }: { searchUsers: NonN
             {opts.map((o) => (
               <CommandItem key={o.value} value={o.value} onSelect={() => { void onPick(o.value); setOpen(false); setTxt(""); }}>
                 <User className="mr-2 size-4 text-muted-foreground" />
-                <span className="truncate">{o.description ?? o.value}</span>
+                <span className="truncate">{linkDisplay(o).primary}</span>
               </CommandItem>
             ))}
           </CommandList>

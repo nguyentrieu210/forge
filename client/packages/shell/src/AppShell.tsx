@@ -40,11 +40,17 @@ export interface AppShellProps {
   userSubtitle?: string;
   theme: ThemeMode;
   onThemeChange: (m: ThemeMode) => void;
+  /** Khóa bảng màu ở cấp app khi thương hiệu do quản trị nền tảng quyết định. */
+  allowBrandChange?: boolean;
   onOpenPalette?: () => void;
   onOpenAI?: () => void;
   aiConfigured?: boolean;
   notificationCount?: number;
   notifications?: NotificationItem[];
+  notificationsLoading?: boolean;
+  notificationsError?: string | null;
+  onRetryNotifications?: () => void;
+  onViewAllNotifications?: () => void;
   onNotificationClick?: (n: NotificationItem) => void;
   onMarkAllRead?: () => void;
   onLogout?: () => void;
@@ -127,6 +133,7 @@ export function AppShell(props: AppShellProps) {
   });
   const groups = useMemo(() => groupNav(props.nav, navQuery), [props.nav, navQuery]);
   const activeRef = useRef<HTMLButtonElement | null>(null);
+  const mainRef = useRef<HTMLElement | null>(null);
 
   // Ghim nav item lên đầu sidebar (client-only) — vẫn giữ nguyên ở nhóm gốc, chỉ thêm 1 nhóm tổng
   // hợp phía trên để truy cập nhanh, giống pattern browser bookmark bar.
@@ -155,6 +162,7 @@ export function AppShell(props: AppShellProps) {
   // Ctrl/Cmd+/ = bảng phím tắt (giống ERPNext Desk) — không bắt khi đang gõ trong input/textarea.
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [confirmLogoutOthers, setConfirmLogoutOthers] = useState(false);
+  const [online, setOnline] = useState(() => typeof navigator === "undefined" ? true : navigator.onLine);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!(e.ctrlKey || e.metaKey) || e.key !== "/") return;
@@ -166,23 +174,52 @@ export function AppShell(props: AppShellProps) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+  useEffect(() => {
+    const sync = () => setOnline(navigator.onLine);
+    window.addEventListener("online", sync);
+    window.addEventListener("offline", sync);
+    return () => { window.removeEventListener("online", sync); window.removeEventListener("offline", sync); };
+  }, []);
 
   const go = (item: NavItem) => {
     if (item.disabledReason) return;
     props.onNavigate(item.key);
     setMobileOpen(false);
+    window.requestAnimationFrame(() => mainRef.current?.focus());
   };
-  const toggleGroup = (name: string) => setOpenGroups((prev) => {
-    const next = new Set(prev); next.has(name) ? next.delete(name) : next.add(name); return next;
+  /**
+   * Nhóm người dùng ĐÓNG TAY, giữ riêng khỏi `openGroups`.
+   *
+   * Trước đây một nhóm được mở khi `containsActive || openGroups.has(name)`. Nhóm chứa
+   * trang đang xem vì thế **luôn** mở và bấm mũi tên không có tác dụng gì — đúng nhóm mà
+   * người dùng hay muốn thu lại nhất, vì nó là nhóm dài nhất đang chiếm chỗ. Không có lỗi
+   * nào hiện ra; cái mũi tên chỉ đơn giản là không làm gì.
+   *
+   * Ghi nhận ý định đóng thành một tập RIÊNG để nó thắng được `containsActive`, thay vì
+   * bỏ `containsActive` đi — mở sẵn nhóm đang hoạt động khi mới vào vẫn là hành vi đúng.
+   */
+  const [closedGroups, setClosedGroups] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem("mf-sidebar-groups-closed") ?? "[]") as string[]); } catch { return new Set(); }
   });
+  useEffect(() => { try { localStorage.setItem("mf-sidebar-groups-closed", JSON.stringify([...closedGroups])); } catch { /* noop */ } }, [closedGroups]);
+
+  const toggleGroup = (name: string) => {
+    const isOpen = openGroups.has(name) || (activeGroup === name && !closedGroups.has(name));
+    setOpenGroups((prev) => { const next = new Set(prev); next.delete(name); if (!isOpen) next.add(name); return next; });
+    setClosedGroups((prev) => { const next = new Set(prev); next.delete(name); if (isOpen) next.add(name); return next; });
+  };
 
   return (
     <TooltipProvider delayDuration={250}>
+      <a className="mf-skip-link" href="#mf-main-content">Bỏ qua menu, tới nội dung chính</a>
       <div className="mf-shell flex h-screen w-full overflow-hidden bg-background text-foreground">
         {mobileOpen ? <div className="fixed inset-0 z-40 bg-black/50 md:hidden" onClick={() => setMobileOpen(false)} aria-hidden="true" /> : null}
         <aside className={cn(
           "mf-shell-sidebar flex shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground transition-[width,transform] duration-200",
-          collapsed ? "w-14" : "w-[15.5rem]",
+          // 17rem, not 15.5. Vietnamese menu labels ("Trung tâm phân quyền", "Danh mục
+          // ứng dụng") plus an icon, a chevron and the pin button's reserved `pr-7` do not
+          // fit in 15.5rem, so they truncated to something the user has to guess at.
+          collapsed ? "w-14" : "w-[17rem]",
           "max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-50 max-md:w-[min(19rem,88vw)] max-md:shadow-xl",
           mobileOpen ? "max-md:translate-x-0" : "max-md:-translate-x-full",
         )} data-collapsed={collapsed ? "true" : "false"}>
@@ -208,10 +245,20 @@ export function AppShell(props: AppShellProps) {
             </div>
           ) : null}
 
-          <ScrollArea className="min-h-0 flex-1 px-2 py-2">
+          {/* `[&_…viewport]>div]:!block` — Radix renders the viewport's child as
+              `display:table`, which sizes to CONTENT rather than to the box. In a nav that
+              produced a 14px horizontal overflow (231 vs 245 measured), so a horizontal
+              scrollbar appeared across the bottom of the menu and ate the last row.
+              Fixed HERE and not in the shared ScrollArea: wide tables and charts genuinely
+              need horizontal scrolling, and taking it away globally to tidy one sidebar
+              would break them. A vertical menu is the case that never wants it. */}
+          <ScrollArea className="min-h-0 flex-1 px-2 py-2 [&_[data-radix-scroll-area-viewport]>div]:!block">
             {displayGroups.map((group) => {
               const containsActive = group.items.some((item) => item.key === props.activeKey);
-              const expanded = collapsed || Boolean(navQuery) || containsActive || openGroups.has(group.name) || !group.name;
+              // Đóng tay thắng `containsActive`; tìm kiếm và sidebar thu gọn vẫn thắng tất cả
+              // vì lúc đó việc của người dùng là NHÌN THẤY mọi mục.
+              const expanded = collapsed || Boolean(navQuery) || !group.name
+                || (!closedGroups.has(group.name) && (containsActive || openGroups.has(group.name)));
               return (
                 <div key={group.name || "__root"} className="mb-2">
                   {!collapsed && group.name ? (
@@ -257,7 +304,8 @@ export function AppShell(props: AppShellProps) {
                           size="icon-sm"
                           className={cn("absolute right-1 top-1/2 size-6 -translate-y-1/2 opacity-0 transition-opacity group-hover/navitem:opacity-100", pinned && "text-primary opacity-100")}
                           onClick={(e) => { e.stopPropagation(); togglePin(item.key); }}
-                          aria-label={pinned ? t("shell.unpin") : t("shell.pin")}
+                          aria-label={`${pinned ? t("shell.unpin") : t("shell.pin")}: ${item.label}`}
+                          title={`${pinned ? t("shell.unpin") : t("shell.pin")}: ${item.label}`}
                         >
                           <Pin className={cn("size-3.5", pinned && "fill-current")} />
                         </Button>
@@ -304,14 +352,28 @@ export function AppShell(props: AppShellProps) {
             ) : null}
             <div className="flex-1" />
             {props.onOpenAI ? (
-              <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" onClick={props.onOpenAI} aria-label="AI"><Sparkles className={cn("size-4", props.aiConfigured ? "text-primary" : "text-muted-foreground")} /></Button></TooltipTrigger><TooltipContent>{props.aiConfigured ? "Trợ lý AI" : "AI (chưa cấu hình)"}</TooltipContent></Tooltip>
+              <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="hidden md:inline-flex" onClick={props.onOpenAI} aria-label="AI"><Sparkles className={cn("size-4", props.aiConfigured ? "text-primary" : "text-muted-foreground")} /></Button></TooltipTrigger><TooltipContent>{props.aiConfigured ? "Trợ lý AI" : "AI (chưa cấu hình)"}</TooltipContent></Tooltip>
             ) : null}
             <NotificationMenu {...props} />
-            <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label="Giao diện">{THEME_ICON[props.theme]}</Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-48"><DropdownMenuLabel className="text-xs font-medium text-muted-foreground">{t("shell.theme_mode")}</DropdownMenuLabel><DropdownMenuItem onClick={() => props.onThemeChange("light")}><Sun className="size-4" /> {t("shell.theme_light")}</DropdownMenuItem><DropdownMenuItem onClick={() => props.onThemeChange("dark")}><Moon className="size-4" /> {t("shell.theme_dark")}</DropdownMenuItem><DropdownMenuItem onClick={() => props.onThemeChange("system")}><Monitor className="size-4" /> {t("shell.theme_system")}</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuLabel className="text-xs font-medium text-muted-foreground">{t("shell.theme_brand")}</DropdownMenuLabel>{BRANDS.map((b) => (<DropdownMenuItem key={b.id} onClick={() => setBrand(b.id)}><span className={cn("size-3.5 shrink-0 rounded-full border", BRAND_SWATCH[b.id])} aria-hidden="true" /><span className="flex-1">{b.label}</span>{brand === b.id ? <Check className="size-3.5 text-primary" /> : null}</DropdownMenuItem>))}</DropdownMenuContent></DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="md:hidden" aria-label="Thêm thao tác"><MoreHorizontal className="size-4" /></Button></DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                {props.onOpenPalette ? <DropdownMenuItem onClick={props.onOpenPalette}><Search className="size-4" /> {t("shell.search", "Tìm nhanh…")}</DropdownMenuItem> : null}
+                {props.onOpenAI ? <DropdownMenuItem onClick={props.onOpenAI}><Sparkles className="size-4" /> {props.aiConfigured ? "Trợ lý AI" : "AI (chưa cấu hình)"}</DropdownMenuItem> : null}
+                {(props.onOpenPalette || props.onOpenAI) ? <DropdownMenuSeparator /> : null}
+                <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">{t("shell.theme_mode")}</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => props.onThemeChange("light")}><Sun className="size-4" /><span className="flex-1">{t("shell.theme_light")}</span>{props.theme === "light" ? <Check className="size-3.5 text-primary" /> : null}</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => props.onThemeChange("dark")}><Moon className="size-4" /><span className="flex-1">{t("shell.theme_dark")}</span>{props.theme === "dark" ? <Check className="size-3.5 text-primary" /> : null}</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => props.onThemeChange("system")}><Monitor className="size-4" /><span className="flex-1">{t("shell.theme_system")}</span>{props.theme === "system" ? <Check className="size-3.5 text-primary" /> : null}</DropdownMenuItem>
+                {props.allowBrandChange !== false ? <><DropdownMenuSeparator /><DropdownMenuLabel className="text-xs font-medium text-muted-foreground">{t("shell.theme_brand")}</DropdownMenuLabel>{BRANDS.map((b) => (<DropdownMenuItem key={b.id} onClick={() => setBrand(b.id)}><span className={cn("size-3.5 shrink-0 rounded-full border", BRAND_SWATCH[b.id])} aria-hidden="true" /><span className="flex-1">{b.label}</span>{brand === b.id ? <Check className="size-3.5 text-primary" /> : null}</DropdownMenuItem>))}</> : null}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="hidden md:inline-flex" aria-label="Giao diện">{THEME_ICON[props.theme]}</Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-48"><DropdownMenuLabel className="text-xs font-medium text-muted-foreground">{t("shell.theme_mode")}</DropdownMenuLabel><DropdownMenuItem onClick={() => props.onThemeChange("light")}><Sun className="size-4" /><span className="flex-1">{t("shell.theme_light")}</span>{props.theme === "light" ? <Check className="size-3.5 text-primary" /> : null}</DropdownMenuItem><DropdownMenuItem onClick={() => props.onThemeChange("dark")}><Moon className="size-4" /><span className="flex-1">{t("shell.theme_dark")}</span>{props.theme === "dark" ? <Check className="size-3.5 text-primary" /> : null}</DropdownMenuItem><DropdownMenuItem onClick={() => props.onThemeChange("system")}><Monitor className="size-4" /><span className="flex-1">{t("shell.theme_system")}</span>{props.theme === "system" ? <Check className="size-3.5 text-primary" /> : null}</DropdownMenuItem>{props.allowBrandChange !== false ? <><DropdownMenuSeparator /><DropdownMenuLabel className="text-xs font-medium text-muted-foreground">{t("shell.theme_brand")}</DropdownMenuLabel>{BRANDS.map((b) => (<DropdownMenuItem key={b.id} onClick={() => setBrand(b.id)}><span className={cn("size-3.5 shrink-0 rounded-full border", BRAND_SWATCH[b.id])} aria-hidden="true" /><span className="flex-1">{b.label}</span>{brand === b.id ? <Check className="size-3.5 text-primary" /> : null}</DropdownMenuItem>))}</> : null}</DropdownMenuContent></DropdownMenu>
             <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="rounded-full" aria-label="Tài khoản"><Avatar className="size-7"><AvatarFallback>{initials(props.fullName)}</AvatarFallback></Avatar></Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-56"><DropdownMenuLabel><div className="truncate">{props.fullName ?? "Khách"}</div>{props.userSubtitle ? <div className="truncate text-xs font-normal text-muted-foreground">{props.userSubtitle}</div> : null}</DropdownMenuLabel><DropdownMenuSeparator />{props.onChangePassword ? <DropdownMenuItem onClick={props.onChangePassword}><KeyRound className="size-4" /> {t("account.change_password")}</DropdownMenuItem> : null}{props.onLogoutOtherSessions ? <DropdownMenuItem onClick={() => setConfirmLogoutOthers(true)}><MonitorSmartphone className="size-4" /> {t("account.logout_other_sessions_menu")}</DropdownMenuItem> : null}{props.onLogout ? <DropdownMenuItem onClick={props.onLogout}><LogOut className="size-4" /> Đăng xuất</DropdownMenuItem> : null}</DropdownMenuContent></DropdownMenu>
           </header>
+          {!online ? <div className="shrink-0 border-b border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-center text-xs text-amber-700 dark:text-amber-400" role="status">Đang ngoại tuyến. Bạn vẫn có thể xem dữ liệu đã tải; các thay đổi sẽ cần gửi lại khi có mạng.</div> : null}
           {props.businessContext ? <div className="shrink-0 overflow-x-auto border-b bg-muted/20 px-3 py-1.5 lg:hidden">{props.businessContext}</div> : null}
-          <main className="mf-shell-content min-h-0 flex-1 overflow-auto">{props.children}</main>
+          <main ref={mainRef} id="mf-main-content" tabIndex={0} className="mf-shell-content min-h-0 flex-1 overflow-auto outline-none">{props.children}</main>
         </div>
       </div>
 
@@ -350,7 +412,24 @@ export function AppShell(props: AppShellProps) {
 }
 
 function NotificationMenu(props: AppShellProps) {
-  return <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="relative" aria-label="Thông báo"><Bell className="size-4" />{props.notificationCount ? <Badge variant="destructive" className="absolute -right-0.5 -top-0.5 h-4 min-w-4 justify-center px-1 text-[10px]">{props.notificationCount > 9 ? "9+" : props.notificationCount}</Badge> : null}</Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-80 p-0"><div className="flex items-center gap-2 border-b px-3 py-2"><span className="text-sm font-medium">Thông báo</span>{props.notificationCount ? <Badge variant="secondary">{props.notificationCount}</Badge> : null}{props.onMarkAllRead && (props.notifications ?? []).some((item) => !item.read) ? <Button variant="link" size="sm" className="ml-auto h-auto p-0 text-xs" onClick={props.onMarkAllRead}>Đánh dấu đã đọc</Button> : null}</div><ScrollArea className="max-h-80">{(props.notifications ?? []).length ? <div className="divide-y">{props.notifications!.map((item) => <Button key={item.name} variant="ghost" onClick={() => props.onNotificationClick?.(item)} className={cn("flex h-auto w-full items-start justify-start gap-2 rounded-none px-3 py-2.5 text-left font-normal hover:bg-accent", !item.read && "bg-primary/[0.04]")}><span className={cn("mt-1.5 size-2 shrink-0 rounded-full", !item.read && "bg-primary")} /><span className="min-w-0 flex-1"><span className="block truncate text-sm">{item.subject || item.type || "Thông báo"}</span><span className="block truncate text-xs text-muted-foreground">{item.document_type ? `${item.document_type} · ` : ""}{item.creation ?? ""}</span></span></Button>)}</div> : <div className="px-3 py-8 text-center text-sm text-muted-foreground">Không có thông báo</div>}</ScrollArea></DropdownMenuContent></DropdownMenu>;
+  const count = props.notificationCount ?? 0;
+  return <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="relative" aria-label={count ? `Thông báo, ${count} chưa đọc` : "Thông báo"}><Bell className="size-4" />{count ? <Badge variant="destructive" className="absolute -right-0.5 -top-0.5 h-4 min-w-4 justify-center px-1 text-[10px]">{count > 9 ? "9+" : count}</Badge> : null}</Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-[min(20rem,calc(100vw-1rem))] p-0"><div className="flex items-center gap-2 border-b px-3 py-2"><span className="text-sm font-medium">Thông báo</span>{count ? <Badge variant="secondary">{count}</Badge> : null}{props.onMarkAllRead && (props.notifications ?? []).some((item) => !item.read) ? <Button variant="link" size="sm" className="ml-auto h-auto p-0 text-xs" onClick={props.onMarkAllRead}>Đánh dấu đã đọc</Button> : null}</div><ScrollArea className="max-h-80">{props.notificationsLoading ? <div className="space-y-2 p-3" aria-busy="true"><div className="h-12 animate-pulse rounded bg-muted" /><div className="h-12 animate-pulse rounded bg-muted" /><span className="sr-only">Đang tải thông báo</span></div> : props.notificationsError ? <div className="px-3 py-6 text-center text-sm"><div className="text-destructive">{props.notificationsError}</div>{props.onRetryNotifications ? <Button size="sm" variant="outline" className="mt-2" onClick={props.onRetryNotifications}>Thử lại</Button> : null}</div> : (props.notifications ?? []).length ? <div className="divide-y">{props.notifications!.map((item) => <Button key={item.name} variant="ghost" onClick={() => props.onNotificationClick?.(item)} className={cn("flex h-auto w-full items-start justify-start gap-2 rounded-none px-3 py-2.5 text-left font-normal hover:bg-accent", !item.read && "bg-primary/[0.04]")}><span className={cn("mt-1.5 size-2 shrink-0 rounded-full", !item.read && "bg-primary")} /><span className="min-w-0 flex-1"><span className="block truncate text-sm">{item.subject || item.type || "Thông báo"}</span><span className="block truncate text-xs text-muted-foreground">{item.document_type ? `${item.document_type} · ` : ""}{relativeTime(item.creation)}</span></span></Button>)}</div> : <div className="px-3 py-8 text-center text-sm text-muted-foreground">Không có thông báo</div>}</ScrollArea>{props.onViewAllNotifications ? <div className="border-t p-1.5"><Button variant="ghost" size="sm" className="w-full" onClick={props.onViewAllNotifications}>Xem tất cả thông báo</Button></div> : null}</DropdownMenuContent></DropdownMenu>;
+}
+
+function relativeTime(value?: string): string {
+  if (!value) return "";
+  const time = new Date(value.includes("T") ? value : value.replace(" ", "T")).getTime();
+  if (!Number.isFinite(time)) return value;
+  const seconds = Math.round((time - Date.now()) / 1000);
+  const formatter = new Intl.RelativeTimeFormat("vi", { numeric: "auto" });
+  if (Math.abs(seconds) < 60) return formatter.format(seconds, "second");
+  const minutes = Math.round(seconds / 60);
+  if (Math.abs(minutes) < 60) return formatter.format(minutes, "minute");
+  const hours = Math.round(minutes / 60);
+  if (Math.abs(hours) < 24) return formatter.format(hours, "hour");
+  const days = Math.round(hours / 24);
+  if (Math.abs(days) < 30) return formatter.format(days, "day");
+  return new Date(time).toLocaleDateString("vi-VN");
 }
 
 function groupNav(nav: NavItem[], query: string): Array<{ name: string; items: NavItem[] }> {

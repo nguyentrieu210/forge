@@ -53,13 +53,24 @@ function TreeNode(props: TreeViewProps & { node: TreeNodeItem; depth: number }) 
   const isGroup = Boolean(node.expandable);
 
   return (
-    <li className="mf-tree-li" role="treeitem" aria-expanded={node.expandable ? isOpen : undefined}>
+    <li className="mf-tree-li" role="none">
       <div
         className={cn(
           "group/node flex items-center gap-1 rounded-md px-1 py-1 hover:bg-accent/60",
           selected === node.value && "bg-accent",
         )}
         style={{ paddingLeft: depth * 16 }}
+        role="treeitem"
+        aria-expanded={node.expandable ? isOpen : undefined}
+        aria-selected={selected === node.value}
+        aria-level={depth + 1}
+        tabIndex={selected === node.value || (!selected && depth === 0) ? 0 : -1}
+        onClick={onSelect ? () => onSelect(node.value) : undefined}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onSelect?.(node.value); }
+          if (event.key === "ArrowRight" && node.expandable && !isOpen) { event.preventDefault(); onToggle(node.value); }
+          if (event.key === "ArrowLeft" && node.expandable && isOpen) { event.preventDefault(); onToggle(node.value); }
+        }}
       >
         {node.expandable ? (
           <Button type="button" variant="ghost" size="icon-sm" className="size-5" onClick={() => onToggle(node.value)} aria-label={isOpen ? t("tree.collapse") : t("tree.expand")}>
@@ -76,7 +87,7 @@ function TreeNode(props: TreeViewProps & { node: TreeNodeItem; depth: number }) 
           : <Package className="size-3.5 shrink-0 text-muted-foreground/70" />}
         <span
           className={cn("truncate text-sm", onSelect && "cursor-pointer hover:text-primary")}
-          onClick={onSelect ? () => onSelect(node.value) : undefined}
+          onClick={onSelect ? (event) => { event.stopPropagation(); onSelect(node.value); } : undefined}
         >
           {node.title ?? node.value}
         </span>

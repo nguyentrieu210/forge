@@ -18,10 +18,14 @@
  * clean cannot be rejected at install for a shape reason. Packing is refused on any
  * error rather than emitting a package that fails later on a customer's tenant.
  */
-import { readdir, readFile, writeFile, stat } from "node:fs/promises";
+import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { parseAppManifest } from "../dist/packages/app-registry/src/index.js";
+// Shared with `forge-app.mjs`, which installs the same package this writes. A second
+// reader would eventually disagree about which files count, and the disagreement would
+// surface as an app that packs one way and installs another.
+import { canonicalize, readAppSource } from "./lib/read-app-source.mjs";
 
 const args = process.argv.slice(2);
 const sourceDir = args.find((value) => !value.startsWith("--"));
@@ -34,64 +38,13 @@ if (!sourceDir) {
   process.exit(2);
 }
 
-/** Reads every .json file in a directory. Missing directory means "none of these". */
-async function readJsonDir(directory) {
-  let entries;
-  try {
-    entries = await readdir(directory);
-  } catch {
-    return [];
-  }
-  const documents = [];
-  // Sorted so the packed output is byte-identical between runs: the installer
-  // treats a changed content hash as a changed package, so a non-deterministic
-  // order would look like an edit on every pack.
-  for (const entry of entries.filter((name) => name.endsWith(".json")).sort()) {
-    const full = path.join(directory, entry);
-    if (!(await stat(full)).isFile()) continue;
-    try {
-      documents.push({ file: full, value: JSON.parse(await readFile(full, "utf8")) });
-    } catch (error) {
-      throw new Error(`${full}: not valid JSON — ${error.message}`);
-    }
-  }
-  return documents;
-}
-
-async function readJsonFile(file, fallback) {
-  try {
-    return JSON.parse(await readFile(file, "utf8"));
-  } catch (error) {
-    if (error.code === "ENOENT") return fallback;
-    throw new Error(`${file}: not valid JSON — ${error.message}`);
-  }
-}
-
-const root = path.resolve(sourceDir);
-const header = await readJsonFile(path.join(root, "app.json"), null);
-if (!header) {
-  console.error(`${root}/app.json is required and must hold the manifest header`);
+let pkg;
+try {
+  pkg = await readAppSource(sourceDir);
+} catch (error) {
+  console.error(error.message);
   process.exit(1);
 }
-
-const doctypes = await readJsonDir(path.join(root, "doctypes"));
-const workflows = await readJsonDir(path.join(root, "workflows"));
-const prints = await readJsonDir(path.join(root, "prints"));
-const fixtureFiles = await readJsonDir(path.join(root, "fixtures"));
-const roles = await readJsonFile(path.join(root, "roles.json"), []);
-
-// A fixture file may hold one record or a list, because a category list wants to be
-// one file while a large seed set wants several.
-const fixtures = fixtureFiles.flatMap(({ value }) => (Array.isArray(value) ? value : [value]));
-
-const pkg = {
-  ...header,
-  roles,
-  doctypes: doctypes.map(({ value }) => value),
-  workflows: workflows.map(({ value }) => value),
-  print_formats: prints.map(({ value }) => value),
-  fixtures,
-};
 
 let manifest;
 try {
@@ -118,31 +71,6 @@ const summary = [
 if (checkOnly) {
   console.log(`PACK_CHECK_PASS ${summary}`);
   process.exit(0);
-}
-
-/**
- * Recursively key-sorted clone, so two packs of the same source emit identical bytes
- * and therefore an identical content hash at install.
- *
- * NOT `JSON.stringify(value, keys.sort(), 2)`. That second argument is a REPLACER,
- * and an array replacer is a property ALLOWLIST applied at every level of the tree —
- * not a key order. It previously silently stripped every nested object down to the
- * handful of names that happened to appear at the top level: DocTypes lost their
- * fields and permissions, print formats lost their html, workflows lost their
- * transitions, and `nav`/`roles` entries became `{}`.
- *
- * Nothing caught it. `--check` exits before serialising and only counts objects; the
- * determinism test compared two packs of the same source, and empty is deterministic
- * too; and the install tests build a manifest in memory rather than reading a packed
- * file. So the only artifact this CLI exists to produce was unusable, and every gate
- * was green.
- */
-function canonicalize(value) {
-  if (Array.isArray(value)) return value.map(canonicalize);
-  if (value && typeof value === "object") {
-    return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonicalize(value[key])]));
-  }
-  return value;
 }
 
 const serialized = `${JSON.stringify(canonicalize(manifest), null, 2)}\n`;

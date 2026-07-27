@@ -11,12 +11,16 @@ export interface PrintViewProps {
   html: string;
   title?: string;
   loading?: boolean;
+  /** Tỷ lệ xem trước; không làm thay đổi kích thước khi in. */
+  zoom?: number;
 }
 
 export const PrintView = forwardRef<HTMLIFrameElement, PrintViewProps>(function PrintView(props, ref) {
   const t = useT();
   if (props.loading) return <div className="mf-print mf-print-loading">{t("print.rendering")}</div>;
+  const zoom = Math.min(1.5, Math.max(0.5, props.zoom ?? 1));
   return (
+    <div className="mf-print-frame-wrap overflow-auto" style={{ minHeight: 600 }}>
     <iframe
       ref={ref}
       className="mf-print-frame"
@@ -25,7 +29,8 @@ export const PrintView = forwardRef<HTMLIFrameElement, PrintViewProps>(function 
       /* P0-07: chặn JS/same-origin/form/popup trong print HTML (chỉ render HTML+CSS tĩnh) */
       sandbox=""
       referrerPolicy="no-referrer"
-      style={{ width: "100%", minHeight: 600, border: "1px solid var(--border)", borderRadius: "var(--mf-panel-radius)", background: "#fff" }}
+      style={{ width: `${100 / zoom}%`, minHeight: 600 / zoom, transform: `scale(${zoom})`, transformOrigin: "top left", border: "1px solid var(--border)", borderRadius: "var(--mf-panel-radius)", background: "#fff" }}
     />
+    </div>
   );
 });

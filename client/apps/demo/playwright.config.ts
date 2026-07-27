@@ -12,7 +12,11 @@ export default defineConfig({
     baseURL: "http://localhost:8099",
     trace: "off",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    { name: "desktop-chromium", use: { ...devices["Desktop Chrome"] } },
+    { name: "mobile-android", use: { ...devices["Pixel 7"] } },
+    { name: "mobile-compact", use: { ...devices["iPhone 13"], browserName: "chromium" } },
+  ],
   webServer: {
     command: "vite --port 8099 --strictPort",
     url: "http://localhost:8099",

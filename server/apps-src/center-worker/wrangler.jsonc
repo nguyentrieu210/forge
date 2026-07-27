@@ -1,0 +1,19 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "cloudforge-app-center",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-23",
+  "compatibility_flags": ["nodejs_compat"],
+  // NO binding that grants access to data. This Worker owns nothing: every read and write
+  // goes back through the gateway as the user who invoked it, so a D1/KV/R2 binding here
+  // would be a way to act without one — exactly what the app-callback design exists to
+  // prevent.
+  //
+  // The one binding below is the OPPOSITE of that: it is how the callback reaches the
+  // gateway at all. A plain `fetch()` to the tenant's own hostname returns 522, because
+  // this Worker runs behind that same zone and the request loops back into it instead of
+  // leaving for the edge. The service binding is a direct invocation of the gateway
+  // script — no DNS, no zone — and the gateway still demands the app credential and the
+  // signed identity before it does anything. Nothing is bypassed but the network hop.
+  "services": [{ "binding": "PLATFORM", "service": "cloudforge-gateway" }]
+}

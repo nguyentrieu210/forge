@@ -36,7 +36,7 @@ import type { D1UserStore } from "../../auth/src/index.js";
 import type { D1ReportService, QueryFilter } from "../../query/src/index.js";
 import { hashPassword, verifyPassword } from "./password.js";
 import {
-  appMethodTarget, combinedNavigation, dispatchAppMethod,
+  appMethodTarget, combinedNavigation, dispatchAppMethod, navItemPath,
   type AppInstaller, type AppMethodEnv,
 } from "../../app-registry/src/index.js";
 import type { D1TranslationStore } from "./translations.js";
@@ -742,6 +742,14 @@ async function dispatchMethod(
     case "metaforge.api.get_application_catalog":
       return methodResponse(await applicationCatalog(context));
 
+    case "metaforge.api.get_overview":
+      return methodResponse(await overviewDashboard(args, context));
+
+    // The generic client's boot: what to render, from what is installed. Without it
+    // every app needs its own compiled bundle.
+    case "metaforge.api.get_app_manifest":
+      return methodResponse(await clientManifest(args, context));
+
     // ---- app registry -------------------------------------------------------
     case "forge.apps.list":
       return methodResponse({ apps: await context.apps.list(context.tenantId) });
@@ -1199,6 +1207,34 @@ async function resolveDisplayValues(args: FrappeArgs, context: FrappeRouterConte
         const document = await loadReadable(doctype, name, context);
         const candidate = document.data[titleField];
         if (typeof candidate === "string" && candidate) label = candidate;
+
+        /**
+         * ONE more hop when the title field is itself a Link.
+         *
+         * A doctype whose most identifying field is a reference — a class session is best
+         * named by its class, an attendance row by its student — otherwise resolves to
+         * another id, so the user reads `LOP-2026-0008` where a name belongs. Following
+         * the reference once turns that into the class's actual name.
+         *
+         * Exactly ONE hop, deliberately: a chain of Link title fields would otherwise
+         * recurse, and two references is already past the point where the label describes
+         * the record the user is looking at. The same permission-aware read is used, so
+         * the second hop cannot leak either.
+         */
+        const titleMeta = meta?.fields?.find((field) => field.fieldname === titleField);
+        if (titleMeta?.fieldtype === "Link" && titleMeta.options && label === candidate) {
+          try {
+            const targetMeta = await context.metadata.getDocType(context.tenantId, titleMeta.options);
+            const targetTitle = targetMeta?.title_field;
+            if (targetTitle) {
+              const referenced = await loadReadable(titleMeta.options, label, context);
+              const deeper = referenced.data[targetTitle];
+              if (typeof deeper === "string" && deeper) label = deeper;
+            }
+          } catch {
+            // Reference unreadable or gone — keep the first-hop value rather than failing.
+          }
+        }
       }
     } catch {
       // An unreadable or missing reference degrades to its id, which is already
@@ -2221,16 +2257,7 @@ async function applicationCatalog(context: FrappeRouterContext): Promise<JsonObj
   const readable: JsonObject[] = [];
   const navigable: typeof apps = [];
   for (const app of apps) {
-    const permitted: typeof app.nav = [];
-    for (const item of app.nav) {
-      if (item.kind !== "doctype") { permitted.push(item); continue; }
-      try {
-        await context.permissions.getReadScope(context.actor, context.tenantId, item.key);
-        permitted.push(item);
-      } catch {
-        // Omitted rather than shown-and-broken.
-      }
-    }
+    const permitted = await permittedNav(app.nav, context);
     readable.push({
       id: app.app_id,
       name: app.app_name,
@@ -2245,6 +2272,270 @@ async function applicationCatalog(context: FrappeRouterContext): Promise<JsonObj
     navigable.push({ ...app, nav: permitted });
   }
   return { apps: readable, nav: combinedNavigation(navigable) };
+}
+
+/**
+ * The overview dashboard, DERIVED from what is installed rather than configured.
+ *
+ * Every other approach here needs a definition per domain — a file someone writes for
+ * "stock", another for "hr", another for "center" — and an app generated from a brief has
+ * nobody to write it. So this reads the same metadata the rest of the platform already
+ * holds: how many documents each doctype has, and for doctypes with a workflow, how many
+ * sit in each state.
+ *
+ * That yields a real dashboard for an app that declared nothing beyond its doctypes, which
+ * is the only version of this feature compatible with apps being data.
+ *
+ * Cost is bounded deliberately. One count per doctype plus one per workflow state is a lot
+ * of round trips on a tenant with many apps, and a dashboard that times out is worse than a
+ * thin one — so doctypes are capped and only the ones with a workflow pay for state counts.
+ */
+const OVERVIEW_MAX_DOCTYPES = 12;
+const OVERVIEW_MAX_STATES = 6;
+
+async function overviewDashboard(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const requested = args.text("domain") ?? args.text("app");
+  const installed = await context.apps.list(context.tenantId);
+  // `domain` names a client-side grouping, not an app id, so it is matched loosely and
+  // never used to exclude everything — an unrecognised domain shows the whole tenant
+  // rather than an empty screen the user cannot explain.
+  const apps = installed.filter((app) => !requested || app.app_id === requested) .length
+    ? installed.filter((app) => !requested || app.app_id === requested)
+    : installed;
+
+  const metrics: JsonObject[] = [];
+  const tasks: JsonObject[] = [];
+  const charts: JsonObject[] = [];
+  const actions: JsonObject[] = [];
+
+  const doctypes: Array<{ key: string; label: string; icon?: string; app: string }> = [];
+  for (const app of apps) {
+    for (const item of await permittedNav(app.nav, context)) {
+      if (item.kind !== "doctype" || doctypes.some((entry) => entry.key === item.key)) continue;
+      doctypes.push({ key: item.key, label: item.label, ...(item.icon ? { icon: item.icon } : {}), app: app.app_id });
+    }
+  }
+
+  /**
+   * Counts through `toKernelFilters`, the SAME translator every other list path uses.
+   *
+   * Handing the kernel a raw Frappe-shaped filter looks like it should work and does not:
+   * field names differ (`modified` vs `modified_at`) and the operator form is not the one
+   * the compiler expects. It fails silently into the catch below, so the dashboard renders
+   * with every state count missing and no error anywhere — which is exactly what happened
+   * on the first run: twelve correct totals and not one task.
+   */
+  const count = async (doctype: string, filters?: JsonValue): Promise<number> => {
+    const result = await context.listService.count(context.actor, context.tenantId, {
+      doctype,
+      ...(filters === undefined ? {} : { filters: toKernelFilters(filters, doctype) as unknown as JsonValue }),
+    });
+    return typeof result === "number" ? result : Number((result as { count?: number }).count ?? 0);
+  };
+
+  for (const entry of doctypes.slice(0, OVERVIEW_MAX_DOCTYPES)) {
+    let total = 0;
+    try {
+      total = await count(entry.key);
+    } catch {
+      // A doctype that cannot be counted is skipped, not reported as zero: "0 học viên"
+      // on a tenant with 120 of them is a lie, while a missing card is visibly missing.
+      continue;
+    }
+    metrics.push({
+      key: `count:${entry.key}`,
+      label: entry.label,
+      value: total,
+      icon: entry.icon ?? "layers",
+      route: `/app/${encodeURIComponent(entry.key)}`,
+      tone: "neutral",
+      description: `Tổng số bản ghi`,
+    });
+    actions.push({ key: `new:${entry.key}`, label: `Thêm ${entry.label.toLowerCase()}`, icon: "plus", route: `/app/${encodeURIComponent(entry.key)}?new=1` });
+
+    const workflow = await context.metadata.getWorkflow(context.tenantId, entry.key);
+    if (!workflow?.is_active) continue;
+
+    // States a transition can LEAVE are the ones with work outstanding — the same
+    // derivation the approval inbox uses, so the number on this card and the number of
+    // cards in that queue cannot disagree.
+    const pending = [...new Set(workflow.transitions.map((transition) => transition.state))];
+    const field = workflow.state_field || "workflow_state";
+    const labels: string[] = [];
+    const values: number[] = [];
+    for (const state of workflow.states.slice(0, OVERVIEW_MAX_STATES)) {
+      // Deliberately NOT wrapped in a catch. A state count that fails and is swallowed
+      // produces a dashboard reporting "0 việc đang chờ" on a tenant with sixty — a
+      // confident lie, and the exact failure this whole screen exists to prevent. If the
+      // count cannot be made, the caller should hear about it.
+      const stateCount = await count(entry.key, [[field, "=", state.state]] as unknown as JsonValue);
+      labels.push(state.state);
+      values.push(stateCount);
+      if (!pending.includes(state.state) || stateCount === 0) continue;
+      tasks.push({
+        key: `pending:${entry.key}:${state.state}`,
+        label: `${entry.label} · ${state.state}`,
+        count: stateCount,
+        tone: state.docstatus === 0 ? "warning" : "info",
+        // Straight to the operational queue when the app declared one, so a number on a
+        // dashboard is one click from the work it describes.
+        route: `/x/${encodeURIComponent(`approval:${entry.key}`)}`,
+        description: "Đang chờ xử lý",
+      });
+    }
+    if (labels.length) {
+      charts.push({
+        key: `states:${entry.key}`,
+        label: `${entry.label} theo trạng thái`,
+        type: "donut",
+        labels,
+        series: [{ name: entry.label, values }],
+        route: `/app/${encodeURIComponent(entry.key)}`,
+      });
+    }
+  }
+
+  // Recent activity, from the doctypes most likely to move. Bounded to two so the
+  // dashboard stays one screen's worth of queries.
+  const activities: JsonObject[] = [];
+  for (const entry of doctypes.filter((candidate) => tasks.some((task) => String(task.key).includes(candidate.key))).slice(0, 2)) {
+    try {
+      const page = await context.listService.list(context.actor, context.tenantId, {
+        doctype: entry.key,
+        limit: 5,
+        sort: [{ field: "modified_at", direction: "desc" }] as unknown as JsonValue,
+      });
+      for (const row of page.rows as JsonObject[]) {
+        activities.push({
+          key: `${entry.key}:${String(row.name)}`,
+          label: `${entry.label} ${String(row.name)}`,
+          ...(row.workflow_state ? { description: String(row.workflow_state) } : {}),
+          ...(row.modified_at ? { timestamp: String(row.modified_at) } : {}),
+          route: `/app/${encodeURIComponent(entry.key)}/${encodeURIComponent(String(row.name))}`,
+        });
+      }
+    } catch { /* a doctype that will not list simply contributes nothing */ }
+  }
+
+  const primary = apps.find((app) => app.client) ?? apps[0];
+  return {
+    key: requested ?? primary?.app_id ?? "forge",
+    label: primary?.app_name ?? "Tổng quan",
+    subtitle: metrics.length ? `${metrics.length} nhóm dữ liệu · ${tasks.reduce((sum, task) => sum + Number(task.count ?? 0), 0)} việc đang chờ` : "Chưa có dữ liệu để tổng hợp",
+    metrics: metrics as unknown as JsonValue,
+    charts: charts as unknown as JsonValue,
+    tasks: tasks as unknown as JsonValue,
+    activities: activities.slice(0, 8) as unknown as JsonValue,
+    actions: actions.slice(0, 6) as unknown as JsonValue,
+  };
+}
+
+/** Nav entries whose target this actor may actually open. */
+async function permittedNav<T extends { key: string; kind?: string; permission_doctype?: string }>(nav: T[], context: FrappeRouterContext): Promise<T[]> {
+  const permitted: T[] = [];
+  for (const item of nav) {
+    // Data-backed experiences (approval inboxes today, richer workspaces later)
+    // must be hidden by the same read gate as their underlying DocType.
+    const permissionDoctype = item.permission_doctype
+      ?? (item.kind === "doctype" ? item.key : undefined)
+      ?? (item.kind === "experience" && item.key.startsWith("approval:")
+        ? item.key.slice("approval:".length)
+        : undefined);
+    if (!permissionDoctype) { permitted.push(item); continue; }
+    try {
+      await context.permissions.getReadScope(context.actor, context.tenantId, permissionDoctype);
+      permitted.push(item);
+    } catch {
+      // Omitted rather than shown-and-broken.
+    }
+  }
+  return permitted;
+}
+
+/**
+ * The whole client manifest for this tenant, assembled from what is installed.
+ *
+ * This is what makes ONE client bundle serve every app. Previously the brand, landing
+ * screen, domain and context dimensions lived in a TypeScript file compiled into a
+ * per-app build, so a new app meant a new build to host somewhere — and "install an
+ * app" only did half the job.
+ *
+ * Nav is the union across apps, and it is filtered by permission BEFORE `home` is
+ * resolved: an actor who cannot read the landing doctype must not be sent there, or
+ * their first screen after login is a permission error.
+ */
+async function clientManifest(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const requested = args.text("app");
+  const installed = await context.apps.list(context.tenantId);
+  const apps = requested ? installed.filter((app) => app.app_id === requested) : installed;
+  if (requested && !apps.length) throw errors.validation(`App ${requested} is not installed on this tenant`);
+
+  // The app that owns presentation: the one asked for, else the first that declares any.
+  // Falling back to the first installed app rather than to nothing means a tenant whose
+  // apps all omit `client` still gets a working Desk instead of a blank screen.
+  const primary = apps.find((app) => app.client) ?? apps[0];
+  const client = primary?.client ?? {};
+
+  const nav: JsonObject[] = [];
+  const seenPaths = new Set<string>();
+  for (const app of apps) {
+    for (const item of await permittedNav(app.nav, context)) {
+      const path = navItemPath(item as Parameters<typeof navItemPath>[0]);
+      // Two entries resolving to one path is not a duplicate menu line — the client
+      // router matches the FIRST only, so the second is permanently unreachable.
+      if (!path || seenPaths.has(path)) continue;
+      seenPaths.add(path);
+      nav.push({
+        key: item.key,
+        label: item.label,
+        kind: item.kind,
+        app: app.app_id,
+        ...(item.icon ? { icon: item.icon } : {}),
+        ...(item.group ? { group: item.group } : {}),
+        ...(item.route ? { route: item.route } : {}),
+      });
+    }
+  }
+
+  // A home the actor cannot reach is worse than no home: the router would bounce off
+  // its catch-all straight back to it. Drop to the first nav entry they DO have.
+  const declaredHome = client.home ?? {};
+  const homeRoute = typeof declaredHome.route === "string" ? declaredHome.route : undefined;
+  const homeDoctype = typeof declaredHome.doctype === "string" ? declaredHome.doctype : undefined;
+  const home = homeRoute && seenPaths.has(homeRoute)
+    ? { route: homeRoute, ...(homeDoctype ? { doctype: homeDoctype } : {}) }
+    : homeDoctype && seenPaths.has(`/app/${encodeURIComponent(homeDoctype)}`)
+      ? { doctype: homeDoctype }
+      : fallbackHome(nav);
+
+  return {
+    id: primary?.app_id ?? "forge",
+    name: primary?.app_name ?? "Forge",
+    ...(primary?.version ? { version: primary.version } : {}),
+    ...(client.brand ? { brand: client.brand } : {}),
+    ...(client.domain ? { domain: client.domain } : {}),
+    ...(client.locale ? { locale: client.locale as unknown as JsonValue } : {}),
+    catalogMode: client.catalog_mode ?? "hybrid",
+    businessContext: {
+      mode: "server-resolved",
+      // Absent means "no global scope selector". An app that does not need one must not
+      // be given the default set, or the shell blocks on a scope it never uses.
+      dimensions: (client.dimensions ?? []) as unknown as JsonValue,
+    },
+    home: home as unknown as JsonValue,
+    nav: nav as unknown as JsonValue,
+    apps: apps.map((app) => ({ id: app.app_id, name: app.app_name, version: app.version })) as unknown as JsonValue,
+  };
+}
+
+/** First reachable nav target, or the catalog — never nothing. */
+function fallbackHome(nav: JsonObject[]): JsonObject {
+  for (const item of nav) {
+    if (item.kind === "doctype") return { doctype: String(item.key) };
+    const path = navItemPath(item as unknown as Parameters<typeof navItemPath>[0]);
+    if (path) return { route: path };
+  }
+  return { route: "/catalog" };
 }
 
 /**

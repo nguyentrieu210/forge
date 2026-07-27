@@ -3,28 +3,122 @@
   "module": "HR",
   "autoname": "NV-.YYYY.-####",
   "title_field": "employee_name",
-  "search_fields": ["employee_name", "personal_email"],
+  "search_fields": [
+    "employee_name",
+    "personal_email"
+  ],
   "sort_field": "employee_name",
   "sort_order": "ASC",
   "track_seen": true,
   "fields": [
-    { "fieldname": "employee_name", "label": "Họ và tên", "fieldtype": "Data", "required": true, "in_list_view": true, "search_index": true },
-    { "fieldname": "department", "label": "Phòng ban", "fieldtype": "Link", "options": "Department", "required": true, "in_list_view": true, "in_standard_filter": true },
-    { "fieldname": "designation", "label": "Chức danh", "fieldtype": "Link", "options": "Designation", "in_list_view": true, "in_standard_filter": true },
-    { "fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Đang làm việc\nNghỉ việc\nTạm hoãn", "default": "Đang làm việc", "in_list_view": true, "in_standard_filter": true },
-    { "fieldname": "date_of_joining", "label": "Ngày vào làm", "fieldtype": "Date", "required": true, "in_list_view": true },
-    { "fieldname": "personal_email", "label": "Email cá nhân", "fieldtype": "Data" },
-    { "fieldname": "mobile", "label": "Điện thoại", "fieldtype": "Data" },
-    { "fieldname": "reports_to", "label": "Quản lý trực tiếp", "fieldtype": "Link", "options": "Employee" },
-    { "fieldname": "has_left", "label": "Đã nghỉ việc", "fieldtype": "Check" },
-    { "fieldname": "relieving_date", "label": "Ngày nghỉ việc", "fieldtype": "Date", "mandatory_depends_on": "eval:doc.has_left == 1" },
-    { "fieldname": "salary_note", "label": "Ghi chú lương", "fieldtype": "Data", "permlevel": 1 }
+    {
+      "fieldname": "employee_name",
+      "label": "Họ và tên",
+      "fieldtype": "Data",
+      "required": true,
+      "in_list_view": true,
+      "search_index": true
+    },
+    {
+      "fieldname": "department",
+      "label": "Phòng ban",
+      "fieldtype": "Link",
+      "options": "Department",
+      "required": true,
+      "in_list_view": true,
+      "in_standard_filter": true
+    },
+    {
+      "fieldname": "designation",
+      "label": "Chức danh",
+      "fieldtype": "Link",
+      "options": "Designation",
+      "in_list_view": true,
+      "in_standard_filter": true
+    },
+    {
+      "fieldname": "employee_status",
+      "label": "Trạng thái",
+      "fieldtype": "Select",
+      "options": "Đang làm việc\nNghỉ việc\nTạm hoãn",
+      "default": "Đang làm việc",
+      "in_list_view": true,
+      "in_standard_filter": true
+    },
+    {
+      "fieldname": "date_of_joining",
+      "label": "Ngày vào làm",
+      "fieldtype": "Date",
+      "required": true,
+      "in_list_view": true
+    },
+    {
+      "fieldname": "personal_email",
+      "label": "Email cá nhân",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "mobile",
+      "label": "Điện thoại",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "reports_to",
+      "label": "Quản lý trực tiếp",
+      "fieldtype": "Link",
+      "options": "Employee"
+    },
+    {
+      "fieldname": "has_left",
+      "label": "Đã nghỉ việc",
+      "fieldtype": "Check"
+    },
+    {
+      "fieldname": "relieving_date",
+      "label": "Ngày nghỉ việc",
+      "fieldtype": "Date",
+      "mandatory_depends_on": "eval:doc.has_left == 1"
+    },
+    {
+      "fieldname": "salary_note",
+      "label": "Ghi chú lương",
+      "fieldtype": "Data",
+      "permlevel": 1
+    }
   ],
   "permissions": [
-    { "role": "Employee", "read": true },
-    { "role": "HR User", "read": true, "write": true, "create": true, "print": true, "report": true },
-    { "role": "HR Manager", "read": true, "write": true, "create": true, "print": true, "report": true, "export": true, "share": true },
-    { "role": "System Manager", "read": true, "write": true, "create": true, "print": true, "report": true, "export": true, "share": true }
+    {
+      "role": "Employee",
+      "read": true
+    },
+    {
+      "role": "HR User",
+      "read": true,
+      "write": true,
+      "create": true,
+      "print": true,
+      "report": true
+    },
+    {
+      "role": "HR Manager",
+      "read": true,
+      "write": true,
+      "create": true,
+      "print": true,
+      "report": true,
+      "export": true,
+      "share": true
+    },
+    {
+      "role": "System Manager",
+      "read": true,
+      "write": true,
+      "create": true,
+      "print": true,
+      "report": true,
+      "export": true,
+      "share": true
+    }
   ],
   "revision": 1
 }

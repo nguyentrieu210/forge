@@ -32,7 +32,25 @@ const LAYOUT_FIELDS = new Set<MetaFieldType>([
   // purely visual grouping.
   "Tab Break", "Fold", "Button",
 ]);
-const SYSTEM_FIELDS = new Set(["name", "owner", "creation", "modified", "modified_by", "docstatus", "idx", "doctype", "version"]);
+/**
+ * Names the kernel owns. A DocType that declares one of these loses it silently.
+ *
+ * `status` is here after it cost a live tenant its data. The kernel derives a `status`
+ * column from docstatus and workflow state, and that name collides in THREE places at
+ * once: the write path replaces a submitted value with the field default, the document
+ * serialiser used to overwrite it with "Draft", and the list projection omits it. So an
+ * app declaring `status:Select(Đang học,Tạm nghỉ,…)` got a column that could not be
+ * written, read back differently on two endpoints, and displayed a value its own options
+ * did not contain — with no error anywhere.
+ *
+ * Refusing the NAME is the smallest fix that cannot be wrong. Making `status` a usable
+ * business field means changing all three paths in a shared kernel, and Frappe/ERPNext
+ * do use one (Sales Order, Task, Issue), so that remains worth doing — but it is a
+ * change to the document engine, not a patch, and it needs its own reproduction and
+ * regression suite. Until then an app names the field `<thing>_status`, which works
+ * today and reads no worse.
+ */
+const SYSTEM_FIELDS = new Set(["name", "owner", "creation", "modified", "modified_by", "docstatus", "idx", "doctype", "version", "status"]);
 
 export function parseDocTypeMeta(value: unknown, expectedName?: string): DocTypeMeta {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw errors.validation("DocType metadata must be an object");

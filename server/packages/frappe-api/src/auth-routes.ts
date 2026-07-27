@@ -17,6 +17,7 @@
 import type { Actor } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
 import type { AuthenticatedUser, D1UserStore } from "../../auth/src/index.js";
+import { visitorKey } from "../../frappe-model/src/index.js";
 import { readFrappeArgs } from "./args.js";
 import { faultResponse, methodResponse } from "./envelope.js";
 import { verifyPassword } from "./password.js";
@@ -38,6 +39,7 @@ export interface AuthRouteContext {
   sessionSecret: string;
   traceId: string;
   now(): string;
+  rateLimit?: { db: D1Database; salt: string; clientAddress: string };
 }
 
 export interface EstablishedSession {
@@ -99,6 +101,7 @@ async function handleLogin(request: Request, url: URL, context: AuthRouteContext
   // Absent credentials are refused with the same message as wrong ones, so the
   // shape of the request cannot be used to probe.
   if (!login || !password) throw invalidCredentials();
+  if (context.rateLimit) await consumeLoginAllowance(context, login);
 
   const found = await context.users.findByLogin(context.tenantId, login);
   if (!found) {
@@ -113,6 +116,7 @@ async function handleLogin(request: Request, url: URL, context: AuthRouteContext
   // Checked after the password so a disabled account is not distinguishable from
   // a wrong password by an unauthenticated caller.
   if (!found.user.enabled) throw invalidCredentials();
+  if (context.rateLimit) await clearSuccessfulLoginLimit(context, login);
 
   const roles = await context.users.listRoles(context.tenantId, found.user.user_id);
   const now = context.now();
@@ -133,6 +137,53 @@ async function handleLogin(request: Request, url: URL, context: AuthRouteContext
     // response too lets a client make its first write without a boot round-trip.
     "x-frappe-csrf-token": minted.csrfToken,
   });
+}
+
+const LOGIN_WINDOW_MINUTES = 15;
+const LOGIN_ACCOUNT_ATTEMPTS = 8;
+const LOGIN_IP_ATTEMPTS = 30;
+
+/** Fixed UTC bucket keeps all isolates and retries on the same persistent counter. */
+function loginWindow(now: string): string {
+  const date = new Date(now);
+  if (Number.isNaN(date.getTime())) throw new Error("Auth clock did not return an ISO timestamp");
+  date.setUTCMinutes(Math.floor(date.getUTCMinutes() / LOGIN_WINDOW_MINUTES) * LOGIN_WINDOW_MINUTES, 0, 0);
+  return date.toISOString();
+}
+
+async function consumeLoginAllowance(context: AuthRouteContext, login: string): Promise<void> {
+  const limit = context.rateLimit!;
+  const now = context.now();
+  const window = loginWindow(now);
+  // Separate counters stop both strategies: one IP spraying many accounts, and one
+  // account attacked from many addresses. Neither key stores the original value.
+  const subjects = [
+    { dimension: "ip", hash: await visitorKey(limit.clientAddress || "unknown", "login-ip", limit.salt), max: LOGIN_IP_ATTEMPTS },
+    { dimension: "account", hash: await visitorKey(login.trim().toLowerCase(), "login-account", limit.salt), max: LOGIN_ACCOUNT_ATTEMPTS },
+  ] as const;
+  for (const subject of subjects) {
+    const row = await limit.db.prepare(
+      `INSERT INTO login_rate_limits(tenant_id,dimension,subject_hash,window_start,attempt_count,modified_at)
+       VALUES(?1,?2,?3,?4,1,?5)
+       ON CONFLICT(tenant_id,dimension,subject_hash,window_start)
+       DO UPDATE SET attempt_count=attempt_count+1,modified_at=excluded.modified_at
+       RETURNING attempt_count`,
+    ).bind(context.tenantId, subject.dimension, subject.hash, window, now).first<{ attempt_count: number }>();
+    if ((row?.attempt_count ?? 0) > subject.max) throw errors.rateLimited();
+  }
+  // Opportunistic retention: no unbounded table growth and no scheduler dependency.
+  const cutoff = new Date(new Date(now).getTime() - 2 * 24 * 60 * 60 * 1000).toISOString();
+  await limit.db.prepare(
+    `DELETE FROM login_rate_limits WHERE tenant_id=?1 AND window_start<?2`,
+  ).bind(context.tenantId, cutoff).run();
+}
+
+async function clearSuccessfulLoginLimit(context: AuthRouteContext, login: string): Promise<void> {
+  const limit = context.rateLimit!;
+  const hash = await visitorKey(login.trim().toLowerCase(), "login-account", limit.salt);
+  await limit.db.prepare(
+    `DELETE FROM login_rate_limits WHERE tenant_id=?1 AND dimension='account' AND subject_hash=?2`,
+  ).bind(context.tenantId, hash).run();
 }
 
 async function handleLogout(request: Request, context: AuthRouteContext): Promise<Response> {

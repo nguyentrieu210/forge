@@ -47,7 +47,7 @@ const PKG = `{
     "lucide-react": "^0.460.0",
     "react": "18.3.1",
     "react-dom": "18.3.1",
-    "react-router-dom": "^6.28.0"
+    "react-router-dom": "7.18.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",
@@ -56,12 +56,7 @@ const PKG = `{
     "@vitejs/plugin-react": "4.3.4",
     "tailwindcss": "^4.0.0",
     "typescript": "5.6.3",
-    "vite": "5.4.11"
-  },
-  "pnpm": {
-    "overrides": {
-{{MFDEPS}}
-    }
+    "vite": "6.4.3"
   }
 }
 `;

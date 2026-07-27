@@ -5,3 +5,16 @@
   For more details, see [4mhttps://developers.cloudflare.com/workers/configuration/cron-triggers/#test-cron-triggers-locally[0m
 
 
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDuplicate key "status" in object literal[0m [duplicate-object-key]
+
+    ../../packages/frappe-api/src/doc-shape.ts:59:4:
+[37m      59 │     [32mstatus[37m: document.status,
+         ╵     [32m~~~~~~[0m
+
+  The original key "status" is here:
+
+    ../../packages/frappe-api/src/doc-shape.ts:46:4:
+[37m      46 │     [32mstatus[37m: document.status,
+         ╵     [32m~~~~~~[0m
+
+

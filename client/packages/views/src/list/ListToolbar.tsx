@@ -53,7 +53,7 @@ export function ListToolbar(props: ListToolbarProps) {
 
   return (
     <div className="mf-list-toolbar flex flex-col gap-2 border-b bg-card px-3 py-2">
-      <div className="flex min-w-0 items-center gap-1.5">
+      <div className="flex min-w-0 flex-wrap items-center gap-1.5">
         <SearchBox doctype={props.doctype} value={state.q} onCommit={(q) => onChange({ q })} />
 
         <DateRangeFilter
@@ -72,8 +72,17 @@ export function ListToolbar(props: ListToolbarProps) {
           />
         ))}
 
-        <div className="ml-auto flex shrink-0 items-center gap-1">
-          <SavedFiltersMenu doctype={props.doctype} state={state} onApply={(preset) => onChange({ q: preset.q, filters: preset.filters, sort: preset.sort, page: 1 })} />
+        {standardFilters.length > 2 ? (
+          <MoreFiltersMenu
+            filters={standardFilters.slice(2)}
+            values={state.filters}
+            onChange={(fieldname, value) => onChange({ filters: { ...state.filters, [fieldname]: value }, page: 1 })}
+            searchLink={props.searchLink}
+          />
+        ) : null}
+
+        <div className="ml-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-1 max-sm:w-full">
+          <SavedFiltersMenu doctype={props.doctype} state={state} onApply={(preset) => onChange({ q: preset.q, filters: preset.filters, routeFilters: preset.routeFilters ?? [], sort: preset.sort, dateRange: preset.dateRange, page: 1 })} />
           {props.onRefresh ? (
             <Button variant="ghost" size="icon" className="size-8" onClick={props.onRefresh} title={t("common.refresh")} aria-label={t("common.refresh")}>
               <RefreshCw />
@@ -123,12 +132,41 @@ export function ListToolbar(props: ListToolbarProps) {
               />
             );
           })}
-          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground" onClick={() => onChange({ q: "", filters: {}, routeFilters: [] })}>
+          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground" onClick={() => onChange({ q: "", filters: {}, routeFilters: [], dateRange: undefined, page: 1 })}>
             {t("list.clear_filters")}
           </Button>
         </div>
       ) : null}
     </div>
+  );
+}
+
+function MoreFiltersMenu({ filters, values, onChange, searchLink }: {
+  filters: StandardFilter[];
+  values: Record<string, string>;
+  onChange: (fieldname: string, value: string) => void;
+  searchLink?: ListToolbarProps["searchLink"];
+}) {
+  const t = useT();
+  const active = filters.filter((f) => Boolean(values[f.fieldname])).length;
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant={active ? "secondary" : "outline"} className="h-8 gap-1.5">
+          <SlidersHorizontal className="size-3.5" /> {t("list.more_filters", "Thêm bộ lọc")}
+          {active ? <Badge variant="secondary" className="h-5 min-w-5 justify-center px-1">{active}</Badge> : null}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-[min(22rem,calc(100vw-1rem))] space-y-3 p-3">
+        <div className="text-sm font-medium">{t("list.more_filters", "Thêm bộ lọc")}</div>
+        {filters.map((filter) => (
+          <div key={filter.fieldname} className="grid gap-1.5">
+            <label className="text-xs font-medium text-muted-foreground">{filter.label}</label>
+            <FilterControl filter={filter} value={values[filter.fieldname] ?? ""} onChange={(value) => onChange(filter.fieldname, value)} searchLink={searchLink} />
+          </div>
+        ))}
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -221,7 +259,7 @@ function FilterControl({ filter, value, onChange, searchLink }: { filter: Standa
   if (filter.fieldtype === "Select" && filter.options?.length) {
     return (
       <Select value={value === "" ? ALL : value} onValueChange={(v) => onChange(v === ALL ? "" : v)}>
-        <SelectTrigger className="w-auto min-w-[8rem] max-w-[12rem] gap-2">
+        <SelectTrigger className="w-auto min-w-[8rem] max-w-[12rem] gap-2" aria-label={filter.label}>
           <SlidersHorizontal className="size-3.5 text-muted-foreground" />
           <SelectValue placeholder={filter.label} />
         </SelectTrigger>
@@ -245,7 +283,7 @@ function LinkFilter({ label, doctype, value, onChange, search }: { label: string
   const t = useT();
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
-  const [items, setItems] = useState<Array<{ value: string; description?: string }>>([]);
+  const [items, setItems] = useState<Array<{ value: string; label?: string; description?: string }>>([]);
   const [loading, setLoading] = useState(false);
   const [selectedLabel, setSelectedLabel] = useState(value);
   const seq = useRef(0);
@@ -267,7 +305,9 @@ function LinkFilter({ label, doctype, value, onChange, search }: { label: string
       {loading ? <div className="flex items-center gap-2 px-3 py-3 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" />{t("common.loading")}</div> : <>
         <CommandItem value="__all__" onSelect={() => { onChange(""); setSelectedLabel(""); setOpen(false); }}><Check className={`mr-2 size-4 ${value ? "opacity-0" : "opacity-100"}`} />{t("list.all")}</CommandItem>
         <CommandEmpty>{t("list.no_results")}</CommandEmpty>
-        {items.map((item) => <CommandItem key={item.value} value={item.value} onSelect={() => { onChange(item.value); setSelectedLabel(item.description || item.value); setOpen(false); }}><Check className={`mr-2 size-4 ${item.value === value ? "opacity-100" : "opacity-0"}`} /><span className="min-w-0"><span className="block truncate">{item.description || item.value}</span>{item.description && item.description !== item.value ? <span className="block truncate text-xs text-muted-foreground">{item.value}</span> : null}</span></CommandItem>)}
+        {items.map((item) => <CommandItem key={item.value} value={item.value} onSelect={() => { onChange(item.value); setSelectedLabel(item.label || item.value); setOpen(false); }}><Check className={`mr-2 size-4 ${item.value === value ? "opacity-100" : "opacity-0"}`} />{/* `label` là TÊN, `description` là MÃ. Trước đây dòng chính đọc `description`,
+            nên bộ lọc hiện "CT-0001" thay vì "IELTS Foundation". */}
+          <span className="min-w-0"><span className="block truncate">{item.label || item.value}</span>{item.label && item.label !== item.value ? <span className="block truncate text-xs text-muted-foreground">{item.value}</span> : null}</span></CommandItem>)}
       </>}
     </CommandList></Command></PopoverContent>
   </Popover>;
@@ -299,7 +339,7 @@ function SavedFiltersMenu({ doctype, state, onApply }: { doctype: string; state:
   const t = useT();
   const [presets, setPresets] = useState<SavedFilterPreset[]>(() => loadSavedFilters(doctype));
   const [promptOpen, setPromptOpen] = useState(false);
-  const hasCurrentFilter = state.q.trim() !== "" || Object.values(state.filters).some(Boolean) || state.sort !== "";
+  const hasCurrentFilter = state.q.trim() !== "" || Object.values(state.filters).some(Boolean) || state.routeFilters.length > 0 || Boolean(state.dateRange) || state.sort !== "";
 
   const refresh = () => setPresets(loadSavedFilters(doctype));
   const save = (name: string) => { saveFilterPreset(doctype, name, state); refresh(); };

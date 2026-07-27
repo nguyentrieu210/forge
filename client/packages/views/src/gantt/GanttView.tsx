@@ -29,21 +29,30 @@ export function GanttView(props: GanttViewProps) {
   const min = Math.min(...starts);
   const max = Math.max(...ends);
   const span = Math.max(DAY, max - min);
+  const mid = min + span / 2;
+  const dateLabel = (value: number) => new Date(value).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
 
   return (
     <div className="mf-gantt">
+      <div className="mf-gantt-axis" aria-hidden="true">
+        <span>{dateLabel(min)}</span><span>{dateLabel(mid)}</span><span>{dateLabel(max)}</span>
+      </div>
       {tasks.map((task) => {
         const s = new Date(task.start).getTime();
         const e = new Date(task.end).getTime();
         const left = ((s - min) / span) * 100;
         const width = Math.max(1, ((e - s) / span) * 100);
         return (
-          <div key={task.name} className="mf-gantt-row" style={{ display: "grid", gridTemplateColumns: "160px 1fr", gap: 8, alignItems: "center", marginBottom: 4 }}>
+          <div key={task.name} className="mf-gantt-row">
             <div className="mf-gantt-label" title={task.label}>{task.label}</div>
             <div className="mf-gantt-track" style={{ position: "relative", height: 20, background: "var(--secondary)", borderRadius: 4 }}>
               <div
                 className={`mf-gantt-bar${props.onTaskClick ? " mf-clickable" : ""}`}
                 onClick={props.onTaskClick ? () => props.onTaskClick!(task) : undefined}
+                onKeyDown={props.onTaskClick ? (event) => { if (event.key === "Enter") { event.preventDefault(); props.onTaskClick!(task); } } : undefined}
+                tabIndex={props.onTaskClick ? 0 : undefined}
+                role={props.onTaskClick ? "button" : undefined}
+                aria-label={`${task.label}, ${task.start} đến ${task.end}${typeof task.progress === "number" ? `, hoàn thành ${task.progress}%` : ""}`}
                 title={`${task.start} → ${task.end}`}
                 style={{ position: "absolute", left: `${left}%`, width: `${width}%`, top: 2, height: 16, background: "var(--primary)", opacity: 0.82, borderRadius: 4 }}
               >

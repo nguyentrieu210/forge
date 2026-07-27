@@ -15,6 +15,27 @@
     "JWT_ISSUER": "cloudforge-platform",
     "JWT_AUDIENCE": "cloudforge-api"
   },
+  // The generic client bundle, served from the SAME origin as the API.
+  //
+  // `not_found_handling: "none"` on purpose. "single-page-application" would answer every
+  // unmatched path with index.html — including `/api/method/login`, so the whole API would
+  // start returning HTML. With "none" an unmatched path reaches the Worker, which decides:
+  // a client route gets the shell, anything else gets routed to the tenant.
+  //
+  // Staged by `scripts/stage-client-bundle.mjs`; `public/` is generated, not checked in.
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "not_found_handling": "none"
+  },
+  // Custom domains, so each tenant is reached at its OWN hostname and the gateway
+  // resolves the tenant from it. Previously each tenant needed a gateway Worker of its
+  // own because the credential could not create DNS records; one gateway serving many
+  // hostnames is the design this was always meant to have.
+  "routes": [
+    { "pattern": "edu.kairo.vn", "custom_domain": true },
+    { "pattern": "hrm.kairo.vn", "custom_domain": true }
+  ],
   "kv_namespaces": [
     { "binding": "ROUTES", "id": "b4607d01c54042dcbc3d6cb3e1ad2da4" }
   ],

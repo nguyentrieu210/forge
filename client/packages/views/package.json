@@ -9,6 +9,50 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./provider": {
+      "types": "./dist/container/provider.d.ts",
+      "import": "./dist/container/provider.js"
+    },
+    "./registry": {
+      "types": "./dist/registry.d.ts",
+      "import": "./dist/registry.js"
+    },
+    "./url-state": {
+      "types": "./dist/list/useListState.d.ts",
+      "import": "./dist/list/useListState.js"
+    },
+    "./doctype-workspace": {
+      "types": "./dist/app/DoctypeWorkspace.d.ts",
+      "import": "./dist/app/DoctypeWorkspace.js"
+    },
+    "./overview": {
+      "types": "./dist/overview/OverviewContainer.d.ts",
+      "import": "./dist/overview/OverviewContainer.js"
+    },
+    "./process": {
+      "types": "./dist/process/ProcessContainer.d.ts",
+      "import": "./dist/process/ProcessContainer.js"
+    },
+    "./calendar": {
+      "types": "./dist/calendar/CalendarContainer.d.ts",
+      "import": "./dist/calendar/CalendarContainer.js"
+    },
+    "./catalog": {
+      "types": "./dist/catalog/ApplicationCatalogContainer.d.ts",
+      "import": "./dist/catalog/ApplicationCatalogContainer.js"
+    },
+    "./permissions": {
+      "types": "./dist/access/PermissionCenter.d.ts",
+      "import": "./dist/access/PermissionCenter.js"
+    },
+    "./workspace": {
+      "types": "./dist/container/WorkspaceContainer.d.ts",
+      "import": "./dist/container/WorkspaceContainer.js"
+    },
+    "./report": {
+      "types": "./dist/report/ReportContainer.d.ts",
+      "import": "./dist/report/ReportContainer.js"
     }
   },
   "scripts": {
@@ -27,7 +71,7 @@
     "lucide-react": "^0.460.0",
     "react-hook-form": "^7.82.0",
     "recharts": "^3.10.0",
-    "xlsx": "0.18.5",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "zod": "^4.4.3"
   },
   "peerDependencies": {

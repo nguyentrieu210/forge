@@ -21,6 +21,7 @@ import {
   type BusinessContextSelection,
   type BusinessContextKey,
   type ApplicationCatalog,
+  type AppManifest,
   type OverviewDashboard,
   type ProcessCatalog,
   type AccessProfileSummary,
@@ -160,6 +161,10 @@ export class FrappeAdapterImpl implements FrappeAdapter {
   }
   async getApplicationCatalog(appId?: string): Promise<ApplicationCatalog> {
     const r = await this.app.call().get<Envelope<ApplicationCatalog>>("metaforge.api.get_application_catalog", { app_id: appId });
+    return this.unwrap(r);
+  }
+  async getAppManifest(appId?: string): Promise<AppManifest> {
+    const r = await this.app.call().get<Envelope<AppManifest>>("metaforge.api.get_app_manifest", { app: appId });
     return this.unwrap(r);
   }
   async getOverview(domain: string, selection?: BusinessContextSelection): Promise<OverviewDashboard> {

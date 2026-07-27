@@ -71,8 +71,8 @@ export function LeaveApprovalExperience({ onExit }: { onExit?: () => void }) {
       const list = await adapter.getList(DOCTYPE, {
         fields: ["name", "employee", "leave_type", "from_date", "to_date", "total_days", "reason", "workflow_state", "modified"],
         filters: [["workflow_state", "=", "Chờ duyệt"]],
-        order_by: "from_date asc",
-        limit_page_length: 50,
+        orderBy: "from_date asc",
+        pageLength: 50,
       });
       setRows(list);
     } catch (caught) {

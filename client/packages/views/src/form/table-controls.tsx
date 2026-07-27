@@ -1,3 +1,4 @@
+import { linkDisplay } from "@metaforge/core";
 /** @jsxImportSource react */
 /**
  * Table / Table MultiSelect controls — sống ở @metaforge/views (tránh cycle controls→views).
@@ -131,7 +132,7 @@ function TableMultiSelectField(p: FieldControlProps) {
             <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-md border bg-popover shadow-md">
               {opts.slice(0, 8).map((o) => (
                 <Button key={o.value} type="button" variant="ghost" className="w-full justify-start rounded-none font-normal" onClick={() => add(o.value)}>
-                  <span className="min-w-0"><span className="block truncate">{o.description ?? o.value}</span>{o.description && o.description !== o.value ? <span className="block truncate text-xs text-muted-foreground">{o.value}</span> : null}</span>
+                  <span className="min-w-0"><span className="block truncate">{linkDisplay(o).primary}</span>{linkDisplay(o).secondary ? <span className="block truncate text-xs text-muted-foreground">{linkDisplay(o).secondary}</span> : null}</span>
                 </Button>
               ))}
             </div>

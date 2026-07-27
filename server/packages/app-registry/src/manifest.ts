@@ -36,6 +36,8 @@ export interface AppNavItem {
   key: string;
   label: string;
   kind: "doctype" | "route" | "workspace" | "system" | "experience";
+  /** DocType whose read permission gates this navigation entry. */
+  permission_doctype?: string;
   icon?: string;
   group?: string;
   route?: string;
@@ -69,10 +71,58 @@ export interface AppValidator {
   actions?: string[];
 }
 
+/**
+ * How this app wants to be PRESENTED — the half of an app that used to live only in a
+ * hand-written client bundle.
+ *
+ * Without this, shipping an app meant shipping a second artifact: a React build whose
+ * `app-manifest.ts` hard-coded the brand, the landing screen and the context dimensions.
+ * That artifact had to be built, hosted and versioned separately, so "install an app"
+ * was a write on one side and a deploy on the other — and the two could disagree.
+ *
+ * Carrying it in the package makes the app ONE thing again. A single generic client
+ * reads this at boot, so a new app needs no client build at all.
+ */
+export interface AppClientManifest {
+  brand?: "zinc" | "blue" | "warm";
+  /** Overview/Process definition key (`hr`, `stock`, `selling`…). */
+  domain?: string;
+  /** Landing screen. A route must be one this app's nav actually reaches — see below. */
+  home?: { doctype?: string; route?: string };
+  /**
+   * Global context selectors this app needs.
+   *
+   * Validated against the dimensions the server can actually resolve. A dimension the
+   * server does not know is not a cosmetic mistake: the shell blocks on "choose a scope"
+   * for a selector that will never have options, and the app is unusable — which is
+   * exactly what an HR app asking for `warehouse` did.
+   */
+  dimensions?: string[];
+  catalog_mode?: "manifest" | "workspace" | "hybrid";
+  locale?: { numberFormat?: string; currency?: string; dateFormat?: string };
+}
+
+/** Dimensions the server's `metaforge.api.get_business_context` can resolve. */
+export const CLIENT_CONTEXT_DIMENSIONS = new Set([
+  "company", "fiscal_year", "warehouse", "branch", "cost_center",
+  "project", "territory", "selling_price_list", "buying_price_list",
+]);
+
+/**
+ * Experience prefixes the deployed generic runtime can actually render.
+ *
+ * Kept as a server-side allowlist so an app cannot declare a screen that does not exist:
+ * the menu entry would install cleanly and then show "chưa được triển khai" on click.
+ * Adding a prefix here is the LAST step of shipping one, never the first.
+ */
+export const SUPPORTED_EXPERIENCE_KINDS = new Set(["approval", "calendar"]);
+
 export interface AppManifest {
   id: string;
   name: string;
   version: string;
+  /** Minimum Forge platform version required by this package. */
+  platform_requires?: string;
   requires: AppDependency[];
   doctypes: DocTypeMeta[];
   workflows: WorkflowMeta[];
@@ -90,6 +140,8 @@ export interface AppManifest {
   hooks: AppHook[];
   /** Pre-commit checks. Like `hooks`, useless without a `worker`. */
   validators: AppValidator[];
+  /** Presentation. Absent means "the generic client picks sane defaults". */
+  client?: AppClientManifest;
 }
 
 /** True when an event type matches a subscription pattern. */
@@ -117,6 +169,12 @@ export function parseAppManifest(value: unknown): AppManifest {
   if (!ID_PATTERN.test(id)) throw errors.validation("An app id must be lowercase letters, digits and hyphens");
   const version = text(input.version, "version", 32);
   if (!VERSION_PATTERN.test(version)) throw errors.validation("An app version must be semantic (1.2.3)");
+  const platformRequires = input.platform_requires === undefined
+    ? undefined
+    : text(input.platform_requires, "platform_requires", 32);
+  if (platformRequires && !VERSION_PATTERN.test(platformRequires)) {
+    throw errors.validation("platform_requires must be semantic (1.2.3)");
+  }
 
   const doctypes = array(input.doctypes, "doctypes").map((entry) => parseDocTypeMeta(entry));
   const doctypeNames = new Set(doctypes.map((meta) => meta.name));
@@ -171,10 +229,13 @@ export function parseAppManifest(value: unknown): AppManifest {
   // doctype. Refusing the manifest is the only answer that is not a surprise later.
   if (validators.length && !worker) throw errors.validation(`${id} declares validators but no worker to run them`);
 
+  const client = input.client === undefined ? undefined : parseClientManifest(input.client, nav, doctypeNames);
+
   return {
     id,
     name: text(input.name, "name", 160),
     version,
+    ...(platformRequires ? { platform_requires: platformRequires } : {}),
     requires,
     doctypes,
     workflows,
@@ -185,7 +246,101 @@ export function parseAppManifest(value: unknown): AppManifest {
     hooks,
     validators,
     ...(worker === undefined ? {} : { worker }),
+    ...(client === undefined ? {} : { client }),
   };
+}
+
+const BRANDS = new Set(["zinc", "blue", "warm"]);
+const CATALOG_MODES = new Set(["manifest", "workspace", "hybrid"]);
+
+/**
+ * Parses the presentation block.
+ *
+ * The checks here are not style policing. Each one corresponds to a way a client that
+ * trusts this block renders something unusable, and every one of them has happened:
+ *
+ * - an unknown `brand` leaves the theme unstyled;
+ * - a `dimension` the server cannot resolve wedges the shell on "choose a scope"
+ *   forever, because the selector it is waiting on can never be populated;
+ * - a `home.route` no nav item reaches sends the router to its catch-all, which
+ *   redirects home, which is the same unreachable route — a redirect loop.
+ *
+ * Refusing the package is the only point at which these are cheap to fix. Past that
+ * they are a tenant with an app installed that nobody can open.
+ */
+function parseClientManifest(value: JsonValue, nav: AppNavItem[], doctypeNames: ReadonlySet<string>): AppClientManifest {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw errors.validation("client must be an object");
+  const input = value as JsonObject;
+  const result: AppClientManifest = {};
+
+  if (input.brand !== undefined) {
+    const brand = text(input.brand, "client.brand", 16);
+    if (!BRANDS.has(brand)) throw errors.validation(`client.brand is not recognised: ${brand} (zinc|blue|warm)`);
+    result.brand = brand as NonNullable<AppClientManifest["brand"]>;
+  }
+  if (input.domain !== undefined) result.domain = text(input.domain, "client.domain", 64);
+  if (input.catalog_mode !== undefined) {
+    const mode = text(input.catalog_mode, "client.catalog_mode", 16);
+    if (!CATALOG_MODES.has(mode)) throw errors.validation(`client.catalog_mode is not recognised: ${mode}`);
+    result.catalog_mode = mode as NonNullable<AppClientManifest["catalog_mode"]>;
+  }
+
+  if (input.dimensions !== undefined) {
+    const dimensions = array(input.dimensions, "client.dimensions").map((entry, index) => {
+      const key = text(entry, `client.dimensions[${index}]`, 64);
+      if (!CLIENT_CONTEXT_DIMENSIONS.has(key)) {
+        throw errors.validation(`client.dimensions[${index}] is not a dimension the server can resolve: ${key}`);
+      }
+      return key;
+    });
+    assertUnique(dimensions, "client dimension");
+    result.dimensions = dimensions;
+  }
+
+  if (input.home !== undefined) {
+    if (!input.home || typeof input.home !== "object" || Array.isArray(input.home)) {
+      throw errors.validation("client.home must be an object");
+    }
+    const home = input.home as JsonObject;
+    const doctype = home.doctype === undefined ? undefined : text(home.doctype, "client.home.doctype", 160);
+    const route = home.route === undefined ? undefined : text(home.route, "client.home.route", 320);
+    if (!doctype && !route) throw errors.validation("client.home needs a doctype or a route");
+    if (doctype && !doctypeNames.has(doctype)) {
+      throw errors.validation(`client.home.doctype ${doctype} is not a doctype this app defines`);
+    }
+    if (route && !navReaches(route, nav)) {
+      throw errors.validation(`client.home.route ${route} is not reachable from this app's nav — the client would redirect to it forever`);
+    }
+    result.home = { ...(doctype ? { doctype } : {}), ...(route ? { route } : {}) };
+  }
+
+  if (input.locale !== undefined) {
+    if (!input.locale || typeof input.locale !== "object" || Array.isArray(input.locale)) {
+      throw errors.validation("client.locale must be an object");
+    }
+    const locale = input.locale as JsonObject;
+    const pick = (field: "numberFormat" | "currency" | "dateFormat") =>
+      locale[field] === undefined ? {} : { [field]: text(locale[field], `client.locale.${field}`, 32) };
+    result.locale = { ...pick("numberFormat"), ...pick("currency"), ...pick("dateFormat") };
+  }
+
+  return result;
+}
+
+/** The path a nav item navigates to — must agree with the client's `resolveNavPath`. */
+export function navItemPath(item: AppNavItem): string | null {
+  switch (item.kind) {
+    case "doctype": return `/app/${encodeURIComponent(item.key)}`;
+    case "experience": return `/x/${encodeURIComponent(item.key)}`;
+    case "workspace": return item.route ?? "/catalog";
+    case "system": return `/${item.key.replace(/^__/, "")}`;
+    case "route": return item.route ?? null;
+    default: return null;
+  }
+}
+
+function navReaches(route: string, nav: AppNavItem[]): boolean {
+  return nav.some((item) => navItemPath(item) === route);
 }
 
 const WRITE_ACTIONS = new Set(["create", "save", "submit", "cancel", "amend", "delete"]);
@@ -290,10 +445,34 @@ function parseNav(value: JsonValue, index: number, doctypeNames: ReadonlySet<str
     throw errors.validation(`nav[${index}].kind is not recognised: ${String(kind)}`);
   }
   const key = text(input.key, `nav[${index}].key`, 160);
+  if (kind === "experience") {
+    const separator = key.indexOf(":");
+    const experienceKind = separator < 0 ? key : key.slice(0, separator);
+    const argument = separator < 0 ? "" : key.slice(separator + 1);
+    if (!SUPPORTED_EXPERIENCE_KINDS.has(experienceKind) || !argument) {
+      throw errors.validation(`nav[${index}] requests unsupported experience ${key}; supported prefixes: ${[...SUPPORTED_EXPERIENCE_KINDS].join(", ")}`);
+    }
+  }
+  const inferredPermissionDoctype = kind === "doctype"
+    ? key
+    : kind === "experience" && key.includes(":")
+      // Both `approval:` and `calendar:` name the doctype after the colon, so the menu
+      // entry is gated on that doctype's read permission — a calendar of records the
+      // user cannot read must not appear at all.
+      ? key.slice(key.indexOf(":") + 1)
+      : undefined;
+  const permissionDoctype = typeof input.permission_doctype === "string"
+    ? text(input.permission_doctype, `nav[${index}].permission_doctype`, 160)
+    : inferredPermissionDoctype;
   // A doctype nav item pointing at a doctype the app does not ship would render a
   // menu entry that leads nowhere.
   if (kind === "doctype" && !doctypeNames.has(key)) {
     throw errors.validation(`nav[${index}] points at doctype ${key}, which this app does not define`);
+  }
+  // Experiences such as approval queues expose data just like a list view. Keeping
+  // the permission target in the package lets every consumer apply the same gate.
+  if (permissionDoctype && !doctypeNames.has(permissionDoctype)) {
+    throw errors.validation(`nav[${index}].permission_doctype points at ${permissionDoctype}, which this app does not define`);
   }
   if (kind === "route" && typeof input.route !== "string") throw errors.validation(`nav[${index}] of kind route requires a route`);
   // A relative route resolves incorrectly in the client router.
@@ -304,6 +483,7 @@ function parseNav(value: JsonValue, index: number, doctypeNames: ReadonlySet<str
     key,
     label: text(input.label, `nav[${index}].label`, 160),
     kind,
+    ...(permissionDoctype ? { permission_doctype: permissionDoctype } : {}),
     ...(typeof input.icon === "string" ? { icon: input.icon } : {}),
     ...(typeof input.group === "string" ? { group: input.group } : {}),
     ...(typeof input.route === "string" ? { route: input.route } : {}),

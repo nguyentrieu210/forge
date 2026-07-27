@@ -16,6 +16,7 @@ import type {
   BusinessContextSelection,
   BusinessContextKey,
   ApplicationCatalog,
+  AppManifest,
   OverviewDashboard,
   ProcessCatalog,
   AccessProfileSummary,
@@ -108,6 +109,14 @@ export interface FrappeAdapter {
   getBusinessContext(appId: string, dimensions?: BusinessContextKey[], selection?: BusinessContextSelection): Promise<BusinessContextState>;
   /** Catalog ứng dụng/workspace permission-aware. */
   getApplicationCatalog(appId?: string): Promise<ApplicationCatalog>;
+  /**
+   * Manifest app do SERVER dựng từ những app đã cài — brand/home/nav/dimensions.
+   *
+   * Đây là thứ cho phép MỘT bundle client phục vụ mọi app: trước đây manifest là file
+   * TypeScript biên dịch cứng vào bundle, nên mỗi app mới phải build và host một bundle
+   * riêng, và "cài app" chỉ làm được nửa việc.
+   */
+  getAppManifest(appId?: string): Promise<AppManifest>;
   getOverview(domain: string, selection?: BusinessContextSelection): Promise<OverviewDashboard>;
   getProcesses(domain: string, selection?: BusinessContextSelection): Promise<ProcessCatalog>;
   getAccessProfile(user?: string): Promise<AccessProfileSummary>;

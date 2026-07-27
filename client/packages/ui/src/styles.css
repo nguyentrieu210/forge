@@ -36,7 +36,7 @@
   --secondary: #f0f0f2;
   --secondary-foreground: #18181b;
   --muted: #f7f7f8;
-  --muted-foreground: #71717a;
+  --muted-foreground: #5f5f68;
   --accent: #e9e9ec;
   --accent-foreground: #18181b;
   --destructive: #dc2626;
@@ -51,10 +51,22 @@
   --border: #e4e4e7;
   --input: #e4e4e7;
   --ring: #71717a;
-  --subtle: #a1a1aa;
+  --subtle: #66666f;
   --info: #2563eb;
   --info-text: #1d4ed8;
   --radius: 0.625rem;
+  /* Bảng màu biểu đồ. Trước đây KHÔNG được khai ở bất kỳ đâu, trong khi cả biểu đồ cột lẫn
+     donut đều tham chiếu `--chart-1..5` — nên MỌI biểu đồ ở MỌI app đều vẽ ra màu đen, và
+     không có lỗi nào được báo. Token là HEX theo đúng quy ước ở đầu file (dùng `var()`
+     trực tiếp, KHÔNG bọc `hsl()`). */
+  /* Series ĐẦU bám theo màu thương hiệu: `--primary` được định nghĩa lại trong từng khối
+     [data-brand] và [data-theme], nên biểu đồ tự đổi theo theme mà không cần bảng màu
+     riêng cho mỗi brand. 2..5 là dải bổ trợ, chọn để phân biệt được cạnh mọi brand. */
+  --chart-1: var(--primary);
+  --chart-2: #16a34a;
+  --chart-3: #f59e0b;
+  --chart-4: #dc2626;
+  --chart-5: #7c3aed;
   --sidebar: #fafafa;
   --sidebar-foreground: #18181b;
 }
@@ -90,6 +102,12 @@
   --info-text: #93c5fd;
   --sidebar: #0c0c0e;
   --sidebar-foreground: #fafafa;
+  /* Sáng hơn bản light: nền tối nuốt màu bão hoà thấp. */
+  --chart-1: var(--primary);
+  --chart-2: #4ade80;
+  --chart-3: #fbbf24;
+  --chart-4: #f87171;
+  --chart-5: #a78bfa;
 }
 
 /* ── BLUE (electric) ──────────────────────────────────────────────────────── */
@@ -110,7 +128,7 @@
   --secondary: #eef2f8;
   --secondary-foreground: #0f172a;
   --muted: #f6f8fb;
-  --muted-foreground: #64748b;
+  --muted-foreground: #536276;
   --accent: #edf1ff;
   --accent-foreground: #1740cc;
   --destructive: #dc2626;
@@ -120,7 +138,7 @@
   --border: #e2e8f0;
   --input: #e2e8f0;
   --ring: #1b4dff;
-  --subtle: #94a3b8;
+  --subtle: #5b6b7e;
   --info: #1b4dff;
   --sidebar: #ffffff;
   --sidebar-foreground: #0f172a;
@@ -176,7 +194,7 @@
   --secondary: #f2ede4;
   --secondary-foreground: #292524;
   --muted: #faf7f1;
-  --muted-foreground: #78716c;
+  --muted-foreground: #675f5a;
   --accent: #f6ece0;
   --accent-foreground: #9a4f24;
   --destructive: #b91c1c;
@@ -186,7 +204,7 @@
   --border: #e8e0d3;
   --input: #e8e0d3;
   --ring: #b15b2e;
-  --subtle: #a8a29e;
+  --subtle: #675f5a;
   --info: #2563eb;
   --sidebar: #faf7f1;
   --sidebar-foreground: #292524;
@@ -573,6 +591,11 @@
     border-color: color-mix(in srgb, var(--destructive) 75%, var(--border));
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--destructive) 10%, transparent);
   }
+  .mf-field-readonly .mf-control {
+    border-style: dashed;
+    background: color-mix(in srgb, var(--muted) 72%, var(--card));
+    color: var(--muted-foreground);
+  }
   .mf-grid {
     overflow: hidden;
     border: 1px solid var(--border);
@@ -640,7 +663,10 @@
     padding: 0.85rem;
     box-shadow: var(--mf-card-shadow);
   }
-  .mf-gantt-row { min-height: 2rem; }
+  .mf-gantt-row { display: grid; min-height: 2rem; grid-template-columns: 10rem 1fr; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; }
+  .mf-gantt-axis { display: grid; grid-template-columns: repeat(3, 1fr); margin: 0 0 0.5rem 10.5rem; color: var(--muted-foreground); font-size: 0.68rem; }
+  .mf-gantt-axis span:nth-child(2) { text-align: center; }
+  .mf-gantt-axis span:last-child { text-align: right; }
   .mf-gantt-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--foreground); font-size: 0.75rem; }
   /* `!important` ở đây là cần: GanttView đặt màu qua style inline (bar/track/progress dựng bằng
      % nên buộc phải inline), CSS thường không thắng được inline style. */
@@ -667,8 +693,11 @@
 
   /* Builder surfaces */
   .mf-builder { overflow: hidden; }
+  .mf-doctype-builder { display: grid; grid-template-columns: 11.25rem minmax(20rem, 1fr) 15rem; gap: 0.75rem; }
   .mf-palette,
-  .mf-props { background: var(--secondary); }
+  .mf-props { max-height: min(44rem, 78vh); overflow: auto; border: 1px solid var(--border); border-radius: 0.65rem; background: var(--secondary); padding: 0.65rem; }
+  .mf-palette-title,
+  .mf-props-title { margin-bottom: 0.45rem; font-size: 0.75rem; font-weight: 700; }
   .mf-canvas { background: var(--card); }
   .mf-palette-item,
   .mf-db-tile {
@@ -679,6 +708,8 @@
   }
   .mf-palette-item:hover,
   .mf-db-tile:hover { border-color: color-mix(in srgb, var(--primary) 35%, var(--border)); background: var(--accent); }
+  .mf-palette-item:focus-visible,
+  .mf-canvas-list > li:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; }
 
   /* States */
   .mf-empty-state {
@@ -705,6 +736,31 @@
   .mf-shell-sidebar { width: min(17rem, 86vw); }
   .mf-page-header { padding-inline: 0.75rem; }
   .mf-calendar .mf-cal-grid > div { min-height: 4rem; }
+  .mf-shell-topbar > button,
+  .mf-shell-topbar [data-radix-dropdown-menu-trigger],
+  .mf-shell-sidebar .mf-shell-nav-item { min-height: 2.75rem; min-width: 2.75rem; }
+  .mf-form-header > div:first-child { align-items: flex-start; padding-inline: 0.75rem; }
+  .mf-form-header button,
+  .mf-form-footer button,
+  .mf-list-toolbar button,
+  .mf-list-toolbar [role="combobox"],
+  .mf-list-mobile button,
+  .mf-list-mobile [role="checkbox"] { min-height: 2.75rem; min-width: 2.75rem; }
+  .mf-form-footer { flex-wrap: wrap; padding: 0.65rem 0.75rem; }
+  .mf-list-toolbar { padding-inline: 0.65rem; }
+  .mf-list-toolbar > div:first-child > :first-child { max-width: none; flex-basis: 100%; }
+  .mf-kanban-board { display: grid; overflow: visible; }
+  .mf-kanban-column { width: 100%; }
+  .mf-kanban-card [role="combobox"] { min-height: 2.75rem; }
+  .mf-gantt { padding: 0.65rem; }
+  .mf-gantt-axis { margin-left: 0; }
+  .mf-gantt-row { grid-template-columns: minmax(6.5rem, 35%) minmax(14rem, 1fr); }
+  .mf-doctype-builder { display: flex; flex-direction: column; overflow: visible; }
+  .mf-doctype-builder .mf-palette { max-height: 13rem; overflow: auto; }
+  .mf-doctype-builder .mf-canvas { order: 2; }
+  .mf-doctype-builder .mf-props { order: 3; max-height: none; }
+  .mf-workflow-builder > div:first-child > input,
+  .mf-dashboard-builder > div:first-child > input { flex: 1 1 12rem; width: auto; }
 }
 
 @layer components {
@@ -731,3 +787,28 @@
 .mf-shell-nav-item[data-active="true"] svg { color: var(--primary); }
 .mf-shell-nav-item:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; }
 .mf-business-context button { box-shadow: 0 1px 1px rgb(0 0 0 / 0.03); }
+
+.mf-skip-link {
+  position: fixed;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 100;
+  translate: 0 -150%;
+  border-radius: 0.45rem;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  padding: 0.55rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 650;
+  transition: translate 120ms ease;
+}
+.mf-skip-link:focus { translate: 0; outline: 2px solid var(--ring); outline-offset: 2px; }
+
+@media (forced-colors: active) {
+  .mf-shell-nav-item[data-active="true"],
+  .mf-kanban-card,
+  .mf-calendar-event,
+  .mf-field-error :is(input, textarea, button[role="combobox"]) { border: 2px solid ButtonText; }
+  .mf-shell-nav-item[data-active="true"]::before { background: Highlight; }
+  .mf-skip-link { border: 2px solid ButtonText; }
+}

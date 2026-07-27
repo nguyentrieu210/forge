@@ -45,7 +45,7 @@ export const AvatarFallback = React.forwardRef<
       className={cn("flex h-full w-full items-center justify-center rounded-full bg-muted text-xs font-semibold uppercase", className)}
       style={tint ? {
         backgroundColor: `color-mix(in srgb, var(${tint}) 16%, var(--card))`,
-        color: `color-mix(in srgb, var(${tint}) 78%, var(--foreground))`,
+        color: "var(--foreground)",
         ...style,
       } : style}
       {...props}

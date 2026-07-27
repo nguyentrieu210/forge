@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Sun, Moon, Monitor, LogOut, User as UserIcon, Globe, Sparkles, Save, Bot } from "lucide-react";
+import { Sun, Moon, Monitor, LogOut, User as UserIcon, Globe, Sparkles, Save, Bot, Eye, EyeOff, PlugZap, Loader2 } from "lucide-react";
 import type { MetaForgeBootDTO } from "@metaforge/adapter-frappe";
 import { useMetaForge } from "@metaforge/views";
-import { useTheme, useLocale, useBrand, BRANDS, type ThemeMode, type Locale } from "@metaforge/shell";
+import { useTheme, useLocale, useBrand, BRANDS, createOpenAICompatProvider, type ThemeMode, type Locale } from "@metaforge/shell";
 import { cn, Button, Input, Label, Separator, Badge, toast } from "@metaforge/ui";
 import { loadAIConfig, saveAIConfig, clearAIConfig, type AIConfigState } from "./ai-config.js";
 
@@ -46,7 +46,7 @@ export function SettingsContent({ boot }: { boot: MetaForgeBootDTO }) {
       </Section>
 
       <Section icon={<Globe className="size-4" />} title="Vùng & Ngôn ngữ">
-        <Row label="Ngôn ngữ"><LocaleSwitch /></Row>
+        <Row label="Ngôn ngữ dữ liệu"><div className="space-y-1"><LocaleSwitch /><p className="text-xs text-muted-foreground">Áp dụng cho số, ngày và nhãn hệ thống đã có bản dịch.</p></div></Row>
         <Row label="Múi giờ"><span>{boot.sysdefaults?.time_zone ?? "—"}</span></Row>
         <Row label="Định dạng ngày"><span>{boot.sysdefaults?.date_format ?? "—"}</span></Row>
         <Row label="Tiền tệ"><span>{boot.sysdefaults?.currency ?? "—"}</span></Row>
@@ -68,6 +68,9 @@ export function SettingsContent({ boot }: { boot: MetaForgeBootDTO }) {
 
 function AISection() {
   const [form, setForm] = useState<AIFormState>(loadAIConfig);
+  const [showKey, setShowKey] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<"ok" | "error" | null>(null);
 
   function save() {
     const cfg: AIFormState = { baseUrl: form.baseUrl.trim(), apiKey: form.apiKey.trim(), model: form.model.trim() };
@@ -80,6 +83,21 @@ function AISection() {
     clearAIConfig();
     setForm({ baseUrl: "", apiKey: "", model: "" });
     toast.success("Đã bật chế độ demo (echo)");
+  }
+
+  async function testConnection() {
+    if (!form.baseUrl.trim() || !form.apiKey.trim() || !form.model.trim() || testing) return;
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const provider = createOpenAICompatProvider({ baseUrl: form.baseUrl.trim(), apiKey: form.apiKey.trim(), model: form.model.trim() });
+      await provider.complete("Trả lời đúng một từ: OK");
+      setTestResult("ok");
+      toast.success("Kết nối AI thành công");
+    } catch (error) {
+      setTestResult("error");
+      toast.error(error instanceof Error ? error.message : String(error));
+    } finally { setTesting(false); }
   }
 
   return (
@@ -97,14 +115,15 @@ function AISection() {
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="ai-api-key">API Key</Label>
-          <Input
-            id="ai-api-key"
-            type="password"
-            value={form.apiKey}
-            onChange={(e) => setForm((f) => ({ ...f, apiKey: e.target.value }))}
-            placeholder="sk-…"
-            autoComplete="off"
-          />
+          <div className="relative"><Input
+              id="ai-api-key"
+              type={showKey ? "text" : "password"}
+              value={form.apiKey}
+              onChange={(e) => { setForm((f) => ({ ...f, apiKey: e.target.value })); setTestResult(null); }}
+              placeholder="sk-…"
+              autoComplete="off"
+              className="pr-11"
+            /><Button type="button" variant="ghost" size="icon-sm" className="absolute right-1 top-1/2 -translate-y-1/2" onClick={() => setShowKey((value) => !value)} aria-label={showKey ? "Ẩn API Key" : "Hiện API Key"}>{showKey ? <EyeOff /> : <Eye />}</Button></div>
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="ai-model">Model</Label>
@@ -118,8 +137,10 @@ function AISection() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Button size="sm" onClick={save}><Save className="size-4" /> Lưu</Button>
+          <Button size="sm" variant="outline" onClick={() => void testConnection()} disabled={testing || !form.baseUrl.trim() || !form.apiKey.trim() || !form.model.trim()}>{testing ? <Loader2 className="size-4 animate-spin" /> : <PlugZap className="size-4" />} Kiểm tra kết nối</Button>
           <Button size="sm" variant="outline" onClick={useDemo}><Bot className="size-4" /> Dùng chế độ demo (echo)</Button>
         </div>
+        {testResult ? <p className={cn("text-xs font-medium", testResult === "ok" ? "text-success" : "text-destructive")} role="status">{testResult === "ok" ? "Kết nối hợp lệ." : "Kết nối chưa thành công; kiểm tra endpoint, model và khóa."}</p> : null}
         <p className="text-xs text-muted-foreground">Hỗ trợ mọi endpoint OpenAI-compatible. <span className="text-foreground">API Key chỉ lưu trong phiên (sessionStorage)</span> — mất khi đóng tab, không tồn tại qua phiên trình duyệt. Chuẩn production nên proxy qua backend.</p>
       </div>
     </Section>

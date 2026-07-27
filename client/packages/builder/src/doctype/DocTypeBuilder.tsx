@@ -7,17 +7,18 @@ import { useEffect, useMemo, useState } from "react";
 import {
   DndContext,
   type DragEndEvent,
+  KeyboardSensor,
   PointerSensor,
   useDraggable,
   useDroppable,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Undo2, Redo2, X, GripVertical } from "lucide-react";
 import { AUTHORABLE_FIELDTYPES, type DocTypeMeta, type DocField, type Fieldtype } from "@metaforge/core";
-import { cn, Button, Input, Textarea, Checkbox } from "@metaforge/ui";
+import { cn, Button, Input, Textarea, Checkbox, ConfirmDialog } from "@metaforge/ui";
 import { useBuilder } from "../kernel.js";
 import { addField, moveField, newField, removeField, updateField, indexOfField } from "./meta-build.js";
 import { validateDraft, type ValidationResult } from "./validate.js";
@@ -34,7 +35,11 @@ export interface DocTypeBuilderProps {
 export function DocTypeBuilder(props: DocTypeBuilderProps) {
   const b = useBuilder<DocTypeMeta>(props.initial);
   const [selected, setSelected] = useState<string | null>(null);
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   useEffect(() => {
     props.onChange?.(b.model);
@@ -65,13 +70,12 @@ export function DocTypeBuilder(props: DocTypeBuilderProps) {
 
   return (
     <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-      <div className="mf-builder mf-doctype-builder" style={{ display: "grid", gridTemplateColumns: "180px 1fr 240px", gap: 12 }}>
+      <div className="mf-builder mf-doctype-builder">
         {/* PALETTE */}
         <div className="mf-palette">
-          <div className="mf-palette-title">Fieldtype</div>
-          {AUTHORABLE_FIELDTYPES.map((ft) => (
-            <PaletteItem key={ft} fieldtype={ft} />
-          ))}
+          <div className="mf-palette-title">Loại trường</div>
+          <p id="mf-builder-dnd-help" className="mb-2 text-[11px] leading-snug text-muted-foreground">Kéo bằng chuột hoặc dùng Space, phím mũi tên, Space để thả.</p>
+          {fieldtypeGroups().map((group) => <section key={group.label} className="mb-3"><h3 className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{group.label}</h3>{group.items.map((ft) => <PaletteItem key={ft} fieldtype={ft} />)}</section>)}
         </div>
 
         {/* CANVAS */}
@@ -80,10 +84,7 @@ export function DocTypeBuilder(props: DocTypeBuilderProps) {
           selected={selected}
           onSelect={setSelected}
           onRename={(name) => b.set({ ...b.model, name })}
-          onDelete={(fn) => {
-            b.set(removeField(b.model, fn));
-            if (selected === fn) setSelected(null);
-          }}
+          onDelete={setPendingDelete}
           undo={b.undo}
           redo={b.redo}
           canUndo={b.canUndo}
@@ -99,8 +100,35 @@ export function DocTypeBuilder(props: DocTypeBuilderProps) {
           {sel ? <FieldProps field={sel} onPatch={(p) => b.set(updateField(b.model, sel.fieldname, p))} /> : <div className="mf-props-empty">Chọn 1 field</div>}
         </div>
       </div>
+      <ConfirmDialog
+        open={Boolean(pendingDelete)}
+        onOpenChange={(open) => { if (!open) setPendingDelete(null); }}
+        title="Xóa trường này?"
+        description="Trường sẽ bị loại khỏi bản thiết kế. Bạn vẫn có thể dùng Hoàn tác ngay sau đó."
+        confirmLabel="Xóa trường"
+        cancelLabel="Giữ lại"
+        destructive
+        onConfirm={() => {
+          if (!pendingDelete) return;
+          b.set(removeField(b.model, pendingDelete));
+          if (selected === pendingDelete) setSelected(null);
+          setPendingDelete(null);
+        }}
+      />
     </DndContext>
   );
+}
+
+function fieldtypeGroups(): Array<{ label: string; items: Fieldtype[] }> {
+  const buckets: Array<{ label: string; accepts: Set<string>; items: Fieldtype[] }> = [
+    { label: "Văn bản", accepts: new Set(["Data", "Text", "Small Text", "Long Text", "Text Editor", "Markdown Editor", "Code", "Password", "Phone", "Barcode"]), items: [] },
+    { label: "Số & thời gian", accepts: new Set(["Int", "Float", "Currency", "Percent", "Duration", "Rating", "Date", "Datetime", "Time"]), items: [] },
+    { label: "Lựa chọn & liên kết", accepts: new Set(["Check", "Select", "Link", "Dynamic Link", "Table", "Table MultiSelect"]), items: [] },
+    { label: "Tệp & trình bày", accepts: new Set(["Attach", "Attach Image", "Image", "Color", "Geolocation", "HTML", "Heading", "Section Break", "Column Break", "Tab Break", "Fold"]), items: [] },
+    { label: "Khác", accepts: new Set(), items: [] },
+  ];
+  for (const fieldtype of AUTHORABLE_FIELDTYPES) (buckets.find((bucket) => bucket.accepts.has(fieldtype)) ?? buckets[buckets.length - 1]!).items.push(fieldtype);
+  return buckets.filter((bucket) => bucket.items.length).map(({ label, items }) => ({ label, items }));
 }
 
 function PaletteItem({ fieldtype }: { fieldtype: Fieldtype }) {
@@ -111,6 +139,7 @@ function PaletteItem({ fieldtype }: { fieldtype: Fieldtype }) {
       className={cn("mf-palette-item mb-1 cursor-grab rounded-md border bg-card px-2 py-1 text-xs hover:border-primary/40", isDragging && "opacity-40")}
       {...attributes}
       {...listeners}
+      aria-describedby="mf-builder-dnd-help"
     >
       {fieldtype}
     </div>
@@ -151,6 +180,7 @@ function Canvas(props: CanvasProps) {
           {props.saving ? "Đang lưu…" : "Lưu DocType"}
         </Button>
       </div>
+      {errors.length ? <ul className="mb-2 list-disc rounded-md border border-destructive/30 bg-destructive/5 px-7 py-2 text-xs text-destructive" role="alert">{errors.map((error, index) => <li key={`${error.fieldname ?? "draft"}-${index}`}>{error.fieldname ? `${error.fieldname}: ` : ""}{error.message}</li>)}</ul> : null}
       {model.fields.length === 0 ? (
         <div className="grid h-40 place-items-center text-sm text-muted-foreground">Kéo fieldtype từ trái vào đây</div>
       ) : (
@@ -173,6 +203,9 @@ function SortableField({ field, selected, onSelect, onDelete }: { field: DocFiel
       ref={setNodeRef}
       className={cn("mb-1 flex items-center justify-between rounded-md border bg-card p-1.5 text-sm", selected && "border-primary ring-1 ring-primary", isDragging && "opacity-50")}
       onClick={onSelect}
+      onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); onSelect(); } }}
+      tabIndex={0}
+      aria-selected={selected}
       style={{ transform: CSS.Transform.toString(transform), transition }}
     >
       <span className="flex cursor-grab items-center gap-1.5" {...attributes} {...listeners}>
@@ -204,7 +237,13 @@ function FieldProps({ field, onPatch }: { field: DocField; onPatch: (p: Partial<
       <Check label="Bắt buộc" checked={field.reqd === 1} onChange={(v) => onPatch({ reqd: v ? 1 : 0 })} />
       <Check label="Hiện ở List" checked={field.in_list_view === 1} onChange={(v) => onPatch({ in_list_view: v ? 1 : 0 })} />
       <Check label="Chỉ đọc" checked={field.read_only === 1} onChange={(v) => onPatch({ read_only: v ? 1 : 0 })} />
+      <Check label="Ẩn" checked={field.hidden === 1} onChange={(v) => onPatch({ hidden: v ? 1 : 0 })} />
+      <Check label="Bộ lọc chuẩn" checked={field.in_standard_filter === 1} onChange={(v) => onPatch({ in_standard_filter: v ? 1 : 0 })} />
+      <Row label="Mô tả"><Textarea value={typeof field.description === "string" ? field.description : ""} onChange={(e) => onPatch({ description: e.target.value })} rows={2} /></Row>
+      <Row label="Giá trị mặc định"><Input value={String(field.default ?? "")} onChange={(e) => onPatch({ default: e.target.value })} /></Row>
       <Row label="depends_on"><Input value={field.depends_on ?? ""} onChange={(e) => onPatch({ depends_on: e.target.value })} placeholder="eval:doc.x=='y'" /></Row>
+      <Row label="mandatory_depends_on"><Input value={field.mandatory_depends_on ?? ""} onChange={(e) => onPatch({ mandatory_depends_on: e.target.value })} placeholder="eval:doc.x=='y'" /></Row>
+      <Row label="read_only_depends_on"><Input value={field.read_only_depends_on ?? ""} onChange={(e) => onPatch({ read_only_depends_on: e.target.value })} placeholder="eval:doc.x=='y'" /></Row>
     </div>
   );
 }

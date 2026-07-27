@@ -29,6 +29,21 @@ interface FrappeChildRow extends JsonObject {
  */
 export function toFrappeDoc(document: CanonicalDocument): JsonObject {
   const doc: JsonObject = {
+    /**
+     * The kernel's DERIVED status, placed BEFORE the spread so a doctype that declares its
+     * own `status` field overrides it.
+     *
+     * It used to come after, and therefore always won. That made `status` unusable as a
+     * business field — Frappe and ERPNext use one on Sales Order, Task, Issue and many
+     * more — and it failed in the worst possible way: the list path reads the stored
+     * column and returned the app's value, while this path returned "Draft", so the SAME
+     * field read differently depending on the endpoint. Found on a live tenant where every
+     * student showed a status the doctype did not even offer.
+     *
+     * A doctype with no `status` field is unaffected: the spread has nothing to override
+     * with, and the derived value stands exactly as before.
+     */
+    status: document.status,
     ...document.data,
     doctype: document.doctype,
     name: document.name,
@@ -41,7 +56,6 @@ export function toFrappeDoc(document: CanonicalDocument): JsonObject {
     modified_by: document.modified_by ?? document.owner,
     docstatus: document.docstatus,
     idx: 0,
-    status: document.status,
   };
   if (document.amended_from) doc.amended_from = document.amended_from;
   for (const [fieldname, rows] of groupChildren(document).entries()) {

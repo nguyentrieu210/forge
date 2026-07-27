@@ -1,0 +1,91 @@
+{
+  "$schema": "./brief.schema.json",
+  "id": "assets",
+  "name": "Quản lý tài sản CNTT",
+  "version": "1.1.0",
+  "module": "Tài sản",
+  "domain": "assets",
+  "brand": "warm",
+  "dimensions": ["company"],
+  "roles": ["Nhân viên IT", "Trưởng phòng IT"],
+  "home": "approval:Asset Request",
+
+  "//fixtures": [
+    "Master data the app needs to be USABLE, not decoration. `company` is a required",
+    "context dimension and a required Link field: without a Company record the shell",
+    "blocks on an empty scope selector and nobody gets past the first screen.",
+    "`forge-app.mjs` refuses to report success when this is missing."
+  ],
+  "fixtures": [
+    { "type": "Company", "name": "Kairo", "data": { "label": "Công ty Kairo", "abbr": "KR", "default_currency": "VND" } }
+  ],
+
+  "doctypes": [
+    {
+      "name": "IT Asset",
+      "label": "Tài sản",
+      "icon": "laptop",
+      "group": "Danh mục",
+      "naming": "TS-.YYYY.-#####",
+      "title": "asset_name",
+      "search": ["asset_name", "serial_no"],
+      "list": ["asset_name", "category", "serial_no", "asset_status", "company"],
+      "inbox": false,
+      "fields": [
+        "asset_name:Data! Tên tài sản",
+        "category:Select(Máy tính,Màn hình,Điện thoại,Thiết bị mạng,Khác) Nhóm tài sản",
+        "serial_no:Data* Số serial",
+        "company:Link(Company)! Công ty",
+        "purchase_date:Date Ngày mua",
+        "cost:Currency Nguyên giá",
+        "asset_status:Select(Trong kho,Đang dùng,Đang sửa,Đã thanh lý) Tình trạng",
+        "assigned_to:Data Người đang dùng",
+        "notes:Small Text Ghi chú"
+      ],
+      "permissions": {
+        "Nhân viên IT": "rwc",
+        "Trưởng phòng IT": "rwc"
+      }
+    },
+
+    {
+      "name": "Asset Request",
+      "label": "Yêu cầu cấp tài sản",
+      "icon": "clipboard-list",
+      "group": "Nghiệp vụ",
+      "inboxLabel": "Duyệt yêu cầu cấp tài sản",
+      "inboxIcon": "smartphone",
+      "naming": "YC-.YYYY.-#####",
+      "title": "requested_for",
+      "list": ["requested_for", "category", "needed_by", "workflow_state"],
+      "fields": [
+        "requested_for:Data! Cấp cho",
+        "department:Data Bộ phận",
+        "category:Select(Máy tính,Màn hình,Điện thoại,Thiết bị mạng,Khác)! Nhóm tài sản",
+        "quantity:Int! Số lượng",
+        "needed_by:Date Cần trước ngày",
+        "company:Link(Company)! Công ty",
+        "reason:Small Text! Lý do",
+        "granted_asset:Link(IT Asset) Tài sản đã cấp"
+      ],
+      "permissions": {
+        "Nhân viên IT": "rwcs",
+        "Trưởng phòng IT": "rwcsxa"
+      },
+      "workflow": {
+        "name": "Duyệt yêu cầu cấp tài sản",
+        "states": {
+          "Nháp": 0,
+          "Chờ duyệt": 0,
+          "Đã duyệt": 1,
+          "Từ chối": 2
+        },
+        "transitions": [
+          ["Nháp", "Gửi duyệt", "Chờ duyệt", "Nhân viên IT"],
+          ["Chờ duyệt", "Duyệt", "Đã duyệt", "Trưởng phòng IT"],
+          ["Chờ duyệt", "Từ chối", "Từ chối", "Trưởng phòng IT"]
+        ]
+      }
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 import {
+  APP_CALLBACK_HEADER,
   createTrustedIdentity,
   deriveAppCallKey,
   IDENTITY_HEADER,
@@ -14,6 +15,19 @@ import { isFrappePath, LOGIN_PATH } from "../../../packages/frappe-api/src/index
 interface GatewayEnv {
   ROUTES: KVNamespace;
   DISPATCHER: DispatchNamespace;
+  /**
+   * The generic client bundle, served from THIS origin.
+   *
+   * Same-origin is not a convenience. The session cookie is `Secure`+`SameSite=Lax`, so
+   * a browser will not send it to a different host — a client hosted anywhere else can
+   * authenticate only by having a developer run a local proxy that forwards cookies,
+   * which is exactly the dependency this removes. Serving the bundle here is what makes
+   * "install an app, open the URL" true without a second deploy per app.
+   *
+   * Optional so a gateway deployed without a bundle still routes the API; a client route
+   * then answers with a plain explanation rather than a silent 404.
+   */
+  ASSETS?: Fetcher;
   FALLBACK_TENANT?: Fetcher;
   PLATFORM_SUFFIX?: string;
   AUTH_MODE?: "development" | "production";
@@ -45,6 +59,11 @@ export default {
       const route = JSON.parse(raw) as TenantRoute;
       if (route.status !== "active") return jsonResponse({ error: { code: "TENANT_NOT_ACTIVE", status: route.status }, trace_id: traceId }, 423);
 
+      // Deliberately AFTER the route lookup: a hostname with no tenant gets a 404, not
+      // an app shell whose login could never succeed. And before actor resolution,
+      // because a page load carries no bearer token and must not be asked for one.
+      if (isClientRoute(request, url)) return serveClientShell(env, url, traceId);
+
       // An app Worker calling back into the platform on behalf of the user who invoked
       // it. Null for every ordinary request, so nothing about the normal path changes.
       const callback = await resolveAppCallback(request, env, url, route.tenant_id);
@@ -61,7 +80,11 @@ export default {
       // Freshly minted, and `withPlatformHeaders` strips whatever the caller sent — so
       // the identity the tenant sees is one this gateway just issued, never one an app
       // handed us. The app's copy is only ever an assertion we re-verify above.
-      const forwarded = withPlatformHeaders(inbound, route.tenant_id, traceId, trusted.encoded, trusted.signature);
+      //
+      // `callback.appId` travels as the one header a caller cannot forge, and it is what
+      // tells the tenant's Frappe surface to authenticate from the identity rather than
+      // from a cookie it will never have. See APP_CALLBACK_HEADER.
+      const forwarded = withPlatformHeaders(inbound, route.tenant_id, traceId, trusted.encoded, trusted.signature, callback?.appId);
       if (env.FALLBACK_TENANT && route.worker_name === "__fallback__") return env.FALLBACK_TENANT.fetch(forwarded);
       const worker = env.DISPATCHER.get(route.worker_name, {}, { limits: limitsFor(route.plan, url.pathname) });
       return worker.fetch(forwarded);
@@ -105,7 +128,7 @@ async function resolveAppCallback(
   env: GatewayEnv,
   url: URL,
   tenantId: string,
-): Promise<{ actor: Awaited<ReturnType<typeof verifyTrustedIdentity>>["actor"]; url: URL } | null> {
+): Promise<{ actor: Awaited<ReturnType<typeof verifyTrustedIdentity>>["actor"]; url: URL; appId: string } | null> {
   if (!url.pathname.startsWith(APP_CALLBACK_PREFIX)) return null;
 
   const appId = request.headers.get("x-cloudforge-app") ?? "";
@@ -121,7 +144,52 @@ async function resolveAppCallback(
 
   const target = new URL(url);
   target.pathname = `/api/${url.pathname.slice(APP_CALLBACK_PREFIX.length)}`;
-  return { actor: identity.actor, url: target };
+  return { actor: identity.actor, url: target, appId };
+}
+
+/**
+ * Client routes the runtime bundle owns, as an ALLOWLIST.
+ *
+ * An allowlist rather than "anything that is not an API path", and the direction matters.
+ * With a denylist, a backend prefix added later and forgotten here would start answering
+ * with HTML where its caller expects JSON — a failure that surfaces as an unrelated parse
+ * error somewhere else. With an allowlist, the same mistake is a 404 on one client route:
+ * obvious, local, and harmless to everything else.
+ *
+ * The cost is that a new top-level client route must be added here too. That is a change
+ * to the runtime bundle, which is deployed alongside this Worker anyway — unlike an app,
+ * which is data and needs neither.
+ */
+const CLIENT_ROUTE_PREFIXES = [
+  "/app/", "/x/", "/overview/", "/process/", "/workspace/", "/report/", "/page/", "/dashboard/",
+];
+const CLIENT_ROUTE_EXACT = new Set(["/", "/catalog", "/permissions", "/index.html"]);
+
+function isClientRoute(request: Request, url: URL): boolean {
+  // Only navigations. A POST to a client path is a mistake somewhere, and answering it
+  // with a page body would hide that.
+  if (request.method !== "GET" && request.method !== "HEAD") return false;
+  if (CLIENT_ROUTE_EXACT.has(url.pathname)) return true;
+  return CLIENT_ROUTE_PREFIXES.some((prefix) => url.pathname.startsWith(prefix));
+}
+
+/**
+ * The SPA shell for a client route.
+ *
+ * Hashed assets (`/assets/*`) never reach this Worker — the assets runtime serves them
+ * before the Worker is invoked, with its own immutable caching. Only the shell is served
+ * here, and it must NOT be cached, because it names the hashed bundles: a stale shell
+ * after a deploy points at files that no longer exist, and the app fails to boot with a
+ * blank screen and a 404 in the console.
+ */
+async function serveClientShell(env: GatewayEnv, url: URL, traceId: string): Promise<Response> {
+  if (!env.ASSETS) {
+    return jsonResponse({ error: { code: "CLIENT_BUNDLE_NOT_DEPLOYED", message: "This gateway routes the API but was deployed without a client bundle." }, trace_id: traceId }, 501);
+  }
+  const shell = await env.ASSETS.fetch(new Request(new URL("/index.html", url.origin), { method: "GET" }));
+  const headers = new Headers(shell.headers);
+  headers.set("cache-control", "no-cache");
+  return new Response(shell.body, { status: shell.status, headers });
 }
 
 function routeKeyFromRequest(url: URL, suffix: string, allowTenantOverride: boolean): string {
@@ -144,14 +212,19 @@ function claimsToActor(claims: Awaited<ReturnType<typeof verifyBearerJwt>>, tena
   };
 }
 
-function withPlatformHeaders(request: Request, tenantId: string, traceId: string, identity: string, signature: string): Request {
+function withPlatformHeaders(request: Request, tenantId: string, traceId: string, identity: string, signature: string, appCallbackId?: string): Request {
   const headers = new Headers(request.headers);
   stripUntrustedPlatformHeaders(headers);
   headers.delete("authorization");
+  // An app callback carries no session, and must not be able to smuggle one: the app
+  // never receives the user's cookie, so a cookie arriving on this path came from
+  // somewhere it should not have.
+  if (appCallbackId) headers.delete("cookie");
   headers.set("x-cloudforge-tenant", tenantId);
   headers.set("x-cloudforge-trace-id", traceId);
   headers.set(IDENTITY_HEADER, identity);
   headers.set(IDENTITY_SIGNATURE_HEADER, signature);
+  if (appCallbackId) headers.set(APP_CALLBACK_HEADER, appCallbackId);
   return new Request(request, { headers });
 }
 

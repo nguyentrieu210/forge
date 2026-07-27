@@ -34,6 +34,7 @@ export const errors = {
   idempotency: () => new CloudForgeError("IDEMPOTENCY_KEY_REUSED", "Command ID was reused with a different payload", 422),
   ledger: (message: string) => new CloudForgeError("LEDGER_INVARIANT_FAILED", message, 422),
   overloaded: (message = "Storage is temporarily overloaded") => new CloudForgeError("D1_OVERLOADED", message, 503, true),
+  rateLimited: (message = "Too many attempts; try again later") => new CloudForgeError("RATE_LIMITED", message, 429, true),
   database: (message = "Storage operation failed") => new CloudForgeError("DATABASE_ERROR", message, 500, false),
   /**
    * The deployment is wrong, not the request. Distinct from DATABASE_ERROR so it is

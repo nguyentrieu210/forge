@@ -3,10 +3,10 @@
  * ReportView (M15, presentational) — render kết quả query_report.run (§7).
  * columns[] + result[] (dict theo fieldname hoặc mảng). UI qua @metaforge/ui Table.
  */
-import { useState } from "react";
-import { Pin, FileSpreadsheet } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Pin, FileSpreadsheet, ArrowUp, ArrowDown, ChevronsUpDown } from "lucide-react";
 import { sanitizeHtml, type BoundFormatters } from "@metaforge/core";
-import { Button, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, cn, useT } from "@metaforge/ui";
+import { Button, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, cn, toast, useT } from "@metaforge/ui";
 import { buildCsv, downloadCsv, downloadXlsx, stampedName, type ExportColumn } from "./export.js";
 import { useLocaleFormat } from "../container/provider.js";
 
@@ -28,6 +28,7 @@ export interface ReportViewProps {
   displayValues?: Record<string, string>;
   /** tên báo cáo — dùng đặt tên file khi xuất Excel. */
   title?: string;
+  onLinkClick?: (doctype: string, name: string) => void;
 }
 
 function cellOf(row: Record<string, unknown> | unknown[], col: ReportColumn, idx: number): unknown {
@@ -65,7 +66,22 @@ export function ReportView(props: ReportViewProps) {
   // sau khi trình duyệt layout xong, phải đo DOM và tính lại mỗi lần resize; ghim 1 cột ngoài cùng
   // thì left=0 luôn đúng, không cần đo gì.
   const [pinned, setPinned] = useState<string | null>(null);
-  if (loading) return <div className="p-4 text-sm text-muted-foreground">{t("report.running")}</div>;
+  const [sort, setSort] = useState<{ key: string; dir: "asc" | "desc" } | null>(null);
+  const sortedResult = useMemo(() => {
+    if (!sort) return result;
+    const index = columns.findIndex((column, columnIndex) => (column.fieldname ?? String(columnIndex)) === sort.key);
+    if (index < 0) return result;
+    const column = columns[index]!;
+    const direction = sort.dir === "asc" ? 1 : -1;
+    return [...result].sort((left, right) => {
+      const a = cellOf(left, column, index);
+      const b = cellOf(right, column, index);
+      const an = Number(a), bn = Number(b);
+      const compared = Number.isFinite(an) && Number.isFinite(bn) ? an - bn : String(a ?? "").localeCompare(String(b ?? ""), "vi", { numeric: true });
+      return compared * direction;
+    });
+  }, [columns, result, sort]);
+  if (loading) return <div className="space-y-2 p-4" aria-busy="true"><div className="h-9 animate-pulse rounded bg-muted" /><div className="h-52 animate-pulse rounded bg-muted" /><span className="sr-only">{t("report.running")}</span></div>;
   const numeric = (ft?: string) => ["currency", "float", "int", "percent"].includes((ft ?? "").toLowerCase());
 
   // Giữ index GỐC theo cột: result có thể là mảng-mảng, cellOf tra theo vị trí — đổi thứ tự hiển thị
@@ -96,7 +112,7 @@ export function ReportView(props: ReportViewProps) {
           disabled={!result.length}
           onClick={() => {
             const cols = ordered.map((x) => x.col);
-            const rows = result as Array<Record<string, unknown> | unknown[]>;
+            const rows = sortedResult as Array<Record<string, unknown> | unknown[]>;
             const raw = (row: Record<string, unknown> | unknown[], _col: ExportColumn, i: number) =>
               cellOf(row, cols[i] as ReportColumn, ordered[i]?.idx ?? i);
             const text = (row: Record<string, unknown> | unknown[], _col: ExportColumn, i: number) =>
@@ -104,9 +120,9 @@ export function ReportView(props: ReportViewProps) {
             const ten = stampedName(props.title || "bao-cao");
             // Rơi về CSV nếu không nạp được SheetJS (mạng đứt giữa chừng, chặn chunk…) — thà file
             // kém đẹp còn hơn bấm xuất mà không có gì xảy ra và người dùng không hiểu vì sao.
-            void downloadXlsx(ten, cols, rows, raw, text).catch(() => {
-              downloadCsv(ten, buildCsv(cols, rows, text));
-            });
+            void downloadXlsx(ten, cols, rows, raw, text)
+              .then(() => toast.success("Đã xuất file Excel"))
+              .catch(() => { downloadCsv(ten, buildCsv(cols, rows, text)); toast.success("Đã xuất file CSV dự phòng"); });
           }}
         >
           <FileSpreadsheet className="mr-1.5 size-3.5" />
@@ -133,6 +149,7 @@ export function ReportView(props: ReportViewProps) {
                 return (
                   <TableHead
                     key={key}
+                    aria-sort={sort?.key === key ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}
                     className={cn(
                       "group/col",
                       numeric(x.col.fieldtype) && "text-right",
@@ -140,7 +157,17 @@ export function ReportView(props: ReportViewProps) {
                     )}
                   >
                     <span className={cn("inline-flex items-center gap-1", numeric(x.col.fieldtype) && "flex-row-reverse")}>
-                      {x.col.label ?? x.col.fieldname}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 gap-1 px-1 font-medium"
+                        onClick={() => setSort((current) => current?.key === key ? (current.dir === "asc" ? { key, dir: "desc" } : null) : { key, dir: "asc" })}
+                        aria-label={`Sắp xếp theo ${x.col.label ?? x.col.fieldname}`}
+                      >
+                        {x.col.label ?? x.col.fieldname}
+                        {sort?.key === key ? (sort.dir === "asc" ? <ArrowUp className="size-3" /> : <ArrowDown className="size-3" />) : <ChevronsUpDown className="size-3 opacity-50" />}
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon-sm"
@@ -158,7 +185,7 @@ export function ReportView(props: ReportViewProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {(result as Array<Record<string, unknown> | unknown[]>).map((row, ri) => (
+            {(sortedResult as Array<Record<string, unknown> | unknown[]>).map((row, ri) => (
               <TableRow key={ri}>
                 {ordered.map((x, position) => {
                   const v = cellOf(row, x.col, x.idx);
@@ -174,7 +201,7 @@ export function ReportView(props: ReportViewProps) {
                       )}
                     >
                       {v === null || v === undefined ? "" : (x.col.fieldtype === "Link" && x.col.options
-                        ? <ReportLink doctype={x.col.options} value={String(v)} displayValues={props.displayValues} />
+                        ? <ReportLink doctype={x.col.options} value={String(v)} displayValues={props.displayValues} onClick={props.onLinkClick} />
                         : formatReportCell(v, x.col, fmt))}
                     </TableCell>
                   );
@@ -195,7 +222,8 @@ export function ReportView(props: ReportViewProps) {
   );
 }
 
-function ReportLink({ doctype, value, displayValues }: { doctype: string; value: string; displayValues?: Record<string, string> }) {
+function ReportLink({ doctype, value, displayValues, onClick }: { doctype: string; value: string; displayValues?: Record<string, string>; onClick?: (doctype: string, name: string) => void }) {
   const label = displayValues?.[`${doctype}::${value}`] ?? value;
-  return <span className="block min-w-0"><span className="block truncate font-medium">{label}</span>{label !== value ? <span className="block truncate text-[11px] text-muted-foreground">{value}</span> : null}</span>;
+  const content = <span className="block min-w-0"><span className="block truncate font-medium">{label}</span>{label !== value ? <span className="block truncate text-[11px] text-muted-foreground">{value}</span> : null}</span>;
+  return onClick ? <Button type="button" variant="link" className="h-auto max-w-full justify-start p-0 text-left" onClick={() => onClick(doctype, value)}>{content}</Button> : content;
 }

@@ -54,7 +54,14 @@ export function resolveFormActions(ctx: FormActionCtx): FormActionDesc[] {
 
   // Lưu — Draft, có quyền write (hoặc tạo mới + create)
   if (ctx.docstatus === 0 && (p.write || (ctx.isNew && p.create))) {
-    out.push({ kind: "save", label: ctx.saving ? "Đang lưu…" : "Lưu", variant: "default", primary: !ctx.isSubmittable, disabled: ctx.saving || !ctx.dirty });
+    out.push({
+      kind: "save",
+      label: ctx.saving ? "Đang lưu…" : "Lưu",
+      variant: "default",
+      primary: !ctx.isSubmittable,
+      disabled: ctx.saving || !ctx.dirty,
+      disabledReason: ctx.saving ? "Đang lưu thay đổi" : !ctx.dirty ? "Không có thay đổi cần lưu" : undefined,
+    });
   }
 
   // Gửi (Submit) — Draft đã lưu, submittable, có quyền submit, KHÔNG workflow. Khoá khi dirty.

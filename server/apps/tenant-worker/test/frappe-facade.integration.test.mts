@@ -173,6 +173,30 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     }
   });
 
+  it("rate-limits one account across rotating addresses without storing login or IP", async () => {
+    await env.DB.prepare(
+      `INSERT INTO users(tenant_id,user_id,full_name,email,password_hash,created_at,modified_at)
+       VALUES('demo','rate@example.com','Rate Test','rate@example.com',?1,?2,?2)`,
+    ).bind(await hashPassword("correct-password", 1_000), NOW).run();
+
+    for (let attempt = 1; attempt <= 9; attempt += 1) {
+      const response = await call("/api/method/login", {
+        method: "POST",
+        headers: { "content-type": "application/json", "CF-Connecting-IP": `203.0.113.${attempt}` },
+        body: JSON.stringify({ usr: "rate@example.com", pwd: "wrong" }),
+      }, { auth: false });
+      expect(response.status).toBe(attempt <= 8 ? 401 : 429);
+    }
+
+    const rows = await env.DB.prepare(
+      `SELECT subject_hash FROM login_rate_limits WHERE tenant_id='demo' AND dimension='account'`,
+    ).all<{ subject_hash: string }>();
+    const stored = rows.results ?? [];
+    expect(stored.length).toBeGreaterThan(0);
+    expect(stored.every((row) => /^[0-9a-f]{64}$/.test(row.subject_hash))).toBe(true);
+    expect(JSON.stringify(stored)).not.toMatch(/rate@example|203\.0\.113/);
+  });
+
   it("boots with the tenant as site_name, which is what scopes the client cache per tenant", async () => {
     const boot = await unwrap(await method("metaforge.api.get_boot", {}, "GET"));
     expect(boot.user).toBe("sales@example.com");
@@ -851,7 +875,11 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
         revision: 1,
       }],
       fixtures: [{ record_type: "Visit Category", name: "Routine", data: { label: "Routine" } }],
-      nav: [{ key: "Visit Note", label: "Ghi chú", kind: "doctype" }],
+      nav: [
+        { key: "approval:Visit Note", label: "Duyệt ghi chú", kind: "experience" },
+        { key: "Visit Note", label: "Ghi chú", kind: "doctype" },
+        { key: "visits-home", label: "Trang chuyến thăm", kind: "route", route: "/visits-home" },
+      ],
     };
 
     const first = await unwrap(await method("forge.apps.install", { app: pkg }));
@@ -887,6 +915,121 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     expect(Array.isArray(workspace.sections)).toBe(true);
     expect(workspace.sections[0].items.length).toBeGreaterThan(0);
     expect(workspace.sections[0].items[0].route).toMatch(/^\/app\//);
+
+    // A data-backed experience is not a harmless menu link: it queries the same
+    // documents as the underlying DocType. Prove both disappear for an actor without
+    // read permission, including from the home fallback used immediately after login.
+    await env.DB.prepare(
+      `DELETE FROM user_roles WHERE tenant_id='demo' AND user_id='sales@example.com' AND role='System Manager'`,
+    ).run();
+    try {
+      const client = await unwrap(await method("metaforge.api.get_app_manifest", { app: "visits" }, "GET"));
+      expect(client.nav.map((item: any) => item.key)).not.toContain("Visit Note");
+      expect(client.nav.map((item: any) => item.key)).not.toContain("approval:Visit Note");
+      expect(client.home).toEqual({ route: "/visits-home" });
+    } finally {
+      await env.DB.prepare(
+        `INSERT INTO user_roles(tenant_id,user_id,role) VALUES('demo','sales@example.com','System Manager') ON CONFLICT DO NOTHING`,
+      ).run();
+    }
+
+    const conflict = await method("forge.apps.install", { app: {
+      id: "conflicting-route", name: "Conflicting Route", version: "1.0.0", roles: [],
+      doctypes: [{
+        name: "Other Note", module: "Other", revision: 1,
+        fields: [{ fieldname: "title", label: "Title", fieldtype: "Data" }],
+        permissions: [{ role: "System Manager", read: true }],
+      }],
+      nav: [{ key: "other-visits-home", label: "Trùng route", kind: "route", route: "/visits-home" }],
+    } });
+    expect(conflict.status).toBe(417);
+    expect(String((await conflict.json() as any).message)).toMatch(/already owned by app visits/i);
+  });
+
+  it("upgrades an app REPEATEDLY, not just once", async () => {
+    /**
+     * The bug this pins was invisible to a single upgrade.
+     *
+     * Every metadata store enforces an optimistic revision check, and the stored revision
+     * increments on each write while a package's hand-authored `revision` stays 1. The
+     * installer carried the stored revision for DocTypes but not for workflows or print
+     * formats, so: install (stored → 1), first upgrade (package 1 == stored 1, ok, stored
+     * → 2), second upgrade (package 1 != stored 2) → refused with `The document changed
+     * after it was loaded`.
+     *
+     * An app upgradeable exactly once, failing afterwards with a message that reads like a
+     * concurrency fault. Two upgrades are needed to see it at all, which is why every
+     * existing test passed.
+     */
+    const pkg = (version: string, label: string) => ({
+      id: "revcheck", name: "Rev Check", version,
+      roles: [{ role: "Rev User" }],
+      doctypes: [{
+        name: "Rev Doc", module: "Rev", is_submittable: true, revision: 1,
+        fields: [
+          { fieldname: "title", label: "Title", fieldtype: "Data", required: true },
+          { fieldname: "workflow_state", label: "State", fieldtype: "Select", options: "Nháp\nXong" },
+        ],
+        permissions: [{ role: "Rev User", read: true, write: true, create: true, submit: true }],
+      }],
+      workflows: [{
+        name: "Rev Flow", document_type: "Rev Doc", state_field: "workflow_state", is_active: true, revision: 1,
+        states: [{ state: "Nháp", docstatus: 0 }, { state: "Xong", docstatus: 1 }],
+        transitions: [{ state: "Nháp", action: label, next_state: "Xong", allowed_role: "Rev User" }],
+      }],
+      print_formats: [{ name: "Rev Print", doc_type: "Rev Doc", format_type: "Standard", html: `<p>${label}</p>`, revision: 1 }],
+      nav: [{ key: "Rev Doc", label: "Rev", kind: "doctype" }],
+    });
+
+    expect((await unwrap(await method("forge.apps.install", { app: pkg("1.0.0", "Xong") }))).outcome).toBe("installed");
+    expect((await unwrap(await method("forge.apps.install", { app: pkg("1.1.0", "Hoàn tất") }))).outcome).toBe("upgraded");
+    // The one that used to fail.
+    expect((await unwrap(await method("forge.apps.install", { app: pkg("1.2.0", "Kết thúc") }))).outcome).toBe("upgraded");
+    expect((await unwrap(await method("forge.apps.install", { app: pkg("1.3.0", "Chốt") }))).outcome).toBe("upgraded");
+
+    // And the last upgrade's content is what is actually stored — the revision juggling
+    // must not have been "fixed" by skipping the write.
+    // `getdoctype` writes onto `frappe.response`, so its keys are TOP-LEVEL, not wrapped
+    // in `message` — hence the raw json() rather than `unwrap`.
+    const loaded: any = await (await method("frappe.desk.form.load.getdoctype", { doctype: "Rev Doc" }, "GET")).json();
+    const workflow = loaded.docs[0].__workflow_docs[0];
+    expect(workflow.transitions[0].action).toBe("Chốt");
+
+    await unwrap(await method("forge.apps.uninstall", { app_id: "revcheck" }));
+  });
+
+  it("rolls an app install back atomically when a late metadata write fails", async () => {
+    const workflow = (name: string) => ({
+      name, document_type: "Atomic Doc", state_field: "workflow_state", is_active: true, revision: 1,
+      states: [{ state: "Nháp", docstatus: 0 }, { state: "Xong", docstatus: 1 }],
+      transitions: [{ state: "Nháp", action: "Xong", next_state: "Xong", allowed_role: "Atomic Role" }],
+    });
+    const response = await method("forge.apps.install", { app: {
+      id: "atomic-failure", name: "Atomic Failure", version: "1.0.0",
+      roles: [{ role: "Atomic Role" }],
+      doctypes: [{
+        name: "Atomic Doc", module: "Atomic", is_submittable: true, revision: 1,
+        fields: [
+          { fieldname: "title", label: "Title", fieldtype: "Data" },
+          { fieldname: "workflow_state", label: "State", fieldtype: "Select", options: "Nháp\nXong" },
+        ],
+        permissions: [{ role: "Atomic Role", read: true, write: true, create: true, submit: true }],
+      }],
+      // Both are individually valid, but the storage invariant permits one active
+      // workflow per DocType. The second statement fails late in the batch.
+      workflows: [workflow("Atomic Flow A"), workflow("Atomic Flow B")],
+      nav: [{ key: "Atomic Doc", label: "Atomic", kind: "doctype" }],
+    } });
+    expect(response.status).not.toBe(200);
+
+    for (const [table, predicate] of [
+      ["roles", "role='Atomic Role'"],
+      ["doctype_definitions", "doctype='Atomic Doc'"],
+      ["installed_apps", "app_id='atomic-failure'"],
+    ] as const) {
+      const row = await env.DB.prepare(`SELECT COUNT(*) AS total FROM ${table} WHERE tenant_id='demo' AND ${predicate}`).first<{ total: number }>();
+      expect(row!.total).toBe(0);
+    }
   });
 
   it("refuses to uninstall an app whose doctypes still hold documents", async () => {
@@ -957,7 +1100,7 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
         doc: JSON.stringify({ doctype: "Field Visit", name: created.name, modified: created.modified }),
         action: transition.action,
       });
-      expect(response.status, `offered "${transition.action}" then refused it`).not.toBe(403);
+      expect(response.status).not.toBe(403);
     }
   });
 
@@ -1013,7 +1156,7 @@ describe("fieldtypes that carry real server behaviour", () => {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ subject: "Bad duration", visit_seconds: bad }),
       });
-      expect(response.status, String(bad)).toBe(417);
+      expect(response.status).toBe(417);
     }
   });
 });
@@ -1053,7 +1196,7 @@ describe("DocField properties the server enforces", () => {
         method: "POST", headers: { "content-type": "application/json" },
         body: JSON.stringify({ subject: "Negative fee", fee }),
       });
-      expect(response.status, String(fee)).toBe(417);
+      expect(response.status).toBe(417);
     }
     const ok = await call("/api/resource/Field Visit", {
       method: "POST", headers: { "content-type": "application/json" },
@@ -1103,7 +1246,7 @@ describe("mechanisms that must actually run, not merely exist", () => {
       "frappe.desk.doctype.notification_log.notification_log.get_notification_logs", { limit: 20 }, "GET",
     ));
     const alert = inbox.notification_logs.find((entry: any) => /Kiểm tra kho/.test(entry.subject));
-    expect(alert, "the alert must reach the user's own inbox").toBeTruthy();
+    expect(alert).toBeTruthy();
     expect(alert.document_name).toBe("FV-NOTIFY");
   });
 
@@ -1168,7 +1311,7 @@ describe("public web form — the one surface with no session", () => {
     const response = await exports.default.fetch(new Request(
       "https://tenant.test/api/method/metaforge.api.get_web_form?route=contact",
     ));
-    expect(response.status, "a guest must be able to render the form").toBe(200);
+    expect(response.status).toBe(200);
     const form = (await response.json() as any).message;
     expect(form.fields).toEqual(["subject", "customer"]);
     // Neither tells the submitter anything they need — both tell an attacker which role

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Download, Upload, FileSpreadsheet, Loader2, CheckCircle2, XCircle, AlertTriangle, ArrowRight, RotateCcw, FileDown } from "lucide-react";
 import type { ImportPreview, ImportStatus, DataImportUiPhase } from "@metaforge/adapter-frappe";
 import { toUiPhase } from "@metaforge/adapter-frappe";
@@ -36,7 +36,10 @@ export function ImportContent() {
   const [fileName, setFileName] = useState<string>("");
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [status, setStatus] = useState<ImportStatus | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
   const pollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => { if (pollTimer.current) clearTimeout(pollTimer.current); }, []);
 
   const busy = phase === "busy";
   const running = phase === "running";
@@ -65,6 +68,9 @@ export function ImportContent() {
   async function onFiles(files: FileList | null) {
     const file = files?.[0];
     if (!file || !dt.trim()) return;
+    setFileError(null);
+    if (!/\.(csv|xlsx|xls)$/i.test(file.name)) { setFileError("Chỉ nhận tệp CSV hoặc Excel (.xlsx, .xls)."); return; }
+    if (file.size > 20 * 1024 * 1024) { setFileError("Tệp lớn hơn 20 MB. Hãy chia thành nhiều tệp nhỏ hơn để nhập an toàn."); return; }
     setPhase("busy");
     setPreview(null);
     setStatus(null);
@@ -143,6 +149,7 @@ export function ImportContent() {
     setFileName("");
     setPreview(null);
     setStatus(null);
+    setFileError(null);
   }
 
   return (
@@ -203,6 +210,7 @@ export function ImportContent() {
               {busy ? "Đang xử lý…" : "Chọn tệp CSV/Excel"}
             </FileButton>
             <span className="text-sm text-muted-foreground">Điền dữ liệu vào file mẫu rồi tải lên để xem trước.</span>
+            {fileError ? <div className="w-full rounded-md border border-destructive/30 bg-destructive/5 p-2 text-sm text-destructive" role="alert">{fileError}</div> : null}
           </div>
         ) : (
           <div className="flex items-center gap-2 text-sm">
@@ -350,7 +358,7 @@ function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; va
 function Progress({ value }: { value: number }) {
   const pct = Math.max(0, Math.min(100, value));
   return (
-    <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+    <div className="h-2 w-full overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(pct)}>
       <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
     </div>
   );

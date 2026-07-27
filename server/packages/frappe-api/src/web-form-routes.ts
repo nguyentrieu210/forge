@@ -86,6 +86,22 @@ export async function consumeSubmissionAllowance(
 ): Promise<void> {
   const visitor = await visitorKey(clientAddress, form.name, store.salt);
   const day = store.now.slice(0, 10);
+  const minute = `${store.now.slice(0, 16)}:00.000Z`;
+
+  // A daily ceiling does not stop a burst that fills the Worker/DB in seconds. Keep a
+  // second, short bucket; at least five are allowed so a deliberately tiny daily limit
+  // remains the rule reported by existing forms.
+  const burstMax = Math.min(10, Math.max(5, form.max_per_day));
+  const burst = await store.db.prepare(
+    `INSERT INTO web_form_rate_limits(tenant_id,form_name,visitor,window_start,attempt_count,modified_at)
+     VALUES(?1,?2,?3,?4,1,?5)
+     ON CONFLICT(tenant_id,form_name,visitor,window_start)
+     DO UPDATE SET attempt_count=attempt_count+1,modified_at=excluded.modified_at
+     RETURNING attempt_count`,
+  ).bind(store.tenantId, form.name, visitor, minute, store.now).first<{ attempt_count: number }>();
+  if ((burst?.attempt_count ?? 0) > burstMax) {
+    throw errors.rateLimited("Too many submissions; try again later");
+  }
 
   const row = await store.db.prepare(
     `INSERT INTO web_form_submissions(tenant_id,form_name,visitor,day,count,modified_at)
@@ -99,6 +115,11 @@ export async function consumeSubmissionAllowance(
     // a fresh address buys them.
     throw errors.validation("Too many submissions from this address today");
   }
+
+  const cutoff = new Date(new Date(store.now).getTime() - 2 * 24 * 60 * 60 * 1000).toISOString();
+  await store.db.prepare(
+    `DELETE FROM web_form_rate_limits WHERE tenant_id=?1 AND window_start<?2`,
+  ).bind(store.tenantId, cutoff).run();
 }
 
 /**

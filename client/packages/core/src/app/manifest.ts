@@ -113,15 +113,16 @@ export function validateManifest(m: AppManifest): ManifestResult {
   // (P2-MANIFEST, review P1-MANIFEST-01). Đây là error (không phải warning) vì hậu quả là app KHÔNG
   // vào được (khác home.doctype thiếu trong nav — vẫn còn deep-link doctype khác dùng được).
   if (m.home?.route) {
-    const matches = (m.nav ?? []).some((n) => {
-      if (n.kind === "route") return n.route === m.home!.route;
-      if (n.kind === "workspace") return m.home!.route === "/workspace";
-      if (n.kind === "system") return m.home!.route === `/${n.key.replace(/^__/, "")}`;
-      if (n.kind === "experience") return m.home!.route === `/x/${n.key}`;
-      if (n.kind === "overview") return m.home!.route === `/overview/${n.key}`;
-      if (n.kind === "process") return m.home!.route === `/process/${n.key}`;
-      return false;
-    });
+    // Qua CHÍNH `resolveNavPath` — không viết lại luật lần thứ hai.
+    //
+    // Trước đây khối này có bản sao riêng của quy ước path, và nó ĐÃ trôi dạt: bản sao
+    // dùng `/x/${key}` thô trong khi `resolveNavPath` (thứ router thật sự dùng, và cũng là
+    // thứ dùng cho kiểm trùng path ở trên) dùng `encodeURIComponent(key)`. Hệ quả là mọi
+    // experience key có ký tự cần mã hoá — vd `approval:Asset Request` — đều hỏng theo cả
+    // hai chiều: manifest mã hoá ĐÚNG thì bị từ chối, manifest không mã hoá thì lọt kiểm
+    // rồi không bao giờ khớp route thật. Bắt được khi app đầu tiên sinh từ brief mở ra
+    // đúng màn "Không dựng được giao diện" mà luật này lẽ ra phải ngăn.
+    const matches = (m.nav ?? []).some((n) => resolveNavPath(n) === m.home!.route);
     if (!matches) err("home_route_unmatched", `home.route "${m.home.route}" không khớp route/workspace/system nào trong nav — sẽ gây redirect loop`);
   }
 

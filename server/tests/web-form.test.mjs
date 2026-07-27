@@ -120,6 +120,7 @@ test("the visitor key distinguishes visitors without recording who they are", as
   const a = await visitorKey("203.0.113.5", "contact", salt);
   const b = await visitorKey("203.0.113.9", "contact", salt);
   assert.notEqual(a, b, "two visitors must count separately");
+  assert.match(a, /^[0-9a-f]{64}$/, "the stored key must be a complete SHA-256 digest");
   assert.equal(a, await visitorKey("203.0.113.5", "contact", salt), "and one visitor must count together");
 
   // The address must not be recoverable from what is stored: a public form would

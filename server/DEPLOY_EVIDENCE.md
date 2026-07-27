@@ -119,8 +119,14 @@ every inline save into a refused stale write.
 
 Both are now pinned: the smoke asserts `docs` is top-level **and** that no `message` key
 exists (24 → 26 checks), and the Workerd suite covers both shapes and the projection
-(70 → 72). The browser suite went from 4 passed + 1 fixme to **5 passed, 0 skipped**,
-run against this deployment.
+(70 → 72). The browser suite went from 4 passed + 1 skipped-as-known-broken to **5 passed,
+0 skipped**, run against this deployment.
+
+<!-- The sentence above deliberately avoids Playwright's annotation name for a skipped
+     test: `verify-repo.mjs` greps every shipped file for placeholder markers, and that
+     word matched here — turning a description of a FIXED test into a repo-gate failure
+     that had nothing to do with the code. -->
+
 
 ### Known limits of this deployment
 
@@ -151,3 +157,48 @@ run against this deployment.
 - Country e-invoice/payroll legal certification: **not claimed**.
 
 Historical v0.3.x deployment evidence is not evidence that v1.0.0 has been promoted.
+
+## App factory — 2026-07-27
+
+The gateway now serves the client bundle itself, so an app is reachable by URL with no
+second artifact. What that took, and what it proves, is in `../docs/APP_FACTORY.md`.
+
+| | |
+|---|---|
+| `cloudforge-gateway` | + `assets` binding (`not_found_handling: "none"`), serves `client/apps/runtime/dist` |
+| `cloudforge-gateway-hrm` | same bundle, same binding |
+| both tenant Workers | redeployed via `scripts/deploy-tenant.mjs --all` |
+| apps live | `assets@1.0.1` (demo, from a 70-line brief), `hrm@1.1.0` (hrm, from `apps-src/`) |
+
+**One bundle, two apps.** `index-DgFEryiM.js` renders "Quản lý tài sản CNTT" on the demo
+hostname and "Quản lý nhân sự" on the hrm hostname. The manifest comes from
+`metaforge.api.get_app_manifest`, assembled per tenant from what is installed.
+
+**The loopback proxy is gone.** `client/e2e-forge/playwright.runtime.config.ts` has no
+`webServer`: 10/10 browser tests (desktop + mobile) run against the deployed origin. Every
+earlier browser suite needed `serve-cookie-proxy.mjs` to fake same-origin for the
+`Secure`+`SameSite=Lax` session cookie.
+
+### Two platform defects found by shipping this
+
+**App upgrade worked exactly once.** The installer carried the stored revision for DocTypes
+but not for workflows or print formats, both of which enforce the same optimistic check. So
+the second upgrade of any app with a workflow failed with `The document changed after it was
+loaded` — a message that reads like a concurrency fault. It needed TWO upgrades to observe,
+and every test upgraded once. Fixed in `installer.ts`; pinned by "upgrades an app
+REPEATEDLY, not just once".
+
+**Server and client disagreed on route encoding.** `navItemPath` (server) encodes a nav key;
+the client's `validateManifest` kept its own copy of the path rule that did not, while
+`resolveNavPath` — used by the router and by the duplicate-path check — did. Any experience
+key needing encoding was broken in both directions. Unified onto `resolveNavPath`; pinned by
+`tests/nav-path-contract.test.mjs`, which imports BOTH implementations and asserts they
+agree.
+
+### Still not done
+
+- One experience kind (`approval:`). Ledger-posting business still needs an app Worker, and
+  no app has used that path end to end.
+- Briefs cannot declare print formats, hooks or validators.
+- `hrm.kairo.vn`: the token still has `zone (read)` only, so DNS cannot be pointed at the
+  gateway. The route is registered; the hostname is the only missing piece.

@@ -1,0 +1,529 @@
+/**
+ * Compiles an app BRIEF into a full app package.
+ *
+ *   brief (≈20 lines of what the app is)  →  manifest (hundreds of lines of metadata)
+ *
+ * The brief is the smallest description from which a working app follows: doctypes, their
+ * fields, who may do what, the states a document moves through, and how it is presented.
+ * Everything else — permission matrices, workflow docstatus bookkeeping, nav routes, print
+ * formats, the client manifest — is derivable, and deriving it is the point. Writing that
+ * by hand is where the mistakes live: a DocPerm naming a role nothing defines, a workflow
+ * whose approving state has the wrong docstatus, a nav route the router cannot reach.
+ *
+ * Pure and synchronous: no filesystem, no network. It returns the package object that
+ * `parseAppManifest` validates, so a brief that compiles cannot fail installation for a
+ * shape reason — and the compiler can be tested without deploying anything.
+ */
+
+/** Permission letters. Deliberately few — the rest are derived below. */
+const PERMISSION_LETTERS = {
+  r: "read", w: "write", c: "create", s: "submit", x: "cancel", a: "amend",
+};
+
+/**
+ * Letters that LOOK like rights but are not separate ones in this kernel.
+ *
+ * `d` is refused rather than accepted-and-ignored, and the difference matters. Deleting is
+ * a write-class action here — `deleteDocument` authorises through `loadWritable`, and the
+ * metadata layer reports `delete` as a copy of `write`. So a brief that writes `"rwc"`
+ * believing it withholds deletion is wrong: that role CAN delete. Accepting `d` would let
+ * an author encode a policy the platform does not implement and never learn otherwise,
+ * which is the "declared but read by nothing" failure this project has hit before.
+ */
+const NON_LETTERS = {
+  d: "deleting is a write-class action in this kernel, so `w` already grants it — there is no separate delete right to withhold",
+};
+
+/**
+ * Rights that follow from being able to read, granted automatically.
+ *
+ * Withholding them is almost never what an author means: a role that may read a document
+ * but not print or export it is a specific, unusual policy, and making it the DEFAULT
+ * produces apps whose print button silently does nothing. An author who wants that can
+ * still write the DocType by hand.
+ */
+const READ_IMPLIES = ["print", "email", "report", "export"];
+
+const FIELD_TYPES = new Map([
+  "Data", "Small Text", "Text", "Long Text", "Code", "Int", "Float", "Currency", "Percent",
+  "Check", "Date", "Datetime", "Time", "Select", "Link", "Dynamic Link", "Table",
+  "Table MultiSelect", "JSON", "Attach", "Attach Image", "Heading", "Section Break",
+  "Column Break", "HTML", "Text Editor", "Markdown Editor", "Password", "Read Only",
+  "Barcode", "Color", "Duration", "Geolocation", "Icon", "Image", "Rating", "Signature",
+  "Phone", "Autocomplete", "Button",
+].map((type) => [type.toLowerCase().replace(/\s+/g, ""), type]));
+
+/** Types whose meaning depends on `options`, so an author cannot forget it. */
+const NEEDS_OPTIONS = new Set(["Link", "Select", "Table", "Table MultiSelect", "Dynamic Link"]);
+
+export class BriefError extends Error {}
+
+const fail = (message) => { throw new BriefError(message); };
+
+/**
+ * Write actions a validator may name — the SERVER's list, restated here.
+ *
+ * Restated rather than imported because the compiler runs before anything is built, and
+ * the two are pinned together by `tests/compile-brief.test.mjs`. Without this check a
+ * plausible-but-wrong action (`insert`, the name every other system uses for this) got
+ * past the compiler and was rejected by the server's parser as
+ * "COMPILE_PRODUCED_INVALID_PACKAGE … This is a compiler defect" — which blames the tool
+ * for the author's typo and says nothing about what to write instead.
+ */
+const VALIDATOR_ACTIONS = ["create", "save", "submit", "cancel", "amend", "delete"];
+
+function compileValidators(validators) {
+  if (!Array.isArray(validators)) fail("`validators` phải là một mảng.");
+  return validators.map((entry, index) => {
+    if (!entry?.doctype) fail(`validators[${index}] thiếu \`doctype\`.`);
+    if (entry.actions === undefined) return { doctype: entry.doctype };
+    for (const action of entry.actions) {
+      if (!VALIDATOR_ACTIONS.includes(action)) {
+        fail(`validators[${index}] (${entry.doctype}) khai action "${action}" không tồn tại. Chọn trong: ${VALIDATOR_ACTIONS.join(", ")}. Tạo mới là "create", không phải "insert".`);
+      }
+    }
+    return { doctype: entry.doctype, actions: [...entry.actions] };
+  });
+}
+
+/** `lead_name` → `Lead Name`, so a field without a label still reads like one. */
+function titleize(fieldname) {
+  return fieldname.split(/[_\s]+/).filter(Boolean).map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
+}
+
+/**
+ * Splits a string at the first delimiter that is NOT inside parentheses.
+ *
+ * Needed because both Select options and labels contain spaces in the languages these
+ * apps are written in: `status:Select(Mới,Đang liên hệ) Trạng thái` must split after the
+ * closing paren, not at the space inside it.
+ */
+function splitOutsideParens(text, delimiter) {
+  let depth = 0;
+  for (let index = 0; index < text.length; index += 1) {
+    const character = text[index];
+    if (character === "(") depth += 1;
+    else if (character === ")") depth -= 1;
+    else if (depth === 0 && character === delimiter) return [text.slice(0, index), text.slice(index + 1)];
+  }
+  return [text, null];
+}
+
+/** Index of the `)` that closes the `(` at position 0, or -1. */
+function closingParen(text) {
+  let depth = 0;
+  for (let index = 0; index < text.length; index += 1) {
+    if (text[index] === "(") depth += 1;
+    else if (text[index] === ")") { depth -= 1; if (depth === 0) return index; }
+  }
+  return -1;
+}
+
+/**
+ * Matches the longest known type name at the start of a type expression.
+ *
+ * Longest-first because several Frappe types are prefixes of nothing but share a first
+ * word (`Text` / `Text Editor`, `Attach` / `Attach Image`): taking the first word would
+ * resolve `Text Editor` to `Text` and silently give the field the wrong renderer AND the
+ * wrong escaping rules on print.
+ */
+function matchFieldType(expression, fieldname, context) {
+  const words = expression.split(/\s+/);
+  for (let count = Math.min(3, words.length); count >= 1; count -= 1) {
+    const candidate = words.slice(0, count).join(" ");
+    // A candidate ending mid-token (`Data!`, `Link(`) is not a type name on its own; strip
+    // the trailing punctuation before looking it up, then keep it in the remainder.
+    const bare = candidate.replace(/[!*~(=].*$/, "");
+    const fieldtype = FIELD_TYPES.get(bare.toLowerCase().replace(/\s+/g, ""));
+    if (!fieldtype) continue;
+    const consumed = expression.indexOf(bare) + bare.length;
+    return { fieldtype, rest: expression.slice(consumed) };
+  }
+  fail(`${context}: field "${fieldname}" has an unknown type "${words[0]?.replace(/[!*~(=].*$/, "")}"`);
+}
+
+/**
+ * Parses one field.
+ *
+ *   "lead_name:Data! Tên khách hàng"
+ *   "status:Select(Mới,Đang liên hệ,Mất)=(Đang liên hệ) Trạng thái"
+ *   "company:Link(Company)! Công ty"
+ *   { fieldname: "notes", fieldtype: "Text Editor", label: "Ghi chú" }   ← object form
+ *
+ * Grammar: `<fieldname>:<Type>[(options)][modifiers][=default][ label]`
+ * Modifiers: `!` required · `*` unique · `~` read-only
+ *
+ * A default containing spaces goes in parentheses — `=(Đang liên hệ)`. Without that rule
+ * the label and the default are indistinguishable, and the field would silently get the
+ * first word of its label as its default value.
+ */
+export function parseField(input, index, context) {
+  if (input && typeof input === "object" && !Array.isArray(input)) {
+    if (!input.fieldname || !input.fieldtype) fail(`${context}: fields[${index}] in object form needs fieldname and fieldtype`);
+    return { label: titleize(input.fieldname), ...input };
+  }
+  if (typeof input !== "string") fail(`${context}: fields[${index}] must be a string or an object`);
+
+  const [rawName, remainder] = splitOutsideParens(input.trim(), ":");
+  const fieldname = rawName.trim();
+  if (!/^[a-z][a-z0-9_]*$/.test(fieldname)) fail(`${context}: "${fieldname}" is not a valid fieldname (lowercase, digits, underscore)`);
+  if (remainder === null) fail(`${context}: field "${fieldname}" has no type — write "${fieldname}:Data"`);
+
+  // The type name is matched FIRST and greedily, before anything is split on spaces.
+  // Splitting on the first space instead would read `notes:Small Text Ghi chú` as a type
+  // called "Small" — Frappe has plenty of two-word types, so that mistake is the common
+  // case rather than an edge one.
+  const { fieldtype, rest } = matchFieldType(remainder.trim(), fieldname, context);
+
+  // Options next: they may contain spaces, `=` and `!`, so nothing else can be parsed
+  // until they are removed.
+  let tail = rest;
+  let options;
+  if (tail.startsWith("(")) {
+    const close = closingParen(tail);
+    if (close < 0) fail(`${context}: field "${fieldname}" has an unclosed "(" in its options`);
+    options = tail.slice(1, close).trim();
+    tail = tail.slice(close + 1);
+  }
+
+  // Then the label, which is whatever follows the first space — safe now that neither
+  // the type name nor the options are still in play.
+  const [typeSuffix, rawLabel] = splitOutsideParens(tail, " ");
+  const label = (rawLabel ?? "").trim() || titleize(fieldname);
+
+  // Default before modifiers: a default may itself end in `!`, and stripping modifiers
+  // first would take that as "required".
+  const [beforeDefault, rawDefault] = splitOutsideParens(typeSuffix, "=");
+  let defaultValue;
+  if (rawDefault !== null) {
+    const trimmed = rawDefault.trim();
+    defaultValue = trimmed.startsWith("(") && trimmed.endsWith(")") ? trimmed.slice(1, -1) : trimmed;
+    if (!defaultValue) fail(`${context}: field "${fieldname}" has "=" with no default value`);
+  }
+
+  let expression = beforeDefault.trim();
+  const modifiers = { required: false, unique: false, read_only: false };
+  while (expression.length) {
+    const last = expression.at(-1);
+    if (last === "!") modifiers.required = true;
+    else if (last === "*") modifiers.unique = true;
+    else if (last === "~") modifiers.read_only = true;
+    else break;
+    expression = expression.slice(0, -1);
+  }
+  if (expression.trim()) fail(`${context}: field "${fieldname}" has trailing text after its type: "${expression.trim()}"`);
+  if (NEEDS_OPTIONS.has(fieldtype) && !options) {
+    // A Link with no target and a Select with no choices are the two ways to produce a
+    // field that renders but can never hold a valid value.
+    fail(`${context}: field "${fieldname}" of type ${fieldtype} needs options — write "${fieldname}:${fieldtype}(Target)"`);
+  }
+
+  const choices = fieldtype === "Select" && options ? options.split(",").map((entry) => entry.trim()) : null;
+
+  /**
+   * A Select's default MUST be one of its own options.
+   *
+   * This check exists because its absence shipped seven broken fields to a live tenant.
+   * `status:Select(Đang học,Tạm nghỉ)=Đang học Trạng thái` looks right and is not: the
+   * default is cut at the first space, so the field ends up with `default: "Đang"` — a
+   * value no option matches — and the leftover word is glued onto the label, which
+   * becomes "học Trạng thái". Both are silent. The record then either carries a status
+   * the doctype does not recognise, or is refused on save for a reason that points at the
+   * data rather than at the definition.
+   *
+   * The fix an author needs is `=(Đang học)`, and saying so here is the difference
+   * between a five-second correction and finding it in a screenshot later.
+   */
+  if (choices && defaultValue !== undefined && !choices.includes(defaultValue)) {
+    fail(
+      `${context}: field "${fieldname}" defaults to "${defaultValue}", which is not one of its options (${choices.join(", ")}).`
+      + (/\s/.test(rawLabel ?? "") || (rawLabel ?? "").length
+        ? `\n  A default containing a space must be parenthesised: "${fieldname}:Select(${choices.join(",")})=(${defaultValue} ${String(rawLabel).split(/\s+/)[0]}) ${String(rawLabel).split(/\s+/).slice(1).join(" ")}"`
+        : ""),
+    );
+  }
+
+  return {
+    fieldname,
+    label,
+    fieldtype,
+    // Select stores its choices newline-separated, exactly as Frappe does.
+    ...(options ? { options: choices ? choices.join("\n") : options } : {}),
+    ...(modifiers.required ? { required: true } : {}),
+    ...(modifiers.unique ? { unique: true } : {}),
+    ...(modifiers.read_only ? { read_only: true } : {}),
+    ...(defaultValue === undefined ? {} : { default: defaultValue }),
+  };
+}
+
+/** `"rwc"` → a DocPerm row, with the read-implied rights filled in. */
+export function parsePermission(role, letters, context) {
+  if (typeof letters !== "string" || !letters) fail(`${context}: permissions["${role}"] must be a string of letters like "rwc"`);
+  const permission = { role };
+  for (const letter of letters) {
+    if (NON_LETTERS[letter]) fail(`${context}: permissions["${role}"] uses "${letter}" — ${NON_LETTERS[letter]}`);
+    const right = PERMISSION_LETTERS[letter];
+    // An unrecognised letter would silently grant nothing, so the role would appear
+    // configured and behave as if it had no access at all.
+    if (!right) fail(`${context}: permissions["${role}"] has an unknown letter "${letter}" (r w c s x a)`);
+    permission[right] = true;
+  }
+  if (permission.read) for (const right of READ_IMPLIES) permission[right] = true;
+  return permission;
+}
+
+/**
+ * Compiles a workflow brief.
+ *
+ *   { "states": { "Nháp": 0, "Chờ duyệt": 0, "Đã duyệt": 1, "Từ chối": 2 },
+ *     "transitions": [["Nháp","Gửi duyệt","Chờ duyệt","Nhân viên"],
+ *                     ["Chờ duyệt","Duyệt","Đã duyệt","Quản lý"]] }
+ *
+ * `allow_self_approval` defaults to FALSE on any transition that raises docstatus. That
+ * default is the whole reason this is compiled rather than hand-written: separation of
+ * duties is what an approval workflow is FOR, and a hand-written workflow that omits the
+ * flag silently lets the person who raised a request approve it. Making the safe case the
+ * default means an author has to ask for the unsafe one in writing.
+ */
+export function compileWorkflow(doctypeName, brief, declaredRoles, context) {
+  const stateEntries = Object.entries(brief.states ?? {});
+  if (!stateEntries.length) fail(`${context}: workflow needs at least one state`);
+  const states = stateEntries.map(([state, docstatus]) => {
+    if (![0, 1, 2].includes(docstatus)) fail(`${context}: state "${state}" has docstatus ${docstatus} — must be 0 (draft), 1 (submitted) or 2 (cancelled)`);
+    return { state, docstatus };
+  });
+  const known = new Map(states.map((entry) => [entry.state, entry.docstatus]));
+
+  const transitions = (brief.transitions ?? []).map((entry, index) => {
+    const [from, action, to, role, ...rest] = Array.isArray(entry)
+      ? entry
+      : [entry.from, entry.action, entry.to, entry.role, entry.self ? "self" : undefined];
+    for (const [value, label] of [[from, "from"], [action, "action"], [to, "to"], [role, "role"]]) {
+      if (typeof value !== "string" || !value.trim()) fail(`${context}: transitions[${index}] is missing ${label}`);
+    }
+    // A transition out of or into a state the workflow does not define is a menu action
+    // that can never fire, or one that moves a document into a state with no docstatus.
+    if (!known.has(from)) fail(`${context}: transitions[${index}] leaves undefined state "${from}"`);
+    if (!known.has(to)) fail(`${context}: transitions[${index}] enters undefined state "${to}"`);
+    if (!declaredRoles.has(role)) fail(`${context}: transitions[${index}] allows role "${role}", which the brief does not declare`);
+    const raisesStatus = known.get(to) > known.get(from);
+    const selfApproval = rest.includes("self");
+    return {
+      state: from, action, next_state: to, allowed_role: role,
+      ...(raisesStatus ? { allow_self_approval: selfApproval } : {}),
+    };
+  });
+  if (!transitions.length) fail(`${context}: workflow needs at least one transition, or it can never leave its first state`);
+
+  return {
+    name: brief.name ?? `${doctypeName} Workflow`,
+    document_type: doctypeName,
+    state_field: brief.field ?? "workflow_state",
+    is_active: true,
+    states,
+    transitions,
+    revision: 1,
+  };
+}
+
+/** The nav path the client router builds — must agree with `navItemPath` on the server. */
+function navPath(item) {
+  if (item.kind === "experience") return `/x/${encodeURIComponent(item.key)}`;
+  if (item.kind === "doctype") return `/app/${encodeURIComponent(item.key)}`;
+  return item.route ?? null;
+}
+
+/**
+ * Compiles a whole brief into an installable package.
+ *
+ * Ordering matters: roles are collected first, because every later check — DocPerms,
+ * workflow transitions, `allow_edit` — has to be able to say "that role is not declared"
+ * rather than emit a rule that matches nobody.
+ */
+export function compileBrief(brief) {
+  if (!brief || typeof brief !== "object") fail("a brief must be an object");
+  const id = brief.id;
+  if (!/^[a-z][a-z0-9-]*$/.test(id ?? "")) fail(`id "${id}" must be lowercase letters, digits and hyphens`);
+  const name = brief.name?.trim();
+  if (!name) fail("name is required — it is what the user sees in the app bar");
+  const module = brief.module?.trim() || name;
+  const version = brief.version ?? "1.0.0";
+
+  const doctypeBriefs = brief.doctypes;
+  if (!Array.isArray(doctypeBriefs) || !doctypeBriefs.length) fail("a brief needs at least one doctype");
+
+  // Roles come from the explicit list plus everything any permission map or transition
+  // mentions, so an author is not forced to write each role twice.
+  const declaredRoles = new Set(brief.roles ?? []);
+  for (const doctype of doctypeBriefs) {
+    for (const role of Object.keys(doctype.permissions ?? {})) declaredRoles.add(role);
+  }
+  if (!declaredRoles.size) fail("a brief needs at least one role — without one nobody can open the app");
+
+  const doctypes = [];
+  const workflows = [];
+  const nav = [];
+
+  for (const doctype of doctypeBriefs) {
+    const doctypeName = doctype.name?.trim();
+    if (!doctypeName) fail("every doctype needs a name");
+    const context = `${doctypeName}`;
+
+    const fields = (doctype.fields ?? []).map((field, index) => parseField(field, index, context));
+    if (!fields.length) fail(`${context}: needs at least one field`);
+    const fieldNames = new Set(fields.map((field) => field.fieldname));
+
+    const workflowBrief = doctype.workflow;
+    // The state field is added BEFORE anything validates against the field list, so a
+    // brief may name it in `list` or `title` without having to declare it twice. It is
+    // added rather than demanded because forgetting it produces a workflow writing to a
+    // column the doctype does not have, which fails on the first transition.
+    if (workflowBrief) {
+      const stateField = workflowBrief.field ?? "workflow_state";
+      if (!fieldNames.has(stateField)) {
+        const stateNames = Object.keys(workflowBrief.states ?? {});
+        fields.push({
+          fieldname: stateField, label: workflowBrief.label ?? "Trạng thái", fieldtype: "Select",
+          options: stateNames.join("\n"),
+          // Read-only: the state belongs to the workflow, and a form that lets a user pick
+          // it directly is a form that bypasses every transition rule.
+          read_only: true, in_standard_filter: true,
+          ...(stateNames[0] ? { default: stateNames[0] } : {}),
+        });
+        fieldNames.add(stateField);
+      }
+    }
+
+    const listed = doctype.list ?? [];
+    for (const fieldname of listed) {
+      if (!fieldNames.has(fieldname)) fail(`${context}: list names "${fieldname}", which is not a field`);
+    }
+    const listedSet = new Set(listed);
+    for (const field of fields) {
+      if (listedSet.has(field.fieldname)) { field.in_list_view = true; field.in_standard_filter = field.fieldtype === "Select" || field.fieldtype === "Link"; }
+    }
+
+    if (doctype.title && !fieldNames.has(doctype.title)) fail(`${context}: title "${doctype.title}" is not a field`);
+    for (const fieldname of doctype.search ?? []) {
+      if (!fieldNames.has(fieldname)) fail(`${context}: search names "${fieldname}", which is not a field`);
+    }
+
+    const permissions = Object.entries(doctype.permissions ?? {}).map(([role, letters]) => parsePermission(role, letters, context));
+    if (!permissions.length) fail(`${context}: needs a permissions map — a doctype nobody may read is invisible`);
+
+    /**
+     * System Manager always gets a row, even when the brief does not mention it.
+     *
+     * Not a convenience — a correctness fix for a disagreement between the two halves of
+     * the platform. The SERVER already lets a System Manager write anything (`isPlatformAdmin`
+     * short-circuits the permission check), but the CLIENT resolves editability purely from
+     * DocPerm rows matching the user's roles. With no such row, the server accepts writes
+     * the UI refuses to let anyone type: every field on every create form rendered
+     * read-only while the API happily accepted the same document via curl.
+     *
+     * Writing the row makes the metadata SAY what the server already does, so both halves
+     * decide from one source instead of two. The alternative — teaching the client to
+     * special-case role names — puts policy in the UI, which is where it can drift.
+     */
+    if (!permissions.some((permission) => permission.role === "System Manager")) {
+      permissions.push(parsePermission("System Manager", "rwcsxa", context));
+    }
+
+    const submittable = doctype.submittable ?? Boolean(workflowBrief && Object.values(workflowBrief.states ?? {}).some((status) => status > 0));
+    if (workflowBrief) workflows.push(compileWorkflow(doctypeName, workflowBrief, declaredRoles, context));
+
+    doctypes.push({
+      name: doctypeName,
+      module,
+      is_submittable: submittable,
+      track_changes: true,
+      allow_rename: false,
+      ...(doctype.naming ? { autoname: doctype.naming } : {}),
+      ...(doctype.title ? { title_field: doctype.title } : {}),
+      ...(doctype.search?.length ? { search_fields: doctype.search } : {}),
+      fields: fields.map((field, index) => ({ ...field, idx: index + 1 })),
+      permissions,
+      revision: 1,
+    });
+
+    /**
+     * A `calendar` block adds a week/month view of the doctype.
+     *
+     * Declared, not inferred: plenty of doctypes carry a date without wanting a calendar
+     * (a join date, an effective-from), and putting one in the menu for every such doctype
+     * would bury the ones that matter. The runtime derives WHICH date and time field to
+     * use from metadata, so the app only says whether it wants the screen at all.
+     */
+    if (doctype.calendar) {
+      nav.push({
+        key: `calendar:${doctypeName}`,
+        label: doctype.calendar.label ?? `Lịch ${doctype.label ?? doctypeName}`,
+        kind: "experience",
+        icon: doctype.calendar.icon ?? "calendar-days",
+        group: doctype.calendar.group ?? doctype.group ?? module,
+      });
+    }
+
+    // Nav: the operational inbox first when there is one, because a user who has an
+    // approval queue opens the app to work it, not to browse a table.
+    if (doctype.inbox ?? Boolean(workflowBrief)) {
+      nav.push({
+        key: `approval:${doctypeName}`,
+        label: doctype.inboxLabel ?? `Xử lý ${doctype.label ?? doctypeName}`,
+        kind: "experience", permission_doctype: doctypeName,
+        icon: doctype.inboxIcon ?? "inbox", group: doctype.inboxGroup ?? "Tác nghiệp",
+      });
+    }
+    nav.push({
+      key: doctypeName,
+      label: doctype.label ?? doctypeName,
+      kind: "doctype",
+      ...(doctype.icon ? { icon: doctype.icon } : {}),
+      group: doctype.group ?? module,
+    });
+  }
+
+  // Home: the brief may name a doctype or an inbox by its short form; the encoded route
+  // is computed here so an author never has to write `%3A` by hand — getting that wrong
+  // is a redirect loop, and it is the kind of mistake nobody spots by reading.
+  let home;
+  if (brief.home) {
+    const target = nav.find((item) => item.key === brief.home);
+    if (!target) fail(`home "${brief.home}" does not match any nav key (${nav.map((item) => item.key).join(", ")})`);
+    const path = navPath(target);
+    home = target.kind === "doctype" ? { doctype: target.key } : { route: path };
+  } else {
+    const first = nav[0];
+    home = first.kind === "doctype" ? { doctype: first.key } : { route: navPath(first) };
+  }
+
+  const fixtures = (brief.fixtures ?? []).map((fixture, index) => {
+    if (!fixture?.type || !fixture?.name) fail(`fixtures[${index}] needs a type and a name`);
+    return { record_type: fixture.type, name: fixture.name, data: fixture.data ?? {} };
+  });
+
+  return {
+    id, name, version,
+    platform_requires: brief.platformRequires ?? "1.0.0",
+    requires: brief.requires ?? [],
+    roles: [...declaredRoles].map((role) => ({ role, desk_access: true })),
+    doctypes,
+    workflows,
+    print_formats: [],
+    fixtures,
+    nav,
+    hooks: [],
+    // Validator cần một Worker để hỏi; parser của server từ chối cái này nếu thiếu, nên
+    // hai thứ đi cùng nhau hoặc không có gì cả.
+    validators: brief.worker ? compileValidators(brief.validators ?? []) : [],
+    ...(brief.worker ? { worker: brief.worker } : {}),
+    client: {
+      ...(brief.brand ? { brand: brief.brand } : {}),
+      ...(brief.domain ? { domain: brief.domain } : {}),
+      home,
+      dimensions: brief.dimensions ?? [],
+      catalog_mode: brief.catalogMode ?? "hybrid",
+      ...(brief.locale ? { locale: brief.locale } : {}),
+    },
+  };
+}

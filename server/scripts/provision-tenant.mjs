@@ -30,10 +30,10 @@
  * resolves to the gateway.
  */
 import { spawnSync } from "node:child_process";
-import { writeFileSync, unlinkSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fail, serverRoot, wrangler } from "./wrangler-cli.mjs";
+import { removeTenantConfig, tenantScriptName, writeTenantConfig } from "./tenant-wrangler.mjs";
 
 const args = process.argv.slice(2);
 const argOf = (name, fallback) => {
@@ -63,32 +63,12 @@ for (const name of ["FORGE_INTERNAL_AUTH_SECRET", "FORGE_INTERNAL_SERVICE_TOKEN"
   }
 }
 
-const script = `cloudforge-tenant-${tenant}`;
+const script = tenantScriptName(tenant);
 const database = `cloudforge-${tenant}`;
 
-/**
- * A GENERATED config, not a checked-in one.
- *
- * One committed wrangler file per tenant does not survive past a handful, and rots the
- * moment the template changes. Deriving it here means a tenant can never drift from the
- * shape the code expects: only TENANT_ID and the D1 binding differ.
- */
-const configPath = path.join(serverRoot, "apps", "tenant-worker", `wrangler.${tenant}.generated.jsonc`);
-const relativeConfig = path.relative(serverRoot, configPath);
-writeFileSync(configPath, `${JSON.stringify({
-  $schema: "node_modules/wrangler/config-schema.json",
-  name: script,
-  main: "src/index.ts",
-  compatibility_date: "2026-07-23",
-  compatibility_flags: ["nodejs_compat"],
-  vars: { TENANT_ID: tenant, AUTH_MODE: "production" },
-  d1_databases: [{ binding: "DB", database_name: database, database_id: databaseId, migrations_dir: "../../migrations/tenant" }],
-  durable_objects: { bindings: [{ name: "AGGREGATES", class_name: "AggregateCoordinator" }] },
-  migrations: [{ tag: "v1", new_sqlite_classes: ["AggregateCoordinator"] }],
-  queues: { producers: [{ binding: "OUTBOX_QUEUE", queue: "cloudforge-outbox" }] },
-  // Deliberately NO `triggers.crons`: a Worker in a dispatch namespace never runs its
-  // own cron. The jobs Worker drives every tenant's maintenance instead.
-}, null, 2)}\n`, "utf8");
+// Shared with `deploy-tenant.mjs`, so a tenant redeployed for a platform change can
+// never end up shaped differently from how it was provisioned.
+const { configPath, relativeConfig } = writeTenantConfig({ tenant, databaseId });
 
 function runScript(name, scriptArgs, env = {}) {
   const result = spawnSync(process.execPath, [path.join(serverRoot, "scripts", name), ...scriptArgs], {
@@ -133,8 +113,7 @@ try {
   adminOutput = runScript("seed-remote-admin.mjs", ["--config", relativeConfig, "--tenant", tenant, "--user", adminUser]);
   console.log("ok");
 } finally {
-  // Derivable at any time and pins an account-specific id, so it is not left behind.
-  try { unlinkSync(configPath); } catch { /* already gone */ }
+  removeTenantConfig(configPath);
 }
 
 console.log(`\n${adminOutput.trim()}`);

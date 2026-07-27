@@ -13,11 +13,30 @@ export function adapterServices(
   policies?: Record<string, BusinessContextPolicy>,
 ): FieldServices {
   return {
-    searchLink: (doctype, txt, opts) => {
+    searchLink: async (doctype, txt, opts) => {
       const contextFilters: Record<string, unknown> = {};
-      // Chỉ áp các quan hệ phổ quát, không đoán field nghiệp vụ của parent DocType.
-      if (context.company && ["Warehouse", "Account", "Cost Center", "Branch", "Project", "Asset", "Employee"].includes(doctype)) {
-        contextFilters.company = context.company;
+      /**
+       * Áp lọc `company` khi DocType đích THỰC SỰ có field đó — hỏi metadata, không đoán
+       * theo TÊN.
+       *
+       * Trước đây đây là một danh sách tên cứng (`Warehouse`, `Branch`, `Employee`…), tức
+       * là giả định mọi thứ tên `Branch` đều là Branch của ERPNext. Một app tự khai DocType
+       * `Branch` không có `company` — chuyện hoàn toàn bình thường khi app là dữ liệu — sẽ
+       * bị client gắn thêm `filters={"company":…}`, server từ chối đúng luật
+       * (`Filter field is not allowed: company`), và ô Link đó **không bao giờ trả về kết
+       * quả nào**. Hệ quả: mọi form có trường Link bắt buộc đều không lưu nổi, mà thông báo
+       * duy nhất người dùng thấy là "Bắt buộc".
+       *
+       * `getMeta` có cache ở adapter nên chi phí là một lần cho mỗi DocType.
+       */
+      if (context.company) {
+        try {
+          const target = await adapter.getMeta(doctype);
+          if (target.fields?.some((field) => field.fieldname === "company")) contextFilters.company = context.company;
+        } catch {
+          // Không đọc được metadata thì KHÔNG lọc: một ô Link trả về rộng hơn cần thiết vẫn
+          // dùng được, còn lọc nhầm thì nó rỗng vĩnh viễn.
+        }
       }
       if (doctype === "Price List") {
         const parentPolicy = opts?.referenceDoctype ? policies?.[opts.referenceDoctype] : undefined;

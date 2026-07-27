@@ -1,13 +1,64 @@
 {
   "id": "hrm",
   "name": "Quản lý nhân sự",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "requires": [],
   "nav": [
-    { "key": "Employee", "label": "Nhân viên", "kind": "doctype", "icon": "users", "group": "Nhân sự" },
-    { "key": "Leave Application", "label": "Đơn nghỉ phép", "kind": "doctype", "icon": "calendar-off", "group": "Nhân sự" },
-    { "key": "Attendance", "label": "Chấm công", "kind": "doctype", "icon": "clock", "group": "Nhân sự" },
-    { "key": "Employee Advance", "label": "Tạm ứng", "kind": "doctype", "icon": "wallet", "group": "Nhân sự" }
+    {
+      "key": "approval:Leave Application",
+      "label": "Duyệt nghỉ phép",
+      "kind": "experience",
+      "icon": "smartphone",
+      "group": "Tác nghiệp"
+    },
+    {
+      "key": "approval:Employee Advance",
+      "label": "Duyệt tạm ứng",
+      "kind": "experience",
+      "icon": "badge-check",
+      "group": "Tác nghiệp"
+    },
+    {
+      "key": "Employee",
+      "label": "Nhân viên",
+      "kind": "doctype",
+      "icon": "users",
+      "group": "Nhân sự"
+    },
+    {
+      "key": "Leave Application",
+      "label": "Đơn nghỉ phép",
+      "kind": "doctype",
+      "icon": "calendar-off",
+      "group": "Nhân sự"
+    },
+    {
+      "key": "Attendance",
+      "label": "Chấm công",
+      "kind": "doctype",
+      "icon": "clock",
+      "group": "Nhân sự"
+    },
+    {
+      "key": "Employee Advance",
+      "label": "Tạm ứng",
+      "kind": "doctype",
+      "icon": "wallet",
+      "group": "Nhân sự"
+    }
   ],
-  "hooks": []
+  "hooks": [],
+  "client": {
+    "brand": "blue",
+    "domain": "hr",
+    "home": {
+      "route": "/x/approval%3ALeave%20Application",
+      "doctype": "Leave Application"
+    },
+    "dimensions": [
+      "company",
+      "fiscal_year"
+    ],
+    "catalog_mode": "hybrid"
+  }
 }

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { combinedNavigation, compareVersions, parseAppManifest, satisfiesVersion } from "../dist/packages/app-registry/src/index.js";
+import { combinedNavigation, compareVersions, navItemPath, parseAppManifest, satisfiesVersion } from "../dist/packages/app-registry/src/index.js";
 
 function doctype(name, overrides = {}) {
   return {
@@ -49,6 +49,8 @@ test("ids and versions are constrained", () => {
   assert.throws(() => manifest({ version: "1.0" }), /semantic/);
   assert.throws(() => manifest({ version: "v1.0.0" }), /semantic/);
   assert.doesNotThrow(() => manifest({ version: "1.0.0-rc.1" }));
+  assert.throws(() => manifest({ platform_requires: "1.2" }), /platform_requires must be semantic/);
+  assert.equal(manifest({ platform_requires: "1.2.0" }).platform_requires, "1.2.0");
 });
 
 test("an app cannot depend on itself", () => {
@@ -103,6 +105,19 @@ test("a print format must target a doctype the app ships", () => {
 test("a doctype nav item must point at a doctype the app ships", () => {
   // A menu entry that leads nowhere is worse than a missing one.
   assert.throws(() => manifest({ nav: [{ key: "Ghost", label: "X", kind: "doctype" }] }), /this app does not define/);
+});
+
+test("a data-backed experience carries a validated permission target", () => {
+  const parsed = manifest({
+    nav: [{ key: "approval:Stock Request", label: "Duyệt kho", kind: "experience" }],
+  });
+  assert.equal(parsed.nav[0].permission_doctype, "Stock Request");
+  assert.throws(() => manifest({
+    nav: [{ key: "approval:Ghost", label: "Duyệt ma", kind: "experience" }],
+  }), /permission_doctype points at Ghost/);
+  assert.throws(() => manifest({
+    nav: [{ key: "approval:Stock Request", label: "Soạn hàng", kind: "experience", permission_doctype: "Ghost" }],
+  }), /permission_doctype points at Ghost/);
 });
 
 test("a route nav item needs an absolute route", () => {
@@ -216,4 +231,73 @@ test("the sample app in apps-src packs and parses, so it cannot rot unnoticed", 
   }
   // The nav entry points at a doctype the app actually ships.
   assert.equal(manifest.nav[0].key, manifest.doctypes[0].name);
+});
+
+// ---- client manifest (presentation carried in the package) --------------------
+//
+// The block that makes ONE client bundle serve every app. Each check below is a way a
+// client that trusted this block would render something the user cannot use, so the
+// package is refused at pack time instead.
+
+test("a client block is parsed and carried on the manifest", () => {
+  const parsed = manifest({
+    nav: [
+      { key: "Stock Request", label: "Phiếu kho", kind: "doctype" },
+      { key: "approval:Stock Request", label: "Duyệt kho", kind: "experience" },
+    ],
+    client: {
+      brand: "warm",
+      domain: "stock",
+      home: { route: "/x/approval%3AStock%20Request" },
+      dimensions: ["company", "warehouse"],
+      catalog_mode: "manifest",
+      locale: { currency: "VND" },
+    },
+  });
+  assert.equal(parsed.client.brand, "warm");
+  assert.equal(parsed.client.domain, "stock");
+  assert.deepEqual(parsed.client.home, { route: "/x/approval%3AStock%20Request" });
+  assert.deepEqual(parsed.client.dimensions, ["company", "warehouse"]);
+  assert.equal(parsed.client.catalog_mode, "manifest");
+  assert.deepEqual(parsed.client.locale, { currency: "VND" });
+});
+
+test("a manifest without a client block stays valid and carries none", () => {
+  assert.equal(manifest().client, undefined);
+});
+
+test("a dimension the server cannot resolve is refused", () => {
+  // Not cosmetic: the shell blocks on "choose a scope" for a selector that can never
+  // be populated, and the app is unopenable.
+  assert.throws(() => manifest({ client: { dimensions: ["company", "department"] } }), /not a dimension the server can resolve/);
+  assert.throws(() => manifest({ client: { dimensions: ["company", "company"] } }), /Duplicate client dimension/);
+});
+
+test("a home route no nav item reaches is refused", () => {
+  // The client router would fall to its catch-all, which redirects home, which is the
+  // same unreachable route.
+  assert.throws(() => manifest({ client: { home: { route: "/x/picking" } } }), /not reachable from this app's nav/);
+  assert.throws(() => manifest({ client: { home: { doctype: "Missing" } } }), /not a doctype this app defines/);
+  assert.doesNotThrow(() => manifest({ client: { home: { doctype: "Stock Request" } } }));
+});
+
+test("brand and catalog mode are constrained to what the client can render", () => {
+  assert.throws(() => manifest({ client: { brand: "neon" } }), /client.brand is not recognised/);
+  assert.throws(() => manifest({ client: { catalog_mode: "everything" } }), /client.catalog_mode is not recognised/);
+});
+
+test("an experience without a deployed generic renderer is refused", () => {
+  assert.throws(() => manifest({
+    nav: [{ key: "picking", label: "Soạn hàng", kind: "experience" }],
+  }), /unsupported experience picking/);
+});
+
+test("nav paths agree with the routes the client builds", () => {
+  assert.equal(navItemPath({ key: "Stock Request", label: "x", kind: "doctype" }), "/app/Stock%20Request");
+  assert.equal(navItemPath({ key: "picking", label: "x", kind: "experience" }), "/x/picking");
+  assert.equal(navItemPath({ key: "__permissions", label: "x", kind: "system" }), "/permissions");
+  assert.equal(navItemPath({ key: "c", label: "x", kind: "route", route: "/catalog" }), "/catalog");
+  // A route-kind entry with no route reaches nothing; callers must handle null rather
+  // than silently treating it as a doctype.
+  assert.equal(navItemPath({ key: "c", label: "x", kind: "route" }), null);
 });

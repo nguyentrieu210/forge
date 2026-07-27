@@ -3,6 +3,10 @@
   "name": "cloudforge-social-ingress",
   "main": "src/index.ts",
   "compatibility_date": "2026-07-27",
+  "vars": {
+    "PUBLIC_ORIGIN": "https://social-ingress.kairo.vn",
+    "META_GRAPH_VERSION": "v23.0"
+  },
   "d1_databases": [{
     "binding": "CONTROL_DB",
     "database_name": "cloudforge-control",

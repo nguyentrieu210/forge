@@ -1,0 +1,471 @@
+{
+  "$schema": "./brief.schema.json",
+  "id": "center",
+  "name": "CloudForge Center",
+  "version": "1.11.0",
+  "module": "Trung tâm",
+  "domain": "center",
+  "brand": "blue",
+  "//locale": [
+    "boot.sysdefaults.currency của tenant đang RỖNG, nên client không biết định dạng tiền",
+    "và in ra số trần (400000 thay vì 400.000 ₫). App tự khai — mergeLocale ghép đè từng",
+    "field lên sysdefaults nên chỉ ép currency, không đụng date/number format của site."
+  ],
+  "locale": { "currency": "VND", "numberFormat": "#.###,##", "dateFormat": "dd-mm-yyyy" },
+
+  "//scope": [
+    "PHA 1 + PHA 2 của MASTER PROMPT: nền, vai trò, master data, ghi danh, buổi học, điểm danh.",
+    "KHÔNG có học phí/công nợ/tiền dạy — những thứ đó phải TÍNH rồi GHI SỔ, không khai bằng",
+    "dữ liệu được, và spec §10.1 đặt ra bất biến tiền tệ mà chỉ code mới thi hành nổi.",
+    "Tên DocType để tiếng Anh, nhãn tiếng Việt — đúng quy ước các app sẵn có, và tránh",
+    "chuyện mã hoá URL với tên có dấu."
+  ],
+
+  "//dimensions": [
+    "CỐ Ý không khai `dimensions`. Một chiều dữ liệu toàn cục mà tenant chưa có master data",
+    "sẽ chặn shell ở màn 'Cần chọn phạm vi dữ liệu' vĩnh viễn. Phạm vi theo cơ sở ở đây đi",
+    "qua DocType `Branch` + phân quyền, không qua selector toàn cục."
+  ],
+
+  "roles": [
+    "Chủ trung tâm",
+    "Quản lý trung tâm",
+    "Lễ tân",
+    "Kế toán",
+    "Giáo viên",
+    "Trợ giảng",
+    "Kiểm toán viên"
+  ],
+
+  "home": "approval:Enrollment",
+
+  "//worker": [
+    "App Worker RIÊNG của Center — thứ brief không nói được: luật phải TÍNH rồi mới quyết.",
+    "Chống trùng phòng/giáo viên và chặn vượt sĩ số phải đếm dữ liệu hiện có, nên không",
+    "khai bằng metadata được. Worker không giữ quyền nào: nó đọc/ghi qua gateway với danh",
+    "tính của chính người dùng vừa gọi, trong đúng một lời gọi."
+  ],
+  "worker": "cloudforge-app-center",
+
+  "//validators": [
+    "Khai ở đây là FAIL-CLOSED: validator không trả lời được thì lệnh ghi bị TỪ CHỐI, không",
+    "được thả qua. Đó là hành vi đúng cho một luật nghiệp vụ, nhưng nó có nghĩa hai doctype",
+    "này phụ thuộc vào việc Worker gọi ngược được vào nền tảng. Chặng đó đi qua service",
+    "binding tới gateway (xem apps-src/center-worker/wrangler.jsonc) chứ không qua mạng."
+  ],
+  "validators": [
+    { "doctype": "Class Session" },
+    { "doctype": "Enrollment", "actions": ["create"] }
+  ],
+
+  "fixtures": [
+    { "type": "Company", "name": "Hải Đăng", "data": { "label": "Trung tâm Ngoại ngữ Hải Đăng", "abbr": "HD", "default_currency": "VND" } }
+  ],
+
+  "doctypes": [
+    {
+      "name": "Branch",
+      "label": "Cơ sở",
+      "icon": "building-2",
+      "group": "Tổ chức",
+      "naming": "CS-.####",
+      "title": "branch_name",
+      "list": ["branch_name", "address", "hotline", "branch_status"],
+      "search": ["branch_name", "code"],
+      "fields": [
+        "code:Data*! Mã cơ sở",
+        "branch_name:Data! Tên cơ sở",
+        "address:Small Text Địa chỉ",
+        "hotline:Phone Hotline",
+        "manager:Data Người quản lý",
+        "opening_hours:Data Giờ hoạt động",
+        "branch_status:Select(Đang hoạt động,Tạm ngưng,Đã đóng) Trạng thái"
+      ],
+      "permissions": {
+        "Chủ trung tâm": "rwc",
+        "Quản lý trung tâm": "rwc",
+        "Lễ tân": "r",
+        "Kế toán": "r",
+        "Giáo viên": "r",
+        "Trợ giảng": "r",
+        "Kiểm toán viên": "r"
+      }
+    },
+
+    {
+      "name": "Classroom",
+      "label": "Phòng học",
+      "icon": "door-open",
+      "group": "Tổ chức",
+      "naming": "PH-.####",
+      "title": "room_name",
+      "list": ["room_name", "branch", "capacity", "room_status"],
+      "fields": [
+        "room_name:Data! Tên phòng",
+        "branch:Link(Branch)! Cơ sở",
+        "capacity:Int! Sức chứa",
+        "equipment:Small Text Thiết bị",
+        "room_status:Select(Sẵn sàng,Đang bảo trì,Ngưng dùng) Trạng thái"
+      ],
+      "permissions": {
+        "Chủ trung tâm": "rwc",
+        "Quản lý trung tâm": "rwc",
+        "Lễ tân": "r",
+        "Giáo viên": "r",
+        "Trợ giảng": "r",
+        "Kiểm toán viên": "r"
+      }
+    },
+
+    {
+      "name": "Student",
+      "label": "Học viên",
+      "icon": "graduation-cap",
+      "group": "Học viên",
+      "naming": "HV-.YYYY.-#####",
+      "title": "student_name",
+      "list": ["student_name", "phone", "branch", "student_status", "joined_on"],
+      "search": ["student_name", "phone", "email"],
+      "fields": [
+        "student_name:Data! Họ và tên",
+        "date_of_birth:Date Ngày sinh",
+        "gender:Select(Nữ,Nam,Khác) Giới tính",
+        "phone:Data Điện thoại",
+        "email:Data Email",
+        "address:Small Text Địa chỉ",
+        "school:Data Trường đang học",
+        "branch:Link(Branch)! Cơ sở chính",
+        "joined_on:Date Ngày tham gia",
+        "source:Select(Giới thiệu,Facebook,Website,Vãng lai,Khác) Nguồn tuyển sinh",
+        "student_status:Select(Đang học,Tạm nghỉ,Đã nghỉ,Tiềm năng)=(Đang học) Trạng thái",
+        "health_note:Small Text Ghi chú sức khoẻ",
+        "academic_note:Small Text Ghi chú học vụ"
+      ],
+      "permissions": {
+        "Chủ trung tâm": "rwc",
+        "Quản lý trung tâm": "rwc",
+        "Lễ tân": "rwc",
+        "Kế toán": "r",
+        "Giáo viên": "r",
+        "Trợ giảng": "r",
+        "Kiểm toán viên": "r"
+      }
+    },
+
+    {
+      "name": "Guardian",
+      "label": "Phụ huynh",
+      "icon": "users",
+      "group": "Học viên",
+      "naming": "PH-.YYYY.-#####",
+      "title": "guardian_name",
+      "list": ["guardian_name", "student", "relationship", "phone", "is_payer"],
+      "search": ["guardian_name", "phone"],
+      "fields": [
+        "guardian_name:Data! Họ và tên",
+        "student:Link(Student)! Học viên",
+        "relationship:Select(Mẹ,Bố,Ông,Bà,Người giám hộ,Khác) Quan hệ",
+        "phone:Data! Điện thoại",
+        "email:Data Email",
+        "address:Small Text Địa chỉ",
+        "is_primary_contact:Check Nhận thông báo chính",
+        "is_payer:Check Người thanh toán"
+      ],
+      "permissions": {
+        "Chủ trung tâm": "rwc",
+        "Quản lý trung tâm": "rwc",
+        "Lễ tân": "rwc",
+        "Kế toán": "r",
+        "Kiểm toán viên": "r"
+      }
+    },
+
+    {
+      "name": "Teacher",
+      "label": "Giáo viên",
+      "icon": "user-check",
+      "group": "Nhân sự",
+      "naming": "GV-.####",
+      "title": "teacher_name",
+      "list": ["teacher_name", "phone", "specialisation", "rate_per_session", "teacher_status"],
+      "search": ["teacher_name", "phone"],
+      "fields": [
+        "teacher_name:Data! Họ và tên",
+        "user_id:Data Tài khoản đăng nhập",
+        "phone:Data Điện thoại",
+        "email:Data Email",
+        "specialisation:Data Chuyên môn",
+        "employment_type:Select(Cơ hữu,Thỉnh giảng,Trợ giảng) Loại hợp đồng",
+        "rate_per_session:Currency Đơn giá mỗi buổi",
+        "branch:Link(Branch) Cơ sở",
+        "teacher_status:Select(Đang dạy,Tạm nghỉ,Đã nghỉ)=(Đang dạy) Trạng thái"
+      ],
+      "permissions": {
+        "Chủ trung tâm": "rwc",
+        "Quản lý trung tâm": "rwc",
+        "Lễ tân": "r",
+        "Kế toán": "r",
+        "Kiểm toán viên": "r"
+      }
+    },
+
+    {
+      "name": "Program",
+      "label": "Chương trình",
+      "icon": "book-open",
+      "group": "Đào tạo",
+      "naming": "CT-.####",
+      "title": "program_name",
+      "list": ["program_name", "subject", "level", "program_status"],
+      "fields": [
+        "program_name:Data! Tên chương trình",
+        "subject:Select(Tiếng Anh,Tiếng Nhật,Tiếng Hàn,Tiếng Trung,Kỹ năng,Khác) Môn học",
+        "level:Select(Vỡ lòng,Sơ cấp,Trung cấp,Cao cấp,Luyện thi) Trình độ",
+        "description:Small Text Mô tả",
+        "program_status:Select(Đang mở,Tạm dừng)=(Đang mở) Trạng thái"
+      ],
+      "permissions": {
+        "Chủ trung tâm": "rwc",
+        "Quản lý trung tâm": "rwc",
+        "Lễ tân": "r",
+        "Kế toán": "r",
+        "Giáo viên": "r",
+        "Kiểm toán viên": "r"
+      }
+    },
+
+    {
+      "name": "Tuition Plan",
+      "label": "Gói học",
+      "icon": "ticket",
+      "group": "Đào tạo",
+      "naming": "GH-.####",
+      "title": "plan_name",
+      "list": ["plan_name", "program", "price", "session_count", "plan_status"],
+      "fields": [
+        "plan_name:Data! Tên gói",
+        "program:Link(Program)! Chương trình",
+        "plan_type:Select(Gói số buổi,Khoá cố định,Theo tháng)=(Gói số buổi) Loại gói",
+        "price:Currency! Giá gói",
+        "session_count:Int! Số buổi",
+        "validity_days:Int Thời hạn (ngày)",
+        "material_fee:Currency Phí tài liệu",
+        "effective_from:Date Hiệu lực từ",
+        "plan_status:Select(Đang bán,Ngừng bán)=(Đang bán) Trạng thái"
+      ],
+      "permissions": {
+        "Chủ trung tâm": "rwc",
+        "Quản lý trung tâm": "rwc",
+        "Lễ tân": "r",
+        "Kế toán": "r",
+        "Kiểm toán viên": "r"
+      }
+    },
+
+    {
+      "name": "Class Group",
+      "label": "Lớp học",
+      "icon": "presentation",
+      "group": "Đào tạo",
+      "naming": "LOP-.YYYY.-####",
+      "title": "class_name",
+      "list": ["class_name", "program", "teacher", "classroom", "capacity", "class_status"],
+      "search": ["class_name"],
+      "fields": [
+        "class_name:Data! Tên lớp",
+        "program:Link(Program)! Chương trình",
+        "branch:Link(Branch)! Cơ sở",
+        "classroom:Link(Classroom) Phòng mặc định",
+        "teacher:Link(Teacher)! Giáo viên phụ trách",
+        "assistant:Link(Teacher) Trợ giảng",
+        "capacity:Int! Sức chứa",
+        "start_date:Date Ngày bắt đầu",
+        "end_date:Date Ngày kết thúc",
+        "weekly_schedule:Data Lịch hàng tuần",
+        "planned_sessions:Int Số buổi dự kiến",
+        "class_status:Select(Đang tuyển sinh,Đang học,Đã kết thúc,Tạm dừng)=(Đang tuyển sinh) Trạng thái"
+      ],
+      "permissions": {
+        "Chủ trung tâm": "rwc",
+        "Quản lý trung tâm": "rwc",
+        "Lễ tân": "rwc",
+        "Kế toán": "r",
+        "Giáo viên": "r",
+        "Trợ giảng": "r",
+        "Kiểm toán viên": "r"
+      }
+    },
+
+    {
+      "name": "Enrollment",
+      "label": "Ghi danh",
+      "icon": "clipboard-check",
+      "group": "Tuyển sinh",
+      "inboxLabel": "Duyệt ghi danh",
+      "inboxIcon": "smartphone",
+      "naming": "GD-.YYYY.-#####",
+      "title": "student",
+      "list": ["student", "class_group", "tuition_plan", "start_date", "workflow_state"],
+      "fields": [
+        "student:Link(Student)! Học viên",
+        "class_group:Link(Class Group)! Lớp học",
+        "tuition_plan:Link(Tuition Plan)! Gói học",
+        "enrollment_type:Select(Chính thức,Học thử)=(Chính thức) Hình thức",
+        "start_date:Date! Ngày bắt đầu",
+        "total_sessions:Int! Tổng số buổi",
+        "sessions_used:Int~ Số buổi đã dùng",
+        "discount_amount:Currency Giảm giá",
+        "note:Small Text Ghi chú"
+      ],
+      "permissions": {
+        "Chủ trung tâm": "rwcsxa",
+        "Quản lý trung tâm": "rwcsxa",
+        "Lễ tân": "rwcs",
+        "Kế toán": "r",
+        "Giáo viên": "r",
+        "Kiểm toán viên": "r"
+      },
+      "workflow": {
+        "name": "Duyệt ghi danh",
+        "states": {
+          "Nháp": 0,
+          "Chờ duyệt": 0,
+          "Đang học": 1,
+          "Tạm dừng": 1,
+          "Hoàn thành": 1,
+          "Đã huỷ": 2
+        },
+        "transitions": [
+          ["Nháp", "Gửi duyệt", "Chờ duyệt", "Lễ tân"],
+          ["Nháp", "Gửi duyệt", "Chờ duyệt", "Quản lý trung tâm"],
+          ["Chờ duyệt", "Duyệt ghi danh", "Đang học", "Quản lý trung tâm"],
+          ["Chờ duyệt", "Duyệt ghi danh", "Đang học", "Chủ trung tâm"],
+          ["Chờ duyệt", "Từ chối", "Đã huỷ", "Quản lý trung tâm"],
+          ["Đang học", "Tạm dừng học", "Tạm dừng", "Quản lý trung tâm"],
+          ["Tạm dừng", "Học lại", "Đang học", "Quản lý trung tâm"],
+          ["Đang học", "Kết thúc khoá", "Hoàn thành", "Quản lý trung tâm"]
+        ]
+      }
+    },
+
+    {
+      "name": "Class Session",
+      "label": "Buổi học",
+      "icon": "calendar-clock",
+      "group": "Vận hành",
+      "inboxLabel": "Buổi học cần xử lý",
+      "inboxIcon": "clipboard-list",
+      "//calendar": "Lịch tuần: buổi học đọc theo tuần, lưới tháng cắt mất buổi khi một ngày nhiều ca.",
+      "calendar": { "label": "Lịch học theo tuần", "icon": "calendar-days", "group": "Vận hành" },
+      "naming": "BH-.YYYY.-#####",
+      "title": "class_group",
+      "list": ["class_group", "session_date", "start_time", "classroom", "teacher", "workflow_state"],
+      "fields": [
+        "class_group:Link(Class Group)! Lớp học",
+        "session_date:Date! Ngày học",
+        "start_time:Time! Giờ bắt đầu",
+        "end_time:Time Giờ kết thúc",
+        "classroom:Link(Classroom) Phòng học",
+        "teacher:Link(Teacher)! Giáo viên đứng lớp",
+        "topic:Data Nội dung buổi học",
+        "session_note:Small Text Nhận xét buổi học"
+      ],
+      "permissions": {
+        "Chủ trung tâm": "rwcsxa",
+        "Quản lý trung tâm": "rwcsxa",
+        "Lễ tân": "rwcs",
+        "Giáo viên": "rwcs",
+        "Trợ giảng": "rw",
+        "Kế toán": "r",
+        "Kiểm toán viên": "r"
+      },
+      "workflow": {
+        "name": "Vòng đời buổi học",
+        "states": {
+          "Đã lên lịch": 0,
+          "Đang điểm danh": 0,
+          "Đã hoàn thành": 1,
+          "Đã huỷ": 2
+        },
+        "transitions": [
+          ["Đã lên lịch", "Mở buổi học", "Đang điểm danh", "Giáo viên"],
+          ["Đã lên lịch", "Mở buổi học", "Đang điểm danh", "Quản lý trung tâm"],
+          ["Đang điểm danh", "Hoàn thành buổi", "Đã hoàn thành", "Giáo viên", "self"],
+          ["Đã lên lịch", "Huỷ buổi", "Đã huỷ", "Quản lý trung tâm"],
+          ["Đang điểm danh", "Huỷ buổi", "Đã huỷ", "Quản lý trung tâm"]
+        ]
+      }
+    },
+
+    {
+      "name": "Attendance Record",
+      "label": "Điểm danh",
+      "icon": "check-square",
+      "group": "Vận hành",
+      "naming": "DD-.YYYY.-#####",
+      "title": "student",
+      "list": ["student", "class_session", "attendance_status", "recorded_at"],
+      "inbox": false,
+      "fields": [
+        "class_session:Link(Class Session)! Buổi học",
+        "student:Link(Student)! Học viên",
+        "attendance_status:Select(Có mặt,Đi muộn,Nghỉ có phép,Nghỉ không phép,Học bù,Học thử)=(Có mặt) Trạng thái",
+        "recorded_at:Datetime Thời điểm ghi nhận",
+        "comment:Small Text Nhận xét"
+      ],
+      "permissions": {
+        "Chủ trung tâm": "rwc",
+        "Quản lý trung tâm": "rwc",
+        "Giáo viên": "rwc",
+        "Trợ giảng": "rwc",
+        "Lễ tân": "r",
+        "Kế toán": "r",
+        "Kiểm toán viên": "r"
+      }
+    },
+
+    {
+      "name": "Absence Request",
+      "label": "Đơn xin nghỉ",
+      "icon": "calendar-off",
+      "group": "Vận hành",
+      "inboxLabel": "Duyệt đơn xin nghỉ",
+      "inboxIcon": "smartphone",
+      "naming": "XN-.YYYY.-#####",
+      "title": "student",
+      "list": ["student", "class_group", "absence_date", "reason_type", "workflow_state"],
+      "fields": [
+        "student:Link(Student)! Học viên",
+        "class_group:Link(Class Group)! Lớp học",
+        "absence_date:Date! Ngày nghỉ",
+        "reason_type:Select(Ốm,Việc gia đình,Trùng lịch học,Khác)! Lý do",
+        "reason_detail:Small Text Chi tiết",
+        "requested_by:Data Người báo nghỉ",
+        "makeup_granted:Check~ Đã cấp buổi học bù"
+      ],
+      "permissions": {
+        "Chủ trung tâm": "rwcsxa",
+        "Quản lý trung tâm": "rwcsxa",
+        "Lễ tân": "rwcs",
+        "Giáo viên": "rwcs",
+        "Kế toán": "r",
+        "Kiểm toán viên": "r"
+      },
+      "workflow": {
+        "name": "Duyệt đơn xin nghỉ",
+        "states": {
+          "Nháp": 0,
+          "Chờ duyệt": 0,
+          "Chấp nhận có phép": 1,
+          "Không chấp nhận": 2
+        },
+        "transitions": [
+          ["Nháp", "Gửi duyệt", "Chờ duyệt", "Lễ tân"],
+          ["Nháp", "Gửi duyệt", "Chờ duyệt", "Giáo viên"],
+          ["Chờ duyệt", "Chấp nhận", "Chấp nhận có phép", "Quản lý trung tâm"],
+          ["Chờ duyệt", "Từ chối", "Không chấp nhận", "Quản lý trung tâm"]
+        ]
+      }
+    }
+  ]
+}
