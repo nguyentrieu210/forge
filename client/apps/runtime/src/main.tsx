@@ -148,8 +148,17 @@ function buildNavigation(manifest: AppManifest, catalog: ApplicationCatalog | un
    */
   const items: RuntimeNav[] = [
     { key: "__overview", label: "Tổng quan", group: "Điều hành", icon: resolveIcon("layout-dashboard"), route: `/overview/${manifest.domain ?? manifest.id}` },
-    { key: "__catalog", label: "Danh mục ứng dụng", group: "Điều hành", icon: resolveIcon("grid-3x3"), route: "/catalog" },
   ];
+  /**
+   * "Danh mục ứng dụng" chỉ có nghĩa khi có NHIỀU hơn một app.
+   *
+   * Tenant một app — phần lớn khách — thì đó là một trang liệt kê đúng cái app người ta
+   * đang mở. Một mục menu dẫn tới chính chỗ mình đang đứng không phải tính năng, nó là
+   * một dòng phải đọc rồi bỏ qua, mỗi ngày.
+   */
+  if ((catalog?.apps?.length ?? 0) > 1) {
+    items.push({ key: "__catalog", label: "Danh mục ứng dụng", group: "Điều hành", icon: resolveIcon("grid-3x3"), route: "/catalog" });
+  }
   if (roles.includes("System Manager") || roles.includes("Administrator")) {
     items.push({ key: "__permissions", label: "Trung tâm phân quyền", group: "Hệ thống", icon: resolveIcon("shield-check"), route: "/permissions" });
     // Nhập dữ liệu ghi vào BẤT KỲ doctype nào người dùng chọn, nên nó đi cùng quyền quản
@@ -158,11 +167,22 @@ function buildNavigation(manifest: AppManifest, catalog: ApplicationCatalog | un
     items.push({ key: "__import", label: "Nhập dữ liệu", group: "Hệ thống", icon: resolveIcon("upload"), route: "/import" });
   }
   const routes = new Set(items.map((item) => item.route));
-  for (const app of catalog?.apps ?? []) for (const workspace of app.workspaces) {
-    const route = `/workspace/${encodeURIComponent(workspace.key)}`;
-    if (routes.has(route)) continue;
-    routes.add(route);
-    items.push({ key: `workspace:${workspace.key}`, label: workspace.label, group: `Ứng dụng · ${app.label}`, icon: resolveIcon(workspace.icon ?? app.icon ?? "layout-grid"), route, keywords: [workspace.module ?? "", app.module ?? ""] });
+  for (const app of catalog?.apps ?? []) {
+    /**
+     * Workspace của CHÍNH app đang mở là bản sao của menu ngay bên dưới.
+     *
+     * Catalog sinh workspace cho mọi app đã cài, kể cả app này. Kết quả là sidebar mở đầu
+     * bằng nguyên một nhóm "Ứng dụng · <tên app>" trỏ vào đúng những doctype đã có nhóm
+     * riêng ở dưới — người dùng thấy hai đường tới cùng một chỗ và phải đoán đường nào
+     * mới đúng. Workspace của app KHÁC thì vẫn giữ: đó mới là thứ họ chưa thấy.
+     */
+    if (app.key === manifest.id) continue;
+    for (const workspace of app.workspaces) {
+      const route = `/workspace/${encodeURIComponent(workspace.key)}`;
+      if (routes.has(route)) continue;
+      routes.add(route);
+      items.push({ key: `workspace:${workspace.key}`, label: workspace.label, group: `Ứng dụng · ${app.label}`, icon: resolveIcon(workspace.icon ?? app.icon ?? "layout-grid"), route, keywords: [workspace.module ?? "", app.module ?? ""] });
+    }
   }
   for (const nav of manifest.nav) {
     const route = manifestRoute(nav);

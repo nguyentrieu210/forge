@@ -456,6 +456,10 @@
         },
         "workflow": {
           "$ref": "#/$defs/workflow"
+        },
+        "child": {
+          "type": "boolean",
+          "description": "Doctype CON — chỉ là dòng của bảng cha. Không lên menu, không có danh sách riêng."
         }
       },
       "patternProperties": {

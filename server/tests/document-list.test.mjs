@@ -10,6 +10,10 @@ import {
   decodeCursor,
 } from "../dist/packages/document-kernel/src/index.js";
 import { PermissionService } from "../dist/packages/policy/src/index.js";
+import {
+  InMemoryMetadataStore,
+  MetadataDocumentListDefinitionResolver,
+} from "../dist/packages/frappe-model/src/index.js";
 
 const compiler = new DocumentListCompiler();
 const soDef = DOCUMENT_LIST_DEFINITIONS["Sales Order"];
@@ -31,6 +35,30 @@ test("list always binds the SERVER tenant as ?1 and doctype as ?2 (body tenant i
 test("unsupported doctype is rejected", () => {
   assert.throws(() => resolveDefinition({ doctype: "User" }), (e) => e.code === "VALIDATION_ERROR");
   assert.throws(() => resolveDefinition({}), (e) => e.code === "VALIDATION_ERROR");
+});
+
+test("a built-in list merges app fields but keeps high-permission fields private", async () => {
+  const metadata = new InMemoryMetadataStore();
+  await metadata.putDocType("demo", {
+    name: "Sales Order",
+    module: "Alumdoor",
+    fields: [
+      { fieldname: "customer", label: "Khách hàng", fieldtype: "Link", options: "Customer", in_list_view: true },
+      { fieldname: "width_mm", label: "Rộng", fieldtype: "Float", in_list_view: true, in_standard_filter: true },
+      { fieldname: "internal_margin", label: "Biên nội bộ", fieldtype: "Currency", in_list_view: true, permlevel: 1 },
+    ],
+    permissions: [],
+    revision: 0,
+  }, "Administrator", "2026-07-27T00:00:00.000Z");
+  const resolver = new MetadataDocumentListDefinitionResolver(metadata);
+  const normal = await resolver.resolve("demo", { doctype: "Sales Order" }, { user_id: "sales@example.test", roles: ["Sales User"] });
+  const admin = await resolver.resolve("demo", { doctype: "Sales Order" }, { user_id: "Administrator", roles: ["System Manager"] });
+
+  assert.ok(normal.fields.width_mm, "the app's operational field becomes queryable");
+  assert.equal(normal.fields.customer.source.json, "$.customer", "the tuned built-in mapping still wins");
+  assert.equal(normal.fields.internal_margin, undefined, "permlevel 1 is excluded for ordinary users");
+  assert.ok(admin.fields.internal_margin, "an administrator retains the high-permission field");
+  assert.ok(normal.defaultFields.includes("width_mm"));
 });
 
 test("a field outside the whitelist is rejected", () => {

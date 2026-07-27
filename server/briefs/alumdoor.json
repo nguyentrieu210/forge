@@ -1,8 +1,8 @@
 {
   "$schema": "./brief.schema.json",
   "id": "alumdoor",
-  "name": "Alumdoor — Đơn hàng, Sản xuất, Kho, Công nợ",
-  "version": "0.1.0",
+  "name": "Alumdoor",
+  "version": "0.2.0",
   "module": "Alumdoor",
   "domain": "alumdoor",
   "brand": "warm",
@@ -128,6 +128,7 @@
       "//": "Dòng đơn. `qty` và `rate` là hai tên nhân O2C ĐỌC — đổi tên là mất hết bút toán.",
       "//do": "Cửa cuốn bán theo m2: rộng × cao × số bộ ra `qty`, `rate` là đơn giá/m2. Số đo giữ nguyên trên dòng vì XƯỞNG cắt theo nó, không cắt theo m2.",
       "name": "Sales Order Item",
+      "child": true,
       "label": "Dòng đơn hàng",
       "group": "Danh mục",
       "naming": "autoincrement",
@@ -189,6 +190,7 @@
 
     {
       "name": "Delivery Note Item",
+      "child": true,
       "label": "Dòng phiếu xuất",
       "group": "Danh mục",
       "naming": "autoincrement",
@@ -245,6 +247,7 @@
     {
       "//": "Dòng phiếu kho. `source_warehouse` / `target_warehouse` là hai tên nhân kho ĐỌC.",
       "name": "Stock Entry Item",
+      "child": true,
       "label": "Dòng phiếu kho",
       "group": "Danh mục",
       "naming": "autoincrement",
@@ -295,6 +298,7 @@
 
     {
       "name": "Sales Invoice Item",
+      "child": true,
       "label": "Dòng hoá đơn",
       "group": "Danh mục",
       "naming": "autoincrement",

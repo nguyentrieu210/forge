@@ -2468,15 +2468,42 @@ async function overviewDashboard(args: FrappeArgs, context: FrappeRouterContext)
     return typeof result === "number" ? result : Number((result as { count?: number }).count ?? 0);
   };
 
-  for (const entry of doctypes.slice(0, OVERVIEW_MAX_DOCTYPES)) {
-    let total = 0;
+  /**
+   * Every doctype's numbers are fetched CONCURRENTLY, then folded in declaration order.
+   *
+   * Written as a plain `for … await` first, and that cost roughly what you would expect:
+   * one round trip per doctype, plus one per workflow state, all in series. On a tenant
+   * with nine doctypes the dashboard took ~800 ms to answer while each individual query
+   * took ~20 ms — the screen was not doing hard work, it was queueing.
+   *
+   * The fold below stays sequential on purpose: metrics, tasks and charts are arrays the
+   * client renders in order, and resolving concurrently while APPENDING concurrently
+   * would reorder the cards run to run for no reason a user could understand.
+   */
+  const perDoctype = await Promise.all(doctypes.slice(0, OVERVIEW_MAX_DOCTYPES).map(async (entry) => {
+    let total: number | null = null;
     try {
       total = await count(entry.key);
     } catch {
       // A doctype that cannot be counted is skipped, not reported as zero: "0 học viên"
       // on a tenant with 120 of them is a lie, while a missing card is visibly missing.
-      continue;
+      return { entry, total: null, workflow: null, states: [] as Array<{ state: string; docstatus: number; count: number }> };
     }
+    const workflow = await context.metadata.getWorkflow(context.tenantId, entry.key);
+    if (!workflow?.is_active) return { entry, total, workflow: null, states: [] as Array<{ state: string; docstatus: number; count: number }> };
+    // Deliberately NOT wrapped in a catch. A state count that fails and is swallowed
+    // produces a dashboard reporting "0 việc đang chờ" on a tenant with sixty — a
+    // confident lie, and the exact failure this whole screen exists to prevent.
+    const states = await Promise.all(workflow.states.slice(0, OVERVIEW_MAX_STATES).map(async (state) => ({
+      state: state.state,
+      docstatus: state.docstatus,
+      count: await count(entry.key, [[workflow.state_field || "workflow_state", "=", state.state]] as unknown as JsonValue),
+    })));
+    return { entry, total, workflow, states };
+  }));
+
+  for (const { entry, total, workflow, states } of perDoctype) {
+    if (total === null) continue;
     metrics.push({
       key: `count:${entry.key}`,
       label: entry.label,
@@ -2488,30 +2515,23 @@ async function overviewDashboard(args: FrappeArgs, context: FrappeRouterContext)
     });
     actions.push({ key: `new:${entry.key}`, label: `Thêm ${entry.label.toLowerCase()}`, icon: "plus", route: `/app/${encodeURIComponent(entry.key)}?new=1` });
 
-    const workflow = await context.metadata.getWorkflow(context.tenantId, entry.key);
-    if (!workflow?.is_active) continue;
+    if (!workflow) continue;
 
     // States a transition can LEAVE are the ones with work outstanding — the same
     // derivation the approval inbox uses, so the number on this card and the number of
     // cards in that queue cannot disagree.
     const pending = [...new Set(workflow.transitions.map((transition) => transition.state))];
-    const field = workflow.state_field || "workflow_state";
     const labels: string[] = [];
     const values: number[] = [];
-    for (const state of workflow.states.slice(0, OVERVIEW_MAX_STATES)) {
-      // Deliberately NOT wrapped in a catch. A state count that fails and is swallowed
-      // produces a dashboard reporting "0 việc đang chờ" on a tenant with sixty — a
-      // confident lie, and the exact failure this whole screen exists to prevent. If the
-      // count cannot be made, the caller should hear about it.
-      const stateCount = await count(entry.key, [[field, "=", state.state]] as unknown as JsonValue);
-      labels.push(state.state);
+    for (const { state, docstatus, count: stateCount } of states) {
+      labels.push(state);
       values.push(stateCount);
-      if (!pending.includes(state.state) || stateCount === 0) continue;
+      if (!pending.includes(state) || stateCount === 0) continue;
       tasks.push({
-        key: `pending:${entry.key}:${state.state}`,
-        label: `${entry.label} · ${state.state}`,
+        key: `pending:${entry.key}:${state}`,
+        label: `${entry.label} · ${state}`,
         count: stateCount,
-        tone: state.docstatus === 0 ? "warning" : "info",
+        tone: docstatus === 0 ? "warning" : "info",
         // Straight to the operational queue when the app declared one, so a number on a
         // dashboard is one click from the work it describes.
         route: `/x/${encodeURIComponent(`approval:${entry.key}`)}`,

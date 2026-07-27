@@ -492,9 +492,22 @@ export function compileBrief(brief) {
     const submittable = doctype.submittable ?? Boolean(workflowBrief && Object.values(workflowBrief.states ?? {}).some((status) => status > 0));
     if (workflowBrief) workflows.push(compileWorkflow(doctypeName, workflowBrief, declaredRoles, context));
 
+    /**
+     * Một doctype CON chỉ tồn tại làm dòng của bảng cha (dòng đơn hàng, dòng phiếu xuất).
+     *
+     * Khai rõ vì hai hệ quả, cả hai đều nhìn thấy được: nó KHÔNG được xuất hiện trên menu
+     * — không ai vào menu để mở "Dòng đơn hàng" — và nó không có danh sách riêng, nên hỏi
+     * danh sách của nó phải bị từ chối thay vì trả về một bảng vô nghĩa.
+     *
+     * Trước đây brief không nói được điều này, nên bốn doctype dòng của Alumdoor nằm chình
+     * ình trong nhóm "Danh mục" cạnh Hàng hoá và Khách hàng.
+     */
+    const isChild = doctype.child === true;
+
     doctypes.push({
       name: doctypeName,
       module,
+      is_child: isChild,
       is_submittable: submittable,
       track_changes: true,
       allow_rename: false,
@@ -534,6 +547,7 @@ export function compileBrief(brief) {
         icon: doctype.inboxIcon ?? "inbox", group: doctype.inboxGroup ?? "Tác nghiệp",
       });
     }
+    if (isChild) continue;
     nav.push({
       key: doctypeName,
       label: doctype.label ?? doctypeName,

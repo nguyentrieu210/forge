@@ -157,6 +157,21 @@ test("a minimal brief compiles into a package the server accepts", () => {
   assert.deepEqual(manifest.client.dimensions, []);
 });
 
+test("a child doctype is installed but never exposed as a standalone menu item", () => {
+  const brief = minimal();
+  brief.doctypes.push({
+    name: "Lead Item",
+    child: true,
+    fields: ["description:Data! Nội dung"],
+    permissions: { Sales: "rwc" },
+  });
+  const pkg = compileBrief(brief);
+  const child = pkg.doctypes.find((doctype) => doctype.name === "Lead Item");
+  assert.equal(child.is_child, true);
+  assert.deepEqual(pkg.nav.map((item) => item.key), ["Lead"]);
+  assert.doesNotThrow(() => parseAppManifest(pkg));
+});
+
 test("a role named only in a permissions map is still declared", () => {
   // Otherwise every role has to be written twice, and the DocPerm that names an
   // undeclared role matches nobody.

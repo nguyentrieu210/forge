@@ -56,7 +56,7 @@
     "check:business-suite": "npm run types:check && npm run test && npm run typecheck:workers && npm run source:test && npm run report && npm run verify && npm run app:check && npm run brief:check && npm run verify:business-suite",
     "app:pack": "node scripts/pack-app.mjs",
     "app:check": "node scripts/pack-app.mjs apps-src/visits --check",
-    "brief:check": "node scripts/forge-app.mjs briefs/assets.json --dry-run && node scripts/forge-app.mjs briefs/center.json --dry-run",
+    "brief:check": "node scripts/forge-app.mjs briefs/assets.json --dry-run && node scripts/forge-app.mjs briefs/center.json --dry-run && node scripts/forge-app.mjs briefs/alumdoor.json --dry-run",
     "dev:seed": "node scripts/seed-local.mjs",
     "smoke:http": "node scripts/http-smoke.mjs"
   },
