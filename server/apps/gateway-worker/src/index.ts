@@ -163,7 +163,20 @@ async function resolveAppCallback(
 const CLIENT_ROUTE_PREFIXES = [
   "/app/", "/x/", "/overview/", "/process/", "/workspace/", "/report/", "/page/", "/dashboard/",
 ];
-const CLIENT_ROUTE_EXACT = new Set(["/", "/catalog", "/permissions", "/index.html"]);
+const CLIENT_ROUTE_EXACT = new Set([
+  "/",
+  "/login",
+  "/catalog",
+  "/permissions",
+  "/features",
+  "/pricing",
+  "/faq",
+  "/privacy",
+  "/terms",
+  "/security",
+  "/facebook/data-deletion",
+  "/index.html",
+]);
 
 function isClientRoute(request: Request, url: URL): boolean {
   // Only navigations. A POST to a client path is a mistake somewhere, and answering it

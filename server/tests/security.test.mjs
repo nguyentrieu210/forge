@@ -16,6 +16,26 @@ const INTERNAL_SECRET = "internal-secret-32-characters-minimum";
 const JWT_ISSUER = "https://auth.example.com";
 const JWT_AUDIENCE = "cloudforge";
 
+test("gateway serves the SPA shell for public marketing and login routes", async () => {
+  const served = [];
+  const environment = {
+    ROUTES: { async get() { return JSON.stringify({ tenant_id: "demo", worker_name: "tenant-demo", status: "active", routing_version: 1 }); } },
+    DISPATCHER: { get() { return { async fetch() { throw new Error("client routes must not reach the tenant"); } }; } },
+    ASSETS: { async fetch(request) { served.push(new URL(request.url).pathname); return new Response("<html>client</html>", { headers: { "content-type": "text/html" } }); } },
+    PLATFORM_SUFFIX: "example.com",
+    AUTH_MODE: "production",
+    INTERNAL_AUTH_SECRET: INTERNAL_SECRET,
+  };
+
+  for (const path of ["/", "/login", "/features", "/pricing", "/faq", "/privacy", "/terms", "/security", "/facebook/data-deletion"]) {
+    const response = await gateway.fetch(new Request(`https://demo.example.com${path}`), environment);
+    assert.equal(response.status, 200, path);
+    assert.equal(response.headers.get("cache-control"), "no-cache", path);
+    assert.equal(await response.text(), "<html>client</html>", path);
+  }
+  assert.deepEqual(served, Array(9).fill("/index.html"));
+});
+
 test("gateway ignores forged role headers and forwards a signed server identity", async () => {
   let forwarded;
   const token = await signJwt({ sub: "sales@example.com", tenant_id: "demo", roles: ["Sales User"], iss: JWT_ISSUER, aud: JWT_AUDIENCE, exp: Math.floor(Date.now() / 1000) + 300 });
