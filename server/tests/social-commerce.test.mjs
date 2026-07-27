@@ -4,6 +4,7 @@ import {
   deriveFacebookEventId, extractFacebookPageIds, hmacHex, verifyMetaSignature,
 } from "../dist/packages/social-commerce/src/index.js";
 import { normalizeFacebookEvents } from "../dist/packages/social-commerce/src/tenant-handler.js";
+import { decryptCredential, encryptCredential } from "../dist/packages/social-commerce/src/credentials.js";
 
 test("Facebook webhook signature is verified against the raw body", async () => {
   const body = JSON.stringify({ object: "page", entry: [{ id: "page-1" }] });
@@ -30,4 +31,12 @@ test("Facebook comment is normalized for keyword cart automation", async () => {
     external_actor_id: "buyer-1", message_text: "RED-M", occurred_at: "2023-11-14T22:13:20.000Z",
     payload: payload.entry[0].changes[0],
   });
+});
+
+test("Facebook credentials are AES-GCM encrypted and tenant-bound", async () => {
+  const key = Buffer.alloc(32, 7).toString("base64");
+  const encrypted = await encryptCredential("page-token", key, "tenant-a:connection:facebook:access-token");
+  assert.equal(encrypted.includes("page-token"), false);
+  assert.equal(await decryptCredential(encrypted, key, "tenant-a:connection:facebook:access-token"), "page-token");
+  await assert.rejects(() => decryptCredential(encrypted, key, "tenant-b:connection:facebook:access-token"));
 });

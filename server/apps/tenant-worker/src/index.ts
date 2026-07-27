@@ -29,6 +29,7 @@ import { publishPendingOutbox } from "../../../packages/outbox/src/index.js";
 import { D1ReportService } from "../../../packages/query/src/index.js";
 import { ingestFacebookMessage, storeFacebookOAuthPages, type FacebookOAuthPage } from "../../../packages/social-commerce/src/tenant-handler.js";
 import type { SocialQueueMessage } from "../../../packages/social-commerce/src/index.js";
+import { routeSocialCommerceApi } from "../../../packages/social-commerce/src/api.js";
 import type { TenantEnv } from "./env.js";
 
 export { AggregateCoordinator };
@@ -203,6 +204,8 @@ export default {
         });
         return new Response(response.body, { status: response.status, headers: response.headers });
       }
+      const socialResponse = await routeSocialCommerceApi(request, url, env.DB, tenantId, actor);
+      if (socialResponse) return socialResponse;
 
       if (request.method === "POST" && url.pathname === "/api/v1/commands") {
         const raw = await readJson<JsonObject>(request);
