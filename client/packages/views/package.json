@@ -26,6 +26,10 @@
       "types": "./dist/app/DoctypeWorkspace.d.ts",
       "import": "./dist/app/DoctypeWorkspace.js"
     },
+    "./master-data-workspace": {
+      "types": "./dist/app/MasterDataWorkspace.d.ts",
+      "import": "./dist/app/MasterDataWorkspace.js"
+    },
     "./overview": {
       "types": "./dist/overview/OverviewContainer.d.ts",
       "import": "./dist/overview/OverviewContainer.js"

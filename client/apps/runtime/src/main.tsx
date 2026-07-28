@@ -12,14 +12,19 @@ import {
   CommandPalette, LoginForm, applyBrand, resolveIcon, useBusinessContext, useTheme,
   type AwesomeRecord, type NavItem,
 } from "@metaforge/shell";
-import { Button, Input, Toaster } from "@metaforge/ui";
-import { ChevronRight, Folder, FolderOpen, Search } from "lucide-react";
+import { Button, Toaster } from "@metaforge/ui";
 import { SocialCommerceLanding, type PublicSocialPage } from "./landing/SocialCommerceLanding.js";
 import { Storefront, type StorefrontPage } from "./storefront/Storefront.js";
+import {
+  CatalogNavigator,
+  type CatalogNavigatorGroup,
+  type CatalogNavigatorItem,
+} from "./components/CatalogNavigator.js";
 import "./styles.css";
 
 const ApplicationCatalogContainer = lazy(() => import("@metaforge/views/catalog").then((module) => ({ default: module.ApplicationCatalogContainer })));
 const DoctypeWorkspace = lazy(() => import("@metaforge/views/doctype-workspace").then((module) => ({ default: module.DoctypeWorkspace })));
+const MasterDataWorkspace = lazy(() => import("@metaforge/views/master-data-workspace").then((module) => ({ default: module.MasterDataWorkspace })));
 const OverviewContainer = lazy(() => import("@metaforge/views/overview").then((module) => ({ default: module.OverviewContainer })));
 const PermissionCenter = lazy(() => import("@metaforge/views/permissions").then((module) => ({ default: module.PermissionCenter })));
 const ProcessContainer = lazy(() => import("@metaforge/views/process").then((module) => ({ default: module.ProcessContainer })));
@@ -453,8 +458,18 @@ function Shell({ manifest, boot, logout, nav, active, breadcrumbs = [], children
         doctypes={palette.doctypes}
         recent={palette.recent}
         searchRecords={palette.searchRecords}
-        onSelectDoctype={(doctype) => navigate(`/app/${encodeURIComponent(doctype)}`)}
-        onSelectRecord={(record) => navigate(`/app/${encodeURIComponent(record.doctype)}/${encodeURIComponent(record.name)}`)}
+        onSelectDoctype={(doctype) => {
+          const item = nav.find((candidate) => candidate.doctype === doctype);
+          navigate(item?.hiddenInSidebar
+            ? `/master-data/${encodeURIComponent(doctype)}`
+            : `/app/${encodeURIComponent(doctype)}`);
+        }}
+        onSelectRecord={(record) => {
+          const item = nav.find((candidate) => candidate.doctype === record.doctype);
+          navigate(item?.hiddenInSidebar
+            ? `/master-data/${encodeURIComponent(record.doctype)}/${encodeURIComponent(record.name)}`
+            : `/app/${encodeURIComponent(record.doctype)}/${encodeURIComponent(record.name)}`);
+        }}
       />
     </>
   );
@@ -470,6 +485,8 @@ function RuntimeRoutes({ manifest, boot, logout, nav, catalogError }: ScreenProp
       <Route path="/process/:domain" element={<ProcessScreen {...screen} />} />
       <Route path="/catalog" element={<CatalogScreen {...screen} error={catalogError} />} />
       <Route path="/master-data" element={<MasterDataScreen {...screen} />} />
+      <Route path="/master-data/:doctype" element={<MasterDataScreen {...screen} />} />
+      <Route path="/master-data/:doctype/:name" element={<MasterDataScreen {...screen} />} />
       <Route path="/permissions" element={<PermissionScreen {...screen} />} />
       <Route path="/workspace/:workspace" element={<WorkspaceScreen {...screen} />} />
       {/* Touch-first experiences may still own the viewport. Social Commerce is a
@@ -552,6 +569,12 @@ function DoctypeScreen({ manifest, boot, logout, nav }: ScreenProps) {
   const bridge = useBridge();
   const { doctype = manifest.home.doctype ?? "ToDo", name } = useParams();
   const currentNav = nav.find((item) => item.doctype === doctype);
+  if (currentNav?.hiddenInSidebar) {
+    const path = name
+      ? `/master-data/${encodeURIComponent(doctype)}/${encodeURIComponent(name)}`
+      : `/master-data/${encodeURIComponent(doctype)}`;
+    return <Navigate to={path} replace />;
+  }
   const active = currentNav?.hiddenInSidebar ? "__master_data" : (currentNav?.key ?? doctype);
   /**
    * Breadcrumb lấy nhãn từ MENU, không phải tên doctype.
@@ -568,106 +591,47 @@ function DoctypeScreen({ manifest, boot, logout, nav }: ScreenProps) {
 }
 function MasterDataScreen(props: ScreenProps) {
   const navigate = useNavigate();
-  const [query, setQuery] = useState("");
-  const [selectedBranch, setSelectedBranch] = useState("Hàng hoá & vật tư");
-  const [selectedKey, setSelectedKey] = useState("");
-  const branches = useMemo(() => {
-    const normalized = query.trim().toLocaleLowerCase("vi");
-    const grouped = new Map<string, RuntimeNav[]>();
+  const bridge = useBridge();
+  const { doctype: routeDoctype, name } = useParams();
+  const decodedDoctype = routeDoctype ? decodeURIComponent(routeDoctype) : undefined;
+  const currentNav = props.nav.find((item) =>
+    item.hiddenInSidebar && item.doctype === decodedDoctype,
+  );
+  const groups = useMemo<CatalogNavigatorGroup[]>(() => {
+    const grouped = new Map<string, CatalogNavigatorItem[]>();
     for (const item of props.nav) {
-      if (!item.hiddenInSidebar || !item.subgroup) continue;
-      if (normalized && !`${item.label} ${item.key}`.toLocaleLowerCase("vi").includes(normalized)) continue;
+      if (!item.hiddenInSidebar || !item.subgroup || !item.doctype) continue;
       if (!grouped.has(item.subgroup)) grouped.set(item.subgroup, []);
-      grouped.get(item.subgroup)!.push(item);
+      grouped.get(item.subgroup)!.push({
+        key: item.doctype,
+        label: item.label,
+        icon: item.icon,
+      });
     }
-    return [...grouped.entries()];
-  }, [props.nav, query]);
-  useEffect(() => {
-    if (!branches.length) {
-      setSelectedKey("");
-      return;
-    }
-    const branch = branches.find(([name]) => name === selectedBranch) ?? branches[0];
-    if (branch[0] !== selectedBranch) setSelectedBranch(branch[0]);
-    if (!branch[1].some((item) => item.key === selectedKey)) setSelectedKey(branch[1][0]?.key ?? "");
-  }, [branches, selectedBranch, selectedKey]);
-  const activeItems = branches.find(([branch]) => branch === selectedBranch)?.[1] ?? [];
-  const selectedItem = activeItems.find((item) => item.key === selectedKey) ?? activeItems[0];
+    return [...grouped.entries()].map(([key, items]) => ({ key, label: key, items }));
+  }, [props.nav]);
+  const breadcrumbs = [
+    { label: "Danh mục", ...(currentNav ? { onClick: () => navigate("/master-data") } : {}) },
+    ...(currentNav ? [{ label: currentNav.label }] : []),
+    ...(name ? [{ label: decodeURIComponent(name) }] : []),
+  ];
   return (
-    <Shell {...props} active="__master_data" breadcrumbs={[{ label: "Danh mục" }]}>
+    <Shell {...props} active="__master_data" breadcrumbs={breadcrumbs}>
       <div className="h-full min-h-0 p-3 md:p-4">
-        <div className="flex h-full min-h-[36rem] w-full flex-col overflow-hidden rounded-xl border bg-card shadow-sm">
-          <div className="border-b px-5 py-4">
-            <h1 className="text-lg font-semibold">Danh mục</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Chọn nhóm, chọn danh mục rồi mở màn quản lý ở cột bên phải.</p>
-            <div className="relative mt-3 max-w-md">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input value={query} onChange={(event) => setQuery(event.target.value)} className="pl-9" placeholder="Tìm danh mục…" />
-            </div>
-          </div>
-          <div className="grid min-h-0 flex-1 grid-cols-1 divide-y md:grid-cols-[minmax(13rem,0.7fr)_minmax(15rem,0.9fr)_minmax(19rem,1.4fr)] md:divide-x md:divide-y-0">
-            <section className="min-h-0 overflow-auto p-3" aria-label="Nhóm danh mục">
-              <div className="mb-2 px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Nhóm danh mục</div>
-              {branches.map(([branch, items]) => (
-                <Button
-                  key={branch}
-                  type="button"
-                  variant={selectedBranch === branch ? "secondary" : "ghost"}
-                  className="mb-1 h-10 w-full justify-start gap-2 px-3 font-medium"
-                  onClick={() => {
-                    setSelectedBranch(branch);
-                    setSelectedKey(items[0]?.key ?? "");
-                  }}
-                >
-                  {selectedBranch === branch ? <FolderOpen className="size-4 text-primary" /> : <Folder className="size-4 text-muted-foreground" />}
-                  <span className="truncate">{branch}</span>
-                  <span className="ml-auto text-xs font-normal text-muted-foreground">{items.length}</span>
-                  <ChevronRight className="size-4 text-muted-foreground" />
-                </Button>
-              ))}
-              {!branches.length ? <div className="p-6 text-center text-sm text-muted-foreground">Không tìm thấy danh mục phù hợp.</div> : null}
-            </section>
-            <section className="min-h-0 overflow-auto p-3" aria-label="Danh mục trong nhóm">
-              <div className="mb-2 px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{selectedBranch || "Danh mục"}</div>
-              {activeItems.map((item) => (
-                <Button
-                  key={item.key}
-                  type="button"
-                  variant={selectedItem?.key === item.key ? "secondary" : "ghost"}
-                  className="mb-1 h-10 w-full justify-start gap-2 px-3 font-normal"
-                  onClick={() => setSelectedKey(item.key)}
-                  onDoubleClick={() => navigate(item.route)}
-                >
-                  <span className="text-muted-foreground [&_svg]:size-4">{item.icon}</span>
-                  <span className="truncate">{item.label}</span>
-                  <ChevronRight className="ml-auto size-4 text-muted-foreground" />
-                </Button>
-              ))}
-            </section>
-            <section className="min-h-0 overflow-auto bg-muted/15 p-5" aria-label="Chi tiết danh mục">
-              {selectedItem ? (
-                <div className="flex h-full min-h-64 flex-col rounded-xl border bg-background p-5 shadow-sm">
-                  <div className="flex size-11 items-center justify-center rounded-lg bg-primary/10 text-primary [&_svg]:size-5">
-                    {selectedItem.icon}
-                  </div>
-                  <h2 className="mt-4 text-xl font-semibold">{selectedItem.label}</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">{selectedBranch}</p>
-                  <p className="mt-5 max-w-lg text-sm leading-6 text-muted-foreground">
-                    Mở danh mục để xem cây hoặc danh sách, tạo mới và chỉnh sửa bản ghi bằng cơ chế ba cột hiện tại.
-                  </p>
-                  <Button
-                    type="button"
-                    className="mt-auto w-fit gap-2"
-                    onClick={() => navigate(selectedItem.route)}
-                  >
-                    Mở {selectedItem.label}
-                    <ChevronRight className="size-4" />
-                  </Button>
-                </div>
-              ) : <div className="grid h-full min-h-64 place-items-center text-sm text-muted-foreground">Chọn một danh mục để tiếp tục.</div>}
-            </section>
-          </div>
-        </div>
+        <MasterDataWorkspace
+          navigator={(
+            <CatalogNavigator
+              groups={groups}
+              selectedKey={currentNav?.doctype}
+              onSelect={(item) => navigate(`/master-data/${encodeURIComponent(item.key)}`)}
+            />
+          )}
+          doctype={currentNav?.doctype}
+          name={name}
+          label={currentNav?.label}
+          bridge={bridge}
+          onNavigate={navigate}
+        />
       </div>
     </Shell>
   );
