@@ -78,18 +78,58 @@ export class PurchaseOrderController extends BaseController<PurchaseOrderData> {
 export class PurchaseReceiptController extends BaseController<PurchaseReceiptData> {
   readonly doctype = "Purchase Receipt";
   async normalize(context: ControllerContext<PurchaseReceiptData>): Promise<PurchaseReceiptData> {
-    const input=context.command.document; if(!input.supplier||!input.company||!input.currency||!input.posting_at||!input.against_purchase_order) throw errors.validation("Supplier, company, currency, posting_at and Purchase Order are required");
+    const input=context.command.document; if(!input.supplier||!input.company||!input.currency||!input.posting_at) throw errors.validation("Supplier, company, currency and posting_at are required");
     const currency=await resolveCurrency(context,input.company,input.currency,input.posting_at,context.command.action==="submit"); const items=normalizePurchaseStockItems(input.items,currency.transactionScale);
+    /**
+     * Đơn mua lấy theo TỪNG DÒNG, đầu phiếu chỉ là mặc định.
+     *
+     * Đây là chỗ giải bài toán N–N của mua hàng: một đơn giao làm nhiều đợt (đã chạy được từ
+     * trước nhờ `assertPurchaseRemaining`), VÀ một chuyến giao gộp nhiều đơn — cái sau trước
+     * đây không làm được, vì cả phiếu chỉ trỏ được về một đơn. Thủ kho phải tách một chuyến
+     * xe, một biên bản giao nhận của NCC, thành hai phiếu nhập.
+     *
+     * Hạn mức "không nhận quá số đặt" vẫn giữ nguyên, nhưng phải kiểm THEO TỪNG ĐƠN: gom dòng
+     * theo đơn rồi kiểm riêng. Kiểm gộp cả phiếu vào một đơn sẽ vừa từ chối nhầm, vừa cho lọt
+     * phần vượt của đơn kia.
+     */
+    const orderOf=(item:PurchaseItem):string|undefined=>item.purchase_order??input.against_purchase_order;
+    for(const [index,item] of items.entries()) if(!orderOf(item)) throw errors.validation(`Purchase Order is required at row ${index+1} (on the line or on the receipt)`);
     const allowNegative=Boolean(input.allow_negative_stock && (context.command.actor.roles.includes("Stock Manager")||context.command.actor.roles.includes("System Manager")));
     if(context.command.action==="submit") { await assertUnlocked(context,input.company,input.posting_at); await assertMasters(context,[["Supplier",input.supplier],["Company",input.company],["Currency",input.currency],...items.map((i):[string,string]=>["Item",i.item_code]),...items.map((i):[string,string]=>["Warehouse",i.warehouse!])]);
-      const po=await requireSubmitted<PurchaseOrderData>(context,"Purchase Order",input.against_purchase_order); assertPurchaseContext(input,po.data,"Purchase Receipt"); await assertPurchaseRemaining(context,po,items,"Receipt"); }
+      const byOrder=new Map<string,PurchaseItem[]>();
+      for(const item of items){const name=orderOf(item)!;const list=byOrder.get(name);if(list)list.push(item);else byOrder.set(name,[item]);}
+      for(const [name,lines] of byOrder){const po=await requireSubmitted<PurchaseOrderData>(context,"Purchase Order",name); assertPurchaseContext(input,po.data,"Purchase Receipt"); await assertPurchaseRemaining(context,po,lines,"Receipt");} }
     return {...input,currency_scale:currency.transactionScale,items,allow_negative_stock:allowNegative};
   }
   async ledger(context: ControllerContext<PurchaseReceiptData>,data:PurchaseReceiptData):Promise<LedgerResult> { if(!["submit","cancel"].includes(context.command.action))return{}; const scale=data.currency_scale??2;
     const stock:StockLedgerEntry[]=[];const usages:StockBundleUsageEntry[]=[];
     for(const [index,item] of data.items.entries()){const valuation=item.valuation_rate??item.rate;const qty=item.qty_micros??toScaledInt(item.qty,6);const value=multiplyScaled(item.qty,6,valuation,6,scale,`items[${index}].stock_value`);const tracked=await buildTrackedStockLines(context as unknown as ControllerContext<JsonObject>,{itemCode:item.item_code,warehouse:item.warehouse!,qtyMicros:qty,direction:"Inward",postingAt:data.posting_at,currency:data.currency,currencyScale:scale,valuationRateMinor:toScaledInt(valuation,scale),stockValueMinor:value,lineKey:`ITEM-${item.row_id||index+1}`,...(item.serial_and_batch_bundle?{bundleName:item.serial_and_batch_bundle}:{})});stock.push(...tracked.stock);usages.push(...tracked.usages);}
-    const procurement=data.items.map((item,index):ProcurementEntry=>({line_key:`RECEIPT-${item.row_id||index+1}`,purchase_order:data.against_purchase_order,kind:"Receipt",item_code:item.item_code,qty_micros:item.qty_micros??toScaledInt(item.qty,6),posting_at:data.posting_at}));
-    return context.command.action==="cancel"?{stock:reverseStock(stock),procurement:procurement.map(x=>({...x,line_key:`REV-${x.line_key}`,qty_micros:-x.qty_micros})),stockBundleUsages:usages.map(line=>({...line,line_key:`REV-${line.line_key}`,usage_delta:-1 as const}))}:{stock,procurement,stockBundleUsages:usages}; }
+    const procurement=data.items.map((item,index):ProcurementEntry=>({line_key:`RECEIPT-${item.row_id||index+1}`,purchase_order:(item.purchase_order??data.against_purchase_order)!,kind:"Receipt",item_code:item.item_code,qty_micros:item.qty_micros??toScaledInt(item.qty,6),posting_at:data.posting_at}));
+    /**
+     * Hàng về thì GHI SỔ CÁI, không chỉ ghi sổ kho.
+     *
+     *     Nợ Hàng tồn kho  /  Có Hàng đã nhận chưa có hoá đơn
+     *
+     * Thiếu bút toán này thì kho và sổ cái là hai thế giới rời nhau: hàng nằm trong kho mà
+     * bảng cân đối không thấy tài sản lẫn khoản phải trả, và không cách nào đối chiếu hai sổ.
+     * Tài khoản trung gian là thứ cho phép hàng về trước, hoá đơn về sau — chuyện thường
+     * ngày ở Việt Nam — mà sổ vẫn cân: hoá đơn mua sau đó ghi Nợ chính tài khoản này.
+     *
+     * Có điều kiện, CÙNG KHUÔN với Delivery Note: app chưa khai hai tài khoản thì hành vi
+     * không đổi, nên bản cập nhật này không làm lệch sổ của app đang chạy.
+     */
+    const gl:GeneralLedgerEntry[]=[];
+    if(data.stock_account&&data.stock_received_but_not_billed){
+      for(const [index,item] of data.items.entries()){
+        const qty=item.qty_micros??toScaledInt(item.qty,6);
+        const value=multiplyScaled(fromScaledInt(qty,6),6,item.valuation_rate??item.rate,scale,scale);
+        if(value===0)continue;
+        const key=item.row_id||index+1;
+        gl.push({line_key:`STOCK-${key}`,account:data.stock_account,debit_minor:value,credit_minor:0,currency:data.currency,currency_scale:scale,posting_at:data.posting_at},
+                {line_key:`SRBNB-${key}`,account:data.stock_received_but_not_billed,debit_minor:0,credit_minor:value,currency:data.currency,currency_scale:scale,posting_at:data.posting_at});
+      }
+    }
+    return context.command.action==="cancel"?{gl:reverseGl(gl),stock:reverseStock(stock),procurement:procurement.map(x=>({...x,line_key:`REV-${x.line_key}`,qty_micros:-x.qty_micros})),stockBundleUsages:usages.map(line=>({...line,line_key:`REV-${line.line_key}`,usage_delta:-1 as const}))}:{gl,stock,procurement,stockBundleUsages:usages}; }
   eventTypes(context:ControllerContext<PurchaseReceiptData>):string[]{return context.command.action==="submit"?["stock.posted","purchase_receipt.submitted","purchase_order.progressed"]:context.command.action==="cancel"?["stock.reversed","purchase_receipt.cancelled","purchase_order.progressed"]:["purchase_receipt.updated"]}
 }
 

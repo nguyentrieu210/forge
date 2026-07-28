@@ -4,6 +4,13 @@ import type { TaxRow } from "../../clouderp-selling/src/types.js";
 
 export interface PurchaseItem extends JsonObject {
   row_id: string;
+  /**
+   * Đơn mua của RIÊNG dòng này, khi một phiếu nhận hàng của nhiều đơn cùng lúc.
+   *
+   * Bỏ trống thì lấy theo đầu phiếu. Liên kết ở cấp dòng là cách ERPNext giải bài toán N–N
+   * giữa đơn mua và phiếu nhập: một đơn giao làm nhiều đợt, và một chuyến giao gộp nhiều đơn.
+   */
+  purchase_order?: string;
   item_code: string;
   qty: DecimalInput;
   rate: DecimalInput;
@@ -63,8 +70,20 @@ export interface PurchaseReceiptData extends JsonObject {
   currency: string;
   currency_scale?: number;
   posting_at: string;
-  against_purchase_order: string;
+  /**
+   * Đơn mua mặc định cho MỌI dòng không tự khai đơn của nó.
+   *
+   * Tuỳ chọn, và đó là điều làm nên bài toán "một chuyến giao gộp nhiều đơn": khi mỗi dòng
+   * tự trỏ đơn của mình (`PurchaseItem.purchase_order`) thì đầu phiếu không còn nghĩa gì,
+   * vì không có MỘT đơn nào đại diện cho cả phiếu. Bắt buộc nó lại sẽ ép thủ kho tách một
+   * chuyến xe, một biên bản giao nhận của NCC, thành hai phiếu.
+   */
+  against_purchase_order?: string;
   allow_negative_stock?: boolean;
+  /** Tài khoản tồn kho. Kèm `stock_received_but_not_billed` mới sinh bút toán — xem `ledger`. */
+  stock_account?: string;
+  /** "Hàng đã nhận chưa có hoá đơn" — cầu nối giữa phiếu nhập và hoá đơn mua. */
+  stock_received_but_not_billed?: string;
   items: PurchaseItem[];
 }
 

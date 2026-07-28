@@ -2,7 +2,7 @@
   "$schema": "./brief.schema.json",
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "module": "Alumdoor",
   "domain": "alumdoor",
   "brand": "warm",
@@ -201,6 +201,20 @@
       "name": "Chênh lệch làm tròn",
       "data": {
         "account_type": "Expense"
+      }
+    },
+    {
+      "type": "Account",
+      "name": "Phải trả người bán",
+      "data": {
+        "account_type": "Payable"
+      }
+    },
+    {
+      "type": "Account",
+      "name": "Hàng nhận chưa có hoá đơn",
+      "data": {
+        "account_type": "Liability"
       }
     }
   ],
@@ -905,35 +919,40 @@
     },
     {
       "name": "Payment Entry",
-      "label": "Phiếu thu",
+      "label": "Phiếu thu / chi",
       "icon": "wallet",
       "group": "Công nợ",
       "naming": "PT-.YYYY.-####",
       "title": "party",
       "submittable": true,
       "list": [
+        "payment_type",
         "party",
         "posting_at",
         "paid_amount",
         "mode_of_payment"
       ],
       "fields": [
-        "party:Link(Customer)! Khách hàng",
+        "payment_type:Select(Receive,Pay)!=(Receive) Loại phiếu (Receive = thu, Pay = chi)",
+        "party_type:Select(Customer,Supplier)!=(Customer) Loại đối tác",
+        "party:Data! Khách hàng / Nhà cung cấp",
         "company:Link(Company)!=(ALUMDOOR) Công ty",
         "currency:Link(Currency)!=(VND) Tiền tệ",
-        "posting_at:Datetime! Ngày thu",
-        "paid_amount:Currency! Số tiền thu",
+        "posting_at:Datetime! Ngày chứng từ",
+        "paid_amount:Currency! Số tiền",
+        "received_amount:Currency! Số tiền nhận (bằng số tiền khi cùng tiền tệ)",
         "mode_of_payment:Select(Tiền mặt,Chuyển khoản)=(Chuyển khoản) Hình thức",
-        "paid_to:Link(Account)!=(Tiền gửi ngân hàng) Tài khoản nhận",
-        "party_account:Link(Account)!=(Phải thu khách hàng) Tài khoản công nợ",
-        "reference_no:Data Số chứng từ",
+        "paid_from:Link(Account)! Tài khoản GHI CÓ (thu: phải thu · chi: ngân hàng)",
+        "paid_to:Link(Account)! Tài khoản GHI NỢ (thu: ngân hàng · chi: phải trả)",
+        "reference_no:Data Số chứng từ ngân hàng",
         "note:Small Text Ghi chú"
       ],
       "permissions": {
         "Chủ xưởng": "rwc",
         "Kế toán": "rwc",
         "Kinh doanh": "r"
-      }
+      },
+      "//do": "Một doctype cho CẢ THU LẪN CHI, đúng như nhân nền tảng: `payment_type` quyết định chiều. THU: paid_from = phải thu, paid_to = ngân hàng. CHI thì NGƯỢC LẠI — paid_from = ngân hàng, paid_to = phải trả. Khai nhầm chiều là bút toán ngược dấu mà không có gì báo."
     },
     {
       "//": "Một dòng định mức: hết bao nhiêu vật tư cho MỘT đơn vị thành phẩm.",
@@ -959,6 +978,299 @@
         "Sản xuất": "rwc",
         "Thủ kho": "r",
         "Kế toán": "r"
+      }
+    },
+    {
+      "//": "NHÀ CUNG CẤP. Khai làm doctype chứ không phải fixture — xưởng phải tự thêm NCC mới.",
+      "//do": [
+        "Hợp lệ vì `hasMasterRecord` của nền tảng đọc CẢ `master_records` LẪN `documents`",
+        "(document-kernel/src/d1-store.ts:401). Nếu nó chỉ đọc master_records thì mọi chứng từ mua",
+        "sẽ bị từ chối với 'Supplier X does not exist' — đã kiểm file thật, không đoán.",
+        "",
+        "`supplier_group` phải LẶP LẠI trên từng chứng từ mua: nhân đọc `supplier_group` từ chính",
+        "đơn/hoá đơn để lọc Chính sách giá, KHÔNG tự tra ngược về hồ sơ NCC."
+      ],
+      "name": "Supplier",
+      "label": "Nhà cung cấp",
+      "icon": "truck",
+      "group": "Danh mục",
+      "naming": "field:supplier_name",
+      "title": "supplier_name",
+      "list": [
+        "supplier_name",
+        "supplier_group",
+        "phone",
+        "contact_person",
+        "payment_terms"
+      ],
+      "search": [
+        "supplier_name",
+        "phone",
+        "tax_id"
+      ],
+      "fields": [
+        "supplier_name:Data*! Tên nhà cung cấp",
+        "supplier_group:Select(Nhôm,Mô tơ,Sơn,Phụ kiện,Vận chuyển,Khác)=(Khác) Nhóm nhà cung cấp",
+        "contact_person:Data Người liên hệ",
+        "phone:Data Điện thoại",
+        "email:Data Email",
+        "address:Small Text Địa chỉ",
+        "tax_id:Data Mã số thuế",
+        "payment_terms:Select(Trả ngay,7 ngày,15 ngày,30 ngày,45 ngày)=(Trả ngay) Điều khoản thanh toán",
+        "note:Small Text Ghi chú",
+        "disabled:Check Ngừng giao dịch"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Kế toán": "rwc",
+        "Thủ kho": "r",
+        "Sản xuất": "r",
+        "Kinh doanh": "r"
+      }
+    },
+    {
+      "//": "Dòng đơn mua. `item_code` `qty` `rate` là ba tên nhân O2P ĐỌC — đổi tên là mất bút toán.",
+      "//do": [
+        "NHÔM: `qty` là số CÂY (thứ thủ kho đếm), `rate` là đ/kg (thứ hoá đơn ghi), và `invoice_kg`",
+        "là số kg trên hoá đơn. Ba con số ba việc — xem docs/ALUMDOOR-MUA-HANG-THIET-KE.md §5.",
+        "Cân nặng KHÔNG quyết định tồn kho: khách nói 'nhiều khi nhập có sai số', suy số cây từ kg",
+        "sẽ ra 29,7 cây trong khi thợ đếm 30, và app lệch thực tế ngay từ lúc nhập."
+      ],
+      "name": "Purchase Order Item",
+      "child": true,
+      "label": "Dòng đơn mua",
+      "group": "Danh mục",
+      "naming": "autoincrement",
+      "title": "item_code",
+      "list": [
+        "item_code",
+        "qty",
+        "uom",
+        "rate",
+        "amount",
+        "warehouse"
+      ],
+      "fields": [
+        "item_code:Link(Item)! Mã hàng",
+        "qty:Float! Số lượng (nhôm: số CÂY)",
+        "uom:Select(Kg,Cây,Cái,Bộ,Mét,Sợi,Cuộn,Túi,Tấm,Thân,Hộp,Bình)=(Cái) Đơn vị tính",
+        "rate:Currency! Đơn giá (nhôm: đ/kg)",
+        "amount:Currency~ Thành tiền",
+        "warehouse:Link(Warehouse) Kho nhận",
+        "width_m:Float Khổ cây (m) — để đối chiếu cân",
+        "invoice_kg:Float Số kg trên hoá đơn NCC",
+        "note:Data Ghi chú dòng"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Kế toán": "rwc",
+        "Thủ kho": "r",
+        "Kinh doanh": "r"
+      }
+    },
+    {
+      "//": "ĐƠN MUA HÀNG. Nhân theo dõi tiến độ nhận/hoá đơn và TỪ CHỐI khi vượt số đặt.",
+      "//do": [
+        "Một đơn nhiều đợt giao: `assertPurchaseRemaining` cộng dồn số đã nhận theo TỪNG MÃ HÀNG",
+        "rồi từ chối khi vượt (clouderp-core/src/controllers.ts:132). Nên chia bao nhiêu đợt cũng được.",
+        "Huỷ đơn sau khi đã có phiếu nhập hoặc hoá đơn thì nhân TỪ CHỐI — không xoá được dấu vết."
+      ],
+      "name": "Purchase Order",
+      "label": "Đơn mua hàng",
+      "icon": "shopping-bag",
+      "group": "Mua hàng",
+      "naming": "DMH-.YYYY.-####",
+      "title": "supplier",
+      "submittable": true,
+      "list": [
+        "supplier",
+        "transaction_date",
+        "schedule_date",
+        "grand_total",
+        "received_percentage",
+        "billed_percentage"
+      ],
+      "search": [
+        "supplier"
+      ],
+      "fields": [
+        "supplier:Link(Supplier)! Nhà cung cấp",
+        "company:Link(Company)!=(ALUMDOOR) Công ty",
+        "currency:Link(Currency)!=(VND) Tiền tệ",
+        "transaction_date:Date! Ngày đặt hàng",
+        "schedule_date:Date Ngày hẹn giao",
+        "supplier_group:Select(Nhôm,Mô tơ,Sơn,Phụ kiện,Vận chuyển,Khác) Nhóm NCC (cho chính sách giá)",
+        "buying_price_list:Link(Price List) Bảng giá mua áp dụng",
+        "items:Table(Purchase Order Item)! Dòng hàng",
+        "grand_total:Currency~ Tổng tiền",
+        "received_percentage:Percent~ Đã nhận (%)",
+        "billed_percentage:Percent~ Đã có hoá đơn (%)",
+        "note:Small Text Ghi chú"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwcsxa",
+        "Kế toán": "rwcsxa",
+        "Thủ kho": "r",
+        "Sản xuất": "r",
+        "Kinh doanh": "r"
+      }
+    },
+    {
+      "//": "Dòng phiếu nhập mua. `warehouse` BẮT BUỘC — nhân từ chối nếu thiếu (controllers.ts:119).",
+      "name": "Purchase Receipt Item",
+      "child": true,
+      "label": "Dòng phiếu nhập mua",
+      "group": "Danh mục",
+      "naming": "autoincrement",
+      "title": "item_code",
+      "list": [
+        "item_code",
+        "qty",
+        "uom",
+        "warehouse",
+        "rate",
+        "amount"
+      ],
+      "fields": [
+        "item_code:Link(Item)! Mã hàng",
+        "qty:Float! Số lượng thực nhận (ĐẾM)",
+        "uom:Select(Kg,Cây,Cái,Bộ,Mét,Sợi,Cuộn,Túi,Tấm,Thân,Hộp,Bình)=(Cái) Đơn vị tính",
+        "warehouse:Link(Warehouse)! Kho nhập",
+        "rate:Currency! Đơn giá",
+        "valuation_rate:Currency Giá vốn nhập kho",
+        "amount:Currency~ Thành tiền",
+        "width_m:Float Khổ cây (m)",
+        "invoice_kg:Float Số kg trên hoá đơn",
+        "note:Data Ghi chú dòng"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Thủ kho": "rwc",
+        "Kế toán": "rwc",
+        "Kinh doanh": "r"
+      }
+    },
+    {
+      "//": "PHIẾU NHẬP MUA — hàng NCC giao về. Tăng tồn kho thật.",
+      "//do": [
+        "KHÁC HẲN `Phiếu kho` (Stock Entry): phiếu kho là điều chuyển nội bộ, không có nhà cung cấp,",
+        "không lên công nợ. Phiếu này gắn với đơn mua và là gốc của công nợ phải trả.",
+        "",
+        "Cũng KHÁC `Phiếu nhập nhôm`: đây là chứng từ kế toán chuẩn cho MỌI vật tư; nhôm còn có thêm",
+        "đường riêng vì đơn vị tồn của nhôm là 'cây theo khổ', không phải một con số."
+      ],
+      "name": "Purchase Receipt",
+      "label": "Phiếu nhập mua",
+      "icon": "package-plus",
+      "group": "Mua hàng",
+      "naming": "PNM-.YYYY.-####",
+      "title": "supplier",
+      "submittable": true,
+      "list": [
+        "supplier",
+        "posting_at",
+        "against_purchase_order",
+        "supplier_invoice_no"
+      ],
+      "search": [
+        "supplier",
+        "supplier_invoice_no"
+      ],
+      "fields": [
+        "supplier:Link(Supplier)! Nhà cung cấp",
+        "company:Link(Company)!=(ALUMDOOR) Công ty",
+        "currency:Link(Currency)!=(VND) Tiền tệ",
+        "against_purchase_order:Link(Purchase Order)! Theo đơn mua",
+        "posting_at:Datetime! Thời điểm nhập",
+        "items:Table(Purchase Receipt Item)! Dòng hàng nhận",
+        "supplier_invoice_no:Data Số phiếu giao của NCC",
+        "stock_account:Link(Account)=(Hàng tồn kho) Tài khoản tồn kho",
+        "stock_received_but_not_billed:Link(Account)=(Hàng nhận chưa có hoá đơn) TK hàng chưa có HĐ",
+        "driver:Data Người giao",
+        "note:Small Text Ghi chú"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwcsxa",
+        "Thủ kho": "rwcsxa",
+        "Kế toán": "rwcsxa",
+        "Kinh doanh": "r"
+      }
+    },
+    {
+      "//": "Dòng hoá đơn mua. `expense_account` BẮT BUỘC TỪNG DÒNG — thiếu là nhân từ chối cả phiếu.",
+      "//do": [
+        "Mặc định trỏ HÀNG TỒN KHO (tài sản), không phải chi phí. Trỏ chi phí thì mua 43 triệu nhôm",
+        "thành chi phí ngay tháng đó dù nhôm còn nằm trong kho — lãi lỗ tháng méo, và giá vốn mỗi",
+        "bộ cửa không tính đúng được."
+      ],
+      "name": "Purchase Invoice Item",
+      "child": true,
+      "label": "Dòng hoá đơn mua",
+      "group": "Danh mục",
+      "naming": "autoincrement",
+      "title": "item_code",
+      "list": [
+        "item_code",
+        "qty",
+        "rate",
+        "amount",
+        "expense_account"
+      ],
+      "fields": [
+        "item_code:Link(Item)! Mã hàng",
+        "qty:Float! Số lượng",
+        "rate:Currency! Đơn giá",
+        "amount:Currency~ Thành tiền",
+        "expense_account:Link(Account)!=(Hàng tồn kho) Tài khoản ghi nợ",
+        "warehouse:Link(Warehouse) Kho"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Kế toán": "rwc",
+        "Thủ kho": "r"
+      }
+    },
+    {
+      "//": "HOÁ ĐƠN MUA — nơi CÔNG NỢ PHẢI TRẢ phát sinh. `credit_to` là tài khoản phải trả.",
+      "name": "Purchase Invoice",
+      "label": "Hoá đơn mua",
+      "icon": "receipt-text",
+      "group": "Mua hàng",
+      "naming": "HDM-.YYYY.-####",
+      "title": "supplier",
+      "submittable": true,
+      "list": [
+        "supplier",
+        "posting_at",
+        "supplier_invoice_no",
+        "grand_total",
+        "outstanding_amount"
+      ],
+      "search": [
+        "supplier",
+        "supplier_invoice_no"
+      ],
+      "fields": [
+        "supplier:Link(Supplier)! Nhà cung cấp",
+        "company:Link(Company)!=(ALUMDOOR) Công ty",
+        "currency:Link(Currency)!=(VND) Tiền tệ",
+        "against_purchase_order:Link(Purchase Order) Theo đơn mua",
+        "posting_at:Datetime! Ngày hoá đơn",
+        "due_date:Date Hạn thanh toán",
+        "supplier_invoice_no:Data Số hoá đơn NCC",
+        "credit_to:Link(Account)!=(Phải trả người bán) Tài khoản phải trả",
+        "supplier_group:Select(Nhôm,Mô tơ,Sơn,Phụ kiện,Vận chuyển,Khác) Nhóm NCC",
+        "buying_price_list:Link(Price List) Bảng giá mua",
+        "items:Table(Purchase Invoice Item)! Dòng hàng",
+        "grand_total:Currency~ Tổng tiền",
+        "outstanding_amount:Currency~ Còn nợ NCC",
+        "note:Small Text Ghi chú"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwcsxa",
+        "Kế toán": "rwcsxa",
+        "Thủ kho": "r",
+        "Kinh doanh": "r"
       }
     },
     {
@@ -1147,6 +1459,24 @@
       ],
       "icon": "wallet",
       "group": "Báo cáo tài chính"
+    },
+    {
+      "//": "Mua theo nhà cung cấp — câu hỏi 'tháng này mua của ai bao nhiêu'.",
+      "name": "Mua hàng theo nhà cung cấp",
+      "doctype": "Purchase Order",
+      "columns": [
+        "supplier:Link(Supplier) Nhà cung cấp",
+        "count(name):Int Số đơn",
+        "sum(grand_total):Currency Tổng tiền"
+      ],
+      "groupBy": "supplier",
+      "orderBy": "sum(grand_total) desc",
+      "filters": [
+        "supplier",
+        "transaction_date"
+      ],
+      "icon": "shopping-bag",
+      "group": "Báo cáo mua hàng"
     }
   ],
   "//links": [
@@ -1213,6 +1543,13 @@
       "permission": "Sales Invoice",
       "icon": "landmark",
       "group": "Báo cáo tài chính"
+    },
+    {
+      "report": "Accounts Payable",
+      "label": "Công nợ phải trả",
+      "permission": "Supplier",
+      "icon": "wallet",
+      "group": "Báo cáo mua hàng"
     }
   ],
   "//dimensions": [
