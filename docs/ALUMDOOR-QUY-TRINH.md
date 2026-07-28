@@ -1,6 +1,11 @@
 # ALUMDOOR — Quy trình & những chỗ còn thiếu
 
-> **Bản 2** — viết lại sau khi đọc **hết** 14 sheet của file đơn hàng và 11 sheet của file
+> **Bản 3** — mục 4 (mua hàng) viết lại lần nữa sau khi đọc hết 254 dòng sheet `NHẬP`.
+> Bản 2 coi sheet đó là sổ mua hàng; **không phải**, nó là sổ hàng vào kho gộp cả mua, cả
+> khách trả, cả NCC đổi lỗi. Đổi lại, dữ liệu ở đó **tự chứng minh** được đơn vị trọng lượng
+> nên bớt một câu phải hỏi anh.
+>
+> Viết lại sau khi đọc **hết** 14 sheet của file đơn hàng và 11 sheet của file
 > báo giá Sáu Hồng. Bản 1 hỏi anh 9 điều; đọc kỹ thì **5 điều đã có sẵn câu trả lời trong
 > chính file anh gửi**. Phần đó ghi lại dưới đây, kèm nguồn — anh chỉ cần xác nhận đúng/sai,
 > không phải gõ lại.
@@ -233,51 +238,125 @@ hàng đang nằm ở NCC là một loại tồn kho cần theo dõi.
 
 ---
 
-## 4. Dòng MUA — ⛔ vẫn là chỗ hở lớn nhất
+## 4. Dòng MUA — đọc kỹ lại, em viết sai ở bản trước
 
-**App chưa có đường nhập nhôm.** 1.256 lô hiện có là em nạp thẳng từ Excel, không qua chứng
-từ. Nên: không biết lô nào mua của ai, ngày nào, giá bao nhiêu → **không có công nợ phải
-trả**, và **không có giá vốn** → không tính được lãi mỗi bộ cửa.
+Bản 1 và 2 em coi sheet `NHẬP` là **sổ mua hàng**. Đọc hết 254 dòng thì **không phải**.
 
-### 4.1 — Đơn vị tính: hai đơn vị cho cùng một thứ
+### 4.1 — `NHẬP` là **sổ HÀNG VÀO KHO**, không phải sổ mua
 
-Sheet `NHẬP` cho thấy ĐVT thực tế có **5 loại**: `LÁ · CÂY · BỘ · SỢI · KG`. Anh cho biết
-**hoá đơn NCC theo kg**, còn xưởng **đếm và cắt theo lá**.
+Nó gộp ba thứ khác hẳn nhau vào một chỗ:
 
-```
-SỐ LÁ   ← thủ kho ĐẾM   → TỒN KHO, thứ đem đi cắt
-SỐ KG   ← hoá đơn NCC   → TIỀN, thứ lên công nợ phải trả
-KG lý thuyết = số lá × khổ × trọng lượng(kg/m)   → chỉ để ĐỐI CHIẾU
-```
-
-**Vì sao không lấy kg chia ra số lá:** anh nói *"nhiều khi nhập có sai số"*. Suy số lá từ cân
-nặng sẽ ra số lẻ kiểu `29,7 lá` trong khi thợ đếm `30` — app và thực tế lệch **ngay từ lúc
-nhập và lệch mãi**. Cân nặng không được quyết định tồn kho.
-
-**Giá vốn mỗi lá** thì không cần hằng số nào: `thành tiền ÷ số lá thực nhận`.
-
-### 4.2 — ⚠️ Trọng lượng: em nghĩ là **kg/mét dài**, không phải kg/m²
-
-| Nếu hiểu `AL548N = 0,425` là | 1 m² cửa cuốn nặng |
+| Loại | Ví dụ thật trong file |
 |---|---|
-| kg/**mét dài** | 0,425 ÷ 0,055 = **7,7 kg/m²** ← đúng tầm cửa thật |
-| kg/**m²** | **0,425 kg/m²** ← nhẹ hơn tờ bìa |
+| **Mua vật tư** | `LONG ĐỀN 8LY · 10 kg · MUA VÀO SẢN XUẤT` |
+| **Khách trả lại** | `RAY HỘP U100 · 1 cây · GỬI DƯ, HOÀN LẠI · XE CÔNG TY LẤY VỀ` |
+| **NCC đổi hàng lỗi** | `AL752 30 LÁ RUỘT · LÁ KÊU, HOÀN LẠI · ĐÃ XUẤT LÁ MỚI ĐỔI, NHẬP KHO` |
 
-Thêm bằng chứng: `RHU100 = 1,419` là **ray hộp** — ray là thanh thẳng, không ai tính theo m².
+Ba thứ này trong app phải là **ba chứng từ khác nhau** — một cái tăng công nợ phải trả, một
+cái giảm công nợ phải thu, một cái không đụng tới tiền. Gộp chung thì kế toán không bóc ra được.
 
-App sẽ hiện **kg lý thuyết cạnh kg hoá đơn** nên lô nhập đầu tiên tự lộ ra ai đúng.
+**Và sổ này không phải sổ tiền:** chỉ **42/254 dòng có ghi số tiền**, 40 dòng ghi *"thanh toán
+tiền mặt"*, đúng **1 dòng** chuyển khoản. Nghĩa là **công nợ NCC hiện không được theo dõi ở
+đây** — có thể kế toán làm ngoài, hoặc phần lớn mua trả tiền ngay.
 
-Bảng đã lưu `data/trong-luong-nhom.json`: **40 dòng, 28 khớp mã nhôm**. 12 dòng chưa khớp:
+### 4.2 — ✅ Trọng lượng **kg/mét dài** — đã CHỨNG MINH, không cần hỏi nữa
+
+Bản trước em nói *"em nghĩ là kg/mét dài"* và nhờ anh xác nhận. Giờ **tự kiểm được rồi**, vì
+sheet `NHẬP` có đủ ba con số: **mã nhôm · số kg · số cây nhận**.
+
+Lấy `kg ÷ trọng lượng(kg/m) ÷ số cây` phải ra **chiều dài một cây**:
+
+| Mã hàng | kg | Số cây | kg/m | → mét mỗi cây |
+|---|---|---|---|---|
+| TD327 | 80,5 | 72 | 0,153 | **7,31 m** |
+| A282 | 163,1 | 52 | 0,452 | **6,94 m** |
+| TD325 | 354,7 | 74 | 0,619 | **7,74 m** |
+| AL548N | 557,9 | 155 | 0,425 | **8,47 m** |
+| AL503 | 556,8 | 193 | 0,411 | **7,02 m** |
+| AL503 | 171,5 | 63 | 0,411 | **6,62 m** |
+| AL595 | 452,7 | 194 | 0,350 | **6,67 m** |
+| AL595 | 25,3 | 11 | 0,350 | **6,57 m** |
+| AL503N26 | 201,2 | 70 | 0,411 | **6,99 m** |
+
+**14 dòng, ngắn nhất 6,57 m — dài nhất 8,61 m — trung vị 7,0 m.**
+
+Đó đúng là chiều dài cây nhôm tiêu chuẩn. Nếu con số là **kg/m²** thì phép chia sẽ ra
+**70 – 150 mét mỗi cây**, vô lý ngay lập tức.
+
+> ✅ **Chốt: bảng trọng lượng là kg/MÉT DÀI.** Em bỏ câu hỏi này khỏi danh sách.
+
+Và nó còn cho biết thêm một điều: **nhôm về xưởng dưới dạng CÂY dài ~6,5–8,6 m**, rồi mới cắt
+ngắn dần. Khớp với dữ liệu tồn: lô dài nhất trong 1.256 lô là **8,8 m**, ngắn nhất dưới 0,25 m
+— đó là cây nguyên và đầu thừa nằm chung một bảng.
+
+### 4.3 — Nhôm mua theo kg, nhưng số cây ghi ở **cột ghi chú**
+
+Dòng nhôm của Tiến Đạt ghi thế này:
 
 ```
-TD325 · TD326 · TD327 · A282 · TD-TG-ALD · RHM8 · RHU100
-TD87A1 · RHM8(2.4MM) · CQ-VM111 · TDU26 · AL-YST
+NỘI DUNG-SP = AL548N     SỐ LƯỢNG = 557,9     ĐVT = KG     GHI CHÚ = 155
+                                                            ↑ số cây, ghi vào ô ghi chú
 ```
 
-> ❓ Đây là ray / lá đáy / lá yếm / thanh đáy — **cần anh cho biết chúng ứng với mã nào**
-> trong danh mục, hoặc xác nhận là mã riêng cần tạo mới.
+Số cây — thứ quyết định tồn kho — đang nằm trong một **ô ghi chú tự do**. Không có cột riêng,
+nên không cộng được, không đối chiếu được, và ai gõ nhầm thì không ai biết.
 
-### 4.3 — 📄 Bảng giá NCC theo ngày (đ/kg)
+Đây chính là chỗ app giúp được nhiều nhất: cho **hai ô riêng** (số kg và số cây), rồi **tự đối
+chiếu** bằng bảng trọng lượng.
+
+### 4.4 — Nhà cung cấp: mỗi bên một loại hàng
+
+| NCC | Số dòng | Chuyên |
+|---|---|---|
+| **TIẾN ĐẠT** | 76 | **Nhôm** (mua theo kg) |
+| **ANH ĐẠT MOTOR** | 29 | Mô tơ, hộp điều khiển, bình lưu điện |
+| VIỆT ĐÔNG HƯNG | 16 | |
+| PHÚ XUÂN VIỆT | 8 | |
+| **BỘT SƠN TI GIA** | 8 | **Bột sơn** (cho lò sơn) |
+| ANH HUY BẠC ĐẠN | 7 | Ốc vít, long đền — **mua theo kg** |
+| NHỰA APC · NAM PHÁT · QUỐC HUY 2 | 6 mỗi bên | |
+
+Ghi chú *"MUA VỀ LÀM LÒ SƠN"* / *"SẢN XUẤT LÒ SƠN"* xuất hiện **18 dòng** → lò sơn là **của
+xưởng**, không phải thuê ngoài. Trả lời luôn một câu ở mục 3.3.
+
+### 4.5 — Đơn vị tính: 12 loại, và ĐVT hiện chỉ là cái nhãn
+
+Đếm thật trên 254 dòng:
+
+```
+KG 115  ·  CÁI 55  ·  CÂY 26  ·  BỘ 13  ·  BÌNH 9  ·  CUỘN 6
+TÚI 5   ·  M 4     ·  TẤM 3   ·  THÂN 3 ·  HỘP 2   ·  LÁ 1
+```
+
+Nền tảng hiện **không quy đổi đơn vị** — `500 kg` và `500 cái` ra cùng một con số tồn. Với
+Alumdoor điều đó hỏng ở hai chỗ cụ thể:
+
+1. **Nhôm**: mua theo **kg**, tồn theo **cây/lá**, cắt theo **mét**
+2. **Ray**: mua theo **cây**, bán theo **mét** (165.000 đ/m — xem mục 2.1)
+
+Nên quy đổi đơn vị **không phải tính năng phụ**, nó là điều kiện để tồn kho và giá vốn đúng.
+
+### 4.6 — Mô hình em đề xuất cho nhập nhôm
+
+```
+SỐ CÂY  ← thủ kho ĐẾM     → TỒN KHO, thứ đem đi cắt
+SỐ KG   ← hoá đơn NCC     → TIỀN, lên công nợ phải trả
+KG lý thuyết = số cây × khổ × kg/m    → ĐỐI CHIẾU, cảnh báo khi lệch
+Giá vốn 1 cây = thành tiền ÷ số cây   → không cần hằng số nào
+```
+
+Anh nói *"nhiều khi nhập có sai số"*. Suy số cây từ cân nặng sẽ ra số lẻ kiểu `29,7` trong khi
+thợ đếm `30` — app và thực tế lệch **ngay từ lúc nhập và lệch mãi**. Nên cân nặng **không được
+quyết định tồn kho**; nó chỉ làm chứng cho tiền và cho cảnh báo.
+
+Với dữ liệu thật ở trên, sai số đo được là **±13%** quanh mức 7 m (6,57 → 8,61). Sai số đó lớn,
+nhưng phần lớn có lẽ là do **cây dài ngắn khác nhau** chứ không phải cân sai — nên app nên hỏi
+**khổ** lúc nhập, rồi mới so cân được chặt.
+
+> ❓ **Cần anh cho biết:** lúc nhập, NCC có ghi **khổ từng cây** không, hay chỉ ghi tổng kg và
+> số cây rồi xưởng tự đo? Có nó thì cảnh báo sai cân mới chính xác.
+
+### 4.7 — Bảng giá NCC theo ngày (đ/kg)
 
 | Loại hàng | 11/12/25 | 11/03 | 08/04 | 07/05 | 25/06 | 01/07 | 13/07 |
 |---|---|---|---|---|---|---|---|
@@ -289,17 +368,29 @@ TD87A1 · RHM8(2.4MM) · CQ-VM111 · TDU26 · AL-YST
 
 Nền tảng đã có `Bảng giá` + `Chính sách giá` có **hiệu lực từ/đến** — nạp thẳng được.
 
-> ❓ **Cần anh cho:** cùng một mã nhôm có mua được ở **cả 3 dạng** (thô / màu chưa dập / màu
-> đã dập) không? Nếu có thì **"thô" và "màu" là hai trạng thái tồn kho khác nhau** của cùng
-> một mã — và đó chính là chỗ nối với công đoạn sơn ở mục 3.3.
+> ❓ Cùng một mã nhôm có mua được ở **cả 3 dạng** (thô / màu chưa dập / màu đã dập) không?
+> Nếu có thì **"thô" và "màu" là hai trạng thái tồn kho khác nhau** của cùng một mã — nối
+> thẳng với công đoạn sơn ở mục 3.3, và lò sơn thì đã biết là của xưởng.
 
-### 4.4 — ⛔ Công nợ phải trả chưa có
+### 4.8 — 12 mã chưa khớp
 
-App mới có **phải thu**. Chưa có **phải trả** cho NCC.
+```
+TD325 · TD326 · TD327 · A282 · TD-TG-ALD · RHM8 · RHU100
+TD87A1 · RHM8(2.4MM) · CQ-VM111 · TDU26 · AL-YST
+```
 
-> ❓ Có cần theo dõi trong app không, hay kế toán làm ngoài? Nếu cần: thanh toán NCC theo
-> hình thức nào (tiền mặt / chuyển khoản / gối đầu bao nhiêu ngày)?
+Nhưng sheet `NHẬP` cho thấy **TD325, TD327, A282, TG ALD đều được mua thật theo kg từ Tiến
+Đạt**, kèm tên gọi: `TD325 LÁ ĐÁY`, `TG ALD (LÁ TG)`. Nên chúng là **mã vật tư thật cần tạo
+trong danh mục**, không phải mã lạ.
 
+> ❓ Chỉ cần anh xác nhận: tạo mới 12 mã này trong danh mục vật tư là đúng ý chứ?
+
+### 4.9 — ⛔ Công nợ phải trả vẫn chưa có trong app
+
+App mới có **phải thu**. Dữ liệu cho thấy phần lớn mua **trả tiền mặt ngay** (40 dòng tiền
+mặt / 1 chuyển khoản), nên có thể công nợ NCC không nặng.
+
+> ❓ Có cần theo dõi công nợ NCC trong app không, hay mua tới đâu trả tới đó?
 ---
 
 ## 5. TỒN KHO — bốn con số, tuyệt đối đừng gộp làm một
@@ -466,18 +557,19 @@ Bản 1 hỏi 9 điều. Đọc kỹ file thì 5 điều đã tự trả lời, 
 | 1 | **Giá LÁ RỜI** — theo lá, mét dài, hay kg? | Đoán sai là sai tiền. Ray/trục bán theo **mét**, nên em nghi lá cũng vậy |
 | 2 | **Số người mỗi tổ** | Có rồi là chạy được lịch sản xuất + tăng ca (định mức giờ đã đủ) |
 | 3 | **Bảng chọn mô tơ** theo m² hoặc kg cửa | App tự tính được cân nặng cửa rồi, chỉ thiếu ngưỡng |
-| 4 | **12 mã ray/lá đáy/thanh đáy** ứng mã nào | Chặn phần nhập kho phụ kiện |
-| 5 | **Cùng mã nhôm mua được cả thô lẫn màu?** | Quyết định "thô/màu" có phải hai trạng thái tồn kho không → nối với công đoạn sơn |
+| 4 | **12 mã ray/lá đáy/thanh đáy** — xác nhận tạo mới trong danh mục | Sheet NHẬP cho thấy chúng được **mua thật theo kg** từ Tiến Đạt *(mục 4.8)* |
+| 5 | **Cùng mã nhôm mua được cả thô lẫn màu?** | Quyết định "thô/màu" có phải hai trạng thái tồn kho không → nối với công đoạn sơn *(lò sơn đã biết là CỦA XƯỞNG)* |
 | 6 | **Mốc giữ chỗ tồn kho** — từ đơn hàng hay từ lệnh sản xuất? | Không có nó thì không tính được **tồn khả dụng**, và kinh doanh sẽ hứa trùng hàng *(mục 5.4)* |
 | 7 | **Khoá Google service account** | Chặn phần đổ Sheet |
 
-Kèm 6 câu xác nhận ngắn (đúng/sai là đủ):
+Kèm 8 câu xác nhận ngắn (đúng/sai là đủ):
 
 - Cách tính m² ở cửa lưới — `RỘNG PBRAY` là tổng cả 2 cánh? *(mục 2.1)*
-- Trọng lượng là **kg/mét dài** phải không? *(mục 4.2)*
 - Puly lớn 4/5/6 cái — theo cái gì? *(mục 3.1)*
 - Trục dài hơn rộng phủ bì bao nhiêu, ray ngắn hơn cao phủ bì bao nhiêu? *(mục 3.1)*
-- **Kế toán** là người bấm phát lệnh sản xuất? *(mục 5)*
+- **Kế toán** là người bấm phát lệnh sản xuất? *(mục 6)*
+- NCC có ghi **khổ từng cây** lúc giao không, hay xưởng tự đo? *(mục 4.6)*
+- Có cần theo dõi **công nợ phải trả** không, hay mua tới đâu trả tới đó? *(mục 4.9)*
 - Tồn nhôm chia hai xưởng thế nào? *(mục 7)*
 - Đoạn nhôm thừa ngắn hơn **bao nhiêu mét** thì coi là bỏ hẳn? *(em đang tự đặt 0,25 m — mục 5.3)*
 - Tồn khả dụng của nhôm đọc **theo bảng khổ** có đúng cách xưởng nghĩ không? *(mục 5.5)*
