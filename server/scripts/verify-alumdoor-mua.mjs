@@ -414,24 +414,17 @@ ok("  · CÔNG NỢ PHẢI TRẢ giảm đúng 490.000 ₫", Math.abs((noTruocBa
  * CÂN, nên không có gì kêu, và nó sống được nhiều tháng.
  *
  * Nguyên nhân không nằm ở phiếu xuất: nhân tra `Company.default_cogs_account` và chỉ ghi khi
- * có ĐỦ CẢ cặp tài khoản. Công ty ALUMDOOR chưa khai cặp đó.
- */
-/**
- * KHÔNG kiểm bằng cách đọc hồ sơ Công ty.
+ * có ĐỦ CẢ cặp tài khoản — hai khoá nay đã khai ở fixture Công ty.
  *
- * Bản đầu của phép thử này đọc `/api/resource/Company/ALUMDOOR` rồi soi hai khoá
- * `default_*_account`. Nó FAIL trong khi hệ thống chạy ĐÚNG: Công ty là một master record,
- * không phải chứng từ, nên đường `resource` không trả các khoá trong `data_json`.
+ * KHÔNG kiểm bằng cách đọc hồ sơ Công ty. Bản đầu của phép thử này đọc
+ * `/api/resource/Company/ALUMDOOR` rồi soi hai khoá đó, và nó FAIL trong khi hệ thống chạy
+ * ĐÚNG: Công ty là master record chứ không phải chứng từ, nên đường `resource` không trả
+ * các khoá trong `data_json`. Đó đúng là cái bẫy mà đầu file này cảnh báo — đọc chứng từ
+ * thay vì đọc sổ.
  *
- * Đó đúng là cái bẫy mà chính đầu file này cảnh báo — đọc chứng từ thay vì đọc sổ. Bằng
- * chứng thật nằm ngay dưới: bán một lô rồi xem GIÁ VỐN trong sổ cái có tăng đúng số đã mua
- * hay không. Sổ trả lời được câu hỏi; siêu dữ liệu thì không.
- */
- * Bán chính số hàng vừa mua, để chứng minh giá vốn CHẢY từ phiếu nhập ra kết quả kinh doanh.
- *
- * Kiểm bằng cách đếm bút toán "Giá vốn" có sẵn trong sổ thì không chứng minh được gì: sổ của
- * tenant đã có hàng trăm bút toán cũ. Phải bán một lô mới, rồi so số giá vốn TĂNG THÊM với
- * đúng giá đã mua — 10 cây × 98.000.
+ * Bằng chứng thật: BÁN chính số hàng vừa mua, rồi xem giá vốn trong SỔ CÁI có tăng đúng số
+ * đã mua không. Phải bán một lô MỚI và đo phần TĂNG THÊM — đếm bút toán "Giá vốn" có sẵn
+ * thì không chứng minh được gì, vì sổ của tenant đã có hàng trăm bút toán cũ.
  */
 const KHACH = `Khách thử mua ${stamp}`;
 await create("Customer", { customer_name: KHACH, phone: "0912000111", payment_terms: "Trả ngay" });

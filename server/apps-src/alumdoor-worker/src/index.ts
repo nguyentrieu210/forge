@@ -863,11 +863,23 @@ async function parseOcr(call: PlatformCall, env: Env, args: Record<string, unkno
   if (!rows.length) return refuse("Không đọc được dòng hàng nào trong ảnh.");
 
   const matched = rows.filter((row) => row.item_code).length;
+  /**
+   * Nói rõ có bao nhiêu dòng khớp kiểu ĐOÁN-THEO-CHUỖI, không chỉ nói tổng số khớp.
+   *
+   * Ba kiểu khớp không ngang nhau: trùng mã và trùng tên là chắc chắn, còn `contains`
+   * ("AL548 màu GS 3m9" chứa mã "AL548") là suy ra. Gộp cả ba vào một con số "khớp 9
+   * dòng" khiến người soát yên tâm với đúng những dòng đáng ngờ nhất — mà đó lại là kiểu
+   * hỏng tệ nhất của cả tính năng này: mã CÓ THẬT nhưng SAI.
+   */
+  const guessed = rows.filter((row) => row.confidence === "contains").length;
   return answer({
-    target: targetName, doctype: target.doctype, items: rows, lines: rows.length, matched,
-    message: matched === rows.length
-      ? `Đọc được ${rows.length} dòng, khớp mã đủ cả ${rows.length}. Vẫn phải soát lại số trước khi ghi sổ.`
-      : `Đọc được ${rows.length} dòng, khớp được mã ${matched}. ${rows.length - matched} dòng CHƯA có mã hàng — chọn tay trên chứng từ nháp.`,
+    target: targetName, doctype: target.doctype, items: rows, lines: rows.length, matched, guessed,
+    message: [
+      `Đọc được ${rows.length} dòng, khớp được mã ${matched}.`,
+      rows.length - matched ? `${rows.length - matched} dòng CHƯA có mã hàng — chọn tay trên chứng từ nháp.` : "",
+      guessed ? `${guessed} dòng khớp mã bằng cách ĐOÁN theo tên — soát kỹ mấy dòng này nhất.` : "",
+      "Máy đọc ảnh là để khỏi gõ, không phải khỏi nhìn: đối chiếu từng số với ảnh trước khi ghi sổ.",
+    ].filter(Boolean).join(" "),
   });
 }
 
