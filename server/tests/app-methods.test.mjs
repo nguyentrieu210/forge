@@ -130,6 +130,35 @@ test("an app that answers without the frappe envelope is still understood", asyn
   assert.deepEqual(result.value, { total: 7 });
 });
 
+/**
+ * DỮ LIỆU đi kèm một câu giải thích không được bị nuốt mất.
+ *
+ * Envelope của Frappe là `{message: …}` và KHÔNG có gì khác. Bóc bất kỳ body nào chỉ vì
+ * nó CÓ CHỨA khoá `message` sẽ vứt sạch mọi field anh em — mà đó lại đúng là hình dạng
+ * thường gặp của một câu trả lời từ app: mấy dòng dữ liệu kèm một câu nói rõ chúng là gì.
+ *
+ * Bắt được từ một lần chạy thật: bản xem trước trả `{items, lines, message}` và tới nơi
+ * gọi chỉ còn mỗi chuỗi — màn hình hiện một câu và một bảng RỖNG, không chỗ nào báo mất.
+ */
+test("một câu `message` đi kèm dữ liệu KHÔNG làm mất phần dữ liệu", async () => {
+  const payload = { items: [{ item_code: "AL548" }], lines: 1, message: "đọc được 1 dòng" };
+  const result = await dispatchAppMethod({
+    env: { DISPATCHER: dispatcherThat(ok(payload)), INTERNAL_AUTH_SECRET: MASTER },
+    tenantId: "acme", target: { appId: "hrm", worker: "app-hrm" },
+    methodName: "hrm.api.x", args: {}, actor: ACTOR, traceId: "t",
+  });
+  assert.deepEqual(result.value, payload);
+});
+
+test("envelope THẬT — `message` là khoá duy nhất — vẫn được bóc như cũ", async () => {
+  const result = await dispatchAppMethod({
+    env: { DISPATCHER: dispatcherThat(ok({ message: { balance: 12 } })), INTERNAL_AUTH_SECRET: MASTER },
+    tenantId: "acme", target: { appId: "hrm", worker: "app-hrm" },
+    methodName: "hrm.api.x", args: {}, actor: ACTOR, traceId: "t",
+  });
+  assert.deepEqual(result.value, { balance: 12 });
+});
+
 test("an app's failure is reported as the app's, and cannot forge a platform error", async () => {
   // An app answering 401 must NOT become an authentication failure: that would log the
   // user out of the platform on a third party's say-so.

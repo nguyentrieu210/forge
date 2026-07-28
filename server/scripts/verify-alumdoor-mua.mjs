@@ -416,12 +416,17 @@ ok("  · CÔNG NỢ PHẢI TRẢ giảm đúng 490.000 ₫", Math.abs((noTruocBa
  * Nguyên nhân không nằm ở phiếu xuất: nhân tra `Company.default_cogs_account` và chỉ ghi khi
  * có ĐỦ CẢ cặp tài khoản. Công ty ALUMDOOR chưa khai cặp đó.
  */
-const cty = await call("GET", "/api/resource/Company/ALUMDOOR").catch(() => null);
-ok("Công ty đã khai cặp tài khoản giá vốn",
-  Boolean(cty?.default_cogs_account) && Boolean(cty?.default_inventory_account),
-  `${cty?.default_inventory_account ?? "—"} / ${cty?.default_cogs_account ?? "—"}`);
-
 /**
+ * KHÔNG kiểm bằng cách đọc hồ sơ Công ty.
+ *
+ * Bản đầu của phép thử này đọc `/api/resource/Company/ALUMDOOR` rồi soi hai khoá
+ * `default_*_account`. Nó FAIL trong khi hệ thống chạy ĐÚNG: Công ty là một master record,
+ * không phải chứng từ, nên đường `resource` không trả các khoá trong `data_json`.
+ *
+ * Đó đúng là cái bẫy mà chính đầu file này cảnh báo — đọc chứng từ thay vì đọc sổ. Bằng
+ * chứng thật nằm ngay dưới: bán một lô rồi xem GIÁ VỐN trong sổ cái có tăng đúng số đã mua
+ * hay không. Sổ trả lời được câu hỏi; siêu dữ liệu thì không.
+ */
  * Bán chính số hàng vừa mua, để chứng minh giá vốn CHẢY từ phiếu nhập ra kết quả kinh doanh.
  *
  * Kiểm bằng cách đếm bút toán "Giá vốn" có sẵn trong sổ thì không chứng minh được gì: sổ của

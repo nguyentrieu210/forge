@@ -179,9 +179,25 @@ export async function dispatchAppMethod(input: {
     throw errors.validation(message, { app_id: target.appId, method: methodName });
   }
 
-  // `message` if the app used the Frappe envelope, otherwise the body as-is: an app
-  // author should not have to know which convention the platform prefers.
-  const value = (body && Object.hasOwn(body, "message") ? body.message : body) ?? null;
+  /**
+   * `message` if the app used the Frappe envelope, otherwise the body as-is — an app
+   * author should not have to know which convention the platform prefers.
+   *
+   * The envelope is `{message: …}` and **nothing else**. Unwrapping any body that merely
+   * CONTAINS a `message` key silently threw away every sibling field, and that is the
+   * common shape for an app answer: rows plus a sentence explaining them. A preview that
+   * answered `{items: […], lines: 12, message: "đọc được 12 dòng"}` reached the caller as
+   * the bare string — the screen showed a sentence and an empty table, with nothing
+   * anywhere reporting a loss.
+   *
+   * Sole-key is the right test because it is exactly what the envelope means. An app that
+   * really wants to send one value keeps sending `{message: value}` and is unaffected; an
+   * app that sends data ALONGSIDE a message was already losing it, so no working caller
+   * can be relying on the old behaviour.
+   */
+  const keys = body ? Object.keys(body) : [];
+  const enveloped = body !== null && keys.length === 1 && keys[0] === "message";
+  const value = (enveloped ? (body as JsonObject).message : body) ?? null;
   return { value: value as JsonValue };
 }
 
