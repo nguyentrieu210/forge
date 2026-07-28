@@ -230,8 +230,10 @@ export class DeliveryNoteController extends BaseController<DeliveryNoteData> {
       const tracked = await buildTrackedStockLines(context as unknown as ControllerContext<JsonObject>, { itemCode:item.item_code,warehouse:item.warehouse!,qtyMicros:qty,direction:"Outward",postingAt:data.posting_at,currency:data.currency,currencyScale,valuationRateMinor,stockValueMinor:value,lineKey:`ITEM-${item.row_id||index+1}`,...(item.serial_and_batch_bundle ? { bundleName:item.serial_and_batch_bundle } : {}),allowNegativeStock:Boolean(data.allow_negative_stock) });
       normal.push(...tracked.stock); usages.push(...tracked.usages);
       const itemMaster=await context.reader.getMasterRecordData(context.command.tenant_id,"Item",item.item_code); const company=await context.reader.getMasterRecordData(context.command.tenant_id,"Company",data.company);
-      const stockAccount=typeof itemMaster?.inventory_account==="string"?itemMaster.inventory_account:typeof company?.default_inventory_account==="string"?company.default_inventory_account:"";
-      const cogsAccount=typeof itemMaster?.cogs_account==="string"?itemMaster.cogs_account:typeof company?.default_cogs_account==="string"?company.default_cogs_account:"";
+      const stockAccount=await itemAccount(context as unknown as ControllerContext<JsonObject>,itemMaster,"inventory_account","default_inventory_account")
+        || (typeof company?.default_inventory_account==="string"?company.default_inventory_account:"");
+      const cogsAccount=await itemAccount(context as unknown as ControllerContext<JsonObject>,itemMaster,"cogs_account","default_cogs_account")
+        || (typeof company?.default_cogs_account==="string"?company.default_cogs_account:"");
       if(stockAccount&&cogsAccount){gl.push({line_key:`COGS-${item.row_id||index+1}`,account:cogsAccount,debit_minor:value,credit_minor:0,currency:data.currency,currency_scale:currencyScale,posting_at:data.posting_at},{line_key:`STOCK-${item.row_id||index+1}`,account:stockAccount,debit_minor:0,credit_minor:value,currency:data.currency,currency_scale:currencyScale,posting_at:data.posting_at});}
     }
     const fulfillment = data.items.map((item, index): FulfillmentEntry => ({ line_key:`DELIVERY-${item.row_id||index+1}`,sales_order:data.against_sales_order,kind:"Delivery",item_code:item.item_code,qty_micros:item.qty_micros??toScaledInt(item.qty,6),posting_at:data.posting_at }));
@@ -712,6 +714,33 @@ async function assertMasterData(context: ControllerContext<JsonObject>, records:
       throw errors.reference(`${recordType} ${name} does not exist or is disabled`);
     }
   }
+}
+
+/**
+ * Tài khoản theo thứ tự Item → nhóm gần nhất → nhóm cha.
+ *
+ * Item Group là cây nên mặc định kế toán phải kế thừa. Chỉ khai field trên form mà không
+ * đọc nó ở bút toán sẽ tạo cảm giác đã cấu hình trong khi sổ vẫn âm thầm dùng Company.
+ */
+async function itemAccount(
+  context: ControllerContext<JsonObject>,
+  item: JsonObject | null,
+  itemField: string,
+  groupField: string,
+): Promise<string> {
+  const direct = item?.[itemField];
+  if (typeof direct === "string" && direct) return direct;
+  let groupName = typeof item?.item_group === "string" ? item.item_group : "";
+  const seen = new Set<string>();
+  for (let depth = 0; groupName && depth < 24 && !seen.has(groupName); depth += 1) {
+    seen.add(groupName);
+    const group = await context.reader.getMasterRecordData(context.command.tenant_id, "Item Group", groupName);
+    if (!group) break;
+    const account = group[groupField];
+    if (typeof account === "string" && account) return account;
+    groupName = typeof group.parent_item_group === "string" ? group.parent_item_group : "";
+  }
+  return "";
 }
 
 async function assertPostingUnlocked(context: ControllerContext<JsonObject>, company: string, postingAt: string): Promise<void> {

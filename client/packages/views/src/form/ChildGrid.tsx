@@ -171,7 +171,15 @@ export function ChildGrid(props: ChildGridProps) {
   const setCell = (rowIdx: number, fieldname: string, value: unknown) => {
     const next = rows.map((r, i) => {
       if (i !== rowIdx) return r;
-      const updated = { ...r, [fieldname]: value };
+      const updated = {
+        ...r,
+        [fieldname]: value,
+        // Hệ số thuộc về CẶP Item + UOM. Đổi một trong hai mà giữ hệ số cũ là cách tạo
+        // tồn sai nhưng chứng từ vẫn hợp lệ, nên xoá để server tra lại từ master.
+        ...((fieldname === "item_code" || fieldname === "uom") && "conversion_factor" in r
+          ? { conversion_factor: undefined }
+          : {}),
+      };
       return COMPUTED_FROM.has(fieldname) ? withComputed(updated) : updated;
     });
     onChange(next);
@@ -193,19 +201,11 @@ export function ChildGrid(props: ChildGridProps) {
     const has = (f: string) => (childMeta.fields ?? []).some((x) => x.fieldname === f);
     // nguồn trên Item → các ô đích trên dòng bảng con
     const plan: Array<[string, string[]]> = [
-      ["stock_uom", ["uom", "stock_uom"]],
+      ["stock_uom", ["stock_uom"]],
       ["inventory_mode", ["inventory_mode"]],
       ["measurement_profile", ["measurement_profile"]],
       ["item_name", ["item_name"]],
       ["description", ["description"]],
-      /**
-       * ĐƠN GIÁ mồi từ giá chuẩn của mặt hàng.
-       *
-       * `valuation_rate` là "giá vốn chuẩn" trên hồ sơ hàng hoá — con số gần nhất với "giá
-       * mình vẫn mua". Mồi vào ô đang trống thôi: người nhập luôn được quyền gõ đè, vì giá
-       * NCC đổi theo ngày và tờ hoá đơn trên tay mới là giá thật.
-       */
-      ["valuation_rate", ["rate"]],
       /**
        * KHO MẶC ĐỊNH của chính mặt hàng — nan nhôm về kho nhôm, mô tơ về kho phụ kiện.
        *
@@ -228,6 +228,30 @@ export function ChildGrid(props: ChildGridProps) {
       if (v === undefined || v === null || v === "") return;
       for (const d of targets) patch[d] = v;
     }));
+
+    /**
+     * ĐVT giao dịch có ưu tiên theo NGỮ CẢNH, không đồng nhất với ĐVT tồn:
+     *
+     *   - mua: default_purchase_uom;
+     *   - bán/giao: default_sales_uom;
+     *   - chứng từ khác: stock_uom.
+     *
+     * Thiếu mặc định riêng mới lùi về ĐVT tồn. Không tự nhét hệ số 1: nếu mua theo Cây mà
+     * tồn theo Mét, server phải lấy đúng bảng quy đổi trên Item.
+     */
+    if (has("uom") && !base[rowIdx]?.uom) {
+      const lower = childMeta.name.toLowerCase();
+      const source = lower.includes("purchase") || lower.includes("supplier")
+        ? "default_purchase_uom"
+        : lower.includes("sales") || lower.includes("quotation") || lower.includes("delivery")
+          ? "default_sales_uom"
+          : "stock_uom";
+      const preferred = await services.fetchValue("Item", itemCode, source).catch(() => undefined);
+      const fallback = source === "stock_uom"
+        ? preferred
+        : preferred || await services.fetchValue("Item", itemCode, "stock_uom").catch(() => undefined);
+      if (fallback !== undefined && fallback !== null && fallback !== "") patch.uom = fallback;
+    }
     // Item tạo trước khi có kiểu quản lý được coi là hàng thường — tương thích ngược.
     if (has("inventory_mode") && !Object.hasOwn(patch, "inventory_mode")) patch.inventory_mode = "Hàng thường";
 
@@ -241,8 +265,6 @@ export function ChildGrid(props: ChildGridProps) {
       }
     }
     if (Object.keys(patch).length === 0) return;
-    // Hệ số quy đổi đi kèm đơn vị: để trống thì ERPNext tính thành 0 và số lượng quy đổi ra 0.
-    if (patch.uom && has("conversion_factor") && !base[rowIdx]?.conversion_factor) patch.conversion_factor = 1;
     const merged = base.map((r, i) => (i === rowIdx ? { ...r, ...patch } : r));
     // Đơn giá vừa mồi xong thì thành tiền phải theo ngay, không đợi người dùng chạm vào ô.
     onChange(merged.map((r, i) => (i === rowIdx ? withComputed(r) : r)));

@@ -77,6 +77,92 @@ function positive(value: unknown): boolean {
   return Number.isFinite(number) && number > 0;
 }
 
+function checked(value: unknown): boolean {
+  return value === true || value === 1 || value === "1";
+}
+
+async function readMaster(call: PlatformCall, doctype: string, name: string): Promise<Record<string, unknown> | null> {
+  const response = await call(`resource/${encodeURIComponent(doctype)}/${encodeURIComponent(name)}`);
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error(`không đọc được ${doctype} ${name} (HTTP ${response.status})`);
+  return ((await response.json()) as { data?: Record<string, unknown> }).data ?? null;
+}
+
+/**
+ * Khóa các mối quan hệ cốt lõi của Item ở server.
+ *
+ * `save` gửi PATCH nên phải ghép với bản hiện có trước khi kiểm tra. Nếu chỉ nhìn payload,
+ * một lần sửa mô tả sẽ bị hiểu nhầm là Item không có nhóm/UOM; tệ hơn, một lần đổi riêng
+ * `inventory_mode` có thể lọt vì bộ quy cách nằm ở bản cũ không được nhìn thấy.
+ */
+async function validateItemMaster(call: PlatformCall, subject: ValidatorSubject): Promise<Response> {
+  const current = subject.action === "save" ? await readMaster(call, "Item", subject.name) : null;
+  const doc = { ...(current ?? {}), ...(subject.payload ?? {}) };
+  const code = String(doc.item_code ?? subject.name ?? "").trim();
+  const groupName = String(doc.item_group ?? "").trim();
+  const nature = String(doc.item_nature ?? "").trim();
+  const stage = String(doc.material_stage ?? "").trim();
+  const supply = String(doc.supply_type ?? "").trim();
+  const mode = String(doc.inventory_mode ?? "Hàng thường").trim() || "Hàng thường";
+  const stockUom = String(doc.stock_uom ?? "").trim();
+
+  if (!code || !groupName) return refuse("Mặt hàng phải có mã và Nhóm hàng.");
+  const group = await readMaster(call, "Item Group", groupName);
+  if (!group) return refuse(`Nhóm hàng ${groupName} không tồn tại hoặc đã ngừng dùng.`);
+  if (checked(group.is_group)) return refuse(`Nhóm hàng ${groupName} là nhóm chứa; hãy chọn một nhóm lá.`);
+
+  if (!["Hàng tồn kho", "Dịch vụ", "Tài sản"].includes(nature)) {
+    return refuse(`${code}: cần chọn đúng Bản chất mặt hàng.`);
+  }
+  if (nature === "Dịch vụ") {
+    if (checked(doc.is_stock_item)) return refuse(`${code}: dịch vụ không được bật Quản lý tồn kho.`);
+    if (mode !== "Hàng thường" || doc.measurement_profile) {
+      return refuse(`${code}: dịch vụ không dùng kiểu quản lý tồn hoặc bộ quy cách kho.`);
+    }
+    if (checked(doc.has_batch_no) || checked(doc.has_serial_no)) {
+      return refuse(`${code}: dịch vụ không theo dõi lô/serial.`);
+    }
+    return accept();
+  }
+
+  if (!checked(doc.is_stock_item)) return refuse(`${code}: hàng tồn kho/tài sản phải bật Quản lý tồn kho.`);
+  if (!stockUom) return refuse(`${code}: cần Đơn vị tồn kho.`);
+  if (nature === "Hàng tồn kho" && (!stage || !supply)) {
+    return refuse(`${code}: cần Giai đoạn vật tư và Nguồn cung.`);
+  }
+
+  const profileName = String(doc.measurement_profile ?? "").trim();
+  if (mode !== "Hàng thường") {
+    if (!profileName) return refuse(`${code}: kiểu ${mode} phải có Bộ quy cách.`);
+    const profile = await readMaster(call, "Measurement Profile", profileName);
+    if (!profile) return refuse(`${code}: Bộ quy cách ${profileName} không tồn tại hoặc đã ngừng dùng.`);
+    if (String(profile.inventory_mode ?? "") !== mode) {
+      return refuse(`${code}: Bộ quy cách ${profileName} không thuộc kiểu ${mode}.`);
+    }
+    const proposedUom = String(profile.stock_uom ?? "").trim();
+    if (proposedUom && proposedUom !== stockUom) {
+      return refuse(`${code}: ĐVT tồn ${stockUom} không khớp Bộ quy cách ${profileName} (${proposedUom}).`);
+    }
+  }
+  if (mode === "Nhôm cây/lá" && stockUom !== "Kg") {
+    return refuse(`${code}: nhôm cây/lá phải tồn theo Kg.`);
+  }
+
+  const conversions = Array.isArray(doc.uom_conversions) ? doc.uom_conversions : [];
+  for (const fieldname of ["default_purchase_uom", "default_sales_uom"]) {
+    const uom = String(doc[fieldname] ?? "").trim();
+    if (!uom || uom === stockUom) continue;
+    const converted = conversions.some((row) =>
+      Boolean(row) && typeof row === "object" && !Array.isArray(row)
+      && String((row as Record<string, unknown>).uom ?? "") === uom
+      && positive((row as Record<string, unknown>).conversion_factor));
+    if (!converted) {
+      return refuse(`${code}: ${uom} khác ĐVT tồn ${stockUom} nhưng chưa có hệ số quy đổi.`);
+    }
+  }
+  return accept();
+}
+
 /**
  * Nhôm của xưởng có hai lớp số liệu:
  * - sổ kho và tiền đi theo KG cân thực tế;
@@ -1056,6 +1142,10 @@ export default {
       }
       if (url.pathname === "/hooks/validate") {
         const subject = (await request.json()) as ValidatorSubject;
+        if (subject.doctype === "Item") {
+          const call = platformCaller(request, env);
+          return await validateItemMaster(call, subject);
+        }
         if (subject.doctype === "Purchase Order" || subject.doctype === "Purchase Receipt") {
           const call = platformCaller(request, env);
           return await validatePurchaseMeasurement(call, subject);

@@ -766,6 +766,10 @@
         "submittable": {
           "type": "boolean"
         },
+        "tree": {
+          "type": "boolean",
+          "description": "DocType cây cha-con. Phải có field parent_<doctype snake_case>; runtime tự dùng Tree View."
+        },
         "fields": {
           "type": "array",
           "minItems": 1,

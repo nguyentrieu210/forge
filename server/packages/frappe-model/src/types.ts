@@ -171,6 +171,7 @@ export interface DocTypeMeta extends JsonObject {
   module: string;
   custom?: boolean;
   is_child?: boolean;
+  is_tree?: boolean;
   is_single?: boolean;
   is_submittable?: boolean;
   track_changes?: boolean;

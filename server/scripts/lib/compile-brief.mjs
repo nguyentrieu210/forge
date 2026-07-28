@@ -730,6 +730,16 @@ export function compileBrief(brief) {
     for (const fieldname of doctype.search ?? []) {
       if (!fieldNames.has(fieldname)) fail(`${context}: search names "${fieldname}", which is not a field`);
     }
+    if (doctype.tree === true) {
+      const parentField = `parent_${doctypeName.toLowerCase().replace(/ /g, "_")}`;
+      const declaredParent = fields.find((field) => field.fieldname === parentField);
+      if (!declaredParent || !["Link", "Data"].includes(declaredParent.fieldtype)) {
+        fail(`${context}: tree doctype needs ${parentField}:Link(${doctypeName})`);
+      }
+      if (declaredParent.fieldtype === "Link" && declaredParent.options !== doctypeName) {
+        fail(`${context}: ${parentField} must link to ${doctypeName}`);
+      }
+    }
 
     const permissions = Object.entries(doctype.permissions ?? {}).map(([role, letters]) => parsePermission(role, letters, context));
     if (!permissions.length) fail(`${context}: needs a permissions map — a doctype nobody may read is invisible`);
@@ -775,6 +785,7 @@ export function compileBrief(brief) {
       ...(doctype.label ? { label: doctype.label } : {}),
       module,
       is_child: isChild,
+      is_tree: doctype.tree === true,
       is_submittable: submittable,
       track_changes: true,
       allow_rename: false,

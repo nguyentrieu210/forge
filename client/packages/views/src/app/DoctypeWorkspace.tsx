@@ -13,6 +13,7 @@ import { ListContainer } from "../container/ListContainer.js";
 import { FormContainer } from "../container/FormContainer.js";
 import { NewFormContainer } from "../container/NewFormContainer.js";
 import { ContextContainer } from "../container/ContextContainer.js";
+import { TreeContainer } from "../tree/TreeContainer.js";
 import type { UrlStateBridge } from "../list/useListState.js";
 
 export interface DoctypeWorkspaceProps {
@@ -42,6 +43,7 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
   const listPath = `${base}/${doctype}`;
   const isNew = name === "new";
   const decoded = name && !isNew ? decodeURIComponent(name) : undefined;
+  const isTree = titleMeta.data?.is_tree === 1;
 
   return (
     <>
@@ -51,14 +53,25 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
         contextTitle={decoded}
         onCloseDetail={() => onNavigate(listPath)}
         list={
-          <ListContainer
-            doctype={doctype}
-            bridge={bridge}
-            activeRow={decoded}
-            onRowClick={(r) => onNavigate(`${listPath}/${encodeURIComponent(String(r.name))}`)}
-            onCreate={() => onNavigate(`${listPath}/new`)}
-            onSingle={() => { if (!decoded) onNavigate(`${listPath}/${encodeURIComponent(doctype)}`); }}
-          />
+          isTree ? (
+            <div className="h-full overflow-auto rounded-lg border bg-card p-3">
+              <TreeContainer
+                doctype={doctype}
+                selected={decoded}
+                editable
+                onSelect={(nodeName) => onNavigate(`${listPath}/${encodeURIComponent(nodeName)}`)}
+              />
+            </div>
+          ) : (
+            <ListContainer
+              doctype={doctype}
+              bridge={bridge}
+              activeRow={decoded}
+              onRowClick={(r) => onNavigate(`${listPath}/${encodeURIComponent(String(r.name))}`)}
+              onCreate={() => onNavigate(`${listPath}/new`)}
+              onSingle={() => { if (!decoded) onNavigate(`${listPath}/${encodeURIComponent(doctype)}`); }}
+            />
+          )
         }
         detail={decoded ? (
           <FormContainer

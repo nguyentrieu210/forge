@@ -2,7 +2,7 @@
   "$schema": "./brief.schema.json",
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "1.17.0",
+  "version": "1.18.0",
   "module": "Alumdoor",
   "domain": "alumdoor",
   "brand": "warm",
@@ -60,6 +60,10 @@
   ],
   "worker": "cloudforge-app-alumdoor",
   "validators": [
+    {
+      "doctype": "Item",
+      "actions": ["create", "save"]
+    },
     {
       "doctype": "Purchase Order",
       "actions": ["create", "save", "submit"]
@@ -230,6 +234,141 @@
       }
     },
     {
+      "type": "UOM",
+      "name": "Cái",
+      "data": { "uom_name": "Cái", "must_be_whole_number": true }
+    },
+    {
+      "type": "UOM",
+      "name": "Bộ",
+      "data": { "uom_name": "Bộ", "must_be_whole_number": true }
+    },
+    {
+      "type": "UOM",
+      "name": "Kg",
+      "data": { "uom_name": "Kg" }
+    },
+    {
+      "type": "UOM",
+      "name": "Mét",
+      "data": { "uom_name": "Mét" }
+    },
+    {
+      "type": "UOM",
+      "name": "m2",
+      "data": { "uom_name": "m2" }
+    },
+    {
+      "type": "UOM",
+      "name": "Cây",
+      "data": { "uom_name": "Cây", "must_be_whole_number": true }
+    },
+    {
+      "type": "UOM",
+      "name": "Thanh",
+      "data": { "uom_name": "Thanh", "must_be_whole_number": true }
+    },
+    {
+      "type": "UOM",
+      "name": "Sợi",
+      "data": { "uom_name": "Sợi", "must_be_whole_number": true }
+    },
+    {
+      "type": "UOM",
+      "name": "Cuộn",
+      "data": { "uom_name": "Cuộn", "must_be_whole_number": true }
+    },
+    {
+      "type": "UOM",
+      "name": "Tấm",
+      "data": { "uom_name": "Tấm", "must_be_whole_number": true }
+    },
+    {
+      "type": "UOM",
+      "name": "Túi",
+      "data": { "uom_name": "Túi", "must_be_whole_number": true }
+    },
+    {
+      "type": "UOM",
+      "name": "Hộp",
+      "data": { "uom_name": "Hộp", "must_be_whole_number": true }
+    },
+    {
+      "type": "UOM",
+      "name": "Bình",
+      "data": { "uom_name": "Bình", "must_be_whole_number": true }
+    },
+    {
+      "type": "UOM",
+      "name": "Lít",
+      "data": { "uom_name": "Lít" }
+    },
+    {
+      "type": "Item Group",
+      "name": "Tất cả mặt hàng",
+      "data": { "item_group_name": "Tất cả mặt hàng", "is_group": true }
+    },
+    {
+      "type": "Item Group",
+      "name": "Thành phẩm",
+      "data": { "item_group_name": "Thành phẩm", "parent_item_group": "Tất cả mặt hàng", "is_group": true }
+    },
+    {
+      "type": "Item Group",
+      "name": "Nguyên vật liệu",
+      "data": { "item_group_name": "Nguyên vật liệu", "parent_item_group": "Tất cả mặt hàng", "is_group": true }
+    },
+    {
+      "type": "Item Group",
+      "name": "Linh kiện & thiết bị",
+      "data": { "item_group_name": "Linh kiện & thiết bị", "parent_item_group": "Tất cả mặt hàng", "is_group": true }
+    },
+    {
+      "type": "Item Group",
+      "name": "Dịch vụ",
+      "data": { "item_group_name": "Dịch vụ", "parent_item_group": "Tất cả mặt hàng" }
+    },
+    {
+      "type": "Item Group",
+      "name": "Cửa cuốn",
+      "data": { "item_group_name": "Cửa cuốn", "parent_item_group": "Thành phẩm" }
+    },
+    {
+      "type": "Item Group",
+      "name": "Cửa nhôm kính",
+      "data": { "item_group_name": "Cửa nhôm kính", "parent_item_group": "Thành phẩm" }
+    },
+    {
+      "type": "Item Group",
+      "name": "Nan/lá cửa",
+      "data": { "item_group_name": "Nan/lá cửa", "parent_item_group": "Nguyên vật liệu" }
+    },
+    {
+      "type": "Item Group",
+      "name": "Mô tơ",
+      "data": { "item_group_name": "Mô tơ", "parent_item_group": "Linh kiện & thiết bị" }
+    },
+    {
+      "type": "Item Group",
+      "name": "Ray và trục",
+      "data": { "item_group_name": "Ray và trục", "parent_item_group": "Nguyên vật liệu" }
+    },
+    {
+      "type": "Item Group",
+      "name": "Phụ kiện",
+      "data": { "item_group_name": "Phụ kiện", "parent_item_group": "Linh kiện & thiết bị" }
+    },
+    {
+      "type": "Item Group",
+      "name": "Remote và điều khiển",
+      "data": { "item_group_name": "Remote và điều khiển", "parent_item_group": "Linh kiện & thiết bị" }
+    },
+    {
+      "type": "Item Group",
+      "name": "Bộ lưu điện",
+      "data": { "item_group_name": "Bộ lưu điện", "parent_item_group": "Linh kiện & thiết bị" }
+    },
+    {
       "type": "Measurement Profile",
       "name": "Hàng thường",
       "data": {
@@ -360,6 +499,343 @@
   ],
   "doctypes": [
     {
+      "name": "UOM",
+      "label": "Đơn vị tính",
+      "icon": "scale",
+      "group": "Danh mục",
+      "naming": "field:uom_name",
+      "title": "uom_name",
+      "list": ["uom_name", "must_be_whole_number", "disabled"],
+      "search": ["uom_name"],
+      "fields": [
+        "uom_name:Data*! Tên đơn vị",
+        "must_be_whole_number:Check Chỉ nhận số nguyên",
+        "disabled:Check Ngừng dùng"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Thủ kho": "rwc",
+        "Kế toán": "r",
+        "Sản xuất": "r",
+        "Kinh doanh": "r"
+      }
+    },
+    {
+      "//": "Cây phân loại duy nhất của Item. Nhóm chỉ tổ chức/tập hợp; bản chất tồn kho, nguồn cung và giai đoạn vật tư nằm trên Item.",
+      "name": "Item Group",
+      "label": "Nhóm hàng",
+      "icon": "folder-tree",
+      "group": "Danh mục",
+      "tree": true,
+      "naming": "field:item_group_name",
+      "title": "item_group_name",
+      "list": ["item_group_name", "parent_item_group", "is_group", "disabled"],
+      "search": ["item_group_name"],
+      "fields": [
+        "item_group_name:Data*! Tên nhóm",
+        "parent_item_group:Link(Item Group) Nhóm cha",
+        "is_group:Check Là nhóm chứa",
+        "default_inventory_account:Link(Account) TK tồn kho mặc định",
+        "default_cogs_account:Link(Account) TK giá vốn mặc định",
+        "default_income_account:Link(Account) TK doanh thu mặc định",
+        "default_expense_account:Link(Account) TK chi phí mặc định",
+        "disabled:Check Ngừng dùng"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Thủ kho": "r",
+        "Kế toán": "r",
+        "Sản xuất": "r",
+        "Kinh doanh": "r"
+      }
+    },
+    {
+      "name": "Brand",
+      "label": "Thương hiệu",
+      "icon": "badge-check",
+      "group": "Danh mục",
+      "naming": "field:brand_name",
+      "title": "brand_name",
+      "list": ["brand_name", "country", "disabled"],
+      "search": ["brand_name"],
+      "fields": [
+        "brand_name:Data*! Tên thương hiệu",
+        "country:Data Quốc gia",
+        "website:Data Website",
+        "note:Small Text Ghi chú",
+        "disabled:Check Ngừng dùng"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Thủ kho": "r",
+        "Kế toán": "r",
+        "Sản xuất": "r",
+        "Kinh doanh": "r"
+      }
+    },
+    {
+      "name": "Manufacturer",
+      "label": "Nhà sản xuất",
+      "icon": "factory",
+      "group": "Danh mục",
+      "naming": "field:manufacturer_name",
+      "title": "manufacturer_name",
+      "list": ["manufacturer_name", "country", "disabled"],
+      "search": ["manufacturer_name"],
+      "fields": [
+        "manufacturer_name:Data*! Tên nhà sản xuất",
+        "country:Data Quốc gia",
+        "website:Data Website",
+        "note:Small Text Ghi chú",
+        "disabled:Check Ngừng dùng"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Thủ kho": "r",
+        "Kế toán": "r",
+        "Sản xuất": "r",
+        "Kinh doanh": "r"
+      }
+    },
+    {
+      "name": "Item Color",
+      "label": "Màu vật tư",
+      "icon": "palette",
+      "group": "Danh mục",
+      "naming": "field:color_code",
+      "title": "color_name",
+      "list": ["color_code", "color_name", "finish", "disabled"],
+      "search": ["color_code", "color_name"],
+      "fields": [
+        "color_code:Data*! Mã màu",
+        "color_name:Data! Tên màu",
+        "finish:Select(Thô,Sơn tĩnh điện,Anode,Vân gỗ,Mạ,Khác) Bề mặt",
+        "supplier_color_code:Data Mã màu nhà cung cấp",
+        "disabled:Check Ngừng dùng"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Thủ kho": "rwc",
+        "Kế toán": "r",
+        "Sản xuất": "r",
+        "Kinh doanh": "r"
+      }
+    },
+    {
+      "name": "Material Grade",
+      "label": "Mác vật liệu",
+      "icon": "layers-3",
+      "group": "Danh mục",
+      "naming": "field:grade_code",
+      "title": "grade_name",
+      "list": ["grade_code", "grade_name", "material_family", "disabled"],
+      "search": ["grade_code", "grade_name"],
+      "fields": [
+        "grade_code:Data*! Mã mác",
+        "grade_name:Data! Tên mác",
+        "material_family:Select(Nhôm,Thép,Inox,Kính,Nhựa,Gỗ,Cao su,Khác)! Họ vật liệu",
+        "density_kg_m3:Float Khối lượng riêng (kg/m3)",
+        "note:Small Text Tiêu chuẩn / ghi chú",
+        "disabled:Check Ngừng dùng"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Thủ kho": "r",
+        "Kế toán": "r",
+        "Sản xuất": "rwc",
+        "Kinh doanh": "r"
+      }
+    },
+    {
+      "name": "Material Specification",
+      "label": "Quy cách kỹ thuật vật tư",
+      "icon": "ruler",
+      "group": "Danh mục",
+      "naming": "field:spec_code",
+      "title": "spec_name",
+      "list": ["spec_code", "spec_name", "material_grade", "theoretical_kg_per_m", "standard_length_m"],
+      "search": ["spec_code", "spec_name", "profile_system"],
+      "fields": [
+        "spec_code:Data*! Mã quy cách",
+        "spec_name:Data! Tên quy cách",
+        "material_grade:Link(Material Grade) Mác vật liệu",
+        "profile_system:Data Hệ / dòng profile",
+        "section_code:Data Mã tiết diện",
+        "theoretical_kg_per_m:Float Kg/m lý thuyết",
+        "standard_length_m:Float Chiều dài chuẩn (m)",
+        "width_mm:Float Khổ rộng (mm)",
+        "thickness_mm:Float Độ dày (mm)",
+        "scrap_threshold_m:Float Ngưỡng phế liệu (m)",
+        "drawing:Attach Bản vẽ kỹ thuật",
+        "note:Small Text Ghi chú",
+        "disabled:Check Ngừng dùng"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Thủ kho": "r",
+        "Kế toán": "r",
+        "Sản xuất": "rwc",
+        "Kinh doanh": "r"
+      }
+    },
+    {
+      "name": "Item Attribute Value",
+      "child": true,
+      "label": "Giá trị thuộc tính",
+      "group": "Danh mục",
+      "naming": "autoincrement",
+      "title": "attribute_value",
+      "list": ["attribute_value", "abbr", "disabled"],
+      "fields": [
+        "attribute_value:Data! Giá trị",
+        "abbr:Data Viết tắt",
+        "numeric_value:Float Giá trị số",
+        "disabled:Check Ngừng dùng"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Thủ kho": "r",
+        "Sản xuất": "r",
+        "Kinh doanh": "r"
+      }
+    },
+    {
+      "name": "Item Attribute",
+      "label": "Thuộc tính mặt hàng",
+      "icon": "list-filter",
+      "group": "Danh mục",
+      "naming": "field:attribute_name",
+      "title": "attribute_name",
+      "list": ["attribute_name", "numeric_values", "disabled"],
+      "search": ["attribute_name"],
+      "fields": [
+        "attribute_name:Data*! Tên thuộc tính",
+        "numeric_values:Check Giá trị dạng số",
+        "from_value:Float Từ",
+        "to_value:Float Đến",
+        "increment:Float Bước tăng",
+        "attribute_values:Table(Item Attribute Value) Danh sách giá trị",
+        "disabled:Check Ngừng dùng"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Thủ kho": "r",
+        "Sản xuất": "rwc",
+        "Kinh doanh": "r"
+      }
+    },
+    {
+      "name": "Item Variant Attribute",
+      "child": true,
+      "label": "Thuộc tính biến thể",
+      "group": "Danh mục",
+      "naming": "autoincrement",
+      "title": "attribute",
+      "list": ["attribute", "attribute_value"],
+      "fields": [
+        "attribute:Link(Item Attribute)! Thuộc tính",
+        "attribute_value:Data! Giá trị"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Thủ kho": "rwc",
+        "Sản xuất": "rwc",
+        "Kinh doanh": "r"
+      }
+    },
+    {
+      "name": "Item Barcode",
+      "child": true,
+      "label": "Mã vạch mặt hàng",
+      "group": "Danh mục",
+      "naming": "autoincrement",
+      "title": "barcode",
+      "list": ["barcode", "barcode_type", "uom"],
+      "fields": [
+        "barcode:Data*! Mã vạch",
+        "barcode_type:Select(EAN-13,EAN-8,UPC-A,Code 128,QR,Khác) Loại mã",
+        "uom:Link(UOM) Đơn vị áp dụng"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Thủ kho": "rwc",
+        "Kế toán": "r",
+        "Kinh doanh": "r"
+      }
+    },
+    {
+      "name": "Item Default",
+      "child": true,
+      "label": "Mặc định theo công ty",
+      "group": "Danh mục",
+      "naming": "autoincrement",
+      "title": "company",
+      "list": ["company", "default_warehouse", "inventory_account", "income_account", "expense_account"],
+      "fields": [
+        "company:Link(Company)! Công ty",
+        "default_warehouse:Link(Warehouse) Kho mặc định",
+        "inventory_account:Link(Account) Tài khoản tồn kho",
+        "income_account:Link(Account) Tài khoản doanh thu",
+        "expense_account:Link(Account) Tài khoản chi phí / giá vốn"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Kế toán": "rwc",
+        "Thủ kho": "r",
+        "Kinh doanh": "r"
+      }
+    },
+    {
+      "name": "Item Reorder",
+      "child": true,
+      "label": "Mức tồn và đặt hàng",
+      "group": "Danh mục",
+      "naming": "autoincrement",
+      "title": "warehouse",
+      "list": ["warehouse", "safety_stock", "reorder_level", "reorder_qty", "lead_time_days"],
+      "fields": [
+        "warehouse:Link(Warehouse)! Kho",
+        "safety_stock:Float Tồn an toàn",
+        "reorder_level:Float Điểm đặt hàng",
+        "reorder_qty:Float Số lượng đặt đề xuất",
+        "lead_time_days:Int Thời gian cung ứng (ngày)"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Thủ kho": "rwc",
+        "Kế toán": "r",
+        "Sản xuất": "r"
+      }
+    },
+    {
+      "name": "Supplier Item",
+      "label": "Mã hàng nhà cung cấp",
+      "icon": "handshake",
+      "group": "Danh mục",
+      "naming": "format:{supplier}:{item_code}",
+      "title": "supplier_item_code",
+      "list": ["supplier", "item_code", "supplier_item_code", "preferred", "lead_time_days", "disabled"],
+      "search": ["supplier_item_code"],
+      "fields": [
+        "supplier:Link(Supplier)! Nhà cung cấp",
+        "item_code:Link(Item)! Mặt hàng",
+        "supplier_item_code:Data! Mã của nhà cung cấp",
+        "preferred:Check Nhà cung cấp ưu tiên",
+        "minimum_order_qty:Float Số lượng mua tối thiểu",
+        "lead_time_days:Int Thời gian giao (ngày)",
+        "last_purchase_rate:Currency- Giá mua gần nhất",
+        "note:Small Text Ghi chú",
+        "disabled:Check Ngừng dùng"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Kế toán": "rwc",
+        "Thủ kho": "r",
+        "Sản xuất": "r",
+        "Kinh doanh": "r"
+      }
+    },
+    {
       "//": "Bộ quy cách quyết định một Item cần những đại lượng vật lý nào. Item chỉ giữ sự thật ổn định; màu, khổ và số cây của từng chuyến nằm trên lô/chứng từ.",
       "name": "Measurement Profile",
       "label": "Bộ quy cách tồn kho",
@@ -379,7 +855,7 @@
       "fields": [
         "profile_name:Data*! Tên bộ quy cách",
         "inventory_mode:Select(Hàng thường,Nhôm cây/lá,Tấm/Kính,Cuộn,Lô/Serial,Thành phẩm theo m2)!=(Hàng thường) Kiểu quản lý tồn",
-        "stock_uom:Select(m2,Bộ,Cái,Mét,Kg,Cây,Thanh,Sợi,Cuộn,Tấm,Túi,Hộp,Bình)!=(Cái) Đơn vị tồn đề xuất",
+        "stock_uom:Link(UOM)!=(Cái) Đơn vị tồn đề xuất",
         "track_dimension_lot:Check Theo dõi lô kích thước",
         "require_color:Check Bắt buộc màu",
         "require_condition:Check Bắt buộc tình trạng",
@@ -410,10 +886,12 @@
       "list": [
         "item_code",
         "item_name",
+        "item_group",
+        "item_nature",
+        "material_stage",
         "inventory_mode",
         "stock_uom",
-        "item_group",
-        "standard_rate"
+        "disabled"
       ],
       "search": [
         "item_code",
@@ -422,24 +900,79 @@
       "fields": [
         "item_code:Data*! Mã hàng",
         "item_name:Data! Tên hàng",
-        "item_group:Select(Cửa cuốn,Cửa nhôm kính,Nan/lá cửa,Mô tơ,Ray và trục,Phụ kiện,Remote và điều khiển,Bộ lưu điện)=(Cửa cuốn) Nhóm hàng",
-        "item_kind:Select(Nguyên vật liệu,Vật tư tiêu hao,Bán thành phẩm,Thành phẩm,Hàng hoá,Dịch vụ)=(Hàng hoá) Loại mặt hàng",
+        "item_group:Link(Item Group)! Nhóm hàng",
+        "item_nature:Select(Hàng tồn kho,Dịch vụ,Tài sản)!=(Hàng tồn kho) Bản chất mặt hàng",
+        {
+          "fieldname": "material_stage",
+          "fieldtype": "Select",
+          "options": "Nguyên vật liệu\nVật tư tiêu hao\nBán thành phẩm\nThành phẩm\nHàng hoá",
+          "label": "Giai đoạn vật tư",
+          "default": "Hàng hoá",
+          "depends_on": "eval:doc.item_nature == 'Hàng tồn kho'"
+        },
+        {
+          "fieldname": "supply_type",
+          "fieldtype": "Select",
+          "options": "Mua ngoài\nTự sản xuất\nMua hoặc sản xuất",
+          "label": "Nguồn cung",
+          "default": "Mua ngoài",
+          "depends_on": "eval:doc.item_nature == 'Hàng tồn kho'"
+        },
+        {
+          "fieldname": "is_stock_item",
+          "fieldtype": "Check",
+          "label": "Quản lý tồn kho",
+          "default": true,
+          "read_only_depends_on": "eval:doc.item_nature == 'Dịch vụ'"
+        },
+        "is_purchase_item:Check=(1) Được phép mua",
+        "is_sales_item:Check=(1) Được phép bán",
+        {
+          "fieldname": "include_item_in_manufacturing",
+          "fieldtype": "Check",
+          "label": "Dùng trong sản xuất",
+          "depends_on": "eval:doc.item_nature == 'Hàng tồn kho'"
+        },
         "inventory_mode:Select(Hàng thường,Nhôm cây/lá,Tấm/Kính,Cuộn,Lô/Serial,Thành phẩm theo m2)=(Hàng thường) Kiểu quản lý tồn",
         {
           "fieldname": "measurement_profile",
           "fieldtype": "Link",
           "options": "Measurement Profile",
           "label": "Bộ quy cách",
-          "depends_on": "eval:doc.inventory_mode != 'Hàng thường'"
+          "depends_on": "eval:doc.inventory_mode != 'Hàng thường'",
+          "mandatory_depends_on": "eval:doc.inventory_mode != 'Hàng thường'"
         },
-        "stock_uom:Select(m2,Bộ,Cái,Mét,Kg,Cây,Thanh,Sợi,Cuộn,Tấm,Túi,Hộp,Bình)=(Cái) Đơn vị TỒN KHO",
-        "default_purchase_uom:Select(m2,Bộ,Cái,Mét,Kg,Cây,Thanh,Sợi,Cuộn,Tấm,Túi,Hộp,Bình) ĐVT mua mặc định",
-        "default_sales_uom:Select(m2,Bộ,Cái,Mét,Kg,Cây,Thanh,Sợi,Cuộn,Tấm,Túi,Hộp,Bình) ĐVT bán mặc định",
+        "stock_uom:Link(UOM)!=(Cái) Đơn vị TỒN KHO",
+        "default_purchase_uom:Link(UOM) ĐVT mua mặc định",
+        "default_sales_uom:Link(UOM) ĐVT bán mặc định",
         "uom_conversions:Table(UOM Conversion) Quy đổi đơn vị (mua cây — tồn mét)",
+        "variant_of:Link(Item) Mã gốc / mẫu",
+        "variant_attributes:Table(Item Variant Attribute) Thuộc tính biến thể",
+        "brand:Link(Brand) Thương hiệu",
+        "manufacturer:Link(Manufacturer) Nhà sản xuất",
+        "manufacturer_part_no:Data Mã của nhà sản xuất",
+        "material_specification:Link(Material Specification) Quy cách kỹ thuật",
+        "default_color:Link(Item Color) Màu mặc định",
+        "barcodes:Table(Item Barcode) Mã vạch",
+        "item_defaults:Table(Item Default) Mặc định theo công ty",
+        "reorder_levels:Table(Item Reorder) Mức tồn / đặt hàng",
         "default_warehouse:Link(Warehouse) Kho mặc định",
-        "standard_rate:Currency Đơn giá chuẩn (theo ĐVT)",
-        "valuation_rate:Currency Giá vốn chuẩn",
-        "min_area_sqm:Float Diện tích tối thiểu tính tiền (m2/bộ)",
+        "inventory_account:Link(Account) Tài khoản tồn kho",
+        "cogs_account:Link(Account) Tài khoản giá vốn",
+        "income_account:Link(Account) Tài khoản doanh thu",
+        "expense_account:Link(Account) Tài khoản chi phí",
+        "standard_rate:Currency Giá định mức BOM",
+        "valuation_method:Select(FIFO)=(FIFO) Phương pháp giá vốn",
+        "has_batch_no:Check Theo dõi số lô",
+        "has_serial_no:Check Theo dõi serial",
+        "allow_negative_stock:Check Cho phép tồn âm",
+        "shelf_life_in_days:Int Hạn sử dụng (ngày)",
+        {
+          "fieldname": "min_area_sqm",
+          "fieldtype": "Float",
+          "label": "Diện tích tối thiểu tính tiền (m2/bộ)",
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'"
+        },
         "description:Small Text Quy cách / xuất xứ",
         "disabled:Check Ngừng kinh doanh"
       ],
@@ -472,7 +1005,7 @@
         "conversion_factor"
       ],
       "fields": [
-        "uom:Select(m2,Bộ,Cái,Mét,Kg,Cây,Thanh,Sợi,Cuộn,Tấm,Túi,Hộp,Bình)! Đơn vị giao dịch",
+        "uom:Link(UOM)! Đơn vị giao dịch",
         "conversion_factor:Float! Một đơn vị này = bao nhiêu đơn vị tồn",
         "note:Data Ghi chú"
       ],
@@ -1280,7 +1813,7 @@
       "fields": [
         "item_code:Link(Item)! Vật tư cần",
         "qty:Float! SL",
-        "uom:Select(m2,Bộ,Cái,Mét,Kg,Cây,Thanh,Sợi,Cuộn,Tấm,Túi,Hộp,Bình) ĐVT",
+        "uom:Link(UOM) ĐVT",
         "conversion_factor:Float Hệ số quy đổi",
         "stock_qty:Float~ Quy ra đơn vị tồn",
         "warehouse:Link(Warehouse) Cần về kho",
@@ -1421,7 +1954,7 @@
       "fields": [
         "item_code:Link(Item)! Mã hàng",
         "qty:Float! SL",
-        "uom:Select(m2,Bộ,Cái,Mét,Kg,Cây,Thanh,Sợi,Cuộn,Tấm,Túi,Hộp,Bình) ĐVT",
+        "uom:Link(UOM) ĐVT",
         "conversion_factor:Float Hệ số quy đổi",
         "stock_qty:Float~ Quy ra đơn vị tồn",
         "rate:Currency! Đơn giá NCC chào",
@@ -1540,7 +2073,7 @@
           "mandatory_depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
           "non_negative": true
         },
-        "uom:Select(m2,Bộ,Cái,Mét,Kg,Cây,Thanh,Sợi,Cuộn,Tấm,Túi,Hộp,Bình) ĐVT",
+        "uom:Link(UOM) ĐVT",
         "qty:Float! Số lượng",
         {
           "fieldname": "qty_bundle",
@@ -1697,7 +2230,7 @@
           "mandatory_depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
           "non_negative": true
         },
-        "uom:Select(m2,Bộ,Cái,Mét,Kg,Cây,Thanh,Sợi,Cuộn,Tấm,Túi,Hộp,Bình) ĐVT",
+        "uom:Link(UOM) ĐVT",
         "qty:Float! Số lượng",
         {
           "fieldname": "qty_bundle",
@@ -1819,7 +2352,7 @@
       "fields": [
         "item_code:Link(Item)! Mã hàng",
         "qty:Float! SL",
-        "uom:Select(m2,Bộ,Cái,Mét,Kg,Cây,Thanh,Sợi,Cuộn,Tấm,Túi,Hộp,Bình) ĐVT",
+        "uom:Link(UOM) ĐVT",
         "conversion_factor:Float- Hệ số quy đổi",
         "rate:Currency! Đơn giá",
         "amount:Currency~ Thành tiền",

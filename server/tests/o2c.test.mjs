@@ -58,6 +58,33 @@ test("Order-to-Cash posts exact minor-unit GL, stock and receivable allocation",
   assert.equal(order.data.billed_percentage, "40.00");
 });
 
+test("Delivery Note inherits inventory and COGS accounts from the nearest Item Group", async () => {
+  const { store, kernel } = setup();
+  store.seedMaster("Account", "Stock - Aluminium");
+  store.seedMaster("Account", "COGS - Materials");
+  store.seedMaster("Item Group", "Materials", "demo", {
+    parent_item_group: "All Items",
+    default_inventory_account: "Stock - Aluminium",
+    default_cogs_account: "COGS - Materials",
+  });
+  store.seedMaster("Item Group", "Aluminium", "demo", { parent_item_group: "Materials" });
+  store.seedMaster("Item", "ITEM-001", "demo", { item_group: "Aluminium" });
+
+  await createAndSubmit(kernel, { doctype: "Sales Order", name: "SO-GROUP-ACCOUNT", document: orderDocument("1") });
+  await createAndSubmit(kernel, {
+    doctype: "Delivery Note",
+    name: "DN-GROUP-ACCOUNT",
+    document: {
+      customer: "CUST-0001", company: "Demo", currency: "USD", currency_scale: 2,
+      posting_at: now(), against_sales_order: "SO-GROUP-ACCOUNT",
+      items: [{ row_id: "DNI-1", item_code: "ITEM-001", qty: "1", rate: "25", warehouse: "Stores", valuation_rate: "15" }],
+    },
+  });
+
+  const deliveryGl = store.snapshot().gl_entries.filter((line) => ["COGS-DNI-1", "STOCK-DNI-1"].includes(line.line_key));
+  assert.deepEqual(deliveryGl.map((line) => line.account), ["COGS - Materials", "Stock - Aluminium"]);
+});
+
 test("cumulative delivery and billing cannot exceed submitted Sales Order quantity", async () => {
   const { kernel } = setup();
   await createAndSubmit(kernel, { doctype: "Sales Order", name: "SO-QTY", document: orderDocument("10") });

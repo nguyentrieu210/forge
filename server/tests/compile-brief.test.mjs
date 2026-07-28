@@ -231,6 +231,26 @@ test("a child doctype is installed but never exposed as a standalone menu item",
   assert.doesNotThrow(() => parseAppManifest(pkg));
 });
 
+test("a tree doctype keeps is_tree and must declare its conventional parent field", () => {
+  const brief = minimal();
+  brief.doctypes[0] = {
+    ...brief.doctypes[0],
+    name: "Item Group",
+    tree: true,
+    fields: [
+      "title:Data!",
+      "parent_item_group:Link(Item Group) Nhóm cha",
+      "is_group:Check Là nhóm chứa",
+    ],
+  };
+  const pkg = compileBrief(brief);
+  assert.equal(pkg.doctypes[0].is_tree, true);
+  assert.equal(parseAppManifest(pkg).doctypes[0].is_tree, true);
+
+  brief.doctypes[0].fields = ["title:Data!", "is_group:Check"];
+  assert.throws(() => compileBrief(brief), /parent_item_group/);
+});
+
 test("a role named only in a permissions map is still declared", () => {
   // Otherwise every role has to be written twice, and the DocPerm that names an
   // undeclared role matches nobody.

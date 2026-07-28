@@ -94,6 +94,7 @@ export function parseDocTypeMeta(value: unknown, expectedName?: string): DocType
     module: moduleName,
     custom: bool(input.custom, false),
     is_child: bool(input.is_child, false),
+    is_tree: bool(input.is_tree, false),
     is_single: bool(input.is_single, false),
     is_submittable: bool(input.is_submittable, false),
     track_changes: bool(input.track_changes, true),

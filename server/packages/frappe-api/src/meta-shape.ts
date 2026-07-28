@@ -126,6 +126,7 @@ export function toFrappeDocType(meta: DocTypeMeta, workflow: WorkflowMeta | null
     custom: flag(meta.custom),
     issingle: flag(meta.is_single),
     istable: flag(meta.is_child),
+    is_tree: flag(meta.is_tree),
     is_submittable: flag(meta.is_submittable),
     track_changes: flag(meta.track_changes),
     track_seen: flag(meta.track_seen),
