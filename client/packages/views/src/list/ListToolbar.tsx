@@ -57,19 +57,12 @@ export function ListToolbar(props: ListToolbarProps) {
 
   return (
     <div className="mf-list-toolbar flex flex-col border-b bg-card">
-      <div className="mf-page-head flex min-h-14 items-center gap-3 border-b px-5 py-2">
-        <div className="min-w-0">
-          <h1 className="truncate text-lg font-semibold">{props.title}</h1>
-          <p className="text-xs text-muted-foreground">{props.doctype}</p>
-        </div>
+      <div className="mf-list-filterbar flex min-w-0 flex-wrap items-center gap-1.5 px-3 py-2">
         {props.onCreate ? (
-          <Button className="ml-auto h-8" onClick={props.onCreate}>
+          <Button className="h-8 shrink-0" onClick={props.onCreate}>
             <Plus /> {t("common.create")}
           </Button>
         ) : null}
-      </div>
-
-      <div className="mf-list-filterbar flex min-w-0 flex-wrap items-center gap-1.5 px-3 py-2">
         <SearchBox doctype={props.doctype} value={state.q} onCommit={(q) => onChange({ q })} />
 
         <DateRangeFilter
