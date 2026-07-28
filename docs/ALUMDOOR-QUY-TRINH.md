@@ -302,7 +302,110 @@ App mới có **phải thu**. Chưa có **phải trả** cho NCC.
 
 ---
 
-## 5. Cấu trúc đơn hàng hằng tháng (T2 → T7.2026)
+## 5. TỒN KHO — bốn con số, tuyệt đối đừng gộp làm một
+
+Anh mô tả đúng mô hình chuẩn:
+
+```
+TỒN TỔNG (vật lý)          thứ đang nằm trong kho, đếm tay ra được
+  −  ĐÃ CÓ ĐƠN (giữ chỗ)   còn trong kho nhưng ĐÃ HỨA cho một đơn nào đó
+  −  HAO HỤT               còn trong kho nhưng KHÔNG dùng được
+  ────────────────────────
+  =  TỒN KHẢ DỤNG          con số người bán được phép hứa với khách
+```
+
+### 5.1 — Vì sao phải tách ra: mỗi con số trả lời một người khác nhau
+
+| Ai hỏi | Hỏi gì | Đọc con số nào |
+|---|---|---|
+| Thủ kho | "Trong kho có bao nhiêu?" | **Tồn tổng** |
+| Kinh doanh | "Tôi bán được bao nhiêu?" | **Tồn khả dụng** |
+| Kế toán | "Tài sản tồn kho bao nhiêu tiền?" | **Tồn tổng** × giá vốn |
+| Chủ xưởng | "Mất bao nhiêu?" | **Hao hụt** |
+
+Gộp lại thì hỏng theo kiểu **im lặng**: kinh doanh mở app thấy `348 lá AL548`, hứa hết 348 cho
+khách mới — trong khi 300 lá đã hứa cho đơn đang sản xuất. **Không có gì báo lỗi.** Nó chỉ lộ
+ra khi thợ ra kho cắt và thiếu hàng, lúc đó đã trót hẹn ngày giao với khách.
+
+Đây đúng kiểu lỗi mà cả app này đang cố tránh: **ghi thành công nhưng sai**.
+
+### 5.2 — Hiện app có gì
+
+| Con số | Trạng thái | Nằm ở đâu |
+|---|---|---|
+| **Tồn tổng** | ✅ | `Lô nhôm tồn.số lá` — 1.256 lô, 43.601 lá |
+| **Đã có đơn (giữ chỗ)** | ⛔ **KHÔNG CÓ** | Không có gì đánh dấu lá đã hứa cho đơn nào |
+| **Hao hụt** | 🟡 ghi rời rạc | `Phiếu cắt.phế mỗi lá` có ghi, nhưng **chưa cộng lại thành số** |
+| **Tồn khả dụng** | ⛔ **KHÔNG CÓ** | Hệ quả tất yếu của hai dòng trên |
+
+Báo cáo `Xuất nhập tồn` của nền tảng cũng **chỉ có `actual_qty`** — không cột giữ chỗ, không
+cột khả dụng. Nên hiện tại **cả hệ thống không có chỗ nào trả lời được "bán được bao nhiêu"**.
+
+### 5.3 — Hao hụt của nhôm có BA nguồn, và HAI loại rất khác nhau
+
+**Ba nguồn:**
+
+1. **Phế cắt** — `khổ − rộng cắt`, phát sinh mỗi lần cắt. Đã ghi trên phiếu cắt ✅
+2. **Khổ quá ngắn** — lúc nạp Excel có **106 dòng khổ < 0,25 m** em đánh dấu là phế
+3. **Lá lỗi** — móp, xước, kêu (file có ví dụ thật: *"LÁ KÊU, HOÀN LẠI"*)
+
+**Hai loại, và đây mới là chỗ quan trọng:**
+
+| Loại | Nghĩa | Xử lý |
+|---|---|---|
+| **Còn dùng được** | đoạn ngắn, vẫn cắt được cửa nhỏ | vẫn là **tồn kho**, chỉ là khổ ngắn |
+| **Bỏ đi** | quá ngắn / lỗi không sửa được | ra khỏi tồn, **bán phế liệu theo kg** |
+
+Gộp hai loại này là mất tiền thật: một đống đoạn 1,2 m vẫn cắt được cửa 1,1 m, mà ghi chung
+là "hao hụt" thì không ai đi tìm nó nữa, và xưởng lại cắt cây mới.
+
+> ❓ **Cần anh cho biết:** đoạn thừa **ngắn hơn bao nhiêu mét** thì coi là bỏ hẳn?
+> Lúc nạp em tự đặt ngưỡng **0,25 m** — con số đó **em bịa**, cần anh chốt lại.
+> Và phế liệu bán lại theo **kg** phải không, giá khoảng bao nhiêu?
+
+### 5.4 — Câu quyết định: **giữ chỗ từ lúc nào?**
+
+Đây là chỗ phải chọn, và chọn sai kiểu nào cũng đau:
+
+| Giữ chỗ từ khi | Hệ quả |
+|---|---|
+| **Báo giá** | Quá sớm — khách chưa chốt mà hàng đã bị khoá, mất cơ hội bán |
+| **Đơn hàng được duyệt** | An toàn nhất, nhưng hàng nằm chờ lâu nếu đơn hẹn giao xa ngày |
+| **Phát lệnh sản xuất** | Sát thực tế nhất — sheet T6 ghi *"kế toán bấm chọn lệnh sản xuất"* |
+| **Lúc cắt** | Quá muộn — hai đơn cùng hứa một số lá, tới lúc cắt mới biết thiếu |
+
+> ❓ **Cần anh chọn một.** Em nghiêng về **phát lệnh sản xuất**, vì đó là mốc xưởng thật sự
+> nhận việc và file của anh cũng đang mốc ở đó. Nhưng đơn ký xa ngày có thể phải giữ sớm hơn.
+
+### 5.5 — Chỗ riêng của nhôm: giữ chỗ theo KHỔ, không theo LÔ
+
+Hàng thường thì giữ chỗ đơn giản — "giữ 10 cái mô tơ".
+
+Nhôm thì khác: một đơn cần **"51 lá khổ ≥ 3,5 m"**, không cần lô cụ thể nào. Lúc cắt app mới
+chọn lô khổ nhỏ nhất còn đủ dài (đã chạy ✅). Nên giữ chỗ phải giữ theo
+**(mã · màu · đời · khổ tối thiểu)**, không phải khoá một lô.
+
+Hệ quả: **tồn khả dụng của nhôm không phải một con số, mà là một bảng theo khổ.** Còn 40 lá
+khổ 3,8 m nghĩa là bán được 40 lá cho cửa rộng ≤ 3,8 m — nhưng **không** bán được lá 4,0 m nào.
+
+Nên báo cáo tồn khả dụng của nhôm nên có dạng:
+
+```
+AL548 · màu GS · đời MỚI
+   khổ ≥ 4,5 m :   12 lá khả dụng   (tổng  18, giữ chỗ  6)
+   khổ ≥ 3,8 m :   52 lá khả dụng   (tổng  70, giữ chỗ 18)
+   khổ ≥ 3,0 m :  145 lá khả dụng   (tổng 180, giữ chỗ 35)
+```
+
+Đọc dồn xuống: lá khổ dài luôn dùng được cho cửa ngắn hơn, nên số khả dụng **cộng dồn** khi
+khổ yêu cầu giảm.
+
+> ❓ **Cần anh xác nhận** cách đọc này có đúng cách xưởng nghĩ không — hay thợ chỉ quan tâm
+> "còn tổng cộng bao nhiêu lá".
+
+---
+
+## 6. Cấu trúc đơn hàng hằng tháng (T2 → T7.2026)
 
 Bảy sheet tháng, mỗi sheet ~2.400 → **50.000 dòng**. Cột thay đổi dần qua các tháng —
 sheet T6/T7 là bản mới nhất và đầy đủ nhất:
@@ -328,7 +431,7 @@ người phát lệnh sản xuất**, không phải xưởng tự phát.
 
 ---
 
-## 6. Những thứ khác
+## 7. Những thứ khác
 
 | Việc | Trạng thái | Ghi chú |
 |---|---|---|
@@ -342,7 +445,7 @@ người phát lệnh sản xuất**, không phải xưởng tự phát.
 
 ---
 
-## 7. Dữ liệu rác cần dọn
+## 8. Dữ liệu rác cần dọn
 
 | Bảng | Số bản ghi | Đề xuất |
 |---|---|---|
@@ -354,7 +457,7 @@ người phát lệnh sản xuất**, không phải xưởng tự phát.
 
 ---
 
-## 8. Tóm tắt: giờ chỉ còn **6 thứ** cần anh
+## 9. Tóm tắt: **7 thứ** cần anh
 
 Bản 1 hỏi 9 điều. Đọc kỹ file thì 5 điều đã tự trả lời, nhưng lòi ra vài câu mới. Còn lại:
 
@@ -365,7 +468,8 @@ Bản 1 hỏi 9 điều. Đọc kỹ file thì 5 điều đã tự trả lời, 
 | 3 | **Bảng chọn mô tơ** theo m² hoặc kg cửa | App tự tính được cân nặng cửa rồi, chỉ thiếu ngưỡng |
 | 4 | **12 mã ray/lá đáy/thanh đáy** ứng mã nào | Chặn phần nhập kho phụ kiện |
 | 5 | **Cùng mã nhôm mua được cả thô lẫn màu?** | Quyết định "thô/màu" có phải hai trạng thái tồn kho không → nối với công đoạn sơn |
-| 6 | **Khoá Google service account** | Chặn phần đổ Sheet |
+| 6 | **Mốc giữ chỗ tồn kho** — từ đơn hàng hay từ lệnh sản xuất? | Không có nó thì không tính được **tồn khả dụng**, và kinh doanh sẽ hứa trùng hàng *(mục 5.4)* |
+| 7 | **Khoá Google service account** | Chặn phần đổ Sheet |
 
 Kèm 6 câu xác nhận ngắn (đúng/sai là đủ):
 
@@ -374,7 +478,9 @@ Kèm 6 câu xác nhận ngắn (đúng/sai là đủ):
 - Puly lớn 4/5/6 cái — theo cái gì? *(mục 3.1)*
 - Trục dài hơn rộng phủ bì bao nhiêu, ray ngắn hơn cao phủ bì bao nhiêu? *(mục 3.1)*
 - **Kế toán** là người bấm phát lệnh sản xuất? *(mục 5)*
-- Tồn nhôm chia hai xưởng thế nào? *(mục 6)*
+- Tồn nhôm chia hai xưởng thế nào? *(mục 7)*
+- Đoạn nhôm thừa ngắn hơn **bao nhiêu mét** thì coi là bỏ hẳn? *(em đang tự đặt 0,25 m — mục 5.3)*
+- Tồn khả dụng của nhôm đọc **theo bảng khổ** có đúng cách xưởng nghĩ không? *(mục 5.5)*
 
 ---
 
