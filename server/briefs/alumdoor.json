@@ -2,7 +2,7 @@
   "$schema": "./brief.schema.json",
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "1.18.5",
+  "version": "1.19.0",
   "module": "Alumdoor",
   "domain": "alumdoor",
   "brand": "warm",
@@ -1220,6 +1220,8 @@
       "title": "customer_name",
       "list": [
         "customer_name",
+        "customer_type",
+        "account_manager",
         "phone",
         "tax_id",
         "credit_limit"
@@ -1231,12 +1233,15 @@
       ],
       "fields": [
         "customer_name:Data*! Tên khách hàng",
+        "customer_type:Select(Đại lý,Khách lẻ,Khác)=(Đại lý) Phân loại",
+        "account_manager:Data Người phụ trách nội bộ",
         "phone:Data Điện thoại",
         "email:Data Email",
         "address:Small Text Địa chỉ",
         "tax_id:Data Mã số thuế",
         "credit_limit:Currency Hạn mức công nợ",
         "payment_terms:Select(Trả ngay,7 ngày,15 ngày,30 ngày,45 ngày)=(Trả ngay) Điều khoản thanh toán",
+        "note:Small Text Ghi chú",
         "disabled:Check Ngừng giao dịch"
       ],
       "permissions": {
@@ -1671,6 +1676,7 @@
         "width_m",
         "sheet_count",
         "warehouse",
+        "quality_status",
         "stock_state"
       ],
       "search": [
@@ -1686,9 +1692,13 @@
         "warehouse:Link(Warehouse)! Kho",
         "received_on:Date Ngày nhập nhôm",
         "returned_on:Date Ngày nhập lại",
+        "quality_status:Select(Khả dụng,Phế,Chờ kiểm)=(Khả dụng) Chất lượng",
         "stock_state:Select(TỒN,HẾT)=(TỒN) Theo dõi tồn",
         "scrap_note:Data Lá lẻ / phế",
-        "note:Small Text Ghi chú"
+        "note:Small Text Ghi chú",
+        "legacy_source_key:Data- Khoá dữ liệu cũ",
+        "source_sheet:Data- Sheet nguồn",
+        "source_row:Int- Dòng nguồn"
       ],
       "permissions": {
         "Chủ xưởng": "rwc",
@@ -1944,6 +1954,7 @@
       "list": [
         "supplier_name",
         "supplier_group",
+        "account_manager",
         "phone",
         "contact_person",
         "payment_terms"
@@ -1956,6 +1967,7 @@
       "fields": [
         "supplier_name:Data*! Tên nhà cung cấp",
         "supplier_group:Select(Nhôm,Mô tơ,Sơn,Phụ kiện,Vận chuyển,Khác)=(Khác) Nhóm nhà cung cấp",
+        "account_manager:Data Người phụ trách nội bộ",
         "contact_person:Data Người liên hệ",
         "phone:Data Điện thoại",
         "email:Data Email",
@@ -2883,6 +2895,222 @@
         "planned_end_date:Date Ngày hẹn giao",
         "install_address:Small Text Địa chỉ lắp đặt",
         "note:Small Text Ghi chú xưởng"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Sản xuất": "rwc",
+        "Kinh doanh": "r",
+        "Thủ kho": "r",
+        "Kế toán": "r"
+      }
+    },
+    {
+      "//": "Dòng chi tiết của sổ đơn cũ. Chỉ để tra cứu dữ liệu trước ngày chạy hệ thống; không ghi sổ kho hay kế toán.",
+      "name": "Legacy Sales Order Item",
+      "child": true,
+      "label": "Dòng đơn hàng cũ",
+      "group": "Danh mục",
+      "naming": "autoincrement",
+      "title": "product",
+      "list": [
+        "product",
+        "item_code",
+        "qty",
+        "uom",
+        "rate",
+        "amount"
+      ],
+      "fields": [
+        "product:Data! Sản phẩm / quy cách gốc",
+        "item_code:Link(Item) Mã hàng đã ghép",
+        "order_description:Small Text Nội dung đặt hàng",
+        "delivery_description:Small Text Nội dung xuất kho",
+        "qty:Float Số lượng",
+        "uom:Link(UOM) ĐVT",
+        "rate:Currency Đơn giá",
+        "amount:Currency Thành tiền",
+        "error:Data Lỗi",
+        "note:Data Ghi chú",
+        "source_row:Int- Dòng nguồn"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Kinh doanh": "rwc",
+        "Kế toán": "r",
+        "Thủ kho": "r",
+        "Sản xuất": "r"
+      }
+    },
+    {
+      "//": "Sổ đơn hàng lịch sử được tách khỏi Sales Order vận hành để không tạo lại tồn, doanh thu và công nợ.",
+      "//do": [
+        "File Excel 2026 lặp cùng một số chứng từ qua nhiều sheet tháng. Khi nhập chỉ giữ bản ở sheet tháng mới nhất,",
+        "nhờ vậy một đơn cũ xuất hiện đúng một lần nhưng vẫn giữ đủ các dòng hàng của bản cuối.",
+        "Các bảng tính tiền riêng như CTY SÁU HỒNG vẫn được lưu theo từng sheet để bảo toàn số liệu nguồn."
+      ],
+      "name": "Legacy Sales Order",
+      "label": "Đơn hàng cũ",
+      "icon": "archive",
+      "group": "Bán hàng",
+      "naming": "field:legacy_voucher",
+      "title": "customer",
+      "list": [
+        "legacy_voucher",
+        "record_type",
+        "order_date",
+        "customer",
+        "delivery_date",
+        "legacy_status",
+        "salesperson"
+      ],
+      "search": [
+        "legacy_voucher",
+        "customer",
+        "salesperson"
+      ],
+      "fields": [
+        "legacy_voucher:Data*! Số chứng từ cũ",
+        "record_type:Select(Đơn hàng,Phiếu xuất,Bảng tính tiền,Đơn dự án)=(Đơn hàng) Loại dữ liệu",
+        "order_date:Date Ngày đặt hàng",
+        "customer:Link(Customer)! Khách hàng",
+        "delivery_date:Date Ngày giao hàng",
+        "legacy_status:Data Trạng thái nguồn",
+        "salesperson:Data Người phụ trách",
+        "items:Table(Legacy Sales Order Item)! Chi tiết nguồn",
+        "note:Small Text Ghi chú",
+        "source_workbook:Data- File nguồn",
+        "source_sheet:Data- Sheet nguồn"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Kinh doanh": "rwc",
+        "Kế toán": "r",
+        "Thủ kho": "r",
+        "Sản xuất": "r"
+      }
+    },
+    {
+      "//": "Nhật ký nhập/mua/hoàn lịch sử. Không thay Purchase Receipt vì file nguồn không có mã hàng và kho đủ tin cậy để ghi lại sổ kho.",
+      "name": "Legacy Goods Intake",
+      "label": "Nhật ký nhập cũ",
+      "icon": "clipboard-list",
+      "group": "Mua hàng",
+      "naming": "field:legacy_key",
+      "title": "source_party",
+      "list": [
+        "intake_date",
+        "transaction_type",
+        "source_party",
+        "item_description",
+        "qty",
+        "uom",
+        "amount"
+      ],
+      "search": [
+        "source_party",
+        "item_description",
+        "note"
+      ],
+      "fields": [
+        "legacy_key:Data*! Khoá dòng cũ",
+        "intake_date:Date Ngày nhập",
+        "transaction_type:Select(Mua vào,Khách hoàn trả,Nhập khác)=(Nhập khác) Loại nghiệp vụ",
+        "source_party:Data! NCC / khách theo file",
+        "supplier:Link(Supplier) Nhà cung cấp đã ghép",
+        "customer:Link(Customer) Khách hàng đã ghép",
+        "item_description:Small Text! Nội dung / sản phẩm",
+        "item_code:Link(Item) Mã hàng đã ghép",
+        "color_text:Data Màu",
+        "dimension_text:Data Kích thước",
+        "qty:Float Số lượng",
+        "uom:Link(UOM) ĐVT",
+        "responsible:Data Người phụ trách",
+        "payment_method:Data Hình thức thanh toán",
+        "amount:Currency Số tiền",
+        "source_status:Data Tình trạng nguồn",
+        "note:Small Text Ghi chú",
+        "source_sheet:Data- Sheet nguồn",
+        "source_row:Int- Dòng nguồn"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Kế toán": "rwc",
+        "Thủ kho": "rwc",
+        "Kinh doanh": "r",
+        "Sản xuất": "r"
+      }
+    },
+    {
+      "//": "Theo dõi lỗi và bảo hành hai chiều: đã đổi cho khách và đã gửi/nhận lại từ NCC.",
+      "name": "Warranty Claim",
+      "label": "Bảo hành",
+      "icon": "shield-check",
+      "group": "Bảo hành",
+      "naming": "field:legacy_key",
+      "title": "customer",
+      "list": [
+        "received_fault_on",
+        "customer",
+        "supplier",
+        "item_description",
+        "warranty_status"
+      ],
+      "search": [
+        "legacy_voucher",
+        "customer",
+        "supplier",
+        "item_description"
+      ],
+      "fields": [
+        "legacy_key:Data*! Khoá hồ sơ",
+        "legacy_voucher:Data Số chứng từ cũ",
+        "order_date:Date Ngày đặt hàng",
+        "received_fault_on:Date Ngày nhận lỗi",
+        "received_fault_qty:Float SL nhận lỗi",
+        "replacement_sent_on:Date Ngày xuất đổi",
+        "replacement_qty:Float SL đã đổi",
+        "warranty_sent_on:Date Ngày gửi bảo hành",
+        "warranty_sent_qty:Float SL gửi NCC",
+        "warranty_received_on:Date Ngày nhận bảo hành",
+        "warranty_received_qty:Float SL nhận từ NCC",
+        "supplier:Link(Supplier) Nhà cung cấp",
+        "customer:Link(Customer) Khách hàng",
+        "item_description:Small Text! Hàng lỗi / nội dung",
+        "issue_cause:Data Nguyên nhân",
+        "customer_resolution:Data Xử lý cho khách",
+        "supplier_resolution:Data Xử lý với NCC",
+        "debt_offset_on:Date Ngày trừ công nợ",
+        "warranty_status:Select(Mới,Đã đổi cho khách,Đang gửi NCC,Đã nhận từ NCC,Đã đóng)=(Mới) Trạng thái",
+        "note:Small Text Ghi chú",
+        "source_sheet:Data- Sheet nguồn",
+        "source_row:Int- Dòng nguồn"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Kinh doanh": "rwc",
+        "Kế toán": "rwc",
+        "Thủ kho": "rwc",
+        "Sản xuất": "r"
+      }
+    },
+    {
+      "//": "Định mức thời gian theo bộ phận lấy từ sheet LỊCH SẢN XUẤT; là master để lập lịch, không phải lệnh sản xuất.",
+      "name": "Production Standard",
+      "label": "Định mức công đoạn",
+      "icon": "timer",
+      "group": "Sản xuất",
+      "naming": "field:department",
+      "title": "department",
+      "list": [
+        "department",
+        "standard_time",
+        "disabled"
+      ],
+      "fields": [
+        "department:Data*! Bộ phận / công đoạn",
+        "standard_time:Small Text! Định mức thời gian",
+        "note:Small Text Ghi chú",
+        "disabled:Check Ngừng dùng"
       ],
       "permissions": {
         "Chủ xưởng": "rwc",

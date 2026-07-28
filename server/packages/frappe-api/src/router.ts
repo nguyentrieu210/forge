@@ -2624,12 +2624,35 @@ const CONTEXT_DIMENSIONS: Array<{ key: string; label: string; recordType: string
   { key: "buying_price_list", label: "Bảng giá mua", recordType: "Price List", required: false },
 ];
 
+/**
+ * Resolves one context value without letting a stored/browser-supplied value escape
+ * the server's permission-filtered option set.
+ *
+ * Optional dimensions deliberately stay empty when the caller clears them. Previously
+ * every optional selector fell back to its first option, so "Tất cả kho" and selecting
+ * a warehouse other than the first one immediately snapped back to K12.
+ */
+export function resolveContextDimensionValue(
+  requested: JsonValue | undefined,
+  permittedNames: string[],
+  options: { required: boolean; locked: boolean; defaultValue?: string },
+): string | undefined {
+  const allowed = new Set(permittedNames);
+  if (typeof requested === "string" && requested && allowed.has(requested)) return requested;
+  if (options.locked && permittedNames.length === 1) return permittedNames[0];
+  if (!options.required) return undefined;
+  if (options.defaultValue && allowed.has(options.defaultValue)) return options.defaultValue;
+  return permittedNames[0];
+}
+
 async function businessContext(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
   const requested = args.array<string>("dimensions");
   const wanted = requested?.length ? new Set(requested.map((entry) => String(entry))) : null;
+  const requestedSelection = args.object("selection") ?? {};
   const permissions = await context.access.listUserPermissions(context.tenantId, context.actor.user_id);
 
   const dimensions: JsonObject[] = [];
+  const selection: JsonObject = {};
   for (const dimension of CONTEXT_DIMENSIONS) {
     if (wanted && !wanted.has(dimension.key)) continue;
     const restrictions = permissions.filter((record) => record.allow_doctype === dimension.recordType);
@@ -2647,7 +2670,19 @@ async function businessContext(args: FrappeArgs, context: FrappeRouterContext): 
     const permitted = restrictions.length
       ? options.filter((option) => restrictions.some((record) => record.allow_name === option.name))
       : options;
-    const defaultValue = restrictions.find((record) => record.is_default)?.allow_name ?? permitted[0]?.name;
+    const permissionDefault = restrictions.find((record) => record.is_default)?.allow_name;
+    const locked = restrictions.length === 1;
+    const defaultValue = dimension.required
+      ? permissionDefault ?? permitted[0]?.name
+      : locked
+        ? permitted[0]?.name
+        : undefined;
+    const selectedValue = resolveContextDimensionValue(
+      requestedSelection[dimension.key],
+      permitted.map((option) => option.name),
+      { required: dimension.required, locked, ...(defaultValue ? { defaultValue } : {}) },
+    );
+    if (selectedValue) selection[dimension.key] = selectedValue;
 
     dimensions.push({
       key: dimension.key,
@@ -2658,13 +2693,13 @@ async function businessContext(args: FrappeArgs, context: FrappeRouterContext): 
       required: dimension.required,
       // Locked when a User Permission pins exactly one value: the user has no
       // choice to make, and offering one would imply they do.
-      locked: restrictions.length === 1,
+      locked,
       ...(dimension.dependsOn ? { dependsOn: dimension.dependsOn } : {}),
       ...(defaultValue ? { defaultValue } : {}),
       options: permitted.map((option) => ({ value: option.name, label: option.label })) as unknown as JsonValue,
     });
   }
-  return { dimensions: dimensions as unknown as JsonValue, selection: {} };
+  return { dimensions: dimensions as unknown as JsonValue, selection };
 }
 
 /**
