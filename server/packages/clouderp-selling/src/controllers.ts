@@ -626,7 +626,7 @@ async function applySellingPricing<T extends SalesItem>(context: ControllerConte
   if (!priceList) return items;
   return Promise.all(items.map(async (item) => {
     const qtyMicros = item.qty_micros ?? toScaledInt(item.qty, 6);
-    const price = await resolveServerPrice(context, { itemCode:item.item_code, qtyMicros, postingDate, priceList, documentCurrency:currency, partyType:"Customer", party:customer, ...(customerGroup?{customerGroup}:{}) });
+    const price = await resolveServerPrice(context, { itemCode:item.item_code, qtyMicros, postingDate, priceList, documentCurrency:currency, ...(typeof item.uom === "string" && item.uom ? { uom:item.uom } : {}), partyType:"Customer", party:customer, ...(customerGroup?{customerGroup}:{}) });
     return { ...item, rate:price.rate, rate_minor:price.rate_minor, item_price:price.item_price, ...(price.pricing_rule?{pricing_rule:price.pricing_rule}:{}), ...(price.discount_percentage?{discount_percentage:price.discount_percentage}:{}) };
   }));
 }

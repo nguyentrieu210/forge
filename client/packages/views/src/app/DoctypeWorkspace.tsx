@@ -85,6 +85,12 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
             doctype={doctype}
             name={decoded}
             aiSlot={props.contextAiSlot}
+            onOpenConnection={(connection) => {
+              const filter = connection.fieldname && connection.value
+                ? `?f_${encodeURIComponent(connection.fieldname)}=${encodeURIComponent(connection.value)}`
+                : "";
+              onNavigate(`${base}/${encodeURIComponent(connection.doctype)}${filter}`);
+            }}
           />
         ) : isTree ? (
           <div className="grid h-full place-items-center px-4 text-center text-xs text-muted-foreground">

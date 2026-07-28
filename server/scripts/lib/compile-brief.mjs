@@ -788,7 +788,7 @@ export function compileBrief(brief) {
       is_tree: doctype.tree === true,
       is_submittable: submittable,
       track_changes: true,
-      allow_rename: false,
+      allow_rename: doctype.allow_rename === true,
       ...(doctype.naming ? { autoname: doctype.naming } : {}),
       ...(doctype.title ? { title_field: doctype.title } : {}),
       ...(doctype.search?.length ? { search_fields: doctype.search } : {}),

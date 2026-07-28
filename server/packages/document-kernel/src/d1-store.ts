@@ -371,7 +371,15 @@ export class D1MutationStore implements MutationStore {
    * text that happens to match. A refused rename is recoverable; a half-rewritten
    * link graph is not.
    */
-  async renameDocument(tenantId: string, doctype: string, oldName: string, newName: string, actor: string, now: string): Promise<void> {
+  async renameDocument(
+    tenantId: string,
+    doctype: string,
+    oldName: string,
+    newName: string,
+    actor: string,
+    now: string,
+    namingField?: string,
+  ): Promise<void> {
     const oldKey = documentKey(doctype, oldName);
     const newKey = documentKey(doctype, newName);
 
@@ -388,9 +396,14 @@ export class D1MutationStore implements MutationStore {
 
     await this.writer.batch([
       this.writer.prepare(
-        `UPDATE documents SET doc_key=?3, name=?4, modified_at=?5, modified_by=?6
+        `UPDATE documents
+         SET doc_key=?3,
+             name=?4,
+             modified_at=?5,
+             modified_by=?6,
+             payload_json=CASE WHEN ?7='' THEN payload_json ELSE json_set(payload_json, ?8, ?4) END
          WHERE tenant_id=?1 AND doc_key=?2`,
-      ).bind(tenantId, oldKey, newKey, newName, now, actor),
+      ).bind(tenantId, oldKey, newKey, newName, now, actor, namingField ?? "", namingField ? `$.${namingField}` : "$.__unused"),
       this.writer.prepare(`UPDATE document_children SET parent_key=?3 WHERE tenant_id=?1 AND parent_key=?2`).bind(tenantId, oldKey, newKey),
       this.writer.prepare(`UPDATE versions SET doc_key=?3 WHERE tenant_id=?1 AND doc_key=?2`).bind(tenantId, oldKey, newKey),
       this.writer.prepare(`UPDATE document_comments SET name=?4 WHERE tenant_id=?1 AND doctype=?2 AND name=?3`).bind(tenantId, doctype, oldName, newName),

@@ -16,6 +16,11 @@ export async function resolveServerPrice(
   const currency = typeof itemPrice.currency === "string" ? itemPrice.currency : "";
   if (!currency) throw errors.reference(`Item Price ${priceName} must define currency`);
   if (currency !== input.documentCurrency) throw errors.reference(`Item Price ${priceName} currency does not match document currency`);
+  const priceUom = typeof itemPrice.uom === "string" ? itemPrice.uom.trim() : "";
+  const lineUom = typeof input.uom === "string" ? input.uom.trim() : "";
+  if (priceUom && lineUom && priceUom !== lineUom) {
+    throw errors.validation(`Item Price ${priceName} applies to UOM "${priceUom}", but the document row uses "${lineUom}"`);
+  }
   const currencyMaster = await context.reader.getMasterRecordData(context.command.tenant_id, "Currency", currency);
   const scale = typeof currencyMaster?.currency_scale === "number" ? currencyMaster.currency_scale : 2;
   let rate = toScaledInt(decimal(itemPrice.rate, "item price rate"), scale, "item price rate");
@@ -49,6 +54,7 @@ export async function resolveServerPrice(
     currency,
     currency_scale: scale,
     item_price: priceName,
+    ...(priceUom ? { uom: priceUom } : {}),
     ...(selected ? { pricing_rule: selected.name } : {}),
     ...(discount ? { discount_percentage: discount } : {}),
   };

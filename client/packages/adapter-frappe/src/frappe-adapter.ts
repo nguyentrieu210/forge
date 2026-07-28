@@ -581,10 +581,22 @@ export class FrappeAdapterImpl implements FrappeAdapter {
   }
   private normalizeConnections(data: unknown): ConnectionCount[] {
     const out: ConnectionCount[] = [];
-    const push = (doctype: unknown, count: unknown): void => {
+    const push = (
+      doctype: unknown,
+      count: unknown,
+      extra?: { label?: unknown; fieldname?: unknown; relation_label?: unknown; value?: unknown },
+    ): void => {
       const d = typeof doctype === "string" ? doctype : "";
       const n = typeof count === "number" ? count : Number(count);
-      if (d && Number.isFinite(n) && n > 0) out.push({ doctype: d, count: n });
+      if (!d || !Number.isFinite(n) || n <= 0) return;
+      out.push({
+        doctype: d,
+        count: n,
+        ...(typeof extra?.label === "string" && extra.label ? { label: extra.label } : {}),
+        ...(typeof extra?.fieldname === "string" && extra.fieldname ? { fieldname: extra.fieldname } : {}),
+        ...(typeof extra?.relation_label === "string" && extra.relation_label ? { relation_label: extra.relation_label } : {}),
+        ...(typeof extra?.value === "string" && extra.value ? { value: extra.value } : {}),
+      });
     };
     // bóc container: ưu tiên khoá `count` (shape v16), nếu không có thì dùng chính data.
     const container =
@@ -595,7 +607,12 @@ export class FrappeAdapterImpl implements FrappeAdapter {
       for (const it of container) {
         if (it && typeof it === "object") {
           const o = it as Record<string, unknown>;
-          push(o.name ?? o.doctype ?? o.document_type, o.count ?? o.open_count ?? o.value);
+          push(o.name ?? o.doctype ?? o.document_type, o.count ?? o.open_count ?? o.value, {
+            label: o.label,
+            fieldname: o.fieldname,
+            relation_label: o.relation_label,
+            value: o.filter_value,
+          });
         }
       }
     } else if (container && typeof container === "object") {

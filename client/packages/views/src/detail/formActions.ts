@@ -40,6 +40,8 @@ export interface FormActionCtx {
   dirty: boolean;
   hasWorkflow: boolean;
   saving?: boolean;
+  /** Chỉ hiện Đổi tên khi metadata thật sự cho phép; server vẫn chốt lại lần cuối. */
+  allowRename?: boolean;
   perms: FormPerms;
 }
 
@@ -92,7 +94,7 @@ export function resolveFormActions(ctx: FormActionCtx): FormActionDesc[] {
 
   // Đổi tên — đã lưu, có quyền write. Đổi định danh bản ghi → khoá khi dirty (tránh nhầm giữa sửa
   // nội dung dở tay với đổi tên, ép Lưu/huỷ nháp trước).
-  if (!ctx.isNew && p.write) {
+  if (!ctx.isNew && p.write && ctx.allowRename) {
     out.push({ kind: "rename", label: "Đổi tên", variant: "outline", inMenu: true, disabled: ctx.saving, ...dirtyGuard });
   }
 

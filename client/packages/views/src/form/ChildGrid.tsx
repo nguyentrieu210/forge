@@ -113,6 +113,20 @@ function flexibleColumn(cols: DocField[]): string | undefined {
   return cols.find((c) => ["Link", "Data", "Dynamic Link"].includes(c.fieldtype))?.fieldname;
 }
 
+function dynamicLinkTarget(field: DocField, row: Doc): string | undefined {
+  if (field.fieldtype === "Link") return field.options;
+  if (field.fieldtype !== "Dynamic Link" || !field.options) return undefined;
+  const target = row[field.options];
+  return typeof target === "string" && target.trim() ? target.trim() : undefined;
+}
+
+function detailFieldSpan(field: DocField): string {
+  if (["Small Text", "Text", "Long Text", "Text Editor", "Code", "HTML", "Markdown Editor"].includes(field.fieldtype)) {
+    return "sm:col-span-2 lg:col-span-3";
+  }
+  return "";
+}
+
 export function ChildGrid(props: ChildGridProps) {
   const t = useT();
   const { childMeta, rows, onChange, registry, services, readOnly, parentDoc, roles, rowDefaults } = props;
@@ -363,7 +377,7 @@ export function ChildGrid(props: ChildGridProps) {
                         masked={rf.masked}
                         services={services}
                         docname={String(row.name ?? "")}
-                        linkTarget={c.fieldtype === "Link" ? c.options : undefined}
+                        linkTarget={dynamicLinkTarget(c, row)}
                         parentDoctype={childMeta.name}
                         docValues={row}
                         roles={roles}
@@ -423,19 +437,27 @@ export function ChildGrid(props: ChildGridProps) {
         không có chỗ này là xoá field khỏi tầm với của người dùng.
       */}
       <Dialog open={detailRow != null} onOpenChange={(open) => { if (!open) setDetailRow(null); }}>
-        <DialogContent className="max-h-[85vh] w-[min(94vw,640px)] max-w-none overflow-y-auto">
+        <DialogContent className="max-h-[88vh] w-[min(96vw,860px)] max-w-none overflow-y-auto p-0">
           <DialogHeader>
-            <DialogTitle>Dòng {detailRow != null ? detailRow + 1 : ""} — {childMeta.label ?? childMeta.name}</DialogTitle>
+            <DialogTitle className="border-b px-5 py-4">
+              {childMeta.label ?? childMeta.name}
+              <span className="ml-2 text-sm font-normal text-muted-foreground">
+                Dòng {detailRow != null ? detailRow + 1 : ""}
+                {detailRow != null && childMeta.title_field && rows[detailRow]?.[childMeta.title_field]
+                  ? ` · ${String(rows[detailRow]?.[childMeta.title_field])}`
+                  : ""}
+              </span>
+            </DialogTitle>
           </DialogHeader>
           {detailRow != null && rows[detailRow] ? (
-            <div className="grid gap-3">
+            <div className="grid grid-cols-1 gap-x-3 gap-y-3 px-5 pb-5 sm:grid-cols-2 lg:grid-cols-3">
               {(childMeta.fields ?? []).filter((f) => !isLayout(f.fieldtype)).map((f) => {
                 const row = rows[detailRow]!;
                 const rf = resolveField(f, childMeta, { doc: row, parent: parentDoc, roles, assumeWritable: true });
                 if (!rf.visible) return null;
                 const Control = registry.resolve(f.fieldtype) ?? FallbackControl;
                 return (
-                  <div key={f.fieldname} className="grid gap-1.5">
+                  <div key={f.fieldname} className={`grid min-w-0 gap-1.5 ${detailFieldSpan(f)}`}>
                     <label className="text-sm font-medium" htmlFor={`detail-${f.fieldname}`}>
                       {f.label ?? f.fieldname}
                       {f.reqd ? <span className="mf-required ml-0.5 text-destructive">*</span> : null}
@@ -448,7 +470,7 @@ export function ChildGrid(props: ChildGridProps) {
                       masked={rf.masked}
                       services={services}
                       docname={String(row.name ?? "")}
-                      linkTarget={f.fieldtype === "Link" ? f.options : undefined}
+                      linkTarget={dynamicLinkTarget(f, row)}
                       parentDoctype={childMeta.name}
                       docValues={row}
                       roles={roles}

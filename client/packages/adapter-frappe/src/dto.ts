@@ -290,4 +290,12 @@ export interface ShareInfo {
 export interface ConnectionCount {
   doctype: string;
   count: number;
+  /** Nhãn nghiệp vụ của DocType đích, ví dụ "Đơn giá theo bảng giá". */
+  label?: string;
+  /** Link field tạo ra quan hệ này; dùng để mở đúng danh sách đã lọc. */
+  fieldname?: string;
+  /** Nhãn ngắn của quan hệ, ví dụ "Mã hàng". */
+  relation_label?: string;
+  /** Giá trị cần lọc ở fieldname. */
+  value?: string;
 }

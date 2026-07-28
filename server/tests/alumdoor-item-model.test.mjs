@@ -17,6 +17,8 @@ test("Alumdoor Item declares reusable inventory measurement profiles", () => {
   assert.ok(doctype("Material Specification"));
   assert.ok(doctype("Supplier Item"));
   assert.ok(doctype("Measurement Profile"));
+  assert.equal(doctype("Item")?.allow_rename, true);
+  assert.equal(field("Item", "item_code")?.read_only_depends_on, "eval: !doc.__islocal");
   assert.equal(field("Item", "item_group")?.options, "Item Group");
   assert.equal(field("Item", "item_nature")?.default, "Hàng tồn kho");
   assert.equal(field("Item", "is_stock_item")?.default, true);
@@ -27,6 +29,17 @@ test("Alumdoor Item declares reusable inventory measurement profiles", () => {
   assert.equal(field("Item", "measurement_profile")?.options, "Measurement Profile");
   assert.match(field("Item", "measurement_profile")?.depends_on ?? "", /inventory_mode != 'Hàng thường'/);
   assert.match(field("Item", "measurement_profile")?.mandatory_depends_on ?? "", /inventory_mode != 'Hàng thường'/);
+  assert.match(field("Item", "uom_conversions")?.depends_on ?? "", /default_purchase_uom != doc.stock_uom/);
+  assert.match(field("Item", "variant_attributes")?.depends_on ?? "", /variant_of/);
+  assert.ok(field("Item", "tab_item_main"));
+  assert.ok(field("Item", "tab_item_identity"));
+  assert.ok(field("Item", "tab_item_accounts"));
+  assert.ok(field("Item", "tab_item_tracking"));
+  assert.equal(field("Item Price", "uom")?.options, "UOM");
+  assert.equal(field("Item Price", "uom")?.fetch_from, "item_code.default_sales_uom");
+  assert.equal(field("Pricing Rule", "party")?.fieldtype, "Dynamic Link");
+  assert.equal(field("Pricing Rule", "party")?.options, "party_type");
+  assert.equal(field("Payment Entry", "party")?.fieldtype, "Dynamic Link");
 
   const aluminium = brief.fixtures.find((entry) =>
     entry.type === "Measurement Profile" && entry.name === "Nhôm cây/lá");

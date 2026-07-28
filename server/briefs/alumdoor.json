@@ -2,7 +2,7 @@
   "$schema": "./brief.schema.json",
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "1.18.3",
+  "version": "1.18.4",
   "module": "Alumdoor",
   "domain": "alumdoor",
   "brand": "warm",
@@ -913,6 +913,7 @@
       "icon": "package",
       "group": "Danh mục",
       "naming": "field:item_code",
+      "allow_rename": true,
       "title": "item_name",
       "list": [
         "item_code",
@@ -930,11 +931,25 @@
       ],
       "fields": [
         {
+          "fieldname": "tab_item_main",
+          "fieldtype": "Tab Break",
+          "label": "Thông tin chính"
+        },
+        {
           "fieldname": "section_basic",
           "fieldtype": "Section Break",
           "label": "Thông tin cơ bản"
         },
-        "item_code:Data*! Mã hàng",
+        {
+          "fieldname": "item_code",
+          "fieldtype": "Data",
+          "label": "Mã hàng",
+          "required": true,
+          "in_list_view": true,
+          "in_standard_filter": true,
+          "read_only_depends_on": "eval: !doc.__islocal",
+          "description": "Mã được tự gợi ý khi tạo. Sau khi lưu, dùng Thao tác khác → Đổi tên để đổi mã an toàn."
+        },
         "item_name:Data! Tên hàng",
         "item_group:Link(Item Group)! Nhóm hàng",
         "item_nature:Select(Hàng tồn kho,Dịch vụ,Tài sản)!=(Hàng tồn kho) Bản chất mặt hàng",
@@ -986,20 +1001,43 @@
         "stock_uom:Link(UOM)!=(Cái) Đơn vị TỒN KHO",
         "default_purchase_uom:Link(UOM) ĐVT mua mặc định",
         "default_sales_uom:Link(UOM) ĐVT bán mặc định",
-        "uom_conversions:Table(UOM Conversion) Quy đổi đơn vị (mua cây — tồn mét)",
+        {
+          "fieldname": "uom_conversions",
+          "fieldtype": "Table",
+          "options": "UOM Conversion",
+          "label": "Đơn vị quy đổi khác",
+          "depends_on": "eval:doc.default_purchase_uom != doc.stock_uom || doc.default_sales_uom != doc.stock_uom",
+          "description": "Chỉ khai khi đơn vị mua hoặc bán khác đơn vị tồn kho."
+        },
+        {
+          "fieldname": "tab_item_identity",
+          "fieldtype": "Tab Break",
+          "label": "Nhận diện"
+        },
         {
           "fieldname": "section_identity",
           "fieldtype": "Section Break",
           "label": "Nhận diện và phân loại"
         },
         "variant_of:Link(Item) Mã gốc / mẫu",
-        "variant_attributes:Table(Item Variant Attribute) Thuộc tính biến thể",
+        {
+          "fieldname": "variant_attributes",
+          "fieldtype": "Table",
+          "options": "Item Variant Attribute",
+          "label": "Thuộc tính biến thể",
+          "depends_on": "eval:doc.variant_of"
+        },
         "brand:Link(Brand) Thương hiệu",
         "manufacturer:Link(Manufacturer) Nhà sản xuất",
         "manufacturer_part_no:Data Mã của nhà sản xuất",
         "material_specification:Link(Material Specification) Quy cách kỹ thuật",
         "default_color:Link(Item Color) Màu mặc định",
         "barcodes:Table(Item Barcode) Mã vạch",
+        {
+          "fieldname": "tab_item_accounts",
+          "fieldtype": "Tab Break",
+          "label": "Kho & kế toán"
+        },
         {
           "fieldname": "section_accounts",
           "fieldtype": "Section Break",
@@ -1014,6 +1052,11 @@
         "expense_account:Link(Account) Tài khoản chi phí",
         "standard_rate:Currency Giá định mức BOM",
         "valuation_method:Select(FIFO)=(FIFO) Phương pháp giá vốn",
+        {
+          "fieldname": "tab_item_tracking",
+          "fieldtype": "Tab Break",
+          "label": "Theo dõi"
+        },
         {
           "fieldname": "section_tracking",
           "fieldtype": "Section Break",
@@ -1062,7 +1105,13 @@
       ],
       "fields": [
         "uom:Link(UOM)! Đơn vị giao dịch",
-        "conversion_factor:Float! Một đơn vị này = bao nhiêu đơn vị tồn",
+        {
+          "fieldname": "conversion_factor",
+          "fieldtype": "Float",
+          "label": "Hệ số về ĐVT tồn",
+          "required": true,
+          "description": "Ví dụ 1 Cây = 5,85 Mét thì nhập 5,85."
+        },
         "note:Data Ghi chú"
       ],
       "permissions": {
@@ -1181,6 +1230,7 @@
       "list": [
         "price_list",
         "item_code",
+        "uom",
         "rate"
       ],
       "search": [
@@ -1189,7 +1239,16 @@
       "fields": [
         "price_list:Link(Price List)! Bảng giá",
         "item_code:Link(Item)! Mã hàng",
-        "rate:Currency! Đơn giá (theo ĐVT của hàng)",
+        {
+          "fieldname": "uom",
+          "fieldtype": "Link",
+          "options": "UOM",
+          "label": "ĐVT áp dụng",
+          "required": true,
+          "fetch_from": "item_code.default_sales_uom",
+          "description": "Đơn giá chỉ áp dụng khi dòng bán dùng đúng đơn vị này."
+        },
+        "rate:Currency! Đơn giá",
         "currency:Link(Currency)-!=(VND) Tiền tệ",
         "note:Data Ghi chú",
         "disabled:Check Ngừng áp dụng"
@@ -1223,7 +1282,7 @@
         "price_list:Link(Price List) Chỉ áp cho bảng giá",
         "item_code:Link(Item) Chỉ áp cho mặt hàng",
         "party_type:Select(Customer,Supplier)=(Customer) Loại đối tác",
-        "party:Link(Customer) Chỉ áp cho khách",
+        "party:Dynamic Link(party_type) Chỉ áp cho đối tác",
         "customer_group:Select(Lẻ,Đại lý,Công trình,Nhà thầu) Chỉ áp cho nhóm khách",
         "min_qty:Float Số lượng từ",
         "max_qty:Float Số lượng đến",
@@ -1763,7 +1822,7 @@
       "fields": [
         "payment_type:Select(Receive,Pay)!=(Receive) Loại phiếu (Receive = thu, Pay = chi)",
         "party_type:Select(Customer,Supplier)!=(Customer) Loại đối tác",
-        "party:Data! Khách hàng / Nhà cung cấp",
+        "party:Dynamic Link(party_type)! Khách hàng / Nhà cung cấp",
         "company:Link(Company)-!=(ALUMDOOR) Công ty",
         "currency:Link(Currency)-!=(VND) Tiền tệ",
         "posting_at:Datetime!=(Now) Ngày chứng từ",

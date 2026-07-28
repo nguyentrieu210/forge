@@ -75,6 +75,26 @@ try {
     return acc;
   }, {})).sort((a, b) => b.count - a.count);
 
+  const itemPrices = d1Query(database, `
+    SELECT
+      p.name,
+      json_extract(p.payload_json, '$.price_list') AS price_list,
+      json_extract(p.payload_json, '$.item_code') AS item_code,
+      json_extract(p.payload_json, '$.uom') AS uom,
+      json_extract(i.payload_json, '$.default_sales_uom') AS default_sales_uom,
+      json_extract(i.payload_json, '$.stock_uom') AS stock_uom
+    FROM documents p
+    LEFT JOIN documents i
+      ON i.tenant_id=p.tenant_id
+     AND i.doctype='Item'
+     AND i.name=json_extract(p.payload_json, '$.item_code')
+    WHERE p.tenant_id='alu' AND p.doctype='Item Price'
+    ORDER BY p.name
+  `);
+  const itemPriceIssues = itemPrices
+    .filter((row) => !String(row.uom ?? "").trim())
+    .map((row) => ({ severity: "error", issue: "missing_price_uom", ...row }));
+
   // Before changing a base stock UOM, expose every relational table that already
   // carries quantities for the Item. Historical stock must be migrated, never
   // silently re-labelled from Mét to Kg.
@@ -106,6 +126,9 @@ try {
     uom_combinations: byUom,
     issue_count: issues.length,
     issues,
+    item_price_count: itemPrices.length,
+    item_price_issue_count: itemPriceIssues.length,
+    item_price_issues: itemPriceIssues,
     relational_usage: relationalUsage,
     items: rows,
   }, null, 2)}\n`);

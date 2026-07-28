@@ -162,6 +162,19 @@ test("Item Price and Pricing Rule override client rates server-side", async () =
   assert.equal(order.data.grand_total, "180.00");
 });
 
+test("Item Price never applies silently to a different transaction UOM", async () => {
+  const { store, kernel } = setup();
+  store.seedMaster("Item", "PRICE-UOM", "demo", { valuation_method: "FIFO", stock_uom: "Kg" });
+  store.seedMaster("Item Price", "Retail:PRICE-UOM", "demo", { currency: "USD", uom: "Kg", rate: "100" });
+  await assert.rejects(
+    createAndSubmit(kernel, { doctype: "Sales Order", name: "SO-PRICE-UOM", document: {
+      customer: "CUST-1", company: "Demo", currency: "USD", transaction_date: "2026-07-25", selling_price_list: "Retail",
+      items: [{ row_id: "1", item_code: "PRICE-UOM", qty: "2", uom: "Mét", rate: "999" }], taxes: [],
+    }}),
+    /applies to UOM "Kg".*"Mét"/,
+  );
+});
+
 test("ERPNext posting controllers enforce the company period lock", async () => {
   const { store, kernel } = setup();
   store.seedMaster("Item", "ITEM-RET", "demo", { valuation_method: "FIFO" });

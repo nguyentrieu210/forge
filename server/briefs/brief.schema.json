@@ -715,6 +715,10 @@
         "naming": {
           "type": "string"
         },
+        "allow_rename": {
+          "type": "boolean",
+          "description": "Cho phép đổi name/mã sau khi lưu qua thao tác Rename an toàn của runtime."
+        },
         "title": {
           "type": "string",
           "pattern": "^[a-z][a-z0-9_]*$"

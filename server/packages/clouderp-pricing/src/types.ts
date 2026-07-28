@@ -6,6 +6,7 @@ export interface PricingContext {
   postingDate: string;
   priceList: string;
   documentCurrency: string;
+  uom?: string;
   partyType?: "Customer" | "Supplier";
   party?: string;
   customerGroup?: string;

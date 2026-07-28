@@ -54,6 +54,10 @@ export interface ContextShare {
 export interface ContextConnection {
   doctype: string;
   count: number;
+  label?: string;
+  fieldname?: string;
+  relationLabel?: string;
+  value?: string;
 }
 
 export interface ContextPanelProps {
@@ -76,7 +80,7 @@ export interface ContextPanelProps {
   onAddShare?: (user: string) => void | Promise<void>;
   onRemoveShare?: (user: string) => void | Promise<void>;
   /** click 1 nhóm liên kết → app tự điều hướng (thiếu ⇒ hiện text tĩnh, KHÔNG nút giả). */
-  onOpenConnection?: (doctype: string) => void;
+  onOpenConnection?: (connection: ContextConnection) => void;
   /** tab AI (app truyền AIPanel — views KHÔNG phụ thuộc shell). */
   aiSlot?: ReactNode;
 }
@@ -289,12 +293,18 @@ function ConnectionsBlock({
           {items.map((c) => (
             <li key={c.doctype} className="flex items-center gap-2">
               {onOpen ? (
-                <Button variant="link" size="sm" onClick={() => onOpen(c.doctype)}
-                  className="h-auto min-w-0 flex-1 justify-start truncate p-0 text-sm font-normal">
-                  {c.doctype}
+                <Button variant="ghost" size="sm" onClick={() => onOpen(c)}
+                  className="h-auto min-w-0 flex-1 justify-start p-1 text-left font-normal">
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-medium text-foreground">{c.label ?? c.doctype}</span>
+                    {c.relationLabel ? <span className="block truncate text-[11px] text-muted-foreground">{c.relationLabel}</span> : null}
+                  </span>
                 </Button>
               ) : (
-                <span className="min-w-0 flex-1 truncate text-sm text-foreground">{c.doctype}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium text-foreground">{c.label ?? c.doctype}</span>
+                  {c.relationLabel ? <span className="block truncate text-[11px] text-muted-foreground">{c.relationLabel}</span> : null}
+                </span>
               )}
               <Badge variant="secondary" className="font-normal">{c.count}</Badge>
             </li>

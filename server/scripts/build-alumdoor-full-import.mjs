@@ -299,6 +299,10 @@ for (const item of items) {
       payload: {
         price_list: "Giá niêm yết",
         item_code: item.code,
+        // Giá là theo đơn vị BÁN của dòng danh mục, không được ngầm hiểu theo ĐVT tồn.
+        // Với trục/ray, giá theo Mét trong khi kho giữ Kg; thiếu field này khiến cùng một
+        // con số có thể bị áp nhầm cho cả hai đơn vị.
+        uom: item.payload.default_sales_uom,
         rate: item.list_price,
         currency: "VND",
         note: "Danh mục Alumdoor 2026-07-28",
@@ -313,6 +317,7 @@ for (const item of items) {
       payload: {
         price_list: "Giá có ray",
         item_code: item.code,
+        uom: item.payload.default_sales_uom,
         rate: item.rail_price,
         currency: "VND",
         note: "Danh mục Alumdoor 2026-07-28",
@@ -326,7 +331,7 @@ appendDocumentUpserts("Item Price", itemPrices, 18);
 appendSearchUpserts("Item Price", itemPrices.map(({ name, payload }) => ({
   name,
   title: payload.item_code,
-  content: `${payload.price_list} ${payload.item_code} ${payload.rate}`,
+  content: `${payload.price_list} ${payload.item_code} ${payload.uom} ${payload.rate}`,
 })), 24);
 
 const audit = {

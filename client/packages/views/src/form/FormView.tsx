@@ -254,6 +254,7 @@ export function FormView(props: FormViewProps) {
     dirty: form.formState.isDirty,
     hasWorkflow: (props.transitions?.length ?? 0) > 0 || props.hasWorkflow === true,
     saving: props.saving,
+    allowRename: meta.allow_rename === 1,
     perms: props.perms ?? { create: true, write: true, submit: true, cancel: true, delete: true, amend: true },
   };
 

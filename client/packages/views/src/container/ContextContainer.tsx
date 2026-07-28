@@ -25,7 +25,7 @@ export interface ContextContainerProps {
   name: string;
   aiSlot?: ReactNode;
   /** app tự điều hướng khi click 1 nhóm liên kết (thiếu ⇒ list liên kết là text tĩnh). */
-  onOpenConnection?: (doctype: string) => void;
+  onOpenConnection?: (connection: ContextConnection) => void;
 }
 
 function commentKind(c: Comment): TimelineKind {
@@ -96,7 +96,14 @@ export function ContextContainer(props: ContextContainerProps) {
     [sharesQ.data],
   );
   const connections: ContextConnection[] = useMemo(
-    () => (connectionsQ.data ?? []).map((c) => ({ doctype: c.doctype, count: c.count })),
+    () => (connectionsQ.data ?? []).map((c) => ({
+      doctype: c.doctype,
+      count: c.count,
+      label: c.label,
+      fieldname: c.fieldname,
+      relationLabel: c.relation_label,
+      value: c.value,
+    })),
     [connectionsQ.data],
   );
 

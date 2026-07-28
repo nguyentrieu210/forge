@@ -690,7 +690,16 @@ async function renameDocument(args: FrappeArgs, context: FrappeRouterContext): P
   await loadWritable(doctype, oldName, context);
   if (await context.documents.getDocument(context.tenantId, doctype, newName)) throw errors.exists();
 
-  await context.documents.renameDocument(context.tenantId, doctype, oldName, newName, context.actor.user_id, context.now());
+  const namingField = meta.autoname?.startsWith("field:") ? meta.autoname.slice("field:".length) : undefined;
+  await context.documents.renameDocument(
+    context.tenantId,
+    doctype,
+    oldName,
+    newName,
+    context.actor.user_id,
+    context.now(),
+    namingField,
+  );
   return { doctype, name: newName, renamed: true };
 }
 
@@ -1950,6 +1959,46 @@ async function desktopPage(args: FrappeArgs, context: FrappeRouterContext): Prom
 async function openCount(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
   const doctype = args.text("doctype");
   if (!doctype) return { count: 0, open_count: 0 };
+  const name = args.text("name");
+  if (name) {
+    // Form sidebar: trả CÁC DocType đang trỏ trực tiếp tới bản ghi hiện tại.
+    //
+    // Bản cũ bỏ qua hoàn toàn `name`, rồi đếm chính DocType hiện tại theo docstatus. Shape trả về
+    // `{count:number}` cũng không phải danh sách connection mà adapter cần, nên panel "Liên kết"
+    // luôn rỗng dù Item đã có Item Price/Pricing Rule/Supplier Item trỏ tới.
+    await assertDocumentAction(context, doctype, name, "read");
+    const metas = await context.metadata.listDocTypes(context.tenantId);
+    const related: JsonObject[] = [];
+    for (const target of metas) {
+      if (target.is_child) continue;
+      for (const field of target.fields ?? []) {
+        if (field.fieldtype !== "Link" || field.options !== doctype) continue;
+        try {
+          const result = await context.listService.count(context.actor, context.tenantId, {
+            doctype: target.name,
+            filters: [{ field: field.fieldname, operator: "eq", value: name }] as unknown as JsonValue,
+          });
+          const count = Number(result.count ?? 0);
+          if (count <= 0) continue;
+          related.push({
+            name: target.name,
+            label: target.label ?? target.name,
+            relation_label: field.label ?? field.fieldname,
+            fieldname: field.fieldname,
+            filter_value: name,
+            count,
+            open_count: count,
+          });
+        } catch {
+          // Không có quyền đọc DocType đích hoặc field không khả dụng trong list definition:
+          // bỏ quan hệ đó, không dùng count làm existence oracle.
+        }
+      }
+    }
+    related.sort((a, b) =>
+      String(a.label ?? a.name).localeCompare(String(b.label ?? b.name), context.language === "vi" ? "vi" : "en"));
+    return { count: related };
+  }
   try {
     const result = await context.listService.count(context.actor, context.tenantId, {
       doctype,

@@ -1025,6 +1025,28 @@ check("ChildGrid render: cột child meta + thêm dòng + resolve depends_on the
   assert.ok(html.includes("—"), "depends_on ẩn cell discount ở row qty≤5 (P1-06)");
 });
 
+check("ChildGrid render: Dynamic Link lấy đúng DocType đích từ chính dòng con", () => {
+  const childMeta: DocTypeMeta = {
+    name: "Reference Row",
+    fields: [
+      { fieldname: "reference_type", fieldtype: "Select", label: "Loại hồ sơ", options: "Customer\nSupplier", in_list_view: 1 },
+      { fieldname: "reference_name", fieldtype: "Dynamic Link", label: "Hồ sơ", options: "reference_type", in_list_view: 1 },
+    ],
+    permissions: [],
+  };
+  const html = renderToStaticMarkup(
+    h(ChildGrid, {
+      childMeta,
+      rows: [{ name: "r1", doctype: "Reference Row", reference_type: "Supplier", reference_name: "NCC-001" }],
+      onChange: () => {},
+      registry: createFullRegistry(),
+      services: { searchLink: async () => [] },
+    }),
+  );
+  assert.ok(html.includes("NCC-001"), "Dynamic Link đã render giá trị hiện có");
+  assert.ok(!html.includes("Chọn") || !html.includes("reference_type"), "không báo thiếu loại hồ sơ khi dòng đã chọn Supplier");
+});
+
 // ===== VIEWS: Kanban + Tree =====
 
 // 32. KanbanView render: cột từ board + card nhóm theo field.
@@ -1216,6 +1238,10 @@ check("Form actions: metadata-driven (docstatus/perms/workflow)", () => {
   // delete + đã lưu → có delete (menu, destructive)
   const del = resolveFormActions({ ...base, perms: { delete: true } }).find((a) => a.kind === "delete");
   assert.ok(del && del.inMenu && del.variant === "destructive", "delete trong menu, destructive");
+
+  // Đổi tên chỉ hiện khi DocType cho phép; trước đây mọi form có write đều hiện rồi server từ chối.
+  assert.ok(!kinds({ ...base, perms: { write: true } }).includes("rename"), "metadata không allow_rename → ẩn đổi tên");
+  assert.ok(kinds({ ...base, allowRename: true, perms: { write: true } }).includes("rename"), "allow_rename + write → có đổi tên");
 
   // KHÔNG perm → không nút nào CẦN QUYỀN (metadata-driven, không hiện cứng).
   // "In" là ngoại lệ CỐ Ý: đang mở được bản ghi nghĩa là đã có quyền đọc, in chỉ là đọc lại bản
