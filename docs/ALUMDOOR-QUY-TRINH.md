@@ -44,6 +44,24 @@
 
 ---
 
+## 0.2. Chuẩn danh mục production (2026-07-28)
+
+- Đã dọn 43 khách thử, 22 nhà cung cấp thử, 9 bảng giá đại lý giả và 2 phiếu thu nháp
+  tham chiếu khách thử. Hai phiếu đều không có hóa đơn gốc, không có bút toán sổ cái hay
+  sổ thanh toán.
+- Giữ `CTY SÁU HỒNG`, `Giá niêm yết`, `Giá có ray`; 277 mặt hàng và 292 dòng giá không đổi.
+- Đã vật chất hoá 6 bộ quy cách tồn kho, 6 mã màu xuất hiện thật trong lịch sử tồn nhôm,
+  8 thương hiệu xuất hiện trực tiếp trong mã/tên hàng và 15 quy cách lá có đủ độ dày +
+  bản lá.
+- Đã nối thương hiệu vào 55 mặt hàng và quy cách kỹ thuật vào 15 mặt hàng. Mã màu viết
+  tắt `GS`, `VK`, `CF`, `XF`, `4004` được giữ nguyên, không tự diễn giải sai ý xưởng.
+- `Manufacturer`, `Material Grade`, `Item Attribute`, `Supplier Item`, `Pricing Rule`
+  tiếp tục để rỗng có chủ ý: file nguồn chưa đủ bằng chứng để tạo dữ liệu đúng. Màn hình
+  và schema đã có, nhưng dữ liệu chỉ được nạp khi có tên nhà sản xuất/mác nhôm/mã NCC và
+  quy tắc giá được xác nhận.
+
+---
+
 ## 1. Bức tranh tổng thể
 
 ```

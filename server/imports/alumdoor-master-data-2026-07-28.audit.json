@@ -1,0 +1,38 @@
+{
+  "generated_at": "2026-07-28T14:30:00.000Z",
+  "source_catalog": "pasted-text.txt",
+  "cleanup_audit": "alumdoor-master-cleanup-2026-07-28.audit.json",
+  "deleted": {
+    "customers": 43,
+    "suppliers": 22,
+    "price_lists": 9,
+    "dependent_draft_payment_entries": 2
+  },
+  "protected": {
+    "Customer": [
+      "CTY SÁU HỒNG"
+    ],
+    "Supplier": [],
+    "Price List": [
+      "Giá niêm yết",
+      "Giá có ray"
+    ]
+  },
+  "inserted_or_updated": {
+    "item_colors": 6,
+    "brands": 8,
+    "material_specifications": 15,
+    "measurement_profiles": 6
+  },
+  "item_links_updated": {
+    "brand": 55,
+    "material_specification": 15
+  },
+  "intentionally_empty_until_verified_source_exists": [
+    "Manufacturer",
+    "Material Grade",
+    "Item Attribute",
+    "Supplier Item",
+    "Pricing Rule"
+  ]
+}

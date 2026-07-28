@@ -1,0 +1,826 @@
+{
+  "generated_at": "2026-07-28T11:50:00.000Z",
+  "tenant": "alu",
+  "database_name": "cloudforge-alu",
+  "masters": [
+    {
+      "doctype": "Customer",
+      "name": "C01140",
+      "label": "C01140",
+      "disabled": false,
+      "created_at": "2026-07-27T14:25:04.608Z",
+      "modified_at": "2026-07-27T14:25:04.608Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "CTY SÁU HỒNG",
+      "label": "CTY SÁU HỒNG",
+      "disabled": false,
+      "created_at": "2026-07-27T07:42:57.383Z",
+      "modified_at": "2026-07-27T07:42:57.383Z",
+      "document_reference_count": 4,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "KH tồn 02942",
+      "label": "KH tồn 02942",
+      "disabled": false,
+      "created_at": "2026-07-27T05:56:46.628Z",
+      "modified_at": "2026-07-27T05:56:46.628Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "KH tồn 10332",
+      "label": "KH tồn 10332",
+      "disabled": false,
+      "created_at": "2026-07-27T14:01:29.317Z",
+      "modified_at": "2026-07-27T14:01:29.317Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "KH tồn 19697",
+      "label": "KH tồn 19697",
+      "disabled": false,
+      "created_at": "2026-07-27T14:47:25.074Z",
+      "modified_at": "2026-07-27T14:47:25.074Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "KH tồn 30063",
+      "label": "KH tồn 30063",
+      "disabled": false,
+      "created_at": "2026-07-27T14:20:58.473Z",
+      "modified_at": "2026-07-27T14:20:58.473Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "KH tồn 33257",
+      "label": "KH tồn 33257",
+      "disabled": false,
+      "created_at": "2026-07-27T14:26:04.265Z",
+      "modified_at": "2026-07-27T14:26:04.265Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "KH tồn 39732",
+      "label": "KH tồn 39732",
+      "disabled": false,
+      "created_at": "2026-07-27T05:55:42.696Z",
+      "modified_at": "2026-07-27T05:55:42.696Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "KH tồn 51052",
+      "label": "KH tồn 51052",
+      "disabled": false,
+      "created_at": "2026-07-28T04:19:31.546Z",
+      "modified_at": "2026-07-28T04:19:31.546Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "KH tồn 52412",
+      "label": "KH tồn 52412",
+      "disabled": false,
+      "created_at": "2026-07-27T07:44:41.425Z",
+      "modified_at": "2026-07-27T07:44:41.425Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "KH tồn 60046",
+      "label": "KH tồn 60046",
+      "disabled": false,
+      "created_at": "2026-07-27T13:51:50.231Z",
+      "modified_at": "2026-07-27T13:51:50.231Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "KH tồn 65996",
+      "label": "KH tồn 65996",
+      "disabled": false,
+      "created_at": "2026-07-27T14:03:27.572Z",
+      "modified_at": "2026-07-27T14:03:27.572Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "KH tồn 69017",
+      "label": "KH tồn 69017",
+      "disabled": false,
+      "created_at": "2026-07-27T06:01:31.889Z",
+      "modified_at": "2026-07-27T06:01:31.889Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "KH tồn 74677",
+      "label": "KH tồn 74677",
+      "disabled": false,
+      "created_at": "2026-07-27T13:41:46.851Z",
+      "modified_at": "2026-07-27T13:41:46.851Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "KH tồn 90260",
+      "label": "KH tồn 90260",
+      "disabled": false,
+      "created_at": "2026-07-27T14:28:40.086Z",
+      "modified_at": "2026-07-27T14:28:40.086Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "KH tồn 96480",
+      "label": "KH tồn 96480",
+      "disabled": false,
+      "created_at": "2026-07-27T13:07:01.696Z",
+      "modified_at": "2026-07-27T13:07:01.696Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "KH tồn 99104",
+      "label": "KH tồn 99104",
+      "disabled": false,
+      "created_at": "2026-07-27T06:23:53.204Z",
+      "modified_at": "2026-07-27T06:23:53.204Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "Khách thử 10332",
+      "label": "Khách thử 10332",
+      "disabled": false,
+      "created_at": "2026-07-27T14:00:19.358Z",
+      "modified_at": "2026-07-27T14:00:19.358Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "Khách thử 11981",
+      "label": "Khách thử 11981",
+      "disabled": false,
+      "created_at": "2026-07-27T05:58:34.872Z",
+      "modified_at": "2026-07-27T05:58:34.872Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "Khách thử 16758",
+      "label": "Khách thử 16758",
+      "disabled": false,
+      "created_at": "2026-07-27T05:53:40.323Z",
+      "modified_at": "2026-07-27T05:53:40.323Z",
+      "document_reference_count": 1,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "Khách thử 19697",
+      "label": "Khách thử 19697",
+      "disabled": false,
+      "created_at": "2026-07-27T14:47:03.259Z",
+      "modified_at": "2026-07-27T14:47:03.259Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "Khách thử 30063",
+      "label": "Khách thử 30063",
+      "disabled": false,
+      "created_at": "2026-07-27T14:20:33.759Z",
+      "modified_at": "2026-07-27T14:20:33.759Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "Khách thử 33257",
+      "label": "Khách thử 33257",
+      "disabled": false,
+      "created_at": "2026-07-27T14:25:37.223Z",
+      "modified_at": "2026-07-27T14:25:37.223Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "Khách thử 38833",
+      "label": "Khách thử 38833",
+      "disabled": false,
+      "created_at": "2026-07-27T14:24:06.340Z",
+      "modified_at": "2026-07-27T14:24:06.340Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "Khách thử 51052",
+      "label": "Khách thử 51052",
+      "disabled": false,
+      "created_at": "2026-07-28T04:19:14.120Z",
+      "modified_at": "2026-07-28T04:19:14.120Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "Khách thử 52412",
+      "label": "Khách thử 52412",
+      "disabled": false,
+      "created_at": "2026-07-27T07:44:15.580Z",
+      "modified_at": "2026-07-27T07:44:15.580Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "Khách thử 56657",
+      "label": "Khách thử 56657",
+      "disabled": false,
+      "created_at": "2026-07-27T14:22:43.044Z",
+      "modified_at": "2026-07-27T14:22:43.044Z",
+      "document_reference_count": 1,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "Khách thử 60046",
+      "label": "Khách thử 60046",
+      "disabled": false,
+      "created_at": "2026-07-27T13:51:18.054Z",
+      "modified_at": "2026-07-27T13:51:18.054Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "Khách thử 65032",
+      "label": "Khách thử 65032",
+      "disabled": false,
+      "created_at": "2026-07-27T05:59:27.930Z",
+      "modified_at": "2026-07-27T05:59:27.930Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "Khách thử 65996",
+      "label": "Khách thử 65996",
+      "disabled": false,
+      "created_at": "2026-07-27T14:02:55.618Z",
+      "modified_at": "2026-07-27T14:02:55.618Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "Khách thử 69017",
+      "label": "Khách thử 69017",
+      "disabled": false,
+      "created_at": "2026-07-27T06:01:12.572Z",
+      "modified_at": "2026-07-27T06:01:12.572Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "Khách thử 74677",
+      "label": "Khách thử 74677",
+      "disabled": false,
+      "created_at": "2026-07-27T13:41:22.443Z",
+      "modified_at": "2026-07-27T13:41:22.443Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "Khách thử 76487",
+      "label": "Khách thử 76487",
+      "disabled": false,
+      "created_at": "2026-07-27T05:54:40.403Z",
+      "modified_at": "2026-07-27T05:54:40.403Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "Khách thử 90260",
+      "label": "Khách thử 90260",
+      "disabled": false,
+      "created_at": "2026-07-27T14:28:15.249Z",
+      "modified_at": "2026-07-27T14:28:15.249Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "Khách thử 91315",
+      "label": "Khách thử 91315",
+      "disabled": false,
+      "created_at": "2026-07-27T05:59:54.483Z",
+      "modified_at": "2026-07-27T05:59:54.483Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "Khách thử 96480",
+      "label": "Khách thử 96480",
+      "disabled": false,
+      "created_at": "2026-07-27T13:06:39.541Z",
+      "modified_at": "2026-07-27T13:06:39.541Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "Khách thử 99104",
+      "label": "Khách thử 99104",
+      "disabled": false,
+      "created_at": "2026-07-27T06:23:22.553Z",
+      "modified_at": "2026-07-27T06:23:22.553Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "Khách thử mua 04060",
+      "label": "Khách thử mua 04060",
+      "disabled": false,
+      "created_at": "2026-07-28T07:30:53.668Z",
+      "modified_at": "2026-07-28T07:30:53.668Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "Khách thử mua 40790",
+      "label": "Khách thử mua 40790",
+      "disabled": false,
+      "created_at": "2026-07-28T06:42:43.997Z",
+      "modified_at": "2026-07-28T06:42:43.997Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "Khách thử mua 61624",
+      "label": "Khách thử mua 61624",
+      "disabled": false,
+      "created_at": "2026-07-28T07:26:58.822Z",
+      "modified_at": "2026-07-28T07:26:58.822Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "Khách thử mua 78468",
+      "label": "Khách thử mua 78468",
+      "disabled": false,
+      "created_at": "2026-07-28T06:53:39.741Z",
+      "modified_at": "2026-07-28T06:53:39.741Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "Khách thử mua 82075",
+      "label": "Khách thử mua 82075",
+      "disabled": false,
+      "created_at": "2026-07-28T07:23:56.984Z",
+      "modified_at": "2026-07-28T07:23:56.984Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "Khách thử mua 84542",
+      "label": "Khách thử mua 84542",
+      "disabled": false,
+      "created_at": "2026-07-28T07:53:56.094Z",
+      "modified_at": "2026-07-28T07:53:56.094Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Customer",
+      "name": "Khách thử mua 93792",
+      "label": "Khách thử mua 93792",
+      "disabled": false,
+      "created_at": "2026-07-28T07:14:08.296Z",
+      "modified_at": "2026-07-28T07:14:08.296Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Price List",
+      "name": "Giá có ray",
+      "label": "Giá có ray",
+      "disabled": false,
+      "created_at": "2026-07-28T10:55:00.000Z",
+      "modified_at": "2026-07-28T11:15:00.000Z",
+      "document_reference_count": 17,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Price List",
+      "name": "Giá niêm yết",
+      "label": "Giá niêm yết",
+      "disabled": false,
+      "created_at": "2026-07-28T10:55:00.000Z",
+      "modified_at": "2026-07-28T11:15:00.000Z",
+      "document_reference_count": 275,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Price List",
+      "name": "Giá đại lý 10332",
+      "label": "Giá đại lý 10332",
+      "disabled": false,
+      "created_at": "2026-07-27T14:02:18.624Z",
+      "modified_at": "2026-07-27T14:02:18.624Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Price List",
+      "name": "Giá đại lý 19697",
+      "label": "Giá đại lý 19697",
+      "disabled": false,
+      "created_at": "2026-07-27T14:48:24.507Z",
+      "modified_at": "2026-07-27T14:48:24.507Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Price List",
+      "name": "Giá đại lý 30063",
+      "label": "Giá đại lý 30063",
+      "disabled": false,
+      "created_at": "2026-07-27T14:21:22.755Z",
+      "modified_at": "2026-07-27T14:21:22.755Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Price List",
+      "name": "Giá đại lý 33257",
+      "label": "Giá đại lý 33257",
+      "disabled": false,
+      "created_at": "2026-07-27T14:27:08.672Z",
+      "modified_at": "2026-07-27T14:27:08.672Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Price List",
+      "name": "Giá đại lý 51052",
+      "label": "Giá đại lý 51052",
+      "disabled": false,
+      "created_at": "2026-07-28T04:20:05.584Z",
+      "modified_at": "2026-07-28T04:20:05.584Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Price List",
+      "name": "Giá đại lý 60046",
+      "label": "Giá đại lý 60046",
+      "disabled": false,
+      "created_at": "2026-07-27T13:52:40.279Z",
+      "modified_at": "2026-07-27T13:52:40.279Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Price List",
+      "name": "Giá đại lý 65996",
+      "label": "Giá đại lý 65996",
+      "disabled": false,
+      "created_at": "2026-07-27T14:04:21.210Z",
+      "modified_at": "2026-07-27T14:04:21.210Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Price List",
+      "name": "Giá đại lý 74677",
+      "label": "Giá đại lý 74677",
+      "disabled": false,
+      "created_at": "2026-07-27T13:42:30.193Z",
+      "modified_at": "2026-07-27T13:42:30.193Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Price List",
+      "name": "Giá đại lý 90260",
+      "label": "Giá đại lý 90260",
+      "disabled": false,
+      "created_at": "2026-07-27T14:29:40.437Z",
+      "modified_at": "2026-07-27T14:29:40.437Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Supplier",
+      "name": "Hoàng Lai 04060",
+      "label": "Hoàng Lai 04060",
+      "disabled": false,
+      "created_at": "2026-07-28T07:30:07.876Z",
+      "modified_at": "2026-07-28T07:30:07.876Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Supplier",
+      "name": "Hoàng Lai 40790",
+      "label": "Hoàng Lai 40790",
+      "disabled": false,
+      "created_at": "2026-07-28T06:42:08.314Z",
+      "modified_at": "2026-07-28T06:42:08.314Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Supplier",
+      "name": "Hoàng Lai 61624",
+      "label": "Hoàng Lai 61624",
+      "disabled": false,
+      "created_at": "2026-07-28T07:26:14.266Z",
+      "modified_at": "2026-07-28T07:26:14.266Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Supplier",
+      "name": "Hoàng Lai 78468",
+      "label": "Hoàng Lai 78468",
+      "disabled": false,
+      "created_at": "2026-07-28T06:52:58.854Z",
+      "modified_at": "2026-07-28T06:52:58.854Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Supplier",
+      "name": "Hoàng Lai 82075",
+      "label": "Hoàng Lai 82075",
+      "disabled": false,
+      "created_at": "2026-07-28T07:23:06.509Z",
+      "modified_at": "2026-07-28T07:23:06.509Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Supplier",
+      "name": "Hoàng Lai 84542",
+      "label": "Hoàng Lai 84542",
+      "disabled": false,
+      "created_at": "2026-07-28T07:53:11.810Z",
+      "modified_at": "2026-07-28T07:53:11.810Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Supplier",
+      "name": "Hoàng Lai 93792",
+      "label": "Hoàng Lai 93792",
+      "disabled": false,
+      "created_at": "2026-07-28T07:13:23.626Z",
+      "modified_at": "2026-07-28T07:13:23.626Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Supplier",
+      "name": "Lạ mặt 04060",
+      "label": "Lạ mặt 04060",
+      "disabled": false,
+      "created_at": "2026-07-28T07:30:18.815Z",
+      "modified_at": "2026-07-28T07:30:18.815Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Supplier",
+      "name": "Lạ mặt 40790",
+      "label": "Lạ mặt 40790",
+      "disabled": false,
+      "created_at": "2026-07-28T06:42:18.238Z",
+      "modified_at": "2026-07-28T06:42:18.238Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Supplier",
+      "name": "Lạ mặt 61624",
+      "label": "Lạ mặt 61624",
+      "disabled": false,
+      "created_at": "2026-07-28T07:26:25.820Z",
+      "modified_at": "2026-07-28T07:26:25.820Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Supplier",
+      "name": "Lạ mặt 78468",
+      "label": "Lạ mặt 78468",
+      "disabled": false,
+      "created_at": "2026-07-28T06:53:10.356Z",
+      "modified_at": "2026-07-28T06:53:10.356Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Supplier",
+      "name": "Lạ mặt 82075",
+      "label": "Lạ mặt 82075",
+      "disabled": false,
+      "created_at": "2026-07-28T07:23:19.449Z",
+      "modified_at": "2026-07-28T07:23:19.449Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Supplier",
+      "name": "Lạ mặt 84542",
+      "label": "Lạ mặt 84542",
+      "disabled": false,
+      "created_at": "2026-07-28T07:53:22.387Z",
+      "modified_at": "2026-07-28T07:53:22.387Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Supplier",
+      "name": "Lạ mặt 93792",
+      "label": "Lạ mặt 93792",
+      "disabled": false,
+      "created_at": "2026-07-28T07:13:35.522Z",
+      "modified_at": "2026-07-28T07:13:35.522Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Supplier",
+      "name": "Tiến Đạt 04060",
+      "label": "Tiến Đạt 04060",
+      "disabled": false,
+      "created_at": "2026-07-28T07:28:25.418Z",
+      "modified_at": "2026-07-28T07:28:25.418Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Supplier",
+      "name": "Tiến Đạt 40790",
+      "label": "Tiến Đạt 40790",
+      "disabled": false,
+      "created_at": "2026-07-28T06:40:42.009Z",
+      "modified_at": "2026-07-28T06:40:42.009Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Supplier",
+      "name": "Tiến Đạt 61624",
+      "label": "Tiến Đạt 61624",
+      "disabled": false,
+      "created_at": "2026-07-28T07:24:22.992Z",
+      "modified_at": "2026-07-28T07:24:22.992Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Supplier",
+      "name": "Tiến Đạt 78468",
+      "label": "Tiến Đạt 78468",
+      "disabled": false,
+      "created_at": "2026-07-28T06:51:19.505Z",
+      "modified_at": "2026-07-28T06:51:19.505Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Supplier",
+      "name": "Tiến Đạt 82075",
+      "label": "Tiến Đạt 82075",
+      "disabled": false,
+      "created_at": "2026-07-28T07:21:23.493Z",
+      "modified_at": "2026-07-28T07:21:23.493Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Supplier",
+      "name": "Tiến Đạt 82701",
+      "label": "Tiến Đạt 82701",
+      "disabled": false,
+      "created_at": "2026-07-28T04:18:03.708Z",
+      "modified_at": "2026-07-28T04:18:03.708Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Supplier",
+      "name": "Tiến Đạt 84542",
+      "label": "Tiến Đạt 84542",
+      "disabled": false,
+      "created_at": "2026-07-28T07:51:25.925Z",
+      "modified_at": "2026-07-28T07:51:25.925Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    },
+    {
+      "doctype": "Supplier",
+      "name": "Tiến Đạt 93792",
+      "label": "Tiến Đạt 93792",
+      "disabled": false,
+      "created_at": "2026-07-28T07:11:35.744Z",
+      "modified_at": "2026-07-28T07:11:35.744Z",
+      "document_reference_count": 0,
+      "relational_reference_count": 0
+    }
+  ],
+  "document_references": [
+    {
+      "master_doctype": "Customer",
+      "master_name": "CTY SÁU HỒNG",
+      "referring_doctype": "Aluminium Cut",
+      "referring_name": "CN-2026-00001",
+      "referring_path": "$.customer"
+    },
+    {
+      "master_doctype": "Customer",
+      "master_name": "CTY SÁU HỒNG",
+      "referring_doctype": "Aluminium Cut",
+      "referring_name": "CN-2026-00002",
+      "referring_path": "$.customer"
+    },
+    {
+      "master_doctype": "Customer",
+      "master_name": "CTY SÁU HỒNG",
+      "referring_doctype": "Aluminium Cut",
+      "referring_name": "CN-2026-00003",
+      "referring_path": "$.customer"
+    },
+    {
+      "master_doctype": "Customer",
+      "master_name": "CTY SÁU HỒNG",
+      "referring_doctype": "Aluminium Cut",
+      "referring_name": "CN-2026-00004",
+      "referring_path": "$.customer"
+    },
+    {
+      "master_doctype": "Customer",
+      "master_name": "Khách thử 16758",
+      "referring_doctype": "Payment Entry",
+      "referring_name": "PT-2026-0001",
+      "referring_path": "$.party"
+    },
+    {
+      "master_doctype": "Customer",
+      "master_name": "Khách thử 56657",
+      "referring_doctype": "Payment Entry",
+      "referring_name": "PT-2026-0015",
+      "referring_path": "$.party"
+    }
+  ],
+  "protected_reference_counts": {
+    "Price List:Giá có ray": 17,
+    "Price List:Giá niêm yết": 275
+  },
+  "relational_references": []
+}
