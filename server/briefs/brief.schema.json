@@ -521,6 +521,7 @@
       "additionalProperties": false
     },
     "fixture": {
+      "description": "Bản ghi danh mục cài kèm app. Ghi chú `//` được phép ở đây như ở mọi nơi khác trong ngôn ngữ brief — thiếu `patternProperties` thì fixture là chỗ DUY NHẤT không chú thích được, mà fixture Công ty lại đúng là chỗ cần chú thích nhất: hai khoá `default_*_account` của nó bật/tắt bút toán giá vốn, và không tên field nào trên chứng từ nói ra điều đó.",
       "type": "object",
       "required": [
         "type",
@@ -538,6 +539,9 @@
         "data": {
           "type": "object"
         }
+      },
+      "patternProperties": {
+        "^//": true
       },
       "additionalProperties": false
     },
