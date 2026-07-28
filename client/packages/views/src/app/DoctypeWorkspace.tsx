@@ -1,9 +1,12 @@
 /** @jsxImportSource react */
-/** Generic DocType workspace theo mô hình ERPNext Desk. */
+/**
+ * Generic DocType workspace: desktop dùng List | Form | Context,
+ * mobile dùng một pane; tạo mới mở modal lớn.
+ */
 import { useState, type ReactNode } from "react";
-import { PanelRight, X } from "lucide-react";
-import { Button, useT } from "@metaforge/ui";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, useT } from "@metaforge/ui";
 import { useMeta } from "../container/hooks.js";
+import { SplitView } from "../detail/SplitView.js";
 import { ListContainer } from "../container/ListContainer.js";
 import { FormContainer } from "../container/FormContainer.js";
 import { NewFormContainer } from "../container/NewFormContainer.js";
@@ -23,7 +26,7 @@ export interface DoctypeWorkspaceProps {
 
 export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
   const t = useT();
-  const [contextOpen, setContextOpen] = useState(true);
+  const [closeRequest, setCloseRequest] = useState(0);
   const titleMeta = useMeta(props.doctype);
   const { doctype, name, onNavigate, bridge } = props;
   const base = props.base ?? "/app";
@@ -33,23 +36,32 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
   const decoded = name && !isNew ? decodeURIComponent(name) : undefined;
   const isTree = titleMeta.data?.is_tree === 1;
 
-  if (isNew) {
-    return (
-      <div className="mf-doctype-page h-full overflow-hidden">
-        <NewFormContainer
-          doctype={doctype}
-          presentation="page"
-          onCreated={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)}
-          onCancel={() => onNavigate(listPath)}
-        />
-      </div>
-    );
-  }
-
-  if (decoded) {
-    return (
-      <div className="mf-document-workspace flex h-full min-w-0 overflow-hidden">
-        <main className="min-w-0 flex-1">
+  return (
+    <>
+      <SplitView
+        autoSaveId={`mf-split-${doctype}`}
+        hasDetail={Boolean(decoded)}
+        contextTitle={decoded}
+        onCloseDetail={() => onNavigate(listPath)}
+        list={isTree ? (
+          <TreeContainer
+            doctype={doctype}
+            title={titleMeta.data?.label ?? doctype}
+            selected={decoded}
+            editable
+            onSelect={(nodeName) => onNavigate(`${listPath}/${encodeURIComponent(nodeName)}`)}
+          />
+        ) : (
+          <ListContainer
+            doctype={doctype}
+            bridge={bridge}
+            activeRow={decoded}
+            onRowClick={(row) => onNavigate(`${listPath}/${encodeURIComponent(String(row.name))}`)}
+            onCreate={() => onNavigate(`${listPath}/new`)}
+            onSingle={() => { if (!decoded) onNavigate(`${listPath}/${encodeURIComponent(doctype)}`); }}
+          />
+        )}
+        detail={decoded ? (
           <FormContainer
             key={`${doctype}/${decoded}`}
             doctype={doctype}
@@ -60,52 +72,37 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
             onRenamed={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)}
             onPrint={() => onNavigate(`${printBase}/${doctype}/${encodeURIComponent(decoded)}`)}
             onClose={() => onNavigate(listPath)}
-            headerActions={!contextOpen ? (
-              <Button type="button" variant="outline" size="sm" onClick={() => setContextOpen(true)}>
-                <PanelRight /> {t("split.activity")}
-              </Button>
-            ) : undefined}
           />
-        </main>
-        {contextOpen ? (
-          <aside className="mf-form-sidebar hidden w-72 shrink-0 border-l bg-card xl:flex xl:flex-col">
-            <div className="flex h-12 shrink-0 items-center border-b px-4">
-              <span className="text-sm font-medium">{t("split.activity")}</span>
-              <Button type="button" variant="ghost" size="icon-sm" className="ml-auto" onClick={() => setContextOpen(false)} aria-label={t("split.close_activity")}>
-                <X />
-              </Button>
-            </div>
-            <div className="min-h-0 flex-1 overflow-auto">
-              <ContextContainer key={`ctx-${doctype}/${decoded}`} doctype={doctype} name={decoded} aiSlot={props.contextAiSlot} />
-            </div>
-          </aside>
         ) : null}
-      </div>
-    );
-  }
-
-  if (isTree) {
-    return (
-      <div className="mf-doctype-page h-full overflow-hidden">
-        <TreeContainer
-          doctype={doctype}
-          title={titleMeta.data?.label ?? doctype}
-          editable
-          onSelect={(nodeName) => onNavigate(`${listPath}/${encodeURIComponent(nodeName)}`)}
-        />
-      </div>
-    );
-  }
-
-  return (
-    <div className="mf-doctype-page h-full overflow-hidden">
-      <ListContainer
-        doctype={doctype}
-        bridge={bridge}
-        onRowClick={(row) => onNavigate(`${listPath}/${encodeURIComponent(String(row.name))}`)}
-        onCreate={() => onNavigate(`${listPath}/new`)}
-        onSingle={() => onNavigate(`${listPath}/${encodeURIComponent(doctype)}`)}
+        context={decoded ? (
+          <ContextContainer
+            key={`ctx-${doctype}/${decoded}`}
+            doctype={doctype}
+            name={decoded}
+            aiSlot={props.contextAiSlot}
+          />
+        ) : null}
       />
-    </div>
+
+      <Dialog open={isNew} onOpenChange={(open) => { if (!open) setCloseRequest((value) => value + 1); }}>
+        <DialogContent
+          className="flex h-[min(92vh,900px)] w-[min(94vw,1180px)] max-w-none flex-col overflow-hidden p-0"
+          onInteractOutside={(event) => { event.preventDefault(); setCloseRequest((value) => value + 1); }}
+          onEscapeKeyDown={(event) => { event.preventDefault(); setCloseRequest((value) => value + 1); }}
+        >
+          <DialogHeader className="shrink-0 border-b px-5 py-3">
+            <DialogTitle>{t("form.create_title_prefix")} {(titleMeta.data?.label ?? doctype).toLocaleLowerCase("vi")}</DialogTitle>
+          </DialogHeader>
+          <div className="min-h-0 flex-1 overflow-hidden p-4">
+            <NewFormContainer
+              doctype={doctype}
+              closeRequest={closeRequest}
+              onCreated={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)}
+              onCancel={() => onNavigate(listPath)}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

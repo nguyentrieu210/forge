@@ -856,7 +856,7 @@ check("datetime: wrapper đủ rộng để không cắt phút và nút lịch",
   );
   // ERPNext để control chiếm trọn form-column. Không ghim Datetime vào một `basis` hẹp:
   // chính cột responsive bảo đảm đủ chỗ cho ngày, phút và nút lịch.
-  assert.ok(html.includes("md:grid-cols-2"), "form phải dùng lưới cột responsive");
+  assert.ok(html.includes("mf-form-grid"), "form phải dùng lưới cột responsive theo bề rộng pane");
   assert.ok(html.includes('type="datetime-local"'), "phải render đúng datetime-local");
   assert.ok(!html.includes("basis-["), "field không được tự ghim bề rộng làm cắt phần phút/nút lịch");
 });

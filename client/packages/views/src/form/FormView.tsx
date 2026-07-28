@@ -419,7 +419,7 @@ export function FormView(props: FormViewProps) {
                 {/* Flex-wrap, KHÔNG phải lưới: field tự chảy theo bề rộng của chính nó và tự
                     xuống dòng khi hết chỗ. Lưới cấp khe đều nhau nên ô ngắn nằm giữa khe rộng,
                     hở hai bên — đó là gốc của cảm giác "form quá rộng, kích cỡ không hợp lý". */}
-                <div className="grid grid-cols-1 items-start gap-x-8 gap-y-4 md:grid-cols-2">
+                <div className="mf-form-grid grid grid-cols-1 items-start gap-x-8 gap-y-4">
                   {section.columns.flatMap((col) => col.fields).map((rf) => (
                     <Field key={rf.field.fieldname} id={fieldDomId(rf.field.fieldname)} rf={rf} form={form} registry={registry} services={services} docName={String(doc.name)} parentDoctype={meta.name} roles={roles} values={values} />
                   ))}

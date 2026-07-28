@@ -582,7 +582,13 @@
     background: color-mix(in srgb, var(--card) 96%, transparent);
     backdrop-filter: blur(12px);
   }
-  .mf-form-body { background: var(--card); }
+  .mf-form-body {
+    container-type: inline-size;
+    background: var(--card);
+  }
+  @container (min-width: 42rem) {
+    .mf-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
   .mf-form-section {
     border-radius: 0;
   }
