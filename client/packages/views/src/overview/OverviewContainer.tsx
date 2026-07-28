@@ -26,7 +26,13 @@ export function OverviewContainer({ domain, onNavigate }: { domain: string; onNa
   const { adapter, scopeKey, businessContext, services } = useMetaForge();
   const queryClient = useQueryClient();
   const [busyActionKey, setBusyActionKey] = useState<string>();
-  const q = useQuery({ queryKey: [scopeKey, "overview", domain, JSON.stringify(businessContext)], queryFn: () => adapter.getOverview(domain, businessContext) });
+  const q = useQuery({
+    queryKey: [scopeKey, "overview", domain, JSON.stringify(businessContext)],
+    queryFn: () => adapter.getOverview(domain, businessContext),
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
+    refetchOnWindowFocus: false,
+  });
 
   const runAction = useCallback(async (action: OverviewAction) => {
     const doctype = overviewQuickCreateTarget(action);

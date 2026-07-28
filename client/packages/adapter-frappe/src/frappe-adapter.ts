@@ -92,6 +92,14 @@ export class FrappeAdapterImpl implements FrappeAdapter {
   private csrf: () => string;
   private csrfValue = "";
   private sessionExpiredHandlers = new Set<() => void>();
+  /**
+   * Metadata is effectively immutable for the lifetime of a Desk session.
+   *
+   * Keep the in-flight Promise as well as the resolved value: Link controls and
+   * nested child tables often ask for the same DocType during the same render.
+   * Without this cache every caller paid for both getdoctype AND translation.
+   */
+  private metaCache = new Map<string, Promise<DocTypeMeta>>();
 
   constructor(opts: FrappeAdapterOptions = {}) {
     const tokenParams = opts.token
@@ -144,9 +152,11 @@ export class FrappeAdapterImpl implements FrappeAdapter {
   // ── auth/boot §1 ──────────────────────────────────────────────────────────
   async login(usr: string, pwd: string): Promise<void> {
     await this.app.auth().loginWithUsernamePassword({ username: usr, password: pwd });
+    this.metaCache.clear();
   }
   async logout(): Promise<void> {
     await this.app.auth().logout();
+    this.metaCache.clear();
   }
   async getBoot(): Promise<MetaForgeBootDTO> {
     const r = await this.app.call().get<Envelope<MetaForgeBootDTO>>("metaforge.api.get_boot");
@@ -239,6 +249,21 @@ export class FrappeAdapterImpl implements FrappeAdapter {
 
   // ── meta §2 / §Q ──────────────────────────────────────────────────────────
   async getMeta(doctype: string): Promise<DocTypeMeta> {
+    const cached = this.metaCache.get(doctype);
+    if (cached) return cached;
+
+    const request = this.loadMeta(doctype);
+    this.metaCache.set(doctype, request);
+    try {
+      return await request;
+    } catch (error) {
+      // A transient failure must not poison the session forever.
+      if (this.metaCache.get(doctype) === request) this.metaCache.delete(doctype);
+      throw error;
+    }
+  }
+
+  private async loadMeta(doctype: string): Promise<DocTypeMeta> {
     const r = await this.app
       .call()
       .get<{ docs: DocTypeMeta[]; masked_fields?: string[] }>("frappe.desk.form.load.getdoctype", {
@@ -952,12 +977,14 @@ export class FrappeAdapterImpl implements FrappeAdapter {
   // ── builder schema mutations §13 (CRUD meta-DocType) ──────────────────────
   async saveMeta(dt: string, meta: DocTypeMetaInput): Promise<void> {
     await this.app.db().updateDoc("DocType", dt, meta as never);
+    this.metaCache.delete(dt);
   }
   async saveCustomize(dt: string, c: CustomizeChanges): Promise<void> {
     await this.app.call().post("frappe.custom.doctype.customize_form.customize_form.save_customization", {
       doctype: dt,
       ...c,
     });
+    this.metaCache.delete(dt);
   }
   async saveWorkflow(wf: WorkflowDef): Promise<void> {
     await this.app.db().updateDoc("Workflow", wf.name, wf as never);

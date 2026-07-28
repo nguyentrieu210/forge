@@ -7,6 +7,7 @@
  */
 import { useEffect, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import type { Doc } from "@metaforge/core";
 import { ConfirmDialog, PromptDialog, toast, useT } from "@metaforge/ui";
 import { FormView } from "../form/FormView.js";
 import type { FormActionKind } from "../detail/formActions.js";
@@ -66,28 +67,44 @@ export function FormContainer(props: FormContainerProps) {
   if (docQ.error) return <div className="p-4 text-sm text-destructive" role="alert">{adapter.mapError(docQ.error).message}</div>;
   if (!metaQ.data || !docQ.data || !doc) return <div className="p-4 text-sm text-muted-foreground">{t("common.no_data")}</div>;
 
-  const refetchAll = () =>
-    // Khoá query có prefix scopeKey (P1-03) ⇒ invalidate PHẢI gồm scopeKey, nếu không sẽ không khớp
-    // (bản ghi sẽ KHÔNG refetch sau save/submit/workflow). Bug hồi quy từ Gate 1, sửa ở Gate 3.
-    Promise.all([
-      qc.invalidateQueries({ queryKey: [scopeKey, "doc", doctype, name] }),
-      qc.invalidateQueries({ queryKey: [scopeKey, "transitions", doctype, name] }),
-      qc.invalidateQueries({ queryKey: [scopeKey, "caps", doctype, name] }),
-    ]);
+  /**
+   * Mutation responses already contain the authoritative document. Publish it
+   * immediately and refresh only mounted dependent queries in the background.
+   * Save must not wait for another getdoc plus every cached list/count variant.
+   */
+  const publishMutation = (updated?: Doc) => {
+    if (updated) {
+      qc.setQueryData(
+        [scopeKey, "doc", doctype, name],
+        (current: typeof docQ.data) => current ? { ...current, doc: updated } : current,
+      );
+      qc.setQueriesData<Doc[]>(
+        { queryKey: [scopeKey, "list", doctype] },
+        (rows) => rows?.map((row) => String(row.name) === name ? { ...row, ...updated } : row),
+      );
+    }
+    void Promise.all([
+      qc.invalidateQueries({ queryKey: [scopeKey, "caps", doctype, name], refetchType: "active" }),
+      qc.invalidateQueries({ queryKey: [scopeKey, "list", doctype], refetchType: "active" }),
+      qc.invalidateQueries({ queryKey: [scopeKey, "count", doctype], refetchType: "active" }),
+      qc.invalidateQueries({ queryKey: [scopeKey, "overview"], refetchType: "none" }),
+    ]).catch(() => undefined);
+  };
 
-  const invalidateList = () => Promise.all([
-    // `all`: ở mobile SplitView không mount list khi đang mở form. Vẫn làm mới cache NGAY sau
-    // mutation để lúc đóng form danh sách hiện đúng dữ liệu mà không cần refetch-on-mount.
-    qc.invalidateQueries({ queryKey: [scopeKey, "list", doctype], refetchType: "all" }),
-    qc.invalidateQueries({ queryKey: [scopeKey, "count", doctype], refetchType: "all" }),
-  ]);
+  const invalidateCollection = () => {
+    void Promise.all([
+      qc.invalidateQueries({ queryKey: [scopeKey, "list", doctype], refetchType: "active" }),
+      qc.invalidateQueries({ queryKey: [scopeKey, "count", doctype], refetchType: "active" }),
+      qc.invalidateQueries({ queryKey: [scopeKey, "overview"], refetchType: "none" }),
+    ]).catch(() => undefined);
+  };
 
   const onSave = async (changed: Record<string, unknown>) => {
     setSaving(true);
     setFieldErrors(undefined);
     try {
-      await adapter.updateDoc(doctype, name, changed, String(doc.modified ?? ""));
-      await Promise.all([refetchAll(), invalidateList()]);
+      const updated = await adapter.updateDoc(doctype, name, changed, String(doc.modified ?? ""));
+      publishMutation(updated);
       setConflict(false);
       toast.success(t("form.saved"));
       props.onSaved?.();
@@ -115,9 +132,9 @@ export function FormContainer(props: FormContainerProps) {
     if (kind === "print") { props.onPrint?.(); return; }
     setSaving(true);
     try {
-      if (kind === "submit") { await adapter.submit(doc); toast.success(t("form.submitted")); await Promise.all([refetchAll(), invalidateList()]); }
-      else if (kind === "cancel") { await adapter.cancel(doctype, name); toast.success(t("form.cancelled")); await Promise.all([refetchAll(), invalidateList()]); }
-      else if (kind === "amend") { const d = await adapter.amend(doctype, name); toast.success(t("form.amended")); await invalidateList(); props.onSaved?.(); void d; }
+      if (kind === "submit") { const updated = await adapter.submit(doc); publishMutation(updated); toast.success(t("form.submitted")); }
+      else if (kind === "cancel") { const updated = await adapter.cancel(doctype, name); publishMutation(updated); toast.success(t("form.cancelled")); }
+      else if (kind === "amend") { await adapter.amend(doctype, name); invalidateCollection(); toast.success(t("form.amended")); props.onSaved?.(); }
     } catch (e) {
       toast.error(adapter.mapError(e).message);
     } finally {
@@ -129,7 +146,8 @@ export function FormContainer(props: FormContainerProps) {
     setSaving(true);
     try {
       await adapter.deleteDoc(doctype, name);
-      await invalidateList();
+      qc.removeQueries({ queryKey: [scopeKey, "doc", doctype, name] });
+      invalidateCollection();
       toast.success(t("form.deleted"));
       props.onDeleted?.();
     } catch (e) {
@@ -144,7 +162,8 @@ export function FormContainer(props: FormContainerProps) {
     setSaving(true);
     try {
       const finalName = await adapter.rename(doctype, name, newName);
-      await invalidateList();
+      qc.removeQueries({ queryKey: [scopeKey, "doc", doctype, name] });
+      invalidateCollection();
       toast.success(t("form.renamed"));
       props.onRenamed?.(finalName);
     } catch (e) {
@@ -157,9 +176,9 @@ export function FormContainer(props: FormContainerProps) {
   const onWorkflowAction = async (action: string) => {
     setSaving(true);
     try {
-      await adapter.applyWorkflow(doc, action);
+      const updated = await adapter.applyWorkflow(doc, action);
+      publishMutation(updated);
       toast.success(`${t("form.workflow_done")}: ${action}`);
-      await Promise.all([refetchAll(), invalidateList()]);
     } catch (e) {
       toast.error(adapter.mapError(e).message);
     } finally {

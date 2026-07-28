@@ -139,10 +139,14 @@ export function NewFormContainer(props: NewFormContainerProps) {
       // ⇒ không mất default/required chưa chạm. `doc` = blankDoc(meta) mang default.
       const full = serializeCreateDocument(metaQ.data, { ...(doc as Record<string, unknown>), ...changed });
       const created = await adapter.createDoc(doctype, full);
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: [scopeKey, "list", doctype], refetchType: "all" }),
-        queryClient.invalidateQueries({ queryKey: [scopeKey, "count", doctype], refetchType: "all" }),
-      ]);
+      // The create response is complete; do not hold the modal open while every
+      // cached page/filter is fetched again. Mounted collections refresh in the
+      // background, inactive ones are marked stale and refresh when reopened.
+      void Promise.all([
+        queryClient.invalidateQueries({ queryKey: [scopeKey, "list", doctype], refetchType: "active" }),
+        queryClient.invalidateQueries({ queryKey: [scopeKey, "count", doctype], refetchType: "active" }),
+        queryClient.invalidateQueries({ queryKey: [scopeKey, "overview"], refetchType: "none" }),
+      ]).catch(() => undefined);
       if (saveIntentRef.current === "continue") {
         toast.success(`${t("form.created")} ${created.name} — ${t("form.continue_new_record")}`);
         setResetSeq((s) => s + 1);

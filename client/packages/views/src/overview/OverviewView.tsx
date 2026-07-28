@@ -1,14 +1,16 @@
 /** @jsxImportSource react */
+import { lazy, Suspense } from "react";
 import {
   AlertTriangle, ArrowRight, BarChart3, Boxes, CalendarClock, CheckCircle2, Clock3,
   Coins, FileText, Loader2, Package, Plus, RefreshCw, TrendingUp, Truck, Users, Warehouse,
 } from "lucide-react";
-import {
-  Bar, BarChart, CartesianGrid, Cell, LabelList, Legend, Line, LineChart, Pie, PieChart,
-  ResponsiveContainer, Tooltip as ChartTooltip, XAxis, YAxis,
-} from "recharts";
-import type { OverviewAction, OverviewChart, OverviewDashboard, OverviewTone } from "@metaforge/core";
+import type { OverviewAction, OverviewDashboard, OverviewTone } from "@metaforge/core";
 import { Badge, Button, cn, Skeleton, useI18n } from "@metaforge/ui";
+
+const LazyOverviewChartCard = lazy(async () => {
+  const module = await import("./OverviewChartCard.js");
+  return { default: module.OverviewChartCard };
+});
 
 export interface OverviewViewProps {
   data?: OverviewDashboard;
@@ -100,7 +102,13 @@ export function OverviewView({ data, loading, error, onNavigate, onAction, busyA
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(18rem,1fr)]">
         <section className="rounded-lg border bg-card p-3 shadow-sm">
           <div className="mb-2 flex items-center gap-2"><BarChart3 className="size-4 text-primary" /><h2 className="text-sm font-semibold">{t("overview.analytics")}</h2></div>
-          {data.charts.length ? <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(20rem,1fr))]">{data.charts.map((c) => <OverviewChartCard key={c.key} chart={c} onNavigate={onNavigate} />)}</div> : <div className="grid min-h-52 place-items-center rounded-lg border border-dashed text-sm text-muted-foreground">{t("overview.no_chart")}</div>}
+          {data.charts.length ? (
+            <Suspense fallback={<Skeleton className="h-72 w-full" />}>
+              <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(20rem,1fr))]">
+                {data.charts.map((chart) => <LazyOverviewChartCard key={chart.key} chart={chart} onNavigate={onNavigate} />)}
+              </div>
+            </Suspense>
+          ) : <div className="grid min-h-52 place-items-center rounded-lg border border-dashed text-sm text-muted-foreground">{t("overview.no_chart")}</div>}
         </section>
         <section className="rounded-lg border bg-card p-3 shadow-sm">
           <div className="mb-2 flex items-center gap-2"><Clock3 className="size-4 text-primary" /><h2 className="text-sm font-semibold">{t("overview.todo")}</h2></div>
@@ -125,45 +133,4 @@ export function OverviewView({ data, loading, error, onNavigate, onAction, busyA
   );
 }
 
-function chartRows(chart: OverviewChart): Array<Record<string, number | string>> {
-  return chart.labels.map((label, index) => {
-    const row: Record<string, number | string> = { label };
-    for (const series of chart.series) row[series.name] = series.values[index] ?? 0;
-    return row;
-  });
-}
-
-/**
- * Số hiển thị NGAY TRÊN cột/điểm của biểu đồ.
- *
- * Bảng chú giải chỉ bật khi rê chuột, nên lúc nhìn lướt, chụp màn hình gửi cho nhau, hay xem
- * trên màn hình treo trong kho thì biểu đồ không nói lên con số nào — chỉ còn hình dáng.
- *
- * Rút gọn khi số lớn: nhãn chỉ rộng bằng cột, để nguyên "1.234.567" sẽ bị cắt hoặc chồng lên
- * nhãn cột bên cạnh. Cần số chính xác thì rê chuột, bảng chú giải vẫn hiện đầy đủ.
- */
-function shortNum(v: unknown): string {
-  const n = Number(v);
-  if (!Number.isFinite(n) || n === 0) return "";
-  const a = Math.abs(n);
-  if (a >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1).replace(".", ",")} tỷ`;
-  if (a >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(".", ",")} tr`;
-  if (a >= 10_000) return `${Math.round(n / 1000)}k`;
-  return new Intl.NumberFormat("vi-VN").format(n);
-}
-
-function OverviewChartCard({ chart, onNavigate }: { chart: OverviewChart; onNavigate: (r: string) => void }) {
-  const rows = chartRows(chart);
-  const content = chart.type === "line" || chart.type === "area" ? (
-    <LineChart data={rows}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="label" tick={{ fontSize: 11 }} /><YAxis allowDecimals={false} tick={{ fontSize: 11 }} /><ChartTooltip /><Legend />{chart.series.map((s, index) => <Line key={s.name} type="monotone" dataKey={s.name} stroke={`var(--chart-${index % 5 + 1})`} strokeWidth={2} dot={{ r: 2.5 }}><LabelList dataKey={s.name} position="top" fontSize={11} formatter={shortNum} /></Line>)}</LineChart>
-  ) : chart.type === "donut" ? (
-    /* Một <Cell> mỗi lát. `fill` trên <Pie> chỉ đặt được MỘT màu cho cả bánh, nên biểu đồ
-       sáu trạng thái ra sáu lát đen như nhau — vẽ đúng dữ liệu mà không đọc được gì, đúng
-       kiểu hỏng mà không ai báo lỗi. Cùng bảng màu `--chart-1..5` biểu đồ cột đang dùng. */
-    <PieChart><ChartTooltip /><Legend /><Pie data={rows.map((row) => ({ name: row.label, value: Number(row[chart.series[0]?.name ?? ""] ?? 0) }))} dataKey="value" nameKey="name" innerRadius="45%" outerRadius="75%" label={(e: { value?: number }) => shortNum(e.value)} labelLine={false}>{rows.map((row, index) => <Cell key={String(row.label)} fill={`var(--chart-${index % 5 + 1})`} />)}</Pie></PieChart>
-  ) : (
-    <BarChart data={rows}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="label" tick={{ fontSize: 11 }} /><YAxis allowDecimals={false} tick={{ fontSize: 11 }} /><ChartTooltip /><Legend />{chart.series.map((s, index) => <Bar key={s.name} dataKey={s.name} fill={`var(--chart-${index % 5 + 1})`} radius={[4, 4, 0, 0]}><LabelList dataKey={s.name} position="top" fontSize={11} formatter={shortNum} /></Bar>)}</BarChart>
-  );
-  return <Button type="button" variant="ghost" disabled={!chart.route} onClick={() => chart.route && onNavigate(chart.route)} className="h-auto min-w-0 flex-col items-stretch rounded-lg border p-3 text-left font-normal transition hover:border-primary/30 hover:bg-card disabled:pointer-events-none"><div className="text-sm font-medium">{chart.label}</div><div className="mt-3 h-64 w-full"><ResponsiveContainer width="100%" height="100%">{content}</ResponsiveContainer></div></Button>;
-}
 function OverviewSkeleton() { return <div className="space-y-4"><Skeleton className="h-10 w-80" /><div className="grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(9.5rem,1fr))]">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-32" />)}</div><div className="grid gap-4 xl:grid-cols-2"><Skeleton className="h-72" /><Skeleton className="h-72" /></div></div>; }

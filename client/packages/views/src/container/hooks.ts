@@ -40,6 +40,9 @@ export function useDoc(doctype: string, name: string): UseQueryResult<{ doc: Doc
     queryKey: [scopeKey, "doc", doctype, name],
     queryFn: () => adapter.getDoc(doctype, name),
     enabled: Boolean(name),
+    staleTime: 2 * 60_000,
+    refetchOnWindowFocus: false,
+    gcTime: 30 * 60_000,
   });
 }
 
@@ -52,10 +55,10 @@ export function useList(doctype: string, opts: ListOpts = {}, enabled = true): U
       ? adapter.getContextualList(doctype, opts, businessContext)
       : adapter.getList(doctype, opts),
     enabled,
-    // List và form là hai route anh em. Khi mở một bản ghi, route list bị unmount; quay lại không
-    // được tự gọi API rồi phủ trạng thái loading lên bảng thêm một lần nữa. Dữ liệu list được làm
-    // mới có chủ đích sau create/update/delete/workflow hoặc bằng nút "Làm mới".
-    refetchOnMount: false,
+    // Reuse a recent snapshot when moving list → form → list. An invalidated or
+    // genuinely old snapshot may refetch in the background without blanking the
+    // table because its previous data remains available.
+    staleTime: 2 * 60_000,
     refetchOnWindowFocus: false,
     gcTime: 30 * 60_000,
     placeholderData: (prev) => prev, // giữ trang cũ khi đổi filter/page → không nháy
@@ -72,8 +75,8 @@ export function useCount(doctype: string, filters?: Filters, orFilters?: Filters
       ? adapter.getContextualCount(doctype, filters, orFilters, businessContext)
       : adapter.getCount(doctype, filters, orFilters),
     enabled,
-    // Đi cùng chính sách của useList: tổng số dòng phải dùng lại cùng snapshot khi đóng form.
-    refetchOnMount: false,
+    // Đi cùng chính sách của useList: tổng số dòng dùng lại cùng snapshot còn mới.
+    staleTime: 2 * 60_000,
     refetchOnWindowFocus: false,
     gcTime: 30 * 60_000,
     placeholderData: (prev) => prev,
@@ -88,6 +91,10 @@ export function useTransitions(doctype: string, name: string, doc?: Doc): UseQue
     queryKey: [scopeKey, "transitions", doctype, name, doc?.modified ?? null, doc?.docstatus ?? null],
     queryFn: () => adapter.getTransitions(doc!),
     enabled: Boolean(doc),
+    // The key already contains modified/docstatus, so this exact result cannot
+    // become stale. A successful mutation produces a new key automatically.
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -101,7 +108,9 @@ export function useCapabilities(doctype: string, name?: string): UseQueryResult<
     queryKey: [scopeKey, "caps", doctype, name ?? "__new__"],
     queryFn: () => adapter.getCapabilities(doctype, name),
     enabled: Boolean(doctype),
-    staleTime: 60_000,
+    staleTime: 2 * 60_000,
+    refetchOnWindowFocus: false,
+    gcTime: 30 * 60_000,
   });
 }
 

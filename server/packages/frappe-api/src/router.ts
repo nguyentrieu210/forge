@@ -1137,15 +1137,19 @@ async function getDoc(args: FrappeArgs, context: FrappeRouterContext): Promise<J
   const doctype = args.requireText("doctype", 160);
   const name = args.requireText("name", 320);
   const document = await loadReadable(doctype, name, context);
-  const meta = await requireMeta(doctype, context);
-  const timeline = await context.collaboration.listTimeline(context.tenantId, doctype, name);
+  const [meta, timeline, tags] = await Promise.all([
+    requireMeta(doctype, context),
+    context.collaboration.listTimeline(context.tenantId, doctype, name),
+    context.collaboration.listTags(context.tenantId, doctype, name),
+  ]);
 
   // `track_seen` was previously validated and stored but read by nothing. Recorded
   // only when the doctype asks for it — tracking every read of every doctype would
   // add a write to the hottest path on the platform for information nobody shows.
-  const views = meta.track_seen
-    ? await recordAndListViews(doctype, name, context)
-    : [];
+  const [views, flags] = await Promise.all([
+    meta.track_seen ? recordAndListViews(doctype, name, context) : Promise.resolve([]),
+    capabilityFlags(doctype, meta, document, context),
+  ]);
 
   return {
     docs: [toFrappeDoc(document)],
@@ -1155,9 +1159,9 @@ async function getDoc(args: FrappeArgs, context: FrappeRouterContext): Promise<J
       communications: [],
       assignments: timeline.assignments ?? [],
       attachments: timeline.files ?? [],
-      tags: await context.collaboration.listTags(context.tenantId, doctype, name),
+      tags,
       views: views as unknown as JsonValue,
-      permissions: await effectivePermissionFlags(doctype, name, context),
+      permissions: numericPermissionFlags(flags),
     },
   };
 }
@@ -1297,23 +1301,27 @@ async function capabilityFlags(
       return false;
     }
   };
+  const [read, write, create, submit, cancel, amend] = await Promise.all([
+    check("read"),
+    check("save"),
+    check("create"),
+    submittable ? check("submit") : Promise.resolve(false),
+    submittable ? check("cancel") : Promise.resolve(false),
+    submittable ? check("amend") : Promise.resolve(false),
+  ]);
   return {
-    read: await check("read"),
-    write: await check("save"),
-    create: await check("create"),
-    // The kernel models deletion as a write-class action, and only a draft is
-    // ever deletable — reporting otherwise would offer an action that must fail.
-    delete: document ? document.docstatus === 0 && await check("save") : false,
-    submit: submittable ? await check("submit") : false,
-    cancel: submittable ? await check("cancel") : false,
-    amend: submittable ? await check("amend") : false,
+    read,
+    write,
+    create,
+    // Delete uses the same gate as save, so reuse the result.
+    delete: Boolean(document && document.docstatus === 0 && write),
+    submit,
+    cancel,
+    amend,
   };
 }
 
-async function effectivePermissionFlags(doctype: string, name: string, context: FrappeRouterContext): Promise<JsonObject> {
-  const meta = await requireMeta(doctype, context);
-  const document = await context.documents.getDocument(context.tenantId, doctype, name);
-  const flags = await capabilityFlags(doctype, meta, document, context);
+function numericPermissionFlags(flags: JsonObject): JsonObject {
   const output: JsonObject = {};
   // docinfo.permissions is 0/1, not booleans.
   for (const [key, value] of Object.entries(flags)) output[key] = value ? 1 : 0;
@@ -1323,39 +1331,35 @@ async function effectivePermissionFlags(doctype: string, name: string, context: 
 async function resolveDisplayValues(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject[]> {
   const items = args.array<JsonObject>("items") ?? [];
   if (items.length > 200) throw errors.validation("Too many display values requested at once");
-  const output: JsonObject[] = [];
-  for (const item of items) {
-    const doctype = typeof item.doctype === "string" ? item.doctype : "";
-    const name = typeof item.name === "string" ? item.name : "";
-    if (!doctype || !name) continue;
+  const valid = items
+    .map((item) => ({
+      doctype: typeof item.doctype === "string" ? item.doctype : "",
+      name: typeof item.name === "string" ? item.name : "",
+    }))
+    .filter((item) => item.doctype && item.name);
+  const metadata = new Map<string, ReturnType<typeof context.metadata.getDocType>>();
+  const getMeta = (doctype: string) => {
+    const cached = metadata.get(doctype);
+    if (cached) return cached;
+    const request = context.metadata.getDocType(context.tenantId, doctype);
+    metadata.set(doctype, request);
+    return request;
+  };
+
+  const resolveOne = async ({ doctype, name }: { doctype: string; name: string }): Promise<JsonObject> => {
     let label = name;
     try {
-      const meta = await context.metadata.getDocType(context.tenantId, doctype);
+      const meta = await getMeta(doctype);
       const titleField = meta?.title_field;
       if (titleField) {
-        // Routed through the permission-aware read so a label cannot leak the
-        // content of a document the actor may not see.
         const document = await loadReadable(doctype, name, context);
         const candidate = document.data[titleField];
         if (typeof candidate === "string" && candidate) label = candidate;
 
-        /**
-         * ONE more hop when the title field is itself a Link.
-         *
-         * A doctype whose most identifying field is a reference — a class session is best
-         * named by its class, an attendance row by its student — otherwise resolves to
-         * another id, so the user reads `LOP-2026-0008` where a name belongs. Following
-         * the reference once turns that into the class's actual name.
-         *
-         * Exactly ONE hop, deliberately: a chain of Link title fields would otherwise
-         * recurse, and two references is already past the point where the label describes
-         * the record the user is looking at. The same permission-aware read is used, so
-         * the second hop cannot leak either.
-         */
         const titleMeta = meta?.fields?.find((field) => field.fieldname === titleField);
         if (titleMeta?.fieldtype === "Link" && titleMeta.options && label === candidate) {
           try {
-            const targetMeta = await context.metadata.getDocType(context.tenantId, titleMeta.options);
+            const targetMeta = await getMeta(titleMeta.options);
             const targetTitle = targetMeta?.title_field;
             if (targetTitle) {
               const referenced = await loadReadable(titleMeta.options, label, context);
@@ -1363,16 +1367,21 @@ async function resolveDisplayValues(args: FrappeArgs, context: FrappeRouterConte
               if (typeof deeper === "string" && deeper) label = deeper;
             }
           } catch {
-            // Reference unreadable or gone — keep the first-hop value rather than failing.
+            // Reference unreadable or gone — keep the first-hop value.
           }
         }
       }
     } catch {
-      // An unreadable or missing reference degrades to its id, which is already
-      // known to the caller — it must not surface as a hard failure that blanks
-      // an entire form.
+      // An unreadable or missing reference degrades to its id.
     }
-    output.push({ doctype, name, label });
+    return { doctype, name, label };
+  };
+
+  // Serial resolution created a waterfall on Link-heavy lists. Resolve a
+  // bounded number at once so one large page cannot flood D1.
+  const output: JsonObject[] = [];
+  for (let index = 0; index < valid.length; index += 16) {
+    output.push(...await Promise.all(valid.slice(index, index + 16).map(resolveOne)));
   }
   return output;
 }
@@ -2792,8 +2801,12 @@ async function overviewDashboard(args: FrappeArgs, context: FrappeRouterContext)
   const actions: JsonObject[] = [];
 
   const doctypes: Array<{ key: string; label: string; icon?: string; app: string }> = [];
-  for (const app of apps) {
-    for (const item of await permittedNav(app.nav, context)) {
+  const permittedByApp = await Promise.all(apps.map(async (app) => ({
+    app,
+    nav: await permittedNav(app.nav, context),
+  })));
+  for (const { app, nav } of permittedByApp) {
+    for (const item of nav) {
       if (item.kind !== "doctype" || doctypes.some((entry) => entry.key === item.key)) continue;
       doctypes.push({ key: item.key, label: item.label, ...(item.icon ? { icon: item.icon } : {}), app: app.app_id });
     }
@@ -2829,15 +2842,15 @@ async function overviewDashboard(args: FrappeArgs, context: FrappeRouterContext)
    * would reorder the cards run to run for no reason a user could understand.
    */
   const perDoctype = await Promise.all(doctypes.slice(0, OVERVIEW_MAX_DOCTYPES).map(async (entry) => {
-    let total: number | null = null;
-    try {
-      total = await count(entry.key);
-    } catch {
+    const [total, workflow] = await Promise.all([
+      count(entry.key).catch(() => null),
+      context.metadata.getWorkflow(context.tenantId, entry.key),
+    ]);
+    if (total === null) {
       // A doctype that cannot be counted is skipped, not reported as zero: "0 học viên"
       // on a tenant with 120 of them is a lie, while a missing card is visibly missing.
       return { entry, total: null, workflow: null, states: [] as Array<{ state: string; docstatus: number; count: number }> };
     }
-    const workflow = await context.metadata.getWorkflow(context.tenantId, entry.key);
     if (!workflow?.is_active) return { entry, total, workflow: null, states: [] as Array<{ state: string; docstatus: number; count: number }> };
     // Deliberately NOT wrapped in a catch. A state count that fails and is swallowed
     // produces a dashboard reporting "0 việc đang chờ" on a tenant with sixty — a
@@ -2900,25 +2913,28 @@ async function overviewDashboard(args: FrappeArgs, context: FrappeRouterContext)
 
   // Recent activity, from the doctypes most likely to move. Bounded to two so the
   // dashboard stays one screen's worth of queries.
-  const activities: JsonObject[] = [];
-  for (const entry of doctypes.filter((candidate) => tasks.some((task) => String(task.key).includes(candidate.key))).slice(0, 2)) {
+  const activityEntries = doctypes
+    .filter((candidate) => tasks.some((task) => String(task.key).includes(candidate.key)))
+    .slice(0, 2);
+  const activityGroups = await Promise.all(activityEntries.map(async (entry): Promise<JsonObject[]> => {
     try {
       const page = await context.listService.list(context.actor, context.tenantId, {
         doctype: entry.key,
         limit: 5,
         sort: [{ field: "modified_at", direction: "desc" }] as unknown as JsonValue,
       });
-      for (const row of page.rows as JsonObject[]) {
-        activities.push({
+      return (page.rows as JsonObject[]).map((row) => ({
           key: `${entry.key}:${String(row.name)}`,
           label: `${entry.label} ${String(row.name)}`,
           ...(row.workflow_state ? { description: String(row.workflow_state) } : {}),
           ...(row.modified_at ? { timestamp: String(row.modified_at) } : {}),
           route: `/app/${encodeURIComponent(entry.key)}/${encodeURIComponent(String(row.name))}`,
-        });
-      }
-    } catch { /* a doctype that will not list simply contributes nothing */ }
-  }
+        }));
+    } catch {
+      return [];
+    }
+  }));
+  const activities = activityGroups.flat();
 
   const primary = apps.find((app) => app.client) ?? apps[0];
   return {
@@ -2935,8 +2951,7 @@ async function overviewDashboard(args: FrappeArgs, context: FrappeRouterContext)
 
 /** Nav entries whose target this actor may actually open. */
 async function permittedNav<T extends { key: string; kind?: string; permission_doctype?: string }>(nav: T[], context: FrappeRouterContext): Promise<T[]> {
-  const permitted: T[] = [];
-  for (const item of nav) {
+  const visible = await Promise.all(nav.map(async (item) => {
     // Data-backed experiences (approval inboxes today, richer workspaces later)
     // must be hidden by the same read gate as their underlying DocType.
     const permissionDoctype = item.permission_doctype
@@ -2944,15 +2959,16 @@ async function permittedNav<T extends { key: string; kind?: string; permission_d
       ?? (item.kind === "experience" && item.key.startsWith("approval:")
         ? item.key.slice("approval:".length)
         : undefined);
-    if (!permissionDoctype) { permitted.push(item); continue; }
+    if (!permissionDoctype) return true;
     try {
       await context.permissions.getReadScope(context.actor, context.tenantId, permissionDoctype);
-      permitted.push(item);
+      return true;
     } catch {
       // Omitted rather than shown-and-broken.
+      return false;
     }
-  }
-  return permitted;
+  }));
+  return nav.filter((_, index) => visible[index]);
 }
 
 /**

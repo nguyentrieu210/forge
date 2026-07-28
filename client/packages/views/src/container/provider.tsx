@@ -3,7 +3,7 @@
  * MetaForgeProvider — cung cấp adapter + registry + services + roles cho container.
  * Bọc sẵn QueryClientProvider (cache §G). Bootstrap: gọi getBoot lấy roles.
  */
-import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, lazy, Suspense, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { FormGuideMap } from "../form/FormGuide.js";
 import { makeLocaleFormat, type LocaleConfig, type BoundFormatters, type BusinessContextSelection, type BusinessContextPolicy, type FormProfileMap } from "@metaforge/core";
@@ -11,7 +11,11 @@ import type { FrappeAdapter } from "@metaforge/adapter-frappe";
 import { ControlRegistry, type FieldServices } from "@metaforge/controls";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, useT } from "@metaforge/ui";
 import { adapterServices } from "./services.js";
-import { NewFormContainer } from "./NewFormContainer.js";
+
+const LazyNewFormContainer = lazy(async () => {
+  const module = await import("./NewFormContainer.js");
+  return { default: module.NewFormContainer };
+});
 
 export interface MetaForgeContextValue {
   adapter: FrappeAdapter;
@@ -86,7 +90,19 @@ export interface MetaForgeProviderProps {
 
 export function MetaForgeProvider(props: MetaForgeProviderProps) {
   const t = useT();
-  const qc = useMemo(() => props.queryClient ?? new QueryClient({ defaultOptions: { queries: { staleTime: 30_000, retry: 1 } } }), [props.queryClient]);
+  const qc = useMemo(
+    () => props.queryClient ?? new QueryClient({
+      defaultOptions: {
+        queries: {
+          staleTime: 2 * 60_000,
+          gcTime: 30 * 60_000,
+          refetchOnWindowFocus: false,
+          retry: 1,
+        },
+      },
+    }),
+    [props.queryClient],
+  );
   // locale key ổn định để memo fmt — đổi user/site/lang ⇒ locale prop đổi ⇒ fmt dựng lại (không stale).
   const localeKey = JSON.stringify(props.locale ?? null);
 
@@ -143,11 +159,13 @@ export function MetaForgeProvider(props: MetaForgeProviderProps) {
                 <DialogTitle>{t("form.create_title_prefix")} {entry.doctype}</DialogTitle>
               </DialogHeader>
               <div className="min-h-0 flex-1 overflow-hidden p-4">
-                <NewFormContainer
-                  doctype={entry.doctype}
-                  onCreated={(name) => closeQuickCreate(entry.id, name)}
-                  onCancel={() => closeQuickCreate(entry.id, undefined)}
-                />
+                <Suspense fallback={<div className="grid h-full place-items-center text-sm text-muted-foreground">{t("common.loading")}</div>}>
+                  <LazyNewFormContainer
+                    doctype={entry.doctype}
+                    onCreated={(name) => closeQuickCreate(entry.id, name)}
+                    onCancel={() => closeQuickCreate(entry.id, undefined)}
+                  />
+                </Suspense>
               </div>
             </DialogContent>
           </Dialog>
