@@ -237,10 +237,29 @@ export class AppInstaller {
     // Ownership is recorded last, once every object exists, and is rewritten
     // wholesale so an upgrade that drops an object also drops its claim.
     statements.push(this.db.prepare(`DELETE FROM app_objects WHERE tenant_id=?1 AND app_id=?2`).bind(tenantId, manifest.id));
-    for (const [type, scope, name] of this.ownedObjects(manifest)) {
+    /**
+     * Ownership rows go in as FEW statements, not one per object.
+     *
+     * These rows are the largest part of the batch and the least interesting: for an app
+     * with forty DocTypes they were sixty-odd single-row inserts, so ownership bookkeeping
+     * alone consumed half the atomic budget and a perfectly ordinary app was refused with
+     * "expands to 128 install statements". The ceiling is meant to describe how COMPLEX a
+     * package is; it was measuring how we happened to write it.
+     *
+     * Twenty rows per statement because D1 caps a query at 100 bound parameters and each
+     * row binds five. Batching is invisible to the transaction: still one `db.batch`,
+     * still all-or-nothing.
+     */
+    const owned = [...this.ownedObjects(manifest)];
+    const OWNERSHIP_ROWS_PER_STATEMENT = 20;
+    for (let start = 0; start < owned.length; start += OWNERSHIP_ROWS_PER_STATEMENT) {
+      const chunk = owned.slice(start, start + OWNERSHIP_ROWS_PER_STATEMENT);
+      const tuples = chunk
+        .map((_, position) => `(?${position * 5 + 1},?${position * 5 + 2},?${position * 5 + 3},?${position * 5 + 4},?${position * 5 + 5})`)
+        .join(",");
       statements.push(this.db.prepare(
-        `INSERT INTO app_objects(tenant_id,app_id,object_type,object_name,object_scope) VALUES(?1,?2,?3,?4,?5)`,
-      ).bind(tenantId, manifest.id, type, name, scope));
+        `INSERT INTO app_objects(tenant_id,app_id,object_type,object_name,object_scope) VALUES${tuples}`,
+      ).bind(...chunk.flatMap(([type, scope, name]) => [tenantId, manifest.id, type, name, scope])));
     }
     // One batch is the atomicity boundary. Refuse an oversized package rather than
     // splitting it into transactions and reintroducing partial installation.

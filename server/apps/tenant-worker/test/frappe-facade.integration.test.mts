@@ -864,6 +864,48 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     expect(String((await response.json() as any).message)).toMatch(/not supported on a single doctype/i);
   });
 
+  /**
+   * Một app cỡ THẬT phải cài được.
+   *
+   * Trần "100 câu lệnh cho một lô" là để mô tả app PHỨC TẠP tới đâu; nhưng quyền sở hữu
+   * từng được ghi mỗi đối tượng một lệnh, nên riêng phần bookkeeping đó đã ăn quá nửa hạn
+   * mức và một app 40 doctype hoàn toàn bình thường bị từ chối với "expands to 128 install
+   * statements". Trần lúc đó đo cách CHÚNG TA viết, không đo app.
+   *
+   * 40 doctype là con số thật của Alumdoor lúc gặp lỗi. Test cũng đọc lại `app_objects` để
+   * chắc rằng gộp nhiều dòng vào một lệnh vẫn ghi ĐỦ từng dòng — gộp sai thì mất quyền sở
+   * hữu, và mất quyền sở hữu thì gỡ app sẽ bỏ sót hoặc xoá nhầm đồ của khách.
+   */
+  it("cài được app cỡ thật (40 doctype) — trần một lô đo độ phức tạp, không đo cách ghi", async () => {
+    const many = Array.from({ length: 40 }, (_, index) => ({
+      name: `Bulk Doc ${index + 1}`, module: "Bulk",
+      fields: [{ fieldname: "title", label: "Title", fieldtype: "Data", required: true }],
+      permissions: [{ role: "Bulk User", read: true, write: true, create: true }],
+      revision: 1,
+    }));
+    const pkg = {
+      id: "bulk", name: "Bulk", version: "1.0.0",
+      roles: [{ role: "Bulk User" }],
+      doctypes: many,
+      fixtures: Array.from({ length: 11 }, (_, index) => ({ record_type: "Bulk Kind", name: `K${index + 1}`, data: {} })),
+      nav: many.map((doctype) => ({ key: doctype.name, label: doctype.name, kind: "doctype" })),
+    };
+
+    const installed = await unwrap(await method("forge.apps.install", { app: pkg }));
+    expect(installed.outcome).toBe("installed");
+    expect(installed.doctypes).toBe(40);
+
+    // Mỗi đối tượng vẫn phải có ĐÚNG một dòng sở hữu: 40 doctype + 11 fixture + 1 role.
+    const owned = await env.DB.prepare(
+      `SELECT count(*) AS total FROM app_objects WHERE tenant_id='demo' AND app_id='bulk'`,
+    ).first<{ total: number }>();
+    expect(owned!.total).toBe(52);
+    const sample = await env.DB.prepare(
+      `SELECT object_type FROM app_objects WHERE tenant_id='demo' AND app_id='bulk' AND object_name='Bulk Doc 40'`,
+    ).first<{ object_type: string }>();
+    expect(sample!.object_type).toBe("DocType");
+  });
+
   it("installs an app, and re-installing the identical package is a no-op", async () => {
     const pkg = {
       id: "visits", name: "Visits", version: "1.0.0",
