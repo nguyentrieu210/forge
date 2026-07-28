@@ -1,0 +1,239 @@
+{
+  "source_file": "pasted-text.txt",
+  "generated_at": "2026-07-28T11:15:00.000Z",
+  "source_records_total": 999,
+  "source_populated_rows": 287,
+  "imported_items": 277,
+  "imported_list_prices": 275,
+  "imported_rail_prices": 17,
+  "missing_list_price_items": [
+    "HH-CUAKEODL",
+    "NVL-LAMAU-PHE"
+  ],
+  "virtual_motor_combos": [
+    "TP-MT-TANKER400KG",
+    "TP-MT-TANKER600KG",
+    "TP-MT-TANKE800KG",
+    "TP-MT-TANKER1000KG",
+    "TP-MT-TANKER1500KG",
+    "TP-MT-YHTAIWAN CH 300KG",
+    "TP-MT-YHTAIWAN CH 500KG",
+    "TP-MT-YHTAIWAN CH 400KG",
+    "TP-MT-YHTAIWAN CH 600KG",
+    "TP-MT-YHTAIWAN CH 700KG",
+    "TP-MT-YHTAIWAN CH 800KG",
+    "TP-MT-YHTAIWAN CH 1000KG",
+    "TP-MT-YHLD300KG",
+    "TP-MT-YHLD500KG",
+    "TP-MT-YHLD800KG",
+    "TP-MT-YHLD1000KG",
+    "TP-MT-JG300KG",
+    "TP-MT-JG400KG",
+    "TP-MT-JG500KG",
+    "TP-MT-JG600KG",
+    "TP-MT-JG800KG",
+    "TP-MT-JG1000KG",
+    "TP-MT-JG1500KG",
+    "TP-MT-ALUMAX400KG",
+    "TP-MT-ALUMAX600KG"
+  ],
+  "micro_surcharge_rows_preserved_in_description": [
+    {
+      "item_code": "TP-UC KT 4D",
+      "amount": 1800000
+    },
+    {
+      "item_code": "TP-UC MTN 4D",
+      "amount": 1800000
+    },
+    {
+      "item_code": "TP-UC KT 4.6D",
+      "amount": 2000000
+    },
+    {
+      "item_code": "TP-UC MTN 4.6D",
+      "amount": 2000000
+    },
+    {
+      "item_code": "TP-UC KT 5.5D",
+      "amount": 2200000
+    },
+    {
+      "item_code": "TP-UC MTN 5.5D",
+      "amount": 2200000
+    },
+    {
+      "item_code": "TP-UC MTN 6D STD MSK",
+      "amount": 2800000
+    },
+    {
+      "item_code": "TP-UC KT 6D STĐ MSK",
+      "amount": 2800000
+    }
+  ],
+  "rail_gift_rows_preserved_in_description": [
+    "TD-AL595",
+    "TP-TD-AL71N",
+    "TP-TD-AL503N26",
+    "AL503C",
+    "TP-ALD-548N",
+    "AL501C",
+    "TP-TD-AL501N",
+    "TP-TD-AL652",
+    "TP-ALD-DL552",
+    "TP-TD-AL752N",
+    "TP-TD-AL50",
+    "TP-ALVIP50",
+    "TP-ALVIPST500",
+    "TP-ALVIPST700",
+    "TP-TD-AL70 (2 LỚP)",
+    "TP-AL70-1LOP",
+    "TP-AL75"
+  ],
+  "excluded_price_adjustments": [
+    {
+      "source_code": "TRU-TP_KHONGLAC_TANKER-ALUMAX",
+      "source_name": "TANKER_ALUMAX KHÔNG LẮC 33",
+      "amount": -250000,
+      "uom": "Cái"
+    },
+    {
+      "source_code": "TRU-TP_KHONGBDK_TANKER-ALUMAX",
+      "source_name": "TANKER_ALUMAX KHÔNG BỘ ĐIỀU KHIỂN",
+      "amount": -100000,
+      "uom": "Cái"
+    },
+    {
+      "source_code": "TRU-TP_KHONGBDK_TANKER-ALUMAX",
+      "source_name": "TANKER_ALUMAX KHÔNG BỘ ĐIỀU KHIỂN,KHÔNG LẮC",
+      "amount": -500000,
+      "uom": "Bộ"
+    },
+    {
+      "source_code": "TRU-TP_KHONGLAC_YHLD",
+      "source_name": "YHLD KHÔNG LẮC",
+      "amount": -300000,
+      "uom": "Cái"
+    },
+    {
+      "source_code": "TRU-TP_KHONGBDK_TANKER-ALUMAX",
+      "source_name": "YHLD KHÔNG BỘ ĐIỀU KHIỂN",
+      "amount": -150000,
+      "uom": "Bộ"
+    },
+    {
+      "source_code": "TRU-TP_KHONGBDK_KHONGLAC_YHLD",
+      "source_name": "YHLD KHÔNG BỘ ĐIỀU KHIỂN,KHÔNG LẮC",
+      "amount": -600000,
+      "uom": "Bộ"
+    },
+    {
+      "source_code": "TRU-TP_KHONGLAC_JG",
+      "source_name": "JG_KHÔNG LẮC",
+      "amount": -350000,
+      "uom": "Cái"
+    },
+    {
+      "source_code": "TRU-TP_KHONGBDK_JG",
+      "source_name": "JG_KHÔNG BỘ ĐIỀU KHIỂN",
+      "amount": -150000,
+      "uom": "Bộ"
+    },
+    {
+      "source_code": "TRU-TP_KHONGBDK_KHONGLAC_JG",
+      "source_name": "JG_KHÔNG BỘ ĐIỀU KHIỂN+KHÔNG LẮC",
+      "amount": -500000,
+      "uom": "Bộ"
+    }
+  ],
+  "remapped_duplicate_codes": [
+    {
+      "source_code": "TP-BUOMSAT",
+      "imported_code": "TP-BUOMSAT-02",
+      "source_name": "BẮN BƯỚM SẮT",
+      "occurrence": 2
+    },
+    {
+      "source_code": "RNHUA/LONG-CR",
+      "imported_code": "RNHUA/LONG-CR-02",
+      "source_name": "RON LÔNG CẠNH RAY",
+      "occurrence": 2
+    },
+    {
+      "source_code": "NVL-V5_KEM_STD",
+      "imported_code": "NVL-V5_KEM_STD-02",
+      "source_name": "V4_STĐ",
+      "occurrence": 2
+    },
+    {
+      "source_code": "TP-CUAST8-9D_MM",
+      "imported_code": "TP-CUAST1.1LY_MM",
+      "source_name": "CỬA SIÊU TRƯỜNG STD 1.1LY",
+      "occurrence": 1
+    },
+    {
+      "source_code": "TP-CUAST1LY_MM",
+      "imported_code": "TP-CUAST1.2LY_MM",
+      "source_name": "CỬA SIÊU TRƯỜNG STD 1.2LY",
+      "occurrence": 2
+    },
+    {
+      "source_code": "TP-CUAST1LY_MM",
+      "imported_code": "TP-CUAST1.3LY_MM",
+      "source_name": "CỬA SIÊU TRƯỜNG STD 1.3LY",
+      "occurrence": 3
+    },
+    {
+      "source_code": "TP-CUAST1.2LY_MM",
+      "imported_code": "TP-CUAST1.4LY_MM",
+      "source_name": "CỬA SIÊU TRƯỜNG STD 1.4LY",
+      "occurrence": 1
+    },
+    {
+      "source_code": "TP-CUAST1.2LY_MM",
+      "imported_code": "TP-CUAST1.5LY_MM",
+      "source_name": "CỬA SIÊU TRƯỜNG STD 1.5LY",
+      "occurrence": 2
+    },
+    {
+      "source_code": "TP-CUAST1.3LY_MM",
+      "imported_code": "TP-CUAST1.6LY_MM",
+      "source_name": "CỬA SIÊU TRƯỜNG STD 1.6LY",
+      "occurrence": 1
+    }
+  ],
+  "merged_exact_duplicates": [
+    {
+      "source_code": "TP-YHLD_TayDK",
+      "source_name": "YHLD TAY ĐIỀU KHIỂN",
+      "occurrence": 2
+    }
+  ],
+  "distinct_groups": [
+    "Cửa CN Đức",
+    "Cửa Đài Loan",
+    "Cửa Đài Loan Inox",
+    "Cửa kéo Đài Loan",
+    "Cửa Lưới",
+    "Cửa siêu trường",
+    "Cửa tấm liền Úc",
+    "Motor & Bình điện",
+    "Phụ kiện",
+    "Phụ kiện CN Đức"
+  ],
+  "distinct_uoms": [
+    "Bộ",
+    "Con",
+    "Cái",
+    "Cây",
+    "Cặp",
+    "Kg",
+    "Mét",
+    "m2"
+  ],
+  "expected_final_counts": {
+    "items": 277,
+    "item_prices": 292,
+    "excluded_adjustment_rows": 9
+  }
+}
