@@ -54,6 +54,15 @@ WHERE tenant_id='alu'
     WHERE tenant_id='alu' AND app_id='alumdoor' AND version='1.18.3'
   );`).join("\n");
 
+const manifestPatchArgs = changed.map((doctype) => `
+    '$.doctypes[' || (
+      SELECT CAST(key AS TEXT)
+      FROM json_each(installed_apps.manifest_json, '$.doctypes')
+      WHERE json_extract(value, '$.name')=${sqlString(doctype.name)}
+      LIMIT 1
+    ) || ']',
+    json(${sqlString(JSON.stringify(doctype))})`).join(",");
+
 const sql = `-- Alumdoor ${manifest.version}: finish Item/UOM/pricing and Dynamic Link metadata.
 -- Generated from the compiler-normalized manifest. Existing business documents are untouched.
 ${definitionUpdates}
@@ -61,7 +70,10 @@ ${definitionUpdates}
 UPDATE installed_apps
 SET version=${sqlString(manifest.version)},
     content_hash=${sqlString(contentHash)},
-    manifest_json=json(${sqlString(JSON.stringify(manifest))}),
+    manifest_json=json_set(
+      manifest_json,
+      '$.version', ${sqlString(manifest.version)},${manifestPatchArgs}
+    ),
     modified_at=${sqlString(now)}
 WHERE tenant_id='alu'
   AND app_id='alumdoor'
