@@ -1,15 +1,29 @@
 # ALUMDOOR — Quy trình & những chỗ còn thiếu
 
-> Tài liệu này **chỉ mô tả và hỏi**, không phải kế hoạch code. Mục đích: anh đọc một lượt,
-> thấy chỗ nào em hiểu sai thì sửa, chỗ nào thiếu số liệu thì bổ sung.
->
-> Trạng thái ghi theo ba mức, và ba mức này **rất khác nhau**:
+> **Bản 2** — viết lại sau khi đọc **hết** 14 sheet của file đơn hàng và 11 sheet của file
+> báo giá Sáu Hồng. Bản 1 hỏi anh 9 điều; đọc kỹ thì **5 điều đã có sẵn câu trả lời trong
+> chính file anh gửi**. Phần đó ghi lại dưới đây, kèm nguồn — anh chỉ cần xác nhận đúng/sai,
+> không phải gõ lại.
 >
 > | Ký hiệu | Nghĩa |
 > |---|---|
-> | ✅ **CHẠY THẬT** | Đã chạy trên `alu.kairo.vn` với dữ liệu thật, có phép thử tự động chặn hồi quy |
-> | 🟡 **ĐÃ KHAI, CHƯA CHỨNG MINH** | Cấu trúc có rồi nhưng chưa chạy thử end-to-end — **chưa được tin** |
-> | ⛔ **CHƯA CÓ** | Chưa làm gì |
+> | ✅ **CHẠY THẬT** | Đã chạy trên `alu.kairo.vn` với dữ liệu thật, có phép thử chặn hồi quy |
+> | 🟡 **ĐÃ KHAI, CHƯA CHỨNG MINH** | Cấu trúc có nhưng chưa chạy end-to-end — **chưa được tin** |
+> | 📄 **CÓ DỮ LIỆU, CHƯA LÀM** | Số liệu đã có trong file của xưởng, chỉ chưa đưa vào app |
+> | ⛔ **CHƯA CÓ** | Chưa có cả dữ liệu lẫn code |
+
+---
+
+## 0. Những gì em đã đọc
+
+| File | Sheet | Đã đọc |
+|---|---|---|
+| `2026 ĐƠN HÀNG - XUẤT HÀNG.xlsx` | 14 sheet | ✅ hết |
+| `TỒN NHÔM 2026 NEW.xlsx` | 15 sheet (mỗi mã nhôm 1 sheet) | ✅ đã nạp 1.256 lô |
+| `CÔNG THỨC CHIA LÁ.pdf` | — | ✅ đã thành code + 11 phép thử |
+| `CTY SÁU HỒNG.xlsx` | 11 sheet | ✅ (sheet BÁO GIÁ là quan trọng nhất) |
+| Ảnh bảng trọng lượng | 40 dòng | ✅ đã lưu `data/trong-luong-nhom.json` |
+| Ảnh bảng giá NCC 2026 | 7 mốc giá × 5 loại | ✅ chép trong tài liệu này |
 
 ---
 
@@ -26,225 +40,246 @@
    │ theo khổ    │            │   ↓          │         │   ↓              │
    └─────────────┘            │ Hoá đơn      │         │ Lắp ráp          │
          │                    │   ↓          │         └──────────────────┘
-   Công nợ PHẢI TRẢ           │ Thu tiền     │
+   Công nợ PHẢI TRẢ ⛔        │ Thu tiền ✅  │
                               └──────────────┘
-                              Công nợ PHẢI THU
 ```
-
-Ba dòng chảy, và **hai trong ba đã chạy được**. Dòng MUA là dòng còn hở nhiều nhất.
 
 ---
 
 ## 2. Dòng BÁN — ✅ chạy thật
 
-| Bước | Trạng thái | Ghi chú |
-|---|---|---|
-| Báo giá (BG-) | ✅ | Có workflow Nháp → Đã gửi → Khách đồng ý/từ chối. "Đã gửi" vẫn **sửa được** vì khách còn mặc cả |
-| Báo giá → Đơn hàng | ✅ | Chép nguyên số đo/màu/mô tơ. Bấm nhiều lần vẫn ra **đúng một đơn** |
-| Đơn hàng (DH-) | ✅ | |
-| Bảng giá bán | ✅ | Chọn bảng giá thì **server quyết giá**, ghi đè giá gõ tay. Để trống thì gõ tay như cũ |
-| Phiếu xuất kho (PXK-) | ✅ | Trừ tồn thật, **từ chối khi không đủ** |
-| Hoá đơn (HD-) | ✅ | Lên công nợ phải thu |
-| Phiếu thu (PT-) | ✅ | Trừ công nợ |
-| In hoá đơn / báo giá | ✅ | Có dòng hàng, tiền có dấu phân cách |
-
-### Còn thiếu ở dòng bán
-
-**2.1 — Bảng giá BÁN chưa có số.** Cơ chế chạy rồi nhưng chưa có một dòng giá thật nào.
-Anh nói *"tính theo m² và tùy trường hợp"*. Em cần biết **"tùy trường hợp"** là tùy theo cái gì:
-
-- Tùy **loại cửa**? (Đức / Úc / Đài Loan / siêu trường — mỗi loại một giá/m²)
-- Tùy **khách**? (đại lý rẻ hơn khách lẻ bao nhiêu %)
-- Tùy **diện tích**? (cửa nhỏ có giá tối thiểu, vd dưới 6 m² tính tròn 6 m²)
-- Tùy **màu / có dập hay không**?
-
-> **Cần anh cho:** một bảng giá bán mẫu, kiểu
-> `AL548N · màu · khách lẻ · 1.450.000 đ/m² · tối thiểu 6 m²`
-
-Và vì cửa Đức **bán tách món được** (xem mục 3.1b), bảng giá thực ra có **hai tầng**:
-
-| Bán gì | Đơn vị tính tiền |
+| Bước | Trạng thái |
 |---|---|
-| Trọn bộ cửa | đ/m² phủ bì |
-| Lá rời | ❓ đ/lá hay đ/mét dài hay đ/kg — **chưa biết** |
-| Mô tơ, ray, remote, trục | đ/cái · đ/bộ · đ/cây |
+| Báo giá (BG-) có workflow Nháp → Đã gửi → Khách đồng ý/từ chối | ✅ |
+| Báo giá → Đơn hàng, bấm nhiều lần vẫn ra **đúng một đơn** | ✅ |
+| Bảng giá: chọn thì **server quyết giá**; để trống thì gõ tay | ✅ |
+| Phiếu xuất kho — trừ tồn thật, **từ chối khi không đủ** | ✅ |
+| Hoá đơn → công nợ · Phiếu thu → trừ nợ | ✅ |
+| In hoá đơn / báo giá, có dòng hàng và dấu phân cách tiền | ✅ |
 
-Hai tầng này **không suy ra nhau được**: giá m² đã gộp cả nhôm lẫn ray lẫn mô tơ lẫn công
-lắp, nên không thể chia ngược ra giá một cái lá.
+### 2.1 — 📄 Giá bán: **file Sáu Hồng đã trả lời**, em hỏi thừa
 
-**2.2 — Diện tích m² chưa tự tính.** Dòng đơn hàng có Rộng (mm), Cao (mm), Số bộ, và
-Số lượng tính tiền. Hiện **phải gõ tay** số m².
+Sheet `BÁO GIÁ` là một báo giá thật, và nó cho thấy **chính xác** cách xưởng tính tiền:
 
-> **Cần anh xác nhận công thức:** `m² = (rộng × cao × số bộ) ÷ 1.000.000` — hay xưởng
-> tính theo **phủ bì** (cộng thêm mỗi bên bao nhiêu mm)? Có làm tròn không?
+| Sản phẩm & quy cách | CAO PB (m) | RỘNG PBRAY (m) | SL | KHỐI LƯỢNG | ĐƠN GIÁ | ĐVT | THÀNH TIỀN |
+|---|---|---|---|---|---|---|---|
+| Cửa lưới MV inox 304 (ray U80) | 3,5 | 4,90 | 2 | 17,15 | 1.490.000 | **M2** | 51.107.000 |
+| Cửa lưới MV inox 304 (ray U100) | 3,5 | 6,40 | 2 | 22,40 | 1.490.000 | **M2** | 66.752.000 |
+| Cửa Đức Alum **AL501N** | 3,2 | 5,15 | 3 | 49,44 | 1.066.000 | **M2** | 158.109.120 |
+| **CK 15%** | 3 | 49,44 | | | −159.900 | **M2** | −7.905.456 |
+| BỘ TỰ DỪNG | | | 3 | | 80.000 | **BỘ** | 240.000 |
+| RAY HỘP TD | 3,1 | | 6 | | 165.000 | **M** | 3.069.000 |
+| TRỤC 114 | 5,3 | | 3 | | 140.000 | **M** | 2.226.000 |
+| CON LĂN | | | 3 | | 90.000 | **CẶP** | 270.000 |
+| PULY LỚN | | | 24 | | 24.000 | **CÁI** | 576.000 |
+| | | | | | | | **TỔNG 333.529.614** |
+
+**Rút ra được ngay bốn điều:**
+
+1. **Cửa bán theo m²** — `1.490.000 đ/m²` (cửa lưới), `1.066.000 đ/m²` (Đức Alum AL501N)
+2. **Chiết khấu là một DÒNG ÂM theo m²**, không phải % ẩn: `CK 15%` = `−159.900 đ/m²`
+   (đúng 15% của 1.066.000). Cách này hay — hoá đơn nhìn thấy rõ đã giảm bao nhiêu.
+3. **Phụ kiện bán tách món, mỗi thứ một ĐVT riêng** — đây chính là câu "bán tách món" anh nói:
+
+   | Món | Đơn vị | Giá |
+   |---|---|---|
+   | Ray hộp TD | **mét dài** | 165.000 đ/m |
+   | Trục 114 | **mét dài** | 140.000 đ/m |
+   | Con lăn | cặp | 90.000 đ/cặp |
+   | Puly lớn | cái | 24.000 đ/cái |
+   | Bộ tự dừng | bộ | 80.000 đ/bộ |
+
+4. Cột `CÒN LẠI` là **luỹ kế cộng dồn** — báo giá tự cộng tới dòng cuối.
+
+> ❓ **Chỉ còn một chỗ em chưa chắc — cách tính m²:**
+> - Cửa Đức: `3,2 × 5,15 × 3 bộ = 49,44` ✓ nhân số lượng
+> - Cửa lưới: `3,5 × 4,90 = 17,15` với SL = 2 → **không** nhân số lượng
+>
+> Nghĩa là ở cửa lưới, `RỘNG PBRAY 4,90` đã là **tổng chiều rộng cả 2 cánh**? Anh xác nhận
+> giúp em cách hiểu đúng.
+
+### 2.2 — ⛔ Giá **LÁ RỜI** vẫn chưa có
+
+Báo giá trên có ray, trục, con lăn, puly, bộ tự dừng — **nhưng không có dòng lá rời nào**.
+
+> ❓ **Cần anh cho:** khách mua lá rời (không mua cả bộ) thì tính theo **lá**, theo **mét
+> dài**, hay theo **kg**? Nhìn cách ray và trục tính theo **mét dài**, em đoán lá cũng vậy —
+> nhưng đoán chỗ này là đoán tiền, nên em không tự quyết.
 
 ---
 
-## 3. Dòng LÀM (sản xuất) — 🟡 một nửa
+## 3. Dòng LÀM (sản xuất)
 
-| Bước | Trạng thái | Ghi chú |
-|---|---|---|
-| Công thức chia lá | ✅ | 19 mã, có 11 phép thử lấy từ chính ví dụ của xưởng |
-| Tồn nhôm theo lô | ✅ | 1.256 lô, 43.601 lá đã nạp từ file Excel |
-| Cắt nhôm | ✅ | Chọn **khổ nhỏ nhất còn đủ dài** để ít phế nhất; từ chối kèm số lá còn thiếu |
-| Hoàn cắt (ghi nhầm) | ✅ | Lá về đúng lô cũ, nguyên khổ. Hoàn lần hai bị chặn |
-| Trả hàng (đã cắt) | ✅ | Vào lô khổ MỚI, đánh dấu ngày nhập lại |
-| Định mức vật tư (BOM) | 🟡 | **Doctype có, số liệu KHÔNG có dòng nào** |
-| Lệnh sản xuất | 🟡 | Đã nối vào BOM nhưng **chưa chạy thử** |
-| Phiếu sản xuất (trừ vật tư) | 🟡 | Nền tảng có sẵn, **chưa chứng minh** |
-| In phiếu sản xuất | ✅ | Số đo in TO, có bảng vật tư cần |
-| Sơn / lò sơn | ⛔ | |
-| Lịch sản xuất / tăng ca | ⛔ | |
-| Danh sách lỗi | ⛔ | |
-
-### Còn thiếu ở dòng làm
-
-**3.1 — ĐỊNH MỨC (BOM) chưa có số nào.** Đây là chỗ **thiếu nặng nhất** của cả app.
-
-Bảng định mức trả lời: *một bộ cửa ăn hết những gì*. Ví dụ em hình dung:
-
-| Bộ cửa AL548N, 4,2 m × 2,8 m | Số lượng |
+| Bước | Trạng thái |
 |---|---|
-| Lá AL548N | 51 lá (đã tính được từ công thức chia lá ✅) |
-| Lá đáy | 1 |
-| Lá đầu | 1 |
-| Ray hộp U100 | 2 cây × 2,8 m |
-| Mô tơ | 1 bộ (loại nào theo cân nặng cửa?) |
-| Trục | 1 |
-| Bộ 3 lá đáy | ? |
-| Ron đáy | ? mét |
-| Phụ kiện (pát, ốc, lò xo…) | ? |
+| Công thức chia lá — 19 mã, 11 phép thử lấy từ ví dụ của xưởng | ✅ |
+| Tồn nhôm theo lô — 1.256 lô, 43.601 lá | ✅ |
+| Cắt nhôm — chọn khổ nhỏ nhất còn đủ dài, từ chối kèm số lá thiếu | ✅ |
+| Hoàn cắt / trả hàng | ✅ |
+| In phiếu sản xuất (số đo in TO) | ✅ |
+| **Định mức (BOM)** | 📄 **dữ liệu CÓ — xem 3.1** |
+| **Lịch sản xuất / tăng ca** | 📄 **định mức giờ CÓ — xem 3.4** |
+| Lệnh sản xuất → trừ vật tư | 🟡 chưa chạy thử |
+| Sơn / lò sơn | 🟡 có định mức mẻ sơn, chưa có quy trình |
+| Danh sách lỗi | 📄 cấu trúc rõ, chưa làm |
+| Bảo hành | 📄 cấu trúc rõ, chưa làm |
 
-> **Cần anh cho:** với **một** bộ cửa mẫu (chọn loại hay bán nhất), liệt kê hết vật tư và
-> số lượng. Chỉ cần **một bộ** — em suy ra công thức theo kích thước rồi anh kiểm lại.
->
-> Riêng phần **lá thì em tính được rồi**, chỉ thiếu ray / mô tơ / trục / phụ kiện.
+### 3.1 — 📄 ĐỊNH MỨC: sheet `HOÀNG LAI` là một bảng định mức trá hình
 
-### 3.1b — Bán TÁCH MÓN, không bắt buộc trọn bộ ⚠️ điều này đổi cả cách làm định mức
+Em nói "không có dòng định mức nào" là **sai**. Sheet `HOÀNG LAI` là đơn công trình 95 bộ,
+và vì nó liệt kê vật tư theo từng lô nên **chia ra là ra ngay tỷ lệ mỗi bộ**:
 
-Anh cho biết cửa Đức **bán tách món được**, không nhất thiết trọn bộ. Đây không phải chi
-tiết nhỏ — nó quyết định định mức là **thứ bắt buộc** hay chỉ là **gợi ý**.
+| Nhóm | Số bộ | Ray hộp | Trục | Puly lớn | Còi báo | Con lăn | Motor | Bình lưu điện |
+|---|---|---|---|---|---|---|---|---|
+| CC1 (AL548+AL503) | 86 | 172 cây | 86 cây | 516 cái | 86 | 86 cặp | 86 bộ | 86 bộ |
+| CC2 | 5 | 10 cây | 5 cây | 25 cái | 5 | 5 cặp | 5 bộ | 5 bộ |
+| CC3 | 1 | 2 cây | 1 cây | 4 cái | 1 | 1 cặp | 1 bộ | 1 bộ |
+| CC4 | 1 | 2 cây | 1 cây | 6 cái | 1 | 1 cặp | 1 bộ | 1 bộ |
+| CK1 | 2 | 4 cây | 2 cây | 12 cái | — | — | — | — |
 
-Nếu định mức là bắt buộc, bán một cái mô tơ rời sẽ bị app đòi đủ ray, đủ lá, đủ trục. Nên
-định mức phải là **bản mẫu để gợi ý**, không phải cái khoá.
-
-Em hiểu xưởng có **ba kiểu bán**, và ba kiểu đi ba đường khác nhau:
-
-| Kiểu bán | Ví dụ | Đường đi trong app | Cần lệnh SX? |
-|---|---|---|---|
-| **Trọn bộ** | 1 bộ cửa Đức 4,2 × 2,8 | định mức nổ ra vật tư → cắt lá → lắp ráp → giao | Có |
-| **Lá rời** | 51 lá AL548N khổ 3,5 m | chỉ **cắt** rồi giao, không lắp | Không — chỉ phiếu cắt |
-| **Phụ kiện rời** | 1 mô tơ, 2 cây ray, 1 remote | xuất thẳng từ kho | Không |
-
-Cách em định làm: **định mức chỉ điền sẵn, người bán xoá được từng dòng.** Bán trọn bộ thì
-chọn bộ cửa, app điền đủ vật tư; bán tách món thì gõ thẳng món cần, không đụng tới định mức.
-
-> **Cần anh xác nhận 3 điều:**
->
-> **a) Có kiểu "trọn bộ nhưng bỏ bớt" không?** Ví dụ khách tự có mô tơ, mua bộ cửa không mô
-> tơ — lúc đó giá tính thế nào? Trừ đúng giá mô tơ, hay có bảng giá riêng?
->
-> **b) Lá rời tính tiền theo gì?** Đây là chỗ em **không đoán được**:
-> - đ/**lá** (theo số lá, không quan tâm dài ngắn)?
-> - đ/**mét dài** (51 lá × 3,5 m = 178,5 m)?
-> - đ/**kg** (như mua vào, cộng lãi)?
-> - đ/**m² phủ bì** (như bán trọn bộ)?
->
-> **c) Giá tách món có đắt hơn giá trong trọn bộ không?** Thường bán lẻ đắt hơn bán theo bộ.
-> Nếu có thì chênh bao nhiêu — theo % hay theo bảng giá riêng?
-
-**3.2 — Mô tơ chọn theo gì?** Cửa nặng thì mô tơ khoẻ. Em thấy trong file có nhiều loại
-(motor trong, motor ngoài, motor ngoài tự dừng…).
-
-> **Cần anh cho:** bảng chọn mô tơ, kiểu `cửa dưới 12 m² → mô tơ 500kg; 12–18 m² → 800kg…`
-
-**3.3 — Công đoạn SƠN chưa có trong app.** File của xưởng có phân biệt rõ
-`THÔ` / `MÀU - CHƯA DẬP` / `MÀU - ĐÃ DẬP`, và bảng giá NCC cũng tính giá khác nhau cho từng
-loại. Nghĩa là **sơn là một công đoạn có tồn kho riêng**: nhôm thô nằm chờ sơn.
-
-> **Cần anh mô tả:** sơn làm ở đâu (lò sơn của xưởng hay thuê ngoài)? Nhôm đi sơn có phải
-> làm phiếu không? Sơn xong có hao hụt không? "Dập" là công đoạn gì, trước hay sau sơn?
-
-**3.4 — Lịch sản xuất / tăng ca.** Sheet `LỊCH SẢN XUẤT` trong file anh gửi **đang rỗng**.
-
-> **Cần anh cho hai con số:**
-> 1. **Định mức giờ** mỗi bộ cửa theo nhóm (ÚC · LƯỚI · ĐỨC · ĐÀI LOAN · SIÊU TRƯỜNG · LÒ SƠN)
-> 2. **Số người mỗi tổ**
->
-> Có hai cái đó em tính được: tổng giờ cần ÷ (số người × 8 giờ) → biết ngày nào phải tăng ca.
-
-**3.5 — Danh sách lỗi.** File có sheet `DANH SÁCH LỖI` nhưng em chưa mở kỹ.
-
-> **Cần anh cho biết:** lỗi ghi nhận ở công đoạn nào? Ai ghi? Ghi xong thì làm gì tiếp
-> (làm lại, bù hàng, trừ lương tổ)? Có phân loại lỗi không?
-
----
-
-## 4. Dòng MUA — ⛔ đây là chỗ hở lớn nhất
-
-**Hiện tại app KHÔNG có đường nhập nhôm.** 1.256 lô đang có là do em nạp thẳng từ Excel một
-lần, không qua chứng từ nào. Nghĩa là:
-
-- Không có phiếu nhập → không biết lô nào mua ngày nào, của ai, giá bao nhiêu
-- **Không có công nợ phải trả** cho nhà cung cấp
-- **Không có giá vốn nhôm** → lãi/lỗ mỗi bộ cửa không tính được
-
-### 4.1 — Đơn vị tính: hiểu đúng mới làm đúng
-
-Từ file `NHẬP` của xưởng, ĐVT thực tế có **5 loại**: `LÁ · CÂY · BỘ · SỢI · KG`.
-
-Và anh vừa cho biết: **hoá đơn NCC ghi theo kg**, còn xưởng **đếm và cắt theo lá**.
-
-Đây là **hai đơn vị cho cùng một thứ**, và em đề xuất xử lý thế này:
+**Định mức mỗi bộ cửa (suy ra, nhất quán ở mọi nhóm):**
 
 ```
-SỐ LÁ   ← thủ kho ĐẾM        → là TỒN KHO, là thứ đem đi cắt
-SỐ KG   ← hoá đơn NCC        → là TIỀN, là thứ lên công nợ phải trả
+Ray hộp        2 cây      ← luôn luôn 2
+Trục           1 cây      ← luôn luôn 1
+Còi báo        1 cái
+Con lăn        1 cặp
+Motor          1 bộ
+Bình lưu điện  1 bộ
+Puly lớn       4–6 cái    ← THAY ĐỔI: 6/6/6 nhưng CC2=5, CC3=4
+Lá nhôm        theo công thức chia lá ✅ (em tính được rồi)
+```
+
+**Và chiều dài vật tư đi theo kích thước cửa:**
+
+| Cửa | Trục | Ray hộp |
+|---|---|---|
+| RPBN 3840 | TRỤC 3900 | RAY 4300 |
+| RPBN 3240 | TRỤC 3300 | RAY 4300 |
+| RPBN 3050 | TRỤC 3200 | RAY 4300 |
+| RPBN 2790 | TRỤC 2900 | RAY 4300 |
+
+→ **Trục dài hơn rộng phủ bì khoảng 60–150 mm**, còn **ray cắt theo chiều cao** (CPB 4480 → ray 4300).
+
+> ❓ **Chỉ còn ba chỗ cần anh chốt:**
+> 1. **Puly lớn** vì sao lúc 4, lúc 5, lúc 6? Theo chiều rộng cửa, hay theo cân nặng?
+> 2. **Trục** dài hơn RPB bao nhiêu — có công thức không, hay làm tròn lên cây có sẵn?
+> 3. **Ray** = CPB trừ đi bao nhiêu? (4480 → 4300 là trừ 180)
+
+### 3.2 — ⛔ Bảng chọn mô tơ
+
+Trong `HOÀNG LAI` mọi bộ đều dùng `MOTOR ALUMAX 600KG`, nên chưa suy ra được quy tắc chọn.
+
+> ❓ **Cần anh cho:** bảng kiểu `cửa dưới … m² hoặc dưới … kg → mô tơ 400/600/800 kg`.
+> Nhắc lại: bảng trọng lượng anh gửi cho phép app **tự tính cân nặng cánh cửa**, nên chỉ cần
+> anh cho ngưỡng là app chọn mô tơ được.
+
+### 3.3 — 🟡 Công đoạn SƠN
+
+Từ `LỊCH SẢN XUẤT`: **`LÒ SƠN: 1 màu sơn (sơn được 345 lá) × tổng 11,5 m dài / 3 tiếng 1 mẻ`**
+
+Nghĩa là: một mẻ sơn **3 tiếng**, mỗi mẻ **345 lá** hoặc **11,5 m dài**, và **một mẻ chỉ một
+màu** — nên gom cùng màu vào một mẻ là việc phải tính khi lên lịch.
+
+Bảng giá NCC cũng phân biệt `THÔ` / `MÀU CHƯA DẬP` / `MÀU ĐÃ DẬP` với giá khác nhau.
+
+> ❓ **Cần anh mô tả:** sơn ở lò của xưởng hay thuê ngoài? Nhôm đi sơn có làm phiếu không?
+> **"Dập"** là công đoạn gì — trước hay sau sơn? Có hao hụt khi sơn không?
+
+### 3.4 — 📄 ĐỊNH MỨC GIỜ: sheet `LỊCH SẢN XUẤT` **không rỗng** — em đã nói sai
+
+Em báo hai lần rằng sheet này rỗng và em bị chặn. **Sai.** Nó có sẵn định mức đầy đủ:
+
+| Bộ phận | Định mức nguyên văn | Quy ra |
+|---|---|---|
+| **ÚC** | `1h45' / 12 m²` | 8,75 phút/m² |
+| **LƯỚI** | `4h / 9 m²` | 26,7 phút/m² |
+| **ĐỨC** | `cắt dập 40', 40' hoàn thiện, 20' lấy nhôm` | **100 phút/bộ** |
+| **ĐÀI LOAN** | `30'/BỘ` | 30 phút/bộ |
+| **SIÊU TRƯỜNG** | `30'/BỘ` | 30 phút/bộ |
+| **LÒ SƠN** | `345 lá × 11,5 m dài / 3 tiếng 1 mẻ` | 3 giờ/mẻ |
+
+Chú ý: **ÚC và LƯỚI tính theo m², ba nhóm kia tính theo BỘ.** Hai cách tính khác nhau, app
+phải hiểu cả hai.
+
+> ❓ **Chỉ còn thiếu một con số:** **số người mỗi tổ**.
+> Có nó là em tính được: `tổng giờ cần ÷ (số người × 8 giờ)` → ngày nào phải tăng ca.
+
+### 3.5 — 📄 DANH SÁCH LỖI — cấu trúc đã rõ
+
+Cột: `NGÀY ĐẶT HÀNG · NGÀY NHẬP LỖI · SỐ CHỨNG TỪ · KHÁCH HÀNG · NCC · NỘI DUNG ·
+NGƯỜI PHỤ TRÁCH · NGUYÊN NHÂN · TÌNH TRẠNG XỬ LÝ CHO KH · TÌNH TRẠNG XỬ LÝ CHO NCC`
+
+Điểm quan trọng: **lỗi được xử lý theo HAI phía song song** — với khách và với NCC. Ví dụ
+thật: *bình lưu điện E800I hỏng → nguyên nhân `LỖI NCC` → `ĐÃ ĐỔI TRẢ` cho khách, đồng thời
+trả về NCC*. Nên nó không phải một ô ghi chú, mà là **hai đường xử lý phải theo dõi riêng**.
+
+> ❓ **Cần anh cho:** `NGUYÊN NHÂN` có mấy loại cố định? (em mới thấy `LỖI NCC`; còn lỗi thợ,
+> lỗi vận chuyển, lỗi thiết kế…?)
+
+### 3.6 — 📄 BẢO HÀNH — cấu trúc đã rõ
+
+Sheet `DS BẢO HÀNH` theo dõi **bốn mốc thời gian có số lượng riêng**:
+
+```
+NGÀY NHẬP LỖI (SL) → NGÀY XUẤT ĐỔI (SL) → NGÀY GỬI BẢO HÀNH (SL) → NGÀY TRẢ BẢO HÀNH (SL)
+```
+
+Kèm `NCC · KHÁCH HÀNG · LOẠI HÀNG · TÌNH TRẠNG`.
+
+Đọc ra được quy trình thật: khách báo hỏng → **xưởng đổi hàng mới cho khách ngay** → rồi mới
+gửi hàng hỏng về NCC → NCC trả lại. Nghĩa là **xưởng ứng hàng trước, đòi NCC sau** — và số
+hàng đang nằm ở NCC là một loại tồn kho cần theo dõi.
+
+---
+
+## 4. Dòng MUA — ⛔ vẫn là chỗ hở lớn nhất
+
+**App chưa có đường nhập nhôm.** 1.256 lô hiện có là em nạp thẳng từ Excel, không qua chứng
+từ. Nên: không biết lô nào mua của ai, ngày nào, giá bao nhiêu → **không có công nợ phải
+trả**, và **không có giá vốn** → không tính được lãi mỗi bộ cửa.
+
+### 4.1 — Đơn vị tính: hai đơn vị cho cùng một thứ
+
+Sheet `NHẬP` cho thấy ĐVT thực tế có **5 loại**: `LÁ · CÂY · BỘ · SỢI · KG`. Anh cho biết
+**hoá đơn NCC theo kg**, còn xưởng **đếm và cắt theo lá**.
+
+```
+SỐ LÁ   ← thủ kho ĐẾM   → TỒN KHO, thứ đem đi cắt
+SỐ KG   ← hoá đơn NCC   → TIỀN, thứ lên công nợ phải trả
 KG lý thuyết = số lá × khổ × trọng lượng(kg/m)   → chỉ để ĐỐI CHIẾU
 ```
 
-**Vì sao không lấy kg chia ra số lá:** anh nói *"nhiều khi nhập có sai số"*. Nếu suy số lá từ
-cân nặng thì mỗi lô ra một số lẻ kiểu `29,7 lá` trong khi thợ đếm được `30` — app và thực tế
-lệch nhau **ngay từ lúc nhập, và lệch mãi**. Nên cân nặng không được phép quyết định tồn kho;
-nó chỉ làm chứng cho tiền và cho cảnh báo.
+**Vì sao không lấy kg chia ra số lá:** anh nói *"nhiều khi nhập có sai số"*. Suy số lá từ cân
+nặng sẽ ra số lẻ kiểu `29,7 lá` trong khi thợ đếm `30` — app và thực tế lệch **ngay từ lúc
+nhập và lệch mãi**. Cân nặng không được quyết định tồn kho.
 
-**Giá vốn mỗi lá** thì đơn giản và không cần hằng số nào:
-`giá vốn 1 lá = thành tiền hoá đơn ÷ số lá thực nhận`
+**Giá vốn mỗi lá** thì không cần hằng số nào: `thành tiền ÷ số lá thực nhận`.
 
-### 4.2 — ⚠️ Đơn vị trọng lượng: em nghĩ bảng của anh là **kg/mét dài**, không phải kg/m²
+### 4.2 — ⚠️ Trọng lượng: em nghĩ là **kg/mét dài**, không phải kg/m²
 
-Anh nói kg/m². Nhưng chính bảng anh gửi bác lại điều đó, ở hai chỗ:
-
-**Bằng chứng 1 — dòng ray.** `RHU100 = 1,419` là *ray hộp U100*. Ray là thanh thẳng,
-chỉ đo theo **mét dài**. Không ai tính ray theo m².
-
-**Bằng chứng 2 — thử ngược ra cân nặng cửa.** `AL548N = 0,425`, bản lá `0,055 m`:
-
-| Nếu hiểu con số là | 1 m² cửa cuốn sẽ nặng |
+| Nếu hiểu `AL548N = 0,425` là | 1 m² cửa cuốn nặng |
 |---|---|
-| kg/**mét dài** | 0,425 ÷ 0,055 = **7,7 kg/m²** ← đúng tầm cửa cuốn thật |
-| kg/**m²** | **0,425 kg/m²** ← nhẹ hơn một tờ bìa cứng |
+| kg/**mét dài** | 0,425 ÷ 0,055 = **7,7 kg/m²** ← đúng tầm cửa thật |
+| kg/**m²** | **0,425 kg/m²** ← nhẹ hơn tờ bìa |
 
-> **Cần anh xác nhận** hoặc cứ để em làm rồi tự kiểm: em sẽ cho app **hiện kg lý thuyết
-> cạnh kg hoá đơn**, nên ngay lô nhập đầu tiên anh sẽ thấy nó khớp hay lệch mười lần.
-> Đó là cách kiểm rẻ nhất, không cần tranh luận.
+Thêm bằng chứng: `RHU100 = 1,419` là **ray hộp** — ray là thanh thẳng, không ai tính theo m².
 
-Bảng trọng lượng anh gửi em đã lưu (40 dòng). **28 dòng khớp được mã nhôm**; 12 dòng còn lại
-là ray / lá đáy / lá yếm / thanh đáy:
+App sẽ hiện **kg lý thuyết cạnh kg hoá đơn** nên lô nhập đầu tiên tự lộ ra ai đúng.
+
+Bảng đã lưu `data/trong-luong-nhom.json`: **40 dòng, 28 khớp mã nhôm**. 12 dòng chưa khớp:
 
 ```
 TD325 · TD326 · TD327 · A282 · TD-TG-ALD · RHM8 · RHU100
 TD87A1 · RHM8(2.4MM) · CQ-VM111 · TDU26 · AL-YST
 ```
 
-> **Cần anh cho:** 12 mã trên tương ứng mã hàng nào trong app (hoặc chúng là mã riêng, cần
-> tạo mới trong danh mục vật tư).
+> ❓ Đây là ray / lá đáy / lá yếm / thanh đáy — **cần anh cho biết chúng ứng với mã nào**
+> trong danh mục, hoặc xác nhận là mã riêng cần tạo mới.
 
-### 4.3 — Bảng giá NCC theo ngày
+### 4.3 — 📄 Bảng giá NCC theo ngày (đ/kg)
 
-Bảng `GIÁ 2026` anh gửi có hình dạng rất rõ: **đ/kg, đổi theo ngày, chia 5 loại hàng**.
-
-| Loại hàng | 11/12/2025 | 11/03 | 08/04 | 07/05 | 25/06 | 01/07 | 13/07 |
+| Loại hàng | 11/12/25 | 11/03 | 08/04 | 07/05 | 25/06 | 01/07 | 13/07 |
 |---|---|---|---|---|---|---|---|
 | THÔ | 96.000 | 106.000 | 109.000 | 108.000 | 105.000 | 103.000 | 98.000 |
 | MÀU – chưa dập | 103.000 | 113.000 | 116.000 | 115.000 | 112.000 | 110.000 | 105.000 |
@@ -252,92 +287,107 @@ Bảng `GIÁ 2026` anh gửi có hình dạng rất rõ: **đ/kg, đổi theo ng
 | RAY MÀU | 105.000 | 115.000 | 118.000 | 117.000 | 114.000 | 112.000 | 107.000 |
 | RAY THÔ | 98.000 | 108.000 | 111.000 | 110.000 | 107.000 | 105.000 | 100.000 |
 
-Nền tảng đã có sẵn `Bảng giá` + `Chính sách giá` có **hiệu lực từ/đến**, nạp thẳng vào được.
+Nền tảng đã có `Bảng giá` + `Chính sách giá` có **hiệu lực từ/đến** — nạp thẳng được.
 
-> **Cần anh cho:** mã nhôm nào thuộc loại nào. Ví dụ `AL548N` là "MÀU – đã dập" hay
-> "MÀU – chưa dập"? Hay cùng một mã có thể mua ở cả 3 dạng (thô / màu chưa dập / màu đã dập)
-> tuỳ lần mua?
->
-> Nếu là vế sau thì **"thô" và "màu" phải là hai trạng thái tồn kho khác nhau** của cùng một
-> mã — và đó chính là chỗ nối với công đoạn sơn ở mục 3.3.
+> ❓ **Cần anh cho:** cùng một mã nhôm có mua được ở **cả 3 dạng** (thô / màu chưa dập / màu
+> đã dập) không? Nếu có thì **"thô" và "màu" là hai trạng thái tồn kho khác nhau** của cùng
+> một mã — và đó chính là chỗ nối với công đoạn sơn ở mục 3.3.
 
-### 4.4 — Công nợ phải trả chưa có
+### 4.4 — ⛔ Công nợ phải trả chưa có
 
-App hiện chỉ có **công nợ phải thu** (khách nợ mình). Chưa có phía **phải trả** (mình nợ NCC).
+App mới có **phải thu**. Chưa có **phải trả** cho NCC.
 
-> **Cần anh cho biết:** có cần theo dõi công nợ NCC trong app không, hay kế toán đang làm
-> ngoài? Nếu cần thì thanh toán NCC thường theo hình thức nào (tiền mặt / chuyển khoản /
-> gối đầu bao nhiêu ngày)?
+> ❓ Có cần theo dõi trong app không, hay kế toán làm ngoài? Nếu cần: thanh toán NCC theo
+> hình thức nào (tiền mặt / chuyển khoản / gối đầu bao nhiêu ngày)?
 
 ---
 
-## 5. Những thứ khác chưa làm
+## 5. Cấu trúc đơn hàng hằng tháng (T2 → T7.2026)
 
-| Việc | Trạng thái | Cần gì |
+Bảy sheet tháng, mỗi sheet ~2.400 → **50.000 dòng**. Cột thay đổi dần qua các tháng —
+sheet T6/T7 là bản mới nhất và đầy đủ nhất:
+
+```
+STT · Năm · Số chứng từ · ĐẠI LÝ · NGƯỜI PHỤ TRÁCH · LOẠI · MÃ HÀNG · LỖI SP
+· ĐƠN HÀNG · PHIẾU XUẤT KHO · GHI CHÚ · NGÀY GIAO · LỆNH XUẤT KHO · LỆNH SX · SỐ LƯỢNG TỒN
+```
+
+Quan sát quan trọng: **một số chứng từ = nhiều dòng hàng**. Ví dụ chứng từ `000086`:
+```
+000086  AL501   AL501 CPB 3M66 X RPBR 2M7 TRẮNG SỨ
+000086  Trục 114  TRỤC 2M8 X 1 CÂY
+```
+→ Đúng mô hình **Đơn hàng có nhiều dòng** mà app đang dùng ✅. Và nó **xác nhận lại việc bán
+tách món**: một đơn có cả cửa lẫn phụ kiện rời.
+
+Ô ghi chú trong sheet T6 còn ghi rõ: *"kế toán bấm chọn lệnh sản xuất"* — tức là **kế toán là
+người phát lệnh sản xuất**, không phải xưởng tự phát.
+
+> ❓ **Cần anh xác nhận:** đúng là kế toán bấm phát lệnh SX phải không? Và **`LỆNH XUẤT KHO`
+> khác `PHIẾU XUẤT KHO`** ở chỗ nào?
+
+---
+
+## 6. Những thứ khác
+
+| Việc | Trạng thái | Ghi chú |
 |---|---|---|
-| **Bảo hành** | ⛔ | File có sheet `DS BẢO HÀNH`. Cần biết: bảo hành bao lâu, theo bộ cửa hay theo đơn, ai tiếp nhận, quy trình xử lý |
-| **Đổ dữ liệu sang Google Sheet** | ⛔ | Chờ **khoá service account** của Google. Anh tạo ở console rồi gửi file JSON |
-| **Lắp đặt / đội lắp** | 🟡 | Phiếu xuất kho có ô đội lắp + ngày lắp, đã có báo cáo theo đội. Chưa có lịch lắp đặt |
-| **Vận chuyển** | 🟡 | Phiếu xuất có ô lái xe + biển số. Chưa có gì hơn |
-| **Nhiều đơn vị tính (CÂY/BỘ/SỢI)** | ⛔ | Hiện ĐVT chỉ là **cái nhãn** — máy không quy đổi. Ray mua theo cây, dùng theo mét thì cần khai "1 cây = mấy mét" |
-| **Hai kho (Xưởng 1 / Xưởng 2)** | 🟡 | Chọn kho đã chạy. Nhưng 1.256 lô nhôm hiện **đang để hết ở Kho 1** vì file tồn không có cột kho |
+| Danh sách KH/NCC | 📄 | Sheet `DS KH-NCC` có: tên · người phụ trách · **KH/NCC/KH LẺ** · SĐT · **chành xe / địa chỉ giao** |
+| Đổ Google Sheet | ⛔ | Chờ **khoá service account** |
+| Lắp đặt / đội lắp | 🟡 | Phiếu xuất có ô đội lắp + ngày lắp, có báo cáo theo đội |
+| Nhiều ĐVT (CÂY/BỘ/SỢI) | ⛔ | ĐVT hiện chỉ là **nhãn** — máy chưa quy đổi. Ray mua theo cây, bán theo **mét** (165.000 đ/m) nên **bắt buộc phải quy đổi** |
+| Hai kho Xưởng 1 / Xưởng 2 | 🟡 | Chọn kho đã chạy; 1.256 lô đang để hết ở Kho 1 |
 
-> **Cần anh cho biết:** tồn nhôm thực tế chia thế nào giữa Xưởng 1 và Xưởng 2? Hay để hết
-> một chỗ rồi chuyển kho bằng phiếu khi cần?
+> ❓ Tồn nhôm thực tế chia thế nào giữa hai xưởng?
 
 ---
 
-## 6. Dữ liệu rác cần dọn
+## 7. Dữ liệu rác cần dọn
 
-Trên `alu.kairo.vn` hiện có dữ liệu thử của em trong quá trình kiểm:
-
-| Bảng | Số bản ghi | Xử lý đề xuất |
+| Bảng | Số bản ghi | Đề xuất |
 |---|---|---|
-| Đơn hàng, Phiếu xuất, Hoá đơn, Phiếu thu | ~140 | **Xoá hết** |
-| Kho | 45 (hầu hết tên kiểu `Kho nhôm 19697`) | Xoá rác, giữ Xưởng 1 + Xưởng 2 |
-| Khách hàng | 35 | Xoá rác |
-| Hàng hoá | 59 | Giữ **17 mã nhôm thật**, xoá phần còn lại |
-| Công ty | 3 (`ALUMDOOR`, `Sáu Hồng`, `Xưởng`) | Giữ **ALUMDOOR**, xoá 2 cái kia |
-| **Lô nhôm tồn** | **1.256** | ⚠️ **GIỮ NGUYÊN** — đây là dữ liệu thật |
-
-> Anh gật một tiếng là em dọn. Xoá không hoàn lại được nên em không tự làm.
+| Đơn hàng · Phiếu xuất · Hoá đơn · Phiếu thu | ~140 | Xoá hết |
+| Kho (`Kho nhôm 19697`…) | 45 | Xoá rác, giữ Xưởng 1 + Xưởng 2 |
+| Khách hàng · Hàng hoá | 35 · 59 | Giữ 17 mã nhôm thật |
+| Công ty | 3 | Giữ **ALUMDOOR**, xoá `Sáu Hồng` + `Xưởng` |
+| **Lô nhôm tồn** | **1.256** | ⚠️ **GIỮ NGUYÊN** |
 
 ---
 
-## 7. Tóm tắt: 9 thứ cần anh bổ sung
+## 8. Tóm tắt: giờ chỉ còn **6 thứ** cần anh
 
-Xếp theo mức độ chặn việc — **1, 2 và 3 đang chặn nhiều nhất**:
+Bản 1 hỏi 9 điều. Đọc kỹ file thì 5 điều đã tự trả lời, nhưng lòi ra vài câu mới. Còn lại:
 
-1. **Định mức một bộ cửa** — ray, mô tơ, trục, phụ kiện hết bao nhiêu (lá thì em tính được rồi)
-2. **Giá bán TÁCH MÓN** — lá rời tính theo lá / mét / kg? có đắt hơn giá trong trọn bộ không?
-   (mục 3.1b — đây là chỗ em không đoán được, đoán sai là sai tiền)
-3. **12 mã ray / lá đáy / thanh đáy** ứng với mã hàng nào trong app
-4. **Mã nhôm nào thuộc loại giá nào** (THÔ / MÀU chưa dập / MÀU đã dập / RAY)
-5. **Bảng giá bán m²** — và "tùy trường hợp" là tùy theo cái gì
-6. **Công đoạn sơn** — làm ở đâu, có phiếu không, "dập" là gì
-7. **Định mức giờ + số người mỗi tổ** (cho lịch sản xuất / tăng ca)
-8. **Bảng chọn mô tơ** theo kích thước hoặc cân nặng cửa
-9. **Khoá Google service account** (cho phần đổ Sheet)
+| # | Cần gì | Vì sao chặn |
+|---|---|---|
+| 1 | **Giá LÁ RỜI** — theo lá, mét dài, hay kg? | Đoán sai là sai tiền. Ray/trục bán theo **mét**, nên em nghi lá cũng vậy |
+| 2 | **Số người mỗi tổ** | Có rồi là chạy được lịch sản xuất + tăng ca (định mức giờ đã đủ) |
+| 3 | **Bảng chọn mô tơ** theo m² hoặc kg cửa | App tự tính được cân nặng cửa rồi, chỉ thiếu ngưỡng |
+| 4 | **12 mã ray/lá đáy/thanh đáy** ứng mã nào | Chặn phần nhập kho phụ kiện |
+| 5 | **Cùng mã nhôm mua được cả thô lẫn màu?** | Quyết định "thô/màu" có phải hai trạng thái tồn kho không → nối với công đoạn sơn |
+| 6 | **Khoá Google service account** | Chặn phần đổ Sheet |
 
-Ngoài ra ba câu hỏi ngắn:
-- đơn vị trọng lượng là **kg/mét dài** phải không (mục 4.2)
-- có kiểu **"trọn bộ nhưng bỏ bớt món"** không, và trừ tiền thế nào (mục 3.1b)
-- tồn nhôm chia hai kho thế nào (mục 5)
+Kèm 6 câu xác nhận ngắn (đúng/sai là đủ):
+
+- Cách tính m² ở cửa lưới — `RỘNG PBRAY` là tổng cả 2 cánh? *(mục 2.1)*
+- Trọng lượng là **kg/mét dài** phải không? *(mục 4.2)*
+- Puly lớn 4/5/6 cái — theo cái gì? *(mục 3.1)*
+- Trục dài hơn rộng phủ bì bao nhiêu, ray ngắn hơn cao phủ bì bao nhiêu? *(mục 3.1)*
+- **Kế toán** là người bấm phát lệnh sản xuất? *(mục 5)*
+- Tồn nhôm chia hai xưởng thế nào? *(mục 6)*
 
 ---
 
-## Phụ lục — những gì đã chứng minh chạy trên tenant thật
-
-Chạy lại bất cứ lúc nào:
+## Phụ lục — đã chứng minh chạy trên tenant thật
 
 ```bash
 FORGE_ADMIN_PASSWORD=… node scripts/verify-alumdoor.mjs --origin https://alu.kairo.vn
 ```
 
-Phép thử này đọc **SỔ** (sổ kho, sổ công nợ), không đọc chứng từ — vì một chứng từ ghi thành
-công vẫn có thể chẳng động vào sổ nào, và đó đúng là kiểu hỏng im lặng nguy hiểm nhất.
+Phép thử đọc **SỔ** (sổ kho, sổ công nợ), không đọc chứng từ — vì chứng từ ghi thành công vẫn
+có thể chẳng động vào sổ nào, và đó là kiểu hỏng im lặng nguy hiểm nhất.
 
-Hiện bao gồm: nhập kho · đơn hàng · xuất kho trừ tồn · chặn xuất quá tồn · chặn xuất quá đơn ·
-hoá đơn lên công nợ · phiếu thu trừ nợ · đề xuất cắt · cắt thật · cắt từ nhiều lô ·
-từ chối khi thiếu nhôm · hoàn cắt · chặn hoàn hai lần · trả hàng · bảng giá server quyết ·
-chặn thiếu giá · báo giá → đơn hàng · chặn chuyển hai lần.
+Gồm: nhập kho · đơn hàng · xuất kho trừ tồn · chặn xuất quá tồn · chặn xuất quá đơn · hoá đơn
+lên công nợ · phiếu thu trừ nợ · đề xuất cắt · cắt thật · cắt từ nhiều lô · từ chối khi thiếu
+nhôm · hoàn cắt · chặn hoàn hai lần · trả hàng · bảng giá server quyết · chặn thiếu giá ·
+báo giá → đơn hàng · chặn chuyển hai lần.
