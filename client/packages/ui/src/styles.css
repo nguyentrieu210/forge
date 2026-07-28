@@ -752,6 +752,11 @@
     border-radius: 0;
     box-shadow: none;
   }
+  .mf-split-list-only {
+    inline-size: 100%;
+    max-inline-size: none;
+    contain: inline-size;
+  }
   /* Bảng nhiều cột chỉ được cuộn BÊN TRONG List; không được dùng intrinsic width đẩy
      rộng ResizablePanel rồi làm tràn cả shell. `contain:inline-size` cắt đường truyền
      min-content, còn table w-max/min-w-full vẫn giữ đủ cột và lấp kín khi dữ liệu ít. */

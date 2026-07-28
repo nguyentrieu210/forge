@@ -51,6 +51,13 @@ function TreeNode(props: TreeViewProps & { node: TreeNodeItem; depth: number }) 
   const kids = isOpen ? childrenOf(node.value) : undefined;
   // Node NHÓM mới được thêm con — kho lá chứa hàng, không chứa kho khác.
   const isGroup = Boolean(node.expandable);
+  const activateNode = () => {
+    // Một lần bấm vào thư mục cha phải làm đủ hai việc: mở form chi tiết ở cột giữa
+    // và bung nhánh con. Không tự đóng lại khi bấm dòng lần hai; thu gọn vẫn dành cho
+    // nút mũi tên để tránh mất cây trong lúc người dùng đang sửa form.
+    if (node.expandable && !isOpen) onToggle(node.value);
+    onSelect?.(node.value);
+  };
 
   return (
     <li className="mf-tree-li" role="none">
@@ -65,9 +72,9 @@ function TreeNode(props: TreeViewProps & { node: TreeNodeItem; depth: number }) 
         aria-selected={selected === node.value}
         aria-level={depth + 1}
         tabIndex={selected === node.value || (!selected && depth === 0) ? 0 : -1}
-        onClick={onSelect ? () => onSelect(node.value) : undefined}
+        onClick={(onSelect || node.expandable) ? activateNode : undefined}
         onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onSelect?.(node.value); }
+          if (event.key === "Enter" || event.key === " ") { event.preventDefault(); activateNode(); }
           if (event.key === "ArrowRight" && node.expandable && !isOpen) { event.preventDefault(); onToggle(node.value); }
           if (event.key === "ArrowLeft" && node.expandable && isOpen) { event.preventDefault(); onToggle(node.value); }
         }}
@@ -80,7 +87,8 @@ function TreeNode(props: TreeViewProps & { node: TreeNodeItem; depth: number }) 
             className="size-5"
             onClick={(event) => {
               event.stopPropagation();
-              onToggle(node.value);
+              if (isOpen) onToggle(node.value);
+              else activateNode();
             }}
             aria-label={isOpen ? t("tree.collapse") : t("tree.expand")}
           >
@@ -97,7 +105,6 @@ function TreeNode(props: TreeViewProps & { node: TreeNodeItem; depth: number }) 
           : <Package className="size-3.5 shrink-0 text-muted-foreground/70" />}
         <span
           className={cn("truncate text-sm", depth === 0 && "font-semibold", onSelect && "cursor-pointer hover:text-primary")}
-          onClick={onSelect ? (event) => { event.stopPropagation(); onSelect(node.value); } : undefined}
         >
           {node.title ?? node.value}
         </span>

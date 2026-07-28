@@ -67,7 +67,9 @@ export function SplitView(props: SplitViewProps) {
   }, [bp, hasContext, contextOpen, sheetOpen, props.hasDetail, props]);
 
   // ── Không có detail → list full ─────────────────────────────────────────────
-  if (!props.hasDetail) return <div className="mf-split h-full">{props.list}</div>;
+  if (!props.hasDetail) {
+    return <div className="mf-split mf-split-list-only h-full w-full min-w-0 max-w-none overflow-hidden">{props.list}</div>;
+  }
 
   // ── Desktop ≥1280: 3 cột resizable ─────────────────────────────────────────
   if (bp === "desktop") {

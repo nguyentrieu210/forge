@@ -39,7 +39,7 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
   return (
     <>
       <SplitView
-        autoSaveId={`mf-split-v2-${doctype}`}
+        autoSaveId={`mf-split-v3-${doctype}`}
         hasDetail={Boolean(decoded)}
         contextTitle={decoded}
         onCloseDetail={() => onNavigate(listPath)}
