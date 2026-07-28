@@ -12,7 +12,8 @@ import {
   CommandPalette, LoginForm, applyBrand, resolveIcon, useBusinessContext, useTheme,
   type AwesomeRecord, type NavItem,
 } from "@metaforge/shell";
-import { Button, Toaster } from "@metaforge/ui";
+import { Button, Input, Toaster } from "@metaforge/ui";
+import { ChevronRight, Folder, FolderOpen, Search } from "lucide-react";
 import { SocialCommerceLanding, type PublicSocialPage } from "./landing/SocialCommerceLanding.js";
 import { Storefront, type StorefrontPage } from "./storefront/Storefront.js";
 import "./styles.css";
@@ -194,6 +195,15 @@ function buildNavigation(manifest: AppManifest, catalog: ApplicationCatalog | un
     // là chuyện không mời người không dùng được vào một màn sẽ từ chối họ.
     items.push({ key: "__import", label: "Nhập dữ liệu", group: "Hệ thống", icon: resolveIcon("upload"), route: "/import" });
   }
+  if (manifest.nav.some((entry) => entry.group === "Danh mục")) {
+    items.push({
+      key: "__master_data",
+      label: "Danh mục",
+      group: "Điều hành",
+      icon: resolveIcon("folder-tree"),
+      route: "/master-data",
+    });
+  }
   const routes = new Set(items.map((item) => item.route));
   for (const app of catalog?.apps ?? []) {
     /**
@@ -221,6 +231,7 @@ function buildNavigation(manifest: AppManifest, catalog: ApplicationCatalog | un
       label: nav.label,
       group: nav.group ?? "Ứng dụng",
       ...(nav.group === "Danh mục" ? { subgroup: masterDataBranch(nav.key) } : {}),
+      ...(nav.group === "Danh mục" ? { hiddenInSidebar: true } : {}),
       icon: resolveIcon(nav.icon),
       route,
       doctype: (nav.kind ?? "doctype") === "doctype" ? nav.key : undefined,
@@ -458,6 +469,7 @@ function RuntimeRoutes({ manifest, boot, logout, nav, catalogError }: ScreenProp
       <Route path="/overview/:domain" element={<OverviewScreen {...screen} />} />
       <Route path="/process/:domain" element={<ProcessScreen {...screen} />} />
       <Route path="/catalog" element={<CatalogScreen {...screen} error={catalogError} />} />
+      <Route path="/master-data" element={<MasterDataScreen {...screen} />} />
       <Route path="/permissions" element={<PermissionScreen {...screen} />} />
       <Route path="/workspace/:workspace" element={<WorkspaceScreen {...screen} />} />
       {/* Touch-first experiences may still own the viewport. Social Commerce is a
@@ -539,7 +551,8 @@ function DoctypeScreen({ manifest, boot, logout, nav }: ScreenProps) {
   const navigate = useNavigate();
   const bridge = useBridge();
   const { doctype = manifest.home.doctype ?? "ToDo", name } = useParams();
-  const active = nav.find((item) => item.doctype === doctype)?.key ?? doctype;
+  const currentNav = nav.find((item) => item.doctype === doctype);
+  const active = currentNav?.hiddenInSidebar ? "__master_data" : (currentNav?.key ?? doctype);
   /**
    * Breadcrumb lấy nhãn từ MENU, không phải tên doctype.
    *
@@ -547,8 +560,85 @@ function DoctypeScreen({ manifest, boot, logout, nav }: ScreenProps) {
    * một màn, hai cái tên. Nhãn menu là thứ người dùng vừa bấm vào để tới đây, nên nó cũng
    * là cái tên họ mong đọc lại ở đầu trang.
    */
-  const title = nav.find((item) => item.doctype === doctype)?.label ?? doctype;
-  return <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={active} breadcrumbs={[{ label: title }]}><div className="h-full p-3 md:p-4"><DoctypeWorkspace doctype={doctype} name={name} bridge={bridge} onNavigate={navigate} /></div></Shell>;
+  const title = currentNav?.label ?? doctype;
+  const breadcrumbs = currentNav?.hiddenInSidebar
+    ? [{ label: "Danh mục", onClick: () => navigate("/master-data") }, { label: title }]
+    : [{ label: title }];
+  return <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={active} breadcrumbs={breadcrumbs}><div className="h-full p-3 md:p-4"><DoctypeWorkspace doctype={doctype} name={name} bridge={bridge} onNavigate={navigate} /></div></Shell>;
+}
+function MasterDataScreen(props: ScreenProps) {
+  const navigate = useNavigate();
+  const [query, setQuery] = useState("");
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set(["Hàng hoá & vật tư"]));
+  const branches = useMemo(() => {
+    const normalized = query.trim().toLocaleLowerCase("vi");
+    const grouped = new Map<string, RuntimeNav[]>();
+    for (const item of props.nav) {
+      if (!item.hiddenInSidebar || !item.subgroup) continue;
+      if (normalized && !`${item.label} ${item.key}`.toLocaleLowerCase("vi").includes(normalized)) continue;
+      if (!grouped.has(item.subgroup)) grouped.set(item.subgroup, []);
+      grouped.get(item.subgroup)!.push(item);
+    }
+    return [...grouped.entries()];
+  }, [props.nav, query]);
+  return (
+    <Shell {...props} active="__master_data" breadcrumbs={[{ label: "Danh mục" }]}>
+      <div className="h-full overflow-auto p-3 md:p-5">
+        <div className="mx-auto w-full max-w-5xl overflow-hidden rounded-xl border bg-card shadow-sm">
+          <div className="border-b px-5 py-4">
+            <h1 className="text-lg font-semibold">Danh mục</h1>
+            <p className="mt-1 text-sm text-muted-foreground">Mở nhánh rồi chọn danh mục cần quản lý.</p>
+            <div className="relative mt-3 max-w-md">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input value={query} onChange={(event) => setQuery(event.target.value)} className="pl-9" placeholder="Tìm danh mục…" />
+            </div>
+          </div>
+          <div className="p-3" role="tree" aria-label="Cây danh mục">
+            {branches.map(([branch, items]) => {
+              const isOpen = Boolean(query) || expanded.has(branch);
+              return (
+                <div key={branch} className="mb-1">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="h-10 w-full justify-start gap-2 px-3 font-semibold"
+                    aria-expanded={isOpen}
+                    onClick={() => setExpanded((previous) => {
+                      const next = new Set(previous);
+                      next.has(branch) ? next.delete(branch) : next.add(branch);
+                      return next;
+                    })}
+                  >
+                    <ChevronRight className={`size-4 transition-transform ${isOpen ? "rotate-90" : ""}`} />
+                    {isOpen ? <FolderOpen className="size-4 text-primary" /> : <Folder className="size-4 text-muted-foreground" />}
+                    <span>{branch}</span>
+                    <span className="ml-auto text-xs font-normal text-muted-foreground">{items.length}</span>
+                  </Button>
+                  {isOpen ? (
+                    <div className="ml-7 border-l pl-2" role="group">
+                      {items.map((item) => (
+                        <Button
+                          key={item.key}
+                          type="button"
+                          variant="ghost"
+                          className="mb-0.5 h-9 w-full justify-start gap-2 px-3 font-normal"
+                          onClick={() => navigate(item.route)}
+                        >
+                          <span className="text-muted-foreground [&_svg]:size-4">{item.icon}</span>
+                          <span className="truncate">{item.label}</span>
+                        </Button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+            {!branches.length ? <div className="p-8 text-center text-sm text-muted-foreground">Không tìm thấy danh mục phù hợp.</div> : null}
+          </div>
+        </div>
+      </div>
+    </Shell>
+  );
 }
 function OverviewScreen(props: ScreenProps) { const navigate = useNavigate(); const { domain = props.manifest.domain ?? "stock" } = useParams(); return <Shell {...props} active="__overview" breadcrumbs={[{ label: "Tổng quan" }]}><div className="h-full overflow-auto p-4"><OverviewContainer domain={domain} onNavigate={navigate} /></div></Shell>; }
 function ProcessScreen(props: ScreenProps) { const navigate = useNavigate(); const { domain = props.manifest.domain ?? "stock" } = useParams(); return <Shell {...props} active="__process" breadcrumbs={[{ label: "Quy trình" }]}><div className="h-full overflow-auto p-4"><ProcessContainer domain={domain} onNavigate={navigate} /></div></Shell>; }

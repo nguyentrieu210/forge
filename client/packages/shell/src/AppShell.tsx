@@ -21,6 +21,8 @@ export interface NavItem {
   group?: string;
   /** Nhánh con trong một nhóm sidebar, dùng để render menu dạng cây. */
   subgroup?: string;
+  /** Vẫn dùng cho route/Ctrl+K nhưng không hiện thành một dòng riêng ở sidebar. */
+  hiddenInSidebar?: boolean;
   badge?: number | string;
   disabledReason?: string;
   keywords?: string[];
@@ -142,7 +144,10 @@ export function AppShell(props: AppShellProps) {
     try { localStorage.setItem("mf-pinned-nav", JSON.stringify([...next])); } catch { /* private mode */ }
     return next;
   });
-  const pinnedItems = useMemo(() => props.nav.filter((item) => pinnedKeys.has(item.key)), [props.nav, pinnedKeys]);
+  const pinnedItems = useMemo(
+    () => props.nav.filter((item) => !item.hiddenInSidebar && pinnedKeys.has(item.key)),
+    [props.nav, pinnedKeys],
+  );
   const displayGroups = useMemo(
     () => (pinnedItems.length && !navQuery ? [{ name: t("shell.pinned"), items: pinnedItems }, ...groups] : groups),
     [groups, pinnedItems, navQuery, t],
@@ -481,6 +486,7 @@ function groupNav(nav: NavItem[], query: string): Array<{ name: string; items: N
   const normalized = query.trim().toLocaleLowerCase("vi");
   const map = new Map<string, NavItem[]>();
   for (const item of nav) {
+    if (item.hiddenInSidebar) continue;
     if (normalized && !`${item.label} ${item.key} ${(item.keywords ?? []).join(" ")}`.toLocaleLowerCase("vi").includes(normalized)) continue;
     const group = item.group ?? "";
     if (!map.has(group)) map.set(group, []);
