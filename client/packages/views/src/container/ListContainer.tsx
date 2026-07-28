@@ -36,7 +36,7 @@ export interface ListContainerProps {
 export function ListContainer(props: ListContainerProps) {
   const t = useT();
   const { doctype, bridge } = props;
-  const { adapter, scopeKey, fmt, roles } = useMetaForge();
+  const { adapter, scopeKey, fmt, roles, businessContext } = useMetaForge();
   const queryClient = useQueryClient();
   const metaQ = useMeta(doctype);
   const meta = metaQ.data ?? EMPTY_META;
@@ -93,6 +93,7 @@ export function ListContainer(props: ListContainerProps) {
   // Xoá hàng loạt không thể hoàn tác — hỏi xác nhận TRƯỚC (trước đây gọi API ngay, 0 xác nhận nào,
   // 1 cú click nhầm ở toolbar chọn nhiều dòng = mất dữ liệu vĩnh viễn hàng loạt).
   const [pendingDelete, setPendingDelete] = useState<string[] | null>(null);
+  const [exporting, setExporting] = useState(false);
   const confirmBulkDelete = useCallback((names: string[]) => setPendingDelete(names), []);
   const doBulkDelete = useCallback(async () => {
     if (!pendingDelete) return;
@@ -109,38 +110,74 @@ export function ListContainer(props: ListContainerProps) {
    * KHÔNG cha nào truyền. Nút tồn tại trong mã, không tồn tại trên màn hình; đó là lý do
    * "xuất Excel" bị coi là chưa làm.
    *
-   * Xuất đúng những gì đang thấy: cột đang hiện, giá trị đã định dạng (tiền có ₫, Link đã
-   * thành tên). Người dùng vừa lọc và sắp xong thì file phải khớp màn hình — gọi lại server
-   * để lấy "tất cả" sẽ trả về một tập khác với thứ họ vừa nhìn.
+   * Không chọn dòng nào ⇒ xuất TOÀN BỘ kết quả đang lọc/sắp xếp, đọc theo lô 100 (giới hạn
+   * page của server). Có chọn dòng ⇒ chỉ xuất đúng các dòng đã chọn trên trang hiện tại.
    */
   const exportSelected = useCallback(async (names: string[], visibleFields: string[]) => {
-    const chosen = new Set(names);
-    const rows = (listQ.data ?? []).filter((row) => chosen.size === 0 || chosen.has(String(row.name)));
-    if (!rows.length) return;
-    const visibleSet = new Set(visibleFields);
-    const visible = columns.filter((column) => visibleSet.has(column.fieldname));
-    const cols = visible.map((column) => ({ label: column.label, fieldname: column.fieldname, fieldtype: column.fieldtype }));
-    const raw = (row: Record<string, unknown> | unknown[], col: { fieldname?: string }) => (Array.isArray(row) ? "" : row[col.fieldname ?? ""]);
-    const text = (row: Record<string, unknown> | unknown[], col: { fieldname?: string }, index: number) => {
-      const column = visible[index];
-      const value = raw(row, col);
-      if (value === null || value === undefined) return "";
-      // Link: cùng nhãn đang hiện trên màn, không phải mã.
-      if (column?.fieldtype === "Link" && column.options) {
-        return displayValues[displayValueKey(column.options, String(value))] ?? String(value);
-      }
-      return column ? formatValue(value, column, fmt) : String(value);
-    };
-    const filename = stampedName(meta.label || meta.name || doctype);
+    if (exporting) return;
+    setExporting(true);
     try {
-      await downloadXlsx(filename, cols, rows as Array<Record<string, unknown>>, raw, text);
-      toast.success(t("list.export_done"));
-    } catch {
-      // xlsx là chunk tải riêng; mạng hỏng thì vẫn phải có file, nên rơi về CSV.
-      downloadCsv(filename, buildCsv(cols, rows as Array<Record<string, unknown>>, text));
-      toast.success(t("list.export_done_csv"));
+      const chosen = new Set(names);
+      let rows = (listQ.data ?? []).filter((row) => chosen.has(String(row.name)));
+      if (!chosen.size) {
+        rows = [];
+        const pageLength = 100;
+        const expected = countQ.data ?? Number.POSITIVE_INFINITY;
+        for (let limitStart = 0; limitStart < expected; limitStart += pageLength) {
+          const opts = { ...listOpts, limitStart, pageLength };
+          const batch = Object.keys(businessContext).length
+            ? await adapter.getContextualList(doctype, opts, businessContext)
+            : await adapter.getList(doctype, opts);
+          rows.push(...batch);
+          if (batch.length < pageLength) break;
+        }
+      }
+      if (!rows.length) return;
+
+      const visibleSet = new Set(visibleFields);
+      const visible = columns.filter((column) => visibleSet.has(column.fieldname));
+      const cols = visible.map((column) => ({ label: column.label, fieldname: column.fieldname, fieldtype: column.fieldtype }));
+      const linkRequests: Array<{ doctype: string; name: string }> = [];
+      const seenLinks = new Set<string>();
+      for (const row of rows) for (const column of visible) {
+        if (column.fieldtype !== "Link" || !column.options) continue;
+        const name = row[column.fieldname];
+        if (!name) continue;
+        const key = displayValueKey(column.options, String(name));
+        if (seenLinks.has(key)) continue;
+        seenLinks.add(key);
+        linkRequests.push({ doctype: column.options, name: String(name) });
+      }
+      const exportDisplayValues = { ...displayValues };
+      for (let start = 0; start < linkRequests.length; start += 200) {
+        const resolved = await adapter.resolveDisplayValues(linkRequests.slice(start, start + 200));
+        for (const entry of resolved) exportDisplayValues[displayValueKey(entry.doctype, entry.name)] = entry.label;
+      }
+
+      const raw = (row: Record<string, unknown> | unknown[], col: { fieldname?: string }) => (Array.isArray(row) ? "" : row[col.fieldname ?? ""]);
+      const text = (row: Record<string, unknown> | unknown[], col: { fieldname?: string }, index: number) => {
+        const column = visible[index];
+        const value = raw(row, col);
+        if (value === null || value === undefined) return "";
+        if (column?.fieldtype === "Link" && column.options) {
+          return exportDisplayValues[displayValueKey(column.options, String(value))] ?? String(value);
+        }
+        return column ? formatValue(value, column, fmt) : String(value);
+      };
+      const filename = stampedName(meta.label || meta.name || doctype);
+      try {
+        await downloadXlsx(filename, cols, rows as Array<Record<string, unknown>>, raw, text);
+        toast.success(`${t("list.export_done")} (${rows.length})`);
+      } catch {
+        downloadCsv(filename, buildCsv(cols, rows as Array<Record<string, unknown>>, text));
+        toast.success(`${t("list.export_done_csv")} (${rows.length})`);
+      }
+    } catch (error) {
+      toast.error(adapter.mapError(error).message);
+    } finally {
+      setExporting(false);
     }
-  }, [listQ.data, columns, displayValues, fmt, meta, doctype, t]);
+  }, [adapter, businessContext, columns, countQ.data, displayValues, doctype, exporting, fmt, listOpts, listQ.data, meta, t]);
 
   if (metaQ.isLoading) return <ListSkeleton />;
   if (metaQ.error) {
@@ -156,7 +193,9 @@ export function ListContainer(props: ListContainerProps) {
         meta={meta}
         rows={listQ.data ?? []}
         total={countQ.data}
-        loading={listQ.isLoading || listQ.isFetching}
+        // Chỉ che bảng ở lần tải đầu. Refetch có dữ liệu cache (do người dùng chủ động làm mới hoặc
+        // mutation invalidate) phải giữ nguyên bảng, tránh cảm giác cả màn hình "load lại".
+        loading={listQ.isLoading}
         error={listQ.error ? adapter.mapError(listQ.error).message : null}
         state={state}
         onStateChange={patch}
@@ -166,6 +205,7 @@ export function ListContainer(props: ListContainerProps) {
         onRefresh={refresh}
         onBulkDelete={caps.delete ? confirmBulkDelete : undefined}
         onExport={exportSelected}
+        exporting={exporting}
         title={meta.label || meta.name || doctype}
         activeRow={props.activeRow}
         fmt={fmt}

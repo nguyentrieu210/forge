@@ -48,6 +48,7 @@ export interface ListViewProps {
   onRefresh?: () => void;
   onBulkDelete?: (names: string[]) => void;
   onExport?: (names: string[], visibleFields: string[]) => void;
+  exporting?: boolean;
   title?: string;
   /** record đang mở ở cột giữa (split view) → highlight dòng. */
   activeRow?: string;
@@ -374,9 +375,7 @@ export function ListView(props: ListViewProps) {
                     ? <TitleCell row={row} col={c} imgField={imgField} displayValues={props.displayValues} onUploadImage={props.onUploadImage} />
                     : c.fieldtype === "Link" && c.options
                       ? <LinkCell doctype={c.options} value={row[c.fieldname]} displayValues={props.displayValues} />
-                      : c.inlineEditable && props.onInlineUpdate
-                        ? <InlineSelectCell row={row} col={c} onUpdate={props.onInlineUpdate} />
-                        : renderCell(row[c.fieldname], c, props.fmt)}
+                      : renderCell(row[c.fieldname], c, props.fmt)}
           </TableCell>
         ))}
         <TableCell aria-hidden className="p-0" />
@@ -385,10 +384,10 @@ export function ListView(props: ListViewProps) {
   };
 
   return (
-    <div className="mf-list-view flex h-full flex-col overflow-hidden rounded-lg border bg-card">
+    <div className="mf-list-view flex h-full flex-col overflow-hidden bg-card">
       <ListToolbar
         doctype={meta.name}
-        title={props.title ?? meta.name}
+        title={props.title ?? meta.label ?? meta.name}
         state={state}
         onChange={onStateChange}
         standardFilters={standardFilters}
@@ -397,6 +396,8 @@ export function ListView(props: ListViewProps) {
         onToggleColumn={toggleColumn}
         onCreate={props.onCreate}
         onRefresh={props.onRefresh}
+        onExport={props.onExport ? () => props.onExport!([], columns.map((column) => column.fieldname)) : undefined}
+        exporting={props.exporting}
         searchLink={props.searchLink}
         density={density}
         onDensityChange={setDensity}
@@ -412,7 +413,7 @@ export function ListView(props: ListViewProps) {
           count={state.selected.length}
           onClear={() => onStateChange({ selected: [] })}
           onDelete={props.onBulkDelete ? () => props.onBulkDelete!(state.selected) : undefined}
-          onExport={props.onExport ? () => props.onExport!(state.selected, columns.map((column) => column.fieldname)) : undefined}
+          onExport={props.onExport && !props.exporting ? () => props.onExport!(state.selected, columns.map((column) => column.fieldname)) : undefined}
         />
       ) : null}
 

@@ -11,14 +11,15 @@
  */
 import { useCallback, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
-import { Button, ConfirmDialog, PromptDialog, toast, useT } from "@metaforge/ui";
+import { Plus, Search } from "lucide-react";
+import { Button, ConfirmDialog, Input, PromptDialog, toast, useT } from "@metaforge/ui";
 import type { TreeNode } from "@metaforge/adapter-frappe";
 import { useMetaForge } from "../container/provider.js";
 import { TreeView, type TreeNodeItem } from "./TreeView.js";
 
 export interface TreeContainerProps {
   doctype: string;
+  title?: string;
   onSelect?: (name: string) => void;
   selected?: string;
   /** hiện cả node đã disable (mặc định ẩn, giống treeview chuẩn Frappe). */
@@ -39,7 +40,7 @@ type Pending =
   | { kind: "delete"; node: TreeNodeItem };
 
 export function TreeContainer({
-  doctype, onSelect, selected, includeDisabled = false, editable = false, createDefaults,
+  doctype, title, onSelect, selected, includeDisabled = false, editable = false, createDefaults,
 }: TreeContainerProps) {
   const t = useT();
   const { adapter, scopeKey } = useMetaForge();
@@ -48,6 +49,7 @@ export function TreeContainer({
   const [childrenMap, setChildrenMap] = useState<Record<string, TreeNodeItem[]>>({});
   const [pending, setPending] = useState<Pending | null>(null);
   const [busy, setBusy] = useState(false);
+  const [query, setQuery] = useState("");
 
   // parent="" ⇒ get_children trả về node gốc (quy ước của treeview Frappe).
   const rootQ = useQuery({
@@ -152,24 +154,42 @@ export function TreeContainer({
   if (rootQ.error) return <div className="p-4 text-sm text-destructive" role="alert">{adapter.mapError(rootQ.error).message}</div>;
 
   return (
-    <div className="flex h-full flex-col gap-2">
-      {editable ? (
-        <div className="flex items-center gap-2">
+    <div className="mf-tree-page flex h-full flex-col overflow-hidden bg-card">
+      <div className="mf-page-head flex min-h-14 shrink-0 items-center gap-3 border-b px-5 py-2">
+        <div className="min-w-0">
+          <h1 className="truncate text-lg font-semibold">{title ?? doctype}</h1>
+          <p className="text-xs text-muted-foreground">{t("tree.hint")}</p>
+        </div>
+        {editable ? (
           <Button
             type="button"
-            variant="outline"
             size="sm"
+            className="ml-auto"
             onClick={() => setPending({ kind: "add", parent: "", isRoot: true, asGroup: true })}
           >
             <Plus className="mr-1 size-3.5" /> {t("tree.add_root")}
           </Button>
-          <span className="text-xs text-muted-foreground">{t("tree.hint")}</span>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
 
-      <div className="min-h-0 flex-1 overflow-auto">
+      <div className="mf-tree-toolbar flex shrink-0 items-center border-b px-4 py-2">
+        <div className="relative w-full max-w-sm">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            className="h-8 w-full pl-8"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={t("common.search")}
+            aria-label={t("common.search")}
+          />
+        </div>
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-auto px-4 py-3">
         <TreeView
-          roots={(rootQ.data ?? []).map(toItem)}
+          roots={(rootQ.data ?? [])
+            .map(toItem)
+            .filter((node) => !query.trim() || (node.title ?? node.value).toLocaleLowerCase("vi").includes(query.trim().toLocaleLowerCase("vi")))}
           childrenOf={(value) => childrenMap[value]}
           expanded={expanded}
           onToggle={onToggle}

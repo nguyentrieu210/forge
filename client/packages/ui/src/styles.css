@@ -532,9 +532,16 @@
   }
 
   /* List / report tables */
+  .mf-doctype-page,
+  .mf-document-workspace {
+    background: var(--card);
+  }
+  .mf-page-head {
+    background: var(--card);
+  }
   .mf-list-view {
-    border-radius: var(--mf-panel-radius);
-    box-shadow: var(--mf-card-shadow);
+    border-radius: 0;
+    box-shadow: none;
   }
   .mf-list-toolbar { background: var(--card); }
   /* Hàng tiêu đề DÍNH (sticky) phải ĐỤC hoàn toàn: nền bán trong suốt (bg-muted/40 mặc định của
@@ -568,8 +575,8 @@
 
   /* Forms */
   .mf-form-view {
-    border-radius: var(--mf-panel-radius);
-    box-shadow: var(--mf-card-shadow);
+    border-radius: 0;
+    box-shadow: none;
   }
   .mf-form-header {
     background: color-mix(in srgb, var(--card) 96%, transparent);
@@ -577,13 +584,17 @@
   }
   .mf-form-body { background: var(--card); }
   .mf-form-section {
-    border: 1px solid transparent;
-    border-radius: 0.65rem;
-    padding: 0.25rem;
+    border-radius: 0;
   }
   .mf-form-section:has(.mf-field-error) {
-    border-color: color-mix(in srgb, var(--destructive) 24%, transparent);
+    border-color: color-mix(in srgb, var(--destructive) 24%, var(--border));
     background: color-mix(in srgb, var(--destructive) 2%, transparent);
+  }
+  .mf-form-sidebar {
+    background: var(--card);
+  }
+  .mf-tree-card {
+    box-shadow: none;
   }
   .mf-field label { letter-spacing: 0.005em; }
   .mf-field :is(input, textarea, button[role="combobox"]) { border-radius: var(--mf-control-radius); }

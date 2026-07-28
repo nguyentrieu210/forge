@@ -13,7 +13,7 @@ import { AlertTriangle, History, X } from "lucide-react";
 import { resolveMeta, collectFetchFrom, type DocTypeMeta, type Doc, type ResolvedField } from "@metaforge/core";
 import { ControlRegistry, FallbackControl, type FieldServices } from "@metaforge/controls";
 import type { WorkflowTransition } from "@metaforge/adapter-frappe";
-import { Separator, Button, Badge, toast, cn, useT } from "@metaforge/ui";
+import { Button, Badge, toast, cn, useT } from "@metaforge/ui";
 import { FormGuide } from "./FormGuide.js";
 import { useMetaForgeOptional } from "../container/provider.js";
 import { groupLayout, isFullWidthField, type FormTab } from "./layout.js";
@@ -76,31 +76,6 @@ export interface FormViewProps {
  * xuống dòng. Không còn khe rỗng, vì không còn khe — chỉ có ô và khoảng cách giữa chúng.
  * Bốn ô đầu phiếu mua (NCC 17rem + ba ô ngắn 10rem) cộng lại vừa một hàng ở khung 1120px.
  */
-const BASIS: Record<string, string> = {
-  Check: "basis-[9rem]",
-  Int: "basis-[8rem]", Float: "basis-[8rem]", Currency: "basis-[10rem]", Percent: "basis-[8rem]",
-  Duration: "basis-[10rem]", Rating: "basis-[10rem]", Color: "basis-[8rem]",
-  Date: "basis-[10rem]", Time: "basis-[9rem]", Datetime: "basis-[13rem]",
-  Select: "basis-[13rem]", Link: "basis-[17rem]", "Dynamic Link": "basis-[17rem]",
-  Data: "basis-[17rem]", Barcode: "basis-[13rem]", Phone: "basis-[13rem]",
-};
-
-/**
- * `basis` của một field. Field nội dung dài chiếm trọn hàng — chúng cần chỗ để đọc.
- *
- * Ô chọn đo theo LỰA CHỌN DÀI NHẤT, cùng luật với cột của bảng con: "Thường / Cần gấp"
- * cần ít chỗ hơn hẳn một ô chọn trạng thái, và cấp đều cho cả hai thì ô ngắn thừa chỗ
- * còn ô dài vẫn thiếu.
- */
-function basisClass(field: { fieldtype: string; options?: string }): string {
-  if (isFullWidthField(field.fieldtype)) return "basis-full";
-  if (field.fieldtype === "Select") {
-    const longest = (field.options ?? "").split("\n").reduce((max, option) => Math.max(max, option.trim().length), 0);
-    return longest <= 8 ? "basis-[9rem]" : longest <= 16 ? "basis-[13rem]" : "basis-[17rem]";
-  }
-  return BASIS[field.fieldtype] ?? "basis-[17rem]";
-}
-
 /** Zod schema từ field required đang hiển thị (dynamic theo depends_on). */
 function buildSchema(resolved: ResolvedField[], t: (k: string, f?: string) => string): z.ZodTypeAny {
   const shape: Record<string, z.ZodTypeAny> = {};
@@ -319,10 +294,10 @@ export function FormView(props: FormViewProps) {
       {/* HEADER + TABS sticky — bỏ qua khi shell cha (vd modal Create) đã tự hiện tiêu đề riêng. */}
       {!props.hideHeader ? (
         <div className="mf-form-header sticky top-0 z-20 shrink-0 border-b bg-card/95 backdrop-blur">
-          <div className="flex flex-wrap items-center gap-3 px-4 py-2.5">
+          <div className="flex min-h-14 flex-wrap items-center gap-3 px-5 py-2">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="truncate text-sm font-semibold">{title}</span>
+                <span className="truncate text-lg font-semibold">{title}</span>
                 {actionCtx.dirty ? (
                   <span className="mf-dirty inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400" title={t("form.dirty_guard", DIRTY_GUARD_REASON)}>
                     <span className="size-1.5 rounded-full bg-amber-500" aria-hidden="true" />{t("form.unsaved")}
@@ -353,7 +328,7 @@ export function FormView(props: FormViewProps) {
           </div>
 
           {tabs.length > 1 ? (
-            <div role="tablist" aria-label={t("form.sections", "Các phần của biểu mẫu")} className="flex h-8 w-full justify-start overflow-x-auto rounded-none border-t bg-transparent p-0">
+            <div role="tablist" aria-label={t("form.sections", "Các phần của biểu mẫu")} className="flex h-10 w-full justify-start overflow-x-auto rounded-none border-t bg-transparent px-3">
                 {tabs.map((tb, i) => (
                   <Button
                     type="button"
@@ -362,7 +337,7 @@ export function FormView(props: FormViewProps) {
                     role="tab"
                     aria-selected={activeIdx === i}
                     onClick={() => setActiveTab(i)}
-                    className={cn("h-8 shrink-0 rounded-none border-b-2 border-transparent px-3 text-xs", activeIdx === i && "border-primary text-foreground")}
+                    className={cn("h-10 shrink-0 rounded-none border-b-2 border-transparent px-3 text-sm", activeIdx === i && "border-primary text-foreground")}
                   >
                     <span>{tb.label || t("form.tab_general")}</span>
                     {tabErrorCount(tb) ? <Badge variant="destructive" className="ml-1 h-4 min-w-4 justify-center px-1 text-[10px]">{tabErrorCount(tb)}</Badge> : null}
@@ -373,7 +348,7 @@ export function FormView(props: FormViewProps) {
         </div>
       ) : tabs.length > 1 ? (
         <div className="mf-form-header sticky top-0 z-20 shrink-0 border-b bg-card/95 backdrop-blur">
-          <div role="tablist" aria-label={t("form.sections", "Các phần của biểu mẫu")} className="flex h-8 w-full justify-start overflow-x-auto rounded-none bg-transparent p-0">
+          <div role="tablist" aria-label={t("form.sections", "Các phần của biểu mẫu")} className="flex h-10 w-full justify-start overflow-x-auto rounded-none bg-transparent px-3">
               {tabs.map((tb, i) => (
                 <Button
                   type="button"
@@ -382,7 +357,7 @@ export function FormView(props: FormViewProps) {
                   role="tab"
                   aria-selected={activeIdx === i}
                   onClick={() => setActiveTab(i)}
-                  className={cn("h-8 shrink-0 rounded-none border-b-2 border-transparent px-3 text-xs", activeIdx === i && "border-primary text-foreground")}
+                  className={cn("h-10 shrink-0 rounded-none border-b-2 border-transparent px-3 text-sm", activeIdx === i && "border-primary text-foreground")}
                 >
                   <span>{tb.label || t("form.tab_general")}</span>
                   {tabErrorCount(tb) ? <Badge variant="destructive" className="ml-1 h-4 min-w-4 justify-center px-1 text-[10px]">{tabErrorCount(tb)}</Badge> : null}
@@ -427,17 +402,14 @@ export function FormView(props: FormViewProps) {
         {/* 96rem chứ không phải 72rem: khung chứa đã rộng 1400px cho vừa bảng dòng hàng, mà
             trần cũ 1152px thì form dừng lại giữa chừng và chừa một mảng trắng bên phải —
             trần an toàn cho màn siêu rộng biến thành trần cho màn làm việc bình thường. */}
-        <div className="w-full max-w-[96rem] space-y-2 px-3 py-2.5">
+        <div className="mx-auto w-full max-w-[72rem] px-6 pb-10">
           {/* Hướng dẫn nhập cho chứng từ này — chỉ hiện ở TAB ĐẦU để không lặp lại ở mọi tab. */}
           {activeIdx === 0 ? <FormGuide doctype={meta.name} guide={formGuides?.[meta.name]} className="mb-1" /> : null}
           {tab?.sections.map((section, si) =>
             section.hidden ? null : (
-              <section key={si} className="mf-form-section space-y-1.5">
+              <section key={si} className="mf-form-section border-b py-5 last:border-b-0">
                 {section.label ? (
-                  <>
-                    <h3 className="mf-section-heading text-xs font-semibold uppercase tracking-wide text-muted-foreground">{section.label}</h3>
-                    <Separator />
-                  </>
+                  <h3 className="mf-section-heading mb-4 text-sm font-semibold text-foreground">{section.label}</h3>
                 ) : null}
                 {/* gap-y-2.5 thay vì 4, gap-x-5 thay vì 6 — mật độ dày kiểu ERP, đọc được cả form
                     trong 1 màn thay vì phải cuộn. */}
@@ -447,7 +419,7 @@ export function FormView(props: FormViewProps) {
                 {/* Flex-wrap, KHÔNG phải lưới: field tự chảy theo bề rộng của chính nó và tự
                     xuống dòng khi hết chỗ. Lưới cấp khe đều nhau nên ô ngắn nằm giữa khe rộng,
                     hở hai bên — đó là gốc của cảm giác "form quá rộng, kích cỡ không hợp lý". */}
-                <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
+                <div className="grid grid-cols-1 items-start gap-x-8 gap-y-4 md:grid-cols-2">
                   {section.columns.flatMap((col) => col.fields).map((rf) => (
                     <Field key={rf.field.fieldname} id={fieldDomId(rf.field.fieldname)} rf={rf} form={form} registry={registry} services={services} docName={String(doc.name)} parentDoctype={meta.name} roles={roles} values={values} />
                   ))}
@@ -532,7 +504,7 @@ function Field({ id, rf, form, registry, services, docName, parentDoctype, roles
            * cung cấp. Đó đúng là "kích cỡ không hợp lý" và "dư khoảng trắng".
            */
           "min-w-0",
-          !isCheck && basisClass(field),
+          isFullWidthField(field.fieldtype) && "col-span-full",
           rf.state && `mf-state-${rf.state}`,
           rf.readOnly && "mf-field-readonly",
           fieldState.error && "mf-field-error",
@@ -555,7 +527,7 @@ function Field({ id, rf, form, registry, services, docName, parentDoctype, roles
 
         return (
           <div className={cn(wrapper, "flex flex-col gap-1")}>
-            <label htmlFor={id} className="text-[11px] font-medium leading-tight text-muted-foreground">{label}</label>
+            <label htmlFor={id} className="text-xs font-medium leading-tight text-muted-foreground">{label}</label>
             {description ? <div className="-mt-0.5">{description}</div> : null}
             {control}
             {fieldState.error ? <span id={`${id}-error`} className="text-xs text-destructive" role="alert">{fieldState.error.message}</span> : null}

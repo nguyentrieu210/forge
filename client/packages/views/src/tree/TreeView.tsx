@@ -34,7 +34,7 @@ export interface TreeViewProps {
 
 export function TreeView(props: TreeViewProps) {
   return (
-    <div className="mf-view-card overflow-auto p-2">
+    <div className="mf-tree-card mx-auto min-h-full w-full max-w-5xl overflow-auto rounded-md border bg-card p-2">
       <ul className="mf-tree" role="tree">
         {props.roots.map((n) => (
           <TreeNode key={n.value} node={n} depth={0} {...props} />
@@ -56,8 +56,8 @@ function TreeNode(props: TreeViewProps & { node: TreeNodeItem; depth: number }) 
     <li className="mf-tree-li" role="none">
       <div
         className={cn(
-          "group/node flex items-center gap-1 rounded-md px-1 py-1 hover:bg-accent/60",
-          selected === node.value && "bg-accent",
+          "group/node flex min-h-9 items-center gap-1 rounded px-2 py-1 hover:bg-accent/60",
+          selected === node.value && "bg-accent font-medium shadow-[inset_2px_0_0_var(--primary)]",
         )}
         style={{ paddingLeft: depth * 16 }}
         role="treeitem"
@@ -96,7 +96,7 @@ function TreeNode(props: TreeViewProps & { node: TreeNodeItem; depth: number }) 
           ? (isOpen ? <FolderOpen className="size-3.5 shrink-0 text-muted-foreground" /> : <Folder className="size-3.5 shrink-0 text-muted-foreground" />)
           : <Package className="size-3.5 shrink-0 text-muted-foreground/70" />}
         <span
-          className={cn("truncate text-sm", onSelect && "cursor-pointer hover:text-primary")}
+          className={cn("truncate text-sm", depth === 0 && "font-semibold", onSelect && "cursor-pointer hover:text-primary")}
           onClick={onSelect ? (event) => { event.stopPropagation(); onSelect(node.value); } : undefined}
         >
           {node.title ?? node.value}

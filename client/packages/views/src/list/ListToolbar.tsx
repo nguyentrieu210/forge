@@ -5,7 +5,7 @@
  * (do useListUrlState xử lý). Chips hiển thị filter đang bật + "Xoá lọc".
  */
 import { useEffect, useRef, useState } from "react";
-import { Bookmark, CalendarDays, Check, ChevronsUpDown, Columns3, Group, History, Loader2, Search, SlidersHorizontal, Plus, X, RefreshCw, Rows2, Rows3, Trash2, Undo2 } from "lucide-react";
+import { Bookmark, CalendarDays, Check, ChevronsUpDown, Columns3, Download, Group, History, Loader2, Search, SlidersHorizontal, Plus, X, RefreshCw, Rows2, Rows3, Trash2, Undo2 } from "lucide-react";
 import {
   Button, Input, Badge, PromptDialog, cn, useT,
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
@@ -33,6 +33,9 @@ export interface ListToolbarProps {
   onToggleColumn: (fieldname: string) => void;
   onCreate?: () => void;
   onRefresh?: () => void;
+  /** Xuất toàn bộ kết quả đang lọc; luôn nằm trên toolbar, không bắt buộc chọn dòng trước. */
+  onExport?: () => void;
+  exporting?: boolean;
   searchLink?: (doctype: string, text: string) => Promise<Array<{ value: string; description?: string }>>;
   density?: "comfortable" | "compact";
   onDensityChange?: (d: "comfortable" | "compact") => void;
@@ -53,8 +56,20 @@ export function ListToolbar(props: ListToolbarProps) {
   const hasActive = activeFilters.length > 0 || state.routeFilters.length > 0 || state.q.trim() !== "" || Boolean(state.dateRange);
 
   return (
-    <div className="mf-list-toolbar flex flex-col gap-2 border-b bg-card px-3 py-2">
-      <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+    <div className="mf-list-toolbar flex flex-col border-b bg-card">
+      <div className="mf-page-head flex min-h-14 items-center gap-3 border-b px-5 py-2">
+        <div className="min-w-0">
+          <h1 className="truncate text-lg font-semibold">{props.title}</h1>
+          <p className="text-xs text-muted-foreground">{props.doctype}</p>
+        </div>
+        {props.onCreate ? (
+          <Button className="ml-auto h-8" onClick={props.onCreate}>
+            <Plus /> {t("common.create")}
+          </Button>
+        ) : null}
+      </div>
+
+      <div className="mf-list-filterbar flex min-w-0 flex-wrap items-center gap-1.5 px-3 py-2">
         <SearchBox doctype={props.doctype} value={state.q} onCommit={(q) => onChange({ q })} />
 
         <DateRangeFilter
@@ -111,16 +126,23 @@ export function ListToolbar(props: ListToolbarProps) {
             onReset={props.onResetColumns}
             canReset={props.canResetColumns}
           />
-          {props.onCreate ? (
-            <Button className="h-8" onClick={props.onCreate}>
-              <Plus /> {t("common.create")}
+          {props.onExport ? (
+            <Button
+              variant="outline"
+              className="h-8"
+              disabled={props.exporting}
+              onClick={props.onExport}
+              aria-label={t("list.export_all", "Xuất Excel")}
+            >
+              {props.exporting ? <Loader2 className="animate-spin" /> : <Download />}
+              <span className="max-sm:hidden">{t("list.export_all", "Xuất Excel")}</span>
             </Button>
           ) : null}
         </div>
       </div>
 
       {hasActive ? (
-        <div className="flex flex-wrap items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5 border-t px-3 py-2">
           {state.q.trim() ? (
             <Chip label={`"${state.q}"`} onClear={() => onChange({ q: "" })} />
           ) : null}

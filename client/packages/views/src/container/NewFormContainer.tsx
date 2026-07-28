@@ -4,6 +4,7 @@
  * → validate required (Zod) → createDoc → điều hướng tới bản ghi vừa tạo. KHÔNG fetch getDoc.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { applyContextPolicy, serializeCreateDocument, type Doc, type DocField, type DocTypeMeta } from "@metaforge/core";
 import { Button, ConfirmDialog, toast, useT } from "@metaforge/ui";
 import { FormView } from "../form/FormView.js";
@@ -39,6 +40,8 @@ export interface NewFormContainerProps {
    * ĐÚNG luồng Huỷ sẵn có: chưa nhập gì thì đóng luôn, đang nhập dở thì hỏi xác nhận. Dùng bộ đếm
    * thay vì boolean để bấm ra ngoài lần thứ 2, thứ 3 vẫn kích hoạt được. */
   closeRequest?: number;
+  /** Page = biểu mẫu Desk đầy đủ; dialog = quick-create gọn. */
+  presentation?: "page" | "dialog";
 }
 
 function blankDoc(meta: DocTypeMeta, contextDefaults: Record<string, string> = {}): Doc {
@@ -66,7 +69,8 @@ function blankDoc(meta: DocTypeMeta, contextDefaults: Record<string, string> = {
 export function NewFormContainer(props: NewFormContainerProps) {
   const t = useT();
   const { doctype } = props;
-  const { adapter, registry, services, roles, businessContext, contextPolicies } = useMetaForge();
+  const { adapter, registry, services, roles, scopeKey, businessContext, contextPolicies } = useMetaForge();
+  const queryClient = useQueryClient();
   const metaQ = useFormMeta(doctype);
   const capsQ = useCapabilities(doctype); // new-doc: doctype-level create/write (fail-closed)
   const caps = capsQ.data ?? NO_CAPS;
@@ -135,6 +139,10 @@ export function NewFormContainer(props: NewFormContainerProps) {
       // ⇒ không mất default/required chưa chạm. `doc` = blankDoc(meta) mang default.
       const full = serializeCreateDocument(metaQ.data, { ...(doc as Record<string, unknown>), ...changed });
       const created = await adapter.createDoc(doctype, full);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: [scopeKey, "list", doctype], refetchType: "all" }),
+        queryClient.invalidateQueries({ queryKey: [scopeKey, "count", doctype], refetchType: "all" }),
+      ]);
       if (saveIntentRef.current === "continue") {
         toast.success(`${t("form.created")} ${created.name} — ${t("form.continue_new_record")}`);
         setResetSeq((s) => s + 1);
@@ -170,7 +178,7 @@ export function NewFormContainer(props: NewFormContainerProps) {
         fieldErrors={fieldErrors}
         hideDefaultActions
         // Modal cha (vd DoctypeWorkspace) đã tự hiện tiêu đề "Tạo {doctype}" — ẩn header trùng của FormView.
-        hideHeader
+        hideHeader={props.presentation !== "page"}
         footerActions={<>
           <Button type="button" variant="outline" disabled={saving} onClick={requestCancel}>{t("common.cancel")}</Button>
           <Button type="submit" variant="outline" disabled={!caps.create || saving} onClick={() => { saveIntentRef.current = "continue"; }}>{t("form.save_and_new")}</Button>

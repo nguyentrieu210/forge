@@ -5,7 +5,7 @@
  *   perms ← docinfo.permissions · transitions ← get_transitions (server) ·
  *   submit/cancel/amend/delete ← adapter · workflow ← applyWorkflow → refetch doc+transitions+timeline.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ConfirmDialog, PromptDialog, toast, useT } from "@metaforge/ui";
 import { FormView } from "../form/FormView.js";
@@ -29,6 +29,7 @@ export interface FormContainerProps {
   onPrint?: () => void;
   /** đóng form, quay về danh sách (hiện nút X trong header form). */
   onClose?: () => void;
+  headerActions?: ReactNode;
 }
 
 export function FormContainer(props: FormContainerProps) {
@@ -74,12 +75,19 @@ export function FormContainer(props: FormContainerProps) {
       qc.invalidateQueries({ queryKey: [scopeKey, "caps", doctype, name] }),
     ]);
 
+  const invalidateList = () => Promise.all([
+    // `all`: ở mobile SplitView không mount list khi đang mở form. Vẫn làm mới cache NGAY sau
+    // mutation để lúc đóng form danh sách hiện đúng dữ liệu mà không cần refetch-on-mount.
+    qc.invalidateQueries({ queryKey: [scopeKey, "list", doctype], refetchType: "all" }),
+    qc.invalidateQueries({ queryKey: [scopeKey, "count", doctype], refetchType: "all" }),
+  ]);
+
   const onSave = async (changed: Record<string, unknown>) => {
     setSaving(true);
     setFieldErrors(undefined);
     try {
       await adapter.updateDoc(doctype, name, changed, String(doc.modified ?? ""));
-      await refetchAll();
+      await Promise.all([refetchAll(), invalidateList()]);
       setConflict(false);
       toast.success(t("form.saved"));
       props.onSaved?.();
@@ -107,9 +115,9 @@ export function FormContainer(props: FormContainerProps) {
     if (kind === "print") { props.onPrint?.(); return; }
     setSaving(true);
     try {
-      if (kind === "submit") { await adapter.submit(doc); toast.success(t("form.submitted")); await refetchAll(); }
-      else if (kind === "cancel") { await adapter.cancel(doctype, name); toast.success(t("form.cancelled")); await refetchAll(); }
-      else if (kind === "amend") { const d = await adapter.amend(doctype, name); toast.success(t("form.amended")); props.onSaved?.(); void d; }
+      if (kind === "submit") { await adapter.submit(doc); toast.success(t("form.submitted")); await Promise.all([refetchAll(), invalidateList()]); }
+      else if (kind === "cancel") { await adapter.cancel(doctype, name); toast.success(t("form.cancelled")); await Promise.all([refetchAll(), invalidateList()]); }
+      else if (kind === "amend") { const d = await adapter.amend(doctype, name); toast.success(t("form.amended")); await invalidateList(); props.onSaved?.(); void d; }
     } catch (e) {
       toast.error(adapter.mapError(e).message);
     } finally {
@@ -121,6 +129,7 @@ export function FormContainer(props: FormContainerProps) {
     setSaving(true);
     try {
       await adapter.deleteDoc(doctype, name);
+      await invalidateList();
       toast.success(t("form.deleted"));
       props.onDeleted?.();
     } catch (e) {
@@ -135,6 +144,7 @@ export function FormContainer(props: FormContainerProps) {
     setSaving(true);
     try {
       const finalName = await adapter.rename(doctype, name, newName);
+      await invalidateList();
       toast.success(t("form.renamed"));
       props.onRenamed?.(finalName);
     } catch (e) {
@@ -149,7 +159,7 @@ export function FormContainer(props: FormContainerProps) {
     try {
       await adapter.applyWorkflow(doc, action);
       toast.success(`${t("form.workflow_done")}: ${action}`);
-      await refetchAll();
+      await Promise.all([refetchAll(), invalidateList()]);
     } catch (e) {
       toast.error(adapter.mapError(e).message);
     } finally {
@@ -161,6 +171,7 @@ export function FormContainer(props: FormContainerProps) {
     <>
       <FormView
         onClose={props.onClose}
+        headerActions={props.headerActions}
         meta={metaQ.data}
         doc={doc}
         registry={registry}

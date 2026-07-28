@@ -52,6 +52,12 @@ export function useList(doctype: string, opts: ListOpts = {}, enabled = true): U
       ? adapter.getContextualList(doctype, opts, businessContext)
       : adapter.getList(doctype, opts),
     enabled,
+    // List và form là hai route anh em. Khi mở một bản ghi, route list bị unmount; quay lại không
+    // được tự gọi API rồi phủ trạng thái loading lên bảng thêm một lần nữa. Dữ liệu list được làm
+    // mới có chủ đích sau create/update/delete/workflow hoặc bằng nút "Làm mới".
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    gcTime: 30 * 60_000,
     placeholderData: (prev) => prev, // giữ trang cũ khi đổi filter/page → không nháy
   });
 }
@@ -66,6 +72,10 @@ export function useCount(doctype: string, filters?: Filters, orFilters?: Filters
       ? adapter.getContextualCount(doctype, filters, orFilters, businessContext)
       : adapter.getCount(doctype, filters, orFilters),
     enabled,
+    // Đi cùng chính sách của useList: tổng số dòng phải dùng lại cùng snapshot khi đóng form.
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    gcTime: 30 * 60_000,
     placeholderData: (prev) => prev,
   });
 }
