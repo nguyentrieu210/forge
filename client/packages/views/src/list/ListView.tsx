@@ -32,6 +32,7 @@ import {
   type ListColumnPreferences,
 } from "./column-preferences.js";
 import { usePullToRefresh } from "./pull-to-refresh.js";
+import type { ExportFormat } from "../report/export.js";
 
 export interface ListViewProps {
   meta: DocTypeMeta;
@@ -47,7 +48,7 @@ export interface ListViewProps {
   onCreate?: () => void;
   onRefresh?: () => void;
   onBulkDelete?: (names: string[]) => void;
-  onExport?: (names: string[], visibleFields: string[]) => void;
+  onExport?: (names: string[], visibleFields: string[], format: ExportFormat) => void;
   exporting?: boolean;
   title?: string;
   /** record đang mở ở cột giữa (split view) → highlight dòng. */
@@ -396,7 +397,7 @@ export function ListView(props: ListViewProps) {
         onToggleColumn={toggleColumn}
         onCreate={props.onCreate}
         onRefresh={props.onRefresh}
-        onExport={props.onExport ? () => props.onExport!([], columns.map((column) => column.fieldname)) : undefined}
+        onExport={props.onExport ? (format) => props.onExport!([], columns.map((column) => column.fieldname), format) : undefined}
         exporting={props.exporting}
         searchLink={props.searchLink}
         density={density}
@@ -413,7 +414,7 @@ export function ListView(props: ListViewProps) {
           count={state.selected.length}
           onClear={() => onStateChange({ selected: [] })}
           onDelete={props.onBulkDelete ? () => props.onBulkDelete!(state.selected) : undefined}
-          onExport={props.onExport && !props.exporting ? () => props.onExport!(state.selected, columns.map((column) => column.fieldname)) : undefined}
+          onExport={props.onExport && !props.exporting ? () => props.onExport!(state.selected, columns.map((column) => column.fieldname), "xlsx") : undefined}
         />
       ) : null}
 

@@ -49,9 +49,9 @@ const THIRD_WIDTH_NAMES = /(^|_)(status|state|uom|unit|currency|priority)(_|$)/i
  * Metadata khai `form_width` luôn thắng. Nếu DocType cũ chưa khai thì tiêu đề và
  * nội dung dài chiếm trọn hàng, field nhận diện ngắn chiếm 1/3, còn lại chiếm 1/2.
  */
-export function resolveFormFieldWidth(field: DocField, titleField?: string): FormFieldWidth {
+export function resolveFormFieldWidth(field: DocField, _titleField?: string): FormFieldWidth {
   if (field.form_width === "full" || field.form_width === "half" || field.form_width === "third") return field.form_width;
-  if (isFullWidthField(field.fieldtype) || field.fieldname === titleField || field.fieldname === "title" || field.fieldname === "subject") return "full";
+  if (isFullWidthField(field.fieldtype)) return "full";
   if (THIRD_WIDTH_TYPES.has(field.fieldtype) || THIRD_WIDTH_NAMES.test(field.fieldname)) return "third";
   return "half";
 }

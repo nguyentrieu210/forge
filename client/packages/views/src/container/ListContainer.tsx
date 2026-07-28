@@ -10,7 +10,7 @@ import { displayValueKey, type Doc, type DocTypeMeta, type ListOpts } from "@met
 import { ConfirmDialog, Skeleton, toast, useT } from "@metaforge/ui";
 import { ListView } from "../list/ListView.js";
 import { formatValue } from "../list/cells.js";
-import { buildCsv, downloadCsv, downloadXlsx, stampedName } from "../report/export.js";
+import { buildCsv, downloadCsv, downloadXlsx, printTablePdf, stampedName, type ExportFormat } from "../report/export.js";
 import { deriveColumns, imageField } from "../list/columns.js";
 import { buildServerQuery, countQuery } from "../list/filters.js";
 import { useListUrlState, type UrlStateBridge } from "../list/useListState.js";
@@ -113,7 +113,7 @@ export function ListContainer(props: ListContainerProps) {
    * Không chọn dòng nào ⇒ xuất TOÀN BỘ kết quả đang lọc/sắp xếp, đọc theo lô 100 (giới hạn
    * page của server). Có chọn dòng ⇒ chỉ xuất đúng các dòng đã chọn trên trang hiện tại.
    */
-  const exportSelected = useCallback(async (names: string[], visibleFields: string[]) => {
+  const exportSelected = useCallback(async (names: string[], visibleFields: string[], format: ExportFormat = "xlsx") => {
     if (exporting) return;
     setExporting(true);
     try {
@@ -165,6 +165,11 @@ export function ListContainer(props: ListContainerProps) {
         return column ? formatValue(value, column, fmt) : String(value);
       };
       const filename = stampedName(meta.label || meta.name || doctype);
+      if (format === "pdf") {
+        printTablePdf(filename, cols, rows as Array<Record<string, unknown>>, text);
+        toast.success(`Đã mở bản PDF (${rows.length})`);
+        return;
+      }
       try {
         await downloadXlsx(filename, cols, rows as Array<Record<string, unknown>>, raw, text);
         toast.success(`${t("list.export_done")} (${rows.length})`);

@@ -290,7 +290,7 @@ export function FormView(props: FormViewProps) {
   onValidRef.current = onValid;
 
   return (
-    <form className="mf-form-view flex h-full flex-col overflow-hidden bg-card" onSubmit={form.handleSubmit(onValid)}>
+    <form className={cn("mf-form-view flex h-full flex-col overflow-hidden bg-card", props.isNew && "mf-form-create")} onSubmit={form.handleSubmit(onValid)}>
       {/* HEADER + TABS sticky — bỏ qua khi shell cha (vd modal Create) đã tự hiện tiêu đề riêng. */}
       {!props.hideHeader ? (
         <div className="mf-form-header sticky top-0 z-20 shrink-0 border-b bg-card/95 backdrop-blur">
@@ -402,15 +402,20 @@ export function FormView(props: FormViewProps) {
         {/* 96rem chứ không phải 72rem: khung chứa đã rộng 1400px cho vừa bảng dòng hàng, mà
             trần cũ 1152px thì form dừng lại giữa chừng và chừa một mảng trắng bên phải —
             trần an toàn cho màn siêu rộng biến thành trần cho màn làm việc bình thường. */}
-        <div className="mx-auto w-full max-w-[72rem] px-6 pb-10">
+        <div className="mx-auto w-full max-w-[72rem] px-4 pb-6">
           {/* Hướng dẫn nhập cho chứng từ này — chỉ hiện ở TAB ĐẦU để không lặp lại ở mọi tab. */}
           {activeIdx === 0 ? <FormGuide doctype={meta.name} guide={formGuides?.[meta.name]} className="mb-1" /> : null}
-          {tab?.sections.map((section, si) =>
-            section.hidden ? null : (
-              <section key={si} className="mf-form-section border-b py-5 last:border-b-0">
-                {section.label ? (
-                  <h3 className="mf-section-heading mb-4 text-sm font-semibold text-foreground">{section.label}</h3>
-                ) : null}
+          {tab?.sections.map((section, si) => {
+            if (section.hidden) return null;
+            const sectionFields = section.columns.flatMap((col) => col.fields);
+            return (
+              <section key={si} className="mf-form-section py-3">
+                <div className="mf-section-heading mb-3 flex items-center gap-3">
+                  <h3 className="shrink-0 text-[13px] font-semibold text-foreground">
+                    {section.label || t("form.section_general", "Thông tin chung")}
+                  </h3>
+                  <span className="h-px min-w-8 flex-1 bg-border" aria-hidden="true" />
+                </div>
                 {/* gap-y-2.5 thay vì 4, gap-x-5 thay vì 6 — mật độ dày kiểu ERP, đọc được cả form
                     trong 1 màn thay vì phải cuộn. */}
                 {/* MỘT lưới duy nhất cho cả section (không phải 2 khối dọc lồng nhau) — nhờ vậy
@@ -419,31 +424,71 @@ export function FormView(props: FormViewProps) {
                 {/* Flex-wrap, KHÔNG phải lưới: field tự chảy theo bề rộng của chính nó và tự
                     xuống dòng khi hết chỗ. Lưới cấp khe đều nhau nên ô ngắn nằm giữa khe rộng,
                     hở hai bên — đó là gốc của cảm giác "form quá rộng, kích cỡ không hợp lý". */}
-                <div className="mf-form-grid grid items-start gap-x-3 gap-y-4">
-                  {section.columns.flatMap((col) => col.fields).map((rf) => (
-                    <Field
-                      key={rf.field.fieldname}
-                      id={fieldDomId(rf.field.fieldname)}
-                      rf={rf}
-                      width={resolveFormFieldWidth(rf.field, meta.title_field)}
-                      form={form}
-                      registry={registry}
-                      services={services}
-                      docName={String(doc.name)}
-                      parentDoctype={meta.name}
-                      roles={roles}
-                      values={values}
-                    />
-                  ))}
+                <div className="mf-form-grid grid items-start gap-x-3 gap-y-3">
+                  {groupCheckFields(sectionFields).map((entry, groupIndex) =>
+                    Array.isArray(entry) ? (
+                      <div key={`checks-${groupIndex}`} className="mf-check-group">
+                        {entry.map((rf) => (
+                          <Field
+                            key={rf.field.fieldname}
+                            id={fieldDomId(rf.field.fieldname)}
+                            rf={rf}
+                            width="third"
+                            form={form}
+                            registry={registry}
+                            services={services}
+                            docName={String(doc.name)}
+                            parentDoctype={meta.name}
+                            roles={roles}
+                            values={values}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <Field
+                        key={entry.field.fieldname}
+                        id={fieldDomId(entry.field.fieldname)}
+                        rf={entry}
+                        width={resolveFormFieldWidth(entry.field, meta.title_field)}
+                        form={form}
+                        registry={registry}
+                        services={services}
+                        docName={String(doc.name)}
+                        parentDoctype={meta.name}
+                        roles={roles}
+                        values={values}
+                      />
+                    ),
+                  )}
                 </div>
               </section>
-            ),
-          )}
+            );
+          })}
         </div>
       </div>
       {props.footerActions ? <div className="mf-form-footer sticky bottom-0 z-20 flex shrink-0 items-center justify-end gap-2 border-t bg-card/95 px-4 py-3 backdrop-blur">{props.footerActions}</div> : null}
     </form>
   );
+}
+
+/** Gom các checkbox LIỀN NHAU vào một hàng riêng để chúng không chen vào phần trống của hàng input. */
+function groupCheckFields(fields: ResolvedField[]): Array<ResolvedField | ResolvedField[]> {
+  const grouped: Array<ResolvedField | ResolvedField[]> = [];
+  let checks: ResolvedField[] = [];
+  const flush = () => {
+    if (!checks.length) return;
+    grouped.push(checks);
+    checks = [];
+  };
+  for (const field of fields) {
+    if (field.field.fieldtype === "Check") checks.push(field);
+    else {
+      flush();
+      grouped.push(field);
+    }
+  }
+  flush();
+  return grouped;
 }
 
 interface FieldProps {

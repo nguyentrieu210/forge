@@ -39,7 +39,7 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
   return (
     <>
       <SplitView
-        autoSaveId={`mf-split-${doctype}`}
+        autoSaveId={`mf-split-v2-${doctype}`}
         hasDetail={Boolean(decoded)}
         contextTitle={decoded}
         onCloseDetail={() => onNavigate(listPath)}
@@ -71,7 +71,6 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
             onDuplicate={() => onNavigate(`${listPath}/new`)}
             onRenamed={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)}
             onPrint={() => onNavigate(`${printBase}/${doctype}/${encodeURIComponent(decoded)}`)}
-            onClose={() => onNavigate(listPath)}
           />
         ) : null}
         context={decoded ? (
@@ -86,14 +85,14 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
 
       <Dialog open={isNew} onOpenChange={(open) => { if (!open) setCloseRequest((value) => value + 1); }}>
         <DialogContent
-          className="flex h-[min(92vh,900px)] w-[min(94vw,1180px)] max-w-none flex-col overflow-hidden p-0"
+          className="flex h-[min(92vh,900px)] w-[min(96vw,760px)] max-w-none flex-col overflow-hidden p-0"
           onInteractOutside={(event) => { event.preventDefault(); setCloseRequest((value) => value + 1); }}
           onEscapeKeyDown={(event) => { event.preventDefault(); setCloseRequest((value) => value + 1); }}
         >
           <DialogHeader className="shrink-0 border-b px-5 py-3">
             <DialogTitle>{t("form.create_title_prefix")} {(titleMeta.data?.label ?? doctype).toLocaleLowerCase("vi")}</DialogTitle>
           </DialogHeader>
-          <div className="min-h-0 flex-1 overflow-hidden p-4">
+          <div className="min-h-0 flex-1 overflow-hidden">
             <NewFormContainer
               doctype={doctype}
               closeRequest={closeRequest}

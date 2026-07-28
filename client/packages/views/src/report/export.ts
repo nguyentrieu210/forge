@@ -38,6 +38,8 @@ export interface ExportColumn {
   fieldtype?: string;
 }
 
+export type ExportFormat = "xlsx" | "pdf";
+
 /** Fieldtype cần ghi xuống Excel dưới dạng SỐ THẬT để còn SUM/lọc/vẽ biểu đồ được. */
 const NUMERIC_FIELDTYPES = new Set(["Currency", "Float", "Int", "Percent"]);
 
@@ -81,6 +83,76 @@ export async function downloadXlsx(
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "BaoCao");
   XLSX.writeFile(wb, filename.endsWith(".xlsx") ? filename : `${filename}.xlsx`);
+}
+
+function html(value: unknown): string {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+/**
+ * Mở hộp thoại in của trình duyệt với một bảng đã dàn trang A4 ngang.
+ * Người dùng chọn "Lưu thành PDF"; cách này giữ đúng font Unicode tiếng Việt mà
+ * không phải nhúng thêm một bộ font nặng vào bundle.
+ */
+export function printTablePdf(
+  filename: string,
+  columns: ExportColumn[],
+  rows: Array<Record<string, unknown> | unknown[]>,
+  textOf: (row: Record<string, unknown> | unknown[], col: ExportColumn, idx: number) => string,
+): void {
+  const frame = document.createElement("iframe");
+  frame.setAttribute("aria-hidden", "true");
+  frame.style.position = "fixed";
+  frame.style.right = "0";
+  frame.style.bottom = "0";
+  frame.style.width = "1px";
+  frame.style.height = "1px";
+  frame.style.border = "0";
+  frame.style.opacity = "0";
+  document.body.appendChild(frame);
+
+  const doc = frame.contentDocument;
+  if (!doc) {
+    frame.remove();
+    throw new Error("Không thể tạo bản PDF");
+  }
+  const head = columns.map((column) => `<th>${html(column.label ?? column.fieldname ?? "")}</th>`).join("");
+  const body = rows.map((row) =>
+    `<tr>${columns.map((column, index) => `<td>${html(textOf(row, column, index))}</td>`).join("")}</tr>`,
+  ).join("");
+  doc.open();
+  doc.write(`<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>${html(filename)}</title>
+    <style>
+      @page { size: A4 landscape; margin: 10mm; }
+      * { box-sizing: border-box; }
+      body { margin: 0; color: #111827; font: 10px/1.35 Arial, "Segoe UI", sans-serif; }
+      h1 { margin: 0 0 8px; font-size: 16px; }
+      .meta { margin-bottom: 10px; color: #667085; }
+      table { width: 100%; border-collapse: collapse; table-layout: auto; }
+      thead { display: table-header-group; }
+      tr { break-inside: avoid; }
+      th, td { border: 1px solid #d0d5dd; padding: 5px 6px; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+      th { background: #f2f4f7; font-weight: 700; }
+      tbody tr:nth-child(even) { background: #f9fafb; }
+    </style></head><body>
+      <h1>${html(filename.replace(/-\d{8}-\d{4}$/, ""))}</h1>
+      <div class="meta">${rows.length} bản ghi · ${html(new Date().toLocaleString("vi-VN"))}</div>
+      <table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>
+    </body></html>`);
+  doc.close();
+
+  const cleanup = () => setTimeout(() => frame.remove(), 500);
+  frame.contentWindow?.addEventListener("afterprint", cleanup, { once: true });
+  setTimeout(() => {
+    frame.contentWindow?.focus();
+    frame.contentWindow?.print();
+    setTimeout(cleanup, 60_000);
+  }, 100);
 }
 
 /**

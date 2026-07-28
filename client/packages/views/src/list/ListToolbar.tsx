@@ -5,7 +5,7 @@
  * (do useListUrlState xử lý). Chips hiển thị filter đang bật + "Xoá lọc".
  */
 import { useEffect, useRef, useState } from "react";
-import { Bookmark, CalendarDays, Check, ChevronsUpDown, Columns3, Download, Group, History, Loader2, Search, SlidersHorizontal, Plus, X, RefreshCw, Rows2, Rows3, Trash2, Undo2 } from "lucide-react";
+import { Bookmark, CalendarDays, Check, ChevronsUpDown, ChevronDown, Columns3, Download, FileSpreadsheet, FileText, Group, History, Loader2, Search, SlidersHorizontal, Plus, X, RefreshCw, Rows2, Rows3, Trash2, Undo2 } from "lucide-react";
 import {
   Button, Input, Badge, PromptDialog, cn, useT,
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
@@ -18,6 +18,7 @@ import type { StandardFilter, ListState } from "./filters.js";
 import { loadSavedFilters, saveFilterPreset, deleteFilterPreset, type SavedFilterPreset } from "./saved-filters.js";
 import { clearSearchHistory, loadSearchHistory, recordSearch } from "./search-history.js";
 import { DATE_RANGE_LABELS, primaryDateField, resolveDateRange, type DateRangeKey } from "./date-range.js";
+import type { ExportFormat } from "../report/export.js";
 
 const ALL = "__all__";
 
@@ -34,7 +35,7 @@ export interface ListToolbarProps {
   onCreate?: () => void;
   onRefresh?: () => void;
   /** Xuất toàn bộ kết quả đang lọc; luôn nằm trên toolbar, không bắt buộc chọn dòng trước. */
-  onExport?: () => void;
+  onExport?: (format: ExportFormat) => void;
   exporting?: boolean;
   searchLink?: (doctype: string, text: string) => Promise<Array<{ value: string; description?: string }>>;
   density?: "comfortable" | "compact";
@@ -120,16 +121,30 @@ export function ListToolbar(props: ListToolbarProps) {
             canReset={props.canResetColumns}
           />
           {props.onExport ? (
-            <Button
-              variant="outline"
-              className="h-8"
-              disabled={props.exporting}
-              onClick={props.onExport}
-              aria-label={t("list.export_all", "Xuất Excel")}
-            >
-              {props.exporting ? <Loader2 className="animate-spin" /> : <Download />}
-              <span className="max-sm:hidden">{t("list.export_all", "Xuất Excel")}</span>
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="h-8"
+                  disabled={props.exporting}
+                  aria-label="Xuất dữ liệu"
+                >
+                  {props.exporting ? <Loader2 className="animate-spin" /> : <Download />}
+                  <span className="max-sm:hidden">Xuất</span>
+                  <ChevronDown className="size-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-44">
+                <DropdownMenuLabel>Chọn định dạng</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => props.onExport?.("xlsx")}>
+                  <FileSpreadsheet className="text-emerald-600" /> Excel (.xlsx)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => props.onExport?.("pdf")}>
+                  <FileText className="text-destructive" /> PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : null}
         </div>
       </div>

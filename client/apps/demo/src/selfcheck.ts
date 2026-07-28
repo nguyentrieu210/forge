@@ -828,12 +828,35 @@ check("layout: Section Break depends_on ẩn → section ẩn", () => {
   assert.equal(cond!.hidden, true, "Section Break ẩn → section ẩn");
 });
 
-check("form width: explicit thắng, title toàn hàng, field ngắn 3 ô, mặc định 2 ô", () => {
-  assert.equal(resolveFormFieldWidth({ fieldname: "item_name", fieldtype: "Data" }, "item_name"), "full");
+check("form width: tên/mã mặc định 2 ô, field ngắn 3 ô, explicit luôn thắng", () => {
+  assert.equal(resolveFormFieldWidth({ fieldname: "item_name", fieldtype: "Data" }, "item_name"), "half");
   assert.equal(resolveFormFieldWidth({ fieldname: "stock_uom", fieldtype: "Link" }), "third");
   assert.equal(resolveFormFieldWidth({ fieldname: "item_status", fieldtype: "Data" }), "third");
   assert.equal(resolveFormFieldWidth({ fieldname: "item_code", fieldtype: "Data" }), "half");
   assert.equal(resolveFormFieldWidth({ fieldname: "item_code", fieldtype: "Data", form_width: "full" }), "full");
+});
+
+check("FormView: checkbox được gom riêng, không chen vào hàng input", () => {
+  const compactMeta: DocTypeMeta = {
+    name: "Item",
+    title_field: "item_name",
+    fields: [
+      { fieldname: "item_code", fieldtype: "Data", label: "Mã hàng" },
+      { fieldname: "item_name", fieldtype: "Data", label: "Tên hàng" },
+      { fieldname: "can_buy", fieldtype: "Check", label: "Được mua" },
+      { fieldname: "can_sell", fieldtype: "Check", label: "Được bán" },
+      { fieldname: "is_stock", fieldtype: "Check", label: "Quản lý tồn" },
+    ],
+    permissions: [{ role: "All", permlevel: 0, read: 1, write: 1 }],
+  };
+  const html = renderToStaticMarkup(h(FormView, {
+    meta: compactMeta,
+    doc: { name: "ITEM-1", doctype: "Item" },
+    registry: createFullRegistry(),
+    roles: ["All"],
+  }));
+  assert.ok(html.includes("mf-check-group"));
+  assert.equal((html.match(/mf-field-width-half/g) ?? []).length, 2);
 });
 
 // 25. DATETIME: Frappe "YYYY-MM-DD HH:mm:ss" → input datetime-local "YYYY-MM-DDTHH:mm".

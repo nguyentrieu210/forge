@@ -71,7 +71,7 @@ export { ReportContainer } from "./report/ReportContainer.js";
 // Khối dựng biểu — dùng chung cho mọi báo cáo dạng biểu, không riêng app nào.
 export { exportFormXlsx, ymdToDmy, type FormXlsxOptions, type HeaderMerge } from "./report/form-export.js";
 export { PeriodPicker, type PeriodPickerProps } from "./report/PeriodPicker.js";
-export { buildCsv, downloadCsv, downloadXlsx, stampedName, type ExportColumn } from "./report/export.js";
+export { buildCsv, downloadCsv, downloadXlsx, printTablePdf, stampedName, type ExportColumn, type ExportFormat } from "./report/export.js";
 export { PrintView, type PrintViewProps } from "./print/PrintView.js";
 export { PrintContainer, type PrintContainerProps } from "./print/PrintContainer.js";
 export { DashboardView, type DashboardViewProps, type DashboardCard, type DashboardChartData } from "./dashboard/DashboardView.js";

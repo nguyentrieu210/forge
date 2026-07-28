@@ -592,10 +592,20 @@
   .mf-form-grid > .mf-field {
     grid-column: 1 / -1;
   }
+  .mf-check-group {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    column-gap: 0.75rem;
+    row-gap: 0.5rem;
+    padding-block: 0.125rem;
+  }
   @container (min-width: 26rem) {
     .mf-form-grid > .mf-field-width-full { grid-column: span 6; }
     .mf-form-grid > .mf-field-width-half { grid-column: span 3; }
     .mf-form-grid > .mf-field-width-third { grid-column: span 2; }
+    .mf-check-group { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   }
   .mf-form-section {
     border-radius: 0;

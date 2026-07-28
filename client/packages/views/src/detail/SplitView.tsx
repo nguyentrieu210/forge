@@ -73,11 +73,11 @@ export function SplitView(props: SplitViewProps) {
   if (bp === "desktop") {
     return (
       <ResizablePanelGroup direction="horizontal" autoSaveId={props.autoSaveId ?? "mf-split"} className="mf-split h-full">
-        <ResizablePanel defaultSize={26} minSize={20} maxSize={40} className="min-w-0">
+        <ResizablePanel defaultSize={34} minSize={24} maxSize={45} className="min-w-0">
           {props.list}
         </ResizablePanel>
         <ResizableHandle withHandle />
-        <ResizablePanel defaultSize={contextOpen && hasContext ? 50 : 74} minSize={30} className="min-w-0">
+        <ResizablePanel defaultSize={contextOpen && hasContext ? 48 : 66} minSize={30} className="min-w-0">
           <div className="relative h-full">
             {/* Nút đóng chi tiết. Trước đây CHỈ màn hẹp mới có nút quay lại; trên desktop/tablet
                 người dùng mở một bản ghi rồi không có cách nào đóng nó — danh sách vẫn thấy đấy
@@ -102,7 +102,7 @@ export function SplitView(props: SplitViewProps) {
         {hasContext && contextOpen ? (
           <>
             <ResizableHandle withHandle />
-            <ResizablePanel defaultSize={24} minSize={18} maxSize={34} className="min-w-0">
+            <ResizablePanel defaultSize={18} minSize={16} maxSize={30} className="min-w-0">
               <ContextFrame title={props.contextTitle} onClose={() => setContextOpen(false)}>
                 {props.context}
               </ContextFrame>

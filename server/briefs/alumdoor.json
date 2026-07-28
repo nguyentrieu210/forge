@@ -2,7 +2,7 @@
   "$schema": "./brief.schema.json",
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "1.18.2",
+  "version": "1.18.3",
   "module": "Alumdoor",
   "domain": "alumdoor",
   "brand": "warm",
@@ -929,6 +929,11 @@
         "item_name"
       ],
       "fields": [
+        {
+          "fieldname": "section_basic",
+          "fieldtype": "Section Break",
+          "label": "Thông tin cơ bản"
+        },
         "item_code:Data*! Mã hàng",
         "item_name:Data! Tên hàng",
         "item_group:Link(Item Group)! Nhóm hàng",
@@ -964,6 +969,11 @@
           "label": "Dùng trong sản xuất",
           "depends_on": "eval:doc.item_nature == 'Hàng tồn kho'"
         },
+        {
+          "fieldname": "section_inventory",
+          "fieldtype": "Section Break",
+          "label": "Quản lý kho và đơn vị"
+        },
         "inventory_mode:Select(Hàng thường,Nhôm cây/lá,Tấm/Kính,Cuộn,Lô/Serial,Thành phẩm theo m2)=(Hàng thường) Kiểu quản lý tồn",
         {
           "fieldname": "measurement_profile",
@@ -977,6 +987,11 @@
         "default_purchase_uom:Link(UOM) ĐVT mua mặc định",
         "default_sales_uom:Link(UOM) ĐVT bán mặc định",
         "uom_conversions:Table(UOM Conversion) Quy đổi đơn vị (mua cây — tồn mét)",
+        {
+          "fieldname": "section_identity",
+          "fieldtype": "Section Break",
+          "label": "Nhận diện và phân loại"
+        },
         "variant_of:Link(Item) Mã gốc / mẫu",
         "variant_attributes:Table(Item Variant Attribute) Thuộc tính biến thể",
         "brand:Link(Brand) Thương hiệu",
@@ -985,6 +1000,11 @@
         "material_specification:Link(Material Specification) Quy cách kỹ thuật",
         "default_color:Link(Item Color) Màu mặc định",
         "barcodes:Table(Item Barcode) Mã vạch",
+        {
+          "fieldname": "section_accounts",
+          "fieldtype": "Section Break",
+          "label": "Kho và kế toán"
+        },
         "item_defaults:Table(Item Default) Mặc định theo công ty",
         "reorder_levels:Table(Item Reorder) Mức tồn / đặt hàng",
         "default_warehouse:Link(Warehouse) Kho mặc định",
@@ -994,6 +1014,11 @@
         "expense_account:Link(Account) Tài khoản chi phí",
         "standard_rate:Currency Giá định mức BOM",
         "valuation_method:Select(FIFO)=(FIFO) Phương pháp giá vốn",
+        {
+          "fieldname": "section_tracking",
+          "fieldtype": "Section Break",
+          "label": "Theo dõi và trạng thái"
+        },
         "has_batch_no:Check Theo dõi số lô",
         "has_serial_no:Check Theo dõi serial",
         "allow_negative_stock:Check Cho phép tồn âm",
