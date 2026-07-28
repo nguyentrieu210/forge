@@ -149,12 +149,11 @@ function AISection() {
 
 function BrandSwitch() {
   const [brand, setBrand] = useBrand();
-  const swatch: Record<string, string> = { zinc: "bg-[#18181b]", blue: "bg-[#1b4dff]", warm: "bg-[#b15b2e]" };
   return (
     <div className="flex flex-wrap gap-2">
       {BRANDS.map((b) => (
         <Button key={b.id} variant={brand === b.id ? "default" : "outline"} size="sm" onClick={() => setBrand(b.id)} className="gap-2">
-          <span className={cn("size-3 rounded-full border", swatch[b.id])} />
+          <span className="size-3 rounded-full border" style={{ background: b.swatch }} />
           {b.label}
         </Button>
       ))}

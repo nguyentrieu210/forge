@@ -101,7 +101,10 @@ export interface ManifestResult {
 }
 
 const ID_RE = /^[a-z][a-z0-9-]*$/;
-const BRANDS: ReadonlySet<string> = new Set(["zinc", "blue", "warm"]);
+const BRANDS: ReadonlySet<string> = new Set([
+  "zinc", "blue", "warm", "sakura", "emerald", "ocean", "violet",
+  "indigo", "teal", "amber", "rose", "aurora", "sunset",
+]);
 const KINDS: ReadonlySet<string> = new Set(["doctype", "route", "workspace", "system", "experience", "overview", "process"]);
 
 export function validateManifest(m: AppManifest): ManifestResult {
@@ -112,7 +115,7 @@ export function validateManifest(m: AppManifest): ManifestResult {
   if (!m || typeof m !== "object") { err("shape", "manifest phải là object"); return { ok: false, issues }; }
   if (!m.id || !ID_RE.test(m.id)) err("id", `id không hợp lệ: "${m.id}" (kebab: chữ thường/số/-, bắt đầu bằng chữ)`);
   if (!m.name || !String(m.name).trim()) err("name", "name bắt buộc");
-  if (m.brand && !BRANDS.has(m.brand)) err("brand", `brand không hợp lệ: "${m.brand}" (zinc|blue|warm)`);
+  if (m.brand && !BRANDS.has(m.brand)) err("brand", `brand không hợp lệ: "${m.brand}"`);
 
   if (!m.home || (!m.home.doctype && !m.home.route)) err("home", "home phải có doctype hoặc route");
   if (!Array.isArray(m.nav) || m.nav.length === 0) err("nav", "nav phải có ít nhất 1 mục");

@@ -31,7 +31,7 @@ export {
 } from "./auth/AuthBoundary.js";
 export { LoginForm, type LoginFormProps } from "./auth/LoginForm.js";
 export { ChangePasswordDialog, type ChangePasswordDialogProps } from "./auth/ChangePasswordDialog.js";
-export { useBrand, applyBrand, BRANDS, type BrandMode } from "./brand.js";
+export { useBrand, applyBrand, isBrandMode, BRANDS, type BrandMode } from "./brand.js";
 export { resolveIcon } from "./icon.js";
 export {
   BusinessContextProvider, BusinessContextBar, useBusinessContext,

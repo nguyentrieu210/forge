@@ -6,7 +6,7 @@
 import { strict as assert } from "node:assert";
 import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { resolveIcon } from "@metaforge/shell";
+import { BRANDS, isBrandMode, resolveIcon } from "@metaforge/shell";
 import {
   mapError,
   AUTHORABLE_FIELDTYPES,
@@ -62,6 +62,13 @@ function check(name: string, fn: () => void) {
 console.log("selfcheck — logic thuần (no network):");
 
 // 1. Fieldtype đúng 43 authorable (verified live docfield.json).
+check("theme: 13 bảng màu, gồm Sakura và 4 gradient", () => {
+  assert.equal(BRANDS.length, 13);
+  assert.equal(isBrandMode("sakura"), true);
+  assert.equal(isBrandMode("unknown"), false);
+  assert.equal(BRANDS.filter((brand) => brand.swatch.includes("gradient")).length, 4);
+});
+
 check("43 authorable fieldtypes", () => {
   assert.equal(AUTHORABLE_FIELDTYPES.length, 43);
 });
