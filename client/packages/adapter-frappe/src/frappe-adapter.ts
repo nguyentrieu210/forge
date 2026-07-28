@@ -264,7 +264,9 @@ export class FrappeAdapterImpl implements FrappeAdapter {
     const normalized = normalizeMeta(raw, r.masked_fields);
     // Metadata label từ Frappe thường là chuỗi nguồn tiếng Anh. Batch qua frappe._() theo lang user
     // để Form/List/Child/Builder dùng label đã dịch, không render thẳng key/source text.
-    const sources = new Set<string>([normalized.name]);
+    // Nhãn do APP KHAI cũng vào từ điển: nó có thể đã là tiếng Việt (thì `dict` không có
+    // và nó tự giữ nguyên), hoặc là tiếng Anh và cần dịch như mọi chuỗi nguồn khác.
+    const sources = new Set<string>([normalized.name, ...(normalized.label ? [normalized.label] : [])]);
     for (const field of normalized.fields ?? []) {
       if (field.label) sources.add(field.label);
       // `description` = dòng chú thích dưới label (vd "Disabled items cannot be selected in any
@@ -276,7 +278,21 @@ export class FrappeAdapterImpl implements FrappeAdapter {
     const dict: Record<string, string> = await this.translateStrings([...sources]).catch(() => ({} as Record<string, string>));
     return {
       ...normalized,
-      label: dict[normalized.name] ?? normalized.name,
+      /**
+       * Nhãn do APP KHAI thắng, rồi mới tới bản dịch của TÊN.
+       *
+       * Dòng này trước đây là `dict[normalized.name] ?? normalized.name` — tức là vứt bỏ
+       * `label` server vừa gửi và thay bằng chính cái tên kỹ thuật. Nó đúng với giả định
+       * của Frappe (nhãn sinh ra từ `frappe._()` trên chuỗi nguồn tiếng Anh), nhưng sai
+       * với nền tảng này: app KHAI nhãn trong brief, và đó là ý định của tác giả app.
+       *
+       * Hậu quả rất khó truy: server trả đúng "Khách hàng", trình duyệt nhận đúng
+       * "Khách hàng", mà màn hình vẫn hiện "Tạo customer" — vì nhãn bị thay ở đúng bước
+       * cuối cùng, sau khi mọi phép thử phía server đã xanh.
+       */
+      label: normalized.label
+        ? (dict[normalized.label] ?? normalized.label)
+        : (dict[normalized.name] ?? normalized.name),
       fields: normalized.fields.map((field) => ({
         ...field,
         label: field.label ? (dict[field.label] ?? field.label) : field.label,
