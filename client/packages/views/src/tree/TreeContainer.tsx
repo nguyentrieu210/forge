@@ -9,7 +9,7 @@
  * NestedSet giữ `lft`/`rgt` cho mỗi node, ghi tay là cây hỏng và mọi truy vấn "con cháu của X"
  * trả sai vĩnh viễn.
  */
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Search } from "lucide-react";
 import { Button, ConfirmDialog, Input, PromptDialog, toast, useT } from "@metaforge/ui";
@@ -39,14 +39,28 @@ type Pending =
   | { kind: "rename"; node: TreeNodeItem }
   | { kind: "delete"; node: TreeNodeItem };
 
+type TreeUiState = {
+  expanded: Set<string>;
+  childrenMap: Record<string, TreeNodeItem[]>;
+};
+
+// SplitView chuyển từ list-only sang 3 cột khi chọn một node, nên nhánh list được
+// remount. Giữ trạng thái cây theo DocType trong vòng đời ứng dụng để cú bấm đầu
+// tiên vừa mở form vừa giữ nguyên nhánh vừa xổ.
+const treeUiState = new Map<string, TreeUiState>();
+
 export function TreeContainer({
   doctype, title, onSelect, selected, includeDisabled = false, editable = false, createDefaults,
 }: TreeContainerProps) {
   const t = useT();
   const { adapter, scopeKey } = useMetaForge();
   const qc = useQueryClient();
-  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
-  const [childrenMap, setChildrenMap] = useState<Record<string, TreeNodeItem[]>>({});
+  const stateKey = `${scopeKey}:${doctype}:${includeDisabled ? "all" : "active"}`;
+  const cachedState = treeUiState.get(stateKey);
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set(cachedState?.expanded));
+  const [childrenMap, setChildrenMap] = useState<Record<string, TreeNodeItem[]>>(
+    () => ({ ...(cachedState?.childrenMap ?? {}) }),
+  );
   const [pending, setPending] = useState<Pending | null>(null);
   const [busy, setBusy] = useState(false);
   const [query, setQuery] = useState("");
@@ -64,7 +78,13 @@ export function TreeContainer({
         queryKey: [scopeKey, "tree", doctype, value, includeDisabled],
         queryFn: () => adapter.treeChildren(doctype, value, includeDisabled),
       });
-      setChildrenMap((m) => ({ ...m, [value]: kids.map(toItem) }));
+      const latest = treeUiState.get(stateKey);
+      const next = { ...(latest?.childrenMap ?? childrenMap), [value]: kids.map(toItem) };
+      treeUiState.set(stateKey, {
+        expanded: new Set(latest?.expanded ?? expanded).add(value),
+        childrenMap: next,
+      });
+      setChildrenMap(next);
     } catch (e) {
       toast.error(adapter.mapError(e).message);
       // Thu node lại khi nạp lỗi — nếu để mở, childrenOf() vẫn undefined và TreeView kẹt ở
@@ -72,31 +92,46 @@ export function TreeContainer({
       setExpanded((prev) => {
         const next = new Set(prev);
         next.delete(value);
+        treeUiState.set(stateKey, { expanded: next, childrenMap });
         return next;
       });
     }
-  }, [adapter, qc, scopeKey, doctype, includeDisabled]);
+  }, [adapter, qc, scopeKey, doctype, includeDisabled, stateKey, expanded, childrenMap]);
+
+  // Khi SplitView vừa chuyển sang 3 cột, TreeContainer mới phải nối tiếp request
+  // lazy của nhánh đã mở thay vì chỉ hiện "Đang tải…" rồi đứng im.
+  useEffect(() => {
+    for (const value of expanded) {
+      if (!childrenMap[value]) void loadChildren(value);
+    }
+  }, [expanded, childrenMap, loadChildren]);
 
   const onToggle = useCallback((value: string) => {
     const isOpen = expanded.has(value);
     const next = new Set(expanded);
     if (isOpen) next.delete(value); else next.add(value);
+    treeUiState.set(stateKey, { expanded: next, childrenMap });
     setExpanded(next);
     // Gọi NGOÀI updater của setState: updater phải thuần (StrictMode chạy 2 lần ⇒ 2 request).
     // Đã có con rồi thì thôi — mở lại dùng luôn bản đã nạp.
     if (!isOpen && !childrenMap[value]) void loadChildren(value);
-  }, [expanded, childrenMap, loadChildren]);
+  }, [expanded, childrenMap, loadChildren, stateKey]);
 
   /** Nạp lại đúng nhánh vừa đổi, không nạp lại cả cây (cây kho có thể vài nghìn node). */
   const refreshBranch = useCallback(async (parent: string) => {
     await qc.invalidateQueries({ queryKey: [scopeKey, "tree", doctype] });
     if (parent) {
-      setChildrenMap((m) => { const n = { ...m }; delete n[parent]; return n; });
+      setChildrenMap((m) => {
+        const n = { ...m };
+        delete n[parent];
+        treeUiState.set(stateKey, { expanded, childrenMap: n });
+        return n;
+      });
       await loadChildren(parent);
     } else {
       await rootQ.refetch();
     }
-  }, [qc, scopeKey, doctype, loadChildren, rootQ]);
+  }, [qc, scopeKey, doctype, loadChildren, rootQ, stateKey, expanded]);
 
   const doAdd = async (name: string) => {
     if (pending?.kind !== "add") return;
@@ -114,7 +149,13 @@ export function TreeContainer({
       });
       toast.success(t("tree.added"));
       // mở node cha ra để thấy ngay thứ vừa tạo
-      if (pending.parent) setExpanded((prev) => new Set(prev).add(pending.parent));
+      if (pending.parent) {
+        setExpanded((prev) => {
+          const next = new Set(prev).add(pending.parent);
+          treeUiState.set(stateKey, { expanded: next, childrenMap });
+          return next;
+        });
+      }
       await refreshBranch(pending.parent);
       setPending(null);
     } catch (e) {

@@ -40,7 +40,7 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
     <>
       <SplitView
         autoSaveId={`mf-split-v3-${doctype}`}
-        hasDetail={Boolean(decoded)}
+        hasDetail={isTree || Boolean(decoded)}
         contextTitle={decoded}
         onCloseDetail={() => onNavigate(listPath)}
         list={isTree ? (
@@ -73,6 +73,10 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
             onPrint={() => onNavigate(`${printBase}/${doctype}/${encodeURIComponent(decoded)}`)}
             onClose={() => onNavigate(listPath)}
           />
+        ) : isTree ? (
+          <div className="grid h-full place-items-center bg-card px-6 text-center text-sm text-muted-foreground">
+            {t("common.choose_prefix")} {(titleMeta.data?.label ?? doctype).toLocaleLowerCase("vi")}
+          </div>
         ) : null}
         context={decoded ? (
           <ContextContainer
@@ -81,6 +85,10 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
             name={decoded}
             aiSlot={props.contextAiSlot}
           />
+        ) : isTree ? (
+          <div className="grid h-full place-items-center px-4 text-center text-xs text-muted-foreground">
+            {t("common.empty")}
+          </div>
         ) : null}
       />
 
