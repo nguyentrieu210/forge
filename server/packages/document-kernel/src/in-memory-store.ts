@@ -92,10 +92,11 @@ export class InMemoryMutationStore implements MutationStore {
       if (document.data[query.referenceField] !== query.referenceName) continue;
       for (const child of document.children) {
         if (child.fieldname !== "items" || child.data.item_code !== query.itemCode) continue;
-        const value = child.data.qty_micros;
+        // Quy về đơn vị tồn trước khi cộng — xem chú thích ở `d1-store.ts`.
+        const value = child.data.stock_qty_micros ?? child.data.qty_micros;
         total += typeof value === "number" && Number.isSafeInteger(value)
           ? value
-          : toScaledInt(String(child.data.qty ?? 0), 6, "child qty");
+          : toScaledInt(String(child.data.stock_qty ?? child.data.qty ?? 0), 6, "child qty");
       }
     }
     return total;
@@ -580,8 +581,14 @@ export class InMemoryMutationStore implements MutationStore {
     for (const line of plan.procurement_entries ?? []) {
       const source = this.documents.get(this.docKey(plan.command.tenant_id, "Purchase Order", line.purchase_order));
       if (!source || source.docstatus !== 1) throw errors.reference(`Submitted Purchase Order ${line.purchase_order} is required`);
+      // Theo ĐƠN VỊ TỒN — phải khớp từng chữ với trigger `purchase_progress_reference_guard`
+      // (migrations/tenant/0023). Hai bản kiểm cùng một luật mà lệch nhau thì test xanh trên
+      // bản in-memory rồi ABORT ở SQLite lúc chạy thật.
       const ordered = source.children.filter((child) => child.fieldname === "items" && child.data.item_code === line.item_code)
-        .reduce((total, child) => total + (typeof child.data.qty_micros === "number" ? child.data.qty_micros : toScaledInt(String(child.data.qty ?? 0), 6)), 0);
+        .reduce((total, child) => {
+          const declared = child.data.stock_qty_micros ?? child.data.qty_micros;
+          return total + (typeof declared === "number" ? declared : toScaledInt(String(child.data.stock_qty ?? child.data.qty ?? 0), 6));
+        }, 0);
       const key = `${line.purchase_order}:${line.kind}:${line.item_code}`;
       const existing = this.procurementEntries.filter((entry) => entry.purchase_order === line.purchase_order && entry.kind === line.kind && entry.item_code === line.item_code).reduce((total, entry) => total + entry.qty_micros, 0);
       const next = existing + (pending.get(key) ?? 0) + line.qty_micros;

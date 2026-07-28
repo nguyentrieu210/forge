@@ -2,7 +2,32 @@ import type { JsonObject } from "../../contracts/src/index.js";
 import type { DecimalInput } from "../../money/src/index.js";
 import type { TaxRow } from "../../clouderp-selling/src/types.js";
 
-export interface PurchaseItem extends JsonObject {
+/**
+ * Một dòng có ĐƠN VỊ GIAO DỊCH khác đơn vị tồn kho.
+ *
+ * Ray mua theo CÂY, bán theo MÉT. Nan nhôm mua theo KG, tồn theo M². Nếu sổ kho ghi thẳng
+ * `qty` thì mua 20 cây ray thành "tồn 20 mét" — sai gấp gần sáu lần, và không có gì báo.
+ *
+ *     stock_qty = qty × conversion_factor
+ *
+ * `qty` và `rate` giữ nguyên ĐƠN VỊ MUA, vì đó là thứ in trên hoá đơn NCC và là thứ người
+ * mua đối chiếu. Chỉ sổ kho và hạn mức "không nhận quá số đặt" chạy theo `stock_qty`.
+ */
+export interface UomLine extends JsonObject {
+  item_code: string;
+  qty: DecimalInput;
+  qty_micros?: number;
+  /** Đơn vị GIAO DỊCH của dòng. Bỏ trống = cùng đơn vị tồn của mặt hàng. */
+  uom?: string;
+  /** Bao nhiêu đơn vị tồn trong MỘT đơn vị giao dịch. Bỏ trống thì tra ở hồ sơ mặt hàng. */
+  conversion_factor?: DecimalInput;
+  conversion_factor_micros?: number;
+  stock_uom?: string;
+  stock_qty?: string;
+  stock_qty_micros?: number;
+}
+
+export interface PurchaseItem extends UomLine {
   row_id: string;
   /**
    * Đơn mua của RIÊNG dòng này, khi một phiếu nhận hàng của nhiều đơn cùng lúc.
@@ -11,10 +36,9 @@ export interface PurchaseItem extends JsonObject {
    * giữa đơn mua và phiếu nhập: một đơn giao làm nhiều đợt, và một chuyến giao gộp nhiều đơn.
    */
   purchase_order?: string;
-  item_code: string;
-  qty: DecimalInput;
+  /** Yêu cầu vật tư của riêng dòng này. Bỏ trống thì lấy theo đầu phiếu. */
+  material_request?: string;
   rate: DecimalInput;
-  qty_micros?: number;
   rate_minor?: number;
   amount?: string;
   amount_minor?: number;
@@ -46,6 +70,10 @@ export interface PurchaseOrderData extends JsonObject {
   schedule_date?: string;
   buying_price_list?: string;
   supplier_group?: string;
+  /** Yêu cầu vật tư mà đơn này đáp ứng. Khai thì nhân TỪ CHỐI đặt quá số đã yêu cầu. */
+  material_request?: string;
+  /** Báo giá NCC đã chọn. Khai thì nhân bắt khớp NCC / công ty / tiền tệ. */
+  supplier_quotation?: string;
   items: PurchaseItem[];
   taxes?: TaxRow[];
   net_total?: string;
@@ -118,6 +146,86 @@ export interface PurchaseInvoiceData extends JsonObject {
   base_grand_total_minor?: number;
   outstanding_amount?: string;
   outstanding_amount_minor?: number;
+}
+
+/**
+ * Một dòng nhu cầu: cần gì, bao nhiêu, khi nào, về kho nào.
+ *
+ * Không có `rate` — đây là chỗ nói CẦN GÌ, chưa phải chỗ nói GIÁ BAO NHIÊU. Giá đến ở
+ * bước sau (báo giá NCC), và trộn hai việc vào một chứng từ là cách đánh mất câu hỏi
+ * "cái này ai yêu cầu, và đã đặt mua đủ chưa".
+ */
+export interface MaterialRequestItem extends UomLine {
+  row_id: string;
+  warehouse?: string;
+  schedule_date?: string;
+  note?: string;
+}
+
+export type MaterialRequestType = "Purchase" | "Material Transfer" | "Material Issue" | "Manufacture";
+
+export interface MaterialRequestData extends JsonObject {
+  company: string;
+  material_request_type: MaterialRequestType;
+  transaction_date: string;
+  schedule_date?: string;
+  requested_by?: string;
+  items: MaterialRequestItem[];
+  note?: string;
+}
+
+export interface RequestForQuotationSupplier extends JsonObject {
+  row_id: string;
+  supplier: string;
+  contact?: string;
+  note?: string;
+}
+
+/**
+ * Hỏi giá NHIỀU nhà cung cấp CÙNG một rổ hàng.
+ *
+ * Đây là lý do RFQ là một chứng từ riêng chứ không phải nhiều báo giá rời: rổ hàng viết
+ * MỘT lần, và mỗi NCC trả lời bằng một `Supplier Quotation` trỏ ngược về đây, nên so giá
+ * là so trên cùng một danh sách chứ không phải so hai tờ giấy khác nhau.
+ */
+export interface RequestForQuotationData extends JsonObject {
+  company: string;
+  transaction_date: string;
+  response_by?: string;
+  material_request?: string;
+  suppliers: RequestForQuotationSupplier[];
+  items: MaterialRequestItem[];
+  note?: string;
+}
+
+export interface SupplierQuotationData extends JsonObject {
+  supplier: string;
+  company: string;
+  currency: string;
+  currency_scale?: number;
+  company_currency?: string;
+  company_currency_scale?: number;
+  conversion_rate?: string;
+  conversion_rate_micros?: number;
+  transaction_date: string;
+  valid_till?: string;
+  request_for_quotation?: string;
+  supplier_group?: string;
+  buying_price_list?: string;
+  items: PurchaseItem[];
+  taxes?: TaxRow[];
+  net_total?: string;
+  net_total_minor?: number;
+  total_taxes_and_charges?: string;
+  total_taxes_and_charges_minor?: number;
+  grand_total?: string;
+  grand_total_minor?: number;
+  base_net_total?: string;
+  base_net_total_minor?: number;
+  base_total_taxes_and_charges?: string;
+  base_total_taxes_and_charges_minor?: number;
+  base_grand_total?: string;
+  base_grand_total_minor?: number;
 }
 
 export interface JournalEntryLine extends JsonObject {

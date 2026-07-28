@@ -105,7 +105,10 @@ export class D1MutationStore implements MutationStore {
   async sumSubmittedChildQuantityMicros(query: SubmittedQuantityQuery): Promise<number> {
     if (!/^[a-z_][a-z0-9_]*$/i.test(query.referenceField)) throw errors.validation("Unsafe reference field");
     const exclusion = query.excludeName ? "AND d.name<>?5" : "";
-    const sql = `SELECT COALESCE(SUM(CAST(json_extract(c.payload_json, '$.qty_micros') AS INTEGER)),0) AS total
+    // `stock_qty_micros` trước `qty_micros`: một dòng mua theo CÂY và một dòng yêu cầu
+    // theo MÉT chỉ so được với nhau sau khi quy về đơn vị tồn. Dòng không quy đổi thì
+    // hai con số bằng nhau, nên COALESCE giữ nguyên hành vi của mọi chứng từ đang chạy.
+    const sql = `SELECT COALESCE(SUM(CAST(COALESCE(json_extract(c.payload_json, '$.stock_qty_micros'), json_extract(c.payload_json, '$.qty_micros')) AS INTEGER)),0) AS total
       FROM documents d
       JOIN document_children c ON c.tenant_id=d.tenant_id AND c.parent_key=d.doc_key AND c.fieldname='items'
       WHERE d.tenant_id=?1 AND d.doctype=?2 AND d.docstatus=1

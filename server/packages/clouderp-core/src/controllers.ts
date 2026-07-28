@@ -11,7 +11,8 @@ import { buildTrackedStockLines } from "../../clouderp-stock/src/index.js";
 import { resolveServerPrice } from "../../clouderp-pricing/src/index.js";
 import { calculateSalesTotals } from "../../clouderp-selling/src/totals.js";
 import type { TaxRow } from "../../clouderp-selling/src/types.js";
-import type { JournalEntryData, JournalEntryLine, PurchaseInvoiceData, PurchaseItem, PurchaseOrderData, PurchaseReceiptData, StockEntryData, StockEntryItem } from "./types.js";
+import { applyUomConversion, stockQtyMicros } from "./uom.js";
+import type { JournalEntryData, JournalEntryLine, MaterialRequestData, MaterialRequestItem, PurchaseInvoiceData, PurchaseItem, PurchaseOrderData, PurchaseReceiptData, RequestForQuotationData, RequestForQuotationSupplier, StockEntryData, StockEntryItem, SupplierQuotationData } from "./types.js";
 
 abstract class BaseController<T extends JsonObject> implements DocumentController<T> {
   abstract readonly doctype: string;
@@ -60,15 +61,122 @@ export class JournalEntryController extends BaseController<JournalEntryData> {
   eventTypes(context: ControllerContext<JournalEntryData>): string[] { return context.command.action === "submit" ? ["gl.posted","journal_entry.submitted"] : context.command.action === "cancel" ? ["gl.reversed","journal_entry.cancelled"] : ["journal_entry.updated"]; }
 }
 
+const MATERIAL_REQUEST_TYPES = ["Purchase", "Material Transfer", "Material Issue", "Manufacture"];
+
+/**
+ * YÊU CẦU VẬT TƯ — chỗ nhu cầu ra đời, trước khi có nhà cung cấp và trước khi có giá.
+ *
+ * Không ghi sổ nào cả, và đó là điều đúng: yêu cầu chưa cam kết tiền, chưa động vào kho.
+ * Giá trị của nó nằm ở chỗ khác — nó cho phép hỏi "cái này ai yêu cầu" và "đã đặt mua đủ
+ * chưa", hai câu mà một đơn mua đứng một mình không trả lời được. Hạn mức chống đặt vượt
+ * nằm ở `assertRequestRemaining`, phía đơn mua.
+ */
+export class MaterialRequestController extends BaseController<MaterialRequestData> {
+  readonly doctype = "Material Request";
+  async normalize(context: ControllerContext<MaterialRequestData>): Promise<MaterialRequestData> {
+    const input = context.command.document;
+    if (!input.company || !input.transaction_date) throw errors.validation("Company and transaction date are required");
+    if (!MATERIAL_REQUEST_TYPES.includes(input.material_request_type)) throw errors.validation(`Material request type must be one of ${MATERIAL_REQUEST_TYPES.join(", ")}`);
+    if (!Array.isArray(input.items) || !input.items.length) throw errors.validation("At least one item is required");
+    const items = await applyUomConversion(context, input.items.map((item, index): MaterialRequestItem => {
+      if (!item.item_code) throw errors.validation(`Item is required at row ${index + 1}`);
+      const qty = toScaledInt(item.qty, 6, `items[${index}].qty`);
+      if (qty <= 0) throw errors.validation(`Quantity must be positive at row ${index + 1}`);
+      return { ...item, row_id: item.row_id || `ROW-${index + 1}`, qty: fromScaledInt(qty, 6), qty_micros: qty };
+    }));
+    if (context.command.action === "submit") await assertMasters(context, [["Company", input.company], ...items.map((item): [string, string] => ["Item", item.item_code]), ...items.filter((item) => item.warehouse).map((item): [string, string] => ["Warehouse", item.warehouse!])]);
+    return { ...input, items };
+  }
+  ledger(): LedgerResult { return {}; }
+  status(context: ControllerContext<MaterialRequestData>): string { const ds = nextDocStatus(context.command.action); return ds === 0 ? "Draft" : ds === 2 ? "Cancelled" : "Pending"; }
+  eventTypes(context: ControllerContext<MaterialRequestData>): string[] { return context.command.action === "submit" ? ["material_request.submitted"] : context.command.action === "cancel" ? ["material_request.cancelled"] : ["material_request.updated"]; }
+}
+
+/**
+ * YÊU CẦU BÁO GIÁ — một rổ hàng, hỏi nhiều nhà cung cấp cùng lúc.
+ *
+ * Rổ hàng viết MỘT lần ở đây, mỗi NCC trả lời bằng một `Supplier Quotation` trỏ ngược về.
+ * Nhờ vậy so giá là so trên cùng một danh sách, thay vì so ba tờ giấy mà tờ nào cũng
+ * thiếu một món khác nhau — chuyện thường xảy ra khi hỏi giá bằng Zalo.
+ */
+export class RequestForQuotationController extends BaseController<RequestForQuotationData> {
+  readonly doctype = "Request for Quotation";
+  async normalize(context: ControllerContext<RequestForQuotationData>): Promise<RequestForQuotationData> {
+    const input = context.command.document;
+    if (!input.company || !input.transaction_date) throw errors.validation("Company and transaction date are required");
+    if (!Array.isArray(input.suppliers) || !input.suppliers.length) throw errors.validation("At least one supplier is required");
+    if (!Array.isArray(input.items) || !input.items.length) throw errors.validation("At least one item is required");
+    const seen = new Set<string>();
+    const suppliers = input.suppliers.map((row, index): RequestForQuotationSupplier => {
+      if (!row.supplier) throw errors.validation(`Supplier is required at row ${index + 1}`);
+      // Hỏi cùng một NCC hai lần trong một yêu cầu là lỗi nhập liệu, và nó làm bảng so
+      // giá có hai cột giống hệt nhau — người đọc không biết cột nào là câu trả lời thật.
+      if (seen.has(row.supplier)) throw errors.validation(`Supplier ${row.supplier} appears twice`);
+      seen.add(row.supplier);
+      return { ...row, row_id: row.row_id || `ROW-${index + 1}` };
+    });
+    const items = await applyUomConversion(context, input.items.map((item, index): MaterialRequestItem => {
+      if (!item.item_code) throw errors.validation(`Item is required at row ${index + 1}`);
+      const qty = toScaledInt(item.qty, 6, `items[${index}].qty`);
+      if (qty <= 0) throw errors.validation(`Quantity must be positive at row ${index + 1}`);
+      return { ...item, row_id: item.row_id || `ROW-${index + 1}`, qty: fromScaledInt(qty, 6), qty_micros: qty };
+    }));
+    if (context.command.action === "submit") {
+      if (input.material_request) { const request = await requireSubmitted<MaterialRequestData>(context, "Material Request", input.material_request); if (request.data.company !== input.company) throw errors.reference(`Material Request ${input.material_request} belongs to another company`); }
+      await assertMasters(context, [["Company", input.company], ...suppliers.map((row): [string, string] => ["Supplier", row.supplier]), ...items.map((item): [string, string] => ["Item", item.item_code])]);
+    }
+    return { ...input, suppliers, items };
+  }
+  ledger(): LedgerResult { return {}; }
+  status(context: ControllerContext<RequestForQuotationData>): string { const ds = nextDocStatus(context.command.action); return ds === 0 ? "Draft" : ds === 2 ? "Cancelled" : "Sent"; }
+  eventTypes(context: ControllerContext<RequestForQuotationData>): string[] { return context.command.action === "submit" ? ["request_for_quotation.submitted"] : context.command.action === "cancel" ? ["request_for_quotation.cancelled"] : ["request_for_quotation.updated"]; }
+}
+
+/**
+ * BÁO GIÁ NHÀ CUNG CẤP — câu trả lời của MỘT nhà cung cấp cho một rổ hàng.
+ *
+ * Tính tổng bằng đúng bộ máy đã dùng cho đơn mua và hoá đơn mua (`calculateSalesTotals`),
+ * nên con số so giá và con số cuối cùng phải trả là cùng một phép tính. Tự cộng lại ở đây
+ * sẽ tạo ra một cách tính thứ hai, và hai cách tính thì sớm muộn lệch nhau.
+ */
+export class SupplierQuotationController extends BaseController<SupplierQuotationData> {
+  readonly doctype = "Supplier Quotation";
+  async normalize(context: ControllerContext<SupplierQuotationData>): Promise<SupplierQuotationData> {
+    const input = context.command.document;
+    if (!input.supplier || !input.company || !input.currency || !input.transaction_date) throw errors.validation("Supplier, company, currency and transaction date are required");
+    if (!Array.isArray(input.items) || !input.items.length) throw errors.validation("At least one item is required");
+    const currency = await resolveCurrency(context, input.company, input.currency, input.transaction_date, context.command.action === "submit");
+    const totals = calculateSalesTotals(input.items as never, input.taxes ?? [], currency.transactionScale);
+    const items = await applyUomConversion(context, totals.items as unknown as PurchaseItem[]);
+    if (context.command.action === "submit") {
+      if (input.request_for_quotation) {
+        const rfq = await requireSubmitted<RequestForQuotationData>(context, "Request for Quotation", input.request_for_quotation);
+        if (rfq.data.company !== input.company) throw errors.reference(`Request for Quotation ${input.request_for_quotation} belongs to another company`);
+        // Một NCC không được hỏi mà tự gửi giá vào thì bảng so giá có một cột không ai
+        // giải thích được — và nó là đường để lách quy trình chọn nhà cung cấp.
+        if (!rfq.data.suppliers.some((row) => row.supplier === input.supplier)) throw errors.reference(`Supplier ${input.supplier} was not invited to ${input.request_for_quotation}`);
+      }
+      await assertMasters(context, [["Supplier", input.supplier], ["Company", input.company], ["Currency", input.currency], ...items.map((item): [string, string] => ["Item", item.item_code]), ...totals.taxes.map((tax): [string, string] => ["Account", tax.account])]);
+    }
+    return { ...input, currency_scale: currency.transactionScale, company_currency: currency.companyCurrency, company_currency_scale: currency.companyScale, conversion_rate: fromScaledInt(currency.rateMicros, 6), conversion_rate_micros: currency.rateMicros, ...(totals as unknown as JsonObject), items, ...baseTotals(totals, currency) } as SupplierQuotationData;
+  }
+  ledger(): LedgerResult { return {}; }
+  status(context: ControllerContext<SupplierQuotationData>): string { const ds = nextDocStatus(context.command.action); return ds === 0 ? "Draft" : ds === 2 ? "Cancelled" : "Submitted"; }
+  eventTypes(context: ControllerContext<SupplierQuotationData>): string[] { return context.command.action === "submit" ? ["supplier_quotation.submitted"] : context.command.action === "cancel" ? ["supplier_quotation.cancelled"] : ["supplier_quotation.updated"]; }
+}
+
 export class PurchaseOrderController extends BaseController<PurchaseOrderData> {
   readonly doctype = "Purchase Order";
   async normalize(context: ControllerContext<PurchaseOrderData>): Promise<PurchaseOrderData> {
     const input = context.command.document; if (!input.supplier || !input.company || !input.currency || !input.transaction_date) throw errors.validation("Supplier, company, currency and transaction date are required");
     const currency = await resolveCurrency(context, input.company, input.currency, input.transaction_date, context.command.action === "submit");
     const pricedItems=await applyBuyingPricing(context,input.items,input.buying_price_list,input.currency,input.transaction_date,input.supplier,input.supplier_group);const totals = calculateSalesTotals(pricedItems as never, input.taxes ?? [], currency.transactionScale);
-    if (context.command.action === "submit") await assertMasters(context, [["Supplier",input.supplier],["Company",input.company],["Currency",input.currency],...totals.items.map((item):[string,string]=>["Item",item.item_code]),...totals.taxes.map((tax):[string,string]=>["Account",tax.account])]);
+    const items = await applyUomConversion(context, totals.items as unknown as PurchaseItem[]);
+    if (context.command.action === "submit") { await assertMasters(context, [["Supplier",input.supplier],["Company",input.company],["Currency",input.currency],...items.map((item):[string,string]=>["Item",item.item_code]),...totals.taxes.map((tax):[string,string]=>["Account",tax.account])]);
+      if (input.supplier_quotation) { const quotation = await requireSubmitted<SupplierQuotationData>(context,"Supplier Quotation",input.supplier_quotation); if (quotation.data.supplier!==input.supplier||quotation.data.company!==input.company||quotation.data.currency!==input.currency) throw errors.reference("Purchase Order commercial context does not match Supplier Quotation"); }
+      if (input.material_request) await assertRequestRemaining(context, input.material_request, input.company, items); }
     return { ...input, currency_scale: currency.transactionScale, company_currency: currency.companyCurrency, company_currency_scale: currency.companyScale, conversion_rate: fromScaledInt(currency.rateMicros,6), conversion_rate_micros: currency.rateMicros,
-      ...(totals as unknown as JsonObject), ...baseTotals(totals, currency), received_percentage:"0.00", billed_percentage:"0.00" } as PurchaseOrderData;
+      ...(totals as unknown as JsonObject), items, ...baseTotals(totals, currency), received_percentage:"0.00", billed_percentage:"0.00" } as PurchaseOrderData;
   }
   async ledger(context: ControllerContext<PurchaseOrderData>): Promise<LedgerResult> { if (context.command.action === "cancel" && await context.reader.getProcuredQuantityMicros(context.command.tenant_id, context.command.aggregate.name) !== 0) throw errors.reference("Purchase Order cannot be cancelled while submitted receipts or invoices exist"); return {}; }
   status(context: ControllerContext<PurchaseOrderData>): string { const ds=nextDocStatus(context.command.action); return ds===0?"Draft":ds===2?"Cancelled":"To Receive and Bill"; }
@@ -79,7 +187,7 @@ export class PurchaseReceiptController extends BaseController<PurchaseReceiptDat
   readonly doctype = "Purchase Receipt";
   async normalize(context: ControllerContext<PurchaseReceiptData>): Promise<PurchaseReceiptData> {
     const input=context.command.document; if(!input.supplier||!input.company||!input.currency||!input.posting_at) throw errors.validation("Supplier, company, currency and posting_at are required");
-    const currency=await resolveCurrency(context,input.company,input.currency,input.posting_at,context.command.action==="submit"); const items=normalizePurchaseStockItems(input.items,currency.transactionScale);
+    const currency=await resolveCurrency(context,input.company,input.currency,input.posting_at,context.command.action==="submit"); const items=await applyUomConversion(context,normalizePurchaseStockItems(input.items,currency.transactionScale));
     /**
      * Đơn mua lấy theo TỪNG DÒNG, đầu phiếu chỉ là mặc định.
      *
@@ -103,8 +211,15 @@ export class PurchaseReceiptController extends BaseController<PurchaseReceiptDat
   }
   async ledger(context: ControllerContext<PurchaseReceiptData>,data:PurchaseReceiptData):Promise<LedgerResult> { if(!["submit","cancel"].includes(context.command.action))return{}; const scale=data.currency_scale??2;
     const stock:StockLedgerEntry[]=[];const usages:StockBundleUsageEntry[]=[];
-    for(const [index,item] of data.items.entries()){const valuation=item.valuation_rate??item.rate;const qty=item.qty_micros??toScaledInt(item.qty,6);const value=multiplyScaled(item.qty,6,valuation,6,scale,`items[${index}].stock_value`);const tracked=await buildTrackedStockLines(context as unknown as ControllerContext<JsonObject>,{itemCode:item.item_code,warehouse:item.warehouse!,qtyMicros:qty,direction:"Inward",postingAt:data.posting_at,currency:data.currency,currencyScale:scale,valuationRateMinor:toScaledInt(valuation,scale),stockValueMinor:value,lineKey:`ITEM-${item.row_id||index+1}`,...(item.serial_and_batch_bundle?{bundleName:item.serial_and_batch_bundle}:{})});stock.push(...tracked.stock);usages.push(...tracked.usages);}
-    const procurement=data.items.map((item,index):ProcurementEntry=>({line_key:`RECEIPT-${item.row_id||index+1}`,purchase_order:(item.purchase_order??data.against_purchase_order)!,kind:"Receipt",item_code:item.item_code,qty_micros:item.qty_micros??toScaledInt(item.qty,6),posting_at:data.posting_at}));
+    /**
+     * SỐ LƯỢNG vào sổ kho là số theo ĐƠN VỊ TỒN, còn TIỀN vẫn là tiền của hoá đơn.
+     *
+     * Mua 20 cây ray, mỗi cây 5,85 m: sổ kho ghi 117 mét, thành tiền vẫn 20 × đơn giá cây.
+     * Kéo theo đó, giá vốn một đơn vị tồn phải chia lại — `giá 1 cây ÷ 5,85` — nếu không
+     * thì 117 mét × giá-một-cây, tồn kho phình lên gần sáu lần so với số tiền đã trả.
+     */
+    for(const [index,item] of data.items.entries()){const valuation=item.valuation_rate??item.rate;const stockQty=stockQtyMicros(item);const value=multiplyScaled(item.qty,6,valuation,6,scale,`items[${index}].stock_value`);const ratePerStockUnit=divideRounded(value*1_000_000,stockQty);const tracked=await buildTrackedStockLines(context as unknown as ControllerContext<JsonObject>,{itemCode:item.item_code,warehouse:item.warehouse!,qtyMicros:stockQty,direction:"Inward",postingAt:data.posting_at,currency:data.currency,currencyScale:scale,valuationRateMinor:ratePerStockUnit,stockValueMinor:value,lineKey:`ITEM-${item.row_id||index+1}`,...(item.serial_and_batch_bundle?{bundleName:item.serial_and_batch_bundle}:{})});stock.push(...tracked.stock);usages.push(...tracked.usages);}
+    const procurement=data.items.map((item,index):ProcurementEntry=>({line_key:`RECEIPT-${item.row_id||index+1}`,purchase_order:(item.purchase_order??data.against_purchase_order)!,kind:"Receipt",item_code:item.item_code,qty_micros:stockQtyMicros(item),posting_at:data.posting_at}));
     /**
      * Hàng về thì GHI SỔ CÁI, không chỉ ghi sổ kho.
      *
@@ -136,7 +251,7 @@ export class PurchaseReceiptController extends BaseController<PurchaseReceiptDat
 export class PurchaseInvoiceController extends BaseController<PurchaseInvoiceData> {
   readonly doctype="Purchase Invoice";
   async normalize(context:ControllerContext<PurchaseInvoiceData>):Promise<PurchaseInvoiceData>{const input=context.command.document;if(!input.supplier||!input.company||!input.currency||!input.posting_at||!input.credit_to)throw errors.validation("Supplier, company, currency, posting_at and payable account are required");
-    const currency=await resolveCurrency(context,input.company,input.currency,input.posting_at,context.command.action==="submit");const pricedItems=await applyBuyingPricing(context,input.items,input.buying_price_list,input.currency,input.posting_at,input.supplier,input.supplier_group);const totals=calculateSalesTotals(pricedItems as never,input.taxes??[],currency.transactionScale);const items=(totals.items as unknown as PurchaseItem[]).map((item,index): PurchaseItem=>{const source=input.items[index]!;if(!source.expense_account)throw errors.validation(`Expense account is required at row ${index+1}`);return{...item,expense_account:source.expense_account,...(source.warehouse ? { warehouse: source.warehouse } : {})}});
+    const currency=await resolveCurrency(context,input.company,input.currency,input.posting_at,context.command.action==="submit");const pricedItems=await applyBuyingPricing(context,input.items,input.buying_price_list,input.currency,input.posting_at,input.supplier,input.supplier_group);const totals=calculateSalesTotals(pricedItems as never,input.taxes??[],currency.transactionScale);const items=await applyUomConversion(context,(totals.items as unknown as PurchaseItem[]).map((item,index): PurchaseItem=>{const source=input.items[index]!;if(!source.expense_account)throw errors.validation(`Expense account is required at row ${index+1}`);return{...item,expense_account:source.expense_account,...(source.warehouse ? { warehouse: source.warehouse } : {})}}));
     if(context.command.action==="submit"){await assertUnlocked(context,input.company,input.posting_at);await assertMasters(context,[["Supplier",input.supplier],["Company",input.company],["Currency",input.currency],["Account",input.credit_to],...items.map(i=>["Item",i.item_code] as [string,string]),...items.map(i=>["Account",i.expense_account!] as [string,string]),...totals.taxes.map(t=>["Account",t.account] as [string,string])]);if(input.against_purchase_order){const po=await requireSubmitted<PurchaseOrderData>(context,"Purchase Order",input.against_purchase_order);assertPurchaseContext(input,po.data,"Purchase Invoice");await assertPurchaseRemaining(context,po,items,"Billing");}}
     const bases=baseTotals(totals,currency);return{...input,currency_scale:currency.transactionScale,company_currency:currency.companyCurrency,company_currency_scale:currency.companyScale,conversion_rate:fromScaledInt(currency.rateMicros,6),conversion_rate_micros:currency.rateMicros,...totals,items,...bases,outstanding_amount_minor:totals.grand_total_minor,outstanding_amount:fromScaledInt(totals.grand_total_minor,currency.transactionScale)} as PurchaseInvoiceData; }
   ledger(context:ControllerContext<PurchaseInvoiceData>,data:PurchaseInvoiceData):LedgerResult{if(!["submit","cancel"].includes(context.command.action))return{};const txScale=data.currency_scale??2;const baseScale=data.company_currency_scale??txScale;const rate=data.conversion_rate_micros??1_000_000;const currency=data.company_currency??data.currency;
@@ -144,7 +259,7 @@ export class PurchaseInvoiceController extends BaseController<PurchaseInvoiceDat
     for(const [index,tax] of (data.taxes??[]).entries()){const base=convertMinor(tax.tax_amount_minor??0,txScale,rate,baseScale);if(base===0)continue;const deduct=tax.add_deduct_tax==="Deduct";gl.push({line_key:`TAX-${tax.row_id||index+1}`,account:tax.account,debit_minor:deduct?0:base,credit_minor:deduct?base:0,currency,currency_scale:baseScale,posting_at:data.posting_at})}
     const payable=data.base_grand_total_minor??convertMinor(data.grand_total_minor??0,txScale,rate,baseScale);gl.push({line_key:"PAYABLE",account:data.credit_to,party_type:"Supplier",party:data.supplier,debit_minor:0,credit_minor:payable,currency,currency_scale:baseScale,posting_at:data.posting_at});
     const payment:PaymentLedgerEntry[]=[{line_key:"PAYABLE",account_type:"Payable",party_type:"Supplier",party:data.supplier,account:data.credit_to,amount_minor:data.grand_total_minor??0,base_amount_minor:payable,currency:data.currency,currency_scale:txScale,against_voucher_type:"Purchase Invoice",against_voucher_no:context.command.aggregate.name,posting_at:data.posting_at}];
-    const procurement:ProcurementEntry[]=data.against_purchase_order?data.items.map((item,index)=>({line_key:`BILL-${item.row_id||index+1}`,purchase_order:data.against_purchase_order!,kind:"Billing",item_code:item.item_code,qty_micros:item.qty_micros??toScaledInt(item.qty,6),posting_at:data.posting_at})):[];
+    const procurement:ProcurementEntry[]=data.against_purchase_order?data.items.map((item,index)=>({line_key:`BILL-${item.row_id||index+1}`,purchase_order:data.against_purchase_order!,kind:"Billing",item_code:item.item_code,qty_micros:stockQtyMicros(item),posting_at:data.posting_at})):[];
     return context.command.action==="cancel"?{gl:reverseGl(gl),payment:reversePayment(payment),procurement:procurement.map(x=>({...x,line_key:`REV-${x.line_key}`,qty_micros:-x.qty_micros}))}:{gl,payment,procurement}; }
   status(context:ControllerContext<PurchaseInvoiceData>):string{const ds=nextDocStatus(context.command.action);return ds===0?"Draft":ds===2?"Cancelled":"Unpaid"}
   eventTypes(context:ControllerContext<PurchaseInvoiceData>):string[]{return context.command.action==="submit"?["gl.posted","payable.updated","purchase_invoice.submitted","purchase_order.progressed"]:context.command.action==="cancel"?["gl.reversed","payable.updated","purchase_invoice.cancelled","purchase_order.progressed"]:["purchase_invoice.updated"]}
@@ -169,4 +284,33 @@ async function resolveCurrency(context:ControllerContext<JsonObject>,company:str
 function convertMinor(amount:number,sourceScale:number,rate:number,targetScale:number):number{return multiplyScaled(fromScaledInt(amount,sourceScale),sourceScale,fromScaledInt(rate,6),6,targetScale)}
 function baseTotals(totals:{net_total_minor:number;total_taxes_and_charges_minor:number;grand_total_minor:number},currency:CurrencyContext):JsonObject{const net=convertMinor(totals.net_total_minor,currency.transactionScale,currency.rateMicros,currency.companyScale);const tax=convertMinor(totals.total_taxes_and_charges_minor,currency.transactionScale,currency.rateMicros,currency.companyScale);const grand=convertMinor(totals.grand_total_minor,currency.transactionScale,currency.rateMicros,currency.companyScale);return{base_net_total_minor:net,base_net_total:fromScaledInt(net,currency.companyScale),base_total_taxes_and_charges_minor:tax,base_total_taxes_and_charges:fromScaledInt(tax,currency.companyScale),base_grand_total_minor:grand,base_grand_total:fromScaledInt(grand,currency.companyScale)}}
 function assertPurchaseContext(target:{supplier:string;company:string;currency:string},source:PurchaseOrderData,label:string):void{if(target.supplier!==source.supplier||target.company!==source.company||target.currency!==source.currency)throw errors.reference(`${label} commercial context does not match Purchase Order`)}
-async function assertPurchaseRemaining(context:ControllerContext<JsonObject>,po:CanonicalDocument<PurchaseOrderData>,items:PurchaseItem[],kind:"Receipt"|"Billing"):Promise<void>{const ordered=new Map<string,number>();for(const i of po.data.items)ordered.set(i.item_code,(ordered.get(i.item_code)??0)+(i.qty_micros??toScaledInt(i.qty,6)));const requested=new Map<string,number>();for(const i of items)requested.set(i.item_code,(requested.get(i.item_code)??0)+(i.qty_micros??toScaledInt(i.qty,6)));for(const[item,qty]of requested){const max=ordered.get(item);if(max===undefined)throw errors.reference(`Item ${item} is not in Purchase Order ${po.name}`);const used=await context.reader.getProcuredQuantityMicros(context.command.tenant_id,po.name,kind,item);if(used+qty>max)throw errors.reference(`${kind} quantity for ${item} exceeds Purchase Order quantity`)}}
+/**
+ * Hạn mức đối chiếu theo ĐƠN VỊ TỒN, không phải đơn vị ghi trên chứng từ.
+ *
+ * Đặt 20 CÂY rồi nhận 117 MÉT là nhận đúng đủ, không phải nhận vượt 97 lần. Quy về một
+ * đơn vị chung là cách duy nhất so được hai chứng từ khai bằng hai đơn vị khác nhau; sổ
+ * tiến độ (`purchase_order_progress_entries`) vì thế cũng ghi bằng đơn vị tồn.
+ */
+async function assertPurchaseRemaining(context:ControllerContext<JsonObject>,po:CanonicalDocument<PurchaseOrderData>,items:PurchaseItem[],kind:"Receipt"|"Billing"):Promise<void>{const ordered=new Map<string,number>();for(const i of po.data.items)ordered.set(i.item_code,(ordered.get(i.item_code)??0)+stockQtyMicros(i));const requested=new Map<string,number>();for(const i of items)requested.set(i.item_code,(requested.get(i.item_code)??0)+stockQtyMicros(i));for(const[item,qty]of requested){const max=ordered.get(item);if(max===undefined)throw errors.reference(`Item ${item} is not in Purchase Order ${po.name}`);const used=await context.reader.getProcuredQuantityMicros(context.command.tenant_id,po.name,kind,item);if(used+qty>max)throw errors.reference(`${kind} quantity for ${item} exceeds Purchase Order quantity`)}}
+
+/**
+ * Không đặt mua quá số đã yêu cầu — cùng một luật, một tầng cao hơn.
+ *
+ * Số đã đặt đọc từ CHÍNH các đơn mua đã ghi sổ trỏ về yêu cầu này
+ * (`sumSubmittedChildQuantityMicros`), không từ một cột `%đã đặt` nào cả. Cột tổng hợp
+ * là thứ trôi dạt khi có người sửa hay huỷ đơn; đếm lại từ chứng từ thì không.
+ */
+async function assertRequestRemaining(context:ControllerContext<JsonObject>,requestName:string,company:string,items:PurchaseItem[]):Promise<void>{
+  const request=await requireSubmitted<MaterialRequestData>(context,"Material Request",requestName);
+  if(request.data.company!==company)throw errors.reference(`Material Request ${requestName} belongs to another company`);
+  const requested=new Map<string,number>();for(const row of request.data.items)requested.set(row.item_code,(requested.get(row.item_code)??0)+stockQtyMicros(row));
+  const wanted=new Map<string,number>();for(const row of items)wanted.set(row.item_code,(wanted.get(row.item_code)??0)+stockQtyMicros(row));
+  for(const [item,qty] of wanted){
+    const max=requested.get(item);
+    if(max===undefined)throw errors.reference(`Item ${item} is not in Material Request ${requestName}`);
+    const ordered=await context.reader.sumSubmittedChildQuantityMicros({tenantId:context.command.tenant_id,parentDoctype:"Purchase Order",referenceField:"material_request",referenceName:requestName,itemCode:item,excludeName:context.command.aggregate.name});
+    if(ordered+qty>max)throw errors.reference(`Ordered quantity for ${item} exceeds Material Request ${requestName}`);
+  }
+}
+
+function divideRounded(numerator:number,denominator:number):number{if(!Number.isSafeInteger(numerator)||!Number.isSafeInteger(denominator)||denominator<=0)throw errors.validation("Arithmetic exceeds safe integer range");const sign=numerator<0?-1:1;const value=Math.abs(numerator);const quotient=Math.floor(value/denominator);return sign*(quotient+((value%denominator)*2>=denominator?1:0));}

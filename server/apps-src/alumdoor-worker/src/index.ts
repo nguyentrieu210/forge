@@ -524,6 +524,214 @@ async function stampQuotation(call: PlatformCall, quote: QuotationDoc, order: st
   return response.ok;
 }
 
+/** Field của dòng mua mà nhân O2P ĐỌC. Chép thiếu `uom`/`conversion_factor` là mất quy đổi. */
+const PURCHASE_LINE_FIELDS = [
+  "item_code", "qty", "uom", "conversion_factor", "rate", "width_m", "invoice_kg", "note",
+] as const;
+
+interface PurchaseDoc {
+  name: string;
+  supplier?: string;
+  company?: string;
+  currency?: string;
+  supplier_group?: string;
+  buying_price_list?: string;
+  schedule_date?: string;
+  items?: Array<Record<string, unknown>>;
+  modified?: string;
+}
+
+function purchaseLines(source: PurchaseDoc, warehouse: string): Array<Record<string, unknown>> {
+  return (source.items ?? []).map((line, index) => {
+    const copied: Record<string, unknown> = { row_id: `R${index + 1}` };
+    for (const field of PURCHASE_LINE_FIELDS) if (line[field] !== undefined && line[field] !== null && line[field] !== "") copied[field] = line[field];
+    const target = warehouse || String(line.warehouse ?? "");
+    if (target) copied.warehouse = target;
+    return copied;
+  });
+}
+
+async function loadSupplierQuotation(call: PlatformCall, name: string): Promise<PurchaseDoc> {
+  if (!name) throw new Error("Cần chọn báo giá nhà cung cấp.");
+  const quotation = await readDoc<PurchaseDoc & { docstatus?: number }>(call, "Supplier Quotation", name);
+  if (quotation.docstatus !== 1) throw new Error(`Báo giá ${name} chưa ghi sổ — chỉ chuyển được báo giá đã ghi sổ.`);
+  if (!quotation.items?.length) throw new Error(`Báo giá ${name} không có dòng hàng nào.`);
+  return quotation;
+}
+
+/** Đơn mua đã tạo từ báo giá này, nếu có. Hỏi theo LIÊN KẾT, không theo dấu trên báo giá. */
+async function orderForQuotation(call: PlatformCall, quotation: string): Promise<string | null> {
+  const query = new URLSearchParams({
+    fields: JSON.stringify(["name"]),
+    filters: JSON.stringify([["supplier_quotation", "=", quotation]]),
+    limit_page_length: "1",
+  });
+  const response = await call(`resource/Purchase%20Order?${query}`);
+  if (!response.ok) return null;
+  return ((await response.json()) as { data?: Array<{ name?: string }> }).data?.[0]?.name ?? null;
+}
+
+async function previewPurchaseOrder(call: PlatformCall, args: Record<string, unknown>): Promise<Response> {
+  let quotation: PurchaseDoc;
+  try { quotation = await loadSupplierQuotation(call, String(args.supplier_quotation ?? "")); } catch (error) { return refuse(error instanceof Error ? error.message : "không đọc được báo giá"); }
+  const items = purchaseLines(quotation, String(args.warehouse ?? ""));
+  return answer({ supplier_quotation: quotation.name, supplier: quotation.supplier, items, lines: items.length });
+}
+
+/**
+ * Báo giá NCC → đơn mua. Bấm lại bao nhiêu lần cũng chỉ ra MỘT đơn.
+ *
+ * Cùng khuôn với `convertQuote` bên bán, và vì đúng một lý do: lần chạy thật đầu tiên của
+ * bản bán đã vượt hạn giờ, đơn ĐƯỢC tạo nhưng người bấm thấy "hết giờ" nên bấm lại — và
+ * lần thứ hai tạo đơn thứ hai. Ở phía mua, đơn thứ hai nghĩa là NCC giao gấp đôi và công
+ * nợ gấp đôi. Chốt nằm ở câu hỏi "đã có đơn nào trỏ về báo giá này chưa", đúng ở mọi thời
+ * điểm kể cả khi lần trước chết giữa chừng.
+ */
+async function orderFromSupplierQuotation(call: PlatformCall, args: Record<string, unknown>): Promise<Response> {
+  const name = String(args.supplier_quotation ?? "");
+  let quotation: PurchaseDoc;
+  let existing: string | null;
+  try {
+    [quotation, existing] = await Promise.all([loadSupplierQuotation(call, name), orderForQuotation(call, name)]);
+  } catch (error) {
+    return refuse(error instanceof Error ? error.message : "không đọc được báo giá");
+  }
+  const items = purchaseLines(quotation, String(args.warehouse ?? ""));
+  if (existing) return answer({ purchase_order: existing, supplier_quotation: quotation.name, items, lines: items.length, already: true });
+
+  const created = await call("resource/Purchase%20Order", {
+    method: "POST",
+    body: JSON.stringify({
+      supplier: quotation.supplier, company: quotation.company, currency: quotation.currency,
+      transaction_date: new Date().toISOString().slice(0, 10),
+      ...(args.schedule_date ? { schedule_date: String(args.schedule_date) } : {}),
+      supplier_quotation: quotation.name,
+      ...(quotation.supplier_group ? { supplier_group: quotation.supplier_group } : {}),
+      items,
+      note: String(args.note ?? `Theo báo giá ${quotation.name}`),
+    }),
+  });
+  if (!created.ok) return refuse(`Không tạo được đơn mua: ${(await created.text()).slice(0, 200)}`);
+  const order = ((await created.json()) as { data?: { name?: string } }).data?.name ?? "";
+  return answer({ purchase_order: order, supplier_quotation: quotation.name, items, lines: items.length });
+}
+
+/**
+ * Số ĐÃ nhận theo từng mã hàng của một đơn mua.
+ *
+ * Cộng từ chính các phiếu nhập ĐÃ GHI SỔ, không đọc `received_percentage` — cột phần trăm
+ * là con số của cả phiếu, không tách được theo mã hàng, mà một đơn có thể về đủ mặt này và
+ * thiếu mặt kia. Cộng theo `stock_qty` vì đơn có thể đặt bằng CÂY còn phiếu nhận ghi MÉT.
+ *
+ * Đọc các phiếu SONG SONG: mỗi lần gọi ngược tốn ~1,2 giây và nền tảng cắt lời gọi app ở
+ * 10 giây, nên ba phiếu xếp nối đuôi đã là quá nửa hạn giờ.
+ */
+async function receivedByItem(call: PlatformCall, order: string): Promise<Map<string, number>> {
+  const received = new Map<string, number>();
+  const query = new URLSearchParams({
+    fields: JSON.stringify(["name"]),
+    filters: JSON.stringify([["against_purchase_order", "=", order], ["docstatus", "=", 1]]),
+    limit_page_length: "20",
+  });
+  const listed = await call(`resource/Purchase%20Receipt?${query}`);
+  if (!listed.ok) return received;
+  const names = (((await listed.json()) as { data?: Array<{ name?: string }> }).data ?? [])
+    .map((row) => row.name).filter((value): value is string => Boolean(value));
+  if (!names.length) return received;
+  const receipts = await Promise.all(names.map(async (receipt) => {
+    try { return await readDoc<PurchaseDoc>(call, "Purchase Receipt", receipt); } catch { return null; }
+  }));
+  for (const receipt of receipts) {
+    for (const line of receipt?.items ?? []) {
+      const code = String(line.item_code ?? "");
+      if (!code) continue;
+      const quantity = Number(line.stock_qty ?? line.qty ?? 0);
+      if (Number.isFinite(quantity)) received.set(code, (received.get(code) ?? 0) + quantity);
+    }
+  }
+  return received;
+}
+
+/** Phần CÒN LẠI của một đơn mua, theo từng dòng. Dòng đã về đủ thì biến mất khỏi phiếu. */
+async function remainingLines(call: PlatformCall, order: string, warehouse: string): Promise<{ purchase: PurchaseDoc; items: Array<Record<string, unknown>> }> {
+  const [purchase, received] = await Promise.all([
+    readDoc<PurchaseDoc & { docstatus?: number }>(call, "Purchase Order", order),
+    receivedByItem(call, order),
+  ]);
+  if (purchase.docstatus !== 1) throw new Error(`Đơn mua ${order} chưa ghi sổ.`);
+  const items: Array<Record<string, unknown>> = [];
+  for (const [index, line] of (purchase.items ?? []).entries()) {
+    const code = String(line.item_code ?? "");
+    if (!code) continue;
+    const factor = Number(line.conversion_factor ?? 1) || 1;
+    const orderedStock = Number(line.stock_qty ?? line.qty ?? 0);
+    /**
+     * Số đã nhận đếm theo MÃ HÀNG, còn đơn có thể có HAI dòng cùng mã (hai khổ, hai màu).
+     * Nên phải rót số đã nhận vào các dòng theo thứ tự, hết dòng này mới sang dòng sau —
+     * chia đều hay trừ thẳng vào từng dòng đều làm dòng đầu hiện thiếu và dòng sau hiện dư.
+     */
+    const pool = received.get(code) ?? 0;
+    const consumed = Math.min(pool, orderedStock);
+    received.set(code, pool - consumed);
+    const outstandingStock = orderedStock - consumed;
+    if (outstandingStock <= 0) continue;
+    const copied: Record<string, unknown> = { row_id: `R${index + 1}`, purchase_order: order };
+    for (const field of PURCHASE_LINE_FIELDS) if (line[field] !== undefined && line[field] !== null && line[field] !== "") copied[field] = line[field];
+    // `qty` trả về ĐƠN VỊ MUA — thủ kho đếm cây, không đếm mét.
+    copied.qty = Number((outstandingStock / factor).toFixed(6));
+    const target = warehouse || String(line.warehouse ?? "");
+    if (target) copied.warehouse = target;
+    items.push(copied);
+  }
+  return { purchase, items };
+}
+
+async function previewPurchaseReceipt(call: PlatformCall, args: Record<string, unknown>): Promise<Response> {
+  const order = String(args.purchase_order ?? "");
+  if (!order) return refuse("Cần chọn đơn mua.");
+  try {
+    const { purchase, items } = await remainingLines(call, order, String(args.warehouse ?? ""));
+    return answer({
+      purchase_order: order, supplier: purchase.supplier, items, lines: items.length,
+      ...(items.length ? {} : { message: `Đơn mua ${order} đã nhận đủ — không còn gì để nhập.` }),
+    });
+  } catch (error) {
+    return refuse(error instanceof Error ? error.message : "không đọc được đơn mua");
+  }
+}
+
+/**
+ * Tạo phiếu nhập NHÁP, không ghi sổ.
+ *
+ * Cố ý dừng ở nháp: số trên đơn là số ĐẶT, số vào kho phải là số ĐẾM ĐƯỢC. Hàng về thiếu
+ * vài cây, hoặc một cây móp phải trả lại ngay tại xe, là chuyện thường ngày — ghi sổ hộ
+ * thủ kho là ghi vào kho một con số chưa ai nhìn thấy.
+ */
+async function receiptFromPurchaseOrder(call: PlatformCall, args: Record<string, unknown>): Promise<Response> {
+  const order = String(args.purchase_order ?? "");
+  if (!order) return refuse("Cần chọn đơn mua.");
+  let purchase: PurchaseDoc;
+  let items: Array<Record<string, unknown>>;
+  try { ({ purchase, items } = await remainingLines(call, order, String(args.warehouse ?? ""))); } catch (error) { return refuse(error instanceof Error ? error.message : "không đọc được đơn mua"); }
+  if (!items.length) return refuse(`Đơn mua ${order} đã nhận đủ — không còn gì để nhập.`);
+
+  const created = await call("resource/Purchase%20Receipt", {
+    method: "POST",
+    body: JSON.stringify({
+      supplier: purchase.supplier, company: purchase.company, currency: purchase.currency,
+      against_purchase_order: order,
+      posting_at: new Date().toISOString(),
+      ...(args.supplier_invoice_no ? { supplier_invoice_no: String(args.supplier_invoice_no) } : {}),
+      ...(args.driver ? { driver: String(args.driver) } : {}),
+      items,
+      note: `Nháp theo đơn mua ${order} — sửa lại số THỰC ĐẾM trước khi ghi sổ.`,
+    }),
+  });
+  if (!created.ok) return refuse(`Không tạo được phiếu nhập: ${(await created.text()).slice(0, 200)}`);
+  const receipt = ((await created.json()) as { data?: { name?: string } }).data?.name ?? "";
+  return answer({ purchase_receipt: receipt, purchase_order: order, items, lines: items.length, draft: true });
+}
+
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
@@ -555,6 +763,10 @@ export default {
         if (method === "alumdoor.cut.return") return await returnCut(call, args);
         if (method === "alumdoor.quote.preview") return await previewQuote(call, args);
         if (method === "alumdoor.quote.convert") return await convertQuote(call, args, ctx);
+        if (method === "alumdoor.purchase.preview_order") return await previewPurchaseOrder(call, args);
+        if (method === "alumdoor.purchase.order_from_quotation") return await orderFromSupplierQuotation(call, args);
+        if (method === "alumdoor.purchase.preview_receipt") return await previewPurchaseReceipt(call, args);
+        if (method === "alumdoor.purchase.receipt_from_order") return await receiptFromPurchaseOrder(call, args);
         return new Response(JSON.stringify({ message: `Không có method ${method}` }), { status: 404 });
       }
       // App này chưa khai validator nào; hook validate trả "cho qua" để không chặn ghi.

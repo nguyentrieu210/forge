@@ -124,11 +124,12 @@ Nhân **từ chối huỷ** khi đã có phiếu nhập/hoá đơn (`getProcured
 |---|---|---|---|---|
 | `supplier` · `company` · `currency` | `Link(...)!` | ✅ | ✅ | Phải **khớp đơn mua** (`assertPurchaseContext`) |
 | `posting_at` | `Datetime!` | ✅ | ✅ | Khoá kỳ kiểm theo ngày này |
-| `against_purchase_order` | `Link(Purchase Order)!` | ✅ **hiện ở ĐẦU PHIẾU** | ✅ | ⚠️ chỗ chặn bài toán gộp đơn — §6a |
+| `against_purchase_order` | `Link(Purchase Order)` | ✅ chỉ là **mặc định** cho dòng | ⬜ | Đã bỏ bắt buộc — §6a |
+| ↳ `purchase_order` (trên DÒNG) | `Link(Purchase Order)` | ✅ `orderOf()` đọc dòng TRƯỚC, không có mới lấy đầu phiếu | ✅ (một trong hai) | Chỗ giải bài toán gộp đơn — §6a |
 | `items` | `Table(Purchase Receipt Item)!` | ✅ mỗi dòng cần `warehouse` | ✅ | |
 | `supplier_invoice_no` | `Data` | ⬜ | ⬜ | Số phiếu giao của NCC |
-| `stock_account` | `Link(Account)=(Hàng tồn kho)` | ❌ **nhân CHƯA đọc** | — | → §6b, đây là lý do sổ cái trống |
-| `stock_received_but_not_billed` | `Link(Account)=(Hàng nhận chưa có hoá đơn)` | ❌ **nhân CHƯA đọc** | — | → §6b |
+| `stock_account` | `Link(Account)=(Hàng tồn kho)` | ✅ `ledger()` ghi Nợ | — | §6b — đã sửa |
+| `stock_received_but_not_billed` | `Link(Account)=(Hàng nhận chưa có hoá đơn)` | ✅ `ledger()` ghi Có | — | §6b — đã sửa |
 
 ### 4.5 — `Purchase Invoice` · Hoá đơn mua
 
@@ -214,12 +215,12 @@ Delivery Note**, để app cũ không khai thì không đổi hành vi.
 
 ---
 
-## 7. Ngoài phạm vi bản này
+## 7. Ngoài phạm vi ĐỢT 1 — **đã làm hết ở đợt 2, xem §9**
 
-- Trả hàng mua / khách trả lại (`Stock Return`) — có nhân, làm đợt sau
-- Yêu cầu mua · Báo giá NCC (`Material Request` · `Supplier Quotation`) — nhân chưa có
-- Quy đổi đơn vị (kg ↔ cây ↔ mét) — cần cho ray "mua cây bán mét", làm riêng
-- **Giá vốn hàng bán bên BÁN đang bằng 0** — lỗi tiền đang sống, sửa 2 dòng brief, **nên làm trước**
+- ~~Trả hàng mua~~ → §9.4
+- ~~Yêu cầu mua · Báo giá NCC~~ → §9.2
+- ~~Quy đổi đơn vị (kg ↔ cây ↔ mét)~~ → §9.1
+- ~~Giá vốn hàng bán bên BÁN đang bằng 0~~ → §9.5
 
 ---
 
@@ -243,3 +244,156 @@ Delivery Note**, để app cũ không khai thì không đổi hành vi.
 3. Mã nhôm nào thuộc loại giá nào (THÔ / MÀU chưa dập / MÀU đã dập / RAY)?
 4. Có cần theo dõi công nợ phải trả không, hay mua tới đâu trả tới đó? *(dữ liệu cho thấy phần
    lớn trả tiền mặt ngay)*
+
+---
+
+# ĐỢT 2 — phần còn lại của phân hệ
+
+Đợt 1 dựng chuỗi lõi (đơn mua → phiếu nhập → hoá đơn → phiếu chi). Đợt 2 làm nốt bốn thứ đã
+ghi "ngoài phạm vi", cộng một lỗi tiền đang sống.
+
+## 9.1 — QUY ĐỔI ĐƠN VỊ · thứ bắt buộc, và thứ dễ hỏng nhất
+
+Ray mua theo **cây**, tồn và bán theo **mét** (165.000 đ/m). Nan nhôm mua theo **kg**, tính
+theo **m²**. Không có quy đổi thì mua 20 cây ray thành *"tồn 20 mét"* — sai gần sáu lần, và
+sai **lặng lẽ**: sổ vẫn cân, báo cáo vẫn ra số, chỉ có kho là không khớp thực tế.
+
+    stock_qty = qty × conversion_factor
+
+`qty` và `rate` giữ nguyên **đơn vị mua** — đó là thứ in trên hoá đơn NCC và là thứ người mua
+đối chiếu. Chỉ **sổ kho** và **hạn mức đặt/nhận** chạy theo `stock_qty`.
+
+### Ba quy tắc, theo đúng thứ tự (`clouderp-core/src/uom.ts`)
+
+| # | Điều kiện | Hệ số | Vì sao |
+|---|---|---|---|
+| 1 | Dòng tự khai `conversion_factor` | dùng luôn | Cây nhôm không phải lúc nào cũng đúng 5,85 m |
+| 2 | Không khai `uom`, hoặc `uom` = đơn vị tồn | `1` | Đường của **mọi dòng đang chạy hôm nay** → bật lên không lệch sổ cũ |
+| 3 | Còn lại | tra `Item.uom_conversions` | Không có thì **TỪ CHỐI** |
+
+Quy tắc 3 **từ chối** thay vì lặng lẽ lấy `1` là điểm chính của cả tính năng. Người dùng đã
+nói rõ *"dòng này tính bằng đơn vị khác"* — lấy `1` lúc đó là ghi đè ý họ bằng một con số
+bịa, và cái sai chỉ lộ ra khi kiểm kho vài tháng sau.
+
+### Ba con số phải đúng CÙNG LÚC
+
+| Con số | Công thức | Sai thì sao |
+|---|---|---|
+| Số lượng vào kho | `qty × cf` | Tồn sai gần 6× |
+| Giá trị vào kho | `qty × rate` — **KHÔNG nhân cf** | Tồn kho phình so với tiền đã trả |
+| Giá vốn 1 đơn vị tồn | `giá trị ÷ stock_qty` | `117 mét × giá-một-cây` |
+
+### FIELD LEDGER — `UOM Conversion` (bảng con của `Item`)
+
+| Field | Kiểu | Nhân ĐỌC? | Chặn? | Nghiệp vụ |
+|---|---|---|---|---|
+| `uom` | `Select(13 đơn vị)!` | ✅ `factorFromMaster()` so **đúng chuỗi này** | ✅ | Đơn vị giao dịch |
+| `conversion_factor` | `Float!` | ✅ `> 0` mới nhận | ✅ | 1 cây = 5,85 mét |
+
+> ⚠️ **Danh sách đơn vị phải GIỐNG HỆT nhau ở mọi nơi.** `Item.stock_uom` từng có
+> `(m2,Bộ,Cái,Mét,Kg,Thanh)` còn dòng mua có `(Kg,Cây,Cái,…,Thân,…)`. Hai danh sách lệch nghĩa
+> là `"Cây"` **vĩnh viễn không bao giờ bằng** `"Thanh"`, nên quy tắc 2 không bao giờ khớp và
+> mọi dòng đều rơi xuống quy tắc 3. Nay dùng chung **một** danh sách 13 giá trị.
+
+### Ba nơi cùng một luật — phải sửa cả ba
+
+Đây là kiểu lỗi *"luật viết hai lần rồi trôi dạt"*, và test bắt được đúng nó:
+
+| Nơi | Tệp | Đọc gì |
+|---|---|---|
+| Nhân (từ chối trước, thông báo đọc được) | `clouderp-core/src/controllers.ts` `assertPurchaseRemaining` | `stockQtyMicros()` |
+| Kho lưu in-memory (test chạy trên đây) | `document-kernel/src/in-memory-store.ts` `assertProcurementInvariants` | `stock_qty_micros ?? qty_micros` |
+| **Trigger SQLite — chốt thật lúc chạy** | `migrations/tenant/0023_purchase_stock_uom.sql` | `COALESCE(stock_qty_micros, qty_micros)` |
+
+Chỉ sửa nhân thì SQLite vẫn `RAISE(ABORT)` ở tầng dưới, và người dùng nhận một mã lỗi không
+đọc được. Test unit **đã fail đúng chỗ này** trước khi có migration 0023.
+
+## 9.2 — YÊU CẦU VẬT TƯ → HỎI GIÁ → BÁO GIÁ NCC
+
+Ba chứng từ **không ghi sổ nào cả**, và đó là đúng: chưa cam kết tiền, chưa động vào kho. Giá
+trị nằm ở hai câu hỏi mà một đơn mua đứng một mình không trả lời được — *"ai yêu cầu cái
+này"* và *"đã đặt mua đủ chưa"*.
+
+| Doctype | Nhân canh gì | Thông báo khi vi phạm |
+|---|---|---|
+| `Material Request` | Đơn mua trỏ về **không được đặt quá số đã yêu cầu** | `exceeds Material Request …` |
+| `Request for Quotation` | **Không mời trùng** một NCC hai lần | `Supplier X appears twice` |
+| `Supplier Quotation` | NCC **không được mời** thì không gửi giá vào được | `was not invited to …` |
+
+**Số đã đặt được ĐẾM LẠI từ chính các đơn mua đã ghi sổ**
+(`sumSubmittedChildQuantityMicros`), không đọc một cột `%đã đặt` nào. Cột tổng hợp là thứ
+trôi dạt khi có người sửa hay huỷ đơn; đếm lại từ chứng từ thì không.
+
+Hạn mức này cũng chạy theo **đơn vị tồn**: yêu cầu 117 mét, đặt 20 cây → vừa đủ.
+
+## 9.3 — Hai nút bấm (worker)
+
+| Nút | Method | Điểm cần chú ý |
+|---|---|---|
+| Báo giá NCC → Đơn mua | `alumdoor.purchase.order_from_quotation` | **Bấm lại chỉ ra MỘT đơn** |
+| Đơn mua → Phiếu nhập | `alumdoor.purchase.receipt_from_order` | Chỉ phần **CÒN LẠI**, và dừng ở **NHÁP** |
+
+Tính bất biến của nút thứ nhất không phải để cho đẹp: bản **bán** đã hỏng đúng chỗ đó — thao
+tác vượt hạn giờ, người dùng thấy *"hết giờ"* nên bấm lại, lần thứ hai tạo đơn thứ hai. Phía
+mua thì đơn thứ hai nghĩa là NCC **giao gấp đôi** và **công nợ gấp đôi**. Chốt nằm ở câu hỏi
+*"đã có đơn nào trỏ về báo giá này chưa"*, đúng ở mọi thời điểm kể cả khi lần trước chết giữa
+chừng — **không** nằm ở một dấu ghi sau.
+
+Nút thứ hai dừng ở **nháp**, cố ý: số trên đơn là số **ĐẶT**, số vào kho phải là số **ĐẾM
+ĐƯỢC**. Hàng về thiếu vài cây là chuyện thường ngày; ghi sổ hộ thủ kho là đưa vào kho một con
+số chưa ai nhìn thấy.
+
+Số đã nhận rót vào các dòng **theo thứ tự, hết dòng này mới sang dòng sau** — vì một đơn có
+thể có hai dòng cùng mã hàng (hai khổ, hai màu), mà sổ tiến độ chỉ đếm theo mã.
+
+## 9.4 — TRẢ HÀNG NCC: hai nửa, hai chứng từ
+
+| Chứng từ | Trả cái gì | Sổ nào động |
+|---|---|---|
+| `Stock Return` (`return_type: Purchase`) | **HÀNG** | Kho ↓ |
+| `Debit Note` | **TIỀN** | Phải trả ↓ |
+
+Tách ra là đúng chứ không phải rườm rà — hàng đi về trước, hoá đơn điều chỉnh của NCC về sau,
+hệt như lúc nhập. Nhân **từ chối** trả quá số đã nhập, **từ chối** trả về kho khác kho đã
+nhập, và **từ chối** giảm trừ vượt số còn nợ trên hoá đơn gốc.
+
+Giá vốn xuất trả lấy theo **giá vốn thật đang có trong kho** (`deriveOutgoingValuation`),
+không lấy giá trên phiếu nhập — nếu không, trả hàng thành chỗ nặn ra lãi.
+
+## 9.5 — GIÁ VỐN HÀNG BÁN = 0 · lỗi tiền đang sống
+
+Sổ cái có doanh thu, **không có giá vốn**, nên lãi gộp hiện đúng **100%** trên mọi báo cáo.
+Sổ vẫn **CÂN** — đó là lý do nó sống được nhiều tháng mà không ai thấy.
+
+Chỗ sửa **không** phải nơi tài liệu đợt 1 đoán. Phiếu xuất kho **không** đọc `stock_account` /
+`cogs_account` trên chính nó. Nhân tra theo thứ tự:
+
+    Item.inventory_account  →  Company.default_inventory_account
+    Item.cogs_account       →  Company.default_cogs_account
+
+`clouderp-selling/src/controllers.ts:232-235`, và chỉ ghi khi có **đủ cả hai**.
+
+Khai hai field đó trên phiếu xuất — như bản thiết kế đợt 1 định làm — là khai một thứ **không
+ai đọc**: đúng kiểu hỏng mà Field Ledger sinh ra để chặn. Chỗ đúng là **fixture Công ty**, hai
+khoá, và đó là toàn bộ bản sửa.
+
+## 9.6 — Scorecard đợt 2
+
+| # | Tiêu chí | Đạt | Bằng chứng |
+|---|---|---|---|
+| 1 | Doctype mới có ledger đủ cột — **11/11** | ✅ | §9.1, brief `alumdoor.json` |
+| 2 | Mọi field khai rõ nhân có đọc không | ✅ | cột "Nhân ĐỌC?" |
+| 3 | Luật lặp ở nhiều tầng đã đồng bộ **cả ba** | ✅ | §9.1, bảng ba nơi |
+| 4 | Không phá app đang chạy | ✅ | quy tắc 2 (hệ số 1) + `COALESCE` ở cả hai kho lưu |
+| 5 | Khẳng định về nhân đều đã đọc file thật | ✅ | §9.5 — bản đoán ban đầu **SAI**, đã grep rồi sửa |
+| 6 | Test bắt được lỗi thật, không chỉ xanh cho vui | ✅ | 11 unit; bản đầu **fail** ở trigger SQLite |
+| 7 | Kiểm bằng SỔ, không bằng chứng từ | ✅ | `verify-alumdoor-mua.mjs` |
+| 8 | Bản in cho khách/NCC có đủ | ✅ | 3 mẫu in mới |
+
+## 9.7 — Vẫn còn thiếu so với ERPNext
+
+| Thứ | Vì sao chưa làm |
+|---|---|
+| `Supplier Scorecard` | ERPNext dựng nó thành doctype có kỳ đánh giá + biến số + công thức. Thay bằng **báo cáo** `Giảm trừ theo nhà cung cấp` — đo chất lượng NCC bằng số tiền phải giảm trừ, đọc thẳng từ sổ. |
+| `Subcontracting` (gia công ngoài) | Cần chuỗi riêng: xuất NVL cho bên gia công, kho "hàng gửi gia công", nhận lại bán thành phẩm. Xưởng có sơn tĩnh điện ngoài — **cần hỏi khách** có muốn theo dõi trong app không. |
+| Báo cáo mua theo **MẶT HÀNG** | Báo cáo app hiện chỉ gộp được trên field của chứng từ CHA, không gộp được trên dòng. Cần mở rộng `AppReportService`. |
