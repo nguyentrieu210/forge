@@ -70,6 +70,9 @@ interface InventoryItem {
   item_code?: string;
   inventory_mode?: string;
   stock_uom?: string;
+  measurement_profile?: string;
+  default_color?: string;
+  allowed_colors?: Array<{ color?: string }>;
 }
 
 function positive(value: unknown): boolean {
@@ -86,6 +89,28 @@ async function readMaster(call: PlatformCall, doctype: string, name: string): Pr
   if (response.status === 404) return null;
   if (!response.ok) throw new Error(`không đọc được ${doctype} ${name} (HTTP ${response.status})`);
   return ((await response.json()) as { data?: Record<string, unknown> }).data ?? null;
+}
+
+function colorNames(item: Record<string, unknown>): string[] {
+  if (!Array.isArray(item.allowed_colors)) return [];
+  return item.allowed_colors
+    .filter((row): row is Record<string, unknown> => Boolean(row) && typeof row === "object" && !Array.isArray(row))
+    .map((row) => String(row.color ?? "").trim())
+    .filter(Boolean);
+}
+
+async function assertActiveColors(
+  call: PlatformCall,
+  colors: string[],
+  context: string,
+): Promise<Response | null> {
+  const unique = [...new Set(colors.filter(Boolean))];
+  const masters = await Promise.all(unique.map(async (color) => [color, await readMaster(call, "Item Color", color)] as const));
+  for (const [color, master] of masters) {
+    if (!master) return refuse(`${context}: mã màu ${color} không tồn tại.`);
+    if (checked(master.disabled)) return refuse(`${context}: mã màu ${color} đã ngừng dùng.`);
+  }
+  return null;
 }
 
 /**
@@ -110,6 +135,22 @@ async function validateItemMaster(call: PlatformCall, subject: ValidatorSubject)
   const group = await readMaster(call, "Item Group", groupName);
   if (!group) return refuse(`Nhóm hàng ${groupName} không tồn tại hoặc đã ngừng dùng.`);
   if (checked(group.is_group)) return refuse(`Nhóm hàng ${groupName} là nhóm chứa; hãy chọn một nhóm lá.`);
+
+  const allowedColors = colorNames(doc);
+  const duplicateColors = allowedColors.filter((color, index) => allowedColors.indexOf(color) !== index);
+  if (duplicateColors.length) {
+    return refuse(`${code}: mã màu ${[...new Set(duplicateColors)].join(", ")} đang bị khai lặp trong Các màu được phép.`);
+  }
+  const defaultColor = String(doc.default_color ?? "").trim();
+  const invalidColor = await assertActiveColors(
+    call,
+    [...allowedColors, defaultColor].filter(Boolean),
+    code,
+  );
+  if (invalidColor) return invalidColor;
+  if (defaultColor && allowedColors.length && !allowedColors.includes(defaultColor)) {
+    return refuse(`${code}: Màu mặc định ${defaultColor} chưa nằm trong Các màu được phép.`);
+  }
 
   if (!["Hàng tồn kho", "Dịch vụ", "Tài sản"].includes(nature)) {
     return refuse(`${code}: cần chọn đúng Bản chất mặt hàng.`);
@@ -171,9 +212,14 @@ async function validateItemMaster(call: PlatformCall, subject: ValidatorSubject)
  * Item được đọc lại từ máy chủ, không tin `inventory_mode` do trình duyệt gửi lên. Nhờ đó
  * một lệnh API không thể giả hàng nhôm thành "Hàng thường" để bỏ qua quy cách bắt buộc.
  */
-async function validatePurchaseMeasurement(call: PlatformCall, subject: ValidatorSubject): Promise<Response> {
-  const rows = Array.isArray(subject.payload?.items)
-    ? subject.payload.items.filter((row): row is Record<string, unknown> => Boolean(row) && typeof row === "object" && !Array.isArray(row))
+async function validatePurchaseMeasurement(
+  call: PlatformCall,
+  subject: ValidatorSubject,
+  validatedDoc?: Record<string, unknown>,
+): Promise<Response> {
+  const doc = validatedDoc ?? await validationDocument(call, subject);
+  const rows = Array.isArray(doc.items)
+    ? doc.items.filter((row): row is Record<string, unknown> => Boolean(row) && typeof row === "object" && !Array.isArray(row))
     : [];
   if (!rows.length) return accept();
 
@@ -211,6 +257,81 @@ async function validatePurchaseMeasurement(call: PlatformCall, subject: Validato
     if (!positive(row.qty)) return refuse(`${line}: cần nhập số Kg thực cân lớn hơn 0.`);
     if (!positive(row.length_m)) return refuse(`${line}: cần nhập chiều dài một cây/lá lớn hơn 0.`);
     if (!positive(row.qty_bar)) return refuse(`${line}: cần nhập số cây/lá lớn hơn 0.`);
+  }
+  return accept();
+}
+
+async function validationDocument(
+  call: PlatformCall,
+  subject: ValidatorSubject,
+): Promise<Record<string, unknown>> {
+  if (subject.action === "create") return subject.payload ?? {};
+  const current = await readMaster(call, subject.doctype, subject.name);
+  return { ...(current ?? {}), ...(subject.payload ?? {}) };
+}
+
+/**
+ * Màu là một chiều của hàng thật, không phải ghi chú.
+ *
+ * - Item quyết định màu nào được dùng (danh sách rỗng = mọi màu đang hoạt động).
+ * - Measurement Profile quyết định chứng từ có bắt buộc chọn màu hay không.
+ * - Mọi chứng từ giữ MÃ màu chuẩn; không cho "ghi gần giống" thành một vị trí tồn khác.
+ */
+async function validateDocumentColors(
+  call: PlatformCall,
+  subject: ValidatorSubject,
+  validatedDoc?: Record<string, unknown>,
+): Promise<Response> {
+  const doc = validatedDoc ?? await validationDocument(call, subject);
+  const rawLines: Array<{ item_code?: unknown; color?: unknown }> =
+    subject.doctype === "Work Order"
+      ? [{ item_code: doc.production_item, color: doc.color }]
+      : subject.doctype === "Aluminium Lot"
+        ? [{ item_code: doc.profile, color: doc.colour }]
+        : Array.isArray(doc.items)
+          ? doc.items
+            .filter((row): row is Record<string, unknown> => Boolean(row) && typeof row === "object" && !Array.isArray(row))
+            .map((row) => ({ item_code: row.item_code, color: row.color ?? row.colour }))
+          : [];
+  if (!rawLines.length) return accept();
+
+  const codes = [...new Set(rawLines.map((row) => String(row.item_code ?? "").trim()).filter(Boolean))];
+  const itemPairs = await Promise.all(codes.map(async (code) => [code, await readMaster(call, "Item", code)] as const));
+  const items = new Map(itemPairs);
+  const profileNames = [...new Set(itemPairs
+    .map(([, item]) => String(item?.measurement_profile ?? "").trim())
+    .filter(Boolean))];
+  const profilePairs = await Promise.all(profileNames.map(async (name) => [name, await readMaster(call, "Measurement Profile", name)] as const));
+  const profiles = new Map(profilePairs);
+  const selectedColors = rawLines.map((row) => String(row.color ?? "").trim()).filter(Boolean);
+  const invalidColor = await assertActiveColors(call, selectedColors, subject.doctype);
+  if (invalidColor) return invalidColor;
+
+  for (let index = 0; index < rawLines.length; index += 1) {
+    const row = rawLines[index]!;
+    const code = String(row.item_code ?? "").trim();
+    if (!code) continue;
+    const item = items.get(code);
+    if (!item) return refuse(`Dòng ${index + 1}: mặt hàng ${code} không tồn tại hoặc đã ngừng dùng.`);
+
+    const profileName = String(item.measurement_profile ?? "").trim();
+    const profile = profileName ? profiles.get(profileName) : null;
+    const mode = String(item.inventory_mode ?? "Hàng thường");
+    const required = subject.doctype === "Aluminium Lot"
+      || checked(profile?.require_color)
+      || mode === "Nhôm cây/lá"
+      || mode === "Thành phẩm theo m2";
+    const color = String(row.color ?? "").trim();
+    const line = subject.doctype === "Work Order" || subject.doctype === "Aluminium Lot"
+      ? `${subject.doctype} (${code})`
+      : `Dòng ${index + 1} (${code})`;
+
+    if (required && !color) return refuse(`${line}: cần chọn Mã màu.`);
+    if (!color) continue;
+    const allowed = colorNames(item);
+    if (allowed.length && !allowed.includes(color)) {
+      return refuse(`${line}: màu ${color} không nằm trong Các màu được phép của mặt hàng.`);
+    }
   }
   return accept();
 }
@@ -686,7 +807,9 @@ async function stampQuotation(call: PlatformCall, quote: QuotationDoc, order: st
 
 /** Field của dòng mua mà nhân O2P ĐỌC. Chép thiếu `uom`/`conversion_factor` là mất quy đổi. */
 const PURCHASE_LINE_FIELDS = [
-  "item_code", "qty", "uom", "conversion_factor", "rate", "width_m", "invoice_kg", "note",
+  "item_code", "inventory_mode", "measurement_profile", "color",
+  "length_m", "qty_bundle", "qty_bar", "total_length_m", "actual_kg_per_m", "so_no",
+  "qty", "uom", "conversion_factor", "rate", "note",
 ] as const;
 
 interface PurchaseDoc {
@@ -1146,9 +1269,23 @@ export default {
           const call = platformCaller(request, env);
           return await validateItemMaster(call, subject);
         }
-        if (subject.doctype === "Purchase Order" || subject.doctype === "Purchase Receipt") {
+        if (subject.doctype === "Purchase Order" || subject.doctype === "Purchase Receipt" || subject.doctype === "Supplier Quotation") {
           const call = platformCaller(request, env);
-          return await validatePurchaseMeasurement(call, subject);
+          const doc = await validationDocument(call, subject);
+          const measurements = await validatePurchaseMeasurement(call, subject, doc);
+          if (!measurements.ok) return measurements;
+          return await validateDocumentColors(call, subject, doc);
+        }
+        if ([
+          "Material Request",
+          "Request for Quotation",
+          "Quotation",
+          "Sales Order",
+          "Work Order",
+          "Aluminium Lot",
+        ].includes(subject.doctype)) {
+          const call = platformCaller(request, env);
+          return await validateDocumentColors(call, subject);
         }
         return accept();
       }

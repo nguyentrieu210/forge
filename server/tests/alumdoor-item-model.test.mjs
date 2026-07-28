@@ -17,6 +17,7 @@ test("Alumdoor Item declares reusable inventory measurement profiles", () => {
   assert.ok(doctype("Material Specification"));
   assert.ok(doctype("Supplier Item"));
   assert.ok(doctype("Measurement Profile"));
+  assert.equal(doctype("Item Allowed Color")?.is_child, true);
   assert.equal(doctype("Item")?.allow_rename, true);
   assert.equal(field("Item", "item_code")?.read_only_depends_on, "eval: !doc.__islocal");
   assert.equal(field("Item", "item_group")?.options, "Item Group");
@@ -31,6 +32,8 @@ test("Alumdoor Item declares reusable inventory measurement profiles", () => {
   assert.match(field("Item", "measurement_profile")?.mandatory_depends_on ?? "", /inventory_mode != 'Hàng thường'/);
   assert.match(field("Item", "uom_conversions")?.depends_on ?? "", /default_purchase_uom != doc.stock_uom/);
   assert.match(field("Item", "variant_attributes")?.depends_on ?? "", /variant_of/);
+  assert.equal(field("Item", "default_color")?.options, "Item Color");
+  assert.equal(field("Item", "allowed_colors")?.options, "Item Allowed Color");
   assert.ok(field("Item", "tab_item_main"));
   assert.ok(field("Item", "tab_item_identity"));
   assert.ok(field("Item", "tab_item_accounts"));
@@ -52,23 +55,49 @@ test("Alumdoor Item declares reusable inventory measurement profiles", () => {
     },
     { mode: "Nhôm cây/lá", uom: "Kg", length: true, pieces: true },
   );
+  assert.equal(aluminium?.data?.require_color, true);
+  assert.equal(
+    brief.fixtures.find((entry) => entry.type === "Measurement Profile" && entry.name === "Thành phẩm theo m2")?.data?.require_color,
+    true,
+  );
 });
 
 test("purchase rows expose aluminium dimensions only for aluminium items", () => {
-  for (const child of ["Purchase Order Item", "Purchase Receipt Item"]) {
+  for (const child of ["Supplier Quotation Item", "Purchase Order Item", "Purchase Receipt Item"]) {
     assert.equal(field(child, "inventory_mode")?.hidden, true);
+    assert.equal(field(child, "color")?.fieldtype, "Link");
+    assert.equal(field(child, "color")?.options, "Item Color");
     assert.match(field(child, "length_m")?.depends_on ?? "", /Nhôm cây\/lá/);
     assert.match(field(child, "length_m")?.mandatory_depends_on ?? "", /Nhôm cây\/lá/);
     assert.match(field(child, "qty_bar")?.mandatory_depends_on ?? "", /Nhôm cây\/lá/);
     assert.equal(field(child, "total_length_m")?.read_only, true);
     assert.equal(field(child, "actual_kg_per_m")?.read_only, true);
-    assert.equal(field(child, "conversion_factor")?.label, "Hệ số quy đổi về ĐVT tồn");
+    if (child !== "Supplier Quotation Item") {
+      assert.equal(field(child, "conversion_factor")?.label, "Hệ số quy đổi về ĐVT tồn");
+    }
   }
   assert.deepEqual(app.validators, [
     { doctype: "Item", actions: ["create", "save"] },
     { doctype: "Purchase Order", actions: ["create", "save", "submit"] },
     { doctype: "Purchase Receipt", actions: ["create", "save", "submit"] },
+    { doctype: "Material Request", actions: ["create", "save", "submit"] },
+    { doctype: "Request for Quotation", actions: ["create", "save", "submit"] },
+    { doctype: "Supplier Quotation", actions: ["create", "save", "submit"] },
+    { doctype: "Quotation", actions: ["create", "save", "submit"] },
+    { doctype: "Sales Order", actions: ["create", "save", "submit"] },
+    { doctype: "Work Order", actions: ["create", "save", "submit"] },
+    { doctype: "Aluminium Lot", actions: ["create", "save"] },
   ]);
+  for (const [child, colorField] of [
+    ["Quotation Item", "color"],
+    ["Sales Order Item", "color"],
+    ["Material Request Item", "color"],
+    ["Aluminium Lot", "colour"],
+    ["Work Order", "color"],
+  ]) {
+    assert.equal(field(child, colorField)?.fieldtype, "Link");
+    assert.equal(field(child, colorField)?.options, "Item Color");
+  }
 });
 
 function validatorRequest(items) {
@@ -192,6 +221,93 @@ test("a service cannot masquerade as stock", async () => {
   assert.match((await response.json()).message, /dịch vụ không được bật Quản lý tồn kho/);
 });
 
+test("Item color policy rejects duplicates and a default outside the allowed list", async () => {
+  const base = {
+    item_code: "CUA-01",
+    item_group: "Thành phẩm",
+    item_nature: "Hàng tồn kho",
+    material_stage: "Thành phẩm",
+    supply_type: "Tự sản xuất",
+    is_stock_item: 1,
+    inventory_mode: "Thành phẩm theo m2",
+    measurement_profile: "Thành phẩm theo m2",
+    stock_uom: "Bộ",
+  };
+  const request = (payload) => new Request("https://app.internal/hooks/validate", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-cloudforge-tenant": "tenant-test",
+      "x-cloudforge-callback": "https://tenant.test/_app/",
+    },
+    body: JSON.stringify({ doctype: "Item", name: "CUA-01", action: "create", payload }),
+  });
+  const env = {
+    PLATFORM: masterPlatform({
+      "Item Group:Thành phẩm": { is_group: 0 },
+      "Measurement Profile:Thành phẩm theo m2": { inventory_mode: "Thành phẩm theo m2", stock_uom: "Bộ", require_color: 1 },
+      "Item Color:GS": { disabled: 0 },
+      "Item Color:CF": { disabled: 0 },
+    }),
+  };
+
+  const duplicate = await alumdoorWorker.fetch(
+    request({ ...base, allowed_colors: [{ color: "GS" }, { color: "GS" }] }),
+    env,
+    {},
+  );
+  assert.equal(duplicate.status, 422);
+  assert.match((await duplicate.json()).message, /khai lặp/);
+
+  const outside = await alumdoorWorker.fetch(
+    request({ ...base, default_color: "CF", allowed_colors: [{ color: "GS" }] }),
+    env,
+    {},
+  );
+  assert.equal(outside.status, 422);
+  assert.match((await outside.json()).message, /chưa nằm trong Các màu được phép/);
+});
+
+test("sales and production documents require an active allowed color", async () => {
+  const request = (color) => new Request("https://app.internal/hooks/validate", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-cloudforge-tenant": "tenant-test",
+      "x-cloudforge-callback": "https://tenant.test/_app/",
+    },
+    body: JSON.stringify({
+      doctype: "Sales Order",
+      name: "NEW-SALES-ORDER",
+      action: "create",
+      payload: { items: [{ item_code: "CUA-01", color }] },
+    }),
+  });
+  const env = {
+    PLATFORM: masterPlatform({
+      "Item:CUA-01": {
+        inventory_mode: "Thành phẩm theo m2",
+        measurement_profile: "Thành phẩm theo m2",
+        allowed_colors: [{ color: "GS" }],
+      },
+      "Measurement Profile:Thành phẩm theo m2": { require_color: 1 },
+      "Item Color:GS": { disabled: 0 },
+      "Item Color:CF": { disabled: 0 },
+    }),
+  };
+
+  const missing = await alumdoorWorker.fetch(request(""), env, {});
+  assert.equal(missing.status, 422);
+  assert.match((await missing.json()).message, /cần chọn Mã màu/);
+
+  const disallowed = await alumdoorWorker.fetch(request("CF"), env, {});
+  assert.equal(disallowed.status, 422);
+  assert.match((await disallowed.json()).message, /không nằm trong Các màu được phép/);
+
+  const valid = await alumdoorWorker.fetch(request("GS"), env, {});
+  assert.equal(valid.status, 200, await valid.text());
+});
+
 test("ordinary items keep the simple qty/uom path", async () => {
   const response = await alumdoorWorker.fetch(
     validatorRequest([{ item_code: "MOTOR-01", qty: 2, uom: "Cái", rate: 1_000_000 }]),
@@ -202,7 +318,10 @@ test("ordinary items keep the simple qty/uom path", async () => {
 });
 
 test("aluminium is authoritative Kg stock plus required physical dimensions", async () => {
-  const env = { PLATFORM: platform({ A282: { inventory_mode: "Nhôm cây/lá", stock_uom: "Kg" } }) };
+  const env = { PLATFORM: platform({
+    A282: { inventory_mode: "Nhôm cây/lá", stock_uom: "Kg", allowed_colors: [{ color: "GS" }] },
+    GS: { disabled: 0 },
+  }) };
   const valid = await alumdoorWorker.fetch(
     validatorRequest([{
       item_code: "A282",
@@ -214,6 +333,7 @@ test("aluminium is authoritative Kg stock plus required physical dimensions", as
       qty_bar: 51,
       qty_bundle: 6,
       so_no: "14JJ",
+      color: "GS",
     }]),
     env,
     {},
@@ -221,7 +341,7 @@ test("aluminium is authoritative Kg stock plus required physical dimensions", as
   assert.equal(valid.status, 200, await valid.text());
 
   const wrongUnit = await alumdoorWorker.fetch(
-    validatorRequest([{ item_code: "A282", uom: "Cây", qty: 51, length_m: 8.5, qty_bar: 51 }]),
+    validatorRequest([{ item_code: "A282", color: "GS", uom: "Cây", qty: 51, length_m: 8.5, qty_bar: 51 }]),
     env,
     {},
   );
@@ -229,10 +349,64 @@ test("aluminium is authoritative Kg stock plus required physical dimensions", as
   assert.match((await wrongUnit.json()).message, /phải nhập theo Kg/);
 
   const missingDimensions = await alumdoorWorker.fetch(
-    validatorRequest([{ item_code: "A282", uom: "Kg", qty: 191.4 }]),
+    validatorRequest([{ item_code: "A282", color: "GS", uom: "Kg", qty: 191.4 }]),
     env,
     {},
   );
   assert.equal(missingDimensions.status, 422);
   assert.match((await missingDimensions.json()).message, /chiều dài/);
+});
+
+test("supplier quotation to purchase order preserves color and aluminium dimensions", async () => {
+  const sourceLine = {
+    item_code: "A282",
+    inventory_mode: "Nhôm cây/lá",
+    measurement_profile: "Nhôm cây/lá",
+    color: "GS",
+    length_m: 8.5,
+    qty_bundle: 6,
+    qty_bar: 51,
+    total_length_m: 433.5,
+    actual_kg_per_m: 0.4415,
+    so_no: "14JJ",
+    qty: 191.4,
+    uom: "Kg",
+    conversion_factor: 1,
+    rate: 105_000,
+    note: "Lô màu GS",
+  };
+  const response = await alumdoorWorker.fetch(
+    new Request("https://app.internal/api/method/alumdoor.purchase.preview_order", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-cloudforge-tenant": "tenant-test",
+        "x-cloudforge-callback": "https://tenant.test/_app/",
+      },
+      body: JSON.stringify({ args: { supplier_quotation: "SQ-1", warehouse: "K12" } }),
+    }),
+    {
+      PLATFORM: {
+        fetch(request) {
+          const path = decodeURIComponent(new URL(request.url).pathname);
+          if (path.endsWith("/resource/Supplier Quotation/SQ-1")) {
+            return Promise.resolve(Response.json({
+              data: {
+                name: "SQ-1",
+                docstatus: 1,
+                supplier: "TIEN-DAT",
+                items: [sourceLine],
+              },
+            }));
+          }
+          return Promise.resolve(Response.json({ message: "not found" }, { status: 404 }));
+        },
+      },
+    },
+    {},
+  );
+  const text = await response.text();
+  assert.equal(response.status, 200, text);
+  const body = JSON.parse(text);
+  assert.deepEqual(body.items, [{ row_id: "R1", ...sourceLine, warehouse: "K12" }]);
 });

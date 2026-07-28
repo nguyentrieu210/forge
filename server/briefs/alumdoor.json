@@ -2,7 +2,7 @@
   "$schema": "./brief.schema.json",
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "1.18.4",
+  "version": "1.18.5",
   "module": "Alumdoor",
   "domain": "alumdoor",
   "brand": "warm",
@@ -71,6 +71,34 @@
     {
       "doctype": "Purchase Receipt",
       "actions": ["create", "save", "submit"]
+    },
+    {
+      "doctype": "Material Request",
+      "actions": ["create", "save", "submit"]
+    },
+    {
+      "doctype": "Request for Quotation",
+      "actions": ["create", "save", "submit"]
+    },
+    {
+      "doctype": "Supplier Quotation",
+      "actions": ["create", "save", "submit"]
+    },
+    {
+      "doctype": "Quotation",
+      "actions": ["create", "save", "submit"]
+    },
+    {
+      "doctype": "Sales Order",
+      "actions": ["create", "save", "submit"]
+    },
+    {
+      "doctype": "Work Order",
+      "actions": ["create", "save", "submit"]
+    },
+    {
+      "doctype": "Aluminium Lot",
+      "actions": ["create", "save"]
     }
   ],
   "//actions": [
@@ -92,7 +120,7 @@
       "permission": "Aluminium Cut",
       "fields": [
         "profile:Link(Item)! Mã nhôm",
-        "colour:Data Màu (bỏ trống = mọi màu)",
+        "colour:Link(Item Color) Màu (bỏ trống = mọi màu)",
         "generation:Select(MỚI,CŨ,TĐ) Đời sản phẩm",
         "cut_width_m:Float! Rộng cắt lá (m)",
         "sheets:Float! Số lá cần",
@@ -416,6 +444,7 @@
         "inventory_mode": "Nhôm cây/lá",
         "stock_uom": "Kg",
         "track_dimension_lot": true,
+        "require_color": true,
         "require_length": true,
         "require_piece_qty": true
       }
@@ -460,6 +489,7 @@
         "profile_name": "Thành phẩm theo m2",
         "inventory_mode": "Thành phẩm theo m2",
         "stock_uom": "Bộ",
+        "require_color": true,
         "require_length": true,
         "require_width": true
       }
@@ -643,6 +673,27 @@
         "finish:Select(Thô,Sơn tĩnh điện,Anode,Vân gỗ,Mạ,Khác) Bề mặt",
         "supplier_color_code:Data Mã màu nhà cung cấp",
         "disabled:Check Ngừng dùng"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Thủ kho": "rwc",
+        "Kế toán": "r",
+        "Sản xuất": "r",
+        "Kinh doanh": "r"
+      }
+    },
+    {
+      "//": "Màu được phép dùng cho một mã hàng. Danh sách rỗng nghĩa là dùng được mọi mã màu đang hoạt động; có khai thì chứng từ chỉ được chọn trong danh sách này.",
+      "name": "Item Allowed Color",
+      "child": true,
+      "label": "Màu áp dụng cho mặt hàng",
+      "group": "Danh mục",
+      "naming": "autoincrement",
+      "title": "color",
+      "list": ["color", "note"],
+      "fields": [
+        "color:Link(Item Color)! Mã màu",
+        "note:Data Ghi chú áp dụng"
       ],
       "permissions": {
         "Chủ xưởng": "rwc",
@@ -1032,6 +1083,13 @@
         "manufacturer_part_no:Data Mã của nhà sản xuất",
         "material_specification:Link(Material Specification) Quy cách kỹ thuật",
         "default_color:Link(Item Color) Màu mặc định",
+        {
+          "fieldname": "allowed_colors",
+          "fieldtype": "Table",
+          "options": "Item Allowed Color",
+          "label": "Các màu được phép",
+          "description": "Để trống nếu mặt hàng dùng được mọi mã màu đang hoạt động. Có khai thì báo giá, mua hàng, lô nhôm và sản xuất chỉ được chọn trong danh sách này."
+        },
         "barcodes:Table(Item Barcode) Mã vạch",
         {
           "fieldname": "tab_item_accounts",
@@ -1324,7 +1382,7 @@
         "qty:Float! SL",
         "rate:Currency! Đơn giá",
         "amount:Currency~ Thành tiền",
-        "color:Data Màu / mã sơn",
+        "color:Link(Item Color) Màu / mã sơn",
         "motor_model:Link(Item) Mô tơ kèm theo",
         "accessories:Small Text Phụ kiện kèm theo",
         "note:Small Text Ghi chú dòng"
@@ -1462,7 +1520,7 @@
         "qty:Float! SL",
         "rate:Currency! Đơn giá",
         "amount:Currency~ Thành tiền",
-        "color:Data Màu / mã sơn",
+        "color:Link(Item Color) Màu / mã sơn",
         "motor_model:Link(Item) Mô tơ kèm theo",
         "accessories:Small Text Phụ kiện kèm theo",
         "install_note:Small Text Ghi chú lắp đặt",
@@ -1621,7 +1679,7 @@
       ],
       "fields": [
         "profile:Link(Item)! Mã nhôm",
-        "colour:Data! Màu",
+        "colour:Link(Item Color)! Màu",
         "generation:Select(MỚI,CŨ,TĐ)=(MỚI) Đời sản phẩm",
         "width_m:Float! Khổ (m)",
         "sheet_count:Float! Số lá",
@@ -1925,6 +1983,7 @@
       "title": "item_code",
       "list": [
         "item_code",
+        "color",
         "qty",
         "uom",
         "warehouse",
@@ -1932,6 +1991,7 @@
       ],
       "fields": [
         "item_code:Link(Item)! Vật tư cần",
+        "color:Link(Item Color) Màu cần",
         "qty:Float! SL",
         "uom:Link(UOM) ĐVT",
         "conversion_factor:Float Hệ số quy đổi",
@@ -2066,6 +2126,7 @@
       "title": "item_code",
       "list": [
         "item_code",
+        "color",
         "qty",
         "uom",
         "rate",
@@ -2073,7 +2134,72 @@
       ],
       "fields": [
         "item_code:Link(Item)! Mã hàng",
+        {
+          "fieldname": "inventory_mode",
+          "fieldtype": "Data",
+          "label": "Kiểu quản lý tồn",
+          "read_only": true,
+          "hidden": true
+        },
+        {
+          "fieldname": "measurement_profile",
+          "fieldtype": "Link",
+          "options": "Measurement Profile",
+          "label": "Bộ quy cách",
+          "read_only": true,
+          "hidden": true
+        },
+        {
+          "fieldname": "color",
+          "fieldtype": "Link",
+          "options": "Item Color",
+          "label": "Màu",
+          "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'"
+        },
+        {
+          "fieldname": "length_m",
+          "fieldtype": "Float",
+          "label": "KT (m)",
+          "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
+          "mandatory_depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
+          "non_negative": true
+        },
         "qty:Float! SL",
+        {
+          "fieldname": "qty_bundle",
+          "fieldtype": "Float",
+          "label": "SL (bó)",
+          "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
+          "non_negative": true
+        },
+        {
+          "fieldname": "qty_bar",
+          "fieldtype": "Float",
+          "label": "SL (cây/lá)",
+          "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
+          "mandatory_depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
+          "non_negative": true
+        },
+        {
+          "fieldname": "total_length_m",
+          "fieldtype": "Float",
+          "label": "Tổng mét",
+          "read_only": true,
+          "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'"
+        },
+        {
+          "fieldname": "actual_kg_per_m",
+          "fieldtype": "Float",
+          "label": "Kg/m thực",
+          "read_only": true,
+          "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'"
+        },
+        {
+          "fieldname": "so_no",
+          "fieldtype": "Data",
+          "label": "Số SO NCC",
+          "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'"
+        },
         "uom:Link(UOM) ĐVT",
         "conversion_factor:Float Hệ số quy đổi",
         "stock_qty:Float~ Quy ra đơn vị tồn",
@@ -2181,7 +2307,8 @@
         },
         {
           "fieldname": "color",
-          "fieldtype": "Data",
+          "fieldtype": "Link",
+          "options": "Item Color",
           "label": "Màu",
           "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'"
         },
@@ -2338,7 +2465,8 @@
         },
         {
           "fieldname": "color",
-          "fieldtype": "Data",
+          "fieldtype": "Link",
+          "options": "Item Color",
           "label": "Màu",
           "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'"
         },
@@ -2746,7 +2874,7 @@
         "width_mm:Int! Rộng (mm)",
         "height_mm:Int! Cao (mm)",
         "set_count:Int=(1) Số bộ",
-        "color:Data Màu / mã sơn",
+        "color:Link(Item Color) Màu / mã sơn",
         "motor_model:Link(Item) Mô tơ",
         "source_warehouse:Link(Warehouse)! Kho nguyên vật liệu",
         "target_warehouse:Link(Warehouse)! Kho nhập thành phẩm",

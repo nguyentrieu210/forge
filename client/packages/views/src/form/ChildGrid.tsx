@@ -4,7 +4,7 @@
  * cột = field in_list_view của child, cell = control từ registry (inline edit), thêm/xoá row.
  * Data-driven từ child meta (KHÔNG hardcode).
  */
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Maximize2, Plus, X } from "lucide-react";
 import { resolveField, type DocTypeMeta, type DocField, type Doc } from "@metaforge/core";
 import { ControlRegistry, FallbackControl, type FieldServices } from "@metaforge/controls";
@@ -131,6 +131,7 @@ export function ChildGrid(props: ChildGridProps) {
   const t = useT();
   const { childMeta, rows, onChange, registry, services, readOnly, parentDoc, roles, rowDefaults } = props;
   const [detailRow, setDetailRow] = useState<number | null>(null);
+  const itemLoadVersion = useRef(new Map<string, number>());
   const cols = visibleColumns(gridColumns(childMeta), childMeta, rows, parentDoc, roles);
   const flexible = flexibleColumn(cols);
 
@@ -147,6 +148,11 @@ export function ChildGrid(props: ChildGridProps) {
    * làm gì — không đoán, không ghi đè field người dùng tự nhập.
    */
   const COMPUTED_FROM = new Set(["qty", "rate", "qty_bar", "length_m"]);
+  const ITEM_DERIVED_FIELDS = [
+    "conversion_factor", "uom", "inventory_mode", "measurement_profile",
+    "item_name", "description", "color", "colour", "rate", "amount",
+    "length_m", "qty_bundle", "qty_bar", "total_length_m", "actual_kg_per_m", "so_no",
+  ];
   const withComputed = (row: Doc): Doc => {
     const has = (f: string) => (childMeta.fields ?? []).some((x) => x.fieldname === f);
     let next = row;
@@ -183,10 +189,19 @@ export function ChildGrid(props: ChildGridProps) {
   };
 
   const setCell = (rowIdx: number, fieldname: string, value: unknown) => {
+    if (["uom", "color", "colour"].includes(fieldname)) {
+      const loadKey = String(rows[rowIdx]?.name ?? rowIdx);
+      itemLoadVersion.current.set(loadKey, (itemLoadVersion.current.get(loadKey) ?? 0) + 1);
+    }
     const next = rows.map((r, i) => {
       if (i !== rowIdx) return r;
+      const changingItem = fieldname === "item_code" && value !== r.item_code;
+      const reset = changingItem
+        ? Object.fromEntries(ITEM_DERIVED_FIELDS.filter((name) => name in r).map((name) => [name, undefined]))
+        : {};
       const updated = {
         ...r,
+        ...reset,
         [fieldname]: value,
         // Hệ số thuộc về CẶP Item + UOM. Đổi một trong hai mà giữ hệ số cũ là cách tạo
         // tồn sai nhưng chứng từ vẫn hợp lệ, nên xoá để server tra lại từ master.
@@ -197,7 +212,12 @@ export function ChildGrid(props: ChildGridProps) {
       return COMPUTED_FROM.has(fieldname) ? withComputed(updated) : updated;
     });
     onChange(next);
-    if (fieldname === "item_code" && value) void fillItemDefaults(rowIdx, String(value), next);
+    if (fieldname === "item_code" && value) {
+      const loadKey = String(next[rowIdx]?.name ?? rowIdx);
+      const loadVersion = (itemLoadVersion.current.get(loadKey) ?? 0) + 1;
+      itemLoadVersion.current.set(loadKey, loadVersion);
+      void fillItemDefaults(rowIdx, String(value), next, loadKey, loadVersion);
+    }
   };
 
   /**
@@ -210,7 +230,13 @@ export function ChildGrid(props: ChildGridProps) {
    * Nguyên tắc: CHỈ điền vào ô đang TRỐNG. Người dùng đã tự sửa đơn vị (mua theo thùng nhưng nhập
    * kho theo cái) thì không được đạp lên lựa chọn của họ.
    */
-  const fillItemDefaults = async (rowIdx: number, itemCode: string, base: Doc[]) => {
+  const fillItemDefaults = async (
+    rowIdx: number,
+    itemCode: string,
+    base: Doc[],
+    loadKey: string,
+    loadVersion: number,
+  ) => {
     if (!services?.fetchValue) return;
     const has = (f: string) => (childMeta.fields ?? []).some((x) => x.fieldname === f);
     // nguồn trên Item → các ô đích trên dòng bảng con
@@ -220,6 +246,7 @@ export function ChildGrid(props: ChildGridProps) {
       ["measurement_profile", ["measurement_profile"]],
       ["item_name", ["item_name"]],
       ["description", ["description"]],
+      ["default_color", ["color", "colour"]],
       /**
        * KHO MẶC ĐỊNH của chính mặt hàng — nan nhôm về kho nhôm, mô tơ về kho phụ kiện.
        *
@@ -274,10 +301,13 @@ export function ChildGrid(props: ChildGridProps) {
      * sẽ tạo một dòng motor mang 51 cây × 8,5 m trong payload dù giao diện đã giấu chúng.
      */
     if (patch.inventory_mode !== "Nhôm cây/lá") {
-      for (const fieldname of ["color", "length_m", "qty_bundle", "qty_bar", "so_no", "total_length_m", "actual_kg_per_m"]) {
+      for (const fieldname of ["length_m", "qty_bundle", "qty_bar", "so_no", "total_length_m", "actual_kg_per_m"]) {
         if (has(fieldname)) patch[fieldname] = undefined;
       }
     }
+    // Người dùng đổi Item lần nữa trước khi các Link mặc định tải xong: kết quả cũ phải bị bỏ,
+    // nếu không màu/UOM của mặt hàng trước sẽ chui vào dòng mới rồi bị server từ chối lúc lưu.
+    if (itemLoadVersion.current.get(loadKey) !== loadVersion) return;
     if (Object.keys(patch).length === 0) return;
     const merged = base.map((r, i) => (i === rowIdx ? { ...r, ...patch } : r));
     // Đơn giá vừa mồi xong thì thành tiền phải theo ngay, không đợi người dùng chạm vào ô.
