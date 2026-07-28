@@ -347,7 +347,9 @@ export function ListView(props: ListViewProps) {
         data-state={selected ? "selected" : undefined}
         className={cn(
           // `bg-card` để ô dính (bg-inherit) có nền che nội dung trôi qua bên dưới khi cuộn ngang.
-          "cursor-pointer bg-card",
+          // Align checkbox, STT and every value with the first line of a two-line title.
+          // Middle alignment makes the STT look like it belongs to the next row.
+          "cursor-pointer bg-card [&>td]:align-top",
           // Run3: hàng đang mở = viền trái 2px primary + nền soft + đậm hơn (Frappe/Linear)
           isActive && "bg-accent font-medium shadow-[inset_2px_0_0_var(--primary)] hover:bg-accent",
         )}
@@ -510,10 +512,10 @@ export function ListView(props: ListViewProps) {
           <TableHeader>
             <TableRow ref={headRowRef} className="hover:bg-transparent">
               {/* Checkbox và STT là hai cột độc lập đúng contract: cố định, không resize/ẩn/đổi chỗ. */}
-              <TableHead className={cn("top-0 bg-card px-3 text-center", SELECT_W, STICKY_SELECT, "z-40", compact && "h-7")}>
+              <TableHead className={cn("top-0 px-3 text-center", SELECT_W, STICKY_SELECT, "z-40 bg-muted", compact && "h-7")}>
                 <Checkbox checked={allPageSelected} onCheckedChange={toggleAllPage} aria-label={t("list.select_all_page")} />
               </TableHead>
-              <TableHead className={cn("top-0 bg-card px-3 text-right tabular-nums", INDEX_W, STICKY_INDEX, "z-40", compact && "h-7")}>
+              <TableHead className={cn("top-0 px-3 text-right tabular-nums", INDEX_W, STICKY_INDEX, "z-40 bg-muted", compact && "h-7")}>
                 #
               </TableHead>
               {columns.map((c) => (
@@ -538,7 +540,7 @@ export function ListView(props: ListViewProps) {
                 />
               ))}
               {/* ô của cột đệm — xem chú thích ở <colgroup> */}
-              <TableHead aria-hidden className={cn("sticky top-0 z-30 bg-card p-0", compact && "h-7")} />
+              <TableHead aria-hidden className={cn("sticky top-0 z-30 bg-muted p-0", compact && "h-7")} />
             </TableRow>
           </TableHeader>
 
@@ -765,7 +767,7 @@ function SortHeader({
         // Cột tiêu đề nuốt hết phần dư, các cột khác co sát nội dung. Trước đây mọi cột chia đều
         // bề ngang nên bảng ít cột bị kéo dãn, chữ nằm rời rạc cách nhau cả gang tay.
         // Bề rộng do người dùng đặt thì THẮNG các lớp co/giãn tự động ở trên.
-        "sticky top-0 z-30 whitespace-nowrap bg-card",
+        "sticky top-0 z-30 whitespace-nowrap bg-muted",
         "group/th",
         onDropCol && "cursor-grab active:cursor-grabbing",
         dragOver && "bg-accent shadow-[inset_2px_0_0_var(--primary)]",

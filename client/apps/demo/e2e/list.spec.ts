@@ -49,6 +49,25 @@ test.describe("List data-table", () => {
       );
       expect(topmostCell).toBe("TH");
     }
+
+    const backgrounds = await page.locator("thead th").evaluateAll((cells) =>
+      cells.slice(0, 3).map((cell) => getComputedStyle(cell).backgroundColor),
+    );
+    expect(backgrounds).toHaveLength(3);
+    expect(new Set(backgrounds).size).toBe(1);
+    expect(backgrounds[0]).not.toBe("rgba(0, 0, 0, 0)");
+  });
+
+  test("checkbox, STT and title share the same top alignment", async ({ page }) => {
+    test.skip(isMobile(page), "Mobile uses record cards");
+    await page.goto("/view/list");
+
+    const cells = page.locator("tbody tr").first().locator("td");
+    await expect(cells.nth(2)).toBeVisible();
+    for (let index = 0; index < 3; index += 1) {
+      const cell = cells.nth(index);
+      await expect.poll(() => cell.evaluate((element) => getComputedStyle(element).verticalAlign)).toBe("top");
+    }
   });
 
   test("standard filter status → lọc + URL giữ khi reload", async ({ page }) => {
