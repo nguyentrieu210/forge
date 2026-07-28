@@ -2,7 +2,7 @@
   "$schema": "./brief.schema.json",
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "1.14.0",
+  "version": "1.17.0",
   "module": "Alumdoor",
   "domain": "alumdoor",
   "brand": "warm",
@@ -59,6 +59,16 @@
     "tính của chính người vừa gọi."
   ],
   "worker": "cloudforge-app-alumdoor",
+  "validators": [
+    {
+      "doctype": "Purchase Order",
+      "actions": ["create", "save", "submit"]
+    },
+    {
+      "doctype": "Purchase Receipt",
+      "actions": ["create", "save", "submit"]
+    }
+  ],
   "//actions": [
     "Ba màn thao tác. Không phải sửa một bản ghi, nên không dựng bằng form doctype được:",
     "cắt nhôm chọn lô, quyết lấy mấy lá ở mỗi lô, trừ tồn rồi ghi phiếu cắt.",
@@ -220,6 +230,71 @@
       }
     },
     {
+      "type": "Measurement Profile",
+      "name": "Hàng thường",
+      "data": {
+        "profile_name": "Hàng thường",
+        "inventory_mode": "Hàng thường",
+        "stock_uom": "Cái"
+      }
+    },
+    {
+      "type": "Measurement Profile",
+      "name": "Nhôm cây/lá",
+      "data": {
+        "profile_name": "Nhôm cây/lá",
+        "inventory_mode": "Nhôm cây/lá",
+        "stock_uom": "Kg",
+        "track_dimension_lot": true,
+        "require_length": true,
+        "require_piece_qty": true
+      }
+    },
+    {
+      "type": "Measurement Profile",
+      "name": "Tấm/Kính",
+      "data": {
+        "profile_name": "Tấm/Kính",
+        "inventory_mode": "Tấm/Kính",
+        "stock_uom": "Tấm",
+        "track_dimension_lot": true,
+        "require_length": true,
+        "require_width": true,
+        "require_piece_qty": true
+      }
+    },
+    {
+      "type": "Measurement Profile",
+      "name": "Cuộn",
+      "data": {
+        "profile_name": "Cuộn",
+        "inventory_mode": "Cuộn",
+        "stock_uom": "Kg",
+        "track_dimension_lot": true,
+        "require_width": true
+      }
+    },
+    {
+      "type": "Measurement Profile",
+      "name": "Lô/Serial",
+      "data": {
+        "profile_name": "Lô/Serial",
+        "inventory_mode": "Lô/Serial",
+        "stock_uom": "Cái"
+      }
+    },
+    {
+      "type": "Measurement Profile",
+      "name": "Thành phẩm theo m2",
+      "data": {
+        "profile_name": "Thành phẩm theo m2",
+        "inventory_mode": "Thành phẩm theo m2",
+        "stock_uom": "Bộ",
+        "require_length": true,
+        "require_width": true
+      }
+    },
+    {
       "type": "Account",
       "name": "Phải thu khách hàng",
       "data": {
@@ -285,6 +360,47 @@
   ],
   "doctypes": [
     {
+      "//": "Bộ quy cách quyết định một Item cần những đại lượng vật lý nào. Item chỉ giữ sự thật ổn định; màu, khổ và số cây của từng chuyến nằm trên lô/chứng từ.",
+      "name": "Measurement Profile",
+      "label": "Bộ quy cách tồn kho",
+      "icon": "ruler",
+      "group": "Danh mục",
+      "naming": "field:profile_name",
+      "title": "profile_name",
+      "list": [
+        "profile_name",
+        "inventory_mode",
+        "stock_uom",
+        "track_dimension_lot"
+      ],
+      "search": [
+        "profile_name"
+      ],
+      "fields": [
+        "profile_name:Data*! Tên bộ quy cách",
+        "inventory_mode:Select(Hàng thường,Nhôm cây/lá,Tấm/Kính,Cuộn,Lô/Serial,Thành phẩm theo m2)!=(Hàng thường) Kiểu quản lý tồn",
+        "stock_uom:Select(m2,Bộ,Cái,Mét,Kg,Cây,Thanh,Sợi,Cuộn,Tấm,Túi,Hộp,Bình)!=(Cái) Đơn vị tồn đề xuất",
+        "track_dimension_lot:Check Theo dõi lô kích thước",
+        "require_color:Check Bắt buộc màu",
+        "require_condition:Check Bắt buộc tình trạng",
+        "require_length:Check Bắt buộc chiều dài",
+        "require_width:Check Bắt buộc chiều rộng",
+        "require_piece_qty:Check Bắt buộc số cây/lá/tấm",
+        "require_bundle_qty:Check Bắt buộc số bó",
+        "theoretical_kg_per_m:Float Kg/m lý thuyết",
+        "effective_width_m:Float Bản rộng hữu dụng (m)",
+        "scrap_threshold_m:Float Ngưỡng phế liệu (m)",
+        "note:Small Text Ghi chú / quy tắc áp dụng"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Thủ kho": "r",
+        "Kế toán": "r",
+        "Sản xuất": "r",
+        "Kinh doanh": "r"
+      }
+    },
+    {
       "name": "Item",
       "label": "Hàng hoá / Vật tư",
       "icon": "package",
@@ -294,6 +410,7 @@
       "list": [
         "item_code",
         "item_name",
+        "inventory_mode",
         "stock_uom",
         "item_group",
         "standard_rate"
@@ -306,7 +423,18 @@
         "item_code:Data*! Mã hàng",
         "item_name:Data! Tên hàng",
         "item_group:Select(Cửa cuốn,Cửa nhôm kính,Nan/lá cửa,Mô tơ,Ray và trục,Phụ kiện,Remote và điều khiển,Bộ lưu điện)=(Cửa cuốn) Nhóm hàng",
-        "stock_uom:Select(m2,Bộ,Cái,Mét,Kg,Cây,Thanh,Sợi,Cuộn,Tấm,Túi,Hộp,Bình)=(m2) Đơn vị TỒN KHO",
+        "item_kind:Select(Nguyên vật liệu,Vật tư tiêu hao,Bán thành phẩm,Thành phẩm,Hàng hoá,Dịch vụ)=(Hàng hoá) Loại mặt hàng",
+        "inventory_mode:Select(Hàng thường,Nhôm cây/lá,Tấm/Kính,Cuộn,Lô/Serial,Thành phẩm theo m2)=(Hàng thường) Kiểu quản lý tồn",
+        {
+          "fieldname": "measurement_profile",
+          "fieldtype": "Link",
+          "options": "Measurement Profile",
+          "label": "Bộ quy cách",
+          "depends_on": "eval:doc.inventory_mode != 'Hàng thường'"
+        },
+        "stock_uom:Select(m2,Bộ,Cái,Mét,Kg,Cây,Thanh,Sợi,Cuộn,Tấm,Túi,Hộp,Bình)=(Cái) Đơn vị TỒN KHO",
+        "default_purchase_uom:Select(m2,Bộ,Cái,Mét,Kg,Cây,Thanh,Sợi,Cuộn,Tấm,Túi,Hộp,Bình) ĐVT mua mặc định",
+        "default_sales_uom:Select(m2,Bộ,Cái,Mét,Kg,Cây,Thanh,Sợi,Cuộn,Tấm,Túi,Hộp,Bình) ĐVT bán mặc định",
         "uom_conversions:Table(UOM Conversion) Quy đổi đơn vị (mua cây — tồn mét)",
         "default_warehouse:Link(Warehouse) Kho mặc định",
         "standard_rate:Currency Đơn giá chuẩn (theo ĐVT)",
@@ -1355,12 +1483,12 @@
       }
     },
     {
-      "//": "Dòng đơn mua. `item_code` `qty` `rate` là ba tên nhân O2P ĐỌC — đổi tên là mất bút toán.",
+      "//": "Dòng đơn mua dùng chung cho mọi mặt hàng. `inventory_mode` lấy từ Item để hàng thường chỉ hiện SL/ĐVT/giá, còn nhôm mới mở quy cách.",
       "//do": [
-        "NHÔM: `qty` là số CÂY (thứ thủ kho đếm), `rate` là đ/kg (thứ hoá đơn ghi), và `invoice_kg`",
-        "là số kg trên hoá đơn. Ba con số ba việc — xem docs/ALUMDOOR-MUA-HANG-THIET-KE.md §5.",
-        "Cân nặng KHÔNG quyết định tồn kho: khách nói 'nhiều khi nhập có sai số', suy số cây từ kg",
-        "sẽ ra 29,7 cây trong khi thợ đếm 30, và app lệch thực tế ngay từ lúc nhập."
+        "NHÔM: `qty` là kg thực đặt/mua và cũng là đơn vị tồn chính. Số cây, bó và chiều dài",
+        "là quy cách vật lý của lô — không dùng `cây ÷ kg` để đổi sổ kho sang cây.",
+        "HÀNG THƯỜNG: các field quy cách có depends_on nên không xuất hiện và đường qty/uom/rate",
+        "giữ nguyên như trước."
       ],
       "name": "Purchase Order Item",
       "child": true,
@@ -1370,21 +1498,90 @@
       "title": "item_code",
       "list": [
         "item_code",
-        "qty",
+        "color",
+        "length_m",
         "uom",
+        "qty",
+        "qty_bundle",
+        "qty_bar",
         "rate",
         "amount",
-        "warehouse"
+        "so_no",
+        "note"
       ],
       "fields": [
-        "item_code:Link(Item)! Mã hàng",
-        "qty:Float! SL",
+        "item_code:Link(Item)! Mã sản phẩm",
+        {
+          "fieldname": "inventory_mode",
+          "fieldtype": "Data",
+          "label": "Kiểu quản lý tồn",
+          "read_only": true,
+          "hidden": true
+        },
+        {
+          "fieldname": "measurement_profile",
+          "fieldtype": "Link",
+          "options": "Measurement Profile",
+          "label": "Bộ quy cách",
+          "read_only": true,
+          "hidden": true
+        },
+        {
+          "fieldname": "color",
+          "fieldtype": "Data",
+          "label": "Màu",
+          "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'"
+        },
+        {
+          "fieldname": "length_m",
+          "fieldtype": "Float",
+          "label": "KT (m)",
+          "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
+          "mandatory_depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
+          "non_negative": true
+        },
         "uom:Select(m2,Bộ,Cái,Mét,Kg,Cây,Thanh,Sợi,Cuộn,Tấm,Túi,Hộp,Bình) ĐVT",
-        "conversion_factor:Float- Hệ số quy đổi",
+        "qty:Float! Số lượng",
+        {
+          "fieldname": "qty_bundle",
+          "fieldtype": "Float",
+          "label": "SL (bó)",
+          "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
+          "non_negative": true
+        },
+        {
+          "fieldname": "qty_bar",
+          "fieldtype": "Float",
+          "label": "SL (cây/lá)",
+          "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
+          "mandatory_depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
+          "non_negative": true
+        },
+        {
+          "fieldname": "total_length_m",
+          "fieldtype": "Float",
+          "label": "Tổng mét",
+          "read_only": true,
+          "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'"
+        },
+        {
+          "fieldname": "actual_kg_per_m",
+          "fieldtype": "Float",
+          "label": "Kg/m thực",
+          "read_only": true,
+          "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'"
+        },
+        {
+          "fieldname": "so_no",
+          "fieldtype": "Data",
+          "label": "Số SO NCC",
+          "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'"
+        },
+        "note:Data Ghi chú",
         "rate:Currency! Đơn giá",
         "amount:Currency~ Thành tiền",
         "warehouse:Link(Warehouse) Kho nhận",
-        "note:Data Ghi chú"
+        "conversion_factor:Float~- Hệ số quy đổi về ĐVT tồn"
       ],
       "permissions": {
         "Chủ xưởng": "rwc",
@@ -1458,25 +1655,93 @@
       "title": "item_code",
       "list": [
         "item_code",
-        "qty",
+        "color",
+        "length_m",
         "uom",
-        "stock_qty",
-        "warehouse",
+        "qty",
+        "qty_bundle",
+        "qty_bar",
         "rate",
-        "amount"
+        "amount",
+        "so_no",
+        "note"
       ],
       "fields": [
-        "item_code:Link(Item)! Mã hàng",
-        "qty:Float! SL",
+        "item_code:Link(Item)! Mã sản phẩm",
+        {
+          "fieldname": "inventory_mode",
+          "fieldtype": "Data",
+          "label": "Kiểu quản lý tồn",
+          "read_only": true,
+          "hidden": true
+        },
+        {
+          "fieldname": "measurement_profile",
+          "fieldtype": "Link",
+          "options": "Measurement Profile",
+          "label": "Bộ quy cách",
+          "read_only": true,
+          "hidden": true
+        },
+        {
+          "fieldname": "color",
+          "fieldtype": "Data",
+          "label": "Màu",
+          "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'"
+        },
+        {
+          "fieldname": "length_m",
+          "fieldtype": "Float",
+          "label": "KT (m)",
+          "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
+          "mandatory_depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
+          "non_negative": true
+        },
         "uom:Select(m2,Bộ,Cái,Mét,Kg,Cây,Thanh,Sợi,Cuộn,Tấm,Túi,Hộp,Bình) ĐVT",
-        "conversion_factor:Float Hệ số quy đổi (1 cây = mấy mét)",
-        "stock_qty:Float~ Thực vào kho",
-        "purchase_order:Link(Purchase Order) Đơn mua của dòng này",
-        "warehouse:Link(Warehouse)! Kho nhập",
+        "qty:Float! Số lượng",
+        {
+          "fieldname": "qty_bundle",
+          "fieldtype": "Float",
+          "label": "SL (bó)",
+          "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
+          "non_negative": true
+        },
+        {
+          "fieldname": "qty_bar",
+          "fieldtype": "Float",
+          "label": "SL (cây/lá)",
+          "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
+          "mandatory_depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
+          "non_negative": true
+        },
+        {
+          "fieldname": "total_length_m",
+          "fieldtype": "Float",
+          "label": "Tổng mét",
+          "read_only": true,
+          "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'"
+        },
+        {
+          "fieldname": "actual_kg_per_m",
+          "fieldtype": "Float",
+          "label": "Kg/m thực",
+          "read_only": true,
+          "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'"
+        },
+        {
+          "fieldname": "so_no",
+          "fieldtype": "Data",
+          "label": "Số SO NCC",
+          "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'"
+        },
+        "note:Data Ghi chú",
         "rate:Currency! Đơn giá",
-        "valuation_rate:Currency- Giá vốn nhập kho",
         "amount:Currency~ Thành tiền",
-        "note:Data Ghi chú"
+        "warehouse:Link(Warehouse)! Kho nhập",
+        "purchase_order:Link(Purchase Order) Đơn mua của dòng này",
+        "conversion_factor:Float~- Hệ số quy đổi về ĐVT tồn",
+        "stock_qty:Float~- Thực vào kho",
+        "valuation_rate:Currency- Giá vốn nhập kho"
       ],
       "permissions": {
         "Chủ xưởng": "rwc",

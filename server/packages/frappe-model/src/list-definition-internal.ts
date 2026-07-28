@@ -35,6 +35,18 @@ export function metadataToListDefinition(meta: DocTypeMeta): DocumentListDefinit
   // included whenever the conventional field exists.
   const treeParentField = `parent_${meta.name.toLowerCase().replace(/ /g, "_")}`;
   const filterFields = [
+    /**
+     * `name` — khoá chính — LUÔN lọc được.
+     *
+     * Nó đã có mặt trong `defaultFields`, `searchFields` và `sortFields`; thiếu đúng ở đây,
+     * và đó là một lỗ hổng chứ không phải một quyết định: `frappe.client.get_value` hỏi một
+     * field của MỘT bản ghi bằng `filters: {name: "…"}`, nên thiếu nó là toàn bộ cơ chế
+     * `fetch_from` của nền tảng chết — chọn mặt hàng xong không có gì tự điền.
+     *
+     * Hỏng theo kiểu tệ nhất: client bọc lời gọi trong `catch` rồi bỏ qua, nên không lỗi
+     * nào hiện ra. Người dùng chỉ thấy các ô đứng im và tưởng tính năng chưa được làm.
+     */
+    "name",
     "docstatus", "status",
     ...(Object.hasOwn(fields, treeParentField) ? [treeParentField] : []),
     /**

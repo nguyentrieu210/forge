@@ -85,10 +85,20 @@ const BASIS: Record<string, string> = {
   Data: "basis-[17rem]", Barcode: "basis-[13rem]", Phone: "basis-[13rem]",
 };
 
-/** `basis` của một field. Field nội dung dài chiếm trọn hàng — chúng cần chỗ để đọc. */
-function basisClass(fieldtype: string): string {
-  if (isFullWidthField(fieldtype)) return "basis-full";
-  return BASIS[fieldtype] ?? "basis-[17rem]";
+/**
+ * `basis` của một field. Field nội dung dài chiếm trọn hàng — chúng cần chỗ để đọc.
+ *
+ * Ô chọn đo theo LỰA CHỌN DÀI NHẤT, cùng luật với cột của bảng con: "Thường / Cần gấp"
+ * cần ít chỗ hơn hẳn một ô chọn trạng thái, và cấp đều cho cả hai thì ô ngắn thừa chỗ
+ * còn ô dài vẫn thiếu.
+ */
+function basisClass(field: { fieldtype: string; options?: string }): string {
+  if (isFullWidthField(field.fieldtype)) return "basis-full";
+  if (field.fieldtype === "Select") {
+    const longest = (field.options ?? "").split("\n").reduce((max, option) => Math.max(max, option.trim().length), 0);
+    return longest <= 8 ? "basis-[9rem]" : longest <= 16 ? "basis-[13rem]" : "basis-[17rem]";
+  }
+  return BASIS[field.fieldtype] ?? "basis-[17rem]";
 }
 
 /** Zod schema từ field required đang hiển thị (dynamic theo depends_on). */
@@ -514,10 +524,15 @@ function Field({ id, rf, form, registry, services, docName, parentDoctype, roles
           : null;
         const wrapper = cn(
           "mf-field",
-          // Một nguồn duy nhất cho bề rộng — xem `basisClass`. Không `max-w` chồng thêm ở đây,
-          // cũng không ở trong control: hai chỗ cùng chặn là hai con số phải nhớ giữ khớp nhau.
-          "min-w-0 grow",
-          !isCheck && basisClass(field.fieldtype),
+          /**
+           * `min-w-0` để ô co lại được trên màn hẹp — KHÔNG `grow`.
+           *
+           * `grow` cạnh `basis` là tự huỷ: basis thành sàn chứ không còn là bề rộng, mọi ô
+           * giãn ra lấp đầy hàng, và ô "Mức độ" chứa hai chữ "Cần gấp" kéo dài bằng ô nhà
+           * cung cấp. Đó đúng là "kích cỡ không hợp lý" và "dư khoảng trắng".
+           */
+          "min-w-0",
+          !isCheck && basisClass(field),
           rf.state && `mf-state-${rf.state}`,
           rf.readOnly && "mf-field-readonly",
           fieldState.error && "mf-field-error",

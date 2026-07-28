@@ -45,6 +45,30 @@ function gridColumns(meta: DocTypeMeta): DocField[] {
 }
 
 /**
+ * Cột mà KHÔNG dòng nào hiện được thì BỎ HẲN, không để lại một cột toàn dấu "—".
+ *
+ * Một bảng dòng thường phải phục vụ nhiều loại mua rất khác nhau: mua nhôm cần màu, chiều
+ * dài cây, số kg / số bó / số cây; mua mô tơ chỉ cần cái và giá. Khai đủ cột cho cả hai rồi
+ * dùng `depends_on` để ẩn theo từng ô thì phiếu mua mô tơ vẫn còn năm cái tiêu đề rỗng —
+ * chiếm chỗ, và bắt người đọc tự hiểu là chúng không liên quan.
+ *
+ * Đánh giá theo ĐÚNG bộ máy `depends_on` sẵn có, trong ngữ cảnh dòng + chứng từ cha. Bảng
+ * chưa có dòng nào thì đánh giá với một dòng rỗng, để cột phụ thuộc vào chứng từ cha vẫn
+ * quyết định được ngay từ lúc chưa nhập gì.
+ */
+function visibleColumns(
+  cols: DocField[],
+  meta: DocTypeMeta,
+  rows: Doc[],
+  parentDoc: Record<string, unknown> | undefined,
+  roles: string[] | undefined,
+): DocField[] {
+  const probes: Doc[] = rows.length ? rows : [{ name: "probe", doctype: meta.name } as Doc];
+  return cols.filter((column) =>
+    probes.some((row) => resolveField(column, meta, { doc: row, parent: parentDoc, roles, assumeWritable: true }).visible));
+}
+
+/**
  * BỀ RỘNG CỘT LÀ TUYỆT ĐỐI, và đúng MỘT cột co giãn.
  *
  * Bản trước cấp `min-width` cho từng cột rồi để bảng `w-full`. Nhưng `min-width` chỉ là
@@ -93,7 +117,7 @@ export function ChildGrid(props: ChildGridProps) {
   const t = useT();
   const { childMeta, rows, onChange, registry, services, readOnly, parentDoc, roles, rowDefaults } = props;
   const [detailRow, setDetailRow] = useState<number | null>(null);
-  const cols = gridColumns(childMeta);
+  const cols = visibleColumns(gridColumns(childMeta), childMeta, rows, parentDoc, roles);
   const flexible = flexibleColumn(cols);
 
   /**
@@ -108,14 +132,40 @@ export function ChildGrid(props: ChildGridProps) {
    * `qty` và `rate` và có ô `amount` thì `amount = qty × rate`. Không có đủ ba thì không
    * làm gì — không đoán, không ghi đè field người dùng tự nhập.
    */
-  const COMPUTED_FROM = new Set(["qty", "rate"]);
+  const COMPUTED_FROM = new Set(["qty", "rate", "qty_bar", "length_m"]);
   const withComputed = (row: Doc): Doc => {
     const has = (f: string) => (childMeta.fields ?? []).some((x) => x.fieldname === f);
-    if (!has("amount") || !has("qty") || !has("rate")) return row;
-    const qty = Number(row.qty);
-    const rate = Number(row.rate);
-    if (!Number.isFinite(qty) || !Number.isFinite(rate)) return row;
-    return { ...row, amount: qty * rate };
+    let next = row;
+    if (has("amount") && has("qty") && has("rate")) {
+      const qty = Number(row.qty);
+      const rate = Number(row.rate);
+      if (Number.isFinite(qty) && Number.isFinite(rate)) next = { ...next, amount: qty * rate };
+    }
+    /**
+     * Nhôm giữ HAI sự thật nhưng không trộn chúng:
+     *
+     *   - `qty` là kg thực cân — đơn vị tồn và đơn vị tính tiền;
+     *   - `qty_bar × length_m` là hình dáng vật lý để biết có cắt được hay không.
+     *
+     * Vì vậy KHÔNG lấy cây ÷ kg làm hệ số kho. Hai con số dẫn xuất dưới đây chỉ mô tả lô;
+     * Stock Ledger vẫn nhận nguyên số kg với hệ số 1.
+     */
+    if (next.inventory_mode === "Nhôm cây/lá" && has("qty_bar") && has("length_m")) {
+      const kg = Number(next.qty);
+      const bars = Number(next.qty_bar);
+      const length = Number(next.length_m);
+      if (Number.isFinite(bars) && bars > 0 && Number.isFinite(length) && length > 0) {
+        const totalLength = bars * length;
+        next = {
+          ...next,
+          ...(has("total_length_m") ? { total_length_m: totalLength } : {}),
+          ...(has("actual_kg_per_m") && Number.isFinite(kg) && kg > 0
+            ? { actual_kg_per_m: kg / totalLength }
+            : {}),
+        };
+      }
+    }
+    return next;
   };
 
   const setCell = (rowIdx: number, fieldname: string, value: unknown) => {
@@ -144,6 +194,8 @@ export function ChildGrid(props: ChildGridProps) {
     // nguồn trên Item → các ô đích trên dòng bảng con
     const plan: Array<[string, string[]]> = [
       ["stock_uom", ["uom", "stock_uom"]],
+      ["inventory_mode", ["inventory_mode"]],
+      ["measurement_profile", ["measurement_profile"]],
       ["item_name", ["item_name"]],
       ["description", ["description"]],
       /**
@@ -176,6 +228,18 @@ export function ChildGrid(props: ChildGridProps) {
       if (v === undefined || v === null || v === "") return;
       for (const d of targets) patch[d] = v;
     }));
+    // Item tạo trước khi có kiểu quản lý được coi là hàng thường — tương thích ngược.
+    if (has("inventory_mode") && !Object.hasOwn(patch, "inventory_mode")) patch.inventory_mode = "Hàng thường";
+
+    /**
+     * Đổi từ một mã nhôm sang hàng thường phải xoá quy cách của mã cũ. Giữ lại các số này
+     * sẽ tạo một dòng motor mang 51 cây × 8,5 m trong payload dù giao diện đã giấu chúng.
+     */
+    if (patch.inventory_mode !== "Nhôm cây/lá") {
+      for (const fieldname of ["color", "length_m", "qty_bundle", "qty_bar", "so_no", "total_length_m", "actual_kg_per_m"]) {
+        if (has(fieldname)) patch[fieldname] = undefined;
+      }
+    }
     if (Object.keys(patch).length === 0) return;
     // Hệ số quy đổi đi kèm đơn vị: để trống thì ERPNext tính thành 0 và số lượng quy đổi ra 0.
     if (patch.uom && has("conversion_factor") && !base[rowIdx]?.conversion_factor) patch.conversion_factor = 1;

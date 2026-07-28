@@ -28,6 +28,13 @@ interface Env {
   AI?: { run: (model: string, input: Record<string, unknown>) => Promise<unknown> };
 }
 
+interface ValidatorSubject {
+  doctype: string;
+  name: string;
+  action: string;
+  payload: Record<string, unknown>;
+}
+
 type PlatformCall = ((path: string, init?: RequestInit) => Promise<Response>) & { via: string };
 
 function platformCaller(request: Request, env: Env): PlatformCall {
@@ -57,6 +64,70 @@ function platformCaller(request: Request, env: Env): PlatformCall {
 
 const answer = (value: unknown) => new Response(JSON.stringify(value), { headers: { "content-type": "application/json" } });
 const refuse = (message: string) => new Response(JSON.stringify({ message }), { status: 422, headers: { "content-type": "application/json" } });
+const accept = () => answer({ ok: true });
+
+interface InventoryItem {
+  item_code?: string;
+  inventory_mode?: string;
+  stock_uom?: string;
+}
+
+function positive(value: unknown): boolean {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0;
+}
+
+/**
+ * Nhôm của xưởng có hai lớp số liệu:
+ * - sổ kho và tiền đi theo KG cân thực tế;
+ * - cây × chiều dài mô tả hình dáng vật lý để cắt và đối chiếu.
+ *
+ * Item được đọc lại từ máy chủ, không tin `inventory_mode` do trình duyệt gửi lên. Nhờ đó
+ * một lệnh API không thể giả hàng nhôm thành "Hàng thường" để bỏ qua quy cách bắt buộc.
+ */
+async function validatePurchaseMeasurement(call: PlatformCall, subject: ValidatorSubject): Promise<Response> {
+  const rows = Array.isArray(subject.payload?.items)
+    ? subject.payload.items.filter((row): row is Record<string, unknown> => Boolean(row) && typeof row === "object" && !Array.isArray(row))
+    : [];
+  if (!rows.length) return accept();
+
+  const codes = [...new Set(rows.map((row) => String(row.item_code ?? "").trim()).filter(Boolean))];
+  const items = new Map<string, InventoryItem>();
+  await Promise.all(codes.map(async (code) => {
+    const response = await call(`resource/Item/${encodeURIComponent(code)}`);
+    if (!response.ok) {
+      throw new Error(`không đọc được mặt hàng ${code} để kiểm tra quy cách (HTTP ${response.status})`);
+    }
+    const item = ((await response.json()) as { data?: InventoryItem }).data ?? {};
+    items.set(code, item);
+  }));
+
+  for (let index = 0; index < rows.length; index += 1) {
+    const row = rows[index]!;
+    const code = String(row.item_code ?? "").trim();
+    if (!code) continue;
+    const item = items.get(code);
+    if (!item || item.inventory_mode !== "Nhôm cây/lá") continue;
+
+    const line = `Dòng ${index + 1} (${code})`;
+    if (item.stock_uom !== "Kg") {
+      return refuse(`${line}: mặt hàng nhôm phải đặt ĐVT tồn kho là Kg trong danh mục mặt hàng.`);
+    }
+    if (String(row.uom ?? "") !== "Kg") {
+      return refuse(`${line}: nhôm phải nhập theo Kg; số cây và chiều dài chỉ là quy cách vật lý.`);
+    }
+    const factor = row.conversion_factor === undefined || row.conversion_factor === null || row.conversion_factor === ""
+      ? 1
+      : Number(row.conversion_factor);
+    if (!Number.isFinite(factor) || factor !== 1) {
+      return refuse(`${line}: hệ số quy đổi phải bằng 1 vì số lượng đã là Kg thực cân.`);
+    }
+    if (!positive(row.qty)) return refuse(`${line}: cần nhập số Kg thực cân lớn hơn 0.`);
+    if (!positive(row.length_m)) return refuse(`${line}: cần nhập chiều dài một cây/lá lớn hơn 0.`);
+    if (!positive(row.qty_bar)) return refuse(`${line}: cần nhập số cây/lá lớn hơn 0.`);
+  }
+  return accept();
+}
 
 interface Lot {
   name: string;
@@ -983,8 +1054,14 @@ export default {
         if (method === "alumdoor.ocr.apply") return await applyOcr(call, env, args);
         return new Response(JSON.stringify({ message: `Không có method ${method}` }), { status: 404 });
       }
-      // App này chưa khai validator nào; hook validate trả "cho qua" để không chặn ghi.
-      if (url.pathname === "/hooks/validate") return answer({ ok: true });
+      if (url.pathname === "/hooks/validate") {
+        const subject = (await request.json()) as ValidatorSubject;
+        if (subject.doctype === "Purchase Order" || subject.doctype === "Purchase Receipt") {
+          const call = platformCaller(request, env);
+          return await validatePurchaseMeasurement(call, subject);
+        }
+        return accept();
+      }
       return new Response(JSON.stringify({ message: "not found" }), { status: 404 });
     } catch (error) {
       const message = error instanceof Error ? error.message : "lỗi không xác định";
