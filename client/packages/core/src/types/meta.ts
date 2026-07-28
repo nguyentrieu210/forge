@@ -20,6 +20,8 @@ export interface DocField {
   reqd?: 0 | 1;
   read_only?: 0 | 1;
   hidden?: 0 | 1;
+  /** Chỉ hiện ở BẢNG danh sách, không hiện trên form. Khác `hidden` (giấu ở mọi màn). */
+  list_only?: 0 | 1;
   default?: string | null;
   depends_on?: string;
   mandatory_depends_on?: string;

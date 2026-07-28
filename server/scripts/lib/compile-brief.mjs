@@ -705,20 +705,25 @@ export function compileBrief(brief) {
     const listed = doctype.list ?? [];
     for (const fieldname of listed) {
       if (!fieldNames.has(fieldname)) fail(`${context}: list names "${fieldname}", which is not a field`);
-      /**
-       * Field ẩn mà lại khai làm cột danh sách là hai câu nói ngược nhau.
-       *
-       * Client lọc cột theo `hidden !== 1` nên cột đó KHÔNG bao giờ hiện — brief nói có,
-       * màn hình không có, và không có gì báo. Bắt tại đây để tác giả chọn dứt khoát một
-       * trong hai, thay vì phát hiện bằng cách nhìn một bảng thiếu cột.
-       */
-      if (fields.find((field) => field.fieldname === fieldname)?.hidden) {
-        fail(`${context}: list names "${fieldname}", nhưng field đó khai ẩn (-). Bỏ nó khỏi \`list\`, hoặc bỏ dấu ẩn — client lọc cột ẩn nên cột này sẽ không bao giờ hiện.`);
-      }
     }
     const listedSet = new Set(listed);
     for (const field of fields) {
-      if (listedSet.has(field.fieldname)) { field.in_list_view = true; field.in_standard_filter = field.fieldtype === "Select" || field.fieldtype === "Link"; }
+      if (!listedSet.has(field.fieldname)) continue;
+      field.in_list_view = true;
+      field.in_standard_filter = field.fieldtype === "Select" || field.fieldtype === "Link";
+      /**
+       * `-` (ẩn) CỘNG với việc có mặt trong `list` = "cột của bảng, không phải ô của form".
+       *
+       * Hai thứ đó không mâu thuẫn, chúng trả lời hai câu khác nhau: `-` nói "đừng bắt người
+       * dùng nhìn ô này lúc đang gõ", `list` nói "cột này đáng xem trong bảng". Cái hay gặp
+       * nhất trong ERP là đúng tổ hợp đó — `đã nhận %` là con số MÁY đặt: trên form nó là
+       * một ô chết chiếm chỗ, còn trên danh sách nó chính là cột người ta mở danh sách để xem.
+       *
+       * Dịch sang `list_only` chứ KHÔNG để nguyên `hidden`, vì `hidden` nghĩa là giấu ở MỌI
+       * màn. Giữ `hidden` ở đây sẽ khiến một field đánh dấu giấu vì lý do riêng tư rò ra bảng
+       * ngay khi ai đó lỡ khai nó làm cột.
+       */
+      if (field.hidden) { delete field.hidden; field.list_only = true; }
     }
 
     if (doctype.title && !fieldNames.has(doctype.title)) fail(`${context}: title "${doctype.title}" is not a field`);

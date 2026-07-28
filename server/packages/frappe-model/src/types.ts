@@ -73,6 +73,8 @@ export interface DocFieldMeta extends JsonObject {
   required?: boolean;
   read_only?: boolean;
   hidden?: boolean;
+  /** Chỉ là cột của BẢNG danh sách, không phải ô của form. Khác `hidden` (giấu ở mọi màn). */
+  list_only?: boolean;
   allow_on_submit?: boolean;
   no_copy?: boolean;
   unique?: boolean;

@@ -95,6 +95,14 @@ export function deriveColumns(meta: DocTypeMeta, ctx: DeriveColumnsCtx = {}): Li
     minWidth: 180,
   });
 
+  /**
+   * `hidden` vẫn bị loại ở đây — giấu nghĩa là giấu, ở MỌI màn.
+   *
+   * Thứ KHÔNG bị loại là `list_only`: field chỉ hiện ở BẢNG, không hiện trên form. Hai cờ
+   * trả lời hai câu khác nhau và không được nhập làm một — `hidden` là "đừng cho ai thấy",
+   * `list_only` là "cột này đáng xem trong bảng, nhưng đừng bắt người ta nhìn nó lúc đang
+   * gõ". `đã nhận %` là loại thứ hai; một field tên `secret_note` là loại thứ nhất.
+   */
   const inList = fields.filter(
     (f: DocField) =>
       f.in_list_view === 1 &&

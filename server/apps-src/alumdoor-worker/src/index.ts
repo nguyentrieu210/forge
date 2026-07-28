@@ -609,9 +609,7 @@ async function orderFromSupplierQuotation(call: PlatformCall, args: Record<strin
       transaction_date: new Date().toISOString().slice(0, 10),
       ...(args.schedule_date ? { schedule_date: String(args.schedule_date) } : {}),
       supplier_quotation: quotation.name,
-      ...(quotation.supplier_group ? { supplier_group: quotation.supplier_group } : {}),
       items,
-      note: String(args.note ?? `Theo báo giá ${quotation.name}`),
     }),
   });
   if (!created.ok) return refuse(`Không tạo được đơn mua: ${(await created.text()).slice(0, 200)}`);

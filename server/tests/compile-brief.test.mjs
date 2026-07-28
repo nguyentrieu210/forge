@@ -50,17 +50,44 @@ test("ẩn + bắt buộc + KHÔNG mặc định bị TỪ CHỐI lúc biên d�
   assert.throws(() => field("company:Link(Company)-! Công ty"), BriefError);
 });
 
-test("field ẩn mà vẫn khai làm cột danh sách bị TỪ CHỐI", () => {
-  // Client lọc cột theo `hidden !== 1`, nên brief nói có cột mà bảng không có cột — và
-  // không có gì báo. Bắt tại compiler để tác giả chọn dứt khoát một trong hai.
-  assert.throws(() => compileBrief({
+/**
+ * ẨN khỏi FORM nhưng vẫn là CỘT của danh sách — kết hợp hợp lệ, không phải mâu thuẫn.
+ *
+ * `-` trả lời "có bắt người dùng nhìn ô này lúc đang gõ không"; `list` trả lời "cột này có
+ * đáng nhìn trong bảng không". Cái hay gặp nhất trong ERP là "không" cho câu đầu và "có"
+ * cho câu sau: `đã nhận %` là con số MÁY đặt — trên form là ô chết, trên danh sách lại
+ * đúng là thứ người ta mở danh sách để xem.
+ *
+ * Bản đầu của compiler TỪ CHỐI kết hợp này, vì lúc đó client lọc luôn `hidden` khi dựng
+ * cột. Sửa ở client (`columns.ts`) rồi thì đây không còn là mâu thuẫn nữa.
+ */
+test("field ẩn khỏi form vẫn khai được làm cột danh sách", () => {
+  const pkg = compileBrief({
     id: "x", name: "X",
     doctypes: [{
-      name: "Thing", list: ["currency"],
-      fields: ["title:Data! Tên", "currency:Link(Currency)-!=(VND) Tiền tệ"],
+      name: "Thing", list: ["title", "received_percentage"],
+      fields: ["title:Data! Tên", "received_percentage:Percent~- Đã nhận (%)"],
       permissions: { "Nhân viên": "rwc" },
     }],
-  }), /khai ẩn/);
+  });
+  const field = pkg.doctypes[0].fields.find((entry) => entry.fieldname === "received_percentage");
+  // Dịch thành `list_only`, KHÔNG để nguyên `hidden`: `hidden` nghĩa là giấu ở mọi màn, nên
+  // để nguyên sẽ khiến một field giấu vì lý do riêng tư rò ra bảng khi ai đó khai nó làm cột.
+  assert.equal(field.hidden, undefined, "không còn là `hidden` chung chung");
+  assert.equal(field.list_only, true, "mà là `list_only` — chỉ ở bảng");
+  assert.equal(field.in_list_view, true, "và vẫn là cột danh sách");
+
+  // Ẩn mà KHÔNG khai làm cột thì vẫn là `hidden` thật, giấu ở mọi màn.
+  const onlyHidden = compileBrief({
+    id: "y", name: "Y",
+    doctypes: [{
+      name: "Thing", list: ["title"],
+      fields: ["title:Data! Tên", "secret_note:Data- Ghi chú riêng"],
+      permissions: { "Nhân viên": "rwc" },
+    }],
+  }).doctypes[0].fields.find((entry) => entry.fieldname === "secret_note");
+  assert.equal(onlyHidden.hidden, true);
+  assert.equal(onlyHidden.list_only, undefined);
 });
 
 test("a two-word type is not truncated to its first word", () => {

@@ -64,10 +64,17 @@ export interface FormViewProps {
   onWorkflowAction?: (action: string) => void;
 }
 
-// Tối đa 2 cột — groupLayout đã gộp/tách về đúng ≤2 (xem MAX_COLUMNS trong layout.ts).
+/**
+ * Số cột do CHỖ TRỐNG quyết định, không phải một hằng số.
+ *
+ * Ép đúng 2 cột làm bốn ô ngắn — nhà cung cấp, mức độ, hai ngày — trải thành hai hàng
+ * dù thừa chỗ, còn trên màn hẹp thì hai cột lại quá chật. `auto-fit` + `minmax` để chính
+ * bề ngang khung chứa quyết định: rộng thì bốn ô lên cùng một hàng, hẹp thì tự xuống
+ * dòng. Field nội dung dài vẫn span hết hàng (xem `isFullWidthField`).
+ */
 const COL_CLASS: Record<number, string> = {
   1: "grid-cols-1",
-  2: "grid-cols-1 md:grid-cols-2",
+  2: "grid-cols-[repeat(auto-fit,minmax(15rem,1fr))]",
 };
 
 /** Field có giá trị NGẮN theo bản chất (mã/số/ngày/lựa chọn/quan hệ) — không cần kéo hết bề rộng cột,
@@ -310,7 +317,7 @@ export function FormView(props: FormViewProps) {
   onValidRef.current = onValid;
 
   return (
-    <form className="mf-form-view flex h-full flex-col overflow-hidden rounded-lg border bg-card" onSubmit={form.handleSubmit(onValid)}>
+    <form className="mf-form-view flex h-full flex-col overflow-hidden bg-card" onSubmit={form.handleSubmit(onValid)}>
       {/* HEADER + TABS sticky — bỏ qua khi shell cha (vd modal Create) đã tự hiện tiêu đề riêng. */}
       {!props.hideHeader ? (
         <div className="mf-form-header sticky top-0 z-20 shrink-0 border-b bg-card/95 backdrop-blur">
@@ -419,7 +426,10 @@ export function FormView(props: FormViewProps) {
         {/* Form LẤP ĐẦY khung chứa — bề ngang do khung quyết định (modal 920px, cột giữa của split
             view ~580px), KHÔNG tự chặn thêm rồi canh giữa: làm vậy sinh hai dải trống hai bên trong
             modal. max-w chỉ còn là chặn an toàn cho màn siêu rộng (>1152px), bình thường không chạm. */}
-        <div className="w-full max-w-[72rem] space-y-2 px-3 py-2.5">
+        {/* 96rem chứ không phải 72rem: khung chứa đã rộng 1400px cho vừa bảng dòng hàng, mà
+            trần cũ 1152px thì form dừng lại giữa chừng và chừa một mảng trắng bên phải —
+            trần an toàn cho màn siêu rộng biến thành trần cho màn làm việc bình thường. */}
+        <div className="w-full max-w-[96rem] space-y-2 px-3 py-2.5">
           {/* Hướng dẫn nhập cho chứng từ này — chỉ hiện ở TAB ĐẦU để không lặp lại ở mọi tab. */}
           {activeIdx === 0 ? <FormGuide doctype={meta.name} guide={formGuides?.[meta.name]} className="mb-1" /> : null}
           {tab?.sections.map((section, si) =>
@@ -543,7 +553,7 @@ function Field({ id, rf, form, registry, services, docName, parentDoctype, roles
         }
 
         return (
-          <div className={cn(wrapper, "flex flex-col gap-1", isFullWidthField(field.fieldtype) && "md:col-span-2")}>
+          <div className={cn(wrapper, "flex flex-col gap-1", isFullWidthField(field.fieldtype) && "col-span-full")}>
             <label htmlFor={id} className="text-[11px] font-medium leading-tight text-muted-foreground">{label}</label>
             {description ? <div className="-mt-0.5">{description}</div> : null}
             {control}

@@ -41,7 +41,10 @@ export const SelectContent = React.forwardRef<
       ref={ref}
       position={position}
       className={cn(
-        "relative z-50 max-h-72 min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md",
+        // Trần theo CHỖ TRỐNG THẬT của Radix, không phải `max-h-72` cố định: mở gần đáy màn
+        // hình thì chỗ trống ít hơn 18rem, mà `overflow-hidden` ở đây sẽ CẮT phần thừa thay vì
+        // cho cuộn — danh sách hiện cụt và không kéo được. Viewport tự cuộn khi đã có trần đúng.
+        "relative z-50 max-h-[min(18rem,var(--radix-select-content-available-height))] min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md",
         "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
         "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
         position === "popper" && "data-[side=bottom]:translate-y-1",
@@ -49,7 +52,7 @@ export const SelectContent = React.forwardRef<
       )}
       {...props}
     >
-      <SelectPrimitive.Viewport className={cn("p-1", position === "popper" && "w-full min-w-[var(--radix-select-trigger-width)]")}>
+      <SelectPrimitive.Viewport className={cn("max-h-[inherit] overflow-y-auto p-1", position === "popper" && "w-full min-w-[var(--radix-select-trigger-width)]")}>
         {children}
       </SelectPrimitive.Viewport>
     </SelectPrimitive.Content>

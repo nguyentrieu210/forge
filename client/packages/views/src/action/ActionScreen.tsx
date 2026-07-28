@@ -179,11 +179,31 @@ function ActionResult({ value, table, committed, format, onOpen }: {
   const rows = table && Array.isArray(record[table]) ? (record[table] as unknown[]) : undefined;
   const rest = Object.entries(record).filter(([key]) => key !== table && !HIDDEN_KEYS.has(key));
 
+  /**
+   * Chứng từ vừa tạo — mở thẳng vào form, đừng bắt người dùng tự đi tìm.
+   *
+   * Method nào tạo ra bản ghi thì trả về `doctype` + `name`, và trước đây hai khoá đó rơi
+   * xuống danh sách khoá/giá trị như hai dòng chữ chết. Người vừa bấm "Tạo chứng từ nháp"
+   * KHÔNG muốn đọc một cái tên — họ muốn đứng trong chứng từ đó để soát lại và ghi sổ.
+   * Bắt họ nhớ mã rồi ra menu tìm là chỗ mất người dùng ngay sau khi việc đã chạy xong.
+   *
+   * Chỉ hiện sau khi CHẠY THẬT: bản xem trước chưa tạo gì, một nút "Mở" lúc đó là nói dối.
+   */
+  const openable = committed && typeof record.doctype === "string" && record.doctype
+    && typeof record.name === "string" && record.name
+    ? { doctype: record.doctype, name: record.name }
+    : null;
+
   return (
     <div className="rounded-xl border bg-card">
       <div className="flex items-center gap-2 border-b px-4 py-2.5">
         <span className={`h-2 w-2 rounded-full ${committed ? "bg-emerald-500" : "bg-amber-500"}`} />
         <h2 className="text-sm font-semibold">{committed ? "Đã chạy" : "Xem trước — chưa ghi gì"}</h2>
+        {openable && onOpen
+          ? <Button size="sm" className="ml-auto" onClick={() => onOpen(openable.doctype, openable.name)}>
+              Mở {openable.name}
+            </Button>
+          : null}
       </div>
       {rows?.length ? <ResultTable rows={rows} format={format} onOpen={onOpen} /> : null}
       {rows && !rows.length ? <p className="px-4 py-3 text-sm text-muted-foreground">Không có dòng nào.</p> : null}

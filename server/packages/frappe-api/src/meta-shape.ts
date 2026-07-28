@@ -37,6 +37,7 @@ export function toFrappeDocField(field: DocFieldMeta): JsonObject {
     reqd: flag(field.required),
     read_only: flag(field.read_only),
     hidden: flag(field.hidden),
+    list_only: flag(field.list_only),
     allow_on_submit: flag(field.allow_on_submit),
     no_copy: flag(field.no_copy),
     unique: flag(field.unique),

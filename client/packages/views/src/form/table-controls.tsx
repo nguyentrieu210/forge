@@ -10,6 +10,7 @@ import type { DocTypeMeta, Doc } from "@metaforge/core";
 import { ControlRegistry, type FieldControlProps } from "@metaforge/controls";
 import { Badge, Button, Input, useT } from "@metaforge/ui";
 import { ChildGrid } from "./ChildGrid.js";
+import { useMetaForgeOptional } from "../container/provider.js";
 
 interface WithRegistry {
   registry: ControlRegistry;
@@ -33,6 +34,15 @@ function TableField(p: FieldControlProps & WithRegistry) {
   const t = useT();
   const childMeta = useChildMeta(p.field.options, p.services);
   const rows = Array.isArray(p.value) ? (p.value as Doc[]) : [];
+  /**
+   * Bối cảnh đang chọn (vd KHO hiện tại) chảy xuống dòng mới của bảng con.
+   *
+   * `blankDoc` chỉ gieo bối cảnh cho chứng từ CHA. Nhưng ở phân hệ mua, kho nằm trên TỪNG
+   * DÒNG — nên thủ kho đang đứng ở "Kho mua" vẫn phải chọn lại đúng cái kho đó cho từng
+   * dòng, mỗi lần lập phiếu. `useMetaForgeOptional` để control vẫn dựng được ngoài provider
+   * (test, storybook) thay vì ném lỗi.
+   */
+  const rowDefaults = useMetaForgeOptional()?.businessContext;
   if (p.masked) return <span className="mf-masked">••••••</span>;
   if (!childMeta) return <div className="mf-grid-loading">{t("grid.loading_table_prefix")} {p.field.options}…</div>;
   return (
@@ -45,6 +55,7 @@ function TableField(p: FieldControlProps & WithRegistry) {
       readOnly={p.readOnly}
       parentDoc={p.docValues}
       roles={p.roles}
+      {...(rowDefaults ? { rowDefaults } : {})}
     />
   );
 }

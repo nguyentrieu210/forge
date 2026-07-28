@@ -53,6 +53,14 @@ export interface FieldServices {
 
 /** Prop chung cho mọi field control (data-driven từ DocField). */
 export interface FieldControlProps<T = unknown> {
+  /**
+   * Ô nằm trong Ô CỦA BẢNG, không phải trên form.
+   *
+   * Ô bảng chỉ rộng vài chục pixel và người đọc quét theo CỘT chứ không đọc từng ô,
+   * nên phần phụ trợ hữu ích trên form — mã kỹ thuật in cạnh tên, chú thích — ở đây
+   * chỉ làm chữ bị cắt. Control tự quyết bỏ bớt cái gì; đây chỉ là lời báo nó đang ở đâu.
+   */
+  compact?: boolean;
   field: DocField;
   value: T;
   onChange: (v: T) => void;

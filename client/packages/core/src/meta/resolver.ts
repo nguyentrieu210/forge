@@ -83,7 +83,10 @@ export function resolveField(field: DocField, meta: DocTypeMeta, ctx: ResolveCon
   const docstatus = Number(doc.docstatus ?? 0);
 
   // visible: !hidden + depends_on
-  const visible = field.hidden ? false : evalDependsOn(field.depends_on, doc, ctx.parent);
+  // `list_only`: cột của BẢNG, không phải ô của FORM. Không dùng `hidden` cho việc này —
+  // `hidden` nghĩa là giấu ở mọi màn, kể cả danh sách, và trộn hai ý đó lại thì một field
+  // đánh dấu giấu vì lý do riêng tư sẽ rò ra bảng ngay khi ai đó khai nó làm cột.
+  const visible = field.hidden || field.list_only ? false : evalDependsOn(field.depends_on, doc, ctx.parent);
 
   // masked: server masked_fields ưu tiên; nếu không có, suy từ permlevel không đọc được.
   // level 0 = đọc được nếu đã mở được doc; level>0 cần read perm ĐÚNG level đó.

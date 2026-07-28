@@ -81,8 +81,16 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
           dở thì nó hỏi xác nhận. Nếu để Radix tự đóng thì dữ liệu đang gõ mất trắng không báo. */}
       <Dialog open={isNew} onOpenChange={(open) => { if (!open) setCloseRequest((n) => n + 1); }}>
         <DialogContent
-          // 920px: form lấp đầy đúng khung, không còn dải trống hai bên, vẫn đủ chỗ cho bảng con.
-          className="flex h-[min(90vh,880px)] w-[min(94vw,920px)] max-w-none flex-col overflow-hidden p-0"
+          /**
+           * Rộng theo MÀN HÌNH, không theo một con số cố định.
+           *
+           * 920px vừa đủ cho một form chỉ có ô nhập, nhưng chứng từ mua bán nào cũng có
+           * BẢNG DÒNG HÀNG: sáu bảy cột nhét vào 920px trừ đi lề thì cột nào cũng chật, mã
+           * hàng bị cắt, và người nhập phải cuộn ngang cho một việc làm mỗi ngày. Màn hình
+           * làm việc thật rộng 1440–1920px — dùng chỗ đó. `min()` giữ nguyên hành vi trên
+           * máy nhỏ: hẹp hơn 1400px thì vẫn là 96% bề ngang như trước.
+           */
+          className="flex h-[min(92vh,900px)] w-[min(94vw,1180px)] max-w-none flex-col overflow-hidden p-0"
           onInteractOutside={(e) => { e.preventDefault(); setCloseRequest((n) => n + 1); }}
           onEscapeKeyDown={(e) => { e.preventDefault(); setCloseRequest((n) => n + 1); }}
         >

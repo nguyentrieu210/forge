@@ -130,6 +130,7 @@ function parseField(value: unknown, index: number): DocFieldMeta {
     required: bool(input.required, false),
     read_only: bool(input.read_only, false),
     hidden: bool(input.hidden, false),
+    list_only: bool(input.list_only, false),
     allow_on_submit: bool(input.allow_on_submit, false),
     no_copy: bool(input.no_copy, false),
     unique: bool(input.unique, false),
