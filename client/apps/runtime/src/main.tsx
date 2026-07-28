@@ -15,10 +15,6 @@ import {
 import { Button, Toaster } from "@metaforge/ui";
 import { SocialCommerceLanding, type PublicSocialPage } from "./landing/SocialCommerceLanding.js";
 import { Storefront, type StorefrontPage } from "./storefront/Storefront.js";
-import {
-  CatalogTabs,
-  type CatalogTabItem,
-} from "./components/CatalogTabs.js";
 import "./styles.css";
 
 const ApplicationCatalogContainer = lazy(() => import("@metaforge/views/catalog").then((module) => ({ default: module.ApplicationCatalogContainer })));
@@ -187,15 +183,6 @@ function buildNavigation(manifest: AppManifest, catalog: ApplicationCatalog | un
     // là chuyện không mời người không dùng được vào một màn sẽ từ chối họ.
     items.push({ key: "__import", label: "Nhập dữ liệu", group: "Hệ thống", icon: resolveIcon("upload"), route: "/import" });
   }
-  if (manifest.nav.some((entry) => entry.group === "Danh mục")) {
-    items.push({
-      key: "__master_data",
-      label: "Danh mục",
-      group: "Điều hành",
-      icon: resolveIcon("folder-tree"),
-      route: "/master-data",
-    });
-  }
   const routes = new Set(items.map((item) => item.route));
   for (const app of catalog?.apps ?? []) {
     /**
@@ -218,15 +205,7 @@ function buildNavigation(manifest: AppManifest, catalog: ApplicationCatalog | un
     const route = manifestRoute(nav);
     if (!route || routes.has(route) || ["overview", "process"].includes(nav.kind ?? "")) continue;
     routes.add(route);
-    items.push({
-      key: nav.key,
-      label: nav.label,
-      group: nav.group ?? "Ứng dụng",
-      ...(nav.group === "Danh mục" ? { hiddenInSidebar: true } : {}),
-      icon: resolveIcon(nav.icon),
-      route,
-      doctype: (nav.kind ?? "doctype") === "doctype" ? nav.key : undefined,
-    });
+    items.push({ key: nav.key, label: nav.label, group: nav.group ?? "Ứng dụng", icon: resolveIcon(nav.icon), route, doctype: (nav.kind ?? "doctype") === "doctype" ? nav.key : undefined });
   }
   return items;
 }
@@ -444,18 +423,8 @@ function Shell({ manifest, boot, logout, nav, active, breadcrumbs = [], children
         doctypes={palette.doctypes}
         recent={palette.recent}
         searchRecords={palette.searchRecords}
-        onSelectDoctype={(doctype) => {
-          const item = nav.find((candidate) => candidate.doctype === doctype);
-          navigate(item?.hiddenInSidebar
-            ? `/master-data/${encodeURIComponent(doctype)}`
-            : `/app/${encodeURIComponent(doctype)}`);
-        }}
-        onSelectRecord={(record) => {
-          const item = nav.find((candidate) => candidate.doctype === record.doctype);
-          navigate(item?.hiddenInSidebar
-            ? `/master-data/${encodeURIComponent(record.doctype)}/${encodeURIComponent(record.name)}`
-            : `/app/${encodeURIComponent(record.doctype)}/${encodeURIComponent(record.name)}`);
-        }}
+        onSelectDoctype={(doctype) => navigate(`/app/${encodeURIComponent(doctype)}`)}
+        onSelectRecord={(record) => navigate(`/app/${encodeURIComponent(record.doctype)}/${encodeURIComponent(record.name)}`)}
       />
     </>
   );
@@ -470,9 +439,6 @@ function RuntimeRoutes({ manifest, boot, logout, nav, catalogError }: ScreenProp
       <Route path="/overview/:domain" element={<OverviewScreen {...screen} />} />
       <Route path="/process/:domain" element={<ProcessScreen {...screen} />} />
       <Route path="/catalog" element={<CatalogScreen {...screen} error={catalogError} />} />
-      <Route path="/master-data" element={<MasterDataScreen {...screen} />} />
-      <Route path="/master-data/:doctype" element={<MasterDataScreen {...screen} />} />
-      <Route path="/master-data/:doctype/:name" element={<MasterDataScreen {...screen} />} />
       <Route path="/permissions" element={<PermissionScreen {...screen} />} />
       <Route path="/workspace/:workspace" element={<WorkspaceScreen {...screen} />} />
       {/* Touch-first experiences may still own the viewport. Social Commerce is a
@@ -554,14 +520,7 @@ function DoctypeScreen({ manifest, boot, logout, nav }: ScreenProps) {
   const navigate = useNavigate();
   const bridge = useBridge();
   const { doctype = manifest.home.doctype ?? "ToDo", name } = useParams();
-  const currentNav = nav.find((item) => item.doctype === doctype);
-  if (currentNav?.hiddenInSidebar) {
-    const path = name
-      ? `/master-data/${encodeURIComponent(doctype)}/${encodeURIComponent(name)}`
-      : `/master-data/${encodeURIComponent(doctype)}`;
-    return <Navigate to={path} replace />;
-  }
-  const active = currentNav?.hiddenInSidebar ? "__master_data" : (currentNav?.key ?? doctype);
+  const active = nav.find((item) => item.doctype === doctype)?.key ?? doctype;
   /**
    * Breadcrumb lấy nhãn từ MENU, không phải tên doctype.
    *
@@ -569,63 +528,8 @@ function DoctypeScreen({ manifest, boot, logout, nav }: ScreenProps) {
    * một màn, hai cái tên. Nhãn menu là thứ người dùng vừa bấm vào để tới đây, nên nó cũng
    * là cái tên họ mong đọc lại ở đầu trang.
    */
-  const title = currentNav?.label ?? doctype;
-  const breadcrumbs = currentNav?.hiddenInSidebar
-    ? [{ label: "Danh mục", onClick: () => navigate("/master-data") }, { label: title }]
-    : [{ label: title }];
-  return <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={active} breadcrumbs={breadcrumbs}><div className="h-full p-3 md:p-4"><DoctypeWorkspace doctype={doctype} name={name} bridge={bridge} onNavigate={navigate} /></div></Shell>;
-}
-function MasterDataScreen(props: ScreenProps) {
-  const navigate = useNavigate();
-  const bridge = useBridge();
-  const { doctype: routeDoctype, name } = useParams();
-  const decodedDoctype = routeDoctype ? decodeURIComponent(routeDoctype) : undefined;
-  const currentNav = props.nav.find((item) =>
-    item.hiddenInSidebar && item.doctype === decodedDoctype,
-  );
-  const items = useMemo<CatalogTabItem[]>(() =>
-    props.nav.flatMap((item) => {
-      if (!item.hiddenInSidebar || !item.doctype) return [];
-      return [{
-        key: item.doctype,
-        label: item.label,
-        icon: item.icon,
-      }];
-    }), [props.nav]);
-  const breadcrumbs = [
-    { label: "Danh mục", ...(currentNav ? { onClick: () => navigate("/master-data") } : {}) },
-    ...(currentNav ? [{ label: currentNav.label }] : []),
-    ...(name ? [{ label: decodeURIComponent(name) }] : []),
-  ];
-  return (
-    <Shell {...props} active="__master_data" breadcrumbs={breadcrumbs}>
-      <div className="flex h-full min-h-0 flex-col">
-        <CatalogTabs
-          items={items}
-          selectedKey={currentNav?.doctype}
-          onSelect={(item) => navigate(`/master-data/${encodeURIComponent(item.key)}`)}
-        />
-        <div className="min-h-0 flex-1 p-3 md:p-4">
-          {currentNav?.doctype ? (
-            <DoctypeWorkspace
-              doctype={currentNav.doctype}
-              name={name}
-              bridge={bridge}
-              base="/master-data"
-              onNavigate={navigate}
-            />
-          ) : (
-            <div className="grid h-full place-items-center rounded-xl border bg-card px-6 text-center shadow-sm">
-              <div>
-                <p className="text-sm font-medium">Chọn một danh mục phía trên</p>
-                <p className="mt-1 text-xs text-muted-foreground">Danh sách hoặc cây dữ liệu sẽ mở ngay bên dưới.</p>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </Shell>
-  );
+  const title = nav.find((item) => item.doctype === doctype)?.label ?? doctype;
+  return <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={active} breadcrumbs={[{ label: title }]}><div className="h-full p-3 md:p-4"><DoctypeWorkspace doctype={doctype} name={name} bridge={bridge} onNavigate={navigate} /></div></Shell>;
 }
 function OverviewScreen(props: ScreenProps) { const navigate = useNavigate(); const { domain = props.manifest.domain ?? "stock" } = useParams(); return <Shell {...props} active="__overview" breadcrumbs={[{ label: "Tổng quan" }]}><div className="h-full overflow-auto p-4"><OverviewContainer domain={domain} onNavigate={navigate} /></div></Shell>; }
 function ProcessScreen(props: ScreenProps) { const navigate = useNavigate(); const { domain = props.manifest.domain ?? "stock" } = useParams(); return <Shell {...props} active="__process" breadcrumbs={[{ label: "Quy trình" }]}><div className="h-full overflow-auto p-4"><ProcessContainer domain={domain} onNavigate={navigate} /></div></Shell>; }
