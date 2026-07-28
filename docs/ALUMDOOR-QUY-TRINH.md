@@ -61,6 +61,17 @@ Anh nói *"tính theo m² và tùy trường hợp"*. Em cần biết **"tùy tr
 > **Cần anh cho:** một bảng giá bán mẫu, kiểu
 > `AL548N · màu · khách lẻ · 1.450.000 đ/m² · tối thiểu 6 m²`
 
+Và vì cửa Đức **bán tách món được** (xem mục 3.1b), bảng giá thực ra có **hai tầng**:
+
+| Bán gì | Đơn vị tính tiền |
+|---|---|
+| Trọn bộ cửa | đ/m² phủ bì |
+| Lá rời | ❓ đ/lá hay đ/mét dài hay đ/kg — **chưa biết** |
+| Mô tơ, ray, remote, trục | đ/cái · đ/bộ · đ/cây |
+
+Hai tầng này **không suy ra nhau được**: giá m² đã gộp cả nhôm lẫn ray lẫn mô tơ lẫn công
+lắp, nên không thể chia ngược ra giá một cái lá.
+
 **2.2 — Diện tích m² chưa tự tính.** Dòng đơn hàng có Rộng (mm), Cao (mm), Số bộ, và
 Số lượng tính tiền. Hiện **phải gõ tay** số m².
 
@@ -108,6 +119,39 @@ Bảng định mức trả lời: *một bộ cửa ăn hết những gì*. Ví 
 > số lượng. Chỉ cần **một bộ** — em suy ra công thức theo kích thước rồi anh kiểm lại.
 >
 > Riêng phần **lá thì em tính được rồi**, chỉ thiếu ray / mô tơ / trục / phụ kiện.
+
+### 3.1b — Bán TÁCH MÓN, không bắt buộc trọn bộ ⚠️ điều này đổi cả cách làm định mức
+
+Anh cho biết cửa Đức **bán tách món được**, không nhất thiết trọn bộ. Đây không phải chi
+tiết nhỏ — nó quyết định định mức là **thứ bắt buộc** hay chỉ là **gợi ý**.
+
+Nếu định mức là bắt buộc, bán một cái mô tơ rời sẽ bị app đòi đủ ray, đủ lá, đủ trục. Nên
+định mức phải là **bản mẫu để gợi ý**, không phải cái khoá.
+
+Em hiểu xưởng có **ba kiểu bán**, và ba kiểu đi ba đường khác nhau:
+
+| Kiểu bán | Ví dụ | Đường đi trong app | Cần lệnh SX? |
+|---|---|---|---|
+| **Trọn bộ** | 1 bộ cửa Đức 4,2 × 2,8 | định mức nổ ra vật tư → cắt lá → lắp ráp → giao | Có |
+| **Lá rời** | 51 lá AL548N khổ 3,5 m | chỉ **cắt** rồi giao, không lắp | Không — chỉ phiếu cắt |
+| **Phụ kiện rời** | 1 mô tơ, 2 cây ray, 1 remote | xuất thẳng từ kho | Không |
+
+Cách em định làm: **định mức chỉ điền sẵn, người bán xoá được từng dòng.** Bán trọn bộ thì
+chọn bộ cửa, app điền đủ vật tư; bán tách món thì gõ thẳng món cần, không đụng tới định mức.
+
+> **Cần anh xác nhận 3 điều:**
+>
+> **a) Có kiểu "trọn bộ nhưng bỏ bớt" không?** Ví dụ khách tự có mô tơ, mua bộ cửa không mô
+> tơ — lúc đó giá tính thế nào? Trừ đúng giá mô tơ, hay có bảng giá riêng?
+>
+> **b) Lá rời tính tiền theo gì?** Đây là chỗ em **không đoán được**:
+> - đ/**lá** (theo số lá, không quan tâm dài ngắn)?
+> - đ/**mét dài** (51 lá × 3,5 m = 178,5 m)?
+> - đ/**kg** (như mua vào, cộng lãi)?
+> - đ/**m² phủ bì** (như bán trọn bộ)?
+>
+> **c) Giá tách món có đắt hơn giá trong trọn bộ không?** Thường bán lẻ đắt hơn bán theo bộ.
+> Nếu có thì chênh bao nhiêu — theo % hay theo bảng giá riêng?
 
 **3.2 — Mô tơ chọn theo gì?** Cửa nặng thì mô tơ khoẻ. Em thấy trong file có nhiều loại
 (motor trong, motor ngoài, motor ngoài tự dừng…).
@@ -260,21 +304,25 @@ Trên `alu.kairo.vn` hiện có dữ liệu thử của em trong quá trình ki�
 
 ---
 
-## 7. Tóm tắt: 8 thứ cần anh bổ sung
+## 7. Tóm tắt: 9 thứ cần anh bổ sung
 
-Xếp theo mức độ chặn việc — **1 và 2 đang chặn nhiều nhất**:
+Xếp theo mức độ chặn việc — **1, 2 và 3 đang chặn nhiều nhất**:
 
 1. **Định mức một bộ cửa** — ray, mô tơ, trục, phụ kiện hết bao nhiêu (lá thì em tính được rồi)
-2. **12 mã ray / lá đáy / thanh đáy** ứng với mã hàng nào trong app
-3. **Mã nhôm nào thuộc loại giá nào** (THÔ / MÀU chưa dập / MÀU đã dập / RAY)
-4. **Bảng giá bán m²** — và "tùy trường hợp" là tùy theo cái gì
-5. **Công đoạn sơn** — làm ở đâu, có phiếu không, "dập" là gì
-6. **Định mức giờ + số người mỗi tổ** (cho lịch sản xuất / tăng ca)
-7. **Bảng chọn mô tơ** theo kích thước hoặc cân nặng cửa
-8. **Khoá Google service account** (cho phần đổ Sheet)
+2. **Giá bán TÁCH MÓN** — lá rời tính theo lá / mét / kg? có đắt hơn giá trong trọn bộ không?
+   (mục 3.1b — đây là chỗ em không đoán được, đoán sai là sai tiền)
+3. **12 mã ray / lá đáy / thanh đáy** ứng với mã hàng nào trong app
+4. **Mã nhôm nào thuộc loại giá nào** (THÔ / MÀU chưa dập / MÀU đã dập / RAY)
+5. **Bảng giá bán m²** — và "tùy trường hợp" là tùy theo cái gì
+6. **Công đoạn sơn** — làm ở đâu, có phiếu không, "dập" là gì
+7. **Định mức giờ + số người mỗi tổ** (cho lịch sản xuất / tăng ca)
+8. **Bảng chọn mô tơ** theo kích thước hoặc cân nặng cửa
+9. **Khoá Google service account** (cho phần đổ Sheet)
 
-Ngoài ra hai câu hỏi ngắn: đơn vị trọng lượng là **kg/mét dài** phải không (mục 4.2), và
-tồn nhôm chia hai kho thế nào (mục 5).
+Ngoài ra ba câu hỏi ngắn:
+- đơn vị trọng lượng là **kg/mét dài** phải không (mục 4.2)
+- có kiểu **"trọn bộ nhưng bỏ bớt món"** không, và trừ tiền thế nào (mục 3.1b)
+- tồn nhôm chia hai kho thế nào (mục 5)
 
 ---
 
