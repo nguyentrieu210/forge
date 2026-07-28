@@ -19,6 +19,8 @@ export interface NavItem {
   label: string;
   icon?: ReactNode;
   group?: string;
+  /** Nhánh con trong một nhóm sidebar, dùng để render menu dạng cây. */
+  subgroup?: string;
   badge?: number | string;
   disabledReason?: string;
   keywords?: string[];
@@ -195,12 +197,105 @@ export function AppShell(props: AppShellProps) {
   const [closedGroups, setClosedGroups] = useState<Set<string>>(() => {
     try { return new Set(JSON.parse(localStorage.getItem("mf-sidebar-groups-closed") ?? "[]") as string[]); } catch { return new Set(); }
   });
+  const [openSubgroups, setOpenSubgroups] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem("mf-sidebar-subgroups") ?? "[]") as string[]); } catch { return new Set(); }
+  });
   useEffect(() => { try { localStorage.setItem("mf-sidebar-groups-closed", JSON.stringify([...closedGroups])); } catch { /* noop */ } }, [closedGroups]);
+  useEffect(() => { try { localStorage.setItem("mf-sidebar-subgroups", JSON.stringify([...openSubgroups])); } catch { /* noop */ } }, [openSubgroups]);
 
   const toggleGroup = (name: string) => {
     const isOpen = openGroups.has(name) || (activeGroup === name && !closedGroups.has(name));
     setOpenGroups((prev) => { const next = new Set(prev); next.delete(name); if (!isOpen) next.add(name); return next; });
     setClosedGroups((prev) => { const next = new Set(prev); next.delete(name); if (isOpen) next.add(name); return next; });
+  };
+
+  const renderNavItem = (item: NavItem, nested = false) => {
+    const active = item.key === props.activeKey;
+    const pinned = pinnedKeys.has(item.key);
+    const button = (
+      <Button
+        ref={active ? activeRef : undefined}
+        variant="ghost"
+        disabled={Boolean(item.disabledReason)}
+        title={item.disabledReason}
+        className={cn(
+          "mf-shell-nav-item relative mb-0.5 w-full justify-start gap-2 overflow-hidden border border-transparent font-normal transition-all",
+          collapsed && "justify-center px-0 max-md:justify-start max-md:px-3",
+          !collapsed && "pr-7",
+          nested && !collapsed && "pl-7",
+          active && "border-primary/20 bg-primary/12 font-bold text-primary shadow-sm hover:bg-primary/16 before:absolute before:inset-y-1 before:left-0 before:w-1 before:rounded-r-full before:bg-primary",
+          item.disabledReason && "opacity-50",
+        )}
+        data-active={active ? "true" : "false"}
+        aria-current={active ? "page" : undefined}
+        onClick={() => go(item)}
+      >
+        <span className={cn("shrink-0 text-muted-foreground [&_svg]:size-4", active && "text-primary")}>{item.icon}</span>
+        {!collapsed ? <span className="min-w-0 flex-1 truncate text-left">{item.label}</span> : null}
+        {!collapsed && item.badge != null ? <Badge variant={active ? "default" : "secondary"} className="ml-auto max-w-14 truncate">{item.badge}</Badge> : null}
+      </Button>
+    );
+    if (collapsed) {
+      return <Tooltip key={item.key}><TooltipTrigger asChild>{button}</TooltipTrigger><TooltipContent side="right">{item.label}{item.disabledReason ? ` — ${item.disabledReason}` : ""}</TooltipContent></Tooltip>;
+    }
+    return (
+      <div key={item.key} className="group/navitem relative">
+        {button}
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          className={cn("absolute right-1 top-1/2 size-6 -translate-y-1/2 opacity-0 transition-opacity group-hover/navitem:opacity-100", pinned && "text-primary opacity-100")}
+          onClick={(event) => { event.stopPropagation(); togglePin(item.key); }}
+          aria-label={`${pinned ? t("shell.unpin") : t("shell.pin")}: ${item.label}`}
+          title={`${pinned ? t("shell.unpin") : t("shell.pin")}: ${item.label}`}
+        >
+          <Pin className={cn("size-3.5", pinned && "fill-current")} />
+        </Button>
+      </div>
+    );
+  };
+
+  const renderGroupItems = (groupName: string, items: NavItem[]) => {
+    const direct = items.filter((item) => !item.subgroup);
+    const branches = new Map<string, NavItem[]>();
+    for (const item of items) {
+      if (!item.subgroup) continue;
+      if (!branches.has(item.subgroup)) branches.set(item.subgroup, []);
+      branches.get(item.subgroup)!.push(item);
+    }
+    return (
+      <>
+        {direct.map((item) => renderNavItem(item))}
+        {[...branches].map(([branch, branchItems]) => {
+          const branchKey = `${groupName}/${branch}`;
+          const containsActive = branchItems.some((item) => item.key === props.activeKey);
+          const branchOpen = collapsed || Boolean(navQuery) || containsActive || openSubgroups.has(branchKey);
+          return (
+            <div key={branchKey} className="mb-0.5">
+              {!collapsed ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className={cn("h-8 w-full justify-start gap-2 px-3 text-xs font-medium text-muted-foreground", containsActive && "text-primary")}
+                  aria-expanded={branchOpen}
+                  onClick={() => setOpenSubgroups((prev) => {
+                    const next = new Set(prev);
+                    next.has(branchKey) ? next.delete(branchKey) : next.add(branchKey);
+                    return next;
+                  })}
+                >
+                  <ChevronRight className={cn("size-3.5 transition-transform", branchOpen && "rotate-90")} />
+                  <span className="truncate">{branch}</span>
+                </Button>
+              ) : null}
+              {branchOpen ? branchItems.map((item) => renderNavItem(item, true)) : null}
+            </div>
+          );
+        })}
+      </>
+    );
   };
 
   return (
@@ -261,51 +356,7 @@ export function AppShell(props: AppShellProps) {
                       <ChevronDown className={cn("size-3.5 transition-transform", expanded ? "rotate-0" : "-rotate-90")} />
                     </Button>
                   ) : null}
-                  {expanded ? group.items.map((item) => {
-                    const active = item.key === props.activeKey;
-                    const pinned = pinnedKeys.has(item.key);
-                    const button = (
-                      <Button
-                        ref={active ? activeRef : undefined}
-                        variant="ghost"
-                        disabled={Boolean(item.disabledReason)}
-                        title={item.disabledReason}
-                        className={cn(
-                          "mf-shell-nav-item relative mb-0.5 w-full justify-start gap-2 overflow-hidden border border-transparent font-normal transition-all",
-                          collapsed && "justify-center px-0 max-md:justify-start max-md:px-3",
-                          !collapsed && "pr-7",
-                          active && "border-primary/20 bg-primary/12 font-bold text-primary shadow-sm hover:bg-primary/16 before:absolute before:inset-y-1 before:left-0 before:w-1 before:rounded-r-full before:bg-primary",
-                          item.disabledReason && "opacity-50",
-                        )}
-                        data-active={active ? "true" : "false"}
-                        aria-current={active ? "page" : undefined}
-                        onClick={() => go(item)}
-                      >
-                        <span className={cn("shrink-0 text-muted-foreground [&_svg]:size-4", active && "text-primary")}>{item.icon}</span>
-                        {!collapsed ? <span className="min-w-0 flex-1 truncate text-left">{item.label}</span> : null}
-                        {!collapsed && item.badge != null ? <Badge variant={active ? "default" : "secondary"} className="ml-auto max-w-14 truncate">{item.badge}</Badge> : null}
-                      </Button>
-                    );
-                    if (collapsed) {
-                      return <Tooltip key={item.key}><TooltipTrigger asChild>{button}</TooltipTrigger><TooltipContent side="right">{item.label}{item.disabledReason ? ` — ${item.disabledReason}` : ""}</TooltipContent></Tooltip>;
-                    }
-                    return (
-                      <div key={item.key} className="group/navitem relative">
-                        {button}
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-sm"
-                          className={cn("absolute right-1 top-1/2 size-6 -translate-y-1/2 opacity-0 transition-opacity group-hover/navitem:opacity-100", pinned && "text-primary opacity-100")}
-                          onClick={(e) => { e.stopPropagation(); togglePin(item.key); }}
-                          aria-label={`${pinned ? t("shell.unpin") : t("shell.pin")}: ${item.label}`}
-                          title={`${pinned ? t("shell.unpin") : t("shell.pin")}: ${item.label}`}
-                        >
-                          <Pin className={cn("size-3.5", pinned && "fill-current")} />
-                        </Button>
-                      </div>
-                    );
-                  }) : null}
+                  {expanded ? renderGroupItems(group.name, group.items) : null}
                 </div>
               );
             })}

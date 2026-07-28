@@ -150,6 +150,17 @@ function manifestRoute(item: AppManifest["nav"][number]): string | null {
   return null;
 }
 
+function masterDataBranch(key: string): string | undefined {
+  if (["UOM", "Item Group", "Brand", "Manufacturer", "Item Color", "Material Grade",
+    "Material Specification", "Item Attribute", "Supplier Item", "Measurement Profile", "Item"].includes(key)) {
+    return "Hàng hoá & vật tư";
+  }
+  if (key === "Warehouse") return "Kho";
+  if (["Customer", "Supplier"].includes(key)) return "Đối tác";
+  if (["Price List", "Item Price", "Pricing Rule"].includes(key)) return "Giá và chính sách";
+  return "Danh mục mở rộng";
+}
+
 function buildNavigation(manifest: AppManifest, catalog: ApplicationCatalog | undefined, roles: string[]): RuntimeNav[] {
   /**
    * Only entries whose screen can actually work.
@@ -205,7 +216,15 @@ function buildNavigation(manifest: AppManifest, catalog: ApplicationCatalog | un
     const route = manifestRoute(nav);
     if (!route || routes.has(route) || ["overview", "process"].includes(nav.kind ?? "")) continue;
     routes.add(route);
-    items.push({ key: nav.key, label: nav.label, group: nav.group ?? "Ứng dụng", icon: resolveIcon(nav.icon), route, doctype: (nav.kind ?? "doctype") === "doctype" ? nav.key : undefined });
+    items.push({
+      key: nav.key,
+      label: nav.label,
+      group: nav.group ?? "Ứng dụng",
+      ...(nav.group === "Danh mục" ? { subgroup: masterDataBranch(nav.key) } : {}),
+      icon: resolveIcon(nav.icon),
+      route,
+      doctype: (nav.kind ?? "doctype") === "doctype" ? nav.key : undefined,
+    });
   }
   return items;
 }
