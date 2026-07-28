@@ -82,7 +82,6 @@ export { GanttView, type GanttViewProps, type GanttTask } from "./gantt/GanttVie
 // container (nối engine ↔ backend thật)
 export { MetaForgeProvider, useMetaForge, useLocaleFormat, type MetaForgeContextValue, type MetaForgeProviderProps } from "./container/provider.js";
 export { DoctypeWorkspace, type DoctypeWorkspaceProps } from "./app/DoctypeWorkspace.js";
-export { MasterDataWorkspace, type MasterDataWorkspaceProps } from "./app/MasterDataWorkspace.js";
 export { adapterServices } from "./container/services.js";
 export { useMeta, useFormMeta, useDoc, useList, useCount, useTransitions } from "./container/hooks.js";
 export { FormContainer, type FormContainerProps } from "./container/FormContainer.js";

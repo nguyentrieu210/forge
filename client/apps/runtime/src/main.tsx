@@ -16,15 +16,13 @@ import { Button, Toaster } from "@metaforge/ui";
 import { SocialCommerceLanding, type PublicSocialPage } from "./landing/SocialCommerceLanding.js";
 import { Storefront, type StorefrontPage } from "./storefront/Storefront.js";
 import {
-  CatalogNavigator,
-  type CatalogNavigatorGroup,
-  type CatalogNavigatorItem,
-} from "./components/CatalogNavigator.js";
+  CatalogTabs,
+  type CatalogTabItem,
+} from "./components/CatalogTabs.js";
 import "./styles.css";
 
 const ApplicationCatalogContainer = lazy(() => import("@metaforge/views/catalog").then((module) => ({ default: module.ApplicationCatalogContainer })));
 const DoctypeWorkspace = lazy(() => import("@metaforge/views/doctype-workspace").then((module) => ({ default: module.DoctypeWorkspace })));
-const MasterDataWorkspace = lazy(() => import("@metaforge/views/master-data-workspace").then((module) => ({ default: module.MasterDataWorkspace })));
 const OverviewContainer = lazy(() => import("@metaforge/views/overview").then((module) => ({ default: module.OverviewContainer })));
 const PermissionCenter = lazy(() => import("@metaforge/views/permissions").then((module) => ({ default: module.PermissionCenter })));
 const ProcessContainer = lazy(() => import("@metaforge/views/process").then((module) => ({ default: module.ProcessContainer })));
@@ -156,17 +154,6 @@ function manifestRoute(item: AppManifest["nav"][number]): string | null {
   return null;
 }
 
-function masterDataBranch(key: string): string | undefined {
-  if (["UOM", "Item Group", "Brand", "Manufacturer", "Item Color", "Material Grade",
-    "Material Specification", "Item Attribute", "Supplier Item", "Measurement Profile", "Item"].includes(key)) {
-    return "Hàng hoá & vật tư";
-  }
-  if (key === "Warehouse") return "Kho";
-  if (["Customer", "Supplier"].includes(key)) return "Đối tác";
-  if (["Price List", "Item Price", "Pricing Rule"].includes(key)) return "Giá và chính sách";
-  return "Danh mục mở rộng";
-}
-
 function buildNavigation(manifest: AppManifest, catalog: ApplicationCatalog | undefined, roles: string[]): RuntimeNav[] {
   /**
    * Only entries whose screen can actually work.
@@ -235,7 +222,6 @@ function buildNavigation(manifest: AppManifest, catalog: ApplicationCatalog | un
       key: nav.key,
       label: nav.label,
       group: nav.group ?? "Ứng dụng",
-      ...(nav.group === "Danh mục" ? { subgroup: masterDataBranch(nav.key) } : {}),
       ...(nav.group === "Danh mục" ? { hiddenInSidebar: true } : {}),
       icon: resolveIcon(nav.icon),
       route,
@@ -597,19 +583,15 @@ function MasterDataScreen(props: ScreenProps) {
   const currentNav = props.nav.find((item) =>
     item.hiddenInSidebar && item.doctype === decodedDoctype,
   );
-  const groups = useMemo<CatalogNavigatorGroup[]>(() => {
-    const grouped = new Map<string, CatalogNavigatorItem[]>();
-    for (const item of props.nav) {
-      if (!item.hiddenInSidebar || !item.subgroup || !item.doctype) continue;
-      if (!grouped.has(item.subgroup)) grouped.set(item.subgroup, []);
-      grouped.get(item.subgroup)!.push({
+  const items = useMemo<CatalogTabItem[]>(() =>
+    props.nav.flatMap((item) => {
+      if (!item.hiddenInSidebar || !item.doctype) return [];
+      return [{
         key: item.doctype,
         label: item.label,
         icon: item.icon,
-      });
-    }
-    return [...grouped.entries()].map(([key, items]) => ({ key, label: key, items }));
-  }, [props.nav]);
+      }];
+    }), [props.nav]);
   const breadcrumbs = [
     { label: "Danh mục", ...(currentNav ? { onClick: () => navigate("/master-data") } : {}) },
     ...(currentNav ? [{ label: currentNav.label }] : []),
@@ -617,21 +599,30 @@ function MasterDataScreen(props: ScreenProps) {
   ];
   return (
     <Shell {...props} active="__master_data" breadcrumbs={breadcrumbs}>
-      <div className="h-full min-h-0 p-3 md:p-4">
-        <MasterDataWorkspace
-          navigator={(
-            <CatalogNavigator
-              groups={groups}
-              selectedKey={currentNav?.doctype}
-              onSelect={(item) => navigate(`/master-data/${encodeURIComponent(item.key)}`)}
-            />
-          )}
-          doctype={currentNav?.doctype}
-          name={name}
-          label={currentNav?.label}
-          bridge={bridge}
-          onNavigate={navigate}
+      <div className="flex h-full min-h-0 flex-col">
+        <CatalogTabs
+          items={items}
+          selectedKey={currentNav?.doctype}
+          onSelect={(item) => navigate(`/master-data/${encodeURIComponent(item.key)}`)}
         />
+        <div className="min-h-0 flex-1 p-3 md:p-4">
+          {currentNav?.doctype ? (
+            <DoctypeWorkspace
+              doctype={currentNav.doctype}
+              name={name}
+              bridge={bridge}
+              base="/master-data"
+              onNavigate={navigate}
+            />
+          ) : (
+            <div className="grid h-full place-items-center rounded-xl border bg-card px-6 text-center shadow-sm">
+              <div>
+                <p className="text-sm font-medium">Chọn một danh mục phía trên</p>
+                <p className="mt-1 text-xs text-muted-foreground">Danh sách hoặc cây dữ liệu sẽ mở ngay bên dưới.</p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </Shell>
   );

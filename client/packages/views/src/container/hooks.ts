@@ -14,9 +14,6 @@ export function useMeta(doctype: string): UseQueryResult<DocTypeMeta> {
   return useQuery({
     queryKey: [scopeKey, "meta", doctype],
     queryFn: () => adapter.getMeta(doctype),
-    // Workspace Danh mục có trạng thái "chưa chọn danh mục". Không gọi getMeta("") —
-    // đó không phải DocType và chỉ tạo một request lỗi vô ích khi vừa mở màn.
-    enabled: Boolean(doctype),
     staleTime: Infinity, // meta ít đổi; invalidate khi save Customize/Property Setter
   });
 }
