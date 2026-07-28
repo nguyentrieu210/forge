@@ -44,7 +44,7 @@ import {
 } from "@metaforge/core";
 import { ControlRegistry, createDefaultRegistry, DateControl, AttachControl, GeolocationControl, LinkControl } from "@metaforge/controls";
 import {
-  FormView, groupLayout, ChildGrid, createFullRegistry, KanbanView, TreeView, ReportView, PrintView, DashboardView, CalendarView, GanttView, type TreeNodeItem,
+  FormView, groupLayout, resolveFormFieldWidth, ChildGrid, createFullRegistry, KanbanView, TreeView, ReportView, PrintView, DashboardView, CalendarView, GanttView, type TreeNodeItem,
   deriveColumns, applyClientQuery, buildServerQuery, countQuery, deriveStandardFilters, deriveSearchFields, statusVariant, emptyListState,
   applyColumnOrder, columnPreferenceKey, hasCustomColumnPreferences, moveColumn, normalizeColumnPreferences, stableColumnPreferenceScope,
   resolveFormActions, resolveWorkflowActions, editableCodeField, suggestEditableCode, type FormActionCtx,
@@ -826,6 +826,14 @@ check("layout: Section Break depends_on ẩn → section ẩn", () => {
   const cond = sections.find((s) => s.label === "Điều kiện");
   assert.ok(cond, "có section điều kiện");
   assert.equal(cond!.hidden, true, "Section Break ẩn → section ẩn");
+});
+
+check("form width: explicit thắng, title toàn hàng, field ngắn 3 ô, mặc định 2 ô", () => {
+  assert.equal(resolveFormFieldWidth({ fieldname: "item_name", fieldtype: "Data" }, "item_name"), "full");
+  assert.equal(resolveFormFieldWidth({ fieldname: "stock_uom", fieldtype: "Link" }), "third");
+  assert.equal(resolveFormFieldWidth({ fieldname: "item_status", fieldtype: "Data" }), "third");
+  assert.equal(resolveFormFieldWidth({ fieldname: "item_code", fieldtype: "Data" }), "half");
+  assert.equal(resolveFormFieldWidth({ fieldname: "item_code", fieldtype: "Data", form_width: "full" }), "full");
 });
 
 // 25. DATETIME: Frappe "YYYY-MM-DD HH:mm:ss" → input datetime-local "YYYY-MM-DDTHH:mm".

@@ -51,7 +51,14 @@ export { SplitView, useBreakpoint, type SplitViewProps, type Breakpoint } from "
 export { ContextPanel, type ContextPanelProps, type TimelineItem, type TimelineKind, type ContextAttachment, type UserOption, type ContextShare, type ContextConnection } from "./detail/ContextPanel.js";
 export { WorkflowActionBar, FormActionBar, resolveWorkflowActions, type WorkflowAction } from "./detail/WorkflowActionBar.js";
 export { resolveFormActions, type FormActionDesc, type FormActionKind, type FormActionCtx, type FormPerms } from "./detail/formActions.js";
-export { groupLayout, type FormTab, type FormSection, type FormColumn } from "./form/layout.js";
+export {
+  groupLayout,
+  resolveFormFieldWidth,
+  type FormFieldWidth,
+  type FormTab,
+  type FormSection,
+  type FormColumn,
+} from "./form/layout.js";
 export { useFormState, type FormApi } from "./form/useFormState.js";
 export { ChildGrid, type ChildGridProps } from "./form/ChildGrid.js";
 export { registerTableControls } from "./form/table-controls.js";

@@ -90,6 +90,8 @@ export interface DocFieldMeta extends JsonObject {
   read_only_depends_on?: string;
   permlevel?: number;
   description?: string;
+  /** Độ rộng field trên lưới form 3 ô; chỉ ảnh hưởng trình bày. */
+  form_width?: "full" | "half" | "third";
   /** Immutable after the first save — enforced by the generic controller. */
   set_only_once?: boolean;
   /** Refuses a negative value. */

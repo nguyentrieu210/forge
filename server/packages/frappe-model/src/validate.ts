@@ -123,6 +123,10 @@ function parseField(value: unknown, index: number): DocFieldMeta {
   const precision = input.precision === undefined ? undefined : safeInt(input.precision, `fields[${index}].precision`, 0, 9);
   const length = input.length === undefined ? undefined : safeInt(input.length, `fields[${index}].length`, 1, 1_000_000);
   const permlevel = input.permlevel === undefined ? 0 : safeInt(input.permlevel, `fields[${index}].permlevel`, 0, 9);
+  const formWidth = input.form_width === undefined ? undefined : text(input.form_width, `fields[${index}].form_width`, 16);
+  if (formWidth !== undefined && !["full", "half", "third"].includes(formWidth)) {
+    throw errors.validation(`fields[${index}].form_width must be full, half, or third`);
+  }
   return {
     fieldname,
     label,
@@ -147,6 +151,7 @@ function parseField(value: unknown, index: number): DocFieldMeta {
     ...(input.read_only_depends_on === undefined ? {} : { read_only_depends_on: text(input.read_only_depends_on, `fields[${index}].read_only_depends_on`, 500) }),
     permlevel,
     ...(input.description === undefined ? {} : { description: text(input.description, `fields[${index}].description`, 2000) }),
+    ...(formWidth === undefined ? {} : { form_width: formWidth as "full" | "half" | "third" }),
     // Value rules the SERVER enforces. Grouped here rather than scattered so it stays
     // obvious which properties change behaviour and which only change appearance.
     set_only_once: bool(input.set_only_once, false),

@@ -57,6 +57,7 @@ export function toFrappeDocField(field: DocFieldMeta): JsonObject {
   if (field.mandatory_depends_on !== undefined) row.mandatory_depends_on = field.mandatory_depends_on;
   if (field.read_only_depends_on !== undefined) row.read_only_depends_on = field.read_only_depends_on;
   if (field.description !== undefined) row.description = field.description;
+  if (field.form_width !== undefined) row.form_width = field.form_width;
   return row;
 }
 

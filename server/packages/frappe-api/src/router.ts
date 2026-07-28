@@ -402,6 +402,7 @@ function fieldFromOp(entry: JsonObject): JsonObject {
   };
   if (typeof entry.label === "string") field.label = entry.label;
   if (typeof entry.options === "string") field.options = entry.options;
+  if (typeof entry.form_width === "string") field.form_width = entry.form_width;
   // The builder speaks Frappe's `reqd` (0/1); the kernel's field metadata uses a
   // boolean `required`.
   if (entry.reqd !== undefined) field.required = entry.reqd === 1 || entry.reqd === true;

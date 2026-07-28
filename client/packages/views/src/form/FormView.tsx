@@ -16,7 +16,7 @@ import type { WorkflowTransition } from "@metaforge/adapter-frappe";
 import { Button, Badge, toast, cn, useT } from "@metaforge/ui";
 import { FormGuide } from "./FormGuide.js";
 import { useMetaForgeOptional } from "../container/provider.js";
-import { groupLayout, isFullWidthField, type FormTab } from "./layout.js";
+import { groupLayout, resolveFormFieldWidth, type FormFieldWidth, type FormTab } from "./layout.js";
 import { WorkflowActionBar, FormActionBar } from "../detail/WorkflowActionBar.js";
 import { DIRTY_GUARD_REASON, type FormActionKind, type FormPerms, type FormActionCtx } from "../detail/formActions.js";
 
@@ -419,9 +419,21 @@ export function FormView(props: FormViewProps) {
                 {/* Flex-wrap, KHÔNG phải lưới: field tự chảy theo bề rộng của chính nó và tự
                     xuống dòng khi hết chỗ. Lưới cấp khe đều nhau nên ô ngắn nằm giữa khe rộng,
                     hở hai bên — đó là gốc của cảm giác "form quá rộng, kích cỡ không hợp lý". */}
-                <div className="mf-form-grid grid grid-cols-1 items-start gap-x-8 gap-y-4">
+                <div className="mf-form-grid grid items-start gap-x-3 gap-y-4">
                   {section.columns.flatMap((col) => col.fields).map((rf) => (
-                    <Field key={rf.field.fieldname} id={fieldDomId(rf.field.fieldname)} rf={rf} form={form} registry={registry} services={services} docName={String(doc.name)} parentDoctype={meta.name} roles={roles} values={values} />
+                    <Field
+                      key={rf.field.fieldname}
+                      id={fieldDomId(rf.field.fieldname)}
+                      rf={rf}
+                      width={resolveFormFieldWidth(rf.field, meta.title_field)}
+                      form={form}
+                      registry={registry}
+                      services={services}
+                      docName={String(doc.name)}
+                      parentDoctype={meta.name}
+                      roles={roles}
+                      values={values}
+                    />
                   ))}
                 </div>
               </section>
@@ -437,6 +449,7 @@ export function FormView(props: FormViewProps) {
 interface FieldProps {
   id: string;
   rf: ResolvedField;
+  width: FormFieldWidth;
   form: ReturnType<typeof useForm<FieldValues>>;
   registry: ControlRegistry;
   services?: FieldServices;
@@ -446,7 +459,7 @@ interface FieldProps {
   values: FieldValues;
 }
 
-function Field({ id, rf, form, registry, services, docName, parentDoctype, roles, values }: FieldProps) {
+function Field({ id, rf, width, form, registry, services, docName, parentDoctype, roles, values }: FieldProps) {
   const { field } = rf;
   if (rf.layout) {
     if (field.fieldtype === "Heading") return <h4 className="pt-1 text-sm font-semibold text-foreground">{field.label}</h4>;
@@ -504,7 +517,8 @@ function Field({ id, rf, form, registry, services, docName, parentDoctype, roles
            * cung cấp. Đó đúng là "kích cỡ không hợp lý" và "dư khoảng trắng".
            */
           "min-w-0",
-          isFullWidthField(field.fieldtype) && "col-span-full",
+          isCheck && "mf-field-check",
+          `mf-field-width-${width}`,
           rf.state && `mf-state-${rf.state}`,
           rf.readOnly && "mf-field-readonly",
           fieldState.error && "mf-field-error",
@@ -513,10 +527,10 @@ function Field({ id, rf, form, registry, services, docName, parentDoctype, roles
         if (isCheck) {
           return (
             <div className={wrapper}>
-              <div className="flex items-start gap-2.5">
-                <div className="pt-0.5">{control}</div>
+              <div className="flex min-h-8 items-center gap-2">
+                <div className="flex shrink-0 items-center">{control}</div>
                 <div className="min-w-0 flex-1">
-                  <label htmlFor={id} className="cursor-pointer text-sm font-medium text-foreground">{label}</label>
+                  <label htmlFor={id} className="block cursor-pointer text-[13px] font-medium leading-5 text-foreground">{label}</label>
                   {description}
                 </div>
               </div>

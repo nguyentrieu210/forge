@@ -4,7 +4,7 @@
  *  - KHÔNG sinh tab/section rỗng ở đầu (chỉ tạo default khi field hiển thị đầu KHÔNG phải Tab Break).
  *  - Tôn trọng depends_on của Tab Break & Section Break (break ẩn ⇒ tab/section ẩn).
  */
-import type { ResolvedField } from "@metaforge/core";
+import type { DocField, ResolvedField } from "@metaforge/core";
 
 export interface FormColumn {
   fields: ResolvedField[];
@@ -33,6 +33,27 @@ const FULL_WIDTH_TYPES = new Set(["Table", "Table MultiSelect", "Text Editor", "
 
 export function isFullWidthField(fieldtype: string): boolean {
   return FULL_WIDTH_TYPES.has(fieldtype);
+}
+
+export type FormFieldWidth = "full" | "half" | "third";
+
+const THIRD_WIDTH_TYPES = new Set([
+  "Check", "Int", "Float", "Currency", "Percent", "Duration", "Rating",
+  "Date", "Datetime", "Time", "Select", "Color",
+]);
+const THIRD_WIDTH_NAMES = /(^|_)(status|state|uom|unit|currency|priority)(_|$)/i;
+
+/**
+ * Quy tắc độ rộng form dùng chung toàn hệ thống.
+ *
+ * Metadata khai `form_width` luôn thắng. Nếu DocType cũ chưa khai thì tiêu đề và
+ * nội dung dài chiếm trọn hàng, field nhận diện ngắn chiếm 1/3, còn lại chiếm 1/2.
+ */
+export function resolveFormFieldWidth(field: DocField, titleField?: string): FormFieldWidth {
+  if (field.form_width === "full" || field.form_width === "half" || field.form_width === "third") return field.form_width;
+  if (isFullWidthField(field.fieldtype) || field.fieldname === titleField || field.fieldname === "title" || field.fieldname === "subject") return "full";
+  if (THIRD_WIDTH_TYPES.has(field.fieldtype) || THIRD_WIDTH_NAMES.test(field.fieldname)) return "third";
+  return "half";
 }
 
 interface RawTab {

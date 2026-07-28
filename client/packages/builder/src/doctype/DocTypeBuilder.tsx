@@ -234,6 +234,18 @@ function FieldProps({ field, onPatch }: { field: DocField; onPatch: (p: Partial<
           <Textarea value={field.options ?? ""} onChange={(e) => onPatch({ options: e.target.value })} rows={3} />
         </Row>
       ) : null}
+      <Row label="Độ rộng trên form">
+        <select
+          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground"
+          value={field.form_width ?? ""}
+          onChange={(event) => onPatch({ form_width: (event.target.value || undefined) as DocField["form_width"] })}
+        >
+          <option value="">Tự động theo loại field</option>
+          <option value="full">Toàn hàng (1 ô/hàng)</option>
+          <option value="half">Nửa hàng (2 ô/hàng)</option>
+          <option value="third">Một phần ba (3 ô/hàng)</option>
+        </select>
+      </Row>
       <Check label="Bắt buộc" checked={field.reqd === 1} onChange={(v) => onPatch({ reqd: v ? 1 : 0 })} />
       <Check label="Hiện ở List" checked={field.in_list_view === 1} onChange={(v) => onPatch({ in_list_view: v ? 1 : 0 })} />
       <Check label="Chỉ đọc" checked={field.read_only === 1} onChange={(v) => onPatch({ read_only: v ? 1 : 0 })} />

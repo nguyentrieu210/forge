@@ -31,6 +31,15 @@ export interface DocField {
   in_standard_filter?: 0 | 1;
   permlevel?: number;
   precision?: string;
+  /**
+   * Độ rộng field trên form, tính trên lưới 3 ô.
+   * - full: 1 field / hàng
+   * - half: 2 field / hàng
+   * - third: 3 field / hàng
+   *
+   * Không khai báo thì FormView tự suy theo fieldtype và vai trò của field.
+   */
+  form_width?: "full" | "half" | "third";
   /** cho phép meta thật mang thêm khoá — không mất dữ liệu */
   [k: string]: unknown;
 }
