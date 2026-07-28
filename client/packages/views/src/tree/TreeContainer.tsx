@@ -9,7 +9,7 @@
  * NestedSet giữ `lft`/`rgt` cho mỗi node, ghi tay là cây hỏng và mọi truy vấn "con cháu của X"
  * trả sai vĩnh viễn.
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Search } from "lucide-react";
 import { Button, ConfirmDialog, Input, PromptDialog, toast, useT } from "@metaforge/ui";
@@ -64,6 +64,7 @@ export function TreeContainer({
   const [pending, setPending] = useState<Pending | null>(null);
   const [busy, setBusy] = useState(false);
   const [query, setQuery] = useState("");
+  const didAutoOpen = useRef(false);
 
   // parent="" ⇒ get_children trả về node gốc (quy ước của treeview Frappe).
   const rootQ = useQuery({
@@ -116,6 +117,22 @@ export function TreeContainer({
     // Đã có con rồi thì thôi — mở lại dùng luôn bản đã nạp.
     if (!isOpen && !childrenMap[value]) void loadChildren(value);
   }, [expanded, childrenMap, loadChildren, stateKey]);
+
+  // Tree workspace luôn có 3 cột: khi chưa có lựa chọn, mở ngay node gốc đầu
+  // tiên để cột form và hoạt động có dữ liệu thay vì hiện hai vùng trống.
+  useEffect(() => {
+    if (selected) {
+      didAutoOpen.current = false;
+      return;
+    }
+    if (didAutoOpen.current || !onSelect) return;
+    const first = rootQ.data?.[0];
+    if (!first) return;
+    didAutoOpen.current = true;
+    const value = String(first.value);
+    if (first.expandable && !expanded.has(value)) onToggle(value);
+    onSelect(value);
+  }, [selected, onSelect, rootQ.data, expanded, onToggle]);
 
   /** Nạp lại đúng nhánh vừa đổi, không nạp lại cả cây (cây kho có thể vài nghìn node). */
   const refreshBranch = useCallback(async (parent: string) => {

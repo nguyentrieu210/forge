@@ -87,8 +87,7 @@ function TreeNode(props: TreeViewProps & { node: TreeNodeItem; depth: number }) 
             className="size-5"
             onClick={(event) => {
               event.stopPropagation();
-              if (isOpen) onToggle(node.value);
-              else activateNode();
+              onToggle(node.value);
             }}
             aria-label={isOpen ? t("tree.collapse") : t("tree.expand")}
           >

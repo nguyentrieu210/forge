@@ -438,13 +438,17 @@ export class D1MutationStore implements MutationStore {
     const bounded = Math.min(Math.max(limit, 1), 500);
     const result = await this.writer.prepare(
       `SELECT name, data_json FROM (
-         SELECT name, data_json FROM master_records
-           WHERE tenant_id=?1 AND record_type=?2 AND disabled=0
-         UNION
-         SELECT name, payload_json AS data_json FROM documents
-           WHERE tenant_id=?1 AND doctype=?2 AND docstatus<>2
-             AND COALESCE(CAST(json_extract(payload_json,'$.disabled') AS INTEGER),0)=0
-       ) ORDER BY name LIMIT ?3`,
+         SELECT name, data_json,
+                ROW_NUMBER() OVER (PARTITION BY name ORDER BY source_rank) AS row_rank
+         FROM (
+           SELECT name, payload_json AS data_json, 0 AS source_rank FROM documents
+             WHERE tenant_id=?1 AND doctype=?2 AND docstatus<>2
+               AND COALESCE(CAST(json_extract(payload_json,'$.disabled') AS INTEGER),0)=0
+           UNION ALL
+           SELECT name, data_json, 1 AS source_rank FROM master_records
+             WHERE tenant_id=?1 AND record_type=?2 AND disabled=0
+         )
+       ) WHERE row_rank=1 ORDER BY name LIMIT ?3`,
     ).bind(tenantId, recordType, bounded).all<{ name: string; data_json: string }>();
     return (result.results ?? []).map((row) => {
       let label = row.name;

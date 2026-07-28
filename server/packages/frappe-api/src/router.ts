@@ -2575,7 +2575,17 @@ async function businessContext(args: FrappeArgs, context: FrappeRouterContext): 
   for (const dimension of CONTEXT_DIMENSIONS) {
     if (wanted && !wanted.has(dimension.key)) continue;
     const restrictions = permissions.filter((record) => record.allow_doctype === dimension.recordType);
-    const options = await context.documents.listMasterRecords(context.tenantId, dimension.recordType, 200);
+    let options = await context.documents.listMasterRecords(context.tenantId, dimension.recordType, 200);
+    // Kho nhóm chỉ là nút cấu trúc trong cây (ví dụ "Kho Alumdoor"), không phải
+    // địa điểm vật lý có thể nhập/xuất. Không đưa nó vào bộ chọn phạm vi toàn hệ
+    // thống, nếu không người dùng chọn một kho vốn không bao giờ có tồn.
+    if (dimension.recordType === "Warehouse") {
+      const warehouseData = new Map(
+        (await context.documents.listMasterRecordData(context.tenantId, "Warehouse"))
+          .map((record) => [record.name, record.data]),
+      );
+      options = options.filter((option) => Number(warehouseData.get(option.name)?.is_group ?? 0) !== 1);
+    }
     const permitted = restrictions.length
       ? options.filter((option) => restrictions.some((record) => record.allow_name === option.name))
       : options;

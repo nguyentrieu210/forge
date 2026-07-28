@@ -134,7 +134,13 @@ function DimensionSelect({ dimension, value, onChange, compact }: {
   dimension: BusinessContextState["dimensions"][number]; value?: string; onChange: (v?: string) => void; compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const selected = dimension.options.find((o) => o.value === value);
+  // Phòng thủ trước dữ liệu master cũ từng tồn tại đồng thời ở master_records
+  // và documents: một giá trị chỉ được phép xuất hiện một lần trong selector.
+  const options = useMemo(
+    () => [...new Map(dimension.options.map((option) => [option.value, option])).values()],
+    [dimension.options],
+  );
+  const selected = options.find((o) => o.value === value);
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -159,7 +165,7 @@ function DimensionSelect({ dimension, value, onChange, compact }: {
                 <span>Tất cả {dimension.label.toLowerCase()}</span>
               </CommandItem>
             ) : null}
-            {dimension.options.map((o) => (
+            {options.map((o) => (
               <CommandItem key={o.value} value={`${o.label} ${o.value}`} disabled={o.disabled} onSelect={() => { onChange(o.value); setOpen(false); }}>
                 <Check className={cn("size-4", o.value === value ? "opacity-100" : "opacity-0")} />
                 <span className="min-w-0 flex-1"><span className="block truncate">{o.label}</span>{o.description ? <span className="block truncate text-xs text-muted-foreground">{o.description}</span> : null}</span>
