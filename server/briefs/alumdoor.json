@@ -2,7 +2,7 @@
   "$schema": "./brief.schema.json",
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "module": "Alumdoor",
   "domain": "alumdoor",
   "brand": "warm",
@@ -136,30 +136,6 @@
       "commit": "alumdoor.cut.return | Nhập hàng trả | Nhập lại số lá đã cắt vào kho?"
     },
     {
-      "//": "BÁO GIÁ NCC → ĐƠN MUA. Chốt xong bấm một nút, không gõ lại dòng nào.",
-      "//do": [
-        "Gõ lại là chỗ giá bị sai — và sai theo hướng đắt hơn thì không ai phát hiện, vì không có",
-        "gì để đối chiếu. Chuyển lần thứ hai KHÔNG tạo đơn mới: nó trả về đúng đơn đã tạo",
-        "(`already: true`), cùng cách đã dùng cho báo giá bán. Hai đơn cho một báo giá là đặt",
-        "hàng hai lần, và cái thứ hai chỉ lộ ra khi NCC giao gấp đôi."
-      ],
-      "name": "bao-gia-ncc-thanh-don-mua",
-      "label": "Báo giá NCC → Đơn mua",
-      "icon": "file-output",
-      "group": "Mua hàng",
-      "description": "Chuyển một báo giá NCC đã ghi sổ thành đơn mua. Mã hàng, số lượng, đơn vị và đơn giá chép nguyên.",
-      "permission": "Purchase Order",
-      "fields": [
-        "supplier_quotation:Link(Supplier Quotation)! Báo giá nhà cung cấp",
-        "schedule_date:Date Ngày hẹn giao",
-        "warehouse:Link(Warehouse) Kho nhận (áp cho mọi dòng)",
-        "note:Small Text Ghi chú đơn mua"
-      ],
-      "preview": "alumdoor.purchase.preview_order | Xem đơn sẽ tạo",
-      "commit": "alumdoor.purchase.order_from_quotation | Tạo đơn mua | Tạo đơn mua từ báo giá này?",
-      "resultTable": "items"
-    },
-    {
       "//": "ĐƠN MUA → PHIẾU NHẬP, chỉ phần CÒN LẠI.",
       "//do": [
         "Đây là chỗ 'một đơn nhiều đợt giao' thành ra dùng được: nút này đọc số ĐÃ nhận từ sổ tiến",
@@ -204,7 +180,7 @@
       "permission": "Purchase Order",
       "fields": [
         "image:Attach Image! Ảnh chụp chứng từ",
-        "target:Select(Báo giá NCC,Đơn mua hàng,Phiếu nhập mua,Hoá đơn mua)!=(Báo giá NCC) Đọc thành chứng từ gì",
+        "target:Select(Đơn mua hàng,Phiếu nhập mua,Hoá đơn mua)!=(Phiếu nhập mua) Đọc thành chứng từ gì",
         "supplier:Link(Supplier)! Nhà cung cấp",
         "warehouse:Link(Warehouse) Kho (bắt buộc khi tạo phiếu nhập)",
         "purchase_order:Link(Purchase Order) Theo đơn mua (nếu có)",
@@ -1202,6 +1178,7 @@
         "Zalo cho chủ xưởng rồi không ai nhớ đã đặt hay chưa."
       ],
       "name": "Material Request",
+      "menu": false,
       "label": "Yêu cầu vật tư",
       "icon": "clipboard-list",
       "group": "Mua hàng",
@@ -1268,6 +1245,7 @@
         "nhà cung cấp, và nó tạo ra một cột không ai giải thích được trong bảng so giá."
       ],
       "name": "Request for Quotation",
+      "menu": false,
       "label": "Yêu cầu báo giá",
       "icon": "mail-question",
       "group": "Mua hàng",
@@ -1338,6 +1316,7 @@
         "Chốt xong thì bấm 'Báo giá NCC → Đơn mua' để chuyển thẳng thành đơn, không gõ lại dòng nào."
       ],
       "name": "Supplier Quotation",
+      "menu": false,
       "label": "Báo giá nhà cung cấp",
       "icon": "file-input",
       "group": "Mua hàng",
@@ -1682,6 +1661,7 @@
         "`return_type` BẮT BUỘC là 'Purchase'; đặt nhầm 'Sales' là ghi ngược chiều tồn kho."
       ],
       "name": "Stock Return",
+      "menu": false,
       "label": "Trả hàng nhà cung cấp",
       "icon": "package-x",
       "group": "Mua hàng",
@@ -1753,6 +1733,7 @@
         "nợ NCC giảm ở một tài khoản và treo ở tài khoản kia."
       ],
       "name": "Debit Note",
+      "menu": false,
       "label": "Giấy báo Nợ NCC",
       "icon": "file-minus",
       "group": "Mua hàng",
@@ -2012,62 +1993,6 @@
         "schedule_date"
       ],
       "icon": "clock-alert",
-      "group": "Báo cáo mua hàng"
-    },
-    {
-      "//": "SO GIÁ: cùng một rổ hàng, mỗi NCC một dòng. Đây là thứ biến việc hỏi giá Zalo thành một quyết định đọc được.",
-      "name": "So sánh báo giá NCC",
-      "doctype": "Supplier Quotation",
-      "columns": [
-        "supplier:Link(Supplier) Nhà cung cấp",
-        "count(name):Int Số báo giá",
-        "min(grand_total):Currency Chào thấp nhất",
-        "sum(grand_total):Currency Tổng đã chào"
-      ],
-      "groupBy": "supplier",
-      "orderBy": "min(grand_total) asc",
-      "filters": [
-        "supplier",
-        "transaction_date",
-        "request_for_quotation"
-      ],
-      "icon": "scale",
-      "group": "Báo cáo mua hàng"
-    },
-    {
-      "//": "Ai đang xin vật tư gì — để chủ xưởng gộp đơn thay vì mua lẻ ba lần trong một tuần.",
-      "name": "Yêu cầu vật tư theo tổ",
-      "doctype": "Material Request",
-      "columns": [
-        "requested_by:Data Người/tổ yêu cầu",
-        "count(name):Int Số yêu cầu"
-      ],
-      "groupBy": "requested_by",
-      "orderBy": "count(name) desc",
-      "filters": [
-        "requested_by",
-        "material_request_type",
-        "transaction_date"
-      ],
-      "icon": "clipboard-list",
-      "group": "Báo cáo mua hàng"
-    },
-    {
-      "//": "Hàng trả lại và tiền được giảm — đo chất lượng NCC bằng số, không bằng cảm giác.",
-      "name": "Giảm trừ theo nhà cung cấp",
-      "doctype": "Debit Note",
-      "columns": [
-        "supplier:Link(Supplier) Nhà cung cấp",
-        "count(name):Int Số lần giảm trừ",
-        "sum(grand_total):Currency Tổng giảm trừ"
-      ],
-      "groupBy": "supplier",
-      "orderBy": "sum(grand_total) desc",
-      "filters": [
-        "supplier",
-        "posting_at"
-      ],
-      "icon": "file-minus",
       "group": "Báo cáo mua hàng"
     }
   ],

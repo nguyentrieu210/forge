@@ -810,6 +810,20 @@ export function compileBrief(brief) {
       });
     }
     if (isChild) continue;
+    /**
+     * `menu: false` — CÀI ĐẶT nhưng KHÔNG lên menu.
+     *
+     * Khác hẳn với việc xoá doctype khỏi brief. Xoá thì định nghĩa thành mồ côi: bản ghi cũ
+     * vẫn nằm trong kho dữ liệu nhưng không còn schema nào mô tả chúng — không đọc được,
+     * không xuất được, và không lấy lại được nếu không cài lại đúng gói cũ. Dữ liệu sống lâu
+     * hơn app, nên dữ liệu thắng.
+     *
+     * Cái này dành cho chuyện rất thường gặp: xưởng chỉ dùng hai loại chứng từ trong mười
+     * loại nền tảng có. Tám cái kia vẫn phải chạy được — nhân vẫn kiểm, chứng từ cũ vẫn mở
+     * được bằng đường dẫn thẳng, báo cáo vẫn đọc — chỉ là không chiếm chỗ trên thanh bên.
+     * Bật lại là sửa một chữ.
+     */
+    if (doctype.menu === false) continue;
     nav.push({
       key: doctypeName,
       label: doctype.label ?? doctypeName,

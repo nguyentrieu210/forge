@@ -787,6 +787,10 @@
         "child": {
           "type": "boolean",
           "description": "Doctype CON — chỉ là dòng của bảng cha. Không lên menu, không có danh sách riêng."
+        },
+        "menu": {
+          "type": "boolean",
+          "description": "`false` = CÀI ĐẶT nhưng không lên menu. Khác hẳn xoá khỏi brief: xoá thì định nghĩa thành mồ côi và bản ghi cũ không còn schema nào mô tả — không đọc được, không xuất được. Dùng khi khách chỉ dùng hai trong mười loại chứng từ nền tảng có; tám cái kia vẫn chạy, chỉ không chiếm chỗ trên thanh bên."
         }
       },
       "patternProperties": {

@@ -32,8 +32,15 @@ export interface FieldServices {
   searchLink?: (doctype: string, txt: string, opts?: LinkSearchOpts) => Promise<Array<{ value: string; description?: string }>>;
   /** upload file → trả file_url (dùng cho Attach/Attach Image). */
   uploadFile?: (file: File, opts: { isPrivate?: 0 | 1; doctype?: string; docname?: string; fieldname?: string }) => Promise<{ file_url: string; name: string }>;
-  /** nạp meta child DocType (dùng cho Table/child grid). */
-  getMeta?: (doctype: string) => Promise<unknown>;
+  /**
+   * Nạp meta của một DocType (bảng con cho Table/child grid, và NHÃN cho nút "Tạo mới …").
+   *
+   * `unknown` cộng thêm đúng một khoá, chứ không phải `DocTypeMeta` đầy đủ: gói controls cố
+   * ý không biết hình dạng metadata của nền tảng. Nhưng để `unknown` trơn thì cái nhãn —
+   * thứ DUY NHẤT tầng này cần — không đọc được, và nút tạo nhanh in ra tên kỹ thuật:
+   * "Tạo mới Material Request" giữa một giao diện tiếng Việt.
+   */
+  getMeta?: (doctype: string) => Promise<{ label?: string } & Record<string, unknown>>;
   /** P1-09 fetch_from: lấy 1 field của doc đích (get_value) để điền tự động khi Link đổi. */
   fetchValue?: (doctype: string, name: string, field: string) => Promise<unknown>;
   /** Resolve name kỹ thuật → title/label thân thiện cho Link đã có sẵn. */

@@ -500,6 +500,7 @@ export function LinkControl(p: FieldControlProps) {
       search={search}
       resolveDisplay={p.services?.resolveDisplay}
       quickCreate={p.services?.quickCreate}
+      getMeta={p.services?.getMeta}
       filters={filters}
       referenceDoctype={p.parentDoctype}
       readOnly={p.readOnly}
@@ -518,7 +519,7 @@ export function LinkControl(p: FieldControlProps) {
  * và User Permission phía server, chống race khi gõ nhanh, và cả các bản vá giao diện về sau.
  */
 export function LinkCombobox({
-  id, value, target, search, resolveDisplay, quickCreate, filters, referenceDoctype, readOnly, error, describedBy, required, label, onChange,
+  id, value, target, search, resolveDisplay, quickCreate, getMeta, filters, referenceDoctype, readOnly, error, describedBy, required, label, onChange,
 }: {
   id: string;
   value: string;
@@ -526,6 +527,8 @@ export function LinkCombobox({
   search: NonNullable<FieldControlProps["services"]>["searchLink"];
   resolveDisplay?: NonNullable<FieldControlProps["services"]>["resolveDisplay"];
   quickCreate?: NonNullable<FieldControlProps["services"]>["quickCreate"];
+  /** Chỉ để lấy NHÃN của doctype đích cho nút "Tạo mới …". Có cache ở adapter. */
+  getMeta?: NonNullable<FieldControlProps["services"]>["getMeta"];
   filters?: LinkSearchOpts["filters"];
   referenceDoctype?: string;
   readOnly?: boolean;
@@ -550,6 +553,25 @@ export function LinkCombobox({
   const filtersKey = filters ? JSON.stringify(filters) : "";
 
   useEffect(() => { if (open) setRecent(loadRecentLinks(target)); }, [open, target]);
+
+  /**
+   * Nhãn của doctype ĐÍCH, cho nút "Tạo mới …".
+   *
+   * Trước đây nút in thẳng `target`, tức là TÊN KỸ THUẬT: giữa một giao diện tiếng Việt
+   * hiện ra "Tạo mới Material Request", "Tạo mới Price List". Nhãn có sẵn trong metadata
+   * và `getMeta` có cache ở adapter, nên đây là một lượt đọc cho mỗi doctype — chỉ chạy
+   * khi popover MỞ và khi thật sự có nút tạo nhanh.
+   */
+  const [targetLabel, setTargetLabel] = useState<string>();
+  useEffect(() => {
+    if (!open || !quickCreate || !getMeta) return;
+    let alive = true;
+    void getMeta(target)
+      .then((meta) => { if (alive && meta?.label) setTargetLabel(meta.label); })
+      // Không đọc được metadata thì lùi về tên kỹ thuật — xấu, nhưng vẫn bấm được.
+      .catch(() => { /* fallback target */ });
+    return () => { alive = false; };
+  }, [open, quickCreate, getMeta, target]);
 
   useEffect(() => {
     if (!value || !resolveDisplay) { if (!value) setPickedDesc(undefined); return; }
@@ -665,7 +687,7 @@ export function LinkCombobox({
                   <>
                     <CommandItem value={`__mf_create__${txt}`} disabled={creating} onSelect={handleCreate}>
                       {creating ? <Loader2 className="mr-2 size-4 shrink-0 animate-spin" aria-hidden="true" /> : <Plus className="mr-2 size-4 shrink-0" aria-hidden="true" />}
-                      {t("control.link_create_new")}{txt.trim() ? ` "${txt.trim()}"` : ` ${target}`}
+                      {t("control.link_create_new")}{txt.trim() ? ` "${txt.trim()}"` : ` ${targetLabel ?? target}`}
                     </CommandItem>
                     {opts.length > 0 || recent.length > 0 ? <div className="mx-1 my-1 h-px bg-border" /> : null}
                   </>
