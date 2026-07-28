@@ -26,6 +26,8 @@ export interface TreeContainerProps {
   includeDisabled?: boolean;
   /** cho phép thêm/đổi tên/xoá node ngay trên cây. */
   editable?: boolean;
+  /** Field tên hiển thị; đổi field này giữ nguyên ID và mọi liên kết đang tham chiếu. */
+  renameField?: string;
   /** giá trị điền sẵn khi tạo node mới (vd { company: "APH" }). */
   createDefaults?: Record<string, unknown>;
 }
@@ -50,7 +52,7 @@ type TreeUiState = {
 const treeUiState = new Map<string, TreeUiState>();
 
 export function TreeContainer({
-  doctype, title, onSelect, selected, includeDisabled = false, editable = false, createDefaults,
+  doctype, title, onSelect, selected, includeDisabled = false, editable = false, renameField, createDefaults,
 }: TreeContainerProps) {
   const t = useT();
   const { adapter, scopeKey } = useMetaForge();
@@ -146,6 +148,9 @@ export function TreeContainer({
       });
       await loadChildren(parent);
     } else {
+      const emptyChildren: Record<string, TreeNodeItem[]> = {};
+      setChildrenMap(emptyChildren);
+      treeUiState.set(stateKey, { expanded, childrenMap: emptyChildren });
       await rootQ.refetch();
     }
   }, [qc, scopeKey, doctype, loadChildren, rootQ, stateKey, expanded]);
@@ -184,7 +189,17 @@ export function TreeContainer({
     if (pending?.kind !== "rename") return;
     setBusy(true);
     try {
-      await adapter.rename(doctype, pending.node.value, newName);
+      if (renameField) {
+        const current = await adapter.getDoc(doctype, pending.node.value);
+        await adapter.updateDoc(
+          doctype,
+          pending.node.value,
+          { [renameField]: newName },
+          String(current.doc.modified ?? ""),
+        );
+      } else {
+        await adapter.rename(doctype, pending.node.value, newName);
+      }
       toast.success(t("tree.renamed"));
       await refreshBranch("");
       setPending(null);
@@ -274,7 +289,7 @@ export function TreeContainer({
         title={t("tree.rename")}
         description={t("tree.rename_desc")}
         label={t("tree.name_label")}
-        defaultValue={pending?.kind === "rename" ? pending.node.value : ""}
+        defaultValue={pending?.kind === "rename" ? (pending.node.title ?? pending.node.value) : ""}
         confirmLabel={t("common.save")}
         onConfirm={(v) => void doRename(v)}
       />

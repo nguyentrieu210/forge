@@ -49,6 +49,7 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
             title={titleMeta.data?.label ?? doctype}
             selected={decoded}
             editable
+            renameField={titleMeta.data?.title_field}
             onSelect={(nodeName) => onNavigate(`${listPath}/${encodeURIComponent(nodeName)}`)}
           />
         ) : (

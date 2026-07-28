@@ -304,7 +304,7 @@ export function FormView(props: FormViewProps) {
                   </span>
                 ) : null}
               </div>
-              <div className="truncate text-xs text-muted-foreground">{meta.name}</div>
+              <div className="truncate text-xs text-muted-foreground">{meta.label ?? meta.name}</div>
             </div>
             <div className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-2 max-sm:w-full">
               {props.headerActions}
