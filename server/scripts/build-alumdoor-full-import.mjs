@@ -80,6 +80,22 @@ const codeOverrides = new Map([
   ["TP-YHLD_TayDK", ["TP-YHLD_TayDK", null]],
 ]);
 
+/**
+ * ĐVT trong file danh mục là ĐVT BÁN. Với vật tư cân khi nhập nhưng bán theo mét,
+ * không được chép nó sang ĐVT mua/tồn. conversion_factor có nghĩa:
+ *   1 ĐVT bán = bao nhiêu ĐVT tồn
+ */
+const itemUomOverrides = new Map([
+  ["TRỤC 114_1.8LY", { stock_uom: "Kg", purchase_uom: "Kg", sales_uom: "Mét", sales_factor: 4.4 }],
+  ["TRỤC 114_2.1LY", { stock_uom: "Kg", purchase_uom: "Kg", sales_uom: "Mét", sales_factor: 4.7 }],
+  ["RON-DD", { stock_uom: "Kg", purchase_uom: "Kg", sales_uom: "Mét", sales_factor: 0.117 }],
+  ["RNHUA-DR", { stock_uom: "Kg", purchase_uom: "Kg", sales_uom: "Mét", sales_factor: 0.1 }],
+  ["RNINOX-DR", { stock_uom: "Kg", purchase_uom: "Kg", sales_uom: "Mét", sales_factor: 0.12 }],
+  ["TP-RAYHOP", { stock_uom: "Kg", purchase_uom: "Kg", sales_uom: "Mét", sales_factor: 1.08 }],
+  ["TP-TD87A1 GS", { stock_uom: "Kg", purchase_uom: "Kg", sales_uom: "Mét", sales_factor: 0.6 }],
+  ["TP-RAY HỘP TD U100", { stock_uom: "Kg", purchase_uom: "Kg", sales_uom: "Mét", sales_factor: 1.42 }],
+]);
+
 const sourceRows = rowsFromTsv(await readFile(sourcePath, "utf8"));
 const populated = sourceRows.filter((row) => row["Mã SP"]);
 const adjustments = populated.filter((row) => row["Mã SP"].startsWith("TRU-"));
@@ -126,6 +142,7 @@ for (const row of candidates) {
   if (isMotorCombo) descriptionParts.push("Mặt hàng bán theo combo; không trừ tồn trực tiếp");
   if (code !== sourceCode) descriptionParts.push(`Mã nguồn: ${sourceCode}`);
 
+  const uomOverride = itemUomOverrides.get(code);
   const payload = {
     item_code: code,
     item_name: row["TÊN SP"],
@@ -138,9 +155,18 @@ for (const row of candidates) {
     include_item_in_manufacturing: false,
     inventory_mode: isDoor ? "Thành phẩm theo m2" : "Hàng thường",
     ...(isDoor ? { measurement_profile: "Thành phẩm theo m2" } : {}),
-    stock_uom: uom,
-    ...(!virtualSaleItem && !isDoor ? { default_purchase_uom: uom } : {}),
-    default_sales_uom: uom,
+    stock_uom: uomOverride?.stock_uom ?? uom,
+    ...(!virtualSaleItem && !isDoor
+      ? { default_purchase_uom: uomOverride?.purchase_uom ?? uom }
+      : {}),
+    default_sales_uom: uomOverride?.sales_uom ?? uom,
+    ...(uomOverride ? {
+      uom_conversions: [{
+        row_id: `UOM-${uomOverride.sales_uom.toUpperCase()}`,
+        uom: uomOverride.sales_uom,
+        conversion_factor: uomOverride.sales_factor,
+      }],
+    } : {}),
     ...(row["KHO \n(K36-K12)"] ? { default_warehouse: row["KHO \n(K36-K12)"] } : {}),
     valuation_method: "FIFO",
     has_batch_no: false,
