@@ -366,18 +366,13 @@ export function DateControl(p: FieldControlProps) {
   const isDatetime = p.field.fieldtype === "Datetime";
   const type = isDatetime ? "datetime-local" : p.field.fieldtype === "Time" ? "time" : "date";
   const raw = (p.value as string) ?? "";
-  /**
-   * Ô ngày KHÔNG kéo hết bề ngang cột.
-   *
-   * Một ngày là mười ký tự, một mốc thời gian là mười sáu — kéo ô ra hết cột làm nó chiếm
-   * chỗ ngang bằng ô "Nhà cung cấp" trong khi chứa ít hơn nhiều lần, và mắt người đọc form
-   * mất chỗ bám. Trần bề rộng, không phải bề rộng cố định: hẹp hơn trần thì vẫn co lại
-   * theo cột, nên trên điện thoại không bị tràn.
-   */
+  // Control KHÔNG tự chặn bề rộng. Bề rộng của một ô do form quyết (`basisClass`) hoặc do cột
+  // của bảng quyết (`colgroup`) — chặn thêm ở đây là con số thứ hai phải nhớ giữ khớp, và nó
+  // đã lệch thật: 16rem ở đây trong khi form cấp 14rem.
   return (
     <Input
       id={labelId(p)}
-      className={`mf-control ${isDatetime ? "max-w-[16rem]" : "max-w-[11rem]"}`}
+      className="mf-control"
       type={type}
       value={isDatetime ? toDatetimeLocal(raw) : raw}
       readOnly={p.readOnly}
@@ -675,22 +670,16 @@ export function LinkCombobox({
         lớp cùng tranh quyền quyết định chiều cao, hỏng thì im lặng và rất khó truy.
       */}
       <PopoverContent
-        className="w-[--radix-popover-trigger-width] overflow-hidden p-0"
+        className="w-[--radix-popover-trigger-width] p-0"
         align="start"
         collisionPadding={12}
       >
         <Command shouldFilter={false}>
-          <CommandInput placeholder={t("control.link_search_placeholder")} value={txt} onValueChange={setTxt} />
-          {/*
-            Trần chiều cao phải theo CHỖ TRỐNG THẬT của popover, không phải một con số cố định.
-            `20rem` hay `50vh` là con số đoán: khi popover mở gần đáy màn hình, Radix chỉ còn
-            cấp cho nó ví dụ 280px, mà danh sách vẫn tự cho mình 320px — popover thì
-            `overflow-hidden`, nên phần thừa bị CẮT và không có thanh cuộn nào xuất hiện.
-            Người dùng thấy danh sách cụt và không cuộn được, đúng như ảnh chụp.
-            Biến của Radix nằm trên chính phần tử popover nên biến CSS kế thừa xuống đây; trừ
-            đi ~3,25rem cho ô tìm kiếm phía trên.
-          */}
-          <CommandList className="max-h-[min(20rem,calc(var(--radix-popover-content-available-height)-3.25rem))] overflow-y-auto">
+          <div className="sticky top-0 z-10 bg-popover">
+            <CommandInput placeholder={t("control.link_search_placeholder")} value={txt} onValueChange={setTxt} />
+          </div>
+          {/* KHÔNG đặt trần ở đây: popover là vùng cuộn duy nhất (xem chú thích trên). */}
+          <CommandList className="max-h-none overflow-visible">
             {loading ? (
               <div className="flex items-center gap-2 px-3 py-3 text-sm text-muted-foreground">
                 <Loader2 className="size-4 animate-spin" aria-hidden="true" />{t("control.link_searching")}

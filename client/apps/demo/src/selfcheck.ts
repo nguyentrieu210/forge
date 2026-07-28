@@ -854,7 +854,20 @@ check("datetime: wrapper đủ rộng để không cắt phút và nút lịch",
       roles: ["All"],
     }),
   );
-  assert.ok(html.includes("max-w-[14rem]"), "Datetime phải rộng hơn Date/Time 11rem");
+  // Kiểm Ý ĐỊNH — ô Datetime phải RỘNG HƠN ô Date — chứ không kiểm một tên class cụ thể.
+  // Bản trước ghim đúng chuỗi "max-w-[14rem]", nên khi bề rộng chuyển sang `basis` (một
+  // nguồn duy nhất thay cho ba tầng chồng nhau) phép thử vỡ dù bất biến vẫn giữ nguyên.
+  const dateHtml = renderToStaticMarkup(
+    h(FormView, {
+      meta: { ...datetimeMeta, fields: [{ fieldname: "starts_at", fieldtype: "Date", label: "Ngày" }] },
+      doc: { name: "EVT-1", doctype: "Event", starts_at: "2026-07-23" },
+      registry: createDefaultRegistry(),
+      roles: ["All"],
+    }),
+  );
+  const basisOf = (markup: string) => Number(/basis-\[(\d+(?:\.\d+)?)rem\]/.exec(markup)?.[1] ?? 0);
+  assert.ok(basisOf(html) > 0 && basisOf(dateHtml) > 0, "cả hai đều phải có bề rộng khai rõ");
+  assert.ok(basisOf(html) > basisOf(dateHtml), "Datetime phải rộng hơn Date — chỗ cho giờ/phút và nút lịch");
 });
 
 // 26. FORM: role không quyền write → FormView render field ở trạng thái locked.

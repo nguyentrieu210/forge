@@ -65,42 +65,30 @@ export interface FormViewProps {
 }
 
 /**
- * Số cột do CHỖ TRỐNG quyết định, không phải một hằng số.
+ * BỀ RỘNG CỦA MỘT Ô THUỘC VỀ CHÍNH FIELD ĐÓ — và chỉ được quyết ở đây.
  *
- * Ép đúng 2 cột làm bốn ô ngắn — nhà cung cấp, mức độ, hai ngày — trải thành hai hàng
- * dù thừa chỗ, còn trên màn hẹp thì hai cột lại quá chật. `auto-fit` + `minmax` để chính
- * bề ngang khung chứa quyết định: rộng thì bốn ô lên cùng một hàng, hẹp thì tự xuống
- * dòng. Field nội dung dài vẫn span hết hàng (xem `isFullWidthField`).
+ * Bản trước có BA tầng cùng quyết một bề rộng: lưới cấp một khe tối thiểu 15rem, vỏ field
+ * chặn `max-w` lần hai, rồi bản thân control chặn lần thứ ba bằng một con số khác. Kết quả
+ * là ô 11rem nằm giữa khe 15rem, hở đều hai bên, và form trông vừa rộng vừa rời rạc —
+ * không phải vì một con số nào sai, mà vì ba con số đúng-riêng-lẻ cãi nhau.
+ *
+ * Giờ dùng flex-wrap: mỗi field là một mục có `basis` theo KIỂU của nó, tự chảy và tự
+ * xuống dòng. Không còn khe rỗng, vì không còn khe — chỉ có ô và khoảng cách giữa chúng.
+ * Bốn ô đầu phiếu mua (NCC 17rem + ba ô ngắn 10rem) cộng lại vừa một hàng ở khung 1120px.
  */
-const COL_CLASS: Record<number, string> = {
-  1: "grid-cols-1",
-  2: "grid-cols-[repeat(auto-fit,minmax(15rem,1fr))]",
+const BASIS: Record<string, string> = {
+  Check: "basis-[9rem]",
+  Int: "basis-[8rem]", Float: "basis-[8rem]", Currency: "basis-[10rem]", Percent: "basis-[8rem]",
+  Duration: "basis-[10rem]", Rating: "basis-[10rem]", Color: "basis-[8rem]",
+  Date: "basis-[10rem]", Time: "basis-[9rem]", Datetime: "basis-[13rem]",
+  Select: "basis-[13rem]", Link: "basis-[17rem]", "Dynamic Link": "basis-[17rem]",
+  Data: "basis-[17rem]", Barcode: "basis-[13rem]", Phone: "basis-[13rem]",
 };
 
-/** Field có giá trị NGẮN theo bản chất (mã/số/ngày/lựa chọn/quan hệ) — không cần kéo hết bề rộng cột,
- * kể cả khi modal/khung chứa rất rộng (vd modal Create). Field nội dung dài (Text/Editor/Table…) vẫn
- * full-width vì cần chỗ để đọc/soạn. Đây là gốc cảm giác "form quá rộng, thiếu thông minh" khi doctype
- * ít cột (Column Break) nhưng field lại toàn loại ngắn. */
-/** Rất ngắn — số, ngày giờ, tick, màu: giá trị chỉ vài ký tự, ô dài chỉ tổ trống trải. */
-const TINY_FIELDTYPES = new Set([
-  "Check", "Int", "Float", "Currency", "Percent", "Duration",
-  "Date", "Time", "Rating", "Color",
-]);
-/** Ngắn vừa — mã, lựa chọn, quan hệ: cần chỗ đọc tên nhưng không cần cả dòng. */
-const NARROW_FIELDTYPES = new Set([
-  "Select", "Link", "Dynamic Link", "Data", "Barcode", "Phone",
-]);
-const TINY_CLASS = "max-w-[11rem]";
-// `datetime-local` có thêm phần giờ/phút và nút mở lịch của trình duyệt. Ép chung 11rem với
-// Date/Time làm cụm phút hoặc picker bị cắt vài pixel trên Chromium/Windows.
-const DATETIME_CLASS = "max-w-[14rem]";
-const NARROW_CLASS = "max-w-[20rem]";
-
-function widthClass(fieldtype: string): string | undefined {
-  if (fieldtype === "Datetime") return DATETIME_CLASS;
-  if (TINY_FIELDTYPES.has(fieldtype)) return TINY_CLASS;
-  if (NARROW_FIELDTYPES.has(fieldtype)) return NARROW_CLASS;
-  return undefined; // Text/Editor/Table… giữ trọn chiều ngang
+/** `basis` của một field. Field nội dung dài chiếm trọn hàng — chúng cần chỗ để đọc. */
+function basisClass(fieldtype: string): string {
+  if (isFullWidthField(fieldtype)) return "basis-full";
+  return BASIS[fieldtype] ?? "basis-[17rem]";
 }
 
 /** Zod schema từ field required đang hiển thị (dynamic theo depends_on). */
@@ -446,19 +434,14 @@ export function FormView(props: FormViewProps) {
                 {/* MỘT lưới duy nhất cho cả section (không phải 2 khối dọc lồng nhau) — nhờ vậy
                     field bảng con/ô soạn thảo mới span được cả 2 cột, và hai cột tự canh hàng ngang
                     với nhau thay vì trôi lệch. */}
-                {(() => {
-                  const items = section.columns.flatMap((col) => col.fields);
-                  // 2 cột khi có từ 2 field thường trở lên. Section chỉ 1 field, hoặc toàn bảng
-                  // con/ô soạn thảo (đã span 2 cột) thì 1 cột mới đúng — ép 2 cột sẽ chừa nửa trống.
-                  const twoCols = items.filter((rf) => !isFullWidthField(rf.field.fieldtype)).length >= 2;
-                  return (
-                    <div className={cn("grid items-start gap-x-4 gap-y-2", twoCols ? COL_CLASS[2] : COL_CLASS[1])}>
-                      {items.map((rf) => (
-                        <Field key={rf.field.fieldname} id={fieldDomId(rf.field.fieldname)} rf={rf} form={form} registry={registry} services={services} docName={String(doc.name)} parentDoctype={meta.name} roles={roles} values={values} />
-                      ))}
-                    </div>
-                  );
-                })()}
+                {/* Flex-wrap, KHÔNG phải lưới: field tự chảy theo bề rộng của chính nó và tự
+                    xuống dòng khi hết chỗ. Lưới cấp khe đều nhau nên ô ngắn nằm giữa khe rộng,
+                    hở hai bên — đó là gốc của cảm giác "form quá rộng, kích cỡ không hợp lý". */}
+                <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
+                  {section.columns.flatMap((col) => col.fields).map((rf) => (
+                    <Field key={rf.field.fieldname} id={fieldDomId(rf.field.fieldname)} rf={rf} form={form} registry={registry} services={services} docName={String(doc.name)} parentDoctype={meta.name} roles={roles} values={values} />
+                  ))}
+                </div>
               </section>
             ),
           )}
@@ -531,7 +514,10 @@ function Field({ id, rf, form, registry, services, docName, parentDoctype, roles
           : null;
         const wrapper = cn(
           "mf-field",
-          !isCheck && widthClass(field.fieldtype),
+          // Một nguồn duy nhất cho bề rộng — xem `basisClass`. Không `max-w` chồng thêm ở đây,
+          // cũng không ở trong control: hai chỗ cùng chặn là hai con số phải nhớ giữ khớp nhau.
+          "min-w-0 grow",
+          !isCheck && basisClass(field.fieldtype),
           rf.state && `mf-state-${rf.state}`,
           rf.readOnly && "mf-field-readonly",
           fieldState.error && "mf-field-error",
@@ -553,7 +539,7 @@ function Field({ id, rf, form, registry, services, docName, parentDoctype, roles
         }
 
         return (
-          <div className={cn(wrapper, "flex flex-col gap-1", isFullWidthField(field.fieldtype) && "col-span-full")}>
+          <div className={cn(wrapper, "flex flex-col gap-1")}>
             <label htmlFor={id} className="text-[11px] font-medium leading-tight text-muted-foreground">{label}</label>
             {description ? <div className="-mt-0.5">{description}</div> : null}
             {control}

@@ -45,48 +45,48 @@ function gridColumns(meta: DocTypeMeta): DocField[] {
 }
 
 /**
- * Bề rộng TỐI THIỂU của một cột, theo kiểu field.
+ * BỀ RỘNG CỘT LÀ TUYỆT ĐỐI, và đúng MỘT cột co giãn.
  *
- * Không có nó thì bảng chia đều bề ngang cho mọi cột: một dòng đơn mua bảy cột làm ô "Mã
- * hàng" hẹp bằng ô "Số lượng", nên tên hàng bị cắt và cái ô chọn liên kết thì gần như
- * không bấm nổi. Đây là lý do bảng con "quá chật, không hiện đủ".
+ * Bản trước cấp `min-width` cho từng cột rồi để bảng `w-full`. Nhưng `min-width` chỉ là
+ * sàn: trình duyệt lấy phần thừa chia ĐỀU cho mọi cột, nên cột "SL" sàn 4,5rem phình ra
+ * ngang cột "Thành tiền" dù nó chỉ chứa "20". Đó là lý do các cột trông không hợp lý —
+ * không phải vì con số sàn sai, mà vì sàn không quyết định được gì khi còn chỗ thừa.
  *
- * Đi kèm với việc cho bảng CUỘN NGANG: trước đây khung ngoài là `overflow-hidden`, tức là
- * phần vượt bị CẮT — không có thanh cuộn, và cũng không có dấu hiệu nào cho biết còn cột
- * phía sau. Người dùng chỉ thấy bảng thiếu cột.
+ * Cách của mọi bảng nhập liệu dùng được (MISA, Excel): cột nào cũng có bề rộng CỐ ĐỊNH,
+ * trừ MỘT cột nuốt hết phần thừa — ở đây là cột tên hàng, cột duy nhất mà chữ dài ra thì
+ * cần thêm chỗ. `table-fixed` để bề rộng khai ra được tôn trọng đúng như khai.
  */
-function columnWidth(field: DocField): string {
+const GRID_WIDTH: Record<string, string> = {
+  Check: "3.5rem", Int: "5rem", Float: "5.5rem", Percent: "5.5rem", Currency: "8rem",
+  Date: "8.5rem", Time: "7rem", Datetime: "10.5rem",
+  "Small Text": "12rem", Text: "12rem", "Long Text": "12rem",
+};
+
+function gridWidth(field: DocField): string {
   const fieldtype = field.fieldtype;
-  /**
-   * Cột SỐ hẹp lại theo NHÃN, không cấp đồng loạt một bề rộng.
-   *
-   * Nhãn ngắn ("SL") thì cột chỉ cần chứa con số; nhãn dài ("Đã có hoá đơn (%)") thì tiêu
-   * đề mới là thứ quyết định bề rộng. Cấp đều 7,5rem cho mọi cột số làm cột "SL" rộng bằng
-   * cột "Thành tiền" trong khi nó chứa "20" — và chỗ thừa đó lấy đi của cột mã hàng.
-   */
-  if (["Currency", "Float", "Int", "Percent"].includes(fieldtype)) {
-    const label = (field.label ?? field.fieldname).length;
-    if (fieldtype === "Currency") return label <= 12 ? "min-w-[7.5rem]" : "min-w-[9rem]";
-    return label <= 4 ? "min-w-[4.5rem]" : label <= 10 ? "min-w-[6rem]" : "min-w-[8rem]";
-  }
-  if (fieldtype === "Check") return "min-w-[4rem]";
-  if (["Date", "Time"].includes(fieldtype)) return "min-w-[9rem]";
-  if (fieldtype === "Datetime") return "min-w-[11rem]";
   if (fieldtype === "Select") {
-    /**
-     * Bề rộng theo LỰA CHỌN DÀI NHẤT, không theo một hằng số chung.
-     *
-     * Cột ĐVT chỉ chứa "Cái", "Cây", "Kg" — cấp cho nó 9rem như cột trạng thái là lấy mất
-     * chỗ của cột mã hàng ngay bên cạnh, mà mã hàng mới là cột cần đọc. Đo từ chính dữ
-     * liệu thay vì đoán thì cột nào cũng vừa đúng phần nó cần.
-     */
+    // Theo LỰA CHỌN DÀI NHẤT: cột ĐVT chỉ chứa "Cây", "Kg" — cấp cho nó bề rộng của một
+    // cột trạng thái là lấy mất chỗ của cột tên hàng ngay bên cạnh.
     const longest = (field.options ?? "").split("\n").reduce((max, option) => Math.max(max, option.trim().length), 0);
-    if (longest <= 6) return "min-w-[5.5rem]";
-    if (longest <= 12) return "min-w-[8rem]";
-    return "min-w-[11rem]";
+    return longest <= 6 ? "6rem" : longest <= 12 ? "8.5rem" : "11rem";
   }
-  if (["Small Text", "Text", "Long Text"].includes(fieldtype)) return "min-w-[12rem]";
-  return "min-w-[11rem]";
+  if (fieldtype === "Currency" || ["Int", "Float", "Percent"].includes(fieldtype)) {
+    // Nhãn dài hơn con số thì chính TIÊU ĐỀ mới là thứ quyết định bề rộng.
+    const label = (field.label ?? field.fieldname).length;
+    const base = GRID_WIDTH[fieldtype] ?? "6rem";
+    return label <= 6 ? base : label <= 12 ? "8rem" : "10rem";
+  }
+  return GRID_WIDTH[fieldtype] ?? "11rem";
+}
+
+/**
+ * Cột được phép CO GIÃN — đúng một, và là cột tên/mã hàng.
+ *
+ * Không có cột co giãn thì tổng bề rộng cố định hiếm khi bằng bề ngang bảng: thiếu thì
+ * thừa một khoảng trắng ở mép phải, dư thì cuộn ngang cả những cột không cần.
+ */
+function flexibleColumn(cols: DocField[]): string | undefined {
+  return cols.find((c) => ["Link", "Data", "Dynamic Link"].includes(c.fieldtype))?.fieldname;
 }
 
 export function ChildGrid(props: ChildGridProps) {
@@ -94,6 +94,7 @@ export function ChildGrid(props: ChildGridProps) {
   const { childMeta, rows, onChange, registry, services, readOnly, parentDoc, roles, rowDefaults } = props;
   const [detailRow, setDetailRow] = useState<number | null>(null);
   const cols = gridColumns(childMeta);
+  const flexible = flexibleColumn(cols);
 
   /**
    * Các field dòng TỰ TÍNH được, tính ngay khi gõ.
@@ -232,12 +233,19 @@ export function ChildGrid(props: ChildGridProps) {
           không để lại dấu hiệu nào — bảng chỉ đơn giản là thiếu cột. Cột "#" GHIM lại bên
           trái khi cuộn, cách MISA làm, để không lạc dòng khi kéo sang phải. */}
       <div className="overflow-x-auto rounded-md border">
-        <Table>
+        <Table className="table-fixed">
+          <colgroup>
+            <col style={{ width: "2.5rem" }} />
+            {cols.map((c) => (
+              <col key={c.fieldname} {...(c.fieldname === flexible ? {} : { style: { width: gridWidth(c) } })} />
+            ))}
+            {!readOnly ? <col style={{ width: "4.5rem" }} /> : null}
+          </colgroup>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className="sticky left-0 z-10 w-10 bg-card text-right">#</TableHead>
               {cols.map((c) => (
-                <TableHead key={c.fieldname} className={`${columnWidth(c)} whitespace-nowrap`}>
+                <TableHead key={c.fieldname} className="truncate whitespace-nowrap">
                   {c.label ?? c.fieldname}
                   {c.reqd ? <span className="mf-required ml-0.5 text-destructive">*</span> : null}
                 </TableHead>
