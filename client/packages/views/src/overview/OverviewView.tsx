@@ -1,13 +1,13 @@
 /** @jsxImportSource react */
 import {
   AlertTriangle, ArrowRight, BarChart3, Boxes, CalendarClock, CheckCircle2, Clock3,
-  Coins, FileText, Package, Plus, RefreshCw, TrendingUp, Truck, Users, Warehouse,
+  Coins, FileText, Loader2, Package, Plus, RefreshCw, TrendingUp, Truck, Users, Warehouse,
 } from "lucide-react";
 import {
   Bar, BarChart, CartesianGrid, Cell, LabelList, Legend, Line, LineChart, Pie, PieChart,
   ResponsiveContainer, Tooltip as ChartTooltip, XAxis, YAxis,
 } from "recharts";
-import type { OverviewChart, OverviewDashboard, OverviewTone } from "@metaforge/core";
+import type { OverviewAction, OverviewChart, OverviewDashboard, OverviewTone } from "@metaforge/core";
 import { Badge, Button, cn, Skeleton, useI18n } from "@metaforge/ui";
 
 export interface OverviewViewProps {
@@ -15,6 +15,9 @@ export interface OverviewViewProps {
   loading?: boolean;
   error?: string;
   onNavigate: (route: string) => void;
+  /** Cho container xử lý action đặc biệt (ví dụ mở quick-create) trước khi fallback sang điều hướng. */
+  onAction?: (action: OverviewAction) => void;
+  busyActionKey?: string;
   onRefresh?: () => void;
 }
 const TONE: Record<OverviewTone, string> = {
@@ -53,7 +56,7 @@ function formatActivityTime(raw: string | undefined, tag: string): string {
   return new Intl.DateTimeFormat(tag, { dateStyle: "short", timeStyle: "short" }).format(date);
 }
 
-export function OverviewView({ data, loading, error, onNavigate, onRefresh }: OverviewViewProps) {
+export function OverviewView({ data, loading, error, onNavigate, onAction, busyActionKey, onRefresh }: OverviewViewProps) {
   const { locale, t } = useI18n();
   const tag = locale === "en" ? "en-US" : "vi-VN";
   if (loading) return <OverviewSkeleton />;
@@ -65,7 +68,20 @@ export function OverviewView({ data, loading, error, onNavigate, onRefresh }: Ov
       <div className="flex flex-wrap items-start gap-3">
         <div><h1 className="text-lg font-semibold tracking-tight">{data.label}</h1>{data.subtitle ? <p className="mt-1 text-sm text-muted-foreground">{data.subtitle}</p> : null}</div>
         <div className="ml-auto flex flex-wrap gap-2">
-          {data.actions.map((a) => <Button key={a.key} size="sm" onClick={() => onNavigate(a.route)}><Plus className="size-4" />{a.label}</Button>)}
+          {data.actions.map((a) => {
+            const busy = busyActionKey === a.key;
+            return (
+              <Button
+                key={a.key}
+                size="sm"
+                disabled={Boolean(busyActionKey)}
+                onClick={() => onAction ? onAction(a) : onNavigate(a.route)}
+              >
+                {busy ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Plus className="size-4" />}
+                {a.label}
+              </Button>
+            );
+          })}
           {onRefresh ? <Button size="icon-sm" variant="outline" onClick={onRefresh} aria-label={t("common.refresh")}><RefreshCw className="size-4" /></Button> : null}
         </div>
       </div>
