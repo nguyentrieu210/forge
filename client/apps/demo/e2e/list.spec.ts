@@ -28,6 +28,29 @@ test.describe("List data-table", () => {
     await expect(page.getByText("/ 12")).toBeVisible();
   });
 
+  test("sticky checkbox and STT headers stay above rows while scrolling", async ({ page }) => {
+    test.skip(isMobile(page), "Mobile uses record cards");
+    await page.setViewportSize({ width: 1280, height: 420 });
+    await page.goto("/view/list");
+
+    const scroller = page.locator(".mf-list-scroll");
+    await scroller.evaluate((element) => {
+      element.scrollTop = Math.min(120, element.scrollHeight - element.clientHeight);
+    });
+    await expect.poll(() => scroller.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+
+    for (let index = 0; index < 2; index += 1) {
+      const headerCell = page.locator("thead th").nth(index);
+      const box = await headerCell.boundingBox();
+      expect(box).not.toBeNull();
+      const topmostCell = await page.evaluate(
+        ({ x, y }) => document.elementFromPoint(x, y)?.closest("th,td")?.tagName,
+        { x: box!.x + box!.width / 2, y: box!.y + box!.height / 2 },
+      );
+      expect(topmostCell).toBe("TH");
+    }
+  });
+
   test("standard filter status → lọc + URL giữ khi reload", async ({ page }) => {
     await page.goto("/view/list?f_status=Working");
     // chỉ còn dòng Working (4)

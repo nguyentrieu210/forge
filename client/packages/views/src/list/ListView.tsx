@@ -505,13 +505,15 @@ export function ListView(props: ListViewProps) {
             */}
             <col />
           </colgroup>
-          <TableHeader className="sticky top-0 z-10">
+          {/* Pin each header cell directly. A z-index on <thead> creates a table stacking
+              context that lets sticky body cells paint over the checkbox/STT headers. */}
+          <TableHeader>
             <TableRow ref={headRowRef} className="hover:bg-transparent">
               {/* Checkbox và STT là hai cột độc lập đúng contract: cố định, không resize/ẩn/đổi chỗ. */}
-              <TableHead className={cn("bg-card px-3 text-center", SELECT_W, STICKY_SELECT, "z-30", compact && "h-7")}>
+              <TableHead className={cn("top-0 bg-card px-3 text-center", SELECT_W, STICKY_SELECT, "z-40", compact && "h-7")}>
                 <Checkbox checked={allPageSelected} onCheckedChange={toggleAllPage} aria-label={t("list.select_all_page")} />
               </TableHead>
-              <TableHead className={cn("bg-card px-3 text-right tabular-nums", INDEX_W, STICKY_INDEX, "z-30", compact && "h-7")}>
+              <TableHead className={cn("top-0 bg-card px-3 text-right tabular-nums", INDEX_W, STICKY_INDEX, "z-40", compact && "h-7")}>
                 #
               </TableHead>
               {columns.map((c) => (
@@ -536,7 +538,7 @@ export function ListView(props: ListViewProps) {
                 />
               ))}
               {/* ô của cột đệm — xem chú thích ở <colgroup> */}
-              <TableHead aria-hidden className={cn("bg-card p-0", compact && "h-7")} />
+              <TableHead aria-hidden className={cn("sticky top-0 z-30 bg-card p-0", compact && "h-7")} />
             </TableRow>
           </TableHeader>
 
@@ -763,8 +765,8 @@ function SortHeader({
         // Cột tiêu đề nuốt hết phần dư, các cột khác co sát nội dung. Trước đây mọi cột chia đều
         // bề ngang nên bảng ít cột bị kéo dãn, chữ nằm rời rạc cách nhau cả gang tay.
         // Bề rộng do người dùng đặt thì THẮNG các lớp co/giãn tự động ở trên.
-        "whitespace-nowrap",
-        "group/th relative",
+        "sticky top-0 z-30 whitespace-nowrap bg-card",
+        "group/th",
         onDropCol && "cursor-grab active:cursor-grabbing",
         dragOver && "bg-accent shadow-[inset_2px_0_0_var(--primary)]",
       )}
