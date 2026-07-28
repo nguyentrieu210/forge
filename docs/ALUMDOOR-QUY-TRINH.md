@@ -24,11 +24,23 @@
 | File | Sheet | Đã đọc |
 |---|---|---|
 | `2026 ĐƠN HÀNG - XUẤT HÀNG.xlsx` | 14 sheet | ✅ hết |
-| `TỒN NHÔM 2026 NEW.xlsx` | 15 sheet (mỗi mã nhôm 1 sheet) | ✅ đã nạp 1.256 lô |
+| `TỒN NHÔM 2026 NEW.xlsx` | 15 sheet (mỗi mã nhôm 1 sheet) | ✅ đã đọc; dữ liệu lô thử cũ đã dọn khỏi production để nhập lại theo K36/K12 |
 | `CÔNG THỨC CHIA LÁ.pdf` | — | ✅ đã thành code + 11 phép thử |
 | `CTY SÁU HỒNG.xlsx` | 11 sheet | ✅ (sheet BÁO GIÁ là quan trọng nhất) |
 | Ảnh bảng trọng lượng | 40 dòng | ✅ đã lưu `data/trong-luong-nhom.json` |
 | Ảnh bảng giá NCC 2026 | 7 mốc giá × 5 loại | ✅ chép trong tài liệu này |
+
+---
+
+## 0.1. Chuẩn kho production (2026-07-28)
+
+- `Kho Alumdoor` là nút nhóm của cây, không phát sinh tồn.
+- `K36` và `K12` là hai kho vật lý duy nhất được phép phát sinh tồn.
+- Không tạo kho ảo cho trạng thái chứng từ. Chỉ thêm kho con khi cần kiểm đếm tồn riêng thật sự
+  (ví dụ: chờ kiểm, hàng lỗi/phế, đang gia công).
+- Màn danh mục Kho dùng cây cha–con; nút bung nhánh không mở nhầm form chi tiết.
+- Đã xoá 56 kho thử và 1.291 lô nhôm sinh thử gắn các kho đó. Tại thời điểm dọn không có
+  `stock_ledger_entries`, nên không có bút toán kho thật bị xoá.
 
 ---
 

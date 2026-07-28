@@ -12,6 +12,7 @@
 
 ## Unreleased — Visual Directions review import
 
+- Warehouse master screens now render the existing lazy tree view correctly; expand/add/rename/delete controls no longer bubble into record navigation.
 - Nới riêng trường `Datetime` để không cắt phần phút/nút lịch trên Chromium Windows.
 - Link picker bỏ filter phụ thuộc còn rỗng; backend luôn tìm theo `title_field` ngoài mã bản ghi.
 - Imported the Claude Design review handoff under `docs/design/visual-directions-review/` for traceability.

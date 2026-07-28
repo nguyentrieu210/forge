@@ -2,7 +2,7 @@
   "$schema": "./brief.schema.json",
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "1.18.0",
+  "version": "1.18.1",
   "module": "Alumdoor",
   "domain": "alumdoor",
   "brand": "warm",
@@ -367,6 +367,37 @@
       "type": "Item Group",
       "name": "Bộ lưu điện",
       "data": { "item_group_name": "Bộ lưu điện", "parent_item_group": "Linh kiện & thiết bị" }
+    },
+    {
+      "type": "Warehouse",
+      "name": "Kho Alumdoor",
+      "data": {
+        "warehouse_name": "Kho Alumdoor",
+        "is_group": true,
+        "disabled": false
+      }
+    },
+    {
+      "type": "Warehouse",
+      "name": "K36",
+      "data": {
+        "warehouse_name": "K36",
+        "parent_warehouse": "Kho Alumdoor",
+        "is_group": false,
+        "address": "Kho vật lý K36",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Warehouse",
+      "name": "K12",
+      "data": {
+        "warehouse_name": "K12",
+        "parent_warehouse": "Kho Alumdoor",
+        "is_group": false,
+        "address": "Kho vật lý K12",
+        "disabled": false
+      }
     },
     {
       "type": "Measurement Profile",
@@ -1022,15 +1053,20 @@
       "label": "Kho",
       "icon": "warehouse",
       "group": "Danh mục",
+      "tree": true,
       "naming": "field:warehouse_name",
       "title": "warehouse_name",
       "list": [
         "warehouse_name",
+        "parent_warehouse",
+        "is_group",
         "address",
         "keeper"
       ],
       "fields": [
         "warehouse_name:Data*! Tên kho",
+        "parent_warehouse:Link(Warehouse) Kho cha",
+        "is_group:Check Là nhóm chứa",
         "address:Small Text Địa chỉ",
         "keeper:Data Thủ kho phụ trách",
         "disabled:Check Ngừng dùng"

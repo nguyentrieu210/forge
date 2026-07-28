@@ -81,16 +81,18 @@ ON CONFLICT(tenant_id,doctype,name) DO UPDATE SET
 INSERT INTO documents
   (tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,modified_by,payload_json)
 VALUES
-  ('alu','Warehouse:K12','Warehouse','K12','admin',0,'Draft',1,'2026-07-28T11:15:00.000Z','2026-07-28T11:15:00.000Z','admin','{"warehouse_name":"K12","address":"Kho K12","disabled":false,"_metadata_revision":24}'),
-  ('alu','Warehouse:K36','Warehouse','K36','admin',0,'Draft',1,'2026-07-28T11:15:00.000Z','2026-07-28T11:15:00.000Z','admin','{"warehouse_name":"K36","address":"Kho K36","disabled":false,"_metadata_revision":24}')
+  ('alu','Warehouse:Kho Alumdoor','Warehouse','Kho Alumdoor','admin',0,'Draft',1,'2026-07-28T11:15:00.000Z','2026-07-28T11:15:00.000Z','admin','{"warehouse_name":"Kho Alumdoor","is_group":true,"disabled":false,"_metadata_revision":25}'),
+  ('alu','Warehouse:K12','Warehouse','K12','admin',0,'Draft',1,'2026-07-28T11:15:00.000Z','2026-07-28T11:15:00.000Z','admin','{"warehouse_name":"K12","parent_warehouse":"Kho Alumdoor","is_group":false,"address":"Kho vật lý K12","disabled":false,"_metadata_revision":25}'),
+  ('alu','Warehouse:K36','Warehouse','K36','admin',0,'Draft',1,'2026-07-28T11:15:00.000Z','2026-07-28T11:15:00.000Z','admin','{"warehouse_name":"K36","parent_warehouse":"Kho Alumdoor","is_group":false,"address":"Kho vật lý K36","disabled":false,"_metadata_revision":25}')
 ON CONFLICT(tenant_id,doc_key) DO UPDATE SET
   payload_json=excluded.payload_json,modified_at=excluded.modified_at,modified_by=excluded.modified_by,
   version=documents.version+1;
 
 INSERT INTO document_search(tenant_id,doctype,name,title,content,modified_at)
 VALUES
-  ('alu','Warehouse','K12','K12','K12 Kho K12','2026-07-28T11:15:00.000Z'),
-  ('alu','Warehouse','K36','K36','K36 Kho K36','2026-07-28T11:15:00.000Z')
+  ('alu','Warehouse','Kho Alumdoor','Kho Alumdoor','Kho Alumdoor nhóm gốc','2026-07-28T11:15:00.000Z'),
+  ('alu','Warehouse','K12','K12','K12 Kho vật lý K12 Kho Alumdoor','2026-07-28T11:15:00.000Z'),
+  ('alu','Warehouse','K36','K36','K36 Kho vật lý K36 Kho Alumdoor','2026-07-28T11:15:00.000Z')
 ON CONFLICT(tenant_id,doctype,name) DO UPDATE SET
   title=excluded.title,content=excluded.content,modified_at=excluded.modified_at;
 

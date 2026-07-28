@@ -73,7 +73,17 @@ function TreeNode(props: TreeViewProps & { node: TreeNodeItem; depth: number }) 
         }}
       >
         {node.expandable ? (
-          <Button type="button" variant="ghost" size="icon-sm" className="size-5" onClick={() => onToggle(node.value)} aria-label={isOpen ? t("tree.collapse") : t("tree.expand")}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="size-5"
+            onClick={(event) => {
+              event.stopPropagation();
+              onToggle(node.value);
+            }}
+            aria-label={isOpen ? t("tree.collapse") : t("tree.expand")}
+          >
             {isOpen ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
           </Button>
         ) : (
@@ -96,17 +106,17 @@ function TreeNode(props: TreeViewProps & { node: TreeNodeItem; depth: number }) 
             rối không đọc nổi. Vẫn hiện khi focus bằng bàn phím. */}
         <span className="ml-auto flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover/node:opacity-100">
           {props.onAddChild && isGroup ? (
-            <Button type="button" variant="ghost" size="icon-sm" className="size-6" onClick={() => props.onAddChild!(node)} aria-label={t("tree.add_child")} title={t("tree.add_child")}>
+            <Button type="button" variant="ghost" size="icon-sm" className="size-6" onClick={(event) => { event.stopPropagation(); props.onAddChild!(node); }} aria-label={t("tree.add_child")} title={t("tree.add_child")}>
               <Plus className="size-3.5" />
             </Button>
           ) : null}
           {props.onRename ? (
-            <Button type="button" variant="ghost" size="icon-sm" className="size-6" onClick={() => props.onRename!(node)} aria-label={t("tree.rename")} title={t("tree.rename")}>
+            <Button type="button" variant="ghost" size="icon-sm" className="size-6" onClick={(event) => { event.stopPropagation(); props.onRename!(node); }} aria-label={t("tree.rename")} title={t("tree.rename")}>
               <Pencil className="size-3.5" />
             </Button>
           ) : null}
           {props.onDelete ? (
-            <Button type="button" variant="ghost" size="icon-sm" className="size-6 text-muted-foreground hover:text-destructive" onClick={() => props.onDelete!(node)} aria-label={t("common.delete")} title={t("common.delete")}>
+            <Button type="button" variant="ghost" size="icon-sm" className="size-6 text-muted-foreground hover:text-destructive" onClick={(event) => { event.stopPropagation(); props.onDelete!(node); }} aria-label={t("common.delete")} title={t("common.delete")}>
               <Trash2 className="size-3.5" />
             </Button>
           ) : null}
