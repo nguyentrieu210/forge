@@ -71,6 +71,7 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
             onDuplicate={() => onNavigate(`${listPath}/new`)}
             onRenamed={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)}
             onPrint={() => onNavigate(`${printBase}/${doctype}/${encodeURIComponent(decoded)}`)}
+            onClose={() => onNavigate(listPath)}
           />
         ) : null}
         context={decoded ? (

@@ -79,20 +79,10 @@ export function SplitView(props: SplitViewProps) {
         <ResizableHandle withHandle />
         <ResizablePanel defaultSize={contextOpen && hasContext ? 48 : 66} minSize={30} className="min-w-0">
           <div className="relative h-full">
-            {/* Nút đóng chi tiết. Trước đây CHỈ màn hẹp mới có nút quay lại; trên desktop/tablet
-                người dùng mở một bản ghi rồi không có cách nào đóng nó — danh sách vẫn thấy đấy
-                nhưng không bỏ được chế độ chia đôi để xem danh sách toàn màn hình. */}
-            {/* z-30: header của FormView là sticky z-20 kèm nền mờ nên nút z-10 bị đè hoàn toàn.
-                Form đã có nút X riêng trong header; nút này phục vụ các loại detail khác. */}
             <div className="absolute right-2 top-2 z-30 flex gap-1">
               {hasContext && !contextOpen ? (
                 <Button variant="outline" size="icon-sm" onClick={() => setContextOpen(true)} aria-label={t("split.open_activity")}>
                   <PanelRight />
-                </Button>
-              ) : null}
-              {props.onCloseDetail ? (
-                <Button variant="outline" size="icon-sm" onClick={props.onCloseDetail} aria-label={t("split.list")}>
-                  <X />
                 </Button>
               ) : null}
             </div>
@@ -119,17 +109,10 @@ export function SplitView(props: SplitViewProps) {
       <div className="mf-split flex h-full">
         <div className="w-[320px] shrink-0 overflow-hidden border-r">{props.list}</div>
         <div className="relative min-w-0 flex-1">
-          {/* z-30: header của FormView là sticky z-20 kèm nền mờ nên nút z-10 bị đè hoàn toàn.
-                Form đã có nút X riêng trong header; nút này phục vụ các loại detail khác. */}
-            <div className="absolute right-2 top-2 z-30 flex gap-1">
+          <div className="absolute right-2 top-2 z-30 flex gap-1">
             {hasContext ? (
               <Button variant="outline" size="sm" onClick={() => setSheetOpen(true)}>
                 <PanelRight /> {t("split.activity")}
-              </Button>
-            ) : null}
-            {props.onCloseDetail ? (
-              <Button variant="outline" size="icon-sm" onClick={props.onCloseDetail} aria-label={t("split.list")}>
-                <X />
               </Button>
             ) : null}
           </div>
