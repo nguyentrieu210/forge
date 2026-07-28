@@ -5,10 +5,12 @@ import { mergeLocale, resolveHomeRoute, validateManifest, type ApplicationCatalo
 import { FrappeAdapterImpl, createScopeKey, type MetaForgeBootDTO } from "@metaforge/adapter-frappe";
 import { MetaForgeProvider } from "@metaforge/views/provider";
 import { createFullRegistry } from "@metaforge/views/registry";
+import { loadRecentDocs } from "@metaforge/views";
 import type { UrlStateBridge } from "@metaforge/views/url-state";
 import {
   AppShell, AuthBoundary, BusinessContextBar, BusinessContextProvider, I18nProvider,
-  LoginForm, applyBrand, resolveIcon, useBusinessContext, useTheme, type NavItem,
+  CommandPalette, LoginForm, applyBrand, resolveIcon, useBusinessContext, useTheme,
+  type AwesomeRecord, type NavItem,
 } from "@metaforge/shell";
 import { Button, Toaster } from "@metaforge/ui";
 import { SocialCommerceLanding, type PublicSocialPage } from "./landing/SocialCommerceLanding.js";
@@ -358,7 +360,74 @@ interface ScreenProps { manifest: AppManifest; boot: MetaForgeBootDTO; logout: (
 function Shell({ manifest, boot, logout, nav, active, breadcrumbs = [], children }: ScreenProps & { active: string; breadcrumbs?: Array<{ label: string; onClick?: () => void }>; children: ReactNode }) {
   const navigate = useNavigate();
   const [theme, setTheme] = useTheme();
-  return <AppShell brand={manifest.name} nav={nav} activeKey={active} onNavigate={(key) => { const item = nav.find((candidate) => candidate.key === key); if (item) navigate(item.route); }} breadcrumbs={breadcrumbs} fullName={boot.full_name} userSubtitle={boot.user} theme={theme} onThemeChange={setTheme} onLogout={logout} businessContext={<BusinessContextBar compact />}>{children}</AppShell>;
+  const [paletteOpen, setPaletteOpen] = useState(false);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== "k") return;
+      event.preventDefault();
+      setPaletteOpen((open) => !open);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  const palette = useMemo(() => ({
+    actions: nav.map((item) => ({
+      id: `go-${item.key}`,
+      label: item.label,
+      run: () => navigate(item.route),
+    })),
+    doctypes: nav
+      .filter((item) => item.doctype)
+      .map((item) => ({ name: item.doctype!, label: item.label })),
+    recent: paletteOpen
+      ? loadRecentDocs().map((entry) => ({ doctype: entry.doctype, name: entry.name, title: entry.title }))
+      : [],
+    searchRecords: async (query: string, signal: AbortSignal): Promise<AwesomeRecord[]> => {
+      const result = await adapter.globalSearch(query, { limit: 20 }).catch(() => []);
+      if (signal.aborted) return [];
+      return result.map((item) => ({
+        doctype: item.doctype,
+        name: item.name,
+        title: item.title ?? item.name,
+      }));
+    },
+  }), [nav, navigate, paletteOpen]);
+
+  return (
+    <>
+      <AppShell
+        brand={manifest.name}
+        nav={nav}
+        activeKey={active}
+        onNavigate={(key) => {
+          const item = nav.find((candidate) => candidate.key === key);
+          if (item) navigate(item.route);
+        }}
+        breadcrumbs={breadcrumbs}
+        fullName={boot.full_name}
+        userSubtitle={boot.user}
+        theme={theme}
+        onThemeChange={setTheme}
+        onOpenPalette={() => setPaletteOpen(true)}
+        onLogout={logout}
+        businessContext={<BusinessContextBar compact />}
+      >
+        {children}
+      </AppShell>
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        actions={palette.actions}
+        doctypes={palette.doctypes}
+        recent={palette.recent}
+        searchRecords={palette.searchRecords}
+        onSelectDoctype={(doctype) => navigate(`/app/${encodeURIComponent(doctype)}`)}
+        onSelectRecord={(record) => navigate(`/app/${encodeURIComponent(record.doctype)}/${encodeURIComponent(record.name)}`)}
+      />
+    </>
+  );
 }
 
 function RuntimeRoutes({ manifest, boot, logout, nav, catalogError }: ScreenProps & { catalogError?: string }) {

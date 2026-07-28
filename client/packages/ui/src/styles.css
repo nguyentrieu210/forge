@@ -747,9 +747,21 @@
     background: var(--card);
   }
   .mf-list-view {
+    min-width: 0;
+    max-width: 100%;
     border-radius: 0;
     box-shadow: none;
   }
+  /* Bảng nhiều cột chỉ được cuộn BÊN TRONG List; không được dùng intrinsic width đẩy
+     rộng ResizablePanel rồi làm tràn cả shell. `contain:inline-size` cắt đường truyền
+     min-content, còn table w-max/min-w-full vẫn giữ đủ cột và lấp kín khi dữ liệu ít. */
+  .mf-list-scroll {
+    min-width: 0;
+    max-width: 100%;
+    contain: inline-size;
+    overscroll-behavior-x: contain;
+  }
+  .mf-list-scroll > table { max-width: none; }
   .mf-list-toolbar { background: var(--card); }
   /* Hàng tiêu đề DÍNH (sticky) phải ĐỤC hoàn toàn: nền bán trong suốt (bg-muted/40 mặc định của
      TableHeader) sẽ để các dòng dữ liệu trôi qua bên dưới hiện xuyên lên khi cuộn. */

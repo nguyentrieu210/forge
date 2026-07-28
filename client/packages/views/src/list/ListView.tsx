@@ -385,7 +385,7 @@ export function ListView(props: ListViewProps) {
   };
 
   return (
-    <div className="mf-list-view flex h-full flex-col overflow-hidden bg-card">
+    <div className="mf-list-view flex h-full min-w-0 max-w-full flex-col overflow-hidden bg-card">
       <ListToolbar
         doctype={meta.name}
         title={props.title ?? meta.label ?? meta.name}
@@ -419,7 +419,7 @@ export function ListView(props: ListViewProps) {
       ) : null}
 
       {/* overscroll-contain: chặn trang phía sau cùng cuộn/nảy khi kéo hết danh sách (mobile). */}
-      <div ref={scrollRef} className="min-h-0 flex-1 overflow-auto overscroll-contain">
+      <div ref={scrollRef} className="mf-list-scroll min-h-0 w-full max-w-full flex-1 overflow-x-auto overflow-y-auto overscroll-contain">
         {pull.distance > 0 || pull.refreshing ? (
           <div
             className="flex items-center justify-center gap-2 overflow-hidden text-xs text-muted-foreground"
@@ -478,7 +478,7 @@ export function ListView(props: ListViewProps) {
         <Table
           unwrapped
           // Fixed từ đầu: cột cố định không co/nhảy; nội dung dài bị cắt trong đúng ô, không đè cột bên.
-          className="table-fixed max-md:hidden [&_td]:overflow-hidden [&_td]:text-ellipsis [&_td]:whitespace-nowrap"
+          className="w-max min-w-full table-fixed max-md:hidden [&_td]:overflow-hidden [&_td]:text-ellipsis [&_td]:whitespace-nowrap"
         >
           {/*
             colgroup — cách DUY NHẤT ép cứng bề rộng cột ở cả `table-layout: auto` lẫn `fixed`.
