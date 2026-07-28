@@ -231,7 +231,7 @@ export function parseWeeklySchedule(text: string): { weekdays: number[]; start: 
   // directly; the word forms below catch "Thứ Bảy" and "CN".
   const run = /th[ứu]\s*([\d\s,\-–]+)/i.exec(source);
   if (run) {
-    for (const digit of run[1].match(/\d/g) ?? []) {
+    for (const digit of run[1]?.match(/\d/g) ?? []) {
       const day = Number(digit);
       if (day >= 2 && day <= 7) weekdays.push(day - 1);
     }
@@ -242,7 +242,7 @@ export function parseWeeklySchedule(text: string): { weekdays: number[]; start: 
   const time = /(\d{1,2}):(\d{2})/.exec(source);
   return {
     weekdays: [...new Set(weekdays)].sort(),
-    start: time ? `${time[1].padStart(2, "0")}:${time[2]}:00` : "18:00:00",
+    start: time?.[1] && time[2] ? `${time[1].padStart(2, "0")}:${time[2]}:00` : "18:00:00",
   };
 }
 

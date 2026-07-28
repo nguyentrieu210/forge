@@ -1,249 +1,591 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+/** @jsxImportSource react */
+/**
+ * Quản lý người dùng & phân quyền — dựng theo lối MISA: DANH SÁCH trước, thao tác sau.
+ *
+ * Bản trước bắt nhập tên đăng nhập vào một ô trống rồi mới tra được một người. Điều đó trả
+ * lời được "người này làm được gì", nhưng không trả lời được câu ĐẦU TIÊN mà bất kỳ ai mở
+ * màn phân quyền cũng hỏi: **ai đang đăng nhập được vào hệ thống này**. Hệ quả không phải
+ * là bất tiện — một tài khoản còn mở cho người đã nghỉ việc thì không có màn nào cho thấy.
+ *
+ * Ba chỗ cố ý khác bản cũ:
+ *
+ *  1. Danh sách người dùng mở ra đầu tiên, kèm trạng thái và vai trò ngay trên từng dòng.
+ *  2. Có nút TẠO TÀI KHOẢN. Trước đây nền tảng không có API nào tạo người dùng, nên cách
+ *     duy nhất để thêm một người là gọi API bằng tay.
+ *  3. Ma trận quyền theo vai trò để CHỈ ĐỌC. Nền tảng từ chối sửa DocPerm ở đây (quyền do
+ *     gói app khai), nên một ô tích sửa được là ô bấm vào chỉ để nhận thông báo lỗi.
+ */
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Check, ChevronsUpDown, Database, Eye, KeyRound, Loader2, Plus, RefreshCw,
-  Save, ShieldAlert, ShieldCheck, Trash2, UserRound, UsersRound,
+  Check, ChevronsUpDown, KeyRound, Loader2, Lock, LockOpen, Plus, RefreshCw,
+  Save, Search, ShieldAlert, ShieldCheck, Trash2, UserPlus, UserRound, UsersRound,
 } from "lucide-react";
 import { useMetaForge } from "../container/provider.js";
-import type { AccessProfileSummary, EffectivePermissionResult } from "@metaforge/core";
+import type { AccessProfileSummary, EffectivePermissionResult, TenantUser } from "@metaforge/core";
 import type { RolesAndDoctypes, DocPermRule } from "@metaforge/adapter-frappe";
 import {
   cn, Badge, Button, Checkbox, Input, Label, Skeleton, Tabs, TabsContent, TabsList, TabsTrigger, toast,
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
   Popover, PopoverTrigger, PopoverContent, Command, CommandInput, CommandList, CommandEmpty, CommandItem,
-  useT,
+  Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@metaforge/ui";
 
-const SCOPE_TYPES = ["Company", "Warehouse", "Branch", "Cost Center", "Project", "Territory"] as const;
+/** Phạm vi dữ liệu gán được cho một người — trùng danh sách chiều dữ liệu server hiểu. */
+const SCOPE_TYPES = [
+  { value: "Warehouse", label: "Kho" },
+  { value: "Company", label: "Công ty" },
+  { value: "Branch", label: "Chi nhánh" },
+  { value: "Cost Center", label: "Trung tâm chi phí" },
+  { value: "Project", label: "Dự án" },
+  { value: "Territory", label: "Khu vực" },
+] as const;
 
-/** Permission Center — writes only native Frappe Role/User Permission records.
- * Backend remains the final permission boundary and effective trace source. */
+const MIN_PASSWORD_LENGTH = 8;
+
+/** Nhãn tiếng Việt cho từng quyền. Khoá lạ thì hiện nguyên khoá, không giấu đi. */
+const PTYPE_LABEL: Record<string, string> = {
+  read: "Xem", write: "Sửa", create: "Thêm", delete: "Xoá", submit: "Ghi sổ",
+  cancel: "Huỷ", amend: "Sửa lại", print: "In", email: "Gửi mail",
+  report: "Báo cáo", export: "Xuất file", share: "Chia sẻ", import: "Nhập file",
+};
+
 export function PermissionCenter() {
-  const t = useT();
-  const { adapter, businessContext } = useMetaForge();
+  const { adapter } = useMetaForge();
+  const [users, setUsers] = useState<TenantUser[]>([]);
+  const [availableRoles, setAvailableRoles] = useState<string[]>([]);
+  const [listLoading, setListLoading] = useState(true);
+  const [listError, setListError] = useState<string>();
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<string>();
+  const [creating, setCreating] = useState(false);
   const [meta, setMeta] = useState<RolesAndDoctypes | null>(null);
-  const [metaError, setMetaError] = useState<string>();
   const [doctype, setDoctype] = useState("");
-  const [rules, setRules] = useState<DocPermRule[]>([]);
-  const [rulesLoading, setRulesLoading] = useState(false);
-  const [rulesError, setRulesError] = useState<string>();
-  const [updating, setUpdating] = useState<string>();
-  const [user, setUser] = useState("");
-  const [profile, setProfile] = useState<AccessProfileSummary>();
-  const [profileLoading, setProfileLoading] = useState(false);
-  const [profileError, setProfileError] = useState<string>();
-  const [documentName, setDocumentName] = useState("");
-  const [effective, setEffective] = useState<EffectivePermissionResult>();
-  const [effectiveLoading, setEffectiveLoading] = useState(false);
-  const [effectiveError, setEffectiveError] = useState<string>();
+
+  const loadUsers = useCallback(async () => {
+    setListLoading(true); setListError(undefined);
+    try {
+      const result = await adapter.listUsers();
+      setUsers(result.users);
+      setAvailableRoles(result.available_roles);
+    } catch (error) {
+      setUsers([]);
+      setListError(adapter.mapError(error).message);
+    } finally { setListLoading(false); }
+  }, [adapter]);
+  useEffect(() => { void loadUsers(); }, [loadUsers]);
 
   useEffect(() => {
     let alive = true;
+    // Ma trận là phần phụ — hỏng nó thì danh sách người dùng vẫn phải dùng được.
     adapter.perm.rolesAndDoctypes()
       .then((result) => { if (alive) { setMeta(result); setDoctype((current) => current || result.doctypes[0]?.value || ""); } })
-      .catch((error) => { if (alive) setMetaError(adapter.mapError(error).message); });
+      .catch(() => undefined);
     return () => { alive = false; };
   }, [adapter]);
 
-  const loadRules = useCallback(async () => {
-    if (!doctype) return;
-    setRulesLoading(true); setRulesError(undefined);
-    try { setRules(await adapter.perm.get(doctype)); }
-    catch (error) { setRules([]); setRulesError(adapter.mapError(error).message); }
-    finally { setRulesLoading(false); }
-  }, [adapter, doctype]);
-  useEffect(() => { void loadRules(); }, [loadRules]);
+  const filtered = useMemo(() => {
+    const needle = search.trim().toLowerCase();
+    if (!needle) return users;
+    return users.filter((user) => user.user.toLowerCase().includes(needle)
+      || (user.full_name ?? "").toLowerCase().includes(needle)
+      || user.roles.some((role) => role.toLowerCase().includes(needle)));
+  }, [users, search]);
 
-  const loadProfile = useCallback(async (requestedUser?: string) => {
-    setProfileLoading(true); setProfileError(undefined);
+  async function toggleEnabled(user: TenantUser) {
     try {
-      const result = await adapter.getAccessProfile(requestedUser?.trim() || undefined);
-      setProfile(result); setUser(result.user); setEffective(undefined);
-    } catch (error) { setProfile(undefined); setProfileError(adapter.mapError(error).message); }
-    finally { setProfileLoading(false); }
-  }, [adapter]);
-  useEffect(() => { void loadProfile(); }, [loadProfile]);
-
-  const loadEffective = useCallback(async () => {
-    if (!doctype) return;
-    setEffectiveLoading(true); setEffectiveError(undefined);
-    try {
-      setEffective(await adapter.explainPermission(
-        doctype,
-        documentName.trim() || undefined,
-        businessContext,
-        user.trim() || profile?.user,
-      ));
-    } catch (error) { setEffective(undefined); setEffectiveError(adapter.mapError(error).message); }
-    finally { setEffectiveLoading(false); }
-  }, [adapter, doctype, documentName, businessContext, user, profile?.user]);
-
-  const ptypes = meta?.doctype_ptype_map?.[doctype] ?? ["read", "write", "create", "delete", "submit", "cancel", "amend"];
-  const doctypes = meta?.doctypes ?? [];
-
-  async function togglePermission(rule: DocPermRule, ptype: string, checked: boolean) {
-    const key = `${rule.role}:${rule.permlevel}:${ptype}:${rule.if_owner ?? 0}`;
-    setUpdating(key);
-    try {
-      await adapter.perm.update(doctype, rule.role, rule.permlevel, ptype, checked ? 1 : 0, rule.if_owner);
-      setRules((current) => current.map((candidate) => candidate === rule ? ({ ...candidate, [ptype]: checked ? 1 : 0 } as DocPermRule) : candidate));
-      toast.success(`${t("perm.toast_updated_prefix")} ${ptype} ${t("perm.toast_updated_for")} ${rule.role}`);
-    } catch (error) { toast.error(adapter.mapError(error).message); }
-    finally { setUpdating(undefined); }
-  }
-
-  async function saveRoles(roles: string[], roleProfile?: string) {
-    if (!profile?.user) return;
-    try {
-      await adapter.setUserRoles(profile.user, roles, roleProfile);
-      toast.success(t("perm.toast_roles_saved"));
-      await loadProfile(profile.user);
+      await adapter.setUserEnabled(user.user, !user.enabled);
+      toast.success(user.enabled ? `Đã khoá ${user.user}` : `Đã mở lại ${user.user}`);
+      await loadUsers();
     } catch (error) { toast.error(adapter.mapError(error).message); }
   }
-
-  async function addScope(allow: string, forValue: string, applicableFor?: string) {
-    if (!profile?.user) return;
-    try {
-      await adapter.addUserPermission({ user: profile.user, allow, forValue, applicableFor });
-      toast.success(t("perm.toast_scope_added"));
-      await loadProfile(profile.user);
-    } catch (error) { toast.error(adapter.mapError(error).message); }
-  }
-
-  async function removeScope(id: string) {
-    try {
-      await adapter.removeUserPermission(id);
-      toast.success(t("perm.toast_scope_removed"));
-      if (profile?.user) await loadProfile(profile.user);
-    } catch (error) { toast.error(adapter.mapError(error).message); }
-  }
-
-  if (metaError) return <ErrorBox message={metaError} />;
 
   return (
-    <div className="mx-auto max-w-[1700px] space-y-4">
+    <div className="mx-auto max-w-[1600px] space-y-4">
       <div className="flex flex-wrap items-start gap-3">
         <div>
-          <h1 className="flex items-center gap-2 text-2xl font-semibold"><ShieldCheck className="size-6 text-primary" /> {t("perm.title")}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{t("perm.subtitle")}</p>
+          <h1 className="flex items-center gap-2 text-2xl font-semibold"><ShieldCheck className="size-6 text-primary" /> Quản lý người dùng &amp; phân quyền</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Tạo tài khoản đăng nhập, gán vai trò, giới hạn phạm vi dữ liệu và kiểm tra quyền thực tế.</p>
         </div>
-        <div className="ml-auto flex items-center gap-2">
-          <Label className="text-xs text-muted-foreground">{t("perm.doctype_under_test")}</Label>
-          {meta ? <Select value={doctype} onValueChange={setDoctype}><SelectTrigger className="w-64"><SelectValue /></SelectTrigger><SelectContent>{doctypes.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}</SelectContent></Select> : <Skeleton className="h-9 w-64" />}
-        </div>
+        <Button className="ml-auto" onClick={() => setCreating(true)}><UserPlus className="size-4" /> Thêm người dùng</Button>
       </div>
 
       <Tabs defaultValue="users" className="space-y-4">
         <TabsList className="h-auto flex-wrap justify-start">
-          <TabsTrigger value="users"><UserRound className="size-4" /> {t("perm.tab_users")}</TabsTrigger>
-          <TabsTrigger value="roles"><UsersRound className="size-4" /> {t("perm.tab_roles")}</TabsTrigger>
-          <TabsTrigger value="scope"><Database className="size-4" /> {t("perm.tab_scope")}</TabsTrigger>
-          <TabsTrigger value="apps"><Eye className="size-4" /> {t("perm.tab_apps")}</TabsTrigger>
-          <TabsTrigger value="effective"><KeyRound className="size-4" /> {t("perm.tab_effective")}</TabsTrigger>
+          <TabsTrigger value="users"><UsersRound className="size-4" /> Người dùng</TabsTrigger>
+          <TabsTrigger value="roles"><ShieldCheck className="size-4" /> Quyền theo vai trò</TabsTrigger>
+          <TabsTrigger value="check"><KeyRound className="size-4" /> Kiểm tra quyền</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="users">
-          <ProfilePanel
-            user={user} setUser={setUser} profile={profile} loading={profileLoading} error={profileError}
-            availableRoles={meta?.roles ?? []} adapter={adapter} onLoad={() => loadProfile(user)} onSaveRoles={saveRoles}
-          />
+        <TabsContent value="users" className="space-y-4">
+          <section className="rounded-xl border bg-card shadow-sm">
+            <div className="flex flex-wrap items-center gap-2 border-b px-4 py-3">
+              <div className="relative min-w-56 max-w-sm flex-1">
+                <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input className="pl-8" value={search} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setSearch(event.target.value)} placeholder="Tìm theo tên, tài khoản hoặc vai trò…" />
+              </div>
+              <span className="text-sm text-muted-foreground">{filtered.length}/{users.length} tài khoản</span>
+              <Button className="ml-auto" variant="outline" size="sm" onClick={loadUsers} disabled={listLoading}>
+                {listLoading ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />} Tải lại
+              </Button>
+            </div>
+
+            {listError ? <ErrorBox message={listError} /> : null}
+            {listLoading ? <div className="space-y-2 p-4">{Array.from({ length: 4 }).map((_, index) => <Skeleton key={index} className="h-11" />)}</div> : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="min-w-52">Họ và tên</TableHead>
+                      <TableHead className="min-w-44">Tên đăng nhập</TableHead>
+                      <TableHead className="min-w-60">Vai trò</TableHead>
+                      <TableHead className="w-32 text-center">Trạng thái</TableHead>
+                      <TableHead className="w-44 text-right">Thao tác</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.length ? filtered.map((user) => (
+                      <TableRow key={user.user} className={cn("cursor-pointer", selected === user.user && "bg-accent/50", !user.enabled && "opacity-60")} onClick={() => setSelected(user.user)}>
+                        <TableCell className="font-medium">{user.full_name || user.user}</TableCell>
+                        <TableCell className="font-mono text-xs">{user.user}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {user.roles.length
+                              ? user.roles.map((role) => <Badge key={role} variant="secondary">{role}</Badge>)
+                              /* Không vai trò = đăng nhập được nhưng không mở được gì. Nói
+                                 thẳng, vì với người dùng nó trông như hệ thống hỏng. */
+                              : <span className="text-xs text-amber-600">chưa gán vai trò</span>}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {user.enabled ? <Badge className="bg-emerald-600 hover:bg-emerald-600">Đang dùng</Badge> : <Badge variant="destructive">Đã khoá</Badge>}
+                        </TableCell>
+                        <TableCell className="text-right" onClick={(event: React.MouseEvent) => event.stopPropagation()}>
+                          <Button variant="ghost" size="sm" onClick={() => setSelected(user.user)}>Phân quyền</Button>
+                          <Button variant="ghost" size="icon-sm" title={user.enabled ? "Khoá tài khoản" : "Mở lại tài khoản"} onClick={() => toggleEnabled(user)}>
+                            {user.enabled ? <Lock className="size-4" /> : <LockOpen className="size-4 text-emerald-600" />}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    )) : <TableRow><TableCell colSpan={5} className="h-24 text-center text-muted-foreground">Không có tài khoản nào khớp.</TableCell></TableRow>}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </section>
+
+          {selected ? <UserDetail key={selected} login={selected} availableRoles={availableRoles} onChanged={loadUsers} onClose={() => setSelected(undefined)} /> : null}
         </TabsContent>
-        <TabsContent value="roles"><RoleMatrix doctype={doctype} ptypes={ptypes} rows={rules} loading={rulesLoading} error={rulesError} updating={updating} onRefresh={loadRules} onToggle={togglePermission} /></TabsContent>
-        <TabsContent value="scope">
-          <ScopePanel profile={profile} loading={profileLoading} adapter={adapter} onLoad={() => loadProfile(user)} onAdd={addScope} onRemove={removeScope} />
-        </TabsContent>
-        <TabsContent value="apps"><AppsPanel profile={profile} /></TabsContent>
-        <TabsContent value="effective"><EffectivePanel selectedUser={profile?.user ?? user} doctype={doctype} documentName={documentName} setDocumentName={setDocumentName} data={effective} loading={effectiveLoading} error={effectiveError} onLoad={loadEffective} /></TabsContent>
+
+        <TabsContent value="roles"><RoleMatrix meta={meta} doctype={doctype} setDoctype={setDoctype} /></TabsContent>
+        <TabsContent value="check"><CheckPanel meta={meta} doctype={doctype} setDoctype={setDoctype} users={users} /></TabsContent>
       </Tabs>
+
+      <CreateUserDialog open={creating} onOpenChange={setCreating} availableRoles={availableRoles} onCreated={async (login) => { await loadUsers(); setSelected(login); }} />
     </div>
   );
 }
 
-function ProfilePanel(props: {
-  user: string; setUser: (value: string) => void; profile?: AccessProfileSummary; loading: boolean; error?: string;
-  availableRoles: Array<{ value: string; label: string }>; adapter: ReturnType<typeof useMetaForge>["adapter"]; onLoad: () => void; onSaveRoles: (roles: string[], roleProfile?: string) => Promise<void>;
+/** Tạo tài khoản: một hộp thoại, một lời gọi — có mật khẩu và vai trò ngay. */
+function CreateUserDialog({ open, onOpenChange, availableRoles, onCreated }: {
+  open: boolean; onOpenChange: (open: boolean) => void; availableRoles: string[]; onCreated: (login: string) => Promise<void>;
 }) {
-  const t = useT();
+  const { adapter } = useMetaForge();
+  const [login, setLogin] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [password, setPassword] = useState("");
   const [roles, setRoles] = useState<string[]>([]);
-  const [roleProfile, setRoleProfile] = useState("");
   const [saving, setSaving] = useState(false);
-  useEffect(() => {
-    setRoles((props.profile?.assignedRoles ?? props.profile?.roles ?? []).filter((role) => !["All", "Guest"].includes(role)));
-    setRoleProfile(props.profile?.roleProfile ?? "");
-  }, [props.profile]);
-  const roleSet = useMemo(() => new Set(roles), [roles]);
-  async function save() { setSaving(true); try { await props.onSaveRoles(roles, roleProfile || undefined); } finally { setSaving(false); } }
-  return <section className="rounded-xl border bg-card p-5 shadow-sm">
-    <div className="flex flex-wrap items-end gap-3">
-      <div className="min-w-64 flex-1"><Label htmlFor="permission-user">{t("perm.user_field")}</Label><Input id="permission-user" className="mt-1.5" value={props.user} onChange={(event: React.ChangeEvent<HTMLInputElement>) => props.setUser(event.target.value)} placeholder="user@example.com" /></div>
-      <Button onClick={props.onLoad} disabled={props.loading}>{props.loading ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />} {t("perm.load_profile")}</Button>
-    </div>
-    {props.error ? <ErrorBox message={props.error} inline /> : null}
-    {props.loading ? <div className="mt-5 grid gap-3 md:grid-cols-3"><Skeleton className="h-32" /><Skeleton className="h-32" /><Skeleton className="h-32" /></div> : props.profile ? <>
-      <div className="mt-5 grid gap-4 xl:grid-cols-3">
-        <InfoCard title={t("perm.card_identity")}><div className="font-semibold">{props.profile.fullName ?? props.profile.user}</div><div className="text-sm text-muted-foreground">{props.profile.user}</div></InfoCard>
-        <InfoCard title={t("perm.card_roles")}><div className="flex flex-wrap gap-1.5">{props.profile.roles.map((role) => <Badge key={role} variant="secondary">{role}</Badge>)}</div></InfoCard>
-        <InfoCard title={t("perm.card_scope_summary")}><div className="text-2xl font-semibold">{props.profile.scopes.reduce((sum, item) => sum + item.values.length, 0)}</div><div className="text-sm text-muted-foreground">{t("perm.scope_values_prefix")} {props.profile.scopes.length} {t("perm.scope_values_suffix")}</div></InfoCard>
-      </div>
-      <div className="mt-4 rounded-xl border p-4">
-        <div className="flex flex-wrap items-center gap-3"><div><h3 className="font-semibold">{t("perm.access_profile_title")}</h3><p className="text-xs text-muted-foreground">{t("perm.access_profile_hint")}</p></div>{props.profile.canManage ? <Button className="ml-auto" size="sm" onClick={save} disabled={saving}>{saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />} {t("perm.save_perms")}</Button> : null}</div>
-        <div className="mt-3 grid items-end gap-3 md:grid-cols-[1fr_auto]">
-          <div><Label>Role Profile</Label><ScopeValuePicker adapter={props.adapter} doctype="Role Profile" value={roleProfile} onChange={setRoleProfile} /></div>
-          <Button type="button" variant="outline" disabled={!roleProfile || !props.profile.canManage} onClick={() => setRoleProfile("")}>{t("perm.use_roles_directly")}</Button>
+  const [error, setError] = useState<string>();
+
+  useEffect(() => { if (open) { setLogin(""); setFullName(""); setPassword(""); setRoles([]); setError(undefined); } }, [open]);
+
+  const ready = login.trim().length > 0 && password.length >= MIN_PASSWORD_LENGTH;
+  async function submit() {
+    setSaving(true); setError(undefined);
+    try {
+      const created = login.trim().toLowerCase();
+      await adapter.createUser({ user: login.trim(), password, fullName: fullName.trim() || undefined, roles });
+      toast.success(`Đã tạo tài khoản ${created}`);
+      onOpenChange(false);
+      await onCreated(created);
+    } catch (caught) { setError(adapter.mapError(caught).message); }
+    finally { setSaving(false); }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader><DialogTitle className="flex items-center gap-2"><UserPlus className="size-5" /> Thêm người dùng</DialogTitle></DialogHeader>
+        <div className="grid gap-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="new-user-login">Tên đăng nhập <span className="text-destructive">*</span></Label>
+              <Input id="new-user-login" className="mt-1.5" value={login} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setLogin(event.target.value)} placeholder="hong.kd hoặc hong@alumdoor.vn" autoComplete="off" />
+              <p className="mt-1 text-xs text-muted-foreground">Không đổi được sau khi tạo — mọi chứng từ người này lập sẽ mang tên này.</p>
+            </div>
+            <div>
+              <Label htmlFor="new-user-name">Họ và tên</Label>
+              <Input id="new-user-name" className="mt-1.5" value={fullName} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setFullName(event.target.value)} placeholder="Nguyễn Thị Hồng" />
+            </div>
+          </div>
+          <div>
+            <Label htmlFor="new-user-password">Mật khẩu <span className="text-destructive">*</span></Label>
+            {/* Hiện rõ chứ không che: người tạo phải đọc lại được để đưa cho nhân viên. */}
+            <Input id="new-user-password" className="mt-1.5" value={password} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setPassword(event.target.value)} placeholder={`ít nhất ${MIN_PASSWORD_LENGTH} ký tự`} autoComplete="new-password" />
+            <p className="mt-1 text-xs text-muted-foreground">Hiện rõ để bạn chép lại đưa cho nhân viên. Nhắc họ đổi sau lần đăng nhập đầu.</p>
+          </div>
+          <div>
+            <Label>Vai trò</Label>
+            <div className="mt-1.5 grid max-h-56 gap-2 overflow-auto rounded-lg border p-2 sm:grid-cols-2 lg:grid-cols-3">
+              {availableRoles.map((role) => (
+                <label key={role} className="flex cursor-pointer items-center gap-2 rounded-md border p-2 text-sm hover:bg-accent">
+                  <Checkbox checked={roles.includes(role)} onCheckedChange={(checked: boolean | "indeterminate") => setRoles((current) => checked ? [...new Set([...current, role])] : current.filter((item) => item !== role))} />
+                  <span className="truncate">{role}</span>
+                </label>
+              ))}
+            </div>
+            {!roles.length ? <p className="mt-1.5 text-xs text-amber-600">Chưa chọn vai trò — người này sẽ đăng nhập được nhưng không thấy màn hình nào.</p> : null}
+          </div>
+          {error ? <ErrorBox message={error} /> : null}
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>Huỷ</Button>
+            <Button onClick={submit} disabled={saving || !ready}>{saving ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />} Tạo tài khoản</Button>
+          </div>
         </div>
-        {roleProfile ? <div className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm">{t("perm.role_profile_locked_prefix")} <strong>{roleProfile}</strong>{t("perm.role_profile_locked_suffix")}</div> : null}
-        <div className="mt-3 grid max-h-72 gap-2 overflow-auto sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {props.availableRoles.filter((role) => !["All", "Guest"].includes(role.value)).map((role) => <label key={role.value} className="flex cursor-pointer items-center gap-2 rounded-md border p-2 text-sm hover:bg-accent"><Checkbox checked={roleSet.has(role.value)} disabled={!props.profile?.canManage || Boolean(roleProfile)} onCheckedChange={(checked: boolean | "indeterminate") => setRoles((current) => checked ? [...new Set([...current, role.value])] : current.filter((item) => item !== role.value))} /><span className="truncate">{role.label}</span></label>)}
-        </div>
-      </div>
-    </> : null}
-  </section>;
+      </DialogContent>
+    </Dialog>
+  );
 }
 
-function RoleMatrix(props: { doctype: string; ptypes: string[]; rows: DocPermRule[]; loading: boolean; error?: string; updating?: string; onRefresh: () => void; onToggle: (rule: DocPermRule, ptype: string, checked: boolean) => void }) {
-  const t = useT();
-  return <section className="rounded-xl border bg-card shadow-sm"><div className="flex items-center gap-2 border-b px-4 py-3"><div><h2 className="font-semibold">{t("perm.matrix_title_prefix")} {props.doctype}</h2><p className="text-xs text-muted-foreground">{t("perm.matrix_hint")}</p></div><Button className="ml-auto" variant="outline" size="sm" onClick={props.onRefresh}><RefreshCw className="size-4" /> {t("common.refresh")}</Button></div>{props.loading ? <div className="space-y-2 p-4">{Array.from({ length: 5 }).map((_, index) => <Skeleton key={index} className="h-9" />)}</div> : props.error ? <ErrorBox message={props.error} inline /> : <div className="overflow-auto"><Table><TableHeader><TableRow className="hover:bg-transparent"><TableHead className="sticky left-0 z-10 min-w-52 bg-card">{t("perm.col_role")}</TableHead><TableHead className="w-20 text-center">{t("perm.col_level")}</TableHead><TableHead className="w-24 text-center">{t("perm.col_if_owner")}</TableHead>{props.ptypes.map((ptype) => <TableHead key={ptype} className="min-w-20 text-center capitalize">{ptype}</TableHead>)}</TableRow></TableHeader><TableBody>{props.rows.length ? props.rows.map((rule, index) => <TableRow key={`${rule.role}:${rule.permlevel}:${rule.if_owner ?? 0}:${index}`}><TableCell className="sticky left-0 z-[1] bg-card font-medium">{rule.role}</TableCell><TableCell className="text-center tabular-nums">{rule.permlevel}</TableCell><TableCell className="text-center">{rule.if_owner ? <Badge variant="outline">{t("common.yes")}</Badge> : "—"}</TableCell>{props.ptypes.map((ptype) => { const key = `${rule.role}:${rule.permlevel}:${ptype}:${rule.if_owner ?? 0}`; const checked = (rule as Record<string, unknown>)[ptype] === 1; return <TableCell key={ptype} className="text-center"><div className="inline-flex size-8 items-center justify-center">{props.updating === key ? <Loader2 className="size-4 animate-spin text-primary" /> : <Checkbox checked={checked} onCheckedChange={(value: boolean | "indeterminate") => props.onToggle(rule, ptype, value === true)} aria-label={`${ptype} ${rule.role}`} />}</div></TableCell>; })}</TableRow>) : <TableRow><TableCell colSpan={props.ptypes.length + 3} className="h-24 text-center text-muted-foreground">{t("perm.matrix_empty")}</TableCell></TableRow>}</TableBody></Table></div>}</section>;
-}
-
-function ScopePanel(props: {
-  profile?: AccessProfileSummary; loading: boolean; adapter: ReturnType<typeof useMetaForge>["adapter"];
-  onLoad: () => void; onAdd: (allow: string, forValue: string, applicableFor?: string) => Promise<void>; onRemove: (id: string) => Promise<void>;
+/** Chi tiết một người: vai trò, phạm vi dữ liệu, cấp lại mật khẩu. */
+function UserDetail({ login, availableRoles, onChanged, onClose }: {
+  login: string; availableRoles: string[]; onChanged: () => Promise<void>; onClose: () => void;
 }) {
-  const t = useT();
-  const [allow, setAllow] = useState<string>("Company");
+  const { adapter } = useMetaForge();
+  const [profile, setProfile] = useState<AccessProfileSummary>();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>();
+  const [roles, setRoles] = useState<string[]>([]);
+  const [savingRoles, setSavingRoles] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true); setError(undefined);
+    try {
+      const result = await adapter.getAccessProfile(login);
+      setProfile(result);
+      setRoles((result.assignedRoles ?? result.roles ?? []).filter((role) => !["All", "Guest"].includes(role)));
+    } catch (caught) { setProfile(undefined); setError(adapter.mapError(caught).message); }
+    finally { setLoading(false); }
+  }, [adapter, login]);
+  useEffect(() => { void load(); }, [load]);
+
+  async function saveRoles() {
+    setSavingRoles(true);
+    try {
+      await adapter.setUserRoles(login, roles);
+      toast.success("Đã lưu vai trò");
+      await load(); await onChanged();
+    } catch (caught) { toast.error(adapter.mapError(caught).message); }
+    finally { setSavingRoles(false); }
+  }
+
+  return (
+    <section className="rounded-xl border bg-card shadow-sm">
+      <div className="flex flex-wrap items-center gap-2 border-b px-4 py-3">
+        <UserRound className="size-5 text-primary" />
+        <div><h2 className="font-semibold">{profile?.fullName || login}</h2><p className="font-mono text-xs text-muted-foreground">{login}</p></div>
+        <Button className="ml-auto" variant="ghost" size="sm" onClick={onClose}>Đóng</Button>
+      </div>
+      {error ? <ErrorBox message={error} /> : null}
+      {loading ? <div className="grid gap-3 p-4 md:grid-cols-2"><Skeleton className="h-40" /><Skeleton className="h-40" /></div> : (
+        <div className="grid gap-4 p-4 xl:grid-cols-2">
+          <div className="rounded-xl border p-4">
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold">Vai trò</h3>
+              {profile?.canManage ? <Button className="ml-auto" size="sm" onClick={saveRoles} disabled={savingRoles}>{savingRoles ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />} Lưu</Button> : null}
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">Vai trò quyết định người này mở được màn hình nào và làm được gì trên đó.</p>
+            <div className="mt-3 grid max-h-64 gap-2 overflow-auto sm:grid-cols-2">
+              {availableRoles.map((role) => (
+                <label key={role} className="flex cursor-pointer items-center gap-2 rounded-md border p-2 text-sm hover:bg-accent">
+                  <Checkbox checked={roles.includes(role)} disabled={!profile?.canManage} onCheckedChange={(checked: boolean | "indeterminate") => setRoles((current) => checked ? [...new Set([...current, role])] : current.filter((item) => item !== role))} />
+                  <span className="truncate">{role}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-4">
+            <ScopeCard profile={profile} login={login} onChanged={load} />
+            <PasswordCard login={login} />
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+/**
+ * Phạm vi dữ liệu — giới hạn người này chỉ thấy dữ liệu của một kho / một công ty.
+ *
+ * Khác với vai trò: vai trò trả lời "làm được gì", phạm vi trả lời "trên dữ liệu nào".
+ * Thủ kho Xưởng 2 có đúng quyền của thủ kho, nhưng chỉ trên kho của Xưởng 2.
+ */
+function ScopeCard({ profile, login, onChanged }: { profile?: AccessProfileSummary; login: string; onChanged: () => Promise<void> }) {
+  const { adapter } = useMetaForge();
+  const [allow, setAllow] = useState<string>("Warehouse");
   const [value, setValue] = useState("");
-  const [applicableFor, setApplicableFor] = useState("");
   const [saving, setSaving] = useState(false);
-  async function add() { if (!value) return; setSaving(true); try { await props.onAdd(allow, value, applicableFor || undefined); setValue(""); } finally { setSaving(false); } }
-  return <section className="rounded-xl border bg-card p-5 shadow-sm">
-    <div className="flex items-center"><div><h2 className="font-semibold">{t("perm.scope_title")}</h2><p className="text-sm text-muted-foreground">{t("perm.scope_hint")}</p></div><Button className="ml-auto" variant="outline" size="sm" onClick={props.onLoad} disabled={props.loading}><RefreshCw className="size-4" /> {t("common.refresh")}</Button></div>
-    {props.profile?.canManage ? <div className="mt-4 grid items-end gap-3 rounded-xl border bg-muted/20 p-4 md:grid-cols-[12rem_1fr_14rem_auto]">
-      <div><Label>{t("perm.scope_type")}</Label><Select value={allow} onValueChange={(next: string) => { setAllow(next); setValue(""); }}><SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger><SelectContent>{SCOPE_TYPES.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent></Select></div>
-      <div><Label>{t("perm.scope_value")}</Label><ScopeValuePicker adapter={props.adapter} doctype={allow} value={value} onChange={setValue} /></div>
-      <div><Label>{t("perm.scope_applicable_for")}</Label><Input className="mt-1.5" value={applicableFor} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setApplicableFor(event.target.value)} placeholder={t("perm.scope_applicable_placeholder")} /></div>
-      <Button onClick={add} disabled={!value || saving}>{saving ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />} {t("common.add")}</Button>
-    </div> : null}
-    <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">{props.profile?.scopes.length ? props.profile.scopes.map((scope) => <InfoCard key={scope.doctype} title={scope.doctype}><div className="space-y-2">{scope.values.map((item) => <div key={item.id ?? item.value} className="flex items-center gap-2 rounded-md bg-background px-2 py-1.5"><div className="min-w-0 flex-1"><div className="truncate text-sm font-medium">{item.label}</div>{item.applicableFor ? <div className="truncate text-xs text-muted-foreground">{t("perm.scope_only_prefix")} {item.applicableFor}</div> : null}</div>{item.isDefault ? <Badge variant="outline">{t("perm.scope_default")}</Badge> : null}{props.profile?.canManage && item.id ? <Button variant="ghost" size="icon-sm" className="text-destructive" onClick={() => props.onRemove(item.id!)} aria-label={`${t("common.remove_prefix")} ${item.label}`}><Trash2 /></Button> : null}</div>)}</div></InfoCard>) : <div className="col-span-full rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">{t("perm.scope_empty")}</div>}</div>
-  </section>;
+
+  async function add() {
+    if (!value) return;
+    setSaving(true);
+    try {
+      await adapter.addUserPermission({ user: login, allow, forValue: value });
+      toast.success("Đã thêm phạm vi");
+      setValue(""); await onChanged();
+    } catch (error) { toast.error(adapter.mapError(error).message); }
+    finally { setSaving(false); }
+  }
+  async function remove(id: string) {
+    try { await adapter.removeUserPermission(id); toast.success("Đã bỏ phạm vi"); await onChanged(); }
+    catch (error) { toast.error(adapter.mapError(error).message); }
+  }
+
+  return (
+    <div className="rounded-xl border p-4">
+      <h3 className="font-semibold">Phạm vi dữ liệu</h3>
+      <p className="mt-1 text-xs text-muted-foreground">Bỏ trống = thấy toàn bộ. Thêm một dòng = chỉ thấy đúng những giá trị đã liệt kê.</p>
+      {profile?.canManage ? (
+        <div className="mt-3 grid items-end gap-2 sm:grid-cols-[9rem_1fr_auto]">
+          <div>
+            <Label className="text-xs">Loại</Label>
+            <Select value={allow} onValueChange={(next: string) => { setAllow(next); setValue(""); }}>
+              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent>{SCOPE_TYPES.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <div><Label className="text-xs">Giá trị</Label><ScopeValuePicker adapter={adapter} doctype={allow} value={value} onChange={setValue} /></div>
+          <Button onClick={add} disabled={!value || saving}>{saving ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}</Button>
+        </div>
+      ) : null}
+      <div className="mt-3 space-y-2">
+        {profile?.scopes?.length ? profile.scopes.map((scope) => (
+          <div key={scope.doctype} className="rounded-lg border bg-muted/20 p-2">
+            <div className="mb-1 text-xs font-semibold uppercase text-muted-foreground">{SCOPE_TYPES.find((item) => item.value === scope.doctype)?.label ?? scope.doctype}</div>
+            {scope.values.map((item) => (
+              <div key={item.id ?? item.value} className="flex items-center gap-2 rounded-md bg-background px-2 py-1.5">
+                <span className="min-w-0 flex-1 truncate text-sm">{item.label}</span>
+                {profile.canManage && item.id ? <Button variant="ghost" size="icon-sm" className="text-destructive" onClick={() => remove(item.id!)} aria-label={`Bỏ ${item.label}`}><Trash2 /></Button> : null}
+              </div>
+            ))}
+          </div>
+        )) : <p className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">Không giới hạn — người này thấy toàn bộ dữ liệu.</p>}
+      </div>
+    </div>
+  );
+}
+
+function PasswordCard({ login }: { login: string }) {
+  const { adapter } = useMetaForge();
+  const [password, setPassword] = useState("");
+  const [saving, setSaving] = useState(false);
+  async function reset() {
+    setSaving(true);
+    try {
+      await adapter.updatePassword(password, { user: login, logoutAll: 1 });
+      toast.success(`Đã đặt lại mật khẩu cho ${login}`);
+      setPassword("");
+    } catch (error) { toast.error(adapter.mapError(error).message); }
+    finally { setSaving(false); }
+  }
+  return (
+    <div className="rounded-xl border p-4">
+      <h3 className="font-semibold">Cấp lại mật khẩu</h3>
+      {/* Đặt lại mật khẩu kết thúc mọi phiên đang mở của người đó — nói trước, vì nếu họ
+          đang làm dở thì đó là điều người quản trị cần cân nhắc, không phải một bất ngờ. */}
+      <p className="mt-1 text-xs text-muted-foreground">Mọi phiên đang đăng nhập của người này sẽ bị thoát ngay.</p>
+      <div className="mt-3 flex gap-2">
+        <Input value={password} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setPassword(event.target.value)} placeholder={`Mật khẩu mới, ít nhất ${MIN_PASSWORD_LENGTH} ký tự`} autoComplete="new-password" />
+        <Button variant="outline" onClick={reset} disabled={saving || password.length < MIN_PASSWORD_LENGTH}>
+          {saving ? <Loader2 className="size-4 animate-spin" /> : <KeyRound className="size-4" />} Đặt lại
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Ma trận quyền theo vai trò — CHỈ ĐỌC, và nói rõ vì sao.
+ *
+ * Nền tảng từ chối sửa DocPerm qua màn này: quyền của một DocType do gói app khai, nên một
+ * sửa đổi ở đây sẽ sống tới lần cài app kế tiếp rồi biến mất không dấu vết. Ô tích sửa được
+ * chỉ dẫn tới một thông báo lỗi, nên bỏ hẳn và giải thích là trung thực hơn.
+ */
+function RoleMatrix({ meta, doctype, setDoctype }: { meta: RolesAndDoctypes | null; doctype: string; setDoctype: (value: string) => void }) {
+  const { adapter } = useMetaForge();
+  const [rules, setRules] = useState<DocPermRule[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>();
+
+  useEffect(() => {
+    if (!doctype) return;
+    let alive = true;
+    setLoading(true); setError(undefined);
+    adapter.perm.get(doctype)
+      .then((result) => { if (alive) setRules(result); })
+      .catch((caught) => { if (alive) { setRules([]); setError(adapter.mapError(caught).message); } })
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, [adapter, doctype]);
+
+  const ptypes = meta?.doctype_ptype_map?.[doctype] ?? ["read", "write", "create", "delete", "submit", "cancel", "amend"];
+  return (
+    <section className="rounded-xl border bg-card shadow-sm">
+      <div className="flex flex-wrap items-center gap-3 border-b px-4 py-3">
+        <div><h2 className="font-semibold">Quyền theo vai trò</h2><p className="text-xs text-muted-foreground">Ai làm được gì trên từng loại chứng từ.</p></div>
+        <div className="ml-auto flex items-center gap-2">
+          <Label className="text-xs text-muted-foreground">Loại chứng từ</Label>
+          {meta ? <Select value={doctype} onValueChange={setDoctype}><SelectTrigger className="w-64"><SelectValue /></SelectTrigger><SelectContent>{meta.doctypes.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}</SelectContent></Select> : <Skeleton className="h-9 w-64" />}
+        </div>
+      </div>
+      <div className="border-b bg-muted/30 px-4 py-2 text-xs text-muted-foreground">
+        Bảng này chỉ để xem. Quyền của mỗi loại chứng từ do gói ứng dụng khai và được cài cùng ứng dụng — sửa trực tiếp ở đây sẽ bị ghi đè ở lần cập nhật kế tiếp. Cần đổi thì sửa trong brief rồi cài lại.
+      </div>
+      {loading ? <div className="space-y-2 p-4">{Array.from({ length: 4 }).map((_, index) => <Skeleton key={index} className="h-9" />)}</div>
+        : error ? <ErrorBox message={error} />
+        : <div className="overflow-x-auto">
+            <Table>
+              <TableHeader><TableRow className="hover:bg-transparent">
+                <TableHead className="sticky left-0 z-10 min-w-48 bg-card">Vai trò</TableHead>
+                <TableHead className="w-32 text-center">Chỉ bản ghi mình lập</TableHead>
+                {ptypes.map((ptype) => <TableHead key={ptype} className="min-w-20 text-center">{PTYPE_LABEL[ptype] ?? ptype}</TableHead>)}
+              </TableRow></TableHeader>
+              <TableBody>
+                {rules.length ? rules.map((rule, index) => (
+                  <TableRow key={`${rule.role}:${rule.permlevel}:${index}`}>
+                    <TableCell className="sticky left-0 z-[1] bg-card font-medium">{rule.role}</TableCell>
+                    <TableCell className="text-center">{rule.if_owner ? <Badge variant="outline">Có</Badge> : "—"}</TableCell>
+                    {ptypes.map((ptype) => (
+                      <TableCell key={ptype} className="text-center">
+                        {(rule as Record<string, unknown>)[ptype] === 1 ? <Check className="mx-auto size-4 text-emerald-600" /> : <span className="text-muted-foreground">—</span>}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                )) : <TableRow><TableCell colSpan={ptypes.length + 2} className="h-24 text-center text-muted-foreground">Chưa có dòng phân quyền nào cho loại chứng từ này.</TableCell></TableRow>}
+              </TableBody>
+            </Table>
+          </div>}
+    </section>
+  );
+}
+
+/** Kiểm tra quyền thực tế — trả lời "vì sao người này không mở được chứng từ đó". */
+function CheckPanel({ meta, doctype, setDoctype, users }: { meta: RolesAndDoctypes | null; doctype: string; setDoctype: (value: string) => void; users: TenantUser[] }) {
+  const { adapter, businessContext } = useMetaForge();
+  const [user, setUser] = useState("");
+  const [documentName, setDocumentName] = useState("");
+  const [data, setData] = useState<EffectivePermissionResult>();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>();
+
+  async function run() {
+    if (!doctype) return;
+    setLoading(true); setError(undefined);
+    try { setData(await adapter.explainPermission(doctype, documentName.trim() || undefined, businessContext, user || undefined)); }
+    catch (caught) { setData(undefined); setError(adapter.mapError(caught).message); }
+    finally { setLoading(false); }
+  }
+
+  return (
+    <section className="rounded-xl border bg-card p-5 shadow-sm">
+      <h2 className="font-semibold">Kiểm tra quyền thực tế</h2>
+      <p className="mt-1 text-sm text-muted-foreground">Chọn một người và một loại chứng từ để xem họ thật sự làm được gì, và luật nào quyết định điều đó.</p>
+      <div className="mt-4 grid items-end gap-3 lg:grid-cols-[1fr_1fr_1fr_auto]">
+        <div>
+          <Label className="text-xs">Người dùng</Label>
+          <Select value={user} onValueChange={setUser}>
+            <SelectTrigger className="mt-1"><SelectValue placeholder="Tôi (đang đăng nhập)" /></SelectTrigger>
+            <SelectContent>{users.map((item) => <SelectItem key={item.user} value={item.user}>{item.full_name || item.user}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label className="text-xs">Loại chứng từ</Label>
+          {meta ? <Select value={doctype} onValueChange={setDoctype}><SelectTrigger className="mt-1"><SelectValue /></SelectTrigger><SelectContent>{meta.doctypes.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}</SelectContent></Select> : <Skeleton className="mt-1 h-9" />}
+        </div>
+        <div>
+          <Label className="text-xs">Số chứng từ (không bắt buộc)</Label>
+          <Input className="mt-1" value={documentName} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setDocumentName(event.target.value)} placeholder="vd: DH-2026-0012" />
+        </div>
+        <Button onClick={run} disabled={loading || !doctype}>{loading ? <Loader2 className="size-4 animate-spin" /> : <ShieldCheck className="size-4" />} Kiểm tra</Button>
+      </div>
+      {error ? <ErrorBox message={error} /> : null}
+      {data ? (
+        <div className="mt-5 space-y-5">
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(data.capabilities).map(([key, allowed]) => (
+              <Badge key={key} variant={allowed ? "default" : "destructive"}>{allowed ? <Check className="mr-1 size-3" /> : <ShieldAlert className="mr-1 size-3" />}{PTYPE_LABEL[key] ?? key}</Badge>
+            ))}
+          </div>
+          <div>
+            <h3 className="mb-2 text-sm font-semibold">Vì sao</h3>
+            <div className="space-y-2">
+              {data.trace.map((item, index) => (
+                <div key={`${item.source}:${item.label}:${index}`} className={cn("rounded-lg border p-3", item.effect === "deny" && "border-destructive/30 bg-destructive/5", item.effect === "allow" && "border-emerald-500/30 bg-emerald-500/5")}>
+                  <div className="flex items-center gap-2"><Badge variant="outline">{item.source}</Badge><span className="text-sm font-medium">{item.label}</span></div>
+                  {item.detail ? <p className="mt-1 text-xs text-muted-foreground">{item.detail}</p> : null}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </section>
+  );
 }
 
 function ScopeValuePicker({ adapter, doctype, value, onChange }: { adapter: ReturnType<typeof useMetaForge>["adapter"]; doctype: string; value: string; onChange: (value: string) => void }) {
-  const t = useT();
-  const [open, setOpen] = useState(false); const [text, setText] = useState(""); const [items, setItems] = useState<Array<{ value: string; description?: string }>>([]); const [loading, setLoading] = useState(false); const seq = useRef(0);
-  useEffect(() => { if (!open) return; const current = ++seq.current; const timer = setTimeout(() => { setLoading(true); void adapter.searchLink(doctype, text, { pageLength: 20 }).then((result) => { if (seq.current === current) setItems(result); }).catch(() => { if (seq.current === current) setItems([]); }).finally(() => { if (seq.current === current) setLoading(false); }); }, 200); return () => clearTimeout(timer); }, [adapter, doctype, open, text]);
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const [items, setItems] = useState<Array<{ value: string; description?: string }>>([]);
+  const [loading, setLoading] = useState(false);
+  const seq = useRef(0);
+  useEffect(() => {
+    if (!open) return;
+    const current = ++seq.current;
+    const timer = setTimeout(() => {
+      setLoading(true);
+      void adapter.searchLink(doctype, text, { pageLength: 20 })
+        .then((result) => { if (seq.current === current) setItems(result); })
+        .catch(() => { if (seq.current === current) setItems([]); })
+        .finally(() => { if (seq.current === current) setLoading(false); });
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [adapter, doctype, open, text]);
   const picked = items.find((item) => item.value === value);
-  return <Popover open={open} onOpenChange={setOpen}><PopoverTrigger asChild><Button variant="outline" className="mt-1.5 w-full justify-between font-normal"><span className="truncate">{picked?.description || value || `${t("common.choose_prefix")} ${doctype}`}</span><ChevronsUpDown className="size-4 opacity-50" /></Button></PopoverTrigger><PopoverContent align="start" className="w-[--radix-popover-trigger-width] p-0"><Command shouldFilter={false}><CommandInput value={text} onValueChange={setText} placeholder={`${t("common.search_prefix")} ${doctype}…`} /><CommandList>{loading ? <div className="flex items-center gap-2 px-3 py-3 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" />{t("common.searching")}</div> : <><CommandEmpty>{t("common.no_results")}</CommandEmpty>{items.map((item) => <CommandItem key={item.value} value={item.value} onSelect={() => { onChange(item.value); setOpen(false); }}><Check className={cn("mr-2 size-4", item.value === value ? "opacity-100" : "opacity-0")} /><span className="min-w-0"><span className="block truncate">{item.description || item.value}</span>{item.description && item.description !== item.value ? <span className="block truncate text-xs text-muted-foreground">{item.value}</span> : null}</span></CommandItem>)}</>}</CommandList></Command></PopoverContent></Popover>;
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild><Button variant="outline" className="mt-1 w-full justify-between font-normal"><span className="truncate">{picked?.description || value || "Chọn…"}</span><ChevronsUpDown className="size-4 opacity-50" /></Button></PopoverTrigger>
+      <PopoverContent align="start" className="w-[--radix-popover-trigger-width] p-0">
+        <Command shouldFilter={false}>
+          <CommandInput value={text} onValueChange={setText} placeholder="Tìm…" />
+          <CommandList>
+            {loading ? <div className="flex items-center gap-2 px-3 py-3 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" />Đang tìm…</div> : <>
+              <CommandEmpty>Không có kết quả.</CommandEmpty>
+              {items.map((item) => (
+                <CommandItem key={item.value} value={item.value} onSelect={() => { onChange(item.value); setOpen(false); }}>
+                  <Check className={cn("mr-2 size-4", item.value === value ? "opacity-100" : "opacity-0")} />
+                  <span className="block min-w-0 truncate">{item.description || item.value}</span>
+                </CommandItem>
+              ))}
+            </>}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
 }
 
-function AppsPanel({ profile }: { profile?: AccessProfileSummary }) {
-  const t = useT();
-  return <section className="rounded-xl border bg-card p-5 shadow-sm"><h2 className="font-semibold">{t("perm.apps_title")}</h2><p className="mt-1 text-sm text-muted-foreground">{t("perm.apps_hint")}</p><div className="mt-4 grid gap-4 md:grid-cols-2"><InfoCard title={t("perm.apps_card")}><div className="flex flex-wrap gap-1.5">{profile?.applications?.length ? profile.applications.map((app) => <Badge key={app}>{app}</Badge>) : <span className="text-sm text-muted-foreground">{t("perm.apps_empty")}</span>}</div></InfoCard><InfoCard title={t("perm.workspaces_card")}><div className="flex flex-wrap gap-1.5">{profile?.workspaces?.length ? profile.workspaces.map((workspace) => <Badge key={workspace} variant="secondary">{workspace}</Badge>) : <span className="text-sm text-muted-foreground">{t("perm.workspaces_empty")}</span>}</div></InfoCard></div></section>;
+function ErrorBox({ message }: { message: string }) {
+  return <div className="m-4 flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive" role="alert"><ShieldAlert className="size-4 shrink-0" /><span>{message}</span></div>;
 }
-
-function EffectivePanel(props: { selectedUser: string; doctype: string; documentName: string; setDocumentName: (value: string) => void; data?: EffectivePermissionResult; loading: boolean; error?: string; onLoad: () => void }) {
-  const t = useT();
-  return <section className="rounded-xl border bg-card p-5 shadow-sm"><div className="mb-4 rounded-lg border bg-muted/30 px-3 py-2 text-sm"><span className="text-muted-foreground">{t("perm.analysing_for")}</span> <span className="font-semibold">{props.selectedUser || t("perm.current_user")}</span></div><div className="flex flex-wrap items-end gap-3"><div className="min-w-64 flex-1"><Label htmlFor="permission-document">{t("perm.document_field")}</Label><Input id="permission-document" className="mt-1.5" value={props.documentName} onChange={(event: React.ChangeEvent<HTMLInputElement>) => props.setDocumentName(event.target.value)} placeholder="MAT-STE-2026-00001" /></div><Button onClick={props.onLoad} disabled={props.loading || !props.doctype}>{props.loading ? <Loader2 className="size-4 animate-spin" /> : <ShieldCheck className="size-4" />} {t("perm.analyse")}</Button></div>{props.error ? <ErrorBox message={props.error} inline /> : null}{props.data ? <div className="mt-5 space-y-5"><div><h3 className="mb-2 text-sm font-semibold">Capabilities · {props.data.user ?? props.selectedUser}</h3><div className="flex flex-wrap gap-2">{Object.entries(props.data.capabilities).map(([key, allowed]) => <Badge key={key} variant={allowed ? "default" : "destructive"}>{allowed ? <Check className="mr-1 size-3" /> : <ShieldAlert className="mr-1 size-3" />}{key}</Badge>)}</div></div><div className="grid gap-5 xl:grid-cols-[.8fr_1.2fr]"><div><h3 className="mb-2 text-sm font-semibold">{t("perm.trace_title")}</h3><div className="space-y-2">{props.data.trace.map((item, index) => <div key={`${item.source}:${item.label}:${index}`} className={cn("rounded-lg border p-3", item.effect === "deny" && "border-destructive/30 bg-destructive/5", item.effect === "allow" && "border-emerald-500/30 bg-emerald-500/5")}><div className="flex items-center gap-2"><Badge variant="outline">{item.source}</Badge><span className="text-sm font-medium">{item.label}</span></div>{item.detail ? <p className="mt-1 text-xs text-muted-foreground">{item.detail}</p> : null}</div>)}</div></div><div><h3 className="mb-2 text-sm font-semibold">{t("perm.field_perm_title")}</h3><div className="max-h-[28rem] overflow-auto rounded-lg border"><Table><TableHeader><TableRow><TableHead>Field</TableHead><TableHead className="text-center">Read</TableHead><TableHead className="text-center">Write</TableHead><TableHead>{t("perm.col_reason")}</TableHead></TableRow></TableHeader><TableBody>{(props.data.fieldRules ?? []).map((field) => <TableRow key={field.fieldname}><TableCell className="font-mono text-xs">{field.fieldname}</TableCell><TableCell className="text-center">{field.read ? <Check className="mx-auto size-4 text-emerald-600" /> : "—"}</TableCell><TableCell className="text-center">{field.write ? <Check className="mx-auto size-4 text-emerald-600" /> : "—"}</TableCell><TableCell className="text-xs text-muted-foreground">{field.reason}</TableCell></TableRow>)}</TableBody></Table></div></div></div></div> : null}</section>;
-}
-
-function InfoCard({ title, children }: { title: string; children: ReactNode }) { return <div className="rounded-xl border bg-muted/20 p-4"><div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</div>{children}</div>; }
-function ErrorBox({ message, inline }: { message: string; inline?: boolean }) { return <div className={cn("mt-4 flex items-center gap-2 text-sm text-destructive", inline ? "rounded-lg border border-destructive/30 bg-destructive/5 p-3" : "rounded-xl border border-destructive/40 bg-destructive/10 p-4")} role="alert"><ShieldAlert className="size-4 shrink-0" /><span>{message}</span></div>; }

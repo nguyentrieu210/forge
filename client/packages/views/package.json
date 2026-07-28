@@ -57,6 +57,10 @@
     "./import": {
       "types": "./dist/system/Import.d.ts",
       "import": "./dist/system/Import.js"
+    },
+    "./action": {
+      "types": "./dist/action/ActionScreen.d.ts",
+      "import": "./dist/action/ActionScreen.js"
     }
   },
   "scripts": {

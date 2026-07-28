@@ -23,6 +23,11 @@ import { assertModifiedMatches, buildCommand, stripServerOwnedFields } from "./c
 import { fromFrappeDoc, toFrappeDoc, toFrappeListRow } from "./doc-shape.js";
 import { faultResponse, methodResponse, resourceResponse, responseFieldsResponse } from "./envelope.js";
 import { consumeSubmissionAllowance, loadPublishedForm, publicFormShape, submissionActor, submissionDocument } from "./web-form-routes.js";
+import { handleUploadFile, matchFilePath, serveFile, UPLOAD_FILE_PATH, type FileStore } from "./files.js";
+import {
+  assertStorefrontSpec, buildStorefrontOrder, consumeOrderAllowance, storefrontCatalog,
+  storefrontProduct, trackStorefrontOrder, type StorefrontContext,
+} from "./storefront.js";
 import { toKernelField, toKernelFilters, toKernelSearch, toKernelSort } from "./filters.js";
 import {
   childDocTypeNames, maskedFieldNames, tableFieldNames, toFrappeDocType, toFrappeMetaBundle, toFrappeWorkflow,
@@ -106,6 +111,14 @@ export interface FrappeRouterContext {
    * deployment does not serve, rather than failing obscurely.
    */
   webForms?: { db: D1Database; salt: string; clientAddress: string };
+  /**
+   * Where attachments live: the database row and the object store.
+   *
+   * Optional, and the reason is a deployment that has no bucket bound. Absent, uploads
+   * answer 404 like any unserved method — as opposed to the previous behaviour, where
+   * the Desk's attach button called a method nobody answered and simply did nothing.
+   */
+  files?: { db: D1Database; bucket: R2Bucket };
 }
 
 /**
@@ -141,6 +154,21 @@ export function isFrappePath(pathname: string): boolean {
 export async function routeFrappeApi(request: Request, url: URL, context: FrappeRouterContext): Promise<Response | null> {
   if (!isFrappePath(url.pathname)) return null;
   try {
+    // BEFORE `readFrappeArgs`, which turns the body into text: an upload is multipart,
+    // and reading it as text either fails outright or produces a mangled string.
+    if (url.pathname === UPLOAD_FILE_PATH) {
+      if (request.method.toUpperCase() !== "POST") throw errors.validation("upload_file accepts POST");
+      return methodResponse(await handleUploadFile(
+        request,
+        context.actor,
+        fileStore(context),
+        // Attaching to a document is a WRITE to that document, so it is authorised as
+        // one. Anything weaker would let a user attach — and therefore publish, if the
+        // file is public — against a record they may only read.
+        (doctype, name) => assertDocumentAction(context, doctype, name, "save"),
+      ));
+    }
+
     const args = await readFrappeArgs(request, url);
 
     const method = METHOD_PATH.exec(url.pathname);
@@ -710,6 +738,31 @@ async function dispatchMethod(
     case "frappe.website.doctype.web_form.web_form.accept":
       return methodResponse(await acceptWebForm(args, context));
 
+    // ---- public storefront --------------------------------------------------
+    // Also reachable without a session, and bounded the same way: what a visitor may
+    // read is an explicit field list in the installed manifest, and what an order may
+    // write comes from the role the manifest names.
+    case "forge.storefront.catalog":
+      return methodResponse(await storefrontCatalog(await storefrontContext(context), {
+        ...(args.text("search") ? { search: args.text("search")! } : {}),
+        ...(args.text("facet") ? { facet: args.text("facet")! } : {}),
+        limit: args.int("limit", 24),
+        offset: args.int("offset", 0),
+      }));
+
+    case "forge.storefront.product":
+      return methodResponse(await storefrontProduct(await storefrontContext(context), args.requireText("slug", 200)));
+
+    case "forge.storefront.place_order":
+      return methodResponse(await placeStorefrontOrder(args, context));
+
+    case "forge.storefront.track_order":
+      return methodResponse(await trackStorefrontOrder(
+        await storefrontContext(context),
+        args.requireText("code", 200),
+        args.requireText("phone", 40),
+      ));
+
     case "metaforge.api.get_boot":
       return methodResponse(await bootPayload(context));
 
@@ -810,6 +863,33 @@ async function dispatchMethod(
     case "metaforge.api.get_access_profile":
       return methodResponse(await accessProfile(args, context));
 
+    // ---- permission manager -------------------------------------------------
+    // The Desk's permission screen. Every one of these was missing, so the screen
+    // rendered blank on a 404 — a menu entry that led to nothing.
+    case "frappe.core.page.permission_manager.permission_manager.get_roles_and_doctypes":
+      return methodResponse(await permissionRolesAndDoctypes(context));
+
+    case "frappe.core.page.permission_manager.permission_manager.get_permissions":
+      return methodResponse(await permissionRules(args, context));
+
+    case "frappe.core.page.permission_manager.permission_manager.add":
+    case "frappe.core.page.permission_manager.permission_manager.update":
+    case "frappe.core.page.permission_manager.permission_manager.remove":
+    case "frappe.core.page.permission_manager.permission_manager.reset":
+      /**
+       * Editing a DocPerm here is refused ON PURPOSE, with the reason.
+       *
+       * On this platform a DocType's permissions come from the app package that
+       * declares it. An edit made through this screen would live until the next
+       * `forge.apps.install` and then vanish without trace — worse than not being
+       * offered, because the operator would believe a policy is in force that the
+       * next deploy silently reverts. Role ASSIGNMENT is tenant data and stays
+       * editable through `metaforge.api.set_user_roles`.
+       */
+      throw errors.validation(
+        "Quyền của DocType do gói app khai và cài đặt, không sửa trực tiếp ở đây — sửa trong brief rồi cài lại. Gán vai trò cho người dùng thì vẫn sửa được.",
+      );
+
     case "metaforge.api.explain_permission":
       return methodResponse(await explainPermission(args, context));
 
@@ -821,6 +901,18 @@ async function dispatchMethod(
 
     case "metaforge.api.set_user_roles":
       return methodResponse(await setUserRoles(args, context));
+
+    // ---- người dùng: liệt kê, tạo tài khoản, khoá/mở --------------------------
+    // Không có ba lời gọi này thì màn phân quyền không trả lời được "ai đăng nhập được
+    // vào hệ thống", và không có đường nào tạo một tài khoản ngoài việc gọi API tay.
+    case "metaforge.api.list_users":
+      return methodResponse(await listUsers(context));
+
+    case "metaforge.api.create_user":
+      return methodResponse(await createUser(args, context));
+
+    case "metaforge.api.set_user_enabled":
+      return methodResponse(await setUserEnabled(args, context));
 
     case "metaforge.api.logout_other_sessions":
       return methodResponse(await logoutOtherSessions(context));
@@ -1486,9 +1578,33 @@ async function accessProfile(args: FrappeArgs, context: FrappeRouterContext): Pr
   const user = requested ?? context.actor.user_id;
   const roles = user === context.actor.user_id ? [...context.actor.roles] : await context.users.listRoles(context.tenantId, user);
   const permissions = await context.access.listUserPermissions(context.tenantId, user);
+  /**
+   * `scopes` is what the client actually reads — grouped by doctype, not a flat list.
+   *
+   * The server sent only `user_permissions`, so `profile.scopes` was `undefined` and the
+   * permission screen crashed on `scopes.reduce(...)` before rendering anything: a blank
+   * page, not an error message. Two implementations of one contract, disagreeing quietly.
+   * `user_permissions` is kept alongside because the Frappe-shaped surface promises it.
+   */
+  const byDoctype = new Map<string, JsonObject[]>();
+  for (const record of permissions) {
+    const list = byDoctype.get(record.allow_doctype) ?? [];
+    list.push({
+      value: record.allow_name,
+      label: record.allow_name,
+      ...(record.applicable_for_doctype ? { applicableFor: record.applicable_for_doctype } : {}),
+      ...(record.is_default ? { isDefault: true } : {}),
+      ...(record.hide_descendants ? { hideDescendants: true } : {}),
+    });
+    byDoctype.set(record.allow_doctype, list);
+  }
   return {
     user,
     roles,
+    scopes: [...byDoctype].map(([doctype, values]) => ({ doctype, values })) as unknown as JsonValue,
+    // Only a System Manager may change anyone's access, so the screen hides its own
+    // controls rather than offering buttons the server will refuse.
+    canManage: isPlatformAdmin(context),
     user_permissions: permissions.map((record) => ({
       allow: record.allow_doctype,
       for_value: record.allow_name,
@@ -1575,6 +1691,95 @@ async function setUserRoles(args: FrappeArgs, context: FrappeRouterContext): Pro
   const roles = args.array<string>("roles") ?? [];
   const applied = await context.users.setRoles(context.tenantId, user, roles.map((role) => String(role)), context.now());
   return { user, roles: applied };
+}
+
+/**
+ * Everyone who can sign in to this tenant.
+ *
+ * The permission screen had no way to ask this. It could load one profile by exact login,
+ * which answers "what can this person do" but never "who can get in at all" — so an
+ * account created for a trial, or one belonging to somebody who left, stayed open and
+ * nobody had a screen that would show it.
+ */
+async function listUsers(context: FrappeRouterContext): Promise<JsonObject> {
+  requireMetadataAdmin(context);
+  const users = await context.users.list(context.tenantId);
+  const roles = await context.users.listAllRoles(context.tenantId);
+  return {
+    users: users.map((user) => ({
+      user: user.user_id,
+      full_name: user.full_name,
+      email: user.email,
+      enabled: user.enabled,
+      user_type: user.user_type,
+      roles: user.roles,
+      ...(user.last_login_at ? { last_login_at: user.last_login_at } : {}),
+    })) as unknown as JsonValue,
+    // The roles a new account can be given, in the same answer, so the screen that lists
+    // users can also open the form that creates one without a second call.
+    available_roles: roles.filter((role) => !["All", "Guest"].includes(role)) as unknown as JsonValue,
+  };
+}
+
+/** Logins are ids, not display names: they end up in `owner` on every document. */
+const LOGIN_PATTERN = /^[A-Za-z0-9._%+-]+(@[A-Za-z0-9.-]+\.[A-Za-z]{2,})?$/;
+const MIN_PASSWORD_LENGTH = 8;
+
+/**
+ * Creates a login, with its roles, in one call.
+ *
+ * One call rather than three (create, set password, assign roles) because the intermediate
+ * states are all wrong to leave lying around: an account with no password cannot be used
+ * but exists, and an account with a password and no roles can sign in and see nothing,
+ * which reads to the person as "the system is broken".
+ *
+ * Refuses to overwrite an existing login. Creating and updating look identical from a form
+ * that is titled "add a user", so an id that is already taken must be an error rather than
+ * a silent password reset on somebody else's account.
+ */
+async function createUser(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  requireMetadataAdmin(context);
+  const user = args.requireText("user", 320).toLowerCase();
+  if (!LOGIN_PATTERN.test(user)) {
+    throw errors.validation("Tên đăng nhập chỉ gồm chữ, số, dấu chấm, gạch dưới, gạch ngang — hoặc một địa chỉ email.");
+  }
+  const password = args.requireText("password", 256);
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    throw errors.validation(`Mật khẩu phải có ít nhất ${MIN_PASSWORD_LENGTH} ký tự.`);
+  }
+  const existing = await context.users.get(context.tenantId, user);
+  if (existing) throw errors.validation(`Tên đăng nhập "${user}" đã tồn tại. Mở tài khoản đó để sửa, hoặc chọn tên khác.`);
+
+  const now = context.now();
+  await context.users.upsert(context.tenantId, {
+    userId: user,
+    fullName: args.text("full_name") ?? user,
+    email: args.text("email") ?? (user.includes("@") ? user : ""),
+    enabled: args.bool("enabled", true),
+    userType: "System User",
+    passwordHash: await hashPassword(password),
+  }, now);
+
+  const roles = (args.array<string>("roles") ?? []).map((role) => String(role));
+  const applied = roles.length ? await context.users.setRoles(context.tenantId, user, roles, now) : [];
+  return { user, roles: applied as unknown as JsonValue, created: true };
+}
+
+/**
+ * Closes or reopens a login.
+ *
+ * An administrator cannot close their OWN account here. Locking yourself out of the screen
+ * that unlocks accounts leaves a tenant with no way back in short of a support request.
+ */
+async function setUserEnabled(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  requireMetadataAdmin(context);
+  const user = args.requireText("user", 320);
+  const enabled = args.bool("enabled", false);
+  if (user === context.actor.user_id && !enabled) {
+    throw errors.validation("Không tự khoá tài khoản của chính mình — sẽ không còn ai mở lại được.");
+  }
+  await context.users.setEnabled(context.tenantId, user, enabled, context.now());
+  return { user, enabled };
 }
 
 /**
@@ -1941,6 +2146,67 @@ function frappeReportColumns(columns: JsonValue | undefined): JsonValue {
 }
 
 /**
+ * Roles and doctypes for the permission screen, from what is INSTALLED.
+ *
+ * Not a fixed list: a tenant sees the doctypes its apps actually shipped, and the roles
+ * those apps declared plus the platform's own. A hard-coded list would show a customer
+ * rows for doctypes they do not have and hide the ones they do.
+ */
+async function permissionRolesAndDoctypes(context: FrappeRouterContext): Promise<JsonObject> {
+  if (!isPlatformAdmin(context)) throw errors.permission("Trung tâm phân quyền cần quyền System Manager");
+  const metas = await context.metadata.listDocTypes(context.tenantId);
+  const roles = new Set<string>();
+  const doctypes: JsonObject[] = [];
+  const ptypeMap: Record<string, JsonValue> = {};
+  for (const meta of metas) {
+    // A child table has no permissions of its own — it is read through its parent, so
+    // offering it here would be a row that cannot mean anything.
+    if (meta.is_child) continue;
+    doctypes.push({ label: meta.label ?? meta.name, value: meta.name });
+    for (const permission of meta.permissions ?? []) roles.add(permission.role);
+    ptypeMap[meta.name] = [...PERMISSION_PTYPES] as unknown as JsonValue;
+  }
+  return {
+    roles: [...roles].sort().map((role) => ({ label: role, value: role })) as unknown as JsonValue,
+    doctypes: doctypes.sort((a, b) => String(a.value).localeCompare(String(b.value))) as unknown as JsonValue,
+    doctype_ptype_map: ptypeMap as unknown as JsonValue,
+  };
+}
+
+/** The permission letters the Desk screen may show. `delete` is a copy of `write` here. */
+const PERMISSION_PTYPES = ["read", "write", "create", "delete", "submit", "cancel", "amend", "print", "email", "report", "import", "export", "share"] as const;
+
+/** DocPerm rows, optionally narrowed to one doctype or one role. */
+async function permissionRules(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonValue> {
+  if (!isPlatformAdmin(context)) throw errors.permission("Trung tâm phân quyền cần quyền System Manager");
+  const wantDoctype = args.text("doctype");
+  const wantRole = args.text("role");
+  const metas = wantDoctype
+    ? [await context.metadata.getDocType(context.tenantId, wantDoctype)].filter(Boolean)
+    : await context.metadata.listDocTypes(context.tenantId);
+  const rules: JsonObject[] = [];
+  for (const meta of metas) {
+    if (!meta || meta.is_child) continue;
+    for (const permission of meta.permissions ?? []) {
+      if (wantRole && permission.role !== wantRole) continue;
+      rules.push({
+        parent: meta.name,
+        role: permission.role,
+        permlevel: permission.permlevel ?? 0,
+        if_owner: permission.if_owner ? 1 : 0,
+        // `delete` mirrors `write` because that is what this kernel enforces; showing a
+        // separate column would describe a policy the platform does not implement.
+        ...Object.fromEntries(PERMISSION_PTYPES.map((ptype) => [
+          ptype,
+          (ptype === "delete" ? permission.write : permission[ptype]) ? 1 : 0,
+        ])),
+      });
+    }
+  }
+  return rules as unknown as JsonValue;
+}
+
+/**
  * The installed app that declares this report, or null.
  *
  * Reports live in the manifest rather than in `app_objects` because they own no schema:
@@ -2265,16 +2531,18 @@ async function notificationLogs(args: FrappeArgs, context: FrappeRouterContext):
  * Permissions — so the selector cannot offer a company the user is not permitted
  * to see, which would produce an empty screen after selecting it.
  */
+// Nhãn tiếng Việt: đây là chữ hiện trên thanh chọn phạm vi ở đầu mọi màn hình, và nó là
+// một trong số ít chuỗi do SERVER quyết định — client không có chỗ nào dịch nó.
 const CONTEXT_DIMENSIONS: Array<{ key: string; label: string; recordType: string; required: boolean; dependsOn?: string }> = [
-  { key: "company", label: "Company", recordType: "Company", required: true },
-  { key: "fiscal_year", label: "Fiscal Year", recordType: "Fiscal Year", required: false },
-  { key: "warehouse", label: "Warehouse", recordType: "Warehouse", required: false, dependsOn: "company" },
-  { key: "branch", label: "Branch", recordType: "Branch", required: false, dependsOn: "company" },
-  { key: "cost_center", label: "Cost Center", recordType: "Cost Center", required: false, dependsOn: "company" },
-  { key: "project", label: "Project", recordType: "Project", required: false },
-  { key: "territory", label: "Territory", recordType: "Territory", required: false },
-  { key: "selling_price_list", label: "Selling Price List", recordType: "Price List", required: false },
-  { key: "buying_price_list", label: "Buying Price List", recordType: "Price List", required: false },
+  { key: "company", label: "Công ty", recordType: "Company", required: true },
+  { key: "fiscal_year", label: "Năm tài chính", recordType: "Fiscal Year", required: false },
+  { key: "warehouse", label: "Kho", recordType: "Warehouse", required: false, dependsOn: "company" },
+  { key: "branch", label: "Chi nhánh", recordType: "Branch", required: false, dependsOn: "company" },
+  { key: "cost_center", label: "Trung tâm chi phí", recordType: "Cost Center", required: false, dependsOn: "company" },
+  { key: "project", label: "Dự án", recordType: "Project", required: false },
+  { key: "territory", label: "Khu vực", recordType: "Territory", required: false },
+  { key: "selling_price_list", label: "Bảng giá bán", recordType: "Price List", required: false },
+  { key: "buying_price_list", label: "Bảng giá mua", recordType: "Price List", required: false },
 ];
 
 async function businessContext(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
@@ -2632,8 +2900,26 @@ async function clientManifest(args: FrappeArgs, context: FrappeRouterContext): P
   const client = primary?.client ?? {};
 
   const nav: JsonObject[] = [];
+  const actions: JsonObject[] = [];
   const seenPaths = new Set<string>();
   for (const app of apps) {
+    /**
+     * Actions the actor may actually run, by the SAME gate their menu entry uses.
+     *
+     * Sent even when no nav entry opens them, because a screen can also be reached by
+     * URL — filtering here rather than in the menu is what makes the two agree. The
+     * server still checks every write the method performs; this only decides whether the
+     * form is worth showing, so that a refusal arrives before it is filled in and not
+     * after.
+     */
+    for (const action of app.actions ?? []) {
+      try {
+        await context.permissions.assert({ actor: context.actor, tenantId: context.tenantId, doctype: action.permission_doctype, action: "save", data: {} });
+        actions.push({ ...(action as unknown as JsonObject), app: app.app_id });
+      } catch {
+        // Omitted rather than offered-and-refused.
+      }
+    }
     for (const item of await permittedNav(app.nav, context)) {
       const path = navItemPath(item as Parameters<typeof navItemPath>[0]);
       // Two entries resolving to one path is not a duplicate menu line — the client
@@ -2679,6 +2965,7 @@ async function clientManifest(args: FrappeArgs, context: FrappeRouterContext): P
     },
     home: home as unknown as JsonValue,
     nav: nav as unknown as JsonValue,
+    actions: actions as unknown as JsonValue,
     apps: apps.map((app) => ({ id: app.app_id, name: app.app_name, version: app.version })) as unknown as JsonValue,
   };
 }
@@ -2765,6 +3052,127 @@ async function callAppMethod(methodName: string, args: FrappeArgs, context: Frap
     traceId: context.traceId,
   });
   return methodResponse(result.value);
+}
+
+/**
+ * Assembles the storefront context from the INSTALLED manifest.
+ *
+ * Read per request rather than cached, because the alternative is a storefront that
+ * keeps serving a product list an administrator has just unpublished — and "I removed
+ * it and it is still on the website" is the one bug nobody accepts an explanation for.
+ */
+async function storefrontContext(context: FrappeRouterContext): Promise<StorefrontContext> {
+  if (!context.webForms) throw errors.notFound("This deployment has no public surface");
+
+  const apps = await context.apps.list(context.tenantId);
+  const withStorefront = apps.filter((app) => app.storefront);
+  if (withStorefront.length === 0) throw errors.notFound("No storefront is installed");
+  // More than one storefront would make "the catalogue" ambiguous, and picking the first
+  // silently would serve one shop's products under another shop's URL.
+  if (withStorefront.length > 1) {
+    throw errors.validation(`More than one installed app declares a storefront: ${withStorefront.map((app) => app.app_id).join(", ")}`);
+  }
+  const spec = withStorefront[0]!.storefront!;
+
+  const catalogMeta = await context.metadata.getDocType(context.tenantId, spec.catalog.doctype);
+  if (!catalogMeta) throw errors.notFound("The storefront's catalogue doctype is not installed");
+  assertStorefrontSpec(spec, catalogMeta);
+
+  return {
+    db: context.webForms.db,
+    tenantId: context.tenantId,
+    now: context.now(),
+    salt: context.webForms.salt,
+    clientAddress: context.webForms.clientAddress,
+    spec,
+    catalogMeta,
+  };
+}
+
+/**
+ * Accepts a public order.
+ *
+ * The write goes through the SAME command path as every other write — `runCommand`, the
+ * aggregate, the audit trail — with an actor carrying one role. A separate insert here
+ * would be a second write path with its own rules, and the rules that get forgotten are
+ * always the ones on the path nobody looks at.
+ */
+async function placeStorefrontOrder(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const storefront = await storefrontContext(context);
+  // Counted BEFORE the write, so a flood cannot fill the tenant's database and only
+  // then be told to stop.
+  await consumeOrderAllowance(storefront);
+
+  const submitted = args.json<JsonObject>("order") ?? {};
+  const built = await buildStorefrontOrder(storefront, submitted);
+
+  const name = await context.metadata.nextName(
+    context.tenantId,
+    built.doctype,
+    (await context.metadata.getDocType(context.tenantId, built.doctype))?.autoname ?? "hash",
+    storefront.now,
+    built.document,
+  );
+
+  const command = await buildCommand({
+    tenantId: context.tenantId,
+    doctype: built.doctype,
+    name,
+    action: "create",
+    expectedVersion: null,
+    document: built.document,
+    actor: built.actor,
+  });
+  await context.runCommand(command);
+
+  // The buyer is told the code and nothing else. Echoing the stored document back would
+  // hand an unauthenticated caller whatever defaults and server-side fields it picked up.
+  return { code: name, tracking_field: storefront.spec.order?.track_field ?? "" };
+}
+
+function fileStore(context: FrappeRouterContext): FileStore {
+  if (!context.files) throw errors.notFound("File storage is not configured on this deployment");
+  return { db: context.files.db, bucket: context.files.bucket, tenantId: context.tenantId, now: context.now() };
+}
+
+/**
+ * Asserts that the caller may perform `action` on a specific document.
+ *
+ * Loads the document first because the permission layer decides on the ROW, not on the
+ * doctype alone: owner-only rules and field conditions cannot be evaluated without it,
+ * and a doctype-level check would quietly grant access to records the user's own
+ * permission rules exclude.
+ */
+async function assertDocumentAction(
+  context: FrappeRouterContext,
+  doctype: string,
+  name: string,
+  action: "read" | "save",
+): Promise<void> {
+  const document = await context.documents.getDocument(context.tenantId, doctype, name);
+  if (!document) throw errors.notFound();
+  await context.permissions.assert({
+    actor: context.actor, tenantId: context.tenantId, doctype, name,
+    owner: document.owner, data: document.data, action,
+  });
+}
+
+/**
+ * Serves `/files/<id>`, or null when the path is not one.
+ *
+ * Separate from `routeFrappeApi` because this path is NOT under `/api/`: it is a URL that
+ * ends up inside an `<img src>` on a public page, and it has to look like one. The
+ * tenant worker calls it before its own routing for the same reason.
+ */
+export async function routeFileDownload(url: URL, context: FrappeRouterContext): Promise<Response | null> {
+  const fileId = matchFilePath(url.pathname);
+  if (!fileId) return null;
+  try {
+    return await serveFile(fileId, context.actor, fileStore(context), (doctype, name) =>
+      assertDocumentAction(context, doctype, name, "read"));
+  } catch (error) {
+    return faultResponse(error, context.traceId);
+  }
 }
 
 function webFormStore(context: FrappeRouterContext) {

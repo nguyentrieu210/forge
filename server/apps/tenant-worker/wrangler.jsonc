@@ -30,6 +30,13 @@
       { "binding": "OUTBOX_QUEUE", "queue": "cloudforge-outbox" }
     ]
   },
+  // Attachments and product photographs. One bucket for every tenant, with the tenant id
+  // as the first path segment of each key: a per-tenant bucket would mean provisioning a
+  // customer could fail on a bucket-count limit long before anything about their data
+  // was a problem. Reads are still scoped by the `files` table, which is per tenant.
+  "r2_buckets": [
+    { "binding": "FILES", "bucket_name": "cloudforge-files" }
+  ],
   "services": [
     { "binding": "SOCIAL_INGRESS", "service": "cloudforge-social-ingress" }
   ]

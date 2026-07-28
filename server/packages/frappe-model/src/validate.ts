@@ -89,6 +89,8 @@ export function parseDocTypeMeta(value: unknown, expectedName?: string): DocType
   }
   const meta: DocTypeMeta = {
     name,
+    // Nhãn đi cùng metadata, không chỉ đi vào menu — xem `DocTypeMeta.label`.
+    ...(input.label === undefined ? {} : { label: text(input.label, "label", 160) }),
     module: moduleName,
     custom: bool(input.custom, false),
     is_child: bool(input.is_child, false),

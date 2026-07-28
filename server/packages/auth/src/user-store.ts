@@ -116,23 +116,33 @@ export class D1UserStore {
     timeZone?: string;
   }, now: string): Promise<void> {
     await this.db.prepare(
+      /**
+       * A field left out is a field left ALONE — that is what the COALESCEs are for.
+       *
+       * They replaced `full_name=excluded.full_name`, which looked harmless and was not:
+       * every caller that updates one thing passes only that thing, so changing a password
+       * (`upsert({ userId, passwordHash })`) also blanked the user's full name, reset their
+       * email to their login id, cleared language and time zone, and — the one that matters —
+       * set `enabled` back to 1, silently reactivating an account somebody had disabled.
+       *
+       * The empty-string sentinel for the hash stays, because "" is not a valid hash and a
+       * profile update must never clear a credential.
+       */
       `INSERT INTO users(tenant_id,user_id,full_name,email,enabled,user_type,password_hash,language,time_zone,created_at,modified_at)
-       VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?10)
+       VALUES(?1,?2,COALESCE(?3,''),COALESCE(?4,?2),COALESCE(?5,1),COALESCE(?6,'System User'),?7,COALESCE(?8,''),COALESCE(?9,''),?10,?10)
        ON CONFLICT(tenant_id,user_id) DO UPDATE SET
-         full_name=excluded.full_name,
-         email=excluded.email,
-         enabled=excluded.enabled,
-         user_type=excluded.user_type,
-         -- An empty hash means "leave the credential alone", so a profile update
-         -- can never silently clear someone's password.
+         full_name=COALESCE(?3,users.full_name),
+         email=COALESCE(?4,users.email),
+         enabled=COALESCE(?5,users.enabled),
+         user_type=COALESCE(?6,users.user_type),
          password_hash=CASE WHEN excluded.password_hash='' THEN users.password_hash ELSE excluded.password_hash END,
-         language=excluded.language,
-         time_zone=excluded.time_zone,
+         language=COALESCE(?8,users.language),
+         time_zone=COALESCE(?9,users.time_zone),
          modified_at=excluded.modified_at`,
     ).bind(
-      tenantId, input.userId, input.fullName ?? "", input.email ?? input.userId,
-      input.enabled === false ? 0 : 1, input.userType ?? "System User",
-      input.passwordHash ?? "", input.language ?? "", input.timeZone ?? "", now,
+      tenantId, input.userId, input.fullName ?? null, input.email ?? null,
+      input.enabled === undefined ? null : (input.enabled ? 1 : 0), input.userType ?? null,
+      input.passwordHash ?? "", input.language ?? null, input.timeZone ?? null, now,
     ).run();
   }
 
@@ -172,6 +182,54 @@ export class D1UserStore {
       `SELECT role FROM roles WHERE tenant_id=?1 AND disabled=0 ORDER BY role`,
     ).bind(tenantId).all<{ role: string }>();
     return (result.results ?? []).map((row) => row.role);
+  }
+
+  /**
+   * Everyone on this tenant, with their roles.
+   *
+   * Its absence was not a missing convenience. The permission screen could load ONE
+   * profile if you already knew the login and typed it exactly — so an administrator had
+   * no way to answer "who can get into this system", which is the first question anyone
+   * asks of a permission screen, and no way to notice an account they meant to close.
+   *
+   * Roles come back in the same read because the list shows them; one query per row would
+   * be one round trip per user.
+   */
+  async list(tenantId: string, limit = 500): Promise<Array<UserRecord & { roles: string[]; last_login_at?: string }>> {
+    const bounded = Math.min(Math.max(limit, 1), 1000);
+    const result = await this.db.prepare(
+      `SELECT u.user_id, u.full_name, u.email, u.enabled, u.user_type, u.password_hash,
+              u.session_epoch, u.language, u.time_zone, u.last_login_at,
+              COALESCE(GROUP_CONCAT(r.role, CHAR(31)), '') AS roles
+         FROM users u
+         LEFT JOIN user_roles r ON r.tenant_id = u.tenant_id AND r.user_id = u.user_id
+        WHERE u.tenant_id = ?1
+        GROUP BY u.user_id
+        ORDER BY u.enabled DESC, u.user_id
+        LIMIT ?2`,
+    ).bind(tenantId, bounded).all<UserRow & { roles: string; last_login_at: string | null }>();
+    return (result.results ?? []).map((row) => ({
+      ...toRecord(row),
+      ...(row.last_login_at ? { last_login_at: row.last_login_at } : {}),
+      // Joined on the unit separator, not a comma: a role name may contain a comma.
+      roles: row.roles ? row.roles.split("").filter(Boolean).sort() : [],
+    }));
+  }
+
+  /**
+   * Closes or reopens a login. Deleting is deliberately not offered.
+   *
+   * The user id is the `owner` of every document that person created, so removing the row
+   * turns their history into dangling references. Disabling stops access at the next
+   * request — `enabled=0` fails the login check — and the epoch bump ends sessions already
+   * open, which deleting the row would not do by itself.
+   */
+  async setEnabled(tenantId: string, userId: string, enabled: boolean, now: string): Promise<void> {
+    const row = await this.db.prepare(
+      `UPDATE users SET enabled=?3, session_epoch=session_epoch+1, modified_at=?4
+        WHERE tenant_id=?1 AND user_id=?2 RETURNING user_id`,
+    ).bind(tenantId, userId, enabled ? 1 : 0, now).first<{ user_id: string }>();
+    if (!row) throw errors.notFound("User not found");
   }
 }
 

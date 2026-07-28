@@ -26,8 +26,13 @@ export interface InstalledAppRecord {
   validators: AppManifest["validators"];
   /** Tabular reports this app declares, so running one needs no second read. */
   reports: AppManifest["reports"];
+  /** Form-driven operations, so the generic client can render them without a build. */
+  actions: AppManifest["actions"];
   /** Presentation, so the generic client can be told what to render without a build. */
   client: AppManifest["client"] | null;
+  /** Public catalogue and order intake, carried so a storefront request needs no
+   *  manifest re-parse — and so an unpublished product disappears on the next request. */
+  storefront: AppManifest["storefront"] | null;
 }
 
 export interface InstallResult {
@@ -46,7 +51,7 @@ export interface UninstallResult {
   removed: { doctypes: number; workflows: number; print_formats: number; roles: number; fixtures: number };
 }
 
-type ObjectType = "DocType" | "Workflow" | "Print Format" | "Role" | "Master Record";
+type ObjectType = "DocType" | "Workflow" | "Print Format" | "Role" | "Master Record" | "Custom Field";
 
 export class AppInstaller {
   private readonly db: D1Database | D1DatabaseSession;
@@ -77,7 +82,9 @@ export class AppInstaller {
         worker: manifest.worker ?? null,
         validators: manifest.validators ?? [],
         reports: manifest.reports ?? [],
+        actions: manifest.actions ?? [],
         client: manifest.client ?? null,
+        storefront: manifest.storefront ?? null,
       };
     });
   }
@@ -205,6 +212,28 @@ export class AppInstaller {
       ).bind(tenantId, fixture.record_type, fixture.name, JSON.stringify(fixture.data), now));
     }
 
+    // Custom Fields, plus a revision bump for every doctype they touch. The bump is not
+    // bookkeeping: `mergeCustomizations` versions the effective schema by it, so a field
+    // written without one installs into the table and stays invisible to anything
+    // holding a cached DocType — which, after an install, is every client.
+    const touched = new Set<string>();
+    for (const field of manifest.custom_fields) {
+      touched.add(field.dt);
+      statements.push(this.db.prepare(
+        `INSERT INTO custom_fields(tenant_id,name,dt,fieldname,metadata_json,insert_after,modified_by,modified_at)
+         VALUES(?1,?2,?3,?4,?5,?6,?7,?8)
+         ON CONFLICT(tenant_id,name) DO UPDATE SET
+           dt=excluded.dt, fieldname=excluded.fieldname, metadata_json=excluded.metadata_json,
+           insert_after=excluded.insert_after, modified_by=excluded.modified_by, modified_at=excluded.modified_at`,
+      ).bind(tenantId, field.name, field.dt, field.fieldname, JSON.stringify(field.field), field.insert_after, actor, now));
+    }
+    for (const doctype of touched) {
+      statements.push(this.db.prepare(
+        `INSERT INTO customization_revisions(tenant_id,doctype,revision,modified_at) VALUES(?1,?2,1,?3)
+         ON CONFLICT(tenant_id,doctype) DO UPDATE SET revision=revision+1, modified_at=excluded.modified_at`,
+      ).bind(tenantId, doctype, now));
+    }
+
     // Ownership is recorded last, once every object exists, and is rewritten
     // wholesale so an upgrade that drops an object also drops its claim.
     statements.push(this.db.prepare(`DELETE FROM app_objects WHERE tenant_id=?1 AND app_id=?2`).bind(tenantId, manifest.id));
@@ -278,6 +307,26 @@ export class AppInstaller {
       statements.push(this.db.prepare(
         `DELETE FROM master_records WHERE tenant_id=?1 AND record_type=?2 AND name=?3`,
       ).bind(tenantId, fixture.record_type, fixture.name));
+    }
+    // Custom Fields on doctypes the app does NOT own are removed BY NAME. The loop above
+    // clears customisations of the app's own doctypes wholesale, which is right there and
+    // wrong here: `DELETE ... WHERE dt='Item'` would take the customer's own fields on
+    // Item with it, and those were never this app's to remove.
+    // `?? []` because this manifest was read back from storage: an app installed before
+    // custom fields existed has no such key, and iterating undefined would make it
+    // impossible to uninstall exactly the apps that predate the feature.
+    const uncustomised = new Set<string>();
+    for (const field of manifest.custom_fields ?? []) {
+      uncustomised.add(field.dt);
+      statements.push(this.db.prepare(
+        `DELETE FROM custom_fields WHERE tenant_id=?1 AND name=?2 AND dt=?3`,
+      ).bind(tenantId, field.name, field.dt));
+    }
+    for (const doctype of uncustomised) {
+      statements.push(this.db.prepare(
+        `INSERT INTO customization_revisions(tenant_id,doctype,revision,modified_at) VALUES(?1,?2,1,?3)
+         ON CONFLICT(tenant_id,doctype) DO UPDATE SET revision=revision+1, modified_at=excluded.modified_at`,
+      ).bind(tenantId, doctype, now));
     }
     // Roles are left in place on purpose: users still hold grants for them, and
     // deleting a role would silently strip permissions that other apps may also rely on.
@@ -365,6 +414,9 @@ export class AppInstaller {
     for (const format of manifest.print_formats) owned.push(["Print Format", "", format.name]);
     for (const role of manifest.roles) owned.push(["Role", "", role.role]);
     for (const fixture of manifest.fixtures) owned.push(["Master Record", fixture.record_type, fixture.name]);
+    // Scoped by the doctype it extends, so the conflict check reads as "two apps both
+    // add a field to Item" rather than as an opaque name collision.
+    for (const field of manifest.custom_fields) owned.push(["Custom Field", field.dt, field.name]);
     return owned;
   }
 }

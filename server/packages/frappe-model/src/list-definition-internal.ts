@@ -37,6 +37,21 @@ export function metadataToListDefinition(meta: DocTypeMeta): DocumentListDefinit
   const filterFields = [
     "docstatus", "status",
     ...(Object.hasOwn(fields, treeParentField) ? [treeParentField] : []),
+    /**
+     * Every Link is filterable, for the same reason the tree parent is.
+     *
+     * A Link IS a relationship, and "show me the rows pointing at this record" is the
+     * only question it exists to answer. Requiring `in_list_view` as well means the
+     * author must show a field as a COLUMN in order to make it queryable — two unrelated
+     * decisions welded together, and the way to satisfy it is to crowd the list with
+     * columns nobody reads.
+     *
+     * Found when a Sales Order carried `against_quotation` and "which order came from
+     * this quotation?" answered `Filter field is not allowed`. That is not a missing
+     * feature the user can see; it is a link that exists in the data and cannot be
+     * followed.
+     */
+    ...meta.fields.filter((field) => field.fieldtype === "Link" || field.fieldtype === "Dynamic Link").map((field) => field.fieldname),
     ...meta.fields.filter((field) => field.in_standard_filter || field.in_list_view).map((field) => field.fieldname),
   ].filter((field) => Object.hasOwn(fields, field));
   const sortField = meta.sort_field && Object.hasOwn(fields, meta.sort_field) ? meta.sort_field : "modified_at";

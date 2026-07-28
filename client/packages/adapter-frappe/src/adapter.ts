@@ -20,6 +20,7 @@ import type {
   OverviewDashboard,
   ProcessCatalog,
   AccessProfileSummary,
+  TenantUser,
   EffectivePermissionResult,
   DisplayValueRequest,
   DisplayValueResult,
@@ -124,6 +125,12 @@ export interface FrappeAdapter {
   addUserPermission(args: { user: string; allow: string; forValue: string; applicableFor?: string; isDefault?: boolean; hideDescendants?: boolean }): Promise<Record<string, unknown>>;
   removeUserPermission(name: string): Promise<void>;
   setUserRoles(user: string, roles: string[], roleProfile?: string): Promise<string[]>;
+  /** Mọi tài khoản đăng nhập được của tenant, kèm vai trò và danh sách vai trò gán được. */
+  listUsers(): Promise<{ users: TenantUser[]; available_roles: string[] }>;
+  /** Tạo tài khoản + mật khẩu + vai trò trong MỘT lời gọi — trạng thái nửa vời đều sai. */
+  createUser(input: { user: string; password: string; fullName?: string; email?: string; roles?: string[] }): Promise<{ user: string; roles: string[] }>;
+  /** Khoá / mở lại một tài khoản. Không xoá: user id là `owner` của mọi chứng từ họ lập. */
+  setUserEnabled(user: string, enabled: boolean): Promise<void>;
   resolveDisplayValues(items: DisplayValueRequest[]): Promise<DisplayValueResult[]>;
   translateStrings(strings: string[], lang?: string): Promise<Record<string, string>>;
   /** Cài CSRF token (từ boot) cho mọi request ghi sau đó (P1-AUTH-01: AuthBoundary gọi ngay khi boot xong). */
@@ -233,7 +240,8 @@ export interface FrappeAdapter {
   listRecentBackups(): Promise<BackupList>; // LIST 30 ngày, KHÔNG tạo
 
   // session — §9/§11
-  updatePassword(newPwd: string, o?: { logoutAll?: 0 | 1; oldPassword?: string; key?: string }): Promise<void>;
+  /** `user` bỏ trống = đổi mật khẩu của chính mình (server đòi mật khẩu cũ). */
+  updatePassword(newPwd: string, o?: { logoutAll?: 0 | 1; oldPassword?: string; key?: string; user?: string }): Promise<void>;
   logoutOtherSessions(): Promise<void>; // orch wrap clear_sessions(keep_current=True)
 
   // notification / workspace / kanban — §12

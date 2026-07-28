@@ -4,9 +4,9 @@
  * Không còn browser-default: Input/Textarea/Checkbox/Select(Radix)/Combobox(cmdk). Masked/readOnly
  * xử lý thống nhất. Link dùng services.searchLink (combobox popover). Giữ MASK để selfcheck logic ổn.
  */
-import { type ChangeEvent, type ReactNode, useEffect, useRef, useState } from "react";
+import { type ChangeEvent, type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { Check, ChevronsUpDown, Loader2, Plus, TriangleAlert } from "lucide-react";
-import { buildLinkFilters, formatDuration, linkDisplay } from "@metaforge/core";
+import { buildLinkFilters, formatDuration, getNumberFormatInfo, linkDisplay } from "@metaforge/core";
 import {
   cn, Input, Textarea, Checkbox,
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
@@ -107,6 +107,9 @@ export function NumberControl(p: FieldControlProps) {
     );
   }
 
+  // `step` chỉ còn nghĩa với ô number; ô tiền/số thực dùng ô văn bản có nhóm hàng nghìn.
+  if (fmt && p.field.fieldtype !== "Int") return <GroupedNumberInput {...p} suffix={suffix} />;
+
   return (
     <div className="relative">
       <Input
@@ -122,6 +125,140 @@ export function NumberControl(p: FieldControlProps) {
         onChange={(e: ChangeEvent<HTMLInputElement>) => p.onChange(e.target.value === "" ? null : Number(e.target.value))}
       />
       {suffix ? <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">{suffix}</span> : null}
+    </div>
+  );
+}
+
+/**
+ * Ô nhập số CÓ dấu phân cách hàng nghìn — ngay khi đang gõ.
+ *
+ * `<input type="number">` không hiển thị được dấu phân cách: đó là chuẩn HTML, không phải
+ * thiếu sót của trình duyệt. Nên đơn giá 200000 hiện đúng như vậy, và người nhập phải tự
+ * đếm số 0 để biết là hai trăm nghìn hay hai triệu. Với bảng giá cửa cuốn — nơi 1.014.000
+ * và 10.140.000 chỉ khác nhau một chữ số — đó là lỗi nhập liệu chờ xảy ra.
+ *
+ * Đổi sang ô văn bản và tự nhóm. Ba chỗ phải làm đúng, nếu không ô nhập sẽ khó dùng hơn cả
+ * khi không có dấu phân cách:
+ *
+ * 1. CON TRỎ. Chèn thêm dấu chấm làm chuỗi dài ra, nên con trỏ phải đặt lại theo SỐ CHỮ SỐ
+ *    đứng trước nó, không theo vị trí ký tự. Không làm thì mỗi lần vượt mốc nghìn, con trỏ
+ *    nhảy về sai chỗ và người dùng gõ tiếp vào giữa số.
+ * 2. ĐANG GÕ DỞ. "1.234," là trạng thái hợp lệ khi người ta sắp gõ phần thập phân. Chuẩn
+ *    hoá ngay lúc đó sẽ nuốt mất dấu phẩy vừa gõ.
+ * 3. GIÁ TRỊ GỬI RA NGOÀI vẫn là số thuần — form và server không bao giờ thấy dấu phân cách.
+ */
+function GroupedNumberInput(p: FieldControlProps & { suffix?: string }) {
+  const fmt = p.services!.fmt!;
+  const info = getNumberFormatInfo(fmt.config.numberFormat);
+  const group = info.group || "";
+  const decimal = info.decimal || ".";
+  const ref = useRef<HTMLInputElement>(null);
+  const caret = useRef<number | null>(null);
+  /** Vị trí con trỏ TUYỆT ĐỐI, cho lần chèn dấu thập phân — nó không thêm chữ số nào. */
+  const caretExact = useRef<number | null>(null);
+
+  const digitsBefore = (text: string, at: number) => text.slice(0, at).replace(/\D/g, "").length;
+  const groupDigits = (raw: string) => (group ? raw.replace(/\B(?=(\d{3})+(?!\d))/g, group) : raw);
+
+  /** "1.234.567,8" → "1234567.8". Chuỗi rỗng → null, để phân biệt "chưa nhập" với số 0. */
+  const parse = (text: string): number | null => {
+    // `split/join` chứ không phải regex: dấu nhóm là "." trong định dạng Việt Nam, và một
+    // regex chưa escape sẽ khớp MỌI ký tự — xoá sạch cả chữ số.
+    const cleaned = text.split(group).join("").replace(decimal, ".").replace(/[^\d.-]/g, "");
+    if (!cleaned || cleaned === "-" || cleaned === ".") return null;
+    const value = Number(cleaned);
+    return Number.isFinite(value) ? value : null;
+  };
+
+  /** Số → chuỗi đã nhóm. Giữ nguyên phần thập phân người dùng đang gõ, không tự làm tròn. */
+  const display = (value: unknown): string => {
+    if (value === null || value === undefined || value === "") return "";
+    const [whole, fraction] = String(value).split(".");
+    const sign = whole?.startsWith("-") ? "-" : "";
+    const grouped = groupDigits((whole ?? "").replace("-", ""));
+    return sign + grouped + (fraction === undefined ? "" : decimal + fraction);
+  };
+
+  // Trạng thái chuỗi sống trong ô, để "1.234," giữ được dấu phẩy đang gõ dở.
+  const [text, setText] = useState(() => display(p.value));
+  const [editing, setEditing] = useState(false);
+  // Giá trị từ ngoài vào (tải bản ghi, tính lại thành tiền) phải hiện ngay — trừ khi người
+  // dùng đang gõ, vì lúc đó ghi đè sẽ giật mất thứ họ vừa nhập.
+  useEffect(() => { if (!editing) setText(display(p.value)); }, [p.value, editing]);
+
+  useEffect(() => {
+    if (caretExact.current !== null && ref.current) {
+      const at = caretExact.current;
+      caretExact.current = null;
+      caret.current = null;
+      ref.current.setSelectionRange(at, at);
+      return;
+    }
+    if (caret.current === null || !ref.current) return;
+    const wanted = caret.current;
+    caret.current = null;
+    let position = 0, seen = 0;
+    while (position < text.length && seen < wanted) { if (/\d/.test(text[position]!)) seen += 1; position += 1; }
+    ref.current.setSelectionRange(position, position);
+  }, [text]);
+
+  /**
+   * Phím `.` và `,` LUÔN là dấu thập phân, bất kể định dạng site dùng dấu nào.
+   *
+   * Không có luật này thì trong định dạng Việt Nam (`#.###,##`, nhóm là dấu chấm) gõ "3.5"
+   * ra **35** — dấu chấm bị hiểu là dấu phân nhóm rồi bỏ đi. Im lặng, và sai một bậc mười.
+   * Bắt được đúng ở ô "rộng cắt lá": gõ 3.5 m, máy đọc 35 m. Lần đó nó lộ ra vì kho không
+   * có cây nhôm 35 m nên bị từ chối; ở ô đơn giá thì 1.5 thành 15 và không có gì báo cả.
+   *
+   * Người dùng KHÔNG BAO GIỜ tự gõ dấu phân nhóm — ô này tự chèn. Nên hai phím đó chỉ còn
+   * một nghĩa duy nhất, và gán đúng nghĩa đó là chuyện của ô nhập, không phải của người gõ.
+   */
+  const typeDecimal = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== "." && event.key !== ",") return;
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    event.preventDefault();
+    const input = event.currentTarget;
+    const start = input.selectionStart ?? text.length;
+    const end = input.selectionEnd ?? start;
+    const kept = text.slice(0, start) + text.slice(end);
+    // Đã có dấu thập phân rồi thì phím này không làm gì — hai dấu thì không còn là số.
+    if (kept.includes(decimal)) return;
+    const next = text.slice(0, start) + decimal + text.slice(end);
+    caretExact.current = start + decimal.length;
+    setText(next);
+    p.onChange(parse(next));
+  };
+
+  return (
+    <div className="relative">
+      <Input
+        ref={ref}
+        id={labelId(p)}
+        className={cn("mf-control text-right tabular-nums", p.suffix && "pr-8")}
+        type="text"
+        inputMode="decimal"
+        value={text}
+        readOnly={p.readOnly}
+        aria-invalid={p.error ? true : undefined}
+        {...a11y(p)}
+        onFocus={() => setEditing(true)}
+        onBlur={() => { setEditing(false); setText(display(p.value)); }}
+        onKeyDown={typeDecimal}
+        onChange={(e: ChangeEvent<HTMLInputElement>) => {
+          const raw = e.target.value;
+          const before = digitsBefore(raw, e.target.selectionStart ?? raw.length);
+          const parsed = parse(raw);
+          // Hiển thị theo CHUỖI người dùng vừa gõ, không theo số đã parse — nếu không thì
+          // dấu thập phân cuối cùng ("1.234,") biến mất ngay khi vừa gõ.
+          const [whole = "", ...rest] = raw.split(group).join("").split(decimal);
+          const sign = whole.startsWith("-") ? "-" : "";
+          const next = sign + groupDigits(whole.replace(/[^\d]/g, "")) + (rest.length ? decimal + rest.join("").replace(/[^\d]/g, "") : "");
+          caret.current = before;
+          setText(next);
+          p.onChange(parsed);
+        }}
+      />
+      {p.suffix ? <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">{p.suffix}</span> : null}
     </div>
   );
 }

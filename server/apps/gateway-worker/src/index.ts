@@ -10,7 +10,7 @@ import {
   verifyTrustedIdentity,
 } from "../../../packages/auth/src/index.js";
 import { errorResponse, errors, jsonResponse, randomId, timingSafeEqualString } from "../../../packages/core/src/index.js";
-import { isFrappePath, LOGIN_PATH } from "../../../packages/frappe-api/src/index.js";
+import { isFrappePath, isPublicFilePath, LOGIN_PATH } from "../../../packages/frappe-api/src/index.js";
 
 interface GatewayEnv {
   ROUTES: KVNamespace;
@@ -171,9 +171,14 @@ async function resolveAppCallback(
  */
 const CLIENT_ROUTE_PREFIXES = [
   "/app/", "/x/", "/overview/", "/process/", "/workspace/", "/report/", "/page/", "/dashboard/",
+  // The public shop. A prefix rather than exact paths because every product has its own
+  // URL — `/shop/npk-16-16-8` must serve the shell so the page can be shared, linked and
+  // reloaded, which is most of what a product page is for.
+  "/shop/",
 ];
 const CLIENT_ROUTE_EXACT = new Set([
   "/",
+  "/shop",
   "/login",
   "/signup",
   "/catalog",
@@ -265,7 +270,12 @@ function withPlatformHeaders(request: Request, tenantId: string, traceId: string
  */
 async function resolveActor(request: Request, env: GatewayEnv, url: URL, tenantId: string) {
   if (env.AUTH_MODE === "development") return staticDevelopmentActor(env.DEV_ACTOR_JSON);
-  if (isFrappePath(url.pathname) && !request.headers.get("authorization")) {
+  // `/files/…` is forwarded as GUEST for the same reason as a Frappe path: a product
+  // photograph on the public catalogue arrives with no token and no cookie, and demanding
+  // one here would turn every image on the storefront into an authentication failure. The
+  // tenant worker still decides — a private file is refused there, where the row that says
+  // so lives.
+  if ((isFrappePath(url.pathname) || isPublicFilePath(url.pathname)) && !request.headers.get("authorization")) {
     return { user_id: "Guest", roles: ["Guest"] };
   }
   return claimsToActor(await verifyBearerJwt(request, {

@@ -10,6 +10,7 @@ import { FormView } from "../form/FormView.js";
 import { useMetaForge } from "./provider.js";
 import { useFormMeta, useCapabilities, NO_CAPS } from "./hooks.js";
 import { consumeDuplicate } from "./duplicate.js";
+import { editableCodeField, suggestEditableCode } from "./editable-code.js";
 
 const pad = (n: number): string => String(n).padStart(2, "0");
 
@@ -53,6 +54,12 @@ function blankDoc(meta: DocTypeMeta, contextDefaults: Record<string, string> = {
   for (const [fieldname, value] of Object.entries(contextDefaults)) {
     if (meta.fields.some((f) => f.fieldname === fieldname) && (doc[fieldname] == null || doc[fieldname] === "")) doc[fieldname] = value;
   }
+  // Mã định danh chính có sẵn ngay khi form mở nhưng vẫn là Data control thường — khách có thể sửa.
+  // Đặt SAU default/context để không ghi đè quy ước mã mà app hoặc tenant đã khai rõ.
+  const codeField = editableCodeField(meta);
+  if (codeField && (doc[codeField.fieldname] == null || doc[codeField.fieldname] === "")) {
+    doc[codeField.fieldname] = suggestEditableCode(meta, codeField);
+  }
   return doc;
 }
 
@@ -85,7 +92,13 @@ export function NewFormContainer(props: NewFormContainerProps) {
       const dup = consumeDuplicate(doctype);
       // dup không bao giờ mang "docstatus"/"name" (loại trừ ở SYSTEM_FIELDS, xem duplicate.ts) — cast
       // an toàn, TS chỉ đang widen quá tay do spread 1 Record<string,unknown> chưa rõ shape tĩnh.
-      if (dup) return { ...base, ...dup, name: "new" } as Doc;
+      if (dup) {
+        // Không chép mã định danh của bản gốc: nó thường unique và sẽ làm bản nhân bản không lưu được.
+        // `base` đã có một mã gợi ý mới; xoá mã cũ khỏi payload nhân bản để giữ đúng giá trị đó.
+        const codeField = editableCodeField(metaQ.data);
+        if (codeField) delete dup[codeField.fieldname];
+        return { ...base, ...dup, name: "new" } as Doc;
+      }
     }
     return base;
     // eslint-disable-next-line react-hooks/exhaustive-deps

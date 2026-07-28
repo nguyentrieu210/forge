@@ -1,0 +1,14 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "cloudforge-app-alumdoor",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-27",
+  "compatibility_flags": ["nodejs_compat"],
+  // Không binding nào chạm được dữ liệu. Mọi đọc/ghi đi ngược qua gateway với danh tính của
+  // chính người dùng vừa gọi, nên Worker này không tự làm được gì thay mặt ai.
+  //
+  // Binding dưới đây là đường ĐI NGƯỢC đó: `fetch()` thẳng tới hostname của tenant trả 522 vì
+  // Worker chạy sau cùng zone. Service binding gọi thẳng script gateway — không DNS, không
+  // zone — và gateway vẫn đòi đủ credential theo (tenant, app) cùng danh tính đã ký.
+  "services": [{ "binding": "PLATFORM", "service": "cloudforge-gateway" }]
+}

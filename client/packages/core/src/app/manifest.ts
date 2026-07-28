@@ -23,6 +23,43 @@ export interface AppNavItem {
   route?: string;
 }
 
+/**
+ * Một thao tác thực hiện bằng cách ĐIỀN FORM rồi bấm chạy, không phải bằng cách sửa một
+ * bản ghi. Xem `AppAction` phía server (packages/app-registry) để biết vì sao nó tồn tại.
+ *
+ * Nằm trong manifest nên màn hình là DỮ LIỆU: một app mới khai thêm một thao tác không cần
+ * bản build client nào.
+ */
+export interface AppActionField {
+  fieldname: string;
+  label: string;
+  fieldtype: string;
+  options?: string;
+  required?: boolean;
+  default?: string;
+  description?: string;
+}
+export interface AppActionCall {
+  method: string;
+  label: string;
+  /** Câu hỏi phải trả lời trước khi chạy. Có thì màn hình hỏi lại, không thì chạy thẳng. */
+  confirm?: string;
+}
+export interface AppAction {
+  name: string;
+  label: string;
+  icon?: string;
+  group?: string;
+  description?: string;
+  fields: AppActionField[];
+  /** Chỉ ĐỌC: cho xem trước điều sắp xảy ra. */
+  preview?: AppActionCall;
+  commit: AppActionCall;
+  permission_doctype: string;
+  /** Khoá trong kết quả chứa mảng dòng để hiện thành bảng. */
+  result_table?: string;
+}
+
 export interface AppLocaleOverride {
   numberFormat?: string;
   currency?: string;
@@ -49,6 +86,8 @@ export interface AppManifest {
   /** app key dùng cho Overview/Process server definitions (vd stock/selling/buying). */
   domain?: string;
   nav: AppNavItem[];
+  /** Thao tác dạng form do app khai. Server đã lọc theo quyền trước khi gửi xuống. */
+  actions?: AppAction[];
 }
 
 export interface ManifestIssue {

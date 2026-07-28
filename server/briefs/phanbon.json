@@ -1,0 +1,815 @@
+{
+  "$schema": "./brief.schema.json",
+  "id": "phanbon",
+  "name": "Phân bón — CRM, Kho và Công nợ",
+  "version": "1.0.1",
+  "module": "Phân bón",
+  "domain": "phanbon",
+  "brand": "warm",
+  "locale": {
+    "currency": "VND",
+    "numberFormat": "#.###,##",
+    "dateFormat": "dd-mm-yyyy"
+  },
+
+  "//pham-vi": [
+    "Một nhà máy phân bón bán ba nhóm hàng qua ba kiểu khách khác nhau, và đó là lý do brief",
+    "này tồn tại thay vì cài một app bán hàng chung:",
+    "  - PHÂN BÓN đi qua đại lý và HTX. Không ai mua trên web; họ hỏi giá, mặc cả theo sản",
+    "    lượng, lấy hàng gối đầu rồi trả sau. Nên trục chính là BÁO GIÁ → ĐƠN → CÔNG NỢ.",
+    "  - GẠO và RƯỢU bán lẻ được. Trục chính là ĐƠN WEB từ trang bán hàng công khai.",
+    "Hai trục dùng CHUNG một danh mục sản phẩm và CHUNG một sổ kho. Tách danh mục ra là cách",
+    "chắc chắn nhất để giá trên web lệch giá trong kho, và người phát hiện là khách."
+  ],
+
+  "//vi-sao-ten-doctype-la-tieng-anh": [
+    "Sales Order, Delivery Note, Sales Invoice, Payment Entry, Stock Entry phải giữ ĐÚNG tên",
+    "này. Nhân nghiệp vụ của nền tảng (clouderp-selling + clouderp-stock + ledger) gắn",
+    "controller theo TÊN doctype: đúng tên thì xuất kho tính tồn trong giao dịch và từ chối khi",
+    "thiếu hàng, hoá đơn ghi sổ cái và sinh công nợ, phiếu thu phân bổ vào hoá đơn.",
+    "Sai một chữ là rơi về controller chung — ghi vẫn thành công, nhưng KHÔNG có bút toán nào:",
+    "kho không trừ, công nợ không lên, và không có gì báo lỗi."
+  ],
+
+  "//khong-co-worker": [
+    "Bản này KHÔNG khai worker. Mọi luật cần TÍNH rồi mới quyết (đủ tồn hay không, còn hạn mức",
+    "công nợ hay không) đều đã nằm trong nhân nền tảng, bên trong giao dịch. Thêm một validator",
+    "'kiểm rồi ghi' ở ngoài chỉ tạo ra ảo giác an toàn: hai người xuất cùng lúc sẽ cùng qua cửa",
+    "kiểm rồi cùng ghi.",
+    "Hạn mức công nợ của đại lý là thứ DUY NHẤT brief chưa thi hành được — nó ghi được vào",
+    "Customer.credit_limit và đọc được trên báo cáo, nhưng chưa CHẶN được lúc bán. Chặn thật",
+    "cần một Worker đọc tổng nợ trong cùng giao dịch; xem docs/ROADMAP_PHANBON.md."
+  ],
+
+  "roles": [
+    "Giám đốc",
+    "Kinh doanh",
+    "Chăm sóc khách hàng",
+    "Thủ kho",
+    "Kế toán"
+  ],
+
+  "home": "Sales Order",
+
+  "//storefront": [
+    "Trang bán hàng công khai. Ba điều đáng nói vì mỗi điều là một cách hỏng đã thấy ở nơi khác:",
+    "",
+    "1. `fields` là DANH SÁCH TRẮNG. Trên cùng doctype Item còn có valuation_rate (giá vốn) và",
+    "   giá đại lý qua Item Price. Một API 'đọc sản phẩm' trả cả bản ghi là đủ để đối thủ biết",
+    "   biên lợi nhuận của mình. Field không liệt kê ở đây thì không bao giờ ra ngoài.",
+    "",
+    "2. `priceField` là chỗ server tính tiền. Client gửi mã hàng và số lượng; đơn giá do server",
+    "   đọc từ chính bản ghi đã publish. Trình duyệt tự khai giá thì không còn là cửa hàng.",
+    "",
+    "3. `trackBy: phone` là yếu tố thứ hai. Mã đơn DW-2026-00001 đoán được; nếu tra cứu chỉ cần",
+    "   mã thì bất kỳ ai cũng duyệt hết tên, địa chỉ, số điện thoại khách của mình.",
+    "",
+    "Rượu: chỉ đưa lên đây loại dưới 15 độ. `age_confirmed` nằm trong buyerFields để khách xác",
+    "nhận đủ 18 tuổi ngay trên form đặt hàng."
+  ],
+  "storefront": {
+    "catalog": {
+      "doctype": "Item",
+      "publishedField": "published",
+      "slugField": "slug",
+      "priceField": "retail_price",
+      "facetField": "item_group",
+      "fields": [
+        "item_code",
+        "item_name",
+        "item_group",
+        "stock_uom",
+        "pack_size",
+        "retail_price",
+        "npk_ratio",
+        "rice_variety",
+        "alcohol_abv",
+        "origin",
+        "image",
+        "short_description",
+        "slug"
+      ],
+      "search": ["item_name", "item_code", "short_description"]
+    },
+    "order": {
+      "doctype": "Web Order",
+      "role": "Chăm sóc khách hàng",
+      "lines": "items",
+      "placedAt": "order_date",
+      "total": "total_amount",
+      "trackBy": "phone",
+      "buyerFields": [
+        "buyer_name",
+        "phone",
+        "email",
+        "ship_address",
+        "province",
+        "payment_method",
+        "age_confirmed",
+        "note"
+      ],
+      "maxPerDay": 20
+    }
+  },
+
+  "fixtures": [
+    {
+      "type": "Company",
+      "name": "PHANBON",
+      "data": {
+        "label": "Công ty phân bón",
+        "abbr": "PB",
+        "default_currency": "VND"
+      }
+    },
+    {
+      "type": "Currency",
+      "name": "VND",
+      "data": {
+        "currency_scale": 0
+      }
+    },
+    {
+      "type": "Account",
+      "name": "Phải thu khách hàng",
+      "data": { "account_type": "Receivable" }
+    },
+    {
+      "type": "Account",
+      "name": "Doanh thu bán hàng",
+      "data": { "account_type": "Income" }
+    },
+    {
+      "type": "Account",
+      "name": "Giá vốn hàng bán",
+      "data": { "account_type": "Expense" }
+    },
+    {
+      "type": "Account",
+      "name": "Hàng tồn kho",
+      "data": { "account_type": "Asset" }
+    },
+    {
+      "type": "Account",
+      "name": "Tiền mặt",
+      "data": { "account_type": "Asset" }
+    },
+    {
+      "type": "Account",
+      "name": "Tiền gửi ngân hàng",
+      "data": { "account_type": "Asset" }
+    },
+    {
+      "type": "Account",
+      "name": "Chênh lệch làm tròn",
+      "data": { "account_type": "Expense" }
+    }
+  ],
+
+  "//reports": [
+    "Năm câu hỏi người điều hành hỏi hằng tuần. Mỗi báo cáo đọc đúng một doctype và quyền kiểm",
+    "trên chính doctype đó, nên kế toán thấy công nợ còn nhân viên kinh doanh thì không."
+  ],
+  "reports": [
+    {
+      "name": "Công nợ theo khách hàng",
+      "doctype": "Sales Invoice",
+      "columns": [
+        "customer:Link(Customer) Khách hàng",
+        "count(name):Int Số hoá đơn",
+        "sum(grand_total):Currency Tổng hoá đơn",
+        "sum(outstanding_amount):Currency Còn nợ"
+      ],
+      "groupBy": "customer",
+      "orderBy": "sum(outstanding_amount) desc",
+      "filters": ["customer", "posting_at", "due_date"],
+      "icon": "wallet"
+    },
+    {
+      "name": "Doanh số theo khách hàng",
+      "doctype": "Sales Order",
+      "columns": [
+        "customer:Link(Customer) Khách hàng",
+        "count(name):Int Số đơn",
+        "sum(grand_total):Currency Tổng giá trị"
+      ],
+      "groupBy": "customer",
+      "orderBy": "sum(grand_total) desc",
+      "filters": ["customer", "transaction_date", "sales_channel"],
+      "icon": "shopping-cart"
+    },
+    {
+      "name": "Báo giá theo trạng thái",
+      "doctype": "Quotation",
+      "columns": [
+        "workflow_state:Data Trạng thái",
+        "count(name):Int Số báo giá",
+        "sum(grand_total):Currency Tổng giá trị"
+      ],
+      "groupBy": "workflow_state",
+      "orderBy": "sum(grand_total) desc",
+      "filters": ["customer", "customer_segment", "quote_date", "owner_staff"],
+      "icon": "file-text"
+    },
+    {
+      "name": "Chăm sóc khách theo nhân viên",
+      "doctype": "Sales Activity",
+      "columns": [
+        "owner_staff:Data Nhân viên",
+        "count(name):Int Số lần chăm sóc"
+      ],
+      "groupBy": "owner_staff",
+      "orderBy": "count(name) desc",
+      "filters": ["owner_staff", "activity_type", "activity_date", "outcome"],
+      "icon": "phone-call"
+    },
+    {
+      "name": "Đơn web theo trạng thái",
+      "doctype": "Web Order",
+      "columns": [
+        "workflow_state:Data Trạng thái",
+        "count(name):Int Số đơn",
+        "sum(total_amount):Currency Tổng tiền"
+      ],
+      "groupBy": "workflow_state",
+      "orderBy": "count(name) desc",
+      "filters": ["workflow_state", "order_date", "province"],
+      "icon": "globe"
+    }
+  ],
+
+  "doctypes": [
+    {
+      "name": "Item",
+      "label": "Sản phẩm",
+      "icon": "package",
+      "group": "Danh mục",
+      "naming": "field:item_code",
+      "title": "item_name",
+      "search": ["item_code", "item_name"],
+      "list": ["item_code", "item_name", "item_group", "stock_uom", "retail_price", "published"],
+      "//fields": [
+        "MỘT danh mục cho cả kho lẫn trang bán hàng. `published` là thứ quyết định sản phẩm có",
+        "ra trang công khai hay không — mặc định TẮT, vì một sản phẩm vừa tạo mà tự lên web là",
+        "chuyện không ai muốn giải thích với khách.",
+        "`retail_price` là giá NIÊM YẾT cho khách lẻ và là giá duy nhất được phép hiện công khai.",
+        "Giá đại lý và giá HTX nằm ở Item Price theo bảng giá, không bao giờ ra trang public."
+      ],
+      "fields": [
+        "item_code:Data*! Mã hàng",
+        "item_name:Data! Tên hàng",
+        "item_group:Select(Phân bón,Gạo,Rượu,Bao bì,Nguyên liệu)!=(Phân bón) Nhóm hàng",
+        "stock_uom:Select(Bao,Túi,Kg,Tấn,Chai,Thùng,Lít,Can,Gói,Cái)!=(Bao) Đơn vị tính",
+        "pack_size:Data Quy cách đóng gói",
+        "retail_price:Currency Giá lẻ niêm yết",
+        "valuation_rate:Currency Giá vốn chuẩn",
+        "npk_ratio:Data Tỷ lệ NPK (chỉ phân bón)",
+        "rice_variety:Data Giống lúa / loại gạo",
+        "alcohol_abv:Float Nồng độ cồn (%vol, chỉ rượu)",
+        "origin:Data Xuất xứ / vùng trồng",
+        "image:Attach Image Ảnh sản phẩm",
+        "short_description:Small Text Mô tả ngắn cho trang bán hàng",
+        "slug:Data* Đường dẫn trên trang bán hàng",
+        "published:Check Hiện trên trang bán hàng",
+        "is_stock_item:Check=(1) Quản lý tồn kho",
+        "disabled:Check Ngừng kinh doanh"
+      ],
+      "permissions": {
+        "Giám đốc": "rwc",
+        "Kinh doanh": "r",
+        "Chăm sóc khách hàng": "r",
+        "Thủ kho": "rwc",
+        "Kế toán": "r"
+      }
+    },
+
+    {
+      "name": "Warehouse",
+      "label": "Kho",
+      "icon": "warehouse",
+      "group": "Danh mục",
+      "naming": "field:warehouse_name",
+      "title": "warehouse_name",
+      "list": ["warehouse_name", "address", "keeper"],
+      "fields": [
+        "warehouse_name:Data*! Tên kho",
+        "address:Small Text Địa chỉ",
+        "keeper:Data Thủ kho phụ trách",
+        "disabled:Check Ngừng dùng"
+      ],
+      "permissions": {
+        "Giám đốc": "rwc",
+        "Thủ kho": "rwc",
+        "Kinh doanh": "r",
+        "Kế toán": "r"
+      }
+    },
+
+    {
+      "name": "Customer",
+      "label": "Khách hàng",
+      "icon": "users",
+      "group": "Danh mục",
+      "naming": "field:customer_name",
+      "title": "customer_name",
+      "search": ["customer_name", "phone"],
+      "list": ["customer_name", "customer_segment", "province", "phone", "credit_limit", "owner_staff"],
+      "//segment": [
+        "Ba hạng khách là ba cách bán khác nhau, không phải một nhãn trang trí: đại lý mua sỉ và",
+        "gối đầu, HTX mua theo vụ và cần báo giá theo lô, khách lẻ trả ngay. `payment_terms` mặc",
+        "định 'Trả ngay' để một khách mới không vô tình được cấp công nợ."
+      ],
+      "fields": [
+        "customer_name:Data*! Tên khách hàng",
+        "customer_segment:Select(Đại lý,HTX/Nông trại,Khách lẻ)!=(Khách lẻ) Hạng khách",
+        "phone:Data Điện thoại",
+        "email:Data Email",
+        "address:Small Text Địa chỉ",
+        "province:Data Tỉnh/Thành",
+        "crop:Data Cây trồng chính",
+        "farm_area_ha:Float Diện tích canh tác (ha)",
+        "tax_id:Data Mã số thuế",
+        "credit_limit:Currency Hạn mức công nợ",
+        "payment_terms:Select(Trả ngay,7 ngày,15 ngày,30 ngày,45 ngày,60 ngày)=(Trả ngay) Điều khoản thanh toán",
+        "owner_staff:Data Nhân viên phụ trách",
+        "disabled:Check Ngừng giao dịch"
+      ],
+      "permissions": {
+        "Giám đốc": "rwc",
+        "Kinh doanh": "rwc",
+        "Chăm sóc khách hàng": "rwc",
+        "Kế toán": "r",
+        "Thủ kho": "r"
+      }
+    },
+
+    {
+      "name": "Lead",
+      "label": "Khách tiềm năng",
+      "icon": "user-plus",
+      "group": "CRM",
+      "naming": "KTN-.YYYY.-#####",
+      "title": "lead_name",
+      "search": ["lead_name", "phone"],
+      "list": ["lead_name", "phone", "province", "lead_source", "lead_status", "owner_staff"],
+      "//nguon": [
+        "`lead_source` có 'Trang bán hàng' vì form trên landing đổ thẳng vào đây. Đó là lý do",
+        "trang công khai đáng làm cho hàng phân bón: khách không mua online, nhưng họ để lại số."
+      ],
+      "fields": [
+        "lead_name:Data! Tên khách",
+        "phone:Data! Điện thoại",
+        "email:Data Email",
+        "province:Data Tỉnh/Thành",
+        "address:Small Text Địa chỉ",
+        "crop:Data Cây trồng",
+        "farm_area_ha:Float Diện tích (ha)",
+        "interested_in:Select(Phân bón,Gạo,Rượu,Nhiều nhóm)=(Phân bón) Quan tâm nhóm hàng",
+        "lead_source:Select(Trang bán hàng,Giới thiệu,Hội thảo,Đại lý giới thiệu,Gọi đến,Khác)=(Trang bán hàng) Nguồn",
+        "lead_status:Select(Mới,Đang liên hệ,Đã báo giá,Chuyển thành khách,Không tiềm năng)=(Mới) Trạng thái",
+        "owner_staff:Data Nhân viên phụ trách",
+        "note:Small Text Ghi chú"
+      ],
+      "permissions": {
+        "Giám đốc": "rwc",
+        "Kinh doanh": "rwc",
+        "Chăm sóc khách hàng": "rwc",
+        "Kế toán": "r"
+      }
+    },
+
+    {
+      "name": "Sales Activity",
+      "label": "Chăm sóc khách",
+      "icon": "phone-call",
+      "group": "CRM",
+      "naming": "CS-.YYYY.-#####",
+      "title": "subject",
+      "list": ["activity_date", "activity_type", "subject", "owner_staff", "outcome", "next_action_date"],
+      "//vong-doi": [
+        "Đây là thứ giữ vòng đời khách hàng chạy: mỗi lần gọi, mỗi lần thăm ruộng, mỗi mẫu gửi",
+        "đi đều để lại một dòng có NGÀY HẸN LẠI. Không có nó, 'chăm sóc khách' chỉ là trí nhớ",
+        "của một nhân viên, và nó nghỉ việc cùng với người đó."
+      ],
+      "fields": [
+        "activity_date:Date! Ngày thực hiện",
+        "activity_type:Select(Gọi điện,Thăm đại lý,Thăm ruộng/vườn,Gửi mẫu,Hội thảo đầu bờ,Email/Zalo,Khác)!=(Gọi điện) Hình thức",
+        "subject:Data! Nội dung",
+        "party_type:Select(Lead,Customer)!=(Lead) Đối tượng",
+        "party_name:Dynamic Link(party_type)! Khách",
+        "owner_staff:Data! Nhân viên thực hiện",
+        "outcome:Select(Quan tâm,Cần báo giá,Hẹn gặp lại,Chưa có nhu cầu,Từ chối)=(Quan tâm) Kết quả",
+        "next_action_date:Date Hẹn liên hệ lại",
+        "detail:Small Text Chi tiết trao đổi"
+      ],
+      "permissions": {
+        "Giám đốc": "rwc",
+        "Kinh doanh": "rwc",
+        "Chăm sóc khách hàng": "rwc",
+        "Kế toán": "r"
+      }
+    },
+
+    {
+      "name": "Quotation Item",
+      "label": "Dòng báo giá",
+      "child": true,
+      "naming": "autoincrement",
+      "fields": [
+        "item_code:Link(Item)! Mã hàng",
+        "qty:Float! Số lượng",
+        "rate:Currency! Đơn giá",
+        "amount:Currency~ Thành tiền",
+        "note:Data Ghi chú dòng"
+      ],
+      "permissions": {
+        "Giám đốc": "rwc",
+        "Kinh doanh": "rwc",
+        "Kế toán": "r"
+      }
+    },
+
+    {
+      "name": "Quotation",
+      "label": "Báo giá",
+      "icon": "file-text",
+      "group": "Bán hàng",
+      "inboxLabel": "Duyệt báo giá",
+      "inboxIcon": "check-circle",
+      "naming": "BG-.YYYY.-#####",
+      "title": "customer",
+      "list": ["customer", "customer_segment", "quote_date", "grand_total", "workflow_state"],
+      "//duyet-gia": [
+        "Báo giá phải qua duyệt vì đây là chỗ tiền rò rỉ ở ngành phân bón: chiết khấu sản lượng",
+        "cho đại lý do nhân viên tự quyết thì tháng nào cũng có một đơn bán dưới giá vốn.",
+        "`allow_self_approval` để mặc định (tắt) trên bước duyệt — người soạn báo giá không tự",
+        "duyệt được báo giá của chính mình."
+      ],
+      "fields": [
+        "customer:Link(Customer) Khách hàng",
+        "lead:Link(Lead) Hoặc khách tiềm năng",
+        "customer_segment:Select(Đại lý,HTX/Nông trại,Khách lẻ)!=(Đại lý) Hạng khách",
+        "contact_name:Data Người liên hệ",
+        "phone:Data Điện thoại",
+        "quote_date:Date! Ngày báo giá",
+        "valid_until:Date Hiệu lực đến",
+        "items:Table(Quotation Item)! Dòng hàng",
+        "grand_total:Currency Tổng tiền",
+        "delivery_terms:Select(Giao tại kho,Giao tại đại lý,Giao tại ruộng)=(Giao tại kho) Điều kiện giao",
+        "payment_terms:Select(Trả ngay,7 ngày,15 ngày,30 ngày,45 ngày,60 ngày)=(Trả ngay) Điều khoản thanh toán",
+        "owner_staff:Data! Nhân viên phụ trách",
+        "note:Small Text Ghi chú"
+      ],
+      "permissions": {
+        "Giám đốc": "rwcsxa",
+        "Kinh doanh": "rwcs",
+        "Chăm sóc khách hàng": "r",
+        "Kế toán": "r"
+      },
+      "workflow": {
+        "name": "Duyệt báo giá",
+        "states": {
+          "Nháp": 0,
+          "Chờ duyệt giá": 0,
+          "Đã duyệt": 1,
+          "Đã gửi khách": 1,
+          "Khách chốt": 1,
+          "Khách từ chối": 2,
+          "Hết hiệu lực": 2
+        },
+        "transitions": [
+          ["Nháp", "Gửi duyệt", "Chờ duyệt giá", "Kinh doanh"],
+          ["Nháp", "Gửi duyệt", "Chờ duyệt giá", "Giám đốc"],
+          ["Chờ duyệt giá", "Duyệt giá", "Đã duyệt", "Giám đốc"],
+          ["Chờ duyệt giá", "Trả lại", "Nháp", "Giám đốc"],
+          ["Đã duyệt", "Gửi khách", "Đã gửi khách", "Kinh doanh", "self"],
+          ["Đã gửi khách", "Khách đồng ý", "Khách chốt", "Kinh doanh", "self"],
+          ["Đã gửi khách", "Khách từ chối", "Khách từ chối", "Kinh doanh", "self"],
+          ["Đã gửi khách", "Hết hạn", "Hết hiệu lực", "Giám đốc"]
+        ]
+      }
+    },
+
+    {
+      "name": "Sales Order Item",
+      "label": "Dòng đơn hàng",
+      "child": true,
+      "naming": "autoincrement",
+      "fields": [
+        "item_code:Link(Item)! Mã hàng",
+        "qty:Float! Số lượng",
+        "rate:Currency! Đơn giá",
+        "amount:Currency~ Thành tiền",
+        "warehouse:Link(Warehouse) Kho xuất",
+        "delivered_qty:Float~ Đã giao"
+      ],
+      "permissions": {
+        "Giám đốc": "rwc",
+        "Kinh doanh": "rwc",
+        "Thủ kho": "r",
+        "Kế toán": "r"
+      }
+    },
+
+    {
+      "name": "Sales Order",
+      "label": "Đơn hàng",
+      "icon": "shopping-cart",
+      "group": "Bán hàng",
+      "naming": "DH-.YYYY.-#####",
+      "title": "customer",
+      "list": ["customer", "transaction_date", "sales_channel", "grand_total", "delivered_percentage", "billed_percentage"],
+      "fields": [
+        "customer:Link(Customer)! Khách hàng",
+        "company:Link(Company)!=(PHANBON) Công ty",
+        "currency:Link(Currency)!=(VND) Tiền tệ",
+        "transaction_date:Date! Ngày đặt",
+        "delivery_date:Date Ngày giao dự kiến",
+        "sales_channel:Select(Đại lý,HTX/Nông trại,Khách lẻ,Trang bán hàng)=(Đại lý) Kênh bán",
+        "against_quotation:Link(Quotation) Theo báo giá",
+        "against_web_order:Link(Web Order) Theo đơn web",
+        "items:Table(Sales Order Item)! Dòng hàng",
+        "grand_total:Currency~ Tổng tiền",
+        "delivered_percentage:Percent~ Đã giao (%)",
+        "billed_percentage:Percent~ Đã xuất hoá đơn (%)",
+        "note:Small Text Ghi chú"
+      ],
+      "permissions": {
+        "Giám đốc": "rwcsxa",
+        "Kinh doanh": "rwcs",
+        "Thủ kho": "r",
+        "Kế toán": "r"
+      }
+    },
+
+    {
+      "name": "Delivery Note Item",
+      "label": "Dòng phiếu xuất",
+      "child": true,
+      "naming": "autoincrement",
+      "fields": [
+        "item_code:Link(Item)! Mã hàng",
+        "qty:Float! Số lượng xuất",
+        "warehouse:Link(Warehouse)! Kho xuất",
+        "rate:Currency Đơn giá bán",
+        "valuation_rate:Currency Giá vốn",
+        "amount:Currency~ Thành tiền"
+      ],
+      "permissions": {
+        "Giám đốc": "rwc",
+        "Thủ kho": "rwc",
+        "Kinh doanh": "r",
+        "Kế toán": "r"
+      }
+    },
+
+    {
+      "name": "Delivery Note",
+      "label": "Phiếu xuất kho",
+      "icon": "truck",
+      "group": "Kho",
+      "naming": "PXK-.YYYY.-#####",
+      "title": "customer",
+      "list": ["customer", "posting_at", "against_sales_order", "driver", "vehicle"],
+      "fields": [
+        "customer:Link(Customer)! Khách hàng",
+        "company:Link(Company)!=(PHANBON) Công ty",
+        "currency:Link(Currency)!=(VND) Tiền tệ",
+        "against_sales_order:Link(Sales Order)! Theo đơn hàng",
+        "posting_at:Datetime! Thời điểm xuất",
+        "items:Table(Delivery Note Item)! Dòng hàng xuất",
+        "ship_address:Small Text! Địa chỉ giao",
+        "driver:Data Người giao / lái xe",
+        "vehicle:Data Biển số xe",
+        "note:Small Text Ghi chú"
+      ],
+      "permissions": {
+        "Giám đốc": "rwcsxa",
+        "Thủ kho": "rwcs",
+        "Kinh doanh": "r",
+        "Kế toán": "r"
+      }
+    },
+
+    {
+      "name": "Sales Invoice Item",
+      "label": "Dòng hoá đơn",
+      "child": true,
+      "naming": "autoincrement",
+      "fields": [
+        "item_code:Link(Item)! Mã hàng",
+        "qty:Float! Số lượng",
+        "rate:Currency! Đơn giá",
+        "amount:Currency~ Thành tiền"
+      ],
+      "permissions": {
+        "Giám đốc": "rwc",
+        "Kế toán": "rwc",
+        "Kinh doanh": "r"
+      }
+    },
+
+    {
+      "name": "Sales Invoice",
+      "label": "Hoá đơn bán hàng",
+      "icon": "receipt",
+      "group": "Công nợ",
+      "naming": "HD-.YYYY.-#####",
+      "title": "customer",
+      "list": ["customer", "posting_at", "due_date", "grand_total", "outstanding_amount"],
+      "fields": [
+        "customer:Link(Customer)! Khách hàng",
+        "company:Link(Company)!=(PHANBON) Công ty",
+        "currency:Link(Currency)!=(VND) Tiền tệ",
+        "against_sales_order:Link(Sales Order) Theo đơn hàng",
+        "posting_at:Datetime! Ngày hoá đơn",
+        "due_date:Date Hạn thanh toán",
+        "debit_to:Link(Account)!=(Phải thu khách hàng) Tài khoản phải thu",
+        "default_income_account:Link(Account)!=(Doanh thu bán hàng) Tài khoản doanh thu",
+        "round_off_account:Link(Account)=(Chênh lệch làm tròn) Tài khoản làm tròn",
+        "items:Table(Sales Invoice Item)! Dòng hàng",
+        "grand_total:Currency~ Tổng tiền",
+        "outstanding_amount:Currency~ Còn nợ"
+      ],
+      "permissions": {
+        "Giám đốc": "rwcsxa",
+        "Kế toán": "rwcs",
+        "Kinh doanh": "r"
+      }
+    },
+
+    {
+      "name": "Payment Entry",
+      "label": "Phiếu thu",
+      "icon": "banknote",
+      "group": "Công nợ",
+      "naming": "PT-.YYYY.-#####",
+      "title": "party",
+      "list": ["party", "posting_at", "paid_amount", "mode_of_payment", "reference_no"],
+      "//ten-field-phai-dung-y-nguyen": [
+        "Năm field dưới đây có tên do PaymentEntryController quyết, không phải do brief:",
+        "  payment_type   — thiếu là 'Payment Entry supports Receive or Pay'",
+        "  party_type     — phải là Customer khi Receive, Supplier khi Pay",
+        "  paid_from      — tài khoản CÔNG NỢ khi thu (KHÔNG phải `party_account`)",
+        "  paid_to        — tài khoản NHẬN tiền khi thu",
+        "  received_amount— số tiền quy về tiền tệ công ty; controller đối chiếu với số nó tự",
+        "                   quy đổi và từ chối nếu lệch, nên đây là chốt chặn chống sai tỷ giá",
+        "Đặt sai tên nào cũng cho cùng một triệu chứng: phiếu thu không ghi được, và thông báo",
+        "nói về 'accounts are required' chứ không nói field nào. Cả cụm này chỉ lộ ra khi có",
+        "người chạy thật một phiếu thu — xem apps/tenant-worker/test/phanbon-o2c.integration.test.mts."
+      ],
+      "fields": [
+        "payment_type:Select(Receive,Pay)!=(Receive) Loại phiếu",
+        "party_type:Select(Customer,Supplier)!=(Customer) Loại đối tượng",
+        "party:Link(Customer)! Khách hàng",
+        "company:Link(Company)!=(PHANBON) Công ty",
+        "currency:Link(Currency)!=(VND) Tiền tệ",
+        "posting_at:Datetime! Ngày thu",
+        "paid_amount:Currency! Số tiền thu",
+        "received_amount:Currency! Số tiền vào tài khoản",
+        "mode_of_payment:Select(Tiền mặt,Chuyển khoản)=(Chuyển khoản) Hình thức",
+        "paid_from:Link(Account)!=(Phải thu khách hàng) Tài khoản công nợ",
+        "paid_to:Link(Account)!=(Tiền gửi ngân hàng) Tài khoản nhận",
+        "reference_no:Data Số chứng từ",
+        "note:Small Text Ghi chú"
+      ],
+      "permissions": {
+        "Giám đốc": "rwcsxa",
+        "Kế toán": "rwcs",
+        "Kinh doanh": "r"
+      }
+    },
+
+    {
+      "name": "Stock Entry Item",
+      "label": "Dòng phiếu kho",
+      "child": true,
+      "naming": "autoincrement",
+      "fields": [
+        "item_code:Link(Item)! Mã hàng",
+        "qty:Float! Số lượng",
+        "source_warehouse:Link(Warehouse) Kho xuất",
+        "target_warehouse:Link(Warehouse) Kho nhập",
+        "valuation_rate:Currency Giá vốn"
+      ],
+      "permissions": {
+        "Giám đốc": "rwc",
+        "Thủ kho": "rwc",
+        "Kế toán": "r"
+      }
+    },
+
+    {
+      "name": "Stock Entry",
+      "label": "Phiếu kho",
+      "icon": "boxes",
+      "group": "Kho",
+      "naming": "PK-.YYYY.-#####",
+      "title": "purpose",
+      "list": ["purpose", "posting_at", "note"],
+      "//purpose": [
+        "Ba giá trị này là TÊN NGHIỆP VỤ của nhân kho, không phải nhãn tự đặt: nhập kho thành",
+        "phẩm từ xưởng là Material Receipt, xuất huỷ/hao hụt là Material Issue, chuyển giữa hai",
+        "kho là Material Transfer. Đổi chữ ở đây là phiếu ghi xong mà tồn không đổi."
+      ],
+      "fields": [
+        "purpose:Select(Material Receipt,Material Issue,Material Transfer)!=(Material Receipt) Loại phiếu",
+        "company:Link(Company)!=(PHANBON) Công ty",
+        "posting_at:Datetime! Thời điểm",
+        "items:Table(Stock Entry Item)! Dòng vật tư",
+        "batch_no:Data Số lô sản xuất",
+        "note:Small Text Ghi chú"
+      ],
+      "permissions": {
+        "Giám đốc": "rwcsxa",
+        "Thủ kho": "rwcs",
+        "Kế toán": "r"
+      }
+    },
+
+    {
+      "name": "Web Order Item",
+      "label": "Dòng đơn web",
+      "child": true,
+      "naming": "autoincrement",
+      "fields": [
+        "item_code:Link(Item)! Mã hàng",
+        "item_name:Data Tên hàng lúc đặt",
+        "qty:Float! Số lượng",
+        "rate:Currency! Đơn giá lúc đặt",
+        "amount:Currency~ Thành tiền"
+      ],
+      "permissions": {
+        "Giám đốc": "rwc",
+        "Chăm sóc khách hàng": "rwc",
+        "Kinh doanh": "rwc",
+        "Kế toán": "r"
+      }
+    },
+
+    {
+      "name": "Web Order",
+      "label": "Đơn hàng web",
+      "icon": "globe",
+      "group": "Bán hàng",
+      "inboxLabel": "Xác nhận đơn web",
+      "inboxIcon": "smartphone",
+      "naming": "DW-.YYYY.-#####",
+      "title": "buyer_name",
+      "search": ["buyer_name", "phone"],
+      "list": ["buyer_name", "phone", "order_date", "total_amount", "workflow_state"],
+      "//khong-tru-ton": [
+        "Đơn web KHÔNG trừ tồn và KHÔNG lên công nợ. Nó là một YÊU CẦU MUA, không phải chứng từ.",
+        "Nhân viên xác nhận rồi mới tạo Sales Order thật — đó là chỗ tồn được giữ.",
+        "Nếu khách vãng lai trừ được tồn trực tiếp thì một người bấm nghịch hai mươi lần là kho",
+        "ảo hết hàng, và không có cách nào phân biệt đơn thật với đơn rác.",
+        "",
+        "`lookup_phone` là yếu tố thứ hai để tra cứu công khai. Mã đơn dạng DW-2026-00001 là dãy",
+        "đoán được: nếu chỉ cần mã, bất kỳ ai cũng duyệt được tên, địa chỉ và số điện thoại của",
+        "toàn bộ khách hàng. Tra cứu phải khớp CẢ HAI."
+      ],
+      "fields": [
+        "buyer_name:Data! Người mua",
+        "phone:Data! Điện thoại",
+        "email:Data Email",
+        "ship_address:Small Text! Địa chỉ giao",
+        "province:Data Tỉnh/Thành",
+        "order_date:Datetime! Thời điểm đặt",
+        "items:Table(Web Order Item)! Dòng hàng",
+        "total_amount:Currency Tổng tiền",
+        "payment_method:Select(COD,Chuyển khoản)=(COD) Hình thức thanh toán",
+        "age_confirmed:Check Đã xác nhận đủ 18 tuổi (đơn có rượu)",
+        "customer:Link(Customer) Khách hàng đã ghép",
+        "against_sales_order:Link(Sales Order) Đơn hàng đã tạo",
+        "note:Small Text Ghi chú của khách",
+        "staff_note:Small Text Ghi chú xử lý"
+      ],
+      "permissions": {
+        "Giám đốc": "rwcsxa",
+        "Chăm sóc khách hàng": "rwcs",
+        "Kinh doanh": "rwcs",
+        "Thủ kho": "r",
+        "Kế toán": "r"
+      },
+      "workflow": {
+        "name": "Xử lý đơn web",
+        "states": {
+          "Mới": 0,
+          "Đã gọi xác nhận": 0,
+          "Đã chuyển đơn hàng": 1,
+          "Khách huỷ": 2,
+          "Không liên hệ được": 2
+        },
+        "transitions": [
+          ["Mới", "Đã gọi khách", "Đã gọi xác nhận", "Chăm sóc khách hàng", "self"],
+          ["Mới", "Đã gọi khách", "Đã gọi xác nhận", "Kinh doanh", "self"],
+          ["Đã gọi xác nhận", "Chuyển thành đơn hàng", "Đã chuyển đơn hàng", "Kinh doanh", "self"],
+          ["Đã gọi xác nhận", "Chuyển thành đơn hàng", "Đã chuyển đơn hàng", "Giám đốc"],
+          ["Mới", "Khách huỷ", "Khách huỷ", "Chăm sóc khách hàng", "self"],
+          ["Đã gọi xác nhận", "Khách huỷ", "Khách huỷ", "Chăm sóc khách hàng", "self"],
+          ["Mới", "Không liên hệ được", "Không liên hệ được", "Chăm sóc khách hàng", "self"]
+        ]
+      }
+    }
+  ]
+}

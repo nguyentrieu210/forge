@@ -112,6 +112,15 @@ export function toFrappeDocType(meta: DocTypeMeta, workflow: WorkflowMeta | null
   const doc: JsonObject = {
     doctype: "DocType",
     name: meta.name,
+    /**
+     * Nhãn hiển thị. Bỏ về `name` khi app không khai — nhưng phải GỬI, không được nuốt.
+     *
+     * Client đã sẵn sàng dùng nó (`titleMeta.data?.label ?? doctype`), nên thiếu dòng này
+     * là mọi tiêu đề rơi về tên kỹ thuật: "Tạo Customer" giữa một giao diện tiếng Việt.
+     * Nhãn bị đánh rơi ở BỐN nơi liên tiếp — compiler, bộ đọc metadata, kiểu dữ liệu, và
+     * đây — nên mỗi nơi vá xong vẫn không thấy gì đổi cho tới nơi cuối cùng.
+     */
+    label: meta.label ?? meta.name,
     module: meta.module,
     custom: flag(meta.custom),
     issingle: flag(meta.is_single),

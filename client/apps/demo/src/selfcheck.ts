@@ -47,7 +47,7 @@ import {
   FormView, groupLayout, ChildGrid, createFullRegistry, KanbanView, TreeView, ReportView, PrintView, DashboardView, CalendarView, GanttView, type TreeNodeItem,
   deriveColumns, applyClientQuery, buildServerQuery, countQuery, deriveStandardFilters, deriveSearchFields, statusVariant, emptyListState,
   applyColumnOrder, columnPreferenceKey, hasCustomColumnPreferences, moveColumn, normalizeColumnPreferences, stableColumnPreferenceScope,
-  resolveFormActions, resolveWorkflowActions, type FormActionCtx,
+  resolveFormActions, resolveWorkflowActions, editableCodeField, suggestEditableCode, type FormActionCtx,
 } from "@metaforge/views";
 import { History, blankDocType, newField, addField, updateField, moveField, removeField, DocTypeBuilder, diffMeta, metaEqual, hasChanges, diffPermissions, permRuleKey, validateDraft, openDraft, draftStatus, serializeDocTypeForSave, roundTripLocal, planCustomization, serializeWorkflow, validateWorkflow, workflowMasters, serializePrintFormat, validatePrintFormat, printHtml, serializeDashboard, validateDashboard } from "@metaforge/builder";
 import { toUiPhase, createScopeKey } from "@metaforge/adapter-frappe";
@@ -210,6 +210,33 @@ check("serializeCreateDocument (full, loại system/layout) + serializeUpdatePat
   assert.equal(patch.name, "TODO-001");
   assert.equal(patch.modified, "2026-01-01 00:00:00");
   assert.equal("docstatus" in patch, false); // system loại
+});
+
+check("mã định danh chính được gợi ý tự động nhưng vẫn là field Data sửa được", () => {
+  const meta = normalizeMeta({
+    name: "Item",
+    autoname: "field:item_code",
+    fields: [
+      { fieldname: "item_code", label: "Mã hàng", fieldtype: "Data", reqd: 1, unique: 1 },
+      { fieldname: "tax_id", label: "Mã số thuế", fieldtype: "Data" },
+      { fieldname: "linked_item_code", label: "Mã hàng liên kết", fieldtype: "Link", options: "Item" },
+    ],
+    permissions: [],
+  });
+  const field = editableCodeField(meta);
+  assert.equal(field?.fieldname, "item_code");
+  assert.equal(field?.read_only, undefined, "mã gợi ý vẫn sửa được");
+  assert.equal(
+    suggestEditableCode(meta, field!, new Date(2026, 6, 28), "A4K9Q"),
+    "ITEM-260728-A4K9Q",
+  );
+
+  assert.equal(editableCodeField(normalizeMeta({
+    name: "Customer",
+    autoname: "field:customer_name",
+    fields: [{ fieldname: "customer_name", fieldtype: "Data" }, { fieldname: "tax_id", fieldtype: "Data" }],
+    permissions: [],
+  })), undefined, "tên khách và mã số thuế không bị tự điền nhầm");
 });
 
 // 4f. P0-09 — Link subsystem: buildLinkFilters (link_filters tĩnh + eval: ngữ cảnh, fail-safe).

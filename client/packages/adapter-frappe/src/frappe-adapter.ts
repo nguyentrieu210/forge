@@ -25,6 +25,7 @@ import {
   type OverviewDashboard,
   type ProcessCatalog,
   type AccessProfileSummary,
+  type TenantUser,
   type EffectivePermissionResult,
   type DisplayValueRequest,
   type DisplayValueResult,
@@ -204,6 +205,26 @@ export class FrappeAdapterImpl implements FrappeAdapter {
   async setUserRoles(user: string, roles: string[], roleProfile?: string): Promise<string[]> {
     const r = await this.app.call().post<Envelope<{ roles: string[] }>>("metaforge.api.set_user_roles", { user, roles: JSON.stringify(roles), role_profile: roleProfile ?? "" });
     return this.unwrap(r).roles ?? [];
+  }
+  /** Mọi tài khoản đăng nhập được của tenant, kèm vai trò và danh sách vai trò có thể gán. */
+  async listUsers(): Promise<{ users: TenantUser[]; available_roles: string[] }> {
+    const r = await this.app.call().get<Envelope<{ users: TenantUser[]; available_roles: string[] }>>("metaforge.api.list_users", {});
+    const value = this.unwrap(r);
+    return { users: value?.users ?? [], available_roles: value?.available_roles ?? [] };
+  }
+  /** Tạo tài khoản + đặt mật khẩu + gán vai trò trong MỘT lời gọi — xem `createUser` phía server. */
+  async createUser(input: { user: string; password: string; fullName?: string; email?: string; roles?: string[] }): Promise<{ user: string; roles: string[] }> {
+    const r = await this.app.call().post<Envelope<{ user: string; roles: string[] }>>("metaforge.api.create_user", {
+      user: input.user, password: input.password,
+      full_name: input.fullName ?? "", email: input.email ?? "",
+      roles: JSON.stringify(input.roles ?? []),
+    });
+    const value = this.unwrap(r);
+    return { user: value?.user ?? input.user, roles: value?.roles ?? [] };
+  }
+  /** Khoá hoặc mở lại một tài khoản. Không xoá — user id là `owner` của mọi chứng từ họ đã lập. */
+  async setUserEnabled(user: string, enabled: boolean): Promise<void> {
+    await this.app.call().post("metaforge.api.set_user_enabled", { user, enabled: enabled ? 1 : 0 });
   }
   async resolveDisplayValues(items: DisplayValueRequest[]): Promise<DisplayValueResult[]> {
     const r = await this.app.call().post<Envelope<DisplayValueResult[]>>("metaforge.api.resolve_display_values", { items: JSON.stringify(items) });
@@ -806,12 +827,20 @@ export class FrappeAdapterImpl implements FrappeAdapter {
   }
 
   // ── session §9/§11 ────────────────────────────────────────────────────────
-  async updatePassword(newPwd: string, o?: { logoutAll?: 0 | 1; oldPassword?: string; key?: string }): Promise<void> {
+  /**
+   * `user` bỏ trống = đổi mật khẩu của CHÍNH mình, và khi đó server đòi mật khẩu cũ.
+   *
+   * Thiếu tham số này thì quản trị viên không có cách nào đặt lại mật khẩu cho người khác —
+   * server vẫn hỗ trợ, chỉ là adapter không gửi lên, nên nút "cấp lại mật khẩu" trong màn
+   * phân quyền không thể tồn tại.
+   */
+  async updatePassword(newPwd: string, o?: { logoutAll?: 0 | 1; oldPassword?: string; key?: string; user?: string }): Promise<void> {
     await this.app.call().post("frappe.core.doctype.user.user.update_password", {
       new_password: newPwd,
       logout_all_sessions: o?.logoutAll ?? 0,
       old_password: o?.oldPassword,
       key: o?.key,
+      user: o?.user,
     });
   }
   async logoutOtherSessions(): Promise<void> {

@@ -231,8 +231,74 @@ export function renderPrintFormat(format: PrintFormatMeta, document: CanonicalDo
     // instead of the literal placeholder text.
     if (field.print_hide || empty) context[field.fieldname] = "";
   }
-  const interpolate = (template: string): string => template.replace(/{{\s*([a-zA-Z0-9_.]+)\s*}}/g, (_match, path: string) => escapeHtml(resolvePath(context, path)));
-  return `<!doctype html><html><head><meta charset="utf-8"><style>${format.css ?? ""}</style></head><body>${interpolate(format.html)}</body></html>`;
+
+  /**
+   * Child rows, so a printed document can show its LINES.
+   *
+   * Until this existed the renderer only substituted scalars, which means no print format
+   * on this platform could print an invoice: the customer got a header, a total, and no
+   * indication of what they were being charged for. The rows were always in the document —
+   * they were simply never put where a template could reach them.
+   *
+   * Taken from `children` (the canonical shape) and from any array already denormalised
+   * into `data`, because both occur depending on how the document was loaded.
+   */
+  const tables = new Map<string, JsonObject[]>();
+  for (const child of document.children ?? []) {
+    const list = tables.get(child.fieldname) ?? [];
+    list.push(child.data as JsonObject);
+    tables.set(child.fieldname, list);
+  }
+  for (const [key, value] of Object.entries(context)) {
+    if (Array.isArray(value) && !tables.has(key)) tables.set(key, value as unknown as JsonObject[]);
+  }
+  // Print order is the order the author entered, not storage order.
+  for (const rows of tables.values()) rows.sort((a, b) => Number(a.idx ?? 0) - Number(b.idx ?? 0));
+
+  const interpolate = (template: string, scope: Record<string, JsonValue>): string =>
+    template.replace(/{{\s*([a-zA-Z0-9_.]+)\s*(?:\|\s*([a-z]+)\s*)?}}/g, (_match, path: string, filter?: string) =>
+      escapeHtml(applyFilter(resolvePath(scope, path), filter, locale)));
+
+  /**
+   * `{{#each items}} … {{/each}}` — one pass, not nested.
+   *
+   * Deliberately not a general template language. A print format is authored in a brief
+   * and stored as data, so every construct here is one more thing that can be written
+   * wrong and only discovered on a customer's printed invoice. Repetition over a child
+   * table is the one construct a document genuinely needs; `{{ _index }}` gives the line
+   * number, and a row field shadows the parent document's field of the same name.
+   */
+  const expanded = format.html.replace(/{{#each\s+([a-zA-Z0-9_]+)\s*}}([\s\S]*?){{\/each}}/g, (_match, field: string, body: string) =>
+    (tables.get(field) ?? [])
+      .map((row, index) => interpolate(body, { ...context, ...(row as Record<string, JsonValue>), _index: index + 1 }))
+      .join(""));
+
+  return `<!doctype html><html><head><meta charset="utf-8"><style>${format.css ?? ""}</style></head><body>${interpolate(expanded, context)}</body></html>`;
+}
+
+/**
+ * `{{ grand_total | money }}` — formatting, at the only place that can do it.
+ *
+ * A printed invoice reading `12000000` is not a cosmetic problem: nobody can tell twelve
+ * million from a hundred and twenty million at a glance, and that is the number the
+ * customer is asked to pay. The client formats numbers everywhere else; printed HTML is
+ * built here and never passes through it.
+ */
+function applyFilter(value: string, filter: string | undefined, locale: string): string {
+  if (!filter || value === "") return value;
+  if (filter === "money" || filter === "number") {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return value;
+    const fractionDigits = filter === "money" ? 0 : Math.min(4, (value.split(".")[1] ?? "").length);
+    return new Intl.NumberFormat(locale.startsWith("vi") ? "vi-VN" : locale, { minimumFractionDigits: fractionDigits, maximumFractionDigits: fractionDigits }).format(parsed);
+  }
+  if (filter === "date") {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    const pad = (part: number) => String(part).padStart(2, "0");
+    return `${pad(date.getUTCDate())}-${pad(date.getUTCMonth() + 1)}-${date.getUTCFullYear()}`;
+  }
+  return value;
 }
 
 function resolvePath(root: Record<string, JsonValue>, path: string): string {

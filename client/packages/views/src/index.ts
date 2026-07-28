@@ -82,6 +82,7 @@ export { loadRecentDocs, recordRecentDoc, type RecentDocEntry } from "./containe
 export { ListContainer, type ListContainerProps } from "./container/ListContainer.js";
 export { ContextContainer, type ContextContainerProps } from "./container/ContextContainer.js";
 export { NewFormContainer, type NewFormContainerProps } from "./container/NewFormContainer.js";
+export { editableCodeField, suggestEditableCode } from "./container/editable-code.js";
 export { WorkspaceContainer, type WorkspaceContainerProps } from "./container/WorkspaceContainer.js";
 export { WorkspaceView, type WorkspaceViewProps, type WsItem, type WsPage, type WsShortcut, type WsCard } from "./workspace/WorkspaceView.js";
 

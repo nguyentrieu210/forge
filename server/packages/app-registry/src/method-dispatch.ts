@@ -35,10 +35,24 @@ import type { AppManifest } from "./manifest.js";
 /**
  * Wall-clock budget for one app method call.
  *
- * Shorter than the hook budget (10s): a hook runs in the background where a slow app
- * costs only its own delivery, whereas this is a user waiting for a screen.
+ * Raised from 5s, and the reason matters more than the number. 5s was chosen when an app
+ * method was assumed to be a COMPUTATION — "a user waiting for a screen". Methods that
+ * write turned out to be the common case, and a write costs several callbacks: measured on
+ * a live tenant, one callback is ~1.2s, because it travels app → gateway → tenant while a
+ * direct client call travels one hop. So a method that reads a document, checks for a
+ * duplicate, writes one, and stamps another spends ~5.9s doing nothing wrong.
+ *
+ * That is not a slow app; it is a budget set below the floor of the operation it funds.
+ * And exceeding it is not a harmless delay: a write method that is cut off has ALREADY
+ * written, while its caller is told it failed — so the user clicks again and the document
+ * is created twice. Making the budget realistic removes the most common way that happens.
+ *
+ * Still bounded, and still shorter than a request would otherwise run for: an app cannot
+ * hold a request open indefinitely, and it never holds an aggregate lock (see above), so a
+ * slow app delays its own caller and nothing else. Matching the hook budget keeps one
+ * number to remember rather than two.
  */
-export const APP_METHOD_TIMEOUT_MS = 5_000;
+export const APP_METHOD_TIMEOUT_MS = 10_000;
 
 /** Everything the dispatcher needs, so the router does not reach into bindings itself. */
 export interface AppMethodEnv {

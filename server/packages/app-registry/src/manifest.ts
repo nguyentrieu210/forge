@@ -11,14 +11,62 @@
  */
 
 import { errors } from "../../core/src/index.js";
-import { parseDocTypeMeta, validateWorkflow } from "../../frappe-model/src/index.js";
-import type { DocTypeMeta, PrintFormatMeta, WorkflowMeta } from "../../frappe-model/src/index.js";
+import { parseCustomField, parseDocTypeMeta, validateWorkflow } from "../../frappe-model/src/index.js";
+import type { CustomFieldRecord, DocTypeMeta, PrintFormatMeta, WorkflowMeta } from "../../frappe-model/src/index.js";
 import type { JsonObject, JsonValue } from "../../contracts/src/index.js";
 
 export interface AppDependency {
   id: string;
   /** Minimum acceptable version, compared component-wise. */
   version: string;
+}
+
+/**
+ * A PUBLIC face for one of the app's doctypes.
+ *
+ * The narrowness is the design. Not "expose get_list to guests" — one forgotten filter
+ * away from serving the customer table — but: one doctype, one flag that decides what is
+ * published, and an explicit list of fields a stranger may see. Everything not listed
+ * stays invisible, which matters most for the fields that sit right next to the ones
+ * that are listed: cost price, dealer price, stock on hand.
+ */
+export interface StorefrontCatalogSpec {
+  doctype: string;
+  /** Check field deciding whether a row is public. Nothing is public without it. */
+  published_field: string;
+  /** Unique, readable key used in the product URL. */
+  slug_field: string;
+  /** Exactly the fields a visitor may see. */
+  fields: string[];
+  /** Fields free-text search may look at — must be a subset of `fields`. */
+  search_fields: string[];
+  /** Optional field the catalogue may be filtered by, e.g. a product group. */
+  facet_field?: string;
+  /** Currency field order lines are priced from, ON THE SERVER. */
+  price_field: string;
+}
+
+export interface StorefrontOrderSpec {
+  doctype: string;
+  /** Role the public write runs as; the tenant's DocPerm decides what it may do. */
+  submit_as_role: string;
+  /** Table field holding the order lines. */
+  lines_field: string;
+  /** Fields the buyer may fill in. Anything else on the doctype is staff-only. */
+  buyer_fields: string[];
+  /** Datetime field stamped by the server, never by the client. */
+  placed_at_field: string;
+  /** Currency field the server totals into. */
+  total_field: string;
+  /** Second factor a tracking lookup must match besides the order code. */
+  track_field: string;
+  /** Orders accepted from one visitor per day. */
+  max_per_day: number;
+}
+
+export interface StorefrontSpec {
+  catalog: StorefrontCatalogSpec;
+  order?: StorefrontOrderSpec;
 }
 
 export interface AppRoleDefinition {
@@ -107,6 +155,63 @@ export interface AppReport {
 }
 
 /**
+ * One input of an action screen. A DocField in everything but name, so the generic client
+ * renders it with the SAME controls a form uses — Link autocompletes, thousands separators,
+ * Select dropdowns — instead of a second, poorer set of inputs living next to the first.
+ */
+export interface AppActionField {
+  fieldname: string;
+  label: string;
+  /** DocField type: Data, Link, Select, Int, Float, Currency, Date, Datetime, Check… */
+  fieldtype: string;
+  /** Link target doctype, or Select choices separated by newlines. */
+  options?: string;
+  required?: boolean;
+  default?: string;
+  description?: string;
+}
+
+/**
+ * An operation a user performs by FILLING A FORM, not by editing a document.
+ *
+ * Cutting aluminium is the case that forced this. It is not a write to one record: it
+ * picks lots, decides how many sheets to take from each, deducts them and writes cut
+ * vouchers — and the person doing it must SEE what it will take before it happens,
+ * because aluminium cut wrong cannot be uncut.
+ *
+ * Before this existed, the only ways to ship that screen were a hand-written React page
+ * in the shared runtime — one customer's workshop compiled into every other customer's
+ * bundle — or telling the user to call an API. Declaring it makes the screen data, like
+ * the DocTypes and the reports already are.
+ *
+ * `preview` is optional but is the reason the shape has two halves: a read-only method
+ * that answers "what would happen", then a commit the user reaches only after seeing it.
+ */
+export interface AppAction {
+  /** Id in `/x/action:<name>`. */
+  name: string;
+  label: string;
+  icon?: string;
+  group?: string;
+  description?: string;
+  fields: AppActionField[];
+  /** Read-only method run on demand. Must change nothing. */
+  preview?: { method: string; label: string };
+  /** The method that writes. Reached from the screen's primary button. */
+  commit: { method: string; label: string; confirm?: string };
+  /**
+   * DocType whose WRITE permission gates the screen.
+   *
+   * Required, and deliberately so: an action runs an app method that writes, and the
+   * method authenticates as the caller. Without a gate the menu entry would be offered
+   * to everyone and the refusal would arrive only after they filled the form in.
+   */
+  permission_doctype: string;
+  /** Response key holding the row array to render as a table. */
+  result_table?: string;
+}
+
+/**
  * How this app wants to be PRESENTED — the half of an app that used to live only in a
  * hand-written client bundle.
  *
@@ -150,7 +255,7 @@ export const CLIENT_CONTEXT_DIMENSIONS = new Set([
  * the menu entry would install cleanly and then show "chưa được triển khai" on click.
  * Adding a prefix here is the LAST step of shipping one, never the first.
  */
-export const SUPPORTED_EXPERIENCE_KINDS = new Set(["approval", "calendar", "social-commerce"]);
+export const SUPPORTED_EXPERIENCE_KINDS = new Set(["approval", "calendar", "social-commerce", "action"]);
 
 export interface AppManifest {
   id: string;
@@ -164,6 +269,19 @@ export interface AppManifest {
   print_formats: PrintFormatMeta[];
   roles: AppRoleDefinition[];
   fixtures: AppFixture[];
+  /**
+   * Fields this app adds to doctypes it does NOT own.
+   *
+   * An industry app usually needs the standard Item with a photo and a pack size on it,
+   * not an Item of its own — a private product doctype would be a second catalogue that
+   * the stock ledger, the price list and every selling controller cannot see. Carrying
+   * the extra fields in the package is what makes them installable, upgradable and
+   * removable: written by hand after install, they belong to nobody and survive the
+   * uninstall of the app that needed them.
+   */
+  custom_fields: CustomFieldRecord[];
+  /** Public catalogue and order intake, if this app has a storefront. */
+  storefront?: StorefrontSpec;
   nav: AppNavItem[];
   /**
    * Worker in the dispatch namespace that receives this app's hook events.
@@ -190,6 +308,13 @@ export interface AppManifest {
    * already allow it to read.
    */
   reports: AppReport[];
+  /**
+   * Form-driven operations backed by this app's own Worker methods.
+   *
+   * Like `reports`, these need a `worker`: an action names methods, and a method with
+   * nothing to serve it is a screen whose only button answers 404.
+   */
+  actions: AppAction[];
   /** Presentation. Absent means "the generic client picks sane defaults". */
   client?: AppClientManifest;
 }
@@ -255,7 +380,24 @@ export function parseAppManifest(value: unknown): AppManifest {
   }
 
   const fixtures = array(input.fixtures ?? [], "fixtures").map((entry, index) => parseFixture(entry, index));
-  const nav = array(input.nav ?? [], "nav").map((entry, index) => parseNav(entry, index, doctypeNames));
+
+  const customFields = array(input.custom_fields ?? [], "custom_fields").map((entry) => parseCustomField(entry));
+  assertUnique(customFields.map((field) => field.name), "custom field");
+  for (const field of customFields) {
+    // A custom field on the app's OWN doctype is a field it forgot to declare. Allowing
+    // it would give one doctype two sources of truth for its schema, and the overlay
+    // would win — so the definition in the package would no longer describe what
+    // installs. Nothing is lost by refusing: the app can simply add the field.
+    if (doctypeNames.has(field.dt)) {
+      throw errors.validation(`custom_fields cannot target ${field.dt}: this app defines that doctype, so declare the field on it directly`);
+    }
+  }
+  // Parsed BEFORE nav so a nav entry naming an action that does not exist is refused here
+  // rather than installing a menu line whose screen cannot be built.
+  const actions = array(input.actions ?? [], "actions").map((entry, index) => parseAction(entry, index, doctypeNames));
+  assertUnique(actions.map((action) => action.name), "action name");
+  const actionsByName = new Map(actions.map((action) => [action.name, action]));
+  const nav = array(input.nav ?? [], "nav").map((entry, index) => parseNav(entry, index, doctypeNames, actionsByName));
   assertUnique(nav.map((item) => item.key), "nav key");
 
   const requires = array(input.requires ?? [], "requires").map((entry, index) => {
@@ -282,6 +424,14 @@ export function parseAppManifest(value: unknown): AppManifest {
   const reports = array(input.reports ?? [], "reports").map((entry, index) => parseReport(entry, index, doctypeNames));
   assertUnique(reports.map((report) => report.name), "report name");
 
+  // Same reasoning as validators: an action names methods, and a method with no worker to
+  // serve it is a screen whose only button answers 404.
+  if (actions.length && !worker) throw errors.validation(`${id} declares actions but no worker to run them`);
+
+  const storefront = input.storefront === undefined
+    ? undefined
+    : parseStorefront(input.storefront, doctypes, roleNames);
+
   const client = input.client === undefined ? undefined : parseClientManifest(input.client, nav, doctypeNames);
 
   return {
@@ -295,10 +445,13 @@ export function parseAppManifest(value: unknown): AppManifest {
     print_formats: printFormats,
     roles,
     fixtures,
+    custom_fields: customFields,
+    ...(storefront === undefined ? {} : { storefront }),
     nav,
     hooks,
     validators,
     reports,
+    actions,
     ...(worker === undefined ? {} : { worker }),
     ...(client === undefined ? {} : { client }),
   };
@@ -535,6 +688,90 @@ function parseReport(value: JsonValue, index: number, doctypeNames: Set<string>)
   };
 }
 
+/** Action ids reach a URL (`/x/action:<name>`), so keep them to what a path carries plainly. */
+const ACTION_NAME = /^[a-z][a-z0-9-]*$/;
+/**
+ * A method name the client will POST to.
+ *
+ * Narrow on purpose. This string is concatenated into `/api/method/<name>` by the client,
+ * so anything with a slash or a query character would let a manifest aim the screen's
+ * button at a different endpoint than the one it names.
+ */
+const ACTION_METHOD = /^[A-Za-z][A-Za-z0-9_.]*$/;
+const ACTION_FIELDTYPES = new Set([
+  "Data", "Small Text", "Text", "Int", "Float", "Currency", "Percent",
+  "Check", "Select", "Link", "Date", "Datetime", "Time",
+]);
+
+function parseAction(value: JsonValue, index: number, doctypeNames: ReadonlySet<string>): AppAction {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw errors.validation(`actions[${index}] must be an object`);
+  const entry = value as JsonObject;
+  const name = text(entry.name, `actions[${index}].name`, 64);
+  if (!ACTION_NAME.test(name)) throw errors.validation(`actions[${index}].name must be lowercase letters, digits and hyphens: ${name}`);
+
+  const call = (raw: JsonValue | undefined, where: string) => {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw errors.validation(`${where} must be an object`);
+    const spec = raw as JsonObject;
+    const method = text(spec.method, `${where}.method`, 160);
+    if (!ACTION_METHOD.test(method)) throw errors.validation(`${where}.method is not a plain method name: ${method}`);
+    return {
+      method,
+      label: text(spec.label, `${where}.label`, 80),
+      ...(spec.confirm === undefined ? {} : { confirm: text(spec.confirm, `${where}.confirm`, 320) }),
+    };
+  };
+
+  const permissionDoctype = text(entry.permission_doctype, `actions[${index}].permission_doctype`, 160);
+  // A gate naming a doctype the app does not ship cannot be evaluated, so the screen would
+  // either be shown to everyone or to nobody — both silently.
+  if (!doctypeNames.has(permissionDoctype)) {
+    throw errors.validation(`actions[${index}].permission_doctype points at ${permissionDoctype}, which this app does not define`);
+  }
+
+  const fields = array(entry.fields ?? [], `actions[${index}].fields`).map((raw, position) => {
+    const where = `actions[${index}].fields[${position}]`;
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw errors.validation(`${where} must be an object`);
+    const field = raw as JsonObject;
+    const fieldtype = text(field.fieldtype ?? "Data", `${where}.fieldtype`, 32);
+    if (!ACTION_FIELDTYPES.has(fieldtype)) {
+      throw errors.validation(`${where}.fieldtype is not one the action screen can render: ${fieldtype}`);
+    }
+    const options = field.options === undefined ? undefined : text(field.options, `${where}.options`, 2000);
+    // A Link with no target renders an autocomplete that searches nothing; a Select with
+    // no choices renders an empty dropdown. Both look like a broken screen.
+    if ((fieldtype === "Link" || fieldtype === "Select") && !options) {
+      throw errors.validation(`${where} is a ${fieldtype} but names no options`);
+    }
+    if (fieldtype === "Link" && !doctypeNames.has(options!)) {
+      throw errors.validation(`${where} links to ${options}, which this app does not define`);
+    }
+    return {
+      fieldname: text(field.fieldname, `${where}.fieldname`, 120),
+      label: text(field.label, `${where}.label`, 160),
+      fieldtype,
+      ...(options ? { options } : {}),
+      ...(field.required === true ? { required: true } : {}),
+      ...(field.default === undefined ? {} : { default: text(field.default, `${where}.default`, 160) }),
+      ...(field.description === undefined ? {} : { description: text(field.description, `${where}.description`, 320) }),
+    };
+  });
+  if (!fields.length) throw errors.validation(`actions[${index}] (${name}) has no fields`);
+  assertUnique(fields.map((field) => field.fieldname), `actions[${index}] field`);
+
+  return {
+    name,
+    label: text(entry.label ?? name, `actions[${index}].label`, 160),
+    ...(entry.icon === undefined ? {} : { icon: text(entry.icon, `actions[${index}].icon`, 64) }),
+    ...(entry.group === undefined ? {} : { group: text(entry.group, `actions[${index}].group`, 80) }),
+    ...(entry.description === undefined ? {} : { description: text(entry.description, `actions[${index}].description`, 500) }),
+    fields,
+    ...(entry.preview === undefined ? {} : { preview: call(entry.preview, `actions[${index}].preview`) }),
+    commit: call(entry.commit, `actions[${index}].commit`),
+    permission_doctype: permissionDoctype,
+    ...(entry.result_table === undefined ? {} : { result_table: text(entry.result_table, `actions[${index}].result_table`, 120) }),
+  };
+}
+
 function parseHook(value: JsonValue, index: number): AppHook {
   const pattern = typeof value === "string" ? value : (value && typeof value === "object" && !Array.isArray(value) ? (value as JsonObject).event : undefined);
   const event = text(pattern, `hooks[${index}].event`, 160);
@@ -596,6 +833,111 @@ function parseRole(value: JsonValue, index: number): AppRoleDefinition {
   return { role: text(input.role, `roles[${index}].role`, 120), desk_access: input.desk_access !== false };
 }
 
+/**
+ * Validates a declared storefront against the doctypes the app actually ships.
+ *
+ * Every check here turns a silent leak or a dead page into a refused install:
+ * a catalogue on a doctype the app does not own would publish somebody else's table;
+ * a field that does not exist would serve nulls forever; a search over an unpublished
+ * field would let a visitor probe values they cannot see by watching which queries match.
+ */
+function parseStorefront(value: JsonValue, doctypes: DocTypeMeta[], roleNames: ReadonlySet<string>): StorefrontSpec {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw errors.validation("storefront must be an object");
+  const input = value as JsonObject;
+  const owned = new Map(doctypes.map((meta) => [meta.name, meta]));
+
+  const catalogInput = input.catalog;
+  if (!catalogInput || typeof catalogInput !== "object" || Array.isArray(catalogInput)) {
+    throw errors.validation("storefront.catalog is required");
+  }
+  const catalogValue = catalogInput as JsonObject;
+  const catalogDoctype = text(catalogValue.doctype, "storefront.catalog.doctype", 160);
+  const catalogMeta = owned.get(catalogDoctype);
+  if (!catalogMeta) throw errors.validation(`storefront.catalog names ${catalogDoctype}, which this app does not define`);
+
+  const catalogFieldnames = new Set(catalogMeta.fields.map((field) => field.fieldname));
+  const requireField = (name: string, where: string): string => {
+    const fieldname = text(name, where, 140);
+    if (!catalogFieldnames.has(fieldname)) throw errors.validation(`${where} names ${catalogDoctype}.${fieldname}, which does not exist`);
+    return fieldname;
+  };
+
+  const fields = array(catalogValue.fields, "storefront.catalog.fields").map((entry, index) =>
+    requireField(entry as string, `storefront.catalog.fields[${index}]`));
+  if (!fields.length) throw errors.validation("storefront.catalog.fields must list at least one field");
+
+  const searchFields = array(catalogValue.search_fields ?? [], "storefront.catalog.search_fields").map((entry, index) => {
+    const fieldname = requireField(entry as string, `storefront.catalog.search_fields[${index}]`);
+    // Searching a field that is not published lets a visitor confirm its value by
+    // watching which queries return a row — a slower way to read it, but a way.
+    if (!fields.includes(fieldname)) {
+      throw errors.validation(`storefront.catalog.search_fields names ${fieldname}, which is not published`);
+    }
+    return fieldname;
+  });
+
+  const catalog: StorefrontCatalogSpec = {
+    doctype: catalogDoctype,
+    published_field: requireField(catalogValue.published_field as string, "storefront.catalog.published_field"),
+    slug_field: requireField(catalogValue.slug_field as string, "storefront.catalog.slug_field"),
+    price_field: requireField(catalogValue.price_field as string, "storefront.catalog.price_field"),
+    fields,
+    search_fields: searchFields,
+    ...(catalogValue.facet_field === undefined
+      ? {}
+      : { facet_field: requireField(catalogValue.facet_field as string, "storefront.catalog.facet_field") }),
+  };
+
+  if (input.order === undefined) return { catalog };
+  if (!input.order || typeof input.order !== "object" || Array.isArray(input.order)) {
+    throw errors.validation("storefront.order must be an object");
+  }
+  const orderValue = input.order as JsonObject;
+  const orderDoctype = text(orderValue.doctype, "storefront.order.doctype", 160);
+  const orderMeta = owned.get(orderDoctype);
+  if (!orderMeta) throw errors.validation(`storefront.order names ${orderDoctype}, which this app does not define`);
+  const orderFieldnames = new Set(orderMeta.fields.map((field) => field.fieldname));
+  const requireOrderField = (name: unknown, where: string): string => {
+    const fieldname = text(name, where, 140);
+    if (!orderFieldnames.has(fieldname)) throw errors.validation(`${where} names ${orderDoctype}.${fieldname}, which does not exist`);
+    return fieldname;
+  };
+
+  const submitAsRole = text(orderValue.submit_as_role, "storefront.order.submit_as_role", 140);
+  if (!roleNames.has(submitAsRole) && !PLATFORM_ROLES.has(submitAsRole)) {
+    throw errors.validation(`storefront.order.submit_as_role names ${submitAsRole}, which the app does not define`);
+  }
+  const maxPerDay = typeof orderValue.max_per_day === "number" ? orderValue.max_per_day : 20;
+  if (!Number.isInteger(maxPerDay) || maxPerDay < 1 || maxPerDay > 500) {
+    throw errors.validation("storefront.order.max_per_day must be between 1 and 500");
+  }
+
+  const buyerFields = array(orderValue.buyer_fields, "storefront.order.buyer_fields").map((entry, index) => {
+    const fieldname = requireOrderField(entry, `storefront.order.buyer_fields[${index}]`);
+    const field = orderMeta.fields.find((candidate) => candidate.fieldname === fieldname)!;
+    // A read-only field is the author's own statement that the value is computed; a
+    // Password arriving from an unauthenticated stranger is never right.
+    if (field.read_only) throw errors.validation(`storefront.order.buyer_fields names ${fieldname}, which is read-only`);
+    if (field.fieldtype === "Password") throw errors.validation(`storefront.order.buyer_fields cannot include a Password field`);
+    return fieldname;
+  });
+  if (!buyerFields.length) throw errors.validation("storefront.order.buyer_fields must list at least one field");
+
+  return {
+    catalog,
+    order: {
+      doctype: orderDoctype,
+      submit_as_role: submitAsRole,
+      lines_field: requireOrderField(orderValue.lines_field, "storefront.order.lines_field"),
+      placed_at_field: requireOrderField(orderValue.placed_at_field, "storefront.order.placed_at_field"),
+      total_field: requireOrderField(orderValue.total_field, "storefront.order.total_field"),
+      track_field: requireOrderField(orderValue.track_field, "storefront.order.track_field"),
+      buyer_fields: buyerFields,
+      max_per_day: maxPerDay,
+    },
+  };
+}
+
 function parseFixture(value: JsonValue, index: number): AppFixture {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw errors.validation(`fixtures[${index}] must be an object`);
   const input = value as JsonObject;
@@ -608,7 +950,7 @@ function parseFixture(value: JsonValue, index: number): AppFixture {
   };
 }
 
-function parseNav(value: JsonValue, index: number, doctypeNames: ReadonlySet<string>): AppNavItem {
+function parseNav(value: JsonValue, index: number, doctypeNames: ReadonlySet<string>, actions: ReadonlyMap<string, AppAction> = new Map()): AppNavItem {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw errors.validation(`nav[${index}] must be an object`);
   const input = value as JsonObject;
   const kind = input.kind;
@@ -616,6 +958,7 @@ function parseNav(value: JsonValue, index: number, doctypeNames: ReadonlySet<str
     throw errors.validation(`nav[${index}].kind is not recognised: ${String(kind)}`);
   }
   const key = text(input.key, `nav[${index}].key`, 160);
+  let action: AppAction | undefined;
   if (kind === "experience") {
     const separator = key.indexOf(":");
     const experienceKind = separator < 0 ? key : key.slice(0, separator);
@@ -623,15 +966,23 @@ function parseNav(value: JsonValue, index: number, doctypeNames: ReadonlySet<str
     if (!SUPPORTED_EXPERIENCE_KINDS.has(experienceKind) || !argument) {
       throw errors.validation(`nav[${index}] requests unsupported experience ${key}; supported prefixes: ${[...SUPPORTED_EXPERIENCE_KINDS].join(", ")}`);
     }
+    if (experienceKind === "action") {
+      action = actions.get(argument);
+      if (!action) throw errors.validation(`nav[${index}] opens action "${argument}", which this app does not declare`);
+    }
   }
   const inferredPermissionDoctype = kind === "doctype"
     ? key
-    : kind === "experience" && (key.startsWith("approval:") || key.startsWith("calendar:"))
-      // Both `approval:` and `calendar:` name the doctype after the colon, so the menu
-      // entry is gated on that doctype's read permission — a calendar of records the
-      // user cannot read must not appear at all.
-      ? key.slice(key.indexOf(":") + 1)
-      : undefined;
+    : action
+      // An action carries its own gate, so the menu entry and the screen agree by
+      // construction rather than by two places being kept in step by hand.
+      ? action.permission_doctype
+      : kind === "experience" && (key.startsWith("approval:") || key.startsWith("calendar:"))
+        // Both `approval:` and `calendar:` name the doctype after the colon, so the menu
+        // entry is gated on that doctype's read permission — a calendar of records the
+        // user cannot read must not appear at all.
+        ? key.slice(key.indexOf(":") + 1)
+        : undefined;
   const permissionDoctype = typeof input.permission_doctype === "string"
     ? text(input.permission_doctype, `nav[${index}].permission_doctype`, 160)
     : inferredPermissionDoctype;

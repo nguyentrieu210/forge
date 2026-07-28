@@ -10,6 +10,23 @@ export interface AccessScopeValue {
   }>;
 }
 
+/**
+ * Một tài khoản đăng nhập của tenant, như màn quản trị nhìn thấy nó.
+ *
+ * `enabled` là thứ quan trọng nhất trong danh sách này: tài khoản bị khoá vẫn còn nguyên
+ * (user id là `owner` của mọi chứng từ họ đã lập, xoá đi là làm hỏng lịch sử), nên nếu
+ * màn hình không hiện trạng thái thì một tài khoản đã đóng trông y hệt một tài khoản đang mở.
+ */
+export interface TenantUser {
+  user: string;
+  full_name?: string;
+  email?: string;
+  enabled: boolean;
+  user_type?: string;
+  roles: string[];
+  last_login_at?: string;
+}
+
 export interface AccessProfileSummary {
   user: string;
   fullName?: string;

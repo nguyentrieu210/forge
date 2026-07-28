@@ -16,7 +16,7 @@ export interface MetadataStore {
   putPrintFormat(tenantId: string, format: PrintFormatMeta, actor: string, now: string): Promise<PrintFormatMeta>;
   /** `document` supplies values for field-, series- and format-based patterns. */
   nextName(tenantId: string, doctype: string, pattern: string, now: string, document?: JsonObject): Promise<string>;
-  provisionStandardCatalog(tenantId: string, actor: string, now: string): Promise<{ doctypes: number; print_formats: number }>;
+  provisionStandardCatalog(tenantId: string, actor: string, now: string): Promise<{ doctypes: number; print_formats: number; roles: number }>;
 }
 
 interface MetaRow { metadata_json: string; revision: number; modified_at: string }
@@ -125,7 +125,7 @@ export class D1MetadataStore implements MetadataStore {
     return normalized;
   }
 
-  async provisionStandardCatalog(tenantId: string, actor: string, now: string): Promise<{ doctypes: number; print_formats: number }> {
+  async provisionStandardCatalog(tenantId: string, actor: string, now: string): Promise<{ doctypes: number; print_formats: number; roles: number }> {
     if (!tenantId || tenantId === "__standard__") throw errors.validation("A concrete tenant is required");
     const doctypes = await this.db.prepare(
       `INSERT OR IGNORE INTO doctype_definitions(tenant_id,doctype,module,is_custom,is_submittable,is_child,revision,metadata_json,disabled,modified_by,modified_at)
@@ -135,7 +135,47 @@ export class D1MetadataStore implements MetadataStore {
       `INSERT OR IGNORE INTO print_formats(tenant_id,name,doc_type,is_default,disabled,revision,format_json,modified_by,modified_at)
        SELECT ?1,name,doc_type,is_default,disabled,revision,format_json,?2,?3 FROM print_formats WHERE tenant_id='__standard__'`,
     ).bind(tenantId, actor, now).run();
-    return { doctypes: doctypes.meta?.changes ?? 0, print_formats: formats.meta?.changes ?? 0 };
+    const roles = await this.provisionStandardRoles(tenantId, now);
+    return { doctypes: doctypes.meta?.changes ?? 0, print_formats: formats.meta?.changes ?? 0, roles };
+  }
+
+  /**
+   * Creates every role the standard DocPerms name.
+   *
+   * Copying the catalogue alone produces a tenant whose Item says "Stock Manager may
+   * write" while `roles` holds no such row — and `user_roles_require_role` refuses the
+   * grant, so nobody but the System Manager can be given the access the metadata
+   * describes. The tenant looks provisioned, the permissions look configured, and the
+   * first attempt to staff the warehouse fails on a foreign key.
+   *
+   * Derived from the metadata rather than from a list kept here, because a list would
+   * have to be edited every time a standard doctype names a role it did not name
+   * before — and the only symptom of forgetting is, again, a grant that cannot be made.
+   */
+  private async provisionStandardRoles(tenantId: string, now: string): Promise<number> {
+    const rows = await this.db.prepare(
+      `SELECT metadata_json FROM doctype_definitions WHERE tenant_id=?1`,
+    ).bind(tenantId).all<{ metadata_json: string }>();
+
+    const named = new Set<string>();
+    for (const row of rows.results ?? []) {
+      let meta: { permissions?: Array<{ role?: unknown }> };
+      // A definition that does not parse is not this method's problem to report: it was
+      // written by whatever put it there, and failing provisioning over it would leave
+      // the tenant with no roles at all rather than with the ones that are readable.
+      try { meta = JSON.parse(row.metadata_json) as typeof meta; } catch { continue; }
+      for (const permission of meta.permissions ?? []) {
+        if (typeof permission.role === "string" && permission.role.trim()) named.add(permission.role.trim());
+      }
+    }
+    if (named.size === 0) return 0;
+
+    const statements = [...named].sort().map((role) => this.db.prepare(
+      `INSERT INTO roles(tenant_id,role,desk_access,is_standard,modified_at) VALUES(?1,?2,1,1,?3)
+       ON CONFLICT(tenant_id,role) DO NOTHING`,
+    ).bind(tenantId, role, now));
+    const results = await this.db.batch(statements);
+    return results.reduce((total, result) => total + (result.meta?.changes ?? 0), 0);
   }
 
   async nextName(tenantId: string, doctype: string, pattern: string, now: string, document: JsonObject = {}): Promise<string> {
@@ -182,7 +222,7 @@ export class InMemoryMetadataStore implements MetadataStore {
   async putWorkflow(tenantId: string, workflow: WorkflowMeta): Promise<WorkflowMeta> { this.workflows.set(this.key(tenantId, workflow.document_type), structuredClone(workflow)); return structuredClone(workflow); }
   async getPrintFormat(tenantId: string, doctype: string, name?: string): Promise<PrintFormatMeta | null> { return structuredClone(this.formats.get(this.key(tenantId, name ?? doctype)) ?? null); }
   async putPrintFormat(tenantId: string, format: PrintFormatMeta): Promise<PrintFormatMeta> { this.formats.set(this.key(tenantId, format.name), structuredClone(format)); return structuredClone(format); }
-  async provisionStandardCatalog(_tenantId: string, _actor: string, _now: string): Promise<{ doctypes: number; print_formats: number }> { return { doctypes: 0, print_formats: 0 }; }
+  async provisionStandardCatalog(_tenantId: string, _actor: string, _now: string): Promise<{ doctypes: number; print_formats: number; roles: number }> { return { doctypes: 0, print_formats: 0, roles: 0 }; }
   
   // Resolution is shared with the D1 store so both allocate identical names; only
   // the counter storage differs.

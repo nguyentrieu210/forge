@@ -37,8 +37,34 @@ export function ChildGrid(props: ChildGridProps) {
   const { childMeta, rows, onChange, registry, services, readOnly, parentDoc, roles } = props;
   const cols = gridColumns(childMeta);
 
+  /**
+   * Các field dòng TỰ TÍNH được, tính ngay khi gõ.
+   *
+   * Server vẫn là nơi quyết định con số cuối cùng (`calculateSalesTotals` tính lại toàn bộ
+   * khi lưu, theo đơn vị nhỏ nhất). Nhưng nếu ô "Thành tiền" trống suốt lúc nhập thì người
+   * bán không soát được gì cho tới khi bấm lưu — mà một dòng sai đơn giá chỉ lộ ra ở tổng
+   * đơn, lúc đã muộn. Nên tính ở client để NHÌN, và vẫn để server tính lại để TIN.
+   *
+   * Quy ước theo tên field, cùng lối với `fillItemDefaults` ngay dưới: dòng nào có đủ
+   * `qty` và `rate` và có ô `amount` thì `amount = qty × rate`. Không có đủ ba thì không
+   * làm gì — không đoán, không ghi đè field người dùng tự nhập.
+   */
+  const COMPUTED_FROM = new Set(["qty", "rate"]);
+  const withComputed = (row: Doc): Doc => {
+    const has = (f: string) => (childMeta.fields ?? []).some((x) => x.fieldname === f);
+    if (!has("amount") || !has("qty") || !has("rate")) return row;
+    const qty = Number(row.qty);
+    const rate = Number(row.rate);
+    if (!Number.isFinite(qty) || !Number.isFinite(rate)) return row;
+    return { ...row, amount: qty * rate };
+  };
+
   const setCell = (rowIdx: number, fieldname: string, value: unknown) => {
-    const next = rows.map((r, i) => (i === rowIdx ? { ...r, [fieldname]: value } : r));
+    const next = rows.map((r, i) => {
+      if (i !== rowIdx) return r;
+      const updated = { ...r, [fieldname]: value };
+      return COMPUTED_FROM.has(fieldname) ? withComputed(updated) : updated;
+    });
     onChange(next);
     if (fieldname === "item_code" && value) void fillItemDefaults(rowIdx, String(value), next);
   };

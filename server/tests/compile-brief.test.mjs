@@ -264,3 +264,67 @@ test("a brief that names System Manager itself is left alone", () => {
   assert.equal(admin.length, 1, "exactly one row, not a duplicate");
   assert.equal(admin[0].write, undefined);
 });
+
+// ---- thao tác dạng form (actions) --------------------------------------------
+
+/**
+ * Một action là MÀN HÌNH khai bằng dữ liệu. Nó chạy method ghi thật, nên mỗi phép thử dưới
+ * đây chốt một cách nó có thể hỏng mà không ai thấy: mục menu mở màn không dựng được,
+ * một nút gọi method không có Worker nào phục vụ, hay một màn không có chốt quyền nào.
+ */
+const withAction = (patch = {}) => ({
+  ...minimal(),
+  worker: "cloudforge-app-crm",
+  actions: [{
+    name: "gui-bao-gia",
+    label: "Gửi báo giá",
+    permission: "Lead",
+    fields: ["lead:Link(Lead)! Khách", "amount:Currency! Số tiền"],
+    preview: "crm.quote.preview | Xem trước",
+    commit: "crm.quote.send | Gửi | Gửi báo giá cho khách?",
+    resultTable: "lines",
+    ...patch,
+  }],
+});
+
+test("action biên dịch thành màn hình + mục menu, và server nhận", () => {
+  const manifest = parseAppManifest(compileBrief(withAction()));
+  assert.equal(manifest.actions.length, 1);
+  const action = manifest.actions[0];
+  assert.equal(action.commit.method, "crm.quote.send");
+  assert.equal(action.commit.confirm, "Gửi báo giá cho khách?");
+  assert.equal(action.preview.label, "Xem trước");
+  assert.equal(action.result_table, "lines");
+  // Field dùng chung ngôn ngữ với field của doctype — không có cú pháp thứ hai.
+  assert.deepEqual(action.fields[0], { fieldname: "lead", label: "Khách", fieldtype: "Link", options: "Lead", required: true });
+
+  // Mục menu lấy chốt quyền TỪ CHÍNH action, nên menu và màn không thể lệch nhau.
+  const nav = manifest.nav.find((item) => item.key === "action:gui-bao-gia");
+  assert.equal(nav.kind, "experience");
+  assert.equal(nav.permission_doctype, "Lead");
+});
+
+test("action không có Worker bị TỪ CHỐI — nút bấm sẽ chỉ trả 404", () => {
+  const brief = withAction();
+  delete brief.worker;
+  assert.throws(() => compileBrief(brief), /actions.*worker|worker.*action/i);
+});
+
+test("action chặn quyền theo doctype app không khai thì bị từ chối", () => {
+  // Chốt không đánh giá được nghĩa là màn hoặc mở cho tất cả, hoặc không cho ai — im lặng cả hai.
+  assert.throws(() => compileBrief(withAction({ permission: "Khong Ton Tai" })), /không khai/);
+});
+
+test("action không có ô nhập nào, hoặc không có nút chạy, đều bị từ chối", () => {
+  assert.throws(() => compileBrief(withAction({ fields: [] })), /ô nhập/);
+  const noCommit = withAction();
+  delete noCommit.actions[0].commit;
+  assert.throws(() => compileBrief(noCommit), /commit/);
+});
+
+test("nav trỏ tới action không tồn tại bị server từ chối", () => {
+  // Không phải chuyện thẩm mỹ: mục menu cài sạch rồi mở ra một màn không dựng được.
+  const pkg = compileBrief(withAction());
+  pkg.nav.push({ key: "action:khong-co", label: "Ma", kind: "experience" });
+  assert.throws(() => parseAppManifest(pkg), /does not declare/);
+});

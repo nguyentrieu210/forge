@@ -7,7 +7,7 @@ import {
 } from "../../../packages/auth/src/index.js";
 import {
   assertSessionCsrf, D1DeskViewStore, D1TranslationStore, establishSession, faultResponse, isFrappePath, isPublicFrappePath,
-  buildCommand, isWebFormPath, routeFrappeApi, routeFrappeAuth, runAutoRepeat, runNotificationRules, slideSession,
+  buildCommand, isPublicFilePath, isStorefrontPath, isWebFormPath, routeFileDownload, routeFrappeApi, routeFrappeAuth, runAutoRepeat, runNotificationRules, slideSession,
   type AuthRouteContext, type AutoRepeatRunResult, type EstablishedSession,
 } from "../../../packages/frappe-api/src/index.js";
 import {
@@ -184,7 +184,10 @@ export default {
       // Mounted ahead of the native routes and authenticated by cookie session
       // rather than by the gateway's trusted identity, so that revocation is
       // checked against the live user directory on every request.
-      if (isFrappePath(url.pathname)) {
+      // `/files/…` joins them because it is authenticated the same way and, for a public
+      // file, not at all: it is the URL that ends up inside an `<img src>` on the public
+      // catalogue, so it must resolve for a browser that has never logged in.
+      if (isFrappePath(url.pathname) || isPublicFilePath(url.pathname)) {
         const frappeResponse = await serveFrappeApi(request, url, env, tenantId, traceId);
         if (frappeResponse) return frappeResponse;
       }
@@ -788,7 +791,7 @@ async function serveFrappeApiInner(
     // have real sessions enabled.
     actor = staticDevelopmentActor(env.DEV_ACTOR_JSON);
     fullName = actor.user_id;
-  } else if (isWebFormPath(url.pathname)) {
+  } else if (isWebFormPath(url.pathname) || isPublicFilePath(url.pathname) || isStorefrontPath(url.pathname)) {
     /**
      * The one surface a visitor with no session may reach.
      *
@@ -827,7 +830,7 @@ async function serveFrappeApiInner(
     ...(env.PUBLIC_ORIGIN ? { PUBLIC_ORIGIN: env.PUBLIC_ORIGIN } : {}),
   };
 
-  const response = await routeFrappeApi(request, url, {
+  const frappeContext = {
     tenantId,
     actor,
     traceId,
@@ -845,7 +848,9 @@ async function serveFrappeApiInner(
     reports: new D1ReportService(env.DB),
     appReports: new AppReportService(env.DB),
     deskViews: new D1DeskViewStore(env.DB),
-    async runCommand(command) {
+    // Typed explicitly: the context is now a standalone object rather than an inline
+    // argument, so it no longer inherits the parameter's contextual types.
+    async runCommand(command: MutationCommand) {
       // Every write in the façade funnels through here, so this is where an app's
       // pre-commit check belongs: nine call sites in the router today, and any handler
       // added later, are covered without each one remembering to ask.
@@ -898,7 +903,16 @@ async function serveFrappeApiInner(
         },
       }
       : {}),
-  });
+    // Attachments. Absent when no bucket is bound, and then `upload_file` answers 404
+    // instead of writing a database row that points at bytes which were never stored.
+    ...(env.FILES ? { files: { db: env.DB, bucket: env.FILES } } : {}),
+  };
+
+  // Downloads first: they are not `/api/` paths, so the API router would not claim them.
+  const fileResponse = await routeFileDownload(url, frappeContext);
+  if (fileResponse) return fileResponse;
+
+  const response = await routeFrappeApi(request, url, frappeContext);
   if (!response) return null;
 
   // Slide the cookie only when it is close to expiring, so an active user is not

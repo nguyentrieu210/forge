@@ -47,6 +47,21 @@ export function writeTenantConfig({ tenant, databaseId, databaseName = `cloudfor
       ...(publicOrigin ? { PUBLIC_ORIGIN: publicOrigin } : {}),
     },
     d1_databases: [{ binding: "DB", database_name: databaseName, database_id: databaseId, migrations_dir: "../../migrations/tenant" }],
+    /**
+     * Attachments and product photographs.
+     *
+     * ONE bucket for every tenant, with the tenant id as the first key segment: a bucket
+     * per customer would make provisioning fail on an account bucket limit long before
+     * anything about that customer's data was a problem. Reads stay scoped by the `files`
+     * table, which is per tenant.
+     *
+     * Declared HERE as well as in the checked-in template, and the duplication is the
+     * point of this comment: the template is what a developer runs locally, this is what
+     * every provisioned customer gets. When the binding existed only in the template, a
+     * real tenant came up without it and `upload_file` answered "File storage is not
+     * configured" — a failure that appears only after a customer tries to add a photo.
+     */
+    r2_buckets: [{ binding: "FILES", bucket_name: "cloudforge-files" }],
     durable_objects: { bindings: [{ name: "AGGREGATES", class_name: "AggregateCoordinator" }] },
     migrations: [{ tag: "v1", new_sqlite_classes: ["AggregateCoordinator"] }],
     queues: { producers: [{ binding: "OUTBOX_QUEUE", queue: "cloudforge-outbox" }] },

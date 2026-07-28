@@ -156,6 +156,16 @@ export interface WorkflowMeta extends JsonObject {
 
 export interface DocTypeMeta extends JsonObject {
   name: string;
+  /**
+   * Tên hiển thị cho người dùng. Bỏ trống thì mọi nơi rơi về `name`, tức tên kỹ thuật.
+   *
+   * Không phải chuyện trang trí: `name` là định danh tiếng Anh không đổi được (nó nằm trong
+   * URL, trong khoá ngoại, trong mọi tham chiếu), nên nếu nhãn không đi cùng metadata thì
+   * người dùng Việt Nam đọc "Aluminium Lot" ở breadcrumb, ở ô chọn loại chứng từ và ở màn
+   * phân quyền — trong khi brief đã khai "Lô nhôm tồn" và menu vẫn hiện đúng. Hai chỗ nói
+   * hai kiểu về cùng một thứ.
+   */
+  label?: string;
   module: string;
   custom?: boolean;
   is_child?: boolean;

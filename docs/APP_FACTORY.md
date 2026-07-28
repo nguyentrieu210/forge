@@ -233,6 +233,64 @@ Ghi lại vì mỗi lỗi đều **xanh mọi cổng** trước khi bị bắt:
 | **Nút "Xuất" của danh sách chưa từng hiện.** Nó chỉ render khi cha truyền `onExport`, và không cha nào truyền | grep mã nguồn thì thấy; dùng app thì không. Nay ghim bằng test trình duyệt tải file thật |
 | **Màn nhập dữ liệu nằm trong app demo**, nên mọi app khác giao ra không có đường nhập Excel | không phải chưa xây — xây rồi, để nhầm thư mục |
 
+## Thêm field vào DocType CHUẨN — `customFields`
+
+Một app ngành hiếm khi cần doctype sản phẩm riêng; nó cần `Item` chuẩn có thêm ảnh và quy
+cách. Danh mục riêng là danh mục **thứ hai** mà sổ kho, bảng giá và mọi controller bán hàng
+không nhìn thấy.
+
+```json
+"customFields": {
+  "Item": ["image:Attach Image Ảnh sản phẩm", { "field": "published:Check Hiện trên web", "after": "item_name" }]
+}
+```
+
+App **sở hữu** những field này: cài lại thì cập nhật, gỡ app thì gỡ đúng chúng — không đụng
+field khách tự thêm trên cùng doctype. Khai custom field lên doctype do chính brief khai thì
+bị TỪ CHỐI: ở đó field thuộc về `fields`, và phủ thêm một lớp overlay lên chính mình khiến
+định nghĩa DocType không còn mô tả đúng thứ được cài.
+
+## Mặt tiền công khai — `storefront`
+
+Khách không đăng nhập đọc được gì, và đặt hàng thế nào. **Không phải** "mở `get_list` cho
+guest" — chỉ cách một bộ lọc bị quên là phục vụ luôn bảng khách hàng.
+
+```json
+"storefront": {
+  "catalog": {
+    "doctype": "Item", "publishedField": "published", "slugField": "slug",
+    "priceField": "retail_price", "facetField": "item_group",
+    "fields": ["item_name", "retail_price", "image", "slug"],
+    "search": ["item_name"]
+  },
+  "order": {
+    "doctype": "Web Order", "role": "Chăm sóc khách hàng", "lines": "items",
+    "placedAt": "order_date", "total": "total_amount", "trackBy": "phone",
+    "buyerFields": ["buyer_name", "phone", "ship_address"], "maxPerDay": 20
+  }
+}
+```
+
+| Ràng buộc | Không có thì |
+|---|---|
+| `fields` là danh sách trắng | giá vốn nằm ngay cạnh giá bán trên cùng doctype, và một API "đọc sản phẩm" công bố nó |
+| giá tính từ `priceField` ở SERVER | trình duyệt tự khai giá — không còn là cửa hàng |
+| `search` phải nằm trong `fields` | tìm được field không hiện = đọc được nó bằng cách thử |
+| `trackBy` là yếu tố thứ hai | mã đơn là dãy đoán được; chỉ cần mã là duyệt được toàn bộ khách hàng |
+| đơn web KHÔNG trừ tồn | một người bấm nghịch làm kho ảo hết hàng |
+
+Bốn method công khai: `forge.storefront.catalog` · `.product` · `.place_order` · `.track_order`.
+Giao diện `/shop` do runtime dựng sẵn, không cần app viết gì thêm.
+
+## Ảnh và tệp đính kèm
+
+`POST /api/method/upload_file` (multipart, cần phiên) và `GET /files/<id>/<tên>`. File công
+khai cache `immutable`; file riêng tư `no-store` và kiểm quyền theo tài liệu nó đính kèm.
+SVG bị từ chối — nó là ảnh ở mọi nơi khác và là `<script>` chạy cùng origin ở đây.
+
+Cần bucket R2 bind vào tenant worker (`FILES`). Thiếu binding thì `upload_file` trả 404 thay
+vì ghi một dòng CSDL trỏ tới bytes chưa bao giờ được lưu.
+
 ### Chưa làm
 
 - Experience mới có `approval:` và `calendar:`. Điểm danh hàng loạt (`roster:`) chưa có.

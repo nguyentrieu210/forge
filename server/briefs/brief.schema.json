@@ -141,6 +141,147 @@
         "$ref": "#/$defs/doctype"
       }
     },
+    "storefront": {
+      "type": "object",
+      "description": "Mặt tiền CÔNG KHAI: khách không đăng nhập đọc được gì, và đặt hàng thế nào. `fields` là DANH SÁCH TRẮNG — field không liệt kê thì không bao giờ ra ngoài (giá vốn, giá đại lý, tồn kho nằm ngay cạnh giá lẻ trên cùng doctype).",
+      "additionalProperties": false,
+      "required": [
+        "catalog"
+      ],
+      "properties": {
+        "catalog": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "doctype",
+            "publishedField",
+            "slugField",
+            "priceField",
+            "fields"
+          ],
+          "properties": {
+            "doctype": {
+              "type": "string",
+              "description": "Phải là doctype brief này khai."
+            },
+            "publishedField": {
+              "type": "string",
+              "description": "Field Check quyết định bản ghi có ra trang công khai không."
+            },
+            "slugField": {
+              "type": "string",
+              "description": "Field duy nhất dùng làm đường dẫn sản phẩm."
+            },
+            "priceField": {
+              "type": "string",
+              "description": "Giá SERVER dùng để tính tiền đơn hàng. Giá do client gửi bị bỏ qua."
+            },
+            "facetField": {
+              "type": "string",
+              "description": "Field cho phép lọc, vd nhóm hàng."
+            },
+            "fields": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string"
+              }
+            },
+            "search": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Field cho tìm kiếm — phải nằm trong `fields`."
+            }
+          }
+        },
+        "order": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "doctype",
+            "role",
+            "lines",
+            "placedAt",
+            "total",
+            "trackBy",
+            "buyerFields"
+          ],
+          "properties": {
+            "doctype": {
+              "type": "string"
+            },
+            "role": {
+              "type": "string",
+              "description": "Vai trò đơn công khai chạy dưới. Trần quyền do DocPerm của vai trò này quyết."
+            },
+            "lines": {
+              "type": "string",
+              "description": "Field bảng chứa dòng hàng."
+            },
+            "placedAt": {
+              "type": "string",
+              "description": "Field Datetime do SERVER đóng dấu."
+            },
+            "total": {
+              "type": "string",
+              "description": "Field Currency server cộng vào."
+            },
+            "trackBy": {
+              "type": "string",
+              "description": "Yếu tố thứ hai để tra cứu, ngoài mã đơn. Chỉ mã đơn là dãy đoán được."
+            },
+            "buyerFields": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string"
+              }
+            },
+            "maxPerDay": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500
+            }
+          }
+        }
+      }
+    },
+    "customFields": {
+      "type": "object",
+      "description": "Field app thêm vào DocType CHUẨN (Item, Customer…) — thứ app không sở hữu. Khóa là tên DocType, giá trị là mảng field viết theo đúng ngôn ngữ trường của `fields`. KHÔNG dùng cho doctype do chính brief này khai.",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 3
+            },
+            {
+              "type": "object",
+              "required": [
+                "field"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "field": {
+                  "type": "string",
+                  "minLength": 3
+                },
+                "after": {
+                  "type": "string",
+                  "description": "Tên field chuẩn để chèn ngay sau. Bỏ trống thì field nằm cuối form."
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
     "reports": {
       "type": "array",
       "description": "Báo cáo bảng trên chính doctype của app. Cột viết gọn: \"field:Type Nhãn\" hoặc \"sum(field):Currency Nhãn\".",
@@ -194,6 +335,160 @@
           "group": {
             "type": "string",
             "description": "Nhóm menu. Mặc định \"Báo cáo\"."
+          },
+          "icon": {
+            "type": "string"
+          }
+        },
+        "patternProperties": {
+          "^//": true
+        }
+      }
+    },
+    "actions": {
+      "type": "array",
+      "description": "Thao tác dạng form: điền ô rồi bấm chạy, gọi method của Worker app. Dùng cho việc KHÔNG phải là sửa một bản ghi (vd cắt nhôm: chọn lô, trừ tồn, ghi phiếu cắt). Cần `worker`.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "permission",
+          "commit",
+          "fields"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$",
+            "description": "Cũng là id trong /x/action:<name>."
+          },
+          "label": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "permission": {
+            "type": "string",
+            "description": "Doctype dùng để chặn quyền vào màn (quyền GHI). Phải là doctype brief này khai."
+          },
+          "fields": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/$defs/field"
+            },
+            "description": "Cùng cú pháp với field của doctype: \"profile:Link(Item)! Mã nhôm\"."
+          },
+          "preview": {
+            "$ref": "#/$defs/actionCall",
+            "description": "Method CHỈ ĐỌC, cho xem trước điều sắp xảy ra."
+          },
+          "commit": {
+            "$ref": "#/$defs/actionCall",
+            "description": "Method GHI THẬT. Thêm phần thứ ba để hỏi lại trước khi chạy."
+          },
+          "resultTable": {
+            "type": "string",
+            "description": "Khoá trong kết quả chứa mảng dòng, để hiện thành bảng."
+          },
+          "group": {
+            "type": "string",
+            "description": "Nhóm menu. Mặc định \"Thao tác\"."
+          },
+          "icon": {
+            "type": "string"
+          }
+        },
+        "patternProperties": {
+          "^//": true
+        }
+      }
+    },
+    "prints": {
+      "type": "array",
+      "description": "Mẫu in do app khai. Lặp dòng hàng: {{#each items}} … {{/each}}. Định dạng tiền: {{ grand_total | money }}. Ngày: {{ posting_at | date }}.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "patternProperties": {
+          "^//": true
+        },
+        "required": [
+          "name",
+          "doctype",
+          "html"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "doctype": {
+            "type": "string",
+            "description": "Phải là doctype brief này khai."
+          },
+          "html": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ],
+            "description": "Chuỗi, hoặc mảng dòng cho dễ đọc."
+          },
+          "css": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ]
+          },
+          "default": {
+            "type": "boolean",
+            "description": "Mặc định true. Mẫu mặc định là mẫu nút In dùng."
+          }
+        }
+      }
+    },
+    "links": {
+      "type": "array",
+      "description": "Mục menu trỏ tới BÁO CÁO SẴN CÓ của nền tảng (Stock Balance, General Ledger, Trial Balance…). Không có nó thì hai chục báo cáo đã chạy được vẫn không ai nhìn thấy.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "patternProperties": {
+          "^//": true
+        },
+        "required": [
+          "report"
+        ],
+        "properties": {
+          "report": {
+            "type": "string",
+            "description": "Tên báo cáo của nền tảng, đúng chính tả."
+          },
+          "label": {
+            "type": "string"
+          },
+          "permission": {
+            "type": "string",
+            "description": "Doctype dùng để chặn quyền. Bỏ trống thì hiện cho mọi vai trò."
+          },
+          "group": {
+            "type": "string"
           },
           "icon": {
             "type": "string"
@@ -286,6 +581,34 @@
             "default": {}
           },
           "additionalProperties": true
+        }
+      ]
+    },
+    "actionCall": {
+      "description": "Một method của Worker app. Viết gọn \"method | nhãn nút | câu hỏi xác nhận\", hoặc dạng object.",
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "object",
+          "required": [
+            "method"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "method": {
+              "type": "string",
+              "minLength": 1
+            },
+            "label": {
+              "type": "string"
+            },
+            "confirm": {
+              "type": "string"
+            }
+          }
         }
       ]
     },

@@ -417,11 +417,31 @@ export class D1MutationStore implements MutationStore {
    * `label` prefers a human name from the payload and falls back to the id, so a
    * record without one still shows something selectable.
    */
+  /**
+   * Master data for a picker — from `master_records` AND from documents of that doctype.
+   *
+   * The UNION is not an optimisation, it is the whole correctness of this method. Its two
+   * siblings (`getMasterRecordData`, `listMasterRecordData`) already read both, and this
+   * one read only the first — so a record was resolvable by name and usable by the pricing
+   * and stock kernels, yet invisible in every selector built from it.
+   *
+   * What that looked like in practice: an app declares `Warehouse` as a DocType (the normal
+   * way — users need to create warehouses), forty-five warehouses exist, and the global
+   * warehouse scope selector reports itself `enabled: false` with an empty list. The app
+   * then blocks on "choose a scope" for a selector that can never be populated. Nothing is
+   * logged, because nothing failed.
+   */
   async listMasterRecords(tenantId: string, recordType: string, limit = 200): Promise<Array<{ name: string; label: string }>> {
     const bounded = Math.min(Math.max(limit, 1), 500);
     const result = await this.writer.prepare(
-      `SELECT name, data_json FROM master_records
-       WHERE tenant_id=?1 AND record_type=?2 AND disabled=0 ORDER BY name LIMIT ?3`,
+      `SELECT name, data_json FROM (
+         SELECT name, data_json FROM master_records
+           WHERE tenant_id=?1 AND record_type=?2 AND disabled=0
+         UNION
+         SELECT name, payload_json AS data_json FROM documents
+           WHERE tenant_id=?1 AND doctype=?2 AND docstatus<>2
+             AND COALESCE(CAST(json_extract(payload_json,'$.disabled') AS INTEGER),0)=0
+       ) ORDER BY name LIMIT ?3`,
     ).bind(tenantId, recordType, bounded).all<{ name: string; data_json: string }>();
     return (result.results ?? []).map((row) => {
       let label = row.name;

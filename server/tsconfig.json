@@ -18,6 +18,7 @@
   },
   "include": [
     "apps/**/*.ts",
+    "apps-src/*/src/**/*.ts",
     "packages/**/*.ts",
     "types/**/*.d.ts"
   ],

@@ -2,6 +2,7 @@
 import { readFile } from "node:fs/promises";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
+import { pathToFileURL } from "node:url";
 import path from "node:path";
 
 const API_BASE = "https://api.cloudflare.com/client/v4";
@@ -138,7 +139,15 @@ function requireBindingName(value) {
   return name;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+/**
+ * So sánh URL với URL, không phải URL với đường dẫn hệ điều hành.
+ *
+ * `file://${process.argv[1]}` cho ra `file://C:\Forge\...` trên Windows, còn
+ * `import.meta.url` là `file:///C:/Forge/...` — không bao giờ bằng nhau, nên script chạy
+ * xong THOÁT IM LẶNG với mã 0 và không in gì. Nhìn y hệt "không có secret nào", và đó
+ * chính là kết luận sai mà nó vừa dẫn tới.
+ */
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   main().catch((error) => {
     process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
     process.exitCode = 1;

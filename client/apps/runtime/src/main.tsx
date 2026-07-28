@@ -12,6 +12,7 @@ import {
 } from "@metaforge/shell";
 import { Button, Toaster } from "@metaforge/ui";
 import { SocialCommerceLanding, type PublicSocialPage } from "./landing/SocialCommerceLanding.js";
+import { Storefront, type StorefrontPage } from "./storefront/Storefront.js";
 import "./styles.css";
 
 const ApplicationCatalogContainer = lazy(() => import("@metaforge/views/catalog").then((module) => ({ default: module.ApplicationCatalogContainer })));
@@ -23,6 +24,7 @@ const ReportContainer = lazy(() => import("@metaforge/views/report").then((modul
 const WorkspaceContainer = lazy(() => import("@metaforge/views/workspace").then((module) => ({ default: module.WorkspaceContainer })));
 const CalendarContainer = lazy(() => import("@metaforge/views/calendar").then((module) => ({ default: module.CalendarContainer })));
 const ImportContent = lazy(() => import("@metaforge/views/import").then((module) => ({ default: module.ImportContent })));
+const ActionScreen = lazy(() => import("@metaforge/views/action").then((module) => ({ default: module.ActionScreen })));
 const ApprovalInbox = lazy(() => import("./experiences/ApprovalInbox.js").then((module) => ({ default: module.ApprovalInbox })));
 const SocialCommerce = lazy(() => import("./experiences/SocialCommerce.js").then((module) => ({ default: module.SocialCommerce })));
 
@@ -116,7 +118,7 @@ function renderExperience(key: string, manifest: AppManifest, navigate: Navigate
       <div className="rounded-xl border bg-card p-6">
         <h1 className="font-semibold">Màn "{key}" chưa được triển khai</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Manifest có khai Experience này, nhưng runtime chưa có màn tương ứng. Các loại đang hỗ trợ: <code>approval:&lt;DocType&gt;</code>, <code>calendar:&lt;DocType&gt;</code>.
+          Manifest có khai Experience này, nhưng runtime chưa có màn tương ứng. Các loại đang hỗ trợ: <code>approval:&lt;DocType&gt;</code>, <code>calendar:&lt;DocType&gt;</code>, <code>action:&lt;tên&gt;</code>.
         </p>
       </div>
     </div>
@@ -206,7 +208,27 @@ function buildNavigation(manifest: AppManifest, catalog: ApplicationCatalog | un
   return items;
 }
 
+/**
+ * The shop, for every tenant whose installed app declares a storefront.
+ *
+ * Checked BEFORE the auth boundary, and deliberately not gated on a hostname the way the
+ * social-commerce marketing pages are: a customer's shop lives on the customer's own
+ * domain, and whether it exists is decided by what is installed, not by which host the
+ * bundle happens to be served from. If no storefront is installed the API answers 404 and
+ * the page says so — which is the honest answer, and one that needs no configuration.
+ */
+function resolveStorefrontPage(): StorefrontPage | undefined {
+  const path = (window.location.pathname.replace(/\/+$/, "") || "/");
+  if (path === "/shop") return "/shop";
+  if (path === "/shop/cart") return "/shop/cart";
+  if (path === "/shop/track") return "/shop/track";
+  return path.startsWith("/shop/") ? "/shop/product" : undefined;
+}
+
 function RootApp() {
+  const shopPage = resolveStorefrontPage();
+  if (shopPage) return <I18nProvider><Storefront page={shopPage} adapter={adapter} /></I18nProvider>;
+
   const publicPage = resolvePublicSocialPage();
   if (publicPage) return <I18nProvider><SocialCommerceLanding page={publicPage} adapter={adapter} /></I18nProvider>;
   return <I18nProvider>
@@ -370,6 +392,33 @@ function ExperienceScreen({ manifest, boot, logout, nav }: ScreenProps) {
   const navigate = useNavigate();
   const experienceKey = decodeURIComponent(key);
   const kind = experienceKey.split(":", 1)[0];
+  /**
+   * `action:<tên>` — màn thao tác do APP KHAI, dựng từ manifest chứ không phải từ code.
+   *
+   * Mở trong shell chung, không chiếm cả màn: đây là một việc trong ngày làm việc (cắt
+   * nhôm, hoàn cắt), người dùng vẫn cần sidebar để đi tiếp sang đơn hàng hay kho.
+   */
+  if (kind === "action") {
+    const name = experienceKey.slice("action:".length);
+    const action = (manifest.actions ?? []).find((candidate) => candidate.name === name);
+    return (
+      <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={experienceKey} breadcrumbs={[{ label: action?.label ?? name }]}>
+        <div className="h-full overflow-auto p-4">
+          {action
+            ? <ActionScreen action={action} onOpen={(doctype, docname) => navigate(`/app/${encodeURIComponent(doctype)}/${encodeURIComponent(docname)}`)} />
+            /**
+             * Manifest đã lọc action theo QUYỀN trước khi gửi xuống, nên "không tìm thấy"
+             * ở đây gần như luôn là không đủ quyền, không phải app khai thiếu. Nói đúng
+             * điều đó thay vì "không tìm thấy màn" — người dùng cần biết phải hỏi ai.
+             */
+            : <div className="grid h-full place-items-center"><div className="max-w-md rounded-xl border bg-card p-6 text-center">
+                <h1 className="font-semibold">Không mở được thao tác "{name}"</h1>
+                <p className="mt-2 text-sm text-muted-foreground">Tài khoản này không có quyền chạy, hoặc app chưa khai thao tác đó.</p>
+              </div></div>}
+        </div>
+      </Shell>
+    );
+  }
   if (kind === "social-commerce") {
     const active = manifest.nav.find((item) => item.key.startsWith("social-commerce:"))?.key ?? experienceKey;
     const canManageConnections = boot.user === "Administrator"
@@ -403,7 +452,15 @@ function DoctypeScreen({ manifest, boot, logout, nav }: ScreenProps) {
   const bridge = useBridge();
   const { doctype = manifest.home.doctype ?? "ToDo", name } = useParams();
   const active = nav.find((item) => item.doctype === doctype)?.key ?? doctype;
-  return <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={active} breadcrumbs={[{ label: doctype }]}><div className="h-full p-3 md:p-4"><DoctypeWorkspace doctype={doctype} name={name} bridge={bridge} onNavigate={navigate} /></div></Shell>;
+  /**
+   * Breadcrumb lấy nhãn từ MENU, không phải tên doctype.
+   *
+   * Menu đã hiện "Đơn hàng" trong khi breadcrumb ngay bên cạnh hiện "Sales Order" — cùng
+   * một màn, hai cái tên. Nhãn menu là thứ người dùng vừa bấm vào để tới đây, nên nó cũng
+   * là cái tên họ mong đọc lại ở đầu trang.
+   */
+  const title = nav.find((item) => item.doctype === doctype)?.label ?? doctype;
+  return <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={active} breadcrumbs={[{ label: title }]}><div className="h-full p-3 md:p-4"><DoctypeWorkspace doctype={doctype} name={name} bridge={bridge} onNavigate={navigate} /></div></Shell>;
 }
 function OverviewScreen(props: ScreenProps) { const navigate = useNavigate(); const { domain = props.manifest.domain ?? "stock" } = useParams(); return <Shell {...props} active="__overview" breadcrumbs={[{ label: "Tổng quan" }]}><div className="h-full overflow-auto p-4"><OverviewContainer domain={domain} onNavigate={navigate} /></div></Shell>; }
 function ProcessScreen(props: ScreenProps) { const navigate = useNavigate(); const { domain = props.manifest.domain ?? "stock" } = useParams(); return <Shell {...props} active="__process" breadcrumbs={[{ label: "Quy trình" }]}><div className="h-full overflow-auto p-4"><ProcessContainer domain={domain} onNavigate={navigate} /></div></Shell>; }

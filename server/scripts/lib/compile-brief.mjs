@@ -132,6 +132,135 @@ function compileReport(report, index, doctypeNames) {
   };
 }
 
+/**
+ * `"alumdoor.cut.apply | Cắt thật | Cắt và trừ tồn?"` → `{ method, label, confirm }`.
+ *
+ * Dạng object cũng nhận, cho ai thích viết rõ. Dấu `|` là vì phần lớn action chỉ cần một
+ * dòng, và bắt viết ba khoá cho một dòng thì brief dài ra mà không rõ thêm.
+ */
+function compileActionCall(raw, where) {
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    if (!raw.method) fail(`${where} thiếu \`method\`.`);
+    return { method: raw.method, label: raw.label ?? raw.method, ...(raw.confirm ? { confirm: raw.confirm } : {}) };
+  }
+  if (typeof raw !== "string") fail(`${where} phải là chuỗi "method | nhãn [| câu hỏi xác nhận]" hoặc object.`);
+  const [method, label, confirm] = raw.split("|").map((part) => part.trim());
+  if (!method) fail(`${where} thiếu tên method.`);
+  return { method, label: label || method, ...(confirm ? { confirm } : {}) };
+}
+
+/**
+ * Một thao tác dạng form. Xem `AppAction` (packages/app-registry) để biết vì sao nó tồn tại.
+ *
+ * Field dùng CHUNG cú pháp với field của doctype — `"profile:Link(Item)! Mã nhôm"` — nên
+ * người viết brief không phải học cú pháp thứ hai cho cùng một khái niệm.
+ */
+function compileAction(action, index, doctypeNames) {
+  const where = `actions[${index}]`;
+  if (!action?.name) fail(`${where} thiếu \`name\`.`);
+  if (!action.permission) fail(`${where} (${action.name}) thiếu \`permission\` — doctype dùng để chặn quyền vào màn này.`);
+  if (!doctypeNames.has(action.permission)) {
+    fail(`${where} (${action.name}) chặn quyền theo "${action.permission}" mà brief này không khai. Có: ${[...doctypeNames].join(", ")}.`);
+  }
+  if (!action.commit) fail(`${where} (${action.name}) thiếu \`commit\` — màn không có nút chạy thì không phải một thao tác.`);
+  const fields = (action.fields ?? []).map((raw, position) => {
+    const field = parseField(raw, position, `${where} (${action.name})`);
+    // Compiler của doctype còn trả `unique`/`read_only`; màn thao tác không có hai khái
+    // niệm đó, và gửi kèm thì parser của server từ chối cả gói.
+    const { fieldname, label, fieldtype, options, required, default: value, description } = field;
+    return {
+      fieldname, label, fieldtype,
+      ...(options ? { options } : {}),
+      ...(required ? { required: true } : {}),
+      ...(value === undefined ? {} : { default: value }),
+      ...(description ? { description } : {}),
+    };
+  });
+  if (!fields.length) fail(`${where} (${action.name}) chưa có ô nhập nào.`);
+  return {
+    name: action.name,
+    label: action.label ?? action.name,
+    ...(action.icon ? { icon: action.icon } : {}),
+    ...(action.group ? { group: action.group } : {}),
+    ...(action.description ? { description: action.description } : {}),
+    fields,
+    ...(action.preview ? { preview: compileActionCall(action.preview, `${where}.preview`) } : {}),
+    commit: compileActionCall(action.commit, `${where}.commit`),
+    permission_doctype: action.permission,
+    ...(action.resultTable ? { result_table: action.resultTable } : {}),
+  };
+}
+
+/** HTML/CSS viết trong brief: chuỗi, hoặc mảng dòng cho dễ đọc. */
+const joinLines = (value) => (Array.isArray(value) ? value.join("\n") : String(value ?? ""));
+
+/**
+ * Mẫu in.
+ *
+ * Bản in là thứ KHÁCH HÀNG cầm, nên nó thuộc về app chứ không phải một thứ ai đó dán vào
+ * sau. Lặp dòng hàng viết `{{#each items}} … {{/each}}`, định dạng tiền viết
+ * `{{ grand_total | money }}` — xem `renderPrintFormat`.
+ */
+function compilePrint(print, index, doctypeNames) {
+  const where = `prints[${index}]`;
+  if (!print?.name) fail(`${where} thiếu \`name\`.`);
+  if (!print.doctype) fail(`${where} (${print.name}) thiếu \`doctype\`.`);
+  if (!doctypeNames.has(print.doctype)) {
+    fail(`${where} (${print.name}) in doctype "${print.doctype}" mà brief này không khai. Có: ${[...doctypeNames].join(", ")}.`);
+  }
+  const html = joinLines(print.html);
+  if (!html.trim()) fail(`${where} (${print.name}) chưa có nội dung \`html\`.`);
+  // `{{#each}}` không có `{{/each}}` sẽ in ra nguyên chuỗi mẫu lên giấy giao cho khách.
+  const opens = (html.match(/{{#each\s/g) ?? []).length;
+  const closes = (html.match(/{{\/each}}/g) ?? []).length;
+  if (opens !== closes) fail(`${where} (${print.name}) có ${opens} \`{{#each}}\` nhưng ${closes} \`{{/each}}\`.`);
+  return {
+    name: print.name,
+    doc_type: print.doctype,
+    format_type: "Standard",
+    html,
+    ...(print.css ? { css: joinLines(print.css) } : {}),
+    is_default: print.default !== false,
+    disabled: false,
+    revision: 1,
+  };
+}
+
+/**
+ * Mục menu trỏ tới một BÁO CÁO SẴN CÓ của nền tảng.
+ *
+ * Nền tảng có sẵn hai chục báo cáo đã chạy được — sổ kho, tồn kho, sổ cái, cân đối, công
+ * nợ — nhưng KHÔNG có đường nào đưa chúng vào menu của một app, nên khách không nhìn thấy
+ * cái nào. Một tính năng không ai tìm ra thì bằng không có.
+ *
+ * `permission` là doctype dùng để chặn: báo cáo tồn kho chỉ nên hiện với người được đọc
+ * hàng hoá. Bỏ trống thì mục hiện cho mọi vai trò.
+ */
+function compileLink(link, index, doctypeNames) {
+  const where = `links[${index}]`;
+  if (!link?.report) fail(`${where} thiếu \`report\` — tên báo cáo của nền tảng.`);
+  if (link.permission && !doctypeNames.has(link.permission)) {
+    fail(`${where} chặn quyền theo "${link.permission}" mà brief này không khai.`);
+  }
+  return {
+    key: `report:${link.report}`,
+    label: link.label ?? link.report,
+    kind: "route",
+    route: `/report/${encodeURIComponent(link.report)}`,
+    ...(link.permission ? { permission_doctype: link.permission } : {}),
+    icon: link.icon ?? "bar-chart-3",
+    group: link.group ?? "Báo cáo",
+  };
+}
+
+function assertUniqueNames(values, label) {
+  const seen = new Set();
+  for (const value of values) {
+    if (seen.has(value)) fail(`Trùng ${label}: ${value}`);
+    seen.add(value);
+  }
+}
+
 function compileValidators(validators) {
   if (!Array.isArray(validators)) fail("`validators` phải là một mảng.");
   return validators.map((entry, index) => {
@@ -144,6 +273,103 @@ function compileValidators(validators) {
     }
     return { doctype: entry.doctype, actions: [...entry.actions] };
   });
+}
+
+/**
+ * The public face of the app: what a stranger may read, and what they may order.
+ *
+ * Written in the brief's own vocabulary and translated here into the manifest's, so an
+ * author writes `publishedField` next to `fields` rather than learning two spellings of
+ * the same idea. The server re-validates every name against the doctype, so a typo is a
+ * refused install rather than a storefront that serves nulls.
+ */
+function compileStorefront(declared) {
+  if (declared === null || typeof declared !== "object" || Array.isArray(declared)) {
+    fail("`storefront` phải là object có `catalog` (và tuỳ chọn `order`).");
+  }
+  const catalog = declared.catalog;
+  if (!catalog?.doctype) fail("storefront.catalog cần `doctype`.");
+  for (const key of ["publishedField", "slugField", "priceField", "fields"]) {
+    if (!catalog[key]) fail(`storefront.catalog cần \`${key}\`.`);
+  }
+  if (!Array.isArray(catalog.fields) || catalog.fields.length === 0) {
+    fail("storefront.catalog.fields phải liệt kê ít nhất một field — đây là DANH SÁCH TRẮNG, không phải gợi ý.");
+  }
+
+  const compiled = {
+    catalog: {
+      doctype: catalog.doctype,
+      published_field: catalog.publishedField,
+      slug_field: catalog.slugField,
+      price_field: catalog.priceField,
+      fields: [...catalog.fields],
+      search_fields: [...(catalog.search ?? [])],
+      ...(catalog.facetField ? { facet_field: catalog.facetField } : {}),
+    },
+  };
+
+  const order = declared.order;
+  if (!order) return compiled;
+  for (const key of ["doctype", "role", "lines", "placedAt", "total", "trackBy", "buyerFields"]) {
+    if (!order[key]) fail(`storefront.order cần \`${key}\`.`);
+  }
+  if (!Array.isArray(order.buyerFields) || order.buyerFields.length === 0) {
+    fail("storefront.order.buyerFields phải liệt kê field khách được điền — mọi field khác là của nhân viên.");
+  }
+  compiled.order = {
+    doctype: order.doctype,
+    submit_as_role: order.role,
+    lines_field: order.lines,
+    placed_at_field: order.placedAt,
+    total_field: order.total,
+    track_field: order.trackBy,
+    buyer_fields: [...order.buyerFields],
+    max_per_day: order.maxPerDay ?? 20,
+  };
+  return compiled;
+}
+
+/**
+ * Fields the app adds to doctypes it does not own.
+ *
+ * Written as `{ "Item": ["image:Attach Image Ảnh sản phẩm"] }` — the same field language
+ * as everywhere else, because a second syntax for the same idea is a second set of
+ * mistakes to learn.
+ *
+ * Refusing a doctype the brief itself declares is deliberate: there the field belongs in
+ * `fields`, and putting it here instead would make the DocType definition an incomplete
+ * description of what installs.
+ */
+function compileCustomFields(declared, doctypeNames) {
+  if (declared === null || typeof declared !== "object" || Array.isArray(declared)) {
+    fail("`customFields` phải là object: { \"<DocType>\": [\"field:Kiểu Nhãn\", …] }");
+  }
+  const compiled = [];
+  for (const [doctype, entries] of Object.entries(declared)) {
+    if (doctypeNames.has(doctype)) {
+      fail(`customFields."${doctype}": brief này tự khai DocType đó — thêm field vào \`fields\` của nó, đừng phủ thêm một lớp overlay lên chính mình.`);
+    }
+    if (!Array.isArray(entries) || entries.length === 0) {
+      fail(`customFields."${doctype}" phải là mảng field không rỗng.`);
+    }
+    for (const [index, entry] of entries.entries()) {
+      const context = `customFields."${doctype}"`;
+      const raw = typeof entry === "object" && entry !== null && !Array.isArray(entry) ? entry.field : entry;
+      const after = typeof entry === "object" && entry !== null && !Array.isArray(entry) ? entry.after : undefined;
+      if (after !== undefined && (typeof after !== "string" || !after.trim())) {
+        fail(`${context}[${index}]: \`after\` phải là tên field chuẩn để chèn phía sau.`);
+      }
+      const field = parseField(raw, index, context);
+      compiled.push({
+        name: `${doctype}-${field.fieldname}`,
+        dt: doctype,
+        fieldname: field.fieldname,
+        field,
+        insert_after: after ? after.trim() : null,
+      });
+    }
+  }
+  return compiled;
 }
 
 /** `lead_name` → `Lead Name`, so a field without a label still reads like one. */
@@ -506,6 +732,10 @@ export function compileBrief(brief) {
 
     doctypes.push({
       name: doctypeName,
+      // Nhãn đi CÙNG metadata, không chỉ vào mục menu. Thiếu dòng này thì breadcrumb, ô
+      // chọn loại chứng từ và màn phân quyền đều hiện tên kỹ thuật tiếng Anh, trong khi
+      // menu bên cạnh hiện tiếng Việt — cùng một thứ, hai cách gọi.
+      ...(doctype.label ? { label: doctype.label } : {}),
       module,
       is_child: isChild,
       is_submittable: submittable,
@@ -581,6 +811,41 @@ export function compileBrief(brief) {
     });
   }
 
+  /**
+   * Thao tác dạng form, và một mục menu cho mỗi cái.
+   *
+   * Chặn quyền theo `permission_doctype` của chính action, nên mục menu và màn hình dùng
+   * CHUNG một cái chốt — không phải hai chỗ phải nhớ giữ cho khớp nhau.
+   */
+  const actions = (brief.actions ?? []).map((action, index) => compileAction(action, index, doctypeNames));
+  if (actions.length && !brief.worker) {
+    fail("`actions` cần `worker`: action gọi method, mà method không có Worker phục vụ thì nút bấm chỉ trả 404.");
+  }
+  for (const action of actions) {
+    nav.push({
+      key: `action:${action.name}`,
+      label: action.label,
+      kind: "experience",
+      permission_doctype: action.permission_doctype,
+      icon: action.icon ?? "play",
+      group: action.group ?? "Thao tác",
+    });
+  }
+
+  /**
+   * Mẫu in và link tới báo cáo sẵn có của nền tảng.
+   *
+   * Sau doctype, vì cả hai đều nêu tên doctype và phải từ chối được tên không tồn tại.
+   */
+  const printFormats = (brief.prints ?? []).map((print, index) => compilePrint(print, index, doctypeNames));
+  assertUniqueNames(printFormats.map((entry) => entry.name), "mẫu in");
+  for (const link of (brief.links ?? []).map((entry, index) => compileLink(entry, index, doctypeNames))) {
+    // Một app cũng khai báo cáo trùng tên với báo cáo nền tảng thì router chỉ khớp cái
+    // ĐẦU TIÊN — mục thứ hai vĩnh viễn không tới được. Từ chối ngay thay vì để nó im lặng.
+    if (nav.some((item) => item.key === link.key)) fail(`links: "${link.label}" trùng với một báo cáo app đã khai (${link.key}).`);
+    nav.push(link);
+  }
+
   // Home: the brief may name a doctype or an inbox by its short form; the encoded route
   // is computed here so an author never has to write `%3A` by hand — getting that wrong
   // is a redirect loop, and it is the kind of mistake nobody spots by reading.
@@ -600,6 +865,9 @@ export function compileBrief(brief) {
     return { record_type: fixture.type, name: fixture.name, data: fixture.data ?? {} };
   });
 
+  const customFields = compileCustomFields(brief.customFields ?? {}, doctypeNames);
+  const storefront = brief.storefront ? compileStorefront(brief.storefront) : undefined;
+
   return {
     id, name, version,
     platform_requires: brief.platformRequires ?? "1.0.0",
@@ -607,14 +875,17 @@ export function compileBrief(brief) {
     roles: [...declaredRoles].map((role) => ({ role, desk_access: true })),
     doctypes,
     workflows,
-    print_formats: [],
+    print_formats: printFormats,
     fixtures,
+    custom_fields: customFields,
+    ...(storefront ? { storefront } : {}),
     nav,
     hooks: [],
     // Validator cần một Worker để hỏi; parser của server từ chối cái này nếu thiếu, nên
     // hai thứ đi cùng nhau hoặc không có gì cả.
     validators: brief.worker ? compileValidators(brief.validators ?? []) : [],
     reports,
+    actions,
     ...(brief.worker ? { worker: brief.worker } : {}),
     client: {
       ...(brief.brand ? { brand: brief.brand } : {}),
