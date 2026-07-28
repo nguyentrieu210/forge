@@ -23,7 +23,7 @@ import { assertModifiedMatches, buildCommand, stripServerOwnedFields } from "./c
 import { fromFrappeDoc, toFrappeDoc, toFrappeListRow } from "./doc-shape.js";
 import { faultResponse, methodResponse, resourceResponse, responseFieldsResponse } from "./envelope.js";
 import { consumeSubmissionAllowance, loadPublishedForm, publicFormShape, submissionActor, submissionDocument } from "./web-form-routes.js";
-import { handleUploadFile, matchFilePath, serveFile, UPLOAD_FILE_PATH, type FileStore } from "./files.js";
+import { handleUploadFile, matchFilePath, readFileContent, serveFile, UPLOAD_FILE_PATH, type FileStore } from "./files.js";
 import {
   assertStorefrontSpec, buildStorefrontOrder, consumeOrderAllowance, storefrontCatalog,
   storefrontProduct, trackStorefrontOrder, type StorefrontContext,
@@ -821,6 +821,26 @@ async function dispatchMethod(
 
     case "forge.apps.uninstall":
       return methodResponse(await uninstallApp(args, context));
+
+    /**
+     * Đọc lại nội dung một file đã tải lên — cho app Worker phải NHÌN vào nó.
+     *
+     * App gọi ngược qua `/_app/…`, và cổng rewrite thành `/api/…` một cách cố ý, để app
+     * chỉ chạm được bề mặt API chứ không phải một đường bất kỳ trên tenant. Hệ quả là
+     * `/files/<id>` nằm ngoài tầm với, nên app cầm `file_url` do ô đính kèm trả về mà
+     * không có cách nào đọc thứ nó trỏ tới. OCR đúng là việc đó: người dùng đính kèm ảnh
+     * bảng giá, app phải đọc được điểm ảnh.
+     *
+     * Quyền dùng ĐÚNG chốt của `/files/<id>`, gọi y hệt cách đó — file riêng tư được kiểm
+     * lại theo chứng từ nó gắn vào, và danh tính là NGƯỜI gọi app, không phải app.
+     */
+    case "forge.files.content":
+      return methodResponse(await readFileContent(
+        args.text("file") ?? args.requireText("file_url", 400),
+        context.actor,
+        fileStore(context),
+        (doctype, name) => assertDocumentAction(context, doctype, name, "read"),
+      ));
 
     // ---- workflow ---------------------------------------------------------
     case "frappe.model.workflow.apply_workflow":

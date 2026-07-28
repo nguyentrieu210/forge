@@ -419,7 +419,8 @@ function matchFieldType(expression, fieldname, context) {
     const candidate = words.slice(0, count).join(" ");
     // A candidate ending mid-token (`Data!`, `Link(`) is not a type name on its own; strip
     // the trailing punctuation before looking it up, then keep it in the remainder.
-    const bare = candidate.replace(/[!*~(=].*$/, "");
+    // `-` is in the list because it is a modifier (ẩn) and no Frappe type name contains one.
+    const bare = candidate.replace(/[!*~(=-].*$/, "");
     const fieldtype = FIELD_TYPES.get(bare.toLowerCase().replace(/\s+/g, ""));
     if (!fieldtype) continue;
     const consumed = expression.indexOf(bare) + bare.length;
@@ -437,8 +438,16 @@ function matchFieldType(expression, fieldname, context) {
  *   { fieldname: "notes", fieldtype: "Text Editor", label: "Ghi chú" }   ← object form
  *
  * Grammar: `<fieldname>:<Type>[(options)][modifiers][=default][ label]`
- * Modifiers: `!` required · `*` unique · `~` read-only
+ * Modifiers: `!` required · `*` unique · `~` read-only · `-` ẩn khỏi form
  *
+ * `-` (ẩn) tồn tại cho một cảnh rất cụ thể: field mà NHÂN bắt buộc nhưng người dùng không
+ * có gì để chọn. Xưởng chỉ có MỘT công ty và tiêu MỘT loại tiền, nên hai ô "Công ty" và
+ * "Tiền tệ" trên mọi chứng từ là hai ô luôn luôn đúng một giá trị — chúng chỉ làm form dài
+ * ra và làm người nhập liệu phải đọc lướt qua thứ không bao giờ đổi. Ẩn KHÔNG phải bỏ:
+ * giá trị mặc định vẫn được gửi lên như thường, vì `blankDoc` gieo default cho MỌI field
+ * kể cả field ẩn, và bộ serialize lúc tạo gửi cả document chứ không chỉ ô đã chạm.
+ *
+
  * A default containing spaces goes in parentheses — `=(Đang liên hệ)`. Without that rule
  * the label and the default are indistinguishable, and the field would silently get the
  * first word of its label as its default value.
@@ -488,16 +497,28 @@ export function parseField(input, index, context) {
   }
 
   let expression = beforeDefault.trim();
-  const modifiers = { required: false, unique: false, read_only: false };
+  const modifiers = { required: false, unique: false, read_only: false, hidden: false };
   while (expression.length) {
     const last = expression.at(-1);
     if (last === "!") modifiers.required = true;
     else if (last === "*") modifiers.unique = true;
     else if (last === "~") modifiers.read_only = true;
+    else if (last === "-") modifiers.hidden = true;
     else break;
     expression = expression.slice(0, -1);
   }
   if (expression.trim()) fail(`${context}: field "${fieldname}" has trailing text after its type: "${expression.trim()}"`);
+
+  /**
+   * Ẩn + bắt buộc + KHÔNG có mặc định = một form không ai nộp nổi, và không ai hiểu vì sao.
+   *
+   * Server từ chối vì thiếu giá trị, nhưng ô đang thiếu thì người dùng KHÔNG NHÌN THẤY để
+   * điền. Đây là kiểu bế tắc tệ nhất: thông báo lỗi nêu tên một field không có trên màn
+   * hình. Bắt khai mặc định tại đây biến nó thành một lỗi lúc biên dịch brief.
+   */
+  if (modifiers.hidden && modifiers.required && defaultValue === undefined) {
+    fail(`${context}: field "${fieldname}" vừa ẩn (-) vừa bắt buộc (!) nhưng không có giá trị mặc định. Viết "${fieldname}:…-!=(giá trị)" — người dùng không thấy ô này để điền, nên mặc định là cách duy nhất nó có giá trị.`);
+  }
   if (NEEDS_OPTIONS.has(fieldtype) && !options) {
     // A Link with no target and a Select with no choices are the two ways to produce a
     // field that renders but can never hold a valid value.
@@ -538,6 +559,7 @@ export function parseField(input, index, context) {
     ...(modifiers.required ? { required: true } : {}),
     ...(modifiers.unique ? { unique: true } : {}),
     ...(modifiers.read_only ? { read_only: true } : {}),
+    ...(modifiers.hidden ? { hidden: true } : {}),
     ...(defaultValue === undefined ? {} : { default: defaultValue }),
   };
 }
@@ -683,6 +705,16 @@ export function compileBrief(brief) {
     const listed = doctype.list ?? [];
     for (const fieldname of listed) {
       if (!fieldNames.has(fieldname)) fail(`${context}: list names "${fieldname}", which is not a field`);
+      /**
+       * Field ẩn mà lại khai làm cột danh sách là hai câu nói ngược nhau.
+       *
+       * Client lọc cột theo `hidden !== 1` nên cột đó KHÔNG bao giờ hiện — brief nói có,
+       * màn hình không có, và không có gì báo. Bắt tại đây để tác giả chọn dứt khoát một
+       * trong hai, thay vì phát hiện bằng cách nhìn một bảng thiếu cột.
+       */
+      if (fields.find((field) => field.fieldname === fieldname)?.hidden) {
+        fail(`${context}: list names "${fieldname}", nhưng field đó khai ẩn (-). Bỏ nó khỏi \`list\`, hoặc bỏ dấu ẩn — client lọc cột ẩn nên cột này sẽ không bao giờ hiện.`);
+      }
     }
     const listedSet = new Set(listed);
     for (const field of fields) {

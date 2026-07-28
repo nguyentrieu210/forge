@@ -3,7 +3,7 @@
 > Cho người ở xưởng, không cho lập trình viên. Bản kỹ thuật:
 > [ALUMDOOR-MUA-HANG-THIET-KE.md](ALUMDOOR-MUA-HANG-THIET-KE.md).
 
-Menu **Mua hàng** có 8 mục, xếp đúng thứ tự việc chạy trong thực tế:
+Menu **Mua hàng** có 8 chứng từ, xếp đúng thứ tự việc chạy trong thực tế, cộng một màn chụp ảnh:
 
 ```
 Yêu cầu vật tư → Yêu cầu báo giá → Báo giá NCC → Đơn mua hàng
@@ -146,7 +146,45 @@ nợ trên hoá đơn.
 
 ---
 
-## 7. Báo cáo
+## 7. Chụp ảnh thay cho gõ
+
+**Mua hàng → Chụp ảnh → chứng từ mua.**
+
+Chụp bảng giá NCC gửi qua Zalo, phiếu giao hàng lúc hàng về, hay hoá đơn NCC — máy đọc thành
+dòng hàng.
+
+| Ô | Điền gì |
+|---|---|
+| **Ảnh chụp** | ảnh hoặc bản chụp màn hình |
+| **Đọc thành chứng từ gì** | Báo giá NCC · Đơn mua hàng · Phiếu nhập mua · Hoá đơn mua |
+| **Nhà cung cấp** | bắt buộc — máy không đoán NCC từ ảnh |
+| **Kho** | bắt buộc khi tạo phiếu nhập |
+
+Bấm **Đọc thử ảnh** trước: nó chỉ đọc, chưa tạo gì. Xem đủ dòng chưa rồi mới bấm **Tạo chứng
+từ nháp**.
+
+### Ba điều phải biết trước khi dùng
+
+**1. Luôn ra bản NHÁP, và đó là cố ý.** Máy đọc ảnh là để khỏi *gõ*, không phải để khỏi
+*nhìn*. Một chữ số đọc nhầm ở cột đơn giá là sai công nợ với NCC, và **không sổ nào kêu lên**.
+Soát lại từng số so với ảnh rồi mới bấm Ghi sổ.
+
+**2. Dòng nào máy không chắc mã hàng thì để TRỐNG**, kèm nguyên chữ đọc được trong ô ghi chú.
+Máy **không đoán bừa**: một ô trống là câu hỏi để anh chọn, còn một mã đoán sai là hàng vào
+nhầm mã mà chứng từ vẫn trông hợp lệ. Bảng kết quả ghi rõ *"đọc được N dòng, khớp được mã M"*.
+
+**3. Dòng thiếu mã hoặc thiếu số lượng không vào chứng từ nháp** — nếu đưa vào, cả phiếu bị từ
+chối và anh mất luôn những dòng đã đọc đúng. Chúng vẫn hiện trên bảng kết quả và trong ô ghi
+chú của phiếu, để anh thêm tay.
+
+### Chụp thế nào cho máy đọc được
+
+Đủ sáng · thẳng góc với tờ giấy · lấy trọn bảng, đừng cắt mất cột đơn giá · ảnh dưới 4 MB.
+Bảng viết tay chữ xấu thì máy đọc kém — chỗ đó gõ tay vẫn nhanh hơn sửa.
+
+---
+
+## 8. Báo cáo
 
 | Báo cáo | Trả lời câu gì |
 |---|---|
@@ -162,7 +200,7 @@ sổ cái.
 
 ---
 
-## 8. Ba lỗi hay gặp
+## 9. Ba lỗi hay gặp
 
 **"chưa có quy đổi từ X sang Y"** — xem §2. Hệ thống cố ý không đoán.
 
@@ -175,7 +213,7 @@ kho (ví dụ cước vận chuyển).
 
 ---
 
-## 9. Ai làm được gì
+## 10. Ai làm được gì
 
 | | Chủ xưởng | Kế toán | Thủ kho | Sản xuất | Kinh doanh |
 |---|:---:|:---:|:---:|:---:|:---:|

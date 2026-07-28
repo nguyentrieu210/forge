@@ -182,6 +182,37 @@
       "preview": "alumdoor.purchase.preview_receipt | Xem còn thiếu bao nhiêu",
       "commit": "alumdoor.purchase.receipt_from_order | Tạo phiếu nhập nháp | Tạo phiếu nhập nháp cho phần hàng còn lại?",
       "resultTable": "items"
+    },
+    {
+      "//": "CHỤP ẢNH → DÒNG HÀNG. NCC gửi bảng giá qua Zalo, thợ chụp phiếu giao lúc hàng về.",
+      "//do": [
+        "Máy đọc ảnh là để KHỎI GÕ, không phải để khỏi nhìn. Nên màn này luôn dừng ở chứng từ",
+        "NHÁP: một chữ số đọc nhầm ở cột đơn giá là sai công nợ với NCC, và không sổ nào kêu lên.",
+        "",
+        "Dòng nào máy KHÔNG chắc mã hàng thì để TRỐNG, kèm nguyên chữ đọc được. Một ô trống là",
+        "câu hỏi cho người soát; một mã đoán bừa là câu trả lời SAI mà không ai đọc lại — hàng vào",
+        "nhầm mã, tồn lệch hai chiều, chứng từ vẫn trông hợp lệ.",
+        "",
+        "Đọc SỐ do nền tảng làm bằng luật, không để mô hình quyết: '98.000' là chín mươi tám nghìn",
+        "còn '3,5' là ba phẩy năm — cùng dấu chấm phẩy, hai nghĩa ngược nhau. Xem `ocr.ts`."
+      ],
+      "name": "doc-anh-chung-tu",
+      "label": "Chụp ảnh → chứng từ mua",
+      "icon": "scan-text",
+      "group": "Mua hàng",
+      "description": "Chụp bảng giá NCC gửi qua Zalo, phiếu giao hàng hay hoá đơn NCC — máy đọc thành dòng hàng. LUÔN ra bản NHÁP: soát lại từng số so với ảnh rồi mới ghi sổ.",
+      "permission": "Purchase Order",
+      "fields": [
+        "image:Attach Image! Ảnh chụp chứng từ",
+        "target:Select(Báo giá NCC,Đơn mua hàng,Phiếu nhập mua,Hoá đơn mua)!=(Báo giá NCC) Đọc thành chứng từ gì",
+        "supplier:Link(Supplier)! Nhà cung cấp",
+        "warehouse:Link(Warehouse) Kho (bắt buộc khi tạo phiếu nhập)",
+        "purchase_order:Link(Purchase Order) Theo đơn mua (nếu có)",
+        "supplier_invoice_no:Data Số hoá đơn / phiếu giao của NCC"
+      ],
+      "preview": "alumdoor.ocr.parse | Đọc thử ảnh",
+      "commit": "alumdoor.ocr.apply | Tạo chứng từ nháp | Tạo chứng từ NHÁP từ ảnh này? Bản nháp chưa vào sổ — anh vẫn phải soát lại từng số.",
+      "resultTable": "items"
     }
   ],
   "home": "Sales Order",
@@ -426,12 +457,11 @@
       "title": "price_list_name",
       "list": [
         "price_list_name",
-        "currency",
         "note"
       ],
       "fields": [
         "price_list_name:Data*! Tên bảng giá",
-        "currency:Link(Currency)!=(VND) Tiền tệ",
+        "currency:Link(Currency)-!=(VND) Tiền tệ",
         "note:Small Text Áp dụng cho ai / khi nào",
         "disabled:Check Ngừng dùng"
       ],
@@ -452,8 +482,7 @@
       "list": [
         "price_list",
         "item_code",
-        "rate",
-        "currency"
+        "rate"
       ],
       "search": [
         "item_code"
@@ -462,7 +491,7 @@
         "price_list:Link(Price List)! Bảng giá",
         "item_code:Link(Item)! Mã hàng",
         "rate:Currency! Đơn giá (theo ĐVT của hàng)",
-        "currency:Link(Currency)!=(VND) Tiền tệ",
+        "currency:Link(Currency)-!=(VND) Tiền tệ",
         "note:Data Ghi chú",
         "disabled:Check Ngừng áp dụng"
       ],
@@ -576,8 +605,8 @@
       ],
       "fields": [
         "customer:Link(Customer)! Khách hàng",
-        "company:Link(Company)!=(ALUMDOOR) Công ty",
-        "currency:Link(Currency)!=(VND) Tiền tệ",
+        "company:Link(Company)-!=(ALUMDOOR) Công ty",
+        "currency:Link(Currency)-!=(VND) Tiền tệ",
         "transaction_date:Date! Ngày báo giá",
         "valid_till:Date Báo giá có hiệu lực đến",
         "contact_person:Data Người liên hệ",
@@ -708,8 +737,8 @@
       ],
       "fields": [
         "customer:Link(Customer)! Khách hàng",
-        "company:Link(Company)!=(ALUMDOOR) Công ty",
-        "currency:Link(Currency)!=(VND) Tiền tệ",
+        "company:Link(Company)-!=(ALUMDOOR) Công ty",
+        "currency:Link(Currency)-!=(VND) Tiền tệ",
         "transaction_date:Date! Ngày đặt",
         "delivery_date:Date Ngày giao dự kiến",
         "against_quotation:Link(Quotation) Theo báo giá",
@@ -783,8 +812,8 @@
       ],
       "fields": [
         "customer:Link(Customer)! Khách hàng",
-        "company:Link(Company)!=(ALUMDOOR) Công ty",
-        "currency:Link(Currency)!=(VND) Tiền tệ",
+        "company:Link(Company)-!=(ALUMDOOR) Công ty",
+        "currency:Link(Currency)-!=(VND) Tiền tệ",
         "against_sales_order:Link(Sales Order)! Theo đơn hàng",
         "posting_at:Datetime! Thời điểm xuất",
         "items:Table(Delivery Note Item)! Dòng hàng xuất",
@@ -940,7 +969,7 @@
       ],
       "fields": [
         "purpose:Select(Material Receipt,Material Issue,Material Transfer,Manufacture)!=(Material Receipt) Loại phiếu",
-        "company:Link(Company)!=(ALUMDOOR) Công ty",
+        "company:Link(Company)-!=(ALUMDOOR) Công ty",
         "posting_at:Datetime! Thời điểm",
         "work_order:Link(Work Order) Theo lệnh sản xuất",
         "finished_good_item:Link(Item) Thành phẩm nhập kho",
@@ -999,8 +1028,8 @@
       ],
       "fields": [
         "customer:Link(Customer)! Khách hàng",
-        "company:Link(Company)!=(ALUMDOOR) Công ty",
-        "currency:Link(Currency)!=(VND) Tiền tệ",
+        "company:Link(Company)-!=(ALUMDOOR) Công ty",
+        "currency:Link(Currency)-!=(VND) Tiền tệ",
         "against_sales_order:Link(Sales Order) Theo đơn hàng",
         "posting_at:Datetime! Ngày hoá đơn",
         "due_date:Date Hạn thanh toán",
@@ -1036,8 +1065,8 @@
         "payment_type:Select(Receive,Pay)!=(Receive) Loại phiếu (Receive = thu, Pay = chi)",
         "party_type:Select(Customer,Supplier)!=(Customer) Loại đối tác",
         "party:Data! Khách hàng / Nhà cung cấp",
-        "company:Link(Company)!=(ALUMDOOR) Công ty",
-        "currency:Link(Currency)!=(VND) Tiền tệ",
+        "company:Link(Company)-!=(ALUMDOOR) Công ty",
+        "currency:Link(Currency)-!=(VND) Tiền tệ",
         "posting_at:Datetime! Ngày chứng từ",
         "paid_amount:Currency! Số tiền",
         "received_amount:Currency! Số tiền nhận (bằng số tiền khi cùng tiền tệ)",
@@ -1190,7 +1219,7 @@
       ],
       "fields": [
         "material_request_type:Select(Purchase,Material Transfer,Material Issue,Manufacture)!=(Purchase) Loại yêu cầu (Purchase = mua ngoài)",
-        "company:Link(Company)!=(ALUMDOOR) Công ty",
+        "company:Link(Company)-!=(ALUMDOOR) Công ty",
         "transaction_date:Date! Ngày yêu cầu",
         "schedule_date:Date Cần trước ngày",
         "requested_by:Data Người/tổ yêu cầu",
@@ -1251,7 +1280,7 @@
         "material_request"
       ],
       "fields": [
-        "company:Link(Company)!=(ALUMDOOR) Công ty",
+        "company:Link(Company)-!=(ALUMDOOR) Công ty",
         "transaction_date:Date! Ngày gửi",
         "response_by:Date Hạn trả lời",
         "material_request:Link(Material Request) Theo yêu cầu vật tư",
@@ -1327,8 +1356,8 @@
       ],
       "fields": [
         "supplier:Link(Supplier)! Nhà cung cấp",
-        "company:Link(Company)!=(ALUMDOOR) Công ty",
-        "currency:Link(Currency)!=(VND) Tiền tệ",
+        "company:Link(Company)-!=(ALUMDOOR) Công ty",
+        "currency:Link(Currency)-!=(VND) Tiền tệ",
         "transaction_date:Date! Ngày báo giá",
         "valid_till:Date Giá có hiệu lực đến",
         "request_for_quotation:Link(Request for Quotation) Trả lời yêu cầu báo giá",
@@ -1419,8 +1448,8 @@
       ],
       "fields": [
         "supplier:Link(Supplier)! Nhà cung cấp",
-        "company:Link(Company)!=(ALUMDOOR) Công ty",
-        "currency:Link(Currency)!=(VND) Tiền tệ",
+        "company:Link(Company)-!=(ALUMDOOR) Công ty",
+        "currency:Link(Currency)-!=(VND) Tiền tệ",
         "transaction_date:Date! Ngày đặt hàng",
         "schedule_date:Date Ngày hẹn giao",
         "supplier_group:Select(Nhôm,Mô tơ,Sơn,Phụ kiện,Vận chuyển,Khác) Nhóm NCC (cho chính sách giá)",
@@ -1515,8 +1544,8 @@
       ],
       "fields": [
         "supplier:Link(Supplier)! Nhà cung cấp",
-        "company:Link(Company)!=(ALUMDOOR) Công ty",
-        "currency:Link(Currency)!=(VND) Tiền tệ",
+        "company:Link(Company)-!=(ALUMDOOR) Công ty",
+        "currency:Link(Currency)-!=(VND) Tiền tệ",
         "against_purchase_order:Link(Purchase Order) Đơn mua mặc định cho mọi dòng",
         "posting_at:Datetime! Thời điểm nhập",
         "items:Table(Purchase Receipt Item)! Dòng hàng nhận",
@@ -1592,8 +1621,8 @@
       ],
       "fields": [
         "supplier:Link(Supplier)! Nhà cung cấp",
-        "company:Link(Company)!=(ALUMDOOR) Công ty",
-        "currency:Link(Currency)!=(VND) Tiền tệ",
+        "company:Link(Company)-!=(ALUMDOOR) Công ty",
+        "currency:Link(Currency)-!=(VND) Tiền tệ",
         "against_purchase_order:Link(Purchase Order) Theo đơn mua",
         "posting_at:Datetime! Ngày hoá đơn",
         "due_date:Date Hạn thanh toán",
@@ -1671,8 +1700,8 @@
       "fields": [
         "party:Link(Supplier)! Nhà cung cấp",
         "return_type:Select(Purchase,Sales)!=(Purchase) Loại trả (giữ nguyên Purchase)",
-        "company:Link(Company)!=(ALUMDOOR) Công ty",
-        "currency:Link(Currency)!=(VND) Tiền tệ",
+        "company:Link(Company)-!=(ALUMDOOR) Công ty",
+        "currency:Link(Currency)-!=(VND) Tiền tệ",
         "return_against:Link(Purchase Receipt)! Trả theo phiếu nhập nào",
         "posting_at:Datetime! Thời điểm xuất trả",
         "items:Table(Stock Return Item)! Hàng trả lại",
@@ -1741,8 +1770,8 @@
       ],
       "fields": [
         "supplier:Link(Supplier)! Nhà cung cấp",
-        "company:Link(Company)!=(ALUMDOOR) Công ty",
-        "currency:Link(Currency)!=(VND) Tiền tệ",
+        "company:Link(Company)-!=(ALUMDOOR) Công ty",
+        "currency:Link(Currency)-!=(VND) Tiền tệ",
         "return_against:Link(Purchase Invoice)! Giảm trừ cho hoá đơn mua nào",
         "posting_at:Datetime! Ngày chứng từ",
         "credit_to:Link(Account)!=(Phải trả người bán) Tài khoản phải trả (phải khớp hoá đơn gốc)",
@@ -1788,7 +1817,7 @@
       ],
       "fields": [
         "item:Link(Item)! Thành phẩm",
-        "company:Link(Company)!=(ALUMDOOR) Công ty",
+        "company:Link(Company)-!=(ALUMDOOR) Công ty",
         "quantity:Float!=(1) Định mức này cho bao nhiêu thành phẩm",
         "items:Table(BOM Item)! Vật tư tiêu hao",
         "operating_cost:Currency Chi phí gia công (nhân công, điện, sơn)",
@@ -1824,7 +1853,7 @@
       "fields": [
         "production_item:Link(Item)! Thành phẩm",
         "bom_no:Link(Bill of Materials)! Định mức áp dụng",
-        "company:Link(Company)!=(ALUMDOOR) Công ty",
+        "company:Link(Company)-!=(ALUMDOOR) Công ty",
         "qty:Float!=(1) Số lượng cần sản xuất",
         "produced_qty:Float~ Đã sản xuất",
         "produced_percentage:Percent~ Tiến độ (%)",

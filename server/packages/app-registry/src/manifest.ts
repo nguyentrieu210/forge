@@ -698,9 +698,20 @@ const ACTION_NAME = /^[a-z][a-z0-9-]*$/;
  * button at a different endpoint than the one it names.
  */
 const ACTION_METHOD = /^[A-Za-z][A-Za-z0-9_.]*$/;
+/**
+ * Fieldtypes the action screen can render, as an ALLOWLIST.
+ *
+ * `Attach` / `Attach Image` are here because a screen that takes a PHOTOGRAPH is a whole
+ * class of work the list previously locked out: a supplier sends a price table over Zalo,
+ * or a driver hands over a delivery note, and the job is to turn that picture into rows.
+ * The screen already resolves controls through the same registry the form uses and hands
+ * them `services`, so the attach control uploads through `upload_file` and yields a
+ * `file_url` exactly as it does on a document — nothing new to render, only permission to.
+ */
 const ACTION_FIELDTYPES = new Set([
   "Data", "Small Text", "Text", "Int", "Float", "Currency", "Percent",
   "Check", "Select", "Link", "Date", "Datetime", "Time",
+  "Attach", "Attach Image",
 ]);
 
 function parseAction(value: JsonValue, index: number, doctypeNames: ReadonlySet<string>): AppAction {

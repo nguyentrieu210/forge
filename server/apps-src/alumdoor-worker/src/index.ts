@@ -18,11 +18,14 @@
  * cùng lọt rồi kho âm. Đó là chốt của nền tảng, không phải của Worker này.
  */
 import { slatCount, australianSlatCount, type AustralianDoor } from "./slats.js";
+import { buildRows, extractJson, type OcrRow } from "./ocr.js";
 
 interface Env {
   INTERNAL_AUTH_SECRET?: string;
   /** Gateway, gọi thẳng script. Xem wrangler.jsonc. */
   PLATFORM?: Fetcher;
+  /** Workers AI — chỉ dùng để ĐỌC ẢNH. Không chạm dữ liệu tenant. */
+  AI?: { run: (model: string, input: Record<string, unknown>) => Promise<unknown> };
 }
 
 type PlatformCall = ((path: string, init?: RequestInit) => Promise<Response>) & { via: string };
@@ -732,6 +735,205 @@ async function receiptFromPurchaseOrder(call: PlatformCall, args: Record<string,
   return answer({ purchase_receipt: receipt, purchase_order: order, items, lines: items.length, draft: true });
 }
 
+// ── ẢNH BẢNG GIÁ → DÒNG HÀNG ────────────────────────────────────────────────
+
+/**
+ * Mô hình đọc ảnh, xếp theo thứ tự thử.
+ *
+ * Mistral Small 3.1 24B trước vì nó là model thị giác lớn nhất Workers AI có và đọc chữ
+ * tiếng Việt CÓ DẤU khá hơn hẳn; Llama 3.2 Vision là đường lui khi model đầu bận hoặc lỗi.
+ * Hỏng cả hai thì TỪ CHỐI — không có đường lui nào là "đoán bừa vài dòng".
+ */
+const VISION_MODELS = ["@cf/mistralai/mistral-small-3.1-24b-instruct", "@cf/meta/llama-3.2-11b-vision-instruct"] as const;
+
+/**
+ * Lời dặn cho mô hình. Ba điều quan trọng, và cả ba đều là chống-bịa:
+ *
+ *   · CHỈ chép thứ NHÌN THẤY. Bảng giá thiếu cột số lượng thì để trống, đừng suy ra 1.
+ *   · Số giữ NGUYÊN cách viết trên ảnh ("98.000", không phải 98000) — bộ đọc số ở
+ *     `ocr.ts` biết luật dấu chấm/phẩy tiếng Việt, còn mô hình thì không đáng tin ở đó.
+ *   · KHÔNG tự nghĩ ra mã hàng. Việc khớp mã do `matchItem` làm bằng luật xác định; mô
+ *     hình đoán trúng một mã có thật nhưng SAI là hỏng tệ nhất, vì chứng từ trông hợp lệ.
+ */
+const OCR_PROMPT = [
+  "Bạn đọc một ảnh chụp chứng từ mua hàng của xưởng cửa cuốn Việt Nam (bảng giá, báo giá, phiếu giao hàng hoặc hoá đơn nhà cung cấp).",
+  "Trả về DUY NHẤT một mảng JSON, không giải thích, không bọc trong markdown.",
+  'Mỗi phần tử: {"item": "tên/mã hàng đúng như in trên ảnh", "qty": "số lượng", "uom": "đơn vị", "rate": "đơn giá", "amount": "thành tiền"}.',
+  "QUY TẮC BẮT BUỘC:",
+  "- Chỉ chép những gì NHÌN THẤY. Ô nào trống trên ảnh thì bỏ khoá đó đi, TUYỆT ĐỐI không suy đoán hay điền mặc định.",
+  '- Giữ NGUYÊN cách viết số của ảnh, kể cả dấu chấm và dấu phẩy: viết "98.000" chứ không viết 98000.',
+  "- Không tự nghĩ ra mã hàng. Chép đúng chữ ở cột tên hàng.",
+  "- Bỏ qua dòng tiêu đề, dòng tổng cộng và dòng ghi chú.",
+].join("\n");
+
+interface AiRunner { run: (model: string, input: Record<string, unknown>) => Promise<unknown> }
+
+/** Danh mục hàng hoá, để khớp mã. Một lần đọc, dùng cho mọi dòng của ảnh. */
+async function readCatalog(call: PlatformCall): Promise<Array<{ item_code: string; item_name?: string }>> {
+  const query = new URLSearchParams({ fields: JSON.stringify(["item_code", "item_name"]), limit_page_length: "500" });
+  const response = await call(`resource/Item?${query}`);
+  if (!response.ok) return [];
+  const rows = ((await response.json()) as { data?: Array<Record<string, unknown>> }).data ?? [];
+  return rows
+    .map((row) => ({ item_code: String(row.item_code ?? ""), ...(row.item_name ? { item_name: String(row.item_name) } : {}) }))
+    .filter((row) => row.item_code);
+}
+
+/** Ảnh đã tải lên → base64. Đường duy nhất, vì `/files/<id>` nằm ngoài tầm gọi ngược của app. */
+async function readImage(call: PlatformCall, fileUrl: string): Promise<{ base64: string; content_type: string }> {
+  const response = await call("method/forge.files.content", { method: "POST", body: JSON.stringify({ file: fileUrl }) });
+  if (!response.ok) throw new Error(`không đọc được ảnh: ${(await response.text()).slice(0, 160)}`);
+  const body = (await response.json()) as { message?: { base64?: string; content_type?: string } };
+  const base64 = body.message?.base64;
+  if (!base64) throw new Error("ảnh rỗng hoặc không đọc được");
+  return { base64, content_type: body.message?.content_type ?? "image/jpeg" };
+}
+
+async function readWithVision(ai: AiRunner, image: { base64: string; content_type: string }): Promise<string> {
+  const failures: string[] = [];
+  for (const model of VISION_MODELS) {
+    try {
+      const output = await ai.run(model, {
+        max_tokens: 2048,
+        temperature: 0,
+        messages: [{
+          role: "user",
+          content: [
+            { type: "text", text: OCR_PROMPT },
+            { type: "image_url", image_url: { url: `data:${image.content_type};base64,${image.base64}` } },
+          ],
+        }],
+      }) as { response?: string; result?: { response?: string } } | string;
+      const text = typeof output === "string" ? output : output?.response ?? output?.result?.response ?? "";
+      if (text.trim()) return text;
+      failures.push(`${model}: trả lời rỗng`);
+    } catch (error) {
+      failures.push(`${model}: ${error instanceof Error ? error.message : "lỗi"}`);
+    }
+  }
+  throw new Error(`không mô hình nào đọc được ảnh (${failures.join(" · ")})`);
+}
+
+/**
+ * Chứng từ đích, và ba tính chất của mỗi cái mà bản dựng dòng phải biết.
+ *
+ * `lineWarehouse` là chỗ dễ sai: dòng BÁO GIÁ NCC KHÔNG có cột kho — báo giá là lời chào
+ * giá, chưa dính đến kho nào. Gửi `warehouse` vào đó là gửi một field không doctype nào
+ * khai, tức là đúng cái kiểu "khai một thứ không ai đọc" mà cả dự án này chống.
+ */
+const OCR_TARGETS = {
+  "Báo giá NCC": { doctype: "Supplier Quotation", lineWarehouse: false, requireWarehouse: false },
+  "Đơn mua hàng": { doctype: "Purchase Order", lineWarehouse: true, requireWarehouse: false },
+  "Phiếu nhập mua": { doctype: "Purchase Receipt", lineWarehouse: true, requireWarehouse: true },
+  "Hoá đơn mua": { doctype: "Purchase Invoice", lineWarehouse: true, requireWarehouse: false },
+} as const;
+type OcrTargetName = keyof typeof OCR_TARGETS;
+
+/**
+ * Đọc ảnh và trả về những gì đọc được — KHÔNG ghi gì.
+ *
+ * Luôn trả cả dòng chưa khớp được mã, kèm chữ gốc. Lọc chúng đi sẽ khiến bảng xem trước
+ * trông sạch sẽ trong khi một nửa tấm bảng giá đã biến mất — người soát không có cách nào
+ * biết là thiếu.
+ */
+async function parseOcr(call: PlatformCall, env: Env, args: Record<string, unknown>): Promise<Response> {
+  if (!env.AI) return refuse("Bản triển khai này chưa bật Workers AI.");
+  const fileUrl = String(args.image ?? args.file ?? "");
+  if (!fileUrl) return refuse("Cần chọn ảnh.");
+  const targetName = String(args.target ?? "Báo giá NCC") as OcrTargetName;
+  const target = OCR_TARGETS[targetName];
+  if (!target) return refuse(`Không tạo được "${targetName}". Chọn một trong: ${Object.keys(OCR_TARGETS).join(", ")}.`);
+
+  let image: { base64: string; content_type: string };
+  let catalog: Array<{ item_code: string; item_name?: string }>;
+  try {
+    // Hai lượt đọc độc lập → chạy song song. Mỗi lượt gọi ngược tốn ~1,2 giây và nền tảng
+    // cắt lời gọi app ở 10 giây, mà bản thân mô hình đã ăn vài giây.
+    [image, catalog] = await Promise.all([readImage(call, fileUrl), readCatalog(call)]);
+  } catch (error) {
+    return refuse(error instanceof Error ? error.message : "không đọc được ảnh");
+  }
+
+  let raw: string;
+  try { raw = await readWithVision(env.AI, image); } catch (error) { return refuse(error instanceof Error ? error.message : "mô hình không đọc được ảnh"); }
+
+  const parsed = extractJson(raw);
+  if (parsed === null) return refuse("Mô hình không trả về dữ liệu đọc được. Chụp lại rõ hơn, đủ sáng, và thẳng góc với tờ giấy.");
+  const rows = buildRows(parsed, catalog);
+  if (!rows.length) return refuse("Không đọc được dòng hàng nào trong ảnh.");
+
+  const matched = rows.filter((row) => row.item_code).length;
+  return answer({
+    target: targetName, doctype: target.doctype, items: rows, lines: rows.length, matched,
+    message: matched === rows.length
+      ? `Đọc được ${rows.length} dòng, khớp mã đủ cả ${rows.length}. Vẫn phải soát lại số trước khi ghi sổ.`
+      : `Đọc được ${rows.length} dòng, khớp được mã ${matched}. ${rows.length - matched} dòng CHƯA có mã hàng — chọn tay trên chứng từ nháp.`,
+  });
+}
+
+/**
+ * Tạo chứng từ NHÁP từ ảnh. Không bao giờ ghi sổ.
+ *
+ * Máy đọc ảnh là để khỏi gõ, không phải để khỏi nhìn. Một chữ số đọc nhầm trên cột đơn giá
+ * là sai công nợ với nhà cung cấp, và không sổ nào kêu lên — nên bước người đọc lại là bước
+ * bắt buộc, và cách chắc chắn nhất để nó xảy ra là dừng ở nháp.
+ *
+ * Dòng chưa khớp mã KHÔNG được đưa vào chứng từ: `item_code` là field bắt buộc, gửi lên
+ * rỗng thì cả phiếu bị từ chối và người dùng mất luôn những dòng đã đọc đúng. Chúng được
+ * trả về riêng để hiện ra màn hình.
+ */
+async function applyOcr(call: PlatformCall, env: Env, args: Record<string, unknown>): Promise<Response> {
+  const preview = await parseOcr(call, env, args);
+  if (!preview.ok) return preview;
+  const read = await preview.json() as { target: OcrTargetName; items: OcrRow[]; lines: number; matched: number };
+  const target = OCR_TARGETS[read.target];
+
+  const warehouse = String(args.warehouse ?? "");
+  if (target.requireWarehouse && !warehouse) return refuse("Phiếu nhập mua cần chọn kho nhập.");
+  const supplier = String(args.supplier ?? "");
+  if (!supplier) return refuse("Cần chọn nhà cung cấp.");
+
+  const usable = read.items.filter((row) => row.item_code && (row.qty ?? 0) > 0);
+  const skipped = read.items.filter((row) => !(row.item_code && (row.qty ?? 0) > 0));
+  if (!usable.length) {
+    return refuse(`Đọc được ${read.lines} dòng nhưng chưa dòng nào đủ mã hàng VÀ số lượng để dựng chứng từ. Xem trước để biết ảnh thiếu gì.`);
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const items = usable.map((row, index) => ({
+    row_id: `R${index + 1}`,
+    item_code: row.item_code!,
+    qty: String(row.qty),
+    ...(row.uom ? { uom: row.uom } : {}),
+    ...(row.rate ? { rate: String(row.rate) } : { rate: "0" }),
+    ...(target.lineWarehouse && warehouse ? { warehouse } : {}),
+    ...(read.target === "Hoá đơn mua" ? { expense_account: String(args.expense_account ?? "Hàng tồn kho") } : {}),
+    note: row.note ?? row.raw_text,
+  }));
+
+  const header: Record<string, unknown> = {
+    supplier, company: "ALUMDOOR", currency: "VND", items,
+    note: `Đọc từ ảnh — SOÁT LẠI SỐ trước khi ghi sổ. ${skipped.length ? `${skipped.length} dòng không dựng được: ${skipped.map((row) => row.raw_text).join(" · ").slice(0, 300)}` : ""}`.trim(),
+  };
+  if (read.target === "Báo giá NCC" || read.target === "Đơn mua hàng") header.transaction_date = today;
+  else header.posting_at = new Date().toISOString();
+  if (read.target === "Hoá đơn mua") header.credit_to = String(args.credit_to ?? "Phải trả người bán");
+  if (args.purchase_order) header.against_purchase_order = String(args.purchase_order);
+  if (args.supplier_invoice_no) header.supplier_invoice_no = String(args.supplier_invoice_no);
+
+  const created = await call(`resource/${encodeURIComponent(target.doctype)}`, { method: "POST", body: JSON.stringify(header) });
+  if (!created.ok) return refuse(`Không tạo được ${read.target}: ${(await created.text()).slice(0, 220)}`);
+  const name = ((await created.json()) as { data?: { name?: string } }).data?.name ?? "";
+
+  return answer({
+    target: read.target, doctype: target.doctype, name, draft: true,
+    items: read.items, lines: read.lines, matched: read.matched, skipped: skipped.length,
+    message: `Đã tạo ${read.target} NHÁP ${name} với ${usable.length}/${read.lines} dòng.`
+      + (skipped.length ? ` ${skipped.length} dòng thiếu mã hàng hoặc số lượng — thêm tay rồi mới ghi sổ.` : "")
+      + " Chưa ghi sổ: soát lại từng số so với ảnh trước khi duyệt.",
+  });
+}
+
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
@@ -767,6 +969,8 @@ export default {
         if (method === "alumdoor.purchase.order_from_quotation") return await orderFromSupplierQuotation(call, args);
         if (method === "alumdoor.purchase.preview_receipt") return await previewPurchaseReceipt(call, args);
         if (method === "alumdoor.purchase.receipt_from_order") return await receiptFromPurchaseOrder(call, args);
+        if (method === "alumdoor.ocr.parse") return await parseOcr(call, env, args);
+        if (method === "alumdoor.ocr.apply") return await applyOcr(call, env, args);
         return new Response(JSON.stringify({ message: `Không có method ${method}` }), { status: 404 });
       }
       // App này chưa khai validator nào; hook validate trả "cho qua" để không chặn ghi.

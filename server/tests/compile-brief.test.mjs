@@ -31,6 +31,38 @@ test("a field carries its type, label and modifiers", () => {
   });
 });
 
+/**
+ * Ẩn một field mà nhân vẫn BẮT BUỘC — cảnh của "công ty" và "tiền tệ" trên mọi chứng từ
+ * của một xưởng chỉ có một công ty và tiêu một loại tiền.
+ */
+test("dấu `-` ẩn field khỏi form nhưng giá trị mặc định vẫn đi cùng", () => {
+  assert.deepEqual(field("company:Link(Company)-!=(ALUMDOOR) Công ty"), {
+    fieldname: "company", label: "Công ty", fieldtype: "Link", options: "Company",
+    required: true, hidden: true, default: "ALUMDOOR",
+  });
+  // Ẩn mà không bắt buộc thì không cần mặc định — ô chỉ đơn giản không hiện.
+  assert.equal(field("note:Data- Ghi chú").hidden, true);
+});
+
+test("ẩn + bắt buộc + KHÔNG mặc định bị TỪ CHỐI lúc biên dịch", () => {
+  // Nếu lọt, server từ chối vì thiếu giá trị, mà ô đang thiếu thì người dùng KHÔNG NHÌN
+  // THẤY để điền: thông báo lỗi nêu tên một field không có trên màn hình.
+  assert.throws(() => field("company:Link(Company)-! Công ty"), BriefError);
+});
+
+test("field ẩn mà vẫn khai làm cột danh sách bị TỪ CHỐI", () => {
+  // Client lọc cột theo `hidden !== 1`, nên brief nói có cột mà bảng không có cột — và
+  // không có gì báo. Bắt tại compiler để tác giả chọn dứt khoát một trong hai.
+  assert.throws(() => compileBrief({
+    id: "x", name: "X",
+    doctypes: [{
+      name: "Thing", list: ["currency"],
+      fields: ["title:Data! Tên", "currency:Link(Currency)-!=(VND) Tiền tệ"],
+      permissions: { "Nhân viên": "rwc" },
+    }],
+  }), /khai ẩn/);
+});
+
 test("a two-word type is not truncated to its first word", () => {
   // Splitting on the first space would read this as a type called "Small" — and Frappe has
   // enough two-word types that this is the common case, not an edge one.

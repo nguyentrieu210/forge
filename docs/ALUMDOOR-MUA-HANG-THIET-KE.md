@@ -390,7 +390,95 @@ khoá, và đó là toàn bộ bản sửa.
 | 7 | Kiểm bằng SỔ, không bằng chứng từ | ✅ | `verify-alumdoor-mua.mjs` |
 | 8 | Bản in cho khách/NCC có đủ | ✅ | 3 mẫu in mới |
 
-## 9.7 — Vẫn còn thiếu so với ERPNext
+## 9.7 — ẨN CÔNG TY VÀ TIỀN TỆ · và vì sao ẩn ≠ bỏ
+
+Xưởng có **một** công ty và tiêu **một** loại tiền. Hai ô đó trên mọi chứng từ là hai ô luôn
+đúng một giá trị: chúng chỉ làm form dài ra và bắt người nhập lướt qua thứ không bao giờ đổi.
+
+Nhưng **nhân BẮT BUỘC cả hai** — bỏ field đi là mọi chứng từ bị từ chối. Nên phải là *ẩn*,
+không phải *bỏ*: `blankDoc` gieo giá trị mặc định cho **mọi** field kể cả field ẩn, và
+`serializeCreateDocument` gửi cả document chứ không chỉ ô đã chạm. Giá trị vẫn lên server
+như thường, chỉ không hiện ra mắt.
+
+Cả chuỗi `hidden` **đã có sẵn** từ trước — `validate.ts:132`, `toFrappeDocField`,
+`resolver.ts:86`, `columns.ts`. Thiếu đúng **một** mắt xích: ngôn ngữ brief không nói được.
+Nay có dấu `-`, cạnh `!` `*` `~`:
+
+    company:Link(Company)-!=(ALUMDOOR) Công ty
+
+### Hai chốt đi kèm, cả hai đều chặn một mâu thuẫn IM LẶNG
+
+| Chốt | Nếu lọt thì sao |
+|---|---|
+| **ẩn + bắt buộc + không mặc định** → từ chối lúc biên dịch | Server từ chối vì thiếu giá trị, mà ô đang thiếu thì người dùng KHÔNG NHÌN THẤY để điền. Thông báo lỗi nêu tên một field không có trên màn hình. |
+| **field ẩn khai làm cột `list`** → từ chối lúc biên dịch | Client lọc cột theo `hidden !== 1`: brief nói có cột, bảng không có cột, không gì báo. |
+
+Chốt thứ hai bắt được ngay hai chỗ thật trong chính brief này — `Bảng giá` và
+`Đơn giá theo bảng giá` đều đang liệt `currency` làm cột danh sách.
+
+## 9.8 — ĐỌC ẢNH BẰNG AI · và ba thứ mô hình KHÔNG được phép quyết
+
+NCC gửi bảng giá qua Zalo; thợ chụp phiếu giao lúc hàng về. Màn **Chụp ảnh → chứng từ mua**
+đọc ảnh thành dòng hàng cho cả bốn chứng từ mua.
+
+### Đường đi của tấm ảnh — và một lỗ hổng phải vá ở nền tảng
+
+App Worker gọi ngược qua `/_app/…`, và cổng **rewrite thành `/api/…`** một cách cố ý, để app
+chỉ chạm được bề mặt API chứ không phải đường bất kỳ trên tenant. Hệ quả: `/files/<id>` nằm
+ngoài tầm với, nên app cầm `file_url` do ô đính kèm trả về mà **không có cách nào đọc**.
+
+Thêm `forge.files.content`, dùng **đúng** chốt quyền của `serveFile` — file riêng tư được
+kiểm lại theo chứng từ nó gắn vào, và danh tính là **người bấm nút**, không phải app. Viết
+một chốt thứ hai lỏng hơn ở đây là trao cho mọi app quyền đọc mọi tệp đính kèm.
+
+Cũng phải nới `ACTION_FIELDTYPES` cho `Attach Image`: màn thao tác vốn đã dùng chung registry
+control với form và đã truyền `services`, nên không có gì mới phải dựng — chỉ là chưa được
+phép.
+
+### Ba thứ để cho LUẬT quyết, không cho mô hình
+
+| Việc | Ai làm | Hỏng thế nào nếu để mô hình làm |
+|---|---|---|
+| **Đọc số** | `parseVietnameseNumber` | `98.000` là chín mươi tám nghìn, `3,5` là ba phẩy năm — cùng dấu chấm phẩy, hai nghĩa ngược. Sai là **sai tiền**, và sổ vẫn cân nên không gì kêu. |
+| **Khớp mã hàng** | `matchItem`, ba tầng, tầng cuối chỉ nhận khi có **đúng một** ứng viên | Đoán ra mã không tồn tại thì nhân từ chối — ồn ào nhưng an toàn. Nguy hiểm là đoán trúng một mã **có thật nhưng SAI**: hàng vào nhầm mã, tồn lệch hai chiều, chứng từ trông hợp lệ. |
+| **Dừng ở NHÁP** | `applyOcr` không bao giờ ghi sổ | Máy đọc ảnh là để khỏi **gõ**, không phải khỏi **nhìn**. |
+
+Luật đọc số, viết ra để người sau khỏi phải suy lại:
+
+| Ảnh viết | Đọc ra | Luật |
+|---|---|---|
+| `98.000` | 98000 | một dấu, theo sau **đúng ba** chữ số → phân nhóm |
+| `1.234.567` | 1234567 | một loại dấu, lặp → phân nhóm |
+| `3,5` · `5.85` | 3,5 · 5,85 | theo sau **ít hơn ba** chữ số → thập phân |
+| `1.234,56` · `1,234.56` | 1234,56 | có **cả hai** dấu → dấu đứng **sau** là thập phân |
+| `liên hệ` · `—` | `null` | **không** trả 0 — 0 là "miễn phí", `null` là "không biết" |
+
+Chỗ mơ hồ còn lại: `1.500` đọc thành 1500, không phải 1,5. Với tiền luôn đúng; với hệ số quy
+đổi thì không ai viết `1.500` để chỉ 1,5. Ghi ra đây để người sau biết chỗ này đã cân nhắc
+chứ không phải bỏ sót.
+
+**Dòng không khớp được mã thì để TRỐNG, giữ nguyên chữ đọc được.** Một ô trống là câu hỏi cho
+người soát; một mã đoán bừa là câu trả lời sai mà không ai đọc lại. Và dòng thiếu mã **không**
+được đưa vào chứng từ: `item_code` bắt buộc, gửi rỗng thì cả phiếu bị từ chối và người dùng
+mất luôn những dòng đã đọc đúng.
+
+### Model
+
+`@cf/mistralai/mistral-small-3.1-24b-instruct`, lui về `@cf/meta/llama-3.2-11b-vision-instruct`.
+Hỏng cả hai thì **TỪ CHỐI** — không có đường lui nào là "đoán bừa vài dòng".
+
+Workers AI chứ không phải API ngoài: **khách chọn**, và nó không cần thêm khoá nào. Đánh đổi
+đã nói rõ với khách — model thị giác ở đây đọc tiếng Việt có dấu và bảng kẻ tay kém hơn model
+lớn, nên chất lượng thực tế cần đo trên ảnh thật của xưởng trước khi tin.
+
+### Rủi ro còn lại: hạn giờ
+
+`alumdoor.ocr.apply` chạy lại toàn bộ bước đọc (ảnh + danh mục + mô hình) rồi mới ghi, vì màn
+thao tác chỉ gửi giá trị form chứ không gửi kèm kết quả xem trước. Cộng lại có thể chạm hạn 10
+giây của một lời gọi app với ảnh lớn. Chưa gặp, nhưng là chỗ cần đo — nếu chạm, cách sửa là
+cho `apply` nhận lại các dòng đã đọc thay vì đọc lần hai.
+
+## 9.9 — Vẫn còn thiếu so với ERPNext
 
 | Thứ | Vì sao chưa làm |
 |---|---|

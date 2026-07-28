@@ -17,6 +17,7 @@
 import type { Actor, JsonObject } from "../../contracts/src/index.js";
 import { errors, randomId } from "../../core/src/index.js";
 
+
 export const UPLOAD_FILE_PATH = "/api/method/upload_file";
 
 /** Everything the file routes need. Optional in the router: no bucket, no file routes. */
@@ -216,6 +217,80 @@ export async function serveFile(
 
 function isSystemManager(actor: Actor): boolean {
   return actor.user_id === "Administrator" || actor.roles.includes("System Manager") || actor.roles.includes("Administrator");
+}
+
+/**
+ * Ceiling for reading a file back as JSON, well under the 10 MB upload limit.
+ *
+ * Base64 grows the payload by a third, and a Worker that has to hold both the bytes and
+ * their encoding in memory before it can answer is a Worker that dies on a large scan
+ * with an out-of-memory error — which reads as "the app is broken", not "that file is
+ * too big". 4 MB covers any phone photograph of a price list.
+ */
+const MAX_READ_BYTES = 4_000_000;
+
+/** base64 without Buffer: this runs on workerd, where only the Web APIs exist. */
+function toBase64(bytes: Uint8Array): string {
+  let binary = "";
+  // In chunks, because `String.fromCharCode(...bytes)` on a multi-megabyte array blows
+  // the argument limit and throws RangeError rather than returning a wrong answer.
+  for (let offset = 0; offset < bytes.length; offset += 8192) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + 8192));
+  }
+  return btoa(binary);
+}
+
+/**
+ * Reads a stored file back as base64, for an app Worker that has to LOOK at it.
+ *
+ * WHY THIS EXISTS. An app Worker calls back through `/_app/…`, which the gateway rewrites
+ * to `/api/…` — deliberately, so an app can only reach the API surface and never an
+ * arbitrary path on the tenant. That leaves `/files/<id>` unreachable, so an app given a
+ * `file_url` by the attach control has no way to fetch what it points at. OCR is exactly
+ * that: the user attaches a photograph, and the app has to read the pixels.
+ *
+ * Authorisation is the SAME check `serveFile` makes, invoked the same way — a private
+ * file is re-authorised against the document it hangs on, and the actor is the user who
+ * invoked the app, never the app itself. Writing a second, laxer check here would hand
+ * every app a way to read every attachment, which is the whole risk of this endpoint.
+ */
+export async function readFileContent(
+  fileUrl: string,
+  actor: Actor,
+  store: FileStore,
+  authorizeRead: (doctype: string, name: string) => Promise<void>,
+): Promise<JsonObject> {
+  const fileId = matchFilePath(String(fileUrl ?? "").split("?")[0] ?? "");
+  if (!fileId) throw errors.validation("file must be a /files/<id> path returned by upload_file");
+
+  const row = await store.db.prepare(
+    `SELECT file_name,content_type,storage_key,attached_to_doctype,attached_to_name,is_private,owner
+     FROM files WHERE tenant_id=?1 AND file_id=?2`,
+  ).bind(store.tenantId, fileId).first<FileRow>();
+  if (!row) throw errors.notFound();
+
+  if (row.is_private) {
+    if (actor.user_id === "Guest") throw errors.notFound();
+    if (row.attached_to_doctype && row.attached_to_name) {
+      await authorizeRead(row.attached_to_doctype, row.attached_to_name);
+    } else if (row.owner !== actor.user_id && !isSystemManager(actor)) {
+      throw errors.notFound();
+    }
+  }
+
+  const object = await store.bucket.get(row.storage_key);
+  if (!object) throw errors.notFound();
+  const bytes = new Uint8Array(await (object as unknown as { arrayBuffer: () => Promise<ArrayBuffer> }).arrayBuffer());
+  if (bytes.byteLength > MAX_READ_BYTES) {
+    throw errors.validation(`File is ${Math.round(bytes.byteLength / 100_000) / 10} MB; the limit for reading one back is 4 MB`);
+  }
+  return {
+    file_id: fileId,
+    file_name: row.file_name,
+    content_type: row.content_type,
+    size: bytes.byteLength,
+    base64: toBase64(bytes),
+  };
 }
 
 function textField(form: FormData, key: string): string {
