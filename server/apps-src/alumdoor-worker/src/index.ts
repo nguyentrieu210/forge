@@ -186,13 +186,22 @@ async function validateItemMaster(call: PlatformCall, subject: ValidatorSubject)
     if (String(profile.inventory_mode ?? "") !== mode) {
       return refuse(`${code}: Bộ quy cách ${profileName} không thuộc kiểu ${mode}.`);
     }
-    const proposedUom = String(profile.stock_uom ?? "").trim();
-    if (proposedUom && proposedUom !== stockUom) {
-      return refuse(`${code}: ĐVT tồn ${stockUom} không khớp Bộ quy cách ${profileName} (${proposedUom}).`);
-    }
-  }
-  if (mode === "Nhôm cây/lá" && stockUom !== "Kg") {
-    return refuse(`${code}: nhôm cây/lá phải tồn theo Kg.`);
+    /**
+     * Bộ quy cách ĐỀ XUẤT đơn vị tồn, không áp đặt — đúng như nhãn của chính trường đó
+     * ("Đơn vị tồn đề xuất").
+     *
+     * Bản trước từ chối lưu khi hai bên lệch nhau, và điều đó khoá cứng hai nhóm hàng thật:
+     *   · 117 mã cửa thành phẩm mang ĐVT tồn m² trong khi bộ quy cách đề xuất Bộ — 40% danh
+     *     mục không sửa được qua giao diện, chúng vào được là nhờ nạp thẳng vòng qua chỗ này.
+     *   · Nan/lá cửa mà chủ xưởng chốt là tồn theo CÂY, trong khi bộ quy cách nhôm đề xuất Kg.
+     *
+     * Một bộ quy cách phục vụ nhiều mặt hàng có cách đếm khác nhau là chuyện bình thường:
+     * cửa Đài Loan tồn theo kg còn nan lá tồn theo cây, cả hai vẫn cùng kiểu "Nhôm cây/lá" vì
+     * chúng giống nhau ở CÁCH ĐO (màu, khổ, số cây), không phải ở đơn vị tồn.
+     *
+     * Thứ vẫn phải chặn nằm ở dưới: mua theo đơn vị khác đơn vị tồn thì bắt buộc có hệ số
+     * quy đổi — đó mới là chỗ sai thì lệch sổ kho.
+     */
   }
 
   const conversions = Array.isArray(doc.uom_conversions) ? doc.uom_conversions : [];
@@ -254,21 +263,47 @@ async function validatePurchaseMeasurement(
     if (!item || item.inventory_mode !== "Nhôm cây/lá") continue;
 
     const line = `Dòng ${index + 1} (${code})`;
-    if (item.stock_uom !== "Kg") {
-      return refuse(`${line}: mặt hàng nhôm phải đặt ĐVT tồn kho là Kg trong danh mục mặt hàng.`);
-    }
+    /**
+     * TIỀN luôn theo Kg thực cân — đây là điều không đổi, vì hoá đơn nhà cung cấp ghi Kg và
+     * phiếu giao có cột Kg do chính họ cân.
+     *
+     * TỒN thì tuỳ mặt hàng. Chủ xưởng chốt ngày 2026-07-29: nan/lá cửa tồn theo CÂY (thợ đếm
+     * lá, không cân kg), còn cửa Đài Loan và một số mã khác vẫn tồn theo Kg. Bản trước ép cứng
+     * "nhôm phải tồn theo Kg" nên nửa danh mục không khai đúng được.
+     */
     if (String(row.uom ?? "") !== "Kg") {
       return refuse(`${line}: nhôm phải nhập theo Kg; số cây và chiều dài chỉ là quy cách vật lý.`);
-    }
-    const factor = row.conversion_factor === undefined || row.conversion_factor === null || row.conversion_factor === ""
-      ? 1
-      : Number(row.conversion_factor);
-    if (!Number.isFinite(factor) || factor !== 1) {
-      return refuse(`${line}: hệ số quy đổi phải bằng 1 vì số lượng đã là Kg thực cân.`);
     }
     if (!positive(row.qty)) return refuse(`${line}: cần nhập số Kg thực cân lớn hơn 0.`);
     if (!positive(row.length_m)) return refuse(`${line}: cần nhập chiều dài một cây/lá lớn hơn 0.`);
     if (!positive(row.qty_bar)) return refuse(`${line}: cần nhập số cây/lá lớn hơn 0.`);
+
+    const declared = row.conversion_factor === undefined || row.conversion_factor === null || row.conversion_factor === ""
+      ? undefined
+      : Number(row.conversion_factor);
+    if (item.stock_uom === "Kg") {
+      // Nhập Kg, tồn Kg: hệ số phải là 1. Khai khác đi là tự nhân số kg lên khi vào sổ.
+      if (declared !== undefined && (!Number.isFinite(declared) || declared !== 1)) {
+        return refuse(`${line}: mặt hàng tồn theo Kg thì hệ số quy đổi phải bằng 1 vì số lượng đã là Kg thực cân.`);
+      }
+      continue;
+    }
+    /**
+     * Nhập Kg mà tồn theo CÂY thì hệ số đổi theo TỪNG LÔ, không cố định trên mặt hàng: cùng
+     * một mã, phiếu Tiến Đạt ngày 22/7 có ba dòng dài 8,50 · 7,20 · 6,60 m nên số cây trên một
+     * kg khác nhau ở cả ba.
+     *
+     * Nhưng dòng chứng từ đã mang sẵn cả hai con số cần thiết — số Kg và số cây — nên hệ số
+     * suy ra được và phải KHỚP với chúng. Không kiểm chỗ này thì 191,4 kg vào sổ thành 191,4
+     * cây: sai gần tám mươi lần, chứng từ vẫn lưu thành công, và chỉ lộ ra lúc kiểm kho.
+     */
+    const expected = Number(row.qty_bar) / Number(row.qty);
+    if (declared === undefined) {
+      return refuse(`${line}: mặt hàng tồn theo ${item.stock_uom} mà nhập theo Kg — dòng phải có hệ số quy đổi (${expected.toFixed(6)} theo số cây và số kg đã nhập).`);
+    }
+    if (!Number.isFinite(declared) || declared <= 0 || Math.abs(declared - expected) > Math.max(1e-6, expected * 1e-4)) {
+      return refuse(`${line}: hệ số quy đổi phải là ${expected.toFixed(6)} (= ${row.qty_bar} cây ÷ ${row.qty} kg), đang khai ${row.conversion_factor}.`);
+    }
   }
   return accept();
 }
@@ -377,6 +412,23 @@ async function validateTransactionLines(
       } else if (["bộ", "bo", "set"].includes(selected) && !nearlyEqual(quantity, sets)) {
         return refuse(`${line}: bán theo Bộ thì số lượng tính tiền phải bằng số bộ.`);
       }
+    }
+    /**
+     * Nhôm mua theo Kg mà tồn theo CÂY: hệ số đến từ chính DÒNG, không từ hồ sơ mặt hàng.
+     *
+     * Bảng quy đổi trên Item chỉ chứa được một hệ số cố định cho mỗi đơn vị, mà số cây trên
+     * một kg đổi theo chiều dài từng lô — phiếu Tiến Đạt ngày 22/7 có ba dòng cùng mã A282 dài
+     * 8,50 · 7,20 · 6,60 m, ba hệ số khác nhau. Ép theo hồ sơ mặt hàng thì mọi phiếu nhập nhôm
+     * đều bị từ chối.
+     *
+     * Con số này KHÔNG được thả tự do: `validateAluminium` ở trên đã buộc nó khớp
+     * `số cây ÷ số kg` của chính dòng đó.
+     */
+    const lotFactorFromLine = side === "purchase" && mode === "Nhôm cây/lá" && normalizedUom(stockUom) !== "kg"
+      && positive(row.qty) && positive(row.qty_bar);
+    if (lotFactorFromLine) {
+      expectedFactor = Number(row.qty_bar) / Number(row.qty);
+      expectedStockQuantity = Number(row.qty_bar);
     }
     const declaredFactor = row.conversion_factor === undefined || row.conversion_factor === null || row.conversion_factor === ""
       ? expectedFactor : Number(row.conversion_factor);

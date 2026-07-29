@@ -210,9 +210,19 @@ test("Item master rejects category containers and mismatched measurement profile
   assert.equal(container.status, 422);
   assert.match((await container.json()).message, /nhóm chứa/);
 
-  const wrongUom = await alumdoorWorker.fetch(request({ ...base, stock_uom: "Cây" }), validEnv, {});
-  assert.equal(wrongUom.status, 422);
-  assert.match((await wrongUom.json()).message, /không khớp Bộ quy cách/);
+  /**
+   * Bộ quy cách ĐỀ XUẤT đơn vị tồn — nó không còn phủ quyết mặt hàng.
+   *
+   * Bản trước từ chối "Cây" vì bộ quy cách nhôm đề xuất "Kg". Chủ xưởng chốt ngày 2026-07-29
+   * rằng nan/lá cửa tồn theo CÂY (thợ đếm lá, không cân kg) còn cửa Đài Loan vẫn tồn theo Kg —
+   * hai mặt hàng cùng kiểu "Nhôm cây/lá" nhưng đếm khác nhau, vì chúng giống nhau ở CÁCH ĐO
+   * (màu, khổ, số cây) chứ không phải ở đơn vị tồn.
+   *
+   * Luật thật sự giữ sổ khỏi lệch nằm ở phiếu nhập, không ở danh mục: mua theo Kg mà tồn theo
+   * Cây thì hệ số quy đổi của dòng phải khớp `số cây ÷ số kg` của chính dòng đó.
+   */
+  const barsInStock = await alumdoorWorker.fetch(request({ ...base, stock_uom: "Cây" }), validEnv, {});
+  assert.equal(barsInStock.status, 200, await barsInStock.text());
 });
 
 test("a service cannot masquerade as stock", async () => {
