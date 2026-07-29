@@ -9,7 +9,7 @@
  * list → mở detail (KHÔNG chuyển màn) do container set URL ?open / :name, list vẫn hiển thị.
  */
 import { useEffect, useState, type ReactNode } from "react";
-import { PanelRight, ArrowLeft, X } from "lucide-react";
+import { PanelRight, ArrowLeft, Maximize2, Minimize2, X } from "lucide-react";
 import {
   Button, Sheet, SheetContent, SheetHeader, SheetTitle,
   ResizablePanelGroup, ResizablePanel, ResizableHandle, useT,
@@ -49,8 +49,20 @@ export function SplitView(props: SplitViewProps) {
   const t = useT();
   const bp = useBreakpoint();
   const hasContext = Boolean(props.context);
-  const [contextOpen, setContextOpen] = useState(true); // desktop: cột phải (mặc định hiện)
+  // Chỉ tự mở cột thứ ba khi màn hình thực sự rộng. Ở 1280px, mở đủ 3 cột làm form giữa
+  // còn khoảng 470px — hợp lệ về kỹ thuật nhưng không đủ chỗ nhập chứng từ.
+  const [contextOpen, setContextOpen] = useState(() => typeof window !== "undefined" && window.innerWidth >= 1600);
   const [sheetOpen, setSheetOpen] = useState(false);    // tablet/mobile: Sheet (mặc định ĐÓNG)
+  const [focusMode, setFocusMode] = useState(false);
+  const { hasDetail, onCloseDetail } = props;
+
+  useEffect(() => {
+    const closeWhenNarrow = () => {
+      if (window.innerWidth < 1440) setContextOpen(false);
+    };
+    window.addEventListener("resize", closeWhenNarrow);
+    return () => window.removeEventListener("resize", closeWhenNarrow);
+  }, []);
 
   // Esc: đóng context trước → rồi detail (§3).
   useEffect(() => {
@@ -59,12 +71,13 @@ export function SplitView(props: SplitViewProps) {
       const el = document.activeElement;
       if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || (el as HTMLElement).isContentEditable)) return;
       if (bp !== "desktop" && sheetOpen) { setSheetOpen(false); return; }
+      if (bp === "desktop" && focusMode) { setFocusMode(false); return; }
       if (bp === "desktop" && hasContext && contextOpen) { setContextOpen(false); return; }
-      if (props.hasDetail) props.onCloseDetail?.();
+      if (hasDetail) onCloseDetail?.();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [bp, hasContext, contextOpen, sheetOpen, props.hasDetail, props]);
+  }, [bp, hasContext, contextOpen, focusMode, sheetOpen, hasDetail, onCloseDetail]);
 
   // ── Không có detail → list full ─────────────────────────────────────────────
   if (!props.hasDetail) {
@@ -73,20 +86,43 @@ export function SplitView(props: SplitViewProps) {
 
   // ── Desktop ≥1280: 3 cột resizable ─────────────────────────────────────────
   if (bp === "desktop") {
+    if (focusMode) {
+      return (
+        <div className="mf-split relative h-full min-w-0 overflow-hidden">
+          <div className="absolute bottom-3 right-3 z-30 flex gap-1 rounded-md bg-card/90 p-1 shadow-sm backdrop-blur">
+            {hasContext ? (
+              <Button variant="outline" size="icon-sm" onClick={() => setSheetOpen(true)} aria-label={t("split.open_activity")}>
+                <PanelRight />
+              </Button>
+            ) : null}
+            <Button variant="outline" size="icon-sm" onClick={() => setFocusMode(false)} aria-label={t("split.exit_focus", "Thoát chế độ tập trung")}>
+              <Minimize2 />
+            </Button>
+          </div>
+          {props.detail}
+          <ContextSheet open={sheetOpen && hasContext} onOpenChange={setSheetOpen} title={props.contextTitle}>
+            {props.context}
+          </ContextSheet>
+        </div>
+      );
+    }
     return (
-      <ResizablePanelGroup direction="horizontal" autoSaveId={props.autoSaveId ?? "mf-split"} className="mf-split h-full">
-        <ResizablePanel defaultSize={34} minSize={24} maxSize={45} className="min-w-0">
+      <ResizablePanelGroup direction="horizontal" autoSaveId={`${props.autoSaveId ?? "mf-split"}:v2`} className="mf-split h-full">
+        <ResizablePanel defaultSize={contextOpen && hasContext ? 28 : 32} minSize={22} maxSize={38} className="min-w-0">
           {props.list}
         </ResizablePanel>
         <ResizableHandle withHandle />
-        <ResizablePanel defaultSize={contextOpen && hasContext ? 48 : 66} minSize={30} className="min-w-0">
+        <ResizablePanel defaultSize={contextOpen && hasContext ? 54 : 68} minSize={42} className="min-w-0">
           <div className="relative h-full">
-            <div className="absolute right-2 top-2 z-30 flex gap-1">
+            <div className="absolute bottom-3 right-3 z-30 flex gap-1 rounded-md bg-card/90 p-1 shadow-sm backdrop-blur">
               {hasContext && !contextOpen ? (
                 <Button variant="outline" size="icon-sm" onClick={() => setContextOpen(true)} aria-label={t("split.open_activity")}>
                   <PanelRight />
                 </Button>
               ) : null}
+              <Button variant="outline" size="icon-sm" onClick={() => setFocusMode(true)} aria-label={t("split.focus", "Tập trung vào biểu mẫu")}>
+                <Maximize2 />
+              </Button>
             </div>
             {props.detail}
           </div>
@@ -94,7 +130,7 @@ export function SplitView(props: SplitViewProps) {
         {hasContext && contextOpen ? (
           <>
             <ResizableHandle withHandle />
-            <ResizablePanel defaultSize={18} minSize={16} maxSize={30} className="min-w-0">
+            <ResizablePanel defaultSize={18} minSize={18} maxSize={28} className="min-w-0">
               <ContextFrame title={props.contextTitle} onClose={() => setContextOpen(false)}>
                 {props.context}
               </ContextFrame>
@@ -109,9 +145,9 @@ export function SplitView(props: SplitViewProps) {
   if (bp === "tablet") {
     return (
       <div className="mf-split flex h-full">
-        <div className="w-[320px] shrink-0 overflow-hidden border-r">{props.list}</div>
+        <div className="w-[clamp(15rem,31vw,20rem)] shrink-0 overflow-hidden border-r">{props.list}</div>
         <div className="relative min-w-0 flex-1">
-          <div className="absolute right-2 top-2 z-30 flex gap-1">
+          <div className="absolute bottom-3 right-3 z-30 flex gap-1 rounded-md bg-card/90 p-1 shadow-sm backdrop-blur">
             {hasContext ? (
               <Button variant="outline" size="sm" onClick={() => setSheetOpen(true)}>
                 <PanelRight /> {t("split.activity")}
@@ -167,7 +203,7 @@ function ContextSheet({ open, onOpenChange, title, children }: { open: boolean; 
   const t = useT();
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[360px] p-0">
+      <SheetContent side="right" className="w-[min(92vw,26rem)] p-0 sm:max-w-[26rem]">
         <SheetHeader className="border-b px-3 py-2.5">
           <SheetTitle className="text-sm">{title ?? t("split.activity")}</SheetTitle>
         </SheetHeader>

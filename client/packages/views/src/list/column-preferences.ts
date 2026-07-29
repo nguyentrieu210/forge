@@ -11,7 +11,7 @@
 
 export const MIN_COL_WIDTH = 72;
 export const MAX_COL_WIDTH = 720;
-const STORAGE_VERSION = 2;
+const STORAGE_VERSION = 3;
 const KEY_PREFIX = "metaforge:list-columns:v2:";
 
 export type ListDensity = "comfortable" | "compact";
@@ -27,6 +27,7 @@ export interface ColumnPreferenceSpec {
 export interface ListColumnPreferences {
   version: typeof STORAGE_VERSION;
   hidden: string[];
+  pinned: string[];
   order: string[];
   widths: ColumnWidths;
   density: ListDensity;
@@ -53,6 +54,7 @@ export function defaultColumnPreferences(columns: ColumnPreferenceSpec[]): ListC
   return {
     version: STORAGE_VERSION,
     hidden: [],
+    pinned: columns.filter((column) => column.isTitle).map((column) => column.fieldname),
     order: uniqueFieldnames(columns),
     widths: {},
     density: "comfortable",
@@ -77,6 +79,9 @@ export function normalizeColumnPreferences(
   const mandatory = new Set(columns.filter((column) => column.isTitle).map((column) => column.fieldname));
 
   const hidden = uniqueStrings(raw.hidden).filter((field) => valid.has(field) && !mandatory.has(field));
+  const hiddenSet = new Set(hidden);
+  const pinned = (raw.pinned === undefined ? defaults.pinned : uniqueStrings(raw.pinned))
+    .filter((field) => valid.has(field) && !hiddenSet.has(field));
   const requestedOrder = uniqueStrings(raw.order).filter((field) => valid.has(field));
   const seen = new Set(requestedOrder);
   const order = [...requestedOrder, ...defaults.order.filter((field) => !seen.has(field))];
@@ -98,6 +103,7 @@ export function normalizeColumnPreferences(
   return {
     version: STORAGE_VERSION,
     hidden,
+    pinned,
     order,
     widths,
     density: raw.density === "compact" ? "compact" : "comfortable",
@@ -148,6 +154,8 @@ export function hasCustomColumnPreferences(
   const defaults = defaultColumnPreferences(columns);
   return (
     preferences.hidden.length > 0 ||
+    preferences.pinned.length !== defaults.pinned.length ||
+    preferences.pinned.some((field, index) => field !== defaults.pinned[index]) ||
     Object.keys(preferences.widths).length > 0 ||
     preferences.density !== defaults.density ||
     preferences.groupBy !== "" ||

@@ -9,9 +9,9 @@
  * NestedSet giữ `lft`/`rgt` cho mỗi node, ghi tay là cây hỏng và mọi truy vấn "con cháu của X"
  * trả sai vĩnh viễn.
  */
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Search } from "lucide-react";
+import { ChevronsUpDown, Loader2, Minus, Plus, Search } from "lucide-react";
 import { Button, ConfirmDialog, Input, PromptDialog, toast, useT } from "@metaforge/ui";
 import type { TreeNode } from "@metaforge/adapter-frappe";
 import { useMetaForge } from "../container/provider.js";
@@ -66,6 +66,7 @@ export function TreeContainer({
   const [pending, setPending] = useState<Pending | null>(null);
   const [busy, setBusy] = useState(false);
   const [query, setQuery] = useState("");
+  const deferredQuery = useDeferredValue(query.trim());
   const didAutoOpen = useRef(false);
 
   // parent="" ⇒ get_children trả về node gốc (quy ước của treeview Frappe).
@@ -73,6 +74,15 @@ export function TreeContainer({
     queryKey: [scopeKey, "tree", doctype, "", includeDisabled],
     queryFn: () => adapter.treeChildren(doctype, "", includeDisabled),
     enabled: Boolean(doctype),
+  });
+
+  // Tìm trên TOÀN DocType, không chỉ các node gốc/nhánh đã tải. globalSearch đã permission-filter
+  // ở server và trả tối đa 100 kết quả nên cây vài nghìn node vẫn không cần nạp toàn bộ vào trình duyệt.
+  const searchQ = useQuery({
+    queryKey: [scopeKey, "tree-search", doctype, deferredQuery],
+    queryFn: () => adapter.globalSearch(deferredQuery, { doctype, limit: 100 }),
+    enabled: deferredQuery.length >= 2,
+    staleTime: 30_000,
   });
 
   const loadChildren = useCallback(async (value: string) => {
@@ -120,6 +130,25 @@ export function TreeContainer({
     if (!isOpen && !childrenMap[value]) void loadChildren(value);
   }, [expanded, childrenMap, loadChildren, stateKey]);
 
+  const collapseAll = () => {
+    const next = new Set<string>();
+    treeUiState.set(stateKey, { expanded: next, childrenMap });
+    setExpanded(next);
+  };
+  const expandLoaded = () => {
+    const roots = (rootQ.data ?? []).map(toItem);
+    const groups = [
+      ...roots.filter((node) => node.expandable).map((node) => node.value),
+      ...Object.values(childrenMap).flat().filter((node) => node.expandable).map((node) => node.value),
+    ];
+    const next = new Set(groups);
+    treeUiState.set(stateKey, { expanded: next, childrenMap });
+    setExpanded(next);
+    for (const value of next) {
+      if (!childrenMap[value]) void loadChildren(value);
+    }
+  };
+
   // Tree workspace luôn có 3 cột: khi chưa có lựa chọn, mở ngay node gốc đầu
   // tiên để cột form và hoạt động có dữ liệu thay vì hiện hai vùng trống.
   useEffect(() => {
@@ -154,6 +183,22 @@ export function TreeContainer({
       await rootQ.refetch();
     }
   }, [qc, scopeKey, doctype, loadChildren, rootQ, stateKey, expanded]);
+
+  const moveNode = async (node: TreeNodeItem, parent: TreeNodeItem) => {
+    if (node.value === parent.value) return;
+    setBusy(true);
+    try {
+      const current = await adapter.getDoc(doctype, node.value);
+      await adapter.treeReparent(doctype, node.value, parent.value, String(current.doc.modified ?? ""));
+      toast.success(t("tree.moved", "Đã chuyển nhóm"));
+      await refreshBranch("");
+      setExpanded((previous) => new Set(previous).add(parent.value));
+    } catch (error) {
+      toast.error(adapter.mapError(error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const doAdd = async (name: string) => {
     if (pending?.kind !== "add") return;
@@ -223,6 +268,28 @@ export function TreeContainer({
     } finally { setBusy(false); }
   };
 
+  const rootItems = useMemo(() => (rootQ.data ?? []).map(toItem), [rootQ.data]);
+  const loadedItems = useMemo(() => {
+    const unique = new Map<string, TreeNodeItem>();
+    for (const item of [...rootItems, ...Object.values(childrenMap).flat()]) unique.set(item.value, item);
+    return [...unique.values()];
+  }, [rootItems, childrenMap]);
+  const normalizedQuery = deferredQuery.toLocaleLowerCase("vi");
+  const localMatches = normalizedQuery
+    ? loadedItems.filter((node) => `${node.title ?? ""} ${node.value}`.toLocaleLowerCase("vi").includes(normalizedQuery))
+    : [];
+  const remoteMatches: TreeNodeItem[] = (searchQ.data ?? []).map((result) => ({
+    value: result.name,
+    title: result.title || result.name,
+    expandable: false,
+  }));
+  const visibleRoots = normalizedQuery
+    ? (deferredQuery.length >= 2 && !searchQ.error ? remoteMatches : localMatches)
+    : rootItems;
+  const selectedPath = selected && !normalizedQuery
+    ? findLoadedPath(rootItems, childrenMap, selected)
+    : [];
+
   if (rootQ.isLoading) return <div className="p-4 text-sm text-muted-foreground">{t("common.loading")}</div>;
   if (rootQ.error) return <div className="p-4 text-sm text-destructive" role="alert">{adapter.mapError(rootQ.error).message}</div>;
 
@@ -245,32 +312,41 @@ export function TreeContainer({
         ) : null}
       </div>
 
-      <div className="mf-tree-toolbar flex shrink-0 items-center border-b px-4 py-2">
-        <div className="relative w-full max-w-sm">
+      <div className="mf-tree-toolbar flex shrink-0 flex-wrap items-center gap-2 border-b px-4 py-2">
+        <div className="relative min-w-48 flex-1">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            className="h-8 w-full pl-8"
+            className="h-8 w-full pl-8 pr-8"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder={t("common.search")}
             aria-label={t("common.search")}
           />
+          {searchQ.isFetching ? <Loader2 className="absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 animate-spin text-muted-foreground" /> : null}
         </div>
+        <Button type="button" variant="ghost" size="icon-sm" onClick={expandLoaded} aria-label={t("tree.expand_loaded", "Mở các nhánh đã tải")} title={t("tree.expand_loaded", "Mở các nhánh đã tải")}>
+          <ChevronsUpDown />
+        </Button>
+        <Button type="button" variant="ghost" size="icon-sm" onClick={collapseAll} aria-label={t("tree.collapse_all", "Thu gọn toàn bộ")} title={t("tree.collapse_all", "Thu gọn toàn bộ")}>
+          <Minus />
+        </Button>
+        {normalizedQuery ? <span className="w-full text-xs text-muted-foreground">{searchQ.error ? t("tree.search_loaded_only", "Không tìm được trên máy chủ; đang lọc các nhánh đã tải.") : `${visibleRoots.length} ${t("tree.results", "kết quả")}`}</span> : null}
+        {selectedPath.length > 1 ? <span className="w-full truncate text-xs text-muted-foreground">{selectedPath.map((node) => node.title ?? node.value).join(" / ")}</span> : null}
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto px-4 py-3">
         <TreeView
-          roots={(rootQ.data ?? [])
-            .map(toItem)
-            .filter((node) => !query.trim() || (node.title ?? node.value).toLocaleLowerCase("vi").includes(query.trim().toLocaleLowerCase("vi")))}
-          childrenOf={(value) => childrenMap[value]}
-          expanded={expanded}
+          roots={visibleRoots}
+          childrenOf={(value) => normalizedQuery ? undefined : childrenMap[value]}
+          expanded={normalizedQuery ? new Set() : expanded}
           onToggle={onToggle}
           onSelect={onSelect}
           selected={selected}
           onAddChild={editable ? (parent) => setPending({ kind: "add", parent: parent.value, isRoot: false, asGroup: false }) : undefined}
+          onAddGroup={editable ? (parent) => setPending({ kind: "add", parent: parent.value, isRoot: false, asGroup: true }) : undefined}
           onRename={editable ? (node) => setPending({ kind: "rename", node }) : undefined}
           onDelete={editable ? (node) => setPending({ kind: "delete", node }) : undefined}
+          onMove={editable && !normalizedQuery && !busy ? (node, parent) => void moveNode(node, parent) : undefined}
         />
       </div>
 
@@ -304,4 +380,21 @@ export function TreeContainer({
       />
     </div>
   );
+}
+
+function findLoadedPath(
+  roots: TreeNodeItem[],
+  childrenMap: Record<string, TreeNodeItem[]>,
+  target: string,
+): TreeNodeItem[] {
+  const visit = (items: TreeNodeItem[], path: TreeNodeItem[]): TreeNodeItem[] => {
+    for (const item of items) {
+      const next = [...path, item];
+      if (item.value === target) return next;
+      const found = visit(childrenMap[item.value] ?? [], next);
+      if (found.length) return found;
+    }
+    return [];
+  };
+  return visit(roots, []);
 }

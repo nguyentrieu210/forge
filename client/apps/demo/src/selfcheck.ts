@@ -1059,7 +1059,7 @@ check("ChildGrid render: Dynamic Link lấy đúng DocType đích từ chính d�
     }),
   );
   assert.ok(html.includes("NCC-001"), "Dynamic Link đã render giá trị hiện có");
-  assert.ok(!html.includes("Chọn") || !html.includes("reference_type"), "không báo thiếu loại hồ sơ khi dòng đã chọn Supplier");
+  assert.ok(!html.includes('Chọn &quot;reference_type&quot; trước'), "không báo thiếu loại hồ sơ khi dòng đã chọn Supplier");
 });
 
 // ===== VIEWS: Kanban + Tree =====

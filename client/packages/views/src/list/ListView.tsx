@@ -5,7 +5,7 @@
  * + sort header + selection + BulkActionBar + SummaryRow + pagination "X–Y / Z" + states VN.
  * Không fetch, không URL — chỉ nhận props + phát onStateChange. Toàn bộ UI qua @metaforge/ui.
  */
-import { Fragment, useMemo, useRef, useState } from "react";
+import { Fragment, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { getCoreRowModel, useReactTable, type ColumnDef, type VisibilityState } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ArrowUp, ArrowDown, ChevronsUpDown, ChevronDown, ChevronLeft, ChevronRight, Trash2, Download, Inbox, SearchX, AlertCircle, RefreshCw, Camera, Loader2 } from "lucide-react";
@@ -113,6 +113,7 @@ export function ListView(props: ListViewProps) {
     });
   };
   const hiddenSet = useMemo(() => new Set(preferences.hidden), [preferences.hidden]);
+  const pinnedSet = useMemo(() => new Set(preferences.pinned), [preferences.pinned]);
   const density = preferences.density;
   const setDensity = (next: "comfortable" | "compact") => updatePreferences((current) => ({ ...current, density: next }));
   const compact = density === "compact";
@@ -304,6 +305,18 @@ export function ListView(props: ListViewProps) {
       hidden: current.hidden.includes(fieldname)
         ? current.hidden.filter((field) => field !== fieldname)
         : [...current.hidden, fieldname],
+      pinned: current.hidden.includes(fieldname)
+        ? current.pinned
+        : current.pinned.filter((field) => field !== fieldname),
+    }));
+  }
+  function togglePinned(fieldname: string) {
+    if (hiddenSet.has(fieldname)) return;
+    updatePreferences((current) => ({
+      ...current,
+      pinned: current.pinned.includes(fieldname)
+        ? current.pinned.filter((field) => field !== fieldname)
+        : [...current.pinned, fieldname],
     }));
   }
 
@@ -311,6 +324,16 @@ export function ListView(props: ListViewProps) {
   const sortDir = state.sort.split(":")[1];
   const numericCols = columns.filter((c) => c.align === "right" && !c.isStatus);
   const totalCols = columns.length + 3; // checkbox + STT + cột dữ liệu + cột đệm
+  const pinnedOffsets = useMemo(() => {
+    let left = 100; // checkbox 44px + STT 56px
+    const offsets = new Map<string, number>();
+    for (const column of columns) {
+      if (!pinnedSet.has(column.fieldname)) continue;
+      offsets.set(column.fieldname, left);
+      left += colWidths[column.fieldname] ?? column.defaultWidth;
+    }
+    return offsets;
+  }, [columns, pinnedSet, colWidths]);
 
   // ── Windowing (ảo hoá tbody) ────────────────────────────────────────────────
   // Khi NHIỀU dòng (>50) ta chỉ render các dòng trong viewport để nghìn dòng/trang
@@ -332,6 +355,51 @@ export function ListView(props: ListViewProps) {
   const virtualItems = rowVirtualizer.getVirtualItems();
   const padTop = virtualItems.length ? virtualItems[0]!.start : 0;
   const padBottom = virtualItems.length ? rowVirtualizer.getTotalSize() - virtualItems[virtualItems.length - 1]!.end : 0;
+  const [focusedRow, setFocusedRow] = useState<string | null>(null);
+  const moveRowFocus = (event: KeyboardEvent<HTMLElement>, index: number) => {
+    if (event.target !== event.currentTarget) return;
+    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+
+    // Khi gom nhóm và thu gọn một nhóm, `rows` vẫn chứa các dòng đang ẩn. Điều hướng theo
+    // đúng các phần tử nhìn thấy để ArrowDown không cố focus một dòng không còn trong DOM.
+    if (!virtualized) {
+      const visible = [...(scrollRef.current?.querySelectorAll<HTMLElement>("[data-list-row]") ?? [])]
+        .filter((candidate) => candidate.offsetParent !== null && candidate.tagName === event.currentTarget.tagName);
+      const currentIndex = visible.indexOf(event.currentTarget);
+      if (currentIndex < 0) return;
+      const targetIndex = event.key === "Home"
+        ? 0
+        : event.key === "End"
+          ? visible.length - 1
+          : Math.min(Math.max(currentIndex + (event.key === "ArrowDown" ? 1 : -1), 0), visible.length - 1);
+      const target = visible[targetIndex];
+      if (!target) return;
+      target.focus();
+      setFocusedRow(target.dataset.listRow ?? null);
+      return;
+    }
+
+    let target = index;
+    if (event.key === "ArrowDown") target = Math.min(rows.length - 1, index + 1);
+    else if (event.key === "ArrowUp") target = Math.max(0, index - 1);
+    else if (event.key === "Home") target = 0;
+    else if (event.key === "End") target = rows.length - 1;
+    const nextName = String(rows[target]?.name ?? "");
+    if (!nextName) return;
+    const focusTarget = () => {
+      const candidates = scrollRef.current?.querySelectorAll<HTMLElement>("[data-list-row]");
+      [...(candidates ?? [])]
+        .find((candidate) =>
+          candidate.dataset.listRow === nextName
+          && candidate.offsetParent !== null
+          && candidate.tagName === event.currentTarget.tagName)
+        ?.focus();
+    };
+    rowVirtualizer.scrollToIndex(target, { align: "auto" });
+    requestAnimationFrame(focusTarget);
+    setFocusedRow(nextName);
+  };
 
   // Render 1 dòng dữ liệu — dùng chung cho bản thường & bản ảo hoá.
   // index = vị trí trong trang (0-based) → STT tuyệt đối = pageStart + index + 1.
@@ -344,6 +412,7 @@ export function ListView(props: ListViewProps) {
         key={name}
         ref={measureRef}
         data-index={index}
+        data-list-row={name}
         data-state={selected ? "selected" : undefined}
         className={cn(
           // `bg-card` để ô dính (bg-inherit) có nền che nội dung trôi qua bên dưới khi cuộn ngang.
@@ -355,11 +424,16 @@ export function ListView(props: ListViewProps) {
         )}
         onClick={() => onRowClick?.(row)}
         onKeyDown={(event) => {
-          if (!onRowClick || event.key !== "Enter") return;
-          event.preventDefault();
-          onRowClick(row);
+          if (event.target !== event.currentTarget) return;
+          if (onRowClick && event.key === "Enter") {
+            event.preventDefault();
+            onRowClick(row);
+            return;
+          }
+          moveRowFocus(event, index);
         }}
-        tabIndex={onRowClick ? 0 : undefined}
+        onFocus={() => setFocusedRow(name)}
+        tabIndex={onRowClick ? (focusedRow === name || (!focusedRow && index === 0) ? 0 : -1) : undefined}
         aria-label={onRowClick ? `${t("common.open", "Mở")} ${name}` : undefined}
       >
         <TableCell className={cn("px-3 text-center", SELECT_W, STICKY_SELECT, compact && "py-1")}>
@@ -370,17 +444,20 @@ export function ListView(props: ListViewProps) {
         <TableCell className={cn("px-3 text-right text-xs tabular-nums text-muted-foreground", INDEX_W, STICKY_INDEX, compact && "py-1")}>
           {pageStart + index + 1}
         </TableCell>
-        {columns.map((c) => (
+        {columns.map((c) => {
+          const pinnedLeft = pinnedOffsets.get(c.fieldname);
+          return (
           <TableCell key={c.fieldname} data-col={c.fieldname} // Bề rộng do <colgroup> quyết định — không đặt w-full/w-px ở ô nữa, hai nguồn tranh nhau
-                    // thì trình duyệt chọn theo luật riêng và kết quả không đoán được.
-                    className={cn(c.align === "right" && "text-right", c.align === "center" && "text-center", compact && "py-1", !c.isTitle && "whitespace-nowrap")}>
+                     // thì trình duyệt chọn theo luật riêng và kết quả không đoán được.
+                    style={pinnedLeft === undefined ? undefined : { left: pinnedLeft }}
+                    className={cn(c.align === "right" && "text-right", c.align === "center" && "text-center", compact && "py-1", !c.isTitle && "whitespace-nowrap", pinnedLeft !== undefined && "sticky z-10 bg-card shadow-[inset_-1px_0_0_var(--border)]")}>
             {c.isTitle
                     ? <TitleCell row={row} col={c} imgField={imgField} displayValues={props.displayValues} onUploadImage={props.onUploadImage} />
                     : c.fieldtype === "Link" && c.options
                       ? <LinkCell doctype={c.options} value={row[c.fieldname]} displayValues={props.displayValues} />
                       : renderCell(row[c.fieldname], c, props.fmt)}
           </TableCell>
-        ))}
+        );})}
         <TableCell aria-hidden className="p-0" />
       </TableRow>
     );
@@ -396,7 +473,9 @@ export function ListView(props: ListViewProps) {
         standardFilters={standardFilters}
         columns={allColumns}
         hidden={preferences.hidden}
+        pinned={preferences.pinned}
         onToggleColumn={toggleColumn}
+        onTogglePin={togglePinned}
         onCreate={props.onCreate}
         onRefresh={props.onRefresh}
         onExport={props.onExport ? (format) => props.onExport!([], columns.map((column) => column.fieldname), format) : undefined}
@@ -452,10 +531,16 @@ export function ListView(props: ListViewProps) {
             return (
               <article
                 key={name}
+                data-list-row={name}
                 className={cn("bg-card p-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring", props.activeRow === name && "bg-accent shadow-[inset_3px_0_0_var(--primary)]")}
                 onClick={() => onRowClick?.(row)}
-                onKeyDown={(event) => { if (onRowClick && event.key === "Enter") { event.preventDefault(); onRowClick(row); } }}
-                tabIndex={onRowClick ? 0 : undefined}
+                onKeyDown={(event) => {
+                  if (event.target !== event.currentTarget) return;
+                  if (onRowClick && event.key === "Enter") { event.preventDefault(); onRowClick(row); return; }
+                  moveRowFocus(event, index);
+                }}
+                onFocus={() => setFocusedRow(name)}
+                tabIndex={onRowClick ? (focusedRow === name || (!focusedRow && index === 0) ? 0 : -1) : undefined}
                 aria-label={onRowClick ? `${t("common.open", "Mở")} ${name}` : undefined}
               >
                 <div className="flex items-start gap-3">
@@ -537,6 +622,7 @@ export function ListView(props: ListViewProps) {
                   onResize={(px) => resizeColumn(c.fieldname, px)}
                   onMoveLeft={() => moveColumnByKeyboard(c.fieldname, -1)}
                   onMoveRight={() => moveColumnByKeyboard(c.fieldname, 1)}
+                  pinnedLeft={pinnedOffsets.get(c.fieldname)}
                 />
               ))}
               {/* ô của cột đệm — xem chú thích ở <colgroup> */}
@@ -611,11 +697,17 @@ export function ListView(props: ListViewProps) {
               <TableRow className="bg-card hover:bg-transparent">
                 <TableCell aria-hidden className={cn("px-3", SELECT_W, STICKY_SELECT)} />
                 <TableCell className={cn("px-3 text-right text-xs text-muted-foreground", INDEX_W, STICKY_INDEX)} title="Tổng hợp trên trang hiện tại">Σ trang</TableCell>
-                {columns.map((c) => (
-                  <TableCell key={c.fieldname} className={cn(c.align === "right" && "text-right tabular-nums")}>
+                {columns.map((c) => {
+                  const pinnedLeft = pinnedOffsets.get(c.fieldname);
+                  return (
+                  <TableCell
+                    key={c.fieldname}
+                    style={pinnedLeft === undefined ? undefined : { left: pinnedLeft }}
+                    className={cn(c.align === "right" && "text-right tabular-nums", pinnedLeft !== undefined && "sticky z-10 bg-card shadow-[inset_-1px_0_0_var(--border)]")}
+                  >
                     {c.align === "right" && !c.isStatus ? formatValue(aggregateColumn(rows, c), c) : null}
                   </TableCell>
-                ))}
+                );})}
                 <TableCell aria-hidden className="p-0" />
               </TableRow>
             </TableFooter>
@@ -678,7 +770,7 @@ function LinkCell({ doctype, value, displayValues }: { doctype: string; value: u
 // ── Sort header ───────────────────────────────────────────────────────────────
 function SortHeader({
   col, active, dir, onClick, compact, dragOver, onDragStart, onDragOverCol, onDragLeaveCol, onDropCol,
-  width, onResize, onResizeStart, onAutoFit, onMoveLeft, onMoveRight,
+  width, onResize, onResizeStart, onAutoFit, onMoveLeft, onMoveRight, pinnedLeft,
 }: {
   col: ListColumn; active: boolean; dir?: string; onClick: () => void; compact?: boolean;
   dragOver?: boolean;
@@ -696,6 +788,7 @@ function SortHeader({
   /** Alt + mũi tên đổi thứ tự cột mà không cần chuột. */
   onMoveLeft?: () => void;
   onMoveRight?: () => void;
+  pinnedLeft?: number;
 }) {
   const Icon = active ? (dir === "asc" ? ArrowUp : ArrowDown) : ChevronsUpDown;
   const thRef = useRef<HTMLTableCellElement>(null);
@@ -708,6 +801,10 @@ function SortHeader({
    * chặn được `dragstart`; cách chắc chắn là gỡ hẳn thuộc tính draggable trong lúc kéo giãn.
    */
   const [resizing, setResizing] = useState(false);
+  const headerStyle = {
+    ...(width ? { width, minWidth: width, maxWidth: width } : { minWidth: col.minWidth }),
+    ...(pinnedLeft === undefined ? {} : { left: pinnedLeft }),
+  };
 
   /**
    * Kéo mép phải để đổi bề rộng cột.
@@ -748,7 +845,7 @@ function SortHeader({
       ref={thRef}
       data-col={col.fieldname}
       aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
-      style={width ? { width, minWidth: width, maxWidth: width } : { minWidth: col.minWidth }}
+      style={headerStyle}
       draggable={Boolean(onDropCol) && !resizing}
       onDragStart={(e) => {
         // setData bắt buộc để Firefox chịu bắt đầu kéo; giá trị thực đọc qua ref (an toàn hơn với
@@ -768,6 +865,7 @@ function SortHeader({
         // bề ngang nên bảng ít cột bị kéo dãn, chữ nằm rời rạc cách nhau cả gang tay.
         // Bề rộng do người dùng đặt thì THẮNG các lớp co/giãn tự động ở trên.
         "sticky top-0 z-30 whitespace-nowrap bg-muted",
+        pinnedLeft !== undefined && "z-40 shadow-[inset_-1px_0_0_var(--border)]",
         "group/th",
         onDropCol && "cursor-grab active:cursor-grabbing",
         dragOver && "bg-accent shadow-[inset_2px_0_0_var(--primary)]",

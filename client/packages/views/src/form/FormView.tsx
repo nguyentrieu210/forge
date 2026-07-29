@@ -7,7 +7,7 @@
  * UI qua @metaforge/ui (header/tabs sticky, card sections). Logic KHÔNG đổi so với bản gốc.
  */
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
-import { useForm, Controller, type FieldValues } from "react-hook-form";
+import { useForm, useWatch, Controller, type FieldValues } from "react-hook-form";
 import { z } from "zod";
 import { AlertTriangle, History, X } from "lucide-react";
 import { resolveMeta, collectFetchFrom, type DocTypeMeta, type Doc, type ResolvedField } from "@metaforge/core";
@@ -100,14 +100,33 @@ export function FormView(props: FormViewProps) {
   const prevLinks = useRef<Record<string, unknown>>({}); // giá trị link lần trước → phát hiện user đổi
   const fetchDocKey = useRef<string>(""); // doc đang đồng bộ → bỏ vòng fetch của lần (re)load (L1)
 
-  // Autosave draft cục bộ — chống mất dữ liệu khi tab bị đóng nhầm/crash (khác beforeunload: đây
-  // PHỤC HỒI được, không chỉ cảnh báo). Khoá theo doctype+name — "new" gộp chung 1 bản nháp/doctype.
-  const draftKey = `mf-draft:${meta.name}:${doc.name ?? "new"}`;
+  // Mỗi tab tạo mới có một mã riêng nhưng giữ mã đó qua refresh. Vì vậy hai cửa sổ cùng tạo
+  // một DocType không còn ghi đè bản nháp của nhau như khoá cố định "...:new".
+  const draftSessionStorageKey = `mf-draft-session:${meta.name}:${typeof location === "undefined" ? "form" : location.pathname}`;
+  const draftSession = useRef("");
+  if (!draftSession.current) {
+    try {
+      draftSession.current = sessionStorage.getItem(draftSessionStorageKey) ?? "";
+      if (!draftSession.current) {
+        draftSession.current = typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        sessionStorage.setItem(draftSessionStorageKey, draftSession.current);
+      }
+    } catch {
+      draftSession.current = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    }
+  }
+  const newDocument = props.isNew ?? (!doc.name || doc.name === "new");
+  const draftKey = `mf-draft:${meta.name}:${newDocument ? `new:${draftSession.current}` : String(doc.name)}`;
+  const previousDraftKey = useRef(draftKey);
   const isFirstDocLoad = useRef(true);
   const [draftAvailable, setDraftAvailable] = useState(false);
 
   // reset khi đổi document (name) hoặc tải lại (modified) — RHF tự lo dirty/back-to-initial.
   useEffect(() => {
+    const staleDraftKey = previousDraftKey.current;
+    previousDraftKey.current = draftKey;
     form.reset({ ...doc });
     // seed link đã-load ⇒ fetch_from KHÔNG kích hoạt lúc tải (chỉ user đổi link mới fetch).
     const seed: Record<string, unknown> = {};
@@ -119,7 +138,11 @@ export function FormView(props: FormViewProps) {
       try { setDraftAvailable(Boolean(localStorage.getItem(draftKey))); } catch { /* private mode */ }
     } else {
       // Doc vừa reload sau khi lưu THÀNH CÔNG (modified đổi) — bản nháp cũ đã lỗi thời, xoá.
-      try { localStorage.removeItem(draftKey); } catch { /* ignore */ }
+      try {
+        localStorage.removeItem(staleDraftKey);
+        localStorage.removeItem(draftKey);
+        if (staleDraftKey !== draftKey && !newDocument) sessionStorage.removeItem(draftSessionStorageKey);
+      } catch { /* ignore */ }
       setDraftAvailable(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -147,17 +170,62 @@ export function FormView(props: FormViewProps) {
   onDirtyChangeRef.current = props.onDirtyChange;
   useEffect(() => { onDirtyChangeRef.current?.(isDirty); }, [isDirty]);
 
-  const values = form.watch();
+  /**
+   * Chỉ đăng ký render lại FormView cho các field thật sự điều khiển metadata/link.
+   *
+   * Controller của từng ô đã tự theo dõi giá trị của chính nó. `form.watch()` không đối số ở
+   * đây trước kia khiến GÕ MỘT KÝ TỰ dựng lại toàn bộ form và mọi ChildGrid. Với chứng từ
+   * nhiều dòng, đây là nguyên nhân chính của độ trễ mà ERPNext/Frappe tránh bằng refresh cục bộ.
+   */
+  const reactiveFields = useMemo(() => {
+    const names = new Set<string>(fetchRules.map((rule) => rule.linkField));
+    const addExpression = (expression?: string) => {
+      if (!expression) return;
+      if (expression.startsWith("eval:")) {
+        for (const match of expression.matchAll(/\bdoc\.([a-zA-Z_][a-zA-Z0-9_]*)/g)) names.add(match[1]!);
+      } else if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(expression.trim())) {
+        names.add(expression.trim());
+      }
+    };
+    for (const field of meta.fields ?? []) {
+      addExpression(field.depends_on);
+      addExpression(field.mandatory_depends_on);
+      addExpression(field.read_only_depends_on);
+      if (field.fieldtype === "Dynamic Link" && field.options) names.add(field.options);
+      if (typeof field.link_filters === "string") {
+        for (const match of field.link_filters.matchAll(/\bdoc\.([a-zA-Z_][a-zA-Z0-9_]*)/g)) names.add(match[1]!);
+      }
+    }
+    return [...names];
+  }, [meta, fetchRules]);
+  const reactiveValues = useWatch({ control: form.control, name: reactiveFields });
+  const values = useMemo(() => {
+    const current = { ...form.getValues() };
+    reactiveFields.forEach((fieldname, index) => {
+      current[fieldname] = (reactiveValues as unknown[])[index];
+    });
+    return current;
+  }, [form, reactiveFields, reactiveValues]);
 
-  // Ghi bản nháp debounce 800ms trong lúc dirty — không ghi liên tục mỗi phím gõ.
+  // Ghi bản nháp debounce 800ms nhưng không bắt component cha render lại ở mỗi phím gõ.
   useEffect(() => {
     if (!isDirty) return;
-    const timer = setTimeout(() => {
-      try { localStorage.setItem(draftKey, JSON.stringify(values)); } catch { /* quota/private mode */ }
-    }, 800);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [values, isDirty]);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const schedule = (next: FieldValues) => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        try { localStorage.setItem(draftKey, JSON.stringify(next)); } catch { /* quota/private mode */ }
+      }, 800);
+    };
+    // Thay đổi đầu tiên đã xảy ra trước khi `isDirty` làm effect này chạy; phải xếp lịch lưu
+    // ngay giá trị hiện tại, nếu không người dùng chỉ sửa đúng một ô rồi đóng tab sẽ mất bản nháp.
+    schedule(form.getValues());
+    const subscription = form.watch((next) => schedule(next as FieldValues));
+    return () => {
+      if (timer) clearTimeout(timer);
+      subscription.unsubscribe();
+    };
+  }, [draftKey, form, isDirty]);
 
   // Ctrl/Cmd+S = Lưu (chặn hộp thoại lưu trang mặc định của trình duyệt). Đọc isDirty/onValid MỚI
   // NHẤT qua ref — đăng ký listener 1 lần, không tái đăng ký mỗi phím gõ.
@@ -246,19 +314,27 @@ export function FormView(props: FormViewProps) {
   }, [meta]);
   useEffect(() => {
     if (!totalFields) return;
-    const rows = values[totalFields.table];
-    if (!Array.isArray(rows)) return;
-    const round = (n: number) => Math.round(n * 1e6) / 1e6;
-    if (totalFields.sumAmount) {
-      const sum = round(rows.reduce((s, r) => s + (Number((r as Doc)?.amount) || 0), 0));
-      if (Number(values.grand_total ?? 0) !== sum) form.setValue("grand_total", sum as never, { shouldDirty: false });
-    }
-    if (totalFields.sumQty) {
-      const sum = round(rows.reduce((s, r) => s + (Number((r as Doc)?.qty) || 0), 0));
-      if (Number(values.total_qty ?? 0) !== sum) form.setValue("total_qty", sum as never, { shouldDirty: false });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [values, totalFields]);
+    const updateTotals = (current: FieldValues) => {
+      const rows = current[totalFields.table];
+      if (!Array.isArray(rows)) return;
+      const round = (n: number) => Math.round(n * 1e6) / 1e6;
+      if (totalFields.sumAmount) {
+        const sum = round(rows.reduce((s, r) => s + (Number((r as Doc)?.amount) || 0), 0));
+        if (Number(current.grand_total ?? 0) !== sum) form.setValue("grand_total", sum as never, { shouldDirty: false });
+      }
+      if (totalFields.sumQty) {
+        const sum = round(rows.reduce((s, r) => s + (Number((r as Doc)?.qty) || 0), 0));
+        if (Number(current.total_qty ?? 0) !== sum) form.setValue("total_qty", sum as never, { shouldDirty: false });
+      }
+    };
+    updateTotals(form.getValues());
+    const subscription = form.watch((next, info) => {
+      if (!info.name || info.name === totalFields.table || info.name.startsWith(`${totalFields.table}.`)) {
+        updateTotals(next as FieldValues);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form, totalFields]);
 
   const resolved: ResolvedField[] = useMemo(
     () => resolveMeta(meta, { doc: values, roles, maskedFields, forceReadOnly }),
@@ -554,12 +630,22 @@ interface FieldProps {
 
 function Field({ id, rf, width, form, registry, services, docName, parentDoctype, roles, values }: FieldProps) {
   const { field } = rf;
+  // Bảng con có thể dùng `parent.foo` ở metadata của CHÍNH DocType con, điều mà FormView cha
+  // không biết để đưa vào danh sách watch chọn lọc. Chỉ Field Table theo dõi toàn doc; các field
+  // thường vẫn render cục bộ qua Controller nên không kéo cả form render lại mỗi phím gõ.
+  const tableValues = useWatch({
+    control: form.control,
+    disabled: field.fieldtype !== "Table" && field.fieldtype !== "Table MultiSelect",
+  }) as FieldValues;
+  const controlValues = field.fieldtype === "Table" || field.fieldtype === "Table MultiSelect"
+    ? tableValues
+    : values;
   if (rf.layout) {
     if (field.fieldtype === "Heading") return <h4 className="pt-1 text-sm font-semibold text-foreground">{field.label}</h4>;
     return null;
   }
   const Control = registry.resolve(field.fieldtype) ?? FallbackControl;
-  const linkTarget = field.fieldtype === "Dynamic Link" ? (values[field.options ?? ""] as string | undefined) : field.options;
+  const linkTarget = field.fieldtype === "Dynamic Link" ? (controlValues[field.options ?? ""] as string | undefined) : field.options;
 
   return (
     <Controller
@@ -586,7 +672,7 @@ function Field({ id, rf, width, form, registry, services, docName, parentDoctype
             docname={docName}
             linkTarget={linkTarget}
             parentDoctype={parentDoctype}
-            docValues={values}
+            docValues={controlValues}
             roles={roles}
           />
         );

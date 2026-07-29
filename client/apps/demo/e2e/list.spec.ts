@@ -157,4 +157,23 @@ test.describe("List data-table", () => {
     await page.getByRole("menuitem", { name: "Khôi phục mặc định" }).click();
     await expect.poll(async () => Math.round((await page.getByRole("columnheader", { name: "Trạng thái" }).boundingBox())!.width)).toBe(initialWidth);
   });
+
+  test("ghim cột tùy ý được ghi nhớ và dòng dùng roving focus", async ({ page }) => {
+    test.skip(isMobile(page), "Mobile dùng card riêng");
+    await page.goto("/view/list");
+
+    await page.getByRole("button", { name: "Cột", exact: true }).click();
+    await page.getByRole("button", { name: "Ghim cột Trạng thái" }).click();
+    await page.keyboard.press("Escape");
+    await page.reload();
+    await page.getByRole("button", { name: "Cột", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Bỏ ghim cột Trạng thái" })).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    const rows = page.locator("tbody tr[data-list-row]");
+    await rows.first().focus();
+    await page.keyboard.press("ArrowDown");
+    await expect(rows.nth(1)).toBeFocused();
+    await expect.poll(() => rows.evaluateAll((items) => items.filter((item) => item.tabIndex === 0).length)).toBe(1);
+  });
 });

@@ -6,13 +6,23 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { aiHeaders } from "../assistant/AssistantBubble.js";
-import { ArrowDownToLine, Copy, Maximize2, Plus, RotateCcw, ScanLine, X } from "lucide-react";
+import { ArrowDown, ArrowDownToLine, ArrowUp, Columns3, Copy, Maximize2, Pin, PinOff, Plus, RotateCcw, ScanLine, Trash2, Undo2, X } from "lucide-react";
 import { resolveField, type DocTypeMeta, type DocField, type Doc } from "@metaforge/core";
 import { ControlRegistry, FallbackControl, type FieldServices } from "@metaforge/controls";
 import {
-  Button, Dialog, DialogContent, DialogHeader, DialogTitle,
+  Button, Checkbox, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Input,
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell, useT,
 } from "@metaforge/ui";
+
+interface GridLayout {
+  w: Record<string, number>;
+  order: string[];
+  hidden: string[];
+  pinned: string[];
+  labels: Record<string, string>;
+}
+
+const EMPTY_LAYOUT: GridLayout = { w: {}, order: [], hidden: [], pinned: [], labels: {} };
 
 export interface ChildGridProps {
   childMeta: DocTypeMeta;
@@ -235,6 +245,12 @@ export function deriveAverageWeight(row: Doc): AverageWeightResult {
 function parsePasted(field: DocField, raw: string): unknown {
   const text = raw.trim();
   if (!text) return undefined;
+  if (field.fieldtype === "Check") {
+    const normalized = text.toLocaleLowerCase("vi");
+    if (["1", "true", "yes", "y", "x", "có"].includes(normalized)) return 1;
+    if (["0", "false", "no", "n", "không"].includes(normalized)) return 0;
+    return undefined;
+  }
   if (["Currency", "Float", "Int", "Percent"].includes(field.fieldtype)) {
     const normalized = text.replace(/[^\d,.-]/g, "").replace(/\.(?=\d{3}\b)/g, "").replace(",", ".");
     const value = Number(normalized);
@@ -245,7 +261,7 @@ function parsePasted(field: DocField, raw: string): unknown {
 
 /** Cột ĐỊNH DANH — Link đầu tiên, tức mã hàng. Được ghim khi cuộn ngang và không co. */
 function identityColumn(cols: DocField[]): string | undefined {
-  return cols.find((c) => ["Link", "Dynamic Link"].includes(c.fieldtype))?.fieldname;
+  return cols.find((c) => ["Link", "Dynamic Link"].includes(c.fieldtype))?.fieldname ?? cols[0]?.fieldname;
 }
 
 /**
@@ -299,8 +315,13 @@ export function ChildGrid(props: ChildGridProps) {
    */
   const [expanded, setExpanded] = useState(false);
   const [pickedRow, setPickedRow] = useState<number | null>(null);
+  const [pickedColumn, setPickedColumn] = useState(0);
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
+  const [lastDeleted, setLastDeleted] = useState<Array<{ row: Doc; index: number }> | null>(null);
+  const [columnSettingsOpen, setColumnSettingsOpen] = useState(false);
   const itemLoadVersion = useRef(new Map<string, number>());
   const compactCols = visibleColumns(gridColumns(childMeta), childMeta, rows, parentDoc, roles);
+  const fallbackCols = (childMeta.fields ?? []).filter((field) => !isLayout(field.fieldtype)).slice(0, 6);
   const bigCols = visibleColumns(
     bigColumns((childMeta.fields ?? []).filter((f) => !isLayout(f.fieldtype))),
     childMeta,
@@ -308,7 +329,9 @@ export function ChildGrid(props: ChildGridProps) {
     parentDoc,
     roles,
   );
-  const baseCols = expanded ? bigCols : compactCols;
+  // DocType con nhỏ (vd checklist 2 cột) không có field nào trong preset bảng lớn theo chứng từ.
+  // Không được biến bảng thành chỉ còn "#" và nút xoá; dùng bộ cột gọn làm fallback đầy đủ.
+  const baseCols = expanded && bigCols.length ? bigCols : (compactCols.length ? compactCols : fallbackCols);
 
   /**
    * BỀ RỘNG VÀ THỨ TỰ CỘT do người dùng đặt, và NHỚ LẠI ở lần mở sau.
@@ -322,29 +345,35 @@ export function ChildGrid(props: ChildGridProps) {
    * bằng mặc định — không được phép làm chết cả bảng vì một tiện ích.
    */
   const layoutKey = `mf-grid-layout:${childMeta.name}:${expanded ? "big" : "compact"}`;
-  const [layout, setLayout] = useState<{ w: Record<string, number>; order: string[] }>({ w: {}, order: [] });
+  const [layout, setLayout] = useState<GridLayout>(() => ({ ...EMPTY_LAYOUT, w: {}, order: [], hidden: [], pinned: [], labels: {} }));
   const loadedKey = useRef("");
   if (loadedKey.current !== layoutKey) {
     loadedKey.current = layoutKey;
     try {
       const saved = localStorage.getItem(layoutKey);
-      layout.w = saved ? (JSON.parse(saved).w ?? {}) : {};
-      layout.order = saved ? (JSON.parse(saved).order ?? []) : [];
+      const parsed = saved ? JSON.parse(saved) as Partial<GridLayout> : {};
+      layout.w = parsed.w ?? {};
+      layout.order = parsed.order ?? [];
+      layout.hidden = parsed.hidden ?? [];
+      layout.pinned = parsed.pinned ?? [];
+      layout.labels = parsed.labels ?? {};
     } catch { /* không có thì dùng mặc định */ }
   }
-  const saveLayout = (next: { w: Record<string, number>; order: string[] }) => {
+  const saveLayout = (next: GridLayout) => {
     setLayout(next);
     try { localStorage.setItem(layoutKey, JSON.stringify(next)); } catch { /* hết quota — vẫn dùng được trong phiên */ }
   };
 
   // Cột người dùng đã xếp lên trước; cột chưa từng xếp giữ nguyên thứ tự gốc ở phía sau, nên
   // một cột MỚI thêm vào doctype vẫn xuất hiện thay vì biến mất vì không có trong thứ tự cũ.
-  const cols = layout.order.length
+  const baseIdentity = identityColumn(baseCols);
+  const orderedCols = layout.order.length
     ? [
         ...layout.order.map((name) => baseCols.find((c) => c.fieldname === name)).filter((c): c is DocField => Boolean(c)),
         ...baseCols.filter((c) => !layout.order.includes(c.fieldname)),
       ]
     : baseCols;
+  const cols = orderedCols.filter((column) => column.fieldname === baseIdentity || !layout.hidden.includes(column.fieldname));
   const formulaLoadVersion = useRef(new Map<string, number>());
   const previousFormulaGroup = useRef("");
   const latestRows = useRef(rows);
@@ -372,12 +401,22 @@ export function ChildGrid(props: ChildGridProps) {
    * khai bề rộng. Khai `min-width` bằng đúng tổng các cột thì bảng mới thật sự tràn, thanh
    * cuộn mới xuất hiện, và mỗi cột giữ được bề rộng đã tính cho nó.
    */
-  const minWidthRem = 2.5 + (readOnly ? 0 : 4.5)
+  const minWidthRem = 2.5 + (readOnly ? 0 : 7)
     + cols.reduce((sum, column) => sum + (Number.parseFloat(columnWidth(column)) || 0), 0);
-  // Ghim cột mã hàng ngay sau cột "#" (2,5rem): cuộn sang phải để nhập số cây vẫn phải biết
-  // dòng này là mã nào. Ghim mỗi số thứ tự thì thứ còn nhìn thấy chỉ là "1", "2", "3".
-  const stickyIdentity = (fieldname: string): string =>
-    (fieldname === identity ? "sticky left-10 z-10 bg-card" : "");
+  const pinnedOffsets = new Map<string, number>();
+  let pinnedLeft = readOnly ? 2.5 : 5;
+  for (const column of cols) {
+    if (column.fieldname !== identity && !layout.pinned.includes(column.fieldname)) continue;
+    pinnedOffsets.set(column.fieldname, pinnedLeft);
+    pinnedLeft += Number.parseFloat(columnWidth(column) || gridWidth(column)) || 8;
+  }
+  const stickyColumn = (fieldname: string, header = false) => {
+    const left = pinnedOffsets.get(fieldname);
+    return {
+      className: left === undefined ? "" : `sticky ${header ? "z-30" : "z-10"} bg-card shadow-[inset_-1px_0_0_var(--border)]`,
+      style: left === undefined ? undefined : { left: `${left}rem` },
+    };
+  };
 
   /**
    * Các field dòng TỰ TÍNH được, tính ngay khi gõ.
@@ -768,7 +807,48 @@ export function ChildGrid(props: ChildGridProps) {
     }
     emitRows([...rows, seed]);
   };
-  const delRow = (idx: number) => emitRows(rows.filter((_, i) => i !== idx));
+  const deleteRows = (indices: number[]) => {
+    const targets = new Set(indices.filter((index) => index >= 0 && index < rows.length));
+    if (!targets.size) return;
+    setLastDeleted(rows.flatMap((row, index) => targets.has(index) ? [{ row, index }] : []));
+    emitRows(rows.filter((_, index) => !targets.has(index)));
+    setSelectedRows([]);
+    setPickedRow((current) => current == null ? null : Math.min(current, Math.max(0, rows.length - targets.size - 1)));
+  };
+  const delRow = (idx: number) => deleteRows([idx]);
+  const undoDelete = () => {
+    if (!lastDeleted?.length) return;
+    const next = [...rows];
+    for (const deleted of [...lastDeleted].sort((a, b) => a.index - b.index)) {
+      next.splice(Math.min(deleted.index, next.length), 0, deleted.row);
+    }
+    emitRows(next);
+    setLastDeleted(null);
+  };
+  const rowKey = (row: Doc, index: number) => String(row.name ?? index);
+  const selectedSet = new Set(selectedRows);
+  const toggleSelected = (row: Doc, index: number) => {
+    const key = rowKey(row, index);
+    setSelectedRows((current) => current.includes(key) ? current.filter((value) => value !== key) : [...current, key]);
+  };
+  const moveRows = (offset: -1 | 1) => {
+    const selectedIndices = rows
+      .map((row, index) => selectedSet.has(rowKey(row, index)) || (selectedRows.length === 0 && pickedRow === index) ? index : -1)
+      .filter((index) => index >= 0);
+    if (!selectedIndices.length) return;
+    const moving = new Set(selectedIndices);
+    const next = [...rows];
+    const ordered = offset < 0 ? selectedIndices : [...selectedIndices].reverse();
+    for (const index of ordered) {
+      const target = index + offset;
+      if (target < 0 || target >= next.length || moving.has(target)) continue;
+      [next[index], next[target]] = [next[target]!, next[index]!];
+      moving.delete(index);
+      moving.add(target);
+    }
+    emitRows(next);
+    if (pickedRow != null) setPickedRow(Math.min(next.length - 1, Math.max(0, pickedRow + offset)));
+  };
 
   /**
    * Dòng TỔNG dưới chân bảng — cách MISA hiển thị chi tiết chứng từ.
@@ -861,6 +941,7 @@ export function ChildGrid(props: ChildGridProps) {
     event.preventDefault();
     const matrix = text.replace(/\r/g, "").replace(/\n$/, "").split("\n").map((line) => line.split("\t"));
     const start = pickedRow ?? 0;
+    const startColumn = Math.min(pickedColumn, Math.max(0, cols.length - 1));
     const next = [...rows];
     const needFill: number[] = [];
     matrix.forEach((cells, i) => {
@@ -875,7 +956,7 @@ export function ChildGrid(props: ChildGridProps) {
       const row = { ...next[at]! };
       const before = row.item_code;
       cells.forEach((cell, c) => {
-        const column = cols[c];
+        const column = cols[startColumn + c];
         if (!column) return;
         const value = parsePasted(column, cell);
         if (value !== undefined) row[column.fieldname] = value;
@@ -927,8 +1008,13 @@ export function ChildGrid(props: ChildGridProps) {
     };
     if (event.key === "ArrowDown" || (event.key === "Enter" && !event.shiftKey)) go(1, 0);
     else if (event.key === "ArrowUp" || (event.key === "Enter" && event.shiftKey)) go(-1, 0);
-    else if (event.key === "Tab" && !event.shiftKey && c < cols.length - 1) go(0, 1);
-    else if (event.key === "Tab" && event.shiftKey && c > 0) go(0, -1);
+    else if (event.key === "Tab" && !event.shiftKey) {
+      if (c < cols.length - 1) go(0, 1);
+      else if (r < rows.length - 1) { event.preventDefault(); focusCell(r + 1, 0); }
+    } else if (event.key === "Tab" && event.shiftKey) {
+      if (c > 0) go(0, -1);
+      else if (r > 0) { event.preventDefault(); focusCell(r - 1, cols.length - 1); }
+    }
     else if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
       // Trong ô chữ, ← → phải là di chuyển con trỏ TRONG chữ, không phải nhảy ô.
       const input = event.target as HTMLInputElement;
@@ -946,7 +1032,7 @@ export function ChildGrid(props: ChildGridProps) {
     event.preventDefault();
     const line = (values: unknown[]) => values.map((v) => String(v ?? "")).join("\t");
     const body = rows.map((row) => line(cols.map((c) => row[c.fieldname])));
-    event.clipboardData.setData("text/plain", [line(cols.map((c) => c.label ?? c.fieldname)), ...body].join("\n"));
+    event.clipboardData.setData("text/plain", [line(cols.map((c) => layout.labels[c.fieldname] || c.label || c.fieldname)), ...body].join("\n"));
   };
 
   /**
@@ -1067,6 +1153,7 @@ export function ChildGrid(props: ChildGridProps) {
             màn hình; bảng gọn vẫn tràn để cuộn vì khung của nó hẹp hơn tổng các cột. */}
         <Table className={expanded ? "w-full table-fixed" : "table-fixed"} style={expanded ? undefined : { minWidth: `${minWidthRem}rem` }}>
           <colgroup>
+            {!readOnly ? <col className="w-10" /> : null}
             <col style={{ width: "2.5rem" }} />
             {/*
               MỌI cột đều khai bề rộng — kể cả cột ghi chú.
@@ -1083,18 +1170,30 @@ export function ChildGrid(props: ChildGridProps) {
           </colgroup>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="sticky left-0 z-10 w-10 bg-card text-right">#</TableHead>
-              {cols.map((c) => (
+              {!readOnly ? (
+                <TableHead className="sticky left-0 z-40 w-10 bg-card text-center">
+                  <Checkbox
+                    checked={rows.length > 0 && selectedRows.length === rows.length}
+                    onCheckedChange={() => setSelectedRows(selectedRows.length === rows.length ? [] : rows.map(rowKey))}
+                    aria-label="Chọn tất cả dòng"
+                  />
+                </TableHead>
+              ) : null}
+              <TableHead className={`sticky z-40 w-10 bg-card text-right ${readOnly ? "left-0" : "left-10"}`}>#</TableHead>
+              {cols.map((c) => {
+                const sticky = stickyColumn(c.fieldname, true);
+                return (
                 <TableHead
                   key={c.fieldname}
-                  className={`group relative truncate whitespace-nowrap ${stickyIdentity(c.fieldname)}`}
+                  className={`group relative truncate whitespace-nowrap ${sticky.className}`}
+                  style={sticky.style}
                   draggable={!readOnly}
                   onDragStart={() => { dragged.current = c.fieldname; }}
                   onDragOver={(event) => { if (dragged.current) event.preventDefault(); }}
                   onDrop={() => dropColumn(c.fieldname)}
                   title={readOnly ? undefined : "Kéo tiêu đề để đổi chỗ cột · kéo mép phải để giãn"}
                 >
-                  {c.label ?? c.fieldname}
+                  {layout.labels[c.fieldname] || c.label || c.fieldname}
                   {c.reqd ? <span className="mf-required ml-0.5 text-destructive">*</span> : null}
                   {!readOnly ? (
                     /* Tay kéo nằm ĐÈ lên mép phải của ô tiêu đề, rộng 6px để bấm trúng được
@@ -1107,7 +1206,7 @@ export function ChildGrid(props: ChildGridProps) {
                     />
                   ) : null}
                 </TableHead>
-              ))}
+              );})}
               {!readOnly ? <TableHead className="w-10" /> : null}
             </TableRow>
           </TableHeader>
@@ -1115,11 +1214,17 @@ export function ChildGrid(props: ChildGridProps) {
             {rows.map((row, ri) => (
               <TableRow
                 key={String(row.name ?? ri)}
-                className={expanded && pickedRow === ri ? "bg-primary/10 hover:bg-primary/10" : "hover:bg-transparent"}
+                className={(expanded && pickedRow === ri) || selectedSet.has(rowKey(row, ri)) ? "bg-primary/10 hover:bg-primary/10" : "hover:bg-transparent"}
                 {...(expanded ? { onFocusCapture: () => setPickedRow(ri), onClick: () => setPickedRow(ri) } : {})}
               >
-                <TableCell className="sticky left-0 z-10 bg-card text-right text-xs text-muted-foreground">{ri + 1}</TableCell>
+                {!readOnly ? (
+                  <TableCell className="sticky left-0 z-20 bg-card text-center" onClick={(event) => event.stopPropagation()}>
+                    <Checkbox checked={selectedSet.has(rowKey(row, ri))} onCheckedChange={() => toggleSelected(row, ri)} aria-label={`Chọn dòng ${ri + 1}`} />
+                  </TableCell>
+                ) : null}
+                <TableCell className={`sticky z-20 bg-card text-right text-xs text-muted-foreground ${readOnly ? "left-0" : "left-10"}`}>{ri + 1}</TableCell>
                 {cols.map((c) => {
+                  const sticky = stickyColumn(c.fieldname);
                   const Control = registry.resolve(c.fieldtype) ?? FallbackControl;
                   // P1-06 canonical: trạng thái field con theo depends_on/read_only_depends_on/docstatus,
                   // eval trong ngữ cảnh row (doc) + doc cha (parent). assumeWritable: quyền ghi bảng con
@@ -1136,10 +1241,17 @@ export function ChildGrid(props: ChildGridProps) {
                    * nhiễu); ở trang tính thì cột phải có sẵn để còn dán cả khối vào.
                    */
                   if (!rf.visible && !expanded) {
-                    return <TableCell key={c.fieldname} className={`align-top text-center text-xs text-muted-foreground ${stickyIdentity(c.fieldname)}`}>—</TableCell>;
+                    return <TableCell key={c.fieldname} className={`align-top text-center text-xs text-muted-foreground ${sticky.className}`} style={sticky.style}>—</TableCell>;
                   }
                   return (
-                    <TableCell key={c.fieldname} data-cell={`${ri}:${cols.indexOf(c)}`} className={`align-top ${stickyIdentity(c.fieldname)}`}>
+                    <TableCell
+                      key={c.fieldname}
+                      data-cell={`${ri}:${cols.indexOf(c)}`}
+                      className={`align-top ${sticky.className}`}
+                      style={sticky.style}
+                      onFocusCapture={() => { setPickedRow(ri); setPickedColumn(cols.indexOf(c)); }}
+                      onClick={() => { setPickedRow(ri); setPickedColumn(cols.indexOf(c)); }}
+                    >
                       <Control
                         field={c}
                         value={row[c.fieldname]}
@@ -1171,23 +1283,26 @@ export function ChildGrid(props: ChildGridProps) {
             ))}
             {rows.length === 0 ? (
               <TableRow className="hover:bg-transparent">
-                <TableCell className="h-16 text-center text-muted-foreground" colSpan={cols.length + 2}>
+                <TableCell className="h-16 text-center text-muted-foreground" colSpan={cols.length + (readOnly ? 1 : 3)}>
                   {t("grid.empty")}
                 </TableCell>
               </TableRow>
             ) : null}
             {rows.length > 0 && totals.size > 0 ? (
               <TableRow className="border-t-2 bg-muted/40 font-medium hover:bg-muted/40">
-                <TableCell className="sticky left-0 z-10 bg-muted/40 text-right text-xs text-muted-foreground">Σ</TableCell>
-                {cols.map((c) => (
-                  <TableCell key={c.fieldname} className="whitespace-nowrap text-right tabular-nums">
+                {!readOnly ? <TableCell className="sticky left-0 z-20 bg-muted/40" /> : null}
+                <TableCell className={`sticky z-20 bg-muted/40 text-right text-xs text-muted-foreground ${readOnly ? "left-0" : "left-10"}`}>Σ</TableCell>
+                {cols.map((c) => {
+                  const sticky = stickyColumn(c.fieldname);
+                  return (
+                  <TableCell key={c.fieldname} className={`whitespace-nowrap text-right tabular-nums ${sticky.className}`} style={sticky.style}>
                     {totals.has(c.fieldname)
                       ? (services?.fmt?.number
                           ? services.fmt.number(totals.get(c.fieldname)!)
                           : totals.get(c.fieldname)!.toLocaleString("vi-VN"))
                       : null}
                   </TableCell>
-                ))}
+                );})}
                 {!readOnly ? <TableCell /> : null}
               </TableRow>
             ) : null}
@@ -1238,6 +1353,25 @@ export function ChildGrid(props: ChildGridProps) {
       <Button type="button" variant="outline" size="sm" onClick={addRow}>
         <Plus /> {t("grid.add_row")}
       </Button>
+      <Button type="button" variant="outline" size="sm" onClick={() => setColumnSettingsOpen(true)}>
+        <Columns3 /> Cột
+      </Button>
+      <Button type="button" variant="ghost" size="sm" disabled={pickedRow == null && selectedRows.length === 0} onClick={() => moveRows(-1)} aria-label="Đưa dòng lên">
+        <ArrowUp /> Lên
+      </Button>
+      <Button type="button" variant="ghost" size="sm" disabled={pickedRow == null && selectedRows.length === 0} onClick={() => moveRows(1)} aria-label="Đưa dòng xuống">
+        <ArrowDown /> Xuống
+      </Button>
+      {selectedRows.length ? (
+        <Button type="button" variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => deleteRows(rows.map((row, index) => selectedSet.has(rowKey(row, index)) ? index : -1).filter((index) => index >= 0))}>
+          <Trash2 /> Xóa {selectedRows.length} dòng
+        </Button>
+      ) : null}
+      {lastDeleted?.length ? (
+        <Button type="button" variant="ghost" size="sm" onClick={undoDelete}>
+          <Undo2 /> Hoàn tác xóa
+        </Button>
+      ) : null}
       {expanded ? (
         <>
           <Button type="button" variant="outline" size="sm" onClick={() => addRows(10)}>
@@ -1270,14 +1404,78 @@ export function ChildGrid(props: ChildGridProps) {
       )}
       {/* Kéo nhầm một cột về 3rem rồi mở lại vẫn thấy nó bé tí là một cái bẫy không lối ra —
           tuỳ chỉnh nào lưu lại được cũng phải có đường hoàn tác. */}
-      {layout.order.length || Object.keys(layout.w).length ? (
-        <Button type="button" variant="ghost" size="sm" onClick={() => saveLayout({ w: {}, order: [] })}>
+      {layout.order.length || Object.keys(layout.w).length || layout.hidden.length || layout.pinned.length || Object.keys(layout.labels).length ? (
+        <Button type="button" variant="ghost" size="sm" onClick={() => saveLayout({ w: {}, order: [], hidden: [], pinned: [], labels: {} })}>
           <RotateCcw /> Cột về mặc định
         </Button>
       ) : null}
       <span className="ml-auto text-xs text-muted-foreground">{rows.length} dòng</span>
     </div>
   ) : null;
+
+  const columnDialog = (
+    <Dialog open={columnSettingsOpen} onOpenChange={setColumnSettingsOpen}>
+      <DialogContent className="max-h-[82vh] w-[min(94vw,680px)] max-w-none overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Tùy chỉnh cột</DialogTitle>
+          <DialogDescription>Ẩn, đổi tên và ghim các cột cần nhìn khi cuộn ngang. Cột nhận diện luôn được giữ lại.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-1">
+          {baseCols.map((column) => {
+            const isIdentity = column.fieldname === baseIdentity;
+            const hidden = layout.hidden.includes(column.fieldname);
+            const pinned = isIdentity || layout.pinned.includes(column.fieldname);
+            return (
+              <div key={column.fieldname} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-md border px-3 py-2">
+                <Checkbox
+                  checked={!hidden}
+                  disabled={isIdentity}
+                  onCheckedChange={() => saveLayout({
+                    ...layout,
+                    hidden: hidden
+                      ? layout.hidden.filter((field) => field !== column.fieldname)
+                      : [...layout.hidden, column.fieldname],
+                    pinned: hidden ? layout.pinned : layout.pinned.filter((field) => field !== column.fieldname),
+                  })}
+                  aria-label={`Hiển thị cột ${column.label ?? column.fieldname}`}
+                />
+                <Input
+                  className="h-8"
+                  value={layout.labels[column.fieldname] ?? column.label ?? column.fieldname}
+                  onChange={(event) => saveLayout({
+                    ...layout,
+                    labels: { ...layout.labels, [column.fieldname]: event.target.value },
+                  })}
+                  aria-label={`Tên hiển thị cột ${column.label ?? column.fieldname}`}
+                />
+                <Button
+                  type="button"
+                  variant={pinned ? "secondary" : "ghost"}
+                  size="icon-sm"
+                  disabled={hidden || isIdentity}
+                  onClick={() => saveLayout({
+                    ...layout,
+                    pinned: pinned
+                      ? layout.pinned.filter((field) => field !== column.fieldname)
+                      : [...layout.pinned, column.fieldname],
+                  })}
+                  aria-label={`${pinned ? "Bỏ ghim" : "Ghim"} cột ${column.label ?? column.fieldname}`}
+                >
+                  {pinned ? <PinOff /> : <Pin />}
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="ghost" onClick={() => saveLayout({ w: {}, order: [], hidden: [], pinned: [], labels: {} })}>
+            <RotateCcw /> Mặc định
+          </Button>
+          <Button type="button" onClick={() => setColumnSettingsOpen(false)}>Xong</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 
   if (expanded) {
     return (
@@ -1322,6 +1520,7 @@ export function ChildGrid(props: ChildGridProps) {
             </div>
           </DialogContent>
         </Dialog>
+        {columnDialog}
       </div>
     );
   }
@@ -1330,6 +1529,7 @@ export function ChildGrid(props: ChildGridProps) {
     <div className="mf-grid space-y-2">
       {table}
       {toolbar}
+      {columnDialog}
 
       {/*
         CHI TIẾT DÒNG — mọi field của dòng, kể cả field không làm cột.

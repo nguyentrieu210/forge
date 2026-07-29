@@ -5,7 +5,7 @@
  * (do useListUrlState xử lý). Chips hiển thị filter đang bật + "Xoá lọc".
  */
 import { useEffect, useRef, useState } from "react";
-import { Bookmark, CalendarDays, Check, ChevronsUpDown, ChevronDown, Columns3, Download, FileSpreadsheet, FileText, Group, History, Loader2, Search, SlidersHorizontal, Plus, X, RefreshCw, Rows2, Rows3, Trash2, Undo2 } from "lucide-react";
+import { Bookmark, CalendarDays, Check, ChevronsUpDown, ChevronDown, Columns3, Download, FileSpreadsheet, FileText, Group, History, Loader2, Pin, PinOff, Search, SlidersHorizontal, Plus, X, RefreshCw, Rows2, Rows3, Trash2, Undo2 } from "lucide-react";
 import {
   Button, Input, Badge, PromptDialog, cn, useT,
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
@@ -31,7 +31,9 @@ export interface ListToolbarProps {
   standardFilters: StandardFilter[];
   columns: ListColumn[];
   hidden: string[];
+  pinned: string[];
   onToggleColumn: (fieldname: string) => void;
+  onTogglePin: (fieldname: string) => void;
   onCreate?: () => void;
   onRefresh?: () => void;
   /** Xuất toàn bộ kết quả đang lọc; luôn nằm trên toolbar, không bắt buộc chọn dòng trước. */
@@ -116,7 +118,9 @@ export function ListToolbar(props: ListToolbarProps) {
           <ColumnPicker
             columns={columns}
             hidden={hidden}
+            pinned={props.pinned}
             onToggle={onToggleColumn}
+            onTogglePin={props.onTogglePin}
             onReset={props.onResetColumns}
             canReset={props.canResetColumns}
           />
@@ -451,18 +455,23 @@ function GroupByMenu({ columns, value, onChange }: { columns: ListColumn[]; valu
 function ColumnPicker({
   columns,
   hidden,
+  pinned,
   onToggle,
+  onTogglePin,
   onReset,
   canReset,
 }: {
   columns: ListColumn[];
   hidden: string[];
+  pinned: string[];
   onToggle: (f: string) => void;
+  onTogglePin: (f: string) => void;
   onReset: () => void;
   canReset: boolean;
 }) {
   const t = useT();
   const hiddenSet = new Set(hidden);
+  const pinnedSet = new Set(pinned);
   const visibleCount = columns.filter((column) => !hiddenSet.has(column.fieldname)).length;
   return (
     <DropdownMenu>
@@ -480,23 +489,43 @@ function ColumnPicker({
         <div className="px-2 pb-1.5 text-[11px] leading-snug text-muted-foreground">{t("list.reorder_hint")}</div>
         <DropdownMenuSeparator />
         <div className="max-h-64 overflow-y-auto">
-          {columns.map((c) => (
-            <label
-              key={c.fieldname}
-              className={cn(
-                "flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm",
-                c.isTitle ? "cursor-not-allowed text-muted-foreground" : "cursor-pointer hover:bg-accent",
-              )}
-              title={c.isTitle ? t("list.required_column", "Cột chính luôn hiển thị") : undefined}
-            >
-              <Checkbox
-                checked={!hiddenSet.has(c.fieldname)}
-                disabled={c.isTitle}
-                onCheckedChange={() => onToggle(c.fieldname)}
-              />
-              <span className="truncate">{c.label}</span>
-            </label>
-          ))}
+          {columns.map((c) => {
+            const isHidden = hiddenSet.has(c.fieldname);
+            const isPinned = pinnedSet.has(c.fieldname);
+            return (
+              <div
+                key={c.fieldname}
+                className={cn("flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent", c.isTitle && "text-muted-foreground")}
+                title={c.isTitle ? t("list.required_column", "Cột chính luôn hiển thị") : undefined}
+              >
+                <label className={cn("flex min-w-0 flex-1 items-center gap-2", c.isTitle ? "cursor-default" : "cursor-pointer")}>
+                  <Checkbox
+                    checked={!isHidden}
+                    disabled={c.isTitle}
+                    onCheckedChange={() => onToggle(c.fieldname)}
+                    aria-labelledby={`mf-list-column-${c.fieldname}`}
+                  />
+                  <span id={`mf-list-column-${c.fieldname}`} className="truncate">{c.label}</span>
+                </label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="size-7 shrink-0"
+                  disabled={isHidden}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onTogglePin(c.fieldname);
+                  }}
+                  aria-label={`${isPinned ? "Bỏ ghim" : "Ghim"} cột ${c.label}`}
+                  title={isPinned ? "Bỏ ghim cột" : "Ghim cột khi cuộn ngang"}
+                >
+                  {isPinned ? <PinOff /> : <Pin />}
+                </Button>
+              </div>
+            );
+          })}
         </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem disabled={!canReset} onClick={onReset}>
