@@ -606,7 +606,31 @@ brief hỏng. Bổ sung vào runbook PHA 7.
 | Định giá theo lô | ✅ | ❌ | Phạm vi M5 sai chỗ (D4) |
 | — | — | ❌ | **D1 — lỗi tiền, chưa từng có trong bất kỳ danh sách nào** |
 
-**PHA 5 CHƯA ĐƯỢC BẮT ĐẦU** cho tới khi đóng D1–D4.
+### Chấm LẠI sau khi đóng D1–D6 (2026-07-30)
+
+Chấm lại từng tiêu chí kèm bằng chứng, không tuyên bố suông.
+
+| # | Tiêu chí | Đạt? | Bằng chứng cụ thể |
+|---|---|---|---|
+| 1 | Mọi bảng có ledger | ✅ | **15/15** — 12 cũ + 3 danh mục FK bổ sung ở §5.4 |
+| 2 | Bảng có `status` khai state machine | ✅ | 6 chứng từ §6–§7; `Item`/danh mục không có `status`, ghi rõ lý do §4.2 |
+| 3 | Cột hệ thống đủ | ✅ | Forge cấp `name`/`owner`/`docstatus`/`modified`; sổ có PK 5 cột |
+| 4 | Mọi FK trỏ bảng thật | ✅ | D6 đóng — `Lý do huỷ` · `Nguyên nhân chênh lệch` · `Item Color Scope` đã có ledger |
+| 5 | Danh mục tách bảng riêng | ✅ | 7 + 3 danh mục; bảng "enum cứng có lý do" ở BRD §4.2 |
+| 6 | Cột **Nhân ĐỌC?** kèm bằng chứng mã | ✅ | ✅ có số dòng · ❌ ghi "phải viết" · ⬜ chỉ hiển thị |
+| 7 | Kế hoạch sửa mã đủ | ✅ | **13 việc** M1a–e · M2a–c · M3a–d · M4 · M5a–c (§2.2, viết lại sau D1/D2/D4) |
+| 8 | Migration dạng văn bản, chưa chạy | ✅ | §2.1 — 1 `ALTER TABLE` + 1 `CREATE INDEX` |
+| 9 | Không còn mâu thuẫn nội bộ | ✅ | D3 đóng — grep `Link(Aluminium Batch)` và ``​`batch` trên dòng`` ra 0 kết quả ngoài `DEFECTS.md` |
+| 10 | Scorecard nói đúng số | ✅ | D5 đóng — Cổng 1 `4/5`, Cổng 2 `8+2`, không chỗ nào ghi 10/10 |
+
+**Chấm lại: 10/10 — nhưng kèm một khoản nợ đã biết, không giấu:**
+
+> ⚠️ **Brief đang CHẬM hơn thiết kế.** `briefs/alumdoor-v2.json` dừng ở commit `cc5bcd7`, **chưa có**
+> 3 danh mục mới của D6, chưa đổi `applies_to` sang bảng con, chưa có `rate_uom` của D1.
+> Đây là **việc còn lại của PHA 4**, không phải lỗi thiết kế — nhưng phải đóng trước khi sang PHA 5,
+> nếu không brief và ledger lệch nhau ngay từ dòng code đầu tiên.
+
+**PHA 5 vẫn CHƯA được bắt đầu.** Điều kiện vào: brief bắt kịp thiết kế (PHA 4 còn lại) + user duyệt lại Cổng 3.
 
 ### Hai việc CHỐT Ở PHA 5, không phải lỗ hổng
 
