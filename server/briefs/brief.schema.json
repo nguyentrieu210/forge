@@ -107,6 +107,29 @@
       "type": "string",
       "minLength": 1
     },
+    "navigation": {
+      "type": "object",
+      "description": "Thứ tự hiển thị sidebar. Nhóm hoặc mục không liệt kê được giữ nguyên và nằm sau phần đã ưu tiên.",
+      "additionalProperties": false,
+      "properties": {
+        "groups": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "items": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
     "requires": {
       "type": "array",
       "items": {

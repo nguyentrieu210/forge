@@ -10,7 +10,7 @@ const field = (doctypeName, fieldname) =>
   doctype(doctypeName)?.fields.find((entry) => entry.fieldname === fieldname);
 
 test("Alumdoor 1.19 keeps imported history outside operational ledgers", () => {
-  assert.equal(brief.version, "1.19.0");
+  assert.equal(brief.version, "1.19.1");
   assert.equal(doctype("Legacy Sales Order Item")?.is_child, true);
   assert.equal(field("Legacy Sales Order", "items")?.options, "Legacy Sales Order Item");
   assert.equal(doctype("Legacy Sales Order")?.is_submittable, false);
@@ -33,4 +33,18 @@ test("aluminium lots separate usable stock from scrap and retain migration trace
   assert.equal(field("Aluminium Lot", "source_sheet")?.hidden, true);
   assert.equal(field("Aluminium Lot", "source_row")?.hidden, true);
   assert.ok(doctype("Aluminium Lot")?.fields.some((entry) => entry.fieldname === "warehouse"));
+});
+
+test("Alumdoor sidebar prioritises daily work and consolidates reports", () => {
+  assert.deepEqual(
+    [...new Set(app.nav.map((entry) => entry.group))],
+    ["Bán hàng", "Kho", "Mua hàng", "Sản xuất", "Công nợ", "Bảo hành", "Báo cáo", "Danh mục"],
+  );
+  assert.equal(app.nav.find((entry) => entry.key === "Supplier")?.group, "Mua hàng");
+  assert.equal(app.nav.filter((entry) => entry.key.startsWith("report:")).length, 16);
+  assert.ok(app.nav.filter((entry) => entry.key.startsWith("report:")).every((entry) => entry.group === "Báo cáo"));
+  assert.deepEqual(
+    app.nav.filter((entry) => entry.group === "Danh mục").slice(0, 5).map((entry) => entry.key),
+    ["Item", "Item Group", "UOM", "Warehouse", "Customer"],
+  );
 });

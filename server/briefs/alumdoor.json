@@ -2,7 +2,7 @@
   "$schema": "./brief.schema.json",
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "1.19.0",
+  "version": "1.19.1",
   "module": "Alumdoor",
   "domain": "alumdoor",
   "brand": "warm",
@@ -234,6 +234,77 @@
     }
   ],
   "home": "Sales Order",
+  "navigation": {
+    "groups": [
+      "Bán hàng",
+      "Kho",
+      "Mua hàng",
+      "Sản xuất",
+      "Công nợ",
+      "Bảo hành",
+      "Báo cáo",
+      "Danh mục"
+    ],
+    "items": [
+      "Sales Order",
+      "Quotation",
+      "approval:Quotation",
+      "action:bao-gia-thanh-don",
+      "Legacy Sales Order",
+      "Aluminium Lot",
+      "action:cat-nhom",
+      "Stock Entry",
+      "Delivery Note",
+      "Aluminium Cut",
+      "action:hoan-cat",
+      "action:tra-hang",
+      "Supplier",
+      "Purchase Order",
+      "action:don-mua-thanh-phieu-nhap",
+      "Purchase Receipt",
+      "Purchase Invoice",
+      "action:doc-anh-chung-tu",
+      "Legacy Goods Intake",
+      "Work Order",
+      "Bill of Materials",
+      "Production Standard",
+      "Sales Invoice",
+      "Payment Entry",
+      "Warranty Claim",
+      "report:Đơn hàng theo khách",
+      "report:Báo giá theo khách",
+      "report:Mua hàng theo nhà cung cấp",
+      "report:Đơn mua chưa nhận đủ",
+      "report:Stock Balance",
+      "report:Stock Ledger",
+      "report:Lệnh sản xuất theo mặt hàng",
+      "report:Work Order Progress",
+      "report:Công nợ theo khách hàng",
+      "report:Accounts Receivable",
+      "report:Accounts Payable",
+      "report:General Ledger",
+      "report:Trial Balance",
+      "report:Profit and Loss",
+      "report:Balance Sheet",
+      "report:Lắp đặt theo đội",
+      "Item",
+      "Item Group",
+      "UOM",
+      "Warehouse",
+      "Customer",
+      "Price List",
+      "Item Price",
+      "Pricing Rule",
+      "Measurement Profile",
+      "Item Color",
+      "Material Grade",
+      "Material Specification",
+      "Item Attribute",
+      "Supplier Item",
+      "Brand",
+      "Manufacturer"
+    ]
+  },
   "fixtures": [
     {
       "//": "Hai khoá `default_*_account` là thứ BẬT bút toán giá vốn khi xuất kho.",
@@ -1948,7 +2019,7 @@
       "name": "Supplier",
       "label": "Nhà cung cấp",
       "icon": "truck",
-      "group": "Danh mục",
+      "group": "Mua hàng",
       "naming": "field:supplier_name",
       "title": "supplier_name",
       "list": [
@@ -3142,7 +3213,7 @@
         "transaction_date"
       ],
       "icon": "shopping-cart",
-      "group": "Báo cáo bán hàng"
+      "group": "Báo cáo"
     },
     {
       "name": "Lệnh sản xuất theo mặt hàng",
@@ -3161,7 +3232,7 @@
         "planned_end_date"
       ],
       "icon": "factory",
-      "group": "Báo cáo sản xuất"
+      "group": "Báo cáo"
     },
     {
       "name": "Lắp đặt theo đội",
@@ -3178,7 +3249,7 @@
         "customer"
       ],
       "icon": "truck",
-      "group": "Báo cáo kho"
+      "group": "Báo cáo"
     },
     {
       "//": "Tỷ lệ chốt báo giá — câu hỏi kinh doanh hỏi hằng tuần, và không đọc được từ sổ nào.",
@@ -3197,7 +3268,7 @@
         "workflow_state"
       ],
       "icon": "file-text",
-      "group": "Báo cáo bán hàng"
+      "group": "Báo cáo"
     },
     {
       "name": "Công nợ theo khách hàng",
@@ -3215,7 +3286,7 @@
         "posting_at"
       ],
       "icon": "wallet",
-      "group": "Báo cáo tài chính"
+      "group": "Báo cáo"
     },
     {
       "//": "Mua theo nhà cung cấp — câu hỏi 'tháng này mua của ai bao nhiêu'.",
@@ -3233,7 +3304,7 @@
         "transaction_date"
       ],
       "icon": "shopping-bag",
-      "group": "Báo cáo mua hàng"
+      "group": "Báo cáo"
     },
     {
       "//": "Đơn đã đặt mà hàng chưa về đủ — câu hỏi thủ kho hỏi mỗi sáng. Không gộp, vì phải xem TỪNG đơn.",
@@ -3254,7 +3325,7 @@
         "schedule_date"
       ],
       "icon": "clock-alert",
-      "group": "Báo cáo mua hàng"
+      "group": "Báo cáo"
     }
   ],
   "//links": [
@@ -3271,63 +3342,63 @@
       "label": "Xuất nhập tồn",
       "permission": "Item",
       "icon": "boxes",
-      "group": "Báo cáo kho"
+      "group": "Báo cáo"
     },
     {
       "report": "Stock Ledger",
       "label": "Sổ chi tiết kho",
       "permission": "Item",
       "icon": "scroll-text",
-      "group": "Báo cáo kho"
+      "group": "Báo cáo"
     },
     {
       "report": "Work Order Progress",
       "label": "Tiến độ sản xuất",
       "permission": "Work Order",
       "icon": "factory",
-      "group": "Báo cáo sản xuất"
+      "group": "Báo cáo"
     },
     {
       "report": "Accounts Receivable",
       "label": "Công nợ phải thu",
       "permission": "Customer",
       "icon": "wallet",
-      "group": "Báo cáo tài chính"
+      "group": "Báo cáo"
     },
     {
       "report": "General Ledger",
       "label": "Sổ cái",
       "permission": "Sales Invoice",
       "icon": "book-open",
-      "group": "Báo cáo tài chính"
+      "group": "Báo cáo"
     },
     {
       "report": "Trial Balance",
       "label": "Bảng cân đối phát sinh",
       "permission": "Sales Invoice",
       "icon": "scale",
-      "group": "Báo cáo tài chính"
+      "group": "Báo cáo"
     },
     {
       "report": "Profit and Loss",
       "label": "Kết quả kinh doanh",
       "permission": "Sales Invoice",
       "icon": "trending-up",
-      "group": "Báo cáo tài chính"
+      "group": "Báo cáo"
     },
     {
       "report": "Balance Sheet",
       "label": "Bảng cân đối kế toán",
       "permission": "Sales Invoice",
       "icon": "landmark",
-      "group": "Báo cáo tài chính"
+      "group": "Báo cáo"
     },
     {
       "report": "Accounts Payable",
       "label": "Công nợ phải trả",
       "permission": "Supplier",
       "icon": "wallet",
-      "group": "Báo cáo mua hàng"
+      "group": "Báo cáo"
     }
   ],
   "//dimensions": [

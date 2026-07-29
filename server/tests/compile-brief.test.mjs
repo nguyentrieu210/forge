@@ -293,6 +293,37 @@ test("an explicit home must name a nav entry that exists", () => {
   assert.deepEqual(compileBrief({ ...minimal(), home: "Lead" }).client.home, { doctype: "Lead" });
 });
 
+test("a brief can order sidebar groups and entries after every nav source is compiled", () => {
+  const brief = minimal();
+  brief.doctypes.push({
+    name: "Item",
+    label: "Hàng hoá",
+    group: "Danh mục",
+    fields: ["item_name:Data! Tên hàng"],
+    permissions: { Sales: "rwc" },
+  });
+  brief.doctypes[0].group = "Bán hàng";
+  brief.navigation = {
+    groups: ["Bán hàng", "Danh mục"],
+    items: ["Lead", "Item"],
+  };
+  assert.deepEqual(
+    compileBrief(brief).nav.map(({ group, key }) => [group, key]),
+    [["Bán hàng", "Lead"], ["Danh mục", "Item"]],
+  );
+});
+
+test("sidebar order refuses misspelled groups and nav keys", () => {
+  assert.throws(
+    () => compileBrief({ ...minimal(), navigation: { groups: ["Không tồn tại"] } }),
+    /unknown sidebar group/,
+  );
+  assert.throws(
+    () => compileBrief({ ...minimal(), navigation: { items: ["Missing"] } }),
+    /unknown nav key/,
+  );
+});
+
 test("a brief that names fields it does not define is refused", () => {
   const bad = (patch) => () => compileBrief({ ...minimal(), doctypes: [{ ...minimal().doctypes[0], ...patch }] });
   assert.throws(bad({ list: ["nope"] }), /list names "nope"/);

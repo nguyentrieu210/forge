@@ -908,6 +908,40 @@ export function compileBrief(brief) {
     nav.push(link);
   }
 
+  /**
+   * Sidebar order belongs to app metadata, not to the React shell.
+   *
+   * A brief is compiled from several independent collections (DocTypes, reports,
+   * actions and platform-report links). Without this final ordering pass those
+   * collections leak into the visible menu: every DocType precedes every report,
+   * and a master declared early can put "Danh mục" above the daily workflows.
+   */
+  const navigation = brief.navigation ?? {};
+  const requestedGroups = navigation.groups ?? [];
+  const requestedItems = navigation.items ?? [];
+  const knownGroups = new Set(nav.map((item) => item.group));
+  const knownItems = new Set(nav.map((item) => item.key));
+  for (const group of requestedGroups) {
+    if (!knownGroups.has(group)) fail(`navigation.groups names unknown sidebar group "${group}"`);
+  }
+  for (const key of requestedItems) {
+    if (!knownItems.has(key)) fail(`navigation.items names unknown nav key "${key}"`);
+  }
+  if (requestedGroups.length || requestedItems.length) {
+    const groupRank = new Map(requestedGroups.map((group, index) => [group, index]));
+    const itemRank = new Map(requestedItems.map((key, index) => [key, index]));
+    const originalRank = new Map(nav.map((item, index) => [item.key, index]));
+    nav.sort((left, right) => {
+      const leftGroup = groupRank.get(left.group) ?? Number.MAX_SAFE_INTEGER;
+      const rightGroup = groupRank.get(right.group) ?? Number.MAX_SAFE_INTEGER;
+      if (leftGroup !== rightGroup) return leftGroup - rightGroup;
+      const leftItem = itemRank.get(left.key) ?? Number.MAX_SAFE_INTEGER;
+      const rightItem = itemRank.get(right.key) ?? Number.MAX_SAFE_INTEGER;
+      if (leftItem !== rightItem) return leftItem - rightItem;
+      return (originalRank.get(left.key) ?? 0) - (originalRank.get(right.key) ?? 0);
+    });
+  }
+
   // Home: the brief may name a doctype or an inbox by its short form; the encoded route
   // is computed here so an author never has to write `%3A` by hand — getting that wrong
   // is a redirect loop, and it is the kind of mistake nobody spots by reading.
