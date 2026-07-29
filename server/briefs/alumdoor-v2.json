@@ -2569,6 +2569,8 @@
     "conversion_factor:Float~- Hệ số về ĐVT tồn",
     "stock_qty:Float~- SL thực xuất kho",
     "warehouse:Link(Warehouse)! Kho xuất",
+    "serial_and_batch_bundle:Link(Serial and Batch Bundle) Lô xuất (bundle Outward)",
+    "weight_kg:Float Khối lượng xuất (kg)",
     "rate:Currency Đơn giá bán",
     "valuation_rate:Currency Giá vốn",
     "amount:Currency~ Thành tiền"
@@ -2610,8 +2612,18 @@
      "fieldtype": "Link",
      "options": "Customer",
      "label": "Khách hàng",
+     "fetch_from": "against_sales_order.customer",
+     "mandatory_depends_on": "eval:doc.issue_purpose == 'Bán hàng'"
+    },
+    {
+     "//": "Bỏ ràng buộc đơn bán rồi thì PHẢI biết xuất để làm gì — nếu không, phiếu không đơn thành lỗ hổng không ai giải thích được.",
+     "fieldname": "issue_purpose",
+     "fieldtype": "Select",
+     "options": "Bán hàng\nXuất mẫu\nĐổi bảo hành\nXuất nội bộ\nXuất gia công",
+     "label": "Mục đích xuất",
      "required": true,
-     "fetch_from": "against_sales_order.customer"
+     "default": "Bán hàng",
+     "in_standard_filter": true
     },
     {
      "fieldname": "customer_group",
@@ -2642,14 +2654,13 @@
      "default": "VND",
      "fetch_from": "against_sales_order.currency"
     },
-    "against_sales_order:Link(Sales Order)! Theo đơn hàng",
+    "against_sales_order:Link(Sales Order) Theo đơn hàng (nếu có)",
     "posting_at:Datetime!=(Now) Thời điểm xuất",
     "items:Table(Delivery Note Item)! Dòng hàng xuất",
     {
      "fieldname": "install_address",
      "fieldtype": "Small Text",
      "label": "Địa chỉ lắp đặt",
-     "required": true,
      "fetch_from": "against_sales_order.install_address"
     },
     "install_date:Date Ngày lắp",
@@ -2811,6 +2822,8 @@
     "qty:Float! SL",
     "source_warehouse:Link(Warehouse) Kho xuất",
     "target_warehouse:Link(Warehouse) Kho nhập",
+    "serial_and_batch_bundle:Link(Serial and Batch Bundle) Lô (bundle)",
+    "weight_kg:Float Khối lượng (kg)",
     "valuation_rate:Currency Đơn giá vốn",
     "note:Data Ghi chú dòng"
    ],
@@ -2839,7 +2852,15 @@
     "note"
    ],
    "fields": [
-    "purpose:Select(Material Receipt,Material Issue,Material Transfer,Manufacture)!=(Material Receipt) Loại phiếu",
+    "purpose:Select(Material Receipt,Material Issue,Material Transfer,Manufacture,Điều chỉnh tồn)!=(Material Receipt) Loại phiếu",
+    {
+     "fieldname": "adjust_reason",
+     "fieldtype": "Link",
+     "options": "Nguyên nhân chênh lệch",
+     "label": "Nguyên nhân điều chỉnh",
+     "depends_on": "eval:doc.purpose == 'Điều chỉnh tồn'",
+     "mandatory_depends_on": "eval:doc.purpose == 'Điều chỉnh tồn'"
+    },
     "company:Link(Company)-!=(ALUMDOOR) Công ty",
     "posting_at:Datetime!=(Now) Thời điểm",
     "work_order:Link(Work Order) Theo lệnh sản xuất",

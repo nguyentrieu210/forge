@@ -563,6 +563,65 @@ brief.navigation.items = brief.navigation.items
            "Lý do huỷ", "Nguyên nhân chênh lệch"]);
 note(`navigation: ${brief.navigation.items.length} mục`);
 
+// ══════════ DELIVERY NOTE — Q8: xuất kho KHÔNG cần đơn bán ══════════
+const dn = doctype("Delivery Note");
+// Xưởng còn xuất mẫu, xuất đổi bảo hành, xuất nội bộ — không đơn bán nào cả.
+replaceField(dn, "against_sales_order", "against_sales_order:Link(Sales Order) Theo đơn hàng (nếu có)");
+// `install_address` fetch_from đơn bán ⇒ bỏ bắt buộc đơn mà giữ bắt buộc địa chỉ là chặn ở cửa sau.
+replaceField(dn, "install_address", {
+  fieldname: "install_address",
+  fieldtype: "Small Text",
+  label: "Địa chỉ lắp đặt",
+  fetch_from: "against_sales_order.install_address",
+});
+replaceField(dn, "customer", {
+  fieldname: "customer",
+  fieldtype: "Link",
+  options: "Customer",
+  label: "Khách hàng",
+  fetch_from: "against_sales_order.customer",
+  mandatory_depends_on: "eval:doc.issue_purpose == 'Bán hàng'",
+});
+addAfter(dn, "customer",
+  {
+    "//": "Bỏ ràng buộc đơn bán rồi thì PHẢI biết xuất để làm gì — nếu không, phiếu không đơn thành lỗ hổng không ai giải thích được.",
+    fieldname: "issue_purpose",
+    fieldtype: "Select",
+    options: "Bán hàng\nXuất mẫu\nĐổi bảo hành\nXuất nội bộ\nXuất gia công",
+    label: "Mục đích xuất",
+    required: true,
+    default: "Bán hàng",
+    in_standard_filter: true,
+  },
+);
+const dni = doctype("Delivery Note Item");
+addAfter(dni, "warehouse",
+  "serial_and_batch_bundle:Link(Serial and Batch Bundle) Lô xuất (bundle Outward)",
+  "weight_kg:Float Khối lượng xuất (kg)");
+
+// ══════════ STOCK ENTRY — bundle + điều chỉnh tồn có lý do ══════════
+const se = doctype("Stock Entry");
+// screen-catalog Inventory: "Không sửa trực tiếp số tồn nếu đã có lịch sử; dùng phiếu điều chỉnh".
+replaceField(se, "purpose",
+  "purpose:Select(Material Receipt,Material Issue,Material Transfer,Manufacture,Điều chỉnh tồn)!=(Material Receipt) Loại phiếu");
+addAfter(se, "purpose",
+  {
+    fieldname: "adjust_reason",
+    fieldtype: "Link",
+    options: "Nguyên nhân chênh lệch",
+    label: "Nguyên nhân điều chỉnh",
+    depends_on: "eval:doc.purpose == 'Điều chỉnh tồn'",
+    mandatory_depends_on: "eval:doc.purpose == 'Điều chỉnh tồn'",
+  },
+);
+const sei = doctype("Stock Entry Item");
+// TÊN COPY ĐÚNG `Stock Entry Detail` của nền tảng. Brief cũ khai đè bằng `Stock Entry Item`
+// rồi ĐÁNH RƠI chính trường này — đó là gốc của quyển sổ thứ hai.
+addAfter(sei, "target_warehouse",
+  "serial_and_batch_bundle:Link(Serial and Batch Bundle) Lô (bundle)",
+  "weight_kg:Float Khối lượng (kg)");
+note("Delivery Note + Stock Entry: bundle + weight_kg + issue_purpose + adjust_reason");
+
 writeFileSync(OUT, JSON.stringify(brief, null, 1) + "\n", "utf8");
 console.log(log.map((l) => "  " + l).join("\n"));
 console.log(`\nĐã ghi ${OUT}`);
