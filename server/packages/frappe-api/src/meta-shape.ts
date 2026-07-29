@@ -58,6 +58,14 @@ export function toFrappeDocField(field: DocFieldMeta): JsonObject {
   if (field.read_only_depends_on !== undefined) row.read_only_depends_on = field.read_only_depends_on;
   if (field.description !== undefined) row.description = field.description;
   if (field.form_width !== undefined) row.form_width = field.form_width;
+  /**
+   * `link_filters` cùng loại với `depends_on` ở trên: kernel LƯU nhưng không tự dùng, client
+   * mới là nơi đọc nó (`buildLinkFilters`) để thu hẹp danh sách của ô Link. Không gửi ra thì
+   * nó nằm nguyên trong metadata mà không có tác dụng gì — và hỏng lặng lẽ: ô Link vẫn mở
+   * được, vẫn tìm được, chỉ là hiện cả những bản ghi lẽ ra không được chọn. Không lỗi nào
+   * hiện ra cho tới khi ai đó lập phiếu mua một mặt hàng không mua được.
+   */
+  if (field.link_filters !== undefined) row.link_filters = field.link_filters;
   return row;
 }
 

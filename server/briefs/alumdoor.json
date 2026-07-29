@@ -2,7 +2,7 @@
   "$schema": "./brief.schema.json",
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "1.22.0",
+  "version": "1.26.2",
   "module": "Alumdoor",
   "domain": "alumdoor",
   "brand": "warm",
@@ -966,6 +966,7 @@
         "color_code",
         "color_name",
         "finish",
+        "applies_to",
         "disabled"
       ],
       "search": [
@@ -976,6 +977,12 @@
         "color_code:Data*! Mã màu",
         "color_name:Data! Tên màu",
         "finish:Select(Thô,Sơn tĩnh điện,Anode,Vân gỗ,Mạ,Khác) Bề mặt",
+        {
+          "//": "Nhóm sản phẩm áp dụng, theo đúng bảng màu của xưởng. GHI LẠI chứ chưa CHẶN: luật chặn hiện chạy từ chiều ngược lại (Item.allowed_colors). Để trống ở đây không có nghĩa là cấm.",
+          "fieldname": "applies_to",
+          "fieldtype": "Small Text",
+          "label": "Nhóm SP áp dụng"
+        },
         "supplier_color_code:Data Mã màu nhà cung cấp",
         "disabled:Check Ngừng dùng"
       ],
@@ -1071,7 +1078,7 @@
         "section_code:Data Mã tiết diện",
         "theoretical_kg_per_m:Float Kg/m lý thuyết",
         "standard_length_m:Float Chiều dài chuẩn (m)",
-        "width_mm:Float Khổ rộng (mm)",
+        "width_m:Float Khổ rộng (m)",
         "thickness_mm:Float Độ dày (mm)",
         "scrap_threshold_m:Float Ngưỡng phế liệu (m)",
         "drawing:Attach Bản vẽ kỹ thuật",
@@ -1391,8 +1398,22 @@
           "default": true,
           "read_only_depends_on": "eval:doc.item_nature == 'Dịch vụ'"
         },
-        "is_purchase_item:Check=(1) Được phép mua",
-        "is_sales_item:Check=(1) Được phép bán",
+        {
+          "//": "`in_standard_filter` để trường này LỌC ĐƯỢC. Danh sách trường lọc dựng từ Link + in_list_view + in_standard_filter, nên một Check không đánh dấu thì mọi truy vấn theo nó bị từ chối — kể cả `link_filters` của ô chọn mặt hàng, thứ chính là lý do trường này tồn tại.",
+          "fieldname": "is_purchase_item",
+          "fieldtype": "Check",
+          "label": "Được phép mua",
+          "default": true,
+          "in_standard_filter": true
+        },
+        {
+          "//": "`in_standard_filter` để trường này LỌC ĐƯỢC. Danh sách trường lọc dựng từ Link + in_list_view + in_standard_filter, nên một Check không đánh dấu thì mọi truy vấn theo nó bị từ chối — kể cả `link_filters` của ô chọn mặt hàng, thứ chính là lý do trường này tồn tại.",
+          "fieldname": "is_sales_item",
+          "fieldtype": "Check",
+          "label": "Được phép bán",
+          "default": true,
+          "in_standard_filter": true
+        },
         {
           "fieldname": "include_item_in_manufacturing",
           "fieldtype": "Check",
@@ -1817,7 +1838,15 @@
         "amount"
       ],
       "fields": [
-        "item_code:Link(Item)! Mã hàng",
+        {
+          "//": "Ô chọn chỉ hiện mặt hàng ĐƯỢC bán. Danh mục có gần 300 mã gồm cả dịch vụ, phụ thu và thành phẩm tự sản xuất; đưa hết vào ô chọn của phiếu bán thì người nhập phải tự nhớ mã nào hợp lệ, và chọn nhầm chỉ lộ ra ở bước ghi sổ.",
+          "fieldname": "item_code",
+          "fieldtype": "Link",
+          "options": "Item",
+          "label": "Mã hàng",
+          "required": true,
+          "link_filters": "{\"is_sales_item\":1,\"disabled\":0}"
+        },
         "item_name:Data~- Tên hàng",
         "inventory_mode:Data~- Kiểu tính",
         "measurement_profile:Link(Measurement Profile)~- Bộ quy cách",
@@ -1831,15 +1860,15 @@
           "depends_on": "eval:doc.inventory_mode != 'Hàng thường'"
         },
         {
-          "fieldname": "width_mm",
-          "fieldtype": "Int",
-          "label": "Rộng (mm)",
+          "fieldname": "width_m",
+          "fieldtype": "Float",
+          "label": "Rộng (m)",
           "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2' || doc.inventory_mode == 'Tấm/Kính'"
         },
         {
-          "fieldname": "height_mm",
-          "fieldtype": "Int",
-          "label": "Cao (mm)",
+          "fieldname": "height_m",
+          "fieldtype": "Float",
+          "label": "Cao (m)",
           "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2' || doc.inventory_mode == 'Tấm/Kính'"
         },
         {
@@ -2016,7 +2045,15 @@
         "amount"
       ],
       "fields": [
-        "item_code:Link(Item)! Mã hàng",
+        {
+          "//": "Ô chọn chỉ hiện mặt hàng ĐƯỢC bán. Danh mục có gần 300 mã gồm cả dịch vụ, phụ thu và thành phẩm tự sản xuất; đưa hết vào ô chọn của phiếu bán thì người nhập phải tự nhớ mã nào hợp lệ, và chọn nhầm chỉ lộ ra ở bước ghi sổ.",
+          "fieldname": "item_code",
+          "fieldtype": "Link",
+          "options": "Item",
+          "label": "Mã hàng",
+          "required": true,
+          "link_filters": "{\"is_sales_item\":1,\"disabled\":0}"
+        },
         "item_name:Data~- Tên hàng",
         "inventory_mode:Data~- Kiểu tính",
         "measurement_profile:Link(Measurement Profile)~- Bộ quy cách",
@@ -2030,15 +2067,15 @@
           "depends_on": "eval:doc.inventory_mode != 'Hàng thường'"
         },
         {
-          "fieldname": "width_mm",
-          "fieldtype": "Int",
-          "label": "Rộng (mm)",
+          "fieldname": "width_m",
+          "fieldtype": "Float",
+          "label": "Rộng (m)",
           "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2' || doc.inventory_mode == 'Tấm/Kính'"
         },
         {
-          "fieldname": "height_mm",
-          "fieldtype": "Int",
-          "label": "Cao (mm)",
+          "fieldname": "height_m",
+          "fieldtype": "Float",
+          "label": "Cao (m)",
           "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2' || doc.inventory_mode == 'Tấm/Kính'"
         },
         {
@@ -2149,7 +2186,15 @@
         "rate"
       ],
       "fields": [
-        "item_code:Link(Item)! Mã hàng",
+        {
+          "//": "Ô chọn chỉ hiện mặt hàng ĐƯỢC bán. Danh mục có gần 300 mã gồm cả dịch vụ, phụ thu và thành phẩm tự sản xuất; đưa hết vào ô chọn của phiếu bán thì người nhập phải tự nhớ mã nào hợp lệ, và chọn nhầm chỉ lộ ra ở bước ghi sổ.",
+          "fieldname": "item_code",
+          "fieldtype": "Link",
+          "options": "Item",
+          "label": "Mã hàng",
+          "required": true,
+          "link_filters": "{\"is_sales_item\":1,\"disabled\":0}"
+        },
         "item_name:Data~- Tên hàng",
         "inventory_mode:Data~- Kiểu tính",
         "measurement_profile:Link(Measurement Profile)~- Bộ quy cách",
@@ -2163,16 +2208,16 @@
           "depends_on": "eval:doc.inventory_mode != 'Hàng thường'"
         },
         {
-          "fieldname": "width_mm",
-          "fieldtype": "Int",
-          "label": "Rộng (mm)",
+          "fieldname": "width_m",
+          "fieldtype": "Float",
+          "label": "Rộng (m)",
           "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2' || doc.inventory_mode == 'Tấm/Kính'",
           "mandatory_depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'"
         },
         {
-          "fieldname": "height_mm",
-          "fieldtype": "Int",
-          "label": "Cao (mm)",
+          "fieldname": "height_m",
+          "fieldtype": "Float",
+          "label": "Cao (m)",
           "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2' || doc.inventory_mode == 'Tấm/Kính'",
           "mandatory_depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'"
         },
@@ -2501,15 +2546,23 @@
         "amount"
       ],
       "fields": [
-        "item_code:Link(Item)! Mã hàng",
+        {
+          "//": "Ô chọn chỉ hiện mặt hàng ĐƯỢC bán. Danh mục có gần 300 mã gồm cả dịch vụ, phụ thu và thành phẩm tự sản xuất; đưa hết vào ô chọn của phiếu bán thì người nhập phải tự nhớ mã nào hợp lệ, và chọn nhầm chỉ lộ ra ở bước ghi sổ.",
+          "fieldname": "item_code",
+          "fieldtype": "Link",
+          "options": "Item",
+          "label": "Mã hàng",
+          "required": true,
+          "link_filters": "{\"is_sales_item\":1,\"disabled\":0}"
+        },
         "item_name:Data~- Tên hàng",
         "inventory_mode:Data~- Kiểu tính",
         "measurement_profile:Link(Measurement Profile)~- Bộ quy cách",
         "stock_uom:Link(UOM)~- ĐVT tồn",
         "min_area_sqm:Float~- Diện tích tính tối thiểu",
         "color:Link(Item Color) Màu / mã sơn",
-        "width_mm:Int Rộng (mm)",
-        "height_mm:Int Cao (mm)",
+        "width_m:Float Rộng (m)",
+        "height_m:Float Cao (m)",
         "set_count:Int=(1) Số bộ",
         "uom:Link(UOM)! ĐVT bán",
         "qty:Float! SL tính tiền",
@@ -2613,6 +2666,38 @@
       "fields": [
         "item_code:Link(Item)! Vật tư",
         "qty:Float! SL",
+        {
+          "//": "ĐƠN VỊ của con số định mức — không phải đơn vị tồn của vật tư.",
+          "//vi-du": [
+            "Bù lon khai 0,096 KG/CON: tồn đếm theo CON, còn định mức tính theo KG.",
+            "Ray sắt khai 1,78 KG/M NGANG: mỗi mét bề ngang cửa ăn 1,78 kg ray."
+          ],
+          "fieldname": "uom",
+          "fieldtype": "Data",
+          "label": "ĐVT định mức"
+        },
+        {
+          "//": "NHÂN THEO GÌ — thứ biến định mức từ con số chết thành công thức.",
+          "//vi-sao": [
+            "Sheet ĐM của xưởng có KG/M NGANG, KG/M CAO, KG/M2 — tức lượng vật tư phụ thuộc kích",
+            "thước cửa. Bản trước chỉ lưu được một con số cố định, nên cửa cao 2 m và cửa cao 3,5 m",
+            "ăn cùng số lá. Đó là lý do 1.929 dòng định mức của xưởng không nạp vào được.",
+            "",
+            "Số bộ luôn nhân thêm ở ngoài, nên ở đây chỉ khai phần phụ thuộc HÌNH DÁNG."
+          ],
+          "fieldname": "qty_basis",
+          "fieldtype": "Select",
+          "options": "Cố định\nTheo chiều cao\nTheo chiều rộng\nTheo diện tích\nTheo số lá",
+          "label": "Nhân theo",
+          "default": "Cố định"
+        },
+        {
+          "fieldname": "source_note",
+          "fieldtype": "Data",
+          "label": "Ghi chú nguồn",
+          "read_only": true,
+          "hidden": true
+        },
         "source_warehouse:Link(Warehouse) Kho xuất vật tư",
         "note:Data Ghi chú"
       ],
@@ -2893,9 +2978,9 @@
         {
           "fieldname": "actual_kg_per_m",
           "fieldtype": "Float",
-          "label": "Kg/m thực",
+          "label": "TL trung bình (kg/m · kg/cái)",
           "read_only": true,
-          "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'"
+          "description": "Chia tổng kg cho: khổ × số cây, hoặc khổ, hoặc số cây — lấy cái đầu tiên có trên dòng. Số để đối chiếu, không vào sổ."
         },
         {
           "fieldname": "so_no",
@@ -2992,7 +3077,15 @@
         "note"
       ],
       "fields": [
-        "item_code:Link(Item)! Mã sản phẩm",
+        {
+          "//": "Ô chọn chỉ hiện mặt hàng ĐƯỢC mua. Danh mục có gần 300 mã gồm cả dịch vụ, phụ thu và thành phẩm tự sản xuất; đưa hết vào ô chọn của phiếu mua thì người nhập phải tự nhớ mã nào hợp lệ, và chọn nhầm chỉ lộ ra ở bước ghi sổ.",
+          "fieldname": "item_code",
+          "fieldtype": "Link",
+          "options": "Item",
+          "label": "Mã sản phẩm",
+          "required": true,
+          "link_filters": "{\"is_purchase_item\":1,\"disabled\":0}"
+        },
         "item_name:Data~- Tên hàng",
         {
           "fieldname": "inventory_mode",
@@ -3026,18 +3119,18 @@
           "mandatory_depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
           "non_negative": true
         },
-        "uom:Link(UOM) ĐVT",
+        "uom:Link(UOM) ĐVT mua",
         "qty:Float! Số lượng",
         {
-          "fieldname": "width_mm",
-          "fieldtype": "Int",
-          "label": "Rộng (mm)",
+          "fieldname": "width_m",
+          "fieldtype": "Float",
+          "label": "Rộng (m)",
           "depends_on": "eval:doc.inventory_mode == 'Tấm/Kính' || doc.inventory_mode == 'Thành phẩm theo m2'"
         },
         {
-          "fieldname": "height_mm",
-          "fieldtype": "Int",
-          "label": "Cao (mm)",
+          "fieldname": "height_m",
+          "fieldtype": "Float",
+          "label": "Cao (m)",
           "depends_on": "eval:doc.inventory_mode == 'Tấm/Kính' || doc.inventory_mode == 'Thành phẩm theo m2'"
         },
         {
@@ -3072,9 +3165,9 @@
         {
           "fieldname": "actual_kg_per_m",
           "fieldtype": "Float",
-          "label": "Kg/m thực",
+          "label": "TL trung bình (kg/m · kg/cái)",
           "read_only": true,
-          "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'"
+          "description": "Chia tổng kg cho: khổ × số cây, hoặc khổ, hoặc số cây — lấy cái đầu tiên có trên dòng. Số để đối chiếu, không vào sổ."
         },
         {
           "fieldname": "so_no",
@@ -3082,9 +3175,9 @@
           "label": "Số SO NCC",
           "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'"
         },
-        "note:Data Ghi chú",
         "rate:Currency! Đơn giá",
         "amount:Currency~ Thành tiền",
+        "note:Data Ghi chú",
         "warehouse:Link(Warehouse) Kho nhận",
         "conversion_factor:Float~- Hệ số quy đổi về ĐVT tồn",
         "stock_qty:Float~- Số lượng quy đổi tồn"
@@ -3173,7 +3266,15 @@
         "note"
       ],
       "fields": [
-        "item_code:Link(Item)! Mã sản phẩm",
+        {
+          "//": "Ô chọn chỉ hiện mặt hàng ĐƯỢC mua. Danh mục có gần 300 mã gồm cả dịch vụ, phụ thu và thành phẩm tự sản xuất; đưa hết vào ô chọn của phiếu mua thì người nhập phải tự nhớ mã nào hợp lệ, và chọn nhầm chỉ lộ ra ở bước ghi sổ.",
+          "fieldname": "item_code",
+          "fieldtype": "Link",
+          "options": "Item",
+          "label": "Mã sản phẩm",
+          "required": true,
+          "link_filters": "{\"is_purchase_item\":1,\"disabled\":0}"
+        },
         "item_name:Data~- Tên hàng",
         {
           "fieldname": "inventory_mode",
@@ -3207,18 +3308,18 @@
           "mandatory_depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
           "non_negative": true
         },
-        "uom:Link(UOM) ĐVT",
+        "uom:Link(UOM) ĐVT mua",
         "qty:Float! Số lượng",
         {
-          "fieldname": "width_mm",
-          "fieldtype": "Int",
-          "label": "Rộng (mm)",
+          "fieldname": "width_m",
+          "fieldtype": "Float",
+          "label": "Rộng (m)",
           "depends_on": "eval:doc.inventory_mode == 'Tấm/Kính' || doc.inventory_mode == 'Thành phẩm theo m2'"
         },
         {
-          "fieldname": "height_mm",
-          "fieldtype": "Int",
-          "label": "Cao (mm)",
+          "fieldname": "height_m",
+          "fieldtype": "Float",
+          "label": "Cao (m)",
           "depends_on": "eval:doc.inventory_mode == 'Tấm/Kính' || doc.inventory_mode == 'Thành phẩm theo m2'"
         },
         {
@@ -3253,9 +3354,9 @@
         {
           "fieldname": "actual_kg_per_m",
           "fieldtype": "Float",
-          "label": "Kg/m thực",
+          "label": "TL trung bình (kg/m · kg/cái)",
           "read_only": true,
-          "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'"
+          "description": "Chia tổng kg cho: khổ × số cây, hoặc khổ, hoặc số cây — lấy cái đầu tiên có trên dòng. Số để đối chiếu, không vào sổ."
         },
         {
           "fieldname": "so_no",
@@ -3263,9 +3364,9 @@
           "label": "Số SO NCC",
           "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'"
         },
-        "note:Data Ghi chú",
         "rate:Currency! Đơn giá",
         "amount:Currency~ Thành tiền",
+        "note:Data Ghi chú",
         "warehouse:Link(Warehouse)! Kho nhập",
         "purchase_order:Link(Purchase Order) Đơn mua của dòng này",
         "conversion_factor:Float~- Hệ số quy đổi về ĐVT tồn",
@@ -3299,7 +3400,8 @@
         "supplier",
         "posting_at",
         "against_purchase_order",
-        "supplier_invoice_no"
+        "supplier_invoice_no",
+        "grand_total"
       ],
       "search": [
         "supplier",
@@ -3320,6 +3422,19 @@
         "driver:Data Người giao",
         "note:Small Text Ghi chú",
         "items:Table(Purchase Receipt Item)! Dòng hàng nhận",
+        {
+          "//": "Tổng tiền hàng nhận. Server vẫn tính lại khi lưu; trường này để form có chỗ HIỆN con số trong lúc gõ — trước đây phiếu nhập không có trường tổng nào, nên người nhập không soát được gì cho tới khi bấm lưu.",
+          "fieldname": "grand_total",
+          "fieldtype": "Currency",
+          "label": "Tổng tiền hàng",
+          "read_only": true
+        },
+        {
+          "fieldname": "total_qty",
+          "fieldtype": "Float",
+          "label": "Tổng số lượng",
+          "read_only": true
+        },
         {
           "fieldname": "company",
           "fieldtype": "Link",
@@ -3371,18 +3486,26 @@
         "amount"
       ],
       "fields": [
-        "item_code:Link(Item)! Mã hàng",
+        {
+          "//": "Ô chọn chỉ hiện mặt hàng ĐƯỢC mua. Danh mục có gần 300 mã gồm cả dịch vụ, phụ thu và thành phẩm tự sản xuất; đưa hết vào ô chọn của phiếu mua thì người nhập phải tự nhớ mã nào hợp lệ, và chọn nhầm chỉ lộ ra ở bước ghi sổ.",
+          "fieldname": "item_code",
+          "fieldtype": "Link",
+          "options": "Item",
+          "label": "Mã hàng",
+          "required": true,
+          "link_filters": "{\"is_purchase_item\":1,\"disabled\":0}"
+        },
         "item_name:Data~- Tên hàng",
         "inventory_mode:Data~- Kiểu tính",
         "measurement_profile:Link(Measurement Profile)~- Bộ quy cách",
         "stock_uom:Link(UOM)~- ĐVT tồn",
         "min_area_sqm:Float~- Diện tích tính tối thiểu",
         "color:Link(Item Color) Màu",
-        "width_mm:Int Rộng (mm)",
-        "height_mm:Int Cao (mm)",
+        "width_m:Float Rộng (m)",
+        "height_m:Float Cao (m)",
         "set_count:Int=(1) Số bộ",
         "qty:Float! SL",
-        "uom:Link(UOM)! ĐVT",
+        "uom:Link(UOM) ĐVT mua",
         "conversion_factor:Float~- Hệ số quy đổi",
         "stock_qty:Float~- SL quy đổi tồn",
         "rate:Currency! Đơn giá",
@@ -3615,6 +3738,7 @@
       ],
       "fields": [
         "item:Link(Item)! Thành phẩm",
+        "color:Link(Item Color) Màu áp dụng",
         "company:Link(Company)-!=(ALUMDOOR) Công ty",
         "quantity:Float!=(1) Định mức này cho bao nhiêu thành phẩm",
         "items:Table(BOM Item)! Vật tư tiêu hao",
@@ -3655,8 +3779,8 @@
         "qty:Float!=(1) Số lượng cần sản xuất",
         "produced_qty:Float~ Đã sản xuất",
         "produced_percentage:Percent~ Tiến độ (%)",
-        "width_mm:Int! Rộng (mm)",
-        "height_mm:Int! Cao (mm)",
+        "width_m:Int! Rộng (mm)",
+        "height_m:Int! Cao (mm)",
         "set_count:Int=(1) Số bộ",
         "color:Link(Item Color) Màu / mã sơn",
         "motor_model:Link(Item) Mô tơ",
@@ -4204,7 +4328,7 @@
         "  <div class=\"row\"><b>Kho vật tư</b><span>{{ source_warehouse }}</span></div>",
         "  <div class=\"row\"><b>Kho nhập TP</b><span>{{ target_warehouse }}</span></div>",
         "</div>",
-        "<div class=\"meas\"><div>RỘNG<div class=\"big\">{{ width_mm }} mm</div></div><div>CAO<div class=\"big\">{{ height_mm }} mm</div></div><div>SỐ BỘ<div class=\"big\">{{ set_count }}</div></div></div>",
+        "<div class=\"meas\"><div>RỘNG<div class=\"big\">{{ width_m }} mm</div></div><div>CAO<div class=\"big\">{{ height_m }} mm</div></div><div>SỐ BỘ<div class=\"big\">{{ set_count }}</div></div></div>",
         "<table><thead><tr><th style=\"width:34px\">#</th><th>Vật tư cần</th><th class=\"n\">Định mức</th><th>Kho xuất</th><th style=\"width:110px\">Thực xuất</th></tr></thead><tbody>",
         "{{#each required_items}}<tr><td>{{ _index }}</td><td>{{ item_code }}</td><td class=\"n\">{{ required_qty | number }}</td><td>{{ source_warehouse }}</td><td></td></tr>{{/each}}",
         "</tbody></table>",
@@ -4249,7 +4373,7 @@
         "  <div class=\"row\"><b>Hiệu lực đến</b><span>{{ valid_till | date }}</span></div>",
         "</div>",
         "<table><thead><tr><th style=\"width:34px\">#</th><th>Hạng mục</th><th class=\"n\">Rộng</th><th class=\"n\">Cao</th><th class=\"n\">Bộ</th><th class=\"n\">Khối lượng</th><th class=\"n\">Đơn giá</th><th class=\"n\">Thành tiền</th></tr></thead><tbody>",
-        "{{#each items}}<tr><td>{{ _index }}</td><td>{{ item_code }}<br><span class=\"sub\">{{ color }}</span></td><td class=\"n\">{{ width_mm }}</td><td class=\"n\">{{ height_mm }}</td><td class=\"n\">{{ set_count }}</td><td class=\"n\">{{ qty | number }}</td><td class=\"n\">{{ rate | money }}</td><td class=\"n\">{{ amount | money }}</td></tr>{{/each}}",
+        "{{#each items}}<tr><td>{{ _index }}</td><td>{{ item_code }}<br><span class=\"sub\">{{ color }}</span></td><td class=\"n\">{{ width_m }}</td><td class=\"n\">{{ height_m }}</td><td class=\"n\">{{ set_count }}</td><td class=\"n\">{{ qty | number }}</td><td class=\"n\">{{ rate | money }}</td><td class=\"n\">{{ amount | money }}</td></tr>{{/each}}",
         "</tbody></table>",
         "<div class=\"tot\"><div class=\"row big\"><span>Tổng cộng</span><span>{{ grand_total | money }} ₫</span></div></div>",
         "<div class=\"note\">Thanh toán: {{ payment_terms }}\nBảo hành: {{ warranty_note }}\nGhi chú: {{ note }}</div>",

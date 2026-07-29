@@ -1,10 +1,12 @@
 # ALUMDOOR — BÀN GIAO CHO PHIÊN SAU
 
-> Cập nhật: **2026-07-29 13:35 (UTC+7)**  
-> Mã nguồn chính: **`C:\Forge`**  
-> Nhánh đang làm: **`feat/alumdoor-warehouse-tree`**  
-> Commit chốt: **`a69c943 feat(alumdoor): align aluminium lot stock columns`**  
-> Production: **<https://alu.kairo.vn>** — app **Alumdoor 1.20.1**
+> Cập nhật: **2026-07-29 21:40 (UTC+7)**
+> Mã nguồn chính: **`C:\Forge`**
+> Production: **<https://alu.kairo.vn>** — app **Alumdoor 1.26.2**
+> Tenant `alu` · D1 `cloudforge-alu` · id `6781cbc1-8635-4b6e-af46-09297c120cff`
+
+**Đọc mục 0 trước mọi mục khác.** Nó ghi những thứ vừa đổi và những quyết định đang CHỜ chủ
+xưởng — làm tiếp mà không biết chúng thì sẽ làm lại thứ vừa xong, hoặc đoán bừa chỗ cố ý bỏ ngỏ.
 
 ## 1. Đọc phần này trước — quyết định nghiệp vụ mới nhất
 

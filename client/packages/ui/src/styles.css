@@ -862,6 +862,39 @@
     background: var(--card);
   }
 
+  /*
+    BẢNG LỚN — nhìn và gõ như một trang tính.
+    Ô liền kề nhau có kẻ dọc, dòng thấp, chữ nhỏ: mắt quét theo CỘT như trên Excel thay vì
+    đọc từng thẻ. Ô đang gõ viền đậm lên để không lạc chỗ khi đi bằng bàn phím.
+  */
+  .mf-grid-excel td,
+  .mf-grid-excel th {
+    border-right: 1px solid var(--border);
+    padding: 0.125rem 0.25rem;
+    font-size: 0.8125rem;
+  }
+  .mf-grid-excel td:last-child,
+  .mf-grid-excel th:last-child { border-right: 0; }
+  .mf-grid-excel input,
+  .mf-grid-excel button {
+    height: 1.75rem;
+    min-height: 1.75rem;
+    border-radius: 0.25rem;
+    font-size: 0.8125rem;
+  }
+  .mf-grid-excel [data-cell]:focus-within {
+    outline: 2px solid var(--primary);
+    outline-offset: -2px;
+  }
+  /* Ghi chú là Small Text ⇒ mặc định vẽ ra ô nhiều dòng cao gấp ba dòng bảng, kéo mọi dòng
+     cao theo. Trong trang tính nó phải là một dòng, muốn dài thì mở chi tiết dòng ra. */
+  .mf-grid-excel textarea {
+    height: 1.75rem;
+    min-height: 1.75rem;
+    resize: none;
+    font-size: 0.8125rem;
+  }
+
   /* Split detail and context */
   .mf-split { background: var(--background); }
   .mf-context-frame { background: var(--secondary); }

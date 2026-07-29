@@ -227,6 +227,39 @@ export function FormView(props: FormViewProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [values, fetchRules, services, doc.name, doc.modified]);
 
+  /**
+   * Tổng chứng từ cộng lại NGAY khi gõ, không đợi lưu.
+   *
+   * ChildGrid đã tính `amount` từng dòng từ lâu, nhưng tổng ở đầu phiếu thì chỉ server mới
+   * điền — nghĩa là suốt lúc nhập, ô "Tổng tiền hàng" đứng im ở con số của lần lưu trước
+   * (hoặc trống với phiếu mới). Người nhập không có cách nào đối chiếu với phiếu giấy của
+   * nhà cung cấp cho tới khi bấm lưu, mà lúc đó sai thì đã ghi sổ.
+   *
+   * Chỉ cộng, không diễn giải: thuế, chiết khấu, phí vẫn để server quyết. Đây là con số để
+   * NHÌN; `calculateSalesTotals` phía server vẫn là con số để TIN.
+   */
+  const totalFields = useMemo(() => {
+    const has = (name: string) => meta.fields.some((f) => f.fieldname === name);
+    const table = meta.fields.find((f) => f.fieldtype === "Table" && f.fieldname === "items");
+    if (!table) return null;
+    return { table: table.fieldname, sumAmount: has("grand_total"), sumQty: has("total_qty") };
+  }, [meta]);
+  useEffect(() => {
+    if (!totalFields) return;
+    const rows = values[totalFields.table];
+    if (!Array.isArray(rows)) return;
+    const round = (n: number) => Math.round(n * 1e6) / 1e6;
+    if (totalFields.sumAmount) {
+      const sum = round(rows.reduce((s, r) => s + (Number((r as Doc)?.amount) || 0), 0));
+      if (Number(values.grand_total ?? 0) !== sum) form.setValue("grand_total", sum as never, { shouldDirty: false });
+    }
+    if (totalFields.sumQty) {
+      const sum = round(rows.reduce((s, r) => s + (Number((r as Doc)?.qty) || 0), 0));
+      if (Number(values.total_qty ?? 0) !== sum) form.setValue("total_qty", sum as never, { shouldDirty: false });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [values, totalFields]);
+
   const resolved: ResolvedField[] = useMemo(
     () => resolveMeta(meta, { doc: values, roles, maskedFields, forceReadOnly }),
     [meta, values, roles, maskedFields, forceReadOnly],

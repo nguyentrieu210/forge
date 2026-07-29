@@ -91,11 +91,77 @@ function checked(value: unknown): boolean {
   return value === true || value === 1 || value === "1";
 }
 
+/**
+ * Nhớ bản ghi đã đọc TRONG MỘT LƯỢT kiểm — nguyên nhân thật của lỗi quá hạn 2 giây.
+ *
+ * Một phiếu mua chạy qua ba bộ kiểm nối tiếp: dòng hàng, quy cách đo, màu. Cả ba đều bắt đầu
+ * bằng việc đọc Item của từng dòng, và mỗi bộ đọc lại từ đầu — nên phiếu 3 dòng tốn 9 lượt
+ * đọc Item thay vì 3, cộng Measurement Profile và Item Color. Mỗi lượt là một vòng app →
+ * cổng → tenant; nhân lên là vượt hạn mức 2000 ms, và phiếu bị từ chối vì CHẬM chứ không
+ * phải vì sai. Đó là lý do phiếu nhập chưa bao giờ lưu nổi.
+ *
+ * Khoá theo chính hàm `call` — nó được tạo mới cho từng request, nên bộ nhớ tạm sống đúng
+ * một lượt kiểm rồi biến mất cùng nó. Không có chuyện một lượt đọc phải dữ liệu cũ của lượt
+ * trước: `WeakMap` thả cache ngay khi `call` hết dùng.
+ *
+ * Nhớ cả kết quả `null` (404): "mặt hàng này không tồn tại" cũng là một câu trả lời, và hỏi
+ * lại ba lần vẫn ra đúng nó.
+ */
+const masterCache = new WeakMap<object, Map<string, Promise<Record<string, unknown> | null>>>();
+
 async function readMaster(call: PlatformCall, doctype: string, name: string): Promise<Record<string, unknown> | null> {
-  const response = await call(`resource/${encodeURIComponent(doctype)}/${encodeURIComponent(name)}`);
-  if (response.status === 404) return null;
-  if (!response.ok) throw new Error(`không đọc được ${doctype} ${name} (HTTP ${response.status})`);
-  return ((await response.json()) as { data?: Record<string, unknown> }).data ?? null;
+  let cache = masterCache.get(call);
+  if (!cache) { cache = new Map(); masterCache.set(call, cache); }
+  const key = `${doctype}/${name}`;
+  const hit = cache.get(key);
+  // Nhớ chính lời hứa chứ không phải kết quả: hai bộ kiểm hỏi cùng lúc thì chỉ MỘT lượt gọi
+  // thật đi ra ngoài, thay vì cả hai cùng bắn đi rồi cùng chờ.
+  if (hit) return hit;
+  const pending = (async () => {
+    const response = await call(`resource/${encodeURIComponent(doctype)}/${encodeURIComponent(name)}`);
+    if (response.status === 404) return null;
+    if (!response.ok) throw new Error(`không đọc được ${doctype} ${name} (HTTP ${response.status})`);
+    return ((await response.json()) as { data?: Record<string, unknown> }).data ?? null;
+  })();
+  cache.set(key, pending);
+  // Lỗi mạng thì BỎ khỏi bộ nhớ tạm: giữ lại một lời hứa đã hỏng nghĩa là mọi bộ kiểm sau
+  // trong cùng lượt đều hỏng theo, dù lần thử lại có thể thành công.
+  pending.catch(() => cache.delete(key));
+  return pending;
+}
+
+/**
+ * Đọc TRƯỚC, song song, mọi bản ghi mà ba bộ kiểm sắp cần.
+ *
+ * Bộ nhớ tạm ở trên bỏ được các lượt đọc TRÙNG, nhưng không đổi được việc chúng nối đuôi
+ * nhau: kiểm dòng hàng đọc Item xong mới tới kiểm quy cách đọc Measurement Profile, xong mới
+ * tới kiểm màu đọc Item Color. Ba đợt chờ, mỗi đợt hai chặng mạng (app → cổng → tenant).
+ *
+ * Ở đây gom lại còn HAI đợt: Item và Item Color không phụ thuộc nhau nên đi cùng lúc; chỉ
+ * Measurement Profile mới phải đợi, vì tên profile nằm trong chính bản ghi Item.
+ *
+ * Cố ý KHÔNG `await` kết quả: `readMaster` nhớ lời hứa, nên khi từng bộ kiểm hỏi tới thì
+ * lượt gọi đã đang bay rồi. Lỗi ở đây cũng nuốt luôn — bộ kiểm thật sẽ gặp lại và báo bằng
+ * câu chữ của nó, còn ném từ đây thì mất mất thông tin dòng nào hỏng.
+ */
+async function warmMasters(call: PlatformCall, doc: Record<string, unknown>): Promise<void> {
+  const rows = Array.isArray(doc.items)
+    ? doc.items.filter((row): row is Record<string, unknown> => Boolean(row) && typeof row === "object" && !Array.isArray(row))
+    : [];
+  const codes = [...new Set(rows.map((row) => String(row.item_code ?? "").trim()).filter(Boolean))];
+  const colors = [...new Set([
+    ...rows.map((row) => String(row.color ?? row.colour ?? "").trim()),
+    String(doc.color ?? doc.colour ?? "").trim(),
+  ].filter(Boolean))];
+
+  const items = await Promise.all([
+    ...codes.map((code) => readMaster(call, "Item", code).catch(() => null)),
+    ...colors.map((name) => readMaster(call, "Item Color", name).catch(() => null)),
+  ]);
+  const profiles = [...new Set(items
+    .map((item) => String(item?.measurement_profile ?? "").trim())
+    .filter(Boolean))];
+  await Promise.all(profiles.map((name) => readMaster(call, "Measurement Profile", name).catch(() => null)));
 }
 
 function colorNames(item: Record<string, unknown>): string[] {
@@ -1599,6 +1665,7 @@ export default {
         if (subject.doctype === "Purchase Order" || subject.doctype === "Purchase Receipt" || subject.doctype === "Purchase Invoice" || subject.doctype === "Supplier Quotation") {
           const call = platformCaller(request, env);
           const doc = await validationDocument(call, subject);
+          await warmMasters(call, doc);
           const transaction = await validateTransactionLines(call, subject, "purchase", doc);
           if (!transaction.ok) return transaction;
           const measurements = await validatePurchaseMeasurement(call, subject, doc);
@@ -1608,6 +1675,7 @@ export default {
         if (["Quotation", "Sales Order", "Delivery Note", "Sales Invoice"].includes(subject.doctype)) {
           const call = platformCaller(request, env);
           const doc = await validationDocument(call, subject);
+          await warmMasters(call, doc);
           const transaction = await validateTransactionLines(call, subject, "sales", doc);
           if (!transaction.ok) return transaction;
           return await validateDocumentColors(call, subject, doc);

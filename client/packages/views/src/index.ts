@@ -115,3 +115,4 @@ export { PermissionCenter } from "./access/PermissionCenter.js";
 export { FormGuide, type FormGuideContent, type FormGuideMap } from "./form/FormGuide.js";
 
 export { ImportContent } from "./system/Import.js";
+export { AssistantBubble, setAssistantContext } from "./assistant/AssistantBubble.js";

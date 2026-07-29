@@ -30,8 +30,8 @@ export interface UomLine extends JsonObject {
   /** Snapshot from Item so later master-data edits never change an old voucher's meaning. */
   measurement_profile?: string;
   /** Kích thước giao dịch cho mặt hàng bán theo m² nhưng tồn theo Bộ. */
-  width_mm?: DecimalInput;
-  height_mm?: DecimalInput;
+  width_m?: DecimalInput;
+  height_m?: DecimalInput;
   set_count?: DecimalInput;
 }
 

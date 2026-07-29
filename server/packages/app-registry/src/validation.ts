@@ -33,10 +33,24 @@ import type { AppMethodEnv } from "./method-dispatch.js";
 /**
  * Wall-clock budget for one validator.
  *
- * Deliberately tight: a user is waiting, and the write has not started. Shorter than the
- * app-method budget because a validator should be a check, not a computation.
+ * Still tight — a user is waiting and the write has not started — but 2 000 ms was set for a
+ * validator that only COMPUTES, and that is not the shape the platform actually gives apps.
+ * An app Worker holds no data bindings by design: every master it needs comes back through
+ * the gateway under the caller's identity, so one read is app → gateway → tenant → back. A
+ * purchase receipt has to see the Item, its Measurement Profile and its Item Color before it
+ * can say yes, and those cannot all be fetched in a single wave because the profile name is
+ * inside the Item.
+ *
+ * Measured on the real tenant: a three-line aluminium receipt spent ~2 800 ms and was refused
+ * for being SLOW rather than wrong — so the rule never ran at all, on any document, since the
+ * seam shipped. A budget no correct validator can meet does not protect anything; it only
+ * makes the feature look broken.
+ *
+ * 5 000 ms is the cost of about three sequential waves with headroom, and still bounds how
+ * long an uncommitted write may hold. Apps are expected to batch — see `warmMasters` in the
+ * alumdoor Worker — and this budget is not the place to absorb an unbatched one.
  */
-export const VALIDATOR_TIMEOUT_MS = 2_000;
+export const VALIDATOR_TIMEOUT_MS = 5_000;
 
 export interface ValidatorTarget {
   appId: string;

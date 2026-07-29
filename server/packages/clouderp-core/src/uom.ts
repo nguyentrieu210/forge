@@ -113,14 +113,21 @@ function dynamicSetStockQtyMicros(
   if (!usesDynamicSquareMetreToSet(master, uom)) return undefined;
   const setsMicros = toScaledInt(line.set_count ?? 1, 6, `items[${index}].set_count`);
   if (setsMicros <= 0) throw errors.validation(`Số bộ phải lớn hơn 0 (dòng ${index + 1})`);
-  const width = Number(line.width_mm);
-  const height = Number(line.height_mm);
+  const width = Number(line.width_m);
+  const height = Number(line.height_m);
   if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) {
     throw errors.validation(`Hàng tính m² phải có rộng và cao lớn hơn 0 (dòng ${index + 1})`);
   }
   const minimumArea = Math.max(0, Number(master?.min_area_sqm) || 0);
   const setCount = Number(fromScaledInt(setsMicros, 6));
-  const expectedQty = toScaledInt(Math.max(width * height / 1_000_000, minimumArea) * setCount, 6, `items[${index}].qty`);
+  /**
+   * Rộng và cao tính bằng MÉT, nên diện tích là tích của chúng — không chia 1.000.000 nữa.
+   *
+   * Hai field này từng là `width_mm`/`height_mm`. Xưởng đo và báo giá theo mét (RCL 4,9 m),
+   * nên bắt nhập milimét là bắt nhân nhẩm 1000 ở mỗi dòng, và quên một số 0 thì diện tích
+   * lệch mười lần mà chứng từ vẫn hợp lệ. Đổi được vì lúc chuyển chưa có chứng từ nào.
+   */
+  const expectedQty = toScaledInt(Math.max(width * height, minimumArea) * setCount, 6, `items[${index}].qty`);
   if (Math.abs(expectedQty - qtyMicros) > 1) {
     throw errors.validation(`Số lượng m² không khớp kích thước, số bộ và diện tích tối thiểu của Item (dòng ${index + 1})`);
   }

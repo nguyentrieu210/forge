@@ -1,4 +1,4 @@
-import type { DomainEvent } from "../../../packages/contracts/src/index.js";
+import type { DomainEvent, JsonObject } from "../../../packages/contracts/src/index.js";
 
 export interface TenantEnv {
   DB: D1Database;
@@ -40,4 +40,12 @@ export interface TenantEnv {
   DISPATCHER?: DispatchNamespace;
   SOCIAL_INGRESS?: Fetcher;
   SOCIAL_CREDENTIAL_KEK?: string;
+  /**
+   * Workers AI — đọc ảnh chứng từ và trả lời câu hỏi về dữ liệu của tenant.
+   *
+   * Tuỳ chọn: tenant chưa gắn binding thì các đầu API AI trả 501 kèm lời giải thích, chứ
+   * KHÔNG làm hỏng phần còn lại của worker. Một tính năng phụ vắng mặt không được phép kéo
+   * theo cả chứng từ và tồn kho.
+   */
+  AI?: { run: (model: string, input: JsonObject) => Promise<unknown> };
 }

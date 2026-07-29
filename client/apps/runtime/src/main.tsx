@@ -5,7 +5,7 @@ import { mergeLocale, resolveHomeRoute, validateManifest, type ApplicationCatalo
 import { FrappeAdapterImpl, createScopeKey, type MetaForgeBootDTO } from "@metaforge/adapter-frappe";
 import { MetaForgeProvider } from "@metaforge/views/provider";
 import { createFullRegistry } from "@metaforge/views/registry";
-import { loadRecentDocs } from "@metaforge/views";
+import { AssistantBubble, loadRecentDocs, setAssistantContext } from "@metaforge/views";
 import type { UrlStateBridge } from "@metaforge/views/url-state";
 import {
   AppShell, AuthBoundary, BusinessContextBar, BusinessContextProvider, I18nProvider,
@@ -372,6 +372,18 @@ function Shell({ manifest, boot, logout, nav, active, breadcrumbs = [], children
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
+  /**
+   * Tiêu đề tab lấy theo app đã cài, không đóng cứng trong index.html.
+   *
+   * Một bundle phục vụ mọi tenant, nên cái tên trong index.html là tên của tenant ĐẦU TIÊN
+   * từng dùng bundle này — Alumdoor mở ra thấy "Kairo Social Commerce". Thanh bên đã lấy
+   * đúng `manifest.name` từ lâu; chỉ mỗi thẻ <title> bị bỏ quên.
+   */
+  const crumb = breadcrumbs.at(-1)?.label;
+  useEffect(() => {
+    document.title = crumb ? `${crumb} — ${manifest.name}` : manifest.name;
+  }, [crumb, manifest.name]);
+
   const palette = useMemo(() => ({
     actions: nav.map((item) => ({
       id: `go-${item.key}`,
@@ -416,6 +428,7 @@ function Shell({ manifest, boot, logout, nav, active, breadcrumbs = [], children
       >
         {children}
       </AppShell>
+      <AssistantBubble appName={`Trợ lý ${manifest.name}`} />
       <CommandPalette
         open={paletteOpen}
         onClose={() => setPaletteOpen(false)}
@@ -547,6 +560,15 @@ function DoctypeScreen({ manifest, boot, logout, nav }: ScreenProps) {
     const search = window.location.search;
     navigate(withinList && search && !path.includes("?") ? `${path}${search}` : path);
   }, [navigate, listPath]);
+  /**
+   * Khai cho trợ lý biết người dùng ĐANG XEM cái gì.
+   *
+   * Chỉ tên màn hình và bản ghi đang mở — không kèm nội dung. Trợ lý trả lời được "đang ở
+   * đâu, mở cái gì" mà không biến câu hỏi thành một đường đọc dữ liệu vòng qua phân quyền.
+   */
+  useEffect(() => {
+    setAssistantContext({ man_hinh: title, doctype, ban_ghi: name ?? null });
+  }, [title, doctype, name]);
   return <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={active} breadcrumbs={[{ label: title }]}><div className="h-full p-3 md:p-4"><DoctypeWorkspace doctype={doctype} name={name} bridge={bridge} onNavigate={navigateKeepingListState} /></div></Shell>;
 }
 function OverviewScreen(props: ScreenProps) { const navigate = useNavigate(); const { domain = props.manifest.domain ?? "stock" } = useParams(); return <Shell {...props} active="__overview" breadcrumbs={[{ label: "Tổng quan" }]}><div className="h-full overflow-auto p-4"><OverviewContainer domain={domain} onNavigate={navigate} /></div></Shell>; }

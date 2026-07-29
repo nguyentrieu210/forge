@@ -75,6 +75,15 @@ export function writeTenantConfig({ tenant, databaseId, databaseName = `cloudfor
      * chạy thật trên deployment nào.
      */
     dispatch_namespaces: [{ binding: "DISPATCHER", namespace: "cloudforge-production", remote: true }],
+    /**
+     * Workers AI — trợ lý đọc chứng từ và trả lời câu hỏi về dữ liệu của chính tenant.
+     *
+     * Chọn Workers AI chứ không phải một nhà cung cấp ngoài vì nó chạy trên CÙNG tài khoản
+     * Cloudflare đang chạy tenant: không thêm khoá bí mật nào phải phát cho từng tenant, và
+     * ảnh phiếu giao không rời khỏi ranh giới tài khoản. Một khoá API ngoài sẽ phải nằm
+     * trong secret của TỪNG tenant, và lộ một cái là lộ hạn mức của tất cả.
+     */
+    ai: { binding: "AI" },
   }, null, 2)}\n`, "utf8");
   return { configPath, relativeConfig: path.relative(serverRoot, configPath) };
 }

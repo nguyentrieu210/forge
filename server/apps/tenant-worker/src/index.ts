@@ -25,6 +25,7 @@ import {
   metadataSummary, parseCsvImport, parseDocTypeMeta, renderPrintFormat, validateWorkflow,
 } from "../../../packages/frappe-model/src/index.js";
 import { AggregateCoordinator } from "./aggregate-do.js";
+import { askAssistant, readReceiptImage } from "./ai-assistant.js";
 import { publishPendingOutbox } from "../../../packages/outbox/src/index.js";
 import { AppReportService, D1ReportService } from "../../../packages/query/src/index.js";
 import { ingestFacebookMessage, storeFacebookOAuthPages, type FacebookOAuthPage } from "../../../packages/social-commerce/src/tenant-handler.js";
@@ -808,6 +809,23 @@ async function serveFrappeApiInner(
     // The client keys its session-expiry detection off exactly that, so a
     // "more correct" 401 here would leave a re-login prompt unreachable.
     throw errors.permission("Login to access this resource");
+  }
+
+  /**
+   * TRỢ LÝ AI — đặt trên đường Frappe, không phải `/api/v1/…`.
+   *
+   * Trình duyệt xác thực bằng COOKIE phiên, còn `/api/v1/…` đòi bearer JWT — nên bản đầu
+   * đặt ở đó trả 401 cho đúng những người dùng nó sinh ra để phục vụ. Ở đây phiên đã dựng
+   * xong và CSRF đã kiểm ngay phía trên, nên trợ lý thừa hưởng đúng một danh tính người dùng
+   * như mọi màn hình khác.
+   *
+   * Cả hai đều CHỈ ĐỌC: chúng trả về đề xuất, người dùng soát rồi mới bấm lưu.
+   */
+  if (request.method === "POST" && url.pathname === "/api/method/metaforge.ai.ask") {
+    return askAssistant(env, await readJson<JsonObject>(request, 64_000));
+  }
+  if (request.method === "POST" && url.pathname === "/api/method/metaforge.ai.read_receipt") {
+    return readReceiptImage(env, tenantId, await readJson<JsonObject>(request, 12_000_000));
   }
 
   const metadata = new D1MetadataStore(env.DB);

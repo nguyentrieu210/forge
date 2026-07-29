@@ -5,7 +5,8 @@
  * Data-driven từ child meta (KHÔNG hardcode).
  */
 import { useRef, useState } from "react";
-import { Maximize2, Plus, X } from "lucide-react";
+import { aiHeaders } from "../assistant/AssistantBubble.js";
+import { ArrowDownToLine, Copy, Maximize2, Plus, RotateCcw, ScanLine, X } from "lucide-react";
 import { resolveField, type DocTypeMeta, type DocField, type Doc } from "@metaforge/core";
 import { ControlRegistry, FallbackControl, type FieldServices } from "@metaforge/controls";
 import {
@@ -83,7 +84,9 @@ function visibleColumns(
 const GRID_WIDTH: Record<string, string> = {
   Check: "3.5rem", Int: "5rem", Float: "5.5rem", Percent: "5.5rem", Currency: "8rem",
   Date: "8.5rem", Time: "7rem", Datetime: "10.5rem",
-  "Small Text": "12rem", Text: "12rem", "Long Text": "12rem",
+  // Ghi chú là cột ĐỌC LƯỚT, không phải cột soạn thảo: 12rem khiến nó rộng ngang cột tiền
+  // trong khi nội dung thường là vài chữ. Muốn viết dài thì mở chi tiết dòng.
+  "Small Text": "8rem", Text: "8rem", "Long Text": "8rem",
 };
 
 /**
@@ -117,6 +120,81 @@ function gridWidth(field: DocField): string {
     return label <= 6 ? base : label <= 12 ? "8rem" : "10rem";
   }
   return GRID_WIDTH[fieldtype] ?? "11rem";
+}
+
+/**
+ * Cột của BẢNG LỚN — cố định, ít, theo đúng thứ tự người lập phiếu đọc tờ giấy trên tay.
+ *
+ * Bản đầu cho bảng lớn hiện MỌI field của dòng. Trên phiếu nhập nhôm đó là 26 cột, mỗi ô
+ * Link lại tự đi hỏi danh mục — mở ra là đơ. Và phần lớn số cột ấy không ai nhập bằng tay:
+ * chúng là số máy tự dẫn xuất (hệ số quy đổi, tổng chiều dài, kg/m thực).
+ *
+ * Mỗi mục là một nhóm TÊN THAY THẾ: bảng con của phiếu bán gọi bề rộng là `width_m`, phiếu
+ * nhập nhôm gọi khổ là `length_m`. Lấy cái đầu tiên có thật trong doctype con.
+ */
+const BIG_COLUMNS: string[][] = [
+  // KHÔNG có `item_name`: ô mã hàng đã in sẵn tên bên dưới mã, nên cột tên là bản sao chiếm
+  // chỗ của những cột phải gõ tay. Bỏ nó đi thì Màu và ĐVT mới đủ rộng để đọc được chữ.
+  ["item_code"], ["color", "colour"],
+  ["height_m"],
+  /**
+   * RỘNG lấy `width_m` trước, `length_m` sau — cả hai đều là MÉT.
+   *
+   * Phiếu bán cửa dùng `width_m` (rộng khách đặt); phiếu nhập nhôm không có nó và rơi về
+   * `length_m` (khổ cây), đúng số chia trong công thức kg/m. Một cột, hai chứng từ, không ô
+   * nào đứng nhầm chỗ.
+   */
+  ["width_m", "length_m"],
+  ["qty"], ["qty_bar", "set_count"],
+  ["uom"], ["rate"], ["amount"],
+  // Trọng lượng trung bình — số MÁY tính, đặt sau tiền vì nó để ĐỐI CHIẾU chứ không phải để
+  // gõ: lệch nhiều so với kg/m danh nghĩa nghĩa là cân sai hoặc ghi nhầm khổ.
+  ["actual_kg_per_m"],
+  ["note", "install_note"],
+];
+/**
+ * Bề rộng cột của BẢNG LỚN — hẹp, để 12 cột vừa trọn màn hình thay vì phải cuộn ngang.
+ *
+ * Bảng gọn đo cột theo kiểu field (`gridWidth`), hợp lý khi chỉ có 5–6 cột trong một khung
+ * hẹp. Ở bảng lớn cùng cách đo ấy cộng lại vượt bề ngang màn hình, và cuộn ngang chính là
+ * thứ mở bảng lớn ra để tránh. Con số ở đây theo NỘI DUNG THẬT: cột màu chứa "GS", "XN-VK";
+ * cột ĐVT chứa "Kg", "Bộ"; chỉ tên hàng và ghi chú mới cần chỗ, nên chúng co giãn.
+ */
+const BIG_WIDTH: Record<string, string> = {
+  // Ô Link/Select vẽ ra một nút có mũi tên bên phải, nên 6rem chỉ đủ hiện "C." và "K." —
+  // một cột màu không đọc được màu thì bằng không có cột. Màu và ĐVT cần 8rem.
+  item_code: "14rem", color: "8rem", colour: "8rem",
+  height_m: "6rem", width_m: "6rem", length_m: "6rem",
+  qty: "7rem", qty_bar: "6rem", set_count: "6rem", actual_kg_per_m: "7rem", uom: "8rem",
+  rate: "8rem", amount: "9rem", note: "8rem", install_note: "8rem",
+};
+function bigColumns(fields: DocField[]): DocField[] {
+  const out: DocField[] = [];
+  for (const names of BIG_COLUMNS) {
+    for (const name of names) {
+      const found = fields.find((f) => f.fieldname === name);
+      if (found) { out.push(found); break; }
+    }
+  }
+  return out;
+}
+
+/**
+ * Một ô dán từ Excel → giá trị của field.
+ *
+ * Excel tiếng Việt xuất số theo dấu phẩy thập phân và chấm ngăn nghìn ("1.234,5"), còn
+ * `Number()` đọc chuỗi đó ra `NaN` — dán vào là mất sạch số lượng mà không báo gì. Chuỗi
+ * rỗng trả về `undefined` để ô trống trong Excel KHÔNG xoá giá trị đang có.
+ */
+function parsePasted(field: DocField, raw: string): unknown {
+  const text = raw.trim();
+  if (!text) return undefined;
+  if (["Currency", "Float", "Int", "Percent"].includes(field.fieldtype)) {
+    const normalized = text.replace(/[^\d,.-]/g, "").replace(/\.(?=\d{3}\b)/g, "").replace(",", ".");
+    const value = Number(normalized);
+    return Number.isFinite(value) ? value : undefined;
+  }
+  return text;
 }
 
 /** Cột ĐỊNH DANH — Link đầu tiên, tức mã hàng. Được ghim khi cuộn ngang và không co. */
@@ -163,11 +241,67 @@ export function ChildGrid(props: ChildGridProps) {
   const t = useT();
   const { childMeta, rows, onChange, registry, services, readOnly, parentDoc, roles, rowDefaults } = props;
   const [detailRow, setDetailRow] = useState<number | null>(null);
+  /**
+   * BẢNG LỚN — bảng con chiếm trọn màn hình để nhập, rồi quay lại chứng từ.
+   *
+   * Bảng gọn trong form chỉ đủ chỗ cho vài cột, nên với phiếu nhập nhôm (mã, màu, kg, khổ,
+   * số cây, ĐVT, giá, kho) người nhập phải cuộn ngang liên tục và mất dấu dòng đang gõ.
+   * Mở rộng bảng gọn ra thì lại đẩy các ô đầu phiếu xuống dưới màn hình.
+   *
+   * Nó vẫn là bảng con của chứng từ cha — cùng một mảng `rows`, cùng `onChange`. Không có
+   * bước "lưu" riêng: đóng lại là thấy nguyên các dòng vừa nhập trong phiếu.
+   */
+  const [expanded, setExpanded] = useState(false);
+  const [pickedRow, setPickedRow] = useState<number | null>(null);
   const itemLoadVersion = useRef(new Map<string, number>());
-  const cols = visibleColumns(gridColumns(childMeta), childMeta, rows, parentDoc, roles);
+  const compactCols = visibleColumns(gridColumns(childMeta), childMeta, rows, parentDoc, roles);
+  const bigCols = bigColumns((childMeta.fields ?? []).filter((f) => !isLayout(f.fieldtype)));
+  const baseCols = expanded ? bigCols : compactCols;
+
+  /**
+   * BỀ RỘNG VÀ THỨ TỰ CỘT do người dùng đặt, và NHỚ LẠI ở lần mở sau.
+   *
+   * Bề rộng mặc định ở đây chỉ là phỏng đoán từ kiểu field: nó không biết xưởng này ghi chú
+   * dài hay ngắn, mã hàng của họ mấy ký tự, hay người nhập quen đọc cột nào trước. Chỉnh
+   * được mà mở lại mất hết thì cũng như không chỉnh — nên lưu theo TỪNG doctype con và từng
+   * chế độ bảng, vào localStorage.
+   *
+   * Hỏng localStorage (chế độ riêng tư, hết quota) chỉ mất phần tuỳ chỉnh, bảng vẫn dựng
+   * bằng mặc định — không được phép làm chết cả bảng vì một tiện ích.
+   */
+  const layoutKey = `mf-grid-layout:${childMeta.name}:${expanded ? "big" : "compact"}`;
+  const [layout, setLayout] = useState<{ w: Record<string, number>; order: string[] }>({ w: {}, order: [] });
+  const loadedKey = useRef("");
+  if (loadedKey.current !== layoutKey) {
+    loadedKey.current = layoutKey;
+    try {
+      const saved = localStorage.getItem(layoutKey);
+      layout.w = saved ? (JSON.parse(saved).w ?? {}) : {};
+      layout.order = saved ? (JSON.parse(saved).order ?? []) : [];
+    } catch { /* không có thì dùng mặc định */ }
+  }
+  const saveLayout = (next: { w: Record<string, number>; order: string[] }) => {
+    setLayout(next);
+    try { localStorage.setItem(layoutKey, JSON.stringify(next)); } catch { /* hết quota — vẫn dùng được trong phiên */ }
+  };
+
+  // Cột người dùng đã xếp lên trước; cột chưa từng xếp giữ nguyên thứ tự gốc ở phía sau, nên
+  // một cột MỚI thêm vào doctype vẫn xuất hiện thay vì biến mất vì không có trong thứ tự cũ.
+  const cols = layout.order.length
+    ? [
+        ...layout.order.map((name) => baseCols.find((c) => c.fieldname === name)).filter((c): c is DocField => Boolean(c)),
+        ...baseCols.filter((c) => !layout.order.includes(c.fieldname)),
+      ]
+    : baseCols;
   const identity = identityColumn(cols);
   const flexible = flexibleColumn(cols, identity);
-  const columnWidth = (column: DocField): string => (column.fieldname === identity ? IDENTITY_WIDTH : gridWidth(column));
+  const columnWidth = (column: DocField): string => {
+    const custom = layout.w[column.fieldname];
+    if (custom) return `${custom}rem`;               // người dùng đã kéo — luôn thắng mặc định
+    return expanded
+      ? (BIG_WIDTH[column.fieldname] ?? "")          // rỗng ⇒ cột co giãn, chia phần còn lại
+      : column.fieldname === identity ? IDENTITY_WIDTH : gridWidth(column);
+  };
   /**
    * Bảng RỘNG BẰNG TỔNG CÁC CỘT, rồi mới cuộn — chứ không ép mọi cột vào khung.
    *
@@ -196,7 +330,7 @@ export function ChildGrid(props: ChildGridProps) {
    * làm gì — không đoán, không ghi đè field người dùng tự nhập.
    */
   const COMPUTED_FROM = new Set([
-    "qty", "rate", "qty_bar", "length_m", "width_mm", "height_mm", "set_count",
+    "qty", "rate", "qty_bar", "length_m", "width_m", "height_m", "set_count",
     "uom", "conversion_factor",
   ]);
   const ITEM_DERIVED_FIELDS = [
@@ -208,8 +342,8 @@ export function ChildGrid(props: ChildGridProps) {
     const has = (f: string) => (childMeta.fields ?? []).some((x) => x.fieldname === f);
     let next = { ...row };
     if (next.inventory_mode === "Thành phẩm theo m2" && has("qty")) {
-      const width = Number(next.width_mm);
-      const height = Number(next.height_mm);
+      const width = Number(next.width_m);
+      const height = Number(next.height_m);
       const sets = Number(next.set_count ?? 1);
       const normalizedUom = String(next.uom ?? "").trim().toLocaleLowerCase("vi");
       const normalizedStockUom = String(next.stock_uom ?? "").trim().toLocaleLowerCase("vi");
@@ -218,7 +352,8 @@ export function ChildGrid(props: ChildGridProps) {
           next.qty = sets;
         } else if (["m2", "m²", "sqm"].includes(normalizedUom)
           && Number.isFinite(width) && width > 0 && Number.isFinite(height) && height > 0) {
-          const actualArea = width * height / 1_000_000;
+          // Rộng và cao đã là MÉT, nên diện tích là tích của chúng — bỏ phép chia 1.000.000.
+          const actualArea = width * height;
           const minimumArea = Math.max(0, Number(next.min_area_sqm) || 0);
           next.qty = Math.max(actualArea, minimumArea) * sets;
         }
@@ -242,20 +377,46 @@ export function ChildGrid(props: ChildGridProps) {
      * Vì vậy KHÔNG lấy cây ÷ kg làm hệ số kho. Hai con số dẫn xuất dưới đây chỉ mô tả lô;
      * Stock Ledger vẫn nhận nguyên số kg với hệ số 1.
      */
-    if (next.inventory_mode === "Nhôm cây/lá" && has("qty_bar") && has("length_m")) {
-      const kg = Number(next.qty);
-      const bars = Number(next.qty_bar);
-      const length = Number(next.length_m);
-      if (Number.isFinite(bars) && bars > 0 && Number.isFinite(length) && length > 0) {
-        const totalLength = bars * length;
-        next = {
-          ...next,
-          ...(has("total_length_m") ? { total_length_m: totalLength } : {}),
-          ...(has("actual_kg_per_m") && Number.isFinite(kg) && kg > 0
-            ? { actual_kg_per_m: kg / totalLength }
-            : {}),
-        };
-      }
+    /**
+     * Tính NGAY khi có đủ ba số, không đợi biết mặt hàng thuộc kiểu quản lý nào.
+     *
+     * Điều kiện `inventory_mode === "Nhôm cây/lá"` trước đây nghĩa là: gõ xong kg, số cây và
+     * khổ mà chưa chọn mã hàng thì ô "Kg/m thực" vẫn trống — đúng lúc người ta cần nó nhất,
+     * vì kg/m thực chính là thứ dùng để BẮT LỖI: lệch nhiều so với kg/m danh nghĩa nghĩa là
+     * cân sai hoặc ghi nhầm khổ, và biết sớm thì sửa được trước khi ghi sổ.
+     *
+     * Ba số này chỉ mô tả lô hàng, không đụng tới số ghi sổ, nên tính thừa cũng vô hại:
+     *   kg/m thực = tổng kg ÷ (khổ × số cây)
+     */
+    if (has("qty_bar") || has("length_m")) {
+      const positive = (value: unknown) => { const n = Number(value); return Number.isFinite(n) && n > 0 ? n : 0; };
+      const kg = positive(next.qty);
+      const bars = positive(next.qty_bar);
+      const length = positive(next.length_m);
+      /**
+       * MẪU SỐ là thứ có thật trên dòng, không phải một công thức cứng.
+       *
+       * Bản trước đòi đủ cả khổ VÀ số cây, nên chỉ nhôm cây mới ra số — mua ron theo cuộn
+       * (có mét, không có "cây") hay mua phụ kiện theo cái (có số cái, không có mét) đều để
+       * trống, đúng những dòng người ta cũng muốn soát trọng lượng nhất.
+       *
+       * Ba bậc, lấy bậc đầu tiên dùng được:
+       *   khổ × số cây  → kg/m   (nhôm cây: 191,4 ÷ (8,5 × 51) = 0,441)
+       *   khổ           → kg/m   (cuộn, thanh lẻ)
+       *   số cây/cái    → kg/cái (phụ kiện cân theo lô)
+       *
+       * Đơn vị vì thế đổi theo dòng, nên tiêu đề cột ghi cả hai. Đây là số để ĐỐI CHIẾU, không
+       * vào sổ — nên thà ra một con số đúng nghĩa hơn là để trống cho gọn.
+       */
+      const totalLength = bars > 0 && length > 0 ? bars * length : length;
+      const divisor = totalLength > 0 ? totalLength : bars;
+      next = {
+        ...next,
+        ...(has("total_length_m") && totalLength > 0 ? { total_length_m: totalLength } : {}),
+        ...(has("actual_kg_per_m") && kg > 0 && divisor > 0
+          ? { actual_kg_per_m: kg / divisor }
+          : {}),
+      };
     }
     if (has("stock_qty") && has("qty") && has("conversion_factor")) {
       const qty = Number(next.qty);
@@ -319,14 +480,20 @@ export function ChildGrid(props: ChildGridProps) {
    * Nguyên tắc: CHỈ điền vào ô đang TRỐNG. Người dùng đã tự sửa đơn vị (mua theo thùng nhưng nhập
    * kho theo cái) thì không được đạp lên lựa chọn của họ.
    */
-  const fillItemDefaults = async (
+  /**
+   * TÍNH phần cần điền cho một dòng, KHÔNG ghi.
+   *
+   * Tách khỏi phần ghi vì dán từ Excel cần điền NHIỀU dòng cùng lúc. Bản trước mỗi lần điền
+   * tự gọi `onChange` với bản chụp `rows` của riêng nó; bắn 40 lời gọi song song thì cái về
+   * sau cùng đè lên tất cả — dán 40 dòng chỉ có một dòng được điền, và đúng dòng nào thì tuỳ
+   * mạng nhanh chậm.
+   */
+  const computeItemPatch = async (
     rowIdx: number,
     itemCode: string,
     base: Doc[],
-    loadKey: string,
-    loadVersion: number,
-  ) => {
-    if (!services?.fetchValue && !services?.fetchDocument) return;
+  ): Promise<Record<string, unknown>> => {
+    if (!services?.fetchValue && !services?.fetchDocument) return {};
     const has = (f: string) => (childMeta.fields ?? []).some((x) => x.fieldname === f);
     const item = services.fetchDocument
       ? await services.fetchDocument("Item", itemCode).catch(() => undefined)
@@ -415,6 +582,17 @@ export function ChildGrid(props: ChildGridProps) {
         if (has(fieldname)) patch[fieldname] = undefined;
       }
     }
+    return patch;
+  };
+
+  const fillItemDefaults = async (
+    rowIdx: number,
+    itemCode: string,
+    base: Doc[],
+    loadKey: string,
+    loadVersion: number,
+  ) => {
+    const patch = await computeItemPatch(rowIdx, itemCode, base);
     // Người dùng đổi Item lần nữa trước khi các Link mặc định tải xong: kết quả cũ phải bị bỏ,
     // nếu không màu/UOM của mặt hàng trước sẽ chui vào dòng mới rồi bị server từ chối lúc lưu.
     if (itemLoadVersion.current.get(loadKey) !== loadVersion) return;
@@ -422,6 +600,15 @@ export function ChildGrid(props: ChildGridProps) {
     const merged = base.map((r, i) => (i === rowIdx ? { ...r, ...patch } : r));
     // Đơn giá vừa mồi xong thì thành tiền phải theo ngay, không đợi người dùng chạm vào ô.
     onChange(merged.map((r, i) => (i === rowIdx ? withComputed(r) : r)));
+  };
+
+  /** Điền cho NHIỀU dòng rồi ghi MỘT lần — đường dán từ Excel đi lối này. */
+  const fillItemDefaultsMany = async (indices: number[], base: Doc[]) => {
+    const patches = await Promise.all(indices.map(async (at) =>
+      [at, await computeItemPatch(at, String(base[at]?.item_code ?? ""), base)] as const));
+    const byRow = new Map(patches.filter(([, p]) => Object.keys(p).length > 0));
+    if (byRow.size === 0) return;
+    onChange(base.map((r, i) => (byRow.has(i) ? withComputed({ ...r, ...byRow.get(i)! }) : r)));
   };
   /**
    * Dòng mới mang sẵn giá trị mặc định của field và của BỐI CẢNH đang chọn.
@@ -467,17 +654,292 @@ export function ChildGrid(props: ChildGridProps) {
     if (seen) totals.set(column.fieldname, sum);
   }
 
-  return (
-    <div className="mf-grid space-y-2">
+  /** Nhân bản dòng — phiếu nhôm hay có 3–4 dòng chỉ khác nhau mỗi khổ và số cây. */
+  const cloneRow = (idx: number) => {
+    const source = rows[idx];
+    if (!source) return;
+    // Tên MỚI, không chép: hai dòng cùng `name` thì server coi là một, và dòng sau ghi đè dòng trước.
+    const copy: Doc = { ...source, name: `new-${Date.now()}` };
+    onChange([...rows.slice(0, idx + 1), copy, ...rows.slice(idx + 1)]);
+  };
+  /**
+   * Điền xuống — chỉ vào ô ĐANG TRỐNG của các dòng dưới.
+   *
+   * Cố ý không đè lên ô đã có giá trị: "điền xuống" mà ghi đè thì một lần bấm nhầm xoá sạch
+   * số liệu đã gõ của cả bảng, và không có bước hoàn tác nào ở đây.
+   */
+  const fillDown = (idx: number) => {
+    const source = rows[idx];
+    if (!source) return;
+    const carry = (childMeta.fields ?? [])
+      .filter((f) => !isLayout(f.fieldtype) && f.fieldname !== "name")
+      .map((f) => f.fieldname);
+    onChange(rows.map((row, i) => {
+      if (i <= idx) return row;
+      const next = { ...row };
+      for (const f of carry) {
+        const value = source[f];
+        if (value == null || value === "") continue;
+        if (next[f] == null || next[f] === "") next[f] = value;
+      }
+      return withComputed(next);
+    }));
+  };
+
+  /** Thêm nhiều dòng một lúc — dán 40 dòng từ Excel mà bấm "thêm dòng" 40 lần thì thà gõ tay. */
+  const addRows = (count: number) => {
+    const seeds: Doc[] = [];
+    for (let i = 0; i < count; i += 1) {
+      const seed: Doc = { name: `new-${Date.now()}-${i}`, doctype: childMeta.name } as Doc;
+      for (const field of childMeta.fields ?? []) {
+        if (isLayout(field.fieldtype)) continue;
+        if (field.default != null && field.default !== "") seed[field.fieldname] = field.default;
+      }
+      for (const [fieldname, value] of Object.entries(rowDefaults ?? {})) {
+        if (value == null || value === "") continue;
+        if (!(childMeta.fields ?? []).some((f) => f.fieldname === fieldname)) continue;
+        if (seed[fieldname] == null || seed[fieldname] === "") seed[fieldname] = value;
+      }
+      seeds.push(seed);
+    }
+    onChange([...rows, ...seeds]);
+  };
+
+  /**
+   * DÁN TỪ EXCEL — cách xưởng thực sự nhập một phiếu 40 dòng.
+   *
+   * Phiếu giao của nhà cung cấp về dưới dạng file Excel; gõ lại từng ô là vừa chậm vừa sai.
+   * Trình duyệt đưa vùng chọn của Excel sang clipboard dưới dạng TSV, nên chỉ cần tách theo
+   * tab và xuống dòng rồi xếp vào ĐÚNG THỨ TỰ CỘT đang hiện.
+   *
+   * Dán GHI ĐÈ từ dòng đang chọn xuống, và tự nối thêm dòng nếu clipboard dài hơn bảng —
+   * dán 40 dòng vào bảng trống mà phải bấm thêm dòng trước thì cũng như không có tính năng.
+   * Ô trống trong Excel KHÔNG xoá giá trị đang có (xem `parsePasted`).
+   */
+  const onPasteGrid = (event: React.ClipboardEvent<HTMLDivElement>) => {
+    if (readOnly) return;
+    const text = event.clipboardData.getData("text/plain");
+    if (!text || !/[\t\n]/.test(text)) return;   // một ô đơn lẻ: để trình duyệt dán như thường
+    event.preventDefault();
+    const matrix = text.replace(/\r/g, "").replace(/\n$/, "").split("\n").map((line) => line.split("\t"));
+    const start = pickedRow ?? 0;
+    const next = [...rows];
+    const needFill: number[] = [];
+    matrix.forEach((cells, i) => {
+      const at = start + i;
+      if (!next[at]) {
+        const seed: Doc = { name: `new-${Date.now()}-${at}`, doctype: childMeta.name } as Doc;
+        for (const [fieldname, value] of Object.entries(rowDefaults ?? {})) {
+          if (value != null && value !== "" && (childMeta.fields ?? []).some((f) => f.fieldname === fieldname)) seed[fieldname] = value;
+        }
+        next[at] = seed;
+      }
+      const row = { ...next[at]! };
+      const before = row.item_code;
+      cells.forEach((cell, c) => {
+        const column = cols[c];
+        if (!column) return;
+        const value = parsePasted(column, cell);
+        if (value !== undefined) row[column.fieldname] = value;
+      });
+      if (row.item_code && row.item_code !== before) needFill.push(at);
+      next[at] = withComputed(row);
+    });
+    onChange(next);
+    /**
+     * Dán mã hàng phải kéo theo tên hàng, ĐVT, giá — y như chọn bằng ô Link.
+     *
+     * Bản đầu chỉ ghi thẳng giá trị vào dòng, nên dán xong cột "Tên hàng" và "ĐVT" đứng im:
+     * chúng là ô MÁY điền, không gõ vào được, và cái điền chúng (`fillItemDefaults`) chỉ chạy
+     * trong `setCell`. Kết quả là dán vào thì được một bảng mã hàng trơ trọi — đúng thứ mà
+     * dán từ Excel sinh ra để khỏi phải làm.
+     */
+    if (needFill.length) void fillItemDefaultsMany(needFill, next);
+  };
+
+  /**
+   * DI CHUYỂN BẰNG PHÍM như Excel: ↑ ↓ ← →, Enter xuống dòng, Tab sang phải.
+   *
+   * Không dựng lại một lưới ô riêng — mỗi ô ở đây là một control thật (Link có tìm kiếm,
+   * Select có danh sách), thứ mà một lưới text thuần không thay được. Chỉ chuyển TIÊU ĐIỂM
+   * giữa các ô, bằng cách hỏi DOM ô kế tiếp qua `data-cell`.
+   *
+   * Bỏ qua khi ô đang mở danh sách (`aria-expanded`): lúc đó mũi tên thuộc về danh sách đó,
+   * cướp nó đi thì không chọn nổi mặt hàng bằng bàn phím nữa.
+   */
+  const gridRef = useRef<HTMLDivElement>(null);
+  const focusCell = (r: number, c: number) => {
+    const cell = gridRef.current?.querySelector<HTMLElement>(`[data-cell="${r}:${c}"]`);
+    const target = cell?.querySelector<HTMLElement>("input,button,textarea,select,[tabindex]") ?? cell;
+    target?.focus();
+    if (target instanceof HTMLInputElement) target.select();
+  };
+  const onGridKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (readOnly) return;
+    const holder = (event.target as HTMLElement).closest<HTMLElement>("[data-cell]");
+    if (!holder) return;
+    if (holder.querySelector('[aria-expanded="true"]')) return;
+    const [r, c] = holder.dataset.cell!.split(":").map(Number) as [number, number];
+    const go = (dr: number, dc: number) => {
+      const nr = Math.min(Math.max(r + dr, 0), rows.length - 1);
+      const nc = Math.min(Math.max(c + dc, 0), cols.length - 1);
+      if (nr === r && nc === c) return;
+      event.preventDefault();
+      focusCell(nr, nc);
+    };
+    if (event.key === "ArrowDown" || (event.key === "Enter" && !event.shiftKey)) go(1, 0);
+    else if (event.key === "ArrowUp" || (event.key === "Enter" && event.shiftKey)) go(-1, 0);
+    else if (event.key === "Tab" && !event.shiftKey && c < cols.length - 1) go(0, 1);
+    else if (event.key === "Tab" && event.shiftKey && c > 0) go(0, -1);
+    else if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
+      // Trong ô chữ, ← → phải là di chuyển con trỏ TRONG chữ, không phải nhảy ô.
+      const input = event.target as HTMLInputElement;
+      const atEdge = !("selectionStart" in input) || (event.key === "ArrowRight"
+        ? input.selectionStart === String(input.value ?? "").length
+        : input.selectionStart === 0);
+      if (atEdge) go(0, event.key === "ArrowRight" ? 1 : -1);
+    }
+  };
+
+  /** Ctrl+C chép cả bảng ra dạng Excel dán được — đối chiếu với file của nhà cung cấp. */
+  const onCopyGrid = (event: React.ClipboardEvent<HTMLDivElement>) => {
+    const selection = window.getSelection()?.toString();
+    if (selection) return;   // đang bôi đen chữ trong một ô: để trình duyệt chép như thường
+    event.preventDefault();
+    const line = (values: unknown[]) => values.map((v) => String(v ?? "")).join("\t");
+    const body = rows.map((row) => line(cols.map((c) => row[c.fieldname])));
+    event.clipboardData.setData("text/plain", [line(cols.map((c) => c.label ?? c.fieldname)), ...body].join("\n"));
+  };
+
+  /**
+   * ĐỌC PHIẾU GIAO BẰNG ẢNH — chụp tờ giấy của nhà cung cấp, máy dựng sẵn các dòng hàng.
+   *
+   * Kết quả là ĐỀ XUẤT, không phải dữ liệu đã ghi: các dòng hiện lên bảng để người nhập soát
+   * rồi mới bấm lưu. Dòng nào máy không quy được về mã trong danh mục thì để TRỐNG ô mã và
+   * ghi nguyên văn đã đọc vào ghi chú — thà để trống cho người ta thấy, còn hơn đoán một mã
+   * gần giống rồi nhập sai kho mà không ai biết.
+   */
+  const [reading, setReading] = useState(false);
+  const [readError, setReadError] = useState<string | null>(null);
+  const onPickReceiptImage = async (file: File) => {
+    setReading(true);
+    setReadError(null);
+    try {
+      const image = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = () => reject(new Error("Không đọc được tệp ảnh"));
+        reader.readAsDataURL(file);
+      });
+      const response = await fetch("/api/method/metaforge.ai.read_receipt", {
+        method: "POST", credentials: "include",
+        headers: aiHeaders(),
+        body: JSON.stringify({ image }),
+      });
+      const result = await response.json() as {
+        message?: string;
+        lines?: Array<Record<string, unknown>>;
+        unmatched?: number;
+      };
+      if (!response.ok) { setReadError(result.message ?? `Lỗi ${response.status}`); return; }
+      const read = result.lines ?? [];
+      if (!read.length) { setReadError("Không thấy dòng hàng nào trên ảnh."); return; }
+
+      const has = (f: string) => (childMeta.fields ?? []).some((x) => x.fieldname === f);
+      const made: Doc[] = read.map((line, i) => {
+        const row: Doc = { name: `new-${Date.now()}-${i}`, doctype: childMeta.name } as Doc;
+        for (const [fieldname, value] of Object.entries(rowDefaults ?? {})) {
+          if (value != null && value !== "" && has(fieldname)) row[fieldname] = value;
+        }
+        const put = (field: string, value: unknown) => {
+          if (value == null || value === "" || !has(field)) return;
+          row[field] = value;
+        };
+        put("item_code", line.item_code);
+        put("color", line.color); put("colour", line.color);
+        put("qty", line.qty); put("uom", line.uom);
+        put("length_m", line.length_m); put("qty_bar", line.qty_bar);
+        put("rate", line.rate);
+        if (!line.item_code && line.raw_text) put("note", `AI đọc: ${String(line.raw_text)} — CHƯA khớp mã`);
+        return row;
+      });
+      const next = [...rows, ...made];
+      onChange(next);
+      const fill = made.map((row, i) => (row.item_code ? rows.length + i : -1)).filter((i) => i >= 0);
+      if (fill.length) void fillItemDefaultsMany(fill, next);
+      if (result.unmatched) setReadError(`Đã thêm ${made.length} dòng. ${result.unmatched} dòng chưa khớp được mã — xem ghi chú của dòng.`);
+    } catch (error) {
+      setReadError(error instanceof Error ? error.message : "Đọc phiếu thất bại");
+    } finally {
+      setReading(false);
+    }
+  };
+
+  /**
+   * KÉO GIÃN cột: bám theo con trỏ, chốt lại khi thả.
+   *
+   * Dùng pointer capture nên chuột đi ra ngoài ô tiêu đề vẫn kéo tiếp — không có nó thì thao
+   * tác đứt quãng ngay khi con trỏ vượt mép cột, đúng lúc đang muốn nới rộng. Chặn dưới 3rem:
+   * một cột 0px là cột không bấm được, và không có cách nào kéo nó trở lại.
+   */
+  const startResize = (fieldname: string, event: React.PointerEvent<HTMLElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const handle = event.currentTarget;
+    const header = handle.closest("th");
+    const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    const startX = event.clientX;
+    const startRem = (header?.getBoundingClientRect().width ?? 8 * rem) / rem;
+    handle.setPointerCapture(event.pointerId);
+    let latest = startRem;
+    const move = (e: PointerEvent) => {
+      latest = Math.max(3, startRem + (e.clientX - startX) / rem);
+      setLayout((prev) => ({ ...prev, w: { ...prev.w, [fieldname]: latest } }));
+    };
+    const done = () => {
+      handle.releasePointerCapture(event.pointerId);
+      handle.removeEventListener("pointermove", move);
+      handle.removeEventListener("pointerup", done);
+      saveLayout({ ...layout, w: { ...layout.w, [fieldname]: latest } });
+    };
+    handle.addEventListener("pointermove", move);
+    handle.addEventListener("pointerup", done);
+  };
+
+  /** ĐỔI CHỖ cột: thả cột đang kéo vào VỊ TRÍ của cột đích, các cột còn lại dồn theo. */
+  const dragged = useRef<string | null>(null);
+  const dropColumn = (target: string) => {
+    const source = dragged.current;
+    dragged.current = null;
+    if (!source || source === target) return;
+    const current = cols.map((c) => c.fieldname);
+    const without = current.filter((n) => n !== source);
+    const at = without.indexOf(target);
+    if (at < 0) return;
+    saveLayout({ ...layout, order: [...without.slice(0, at), source, ...without.slice(at)] });
+  };
+
+  const table = (
+    <>
       {/* CUỘN NGANG, không cắt. `overflow-hidden` trước đây giấu mất các cột phía sau mà
           không để lại dấu hiệu nào — bảng chỉ đơn giản là thiếu cột. Cột "#" GHIM lại bên
           trái khi cuộn, cách MISA làm, để không lạc dòng khi kéo sang phải. */}
       <div className="overflow-x-auto rounded-md border">
-        <Table className="table-fixed" style={{ minWidth: `${minWidthRem}rem` }}>
+        {/* Bảng lớn CHIA phần trong khung (`w-full`, không ép min-width) nên 12 cột vừa trọn
+            màn hình; bảng gọn vẫn tràn để cuộn vì khung của nó hẹp hơn tổng các cột. */}
+        <Table className={expanded ? "w-full table-fixed" : "table-fixed"} style={expanded ? undefined : { minWidth: `${minWidthRem}rem` }}>
           <colgroup>
             <col style={{ width: "2.5rem" }} />
+            {/*
+              MỌI cột đều khai bề rộng — kể cả cột ghi chú.
+              Để trống một cột nghĩa là "cột này nhận phần CÒN LẠI", và phần còn lại không có
+              giới hạn nào: trên màn hình rộng, ghi chú phình ra chiếm nửa bảng trong khi mã
+              hàng và số lượng chen chúc. Cũng chính chỗ trống đó từng cho ra cột rộng 0px khi
+              phần còn lại âm. Khai hết thì `table-fixed` giãn đều theo tỉ lệ — cân đối ở mọi
+              bề ngang, và không còn cột nào có thể biến mất.
+            */}
             {cols.map((c) => (
-              <col key={c.fieldname} {...(c.fieldname === flexible ? {} : { style: { width: columnWidth(c) } })} />
+              <col key={c.fieldname} style={{ width: columnWidth(c) || (c.fieldname === flexible ? "10rem" : gridWidth(c)) }} />
             ))}
             {!readOnly ? <col style={{ width: "4.5rem" }} /> : null}
           </colgroup>
@@ -485,9 +947,27 @@ export function ChildGrid(props: ChildGridProps) {
             <TableRow className="hover:bg-transparent">
               <TableHead className="sticky left-0 z-10 w-10 bg-card text-right">#</TableHead>
               {cols.map((c) => (
-                <TableHead key={c.fieldname} className={`truncate whitespace-nowrap ${stickyIdentity(c.fieldname)}`}>
+                <TableHead
+                  key={c.fieldname}
+                  className={`group relative truncate whitespace-nowrap ${stickyIdentity(c.fieldname)}`}
+                  draggable={!readOnly}
+                  onDragStart={() => { dragged.current = c.fieldname; }}
+                  onDragOver={(event) => { if (dragged.current) event.preventDefault(); }}
+                  onDrop={() => dropColumn(c.fieldname)}
+                  title={readOnly ? undefined : "Kéo tiêu đề để đổi chỗ cột · kéo mép phải để giãn"}
+                >
                   {c.label ?? c.fieldname}
                   {c.reqd ? <span className="mf-required ml-0.5 text-destructive">*</span> : null}
+                  {!readOnly ? (
+                    /* Tay kéo nằm ĐÈ lên mép phải của ô tiêu đề, rộng 6px để bấm trúng được
+                       bằng chuột mà không cần ngắm. Mờ đi cho tới khi rê vào cột. */
+                    <span
+                      role="presentation"
+                      onPointerDown={(event) => startResize(c.fieldname, event)}
+                      onDragStart={(event) => event.preventDefault()}
+                      className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize opacity-0 transition group-hover:opacity-100 hover:bg-primary/60"
+                    />
+                  ) : null}
                 </TableHead>
               ))}
               {!readOnly ? <TableHead className="w-10" /> : null}
@@ -495,7 +975,11 @@ export function ChildGrid(props: ChildGridProps) {
           </TableHeader>
           <TableBody>
             {rows.map((row, ri) => (
-              <TableRow key={String(row.name ?? ri)} className="hover:bg-transparent">
+              <TableRow
+                key={String(row.name ?? ri)}
+                className={expanded && pickedRow === ri ? "bg-primary/10 hover:bg-primary/10" : "hover:bg-transparent"}
+                {...(expanded ? { onFocusCapture: () => setPickedRow(ri), onClick: () => setPickedRow(ri) } : {})}
+              >
                 <TableCell className="sticky left-0 z-10 bg-card text-right text-xs text-muted-foreground">{ri + 1}</TableCell>
                 {cols.map((c) => {
                   const Control = registry.resolve(c.fieldtype) ?? FallbackControl;
@@ -504,11 +988,20 @@ export function ChildGrid(props: ChildGridProps) {
                   // KẾ THỪA từ cha (DocType con permissions rỗng) — grid đã gate bằng readOnly field cha
                   // (H1). Vẫn tôn trọng read_only/read_only_depends_on/docstatus + masked_fields server.
                   const rf = resolveField(c, childMeta, { doc: row, parent: parentDoc, roles, assumeWritable: true });
-                  if (!rf.visible) {
+                  /**
+                   * Bảng lớn LUÔN vẽ ô nhập, kể cả field đang bị `depends_on` ẩn.
+                   *
+                   * `depends_on` của các field quy cách đọc `inventory_mode` — thứ chỉ có SAU khi
+                   * đã chọn mã hàng. Nên trên một dòng còn trống, gần như mọi cột hiện dấu "—":
+                   * bảng trông như bị khoá cứng, và không dán được gì vào vì ô nhập không tồn tại.
+                   * Ở bảng gọn thì "—" đúng (đã biết hàng gì rồi thì cột không liên quan chỉ gây
+                   * nhiễu); ở trang tính thì cột phải có sẵn để còn dán cả khối vào.
+                   */
+                  if (!rf.visible && !expanded) {
                     return <TableCell key={c.fieldname} className={`align-top text-center text-xs text-muted-foreground ${stickyIdentity(c.fieldname)}`}>—</TableCell>;
                   }
                   return (
-                    <TableCell key={c.fieldname} className={`align-top ${stickyIdentity(c.fieldname)}`}>
+                    <TableCell key={c.fieldname} data-cell={`${ri}:${cols.indexOf(c)}`} className={`align-top ${stickyIdentity(c.fieldname)}`}>
                       <Control
                         field={c}
                         value={row[c.fieldname]}
@@ -563,11 +1056,142 @@ export function ChildGrid(props: ChildGridProps) {
           </TableBody>
         </Table>
       </div>
-      {!readOnly ? (
-        <Button type="button" variant="outline" size="sm" onClick={addRow}>
-          <Plus /> {t("grid.add_row")}
+    </>
+  );
+
+  /** Bảng field của MỘT dòng — dùng cho cả hộp chi tiết và panel bên phải của bảng lớn. */
+  const rowFields = (idx: number, columns: string) => {
+    const row = rows[idx];
+    if (!row) return null;
+    return (
+      <div className={`grid min-w-0 gap-x-3 gap-y-3 ${columns}`}>
+        {(childMeta.fields ?? []).filter((f) => !isLayout(f.fieldtype)).map((f) => {
+          const rf = resolveField(f, childMeta, { doc: row, parent: parentDoc, roles, assumeWritable: true });
+          if (!rf.visible) return null;
+          const Control = registry.resolve(f.fieldtype) ?? FallbackControl;
+          return (
+            <div key={f.fieldname} className={`grid min-w-0 gap-1.5 ${columns.includes("grid-cols-1") ? "" : detailFieldSpan(f)}`}>
+              <label className="text-sm font-medium" htmlFor={`detail-${f.fieldname}`}>
+                {f.label ?? f.fieldname}
+                {f.reqd ? <span className="mf-required ml-0.5 text-destructive">*</span> : null}
+              </label>
+              <Control
+                field={f}
+                value={row[f.fieldname]}
+                onChange={(v: unknown) => setCell(idx, f.fieldname, v)}
+                readOnly={readOnly || rf.readOnly}
+                masked={rf.masked}
+                services={services}
+                docname={String(row.name ?? "")}
+                linkTarget={dynamicLinkTarget(f, row)}
+                parentDoctype={childMeta.name}
+                docValues={row}
+                roles={roles}
+              />
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const toolbar = !readOnly ? (
+    <div className="flex flex-wrap items-center gap-2">
+      <Button type="button" variant="outline" size="sm" onClick={addRow}>
+        <Plus /> {t("grid.add_row")}
+      </Button>
+      {expanded ? (
+        <>
+          <Button type="button" variant="outline" size="sm" onClick={() => addRows(10)}>
+            <Plus /> Thêm 10 dòng
+          </Button>
+          <Button type="button" variant="outline" size="sm" disabled={pickedRow == null} onClick={() => pickedRow != null && cloneRow(pickedRow)}>
+            <Copy /> Nhân bản dòng
+          </Button>
+          <Button type="button" variant="outline" size="sm" disabled={pickedRow == null} onClick={() => pickedRow != null && fillDown(pickedRow)} title="Chép giá trị của dòng đang chọn xuống các ô còn TRỐNG ở dưới">
+            <ArrowDownToLine /> Điền xuống
+          </Button>
+          <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium hover:bg-accent">
+            <ScanLine className="size-4" />
+            {reading ? "Đang đọc ảnh…" : "Đọc phiếu bằng ảnh"}
+            <input
+              type="file" accept="image/*" capture="environment" className="sr-only" disabled={reading}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.target.value = "";                 // chọn lại đúng tệp đó vẫn phải chạy
+                if (file) void onPickReceiptImage(file);
+              }}
+            />
+          </label>
+          <span className="text-xs text-muted-foreground">Chép vùng trong Excel rồi Ctrl+V ngay trên bảng</span>
+        </>
+      ) : (
+        <Button type="button" variant="outline" size="sm" onClick={() => { setExpanded(true); setPickedRow(rows.length ? 0 : null); }}>
+          <Maximize2 /> Mở bảng lớn
+        </Button>
+      )}
+      {/* Kéo nhầm một cột về 3rem rồi mở lại vẫn thấy nó bé tí là một cái bẫy không lối ra —
+          tuỳ chỉnh nào lưu lại được cũng phải có đường hoàn tác. */}
+      {layout.order.length || Object.keys(layout.w).length ? (
+        <Button type="button" variant="ghost" size="sm" onClick={() => saveLayout({ w: {}, order: [] })}>
+          <RotateCcw /> Cột về mặc định
         </Button>
       ) : null}
+      <span className="ml-auto text-xs text-muted-foreground">{rows.length} dòng</span>
+    </div>
+  ) : null;
+
+  if (expanded) {
+    return (
+      <div className="mf-grid space-y-2">
+        <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+          Đang nhập ở bảng lớn — {rows.length} dòng.
+        </div>
+        <Dialog open onOpenChange={(open) => { if (!open) setExpanded(false); }}>
+          <DialogContent className="flex h-[94vh] w-[97vw] max-w-none flex-col gap-0 overflow-hidden p-0">
+            <DialogHeader className="shrink-0">
+              <DialogTitle className="flex items-center gap-3 border-b px-4 py-3">
+                <span>{childMeta.label ?? childMeta.name}</span>
+                <Button type="button" size="sm" className="ml-auto" onClick={() => setExpanded(false)}>
+                  Lưu và quay lại
+                </Button>
+              </DialogTitle>
+            </DialogHeader>
+            <div className="shrink-0 border-b px-4 py-2">{toolbar}</div>
+            {readError ? (
+              <div className="shrink-0 border-b bg-amber-500/10 px-4 py-2 text-sm text-amber-700 dark:text-amber-400" role="status">
+                {readError}
+                <button type="button" className="ml-2 underline" onClick={() => setReadError(null)}>bỏ qua</button>
+              </div>
+            ) : null}
+            {/* Bảng chiếm trọn bề ngang. Field không có cột ở đây vẫn tới được qua nút chi tiết
+                dòng (⛶) của bảng gọn — không mất field nào, chỉ là không nhét hết vào một lưới. */}
+            {/*
+              `min-w-0` là thứ giữ bảng NẰM TRONG hộp thoại.
+              Mặc định một con flex rộng tối thiểu bằng nội dung của nó, nên bảng rộng hơn màn
+              hình sẽ đẩy phình cả hộp thoại — thanh công cụ và nút "Lưu và quay lại" trôi ra
+              ngoài mép phải, đúng thứ nhìn thấy trên ảnh chụp. Có `min-w-0` thì phần tràn
+              thuộc về thanh cuộn của riêng vùng bảng.
+            */}
+            <div
+              ref={gridRef}
+              className="mf-grid-excel min-h-0 min-w-0 flex-1 overflow-auto p-3"
+              onPaste={onPasteGrid}
+              onCopy={onCopyGrid}
+              onKeyDown={onGridKeyDown}
+            >
+              {table}
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mf-grid space-y-2">
+      {table}
+      {toolbar}
 
       {/*
         CHI TIẾT DÒNG — mọi field của dòng, kể cả field không làm cột.
@@ -589,37 +1213,9 @@ export function ChildGrid(props: ChildGridProps) {
               </span>
             </DialogTitle>
           </DialogHeader>
-          {detailRow != null && rows[detailRow] ? (
-            <div className="grid grid-cols-1 gap-x-3 gap-y-3 px-5 pb-5 sm:grid-cols-2 lg:grid-cols-3">
-              {(childMeta.fields ?? []).filter((f) => !isLayout(f.fieldtype)).map((f) => {
-                const row = rows[detailRow]!;
-                const rf = resolveField(f, childMeta, { doc: row, parent: parentDoc, roles, assumeWritable: true });
-                if (!rf.visible) return null;
-                const Control = registry.resolve(f.fieldtype) ?? FallbackControl;
-                return (
-                  <div key={f.fieldname} className={`grid min-w-0 gap-1.5 ${detailFieldSpan(f)}`}>
-                    <label className="text-sm font-medium" htmlFor={`detail-${f.fieldname}`}>
-                      {f.label ?? f.fieldname}
-                      {f.reqd ? <span className="mf-required ml-0.5 text-destructive">*</span> : null}
-                    </label>
-                    <Control
-                      field={f}
-                      value={row[f.fieldname]}
-                      onChange={(v: unknown) => setCell(detailRow, f.fieldname, v)}
-                      readOnly={readOnly || rf.readOnly}
-                      masked={rf.masked}
-                      services={services}
-                      docname={String(row.name ?? "")}
-                      linkTarget={dynamicLinkTarget(f, row)}
-                      parentDoctype={childMeta.name}
-                      docValues={row}
-                      roles={roles}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          ) : null}
+          {detailRow != null && rows[detailRow]
+            ? <div className="px-5 pb-5">{rowFields(detailRow, "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3")}</div>
+            : null}
         </DialogContent>
       </Dialog>
     </div>
