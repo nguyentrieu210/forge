@@ -368,10 +368,8 @@
   "items": [
    "Sales Order",
    "Delivery Note",
-   "Aluminium Lot",
    "action:cat-nhom",
    "Stock Entry",
-   "Aluminium Cut",
    "action:hoan-cat",
    "action:tra-hang",
    "Purchase Order",
@@ -414,7 +412,12 @@
    "Item Attribute",
    "Supplier Item",
    "Brand",
-   "Manufacturer"
+   "Manufacturer",
+   "Cut Order",
+   "Stock Reservation",
+   "Stock Reconciliation",
+   "Lý do huỷ",
+   "Nguyên nhân chênh lệch"
   ]
  },
  "fixtures": [
@@ -4553,6 +4556,204 @@
     "Chủ xưởng": "rwc",
     "Thủ kho": "r",
     "Kế toán": "r",
+    "Sản xuất": "r",
+    "Kinh doanh": "r"
+   }
+  },
+  {
+   "//": [
+    "Thay `Aluminium Cut`. Ban cũ thiếu 6 thứ: không ghi sổ kho, không kg tiêu hao, không kerf,",
+    "không sinh đầu thừa, một phiếu chỉ một lô, voucher_no là Data tự do.",
+    "HAI bundle ngược chiều — copy khuôn `Stock Entry` mục đích Manufacture (bundle trên DÒNG",
+    "cho vật tư tiêu hao + bundle trên ĐẦU PHIẾU cho thành phẩm nhập kho)."
+   ],
+   "name": "Cut Order",
+   "label": "Phiếu cắt nhôm",
+   "icon": "scissors",
+   "group": "Sản xuất",
+   "naming": "CN-.YYYY.-#####",
+   "title": "so_reference",
+   "submittable": true,
+   "list": [
+    "cut_on",
+    "cutting_policy",
+    "customer",
+    "cut_state"
+   ],
+   "search": [
+    "so_reference",
+    "customer"
+   ],
+   "fields": [
+    "cut_on:Datetime!=(Now) Thời điểm cắt",
+    "cutting_policy:Link(Cutting Policy)! Công thức cửa",
+    "customer:Link(Customer) Khách hàng",
+    "so_reference:Data Số chứng từ đơn hàng",
+    "items:Table(Cut Order Item)! Dòng cắt",
+    {
+     "//": "Bundle Inward ở kho Đầu thừa. Nhân tạo, người dùng không chọn.",
+     "fieldname": "offcut_bundle",
+     "fieldtype": "Link",
+     "options": "Serial and Batch Bundle",
+     "label": "Lô đầu thừa sinh ra",
+     "read_only": true
+    },
+    "cut_state:Select(Đã cắt,Đã hoàn cắt,Đã trả hàng)!=(Đã cắt) Trạng thái",
+    "cancel_reason:Link(Lý do huỷ) Lý do hoàn/trả",
+    "note:Small Text Ghi chú"
+   ],
+   "permissions": {
+    "Chủ xưởng": "rwcsxa",
+    "Thủ kho": "rwcsxa",
+    "Sản xuất": "rwcsxa",
+    "Kế toán": "r"
+   }
+  },
+  {
+   "name": "Cut Order Item",
+   "child": true,
+   "label": "Dòng phiếu cắt",
+   "group": "Sản xuất",
+   "naming": "autoincrement",
+   "title": "item_code",
+   "list": [
+    "item_code",
+    "cut_width_m",
+    "sheets_cut",
+    "offcut_length_m"
+   ],
+   "fields": [
+    "serial_and_batch_bundle:Link(Serial and Batch Bundle)! Lô đem cắt (bundle Outward)",
+    "item_code:Link(Item)! Mã nhôm",
+    "source_length_m:Float! Khổ cây (m)",
+    "cut_width_m:Float! Rộng cắt lá (m)",
+    "sheets_cut:Float! Số lá cắt",
+    "cuts_count:Int Số nhát cắt",
+    "kerf_total_m:Float~- Tổng kerf (m)",
+    "kg_consumed:Float Kg tiêu hao",
+    "kg_weighed:Float Kg cân thật lúc xuất",
+    "offcut_length_m:Float~- Đầu thừa (m)",
+    "scrap_m:Float Phế bỏ hẳn (m)",
+    "note:Data Ghi chú"
+   ],
+   "permissions": {
+    "Chủ xưởng": "rwcsxa",
+    "Thủ kho": "rwcsxa",
+    "Sản xuất": "rwcsxa",
+    "Kế toán": "r"
+   }
+  },
+  {
+   "//": "Giữ chỗ theo (mã · màu · tình trạng · KHỔ TỐI THIỂU) — KHÔNG khoá lô cụ thể, vì khoá lô là phá cơ chế chọn lô tối ưu lúc cắt.",
+   "name": "Stock Reservation",
+   "label": "Giữ chỗ tồn",
+   "icon": "lock",
+   "group": "Kho",
+   "naming": "GC-.YYYY.-#####",
+   "title": "item_code",
+   "list": [
+    "item_code",
+    "color",
+    "min_length_m",
+    "qty_reserved",
+    "state"
+   ],
+   "search": [
+    "item_code",
+    "source_name"
+   ],
+   "fields": [
+    "item_code:Link(Item)! Mã nhôm",
+    "color:Link(Item Color) Màu (trống = mọi màu)",
+    "condition:Select(Thô,Đã sơn,Lỗi) Tình trạng (trống = mọi tình trạng)",
+    "min_length_m:Float! Khổ tối thiểu (m)",
+    "warehouse:Link(Warehouse) Kho (trống = mọi kho chính)",
+    "qty_reserved:Float! Số lá giữ",
+    "source_doctype:Select(Production Order,Sales Order,Cut Order)! Giữ cho",
+    "source_name:Data! Số chứng từ nguồn",
+    "reserved_at:Datetime!=(Now) Giữ lúc",
+    "expires_at:Datetime Hết hạn",
+    "state:Select(Đang giữ,Đã dùng,Đã nhả,Hết hạn)!=(Đang giữ) Trạng thái",
+    "released_reason:Link(Lý do huỷ) Lý do nhả"
+   ],
+   "permissions": {
+    "Chủ xưởng": "rwcsxa",
+    "Kế toán": "rwc",
+    "Thủ kho": "r",
+    "Sản xuất": "r",
+    "Kinh doanh": "r"
+   }
+  },
+  {
+   "//": "CHỤP số sổ tại snapshot_at rồi mới đếm — nếu so với sổ lúc bấm ghi thì mọi giao dịch phát sinh giữa chừng thành chênh lệch giả.",
+   "name": "Stock Reconciliation",
+   "label": "Kiểm kê kho",
+   "icon": "clipboard-check",
+   "group": "Kho",
+   "naming": "KK-.YYYY.-####",
+   "title": "warehouse",
+   "submittable": true,
+   "list": [
+    "warehouse",
+    "snapshot_at",
+    "counted_by",
+    "recon_state"
+   ],
+   "search": [
+    "warehouse"
+   ],
+   "fields": [
+    "warehouse:Link(Warehouse)! Kho kiểm kê",
+    "scope:Select(Toàn kho,Theo nhóm hàng,Theo mã hàng)!=(Toàn kho) Phạm vi",
+    "item_group:Link(Item Group) Nhóm hàng",
+    "item_code:Link(Item) Mã hàng",
+    "snapshot_at:Datetime!=(Now) Thời điểm chốt số sổ",
+    "counted_by:Link(User)! Người đếm",
+    "witnessed_by:Link(User) Người chứng kiến",
+    "items:Table(Stock Reconciliation Item)! Dòng đếm",
+    "recon_state:Select(Nháp,Đang đếm,Chờ duyệt,Đã ghi sổ,Đã huỷ)!=(Nháp) Trạng thái",
+    "cancel_reason:Link(Lý do huỷ) Lý do huỷ",
+    "note:Small Text Ghi chú"
+   ],
+   "permissions": {
+    "Chủ xưởng": "rwcsxa",
+    "Thủ kho": "rwc",
+    "Kế toán": "rwcs",
+    "Sản xuất": "r",
+    "Kinh doanh": "r"
+   }
+  },
+  {
+   "name": "Stock Reconciliation Item",
+   "child": true,
+   "label": "Dòng kiểm kê",
+   "group": "Kho",
+   "naming": "autoincrement",
+   "title": "item_code",
+   "list": [
+    "item_code",
+    "book_qty",
+    "counted_qty",
+    "variance_qty",
+    "variance_reason"
+   ],
+   "fields": [
+    "item_code:Link(Item)! Mã hàng",
+    "serial_and_batch_bundle:Link(Serial and Batch Bundle) Lô đếm được",
+    "book_qty:Float~- Số sổ (chụp lúc chốt)",
+    "book_weight_kg:Float~- Kg theo sổ",
+    "counted_qty:Float! Số đếm thực tế",
+    "counted_weight_kg:Float Kg cân thực tế",
+    "variance_qty:Float~- Chênh lệch",
+    "variance_weight_kg:Float~- Chênh kg",
+    "variance_reason:Link(Nguyên nhân chênh lệch) Nguyên nhân",
+    "variance_note:Data Diễn giải",
+    "photo:Attach Image Ảnh hiện trạng"
+   ],
+   "permissions": {
+    "Chủ xưởng": "rwcsxa",
+    "Thủ kho": "rwc",
+    "Kế toán": "rwcs",
     "Sản xuất": "r",
     "Kinh doanh": "r"
    }
