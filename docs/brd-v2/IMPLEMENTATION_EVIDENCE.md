@@ -98,9 +98,23 @@ Không submit chứng từ nghiệp vụ trong Browser QA; các side effect đã
   guest API 403.
 - Browser production đăng nhập thành công; home `Tồn nhôm theo khổ`, action `Cắt nhôm`
   và danh sách `Kiểm kê kho` đều mở được.
+- Trước khi nhập dữ liệu thật đã tạo backup `alu-2026-07-29T21-20-23-660Z.sql`
+  (SHA-256 `94915e4d0d3697f28c097ebdf9f01e085804dc04bf8901f2684176b87f9a0cc4`) và
+  restore thành công vào D1 drill `cloudforge-drill-alumdoor-data-20260730` với 67 bảng,
+  `quick_check=ok`, không đổi route.
+- Ba workbook nguồn khớp SHA audit; SQL import đầy đủ được áp hai lần trên drill và giữ đúng
+  3.562 khóa duy nhất, không nhân bản, không phát sinh stock/GL/payment ledger.
+- Import production chạy một lần và đối chiếu đạt: 1.257 lô / 43.601 cây-lá, 439 khách hàng,
+  22 nhà cung cấp, 17 Item nhôm, 7 màu, 1.474 đơn hàng cũ, 254 nhật ký nhập, 86 bảo hành,
+  6 định mức; `documents=search_rows=distinct_keys=3.562`, migration 25/25,
+  `quick_check=ok`.
+- Smoke đăng nhập production sau import đọc đúng count của bốn danh sách chính và đăng xuất
+  thành công; `/health` 200, shell 200, guest API vẫn 403.
 
 ## 6. Ranh giới còn lại
 
-Không submit chứng từ nghiệp vụ giả trên production. Pilot có ghi dữ liệu nhập — giữ chỗ —
-cắt/đầu thừa — kiểm kê và đối chiếu cây/kg/giá trị vẫn cần dữ liệu thật hoặc staging chuyên
-dụng. Đây là cổng vận hành còn mở; không phải lỗi build/deploy.
+Không submit chứng từ nghiệp vụ giả trên production. Import vừa thực hiện chỉ đưa master và
+chứng từ lịch sử vào các DocType tham chiếu. Workbook tồn không có giá trị kg, nên không thể
+tạo số dư mở đầu hoặc stock ledger đáng tin cậy. Pilot nhập có kg cân thật — giữ chỗ —
+cắt/đầu thừa — kiểm kê và đối chiếu cây/kg/giá trị vẫn là cổng vận hành còn mở; không phải lỗi
+build/deploy.

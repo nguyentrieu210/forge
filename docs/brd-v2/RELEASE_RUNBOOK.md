@@ -144,8 +144,14 @@ Không rollback bằng cách sửa trực tiếp `installed_apps`, xóa migratio
 - hai restore drill độc lập đạt 64 bảng và `quick_check=ok`;
 - migration production tới 25/25;
 - deploy tenant Worker, app Worker, gateway/client design;
-- cài `alumdoor@2.0.0` và hậu kiểm D1/HTTP/Browser production.
+- cài `alumdoor@2.0.0` và hậu kiểm D1/HTTP/Browser production;
+- tạo thêm backup ngay trước import dữ liệu thật, restore drill 67 bảng đạt;
+- xác minh bộ import idempotent hai lần trên drill, sau đó nhập một lần vào production;
+- đối chiếu đạt 3.562 hồ sơ/khóa/search row, gồm 1.257 lô và 43.601 cây-lá;
+  stock/GL/payment ledger vẫn bằng 0, migration 25/25, `quick_check=ok`;
+- smoke đăng nhập đọc đúng count danh sách chính, đăng xuất thành công; health/shell 200 và
+  guest API 403.
 
-Chưa chạy pilot có ghi dữ liệu vì production hiện không có chứng từ nghiệp vụ và release
-không tự tạo dữ liệu giả. Checklist pilot mục 4 vẫn phải chạy với dữ liệu thật hoặc staging
-chuyên dụng trước khi chuyển Pha 7 từ vàng sang hoàn tất.
+Chưa chạy pilot có ghi ledger. Dữ liệu vừa nhập là master/chứng từ lịch sử tham chiếu; workbook
+tồn không có kg nên không thể tạo số dư mở đầu đáng tin cậy. Checklist pilot mục 4 vẫn phải
+chạy với kg cân thật hoặc staging chuyên dụng trước khi chuyển Pha 7 từ vàng sang hoàn tất.

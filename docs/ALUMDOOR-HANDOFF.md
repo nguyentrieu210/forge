@@ -1,6 +1,6 @@
 # ALUMDOOR — BÀN GIAO CHO PHIÊN SAU
 
-> Cập nhật: **2026-07-30 04:03 (UTC+7)**
+> Cập nhật: **2026-07-30 04:37 (UTC+7)**
 > Mã nguồn release: **`C:\Forge-worktrees\platform-design`**
 > Production: **<https://alu.kairo.vn>** — app **Alumdoor 2.0.0**
 > Tenant `alu` · D1 `cloudforge-alu` · id `6781cbc1-8635-4b6e-af46-09297c120cff`
@@ -28,8 +28,11 @@ Mốc release phải nhớ:
 - Hậu kiểm D1 `quick_check=ok`; HTTP health 200, shell 200, guest API 403 đúng bảo vệ.
 - Browser production đăng nhập thật, mở được home `Tồn nhôm theo khổ`, `Cắt nhôm` và
   `Kiểm kê kho`.
-- Chưa tạo giao dịch nghiệp vụ giả trên production. Pilot có ghi dữ liệu và đối chiếu
-  cây/kg/giá trị vẫn là việc vận hành cần thực hiện với dữ liệu thật hoặc staging chuyên dụng.
+- Dữ liệu thật từ ba workbook đã được nhập vào production theo dạng master/chứng từ lịch sử:
+  **3.562 hồ sơ**, gồm 1.257 lô, 439 khách hàng và 1.474 đơn hàng cũ; import chạy đúng một
+  lần, không sinh stock/GL/payment ledger giả.
+- Chưa tạo giao dịch nghiệp vụ giả trên production. Pilot có ghi ledger và đối chiếu
+  cây/kg/giá trị vẫn là việc vận hành cần thực hiện sau khi có số kg cân thật.
 
 ## 1. Đọc phần này trước — quyết định nghiệp vụ mới nhất
 
@@ -71,23 +74,47 @@ Tài liệu `docs/ALUMDOOR-QUY-TRINH.md` và `docs/ALUMDOOR-MUA-HANG-THIET-KE.md
 - Restore drill B: `cloudforge-drill-alumdoor-v2-b`
   (`47a59332-549c-4bde-a1ce-8d6dfa71e1b5`) — 64 bảng, integrity đạt.
 
-### 2.3 Số liệu đã đọc lại trực tiếp sau deploy
+### 2.3 Bản sao ngay trước khi nhập dữ liệu thật
+
+- SQL: `C:\Forge-worktrees\platform-design\server\backups\alu\alu-2026-07-29T21-20-23-660Z.sql`
+- Manifest: cùng tên, đuôi `.sql.json`
+- SHA-256: `94915e4d0d3697f28c097ebdf9f01e085804dc04bf8901f2684176b87f9a0cc4`
+- Dung lượng: `3.452.683` byte
+- Bản mã hoá DPAPI ngoài Cloudflare:
+  `C:\AppWeb\_BanGiao\backups\Alumdoor\alu-2026-07-29T21-20-23-660Z.sql.dpapi`
+- Restore drill: `cloudforge-drill-alumdoor-data-20260730`
+  (`23f0dd12-0431-414b-b083-99043531a80c`) — 67 bảng, `quick_check=ok`, không đổi route.
+- Cùng bộ import đã được áp hai lần trên drill; số khóa vẫn giữ nguyên 3.562, chứng minh
+  cơ chế upsert không nhân bản dữ liệu.
+
+### 2.4 Số liệu đọc lại trực tiếp sau import production
 
 | Hạng mục | Kết quả |
 |---|---:|
-| Tổng chứng từ trong tenant | 0 |
+| Tổng hồ sơ trong tenant | 3.562 |
+| Khách hàng | 439 |
+| Nhà cung cấp | 22 |
+| Item nhôm | 17 |
+| Màu nhôm | 7 |
+| Lô nhôm | 1.257 |
+| Tổng số cây/lá trong lô | 43.601 |
+| Đơn hàng cũ | 1.474 |
+| Nhật ký nhập cũ | 254 |
+| Bảo hành | 86 |
+| Định mức công đoạn | 6 |
 | Master records | 57 |
 | DocType thuộc app | 69 |
 | Custom Field thuộc app | 10 |
 | Print Format thuộc app | 7 |
 | Stock ledger | 0 |
+| GL / Payment ledger | 0 / 0 |
+| Search index / khóa duy nhất | 3.562 / 3.562 |
 | Migration tenant | 25 |
 | D1 quick check | `ok` |
 
-Các con số 4.435 chứng từ và 1.257 lô ở bản bàn giao cũ không có trong D1 production
-`6781cbc1-8635-4b6e-af46-09297c120cff` được đọc trực tiếp trước release V2. D1 hiện hành là
-nguồn có thẩm quyền; không được phục dựng các số liệu cũ bằng cách chạy lại full import khi
-chưa xác định nguồn database khác nhau.
+Đăng nhập thật qua API production đã đọc được đúng tổng của các danh sách chính: 1.257 lô,
+439 khách hàng, 1.474 đơn hàng cũ và 254 nhật ký nhập cũ. Con số 4.435 chứng từ ở bản bàn giao
+cũ không phải số hiện hành; D1 production và audit import này là nguồn có thẩm quyền.
 
 ## 3. Việc vừa hoàn thành ở 1.20.1
 
@@ -180,13 +207,17 @@ Không nên viết lại toàn bộ UI nữa nếu không có lỗi tái hiện 
 
 - 439 khách hàng.
 - 22 nhà cung cấp.
-- 277 Item và 292 dòng giá đã được giữ từ dữ liệu đã làm sạch trước đó.
-- 17 mã/profile nhôm, 7 mã màu xuất hiện trong sổ tồn.
+- 17 Item/profile nhôm và 7 mã màu xuất hiện trong sổ tồn.
+- 1.257 lô nhôm / 43.601 cây-lá; 106 lô LM/phế, 4 lô được đánh dấu chọn cắt,
+  163 lô có ghi chú nhập.
+- Trạng thái lô: 1.149 `TỒN`, 55 `SẮP HẾT`, 53 `HẾT`.
 - 1.474 đơn hàng cũ / 4.653 dòng đơn.
 - 254 nhật ký nhập cũ.
 - 86 bảo hành.
 - 6 định mức công đoạn.
-- Dữ liệu lịch sử nằm trong doctype tham chiếu, không tự sinh sổ kho/kế toán.
+- Dữ liệu lịch sử nằm trong doctype tham chiếu, không tự sinh sổ kho/kế toán. Workbook không
+  có kg tồn nên cả 1.257 lô đều chưa có `remaining_kg`; báo cáo V2 theo ledger/kg vì vậy vẫn
+  chỉ phản ánh giao dịch vận hành mới, không được bịa số dư mở đầu.
 
 Nguồn hiện còn ở:
 

@@ -10,7 +10,7 @@
 | 4 — Brief/cổng biên dịch | ✅ Qua cổng | `server/briefs/alumdoor-v2.json`; dry-run đạt, 69 DocType, 57 fixture, 67 mục điều hướng |
 | 5 — Build | ✅ Hoàn tất theo spec | Các lát cắt nghiệp vụ và nền tảng bên dưới |
 | 6 — Verify/QA trước release | ✅ Qua cổng cục bộ | Full server/SQL, Worker, typecheck, client build/selfcheck và Browser QA desktop/mobile đều đạt |
-| 7 — Release production | 🟡 Đã go-live, còn pilot giao dịch thật | Backup + 2 restore drill + migration + deploy + smoke đạt; production là Alumdoor 2.0.0 |
+| 7 — Release production | 🟡 Đã go-live và nhập dữ liệu thật, còn pilot ledger theo kg | Backup + restore drill + migration + deploy + import 3.562 hồ sơ + smoke đạt; production là Alumdoor 2.0.0 |
 
 ## Pha 5 — phạm vi đã hoàn tất
 
@@ -47,6 +47,8 @@
 - [x] Có phê duyệt rõ ràng từ người dùng để nhập nhánh design và deploy production.
 - [x] Deploy gateway/client, tenant Worker, app Worker và `alumdoor@2.0.0`.
 - [x] Hậu kiểm D1/HTTP/Browser production không ghi dữ liệu đạt.
+- [x] Backup mới + restore drill trước import; xác minh import idempotent hai lần trên drill.
+- [x] Nhập production 3.562 hồ sơ thật và đối chiếu count/search/key/integrity; không tạo ledger giả.
 
-Pha 7 giữ màu vàng cho tới khi có pilot giao dịch thật hoặc staging chuyên dụng. Không tạo
-chứng từ giả trên production chỉ để đánh dấu checklist.
+Pha 7 giữ màu vàng cho tới khi có pilot giao dịch thật có kg cân hoặc staging chuyên dụng.
+Workbook tồn không có kg nên không tạo số dư ledger giả chỉ để đánh dấu checklist.
