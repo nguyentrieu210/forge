@@ -9,8 +9,8 @@ const doctype = (name) => app.doctypes.find((entry) => entry.name === name);
 const field = (doctypeName, fieldname) =>
   doctype(doctypeName)?.fields.find((entry) => entry.fieldname === fieldname);
 
-test("Alumdoor 1.20 keeps imported history outside operational ledgers", () => {
-  assert.equal(brief.version, "1.20.0");
+test("Alumdoor 1.20.1 keeps imported history outside operational ledgers", () => {
+  assert.equal(brief.version, "1.20.1");
   assert.equal(doctype("Legacy Sales Order Item")?.is_child, true);
   assert.equal(field("Legacy Sales Order", "items")?.options, "Legacy Sales Order Item");
   assert.equal(doctype("Legacy Sales Order")?.is_submittable, false);
@@ -27,8 +27,30 @@ test("party masters preserve source classification and internal ownership", () =
   assert.equal(field("Supplier", "account_manager")?.fieldtype, "Data");
 });
 
-test("aluminium lots separate usable stock from scrap and retain migration trace", () => {
+test("aluminium lots follow the workshop stock columns and retain migration trace", () => {
+  assert.deepEqual(doctype("Aluminium Lot")?.fields.filter((entry) => entry.in_list_view).map((entry) => entry.fieldname), [
+    "profile",
+    "received_on",
+    "colour",
+    "generation",
+    "width_m",
+    "sheet_count",
+    "returned_on",
+    "stock_state",
+    "selected_for_cut",
+    "scrap_note",
+    "remaining_kg",
+    "intake_note",
+    "note",
+    "warehouse",
+  ]);
+  assert.equal(field("Aluminium Lot", "generation")?.label, "Tình trạng");
+  assert.equal(field("Aluminium Lot", "selected_for_cut")?.fieldtype, "Check");
+  assert.equal(field("Aluminium Lot", "remaining_kg")?.label, "Số kg tồn");
+  assert.equal(field("Aluminium Lot", "intake_note")?.label, "Nhập/Ghi chú");
+  assert.match(field("Aluminium Lot", "stock_state")?.options ?? "", /SẮP HẾT/);
   assert.equal(field("Aluminium Lot", "quality_status")?.default, "Khả dụng");
+  assert.equal(field("Aluminium Lot", "quality_status")?.hidden, true);
   assert.equal(field("Aluminium Lot", "legacy_source_key")?.hidden, true);
   assert.equal(field("Aluminium Lot", "source_sheet")?.hidden, true);
   assert.equal(field("Aluminium Lot", "source_row")?.hidden, true);

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Builds a bounded D1 metadata release equivalent to installing alumdoor@1.20.0.
+ * Builds a bounded D1 metadata release equivalent to installing alumdoor@1.20.1.
  *
  * This is the authenticated-installer fallback for a tenant whose administrator
  * password is intentionally unavailable to the deployment shell. Every statement is
@@ -16,8 +16,8 @@ if (!manifestArg || !outputArg) {
   throw new Error("usage: node build-alumdoor-remaining-release-metadata.mjs <manifest.json> <output.sql>");
 }
 const manifest = JSON.parse(await readFile(resolve(manifestArg), "utf8"));
-if (manifest.id !== "alumdoor" || manifest.version !== "1.20.0") {
-  throw new Error(`Expected alumdoor@1.20.0, received ${manifest.id}@${manifest.version}`);
+if (manifest.id !== "alumdoor" || manifest.version !== "1.20.1") {
+  throw new Error(`Expected alumdoor@1.20.1, received ${manifest.id}@${manifest.version}`);
 }
 
 function sortValue(value) {
@@ -27,11 +27,11 @@ function sortValue(value) {
 }
 const sqlString = (value) => `'${String(value).replaceAll("'", "''")}'`;
 const contentHash = createHash("sha256").update(JSON.stringify(sortValue(manifest))).digest("hex");
-const now = "2026-07-29T05:15:00.000Z";
+const now = "2026-07-29T06:10:00.000Z";
 const versionGuard = `EXISTS (
     SELECT 1 FROM installed_apps
     WHERE tenant_id='alu' AND app_id='alumdoor'
-      AND version IN ('1.19.0', '1.19.1', '1.20.0')
+      AND version IN ('1.19.0', '1.19.1', '1.20.0', '1.20.1')
       AND content_hash<>${sqlString(contentHash)}
   )`;
 
@@ -153,14 +153,14 @@ statements.push(`UPDATE installed_apps
 SET manifest_json=json_set(manifest_json,'$.doctypes',json('[]')),
     modified_at=${sqlString(now)}
 WHERE tenant_id='alu' AND app_id='alumdoor'
-  AND version IN ('1.19.0','1.19.1','1.20.0')
+  AND version IN ('1.19.0','1.19.1','1.20.0','1.20.1')
   AND content_hash<>${sqlString(contentHash)};`);
 for (const doctype of manifest.doctypes) {
   statements.push(`UPDATE installed_apps
 SET manifest_json=json_insert(manifest_json,'$.doctypes[#]',json(${sqlString(JSON.stringify(doctype))})),
     modified_at=${sqlString(now)}
 WHERE tenant_id='alu' AND app_id='alumdoor'
-  AND version IN ('1.19.0','1.19.1','1.20.0')
+  AND version IN ('1.19.0','1.19.1','1.20.0','1.20.1')
   AND content_hash<>${sqlString(contentHash)};`);
 }
 for (const [key, value] of Object.entries(manifest)) {
@@ -169,7 +169,7 @@ for (const [key, value] of Object.entries(manifest)) {
 SET manifest_json=json_set(manifest_json,${sqlString(`$.${key}`)},json(${sqlString(JSON.stringify(value))})),
     modified_at=${sqlString(now)}
 WHERE tenant_id='alu' AND app_id='alumdoor'
-  AND version IN ('1.19.0','1.19.1','1.20.0')
+  AND version IN ('1.19.0','1.19.1','1.20.0','1.20.1')
   AND content_hash<>${sqlString(contentHash)};`);
 }
 statements.push(`UPDATE installed_apps
@@ -178,7 +178,7 @@ SET app_name=${sqlString(manifest.name)},
     content_hash=${sqlString(contentHash)},
     modified_at=${sqlString(now)}
 WHERE tenant_id='alu' AND app_id='alumdoor'
-  AND version IN ('1.19.0','1.19.1','1.20.0')
+  AND version IN ('1.19.0','1.19.1','1.20.0','1.20.1')
   AND content_hash<>${sqlString(contentHash)};`);
 
 const MAX_PART_BYTES = 80_000;

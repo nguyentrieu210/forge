@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the bounded Alumdoor 1.19 metadata release on a local tenant export."""
+"""Validate a bounded Alumdoor metadata release on a local tenant export."""
 
 from __future__ import annotations
 
@@ -58,8 +58,8 @@ def main() -> None:
                 raise AssertionError("Alumdoor app disappeared")
             version, stored_hash, stored_manifest_text = installed
             stored_manifest = json.loads(stored_manifest_text)
-            if version != "1.19.0":
-                raise AssertionError(f"Wrong app version: {version}")
+            if version != manifest["version"]:
+                raise AssertionError(f"Wrong app version: {version} != {manifest['version']}")
             if stored_hash != content_hash:
                 raise AssertionError(f"Wrong content hash: {stored_hash} != {content_hash}")
             if stored_manifest != manifest:

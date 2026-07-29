@@ -1,0 +1,100 @@
+{
+  "format": "cloudforge-alumdoor-remaining-import/v1",
+  "generated_at": "2026-07-29T00:00:00.000Z",
+  "tenant": "alu",
+  "warehouse_assumption": "K36",
+  "sources": [
+    {
+      "file": "2026 ĐƠN HÀNG - XUẤT HÀNG.xlsx",
+      "sha256": "95fcc0adbf4575b85e6c07da70b437450207090ebb378dabef5f16ad6690b285"
+    },
+    {
+      "file": "TỒN NHÔM 2026 NEW.xlsx",
+      "sha256": "c2e6c8fa2a64dd36ba8ec3f8f64926acfc72529ef609f737efd00e077ca2e20c"
+    },
+    {
+      "file": "CTY SÁU HỒNG.xlsx",
+      "sha256": "bf68dce77e522e3571dbf0be245bab215ba4bf63d746d7cdbd3ec881665a1f9a"
+    }
+  ],
+  "counts": {
+    "customers": 439,
+    "suppliers": 22,
+    "aluminium_profiles": 17,
+    "aluminium_colours": 7,
+    "aluminium_lots": 1257,
+    "aluminium_sheets": 43601,
+    "aluminium_scrap_lots": 106,
+    "aluminium_selected_for_cut_lots": 4,
+    "aluminium_lots_with_remaining_kg": 0,
+    "aluminium_lots_with_intake_note": 163,
+    "aluminium_lots_by_stock_state": {
+      "HẾT": 53,
+      "SẮP HẾT": 55,
+      "TỒN": 1149
+    },
+    "aluminium_empty_rows_skipped": 248,
+    "legacy_orders": 1474,
+    "legacy_order_lines": 4653,
+    "legacy_ledger_lines": 171,
+    "duplicated_monthly_vouchers_collapsed": 120,
+    "legacy_intakes": 254,
+    "legacy_intakes_by_type": {
+      "Mua vào": 45,
+      "Khách hoàn trả": 8,
+      "Nhập khác": 201
+    },
+    "warranty_claims": 86,
+    "production_standards": 6
+  },
+  "source_quality": {
+    "blank_party_types_treated_as_customer_other": 116,
+    "unknown_aluminium_generations_defaulted_to_new": 0
+  },
+  "safeguards": [
+    "Lot-column mode patches only imported Aluminium Lot rows and leaves customer, supplier, history and operational ledgers untouched.",
+    "Historical orders, intake and warranty records are reference doctypes and do not post stock/accounting ledgers.",
+    "Repeated monthly vouchers keep only the newest sheet copy.",
+    "Aluminium lots use deterministic LN-MIG names and idempotent upsert.",
+    "Rows with zero aluminium sheets are history only and are not imported as current stock.",
+    "Aluminium widths below 0.25 m are retained but marked quality_status=Phế."
+  ],
+  "sql_parts": [
+    {
+      "file": "alumdoor-lot-columns-2026-07-29.part-001.sql",
+      "bytes": 79632
+    },
+    {
+      "file": "alumdoor-lot-columns-2026-07-29.part-002.sql",
+      "bytes": 79452
+    },
+    {
+      "file": "alumdoor-lot-columns-2026-07-29.part-003.sql",
+      "bytes": 79452
+    },
+    {
+      "file": "alumdoor-lot-columns-2026-07-29.part-004.sql",
+      "bytes": 79652
+    },
+    {
+      "file": "alumdoor-lot-columns-2026-07-29.part-005.sql",
+      "bytes": 79644
+    },
+    {
+      "file": "alumdoor-lot-columns-2026-07-29.part-006.sql",
+      "bytes": 79498
+    },
+    {
+      "file": "alumdoor-lot-columns-2026-07-29.part-007.sql",
+      "bytes": 79608
+    },
+    {
+      "file": "alumdoor-lot-columns-2026-07-29.part-008.sql",
+      "bytes": 79796
+    },
+    {
+      "file": "alumdoor-lot-columns-2026-07-29.part-009.sql",
+      "bytes": 13038
+    }
+  ]
+}

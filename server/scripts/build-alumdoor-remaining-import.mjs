@@ -12,6 +12,7 @@
  *     --stock "C:/Users/Admin/Downloads/TỒN NHÔM 2026 NEW.xlsx" \
  *     --ledger "C:/Users/Admin/Downloads/CTY SÁU HỒNG.xlsx" \
  *     --warehouse K36 \
+ *     [--lot-columns-only] \
  *     --sql imports/alumdoor-remaining-2026-07-29.sql \
  *     --audit imports/alumdoor-remaining-2026-07-29.audit.json
  */
@@ -33,6 +34,7 @@ const LEDGER_FILE = argOf("ledger");
 const SQL_FILE = argOf("sql");
 const AUDIT_FILE = argOf("audit");
 const MAX_PART_BYTES = Number(argOf("max-part-bytes", "80000"));
+const LOT_COLUMNS_ONLY = args.includes("--lot-columns-only");
 const WAREHOUSE = argOf("warehouse", "K36");
 const TENANT = argOf("tenant", "alu");
 const IMPORTED_AT = "2026-07-29T00:00:00.000Z";
@@ -615,6 +617,10 @@ const colours = new Set();
 let skippedEmptyLots = 0;
 let scrapLots = 0;
 let unknownGenerations = 0;
+let selectedForCutLots = 0;
+let lotsWithRemainingKg = 0;
+let lotsWithIntakeNote = 0;
+const lotStockStates = new Map();
 
 for (const sheetName of stockBook.SheetNames) {
   const profile = clean(sheetName);
@@ -630,7 +636,12 @@ for (const sheetName of stockBook.SheetNames) {
   const cWidth = at("KHỔ");
   const cCount = at("SỐ LÁ");
   const cReturned = at("NGÀY NHẬP LẠI");
+  const cStockState = at("THEO DÕI TỒN");
+  const cSelectedForCut = at("CHỌN CẮT");
   const cScrap = at("LM/PHẾ");
+  const cRemainingKg = at("SỐ KG");
+  const cIntakeNoteExact = at("NHẬP/GHI CHÚ");
+  const cIntakeNote = cIntakeNoteExact >= 0 ? cIntakeNoteExact : at("NHẬP");
   const cNote = at("GHI CHÚ");
   for (let index = headerAt + 1; index < rows.length; index += 1) {
     const row = rows[index];
@@ -645,8 +656,18 @@ for (const sheetName of stockBook.SheetNames) {
     const rawGeneration = upper(row[cGeneration]);
     const generation = generationMap.get(rawGeneration) ?? "MỚI";
     if (rawGeneration && !generationMap.has(rawGeneration)) unknownGenerations += 1;
+    const rawStockState = upper(row[cStockState]);
+    const stockState = ["TỒN", "SẮP HẾT", "HẾT"].includes(rawStockState) ? rawStockState : "TỒN";
+    const selectedForCut = row[cSelectedForCut] === true
+      || ["1", "TRUE", "CÓ", "X"].includes(upper(row[cSelectedForCut]));
+    const remainingKg = numberOf(row[cRemainingKg]);
+    const intakeNote = clean(row[cIntakeNote]);
     const isScrap = width < 0.25;
     if (isScrap) scrapLots += 1;
+    if (selectedForCut) selectedForCutLots += 1;
+    if (remainingKg !== null) lotsWithRemainingKg += 1;
+    if (intakeNote) lotsWithIntakeNote += 1;
+    lotStockStates.set(stockState, (lotStockStates.get(stockState) ?? 0) + 1);
     profiles.add(profile);
     colours.add(colour);
     const number = lots.length + 1;
@@ -664,8 +685,11 @@ for (const sheetName of stockBook.SheetNames) {
         ...(excelDate(row[cDate]) ? { received_on: excelDate(row[cDate]) } : {}),
         ...(excelDate(row[cReturned]) ? { returned_on: excelDate(row[cReturned]) } : {}),
         quality_status: isScrap ? "Phế" : "Khả dụng",
-        stock_state: "TỒN",
+        stock_state: stockState,
+        selected_for_cut: selectedForCut,
         scrap_note: clean(row[cScrap]) || (isScrap ? `Khổ dưới 0,25 m: ${width} m` : ""),
+        ...(remainingKg !== null ? { remaining_kg: remainingKg } : {}),
+        intake_note: intakeNote,
         note: clean(row[cNote]),
         legacy_source_key: sourceKey,
         source_sheet: sheetName,
@@ -806,34 +830,52 @@ ON CONFLICT(tenant_id,doctype,name) DO UPDATE SET
   }
 }
 
-appendDocumentUpserts("Item", profileItems, { overwrite: false });
-appendSearchUpserts("Item", profileItems, (record) => record.payload.item_name, (record) =>
-  [record.payload.item_code, record.payload.item_name, record.payload.item_group, record.payload.description].join(" "));
-appendDocumentUpserts("Item Color", colourRecords, { overwrite: false });
-appendSearchUpserts("Item Color", colourRecords, (record) => record.payload.color_name, (record) =>
-  [record.payload.color_code, record.payload.color_name, record.payload.finish].join(" "));
-appendDocumentUpserts("Customer", customerRecords);
-appendSearchUpserts("Customer", customerRecords, (record) => record.payload.customer_name, (record) =>
-  [record.payload.customer_name, record.payload.phone, record.payload.address, record.payload.account_manager].join(" "));
-appendDocumentUpserts("Supplier", supplierRecords);
-appendSearchUpserts("Supplier", supplierRecords, (record) => record.payload.supplier_name, (record) =>
-  [record.payload.supplier_name, record.payload.phone, record.payload.address, record.payload.supplier_group].join(" "));
-appendDocumentUpserts("Aluminium Lot", lots, { chunkSize: 12 });
-appendSearchUpserts("Aluminium Lot", lots, (record) => `${record.payload.profile} · ${record.payload.colour} · ${record.payload.width_m} m`, (record) =>
-  [record.payload.profile, record.payload.colour, record.payload.generation, record.payload.width_m, record.payload.warehouse, record.payload.quality_status].join(" "));
-appendDocumentUpserts("Legacy Sales Order", legacyOrders, { chunkSize: 5 });
-appendSearchUpserts("Legacy Sales Order", legacyOrders, (record) => `${record.payload.legacy_voucher} · ${record.payload.customer}`, (record) =>
-  [record.payload.legacy_voucher, record.payload.customer, record.payload.salesperson,
-    ...record.payload.items.flatMap((item) => [item.product, item.order_description])].join(" "), 8);
-appendDocumentUpserts("Legacy Goods Intake", legacyIntakes, { chunkSize: 12 });
-appendSearchUpserts("Legacy Goods Intake", legacyIntakes, (record) => `${record.payload.source_party} · ${record.payload.item_description}`, (record) =>
-  [record.payload.source_party, record.payload.item_description, record.payload.note, record.payload.source_status].join(" "));
-appendDocumentUpserts("Warranty Claim", warrantyClaims, { chunkSize: 12 });
-appendSearchUpserts("Warranty Claim", warrantyClaims, (record) => `${record.payload.customer ?? "Không rõ KH"} · ${record.payload.item_description}`, (record) =>
-  [record.payload.legacy_voucher, record.payload.customer, record.payload.supplier, record.payload.item_description, record.payload.note].join(" "));
-appendDocumentUpserts("Production Standard", productionStandards);
-appendSearchUpserts("Production Standard", productionStandards, (record) => record.payload.department, (record) =>
-  [record.payload.department, record.payload.standard_time].join(" "));
+if (LOT_COLUMNS_ONLY) {
+  for (const record of lots) {
+    const patch = {
+      stock_state: record.payload.stock_state,
+      selected_for_cut: record.payload.selected_for_cut,
+      intake_note: record.payload.intake_note,
+      ...(record.payload.remaining_kg === undefined ? {} : { remaining_kg: record.payload.remaining_kg }),
+    };
+    sql.push(`UPDATE documents
+SET payload_json=json_patch(payload_json,json(${sqlText(JSON.stringify(patch))})),
+    modified_at=${sqlText(IMPORTED_AT)},modified_by='admin',version=version+1
+WHERE tenant_id=${sqlText(TENANT)} AND doc_key=${sqlText(`Aluminium Lot:${record.name}`)}
+  AND doctype='Aluminium Lot'
+  AND json_extract(payload_json,'$._migration_source')='alumdoor-current-lots-2026'
+  AND json_patch(payload_json,json(${sqlText(JSON.stringify(patch))}))<>payload_json;`);
+  }
+} else {
+  appendDocumentUpserts("Item", profileItems, { overwrite: false });
+  appendSearchUpserts("Item", profileItems, (record) => record.payload.item_name, (record) =>
+    [record.payload.item_code, record.payload.item_name, record.payload.item_group, record.payload.description].join(" "));
+  appendDocumentUpserts("Item Color", colourRecords, { overwrite: false });
+  appendSearchUpserts("Item Color", colourRecords, (record) => record.payload.color_name, (record) =>
+    [record.payload.color_code, record.payload.color_name, record.payload.finish].join(" "));
+  appendDocumentUpserts("Customer", customerRecords);
+  appendSearchUpserts("Customer", customerRecords, (record) => record.payload.customer_name, (record) =>
+    [record.payload.customer_name, record.payload.phone, record.payload.address, record.payload.account_manager].join(" "));
+  appendDocumentUpserts("Supplier", supplierRecords);
+  appendSearchUpserts("Supplier", supplierRecords, (record) => record.payload.supplier_name, (record) =>
+    [record.payload.supplier_name, record.payload.phone, record.payload.address, record.payload.supplier_group].join(" "));
+  appendDocumentUpserts("Aluminium Lot", lots, { chunkSize: 12 });
+  appendSearchUpserts("Aluminium Lot", lots, (record) => `${record.payload.profile} · ${record.payload.colour} · ${record.payload.width_m} m`, (record) =>
+    [record.payload.profile, record.payload.colour, record.payload.generation, record.payload.width_m, record.payload.warehouse, record.payload.quality_status].join(" "));
+  appendDocumentUpserts("Legacy Sales Order", legacyOrders, { chunkSize: 5 });
+  appendSearchUpserts("Legacy Sales Order", legacyOrders, (record) => `${record.payload.legacy_voucher} · ${record.payload.customer}`, (record) =>
+    [record.payload.legacy_voucher, record.payload.customer, record.payload.salesperson,
+      ...record.payload.items.flatMap((item) => [item.product, item.order_description])].join(" "), 8);
+  appendDocumentUpserts("Legacy Goods Intake", legacyIntakes, { chunkSize: 12 });
+  appendSearchUpserts("Legacy Goods Intake", legacyIntakes, (record) => `${record.payload.source_party} · ${record.payload.item_description}`, (record) =>
+    [record.payload.source_party, record.payload.item_description, record.payload.note, record.payload.source_status].join(" "));
+  appendDocumentUpserts("Warranty Claim", warrantyClaims, { chunkSize: 12 });
+  appendSearchUpserts("Warranty Claim", warrantyClaims, (record) => `${record.payload.customer ?? "Không rõ KH"} · ${record.payload.item_description}`, (record) =>
+    [record.payload.legacy_voucher, record.payload.customer, record.payload.supplier, record.payload.item_description, record.payload.note].join(" "));
+  appendDocumentUpserts("Production Standard", productionStandards);
+  appendSearchUpserts("Production Standard", productionStandards, (record) => record.payload.department, (record) =>
+    [record.payload.department, record.payload.standard_time].join(" "));
+}
 
 const audit = {
   format: "cloudforge-alumdoor-remaining-import/v1",
@@ -853,6 +895,10 @@ const audit = {
     aluminium_lots: lots.length,
     aluminium_sheets: lots.reduce((sum, lot) => sum + Number(lot.payload.sheet_count ?? 0), 0),
     aluminium_scrap_lots: scrapLots,
+    aluminium_selected_for_cut_lots: selectedForCutLots,
+    aluminium_lots_with_remaining_kg: lotsWithRemainingKg,
+    aluminium_lots_with_intake_note: lotsWithIntakeNote,
+    aluminium_lots_by_stock_state: Object.fromEntries([...lotStockStates].sort(([a], [b]) => a.localeCompare(b, "vi"))),
     aluminium_empty_rows_skipped: skippedEmptyLots,
     legacy_orders: legacyOrders.length,
     legacy_order_lines: legacyOrders.reduce((sum, order) => sum + order.payload.items.length, 0),
@@ -868,6 +914,7 @@ const audit = {
     unknown_aluminium_generations_defaulted_to_new: unknownGenerations,
   },
   safeguards: [
+    ...(LOT_COLUMNS_ONLY ? ["Lot-column mode patches only imported Aluminium Lot rows and leaves customer, supplier, history and operational ledgers untouched."] : []),
     "Historical orders, intake and warranty records are reference doctypes and do not post stock/accounting ledgers.",
     "Repeated monthly vouchers keep only the newest sheet copy.",
     "Aluminium lots use deterministic LN-MIG names and idempotent upsert.",
