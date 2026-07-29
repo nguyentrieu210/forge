@@ -86,6 +86,14 @@ const GRID_WIDTH: Record<string, string> = {
   "Small Text": "12rem", Text: "12rem", "Long Text": "12rem",
 };
 
+/**
+ * Cột MÃ HÀNG không bao giờ co, và không bao giờ là cột chịu thiệt.
+ *
+ * Nó là thứ duy nhất người đọc dùng để biết dòng này là hàng gì; mọi cột khác chỉ có nghĩa
+ * khi đã biết điều đó.
+ */
+const IDENTITY_WIDTH = "14rem";
+
 function gridWidth(field: DocField): string {
   const fieldtype = field.fieldtype;
   if (fieldtype === "Select") {
@@ -94,23 +102,47 @@ function gridWidth(field: DocField): string {
     const longest = (field.options ?? "").split("\n").reduce((max, option) => Math.max(max, option.trim().length), 0);
     return longest <= 6 ? "6rem" : longest <= 12 ? "8.5rem" : "11rem";
   }
-  if (fieldtype === "Currency" || ["Int", "Float", "Percent"].includes(fieldtype)) {
+  /**
+   * Link đo theo NHÃN, không rơi về mặc định 11rem như mọi field còn lại.
+   *
+   * Khi ĐVT chuyển từ Select sang Link(UOM), nhánh đo-theo-lựa-chọn ở trên không còn áp
+   * dụng nữa và cột đó lặng lẽ nhảy từ 6rem lên 11rem. Một cột chỉ chứa "Kg", "Bộ", "Cây"
+   * chiếm gần gấp ba chỗ nó cần — và chỗ đó lấy đúng của cột mã hàng bên cạnh. Link tới một
+   * danh mục ngắn (ĐVT, màu, kho) là trường hợp thường gặp hơn hẳn Link tới tên dài.
+   */
+  if (["Link", "Dynamic Link", "Currency", "Int", "Float", "Percent"].includes(fieldtype)) {
     // Nhãn dài hơn con số thì chính TIÊU ĐỀ mới là thứ quyết định bề rộng.
     const label = (field.label ?? field.fieldname).length;
-    const base = GRID_WIDTH[fieldtype] ?? "6rem";
+    const base = GRID_WIDTH[fieldtype] ?? "7rem";
     return label <= 6 ? base : label <= 12 ? "8rem" : "10rem";
   }
   return GRID_WIDTH[fieldtype] ?? "11rem";
 }
 
+/** Cột ĐỊNH DANH — Link đầu tiên, tức mã hàng. Được ghim khi cuộn ngang và không co. */
+function identityColumn(cols: DocField[]): string | undefined {
+  return cols.find((c) => ["Link", "Dynamic Link"].includes(c.fieldtype))?.fieldname;
+}
+
 /**
- * Cột được phép CO GIÃN — đúng một, và là cột tên/mã hàng.
+ * Cột được phép CO GIÃN — đúng một, và là cột GHI CHÚ, không phải cột mã hàng.
  *
  * Không có cột co giãn thì tổng bề rộng cố định hiếm khi bằng bề ngang bảng: thiếu thì
  * thừa một khoảng trắng ở mép phải, dư thì cuộn ngang cả những cột không cần.
+ *
+ * Nhưng cột co giãn cũng là cột DUY NHẤT có thể bị ép về 0: với `table-fixed`, cột không
+ * khai bề rộng chỉ nhận PHẦN CÒN LẠI, và phần còn lại có thể âm. Đo trên đơn mua hàng thật
+ * ngày 29/7: các cột đã khai cộng lại 848px trong một khung 722px, nên cột "Mã sản phẩm" —
+ * cột được chọn co giãn lúc đó — rộng đúng **0px**. Không nhìn thấy, không bấm được, tức là
+ * không tạo nổi một dòng hàng nào. Cuộn ngang cũng vô ích vì cuộn tới nơi vẫn rộng 0.
+ *
+ * Nên chỗ chịu thiệt phải là thứ mất đi vẫn đọc được chứng từ: ghi chú. Không có cột chữ
+ * nào thì không có cột co giãn — mọi cột giữ đúng bề rộng đã khai và bảng tự tràn để cuộn.
  */
-function flexibleColumn(cols: DocField[]): string | undefined {
-  return cols.find((c) => ["Link", "Data", "Dynamic Link"].includes(c.fieldtype))?.fieldname;
+function flexibleColumn(cols: DocField[], identity: string | undefined): string | undefined {
+  const text = cols.filter((c) => c.fieldname !== identity
+    && ["Data", "Small Text", "Text", "Long Text"].includes(c.fieldtype));
+  return text[text.length - 1]?.fieldname;
 }
 
 function dynamicLinkTarget(field: DocField, row: Doc): string | undefined {
@@ -133,7 +165,23 @@ export function ChildGrid(props: ChildGridProps) {
   const [detailRow, setDetailRow] = useState<number | null>(null);
   const itemLoadVersion = useRef(new Map<string, number>());
   const cols = visibleColumns(gridColumns(childMeta), childMeta, rows, parentDoc, roles);
-  const flexible = flexibleColumn(cols);
+  const identity = identityColumn(cols);
+  const flexible = flexibleColumn(cols, identity);
+  const columnWidth = (column: DocField): string => (column.fieldname === identity ? IDENTITY_WIDTH : gridWidth(column));
+  /**
+   * Bảng RỘNG BẰNG TỔNG CÁC CỘT, rồi mới cuộn — chứ không ép mọi cột vào khung.
+   *
+   * `w-full` một mình có nghĩa "không bao giờ rộng hơn khung", nên `overflow-x-auto` bọc
+   * ngoài không bao giờ có gì để cuộn: bảng tự bóp lại cho vừa, và thứ bị bóp là cột không
+   * khai bề rộng. Khai `min-width` bằng đúng tổng các cột thì bảng mới thật sự tràn, thanh
+   * cuộn mới xuất hiện, và mỗi cột giữ được bề rộng đã tính cho nó.
+   */
+  const minWidthRem = 2.5 + (readOnly ? 0 : 4.5)
+    + cols.reduce((sum, column) => sum + (Number.parseFloat(columnWidth(column)) || 0), 0);
+  // Ghim cột mã hàng ngay sau cột "#" (2,5rem): cuộn sang phải để nhập số cây vẫn phải biết
+  // dòng này là mã nào. Ghim mỗi số thứ tự thì thứ còn nhìn thấy chỉ là "1", "2", "3".
+  const stickyIdentity = (fieldname: string): string =>
+    (fieldname === identity ? "sticky left-10 z-10 bg-card" : "");
 
   /**
    * Các field dòng TỰ TÍNH được, tính ngay khi gõ.
@@ -425,11 +473,11 @@ export function ChildGrid(props: ChildGridProps) {
           không để lại dấu hiệu nào — bảng chỉ đơn giản là thiếu cột. Cột "#" GHIM lại bên
           trái khi cuộn, cách MISA làm, để không lạc dòng khi kéo sang phải. */}
       <div className="overflow-x-auto rounded-md border">
-        <Table className="table-fixed">
+        <Table className="table-fixed" style={{ minWidth: `${minWidthRem}rem` }}>
           <colgroup>
             <col style={{ width: "2.5rem" }} />
             {cols.map((c) => (
-              <col key={c.fieldname} {...(c.fieldname === flexible ? {} : { style: { width: gridWidth(c) } })} />
+              <col key={c.fieldname} {...(c.fieldname === flexible ? {} : { style: { width: columnWidth(c) } })} />
             ))}
             {!readOnly ? <col style={{ width: "4.5rem" }} /> : null}
           </colgroup>
@@ -437,7 +485,7 @@ export function ChildGrid(props: ChildGridProps) {
             <TableRow className="hover:bg-transparent">
               <TableHead className="sticky left-0 z-10 w-10 bg-card text-right">#</TableHead>
               {cols.map((c) => (
-                <TableHead key={c.fieldname} className="truncate whitespace-nowrap">
+                <TableHead key={c.fieldname} className={`truncate whitespace-nowrap ${stickyIdentity(c.fieldname)}`}>
                   {c.label ?? c.fieldname}
                   {c.reqd ? <span className="mf-required ml-0.5 text-destructive">*</span> : null}
                 </TableHead>
@@ -457,10 +505,10 @@ export function ChildGrid(props: ChildGridProps) {
                   // (H1). Vẫn tôn trọng read_only/read_only_depends_on/docstatus + masked_fields server.
                   const rf = resolveField(c, childMeta, { doc: row, parent: parentDoc, roles, assumeWritable: true });
                   if (!rf.visible) {
-                    return <TableCell key={c.fieldname} className="align-top text-center text-xs text-muted-foreground">—</TableCell>;
+                    return <TableCell key={c.fieldname} className={`align-top text-center text-xs text-muted-foreground ${stickyIdentity(c.fieldname)}`}>—</TableCell>;
                   }
                   return (
-                    <TableCell key={c.fieldname} className="align-top">
+                    <TableCell key={c.fieldname} className={`align-top ${stickyIdentity(c.fieldname)}`}>
                       <Control
                         field={c}
                         value={row[c.fieldname]}

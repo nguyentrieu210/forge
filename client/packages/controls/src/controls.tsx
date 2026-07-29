@@ -622,6 +622,22 @@ export function LinkCombobox({
   const recentValues = new Set(visibleRecent.map((option) => option.value));
   const visibleOptions = !txt.trim() ? opts.filter((option) => !recentValues.has(option.value)) : opts;
 
+  /**
+   * Kết quả ĐẦU TIÊN luôn được tô sáng sẵn, để gõ mã rồi Enter là CHỌN được.
+   *
+   * `shouldFilter={false}` vì lọc do máy chủ làm, và cmdk chỉ tự chọn mục đầu khi chính nó
+   * lọc. Kết quả về bằng đường không đồng bộ nên danh sách thay ngay dưới chân nó, mục đang
+   * chọn trỏ vào một `value` không còn tồn tại, và cmdk bỏ chọn tất cả — Enter lúc đó không
+   * làm gì cả. Người nhập gõ đúng mã rồi Enter mà ô vẫn trống là hỏng đúng thao tác thường
+   * dùng nhất, nên mục đang chọn được điều khiển từ đây thay vì phó mặc.
+   *
+   * Không bao giờ trỏ vào "＋ Tạo mới": Enter phải chọn cái đang có, tạo mới là việc phải
+   * chủ động đi tới.
+   */
+  const firstValue = visibleRecent.length ? `recent-${visibleRecent[0]!.value}` : visibleOptions[0]?.value ?? "";
+  const [active, setActive] = useState("");
+  useEffect(() => { setActive(firstValue); }, [firstValue]);
+
   // Giống ERPNext "+ Create a new …" — gõ không khớp bản ghi nào có sẵn thì tạo nhanh ngay tại đây
   // (mở form tạo thật qua services.quickCreate, KHÔNG tự bịa field) thay vì bắt người dùng thoát ra
   // tạo riêng rồi quay lại gõ lại. Quyền tạo do chính form đó tự kiểm (fail-closed), không lặp ở đây.
@@ -635,6 +651,14 @@ export function LinkCombobox({
       setCreating(false);
     }
   };
+
+  /** Một mục duy nhất, đặt được ở đầu hoặc ở cuối danh sách tuỳ có kết quả khớp hay không. */
+  const createItem = (
+    <CommandItem value={`__mf_create__${txt}`} disabled={creating} onSelect={handleCreate}>
+      {creating ? <Loader2 className="mr-2 size-4 shrink-0 animate-spin" aria-hidden="true" /> : <Plus className="mr-2 size-4 shrink-0" aria-hidden="true" />}
+      {t("control.link_create_new")}{txt.trim() ? ` "${txt.trim()}"` : ` ${targetLabel ?? target}`}
+    </CommandItem>
+  );
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -671,7 +695,7 @@ export function LinkCombobox({
         align="start"
         collisionPadding={12}
       >
-        <Command shouldFilter={false} className="max-h-[var(--radix-popover-content-available-height)]">
+        <Command shouldFilter={false} value={active} onValueChange={setActive} className="max-h-[var(--radix-popover-content-available-height)]">
           <div className="sticky top-0 z-10 bg-popover">
             <CommandInput placeholder={t("control.link_search_placeholder")} value={txt} onValueChange={setTxt} />
           </div>
@@ -684,20 +708,15 @@ export function LinkCombobox({
               <div className="px-3 py-3 text-sm text-destructive" role="alert">{t("control.link_load_failed")}</div>
             ) : (
               <>
-                {/* "+ Tạo mới" nằm ĐẦU danh sách.
-                    Trước đây để cuối cho giống ERPNext, nhưng với danh mục dài thì người dùng phải
-                    cuộn hết danh sách mới thấy — mà lúc cần tạo mới chính là lúc danh sách KHÔNG có
-                    thứ họ cần, nên bắt cuộn qua toàn bộ thứ vô ích là ngược đời. Để đầu thì luôn
-                    thấy ngay, và cũng không cản việc chọn: mục đang chọn vẫn hiện tick riêng. */}
-                {quickCreate ? (
-                  <>
-                    <CommandItem value={`__mf_create__${txt}`} disabled={creating} onSelect={handleCreate}>
-                      {creating ? <Loader2 className="mr-2 size-4 shrink-0 animate-spin" aria-hidden="true" /> : <Plus className="mr-2 size-4 shrink-0" aria-hidden="true" />}
-                      {t("control.link_create_new")}{txt.trim() ? ` "${txt.trim()}"` : ` ${targetLabel ?? target}`}
-                    </CommandItem>
-                    {opts.length > 0 || visibleRecent.length > 0 ? <div className="mx-1 my-1 h-px bg-border" /> : null}
-                  </>
-                ) : null}
+                {/* "+ Tạo mới" ở ĐẦU khi không tìm được gì, ở CUỐI khi có kết quả.
+                    Để đầu là đúng cho trường hợp danh mục dài mà không có thứ cần: bắt cuộn hết
+                    danh sách vô ích rồi mới thấy nút tạo là ngược đời.
+                    Nhưng khi CÓ kết quả khớp thì để đầu là nguy hiểm: mục đầu danh sách được tô
+                    sáng sẵn, nên gõ đúng mã có thật rồi Enter — thao tác tự nhiên nhất của người
+                    nhập liệu — sẽ TẠO MỘT BẢN GHI TRÙNG thay vì chọn cái đang có. Thử trên tenant
+                    thật: gõ "AL548" (mã có sẵn) thì mục sáng là "＋ Tạo mới AL548". Với danh mục
+                    294 mặt hàng và người nhập gõ cả ngày, đó là cách sinh mã rác nhanh nhất. */}
+                {quickCreate && opts.length === 0 && visibleRecent.length === 0 ? createItem : null}
                 {/* Gần đây — chỉ khi ô tìm còn trống, đỡ gõ lại giá trị vừa dùng (client-only, không gọi server). */}
                 {visibleRecent.length > 0 ? (
                   <CommandGroup heading={t("control.link_recent")}>
@@ -723,7 +742,12 @@ export function LinkCombobox({
                   </CommandItem>
                 ))}
                 {atCap ? <div className="px-3 py-2 text-xs text-muted-foreground">{t("control.link_more_hint_prefix")} {LINK_PAGE_LENGTH} {t("control.link_more_hint_suffix")}</div> : null}
-                {/* "+ Tạo mới" đã nằm ở ĐẦU danh sách (xem trên). Không lặp lại ở cuối. */}
+                {quickCreate && (opts.length > 0 || visibleRecent.length > 0) ? (
+                  <>
+                    <div className="mx-1 my-1 h-px bg-border" />
+                    {createItem}
+                  </>
+                ) : null}
               </>
             )}
           </CommandList>
