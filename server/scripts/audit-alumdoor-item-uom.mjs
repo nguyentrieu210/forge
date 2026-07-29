@@ -58,7 +58,7 @@ try {
     if (derivedRate.test(purchase) || derivedRate.test(stock)) {
       issues.push({ severity: "error", issue: "derived_rate_used_as_uom", ...row });
     }
-    if (purchase && stock && purchase !== stock && !conversionUoms.has(purchase)) {
+    if (Number(row.is_purchase_item) === 1 && purchase && stock && purchase !== stock && !conversionUoms.has(purchase)) {
       issues.push({ severity: "error", issue: "missing_purchase_conversion", ...row });
     }
   }

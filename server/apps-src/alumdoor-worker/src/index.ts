@@ -197,6 +197,8 @@ async function validateItemMaster(call: PlatformCall, subject: ValidatorSubject)
 
   const conversions = Array.isArray(doc.uom_conversions) ? doc.uom_conversions : [];
   for (const fieldname of ["default_purchase_uom", "default_sales_uom"]) {
+    if (fieldname === "default_purchase_uom" && !checked(doc.is_purchase_item)) continue;
+    if (fieldname === "default_sales_uom" && !checked(doc.is_sales_item)) continue;
     const uom = String(doc[fieldname] ?? "").trim();
     if (!uom || uom === stockUom) continue;
     const dynamicSquareMetreToSet = mode === "Thành phẩm theo m2"

@@ -296,6 +296,13 @@ test("Item color policy rejects duplicates and a default outside the allowed lis
     {},
   );
   assert.equal(dynamicArea.status, 200, await dynamicArea.text());
+
+  const manufacturedOnly = await alumdoorWorker.fetch(
+    request({ ...base, is_purchase_item: 0, is_sales_item: 1, default_purchase_uom: "Kg", default_sales_uom: "m2" }),
+    env,
+    {},
+  );
+  assert.equal(manufacturedOnly.status, 200, await manufacturedOnly.text());
 });
 
 test("sales and production documents require an active allowed color", async () => {
