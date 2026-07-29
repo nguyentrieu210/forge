@@ -2,7 +2,7 @@
   "$schema": "./brief.schema.json",
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "1.26.2",
+  "version": "1.27.0",
   "module": "Alumdoor",
   "domain": "alumdoor",
   "brand": "warm",
@@ -12,10 +12,10 @@
     "dateFormat": "dd-mm-yyyy"
   },
   "//vi-sao-khong-tu-khai-logic": [
-    "KHÔNG có validator hay app Worker nào trong bản này, và đó là chủ ý.",
-    "Trừ tồn kho và lên công nợ là BẤT BIẾN TIỀN — không được phép 'kiểm rồi ghi' ngoài giao",
-    "dịch, vì hai người xuất cùng lúc sẽ cùng qua cửa kiểm rồi cùng ghi, và kho âm.",
-    "Nền tảng đã có nhân xử lý việc đó (packages/clouderp-selling + clouderp-stock + ledger):",
+    "Worker/validator của Alumdoor chỉ kiểm tra ràng buộc ngành và tính công thức; không trực tiếp",
+    "trừ tồn kho hay lên công nợ. Hai việc đó là BẤT BIẾN TIỀN — không được phép 'kiểm rồi ghi'",
+    "ngoài giao dịch, vì hai người xuất cùng lúc sẽ cùng qua cửa kiểm rồi cùng ghi, và kho âm.",
+    "Nền tảng xử lý phần ghi sổ (packages/clouderp-selling + clouderp-stock + ledger):",
     "Delivery Note tính tồn TRONG giao dịch và TỪ CHỐI khi không đủ; Sales Invoice ghi sổ cái",
     "và sinh công nợ; Payment Entry phân bổ vào hoá đơn. Tất cả tính theo đơn vị nhỏ nhất",
     "(micros/minor) nên không có sai số dấu phẩy động.",
@@ -181,6 +181,31 @@
     "lại được, nên nó phải vào một lô khổ khác. Một nút chung sẽ đúng ở một nửa số lần dùng."
   ],
   "actions": [
+    {
+      "//": "Máy tính chỉ đọc Item + Công thức cửa, không ghi chứng từ. Dùng để đối chiếu trước khi công thức được chụp vào báo giá/đơn hàng.",
+      "name": "tinh-cong-thuc-cua",
+      "label": "Tính công thức cửa",
+      "icon": "calculator",
+      "group": "Bán hàng",
+      "description": "Tính cùng lúc rộng cắt, m2 bán và kg mua dự toán theo đúng loại cửa, nhóm khách và tách món/trọn bộ.",
+      "permission": "Quotation",
+      "fields": [
+        "item_code:Link(Item)! Mặt hàng cửa",
+        "customer_group:Select(Đại lý,Lẻ)! Nhóm giá",
+        "purpose:Select(Bán hàng,Sản xuất,Dự toán mua,Tất cả)!=(Bán hàng) Cần tính",
+        "sales_mode:Select(Trọn bộ,Tách món)!=(Trọn bộ) Cách bán",
+        "has_butterfly_bracket:Check Có bản bướm",
+        "width_m:Float! Rộng khai theo chính sách (m)",
+        "height_m:Float Cao phủ bì (m)",
+        "mesh_height_m:Float Cao lưới (m)",
+        "set_count:Int!=(1) Số bộ",
+        "actual_purchase_kg:Float Kg mua thực tế (Cửa Đức)",
+        "purchase_rate:Currency Đơn giá mua / kg"
+      ],
+      "preview": "alumdoor.door.calculate | Tính thử",
+      "commit": "alumdoor.door.calculate | Tính lại",
+      "resultTable": "results"
+    },
     {
       "name": "cat-nhom",
       "label": "Cắt nhôm",
@@ -666,25 +691,120 @@
       }
     },
     {
-      "//": "CHỈ hai luật cửa Đức — hai luật duy nhất đã được chủ xưởng xác nhận miệng.",
-      "//con-lai": [
-        "BRD 25/7 còn ba hằng số nữa: cửa Úc trừ 0,03; Đức kéo tay trừ 0,05 (ray sắt U70) hoặc",
-        "0,08 (ray U76). KHÔNG khai ở đây, vì cả ba đều nhắm vào nhóm hàng 'Cửa tấm liền Úc' —",
-        "cửa Úc và cửa Đức kéo tay đang nằm chung một nhóm trong danh mục. Khai vào lúc này thì",
-        "hai luật khác nhau cùng khớp một nhóm và phải dựa vào độ ưu tiên để phân xử, tức là đoán.",
-        "",
-        "Đợi tờ đối chiếu thành phẩm tách xong nhóm hàng rồi khai — sai một dòng ở đây là cắt",
-        "hỏng cây nhôm, không phải sai một con số."
-      ],
+      "//": "Nguồn: bảng công thức chủ xưởng gửi 2026-07-29. Một bản ghi chứa đủ nhánh đại lý/lẻ để cùng một loại cửa không bị tách thành các luật dễ lệch nhau.",
+      "type": "Cutting Policy",
+      "name": "Cửa Đức — công thức chuẩn",
+      "data": {
+        "policy_name": "Cửa Đức — công thức chuẩn",
+        "door_type": "Cửa Đức",
+        "dealer_width_basis": "Phủ bì nhựa",
+        "retail_width_basis": "Phủ bì ray",
+        "dealer_cut_deduction_m": 0.02,
+        "retail_cut_deduction_m": 0.08,
+        "dealer_split_sales_basis": "Phủ bì nhựa",
+        "dealer_full_sales_basis": "Phủ bì nhựa",
+        "retail_sales_basis": "Phủ bì ray",
+        "purchase_formula": "Kg thực tế",
+        "note": "Sản xuất: đại lý PB nhựa − 0,02; lẻ PB ray − 0,08. Mua: kg thực tế × đơn giá."
+      }
+    },
+    {
+      "type": "Cutting Policy",
+      "name": "Cửa Úc — công thức chuẩn",
+      "data": {
+        "policy_name": "Cửa Úc — công thức chuẩn",
+        "door_type": "Cửa Úc",
+        "dealer_width_basis": "Phủ bì ray",
+        "retail_width_basis": "Phủ bì ray",
+        "dealer_cut_deduction_m": 0.03,
+        "retail_cut_deduction_m": 0.03,
+        "dealer_split_sales_basis": "Phủ bì ray",
+        "dealer_full_sales_basis": "Phủ bì ray",
+        "retail_sales_basis": "Phủ bì ray",
+        "purchase_formula": "Barem kg/m2",
+        "purchase_height_basis": "Cao phủ bì",
+        "purchase_width_basis": "Rộng cắt lá",
+        "note": "Rộng cắt = PB ray − 0,03. Mua: barem × Cao PB × Rộng cắt. Bán: Cao PB × PB ray."
+      }
+    },
+    {
+      "type": "Cutting Policy",
+      "name": "Cửa Lưới — công thức chuẩn",
+      "data": {
+        "policy_name": "Cửa Lưới — công thức chuẩn",
+        "door_type": "Cửa Lưới",
+        "dealer_width_basis": "Phủ bì ray",
+        "retail_width_basis": "Phủ bì ray",
+        "dealer_cut_deduction_m": 0.03,
+        "retail_cut_deduction_m": 0.03,
+        "butterfly_cut_deduction_m": 0.035,
+        "dealer_split_sales_basis": "Rộng cắt lá",
+        "dealer_full_sales_basis": "Phủ bì ray",
+        "retail_sales_basis": "Phủ bì ray",
+        "purchase_formula": "Barem kg/m2",
+        "purchase_height_basis": "Cao lưới",
+        "purchase_width_basis": "Rộng cắt lá",
+        "note": "Đại lý tách món chỉ lấy lưới bán theo rộng cắt; trọn bộ và khách lẻ bán theo PB ray. Có bản bướm trừ 0,035."
+      }
+    },
+    {
+      "type": "Cutting Policy",
+      "name": "Cửa Đài Loan — công thức chuẩn",
+      "data": {
+        "policy_name": "Cửa Đài Loan — công thức chuẩn",
+        "door_type": "Cửa Đài Loan",
+        "dealer_width_basis": "Phủ bì ray",
+        "retail_width_basis": "Phủ bì ray",
+        "dealer_cut_deduction_m": 0.03,
+        "retail_cut_deduction_m": 0.03,
+        "butterfly_cut_deduction_m": 0.035,
+        "dealer_split_sales_basis": "Rộng cắt lá",
+        "dealer_full_sales_basis": "Phủ bì ray",
+        "retail_sales_basis": "Phủ bì ray",
+        "manual_pull_sales_basis": "Phủ bì ray",
+        "purchase_formula": "Barem kg/m2",
+        "purchase_height_basis": "Cao lưới",
+        "purchase_width_basis": "Rộng cắt lá",
+        "note": "Đại lý tách món bán theo rộng cắt; trọn bộ, kéo tay và khách lẻ bán theo PB ray. Có bản bướm trừ 0,035."
+      }
+    },
+    {
+      "type": "Cutting Policy",
+      "name": "Cửa Siêu Trường — công thức chuẩn",
+      "data": {
+        "policy_name": "Cửa Siêu Trường — công thức chuẩn",
+        "door_type": "Cửa Siêu Trường",
+        "dealer_width_basis": "Phủ bì ray",
+        "retail_width_basis": "Phủ bì ray",
+        "dealer_cut_deduction_m": 0.03,
+        "retail_cut_deduction_m": 0.03,
+        "butterfly_cut_deduction_m": 0.035,
+        "dealer_split_sales_basis": "Rộng cắt lá",
+        "dealer_full_sales_basis": "Rộng cắt lá",
+        "retail_sales_basis": "Phủ bì ray",
+        "purchase_formula": "Barem kg/m2",
+        "purchase_height_basis": "Cao lưới",
+        "purchase_width_basis": "Rộng cắt lá",
+        "note": "Đại lý bán theo rộng cắt; khách lẻ bán theo PB ray. Có bản bướm trừ 0,035."
+      }
+    },
+    {
+      "//": "Hai fixture cũ được đóng để tenant đã cài bản 1.22 không còn hai luật cùng khớp sau nâng cấp.",
       "type": "Cutting Policy",
       "name": "Cửa Đức — đại lý",
       "data": {
         "policy_name": "Cửa Đức — đại lý",
-        "customer_group": "Đại lý",
-        "item_group": "Cửa CN Đức",
-        "width_basis": "Phủ bì nhựa",
-        "cut_deduction_m": 0.02,
-        "note": "Chủ xưởng xác nhận 2026-07-29. BRD 25/7: 'Khách đại lý: kích thước pb nhựa − 0,02'."
+        "door_type": "Cửa Đức",
+        "dealer_width_basis": "Phủ bì nhựa",
+        "retail_width_basis": "Phủ bì ray",
+        "dealer_cut_deduction_m": 0.02,
+        "retail_cut_deduction_m": 0.08,
+        "dealer_split_sales_basis": "Phủ bì nhựa",
+        "dealer_full_sales_basis": "Phủ bì nhựa",
+        "retail_sales_basis": "Phủ bì ray",
+        "purchase_formula": "Kg thực tế",
+        "disabled": true,
+        "note": "Đã gộp vào Cửa Đức — công thức chuẩn từ bản 1.26.0."
       }
     },
     {
@@ -692,11 +812,17 @@
       "name": "Cửa Đức — khách lẻ",
       "data": {
         "policy_name": "Cửa Đức — khách lẻ",
-        "customer_group": "Lẻ",
-        "item_group": "Cửa CN Đức",
-        "width_basis": "Phủ bì ray",
-        "cut_deduction_m": 0.08,
-        "note": "Chủ xưởng xác nhận 2026-07-29 là 0,08 (BRD 25/7 ghi 0,06 — bản BRD cũ). Công trình và nhà thầu tính như khách lẻ."
+        "door_type": "Cửa Đức",
+        "dealer_width_basis": "Phủ bì nhựa",
+        "retail_width_basis": "Phủ bì ray",
+        "dealer_cut_deduction_m": 0.02,
+        "retail_cut_deduction_m": 0.08,
+        "dealer_split_sales_basis": "Phủ bì nhựa",
+        "dealer_full_sales_basis": "Phủ bì nhựa",
+        "retail_sales_basis": "Phủ bì ray",
+        "purchase_formula": "Kg thực tế",
+        "disabled": true,
+        "note": "Đã gộp vào Cửa Đức — công thức chuẩn từ bản 1.26.0."
       }
     },
     {
@@ -1427,6 +1553,21 @@
         },
         "inventory_mode:Select(Hàng thường,Nhôm cây/lá,Tấm/Kính,Cuộn,Lô/Serial,Thành phẩm theo m2)=(Hàng thường) Kiểu quản lý tồn",
         {
+          "fieldname": "door_type",
+          "fieldtype": "Select",
+          "options": "Cửa Đức\nCửa Úc\nCửa Lưới\nCửa Đài Loan\nCửa Siêu Trường",
+          "label": "Loại cửa áp công thức",
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'",
+          "description": "Chọn cho thành phẩm cửa. Dữ liệu cũ còn trống được máy chủ nhận diện từ Nhóm hàng; khai thẳng ở đây để nhóm hàng và công thức không bị buộc cứng vào nhau."
+        },
+        {
+          "fieldname": "purchase_kg_per_m2",
+          "fieldtype": "Float",
+          "label": "Barem mua (kg/m2)",
+          "depends_on": "eval:doc.door_type && doc.door_type != 'Cửa Đức'",
+          "description": "Khối lượng nhà cung cấp tính cho một m2 cửa. Dùng cho dự toán mua của cửa Úc, Lưới, Đài Loan và Siêu Trường; Cửa Đức dùng kg cân thực tế."
+        },
+        {
           "fieldname": "measurement_profile",
           "fieldtype": "Link",
           "options": "Measurement Profile",
@@ -1770,48 +1911,83 @@
       }
     },
     {
-      "//": "CHÍNH SÁCH ĐO VÀ CẮT — tầng mà Chính sách giá không với tới.",
+      "//": "MỘT DÒNG = toàn bộ công thức của MỘT loại cửa: cắt, dự toán mua và bán. Worker đọc đúng danh mục này, không giữ một bảng số riêng.",
       "//vi-sao-khong-nhap-vao-chinh-sach-gia": [
-        "Chính sách giá chỉ trả ra MỘT CON SỐ TIỀN (giá cố định hoặc % giảm). Còn 'đại lý đo phủ",
-        "bì nhựa, khách lẻ đo phủ bì ray' không đổi đơn giá — nó đổi DIỆN TÍCH, tức đổi lượng.",
+        "Chính sách giá chỉ trả ra đơn giá. Bảng này quyết định lượng tính tiền, rộng cắt lá và",
+        "khối lượng mua dự toán — ba kết quả khác nhau nhưng phải xuất phát từ cùng một số đo.",
         "",
-        "Và cùng luật đó còn quyết định RỘNG CẮT LÁ, thứ chảy sang lệnh sản xuất nơi chính sách",
-        "giá không với tới. Một luật chi phối hai tầng thì phải nằm ở chỗ cả hai đọc được.",
-        "",
-        "Sai một dòng ở đây không phải sai tiền — là cắt hỏng cây nhôm, và nhôm đã cắt thì không",
-        "nối lại được. Xem docs/ALUMDOOR-LUAT-DO-VA-GIA.md."
+        "Mỗi loại cửa chỉ có một luật hoạt động. Nhóm Item cụ thể có thể ghi đè luật chung; hai",
+        "luật cùng mức ưu tiên bị Worker từ chối thay vì đoán, vì đoán sai là cắt hỏng nhôm."
       ],
       "name": "Cutting Policy",
-      "label": "Chính sách đo và cắt",
-      "icon": "ruler",
+      "label": "Công thức cửa",
+      "icon": "calculator",
       "group": "Danh mục",
       "naming": "field:policy_name",
       "title": "policy_name",
       "list": [
-        "customer_group",
+        "door_type",
         "item_group",
-        "rail_type",
-        "width_basis",
-        "cut_deduction_m"
+        "dealer_width_basis",
+        "retail_width_basis",
+        "purchase_formula",
+        "disabled"
       ],
       "search": [
-        "policy_name"
+        "policy_name",
+        "door_type"
       ],
       "fields": [
         "policy_name:Data*! Tên chính sách",
-        "customer_group:Select(Đại lý,Lẻ) Chỉ áp cho nhóm giá",
-        "item_group:Link(Item Group) Chỉ áp cho nhóm hàng",
-        "rail_type:Select(Ray sắt U70,Ray đơn U76,Ray hộp U76,Ray hộp U100) Chỉ áp khi đặt kèm loại ray",
-        "width_basis:Select(Phủ bì nhựa,Phủ bì ray)! Bề rộng khách khai đo theo",
+        "door_type:Select(Cửa Đức,Cửa Úc,Cửa Lưới,Cửa Đài Loan,Cửa Siêu Trường)! Loại cửa",
+        "item_group:Link(Item Group) Chỉ áp cho nhóm hàng này (trống = mọi nhóm của loại cửa)",
+        "dealer_width_basis:Select(Phủ bì nhựa,Phủ bì ray)! Đại lý nhập rộng theo",
+        "retail_width_basis:Select(Phủ bì nhựa,Phủ bì ray)! Khách lẻ nhập rộng theo",
         {
-          "//": "Số MÉT trừ đi, KHÔNG phải hệ số nhân. Xưởng từng báo 'nhân 0,98' — nó bằng 'trừ 0,08' đúng tại cửa rộng 4,00 m nên nhiều năm không lộ, còn ở 2 m và 6 m thì lệch 4 cm. Khe hở lá–ray là khoảng cách cơ khí cố định theo profile ray, không nở theo bề rộng cửa.",
-          "fieldname": "cut_deduction_m",
+          "//": "Số MÉT trừ cố định, không phải hệ số nhân.",
+          "fieldname": "dealer_cut_deduction_m",
           "fieldtype": "Float",
-          "label": "Trừ khi cắt lá (m)",
-          "required": true,
-          "description": "Rộng cắt lá = bề rộng khách khai − số này. Cửa Đức: đại lý 0,02 · khách lẻ 0,08."
+          "label": "Đại lý — trừ khi cắt (m)",
+          "required": true
         },
-        "priority:Int=(0) Độ ưu tiên khi nhiều luật cùng khớp",
+        {
+          "fieldname": "retail_cut_deduction_m",
+          "fieldtype": "Float",
+          "label": "Khách lẻ — trừ khi cắt (m)",
+          "required": true
+        },
+        {
+          "fieldname": "butterfly_cut_deduction_m",
+          "fieldtype": "Float",
+          "label": "Có bản bướm — trừ khi cắt (m)",
+          "description": "Có giá trị thì thay số trừ thường khi dòng hàng chọn Có bản bướm. Lưới, Đài Loan và Siêu Trường: 0,035 m."
+        },
+        "dealer_split_sales_basis:Select(Phủ bì nhựa,Phủ bì ray,Rộng cắt lá)! Đại lý tách món bán theo rộng",
+        "dealer_full_sales_basis:Select(Phủ bì nhựa,Phủ bì ray,Rộng cắt lá)! Đại lý trọn bộ bán theo rộng",
+        "retail_sales_basis:Select(Phủ bì nhựa,Phủ bì ray,Rộng cắt lá)! Khách lẻ bán theo rộng",
+        {
+          "fieldname": "manual_pull_sales_basis",
+          "fieldtype": "Select",
+          "options": "Phủ bì nhựa\nPhủ bì ray\nRộng cắt lá",
+          "label": "Cửa kéo tay bán theo rộng",
+          "description": "Ngoại lệ của Cửa Đài Loan kéo tay; để trống nếu loại cửa không có ngoại lệ."
+        },
+        "purchase_formula:Select(Kg thực tế,Barem kg/m2)! Công thức mua",
+        {
+          "fieldname": "purchase_height_basis",
+          "fieldtype": "Select",
+          "options": "Cao phủ bì\nCao lưới",
+          "label": "Dự toán mua dùng chiều cao",
+          "depends_on": "eval:doc.purchase_formula == 'Barem kg/m2'"
+        },
+        {
+          "fieldname": "purchase_width_basis",
+          "fieldtype": "Select",
+          "options": "Phủ bì nhựa\nPhủ bì ray\nRộng cắt lá",
+          "label": "Dự toán mua dùng chiều rộng",
+          "depends_on": "eval:doc.purchase_formula == 'Barem kg/m2'"
+        },
+        "priority:Int=(0) Độ ưu tiên khi có luật riêng cho nhóm hàng",
         "note:Small Text Ghi chú / nguồn",
         "disabled:Check Ngừng áp dụng"
       ],
@@ -1878,6 +2054,30 @@
           "default": 1,
           "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'"
         },
+        {
+          "fieldname": "sales_mode",
+          "fieldtype": "Select",
+          "options": "Trọn bộ\nTách món",
+          "label": "Cách bán",
+          "default": "Trọn bộ",
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'"
+        },
+        {
+          "fieldname": "has_butterfly_bracket",
+          "fieldtype": "Check",
+          "label": "Có bản bướm",
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'"
+        },
+        {
+          "fieldname": "mesh_height_m",
+          "fieldtype": "Float",
+          "label": "Cao lưới (m)",
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'"
+        },
+        "formula_policy:Link(Cutting Policy)~- Công thức đã áp",
+        "width_basis:Data~- Cơ sở rộng",
+        "cut_width_m:Float~- Rộng cắt lá (m)",
+        "billable_area_sqm:Float~- Diện tích tính tiền (m2)",
         {
           "fieldname": "length_m",
           "fieldtype": "Float",
@@ -2086,6 +2286,30 @@
           "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'"
         },
         {
+          "fieldname": "sales_mode",
+          "fieldtype": "Select",
+          "options": "Trọn bộ\nTách món",
+          "label": "Cách bán",
+          "default": "Trọn bộ",
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'"
+        },
+        {
+          "fieldname": "has_butterfly_bracket",
+          "fieldtype": "Check",
+          "label": "Có bản bướm",
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'"
+        },
+        {
+          "fieldname": "mesh_height_m",
+          "fieldtype": "Float",
+          "label": "Cao lưới (m)",
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'"
+        },
+        "formula_policy:Link(Cutting Policy)~- Công thức đã áp",
+        "width_basis:Data~- Cơ sở rộng",
+        "cut_width_m:Float~- Rộng cắt lá (m)",
+        "billable_area_sqm:Float~- Diện tích tính tiền (m2)",
+        {
           "fieldname": "length_m",
           "fieldtype": "Float",
           "label": "Dài một cây (m)",
@@ -2230,6 +2454,30 @@
           "mandatory_depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'"
         },
         {
+          "fieldname": "sales_mode",
+          "fieldtype": "Select",
+          "options": "Trọn bộ\nTách món",
+          "label": "Cách bán",
+          "default": "Trọn bộ",
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'"
+        },
+        {
+          "fieldname": "has_butterfly_bracket",
+          "fieldtype": "Check",
+          "label": "Có bản bướm",
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'"
+        },
+        {
+          "fieldname": "mesh_height_m",
+          "fieldtype": "Float",
+          "label": "Cao lưới (m)",
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'"
+        },
+        "formula_policy:Link(Cutting Policy)~- Công thức đã áp",
+        "width_basis:Data~- Cơ sở rộng",
+        "cut_width_m:Float~- Rộng cắt lá (m)",
+        "billable_area_sqm:Float~- Diện tích tính tiền (m2)",
+        {
           "fieldname": "length_m",
           "fieldtype": "Float",
           "label": "Dài một cây (m)",
@@ -2295,6 +2543,15 @@
           "label": "Khách hàng",
           "required": true,
           "fetch_from": "against_sales_order.customer"
+        },
+        {
+          "fieldname": "customer_group",
+          "fieldtype": "Select",
+          "options": "Đại lý\nLẻ",
+          "label": "Nhóm giá",
+          "read_only": true,
+          "hidden": true,
+          "fetch_from": "customer.price_group"
         },
         {
           "fieldname": "company",
@@ -2564,6 +2821,13 @@
         "width_m:Float Rộng (m)",
         "height_m:Float Cao (m)",
         "set_count:Int=(1) Số bộ",
+        "sales_mode:Select(Trọn bộ,Tách món)=(Trọn bộ) Cách bán",
+        "has_butterfly_bracket:Check Có bản bướm",
+        "mesh_height_m:Float Cao lưới (m)",
+        "formula_policy:Link(Cutting Policy)~- Công thức đã áp",
+        "width_basis:Data~- Cơ sở rộng",
+        "cut_width_m:Float~- Rộng cắt lá (m)",
+        "billable_area_sqm:Float~- Diện tích tính tiền (m2)",
         "uom:Link(UOM)! ĐVT bán",
         "qty:Float! SL tính tiền",
         "conversion_factor:Float~- Hệ số về ĐVT tồn",
@@ -2595,6 +2859,15 @@
       ],
       "fields": [
         "customer:Link(Customer)! Khách hàng",
+        {
+          "fieldname": "customer_group",
+          "fieldtype": "Select",
+          "options": "Đại lý\nLẻ",
+          "label": "Nhóm giá",
+          "read_only": true,
+          "hidden": true,
+          "fetch_from": "customer.price_group"
+        },
         "company:Link(Company)-!=(ALUMDOOR) Công ty",
         "currency:Link(Currency)-!=(VND) Tiền tệ",
         "against_sales_order:Link(Sales Order) Theo đơn hàng",
@@ -3779,8 +4052,8 @@
         "qty:Float!=(1) Số lượng cần sản xuất",
         "produced_qty:Float~ Đã sản xuất",
         "produced_percentage:Percent~ Tiến độ (%)",
-        "width_m:Int! Rộng (mm)",
-        "height_m:Int! Cao (mm)",
+        "width_m:Float! Rộng (m)",
+        "height_m:Float! Cao (m)",
         "set_count:Int=(1) Số bộ",
         "color:Link(Item Color) Màu / mã sơn",
         "motor_model:Link(Item) Mô tơ",
@@ -4328,7 +4601,7 @@
         "  <div class=\"row\"><b>Kho vật tư</b><span>{{ source_warehouse }}</span></div>",
         "  <div class=\"row\"><b>Kho nhập TP</b><span>{{ target_warehouse }}</span></div>",
         "</div>",
-        "<div class=\"meas\"><div>RỘNG<div class=\"big\">{{ width_m }} mm</div></div><div>CAO<div class=\"big\">{{ height_m }} mm</div></div><div>SỐ BỘ<div class=\"big\">{{ set_count }}</div></div></div>",
+        "<div class=\"meas\"><div>RỘNG<div class=\"big\">{{ width_m }} m</div></div><div>CAO<div class=\"big\">{{ height_m }} m</div></div><div>SỐ BỘ<div class=\"big\">{{ set_count }}</div></div></div>",
         "<table><thead><tr><th style=\"width:34px\">#</th><th>Vật tư cần</th><th class=\"n\">Định mức</th><th>Kho xuất</th><th style=\"width:110px\">Thực xuất</th></tr></thead><tbody>",
         "{{#each required_items}}<tr><td>{{ _index }}</td><td>{{ item_code }}</td><td class=\"n\">{{ required_qty | number }}</td><td>{{ source_warehouse }}</td><td></td></tr>{{/each}}",
         "</tbody></table>",

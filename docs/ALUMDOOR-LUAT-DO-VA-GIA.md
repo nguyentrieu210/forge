@@ -60,21 +60,22 @@ cùng một loại ray. Nên **trừ cố định 0,08** là luật; 0,98 là m�
 
 Chủ xưởng đã xác nhận **0,08**.
 
-## 4. Các hằng số trừ khác trong BRD — khác sản phẩm, khác điều kiện
+## 4. Bảng công thức đầy đủ — nguồn chốt ngày 2026-07-29
 
-Không được lẫn với hai số trên: chúng thuộc sản phẩm khác và phụ thuộc **loại ray**, không
-phụ thuộc loại khách.
+Ảnh bảng công thức chủ xưởng gửi ngày 2026-07-29 thay phần hằng số còn treo trong BRD cũ.
+Mỗi loại cửa có một chính sách duy nhất, sinh ra ba kết quả từ cùng số đo.
 
-| Sản phẩm | Điều kiện | Đo theo | Trừ |
-|---|---|---|---|
-| Cửa Đức | khách đại lý | PB nhựa | 0,02 |
-| Cửa Đức | khách lẻ | PB ray | 0,08 |
-| Cửa Úc | — | PB ray | 0,03 |
-| Đức kéo tay | ray sắt U70 | PB ray | 0,05 |
-| Đức kéo tay | ray hộp/đơn U76 | PB ray | 0,08 |
+| Loại cửa | Rộng cắt lá | Mua vào | Đại lý bán | Khách lẻ bán |
+|---|---|---|---|---|
+| Cửa Đức | Đại lý: PB nhựa − 0,02; Lẻ: PB ray − 0,08 | Kg thực tế × đơn giá | Cao PB × PB nhựa | Cao PB × PB ray |
+| Cửa Úc | PB ray − 0,03 | Barem kg/m² × Cao PB × Rộng cắt × đơn giá | Cao PB × PB ray | Cao PB × PB ray |
+| Cửa Lưới | PB ray − 0,03; có bản bướm − 0,035 | Barem kg/m² × Cao lưới × Rộng cắt × đơn giá | Tách món: Cao PB × Rộng cắt; trọn bộ: Cao PB × PB ray | Cao PB × PB ray |
+| Cửa Đài Loan | PB ray − 0,03; có bản bướm − 0,035 | Barem kg/m² × Cao lưới × Rộng cắt × đơn giá | Tách món: Cao PB × Rộng cắt; trọn bộ/kéo tay: Cao PB × PB ray | Cao PB × PB ray |
+| Cửa Siêu Trường | PB ray − 0,03; có bản bướm − 0,035 | Barem kg/m² × Cao lưới × Rộng cắt × đơn giá | Cao PB × Rộng cắt | Cao PB × PB ray |
 
-Con số 0,08 xuất hiện ở **hai dòng khác nhau vì hai lý do khác nhau** — đây chính là chỗ đã gây
-nhầm giữa 0,06 và 0,08 khi đọc BRD.
+Các công thức trong bảng là công thức **một bộ**. Tổng chứng từ nhân thêm `Số bộ`. Nếu một
+dòng đang ghi bề rộng tổng của nhiều cánh thì `Số bộ` phải là 1; không được vừa cộng bề rộng
+vừa nhân số bộ lần nữa.
 
 ## 5. Hệ quả cho hệ thống
 
@@ -83,25 +84,24 @@ Nhóm khách chảy vào **hai tầng**, và trước nay chỉ có tầng một
 **Tầng đơn giá** — đã có đủ cơ chế (Chính sách giá theo khách / nhóm / mặt hàng / dải số lượng
 / thời gian, ra giá cố định hoặc % giảm, có độ ưu tiên). Chỉ chưa khai bản ghi nào.
 
-**Tầng cách tính lượng** — chưa có chỗ nào chứa. "Đo theo PB ray hay PB nhựa" đổi **diện tích
-tính tiền**, tức đổi *lượng* chứ không đổi *đơn giá*; và cùng luật đó còn quyết định **rộng cắt
-lá**, tức chảy sang cả lệnh sản xuất nơi Chính sách giá không với tới.
+**Tầng cách tính lượng** — nằm trong `Cutting Policy` (giao diện: **Công thức cửa**). Một bản
+ghi chứa cả nhánh đại lý/lẻ, tách món/trọn bộ, bản bướm, mua barem và rộng cắt để ba luồng
+không thể dùng ba bảng số khác nhau.
 
-Ba chỗ phải sửa cùng một lượt, nếu không sẽ mâu thuẫn nhau:
+Bốn chỗ phải sửa cùng một lượt, nếu không sẽ mâu thuẫn nhau:
 
-1. **Dòng bán** lưu `rộng` kèm **cơ sở đo**, không chỉ một con số trần.
-2. **Máy chủ** hiện tự tính lại `diện tích = rộng × cao × số bộ` rồi **từ chối nếu lệch**. Phép
-   kiểm đó chưa biết gì về cơ sở đo; thêm luật mà không sửa nó thì hoặc mọi đơn đại lý bị chặn,
-   hoặc phải tắt kiểm — mà tắt kiểm là mở đường cho gọi API ghi thẳng diện tích sai.
-3. **Bậc giá theo m²** phải tính trên **diện tích tính tiền**, không phải diện tích vật lý. Cửa
-   sát mép bậc sẽ rơi vào hai bậc khác nhau giữa lẻ và đại lý — đúng, nhưng phải cố ý.
+1. **Dòng bán** giữ `rộng`, `cao`, `số bộ`, `cách bán`, `có bản bướm`; cơ sở rộng đến từ nhóm
+   khách và chính sách, không cho người lập tự chọn.
+2. **Máy chủ** đọc Item + Công thức cửa, tính lại diện tích và từ chối payload ghi thẳng nếu
+   `qty` lệch. Cửa không thuộc năm loại trên vẫn đi công thức m² chung.
+3. **Máy tính Công thức cửa** cho xem trước rộng cắt, m² bán và kg mua dự toán từ đúng một luật.
+4. **Bậc giá theo m²** phải tính trên diện tích tính tiền do Worker trả ra, không phải diện tích
+   hình học mặc định.
 
 ## 6. Còn treo
 
 - **439 khách chưa phân loại đáng tin.** Hiện 321 mang giá trị mặc định "Đại lý", 114 để "Khác",
   chỉ 4 là "Khách lẻ". Phân loại này giờ quyết định **cả tiền lẫn kích thước cắt**, nên không
   dùng lại số đang có được.
-- **Hai bảng phân loại chưa hợp nhất:** hồ sơ khách dùng `customer_type` (Đại lý · Khách lẻ ·
-  Khác), đơn hàng dùng `customer_group` (Lẻ · Đại lý · Công trình · Nhà thầu). Định giá đọc cái
-  ghi **trên đơn**, không đọc hồ sơ khách — nên sale chọn nhầm là sai cả tiền lẫn cắt, không ai
-  chặn.
+- Cần điền `Item.purchase_kg_per_m2` cho cửa Úc, Lưới, Đài Loan và Siêu Trường trước khi dùng
+  dự toán mua. Worker cố ý từ chối khi thiếu barem, không lấy một số gần đúng từ mặt hàng khác.

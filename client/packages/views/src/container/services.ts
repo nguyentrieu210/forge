@@ -55,6 +55,7 @@ export function adapterServices(
     getMeta: (doctype) => adapter.getMeta(doctype),
     fetchValue: (doctype, name, field) => adapter.getValue(doctype, { name }, field),
     fetchDocument: async (doctype, name) => (await adapter.getDoc(doctype, name)).doc,
+    callPost: <T = unknown>(method: string, args?: Record<string, unknown>) => adapter.callPost<T>(method, args),
     resolveDisplay: async (doctype, name) => {
       const [resolved] = await adapter.resolveDisplayValues([{ doctype, name }]);
       return { label: resolved?.label ?? name, description: resolved?.description, image: resolved?.image };
