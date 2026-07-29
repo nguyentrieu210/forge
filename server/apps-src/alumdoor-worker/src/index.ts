@@ -70,7 +70,13 @@ interface InventoryItem {
   item_code?: string;
   inventory_mode?: string;
   stock_uom?: string;
+  default_purchase_uom?: string;
+  default_sales_uom?: string;
   measurement_profile?: string;
+  min_area_sqm?: number;
+  is_purchase_item?: unknown;
+  is_sales_item?: unknown;
+  uom_conversions?: Array<{ uom?: string; conversion_factor?: unknown }>;
   default_color?: string;
   allowed_colors?: Array<{ color?: string }>;
 }
@@ -193,6 +199,10 @@ async function validateItemMaster(call: PlatformCall, subject: ValidatorSubject)
   for (const fieldname of ["default_purchase_uom", "default_sales_uom"]) {
     const uom = String(doc[fieldname] ?? "").trim();
     if (!uom || uom === stockUom) continue;
+    const dynamicSquareMetreToSet = mode === "Thành phẩm theo m2"
+      && ["m2", "m²", "sqm"].includes(normalizedUom(uom))
+      && ["bộ", "bo", "set"].includes(normalizedUom(stockUom));
+    if (dynamicSquareMetreToSet) continue;
     const converted = conversions.some((row) =>
       Boolean(row) && typeof row === "object" && !Array.isArray(row)
       && String((row as Record<string, unknown>).uom ?? "") === uom
@@ -268,6 +278,116 @@ async function validationDocument(
   if (subject.action === "create") return subject.payload ?? {};
   const current = await readMaster(call, subject.doctype, subject.name);
   return { ...(current ?? {}), ...(subject.payload ?? {}) };
+}
+
+type TransactionSide = "purchase" | "sales";
+
+function normalizedUom(value: unknown): string {
+  return String(value ?? "").trim().toLocaleLowerCase("vi");
+}
+
+function nearlyEqual(left: number, right: number): boolean {
+  return Math.abs(left - right) <= Math.max(0.000001, Math.abs(right) * 0.000001);
+}
+
+/**
+ * One Item contract for the entire purchase/sales chain.
+ *
+ * The line can choose only a UOM declared by Item. Inventory mode, stock UOM and conversion
+ * are master data, not user input. Quantity remains the commercial quantity; stock quantity is
+ * a separate snapshot used by the ledger.
+ */
+async function validateTransactionLines(
+  call: PlatformCall,
+  subject: ValidatorSubject,
+  side: TransactionSide,
+  validatedDoc?: Record<string, unknown>,
+): Promise<Response> {
+  const doc = validatedDoc ?? await validationDocument(call, subject);
+  const rows = Array.isArray(doc.items)
+    ? doc.items.filter((row): row is Record<string, unknown> => Boolean(row) && typeof row === "object" && !Array.isArray(row))
+    : [];
+  if (!rows.length) return accept();
+  const codes = [...new Set(rows.map((row) => String(row.item_code ?? "").trim()).filter(Boolean))];
+  const pairs = await Promise.all(codes.map(async (code) => [code, await readMaster(call, "Item", code) as InventoryItem | null] as const));
+  const items = new Map(pairs);
+
+  for (let index = 0; index < rows.length; index += 1) {
+    const row = rows[index]!;
+    const code = String(row.item_code ?? "").trim();
+    if (!code) continue;
+    const item = items.get(code);
+    const line = `Dòng ${index + 1} (${code})`;
+    if (!item) return refuse(`${line}: mặt hàng không tồn tại hoặc đã ngừng dùng.`);
+    if (side === "purchase" && item.is_purchase_item !== undefined && !checked(item.is_purchase_item)) {
+      return refuse(`${line}: Item không được phép mua.`);
+    }
+    if (side === "sales" && item.is_sales_item !== undefined && !checked(item.is_sales_item)) {
+      return refuse(`${line}: Item không được phép bán.`);
+    }
+
+    const stockUom = String(item.stock_uom ?? "").trim();
+    const defaultUom = String(side === "purchase" ? item.default_purchase_uom ?? "" : item.default_sales_uom ?? "").trim();
+    const uom = String(row.uom ?? (defaultUom || stockUom)).trim();
+    const mode = String(item.inventory_mode ?? "Hàng thường");
+    const selected = normalizedUom(uom);
+    if (side === "purchase" && mode === "Nhôm cây/lá" && selected !== "kg") {
+      return refuse(`${line}: nhôm cây/lá phải nhập theo Kg; số cây và chiều dài chỉ là quy cách đối chiếu.`);
+    }
+    const dynamicSquareMetreToSet = mode === "Thành phẩm theo m2"
+      && ["m2", "m²", "sqm"].includes(selected)
+      && ["bộ", "bo", "set"].includes(normalizedUom(stockUom));
+    const factors = new Map<string, number>();
+    if (stockUom) factors.set(stockUom, 1);
+    for (const conversion of item.uom_conversions ?? []) {
+      const name = String(conversion?.uom ?? "").trim();
+      const factor = Number(conversion?.conversion_factor);
+      if (name && Number.isFinite(factor) && factor > 0) factors.set(name, factor);
+    }
+    if (defaultUom && !factors.has(defaultUom) && !(dynamicSquareMetreToSet && defaultUom === uom)) {
+      return refuse(`${line}: ĐVT mặc định ${defaultUom} chưa có hệ số quy đổi trên Item.`);
+    }
+    if (uom && !factors.has(uom) && !dynamicSquareMetreToSet) {
+      return refuse(`${line}: ĐVT ${uom} chưa được Item cho phép.`);
+    }
+    // Draft/partial payloads can be validated again by the authoritative document controller.
+    // When qty is present, however, all derived quantities below must be exact.
+    if (row.qty === undefined || row.qty === null || row.qty === "") continue;
+    const quantity = Number(row.qty);
+    if (!Number.isFinite(quantity) || quantity <= 0) return refuse(`${line}: số lượng phải lớn hơn 0.`);
+    let expectedFactor = uom ? factors.get(uom) ?? 1 : 1;
+    let expectedStockQuantity = quantity * expectedFactor;
+    if (mode === "Thành phẩm theo m2") {
+      const sets = Number(row.set_count ?? 1);
+      if (!Number.isFinite(sets) || sets <= 0) return refuse(`${line}: số bộ phải lớn hơn 0.`);
+      if (["m2", "m²", "sqm"].includes(selected)) {
+        const width = Number(row.width_mm);
+        const height = Number(row.height_mm);
+        if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) {
+          return refuse(`${line}: hàng tính m2 phải có rộng và cao lớn hơn 0.`);
+        }
+        const billable = Math.max(width * height / 1_000_000, Number(item.min_area_sqm ?? 0) || 0) * sets;
+        if (!nearlyEqual(quantity, billable)) return refuse(`${line}: SL tính tiền phải là ${billable.toFixed(6)} m2 theo kích thước và diện tích tối thiểu của Item.`);
+        if (dynamicSquareMetreToSet) {
+          expectedFactor = sets / quantity;
+          expectedStockQuantity = sets;
+        }
+      } else if (["bộ", "bo", "set"].includes(selected) && !nearlyEqual(quantity, sets)) {
+        return refuse(`${line}: bán theo Bộ thì số lượng tính tiền phải bằng số bộ.`);
+      }
+    }
+    const declaredFactor = row.conversion_factor === undefined || row.conversion_factor === null || row.conversion_factor === ""
+      ? expectedFactor : Number(row.conversion_factor);
+    if (!Number.isFinite(declaredFactor) || declaredFactor <= 0 || !nearlyEqual(declaredFactor, expectedFactor)) {
+      return refuse(`${line}: hệ số quy đổi phải là ${expectedFactor} theo Item, không nhập tuỳ ý trên chứng từ.`);
+    }
+    const stockQuantity = Number(row.stock_qty);
+    if (row.stock_qty !== undefined && row.stock_qty !== null && row.stock_qty !== ""
+      && (!Number.isFinite(stockQuantity) || !nearlyEqual(stockQuantity, expectedStockQuantity))) {
+      return refuse(`${line}: số lượng tồn phải đúng theo Item và quy cách của dòng.`);
+    }
+  }
+  return accept();
 }
 
 /**
@@ -650,8 +770,10 @@ async function returnCut(call: PlatformCall, args: Record<string, unknown>): Pro
 
 /** Dòng hàng chép từ báo giá sang đơn. Field nào nhân O2C đọc thì phải qua nguyên vẹn. */
 const QUOTE_LINE_FIELDS = [
-  "item_code", "width_mm", "height_mm", "set_count", "qty", "rate",
-  "color", "motor_model", "accessories",
+  "item_code", "item_name", "inventory_mode", "measurement_profile", "min_area_sqm",
+  "width_mm", "height_mm", "set_count", "length_m", "qty_bar",
+  "qty", "uom", "conversion_factor", "stock_uom", "stock_qty", "rate", "amount",
+  "color", "motor_model", "accessories", "note",
 ] as const;
 
 interface QuotationDoc {
@@ -693,6 +815,7 @@ function orderLines(quote: QuotationDoc): Array<Record<string, unknown>> {
   return (quote.items ?? []).map((line, index) => {
     const copied: Record<string, unknown> = { row_id: `R${index + 1}` };
     for (const field of QUOTE_LINE_FIELDS) if (line[field] !== undefined && line[field] !== null && line[field] !== "") copied[field] = line[field];
+    if (!copied.install_note && line.note) copied.install_note = line.note;
     return copied;
   });
 }
@@ -776,6 +899,7 @@ async function convertQuote(call: PlatformCall, args: Record<string, unknown>, c
       against_quotation: quote.name,
       ...(quote.selling_price_list ? { selling_price_list: quote.selling_price_list } : {}),
       ...(quote.customer_group ? { customer_group: quote.customer_group } : {}),
+      ...(quote.install_address ? { install_address: quote.install_address } : {}),
       items: orderLines(quote),
       note: String(args.note ?? `Theo báo giá ${quote.name}`),
     }),
@@ -807,9 +931,10 @@ async function stampQuotation(call: PlatformCall, quote: QuotationDoc, order: st
 
 /** Field của dòng mua mà nhân O2P ĐỌC. Chép thiếu `uom`/`conversion_factor` là mất quy đổi. */
 const PURCHASE_LINE_FIELDS = [
-  "item_code", "inventory_mode", "measurement_profile", "color",
+  "item_code", "item_name", "inventory_mode", "measurement_profile", "stock_uom", "min_area_sqm", "color",
+  "width_mm", "height_mm", "set_count",
   "length_m", "qty_bundle", "qty_bar", "total_length_m", "actual_kg_per_m", "so_no",
-  "qty", "uom", "conversion_factor", "rate", "note",
+  "qty", "uom", "conversion_factor", "stock_qty", "rate", "amount", "note",
 ] as const;
 
 interface PurchaseDoc {
@@ -1011,6 +1136,131 @@ async function receiptFromPurchaseOrder(call: PlatformCall, args: Record<string,
   if (!created.ok) return refuse(`Không tạo được phiếu nhập: ${(await created.text()).slice(0, 200)}`);
   const receipt = ((await created.json()) as { data?: { name?: string } }).data?.name ?? "";
   return answer({ purchase_receipt: receipt, purchase_order: order, items, lines: items.length, draft: true });
+}
+
+interface SalesOrderDoc {
+  name: string;
+  docstatus?: number;
+  customer?: string;
+  company?: string;
+  currency?: string;
+  install_address?: string;
+  items?: Array<Record<string, unknown>>;
+}
+
+const SALES_DELIVERY_LINE_FIELDS = [
+  ...QUOTE_LINE_FIELDS,
+  "install_note", "warehouse",
+] as const;
+
+/** Số đã giao được đọc từ các phiếu xuất ĐÃ GHI SỔ, theo đơn vị tồn. */
+async function deliveredByItem(call: PlatformCall, order: string): Promise<Map<string, number>> {
+  const delivered = new Map<string, number>();
+  const query = new URLSearchParams({
+    fields: JSON.stringify(["name"]),
+    filters: JSON.stringify([["against_sales_order", "=", order], ["docstatus", "=", 1]]),
+    limit_page_length: "50",
+  });
+  const listed = await call(`resource/Delivery%20Note?${query}`);
+  if (!listed.ok) return delivered;
+  const names = (((await listed.json()) as { data?: Array<{ name?: string }> }).data ?? [])
+    .map((row) => row.name).filter((value): value is string => Boolean(value));
+  const notes = await Promise.all(names.map(async (name) => {
+    try { return await readDoc<SalesOrderDoc>(call, "Delivery Note", name); } catch { return null; }
+  }));
+  for (const note of notes) {
+    for (const line of note?.items ?? []) {
+      const code = String(line.item_code ?? "");
+      const quantity = Number(line.stock_qty ?? line.qty ?? 0);
+      if (code && Number.isFinite(quantity)) delivered.set(code, (delivered.get(code) ?? 0) + quantity);
+    }
+  }
+  return delivered;
+}
+
+/** Phần chưa giao của đơn bán; giữ nguyên màu, kích thước, ĐVT và kho của từng dòng. */
+async function remainingDeliveryLines(
+  call: PlatformCall,
+  order: string,
+  warehouse: string,
+): Promise<{ sales: SalesOrderDoc; items: Array<Record<string, unknown>> }> {
+  const [sales, delivered] = await Promise.all([
+    readDoc<SalesOrderDoc>(call, "Sales Order", order),
+    deliveredByItem(call, order),
+  ]);
+  if (sales.docstatus !== 1) throw new Error(`Đơn hàng ${order} chưa ghi sổ.`);
+  const items: Array<Record<string, unknown>> = [];
+  for (const [index, line] of (sales.items ?? []).entries()) {
+    const code = String(line.item_code ?? "");
+    if (!code) continue;
+    const orderedStock = Number(line.stock_qty ?? line.qty ?? 0);
+    const pool = delivered.get(code) ?? 0;
+    const consumed = Math.min(pool, orderedStock);
+    delivered.set(code, pool - consumed);
+    const outstandingStock = orderedStock - consumed;
+    if (outstandingStock <= 0) continue;
+    const orderedQty = Number(line.qty ?? 0);
+    const copied: Record<string, unknown> = { row_id: `R${index + 1}` };
+    for (const field of SALES_DELIVERY_LINE_FIELDS) {
+      if (line[field] !== undefined && line[field] !== null && line[field] !== "") copied[field] = line[field];
+    }
+    copied.qty = orderedStock > 0 ? Number((orderedQty * outstandingStock / orderedStock).toFixed(6)) : orderedQty;
+    copied.stock_qty = Number(outstandingStock.toFixed(6));
+    if (String(line.inventory_mode ?? "") === "Thành phẩm theo m2"
+      && ["bộ", "bo", "set"].includes(normalizedUom(String(line.stock_uom ?? "")))) {
+      copied.set_count = Number(outstandingStock.toFixed(6));
+    }
+    const target = warehouse || String(line.warehouse ?? "");
+    if (target) copied.warehouse = target;
+    items.push(copied);
+  }
+  return { sales, items };
+}
+
+async function previewDelivery(call: PlatformCall, args: Record<string, unknown>): Promise<Response> {
+  const order = String(args.sales_order ?? "");
+  if (!order) return refuse("Cần chọn đơn hàng.");
+  try {
+    const { sales, items } = await remainingDeliveryLines(call, order, String(args.warehouse ?? ""));
+    return answer({
+      sales_order: order, customer: sales.customer, install_address: sales.install_address, items, lines: items.length,
+      ...(items.length ? {} : { message: `Đơn hàng ${order} đã giao đủ.` }),
+    });
+  } catch (error) {
+    return refuse(error instanceof Error ? error.message : "không đọc được đơn hàng");
+  }
+}
+
+/** Tạo phiếu xuất NHÁP; thủ kho vẫn là người xác nhận số thực giao trước khi ghi sổ. */
+async function deliveryFromSalesOrder(call: PlatformCall, args: Record<string, unknown>): Promise<Response> {
+  const order = String(args.sales_order ?? "");
+  if (!order) return refuse("Cần chọn đơn hàng.");
+  let sales: SalesOrderDoc;
+  let items: Array<Record<string, unknown>>;
+  try { ({ sales, items } = await remainingDeliveryLines(call, order, String(args.warehouse ?? ""))); }
+  catch (error) { return refuse(error instanceof Error ? error.message : "không đọc được đơn hàng"); }
+  if (!items.length) return refuse(`Đơn hàng ${order} đã giao đủ.`);
+  if (!sales.install_address && !args.install_address) return refuse(`Đơn hàng ${order} chưa có địa chỉ giao / lắp đặt.`);
+  const created = await call("resource/Delivery%20Note", {
+    method: "POST",
+    body: JSON.stringify({
+      customer: sales.customer,
+      company: sales.company,
+      currency: sales.currency,
+      against_sales_order: order,
+      posting_at: new Date().toISOString(),
+      install_address: String(args.install_address ?? sales.install_address ?? ""),
+      ...(args.install_date ? { install_date: String(args.install_date) } : {}),
+      ...(args.installer ? { installer: String(args.installer) } : {}),
+      ...(args.driver ? { driver: String(args.driver) } : {}),
+      ...(args.vehicle ? { vehicle: String(args.vehicle) } : {}),
+      items,
+      note: `Nháp theo đơn hàng ${order} — soát số thực giao trước khi ghi sổ.`,
+    }),
+  });
+  if (!created.ok) return refuse(`Không tạo được phiếu xuất: ${(await created.text()).slice(0, 200)}`);
+  const delivery = ((await created.json()) as { data?: { name?: string } }).data?.name ?? "";
+  return answer({ delivery_note: delivery, sales_order: order, items, lines: items.length, draft: true });
 }
 
 // ── ẢNH BẢNG GIÁ → DÒNG HÀNG ────────────────────────────────────────────────
@@ -1259,6 +1509,8 @@ export default {
         if (method === "alumdoor.purchase.order_from_quotation") return await orderFromSupplierQuotation(call, args);
         if (method === "alumdoor.purchase.preview_receipt") return await previewPurchaseReceipt(call, args);
         if (method === "alumdoor.purchase.receipt_from_order") return await receiptFromPurchaseOrder(call, args);
+        if (method === "alumdoor.sales.preview_delivery") return await previewDelivery(call, args);
+        if (method === "alumdoor.sales.delivery_from_order") return await deliveryFromSalesOrder(call, args);
         if (method === "alumdoor.ocr.parse") return await parseOcr(call, env, args);
         if (method === "alumdoor.ocr.apply") return await applyOcr(call, env, args);
         return new Response(JSON.stringify({ message: `Không có method ${method}` }), { status: 404 });
@@ -1269,18 +1521,25 @@ export default {
           const call = platformCaller(request, env);
           return await validateItemMaster(call, subject);
         }
-        if (subject.doctype === "Purchase Order" || subject.doctype === "Purchase Receipt" || subject.doctype === "Supplier Quotation") {
+        if (subject.doctype === "Purchase Order" || subject.doctype === "Purchase Receipt" || subject.doctype === "Purchase Invoice" || subject.doctype === "Supplier Quotation") {
           const call = platformCaller(request, env);
           const doc = await validationDocument(call, subject);
+          const transaction = await validateTransactionLines(call, subject, "purchase", doc);
+          if (!transaction.ok) return transaction;
           const measurements = await validatePurchaseMeasurement(call, subject, doc);
           if (!measurements.ok) return measurements;
+          return await validateDocumentColors(call, subject, doc);
+        }
+        if (["Quotation", "Sales Order", "Delivery Note", "Sales Invoice"].includes(subject.doctype)) {
+          const call = platformCaller(request, env);
+          const doc = await validationDocument(call, subject);
+          const transaction = await validateTransactionLines(call, subject, "sales", doc);
+          if (!transaction.ok) return transaction;
           return await validateDocumentColors(call, subject, doc);
         }
         if ([
           "Material Request",
           "Request for Quotation",
-          "Quotation",
-          "Sales Order",
           "Work Order",
           "Aluminium Lot",
         ].includes(subject.doctype)) {

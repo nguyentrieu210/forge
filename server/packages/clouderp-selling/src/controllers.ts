@@ -17,6 +17,7 @@ import { addMinor, fromScaledInt, multiplyScaled, negateMinor, toScaledInt } fro
 import { domainEvent } from "../../outbox/src/index.js";
 import { buildTrackedStockLines, deriveOutgoingValuation } from "../../clouderp-stock/src/index.js";
 import { resolveServerPrice } from "../../clouderp-pricing/src/index.js";
+import { applyUomConversion, stockQtyMicros } from "../../clouderp-core/src/uom.js";
 import { assertCurrencyScale, calculateSalesTotals } from "./totals.js";
 import type { DeliveryNoteData, PaymentEntryData, SalesInvoiceData, SalesItem, SalesOrderData } from "./types.js";
 
@@ -117,7 +118,8 @@ export class SalesOrderController extends BaseController<SalesOrderData> {
     if (!input.currency) throw errors.validation("Currency is required");
     const currency = await resolveCurrencyContext(context, input.company, input.currency, input.transaction_date);
     const currencyScale = currency.transactionScale;
-    const pricedItems = await applySellingPricing(context, input.items, input.selling_price_list, input.currency, input.transaction_date, input.customer, input.customer_group);
+    const itemSnapshots = await applyUomConversion(context as unknown as ControllerContext<JsonObject>, input.items, { transactionKind: "sales" });
+    const pricedItems = await applySellingPricing(context, itemSnapshots, input.selling_price_list, input.currency, input.transaction_date, input.customer, input.customer_group);
     const totals = calculateSalesTotals(pricedItems, input.taxes ?? [], currencyScale, {
       apply_discount_on: input.apply_discount_on,
       additional_discount_percentage: input.additional_discount_percentage,
@@ -173,7 +175,11 @@ export class DeliveryNoteController extends BaseController<DeliveryNoteData> {
     if (input.items.length === 0) throw errors.validation("At least one delivery item is required");
     const currency = await resolveCurrencyContext(context, input.company, input.currency, input.posting_at);
     const currencyScale = currency.transactionScale;
-    const items = normalizeStockItems(input.items, currencyScale);
+    const items = await applyUomConversion(
+      context as unknown as ControllerContext<JsonObject>,
+      normalizeStockItems(input.items, currencyScale),
+      { transactionKind: "sales" },
+    );
     // Negative stock disables the stock_balance_guard trigger, so it is a
     // server-authoritative decision — never trust the client-supplied flag.
     const allowNegativeStock = resolveAllowNegativeStock(context, input.allow_negative_stock);
@@ -193,14 +199,16 @@ export class DeliveryNoteController extends BaseController<DeliveryNoteData> {
         referenceField: "against_sales_order",
         referenceName: input.against_sales_order,
         label: "delivered",
+        quantityKind: "stock",
       });
       if (!allowNegativeStock) {
         for (const item of items) {
           const balance = await context.reader.getStockBalanceMicros(context.command.tenant_id, item.item_code, item.warehouse!);
-          if (balance < (item.qty_micros ?? 0)) {
+          const requestedStockQty = stockQtyMicros(item);
+          if (balance < requestedStockQty) {
             throw errors.reference(`Insufficient stock for ${item.item_code} in ${item.warehouse}`, {
               available_qty_micros: balance,
-              requested_qty_micros: item.qty_micros ?? 0,
+              requested_qty_micros: requestedStockQty,
             });
           }
         }
@@ -209,7 +217,7 @@ export class DeliveryNoteController extends BaseController<DeliveryNoteData> {
     let valuedItems = items;
     if (context.command.action === "submit") {
       valuedItems = await Promise.all(items.map(async (item, index) => {
-        const qty = item.qty_micros ?? toScaledInt(item.qty, 6);
+        const qty = stockQtyMicros(item);
         const valuation = await deriveOutgoingValuation(context as unknown as ControllerContext<JsonObject>, {
           itemCode: item.item_code, warehouse: item.warehouse!, qtyMicros: qty, postingAt: input.posting_at, currencyScale,
         });
@@ -224,9 +232,9 @@ export class DeliveryNoteController extends BaseController<DeliveryNoteData> {
     const currencyScale = data.currency_scale ?? 2;
     const normal: StockLedgerEntry[] = []; const usages: StockBundleUsageEntry[] = []; const gl: GeneralLedgerEntry[] = [];
     for (const [index,item] of data.items.entries()) {
-      const qty = item.qty_micros ?? toScaledInt(item.qty,6);
+      const qty = stockQtyMicros(item);
       const valuationRateMinor = item.valuation_rate_minor ?? toScaledInt(item.valuation_rate ?? item.rate,currencyScale);
-      const value = Math.abs(item.stock_value_difference_minor ?? multiplyScaled(item.qty,6,item.valuation_rate ?? item.rate,6,currencyScale));
+      const value = Math.abs(item.stock_value_difference_minor ?? multiplyScaled(fromScaledInt(qty,6),6,item.valuation_rate ?? item.rate,6,currencyScale));
       const tracked = await buildTrackedStockLines(context as unknown as ControllerContext<JsonObject>, { itemCode:item.item_code,warehouse:item.warehouse!,qtyMicros:qty,direction:"Outward",postingAt:data.posting_at,currency:data.currency,currencyScale,valuationRateMinor,stockValueMinor:value,lineKey:`ITEM-${item.row_id||index+1}`,...(item.serial_and_batch_bundle ? { bundleName:item.serial_and_batch_bundle } : {}),allowNegativeStock:Boolean(data.allow_negative_stock) });
       normal.push(...tracked.stock); usages.push(...tracked.usages);
       const itemMaster=await context.reader.getMasterRecordData(context.command.tenant_id,"Item",item.item_code); const company=await context.reader.getMasterRecordData(context.command.tenant_id,"Company",data.company);
@@ -256,7 +264,8 @@ export class SalesInvoiceController extends BaseController<SalesInvoiceData> {
     if (!input.debit_to || !input.default_income_account) throw errors.validation("Receivable and income accounts are required");
     const currency = await resolveCurrencyContext(context, input.company, input.currency, input.posting_at);
     const currencyScale = currency.transactionScale;
-    const pricedItems = await applySellingPricing(context, input.items, input.selling_price_list, input.currency, input.posting_at, input.customer, input.customer_group);
+    const itemSnapshots = await applyUomConversion(context as unknown as ControllerContext<JsonObject>, input.items, { transactionKind: "sales" });
+    const pricedItems = await applySellingPricing(context, itemSnapshots, input.selling_price_list, input.currency, input.posting_at, input.customer, input.customer_group);
     const totals = calculateSalesTotals(pricedItems, input.taxes ?? [], currencyScale, {
       apply_discount_on: input.apply_discount_on,
       additional_discount_percentage: input.additional_discount_percentage,
@@ -288,6 +297,7 @@ export class SalesInvoiceController extends BaseController<SalesInvoiceData> {
         referenceField: "against_sales_order",
         referenceName: input.against_sales_order,
         label: "billed",
+        quantityKind: "transaction",
       });
     }
     return {
@@ -581,10 +591,11 @@ async function assertRemainingQuantity(
     referenceField: string;
     referenceName: string;
     label: string;
+    quantityKind: "stock" | "transaction";
   },
 ): Promise<void> {
-  const orderByItem = aggregateItemQuantity(input.source.data.items);
-  const currentByItem = aggregateItemQuantity(input.items);
+  const orderByItem = aggregateItemQuantity(input.source.data.items, input.quantityKind);
+  const currentByItem = aggregateItemQuantity(input.items, input.quantityKind);
   for (const [itemCode, requestedMicros] of currentByItem) {
     const orderedMicros = orderByItem.get(itemCode);
     if (orderedMicros === undefined) throw errors.reference(`Item ${itemCode} is not present in Sales Order ${input.referenceName}`);
@@ -595,6 +606,7 @@ async function assertRemainingQuantity(
       referenceName: input.referenceName,
       itemCode,
       excludeName: context.command.aggregate.name,
+      quantityKind: input.quantityKind,
     });
     if (alreadySubmitted + requestedMicros > orderedMicros) {
       throw errors.reference(`Quantity ${input.label} for ${itemCode} exceeds Sales Order quantity`, {
@@ -606,10 +618,12 @@ async function assertRemainingQuantity(
   }
 }
 
-function aggregateItemQuantity(items: SalesItem[]): Map<string, number> {
+function aggregateItemQuantity(items: SalesItem[], quantityKind: "stock" | "transaction"): Map<string, number> {
   const result = new Map<string, number>();
   for (const item of items) {
-    const micros = item.qty_micros ?? toScaledInt(item.qty, 6, `${item.item_code}.qty`);
+    const micros = quantityKind === "stock"
+      ? stockQtyMicros(item)
+      : item.qty_micros ?? toScaledInt(item.qty, 6, `${item.item_code}.qty`);
     result.set(item.item_code, (result.get(item.item_code) ?? 0) + micros);
   }
   return result;

@@ -58,6 +58,76 @@ test("Order-to-Cash posts exact minor-unit GL, stock and receivable allocation",
   assert.equal(order.data.billed_percentage, "40.00");
 });
 
+test("sales keeps billable UOM separate from stock UOM from order through delivery and invoice", async () => {
+  const { store, kernel } = setup();
+  store.seedMaster("Item", "ITEM-001", "demo", {
+    stock_uom: "Mét",
+    default_sales_uom: "Cây",
+    inventory_mode: "Hàng thường",
+    uom_conversions: [{ uom: "Cây", conversion_factor: "6" }],
+  });
+  const salesLine = { row_id: "1", item_code: "ITEM-001", qty: "2", uom: "Cây", rate: "300" };
+  await createAndSubmit(kernel, {
+    doctype: "Sales Order", name: "SO-SALES-UOM",
+    document: { ...orderDocument("2", "300"), items: [salesLine] },
+  });
+  await createAndSubmit(kernel, {
+    doctype: "Delivery Note", name: "DN-SALES-UOM",
+    document: {
+      customer: "CUST-0001", company: "Demo", currency: "USD", posting_at: now(), against_sales_order: "SO-SALES-UOM",
+      items: [{ ...salesLine, warehouse: "Stores", valuation_rate: "15" }],
+    },
+  });
+  await createAndSubmit(kernel, {
+    doctype: "Sales Invoice", name: "SI-SALES-UOM",
+    document: {
+      customer: "CUST-0001", company: "Demo", currency: "USD", posting_at: now(), against_sales_order: "SO-SALES-UOM",
+      debit_to: "Debtors", default_income_account: "Sales", items: [salesLine], taxes: [],
+    },
+  });
+
+  const delivery = await store.getDocument("demo", "Delivery Note", "DN-SALES-UOM");
+  assert.equal(delivery.data.items[0].qty, "2.000000");
+  assert.equal(delivery.data.items[0].stock_qty, "12.000000");
+  assert.equal(await store.getStockBalanceMicros("demo", "ITEM-001", "Stores"), 88_000_000);
+  const invoice = await store.getDocument("demo", "Sales Invoice", "SI-SALES-UOM");
+  assert.equal(invoice.data.grand_total, "600.00");
+  assert.equal(invoice.data.items[0].stock_qty, "12.000000");
+});
+
+test("square-metre doors bill by area but deduct an exact number of sets", async () => {
+  const { store, kernel } = setup();
+  store.seedMaster("Item", "ITEM-001", "demo", {
+    stock_uom: "Bộ",
+    default_sales_uom: "m2",
+    inventory_mode: "Thành phẩm theo m2",
+    min_area_sqm: "3",
+  });
+  const door = {
+    row_id: "1", item_code: "ITEM-001", uom: "m2", qty: "6", rate: "100",
+    width_mm: "1000", height_mm: "2000", set_count: "2",
+  };
+  await createAndSubmit(kernel, {
+    doctype: "Sales Order", name: "SO-DOOR-M2",
+    document: { ...orderDocument("6", "100"), items: [door] },
+  });
+  await createAndSubmit(kernel, {
+    doctype: "Delivery Note", name: "DN-DOOR-M2",
+    document: {
+      customer: "CUST-0001", company: "Demo", currency: "USD", posting_at: now(), against_sales_order: "SO-DOOR-M2",
+      items: [{ ...door, warehouse: "Stores", valuation_rate: "15" }],
+    },
+  });
+
+  const delivery = await store.getDocument("demo", "Delivery Note", "DN-DOOR-M2");
+  assert.equal(delivery.data.items[0].qty, "6.000000");
+  assert.equal(delivery.data.items[0].conversion_factor, "0.333333");
+  assert.equal(delivery.data.items[0].stock_qty, "2.000000");
+  assert.equal(await store.getStockBalanceMicros("demo", "ITEM-001", "Stores"), 98_000_000);
+  const order = await store.getDocument("demo", "Sales Order", "SO-DOOR-M2");
+  assert.equal(order.data.delivered_percentage, "100.00");
+});
+
 test("Delivery Note inherits inventory and COGS accounts from the nearest Item Group", async () => {
   const { store, kernel } = setup();
   store.seedMaster("Account", "Stock - Aluminium");

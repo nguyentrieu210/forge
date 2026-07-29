@@ -43,6 +43,8 @@ export interface FieldServices {
   getMeta?: (doctype: string) => Promise<{ label?: string } & Record<string, unknown>>;
   /** P1-09 fetch_from: lấy 1 field của doc đích (get_value) để điền tự động khi Link đổi. */
   fetchValue?: (doctype: string, name: string, field: string) => Promise<unknown>;
+  /** Fetch one complete document for dependent auto-fill; avoids one HTTP request per field. */
+  fetchDocument?: (doctype: string, name: string) => Promise<Record<string, unknown>>;
   /** Resolve name kỹ thuật → title/label thân thiện cho Link đã có sẵn. */
   resolveDisplay?: (doctype: string, name: string) => Promise<{ label: string; description?: string; image?: string }>;
   /** Mở form tạo nhanh bản ghi đích ngay trong Link combobox (giống ERPNext "+ Create a new …") khi

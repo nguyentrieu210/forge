@@ -171,7 +171,7 @@ test("Item Price never applies silently to a different transaction UOM", async (
       customer: "CUST-1", company: "Demo", currency: "USD", transaction_date: "2026-07-25", selling_price_list: "Retail",
       items: [{ row_id: "1", item_code: "PRICE-UOM", qty: "2", uom: "Mét", rate: "999" }], taxes: [],
     }}),
-    /applies to UOM "Kg".*"Mét"/,
+    /không cho phép giao dịch theo ĐVT "Mét"/,
   );
 });
 

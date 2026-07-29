@@ -805,7 +805,7 @@ export function compileBrief(brief) {
      * would bury the ones that matter. The runtime derives WHICH date and time field to
      * use from metadata, so the app only says whether it wants the screen at all.
      */
-    if (doctype.calendar) {
+    if (doctype.menu !== false && doctype.calendar) {
       nav.push({
         key: `calendar:${doctypeName}`,
         label: doctype.calendar.label ?? `Lịch ${doctype.label ?? doctypeName}`,
@@ -817,7 +817,7 @@ export function compileBrief(brief) {
 
     // Nav: the operational inbox first when there is one, because a user who has an
     // approval queue opens the app to work it, not to browse a table.
-    if (doctype.inbox ?? Boolean(workflowBrief)) {
+    if (doctype.menu !== false && (doctype.inbox ?? Boolean(workflowBrief))) {
       nav.push({
         key: `approval:${doctypeName}`,
         label: doctype.inboxLabel ?? `Xử lý ${doctype.label ?? doctypeName}`,
@@ -883,7 +883,10 @@ export function compileBrief(brief) {
   if (actions.length && !brief.worker) {
     fail("`actions` cần `worker`: action gọi method, mà method không có Worker phục vụ thì nút bấm chỉ trả 404.");
   }
-  for (const action of actions) {
+  for (const [index, action] of actions.entries()) {
+    // Keep the callable action installed while removing it from the daily sidebar.
+    // This mirrors DocType `menu: false`: direct links and contextual buttons still work.
+    if (brief.actions?.[index]?.menu === false) continue;
     nav.push({
       key: `action:${action.name}`,
       label: action.label,

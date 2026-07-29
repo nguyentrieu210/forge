@@ -83,7 +83,7 @@ export class MaterialRequestController extends BaseController<MaterialRequestDat
       const qty = toScaledInt(item.qty, 6, `items[${index}].qty`);
       if (qty <= 0) throw errors.validation(`Quantity must be positive at row ${index + 1}`);
       return { ...item, row_id: item.row_id || `ROW-${index + 1}`, qty: fromScaledInt(qty, 6), qty_micros: qty };
-    }));
+    }), { transactionKind: "purchase" });
     if (context.command.action === "submit") await assertMasters(context, [["Company", input.company], ...items.map((item): [string, string] => ["Item", item.item_code]), ...items.filter((item) => item.warehouse).map((item): [string, string] => ["Warehouse", item.warehouse!])]);
     return { ...input, items };
   }
@@ -120,7 +120,7 @@ export class RequestForQuotationController extends BaseController<RequestForQuot
       const qty = toScaledInt(item.qty, 6, `items[${index}].qty`);
       if (qty <= 0) throw errors.validation(`Quantity must be positive at row ${index + 1}`);
       return { ...item, row_id: item.row_id || `ROW-${index + 1}`, qty: fromScaledInt(qty, 6), qty_micros: qty };
-    }));
+    }), { transactionKind: "purchase" });
     if (context.command.action === "submit") {
       if (input.material_request) { const request = await requireSubmitted<MaterialRequestData>(context, "Material Request", input.material_request); if (request.data.company !== input.company) throw errors.reference(`Material Request ${input.material_request} belongs to another company`); }
       await assertMasters(context, [["Company", input.company], ...suppliers.map((row): [string, string] => ["Supplier", row.supplier]), ...items.map((item): [string, string] => ["Item", item.item_code])]);
@@ -147,7 +147,7 @@ export class SupplierQuotationController extends BaseController<SupplierQuotatio
     if (!Array.isArray(input.items) || !input.items.length) throw errors.validation("At least one item is required");
     const currency = await resolveCurrency(context, input.company, input.currency, input.transaction_date, context.command.action === "submit");
     const totals = calculateSalesTotals(input.items as never, input.taxes ?? [], currency.transactionScale);
-    const items = await applyUomConversion(context, totals.items as unknown as PurchaseItem[]);
+    const items = await applyUomConversion(context, totals.items as unknown as PurchaseItem[], { transactionKind: "purchase" });
     if (context.command.action === "submit") {
       if (input.request_for_quotation) {
         const rfq = await requireSubmitted<RequestForQuotationData>(context, "Request for Quotation", input.request_for_quotation);
@@ -171,7 +171,7 @@ export class PurchaseOrderController extends BaseController<PurchaseOrderData> {
     const input = context.command.document; if (!input.supplier || !input.company || !input.currency || !input.transaction_date) throw errors.validation("Supplier, company, currency and transaction date are required");
     const currency = await resolveCurrency(context, input.company, input.currency, input.transaction_date, context.command.action === "submit");
     const pricedItems=await applyBuyingPricing(context,input.items,input.buying_price_list,input.currency,input.transaction_date,input.supplier,input.supplier_group);const totals = calculateSalesTotals(pricedItems as never, input.taxes ?? [], currency.transactionScale);
-    const items = await applyUomConversion(context, totals.items as unknown as PurchaseItem[]);
+    const items = await applyUomConversion(context, totals.items as unknown as PurchaseItem[], { transactionKind: "purchase" });
     if (context.command.action === "submit") { await assertMasters(context, [["Supplier",input.supplier],["Company",input.company],["Currency",input.currency],...items.map((item):[string,string]=>["Item",item.item_code]),...totals.taxes.map((tax):[string,string]=>["Account",tax.account])]);
       if (input.supplier_quotation) { const quotation = await requireSubmitted<SupplierQuotationData>(context,"Supplier Quotation",input.supplier_quotation); if (quotation.data.supplier!==input.supplier||quotation.data.company!==input.company||quotation.data.currency!==input.currency) throw errors.reference("Purchase Order commercial context does not match Supplier Quotation"); }
       if (input.material_request) await assertRequestRemaining(context, input.material_request, input.company, items); }
@@ -187,7 +187,7 @@ export class PurchaseReceiptController extends BaseController<PurchaseReceiptDat
   readonly doctype = "Purchase Receipt";
   async normalize(context: ControllerContext<PurchaseReceiptData>): Promise<PurchaseReceiptData> {
     const input=context.command.document; if(!input.supplier||!input.company||!input.currency||!input.posting_at) throw errors.validation("Supplier, company, currency and posting_at are required");
-    const currency=await resolveCurrency(context,input.company,input.currency,input.posting_at,context.command.action==="submit"); const items=await applyUomConversion(context,normalizePurchaseStockItems(input.items,currency.transactionScale));
+    const currency=await resolveCurrency(context,input.company,input.currency,input.posting_at,context.command.action==="submit"); const items=await applyUomConversion(context,normalizePurchaseStockItems(input.items,currency.transactionScale),{transactionKind:"purchase"});
     /**
      * Đơn mua lấy theo TỪNG DÒNG, đầu phiếu chỉ là mặc định.
      *
@@ -251,7 +251,7 @@ export class PurchaseReceiptController extends BaseController<PurchaseReceiptDat
 export class PurchaseInvoiceController extends BaseController<PurchaseInvoiceData> {
   readonly doctype="Purchase Invoice";
   async normalize(context:ControllerContext<PurchaseInvoiceData>):Promise<PurchaseInvoiceData>{const input=context.command.document;if(!input.supplier||!input.company||!input.currency||!input.posting_at||!input.credit_to)throw errors.validation("Supplier, company, currency, posting_at and payable account are required");
-    const currency=await resolveCurrency(context,input.company,input.currency,input.posting_at,context.command.action==="submit");const pricedItems=await applyBuyingPricing(context,input.items,input.buying_price_list,input.currency,input.posting_at,input.supplier,input.supplier_group);const totals=calculateSalesTotals(pricedItems as never,input.taxes??[],currency.transactionScale);const items=await applyUomConversion(context,(totals.items as unknown as PurchaseItem[]).map((item,index): PurchaseItem=>{const source=input.items[index]!;if(!source.expense_account)throw errors.validation(`Expense account is required at row ${index+1}`);return{...item,expense_account:source.expense_account,...(source.warehouse ? { warehouse: source.warehouse } : {})}}));
+    const currency=await resolveCurrency(context,input.company,input.currency,input.posting_at,context.command.action==="submit");const pricedItems=await applyBuyingPricing(context,input.items,input.buying_price_list,input.currency,input.posting_at,input.supplier,input.supplier_group);const totals=calculateSalesTotals(pricedItems as never,input.taxes??[],currency.transactionScale);const items=await applyUomConversion(context,(totals.items as unknown as PurchaseItem[]).map((item,index): PurchaseItem=>{const source=input.items[index]!;if(!source.expense_account)throw errors.validation(`Expense account is required at row ${index+1}`);return{...item,expense_account:source.expense_account,...(source.warehouse ? { warehouse: source.warehouse } : {})}}),{transactionKind:"purchase"});
     if(context.command.action==="submit"){await assertUnlocked(context,input.company,input.posting_at);await assertMasters(context,[["Supplier",input.supplier],["Company",input.company],["Currency",input.currency],["Account",input.credit_to],...items.map(i=>["Item",i.item_code] as [string,string]),...items.map(i=>["Account",i.expense_account!] as [string,string]),...totals.taxes.map(t=>["Account",t.account] as [string,string])]);if(input.against_purchase_order){const po=await requireSubmitted<PurchaseOrderData>(context,"Purchase Order",input.against_purchase_order);assertPurchaseContext(input,po.data,"Purchase Invoice");await assertPurchaseRemaining(context,po,items,"Billing");}}
     const bases=baseTotals(totals,currency);return{...input,currency_scale:currency.transactionScale,company_currency:currency.companyCurrency,company_currency_scale:currency.companyScale,conversion_rate:fromScaledInt(currency.rateMicros,6),conversion_rate_micros:currency.rateMicros,...totals,items,...bases,outstanding_amount_minor:totals.grand_total_minor,outstanding_amount:fromScaledInt(totals.grand_total_minor,currency.transactionScale)} as PurchaseInvoiceData; }
   ledger(context:ControllerContext<PurchaseInvoiceData>,data:PurchaseInvoiceData):LedgerResult{if(!["submit","cancel"].includes(context.command.action))return{};const txScale=data.currency_scale??2;const baseScale=data.company_currency_scale??txScale;const rate=data.conversion_rate_micros??1_000_000;const currency=data.company_currency??data.currency;

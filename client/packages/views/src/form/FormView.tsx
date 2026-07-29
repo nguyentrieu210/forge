@@ -203,12 +203,26 @@ export function FormView(props: FormViewProps) {
         for (const r of rules) form.setValue(r.target, "", { shouldDirty: true });
         continue;
       }
-      for (const r of rules) {
-        if (!r.sourceDoctype || !services?.fetchValue) continue;
-        void services.fetchValue(r.sourceDoctype, String(cur), r.sourceField)
-          .then((v) => { if (prevLinks.current[r.linkField] === cur) form.setValue(r.target, (v ?? "") as never, { shouldDirty: true }); })
+      const sourceDoctype = rules.find((r) => r.sourceDoctype)?.sourceDoctype;
+      if (!sourceDoctype) continue;
+      // Một Link thường điền 3–5 ô đầu phiếu. Đọc trọn document MỘT lần thay vì gọi
+      // get_value cho từng ô: nhanh hơn rõ rệt trên đường app → gateway → tenant.
+      if (services?.fetchDocument) {
+        void services.fetchDocument(sourceDoctype, String(cur))
+          .then((source) => {
+            if (prevLinks.current[lf] !== cur) return;
+            for (const r of rules) form.setValue(r.target, (source[r.sourceField] ?? "") as never, { shouldDirty: true });
+          })
           .catch(() => { /* fetch lỗi → giữ nguyên (không phá form) */ });
+        continue;
       }
+      if (!services?.fetchValue) continue;
+      void Promise.all(rules.map(async (r) => ({ r, value: await services.fetchValue!(sourceDoctype, String(cur), r.sourceField) })))
+        .then((resolvedRules) => {
+          if (prevLinks.current[lf] !== cur) return;
+          for (const { r, value } of resolvedRules) form.setValue(r.target, (value ?? "") as never, { shouldDirty: true });
+        })
+        .catch(() => { /* fetch lỗi → giữ nguyên (không phá form) */ });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [values, fetchRules, services, doc.name, doc.modified]);

@@ -38,6 +38,12 @@ test("Alumdoor Item declares reusable inventory measurement profiles", () => {
   assert.ok(field("Item", "tab_item_identity"));
   assert.ok(field("Item", "tab_item_accounts"));
   assert.ok(field("Item", "tab_item_tracking"));
+  assert.equal(field("Item", "item_defaults"), undefined);
+  assert.equal(field("Item", "default_warehouse")?.options, "Warehouse");
+  assert.equal(field("Item", "inventory_account")?.options, "Account");
+  assert.equal(field("Item", "cogs_account")?.options, "Account");
+  assert.equal(field("Item", "income_account")?.options, "Account");
+  assert.equal(field("Item", "expense_account")?.options, "Account");
   assert.equal(field("Item Price", "uom")?.options, "UOM");
   assert.equal(field("Item Price", "uom")?.fetch_from, "item_code.default_sales_uom");
   assert.equal(field("Pricing Rule", "party")?.fieldtype, "Dynamic Link");
@@ -80,11 +86,14 @@ test("purchase rows expose aluminium dimensions only for aluminium items", () =>
     { doctype: "Item", actions: ["create", "save"] },
     { doctype: "Purchase Order", actions: ["create", "save", "submit"] },
     { doctype: "Purchase Receipt", actions: ["create", "save", "submit"] },
+    { doctype: "Purchase Invoice", actions: ["create", "save", "submit"] },
     { doctype: "Material Request", actions: ["create", "save", "submit"] },
     { doctype: "Request for Quotation", actions: ["create", "save", "submit"] },
     { doctype: "Supplier Quotation", actions: ["create", "save", "submit"] },
     { doctype: "Quotation", actions: ["create", "save", "submit"] },
     { doctype: "Sales Order", actions: ["create", "save", "submit"] },
+    { doctype: "Delivery Note", actions: ["create", "save", "submit"] },
+    { doctype: "Sales Invoice", actions: ["create", "save", "submit"] },
     { doctype: "Work Order", actions: ["create", "save", "submit"] },
     { doctype: "Aluminium Lot", actions: ["create", "save"] },
   ]);
@@ -98,6 +107,20 @@ test("purchase rows expose aluminium dimensions only for aluminium items", () =>
     assert.equal(field(child, colorField)?.fieldtype, "Link");
     assert.equal(field(child, colorField)?.options, "Item Color");
   }
+  for (const child of ["Quotation Item", "Sales Order Item", "Delivery Note Item", "Sales Invoice Item"]) {
+    assert.equal(field(child, "inventory_mode")?.hidden, true);
+    assert.equal(field(child, "stock_uom")?.read_only, true);
+    assert.equal(field(child, "uom")?.options, "UOM");
+    assert.equal(field(child, "conversion_factor")?.read_only, true);
+    assert.equal(field(child, "stock_qty")?.read_only, true);
+  }
+  assert.equal(field("Purchase Receipt", "supplier")?.fetch_from, "against_purchase_order.supplier");
+  assert.equal(field("Purchase Receipt", "company")?.fetch_from, "against_purchase_order.company");
+  assert.equal(field("Delivery Note", "customer")?.fetch_from, "against_sales_order.customer");
+  assert.equal(field("Delivery Note", "install_address")?.fetch_from, "against_sales_order.install_address");
+  assert.ok(field("Sales Order", "install_address"));
+  assert.match(field("Delivery Note Item", "width_mm")?.depends_on ?? "", /Thành phẩm theo m2/);
+  assert.equal(brief.actions.find((entry) => entry.name === "don-ban-thanh-phieu-xuat")?.menu, false);
 });
 
 function validatorRequest(items) {
@@ -266,6 +289,13 @@ test("Item color policy rejects duplicates and a default outside the allowed lis
   );
   assert.equal(outside.status, 422);
   assert.match((await outside.json()).message, /chưa nằm trong Các màu được phép/);
+
+  const dynamicArea = await alumdoorWorker.fetch(
+    request({ ...base, default_sales_uom: "m2", allowed_colors: [{ color: "GS" }] }),
+    env,
+    {},
+  );
+  assert.equal(dynamicArea.status, 200, await dynamicArea.text());
 });
 
 test("sales and production documents require an active allowed color", async () => {
@@ -315,6 +345,49 @@ test("ordinary items keep the simple qty/uom path", async () => {
     {},
   );
   assert.equal(response.status, 200);
+});
+
+test("m2 sales derives a dynamic conversion to exact set stock", async () => {
+  const request = (line) => new Request("https://app.internal/hooks/validate", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-cloudforge-tenant": "tenant-test",
+      "x-cloudforge-callback": "https://tenant.test/_app/",
+    },
+    body: JSON.stringify({
+      doctype: "Sales Order",
+      name: "NEW-SALES-ORDER",
+      action: "create",
+      payload: { items: [line] },
+    }),
+  });
+  const env = {
+    PLATFORM: masterPlatform({
+      "Item:CUA-M2": {
+        inventory_mode: "Thành phẩm theo m2",
+        measurement_profile: "Thành phẩm theo m2",
+        stock_uom: "Bộ",
+        default_sales_uom: "m2",
+        min_area_sqm: 3,
+        is_sales_item: 1,
+        allowed_colors: [{ color: "GS" }],
+      },
+      "Measurement Profile:Thành phẩm theo m2": { require_color: 1 },
+      "Item Color:GS": { disabled: 0 },
+    }),
+  };
+  const base = {
+    item_code: "CUA-M2", color: "GS", uom: "m2", qty: 6,
+    width_mm: 1000, height_mm: 2000, set_count: 2,
+    conversion_factor: 2 / 6, stock_qty: 2,
+  };
+  const valid = await alumdoorWorker.fetch(request(base), env, {});
+  assert.equal(valid.status, 200, await valid.text());
+
+  const forged = await alumdoorWorker.fetch(request({ ...base, conversion_factor: 1, stock_qty: 6 }), env, {});
+  assert.equal(forged.status, 422);
+  assert.match((await forged.json()).message, /hệ số quy đổi phải là/);
 });
 
 test("aluminium is authoritative Kg stock plus required physical dimensions", async () => {
@@ -409,4 +482,61 @@ test("supplier quotation to purchase order preserves color and aluminium dimensi
   assert.equal(response.status, 200, text);
   const body = JSON.parse(text);
   assert.deepEqual(body.items, [{ row_id: "R1", ...sourceLine, warehouse: "K12" }]);
+});
+
+test("sales order to delivery preserves Item snapshots and exact remaining stock", async () => {
+  const sourceLine = {
+    item_code: "CUA-M2",
+    item_name: "Cửa Đức",
+    inventory_mode: "Thành phẩm theo m2",
+    measurement_profile: "Thành phẩm theo m2",
+    stock_uom: "Bộ",
+    min_area_sqm: 3,
+    color: "GS",
+    width_mm: 1000,
+    height_mm: 2000,
+    set_count: 2,
+    qty: 6,
+    uom: "m2",
+    conversion_factor: 2 / 6,
+    stock_qty: 2,
+    rate: 1_000_000,
+    warehouse: "K12",
+  };
+  const response = await alumdoorWorker.fetch(
+    new Request("https://app.internal/api/method/alumdoor.sales.preview_delivery", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-cloudforge-tenant": "tenant-test",
+        "x-cloudforge-callback": "https://tenant.test/_app/",
+      },
+      body: JSON.stringify({ args: { sales_order: "SO-1" } }),
+    }),
+    {
+      PLATFORM: {
+        fetch(request) {
+          const url = new URL(request.url);
+          const path = decodeURIComponent(url.pathname);
+          if (path.endsWith("/resource/Sales Order/SO-1")) {
+            return Promise.resolve(Response.json({ data: {
+              name: "SO-1", docstatus: 1, customer: "KH-1", company: "ALUMDOOR", currency: "VND",
+              install_address: "Xưởng K12", items: [sourceLine],
+            } }));
+          }
+          if (path.endsWith("/resource/Delivery Note")) return Promise.resolve(Response.json({ data: [] }));
+          return Promise.resolve(Response.json({ message: "not found" }, { status: 404 }));
+        },
+      },
+    },
+    {},
+  );
+  const text = await response.text();
+  assert.equal(response.status, 200, text);
+  const body = JSON.parse(text);
+  assert.equal(body.items[0].qty, 6);
+  assert.equal(body.items[0].stock_qty, 2);
+  assert.equal(body.items[0].set_count, 2);
+  assert.equal(body.items[0].warehouse, "K12");
+  assert.equal(body.items[0].color, "GS");
 });

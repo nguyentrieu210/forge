@@ -615,6 +615,12 @@ export function LinkCombobox({
   }, [txt, target, open, search, filtersKey, referenceDoctype]);
 
   const atCap = opts.length >= LINK_PAGE_LENGTH;
+  // localStorage can outlive a deleted record or a permission change. Only show a recent value
+  // after the current permission-filtered server result confirms it, then de-duplicate the list.
+  const optionValues = new Set(opts.map((option) => option.value));
+  const visibleRecent = !txt.trim() ? recent.filter((option) => optionValues.has(option.value)) : [];
+  const recentValues = new Set(visibleRecent.map((option) => option.value));
+  const visibleOptions = !txt.trim() ? opts.filter((option) => !recentValues.has(option.value)) : opts;
 
   // Giống ERPNext "+ Create a new …" — gõ không khớp bản ghi nào có sẵn thì tạo nhanh ngay tại đây
   // (mở form tạo thật qua services.quickCreate, KHÔNG tự bịa field) thay vì bắt người dùng thoát ra
@@ -654,32 +660,22 @@ export function LinkCombobox({
         </Button>
       </PopoverTrigger>
       {/*
-        Giới hạn chiều cao theo CHỖ TRỐNG THẬT còn lại dưới ô (biến của Radix), không để mặc định.
-        Trước đây popover không bị chặn chiều cao: ô Link nằm gần đáy màn hình (hay gặp — form dài,
-        hoặc điện thoại) làm danh sách tràn khỏi khung nhìn, phần tràn nằm ngoài vùng cuộn nên
-        người dùng thấy danh sách "cụt và không cuộn được".
-        Kèm flex + min-h-0 để CommandList co lại đúng phần còn thừa và tự cuộn bên trong.
-      */}
-      {/*
         `collisionPadding`: Radix giữ popover cách mép khung nhìn một khoảng, thay vì dán sát đáy
         màn hình khiến mấy mục cuối nằm ngay trên thanh tác vụ và bấm rất khó.
 
-        Giới hạn chiều cao đặt ở CHÍNH CommandList bằng một trị CỤ THỂ, không đi qua chuỗi
-        flex (PopoverContent → Command → CommandList). Chuỗi đó mong manh: `Command` của cmdk có
-        sẵn `h-full`, `PopoverContent` nền đã có `overflow-y-auto` — thêm một tầng flex nữa là ba
-        lớp cùng tranh quyền quyết định chiều cao, hỏng thì im lặng và rất khó truy.
+        CommandList là vùng cuộn duy nhất. Chiều cao của nó lấy theo phần màn hình Radix báo còn
+        trống và chặn ở 22rem; ô tìm kiếm vì vậy luôn đứng yên trong khi danh sách cuộn độc lập.
       */}
       <PopoverContent
-        className="w-[--radix-popover-trigger-width] p-0"
+        className="w-[--radix-popover-trigger-width] overflow-hidden p-0"
         align="start"
         collisionPadding={12}
       >
-        <Command shouldFilter={false}>
+        <Command shouldFilter={false} className="max-h-[var(--radix-popover-content-available-height)]">
           <div className="sticky top-0 z-10 bg-popover">
             <CommandInput placeholder={t("control.link_search_placeholder")} value={txt} onValueChange={setTxt} />
           </div>
-          {/* KHÔNG đặt trần ở đây: popover là vùng cuộn duy nhất (xem chú thích trên). */}
-          <CommandList className="max-h-none overflow-visible">
+          <CommandList className="max-h-[min(22rem,calc(var(--radix-popover-content-available-height)-2.75rem))] overflow-y-auto overflow-x-hidden overscroll-contain">
             {loading ? (
               <div className="flex items-center gap-2 px-3 py-3 text-sm text-muted-foreground">
                 <Loader2 className="size-4 animate-spin" aria-hidden="true" />{t("control.link_searching")}
@@ -699,13 +695,13 @@ export function LinkCombobox({
                       {creating ? <Loader2 className="mr-2 size-4 shrink-0 animate-spin" aria-hidden="true" /> : <Plus className="mr-2 size-4 shrink-0" aria-hidden="true" />}
                       {t("control.link_create_new")}{txt.trim() ? ` "${txt.trim()}"` : ` ${targetLabel ?? target}`}
                     </CommandItem>
-                    {opts.length > 0 || recent.length > 0 ? <div className="mx-1 my-1 h-px bg-border" /> : null}
+                    {opts.length > 0 || visibleRecent.length > 0 ? <div className="mx-1 my-1 h-px bg-border" /> : null}
                   </>
                 ) : null}
                 {/* Gần đây — chỉ khi ô tìm còn trống, đỡ gõ lại giá trị vừa dùng (client-only, không gọi server). */}
-                {!txt.trim() && recent.length > 0 ? (
+                {visibleRecent.length > 0 ? (
                   <CommandGroup heading={t("control.link_recent")}>
-                    {recent.map((o) => (
+                    {visibleRecent.map((o) => (
                       <CommandItem key={`recent-${o.value}`} value={`recent-${o.value}`} onSelect={() => { onChange(o.value); setPickedDesc(o.description); recordRecentLink(target, o); setOpen(false); }}>
                         <Check className={cn("mr-2 size-4 shrink-0", o.value === value ? "opacity-100" : "opacity-0")} />
                         <span className="flex min-w-0 flex-col">
@@ -717,7 +713,7 @@ export function LinkCombobox({
                   </CommandGroup>
                 ) : null}
                 {opts.length === 0 && !quickCreate ? <CommandEmpty>{t("control.link_no_results")}</CommandEmpty> : null}
-                {opts.map((o) => (
+                {visibleOptions.map((o) => (
                   <CommandItem key={o.value} value={o.value} onSelect={() => { onChange(o.value); setPickedDesc(o.description); recordRecentLink(target, o); setOpen(false); }}>
                     <Check className={cn("mr-2 size-4 shrink-0", o.value === value ? "opacity-100" : "opacity-0")} />
                     <span className="flex min-w-0 flex-col">

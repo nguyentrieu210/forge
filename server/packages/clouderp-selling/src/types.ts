@@ -1,10 +1,9 @@
 import type { JsonObject } from "../../contracts/src/index.js";
 import type { DecimalInput } from "../../money/src/index.js";
+import type { UomLine } from "../../clouderp-core/src/types.js";
 
-export interface SalesItem extends JsonObject {
+export interface SalesItem extends UomLine {
   row_id: string;
-  item_code: string;
-  qty: DecimalInput;
   rate: DecimalInput;
   amount?: string;
   qty_micros?: number;

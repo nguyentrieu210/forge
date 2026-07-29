@@ -25,6 +25,14 @@ export interface UomLine extends JsonObject {
   stock_uom?: string;
   stock_qty?: string;
   stock_qty_micros?: number;
+  /** Snapshot from Item. The client may display it, but the server always overwrites it. */
+  inventory_mode?: string;
+  /** Snapshot from Item so later master-data edits never change an old voucher's meaning. */
+  measurement_profile?: string;
+  /** Kích thước giao dịch cho mặt hàng bán theo m² nhưng tồn theo Bộ. */
+  width_mm?: DecimalInput;
+  height_mm?: DecimalInput;
+  set_count?: DecimalInput;
 }
 
 export interface PurchaseItem extends UomLine {

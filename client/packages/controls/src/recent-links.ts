@@ -1,6 +1,7 @@
 /** Ghi nhớ vài giá trị Link vừa chọn theo từng doctype đích (localStorage, client-only) — hiện
  * "Gần đây" trong dropdown khi ô tìm còn trống, đỡ phải gõ lại giá trị vừa dùng. */
-const PREFIX = "mf-recent-link:";
+// v2 drops old client-only entries that can outlive records deleted on the server.
+const PREFIX = "mf-recent-link:v2:";
 const MAX = 5;
 
 export interface RecentLinkEntry {

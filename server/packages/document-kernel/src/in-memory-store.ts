@@ -93,10 +93,14 @@ export class InMemoryMutationStore implements MutationStore {
       for (const child of document.children) {
         if (child.fieldname !== "items" || child.data.item_code !== query.itemCode) continue;
         // Quy về đơn vị tồn trước khi cộng — xem chú thích ở `d1-store.ts`.
-        const value = child.data.stock_qty_micros ?? child.data.qty_micros;
+        const value = query.quantityKind === "transaction"
+          ? child.data.qty_micros
+          : child.data.stock_qty_micros ?? child.data.qty_micros;
         total += typeof value === "number" && Number.isSafeInteger(value)
           ? value
-          : toScaledInt(String(child.data.stock_qty ?? child.data.qty ?? 0), 6, "child qty");
+          : toScaledInt(String(query.quantityKind === "transaction"
+            ? child.data.qty ?? 0
+            : child.data.stock_qty ?? child.data.qty ?? 0), 6, "child qty");
       }
     }
     return total;

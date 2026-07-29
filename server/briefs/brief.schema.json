@@ -420,6 +420,10 @@
             "type": "string",
             "description": "Nhóm menu. Mặc định \"Thao tác\"."
           },
+          "menu": {
+            "type": "boolean",
+            "description": "false = vẫn cài action nhưng không hiện thành một dòng riêng trên sidebar."
+          },
           "icon": {
             "type": "string"
           }

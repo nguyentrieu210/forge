@@ -2,7 +2,7 @@
   "$schema": "./brief.schema.json",
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "1.19.1",
+  "version": "1.20.0",
   "module": "Alumdoor",
   "domain": "alumdoor",
   "brand": "warm",
@@ -73,6 +73,10 @@
       "actions": ["create", "save", "submit"]
     },
     {
+      "doctype": "Purchase Invoice",
+      "actions": ["create", "save", "submit"]
+    },
+    {
       "doctype": "Material Request",
       "actions": ["create", "save", "submit"]
     },
@@ -90,6 +94,14 @@
     },
     {
       "doctype": "Sales Order",
+      "actions": ["create", "save", "submit"]
+    },
+    {
+      "doctype": "Delivery Note",
+      "actions": ["create", "save", "submit"]
+    },
+    {
+      "doctype": "Sales Invoice",
       "actions": ["create", "save", "submit"]
     },
     {
@@ -148,8 +160,9 @@
     {
       "//": "Báo giá → đơn hàng. Chép nguyên dòng hàng và số đo, không gõ lại.",
       "//do": "Gõ lại là chỗ số đo bị sai: một bộ cửa 4.200×2.800 chép tay thành 4.200×2.080 thì xưởng cắt xong mới biết. Chuyển lần thứ hai bị TỪ CHỐI — hai đơn cho cùng một báo giá là giao hàng hai lần.",
-      "name": "bao-gia-thanh-don",
-      "label": "Báo giá → Đơn hàng",
+    "name": "bao-gia-thanh-don",
+    "label": "Báo giá → Đơn hàng",
+    "menu": false,
       "icon": "file-output",
       "group": "Bán hàng",
       "description": "Chỉ chuyển được báo giá KHÁCH ĐÃ ĐỒNG Ý. Số đo, màu, mô tơ, đơn giá chép nguyên sang đơn.",
@@ -185,8 +198,9 @@
         "ghi sổ — vì hàng về thiếu vài cây là chuyện thường, và số thật là số ĐẾM ĐƯỢC.",
         "Tạo ra phiếu NHÁP, không ghi sổ ngay: chưa ai đếm thì chưa được phép tăng tồn kho."
       ],
-      "name": "don-mua-thanh-phieu-nhap",
-      "label": "Đơn mua → Phiếu nhập",
+    "name": "don-mua-thanh-phieu-nhap",
+    "label": "Đơn mua → Phiếu nhập",
+    "menu": false,
       "icon": "package-plus",
       "group": "Mua hàng",
       "description": "Tạo phiếu nhập NHÁP cho phần hàng còn chưa về của một đơn mua. Xem trước để biết còn thiếu bao nhiêu.",
@@ -202,6 +216,28 @@
       "resultTable": "items"
     },
     {
+      "//": "ĐƠN BÁN → PHIẾU XUẤT, chỉ phần CÒN LẠI và giữ nguyên quy cách Item.",
+      "name": "don-ban-thanh-phieu-xuat",
+      "label": "Đơn hàng → Phiếu xuất",
+      "menu": false,
+      "icon": "truck",
+      "group": "Bán hàng",
+      "description": "Tạo phiếu xuất NHÁP cho phần chưa giao; giữ nguyên màu, kích thước, ĐVT bán và số lượng tồn.",
+      "permission": "Delivery Note",
+      "fields": [
+        "sales_order:Link(Sales Order)! Đơn hàng",
+        "warehouse:Link(Warehouse) Kho xuất (trống = theo từng dòng)",
+        "install_address:Small Text Địa chỉ giao (trống = theo đơn)",
+        "install_date:Date Ngày lắp",
+        "installer:Data Đội lắp đặt",
+        "driver:Data Người giao / lái xe",
+        "vehicle:Data Biển số xe"
+      ],
+      "preview": "alumdoor.sales.preview_delivery | Xem phần chưa giao",
+      "commit": "alumdoor.sales.delivery_from_order | Tạo phiếu xuất nháp | Tạo phiếu xuất nháp cho phần hàng còn lại?",
+      "resultTable": "items"
+    },
+    {
       "//": "CHỤP ẢNH → DÒNG HÀNG. NCC gửi bảng giá qua Zalo, thợ chụp phiếu giao lúc hàng về.",
       "//do": [
         "Máy đọc ảnh là để KHỎI GÕ, không phải để khỏi nhìn. Nên màn này luôn dừng ở chứng từ",
@@ -214,8 +250,9 @@
         "Đọc SỐ do nền tảng làm bằng luật, không để mô hình quyết: '98.000' là chín mươi tám nghìn",
         "còn '3,5' là ba phẩy năm — cùng dấu chấm phẩy, hai nghĩa ngược nhau. Xem `ocr.ts`."
       ],
-      "name": "doc-anh-chung-tu",
-      "label": "Chụp ảnh → chứng từ mua",
+    "name": "doc-anh-chung-tu",
+    "label": "Chụp ảnh → chứng từ mua",
+    "menu": false,
       "icon": "scan-text",
       "group": "Mua hàng",
       "description": "Chụp bảng giá NCC gửi qua Zalo, phiếu giao hàng hay hoá đơn NCC — máy đọc thành dòng hàng. LUÔN ra bản NHÁP: soát lại từng số so với ảnh rồi mới ghi sổ.",
@@ -247,28 +284,18 @@
     ],
     "items": [
       "Sales Order",
-      "Quotation",
-      "approval:Quotation",
-      "action:bao-gia-thanh-don",
-      "Legacy Sales Order",
+      "Delivery Note",
       "Aluminium Lot",
       "action:cat-nhom",
       "Stock Entry",
-      "Delivery Note",
       "Aluminium Cut",
       "action:hoan-cat",
       "action:tra-hang",
-      "Supplier",
       "Purchase Order",
-      "action:don-mua-thanh-phieu-nhap",
       "Purchase Receipt",
-      "Purchase Invoice",
-      "action:doc-anh-chung-tu",
-      "Legacy Goods Intake",
       "Work Order",
       "Bill of Materials",
       "Production Standard",
-      "Sales Invoice",
       "Payment Entry",
       "Warranty Claim",
       "report:Đơn hàng theo khách",
@@ -292,6 +319,7 @@
       "UOM",
       "Warehouse",
       "Customer",
+      "Supplier",
       "Price List",
       "Item Price",
       "Pricing Rule",
@@ -1172,7 +1200,6 @@
           "fieldtype": "Section Break",
           "label": "Kho và kế toán"
         },
-        "item_defaults:Table(Item Default) Mặc định theo công ty",
         "reorder_levels:Table(Item Reorder) Mức tồn / đặt hàng",
         "default_warehouse:Link(Warehouse) Kho mặc định",
         "inventory_account:Link(Account) Tài khoản tồn kho",
@@ -1443,22 +1470,68 @@
       "title": "item_code",
       "list": [
         "item_code",
-        "width_mm",
-        "height_mm",
-        "set_count",
+        "uom",
         "qty",
         "rate",
         "amount"
       ],
       "fields": [
         "item_code:Link(Item)! Mã hàng",
-        "width_mm:Int Rộng (mm)",
-        "height_mm:Int Cao (mm)",
-        "set_count:Int=(1) Số bộ",
-        "qty:Float! SL",
+        "item_name:Data~- Tên hàng",
+        "inventory_mode:Data~- Kiểu tính",
+        "measurement_profile:Link(Measurement Profile)~- Bộ quy cách",
+        "stock_uom:Link(UOM)~- ĐVT tồn",
+        "min_area_sqm:Float~- Diện tích tính tối thiểu",
+        {
+          "fieldname": "color",
+          "fieldtype": "Link",
+          "options": "Item Color",
+          "label": "Màu / mã sơn",
+          "depends_on": "eval:doc.inventory_mode != 'Hàng thường'"
+        },
+        {
+          "fieldname": "width_mm",
+          "fieldtype": "Int",
+          "label": "Rộng (mm)",
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2' || doc.inventory_mode == 'Tấm/Kính'"
+        },
+        {
+          "fieldname": "height_mm",
+          "fieldtype": "Int",
+          "label": "Cao (mm)",
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2' || doc.inventory_mode == 'Tấm/Kính'"
+        },
+        {
+          "fieldname": "set_count",
+          "fieldtype": "Int",
+          "label": "Số bộ",
+          "default": 1,
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'"
+        },
+        {
+          "fieldname": "length_m",
+          "fieldtype": "Float",
+          "label": "Dài một cây (m)",
+          "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'"
+        },
+        {
+          "fieldname": "qty_bar",
+          "fieldtype": "Float",
+          "label": "Số cây/lá",
+          "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'"
+        },
+        "uom:Link(UOM)! ĐVT bán",
+        {
+          "fieldname": "qty",
+          "fieldtype": "Float",
+          "label": "SL tính tiền",
+          "required": true,
+          "read_only_depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2' && (doc.uom == 'm2' || doc.uom == 'M2' || doc.uom == 'm²')"
+        },
+        "conversion_factor:Float~- Hệ số về ĐVT tồn",
+        "stock_qty:Float~- SL quy đổi tồn",
         "rate:Currency! Đơn giá",
         "amount:Currency~ Thành tiền",
-        "color:Link(Item Color) Màu / mã sơn",
         "motor_model:Link(Item) Mô tơ kèm theo",
         "accessories:Small Text Phụ kiện kèm theo",
         "note:Small Text Ghi chú dòng"
@@ -1479,6 +1552,7 @@
       ],
       "name": "Quotation",
       "label": "Báo giá",
+      "menu": false,
       "icon": "file-text",
       "group": "Bán hàng",
       "naming": "BG-.YYYY.-####",
@@ -1581,22 +1655,68 @@
       "title": "item_code",
       "list": [
         "item_code",
-        "width_mm",
-        "height_mm",
-        "set_count",
+        "uom",
         "qty",
         "rate",
         "amount"
       ],
       "fields": [
         "item_code:Link(Item)! Mã hàng",
-        "width_mm:Int Rộng (mm)",
-        "height_mm:Int Cao (mm)",
-        "set_count:Int=(1) Số bộ",
-        "qty:Float! SL",
+        "item_name:Data~- Tên hàng",
+        "inventory_mode:Data~- Kiểu tính",
+        "measurement_profile:Link(Measurement Profile)~- Bộ quy cách",
+        "stock_uom:Link(UOM)~- ĐVT tồn",
+        "min_area_sqm:Float~- Diện tích tính tối thiểu",
+        {
+          "fieldname": "color",
+          "fieldtype": "Link",
+          "options": "Item Color",
+          "label": "Màu / mã sơn",
+          "depends_on": "eval:doc.inventory_mode != 'Hàng thường'"
+        },
+        {
+          "fieldname": "width_mm",
+          "fieldtype": "Int",
+          "label": "Rộng (mm)",
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2' || doc.inventory_mode == 'Tấm/Kính'"
+        },
+        {
+          "fieldname": "height_mm",
+          "fieldtype": "Int",
+          "label": "Cao (mm)",
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2' || doc.inventory_mode == 'Tấm/Kính'"
+        },
+        {
+          "fieldname": "set_count",
+          "fieldtype": "Int",
+          "label": "Số bộ",
+          "default": 1,
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'"
+        },
+        {
+          "fieldname": "length_m",
+          "fieldtype": "Float",
+          "label": "Dài một cây (m)",
+          "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'"
+        },
+        {
+          "fieldname": "qty_bar",
+          "fieldtype": "Float",
+          "label": "Số cây/lá",
+          "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'"
+        },
+        "uom:Link(UOM)! ĐVT bán",
+        {
+          "fieldname": "qty",
+          "fieldtype": "Float",
+          "label": "SL tính tiền",
+          "required": true,
+          "read_only_depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2' && (doc.uom == 'm2' || doc.uom == 'M2' || doc.uom == 'm²')"
+        },
+        "conversion_factor:Float~- Hệ số về ĐVT tồn",
+        "stock_qty:Float~- SL quy đổi tồn",
         "rate:Currency! Đơn giá",
         "amount:Currency~ Thành tiền",
-        "color:Link(Item Color) Màu / mã sơn",
         "motor_model:Link(Item) Mô tơ kèm theo",
         "accessories:Small Text Phụ kiện kèm theo",
         "install_note:Small Text Ghi chú lắp đặt",
@@ -1636,6 +1756,7 @@
         "against_quotation:Link(Quotation) Theo báo giá",
         "selling_price_list:Link(Price List) Bảng giá áp dụng",
         "customer_group:Select(Lẻ,Đại lý,Công trình,Nhà thầu) Nhóm khách (cho chính sách giá)",
+        "install_address:Small Text Địa chỉ giao / lắp đặt",
         "items:Table(Sales Order Item)! Dòng hàng",
         "grand_total:Currency~ Tổng tiền",
         "delivered_percentage:Percent~ Đã giao (%)",
@@ -1659,13 +1780,69 @@
       "title": "item_code",
       "list": [
         "item_code",
+        "uom",
         "qty",
         "warehouse",
         "rate"
       ],
       "fields": [
         "item_code:Link(Item)! Mã hàng",
-        "qty:Float! SL",
+        "item_name:Data~- Tên hàng",
+        "inventory_mode:Data~- Kiểu tính",
+        "measurement_profile:Link(Measurement Profile)~- Bộ quy cách",
+        "stock_uom:Link(UOM)~- ĐVT tồn",
+        "min_area_sqm:Float~- Diện tích tính tối thiểu",
+        {
+          "fieldname": "color",
+          "fieldtype": "Link",
+          "options": "Item Color",
+          "label": "Màu / mã sơn",
+          "depends_on": "eval:doc.inventory_mode != 'Hàng thường'"
+        },
+        {
+          "fieldname": "width_mm",
+          "fieldtype": "Int",
+          "label": "Rộng (mm)",
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2' || doc.inventory_mode == 'Tấm/Kính'",
+          "mandatory_depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'"
+        },
+        {
+          "fieldname": "height_mm",
+          "fieldtype": "Int",
+          "label": "Cao (mm)",
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2' || doc.inventory_mode == 'Tấm/Kính'",
+          "mandatory_depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'"
+        },
+        {
+          "fieldname": "set_count",
+          "fieldtype": "Int",
+          "label": "Số bộ",
+          "default": 1,
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'",
+          "mandatory_depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'"
+        },
+        {
+          "fieldname": "length_m",
+          "fieldtype": "Float",
+          "label": "Dài một cây (m)",
+          "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'"
+        },
+        {
+          "fieldname": "qty_bar",
+          "fieldtype": "Float",
+          "label": "Số cây/lá",
+          "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'"
+        },
+        "uom:Link(UOM)! ĐVT giao",
+        {
+          "fieldname": "qty",
+          "fieldtype": "Float",
+          "label": "SL giao theo ĐVT",
+          "required": true,
+          "read_only_depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2' && (doc.uom == 'm2' || doc.uom == 'M2' || doc.uom == 'm²')"
+        },
+        "conversion_factor:Float~- Hệ số về ĐVT tồn",
+        "stock_qty:Float~- SL thực xuất kho",
         "warehouse:Link(Warehouse)! Kho xuất",
         "rate:Currency Đơn giá bán",
         "valuation_rate:Currency Giá vốn",
@@ -1691,7 +1868,7 @@
       "name": "Delivery Note",
       "label": "Phiếu xuất kho",
       "icon": "truck",
-      "group": "Kho",
+      "group": "Bán hàng",
       "naming": "PXK-.YYYY.-####",
       "title": "customer",
       "submittable": true,
@@ -1703,13 +1880,44 @@
         "installer"
       ],
       "fields": [
-        "customer:Link(Customer)! Khách hàng",
-        "company:Link(Company)-!=(ALUMDOOR) Công ty",
-        "currency:Link(Currency)-!=(VND) Tiền tệ",
+        {
+          "fieldname": "customer",
+          "fieldtype": "Link",
+          "options": "Customer",
+          "label": "Khách hàng",
+          "required": true,
+          "fetch_from": "against_sales_order.customer"
+        },
+        {
+          "fieldname": "company",
+          "fieldtype": "Link",
+          "options": "Company",
+          "label": "Công ty",
+          "required": true,
+          "hidden": true,
+          "default": "ALUMDOOR",
+          "fetch_from": "against_sales_order.company"
+        },
+        {
+          "fieldname": "currency",
+          "fieldtype": "Link",
+          "options": "Currency",
+          "label": "Tiền tệ",
+          "required": true,
+          "hidden": true,
+          "default": "VND",
+          "fetch_from": "against_sales_order.currency"
+        },
         "against_sales_order:Link(Sales Order)! Theo đơn hàng",
         "posting_at:Datetime!=(Now) Thời điểm xuất",
         "items:Table(Delivery Note Item)! Dòng hàng xuất",
-        "install_address:Small Text! Địa chỉ lắp đặt",
+        {
+          "fieldname": "install_address",
+          "fieldtype": "Small Text",
+          "label": "Địa chỉ lắp đặt",
+          "required": true,
+          "fetch_from": "against_sales_order.install_address"
+        },
         "install_date:Date Ngày lắp",
         "installer:Data Đội lắp đặt",
         "driver:Data Người giao / lái xe",
@@ -1892,13 +2100,26 @@
       "title": "item_code",
       "list": [
         "item_code",
+        "uom",
         "qty",
         "rate",
         "amount"
       ],
       "fields": [
         "item_code:Link(Item)! Mã hàng",
-        "qty:Float! SL",
+        "item_name:Data~- Tên hàng",
+        "inventory_mode:Data~- Kiểu tính",
+        "measurement_profile:Link(Measurement Profile)~- Bộ quy cách",
+        "stock_uom:Link(UOM)~- ĐVT tồn",
+        "min_area_sqm:Float~- Diện tích tính tối thiểu",
+        "color:Link(Item Color) Màu / mã sơn",
+        "width_mm:Int Rộng (mm)",
+        "height_mm:Int Cao (mm)",
+        "set_count:Int=(1) Số bộ",
+        "uom:Link(UOM)! ĐVT bán",
+        "qty:Float! SL tính tiền",
+        "conversion_factor:Float~- Hệ số về ĐVT tồn",
+        "stock_qty:Float~- SL quy đổi tồn",
         "rate:Currency! Đơn giá",
         "amount:Currency~ Thành tiền"
       ],
@@ -1912,6 +2133,7 @@
       "//": "Hoá đơn bán hàng — nơi CÔNG NỢ phát sinh. debit_to là tài khoản phải thu.",
       "name": "Sales Invoice",
       "label": "Hoá đơn bán hàng",
+      "menu": false,
       "icon": "receipt",
       "group": "Công nợ",
       "naming": "HD-.YYYY.-####",
@@ -2019,7 +2241,7 @@
       "name": "Supplier",
       "label": "Nhà cung cấp",
       "icon": "truck",
-      "group": "Mua hàng",
+      "group": "Danh mục",
       "naming": "field:supplier_name",
       "title": "supplier_name",
       "list": [
@@ -2217,6 +2439,7 @@
       ],
       "fields": [
         "item_code:Link(Item)! Mã hàng",
+        "item_name:Data~- Tên hàng",
         {
           "fieldname": "inventory_mode",
           "fieldtype": "Data",
@@ -2232,6 +2455,8 @@
           "read_only": true,
           "hidden": true
         },
+        "stock_uom:Link(UOM)~- ĐVT tồn",
+        "min_area_sqm:Float~- Diện tích tính tối thiểu",
         {
           "fieldname": "color",
           "fieldtype": "Link",
@@ -2284,8 +2509,8 @@
           "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'"
         },
         "uom:Link(UOM) ĐVT",
-        "conversion_factor:Float Hệ số quy đổi",
-        "stock_qty:Float~ Quy ra đơn vị tồn",
+        "conversion_factor:Float~- Hệ số quy đổi",
+        "stock_qty:Float~- Quy ra đơn vị tồn",
         "rate:Currency! Đơn giá NCC chào",
         "amount:Currency~ Thành tiền",
         "lead_time_days:Int Số ngày giao",
@@ -2373,6 +2598,7 @@
       ],
       "fields": [
         "item_code:Link(Item)! Mã sản phẩm",
+        "item_name:Data~- Tên hàng",
         {
           "fieldname": "inventory_mode",
           "fieldtype": "Data",
@@ -2388,6 +2614,8 @@
           "read_only": true,
           "hidden": true
         },
+        "stock_uom:Link(UOM)~- ĐVT tồn",
+        "min_area_sqm:Float~- Diện tích tính tối thiểu",
         {
           "fieldname": "color",
           "fieldtype": "Link",
@@ -2405,6 +2633,25 @@
         },
         "uom:Link(UOM) ĐVT",
         "qty:Float! Số lượng",
+        {
+          "fieldname": "width_mm",
+          "fieldtype": "Int",
+          "label": "Rộng (mm)",
+          "depends_on": "eval:doc.inventory_mode == 'Tấm/Kính' || doc.inventory_mode == 'Thành phẩm theo m2'"
+        },
+        {
+          "fieldname": "height_mm",
+          "fieldtype": "Int",
+          "label": "Cao (mm)",
+          "depends_on": "eval:doc.inventory_mode == 'Tấm/Kính' || doc.inventory_mode == 'Thành phẩm theo m2'"
+        },
+        {
+          "fieldname": "set_count",
+          "fieldtype": "Int",
+          "label": "Số bộ",
+          "default": 1,
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'"
+        },
         {
           "fieldname": "qty_bundle",
           "fieldtype": "Float",
@@ -2444,7 +2691,8 @@
         "rate:Currency! Đơn giá",
         "amount:Currency~ Thành tiền",
         "warehouse:Link(Warehouse) Kho nhận",
-        "conversion_factor:Float~- Hệ số quy đổi về ĐVT tồn"
+        "conversion_factor:Float~- Hệ số quy đổi về ĐVT tồn",
+        "stock_qty:Float~- Số lượng quy đổi tồn"
       ],
       "permissions": {
         "Chủ xưởng": "rwc",
@@ -2531,6 +2779,7 @@
       ],
       "fields": [
         "item_code:Link(Item)! Mã sản phẩm",
+        "item_name:Data~- Tên hàng",
         {
           "fieldname": "inventory_mode",
           "fieldtype": "Data",
@@ -2546,6 +2795,8 @@
           "read_only": true,
           "hidden": true
         },
+        "stock_uom:Link(UOM)~- ĐVT tồn",
+        "min_area_sqm:Float~- Diện tích tính tối thiểu",
         {
           "fieldname": "color",
           "fieldtype": "Link",
@@ -2563,6 +2814,25 @@
         },
         "uom:Link(UOM) ĐVT",
         "qty:Float! Số lượng",
+        {
+          "fieldname": "width_mm",
+          "fieldtype": "Int",
+          "label": "Rộng (mm)",
+          "depends_on": "eval:doc.inventory_mode == 'Tấm/Kính' || doc.inventory_mode == 'Thành phẩm theo m2'"
+        },
+        {
+          "fieldname": "height_mm",
+          "fieldtype": "Int",
+          "label": "Cao (mm)",
+          "depends_on": "eval:doc.inventory_mode == 'Tấm/Kính' || doc.inventory_mode == 'Thành phẩm theo m2'"
+        },
+        {
+          "fieldname": "set_count",
+          "fieldtype": "Int",
+          "label": "Số bộ",
+          "default": 1,
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'"
+        },
         {
           "fieldname": "qty_bundle",
           "fieldtype": "Float",
@@ -2641,15 +2911,40 @@
         "supplier_invoice_no"
       ],
       "fields": [
-        "supplier:Link(Supplier)! Nhà cung cấp",
+        {
+          "fieldname": "supplier",
+          "fieldtype": "Link",
+          "options": "Supplier",
+          "label": "Nhà cung cấp",
+          "required": true,
+          "fetch_from": "against_purchase_order.supplier"
+        },
         "against_purchase_order:Link(Purchase Order) Theo đơn mua",
         "posting_at:Datetime!=(Now) Thời điểm nhập",
         "supplier_invoice_no:Data Số phiếu giao của NCC",
         "driver:Data Người giao",
         "note:Small Text Ghi chú",
         "items:Table(Purchase Receipt Item)! Dòng hàng nhận",
-        "company:Link(Company)-!=(ALUMDOOR) Công ty",
-        "currency:Link(Currency)-!=(VND) Tiền tệ",
+        {
+          "fieldname": "company",
+          "fieldtype": "Link",
+          "options": "Company",
+          "label": "Công ty",
+          "required": true,
+          "hidden": true,
+          "default": "ALUMDOOR",
+          "fetch_from": "against_purchase_order.company"
+        },
+        {
+          "fieldname": "currency",
+          "fieldtype": "Link",
+          "options": "Currency",
+          "label": "Tiền tệ",
+          "required": true,
+          "hidden": true,
+          "default": "VND",
+          "fetch_from": "against_purchase_order.currency"
+        },
         "stock_account:Link(Account)-=(Hàng tồn kho) Tài khoản tồn kho",
         "stock_received_but_not_billed:Link(Account)-=(Hàng nhận chưa có hoá đơn) TK hàng chưa có HĐ"
       ],
@@ -2682,9 +2977,19 @@
       ],
       "fields": [
         "item_code:Link(Item)! Mã hàng",
+        "item_name:Data~- Tên hàng",
+        "inventory_mode:Data~- Kiểu tính",
+        "measurement_profile:Link(Measurement Profile)~- Bộ quy cách",
+        "stock_uom:Link(UOM)~- ĐVT tồn",
+        "min_area_sqm:Float~- Diện tích tính tối thiểu",
+        "color:Link(Item Color) Màu",
+        "width_mm:Int Rộng (mm)",
+        "height_mm:Int Cao (mm)",
+        "set_count:Int=(1) Số bộ",
         "qty:Float! SL",
-        "uom:Link(UOM) ĐVT",
-        "conversion_factor:Float- Hệ số quy đổi",
+        "uom:Link(UOM)! ĐVT",
+        "conversion_factor:Float~- Hệ số quy đổi",
+        "stock_qty:Float~- SL quy đổi tồn",
         "rate:Currency! Đơn giá",
         "amount:Currency~ Thành tiền",
         "expense_account:Link(Account)-!=(Hàng tồn kho) Tài khoản ghi nợ",
@@ -2700,6 +3005,7 @@
       "//": "HOÁ ĐƠN MUA — nơi CÔNG NỢ PHẢI TRẢ phát sinh. `credit_to` là tài khoản phải trả.",
       "name": "Purchase Invoice",
       "label": "Hoá đơn mua",
+      "menu": false,
       "icon": "receipt-text",
       "group": "Mua hàng",
       "naming": "HDM-.YYYY.-####",
@@ -3021,6 +3327,7 @@
       ],
       "name": "Legacy Sales Order",
       "label": "Đơn hàng cũ",
+      "menu": false,
       "icon": "archive",
       "group": "Bán hàng",
       "naming": "field:legacy_voucher",
@@ -3064,6 +3371,7 @@
       "//": "Nhật ký nhập/mua/hoàn lịch sử. Không thay Purchase Receipt vì file nguồn không có mã hàng và kho đủ tin cậy để ghi lại sổ kho.",
       "name": "Legacy Goods Intake",
       "label": "Nhật ký nhập cũ",
+      "menu": false,
       "icon": "clipboard-list",
       "group": "Mua hàng",
       "naming": "field:legacy_key",

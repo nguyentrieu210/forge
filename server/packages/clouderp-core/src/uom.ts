@@ -50,14 +50,96 @@ function factorFromMaster(master: JsonObject | null, uom: string): number | unde
   return undefined;
 }
 
-function resolveFactorMicros(line: UomLine, master: JsonObject | null, index: number): number {
+export type UomTransactionKind = "purchase" | "sales" | "stock";
+
+export interface ApplyUomOptions {
+  /** Selects the Item default UOM. It never changes the stock UOM. */
+  transactionKind?: UomTransactionKind;
+}
+
+function itemText(master: JsonObject | null, fieldname: string): string {
+  const value = master?.[fieldname];
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function transactionUomOf(line: UomLine, master: JsonObject | null, kind: UomTransactionKind): string {
+  const declared = typeof line.uom === "string" ? line.uom.trim() : "";
+  if (declared) return declared;
+  const preferredField = kind === "purchase"
+    ? "default_purchase_uom"
+    : kind === "sales" ? "default_sales_uom" : "stock_uom";
+  return itemText(master, preferredField) || stockUomOf(master) || "";
+}
+
+function allowedUoms(master: JsonObject | null): Set<string> {
+  const result = new Set<string>();
+  for (const fieldname of ["stock_uom", "default_purchase_uom", "default_sales_uom"]) {
+    const value = itemText(master, fieldname);
+    if (value) result.add(value);
+  }
+  const rows = master?.uom_conversions;
+  if (Array.isArray(rows)) {
+    for (const row of rows) {
+      if (!row || typeof row !== "object" || Array.isArray(row)) continue;
+      const value = (row as JsonObject).uom;
+      if (typeof value === "string" && value.trim()) result.add(value.trim());
+    }
+  }
+  return result;
+}
+
+function normalizedUom(value: string | undefined): string {
+  return String(value ?? "").trim().toLocaleLowerCase("vi");
+}
+
+function usesDynamicSquareMetreToSet(master: JsonObject | null, uom: string): boolean {
+  return itemText(master, "inventory_mode") === "Thành phẩm theo m2"
+    && ["m2", "m²", "sqm"].includes(normalizedUom(uom))
+    && ["bộ", "bo", "set"].includes(normalizedUom(stockUomOf(master)));
+}
+
+/**
+ * Cửa bán theo m² nhưng xuất kho theo Bộ không có hệ số cố định trên Item: một bộ 1×2 m
+ * và một bộ 3×3 m có diện tích khác nhau nhưng đều chỉ trừ một Bộ. Máy chủ tự tính lại cả
+ * diện tích tính tiền lẫn số Bộ để API trực tiếp cũng không thể làm lệch sổ kho.
+ */
+function dynamicSetStockQtyMicros(
+  line: UomLine,
+  master: JsonObject | null,
+  uom: string,
+  qtyMicros: number,
+  index: number,
+): number | undefined {
+  if (!usesDynamicSquareMetreToSet(master, uom)) return undefined;
+  const setsMicros = toScaledInt(line.set_count ?? 1, 6, `items[${index}].set_count`);
+  if (setsMicros <= 0) throw errors.validation(`Số bộ phải lớn hơn 0 (dòng ${index + 1})`);
+  const width = Number(line.width_mm);
+  const height = Number(line.height_mm);
+  if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) {
+    throw errors.validation(`Hàng tính m² phải có rộng và cao lớn hơn 0 (dòng ${index + 1})`);
+  }
+  const minimumArea = Math.max(0, Number(master?.min_area_sqm) || 0);
+  const setCount = Number(fromScaledInt(setsMicros, 6));
+  const expectedQty = toScaledInt(Math.max(width * height / 1_000_000, minimumArea) * setCount, 6, `items[${index}].qty`);
+  if (Math.abs(expectedQty - qtyMicros) > 1) {
+    throw errors.validation(`Số lượng m² không khớp kích thước, số bộ và diện tích tối thiểu của Item (dòng ${index + 1})`);
+  }
+  return setsMicros;
+}
+
+function resolveFactorMicros(line: UomLine, master: JsonObject | null, uom: string, index: number): number {
+  if (master && uom && !allowedUoms(master).has(uom)) {
+    throw errors.validation(
+      `Mặt hàng ${line.item_code} (dòng ${index + 1}) không cho phép giao dịch theo ĐVT "${uom}". `
+      + "Hãy khai ĐVT đó trong Hàng hoá → Đơn vị quy đổi khác trước khi dùng.",
+    );
+  }
   const declared = line.conversion_factor;
   if (declared !== undefined && declared !== null && declared !== "") {
     const factor = toScaledInt(declared, 6, `items[${index}].conversion_factor`);
     if (factor <= 0) throw errors.validation(`Hệ số quy đổi phải lớn hơn 0 (dòng ${index + 1})`);
     return factor;
   }
-  const uom = typeof line.uom === "string" ? line.uom.trim() : "";
   const stockUom = stockUomOf(master);
   if (!uom || !stockUom || uom === stockUom) return ONE;
   const factor = factorFromMaster(master, uom);
@@ -77,6 +159,7 @@ function resolveFactorMicros(line: UomLine, master: JsonObject | null, index: nu
 export async function applyUomConversion<T extends UomLine>(
   context: ControllerContext<JsonObject>,
   items: T[],
+  options: ApplyUomOptions = {},
 ): Promise<T[]> {
   const masters = new Map<string, JsonObject | null>();
   for (const item of items) {
@@ -85,20 +168,29 @@ export async function applyUomConversion<T extends UomLine>(
   }
   return items.map((item, index) => {
     const master = masters.get(item.item_code) ?? null;
+    const transactionKind = options.transactionKind ?? "stock";
+    const uom = transactionUomOf(item, master, transactionKind);
     const qtyMicros = item.qty_micros ?? toScaledInt(item.qty, 6, `items[${index}].qty`);
-    const factorMicros = resolveFactorMicros(item, master, index);
-    const stockQty = factorMicros === ONE
+    const dynamicStockQty = dynamicSetStockQtyMicros(item, master, uom, qtyMicros, index);
+    const factorMicros = dynamicStockQty === undefined
+      ? resolveFactorMicros(item, master, uom, index)
+      : toScaledInt(Number(fromScaledInt(dynamicStockQty, 6)) / Number(fromScaledInt(qtyMicros, 6)), 6, `items[${index}].conversion_factor`);
+    const stockQty = dynamicStockQty ?? (factorMicros === ONE
       ? qtyMicros
-      : multiplyScaled(fromScaledInt(qtyMicros, 6), 6, fromScaledInt(factorMicros, 6), 6, 6, `items[${index}].stock_qty`);
+      : multiplyScaled(fromScaledInt(qtyMicros, 6), 6, fromScaledInt(factorMicros, 6), 6, 6, `items[${index}].stock_qty`));
     if (stockQty <= 0) throw errors.validation(`Số lượng quy đổi phải lớn hơn 0 (dòng ${index + 1})`);
     const stockUom = stockUomOf(master);
+    const inventoryMode = itemText(master, "inventory_mode") || "Hàng thường";
+    const measurementProfile = itemText(master, "measurement_profile");
     return {
       ...item,
+      ...(uom ? { uom } : {}),
       conversion_factor: fromScaledInt(factorMicros, 6),
       conversion_factor_micros: factorMicros,
       ...(stockUom ? { stock_uom: stockUom } : {}),
       stock_qty: fromScaledInt(stockQty, 6),
       stock_qty_micros: stockQty,
+      ...(master ? { inventory_mode: inventoryMode, measurement_profile: measurementProfile } : {}),
     };
   });
 }

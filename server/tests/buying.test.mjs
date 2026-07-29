@@ -96,7 +96,7 @@ test("đơn vị lạ mà mặt hàng chưa khai quy đổi thì TỪ CHỐI, kh
     createAndSubmit(kernel, order("PO-BAD", [
       { row_id: "R1", item_code: "RAY", qty: "5", uom: "Kg", rate: "1000" },
     ])),
-    /chưa có quy đổi từ "Kg"/,
+    /không cho phép giao dịch theo ĐVT "Kg"/,
   );
 });
 

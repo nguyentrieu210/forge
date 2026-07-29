@@ -7,6 +7,8 @@ export interface SubmittedQuantityQuery {
   referenceName: string;
   itemCode: string;
   excludeName?: string;
+  /** Stock/procurement progress uses canonical stock quantity; billing uses transaction quantity. */
+  quantityKind?: "stock" | "transaction";
 }
 
 export interface DomainReader {

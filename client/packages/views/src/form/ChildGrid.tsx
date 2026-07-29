@@ -147,19 +147,43 @@ export function ChildGrid(props: ChildGridProps) {
    * `qty` và `rate` và có ô `amount` thì `amount = qty × rate`. Không có đủ ba thì không
    * làm gì — không đoán, không ghi đè field người dùng tự nhập.
    */
-  const COMPUTED_FROM = new Set(["qty", "rate", "qty_bar", "length_m"]);
+  const COMPUTED_FROM = new Set([
+    "qty", "rate", "qty_bar", "length_m", "width_mm", "height_mm", "set_count",
+    "uom", "conversion_factor",
+  ]);
   const ITEM_DERIVED_FIELDS = [
-    "conversion_factor", "uom", "inventory_mode", "measurement_profile",
+    "conversion_factor", "uom", "stock_uom", "stock_qty", "inventory_mode", "measurement_profile", "min_area_sqm",
     "item_name", "description", "color", "colour", "rate", "amount",
     "length_m", "qty_bundle", "qty_bar", "total_length_m", "actual_kg_per_m", "so_no",
   ];
   const withComputed = (row: Doc): Doc => {
     const has = (f: string) => (childMeta.fields ?? []).some((x) => x.fieldname === f);
-    let next = row;
-    if (has("amount") && has("qty") && has("rate")) {
-      const qty = Number(row.qty);
-      const rate = Number(row.rate);
-      if (Number.isFinite(qty) && Number.isFinite(rate)) next = { ...next, amount: qty * rate };
+    let next = { ...row };
+    if (next.inventory_mode === "Thành phẩm theo m2" && has("qty")) {
+      const width = Number(next.width_mm);
+      const height = Number(next.height_mm);
+      const sets = Number(next.set_count ?? 1);
+      const normalizedUom = String(next.uom ?? "").trim().toLocaleLowerCase("vi");
+      const normalizedStockUom = String(next.stock_uom ?? "").trim().toLocaleLowerCase("vi");
+      if (Number.isFinite(sets) && sets > 0) {
+        if (["bộ", "bo", "set"].includes(normalizedUom)) {
+          next.qty = sets;
+        } else if (["m2", "m²", "sqm"].includes(normalizedUom)
+          && Number.isFinite(width) && width > 0 && Number.isFinite(height) && height > 0) {
+          const actualArea = width * height / 1_000_000;
+          const minimumArea = Math.max(0, Number(next.min_area_sqm) || 0);
+          next.qty = Math.max(actualArea, minimumArea) * sets;
+        }
+        // Cửa có thể bán theo m² nhưng kho quản lý theo Bộ. Hệ số ở đây là động theo
+        // kích thước từng cửa, vì vậy tuyệt đối không lấy một hệ số tĩnh trên Item.
+        if (["bộ", "bo", "set"].includes(normalizedStockUom)) {
+          const billableQty = Number(next.qty);
+          if (Number.isFinite(billableQty) && billableQty > 0) {
+            if (has("conversion_factor")) next.conversion_factor = sets / billableQty;
+            if (has("stock_qty")) next.stock_qty = sets;
+          }
+        }
+      }
     }
     /**
      * Nhôm giữ HAI sự thật nhưng không trộn chúng:
@@ -184,6 +208,18 @@ export function ChildGrid(props: ChildGridProps) {
             : {}),
         };
       }
+    }
+    if (has("stock_qty") && has("qty") && has("conversion_factor")) {
+      const qty = Number(next.qty);
+      const factor = Number(next.conversion_factor);
+      if (Number.isFinite(qty) && qty > 0 && Number.isFinite(factor) && factor > 0) {
+        next.stock_qty = qty * factor;
+      }
+    }
+    if (has("amount") && has("qty") && has("rate")) {
+      const qty = Number(next.qty);
+      const rate = Number(next.rate);
+      if (Number.isFinite(qty) && Number.isFinite(rate)) next.amount = qty * rate;
     }
     return next;
   };
@@ -210,13 +246,18 @@ export function ChildGrid(props: ChildGridProps) {
           : {}),
       };
       return COMPUTED_FROM.has(fieldname) ? withComputed(updated) : updated;
-    });
+    }) as Doc[];
     onChange(next);
     if (fieldname === "item_code" && value) {
       const loadKey = String(next[rowIdx]?.name ?? rowIdx);
       const loadVersion = (itemLoadVersion.current.get(loadKey) ?? 0) + 1;
       itemLoadVersion.current.set(loadKey, loadVersion);
       void fillItemDefaults(rowIdx, String(value), next, loadKey, loadVersion);
+    } else if (fieldname === "uom" && next[rowIdx]?.item_code) {
+      const loadKey = String(next[rowIdx]?.name ?? rowIdx);
+      const loadVersion = (itemLoadVersion.current.get(loadKey) ?? 0) + 1;
+      itemLoadVersion.current.set(loadKey, loadVersion);
+      void fillItemDefaults(rowIdx, String(next[rowIdx]!.item_code), next, loadKey, loadVersion);
     }
   };
 
@@ -237,8 +278,15 @@ export function ChildGrid(props: ChildGridProps) {
     loadKey: string,
     loadVersion: number,
   ) => {
-    if (!services?.fetchValue) return;
+    if (!services?.fetchValue && !services?.fetchDocument) return;
     const has = (f: string) => (childMeta.fields ?? []).some((x) => x.fieldname === f);
+    const item = services.fetchDocument
+      ? await services.fetchDocument("Item", itemCode).catch(() => undefined)
+      : undefined;
+    const readItemValue = async (fieldname: string): Promise<unknown> => {
+      if (item) return item[fieldname];
+      return services?.fetchValue?.("Item", itemCode, fieldname).catch(() => undefined);
+    };
     // nguồn trên Item → các ô đích trên dòng bảng con
     const plan: Array<[string, string[]]> = [
       ["stock_uom", ["stock_uom"]],
@@ -247,6 +295,8 @@ export function ChildGrid(props: ChildGridProps) {
       ["item_name", ["item_name"]],
       ["description", ["description"]],
       ["default_color", ["color", "colour"]],
+      ["min_area_sqm", ["min_area_sqm"]],
+      ["standard_rate", ["rate"]],
       /**
        * KHO MẶC ĐỊNH của chính mặt hàng — nan nhôm về kho nhôm, mô tơ về kho phụ kiện.
        *
@@ -265,7 +315,7 @@ export function ChildGrid(props: ChildGridProps) {
         return rowDefaults?.[d] !== undefined && current === rowDefaults[d];
       });
       if (targets.length === 0) return;
-      const v = await services.fetchValue!("Item", itemCode, src).catch(() => undefined);
+      const v = await readItemValue(src);
       if (v === undefined || v === null || v === "") return;
       for (const d of targets) patch[d] = v;
     }));
@@ -287,11 +337,23 @@ export function ChildGrid(props: ChildGridProps) {
         : lower.includes("sales") || lower.includes("quotation") || lower.includes("delivery")
           ? "default_sales_uom"
           : "stock_uom";
-      const preferred = await services.fetchValue("Item", itemCode, source).catch(() => undefined);
+      const preferred = await readItemValue(source);
       const fallback = source === "stock_uom"
         ? preferred
-        : preferred || await services.fetchValue("Item", itemCode, "stock_uom").catch(() => undefined);
+        : preferred || await readItemValue("stock_uom");
       if (fallback !== undefined && fallback !== null && fallback !== "") patch.uom = fallback;
+    }
+    const transactionUom = String(patch.uom ?? base[rowIdx]?.uom ?? "").trim();
+    const stockUom = String(patch.stock_uom ?? item?.stock_uom ?? "").trim();
+    if (has("conversion_factor") && transactionUom && stockUom) {
+      if (transactionUom === stockUom) patch.conversion_factor = 1;
+      else {
+        const conversions = Array.isArray(item?.uom_conversions) ? item.uom_conversions : [];
+        const match = conversions.find((row) => Boolean(row) && typeof row === "object"
+          && String((row as Record<string, unknown>).uom ?? "").trim() === transactionUom) as Record<string, unknown> | undefined;
+        const factor = Number(match?.conversion_factor);
+        if (Number.isFinite(factor) && factor > 0) patch.conversion_factor = factor;
+      }
     }
     // Item tạo trước khi có kiểu quản lý được coi là hàng thường — tương thích ngược.
     if (has("inventory_mode") && !Object.hasOwn(patch, "inventory_mode")) patch.inventory_mode = "Hàng thường";

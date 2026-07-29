@@ -9,8 +9,8 @@ const doctype = (name) => app.doctypes.find((entry) => entry.name === name);
 const field = (doctypeName, fieldname) =>
   doctype(doctypeName)?.fields.find((entry) => entry.fieldname === fieldname);
 
-test("Alumdoor 1.19 keeps imported history outside operational ledgers", () => {
-  assert.equal(brief.version, "1.19.1");
+test("Alumdoor 1.20 keeps imported history outside operational ledgers", () => {
+  assert.equal(brief.version, "1.20.0");
   assert.equal(doctype("Legacy Sales Order Item")?.is_child, true);
   assert.equal(field("Legacy Sales Order", "items")?.options, "Legacy Sales Order Item");
   assert.equal(doctype("Legacy Sales Order")?.is_submittable, false);
@@ -40,7 +40,7 @@ test("Alumdoor sidebar prioritises daily work and consolidates reports", () => {
     [...new Set(app.nav.map((entry) => entry.group))],
     ["Bán hàng", "Kho", "Mua hàng", "Sản xuất", "Công nợ", "Bảo hành", "Báo cáo", "Danh mục"],
   );
-  assert.equal(app.nav.find((entry) => entry.key === "Supplier")?.group, "Mua hàng");
+  assert.equal(app.nav.find((entry) => entry.key === "Supplier")?.group, "Danh mục");
   assert.equal(app.nav.filter((entry) => entry.key.startsWith("report:")).length, 16);
   assert.ok(app.nav.filter((entry) => entry.key.startsWith("report:")).every((entry) => entry.group === "Báo cáo"));
   assert.deepEqual(
