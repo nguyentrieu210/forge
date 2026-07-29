@@ -227,11 +227,19 @@ async function readReceiptImageInner(env: TenantEnv, tenantId: string, body: Jso
  * cơ sở dữ liệu. Nhờ vậy quyền xem của người dùng vẫn là ranh giới duy nhất: hỏi trợ lý
  * không moi ra được thứ mà chính họ mở màn hình lên cũng không thấy.
  */
-export async function askAssistant(env: TenantEnv, body: JsonObject): Promise<Response> {
+export async function askAssistant(
+  env: TenantEnv,
+  body: JsonObject,
+  audit?: { tenantId: string; userId: string },
+): Promise<Response> {
   if (!env.AI) return aiUnavailable();
-  return guard("Hỏi trợ lý", () => askAssistantInner(env, body));
+  return guard("Hỏi trợ lý", () => askAssistantInner(env, body, audit));
 }
-async function askAssistantInner(env: TenantEnv, body: JsonObject): Promise<Response> {
+async function askAssistantInner(
+  env: TenantEnv,
+  body: JsonObject,
+  audit?: { tenantId: string; userId: string },
+): Promise<Response> {
   const question = String(body.question ?? "").trim();
   if (!question) return new Response(JSON.stringify({ message: "Chưa có câu hỏi." }), { status: 400 });
   const context = JSON.stringify(body.context ?? {}).slice(0, 12_000);
@@ -258,6 +266,21 @@ async function askAssistantInner(env: TenantEnv, body: JsonObject): Promise<Resp
     return new Response(JSON.stringify({
       message: `Mô hình trả về rỗng. Hình dạng kết quả: ${JSON.stringify(result).slice(0, 200)}`,
     }), { status: 502, headers: { "content-type": "application/json; charset=utf-8" } });
+  }
+  if (audit) {
+    await env.DB.prepare(
+      `INSERT INTO ai_logs(
+         tenant_id,log_id,user_id,question,context_json,answer,model_family,created_at
+       ) VALUES(?1,?2,?3,?4,?5,?6,'workers-ai',?7)`,
+    ).bind(
+      audit.tenantId,
+      crypto.randomUUID(),
+      audit.userId,
+      question,
+      context,
+      answer,
+      new Date().toISOString(),
+    ).run();
   }
   return new Response(JSON.stringify({ answer }), {
     status: 200, headers: { "content-type": "application/json; charset=utf-8" },

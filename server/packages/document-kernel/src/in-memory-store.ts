@@ -23,7 +23,7 @@ import type {
 import { errors } from "../../core/src/index.js";
 import { fromScaledInt, toScaledInt } from "../../money/src/index.js";
 import { deriveDeliveryNoteStatus, deriveO2CStatus } from "./status.js";
-import type { MutationStore, SubmittedQuantityQuery } from "./store.js";
+import type { MutationStore, SubmittedQuantityQuery, TrackedStockPosition, TrackedStockState } from "./store.js";
 
 class KeyedMutex {
   private tails = new Map<string, Promise<void>>();
@@ -94,6 +94,20 @@ export class InMemoryMutationStore implements MutationStore {
     return document;
   }
 
+  async listDocumentsByDoctype<T extends JsonObject>(
+    tenantId: string,
+    doctype: string,
+  ): Promise<Array<CanonicalDocument<T>>> {
+    const result: Array<CanonicalDocument<T>> = [];
+    for (const raw of this.documents.values()) {
+      if (raw.tenant_id !== tenantId || raw.doctype !== doctype) continue;
+      const document = structuredClone(raw) as CanonicalDocument<T>;
+      await this.hydrateDerived(document);
+      result.push(document);
+    }
+    return result.sort((left, right) => left.name.localeCompare(right.name));
+  }
+
   async getReceipt(tenantId: string, commandId: string): Promise<MutationReceipt | null> {
     return structuredClone(this.receipts.get(this.receiptKey(tenantId, commandId)) ?? null);
   }
@@ -143,6 +157,55 @@ export class InMemoryMutationStore implements MutationStore {
       .filter((line) => line.item_code === itemCode && line.warehouse === warehouse
         && (!batchNo || line.batch_no === batchNo) && (!serialNo || line.serial_no === serialNo))
       .reduce((total, line) => total + line.actual_qty_micros, 0);
+  }
+
+  async getTrackedStockState(
+    tenantId: string,
+    itemCode: string,
+    warehouse: string,
+    batchNo?: string,
+    throughPostingAt?: string,
+  ): Promise<TrackedStockState> {
+    const rows = this.stockEntries.filter((line) =>
+      line.item_code === itemCode
+      && line.warehouse === warehouse
+      && (!batchNo || line.batch_no === batchNo)
+      && (!throughPostingAt || line.posting_at <= throughPostingAt));
+    const measured = rows.filter((line) => line.actual_weight_micros !== undefined);
+    return {
+      qty_micros: rows.reduce((total, line) => total + line.actual_qty_micros, 0),
+      weight_micros: measured.length
+        ? measured.reduce((total, line) => total + (line.actual_weight_micros ?? 0), 0)
+        : null,
+      stock_value_minor: rows.reduce((total, line) => total + line.stock_value_difference_minor, 0),
+    };
+  }
+
+  async listTrackedStockPositions(_tenantId: string, itemCode?: string): Promise<TrackedStockPosition[]> {
+    const grouped = new Map<string, TrackedStockPosition & { measured: boolean }>();
+    for (const line of this.stockEntries) {
+      if (!line.batch_no || (itemCode && line.item_code !== itemCode)) continue;
+      const key = `${line.item_code}\u0000${line.warehouse}\u0000${line.batch_no}`;
+      const row = grouped.get(key) ?? {
+        item_code: line.item_code,
+        warehouse: line.warehouse,
+        batch_no: line.batch_no,
+        qty_micros: 0,
+        weight_micros: null,
+        stock_value_minor: 0,
+        measured: false,
+      };
+      row.qty_micros += line.actual_qty_micros;
+      row.stock_value_minor += line.stock_value_difference_minor;
+      if (line.actual_weight_micros !== undefined) {
+        row.measured = true;
+        row.weight_micros = (row.weight_micros ?? 0) + line.actual_weight_micros;
+      }
+      grouped.set(key, row);
+    }
+    return [...grouped.values()]
+      .filter((row) => row.qty_micros !== 0 || (row.weight_micros ?? 0) !== 0)
+      .map(({ measured: _measured, ...row }) => structuredClone(row));
   }
 
   async getVoucherGlEntries(tenantId: string, voucherType: string, voucherNo: string, voucherRevision: number): Promise<GeneralLedgerEntry[]> {

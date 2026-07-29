@@ -9,7 +9,7 @@ import type {
 import { asCloudForgeError, documentKey, errors } from "../../core/src/index.js";
 import { fromScaledInt, toScaledInt } from "../../money/src/index.js";
 import { deriveDeliveryNoteStatus, deriveO2CStatus } from "./status.js";
-import type { MutationStore, SubmittedQuantityQuery } from "./store.js";
+import type { MutationStore, SubmittedQuantityQuery, TrackedStockPosition, TrackedStockState } from "./store.js";
 
 interface DocumentRow {
   tenant_id: string;
@@ -83,6 +83,32 @@ export class D1MutationStore implements MutationStore {
     };
     await this.hydrateDerived(document);
     return document;
+  }
+
+  async listDocumentsByDoctype<T extends JsonObject>(
+    tenantId: string,
+    doctype: string,
+  ): Promise<Array<CanonicalDocument<T>>> {
+    const rows = await this.writer.prepare(
+      `SELECT tenant_id, doctype, name, owner, docstatus, status, version, created_at, modified_at,
+              modified_by, amended_from, payload_json
+       FROM documents WHERE tenant_id=?1 AND doctype=?2 ORDER BY name LIMIT 5000`,
+    ).bind(tenantId, doctype).all<DocumentRow>();
+    return (rows.results ?? []).map((row): CanonicalDocument<T> => ({
+      tenant_id: row.tenant_id,
+      doctype: row.doctype,
+      name: row.name,
+      owner: row.owner,
+      docstatus: row.docstatus as 0 | 1 | 2,
+      status: row.status,
+      version: row.version,
+      created_at: row.created_at,
+      modified_at: row.modified_at,
+      ...(row.modified_by ? { modified_by: row.modified_by } : {}),
+      ...(row.amended_from ? { amended_from: row.amended_from } : {}),
+      data: JSON.parse(row.payload_json) as T,
+      children: [],
+    }));
   }
 
   async getReceipt(tenantId: string, commandId: string): Promise<MutationReceipt | null> {
@@ -159,6 +185,60 @@ export class D1MutationStore implements MutationStore {
       `SELECT COALESCE(SUM(actual_qty_micros),0) AS total FROM stock_ledger_entries WHERE ${conditions.join(" AND ")}`,
     ).bind(...values).first<{ total: number }>();
     return Number(row?.total ?? 0);
+  }
+
+  async getTrackedStockState(
+    tenantId: string,
+    itemCode: string,
+    warehouse: string,
+    batchNo?: string,
+    throughPostingAt?: string,
+  ): Promise<TrackedStockState> {
+    const row = await this.writer.prepare(
+      `SELECT COALESCE(SUM(actual_qty_micros),0) AS qty_micros,
+              CASE WHEN COUNT(actual_weight_micros)=0 THEN NULL
+                   ELSE COALESCE(SUM(actual_weight_micros),0) END AS weight_micros,
+              COALESCE(SUM(stock_value_difference_minor),0) AS stock_value_minor
+       FROM stock_ledger_entries
+       WHERE tenant_id=?1 AND item_code=?2 AND warehouse=?3
+         AND (?4 IS NULL OR batch_no=?4)
+         AND (?5 IS NULL OR posting_at<=?5)`,
+    ).bind(tenantId, itemCode, warehouse, batchNo ?? null, throughPostingAt ?? null)
+      .first<{ qty_micros: number; weight_micros: number | null; stock_value_minor: number }>();
+    return {
+      qty_micros: Number(row?.qty_micros ?? 0),
+      weight_micros: row?.weight_micros == null ? null : Number(row.weight_micros),
+      stock_value_minor: Number(row?.stock_value_minor ?? 0),
+    };
+  }
+
+  async listTrackedStockPositions(tenantId: string, itemCode?: string): Promise<TrackedStockPosition[]> {
+    const result = await this.writer.prepare(
+      `SELECT item_code,warehouse,batch_no,
+              SUM(actual_qty_micros) AS qty_micros,
+              CASE WHEN COUNT(actual_weight_micros)=0 THEN NULL
+                   ELSE COALESCE(SUM(actual_weight_micros),0) END AS weight_micros,
+              COALESCE(SUM(stock_value_difference_minor),0) AS stock_value_minor
+       FROM stock_ledger_entries
+       WHERE tenant_id=?1 AND batch_no IS NOT NULL AND (?2 IS NULL OR item_code=?2)
+       GROUP BY item_code,warehouse,batch_no
+       HAVING SUM(actual_qty_micros)<>0 OR COALESCE(SUM(actual_weight_micros),0)<>0`,
+    ).bind(tenantId, itemCode ?? null).all<{
+      item_code: string;
+      warehouse: string;
+      batch_no: string;
+      qty_micros: number;
+      weight_micros: number | null;
+      stock_value_minor: number;
+    }>();
+    return (result.results ?? []).map((row) => ({
+      item_code: String(row.item_code),
+      warehouse: String(row.warehouse),
+      batch_no: String(row.batch_no),
+      qty_micros: Number(row.qty_micros),
+      weight_micros: row.weight_micros == null ? null : Number(row.weight_micros),
+      stock_value_minor: Number(row.stock_value_minor),
+    }));
   }
 
   async getVoucherGlEntries(tenantId: string, voucherType: string, voucherNo: string, voucherRevision: number): Promise<GeneralLedgerEntry[]> {
@@ -550,6 +630,32 @@ export class D1MutationStore implements MutationStore {
       `SELECT lock_date FROM accounting_period_locks WHERE tenant_id=?1 AND company=?2`,
     ).bind(tenantId, company).first<{ lock_date: string }>();
     return row?.lock_date ?? null;
+  }
+
+  async setAccountingPeriodLock(
+    tenantId: string,
+    company: string,
+    lockDate: string,
+    actor: string,
+    reason: string,
+    occurredAt: string,
+  ): Promise<{ company: string; lock_date: string | null }> {
+    const action = lockDate ? "Lock" : "Unlock";
+    await this.db.batch([
+      this.db.prepare(
+        `INSERT INTO accounting_period_locks(tenant_id,company,lock_date,modified_at,modified_by,reason)
+         VALUES(?1,?2,?3,?4,?5,?6)
+         ON CONFLICT(tenant_id,company) DO UPDATE SET
+           lock_date=excluded.lock_date,modified_at=excluded.modified_at,
+           modified_by=excluded.modified_by,reason=excluded.reason`,
+      ).bind(tenantId, company, lockDate, occurredAt, actor, reason),
+      this.db.prepare(
+        `INSERT INTO accounting_period_lock_events(
+           tenant_id,event_id,company,action,lock_date,reason,actor,occurred_at
+         ) VALUES(?1,?2,?3,?4,?5,?6,?7,?8)`,
+      ).bind(tenantId, crypto.randomUUID(), company, action, lockDate, reason, actor, occurredAt),
+    ]);
+    return { company, lock_date: lockDate || null };
   }
 
   async execute<T extends JsonObject>(plan: MutationPlan<T>): Promise<MutationReceipt> {

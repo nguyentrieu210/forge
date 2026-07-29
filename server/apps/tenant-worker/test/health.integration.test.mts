@@ -1,6 +1,7 @@
 import { env, exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 import { commandPayloadHash } from "../../../packages/core/src/index.js";
+import { runAlumdoorMaintenance } from "../src/index.js";
 
 type Action = "create" | "save" | "submit" | "cancel";
 
@@ -70,6 +71,79 @@ describe("tenant worker with real workerd D1 and Durable Object bindings", () =>
     const response = await exports.default.fetch(new Request("https://tenant.test/health"));
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ ok: true, service: "tenant-worker" });
+  });
+
+  it("creates Alumdoor reconciliation reminders and the end-of-day summary exactly once", async () => {
+    const now = "2026-07-01T10:30:00.000Z";
+    await env.DB.prepare(
+      `INSERT INTO installed_apps(
+         tenant_id,app_id,app_name,version,content_hash,manifest_json,installed_by,installed_at,modified_at
+       ) VALUES('demo','alumdoor','Alumdoor','2.0.0',?1,'{}','Administrator',?2,?2)
+       ON CONFLICT(tenant_id,app_id) DO UPDATE SET version=excluded.version`,
+    ).bind("0".repeat(64), now).run();
+    await env.DB.prepare(
+      `INSERT INTO roles(tenant_id,role,modified_at) VALUES('demo','Chủ xưởng',?1)
+       ON CONFLICT(tenant_id,role) DO NOTHING`,
+    ).bind(now).run();
+    await env.DB.prepare(
+      `INSERT INTO users(tenant_id,user_id,full_name,email,time_zone,created_at,modified_at)
+       VALUES('demo','owner@example.com','Chủ xưởng','owner@example.com','Asia/Bangkok',?1,?1)
+       ON CONFLICT(tenant_id,user_id) DO UPDATE SET enabled=1,time_zone='Asia/Bangkok'`,
+    ).bind(now).run();
+    await env.DB.prepare(
+      `INSERT INTO user_roles(tenant_id,user_id,role) VALUES('demo','owner@example.com','Chủ xưởng')
+       ON CONFLICT DO NOTHING`,
+    ).run();
+    await env.DB.prepare(
+      `INSERT OR IGNORE INTO stock_ledger_entries(
+         tenant_id,voucher_type,voucher_no,voucher_revision,line_key,item_code,warehouse,
+         actual_qty_micros,valuation_rate_minor,stock_value_difference_minor,qty_scale,
+         currency_scale,currency,posting_at,allow_negative_stock
+       ) VALUES
+         ('demo','Purchase Receipt','PR-EOD',1,'1','AL-EOD','K36',10000000,100,1000,6,2,'VND',?1,0),
+         ('demo','Delivery Note','DN-EOD',1,'1','AL-EOD','K36',-2000000,100,-200,6,2,'VND',?1,0),
+         ('demo','Cut Order','CUT-EOD',1,'OUT','AL-EOD','K36',-1000000,100,-100,6,2,'VND',?1,0),
+         ('demo','Cut Order','CUT-EOD',1,'IN','AL-EOD','K36',1000000,100,100,6,2,'VND',?1,0)`,
+    ).bind(now).run();
+    await env.DB.prepare(
+      `INSERT INTO master_records(tenant_id,record_type,name,data_json,disabled,modified_at)
+       VALUES('demo','Measurement Profile','ALUMINUM',?1,0,?2)
+       ON CONFLICT(tenant_id,record_type,name) DO UPDATE SET
+         data_json=excluded.data_json,disabled=0,modified_at=excluded.modified_at`,
+    ).bind(JSON.stringify({ weight_tolerance_pct: 13 }), now).run();
+    await env.DB.prepare(
+      `INSERT INTO documents(
+         tenant_id,doc_key,doctype,name,owner,docstatus,status,version,
+         created_at,modified_at,payload_json
+       ) VALUES('demo','Purchase Receipt:PR-EOD','Purchase Receipt','PR-EOD','Administrator',1,'Submitted',1,?1,?1,?2)
+       ON CONFLICT(tenant_id,doc_key) DO UPDATE SET
+         docstatus=1,status='Submitted',modified_at=excluded.modified_at,payload_json=excluded.payload_json`,
+    ).bind(now, JSON.stringify({ posting_at: now })).run();
+    await env.DB.prepare(
+      `INSERT INTO document_children(
+         tenant_id,parent_key,fieldname,child_doctype,row_id,idx,payload_json
+       ) VALUES('demo','Purchase Receipt:PR-EOD','items','Purchase Receipt Item','PR-EOD-1',1,?1)
+       ON CONFLICT(tenant_id,parent_key,fieldname,row_id) DO UPDATE SET payload_json=excluded.payload_json`,
+    ).bind(JSON.stringify({
+      row_id: "PR-EOD-1",
+      measurement_profile: "ALUMINUM",
+      weight_variance_pct: 15,
+    })).run();
+
+    expect(await runAlumdoorMaintenance(env.DB, "demo", now)).toEqual({
+      reconciliation_reminders: 2,
+      daily_reports: 1,
+    });
+    expect(await runAlumdoorMaintenance(env.DB, "demo", now)).toEqual({
+      reconciliation_reminders: 0,
+      daily_reports: 0,
+    });
+    const notifications = await env.DB.prepare(
+      `SELECT subject FROM notification_log
+       WHERE tenant_id='demo' AND for_user='owner@example.com' ORDER BY name`,
+    ).all<{ subject: string }>();
+    expect(notifications.results).toHaveLength(3);
+    expect(notifications.results?.some((row) => row.subject.includes("nhập 2 · xuất 2 · cắt 1 · lệch cân 1"))).toBe(true);
   });
 
   it("whoami returns the authenticated identity without leaking any signature or secret", async () => {

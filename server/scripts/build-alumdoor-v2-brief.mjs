@@ -49,11 +49,26 @@ const replaceField = (dt, name, next) => {
 // ─────────────────────────── HEADER ───────────────────────────
 brief.version = "2.0.0";
 brief.locale.dateFormat = "dd/mm/yyyy"; // Q11 — chủ xưởng chốt gạch chéo
-// Đích cuối là `report:Tồn nhôm theo khổ` (nỗi đau #1 chỉ định màn chính, BRD §7.1) — nhưng
-// báo cáo đó chưa dựng ở đợt này, và compiler ĐÚNG khi từ chối `home` trỏ vào nav key không có.
-// Đợt "nhánh nhập" trỏ tạm vào Phiếu nhập mua: đúng ưu tiên chủ xưởng, và là thứ đã tồn tại.
-brief.home = "Purchase Receipt";
+// Nỗi đau #1 của BRD: người mở app phải thấy ngay tồn KHẢ DỤNG theo khổ, không phải tự lấy tồn tổng
+// rồi trừ các phiếu giữ bằng tay. Báo cáo này nằm ở query engine nền tảng vì nó đọc cùng sổ kho.
+brief.links.unshift({
+  report: "Tồn nhôm theo khổ",
+  label: "Tồn nhôm theo khổ",
+  permission: "Item",
+  icon: "ruler",
+  group: "Kho",
+});
+brief.navigation.items.unshift("report:Tồn nhôm theo khổ");
+brief.home = "report:Tồn nhôm theo khổ";
 note(`header: version 2.0.0 · dateFormat dd/mm/yyyy · home = Tồn nhôm theo khổ`);
+
+// Các chứng từ V2 có controller sổ kho chuyên biệt, nhưng app hook vẫn cần khai để lớp validator
+// ngành kiểm các Link/màu/quy cách trước khi lệnh đi vào kernel.
+brief.validators.push(
+  { doctype: "Cut Order", actions: ["create", "save", "submit", "cancel"] },
+  { doctype: "Stock Reservation", actions: ["create", "save"] },
+  { doctype: "Stock Reconciliation", actions: ["create", "save", "submit"] },
+);
 
 // ─────────────────────────── ITEM ───────────────────────────
 const item = doctype("Item");
@@ -447,14 +462,6 @@ brief.doctypes.push(
       "customer:Link(Customer) Khách hàng",
       "so_reference:Data Số chứng từ đơn hàng",
       "items:Table(Cut Order Item)! Dòng cắt",
-      {
-        "//": "Bundle Inward ở kho Đầu thừa. Nhân tạo, người dùng không chọn.",
-        fieldname: "offcut_bundle",
-        fieldtype: "Link",
-        options: "Serial and Batch Bundle",
-        label: "Lô đầu thừa sinh ra",
-        read_only: true,
-      },
       "cut_state:Select(Đã cắt,Đã hoàn cắt,Đã trả hàng)!=(Đã cắt) Trạng thái",
       "cancel_reason:Link(Lý do huỷ) Lý do hoàn/trả",
       "note:Small Text Ghi chú",
@@ -471,7 +478,16 @@ brief.doctypes.push(
     list: ["item_code", "cut_width_m", "sheets_cut", "offcut_length_m"],
     fields: [
       "serial_and_batch_bundle:Link(Serial and Batch Bundle)! Lô đem cắt (bundle Outward)",
+      {
+        "//": "Mỗi dòng có lô mẹ và kho đầu thừa riêng; đặt trên đầu phiếu làm mất quan hệ khi cắt nhiều mã/kho.",
+        fieldname: "offcut_bundle",
+        fieldtype: "Link",
+        options: "Serial and Batch Bundle",
+        label: "Bundle nhập đầu thừa",
+        read_only: true,
+      },
       "item_code:Link(Item)! Mã nhôm",
+      { fieldname: "source_warehouse", fieldtype: "Link", options: "Warehouse", label: "Kho lô mẹ", read_only: true },
       "source_length_m:Float! Khổ cây (m)",
       "cut_width_m:Float! Rộng cắt lá (m)",
       "sheets_cut:Float! Số lá cắt",
@@ -481,6 +497,12 @@ brief.doctypes.push(
       "kg_weighed:Float Kg cân thật lúc xuất",
       "offcut_length_m:Float~- Đầu thừa (m)",
       "scrap_m:Float Phế bỏ hẳn (m)",
+      { fieldname: "stock_value_consumed_minor", fieldtype: "Int", label: "Giá trị lô đã trừ (minor)", hidden: true, read_only: true },
+      { fieldname: "offcut_stock_value_minor", fieldtype: "Int", label: "Giá trị đầu thừa (minor)", hidden: true, read_only: true },
+      { fieldname: "cut_product_value_minor", fieldtype: "Int", label: "Giá trị phần đã cắt (minor)", hidden: true, read_only: true },
+      { fieldname: "kg_consumed_micros", fieldtype: "Int", label: "Kg tiêu hao (micros)", hidden: true, read_only: true },
+      { fieldname: "offcut_weight_micros", fieldtype: "Int", label: "Kg đầu thừa (micros)", hidden: true, read_only: true },
+      { fieldname: "cut_product_weight_micros", fieldtype: "Int", label: "Kg phần đã cắt (micros)", hidden: true, read_only: true },
       "note:Data Ghi chú",
     ],
     permissions: perm,
@@ -502,7 +524,7 @@ brief.doctypes.push(
       "min_length_m:Float! Khổ tối thiểu (m)",
       "warehouse:Link(Warehouse) Kho (trống = mọi kho chính)",
       "qty_reserved:Float! Số lá giữ",
-      "source_doctype:Select(Production Order,Sales Order,Cut Order)! Giữ cho",
+      "source_doctype:Select(Work Order,Sales Order,Cut Order)! Giữ cho",
       "source_name:Data! Số chứng từ nguồn",
       "reserved_at:Datetime!=(Now) Giữ lúc",
       "expires_at:Datetime Hết hạn",
@@ -549,6 +571,7 @@ brief.doctypes.push(
     list: ["item_code", "book_qty", "counted_qty", "variance_qty", "variance_reason"],
     fields: [
       "item_code:Link(Item)! Mã hàng",
+      { fieldname: "batch_no", fieldtype: "Link", options: "Batch", label: "Lô chụp sổ", read_only: true },
       "serial_and_batch_bundle:Link(Serial and Batch Bundle) Lô đếm được",
       "book_qty:Float~- Số sổ (chụp lúc chốt)",
       "book_weight_kg:Float~- Kg theo sổ",
@@ -556,6 +579,12 @@ brief.doctypes.push(
       "counted_weight_kg:Float Kg cân thực tế",
       "variance_qty:Float~- Chênh lệch",
       "variance_weight_kg:Float~- Chênh kg",
+      { fieldname: "book_qty_micros", fieldtype: "Int", label: "Số sổ (micros)", hidden: true, read_only: true },
+      { fieldname: "book_weight_micros", fieldtype: "Int", label: "Kg sổ (micros)", hidden: true, read_only: true },
+      { fieldname: "book_stock_value_minor", fieldtype: "Int", label: "Giá trị sổ (minor)", hidden: true, read_only: true },
+      { fieldname: "variance_qty_micros", fieldtype: "Int", label: "Chênh SL (micros)", hidden: true, read_only: true },
+      { fieldname: "variance_weight_micros", fieldtype: "Int", label: "Chênh kg (micros)", hidden: true, read_only: true },
+      "valuation_rate:Currency Đơn giá điều chỉnh (khi lô chưa có giá)",
       "variance_reason:Link(Nguyên nhân chênh lệch) Nguyên nhân",
       "variance_note:Data Diễn giải",
       "photo:Attach Image Ảnh hiện trạng",
@@ -658,11 +687,12 @@ cut.permission = "Cut Order";
 // Bản cũ: `voucher_no:Data!` — số chứng từ gõ tay, không trỏ đâu cả. Giờ action nhận PHIẾU thật.
 cut.fields = [
   "cut_order:Link(Cut Order)! Phiếu cắt (nháp)",
-  "prefer_offcut:Check!=(1) Ưu tiên dùng đầu thừa trước",
 ];
+delete cut.preview;
+delete cut.resultTable;
 cut.description =
-  "Chọn lô khổ NHỎ NHẤT còn đủ dài để phế ít nhất, ưu tiên đầu thừa. Ghi 2 bundle ngược chiều: trừ lô mẹ, nhập lô đầu thừa. Cắt xong không nối lại được.";
-for (const [name, label] of [["hoan-cat", "Hoàn cắt"], ["tra-hang", "Trả hàng"]]) {
+  "Ghi sổ phiếu cắt nháp đã được đề xuất trước đó: trừ đúng lô mẹ, nhập lô đầu thừa và dùng các phiếu giữ chỗ gắn với lệnh. Cắt xong không nối lại được.";
+for (const name of ["hoan-cat", "tra-hang"]) {
   const a = action(name);
   a.permission = "Cut Order";
   a.fields = [
@@ -670,8 +700,11 @@ for (const [name, label] of [["hoan-cat", "Hoàn cắt"], ["tra-hang", "Trả h�
     "reason:Link(Lý do huỷ)! Lý do",
     "note:Small Text Diễn giải",
   ];
-  a.description = `${label}: đảo bút toán và trả lô về đúng trạng thái trước khi cắt. Không tạo phiếu cắt ngược.`;
 }
+action("hoan-cat").description =
+  "Chỉ dùng khi ghi nhầm: đảo nguyên trạng bút toán cắt và đầu thừa, không tính lại theo giá bình quân và không tạo phiếu cắt ngược.";
+action("tra-hang").description =
+  "Hàng đã cắt không thể nối lại thành lô mẹ. Tạo lô mới đúng chiều dài đã cắt và nhập bằng Phiếu kho, giữ nguyên dấu vết lô cha.";
 const doc = action("doc-anh-chung-tu");
 doc.permission = "Purchase Receipt"; // V2 nhận hàng là nhánh MVP, không phải đơn mua
 doc.description = "AI đọc ảnh chứng từ và chỉ dựng bản NHÁP. Không bao giờ tự ghi sổ — người vẫn phải bấm duyệt.";
@@ -691,6 +724,7 @@ brief.actions.push(
       "color:Link(Item Color) Màu (bỏ trống = mọi màu)",
       "condition:Select(Thô,Đã sơn,Lỗi) Tình trạng",
       "warehouse:Link(Warehouse)! Kho",
+      "cutting_policy:Link(Cutting Policy)! Công thức cửa",
       "cut_width_m:Float! Rộng cắt lá (m)",
       "sheets:Float! Số lá cần",
       "include_offcut:Check!=(1) Xét cả kho đầu thừa",
@@ -743,10 +777,7 @@ brief.actions.push(
       "scope:Select(Toàn kho,Theo nhóm hàng,Một mặt hàng)!=(Toàn kho) Phạm vi",
       "item_group:Link(Item Group) Nhóm hàng",
       "item_code:Link(Item) Mặt hàng",
-      // KHÔNG khai "counted_by:Link(User)" ở đây: trình đóng gói từ chối Link(User) trên
-      // trường ACTION ("which this app does not define") trong khi vẫn nhận Link(User) trên
-      // trường DOCTYPE (Warehouse.keeper) — hai lối kiểm khác nhau, chính compiler tự gọi
-      // đó là "compiler defect". Người đếm lấy từ chính người bấm; phiếu đã có `counted_by`.
+      // Người đếm lấy từ danh tính đã ký của chính người bấm; không nhận tên do client gửi.
     ],
     commit: "alumdoor.recon.snapshot | Chốt số sổ",
     resultTable: "lines",
@@ -763,21 +794,58 @@ brief.actions.push(
     commit:
       "alumdoor.recon.post | Ghi sổ điều chỉnh | Bút toán điều chỉnh ghi vào ngày chốt số sổ và không sửa được — tiếp tục?",
   },
+  {
+    "//": "Chỉ đọc dữ liệu người gọi đã được phép mở. Nền tảng ghi ai_logs cho mọi câu trả lời thành công.",
+    name: "hoi-ai",
+    label: "Hỏi trợ lý",
+    icon: "sparkles",
+    group: "Báo cáo",
+    permission: "Item",
+    permissionAction: "read",
+    description: "Trợ lý chỉ trả lời từ bối cảnh được cung cấp, không tự ghi chứng từ và không đoán số còn thiếu.",
+    fields: [
+      "question:Small Text! Câu hỏi",
+      "context_doctype:Data Loại chứng từ làm bối cảnh",
+      "context_name:Data Số chứng từ làm bối cảnh",
+    ],
+    commit: "alumdoor.ai.ask | Hỏi",
+  },
+  {
+    name: "khoa-ky",
+    label: "Khoá kỳ",
+    icon: "lock-keyhole",
+    group: "Cài đặt",
+    permission: "Cutting Policy",
+    description: "Chỉ Chủ xưởng. Chặn mọi bút toán kho có ngày nhỏ hơn hoặc bằng ngày khoá; mỗi lần đổi đều có nhật ký.",
+    fields: [
+      "company:Data! Công ty",
+      "lock_date:Date! Khoá đến hết ngày",
+      "reason:Small Text! Lý do",
+    ],
+    commit: "alumdoor.period.lock | Khoá kỳ | Sau khi khoá, chứng từ trong kỳ chỉ có thể ghi khi mở lại — tiếp tục?",
+  },
+  {
+    name: "mo-ky",
+    label: "Mở kỳ",
+    icon: "lock-keyhole-open",
+    group: "Cài đặt",
+    permission: "Cutting Policy",
+    description: "Chỉ Chủ xưởng. Mở lại kỳ đã khoá; bắt buộc ghi lý do và lưu nhật ký người thực hiện.",
+    fields: [
+      "company:Data! Công ty",
+      "reason:Small Text! Lý do mở kỳ",
+    ],
+    commit: "alumdoor.period.unlock | Mở kỳ | Chứng từ quá khứ sẽ có thể ghi lại — tiếp tục?",
+  },
 );
-note(`actions: ${brief.actions.length} (3 action cắt trỏ lại Cut Order, +5 mới)`);
+note(`actions: ${brief.actions.length} (3 action cắt trỏ lại Cut Order, +8 mới)`);
 
-// KHÔNG khai ở PHA 4, có lý do — ghi ra để không ai tưởng là quên:
-//   `khoa-ky`/`mo-ky` — compiler đòi `permission` là doctype CÓ KHAI; khoá kỳ nằm ở bảng nền
-//     tảng `accounting_period_locks` chưa có doctype. Khai một doctype trùng tên = đẻ bảng
-//     thứ hai, đúng lỗi vừa xoá ở trên. Xác minh cách nền tảng phơi bảng này ở PHA 5.
-//   `hoi-ai` — cần `ai_logs`, TECHNICAL_DESIGN §8.2 đã chốt là "quyết ở PHA 5".
+// Khoá/mở kỳ đi qua method nền tảng và bảng `accounting_period_locks`; không dựng doctype bóng.
 
 // ══════════ BÁO CÁO V2 ══════════
-// GIỚI HẠN THẬT: `reports` chỉ đọc doctype CÓ KHAI trong brief (compile-brief.mjs:108).
-// "Tồn nhôm theo khổ" phải đọc `Batch` + sổ kho — cả hai đều là bảng NỀN TẢNG, brief không khai.
-// Khai `Batch` thành doctype của app chính là cách bản cũ đẻ ra quyển sổ thứ hai ⇒ KHÔNG làm.
-// Tạm dùng link tới `Stock Balance` của nền tảng; báo cáo tách theo khổ/màu phải viết ở tầng
-// nền tảng — việc của PHA 5. Vì vậy `home` vẫn là Purchase Receipt, không phải báo cáo.
+// `reports` của brief chỉ đọc doctype do app sở hữu. Báo cáo "Tồn nhôm theo khổ" đọc Batch + sổ kho
+// nên đã được dựng thành platform report/view ở migration 0025 và đưa vào app bằng `links` phía trên.
+// Không khai lại Batch hay sổ kho thành bảng của app.
 brief.reports.push(
   {
     name: "Nhập kho theo nhà cung cấp",
@@ -860,6 +928,34 @@ brief.reports.push(
 );
 note(`reports: ${brief.reports.length} (+5 báo cáo kho)`);
 
+brief.prints.push({
+  "//": "Biên bản kiểm kê A4: số chứng từ, QR, mọi dòng chênh lệch và ba khu ký.",
+  name: "Biên bản kiểm kê kho ALUMDOOR",
+  doctype: "Stock Reconciliation",
+  default: true,
+  css: [
+    "*{box-sizing:border-box} body{font-family:'Segoe UI',Arial,sans-serif;font-size:12px;color:#111;margin:0;padding:22px}",
+    ".head{display:flex;justify-content:space-between;border-bottom:2px solid #9b1c1c;padding-bottom:10px;margin-bottom:14px}",
+    ".brand{font-size:21px;font-weight:800;color:#9b1c1c}.title{font-size:17px;font-weight:800;text-transform:uppercase;text-align:right}",
+    ".meta{display:grid;grid-template-columns:1fr 1fr;gap:5px 24px;margin:12px 0}.meta b{display:inline-block;min-width:120px;color:#555}",
+    "table{width:100%;border-collapse:collapse}th,td{border:1px solid #bbb;padding:5px 6px}th{background:#f2f2f2;font-size:10px;text-transform:uppercase}",
+    ".n{text-align:right;font-variant-numeric:tabular-nums}.qr{width:74px;height:74px;margin-left:14px}",
+    ".sign{display:flex;justify-content:space-between;text-align:center;margin-top:34px}.sign div{width:31%}.sign b{display:block;margin-bottom:55px}",
+    ".note{margin-top:12px;white-space:pre-wrap;color:#444}",
+  ],
+  html: [
+    "<div class=\"head\"><div><div class=\"brand\">ALUMDOOR</div><div>Biên bản kiểm kê tài sản tồn kho</div></div>",
+    "<div style=\"display:flex\"><div><div class=\"title\">Biên bản kiểm kê kho</div><div>Số: {{ name }}</div></div><img class=\"qr\" alt=\"QR {{ name }}\" src=\"{{ name | qrcode }}\"></div></div>",
+    "<div class=\"meta\"><div><b>Kho kiểm kê</b>{{ warehouse }}</div><div><b>Thời điểm chốt</b>{{ snapshot_at | date }}</div>",
+    "<div><b>Người đếm</b>{{ counted_by }}</div><div><b>Người chứng kiến</b>{{ witnessed_by }}</div></div>",
+    "<table><thead><tr><th>#</th><th>Mã hàng / lô</th><th class=\"n\">Sổ</th><th class=\"n\">Đếm</th><th class=\"n\">Chênh</th><th class=\"n\">Kg chênh</th><th>Nguyên nhân / diễn giải</th></tr></thead><tbody>",
+    "{{#each items}}<tr><td>{{ _index }}</td><td>{{ item_code }}<br>{{ batch_no }}</td><td class=\"n\">{{ book_qty | number }}</td><td class=\"n\">{{ counted_qty | number }}</td><td class=\"n\">{{ variance_qty | number }}</td><td class=\"n\">{{ variance_weight_kg | number }}</td><td>{{ variance_reason }}<br>{{ variance_note }}</td></tr>{{/each}}",
+    "</tbody></table><div class=\"note\">Ghi chú: {{ note }}</div>",
+    "<div class=\"sign\"><div><b>Người đếm</b>(ký, ghi rõ họ tên)</div><div><b>Người chứng kiến</b>(ký, ghi rõ họ tên)</div><div><b>Thủ trưởng đơn vị</b>(ký, đóng dấu)</div></div>",
+  ],
+});
+note("prints: + Biên bản kiểm kê A4 có QR và ba khu chữ ký");
+
 // ══════════ CỔNG 4 — FIXTURE PHẢI THEO KỊP FIELD ══════════
 // Dry-run KHÔNG bắt được nhóm này: nó biên dịch cấu trúc, không chạy validator dữ liệu.
 // Ba lỗ dưới đây chỉ lộ lúc cài thật vào tenant.
@@ -898,20 +994,32 @@ for (const [name, patch] of Object.entries(LEAF)) Object.assign(fixture("Cutting
 note(`G2 · Cutting Policy: seed leaf_formula cho ${Object.keys(LEAF).length}/7 chính sách (trường BẮT BUỘC, trước đó trống)`);
 
 // ── G3. Không có kho đầu thừa thì nhánh cắt không có chỗ nhập lại ──
-// `Cut Order.offcut_bundle` ghi Inward vào kho đầu thừa. Chỉ có K36/K12, và cả hai chưa khai
-// `stock_role` ⇒ rơi về mặc định "Kho chính". Đầu thừa sẽ nhập lẫn vào kho chính.
+// Mỗi kho chính có đúng một kho đầu thừa con để việc chọn kho không mơ hồ khi có nhiều địa điểm.
 fixture("Warehouse", "K36").data.stock_role = "Kho chính";
 fixture("Warehouse", "K12").data.stock_role = "Kho chính";
 brief.fixtures.push(
   {
-    "//": "Đầu thừa ≥ scrap_threshold_m nhập lại đây. Tách kho để tồn khả dụng của kho chính không bị đầu thừa làm nhiễu.",
+    "//": "Đầu thừa của K36. Tách kho để tồn khả dụng kho chính không bị đầu thừa làm nhiễu.",
     type: "Warehouse",
-    name: "K1",
+    name: "K36-DT",
     data: {
-      warehouse_name: "K1",
-      parent_warehouse: "Kho Alumdoor",
+      warehouse_name: "K36-DT",
+      parent_warehouse: "K36",
       is_group: false,
-      address: "Kho đầu thừa",
+      address: "Kho đầu thừa K36",
+      stock_role: "Kho đầu thừa",
+      disabled: false,
+    },
+  },
+  {
+    "//": "Đầu thừa của K12; cùng quy tắc nhưng không trộn vị trí vật lý với K36.",
+    type: "Warehouse",
+    name: "K12-DT",
+    data: {
+      warehouse_name: "K12-DT",
+      parent_warehouse: "K12",
+      is_group: false,
+      address: "Kho đầu thừa K12",
       stock_role: "Kho đầu thừa",
       disabled: false,
     },
@@ -930,7 +1038,7 @@ brief.fixtures.push(
     },
   },
 );
-note("G3 · Warehouse: K36/K12 khai stock_role + thêm K1 (đầu thừa) · K0 (phế)");
+note("G3 · Warehouse: K36/K12 khai stock_role + mỗi kho có một kho đầu thừa con · K0 (phế)");
 
 // ══════════ CHỐT CHẶN — không để G2 xảy ra lần nữa ══════════
 // G2 lọt được vì thêm trường bắt buộc mà quên fixture, và dry-run KHÔNG bắt (nó biên dịch cấu

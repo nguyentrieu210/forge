@@ -1,5 +1,6 @@
 import type { Actor, CanonicalDocument, JsonObject, JsonValue } from "../../contracts/src/index.js";
 import { errors, randomId } from "../../core/src/index.js";
+import qrcode from "qrcode-generator";
 import type { MetadataStore } from "./store.js";
 import type { AssignmentRecord, CommentRecord, DocTypeMeta, FileRecord, PrintFormatMeta, ShareRecord } from "./types.js";
 
@@ -286,6 +287,12 @@ export function renderPrintFormat(format: PrintFormatMeta, document: CanonicalDo
  */
 function applyFilter(value: string, filter: string | undefined, locale: string): string {
   if (!filter || value === "") return value;
+  if (filter === "qrcode") {
+    const qr = qrcode(0, "M");
+    qr.addData(value, "Byte");
+    qr.make();
+    return qr.createDataURL(3, 2);
+  }
   if (filter === "money" || filter === "number") {
     const parsed = Number(value);
     if (!Number.isFinite(parsed)) return value;

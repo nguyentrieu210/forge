@@ -209,6 +209,50 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     expect(boot.sysdefaults.currency).toBe("USD");
   });
 
+  it("locks and unlocks one accounting period through the authorised API with an append-only audit trail", async () => {
+    const locked = await unwrap(await method("metaforge.api.set_accounting_period_lock", {
+      company: "Demo",
+      action: "Lock",
+      lock_date: "2026-07-25",
+      reason: "Chốt kiểm kê tháng 7",
+    }));
+    expect(locked).toEqual({ company: "Demo", lock_date: "2026-07-25" });
+    const current = await env.DB.prepare(
+      `SELECT lock_date,modified_by,reason FROM accounting_period_locks
+       WHERE tenant_id='demo' AND company='Demo'`,
+    ).first<{ lock_date: string; modified_by: string; reason: string }>();
+    expect(current).toEqual({
+      lock_date: "2026-07-25",
+      modified_by: "sales@example.com",
+      reason: "Chốt kiểm kê tháng 7",
+    });
+
+    const unlocked = await unwrap(await method("metaforge.api.set_accounting_period_lock", {
+      company: "Demo",
+      action: "Unlock",
+      reason: "Mở lại theo biên bản điều chỉnh",
+    }));
+    expect(unlocked).toEqual({ company: "Demo", lock_date: null });
+    const events = await env.DB.prepare(
+      `SELECT action,lock_date,reason,actor FROM accounting_period_lock_events
+       WHERE tenant_id='demo' AND company='Demo' ORDER BY occurred_at,rowid`,
+    ).all<{ action: string; lock_date: string; reason: string; actor: string }>();
+    expect(events.results).toEqual([
+      {
+        action: "Lock",
+        lock_date: "2026-07-25",
+        reason: "Chốt kiểm kê tháng 7",
+        actor: "sales@example.com",
+      },
+      {
+        action: "Unlock",
+        lock_date: "",
+        reason: "Mở lại theo biên bản điều chỉnh",
+        actor: "sales@example.com",
+      },
+    ]);
+  });
+
   it("rejects a write without the CSRF header even with a valid session cookie", async () => {
     // A cross-site form can send the cookie but cannot read the nonce.
     const response = await exports.default.fetch(new Request("https://tenant.test/api/resource/Field Visit", {
@@ -872,12 +916,12 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
    * mức và một app 40 doctype hoàn toàn bình thường bị từ chối với "expands to 128 install
    * statements". Trần lúc đó đo cách CHÚNG TA viết, không đo app.
    *
-   * 40 doctype là con số thật của Alumdoor lúc gặp lỗi. Test cũng đọc lại `app_objects` để
+   * 69 doctype + 57 fixture là kích thước thật của Alumdoor V2. Test cũng đọc lại `app_objects` để
    * chắc rằng gộp nhiều dòng vào một lệnh vẫn ghi ĐỦ từng dòng — gộp sai thì mất quyền sở
    * hữu, và mất quyền sở hữu thì gỡ app sẽ bỏ sót hoặc xoá nhầm đồ của khách.
    */
-  it("cài được app cỡ thật (40 doctype) — trần một lô đo độ phức tạp, không đo cách ghi", async () => {
-    const many = Array.from({ length: 40 }, (_, index) => ({
+  it("cài được app cỡ Alumdoor V2 (69 doctype + 57 fixture) trong một giao dịch", async () => {
+    const many = Array.from({ length: 69 }, (_, index) => ({
       name: `Bulk Doc ${index + 1}`, module: "Bulk",
       fields: [{ fieldname: "title", label: "Title", fieldtype: "Data", required: true }],
       permissions: [{ role: "Bulk User", read: true, write: true, create: true }],
@@ -887,21 +931,21 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
       id: "bulk", name: "Bulk", version: "1.0.0",
       roles: [{ role: "Bulk User" }],
       doctypes: many,
-      fixtures: Array.from({ length: 11 }, (_, index) => ({ record_type: "Bulk Kind", name: `K${index + 1}`, data: {} })),
+      fixtures: Array.from({ length: 57 }, (_, index) => ({ record_type: "Bulk Kind", name: `K${index + 1}`, data: {} })),
       nav: many.map((doctype) => ({ key: doctype.name, label: doctype.name, kind: "doctype" })),
     };
 
     const installed = await unwrap(await method("forge.apps.install", { app: pkg }));
     expect(installed.outcome).toBe("installed");
-    expect(installed.doctypes).toBe(40);
+    expect(installed.doctypes).toBe(69);
 
-    // Mỗi đối tượng vẫn phải có ĐÚNG một dòng sở hữu: 40 doctype + 11 fixture + 1 role.
+    // Mỗi đối tượng vẫn phải có ĐÚNG một dòng sở hữu: 69 doctype + 57 fixture + 1 role.
     const owned = await env.DB.prepare(
       `SELECT count(*) AS total FROM app_objects WHERE tenant_id='demo' AND app_id='bulk'`,
     ).first<{ total: number }>();
-    expect(owned!.total).toBe(52);
+    expect(owned!.total).toBe(127);
     const sample = await env.DB.prepare(
-      `SELECT object_type FROM app_objects WHERE tenant_id='demo' AND app_id='bulk' AND object_name='Bulk Doc 40'`,
+      `SELECT object_type FROM app_objects WHERE tenant_id='demo' AND app_id='bulk' AND object_name='Bulk Doc 69'`,
     ).first<{ object_type: string }>();
     expect(sample!.object_type).toBe("DocType");
   });

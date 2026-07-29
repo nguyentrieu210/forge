@@ -12,6 +12,9 @@ import {
   BankReconciliationController, BankTransactionController, EInvoiceSubmissionController, PayrollEntryController,
   SalarySlipController, SubscriptionController,
 } from "./enterprise-controllers.js";
+import {
+  CutOrderController, StockReconciliationController, StockReservationController,
+} from "./alumdoor-inventory.js";
 
 export function registerErpNextCoreControllers(registry: ControllerRegistry): ControllerRegistry {
   return registry
@@ -40,5 +43,8 @@ export function registerErpNextCoreControllers(registry: ControllerRegistry): Co
     .register(new SalarySlipController())
     .register(new PayrollEntryController())
     .register(new SubscriptionController())
-    .register(new EInvoiceSubmissionController());
+    .register(new EInvoiceSubmissionController())
+    .register(new CutOrderController())
+    .register(new StockReservationController())
+    .register(new StockReconciliationController());
 }

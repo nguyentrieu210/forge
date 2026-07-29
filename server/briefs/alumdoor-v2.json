@@ -154,6 +154,30 @@
     "save",
     "submit"
    ]
+  },
+  {
+   "doctype": "Cut Order",
+   "actions": [
+    "create",
+    "save",
+    "submit",
+    "cancel"
+   ]
+  },
+  {
+   "doctype": "Stock Reservation",
+   "actions": [
+    "create",
+    "save"
+   ]
+  },
+  {
+   "doctype": "Stock Reconciliation",
+   "actions": [
+    "create",
+    "save",
+    "submit"
+   ]
   }
  ],
  "//hooks": [
@@ -205,22 +229,19 @@
    "label": "Cắt nhôm",
    "icon": "scissors",
    "group": "Kho",
-   "description": "Chọn lô khổ NHỎ NHẤT còn đủ dài để phế ít nhất, ưu tiên đầu thừa. Ghi 2 bundle ngược chiều: trừ lô mẹ, nhập lô đầu thừa. Cắt xong không nối lại được.",
+   "description": "Ghi sổ phiếu cắt nháp đã được đề xuất trước đó: trừ đúng lô mẹ, nhập lô đầu thừa và dùng các phiếu giữ chỗ gắn với lệnh. Cắt xong không nối lại được.",
    "permission": "Cut Order",
    "fields": [
-    "cut_order:Link(Cut Order)! Phiếu cắt (nháp)",
-    "prefer_offcut:Check!=(1) Ưu tiên dùng đầu thừa trước"
+    "cut_order:Link(Cut Order)! Phiếu cắt (nháp)"
    ],
-   "preview": "alumdoor.cut.propose | Xem đề xuất",
-   "commit": "alumdoor.cut.apply | Cắt và trừ tồn | Cắt thật và trừ tồn kho. Đã cắt thì nhôm không nối lại được — tiếp tục?",
-   "resultTable": "picks"
+   "commit": "alumdoor.cut.apply | Cắt và trừ tồn | Cắt thật và trừ tồn kho. Đã cắt thì nhôm không nối lại được — tiếp tục?"
   },
   {
    "name": "hoan-cat",
    "label": "Hoàn cắt (ghi nhầm)",
    "icon": "undo-2",
    "group": "Kho",
-   "description": "Hoàn cắt: đảo bút toán và trả lô về đúng trạng thái trước khi cắt. Không tạo phiếu cắt ngược.",
+   "description": "Chỉ dùng khi ghi nhầm: đảo nguyên trạng bút toán cắt và đầu thừa, không tính lại theo giá bình quân và không tạo phiếu cắt ngược.",
    "permission": "Cut Order",
    "fields": [
     "cut_order:Link(Cut Order)! Phiếu cắt",
@@ -253,7 +274,7 @@
    "label": "Trả hàng (đã cắt)",
    "icon": "package-open",
    "group": "Kho",
-   "description": "Trả hàng: đảo bút toán và trả lô về đúng trạng thái trước khi cắt. Không tạo phiếu cắt ngược.",
+   "description": "Hàng đã cắt không thể nối lại thành lô mẹ. Tạo lô mới đúng chiều dài đã cắt và nhập bằng Phiếu kho, giữ nguyên dấu vết lô cha.",
    "permission": "Cut Order",
    "fields": [
     "cut_order:Link(Cut Order)! Phiếu cắt",
@@ -354,6 +375,7 @@
     "color:Link(Item Color) Màu (bỏ trống = mọi màu)",
     "condition:Select(Thô,Đã sơn,Lỗi) Tình trạng",
     "warehouse:Link(Warehouse)! Kho",
+    "cutting_policy:Link(Cutting Policy)! Công thức cửa",
     "cut_width_m:Float! Rộng cắt lá (m)",
     "sheets:Float! Số lá cần",
     "include_offcut:Check!=(1) Xét cả kho đầu thừa"
@@ -425,9 +447,52 @@
     "reconciliation:Link(Stock Reconciliation)! Phiếu kiểm kê"
    ],
    "commit": "alumdoor.recon.post | Ghi sổ điều chỉnh | Bút toán điều chỉnh ghi vào ngày chốt số sổ và không sửa được — tiếp tục?"
+  },
+  {
+   "//": "Chỉ đọc dữ liệu người gọi đã được phép mở. Nền tảng ghi ai_logs cho mọi câu trả lời thành công.",
+   "name": "hoi-ai",
+   "label": "Hỏi trợ lý",
+   "icon": "sparkles",
+   "group": "Báo cáo",
+   "permission": "Item",
+   "permissionAction": "read",
+   "description": "Trợ lý chỉ trả lời từ bối cảnh được cung cấp, không tự ghi chứng từ và không đoán số còn thiếu.",
+   "fields": [
+    "question:Small Text! Câu hỏi",
+    "context_doctype:Data Loại chứng từ làm bối cảnh",
+    "context_name:Data Số chứng từ làm bối cảnh"
+   ],
+   "commit": "alumdoor.ai.ask | Hỏi"
+  },
+  {
+   "name": "khoa-ky",
+   "label": "Khoá kỳ",
+   "icon": "lock-keyhole",
+   "group": "Cài đặt",
+   "permission": "Cutting Policy",
+   "description": "Chỉ Chủ xưởng. Chặn mọi bút toán kho có ngày nhỏ hơn hoặc bằng ngày khoá; mỗi lần đổi đều có nhật ký.",
+   "fields": [
+    "company:Data! Công ty",
+    "lock_date:Date! Khoá đến hết ngày",
+    "reason:Small Text! Lý do"
+   ],
+   "commit": "alumdoor.period.lock | Khoá kỳ | Sau khi khoá, chứng từ trong kỳ chỉ có thể ghi khi mở lại — tiếp tục?"
+  },
+  {
+   "name": "mo-ky",
+   "label": "Mở kỳ",
+   "icon": "lock-keyhole-open",
+   "group": "Cài đặt",
+   "permission": "Cutting Policy",
+   "description": "Chỉ Chủ xưởng. Mở lại kỳ đã khoá; bắt buộc ghi lý do và lưu nhật ký người thực hiện.",
+   "fields": [
+    "company:Data! Công ty",
+    "reason:Small Text! Lý do mở kỳ"
+   ],
+   "commit": "alumdoor.period.unlock | Mở kỳ | Chứng từ quá khứ sẽ có thể ghi lại — tiếp tục?"
   }
  ],
- "home": "Purchase Receipt",
+ "home": "report:Tồn nhôm theo khổ",
  "navigation": {
   "groups": [
    "Bán hàng",
@@ -440,6 +505,7 @@
    "Danh mục"
   ],
   "items": [
+   "report:Tồn nhôm theo khổ",
    "Sales Order",
    "Delivery Note",
    "action:cat-nhom",
@@ -1050,14 +1116,27 @@
    }
   },
   {
-   "//": "Đầu thừa ≥ scrap_threshold_m nhập lại đây. Tách kho để tồn khả dụng của kho chính không bị đầu thừa làm nhiễu.",
+   "//": "Đầu thừa của K36. Tách kho để tồn khả dụng kho chính không bị đầu thừa làm nhiễu.",
    "type": "Warehouse",
-   "name": "K1",
+   "name": "K36-DT",
    "data": {
-    "warehouse_name": "K1",
-    "parent_warehouse": "Kho Alumdoor",
+    "warehouse_name": "K36-DT",
+    "parent_warehouse": "K36",
     "is_group": false,
-    "address": "Kho đầu thừa",
+    "address": "Kho đầu thừa K36",
+    "stock_role": "Kho đầu thừa",
+    "disabled": false
+   }
+  },
+  {
+   "//": "Đầu thừa của K12; cùng quy tắc nhưng không trộn vị trí vật lý với K36.",
+   "type": "Warehouse",
+   "name": "K12-DT",
+   "data": {
+    "warehouse_name": "K12-DT",
+    "parent_warehouse": "K12",
+    "is_group": false,
+    "address": "Kho đầu thừa K12",
     "stock_role": "Kho đầu thừa",
     "disabled": false
    }
@@ -4603,14 +4682,6 @@
     "customer:Link(Customer) Khách hàng",
     "so_reference:Data Số chứng từ đơn hàng",
     "items:Table(Cut Order Item)! Dòng cắt",
-    {
-     "//": "Bundle Inward ở kho Đầu thừa. Nhân tạo, người dùng không chọn.",
-     "fieldname": "offcut_bundle",
-     "fieldtype": "Link",
-     "options": "Serial and Batch Bundle",
-     "label": "Lô đầu thừa sinh ra",
-     "read_only": true
-    },
     "cut_state:Select(Đã cắt,Đã hoàn cắt,Đã trả hàng)!=(Đã cắt) Trạng thái",
     "cancel_reason:Link(Lý do huỷ) Lý do hoàn/trả",
     "note:Small Text Ghi chú"
@@ -4637,7 +4708,22 @@
    ],
    "fields": [
     "serial_and_batch_bundle:Link(Serial and Batch Bundle)! Lô đem cắt (bundle Outward)",
+    {
+     "//": "Mỗi dòng có lô mẹ và kho đầu thừa riêng; đặt trên đầu phiếu làm mất quan hệ khi cắt nhiều mã/kho.",
+     "fieldname": "offcut_bundle",
+     "fieldtype": "Link",
+     "options": "Serial and Batch Bundle",
+     "label": "Bundle nhập đầu thừa",
+     "read_only": true
+    },
     "item_code:Link(Item)! Mã nhôm",
+    {
+     "fieldname": "source_warehouse",
+     "fieldtype": "Link",
+     "options": "Warehouse",
+     "label": "Kho lô mẹ",
+     "read_only": true
+    },
     "source_length_m:Float! Khổ cây (m)",
     "cut_width_m:Float! Rộng cắt lá (m)",
     "sheets_cut:Float! Số lá cắt",
@@ -4647,6 +4733,48 @@
     "kg_weighed:Float Kg cân thật lúc xuất",
     "offcut_length_m:Float~- Đầu thừa (m)",
     "scrap_m:Float Phế bỏ hẳn (m)",
+    {
+     "fieldname": "stock_value_consumed_minor",
+     "fieldtype": "Int",
+     "label": "Giá trị lô đã trừ (minor)",
+     "hidden": true,
+     "read_only": true
+    },
+    {
+     "fieldname": "offcut_stock_value_minor",
+     "fieldtype": "Int",
+     "label": "Giá trị đầu thừa (minor)",
+     "hidden": true,
+     "read_only": true
+    },
+    {
+     "fieldname": "cut_product_value_minor",
+     "fieldtype": "Int",
+     "label": "Giá trị phần đã cắt (minor)",
+     "hidden": true,
+     "read_only": true
+    },
+    {
+     "fieldname": "kg_consumed_micros",
+     "fieldtype": "Int",
+     "label": "Kg tiêu hao (micros)",
+     "hidden": true,
+     "read_only": true
+    },
+    {
+     "fieldname": "offcut_weight_micros",
+     "fieldtype": "Int",
+     "label": "Kg đầu thừa (micros)",
+     "hidden": true,
+     "read_only": true
+    },
+    {
+     "fieldname": "cut_product_weight_micros",
+     "fieldtype": "Int",
+     "label": "Kg phần đã cắt (micros)",
+     "hidden": true,
+     "read_only": true
+    },
     "note:Data Ghi chú"
    ],
    "permissions": {
@@ -4682,7 +4810,7 @@
     "min_length_m:Float! Khổ tối thiểu (m)",
     "warehouse:Link(Warehouse) Kho (trống = mọi kho chính)",
     "qty_reserved:Float! Số lá giữ",
-    "source_doctype:Select(Production Order,Sales Order,Cut Order)! Giữ cho",
+    "source_doctype:Select(Work Order,Sales Order,Cut Order)! Giữ cho",
     "source_name:Data! Số chứng từ nguồn",
     "reserved_at:Datetime!=(Now) Giữ lúc",
     "expires_at:Datetime Hết hạn",
@@ -4752,6 +4880,13 @@
    ],
    "fields": [
     "item_code:Link(Item)! Mã hàng",
+    {
+     "fieldname": "batch_no",
+     "fieldtype": "Link",
+     "options": "Batch",
+     "label": "Lô chụp sổ",
+     "read_only": true
+    },
     "serial_and_batch_bundle:Link(Serial and Batch Bundle) Lô đếm được",
     "book_qty:Float~- Số sổ (chụp lúc chốt)",
     "book_weight_kg:Float~- Kg theo sổ",
@@ -4759,6 +4894,42 @@
     "counted_weight_kg:Float Kg cân thực tế",
     "variance_qty:Float~- Chênh lệch",
     "variance_weight_kg:Float~- Chênh kg",
+    {
+     "fieldname": "book_qty_micros",
+     "fieldtype": "Int",
+     "label": "Số sổ (micros)",
+     "hidden": true,
+     "read_only": true
+    },
+    {
+     "fieldname": "book_weight_micros",
+     "fieldtype": "Int",
+     "label": "Kg sổ (micros)",
+     "hidden": true,
+     "read_only": true
+    },
+    {
+     "fieldname": "book_stock_value_minor",
+     "fieldtype": "Int",
+     "label": "Giá trị sổ (minor)",
+     "hidden": true,
+     "read_only": true
+    },
+    {
+     "fieldname": "variance_qty_micros",
+     "fieldtype": "Int",
+     "label": "Chênh SL (micros)",
+     "hidden": true,
+     "read_only": true
+    },
+    {
+     "fieldname": "variance_weight_micros",
+     "fieldtype": "Int",
+     "label": "Chênh kg (micros)",
+     "hidden": true,
+     "read_only": true
+    },
+    "valuation_rate:Currency Đơn giá điều chỉnh (khi lô chưa có giá)",
     "variance_reason:Link(Nguyên nhân chênh lệch) Nguyên nhân",
     "variance_note:Data Diễn giải",
     "photo:Attach Image Ảnh hiện trạng"
@@ -5011,6 +5182,13 @@
   "khách không có cách nào xem tồn kho hay sổ cái, dù nền tảng vẫn ghi đủ."
  ],
  "links": [
+  {
+   "report": "Tồn nhôm theo khổ",
+   "label": "Tồn nhôm theo khổ",
+   "permission": "Item",
+   "icon": "ruler",
+   "group": "Kho"
+  },
   {
    "report": "Stock Balance",
    "label": "Xuất nhập tồn",
@@ -5358,6 +5536,32 @@
     "</tbody></table>",
     "<div class=\"note\">Điều kiện mong muốn: {{ note }}\nGiao hàng tại: Xưởng 1 — 12B đường số 2, P. Bình Hưng Hoà, Q. Bình Tân, TP.HCM</div>",
     "<div class=\"sign\"><div><b>Nhà cung cấp báo giá</b>(ký, ghi rõ họ tên, đóng dấu)</div><div><b>Người lập yêu cầu</b>(ký, ghi rõ họ tên)</div></div>"
+   ]
+  },
+  {
+   "//": "Biên bản kiểm kê A4: số chứng từ, QR, mọi dòng chênh lệch và ba khu ký.",
+   "name": "Biên bản kiểm kê kho ALUMDOOR",
+   "doctype": "Stock Reconciliation",
+   "default": true,
+   "css": [
+    "*{box-sizing:border-box} body{font-family:'Segoe UI',Arial,sans-serif;font-size:12px;color:#111;margin:0;padding:22px}",
+    ".head{display:flex;justify-content:space-between;border-bottom:2px solid #9b1c1c;padding-bottom:10px;margin-bottom:14px}",
+    ".brand{font-size:21px;font-weight:800;color:#9b1c1c}.title{font-size:17px;font-weight:800;text-transform:uppercase;text-align:right}",
+    ".meta{display:grid;grid-template-columns:1fr 1fr;gap:5px 24px;margin:12px 0}.meta b{display:inline-block;min-width:120px;color:#555}",
+    "table{width:100%;border-collapse:collapse}th,td{border:1px solid #bbb;padding:5px 6px}th{background:#f2f2f2;font-size:10px;text-transform:uppercase}",
+    ".n{text-align:right;font-variant-numeric:tabular-nums}.qr{width:74px;height:74px;margin-left:14px}",
+    ".sign{display:flex;justify-content:space-between;text-align:center;margin-top:34px}.sign div{width:31%}.sign b{display:block;margin-bottom:55px}",
+    ".note{margin-top:12px;white-space:pre-wrap;color:#444}"
+   ],
+   "html": [
+    "<div class=\"head\"><div><div class=\"brand\">ALUMDOOR</div><div>Biên bản kiểm kê tài sản tồn kho</div></div>",
+    "<div style=\"display:flex\"><div><div class=\"title\">Biên bản kiểm kê kho</div><div>Số: {{ name }}</div></div><img class=\"qr\" alt=\"QR {{ name }}\" src=\"{{ name | qrcode }}\"></div></div>",
+    "<div class=\"meta\"><div><b>Kho kiểm kê</b>{{ warehouse }}</div><div><b>Thời điểm chốt</b>{{ snapshot_at | date }}</div>",
+    "<div><b>Người đếm</b>{{ counted_by }}</div><div><b>Người chứng kiến</b>{{ witnessed_by }}</div></div>",
+    "<table><thead><tr><th>#</th><th>Mã hàng / lô</th><th class=\"n\">Sổ</th><th class=\"n\">Đếm</th><th class=\"n\">Chênh</th><th class=\"n\">Kg chênh</th><th>Nguyên nhân / diễn giải</th></tr></thead><tbody>",
+    "{{#each items}}<tr><td>{{ _index }}</td><td>{{ item_code }}<br>{{ batch_no }}</td><td class=\"n\">{{ book_qty | number }}</td><td class=\"n\">{{ counted_qty | number }}</td><td class=\"n\">{{ variance_qty | number }}</td><td class=\"n\">{{ variance_weight_kg | number }}</td><td>{{ variance_reason }}<br>{{ variance_note }}</td></tr>{{/each}}",
+    "</tbody></table><div class=\"note\">Ghi chú: {{ note }}</div>",
+    "<div class=\"sign\"><div><b>Người đếm</b>(ký, ghi rõ họ tên)</div><div><b>Người chứng kiến</b>(ký, ghi rõ họ tên)</div><div><b>Thủ trưởng đơn vị</b>(ký, đóng dấu)</div></div>"
    ]
   }
  ],

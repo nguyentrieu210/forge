@@ -1,41 +1,49 @@
 # THEO DÕI PHA — ALUMDOOR V2
 
-> Cập nhật: 2026-07-30 · nhánh `feat/alumdoor-v2-kho`
+> Cập nhật: 2026-07-30 · nhánh `feat/alumdoor-v2-kho` · gói `alumdoor@2.0.0`
 
 | Pha | Trạng thái | Bằng chứng |
 |---|---|---|
 | 1 — Research | ✅ Qua cổng | `docs/ALUMDOOR-V2-PHA1-RESEARCH.md` |
-| 2 — BRD | ✅ Qua cổng, giữ đúng 2 cảnh báo đã công khai | `BRD.md` §11: 8 ✅ + 2 ⚠️ |
-| 3 — Thiết kế kỹ thuật | ✅ 10/10 sau khi đóng D1–D6 | `TECHNICAL_DESIGN.md` §9 |
-| 4 — Brief/cổng biên dịch | ✅ | `server/briefs/alumdoor-v2.json`; `forge-app --dry-run` → `DRY_RUN_PASS`, 69 doctypes, 56 fixtures, 63 nav |
-| 5 — Build | 🔄 Đang làm | M1–M5 đã gộp; các lát cắt bên dưới |
-| 6 — Verify/QA | ⬜ Chưa qua cổng | Chưa có browser QA và bộ bằng chứng production V2 |
-| 7 — Release | ⬜ Chưa làm | Production vẫn là Alumdoor 1.27.0 theo `ALUMDOOR-HANDOFF.md` |
+| 2 — BRD | ✅ Qua cổng, giữ nguyên 2 cảnh báo đã công khai | `BRD.md` §11 |
+| 3 — Thiết kế kỹ thuật | ✅ Qua cổng | `TECHNICAL_DESIGN.md` §9 |
+| 4 — Brief/cổng biên dịch | ✅ Qua cổng | `server/briefs/alumdoor-v2.json`; dry-run đạt, 69 DocType, 57 fixture, 67 mục điều hướng |
+| 5 — Build | ✅ Hoàn tất theo spec | Các lát cắt nghiệp vụ và nền tảng bên dưới |
+| 6 — Verify/QA trước release | ✅ Qua cổng cục bộ | Full server/SQL, Worker, typecheck, client build/selfcheck và Browser QA desktop/mobile đều đạt |
+| 7 — Release production | ⏸️ Chưa được phép chạy | Production vẫn là Alumdoor 1.27.0; còn backup mới, hai restore drill, pilot và phê duyệt release |
 
-## Pha 5 — lát cắt đã hoàn tất
+## Pha 5 — phạm vi đã hoàn tất
 
-- [x] M1 — `actual_weight_micros` đi xuyên migration, contract, D1 store, in-memory store và tracking.
-- [x] M2 — đơn giá khai `rate_uom`; giá đ/kg nhân kg thực cân rồi chia lại theo số cây/lá.
-- [x] M3–M5 — định giá thu hẹp theo lô, từ chối phương pháp giá vốn lạ, hết tràn số VND.
-- [x] Q8 — Phiếu xuất không bán (`Xuất mẫu`, `Đổi bảo hành`, `Xuất nội bộ`, `Xuất gia công`) không cần Đơn bán/Khách hàng; không sinh fulfillment giả.
-- [x] Phiếu nhập theo lô ghi cùng một dòng sổ: số cây/lá + kg + giá trị; retry idempotent; huỷ đảo đủ ba số.
-- [x] Phiếu xuất và Phiếu kho mang `weight_kg` vào sổ; mặt hàng catch-weight thiếu kg bị từ chối khi submit.
-- [x] `reverseStock` đảo cả `actual_weight_micros`.
-- [x] Huỷ Phiếu xuất/Phiếu kho đọc đúng bút toán gốc theo `(voucher_type, voucher_no, voucher_revision)` rồi đảo nguyên trạng; test hai lô khác giá chứng minh không chia lại theo bình quân.
-- [x] Trạng thái Phiếu xuất không bán được giữ là `Submitted` ở cả lúc ghi và lúc đọc lại; không bị suy diễn thành `To Bill`.
-- [x] Brief Phiếu nhập nói đúng hành vi mới: kg thực cân là số lượng tồn thứ hai, bắt buộc với nhôm catch-weight và được đảo khi huỷ.
+- [x] Sổ kho hai đơn vị: số cây/lá và `actual_weight_micros`; định giá theo kg thực cân; huỷ đảo đủ số lượng, kg và giá trị.
+- [x] Vị trí lô luôn lấy từ sổ hiện hành, không lấy kho nhận ban đầu đã lỗi thời.
+- [x] `Cut Order`: đề xuất lô, kerf, kg tiêu hao, ưu tiên đầu thừa, chặn ăn giữ chỗ của chứng từ khác, ghi sổ atomic và idempotent.
+- [x] Sinh lô đầu thừa ở kho đầu thừa con; cắt tiếp đầu thừa đúng kho; hoàn cắt/trả hàng không phục hồi sai lô mẹ.
+- [x] Giữ chỗ tồn theo ngưỡng chiều dài, tự nhả khi hết hạn qua lệnh aggregate có audit.
+- [x] Kiểm kê hai đơn vị: snapshot, chênh lệch cây/kg, bắt buộc nguyên nhân, cảnh báo phát sinh sau thời điểm chốt và điều chỉnh theo đúng `snapshot_at`.
+- [x] Báo cáo `Tồn nhôm theo khổ`, availability theo ngưỡng, báo cáo lệch cân/hao hụt/giữ chỗ/chênh kiểm kê.
+- [x] Khóa/mở kỳ có kiểm quyền hai lớp và nhật ký bất biến.
+- [x] `Hỏi trợ lý` chỉ đọc trong quyền người gọi; câu trả lời thành công ghi `ai_logs`.
+- [x] Lịch nền tảng: nhả giữ chỗ hết hạn, nhắc kiểm kê tháng/quý, báo cáo cuối ngày gồm nhập/xuất/cắt và cảnh báo lệch cân.
+- [x] QR trong mẫu in; trình render và kiểu trường đã có test.
+- [x] Trình cài gói hỗ trợ đúng quy mô V2 mà vẫn giữ một `D1 batch` atomic dưới giới hạn 100 câu lệnh.
+- [x] Danh bạ icon frontend phủ các icon V2; Browser QA không còn cảnh báo icon ở bundle hiện hành.
 
-## Pha 5 — việc kế tiếp
+## Pha 6 — bằng chứng gần nhất
 
-- [ ] Nối action/validator `Cut Order` với khuôn `Stock Entry`: tính `kg_consumed`, cân thật thắng, kerf và đầu thừa.
-- [ ] Sinh lô đầu thừa + bundle Inward ở kho Đầu thừa; hoàn cắt đảo đúng lô con.
-- [ ] Hoàn thiện `Stock Reconciliation` hai đơn vị và chênh lệch kg.
-- [x] Chạy test đầy đủ + worker typecheck cho lát cắt hiện tại.
-- [ ] Chưa deploy, chưa pilot production khi chưa backup và diễn tập migration hai lần.
+- Full server: **515/515 unit PASS**; toàn bộ SQL PASS, gồm 25 migration và các bài đua 100 request.
+- Worker Workerd/D1: **131/131 tenant PASS + 3/3 query PASS**; test cài gói chạy đúng quy mô V2 **69 DocType + 57 fixture**.
+- `typecheck:workers`, client `typecheck`, 83 nhóm selfcheck và production build: PASS.
+- Brief/schema/verify: PASS; gói cục bộ `alumdoor@2.0.0` cài nâng cấp thành công, client manifest có 67 mục và home `Tồn nhôm theo khổ`.
+- Browser QA: đăng nhập thật vào runtime cục bộ, kiểm report/action trên desktop và viewport 390×844; không có console error.
+- Chi tiết lệnh và phạm vi: `IMPLEMENTATION_EVIDENCE.md`.
 
-## Bằng chứng kiểm thử gần nhất
+## Pha 7 — điều kiện bắt buộc còn lại
 
-- Targeted: 48/48 PASS (`batch-valuation`, `catch-weight-valuation`, `o2c`, `erpnext-core`).
-- Full server sau lát cắt: 501/501 unit PASS + toàn bộ SQL PASS.
-- Worker typecheck: PASS.
-- Brief V2 tái sinh từ script và `DRY_RUN_PASS`.
+- [ ] Tạo backup D1 production mới, kiểm checksum và chuyển bản plaintext sang nơi lưu mã hóa ngoài tài khoản.
+- [ ] Restore drill lần 1 vào D1 mới, không đổi route.
+- [ ] Restore drill lần 2 vào một D1 mới khác, không tái sử dụng đích lần 1.
+- [ ] Chạy migration `0025_alumdoor_inventory_views.sql` và nâng gói trong staging/pilot.
+- [ ] Pilot nhập — giữ chỗ — cắt/đầu thừa — kiểm kê; đối chiếu ledger, báo cáo và `/health`.
+- [ ] Có phê duyệt rõ ràng mới deploy production.
+
+Không được đánh dấu Pha 7 hoàn tất chỉ dựa trên test cục bộ. Quy trình chi tiết nằm ở `RELEASE_RUNBOOK.md`.

@@ -11,14 +11,39 @@ export interface SubmittedQuantityQuery {
   quantityKind?: "stock" | "transaction";
 }
 
+export interface TrackedStockState {
+  qty_micros: number;
+  /** NULL means no catch-weight measurement has ever been posted for this slice. */
+  weight_micros: number | null;
+  stock_value_minor: number;
+}
+
+export interface TrackedStockPosition extends TrackedStockState {
+  item_code: string;
+  warehouse: string;
+  batch_no: string;
+}
+
 export interface DomainReader {
   getDocument<T extends JsonObject>(tenantId: string, doctype: string, name: string): Promise<CanonicalDocument<T> | null>;
+  /** Bounded controller-side scan for state overlays such as stock reservations. */
+  listDocumentsByDoctype<T extends JsonObject>(tenantId: string, doctype: string): Promise<Array<CanonicalDocument<T>>>;
   sumSubmittedChildQuantityMicros(query: SubmittedQuantityQuery): Promise<number>;
   getOutstandingMinor(tenantId: string, voucherType: string, voucherNo: string): Promise<number>;
   /** Outstanding in company-currency minor units, derived from the payment ledger. */
   getBaseOutstandingMinor(tenantId: string, voucherType: string, voucherNo: string): Promise<number>;
   getStockBalanceMicros(tenantId: string, itemCode: string, warehouse: string): Promise<number>;
   getTrackedStockBalanceMicros(tenantId: string, itemCode: string, warehouse: string, batchNo?: string, serialNo?: string): Promise<number>;
+  /** Quantity, catch weight and value from the same append-only ledger slice. */
+  getTrackedStockState(
+    tenantId: string,
+    itemCode: string,
+    warehouse: string,
+    batchNo?: string,
+    throughPostingAt?: string,
+  ): Promise<TrackedStockState>;
+  /** Current batch positions grouped from the ledger; never infer location from Batch.received_warehouse. */
+  listTrackedStockPositions(tenantId: string, itemCode?: string): Promise<TrackedStockPosition[]>;
   /** Các dòng sổ cái gốc của đúng một lần ghi chứng từ; dùng để huỷ bằng đối dấu nguyên trạng. */
   getVoucherGlEntries(tenantId: string, voucherType: string, voucherNo: string, voucherRevision: number): Promise<GeneralLedgerEntry[]>;
   /** Các dòng sổ gốc của đúng một lần ghi chứng từ; dùng để huỷ bằng đối dấu nguyên trạng. */

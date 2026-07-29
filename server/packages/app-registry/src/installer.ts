@@ -52,6 +52,7 @@ export interface UninstallResult {
 }
 
 type ObjectType = "DocType" | "Workflow" | "Print Format" | "Role" | "Master Record" | "Custom Field";
+type SqlValue = string | number | null;
 
 export class AppInstaller {
   private readonly db: D1Database | D1DatabaseSession;
@@ -141,58 +142,111 @@ export class AppInstaller {
      * A failure on the last workflow left a live DocType with no app record, no owner
      * and no safe uninstall path. Prevalidation cannot prevent storage failures, so
      * activation and every object it exposes must commit or roll back together.
-     */
+    */
     const statements: D1PreparedStatement[] = [];
+    const appendRows = (
+      rows: SqlValue[][],
+      rowsPerStatement: number,
+      sqlBeforeValues: string,
+      sqlAfterValues = "",
+    ): void => {
+      for (let start = 0; start < rows.length; start += rowsPerStatement) {
+        const chunk = rows.slice(start, start + rowsPerStatement);
+        const width = chunk[0]?.length ?? 0;
+        if (!width || chunk.some((row) => row.length !== width)) {
+          throw errors.validation("App installer produced an invalid grouped statement");
+        }
+        const tuples = chunk.map((_, rowIndex) => {
+          const first = rowIndex * width + 1;
+          return `(${Array.from({ length: width }, (_unused, columnIndex) => `?${first + columnIndex}`).join(",")})`;
+        }).join(",");
+        statements.push(
+          this.db.prepare(`${sqlBeforeValues}${tuples}${sqlAfterValues}`).bind(...chunk.flat()),
+        );
+      }
+    };
 
     // Roles lead the batch so DocPerm grants become valid in the same transaction.
-    for (const role of manifest.roles) {
-      statements.push(this.db.prepare(
-        `INSERT INTO roles(tenant_id,role,desk_access,is_standard,modified_at) VALUES(?1,?2,?3,0,?4)
-         ON CONFLICT(tenant_id,role) DO NOTHING`,
-      ).bind(tenantId, role.role, role.desk_access ? 1 : 0, now));
-    }
+    appendRows(
+      manifest.roles.map((role) => [tenantId, role.role, role.desk_access ? 1 : 0, now]),
+      25,
+      "INSERT INTO roles(tenant_id,role,desk_access,modified_at) VALUES",
+      " ON CONFLICT(tenant_id,role) DO NOTHING",
+    );
 
     // Package revisions describe source metadata; stored revisions describe writes.
     // Carry the latter forward so repeated upgrades stay monotonic.
+    const doctypeRows: SqlValue[][] = [];
     for (const doctype of manifest.doctypes) {
       const current = await this.db.prepare(
         `SELECT revision FROM doctype_definitions WHERE tenant_id=?1 AND doctype=?2`,
       ).bind(tenantId, doctype.name).first<{ revision: number }>();
       const revision = (current?.revision ?? 0) + 1;
       const normalized = { ...doctype, revision };
-      statements.push(this.db.prepare(
-        `INSERT INTO doctype_definitions(tenant_id,doctype,module,is_custom,is_submittable,is_child,revision,metadata_json,disabled,modified_by,modified_at)
-         VALUES(?1,?2,?3,?4,?5,?6,?7,?8,0,?9,?10)
-         ON CONFLICT(tenant_id,doctype) DO UPDATE SET module=excluded.module,is_custom=excluded.is_custom,is_submittable=excluded.is_submittable,
-           is_child=excluded.is_child,revision=excluded.revision,metadata_json=excluded.metadata_json,disabled=0,modified_by=excluded.modified_by,modified_at=excluded.modified_at`,
-      ).bind(tenantId, doctype.name, doctype.module, doctype.custom ? 1 : 0, doctype.is_submittable ? 1 : 0, doctype.is_child ? 1 : 0, revision, JSON.stringify(normalized), actor, now));
+      doctypeRows.push([
+        tenantId, doctype.name, doctype.module, doctype.custom ? 1 : 0,
+        doctype.is_submittable ? 1 : 0, doctype.is_child ? 1 : 0,
+        revision, JSON.stringify(normalized), actor, now,
+      ]);
     }
+    appendRows(
+      doctypeRows,
+      10,
+      `INSERT INTO doctype_definitions(
+         tenant_id,doctype,module,is_custom,is_submittable,is_child,revision,metadata_json,modified_by,modified_at
+       ) VALUES`,
+      ` ON CONFLICT(tenant_id,doctype) DO UPDATE SET
+          module=excluded.module,is_custom=excluded.is_custom,is_submittable=excluded.is_submittable,
+          is_child=excluded.is_child,revision=excluded.revision,metadata_json=excluded.metadata_json,
+          disabled=0,modified_by=excluded.modified_by,modified_at=excluded.modified_at`,
+    );
+
+    const workflowRows: SqlValue[][] = [];
     for (const workflow of manifest.workflows) {
       const current = await this.db.prepare(
         `SELECT revision FROM workflows WHERE tenant_id=?1 AND name=?2`,
       ).bind(tenantId, workflow.name).first<{ revision: number }>();
       const revision = (current?.revision ?? 0) + 1;
       const normalized = { ...workflow, revision };
-      statements.push(this.db.prepare(
-        `INSERT INTO workflows(tenant_id,name,document_type,is_active,revision,workflow_json,modified_by,modified_at)
-         VALUES(?1,?2,?3,?4,?5,?6,?7,?8)
-         ON CONFLICT(tenant_id,name) DO UPDATE SET document_type=excluded.document_type,is_active=excluded.is_active,revision=excluded.revision,
-           workflow_json=excluded.workflow_json,modified_by=excluded.modified_by,modified_at=excluded.modified_at`,
-      ).bind(tenantId, workflow.name, workflow.document_type, workflow.is_active ? 1 : 0, revision, JSON.stringify(normalized), actor, now));
+      workflowRows.push([
+        tenantId, workflow.name, workflow.document_type, workflow.is_active ? 1 : 0,
+        revision, JSON.stringify(normalized), actor, now,
+      ]);
     }
+    appendRows(
+      workflowRows,
+      12,
+      `INSERT INTO workflows(
+         tenant_id,name,document_type,is_active,revision,workflow_json,modified_by,modified_at
+       ) VALUES`,
+      ` ON CONFLICT(tenant_id,name) DO UPDATE SET
+          document_type=excluded.document_type,is_active=excluded.is_active,revision=excluded.revision,
+          workflow_json=excluded.workflow_json,modified_by=excluded.modified_by,modified_at=excluded.modified_at`,
+    );
+
+    const printRows: SqlValue[][] = [];
     for (const format of manifest.print_formats) {
       const current = await this.db.prepare(
         `SELECT revision FROM print_formats WHERE tenant_id=?1 AND name=?2`,
       ).bind(tenantId, format.name).first<{ revision: number }>();
       const revision = (current?.revision ?? 0) + 1;
       const normalized = { ...format, revision };
-      statements.push(this.db.prepare(
-        `INSERT INTO print_formats(tenant_id,name,doc_type,is_default,disabled,revision,format_json,modified_by,modified_at)
-         VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9)
-         ON CONFLICT(tenant_id,name) DO UPDATE SET doc_type=excluded.doc_type,is_default=excluded.is_default,disabled=excluded.disabled,
-           revision=excluded.revision,format_json=excluded.format_json,modified_by=excluded.modified_by,modified_at=excluded.modified_at`,
-      ).bind(tenantId, format.name, format.doc_type, format.is_default ? 1 : 0, format.disabled ? 1 : 0, revision, JSON.stringify(normalized), actor, now));
+      printRows.push([
+        tenantId, format.name, format.doc_type, format.is_default ? 1 : 0,
+        format.disabled ? 1 : 0, revision, JSON.stringify(normalized), actor, now,
+      ]);
     }
+    appendRows(
+      printRows,
+      11,
+      `INSERT INTO print_formats(
+         tenant_id,name,doc_type,is_default,disabled,revision,format_json,modified_by,modified_at
+       ) VALUES`,
+      ` ON CONFLICT(tenant_id,name) DO UPDATE SET
+          doc_type=excluded.doc_type,is_default=excluded.is_default,disabled=excluded.disabled,
+          revision=excluded.revision,format_json=excluded.format_json,
+          modified_by=excluded.modified_by,modified_at=excluded.modified_at`,
+    );
 
     statements.push(
       this.db.prepare(
@@ -204,35 +258,46 @@ export class AppInstaller {
       ).bind(tenantId, manifest.id, manifest.name, manifest.version, contentHash, JSON.stringify(manifest), actor, now),
     );
 
-    for (const fixture of manifest.fixtures) {
-      statements.push(this.db.prepare(
-        `INSERT INTO master_records(tenant_id,record_type,name,disabled,data_json,modified_at)
-         VALUES(?1,?2,?3,0,?4,?5)
-         ON CONFLICT(tenant_id,record_type,name) DO UPDATE SET data_json=excluded.data_json, modified_at=excluded.modified_at`,
-      ).bind(tenantId, fixture.record_type, fixture.name, JSON.stringify(fixture.data), now));
-    }
+    appendRows(
+      manifest.fixtures.map((fixture) => [
+        tenantId, fixture.record_type, fixture.name, JSON.stringify(fixture.data), now,
+      ]),
+      20,
+      "INSERT INTO master_records(tenant_id,record_type,name,data_json,modified_at) VALUES",
+      ` ON CONFLICT(tenant_id,record_type,name) DO UPDATE SET
+          data_json=excluded.data_json,disabled=0,modified_at=excluded.modified_at`,
+    );
 
     // Custom Fields, plus a revision bump for every doctype they touch. The bump is not
     // bookkeeping: `mergeCustomizations` versions the effective schema by it, so a field
     // written without one installs into the table and stays invisible to anything
     // holding a cached DocType — which, after an install, is every client.
     const touched = new Set<string>();
+    const customFieldRows: SqlValue[][] = [];
     for (const field of manifest.custom_fields) {
       touched.add(field.dt);
-      statements.push(this.db.prepare(
-        `INSERT INTO custom_fields(tenant_id,name,dt,fieldname,metadata_json,insert_after,modified_by,modified_at)
-         VALUES(?1,?2,?3,?4,?5,?6,?7,?8)
-         ON CONFLICT(tenant_id,name) DO UPDATE SET
-           dt=excluded.dt, fieldname=excluded.fieldname, metadata_json=excluded.metadata_json,
-           insert_after=excluded.insert_after, modified_by=excluded.modified_by, modified_at=excluded.modified_at`,
-      ).bind(tenantId, field.name, field.dt, field.fieldname, JSON.stringify(field.field), field.insert_after, actor, now));
+      customFieldRows.push([
+        tenantId, field.name, field.dt, field.fieldname, JSON.stringify(field.field),
+        field.insert_after, actor, now,
+      ]);
     }
-    for (const doctype of touched) {
-      statements.push(this.db.prepare(
-        `INSERT INTO customization_revisions(tenant_id,doctype,revision,modified_at) VALUES(?1,?2,1,?3)
-         ON CONFLICT(tenant_id,doctype) DO UPDATE SET revision=revision+1, modified_at=excluded.modified_at`,
-      ).bind(tenantId, doctype, now));
-    }
+    appendRows(
+      customFieldRows,
+      12,
+      `INSERT INTO custom_fields(
+         tenant_id,name,dt,fieldname,metadata_json,insert_after,modified_by,modified_at
+       ) VALUES`,
+      ` ON CONFLICT(tenant_id,name) DO UPDATE SET
+          dt=excluded.dt,fieldname=excluded.fieldname,metadata_json=excluded.metadata_json,
+          insert_after=excluded.insert_after,modified_by=excluded.modified_by,modified_at=excluded.modified_at`,
+    );
+    appendRows(
+      [...touched].map((doctype) => [tenantId, doctype, 1, now]),
+      25,
+      "INSERT INTO customization_revisions(tenant_id,doctype,revision,modified_at) VALUES",
+      ` ON CONFLICT(tenant_id,doctype) DO UPDATE SET
+          revision=customization_revisions.revision+1,modified_at=excluded.modified_at`,
+    );
 
     // Ownership is recorded last, once every object exists, and is rewritten
     // wholesale so an upgrade that drops an object also drops its claim.

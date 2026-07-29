@@ -78,6 +78,28 @@ const answer = (value: unknown) => new Response(JSON.stringify(value), { headers
 const refuse = (message: string) => new Response(JSON.stringify({ message }), { status: 422, headers: { "content-type": "application/json" } });
 const accept = () => answer({ ok: true });
 
+function platformActorIdentity(request: Request): { user_id: string; roles: string[] } {
+  const encoded = request.headers.get("x-cloudforge-identity") ?? "";
+  if (!encoded) return { user_id: "", roles: [] };
+  try {
+    const normalized = encoded.replaceAll("-", "+").replaceAll("_", "/");
+    const json = atob(normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "="));
+    const identity = JSON.parse(json) as { actor?: { user_id?: unknown; roles?: unknown } };
+    return {
+      user_id: typeof identity.actor?.user_id === "string" ? identity.actor.user_id : "",
+      roles: Array.isArray(identity.actor?.roles)
+        ? identity.actor.roles.filter((role): role is string => typeof role === "string")
+        : [],
+    };
+  } catch {
+    return { user_id: "", roles: [] };
+  }
+}
+
+function platformActorUser(request: Request): string {
+  return platformActorIdentity(request).user_id;
+}
+
 interface InventoryItem {
   item_code?: string;
   item_group?: string;
@@ -679,6 +701,7 @@ interface Lot {
   width_m: number;
   sheet_count: number;
   warehouse: string;
+  is_offcut?: boolean;
   modified?: string;
 }
 
@@ -694,7 +717,10 @@ interface Lot {
 export function chooseLots(lots: Lot[], widthM: number, sheets: number): { picks: Array<{ lot: Lot; take: number }>; short: number } {
   const usable = lots
     .filter((lot) => lot.width_m >= widthM && lot.sheet_count > 0)
-    .sort((a, b) => (a.width_m - b.width_m) || (b.sheet_count - a.sheet_count));
+    .sort((a, b) =>
+      (a.width_m - b.width_m)
+      || (Number(Boolean(b.is_offcut)) - Number(Boolean(a.is_offcut)))
+      || (b.sheet_count - a.sheet_count));
   const picks: Array<{ lot: Lot; take: number }> = [];
   let remaining = sheets;
   for (const lot of usable) {
@@ -864,6 +890,674 @@ async function readDoc<T>(call: PlatformCall, doctype: string, name: string): Pr
   const response = await call(`resource/${encodeURIComponent(doctype)}/${encodeURIComponent(name)}`);
   if (!response.ok) throw new Error(`không đọc được ${doctype} ${name} (HTTP ${response.status})`);
   return ((await response.json()) as { data?: T & { modified?: string } }).data ?? ({} as T & { modified?: string });
+}
+
+interface V2BatchBalance {
+  item_code?: string;
+  warehouse?: string;
+  batch_no?: string;
+  actual_qty?: number;
+  actual_weight?: number | null;
+  stock_value?: number;
+}
+
+interface V2Batch {
+  name?: string;
+  batch_id?: string;
+  item_code?: string;
+  color?: string;
+  condition?: string;
+  length_m?: number;
+  is_offcut?: unknown;
+  parent_batch?: string;
+  received_warehouse?: string;
+}
+
+interface V2CutOrderItem {
+  row_id?: string;
+  item_code?: string;
+  serial_and_batch_bundle?: string;
+  offcut_bundle?: string;
+  source_warehouse?: string;
+  source_length_m?: number;
+  cut_width_m?: number;
+  sheets_cut?: number;
+  kg_consumed?: number;
+  cut_product_value_minor?: number;
+  cut_product_weight_micros?: number;
+}
+
+interface V2CutOrder {
+  name?: string;
+  cut_on?: string;
+  cutting_policy?: string;
+  customer?: string;
+  so_reference?: string;
+  cut_state?: string;
+  company?: string;
+  currency?: string;
+  currency_scale?: number;
+  items?: V2CutOrderItem[];
+  modified?: string;
+}
+
+/** Query Report trả về `message.result` theo Frappe; nhận cả dạng đã unwrap để callback dễ kiểm thử. */
+async function reportRows<T>(
+  call: PlatformCall,
+  reportName: string,
+  filters: Record<string, unknown>,
+): Promise<T[]> {
+  const response = await call("method/frappe.desk.query_report.run", {
+    method: "POST",
+    body: JSON.stringify({ report_name: reportName, ignore_prepared_report: 1, filters }),
+  });
+  if (!response.ok) throw new Error(`không đọc được báo cáo ${reportName} (HTTP ${response.status})`);
+  const payload = await response.json() as {
+    message?: { result?: T[] } | T[];
+    result?: T[];
+  };
+  if (Array.isArray(payload.message)) return payload.message;
+  if (payload.message && !Array.isArray(payload.message) && Array.isArray(payload.message.result)) return payload.message.result;
+  return payload.result ?? [];
+}
+
+async function createV2Doc<T extends Record<string, unknown>>(
+  call: PlatformCall,
+  doctype: string,
+  document: T,
+): Promise<T & { name: string; modified?: string }> {
+  const response = await call(`resource/${encodeURIComponent(doctype)}`, {
+    method: "POST",
+    body: JSON.stringify(document),
+  });
+  if (!response.ok) throw new Error(`không tạo được ${doctype}: ${(await response.text()).slice(0, 220)}`);
+  const data = ((await response.json()) as { data?: T & { name?: string; modified?: string } }).data;
+  if (!data?.name) throw new Error(`${doctype} đã tạo nhưng không trả về số chứng từ`);
+  return { ...data, name: data.name };
+}
+
+async function submitV2Doc<T extends Record<string, unknown>>(
+  call: PlatformCall,
+  doctype: string,
+  name: string,
+  document?: T & { modified?: string },
+): Promise<Record<string, unknown>> {
+  const source = document ?? await readDoc<Record<string, unknown>>(call, doctype, name);
+  const response = await call("method/frappe.client.submit", {
+    method: "POST",
+    body: JSON.stringify({ doc: { ...source, doctype, name } }),
+  });
+  if (!response.ok) throw new Error(`không ghi sổ được ${doctype} ${name}: ${(await response.text()).slice(0, 240)}`);
+  const payload = await response.json() as { message?: Record<string, unknown>; data?: Record<string, unknown> };
+  return payload.message ?? payload.data ?? {};
+}
+
+async function cancelV2Doc(
+  call: PlatformCall,
+  doctype: string,
+  name: string,
+  document?: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  const source = document ?? await readDoc<Record<string, unknown>>(call, doctype, name);
+  const response = await call("method/frappe.client.cancel", {
+    method: "POST",
+    body: JSON.stringify({ doc: { ...source, doctype, name } }),
+  });
+  if (!response.ok) throw new Error(`không huỷ được ${doctype} ${name}: ${(await response.text()).slice(0, 240)}`);
+  const payload = await response.json() as { message?: Record<string, unknown>; data?: Record<string, unknown> };
+  return payload.message ?? payload.data ?? {};
+}
+
+async function submitBundle(
+  call: PlatformCall,
+  input: {
+    item_code: string;
+    warehouse: string;
+    type: "Inward" | "Outward";
+    posting_at: string;
+    entries: Array<{ row_id: string; qty: number; batch_no: string }>;
+  },
+): Promise<string> {
+  const created = await createV2Doc(call, "Serial and Batch Bundle", input);
+  await submitV2Doc(call, "Serial and Batch Bundle", created.name, created);
+  return created.name;
+}
+
+async function listV2BatchStock(
+  call: PlatformCall,
+  args: Record<string, unknown>,
+): Promise<Array<V2BatchBalance & { batch: V2Batch }>> {
+  const itemCode = String(args.item_code ?? "").trim();
+  const warehouse = String(args.warehouse ?? "").trim();
+  const includeOffcut = args.include_offcut === undefined ? true : checked(args.include_offcut);
+  const balances = await reportRows<V2BatchBalance>(call, "Batch Stock Balance", {
+    ...(itemCode ? { item_code: itemCode } : {}),
+    ...(warehouse && !includeOffcut ? { warehouse } : {}),
+  });
+  const positive = balances.filter((row) => String(row.batch_no ?? "") && Number(row.actual_qty ?? 0) > 0);
+  const warehouseNames = [...new Set(positive.map((row) => String(row.warehouse ?? "")).filter(Boolean))];
+  const warehousePairs = await Promise.all(warehouseNames.map(async (name) => [name, await readMaster(call, "Warehouse", name)] as const));
+  const warehouses = new Map(warehousePairs);
+  const enriched = await Promise.all(positive.map(async (row) => ({
+    ...row,
+    batch: await readDoc<V2Batch>(call, "Batch", String(row.batch_no)),
+  })));
+  const color = String(args.color ?? args.colour ?? "").trim();
+  const condition = String(args.condition ?? args.generation ?? "").trim();
+  return enriched.filter(({ batch, warehouse: rowWarehouse }) =>
+    (!itemCode || batch.item_code === itemCode)
+    && (!warehouse
+      || rowWarehouse === warehouse
+      || (includeOffcut
+        && warehouses.get(String(rowWarehouse))?.stock_role === "Kho đầu thừa"
+        && warehouses.get(String(rowWarehouse))?.parent_warehouse === warehouse))
+    && (!color || batch.color === color)
+    && (!condition || batch.condition === condition)
+    && (includeOffcut || !checked(batch.is_offcut)));
+}
+
+/**
+ * V2 chỉ đọc Batch + sổ kho. Không còn Aluminium Lot song song với sổ nên một lô không thể "còn"
+ * ở bảng phụ trong khi sổ thật đã hết.
+ */
+async function proposeCutV2(call: PlatformCall, args: Record<string, unknown>): Promise<Response> {
+  const itemCode = String(args.item_code ?? args.profile ?? "").trim();
+  const warehouse = String(args.warehouse ?? "").trim();
+  const cutWidth = Number(args.cut_width_m);
+  const sheets = Number(args.sheets);
+  if (!itemCode || !warehouse || !Number.isFinite(cutWidth) || cutWidth <= 0 || !Number.isInteger(sheets) || sheets <= 0) {
+    return refuse("Cần mã nhôm, kho, rộng cắt và số lá nguyên dương.");
+  }
+  const stock = await listV2BatchStock(call, { ...args, item_code: itemCode, warehouse });
+  const lots: Lot[] = stock.map(({ batch, actual_qty, warehouse: rowWarehouse }) => ({
+    name: String(batch.name ?? batch.batch_id ?? ""),
+    profile: itemCode,
+    colour: String(batch.color ?? ""),
+    generation: String(batch.condition ?? ""),
+    width_m: Number(batch.length_m ?? 0),
+    sheet_count: Math.floor(Number(actual_qty ?? 0)),
+    warehouse: String(rowWarehouse ?? warehouse),
+    is_offcut: checked(batch.is_offcut),
+  }));
+  const { picks, short } = chooseLots(lots, cutWidth, sheets);
+  return answer({
+    item_code: itemCode,
+    warehouse,
+    cut_width_m: cutWidth,
+    sheets,
+    lots_considered: lots.length,
+    picks: picks.map(({ lot, take }) => ({
+      batch_no: lot.name,
+      length_m: lot.width_m,
+      color: lot.colour,
+      condition: lot.generation,
+      warehouse: lot.warehouse,
+      is_offcut: Boolean(lot.is_offcut),
+      available: lot.sheet_count,
+      take,
+      offcut_per_sheet_m: Number((lot.width_m - cutWidth).toFixed(6)),
+    })),
+    short,
+    ...(short ? { message: `Thiếu ${short} lá khổ ≥ ${cutWidth} m cho ${itemCode}.` } : {}),
+  });
+}
+
+/**
+ * Dựng phiếu cắt nháp cùng các bundle chưa dùng. Ghi sổ vẫn xảy ra ở `cut.apply`; nếu tồn đã đổi,
+ * controller kiểm lại từng batch và từ chối, không trừ âm.
+ */
+async function draftCutV2(call: PlatformCall, args: Record<string, unknown>): Promise<Response> {
+  const proposed = await proposeCutV2(call, args);
+  if (!proposed.ok) return proposed;
+  const proposal = await proposed.json() as {
+    item_code: string;
+    warehouse: string;
+    cut_width_m: number;
+    sheets: number;
+    short: number;
+    picks: Array<{ batch_no: string; length_m: number; take: number; warehouse: string }>;
+  };
+  if (proposal.short) return refuse(`Không đủ tồn: còn thiếu ${proposal.short} lá.`);
+  const cuttingPolicy = String(args.cutting_policy ?? "").trim();
+  if (!cuttingPolicy) return refuse("Cần chọn công thức cửa trước khi tạo phiếu cắt.");
+  const postingAt = new Date().toISOString();
+  const item = await readMaster(call, "Item", proposal.item_code);
+  const profileName = String(item?.measurement_profile ?? "");
+  const profile = profileName ? await readMaster(call, "Measurement Profile", profileName) : null;
+  if (!profile) return refuse(`Mặt hàng ${proposal.item_code} chưa có bộ quy cách.`);
+  const kerfM = Number(profile.kerf_mm ?? 0) / 1000;
+  const threshold = Number(profile.scrap_threshold_m ?? 0);
+  const items: V2CutOrderItem[] = [];
+  const createdBundles: string[] = [];
+  const createdBatches: string[] = [];
+  try {
+    for (const [index, pick] of proposal.picks.entries()) {
+      const outward = await submitBundle(call, {
+        item_code: proposal.item_code,
+        warehouse: pick.warehouse,
+        type: "Outward",
+        posting_at: postingAt,
+        entries: [{ row_id: "ROW-1", qty: pick.take, batch_no: pick.batch_no }],
+      });
+      createdBundles.push(outward);
+      const offcutLength = Number((pick.length_m - proposal.cut_width_m - kerfM * pick.take).toFixed(6));
+      let offcutBundle = "";
+      if (offcutLength >= threshold && offcutLength > 0) {
+        const offcutWarehouse = String(args.offcut_warehouse ?? "").trim()
+          || await findOffcutWarehouse(call, pick.warehouse);
+        if (!offcutWarehouse) throw new Error("chưa có kho vai trò Kho đầu thừa");
+        const sourceBatch = await readDoc<V2Batch>(call, "Batch", pick.batch_no);
+        const offcutBatch = await createV2Doc(call, "Batch", {
+          item_code: proposal.item_code,
+          color: sourceBatch.color,
+          condition: sourceBatch.condition,
+          length_m: offcutLength,
+          is_offcut: 1,
+          parent_batch: pick.batch_no,
+          cut_generation: Number((sourceBatch as Record<string, unknown>).cut_generation ?? 0) + 1,
+          received_warehouse: offcutWarehouse,
+        });
+        createdBatches.push(offcutBatch.name);
+        offcutBundle = await submitBundle(call, {
+          item_code: proposal.item_code,
+          warehouse: offcutWarehouse,
+          type: "Inward",
+          posting_at: postingAt,
+          entries: [{ row_id: "ROW-1", qty: pick.take, batch_no: offcutBatch.name }],
+        });
+        createdBundles.push(offcutBundle);
+      }
+      items.push({
+        row_id: `ROW-${index + 1}`,
+        item_code: proposal.item_code,
+        serial_and_batch_bundle: outward,
+        ...(offcutBundle ? { offcut_bundle: offcutBundle } : {}),
+        source_length_m: pick.length_m,
+        cut_width_m: proposal.cut_width_m,
+        sheets_cut: pick.take,
+      });
+    }
+    const cut = await createV2Doc(call, "Cut Order", {
+      cut_on: postingAt,
+      cutting_policy: cuttingPolicy,
+      ...(args.customer ? { customer: String(args.customer) } : {}),
+      ...(args.so_reference ? { so_reference: String(args.so_reference) } : {}),
+      items,
+      cut_state: "Nháp",
+    });
+    return answer({
+      cut_order: cut.name,
+      draft: true,
+      items,
+      bundles: createdBundles,
+      offcut_batches: createdBatches,
+      message: `Đã tạo phiếu cắt nháp ${cut.name}; chưa trừ tồn kho.`,
+    });
+  } catch (error) {
+    throw new Error(
+      `${error instanceof Error ? error.message : "không tạo được phiếu cắt"}`
+      + (createdBundles.length ? `; bundle đã tạo nhưng chưa dùng: ${createdBundles.join(", ")}` : ""),
+    );
+  }
+}
+
+async function findOffcutWarehouse(call: PlatformCall, sourceWarehouse: string): Promise<string> {
+  const source = await readMaster(call, "Warehouse", sourceWarehouse);
+  if (source?.stock_role === "Kho đầu thừa") return sourceWarehouse;
+  const query = new URLSearchParams({
+    fields: JSON.stringify(["name", "stock_role", "parent_warehouse", "is_group", "disabled"]),
+    filters: JSON.stringify([
+      ["stock_role", "=", "Kho đầu thừa"],
+      ["parent_warehouse", "=", sourceWarehouse],
+      ["is_group", "=", 0],
+      ["disabled", "=", 0],
+    ]),
+    limit_page_length: "3",
+  });
+  const response = await call(`resource/Warehouse?${query}`);
+  if (!response.ok) return "";
+  const rows = ((await response.json()) as { data?: Array<{ name?: string }> }).data ?? [];
+  return rows.length === 1 ? String(rows[0]?.name ?? "") : "";
+}
+
+async function applyCutV2(call: PlatformCall, args: Record<string, unknown>): Promise<Response> {
+  const name = String(args.cut_order ?? "").trim();
+  if (!name) return refuse("Cần chọn phiếu cắt nháp.");
+  const cut = await readDoc<V2CutOrder>(call, "Cut Order", name);
+  if (cut.cut_state !== "Đã cắt") {
+    await submitV2Doc(call, "Cut Order", name, cut as V2CutOrder & Record<string, unknown>);
+  }
+  const reservations = await consumeReservationsForCut(call, name, cut.so_reference);
+  return answer({
+    cut_order: name,
+    submitted: true,
+    idempotent: cut.cut_state === "Đã cắt",
+    reservations,
+    message: `Đã cắt và trừ tồn theo phiếu ${name}; ${reservations.used} phiếu giữ chỗ đã chuyển sang Đã dùng.`
+      + (reservations.failed.length ? ` Cần kiểm tra lại: ${reservations.failed.join(", ")}.` : ""),
+  });
+}
+
+async function consumeReservationsForCut(
+  call: PlatformCall,
+  cutOrder: string,
+  sourceReference?: string,
+): Promise<{ used: number; failed: string[] }> {
+  const sourceNames = new Set([cutOrder, String(sourceReference ?? "").trim()].filter(Boolean));
+  const query = new URLSearchParams({
+    fields: JSON.stringify(["name", "source_name", "state", "modified"]),
+    filters: JSON.stringify([["state", "=", "Đang giữ"]]),
+    limit_page_length: "5000",
+  });
+  const response = await call(`resource/Stock%20Reservation?${query}`);
+  if (!response.ok) return { used: 0, failed: ["không đọc được danh sách giữ chỗ"] };
+  const rows = ((await response.json()) as {
+    data?: Array<{ name?: string; source_name?: string; state?: string; modified?: string }>;
+  }).data ?? [];
+  let used = 0;
+  const failed: string[] = [];
+  for (const row of rows) {
+    const reservation = String(row.name ?? "");
+    if (!reservation || !sourceNames.has(String(row.source_name ?? ""))) continue;
+    const saved = await call(`resource/Stock%20Reservation/${encodeURIComponent(reservation)}`, {
+      method: "PUT",
+      body: JSON.stringify({ state: "Đã dùng", modified: row.modified }),
+    });
+    if (saved.ok) used += 1;
+    else failed.push(reservation);
+  }
+  return { used, failed };
+}
+
+async function reverseCutV2(call: PlatformCall, args: Record<string, unknown>): Promise<Response> {
+  const name = String(args.cut_order ?? args.cut ?? "").trim();
+  const reason = String(args.reason ?? "").trim();
+  if (!name || !reason) return refuse("Cần phiếu cắt và lý do hoàn cắt.");
+  const cut = await readDoc<V2CutOrder>(call, "Cut Order", name);
+  await cancelV2Doc(call, "Cut Order", name, {
+    ...cut,
+    cancel_reason: reason,
+    note: String(args.note ?? ""),
+  } as Record<string, unknown>);
+  return answer({ cut_order: name, reversed: true, message: `Đã đảo đúng bút toán gốc của phiếu ${name}.` });
+}
+
+async function returnCutV2(call: PlatformCall, args: Record<string, unknown>): Promise<Response> {
+  const name = String(args.cut_order ?? args.cut ?? "").trim();
+  const reason = String(args.reason ?? "").trim();
+  if (!name || !reason) return refuse("Cần phiếu cắt và lý do trả hàng.");
+  const cut = await readDoc<V2CutOrder>(call, "Cut Order", name);
+  if (cut.cut_state !== "Đã cắt" || !cut.items?.length) {
+    return refuse(`Phiếu ${name} không ở trạng thái Đã cắt hoặc không có dòng hàng.`);
+  }
+  const marker = `Trả hàng đã cắt từ Cut Order ${name}`;
+  const existingQuery = new URLSearchParams({
+    fields: JSON.stringify(["name", "note", "docstatus"]),
+    limit_page_length: "5000",
+  });
+  const existingResponse = await call(`resource/Stock%20Entry?${existingQuery}`);
+  if (existingResponse.ok) {
+    const existing = ((await existingResponse.json()) as { data?: Array<{ name?: string; note?: string; docstatus?: number }> }).data ?? [];
+    const prior = existing.find((row) => row.note === marker && row.docstatus !== 2);
+    if (prior) return refuse(`Phiếu cắt ${name} đã được nhập trả bằng phiếu kho ${prior.name}.`);
+  }
+
+  const postingAt = new Date().toISOString();
+  const rows: Array<Record<string, unknown>> = [];
+  const returnedBatches: string[] = [];
+  const bundles: string[] = [];
+  for (const [index, item] of cut.items.entries()) {
+    if (!item.item_code || !item.serial_and_batch_bundle || !item.source_warehouse || !positive(item.sheets_cut) || !positive(item.cut_width_m)) {
+      throw new Error(`dòng ${index + 1} của phiếu cắt thiếu dữ liệu gốc để nhập trả`);
+    }
+    const sourceBundle = await readDoc<{ entries?: Array<{ batch_no?: string }> }>(
+      call, "Serial and Batch Bundle", item.serial_and_batch_bundle,
+    );
+    const parent = String(sourceBundle.entries?.[0]?.batch_no ?? "");
+    if (!parent) throw new Error(`bundle ${item.serial_and_batch_bundle} không có lô mẹ`);
+    const parentBatch = await readDoc<V2Batch>(call, "Batch", parent);
+    const returned = await createV2Doc(call, "Batch", {
+      item_code: item.item_code,
+      color: parentBatch.color,
+      condition: parentBatch.condition,
+      length_m: Number(item.cut_width_m),
+      is_offcut: 1,
+      parent_batch: parent,
+      cut_generation: Number((parentBatch as Record<string, unknown>).cut_generation ?? 0) + 1,
+      received_warehouse: item.source_warehouse,
+      note: `${marker}; lý do: ${reason}`,
+    });
+    returnedBatches.push(returned.name);
+    const bundle = await submitBundle(call, {
+      item_code: item.item_code,
+      warehouse: item.source_warehouse,
+      type: "Inward",
+      posting_at: postingAt,
+      entries: [{ row_id: "ROW-1", qty: Number(item.sheets_cut), batch_no: returned.name }],
+    });
+    bundles.push(bundle);
+    const value = Number(item.cut_product_value_minor ?? 0);
+    const qty = Number(item.sheets_cut);
+    rows.push({
+      row_id: `ROW-${index + 1}`,
+      item_code: item.item_code,
+      qty,
+      target_warehouse: item.source_warehouse,
+      serial_and_batch_bundle: bundle,
+      ...(Number(item.cut_product_weight_micros ?? 0) > 0
+        ? { weight_kg: Number(item.cut_product_weight_micros) / 1_000_000 }
+        : {}),
+      valuation_rate: qty > 0 ? value / qty / (10 ** Number(cut.currency_scale ?? 2)) : 0,
+      note: marker,
+    });
+  }
+  const stockEntry = await createV2Doc(call, "Stock Entry", {
+    purpose: "Material Receipt",
+    company: String(cut.company ?? "ALUMDOOR"),
+    posting_at: postingAt,
+    items: rows,
+    note: marker,
+  });
+  await submitV2Doc(call, "Stock Entry", stockEntry.name, stockEntry);
+  return answer({
+    cut_order: name,
+    stock_entry: stockEntry.name,
+    returned_batches: returnedBatches,
+    bundles,
+    mode: "trả hàng đã cắt",
+    message: `Đã nhập lại hàng đã cắt bằng phiếu kho ${stockEntry.name}; lô mẹ không bị khôi phục nguyên khổ.`,
+  });
+}
+
+async function createReservationV2(call: PlatformCall, args: Record<string, unknown>): Promise<Response> {
+  const required = ["item_code", "warehouse", "min_length_m", "qty_reserved", "source_doctype", "source_name", "expires_at"];
+  const missing = required.filter((field) => args[field] == null || String(args[field]).trim() === "");
+  if (missing.length) return refuse(`Thiếu thông tin giữ chỗ: ${missing.join(", ")}.`);
+  const reservation = await createV2Doc(call, "Stock Reservation", {
+    item_code: String(args.item_code),
+    ...(args.color ? { color: String(args.color) } : {}),
+    ...(args.condition ? { condition: String(args.condition) } : {}),
+    warehouse: String(args.warehouse),
+    min_length_m: Number(args.min_length_m),
+    qty_reserved: Number(args.qty_reserved),
+    source_doctype: String(args.source_doctype),
+    source_name: String(args.source_name),
+    expires_at: String(args.expires_at),
+    reserved_at: new Date().toISOString(),
+    state: "Đang giữ",
+  });
+  return answer({ reservation: reservation.name, state: "Đang giữ", message: `Đã giữ chỗ ${reservation.name}; tồn thực không thay đổi.` });
+}
+
+async function releaseReservationV2(call: PlatformCall, args: Record<string, unknown>): Promise<Response> {
+  const name = String(args.reservation ?? "").trim();
+  const reason = String(args.released_reason ?? "").trim();
+  if (!name || !reason) return refuse("Cần phiếu giữ chỗ và lý do nhả.");
+  const reservation = await readDoc<Record<string, unknown>>(call, "Stock Reservation", name);
+  if (reservation.state !== "Đang giữ") return refuse(`Phiếu ${name} không còn ở trạng thái Đang giữ.`);
+  const response = await call(`resource/Stock%20Reservation/${encodeURIComponent(name)}`, {
+    method: "PUT",
+    body: JSON.stringify({ state: "Đã nhả", released_reason: reason, modified: reservation.modified }),
+  });
+  if (!response.ok) return refuse(`Không nhả được ${name}: ${(await response.text()).slice(0, 180)}`);
+  return answer({ reservation: name, state: "Đã nhả" });
+}
+
+async function snapshotReconciliationV2(
+  call: PlatformCall,
+  args: Record<string, unknown>,
+  actorUser: string,
+): Promise<Response> {
+  const warehouse = String(args.warehouse ?? "").trim();
+  const scope = String(args.scope ?? "Toàn kho").trim();
+  if (!warehouse) return refuse("Cần chọn kho kiểm kê.");
+  const stock = await listV2BatchStock(call, {
+    warehouse,
+    ...(args.item_code ? { item_code: String(args.item_code) } : {}),
+    // A reconciliation is always for the warehouse named on the document.
+    // Offcut child warehouses have their own reconciliation and reminder cycle.
+    include_offcut: 0,
+  });
+  const itemGroup = String(args.item_group ?? "").trim();
+  const selected: typeof stock = [];
+  for (const row of stock) {
+    if (itemGroup) {
+      const item = await readMaster(call, "Item", String(row.item_code ?? row.batch.item_code ?? ""));
+      if (item?.item_group !== itemGroup) continue;
+    }
+    selected.push(row);
+  }
+  const snapshotAt = new Date().toISOString();
+  const lines = selected.map((row, index) => ({
+    row_id: `ROW-${index + 1}`,
+    item_code: String(row.item_code ?? row.batch.item_code ?? ""),
+    batch_no: String(row.batch_no ?? row.batch.name ?? ""),
+    book_qty: Number(row.actual_qty ?? 0),
+    book_weight_kg: row.actual_weight == null ? undefined : Number(row.actual_weight),
+    counted_qty: Number(row.actual_qty ?? 0),
+    counted_weight_kg: row.actual_weight == null ? undefined : Number(row.actual_weight),
+  }));
+  const reconciliation = await createV2Doc(call, "Stock Reconciliation", {
+    warehouse,
+    scope,
+    ...(itemGroup ? { item_group: itemGroup } : {}),
+    ...(args.item_code ? { item_code: String(args.item_code) } : {}),
+    snapshot_at: snapshotAt,
+    counted_by: actorUser,
+    ...(args.witnessed_by ? { witnessed_by: String(args.witnessed_by) } : {}),
+    items: lines,
+    recon_state: "Đang đếm",
+  });
+  return answer({
+    reconciliation: reconciliation.name,
+    snapshot_at: snapshotAt,
+    lines,
+    message: `Đã chụp ${lines.length} dòng sổ vào phiếu ${reconciliation.name}; chưa ghi điều chỉnh.`,
+  });
+}
+
+async function postReconciliationV2(call: PlatformCall, args: Record<string, unknown>): Promise<Response> {
+  const name = String(args.reconciliation ?? "").trim();
+  if (!name) return refuse("Cần chọn phiếu kiểm kê.");
+  const reconciliation = await readDoc<Record<string, unknown>>(call, "Stock Reconciliation", name);
+  const snapshotAt = String(reconciliation.snapshot_at ?? "").trim();
+  const warehouse = String(reconciliation.warehouse ?? "").trim();
+  const laterEntries = snapshotAt && warehouse
+    ? await reportRows<{ voucher_type?: string; voucher_no?: string }>(call, "Stock Ledger", {
+      warehouse,
+      posting_at: [">", snapshotAt],
+    })
+    : [];
+  const laterVouchers = new Set(
+    laterEntries.map((row) => `${String(row.voucher_type ?? "")}:${String(row.voucher_no ?? "")}`),
+  );
+  await submitV2Doc(call, "Stock Reconciliation", name, reconciliation);
+  const warning = laterVouchers.size
+    ? `Cảnh báo: có ${laterVouchers.size} chứng từ kho phát sinh sau mốc chốt; chênh lệch vẫn được ghi theo snapshot.`
+    : null;
+  return answer({
+    reconciliation: name,
+    posted: true,
+    snapshot_at: snapshotAt || null,
+    later_vouchers: laterVouchers.size,
+    warning,
+    message: `Đã ghi sổ chênh lệch theo mốc chốt của ${name}.${warning ? ` ${warning}` : ""}`,
+  });
+}
+
+async function askAlumdoorAssistant(
+  call: PlatformCall,
+  args: Record<string, unknown>,
+): Promise<Response> {
+  const question = String(args.question ?? "").trim();
+  if (!question) return refuse("Cần nhập câu hỏi.");
+  const contextDoctype = String(args.context_doctype ?? "").trim();
+  const contextName = String(args.context_name ?? "").trim();
+  let context: Record<string, unknown> = {};
+  if (contextDoctype || contextName) {
+    if (!contextDoctype || !contextName) return refuse("Bối cảnh phải có đủ loại chứng từ và số chứng từ.");
+    const document = await readDoc<Record<string, unknown>>(call, contextDoctype, contextName);
+    context = { doctype: contextDoctype, name: contextName, document };
+  }
+  const response = await call("method/metaforge.ai.ask", {
+    method: "POST",
+    body: JSON.stringify({ question, context }),
+  });
+  if (!response.ok) return refuse(`Trợ lý chưa trả lời được: ${(await response.text()).slice(0, 220)}`);
+  const payload = await response.json() as { answer?: string; message?: { answer?: string } };
+  const responseText = String(payload.answer ?? payload.message?.answer ?? "").trim();
+  if (!responseText) return refuse("Trợ lý trả về câu trả lời rỗng.");
+  return answer({
+    answer: responseText,
+    context_doctype: contextDoctype || null,
+    context_name: contextName || null,
+    read_only: true,
+  });
+}
+
+async function setAccountingPeriod(
+  request: Request,
+  call: PlatformCall,
+  args: Record<string, unknown>,
+  action: "Lock" | "Unlock",
+): Promise<Response> {
+  const actor = platformActorIdentity(request);
+  if (actor.user_id !== "Administrator"
+    && !actor.roles.includes("Administrator")
+    && !actor.roles.includes("System Manager")
+    && !actor.roles.includes("Chủ xưởng")) {
+    return new Response(JSON.stringify({ message: "Chỉ Chủ xưởng được khoá hoặc mở kỳ." }), {
+      status: 403,
+      headers: { "content-type": "application/json" },
+    });
+  }
+  const company = String(args.company ?? "").trim();
+  const reason = String(args.reason ?? "").trim();
+  const lockDate = String(args.lock_date ?? "").trim();
+  if (!company || !reason || (action === "Lock" && !lockDate)) {
+    return refuse(action === "Lock"
+      ? "Cần công ty, ngày khoá và lý do."
+      : "Cần công ty và lý do mở kỳ.");
+  }
+  const response = await call("method/metaforge.api.set_accounting_period_lock", {
+    method: "POST",
+    body: JSON.stringify({
+      company,
+      action,
+      ...(action === "Lock" ? { lock_date: lockDate } : {}),
+      reason,
+    }),
+  });
+  if (!response.ok) return refuse(`Không cập nhật được kỳ: ${(await response.text()).slice(0, 220)}`);
+  const payload = await response.json() as {
+    message?: { company?: string; lock_date?: string | null };
+  };
+  return answer({
+    company: payload.message?.company ?? company,
+    lock_date: payload.message?.lock_date ?? null,
+    action,
+    audited: true,
+  });
 }
 
 /**
@@ -1787,10 +2481,22 @@ export default {
 
         const call = platformCaller(request, env);
         if (method === "alumdoor.door.calculate") return await calculateDoor(call, args);
-        if (method === "alumdoor.cut.propose") return await proposeCut(call, args);
-        if (method === "alumdoor.cut.apply") return await applyCut(call, args);
-        if (method === "alumdoor.cut.reverse") return await reverseCut(call, args);
-        if (method === "alumdoor.cut.return") return await returnCut(call, args);
+        if (method === "alumdoor.cut.propose") return await proposeCutV2(call, args);
+        if (method === "alumdoor.cut.draft") return await draftCutV2(call, args);
+        if (method === "alumdoor.cut.apply") return await applyCutV2(call, args);
+        if (method === "alumdoor.cut.reverse") return await reverseCutV2(call, args);
+        if (method === "alumdoor.cut.return") return await returnCutV2(call, args);
+        if (method === "alumdoor.reserve.create") return await createReservationV2(call, args);
+        if (method === "alumdoor.reserve.release") return await releaseReservationV2(call, args);
+        if (method === "alumdoor.recon.snapshot") {
+          const actorUser = platformActorUser(request);
+          if (!actorUser) return refuse("Không xác định được người đang thực hiện kiểm kê.");
+          return await snapshotReconciliationV2(call, args, actorUser);
+        }
+        if (method === "alumdoor.recon.post") return await postReconciliationV2(call, args);
+        if (method === "alumdoor.ai.ask") return await askAlumdoorAssistant(call, args);
+        if (method === "alumdoor.period.lock") return await setAccountingPeriod(request, call, args, "Lock");
+        if (method === "alumdoor.period.unlock") return await setAccountingPeriod(request, call, args, "Unlock");
         if (method === "alumdoor.quote.preview") return await previewQuote(call, args);
         if (method === "alumdoor.quote.convert") return await convertQuote(call, args, ctx);
         if (method === "alumdoor.purchase.preview_order") return await previewPurchaseOrder(call, args);

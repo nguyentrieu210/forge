@@ -817,6 +817,9 @@ async function dispatchMethod(
     case "metaforge.api.get_overview":
       return methodResponse(await overviewDashboard(args, context));
 
+    case "metaforge.api.set_accounting_period_lock":
+      return methodResponse(await setAccountingPeriodLock(args, context));
+
     // The generic client's boot: what to render, from what is installed. Without it
     // every app needs its own compiled bundle.
     case "metaforge.api.get_app_manifest":
@@ -1059,6 +1062,33 @@ async function dispatchMethod(
       throw errors.notFound(`Method is not implemented on this platform: ${methodName}`);
     }
   }
+}
+
+async function setAccountingPeriodLock(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const roles = context.actor.roles;
+  if (context.actor.user_id !== "Administrator"
+    && !roles.includes("Administrator")
+    && !roles.includes("System Manager")
+    && !roles.includes("Chủ xưởng")) {
+    throw errors.permission("Chỉ Chủ xưởng được khoá hoặc mở kỳ");
+  }
+  const company = args.requireText("company", 160);
+  const action = args.requireText("action", 20);
+  const reason = args.requireText("reason", 500);
+  if (!["Lock", "Unlock"].includes(action)) throw errors.validation("action must be Lock or Unlock");
+  const lockDate = action === "Lock" ? args.requireText("lock_date", 10) : "";
+  if (lockDate && !/^\d{4}-\d{2}-\d{2}$/.test(lockDate)) throw errors.validation("Ngày khoá phải có dạng YYYY-MM-DD");
+  if (!await context.documents.hasMasterRecord(context.tenantId, "Company", company)) {
+    throw errors.reference(`Công ty ${company} không tồn tại hoặc đã ngừng dùng`);
+  }
+  return await context.documents.setAccountingPeriodLock(
+    context.tenantId,
+    company,
+    lockDate,
+    context.actor.user_id,
+    reason,
+    context.now(),
+  );
 }
 
 async function bootPayload(context: FrappeRouterContext): Promise<JsonObject> {
@@ -3045,7 +3075,13 @@ async function clientManifest(args: FrappeArgs, context: FrappeRouterContext): P
      */
     for (const action of app.actions ?? []) {
       try {
-        await context.permissions.assert({ actor: context.actor, tenantId: context.tenantId, doctype: action.permission_doctype, action: "save", data: {} });
+        await context.permissions.assert({
+          actor: context.actor,
+          tenantId: context.tenantId,
+          doctype: action.permission_doctype,
+          action: action.permission_action ?? "save",
+          data: {},
+        });
         actions.push({ ...(action as unknown as JsonObject), app: app.app_id });
       } catch {
         // Omitted rather than offered-and-refused.

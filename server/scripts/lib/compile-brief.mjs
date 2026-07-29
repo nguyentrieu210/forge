@@ -163,6 +163,10 @@ function compileAction(action, index, doctypeNames) {
     fail(`${where} (${action.name}) chặn quyền theo "${action.permission}" mà brief này không khai. Có: ${[...doctypeNames].join(", ")}.`);
   }
   if (!action.commit) fail(`${where} (${action.name}) thiếu \`commit\` — màn không có nút chạy thì không phải một thao tác.`);
+  const permissionAction = action.permissionAction ?? "save";
+  if (!["read", "save"].includes(permissionAction)) {
+    fail(`${where} (${action.name}) permissionAction phải là "read" hoặc "save".`);
+  }
   const fields = (action.fields ?? []).map((raw, position) => {
     const field = parseField(raw, position, `${where} (${action.name})`);
     // Compiler của doctype còn trả `unique`/`read_only`; màn thao tác không có hai khái
@@ -187,6 +191,7 @@ function compileAction(action, index, doctypeNames) {
     ...(action.preview ? { preview: compileActionCall(action.preview, `${where}.preview`) } : {}),
     commit: compileActionCall(action.commit, `${where}.commit`),
     permission_doctype: action.permission,
+    ...(permissionAction === "save" ? {} : { permission_action: "read" }),
     ...(action.resultTable ? { result_table: action.resultTable } : {}),
   };
 }

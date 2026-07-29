@@ -551,19 +551,19 @@ xem BRD §6. Dưới đây chỉ kê **action app phải tự viết**.
 | Bundle usage | ✅ `stock_bundle_usage_entries` | — |
 | Tiến độ đơn mua | ✅ `purchase_order_progress_entries` | Là nguồn báo cáo "NCC còn nợ" |
 | Chống ghi đè | ✅ khoá `modified` + `mutation_guard` · `mutation_receipts` | Optimistic lock có sẵn |
-| **`ai_logs`** | ❌ **không có** | Phải tạo, hoặc log vào `inbound_events` — **chốt ở PHA 5** |
-| Cron / việc định kỳ | ✅ **ở TẦNG NỀN TẢNG** — xác minh PHA 4 | `tenant-worker` chạy `*/1 * * * *` + producer `OUTBOX_QUEUE`; `jobs-worker` và `query-worker` cũng có cron. Bảng `auto_repeat` có sẵn. ⚠️ **`alumdoor-worker` KHÔNG có `triggers`** — và đó là **cố ý**: comment trong `wrangler.jsonc` ghi *"Không binding nào chạm được dữ liệu. Mọi đọc/ghi đi ngược qua gateway với danh tính của chính người dùng vừa gọi"*. App worker không tự làm gì thay mặt ai ⇒ **V2 KHÔNG thêm cron vào app worker**, mà đăng ký việc định kỳ qua cơ chế nền tảng |
+| **`ai_logs`** | ✅ **đã bổ sung ở migration 0025** | Chỉ ghi sau câu trả lời AI thành công; lưu tenant, người hỏi, câu hỏi, bối cảnh và model; action đọc dữ liệu dưới đúng danh tính người gọi |
+| Cron / việc định kỳ | ✅ **ở TẦNG NỀN TẢNG** | `tenant-worker.scheduled()` và `/internal/maintenance` chạy maintenance dùng chung; trạng thái gần nhất/lỗi/stale được công bố ở `/health`. `alumdoor-worker` vẫn cố ý không có binding dữ liệu hoặc cron |
 | `/api/sync` offline | ❌ không áp dụng | Không có POS |
-| Export-all | ⚠️ chưa xác minh | — |
+| Export-all | ✅ đã xác minh | `frappe.desk.reportview.export_query` có full test và HTTP smoke; quyền `read` mặc định kéo theo `export` đúng contract |
 
-> **Kết luận:** hạ tầng Forge phủ **11/14**. V2 chỉ cần thêm `ai_logs` và xác minh cron. Đây là lý do
-> không dựng bảng hạ tầng mới — dựng là đẻ trùng lần thứ ba (sau `purchase_order_progress_entries`
-> và `import_jobs`).
+> **Cập nhật thi hành 2026-07-30:** hạ tầng cần cho V2 đã phủ đủ. `ai_logs`, maintenance nền tảng,
+> health evidence và export-all đều đã có test. App worker tiếp tục không nắm dữ liệu tenant và không
+> tự chạy cron; nguyên tắc cô lập của thiết kế không thay đổi.
 
 ### 8.3 Việc định kỳ V2 — KHÔNG thêm cron vào app worker
 
-App worker cố ý **không có binding dữ liệu và không có cron**. Ba việc định kỳ dưới đây phải đi qua cơ
-chế nền tảng (`auto_repeat` / `jobs-worker` / `notification_rules`) — **chốt cách nối ở PHA 5**:
+App worker cố ý **không có binding dữ liệu và không có cron**. Ba việc định kỳ dưới đây đi qua
+maintenance của `tenant-worker`, được gọi bởi scheduler nền tảng và có khóa idempotency:
 
 | Việc | Vì sao bắt buộc |
 |---|---|
@@ -572,6 +572,11 @@ chế nền tảng (`auto_repeat` / `jobs-worker` / `notification_rules`) — **
 | Báo cáo cuối ngày cho Chủ xưởng | Nhập/xuất/cắt trong ngày + cảnh báo lệch cân |
 
 Backup D1 → R2 đã có ở tầng vận hành (`server/backups/alu/`), không phải việc của app.
+
+> **Cập nhật thi hành 2026-07-30:** nhả giữ chỗ chạy bằng aggregate command hệ thống nên vẫn có
+> audit và chỉ nhả sau `expires_at`; thông báo kiểm kê tháng/quý và báo cáo cuối ngày dùng tên
+> idempotent theo kỳ/ngày/người nhận. Báo cáo cuối ngày lấy ngưỡng lệch cân từ `Measurement Profile`
+> (mặc định 13% khi profile cũ chưa có giá trị). `/health` công bố lần chạy gần nhất, lỗi và trạng thái stale.
 
 ### 8.4 ⚠️ Toolchain — `forge-app.mjs` đòi BUILD trước
 
@@ -643,6 +648,9 @@ Chấm lại từng tiêu chí kèm bằng chứng, không tuyên bố suông.
 |---|---|---|
 | 1 | `ai_logs` tạo mới hay log vào `inbound_events` | Không chặn thiết kế; quyết lúc viết brief |
 | 2 | Xác minh 3 cron trong `wrangler.jsonc` | Đọc lúc PHA 4 khi mở worktree |
+
+> **Đã chốt khi thi hành:** tạo bảng `ai_logs` riêng trong migration 0025; ba lịch Alumdoor nối vào
+> scheduler dùng chung của `tenant-worker`, không thêm cron hoặc D1 binding cho app worker.
 
 ### ⚠️ Ba thứ PHA 5 KHÔNG được làm khác ledger
 

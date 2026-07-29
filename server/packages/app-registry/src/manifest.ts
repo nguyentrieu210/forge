@@ -207,6 +207,8 @@ export interface AppAction {
    * to everyone and the refusal would arrive only after they filled the form in.
    */
   permission_doctype: string;
+  /** Read-only actions (for example an AI explainer) may gate on read instead of write. */
+  permission_action?: "read" | "save";
   /** Response key holding the row array to render as a table. */
   result_table?: string;
 }
@@ -733,6 +735,12 @@ function parseAction(value: JsonValue, index: number, doctypeNames: ReadonlySet<
   };
 
   const permissionDoctype = text(entry.permission_doctype, `actions[${index}].permission_doctype`, 160);
+  const permissionAction = entry.permission_action === undefined
+    ? "save"
+    : text(entry.permission_action, `actions[${index}].permission_action`, 16);
+  if (!["read", "save"].includes(permissionAction)) {
+    throw errors.validation(`actions[${index}].permission_action must be read or save`);
+  }
   // A gate naming a doctype the app does not ship cannot be evaluated, so the screen would
   // either be shown to everyone or to nobody — both silently.
   if (!doctypeNames.has(permissionDoctype)) {
@@ -779,6 +787,7 @@ function parseAction(value: JsonValue, index: number, doctypeNames: ReadonlySet<
     ...(entry.preview === undefined ? {} : { preview: call(entry.preview, `actions[${index}].preview`) }),
     commit: call(entry.commit, `actions[${index}].commit`),
     permission_doctype: permissionDoctype,
+    ...(permissionAction === "save" ? {} : { permission_action: "read" as const }),
     ...(entry.result_table === undefined ? {} : { result_table: text(entry.result_table, `actions[${index}].result_table`, 120) }),
   };
 }
