@@ -371,6 +371,63 @@ function escapeLike(term: string): string {
   return term.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
 }
 
+/**
+ * Gõ "nhôm" phải tìm ra "NHÔM", và gõ "nhom" cũng phải ra.
+ *
+ * `LIKE` của SQLite chỉ gập hoa–thường cho 26 chữ cái ASCII. `A↔a` thì gập, còn `Ô↔ô`, `Ạ↔ạ`,
+ * `Ứ↔ứ` thì với nó là những ký tự hoàn toàn khác nhau — và không có bước bỏ dấu nào. Đo trên
+ * dữ liệu thật ngày 29/7: gõ `NHÔM` ra một kết quả, gõ `nhôm` ra KHÔNG kết quả nào; `cửa`,
+ * `CỬA`, `cua` cho ba tập kết quả khác hẳn nhau, không tập nào chứa tập nào.
+ *
+ * Người Việt gõ telex ra chữ THƯỜNG có dấu — tức cách gõ tự nhiên nhất là cách không ra gì.
+ *
+ * D1 không có bộ ICU nên không bật được so sánh theo ngôn ngữ. Cách còn lại là tự hạ chữ và
+ * bỏ dấu ở CẢ HAI VẾ. Nó không làm chậm thêm: `LIKE '%…%'` vốn đã không dùng được chỉ mục, nên
+ * câu truy vấn vẫn quét đúng như trước.
+ */
+const VIETNAMESE_FOLD: Array<[string, string]> = [
+  ["àáảãạăằắẳẵặâầấẩẫậ", "a"],
+  ["èéẻẽẹêềếểễệ", "e"],
+  ["ìíỉĩị", "i"],
+  ["òóỏõọôồốổỗộơờớởỡợ", "o"],
+  ["ùúủũụưừứửữự", "u"],
+  ["ỳýỷỹỵ", "y"],
+  ["đ", "d"],
+];
+
+/** Bỏ dấu trong JS — dùng cho từ khoá, phải khớp từng chữ với biểu thức SQL dưới đây. */
+function foldVietnamese(value: string): string {
+  let folded = value.toLowerCase();
+  for (const [accented, plain] of VIETNAMESE_FOLD) {
+    for (const character of accented) folded = folded.split(character).join(plain);
+  }
+  return folded;
+}
+
+/**
+ * Cùng phép gập đó, viết bằng SQL — nhưng CHỈ cho những chữ cái có trong từ khoá.
+ *
+ * `lower()` của SQLite cũng chỉ hạ được ASCII, nên chữ hoa có dấu phải thay bằng tay: mỗi chữ
+ * hoa có dấu đổi thẳng sang chữ thường không dấu, gộp hai bước làm một.
+ *
+ * Gập cả bảng chữ cái tiếng Việt là 134 lần `replace` lồng nhau cho MỖI cột — một câu truy vấn
+ * hai cột đã hơn 9 KB, và nhân tiếp theo số từ. Không cần thế: tìm "nhom" thì chỉ chữ `o` có
+ * biến thể đáng gập, ba chữ còn lại không có dấu bao giờ. Lọc theo chữ cái trong từ khoá cắt
+ * câu truy vấn xuống còn một phần năm mà không mất một kết quả nào.
+ */
+function foldVietnameseSql(expression: string, letters: Set<string>): string {
+  let sql = `lower(${expression})`;
+  for (const [accented, plain] of VIETNAMESE_FOLD) {
+    if (!letters.has(plain)) continue;
+    for (const character of accented) {
+      sql = `replace(${sql}, '${character}', '${plain}')`;
+      const upper = character.toUpperCase();
+      if (upper !== character) sql = `replace(${sql}, '${upper}', '${plain}')`;
+    }
+  }
+  return sql;
+}
+
 /** Reject (as a 422) before the store would build a statement D1 can't bind.
  *  MAX_FILTERS × MAX_IN_VALUES could otherwise exceed D1's 100-parameter cap. */
 function assertParamBudget(params: JsonValue[]): void {
@@ -514,10 +571,21 @@ export class DocumentListCompiler {
       where.push(`${expression} ${SQL_OPERATOR[filter.operator]} ?${params.length}${escape}`);
     }
     if (request.search) {
-      params.push(`%${escapeLike(request.search)}%`);
-      const index = params.length;
-      const clauses = definition.searchFields.map((field) => `${fieldExpression(definition, field)} LIKE ?${index} ESCAPE '\\'`);
-      where.push(`(${clauses.join(" OR ")})`);
+      /**
+       * Từ khoá tách thành TỪ RỜI, và mọi từ đều phải có mặt — không cần đúng thứ tự.
+       *
+       * Một chuỗi liền mạch bắt người tìm nhớ đúng thứ tự đã lưu: gõ "ray nhom uc" thì ra,
+       * gõ "nhom ray" thì trượt, dù cả hai đều mô tả đúng thứ cần tìm.
+       */
+      const terms = foldVietnamese(request.search).split(/\s+/).filter(Boolean).slice(0, 6);
+      for (const term of terms) {
+        params.push(`%${escapeLike(term)}%`);
+        const index = params.length;
+        const letters = new Set(term);
+        const clauses = definition.searchFields.map((field) =>
+          `${foldVietnameseSql(fieldExpression(definition, field), letters)} LIKE ?${index} ESCAPE '\\'`);
+        where.push(`(${clauses.join(" OR ")})`);
+      }
     }
     if (scope) this.appendAccessPredicate(where, params, definition, scope);
     return where;

@@ -1,4 +1,4 @@
-import { StrictMode, Suspense, lazy, useEffect, useMemo, useState, type ReactNode } from "react";
+import { StrictMode, Suspense, lazy, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams, useSearchParams, type NavigateFunction } from "react-router-dom";
 import { mergeLocale, resolveHomeRoute, validateManifest, type ApplicationCatalog, type AppManifest } from "@metaforge/core";
@@ -529,7 +529,25 @@ function DoctypeScreen({ manifest, boot, logout, nav }: ScreenProps) {
    * là cái tên họ mong đọc lại ở đầu trang.
    */
   const title = nav.find((item) => item.doctype === doctype)?.label ?? doctype;
-  return <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={active} breadcrumbs={[{ label: title }]}><div className="h-full p-3 md:p-4"><DoctypeWorkspace doctype={doctype} name={name} bridge={bridge} onNavigate={navigate} /></div></Shell>;
+  /**
+   * Mở một dòng rồi đóng lại phải QUAY VỀ ĐÚNG DANH SÁCH VỪA TÌM.
+   *
+   * Trạng thái danh sách — từ khoá, bộ lọc, trang, cách sắp xếp — sống ở query-string. Nhưng
+   * điều hướng trong màn này gọi bằng ĐƯỜNG DẪN TRẦN (`/app/Item/AL548`), nên query bị vứt:
+   * tìm "nhom" ra ba dòng, mở một dòng xem, đóng lại thì danh sách nạp lại từ đầu với 294 mặt
+   * hàng và người dùng phải gõ lại từ khoá. Với người soát hàng chục dòng thì đó là gõ lại
+   * hàng chục lần.
+   *
+   * Chỉ giữ query khi vẫn ở TRONG cùng một doctype — sang doctype khác thì bộ lọc của doctype
+   * cũ không còn nghĩa gì, mang theo là lọc nhầm.
+   */
+  const listPath = `/app/${encodeURIComponent(doctype)}`;
+  const navigateKeepingListState = useCallback((path: string) => {
+    const withinList = path === listPath || path.startsWith(`${listPath}/`);
+    const search = window.location.search;
+    navigate(withinList && search && !path.includes("?") ? `${path}${search}` : path);
+  }, [navigate, listPath]);
+  return <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={active} breadcrumbs={[{ label: title }]}><div className="h-full p-3 md:p-4"><DoctypeWorkspace doctype={doctype} name={name} bridge={bridge} onNavigate={navigateKeepingListState} /></div></Shell>;
 }
 function OverviewScreen(props: ScreenProps) { const navigate = useNavigate(); const { domain = props.manifest.domain ?? "stock" } = useParams(); return <Shell {...props} active="__overview" breadcrumbs={[{ label: "Tổng quan" }]}><div className="h-full overflow-auto p-4"><OverviewContainer domain={domain} onNavigate={navigate} /></div></Shell>; }
 function ProcessScreen(props: ScreenProps) { const navigate = useNavigate(); const { domain = props.manifest.domain ?? "stock" } = useParams(); return <Shell {...props} active="__process" breadcrumbs={[{ label: "Quy trình" }]}><div className="h-full overflow-auto p-4"><ProcessContainer domain={domain} onNavigate={navigate} /></div></Shell>; }

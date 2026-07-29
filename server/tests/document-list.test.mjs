@@ -103,11 +103,44 @@ test("int filters reject non-integer values; string filters keep the raw string 
 
 test("search is bounded to the definition's searchFields only, as a LIKE parameter", () => {
   const compiled = compileList({ doctype: "Sales Order", search: "CUST" });
-  assert.match(compiled.sql, /json_extract\(payload_json, '\$\.customer'\) LIKE \?\d+ ESCAPE/);
-  assert.match(compiled.sql, /"name" LIKE \?\d+ ESCAPE/);
-  assert.ok(compiled.params.includes("%CUST%"));
+  assert.match(compiled.sql, /'\$\.customer'\)[\s\S]*?LIKE \?\d+ ESCAPE/);
+  assert.match(compiled.sql, /"name"[\s\S]*?LIKE \?\d+ ESCAPE/);
+  // Từ khoá vào truy vấn ở dạng ĐÃ HẠ CHỮ VÀ BỎ DẤU — cùng phép gập được áp cho cột.
+  assert.ok(compiled.params.includes("%cust%"));
   // company is a real field but NOT a search field
-  assert.doesNotMatch(compiled.sql, /'\$\.company'\) LIKE/);
+  assert.doesNotMatch(compiled.sql, /'\$\.company'\)[\s\S]{0,40}LIKE/);
+});
+
+test("tìm kiếm bỏ qua hoa–thường và dấu tiếng Việt ở CẢ HAI VẾ", () => {
+  /**
+   * Đo trên dữ liệu thật ngày 29/7: gõ "NHÔM" ra một kết quả, gõ "nhôm" ra KHÔNG kết quả nào,
+   * và "cửa" / "CỬA" / "cua" cho ba tập khác hẳn nhau, không tập nào chứa tập nào. Người Việt
+   * gõ telex ra chữ THƯỜNG có dấu — tức cách gõ tự nhiên nhất là cách không ra gì.
+   *
+   * Kiểm Ý ĐỊNH chứ không kiểm cách viết câu SQL: năm cách gõ cùng một chữ phải cho cùng một
+   * tham số tìm kiếm.
+   */
+  const parameterFor = (term) => compileList({ doctype: "Sales Order", search: term })
+    .params.find((value) => typeof value === "string" && value.startsWith("%"));
+  for (const typed of ["nhôm", "NHÔM", "Nhôm", "nhom", "NHOM"]) {
+    assert.equal(parameterFor(typed), "%nhom%", `gõ "${typed}" phải tìm giống nhau`);
+  }
+  // Cột cũng phải được gập, nếu không thì chữ hoa có dấu nằm trong dữ liệu vẫn không khớp.
+  assert.match(compileList({ doctype: "Sales Order", search: "nhôm" }).sql, /replace\([\s\S]*'Ô', 'o'\)/);
+});
+
+test("chỉ gập những chữ cái có trong từ khoá, để câu truy vấn không phình", () => {
+  // "abc" không có chữ nào mang dấu ngoài `a`, nên không được kéo theo bảng gập của o/u/e/i/y.
+  const narrow = compileList({ doctype: "Sales Order", search: "abc" }).sql;
+  assert.match(narrow, /'Ạ', 'a'/);
+  assert.doesNotMatch(narrow, /'ô', 'o'/);
+  assert.ok(narrow.length < 4000, `câu truy vấn dài ${narrow.length} ký tự`);
+});
+
+test("mọi từ trong từ khoá đều phải có mặt, không cần đúng thứ tự", () => {
+  const compiled = compileList({ doctype: "Sales Order", search: "ray nhom" });
+  assert.ok(compiled.params.includes("%ray%"));
+  assert.ok(compiled.params.includes("%nhom%"));
 });
 
 test("LIKE wildcards in the search term are escaped so they match literally", () => {
