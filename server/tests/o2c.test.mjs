@@ -105,7 +105,7 @@ test("square-metre doors bill by area but deduct an exact number of sets", async
   });
   const door = {
     row_id: "1", item_code: "ITEM-001", uom: "m2", qty: "6", rate: "100",
-    width_mm: "1000", height_mm: "2000", set_count: "2",
+    width_m: "1", height_m: "2", set_count: "2",
   };
   await createAndSubmit(kernel, {
     doctype: "Sales Order", name: "SO-DOOR-M2",
