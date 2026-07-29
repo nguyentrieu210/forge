@@ -154,13 +154,6 @@
     "save",
     "submit"
    ]
-  },
-  {
-   "doctype": "Aluminium Lot",
-   "actions": [
-    "create",
-    "save"
-   ]
   }
  ],
  "//hooks": [
@@ -194,6 +187,7 @@
     "customer_group:Select(Đại lý,Lẻ)! Nhóm giá",
     "purpose:Select(Bán hàng,Sản xuất,Dự toán mua,Tất cả)!=(Bán hàng) Cần tính",
     "sales_mode:Select(Trọn bộ,Tách món)!=(Trọn bộ) Cách bán",
+    "ray_type:Select(Ray thường,Ray âm,Ray nghiêng) Loại ray",
     "has_butterfly_bracket:Check Có bản bướm",
     "width_m:Float! Rộng khai theo chính sách (m)",
     "height_m:Float Cao phủ bì (m)",
@@ -211,16 +205,11 @@
    "label": "Cắt nhôm",
    "icon": "scissors",
    "group": "Kho",
-   "description": "Chọn lô khổ NHỎ NHẤT còn đủ dài, để phế ít nhất. Bấm Xem đề xuất trước — cắt xong không hoàn tác được bằng cách cắt ngược.",
-   "permission": "Aluminium Cut",
+   "description": "Chọn lô khổ NHỎ NHẤT còn đủ dài để phế ít nhất, ưu tiên đầu thừa. Ghi 2 bundle ngược chiều: trừ lô mẹ, nhập lô đầu thừa. Cắt xong không nối lại được.",
+   "permission": "Cut Order",
    "fields": [
-    "profile:Link(Item)! Mã nhôm",
-    "colour:Link(Item Color) Màu (bỏ trống = mọi màu)",
-    "generation:Select(MỚI,CŨ,TĐ) Đời sản phẩm",
-    "cut_width_m:Float! Rộng cắt lá (m)",
-    "sheets:Float! Số lá cần",
-    "voucher_no:Data! Số chứng từ",
-    "customer:Link(Customer) Khách hàng"
+    "cut_order:Link(Cut Order)! Phiếu cắt (nháp)",
+    "prefer_offcut:Check!=(1) Ưu tiên dùng đầu thừa trước"
    ],
    "preview": "alumdoor.cut.propose | Xem đề xuất",
    "commit": "alumdoor.cut.apply | Cắt và trừ tồn | Cắt thật và trừ tồn kho. Đã cắt thì nhôm không nối lại được — tiếp tục?",
@@ -231,12 +220,12 @@
    "label": "Hoàn cắt (ghi nhầm)",
    "icon": "undo-2",
    "group": "Kho",
-   "description": "Dùng khi phiếu cắt bị ghi nhầm và nhôm CHƯA cắt. Lá quay về đúng lô cũ, nguyên khổ.",
-   "permission": "Aluminium Cut",
+   "description": "Hoàn cắt: đảo bút toán và trả lô về đúng trạng thái trước khi cắt. Không tạo phiếu cắt ngược.",
+   "permission": "Cut Order",
    "fields": [
-    "voucher_no:Data Số chứng từ (hoàn cả phiếu)",
-    "cut:Link(Aluminium Cut) Hoặc một phiếu cắt cụ thể",
-    "note:Data Lý do"
+    "cut_order:Link(Cut Order)! Phiếu cắt",
+    "reason:Link(Lý do huỷ)! Lý do",
+    "note:Small Text Diễn giải"
    ],
    "commit": "alumdoor.cut.reverse | Hoàn cắt | Cộng lại tồn cho các phiếu cắt của chứng từ này?"
   },
@@ -264,12 +253,12 @@
    "label": "Trả hàng (đã cắt)",
    "icon": "package-open",
    "group": "Kho",
-   "description": "Dùng khi lá ĐÃ CẮT quay về kho. Nhập vào lô có khổ bằng rộng cắt, đánh dấu ngày nhập lại — không lẫn với nhôm mới mua.",
-   "permission": "Aluminium Cut",
+   "description": "Trả hàng: đảo bút toán và trả lô về đúng trạng thái trước khi cắt. Không tạo phiếu cắt ngược.",
+   "permission": "Cut Order",
    "fields": [
-    "voucher_no:Data Số chứng từ (trả cả phiếu)",
-    "cut:Link(Aluminium Cut) Hoặc một phiếu cắt cụ thể",
-    "note:Data Lý do"
+    "cut_order:Link(Cut Order)! Phiếu cắt",
+    "reason:Link(Lý do huỷ)! Lý do",
+    "note:Small Text Diễn giải"
    ],
    "commit": "alumdoor.cut.return | Nhập hàng trả | Nhập lại số lá đã cắt vào kho?"
   },
@@ -338,8 +327,8 @@
    "menu": false,
    "icon": "scan-text",
    "group": "Mua hàng",
-   "description": "Chụp bảng giá NCC gửi qua Zalo, phiếu giao hàng hay hoá đơn NCC — máy đọc thành dòng hàng. LUÔN ra bản NHÁP: soát lại từng số so với ảnh rồi mới ghi sổ.",
-   "permission": "Purchase Order",
+   "description": "AI đọc ảnh chứng từ và chỉ dựng bản NHÁP. Không bao giờ tự ghi sổ — người vẫn phải bấm duyệt.",
+   "permission": "Purchase Receipt",
    "fields": [
     "image:Attach Image! Ảnh chụp chứng từ",
     "target:Select(Đơn mua hàng,Phiếu nhập mua,Hoá đơn mua)!=(Phiếu nhập mua) Đọc thành chứng từ gì",
@@ -351,6 +340,91 @@
    "preview": "alumdoor.ocr.parse | Đọc thử ảnh",
    "commit": "alumdoor.ocr.apply | Tạo chứng từ nháp | Tạo chứng từ NHÁP từ ảnh này? Bản nháp chưa vào sổ — anh vẫn phải soát lại từng số.",
    "resultTable": "items"
+  },
+  {
+   "//": "Xem trước rồi mới ra phiếu — máy KHÔNG tự ghi sổ. Ra bản nháp, người bấm Cắt sau.",
+   "name": "de-xuat-lo-cat",
+   "label": "Đề xuất lô cắt",
+   "icon": "list-checks",
+   "group": "Kho",
+   "permission": "Cut Order",
+   "description": "Tìm lô đủ dài mà phế ít nhất theo mã · màu · tình trạng · khổ tối thiểu. Bỏ qua lô đang bị giữ chỗ.",
+   "fields": [
+    "item_code:Link(Item)! Mã nhôm",
+    "color:Link(Item Color) Màu (bỏ trống = mọi màu)",
+    "condition:Select(Thô,Đã sơn,Lỗi) Tình trạng",
+    "warehouse:Link(Warehouse)! Kho",
+    "cut_width_m:Float! Rộng cắt lá (m)",
+    "sheets:Float! Số lá cần",
+    "include_offcut:Check!=(1) Xét cả kho đầu thừa"
+   ],
+   "preview": "alumdoor.cut.propose | Xem đề xuất",
+   "commit": "alumdoor.cut.draft | Tạo phiếu cắt nháp",
+   "resultTable": "picks"
+  },
+  {
+   "//": "Giữ chỗ theo QUY CÁCH, không khoá lô cụ thể — khoá lô là phá cơ chế chọn lô tối ưu lúc cắt.",
+   "name": "giu-cho",
+   "label": "Giữ chỗ nhôm",
+   "icon": "bookmark",
+   "group": "Kho",
+   "permission": "Stock Reservation",
+   "description": "Trừ vào tồn KHẢ DỤNG, không đụng tồn thực và không sinh bút toán. Hết hạn thì tự nhả.",
+   "fields": [
+    "item_code:Link(Item)! Mã nhôm",
+    "color:Link(Item Color) Màu",
+    "condition:Select(Thô,Đã sơn,Lỗi) Tình trạng",
+    "warehouse:Link(Warehouse)! Kho",
+    "min_length_m:Float! Khổ tối thiểu (m)",
+    "qty_reserved:Float! Số cây giữ",
+    "source_doctype:Select(Sales Order,Work Order,Cut Order) Giữ cho chứng từ",
+    "source_name:Data Số chứng từ",
+    "expires_at:Datetime! Hết hạn giữ"
+   ],
+   "commit": "alumdoor.reserve.create | Giữ chỗ"
+  },
+  {
+   "name": "nha-giu-cho",
+   "label": "Nhả giữ chỗ",
+   "icon": "bookmark-x",
+   "group": "Kho",
+   "permission": "Stock Reservation",
+   "description": "Trả lại tồn khả dụng. Nhả nhầm thì giữ lại được, nên không cần cảnh báo nặng.",
+   "fields": [
+    "reservation:Link(Stock Reservation)! Phiếu giữ chỗ",
+    "released_reason:Small Text! Lý do nhả"
+   ],
+   "commit": "alumdoor.reserve.release | Nhả"
+  },
+  {
+   "//": "Chụp sổ TRƯỚC khi đếm. Chốt xong mà còn nhập/xuất thì phần đó là chênh lệch GIẢ — nên snapshot_at là mốc so, không phải lúc bấm duyệt.",
+   "name": "chot-so-so-kiem-ke",
+   "label": "Chốt số sổ để kiểm kê",
+   "icon": "camera",
+   "group": "Kho",
+   "permission": "Stock Reconciliation",
+   "description": "Chụp tồn sổ tại thời điểm bấm và điền vào phiếu. KHÔNG ghi bút toán nào.",
+   "fields": [
+    "warehouse:Link(Warehouse)! Kho",
+    "scope:Select(Toàn kho,Theo nhóm hàng,Một mặt hàng)!=(Toàn kho) Phạm vi",
+    "item_group:Link(Item Group) Nhóm hàng",
+    "item_code:Link(Item) Mặt hàng"
+   ],
+   "commit": "alumdoor.recon.snapshot | Chốt số sổ",
+   "resultTable": "lines"
+  },
+  {
+   "//": "Chỉ Chủ xưởng. Bút toán điều chỉnh ghi tại `snapshot_at`, không phải lúc bấm — nếu không thì mọi phát sinh giữa hai mốc bị tính nhầm thành lệch.",
+   "name": "duyet-kiem-ke",
+   "label": "Duyệt kiểm kê",
+   "icon": "check-check",
+   "group": "Kho",
+   "permission": "Stock Reconciliation",
+   "description": "Ghi bút toán điều chỉnh cho phần chênh lệch. Mỗi dòng lệch phải có nguyên nhân mới duyệt được.",
+   "fields": [
+    "reconciliation:Link(Stock Reconciliation)! Phiếu kiểm kê"
+   ],
+   "commit": "alumdoor.recon.post | Ghi sổ điều chỉnh | Bút toán điều chỉnh ghi vào ngày chốt số sổ và không sửa được — tiếp tục?"
   }
  ],
  "home": "Purchase Receipt",
@@ -2677,133 +2751,6 @@
    }
   },
   {
-   "//": "MỘT VỊ TRÍ TỒN NHÔM = (mã nhôm, màu, đời SP, khổ) → số lá. Đúng shape file Excel.",
-   "//do": [
-    "Không dùng sổ kho chung cho nhôm, và đây là lý do: đơn vị tồn của sổ kho là 'bao nhiêu",
-    "cái hàng X trong kho Y', còn đơn vị thật ở đây là 'bao nhiêu LÁ khổ 3,92 màu GS'. Ép vào",
-    "sổ chung thì phải sinh ~1.500 mã hàng kiểu AL548-GS-MOI-3.92, và danh mục hàng — nơi",
-    "người bán chọn sản phẩm — sẽ ngập 1.500 dòng không ai đọc nổi.",
-    "An toàn khi hai người cắt cùng lúc KHÔNG dựa vào kiểm-rồi-ghi: mỗi lần cắt là một lệnh",
-    "ghi có `modified`, nên người thứ hai bị từ chối vì bản ghi đã đổi, chứ không phải cả hai",
-    "cùng lọt rồi kho âm."
-   ],
-   "name": "Aluminium Lot",
-   "label": "Lô nhôm tồn",
-   "icon": "layers",
-   "group": "Kho",
-   "naming": "LN-.######",
-   "title": "profile",
-   "list": [
-    "profile",
-    "received_on",
-    "colour",
-    "generation",
-    "width_m",
-    "sheet_count",
-    "returned_on",
-    "stock_state",
-    "selected_for_cut",
-    "scrap_note",
-    "remaining_kg",
-    "intake_note",
-    "note",
-    "warehouse"
-   ],
-   "search": [
-    "profile",
-    "colour"
-   ],
-   "fields": [
-    "profile:Link(Item)! Mã nhôm",
-    "received_on:Date Ngày nhập nhôm",
-    "colour:Link(Item Color)! Màu",
-    "generation:Select(MỚI,CŨ,TĐ)=(MỚI) Tình trạng",
-    "width_m:Float! Khổ (m)",
-    "sheet_count:Float! Số lá",
-    "returned_on:Date Ngày nhập lại",
-    "stock_state:Select(TỒN,SẮP HẾT,HẾT)=(TỒN) Theo dõi tồn",
-    "selected_for_cut:Check Chọn cắt",
-    "scrap_note:Data LM/Phế",
-    "remaining_kg:Float Số kg tồn",
-    "intake_note:Small Text Nhập/Ghi chú",
-    "note:Small Text Ghi chú",
-    "warehouse:Link(Warehouse)! Kho",
-    "quality_status:Select(Khả dụng,Phế,Chờ kiểm)-=(Khả dụng) Chất lượng nội bộ",
-    "legacy_source_key:Data- Khoá dữ liệu cũ",
-    "source_sheet:Data- Sheet nguồn",
-    "source_row:Int- Dòng nguồn",
-    {
-     "//": "Dấu vết PHIẾU NHẬP đã sinh ra lô này. Hai việc: tra ngược được lô về chuyến hàng nào, và huỷ phiếu thì biết phải trừ lại đúng bao nhiêu lá của đúng lô nào.",
-     "fieldname": "source_receipt",
-     "fieldtype": "Link",
-     "options": "Purchase Receipt",
-     "label": "Theo phiếu nhập",
-     "read_only": true,
-     "hidden": true
-    },
-    {
-     "fieldname": "source_receipt_row",
-     "fieldtype": "Data",
-     "label": "Dòng phiếu nhập",
-     "read_only": true,
-     "hidden": true
-    },
-    {
-     "fieldname": "intake_sheets",
-     "fieldtype": "Float",
-     "label": "Số lá phiếu nhập ghi vào",
-     "read_only": true,
-     "hidden": true
-    }
-   ],
-   "permissions": {
-    "Chủ xưởng": "rwc",
-    "Thủ kho": "rwc",
-    "Sản xuất": "r",
-    "Kinh doanh": "r",
-    "Kế toán": "r"
-   }
-  },
-  {
-   "//": "Một lần cắt. Giữ đủ để HOÀN được — đó là việc kế toán làm thật, không phải tính năng phụ.",
-   "name": "Aluminium Cut",
-   "label": "Phiếu cắt nhôm",
-   "icon": "scissors",
-   "group": "Kho",
-   "naming": "CN-.YYYY.-#####",
-   "title": "voucher_no",
-   "list": [
-    "lot",
-    "cut_on",
-    "customer",
-    "voucher_no",
-    "cut_width_m",
-    "sheets_cut",
-    "cut_state"
-   ],
-   "search": [
-    "voucher_no",
-    "customer"
-   ],
-   "fields": [
-    "lot:Link(Aluminium Lot)! Lô nhôm",
-    "cut_on:Datetime! Thời điểm cắt",
-    "customer:Link(Customer) Khách hàng",
-    "voucher_no:Data! Số chứng từ",
-    "cut_width_m:Float! Rộng cắt lá (m)",
-    "sheets_cut:Float! Số lá cắt",
-    "scrap_m:Float Phế mỗi lá (m)",
-    "cut_state:Select(ĐÃ CẮT,ĐÃ HOÀN CẮT,ĐÃ TRẢ HÀNG)=(ĐÃ CẮT) Trạng thái",
-    "note:Small Text Ghi chú"
-   ],
-   "permissions": {
-    "Chủ xưởng": "rwc",
-    "Thủ kho": "rwc",
-    "Sản xuất": "rwc",
-    "Kế toán": "r"
-   }
-  },
-  {
    "//": "Dòng phiếu kho. `source_warehouse` / `target_warehouse` là hai tên nhân kho ĐỌC.",
    "name": "Stock Entry Item",
    "child": true,
@@ -4913,6 +4860,100 @@
     "schedule_date"
    ],
    "icon": "clock-alert",
+   "group": "Báo cáo"
+  },
+  {
+   "name": "Nhập kho theo nhà cung cấp",
+   "doctype": "Purchase Receipt",
+   "columns": [
+    "supplier:Link(Supplier) Nhà cung cấp",
+    "count(name):Int Số phiếu",
+    "sum(total_qty):Float Tổng cây"
+   ],
+   "groupBy": "supplier",
+   "orderBy": "sum(total_qty) desc",
+   "filters": [
+    "supplier",
+    "posting_at"
+   ],
+   "icon": "truck",
+   "group": "Báo cáo"
+  },
+  {
+   "//": "Nỗi đau #1 đo được: cân thực lệch cân lý thuyết bao nhiêu, theo từng mã. Không có bảng này thì 'nhôm thiếu ký' mãi là cảm giác.",
+   "name": "Lệch cân khi nhập",
+   "doctype": "Purchase Receipt Item",
+   "columns": [
+    "item_code:Link(Item) Mã nhôm",
+    "count(name):Int Số dòng",
+    "sum(theoretical_kg):Float Kg lý thuyết",
+    "sum(actual_weight_kg):Float Kg thực cân",
+    "avg(weight_variance_pct):Float Lệch bình quân (%)"
+   ],
+   "groupBy": "item_code",
+   "orderBy": "avg(weight_variance_pct) asc",
+   "filters": [
+    "item_code",
+    "warehouse"
+   ],
+   "icon": "scale",
+   "group": "Báo cáo"
+  },
+  {
+   "name": "Hao hụt khi cắt",
+   "doctype": "Cut Order Item",
+   "columns": [
+    "item_code:Link(Item) Mã nhôm",
+    "count(name):Int Số lần cắt",
+    "sum(kg_consumed):Float Kg tiêu hao",
+    "sum(kerf_total_m):Float Mạch cưa (m)",
+    "sum(scrap_m):Float Phế (m)",
+    "sum(offcut_length_m):Float Đầu thừa thu lại (m)"
+   ],
+   "groupBy": "item_code",
+   "orderBy": "sum(scrap_m) desc",
+   "filters": [
+    "item_code"
+   ],
+   "icon": "scissors",
+   "group": "Báo cáo"
+  },
+  {
+   "//": "Giữ chỗ quên nhả làm tồn khả dụng tụt dần KHÔNG LÝ DO — hỏng im lặng, cùng họ với nỗi đau #2 nhưng ngược chiều.",
+   "name": "Giữ chỗ đang treo",
+   "doctype": "Stock Reservation",
+   "columns": [
+    "item_code:Link(Item) Mã nhôm",
+    "count(name):Int Số phiếu giữ",
+    "sum(qty_reserved):Float Cây đang giữ"
+   ],
+   "groupBy": "item_code",
+   "orderBy": "sum(qty_reserved) desc",
+   "filters": [
+    "item_code",
+    "warehouse",
+    "state",
+    "expires_at"
+   ],
+   "icon": "bookmark",
+   "group": "Báo cáo"
+  },
+  {
+   "name": "Chênh lệch kiểm kê",
+   "doctype": "Stock Reconciliation Item",
+   "columns": [
+    "variance_reason:Link(Nguyên nhân chênh lệch) Nguyên nhân",
+    "count(name):Int Số dòng lệch",
+    "sum(variance_qty):Float Lệch cây",
+    "sum(variance_weight_kg):Float Lệch kg"
+   ],
+   "groupBy": "variance_reason",
+   "orderBy": "sum(variance_weight_kg) asc",
+   "filters": [
+    "item_code",
+    "variance_reason"
+   ],
+   "icon": "clipboard-check",
    "group": "Báo cáo"
   }
  ],

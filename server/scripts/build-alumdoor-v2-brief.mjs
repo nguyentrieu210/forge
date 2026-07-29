@@ -622,6 +622,234 @@ addAfter(sei, "target_warehouse",
   "weight_kg:Float Khối lượng (kg)");
 note("Delivery Note + Stock Entry: bundle + weight_kg + issue_purpose + adjust_reason");
 
+// ══════════ XOÁ THẬT quyển sổ thứ hai ══════════
+// Trước đây em mới bỏ `Aluminium Lot` / `Aluminium Cut` khỏi NAVIGATION rồi tưởng xong.
+// Bỏ khỏi menu ≠ bỏ khỏi hệ thống: doctype vẫn khai ⇒ bảng vẫn tạo, validator vẫn chạy,
+// API vẫn nhận ghi. Quyển sổ thứ hai vẫn sống, chỉ là không có cửa vào.
+const dropDoctypes = (...names) => {
+  const gone = new Set(names);
+  const before = brief.doctypes.length;
+  brief.doctypes = brief.doctypes.filter((d) => !gone.has(d.name));
+  brief.validators = (brief.validators ?? []).filter((v) => !gone.has(v.doctype));
+  note(`XOÁ doctype: ${names.join(", ")} (${before} → ${brief.doctypes.length}) + validator kèm theo`);
+};
+dropDoctypes("Aluminium Lot", "Aluminium Cut");
+
+// ══════════ ACTION V2 ══════════
+// Compiler bắt buộc `permission` trỏ doctype CÓ KHAI, nên xoá 2 doctype trên là ba action cắt
+// gãy ngay lúc compile — đúng cái ta muốn: không thể quên đổi.
+const action = (n) => {
+  const a = brief.actions.find((x) => x.name === n);
+  if (!a) throw new Error(`không thấy action ${n}`);
+  return a;
+};
+const cut = action("cat-nhom");
+cut.permission = "Cut Order";
+// Bản cũ: `voucher_no:Data!` — số chứng từ gõ tay, không trỏ đâu cả. Giờ action nhận PHIẾU thật.
+cut.fields = [
+  "cut_order:Link(Cut Order)! Phiếu cắt (nháp)",
+  "prefer_offcut:Check!=(1) Ưu tiên dùng đầu thừa trước",
+];
+cut.description =
+  "Chọn lô khổ NHỎ NHẤT còn đủ dài để phế ít nhất, ưu tiên đầu thừa. Ghi 2 bundle ngược chiều: trừ lô mẹ, nhập lô đầu thừa. Cắt xong không nối lại được.";
+for (const [name, label] of [["hoan-cat", "Hoàn cắt"], ["tra-hang", "Trả hàng"]]) {
+  const a = action(name);
+  a.permission = "Cut Order";
+  a.fields = [
+    "cut_order:Link(Cut Order)! Phiếu cắt",
+    "reason:Link(Lý do huỷ)! Lý do",
+    "note:Small Text Diễn giải",
+  ];
+  a.description = `${label}: đảo bút toán và trả lô về đúng trạng thái trước khi cắt. Không tạo phiếu cắt ngược.`;
+}
+const doc = action("doc-anh-chung-tu");
+doc.permission = "Purchase Receipt"; // V2 nhận hàng là nhánh MVP, không phải đơn mua
+doc.description = "AI đọc ảnh chứng từ và chỉ dựng bản NHÁP. Không bao giờ tự ghi sổ — người vẫn phải bấm duyệt.";
+action("tinh-cong-thuc-cua").fields.splice(4, 0, "ray_type:Select(Ray thường,Ray âm,Ray nghiêng) Loại ray");
+
+brief.actions.push(
+  {
+    "//": "Xem trước rồi mới ra phiếu — máy KHÔNG tự ghi sổ. Ra bản nháp, người bấm Cắt sau.",
+    name: "de-xuat-lo-cat",
+    label: "Đề xuất lô cắt",
+    icon: "list-checks",
+    group: "Kho",
+    permission: "Cut Order",
+    description: "Tìm lô đủ dài mà phế ít nhất theo mã · màu · tình trạng · khổ tối thiểu. Bỏ qua lô đang bị giữ chỗ.",
+    fields: [
+      "item_code:Link(Item)! Mã nhôm",
+      "color:Link(Item Color) Màu (bỏ trống = mọi màu)",
+      "condition:Select(Thô,Đã sơn,Lỗi) Tình trạng",
+      "warehouse:Link(Warehouse)! Kho",
+      "cut_width_m:Float! Rộng cắt lá (m)",
+      "sheets:Float! Số lá cần",
+      "include_offcut:Check!=(1) Xét cả kho đầu thừa",
+    ],
+    preview: "alumdoor.cut.propose | Xem đề xuất",
+    commit: "alumdoor.cut.draft | Tạo phiếu cắt nháp",
+    resultTable: "picks",
+  },
+  {
+    "//": "Giữ chỗ theo QUY CÁCH, không khoá lô cụ thể — khoá lô là phá cơ chế chọn lô tối ưu lúc cắt.",
+    name: "giu-cho",
+    label: "Giữ chỗ nhôm",
+    icon: "bookmark",
+    group: "Kho",
+    permission: "Stock Reservation",
+    description: "Trừ vào tồn KHẢ DỤNG, không đụng tồn thực và không sinh bút toán. Hết hạn thì tự nhả.",
+    fields: [
+      "item_code:Link(Item)! Mã nhôm",
+      "color:Link(Item Color) Màu",
+      "condition:Select(Thô,Đã sơn,Lỗi) Tình trạng",
+      "warehouse:Link(Warehouse)! Kho",
+      "min_length_m:Float! Khổ tối thiểu (m)",
+      "qty_reserved:Float! Số cây giữ",
+      "source_doctype:Select(Sales Order,Work Order,Cut Order) Giữ cho chứng từ",
+      "source_name:Data Số chứng từ",
+      "expires_at:Datetime! Hết hạn giữ",
+    ],
+    commit: "alumdoor.reserve.create | Giữ chỗ",
+  },
+  {
+    name: "nha-giu-cho",
+    label: "Nhả giữ chỗ",
+    icon: "bookmark-x",
+    group: "Kho",
+    permission: "Stock Reservation",
+    description: "Trả lại tồn khả dụng. Nhả nhầm thì giữ lại được, nên không cần cảnh báo nặng.",
+    fields: ["reservation:Link(Stock Reservation)! Phiếu giữ chỗ", "released_reason:Small Text! Lý do nhả"],
+    commit: "alumdoor.reserve.release | Nhả",
+  },
+  {
+    "//": "Chụp sổ TRƯỚC khi đếm. Chốt xong mà còn nhập/xuất thì phần đó là chênh lệch GIẢ — nên snapshot_at là mốc so, không phải lúc bấm duyệt.",
+    name: "chot-so-so-kiem-ke",
+    label: "Chốt số sổ để kiểm kê",
+    icon: "camera",
+    group: "Kho",
+    permission: "Stock Reconciliation",
+    description: "Chụp tồn sổ tại thời điểm bấm và điền vào phiếu. KHÔNG ghi bút toán nào.",
+    fields: [
+      "warehouse:Link(Warehouse)! Kho",
+      "scope:Select(Toàn kho,Theo nhóm hàng,Một mặt hàng)!=(Toàn kho) Phạm vi",
+      "item_group:Link(Item Group) Nhóm hàng",
+      "item_code:Link(Item) Mặt hàng",
+      // KHÔNG khai "counted_by:Link(User)" ở đây: trình đóng gói từ chối Link(User) trên
+      // trường ACTION ("which this app does not define") trong khi vẫn nhận Link(User) trên
+      // trường DOCTYPE (Warehouse.keeper) — hai lối kiểm khác nhau, chính compiler tự gọi
+      // đó là "compiler defect". Người đếm lấy từ chính người bấm; phiếu đã có `counted_by`.
+    ],
+    commit: "alumdoor.recon.snapshot | Chốt số sổ",
+    resultTable: "lines",
+  },
+  {
+    "//": "Chỉ Chủ xưởng. Bút toán điều chỉnh ghi tại `snapshot_at`, không phải lúc bấm — nếu không thì mọi phát sinh giữa hai mốc bị tính nhầm thành lệch.",
+    name: "duyet-kiem-ke",
+    label: "Duyệt kiểm kê",
+    icon: "check-check",
+    group: "Kho",
+    permission: "Stock Reconciliation",
+    description: "Ghi bút toán điều chỉnh cho phần chênh lệch. Mỗi dòng lệch phải có nguyên nhân mới duyệt được.",
+    fields: ["reconciliation:Link(Stock Reconciliation)! Phiếu kiểm kê"],
+    commit:
+      "alumdoor.recon.post | Ghi sổ điều chỉnh | Bút toán điều chỉnh ghi vào ngày chốt số sổ và không sửa được — tiếp tục?",
+  },
+);
+note(`actions: ${brief.actions.length} (3 action cắt trỏ lại Cut Order, +5 mới)`);
+
+// KHÔNG khai ở PHA 4, có lý do — ghi ra để không ai tưởng là quên:
+//   `khoa-ky`/`mo-ky` — compiler đòi `permission` là doctype CÓ KHAI; khoá kỳ nằm ở bảng nền
+//     tảng `accounting_period_locks` chưa có doctype. Khai một doctype trùng tên = đẻ bảng
+//     thứ hai, đúng lỗi vừa xoá ở trên. Xác minh cách nền tảng phơi bảng này ở PHA 5.
+//   `hoi-ai` — cần `ai_logs`, TECHNICAL_DESIGN §8.2 đã chốt là "quyết ở PHA 5".
+
+// ══════════ BÁO CÁO V2 ══════════
+// GIỚI HẠN THẬT: `reports` chỉ đọc doctype CÓ KHAI trong brief (compile-brief.mjs:108).
+// "Tồn nhôm theo khổ" phải đọc `Batch` + sổ kho — cả hai đều là bảng NỀN TẢNG, brief không khai.
+// Khai `Batch` thành doctype của app chính là cách bản cũ đẻ ra quyển sổ thứ hai ⇒ KHÔNG làm.
+// Tạm dùng link tới `Stock Balance` của nền tảng; báo cáo tách theo khổ/màu phải viết ở tầng
+// nền tảng — việc của PHA 5. Vì vậy `home` vẫn là Purchase Receipt, không phải báo cáo.
+brief.reports.push(
+  {
+    name: "Nhập kho theo nhà cung cấp",
+    doctype: "Purchase Receipt",
+    columns: ["supplier:Link(Supplier) Nhà cung cấp", "count(name):Int Số phiếu", "sum(total_qty):Float Tổng cây"],
+    groupBy: "supplier",
+    orderBy: "sum(total_qty) desc",
+    filters: ["supplier", "posting_at"],
+    icon: "truck",
+    group: "Báo cáo",
+  },
+  {
+    "//": "Nỗi đau #1 đo được: cân thực lệch cân lý thuyết bao nhiêu, theo từng mã. Không có bảng này thì 'nhôm thiếu ký' mãi là cảm giác.",
+    name: "Lệch cân khi nhập",
+    doctype: "Purchase Receipt Item",
+    columns: [
+      "item_code:Link(Item) Mã nhôm",
+      "count(name):Int Số dòng",
+      "sum(theoretical_kg):Float Kg lý thuyết",
+      "sum(actual_weight_kg):Float Kg thực cân",
+      "avg(weight_variance_pct):Float Lệch bình quân (%)",
+    ],
+    groupBy: "item_code",
+    orderBy: "avg(weight_variance_pct) asc",
+    filters: ["item_code", "warehouse"],
+    icon: "scale",
+    group: "Báo cáo",
+  },
+  {
+    name: "Hao hụt khi cắt",
+    doctype: "Cut Order Item",
+    columns: [
+      "item_code:Link(Item) Mã nhôm",
+      "count(name):Int Số lần cắt",
+      "sum(kg_consumed):Float Kg tiêu hao",
+      "sum(kerf_total_m):Float Mạch cưa (m)",
+      "sum(scrap_m):Float Phế (m)",
+      "sum(offcut_length_m):Float Đầu thừa thu lại (m)",
+    ],
+    groupBy: "item_code",
+    orderBy: "sum(scrap_m) desc",
+    filters: ["item_code"],
+    icon: "scissors",
+    group: "Báo cáo",
+  },
+  {
+    "//": "Giữ chỗ quên nhả làm tồn khả dụng tụt dần KHÔNG LÝ DO — hỏng im lặng, cùng họ với nỗi đau #2 nhưng ngược chiều.",
+    name: "Giữ chỗ đang treo",
+    doctype: "Stock Reservation",
+    columns: [
+      // `warehouse` chỉ là BỘ LỌC, không phải cột: gộp theo item_code thì cột không gộp là
+      // câu SQL sai — compiler chặn đúng.
+      "item_code:Link(Item) Mã nhôm",
+      "count(name):Int Số phiếu giữ",
+      "sum(qty_reserved):Float Cây đang giữ",
+    ],
+    groupBy: "item_code",
+    orderBy: "sum(qty_reserved) desc",
+    filters: ["item_code", "warehouse", "state", "expires_at"],
+    icon: "bookmark",
+    group: "Báo cáo",
+  },
+  {
+    name: "Chênh lệch kiểm kê",
+    doctype: "Stock Reconciliation Item",
+    columns: [
+      // Gộp theo NGUYÊN NHÂN, không theo mã: câu hỏi đáng tiền là "mất vì cái gì", không phải
+      // "mất ở mã nào". Mã vẫn lọc được.
+      "variance_reason:Link(Nguyên nhân chênh lệch) Nguyên nhân",
+      "count(name):Int Số dòng lệch",
+      "sum(variance_qty):Float Lệch cây",
+      "sum(variance_weight_kg):Float Lệch kg",
+    ],
+    groupBy: "variance_reason",
+    orderBy: "sum(variance_weight_kg) asc",
+    filters: ["item_code", "variance_reason"],
+    icon: "clipboard-check",
+    group: "Báo cáo",
+  },
+);
+note(`reports: ${brief.reports.length} (+5 báo cáo kho)`);
+
 writeFileSync(OUT, JSON.stringify(brief, null, 1) + "\n", "utf8");
 console.log(log.map((l) => "  " + l).join("\n"));
 console.log(`\nĐã ghi ${OUT}`);
