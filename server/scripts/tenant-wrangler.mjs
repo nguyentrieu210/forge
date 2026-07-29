@@ -32,6 +32,12 @@ export function writeTenantConfig({ tenant, databaseId, databaseName = `cloudfor
     main: "src/index.ts",
     compatibility_date: "2026-07-23",
     compatibility_flags: ["nodejs_compat"],
+    placement: { mode: "smart" },
+    observability: {
+      enabled: true,
+      logs: { enabled: true, head_sampling_rate: 1 },
+      traces: { enabled: true, head_sampling_rate: 0.05 },
+    },
     vars: {
       TENANT_ID: tenant,
       AUTH_MODE: "production",

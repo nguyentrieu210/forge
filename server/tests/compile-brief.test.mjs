@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { BriefError, compileBrief, compileWorkflow, parseField, parsePermission } from "../scripts/lib/compile-brief.mjs";
+import { validateBriefSchema } from "../scripts/lib/validate-brief-schema.mjs";
 import { parseAppManifest } from "../dist/packages/app-registry/src/index.js";
 
 /**
@@ -437,4 +438,97 @@ test("nav trỏ tới action không tồn tại bị server từ chối", () => 
   const pkg = compileBrief(withAction());
   pkg.nav.push({ key: "action:khong-co", label: "Ma", kind: "experience" });
   assert.throws(() => parseAppManifest(pkg), /does not declare/);
+});
+
+// ---- design contract + màn riêng -------------------------------------------
+
+const withScreen = () => {
+  const brief = withAction();
+  brief.brand = "aurora";
+  brief.design = { density: "compact", radius: "soft", contentWidth: "wide" };
+  brief.home = "screen:sales-cockpit";
+  brief.screens = [{
+    name: "sales-cockpit",
+    label: "Bàn điều hành bán hàng",
+    description: "Một màn ghép từ dữ liệu, không cần build frontend riêng.",
+    permission: "Lead",
+    mode: "focus",
+    columns: 2,
+    group: "Điều hành",
+    blocks: [
+      {
+        id: "open-leads",
+        type: "metric",
+        label: "Khách tiềm năng",
+        doctype: "Lead",
+        filters: { lead_name: ["like", "%"] },
+        tone: "info",
+        route: "/app/Lead",
+      },
+      {
+        id: "latest-leads",
+        type: "list",
+        label: "Mới cập nhật",
+        doctype: "Lead",
+        fields: ["name", "lead_name"],
+        orderBy: "modified desc",
+        limit: 6,
+      },
+      {
+        id: "send-quote",
+        type: "action",
+        label: "Gửi báo giá",
+        action: "gui-bao-gia",
+        span: 2,
+      },
+    ],
+  }];
+  return brief;
+};
+
+test("design và màn riêng đi trọn brief → package → server parser", async () => {
+  const brief = withScreen();
+  assert.deepEqual(await validateBriefSchema(brief), []);
+
+  const manifest = parseAppManifest(compileBrief(brief));
+  assert.equal(manifest.client.brand, "aurora");
+  assert.deepEqual(manifest.client.design, {
+    density: "compact",
+    radius: "soft",
+    content_width: "wide",
+  });
+  assert.deepEqual(manifest.client.home, { route: "/x/screen%3Acrm-sales-cockpit" });
+  assert.equal(manifest.screens.length, 1);
+  assert.equal(manifest.screens[0].name, "crm-sales-cockpit");
+  assert.equal(manifest.screens[0].blocks.length, 3);
+  assert.equal(manifest.screens[0].blocks[1].order_by, "modified desc");
+
+  const nav = manifest.nav.find((item) => item.key === "screen:crm-sales-cockpit");
+  assert.equal(nav.kind, "experience");
+  assert.equal(nav.permission_doctype, "Lead");
+  assert.equal(nav.group, "Điều hành");
+});
+
+test("màn riêng từ chối field, filter, action và span không an toàn", () => {
+  const mutate = (change) => {
+    const brief = withScreen();
+    change(brief.screens[0]);
+    return () => compileBrief(brief);
+  };
+  assert.throws(mutate((screen) => { screen.blocks[1].fields = ["field_khong_co"]; }), /field không tồn tại/);
+  assert.throws(mutate((screen) => { screen.blocks[0].filters = { field_khong_co: 1 }; }), /filters dùng field không tồn tại/);
+  assert.throws(mutate((screen) => { screen.blocks[2].action = "khong-co"; }), /action.*không khai/);
+  assert.throws(mutate((screen) => { screen.blocks[2].span = 3; }), /span.*số cột/);
+});
+
+test("server từ chối nav screen không được manifest khai", () => {
+  const pkg = compileBrief(withScreen());
+  pkg.nav.push({ key: "screen:khong-co", label: "Màn ma", kind: "experience" });
+  assert.throws(() => parseAppManifest(pkg), /does not declare/);
+});
+
+test("server từ chối screen không mang namespace app", () => {
+  const pkg = compileBrief(withScreen());
+  pkg.screens[0].name = "sales-cockpit";
+  assert.throws(() => parseAppManifest(pkg), /namespaced with this app id/);
 });

@@ -9,7 +9,7 @@ import { AssistantBubble, loadRecentDocs, setAssistantContext } from "@metaforge
 import type { UrlStateBridge } from "@metaforge/views/url-state";
 import {
   AppShell, AuthBoundary, BusinessContextBar, BusinessContextProvider, I18nProvider,
-  CommandPalette, LoginForm, applyBrand, resolveIcon, useBusinessContext, useTheme,
+  CommandPalette, LoginForm, applyBrand, applyDesign, resolveIcon, useBusinessContext, useTheme,
   type AwesomeRecord, type NavItem,
 } from "@metaforge/shell";
 import { Button, Toaster } from "@metaforge/ui";
@@ -27,6 +27,7 @@ const WorkspaceContainer = lazy(() => import("@metaforge/views/workspace").then(
 const CalendarContainer = lazy(() => import("@metaforge/views/calendar").then((module) => ({ default: module.CalendarContainer })));
 const ImportContent = lazy(() => import("@metaforge/views/import").then((module) => ({ default: module.ImportContent })));
 const ActionScreen = lazy(() => import("@metaforge/views/action").then((module) => ({ default: module.ActionScreen })));
+const ScreenView = lazy(() => import("@metaforge/views/screen").then((module) => ({ default: module.ScreenView })));
 const ApprovalInbox = lazy(() => import("./experiences/ApprovalInbox.js").then((module) => ({ default: module.ApprovalInbox })));
 const SocialCommerce = lazy(() => import("./experiences/SocialCommerce.js").then((module) => ({ default: module.SocialCommerce })));
 
@@ -120,7 +121,7 @@ function renderExperience(key: string, manifest: AppManifest, navigate: Navigate
       <div className="rounded-xl border bg-card p-6">
         <h1 className="font-semibold">Màn "{key}" chưa được triển khai</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Manifest có khai Experience này, nhưng runtime chưa có màn tương ứng. Các loại đang hỗ trợ: <code>approval:&lt;DocType&gt;</code>, <code>calendar:&lt;DocType&gt;</code>, <code>action:&lt;tên&gt;</code>.
+          Manifest có khai Experience này, nhưng runtime chưa có màn tương ứng. Các loại đang hỗ trợ: <code>approval:&lt;DocType&gt;</code>, <code>calendar:&lt;DocType&gt;</code>, <code>action:&lt;tên&gt;</code>, <code>screen:&lt;tên&gt;</code>.
         </p>
       </div>
     </div>
@@ -295,7 +296,11 @@ function ManifestBoundary({ boot, logout }: { boot: MetaForgeBootDTO; logout: ()
     return () => { alive = false; };
   }, []);
 
-  useEffect(() => { if (manifest) applyBrand(manifest.brand ?? "blue"); }, [manifest]);
+  useEffect(() => {
+    if (!manifest) return;
+    applyBrand(manifest.brand ?? "blue");
+    applyDesign(manifest.design);
+  }, [manifest]);
 
   if (error) {
     return (
@@ -411,6 +416,8 @@ function Shell({ manifest, boot, logout, nav, active, breadcrumbs = [], children
     <>
       <AppShell
         brand={manifest.name}
+        brandMode={manifest.brand}
+        allowBrandChange={!manifest.brand}
         nav={nav}
         activeKey={active}
         onNavigate={(key) => {
@@ -474,6 +481,36 @@ function ExperienceScreen({ manifest, boot, logout, nav }: ScreenProps) {
   const navigate = useNavigate();
   const experienceKey = decodeURIComponent(key);
   const kind = experienceKey.split(":", 1)[0];
+  /**
+   * `screen:<tên>` — màn nghiệp vụ do app ghép từ các block an toàn trong manifest.
+   *
+   * Khác Experience React viết tay, thêm màn này là một lần cài metadata. Runtime chung
+   * dựng KPI, danh sách và action ngay lập tức, nên không có frontend riêng để lệch phiên
+   * bản với schema phía server.
+   */
+  if (kind === "screen") {
+    const name = experienceKey.slice("screen:".length);
+    const screen = (manifest.screens ?? []).find((candidate) => candidate.name === name);
+    return (
+      <Shell
+        manifest={manifest}
+        boot={boot}
+        logout={logout}
+        nav={nav}
+        active={experienceKey}
+        breadcrumbs={[{ label: screen?.label ?? name }]}
+      >
+        {screen
+          ? <ScreenView screen={screen} actions={manifest.actions} onNavigate={navigate} />
+          : <div className="grid h-full place-items-center p-6 text-center">
+              <div className="max-w-md rounded-xl border bg-card p-6">
+                <h1 className="font-semibold">Không mở được màn “{name}”</h1>
+                <p className="mt-2 text-sm text-muted-foreground">Tài khoản này không có quyền xem, hoặc app chưa khai màn đó.</p>
+              </div>
+            </div>}
+      </Shell>
+    );
+  }
   /**
    * `action:<tên>` — màn thao tác do APP KHAI, dựng từ manifest chứ không phải từ code.
    *

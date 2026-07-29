@@ -155,6 +155,7 @@ export function CalendarContainer(props: CalendarContainerProps) {
       await adapter.updateDoc(doctype, String(row.name), { [dateField]: newDateKey }, String(row.modified ?? ""));
       toast.success(t("calendar.rescheduled"));
       void qc.invalidateQueries({ queryKey: [scopeKey, "list", doctype] });
+      void qc.invalidateQueries({ queryKey: [scopeKey, "list-view", doctype] });
     } catch (e) {
       toast.error(adapter.mapError(e).message);
     }

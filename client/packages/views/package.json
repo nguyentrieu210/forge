@@ -61,6 +61,10 @@
     "./action": {
       "types": "./dist/action/ActionScreen.d.ts",
       "import": "./dist/action/ActionScreen.js"
+    },
+    "./screen": {
+      "types": "./dist/screen/ScreenView.d.ts",
+      "import": "./dist/screen/ScreenView.js"
     }
   },
   "scripts": {
@@ -72,6 +76,7 @@
     "@metaforge/adapter-frappe": "workspace:*",
     "@metaforge/controls": "workspace:*",
     "@metaforge/core": "workspace:*",
+    "@metaforge/shell": "workspace:*",
     "@metaforge/ui": "workspace:*",
     "@tanstack/react-query": "^5.101.4",
     "@tanstack/react-table": "^8.21.3",

@@ -11,7 +11,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, ConfirmDialog,
 } from "@metaforge/ui";
 import type { ThemeMode } from "./theme.js";
-import { BRANDS, useBrand } from "./brand.js";
+import { BRANDS, useBrand, type BrandMode } from "./brand.js";
 import { useT } from "./i18n/index.js";
 
 export interface NavItem {
@@ -30,6 +30,8 @@ export interface NotificationItem {
 }
 export interface AppShellProps {
   brand?: string;
+  /** Palette do manifest app kiểm soát. Có giá trị thì preference local không được ghi đè. */
+  brandMode?: BrandMode;
   /** Logo app (ReactNode). Không có ⇒ rơi về chữ cái đầu của `brand`. */
   brandMark?: ReactNode;
   nav: NavItem[];
@@ -117,7 +119,7 @@ function BreadcrumbTrail({ items }: { items: Breadcrumb[] }) {
 export function AppShell(props: AppShellProps) {
   const t = useT();
   // Màu thương hiệu nằm CHUNG menu với sáng/tối — cùng là "giao diện", không tách ra màn Cài đặt.
-  const [brand, setBrand] = useBrand();
+  const [brand, setBrand] = useBrand(props.brandMode);
   const [collapsed, setCollapsed] = useState(() => { try { return localStorage.getItem("mf-sidebar-collapsed") === "1"; } catch { return false; } });
   const [mobileOpen, setMobileOpen] = useState(false);
   const [navQuery, setNavQuery] = useState("");

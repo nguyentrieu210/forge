@@ -6,7 +6,7 @@
 import { useMemo } from "react";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { applyFormProfile, type DocTypeMeta, type Doc, type DocInfo, type ListOpts, type Filters } from "@metaforge/core";
-import { type Capabilities, type WorkflowTransitionsResult, NO_CAPS } from "@metaforge/adapter-frappe";
+import { type Capabilities, type ListViewSnapshot, type WorkflowTransitionsResult, NO_CAPS } from "@metaforge/adapter-frappe";
 import { useMetaForge } from "./provider.js";
 
 export function useMeta(doctype: string): UseQueryResult<DocTypeMeta> {
@@ -62,6 +62,20 @@ export function useList(doctype: string, opts: ListOpts = {}, enabled = true): U
     refetchOnWindowFocus: false,
     gcTime: 30 * 60_000,
     placeholderData: (prev) => prev, // giữ trang cũ khi đổi filter/page → không nháy
+  });
+}
+
+export function useListView(doctype: string, opts: ListOpts = {}, enabled = true): UseQueryResult<ListViewSnapshot> {
+  const { adapter, scopeKey, businessContext } = useMetaForge();
+  const contextKey = JSON.stringify(businessContext);
+  return useQuery({
+    queryKey: [scopeKey, "list-view", doctype, JSON.stringify(opts), contextKey],
+    queryFn: () => adapter.getListView(doctype, opts, businessContext),
+    enabled,
+    staleTime: 2 * 60_000,
+    refetchOnWindowFocus: false,
+    gcTime: 30 * 60_000,
+    placeholderData: (previous) => previous,
   });
 }
 

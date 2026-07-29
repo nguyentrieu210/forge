@@ -2,7 +2,7 @@
  * DTO cho FrappeAdapter — SHAPE đã verified trên live 16.29.0 (api-map.md).
  * Các sửa review#4 nằm ngay trong type để lệch contract = lỗi biên dịch.
  */
-import type { LabelValue } from "@metaforge/core";
+import type { Doc, DisplayValueResult, LabelValue } from "@metaforge/core";
 
 /** §1 — BootDTO: orch metaforge.api.get_boot wrap frappe.boot.get_bootinfo. */
 export interface MetaForgeBootDTO {
@@ -272,6 +272,13 @@ export interface Capabilities {
 export const NO_CAPS: Capabilities = {
   read: false, write: false, create: false, delete: false, submit: false, cancel: false, amend: false,
 };
+
+export interface ListViewSnapshot {
+  rows: Doc[];
+  count: number;
+  capabilities: Capabilities;
+  display_values: DisplayValueResult[];
+}
 
 /** §5 — Chia sẻ (docshare) 1 doc — frappe.share.get_users trả mảng row DocShare.
  * Cờ quyền là 0|1; `everyone`/`submit` có thể vắng tuỳ doctype. */

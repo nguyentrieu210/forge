@@ -2,21 +2,22 @@
 /**
  * ListContainer — nối ListView vào backend (server-side filter/sort/paginate).
  * State sống ở URL (AC#4/#7) qua `bridge` injectable → package KHÔNG cứng react-router.
- * Sở thích cột do ListView lưu theo site + user + doctype. getList + getCount chạy song song.
+ * Sở thích cột do ListView lưu theo site + user + doctype. Dữ liệu, tổng số, quyền và
+ * nhãn Link đi chung một snapshot để màn hình không tạo waterfall HTTP.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { displayValueKey, type Doc, type DocTypeMeta, type ListOpts } from "@metaforge/core";
 import { ConfirmDialog, Skeleton, toast, useT } from "@metaforge/ui";
 import { ListView } from "../list/ListView.js";
 import { formatValue } from "../list/cells.js";
 import { buildCsv, downloadCsv, downloadXlsx, printTablePdf, stampedName, type ExportFormat } from "../report/export.js";
 import { deriveColumns, imageField } from "../list/columns.js";
-import { buildServerQuery, countQuery } from "../list/filters.js";
+import { buildServerQuery } from "../list/filters.js";
 import { useListUrlState, type UrlStateBridge } from "../list/useListState.js";
 import { stableColumnPreferenceScope } from "../list/column-preferences.js";
 import { useMetaForge } from "./provider.js";
-import { useMeta, useList, useCount, useCapabilities, NO_CAPS } from "./hooks.js";
+import { useMeta, useListView, NO_CAPS } from "./hooks.js";
 
 const EMPTY_META: DocTypeMeta = { name: "", fields: [], permissions: [] };
 
@@ -42,10 +43,8 @@ export function ListContainer(props: ListContainerProps) {
   const meta = metaQ.data ?? EMPTY_META;
   // P1-PERM-01: caps DOCTYPE-level (không name) fail-closed — đang tải/lỗi ⇒ NO_CAPS (ẩn Tạo mới/Xoá
   // hàng loạt cho tới khi server trả quyền thật, giống FormContainer/NewFormContainer).
-  const capsQ = useCapabilities(doctype);
   // Field ảnh của doctype — nơi ghi file_url sau khi tải ảnh lên từ avatar trên danh sách.
   const imgField = useMemo(() => (metaQ.data ? imageField(metaQ.data, { roles }) : undefined), [metaQ.data, roles]);
-  const caps = capsQ.data ?? NO_CAPS;
 
   const isSingle = Boolean(metaQ.data?.issingle);
   useEffect(() => {
@@ -58,36 +57,18 @@ export function ListContainer(props: ListContainerProps) {
   // Global context is enforced by adapter.getContextualList/getContextualCount on the server,
   // including warehouse fields in child tables. Do not duplicate it as a parent-only filter here.
   const listOpts = useMemo<ListOpts>(() => buildServerQuery(meta, state, columns), [meta, state, columns]);
-  const cQuery = useMemo(() => countQuery(meta, state), [meta, state]);
-
   const ready = Boolean(metaQ.data) && !isSingle;
-  const listQ = useList(doctype, listOpts, ready);
-  const countQ = useCount(doctype, cQuery.filters, cQuery.orFilters, ready);
-
-  const displayRequests = useMemo(() => {
-    const linkCols = columns.filter((c) => c.fieldtype === "Link" && c.options);
-    const seen = new Set<string>();
-    const out: Array<{ doctype: string; name: string }> = [];
-    for (const row of listQ.data ?? []) for (const col of linkCols) {
-      const name = row[col.fieldname];
-      if (!name) continue;
-      const key = displayValueKey(col.options!, String(name));
-      if (!seen.has(key)) { seen.add(key); out.push({ doctype: col.options!, name: String(name) }); }
-    }
-    return out;
-  }, [columns, listQ.data]);
-  const displayQ = useQuery({
-    queryKey: [scopeKey, "display-values", JSON.stringify(displayRequests)],
-    queryFn: () => adapter.resolveDisplayValues(displayRequests),
-    enabled: displayRequests.length > 0,
-    staleTime: 5 * 60_000,
-  });
-  const displayValues = useMemo(() => Object.fromEntries((displayQ.data ?? []).map((r) => [displayValueKey(r.doctype, r.name), r.label])), [displayQ.data]);
+  const viewQ = useListView(doctype, listOpts, ready);
+  const rows = viewQ.data?.rows ?? [];
+  const caps = viewQ.data?.capabilities ?? NO_CAPS;
+  const displayValues = useMemo(
+    () => Object.fromEntries((viewQ.data?.display_values ?? []).map((r) => [displayValueKey(r.doctype, r.name), r.label])),
+    [viewQ.data?.display_values],
+  );
 
   const refresh = useCallback(() => {
     // Khoá query có prefix scopeKey (P1-03) ⇒ invalidate PHẢI gồm scopeKey, nếu không sẽ không khớp.
-    queryClient.invalidateQueries({ queryKey: [scopeKey, "list", doctype] });
-    queryClient.invalidateQueries({ queryKey: [scopeKey, "count", doctype] });
+    queryClient.invalidateQueries({ queryKey: [scopeKey, "list-view", doctype] });
   }, [queryClient, scopeKey, doctype]);
 
   // Xoá hàng loạt không thể hoàn tác — hỏi xác nhận TRƯỚC (trước đây gọi API ngay, 0 xác nhận nào,
@@ -118,11 +99,11 @@ export function ListContainer(props: ListContainerProps) {
     setExporting(true);
     try {
       const chosen = new Set(names);
-      let rows = (listQ.data ?? []).filter((row) => chosen.has(String(row.name)));
+      let rows = (viewQ.data?.rows ?? []).filter((row) => chosen.has(String(row.name)));
       if (!chosen.size) {
         rows = [];
         const pageLength = 100;
-        const expected = countQ.data ?? Number.POSITIVE_INFINITY;
+        const expected = viewQ.data?.count ?? Number.POSITIVE_INFINITY;
         for (let limitStart = 0; limitStart < expected; limitStart += pageLength) {
           const opts = { ...listOpts, limitStart, pageLength };
           const batch = Object.keys(businessContext).length
@@ -182,7 +163,7 @@ export function ListContainer(props: ListContainerProps) {
     } finally {
       setExporting(false);
     }
-  }, [adapter, businessContext, columns, countQ.data, displayValues, doctype, exporting, fmt, listOpts, listQ.data, meta, t]);
+  }, [adapter, businessContext, columns, displayValues, doctype, exporting, fmt, listOpts, meta, t, viewQ.data]);
 
   if (metaQ.isLoading) return <ListSkeleton />;
   if (metaQ.error) {
@@ -196,12 +177,12 @@ export function ListContainer(props: ListContainerProps) {
     <>
       <ListView
         meta={meta}
-        rows={listQ.data ?? []}
-        total={countQ.data}
+        rows={rows}
+        total={viewQ.data?.count}
         // Chỉ che bảng ở lần tải đầu. Refetch có dữ liệu cache (do người dùng chủ động làm mới hoặc
         // mutation invalidate) phải giữ nguyên bảng, tránh cảm giác cả màn hình "load lại".
-        loading={listQ.isLoading}
-        error={listQ.error ? adapter.mapError(listQ.error).message : null}
+        loading={viewQ.isLoading}
+        error={viewQ.error ? adapter.mapError(viewQ.error).message : null}
         state={state}
         onStateChange={patch}
         preferenceScope={stableColumnPreferenceScope(scopeKey)}
@@ -225,9 +206,9 @@ export function ListContainer(props: ListContainerProps) {
             // cùng một bản ghi. Bỏ qua cho tiện thì người sau âm thầm đè mất thay đổi của người
             // trước — loại lỗi không ai phát hiện cho tới lúc đối chiếu số liệu.
             // `modified` luôn có trong kết quả list (queryFields đưa vào nhóm base).
-            const row = (listQ.data ?? []).find((r) => String(r.name) === name);
+            const row = rows.find((r) => String(r.name) === name);
             await adapter.updateDoc(doctype, name, patch as Partial<Doc>, String(row?.modified ?? ""));
-            await listQ.refetch();
+            await viewQ.refetch();
           } catch (e) {
             toast.error(adapter.mapError(e).message);
           }
@@ -236,9 +217,9 @@ export function ListContainer(props: ListContainerProps) {
           try {
             const up = await adapter.uploadFile(file, { isPrivate: 0, doctype, docname: name, fieldname: imgField });
             if (!up?.file_url) throw new Error("Máy chủ không trả về đường dẫn tệp");
-            const row = (listQ.data ?? []).find((r) => String(r.name) === name);
+            const row = rows.find((r) => String(r.name) === name);
             await adapter.updateDoc(doctype, name, { [imgField ?? "image"]: up.file_url } as Partial<Doc>, String(row?.modified ?? ""));
-            await listQ.refetch();
+            await viewQ.refetch();
             toast.success("Đã cập nhật ảnh");
           } catch (e) {
             toast.error(adapter.mapError(e).message);

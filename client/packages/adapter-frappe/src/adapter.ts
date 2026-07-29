@@ -49,6 +49,7 @@ import type {
   Capabilities,
   ShareInfo,
   ConnectionCount,
+  ListViewSnapshot,
 } from "./dto.js";
 
 export interface UploadOpts {
@@ -147,6 +148,8 @@ export interface FrappeAdapter {
   // document CRUD — §3
   getDoc(dt: string, name: string): Promise<{ doc: Doc; docinfo: DocInfo }>;
   getList(dt: string, opts?: ListOpts): Promise<Doc[]>;
+  /** One read snapshot for the list screen: rows, count, capabilities and Link labels. */
+  getListView(dt: string, opts?: ListOpts, selection?: BusinessContextSelection): Promise<ListViewSnapshot>;
   /** Server-scoped list: applies Company/Fiscal Year/Warehouse, including warehouse fields in child tables. */
   getContextualList(dt: string, opts?: ListOpts, selection?: BusinessContextSelection): Promise<Doc[]>;
   /** P1-10 — đếm KHỚP list: có orFilters ⇒ reportview.get_count (nhận or_filters), khớp search. */

@@ -26,6 +26,9 @@ interface PrintRow { format_json: string; revision: number }
 export class D1MetadataStore implements MetadataStore {
   private readonly db: D1Database | D1DatabaseSession;
   private readonly customizations: CustomizationStore;
+  private readonly docTypeCache = new Map<string, Promise<DocTypeMeta | null>>();
+  private docTypeCacheHits = 0;
+  private docTypeCacheMisses = 0;
 
   constructor(db: D1Database, customizations?: CustomizationStore) {
     this.db = db.withSession?.("first-primary") ?? db;
@@ -42,6 +45,24 @@ export class D1MetadataStore implements MetadataStore {
    * bypassed this would silently ignore every customisation.
    */
   async getDocType(tenantId: string, doctype: string): Promise<DocTypeMeta | null> {
+    const key = `${tenantId}\u0000${doctype}`;
+    const cached = this.docTypeCache.get(key);
+    if (cached) {
+      this.docTypeCacheHits += 1;
+      return cached;
+    }
+    this.docTypeCacheMisses += 1;
+    const pending = this.loadDocType(tenantId, doctype);
+    this.docTypeCache.set(key, pending);
+    try {
+      return await pending;
+    } catch (error) {
+      this.docTypeCache.delete(key);
+      throw error;
+    }
+  }
+
+  private async loadDocType(tenantId: string, doctype: string): Promise<DocTypeMeta | null> {
     const row = await this.db.prepare(
       `SELECT metadata_json, revision, modified_at FROM doctype_definitions WHERE tenant_id=?1 AND doctype=?2 AND disabled=0`,
     ).bind(tenantId, doctype).first<MetaRow>();
@@ -56,6 +77,10 @@ export class D1MetadataStore implements MetadataStore {
     ]);
     if (!customFields.length && !propertySetters.length) return base;
     return mergeCustomizations({ base, customFields, propertySetters, customizationRevision });
+  }
+
+  cacheStats(): { hits: number; misses: number } {
+    return { hits: this.docTypeCacheHits, misses: this.docTypeCacheMisses };
   }
 
   /** The overlay store, for callers that manage customisations. */
@@ -81,7 +106,9 @@ export class D1MetadataStore implements MetadataStore {
        ON CONFLICT(tenant_id,doctype) DO UPDATE SET module=excluded.module,is_custom=excluded.is_custom,is_submittable=excluded.is_submittable,
        is_child=excluded.is_child,revision=excluded.revision,metadata_json=excluded.metadata_json,disabled=0,modified_by=excluded.modified_by,modified_at=excluded.modified_at`,
     ).bind(tenantId, meta.name, meta.module, meta.custom ? 1 : 0, meta.is_submittable ? 1 : 0, meta.is_child ? 1 : 0, revision, JSON.stringify(normalized), actor, now).run();
-    return { ...normalized, modified_at: now };
+    const saved = { ...normalized, modified_at: now };
+    this.docTypeCache.set(`${tenantId}\u0000${meta.name}`, Promise.resolve(saved));
+    return saved;
   }
 
   async getWorkflow(tenantId: string, doctype: string): Promise<WorkflowMeta | null> {

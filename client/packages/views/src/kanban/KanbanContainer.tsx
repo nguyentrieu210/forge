@@ -42,6 +42,7 @@ export function KanbanContainer(props: KanbanContainerProps) {
       await adapter.updateDoc(doctype, String(row.name), { [fieldName]: toColumn }, String(row.modified ?? ""));
       toast.success(t("kanban.moved"));
       void qc.invalidateQueries({ queryKey: [scopeKey, "list", doctype] });
+      void qc.invalidateQueries({ queryKey: [scopeKey, "list-view", doctype] });
     } catch (e) {
       toast.error(adapter.mapError(e).message);
     }

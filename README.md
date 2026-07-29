@@ -61,7 +61,8 @@ FORGE_ADMIN_PASSWORD=… node scripts/forge-app.mjs briefs/assets.json --origin 
 
 Được như vậy vì ba mắt xích đã nối: gateway **tự phục vụ bundle client cùng origin với API** (hết
 phụ thuộc proxy loopback), manifest giao diện do **server dựng từ app đã cài** (một bundle phục vụ
-mọi app), và màn tác nghiệp **suy từ workflow metadata** (khai workflow là có màn duyệt).
+mọi app), và màn tác nghiệp **suy từ workflow hoặc khai bằng Screen Contract** (KPI + danh sách +
+action, không build frontend riêng).
 
 Đã chạy thật trên Cloudflare: brief 70 dòng → app `assets` sống; **13/13** kiểm nghiệp vụ đầu-cuối
 qua đường cookie (gồm chặn tự duyệt — 403 *"You cannot approve a document you created"*); **10/10**

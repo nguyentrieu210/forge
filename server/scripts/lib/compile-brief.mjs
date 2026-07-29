@@ -191,6 +191,127 @@ function compileAction(action, index, doctypeNames) {
   };
 }
 
+const SCREEN_BLOCK_ID = /^[a-z][a-z0-9-]*$/;
+const SCREEN_MODES = new Set(["desk", "focus", "touch"]);
+const SCREEN_TONES = new Set(["neutral", "info", "success", "warning", "danger"]);
+const SCREEN_SYSTEM_FIELDS = new Set(["name", "owner", "status", "docstatus", "creation", "modified", "modified_at"]);
+
+/**
+ * A composed app screen: custom enough to express an operational workspace, but still data.
+ *
+ * Blocks only reuse platform reads and declared actions. That is the important boundary:
+ * no HTML, JavaScript or arbitrary endpoint enters the manifest, so one generic runtime can
+ * render the screen without turning an app install into a code-deployment event.
+ */
+function compileScreen(screen, index, doctypes, actions, appId) {
+  const where = `screens[${index}]`;
+  if (!screen?.name || !SCREEN_BLOCK_ID.test(screen.name)) fail(`${where}.name phải là kebab-case.`);
+  const installedName = `${appId}-${screen.name}`;
+  if (installedName.length > 140) fail(`${where}.name quá dài sau khi ghép namespace app "${appId}".`);
+  const metaByName = new Map(doctypes.map((meta) => [meta.name, meta]));
+  if (!screen.permission || !metaByName.has(screen.permission)) {
+    fail(`${where} (${screen.name}) chặn quyền theo "${screen.permission}", nhưng brief này không khai DocType đó.`);
+  }
+  const mode = screen.mode ?? "desk";
+  if (!SCREEN_MODES.has(mode)) fail(`${where}.mode không hợp lệ: ${mode}.`);
+  const columns = screen.columns ?? 2;
+  if (!Number.isInteger(columns) || columns < 1 || columns > 3) fail(`${where}.columns chỉ nhận 1–3.`);
+
+  const fieldsFor = (doctype, blockWhere) => {
+    const meta = metaByName.get(doctype);
+    if (!meta) fail(`${blockWhere} đọc DocType "${doctype}" mà brief này không khai.`);
+    return new Set([...SCREEN_SYSTEM_FIELDS, ...meta.fields.map((field) => field.fieldname)]);
+  };
+  const filtersFor = (filters, doctype, blockWhere) => {
+    if (filters === undefined) return undefined;
+    if (!filters || typeof filters !== "object" || Array.isArray(filters)) fail(`${blockWhere}.filters phải là object.`);
+    const known = fieldsFor(doctype, blockWhere);
+    for (const field of Object.keys(filters)) {
+      if (!known.has(field)) fail(`${blockWhere}.filters dùng field không tồn tại: ${doctype}.${field}.`);
+    }
+    return { ...filters };
+  };
+
+  const actionNames = new Set(actions.map((action) => action.name));
+  const blocks = (screen.blocks ?? []).map((block, position) => {
+    const blockWhere = `${where}.blocks[${position}]`;
+    if (!block || typeof block !== "object" || Array.isArray(block)) fail(`${blockWhere} phải là object.`);
+    if (!block.id || !SCREEN_BLOCK_ID.test(block.id)) fail(`${blockWhere}.id phải là kebab-case.`);
+    if (!block.label) fail(`${blockWhere}.label là bắt buộc.`);
+    if (block.span !== undefined && (!Number.isInteger(block.span) || block.span < 1 || block.span > columns)) {
+      fail(`${blockWhere}.span phải từ 1 tới số cột của màn (${columns}).`);
+    }
+    const base = {
+      id: block.id,
+      label: block.label,
+      ...(block.description ? { description: block.description } : {}),
+      ...(block.icon ? { icon: block.icon } : {}),
+      ...(block.span ? { span: block.span } : {}),
+    };
+    if (block.type === "metric") {
+      fieldsFor(block.doctype, blockWhere);
+      if (block.tone && !SCREEN_TONES.has(block.tone)) fail(`${blockWhere}.tone không hợp lệ: ${block.tone}.`);
+      if (block.route && !String(block.route).startsWith("/")) fail(`${blockWhere}.route phải là đường dẫn tuyệt đối.`);
+      const filters = filtersFor(block.filters, block.doctype, blockWhere);
+      return {
+        ...base,
+        type: "metric",
+        doctype: block.doctype,
+        ...(filters ? { filters } : {}),
+        ...(block.tone ? { tone: block.tone } : {}),
+        ...(block.route ? { route: block.route } : {}),
+      };
+    }
+    if (block.type === "list") {
+      const known = fieldsFor(block.doctype, blockWhere);
+      if (!Array.isArray(block.fields) || block.fields.length === 0) fail(`${blockWhere}.fields phải có ít nhất một field.`);
+      for (const field of block.fields) {
+        if (!known.has(field)) fail(`${blockWhere}.fields dùng field không tồn tại: ${block.doctype}.${field}.`);
+      }
+      assertUniqueNames(block.fields, `${blockWhere} field`);
+      if (block.orderBy) {
+        const [field, direction = "asc"] = String(block.orderBy).trim().split(/\s+/);
+        if (!known.has(field)) fail(`${blockWhere}.orderBy dùng field không tồn tại: ${block.doctype}.${field}.`);
+        if (!["asc", "desc"].includes(direction)) fail(`${blockWhere}.orderBy chỉ nhận asc hoặc desc.`);
+      }
+      const limit = block.limit ?? 8;
+      if (!Number.isInteger(limit) || limit < 1 || limit > 50) fail(`${blockWhere}.limit chỉ nhận 1–50.`);
+      const filters = filtersFor(block.filters, block.doctype, blockWhere);
+      return {
+        ...base,
+        type: "list",
+        doctype: block.doctype,
+        fields: [...block.fields],
+        ...(filters ? { filters } : {}),
+        ...(block.orderBy ? { order_by: block.orderBy } : {}),
+        limit,
+        ...(block.emptyText ? { empty_text: block.emptyText } : {}),
+      };
+    }
+    if (block.type === "action") {
+      if (!actionNames.has(block.action)) fail(`${blockWhere} mở action "${block.action}" mà brief không khai.`);
+      return { ...base, type: "action", action: block.action };
+    }
+    fail(`${blockWhere}.type không hỗ trợ: ${block.type}.`);
+  });
+  if (!blocks.length) fail(`${where} (${screen.name}) chưa có block nào.`);
+  assertUniqueNames(blocks.map((block) => block.id), `${where} block`);
+
+  return {
+    // Route keys live in one tenant-wide namespace. Prefixing here keeps two installed
+    // apps from both claiming a generic name such as "dashboard" or "cockpit".
+    name: installedName,
+    label: screen.label ?? screen.name,
+    ...(screen.description ? { description: screen.description } : {}),
+    ...(screen.icon ? { icon: screen.icon } : {}),
+    ...(screen.group ? { group: screen.group } : {}),
+    permission_doctype: screen.permission,
+    mode,
+    columns,
+    blocks,
+  };
+}
+
 /** HTML/CSS viết trong brief: chuỗi, hoặc mảng dòng cho dễ đọc. */
 const joinLines = (value) => (Array.isArray(value) ? value.join("\n") : String(value ?? ""));
 
@@ -898,6 +1019,27 @@ export function compileBrief(brief) {
   }
 
   /**
+   * Operational screens composed from safe platform blocks.
+   *
+   * A screen is installed as data, so adding a warehouse console or a touch-first
+   * receiving screen does not require rebuilding the shared React runtime. Every block
+   * still goes through the same DocType permissions and declared-action boundary.
+   */
+  const screens = (brief.screens ?? []).map((screen, index) => compileScreen(screen, index, doctypes, actions, id));
+  assertUniqueNames(screens.map((screen) => screen.name), "màn riêng");
+  for (const [index, screen] of screens.entries()) {
+    if (brief.screens?.[index]?.menu === false) continue;
+    nav.push({
+      key: `screen:${screen.name}`,
+      label: screen.label,
+      kind: "experience",
+      permission_doctype: screen.permission_doctype,
+      icon: screen.icon ?? "layout-dashboard",
+      group: screen.group ?? module,
+    });
+  }
+
+  /**
    * Mẫu in và link tới báo cáo sẵn có của nền tảng.
    *
    * Sau doctype, vì cả hai đều nêu tên doctype và phải từ chối được tên không tồn tại.
@@ -921,7 +1063,12 @@ export function compileBrief(brief) {
    */
   const navigation = brief.navigation ?? {};
   const requestedGroups = navigation.groups ?? [];
-  const requestedItems = navigation.items ?? [];
+  const qualifyScreenKey = (key) => {
+    if (!key.startsWith("screen:")) return key;
+    const localName = key.slice("screen:".length);
+    return localName.startsWith(`${id}-`) ? key : `screen:${id}-${localName}`;
+  };
+  const requestedItems = (navigation.items ?? []).map(qualifyScreenKey);
   const knownGroups = new Set(nav.map((item) => item.group));
   const knownItems = new Set(nav.map((item) => item.key));
   for (const group of requestedGroups) {
@@ -950,7 +1097,8 @@ export function compileBrief(brief) {
   // is a redirect loop, and it is the kind of mistake nobody spots by reading.
   let home;
   if (brief.home) {
-    const target = nav.find((item) => item.key === brief.home);
+    const requestedHome = qualifyScreenKey(brief.home);
+    const target = nav.find((item) => item.key === requestedHome);
     if (!target) fail(`home "${brief.home}" does not match any nav key (${nav.map((item) => item.key).join(", ")})`);
     const path = navPath(target);
     home = target.kind === "doctype" ? { doctype: target.key } : { route: path };
@@ -997,9 +1145,17 @@ export function compileBrief(brief) {
     validators: brief.worker ? compileValidators(brief.validators ?? []) : [],
     reports,
     actions,
+    screens,
     ...(brief.worker ? { worker: brief.worker } : {}),
     client: {
       ...(brief.brand ? { brand: brief.brand } : {}),
+      ...(brief.design ? {
+        design: {
+          ...(brief.design.density ? { density: brief.design.density } : {}),
+          ...(brief.design.radius ? { radius: brief.design.radius } : {}),
+          ...(brief.design.contentWidth ? { content_width: brief.design.contentWidth } : {}),
+        },
+      } : {}),
       ...(brief.domain ? { domain: brief.domain } : {}),
       home,
       dimensions: brief.dimensions ?? [],

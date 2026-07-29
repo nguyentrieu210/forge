@@ -114,6 +114,7 @@ export { OverviewView, type OverviewViewProps } from "./overview/OverviewView.js
 export { OverviewContainer } from "./overview/OverviewContainer.js";
 export { ProcessView } from "./process/ProcessView.js";
 export { ProcessContainer } from "./process/ProcessContainer.js";
+export { ScreenView, type ScreenViewProps } from "./screen/ScreenView.js";
 
 export { PermissionCenter } from "./access/PermissionCenter.js";
 

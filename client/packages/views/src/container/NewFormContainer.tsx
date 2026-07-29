@@ -143,6 +143,7 @@ export function NewFormContainer(props: NewFormContainerProps) {
       // cached page/filter is fetched again. Mounted collections refresh in the
       // background, inactive ones are marked stale and refresh when reopened.
       void Promise.all([
+        queryClient.invalidateQueries({ queryKey: [scopeKey, "list-view", doctype], refetchType: "active" }),
         queryClient.invalidateQueries({ queryKey: [scopeKey, "list", doctype], refetchType: "active" }),
         queryClient.invalidateQueries({ queryKey: [scopeKey, "count", doctype], refetchType: "active" }),
         queryClient.invalidateQueries({ queryKey: [scopeKey, "overview"], refetchType: "none" }),

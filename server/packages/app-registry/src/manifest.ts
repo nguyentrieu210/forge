@@ -211,6 +211,69 @@ export interface AppAction {
   result_table?: string;
 }
 
+export type AppScreenMode = "desk" | "focus" | "touch";
+export type AppScreenTone = "neutral" | "info" | "success" | "warning" | "danger";
+
+interface AppScreenBlockBase {
+  id: string;
+  label: string;
+  description?: string;
+  icon?: string;
+  /** Number of grid columns occupied by this block. */
+  span?: 1 | 2 | 3;
+}
+
+export interface AppScreenMetricBlock extends AppScreenBlockBase {
+  type: "metric";
+  doctype: string;
+  filters?: JsonObject;
+  tone?: AppScreenTone;
+  route?: string;
+}
+
+export interface AppScreenListBlock extends AppScreenBlockBase {
+  type: "list";
+  doctype: string;
+  fields: string[];
+  filters?: JsonObject;
+  order_by?: string;
+  limit: number;
+  empty_text?: string;
+}
+
+export interface AppScreenActionBlock extends AppScreenBlockBase {
+  type: "action";
+  action: string;
+}
+
+export type AppScreenBlock = AppScreenMetricBlock | AppScreenListBlock | AppScreenActionBlock;
+
+/**
+ * A composed, app-owned screen rendered by the generic client.
+ *
+ * Unlike a native React Experience, this travels with the app package and therefore needs
+ * no second frontend build. Blocks deliberately reuse platform data paths (DocType list/
+ * count and declared AppAction) so permission checks stay server-authoritative.
+ */
+export interface AppScreen {
+  /** Id in `/x/screen:<name>`. */
+  name: string;
+  label: string;
+  description?: string;
+  icon?: string;
+  group?: string;
+  permission_doctype: string;
+  mode: AppScreenMode;
+  columns: 1 | 2 | 3;
+  blocks: AppScreenBlock[];
+}
+
+export interface AppDesignManifest {
+  density?: "compact" | "comfortable" | "touch";
+  radius?: "square" | "soft" | "round";
+  content_width?: "contained" | "wide" | "fluid";
+}
+
 /**
  * How this app wants to be PRESENTED — the half of an app that used to live only in a
  * hand-written client bundle.
@@ -224,7 +287,9 @@ export interface AppAction {
  * reads this at boot, so a new app needs no client build at all.
  */
 export interface AppClientManifest {
-  brand?: "zinc" | "blue" | "warm";
+  brand?:
+    | "zinc" | "blue" | "warm" | "sakura" | "emerald" | "ocean" | "violet"
+    | "indigo" | "teal" | "amber" | "rose" | "aurora" | "sunset";
   /** Overview/Process definition key (`hr`, `stock`, `selling`…). */
   domain?: string;
   /** Landing screen. A route must be one this app's nav actually reaches — see below. */
@@ -240,6 +305,7 @@ export interface AppClientManifest {
   dimensions?: string[];
   catalog_mode?: "manifest" | "workspace" | "hybrid";
   locale?: { numberFormat?: string; currency?: string; dateFormat?: string };
+  design?: AppDesignManifest;
 }
 
 /** Dimensions the server's `metaforge.api.get_business_context` can resolve. */
@@ -255,7 +321,7 @@ export const CLIENT_CONTEXT_DIMENSIONS = new Set([
  * the menu entry would install cleanly and then show "chưa được triển khai" on click.
  * Adding a prefix here is the LAST step of shipping one, never the first.
  */
-export const SUPPORTED_EXPERIENCE_KINDS = new Set(["approval", "calendar", "social-commerce", "action"]);
+export const SUPPORTED_EXPERIENCE_KINDS = new Set(["approval", "calendar", "social-commerce", "action", "screen"]);
 
 export interface AppManifest {
   id: string;
@@ -315,6 +381,8 @@ export interface AppManifest {
    * nothing to serve it is a screen whose only button answers 404.
    */
   actions: AppAction[];
+  /** App-owned composed screens rendered from data by the generic client. */
+  screens: AppScreen[];
   /** Presentation. Absent means "the generic client picks sane defaults". */
   client?: AppClientManifest;
 }
@@ -392,12 +460,15 @@ export function parseAppManifest(value: unknown): AppManifest {
       throw errors.validation(`custom_fields cannot target ${field.dt}: this app defines that doctype, so declare the field on it directly`);
     }
   }
-  // Parsed BEFORE nav so a nav entry naming an action that does not exist is refused here
+  // Parsed BEFORE nav so a nav entry naming an action/screen that does not exist is refused here
   // rather than installing a menu line whose screen cannot be built.
   const actions = array(input.actions ?? [], "actions").map((entry, index) => parseAction(entry, index, doctypeNames));
   assertUnique(actions.map((action) => action.name), "action name");
   const actionsByName = new Map(actions.map((action) => [action.name, action]));
-  const nav = array(input.nav ?? [], "nav").map((entry, index) => parseNav(entry, index, doctypeNames, actionsByName));
+  const screens = array(input.screens ?? [], "screens").map((entry, index) => parseScreen(entry, index, id, doctypes, actionsByName));
+  assertUnique(screens.map((screen) => screen.name), "screen name");
+  const screensByName = new Map(screens.map((screen) => [screen.name, screen]));
+  const nav = array(input.nav ?? [], "nav").map((entry, index) => parseNav(entry, index, doctypeNames, actionsByName, screensByName));
   assertUnique(nav.map((item) => item.key), "nav key");
 
   const requires = array(input.requires ?? [], "requires").map((entry, index) => {
@@ -452,13 +523,20 @@ export function parseAppManifest(value: unknown): AppManifest {
     validators,
     reports,
     actions,
+    screens,
     ...(worker === undefined ? {} : { worker }),
     ...(client === undefined ? {} : { client }),
   };
 }
 
-const BRANDS = new Set(["zinc", "blue", "warm"]);
+const BRANDS = new Set([
+  "zinc", "blue", "warm", "sakura", "emerald", "ocean", "violet",
+  "indigo", "teal", "amber", "rose", "aurora", "sunset",
+]);
 const CATALOG_MODES = new Set(["manifest", "workspace", "hybrid"]);
+const DESIGN_DENSITIES = new Set(["compact", "comfortable", "touch"]);
+const DESIGN_RADII = new Set(["square", "soft", "round"]);
+const DESIGN_WIDTHS = new Set(["contained", "wide", "fluid"]);
 
 /**
  * Parses the presentation block.
@@ -482,7 +560,7 @@ function parseClientManifest(value: JsonValue, nav: AppNavItem[], doctypeNames: 
 
   if (input.brand !== undefined) {
     const brand = text(input.brand, "client.brand", 16);
-    if (!BRANDS.has(brand)) throw errors.validation(`client.brand is not recognised: ${brand} (zinc|blue|warm)`);
+    if (!BRANDS.has(brand)) throw errors.validation(`client.brand is not recognised: ${brand}`);
     result.brand = brand as NonNullable<AppClientManifest["brand"]>;
   }
   if (input.domain !== undefined) result.domain = text(input.domain, "client.domain", 64);
@@ -529,6 +607,24 @@ function parseClientManifest(value: JsonValue, nav: AppNavItem[], doctypeNames: 
     const pick = (field: "numberFormat" | "currency" | "dateFormat") =>
       locale[field] === undefined ? {} : { [field]: text(locale[field], `client.locale.${field}`, 32) };
     result.locale = { ...pick("numberFormat"), ...pick("currency"), ...pick("dateFormat") };
+  }
+
+  if (input.design !== undefined) {
+    if (!input.design || typeof input.design !== "object" || Array.isArray(input.design)) {
+      throw errors.validation("client.design must be an object");
+    }
+    const design = input.design as JsonObject;
+    const density = design.density === undefined ? undefined : text(design.density, "client.design.density", 16);
+    const radius = design.radius === undefined ? undefined : text(design.radius, "client.design.radius", 16);
+    const contentWidth = design.content_width === undefined ? undefined : text(design.content_width, "client.design.content_width", 16);
+    if (density && !DESIGN_DENSITIES.has(density)) throw errors.validation(`client.design.density is not recognised: ${density}`);
+    if (radius && !DESIGN_RADII.has(radius)) throw errors.validation(`client.design.radius is not recognised: ${radius}`);
+    if (contentWidth && !DESIGN_WIDTHS.has(contentWidth)) throw errors.validation(`client.design.content_width is not recognised: ${contentWidth}`);
+    result.design = {
+      ...(density ? { density: density as NonNullable<AppDesignManifest["density"]> } : {}),
+      ...(radius ? { radius: radius as NonNullable<AppDesignManifest["radius"]> } : {}),
+      ...(contentWidth ? { content_width: contentWidth as NonNullable<AppDesignManifest["content_width"]> } : {}),
+    };
   }
 
   return result;
@@ -783,6 +879,135 @@ function parseAction(value: JsonValue, index: number, doctypeNames: ReadonlySet<
   };
 }
 
+const SCREEN_BLOCK_ID = /^[a-z][a-z0-9-]*$/;
+const SCREEN_MODES = new Set<AppScreenMode>(["desk", "focus", "touch"]);
+const SCREEN_TONES = new Set<AppScreenTone>(["neutral", "info", "success", "warning", "danger"]);
+const SYSTEM_SCREEN_FIELDS = new Set(["name", "owner", "status", "docstatus", "creation", "modified", "modified_at"]);
+
+function parseScreen(
+  value: JsonValue,
+  index: number,
+  appId: string,
+  doctypes: AppManifest["doctypes"],
+  actions: ReadonlyMap<string, AppAction>,
+): AppScreen {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw errors.validation(`screens[${index}] must be an object`);
+  const entry = value as JsonObject;
+  const name = text(entry.name, `screens[${index}].name`, 140);
+  if (!ACTION_NAME.test(name)) throw errors.validation(`screens[${index}].name must be lowercase letters, digits and hyphens: ${name}`);
+  if (!name.startsWith(`${appId}-`)) {
+    throw errors.validation(`screens[${index}].name must be namespaced with this app id: ${appId}-`);
+  }
+
+  const metaByName = new Map(doctypes.map((meta) => [meta.name, meta]));
+  const permissionDoctype = text(entry.permission_doctype, `screens[${index}].permission_doctype`, 160);
+  if (!metaByName.has(permissionDoctype)) {
+    throw errors.validation(`screens[${index}].permission_doctype points at ${permissionDoctype}, which this app does not define`);
+  }
+
+  const mode = text(entry.mode ?? "desk", `screens[${index}].mode`, 16) as AppScreenMode;
+  if (!SCREEN_MODES.has(mode)) throw errors.validation(`screens[${index}].mode is not recognised: ${mode}`);
+  const columns = integer(entry.columns ?? 2, `screens[${index}].columns`, 1, 3) as 1 | 2 | 3;
+
+  const fieldsFor = (doctype: string, where: string): ReadonlySet<string> => {
+    const meta = metaByName.get(doctype);
+    if (!meta) throw errors.validation(`${where} points at ${doctype}, which this app does not define`);
+    return new Set([...SYSTEM_SCREEN_FIELDS, ...meta.fields.map((field) => field.fieldname)]);
+  };
+  const filtersFor = (raw: JsonValue | undefined, doctype: string, where: string): JsonObject | undefined => {
+    if (raw === undefined) return undefined;
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw errors.validation(`${where} must be an object`);
+    const known = fieldsFor(doctype, where);
+    for (const field of Object.keys(raw)) {
+      if (!known.has(field)) throw errors.validation(`${where} filters unknown field ${doctype}.${field}`);
+    }
+    return raw as JsonObject;
+  };
+  const spanFor = (raw: JsonValue | undefined, where: string): 1 | 2 | 3 | undefined => {
+    if (raw === undefined) return undefined;
+    const span = integer(raw, `${where}.span`, 1, 3) as 1 | 2 | 3;
+    if (span > columns) throw errors.validation(`${where}.span (${span}) exceeds screen columns (${columns})`);
+    return span;
+  };
+
+  const blocks = array(entry.blocks ?? [], `screens[${index}].blocks`).map((raw, position): AppScreenBlock => {
+    const where = `screens[${index}].blocks[${position}]`;
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw errors.validation(`${where} must be an object`);
+    const block = raw as JsonObject;
+    const type = text(block.type, `${where}.type`, 16);
+    const id = text(block.id, `${where}.id`, 64);
+    if (!SCREEN_BLOCK_ID.test(id)) throw errors.validation(`${where}.id must be lowercase letters, digits and hyphens: ${id}`);
+    const span = spanFor(block.span, where);
+    const base = {
+      id,
+      label: text(block.label, `${where}.label`, 160),
+      ...(block.description === undefined ? {} : { description: text(block.description, `${where}.description`, 500) }),
+      ...(block.icon === undefined ? {} : { icon: text(block.icon, `${where}.icon`, 64) }),
+      ...(span === undefined ? {} : { span }),
+    };
+    if (type === "metric") {
+      const doctype = text(block.doctype, `${where}.doctype`, 160);
+      fieldsFor(doctype, where);
+      const tone = block.tone === undefined ? undefined : text(block.tone, `${where}.tone`, 16) as AppScreenTone;
+      if (tone && !SCREEN_TONES.has(tone)) throw errors.validation(`${where}.tone is not recognised: ${tone}`);
+      const route = block.route === undefined ? undefined : text(block.route, `${where}.route`, 320);
+      if (route && !route.startsWith("/")) throw errors.validation(`${where}.route must be absolute`);
+      const filters = filtersFor(block.filters, doctype, `${where}.filters`);
+      return {
+        ...base, type: "metric", doctype,
+        ...(filters ? { filters } : {}),
+        ...(tone ? { tone } : {}),
+        ...(route ? { route } : {}),
+      };
+    }
+    if (type === "list") {
+      const doctype = text(block.doctype, `${where}.doctype`, 160);
+      const known = fieldsFor(doctype, where);
+      const fields = array(block.fields ?? [], `${where}.fields`).map((field, fieldIndex) => {
+        const fieldname = text(field, `${where}.fields[${fieldIndex}]`, 120);
+        if (!known.has(fieldname)) throw errors.validation(`${where}.fields[${fieldIndex}] names unknown field ${doctype}.${fieldname}`);
+        return fieldname;
+      });
+      if (!fields.length) throw errors.validation(`${where}.fields must not be empty`);
+      assertUnique(fields, `${where} field`);
+      const orderBy = block.order_by === undefined ? undefined : text(block.order_by, `${where}.order_by`, 160);
+      if (orderBy) {
+        const [field, direction = "asc"] = orderBy.trim().split(/\s+/);
+        if (!known.has(field!)) throw errors.validation(`${where}.order_by names unknown field ${doctype}.${field}`);
+        if (direction !== "asc" && direction !== "desc") throw errors.validation(`${where}.order_by direction must be asc or desc`);
+      }
+      const filters = filtersFor(block.filters, doctype, `${where}.filters`);
+      return {
+        ...base, type: "list", doctype, fields,
+        ...(filters ? { filters } : {}),
+        ...(orderBy ? { order_by: orderBy } : {}),
+        limit: integer(block.limit ?? 8, `${where}.limit`, 1, 50),
+        ...(block.empty_text === undefined ? {} : { empty_text: text(block.empty_text, `${where}.empty_text`, 200) }),
+      };
+    }
+    if (type === "action") {
+      const action = text(block.action, `${where}.action`, 64);
+      if (!actions.has(action)) throw errors.validation(`${where} opens action "${action}", which this app does not declare`);
+      return { ...base, type: "action", action };
+    }
+    throw errors.validation(`${where}.type is not recognised: ${type}`);
+  });
+  if (!blocks.length) throw errors.validation(`screens[${index}] (${name}) has no blocks`);
+  assertUnique(blocks.map((block) => block.id), `screens[${index}] block`);
+
+  return {
+    name,
+    label: text(entry.label ?? name, `screens[${index}].label`, 160),
+    ...(entry.description === undefined ? {} : { description: text(entry.description, `screens[${index}].description`, 500) }),
+    ...(entry.icon === undefined ? {} : { icon: text(entry.icon, `screens[${index}].icon`, 64) }),
+    ...(entry.group === undefined ? {} : { group: text(entry.group, `screens[${index}].group`, 80) }),
+    permission_doctype: permissionDoctype,
+    mode,
+    columns,
+    blocks,
+  };
+}
+
 function parseHook(value: JsonValue, index: number): AppHook {
   const pattern = typeof value === "string" ? value : (value && typeof value === "object" && !Array.isArray(value) ? (value as JsonObject).event : undefined);
   const event = text(pattern, `hooks[${index}].event`, 160);
@@ -961,7 +1186,13 @@ function parseFixture(value: JsonValue, index: number): AppFixture {
   };
 }
 
-function parseNav(value: JsonValue, index: number, doctypeNames: ReadonlySet<string>, actions: ReadonlyMap<string, AppAction> = new Map()): AppNavItem {
+function parseNav(
+  value: JsonValue,
+  index: number,
+  doctypeNames: ReadonlySet<string>,
+  actions: ReadonlyMap<string, AppAction> = new Map(),
+  screens: ReadonlyMap<string, AppScreen> = new Map(),
+): AppNavItem {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw errors.validation(`nav[${index}] must be an object`);
   const input = value as JsonObject;
   const kind = input.kind;
@@ -970,6 +1201,7 @@ function parseNav(value: JsonValue, index: number, doctypeNames: ReadonlySet<str
   }
   const key = text(input.key, `nav[${index}].key`, 160);
   let action: AppAction | undefined;
+  let screen: AppScreen | undefined;
   if (kind === "experience") {
     const separator = key.indexOf(":");
     const experienceKind = separator < 0 ? key : key.slice(0, separator);
@@ -981,6 +1213,10 @@ function parseNav(value: JsonValue, index: number, doctypeNames: ReadonlySet<str
       action = actions.get(argument);
       if (!action) throw errors.validation(`nav[${index}] opens action "${argument}", which this app does not declare`);
     }
+    if (experienceKind === "screen") {
+      screen = screens.get(argument);
+      if (!screen) throw errors.validation(`nav[${index}] opens screen "${argument}", which this app does not declare`);
+    }
   }
   const inferredPermissionDoctype = kind === "doctype"
     ? key
@@ -988,6 +1224,8 @@ function parseNav(value: JsonValue, index: number, doctypeNames: ReadonlySet<str
       // An action carries its own gate, so the menu entry and the screen agree by
       // construction rather than by two places being kept in step by hand.
       ? action.permission_doctype
+      : screen
+        ? screen.permission_doctype
       : kind === "experience" && (key.startsWith("approval:") || key.startsWith("calendar:"))
         // Both `approval:` and `calendar:` name the doctype after the colon, so the menu
         // entry is gated on that doctype's read permission — a calendar of records the
@@ -1033,6 +1271,13 @@ function text(value: unknown, field: string, max: number): string {
     throw errors.validation(`${field} is required and must be at most ${max} characters`);
   }
   return value.trim();
+}
+
+function integer(value: unknown, field: string, min: number, max: number): number {
+  if (!Number.isInteger(value) || Number(value) < min || Number(value) > max) {
+    throw errors.validation(`${field} must be an integer from ${min} to ${max}`);
+  }
+  return Number(value);
 }
 
 function assertUnique(values: string[], label: string): void {

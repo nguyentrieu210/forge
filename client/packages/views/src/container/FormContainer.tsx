@@ -8,6 +8,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Doc } from "@metaforge/core";
+import type { ListViewSnapshot } from "@metaforge/adapter-frappe";
 import { ConfirmDialog, PromptDialog, toast, useT } from "@metaforge/ui";
 import { FormView } from "../form/FormView.js";
 import type { FormActionKind } from "../detail/formActions.js";
@@ -82,9 +83,16 @@ export function FormContainer(props: FormContainerProps) {
         { queryKey: [scopeKey, "list", doctype] },
         (rows) => rows?.map((row) => String(row.name) === name ? { ...row, ...updated } : row),
       );
+      qc.setQueriesData<ListViewSnapshot>(
+        { queryKey: [scopeKey, "list-view", doctype] },
+        (snapshot) => snapshot
+          ? { ...snapshot, rows: snapshot.rows.map((row) => String(row.name) === name ? { ...row, ...updated } : row) }
+          : snapshot,
+      );
     }
     void Promise.all([
       qc.invalidateQueries({ queryKey: [scopeKey, "caps", doctype, name], refetchType: "active" }),
+      qc.invalidateQueries({ queryKey: [scopeKey, "list-view", doctype], refetchType: "active" }),
       qc.invalidateQueries({ queryKey: [scopeKey, "list", doctype], refetchType: "active" }),
       qc.invalidateQueries({ queryKey: [scopeKey, "count", doctype], refetchType: "active" }),
       qc.invalidateQueries({ queryKey: [scopeKey, "overview"], refetchType: "none" }),
@@ -93,6 +101,7 @@ export function FormContainer(props: FormContainerProps) {
 
   const invalidateCollection = () => {
     void Promise.all([
+      qc.invalidateQueries({ queryKey: [scopeKey, "list-view", doctype], refetchType: "active" }),
       qc.invalidateQueries({ queryKey: [scopeKey, "list", doctype], refetchType: "active" }),
       qc.invalidateQueries({ queryKey: [scopeKey, "count", doctype], refetchType: "active" }),
       qc.invalidateQueries({ queryKey: [scopeKey, "overview"], refetchType: "none" }),

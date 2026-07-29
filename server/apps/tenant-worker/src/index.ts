@@ -726,6 +726,7 @@ async function serveFrappeApiInner(
   traceId: string,
   sessionSecret: string | undefined,
 ): Promise<Response | null> {
+  const requestStarted = performance.now();
   const now = (): string => new Date().toISOString();
   const users = new D1UserStore(env.DB);
   const authContext: AuthRouteContext = {
@@ -810,6 +811,7 @@ async function serveFrappeApiInner(
     // "more correct" 401 here would leave a re-login prompt unreachable.
     throw errors.permission("Login to access this resource");
   }
+  const authenticationFinished = performance.now();
 
   /**
    * TRỢ LÝ AI — đặt trên đường Frappe, không phải `/api/v1/…`.
@@ -828,11 +830,12 @@ async function serveFrappeApiInner(
     return readReceiptImage(env, tenantId, await readJson<JsonObject>(request, 12_000_000));
   }
 
-  const metadata = new D1MetadataStore(env.DB);
-  const access = new D1DocumentAccessStore(env.DB);
+  const requestDb = readDatabaseForRequest(request, url, env.DB);
+  const metadata = new D1MetadataStore(requestDb);
+  const access = new D1DocumentAccessStore(requestDb);
   const permissions = new MetadataPermissionService(metadata, undefined, access);
-  const documents = new D1MutationStore(env.DB);
-  const installedApps = new AppInstaller(env.DB, metadata, users);
+  const documents = new D1MutationStore(requestDb);
+  const installedApps = new AppInstaller(requestDb, metadata, users);
 
   /**
    * Bindings for reaching app Workers, shared by app methods and pre-commit validators.
@@ -856,16 +859,16 @@ async function serveFrappeApiInner(
     permissions,
     documents,
     access,
-    collaboration: new D1CollaborationService(env.DB),
-    listService: new DocumentListService(new D1DocumentListStore(env.DB), permissions, new MetadataDocumentListDefinitionResolver(metadata)),
+    collaboration: new D1CollaborationService(requestDb),
+    listService: new DocumentListService(new D1DocumentListStore(requestDb), permissions, new MetadataDocumentListDefinitionResolver(metadata)),
     customizations: metadata.customizationStore,
-    translations: new D1TranslationStore(env.DB),
+    translations: new D1TranslationStore(requestDb),
     apps: installedApps,
     users,
-    search: new D1SearchStore(env.DB),
-    reports: new D1ReportService(env.DB),
-    appReports: new AppReportService(env.DB),
-    deskViews: new D1DeskViewStore(env.DB),
+    search: new D1SearchStore(requestDb),
+    reports: new D1ReportService(requestDb),
+    appReports: new AppReportService(requestDb),
+    deskViews: new D1DeskViewStore(requestDb),
     // Typed explicitly: the context is now a standalone object rather than an inline
     // argument, so it no longer inherits the parameter's contextual types.
     async runCommand(command: MutationCommand) {
@@ -915,7 +918,7 @@ async function serveFrappeApiInner(
     ...(env.INTERNAL_AUTH_SECRET
       ? {
         webForms: {
-          db: env.DB,
+          db: requestDb,
           salt: env.INTERNAL_AUTH_SECRET,
           clientAddress: request.headers.get("CF-Connecting-IP") ?? "unknown",
         },
@@ -923,15 +926,21 @@ async function serveFrappeApiInner(
       : {}),
     // Attachments. Absent when no bucket is bound, and then `upload_file` answers 404
     // instead of writing a database row that points at bytes which were never stored.
-    ...(env.FILES ? { files: { db: env.DB, bucket: env.FILES } } : {}),
+    ...(env.FILES ? { files: { db: requestDb, bucket: env.FILES } } : {}),
   };
 
   // Downloads first: they are not `/api/` paths, so the API router would not claim them.
   const fileResponse = await routeFileDownload(url, frappeContext);
   if (fileResponse) return fileResponse;
 
-  const response = await routeFrappeApi(request, url, frappeContext);
+  let response = await routeFrappeApi(request, url, frappeContext);
   if (!response) return null;
+  if (request.method.toUpperCase() !== "GET" && typeof (requestDb as D1DatabaseSession).getBookmark === "function") {
+    // The aggregate Durable Object commits through its own D1 session. Advance this
+    // request's primary session after it returns so the bookmark sent to the browser
+    // includes that completed write and the next replica read is read-your-writes safe.
+    await requestDb.prepare("SELECT 1 AS ok").first().catch(() => null);
+  }
 
   // Slide the cookie only when it is close to expiring, so an active user is not
   // logged out mid-session and an idle one still ages out.
@@ -939,7 +948,63 @@ async function serveFrappeApiInner(
     const refreshed = await slideSession(established, authContext);
     if (refreshed) response.headers.append("set-cookie", refreshed);
   }
+  const completed = performance.now();
+  const headers = new Headers(response.headers);
+  headers.set(
+    "server-timing",
+    `auth;dur=${(authenticationFinished - requestStarted).toFixed(1)}, route;dur=${(completed - authenticationFinished).toFixed(1)}, total;dur=${(completed - requestStarted).toFixed(1)}`,
+  );
+  const metaStats = metadata.cacheStats();
+  const permissionStats = permissions.cacheStats();
+  headers.set("x-forge-meta-cache", `hit=${metaStats.hits}, miss=${metaStats.misses}`);
+  headers.set("x-forge-permission-cache", `hit=${permissionStats.hits}, miss=${permissionStats.misses}`);
+  const bookmark = typeof (requestDb as D1DatabaseSession).getBookmark === "function"
+    ? (requestDb as D1DatabaseSession).getBookmark()
+    : null;
+  if (bookmark) headers.set("x-d1-bookmark", bookmark);
+  response = new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
   return response;
+}
+
+const REPLICA_SAFE_METHODS = new Set([
+  "frappe.desk.form.load.getdoctype",
+  "frappe.client.get_list",
+  "frappe.desk.reportview.get",
+  "frappe.client.get_count",
+  "frappe.desk.reportview.get_count",
+  "frappe.client.get_value",
+  "metaforge.api.get_business_context",
+  "metaforge.api.get_contextual_list",
+  "metaforge.api.get_contextual_count",
+  "metaforge.api.get_list_view",
+  "frappe.desk.search.search_link",
+  "metaforge.api.get_capabilities",
+  "metaforge.api.resolve_display_values",
+  "metaforge.api.get_application_catalog",
+  "metaforge.api.get_overview",
+  "metaforge.api.get_app_manifest",
+  "metaforge.api.global_search",
+  "metaforge.api.get_access_profile",
+  "metaforge.api.list_users",
+]);
+
+function readDatabaseForRequest(request: Request, url: URL, database: D1Database): D1Database {
+  if (!database.withSession) return database;
+  if (request.method.toUpperCase() !== "GET") return database.withSession("first-primary");
+  const resourceRead = url.pathname.startsWith("/api/resource/");
+  const methodName = url.pathname.startsWith("/api/method/")
+    ? url.pathname.slice("/api/method/".length)
+    : "";
+  if (!resourceRead && !REPLICA_SAFE_METHODS.has(methodName)) return database.withSession("first-primary");
+  const candidate = request.headers.get("x-d1-bookmark")?.trim();
+  // The first browser read establishes a primary bookmark. Later reads may use a
+  // replica that has reached that bookmark, avoiding stale post-login/post-write data.
+  const constraint = candidate && candidate.length <= 1024 ? candidate : "first-primary";
+  return database.withSession(constraint);
 }
 
 function coerceImportRow(row: JsonObject, fields: Array<{ fieldname: string; fieldtype: string }>): JsonObject {

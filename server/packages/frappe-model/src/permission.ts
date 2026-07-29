@@ -43,34 +43,46 @@ export interface DocumentAccessStore {
 
 export class D1DocumentAccessStore implements DocumentAccessStore {
   private readonly db: D1Database | D1DatabaseSession;
+  private readonly shareCache = new Map<string, Promise<ShareGrant | null>>();
+  private readonly anyShareCache = new Map<string, Promise<boolean>>();
+  private readonly userPermissionCache = new Map<string, Promise<UserPermissionRecord[]>>();
   constructor(db: D1Database) { this.db = db.withSession?.("first-primary") ?? db; }
 
   async getShare(tenantId: string, doctype: string, name: string, user: string): Promise<ShareGrant | null> {
-    const row = await this.db.prepare(
-      `SELECT can_read,can_write,can_share FROM document_shares WHERE tenant_id=?1 AND doctype=?2 AND name=?3 AND user=?4`,
-    ).bind(tenantId, doctype, name, user).first<{ can_read: number; can_write: number; can_share: number }>();
-    return row ? { read: row.can_read === 1, write: row.can_write === 1, share: row.can_share === 1 } : null;
+    const key = [tenantId, doctype, name, user].join("\u0000");
+    return this.memo(this.shareCache, key, async () => {
+      const row = await this.db.prepare(
+        `SELECT can_read,can_write,can_share FROM document_shares WHERE tenant_id=?1 AND doctype=?2 AND name=?3 AND user=?4`,
+      ).bind(tenantId, doctype, name, user).first<{ can_read: number; can_write: number; can_share: number }>();
+      return row ? { read: row.can_read === 1, write: row.can_write === 1, share: row.can_share === 1 } : null;
+    });
   }
 
   async hasAnyShare(tenantId: string, doctype: string, user: string): Promise<boolean> {
-    const row = await this.db.prepare(
-      `SELECT 1 AS found FROM document_shares WHERE tenant_id=?1 AND doctype=?2 AND user=?3 AND can_read=1 LIMIT 1`,
-    ).bind(tenantId, doctype, user).first<{ found: number }>();
-    return row?.found === 1;
+    const key = [tenantId, doctype, user].join("\u0000");
+    return this.memo(this.anyShareCache, key, async () => {
+      const row = await this.db.prepare(
+        `SELECT 1 AS found FROM document_shares WHERE tenant_id=?1 AND doctype=?2 AND user=?3 AND can_read=1 LIMIT 1`,
+      ).bind(tenantId, doctype, user).first<{ found: number }>();
+      return row?.found === 1;
+    });
   }
 
   async listUserPermissions(tenantId: string, user: string, applicableForDoctype?: string): Promise<UserPermissionRecord[]> {
-    const result = applicableForDoctype
-      ? await this.db.prepare(
-        `SELECT user,allow_doctype,allow_name,applicable_for_doctype,is_default,hide_descendants,created_by,created_at
-         FROM user_permissions WHERE tenant_id=?1 AND user=?2 AND (applicable_for_doctype='' OR applicable_for_doctype=?3)
-         ORDER BY allow_doctype,allow_name`,
-      ).bind(tenantId, user, applicableForDoctype).all<UserPermissionRecord>()
-      : await this.db.prepare(
-        `SELECT user,allow_doctype,allow_name,applicable_for_doctype,is_default,hide_descendants,created_by,created_at
-         FROM user_permissions WHERE tenant_id=?1 AND user=?2 ORDER BY applicable_for_doctype,allow_doctype,allow_name`,
-      ).bind(tenantId, user).all<UserPermissionRecord>();
-    return (result.results ?? []).map((row) => ({ ...row, is_default: Boolean(row.is_default), hide_descendants: Boolean(row.hide_descendants) }));
+    const key = [tenantId, user, applicableForDoctype ?? "*"].join("\u0000");
+    return this.memo(this.userPermissionCache, key, async () => {
+      const result = applicableForDoctype
+        ? await this.db.prepare(
+          `SELECT user,allow_doctype,allow_name,applicable_for_doctype,is_default,hide_descendants,created_by,created_at
+           FROM user_permissions WHERE tenant_id=?1 AND user=?2 AND (applicable_for_doctype='' OR applicable_for_doctype=?3)
+           ORDER BY allow_doctype,allow_name`,
+        ).bind(tenantId, user, applicableForDoctype).all<UserPermissionRecord>()
+        : await this.db.prepare(
+          `SELECT user,allow_doctype,allow_name,applicable_for_doctype,is_default,hide_descendants,created_by,created_at
+           FROM user_permissions WHERE tenant_id=?1 AND user=?2 ORDER BY applicable_for_doctype,allow_doctype,allow_name`,
+        ).bind(tenantId, user).all<UserPermissionRecord>();
+      return (result.results ?? []).map((row) => ({ ...row, is_default: Boolean(row.is_default), hide_descendants: Boolean(row.hide_descendants) }));
+    });
   }
 
   async putUserPermission(tenantId: string, record: UserPermissionRecord): Promise<UserPermissionRecord> {
@@ -81,6 +93,7 @@ export class D1DocumentAccessStore implements DocumentAccessStore {
        DO UPDATE SET is_default=excluded.is_default,hide_descendants=excluded.hide_descendants,created_by=excluded.created_by,created_at=excluded.created_at`,
     ).bind(tenantId, record.user, record.allow_doctype, record.allow_name, record.applicable_for_doctype,
       record.is_default ? 1 : 0, record.hide_descendants ? 1 : 0, record.created_by, record.created_at).run();
+    this.invalidateUserPermissions(tenantId, record.user);
     return record;
   }
 
@@ -88,10 +101,35 @@ export class D1DocumentAccessStore implements DocumentAccessStore {
     await this.db.prepare(
       `DELETE FROM user_permissions WHERE tenant_id=?1 AND user=?2 AND allow_doctype=?3 AND allow_name=?4 AND applicable_for_doctype=?5`,
     ).bind(tenantId, user, allowDoctype, allowName, applicableForDoctype).run();
+    this.invalidateUserPermissions(tenantId, user);
+  }
+
+  private async memo<T>(cache: Map<string, Promise<T>>, key: string, loader: () => Promise<T>): Promise<T> {
+    const cached = cache.get(key);
+    if (cached) return cached;
+    const pending = loader();
+    cache.set(key, pending);
+    try {
+      return await pending;
+    } catch (error) {
+      cache.delete(key);
+      throw error;
+    }
+  }
+
+  private invalidateUserPermissions(tenantId: string, user: string): void {
+    const prefix = `${tenantId}\u0000${user}\u0000`;
+    for (const key of this.userPermissionCache.keys()) {
+      if (key.startsWith(prefix)) this.userPermissionCache.delete(key);
+    }
   }
 }
 
 export class MetadataPermissionService {
+  private readonly readScopeCache = new Map<string, Promise<ReadAccessScope>>();
+  private readScopeCacheHits = 0;
+  private readScopeCacheMisses = 0;
+
   constructor(
     private readonly metadata: MetadataStore,
     private readonly base = new PermissionService(),
@@ -122,6 +160,26 @@ export class MetadataPermissionService {
   }
 
   async getReadScope(actor: Actor, tenantId: string, doctype: string): Promise<ReadAccessScope> {
+    const key = [tenantId, actor.user_id, [...actor.roles].sort().join(","), doctype].join("\u0000");
+    const cached = this.readScopeCache.get(key);
+    if (cached) {
+      this.readScopeCacheHits += 1;
+      return cached;
+    }
+    this.readScopeCacheMisses += 1;
+    const pending = this.resolveReadScope(actor, tenantId, doctype);
+    this.readScopeCache.set(key, pending);
+    try {
+      return await pending;
+    } finally {
+      // Deduplicate concurrent list/count work only. A share can be granted or
+      // revoked by another service instance during this request, so retaining a
+      // resolved scope would make authorization stale after the mutation.
+      if (this.readScopeCache.get(key) === pending) this.readScopeCache.delete(key);
+    }
+  }
+
+  private async resolveReadScope(actor: Actor, tenantId: string, doctype: string): Promise<ReadAccessScope> {
     if (isAdmin(actor)) return { mode: "all", actor_user_id: actor.user_id, user_permissions: [] };
     const meta = await this.metadata.getDocType(tenantId, doctype);
     const direct = this.directReadMode(meta, actor, doctype);
@@ -129,6 +187,10 @@ export class MetadataPermissionService {
     if (!direct && !shared) throw errors.permission(`Role is not allowed to read ${doctype}`);
     const mode = direct === "all" ? "all" : direct === "owner" && shared ? "owner_or_shared" : direct === "owner" ? "owner" : "shared";
     return { mode, actor_user_id: actor.user_id, user_permissions: await this.userPermissionConstraints(tenantId, actor, doctype, meta) };
+  }
+
+  cacheStats(): { hits: number; misses: number } {
+    return { hits: this.readScopeCacheHits, misses: this.readScopeCacheMisses };
   }
 
   async canReadDocument(actor: Actor, tenantId: string, document: CanonicalDocument<JsonObject>): Promise<boolean> {

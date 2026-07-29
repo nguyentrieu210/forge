@@ -665,6 +665,9 @@ importers:
       '@metaforge/core':
         specifier: workspace:*
         version: link:../core
+      '@metaforge/shell':
+        specifier: workspace:*
+        version: link:../shell
       '@metaforge/ui':
         specifier: workspace:*
         version: link:../ui

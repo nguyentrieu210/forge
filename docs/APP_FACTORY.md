@@ -37,7 +37,7 @@ Ba mắt xích đã nối:
 |---|---|---|
 | Giao diện ở đâu | máy lập trình viên, sau proxy | gateway phục vụ tĩnh, **cùng origin** với API |
 | Manifest client | file TS biên dịch cứng mỗi app | `metaforge.api.get_app_manifest` — server dựng từ app đã cài |
-| Màn tác nghiệp | React viết tay cho từng DocType | suy từ workflow metadata (`approval:<DocType>`) |
+| Màn tác nghiệp | React viết tay cho từng DocType | suy từ workflow hoặc khai `screens` (`screen:<name>`) |
 
 Kết quả: **một bundle duy nhất phục vụ mọi app**, và thêm app là một lệnh ghi dữ liệu.
 
@@ -106,6 +106,87 @@ viết tay quên cờ này sẽ âm thầm cho người tạo tự duyệt đơn
 
 Trường trạng thái được **tự thêm** (Select, read-only, options = danh sách state). Quên nó thì
 workflow ghi vào cột DocType không có, và hỏng ngay ở transition đầu tiên.
+
+## Design Contract và màn riêng cài cùng app
+
+`brand` chỉ chọn bảng màu. App có thể điều chỉnh ngôn ngữ hình khối và nhịp giao diện mà không
+fork CSS:
+
+```json
+"brand": "aurora",
+"design": {
+  "density": "compact",
+  "radius": "soft",
+  "contentWidth": "wide"
+}
+```
+
+| Thuộc tính | Giá trị |
+|---|---|
+| `density` | `compact` · `comfortable` · `touch` |
+| `radius` | `square` · `soft` · `round` |
+| `contentWidth` | `contained` · `wide` · `fluid` |
+
+App cần một bàn điều hành riêng không còn phải nhét React của một khách vào bundle dùng chung.
+Khai `screens` trong brief; compiler sinh `screen:<name>`, server lọc theo quyền và runtime chung
+dựng màn:
+
+```json
+"home": "screen:sales-cockpit",
+"screens": [{
+  "name": "sales-cockpit",
+  "label": "Bàn điều hành bán hàng",
+  "permission": "Lead",
+  "mode": "focus",
+  "columns": 2,
+  "group": "Điều hành",
+  "blocks": [
+    {
+      "id": "open-leads",
+      "type": "metric",
+      "label": "Khách tiềm năng",
+      "doctype": "Lead",
+      "filters": { "status": "Open" },
+      "tone": "info",
+      "route": "/app/Lead"
+    },
+    {
+      "id": "latest-leads",
+      "type": "list",
+      "label": "Mới cập nhật",
+      "doctype": "Lead",
+      "fields": ["name", "lead_name", "status"],
+      "orderBy": "modified desc",
+      "limit": 8
+    },
+    {
+      "id": "send-quote",
+      "type": "action",
+      "label": "Gửi báo giá",
+      "action": "gui-bao-gia",
+      "span": 2
+    }
+  ]
+}]
+```
+
+Ba block đầu tiên cố ý hẹp:
+
+- `metric`: đếm một DocType với bộ lọc đã kiểm field.
+- `list`: đọc các field đã khai, có sắp xếp và giới hạn tối đa 50 dòng.
+- `action`: nhúng một action đã khai trong chính app.
+
+Không nhận HTML, JavaScript hay endpoint tuỳ ý. Mọi dữ liệu vẫn đi qua adapter, context nghiệp vụ
+và quyền DocType hiện hữu; action vẫn cần Worker và quyền ghi. Tên DocType, field, filter, action,
+`span` và route được kiểm cả lúc biên dịch brief lẫn lúc server nhận package. Ranh giới này giữ
+được hai điều cùng lúc: app có màn thật sự riêng, nhưng “cài app” vẫn là cài dữ liệu chứ không biến
+thành một lần deploy code.
+
+`mode` nhận `desk`, `focus`, `touch`; nó là ý định bố cục của màn, tách khỏi `design.density` là nhịp
+chung của toàn app. `menu: false` giữ màn có thể mở bằng URL hoặc làm home nhưng không chiếm chỗ
+trong sidebar. Tên trong brief là tên cục bộ; compiler tự thêm namespace app vào package và route
+(`screen:sales-cockpit` của app `crm` thành `screen:crm-sales-cockpit`) để hai app cài chung không
+thể giành cùng một URL.
 
 ## Màn tác nghiệp suy từ metadata
 

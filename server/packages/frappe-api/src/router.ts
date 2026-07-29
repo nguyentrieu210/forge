@@ -54,7 +54,7 @@ import { assertKanbanField, type D1DeskViewStore } from "./desk-views.js";
  * wire contract changes — otherwise a browser keeps serving documents shaped by
  * the previous contract after a deploy.
  */
-export const FORGE_CONTRACT_VERSION = "16.0.0-forge.1";
+export const FORGE_CONTRACT_VERSION = "16.0.0-forge.2";
 
 export interface FrappeRouterContext {
   tenantId: string;
@@ -1035,6 +1035,9 @@ async function dispatchMethod(
     case "metaforge.api.get_contextual_count":
       return methodResponse(await contextualCount(args, context));
 
+    case "metaforge.api.get_list_view":
+      return methodResponse(await listView(args, context));
+
     case "frappe.desk.search.search_link":
       return methodResponse(await searchLink(args, context));
 
@@ -1107,7 +1110,7 @@ async function getDocType(args: FrappeArgs, context: FrappeRouterContext): Promi
     }
   }
 
-  return toFrappeMetaBundle({
+  const bundle = toFrappeMetaBundle({
     // `filterMetaForActor` strips the DocPerm rows, which is right for the native
     // API — it deliberately never discloses the permission matrix. But the Frappe
     // contract carries them, and the client derives its list columns and field
@@ -1121,6 +1124,39 @@ async function getDocType(args: FrappeArgs, context: FrappeRouterContext): Promi
     workflow,
     maskedFields: maskedFieldNames(full, filtered),
   });
+  const translations = await context.translations.translate(
+    context.tenantId,
+    context.language || context.actor.locale || "en",
+    collectMetaStrings([filtered, ...children], workflow),
+  );
+  return { ...bundle, translations: translations as unknown as JsonValue };
+}
+
+function collectMetaStrings(
+  metas: DocTypeMeta[],
+  workflow: Awaited<ReturnType<MetadataStore["getWorkflow"]>>,
+): string[] {
+  const strings = new Set<string>();
+  const add = (value: unknown) => {
+    if (typeof value === "string" && value.trim()) strings.add(value.trim());
+  };
+  for (const meta of metas) {
+    add(meta.name);
+    add(meta.label);
+    for (const field of meta.fields) {
+      add(field.label);
+      add(field.description);
+      if (field.fieldtype === "Select" && typeof field.options === "string") {
+        for (const option of field.options.split("\n")) add(option);
+      }
+    }
+  }
+  if (workflow) {
+    add(workflow.name);
+    for (const state of workflow.states) add(state.state);
+    for (const transition of workflow.transitions) add(transition.action);
+  }
+  return [...strings];
 }
 
 /**
@@ -1337,53 +1373,67 @@ async function resolveDisplayValues(args: FrappeArgs, context: FrappeRouterConte
       name: typeof item.name === "string" ? item.name : "",
     }))
     .filter((item) => item.doctype && item.name);
-  const metadata = new Map<string, ReturnType<typeof context.metadata.getDocType>>();
-  const getMeta = (doctype: string) => {
-    const cached = metadata.get(doctype);
-    if (cached) return cached;
-    const request = context.metadata.getDocType(context.tenantId, doctype);
-    metadata.set(doctype, request);
-    return request;
-  };
+  return batchDisplayValues(valid, context);
+}
 
-  const resolveOne = async ({ doctype, name }: { doctype: string; name: string }): Promise<JsonObject> => {
-    let label = name;
+async function batchDisplayValues(
+  items: Array<{ doctype: string; name: string }>,
+  context: FrappeRouterContext,
+  resolveLinkedTitle = true,
+): Promise<JsonObject[]> {
+  const labels = new Map(items.map((item) => [`${item.doctype}\u0000${item.name}`, item.name]));
+  const grouped = new Map<string, Set<string>>();
+  for (const item of items) {
+    const names = grouped.get(item.doctype) ?? new Set<string>();
+    names.add(item.name);
+    grouped.set(item.doctype, names);
+  }
+
+  await Promise.all([...grouped].map(async ([doctype, nameSet]) => {
     try {
-      const meta = await getMeta(doctype);
+      const meta = await context.metadata.getDocType(context.tenantId, doctype);
       const titleField = meta?.title_field;
-      if (titleField) {
-        const document = await loadReadable(doctype, name, context);
-        const candidate = document.data[titleField];
-        if (typeof candidate === "string" && candidate) label = candidate;
+      if (!meta || !titleField) return;
 
-        const titleMeta = meta?.fields?.find((field) => field.fieldname === titleField);
-        if (titleMeta?.fieldtype === "Link" && titleMeta.options && label === candidate) {
-          try {
-            const targetMeta = await getMeta(titleMeta.options);
-            const targetTitle = targetMeta?.title_field;
-            if (targetTitle) {
-              const referenced = await loadReadable(titleMeta.options, label, context);
-              const deeper = referenced.data[targetTitle];
-              if (typeof deeper === "string" && deeper) label = deeper;
-            }
-          } catch {
-            // Reference unreadable or gone — keep the first-hop value.
+      const firstHop = new Map<string, string>();
+      const names = [...nameSet];
+      for (let index = 0; index < names.length; index += 50) {
+        const chunk = names.slice(index, index + 50);
+        const page = await context.listService.list(context.actor, context.tenantId, {
+          doctype,
+          fields: ["name", titleField],
+          filters: [{ field: "name", operator: "in", value: chunk }] as unknown as JsonValue,
+          limit: chunk.length,
+        });
+        for (const raw of page.rows) {
+          const row = raw as JsonObject;
+          const name = typeof row.name === "string" ? row.name : "";
+          const label = typeof row[titleField] === "string" ? String(row[titleField]) : "";
+          if (name && label) {
+            firstHop.set(name, label);
+            labels.set(`${doctype}\u0000${name}`, label);
           }
         }
       }
-    } catch {
-      // An unreadable or missing reference degrades to its id.
-    }
-    return { doctype, name, label };
-  };
 
-  // Serial resolution created a waterfall on Link-heavy lists. Resolve a
-  // bounded number at once so one large page cannot flood D1.
-  const output: JsonObject[] = [];
-  for (let index = 0; index < valid.length; index += 16) {
-    output.push(...await Promise.all(valid.slice(index, index + 16).map(resolveOne)));
-  }
-  return output;
+      const titleMeta = meta.fields.find((field) => field.fieldname === titleField);
+      if (!resolveLinkedTitle || titleMeta?.fieldtype !== "Link" || !titleMeta.options) return;
+      const referenced = [...new Set(firstHop.values())].map((name) => ({ doctype: titleMeta.options!, name }));
+      const resolved = await batchDisplayValues(referenced, context, false);
+      const deeper = new Map(resolved.map((item) => [String(item.name), String(item.label)]));
+      for (const [name, firstLabel] of firstHop) {
+        labels.set(`${doctype}\u0000${name}`, deeper.get(firstLabel) ?? firstLabel);
+      }
+    } catch {
+      // Missing or unreadable references intentionally fall back to their ids.
+    }
+  }));
+
+  return items.map(({ doctype, name }) => ({
+    doctype,
+    name,
+    label: labels.get(`${doctype}\u0000${name}`) ?? name,
+  }));
 }
 
 // ---- workflow ---------------------------------------------------------------
@@ -2760,6 +2810,61 @@ async function contextualCount(args: FrappeArgs, context: FrappeRouterContext): 
   return typeof result === "number" ? result : Number((result as { count?: number }).count ?? 0);
 }
 
+async function listView(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const doctype = args.requireText("doctype", 160);
+  const requested = args.array<string>("fields") ?? ["name"];
+  const contextual = await contextFilters(doctype, args.object("context") ?? {}, context);
+  const filters = [
+    ...toKernelFilters(args.json("filters"), doctype),
+    ...contextual,
+  ];
+  const search = toKernelSearch(args.json("or_filters"));
+  const sort = toKernelSort(args.text("order_by"));
+  const listBody: JsonObject = {
+    doctype,
+    ...(requested.includes("*") ? {} : { fields: toKernelProjection(requested.map(String)) }),
+    filters: filters as unknown as JsonValue,
+    limit: clampPageLength(args.int("page_length", args.int("limit_page_length", 20))),
+    offset: args.int("limit_start", 0),
+    ...(search ? { search } : {}),
+    ...(sort.length ? { sort: sort as unknown as JsonValue } : {}),
+  };
+  const countBody: JsonObject = {
+    doctype,
+    filters: filters as unknown as JsonValue,
+    ...(search ? { search } : {}),
+  };
+  const metaPromise = requireMeta(doctype, context);
+  const [page, rawCount, meta, flags] = await Promise.all([
+    context.listService.list(context.actor, context.tenantId, listBody),
+    context.listService.count(context.actor, context.tenantId, countBody),
+    metaPromise,
+    metaPromise.then((value) => capabilityFlags(doctype, value, null, context)),
+  ]);
+  const rows = page.rows.map((row) => toFrappeListRow(row as JsonObject));
+  const linkFields = meta.fields.filter((field) => field.fieldtype === "Link" && field.options);
+  const displayItems: Array<{ doctype: string; name: string }> = [];
+  for (const row of rows) {
+    for (const field of linkFields) {
+      const value = row[field.fieldname];
+      if (typeof value === "string" && value) {
+        displayItems.push({ doctype: field.options!, name: value });
+      }
+    }
+  }
+  const displayValues = await batchDisplayValues(
+    [...new Map(displayItems.map((item) => [`${item.doctype}\u0000${item.name}`, item])).values()],
+    context,
+  );
+  const count = typeof rawCount === "number" ? rawCount : Number((rawCount as { count?: number }).count ?? 0);
+  return {
+    rows: rows as unknown as JsonValue,
+    count,
+    capabilities: flags,
+    display_values: displayValues as unknown as JsonValue,
+  };
+}
+
 function isPlatformAdmin(context: FrappeRouterContext): boolean {
   const { user_id: userId, roles } = context.actor;
   return userId === "Administrator" || roles.includes("Administrator") || roles.includes("System Manager");
@@ -3032,8 +3137,11 @@ async function clientManifest(args: FrappeArgs, context: FrappeRouterContext): P
 
   const nav: JsonObject[] = [];
   const actions: JsonObject[] = [];
+  const screens: JsonObject[] = [];
   const seenPaths = new Set<string>();
   for (const app of apps) {
+    const permittedActionNames = new Set<string>();
+    const permittedScreenNames = new Set<string>();
     /**
      * Actions the actor may actually run, by the SAME gate their menu entry uses.
      *
@@ -3047,11 +3155,45 @@ async function clientManifest(args: FrappeArgs, context: FrappeRouterContext): P
       try {
         await context.permissions.assert({ actor: context.actor, tenantId: context.tenantId, doctype: action.permission_doctype, action: "save", data: {} });
         actions.push({ ...(action as unknown as JsonObject), app: app.app_id });
+        permittedActionNames.add(action.name);
       } catch {
         // Omitted rather than offered-and-refused.
       }
     }
+    for (const screen of app.screens ?? []) {
+      try {
+        await context.permissions.getReadScope(context.actor, context.tenantId, screen.permission_doctype);
+        const visibleBlocks = [];
+        for (const block of screen.blocks) {
+          if (block.type === "action") {
+            if (permittedActionNames.has(block.action)) visibleBlocks.push(block);
+            continue;
+          }
+          try {
+            await context.permissions.getReadScope(context.actor, context.tenantId, block.doctype);
+            visibleBlocks.push(block);
+          } catch {
+            // A screen gate never grants access to a different block doctype.
+          }
+        }
+        // Do not expose an empty shell or leave a nav item that can only open one.
+        if (!visibleBlocks.length) continue;
+        screens.push({
+          ...(screen as unknown as JsonObject),
+          blocks: visibleBlocks as unknown as JsonValue,
+          app: app.app_id,
+        });
+        permittedScreenNames.add(screen.name);
+      } catch {
+        // A composed screen is omitted before render when its underlying scope is unreadable.
+      }
+    }
     for (const item of await permittedNav(app.nav, context)) {
+      if (
+        item.kind === "experience"
+        && item.key.startsWith("screen:")
+        && !permittedScreenNames.has(item.key.slice("screen:".length))
+      ) continue;
       const path = navItemPath(item as Parameters<typeof navItemPath>[0]);
       // Two entries resolving to one path is not a duplicate menu line — the client
       // router matches the FIRST only, so the second is permanently unreachable.
@@ -3087,6 +3229,7 @@ async function clientManifest(args: FrappeArgs, context: FrappeRouterContext): P
     ...(client.brand ? { brand: client.brand } : {}),
     ...(client.domain ? { domain: client.domain } : {}),
     ...(client.locale ? { locale: client.locale as unknown as JsonValue } : {}),
+    ...(client.design ? { design: client.design as unknown as JsonValue } : {}),
     catalogMode: client.catalog_mode ?? "hybrid",
     businessContext: {
       mode: "server-resolved",
@@ -3097,6 +3240,7 @@ async function clientManifest(args: FrappeArgs, context: FrappeRouterContext): P
     home: home as unknown as JsonValue,
     nav: nav as unknown as JsonValue,
     actions: actions as unknown as JsonValue,
+    screens: screens as unknown as JsonValue,
     apps: apps.map((app) => ({ id: app.app_id, name: app.app_name, version: app.version })) as unknown as JsonValue,
   };
 }

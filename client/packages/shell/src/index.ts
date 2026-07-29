@@ -32,6 +32,7 @@ export {
 export { LoginForm, type LoginFormProps } from "./auth/LoginForm.js";
 export { ChangePasswordDialog, type ChangePasswordDialogProps } from "./auth/ChangePasswordDialog.js";
 export { useBrand, applyBrand, isBrandMode, BRANDS, type BrandMode } from "./brand.js";
+export { applyDesign } from "./design.js";
 export { resolveIcon } from "./icon.js";
 export {
   BusinessContextProvider, BusinessContextBar, useBusinessContext,

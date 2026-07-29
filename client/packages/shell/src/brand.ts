@@ -33,16 +33,24 @@ export function applyBrand(brand: BrandMode): void {
   else document.documentElement.setAttribute("data-brand", brand);
 }
 
-export function useBrand(): [BrandMode, (b: BrandMode) => void] {
-  const [brand, setBrand] = useState<BrandMode>(() => {
+export function useBrand(controlled?: BrandMode): [BrandMode, (b: BrandMode) => void] {
+  const [userBrand, setUserBrand] = useState<BrandMode>(() => {
     if (typeof localStorage === "undefined") return "blue";
     const value = localStorage.getItem(KEY);
     return isBrandMode(value) ? value : "blue";
   });
   useEffect(() => {
-    applyBrand(brand);
-    if (typeof localStorage !== "undefined") localStorage.setItem(KEY, brand);
-  }, [brand]);
-  const set = useCallback((value: BrandMode) => setBrand(value), []);
-  return [brand, set];
+    const effective = controlled ?? userBrand;
+    applyBrand(effective);
+    // A manifest-controlled palette belongs to the app, not to the user's preference
+    // for apps that do not specify one. Do not overwrite that preference while visiting
+    // a branded app.
+    if (controlled === undefined && typeof localStorage !== "undefined") {
+      localStorage.setItem(KEY, effective);
+    }
+  }, [controlled, userBrand]);
+  const set = useCallback((value: BrandMode) => {
+    if (controlled === undefined) setUserBrand(value);
+  }, [controlled]);
+  return [controlled ?? userBrand, set];
 }

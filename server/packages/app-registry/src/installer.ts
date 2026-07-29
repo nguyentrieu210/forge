@@ -28,6 +28,8 @@ export interface InstalledAppRecord {
   reports: AppManifest["reports"];
   /** Form-driven operations, so the generic client can render them without a build. */
   actions: AppManifest["actions"];
+  /** App-owned composed screens, so install and presentation remain one artifact. */
+  screens: AppManifest["screens"];
   /** Presentation, so the generic client can be told what to render without a build. */
   client: AppManifest["client"] | null;
   /** Public catalogue and order intake, carried so a storefront request needs no
@@ -83,6 +85,7 @@ export class AppInstaller {
         validators: manifest.validators ?? [],
         reports: manifest.reports ?? [],
         actions: manifest.actions ?? [],
+        screens: manifest.screens ?? [],
         client: manifest.client ?? null,
         storefront: manifest.storefront ?? null,
       };

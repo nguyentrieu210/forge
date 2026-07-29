@@ -66,6 +66,7 @@ import type {
   Capabilities,
   ShareInfo,
   ConnectionCount,
+  ListViewSnapshot,
 } from "./dto.js";
 
 interface Envelope<T> {
@@ -91,6 +92,7 @@ export class FrappeAdapterImpl implements FrappeAdapter {
   private app: FrappeApp;
   private csrf: () => string;
   private csrfValue = "";
+  private d1Bookmark = "";
   private sessionExpiredHandlers = new Set<() => void>();
   /**
    * Metadata is effectively immutable for the lifetime of a Desk session.
@@ -107,16 +109,31 @@ export class FrappeAdapterImpl implements FrappeAdapter {
       : undefined;
     this.app = new FrappeApp(opts.url ?? "", tokenParams, undefined, opts.headers);
     this.csrf = opts.getCsrfToken ?? (() => this.csrfValue);
+    this.app.axios.interceptors.request.use((config) => {
+      if (!this.d1Bookmark) return config;
+      const headers = config.headers as unknown as {
+        set?: (name: string, value: string) => void;
+        [key: string]: unknown;
+      };
+      if (typeof headers.set === "function") headers.set("x-d1-bookmark", this.d1Bookmark);
+      else headers["x-d1-bookmark"] = this.d1Bookmark;
+      return config;
+    });
     // frappe-js-sdk tự đọc `window.csrf_token` trong interceptor riêng của nó (không đi qua getCsrfToken
     // ở trên) — setCsrfToken() ghi cả 2 nơi để mọi request ghi (db/call/file, cùng dùng chung axios) đều
     // tự động có X-Frappe-CSRF-Token mà không cần app tự set header thủ công.
     this.app.axios.interceptors.response.use(
-      (response) => response,
+      (response) => {
+        const bookmark = response.headers?.["x-d1-bookmark"];
+        if (typeof bookmark === "string" && bookmark.length <= 1024) this.d1Bookmark = bookmark;
+        return response;
+      },
       (error: unknown) => {
         // Chỉ kind "auth" (401/AuthenticationError/SessionExpired) mới là MẤT XÁC THỰC thật —
         // "permission" (403 trên 1 bản ghi cụ thể) KHÔNG được coi là hết phiên (tránh đá user
         // về màn login chỉ vì thiếu quyền một thao tác).
         if (coreMapError(error).kind === "auth") {
+          this.d1Bookmark = "";
           for (const cb of this.sessionExpiredHandlers) {
             try {
               cb();
@@ -151,10 +168,12 @@ export class FrappeAdapterImpl implements FrappeAdapter {
 
   // ── auth/boot §1 ──────────────────────────────────────────────────────────
   async login(usr: string, pwd: string): Promise<void> {
+    this.d1Bookmark = "";
     await this.app.auth().loginWithUsernamePassword({ username: usr, password: pwd });
     this.metaCache.clear();
   }
   async logout(): Promise<void> {
+    this.d1Bookmark = "";
     await this.app.auth().logout();
     this.metaCache.clear();
   }
@@ -266,7 +285,7 @@ export class FrappeAdapterImpl implements FrappeAdapter {
   private async loadMeta(doctype: string): Promise<DocTypeMeta> {
     const r = await this.app
       .call()
-      .get<{ docs: DocTypeMeta[]; masked_fields?: string[] }>("frappe.desk.form.load.getdoctype", {
+      .get<{ docs: DocTypeMeta[]; masked_fields?: string[]; translations?: Record<string, string> }>("frappe.desk.form.load.getdoctype", {
         doctype,
         with_parent: 1,
       });
@@ -300,7 +319,8 @@ export class FrappeAdapterImpl implements FrappeAdapter {
       if (typeof field.description === "string" && field.description) sources.add(field.description);
       if (field.fieldtype === "Select" && field.options) for (const option of field.options.split("\n")) if (option) sources.add(option);
     }
-    const dict: Record<string, string> = await this.translateStrings([...sources]).catch(() => ({} as Record<string, string>));
+    const dict: Record<string, string> = r.translations
+      ?? await this.translateStrings([...sources]).catch(() => ({} as Record<string, string>));
     return {
       ...normalized,
       /**
@@ -368,6 +388,19 @@ export class FrappeAdapterImpl implements FrappeAdapter {
       limit: opts.pageLength,
       limit_start: opts.limitStart,
     } as never)) as Doc[];
+  }
+  async getListView(dt: string, opts: ListOpts = {}, selection?: BusinessContextSelection): Promise<ListViewSnapshot> {
+    const r = await this.app.call().get<Envelope<ListViewSnapshot>>("metaforge.api.get_list_view", {
+      doctype: dt,
+      fields: JSON.stringify(opts.fields ?? ["name"]),
+      filters: opts.filters ? JSON.stringify(opts.filters) : undefined,
+      or_filters: opts.orFilters ? JSON.stringify(opts.orFilters) : undefined,
+      order_by: opts.orderBy,
+      limit_start: opts.limitStart ?? 0,
+      page_length: opts.pageLength ?? 20,
+      context: selection ? JSON.stringify(selection) : undefined,
+    });
+    return this.unwrap(r);
   }
   async getContextualList(dt: string, opts: ListOpts = {}, selection?: BusinessContextSelection): Promise<Doc[]> {
     const r = await this.app.call().get<Envelope<Doc[]>>("metaforge.api.get_contextual_list", {

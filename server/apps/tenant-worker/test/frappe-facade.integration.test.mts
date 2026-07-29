@@ -265,6 +265,9 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     // Served verbatim so the client's own evaluator can act on it.
     const note = doc.fields.find((field: any) => field.fieldname === "billing_note");
     expect(note.mandatory_depends_on).toBe("eval:doc.is_billable == 1");
+    // Metadata and its translations travel together; the client must not pay a
+    // second authenticated HTTP round-trip before it can render this form.
+    expect(bundle.translations.Subject).toBe("Chủ đề");
   });
 
   let createdName = "";
@@ -386,6 +389,27 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
       doctype: "Field Visit", filters: { customer: "CUST-1" },
     }, "GET"));
     expect(Number(count)).toBeGreaterThanOrEqual(1);
+  });
+
+  it("serves one permission-aware list snapshot with diagnostics and a D1 bookmark", async () => {
+    const response = await method("metaforge.api.get_list_view", {
+      doctype: "Field Visit",
+      fields: ["name", "subject", "customer", "modified"],
+      filters: { customer: "CUST-1" },
+      page_length: 20,
+      context: { company: "Demo" },
+    }, "GET");
+    expect(response.status).toBe(200);
+    expect(response.headers.get("server-timing")).toMatch(/auth;dur=.*route;dur=.*total;dur=/);
+    expect(response.headers.get("x-forge-meta-cache")).toMatch(/hit=[1-9]\d*, miss=\d+/);
+    expect(response.headers.get("x-forge-permission-cache")).toMatch(/hit=\d+, miss=\d+/);
+    expect(response.headers.get("x-d1-bookmark")).toBeTruthy();
+
+    const snapshot = await unwrap(response);
+    expect(snapshot.rows.some((row: any) => row.name === createdName)).toBe(true);
+    expect(snapshot.count).toBeGreaterThanOrEqual(1);
+    expect(snapshot.capabilities.create).toBe(true);
+    expect(snapshot.display_values).toContainEqual({ doctype: "Customer", name: "CUST-1", label: "CUST-1" });
   });
 
   it("resolves link searches and display values through the permission layer", async () => {

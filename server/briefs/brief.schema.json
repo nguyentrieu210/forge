@@ -42,8 +42,34 @@
       "enum": [
         "zinc",
         "blue",
-        "warm"
+        "warm",
+        "sakura",
+        "emerald",
+        "ocean",
+        "violet",
+        "indigo",
+        "teal",
+        "amber",
+        "rose",
+        "aurora",
+        "sunset"
       ]
+    },
+    "design": {
+      "type": "object",
+      "description": "Ngôn ngữ hiển thị của app, tách khỏi màu brand. Runtime áp đồng nhất cho Desk và màn riêng.",
+      "additionalProperties": false,
+      "properties": {
+        "density": {
+          "enum": ["compact", "comfortable", "touch"]
+        },
+        "radius": {
+          "enum": ["square", "soft", "round"]
+        },
+        "contentWidth": {
+          "enum": ["contained", "wide", "fluid"]
+        }
+      }
     },
     "catalogMode": {
       "enum": [
@@ -426,6 +452,115 @@
           },
           "icon": {
             "type": "string"
+          }
+        },
+        "patternProperties": {
+          "^//": true
+        }
+      }
+    },
+    "screens": {
+      "type": "array",
+      "description": "Màn nghiệp vụ riêng được ghép từ block an toàn và đi cùng gói app. Không cần build frontend riêng.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "permission", "blocks"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$",
+            "maxLength": 64
+          },
+          "label": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "permission": {
+            "type": "string",
+            "description": "DocType dùng để chặn quyền đọc màn."
+          },
+          "mode": {
+            "enum": ["desk", "focus", "touch"]
+          },
+          "columns": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3
+          },
+          "group": {
+            "type": "string"
+          },
+          "icon": {
+            "type": "string"
+          },
+          "menu": {
+            "type": "boolean"
+          },
+          "blocks": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["id", "type", "label", "doctype"],
+                  "properties": {
+                    "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+                    "type": { "const": "metric" },
+                    "label": { "type": "string" },
+                    "description": { "type": "string" },
+                    "icon": { "type": "string" },
+                    "span": { "type": "integer", "minimum": 1, "maximum": 3 },
+                    "doctype": { "type": "string" },
+                    "filters": { "type": "object" },
+                    "tone": { "enum": ["neutral", "info", "success", "warning", "danger"] },
+                    "route": { "type": "string", "pattern": "^/" }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["id", "type", "label", "doctype", "fields"],
+                  "properties": {
+                    "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+                    "type": { "const": "list" },
+                    "label": { "type": "string" },
+                    "description": { "type": "string" },
+                    "icon": { "type": "string" },
+                    "span": { "type": "integer", "minimum": 1, "maximum": 3 },
+                    "doctype": { "type": "string" },
+                    "fields": {
+                      "type": "array",
+                      "minItems": 1,
+                      "uniqueItems": true,
+                      "items": { "type": "string" }
+                    },
+                    "filters": { "type": "object" },
+                    "orderBy": { "type": "string" },
+                    "limit": { "type": "integer", "minimum": 1, "maximum": 50 },
+                    "emptyText": { "type": "string" }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["id", "type", "label", "action"],
+                  "properties": {
+                    "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+                    "type": { "const": "action" },
+                    "label": { "type": "string" },
+                    "description": { "type": "string" },
+                    "icon": { "type": "string" },
+                    "span": { "type": "integer", "minimum": 1, "maximum": 3 },
+                    "action": { "type": "string" }
+                  }
+                }
+              ]
+            }
           }
         },
         "patternProperties": {
