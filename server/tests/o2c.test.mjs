@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createO2CControllerRegistry } from "../dist/packages/clouderp-selling/src/index.js";
-import { DocumentKernel, InMemoryMutationStore, deriveO2CStatus } from "../dist/packages/document-kernel/src/index.js";
+import { DocumentKernel, InMemoryMutationStore, deriveDeliveryNoteStatus, deriveO2CStatus } from "../dist/packages/document-kernel/src/index.js";
 import { createAndSubmit, mutate, orderDocument, seedStandardMasters } from "./helpers.mjs";
 
 const now = () => "2026-07-23T08:00:00.000Z";
@@ -56,6 +56,50 @@ test("Order-to-Cash posts exact minor-unit GL, stock and receivable allocation",
   const order = await store.getDocument("demo", "Sales Order", "SO-0001");
   assert.equal(order.data.delivered_percentage, "40.00");
   assert.equal(order.data.billed_percentage, "40.00");
+});
+
+test("non-sales Delivery Note posts stock without requiring a customer or Sales Order", async () => {
+  const { store, kernel } = setup();
+  await createAndSubmit(kernel, {
+    doctype: "Delivery Note", name: "DN-SAMPLE",
+    document: {
+      issue_purpose: "Xuất mẫu", company: "Demo", currency: "USD", posting_at: now(),
+      items: [{ row_id: "1", item_code: "ITEM-001", qty: "2", rate: "25", warehouse: "Stores", valuation_rate: "15" }],
+    },
+  });
+
+  const snapshot = store.snapshot();
+  const delivery = await store.getDocument("demo", "Delivery Note", "DN-SAMPLE");
+  assert.equal(delivery.data.issue_purpose, "Xuất mẫu");
+  assert.equal(delivery.data.against_sales_order, undefined);
+  assert.equal(delivery.data.customer, undefined);
+  assert.equal(delivery.status, "Submitted");
+  assert.equal(snapshot.stock_entries.at(-1).actual_qty_micros, -2_000_000);
+  assert.equal(snapshot.fulfillment_entries.length, 0, "non-sales issues must not advance a Sales Order");
+  assert.equal(await store.getStockBalanceMicros("demo", "ITEM-001", "Stores"), 98_000_000);
+});
+
+test("sales Delivery Note still requires both customer and submitted Sales Order", async () => {
+  const { kernel } = setup();
+  const base = {
+    issue_purpose: "Bán hàng", company: "Demo", currency: "USD", posting_at: now(),
+    items: [{ row_id: "1", item_code: "ITEM-001", qty: "1", rate: "25", warehouse: "Stores", valuation_rate: "15" }],
+  };
+  await assert.rejects(
+    mutate(kernel, {
+      commandId: "dn-sales-no-order", doctype: "Delivery Note", name: "DN-SALES-NO-ORDER",
+      action: "create", expectedVersion: null, document: { ...base, customer: "CUST-0001" },
+    }),
+    (error) => error.code === "VALIDATION_ERROR" && /Customer and Sales Order/.test(error.message),
+  );
+  await assert.rejects(
+    mutate(kernel, {
+      commandId: "dn-no-purpose", doctype: "Delivery Note", name: "DN-NO-PURPOSE",
+      action: "create", expectedVersion: null,
+      document: { company: "Demo", currency: "USD", posting_at: now(), items: base.items },
+    }),
+    (error) => error.code === "VALIDATION_ERROR" && /issue purpose/.test(error.message),
+  );
 });
 
 test("sales keeps billable UOM separate from stock UOM from order through delivery and invoice", async () => {
@@ -301,6 +345,8 @@ test("deriveO2CStatus maps docstatus + metrics to the ERPNext status label", () 
   assert.equal(deriveO2CStatus("Sales Order", 1, { deliveredPercentage: 100, billedPercentage: 100 }), "Completed");
   // Delivery Note is always To Bill when submitted (CloudForge bills the Sales Order)
   assert.equal(deriveO2CStatus("Delivery Note", 1), "To Bill");
+  assert.equal(deriveDeliveryNoteStatus(1, "Xuất mẫu"), "Submitted");
+  assert.equal(deriveDeliveryNoteStatus(1, "Bán hàng"), "To Bill");
   // Sales Invoice by outstanding
   assert.equal(deriveO2CStatus("Sales Invoice", 1, { outstandingMinor: 27500, grandTotalMinor: 27500 }), "Unpaid");
   assert.equal(deriveO2CStatus("Sales Invoice", 1, { outstandingMinor: 17500, grandTotalMinor: 27500 }), "Partly Paid");

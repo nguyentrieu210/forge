@@ -3730,12 +3730,14 @@
      "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'"
     },
     {
+     "//": "QĐ-2: với hàng catch weight, đây là số lượng tồn thứ hai chứ không còn là số đối chiếu.",
      "fieldname": "actual_weight_kg",
      "fieldtype": "Float",
      "label": "Tổng kg thực cân",
-     "depends_on": "eval:doc.uom != 'Kg' && doc.uom != 'KG' && doc.uom != 'kg'",
+     "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
+     "mandatory_depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
      "non_negative": true,
-     "description": "Chỉ nhập khi ĐVT giao dịch không phải Kg nhưng vẫn cần đối chiếu trọng lượng bình quân. Không thay đổi số lượng mua hay tồn kho."
+     "description": "Số kg thực nhận được ghi cùng số cây/lá vào sổ kho. Bắt buộc trước khi ghi sổ hàng nhôm cân theo kiện; huỷ phiếu sẽ đảo cả cây/lá, kg và giá trị."
     },
     {
      "fieldname": "actual_kg_per_m",

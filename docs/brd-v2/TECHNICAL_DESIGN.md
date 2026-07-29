@@ -632,6 +632,11 @@ Chấm lại từng tiêu chí kèm bằng chứng, không tuyên bố suông.
 
 **PHA 5 vẫn CHƯA được bắt đầu.** Điều kiện vào: brief bắt kịp thiết kế (PHA 4 còn lại) + user duyệt lại Cổng 3.
 
+> **Cập nhật thi hành 2026-07-30:** điều kiện trên đã được đáp ứng; PHA 5 đang chạy trên nhánh
+> `feat/alumdoor-v2-kho`. Trạng thái từng lát cắt và bằng chứng test nằm ở
+> [`PHASE_TRACKER.md`](PHASE_TRACKER.md). Đoạn “chưa bắt đầu” phía trên được giữ lại như mốc lịch sử
+> của lần chấm Cổng 3, không còn là trạng thái hiện hành.
+
 ### Hai việc CHỐT Ở PHA 5, không phải lỗ hổng
 
 | # | Việc | Vì sao để lại |

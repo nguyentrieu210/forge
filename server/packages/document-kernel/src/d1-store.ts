@@ -1,5 +1,6 @@
 import type {
   CanonicalDocument,
+  GeneralLedgerEntry,
   JsonObject,
   MutationPlan,
   MutationReceipt,
@@ -7,7 +8,7 @@ import type {
 } from "../../contracts/src/index.js";
 import { asCloudForgeError, documentKey, errors } from "../../core/src/index.js";
 import { fromScaledInt, toScaledInt } from "../../money/src/index.js";
-import { deriveO2CStatus } from "./status.js";
+import { deriveDeliveryNoteStatus, deriveO2CStatus } from "./status.js";
 import type { MutationStore, SubmittedQuantityQuery } from "./store.js";
 
 interface DocumentRow {
@@ -160,6 +161,43 @@ export class D1MutationStore implements MutationStore {
     return Number(row?.total ?? 0);
   }
 
+  async getVoucherGlEntries(tenantId: string, voucherType: string, voucherNo: string, voucherRevision: number): Promise<GeneralLedgerEntry[]> {
+    const result = await this.writer.prepare(
+      `SELECT line_key,account,party_type,party,debit_minor,credit_minor,currency,currency_scale,
+       cost_center,dimensions_json,remarks,posting_at
+       FROM gl_entries
+       WHERE tenant_id=?1 AND voucher_type=?2 AND voucher_no=?3 AND voucher_revision=?4
+       ORDER BY rowid`,
+    ).bind(tenantId, voucherType, voucherNo, voucherRevision).all<Record<string, unknown>>();
+    return (result.results ?? []).map((row) => ({
+      line_key: String(row.line_key),
+      account: String(row.account),
+      ...(row.party_type ? { party_type: String(row.party_type) } : {}),
+      ...(row.party ? { party: String(row.party) } : {}),
+      debit_minor: Number(row.debit_minor),
+      credit_minor: Number(row.credit_minor),
+      currency: String(row.currency),
+      currency_scale: Number(row.currency_scale),
+      ...(row.cost_center ? { cost_center: String(row.cost_center) } : {}),
+      ...(typeof row.dimensions_json === "string"
+        ? { accounting_dimensions: JSON.parse(row.dimensions_json) as JsonObject }
+        : {}),
+      ...(row.remarks ? { remarks: String(row.remarks) } : {}),
+      posting_at: String(row.posting_at),
+    }));
+  }
+
+  async getVoucherStockEntries(tenantId: string, voucherType: string, voucherNo: string, voucherRevision: number): Promise<StockLedgerEntry[]> {
+    const result = await this.writer.prepare(
+      `SELECT line_key,item_code,warehouse,actual_qty_micros,actual_weight_micros,valuation_rate_minor,stock_value_difference_minor,
+       qty_scale,currency_scale,currency,posting_at,batch_no,serial_no,allow_negative_stock
+       FROM stock_ledger_entries
+       WHERE tenant_id=?1 AND voucher_type=?2 AND voucher_no=?3 AND voucher_revision=?4
+       ORDER BY rowid`,
+    ).bind(tenantId, voucherType, voucherNo, voucherRevision).all<Record<string, unknown>>();
+    return (result.results ?? []).map(mapStockLedgerRow);
+  }
+
   async getStockLedgerHistory(tenantId: string, itemCode: string, warehouse: string, throughPostingAt?: string, batchNo?: string): Promise<StockLedgerEntry[]> {
     // Dựng điều kiện theo danh sách thay vì nối chuỗi hai nhánh: thêm tham số thứ năm vào
     // lối viết `?4` cố định cũ là chỗ rất dễ lệch số thứ tự, và lệch một số là truy vấn sai
@@ -173,17 +211,7 @@ export class D1MutationStore implements MutationStore {
       FROM stock_ledger_entries WHERE ${conditions.join(" AND ")}
       ORDER BY posting_at,rowid`;
     const result = await this.writer.prepare(sql).bind(...values).all<Record<string, unknown>>();
-    return (result.results ?? []).map((row) => ({
-      line_key: String(row.line_key), item_code: String(row.item_code), warehouse: String(row.warehouse),
-      actual_qty_micros: Number(row.actual_qty_micros),
-      // `!= null` bắt cả null lẫn undefined mà VẪN giữ số 0 — `row.x ? …` sẽ nuốt mất cân 0.
-      ...(row.actual_weight_micros != null ? { actual_weight_micros: Number(row.actual_weight_micros) } : {}),
-      valuation_rate_minor: Number(row.valuation_rate_minor),
-      stock_value_difference_minor: Number(row.stock_value_difference_minor), qty_scale: 6,
-      currency_scale: Number(row.currency_scale), currency: String(row.currency), posting_at: String(row.posting_at),
-      ...(row.batch_no ? { batch_no: String(row.batch_no) } : {}), ...(row.serial_no ? { serial_no: String(row.serial_no) } : {}),
-      allow_negative_stock: Number(row.allow_negative_stock) === 1,
-    }));
+    return (result.results ?? []).map(mapStockLedgerRow);
   }
 
   async isStockBundleUsed(tenantId: string, bundleName: string): Promise<boolean> {
@@ -817,7 +845,10 @@ export class D1MutationStore implements MutationStore {
       if (document.docstatus === 1) document.status = reconciled <= 0 ? "Unreconciled" : reconciled >= amount ? "Reconciled" : "Partly Reconciled";
     }
     if (document.doctype === "Delivery Note" && document.docstatus === 1) {
-      document.status = deriveO2CStatus("Delivery Note", document.docstatus);
+      document.status = deriveDeliveryNoteStatus(
+        document.docstatus,
+        typeof document.data.issue_purpose === "string" ? document.data.issue_purpose : undefined,
+      );
     }
     if (document.doctype === "Purchase Order") {
       const items = Array.isArray(document.data.items) ? document.data.items : [];
@@ -894,6 +925,20 @@ export class D1MutationStore implements MutationStore {
       }
     }
   }
+}
+
+function mapStockLedgerRow(row: Record<string, unknown>): StockLedgerEntry {
+  return {
+    line_key: String(row.line_key), item_code: String(row.item_code), warehouse: String(row.warehouse),
+    actual_qty_micros: Number(row.actual_qty_micros),
+    // `!= null` bắt cả null lẫn undefined mà VẪN giữ số 0 — `row.x ? …` sẽ nuốt mất cân 0.
+    ...(row.actual_weight_micros != null ? { actual_weight_micros: Number(row.actual_weight_micros) } : {}),
+    valuation_rate_minor: Number(row.valuation_rate_minor),
+    stock_value_difference_minor: Number(row.stock_value_difference_minor), qty_scale: 6,
+    currency_scale: Number(row.currency_scale), currency: String(row.currency), posting_at: String(row.posting_at),
+    ...(row.batch_no ? { batch_no: String(row.batch_no) } : {}), ...(row.serial_no ? { serial_no: String(row.serial_no) } : {}),
+    allow_negative_stock: Number(row.allow_negative_stock) === 1,
+  };
 }
 
 /**

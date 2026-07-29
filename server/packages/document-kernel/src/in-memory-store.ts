@@ -22,7 +22,7 @@ import type {
 } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
 import { fromScaledInt, toScaledInt } from "../../money/src/index.js";
-import { deriveO2CStatus } from "./status.js";
+import { deriveDeliveryNoteStatus, deriveO2CStatus } from "./status.js";
 import type { MutationStore, SubmittedQuantityQuery } from "./store.js";
 
 class KeyedMutex {
@@ -47,7 +47,21 @@ export class InMemoryMutationStore implements MutationStore {
   private readonly documents = new Map<string, CanonicalDocument>();
   private readonly receipts = new Map<string, MutationReceipt>();
   private readonly glEntries: GeneralLedgerEntry[] = [];
+  private readonly voucherGlEntries: Array<{
+    tenant_id: string;
+    voucher_type: string;
+    voucher_no: string;
+    voucher_revision: number;
+    line: GeneralLedgerEntry;
+  }> = [];
   private readonly stockEntries: StockLedgerEntry[] = [];
+  private readonly voucherStockEntries: Array<{
+    tenant_id: string;
+    voucher_type: string;
+    voucher_no: string;
+    voucher_revision: number;
+    line: StockLedgerEntry;
+  }> = [];
   private readonly paymentEntries: PaymentLedgerEntry[] = [];
   private readonly fulfillmentEntries: FulfillmentEntry[] = [];
   private readonly procurementEntries: ProcurementEntry[] = [];
@@ -129,6 +143,24 @@ export class InMemoryMutationStore implements MutationStore {
       .filter((line) => line.item_code === itemCode && line.warehouse === warehouse
         && (!batchNo || line.batch_no === batchNo) && (!serialNo || line.serial_no === serialNo))
       .reduce((total, line) => total + line.actual_qty_micros, 0);
+  }
+
+  async getVoucherGlEntries(tenantId: string, voucherType: string, voucherNo: string, voucherRevision: number): Promise<GeneralLedgerEntry[]> {
+    return structuredClone(this.voucherGlEntries
+      .filter((entry) => entry.tenant_id === tenantId
+        && entry.voucher_type === voucherType
+        && entry.voucher_no === voucherNo
+        && entry.voucher_revision === voucherRevision)
+      .map((entry) => entry.line));
+  }
+
+  async getVoucherStockEntries(tenantId: string, voucherType: string, voucherNo: string, voucherRevision: number): Promise<StockLedgerEntry[]> {
+    return structuredClone(this.voucherStockEntries
+      .filter((entry) => entry.tenant_id === tenantId
+        && entry.voucher_type === voucherType
+        && entry.voucher_no === voucherNo
+        && entry.voucher_revision === voucherRevision)
+      .map((entry) => entry.line));
   }
 
   async getStockLedgerHistory(tenantId: string, itemCode: string, warehouse: string, throughPostingAt?: string, batchNo?: string): Promise<StockLedgerEntry[]> {
@@ -340,7 +372,21 @@ export class InMemoryMutationStore implements MutationStore {
         ...(command.amended_from ? { amended_from: command.amended_from } : {}),
       });
       this.glEntries.push(...structuredClone(plan.gl_entries));
+      this.voucherGlEntries.push(...plan.gl_entries.map((line) => ({
+        tenant_id: command.tenant_id,
+        voucher_type: command.aggregate.doctype,
+        voucher_no: command.aggregate.name,
+        voucher_revision: plan.document.version,
+        line: structuredClone(line),
+      })));
       this.stockEntries.push(...structuredClone(plan.stock_entries));
+      this.voucherStockEntries.push(...plan.stock_entries.map((line) => ({
+        tenant_id: command.tenant_id,
+        voucher_type: command.aggregate.doctype,
+        voucher_no: command.aggregate.name,
+        voucher_revision: plan.document.version,
+        line: structuredClone(line),
+      })));
       this.paymentEntries.push(...structuredClone(plan.payment_entries));
       this.fulfillmentEntries.push(...structuredClone(plan.fulfillment_entries));
       this.procurementEntries.push(...structuredClone(plan.procurement_entries ?? []));
@@ -424,7 +470,10 @@ export class InMemoryMutationStore implements MutationStore {
       if (document.docstatus === 1) document.status = reconciled <= 0 ? "Unreconciled" : reconciled >= amount ? "Reconciled" : "Partly Reconciled";
     }
     if (document.doctype === "Delivery Note" && document.docstatus === 1) {
-      document.status = deriveO2CStatus("Delivery Note", document.docstatus);
+      document.status = deriveDeliveryNoteStatus(
+        document.docstatus,
+        typeof document.data.issue_purpose === "string" ? document.data.issue_purpose : undefined,
+      );
     }
     if (document.doctype === "Purchase Order") {
       const items = Array.isArray(document.data.items) ? document.data.items : [];

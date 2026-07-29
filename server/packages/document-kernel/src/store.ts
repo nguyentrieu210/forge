@@ -1,4 +1,4 @@
-import type { CanonicalDocument, JsonObject, MutationPlan, MutationReceipt, MutationSnapshot, StockLedgerEntry } from "../../contracts/src/index.js";
+import type { CanonicalDocument, GeneralLedgerEntry, JsonObject, MutationPlan, MutationReceipt, MutationSnapshot, StockLedgerEntry } from "../../contracts/src/index.js";
 
 export interface SubmittedQuantityQuery {
   tenantId: string;
@@ -19,6 +19,10 @@ export interface DomainReader {
   getBaseOutstandingMinor(tenantId: string, voucherType: string, voucherNo: string): Promise<number>;
   getStockBalanceMicros(tenantId: string, itemCode: string, warehouse: string): Promise<number>;
   getTrackedStockBalanceMicros(tenantId: string, itemCode: string, warehouse: string, batchNo?: string, serialNo?: string): Promise<number>;
+  /** Các dòng sổ cái gốc của đúng một lần ghi chứng từ; dùng để huỷ bằng đối dấu nguyên trạng. */
+  getVoucherGlEntries(tenantId: string, voucherType: string, voucherNo: string, voucherRevision: number): Promise<GeneralLedgerEntry[]>;
+  /** Các dòng sổ gốc của đúng một lần ghi chứng từ; dùng để huỷ bằng đối dấu nguyên trạng. */
+  getVoucherStockEntries(tenantId: string, voucherType: string, voucherNo: string, voucherRevision: number): Promise<StockLedgerEntry[]>;
   /**
    * `batchNo` thu hẹp lịch sử về ĐÚNG một lô.
    *

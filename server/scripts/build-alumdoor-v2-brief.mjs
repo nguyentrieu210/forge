@@ -176,6 +176,16 @@ addAfter(pr, "note",
 );
 
 const pri = doctype("Purchase Receipt Item");
+replaceField(pri, "actual_weight_kg", {
+  "//": "QĐ-2: với hàng catch weight, đây là số lượng tồn thứ hai chứ không còn là số đối chiếu.",
+  fieldname: "actual_weight_kg",
+  fieldtype: "Float",
+  label: "Tổng kg thực cân",
+  depends_on: "eval:doc.inventory_mode == 'Nhôm cây/lá'",
+  mandatory_depends_on: "eval:doc.inventory_mode == 'Nhôm cây/lá'",
+  non_negative: true,
+  description: "Số kg thực nhận được ghi cùng số cây/lá vào sổ kho. Bắt buộc trước khi ghi sổ hàng nhôm cân theo kiện; huỷ phiếu sẽ đảo cả cây/lá, kg và giá trị.",
+});
 addAfter(pri, "warehouse",
   {
     "//": [

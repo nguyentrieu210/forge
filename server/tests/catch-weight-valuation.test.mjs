@@ -19,12 +19,13 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createO2CControllerRegistry } from "../dist/packages/clouderp-selling/src/index.js";
 import { registerErpCoreControllers } from "../dist/packages/clouderp-core/src/index.js";
+import { registerStockControllers } from "../dist/packages/clouderp-stock/src/index.js";
 import { DocumentKernel, InMemoryMutationStore } from "../dist/packages/document-kernel/src/index.js";
-import { createAndSubmit } from "./helpers.mjs";
+import { createAndSubmit, mutate } from "./helpers.mjs";
 
 const now = () => "2026-07-30T08:00:00.000Z";
 
-function setup() {
+function setup({ tracked = false } = {}) {
   const store = new InMemoryMutationStore();
   store.seedO2CMasters({
     company: "Demo", customer: "CUST-1", currency: "VND",
@@ -37,8 +38,10 @@ function setup() {
   // Đơn vị tồn là CÂY (QĐ-2), khối lượng là đơn vị thứ hai ngang hàng — không phải quy đổi.
   store.seedMaster("Item", "NHOM-4.6D", "demo", {
     stock_uom: "Cây", has_catch_weight: 1, weight_uom: "Kg",
+    ...(tracked ? { has_batch_no: 1 } : {}),
   });
-  const registry = registerErpCoreControllers(createO2CControllerRegistry());
+  if (tracked) store.seedMaster("Batch", "LO-NHOM-001", "demo", { item: "NHOM-4.6D" });
+  const registry = registerStockControllers(registerErpCoreControllers(createO2CControllerRegistry()));
   return { store, kernel: new DocumentKernel(registry, store, undefined, now) };
 }
 
@@ -78,6 +81,62 @@ test("giá đ/kg nhân với SỐ KG đã cân, không nhân với số cây", a
   assert.equal(lines[0].actual_weight_micros, 1_200_000_000);
   // Giá vốn MỘT CÂY = tổng giá trị ÷ số cây = 600.000 đ/cây.
   assert.equal(lines[0].valuation_rate_minor, 600_000_00);
+});
+
+test("phiếu nhập lô ghi cây + kg + giá trị trên cùng dòng, retry không nhân đôi và huỷ đảo đủ", async () => {
+  const { store, kernel } = setup({ tracked: true });
+  await createAndSubmit(kernel, {
+    doctype: "Serial and Batch Bundle", name: "SBB-NHOM-IN",
+    document: {
+      item_code: "NHOM-4.6D", warehouse: "K36", type: "Inward", posting_at: now(),
+      entries: [{ row_id: "1", batch_no: "LO-NHOM-001", qty: "200" }],
+    },
+  });
+  const item = {
+    item_code: "NHOM-4.6D", qty: "200", uom: "Cây",
+    actual_weight_kg: "1200", rate: "100000", rate_uom: "Kg",
+    serial_and_batch_bundle: "SBB-NHOM-IN",
+  };
+  await receive(kernel, "PNM-LO", item);
+
+  const receiptDocument = {
+    supplier: "SUP-1", company: "Demo", currency: "VND", posting_at: now(),
+    against_purchase_order: "PO-PNM-LO", stock_account: "Ton kho",
+    stock_received_but_not_billed: "Hang nhan chua hoa don",
+    items: [{ row_id: "1", warehouse: "K36", ...item }],
+  };
+  await mutate(kernel, {
+    commandId: "PNM-LO-submit", doctype: "Purchase Receipt", name: "PNM-LO",
+    action: "submit", expectedVersion: 1, document: receiptDocument,
+  });
+
+  let lines = store.snapshot().stock_entries.filter((line) => line.item_code === "NHOM-4.6D");
+  assert.equal(lines.length, 1, "replay cùng command_id không được tạo bút toán thứ hai");
+  assert.deepEqual(
+    {
+      batch: lines[0].batch_no,
+      qty: lines[0].actual_qty_micros,
+      weight: lines[0].actual_weight_micros,
+      value: lines[0].stock_value_difference_minor,
+    },
+    {
+      batch: "LO-NHOM-001",
+      qty: 200_000_000,
+      weight: 1_200_000_000,
+      value: 120_000_000_00,
+    },
+  );
+  assert.equal(await store.isStockBundleUsed("demo", "SBB-NHOM-IN"), true);
+
+  await mutate(kernel, {
+    commandId: "PNM-LO-cancel", doctype: "Purchase Receipt", name: "PNM-LO",
+    action: "cancel", expectedVersion: 2, document: {},
+  });
+  lines = store.snapshot().stock_entries.filter((line) => line.item_code === "NHOM-4.6D");
+  assert.equal(lines.reduce((sum, line) => sum + line.actual_qty_micros, 0), 0);
+  assert.equal(lines.reduce((sum, line) => sum + (line.actual_weight_micros ?? 0), 0), 0);
+  assert.equal(lines.reduce((sum, line) => sum + line.stock_value_difference_minor, 0), 0);
+  assert.equal(await store.isStockBundleUsed("demo", "SBB-NHOM-IN"), false);
 });
 
 test("sổ cái và sổ kho phải ghi CÙNG một con số", async () => {

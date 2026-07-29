@@ -91,13 +91,21 @@ export interface SalesOrderData extends SalesTotalsData, CurrencyContextData {
   billed_percentage?: string;
 }
 
+export type DeliveryIssuePurpose =
+  | "Bán hàng"
+  | "Xuất mẫu"
+  | "Đổi bảo hành"
+  | "Xuất nội bộ"
+  | "Xuất gia công";
+
 export interface DeliveryNoteData extends JsonObject {
-  customer: string;
+  customer?: string;
   company: string;
   currency: string;
   currency_scale?: number;
   posting_at: string;
-  against_sales_order: string;
+  against_sales_order?: string;
+  issue_purpose?: DeliveryIssuePurpose;
   allow_negative_stock?: boolean;
   items: SalesItem[];
 }

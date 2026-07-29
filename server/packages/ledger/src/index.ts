@@ -32,6 +32,9 @@ export function reverseStock(lines: StockLedgerEntry[]): StockLedgerEntry[] {
     ...line,
     line_key: `REV-${line.line_key}`,
     actual_qty_micros: -line.actual_qty_micros,
+    ...(line.actual_weight_micros === undefined
+      ? {}
+      : { actual_weight_micros: -line.actual_weight_micros }),
     stock_value_difference_minor: -line.stock_value_difference_minor,
   }));
 }

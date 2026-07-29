@@ -41,6 +41,12 @@ export interface UomLine extends JsonObject {
   /** Số cân THẬT của dòng (catch weight). Không suy ra được từ `qty`. */
   actual_weight_kg?: DecimalInput;
   actual_weight_micros?: number;
+  /** Snapshot từ Item; máy chủ ghi đè để client không tự bật/tắt luật cân theo kiện. */
+  has_catch_weight?: boolean | number;
+  weight_uom?: string;
+  /** Khối lượng xuất thực tế của dòng kho/bán; khác `actual_weight_kg` dùng ở nhánh nhập. */
+  weight_kg?: DecimalInput;
+  weight_micros?: number;
   /**
    * Số lượng quy về ĐƠN VỊ CỦA `rate` — chính là số phải nhân với `rate`.
    *
@@ -293,6 +299,8 @@ export interface StockEntryItem extends JsonObject {
   valuation_rate?: DecimalInput;
   valuation_rate_minor?: number;
   stock_value_difference_minor?: number;
+  weight_kg?: DecimalInput;
+  weight_micros?: number;
   serial_and_batch_bundle?: string;
   batch_no?: string;
   serial_nos?: string[];

@@ -16,7 +16,7 @@ import { registerErpCoreControllers } from "../dist/packages/clouderp-core/src/i
 import { DocumentKernel, InMemoryMutationStore } from "../dist/packages/document-kernel/src/index.js";
 import { registerStockControllers, normalizeValuationMethod, valueIssue } from "../dist/packages/clouderp-stock/src/index.js";
 import { registerErpNextCoreControllers } from "../dist/packages/clouderp-erpnext/src/index.js";
-import { createAndSubmit } from "./helpers.mjs";
+import { createAndSubmit, mutate } from "./helpers.mjs";
 
 const now = () => "2026-07-30T08:00:00.000Z";
 
@@ -56,13 +56,9 @@ async function bundle(kernel, name, batch, qty) {
 }
 
 /**
- * Dùng PHIẾU KHO (Material Issue) chứ không dùng Phiếu xuất bán, vì hai lý do:
+ * Dùng PHIẾU KHO (Material Issue) thay vì Phiếu xuất bán vì đây là đúng đường của Cut Order:
  *
- *  1. Cắt nhôm đi qua đúng đường này — Cut Order của V2 là một Stock Entry, không phải phiếu bán.
- *  2. `DeliveryNoteController` vẫn ĐÒI Sales Order ở tầng nhân. Brief V2 đã bỏ bắt buộc
- *     `against_sales_order` trên TRƯỜNG, nhưng luật nằm trong mã nhân nên nới ở brief không
- *     nới được nghiệp vụ. Q8 ("xuất không cần đơn bán") vì vậy CHƯA xong — cần sửa nhân,
- *     ghi lại để không ai tưởng đổi brief là đủ.
+ * Cắt nhôm là một Stock Entry, không phải một Delivery Note.
  */
 const issue = (kernel, name, bundleName) => createAndSubmit(kernel, {
   doctype: "Stock Entry", name, document: {
@@ -96,6 +92,143 @@ test("lô CŨ vẫn định giá theo giá của chính nó", async () => {
   const posted = store.snapshot().stock_entries.find((entry) => entry.actual_qty_micros < 0);
   // Đây là chỗ dễ tự lừa: nếu chỉ test lô mới, một cài đặt "luôn lấy lô ĐẮT nhất" cũng xanh.
   assert.equal(-posted.stock_value_difference_minor, 500_000_00);
+});
+
+test("Phiếu xuất catch-weight trừ cùng lúc số cây và kg, huỷ trả lại đủ cả hai", async () => {
+  const { store, kernel } = setup();
+  store.seedMaster("Item", "NHOM-4.6D", "demo", {
+    stock_uom: "Cây", has_batch_no: 1, has_catch_weight: 1, weight_uom: "Kg",
+  });
+  for (const entry of store.stockEntries) entry.actual_weight_micros = 100_000_000;
+  await bundle(kernel, "SBB-DN-WEIGHT", "LO-MOI", "10");
+  const document = {
+    issue_purpose: "Xuất nội bộ", company: "Demo", currency: "VND", posting_at: now(),
+    items: [{
+      row_id: "1", item_code: "NHOM-4.6D", qty: "10", rate: "0",
+      warehouse: "K36", serial_and_batch_bundle: "SBB-DN-WEIGHT", weight_kg: "47",
+    }],
+  };
+  await createAndSubmit(kernel, { doctype: "Delivery Note", name: "PXK-WEIGHT", document });
+
+  let posted = store.snapshot().stock_entries
+    .filter((entry) => entry.item_code === "NHOM-4.6D" && entry.line_key.startsWith("ITEM-"));
+  assert.equal(posted.length, 1);
+  assert.equal(posted[0].batch_no, "LO-MOI");
+  assert.equal(posted[0].actual_qty_micros, -10_000_000);
+  assert.equal(posted[0].actual_weight_micros, -47_000_000);
+
+  await mutate(kernel, {
+    commandId: "PXK-WEIGHT-cancel", doctype: "Delivery Note", name: "PXK-WEIGHT",
+    action: "cancel", expectedVersion: 2, document: {},
+  });
+  posted = store.snapshot().stock_entries
+    .filter((entry) => entry.item_code === "NHOM-4.6D" && /ITEM-/.test(entry.line_key));
+  assert.equal(posted.reduce((sum, entry) => sum + entry.actual_qty_micros, 0), 0);
+  assert.equal(posted.reduce((sum, entry) => sum + (entry.actual_weight_micros ?? 0), 0), 0);
+  assert.equal(posted.reduce((sum, entry) => sum + entry.stock_value_difference_minor, 0), 0);
+});
+
+test("Phiếu xuất catch-weight thiếu kg bị từ chối trước khi ghi sổ", async () => {
+  const { store, kernel } = setup();
+  store.seedMaster("Item", "NHOM-4.6D", "demo", {
+    stock_uom: "Cây", has_batch_no: 1, has_catch_weight: 1, weight_uom: "Kg",
+  });
+  await bundle(kernel, "SBB-DN-NO-WEIGHT", "LO-MOI", "10");
+  await assert.rejects(
+    createAndSubmit(kernel, {
+      doctype: "Delivery Note", name: "PXK-NO-WEIGHT",
+      document: {
+        issue_purpose: "Xuất nội bộ", company: "Demo", currency: "VND", posting_at: now(),
+        items: [{
+          row_id: "1", item_code: "NHOM-4.6D", qty: "10", rate: "0",
+          warehouse: "K36", serial_and_batch_bundle: "SBB-DN-NO-WEIGHT",
+        }],
+      },
+    }),
+    /Khối lượng xuất là bắt buộc/,
+  );
+  assert.equal(
+    store.snapshot().stock_entries.filter((entry) => entry.line_key.startsWith("ITEM-")).length,
+    0,
+  );
+});
+
+test("Phiếu kho dùng cho cắt trừ cây + kg theo đúng lô và huỷ bằng bút toán gốc", async () => {
+  const { store, kernel } = setup();
+  store.seedMaster("Item", "NHOM-4.6D", "demo", {
+    stock_uom: "Cây", has_batch_no: 1, has_catch_weight: 1, weight_uom: "Kg",
+  });
+  for (const entry of store.stockEntries) entry.actual_weight_micros = 100_000_000;
+  await bundle(kernel, "SBB-CUT-WEIGHT", "LO-MOI", "10");
+  await createAndSubmit(kernel, {
+    doctype: "Stock Entry", name: "CUT-WEIGHT",
+    document: {
+      company: "Demo", posting_at: now(), purpose: "Material Issue",
+      items: [{
+        row_id: "1", item_code: "NHOM-4.6D", qty: "10", weight_kg: "47",
+        source_warehouse: "K36", serial_and_batch_bundle: "SBB-CUT-WEIGHT",
+      }],
+    },
+  });
+  let posted = store.snapshot().stock_entries
+    .filter((entry) => entry.item_code === "NHOM-4.6D" && entry.line_key.startsWith("SRC-"));
+  assert.equal(posted.length, 1);
+  assert.equal(posted[0].batch_no, "LO-MOI");
+  assert.equal(posted[0].actual_qty_micros, -10_000_000);
+  assert.equal(posted[0].actual_weight_micros, -47_000_000);
+  assert.equal(posted[0].stock_value_difference_minor, -900_000_00);
+
+  await mutate(kernel, {
+    commandId: "CUT-WEIGHT-cancel", doctype: "Stock Entry", name: "CUT-WEIGHT",
+    action: "cancel", expectedVersion: 2, document: {},
+  });
+  posted = store.snapshot().stock_entries
+    .filter((entry) => entry.item_code === "NHOM-4.6D" && /SRC-/.test(entry.line_key));
+  assert.equal(posted.reduce((sum, entry) => sum + entry.actual_qty_micros, 0), 0);
+  assert.equal(posted.reduce((sum, entry) => sum + (entry.actual_weight_micros ?? 0), 0), 0);
+  assert.equal(posted.reduce((sum, entry) => sum + entry.stock_value_difference_minor, 0), 0);
+  assert.equal(await store.isStockBundleUsed("demo", "SBB-CUT-WEIGHT"), false);
+});
+
+test("huỷ phiếu cắt nhiều lô trả đúng giá và kg cho TỪNG lô, không chia lại theo bình quân", async () => {
+  const { store, kernel } = setup();
+  store.seedMaster("Item", "NHOM-4.6D", "demo", {
+    stock_uom: "Cây", has_batch_no: 1, has_catch_weight: 1, weight_uom: "Kg",
+  });
+  for (const entry of store.stockEntries) entry.actual_weight_micros = 100_000_000;
+  await createAndSubmit(kernel, {
+    doctype: "Serial and Batch Bundle", name: "SBB-CUT-TWO-BATCHES",
+    document: {
+      item_code: "NHOM-4.6D", warehouse: "K36", type: "Outward", posting_at: now(),
+      entries: [
+        { row_id: "CU", batch_no: "LO-CU", qty: "5" },
+        { row_id: "MOI", batch_no: "LO-MOI", qty: "5" },
+      ],
+    },
+  });
+  await createAndSubmit(kernel, {
+    doctype: "Stock Entry", name: "CUT-TWO-BATCHES",
+    document: {
+      company: "Demo", posting_at: now(), purpose: "Material Issue",
+      items: [{
+        row_id: "1", item_code: "NHOM-4.6D", qty: "10", weight_kg: "47",
+        source_warehouse: "K36", serial_and_batch_bundle: "SBB-CUT-TWO-BATCHES",
+      }],
+    },
+  });
+  await mutate(kernel, {
+    commandId: "CUT-TWO-BATCHES-cancel", doctype: "Stock Entry", name: "CUT-TWO-BATCHES",
+    action: "cancel", expectedVersion: 2, document: {},
+  });
+
+  const posted = store.snapshot().stock_entries
+    .filter((entry) => entry.item_code === "NHOM-4.6D" && /SRC-/.test(entry.line_key));
+  for (const batch of ["LO-CU", "LO-MOI"]) {
+    const batchLines = posted.filter((entry) => entry.batch_no === batch);
+    assert.equal(batchLines.reduce((sum, entry) => sum + entry.actual_qty_micros, 0), 0, batch);
+    assert.equal(batchLines.reduce((sum, entry) => sum + (entry.actual_weight_micros ?? 0), 0), 0, batch);
+    assert.equal(batchLines.reduce((sum, entry) => sum + entry.stock_value_difference_minor, 0), 0, batch);
+  }
 });
 
 test("phương pháp giá vốn lạ bị TỪ CHỐI, không lặng lẽ thành FIFO", () => {

@@ -250,7 +250,12 @@ export async function applyUomConversion<T extends UomLine>(
       // Gộp vào đây chứ không để thành một bước riêng caller phải nhớ gọi: hai chỗ đều cần
       // hồ sơ mặt hàng, và một bước "nhớ gọi thêm" là bước sẽ bị quên ở controller thứ ba.
       ...applyRateUnit(item, master, uom, qtyMicros, index),
-      ...(master ? { inventory_mode: inventoryMode, measurement_profile: measurementProfile } : {}),
+      ...(master ? {
+        inventory_mode: inventoryMode,
+        measurement_profile: measurementProfile,
+        has_catch_weight: master.has_catch_weight === true || master.has_catch_weight === 1,
+        ...(typeof master.weight_uom === "string" ? { weight_uom: master.weight_uom } : {}),
+      } : {}),
     };
   });
 }

@@ -11,7 +11,7 @@ import type {
 } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
 import type { ControllerContext, DocumentController, O2CStatusMetrics } from "../../document-kernel/src/index.js";
-import { deriveO2CStatus, nextDocStatus } from "../../document-kernel/src/index.js";
+import { deriveDeliveryNoteStatus, deriveO2CStatus, nextDocStatus } from "../../document-kernel/src/index.js";
 import { reverseGl, reversePayment, reverseStock } from "../../ledger/src/index.js";
 import { addMinor, fromScaledInt, multiplyScaled, negateMinor, toScaledInt } from "../../money/src/index.js";
 import { domainEvent } from "../../outbox/src/index.js";
@@ -19,7 +19,15 @@ import { buildTrackedStockLines, deriveOutgoingValuation } from "../../clouderp-
 import { resolveServerPrice } from "../../clouderp-pricing/src/index.js";
 import { applyUomConversion, stockQtyMicros } from "../../clouderp-core/src/uom.js";
 import { assertCurrencyScale, calculateSalesTotals } from "./totals.js";
-import type { DeliveryNoteData, PaymentEntryData, SalesInvoiceData, SalesItem, SalesOrderData } from "./types.js";
+import type { DeliveryIssuePurpose, DeliveryNoteData, PaymentEntryData, SalesInvoiceData, SalesItem, SalesOrderData } from "./types.js";
+
+const DELIVERY_ISSUE_PURPOSES = new Set<DeliveryIssuePurpose>([
+  "Bán hàng",
+  "Xuất mẫu",
+  "Đổi bảo hành",
+  "Xuất nội bộ",
+  "Xuất gia công",
+]);
 
 abstract class BaseController<T extends JsonObject> implements DocumentController<T> {
   abstract readonly doctype: string;
@@ -167,40 +175,60 @@ export class SalesOrderController extends BaseController<SalesOrderData> {
 export class DeliveryNoteController extends BaseController<DeliveryNoteData> {
   readonly doctype = "Delivery Note";
 
+  protected status(context: ControllerContext<DeliveryNoteData>, data: DeliveryNoteData): string {
+    return deriveDeliveryNoteStatus(nextDocStatus(context.command.action), data.issue_purpose);
+  }
+
   async normalize(context: ControllerContext<DeliveryNoteData>): Promise<DeliveryNoteData> {
     const input = context.command.document;
-    if (!input.customer || !input.company || !input.currency || !input.against_sales_order) {
-      throw errors.validation("Customer, company, currency and Sales Order are required");
+    if (!input.company || !input.currency) throw errors.validation("Company and currency are required");
+    const issuePurpose = input.issue_purpose ?? (input.against_sales_order ? "Bán hàng" : undefined);
+    if (!issuePurpose || !DELIVERY_ISSUE_PURPOSES.has(issuePurpose)) {
+      throw errors.validation("A valid issue purpose is required");
     }
+    if (issuePurpose === "Bán hàng" && (!input.customer || !input.against_sales_order)) {
+      throw errors.validation("Customer and Sales Order are required for a sales delivery");
+    }
+    let normalizedCustomer = input.customer;
     if (input.items.length === 0) throw errors.validation("At least one delivery item is required");
     const currency = await resolveCurrencyContext(context, input.company, input.currency, input.posting_at);
     const currencyScale = currency.transactionScale;
-    const items = await applyUomConversion(
+    const stockItems = await applyUomConversion(
       context as unknown as ControllerContext<JsonObject>,
       normalizeStockItems(input.items, currencyScale),
       { transactionKind: "sales" },
     );
+    const items = normalizeDeliveryWeights(stockItems, context.command.action === "submit");
     // Negative stock disables the stock_balance_guard trigger, so it is a
     // server-authoritative decision — never trust the client-supplied flag.
     const allowNegativeStock = resolveAllowNegativeStock(context, input.allow_negative_stock);
     if (context.command.action === "submit") {
       await assertMasterData(context, [
-        ["Company", input.company], ["Customer", input.customer], ["Currency", input.currency],
+        ["Company", input.company], ["Currency", input.currency],
+        ...(input.customer ? [["Customer", input.customer] as [string, string]] : []),
         ...items.map((item): [string, string] => ["Item", item.item_code]),
         ...items.map((item): [string, string] => ["Warehouse", item.warehouse!]),
       ]);
       await assertPostingUnlocked(context, input.company, input.posting_at);
-      const salesOrder = await requireSubmittedDocument<SalesOrderData>(context, "Sales Order", input.against_sales_order);
-      assertSameCommercialContext(input, salesOrder.data, "Delivery Note", "Sales Order");
-      await assertRemainingQuantity(context, {
-        source: salesOrder,
-        items,
-        targetParentDoctype: "Delivery Note",
-        referenceField: "against_sales_order",
-        referenceName: input.against_sales_order,
-        label: "delivered",
-        quantityKind: "stock",
-      });
+      if (input.against_sales_order) {
+        const salesOrder = await requireSubmittedDocument<SalesOrderData>(context, "Sales Order", input.against_sales_order);
+        normalizedCustomer ??= salesOrder.data.customer;
+        assertSameCommercialContext(
+          { customer: normalizedCustomer, company: input.company, currency: input.currency },
+          salesOrder.data,
+          "Delivery Note",
+          "Sales Order",
+        );
+        await assertRemainingQuantity(context, {
+          source: salesOrder,
+          items,
+          targetParentDoctype: "Delivery Note",
+          referenceField: "against_sales_order",
+          referenceName: input.against_sales_order,
+          label: "delivered",
+          quantityKind: "stock",
+        });
+      }
       if (!allowNegativeStock) {
         for (const item of items) {
           const balance = await context.reader.getStockBalanceMicros(context.command.tenant_id, item.item_code, item.warehouse!);
@@ -224,18 +252,74 @@ export class DeliveryNoteController extends BaseController<DeliveryNoteData> {
         return { ...item, valuation_rate_minor: valuation.valuation_rate_minor, valuation_rate: fromScaledInt(valuation.valuation_rate_minor, currencyScale), stock_value_difference_minor: valuation.stock_value_difference_minor };
       }));
     }
-    return { ...input, currency_scale: currencyScale, allow_negative_stock: allowNegativeStock, items: valuedItems };
+    return {
+      ...input,
+      ...(normalizedCustomer ? { customer: normalizedCustomer } : {}),
+      issue_purpose: issuePurpose,
+      currency_scale: currencyScale,
+      allow_negative_stock: allowNegativeStock,
+      items: valuedItems,
+    };
   }
 
   async ledger(context: ControllerContext<DeliveryNoteData>, data: DeliveryNoteData): Promise<{ gl: GeneralLedgerEntry[]; stock: StockLedgerEntry[]; fulfillment: FulfillmentEntry[]; stockBundleUsages: StockBundleUsageEntry[] }> {
     if (context.command.action !== "submit" && context.command.action !== "cancel") return { gl: [], stock: [], fulfillment: [], stockBundleUsages: [] };
+    if (context.command.action === "cancel") {
+      const originalRevision = requireExisting(context).version;
+      const [originalGl, originalStock] = await Promise.all([
+        context.reader.getVoucherGlEntries(
+          context.command.tenant_id,
+          this.doctype,
+          context.command.aggregate.name,
+          originalRevision,
+        ),
+        context.reader.getVoucherStockEntries(
+          context.command.tenant_id,
+          this.doctype,
+          context.command.aggregate.name,
+          originalRevision,
+        ),
+      ]);
+      if (originalStock.length === 0) {
+        throw errors.reference(`Original stock posting for ${this.doctype} ${context.command.aggregate.name} was not found`);
+      }
+      const fulfillment = data.against_sales_order
+        ? data.items.map((item, index): FulfillmentEntry => ({
+          line_key: `REV-DELIVERY-${item.row_id || index + 1}`,
+          sales_order: data.against_sales_order!,
+          kind: "Delivery",
+          item_code: item.item_code,
+          qty_micros: -(item.qty_micros ?? toScaledInt(item.qty, 6)),
+          posting_at: data.posting_at,
+        }))
+        : [];
+      const stockBundleUsages = data.items.flatMap((item, index): StockBundleUsageEntry[] => (
+        item.serial_and_batch_bundle
+          ? [{
+            line_key: `REV-BUNDLE-ITEM-${item.row_id || index + 1}`,
+            bundle_name: item.serial_and_batch_bundle,
+            item_code: item.item_code,
+            warehouse: item.warehouse!,
+            direction: "Outward",
+            usage_delta: -1,
+            posting_at: data.posting_at,
+          }]
+          : []
+      ));
+      return {
+        gl: reverseGl(originalGl),
+        stock: reverseStock(originalStock),
+        fulfillment,
+        stockBundleUsages,
+      };
+    }
     const currencyScale = data.currency_scale ?? 2;
     const normal: StockLedgerEntry[] = []; const usages: StockBundleUsageEntry[] = []; const gl: GeneralLedgerEntry[] = [];
     for (const [index,item] of data.items.entries()) {
       const qty = stockQtyMicros(item);
       const valuationRateMinor = item.valuation_rate_minor ?? toScaledInt(item.valuation_rate ?? item.rate,currencyScale);
       const value = Math.abs(item.stock_value_difference_minor ?? multiplyScaled(fromScaledInt(qty,6),6,item.valuation_rate ?? item.rate,6,currencyScale));
-      const tracked = await buildTrackedStockLines(context as unknown as ControllerContext<JsonObject>, { itemCode:item.item_code,warehouse:item.warehouse!,qtyMicros:qty,direction:"Outward",postingAt:data.posting_at,currency:data.currency,currencyScale,valuationRateMinor,stockValueMinor:value,lineKey:`ITEM-${item.row_id||index+1}`,...(item.serial_and_batch_bundle ? { bundleName:item.serial_and_batch_bundle } : {}),allowNegativeStock:Boolean(data.allow_negative_stock) });
+      const tracked = await buildTrackedStockLines(context as unknown as ControllerContext<JsonObject>, { itemCode:item.item_code,warehouse:item.warehouse!,qtyMicros:qty,direction:"Outward",postingAt:data.posting_at,currency:data.currency,currencyScale,valuationRateMinor,stockValueMinor:value,lineKey:`ITEM-${item.row_id||index+1}`,...(item.weight_micros !== undefined ? { weightMicros:item.weight_micros } : {}),...(item.serial_and_batch_bundle ? { bundleName:item.serial_and_batch_bundle } : {}),allowNegativeStock:Boolean(data.allow_negative_stock) });
       normal.push(...tracked.stock); usages.push(...tracked.usages);
       // Giá vốn ghi sổ cái LẤY TỪ sổ kho, không dùng lại `value` tính trước khi gọi.
       // Định giá theo từng lô làm tổng khác con số tính theo cả dòng; giữ `value` ở đây là
@@ -248,13 +332,17 @@ export class DeliveryNoteController extends BaseController<DeliveryNoteData> {
         || (typeof company?.default_cogs_account==="string"?company.default_cogs_account:"");
       if(stockAccount&&cogsAccount){gl.push({line_key:`COGS-${item.row_id||index+1}`,account:cogsAccount,debit_minor:postedValue,credit_minor:0,currency:data.currency,currency_scale:currencyScale,posting_at:data.posting_at},{line_key:`STOCK-${item.row_id||index+1}`,account:stockAccount,debit_minor:0,credit_minor:postedValue,currency:data.currency,currency_scale:currencyScale,posting_at:data.posting_at});}
     }
-    const fulfillment = data.items.map((item, index): FulfillmentEntry => ({ line_key:`DELIVERY-${item.row_id||index+1}`,sales_order:data.against_sales_order,kind:"Delivery",item_code:item.item_code,qty_micros:item.qty_micros??toScaledInt(item.qty,6),posting_at:data.posting_at }));
-    return context.command.action === "cancel" ? { gl:reverseGl(gl),stock:reverseStock(normal),fulfillment:fulfillment.map((line)=>({...line,line_key:`REV-${line.line_key}`,qty_micros:-line.qty_micros})),stockBundleUsages:usages.map((line)=>({...line,line_key:`REV-${line.line_key}`,usage_delta:-1 as const})) } : { gl,stock:normal,fulfillment,stockBundleUsages:usages };
+    const fulfillment = data.against_sales_order
+      ? data.items.map((item, index): FulfillmentEntry => ({ line_key:`DELIVERY-${item.row_id||index+1}`,sales_order:data.against_sales_order!,kind:"Delivery",item_code:item.item_code,qty_micros:item.qty_micros??toScaledInt(item.qty,6),posting_at:data.posting_at }))
+      : [];
+    return { gl,stock:normal,fulfillment,stockBundleUsages:usages };
   }
 
   eventTypes(context: ControllerContext<DeliveryNoteData>): string[] {
-    if (context.command.action === "submit") return ["stock.posted", "delivery.updated", "sales_order.progressed"];
-    if (context.command.action === "cancel") return ["stock.reversed", "delivery.cancelled", "sales_order.progressed"];
+    const data = context.command.action === "cancel" ? context.existing?.data : context.command.document;
+    const progressesSalesOrder = typeof data?.against_sales_order === "string" && data.against_sales_order.length > 0;
+    if (context.command.action === "submit") return ["stock.posted", "delivery.updated", ...(progressesSalesOrder ? ["sales_order.progressed"] : [])];
+    if (context.command.action === "cancel") return ["stock.reversed", "delivery.cancelled", ...(progressesSalesOrder ? ["sales_order.progressed"] : [])];
     return ["delivery.updated"];
   }
 }
@@ -561,6 +649,23 @@ function normalizeStockItems(items: SalesItem[], currencyScale: number): SalesIt
       valuation_rate: fromScaledInt(valuationMicros, 6),
       valuation_rate_minor: toScaledInt(valuation, currencyScale),
     };
+  });
+}
+
+function normalizeDeliveryWeights(items: SalesItem[], required: boolean): SalesItem[] {
+  return items.map((item, index) => {
+    const catchWeight = item.has_catch_weight === true || item.has_catch_weight === 1;
+    const weightMicros = item.weight_micros
+      ?? (item.weight_kg === undefined ? undefined : toScaledInt(item.weight_kg, 6, `items[${index}].weight_kg`));
+    if (catchWeight && required && weightMicros === undefined) {
+      throw errors.validation(`Khối lượng xuất là bắt buộc cho mặt hàng cân theo kiện ở dòng ${index + 1}`);
+    }
+    if (weightMicros !== undefined && weightMicros <= 0) {
+      throw errors.validation(`Khối lượng xuất phải lớn hơn 0 ở dòng ${index + 1}`);
+    }
+    return weightMicros === undefined
+      ? item
+      : { ...item, weight_micros: weightMicros, weight_kg: fromScaledInt(weightMicros, 6) };
   });
 }
 
