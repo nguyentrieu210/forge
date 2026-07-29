@@ -69,6 +69,26 @@ test("ERPNext core reports compile only whitelisted ledger and projection fields
   assert.throws(() => compiler.compile({ report: "Serial Number Status", tenant_id: "demo", filters: [{ field: "actual_qty_micros", operator: ">", value: 0 }] }), (error) => error.code === "VALIDATION_ERROR");
 });
 
+test("Alumdoor available-stock report exposes the cumulative length view without raw micros", () => {
+  const compiled = new QueryCompiler().compile({
+    report: "Tồn nhôm theo khổ",
+    tenant_id: "demo",
+    filters: [
+      { field: "warehouse", operator: "=", value: "K36" },
+      { field: "min_length_m", operator: ">=", value: 4.5 },
+    ],
+  });
+  assert.match(compiled.sql, /alumdoor_available_stock_by_length/);
+  assert.match(compiled.sql, /"tenant_id"=\?1/);
+  assert.deepEqual(compiled.params.slice(1, 3), ["K36", 4.5]);
+  assert.ok(compiled.columns.some((column) => column.field === "available_qty"));
+  assert.throws(() => new QueryCompiler().compile({
+    report: "Tồn nhôm theo khổ",
+    tenant_id: "demo",
+    filters: [{ field: "available_qty_micros", operator: ">", value: 0 }],
+  }), (error) => error.code === "VALIDATION_ERROR");
+});
+
 
 test("ERPNext breadth reports remain tenant-scoped and field-whitelisted", () => {
   const compiler = new QueryCompiler();

@@ -66,17 +66,64 @@ CREATE INDEX IF NOT EXISTS idx_sle_batch_valuation
 
 ### 2.2 Sửa mã cần viết
 
-| # | File · dòng | Sửa gì |
-|---|---|---|
-| M3a | `document-kernel/src/store.ts:22` | `getStockLedgerHistory(..., batchNo?: string)` — **mô phỏng đúng** `getTrackedStockBalanceMicros` ở dòng 21 vốn đã có tham số này |
-| M3b | `document-kernel/src/d1-store.ts:163` | thêm `AND (?4 IS NULL OR batch_no=?4)` |
-| M3c | `document-kernel/src/in-memory-store.ts:134` | thêm điều kiện lọc tương ứng — **hai kho lưu phải khớp nhau**, lệch là test xanh giả |
-| M3d | `clouderp-stock/src/valuation.ts:32-41` | `deriveOutgoingValuation` nhận `batchNo`, truyền xuống |
-| M4 | `clouderp-stock/src/valuation.ts:18` | `normalizeValuationMethod` — giá trị lạ **TỪ CHỐI**, thôi âm thầm thành FIFO |
-| M5 | `clouderp-stock/src/tracking.ts:65` | `valuation_rate_minor` tính **theo từng dòng bundle** thay vì dùng chung một giá cho cả dòng chứng từ |
+> ⚠️ **VIẾT LẠI 30/07 sau rà soát** — bản đầu **thiếu 7 chỗ** và **bỏ sót hẳn một lỗi tiền**.
+> Chi tiết: [DEFECTS.md](DEFECTS.md) D1 · D2 · D4.
 
-> **M5 là mấu chốt.** M3 mở đường cho việc tính theo lô; M5 mới thực sự **dùng** đường đó. Thiếu M5 thì
-> vẫn một giá chia đều cho mọi lô — đúng lỗi cũ, chỉ khác là giờ có index để làm đúng.
+**Nhóm M1 — catch weight phải tồn tại THẬT, không chỉ trong migration (D2):**
+
+| # | File | Sửa gì |
+|---|---|---|
+| M1a | migration mới | `ALTER TABLE stock_ledger_entries ADD COLUMN actual_weight_micros INTEGER` + index batch |
+| **M1b** | `contracts/src/index.ts` | thêm `actual_weight_micros?: number` vào `StockLedgerEntry` — **hiện KHÔNG có** |
+| **M1c** | `document-kernel/src/d1-store.ts:628` | thêm cột vào **INSERT** và vào **SELECT** của `getStockLedgerHistory` |
+| **M1d** | `clouderp-stock/src/tracking.ts:7` | `TrackedStockRequest.weightMicros`; chia theo tỉ lệ từng dòng bundle **y như `stockValueMinor`**, dòng cuối nhận phần dư để không lẹm làm tròn |
+| **M1e** | `in-memory-store.ts` | cùng trường — lệch với D1 store là **test xanh giả** |
+
+> Thiếu M1b–M1e thì chạy migration xong **mọi bút toán mới vẫn NULL**. Cột có mà không ai ghi.
+
+**Nhóm M2 — `rate` phải nói rõ đơn vị (D1, lỗi TIỀN):**
+
+| # | File | Sửa gì |
+|---|---|---|
+| **M2a** | brief `Purchase Receipt Item` | thêm **`rate_uom:Link(UOM)`** — mặc định `weight_uom` khi item catch-weight, ngược lại `stock_uom`. **Không có đơn vị ngầm** |
+| **M2b** | `clouderp-core/src/controllers.ts:221` · `:239` | `value` = `qty × rate` **chỉ đúng khi `rate_uom == stock_uom`**. Catch-weight: `value = actual_weight × rate`, rồi `valuation_rate_minor = value ÷ qty_bar` |
+| **M2c** | validator | `rate_uom` trống mà item catch-weight → **TỪ CHỐI**, không đoán |
+
+> **Vì sao đây là lỗi nặng nhất:** nhập 200 cây / 1.200 kg / 100.000 đ/kg ra **20 triệu** thay vì
+> **120 triệu** — sai 6 lần, sổ vẫn cân. Doc-comment ngay trên `controllers.ts:219` đã cảnh báo đúng
+> họ lỗi này (*"117 mét × giá-một-cây, tồn kho phình gần sáu lần"*) mà thiết kế V2 vẫn đi qua.
+
+**Nhóm M3 — định giá thu hẹp theo lô:**
+
+| # | File | Sửa gì |
+|---|---|---|
+| M3a | `document-kernel/src/store.ts:22` | `getStockLedgerHistory(..., batchNo?)` — mô phỏng `getTrackedStockBalanceMicros` dòng 21 vốn đã có tham số này |
+| M3b | `d1-store.ts:163` | `AND (?4 IS NULL OR batch_no=?4)` |
+| M3c | `in-memory-store.ts:134` | điều kiện lọc tương ứng |
+| M3d | `clouderp-stock/src/valuation.ts:32` | `deriveOutgoingValuation` nhận `batchNo` |
+| M4 | `valuation.ts:18` | `normalizeValuationMethod` — giá trị lạ **TỪ CHỐI** |
+
+**Nhóm M5 — phạm vi VIẾT LẠI (D4):**
+
+Bản đầu chỉ ghi `tracking.ts:65`. **Sai chỗ.** Gốc nằm ở caller: nó tính giá cho **cả dòng** rồi mới
+đưa xuống bundle — `clouderp-selling/src/controllers.ts:217` và `clouderp-erpnext/src/controllers.ts:104`.
+
+**Chốt cách B: nạp bundle TRƯỚC, định giá TỪNG batch.**
+
+```
+caller: đọc bundle → với mỗi entry { batch_no, qty }:
+          deriveOutgoingValuation({ itemCode, warehouse, batchNo, qtyMicros })
+        → dựng SLE riêng cho entry đó
+```
+
+| # | File | Sửa gì |
+|---|---|---|
+| M5a | `clouderp-selling/src/controllers.ts:217` | nạp bundle trước, gọi định giá theo từng batch |
+| M5b | `clouderp-erpnext/src/controllers.ts:104` | như trên cho Stock Entry |
+| M5c | `clouderp-stock/src/tracking.ts:65` | nhận **mảng** giá theo entry thay vì một `valuationRateMinor` chung |
+
+> ❌ **Cách A đã LOẠI** (mỗi dòng chứng từ chỉ một batch): nó phá chính lý do dùng bundle — cắt từ 3 lô
+> phải tách thành 3 dòng chứng từ, mất khớp với thực tế xưởng.
 
 ### 2.3 State machine — sổ không có trạng thái
 
@@ -254,9 +301,28 @@ ngoại lệ: item ∈ exempt_items (AL71C) → bỏ bước trừ một lá
 | `Item Group` | `default_valuation_method` Select(FIFO, Bình quân di động) · `default_measurement_profile` Link | Item kế thừa lúc tạo |
 | `UOM` | +2 bản ghi: **`LÁ`** · **`THÂN`** | `must_be_whole_number` = ✔ cho Cây/Lá/Tấm — **dùng sẵn, không tự chế validate** |
 | `UOM Conversion` | — | **CHẶN khai khi `item.has_catch_weight`** |
-| `Item Color` | seed 24 màu; `4004`→ĐỎ; `9512`→`supplier_color_code` của TRẮNG | `applies_to` là Small Text ⇒ **không ép được**; chặn một chiều qua `Item.allowed_colors` |
+| `Item Color` | seed 24 màu; `4004`→ĐỎ; `9512`→`supplier_color_code` của TRẮNG; **`applies_to` Small Text → bảng con `Item Color Scope`** | ✅ Chủ xưởng chốt 30/07: bảng màu gửi kèm ĐÃ CÓ cột "Nhóm SP áp dụng" ⇒ dữ liệu để ép tồn tại. Đổi sang Link(Item Group) và **ÉP THẬT** — BRD §0.2 Q10 |
 | `Supplier` | `receipt_tolerance_pct` Float DEFAULT **5** | Dung sai giao hàng theo NCC |
 | `Warehouse` | `stock_role` Select(Kho chính, Kho đầu thừa, Kho phế, Kho gửi gia công) · `keeper` **Data → Link(User)** | Cây: `K36 › Đầu thừa`, `K12 › Đầu thừa` (W-Q2). Chỉ `Kho chính` vào tồn khả dụng |
+
+### 5.4 Ba danh mục FK còn thiếu ledger (D6)
+
+Scorecard cũ ghi *"mọi FK trỏ bảng thật"* — **sai**. Ba danh mục dưới đây bị dùng làm FK khắp nơi mà
+chưa có ledger. Bổ sung:
+
+| Doctype | Field | Ràng buộc | Dùng ở |
+|---|---|---|---|
+| **Lý do huỷ** | `reason_code:Data*!` · `reason_name:Data!` · `applies_to_doctype:Select(Tất cả,Phiếu nhập,Phiếu xuất,Phiếu kho,Phiếu cắt,Kiểm kê)=(Tất cả)` · `sort_order:Int` · `disabled:Check` | `reason_code` UNIQUE | `*.cancel_reason` — chip lý do Kanban, **bước lùi bắt buộc chọn** |
+| **Nguyên nhân chênh lệch** | `reason_code:Data*!` · `reason_name:Data!` · `variance_kind:Select(Thừa,Thiếu,Cả hai)=(Cả hai)` · `sort_order:Int` · `disabled:Check` | UNIQUE | `Stock Reconciliation Item.variance_reason` · `Stock Entry.adjust_reason` — **TT99/2025 đòi phân loại nguyên nhân rồi mới hạch toán** |
+| **Item Color Scope** (child của `Item Color`) | `item_group:Link(Item Group)!` | — | Thay `applies_to` Small Text ⇒ ép được ràng buộc màu ↔ nhóm SP |
+
+**Seed từ dữ liệu thật:**
+
+- *Lý do huỷ*: Nhập nhầm · Sai số lượng · Sai lô · NCC đổi hàng · Khác
+- *Nguyên nhân chênh lệch*: Sai cân đo · Quên ghi · Hỏng/mất · **Thợ cắt sai không báo** · Khác
+  (mục thứ tư lấy nguyên văn từ lời kế toán trong nghề — `danketoan.com`)
+- *Item Color Scope*: theo cột "Nhóm SP áp dụng" của bảng màu chủ xưởng gửi — sơn tĩnh điện áp cho
+  6 nhóm, mạ màu **chỉ** Cửa Úc và Đài Loan
 
 ---
 
@@ -485,22 +551,40 @@ xem BRD §6. Dưới đây chỉ kê **action app phải tự viết**.
 | Bundle usage | ✅ `stock_bundle_usage_entries` | — |
 | Tiến độ đơn mua | ✅ `purchase_order_progress_entries` | Là nguồn báo cáo "NCC còn nợ" |
 | Chống ghi đè | ✅ khoá `modified` + `mutation_guard` · `mutation_receipts` | Optimistic lock có sẵn |
-| **`ai_logs`** | ❌ **không có** | Phải tạo, hoặc log vào `inbound_events` — **chốt ở PHA 5** |
-| 3 cron (nhắc/báo cáo/backup) | ⚠️ chưa xác minh | Alumdoor có 3 cron theo tài liệu; cần đọc `wrangler.jsonc` ở PHA 4 |
+| **`ai_logs`** | ✅ **đã bổ sung ở migration 0025** | Chỉ ghi sau câu trả lời AI thành công; lưu tenant, người hỏi, câu hỏi, bối cảnh và model; action đọc dữ liệu dưới đúng danh tính người gọi |
+| Cron / việc định kỳ | ✅ **ở TẦNG NỀN TẢNG** | `tenant-worker.scheduled()` và `/internal/maintenance` chạy maintenance dùng chung; trạng thái gần nhất/lỗi/stale được công bố ở `/health`. `alumdoor-worker` vẫn cố ý không có binding dữ liệu hoặc cron |
 | `/api/sync` offline | ❌ không áp dụng | Không có POS |
-| Export-all | ⚠️ chưa xác minh | — |
+| Export-all | ✅ đã xác minh | `frappe.desk.reportview.export_query` có full test và HTTP smoke; quyền `read` mặc định kéo theo `export` đúng contract |
 
-> **Kết luận:** hạ tầng Forge phủ **11/14**. V2 chỉ cần thêm `ai_logs` và xác minh cron. Đây là lý do
-> không dựng bảng hạ tầng mới — dựng là đẻ trùng lần thứ ba (sau `purchase_order_progress_entries`
-> và `import_jobs`).
+> **Cập nhật thi hành 2026-07-30:** hạ tầng cần cho V2 đã phủ đủ. `ai_logs`, maintenance nền tảng,
+> health evidence và export-all đều đã có test. App worker tiếp tục không nắm dữ liệu tenant và không
+> tự chạy cron; nguyên tắc cô lập của thiết kế không thay đổi.
 
-### 8.3 Cron V2
+### 8.3 Việc định kỳ V2 — KHÔNG thêm cron vào app worker
 
-| Giờ | Việc |
+App worker cố ý **không có binding dữ liệu và không có cron**. Ba việc định kỳ dưới đây đi qua
+maintenance của `tenant-worker`, được gọi bởi scheduler nền tảng và có khóa idempotency:
+
+| Việc | Vì sao bắt buộc |
 |---|---|
-| sáng | Nhả **giữ chỗ hết hạn** (nếu không, khả dụng tụt dần không lý do) · nhắc kiểm kê định kỳ |
-| tối | Báo cáo cuối ngày cho Chủ xưởng: nhập/xuất/cắt trong ngày, cảnh báo lệch cân |
-| đêm | Backup D1 → R2 |
+| Nhả **giữ chỗ hết hạn** | Không nhả thì tồn khả dụng **tụt dần không lý do** — hỏng im lặng đúng kiểu nỗi đau #2 nhưng ngược chiều |
+| Nhắc kiểm kê định kỳ | Tháng cho kho chính, quý cho kho đầu thừa (K1) |
+| Báo cáo cuối ngày cho Chủ xưởng | Nhập/xuất/cắt trong ngày + cảnh báo lệch cân |
+
+Backup D1 → R2 đã có ở tầng vận hành (`server/backups/alu/`), không phải việc của app.
+
+> **Cập nhật thi hành 2026-07-30:** nhả giữ chỗ chạy bằng aggregate command hệ thống nên vẫn có
+> audit và chỉ nhả sau `expires_at`; thông báo kiểm kê tháng/quý và báo cáo cuối ngày dùng tên
+> idempotent theo kỳ/ngày/người nhận. Báo cáo cuối ngày lấy ngưỡng lệch cân từ `Measurement Profile`
+> (mặc định 13% khi profile cũ chưa có giá trị). `/health` công bố lần chạy gần nhất, lỗi và trạng thái stale.
+
+### 8.4 ⚠️ Toolchain — `forge-app.mjs` đòi BUILD trước
+
+Chạy `node scripts/forge-app.mjs briefs/*.json --dry-run` trên checkout sạch thì **lỗi**:
+`ERR_MODULE_NOT_FOUND: server/dist/packages/app-registry/src/index.js`.
+
+Phải `pnpm build` trong `server/` trước. **Chưa tài liệu deploy nào ghi bước này** — người mới sẽ tưởng
+brief hỏng. Bổ sung vào runbook PHA 7.
 
 ---
 
@@ -517,7 +601,46 @@ xem BRD §6. Dưới đây chỉ kê **action app phải tự viết**.
 | — | API/action spec + quyền server | ✅ | §8.1 — 10 action, mỗi cái ghi rõ ghi gì và role nào |
 | — | Migration viết dạng văn bản, **chưa chạy** | ✅ | §2.1 — 1 `ALTER TABLE` + 1 `CREATE INDEX` |
 
-**Tự chấm: 8/8 ✅.**
+**Tự chấm SAU RÀ SOÁT 30/07: 4 đạt / 4 KHÔNG đạt** — bản trước ghi 8/8 là **nói quá** (D5).
+
+| Tiêu chí | Trước | Sau | Vì |
+|---|---|---|---|
+| 1. Mọi bảng có ledger | ✅ | ⚠️ | Thiếu ledger 3 danh mục: `Lý do huỷ` · `Nguyên nhân chênh lệch` · `Item Allowed Color` (D6) |
+| 4. Mọi FK trỏ bảng thật | ✅ | ❌ | Ba FK trên chưa có bảng — scorecard cũ tuyên bố sai |
+| Migration đủ | ✅ | ❌ | Thiếu M1b–M1e; cột có mà không ai ghi (D2) |
+| Định giá theo lô | ✅ | ❌ | Phạm vi M5 sai chỗ (D4) |
+| — | — | ❌ | **D1 — lỗi tiền, chưa từng có trong bất kỳ danh sách nào** |
+
+### Chấm LẠI sau khi đóng D1–D6 (2026-07-30)
+
+Chấm lại từng tiêu chí kèm bằng chứng, không tuyên bố suông.
+
+| # | Tiêu chí | Đạt? | Bằng chứng cụ thể |
+|---|---|---|---|
+| 1 | Mọi bảng có ledger | ✅ | **15/15** — 12 cũ + 3 danh mục FK bổ sung ở §5.4 |
+| 2 | Bảng có `status` khai state machine | ✅ | 6 chứng từ §6–§7; `Item`/danh mục không có `status`, ghi rõ lý do §4.2 |
+| 3 | Cột hệ thống đủ | ✅ | Forge cấp `name`/`owner`/`docstatus`/`modified`; sổ có PK 5 cột |
+| 4 | Mọi FK trỏ bảng thật | ✅ | D6 đóng — `Lý do huỷ` · `Nguyên nhân chênh lệch` · `Item Color Scope` đã có ledger |
+| 5 | Danh mục tách bảng riêng | ✅ | 7 + 3 danh mục; bảng "enum cứng có lý do" ở BRD §4.2 |
+| 6 | Cột **Nhân ĐỌC?** kèm bằng chứng mã | ✅ | ✅ có số dòng · ❌ ghi "phải viết" · ⬜ chỉ hiển thị |
+| 7 | Kế hoạch sửa mã đủ | ✅ | **13 việc** M1a–e · M2a–c · M3a–d · M4 · M5a–c (§2.2, viết lại sau D1/D2/D4) |
+| 8 | Migration dạng văn bản, chưa chạy | ✅ | §2.1 — 1 `ALTER TABLE` + 1 `CREATE INDEX` |
+| 9 | Không còn mâu thuẫn nội bộ | ✅ | D3 đóng — grep `Link(Aluminium Batch)` và ``​`batch` trên dòng`` ra 0 kết quả ngoài `DEFECTS.md` |
+| 10 | Scorecard nói đúng số | ✅ | D5 đóng — Cổng 1 `4/5`, Cổng 2 `8+2`, không chỗ nào ghi 10/10 |
+
+**Chấm lại: 10/10 — nhưng kèm một khoản nợ đã biết, không giấu:**
+
+> ⚠️ **Brief đang CHẬM hơn thiết kế.** `briefs/alumdoor-v2.json` dừng ở commit `cc5bcd7`, **chưa có**
+> 3 danh mục mới của D6, chưa đổi `applies_to` sang bảng con, chưa có `rate_uom` của D1.
+> Đây là **việc còn lại của PHA 4**, không phải lỗi thiết kế — nhưng phải đóng trước khi sang PHA 5,
+> nếu không brief và ledger lệch nhau ngay từ dòng code đầu tiên.
+
+**PHA 5 vẫn CHƯA được bắt đầu.** Điều kiện vào: brief bắt kịp thiết kế (PHA 4 còn lại) + user duyệt lại Cổng 3.
+
+> **Cập nhật thi hành 2026-07-30:** điều kiện trên đã được đáp ứng; PHA 5 đang chạy trên nhánh
+> `feat/alumdoor-v2-kho`. Trạng thái từng lát cắt và bằng chứng test nằm ở
+> [`PHASE_TRACKER.md`](PHASE_TRACKER.md). Đoạn “chưa bắt đầu” phía trên được giữ lại như mốc lịch sử
+> của lần chấm Cổng 3, không còn là trạng thái hiện hành.
 
 ### Hai việc CHỐT Ở PHA 5, không phải lỗ hổng
 
@@ -525,6 +648,9 @@ xem BRD §6. Dưới đây chỉ kê **action app phải tự viết**.
 |---|---|---|
 | 1 | `ai_logs` tạo mới hay log vào `inbound_events` | Không chặn thiết kế; quyết lúc viết brief |
 | 2 | Xác minh 3 cron trong `wrangler.jsonc` | Đọc lúc PHA 4 khi mở worktree |
+
+> **Đã chốt khi thi hành:** tạo bảng `ai_logs` riêng trong migration 0025; ba lịch Alumdoor nối vào
+> scheduler dùng chung của `tenant-worker`, không thêm cron hoặc D1 binding cho app worker.
 
 ### ⚠️ Ba thứ PHA 5 KHÔNG được làm khác ledger
 

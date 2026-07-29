@@ -29,6 +29,30 @@ export interface UomLine extends JsonObject {
   inventory_mode?: string;
   /** Snapshot from Item so later master-data edits never change an old voucher's meaning. */
   measurement_profile?: string;
+  /**
+   * ĐƠN VỊ CỦA `rate`. Bỏ trống = cùng đơn vị giao dịch của dòng (`uom`) — đường của mọi
+   * dòng đang chạy hôm nay, nên khai thêm trường này không làm lệch sổ cũ.
+   *
+   * Có trường này vì `rate` trước đây là một con số KHÔNG CÓ ĐƠN VỊ. Nhôm báo giá đ/kg mà
+   * đếm theo cây, nên `qty × rate` là nhân số cây với giá một ký: sai sáu lần, và sổ vẫn cân.
+   * Đơn vị ngầm là gốc của lỗi đó — nên nó phải được KHAI, không được đoán.
+   */
+  rate_uom?: string;
+  /** Số cân THẬT của dòng (catch weight). Không suy ra được từ `qty`. */
+  actual_weight_kg?: DecimalInput;
+  actual_weight_micros?: number;
+  /** Snapshot từ Item; máy chủ ghi đè để client không tự bật/tắt luật cân theo kiện. */
+  has_catch_weight?: boolean | number;
+  weight_uom?: string;
+  /** Khối lượng xuất thực tế của dòng kho/bán; khác `actual_weight_kg` dùng ở nhánh nhập. */
+  weight_kg?: DecimalInput;
+  weight_micros?: number;
+  /**
+   * Số lượng quy về ĐƠN VỊ CỦA `rate` — chính là số phải nhân với `rate`.
+   *
+   * Máy chủ tự điền, client gửi lên cũng bị ghi đè. Bằng `qty` khi `rate_uom` trùng `uom`.
+   */
+  priced_qty_micros?: number;
   /** Kích thước giao dịch cho mặt hàng bán theo m² nhưng tồn theo Bộ. */
   width_m?: DecimalInput;
   height_m?: DecimalInput;
@@ -275,6 +299,8 @@ export interface StockEntryItem extends JsonObject {
   valuation_rate?: DecimalInput;
   valuation_rate_minor?: number;
   stock_value_difference_minor?: number;
+  weight_kg?: DecimalInput;
+  weight_micros?: number;
   serial_and_batch_bundle?: string;
   batch_no?: string;
   serial_nos?: string[];

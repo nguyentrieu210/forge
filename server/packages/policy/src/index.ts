@@ -63,6 +63,7 @@ const REPORT_PERMISSIONS: Record<string, readonly string[]> = {
   "Stock Balance": ["System Manager", "Stock Manager", "Stock User"],
   "Stock Ledger": ["System Manager", "Stock Manager", "Stock User", "Accounts Manager"],
   "Batch Stock Balance": ["System Manager", "Stock Manager", "Stock User"],
+  "Tồn nhôm theo khổ": ["System Manager", "Stock Manager", "Stock User", "Chủ xưởng", "Thủ kho", "Sản xuất", "Kế toán"],
   "Serial Number Status": ["System Manager", "Stock Manager", "Stock User"],
   "Work Order Progress": ["System Manager", "Manufacturing Manager", "Manufacturing User", "Stock Manager"],
   "Asset Depreciation Ledger": ["System Manager", "Asset Manager", "Asset User", "Accounts Manager", "Accounts User"],

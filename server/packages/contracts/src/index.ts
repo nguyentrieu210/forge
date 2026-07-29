@@ -111,6 +111,17 @@ export interface StockLedgerEntry {
   item_code: string;
   warehouse: string;
   actual_qty_micros: number;
+  /**
+   * Số cân THẬT của dòng sổ, khi mặt hàng cân theo kiện (catch weight).
+   *
+   * Không suy ra được từ `actual_qty_micros`: cùng một mã nhôm đo thật ra 6,57 m/cây ở lô này
+   * và 8,61 m/cây ở lô kia, nên mọi hệ số quy đổi tĩnh đều sai với một trong hai.
+   *
+   * `undefined` nghĩa là "dòng này không cân theo kiện" — KHÁC với cân được 0 (lá vụn).
+   * Đừng thay bằng `?? 0`: cộng một phép cân chưa từng xảy ra vào tổng là bịa số.
+   * Cùng dấu với `actual_qty_micros` — nền tảng ép ở `stock_weight_sign_guard`.
+   */
+  actual_weight_micros?: number;
   valuation_rate_minor: number;
   stock_value_difference_minor: number;
   qty_scale: 6;

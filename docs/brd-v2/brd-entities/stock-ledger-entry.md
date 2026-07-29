@@ -63,7 +63,7 @@ integer** — không có số thực dấu phẩy động trong sổ, nên khôn
 | `line_key` | TEXT | PK, NOT NULL | duy nhất trong 1 chứng từ | Dòng thứ mấy của chứng từ |
 | `item_code` | TEXT | NOT NULL, FK→Item | mặt hàng phải `is_stock_item` → *"«X» không phải hàng tồn kho"* | — |
 | `warehouse` | TEXT | NOT NULL, FK→Warehouse | phải là **kho lá** → *"«Kho Alumdoor» là nút nhóm, không phát sinh tồn"* | — |
-| `batch_no` | TEXT | nullable, FK→Aluminium Batch | **BẮT BUỘC khi `item.has_batch_no`** → *"Mặt hàng «X» quản lý theo lô — phải chọn lô"* | ⚠️ Trước V2 cột này bỏ trống hoàn toàn. Đây là mắt xích của QĐ-1 |
+| `batch_no` | TEXT | nullable, FK→Batch | **BẮT BUỘC khi `item.has_batch_no`** → *"Mặt hàng «X» quản lý theo lô — phải chọn lô"* | ⚠️ Trước V2 cột này bỏ trống hoàn toàn. Đây là mắt xích của QĐ-1 |
 | `actual_qty_micros` | INTEGER | NOT NULL | `≠ 0`; âm = xuất, dương = nhập | **Số lượng theo `item.stock_uom`** — với nhôm là **Cây/Lá**, không phải Kg (QĐ-2) |
 | `actual_weight_micros` | INTEGER | **MỚI**, nullable | BẮT BUỘC khi `item.has_catch_weight` → *"Mặt hàng cân theo kiện phải ghi khối lượng"*; cùng dấu với `actual_qty_micros` | **Kg thực cân** — catch weight. Nguồn cho giá vốn và công nợ NCC |
 | `valuation_rate_minor` | INTEGER | NOT NULL, `≥ 0` | — | Giá vốn một đơn vị tồn tại thời điểm này |

@@ -158,6 +158,56 @@ function resolveFactorMicros(line: UomLine, master: JsonObject | null, uom: stri
 }
 
 /**
+ * `rate` nhân với CÁI GÌ — và vì sao câu hỏi đó phải có câu trả lời khai rõ.
+ *
+ * `rate` vốn là một con số không có đơn vị, và cả hệ thống ngầm hiểu nó là "giá một đơn vị
+ * giao dịch". Ngầm hiểu đó đúng cho mọi mặt hàng đếm được. Nó sai cho nhôm:
+ *
+ *     Nhận 200 cây · cân 1.200 kg · NCC báo 100.000 đ/kg
+ *     qty × rate  =    200 × 100.000 =  20.000.000     ← nhân số CÂY với giá một KÝ
+ *     đúng        =  1.200 × 100.000 = 120.000.000
+ *
+ * Sai sáu lần, và không dòng nào lệch: sổ kho và sổ cái dùng chung con số sai đó nên vẫn cân.
+ *
+ * Ba nhánh, và nhánh thứ ba là quan trọng nhất:
+ *
+ *   1. `rate_uom` trống hoặc trùng `uom` → nhân với `qty`. Đường của mọi dòng đang chạy.
+ *   2. `rate_uom` trùng `weight_uom` của mặt hàng cân theo kiện → nhân với SỐ CÂN THẬT.
+ *   3. Còn lại → TỪ CHỐI.
+ *
+ * Nhánh 3 không đi tìm hệ số quy đổi, dù `uom_conversions` có thể có. Cố suy ra là quay lại
+ * đúng cái giả định vừa gỡ bỏ: hệ số tĩnh không diễn tả được nhôm — cùng một mã đo thật ra
+ * 6,57 m/cây ở lô này và 8,61 ở lô kia. Đoán một lần nữa chỉ là đổi chỗ chỗ sai.
+ */
+function applyRateUnit<T extends UomLine>(item: T, master: JsonObject | null, uom: string | undefined, qtyMicros: number, index: number): Partial<UomLine> {
+  const weightMicros = item.actual_weight_micros
+    ?? (item.actual_weight_kg === undefined ? undefined : toScaledInt(item.actual_weight_kg, 6, `items[${index}].actual_weight_kg`));
+  const weightPart = weightMicros === undefined ? {} : { actual_weight_micros: weightMicros, actual_weight_kg: fromScaledInt(weightMicros, 6) };
+
+  const lineUom = uom ?? stockUomOf(master);
+  const rateUom = item.rate_uom;
+  if (!rateUom || rateUom === lineUom) return { ...weightPart, priced_qty_micros: qtyMicros };
+
+  const weightUom = itemText(master, "weight_uom");
+  if (rateUom === weightUom) {
+    if (weightMicros === undefined) {
+      throw errors.validation(
+        `Mặt hàng ${item.item_code} (dòng ${index + 1}): đơn giá tính theo "${rateUom}" nhưng chưa cân.`
+        + ` Điền Khối lượng thực (actual weight) — suy từ số lượng là bịa ra một phép cân chưa từng xảy ra.`,
+      );
+    }
+    if (weightMicros <= 0) throw errors.validation(`Khối lượng thực phải lớn hơn 0 (dòng ${index + 1})`);
+    return { ...weightPart, priced_qty_micros: weightMicros };
+  }
+
+  throw errors.validation(
+    `Mặt hàng ${item.item_code} (dòng ${index + 1}): rate_uom "${rateUom}" không phải đơn vị giao dịch "${lineUom ?? "?"}"`
+    + `${weightUom ? ` cũng không phải đơn vị khối lượng "${weightUom}"` : ", và mặt hàng không cân theo kiện"}.`
+    + ` Đơn giá phải tính theo một trong hai — quy đổi ngầm sang đơn vị thứ ba là cách sai tiền quay lại lần nữa.`,
+  );
+}
+
+/**
  * Điền `conversion_factor`, `stock_uom` và `stock_qty` cho từng dòng.
  *
  * Đọc hồ sơ mặt hàng MỘT lần cho mỗi mã, vì một phiếu nhập nhôm hay có mười dòng cùng mã
@@ -197,7 +247,15 @@ export async function applyUomConversion<T extends UomLine>(
       ...(stockUom ? { stock_uom: stockUom } : {}),
       stock_qty: fromScaledInt(stockQty, 6),
       stock_qty_micros: stockQty,
-      ...(master ? { inventory_mode: inventoryMode, measurement_profile: measurementProfile } : {}),
+      // Gộp vào đây chứ không để thành một bước riêng caller phải nhớ gọi: hai chỗ đều cần
+      // hồ sơ mặt hàng, và một bước "nhớ gọi thêm" là bước sẽ bị quên ở controller thứ ba.
+      ...applyRateUnit(item, master, uom, qtyMicros, index),
+      ...(master ? {
+        inventory_mode: inventoryMode,
+        measurement_profile: measurementProfile,
+        has_catch_weight: master.has_catch_weight === true || master.has_catch_weight === 1,
+        ...(typeof master.weight_uom === "string" ? { weight_uom: master.weight_uom } : {}),
+      } : {}),
     };
   });
 }
@@ -205,4 +263,14 @@ export async function applyUomConversion<T extends UomLine>(
 /** Số lượng theo ĐƠN VỊ TỒN của một dòng — thứ mà sổ kho và hạn mức đặt hàng phải dùng. */
 export function stockQtyMicros(line: UomLine): number {
   return line.stock_qty_micros ?? line.qty_micros ?? toScaledInt(line.qty, 6, "qty");
+}
+
+/**
+ * Số lượng theo ĐƠN VỊ CỦA `rate` — thứ duy nhất được phép nhân với `rate`.
+ *
+ * Lùi về `qty` khi chưa qua `applyUomConversion` (chứng từ cũ đọc lại lúc huỷ), nên hành vi
+ * của mọi dòng không khai `rate_uom` không đổi.
+ */
+export function pricedQtyMicros(line: UomLine): number {
+  return line.priced_qty_micros ?? line.qty_micros ?? toScaledInt(line.qty, 6, "qty");
 }

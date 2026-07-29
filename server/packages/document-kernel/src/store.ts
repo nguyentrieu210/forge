@@ -1,4 +1,4 @@
-import type { CanonicalDocument, JsonObject, MutationPlan, MutationReceipt, MutationSnapshot, StockLedgerEntry } from "../../contracts/src/index.js";
+import type { CanonicalDocument, GeneralLedgerEntry, JsonObject, MutationPlan, MutationReceipt, MutationSnapshot, StockLedgerEntry } from "../../contracts/src/index.js";
 
 export interface SubmittedQuantityQuery {
   tenantId: string;
@@ -11,15 +11,55 @@ export interface SubmittedQuantityQuery {
   quantityKind?: "stock" | "transaction";
 }
 
+export interface TrackedStockState {
+  qty_micros: number;
+  /** NULL means no catch-weight measurement has ever been posted for this slice. */
+  weight_micros: number | null;
+  stock_value_minor: number;
+}
+
+export interface TrackedStockPosition extends TrackedStockState {
+  item_code: string;
+  warehouse: string;
+  batch_no: string;
+}
+
 export interface DomainReader {
   getDocument<T extends JsonObject>(tenantId: string, doctype: string, name: string): Promise<CanonicalDocument<T> | null>;
+  /** Bounded controller-side scan for state overlays such as stock reservations. */
+  listDocumentsByDoctype<T extends JsonObject>(tenantId: string, doctype: string): Promise<Array<CanonicalDocument<T>>>;
   sumSubmittedChildQuantityMicros(query: SubmittedQuantityQuery): Promise<number>;
   getOutstandingMinor(tenantId: string, voucherType: string, voucherNo: string): Promise<number>;
   /** Outstanding in company-currency minor units, derived from the payment ledger. */
   getBaseOutstandingMinor(tenantId: string, voucherType: string, voucherNo: string): Promise<number>;
   getStockBalanceMicros(tenantId: string, itemCode: string, warehouse: string): Promise<number>;
   getTrackedStockBalanceMicros(tenantId: string, itemCode: string, warehouse: string, batchNo?: string, serialNo?: string): Promise<number>;
-  getStockLedgerHistory(tenantId: string, itemCode: string, warehouse: string, throughPostingAt?: string): Promise<StockLedgerEntry[]>;
+  /** Quantity, catch weight and value from the same append-only ledger slice. */
+  getTrackedStockState(
+    tenantId: string,
+    itemCode: string,
+    warehouse: string,
+    batchNo?: string,
+    throughPostingAt?: string,
+  ): Promise<TrackedStockState>;
+  /** Current batch positions grouped from the ledger; never infer location from Batch.received_warehouse. */
+  listTrackedStockPositions(tenantId: string, itemCode?: string): Promise<TrackedStockPosition[]>;
+  /** Các dòng sổ cái gốc của đúng một lần ghi chứng từ; dùng để huỷ bằng đối dấu nguyên trạng. */
+  getVoucherGlEntries(tenantId: string, voucherType: string, voucherNo: string, voucherRevision: number): Promise<GeneralLedgerEntry[]>;
+  /** Các dòng sổ gốc của đúng một lần ghi chứng từ; dùng để huỷ bằng đối dấu nguyên trạng. */
+  getVoucherStockEntries(tenantId: string, voucherType: string, voucherNo: string, voucherRevision: number): Promise<StockLedgerEntry[]>;
+  /**
+   * `batchNo` thu hẹp lịch sử về ĐÚNG một lô.
+   *
+   * Đó chính là cách làm "giá đích danh": phát lại FIFO trên một lô duy nhất thì lớp đầu tiên
+   * cũng là lớp duy nhất, nên giá trả về là giá của chính lô đó. Không cần thêm phương pháp
+   * thứ ba vào hệ thống — chỉ cần hỏi đúng câu hỏi hẹp hơn.
+   *
+   * Cần vì lúc cắt, xưởng CỐ Ý chọn lô khổ nhỏ nhất còn đủ dài để phế ít nhất — thường không
+   * phải lô cũ nhất. Định giá bỏ qua lô thì vật lý tiêu thụ lô này còn kế toán trừ lô kia,
+   * lệch âm thầm. ERPNext dính đúng lỗi này (PR #29804).
+   */
+  getStockLedgerHistory(tenantId: string, itemCode: string, warehouse: string, throughPostingAt?: string, batchNo?: string): Promise<StockLedgerEntry[]>;
   isStockBundleUsed(tenantId: string, bundleName: string): Promise<boolean>;
   getReturnedQuantityMicros(tenantId: string, referenceDoctype: string, referenceName: string, kind: string, itemCode: string): Promise<number>;
   getManufacturedQuantityMicros(tenantId: string, workOrder: string, kind?: "Material Transfer" | "Consumption" | "Manufacture", itemCode?: string): Promise<number>;

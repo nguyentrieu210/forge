@@ -25,7 +25,7 @@
 | `profile_name` | Data | ✅ | UNIQUE | Tên bộ quy cách |
 | `inventory_mode` | Select(Hàng thường, Nhôm cây/lá, Tấm/Kính, Cuộn, Lô/Serial, Thành phẩm theo m2) | ✅ | mặc định `Hàng thường` | **Nguồn duy nhất.** Enum cứng — mỗi giá trị là một nhánh code |
 | `stock_uom` | Link(UOM) | ✅ | — | ĐVT tồn **đề xuất** cho Item dùng profile này |
-| `require_color` | Check | — | — | Bật ⇒ `Aluminium Batch.color` bắt buộc |
+| `require_color` | Check | — | — | Bật ⇒ `Batch.color` bắt buộc |
 | `require_condition` | Check | — | — | Bật ⇒ `batch.condition` bắt buộc |
 | `require_length` | Check | — | — | Bật ⇒ `batch.length_m` bắt buộc |
 | `require_width` | Check | — | — | Cho tấm/kính |

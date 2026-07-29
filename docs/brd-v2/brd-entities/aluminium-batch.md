@@ -147,7 +147,7 @@ hai giá, hai màu ⇒ **hai batch**. Cùng chuyến, cùng màu, cùng khổ �
 | Field | Kiểu | Bắt buộc | Validate + câu lỗi | Nghiệp vụ |
 |---|---|---|---|---|
 | `is_offcut` | Check | — | — | Lô sinh ra từ phần dư sau khi cắt |
-| `parent_batch` | Link(Aluminium Batch) | ✅ khi `is_offcut` | không tự trỏ chính nó; không tạo vòng | Cắt từ lô nào ra — chuỗi truy ngược tới cây nguyên |
+| `parent_batch` | Link(Batch) | ✅ khi `is_offcut` | không tự trỏ chính nó; không tạo vòng | Cắt từ lô nào ra — chuỗi truy ngược tới cây nguyên |
 | `cut_generation` | Int | — | `≥ 0`, tự tăng theo `parent_batch` | Cây nguyên = 0; cắt lần 1 ra đầu thừa = 1… Cảnh báo khi vượt ngưỡng |
 
 > **Đầu thừa nằm ở kho RIÊNG và bị LOẠI khỏi tồn khả dụng** (chuẩn ngành: Acumatica, CutWize) — MRP/

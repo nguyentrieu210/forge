@@ -22,8 +22,8 @@ import type {
 } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
 import { fromScaledInt, toScaledInt } from "../../money/src/index.js";
-import { deriveO2CStatus } from "./status.js";
-import type { MutationStore, SubmittedQuantityQuery } from "./store.js";
+import { deriveDeliveryNoteStatus, deriveO2CStatus } from "./status.js";
+import type { MutationStore, SubmittedQuantityQuery, TrackedStockPosition, TrackedStockState } from "./store.js";
 
 class KeyedMutex {
   private tails = new Map<string, Promise<void>>();
@@ -47,7 +47,21 @@ export class InMemoryMutationStore implements MutationStore {
   private readonly documents = new Map<string, CanonicalDocument>();
   private readonly receipts = new Map<string, MutationReceipt>();
   private readonly glEntries: GeneralLedgerEntry[] = [];
+  private readonly voucherGlEntries: Array<{
+    tenant_id: string;
+    voucher_type: string;
+    voucher_no: string;
+    voucher_revision: number;
+    line: GeneralLedgerEntry;
+  }> = [];
   private readonly stockEntries: StockLedgerEntry[] = [];
+  private readonly voucherStockEntries: Array<{
+    tenant_id: string;
+    voucher_type: string;
+    voucher_no: string;
+    voucher_revision: number;
+    line: StockLedgerEntry;
+  }> = [];
   private readonly paymentEntries: PaymentLedgerEntry[] = [];
   private readonly fulfillmentEntries: FulfillmentEntry[] = [];
   private readonly procurementEntries: ProcurementEntry[] = [];
@@ -78,6 +92,20 @@ export class InMemoryMutationStore implements MutationStore {
     const document = structuredClone(raw) as CanonicalDocument<T>;
     await this.hydrateDerived(document);
     return document;
+  }
+
+  async listDocumentsByDoctype<T extends JsonObject>(
+    tenantId: string,
+    doctype: string,
+  ): Promise<Array<CanonicalDocument<T>>> {
+    const result: Array<CanonicalDocument<T>> = [];
+    for (const raw of this.documents.values()) {
+      if (raw.tenant_id !== tenantId || raw.doctype !== doctype) continue;
+      const document = structuredClone(raw) as CanonicalDocument<T>;
+      await this.hydrateDerived(document);
+      result.push(document);
+    }
+    return result.sort((left, right) => left.name.localeCompare(right.name));
   }
 
   async getReceipt(tenantId: string, commandId: string): Promise<MutationReceipt | null> {
@@ -131,9 +159,78 @@ export class InMemoryMutationStore implements MutationStore {
       .reduce((total, line) => total + line.actual_qty_micros, 0);
   }
 
-  async getStockLedgerHistory(tenantId: string, itemCode: string, warehouse: string, throughPostingAt?: string): Promise<StockLedgerEntry[]> {
+  async getTrackedStockState(
+    tenantId: string,
+    itemCode: string,
+    warehouse: string,
+    batchNo?: string,
+    throughPostingAt?: string,
+  ): Promise<TrackedStockState> {
+    const rows = this.stockEntries.filter((line) =>
+      line.item_code === itemCode
+      && line.warehouse === warehouse
+      && (!batchNo || line.batch_no === batchNo)
+      && (!throughPostingAt || line.posting_at <= throughPostingAt));
+    const measured = rows.filter((line) => line.actual_weight_micros !== undefined);
+    return {
+      qty_micros: rows.reduce((total, line) => total + line.actual_qty_micros, 0),
+      weight_micros: measured.length
+        ? measured.reduce((total, line) => total + (line.actual_weight_micros ?? 0), 0)
+        : null,
+      stock_value_minor: rows.reduce((total, line) => total + line.stock_value_difference_minor, 0),
+    };
+  }
+
+  async listTrackedStockPositions(_tenantId: string, itemCode?: string): Promise<TrackedStockPosition[]> {
+    const grouped = new Map<string, TrackedStockPosition & { measured: boolean }>();
+    for (const line of this.stockEntries) {
+      if (!line.batch_no || (itemCode && line.item_code !== itemCode)) continue;
+      const key = `${line.item_code}\u0000${line.warehouse}\u0000${line.batch_no}`;
+      const row = grouped.get(key) ?? {
+        item_code: line.item_code,
+        warehouse: line.warehouse,
+        batch_no: line.batch_no,
+        qty_micros: 0,
+        weight_micros: null,
+        stock_value_minor: 0,
+        measured: false,
+      };
+      row.qty_micros += line.actual_qty_micros;
+      row.stock_value_minor += line.stock_value_difference_minor;
+      if (line.actual_weight_micros !== undefined) {
+        row.measured = true;
+        row.weight_micros = (row.weight_micros ?? 0) + line.actual_weight_micros;
+      }
+      grouped.set(key, row);
+    }
+    return [...grouped.values()]
+      .filter((row) => row.qty_micros !== 0 || (row.weight_micros ?? 0) !== 0)
+      .map(({ measured: _measured, ...row }) => structuredClone(row));
+  }
+
+  async getVoucherGlEntries(tenantId: string, voucherType: string, voucherNo: string, voucherRevision: number): Promise<GeneralLedgerEntry[]> {
+    return structuredClone(this.voucherGlEntries
+      .filter((entry) => entry.tenant_id === tenantId
+        && entry.voucher_type === voucherType
+        && entry.voucher_no === voucherNo
+        && entry.voucher_revision === voucherRevision)
+      .map((entry) => entry.line));
+  }
+
+  async getVoucherStockEntries(tenantId: string, voucherType: string, voucherNo: string, voucherRevision: number): Promise<StockLedgerEntry[]> {
+    return structuredClone(this.voucherStockEntries
+      .filter((entry) => entry.tenant_id === tenantId
+        && entry.voucher_type === voucherType
+        && entry.voucher_no === voucherNo
+        && entry.voucher_revision === voucherRevision)
+      .map((entry) => entry.line));
+  }
+
+  async getStockLedgerHistory(tenantId: string, itemCode: string, warehouse: string, throughPostingAt?: string, batchNo?: string): Promise<StockLedgerEntry[]> {
     return structuredClone(this.stockEntries
-      .filter((line) => line.item_code === itemCode && line.warehouse === warehouse && (!throughPostingAt || line.posting_at <= throughPostingAt))
+      .filter((line) => line.item_code === itemCode && line.warehouse === warehouse
+        && (!throughPostingAt || line.posting_at <= throughPostingAt)
+        && (!batchNo || line.batch_no === batchNo))
       .sort((a,b) => a.posting_at.localeCompare(b.posting_at)));
   }
 
@@ -338,7 +435,21 @@ export class InMemoryMutationStore implements MutationStore {
         ...(command.amended_from ? { amended_from: command.amended_from } : {}),
       });
       this.glEntries.push(...structuredClone(plan.gl_entries));
+      this.voucherGlEntries.push(...plan.gl_entries.map((line) => ({
+        tenant_id: command.tenant_id,
+        voucher_type: command.aggregate.doctype,
+        voucher_no: command.aggregate.name,
+        voucher_revision: plan.document.version,
+        line: structuredClone(line),
+      })));
       this.stockEntries.push(...structuredClone(plan.stock_entries));
+      this.voucherStockEntries.push(...plan.stock_entries.map((line) => ({
+        tenant_id: command.tenant_id,
+        voucher_type: command.aggregate.doctype,
+        voucher_no: command.aggregate.name,
+        voucher_revision: plan.document.version,
+        line: structuredClone(line),
+      })));
       this.paymentEntries.push(...structuredClone(plan.payment_entries));
       this.fulfillmentEntries.push(...structuredClone(plan.fulfillment_entries));
       this.procurementEntries.push(...structuredClone(plan.procurement_entries ?? []));
@@ -422,7 +533,10 @@ export class InMemoryMutationStore implements MutationStore {
       if (document.docstatus === 1) document.status = reconciled <= 0 ? "Unreconciled" : reconciled >= amount ? "Reconciled" : "Partly Reconciled";
     }
     if (document.doctype === "Delivery Note" && document.docstatus === 1) {
-      document.status = deriveO2CStatus("Delivery Note", document.docstatus);
+      document.status = deriveDeliveryNoteStatus(
+        document.docstatus,
+        typeof document.data.issue_purpose === "string" ? document.data.issue_purpose : undefined,
+      );
     }
     if (document.doctype === "Purchase Order") {
       const items = Array.isArray(document.data.items) ? document.data.items : [];
@@ -507,6 +621,17 @@ export class InMemoryMutationStore implements MutationStore {
     const pendingSerial = new Map<string, number>();
     const pendingBatch = new Map<string, number>();
     for (const line of plan.stock_entries) {
+      // Song sinh của `stock_weight_sign_guard` (migration 0024). Hai kho phải kể CÙNG một
+      // câu chuyện: nếu chỉ D1 chặn, test chạy trên kho trong bộ nhớ sẽ XANH cho đúng cái
+      // bút toán mà production ABORT. Luật viết hai nơi thì phải sửa cả hai, cùng lúc —
+      // migration 0023 đã ghi lại đúng bài học này.
+      if (line.actual_weight_micros != null
+        && ((line.actual_qty_micros > 0 && line.actual_weight_micros < 0)
+          || (line.actual_qty_micros < 0 && line.actual_weight_micros > 0))) {
+        throw errors.reference(`Stock weight sign does not match quantity for ${line.item_code}`, {
+          actual_qty_micros: line.actual_qty_micros, actual_weight_micros: line.actual_weight_micros,
+        });
+      }
       if (line.serial_no) {
         if (Math.abs(line.actual_qty_micros) !== 1_000_000) throw errors.reference("Serial quantity must equal one");
         const serialKey = `${line.item_code}:${line.serial_no}`;

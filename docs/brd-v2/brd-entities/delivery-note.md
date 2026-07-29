@@ -46,7 +46,7 @@ nào**, nên sau này soi lại chứng từ cũ vẫn biết nó ra số đó t
 | D1 | `against_sales_order`: **required → tuỳ chọn** | ✅ Chủ xưởng chốt 2026-07-30. Xưởng còn xuất mẫu, xuất đổi bảo hành, xuất nội bộ — không có đơn bán nào. Đây cũng là thứ gỡ va chạm phạm vi với QĐ-4 |
 | D2 | `install_address`: **required → tuỳ chọn** | Nó `fetch_from: against_sales_order.install_address`. Bỏ bắt buộc đơn bán mà giữ bắt buộc địa chỉ lắp là chặn ở cửa sau |
 | D3 | Thêm `issue_purpose` Select(Bán hàng, Xuất mẫu, Đổi bảo hành, Xuất nội bộ, Xuất gia công) | Bỏ ràng buộc đơn bán rồi thì phải biết **xuất để làm gì** — nếu không, phiếu không đơn trở thành lỗ hổng không ai giải thích được |
-| D4 | Thêm `batch` trên dòng | QĐ-1 — xuất phải chỉ rõ lô, để giá vốn thu hẹp đúng batch |
+| D4 | Thêm **`serial_and_batch_bundle`** trên dòng (bundle chiều `Outward`) | QĐ-1. **KHÔNG phải trường `batch` Link** — lô nằm trong bundle, xem [aluminium-batch.md](aluminium-batch.md) §đầu file |
 | D5 | Thêm `weight_kg` trên dòng | QĐ-2 catch weight — sổ ghi cả cây lẫn kg |
 | D6 | `customer`: required → **tuỳ chọn khi `issue_purpose ≠ Bán hàng`** | Xuất nội bộ không có khách |
 

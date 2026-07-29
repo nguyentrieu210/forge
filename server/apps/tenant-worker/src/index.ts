@@ -74,7 +74,15 @@ export default {
     const traceId = request.headers.get("x-cloudforge-trace-id") ?? randomId("trace");
     try {
       const url = new URL(request.url);
-      if (url.pathname === "/health") return jsonResponse({ ok: true, service: "tenant-worker", tenant: env.TENANT_ID ?? null });
+      if (url.pathname === "/health") {
+        const tenant = env.TENANT_ID ?? null;
+        return jsonResponse({
+          ok: true,
+          service: "tenant-worker",
+          tenant,
+          maintenance: tenant ? await maintenanceHealth(env.DB, tenant) : null,
+        });
+      }
 
       if (request.method === "POST" && url.pathname === "/internal/outbox/flush") {
         assertInternalService(request, env.INTERNAL_SERVICE_TOKEN);
@@ -613,7 +621,12 @@ export async function runMaintenance(
   outbox: { published: number; failed: number; skipped: number } | null;
   hooks: number;
   auto_repeat: AutoRepeatRunResult;
+  reservations: { expired: number; failed: number };
+  alumdoor: { reconciliation_reminders: number; daily_reports: number };
 }> {
+  const startedAt = new Date().toISOString();
+  await recordMaintenanceState(env.DB, tenantId, { last_started_at: startedAt, last_error: null });
+  try {
   const outbox = env.OUTBOX_QUEUE
     ? await publishPendingOutbox(env.DB, env.OUTBOX_QUEUE, tenantId)
     : null;
@@ -664,7 +677,229 @@ export async function runMaintenance(
     },
   });
 
-  return { outbox, hooks, auto_repeat };
+  const reservations = await expireStockReservations(env, tenantId, now);
+  const alumdoor = await runAlumdoorMaintenance(env.DB, tenantId, now);
+  await recordMaintenanceState(env.DB, tenantId, { last_success_at: new Date().toISOString(), last_error: null });
+  return { outbox, hooks, auto_repeat, reservations, alumdoor };
+  } catch (error) {
+    await recordMaintenanceState(env.DB, tenantId, {
+      last_error: error instanceof Error ? error.message.slice(0, 1000) : String(error).slice(0, 1000),
+    });
+    throw error;
+  }
+}
+
+async function recordMaintenanceState(
+  db: D1Database,
+  tenantId: string,
+  patch: { last_started_at?: string; last_success_at?: string; last_error?: string | null },
+): Promise<void> {
+  await db.prepare(
+    `INSERT INTO maintenance_runs(tenant_id,job_name,last_started_at,last_success_at,last_error)
+     VALUES(?1,'tenant-maintenance',?2,?3,?4)
+     ON CONFLICT(tenant_id,job_name) DO UPDATE SET
+       last_started_at=COALESCE(excluded.last_started_at,maintenance_runs.last_started_at),
+       last_success_at=COALESCE(excluded.last_success_at,maintenance_runs.last_success_at),
+       last_error=CASE WHEN ?5=1 THEN excluded.last_error ELSE maintenance_runs.last_error END`,
+  ).bind(
+    tenantId,
+    patch.last_started_at ?? null,
+    patch.last_success_at ?? null,
+    patch.last_error ?? null,
+    Object.hasOwn(patch, "last_error") ? 1 : 0,
+  ).run();
+}
+
+async function maintenanceHealth(
+  db: D1Database,
+  tenantId: string,
+): Promise<{ last_started_at: string | null; last_success_at: string | null; failed: boolean; stale: boolean }> {
+  const row = await db.prepare(
+    `SELECT last_started_at,last_success_at,last_error FROM maintenance_runs
+     WHERE tenant_id=?1 AND job_name='tenant-maintenance'`,
+  ).bind(tenantId).first<{ last_started_at: string | null; last_success_at: string | null; last_error: string | null }>();
+  const successAt = row?.last_success_at ?? null;
+  return {
+    last_started_at: row?.last_started_at ?? null,
+    last_success_at: successAt,
+    failed: Boolean(row?.last_error),
+    stale: !successAt || Date.now() - Date.parse(successAt) > 5 * 60_000,
+  };
+}
+
+export async function runAlumdoorMaintenance(
+  db: D1Database,
+  tenantId: string,
+  now: string,
+): Promise<{ reconciliation_reminders: number; daily_reports: number }> {
+  const installed = await db.prepare(
+    `SELECT version FROM installed_apps WHERE tenant_id=?1 AND app_id='alumdoor'`,
+  ).bind(tenantId).first<{ version: string }>();
+  if (!installed?.version?.startsWith("2.")) return { reconciliation_reminders: 0, daily_reports: 0 };
+
+  const owners = await db.prepare(
+    `SELECT DISTINCT u.user_id,u.time_zone
+     FROM users u JOIN user_roles r ON r.tenant_id=u.tenant_id AND r.user_id=u.user_id
+     WHERE u.tenant_id=?1 AND u.enabled=1 AND r.role='Chủ xưởng'`,
+  ).bind(tenantId).all<{ user_id: string; time_zone: string }>();
+  let reconciliationReminders = 0;
+  let dailyReports = 0;
+  for (const owner of owners.results ?? []) {
+    const local = localClock(now, owner.time_zone || "Asia/Bangkok");
+    if (local.day === 1) {
+      reconciliationReminders += await insertNotification(db, {
+        tenantId,
+        name: `ALUMDOOR-RECON-MAIN-${local.year}-${two(local.month)}-${owner.user_id}`,
+        user: owner.user_id,
+        subject: `Đến lịch kiểm kê tháng ${two(local.month)}/${local.year}: kho chính`,
+        documentType: "Stock Reconciliation",
+        createdAt: now,
+      });
+      if ([1, 4, 7, 10].includes(local.month)) {
+        reconciliationReminders += await insertNotification(db, {
+          tenantId,
+          name: `ALUMDOOR-RECON-OFFCUT-${local.year}-Q${Math.ceil(local.month / 3)}-${owner.user_id}`,
+          user: owner.user_id,
+          subject: `Đến lịch kiểm kê quý ${Math.ceil(local.month / 3)}/${local.year}: kho đầu thừa`,
+          documentType: "Stock Reconciliation",
+          createdAt: now,
+        });
+      }
+    }
+    if (local.hour >= 17) {
+      const summary = await db.prepare(
+        `SELECT
+           COUNT(DISTINCT CASE WHEN actual_qty_micros>0 THEN voucher_type||':'||voucher_no END) AS inbound,
+           COUNT(DISTINCT CASE WHEN actual_qty_micros<0 THEN voucher_type||':'||voucher_no END) AS outbound,
+           COUNT(DISTINCT CASE WHEN voucher_type='Cut Order' THEN voucher_no END) AS cuts,
+           (
+             SELECT COUNT(*)
+             FROM documents receipt
+             JOIN document_children line
+               ON line.tenant_id=receipt.tenant_id
+              AND line.parent_key=receipt.doc_key
+              AND line.child_doctype='Purchase Receipt Item'
+             LEFT JOIN master_records profile
+               ON profile.tenant_id=receipt.tenant_id
+              AND profile.record_type='Measurement Profile'
+              AND profile.name=json_extract(line.payload_json,'$.measurement_profile')
+              AND profile.disabled=0
+             WHERE receipt.tenant_id=?1
+               AND receipt.doctype='Purchase Receipt'
+               AND receipt.docstatus=1
+               AND substr(COALESCE(json_extract(receipt.payload_json,'$.posting_at'),receipt.modified_at),1,10)=?2
+               AND ABS(CAST(json_extract(line.payload_json,'$.weight_variance_pct') AS REAL))
+                   > COALESCE(CAST(json_extract(profile.data_json,'$.weight_tolerance_pct') AS REAL),13)
+           ) AS weight_warnings
+         FROM stock_ledger_entries
+         WHERE tenant_id=?1 AND substr(posting_at,1,10)=?2`,
+      ).bind(tenantId, local.date).first<{
+        inbound: number;
+        outbound: number;
+        cuts: number;
+        weight_warnings: number;
+      }>();
+      dailyReports += await insertNotification(db, {
+        tenantId,
+        name: `ALUMDOOR-EOD-${local.date}-${owner.user_id}`,
+        user: owner.user_id,
+        subject: `Cuối ngày ${local.date}: nhập ${Number(summary?.inbound ?? 0)} · xuất ${Number(summary?.outbound ?? 0)} · cắt ${Number(summary?.cuts ?? 0)} · lệch cân ${Number(summary?.weight_warnings ?? 0)}`,
+        documentType: "Stock Ledger",
+        createdAt: now,
+      });
+    }
+  }
+  return { reconciliation_reminders: reconciliationReminders, daily_reports: dailyReports };
+}
+
+async function insertNotification(
+  db: D1Database,
+  input: {
+    tenantId: string;
+    name: string;
+    user: string;
+    subject: string;
+    documentType: string;
+    createdAt: string;
+  },
+): Promise<number> {
+  const result = await db.prepare(
+    `INSERT OR IGNORE INTO notification_log(
+       tenant_id,name,for_user,subject,notification_type,document_type,document_name,read,from_user,created_at
+     ) VALUES(?1,?2,?3,?4,'Alert',?5,'',0,'Administrator',?6)`,
+  ).bind(input.tenantId, input.name, input.user, input.subject, input.documentType, input.createdAt).run();
+  return Number(result.meta?.changes ?? 0);
+}
+
+function localClock(iso: string, timeZone: string): {
+  year: number; month: number; day: number; hour: number; date: string;
+} {
+  let formatter: Intl.DateTimeFormat;
+  try {
+    formatter = new Intl.DateTimeFormat("en-CA", {
+      timeZone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hourCycle: "h23",
+    });
+  } catch {
+    formatter = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Bangkok", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hourCycle: "h23",
+    });
+  }
+  const parts = Object.fromEntries(formatter.formatToParts(new Date(iso)).map((part) => [part.type, part.value]));
+  const year = Number(parts.year);
+  const month = Number(parts.month);
+  const day = Number(parts.day);
+  return { year, month, day, hour: Number(parts.hour), date: `${year}-${two(month)}-${two(day)}` };
+}
+
+function two(value: number): string {
+  return String(value).padStart(2, "0");
+}
+
+async function expireStockReservations(
+  env: TenantEnv,
+  tenantId: string,
+  now: string,
+): Promise<{ expired: number; failed: number }> {
+  const rows = await env.DB.prepare(
+    `SELECT name,version,payload_json
+     FROM documents
+     WHERE tenant_id=?1 AND doctype='Stock Reservation' AND docstatus=0
+       AND json_extract(payload_json,'$.state')='Đang giữ'
+       AND COALESCE(json_extract(payload_json,'$.expires_at'),'')<>''
+       AND json_extract(payload_json,'$.expires_at')<=?2
+     ORDER BY json_extract(payload_json,'$.expires_at') LIMIT 500`,
+  ).bind(tenantId, now).all<{ name: string; version: number; payload_json: string }>();
+  let expired = 0;
+  let failed = 0;
+  const actor = { user_id: "Administrator", roles: ["System Manager"] };
+  for (const row of rows.results ?? []) {
+    try {
+      const document = JSON.parse(row.payload_json) as JsonObject;
+      const command = await buildCommand({
+        tenantId,
+        actor,
+        doctype: "Stock Reservation",
+        name: row.name,
+        action: "save",
+        expectedVersion: row.version,
+        document: { ...document, state: "Hết hạn" },
+      });
+      const stub = env.AGGREGATES.getByName(`${tenantId}:Stock Reservation:${row.name}`) as AggregateStub;
+      if (typeof stub.mutate === "function") await stub.mutate(command);
+      else await callDoFetch(stub, command);
+      expired++;
+    } catch (error) {
+      failed++;
+      console.error(JSON.stringify({
+        level: "error",
+        code: "STOCK_RESERVATION_EXPIRY_FAILED",
+        tenant_id: tenantId,
+        reservation: row.name,
+        detail: error instanceof Error ? error.message : String(error),
+      }));
+    }
+  }
+  return { expired, failed };
 }
 
 /**
@@ -824,7 +1059,11 @@ async function serveFrappeApiInner(
    * Cả hai đều CHỈ ĐỌC: chúng trả về đề xuất, người dùng soát rồi mới bấm lưu.
    */
   if (request.method === "POST" && url.pathname === "/api/method/metaforge.ai.ask") {
-    return askAssistant(env, await readJson<JsonObject>(request, 64_000));
+    return askAssistant(
+      env,
+      await readJson<JsonObject>(request, 64_000),
+      { tenantId, userId: actor.user_id },
+    );
   }
   if (request.method === "POST" && url.pathname === "/api/method/metaforge.ai.read_receipt") {
     return readReceiptImage(env, tenantId, await readJson<JsonObject>(request, 12_000_000));

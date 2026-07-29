@@ -148,3 +148,24 @@ test("print_hide_if_no_value hides only when there is nothing to show", () => {
   }, "vi", meta([{ fieldname: "note", fieldtype: "Data", print_hide_if_no_value: true }]));
   assert.match(withValue, /có nội dung/);
 });
+
+test("print format qrcode filter renders a self-contained QR image", () => {
+  const printed = renderPrintFormat({
+    name: "Inventory QR",
+    doc_type: "Stock Reconciliation",
+    format_type: "Jinja",
+    revision: 1,
+    html: '<img class="qr" src="{{ name | qrcode }}">',
+  }, {
+    doctype: "Stock Reconciliation",
+    name: "KK-2026-0001",
+    owner: "u",
+    docstatus: 1,
+    status: "Đã ghi sổ",
+    version: 2,
+    data: {},
+    children: [],
+  }, "vi");
+  assert.match(printed, /data:image\/gif;base64,/);
+  assert.doesNotMatch(printed, /{{\s*name/);
+});

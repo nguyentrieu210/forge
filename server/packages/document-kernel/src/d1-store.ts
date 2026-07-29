@@ -1,5 +1,6 @@
 import type {
   CanonicalDocument,
+  GeneralLedgerEntry,
   JsonObject,
   MutationPlan,
   MutationReceipt,
@@ -7,8 +8,8 @@ import type {
 } from "../../contracts/src/index.js";
 import { asCloudForgeError, documentKey, errors } from "../../core/src/index.js";
 import { fromScaledInt, toScaledInt } from "../../money/src/index.js";
-import { deriveO2CStatus } from "./status.js";
-import type { MutationStore, SubmittedQuantityQuery } from "./store.js";
+import { deriveDeliveryNoteStatus, deriveO2CStatus } from "./status.js";
+import type { MutationStore, SubmittedQuantityQuery, TrackedStockPosition, TrackedStockState } from "./store.js";
 
 interface DocumentRow {
   tenant_id: string;
@@ -82,6 +83,32 @@ export class D1MutationStore implements MutationStore {
     };
     await this.hydrateDerived(document);
     return document;
+  }
+
+  async listDocumentsByDoctype<T extends JsonObject>(
+    tenantId: string,
+    doctype: string,
+  ): Promise<Array<CanonicalDocument<T>>> {
+    const rows = await this.writer.prepare(
+      `SELECT tenant_id, doctype, name, owner, docstatus, status, version, created_at, modified_at,
+              modified_by, amended_from, payload_json
+       FROM documents WHERE tenant_id=?1 AND doctype=?2 ORDER BY name LIMIT 5000`,
+    ).bind(tenantId, doctype).all<DocumentRow>();
+    return (rows.results ?? []).map((row): CanonicalDocument<T> => ({
+      tenant_id: row.tenant_id,
+      doctype: row.doctype,
+      name: row.name,
+      owner: row.owner,
+      docstatus: row.docstatus as 0 | 1 | 2,
+      status: row.status,
+      version: row.version,
+      created_at: row.created_at,
+      modified_at: row.modified_at,
+      ...(row.modified_by ? { modified_by: row.modified_by } : {}),
+      ...(row.amended_from ? { amended_from: row.amended_from } : {}),
+      data: JSON.parse(row.payload_json) as T,
+      children: [],
+    }));
   }
 
   async getReceipt(tenantId: string, commandId: string): Promise<MutationReceipt | null> {
@@ -160,23 +187,111 @@ export class D1MutationStore implements MutationStore {
     return Number(row?.total ?? 0);
   }
 
-  async getStockLedgerHistory(tenantId: string, itemCode: string, warehouse: string, throughPostingAt?: string): Promise<StockLedgerEntry[]> {
-    const sql = `SELECT line_key,item_code,warehouse,actual_qty_micros,valuation_rate_minor,stock_value_difference_minor,
-      qty_scale,currency_scale,currency,posting_at,batch_no,serial_no,allow_negative_stock
-      FROM stock_ledger_entries WHERE tenant_id=?1 AND item_code=?2 AND warehouse=?3
-      ${throughPostingAt ? "AND posting_at<=?4" : ""}
-      ORDER BY posting_at,rowid`;
-    const result = throughPostingAt
-      ? await this.writer.prepare(sql).bind(tenantId,itemCode,warehouse,throughPostingAt).all<Record<string, unknown>>()
-      : await this.writer.prepare(sql).bind(tenantId,itemCode,warehouse).all<Record<string, unknown>>();
+  async getTrackedStockState(
+    tenantId: string,
+    itemCode: string,
+    warehouse: string,
+    batchNo?: string,
+    throughPostingAt?: string,
+  ): Promise<TrackedStockState> {
+    const row = await this.writer.prepare(
+      `SELECT COALESCE(SUM(actual_qty_micros),0) AS qty_micros,
+              CASE WHEN COUNT(actual_weight_micros)=0 THEN NULL
+                   ELSE COALESCE(SUM(actual_weight_micros),0) END AS weight_micros,
+              COALESCE(SUM(stock_value_difference_minor),0) AS stock_value_minor
+       FROM stock_ledger_entries
+       WHERE tenant_id=?1 AND item_code=?2 AND warehouse=?3
+         AND (?4 IS NULL OR batch_no=?4)
+         AND (?5 IS NULL OR posting_at<=?5)`,
+    ).bind(tenantId, itemCode, warehouse, batchNo ?? null, throughPostingAt ?? null)
+      .first<{ qty_micros: number; weight_micros: number | null; stock_value_minor: number }>();
+    return {
+      qty_micros: Number(row?.qty_micros ?? 0),
+      weight_micros: row?.weight_micros == null ? null : Number(row.weight_micros),
+      stock_value_minor: Number(row?.stock_value_minor ?? 0),
+    };
+  }
+
+  async listTrackedStockPositions(tenantId: string, itemCode?: string): Promise<TrackedStockPosition[]> {
+    const result = await this.writer.prepare(
+      `SELECT item_code,warehouse,batch_no,
+              SUM(actual_qty_micros) AS qty_micros,
+              CASE WHEN COUNT(actual_weight_micros)=0 THEN NULL
+                   ELSE COALESCE(SUM(actual_weight_micros),0) END AS weight_micros,
+              COALESCE(SUM(stock_value_difference_minor),0) AS stock_value_minor
+       FROM stock_ledger_entries
+       WHERE tenant_id=?1 AND batch_no IS NOT NULL AND (?2 IS NULL OR item_code=?2)
+       GROUP BY item_code,warehouse,batch_no
+       HAVING SUM(actual_qty_micros)<>0 OR COALESCE(SUM(actual_weight_micros),0)<>0`,
+    ).bind(tenantId, itemCode ?? null).all<{
+      item_code: string;
+      warehouse: string;
+      batch_no: string;
+      qty_micros: number;
+      weight_micros: number | null;
+      stock_value_minor: number;
+    }>();
     return (result.results ?? []).map((row) => ({
-      line_key: String(row.line_key), item_code: String(row.item_code), warehouse: String(row.warehouse),
-      actual_qty_micros: Number(row.actual_qty_micros), valuation_rate_minor: Number(row.valuation_rate_minor),
-      stock_value_difference_minor: Number(row.stock_value_difference_minor), qty_scale: 6,
-      currency_scale: Number(row.currency_scale), currency: String(row.currency), posting_at: String(row.posting_at),
-      ...(row.batch_no ? { batch_no: String(row.batch_no) } : {}), ...(row.serial_no ? { serial_no: String(row.serial_no) } : {}),
-      allow_negative_stock: Number(row.allow_negative_stock) === 1,
+      item_code: String(row.item_code),
+      warehouse: String(row.warehouse),
+      batch_no: String(row.batch_no),
+      qty_micros: Number(row.qty_micros),
+      weight_micros: row.weight_micros == null ? null : Number(row.weight_micros),
+      stock_value_minor: Number(row.stock_value_minor),
     }));
+  }
+
+  async getVoucherGlEntries(tenantId: string, voucherType: string, voucherNo: string, voucherRevision: number): Promise<GeneralLedgerEntry[]> {
+    const result = await this.writer.prepare(
+      `SELECT line_key,account,party_type,party,debit_minor,credit_minor,currency,currency_scale,
+       cost_center,dimensions_json,remarks,posting_at
+       FROM gl_entries
+       WHERE tenant_id=?1 AND voucher_type=?2 AND voucher_no=?3 AND voucher_revision=?4
+       ORDER BY rowid`,
+    ).bind(tenantId, voucherType, voucherNo, voucherRevision).all<Record<string, unknown>>();
+    return (result.results ?? []).map((row) => ({
+      line_key: String(row.line_key),
+      account: String(row.account),
+      ...(row.party_type ? { party_type: String(row.party_type) } : {}),
+      ...(row.party ? { party: String(row.party) } : {}),
+      debit_minor: Number(row.debit_minor),
+      credit_minor: Number(row.credit_minor),
+      currency: String(row.currency),
+      currency_scale: Number(row.currency_scale),
+      ...(row.cost_center ? { cost_center: String(row.cost_center) } : {}),
+      ...(typeof row.dimensions_json === "string"
+        ? { accounting_dimensions: JSON.parse(row.dimensions_json) as JsonObject }
+        : {}),
+      ...(row.remarks ? { remarks: String(row.remarks) } : {}),
+      posting_at: String(row.posting_at),
+    }));
+  }
+
+  async getVoucherStockEntries(tenantId: string, voucherType: string, voucherNo: string, voucherRevision: number): Promise<StockLedgerEntry[]> {
+    const result = await this.writer.prepare(
+      `SELECT line_key,item_code,warehouse,actual_qty_micros,actual_weight_micros,valuation_rate_minor,stock_value_difference_minor,
+       qty_scale,currency_scale,currency,posting_at,batch_no,serial_no,allow_negative_stock
+       FROM stock_ledger_entries
+       WHERE tenant_id=?1 AND voucher_type=?2 AND voucher_no=?3 AND voucher_revision=?4
+       ORDER BY rowid`,
+    ).bind(tenantId, voucherType, voucherNo, voucherRevision).all<Record<string, unknown>>();
+    return (result.results ?? []).map(mapStockLedgerRow);
+  }
+
+  async getStockLedgerHistory(tenantId: string, itemCode: string, warehouse: string, throughPostingAt?: string, batchNo?: string): Promise<StockLedgerEntry[]> {
+    // Dựng điều kiện theo danh sách thay vì nối chuỗi hai nhánh: thêm tham số thứ năm vào
+    // lối viết `?4` cố định cũ là chỗ rất dễ lệch số thứ tự, và lệch một số là truy vấn sai
+    // mà vẫn chạy.
+    const conditions = ["tenant_id=?1", "item_code=?2", "warehouse=?3"];
+    const values: unknown[] = [tenantId, itemCode, warehouse];
+    if (throughPostingAt) { conditions.push(`posting_at<=?${values.length + 1}`); values.push(throughPostingAt); }
+    if (batchNo) { conditions.push(`batch_no=?${values.length + 1}`); values.push(batchNo); }
+    const sql = `SELECT line_key,item_code,warehouse,actual_qty_micros,actual_weight_micros,valuation_rate_minor,stock_value_difference_minor,
+      qty_scale,currency_scale,currency,posting_at,batch_no,serial_no,allow_negative_stock
+      FROM stock_ledger_entries WHERE ${conditions.join(" AND ")}
+      ORDER BY posting_at,rowid`;
+    const result = await this.writer.prepare(sql).bind(...values).all<Record<string, unknown>>();
+    return (result.results ?? []).map(mapStockLedgerRow);
   }
 
   async isStockBundleUsed(tenantId: string, bundleName: string): Promise<boolean> {
@@ -517,6 +632,32 @@ export class D1MutationStore implements MutationStore {
     return row?.lock_date ?? null;
   }
 
+  async setAccountingPeriodLock(
+    tenantId: string,
+    company: string,
+    lockDate: string,
+    actor: string,
+    reason: string,
+    occurredAt: string,
+  ): Promise<{ company: string; lock_date: string | null }> {
+    const action = lockDate ? "Lock" : "Unlock";
+    await this.db.batch([
+      this.db.prepare(
+        `INSERT INTO accounting_period_locks(tenant_id,company,lock_date,modified_at,modified_by,reason)
+         VALUES(?1,?2,?3,?4,?5,?6)
+         ON CONFLICT(tenant_id,company) DO UPDATE SET
+           lock_date=excluded.lock_date,modified_at=excluded.modified_at,
+           modified_by=excluded.modified_by,reason=excluded.reason`,
+      ).bind(tenantId, company, lockDate, occurredAt, actor, reason),
+      this.db.prepare(
+        `INSERT INTO accounting_period_lock_events(
+           tenant_id,event_id,company,action,lock_date,reason,actor,occurred_at
+         ) VALUES(?1,?2,?3,?4,?5,?6,?7,?8)`,
+      ).bind(tenantId, crypto.randomUUID(), company, action, lockDate, reason, actor, occurredAt),
+    ]);
+    return { company, lock_date: lockDate || null };
+  }
+
   async execute<T extends JsonObject>(plan: MutationPlan<T>): Promise<MutationReceipt> {
     const command = plan.command;
     const key = documentKey(command.aggregate.doctype, command.aggregate.name);
@@ -626,11 +767,15 @@ export class D1MutationStore implements MutationStore {
     for (const line of plan.stock_entries) {
       statements.push(database.prepare(
         `INSERT INTO stock_ledger_entries
-         (tenant_id,voucher_type,voucher_no,voucher_revision,line_key,item_code,warehouse,actual_qty_micros,valuation_rate_minor,stock_value_difference_minor,qty_scale,currency_scale,currency,posting_at,batch_no,serial_no,allow_negative_stock)
-         VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17)`,
+         (tenant_id,voucher_type,voucher_no,voucher_revision,line_key,item_code,warehouse,actual_qty_micros,actual_weight_micros,valuation_rate_minor,stock_value_difference_minor,qty_scale,currency_scale,currency,posting_at,batch_no,serial_no,allow_negative_stock)
+         VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18)`,
       ).bind(
         command.tenant_id, command.aggregate.doctype, command.aggregate.name, plan.document.version,
-        line.line_key, line.item_code, line.warehouse, line.actual_qty_micros, line.valuation_rate_minor,
+        line.line_key, line.item_code, line.warehouse, line.actual_qty_micros,
+        // `?? null` chứ KHÔNG `?? 0`: cột này rỗng nghĩa là không cân theo kiện, còn 0 nghĩa
+        // là đã cân và được 0. Gộp hai thứ đó lại là mất luôn khả năng phân biệt.
+        line.actual_weight_micros ?? null,
+        line.valuation_rate_minor,
         line.stock_value_difference_minor, line.qty_scale, line.currency_scale, line.currency,
         line.posting_at, line.batch_no ?? null, line.serial_no ?? null, line.allow_negative_stock ? 1 : 0,
       ));
@@ -806,7 +951,10 @@ export class D1MutationStore implements MutationStore {
       if (document.docstatus === 1) document.status = reconciled <= 0 ? "Unreconciled" : reconciled >= amount ? "Reconciled" : "Partly Reconciled";
     }
     if (document.doctype === "Delivery Note" && document.docstatus === 1) {
-      document.status = deriveO2CStatus("Delivery Note", document.docstatus);
+      document.status = deriveDeliveryNoteStatus(
+        document.docstatus,
+        typeof document.data.issue_purpose === "string" ? document.data.issue_purpose : undefined,
+      );
     }
     if (document.doctype === "Purchase Order") {
       const items = Array.isArray(document.data.items) ? document.data.items : [];
@@ -883,6 +1031,20 @@ export class D1MutationStore implements MutationStore {
       }
     }
   }
+}
+
+function mapStockLedgerRow(row: Record<string, unknown>): StockLedgerEntry {
+  return {
+    line_key: String(row.line_key), item_code: String(row.item_code), warehouse: String(row.warehouse),
+    actual_qty_micros: Number(row.actual_qty_micros),
+    // `!= null` bắt cả null lẫn undefined mà VẪN giữ số 0 — `row.x ? …` sẽ nuốt mất cân 0.
+    ...(row.actual_weight_micros != null ? { actual_weight_micros: Number(row.actual_weight_micros) } : {}),
+    valuation_rate_minor: Number(row.valuation_rate_minor),
+    stock_value_difference_minor: Number(row.stock_value_difference_minor), qty_scale: 6,
+    currency_scale: Number(row.currency_scale), currency: String(row.currency), posting_at: String(row.posting_at),
+    ...(row.batch_no ? { batch_no: String(row.batch_no) } : {}), ...(row.serial_no ? { serial_no: String(row.serial_no) } : {}),
+    allow_negative_stock: Number(row.allow_negative_stock) === 1,
+  };
 }
 
 /**

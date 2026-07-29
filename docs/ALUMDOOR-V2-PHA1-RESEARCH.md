@@ -253,7 +253,7 @@ Nguồn: `2026 ĐƠN HÀNG - XUẤT HÀNG.xlsx` (14 sheet) · `TỒN NHÔM 2026 
 | 4 | Thuật ngữ ngành theo cách khách gọi | ✅ | §5 — 12 nhóm thuật ngữ lấy từ file gốc |
 | 5 | Đã đọc preset ngành hoặc derive entry mới theo §5 | ✅ | §6 — preset `san-xuat` chỉnh cho ép nhựa, không hợp; derive entry `cua-cuon-nhom` đủ 9 dòng |
 
-**Kết luận tự chấm: 4/5 ✅ + 1 ⚠️.** Mục ⚠️ chỉ khép được bằng câu trả lời của chủ xưởng, không phải
+**Kết luận tự chấm: 4/5 ✅ + 1 ⚠️** — và mục ⚠️ (giá phải trả) chỉ được đóng ở **Cổng 2**, không phải lúc qua Cổng 1. Ghi rõ để không đọc nhầm thành 5/5. Mục ⚠️ chỉ khép được bằng câu trả lời của chủ xưởng, không phải
 bằng nghiên cứu thêm — nên đưa vào câu hỏi mở của cổng thay vì chặn.
 
 ---

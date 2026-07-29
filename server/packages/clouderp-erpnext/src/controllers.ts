@@ -101,12 +101,121 @@ export class WorkOrderController extends BaseController<WorkOrderData>{
 
 export class AdvancedStockEntryController extends BaseController<StockEntryData>{
   readonly doctype="Stock Entry";
-  async normalize(context:ControllerContext<StockEntryData>):Promise<StockEntryData>{const input=context.command.document;if(!input.company||!input.posting_at||!["Material Receipt","Material Issue","Material Transfer","Manufacture"].includes(input.purpose))throw errors.validation("Company, posting_at and valid purpose are required");const company=await companyCurrency(context,input.company);const items:StockEntryItem[]=[];for(const [index,row] of input.items.entries()){const qty=toScaledInt(row.qty,6);if(qty<=0||!row.item_code)throw errors.validation(`Valid item and quantity required at row ${index+1}`);let source=row.source_warehouse;let target=row.target_warehouse;if(input.purpose==="Material Receipt"&&!target)throw errors.validation(`Target warehouse required at row ${index+1}`);if(input.purpose==="Material Issue"&&!source)throw errors.validation(`Source warehouse required at row ${index+1}`);if(input.purpose==="Material Transfer"&&(!source||!target||source===target))throw errors.validation(`Distinct warehouses required at row ${index+1}`);if(input.purpose==="Manufacture"&&!source)source=input.source_warehouse;if((input.purpose==="Material Issue"||input.purpose==="Material Transfer"||input.purpose==="Manufacture")&&source){const valuation=await deriveOutgoingValuation(context as unknown as ControllerContext<JsonObject>,{itemCode:row.item_code,warehouse:source,qtyMicros:qty,postingAt:input.posting_at,currencyScale:company.scale});items.push({...row,row_id:row.row_id||`ROW-${index+1}`,qty:fromScaledInt(qty,6),qty_micros:qty,source_warehouse:source,...(target?{target_warehouse:target}:{}),valuation_rate_minor:valuation.valuation_rate_minor,valuation_rate:fromScaledInt(valuation.valuation_rate_minor,company.scale),stock_value_difference_minor:valuation.stock_value_difference_minor});}else{const rate=toScaledInt(row.valuation_rate??0,company.scale);items.push({...row,row_id:row.row_id||`ROW-${index+1}`,qty:fromScaledInt(qty,6),qty_micros:qty,...(source?{source_warehouse:source}:{}),...(target?{target_warehouse:target}:{}),valuation_rate_minor:rate,valuation_rate:fromScaledInt(rate,company.scale)});}}
-    let finishedQty=0;if(input.purpose==="Manufacture"){if(!input.work_order||!input.finished_good_item||!input.target_warehouse)throw errors.validation("Manufacture requires Work Order, finished item and target warehouse");const wo=await requireSubmitted<WorkOrderData>(context,"Work Order",input.work_order);if(wo.data.production_item!==input.finished_good_item||wo.data.company!==input.company)throw errors.reference("Manufacture entry does not match Work Order");finishedQty=toScaledInt(input.finished_good_qty??0,6);const made=await context.reader.getManufacturedQuantityMicros(context.command.tenant_id,input.work_order,"Manufacture",input.finished_good_item);if(finishedQty<=0||made+finishedQty>(wo.data.qty_micros??0))throw errors.reference("Manufacture quantity exceeds Work Order remaining quantity");for(const row of items){const required=wo.data.required_items?.find(x=>x.item_code===row.item_code)?.required_qty_micros??0;const consumed=await context.reader.getManufacturedQuantityMicros(context.command.tenant_id,input.work_order,"Consumption",row.item_code);if(consumed+(row.qty_micros??0)>required)throw errors.reference(`Consumption for ${row.item_code} exceeds Work Order requirement`);}}
-    if(context.command.action==="submit"){const records:Array<[string,string]>=[["Company",input.company],...items.map((row):[string,string]=>["Item",row.item_code])];for(const row of items){if(row.source_warehouse)records.push(["Warehouse",row.source_warehouse]);if(row.target_warehouse)records.push(["Warehouse",row.target_warehouse]);}if(input.finished_good_item)records.push(["Item",input.finished_good_item]);if(input.target_warehouse)records.push(["Warehouse",input.target_warehouse]);await assertMasters(context,records);}return{...input,currency:company.currency,currency_scale:company.scale,items,finished_good_qty:fromScaledInt(finishedQty,6),finished_good_qty_micros:finishedQty,allow_negative_stock:false};}
-  async ledger(context:ControllerContext<StockEntryData>,data:StockEntryData):Promise<Ledgers>{if(!["submit","cancel"].includes(context.command.action))return{};await assertUnlocked(context,data.company,data.posting_at);const stock:StockLedgerEntry[]=[];const usages:StockBundleUsageEntry[]=[];const manufacturing:ManufacturingEntry[]=[];let consumedValue=0;for(const [index,item] of data.items.entries()){const qty=item.qty_micros??toScaledInt(item.qty,6);const rate=item.valuation_rate_minor??0;const value=Math.abs(item.stock_value_difference_minor??multiplyScaled(fromScaledInt(qty,6),6,fromScaledInt(rate,data.currency_scale??2),data.currency_scale??2,data.currency_scale??2));if(item.source_warehouse){const out=await buildTrackedStockLines(context as unknown as ControllerContext<JsonObject>,{itemCode:item.item_code,warehouse:item.source_warehouse,qtyMicros:qty,direction:"Outward",postingAt:data.posting_at,currency:data.currency??"USD",currencyScale:data.currency_scale??2,valuationRateMinor:rate,stockValueMinor:value,lineKey:`SRC-${item.row_id||index+1}`,...(item.serial_and_batch_bundle?{bundleName:item.serial_and_batch_bundle}:{})});stock.push(...out.stock);usages.push(...out.usages);consumedValue=addMinor([consumedValue,value]);}if(item.target_warehouse){if(item.source_warehouse&&item.serial_and_batch_bundle){const sourceLines=stock.filter(line=>line.line_key.startsWith(`SRC-${item.row_id||index+1}-`));stock.push(...sourceLines.map(line=>({...line,line_key:line.line_key.replace("SRC-","TGT-"),warehouse:item.target_warehouse!,actual_qty_micros:-line.actual_qty_micros,stock_value_difference_minor:-line.stock_value_difference_minor,allow_negative_stock:false})));}else{const incoming=await buildTrackedStockLines(context as unknown as ControllerContext<JsonObject>,{itemCode:item.item_code,warehouse:item.target_warehouse,qtyMicros:qty,direction:"Inward",postingAt:data.posting_at,currency:data.currency??"USD",currencyScale:data.currency_scale??2,valuationRateMinor:rate,stockValueMinor:value,lineKey:`TGT-${item.row_id||index+1}`,...(item.serial_and_batch_bundle?{bundleName:item.serial_and_batch_bundle}:{})});stock.push(...incoming.stock);usages.push(...incoming.usages);}}if(data.purpose==="Manufacture"&&data.work_order)manufacturing.push({line_key:`CONSUME-${item.row_id||index+1}`,work_order:data.work_order,kind:"Consumption",item_code:item.item_code,qty_micros:qty,posting_at:data.posting_at});}
-    if(data.purpose==="Manufacture"&&data.work_order&&data.finished_good_item&&data.target_warehouse){const qty=data.finished_good_qty_micros??toScaledInt(data.finished_good_qty??0,6);const wo=await requireSubmitted<WorkOrderData>(context,"Work Order",data.work_order);const operating=divideRounded((wo.data.operating_cost_minor??0)*qty,wo.data.qty_micros??qty);const value=addMinor([consumedValue,operating]);const rate=divideRounded(value*1_000_000,qty);const incoming=await buildTrackedStockLines(context as unknown as ControllerContext<JsonObject>,{itemCode:data.finished_good_item,warehouse:data.target_warehouse,qtyMicros:qty,direction:"Inward",postingAt:data.posting_at,currency:data.currency??"USD",currencyScale:data.currency_scale??2,valuationRateMinor:rate,stockValueMinor:value,lineKey:"FINISHED",...(data.finished_good_bundle?{bundleName:data.finished_good_bundle}:{})});stock.push(...incoming.stock);usages.push(...incoming.usages);manufacturing.push({line_key:"MANUFACTURE",work_order:data.work_order,kind:"Manufacture",item_code:data.finished_good_item,qty_micros:qty,posting_at:data.posting_at});}
-    return context.command.action==="cancel"?{stock:reverseStock(stock),manufacturing:manufacturing.map(x=>({...x,line_key:`REV-${x.line_key}`,qty_micros:-x.qty_micros})),bundleUsages:usages.map(line=>({...line,line_key:`REV-${line.line_key}`,usage_delta:-1 as const}))}:{stock,manufacturing,bundleUsages:usages};}
+  async normalize(context:ControllerContext<StockEntryData>):Promise<StockEntryData>{
+    const input=context.command.document;
+    if(!input.company||!input.posting_at||!["Material Receipt","Material Issue","Material Transfer","Manufacture"].includes(input.purpose))throw errors.validation("Company, posting_at and valid purpose are required");
+    const company=await companyCurrency(context,input.company);
+    const items:StockEntryItem[]=[];
+    for(const [index,row] of input.items.entries()){
+      const qty=toScaledInt(row.qty,6);
+      if(qty<=0||!row.item_code)throw errors.validation(`Valid item and quantity required at row ${index+1}`);
+      const master=await context.reader.getMasterRecordData(context.command.tenant_id,"Item",row.item_code);
+      const catchWeight=master?.has_catch_weight===true||master?.has_catch_weight===1;
+      const weightMicros=row.weight_micros??(row.weight_kg===undefined?undefined:toScaledInt(row.weight_kg,6,`items[${index}].weight_kg`));
+      if(weightMicros!==undefined&&weightMicros<=0)throw errors.validation(`Khối lượng phải lớn hơn 0 ở dòng ${index+1}`);
+      if(catchWeight&&context.command.action==="submit"&&weightMicros===undefined)throw errors.validation(`Khối lượng là bắt buộc cho mặt hàng cân theo kiện ở dòng ${index+1}`);
+      const weightSnapshot=weightMicros===undefined?{}:{weight_micros:weightMicros,weight_kg:fromScaledInt(weightMicros,6)};
+      let source=row.source_warehouse;
+      const target=row.target_warehouse;
+      if(input.purpose==="Material Receipt"&&!target)throw errors.validation(`Target warehouse required at row ${index+1}`);
+      if(input.purpose==="Material Issue"&&!source)throw errors.validation(`Source warehouse required at row ${index+1}`);
+      if(input.purpose==="Material Transfer"&&(!source||!target||source===target))throw errors.validation(`Distinct warehouses required at row ${index+1}`);
+      if(input.purpose==="Manufacture"&&!source)source=input.source_warehouse;
+      if((input.purpose==="Material Issue"||input.purpose==="Material Transfer"||input.purpose==="Manufacture")&&source){
+        const valuation=await deriveOutgoingValuation(context as unknown as ControllerContext<JsonObject>,{itemCode:row.item_code,warehouse:source,qtyMicros:qty,postingAt:input.posting_at,currencyScale:company.scale});
+        items.push({...row,...weightSnapshot,row_id:row.row_id||`ROW-${index+1}`,qty:fromScaledInt(qty,6),qty_micros:qty,source_warehouse:source,...(target?{target_warehouse:target}:{}),valuation_rate_minor:valuation.valuation_rate_minor,valuation_rate:fromScaledInt(valuation.valuation_rate_minor,company.scale),stock_value_difference_minor:valuation.stock_value_difference_minor});
+      }else{
+        const rate=toScaledInt(row.valuation_rate??0,company.scale);
+        items.push({...row,...weightSnapshot,row_id:row.row_id||`ROW-${index+1}`,qty:fromScaledInt(qty,6),qty_micros:qty,...(source?{source_warehouse:source}:{}),...(target?{target_warehouse:target}:{}),valuation_rate_minor:rate,valuation_rate:fromScaledInt(rate,company.scale)});
+      }
+    }
+    let finishedQty=0;
+    if(input.purpose==="Manufacture"){
+      if(!input.work_order||!input.finished_good_item||!input.target_warehouse)throw errors.validation("Manufacture requires Work Order, finished item and target warehouse");
+      const wo=await requireSubmitted<WorkOrderData>(context,"Work Order",input.work_order);
+      if(wo.data.production_item!==input.finished_good_item||wo.data.company!==input.company)throw errors.reference("Manufacture entry does not match Work Order");
+      finishedQty=toScaledInt(input.finished_good_qty??0,6);
+      const made=await context.reader.getManufacturedQuantityMicros(context.command.tenant_id,input.work_order,"Manufacture",input.finished_good_item);
+      if(finishedQty<=0||made+finishedQty>(wo.data.qty_micros??0))throw errors.reference("Manufacture quantity exceeds Work Order remaining quantity");
+      for(const row of items){
+        const required=wo.data.required_items?.find(x=>x.item_code===row.item_code)?.required_qty_micros??0;
+        const consumed=await context.reader.getManufacturedQuantityMicros(context.command.tenant_id,input.work_order,"Consumption",row.item_code);
+        if(consumed+(row.qty_micros??0)>required)throw errors.reference(`Consumption for ${row.item_code} exceeds Work Order requirement`);
+      }
+    }
+    if(context.command.action==="submit"){
+      const records:Array<[string,string]>=[["Company",input.company],...items.map((row):[string,string]=>["Item",row.item_code])];
+      for(const row of items){if(row.source_warehouse)records.push(["Warehouse",row.source_warehouse]);if(row.target_warehouse)records.push(["Warehouse",row.target_warehouse]);}
+      if(input.finished_good_item)records.push(["Item",input.finished_good_item]);
+      if(input.target_warehouse)records.push(["Warehouse",input.target_warehouse]);
+      await assertMasters(context,records);
+    }
+    return{...input,currency:company.currency,currency_scale:company.scale,items,finished_good_qty:fromScaledInt(finishedQty,6),finished_good_qty_micros:finishedQty,allow_negative_stock:false};
+  }
+  async ledger(context:ControllerContext<StockEntryData>,data:StockEntryData):Promise<Ledgers>{
+    if(!["submit","cancel"].includes(context.command.action))return{};
+    await assertUnlocked(context,data.company,data.posting_at);
+    if(context.command.action==="cancel"){
+      const originalRevision=requireExisting(context).version;
+      const stock=await context.reader.getVoucherStockEntries(context.command.tenant_id,this.doctype,context.command.aggregate.name,originalRevision);
+      if(stock.length===0)throw errors.reference(`Original stock posting for ${this.doctype} ${context.command.aggregate.name} was not found`);
+      const bundleUsages:StockBundleUsageEntry[]=[];
+      for(const [index,item] of data.items.entries()){
+        if(!item.serial_and_batch_bundle)continue;
+        const warehouse=item.source_warehouse??item.target_warehouse;
+        if(!warehouse)continue;
+        bundleUsages.push({line_key:`REV-BUNDLE-${item.row_id||index+1}`,bundle_name:item.serial_and_batch_bundle,item_code:item.item_code,warehouse,direction:item.source_warehouse?"Outward":"Inward",usage_delta:-1,posting_at:data.posting_at});
+      }
+      if(data.finished_good_bundle&&data.finished_good_item&&data.target_warehouse){
+        bundleUsages.push({line_key:"REV-BUNDLE-FINISHED",bundle_name:data.finished_good_bundle,item_code:data.finished_good_item,warehouse:data.target_warehouse,direction:"Inward",usage_delta:-1,posting_at:data.posting_at});
+      }
+      const manufacturing:ManufacturingEntry[]=[];
+      if(data.purpose==="Manufacture"&&data.work_order){
+        for(const [index,item] of data.items.entries())manufacturing.push({line_key:`REV-CONSUME-${item.row_id||index+1}`,work_order:data.work_order,kind:"Consumption",item_code:item.item_code,qty_micros:-(item.qty_micros??toScaledInt(item.qty,6)),posting_at:data.posting_at});
+        if(data.finished_good_item)manufacturing.push({line_key:"REV-MANUFACTURE",work_order:data.work_order,kind:"Manufacture",item_code:data.finished_good_item,qty_micros:-(data.finished_good_qty_micros??toScaledInt(data.finished_good_qty??0,6)),posting_at:data.posting_at});
+      }
+      return{stock:reverseStock(stock),manufacturing,bundleUsages};
+    }
+    const stock:StockLedgerEntry[]=[];
+    const usages:StockBundleUsageEntry[]=[];
+    const manufacturing:ManufacturingEntry[]=[];
+    let consumedValue=0;
+    for(const [index,item] of data.items.entries()){
+      const qty=item.qty_micros??toScaledInt(item.qty,6);
+      const rate=item.valuation_rate_minor??0;
+      const value=Math.abs(item.stock_value_difference_minor??multiplyScaled(fromScaledInt(qty,6),6,fromScaledInt(rate,data.currency_scale??2),data.currency_scale??2,data.currency_scale??2));
+      const weight=item.weight_micros===undefined?{}:{weightMicros:item.weight_micros};
+      if(item.source_warehouse){
+        const out=await buildTrackedStockLines(context as unknown as ControllerContext<JsonObject>,{itemCode:item.item_code,warehouse:item.source_warehouse,qtyMicros:qty,...weight,direction:"Outward",postingAt:data.posting_at,currency:data.currency??"USD",currencyScale:data.currency_scale??2,valuationRateMinor:rate,stockValueMinor:value,lineKey:`SRC-${item.row_id||index+1}`,...(item.serial_and_batch_bundle?{bundleName:item.serial_and_batch_bundle}:{})});
+        stock.push(...out.stock);
+        usages.push(...out.usages);
+        consumedValue=addMinor([consumedValue,out.stockValueMinor]);
+      }
+      if(item.target_warehouse){
+        if(item.source_warehouse&&item.serial_and_batch_bundle){
+          const sourceLines=stock.filter(line=>line.line_key.startsWith(`SRC-${item.row_id||index+1}-`));
+          stock.push(...sourceLines.map(line=>({...line,line_key:line.line_key.replace("SRC-","TGT-"),warehouse:item.target_warehouse!,actual_qty_micros:-line.actual_qty_micros,...(line.actual_weight_micros===undefined?{}:{actual_weight_micros:-line.actual_weight_micros}),stock_value_difference_minor:-line.stock_value_difference_minor,allow_negative_stock:false})));
+        }else{
+          const incoming=await buildTrackedStockLines(context as unknown as ControllerContext<JsonObject>,{itemCode:item.item_code,warehouse:item.target_warehouse,qtyMicros:qty,...weight,direction:"Inward",postingAt:data.posting_at,currency:data.currency??"USD",currencyScale:data.currency_scale??2,valuationRateMinor:rate,stockValueMinor:value,lineKey:`TGT-${item.row_id||index+1}`,...(item.serial_and_batch_bundle?{bundleName:item.serial_and_batch_bundle}:{})});
+          stock.push(...incoming.stock);
+          usages.push(...incoming.usages);
+        }
+      }
+      if(data.purpose==="Manufacture"&&data.work_order)manufacturing.push({line_key:`CONSUME-${item.row_id||index+1}`,work_order:data.work_order,kind:"Consumption",item_code:item.item_code,qty_micros:qty,posting_at:data.posting_at});
+    }
+    if(data.purpose==="Manufacture"&&data.work_order&&data.finished_good_item&&data.target_warehouse){
+      const qty=data.finished_good_qty_micros??toScaledInt(data.finished_good_qty??0,6);
+      const wo=await requireSubmitted<WorkOrderData>(context,"Work Order",data.work_order);
+      const operating=divideRounded((wo.data.operating_cost_minor??0)*qty,wo.data.qty_micros??qty);
+      const value=addMinor([consumedValue,operating]);
+      const rate=divideRounded(value*1_000_000,qty);
+      const incoming=await buildTrackedStockLines(context as unknown as ControllerContext<JsonObject>,{itemCode:data.finished_good_item,warehouse:data.target_warehouse,qtyMicros:qty,direction:"Inward",postingAt:data.posting_at,currency:data.currency??"USD",currencyScale:data.currency_scale??2,valuationRateMinor:rate,stockValueMinor:value,lineKey:"FINISHED",...(data.finished_good_bundle?{bundleName:data.finished_good_bundle}:{})});
+      stock.push(...incoming.stock);
+      usages.push(...incoming.usages);
+      manufacturing.push({line_key:"MANUFACTURE",work_order:data.work_order,kind:"Manufacture",item_code:data.finished_good_item,qty_micros:qty,posting_at:data.posting_at});
+    }
+    return{stock,manufacturing,bundleUsages:usages};
+  }
 }
 
 export class AssetController extends BaseController<AssetData>{

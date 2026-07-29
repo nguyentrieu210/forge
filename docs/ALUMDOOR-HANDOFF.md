@@ -5,6 +5,11 @@
 > Production: **<https://alu.kairo.vn>** — app **Alumdoor 1.27.0**
 > Tenant `alu` · D1 `cloudforge-alu` · id `6781cbc1-8635-4b6e-af46-09297c120cff`
 
+> **Ghi chú V2 ngày 2026-07-30:** nhánh `feat/alumdoor-v2-kho` đã hoàn tất build và QA cục bộ
+> cho `alumdoor@2.0.0`, nhưng **chưa deploy production**. Đọc
+> `docs/brd-v2/IMPLEMENTATION_EVIDENCE.md`, `PHASE_TRACKER.md` và `RELEASE_RUNBOOK.md`.
+> Không thay trạng thái 1.27.0 bên dưới cho tới khi backup mới, hai restore drill, pilot và release thật sự đạt.
+
 **Đọc mục 0 trước mọi mục khác.** Nó ghi những thứ vừa đổi và những quyết định đang CHỜ chủ
 xưởng — làm tiếp mà không biết chúng thì sẽ làm lại thứ vừa xong, hoặc đoán bừa chỗ cố ý bỏ ngỏ.
 

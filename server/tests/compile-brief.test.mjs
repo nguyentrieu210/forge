@@ -399,13 +399,14 @@ const withAction = (patch = {}) => ({
 });
 
 test("action biên dịch thành màn hình + mục menu, và server nhận", () => {
-  const manifest = parseAppManifest(compileBrief(withAction()));
+  const manifest = parseAppManifest(compileBrief(withAction({ permissionAction: "read" })));
   assert.equal(manifest.actions.length, 1);
   const action = manifest.actions[0];
   assert.equal(action.commit.method, "crm.quote.send");
   assert.equal(action.commit.confirm, "Gửi báo giá cho khách?");
   assert.equal(action.preview.label, "Xem trước");
   assert.equal(action.result_table, "lines");
+  assert.equal(action.permission_action, "read");
   // Field dùng chung ngôn ngữ với field của doctype — không có cú pháp thứ hai.
   assert.deepEqual(action.fields[0], { fieldname: "lead", label: "Khách", fieldtype: "Link", options: "Lead", required: true });
 
@@ -413,6 +414,10 @@ test("action biên dịch thành màn hình + mục menu, và server nhận", ()
   const nav = manifest.nav.find((item) => item.key === "action:gui-bao-gia");
   assert.equal(nav.kind, "experience");
   assert.equal(nav.permission_doctype, "Lead");
+});
+
+test("action từ chối quyền kiểm tra không được khai báo", () => {
+  assert.throws(() => compileBrief(withAction({ permissionAction: "delete" })), /permissionAction/);
 });
 
 test("action không có Worker bị TỪ CHỐI — nút bấm sẽ chỉ trả 404", () => {

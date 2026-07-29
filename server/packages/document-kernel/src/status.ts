@@ -62,3 +62,16 @@ export function deriveO2CStatus(doctype: string, docstatus: number, metrics: O2C
       return "Submitted";
   }
 }
+
+/**
+ * Delivery Notes that do not represent a sale are complete once submitted and
+ * must not be presented as waiting for an invoice.
+ */
+export function deriveDeliveryNoteStatus(docstatus: number, issuePurpose?: string): string {
+  if (issuePurpose && issuePurpose !== "Bán hàng") {
+    if (docstatus === 2) return "Cancelled";
+    if (docstatus !== 1) return "Draft";
+    return "Submitted";
+  }
+  return deriveO2CStatus("Delivery Note", docstatus);
+}
