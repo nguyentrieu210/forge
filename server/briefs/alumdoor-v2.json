@@ -753,7 +753,8 @@
     "parent_warehouse": "Kho Alumdoor",
     "is_group": false,
     "address": "Kho vật lý K36",
-    "disabled": false
+    "disabled": false,
+    "stock_role": "Kho chính"
    }
   },
   {
@@ -764,7 +765,8 @@
     "parent_warehouse": "Kho Alumdoor",
     "is_group": false,
     "address": "Kho vật lý K12",
-    "disabled": false
+    "disabled": false,
+    "stock_role": "Kho chính"
    }
   },
   {
@@ -782,7 +784,10 @@
     "dealer_full_sales_basis": "Phủ bì nhựa",
     "retail_sales_basis": "Phủ bì ray",
     "purchase_formula": "Kg thực tế",
-    "note": "Sản xuất: đại lý PB nhựa − 0,02; lẻ PB ray − 0,08. Mua: kg thực tế × đơn giá."
+    "note": "Sản xuất: đại lý PB nhựa − 0,02; lẻ PB ray − 0,08. Mua: kg thực tế × đơn giá.",
+    "leaf_formula": "Kiểu Đức",
+    "leaf_height_deduction_m": 0.13,
+    "ray_type": "U75"
    }
   },
   {
@@ -801,7 +806,10 @@
     "purchase_formula": "Barem kg/m2",
     "purchase_height_basis": "Cao phủ bì",
     "purchase_width_basis": "Rộng cắt lá",
-    "note": "Rộng cắt = PB ray − 0,03. Mua: barem × Cao PB × Rộng cắt. Bán: Cao PB × PB ray."
+    "note": "Rộng cắt = PB ray − 0,03. Mua: barem × Cao PB × Rộng cắt. Bán: Cao PB × PB ray.",
+    "leaf_formula": "Kiểu Úc",
+    "leaf_divisor_source": "Hằng số của chính sách",
+    "leaf_divisor_const": 0.465
    }
   },
   {
@@ -821,7 +829,8 @@
     "purchase_formula": "Barem kg/m2",
     "purchase_height_basis": "Cao lưới",
     "purchase_width_basis": "Rộng cắt lá",
-    "note": "Đại lý tách món chỉ lấy lưới bán theo rộng cắt; trọn bộ và khách lẻ bán theo PB ray. Có bản bướm trừ 0,035."
+    "note": "Đại lý tách món chỉ lấy lưới bán theo rộng cắt; trọn bộ và khách lẻ bán theo PB ray. Có bản bướm trừ 0,035.",
+    "leaf_formula": "Kiểu Đài Loan Lưới"
    }
   },
   {
@@ -842,7 +851,8 @@
     "purchase_formula": "Barem kg/m2",
     "purchase_height_basis": "Cao lưới",
     "purchase_width_basis": "Rộng cắt lá",
-    "note": "Đại lý tách món bán theo rộng cắt; trọn bộ, kéo tay và khách lẻ bán theo PB ray. Có bản bướm trừ 0,035."
+    "note": "Đại lý tách món bán theo rộng cắt; trọn bộ, kéo tay và khách lẻ bán theo PB ray. Có bản bướm trừ 0,035.",
+    "leaf_formula": "Kiểu Đài Loan Lưới"
    }
   },
   {
@@ -862,7 +872,8 @@
     "purchase_formula": "Barem kg/m2",
     "purchase_height_basis": "Cao lưới",
     "purchase_width_basis": "Rộng cắt lá",
-    "note": "Đại lý bán theo rộng cắt; khách lẻ bán theo PB ray. Có bản bướm trừ 0,035."
+    "note": "Đại lý bán theo rộng cắt; khách lẻ bán theo PB ray. Có bản bướm trừ 0,035.",
+    "leaf_formula": "Kiểu Đức"
    }
   },
   {
@@ -881,7 +892,10 @@
     "retail_sales_basis": "Phủ bì ray",
     "purchase_formula": "Kg thực tế",
     "disabled": true,
-    "note": "Đã gộp vào Cửa Đức — công thức chuẩn từ bản 1.26.0."
+    "note": "Đã gộp vào Cửa Đức — công thức chuẩn từ bản 1.26.0.",
+    "leaf_formula": "Kiểu Đức",
+    "leaf_height_deduction_m": 0.13,
+    "ray_type": "U75"
    }
   },
   {
@@ -899,7 +913,10 @@
     "retail_sales_basis": "Phủ bì ray",
     "purchase_formula": "Kg thực tế",
     "disabled": true,
-    "note": "Đã gộp vào Cửa Đức — công thức chuẩn từ bản 1.26.0."
+    "note": "Đã gộp vào Cửa Đức — công thức chuẩn từ bản 1.26.0.",
+    "leaf_formula": "Kiểu Đức",
+    "leaf_height_deduction_m": 0.13,
+    "ray_type": "U75"
    }
   },
   {
@@ -917,7 +934,7 @@
    "data": {
     "profile_name": "Nhôm cây/lá",
     "inventory_mode": "Nhôm cây/lá",
-    "stock_uom": "Kg",
+    "stock_uom": "Cây",
     "track_dimension_lot": true,
     "require_color": true,
     "require_length": true,
@@ -1030,6 +1047,32 @@
    "name": "Hàng nhận chưa có hoá đơn",
    "data": {
     "account_type": "Liability"
+   }
+  },
+  {
+   "//": "Đầu thừa ≥ scrap_threshold_m nhập lại đây. Tách kho để tồn khả dụng của kho chính không bị đầu thừa làm nhiễu.",
+   "type": "Warehouse",
+   "name": "K1",
+   "data": {
+    "warehouse_name": "K1",
+    "parent_warehouse": "Kho Alumdoor",
+    "is_group": false,
+    "address": "Kho đầu thừa",
+    "stock_role": "Kho đầu thừa",
+    "disabled": false
+   }
+  },
+  {
+   "//": "Ngắn hơn ngưỡng, hoặc lá lỗi — bán theo kg, không quay lại sản xuất.",
+   "type": "Warehouse",
+   "name": "K0",
+   "data": {
+    "warehouse_name": "K0",
+    "parent_warehouse": "Kho Alumdoor",
+    "is_group": false,
+    "address": "Kho phế",
+    "stock_role": "Kho phế",
+    "disabled": false
    }
   }
  ],

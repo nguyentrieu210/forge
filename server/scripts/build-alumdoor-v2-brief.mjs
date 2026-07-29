@@ -850,6 +850,122 @@ brief.reports.push(
 );
 note(`reports: ${brief.reports.length} (+5 báo cáo kho)`);
 
+// ══════════ CỔNG 4 — FIXTURE PHẢI THEO KỊP FIELD ══════════
+// Dry-run KHÔNG bắt được nhóm này: nó biên dịch cấu trúc, không chạy validator dữ liệu.
+// Ba lỗ dưới đây chỉ lộ lúc cài thật vào tenant.
+const fixture = (type, name) => {
+  const f = brief.fixtures.find((x) => x.type === type && x.name === name);
+  if (!f) throw new Error(`không thấy fixture ${type}/${name}`);
+  return f;
+};
+
+// ── G1. `Nhôm cây/lá` đang seed đúng cái giá trị mà validator sinh ra để TỪ CHỐI ──
+// TECHNICAL_DESIGN §4 chốt câu báo lỗi: «Đơn vị tồn "Kg" không khớp bộ quy cách "Nhôm cây/lá"
+// (đề xuất: Cây)». Fixture lại đang đặt đúng "Kg". Đây là quyển sổ CŨ còn sót: bản cũ để
+// `qty` = tổng kg; QĐ-2 đổi `qty` = số CÂY, kg thành catch weight. Không sửa fixture thì
+// mọi mặt hàng nhôm tạo từ bộ quy cách này sinh ra sai ngay từ đơn vị.
+fixture("Measurement Profile", "Nhôm cây/lá").data.stock_uom = "Cây";
+note('G1 · Measurement Profile "Nhôm cây/lá": stock_uom Kg → Cây (QĐ-2)');
+
+// ── G2. `leaf_formula` BẮT BUỘC mà không fixture nào khai ──
+// Thêm 9 trường chia lá vào Cutting Policy nhưng để nguyên 7 fixture bản cũ.
+const LEAF = {
+  "Cửa Đức — công thức chuẩn": { leaf_formula: "Kiểu Đức", leaf_height_deduction_m: 0.13, ray_type: "U75" },
+  "Cửa Đức — đại lý": { leaf_formula: "Kiểu Đức", leaf_height_deduction_m: 0.13, ray_type: "U75" },
+  "Cửa Đức — khách lẻ": { leaf_formula: "Kiểu Đức", leaf_height_deduction_m: 0.13, ray_type: "U75" },
+  // Chủ xưởng chốt 30/07: 0,13 CHỈ cho cửa Đức, "nhiều cái không trừ" ⇒ các dòng khác ĐỂ TRỐNG.
+  "Cửa Úc — công thức chuẩn": {
+    leaf_formula: "Kiểu Úc",
+    leaf_divisor_source: "Hằng số của chính sách",
+    leaf_divisor_const: 0.465,
+  },
+  "Cửa Lưới — công thức chuẩn": { leaf_formula: "Kiểu Đài Loan Lưới" },
+  "Cửa Đài Loan — công thức chuẩn": { leaf_formula: "Kiểu Đài Loan Lưới" },
+  // Chủ xưởng 30/07: "cứ lấy giống cửa Đức, sửa được sau" — TẠM, không phải số đo.
+  "Cửa Siêu Trường — công thức chuẩn": { leaf_formula: "Kiểu Đức" },
+};
+for (const [name, patch] of Object.entries(LEAF)) Object.assign(fixture("Cutting Policy", name).data, patch);
+note(`G2 · Cutting Policy: seed leaf_formula cho ${Object.keys(LEAF).length}/7 chính sách (trường BẮT BUỘC, trước đó trống)`);
+
+// ── G3. Không có kho đầu thừa thì nhánh cắt không có chỗ nhập lại ──
+// `Cut Order.offcut_bundle` ghi Inward vào kho đầu thừa. Chỉ có K36/K12, và cả hai chưa khai
+// `stock_role` ⇒ rơi về mặc định "Kho chính". Đầu thừa sẽ nhập lẫn vào kho chính.
+fixture("Warehouse", "K36").data.stock_role = "Kho chính";
+fixture("Warehouse", "K12").data.stock_role = "Kho chính";
+brief.fixtures.push(
+  {
+    "//": "Đầu thừa ≥ scrap_threshold_m nhập lại đây. Tách kho để tồn khả dụng của kho chính không bị đầu thừa làm nhiễu.",
+    type: "Warehouse",
+    name: "K1",
+    data: {
+      warehouse_name: "K1",
+      parent_warehouse: "Kho Alumdoor",
+      is_group: false,
+      address: "Kho đầu thừa",
+      stock_role: "Kho đầu thừa",
+      disabled: false,
+    },
+  },
+  {
+    "//": "Ngắn hơn ngưỡng, hoặc lá lỗi — bán theo kg, không quay lại sản xuất.",
+    type: "Warehouse",
+    name: "K0",
+    data: {
+      warehouse_name: "K0",
+      parent_warehouse: "Kho Alumdoor",
+      is_group: false,
+      address: "Kho phế",
+      stock_role: "Kho phế",
+      disabled: false,
+    },
+  },
+);
+note("G3 · Warehouse: K36/K12 khai stock_role + thêm K1 (đầu thừa) · K0 (phế)");
+
+// ══════════ CHỐT CHẶN — không để G2 xảy ra lần nữa ══════════
+// G2 lọt được vì thêm trường bắt buộc mà quên fixture, và dry-run KHÔNG bắt (nó biên dịch cấu
+// trúc, không chạy validator dữ liệu). Sửa tay một lần thì lần sau vẫn lọt ⇒ viết thành luật
+// chạy được, ngay trong máy sinh brief.
+{
+  const byName = new Map(brief.doctypes.map((d) => [d.name, d]));
+  // Cắt phần KIỂU khỏi phần NHÃN. Không được `split(" ")[0]`: options của Select có dấu cách
+  // ("Select(Kiểu Đức,Kiểu Úc,…)!") nên cắt theo dấu cách đầu tiên sẽ nuốt mất dấu `!` và
+  // trường bắt buộc bị đọc thành không bắt buộc. Lần viết đầu em sai đúng chỗ này — chốt chặn
+  // báo "không thiếu cái nào" trong khi cố tình bỏ `leaf_formula` của Cửa Úc. Chốt chặn hỏng
+  // còn tệ hơn không có: nó phát tín hiệu xanh.
+  const typeSpec = (s) => {
+    let depth = 0;
+    for (let i = 0; i < s.length; i++) {
+      if (s[i] === "(") depth++;
+      else if (s[i] === ")") depth--;
+      else if (s[i] === " " && depth === 0) return s.slice(0, i);
+    }
+    return s;
+  };
+  const spec = (f) => {
+    if (typeof f !== "string") return { name: f.fieldname, required: !!f.required, hasDefault: "default" in f };
+    const colon = f.indexOf(":");
+    const name = (colon < 0 ? f : f.slice(0, colon)).trim();
+    const type = colon < 0 ? "" : typeSpec(f.slice(colon + 1));
+    return { name, required: type.includes("!"), hasDefault: /=\(/.test(type) };
+  };
+  const holes = [];
+  for (const fx of brief.fixtures) {
+    const dt = byName.get(fx.type);
+    if (!dt) continue; // doctype nền tảng — không tự kiểm được, đừng giả vờ là có
+    for (const f of dt.fields ?? []) {
+      const s = spec(f);
+      if (s.required && !s.hasDefault && !(s.name in fx.data)) holes.push(`${fx.type}/${fx.name} thiếu "${s.name}"`);
+    }
+  }
+  if (holes.length) {
+    console.error(`\nFIXTURE THIẾU TRƯỜNG BẮT BUỘC (${holes.length}) — dry-run sẽ vẫn PASS, cài thật mới hỏng:`);
+    for (const h of holes) console.error("  " + h);
+    process.exit(1);
+  }
+  note(`chốt chặn: ${brief.fixtures.length} fixture, không cái nào thiếu trường bắt buộc`);
+}
+
 writeFileSync(OUT, JSON.stringify(brief, null, 1) + "\n", "utf8");
 console.log(log.map((l) => "  " + l).join("\n"));
 console.log(`\nĐã ghi ${OUT}`);
