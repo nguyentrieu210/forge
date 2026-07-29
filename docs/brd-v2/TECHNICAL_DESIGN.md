@@ -486,7 +486,7 @@ xem BRD §6. Dưới đây chỉ kê **action app phải tự viết**.
 | Tiến độ đơn mua | ✅ `purchase_order_progress_entries` | Là nguồn báo cáo "NCC còn nợ" |
 | Chống ghi đè | ✅ khoá `modified` + `mutation_guard` · `mutation_receipts` | Optimistic lock có sẵn |
 | **`ai_logs`** | ❌ **không có** | Phải tạo, hoặc log vào `inbound_events` — **chốt ở PHA 5** |
-| 3 cron (nhắc/báo cáo/backup) | ⚠️ chưa xác minh | Alumdoor có 3 cron theo tài liệu; cần đọc `wrangler.jsonc` ở PHA 4 |
+| Cron / việc định kỳ | ✅ **ở TẦNG NỀN TẢNG** — xác minh PHA 4 | `tenant-worker` chạy `*/1 * * * *` + producer `OUTBOX_QUEUE`; `jobs-worker` và `query-worker` cũng có cron. Bảng `auto_repeat` có sẵn. ⚠️ **`alumdoor-worker` KHÔNG có `triggers`** — và đó là **cố ý**: comment trong `wrangler.jsonc` ghi *"Không binding nào chạm được dữ liệu. Mọi đọc/ghi đi ngược qua gateway với danh tính của chính người dùng vừa gọi"*. App worker không tự làm gì thay mặt ai ⇒ **V2 KHÔNG thêm cron vào app worker**, mà đăng ký việc định kỳ qua cơ chế nền tảng |
 | `/api/sync` offline | ❌ không áp dụng | Không có POS |
 | Export-all | ⚠️ chưa xác minh | — |
 
@@ -494,13 +494,26 @@ xem BRD §6. Dưới đây chỉ kê **action app phải tự viết**.
 > không dựng bảng hạ tầng mới — dựng là đẻ trùng lần thứ ba (sau `purchase_order_progress_entries`
 > và `import_jobs`).
 
-### 8.3 Cron V2
+### 8.3 Việc định kỳ V2 — KHÔNG thêm cron vào app worker
 
-| Giờ | Việc |
+App worker cố ý **không có binding dữ liệu và không có cron**. Ba việc định kỳ dưới đây phải đi qua cơ
+chế nền tảng (`auto_repeat` / `jobs-worker` / `notification_rules`) — **chốt cách nối ở PHA 5**:
+
+| Việc | Vì sao bắt buộc |
 |---|---|
-| sáng | Nhả **giữ chỗ hết hạn** (nếu không, khả dụng tụt dần không lý do) · nhắc kiểm kê định kỳ |
-| tối | Báo cáo cuối ngày cho Chủ xưởng: nhập/xuất/cắt trong ngày, cảnh báo lệch cân |
-| đêm | Backup D1 → R2 |
+| Nhả **giữ chỗ hết hạn** | Không nhả thì tồn khả dụng **tụt dần không lý do** — hỏng im lặng đúng kiểu nỗi đau #2 nhưng ngược chiều |
+| Nhắc kiểm kê định kỳ | Tháng cho kho chính, quý cho kho đầu thừa (K1) |
+| Báo cáo cuối ngày cho Chủ xưởng | Nhập/xuất/cắt trong ngày + cảnh báo lệch cân |
+
+Backup D1 → R2 đã có ở tầng vận hành (`server/backups/alu/`), không phải việc của app.
+
+### 8.4 ⚠️ Toolchain — `forge-app.mjs` đòi BUILD trước
+
+Chạy `node scripts/forge-app.mjs briefs/*.json --dry-run` trên checkout sạch thì **lỗi**:
+`ERR_MODULE_NOT_FOUND: server/dist/packages/app-registry/src/index.js`.
+
+Phải `pnpm build` trong `server/` trước. **Chưa tài liệu deploy nào ghi bước này** — người mới sẽ tưởng
+brief hỏng. Bổ sung vào runbook PHA 7.
 
 ---
 
