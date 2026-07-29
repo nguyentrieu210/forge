@@ -2,7 +2,7 @@
   "$schema": "./brief.schema.json",
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "1.21.0",
+  "version": "1.22.0",
   "module": "Alumdoor",
   "domain": "alumdoor",
   "brand": "warm",
@@ -62,56 +62,114 @@
   "validators": [
     {
       "doctype": "Item",
-      "actions": ["create", "save"]
+      "actions": [
+        "create",
+        "save"
+      ]
     },
     {
       "doctype": "Purchase Order",
-      "actions": ["create", "save", "submit"]
+      "actions": [
+        "create",
+        "save",
+        "submit"
+      ]
     },
     {
       "doctype": "Purchase Receipt",
-      "actions": ["create", "save", "submit"]
+      "actions": [
+        "create",
+        "save",
+        "submit"
+      ]
     },
     {
       "doctype": "Purchase Invoice",
-      "actions": ["create", "save", "submit"]
+      "actions": [
+        "create",
+        "save",
+        "submit"
+      ]
     },
     {
       "doctype": "Material Request",
-      "actions": ["create", "save", "submit"]
+      "actions": [
+        "create",
+        "save",
+        "submit"
+      ]
     },
     {
       "doctype": "Request for Quotation",
-      "actions": ["create", "save", "submit"]
+      "actions": [
+        "create",
+        "save",
+        "submit"
+      ]
     },
     {
       "doctype": "Supplier Quotation",
-      "actions": ["create", "save", "submit"]
+      "actions": [
+        "create",
+        "save",
+        "submit"
+      ]
     },
     {
       "doctype": "Quotation",
-      "actions": ["create", "save", "submit"]
+      "actions": [
+        "create",
+        "save",
+        "submit"
+      ]
     },
     {
       "doctype": "Sales Order",
-      "actions": ["create", "save", "submit"]
+      "actions": [
+        "create",
+        "save",
+        "submit"
+      ]
     },
     {
       "doctype": "Delivery Note",
-      "actions": ["create", "save", "submit"]
+      "actions": [
+        "create",
+        "save",
+        "submit"
+      ]
     },
     {
       "doctype": "Sales Invoice",
-      "actions": ["create", "save", "submit"]
+      "actions": [
+        "create",
+        "save",
+        "submit"
+      ]
     },
     {
       "doctype": "Work Order",
-      "actions": ["create", "save", "submit"]
+      "actions": [
+        "create",
+        "save",
+        "submit"
+      ]
     },
     {
       "doctype": "Aluminium Lot",
-      "actions": ["create", "save"]
+      "actions": [
+        "create",
+        "save"
+      ]
     }
+  ],
+  "//hooks": [
+    "Sinh LÔ NHÔM sau khi phiếu nhập được ghi sổ — xem alumdoor-worker/src/index.ts.",
+    "Hook chạy SAU commit nên không làm chậm lệnh ghi, và nền tảng chống giao lặp theo (app, sự kiện)."
+  ],
+  "hooks": [
+    "purchase_receipt.submitted",
+    "purchase_receipt.cancelled"
   ],
   "//actions": [
     "Ba màn thao tác. Không phải sửa một bản ghi, nên không dựng bằng form doctype được:",
@@ -160,9 +218,9 @@
     {
       "//": "Báo giá → đơn hàng. Chép nguyên dòng hàng và số đo, không gõ lại.",
       "//do": "Gõ lại là chỗ số đo bị sai: một bộ cửa 4.200×2.800 chép tay thành 4.200×2.080 thì xưởng cắt xong mới biết. Chuyển lần thứ hai bị TỪ CHỐI — hai đơn cho cùng một báo giá là giao hàng hai lần.",
-    "name": "bao-gia-thanh-don",
-    "label": "Báo giá → Đơn hàng",
-    "menu": false,
+      "name": "bao-gia-thanh-don",
+      "label": "Báo giá → Đơn hàng",
+      "menu": false,
       "icon": "file-output",
       "group": "Bán hàng",
       "description": "Chỉ chuyển được báo giá KHÁCH ĐÃ ĐỒNG Ý. Số đo, màu, mô tơ, đơn giá chép nguyên sang đơn.",
@@ -198,9 +256,9 @@
         "ghi sổ — vì hàng về thiếu vài cây là chuyện thường, và số thật là số ĐẾM ĐƯỢC.",
         "Tạo ra phiếu NHÁP, không ghi sổ ngay: chưa ai đếm thì chưa được phép tăng tồn kho."
       ],
-    "name": "don-mua-thanh-phieu-nhap",
-    "label": "Đơn mua → Phiếu nhập",
-    "menu": false,
+      "name": "don-mua-thanh-phieu-nhap",
+      "label": "Đơn mua → Phiếu nhập",
+      "menu": false,
       "icon": "package-plus",
       "group": "Mua hàng",
       "description": "Tạo phiếu nhập NHÁP cho phần hàng còn chưa về của một đơn mua. Xem trước để biết còn thiếu bao nhiêu.",
@@ -250,9 +308,9 @@
         "Đọc SỐ do nền tảng làm bằng luật, không để mô hình quyết: '98.000' là chín mươi tám nghìn",
         "còn '3,5' là ba phẩy năm — cùng dấu chấm phẩy, hai nghĩa ngược nhau. Xem `ocr.ts`."
       ],
-    "name": "doc-anh-chung-tu",
-    "label": "Chụp ảnh → chứng từ mua",
-    "menu": false,
+      "name": "doc-anh-chung-tu",
+      "label": "Chụp ảnh → chứng từ mua",
+      "menu": false,
       "icon": "scan-text",
       "group": "Mua hàng",
       "description": "Chụp bảng giá NCC gửi qua Zalo, phiếu giao hàng hay hoá đơn NCC — máy đọc thành dòng hàng. LUÔN ra bản NHÁP: soát lại từng số so với ảnh rồi mới ghi sổ.",
@@ -323,7 +381,7 @@
       "Price List",
       "Item Price",
       "Pricing Rule",
-    "Cutting Policy",
+      "Cutting Policy",
       "Measurement Profile",
       "Item Color",
       "Material Grade",
@@ -364,137 +422,217 @@
     {
       "type": "UOM",
       "name": "Cái",
-      "data": { "uom_name": "Cái", "must_be_whole_number": true }
+      "data": {
+        "uom_name": "Cái",
+        "must_be_whole_number": true
+      }
     },
     {
       "type": "UOM",
       "name": "Bộ",
-      "data": { "uom_name": "Bộ", "must_be_whole_number": true }
+      "data": {
+        "uom_name": "Bộ",
+        "must_be_whole_number": true
+      }
     },
     {
       "type": "UOM",
       "name": "Kg",
-      "data": { "uom_name": "Kg" }
+      "data": {
+        "uom_name": "Kg"
+      }
     },
     {
       "type": "UOM",
       "name": "Mét",
-      "data": { "uom_name": "Mét" }
+      "data": {
+        "uom_name": "Mét"
+      }
     },
     {
       "type": "UOM",
       "name": "m2",
-      "data": { "uom_name": "m2" }
+      "data": {
+        "uom_name": "m2"
+      }
     },
     {
       "type": "UOM",
       "name": "Cây",
-      "data": { "uom_name": "Cây", "must_be_whole_number": true }
+      "data": {
+        "uom_name": "Cây",
+        "must_be_whole_number": true
+      }
     },
     {
       "type": "UOM",
       "name": "Thanh",
-      "data": { "uom_name": "Thanh", "must_be_whole_number": true }
+      "data": {
+        "uom_name": "Thanh",
+        "must_be_whole_number": true
+      }
     },
     {
       "type": "UOM",
       "name": "Sợi",
-      "data": { "uom_name": "Sợi", "must_be_whole_number": true }
+      "data": {
+        "uom_name": "Sợi",
+        "must_be_whole_number": true
+      }
     },
     {
       "type": "UOM",
       "name": "Cuộn",
-      "data": { "uom_name": "Cuộn", "must_be_whole_number": true }
+      "data": {
+        "uom_name": "Cuộn",
+        "must_be_whole_number": true
+      }
     },
     {
       "type": "UOM",
       "name": "Tấm",
-      "data": { "uom_name": "Tấm", "must_be_whole_number": true }
+      "data": {
+        "uom_name": "Tấm",
+        "must_be_whole_number": true
+      }
     },
     {
       "type": "UOM",
       "name": "Túi",
-      "data": { "uom_name": "Túi", "must_be_whole_number": true }
+      "data": {
+        "uom_name": "Túi",
+        "must_be_whole_number": true
+      }
     },
     {
       "type": "UOM",
       "name": "Hộp",
-      "data": { "uom_name": "Hộp", "must_be_whole_number": true }
+      "data": {
+        "uom_name": "Hộp",
+        "must_be_whole_number": true
+      }
     },
     {
       "type": "UOM",
       "name": "Bình",
-      "data": { "uom_name": "Bình", "must_be_whole_number": true }
+      "data": {
+        "uom_name": "Bình",
+        "must_be_whole_number": true
+      }
     },
     {
       "type": "UOM",
       "name": "Lít",
-      "data": { "uom_name": "Lít" }
+      "data": {
+        "uom_name": "Lít"
+      }
     },
     {
       "type": "Item Group",
       "name": "Tất cả mặt hàng",
-      "data": { "item_group_name": "Tất cả mặt hàng", "is_group": true }
+      "data": {
+        "item_group_name": "Tất cả mặt hàng",
+        "is_group": true
+      }
     },
     {
       "type": "Item Group",
       "name": "Thành phẩm",
-      "data": { "item_group_name": "Thành phẩm", "parent_item_group": "Tất cả mặt hàng", "is_group": true }
+      "data": {
+        "item_group_name": "Thành phẩm",
+        "parent_item_group": "Tất cả mặt hàng",
+        "is_group": true
+      }
     },
     {
       "type": "Item Group",
       "name": "Nguyên vật liệu",
-      "data": { "item_group_name": "Nguyên vật liệu", "parent_item_group": "Tất cả mặt hàng", "is_group": true }
+      "data": {
+        "item_group_name": "Nguyên vật liệu",
+        "parent_item_group": "Tất cả mặt hàng",
+        "is_group": true
+      }
     },
     {
       "type": "Item Group",
       "name": "Linh kiện & thiết bị",
-      "data": { "item_group_name": "Linh kiện & thiết bị", "parent_item_group": "Tất cả mặt hàng", "is_group": true }
+      "data": {
+        "item_group_name": "Linh kiện & thiết bị",
+        "parent_item_group": "Tất cả mặt hàng",
+        "is_group": true
+      }
     },
     {
       "type": "Item Group",
       "name": "Dịch vụ",
-      "data": { "item_group_name": "Dịch vụ", "parent_item_group": "Tất cả mặt hàng" }
+      "data": {
+        "item_group_name": "Dịch vụ",
+        "parent_item_group": "Tất cả mặt hàng"
+      }
     },
     {
       "type": "Item Group",
       "name": "Cửa cuốn",
-      "data": { "item_group_name": "Cửa cuốn", "parent_item_group": "Thành phẩm" }
+      "data": {
+        "item_group_name": "Cửa cuốn",
+        "parent_item_group": "Thành phẩm"
+      }
     },
     {
       "type": "Item Group",
       "name": "Cửa nhôm kính",
-      "data": { "item_group_name": "Cửa nhôm kính", "parent_item_group": "Thành phẩm" }
+      "data": {
+        "item_group_name": "Cửa nhôm kính",
+        "parent_item_group": "Thành phẩm"
+      }
     },
     {
       "type": "Item Group",
       "name": "Nan/lá cửa",
-      "data": { "item_group_name": "Nan/lá cửa", "parent_item_group": "Nguyên vật liệu" }
+      "data": {
+        "item_group_name": "Nan/lá cửa",
+        "parent_item_group": "Nguyên vật liệu"
+      }
     },
     {
       "type": "Item Group",
       "name": "Mô tơ",
-      "data": { "item_group_name": "Mô tơ", "parent_item_group": "Linh kiện & thiết bị" }
+      "data": {
+        "item_group_name": "Mô tơ",
+        "parent_item_group": "Linh kiện & thiết bị"
+      }
     },
     {
       "type": "Item Group",
       "name": "Ray và trục",
-      "data": { "item_group_name": "Ray và trục", "parent_item_group": "Nguyên vật liệu" }
+      "data": {
+        "item_group_name": "Ray và trục",
+        "parent_item_group": "Nguyên vật liệu"
+      }
     },
     {
       "type": "Item Group",
       "name": "Phụ kiện",
-      "data": { "item_group_name": "Phụ kiện", "parent_item_group": "Linh kiện & thiết bị" }
+      "data": {
+        "item_group_name": "Phụ kiện",
+        "parent_item_group": "Linh kiện & thiết bị"
+      }
     },
     {
       "type": "Item Group",
       "name": "Remote và điều khiển",
-      "data": { "item_group_name": "Remote và điều khiển", "parent_item_group": "Linh kiện & thiết bị" }
+      "data": {
+        "item_group_name": "Remote và điều khiển",
+        "parent_item_group": "Linh kiện & thiết bị"
+      }
     },
     {
       "type": "Item Group",
       "name": "Bộ lưu điện",
-      "data": { "item_group_name": "Bộ lưu điện", "parent_item_group": "Linh kiện & thiết bị" }
+      "data": {
+        "item_group_name": "Bộ lưu điện",
+        "parent_item_group": "Linh kiện & thiết bị"
+      }
     },
     {
       "type": "Warehouse",
@@ -700,8 +838,14 @@
       "group": "Danh mục",
       "naming": "field:uom_name",
       "title": "uom_name",
-      "list": ["uom_name", "must_be_whole_number", "disabled"],
-      "search": ["uom_name"],
+      "list": [
+        "uom_name",
+        "must_be_whole_number",
+        "disabled"
+      ],
+      "search": [
+        "uom_name"
+      ],
       "fields": [
         "uom_name:Data*! Tên đơn vị",
         "must_be_whole_number:Check Chỉ nhận số nguyên",
@@ -724,8 +868,15 @@
       "tree": true,
       "naming": "field:item_group_name",
       "title": "item_group_name",
-      "list": ["item_group_name", "parent_item_group", "is_group", "disabled"],
-      "search": ["item_group_name"],
+      "list": [
+        "item_group_name",
+        "parent_item_group",
+        "is_group",
+        "disabled"
+      ],
+      "search": [
+        "item_group_name"
+      ],
       "fields": [
         "item_group_name:Data*! Tên nhóm",
         "parent_item_group:Link(Item Group) Nhóm cha",
@@ -751,8 +902,14 @@
       "group": "Danh mục",
       "naming": "field:brand_name",
       "title": "brand_name",
-      "list": ["brand_name", "country", "disabled"],
-      "search": ["brand_name"],
+      "list": [
+        "brand_name",
+        "country",
+        "disabled"
+      ],
+      "search": [
+        "brand_name"
+      ],
       "fields": [
         "brand_name:Data*! Tên thương hiệu",
         "country:Data Quốc gia",
@@ -775,8 +932,14 @@
       "group": "Danh mục",
       "naming": "field:manufacturer_name",
       "title": "manufacturer_name",
-      "list": ["manufacturer_name", "country", "disabled"],
-      "search": ["manufacturer_name"],
+      "list": [
+        "manufacturer_name",
+        "country",
+        "disabled"
+      ],
+      "search": [
+        "manufacturer_name"
+      ],
       "fields": [
         "manufacturer_name:Data*! Tên nhà sản xuất",
         "country:Data Quốc gia",
@@ -799,8 +962,16 @@
       "group": "Danh mục",
       "naming": "field:color_code",
       "title": "color_name",
-      "list": ["color_code", "color_name", "finish", "disabled"],
-      "search": ["color_code", "color_name"],
+      "list": [
+        "color_code",
+        "color_name",
+        "finish",
+        "disabled"
+      ],
+      "search": [
+        "color_code",
+        "color_name"
+      ],
       "fields": [
         "color_code:Data*! Mã màu",
         "color_name:Data! Tên màu",
@@ -824,7 +995,10 @@
       "group": "Danh mục",
       "naming": "autoincrement",
       "title": "color",
-      "list": ["color", "note"],
+      "list": [
+        "color",
+        "note"
+      ],
       "fields": [
         "color:Link(Item Color)! Mã màu",
         "note:Data Ghi chú áp dụng"
@@ -844,8 +1018,16 @@
       "group": "Danh mục",
       "naming": "field:grade_code",
       "title": "grade_name",
-      "list": ["grade_code", "grade_name", "material_family", "disabled"],
-      "search": ["grade_code", "grade_name"],
+      "list": [
+        "grade_code",
+        "grade_name",
+        "material_family",
+        "disabled"
+      ],
+      "search": [
+        "grade_code",
+        "grade_name"
+      ],
       "fields": [
         "grade_code:Data*! Mã mác",
         "grade_name:Data! Tên mác",
@@ -869,8 +1051,18 @@
       "group": "Danh mục",
       "naming": "field:spec_code",
       "title": "spec_name",
-      "list": ["spec_code", "spec_name", "material_grade", "theoretical_kg_per_m", "standard_length_m"],
-      "search": ["spec_code", "spec_name", "profile_system"],
+      "list": [
+        "spec_code",
+        "spec_name",
+        "material_grade",
+        "theoretical_kg_per_m",
+        "standard_length_m"
+      ],
+      "search": [
+        "spec_code",
+        "spec_name",
+        "profile_system"
+      ],
       "fields": [
         "spec_code:Data*! Mã quy cách",
         "spec_name:Data! Tên quy cách",
@@ -901,7 +1093,11 @@
       "group": "Danh mục",
       "naming": "autoincrement",
       "title": "attribute_value",
-      "list": ["attribute_value", "abbr", "disabled"],
+      "list": [
+        "attribute_value",
+        "abbr",
+        "disabled"
+      ],
       "fields": [
         "attribute_value:Data! Giá trị",
         "abbr:Data Viết tắt",
@@ -922,8 +1118,14 @@
       "group": "Danh mục",
       "naming": "field:attribute_name",
       "title": "attribute_name",
-      "list": ["attribute_name", "numeric_values", "disabled"],
-      "search": ["attribute_name"],
+      "list": [
+        "attribute_name",
+        "numeric_values",
+        "disabled"
+      ],
+      "search": [
+        "attribute_name"
+      ],
       "fields": [
         "attribute_name:Data*! Tên thuộc tính",
         "numeric_values:Check Giá trị dạng số",
@@ -947,7 +1149,10 @@
       "group": "Danh mục",
       "naming": "autoincrement",
       "title": "attribute",
-      "list": ["attribute", "attribute_value"],
+      "list": [
+        "attribute",
+        "attribute_value"
+      ],
       "fields": [
         "attribute:Link(Item Attribute)! Thuộc tính",
         "attribute_value:Data! Giá trị"
@@ -966,7 +1171,11 @@
       "group": "Danh mục",
       "naming": "autoincrement",
       "title": "barcode",
-      "list": ["barcode", "barcode_type", "uom"],
+      "list": [
+        "barcode",
+        "barcode_type",
+        "uom"
+      ],
       "fields": [
         "barcode:Data*! Mã vạch",
         "barcode_type:Select(EAN-13,EAN-8,UPC-A,Code 128,QR,Khác) Loại mã",
@@ -986,7 +1195,13 @@
       "group": "Danh mục",
       "naming": "autoincrement",
       "title": "company",
-      "list": ["company", "default_warehouse", "inventory_account", "income_account", "expense_account"],
+      "list": [
+        "company",
+        "default_warehouse",
+        "inventory_account",
+        "income_account",
+        "expense_account"
+      ],
       "fields": [
         "company:Link(Company)! Công ty",
         "default_warehouse:Link(Warehouse) Kho mặc định",
@@ -1008,7 +1223,13 @@
       "group": "Danh mục",
       "naming": "autoincrement",
       "title": "warehouse",
-      "list": ["warehouse", "safety_stock", "reorder_level", "reorder_qty", "lead_time_days"],
+      "list": [
+        "warehouse",
+        "safety_stock",
+        "reorder_level",
+        "reorder_qty",
+        "lead_time_days"
+      ],
       "fields": [
         "warehouse:Link(Warehouse)! Kho",
         "safety_stock:Float Tồn an toàn",
@@ -1030,8 +1251,17 @@
       "group": "Danh mục",
       "naming": "format:{supplier}:{item_code}",
       "title": "supplier_item_code",
-      "list": ["supplier", "item_code", "supplier_item_code", "preferred", "lead_time_days", "disabled"],
-      "search": ["supplier_item_code"],
+      "list": [
+        "supplier",
+        "item_code",
+        "supplier_item_code",
+        "preferred",
+        "lead_time_days",
+        "disabled"
+      ],
+      "search": [
+        "supplier_item_code"
+      ],
       "fields": [
         "supplier:Link(Supplier)! Nhà cung cấp",
         "item_code:Link(Item)! Mặt hàng",
@@ -2119,7 +2349,30 @@
         "quality_status:Select(Khả dụng,Phế,Chờ kiểm)-=(Khả dụng) Chất lượng nội bộ",
         "legacy_source_key:Data- Khoá dữ liệu cũ",
         "source_sheet:Data- Sheet nguồn",
-        "source_row:Int- Dòng nguồn"
+        "source_row:Int- Dòng nguồn",
+        {
+          "//": "Dấu vết PHIẾU NHẬP đã sinh ra lô này. Hai việc: tra ngược được lô về chuyến hàng nào, và huỷ phiếu thì biết phải trừ lại đúng bao nhiêu lá của đúng lô nào.",
+          "fieldname": "source_receipt",
+          "fieldtype": "Link",
+          "options": "Purchase Receipt",
+          "label": "Theo phiếu nhập",
+          "read_only": true,
+          "hidden": true
+        },
+        {
+          "fieldname": "source_receipt_row",
+          "fieldtype": "Data",
+          "label": "Dòng phiếu nhập",
+          "read_only": true,
+          "hidden": true
+        },
+        {
+          "fieldname": "intake_sheets",
+          "fieldtype": "Float",
+          "label": "Số lá phiếu nhập ghi vào",
+          "read_only": true,
+          "hidden": true
+        }
       ],
       "permissions": {
         "Chủ xưởng": "rwc",

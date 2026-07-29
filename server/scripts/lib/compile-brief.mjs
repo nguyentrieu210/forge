@@ -979,7 +979,19 @@ export function compileBrief(brief) {
     custom_fields: customFields,
     ...(storefront ? { storefront } : {}),
     nav,
-    hooks: [],
+    /**
+     * Việc app muốn làm SAU KHI ghi sổ xong — đường duy nhất để app chạy logic mà không
+     * chen vào đường ghi của nhân.
+     *
+     * Nền tảng đã dựng đủ: giao sau khi commit (một app chậm không làm nghẽn mọi lệnh ghi),
+     * cô lập giữa các app, giao ít nhất một lần với chống lặp theo từng cặp (app, sự kiện),
+     * 12 lần thử trải hơn bảy tiếng. Thứ duy nhất còn thiếu là brief không khai được — nên
+     * app viết bằng brief không có cách nào phản ứng sau khi chứng từ được ghi.
+     *
+     * Cùng lý do với validator: hook cần một Worker để giao tới, nên thiếu `worker` thì bỏ
+     * qua thay vì xếp hàng những sự kiện không bao giờ có ai nhận.
+     */
+    hooks: brief.worker ? (brief.hooks ?? []).map((event) => ({ event })) : [],
     // Validator cần một Worker để hỏi; parser của server từ chối cái này nếu thiếu, nên
     // hai thứ đi cùng nhau hoặc không có gì cả.
     validators: brief.worker ? compileValidators(brief.validators ?? []) : [],

@@ -522,6 +522,14 @@
           }
         }
       }
+    },
+    "hooks": {
+      "type": "array",
+      "description": "Sự kiện app muốn nhận SAU KHI ghi sổ (vd purchase_receipt.submitted). Cần `worker`. Chỉ cho ký tự đại diện ở cuối.",
+      "items": {
+        "type": "string",
+        "pattern": "^([*]|[a-z0-9_]+([.][a-z0-9_]+)*([.][*])?)$"
+      }
     }
   },
   "patternProperties": {

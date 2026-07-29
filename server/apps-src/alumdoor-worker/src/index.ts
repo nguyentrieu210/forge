@@ -19,6 +19,7 @@
  */
 import { slatCount, australianSlatCount, type AustralianDoor } from "./slats.js";
 import { buildRows, extractJson, type OcrRow } from "./ocr.js";
+import { syncLotsFromReceipt } from "./lots-from-receipt.js";
 
 interface Env {
   INTERNAL_AUTH_SECRET?: string;
@@ -35,7 +36,7 @@ interface ValidatorSubject {
   payload: Record<string, unknown>;
 }
 
-type PlatformCall = ((path: string, init?: RequestInit) => Promise<Response>) & { via: string };
+export type PlatformCall = ((path: string, init?: RequestInit) => Promise<Response>) & { via: string };
 
 function platformCaller(request: Request, env: Env): PlatformCall {
   const declared = request.headers.get("x-cloudforge-callback");
@@ -1568,6 +1569,26 @@ export default {
         if (method === "alumdoor.ocr.parse") return await parseOcr(call, env, args);
         if (method === "alumdoor.ocr.apply") return await applyOcr(call, env, args);
         return new Response(JSON.stringify({ message: `Không có method ${method}` }), { status: 404 });
+      }
+      /**
+       * Sự kiện SAU KHI ghi sổ. Nền tảng giao tới đây sau commit, có chống giao lặp theo
+       * từng cặp (app, sự kiện), nên chỗ này không phải tự chống chạy hai lần.
+       */
+      if (url.pathname === "/hooks/event") {
+        const event = (await request.json()) as { event_type?: string; aggregate?: { doctype?: string; name?: string } };
+        const type = String(event.event_type ?? "");
+        const receipt = String(event.aggregate?.name ?? "");
+        if (!receipt || !type.startsWith("purchase_receipt.")) return new Response(null, { status: 204 });
+        const call = platformCaller(request, env);
+        const direction = type.endsWith(".cancelled") ? -1 : 1;
+        const result = await syncLotsFromReceipt(call, receipt, direction);
+        /**
+         * Dòng hỏng KHÔNG được nuốt: trả lỗi để nền tảng giao lại, và sau 12 lần thì đánh
+         * dấu bỏ cuộc — có dấu vết để lần ra. Im lặng ở đây là quay lại đúng cái bệnh cũ:
+         * hai quyển sổ lệch nhau mà không ai biết.
+         */
+        const status = result.failed.length ? 500 : 200;
+        return new Response(JSON.stringify(result), { status, headers: { "content-type": "application/json" } });
       }
       if (url.pathname === "/hooks/validate") {
         const subject = (await request.json()) as ValidatorSubject;
