@@ -9,8 +9,16 @@ const doctype = (name) => app.doctypes.find((entry) => entry.name === name);
 const field = (doctypeName, fieldname) =>
   doctype(doctypeName)?.fields.find((entry) => entry.fieldname === fieldname);
 
-test("Alumdoor 1.20.1 keeps imported history outside operational ledgers", () => {
-  assert.equal(brief.version, "1.20.1");
+test("Alumdoor keeps imported history outside operational ledgers", () => {
+  /**
+   * Số phiên bản KHÔNG được kiểm bằng dấu bằng.
+   *
+   * Bản trước ghim `=== "1.20.1"`, nên mọi lần phát hành đều làm đỏ một phép thử vốn không liên
+   * quan gì tới thứ nó bảo vệ — và cách sửa nhanh nhất luôn là gõ số mới vào, tức là phép thử
+   * dạy người ta bỏ qua chính nó. Thứ cần giữ là dữ liệu lịch sử nằm NGOÀI sổ nghiệp vụ; số
+   * phiên bản chỉ là cái nhãn.
+   */
+  assert.match(brief.version, /^\d+\.\d+\.\d+$/);
   assert.equal(doctype("Legacy Sales Order Item")?.is_child, true);
   assert.equal(field("Legacy Sales Order", "items")?.options, "Legacy Sales Order Item");
   assert.equal(doctype("Legacy Sales Order")?.is_submittable, false);

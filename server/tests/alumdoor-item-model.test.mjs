@@ -547,3 +547,52 @@ test("sales order to delivery preserves Item snapshots and exact remaining stock
   assert.equal(body.items[0].warehouse, "K12");
   assert.equal(body.items[0].color, "GS");
 });
+
+/**
+ * Nhóm giá của khách chi phối HAI thứ, và cái thứ hai mới là cái đắt.
+ *
+ * Thứ nhất là tiền: đại lý khai bề rộng theo phủ bì nhựa, khách lẻ theo phủ bì ray, nên cùng
+ * một bộ cửa ra hai con số mét vuông khác nhau. Thứ hai là RỘNG CẮT LÁ: đại lý trừ 0,02, khách
+ * lẻ trừ 0,08 — và cắt sai thì cây nhôm thành phế, không nối lại được.
+ *
+ * Vì vậy nhóm giá không được là một ô chọn rỗng trên chứng từ để người lập tự điền: nó phải
+ * đến từ hồ sơ khách. Xem docs/ALUMDOOR-LUAT-DO-VA-GIA.md.
+ */
+test("nhóm giá đến từ hồ sơ khách, không phải người lập chứng từ tự chọn", () => {
+  const priceGroup = field("Customer", "price_group");
+  assert.ok(priceGroup, "Customer phải có trường Nhóm giá");
+  assert.equal(priceGroup.fieldtype, "Select");
+  assert.deepEqual(priceGroup.options.split("\n"), ["Đại lý", "Lẻ"]);
+  // Không mặc định: 321/439 khách hiện mang đúng giá trị mặc định của trường cũ, và đó là lý do
+  // phân loại khách hiện có không dùng lại được.
+  assert.equal(priceGroup.default, undefined);
+
+  for (const doctypeName of ["Quotation", "Sales Order"]) {
+    const group = field(doctypeName, "customer_group");
+    assert.equal(group?.fetch_from, "customer.price_group", `${doctypeName} phải lấy nhóm giá từ khách`);
+    assert.equal(group?.read_only, true, `${doctypeName} không được cho sửa tay nhóm giá`);
+  }
+});
+
+test("chính sách đo và cắt tách khỏi chính sách giá, và chỉ khai luật đã xác nhận", () => {
+  const policy = doctype("Cutting Policy");
+  assert.ok(policy, "phải có doctype Chính sách đo và cắt");
+  assert.equal(field("Cutting Policy", "width_basis")?.required, true);
+  assert.equal(field("Cutting Policy", "cut_deduction_m")?.required, true);
+
+  const rules = brief.fixtures.filter((entry) => entry.type === "Cutting Policy");
+  assert.equal(rules.length, 2, "chỉ hai luật cửa Đức đã được xác nhận miệng");
+  const byGroup = new Map(rules.map((rule) => [rule.data.customer_group, rule.data]));
+  assert.deepEqual(
+    { basis: byGroup.get("Đại lý").width_basis, cut: byGroup.get("Đại lý").cut_deduction_m },
+    { basis: "Phủ bì nhựa", cut: 0.02 },
+  );
+  assert.deepEqual(
+    { basis: byGroup.get("Lẻ").width_basis, cut: byGroup.get("Lẻ").cut_deduction_m },
+    { basis: "Phủ bì ray", cut: 0.08 },
+  );
+  // Cùng một bộ cửa phải ra cùng một miếng nhôm, dù bán cho ai. Đó là điều suy ra
+  // PB ray = PB nhựa + 0,06 — hằng số duy nhất trong luật này không do khách nói thẳng.
+  const gap = byGroup.get("Lẻ").cut_deduction_m - byGroup.get("Đại lý").cut_deduction_m;
+  assert.ok(Math.abs(gap - 0.06) < 1e-9, "khoảng cách hai cách đo phải là 0,06 m");
+});

@@ -2,7 +2,7 @@
   "$schema": "./brief.schema.json",
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "1.20.1",
+  "version": "1.21.0",
   "module": "Alumdoor",
   "domain": "alumdoor",
   "brand": "warm",
@@ -323,6 +323,7 @@
       "Price List",
       "Item Price",
       "Pricing Rule",
+    "Cutting Policy",
       "Measurement Profile",
       "Item Color",
       "Material Grade",
@@ -524,6 +525,40 @@
         "is_group": false,
         "address": "Kho vật lý K12",
         "disabled": false
+      }
+    },
+    {
+      "//": "CHỈ hai luật cửa Đức — hai luật duy nhất đã được chủ xưởng xác nhận miệng.",
+      "//con-lai": [
+        "BRD 25/7 còn ba hằng số nữa: cửa Úc trừ 0,03; Đức kéo tay trừ 0,05 (ray sắt U70) hoặc",
+        "0,08 (ray U76). KHÔNG khai ở đây, vì cả ba đều nhắm vào nhóm hàng 'Cửa tấm liền Úc' —",
+        "cửa Úc và cửa Đức kéo tay đang nằm chung một nhóm trong danh mục. Khai vào lúc này thì",
+        "hai luật khác nhau cùng khớp một nhóm và phải dựa vào độ ưu tiên để phân xử, tức là đoán.",
+        "",
+        "Đợi tờ đối chiếu thành phẩm tách xong nhóm hàng rồi khai — sai một dòng ở đây là cắt",
+        "hỏng cây nhôm, không phải sai một con số."
+      ],
+      "type": "Cutting Policy",
+      "name": "Cửa Đức — đại lý",
+      "data": {
+        "policy_name": "Cửa Đức — đại lý",
+        "customer_group": "Đại lý",
+        "item_group": "Cửa CN Đức",
+        "width_basis": "Phủ bì nhựa",
+        "cut_deduction_m": 0.02,
+        "note": "Chủ xưởng xác nhận 2026-07-29. BRD 25/7: 'Khách đại lý: kích thước pb nhựa − 0,02'."
+      }
+    },
+    {
+      "type": "Cutting Policy",
+      "name": "Cửa Đức — khách lẻ",
+      "data": {
+        "policy_name": "Cửa Đức — khách lẻ",
+        "customer_group": "Lẻ",
+        "item_group": "Cửa CN Đức",
+        "width_basis": "Phủ bì ray",
+        "cut_deduction_m": 0.08,
+        "note": "Chủ xưởng xác nhận 2026-07-29 là 0,08 (BRD 25/7 ghi 0,06 — bản BRD cũ). Công trình và nhà thầu tính như khách lẻ."
       }
     },
     {
@@ -1331,7 +1366,30 @@
       ],
       "fields": [
         "customer_name:Data*! Tên khách hàng",
-        "customer_type:Select(Đại lý,Khách lẻ,Khác)=(Đại lý) Phân loại",
+        "customer_type:Select(Đại lý,Khách lẻ,Khác)=(Đại lý) Phân loại (mô tả)",
+        {
+          "//": "NHÓM GIÁ — trường quyết định, không phải `customer_type`.",
+          "//vi-sao": [
+            "Hai thứ này trông giống nhau nên rất dễ nhập một chỗ rồi tưởng chỗ kia cũng đúng.",
+            "`customer_type` là nhãn mô tả có sẵn từ lúc nạp dữ liệu và KHÔNG đáng tin: 321/439",
+            "khách đang mang đúng giá trị mặc định 'Đại lý', 114 khách để 'Khác', chỉ 4 khách là",
+            "'Khách lẻ'. Bốn khách lẻ trên bốn trăm ba chín là con số không thể có thật.",
+            "",
+            "Nhóm giá thì quyết định TIỀN và cả KÍCH THƯỚC CẮT NHÔM (đại lý đo phủ bì nhựa trừ",
+            "0,02; khách lẻ đo phủ bì ray trừ 0,08 — xem docs/ALUMDOOR-LUAT-DO-VA-GIA.md). Sai một",
+            "khách là vừa sai tiền vừa cắt hỏng cây nhôm, nên nó phải là một trường riêng, KHÔNG",
+            "mặc định, và để trống thì chứng từ bị từ chối chứ không đoán.",
+            "",
+            "Chỉ hai giá trị: chủ xưởng chốt Công trình và Nhà thầu tính như khách lẻ."
+          ],
+          "fieldname": "price_group",
+          "fieldtype": "Select",
+          "options": "Đại lý\nLẻ",
+          "label": "Nhóm giá",
+          "in_list_view": true,
+          "in_standard_filter": true,
+          "description": "Quyết định cách đo bề rộng và giá bán. Đại lý đo phủ bì nhựa, khách lẻ đo phủ bì ray. Công trình và nhà thầu tính như khách lẻ."
+        },
         "account_manager:Data Người phụ trách nội bộ",
         "phone:Data Điện thoại",
         "email:Data Email",
@@ -1444,7 +1502,7 @@
         "item_code:Link(Item) Chỉ áp cho mặt hàng",
         "party_type:Select(Customer,Supplier)=(Customer) Loại đối tác",
         "party:Dynamic Link(party_type) Chỉ áp cho đối tác",
-        "customer_group:Select(Lẻ,Đại lý,Công trình,Nhà thầu) Chỉ áp cho nhóm khách",
+        "customer_group:Select(Đại lý,Lẻ) Chỉ áp cho nhóm giá",
         "min_qty:Float Số lượng từ",
         "max_qty:Float Số lượng đến",
         "valid_from:Date Hiệu lực từ",
@@ -1458,6 +1516,59 @@
         "Chủ xưởng": "rwc",
         "Kinh doanh": "r",
         "Kế toán": "rwc"
+      }
+    },
+    {
+      "//": "CHÍNH SÁCH ĐO VÀ CẮT — tầng mà Chính sách giá không với tới.",
+      "//vi-sao-khong-nhap-vao-chinh-sach-gia": [
+        "Chính sách giá chỉ trả ra MỘT CON SỐ TIỀN (giá cố định hoặc % giảm). Còn 'đại lý đo phủ",
+        "bì nhựa, khách lẻ đo phủ bì ray' không đổi đơn giá — nó đổi DIỆN TÍCH, tức đổi lượng.",
+        "",
+        "Và cùng luật đó còn quyết định RỘNG CẮT LÁ, thứ chảy sang lệnh sản xuất nơi chính sách",
+        "giá không với tới. Một luật chi phối hai tầng thì phải nằm ở chỗ cả hai đọc được.",
+        "",
+        "Sai một dòng ở đây không phải sai tiền — là cắt hỏng cây nhôm, và nhôm đã cắt thì không",
+        "nối lại được. Xem docs/ALUMDOOR-LUAT-DO-VA-GIA.md."
+      ],
+      "name": "Cutting Policy",
+      "label": "Chính sách đo và cắt",
+      "icon": "ruler",
+      "group": "Danh mục",
+      "naming": "field:policy_name",
+      "title": "policy_name",
+      "list": [
+        "customer_group",
+        "item_group",
+        "rail_type",
+        "width_basis",
+        "cut_deduction_m"
+      ],
+      "search": [
+        "policy_name"
+      ],
+      "fields": [
+        "policy_name:Data*! Tên chính sách",
+        "customer_group:Select(Đại lý,Lẻ) Chỉ áp cho nhóm giá",
+        "item_group:Link(Item Group) Chỉ áp cho nhóm hàng",
+        "rail_type:Select(Ray sắt U70,Ray đơn U76,Ray hộp U76,Ray hộp U100) Chỉ áp khi đặt kèm loại ray",
+        "width_basis:Select(Phủ bì nhựa,Phủ bì ray)! Bề rộng khách khai đo theo",
+        {
+          "//": "Số MÉT trừ đi, KHÔNG phải hệ số nhân. Xưởng từng báo 'nhân 0,98' — nó bằng 'trừ 0,08' đúng tại cửa rộng 4,00 m nên nhiều năm không lộ, còn ở 2 m và 6 m thì lệch 4 cm. Khe hở lá–ray là khoảng cách cơ khí cố định theo profile ray, không nở theo bề rộng cửa.",
+          "fieldname": "cut_deduction_m",
+          "fieldtype": "Float",
+          "label": "Trừ khi cắt lá (m)",
+          "required": true,
+          "description": "Rộng cắt lá = bề rộng khách khai − số này. Cửa Đức: đại lý 0,02 · khách lẻ 0,08."
+        },
+        "priority:Int=(0) Độ ưu tiên khi nhiều luật cùng khớp",
+        "note:Small Text Ghi chú / nguồn",
+        "disabled:Check Ngừng áp dụng"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Kế toán": "r",
+        "Sản xuất": "r",
+        "Kinh doanh": "r"
       }
     },
     {
@@ -1579,7 +1690,21 @@
         "phone:Data Điện thoại",
         "install_address:Small Text Địa chỉ công trình",
         "selling_price_list:Link(Price List) Bảng giá áp dụng",
-        "customer_group:Select(Lẻ,Đại lý,Công trình,Nhà thầu) Nhóm khách",
+        {
+          "//": "Lấy TỪ HỒ SƠ KHÁCH, không để người lập chọn tay.",
+          "//vi-sao": [
+            "Trước đây nhóm khách là một ô chọn rỗng trên chứng từ và định giá đọc chính ô đó,",
+            "nên chọn nhầm là ra giá của nhóm khác — im lặng, không ai chặn. Nay nó chỉ là ẢNH",
+            "CHỤP của `Customer.price_group` tại thời điểm lập, để chứng từ cũ vẫn đọc được đúng",
+            "khi khách đổi nhóm sau này."
+          ],
+          "fieldname": "customer_group",
+          "fieldtype": "Select",
+          "options": "Đại lý\nLẻ",
+          "label": "Nhóm giá",
+          "read_only": true,
+          "fetch_from": "customer.price_group"
+        },
         "items:Table(Quotation Item)! Dòng hàng",
         "grand_total:Currency~ Tổng tiền",
         "payment_terms:Select(Trả ngay,Cọc 50%,7 ngày,15 ngày,30 ngày)=(Cọc 50%) Điều khoản thanh toán",
@@ -1755,7 +1880,15 @@
         "delivery_date:Date Ngày giao dự kiến",
         "against_quotation:Link(Quotation) Theo báo giá",
         "selling_price_list:Link(Price List) Bảng giá áp dụng",
-        "customer_group:Select(Lẻ,Đại lý,Công trình,Nhà thầu) Nhóm khách (cho chính sách giá)",
+        {
+          "//": "Ảnh chụp nhóm giá của khách — xem chú thích cùng trường ở Báo giá.",
+          "fieldname": "customer_group",
+          "fieldtype": "Select",
+          "options": "Đại lý\nLẻ",
+          "label": "Nhóm giá",
+          "read_only": true,
+          "fetch_from": "customer.price_group"
+        },
         "install_address:Small Text Địa chỉ giao / lắp đặt",
         "items:Table(Sales Order Item)! Dòng hàng",
         "grand_total:Currency~ Tổng tiền",
