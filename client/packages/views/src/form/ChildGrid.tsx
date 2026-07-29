@@ -4,7 +4,7 @@
  * cột = field in_list_view của child, cell = control từ registry (inline edit), thêm/xoá row.
  * Data-driven từ child meta (KHÔNG hardcode).
  */
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Maximize2, Plus, X } from "lucide-react";
 import { resolveField, type DocTypeMeta, type DocField, type Doc } from "@metaforge/core";
 import { ControlRegistry, FallbackControl, type FieldServices } from "@metaforge/controls";
@@ -164,6 +164,16 @@ export function ChildGrid(props: ChildGridProps) {
   const { childMeta, rows, onChange, registry, services, readOnly, parentDoc, roles, rowDefaults } = props;
   const [detailRow, setDetailRow] = useState<number | null>(null);
   const itemLoadVersion = useRef(new Map<string, number>());
+  const formulaLoadVersion = useRef(new Map<string, number>());
+  const previousFormulaGroup = useRef("");
+  const latestRows = useRef(rows);
+  useEffect(() => {
+    latestRows.current = rows;
+  }, [rows]);
+  const emitRows = (next: Doc[]) => {
+    latestRows.current = next;
+    onChange(next);
+  };
   const cols = visibleColumns(gridColumns(childMeta), childMeta, rows, parentDoc, roles);
   const identity = identityColumn(cols);
   const flexible = flexibleColumn(cols, identity);
@@ -197,11 +207,12 @@ export function ChildGrid(props: ChildGridProps) {
    */
   const COMPUTED_FROM = new Set([
     "qty", "rate", "qty_bar", "length_m", "width_mm", "height_mm", "set_count",
-    "uom", "conversion_factor",
+    "mesh_height_mm", "sales_mode", "has_butterfly_bracket", "uom", "conversion_factor",
   ]);
   const ITEM_DERIVED_FIELDS = [
     "conversion_factor", "uom", "stock_uom", "stock_qty", "inventory_mode", "measurement_profile", "min_area_sqm",
     "item_name", "description", "color", "colour", "rate", "amount",
+    "formula_policy", "width_basis", "cut_width_mm", "billable_area_sqm",
     "length_m", "qty_bundle", "qty_bar", "total_length_m", "actual_kg_per_m", "so_no",
   ];
   const withComputed = (row: Doc): Doc => {
@@ -272,7 +283,97 @@ export function ChildGrid(props: ChildGridProps) {
     return next;
   };
 
+  const isDoorSalesGrid = ["Quotation Item", "Sales Order Item", "Delivery Note Item", "Sales Invoice Item"]
+    .includes(childMeta.name);
+
+  /**
+   * Tính ở Worker rồi chụp kết quả vào dòng. Client chỉ làm nhiệm vụ tự điền; cùng payload
+   * sẽ được Worker tính lại khi lưu nên sửa DOM hay gọi API thẳng cũng không ghi được m2 sai.
+   */
+  const fillDoorFormula = async (
+    rowIdx: number,
+    base: Doc[],
+    loadKey: string,
+    loadVersion: number,
+  ) => {
+    if (!isDoorSalesGrid || !services?.callPost) return;
+    const row = base[rowIdx];
+    if (!row || row.inventory_mode !== "Thành phẩm theo m2" || !row.item_code) return;
+    const width = Number(row.width_mm);
+    const height = Number(row.height_mm);
+    const normalizedUom = String(row.uom ?? "").trim().toLocaleLowerCase("vi");
+    if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) return;
+    if (!["m2", "m²", "sqm"].includes(normalizedUom)) return;
+    try {
+      const calculated = await services.callPost<Record<string, unknown>>("alumdoor.door.calculate", {
+        item_code: row.item_code,
+        customer: parentDoc?.customer,
+        customer_group: parentDoc?.customer_group,
+        sales_mode: row.sales_mode ?? "Trọn bộ",
+        has_butterfly_bracket: row.has_butterfly_bracket ?? 0,
+        width_mm: width,
+        height_mm: height,
+        mesh_height_mm: row.mesh_height_mm,
+        set_count: row.set_count ?? 1,
+        purpose: "Bán hàng",
+      });
+      if (formulaLoadVersion.current.get(loadKey) !== loadVersion) return;
+      const billable = Number(calculated.billable_area_sqm);
+      const cutWidthM = Number(calculated.cut_width_m);
+      if (!Number.isFinite(billable) || billable <= 0 || !Number.isFinite(cutWidthM) || cutWidthM <= 0) return;
+      const has = (fieldname: string) => (childMeta.fields ?? []).some((field) => field.fieldname === fieldname);
+      const currentRows = latestRows.current;
+      const currentRowIdx = currentRows.findIndex((entry, index) => String(entry.name ?? index) === loadKey);
+      if (currentRowIdx < 0) return;
+      const currentRow = currentRows[currentRowIdx]!;
+      const sets = Number(currentRow.set_count ?? 1);
+      const patch: Record<string, unknown> = { qty: billable };
+      if (has("formula_policy")) patch.formula_policy = calculated.policy_name;
+      if (has("width_basis")) patch.width_basis = calculated.width_basis;
+      if (has("cut_width_mm")) patch.cut_width_mm = cutWidthM * 1_000;
+      if (has("billable_area_sqm")) patch.billable_area_sqm = billable;
+      if (["bộ", "bo", "set"].includes(String(currentRow.stock_uom ?? "").trim().toLocaleLowerCase("vi"))
+        && Number.isFinite(sets) && sets > 0) {
+        if (has("conversion_factor")) patch.conversion_factor = sets / billable;
+        if (has("stock_qty")) patch.stock_qty = sets;
+      }
+      const merged = currentRows.map((entry, index) => {
+        if (index !== currentRowIdx) return entry;
+        // `withComputed` vẫn phục vụ mọi app bằng công thức m2 chung. Áp snapshot của Worker
+        // SAU nó để luật cửa thắng đúng tại app Alumdoor, rồi tính tiền từ qty đã chốt.
+        const adjusted = { ...withComputed({ ...entry, ...patch }), ...patch } as Doc;
+        const rate = Number(adjusted.rate);
+        if ("amount" in adjusted && Number.isFinite(rate)) adjusted.amount = billable * rate;
+        return adjusted;
+      });
+      emitRows(merged);
+    } catch {
+      // Item không thuộc năm loại cửa hoặc khách chưa phân nhóm: giữ công thức chung để form
+      // vẫn nhập được; validator sẽ nêu đúng lý do khi người dùng lưu/ghi sổ.
+    }
+  };
+
+  const formulaCustomerGroup = String(parentDoc?.customer_group ?? "");
+  useEffect(() => {
+    if (!formulaCustomerGroup || formulaCustomerGroup === previousFormulaGroup.current) return;
+    previousFormulaGroup.current = formulaCustomerGroup;
+    rows.forEach((row, rowIdx) => {
+      const loadKey = String(row.name ?? rowIdx);
+      const version = (formulaLoadVersion.current.get(loadKey) ?? 0) + 1;
+      formulaLoadVersion.current.set(loadKey, version);
+      void fillDoorFormula(rowIdx, rows, loadKey, version);
+    });
+    // Chỉ chạy lại khi nhóm khách đổi. Thêm `rows` sẽ tự tạo vòng lặp vì kết quả tính cũng
+    // cập nhật rows; các thay đổi dòng đã được `setCell` xử lý riêng ngay bên dưới.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formulaCustomerGroup]);
+
   const setCell = (rowIdx: number, fieldname: string, value: unknown) => {
+    // Mọi thao tác trên dòng đều làm kết quả công thức đang bay trở nên cũ. Tăng version ngay,
+    // kể cả field vừa sửa không tham gia phép tính, để phản hồi chậm không ghi đè dữ liệu mới.
+    const formulaKey = String(rows[rowIdx]?.name ?? rowIdx);
+    const formulaVersion = (formulaLoadVersion.current.get(formulaKey) ?? 0) + 1;
+    formulaLoadVersion.current.set(formulaKey, formulaVersion);
     if (["uom", "color", "colour"].includes(fieldname)) {
       const loadKey = String(rows[rowIdx]?.name ?? rowIdx);
       itemLoadVersion.current.set(loadKey, (itemLoadVersion.current.get(loadKey) ?? 0) + 1);
@@ -295,7 +396,10 @@ export function ChildGrid(props: ChildGridProps) {
       };
       return COMPUTED_FROM.has(fieldname) ? withComputed(updated) : updated;
     }) as Doc[];
-    onChange(next);
+    emitRows(next);
+    if (COMPUTED_FROM.has(fieldname)) {
+      void fillDoorFormula(rowIdx, next, formulaKey, formulaVersion);
+    }
     if (fieldname === "item_code" && value) {
       const loadKey = String(next[rowIdx]?.name ?? rowIdx);
       const loadVersion = (itemLoadVersion.current.get(loadKey) ?? 0) + 1;
@@ -421,7 +525,11 @@ export function ChildGrid(props: ChildGridProps) {
     if (Object.keys(patch).length === 0) return;
     const merged = base.map((r, i) => (i === rowIdx ? { ...r, ...patch } : r));
     // Đơn giá vừa mồi xong thì thành tiền phải theo ngay, không đợi người dùng chạm vào ô.
-    onChange(merged.map((r, i) => (i === rowIdx ? withComputed(r) : r)));
+    const computed = merged.map((r, i) => (i === rowIdx ? withComputed(r) : r));
+    emitRows(computed);
+    const formulaVersion = (formulaLoadVersion.current.get(loadKey) ?? 0) + 1;
+    formulaLoadVersion.current.set(loadKey, formulaVersion);
+    void fillDoorFormula(rowIdx, computed, loadKey, formulaVersion);
   };
   /**
    * Dòng mới mang sẵn giá trị mặc định của field và của BỐI CẢNH đang chọn.
@@ -441,9 +549,9 @@ export function ChildGrid(props: ChildGridProps) {
       if (!(childMeta.fields ?? []).some((f) => f.fieldname === fieldname)) continue;
       if (seed[fieldname] == null || seed[fieldname] === "") seed[fieldname] = value;
     }
-    onChange([...rows, seed]);
+    emitRows([...rows, seed]);
   };
-  const delRow = (idx: number) => onChange(rows.filter((_, i) => i !== idx));
+  const delRow = (idx: number) => emitRows(rows.filter((_, i) => i !== idx));
 
   /**
    * Dòng TỔNG dưới chân bảng — cách MISA hiển thị chi tiết chứng từ.

@@ -45,6 +45,8 @@ export interface FieldServices {
   fetchValue?: (doctype: string, name: string, field: string) => Promise<unknown>;
   /** Fetch one complete document for dependent auto-fill; avoids one HTTP request per field. */
   fetchDocument?: (doctype: string, name: string) => Promise<Record<string, unknown>>;
+  /** Gọi method nghiệp vụ của app từ control tổng hợp (ví dụ bảng dòng tự tính công thức cửa). */
+  callPost?: <T = unknown>(method: string, args?: Record<string, unknown>) => Promise<T>;
   /** Resolve name kỹ thuật → title/label thân thiện cho Link đã có sẵn. */
   resolveDisplay?: (doctype: string, name: string) => Promise<{ label: string; description?: string; image?: string }>;
   /** Mở form tạo nhanh bản ghi đích ngay trong Link combobox (giống ERPNext "+ Create a new …") khi

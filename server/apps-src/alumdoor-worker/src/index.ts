@@ -20,6 +20,17 @@
 import { slatCount, australianSlatCount, type AustralianDoor } from "./slats.js";
 import { buildRows, extractJson, type OcrRow } from "./ocr.js";
 import { syncLotsFromReceipt } from "./lots-from-receipt.js";
+import {
+  calculateDoorFormula,
+  inferDoorType,
+  isManualPullGroup,
+  parseDoorPolicy,
+  selectDoorPolicy,
+  type CustomerGroup,
+  type DoorFormulaPolicy,
+  type DoorFormulaPurpose,
+  type SalesMode,
+} from "./door-formulas.js";
 
 interface Env {
   INTERNAL_AUTH_SECRET?: string;
@@ -69,6 +80,9 @@ const accept = () => answer({ ok: true });
 
 interface InventoryItem {
   item_code?: string;
+  item_group?: string;
+  door_type?: string;
+  purchase_kg_per_m2?: number;
   inventory_mode?: string;
   stock_uom?: string;
   default_purchase_uom?: string;
@@ -96,6 +110,28 @@ async function readMaster(call: PlatformCall, doctype: string, name: string): Pr
   if (response.status === 404) return null;
   if (!response.ok) throw new Error(`không đọc được ${doctype} ${name} (HTTP ${response.status})`);
   return ((await response.json()) as { data?: Record<string, unknown> }).data ?? null;
+}
+
+/**
+ * Một lượt đọc cho cả chứng từ. Không đọc từng policy theo từng dòng: đơn 40 cửa mà làm vậy
+ * sẽ vừa chậm vừa có thể thấy hai phiên bản chính sách khác nhau giữa đầu và cuối vòng lặp.
+ */
+async function readDoorPolicies(call: PlatformCall): Promise<DoorFormulaPolicy[]> {
+  const query = new URLSearchParams({
+    fields: JSON.stringify([
+      "policy_name", "door_type", "item_group",
+      "dealer_width_basis", "retail_width_basis",
+      "dealer_cut_deduction_m", "retail_cut_deduction_m", "butterfly_cut_deduction_m",
+      "dealer_split_sales_basis", "dealer_full_sales_basis", "retail_sales_basis", "manual_pull_sales_basis",
+      "purchase_formula", "purchase_height_basis", "purchase_width_basis",
+      "priority", "disabled", "note",
+    ]),
+    limit_page_length: "100",
+  });
+  const response = await call(`resource/Cutting%20Policy?${query}`);
+  if (!response.ok) return [];
+  const rows = ((await response.json()) as { data?: Array<Record<string, unknown>> }).data ?? [];
+  return rows.map(parseDoorPolicy);
 }
 
 function colorNames(item: Record<string, unknown>): string[] {
@@ -347,8 +383,21 @@ async function validateTransactionLines(
     : [];
   if (!rows.length) return accept();
   const codes = [...new Set(rows.map((row) => String(row.item_code ?? "").trim()).filter(Boolean))];
-  const pairs = await Promise.all(codes.map(async (code) => [code, await readMaster(call, "Item", code) as InventoryItem | null] as const));
+  const declaredCustomerGroup = String(doc.customer_group ?? "").trim();
+  const customerName = String(doc.customer ?? "").trim();
+  /**
+   * Item, bộ chính sách và hồ sơ khách độc lập nên đọc song song. Validator có ngân sách hai
+   * giây; xếp ba lượt này nối đuôi sẽ biến một phép kiểm đúng thành timeout trên đơn nhiều dòng.
+   */
+  const [pairs, doorPolicies, customer] = await Promise.all([
+    Promise.all(codes.map(async (code) => [code, await readMaster(call, "Item", code) as InventoryItem | null] as const)),
+    side === "sales" ? readDoorPolicies(call) : Promise.resolve([]),
+    side === "sales" && !declaredCustomerGroup && customerName
+      ? readMaster(call, "Customer", customerName)
+      : Promise.resolve(null),
+  ]);
   const items = new Map(pairs);
+  const customerGroup = declaredCustomerGroup || String(customer?.price_group ?? "").trim();
 
   for (let index = 0; index < rows.length; index += 1) {
     const row = rows[index]!;
@@ -404,7 +453,52 @@ async function validateTransactionLines(
         if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) {
           return refuse(`${line}: hàng tính m2 phải có rộng và cao lớn hơn 0.`);
         }
-        const billable = Math.max(width * height / 1_000_000, Number(item.min_area_sqm ?? 0) || 0) * sets;
+        const doorType = side === "sales" ? inferDoorType(item.door_type, item.item_group) : null;
+        let billable: number;
+        if (doorType) {
+          if (customerGroup !== "Đại lý" && customerGroup !== "Lẻ") {
+            return refuse(`${line}: khách hàng chưa có Nhóm giá Đại lý/Lẻ; không thể chọn đúng công thức đo và cắt.`);
+          }
+          const rawSalesMode = String(row.sales_mode ?? "Trọn bộ").trim();
+          if (rawSalesMode !== "Tách món" && rawSalesMode !== "Trọn bộ") {
+            return refuse(`${line}: Cách bán phải là Tách món hoặc Trọn bộ.`);
+          }
+          try {
+            const policy = selectDoorPolicy(doorPolicies, doorType, String(item.item_group ?? ""));
+            const calculated = calculateDoorFormula(policy, {
+              door_type: doorType,
+              item_group: String(item.item_group ?? ""),
+              customer_group: customerGroup as CustomerGroup,
+              sales_mode: rawSalesMode as SalesMode,
+              has_butterfly_bracket: checked(row.has_butterfly_bracket),
+              is_manual_pull: checked(row.is_manual_pull) || isManualPullGroup(item.item_group),
+              measured_width_m: width / 1_000,
+              cover_height_m: height / 1_000,
+              set_count: sets,
+              min_area_sqm: Number(item.min_area_sqm ?? 0) || 0,
+              purpose: "sales",
+            });
+            billable = Number(calculated.billable_area_sqm);
+            if (row.formula_policy && String(row.formula_policy) !== calculated.policy_name) {
+              return refuse(`${line}: đang chụp chính sách ${row.formula_policy}, đúng phải là ${calculated.policy_name}.`);
+            }
+            if (row.width_basis && String(row.width_basis) !== calculated.width_basis) {
+              return refuse(`${line}: cơ sở rộng phải là ${calculated.width_basis} theo nhóm khách ${customerGroup}.`);
+            }
+            if (row.cut_width_mm != null && row.cut_width_mm !== ""
+              && !nearlyEqual(Number(row.cut_width_mm), calculated.cut_width_m * 1_000)) {
+              return refuse(`${line}: rộng cắt phải là ${(calculated.cut_width_m * 1_000).toFixed(3)} mm theo ${calculated.policy_name}.`);
+            }
+            if (row.billable_area_sqm != null && row.billable_area_sqm !== ""
+              && !nearlyEqual(Number(row.billable_area_sqm), billable)) {
+              return refuse(`${line}: diện tích chụp trên dòng phải là ${billable.toFixed(6)} m2 theo ${calculated.policy_name}.`);
+            }
+          } catch (error) {
+            return refuse(`${line}: ${error instanceof Error ? error.message : "không tính được công thức cửa"}`);
+          }
+        } else {
+          billable = Math.max(width * height / 1_000_000, Number(item.min_area_sqm ?? 0) || 0) * sets;
+        }
         if (!nearlyEqual(quantity, billable)) return refuse(`${line}: SL tính tiền phải là ${billable.toFixed(6)} m2 theo kích thước và diện tích tối thiểu của Item.`);
         if (dynamicSquareMetreToSet) {
           expectedFactor = sets / quantity;
@@ -826,7 +920,8 @@ async function returnCut(call: PlatformCall, args: Record<string, unknown>): Pro
 /** Dòng hàng chép từ báo giá sang đơn. Field nào nhân O2C đọc thì phải qua nguyên vẹn. */
 const QUOTE_LINE_FIELDS = [
   "item_code", "item_name", "inventory_mode", "measurement_profile", "min_area_sqm",
-  "width_mm", "height_mm", "set_count", "length_m", "qty_bar",
+  "width_mm", "height_mm", "mesh_height_mm", "set_count", "sales_mode", "has_butterfly_bracket",
+  "formula_policy", "width_basis", "cut_width_mm", "billable_area_sqm", "length_m", "qty_bar",
   "qty", "uom", "conversion_factor", "stock_uom", "stock_qty", "rate", "amount",
   "color", "motor_model", "accessories", "note",
 ] as const;
@@ -1197,6 +1292,7 @@ interface SalesOrderDoc {
   name: string;
   docstatus?: number;
   customer?: string;
+  customer_group?: string;
   company?: string;
   currency?: string;
   install_address?: string;
@@ -1300,6 +1396,7 @@ async function deliveryFromSalesOrder(call: PlatformCall, args: Record<string, u
     method: "POST",
     body: JSON.stringify({
       customer: sales.customer,
+      ...(sales.customer_group ? { customer_group: sales.customer_group } : {}),
       company: sales.company,
       currency: sales.currency,
       against_sales_order: order,
@@ -1529,6 +1626,75 @@ async function applyOcr(call: PlatformCall, env: Env, args: Record<string, unkno
   });
 }
 
+function formulaPurpose(value: unknown): DoorFormulaPurpose {
+  const text = String(value ?? "Bán hàng").trim();
+  if (text === "Sản xuất" || text === "production") return "production";
+  if (text === "Dự toán mua" || text === "purchase") return "purchase";
+  if (text === "Tất cả" || text === "all") return "all";
+  return "sales";
+}
+
+/**
+ * Màn tính thử công thức cửa. Chỉ đọc, không ghi chứng từ.
+ *
+ * Item và Cutting Policy đều đọc từ server; client chỉ gửi số đo và tình huống bán. Nhờ đó
+ * gọi API trực tiếp cũng không thể giả một barem hoặc số trừ có lợi hơn dữ liệu đã duyệt.
+ */
+async function calculateDoor(call: PlatformCall, args: Record<string, unknown>): Promise<Response> {
+  const itemCode = String(args.item_code ?? "").trim();
+  if (!itemCode) return refuse("Cần chọn mặt hàng cửa.");
+  const customerName = String(args.customer ?? "").trim();
+  const declaredGroup = String(args.customer_group ?? "").trim();
+  const [item, policies, customer] = await Promise.all([
+    readMaster(call, "Item", itemCode),
+    readDoorPolicies(call),
+    !declaredGroup && customerName ? readMaster(call, "Customer", customerName) : Promise.resolve(null),
+  ]);
+  if (!item) return refuse(`Mặt hàng ${itemCode} không tồn tại hoặc đã ngừng dùng.`);
+  const doorType = inferDoorType(item.door_type, item.item_group);
+  if (!doorType) return refuse(`${itemCode} chưa được phân loại là một loại cửa có công thức.`);
+  const customerGroup = declaredGroup || String(customer?.price_group ?? "").trim();
+  if (customerGroup !== "Đại lý" && customerGroup !== "Lẻ") {
+    return refuse("Cần Nhóm giá Đại lý/Lẻ; nếu chọn khách thì phải hoàn thiện Nhóm giá trên hồ sơ khách.");
+  }
+  const rawMode = String(args.sales_mode ?? "Trọn bộ").trim();
+  if (rawMode !== "Tách món" && rawMode !== "Trọn bộ") return refuse("Cách bán phải là Tách món hoặc Trọn bộ.");
+  try {
+    const policy = selectDoorPolicy(policies, doorType, String(item.item_group ?? ""));
+    const result = calculateDoorFormula(policy, {
+      door_type: doorType,
+      item_group: String(item.item_group ?? ""),
+      customer_group: customerGroup as CustomerGroup,
+      sales_mode: rawMode as SalesMode,
+      has_butterfly_bracket: checked(args.has_butterfly_bracket),
+      is_manual_pull: checked(args.is_manual_pull) || isManualPullGroup(item.item_group),
+      measured_width_m: Number(args.width_mm) / 1_000,
+      set_count: Number(args.set_count ?? 1),
+      min_area_sqm: Number(item.min_area_sqm ?? 0) || 0,
+      purpose: formulaPurpose(args.purpose),
+      ...(args.height_mm == null || args.height_mm === "" ? {} : { cover_height_m: Number(args.height_mm) / 1_000 }),
+      ...(args.mesh_height_mm == null || args.mesh_height_mm === "" ? {} : { mesh_height_m: Number(args.mesh_height_mm) / 1_000 }),
+      ...(item.purchase_kg_per_m2 == null ? {} : { kg_per_m2: Number(item.purchase_kg_per_m2) }),
+      ...(args.actual_purchase_kg == null || args.actual_purchase_kg === "" ? {} : { actual_purchase_kg: Number(args.actual_purchase_kg) }),
+      ...(args.purchase_rate == null || args.purchase_rate === "" ? {} : { purchase_rate: Number(args.purchase_rate) }),
+    });
+    return answer({
+      ...result,
+      item_code: itemCode,
+      item_group: item.item_group,
+      results: [
+        { chỉ_tiêu: "Cơ sở rộng", kết_quả: result.width_basis, đơn_vị: "" },
+        { chỉ_tiêu: "Rộng cắt lá", kết_quả: result.cut_width_m, đơn_vị: "m" },
+        ...(result.billable_area_sqm == null ? [] : [{ chỉ_tiêu: "Diện tích tính tiền", kết_quả: result.billable_area_sqm, đơn_vị: "m2" }]),
+        ...(result.purchase_kg == null ? [] : [{ chỉ_tiêu: "Khối lượng mua dự toán", kết_quả: result.purchase_kg, đơn_vị: "Kg" }]),
+        ...(result.purchase_amount == null ? [] : [{ chỉ_tiêu: "Tiền mua dự toán", kết_quả: result.purchase_amount, đơn_vị: "VND" }]),
+      ],
+    });
+  } catch (error) {
+    return refuse(error instanceof Error ? error.message : "không tính được công thức cửa");
+  }
+}
+
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
@@ -1554,6 +1720,7 @@ export default {
         }
 
         const call = platformCaller(request, env);
+        if (method === "alumdoor.door.calculate") return await calculateDoor(call, args);
         if (method === "alumdoor.cut.propose") return await proposeCut(call, args);
         if (method === "alumdoor.cut.apply") return await applyCut(call, args);
         if (method === "alumdoor.cut.reverse") return await reverseCut(call, args);

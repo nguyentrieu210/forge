@@ -24,6 +24,8 @@ test("Alumdoor Item declares reusable inventory measurement profiles", () => {
   assert.equal(field("Item", "item_nature")?.default, "Hàng tồn kho");
   assert.equal(field("Item", "is_stock_item")?.default, true);
   assert.equal(field("Item", "inventory_mode")?.default, "Hàng thường");
+  assert.deepEqual(field("Item", "door_type")?.options.split("\n"), ["Cửa Đức", "Cửa Úc", "Cửa Lưới", "Cửa Đài Loan", "Cửa Siêu Trường"]);
+  assert.match(field("Item", "purchase_kg_per_m2")?.depends_on ?? "", /door_type/);
   assert.equal(field("Item", "stock_uom")?.default, "Cái");
   assert.equal(field("Item", "stock_uom")?.options, "UOM");
   assert.equal(field("Item", "stock_uom")?.required, true);
@@ -113,6 +115,13 @@ test("purchase rows expose aluminium dimensions only for aluminium items", () =>
     assert.equal(field(child, "uom")?.options, "UOM");
     assert.equal(field(child, "conversion_factor")?.read_only, true);
     assert.equal(field(child, "stock_qty")?.read_only, true);
+    assert.deepEqual(field(child, "sales_mode")?.options.split("\n"), ["Trọn bộ", "Tách món"]);
+    assert.ok(field(child, "has_butterfly_bracket"));
+    assert.ok(field(child, "mesh_height_mm"));
+    assert.equal(field(child, "formula_policy")?.read_only, true);
+    assert.equal(field(child, "width_basis")?.read_only, true);
+    assert.equal(field(child, "cut_width_mm")?.read_only, true);
+    assert.equal(field(child, "billable_area_sqm")?.read_only, true);
   }
   assert.equal(field("Purchase Receipt", "supplier")?.fetch_from, "against_purchase_order.supplier");
   assert.equal(field("Purchase Receipt", "company")?.fetch_from, "against_purchase_order.company");
@@ -584,25 +593,39 @@ test("nhóm giá đến từ hồ sơ khách, không phải người lập chứ
   }
 });
 
-test("chính sách đo và cắt tách khỏi chính sách giá, và chỉ khai luật đã xác nhận", () => {
+test("công thức cửa tách khỏi chính sách giá và phủ đủ năm loại cửa", () => {
   const policy = doctype("Cutting Policy");
-  assert.ok(policy, "phải có doctype Chính sách đo và cắt");
-  assert.equal(field("Cutting Policy", "width_basis")?.required, true);
-  assert.equal(field("Cutting Policy", "cut_deduction_m")?.required, true);
+  assert.ok(policy, "phải có doctype Công thức cửa");
+  for (const required of [
+    "door_type", "dealer_width_basis", "retail_width_basis",
+    "dealer_cut_deduction_m", "retail_cut_deduction_m",
+    "dealer_split_sales_basis", "dealer_full_sales_basis", "retail_sales_basis",
+    "purchase_formula",
+  ]) assert.equal(field("Cutting Policy", required)?.required, true, `${required} phải bắt buộc`);
 
   const rules = brief.fixtures.filter((entry) => entry.type === "Cutting Policy");
-  assert.equal(rules.length, 2, "chỉ hai luật cửa Đức đã được xác nhận miệng");
-  const byGroup = new Map(rules.map((rule) => [rule.data.customer_group, rule.data]));
+  const active = rules.filter((rule) => !rule.data.disabled);
+  assert.equal(active.length, 5, "mỗi loại cửa có đúng một luật hoạt động");
+  const byType = new Map(active.map((rule) => [rule.data.door_type, rule.data]));
+  assert.deepEqual([...byType.keys()].sort(), ["Cửa Đức", "Cửa Úc", "Cửa Lưới", "Cửa Đài Loan", "Cửa Siêu Trường"].sort());
   assert.deepEqual(
-    { basis: byGroup.get("Đại lý").width_basis, cut: byGroup.get("Đại lý").cut_deduction_m },
-    { basis: "Phủ bì nhựa", cut: 0.02 },
+    {
+      dealerBasis: byType.get("Cửa Đức").dealer_width_basis,
+      dealerCut: byType.get("Cửa Đức").dealer_cut_deduction_m,
+      retailBasis: byType.get("Cửa Đức").retail_width_basis,
+      retailCut: byType.get("Cửa Đức").retail_cut_deduction_m,
+    },
+    { dealerBasis: "Phủ bì nhựa", dealerCut: 0.02, retailBasis: "Phủ bì ray", retailCut: 0.08 },
   );
-  assert.deepEqual(
-    { basis: byGroup.get("Lẻ").width_basis, cut: byGroup.get("Lẻ").cut_deduction_m },
-    { basis: "Phủ bì ray", cut: 0.08 },
-  );
-  // Cùng một bộ cửa phải ra cùng một miếng nhôm, dù bán cho ai. Đó là điều suy ra
-  // PB ray = PB nhựa + 0,06 — hằng số duy nhất trong luật này không do khách nói thẳng.
-  const gap = byGroup.get("Lẻ").cut_deduction_m - byGroup.get("Đại lý").cut_deduction_m;
+  assert.equal(byType.get("Cửa Lưới").dealer_split_sales_basis, "Rộng cắt lá");
+  assert.equal(byType.get("Cửa Lưới").dealer_full_sales_basis, "Phủ bì ray");
+  assert.equal(byType.get("Cửa Đài Loan").manual_pull_sales_basis, "Phủ bì ray");
+  assert.equal(byType.get("Cửa Siêu Trường").dealer_full_sales_basis, "Rộng cắt lá");
+  for (const type of ["Cửa Úc", "Cửa Lưới", "Cửa Đài Loan", "Cửa Siêu Trường"]) {
+    assert.equal(byType.get(type).purchase_formula, "Barem kg/m2");
+    assert.equal(byType.get(type).purchase_width_basis, "Rộng cắt lá");
+  }
+  const gap = byType.get("Cửa Đức").retail_cut_deduction_m - byType.get("Cửa Đức").dealer_cut_deduction_m;
   assert.ok(Math.abs(gap - 0.06) < 1e-9, "khoảng cách hai cách đo phải là 0,06 m");
+  assert.ok(brief.actions.find((entry) => entry.name === "tinh-cong-thuc-cua"), "phải có màn tính thử dùng đúng Worker");
 });
