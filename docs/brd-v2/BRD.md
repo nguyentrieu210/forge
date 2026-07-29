@@ -214,7 +214,7 @@ bút toán nào) để dành cho Field Ledger ở PHA 3, không lặp ở BRD.
 | # | Entity | Tầng | Vai trò | File chi tiết | Trạng thái |
 |---|---|---|---|---|---|
 | E01 | **Item** — Hàng hoá / Vật tư | Doctype (danh mục) | Sự thật ỔN ĐỊNH của một mặt hàng | [item.md](brd-entities/item.md) | ✅ |
-| E02 | **Aluminium Batch** — Lô nhôm | Doctype + khoá vào ledger | Màu · khổ · tình trạng · kg thực cân của MỘT chuyến hàng cụ thể (QĐ-1) | [aluminium-batch.md](brd-entities/aluminium-batch.md) | ✅ |
+| E02 | **Batch** (doctype NỀN TẢNG) + Custom Field — Lô nhôm | Doctype + khoá vào ledger | Màu · khổ · tình trạng · kg thực cân của MỘT chuyến hàng cụ thể (QĐ-1) | [aluminium-batch.md](brd-entities/aluminium-batch.md) | ✅ |
 | E03 | **Stock Ledger Entry** — Sổ kho | **Ledger (SQL)** | Quyển sổ DUY NHẤT của tồn; bất biến | [stock-ledger-entry.md](brd-entities/stock-ledger-entry.md) | ✅ |
 | E04 | **Measurement Profile** — Bộ quy cách | Doctype (danh mục) | Item cần đại lượng vật lý nào; giữ kerf + ngưỡng phế + bản lá | [measurement-profile.md](brd-entities/measurement-profile.md) | ✅ |
 | E05 | **Warehouse** — Kho | Doctype (danh mục, cây) | K36 · K12 · kho ĐẦU THỪA (loại khỏi khả dụng) | [warehouse.md](brd-entities/warehouse.md) | ✅ |
@@ -241,7 +241,7 @@ Luật: mọi field "chọn 1 trong danh sách admin tự cấu hình được" 
 |---|---|---|---|---|
 | **Nhóm hàng** (E06) | `Item.item_group` | ✅ cây | 13 nhóm đang có | Chủ xưởng |
 | **Đơn vị tính** (E07) | `Item.stock_uom`, `.default_purchase_uom`, `.default_sales_uom`, `UOM Conversion.uom`, mọi dòng chứng từ | Không | 14 UOM hiện có **+ LÁ + THÂN** | Chủ xưởng |
-| **Màu** (E09) | `Aluminium Batch.color`, `Cut Order Item.color`, `Item.default_color`, `Item Allowed Color` | Không | 24 màu (18 STĐ + 5 mạ + THÔ) | Chủ xưởng |
+| **Màu** (E09) | `Batch.color`, `Cut Order Item.color`, `Item.default_color`, `Item Allowed Color` | Không | 24 màu (18 STĐ + 5 mạ + THÔ) | Chủ xưởng |
 | **Kho** (E05) | `Stock Ledger Entry.warehouse`, mọi dòng chứng từ, `Item.default_warehouse` | ✅ cây | Kho Alumdoor › K36 · K12 · **Đầu thừa** | Chủ xưởng |
 | **Bộ quy cách** (E04) | `Item.measurement_profile` | Không | 6 bộ hiện có | Chủ xưởng |
 | **Công thức cửa** (E10) | `Item.cutting_policy` | Không | 5 dòng cửa + biến thể ray U75/U100 | Chủ xưởng |
@@ -257,7 +257,7 @@ thuật, không đổi theo khách):
 | `Item.item_nature` (Hàng tồn kho/Dịch vụ/Tài sản) | Quyết định nhánh xử lý của nhân, không phải danh sách khách tự thêm |
 | `Item.inventory_mode` | Mỗi giá trị ứng với một nhánh code riêng — thêm giá trị mới mà không có code là app im lặng chạy sai |
 | `*.docstatus` (0/1/2) và `status` các chứng từ | State machine, không phải danh mục (`master-data-contract.md` §1 ghi rõ) |
-| `Aluminium Batch.condition` (Thô/Đã sơn/Lỗi) | **Cần xác nhận ở Cổng 2** — nếu xưởng có thêm tình trạng khác (đã dập, chờ sơn) thì phải chuyển thành danh mục |
+| `Batch.condition` (Thô/Đã sơn/Lỗi) | **Cần xác nhận ở Cổng 2** — nếu xưởng có thêm tình trạng khác (đã dập, chờ sơn) thì phải chuyển thành danh mục |
 
 ## 5. LUỒNG NGHIỆP VỤ
 
@@ -277,7 +277,7 @@ thuật, không đổi theo khách):
 | 2 | Thủ kho | Bấm **Đọc phiếu bằng ảnh** → chụp bảng kê NCC | `alumdoor.ocr.read` — Workers AI đọc ảnh → đề xuất dòng hàng. **Mã không khớp thì để TRỐNG**, ghi nguyên văn vào ghi chú | Bảng lớn hiện dòng nháp, ô AI điền có nền nhạt + icon ✨ |
 | 3 | Thủ kho | Soát và sửa từng dòng: mã hàng, **màu**, **tình trạng** (Thô/Đã sơn), **khổ**, **số cây ĐẾM được**, **kg thực cân**, đơn giá, kho nhập | Tự tính `total_length_m`, `theoretical_kg`, `weight_variance_pct`. Lệch > ngưỡng → **cảnh báo vàng ngay tại dòng**, không chặn | Thủ kho thấy dòng nào lệch cân bất thường trước khi ghi sổ |
 | 4 | Thủ kho | Đính **ảnh hàng nhận** + ảnh phiếu giấy NCC | Nén client ≤ 500 KB, lên R2, key `purchase-receipt/<id>/<uuid>.jpg` | Thumbnail trên phiếu |
-| 5 | Thủ kho | Bấm **Ghi sổ** | Gom dòng `byOrder` → kiểm hạn mức **theo từng đơn** với dung sai `supplier.receipt_tolerance_pct`. Mỗi dòng nhôm: **tạo `Aluminium Batch`** + ghi **1 bút toán** `+cây / +kg` kèm `batch_no`. Ghi `purchase_order_progress_entries`. Audit **cùng transaction** | Thủ kho: toast *"Đã nhập PNM-2026-0031 — 3 lô mới"*. Kinh doanh: tồn khả dụng tăng. Chủ xưởng: dashboard *"Nhôm NCC còn nợ"* giảm |
+| 5 | Thủ kho | Bấm **Ghi sổ** | Gom dòng `byOrder` → kiểm hạn mức **theo từng đơn** với dung sai `supplier.receipt_tolerance_pct`. Mỗi dòng nhôm: **tạo `Batch` + bundle Inward** + ghi **1 bút toán** `+cây / +kg` kèm `batch_no`. Ghi `purchase_order_progress_entries`. Audit **cùng transaction** | Thủ kho: toast *"Đã nhập PNM-2026-0031 — 3 lô mới"*. Kinh doanh: tồn khả dụng tăng. Chủ xưởng: dashboard *"Nhôm NCC còn nợ"* giảm |
 | 6 | Thủ kho | Bấm **In tem lô** | Sinh tem 35×22 mm mỗi lô: mã lô + mã nhôm + màu + khổ + QR | Dán lên bó nhôm — lần sau quét là ra thẻ lô |
 
 **Nhánh lỗi:**
@@ -426,7 +426,7 @@ Chữ `w`/`c`/`s`/`x`/`a` **kéo theo `r`** (compiler tự điền quyền đọ
 | **Cutting Policy** | `rwc` | `r` | `r` | `r` | `r` |
 | **Item Group · UOM · Item Color · Warehouse** | `rwc` | `rwc`¹ | `r` | `r` | `r` |
 | **Supplier** | `rwc` | `r` | — | `rwc` | `r` |
-| **Aluminium Batch** | `rwc` | `rwc` | `r` | `r` | `r` |
+| **Batch** | `rwc` | `rwc` | `r` | `r` | `r` |
 | **Purchase Receipt** | `rwcsxa` | `rwcsxa` | — | `rwcsxa` | `r` |
 | **Delivery Note** | `rwcsxa` | `rwcsxa` | — | `rwcsxa` | `r` |
 | **Stock Entry** | `rwcsxa` | `rwcsxa` | `rwc`² | `rwcsxa` | `r` |
@@ -478,7 +478,7 @@ BRD §3 chốt **"Sản xuất thấy số lượng nhưng KHÔNG thấy tiền"
 không cần biết lá đó giá bao nhiêu.
 
 Nhưng ma trận trên là **quyền theo DOCTYPE**, không phải theo trường. Cho `Sản xuất` quyền `r` trên
-`Aluminium Batch` là cho đọc **cả** `valuation_rate` nếu trường đó nằm trên cùng doctype.
+`Batch` là cho đọc **cả** `valuation_rate` nếu trường đó nằm trên cùng doctype.
 
 ### ✅ ĐÃ XÁC MINH 2026-07-30 — nhân KHÔNG có quyền theo trường
 
@@ -535,7 +535,7 @@ Lý do: nỗi đau #1 chỉ định màn chính (§1.1), và đơn bán nằm ng
 (bỏ `Bán hàng` gộp vào Kho, bỏ `Công nợ` và `Bảo hành` — ngoài phạm vi QĐ-4).
 
 ```
-Kho        Aluminium Batch · Stock Entry · Delivery Note · Stock Reconciliation · Stock Reservation
+Kho        Batch · Stock Entry · Delivery Note · Stock Reconciliation · Stock Reservation
 Mua hàng   Purchase Receipt · action:doc-anh-chung-tu
 Sản xuất   Cut Order · action:cat-nhom · action:hoan-cat · action:tra-hang · action:tinh-cong-thuc-cua
 Báo cáo    report:Tồn nhôm theo khổ · report:Stock Balance · report:Stock Ledger
@@ -578,7 +578,7 @@ AL548 · GHI SẦN · Đã sơn
 
 | Thao tác | Đi đâu | Ghi chú |
 |---|---|---|
-| Bấm một mức khổ | Mở list `Aluminium Batch` đã lọc sẵn `length_m ≥ L` | 100% số phải bấm được (`polish-contract`) |
+| Bấm một mức khổ | Mở list `Batch` đã lọc sẵn `length_m ≥ L` | 100% số phải bấm được (`polish-contract`) |
 | `Cắt từ đây` | Mở `action:cat-nhom` prefill mã·màu·khổ | Prefill chéo bắt buộc |
 | Xuất Excel | Theo **bộ lọc hiện tại**, không phải trang đang xem | `data-table-contract` |
 

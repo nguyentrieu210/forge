@@ -39,7 +39,7 @@ nhau. Giữ nguyên.
 | T1 | Thêm **`serial_and_batch_bundle`** trên dòng — **copy đúng tên trường của `Stock Entry Detail` nền tảng** | QĐ-1. Brief cũ khai đè bằng `Stock Entry Item` và **đánh rơi chính trường này** — đó là gốc của quyển sổ thứ hai |
 | T2 | Thêm `weight_kg` trên dòng | QĐ-2 catch weight |
 | T3 | Thêm giá trị `purpose = Điều chỉnh tồn` + `adjust_reason` bắt buộc | `screen-catalog` Inventory: *"Không sửa trực tiếp số tồn nếu đã có lịch sử; dùng phiếu điều chỉnh"* — phải có chứng từ để làm việc đó, và phải có **lý do** |
-| T4 | `Material Transfer` **không đổi `Aluminium Batch.received_warehouse`** | Vị trí hiện tại của lô đọc từ sổ, không lưu trên batch — xem [aluminium-batch.md](aluminium-batch.md) §2.1 |
+| T4 | `Material Transfer` **không đổi `Batch.received_warehouse`** | Vị trí hiện tại của lô đọc từ sổ, không lưu trên batch — xem [aluminium-batch.md](aluminium-batch.md) §2.1 |
 
 ---
 
@@ -104,7 +104,7 @@ dùng để hợp thức hoá chênh lệch lớn. Ngưỡng buộc phải đi �
 |---|---|
 | Chuyển kho | Chuyển 5 lá lô X từ K36 → K12 → **2 bút toán cùng `batch_no`**: `−5` ở K36, `+5` ở K12 |
 | Lô ở hai kho | Sau khi chuyển một phần, `GROUP BY warehouse` của lô X ra **2 dòng** |
-| Batch không đổi kho | `Aluminium Batch.received_warehouse` **không đổi** sau chuyển kho |
+| Batch không đổi kho | `Batch.received_warehouse` **không đổi** sau chuyển kho |
 | Thiếu ở kho nguồn | Chuyển 10 mà K36 chỉ còn 3 → 422 |
 | Điều chỉnh cần lý do | `purpose = Điều chỉnh tồn`, `adjust_reason` trống → 422 |
 | Catch weight | Chuyển 5 lá / 14 kg → cả hai cột đều có ở cả hai bút toán |

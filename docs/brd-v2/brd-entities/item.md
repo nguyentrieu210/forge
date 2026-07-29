@@ -3,7 +3,7 @@
 > Doctype danh mục · lưu JSON trong `master_records.data_json` · `naming: field:item_code`
 >
 > **Nguyên tắc phân vai:** Item giữ **sự thật ỔN ĐỊNH** của một mặt hàng. Thứ thay đổi theo từng
-> chuyến hàng — màu, khổ, tình trạng, kg thực cân — nằm ở **Aluminium Batch (E02)**, không nằm ở đây.
+> chuyến hàng — màu, khổ, tình trạng, kg thực cân — nằm ở **Batch + Custom Field (E02)**, không nằm ở đây.
 
 ---
 

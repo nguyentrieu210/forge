@@ -53,7 +53,7 @@ Và vì nhôm là catch weight, **đếm cả hai con số**: số cây/lá **v�
 
 | Field | Kiểu | Bắt buộc | Validate + câu lỗi | Nghiệp vụ |
 |---|---|---|---|---|
-| `batch` | Link(Aluminium Batch) | ✅ khi mặt hàng theo lô | — | Đếm **theo lô**, không gộp mã |
+| `serial_and_batch_bundle` | Link(Serial and Batch Bundle) | ✅ khi mặt hàng theo lô | bundle liệt kê từng lô đếm được | Đếm **theo lô**, không gộp mã |
 | `item_code` | Link(Item) | ✅ | — | — |
 | `book_qty` | Float | ✅ (hệ thống điền, chỉ đọc) | — | Số sổ tại `snapshot_at` |
 | `book_weight_kg` | Float | — (chỉ đọc) | — | Kg theo sổ |

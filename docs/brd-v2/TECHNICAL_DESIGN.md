@@ -301,9 +301,28 @@ ngoại lệ: item ∈ exempt_items (AL71C) → bỏ bước trừ một lá
 | `Item Group` | `default_valuation_method` Select(FIFO, Bình quân di động) · `default_measurement_profile` Link | Item kế thừa lúc tạo |
 | `UOM` | +2 bản ghi: **`LÁ`** · **`THÂN`** | `must_be_whole_number` = ✔ cho Cây/Lá/Tấm — **dùng sẵn, không tự chế validate** |
 | `UOM Conversion` | — | **CHẶN khai khi `item.has_catch_weight`** |
-| `Item Color` | seed 24 màu; `4004`→ĐỎ; `9512`→`supplier_color_code` của TRẮNG | `applies_to` là Small Text ⇒ **không ép được**; chặn một chiều qua `Item.allowed_colors` |
+| `Item Color` | seed 24 màu; `4004`→ĐỎ; `9512`→`supplier_color_code` của TRẮNG; **`applies_to` Small Text → bảng con `Item Color Scope`** | ✅ Chủ xưởng chốt 30/07: bảng màu gửi kèm ĐÃ CÓ cột "Nhóm SP áp dụng" ⇒ dữ liệu để ép tồn tại. Đổi sang Link(Item Group) và **ÉP THẬT** — BRD §0.2 Q10 |
 | `Supplier` | `receipt_tolerance_pct` Float DEFAULT **5** | Dung sai giao hàng theo NCC |
 | `Warehouse` | `stock_role` Select(Kho chính, Kho đầu thừa, Kho phế, Kho gửi gia công) · `keeper` **Data → Link(User)** | Cây: `K36 › Đầu thừa`, `K12 › Đầu thừa` (W-Q2). Chỉ `Kho chính` vào tồn khả dụng |
+
+### 5.4 Ba danh mục FK còn thiếu ledger (D6)
+
+Scorecard cũ ghi *"mọi FK trỏ bảng thật"* — **sai**. Ba danh mục dưới đây bị dùng làm FK khắp nơi mà
+chưa có ledger. Bổ sung:
+
+| Doctype | Field | Ràng buộc | Dùng ở |
+|---|---|---|---|
+| **Lý do huỷ** | `reason_code:Data*!` · `reason_name:Data!` · `applies_to_doctype:Select(Tất cả,Phiếu nhập,Phiếu xuất,Phiếu kho,Phiếu cắt,Kiểm kê)=(Tất cả)` · `sort_order:Int` · `disabled:Check` | `reason_code` UNIQUE | `*.cancel_reason` — chip lý do Kanban, **bước lùi bắt buộc chọn** |
+| **Nguyên nhân chênh lệch** | `reason_code:Data*!` · `reason_name:Data!` · `variance_kind:Select(Thừa,Thiếu,Cả hai)=(Cả hai)` · `sort_order:Int` · `disabled:Check` | UNIQUE | `Stock Reconciliation Item.variance_reason` · `Stock Entry.adjust_reason` — **TT99/2025 đòi phân loại nguyên nhân rồi mới hạch toán** |
+| **Item Color Scope** (child của `Item Color`) | `item_group:Link(Item Group)!` | — | Thay `applies_to` Small Text ⇒ ép được ràng buộc màu ↔ nhóm SP |
+
+**Seed từ dữ liệu thật:**
+
+- *Lý do huỷ*: Nhập nhầm · Sai số lượng · Sai lô · NCC đổi hàng · Khác
+- *Nguyên nhân chênh lệch*: Sai cân đo · Quên ghi · Hỏng/mất · **Thợ cắt sai không báo** · Khác
+  (mục thứ tư lấy nguyên văn từ lời kế toán trong nghề — `danketoan.com`)
+- *Item Color Scope*: theo cột "Nhóm SP áp dụng" của bảng màu chủ xưởng gửi — sơn tĩnh điện áp cho
+  6 nhóm, mạ màu **chỉ** Cửa Úc và Đài Loan
 
 ---
 
