@@ -161,7 +161,7 @@ export class D1MutationStore implements MutationStore {
   }
 
   async getStockLedgerHistory(tenantId: string, itemCode: string, warehouse: string, throughPostingAt?: string): Promise<StockLedgerEntry[]> {
-    const sql = `SELECT line_key,item_code,warehouse,actual_qty_micros,valuation_rate_minor,stock_value_difference_minor,
+    const sql = `SELECT line_key,item_code,warehouse,actual_qty_micros,actual_weight_micros,valuation_rate_minor,stock_value_difference_minor,
       qty_scale,currency_scale,currency,posting_at,batch_no,serial_no,allow_negative_stock
       FROM stock_ledger_entries WHERE tenant_id=?1 AND item_code=?2 AND warehouse=?3
       ${throughPostingAt ? "AND posting_at<=?4" : ""}
@@ -171,7 +171,10 @@ export class D1MutationStore implements MutationStore {
       : await this.writer.prepare(sql).bind(tenantId,itemCode,warehouse).all<Record<string, unknown>>();
     return (result.results ?? []).map((row) => ({
       line_key: String(row.line_key), item_code: String(row.item_code), warehouse: String(row.warehouse),
-      actual_qty_micros: Number(row.actual_qty_micros), valuation_rate_minor: Number(row.valuation_rate_minor),
+      actual_qty_micros: Number(row.actual_qty_micros),
+      // `!= null` bắt cả null lẫn undefined mà VẪN giữ số 0 — `row.x ? …` sẽ nuốt mất cân 0.
+      ...(row.actual_weight_micros != null ? { actual_weight_micros: Number(row.actual_weight_micros) } : {}),
+      valuation_rate_minor: Number(row.valuation_rate_minor),
       stock_value_difference_minor: Number(row.stock_value_difference_minor), qty_scale: 6,
       currency_scale: Number(row.currency_scale), currency: String(row.currency), posting_at: String(row.posting_at),
       ...(row.batch_no ? { batch_no: String(row.batch_no) } : {}), ...(row.serial_no ? { serial_no: String(row.serial_no) } : {}),
@@ -626,11 +629,15 @@ export class D1MutationStore implements MutationStore {
     for (const line of plan.stock_entries) {
       statements.push(database.prepare(
         `INSERT INTO stock_ledger_entries
-         (tenant_id,voucher_type,voucher_no,voucher_revision,line_key,item_code,warehouse,actual_qty_micros,valuation_rate_minor,stock_value_difference_minor,qty_scale,currency_scale,currency,posting_at,batch_no,serial_no,allow_negative_stock)
-         VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17)`,
+         (tenant_id,voucher_type,voucher_no,voucher_revision,line_key,item_code,warehouse,actual_qty_micros,actual_weight_micros,valuation_rate_minor,stock_value_difference_minor,qty_scale,currency_scale,currency,posting_at,batch_no,serial_no,allow_negative_stock)
+         VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18)`,
       ).bind(
         command.tenant_id, command.aggregate.doctype, command.aggregate.name, plan.document.version,
-        line.line_key, line.item_code, line.warehouse, line.actual_qty_micros, line.valuation_rate_minor,
+        line.line_key, line.item_code, line.warehouse, line.actual_qty_micros,
+        // `?? null` chứ KHÔNG `?? 0`: cột này rỗng nghĩa là không cân theo kiện, còn 0 nghĩa
+        // là đã cân và được 0. Gộp hai thứ đó lại là mất luôn khả năng phân biệt.
+        line.actual_weight_micros ?? null,
+        line.valuation_rate_minor,
         line.stock_value_difference_minor, line.qty_scale, line.currency_scale, line.currency,
         line.posting_at, line.batch_no ?? null, line.serial_no ?? null, line.allow_negative_stock ? 1 : 0,
       ));

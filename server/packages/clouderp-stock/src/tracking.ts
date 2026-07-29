@@ -8,6 +8,13 @@ export interface TrackedStockRequest {
   itemCode: string;
   warehouse: string;
   qtyMicros: number;
+  /**
+   * Cân thật của cả dòng, khi mặt hàng cân theo kiện. Luôn ghi TRỊ TUYỆT ĐỐI — chiều do
+   * `direction` quyết định, giống `stockValueMinor`.
+   *
+   * Bỏ trống = không cân theo kiện. Không mặc định 0: xem `StockLedgerEntry.actual_weight_micros`.
+   */
+  weightMicros?: number;
   direction: "Inward" | "Outward";
   postingAt: string;
   currency: string;
@@ -43,6 +50,15 @@ export async function buildTrackedStockLines(
   if (total !== request.qtyMicros) throw errors.reference(`Serial and Batch Bundle ${request.bundleName} quantity does not match stock row`, { bundle_qty_micros: total, row_qty_micros: request.qtyMicros });
   const stock: StockLedgerEntry[] = [];
   let allocatedValue = 0;
+  // Cân chia theo cùng KIỂU với tiền — tỉ lệ theo qty, dòng CUỐI nhận phần dư — chứ không
+  // chia đều rồi làm tròn từng dòng. Chia đều thì tổng các dòng lệch tổng đã cân vài micro,
+  // và sổ kg trôi dần mà sổ cây vẫn cân, không ai nhìn ra.
+  //
+  // Đây là con số ƯỚC theo tỉ lệ, không phải cân từng lô. Nhôm cân cả chuyến rồi mới chia
+  // vào các lô, nên đúng bản chất là ước. Muốn số cân thật từng lô thì phải cân từng lô và
+  // truyền `weight_micros` xuống từng dòng bundle — chưa cần cho nhánh nhập ở đợt này.
+  const totalWeight = request.weightMicros == null ? null : Math.abs(request.weightMicros);
+  let allocatedWeight = 0;
   for (const [index,row] of rows.entries()) {
     const qty = row.qty_micros!;
     if (request.direction === "Outward") {
@@ -58,10 +74,18 @@ export async function buildTrackedStockLines(
       ? Math.abs(request.stockValueMinor)-allocatedValue
       : Math.round(Math.abs(request.stockValueMinor)*qty/request.qtyMicros);
     allocatedValue += absoluteValue;
+    let absoluteWeight: number | null = null;
+    if (totalWeight != null) {
+      absoluteWeight = index === rows.length-1
+        ? totalWeight-allocatedWeight
+        : Math.round(totalWeight*qty/request.qtyMicros);
+      allocatedWeight += absoluteWeight;
+    }
     stock.push({
       line_key: `${request.lineKey}-${row.row_id || index+1}`,
       item_code: request.itemCode, warehouse: request.warehouse,
       actual_qty_micros: request.direction === "Inward" ? qty : -qty,
+      ...(absoluteWeight != null ? { actual_weight_micros: request.direction === "Inward" ? absoluteWeight : -absoluteWeight } : {}),
       valuation_rate_minor: request.valuationRateMinor,
       stock_value_difference_minor: request.direction === "Inward" ? absoluteValue : -absoluteValue,
       qty_scale: 6, currency_scale: request.currencyScale, currency: request.currency, posting_at: request.postingAt,
@@ -96,6 +120,9 @@ function baseLine(request: TrackedStockRequest): StockLedgerEntry {
   return {
     line_key: request.lineKey, item_code: request.itemCode, warehouse: request.warehouse,
     actual_qty_micros: request.direction === "Inward" ? request.qtyMicros : -request.qtyMicros,
+    ...(request.weightMicros == null
+      ? {}
+      : { actual_weight_micros: request.direction === "Inward" ? Math.abs(request.weightMicros) : -Math.abs(request.weightMicros) }),
     valuation_rate_minor: request.valuationRateMinor,
     stock_value_difference_minor: request.direction === "Inward" ? Math.abs(request.stockValueMinor) : -Math.abs(request.stockValueMinor),
     qty_scale: 6, currency_scale: request.currencyScale, currency: request.currency, posting_at: request.postingAt,

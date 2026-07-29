@@ -507,6 +507,17 @@ export class InMemoryMutationStore implements MutationStore {
     const pendingSerial = new Map<string, number>();
     const pendingBatch = new Map<string, number>();
     for (const line of plan.stock_entries) {
+      // Song sinh của `stock_weight_sign_guard` (migration 0024). Hai kho phải kể CÙNG một
+      // câu chuyện: nếu chỉ D1 chặn, test chạy trên kho trong bộ nhớ sẽ XANH cho đúng cái
+      // bút toán mà production ABORT. Luật viết hai nơi thì phải sửa cả hai, cùng lúc —
+      // migration 0023 đã ghi lại đúng bài học này.
+      if (line.actual_weight_micros != null
+        && ((line.actual_qty_micros > 0 && line.actual_weight_micros < 0)
+          || (line.actual_qty_micros < 0 && line.actual_weight_micros > 0))) {
+        throw errors.reference(`Stock weight sign does not match quantity for ${line.item_code}`, {
+          actual_qty_micros: line.actual_qty_micros, actual_weight_micros: line.actual_weight_micros,
+        });
+      }
       if (line.serial_no) {
         if (Math.abs(line.actual_qty_micros) !== 1_000_000) throw errors.reference("Serial quantity must equal one");
         const serialKey = `${line.item_code}:${line.serial_no}`;
