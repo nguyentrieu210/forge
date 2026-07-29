@@ -273,6 +273,73 @@ addAfter(doctype("Item Group"), "default_expense_account",
   "default_measurement_profile:Link(Measurement Profile) Bộ quy cách mặc định",
 );
 
+// ────────────────── CUTTING POLICY ──────────────────
+// Bản cũ ĐÃ ĐÚNG 14 trường (2 *_width_basis, 2 *_cut_deduction_m, butterfly, 3 *_sales_basis,
+// manual_pull, purchase_formula + 2 basis, priority, disabled) — GIỮ NGUYÊN HẾT.
+// Thiếu đúng hai chiều: LOẠI RAY và CHIA LÁ.
+const cp = doctype("Cutting Policy");
+
+// Sheet GHI CHÚ cho hai bộ hằng số theo ray: Đức U75 `RCL=RPBR−0,08` vs U100 `−0,09`;
+// ĐL+Lưới `RLL+0,11` vs `+0,17`. Một `retail_cut_deduction_m` không diễn tả được cả hai.
+// `item_group` không thay được vì loại ray là lựa chọn của TỪNG ĐƠN, không phải thuộc tính nhóm hàng.
+replaceField(cp, "door_type",
+  "door_type:Select(Cửa Đức,Cửa Úc,Cửa Lưới,Cửa Đài Loan,Cửa Siêu Trường,Cửa tấm liền Úc)! Loại cửa");
+addAfter(cp, "door_type",
+  "ray_type:Select(U75,U100,Ray sắt U70,Không dùng ray)!=(U75) Loại ray");
+
+// Phần CHIA LÁ — bản cũ không có ở đâu cả (xác nhận trong tài liệu phiên trước).
+addAfter(cp, "butterfly_cut_deduction_m",
+  "height_pb_offset_m:Float=(0.5) Cao phủ bì = cao lọt lòng cộng (m)",
+  "leaf_formula:Select(Kiểu Đức,Kiểu Úc,Kiểu tấm liền Úc,Kiểu Đài Loan Lưới)! Dạng công thức chia lá",
+  {
+    "//": [
+      "0,13 CHỈ cho Cửa Đức. Các dòng khác ĐỂ TRỐNG — chủ xưởng chốt 30/07: 'nhiều cái không trừ'.",
+      "Đặt 0 cũng là ĐOÁN, không hơn gì đoán 0,13. Trống thì chặn chia lá dòng đó kèm câu hỏi.",
+    ],
+    fieldname: "leaf_height_deduction_m",
+    fieldtype: "Float",
+    label: "Trừ chiều cao trước khi chia (m)",
+  },
+  "leaf_divisor_source:Select(Bản lá của bộ quy cách,Hằng số của chính sách)!=(Bản lá của bộ quy cách) Ước số chia lấy từ",
+  "leaf_divisor_const:Float Ước số chia (hằng số) — Úc 0,465 · tấm liền Úc 0,068",
+  "leaf_rounding:Select(Ngưỡng trừ-một-lá,Nấc 0-0.3-0.7-1,Làm tròn xuống)!=(Ngưỡng trừ-một-lá) Cách làm tròn số lá",
+  {
+    "//": [
+      "Chủ xưởng chốt 30/07: TRỪ MỘT LÁ TRƯỚC, LÀM TRÒN SAU, ngưỡng 0,6 trên phần thập phân.",
+      "  raw = (CPB − leaf_height_deduction_m) ÷ divisor",
+      "  after = raw − 1",
+      "  số lá = frac(after) >= 0,6 ? ceil(after) : floor(after)",
+      "Chính thứ tự 'trừ rồi mới tròn' giải thích vì sao 52,6 ra 52 chứ không ra 53.",
+      "LƯU Ý: ghi chú 'ngưỡng 20,5' trong sheet GHI CHÚ là ngưỡng TUYỆT ĐỐI trên giá trị —",
+      "luật 0,6 này thắng theo lời chủ xưởng. Đừng sửa ngược khi đọc lại sheet.",
+    ],
+    fieldname: "leaf_round_threshold",
+    fieldtype: "Float",
+    label: "Ngưỡng làm tròn (phần thập phân)",
+    default: 0.6,
+  },
+  "leaf_variants:Table(Leaf Variant) Biến thể theo loại motor (cửa Úc)",
+);
+
+// Child doctype cho 3 biến thể motor của cửa Úc: (CPB ÷ 0,465) + k, k = 2 / 1,5 / 1,3.
+brief.doctypes.push({
+  "//": "Cửa Úc: số lá = (CPB ÷ ước số) + addend, addend đổi theo loại motor. Làm tròn về nấc 0/0.3/0.7/1.",
+  name: "Leaf Variant",
+  child: true,
+  label: "Biến thể chia lá",
+  group: "Danh mục",
+  naming: "autoincrement",
+  title: "variant_label",
+  list: ["variant_label", "addend"],
+  fields: [
+    "variant_label:Data*! Biến thể",
+    "addend:Float! Cộng thêm",
+    "note:Data Ghi chú",
+  ],
+  permissions: { "Chủ xưởng": "rwc", "Kế toán": "r", "Sản xuất": "r", "Kinh doanh": "r" },
+});
+note("Cutting Policy: +9 trường (ray_type, chia lá) · +doctype con Leaf Variant");
+
 writeFileSync(OUT, JSON.stringify(brief, null, 1) + "\n", "utf8");
 console.log(log.map((l) => "  " + l).join("\n"));
 console.log(`\nĐã ghi ${OUT}`);

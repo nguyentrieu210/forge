@@ -1980,7 +1980,8 @@
    ],
    "fields": [
     "policy_name:Data*! Tên chính sách",
-    "door_type:Select(Cửa Đức,Cửa Úc,Cửa Lưới,Cửa Đài Loan,Cửa Siêu Trường)! Loại cửa",
+    "door_type:Select(Cửa Đức,Cửa Úc,Cửa Lưới,Cửa Đài Loan,Cửa Siêu Trường,Cửa tấm liền Úc)! Loại cửa",
+    "ray_type:Select(U75,U100,Ray sắt U70,Không dùng ray)!=(U75) Loại ray",
     "item_group:Link(Item Group) Chỉ áp cho nhóm hàng này (trống = mọi nhóm của loại cửa)",
     "dealer_width_basis:Select(Phủ bì nhựa,Phủ bì ray)! Đại lý nhập rộng theo",
     "retail_width_basis:Select(Phủ bì nhựa,Phủ bì ray)! Khách lẻ nhập rộng theo",
@@ -2003,6 +2004,36 @@
      "label": "Có bản bướm — trừ khi cắt (m)",
      "description": "Có giá trị thì thay số trừ thường khi dòng hàng chọn Có bản bướm. Lưới, Đài Loan và Siêu Trường: 0,035 m."
     },
+    "height_pb_offset_m:Float=(0.5) Cao phủ bì = cao lọt lòng cộng (m)",
+    "leaf_formula:Select(Kiểu Đức,Kiểu Úc,Kiểu tấm liền Úc,Kiểu Đài Loan Lưới)! Dạng công thức chia lá",
+    {
+     "//": [
+      "0,13 CHỈ cho Cửa Đức. Các dòng khác ĐỂ TRỐNG — chủ xưởng chốt 30/07: 'nhiều cái không trừ'.",
+      "Đặt 0 cũng là ĐOÁN, không hơn gì đoán 0,13. Trống thì chặn chia lá dòng đó kèm câu hỏi."
+     ],
+     "fieldname": "leaf_height_deduction_m",
+     "fieldtype": "Float",
+     "label": "Trừ chiều cao trước khi chia (m)"
+    },
+    "leaf_divisor_source:Select(Bản lá của bộ quy cách,Hằng số của chính sách)!=(Bản lá của bộ quy cách) Ước số chia lấy từ",
+    "leaf_divisor_const:Float Ước số chia (hằng số) — Úc 0,465 · tấm liền Úc 0,068",
+    "leaf_rounding:Select(Ngưỡng trừ-một-lá,Nấc 0-0.3-0.7-1,Làm tròn xuống)!=(Ngưỡng trừ-một-lá) Cách làm tròn số lá",
+    {
+     "//": [
+      "Chủ xưởng chốt 30/07: TRỪ MỘT LÁ TRƯỚC, LÀM TRÒN SAU, ngưỡng 0,6 trên phần thập phân.",
+      "  raw = (CPB − leaf_height_deduction_m) ÷ divisor",
+      "  after = raw − 1",
+      "  số lá = frac(after) >= 0,6 ? ceil(after) : floor(after)",
+      "Chính thứ tự 'trừ rồi mới tròn' giải thích vì sao 52,6 ra 52 chứ không ra 53.",
+      "LƯU Ý: ghi chú 'ngưỡng 20,5' trong sheet GHI CHÚ là ngưỡng TUYỆT ĐỐI trên giá trị —",
+      "luật 0,6 này thắng theo lời chủ xưởng. Đừng sửa ngược khi đọc lại sheet."
+     ],
+     "fieldname": "leaf_round_threshold",
+     "fieldtype": "Float",
+     "label": "Ngưỡng làm tròn (phần thập phân)",
+     "default": 0.6
+    },
+    "leaf_variants:Table(Leaf Variant) Biến thể theo loại motor (cửa Úc)",
     "dealer_split_sales_basis:Select(Phủ bì nhựa,Phủ bì ray,Rộng cắt lá)! Đại lý tách món bán theo rộng",
     "dealer_full_sales_basis:Select(Phủ bì nhựa,Phủ bì ray,Rộng cắt lá)! Đại lý trọn bộ bán theo rộng",
     "retail_sales_basis:Select(Phủ bì nhựa,Phủ bì ray,Rộng cắt lá)! Khách lẻ bán theo rộng",
@@ -4417,6 +4448,30 @@
     "Kinh doanh": "r",
     "Thủ kho": "r",
     "Kế toán": "r"
+   }
+  },
+  {
+   "//": "Cửa Úc: số lá = (CPB ÷ ước số) + addend, addend đổi theo loại motor. Làm tròn về nấc 0/0.3/0.7/1.",
+   "name": "Leaf Variant",
+   "child": true,
+   "label": "Biến thể chia lá",
+   "group": "Danh mục",
+   "naming": "autoincrement",
+   "title": "variant_label",
+   "list": [
+    "variant_label",
+    "addend"
+   ],
+   "fields": [
+    "variant_label:Data*! Biến thể",
+    "addend:Float! Cộng thêm",
+    "note:Data Ghi chú"
+   ],
+   "permissions": {
+    "Chủ xưởng": "rwc",
+    "Kế toán": "r",
+    "Sản xuất": "r",
+    "Kinh doanh": "r"
    }
   }
  ],
