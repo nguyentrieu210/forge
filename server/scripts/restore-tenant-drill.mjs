@@ -4,9 +4,10 @@
  * Production database names are rejected by construction.
  */
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import { rewriteOversizedInstalledAppRows } from "./lib/d1-backup-import.mjs";
 import { d1Query, fail, serverRoot, wrangler } from "./wrangler-cli.mjs";
 import { removeTenantConfig, writeTenantConfig } from "./tenant-wrangler.mjs";
 
@@ -35,6 +36,7 @@ const database = databases.find((entry) => entry.name === target);
 if (!database?.uuid) fail(`target D1 ${target} does not exist; create a new empty database first`);
 
 const actualHash = createHash("sha256").update(readFileSync(sqlPath)).digest("hex");
+const importPlan = rewriteOversizedInstalledAppRows(readFileSync(sqlPath, "utf8"));
 const backupManifestPath = `${sqlPath}.json`;
 if (existsSync(backupManifestPath)) {
   const manifest = JSON.parse(readFileSync(backupManifestPath, "utf8"));
@@ -46,6 +48,11 @@ console.log(`source    ${sqlPath}`);
 console.log(`sha256    ${actualHash}`);
 console.log(`target    ${target} (${database.uuid})`);
 console.log(`mode      ${execute ? "RESTORE DRILL" : "dry run"}`);
+if (importPlan.rewrittenRows > 0) {
+  console.log(
+    `D1 import ${importPlan.rewrittenRows} oversized app row -> ${importPlan.generatedStatements} safe statements (max ${importPlan.maxGeneratedStatementBytes} bytes)`,
+  );
+}
 if (!execute) {
   console.log(`\nDry run only. To restore, add --execute --confirm ${target}`);
   process.exit(0);
@@ -53,13 +60,15 @@ if (!execute) {
 if (confirm !== target) fail(`refusing restore: pass --confirm ${target}`);
 
 const { configPath, relativeConfig } = writeTenantConfig({ tenant: `drill-${tenant}`, databaseId: database.uuid, databaseName: target });
+const importPath = importPlan.rewrittenRows > 0 ? `${sqlPath}.d1-safe-${process.pid}.sql` : sqlPath;
 try {
+  if (importPath !== sqlPath) writeFileSync(importPath, importPlan.sql, { encoding: "utf8", flag: "wx" });
   const binding = { name: target, id: database.uuid, configArg: relativeConfig };
   const existing = d1Query(binding, `SELECT COUNT(*) AS total FROM sqlite_schema
     WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%'`)[0];
   if (Number(existing?.total ?? 0) !== 0) fail(`target ${target} is not empty; create a fresh drill database`);
 
-  wrangler(["d1", "execute", target, "--config", relativeConfig, "--remote", "--file", sqlPath], { capture: false });
+  wrangler(["d1", "execute", target, "--config", relativeConfig, "--remote", "--file", importPath], { capture: false });
   const integrity = d1Query(binding, "PRAGMA quick_check");
   const tables = d1Query(binding, `SELECT COUNT(*) AS total FROM sqlite_schema
     WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%'`)[0];
@@ -73,6 +82,11 @@ try {
     restored_at: new Date().toISOString(),
     table_count: Number(tables?.total ?? 0),
     integrity,
+    import_rewrites: {
+      oversized_installed_app_rows: importPlan.rewrittenRows,
+      generated_statements: importPlan.generatedStatements,
+      max_statement_bytes: importPlan.maxGeneratedStatementBytes,
+    },
     routes_changed: false,
   };
   const evidencePath = `${sqlPath}.${target}.restore.json`;
@@ -81,5 +95,6 @@ try {
   console.log(`evidence          ${evidencePath}`);
   console.log("routes            unchanged");
 } finally {
+  if (importPath !== sqlPath && existsSync(importPath)) unlinkSync(importPath);
   removeTenantConfig(configPath);
 }
