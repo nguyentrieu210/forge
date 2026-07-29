@@ -220,6 +220,59 @@ addAfter(pri, "warehouse",
   },
 );
 
+// ────────────────── BATCH (doctype NỀN TẢNG) ──────────────────
+// KHÔNG dựng doctype lô riêng: nền tảng đã có `Batch` (module Stock, autoname field:batch_id).
+// Bản cũ đẻ `Aluminium Lot` song song — chính là quyển sổ thứ hai. V2 phủ Custom Field lên `Batch`.
+//
+// Ba thứ CẤM đặt ở đây, ghi lại để người sau không thêm "cho tiện":
+//   remaining_qty / sheet_count / remaining_kg  → số lượng LUÔN cộng từ sổ (QĐ-1)
+//   warehouse (vị trí hiện tại)                 → lô nằm hai kho cùng lúc được; đọc từ sổ
+//   bất kỳ trường giá vốn nào                   → Forge không có quyền theo TRƯỜNG; đặt lên đây
+//                                                 là Sản xuất đọc được ⇒ thủng phân quyền im lặng
+brief.customFields = {
+  Batch: [
+    "color:Link(Item Color) Màu",
+    "condition:Select(Thô,Đã sơn,Lỗi) Tình trạng",
+    "is_stamped:Check Đã dập",
+    "length_m:Float Khổ (m)",
+    "intake_kg:Float Kg thực cân lúc nhập",
+    "received_warehouse:Link(Warehouse) Kho nhập ban đầu",
+    "is_offcut:Check Là đầu thừa",
+    "parent_batch:Link(Batch) Cắt ra từ lô",
+    "cut_generation:Int Đời cắt",
+    "intake_note:Small Text Nhập / ghi chú",
+  ],
+};
+note(`customFields: Batch +${brief.customFields.Batch.length} trường (không dựng doctype lô riêng)`);
+
+// ────────────────── WAREHOUSE ──────────────────
+const wh = doctype("Warehouse");
+// Dạng rút gọn của brief: `field:Select(a,b,c)=(mặc định) Nhãn` — khỏi escape xuống dòng.
+// Chỉ 'Kho chính' vào tồn khả dụng; đầu thừa/phế/gia công bị LOẠI (chuẩn ngành cắt thanh).
+addAfter(wh, "is_group",
+  "stock_role:Select(Kho chính,Kho đầu thừa,Kho phế,Kho gửi gia công)=(Kho chính) Vai trò kho");
+// `keeper` là Data tự do ⇒ không scope quyền hay gửi thông báo cho ai được.
+replaceField(wh, "keeper", "keeper:Link(User) Thủ kho phụ trách");
+
+// ────────────────── SUPPLIER ──────────────────
+addAfter(doctype("Supplier"), "payment_terms",
+  {
+    "//": "Dung sai giao hàng ±5% theo sổ yêu cầu 30/07. Khai theo NCC vì mỗi bên một thói quen.",
+    fieldname: "receipt_tolerance_pct",
+    fieldtype: "Float",
+    label: "Dung sai nhận hàng (%)",
+    default: 5,
+  },
+);
+
+// ────────────────── ITEM GROUP ──────────────────
+addAfter(doctype("Item Group"), "default_expense_account",
+  // TT99/2025 cho phép mỗi nhóm hàng một phương pháp giá. Không có trường này thì câu
+  // "Item kế thừa phương pháp từ nhóm" trong ledger là nói suông.
+  "default_valuation_method:Select(FIFO,Bình quân di động) Phương pháp giá vốn mặc định",
+  "default_measurement_profile:Link(Measurement Profile) Bộ quy cách mặc định",
+);
+
 writeFileSync(OUT, JSON.stringify(brief, null, 1) + "\n", "utf8");
 console.log(log.map((l) => "  " + l).join("\n"));
 console.log(`\nĐã ghi ${OUT}`);

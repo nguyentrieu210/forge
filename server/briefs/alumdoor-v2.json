@@ -1011,6 +1011,8 @@
     "default_cogs_account:Link(Account) TK giá vốn mặc định",
     "default_income_account:Link(Account) TK doanh thu mặc định",
     "default_expense_account:Link(Account) TK chi phí mặc định",
+    "default_valuation_method:Select(FIFO,Bình quân di động) Phương pháp giá vốn mặc định",
+    "default_measurement_profile:Link(Measurement Profile) Bộ quy cách mặc định",
     "disabled:Check Ngừng dùng"
    ],
    "permissions": {
@@ -1762,8 +1764,9 @@
     "warehouse_name:Data*! Tên kho",
     "parent_warehouse:Link(Warehouse) Kho cha",
     "is_group:Check Là nhóm chứa",
+    "stock_role:Select(Kho chính,Kho đầu thừa,Kho phế,Kho gửi gia công)=(Kho chính) Vai trò kho",
     "address:Small Text Địa chỉ",
-    "keeper:Data Thủ kho phụ trách",
+    "keeper:Link(User) Thủ kho phụ trách",
     "disabled:Check Ngừng dùng"
    ],
    "permissions": {
@@ -3058,6 +3061,13 @@
     "address:Small Text Địa chỉ",
     "tax_id:Data Mã số thuế",
     "payment_terms:Select(Trả ngay,7 ngày,15 ngày,30 ngày,45 ngày)=(Trả ngay) Điều khoản thanh toán",
+    {
+     "//": "Dung sai giao hàng ±5% theo sổ yêu cầu 30/07. Khai theo NCC vì mỗi bên một thói quen.",
+     "fieldname": "receipt_tolerance_pct",
+     "fieldtype": "Float",
+     "label": "Dung sai nhận hàng (%)",
+     "default": 5
+    },
     "note:Small Text Ghi chú",
     "disabled:Check Ngừng giao dịch"
    ],
@@ -4904,5 +4914,19 @@
     "<div class=\"sign\"><div><b>Nhà cung cấp báo giá</b>(ký, ghi rõ họ tên, đóng dấu)</div><div><b>Người lập yêu cầu</b>(ký, ghi rõ họ tên)</div></div>"
    ]
   }
- ]
+ ],
+ "customFields": {
+  "Batch": [
+   "color:Link(Item Color) Màu",
+   "condition:Select(Thô,Đã sơn,Lỗi) Tình trạng",
+   "is_stamped:Check Đã dập",
+   "length_m:Float Khổ (m)",
+   "intake_kg:Float Kg thực cân lúc nhập",
+   "received_warehouse:Link(Warehouse) Kho nhập ban đầu",
+   "is_offcut:Check Là đầu thừa",
+   "parent_batch:Link(Batch) Cắt ra từ lô",
+   "cut_generation:Int Đời cắt",
+   "intake_note:Small Text Nhập / ghi chú"
+  ]
+ }
 }
