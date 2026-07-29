@@ -340,6 +340,76 @@ brief.doctypes.push({
 });
 note("Cutting Policy: +9 trường (ray_type, chia lá) · +doctype con Leaf Variant");
 
+// ────────────────── D1: rate_uom — CHỐNG ĐƠN VỊ NGẦM ──────────────────
+// value = qty × rate ở controllers.ts:221. qty của nhôm là số CÂY, còn NCC báo giá đ/KG.
+// Nhập 200 cây / 1.200 kg / 100.000 đ/kg => ghi 20tr thay vì 120tr. Sai 6 lần, sổ vẫn cân.
+// Khai rate_uom để không còn đơn vị ngầm; nhân đọc nó mà quyết nhân với qty hay với khối lượng.
+addAfter(pri, "rate",
+  "rate_uom:Link(UOM) ĐVT của đơn giá — mặc định theo ĐVT khối lượng nếu hàng cân theo kiện");
+
+// ────────────────── D6: 3 danh mục FK còn thiếu ──────────────────
+brief.doctypes.push(
+  {
+    "//": "Chip lý do khi huỷ/đảo chứng từ. screen-catalog: bước LÙI bắt buộc chọn, không cho bỏ trống.",
+    name: "Lý do huỷ",
+    label: "Lý do huỷ",
+    icon: "circle-slash",
+    group: "Danh mục",
+    naming: "field:reason_code",
+    title: "reason_name",
+    list: ["reason_code", "reason_name", "applies_to_doctype", "disabled"],
+    search: ["reason_code", "reason_name"],
+    fields: [
+      "reason_code:Data*! Mã lý do",
+      "reason_name:Data! Tên lý do",
+      "applies_to_doctype:Select(Tất cả,Phiếu nhập,Phiếu xuất,Phiếu kho,Phiếu cắt,Kiểm kê)!=(Tất cả) Áp cho chứng từ",
+      "sort_order:Int=(0) Thứ tự",
+      "disabled:Check Ngừng dùng",
+    ],
+    permissions: { "Chủ xưởng": "rwc", "Thủ kho": "r", "Kế toán": "r", "Sản xuất": "r", "Kinh doanh": "r" },
+  },
+  {
+    "//": "TT99/2025 đòi phân loại nguyên nhân RỒI MỚI hạch toán — nên đây là danh mục, không phải ô ghi chú.",
+    name: "Nguyên nhân chênh lệch",
+    label: "Nguyên nhân chênh lệch",
+    icon: "scale",
+    group: "Danh mục",
+    naming: "field:reason_code",
+    title: "reason_name",
+    list: ["reason_code", "reason_name", "variance_kind", "disabled"],
+    search: ["reason_code", "reason_name"],
+    fields: [
+      "reason_code:Data*! Mã nguyên nhân",
+      "reason_name:Data! Tên nguyên nhân",
+      "variance_kind:Select(Thừa,Thiếu,Cả hai)!=(Cả hai) Áp cho chênh lệch",
+      "sort_order:Int=(0) Thứ tự",
+      "disabled:Check Ngừng dùng",
+    ],
+    permissions: { "Chủ xưởng": "rwc", "Thủ kho": "r", "Kế toán": "r", "Sản xuất": "r", "Kinh doanh": "r" },
+  },
+  {
+    "//": "Thay `applies_to` Small Text. Chuỗi tự do không so khớp với nhóm hàng được nên không ép được.",
+    name: "Item Color Scope",
+    child: true,
+    label: "Nhóm SP áp dụng",
+    group: "Danh mục",
+    naming: "autoincrement",
+    title: "item_group",
+    list: ["item_group"],
+    fields: ["item_group:Link(Item Group)! Nhóm hàng"],
+    permissions: { "Chủ xưởng": "rwc", "Thủ kho": "r", "Kế toán": "r", "Sản xuất": "r", "Kinh doanh": "r" },
+  },
+);
+
+// Bảng màu chủ xưởng gửi ĐÃ CÓ cột "Nhóm SP áp dụng" ⇒ dữ liệu để ép tồn tại (BRD Q10).
+// Sơn tĩnh điện áp 6 nhóm; mạ màu CHỈ Cửa Úc và Đài Loan.
+const ic = doctype("Item Color");
+replaceField(ic, "applies_to", "applies_to_groups:Table(Item Color Scope) Nhóm SP áp dụng");
+// `list` phải bỏ theo: Table không hiện được trên cột danh sách, và tên cũ đã biến mất.
+// Compiler bắt đúng chỗ này — cùng họ lỗi với `Item.list` trỏ `inventory_mode` đã xoá.
+ic.list = ic.list.filter((c) => c !== "applies_to");
+note("D6: +3 danh mục (Lý do huỷ, Nguyên nhân chênh lệch, Item Color Scope) · applies_to → bảng con");
+
 writeFileSync(OUT, JSON.stringify(brief, null, 1) + "\n", "utf8");
 console.log(log.map((l) => "  " + l).join("\n"));
 console.log(`\nĐã ghi ${OUT}`);

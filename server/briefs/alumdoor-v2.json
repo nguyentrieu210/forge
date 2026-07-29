@@ -1094,7 +1094,6 @@
     "color_code",
     "color_name",
     "finish",
-    "applies_to",
     "disabled"
    ],
    "search": [
@@ -1105,12 +1104,7 @@
     "color_code:Data*! Mã màu",
     "color_name:Data! Tên màu",
     "finish:Select(Thô,Sơn tĩnh điện,Anode,Vân gỗ,Mạ,Khác) Bề mặt",
-    {
-     "//": "Nhóm sản phẩm áp dụng, theo đúng bảng màu của xưởng. GHI LẠI chứ chưa CHẶN: luật chặn hiện chạy từ chiều ngược lại (Item.allowed_colors). Để trống ở đây không có nghĩa là cấm.",
-     "fieldname": "applies_to",
-     "fieldtype": "Small Text",
-     "label": "Nhóm SP áp dụng"
-    },
+    "applies_to_groups:Table(Item Color Scope) Nhóm SP áp dụng",
     "supplier_color_code:Data Mã màu nhà cung cấp",
     "disabled:Check Ngừng dùng"
    ],
@@ -3744,6 +3738,7 @@
      "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'"
     },
     "rate:Currency! Đơn giá",
+    "rate_uom:Link(UOM) ĐVT của đơn giá — mặc định theo ĐVT khối lượng nếu hàng cân theo kiện",
     "amount:Currency~ Thành tiền",
     "note:Data Ghi chú",
     "warehouse:Link(Warehouse)! Kho nhập",
@@ -4469,6 +4464,94 @@
    ],
    "permissions": {
     "Chủ xưởng": "rwc",
+    "Kế toán": "r",
+    "Sản xuất": "r",
+    "Kinh doanh": "r"
+   }
+  },
+  {
+   "//": "Chip lý do khi huỷ/đảo chứng từ. screen-catalog: bước LÙI bắt buộc chọn, không cho bỏ trống.",
+   "name": "Lý do huỷ",
+   "label": "Lý do huỷ",
+   "icon": "circle-slash",
+   "group": "Danh mục",
+   "naming": "field:reason_code",
+   "title": "reason_name",
+   "list": [
+    "reason_code",
+    "reason_name",
+    "applies_to_doctype",
+    "disabled"
+   ],
+   "search": [
+    "reason_code",
+    "reason_name"
+   ],
+   "fields": [
+    "reason_code:Data*! Mã lý do",
+    "reason_name:Data! Tên lý do",
+    "applies_to_doctype:Select(Tất cả,Phiếu nhập,Phiếu xuất,Phiếu kho,Phiếu cắt,Kiểm kê)!=(Tất cả) Áp cho chứng từ",
+    "sort_order:Int=(0) Thứ tự",
+    "disabled:Check Ngừng dùng"
+   ],
+   "permissions": {
+    "Chủ xưởng": "rwc",
+    "Thủ kho": "r",
+    "Kế toán": "r",
+    "Sản xuất": "r",
+    "Kinh doanh": "r"
+   }
+  },
+  {
+   "//": "TT99/2025 đòi phân loại nguyên nhân RỒI MỚI hạch toán — nên đây là danh mục, không phải ô ghi chú.",
+   "name": "Nguyên nhân chênh lệch",
+   "label": "Nguyên nhân chênh lệch",
+   "icon": "scale",
+   "group": "Danh mục",
+   "naming": "field:reason_code",
+   "title": "reason_name",
+   "list": [
+    "reason_code",
+    "reason_name",
+    "variance_kind",
+    "disabled"
+   ],
+   "search": [
+    "reason_code",
+    "reason_name"
+   ],
+   "fields": [
+    "reason_code:Data*! Mã nguyên nhân",
+    "reason_name:Data! Tên nguyên nhân",
+    "variance_kind:Select(Thừa,Thiếu,Cả hai)!=(Cả hai) Áp cho chênh lệch",
+    "sort_order:Int=(0) Thứ tự",
+    "disabled:Check Ngừng dùng"
+   ],
+   "permissions": {
+    "Chủ xưởng": "rwc",
+    "Thủ kho": "r",
+    "Kế toán": "r",
+    "Sản xuất": "r",
+    "Kinh doanh": "r"
+   }
+  },
+  {
+   "//": "Thay `applies_to` Small Text. Chuỗi tự do không so khớp với nhóm hàng được nên không ép được.",
+   "name": "Item Color Scope",
+   "child": true,
+   "label": "Nhóm SP áp dụng",
+   "group": "Danh mục",
+   "naming": "autoincrement",
+   "title": "item_group",
+   "list": [
+    "item_group"
+   ],
+   "fields": [
+    "item_group:Link(Item Group)! Nhóm hàng"
+   ],
+   "permissions": {
+    "Chủ xưởng": "rwc",
+    "Thủ kho": "r",
     "Kế toán": "r",
     "Sản xuất": "r",
     "Kinh doanh": "r"
