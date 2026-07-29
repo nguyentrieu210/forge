@@ -11,7 +11,7 @@ import { buildTrackedStockLines } from "../../clouderp-stock/src/index.js";
 import { resolveServerPrice } from "../../clouderp-pricing/src/index.js";
 import { calculateSalesTotals } from "../../clouderp-selling/src/totals.js";
 import type { TaxRow } from "../../clouderp-selling/src/types.js";
-import { applyUomConversion, stockQtyMicros } from "./uom.js";
+import { applyUomConversion, pricedQtyMicros, stockQtyMicros } from "./uom.js";
 import type { JournalEntryData, JournalEntryLine, MaterialRequestData, MaterialRequestItem, PurchaseInvoiceData, PurchaseItem, PurchaseOrderData, PurchaseReceiptData, RequestForQuotationData, RequestForQuotationSupplier, StockEntryData, StockEntryItem, SupplierQuotationData } from "./types.js";
 
 abstract class BaseController<T extends JsonObject> implements DocumentController<T> {
@@ -218,7 +218,24 @@ export class PurchaseReceiptController extends BaseController<PurchaseReceiptDat
      * Kéo theo đó, giá vốn một đơn vị tồn phải chia lại — `giá 1 cây ÷ 5,85` — nếu không
      * thì 117 mét × giá-một-cây, tồn kho phình lên gần sáu lần so với số tiền đã trả.
      */
-    for(const [index,item] of data.items.entries()){const valuation=item.valuation_rate??item.rate;const stockQty=stockQtyMicros(item);const value=multiplyScaled(item.qty,6,valuation,6,scale,`items[${index}].stock_value`);const ratePerStockUnit=divideRounded(value*1_000_000,stockQty);const tracked=await buildTrackedStockLines(context as unknown as ControllerContext<JsonObject>,{itemCode:item.item_code,warehouse:item.warehouse!,qtyMicros:stockQty,direction:"Inward",postingAt:data.posting_at,currency:data.currency,currencyScale:scale,valuationRateMinor:ratePerStockUnit,stockValueMinor:value,lineKey:`ITEM-${item.row_id||index+1}`,...(item.serial_and_batch_bundle?{bundleName:item.serial_and_batch_bundle}:{})});stock.push(...tracked.stock);usages.push(...tracked.usages);}
+    /**
+     * Giá trị dòng tính MỘT lần rồi dùng cho cả sổ kho lẫn sổ cái.
+     *
+     * Trước đây hai khối tính riêng, cùng công thức, cách nhau ba chục dòng. Sửa một khối mà
+     * quên khối kia thì kho và sổ cái lệch nhau — và không phép kiểm nào trong hệ thống đối
+     * chiếu hai con số đó, nên nó lệch im lặng. Một nguồn thì không có gì để lệch.
+     */
+    const lineValue=(item:PurchaseItem,index:number):number=>
+      multiplyScaled(fromScaledInt(pricedQtyMicros(item),6),6,item.valuation_rate??item.rate,scale,scale,`items[${index}].stock_value`);
+    for(const [index,item] of data.items.entries()){const stockQty=stockQtyMicros(item);const value=lineValue(item,index);
+      /**
+       * `value` chia cho SỐ ĐƠN VỊ TỒN, không chia cho số vừa nhân.
+       *
+       * Nhôm: nhân với 1.200 kg ra 120 triệu, rồi chia cho 200 CÂY ra 600.000 đ/cây. Đó mới
+       * là giá vốn một đơn vị tồn — thứ mà phiếu xuất sau này nhân lên. Chia lại cho 1.200
+       * là ghi giá một ký vào chỗ dành cho giá một cây, và lỗi sáu lần quay lại ở đầu kia.
+       */
+      const ratePerStockUnit=ratePerUnitMinor(value,stockQty);const tracked=await buildTrackedStockLines(context as unknown as ControllerContext<JsonObject>,{itemCode:item.item_code,warehouse:item.warehouse!,qtyMicros:stockQty,direction:"Inward",postingAt:data.posting_at,currency:data.currency,currencyScale:scale,valuationRateMinor:ratePerStockUnit,stockValueMinor:value,lineKey:`ITEM-${item.row_id||index+1}`,...(item.actual_weight_micros!==undefined?{weightMicros:item.actual_weight_micros}:{}),...(item.serial_and_batch_bundle?{bundleName:item.serial_and_batch_bundle}:{})});stock.push(...tracked.stock);usages.push(...tracked.usages);}
     const procurement=data.items.map((item,index):ProcurementEntry=>({line_key:`RECEIPT-${item.row_id||index+1}`,purchase_order:(item.purchase_order??data.against_purchase_order)!,kind:"Receipt",item_code:item.item_code,qty_micros:stockQtyMicros(item),posting_at:data.posting_at}));
     /**
      * Hàng về thì GHI SỔ CÁI, không chỉ ghi sổ kho.
@@ -236,8 +253,7 @@ export class PurchaseReceiptController extends BaseController<PurchaseReceiptDat
     const gl:GeneralLedgerEntry[]=[];
     if(data.stock_account&&data.stock_received_but_not_billed){
       for(const [index,item] of data.items.entries()){
-        const qty=item.qty_micros??toScaledInt(item.qty,6);
-        const value=multiplyScaled(fromScaledInt(qty,6),6,item.valuation_rate??item.rate,scale,scale);
+        const value=lineValue(item,index);
         if(value===0)continue;
         const key=item.row_id||index+1;
         gl.push({line_key:`STOCK-${key}`,account:data.stock_account,debit_minor:value,credit_minor:0,currency:data.currency,currency_scale:scale,posting_at:data.posting_at},
@@ -313,4 +329,32 @@ async function assertRequestRemaining(context:ControllerContext<JsonObject>,requ
   }
 }
 
+/**
+ * Giá vốn MỘT đơn vị tồn = `value ÷ qty`, nhân trước 10⁶ để giữ 6 chữ số thập phân.
+ *
+ * Viết riêng vì `divideRounded(value*1_000_000, qty)` NHÂN TRƯỚC bằng số thường, và tích đó
+ * vượt `Number.MAX_SAFE_INTEGER` sớm hơn nhiều người tưởng — với VND (đơn vị nhỏ = xu, 2 chữ
+ * số) thì trần rơi vào khoảng **90 triệu đồng một dòng**. Một phiếu nhập nhôm 120 triệu là
+ * chuyện thường ngày ở xưởng này, nên nhánh nhập gãy ngay ở phiếu thật đầu tiên.
+ *
+ * Lỗi đó nằm sẵn trong nhân từ trước, không phải do catch weight sinh ra — nhưng nó ẩn được
+ * lâu vì mọi test đều chạy bằng USD, nơi cùng một số tiền nhỏ hơn 25.000 lần. Sửa `value`
+ * cho đúng làm nó lộ ra ngay lần chạy đầu.
+ *
+ * BigInt cho phép nhân rồi chia mà không mất chữ số nào; phép kiểm an toàn vẫn giữ ở KẾT QUẢ,
+ * chỗ nó thật sự có nghĩa.
+ *
+ * Còn ba chỗ nữa dùng đúng khuôn `x*1_000_000` này — `valuation.ts:57`, và hai chỗ trong
+ * `clouderp-erpnext` (BOM, Manufacture). Chúng nằm trên nhánh XUẤT và nhánh sản xuất, sẽ
+ * chạm ở M3/M5; ghi ra đây để không ai tưởng nhánh nhập sạch là cả hệ thống sạch.
+ */
+function ratePerUnitMinor(valueMinor:number,qtyMicros:number):number{
+  if(!Number.isSafeInteger(valueMinor)||!Number.isSafeInteger(qtyMicros)||qtyMicros<=0)throw errors.validation("Arithmetic exceeds safe integer range");
+  const negative=valueMinor<0;const absolute=BigInt(negative?-valueMinor:valueMinor)*1_000_000n;const denominator=BigInt(qtyMicros);
+  const quotient=absolute/denominator;const remainder=absolute%denominator;
+  const rounded=quotient+((remainder*2n>=denominator)?1n:0n);
+  const result=Number(negative?-rounded:rounded);
+  if(!Number.isSafeInteger(result))throw errors.validation("Giá vốn một đơn vị tồn vượt dải số nguyên an toàn");
+  return result;
+}
 function divideRounded(numerator:number,denominator:number):number{if(!Number.isSafeInteger(numerator)||!Number.isSafeInteger(denominator)||denominator<=0)throw errors.validation("Arithmetic exceeds safe integer range");const sign=numerator<0?-1:1;const value=Math.abs(numerator);const quotient=Math.floor(value/denominator);return sign*(quotient+((value%denominator)*2>=denominator?1:0));}
