@@ -1149,7 +1149,7 @@ async function stampQuotation(call: PlatformCall, quote: QuotationDoc, order: st
 const PURCHASE_LINE_FIELDS = [
   "item_code", "item_name", "inventory_mode", "measurement_profile", "stock_uom", "min_area_sqm", "color",
   "width_m", "height_m", "set_count",
-  "length_m", "qty_bundle", "qty_bar", "total_length_m", "actual_kg_per_m", "so_no",
+  "length_m", "qty_bundle", "qty_bar", "actual_weight_kg", "total_length_m", "actual_kg_per_m", "so_no",
   "qty", "uom", "conversion_factor", "stock_qty", "rate", "amount", "note",
 ] as const;
 

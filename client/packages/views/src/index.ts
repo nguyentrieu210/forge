@@ -60,7 +60,12 @@ export {
   type FormColumn,
 } from "./form/layout.js";
 export { useFormState, type FormApi } from "./form/useFormState.js";
-export { ChildGrid, type ChildGridProps } from "./form/ChildGrid.js";
+export {
+  ChildGrid,
+  deriveAverageWeight,
+  type ChildGridProps,
+  type AverageWeightResult,
+} from "./form/ChildGrid.js";
 export { registerTableControls } from "./form/table-controls.js";
 export { KanbanView, type KanbanViewProps } from "./kanban/KanbanView.js";
 export { KanbanContainer, type KanbanContainerProps } from "./kanban/KanbanContainer.js";

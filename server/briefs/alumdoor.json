@@ -3249,11 +3249,20 @@
           "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'"
         },
         {
+          "fieldname": "actual_weight_kg",
+          "fieldtype": "Float",
+          "label": "Tổng kg thực cân",
+          "depends_on": "eval:doc.uom != 'Kg' && doc.uom != 'KG' && doc.uom != 'kg'",
+          "non_negative": true,
+          "description": "Chỉ nhập khi ĐVT giao dịch không phải Kg nhưng vẫn cần đối chiếu trọng lượng bình quân. Không thay đổi số lượng mua hay tồn kho."
+        },
+        {
           "fieldname": "actual_kg_per_m",
           "fieldtype": "Float",
           "label": "TL trung bình (kg/m · kg/cái)",
           "read_only": true,
-          "description": "Chia tổng kg cho: khổ × số cây, hoặc khổ, hoặc số cây — lấy cái đầu tiên có trên dòng. Số để đối chiếu, không vào sổ."
+          "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá' || doc.actual_weight_kg > 0",
+          "description": "ĐVT Kg: lấy SL làm tổng kg. ĐVT khác: chỉ tính khi có Tổng kg thực cân; tuyệt đối không coi số Bộ/Cái là kg. Chia cho tổng mét, số cây hoặc số lượng giao dịch. Số để đối chiếu, không vào sổ."
         },
         {
           "fieldname": "so_no",
@@ -3436,11 +3445,20 @@
           "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'"
         },
         {
+          "fieldname": "actual_weight_kg",
+          "fieldtype": "Float",
+          "label": "Tổng kg thực cân",
+          "depends_on": "eval:doc.uom != 'Kg' && doc.uom != 'KG' && doc.uom != 'kg'",
+          "non_negative": true,
+          "description": "Chỉ nhập khi ĐVT giao dịch không phải Kg nhưng vẫn cần đối chiếu trọng lượng bình quân. Không thay đổi số lượng mua hay tồn kho."
+        },
+        {
           "fieldname": "actual_kg_per_m",
           "fieldtype": "Float",
           "label": "TL trung bình (kg/m · kg/cái)",
           "read_only": true,
-          "description": "Chia tổng kg cho: khổ × số cây, hoặc khổ, hoặc số cây — lấy cái đầu tiên có trên dòng. Số để đối chiếu, không vào sổ."
+          "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá' || doc.actual_weight_kg > 0",
+          "description": "ĐVT Kg: lấy SL làm tổng kg. ĐVT khác: chỉ tính khi có Tổng kg thực cân; tuyệt đối không coi số Bộ/Cái là kg. Chia cho tổng mét, số cây hoặc số lượng giao dịch. Số để đối chiếu, không vào sổ."
         },
         {
           "fieldname": "so_no",
@@ -3625,11 +3643,20 @@
           "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'"
         },
         {
+          "fieldname": "actual_weight_kg",
+          "fieldtype": "Float",
+          "label": "Tổng kg thực cân",
+          "depends_on": "eval:doc.uom != 'Kg' && doc.uom != 'KG' && doc.uom != 'kg'",
+          "non_negative": true,
+          "description": "Chỉ nhập khi ĐVT giao dịch không phải Kg nhưng vẫn cần đối chiếu trọng lượng bình quân. Không thay đổi số lượng mua hay tồn kho."
+        },
+        {
           "fieldname": "actual_kg_per_m",
           "fieldtype": "Float",
           "label": "TL trung bình (kg/m · kg/cái)",
           "read_only": true,
-          "description": "Chia tổng kg cho: khổ × số cây, hoặc khổ, hoặc số cây — lấy cái đầu tiên có trên dòng. Số để đối chiếu, không vào sổ."
+          "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá' || doc.actual_weight_kg > 0",
+          "description": "ĐVT Kg: lấy SL làm tổng kg. ĐVT khác: chỉ tính khi có Tổng kg thực cân; tuyệt đối không coi số Bộ/Cái là kg. Chia cho tổng mét, số cây hoặc số lượng giao dịch. Số để đối chiếu, không vào sổ."
         },
         {
           "fieldname": "so_no",

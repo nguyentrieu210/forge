@@ -147,6 +147,7 @@ const BIG_COLUMNS: string[][] = [
   ["width_m", "length_m"],
   ["qty"], ["qty_bar", "set_count"],
   ["uom"], ["rate"], ["amount"],
+  ["actual_weight_kg"],
   // Trọng lượng trung bình — số MÁY tính, đặt sau tiền vì nó để ĐỐI CHIẾU chứ không phải để
   // gõ: lệch nhiều so với kg/m danh nghĩa nghĩa là cân sai hoặc ghi nhầm khổ.
   ["actual_kg_per_m"],
@@ -165,7 +166,7 @@ const BIG_WIDTH: Record<string, string> = {
   // một cột màu không đọc được màu thì bằng không có cột. Màu và ĐVT cần 8rem.
   item_code: "14rem", color: "8rem", colour: "8rem",
   height_m: "6rem", width_m: "6rem", length_m: "6rem",
-  qty: "7rem", qty_bar: "6rem", set_count: "6rem", actual_kg_per_m: "7rem", uom: "8rem",
+  qty: "7rem", qty_bar: "6rem", set_count: "6rem", actual_weight_kg: "7rem", actual_kg_per_m: "7rem", uom: "8rem",
   rate: "8rem", amount: "9rem", note: "8rem", install_note: "8rem",
 };
 function bigColumns(fields: DocField[]): DocField[] {
@@ -177,6 +178,51 @@ function bigColumns(fields: DocField[]): DocField[] {
     }
   }
   return out;
+}
+
+export interface AverageWeightResult {
+  totalLengthM?: number;
+  averageWeight?: number;
+  basis?: "kg/m" | "kg/cây" | "kg/ĐVT";
+}
+
+/**
+ * Trọng lượng bình quân chỉ được suy ra khi dòng có một nguồn TỔNG KG thật.
+ *
+ * - giao dịch theo Kg: `qty` chính là tổng kg;
+ * - giao dịch theo Bộ/Cái/Cây/...: phải nhập riêng `actual_weight_kg`;
+ * - tuyệt đối không coi số Bộ/Cái trong `qty` là kg, vì vậy dòng 222 Bộ không thể tự sinh 0,10 kg/cái.
+ */
+export function deriveAverageWeight(row: Doc): AverageWeightResult {
+  const positive = (value: unknown) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+  };
+  const uom = String(row.uom ?? "").trim().toLocaleLowerCase("vi");
+  const isKg = ["kg", "kilogram", "ki-lô-gam"].includes(uom);
+  const totalKg = isKg ? positive(row.qty) : positive(row.actual_weight_kg);
+  const bars = positive(row.qty_bar);
+  const length = positive(row.length_m);
+  const quantity = positive(row.qty);
+  const totalLengthM = bars > 0 && length > 0 ? bars * length : length || undefined;
+
+  let divisor = 0;
+  let basis: AverageWeightResult["basis"];
+  if (totalLengthM) {
+    divisor = totalLengthM;
+    basis = "kg/m";
+  } else if (bars > 0) {
+    divisor = bars;
+    basis = "kg/cây";
+  } else if (!isKg && quantity > 0) {
+    divisor = quantity;
+    basis = "kg/ĐVT";
+  }
+
+  return {
+    ...(totalLengthM ? { totalLengthM } : {}),
+    ...(totalKg > 0 && divisor > 0 ? { averageWeight: totalKg / divisor, basis } : {}),
+  };
 }
 
 /**
@@ -255,7 +301,13 @@ export function ChildGrid(props: ChildGridProps) {
   const [pickedRow, setPickedRow] = useState<number | null>(null);
   const itemLoadVersion = useRef(new Map<string, number>());
   const compactCols = visibleColumns(gridColumns(childMeta), childMeta, rows, parentDoc, roles);
-  const bigCols = bigColumns((childMeta.fields ?? []).filter((f) => !isLayout(f.fieldtype)));
+  const bigCols = visibleColumns(
+    bigColumns((childMeta.fields ?? []).filter((f) => !isLayout(f.fieldtype))),
+    childMeta,
+    rows,
+    parentDoc,
+    roles,
+  );
   const baseCols = expanded ? bigCols : compactCols;
 
   /**
@@ -341,13 +393,13 @@ export function ChildGrid(props: ChildGridProps) {
    */
   const COMPUTED_FROM = new Set([
     "qty", "rate", "qty_bar", "length_m", "width_m", "height_m", "set_count",
-    "mesh_height_m", "sales_mode", "has_butterfly_bracket", "uom", "conversion_factor",
+    "mesh_height_m", "sales_mode", "has_butterfly_bracket", "uom", "conversion_factor", "actual_weight_kg",
   ]);
   const ITEM_DERIVED_FIELDS = [
     "conversion_factor", "uom", "stock_uom", "stock_qty", "inventory_mode", "measurement_profile", "min_area_sqm",
     "item_name", "description", "color", "colour", "rate", "amount",
     "formula_policy", "width_basis", "cut_width_m", "billable_area_sqm",
-    "length_m", "qty_bundle", "qty_bar", "total_length_m", "actual_kg_per_m", "so_no",
+    "length_m", "qty_bundle", "qty_bar", "actual_weight_kg", "total_length_m", "actual_kg_per_m", "so_no",
   ];
   const withComputed = (row: Doc): Doc => {
     const has = (f: string) => (childMeta.fields ?? []).some((x) => x.fieldname === f);
@@ -389,44 +441,15 @@ export function ChildGrid(props: ChildGridProps) {
      * Stock Ledger vẫn nhận nguyên số kg với hệ số 1.
      */
     /**
-     * Tính NGAY khi có đủ ba số, không đợi biết mặt hàng thuộc kiểu quản lý nào.
-     *
-     * Điều kiện `inventory_mode === "Nhôm cây/lá"` trước đây nghĩa là: gõ xong kg, số cây và
-     * khổ mà chưa chọn mã hàng thì ô "Kg/m thực" vẫn trống — đúng lúc người ta cần nó nhất,
-     * vì kg/m thực chính là thứ dùng để BẮT LỖI: lệch nhiều so với kg/m danh nghĩa nghĩa là
-     * cân sai hoặc ghi nhầm khổ, và biết sớm thì sửa được trước khi ghi sổ.
-     *
-     * Ba số này chỉ mô tả lô hàng, không đụng tới số ghi sổ, nên tính thừa cũng vô hại:
-     *   kg/m thực = tổng kg ÷ (khổ × số cây)
+     * Chỉ tính khi đã xác định được TỔNG KG thật: `qty` nếu ĐVT là Kg, nếu không phải dùng ô
+     * `actual_weight_kg`. Nhờ đó số lượng Bộ/Cái không bao giờ bị lấy nhầm làm trọng lượng.
      */
-    if (has("qty_bar") || has("length_m")) {
-      const positive = (value: unknown) => { const n = Number(value); return Number.isFinite(n) && n > 0 ? n : 0; };
-      const kg = positive(next.qty);
-      const bars = positive(next.qty_bar);
-      const length = positive(next.length_m);
-      /**
-       * MẪU SỐ là thứ có thật trên dòng, không phải một công thức cứng.
-       *
-       * Bản trước đòi đủ cả khổ VÀ số cây, nên chỉ nhôm cây mới ra số — mua ron theo cuộn
-       * (có mét, không có "cây") hay mua phụ kiện theo cái (có số cái, không có mét) đều để
-       * trống, đúng những dòng người ta cũng muốn soát trọng lượng nhất.
-       *
-       * Ba bậc, lấy bậc đầu tiên dùng được:
-       *   khổ × số cây  → kg/m   (nhôm cây: 191,4 ÷ (8,5 × 51) = 0,441)
-       *   khổ           → kg/m   (cuộn, thanh lẻ)
-       *   số cây/cái    → kg/cái (phụ kiện cân theo lô)
-       *
-       * Đơn vị vì thế đổi theo dòng, nên tiêu đề cột ghi cả hai. Đây là số để ĐỐI CHIẾU, không
-       * vào sổ — nên thà ra một con số đúng nghĩa hơn là để trống cho gọn.
-       */
-      const totalLength = bars > 0 && length > 0 ? bars * length : length;
-      const divisor = totalLength > 0 ? totalLength : bars;
+    if (has("actual_kg_per_m") || has("total_length_m")) {
+      const derived = deriveAverageWeight(next);
       next = {
         ...next,
-        ...(has("total_length_m") && totalLength > 0 ? { total_length_m: totalLength } : {}),
-        ...(has("actual_kg_per_m") && kg > 0 && divisor > 0
-          ? { actual_kg_per_m: kg / divisor }
-          : {}),
+        ...(has("total_length_m") ? { total_length_m: derived.totalLengthM } : {}),
+        ...(has("actual_kg_per_m") ? { actual_kg_per_m: derived.averageWeight } : {}),
       };
     }
     if (has("stock_qty") && has("qty") && has("conversion_factor")) {
@@ -716,7 +739,14 @@ export function ChildGrid(props: ChildGridProps) {
       [at, await computeItemPatch(at, String(base[at]?.item_code ?? ""), base)] as const));
     const byRow = new Map(patches.filter(([, p]) => Object.keys(p).length > 0));
     if (byRow.size === 0) return;
-    onChange(base.map((r, i) => (byRow.has(i) ? withComputed({ ...r, ...byRow.get(i)! }) : r)));
+    const merged = base.map((r, i) => (byRow.has(i) ? withComputed({ ...r, ...byRow.get(i)! }) : r));
+    emitRows(merged);
+    for (const rowIdx of byRow.keys()) {
+      const loadKey = String(merged[rowIdx]?.name ?? rowIdx);
+      const version = (formulaLoadVersion.current.get(loadKey) ?? 0) + 1;
+      formulaLoadVersion.current.set(loadKey, version);
+      void fillDoorFormula(rowIdx, merged, loadKey, version);
+    }
   };
   /**
    * Dòng mới mang sẵn giá trị mặc định của field và của BỐI CẢNH đang chọn.
@@ -768,7 +798,7 @@ export function ChildGrid(props: ChildGridProps) {
     if (!source) return;
     // Tên MỚI, không chép: hai dòng cùng `name` thì server coi là một, và dòng sau ghi đè dòng trước.
     const copy: Doc = { ...source, name: `new-${Date.now()}` };
-    onChange([...rows.slice(0, idx + 1), copy, ...rows.slice(idx + 1)]);
+    emitRows([...rows.slice(0, idx + 1), copy, ...rows.slice(idx + 1)]);
   };
   /**
    * Điền xuống — chỉ vào ô ĐANG TRỐNG của các dòng dưới.
@@ -782,7 +812,7 @@ export function ChildGrid(props: ChildGridProps) {
     const carry = (childMeta.fields ?? [])
       .filter((f) => !isLayout(f.fieldtype) && f.fieldname !== "name")
       .map((f) => f.fieldname);
-    onChange(rows.map((row, i) => {
+    emitRows(rows.map((row, i) => {
       if (i <= idx) return row;
       const next = { ...row };
       for (const f of carry) {
@@ -810,7 +840,7 @@ export function ChildGrid(props: ChildGridProps) {
       }
       seeds.push(seed);
     }
-    onChange([...rows, ...seeds]);
+    emitRows([...rows, ...seeds]);
   };
 
   /**
@@ -853,7 +883,7 @@ export function ChildGrid(props: ChildGridProps) {
       if (row.item_code && row.item_code !== before) needFill.push(at);
       next[at] = withComputed(row);
     });
-    onChange(next);
+    emitRows(next);
     /**
      * Dán mã hàng phải kéo theo tên hàng, ĐVT, giá — y như chọn bằng ô Link.
      *
@@ -972,7 +1002,7 @@ export function ChildGrid(props: ChildGridProps) {
         return row;
       });
       const next = [...rows, ...made];
-      onChange(next);
+      emitRows(next);
       const fill = made.map((row, i) => (row.item_code ? rows.length + i : -1)).filter((i) => i >= 0);
       if (fill.length) void fillItemDefaultsMany(fill, next);
       if (result.unmatched) setReadError(`Đã thêm ${made.length} dòng. ${result.unmatched} dòng chưa khớp được mã — xem ghi chú của dòng.`);

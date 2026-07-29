@@ -44,7 +44,7 @@ import {
 } from "@metaforge/core";
 import { ControlRegistry, createDefaultRegistry, DateControl, AttachControl, GeolocationControl, LinkControl } from "@metaforge/controls";
 import {
-  FormView, groupLayout, resolveFormFieldWidth, ChildGrid, createFullRegistry, KanbanView, TreeView, ReportView, PrintView, DashboardView, CalendarView, GanttView, type TreeNodeItem,
+  FormView, groupLayout, resolveFormFieldWidth, ChildGrid, deriveAverageWeight, createFullRegistry, KanbanView, TreeView, ReportView, PrintView, DashboardView, CalendarView, GanttView, type TreeNodeItem,
   deriveColumns, applyClientQuery, buildServerQuery, countQuery, deriveStandardFilters, deriveSearchFields, statusVariant, emptyListState,
   applyColumnOrder, columnPreferenceKey, hasCustomColumnPreferences, moveColumn, normalizeColumnPreferences, stableColumnPreferenceScope,
   resolveFormActions, resolveWorkflowActions, editableCodeField, suggestEditableCode, type FormActionCtx,
@@ -996,6 +996,21 @@ check("LinkControl: cờ dev __MF_LINK_ALLOW_FREE_TEXT__ khôi phục input tự
 });
 
 // 31. ChildGrid render: cột từ child meta + rows + nút thêm dòng + P1-06 canonical per-row state.
+check("TL trung bình không lấy nhầm số lượng Bộ làm kg", () => {
+  assert.deepEqual(
+    deriveAverageWeight({ doctype: "Purchase Order Item", name: "1", uom: "Bộ", qty: 222, qty_bar: 2222 }),
+    {},
+  );
+  assert.deepEqual(
+    deriveAverageWeight({ doctype: "Purchase Order Item", name: "2", uom: "Kg", qty: 191.4, qty_bar: 51, length_m: 8.5 }),
+    { totalLengthM: 433.5, averageWeight: 191.4 / 433.5, basis: "kg/m" },
+  );
+  assert.deepEqual(
+    deriveAverageWeight({ doctype: "Purchase Order Item", name: "3", uom: "Bộ", qty: 10, actual_weight_kg: 25 }),
+    { averageWeight: 2.5, basis: "kg/ĐVT" },
+  );
+});
+
 check("ChildGrid render: cột child meta + thêm dòng + resolve depends_on theo row", () => {
   const childMeta: DocTypeMeta = {
     name: "Sales Order Item",

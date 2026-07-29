@@ -79,7 +79,10 @@ test("purchase rows expose aluminium dimensions only for aluminium items", () =>
     assert.match(field(child, "length_m")?.mandatory_depends_on ?? "", /Nhôm cây\/lá/);
     assert.match(field(child, "qty_bar")?.mandatory_depends_on ?? "", /Nhôm cây\/lá/);
     assert.equal(field(child, "total_length_m")?.read_only, true);
+    assert.equal(field(child, "actual_weight_kg")?.non_negative, true);
+    assert.match(field(child, "actual_weight_kg")?.depends_on ?? "", /uom != 'Kg'/);
     assert.equal(field(child, "actual_kg_per_m")?.read_only, true);
+    assert.match(field(child, "actual_kg_per_m")?.description ?? "", /không coi số Bộ\/Cái là kg/);
     if (child !== "Supplier Quotation Item") {
       assert.equal(field(child, "conversion_factor")?.label, "Hệ số quy đổi về ĐVT tồn");
     }
