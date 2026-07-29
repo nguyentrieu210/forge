@@ -131,9 +131,11 @@ export class InMemoryMutationStore implements MutationStore {
       .reduce((total, line) => total + line.actual_qty_micros, 0);
   }
 
-  async getStockLedgerHistory(tenantId: string, itemCode: string, warehouse: string, throughPostingAt?: string): Promise<StockLedgerEntry[]> {
+  async getStockLedgerHistory(tenantId: string, itemCode: string, warehouse: string, throughPostingAt?: string, batchNo?: string): Promise<StockLedgerEntry[]> {
     return structuredClone(this.stockEntries
-      .filter((line) => line.item_code === itemCode && line.warehouse === warehouse && (!throughPostingAt || line.posting_at <= throughPostingAt))
+      .filter((line) => line.item_code === itemCode && line.warehouse === warehouse
+        && (!throughPostingAt || line.posting_at <= throughPostingAt)
+        && (!batchNo || line.batch_no === batchNo))
       .sort((a,b) => a.posting_at.localeCompare(b.posting_at)));
   }
 

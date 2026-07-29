@@ -3,6 +3,7 @@ import { errors } from "../../core/src/index.js";
 import type { ControllerContext } from "../../document-kernel/src/index.js";
 import { fromScaledInt, toScaledInt } from "../../money/src/index.js";
 import type { SerialBatchBundleData, SerialBatchBundleRow } from "./types.js";
+import { deriveOutgoingValuation } from "./valuation.js";
 
 export interface TrackedStockRequest {
   itemCode: string;
@@ -26,15 +27,29 @@ export interface TrackedStockRequest {
   allowNegativeStock?: boolean;
 }
 
+export interface TrackedStockResult {
+  stock: StockLedgerEntry[];
+  usages: StockBundleUsageEntry[];
+  bundle?: SerialBatchBundleData;
+  /**
+   * Giá trị THẬT đã ghi vào sổ, trị tuyệt đối.
+   *
+   * Người gọi PHẢI dùng con số này cho bút toán giá vốn, không được dùng lại con số họ tự
+   * tính trước khi gọi. Khi định giá theo từng lô, tổng của các lô KHÔNG bằng con số tính
+   * theo cả dòng — và nếu sổ cái vẫn ghi con số cũ thì kho và sổ cái lệch nhau im lặng.
+   */
+  stockValueMinor: number;
+}
+
 export async function buildTrackedStockLines(
   context: ControllerContext<JsonObject>,
   request: TrackedStockRequest,
-): Promise<{ stock: StockLedgerEntry[]; usages: StockBundleUsageEntry[]; bundle?: SerialBatchBundleData }> {
+): Promise<TrackedStockResult> {
   const item = await context.reader.getMasterRecordData(context.command.tenant_id, "Item", request.itemCode);
   const tracked = item?.has_serial_no === true || item?.has_serial_no === 1 || item?.has_batch_no === true || item?.has_batch_no === 1;
   if (!request.bundleName) {
     if (tracked && context.command.action === "submit") throw errors.reference(`Serial and Batch Bundle is required for tracked Item ${request.itemCode}`);
-    return { stock: [baseLine(request)], usages: [] };
+    return { stock: [baseLine(request)], usages: [], stockValueMinor: Math.abs(request.stockValueMinor) };
   }
   if (context.command.action === "submit" && await context.reader.isStockBundleUsed(context.command.tenant_id, request.bundleName)) {
     throw errors.reference(`Serial and Batch Bundle ${request.bundleName} is already used`);
@@ -70,9 +85,34 @@ export async function buildTrackedStockLines(
       const available = await context.reader.getTrackedStockBalanceMicros(context.command.tenant_id,request.itemCode,request.warehouse,row.batch_no,row.serial_no);
       if (available < qty) throw errors.reference(`Insufficient tracked stock for ${request.itemCode}`, { batch_no: row.batch_no ?? null, serial_no: row.serial_no ?? null, available_qty_micros: available, requested_qty_micros: qty });
     }
-    const absoluteValue = index === rows.length-1
-      ? Math.abs(request.stockValueMinor)-allocatedValue
-      : Math.round(Math.abs(request.stockValueMinor)*qty/request.qtyMicros);
+    /**
+     * ĐỊNH GIÁ TỪNG LÔ, ngay tại chỗ đã nạp bundle.
+     *
+     * Người gọi tính giá cho CẢ DÒNG rồi mới đưa xuống đây, nên trước đó mọi lô trong một
+     * phiếu đều nhận chung một đơn giá. Với nhôm thì đó là sai thật sự: lúc cắt, xưởng CỐ Ý
+     * chọn lô khổ nhỏ nhất còn đủ dài để phế ít nhất — thường KHÔNG phải lô cũ nhất, và
+     * thường mua ở giá khác. Vật lý tiêu thụ lô này trong khi kế toán trừ giá lô kia.
+     *
+     * Đặt phép tính ở đây chứ không ở hai người gọi (Phiếu xuất, Phiếu kho) vì đây là chỗ DUY
+     * NHẤT đã nạp bundle và đã duyệt từng dòng lô. Sửa ở hai nơi thì nơi thứ ba sinh sau sẽ
+     * quên — đúng kiểu "luật viết hai lần rồi trôi dạt".
+     *
+     * Chỉ áp cho chiều XUẤT và dòng CÓ lô. Nhập thì giá đến từ chứng từ mua, không phát lại.
+     */
+    let absoluteValue: number;
+    let rowRateMinor = request.valuationRateMinor;
+    if (request.direction === "Outward" && row.batch_no) {
+      const perBatch = await deriveOutgoingValuation(context, {
+        itemCode: request.itemCode, warehouse: request.warehouse, qtyMicros: qty,
+        postingAt: request.postingAt, currencyScale: request.currencyScale, batchNo: row.batch_no,
+      });
+      absoluteValue = Math.abs(perBatch.stock_value_difference_minor);
+      rowRateMinor = perBatch.valuation_rate_minor;
+    } else {
+      absoluteValue = index === rows.length-1
+        ? Math.abs(request.stockValueMinor)-allocatedValue
+        : Math.round(Math.abs(request.stockValueMinor)*qty/request.qtyMicros);
+    }
     allocatedValue += absoluteValue;
     let absoluteWeight: number | null = null;
     if (totalWeight != null) {
@@ -86,7 +126,7 @@ export async function buildTrackedStockLines(
       item_code: request.itemCode, warehouse: request.warehouse,
       actual_qty_micros: request.direction === "Inward" ? qty : -qty,
       ...(absoluteWeight != null ? { actual_weight_micros: request.direction === "Inward" ? absoluteWeight : -absoluteWeight } : {}),
-      valuation_rate_minor: request.valuationRateMinor,
+      valuation_rate_minor: rowRateMinor,
       stock_value_difference_minor: request.direction === "Inward" ? absoluteValue : -absoluteValue,
       qty_scale: 6, currency_scale: request.currencyScale, currency: request.currency, posting_at: request.postingAt,
       ...(row.batch_no ? { batch_no: row.batch_no } : {}), ...(row.serial_no ? { serial_no: row.serial_no } : {}),
@@ -95,6 +135,7 @@ export async function buildTrackedStockLines(
   }
   return {
     stock,
+    stockValueMinor: allocatedValue,
     usages: [{ line_key: `BUNDLE-${request.lineKey}`, bundle_name: request.bundleName, item_code: request.itemCode, warehouse: request.warehouse, direction: request.direction, usage_delta: 1, posting_at: request.postingAt }],
     bundle,
   };

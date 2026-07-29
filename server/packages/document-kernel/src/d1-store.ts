@@ -160,15 +160,19 @@ export class D1MutationStore implements MutationStore {
     return Number(row?.total ?? 0);
   }
 
-  async getStockLedgerHistory(tenantId: string, itemCode: string, warehouse: string, throughPostingAt?: string): Promise<StockLedgerEntry[]> {
+  async getStockLedgerHistory(tenantId: string, itemCode: string, warehouse: string, throughPostingAt?: string, batchNo?: string): Promise<StockLedgerEntry[]> {
+    // Dựng điều kiện theo danh sách thay vì nối chuỗi hai nhánh: thêm tham số thứ năm vào
+    // lối viết `?4` cố định cũ là chỗ rất dễ lệch số thứ tự, và lệch một số là truy vấn sai
+    // mà vẫn chạy.
+    const conditions = ["tenant_id=?1", "item_code=?2", "warehouse=?3"];
+    const values: unknown[] = [tenantId, itemCode, warehouse];
+    if (throughPostingAt) { conditions.push(`posting_at<=?${values.length + 1}`); values.push(throughPostingAt); }
+    if (batchNo) { conditions.push(`batch_no=?${values.length + 1}`); values.push(batchNo); }
     const sql = `SELECT line_key,item_code,warehouse,actual_qty_micros,actual_weight_micros,valuation_rate_minor,stock_value_difference_minor,
       qty_scale,currency_scale,currency,posting_at,batch_no,serial_no,allow_negative_stock
-      FROM stock_ledger_entries WHERE tenant_id=?1 AND item_code=?2 AND warehouse=?3
-      ${throughPostingAt ? "AND posting_at<=?4" : ""}
+      FROM stock_ledger_entries WHERE ${conditions.join(" AND ")}
       ORDER BY posting_at,rowid`;
-    const result = throughPostingAt
-      ? await this.writer.prepare(sql).bind(tenantId,itemCode,warehouse,throughPostingAt).all<Record<string, unknown>>()
-      : await this.writer.prepare(sql).bind(tenantId,itemCode,warehouse).all<Record<string, unknown>>();
+    const result = await this.writer.prepare(sql).bind(...values).all<Record<string, unknown>>();
     return (result.results ?? []).map((row) => ({
       line_key: String(row.line_key), item_code: String(row.item_code), warehouse: String(row.warehouse),
       actual_qty_micros: Number(row.actual_qty_micros),

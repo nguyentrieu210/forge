@@ -237,12 +237,16 @@ export class DeliveryNoteController extends BaseController<DeliveryNoteData> {
       const value = Math.abs(item.stock_value_difference_minor ?? multiplyScaled(fromScaledInt(qty,6),6,item.valuation_rate ?? item.rate,6,currencyScale));
       const tracked = await buildTrackedStockLines(context as unknown as ControllerContext<JsonObject>, { itemCode:item.item_code,warehouse:item.warehouse!,qtyMicros:qty,direction:"Outward",postingAt:data.posting_at,currency:data.currency,currencyScale,valuationRateMinor,stockValueMinor:value,lineKey:`ITEM-${item.row_id||index+1}`,...(item.serial_and_batch_bundle ? { bundleName:item.serial_and_batch_bundle } : {}),allowNegativeStock:Boolean(data.allow_negative_stock) });
       normal.push(...tracked.stock); usages.push(...tracked.usages);
+      // Giá vốn ghi sổ cái LẤY TỪ sổ kho, không dùng lại `value` tính trước khi gọi.
+      // Định giá theo từng lô làm tổng khác con số tính theo cả dòng; giữ `value` ở đây là
+      // để sổ cái kể một câu chuyện khác sổ kho, và không phép kiểm nào đối chiếu hai cái đó.
+      const postedValue = tracked.stockValueMinor;
       const itemMaster=await context.reader.getMasterRecordData(context.command.tenant_id,"Item",item.item_code); const company=await context.reader.getMasterRecordData(context.command.tenant_id,"Company",data.company);
       const stockAccount=await itemAccount(context as unknown as ControllerContext<JsonObject>,itemMaster,"inventory_account","default_inventory_account")
         || (typeof company?.default_inventory_account==="string"?company.default_inventory_account:"");
       const cogsAccount=await itemAccount(context as unknown as ControllerContext<JsonObject>,itemMaster,"cogs_account","default_cogs_account")
         || (typeof company?.default_cogs_account==="string"?company.default_cogs_account:"");
-      if(stockAccount&&cogsAccount){gl.push({line_key:`COGS-${item.row_id||index+1}`,account:cogsAccount,debit_minor:value,credit_minor:0,currency:data.currency,currency_scale:currencyScale,posting_at:data.posting_at},{line_key:`STOCK-${item.row_id||index+1}`,account:stockAccount,debit_minor:0,credit_minor:value,currency:data.currency,currency_scale:currencyScale,posting_at:data.posting_at});}
+      if(stockAccount&&cogsAccount){gl.push({line_key:`COGS-${item.row_id||index+1}`,account:cogsAccount,debit_minor:postedValue,credit_minor:0,currency:data.currency,currency_scale:currencyScale,posting_at:data.posting_at},{line_key:`STOCK-${item.row_id||index+1}`,account:stockAccount,debit_minor:0,credit_minor:postedValue,currency:data.currency,currency_scale:currencyScale,posting_at:data.posting_at});}
     }
     const fulfillment = data.items.map((item, index): FulfillmentEntry => ({ line_key:`DELIVERY-${item.row_id||index+1}`,sales_order:data.against_sales_order,kind:"Delivery",item_code:item.item_code,qty_micros:item.qty_micros??toScaledInt(item.qty,6),posting_at:data.posting_at }));
     return context.command.action === "cancel" ? { gl:reverseGl(gl),stock:reverseStock(normal),fulfillment:fulfillment.map((line)=>({...line,line_key:`REV-${line.line_key}`,qty_micros:-line.qty_micros})),stockBundleUsages:usages.map((line)=>({...line,line_key:`REV-${line.line_key}`,usage_delta:-1 as const})) } : { gl,stock:normal,fulfillment,stockBundleUsages:usages };
