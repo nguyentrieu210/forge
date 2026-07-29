@@ -1,8 +1,8 @@
 # ALUMDOOR V2 — IMPLEMENTATION EVIDENCE
 
 > Ngày kiểm: 2026-07-30  
-> Worktree: `C:\Forge-worktrees\alumdoor-v2`  
-> Nhánh: `feat/alumdoor-v2-kho`  
+> Worktree release: `C:\Forge-worktrees\platform-design`
+> Nhánh: `feat/platform-design-screens`
 > Gói: `alumdoor@2.0.0`  
 > Mốc bắt đầu của lượt hoàn thiện: `6bb394d`
 
@@ -38,8 +38,9 @@ pnpm.cmd run verify
 
 Kết quả:
 
-- `pnpm run test`: **515/515 unit PASS** và toàn bộ SQL PASS, gồm 25 migration và các bài tranh chấp 100 request.
-- Worker Workerd/D1: **131/131 tenant PASS** và **3/3 query PASS**; test app-registry dùng đúng quy mô **69 DocType + 57 fixture**.
+- `pnpm run test:unit`: **520/520 unit PASS** sau merge design và bổ sung kiểm thử restore D1.
+- Toàn bộ SQL PASS, gồm 25 migration và các bài tranh chấp 100 request.
+- Worker Workerd/D1: **132/132 tenant PASS** và **3/3 query PASS**; test app-registry dùng đúng quy mô **69 DocType + 57 fixture**.
 - Worker typecheck, brief schema/dry-run và repo/secrets verify: PASS.
 
 Chạy từ `client/`:
@@ -80,14 +81,26 @@ QA dùng runtime build và gói V2 cài thật trên D1 cục bộ:
 
 Không submit chứng từ nghiệp vụ trong Browser QA; các side effect đã được kiểm bằng unit/integration/SQL test.
 
-## 5. Ranh giới bằng chứng
+## 5. Bằng chứng production
 
-Tài liệu này chứng minh **build và QA trước release**, không phải bằng chứng production:
+- Người dùng phê duyệt rõ ràng việc nhập nhánh design và deploy.
+- Merge V2 vào nhánh design: `f5187ee`; đồng bộ lockfile: `fb83520`; bản sửa restore:
+  `f484662`.
+- Backup release: `alu-2026-07-29T20-45-09-596Z.sql`, 3.233.930 byte,
+  SHA-256 `b0a169e3c7eb056843bb9af842f35cba9e2b258a7da6100047d9fbe2df5b1a4f`.
+- Hai restore drill độc lập cùng từ backup trên đều đạt 64 bảng, `quick_check=ok`,
+  `routes_changed=false`.
+- Production D1 đã áp migration 24–25; tổng 25/25, `quick_check=ok`.
+- Tenant Worker, app Worker và gateway/client design đã deploy; app metadata nâng cấp thành
+  `alumdoor@2.0.0`, hash
+  `b62cb1818d0aafc28f71a8ad5735dff8e866d0ec0f37a08c7c2d2fd449e74387`.
+- Production đọc lại đúng 69 DocType, 57 fixture, 67 nav; `/health` 200, shell 200,
+  guest API 403.
+- Browser production đăng nhập thành công; home `Tồn nhôm theo khổ`, action `Cắt nhôm`
+  và danh sách `Kiểm kê kho` đều mở được.
 
-- Production vẫn chạy `alumdoor@1.27.0`.
-- Chưa tạo backup mới cho lần nâng V2.
-- Chưa chạy hai restore drill từ backup mới.
-- Chưa chạy pilot ghi dữ liệu V2 trên staging/production.
-- Chưa có phê duyệt deploy production.
+## 6. Ranh giới còn lại
 
-Vì vậy Pha 7 phải giữ trạng thái chờ cho tới khi hoàn tất `RELEASE_RUNBOOK.md`.
+Không submit chứng từ nghiệp vụ giả trên production. Pilot có ghi dữ liệu nhập — giữ chỗ —
+cắt/đầu thừa — kiểm kê và đối chiếu cây/kg/giá trị vẫn cần dữ liệu thật hoặc staging chuyên
+dụng. Đây là cổng vận hành còn mở; không phải lỗi build/deploy.

@@ -1,6 +1,6 @@
 # THEO DÕI PHA — ALUMDOOR V2
 
-> Cập nhật: 2026-07-30 · nhánh `feat/alumdoor-v2-kho` · gói `alumdoor@2.0.0`
+> Cập nhật: 2026-07-30 · nhánh `feat/platform-design-screens` · gói `alumdoor@2.0.0`
 
 | Pha | Trạng thái | Bằng chứng |
 |---|---|---|
@@ -10,7 +10,7 @@
 | 4 — Brief/cổng biên dịch | ✅ Qua cổng | `server/briefs/alumdoor-v2.json`; dry-run đạt, 69 DocType, 57 fixture, 67 mục điều hướng |
 | 5 — Build | ✅ Hoàn tất theo spec | Các lát cắt nghiệp vụ và nền tảng bên dưới |
 | 6 — Verify/QA trước release | ✅ Qua cổng cục bộ | Full server/SQL, Worker, typecheck, client build/selfcheck và Browser QA desktop/mobile đều đạt |
-| 7 — Release production | ⏸️ Chưa được phép chạy | Production vẫn là Alumdoor 1.27.0; còn backup mới, hai restore drill, pilot và phê duyệt release |
+| 7 — Release production | 🟡 Đã go-live, còn pilot giao dịch thật | Backup + 2 restore drill + migration + deploy + smoke đạt; production là Alumdoor 2.0.0 |
 
 ## Pha 5 — phạm vi đã hoàn tất
 
@@ -30,20 +30,23 @@
 
 ## Pha 6 — bằng chứng gần nhất
 
-- Full server: **515/515 unit PASS**; toàn bộ SQL PASS, gồm 25 migration và các bài đua 100 request.
-- Worker Workerd/D1: **131/131 tenant PASS + 3/3 query PASS**; test cài gói chạy đúng quy mô V2 **69 DocType + 57 fixture**.
+- Full server: **520/520 unit PASS**; toàn bộ SQL PASS, gồm 25 migration và các bài đua 100 request.
+- Worker Workerd/D1: **132/132 tenant PASS + 3/3 query PASS**; test cài gói chạy đúng quy mô V2 **69 DocType + 57 fixture**.
 - `typecheck:workers`, client `typecheck`, 83 nhóm selfcheck và production build: PASS.
 - Brief/schema/verify: PASS; gói cục bộ `alumdoor@2.0.0` cài nâng cấp thành công, client manifest có 67 mục và home `Tồn nhôm theo khổ`.
 - Browser QA: đăng nhập thật vào runtime cục bộ, kiểm report/action trên desktop và viewport 390×844; không có console error.
 - Chi tiết lệnh và phạm vi: `IMPLEMENTATION_EVIDENCE.md`.
 
-## Pha 7 — điều kiện bắt buộc còn lại
+## Pha 7 — trạng thái release
 
-- [ ] Tạo backup D1 production mới, kiểm checksum và chuyển bản plaintext sang nơi lưu mã hóa ngoài tài khoản.
-- [ ] Restore drill lần 1 vào D1 mới, không đổi route.
-- [ ] Restore drill lần 2 vào một D1 mới khác, không tái sử dụng đích lần 1.
-- [ ] Chạy migration `0025_alumdoor_inventory_views.sql` và nâng gói trong staging/pilot.
+- [x] Tạo backup D1 production mới, kiểm checksum và tạo bản mã hoá DPAPI ngoài Cloudflare.
+- [x] Restore drill lần 1 vào D1 mới, không đổi route.
+- [x] Restore drill lần 2 vào một D1 mới khác, không tái sử dụng đích lần 1.
+- [x] Chạy migration tới `0025_alumdoor_inventory_views.sql` và nâng gói production.
 - [ ] Pilot nhập — giữ chỗ — cắt/đầu thừa — kiểm kê; đối chiếu ledger, báo cáo và `/health`.
-- [ ] Có phê duyệt rõ ràng mới deploy production.
+- [x] Có phê duyệt rõ ràng từ người dùng để nhập nhánh design và deploy production.
+- [x] Deploy gateway/client, tenant Worker, app Worker và `alumdoor@2.0.0`.
+- [x] Hậu kiểm D1/HTTP/Browser production không ghi dữ liệu đạt.
 
-Không được đánh dấu Pha 7 hoàn tất chỉ dựa trên test cục bộ. Quy trình chi tiết nằm ở `RELEASE_RUNBOOK.md`.
+Pha 7 giữ màu vàng cho tới khi có pilot giao dịch thật hoặc staging chuyên dụng. Không tạo
+chứng từ giả trên production chỉ để đánh dấu checklist.

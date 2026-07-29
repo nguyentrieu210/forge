@@ -1,29 +1,35 @@
 # ALUMDOOR — BÀN GIAO CHO PHIÊN SAU
 
-> Cập nhật: **2026-07-29 21:12 (UTC+7)**
-> Mã nguồn chính: **`C:\Forge`**
-> Production: **<https://alu.kairo.vn>** — app **Alumdoor 1.27.0**
+> Cập nhật: **2026-07-30 04:03 (UTC+7)**
+> Mã nguồn release: **`C:\Forge-worktrees\platform-design`**
+> Production: **<https://alu.kairo.vn>** — app **Alumdoor 2.0.0**
 > Tenant `alu` · D1 `cloudforge-alu` · id `6781cbc1-8635-4b6e-af46-09297c120cff`
 
-> **Ghi chú V2 ngày 2026-07-30:** nhánh `feat/alumdoor-v2-kho` đã hoàn tất build và QA cục bộ
-> cho `alumdoor@2.0.0`, nhưng **chưa deploy production**. Đọc
-> `docs/brd-v2/IMPLEMENTATION_EVIDENCE.md`, `PHASE_TRACKER.md` và `RELEASE_RUNBOOK.md`.
-> Không thay trạng thái 1.27.0 bên dưới cho tới khi backup mới, hai restore drill, pilot và release thật sự đạt.
+> **V2 đã go-live ngày 2026-07-30:** nhánh `feat/platform-design-screens`, commit release
+> `f484662`, đã nhập Alumdoor V2 và giao diện design. Đọc
+> `docs/brd-v2/IMPLEMENTATION_EVIDENCE.md`, `PHASE_TRACKER.md` và `RELEASE_RUNBOOK.md`
+> để xem bằng chứng backup, restore drill, migration, deploy và hậu kiểm.
 
 **Đọc mục 0 trước mọi mục khác.** Nó ghi những thứ vừa đổi và những quyết định đang CHỜ chủ
 xưởng — làm tiếp mà không biết chúng thì sẽ làm lại thứ vừa xong, hoặc đoán bừa chỗ cố ý bỏ ngỏ.
 
-## 0. Release hiện hành — 1.27.0
+## 0. Release hiện hành — 2.0.0
 
-Chi tiết đầy đủ ở `docs/ALUMDOOR-PHIEN-29-07.md`. Mốc phải nhớ:
+Mốc release phải nhớ:
 
-- Nhánh chuẩn là `master`, HEAD `a3f009d`; repo không đặt nhánh chuẩn tên `main`.
-- Công thức năm loại cửa đã gộp, toàn bộ rộng/cao/khổ dùng mét.
-- `TL trung bình` chỉ lấy `qty` làm kg khi ĐVT là Kg; hàng Bộ/Cái phải có
-  `actual_weight_kg`, nếu không kết quả để trống.
-- 83/83 selfcheck client, 485/485 unit server và toàn bộ test SQL đạt.
-- Backup, diễn tập migration chạy hai lần, 14/14 phần production và hậu kiểm D1/HTTP đều đạt.
-- Chưa chạy pilot có ghi dữ liệu sau deploy; Browser kiểm tra cô lập không có phiên đăng nhập.
+- Nhánh release là `feat/platform-design-screens`, commit `f484662`; merge V2 ở `f5187ee`.
+- Gói production là `alumdoor@2.0.0`, content hash
+  `b62cb1818d0aafc28f71a8ad5735dff8e866d0ec0f37a08c7c2d2fd449e74387`.
+- 69 DocType, 1 workflow, 57 fixture, 67 mục điều hướng; migration tenant đạt 25/25.
+- 520/520 unit server, toàn bộ SQL, 132/132 tenant Worker, 3/3 query Worker,
+  83 nhóm selfcheck client, typecheck và production build đều đạt.
+- Backup release đã kiểm checksum và restore thành công vào hai D1 drill độc lập.
+- Gateway, tenant Worker, app Worker, metadata V2 và giao diện design đều đã lên production.
+- Hậu kiểm D1 `quick_check=ok`; HTTP health 200, shell 200, guest API 403 đúng bảo vệ.
+- Browser production đăng nhập thật, mở được home `Tồn nhôm theo khổ`, `Cắt nhôm` và
+  `Kiểm kê kho`.
+- Chưa tạo giao dịch nghiệp vụ giả trên production. Pilot có ghi dữ liệu và đối chiếu
+  cây/kg/giá trị vẫn là việc vận hành cần thực hiện với dữ liệu thật hoặc staging chuyên dụng.
 
 ## 1. Đọc phần này trước — quyết định nghiệp vụ mới nhất
 
@@ -45,34 +51,43 @@ Tài liệu `docs/ALUMDOOR-QUY-TRINH.md` và `docs/ALUMDOOR-MUA-HANG-THIET-KE.md
 - Tenant: `alu`
 - D1: `cloudforge-alu`
 - D1 database id: `6781cbc1-8635-4b6e-af46-09297c120cff`
-- App đang cài: `alumdoor@1.27.0`
-- Content hash: `6da6fa8c5877c3613d012e2674c3b8d3d807dc7ca9fbddb2883ccd5b892c1357`
-- Bản 1.27.0 đã deploy đủ frontend/gateway, tenant Worker, app Worker và 14 phần metadata.
+- App đang cài: `alumdoor@2.0.0`
+- Content hash: `b62cb1818d0aafc28f71a8ad5735dff8e866d0ec0f37a08c7c2d2fd449e74387`
+- Tenant migration: `25/25`, mới nhất `0025_alumdoor_inventory_views.sql`
+- Gateway version: `27f09d52-40c9-4b44-9533-e656c3469440`
+- App Worker version: `641348f5-3aa8-46aa-affe-9180c7865def`
+- Bản V2 đã deploy đủ frontend/gateway, tenant Worker, app Worker và metadata.
 
-### 2.2 Bản sao trước khi cập nhật 1.27.0
+### 2.2 Bản sao trước khi cập nhật V2
 
-- SQL: `C:\Forge\server\backups\alu\alu-2026-07-29T13-59-28-792Z.sql`
+- SQL: `C:\Forge-worktrees\platform-design\server\backups\alu\alu-2026-07-29T20-45-09-596Z.sql`
 - Manifest: cùng tên, đuôi `.sql.json`
-- SHA-256: `6cfb5d787f6377f3d6673289e3c70df3053ea1de9791b0b7943f8aebf49a7d74`
-- Dung lượng: `12.231.662` byte
+- SHA-256: `b0a169e3c7eb056843bb9af842f35cba9e2b258a7da6100047d9fbe2df5b1a4f`
+- Dung lượng: `3.233.930` byte
+- Bản mã hoá DPAPI ngoài Cloudflare:
+  `C:\AppWeb\_BanGiao\backups\Alumdoor\alu-2026-07-29T20-45-09-596Z.sql.dpapi`
+- Restore drill A: `cloudforge-drill-alumdoor-v2-a`
+  (`5572e403-2251-4604-aa63-1da30030a179`) — 64 bảng, integrity đạt.
+- Restore drill B: `cloudforge-drill-alumdoor-v2-b`
+  (`47a59332-549c-4bde-a1ce-8d6dfa71e1b5`) — 64 bảng, integrity đạt.
 
 ### 2.3 Số liệu đã đọc lại trực tiếp sau deploy
 
 | Hạng mục | Kết quả |
 |---|---:|
-| Tổng chứng từ trong tenant | 4.435 |
-| Lô nhôm hiện hữu | 1.257 |
-| Tổng số lá/cây trong các lô | 43.601 |
-| Dòng được đánh dấu “Chọn cắt” | 4 |
-| Dòng có “Nhập/Ghi chú” | 163 |
-| Trạng thái “Sắp hết” | 55 |
-| Trạng thái “Hết” | 53 |
-| Dòng có `remaining_kg` từ Excel | 0 |
+| Tổng chứng từ trong tenant | 0 |
+| Master records | 57 |
+| DocType thuộc app | 69 |
+| Custom Field thuộc app | 10 |
+| Print Format thuộc app | 7 |
 | Stock ledger | 0 |
-| GL ledger | 0 |
-| Payment ledger | 0 |
+| Migration tenant | 25 |
+| D1 quick check | `ok` |
 
-Ba ledger bằng 0 không phải lỗi của đợt 1.20.1: dữ liệu lịch sử được nhập vào doctype tham chiếu để tránh tự sinh bút toán giả. Nhưng đây cũng có nghĩa là cần chạy một giao dịch thật end-to-end trước khi coi phân hệ vận hành xong.
+Các con số 4.435 chứng từ và 1.257 lô ở bản bàn giao cũ không có trong D1 production
+`6781cbc1-8635-4b6e-af46-09297c120cff` được đọc trực tiếp trước release V2. D1 hiện hành là
+nguồn có thẩm quyền; không được phục dựng các số liệu cũ bằng cách chạy lại full import khi
+chưa xác định nguồn database khác nhau.
 
 ## 3. Việc vừa hoàn thành ở 1.20.1
 
@@ -326,16 +341,16 @@ node scripts/forge-app.mjs briefs/alumdoor.json --dry-run
 ### Kiểm tra đầy đủ server
 
 ```powershell
-cd C:\Forge\server
+cd C:\Forge-worktrees\platform-design\server
 npm.cmd run test:unit
 ```
 
-Mốc hiện tại: **469/469 test đạt**.
+Mốc release hiện tại: **520/520 test đạt**.
 
 ### Đọc version production
 
 ```powershell
-cd C:\Forge\server
+cd C:\Forge-worktrees\platform-design\server
 npx.cmd wrangler d1 execute cloudforge-alu --remote --command "SELECT app_id,version,content_hash FROM installed_apps WHERE tenant_id='alu' AND app_id='alumdoor';" --json
 ```
 
@@ -349,4 +364,8 @@ Không deploy migration mới trước khi:
 
 ## 10. Câu mở đầu đề xuất cho phiên sau
 
-> Đọc `C:\Forge\docs\ALUMDOOR-HANDOFF.md` và mục 0 trong `ALUMDOOR-PHIEN-29-07.md`, kiểm tra code và production 1.27.0. Không audit lại từ đầu và không đổi mô hình đã chốt. Tiếp tục P0 từ hook `lots-from-receipt.ts`: nối thêm kg thực cân vào `remaining_kg`, chứng minh idempotency + cancel/reversal bằng test end-to-end và pilot thật. Sau đó mới làm trừ sản xuất đồng thời theo cây/lá và kg.
+> Đọc `C:\Forge-worktrees\platform-design\docs\ALUMDOOR-HANDOFF.md` và bộ
+> `docs/brd-v2/`. Kiểm tra production phải là `alumdoor@2.0.0`, migration 25/25 và D1 id
+> `6781cbc1-8635-4b6e-af46-09297c120cff`. Không audit lại từ đầu và không chạy lại full
+> import cũ. Việc vận hành còn lại là pilot có dữ liệu thật hoặc staging chuyên dụng:
+> nhập — giữ chỗ — cắt/đầu thừa — kiểm kê, rồi đối chiếu cây/kg/giá trị, report và QR.

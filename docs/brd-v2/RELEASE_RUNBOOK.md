@@ -1,7 +1,7 @@
 # ALUMDOOR V2 — RELEASE / ROLLBACK RUNBOOK
 
-> Production hiện hành: `alumdoor@1.27.0` trên tenant `alu`.  
-> Đích nâng cấp: `alumdoor@2.0.0`, cùng app id `alumdoor`.  
+> Production hiện hành: `alumdoor@2.0.0` trên tenant `alu` từ 2026-07-30.
+> Release đã nâng cấp từ bản thực tế đọc trực tiếp `alumdoor@1.26.2`, cùng app id `alumdoor`.
 > Tài liệu này không cấp quyền deploy. Chỉ chạy bước production sau khi có phê duyệt rõ ràng.
 
 ## 1. Cổng “không được đi tiếp”
@@ -138,4 +138,14 @@ Không rollback bằng cách sửa trực tiếp `installed_apps`, xóa migratio
 
 ## 8. Trạng thái hiện tại
 
-Runbook này đã được chuẩn bị và kiểm cú pháp/lệnh theo script trong repo. Các bước production ở mục 3–7 **chưa chạy trong lượt hoàn thiện V2 này**. Pha 7 vẫn chờ backup mới, hai restore drill, pilot và phê duyệt.
+Đã thực hiện ngày 2026-07-30:
+
+- backup release + checksum + bản mã hoá DPAPI ngoài Cloudflare;
+- hai restore drill độc lập đạt 64 bảng và `quick_check=ok`;
+- migration production tới 25/25;
+- deploy tenant Worker, app Worker, gateway/client design;
+- cài `alumdoor@2.0.0` và hậu kiểm D1/HTTP/Browser production.
+
+Chưa chạy pilot có ghi dữ liệu vì production hiện không có chứng từ nghiệp vụ và release
+không tự tạo dữ liệu giả. Checklist pilot mục 4 vẫn phải chạy với dữ liệu thật hoặc staging
+chuyên dụng trước khi chuyển Pha 7 từ vàng sang hoàn tất.
