@@ -1,4 +1,4 @@
-# MỤC 0 — PHIÊN 29/07/2026: 1.20.1 → 1.26.2
+# MỤC 0 — PHIÊN 29/07/2026: 1.20.1 → 1.27.0
 
 Chèn vào `ALUMDOOR-HANDOFF.md` như mục 0. Ghi những gì vừa đổi, **vì sao**, và những chỗ cố ý
 bỏ ngỏ chờ chủ xưởng. Mục 1–10 của file bàn giao vẫn đúng trừ những chỗ dưới đây nói khác.
@@ -111,20 +111,28 @@ giờ ra số. **Để riêng hai cột.**
 
 ---
 
-## 0.5 TL trung bình — ba bậc mẫu số
+## 0.5 TL trung bình — chỉ tính từ nguồn kg thật
 
-`actual_kg_per_m`, nhãn **"TL trung bình (kg/m · kg/cái)"**. Lấy bậc đầu tiên dùng được:
+`actual_kg_per_m`, nhãn **"TL trung bình (kg/m · kg/cái)"**. Nguồn tử số được chốt như sau:
+
+- ĐVT giao dịch là `Kg`: `qty` chính là tổng kg thực cân.
+- ĐVT là `Bộ/Cái/Cây/...`: **không** được coi `qty` là kg; chỉ tính khi người dùng nhập riêng
+  `actual_weight_kg` (**Tổng kg thực cân**).
+
+Sau khi có tổng kg thật, lấy bậc mẫu số đầu tiên dùng được:
 
 | Có gì trên dòng | Chia cho | Ra | Ví dụ |
 |---|---|---|---|
 | kg + khổ + số cây | khổ × số cây | kg/m | `191,4 ÷ (8,5 × 51)` = 0,442 |
 | kg + khổ | khổ | kg/m | `12 ÷ 50` = 0,240 |
 | kg + số cây | số cây | kg/cái | `30 ÷ 120` = 0,250 |
-| chỉ có kg | — | (trống) | |
+| tổng kg riêng + số lượng Bộ/Cái | số lượng giao dịch | kg/ĐVT | `25 ÷ 10 Bộ` = 2,5 |
+| không có nguồn tổng kg thật | — | (trống) | `222 Bộ` không còn tự sinh `0,10` |
 
-Bản trước đòi đủ cả ba nên chỉ nhôm cây ra số; mua ron theo cuộn hay phụ kiện cân theo lô đều
-để trống — đúng những dòng cũng muốn soát trọng lượng nhất. Cũng đã bỏ `depends_on` khoá ô này
-theo kiểu nhôm.
+Bản 1.26.2 lấy `qty` làm kg cho mọi ĐVT, nên một dòng mô tơ/combo bán theo Bộ có thể sinh ra
+một trọng lượng vô nghĩa. Bản 1.27.0 thêm `actual_weight_kg` cho ba bảng mua và xoá kết quả cũ
+ngay khi không còn đủ nguồn kg/mẫu số. Bảng lớn cũng tôn trọng `depends_on`, nên cột quy cách
+nhôm không còn hiện trên hàng thường chỉ vì mở chế độ toàn màn hình.
 
 Đây là số để **đối chiếu**, không vào sổ: lệch nhiều so với kg/m danh nghĩa nghĩa là cân sai
 hoặc ghi nhầm khổ — biết lúc đang gõ thì sửa được, biết sau khi ghi sổ thì phải huỷ phiếu.
@@ -388,3 +396,26 @@ khi chưa chờ đủ; phiên này đã suýt đuổi theo một lỗi ma vì ti
 
 Script kiểm nhanh trong scratchpad: `api.mjs` (đăng nhập cookie + CSRF), `thu-luu.mjs` (lưu đơn
 mua 3 dòng — **phải có `company` và `currency`**), `ai2.mjs`, `kiem.mjs`, `dem.mjs`, `nap-mau.mjs`.
+
+---
+
+## 0.14 Chốt release production 1.27.0
+
+Ngày 29/07/2026 đã gộp toàn bộ nhánh công thức cửa và các thay đổi phiên trước vào nhánh chuẩn
+`master`, sau đó deploy đủ tenant Worker, app Worker trong `cloudforge-production`, metadata và
+gateway/UI.
+
+- Commit đầu nhánh production: `a3f009d`.
+- App production: `alumdoor@1.27.0`.
+- Content hash: `6da6fa8c5877c3613d012e2674c3b8d3d807dc7ca9fbddb2883ccd5b892c1357`.
+- Backup ngay trước deploy: `server/backups/alu/alu-2026-07-29T13-59-28-792Z.sql`,
+  12.231.662 byte, SHA-256 `6cfb5d787f6377f3d6673289e3c70df3053ea1de9791b0b7943f8aebf49a7d74`.
+- Diễn tập 14 phần SQL trên backup: `quick_check=ok`; chạy lần hai ghi `0` dòng.
+- Kiểm thử: client selfcheck 83/83; server unit 485/485; toàn bộ test migration SQL đạt.
+- Production hậu kiểm: HTTP app 200, API guest trả JSON 403 đúng lớp quyền; 4.435 chứng từ vẫn
+  còn; ba child doctype mua đều có `actual_weight_kg`; 5 chính sách cửa hoạt động và 2 chính
+  sách Đức cũ bị vô hiệu hoá.
+
+Giới hạn kiểm tra: phiên Browser cô lập không có cookie đăng nhập, nên hậu kiểm không tạo/sửa
+chứng từ production. Cần người dùng mở lại một Đơn mua/Phiếu nhập thật để kiểm tra trực quan
+bảng lớn; pilot ghi sổ end-to-end vẫn là việc bắt buộc trước khi coi phân hệ kho/sản xuất kín.

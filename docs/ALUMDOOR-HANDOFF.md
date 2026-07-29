@@ -1,12 +1,24 @@
 # ALUMDOOR — BÀN GIAO CHO PHIÊN SAU
 
-> Cập nhật: **2026-07-29 21:40 (UTC+7)**
+> Cập nhật: **2026-07-29 21:12 (UTC+7)**
 > Mã nguồn chính: **`C:\Forge`**
-> Production: **<https://alu.kairo.vn>** — app **Alumdoor 1.26.2**
+> Production: **<https://alu.kairo.vn>** — app **Alumdoor 1.27.0**
 > Tenant `alu` · D1 `cloudforge-alu` · id `6781cbc1-8635-4b6e-af46-09297c120cff`
 
 **Đọc mục 0 trước mọi mục khác.** Nó ghi những thứ vừa đổi và những quyết định đang CHỜ chủ
 xưởng — làm tiếp mà không biết chúng thì sẽ làm lại thứ vừa xong, hoặc đoán bừa chỗ cố ý bỏ ngỏ.
+
+## 0. Release hiện hành — 1.27.0
+
+Chi tiết đầy đủ ở `docs/ALUMDOOR-PHIEN-29-07.md`. Mốc phải nhớ:
+
+- Nhánh chuẩn là `master`, HEAD `a3f009d`; repo không đặt nhánh chuẩn tên `main`.
+- Công thức năm loại cửa đã gộp, toàn bộ rộng/cao/khổ dùng mét.
+- `TL trung bình` chỉ lấy `qty` làm kg khi ĐVT là Kg; hàng Bộ/Cái phải có
+  `actual_weight_kg`, nếu không kết quả để trống.
+- 83/83 selfcheck client, 485/485 unit server và toàn bộ test SQL đạt.
+- Backup, diễn tập migration chạy hai lần, 14/14 phần production và hậu kiểm D1/HTTP đều đạt.
+- Chưa chạy pilot có ghi dữ liệu sau deploy; Browser kiểm tra cô lập không có phiên đăng nhập.
 
 ## 1. Đọc phần này trước — quyết định nghiệp vụ mới nhất
 
@@ -28,22 +40,22 @@ Tài liệu `docs/ALUMDOOR-QUY-TRINH.md` và `docs/ALUMDOOR-MUA-HANG-THIET-KE.md
 - Tenant: `alu`
 - D1: `cloudforge-alu`
 - D1 database id: `6781cbc1-8635-4b6e-af46-09297c120cff`
-- App đang cài: `alumdoor@1.20.1`
-- Content hash: `eb35d29e4c886d8adae48e185247494bb9e7067e95a4ac2383bc4ac3b092bc0d`
-- Bản cập nhật 1.20.1 chỉ thay metadata + vá dữ liệu lô; không cần deploy lại frontend/Worker.
+- App đang cài: `alumdoor@1.27.0`
+- Content hash: `6da6fa8c5877c3613d012e2674c3b8d3d807dc7ca9fbddb2883ccd5b892c1357`
+- Bản 1.27.0 đã deploy đủ frontend/gateway, tenant Worker, app Worker và 14 phần metadata.
 
-### 2.2 Bản sao trước khi cập nhật 1.20.1
+### 2.2 Bản sao trước khi cập nhật 1.27.0
 
-- SQL: `C:\Forge\server\backups\alu\alu-2026-07-29T05-33-01-513Z.sql`
+- SQL: `C:\Forge\server\backups\alu\alu-2026-07-29T13-59-28-792Z.sql`
 - Manifest: cùng tên, đuôi `.sql.json`
-- SHA-256: `816443c07dc1405df613b713f364059de0490dbc8c61a687c5b5d29c4ecf429d`
-- Dung lượng: `10,310,738` byte
+- SHA-256: `6cfb5d787f6377f3d6673289e3c70df3053ea1de9791b0b7943f8aebf49a7d74`
+- Dung lượng: `12.231.662` byte
 
 ### 2.3 Số liệu đã đọc lại trực tiếp sau deploy
 
 | Hạng mục | Kết quả |
 |---|---:|
-| Tổng chứng từ trong tenant | 4.231 |
+| Tổng chứng từ trong tenant | 4.435 |
 | Lô nhôm hiện hữu | 1.257 |
 | Tổng số lá/cây trong các lô | 43.601 |
 | Dòng được đánh dấu “Chọn cắt” | 4 |
@@ -168,7 +180,10 @@ Audit nguồn: `server/imports/alumdoor-lot-columns-2026-07-29.audit.json` và `
 
 ### P0 — Nối Phiếu nhập mua với Lô nhôm
 
-Đây là việc quan trọng nhất và chưa hoàn thiện:
+Đã có hook bước đầu ở `lots-from-receipt.ts`: submit/cancel Phiếu nhập có thể cộng/trừ số
+cây/lá vào lô theo mã + màu + tình trạng + khổ + kho. Tuy nhiên cầu nối vẫn **chưa hoàn thiện**:
+hook chưa đưa `qty` kg vào `remaining_kg`, chưa có test end-to-end riêng và chưa pilot thật trên
+production. Vì vậy các yêu cầu dưới đây vẫn là P0, không được coi commit có hook là đã khép kín.
 
 1. Khi submit `Purchase Receipt` cho Item `Nhôm cây/lá`, stock ledger tăng bằng **kg thực cân**.
 2. Đồng thời tạo/cập nhật `Aluminium Lot` theo mã nhôm, màu, tình trạng, khổ, số cây/lá, kho và nguồn phiếu nhập.
@@ -329,4 +344,4 @@ Không deploy migration mới trước khi:
 
 ## 10. Câu mở đầu đề xuất cho phiên sau
 
-> Đọc `C:\Forge\docs\ALUMDOOR-HANDOFF.md`, kiểm tra code và production hiện tại. Không audit lại từ đầu và không đổi mô hình đã chốt. Bắt đầu P0: nối Phiếu nhập mua nhôm (kg thực cân + khổ + số cây + màu + kho) với Aluminium Lot và stock ledger Kg, có idempotency, cancel/reversal và test end-to-end. Sau đó mới làm trừ sản xuất đồng thời theo cây/lá và kg.
+> Đọc `C:\Forge\docs\ALUMDOOR-HANDOFF.md` và mục 0 trong `ALUMDOOR-PHIEN-29-07.md`, kiểm tra code và production 1.27.0. Không audit lại từ đầu và không đổi mô hình đã chốt. Tiếp tục P0 từ hook `lots-from-receipt.ts`: nối thêm kg thực cân vào `remaining_kg`, chứng minh idempotency + cancel/reversal bằng test end-to-end và pilot thật. Sau đó mới làm trừ sản xuất đồng thời theo cây/lá và kg.
