@@ -66,17 +66,64 @@ CREATE INDEX IF NOT EXISTS idx_sle_batch_valuation
 
 ### 2.2 Sửa mã cần viết
 
-| # | File · dòng | Sửa gì |
-|---|---|---|
-| M3a | `document-kernel/src/store.ts:22` | `getStockLedgerHistory(..., batchNo?: string)` — **mô phỏng đúng** `getTrackedStockBalanceMicros` ở dòng 21 vốn đã có tham số này |
-| M3b | `document-kernel/src/d1-store.ts:163` | thêm `AND (?4 IS NULL OR batch_no=?4)` |
-| M3c | `document-kernel/src/in-memory-store.ts:134` | thêm điều kiện lọc tương ứng — **hai kho lưu phải khớp nhau**, lệch là test xanh giả |
-| M3d | `clouderp-stock/src/valuation.ts:32-41` | `deriveOutgoingValuation` nhận `batchNo`, truyền xuống |
-| M4 | `clouderp-stock/src/valuation.ts:18` | `normalizeValuationMethod` — giá trị lạ **TỪ CHỐI**, thôi âm thầm thành FIFO |
-| M5 | `clouderp-stock/src/tracking.ts:65` | `valuation_rate_minor` tính **theo từng dòng bundle** thay vì dùng chung một giá cho cả dòng chứng từ |
+> ⚠️ **VIẾT LẠI 30/07 sau rà soát** — bản đầu **thiếu 7 chỗ** và **bỏ sót hẳn một lỗi tiền**.
+> Chi tiết: [DEFECTS.md](DEFECTS.md) D1 · D2 · D4.
 
-> **M5 là mấu chốt.** M3 mở đường cho việc tính theo lô; M5 mới thực sự **dùng** đường đó. Thiếu M5 thì
-> vẫn một giá chia đều cho mọi lô — đúng lỗi cũ, chỉ khác là giờ có index để làm đúng.
+**Nhóm M1 — catch weight phải tồn tại THẬT, không chỉ trong migration (D2):**
+
+| # | File | Sửa gì |
+|---|---|---|
+| M1a | migration mới | `ALTER TABLE stock_ledger_entries ADD COLUMN actual_weight_micros INTEGER` + index batch |
+| **M1b** | `contracts/src/index.ts` | thêm `actual_weight_micros?: number` vào `StockLedgerEntry` — **hiện KHÔNG có** |
+| **M1c** | `document-kernel/src/d1-store.ts:628` | thêm cột vào **INSERT** và vào **SELECT** của `getStockLedgerHistory` |
+| **M1d** | `clouderp-stock/src/tracking.ts:7` | `TrackedStockRequest.weightMicros`; chia theo tỉ lệ từng dòng bundle **y như `stockValueMinor`**, dòng cuối nhận phần dư để không lẹm làm tròn |
+| **M1e** | `in-memory-store.ts` | cùng trường — lệch với D1 store là **test xanh giả** |
+
+> Thiếu M1b–M1e thì chạy migration xong **mọi bút toán mới vẫn NULL**. Cột có mà không ai ghi.
+
+**Nhóm M2 — `rate` phải nói rõ đơn vị (D1, lỗi TIỀN):**
+
+| # | File | Sửa gì |
+|---|---|---|
+| **M2a** | brief `Purchase Receipt Item` | thêm **`rate_uom:Link(UOM)`** — mặc định `weight_uom` khi item catch-weight, ngược lại `stock_uom`. **Không có đơn vị ngầm** |
+| **M2b** | `clouderp-core/src/controllers.ts:221` · `:239` | `value` = `qty × rate` **chỉ đúng khi `rate_uom == stock_uom`**. Catch-weight: `value = actual_weight × rate`, rồi `valuation_rate_minor = value ÷ qty_bar` |
+| **M2c** | validator | `rate_uom` trống mà item catch-weight → **TỪ CHỐI**, không đoán |
+
+> **Vì sao đây là lỗi nặng nhất:** nhập 200 cây / 1.200 kg / 100.000 đ/kg ra **20 triệu** thay vì
+> **120 triệu** — sai 6 lần, sổ vẫn cân. Doc-comment ngay trên `controllers.ts:219` đã cảnh báo đúng
+> họ lỗi này (*"117 mét × giá-một-cây, tồn kho phình gần sáu lần"*) mà thiết kế V2 vẫn đi qua.
+
+**Nhóm M3 — định giá thu hẹp theo lô:**
+
+| # | File | Sửa gì |
+|---|---|---|
+| M3a | `document-kernel/src/store.ts:22` | `getStockLedgerHistory(..., batchNo?)` — mô phỏng `getTrackedStockBalanceMicros` dòng 21 vốn đã có tham số này |
+| M3b | `d1-store.ts:163` | `AND (?4 IS NULL OR batch_no=?4)` |
+| M3c | `in-memory-store.ts:134` | điều kiện lọc tương ứng |
+| M3d | `clouderp-stock/src/valuation.ts:32` | `deriveOutgoingValuation` nhận `batchNo` |
+| M4 | `valuation.ts:18` | `normalizeValuationMethod` — giá trị lạ **TỪ CHỐI** |
+
+**Nhóm M5 — phạm vi VIẾT LẠI (D4):**
+
+Bản đầu chỉ ghi `tracking.ts:65`. **Sai chỗ.** Gốc nằm ở caller: nó tính giá cho **cả dòng** rồi mới
+đưa xuống bundle — `clouderp-selling/src/controllers.ts:217` và `clouderp-erpnext/src/controllers.ts:104`.
+
+**Chốt cách B: nạp bundle TRƯỚC, định giá TỪNG batch.**
+
+```
+caller: đọc bundle → với mỗi entry { batch_no, qty }:
+          deriveOutgoingValuation({ itemCode, warehouse, batchNo, qtyMicros })
+        → dựng SLE riêng cho entry đó
+```
+
+| # | File | Sửa gì |
+|---|---|---|
+| M5a | `clouderp-selling/src/controllers.ts:217` | nạp bundle trước, gọi định giá theo từng batch |
+| M5b | `clouderp-erpnext/src/controllers.ts:104` | như trên cho Stock Entry |
+| M5c | `clouderp-stock/src/tracking.ts:65` | nhận **mảng** giá theo entry thay vì một `valuationRateMinor` chung |
+
+> ❌ **Cách A đã LOẠI** (mỗi dòng chứng từ chỉ một batch): nó phá chính lý do dùng bundle — cắt từ 3 lô
+> phải tách thành 3 dòng chứng từ, mất khớp với thực tế xưởng.
 
 ### 2.3 State machine — sổ không có trạng thái
 
@@ -530,7 +577,17 @@ brief hỏng. Bổ sung vào runbook PHA 7.
 | — | API/action spec + quyền server | ✅ | §8.1 — 10 action, mỗi cái ghi rõ ghi gì và role nào |
 | — | Migration viết dạng văn bản, **chưa chạy** | ✅ | §2.1 — 1 `ALTER TABLE` + 1 `CREATE INDEX` |
 
-**Tự chấm: 8/8 ✅.**
+**Tự chấm SAU RÀ SOÁT 30/07: 4 đạt / 4 KHÔNG đạt** — bản trước ghi 8/8 là **nói quá** (D5).
+
+| Tiêu chí | Trước | Sau | Vì |
+|---|---|---|---|
+| 1. Mọi bảng có ledger | ✅ | ⚠️ | Thiếu ledger 3 danh mục: `Lý do huỷ` · `Nguyên nhân chênh lệch` · `Item Allowed Color` (D6) |
+| 4. Mọi FK trỏ bảng thật | ✅ | ❌ | Ba FK trên chưa có bảng — scorecard cũ tuyên bố sai |
+| Migration đủ | ✅ | ❌ | Thiếu M1b–M1e; cột có mà không ai ghi (D2) |
+| Định giá theo lô | ✅ | ❌ | Phạm vi M5 sai chỗ (D4) |
+| — | — | ❌ | **D1 — lỗi tiền, chưa từng có trong bất kỳ danh sách nào** |
+
+**PHA 5 CHƯA ĐƯỢC BẮT ĐẦU** cho tới khi đóng D1–D4.
 
 ### Hai việc CHỐT Ở PHA 5, không phải lỗ hổng
 

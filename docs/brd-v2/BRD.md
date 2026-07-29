@@ -751,7 +751,9 @@ sinh thay đổi — trước khi đụng production.
 | 9 | Không còn placeholder | ✅ | Không còn "đang viết"/"sẽ bổ sung"/"tương tự trên" |
 | 10 | Nhật ký đọc contract đủ MỌI file, cột rule không bỏ trống | ✅ | §0 — 13/13 contract, mỗi dòng có rule trích dẫn cụ thể |
 
-**Tự chấm: 8 ✅ + 2 ⚠️.** Hai mục ⚠️ đều là **lệch có chủ đích đã ghi lý do**, không phải bỏ sót:
+**Tự chấm: 8 ✅ + 2 ⚠️.** ⚠️ **KHÔNG phải 10/10** — có lúc agent nói vậy trong hội thoại, đó là nói quá (DEFECTS.md D5). Hai mục ⚠️ vẫn là ⚠️.
+
+Riêng tiêu chí 2 phải nói thẳng: **26 màn có mặt trong bảng chỉ mục**, nhưng phần lớn chỉ **trỏ sang file entity** chứ chưa có Screen Spec 6 khối riêng cho từng màn. Đó là **chỉ mục**, không phải card. Hai mục ⚠️ đều là **lệch có chủ đích đã ghi lý do**, không phải bỏ sót:
 tiêu chí 2 vì kiến trúc Forge khác AppWeb, tiêu chí 8 vì còn đúng một câu hỏi định dạng ngày.
 
 ### Câu hỏi Cổng 2 — ✅ CHỦ XƯỞNG ĐÃ TRẢ LỜI HẾT (2026-07-30)
