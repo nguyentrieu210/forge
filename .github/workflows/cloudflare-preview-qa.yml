@@ -18,9 +18,10 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 35
+    environment: production
     env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN || secrets.CLOUDFLARE_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: d4d5a24d4e56f28f27fe58b64ef149a5
 
     steps:
       - name: Checkout
@@ -39,11 +40,20 @@ jobs:
       - name: Install Forge dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build MetaForge runtime
-        run: pnpm --filter runtime run build
+      - name: Build Forge with the repository's proven command
+        run: pnpm build
 
       - name: Stage runtime assets for gateway
         run: node server/scripts/stage-client-bundle.mjs
+
+      - name: Verify Cloudflare Actions credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
+            echo "::error::Cloudflare Git integration is connected, but GitHub Actions has no CLOUDFLARE_API_TOKEN/CF_API_TOKEN/CLOUDFLARE_TOKEN secret in the repository or production environment."
+            exit 1
+          fi
 
       - name: Upload gateway preview version
         id: preview
