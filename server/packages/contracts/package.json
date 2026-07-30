@@ -1,2 +1,1 @@
-
-{"name":"@cloudforge/contracts","version":"0.1.0","type":"module","private":true,"exports":"./src/index.ts"}
+{"name":"@cloudforge/contracts","version":"0.1.0","type":"module","private":true,"exports":{".":"./src/index.ts","./purchase-allocation":"./src/purchase-allocation.ts"}}
