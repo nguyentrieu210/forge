@@ -1078,7 +1078,7 @@ check("Bảng con trong form và bảng lớn dùng chung đủ cột đơn mua"
   }]);
   assert.deepEqual(
     columns.map((field) => field.fieldname),
-    ["item_code", "length_m", "theoretical_kg_per_m", "qty_bundle", "qty_bar", "qty", "uom", "rate", "amount", "theoretical_kg", "color", "is_stamped", "so_no", "warehouse", "note"],
+    ["item_code", "length_m", "theoretical_kg_per_m", "qty_bundle", "qty_bar", "theoretical_kg", "qty", "uom", "rate", "amount", "color", "is_stamped", "so_no", "warehouse", "note"],
   );
   assert.deepEqual(
     columns

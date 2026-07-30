@@ -31,11 +31,11 @@ const PURCHASE_ORDER_ITEM_FULL_FIELDS = [
   "theoretical_kg_per_m",
   "qty_bundle",
   "qty_bar",
+  "theoretical_kg",
   "qty",
   "uom",
   "rate",
   "amount",
-  "theoretical_kg",
   "color",
   "is_stamped",
   "so_no",
@@ -413,7 +413,9 @@ export function ChildGrid(props: ChildGridProps) {
    * Hỏng localStorage (chế độ riêng tư, hết quota) chỉ mất phần tuỳ chỉnh, bảng vẫn dựng
    * bằng mặc định — không được phép làm chết cả bảng vì một tiện ích.
    */
-  const layoutKey = `mf-grid-layout:${childMeta.name}:${expanded ? "big-v2" : "compact-v2"}`;
+  // big-v3 resets the previous default order so the customer-approved purchase sequence is applied
+  // even on browsers that already persisted the old big-table layout.
+  const layoutKey = `mf-grid-layout:${childMeta.name}:${expanded ? "big-v3" : "compact-v2"}`;
   const [layout, setLayout] = useState<GridLayout>(() => ({ ...EMPTY_LAYOUT, w: {}, order: [], hidden: [], pinned: [], labels: {} }));
   const loadedKey = useRef("");
   if (loadedKey.current !== layoutKey) {
