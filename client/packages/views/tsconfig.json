@@ -9,7 +9,8 @@
     { "path": "../core" },
     { "path": "../adapter-frappe" },
     { "path": "../ui" },
-    { "path": "../controls" }
+    { "path": "../controls" },
+    { "path": "../shell" }
   ],
   "include": ["src/**/*"]
 }
