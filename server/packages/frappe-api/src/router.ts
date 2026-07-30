@@ -726,7 +726,12 @@ async function saveDocument(doctype: string, name: string, args: FrappeArgs, con
   // cannot overwrite a concurrent edit.
   assertModifiedMatches(current, submitted.modified);
 
-  const payload = toKernelPayload(submitted, meta);
+  // The Desk intentionally sends a PATCH-shaped PUT containing only dirty fields.
+  // Specialised controllers (Purchase Order totals/pricing in particular) normalize
+  // a complete document and therefore must see the stored fields and child tables
+  // that were not edited in this request. Merge in Frappe shape first so child rows
+  // are preserved, then convert the complete document back to the kernel payload.
+  const payload = toKernelPayload({ ...toFrappeDoc(current), ...submitted }, meta);
   await context.runCommand(await buildCommand({
     tenantId: context.tenantId, actor: context.actor, doctype, name,
     action: "save", expectedVersion: current.version, document: payload,

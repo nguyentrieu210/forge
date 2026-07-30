@@ -385,6 +385,20 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     expect(doc.subject).toBe("Renamed subject");
     expect(doc.modified).not.toBe(createdModified);
     createdModified = doc.modified;
+
+    // The Desk updates only dirty fields. The server must preserve unchanged
+    // values and give specialised controllers a complete document.
+    const patchOnly = await call(`/api/resource/Field Visit/${createdName}`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ notes_html: "<p>Patch only</p>", modified: createdModified }),
+    });
+    expect(patchOnly.status).toBe(200);
+    const patched = (await patchOnly.json() as any).data;
+    expect(patched.subject).toBe("Renamed subject");
+    expect(patched.customer).toBe("CUST-1");
+    expect(patched.notes_html).toBe("<p>Patch only</p>");
+    createdModified = patched.modified;
   });
 
   it("refuses a write that omits the modified token, rather than treating it as a force-write", async () => {
