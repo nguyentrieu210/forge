@@ -8,6 +8,7 @@ export * from "./purchase-allocation-d1-store.js";
 export * from "./purchase-allocation-domain-store.js";
 export * from "./purchase-allocation-in-memory-store.js";
 export * from "./purchase-allocation-reader.js";
+export * from "./purchase-allocation-rollout-store.js";
 export * from "./reconciliation.js";
 export * from "./status.js";
 export * from "./store.js";
