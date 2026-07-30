@@ -48,7 +48,7 @@ const replaceField = (dt, name, next) => {
 };
 
 // ─────────────────────────── HEADER ───────────────────────────
-brief.version = "2.0.8";
+brief.version = "2.0.9";
 brief.locale.dateFormat = "dd/mm/yyyy"; // Q11 — chủ xưởng chốt gạch chéo
 // Nỗi đau #1 của BRD: người mở app phải thấy ngay tồn KHẢ DỤNG theo khổ, không phải tự lấy tồn tổng
 // rồi trừ các phiếu giữ bằng tay. Báo cáo này nằm ở query engine nền tảng vì nó đọc cùng sổ kho.
@@ -986,19 +986,20 @@ brief.prints.push({
   default: true,
   css: [
     "@page{size:A4 landscape;margin:0}",
-    "*{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif} body{font-family:Arial,Helvetica,sans-serif;font-size:8px;color:#111;margin:0;padding:23.7mm 22mm 8mm}",
-    ".letterhead{position:relative;width:166mm;height:14.8mm}",
+    "*{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif} html,body{margin:0}body{width:297mm;min-height:210mm;font-family:Arial,Helvetica,sans-serif;font-size:8px;color:#111;padding:23.7mm 22mm 8mm}",
+    ".letterhead{position:relative;width:100%;height:14.8mm}",
     ".brand-logo{position:absolute;left:2.7mm;top:2.8mm;width:43.6mm;height:auto}",
-    ".company-block{position:absolute;right:0;top:0;width:94mm;text-align:center;font-size:6.5px;font-style:italic;line-height:1.45}",
+    ".company-block{position:absolute;right:2.7mm;top:0;width:94mm;text-align:center;font-size:6.5px;font-style:italic;line-height:1.45}",
     ".tagline{color:#f15a24;font-size:7px;font-style:normal;font-weight:800;text-decoration:underline;white-space:nowrap}",
     ".company-block b{font-style:normal}.website{font-style:normal}",
-    ".title{width:166mm;font-size:15px;font-weight:700;color:#f15a24;text-transform:uppercase;text-align:center;margin:0 0 3.2mm}",
-    ".meta{width:166mm;font-size:7px;font-weight:400;line-height:1.45;margin-bottom:4.5mm}.meta div{min-height:2.6mm}.meta b{display:inline-block;min-width:30mm}",
-    "table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}th,td{border:1px solid #777;padding:2px 1.5px;vertical-align:middle;overflow-wrap:anywhere}",
-    "th{background:#f3f3f3;font-size:6.2px;text-transform:uppercase;text-align:center;line-height:1.12}",
-    ".n{text-align:right;font-variant-numeric:tabular-nums}.c{text-align:center}.code{font-weight:700}.small{font-size:6px;color:#555}",
+    ".title{width:100%;font-size:15px;font-weight:700;color:#f15a24;text-transform:uppercase;text-align:center;margin:0 0 3.2mm}",
+    ".meta{width:100%;font-size:7px;font-weight:400;line-height:1.45;margin-bottom:4.5mm}.meta div{min-height:2.6mm}.meta b{display:inline-block;min-width:30mm}",
+    "table{width:100%;border-collapse:collapse;table-layout:auto}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}th,td{border:1px solid #777;padding:2px 1.5px;vertical-align:middle}",
+    "th{background:#f3f3f3;font-size:6.2px;text-transform:uppercase;text-align:center;line-height:1.12;white-space:normal}",
+    "td{white-space:nowrap}.n{text-align:right;font-variant-numeric:tabular-nums}.c{text-align:center}.code{font-weight:700}.item-cell,.note-cell{white-space:normal;overflow-wrap:anywhere}.small{font-size:6px;color:#555}",
+    ".index-col{width:1%;white-space:nowrap}.note-col,.note-cell{width:1%;min-width:18mm;max-width:26mm}",
     "tfoot td{font-size:8px;font-weight:800;background:#fff}.total-label{text-align:right}.total-value{text-align:right;color:#c55a11;white-space:nowrap}",
-    ".sign{display:flex;justify-content:space-between;text-align:center;margin-top:18px}.sign div{width:30%}.sign b{display:block;margin-bottom:35px;font-size:8px}",
+    ".sign{display:flex;width:100%;justify-content:space-between;text-align:center;margin-top:18px}.sign div{width:30%}.sign b{display:block;margin-bottom:35px;font-size:8px}",
   ],
   html: [
     `<div class="letterhead"><img class="brand-logo" src="${ORDER_LOGO}" alt="ALUMDOOR">`,
@@ -1006,14 +1007,14 @@ brief.prints.push({
     "<div class=\"title\">Đơn đặt hàng</div>",
     "<div class=\"meta\"><div><b>Tên nhà cung cấp:</b>{{ supplier }}</div><div><b>Ngày đặt hàng:</b>{{ transaction_date | date }}</div><div><b>Ngày giao hàng:</b>{{ schedule_date | date }}</div></div>",
     "<table><thead><tr>",
-    "<th style=\"width:24px\">STT</th><th style=\"width:105px\">Mã hàng</th><th style=\"width:48px\">Kích thước (m)</th><th style=\"width:54px\">Trọng lượng (kg/m)</th><th style=\"width:38px\">SL bó</th><th style=\"width:42px\">Số cây/lá</th><th style=\"width:54px\">Số kg barem</th><th style=\"width:50px\">Số lượng</th><th style=\"width:34px\">ĐVT</th><th style=\"width:62px\">Đơn giá</th><th style=\"width:72px\">Thành tiền</th><th style=\"width:50px\">Màu</th><th style=\"width:38px\">Dập</th><th style=\"width:55px\">Số SO NCC</th><th>Ghi chú</th>",
+    "<th class=\"index-col\">STT</th><th>Mã hàng</th><th>Tên hàng</th><th>Kích thước (m)</th><th>Trọng lượng (kg/m)</th><th>SL bó</th><th>Số cây/lá</th><th>Số lượng</th><th>ĐVT</th><th>Đơn giá</th><th>Thành tiền</th><th>Màu</th><th>Dập</th><th>Số SO NCC</th><th class=\"note-col\">Ghi chú</th>",
     "</tr></thead><tbody>",
-    "{{#each items}}<tr><td class=\"c\">{{ _index }}</td><td><div class=\"code\">{{ item_code }}</div><div class=\"small\">{{ item_name }}</div></td><td class=\"n\">{{ length_m | number }}</td><td class=\"n\">{{ theoretical_kg_per_m | number }}</td><td class=\"n\">{{ qty_bundle | number }}</td><td class=\"n\">{{ qty_bar | number }}</td><td class=\"n\">{{ theoretical_kg | number }}</td><td class=\"n\">{{ qty | number }}</td><td class=\"c\">{{ uom }}</td><td class=\"n\">{{ rate | money }}</td><td class=\"n\">{{ amount | money }}</td><td class=\"c\">{{ color }}</td><td class=\"c\">{{ is_stamped }}</td><td class=\"c\">{{ so_no }}</td><td>{{ note }}</td></tr>{{/each}}",
+    "{{#each items}}<tr><td class=\"c index-col\">{{ _index }}</td><td class=\"code\">{{ item_code }}</td><td class=\"item-cell\">{{ item_name }}</td><td class=\"n\">{{ length_m | number }}</td><td class=\"n\">{{ theoretical_kg_per_m | number }}</td><td class=\"n\">{{ qty_bundle | number }}</td><td class=\"n\">{{ qty_bar | number }}</td><td class=\"n\">{{ qty | number }}</td><td class=\"c\">{{ uom }}</td><td class=\"n\">{{ rate | money }}</td><td class=\"n\">{{ amount | money }}</td><td class=\"c\">{{ color }}</td><td class=\"c\">{{ is_stamped }}</td><td class=\"c\">{{ so_no }}</td><td class=\"note-cell\">{{ note }}</td></tr>{{/each}}",
     "</tbody><tfoot><tr><td class=\"total-label\" colspan=\"10\">Tổng tiền</td><td class=\"total-value\">{{ grand_total | money }} {{ currency }}</td><td colspan=\"4\"></td></tr></tfoot></table>",
     "<div class=\"sign\"><div><b>Người lập đơn</b>(ký, ghi rõ họ tên)</div><div><b>Người duyệt</b>(ký, ghi rõ họ tên)</div><div><b>Nhà cung cấp xác nhận</b>(ký, ghi rõ họ tên)</div></div>",
   ],
 });
-note("prints: + Đơn nhập hàng A4 ngang, logo nhúng trực tiếp, tổng tiền nằm đúng cột thành tiền");
+note("prints: + Đơn nhập hàng A4 ngang, đầu trang giãn đúng khổ và cột tự ôm nội dung");
 
 brief.prints.push({
   "//": "Biên bản kiểm kê A4: số chứng từ, QR, mọi dòng chênh lệch và ba khu ký.",
