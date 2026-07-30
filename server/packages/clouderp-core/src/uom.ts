@@ -1,25 +1,3 @@
-/**
- * Quy đổi đơn vị tính: mua theo CÂY, tồn theo MÉT.
- *
- * Đây là chỗ mà mọi phần mềm kho đều phải có và là chỗ dễ bỏ quên nhất, vì thiếu nó thì
- * KHÔNG có gì báo lỗi — chỉ có một con số tồn kho sai lặng lẽ. Xưởng mua ray theo cây,
- * bán theo mét; mua nan nhôm theo kg, tính theo m². Ghi thẳng `qty` vào sổ kho nghĩa là
- * 20 cây ray thành "tồn 20 mét", sai gần sáu lần, và giá vốn mỗi bộ cửa sai theo.
- *
- *     stock_qty = qty × conversion_factor
- *
- * Ba quy tắc, theo đúng thứ tự:
- *
- *   1. Dòng tự khai `conversion_factor` → dùng luôn. Cây nhôm không phải lúc nào cũng
- *      đúng 5,85 m, nên người nhập phải sửa được cho từng chuyến hàng.
- *   2. Không khai `uom`, hoặc `uom` trùng đơn vị tồn của mặt hàng → hệ số 1. Đây là
- *      đường của MỌI dòng đang chạy hôm nay, nên bật quy đổi lên không làm lệch sổ cũ.
- *   3. Còn lại → tra bảng `uom_conversions` trên hồ sơ mặt hàng. KHÔNG có thì TỪ CHỐI.
- *
- * Bước 3 từ chối thay vì lặng lẽ lấy 1 là điểm chính. Người dùng đã nói rõ "dòng này
- * tính theo đơn vị khác" — lấy 1 lúc đó là ghi đè ý họ bằng một con số bịa, và cái sai
- * chỉ lộ ra khi kiểm kho vài tháng sau.
- */
 import type { JsonObject } from "../../contracts/src/index.js";
 import type { DecimalInput } from "../../money/src/index.js";
 import { errors } from "../../core/src/index.js";
@@ -29,7 +7,6 @@ import type { UomLine } from "./types.js";
 
 const ONE = 1_000_000;
 
-/** Đơn vị tồn của một mặt hàng, hoặc `undefined` khi hồ sơ chưa khai. */
 function stockUomOf(master: JsonObject | null): string | undefined {
   const declared = master?.stock_uom;
   return typeof declared === "string" && declared.trim() ? declared.trim() : undefined;
@@ -53,7 +30,6 @@ function factorFromMaster(master: JsonObject | null, uom: string): number | unde
 export type UomTransactionKind = "purchase" | "sales" | "stock";
 
 export interface ApplyUomOptions {
-  /** Selects the Item default UOM. It never changes the stock UOM. */
   transactionKind?: UomTransactionKind;
 }
 
@@ -98,11 +74,6 @@ function usesDynamicSquareMetreToSet(master: JsonObject | null, uom: string): bo
     && ["bộ", "bo", "set"].includes(normalizedUom(stockUomOf(master)));
 }
 
-/**
- * Cửa bán theo m² nhưng xuất kho theo Bộ không có hệ số cố định trên Item: một bộ 1×2 m
- * và một bộ 3×3 m có diện tích khác nhau nhưng đều chỉ trừ một Bộ. Máy chủ tự tính lại cả
- * diện tích tính tiền lẫn số Bộ để API trực tiếp cũng không thể làm lệch sổ kho.
- */
 function dynamicSetStockQtyMicros(
   line: UomLine,
   master: JsonObject | null,
@@ -120,13 +91,6 @@ function dynamicSetStockQtyMicros(
   }
   const minimumArea = Math.max(0, Number(master?.min_area_sqm) || 0);
   const setCount = Number(fromScaledInt(setsMicros, 6));
-  /**
-   * Rộng và cao tính bằng MÉT, nên diện tích là tích của chúng — không chia 1.000.000 nữa.
-   *
-   * Hai field này từng là `width_mm`/`height_mm`. Xưởng đo và báo giá theo mét (RCL 4,9 m),
-   * nên bắt nhập milimét là bắt nhân nhẩm 1000 ở mỗi dòng, và quên một số 0 thì diện tích
-   * lệch mười lần mà chứng từ vẫn hợp lệ. Đổi được vì lúc chuyển chưa có chứng từ nào.
-   */
   const expectedQty = toScaledInt(Math.max(width * height, minimumArea) * setCount, 6, `items[${index}].qty`);
   if (Math.abs(expectedQty - qtyMicros) > 1) {
     throw errors.validation(`Số lượng m² không khớp kích thước, số bộ và diện tích tối thiểu của Item (dòng ${index + 1})`);
@@ -157,32 +121,20 @@ function resolveFactorMicros(line: UomLine, master: JsonObject | null, uom: stri
   );
 }
 
-/**
- * `rate` nhân với CÁI GÌ — và vì sao câu hỏi đó phải có câu trả lời khai rõ.
- *
- * `rate` vốn là một con số không có đơn vị, và cả hệ thống ngầm hiểu nó là "giá một đơn vị
- * giao dịch". Ngầm hiểu đó đúng cho mọi mặt hàng đếm được. Nó sai cho nhôm:
- *
- *     Nhận 200 cây · cân 1.200 kg · NCC báo 100.000 đ/kg
- *     qty × rate  =    200 × 100.000 =  20.000.000     ← nhân số CÂY với giá một KÝ
- *     đúng        =  1.200 × 100.000 = 120.000.000
- *
- * Sai sáu lần, và không dòng nào lệch: sổ kho và sổ cái dùng chung con số sai đó nên vẫn cân.
- *
- * Ba nhánh, và nhánh thứ ba là quan trọng nhất:
- *
- *   1. `rate_uom` trống hoặc trùng `uom` → nhân với `qty`. Đường của mọi dòng đang chạy.
- *   2. `rate_uom` trùng `weight_uom` của mặt hàng cân theo kiện → nhân với SỐ CÂN THẬT.
- *   3. Còn lại → TỪ CHỐI.
- *
- * Nhánh 3 không đi tìm hệ số quy đổi, dù `uom_conversions` có thể có. Cố suy ra là quay lại
- * đúng cái giả định vừa gỡ bỏ: hệ số tĩnh không diễn tả được nhôm — cùng một mã đo thật ra
- * 6,57 m/cây ở lô này và 8,61 ở lô kia. Đoán một lần nữa chỉ là đổi chỗ chỗ sai.
- */
-function applyRateUnit<T extends UomLine>(item: T, master: JsonObject | null, uom: string | undefined, qtyMicros: number, index: number): Partial<UomLine> {
+function applyRateUnit<T extends UomLine>(
+  item: T,
+  master: JsonObject | null,
+  uom: string | undefined,
+  qtyMicros: number,
+  index: number,
+): Partial<UomLine> {
   const weightMicros = item.actual_weight_micros
-    ?? (item.actual_weight_kg === undefined ? undefined : toScaledInt(item.actual_weight_kg, 6, `items[${index}].actual_weight_kg`));
-  const weightPart = weightMicros === undefined ? {} : { actual_weight_micros: weightMicros, actual_weight_kg: fromScaledInt(weightMicros, 6) };
+    ?? (item.actual_weight_kg === undefined
+      ? undefined
+      : toScaledInt(item.actual_weight_kg, 6, `items[${index}].actual_weight_kg`));
+  const weightPart = weightMicros === undefined
+    ? {}
+    : { actual_weight_micros: weightMicros, actual_weight_kg: fromScaledInt(weightMicros, 6) };
 
   const lineUom = uom ?? stockUomOf(master);
   const rateUom = item.rate_uom;
@@ -207,12 +159,6 @@ function applyRateUnit<T extends UomLine>(item: T, master: JsonObject | null, uo
   );
 }
 
-/**
- * Điền `conversion_factor`, `stock_uom` và `stock_qty` cho từng dòng.
- *
- * Đọc hồ sơ mặt hàng MỘT lần cho mỗi mã, vì một phiếu nhập nhôm hay có mười dòng cùng mã
- * khác khổ, và mười lượt đọc D1 trong một request là thứ đã từng làm thao tác quá hạn.
- */
 export async function applyUomConversion<T extends UomLine>(
   context: ControllerContext<JsonObject>,
   items: T[],
@@ -231,10 +177,21 @@ export async function applyUomConversion<T extends UomLine>(
     const dynamicStockQty = dynamicSetStockQtyMicros(item, master, uom, qtyMicros, index);
     const factorMicros = dynamicStockQty === undefined
       ? resolveFactorMicros(item, master, uom, index)
-      : toScaledInt(Number(fromScaledInt(dynamicStockQty, 6)) / Number(fromScaledInt(qtyMicros, 6)), 6, `items[${index}].conversion_factor`);
+      : toScaledInt(
+          Number(fromScaledInt(dynamicStockQty, 6)) / Number(fromScaledInt(qtyMicros, 6)),
+          6,
+          `items[${index}].conversion_factor`,
+        );
     const stockQty = dynamicStockQty ?? (factorMicros === ONE
       ? qtyMicros
-      : multiplyScaled(fromScaledInt(qtyMicros, 6), 6, fromScaledInt(factorMicros, 6), 6, 6, `items[${index}].stock_qty`));
+      : multiplyScaled(
+          fromScaledInt(qtyMicros, 6),
+          6,
+          fromScaledInt(factorMicros, 6),
+          6,
+          6,
+          `items[${index}].stock_qty`,
+        ));
     if (stockQty <= 0) throw errors.validation(`Số lượng quy đổi phải lớn hơn 0 (dòng ${index + 1})`);
     const stockUom = stockUomOf(master);
     const inventoryMode = itemText(master, "inventory_mode") || "Hàng thường";
@@ -247,8 +204,6 @@ export async function applyUomConversion<T extends UomLine>(
       ...(stockUom ? { stock_uom: stockUom } : {}),
       stock_qty: fromScaledInt(stockQty, 6),
       stock_qty_micros: stockQty,
-      // Gộp vào đây chứ không để thành một bước riêng caller phải nhớ gọi: hai chỗ đều cần
-      // hồ sơ mặt hàng, và một bước "nhớ gọi thêm" là bước sẽ bị quên ở controller thứ ba.
       ...applyRateUnit(item, master, uom, qtyMicros, index),
       ...(master ? {
         inventory_mode: inventoryMode,
@@ -260,17 +215,25 @@ export async function applyUomConversion<T extends UomLine>(
   });
 }
 
-/** Số lượng theo ĐƠN VỊ TỒN của một dòng — thứ mà sổ kho và hạn mức đặt hàng phải dùng. */
+/**
+ * Số lượng nghĩa vụ/tồn của một dòng.
+ *
+ * Nhôm cây/lá mua và định giá theo kg nhưng nhà máy nợ theo số cây/lá. `inventory_mode`
+ * là snapshot server từ Item, nên chỉ khi server xác nhận đúng chế độ này mới đọc `qty_bar`.
+ */
 export function stockQtyMicros(line: UomLine): number {
+  if (line.inventory_mode === "Nhôm cây/lá") {
+    const qtyBar = line.qty_bar;
+    if (typeof qtyBar !== "string" && typeof qtyBar !== "number") {
+      throw errors.validation(`Mặt hàng ${line.item_code}: Nhôm cây/lá phải có số cây/lá`);
+    }
+    const bars = toScaledInt(qtyBar, 6, "qty_bar");
+    if (bars <= 0) throw errors.validation(`Mặt hàng ${line.item_code}: số cây/lá phải lớn hơn 0`);
+    return bars;
+  }
   return line.stock_qty_micros ?? line.qty_micros ?? toScaledInt(line.qty, 6, "qty");
 }
 
-/**
- * Số lượng theo ĐƠN VỊ CỦA `rate` — thứ duy nhất được phép nhân với `rate`.
- *
- * Lùi về `qty` khi chưa qua `applyUomConversion` (chứng từ cũ đọc lại lúc huỷ), nên hành vi
- * của mọi dòng không khai `rate_uom` không đổi.
- */
 export function pricedQtyMicros(line: UomLine): number {
   return line.priced_qty_micros ?? line.qty_micros ?? toScaledInt(line.qty, 6, "qty");
 }
