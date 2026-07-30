@@ -5,7 +5,7 @@ Ngày audit: **2026-07-30**, workspace `C:\Forge`.
 ## Git
 
 - Branch: `hotfix/alumdoor-print-list-delete`
-- HEAD xác nhận trước khi cập nhật trạng thái deployment: `a1f78de066cb3c1ea1f4774696b5abf21455a48f` (`docs: update next Alumdoor print steps`).
+- HEAD xác nhận trước khi phân tích yêu cầu phân bổ nhập nhôm: `c12ccee0a6bbd2a2766a45d8c515129c493d36d9` (`docs: prioritize alu production smoke test`).
 - Commit code fixture bản in: `f5186c4ef6fb54d819bad95ee4eb17f2fd1a18e1` (`test(alumdoor): add purchase order print fixture`).
 - Baseline chức năng Alumdoor đã kéo và kiểm chứng trước đó: `7bbf20f45ecebf329af7b349e02e61827dfe32fe`.
 - Trước khi tạo bộ tài liệu ban đầu, Git status chỉ có hai thư mục untracked đã tồn tại: `server/work/` và `tmp/`.
@@ -53,6 +53,15 @@ Ngày **2026-07-30**, người vận hành xác nhận đã chạy hoàn tất t
 - Trạng thái này là **operator-confirmed**. GitHub connector không có quyền đọc Cloudflare deployment/version hoặc log terminal local nên chưa xác minh độc lập deployment ID, timestamp, health hoặc traffic.
 - Việc deploy Gateway `cloudforge-gateway` lên 100% production traffic chưa được xác nhận trong tài liệu này.
 
+## Yêu cầu mới — phân bổ FIFO hàng nhôm về theo đơn mua
+
+- Khách yêu cầu một lần nhập có thể bù nhiều đơn mua cùng nhà cung cấp/mã/quy cách theo thứ tự cũ trước: đặt 200 cây rồi 100 cây, nhập 230 cây thì tự phân bổ 200 cây cho đơn đầu và 30 cây cho đơn sau; tồn danh nghĩa của đơn sau là 70 cây.
+- Mỗi lần nhập phải giữ lịch sử diễn giải bất biến: phiếu nhập nào, ngày nào, dòng nào đã trừ vào dòng đơn mua nào, bao nhiêu cây, kg barem và kg cân thực tế; huỷ chứng từ phải ghi bút toán đảo, không xoá dấu vết.
+- Code hiện tại đã cộng dồn `purchase_order_progress_entries` và chặn nhận vượt theo `receipt_tolerance_pct`, nhưng kiểm theo từng Purchase Order và `item_code`; chưa tự phân bổ FIFO qua nhiều đơn và chưa bám tới `purchase_order_item.row_id`.
+- `ProcurementEntry` hiện chỉ có Purchase Order, loại tiến độ, mã hàng, số lượng và ngày; chưa đủ nguồn dòng phiếu nhập/dòng đơn mua, kg barem, kg thực tế và phương pháp phân bổ để dựng lịch sử yêu cầu.
+- Ví dụ khách chốt dung sai theo **pool gộp**: tổng đặt 300 cây, ±5% tương đương 285–315 cây; đã nhận 230 thì lần giao cuối hợp lệ trong khoảng 55–85 cây. Luật này khác kiểm dung sai độc lập từng đơn hiện tại và phải được mô hình hoá bằng một nhóm/pool có chủ đích, không tự gộp mọi đơn cùng mã vô thời hạn.
+- Chưa sửa code trong đợt phân tích này. Thiết kế tiếp theo là sổ phân bổ receipt-to-PO-line bất biến, thuật toán FIFO, trạng thái đóng trong dung sai và báo cáo lịch sử/nợ nhà máy.
+
 ## Test và lint đã được khôi phục
 
 - Hai assertion Alumdoor đã được cập nhật trực tiếp theo contract v2.0.34 trong `server/tests/alumdoor-item-model.test.mjs`.
@@ -87,6 +96,8 @@ Ngày **2026-07-30**, người vận hành xác nhận đã chạy hoàn tất t
 - GitHub connector chưa trả check-run cho HEAD hiện tại; không dùng trạng thái audit cũ để suy ra CI của commit mới.
 - Tenant `alu` đã được operator xác nhận deploy, nhưng chưa có smoke-test production được ghi nhận cho login, CRUD, list/delete, print preview và PDF.
 - Chưa xác nhận Gateway version nào đang nhận 100% production traffic.
+- Tiến độ mua hiện gộp theo `item_code`; cùng mã nhưng khác chiều dài/màu/dập hoặc có hai dòng trong một đơn có thể bị đối chiếu nhầm nếu dùng nguyên mô hình này cho FIFO.
+- Dung sai hiện chỉ chặn trần nhận tối đa; chưa có khái niệm tối thiểu khi đóng đơn, pool gộp, hoặc hành động đóng phần thiếu trong dung sai.
 - Fixture mới chưa thay thế visual regression test trên Chromium và kiểm tra PDF tải xuống thực tế.
 - Tài liệu trạng thái cũ như `server/STATUS.md` lệch migration/phiên bản hiện hành; cần tránh dùng làm nguồn sự thật.
 - Bundle client lớn, ảnh hưởng tải trang nhưng chưa chặn build.
