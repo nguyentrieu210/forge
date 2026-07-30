@@ -1,188 +1,149 @@
 # NEXT TASKS
 
-## Hoàn thành — Khôi phục test gate Alumdoor
+## P0 — Xác minh production tenant `alu` hiện hành
 
-**Mục tiêu:** làm test phản ánh contract v2.0.34 hiện hành mà không quay lại layout/cột cũ.
+**Mục tiêu:** chứng minh deployment đang live hoạt động đúng, thay vì coi exit code là nghi thức ban phước cho hạ tầng.
 
-- File dự kiến: `server/tests/alumdoor-item-model.test.mjs`, `server/scripts/build-alumdoor-v2-brief.mjs`, đối chiếu `server/briefs/alumdoor-v2.json`.
-- Rủi ro: sửa test theo output sai sẽ hợp thức hóa regression; cần chốt print contract với BRD/mẫu đã duyệt.
-- Trạng thái: hoàn thành; root `pnpm.cmd run test` đã chạy tới cuối và pass.
-- Kiểm tra: test server, SQL tests, client selfcheck; render một Purchase Order thật ở preview và PDF.
-- Phụ thuộc: không.
+- Người vận hành đã xác nhận backup, tenant preflight và live deploy phiên bản trước FIFO ngày 2026-07-30.
+- Còn lại: xác nhận Gateway version/traffic; smoke `alu.kairo.vn` cho login, list, form, create/update/delete chứng từ thử, Purchase Order preview và tải PDF.
+- Ghi deployment/version ID, thời điểm, kết quả từng bước và vị trí backup mã hóa; không ghi secret hoặc dữ liệu khách hàng.
+- Rollback trigger: login/API 5xx, sai tenant/database, mất dữ liệu CRUD, permission regression hoặc print/PDF lỗi nghiêm trọng.
 
-## P0 — Xác minh production tenant `alu` sau deploy
+## P0 — Hoàn thiện và rollout hàng đợi nhập nhôm FIFO
 
-**Mục tiêu:** chứng minh deployment live hoạt động đúng, thay vì coi exit code là một nghi lễ ban phước.
+**Mục tiêu:** đưa contract tại `server/docs/ALUMDOOR-PURCHASE-RECEIPT-ALLOCATION.md` từ backend core đã xanh CI thành workflow production đầy đủ, có backfill và UI vận hành được.
 
-- Trạng thái: người vận hành xác nhận ngày 2026-07-30 đã backup remote D1 ra `C:\ForgeBackups\alu`, chạy tenant preflight và live deploy với `--execute --confirm alu` thành công.
-- Còn lại: xác nhận Gateway version đang nhận production traffic; smoke test `alu.kairo.vn` cho login, list, mở form, create/update/delete chứng từ thử, Purchase Order print preview và tải PDF.
-- Ghi nhận sau kiểm tra: deployment/version ID và thời điểm; kết quả từng smoke step; backup manifest/checksum và nơi lưu trữ mã hóa ngoài repository. Không ghi secret hoặc nội dung dữ liệu khách hàng.
-- Rollback trigger: login/API 5xx, sai tenant routing/database, CRUD mất dữ liệu, print/PDF lỗi nghiêm trọng hoặc permission regression.
-- Hoàn thành khi: Gateway và tenant đều đúng version dự kiến, smoke test xanh, không có lỗi production mới và backup đã được chuyển khỏi nơi lưu plaintext thông thường.
-- Phụ thuộc: tenant live deploy đã operator-confirmed; Gateway production traffic chưa được xác nhận độc lập.
+- HEAD implementation đã qua CI run `30567772883`: test, typecheck và build **PASS**.
+- Feature rollout mặc định **tắt**. Không có rollout row hoặc `enabled=0` thì PO/Receipt tiếp tục dùng controller legacy.
+- Không bật rollout cho `alu` trước backfill/checksum, M5–M7 và staging smoke.
 
-## P1 — Implement hàng đợi nhập nhôm FIFO và nợ nhà máy
+### Hoàn thành — M1: Schema, contract và atomic persistence
 
-**Mục tiêu:** triển khai contract đã chốt tại `server/docs/ALUMDOOR-PURCHASE-RECEIPT-ALLOCATION.md` để một Receipt có thể tự bù nhiều PO line, giữ lịch sử bất biến và đối soát dung sai chính xác.
+- Migration:
+  - `0027_purchase_receipt_allocation.sql`
+  - `0028_purchase_allocation_cancel_guard.sql`
+  - `0029_purchase_allocation_rollout.sql`
+- Có queue, windows, obligations, allocations, unapplied, settlement entries, revision claims, views và triggers.
+- Allocation rows được ghi cùng D1 batch với document, stock, procurement compatibility projection và mutation receipt.
+- Revision conflict abort toàn batch và được phân loại retryable.
+- SQL tests cover stale revision rollback, row guards, reversal cap, PO cancel, settlement boundaries và rollout activation constraints.
 
-- Ngày **2026-07-30**, người dùng dự án đã **duyệt** contract v1 và cho phép bắt đầu implementation từ M1.
-- Phê duyệt implementation không bao gồm quyền deploy production hoặc sửa production secrets; rollout vẫn phải qua M8 và explicit deploy approval.
-- Điểm review thiết kế sau chốt: **9,2/10**. Trạng thái: **approved and ready for implementation**, chưa ready for production.
-- Kịch bản khóa: PO 200 + 100 cây, Receipt 230 cây/644,184 kg barem/630 kg thực => allocation 200 + 30, còn nợ danh nghĩa 70.
-- Quyết định concurrency đã chốt: `PurchaseAllocationCoordinator` theo `tenant + company + supplier`, cộng D1 revision claim/trigger authoritative trong cùng batch. Không lock riêng từng vật tư.
-- Quyết định lifecycle đã chốt: obligation queue chạy liên tục; settlement window hữu hạn và snapshot tolerance. Window chỉ close/reverse bằng action có quyền và lý do.
-- Quyết định ordering đã chốt: FIFO tại thời điểm commit; backdated Receipt không viết lại allocation cũ; cancel Receipt chỉ reverse chính Receipt đó, không auto-rebalance Receipt mới hơn.
-- Quyết định PO đã chốt: identity/qty bất biến sau submit; cancel chỉ khi net allocation bằng 0 và window chưa settled; amend qua successor `amended_from`.
-- Quyết định material key đã chốt: canonical hash schema v1 gồm `item_code + length_m + theoretical_kg_per_m + color + is_stamped + measurement_profile + stock_uom`, do server tạo.
-- Quyết định kg đã chốt: cân thực authoritative ở Receipt line; kg theo PO là projection versioned theo barem, residual dồn allocation cuối.
-- Quyết định legacy đã chốt: backfill từ `versions.snapshot_json`; exact unique => resolved, mơ hồ => `legacy_unresolved`; không đoán PO row id.
-- Quyết định cutover đã chốt: allocation ledger là nguồn sự thật; progress table cũ chỉ là compatibility projection sinh từ allocation plan.
+### Hoàn thành — M2: Canonical material key
 
-### M1 — Schema và contract
+- Server hash schema v1 từ item, chiều dài, barem kg/m, màu, dập, measurement profile và stock UOM.
+- Fixed-point micros, null/empty normalization và canonical JSON ổn định.
+- Test khóa việc khác quy cách không được bù lẫn.
 
-- Trạng thái: **được phép bắt đầu**.
-- Thêm migration append-only `server/migrations/tenant/0027_purchase_receipt_allocation.sql`.
-- Thêm tables cho queue, settlement window, obligations, allocations, unapplied, settlement events và revision claims.
-- Thêm triggers/unique/check guards cho revision, sign, lifecycle, live row id và idempotency.
-- Mở rộng `MutationPlan`, contracts và D1 store để ghi allocation cùng document/stock/procurement.
-- Test SQL: revision mismatch abort toàn batch; live allocation thiếu PO row bị từ chối; reversal sign/lifecycle hợp lệ.
+### Hoàn thành — M3: Supplier coordinator
 
-### M2 — Canonical material key
+- PO/Receipt submit/cancel được serialize theo `purchase:<tenant>:<company>:<supplier>` trong namespace `AGGREGATES` hiện có.
+- Không lock riêng từng vật tư nên không tạo multi-lock/deadlock trong một xe nhiều mặt hàng.
+- Retry revision conflict tối đa ba lần với cùng command id; lỗi nghiệp vụ và version conflict khác không bị nuốt.
 
-- Viết canonicalizer thuần hàm, fixed-point micros, canonical JSON và SHA-256.
-- Snapshot hash + các field giải thích được trên PO/Receipt/allocation.
-- Test khác chiều dài, barem, màu, dập hoặc profile không trộn; null/empty normalization ổn định.
+### Đang làm — M4: FIFO planner và application lifecycle
 
-### M3 — Coordinator và retry
+Đã xong:
 
-- Thêm `PurchaseAllocationCoordinator` và route các mutation ảnh hưởng stream.
-- Draft create/save giữ Aggregate Coordinator hiện tại.
-- Retry revision conflict tối đa 3 lần với cùng command id; idempotency receipt vẫn authoritative.
-- Test hai Receipt submit đồng thời, PO submit cạnh Receipt, retry sau conflict và không double allocation.
+- PO submit mở obligation theo row.
+- Receipt submit tự FIFO qua nhiều PO.
+- Một Receipt nhiều dòng được xử lý tuần tự theo queue để các dòng cùng xe không tranh nhau.
+- Receipt vượt nominal nhưng trong tolerance tạo unapplied quantity.
+- Receipt cancel tạo allocation/procurement reversal theo nguồn.
+- Nhôm cây/lá lấy `qty_bar` làm nghĩa vụ/tồn; kg barem và actual weight giữ riêng.
+- Integration test 200 + 100 / nhận 230 => 200 + 30, còn 70.
+- Stress planner 250 obligation rows.
 
-### M4 — Allocation planner
+Còn lại:
 
-- Planner thuần hàm nhận obligations + Receipt line + window snapshot và trả allocation/unapplied/events.
-- FIFO theo `transaction_date → created_at → PO name → idx → row_id`.
-- Một Receipt line bù nhiều PO; một Receipt nhiều dòng; hàng trăm rows.
-- Receipt vượt current maximum bị block; vượt nominal nhưng trong maximum ghi unapplied.
-- PO mới trước settlement tự apply unapplied cũ bằng event mới.
+- Khi PO mới gia nhập window đang có unapplied quantity, tự tạo `apply_unapplied` allocation event và giảm unapplied source trong cùng batch.
+- Bổ sung production-shaped integration test cho cancel Receipt và nhiều Receipt lines trên cùng queue.
+- Test đồng thời ở worker/DO level, không chỉ revision/SQL và planner unit.
 
-### M5 — Lifecycle và edge cases
+### P0 tiếp theo — M5: Settlement và edge cases
 
-- Cancel Receipt ghi reverse, không rebalance lịch sử.
-- Backdated Receipt dùng posting date cho sổ, stream sequence cho allocation.
-- PO cancel/amend guards.
-- Manual override cùng supplier/material/window, permission + reason bắt buộc.
-- Settlement close/reverse rules, integer min/max, shortage/overage variance.
+- Tạo server action/API cho `Đối soát giao cuối / Đóng trong dung sai`.
+- Permission server-side và reason bắt buộc.
+- Integer min/max, shortage/overage variance và settlement event append-only.
+- Reverse settlement chỉ khi window kế tiếp chưa có activity.
+- Manual FIFO override cùng supplier/material/window, permission + reason.
+- Cảnh báo backdated Receipt; allocation vẫn theo commit sequence.
+- Khóa PO amend/cancel và Receipt cancel với settlement lifecycle đúng contract.
 
-### M6 — Backfill và cutover
+### P0 tiếp theo — M6: Backfill và cutover
 
-- Viết `server/scripts/backfill-purchase-receipt-allocations.mjs` với dry-run mặc định.
-- Dùng voucher revision, line key và `versions.snapshot_json` để dựng source row.
-- Xuất resolved/unresolved/checksum; không execute nếu PO-level quantity không khớp.
-- Chuyển `received_percentage`, tồn danh nghĩa và báo cáo sang ledger mới.
-- Compatibility progress rows được sinh từ allocation plan, không ghi độc lập.
+- Viết `server/scripts/backfill-purchase-receipt-allocations.mjs`, dry-run mặc định.
+- Đọc voucher revision, line key, `versions.snapshot_json`, PO/Receipt child rows và legacy progress.
+- Exact unique => resolved; mơ hồ => `legacy_unresolved`; tuyệt đối không đoán row id.
+- Xuất resolved/unresolved counts, PO-level quantity checksum và file review.
+- Không cho activation nếu checksum lệch hoặc unresolved > 0.
+- Activation ghi `purchase_allocation_rollout_state` với checksum, actor và timestamp.
+- Sau cutover, allocation ledger là nguồn sự thật; progress table cũ chỉ là compatibility projection sinh từ cùng plan.
 
-### M7 — UI và báo cáo
+### P1 — M7: UI và báo cáo
 
 - Preview allocation trước submit Receipt.
-- Timeline PO/Receipt với drill-down.
+- Timeline PO/Receipt: Receipt nào trừ PO row nào, số cây, barem, cân thực và reversal.
 - Hiển thị nominal remaining, actual received, unapplied, settlement range và variance.
-- Manual override/settlement action có permission, reason và cảnh báo backdated.
-- Báo cáo NCC: tổng đặt, tổng về, nợ danh nghĩa, window, dải giao cuối và PO cũ nhất.
+- Settlement/manual override action có permission, reason và confirmation rõ.
+- Báo cáo NCC: tổng đặt, tổng về, nợ danh nghĩa, window, dải giao cuối và tuổi PO cũ nhất.
 
-### M8 — Gate và rollout
+### P0 rollout — M8: Gate và deployment
 
-- Targeted unit/SQL/integration/concurrency/stress tests.
-- Root `pnpm.cmd run test`, `pnpm.cmd run typecheck`, `pnpm.cmd run build`, frontend lint.
+Đã xong:
+
+- CI test/typecheck/build xanh trên run `30567772883`.
+- Rollout gate mặc định tắt và database chặn bật nếu thiếu checksum/unresolved còn tồn.
+- Draft PR CI tạm #6 đã đóng, không merge và không deploy.
+
+Còn lại:
+
 - Đo D1 batch size/latency với hàng trăm allocation rows và supplier contention.
-- Dry-run backfill trên backup production, review unresolved và checksum.
-- Staging migration/smoke trước; production chỉ sau backup mới và explicit deploy approval.
-
-- File chính dự kiến: `server/packages/contracts/src/index.ts`, `server/packages/clouderp-core/src/types.ts`, `server/packages/clouderp-core/src/controllers.ts`, tenant routing/coordinator, document kernel/D1 store, migration `0027`, backfill script, Alumdoor generator/brief, report/UI và tests.
-- Hoàn thành khi: trạng thái dựng lại hoàn toàn từ ledger bất biến; không double allocation; cancel/backdated không sửa lịch sử; settlement boundary đúng; legacy checksum khớp; browser workflow usable.
-- Phụ thuộc: P0 production smoke nên hoàn tất trước deployment tiếp theo. Implementation local/staging có thể bắt đầu theo M1.
+- Backup production mới.
+- Apply migrations trên staging.
+- Dry-run backfill staging/backup, review unresolved/checksum.
+- Staging smoke toàn luồng PO→Receipt→cancel→settlement→report.
+- Chỉ sau explicit production approval mới migrate/deploy/activate `alu`.
 
 ## P1 — Kiểm thử ổn định bản in Purchase Order Alumdoor
 
-**Mục tiêu:** khóa các yêu cầu gần nhất: cột đúng thứ tự, Dập trước Ghi chú, không Số bó, căn giữa theo hàng, logo/header/tựa đề không dính và preview khớp PDF.
+- Fixture production renderer đã khóa A4 portrait, 13 cột, Dập trước Ghi chú, không Số bó, căn giữa, logo/header, thứ tự row, format số và không placeholder.
+- Còn lại: browser smoke production, tải PDF thật, kiểm font/tràn nội dung/trang trắng và cân nhắc visual regression Chromium.
+- Phụ thuộc: xác minh production tenant/Gateway.
 
-- File: `server/scripts/build-alumdoor-v2-brief.mjs`, `server/tests/alumdoor-item-model.test.mjs`, `server/tests/alumdoor-purchase-order-print.test.mjs`, có thể thêm fixture/snapshot browser trong `server/tests/` hoặc client test.
-- Trạng thái: **đang làm**. Commit `f5186c4ef6fb54d819bad95ee4eb17f2fd1a18e1` đã thêm fixture chạy qua renderer production với một dòng nhôm và một dòng hàng thường; tenant `alu` đã được operator xác nhận deploy.
-- Đã khóa tự động: A4 portrait, 13 cột và tổng width 100%, thứ tự `Dập` trước `Ghi chú`, không `Số bó`, căn giữa, logo/header, render theo `idx`, format số Việt Nam, không còn placeholder và hàng thường không bị điền giả dữ liệu nhôm.
-- Còn lại: xác nhận CI/gate theo HEAD hiện tại; thực hiện production browser smoke và tải PDF thật để kiểm tra lệch font, tràn nội dung và trang trắng; sau đó cân nhắc browser visual/integration automation.
-- Rủi ro: browser preview và html2canvas/jsPDF có metric font khác nhau; ảnh header/data URI làm test text cũ không phù hợp.
-- Hoàn thành khi: fixture có dữ liệu nhôm và hàng thường render đúng ở preview + PDF; test kiểm tra cấu trúc thay vì chuỗi HTML mong manh; có bằng chứng browser/PDF thực tế.
-- Kiểm tra: `pnpm.cmd run test`, `pnpm.cmd run typecheck`, `pnpm.cmd run build`, build brief, production smoke ở `alu.kairo.vn`, tải PDF thật và so visual A4 portrait.
-- Phụ thuộc: P0 production verification.
+## Hoàn thành — Khôi phục test/lint gate
 
-## Hoàn thành — Xử lý 26 lỗi lint có kiểm soát
-
-**Mục tiêu:** đưa `pnpm.cmd --filter metaforge run lint` về xanh mà không đổi UI/behavior.
-
-- File dự kiến: 9 file liệt kê trong `CURRENT_STATUS.md`, và chỉ sửa `client/scripts/check-native-ui.mjs` nếu chứng minh false positive.
-- Rủi ro: thay native element bằng shared component có thể đổi event, accessibility hoặc layout.
-- Trạng thái: hoàn thành; lint, typecheck, test và build đều pass local.
-- Kiểm tra: lint, typecheck, build, visual smoke ở Storefront, DocTypeBuilder, AppShell, ChildGrid, ActionScreen.
-- Phụ thuộc: không.
+- Test contract Alumdoor v2.0.34 đã phản ánh layout hiện hành.
+- Frontend lint: 0 native UI violations, 0 hook-order violations.
+- Root test/typecheck/build đã pass ở audit trước; CI FIFO mới cũng pass test/typecheck/build.
 
 ## P1 — Bổ sung test lưu partial Frappe document
 
-**Mục tiêu:** khóa bug đã sửa gần đây: PUT partial vào submitted document phải merge với stored document trước controller normalization.
+**Mục tiêu:** khóa bug PUT partial vào submitted document phải merge stored document trước controller normalization.
 
-- File dự kiến: `server/packages/frappe-api/src/router.ts`, test facade/integration trong `server/apps/tenant-worker/test/` hoặc `server/tests/`.
-- Rủi ro: merge sai có thể cho phép field bị bỏ qua hoặc làm mất child rows.
-- Hoàn thành khi: test cover normal doc, submitted doc, child table và concurrency/timestamp.
-- Kiểm tra: targeted integration test + root test.
-- Phụ thuộc: P0 để root gate chạy trọn.
+- Cover normal doc, submitted doc, child table và concurrency/timestamp.
+- Targeted facade/integration test + root gate.
 
 ## P2 — Hoàn thiện page/dashboard/process renderers
 
-**Mục tiêu:** thay fallback có chủ đích bằng renderer/API contract đầy đủ.
-
-- File dự kiến: `client/apps/runtime/src/main.tsx`, `client/packages/views/src/process/`, `client/packages/adapter-frappe/src/frappe-adapter.ts`, `server/packages/frappe-api/src/router.ts`.
-- Rủi ro: mở rộng API có ảnh hưởng permission/manifest compatibility.
-- Hoàn thành khi: route có metadata hợp lệ render được; route không hỗ trợ trả lỗi rõ ràng; permission được test.
-- Kiểm tra: integration + browser route smoke.
-- Phụ thuộc: P0.
+- Thay fallback bằng renderer/API contract đầy đủ.
+- Test route metadata, unsupported route và permission.
 
 ## P2 — Hoàn thiện collaboration UI
 
-**Mục tiêu:** assign picker, upload/delete attachment và add/remove tag từ form context.
+- Assign picker, upload/delete attachment và add/remove tag từ form context.
+- Test optimistic update, permission và refetch.
 
-- File dự kiến: `client/packages/views/src/`, `client/packages/adapter-frappe/src/frappe-adapter.ts`.
-- Rủi ro: optimistic update, file permission và stale timeline.
-- Hoàn thành khi: thao tác thật round-trip qua facade, refetch chính xác và có trạng thái lỗi.
-- Kiểm tra: integration trên user có/không có quyền.
-- Phụ thuộc: lint P1 nên xử lý trước để tránh tăng nợ UI.
+## P2 — Đồng bộ tài liệu trạng thái legacy
 
-## P2 — Đồng bộ tài liệu trạng thái
-
-**Mục tiêu:** loại bỏ mâu thuẫn giữa `server/STATUS.md`, traceability cũ và code/migration hiện tại.
-
-- File dự kiến: `server/STATUS.md`, `client/docs/KNOWN_GAPS.md`, `client/docs/implementation-traceability.md`.
-- Rủi ro: vô tình tuyên bố production state chưa xác minh.
-- Hoàn thành khi: mỗi tuyên bố có lệnh/commit/file chứng minh và ngày kiểm tra.
-- Kiểm tra: review chéo với migration, manifest, package scripts và CI.
-- Phụ thuộc: P0 để có trạng thái test chuẩn.
+- Đối chiếu `server/STATUS.md`, `client/docs/KNOWN_GAPS.md` và traceability với code/migrations hiện tại.
+- Mỗi tuyên bố phải có commit/file/lệnh/ngày chứng minh.
 
 ## P3 — Tối ưu bundle frontend
 
-**Mục tiêu:** giảm warning chunk lớn và tải ban đầu.
-
-- File dự kiến: `client/apps/*/vite.config.*`, route imports trong `client/apps/runtime/src/main.tsx`, export graph của `client/packages/views/`.
-- Rủi ro: split sai gây duplicate dependency hoặc lỗi runtime lazy loading.
-- Hoàn thành khi: chunk chính giảm có đo lường, không tăng tổng payload đáng kể.
-- Kiểm tra: build stats, browser smoke, Core Web Vitals.
-- Phụ thuộc: test/lint xanh.
+- Đo và giảm chunk lớn, không tăng tổng payload đáng kể.
+- Build stats, browser smoke và Core Web Vitals.
 
 ## P3 — Chuẩn hóa local onboarding
 
-**Mục tiêu:** có một đường chạy local rõ cho Gateway + Tenant + D1 mà không phụ thuộc thông tin truyền miệng.
-
-- File dự kiến: `README.md`, `server/README.md`, script local seed/migrate hiện có.
-- Rủi ro: tài liệu hóa nhầm secret/resource ID.
-- Hoàn thành khi: máy sạch có thể chạy từ `.env.example`/`.dev.vars.example` bằng giá trị giả và tài nguyên local.
-- Kiểm tra: clean-room setup.
-- Phụ thuộc: không.
+- Có một đường chạy local Gateway + Tenant + D1 từ config mẫu, không phụ thuộc thông tin truyền miệng hoặc production secret.
+- Kiểm tra clean-room setup.
