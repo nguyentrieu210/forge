@@ -6,6 +6,11 @@ on:
       - hotfix/alumdoor-print-list-delete
     paths:
       - .github/workflows/ai-fix-alumdoor-v2034.yml
+  pull_request:
+    branches:
+      - hotfix/alumdoor-print-list-delete
+    paths:
+      - .github/ai-trigger-alumdoor-v2034.txt
   workflow_dispatch:
 
 permissions:
