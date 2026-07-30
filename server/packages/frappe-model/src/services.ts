@@ -257,7 +257,7 @@ export function renderPrintFormat(format: PrintFormatMeta, document: CanonicalDo
   for (const rows of tables.values()) rows.sort((a, b) => Number(a.idx ?? 0) - Number(b.idx ?? 0));
 
   const interpolate = (template: string, scope: Record<string, JsonValue>): string =>
-    template.replace(/{{\s*([a-zA-Z0-9_.]+)\s*(?:\|\s*([a-z]+)\s*)?}}/g, (_match, path: string, filter?: string) =>
+    template.replace(/{{\s*([a-zA-Z0-9_.]+)\s*(?:\|\s*([a-z0-9]+)\s*)?}}/g, (_match, path: string, filter?: string) =>
       escapeHtml(applyFilter(resolvePath(scope, path), filter, locale)));
 
   /**
@@ -293,10 +293,10 @@ function applyFilter(value: string, filter: string | undefined, locale: string):
     qr.make();
     return qr.createDataURL(3, 2);
   }
-  if (filter === "money" || filter === "number") {
+  if (filter === "money" || filter === "number" || filter === "number2") {
     const parsed = Number(value);
     if (!Number.isFinite(parsed)) return value;
-    const fractionDigits = filter === "money" ? 0 : Math.min(4, (value.split(".")[1] ?? "").length);
+    const fractionDigits = filter === "money" ? 0 : filter === "number2" ? 2 : Math.min(4, (value.split(".")[1] ?? "").length);
     return new Intl.NumberFormat(locale.startsWith("vi") ? "vi-VN" : locale, { minimumFractionDigits: fractionDigits, maximumFractionDigits: fractionDigits }).format(parsed);
   }
   if (filter === "date") {

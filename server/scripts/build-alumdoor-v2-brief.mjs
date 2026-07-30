@@ -48,7 +48,7 @@ const replaceField = (dt, name, next) => {
 };
 
 // ─────────────────────────── HEADER ───────────────────────────
-brief.version = "2.0.10";
+brief.version = "2.0.11";
 brief.locale.dateFormat = "dd/mm/yyyy"; // Q11 — chủ xưởng chốt gạch chéo
 // Nỗi đau #1 của BRD: người mở app phải thấy ngay tồn KHẢ DỤNG theo khổ, không phải tự lấy tồn tổng
 // rồi trừ các phiếu giữ bằng tay. Báo cáo này nằm ở query engine nền tảng vì nó đọc cùng sổ kho.
@@ -986,7 +986,7 @@ brief.prints.push({
   default: true,
   css: [
     "@page{size:A4 landscape;margin:0}",
-    "*{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif} html,body{margin:0}body{width:297mm;min-height:210mm;font-family:Arial,Helvetica,sans-serif;font-size:8px;color:#111;padding:23.7mm 22mm 8mm}",
+    "*{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif} html,body{margin:0}body{width:297mm;min-height:210mm;font-family:Arial,Helvetica,sans-serif;font-size:9px;color:#111;padding:23.7mm 22mm 8mm}",
     ".letterhead{position:relative;width:100%;height:14.8mm}",
     ".brand-logo{position:absolute;left:2.7mm;top:2.8mm;width:43.6mm;height:auto}",
     ".company-block{position:absolute;right:2.7mm;top:0;width:94mm;text-align:center;font-size:6.5px;font-style:italic;line-height:1.45}",
@@ -994,11 +994,11 @@ brief.prints.push({
     ".company-block b{font-style:normal}.website{font-style:normal}",
     ".title{width:100%;font-size:15px;font-weight:700;color:#f15a24;text-transform:uppercase;text-align:center;margin:0 0 3.2mm}",
     ".meta{width:100%;font-size:7px;font-weight:400;line-height:1.45;margin-bottom:4.5mm}.meta div{min-height:2.6mm}.meta b{display:inline-block;min-width:30mm}",
-    "table{width:100%;border-collapse:collapse;table-layout:auto}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}th,td{border:1px solid #777;padding:2px 1.5px;vertical-align:middle}",
-    "th{background:#f3f3f3;font-size:6.2px;text-transform:uppercase;text-align:center;line-height:1.12;white-space:normal}",
-    "td{white-space:nowrap}.n{text-align:right;font-variant-numeric:tabular-nums}.c{text-align:center}.code{font-weight:700}.item-cell,.note-cell{white-space:normal;overflow-wrap:anywhere}.small{font-size:6px;color:#555}",
+    "table{width:100%;border-collapse:collapse;table-layout:auto}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}th,td{border:1px solid #777;padding:4px 2px;vertical-align:middle;line-height:1.28}",
+    "th{background:#f3f3f3;font-size:7.4px;text-transform:uppercase;text-align:center;line-height:1.25;white-space:normal;padding-top:4.5px;padding-bottom:4.5px}",
+    "td{font-size:8.6px;white-space:nowrap}.n{text-align:right;font-variant-numeric:tabular-nums}.c{text-align:center}.code{font-weight:700}.item-cell,.note-cell{white-space:normal;overflow-wrap:anywhere}.small{font-size:7px;color:#555}",
     ".index-col{width:1%;white-space:nowrap}.note-col,.note-cell{width:1%;min-width:18mm;max-width:26mm}",
-    "tfoot td{font-size:8px;font-weight:800;background:#fff}.total-label{text-align:right}.total-value{text-align:right;color:#c55a11;white-space:nowrap}",
+    "tfoot td{font-size:9.4px;font-weight:800;line-height:1.3;background:#fff;padding-top:5px;padding-bottom:5px}.total-label{text-align:right;padding-right:5px}.total-value{text-align:right;color:#c55a11;white-space:nowrap;padding-left:4px;padding-right:4px}",
     ".sign{display:flex;width:100%;justify-content:space-between;text-align:center;margin-top:18px}.sign div{width:30%}.sign b{display:block;margin-bottom:35px;font-size:8px}",
   ],
   html: [
@@ -1007,10 +1007,10 @@ brief.prints.push({
     "<div class=\"title\">Đơn đặt hàng</div>",
     "<div class=\"meta\"><div><b>Tên nhà cung cấp:</b>{{ supplier }}</div><div><b>Ngày đặt hàng:</b>{{ transaction_date | date }}</div><div><b>Ngày giao hàng:</b>{{ schedule_date | date }}</div></div>",
     "<table><thead><tr>",
-    "<th class=\"index-col\">STT</th><th>Mã hàng</th><th>Tên hàng</th><th>Màu sắc</th><th>Kích thước</th><th>Trọng lượng</th><th>Số bó</th><th>Số cây/lá</th><th>Số lượng</th><th>ĐVT</th><th>Đơn giá</th><th>Thành tiền</th><th>Dập</th><th class=\"note-col\">Ghi chú</th>",
+    "<th class=\"index-col\">STT</th><th>Mã hàng</th><th>Tên hàng</th><th>Màu sắc</th><th>Kích thước</th><th>Dập</th><th>Trọng lượng</th><th>Số bó</th><th>Số cây/lá</th><th>Số lượng</th><th>ĐVT</th><th>Đơn giá</th><th>Thành tiền</th><th class=\"note-col\">Ghi chú</th>",
     "</tr></thead><tbody>",
-    "{{#each items}}<tr><td class=\"c index-col\">{{ _index }}</td><td class=\"code\">{{ item_code }}</td><td class=\"item-cell\">{{ item_name }}</td><td class=\"c\">{{ color }}</td><td class=\"n\">{{ length_m | number }}</td><td class=\"n\">{{ theoretical_kg_per_m | number }}</td><td class=\"n\">{{ qty_bundle | number }}</td><td class=\"n\">{{ qty_bar | number }}</td><td class=\"n\">{{ qty | number }}</td><td class=\"c\">{{ uom }}</td><td class=\"n\">{{ rate | money }}</td><td class=\"n\">{{ amount | money }}</td><td class=\"c\">{{ is_stamped }}</td><td class=\"note-cell\">{{ note }}</td></tr>{{/each}}",
-    "</tbody><tfoot><tr><td class=\"total-label\" colspan=\"11\">Tổng tiền</td><td class=\"total-value\">{{ grand_total | money }} {{ currency }}</td><td colspan=\"2\"></td></tr></tfoot></table>",
+    "{{#each items}}<tr><td class=\"c index-col\">{{ _index }}</td><td class=\"code\">{{ item_code }}</td><td class=\"item-cell\">{{ item_name }}</td><td class=\"c\">{{ color }}</td><td class=\"n\">{{ length_m | number }}</td><td class=\"c\">{{ is_stamped }}</td><td class=\"n\">{{ theoretical_kg_per_m | number }}</td><td class=\"n\">{{ qty_bundle | number }}</td><td class=\"n\">{{ qty_bar | number }}</td><td class=\"n\">{{ qty | number2 }}</td><td class=\"c\">{{ uom }}</td><td class=\"n\">{{ rate | money }}</td><td class=\"n\">{{ amount | money }}</td><td class=\"note-cell\">{{ note }}</td></tr>{{/each}}",
+    "</tbody><tfoot><tr><td class=\"total-label\" colspan=\"12\">Tổng tiền</td><td class=\"total-value\">{{ grand_total | money }} {{ currency }}</td><td></td></tr></tfoot></table>",
     "<div class=\"sign\"><div><b>Người lập đơn</b>(ký, ghi rõ họ tên)</div><div><b>Người duyệt</b>(ký, ghi rõ họ tên)</div><div><b>Nhà cung cấp xác nhận</b>(ký, ghi rõ họ tên)</div></div>",
   ],
 });

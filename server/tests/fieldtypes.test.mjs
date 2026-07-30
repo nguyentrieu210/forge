@@ -192,3 +192,18 @@ test("print yesno filter renders stamping choice in Vietnamese", () => {
   assert.match(stamped, /<span>Dập<\/span>/);
   assert.match(plain, /<span>Không dập<\/span>/);
 });
+
+test("print number2 filter keeps exactly two decimal places", () => {
+  const printed = renderPrintFormat({
+    name: "Purchase Order",
+    doc_type: "Purchase Order",
+    format_type: "Standard",
+    html: "<span>{{ qty | number2 }}</span>",
+    revision: 1,
+  }, {
+    doctype: "Purchase Order",
+    name: "DMH-1",
+    data: { qty: 560.16 },
+  }, "vi");
+  assert.match(printed, /<span>560,16<\/span>/);
+});
