@@ -6,42 +6,47 @@ Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
 
 - Repository: `nguyentrieu210/forge`.
 - Branch/default branch: `hotfix/alumdoor-print-list-delete`.
-- Code HEAD được xác minh trong đợt này: `591ca359937d6ae12803d36c74996db8482060af` (`fix(deploy): allow approved generated paths during tenant deploy`).
-- Commit trên chỉ cho phép clean-worktree guard bỏ qua đúng `server/work/` và `tmp/`; mọi thay đổi khác vẫn chặn live migration/deploy.
+- HEAD sau thay đổi sidebar: `87cd45aa9272f5600ff3d5914f697ce9a26994b6` (`fix(ui): compact desktop sidebar`).
+- Baseline code/schema đã qua CI trước đó: `591ca359937d6ae12803d36c74996db8482060af`.
 - `server/work/`, `tmp/`, backup SQL, `.env` và generated artifacts không được commit.
 
-## CI exact HEAD
+## Sidebar/runtime UI
 
-Draft PR tạm `#6` chỉ được mở lại để kích hoạt workflow `pull_request` cho đúng SHA, sau đó đóng mà không merge.
+- Đã làm gọn sidebar desktop tại `client/apps/runtime/src/styles.css`.
+- Sidebar rộng `15.75rem` thay vì `17rem` khi mở.
+- Group header, ô tìm kiếm, dòng menu, icon và khoảng cách dọc được giảm kích thước.
+- Không ẩn route, không đổi permission và không xoá mục Báo cáo/Danh mục.
+- CI và Cloudflare build cho HEAD mới đang chờ xác minh; chưa ghi nhận smoke browser cho thay đổi này.
+
+## CI
+
+Baseline đã xác minh:
 
 - Workflow run: `30570000862`.
 - Job: `90964015638` (`Test, typecheck and build`).
 - Exact head: `591ca359937d6ae12803d36c74996db8482060af`.
-- `pnpm install --frozen-lockfile`: **PASS**.
-- Test: **PASS**.
-- Typecheck: **PASS**.
-- Build: **PASS**.
-- Kết luận job: **success**.
-- PR `#6` đã đóng, không merge và không deploy.
+- Install/test/typecheck/build: **PASS**.
 
-## Production deployment tenant `alu`
+HEAD sidebar `87cd45aa...` vừa được push; cần chờ CI push hoàn tất trước khi coi là verified.
 
-Người vận hành đã xác nhận ngày 2026-07-30 rằng phiên bản trước implementation FIFO đã được backup, preflight và live deploy bằng:
+## Cloudflare production tenant `alu`
 
-- `node scripts/backup-tenant.mjs --tenant alu --execute ...`
-- `node scripts/deploy-tenant.mjs --tenant alu`
-- `node scripts/deploy-tenant.mjs --tenant alu --execute --confirm alu`
+- Người vận hành xác nhận workflow release đã chạy được sau khi sửa credential.
+- Code/schema FIFO target `591ca359...` đã được đưa qua quy trình backup, migration và tenant deploy theo xác nhận vận hành.
+- FIFO rollout vẫn phải giữ **disabled**.
+- Gateway `cloudforge-gateway` dùng Cloudflare Git build; build command đúng cho monorepo là:
 
-Trạng thái trên là operator-confirmed. Chưa có bằng chứng độc lập cho deployment ID, Gateway production traffic hoặc browser smoke login/CRUD/print/PDF.
+```bash
+pnpm --filter metaforge run build && node server/scripts/stage-client-bundle.mjs
+```
 
-**Code/schema FIFO mới tại SHA `591ca359...` chưa được deploy lên Cloudflare trong đợt 2026-07-31. Không sửa production secrets.**
+- Deploy command Gateway:
 
-Lý do release bị chặn trong phiên ChatGPT hiện tại:
+```bash
+pnpm --dir server exec wrangler deploy --config apps/gateway-worker/wrangler.jsonc
+```
 
-- Không có Cloudflare plugin/action.
-- Không có `CLOUDFLARE_API_TOKEN` hoặc `CLOUDFLARE_ACCOUNT_ID` được mount.
-- Repository chỉ có workflow CI; chưa có allowlisted GitHub Actions workflow để backup/migrate/deploy Cloudflare.
-- `ForgeSkills.zip` chỉ cung cấp quy trình/gate; không chứa credential hoặc Cloudflare executor. `FORGE.md` và `.forge/manifest.json` cũng chưa được cài vào repository.
+- Còn thiếu bằng chứng ghi vào repo: deployment/version ID mới nhất, kết quả `/health`, login/CRUD/print/PDF và ảnh sidebar production sau HEAD mới.
 
 ## FIFO Purchase Receipt vào nhiều Purchase Order
 
@@ -73,7 +78,7 @@ Contract authoritative: `server/docs/ALUMDOOR-PURCHASE-RECEIPT-ALLOCATION.md`.
 - Chỉ bật khi có backfill checksum, `unresolved_count=0`, actor và timestamp.
 - Database chặn tắt lại sau activation.
 
-Vì vậy code/schema có thể được deploy trước với rollout tắt, nhưng FIFO chưa hoạt động cho tenant cho đến khi backfill/cutover hoàn tất.
+Code/schema có thể live khi rollout tắt, nhưng FIFO chưa hoạt động cho tenant cho tới khi backfill/cutover hoàn tất.
 
 ## Tenant-safe migration/deploy
 
@@ -83,14 +88,16 @@ Các script hiện hành:
 - Tenant-safe migration: `server/scripts/migrate-tenant.mjs`.
 - Low-level migration engine: `server/scripts/d1-migrate-remote.mjs`.
 - Tenant deploy: `server/scripts/deploy-tenant.mjs`.
+- Stage client: `server/scripts/stage-client-bundle.mjs`.
 
-Thứ tự operator an toàn, rollout vẫn tắt:
+Thứ tự an toàn:
 
 1. Backup tenant ra ngoài repository và chuyển backup plaintext sang nơi lưu mã hóa.
-2. `node scripts/migrate-tenant.mjs --tenant alu`.
-3. `node scripts/migrate-tenant.mjs --tenant alu --execute --confirm alu`.
-4. `node scripts/deploy-tenant.mjs --tenant alu`.
-5. `node scripts/deploy-tenant.mjs --tenant alu --execute --confirm alu`.
+2. Migration dry-run.
+3. Migration live với explicit confirmation.
+4. Tenant deploy dry-run.
+5. Tenant deploy live với explicit confirmation.
+6. Smoke health/login/CRUD/print/PDF.
 
 ## Blocker trước khi bật FIFO production
 
