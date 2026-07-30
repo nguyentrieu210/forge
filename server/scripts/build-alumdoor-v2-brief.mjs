@@ -48,7 +48,7 @@ const replaceField = (dt, name, next) => {
 };
 
 // ─────────────────────────── HEADER ───────────────────────────
-brief.version = "2.0.12";
+brief.version = "2.0.13";
 brief.locale.dateFormat = "dd/mm/yyyy"; // Q11 — chủ xưởng chốt gạch chéo
 // Nỗi đau #1 của BRD: người mở app phải thấy ngay tồn KHẢ DỤNG theo khổ, không phải tự lấy tồn tổng
 // rồi trừ các phiếu giữ bằng tay. Báo cáo này nằm ở query engine nền tảng vì nó đọc cùng sổ kho.
@@ -987,16 +987,16 @@ brief.prints.push({
   css: [
     "@page{size:A4 portrait;margin:0}",
     "*{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif} html,body{margin:0}body{width:210mm;min-height:297mm;font-family:Arial,Helvetica,sans-serif;font-size:9px;color:#111;padding:23.7mm 8mm 8mm}",
-    ".letterhead{position:relative;width:166mm;height:14.8mm;margin-left:14mm}",
+    ".letterhead{position:relative;width:166mm;height:17mm;margin-left:14mm}",
     ".brand-logo{position:absolute;left:2.7mm;top:2.8mm;width:43.6mm;height:auto}",
-    ".company-block{position:absolute;right:2.7mm;top:0;width:94mm;text-align:center;font-size:6.5px;font-style:italic;line-height:1.45}",
-    ".tagline{color:#f15a24;font-size:7px;font-style:normal;font-weight:800;text-decoration:underline;white-space:nowrap}",
+    ".company-block{position:absolute;right:2.7mm;top:0;width:94mm;text-align:center;font-size:7.5px;font-style:italic;line-height:1.4}",
+    ".tagline{color:#f15a24;font-size:8.5px;font-style:normal;font-weight:800;text-decoration:underline;white-space:nowrap}",
     ".company-block b{font-style:normal}.website{font-style:normal}",
-    ".title{width:166mm;font-size:15px;font-weight:700;color:#f15a24;text-transform:uppercase;text-align:center;margin:0 0 3.2mm 14mm}",
-    ".meta{width:166mm;margin-left:14mm;font-size:7px;font-weight:400;line-height:1.45;margin-bottom:4.5mm}.meta div{min-height:2.6mm}.meta b{display:inline-block;min-width:30mm}",
-    "table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}th,td{border:1px solid #777;padding:3.5pt 2pt;vertical-align:middle;line-height:1.25}",
-    "th{background:#f3f3f3;font-size:8pt;text-transform:uppercase;text-align:center;line-height:1.2;white-space:normal}",
-    "td{font-size:9pt;white-space:nowrap}.n{text-align:right;font-variant-numeric:tabular-nums}.c{text-align:center}.code{font-weight:700}.item-cell,.note-cell{white-space:normal;overflow-wrap:anywhere}",
+    ".title{width:166mm;font-size:18px;font-weight:700;color:#f15a24;text-transform:uppercase;text-align:center;margin:0 0 3.2mm 14mm}",
+    ".meta{width:166mm;margin-left:14mm;font-size:8px;font-weight:400;line-height:1.45;margin-bottom:4.5mm}.meta div{min-height:2.8mm}.meta b{display:inline-block;min-width:30mm}",
+    "table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}th,td{border:1px solid #777;padding:3pt 1.5pt;vertical-align:middle;text-align:center;line-height:1.2}",
+    "th{background:#f3f3f3;font-size:7.5pt;text-transform:uppercase;white-space:normal}",
+    "td{font-size:8pt;white-space:normal;overflow-wrap:anywhere}.n{text-align:center;font-variant-numeric:tabular-nums}.c{text-align:center}.code{font-weight:700}.item-cell,.note-cell{white-space:normal;overflow-wrap:anywhere}",
     ".index-col{white-space:nowrap}.note-col,.note-cell{white-space:normal}",
     "tfoot td{font-size:10pt;font-weight:800;line-height:1.25;background:#fff;padding-top:4pt;padding-bottom:4pt}.total-label{text-align:right;padding-right:5pt}.total-value{text-align:right;color:#c55a11;white-space:nowrap;padding-left:4pt;padding-right:4pt}",
     ".sign{display:flex;width:100%;justify-content:space-between;text-align:center;margin-top:18px}.sign div{width:30%}.sign b{display:block;margin-bottom:35px;font-size:8px}",
