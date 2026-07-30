@@ -6,10 +6,11 @@
  */
 import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Printer, ArrowLeft, Minus, Plus, RotateCcw, RefreshCw } from "lucide-react";
-import { Button, useT } from "@metaforge/ui";
+import { Printer, ArrowLeft, Minus, Plus, RotateCcw, RefreshCw, Download, Loader2 } from "lucide-react";
+import { Button, toast, useT } from "@metaforge/ui";
 import { useMetaForge } from "../container/provider.js";
 import { PrintView } from "./PrintView.js";
+import { downloadPrintPdf } from "./downloadPdf.js";
 
 export interface PrintContainerProps {
   doctype: string;
@@ -22,6 +23,7 @@ export function PrintContainer({ doctype, name, onBack }: PrintContainerProps) {
   const { adapter, scopeKey } = useMetaForge();
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [zoom, setZoom] = useState(1);
+  const [downloading, setDownloading] = useState(false);
   const printQ = useQuery({
     queryKey: [scopeKey, "print-html", doctype, name],
     queryFn: () => adapter.printHtml(doctype, name),
@@ -35,6 +37,19 @@ export function PrintContainer({ doctype, name, onBack }: PrintContainerProps) {
     try { iframeRef.current?.contentWindow?.print(); } catch { /* trình duyệt chặn — người dùng tự in qua chuột phải */ }
   };
 
+  const doDownloadPdf = async () => {
+    if (!printQ.data || downloading) return;
+    setDownloading(true);
+    try {
+      await downloadPrintPdf(printQ.data, `${doctype}-${name}.pdf`);
+      toast.success("Đã tạo file PDF");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Không thể tạo file PDF");
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   return (
     <div className="mf-print-container flex h-full flex-col overflow-hidden">
       <div className="flex shrink-0 items-center gap-2 border-b bg-card px-4 py-2.5">
@@ -45,6 +60,10 @@ export function PrintContainer({ doctype, name, onBack }: PrintContainerProps) {
           <Button variant="ghost" size="sm" className="min-w-16 tabular-nums" onClick={() => setZoom(1)} aria-label="Đặt lại tỷ lệ"><RotateCcw className="size-3.5" /> {Math.round(zoom * 100)}%</Button>
           <Button variant="ghost" size="icon-sm" onClick={() => setZoom((value) => Math.min(1.5, value + 0.1))} disabled={zoom >= 1.5} aria-label="Phóng to"><Plus /></Button>
         </div>
+        <Button variant="outline" size="sm" onClick={() => void doDownloadPdf()} disabled={printQ.isLoading || !printQ.data || downloading}>
+          {downloading ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+          {downloading ? "Đang tạo PDF…" : "Tải PDF"}
+        </Button>
         <Button size="sm" onClick={doPrint} disabled={printQ.isLoading || !printQ.data}><Printer className="size-4" /> {t("form.action.print")}</Button>
       </div>
       <div className="min-h-0 flex-1 overflow-auto bg-muted/30 p-4">

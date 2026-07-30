@@ -453,6 +453,7 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     expect(snapshot.rows.some((row: any) => row.name === createdName)).toBe(true);
     expect(snapshot.count).toBeGreaterThanOrEqual(1);
     expect(snapshot.capabilities.create).toBe(true);
+    expect(snapshot.capabilities.delete).toBe(true);
     expect(snapshot.display_values).toContainEqual({ doctype: "Customer", name: "CUST-1", label: "CUST-1" });
   });
 

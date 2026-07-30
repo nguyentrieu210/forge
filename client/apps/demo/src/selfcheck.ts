@@ -44,7 +44,7 @@ import {
 } from "@metaforge/core";
 import { ControlRegistry, createDefaultRegistry, DateControl, AttachControl, GeolocationControl, LinkControl } from "@metaforge/controls";
 import {
-  FormView, groupLayout, resolveFormFieldWidth, ChildGrid, deriveAverageWeight, derivePurchaseOrderBarem, resolveChildGridColumns, defaultChildGridHiddenColumns, createFullRegistry, KanbanView, TreeView, ReportView, PrintView, DashboardView, CalendarView, GanttView, type TreeNodeItem,
+  FormView, groupLayout, resolveFormFieldWidth, ChildGrid, deriveAverageWeight, derivePurchaseOrderBarem, resolveChildGridColumns, defaultChildGridHiddenColumns, createFullRegistry, ListView, KanbanView, TreeView, ReportView, PrintView, DashboardView, CalendarView, GanttView, type TreeNodeItem,
   deriveColumns, applyClientQuery, buildServerQuery, countQuery, deriveStandardFilters, deriveSearchFields, statusVariant, emptyListState,
   applyColumnOrder, columnPreferenceKey, hasCustomColumnPreferences, moveColumn, normalizeColumnPreferences, stableColumnPreferenceScope,
   resolveFormActions, resolveWorkflowActions, editableCodeField, suggestEditableCode, type FormActionCtx,
@@ -1165,6 +1165,29 @@ check("ChildGrid render: Dynamic Link lấy đúng DocType đích từ chính d�
   );
   assert.ok(html.includes("NCC-001"), "Dynamic Link đã render giá trị hiện có");
   assert.ok(!html.includes('Chọn &quot;reference_type&quot; trước'), "không báo thiếu loại hồ sơ khi dòng đã chọn Supplier");
+});
+
+check("ListView render: quyền xoá hiện nút thao tác trên từng dòng", () => {
+  const listMeta: DocTypeMeta = {
+    name: "Purchase Order",
+    title_field: "supplier",
+    fields: [
+      { fieldname: "supplier", fieldtype: "Data", label: "Nhà cung cấp", in_list_view: 1 },
+    ],
+    permissions: [],
+  };
+  const html = renderToStaticMarkup(
+    h(ListView, {
+      meta: listMeta,
+      rows: [{ name: "PO-TEST-001", doctype: "Purchase Order", supplier: "Tiến Đạt" }],
+      total: 1,
+      state: emptyListState(),
+      onStateChange: () => {},
+      onDelete: () => {},
+    }),
+  );
+  assert.ok(html.includes("Thao tác"), "có tiêu đề cột thao tác");
+  assert.ok(html.includes("Xoá PO-TEST-001"), "có nút xoá riêng của dòng");
 });
 
 // ===== VIEWS: Kanban + Tree =====

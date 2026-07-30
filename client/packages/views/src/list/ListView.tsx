@@ -48,6 +48,8 @@ export interface ListViewProps {
   onCreate?: () => void;
   onRefresh?: () => void;
   onBulkDelete?: (names: string[]) => void;
+  /** Xoá một bản ghi ngay trên dòng/card; container chịu trách nhiệm xác nhận. */
+  onDelete?: (name: string) => void;
   onExport?: (names: string[], visibleFields: string[], format: ExportFormat) => void;
   exporting?: boolean;
   title?: string;
@@ -323,7 +325,7 @@ export function ListView(props: ListViewProps) {
   const sortField = state.sort.split(":")[0];
   const sortDir = state.sort.split(":")[1];
   const numericCols = columns.filter((c) => c.align === "right" && !c.isStatus);
-  const totalCols = columns.length + 3; // checkbox + STT + cột dữ liệu + cột đệm
+  const totalCols = columns.length + (props.onDelete ? 4 : 3); // checkbox + STT + dữ liệu + thao tác? + đệm
   const pinnedOffsets = useMemo(() => {
     let left = 100; // checkbox 44px + STT 56px
     const offsets = new Map<string, number>();
@@ -458,6 +460,24 @@ export function ListView(props: ListViewProps) {
                       : renderCell(row[c.fieldname], c, props.fmt)}
           </TableCell>
         );})}
+        {props.onDelete && Number(row.docstatus ?? 0) === 0 ? (
+          <TableCell className={cn("w-12 px-2 text-center", compact && "py-1")}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+              aria-label={`${t("common.delete")} ${name}`}
+              title={t("common.delete")}
+              onClick={(event) => {
+                event.stopPropagation();
+                props.onDelete?.(name);
+              }}
+            >
+              <Trash2 />
+            </Button>
+          </TableCell>
+        ) : null}
         <TableCell aria-hidden className="p-0" />
       </TableRow>
     );
@@ -553,6 +573,22 @@ export function ListView(props: ListViewProps) {
                       {detailCols.map((column) => <div key={column.fieldname} className="min-w-0"><dt className="truncate text-muted-foreground">{column.label}</dt><dd className="mt-0.5 truncate font-medium">{column.fieldtype === "Link" && column.options ? <LinkCell doctype={column.options} value={row[column.fieldname]} displayValues={props.displayValues} /> : renderCell(row[column.fieldname], column, props.fmt)}</dd></div>)}
                     </dl> : null}
                   </div>
+                  {props.onDelete && Number(row.docstatus ?? 0) === 0 ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      className="shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      aria-label={`${t("common.delete")} ${name}`}
+                      title={t("common.delete")}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        props.onDelete?.(name);
+                      }}
+                    >
+                      <Trash2 />
+                    </Button>
+                  ) : null}
                   <span className="text-xs tabular-nums text-muted-foreground">#{pageStart + index + 1}</span>
                 </div>
               </article>
@@ -586,6 +622,7 @@ export function ListView(props: ListViewProps) {
                 }
               />
             ))}
+            {props.onDelete ? <col className="w-12" /> : null}
             {/*
               Cột đệm là cột auto DUY NHẤT: nhận phần dư khi bảng rộng, về 0 khi tổng cột vượt khung.
               Nhờ đó checkbox/STT và các width người dùng đặt không bị thuật toán table phân lại.
@@ -625,6 +662,11 @@ export function ListView(props: ListViewProps) {
                   pinnedLeft={pinnedOffsets.get(c.fieldname)}
                 />
               ))}
+              {props.onDelete ? (
+                <TableHead className={cn("sticky top-0 z-30 w-12 px-2 text-center bg-muted", compact && "h-7")}>
+                  {t("common.actions", "Thao tác")}
+                </TableHead>
+              ) : null}
               {/* ô của cột đệm — xem chú thích ở <colgroup> */}
               <TableHead aria-hidden className={cn("sticky top-0 z-30 bg-muted p-0", compact && "h-7")} />
             </TableRow>
@@ -708,6 +750,7 @@ export function ListView(props: ListViewProps) {
                     {c.align === "right" && !c.isStatus ? formatValue(aggregateColumn(rows, c), c) : null}
                   </TableCell>
                 );})}
+                {props.onDelete ? <TableCell aria-hidden className="w-12 p-0" /> : null}
                 <TableCell aria-hidden className="p-0" />
               </TableRow>
             </TableFooter>

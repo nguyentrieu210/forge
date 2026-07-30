@@ -471,11 +471,16 @@ export class FrappeAdapterImpl implements FrappeAdapter {
     return this.unwrap(r);
   }
   async bulkDelete(dt: string, names: string[]): Promise<Array<{ name: string; ok: boolean }>> {
-    await this.app.call().post("frappe.desk.reportview.delete_items", {
+    const response = await this.app.call().post<Envelope<{
+      results?: Array<{ name?: string; deleted?: boolean }>;
+    }>>("frappe.desk.reportview.delete_items", {
       doctype: dt,
       items: JSON.stringify(names),
     });
-    return names.map((name) => ({ name, ok: true }));
+    const results = this.unwrap(response)?.results;
+    if (!Array.isArray(results)) return names.map((name) => ({ name, ok: true }));
+    const outcome = new Map(results.map((entry) => [String(entry.name ?? ""), entry.deleted === true]));
+    return names.map((name) => ({ name, ok: outcome.get(name) === true }));
   }
   async amend(dt: string, name: string): Promise<Doc> {
     const { doc } = await this.getDoc(dt, name);
@@ -699,6 +704,9 @@ export class FrappeAdapterImpl implements FrappeAdapter {
     const r = await this.app
       .call()
       .get<Envelope<{ html: string; style: string }>>("frappe.www.printview.get_html_and_style", {
+        // CloudForge dùng tên chuẩn `doctype`; Frappe v16 dùng `doc` cho cùng giá trị.
+        // Gửi cả hai để adapter chạy đúng trên cả hai backend.
+        doctype: dt,
         doc: dt,
         name,
         print_format: format,

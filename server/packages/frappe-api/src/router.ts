@@ -1379,8 +1379,10 @@ async function capabilityFlags(
     read,
     write,
     create,
-    // Delete uses the same gate as save, so reuse the result.
-    delete: Boolean(document && document.docstatus === 0 && write),
+    // Ở form có document cụ thể: chỉ bản nháp mới được xoá. Ở list không có document:
+    // trả quyền write ở cấp DocType để giao diện có thể hiện thao tác; từng dòng vẫn bị
+    // kernel kiểm tra docstatus và quyền lại khi người dùng xác nhận xoá.
+    delete: document ? document.docstatus === 0 && write : write,
     submit,
     cancel,
     amend,

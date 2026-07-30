@@ -78,10 +78,21 @@ export function ListContainer(props: ListContainerProps) {
   const confirmBulkDelete = useCallback((names: string[]) => setPendingDelete(names), []);
   const doBulkDelete = useCallback(async () => {
     if (!pendingDelete) return;
-    await adapter.bulkDelete(doctype, pendingDelete);
-    setPendingDelete(null);
-    patch({ selected: [] });
-    refresh();
+    try {
+      const results = await adapter.bulkDelete(doctype, pendingDelete);
+      const deleted = results.filter((result) => result.ok).length;
+      const failed = results.length - deleted;
+      if (deleted) toast.success(`Đã xoá ${deleted} bản ghi`);
+      if (failed) toast.error(`Không thể xoá ${failed} bản ghi`);
+      if (deleted) {
+        patch({ selected: [] });
+        refresh();
+      }
+    } catch (error) {
+      toast.error(adapter.mapError(error).message);
+    } finally {
+      setPendingDelete(null);
+    }
   }, [adapter, doctype, pendingDelete, patch, refresh]);
 
   /**
@@ -190,6 +201,7 @@ export function ListContainer(props: ListContainerProps) {
         onCreate={caps.create ? props.onCreate : undefined}
         onRefresh={refresh}
         onBulkDelete={caps.delete ? confirmBulkDelete : undefined}
+        onDelete={caps.delete ? (name) => setPendingDelete([name]) : undefined}
         onExport={exportSelected}
         exporting={exporting}
         title={meta.label || meta.name || doctype}

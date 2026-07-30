@@ -183,7 +183,7 @@ test("purchase rows expose aluminium dimensions only for aluminium items", () =>
 });
 
 test("V2 purchase receipt exposes dimensions and area weight without mixing kg/m", () => {
-  assert.equal(v2Brief.version, "2.0.5");
+  assert.equal(v2Brief.version, "2.0.6");
   const receiptItem = v2Doctype("Purchase Receipt Item");
   for (const fieldname of [
     "height_m", "width_m", "set_count", "actual_weight_kg", "actual_kg_per_m", "actual_kg_per_sqm",
@@ -207,6 +207,21 @@ test("V2 purchase receipt exposes dimensions and area weight without mixing kg/m
     v2Brief.fixtures.find((entry) => entry.type === "Measurement Profile" && entry.name === "Nhôm cây/lá")?.data?.stock_uom,
     "Kg",
   );
+});
+
+test("V2 purchase order print matches the supplied ALUMDOOR A4 template", () => {
+  const print = v2Brief.prints.find((entry) => entry.doctype === "Purchase Order" && entry.default);
+  assert.ok(print, "thiếu mẫu in Purchase Order mặc định");
+  const css = (print.css ?? []).join("\n");
+  const html = (print.html ?? []).join("\n");
+  assert.match(css, /size:A4 portrait/i);
+  assert.match(html, /CHUYÊN SẢN XUẤT/i);
+  assert.match(html, /096\.515\.9595/);
+  assert.match(html, /www\.alumdoor\.vn/);
+  assert.match(html, /Tên nhà cung cấp/);
+  assert.match(html, /Ngày giao hàng/);
+  assert.match(html, /qty_bundle/);
+  assert.match(html, /theoretical_kg/);
 });
 
 function validatorRequest(items) {
