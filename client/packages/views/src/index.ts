@@ -65,6 +65,7 @@ export {
   deriveAverageWeight,
   derivePurchaseOrderBarem,
   resolveChildGridColumns,
+  defaultChildGridHiddenColumns,
   type ChildGridProps,
   type AverageWeightResult,
 } from "./form/ChildGrid.js";

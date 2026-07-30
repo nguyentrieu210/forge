@@ -44,7 +44,7 @@ import {
 } from "@metaforge/core";
 import { ControlRegistry, createDefaultRegistry, DateControl, AttachControl, GeolocationControl, LinkControl } from "@metaforge/controls";
 import {
-  FormView, groupLayout, resolveFormFieldWidth, ChildGrid, deriveAverageWeight, derivePurchaseOrderBarem, resolveChildGridColumns, createFullRegistry, KanbanView, TreeView, ReportView, PrintView, DashboardView, CalendarView, GanttView, type TreeNodeItem,
+  FormView, groupLayout, resolveFormFieldWidth, ChildGrid, deriveAverageWeight, derivePurchaseOrderBarem, resolveChildGridColumns, defaultChildGridHiddenColumns, createFullRegistry, KanbanView, TreeView, ReportView, PrintView, DashboardView, CalendarView, GanttView, type TreeNodeItem,
   deriveColumns, applyClientQuery, buildServerQuery, countQuery, deriveStandardFilters, deriveSearchFields, statusVariant, emptyListState,
   applyColumnOrder, columnPreferenceKey, hasCustomColumnPreferences, moveColumn, normalizeColumnPreferences, stableColumnPreferenceScope,
   resolveFormActions, resolveWorkflowActions, editableCodeField, suggestEditableCode, type FormActionCtx,
@@ -1058,9 +1058,15 @@ check("Bảng con trong form và bảng lớn dùng chung đủ cột đơn mua"
       { fieldname: "qty_bundle", fieldtype: "Float", label: "SL (bó)", in_list_view: 1 },
       { fieldname: "qty_bar", fieldtype: "Float", label: "Số cây/lá", in_list_view: 1 },
       { fieldname: "theoretical_kg_per_m", fieldtype: "Float", label: "Định mức", in_list_view: 1 },
+      { fieldname: "qty", fieldtype: "Float", label: "Số lượng", in_list_view: 1 },
       { fieldname: "theoretical_kg", fieldtype: "Float", label: "Số kg barem", in_list_view: 1 },
+      { fieldname: "uom", fieldtype: "Link", options: "UOM", label: "ĐVT", in_list_view: 1 },
+      { fieldname: "rate", fieldtype: "Currency", label: "Đơn giá", in_list_view: 1 },
+      { fieldname: "amount", fieldtype: "Currency", label: "Thành tiền", in_list_view: 1 },
       { fieldname: "is_stamped", fieldtype: "Select", options: "Có\nKhông", label: "Dập", in_list_view: 1 },
       { fieldname: "so_no", fieldtype: "Data", label: "Số SO NCC", in_list_view: 1 },
+      { fieldname: "warehouse", fieldtype: "Link", options: "Warehouse", label: "Kho nhận" },
+      { fieldname: "note", fieldtype: "Data", label: "Ghi chú" },
     ],
     permissions: [],
   };
@@ -1072,8 +1078,15 @@ check("Bảng con trong form và bảng lớn dùng chung đủ cột đơn mua"
   }]);
   assert.deepEqual(
     columns.map((field) => field.fieldname),
-    ["item_code", "color", "length_m", "qty_bundle", "qty_bar", "theoretical_kg_per_m", "theoretical_kg", "is_stamped", "so_no"],
+    ["item_code", "color", "length_m", "qty_bundle", "qty_bar", "theoretical_kg_per_m", "qty", "theoretical_kg", "uom", "rate", "amount", "is_stamped", "so_no", "warehouse", "note"],
   );
+  assert.deepEqual(
+    columns
+      .filter((field) => !defaultChildGridHiddenColumns(purchaseItemMeta, columns, false).includes(field.fieldname))
+      .map((field) => field.fieldname),
+    ["item_code", "qty", "uom", "rate", "amount"],
+  );
+  assert.deepEqual(defaultChildGridHiddenColumns(purchaseItemMeta, columns, true), []);
 });
 
 check("ChildGrid render: cột child meta + thêm dòng + resolve depends_on theo row", () => {

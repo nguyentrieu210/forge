@@ -24,6 +24,25 @@ interface GridLayout {
 
 const EMPTY_LAYOUT: GridLayout = { w: {}, order: [], hidden: [], pinned: [], labels: {} };
 
+const PURCHASE_ORDER_ITEM_COMPACT_FIELDS = ["item_code", "qty", "uom", "rate", "amount"];
+const PURCHASE_ORDER_ITEM_FULL_FIELDS = [
+  "item_code",
+  "color",
+  "length_m",
+  "qty_bundle",
+  "qty_bar",
+  "theoretical_kg_per_m",
+  "qty",
+  "theoretical_kg",
+  "uom",
+  "rate",
+  "amount",
+  "is_stamped",
+  "so_no",
+  "warehouse",
+  "note",
+];
+
 export interface ChildGridProps {
   childMeta: DocTypeMeta;
   rows: Doc[];
@@ -86,9 +105,30 @@ export function resolveChildGridColumns(
   parentDoc?: Record<string, unknown>,
   roles?: string[],
 ): DocField[] {
+  if (meta.name === "Purchase Order Item") {
+    return PURCHASE_ORDER_ITEM_FULL_FIELDS
+      .map((fieldname) => (meta.fields ?? []).find((field) => field.fieldname === fieldname))
+      .filter((field): field is DocField => Boolean(field));
+  }
   const visible = visibleColumns(gridColumns(meta), meta, rows, parentDoc, roles);
   if (visible.length) return visible;
   return (meta.fields ?? []).filter((field) => !isLayout(field.fieldtype)).slice(0, 6);
+}
+
+/** Mặc định form đơn mua chỉ giữ năm cột nhập nhanh; nút Cột vẫn có thể mở thêm. */
+export function defaultChildGridHiddenColumns(meta: DocTypeMeta, columns: DocField[], expanded: boolean): string[] {
+  if (meta.name !== "Purchase Order Item" || expanded) return [];
+  return columns
+    .filter((field) => !PURCHASE_ORDER_ITEM_COMPACT_FIELDS.includes(field.fieldname))
+    .map((field) => field.fieldname);
+}
+
+function childGridColumnLabel(meta: DocTypeMeta, field: DocField): string {
+  if (meta.name === "Purchase Order Item") {
+    if (field.fieldname === "qty") return "Số lượng";
+    if (field.fieldname === "uom") return "ĐVT";
+  }
+  return field.label || field.fieldname;
 }
 
 /**
@@ -318,47 +358,50 @@ export function ChildGrid(props: ChildGridProps) {
   const itemLoadVersion = useRef(new Map<string, number>());
   const automaticItemLoads = useRef(new Set<string>());
   const canonicalCols = resolveChildGridColumns(childMeta, rows, parentDoc, roles);
-  /**
-   * Bảng trong form là nguồn chuẩn duy nhất cho danh sách và thứ tự cột.
-   *
-   * Bảng lớn chỉ đổi không gian làm việc và thêm tiện ích nhập nhanh; không được tự dùng một
-   * preset khác vì như vậy các cột nghiệp vụ như SL (bó), Số SO NCC hoặc cột mới trong metadata
-   * sẽ biến mất khi người dùng bấm "Mở bảng lớn".
-   */
+  /** Hai chế độ dùng chung dữ liệu, nhưng có mặc định và tùy chỉnh cột riêng. */
   const baseCols = canonicalCols;
+  const defaultHidden = defaultChildGridHiddenColumns(childMeta, baseCols, expanded);
+  const defaultLayout = (): GridLayout => ({
+    w: {},
+    order: [],
+    hidden: [...defaultHidden],
+    pinned: [],
+    labels: {},
+  });
 
   /**
    * BỀ RỘNG VÀ THỨ TỰ CỘT do người dùng đặt, và NHỚ LẠI ở lần mở sau.
    *
    * Bề rộng mặc định ở đây chỉ là phỏng đoán từ kiểu field: nó không biết xưởng này ghi chú
    * dài hay ngắn, mã hàng của họ mấy ký tự, hay người nhập quen đọc cột nào trước. Chỉnh
-   * được mà mở lại mất hết thì cũng như không chỉnh — nên lưu theo TỪNG doctype con, dùng chung
-   * cho bảng trong form và bảng lớn.
+   * được mà mở lại mất hết thì cũng như không chỉnh — nên lưu theo TỪNG doctype con và TỪNG
+   * chế độ. Form mặc định gọn; bảng lớn mặc định đầy đủ, không để việc ẩn cột ở form làm mất
+   * cột nghiệp vụ trong bảng lớn.
    *
    * Hỏng localStorage (chế độ riêng tư, hết quota) chỉ mất phần tuỳ chỉnh, bảng vẫn dựng
    * bằng mặc định — không được phép làm chết cả bảng vì một tiện ích.
    */
-  const layoutKey = `mf-grid-layout:${childMeta.name}`;
+  const layoutKey = `mf-grid-layout:${childMeta.name}:${expanded ? "big-v2" : "compact-v2"}`;
   const [layout, setLayout] = useState<GridLayout>(() => ({ ...EMPTY_LAYOUT, w: {}, order: [], hidden: [], pinned: [], labels: {} }));
   const loadedKey = useRef("");
   if (loadedKey.current !== layoutKey) {
     loadedKey.current = layoutKey;
     try {
-      const saved = localStorage.getItem(layoutKey)
-        ?? localStorage.getItem(`${layoutKey}:compact`)
-        ?? localStorage.getItem(`${layoutKey}:big`);
+      const saved = localStorage.getItem(layoutKey);
       const parsed = saved ? JSON.parse(saved) as Partial<GridLayout> : {};
-      layout.w = parsed.w ?? {};
-      layout.order = parsed.order ?? [];
-      layout.hidden = parsed.hidden ?? [];
-      layout.pinned = parsed.pinned ?? [];
-      layout.labels = parsed.labels ?? {};
+      const defaults = defaultLayout();
+      layout.w = parsed.w ?? defaults.w;
+      layout.order = parsed.order ?? defaults.order;
+      layout.hidden = parsed.hidden ?? defaults.hidden;
+      layout.pinned = parsed.pinned ?? defaults.pinned;
+      layout.labels = parsed.labels ?? defaults.labels;
     } catch { /* không có thì dùng mặc định */ }
   }
   const saveLayout = (next: GridLayout) => {
     setLayout(next);
     try { localStorage.setItem(layoutKey, JSON.stringify(next)); } catch { /* hết quota — vẫn dùng được trong phiên */ }
   };
+  const resetLayout = () => saveLayout(defaultLayout());
 
   // Cột người dùng đã xếp lên trước; cột chưa từng xếp giữ nguyên thứ tự gốc ở phía sau, nên
   // một cột MỚI thêm vào doctype vẫn xuất hiện thay vì biến mất vì không có trong thứ tự cũ.
@@ -1245,7 +1288,7 @@ export function ChildGrid(props: ChildGridProps) {
                   onDrop={() => dropColumn(c.fieldname)}
                   title={readOnly ? undefined : "Kéo tiêu đề để đổi chỗ cột · kéo mép phải để giãn"}
                 >
-                  {layout.labels[c.fieldname] || c.label || c.fieldname}
+                  {layout.labels[c.fieldname] || childGridColumnLabel(childMeta, c)}
                   {c.reqd ? <span className="mf-required ml-0.5 text-destructive">*</span> : null}
                   {!readOnly ? (
                     /* Tay kéo nằm ĐÈ lên mép phải của ô tiêu đề, rộng 6px để bấm trúng được
@@ -1283,12 +1326,19 @@ export function ChildGrid(props: ChildGridProps) {
                   // KẾ THỪA từ cha (DocType con permissions rỗng) — grid đã gate bằng readOnly field cha
                   // (H1). Vẫn tôn trọng read_only/read_only_depends_on/docstatus + masked_fields server.
                   const rf = resolveField(c, childMeta, { doc: row, parent: parentDoc, roles, assumeWritable: true });
+                  const cellReadOnly = Boolean(readOnly || rf.readOnly || (expanded && !rf.visible));
+                  const cellHint = !rf.visible
+                    ? "Không áp dụng cho mặt hàng này"
+                    : rf.readOnly
+                      ? "Hệ thống tự tính hoặc tự điền"
+                      : "Có thể nhập";
                   /**
-                   * Bảng lớn LUÔN vẽ ô nhập, kể cả field đang bị `depends_on` ẩn.
+                   * Bảng lớn LUÔN vẽ đủ ô, kể cả field đang bị `depends_on` ẩn.
                    *
                    * `depends_on` của các field quy cách đọc `inventory_mode` — thứ chỉ có SAU khi
                    * đã chọn mã hàng. Nên trên một dòng còn trống, gần như mọi cột hiện dấu "—":
-                   * bảng trông như bị khoá cứng, và không dán được gì vào vì ô nhập không tồn tại.
+                   * bảng trông như bị khoá cứng. Các ô đó vẫn tồn tại để giữ đúng cấu trúc khi dán bảng,
+                   * nhưng bị khoá và tô xám cho tới khi mặt hàng đã chọn làm chúng có hiệu lực.
                    * Ở bảng gọn thì "—" đúng (đã biết hàng gì rồi thì cột không liên quan chỉ gây
                    * nhiễu); ở trang tính thì cột phải có sẵn để còn dán cả khối vào.
                    */
@@ -1299,8 +1349,10 @@ export function ChildGrid(props: ChildGridProps) {
                     <TableCell
                       key={c.fieldname}
                       data-cell={`${ri}:${cols.indexOf(c)}`}
-                      className={`align-top ${sticky.className}`}
+                      data-editable={cellReadOnly ? "false" : "true"}
+                      className={`align-top ${cellReadOnly ? "!bg-muted/60 text-muted-foreground" : "bg-background"} ${sticky.className}`}
                       style={sticky.style}
+                      title={cellHint}
                       onFocusCapture={() => { setPickedRow(ri); setPickedColumn(cols.indexOf(c)); }}
                       onClick={() => { setPickedRow(ri); setPickedColumn(cols.indexOf(c)); }}
                     >
@@ -1308,7 +1360,7 @@ export function ChildGrid(props: ChildGridProps) {
                         field={c}
                         value={row[c.fieldname]}
                         onChange={(v: unknown) => setCell(ri, c.fieldname, v)}
-                        readOnly={readOnly || rf.readOnly}
+                        readOnly={cellReadOnly}
                         masked={rf.masked}
                         services={services}
                         docname={String(row.name ?? "")}
@@ -1448,6 +1500,14 @@ export function ChildGrid(props: ChildGridProps) {
             />
           </label>
           <span className="text-xs text-muted-foreground">Chép vùng trong Excel rồi Ctrl+V ngay trên bảng</span>
+          <span className="inline-flex items-center gap-3 text-xs text-muted-foreground" aria-label="Chú thích trạng thái ô">
+            <span className="inline-flex items-center gap-1">
+              <span className="size-3 rounded-sm border bg-background" /> Ô nhập liệu
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="size-3 rounded-sm border bg-muted" /> Tự tính / không áp dụng
+            </span>
+          </span>
         </>
       ) : (
         <Button type="button" variant="outline" size="sm" onClick={() => { setExpanded(true); setPickedRow(rows.length ? 0 : null); }}>
@@ -1457,7 +1517,7 @@ export function ChildGrid(props: ChildGridProps) {
       {/* Kéo nhầm một cột về 3rem rồi mở lại vẫn thấy nó bé tí là một cái bẫy không lối ra —
           tuỳ chỉnh nào lưu lại được cũng phải có đường hoàn tác. */}
       {layout.order.length || Object.keys(layout.w).length || layout.hidden.length || layout.pinned.length || Object.keys(layout.labels).length ? (
-        <Button type="button" variant="ghost" size="sm" onClick={() => saveLayout({ w: {}, order: [], hidden: [], pinned: [], labels: {} })}>
+        <Button type="button" variant="ghost" size="sm" onClick={resetLayout}>
           <RotateCcw /> Cột về mặc định
         </Button>
       ) : null}
@@ -1493,12 +1553,12 @@ export function ChildGrid(props: ChildGridProps) {
                 />
                 <Input
                   className="h-8"
-                  value={layout.labels[column.fieldname] ?? column.label ?? column.fieldname}
+                  value={layout.labels[column.fieldname] ?? childGridColumnLabel(childMeta, column)}
                   onChange={(event) => saveLayout({
                     ...layout,
                     labels: { ...layout.labels, [column.fieldname]: event.target.value },
                   })}
-                  aria-label={`Tên hiển thị cột ${column.label ?? column.fieldname}`}
+                  aria-label={`Tên hiển thị cột ${childGridColumnLabel(childMeta, column)}`}
                 />
                 <Button
                   type="button"
@@ -1520,7 +1580,7 @@ export function ChildGrid(props: ChildGridProps) {
           })}
         </div>
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="ghost" onClick={() => saveLayout({ w: {}, order: [], hidden: [], pinned: [], labels: {} })}>
+          <Button type="button" variant="ghost" onClick={resetLayout}>
             <RotateCcw /> Mặc định
           </Button>
           <Button type="button" onClick={() => setColumnSettingsOpen(false)}>Xong</Button>
