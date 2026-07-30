@@ -48,7 +48,7 @@ const replaceField = (dt, name, next) => {
 };
 
 // ─────────────────────────── HEADER ───────────────────────────
-brief.version = "2.0.9";
+brief.version = "2.0.10";
 brief.locale.dateFormat = "dd/mm/yyyy"; // Q11 — chủ xưởng chốt gạch chéo
 // Nỗi đau #1 của BRD: người mở app phải thấy ngay tồn KHẢ DỤNG theo khổ, không phải tự lấy tồn tổng
 // rồi trừ các phiếu giữ bằng tay. Báo cáo này nằm ở query engine nền tảng vì nó đọc cùng sổ kho.
@@ -1007,10 +1007,10 @@ brief.prints.push({
     "<div class=\"title\">Đơn đặt hàng</div>",
     "<div class=\"meta\"><div><b>Tên nhà cung cấp:</b>{{ supplier }}</div><div><b>Ngày đặt hàng:</b>{{ transaction_date | date }}</div><div><b>Ngày giao hàng:</b>{{ schedule_date | date }}</div></div>",
     "<table><thead><tr>",
-    "<th class=\"index-col\">STT</th><th>Mã hàng</th><th>Tên hàng</th><th>Kích thước (m)</th><th>Trọng lượng (kg/m)</th><th>SL bó</th><th>Số cây/lá</th><th>Số lượng</th><th>ĐVT</th><th>Đơn giá</th><th>Thành tiền</th><th>Màu</th><th>Dập</th><th>Số SO NCC</th><th class=\"note-col\">Ghi chú</th>",
+    "<th class=\"index-col\">STT</th><th>Mã hàng</th><th>Tên hàng</th><th>Màu sắc</th><th>Kích thước</th><th>Trọng lượng</th><th>Số bó</th><th>Số cây/lá</th><th>Số lượng</th><th>ĐVT</th><th>Đơn giá</th><th>Thành tiền</th><th>Dập</th><th class=\"note-col\">Ghi chú</th>",
     "</tr></thead><tbody>",
-    "{{#each items}}<tr><td class=\"c index-col\">{{ _index }}</td><td class=\"code\">{{ item_code }}</td><td class=\"item-cell\">{{ item_name }}</td><td class=\"n\">{{ length_m | number }}</td><td class=\"n\">{{ theoretical_kg_per_m | number }}</td><td class=\"n\">{{ qty_bundle | number }}</td><td class=\"n\">{{ qty_bar | number }}</td><td class=\"n\">{{ qty | number }}</td><td class=\"c\">{{ uom }}</td><td class=\"n\">{{ rate | money }}</td><td class=\"n\">{{ amount | money }}</td><td class=\"c\">{{ color }}</td><td class=\"c\">{{ is_stamped }}</td><td class=\"c\">{{ so_no }}</td><td class=\"note-cell\">{{ note }}</td></tr>{{/each}}",
-    "</tbody><tfoot><tr><td class=\"total-label\" colspan=\"10\">Tổng tiền</td><td class=\"total-value\">{{ grand_total | money }} {{ currency }}</td><td colspan=\"4\"></td></tr></tfoot></table>",
+    "{{#each items}}<tr><td class=\"c index-col\">{{ _index }}</td><td class=\"code\">{{ item_code }}</td><td class=\"item-cell\">{{ item_name }}</td><td class=\"c\">{{ color }}</td><td class=\"n\">{{ length_m | number }}</td><td class=\"n\">{{ theoretical_kg_per_m | number }}</td><td class=\"n\">{{ qty_bundle | number }}</td><td class=\"n\">{{ qty_bar | number }}</td><td class=\"n\">{{ qty | number }}</td><td class=\"c\">{{ uom }}</td><td class=\"n\">{{ rate | money }}</td><td class=\"n\">{{ amount | money }}</td><td class=\"c\">{{ is_stamped }}</td><td class=\"note-cell\">{{ note }}</td></tr>{{/each}}",
+    "</tbody><tfoot><tr><td class=\"total-label\" colspan=\"11\">Tổng tiền</td><td class=\"total-value\">{{ grand_total | money }} {{ currency }}</td><td colspan=\"2\"></td></tr></tfoot></table>",
     "<div class=\"sign\"><div><b>Người lập đơn</b>(ký, ghi rõ họ tên)</div><div><b>Người duyệt</b>(ký, ghi rõ họ tên)</div><div><b>Nhà cung cấp xác nhận</b>(ký, ghi rõ họ tên)</div></div>",
   ],
 });
