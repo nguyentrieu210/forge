@@ -9,11 +9,11 @@ const BASIS_POINTS = 10_000n;
 
 export interface PurchaseMaterialIdentityInput {
   item_code: string;
-  length_m?: DecimalInput | null;
-  theoretical_kg_per_m?: DecimalInput | null;
-  color?: string | null;
-  is_stamped?: boolean | number | string | null;
-  measurement_profile?: string | null;
+  length_m?: DecimalInput | null | undefined;
+  theoretical_kg_per_m?: DecimalInput | null | undefined;
+  color?: string | null | undefined;
+  is_stamped?: boolean | number | string | null | undefined;
+  measurement_profile?: string | null | undefined;
   stock_uom: string;
 }
 
