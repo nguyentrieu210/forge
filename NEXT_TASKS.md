@@ -21,30 +21,85 @@
 - Hoàn thành khi: Gateway và tenant đều đúng version dự kiến, smoke test xanh, không có lỗi production mới và backup đã được chuyển khỏi nơi lưu plaintext thông thường.
 - Phụ thuộc: tenant live deploy đã operator-confirmed; Gateway production traffic chưa được xác nhận độc lập.
 
-## P1 — Hàng đợi nhập nhôm FIFO liên tục và nợ nhà máy
+## P1 — Implement hàng đợi nhập nhôm FIFO và nợ nhà máy
 
-**Mục tiêu:** quản lý một chuỗi PO kéo dài nhiều tuần, nhiều PO cùng vật tư trong tháng và một xe nhập có thể tự bù rất nhiều PO, không bắt người dùng tự gom nhóm.
+**Mục tiêu:** triển khai contract đã chốt tại `server/docs/ALUMDOOR-PURCHASE-RECEIPT-ALLOCATION.md` để một Receipt có thể tự bù nhiều PO line, giữ lịch sử bất biến và đối soát dung sai chính xác.
 
-- Điểm review hiện tại: **7,3/10**. Chỉ bắt đầu implementation sau khi chốt các architecture gate dưới đây.
-- Kịch bản nền: PO ngày 1 đặt AL71 7,2 m × 0,389 × 200 cây; PO ngày 2 đặt 100 cây; Receipt nhận 230 cây, barem 644,184 kg và cân thực 630 kg. Hệ thống phân bổ FIFO 200 cây vào PO ngày 1, 30 cây vào PO ngày 2 và báo tồn danh nghĩa 70 cây.
-- Thực tế phải cover: một PO có thể mở cả tháng; cùng supplier/mã/quy cách có thể phát sinh 3–4 PO hoặc hơn trong tháng; một Receipt có nhiều dòng và mỗi dòng có thể chạm hàng chục PO line.
-- Tách hai khái niệm: **obligation queue** chạy liên tục để FIFO; **settlement window** là kỳ đối soát hữu hạn để tính dung sai. Không lấy queue vô thời hạn làm mẫu số ±5%.
-- Queue key do server tạo theo `tenant + company + supplier + material_match_key`. `material_match_key` là hash có `schema_version` từ snapshot chuẩn hoá, tối thiểu gồm `item_code + length_m + color + is_stamped + measurement_profile`; không tin chuỗi key do client gửi.
-- Concurrency gate: Aggregate DO hiện khóa theo `tenant:doctype:name`, không khóa được hai Receipt khác nhau. Thiết kế phải dùng coordinator riêng theo `tenant + company + supplier` hoặc D1 stream revision/CAS + unique/commit guards; một Receipt không được giữ nhiều DO lock theo từng vật tư.
-- Thuật toán Receipt submit: lấy mọi PO line còn nghĩa vụ đúng key, sắp `transaction_date → created_at → PO name → row idx`, phân bổ FIFO qua bao nhiêu PO cũng được, ghi allocation trong cùng D1 batch với document/stock/procurement và kiểm stream revision tại commit.
-- Sổ allocation append-only cần chứa receipt, receipt item row, PO, PO item row, allocation sequence, qty cây, barem snapshot, posting_at và `allocate/reverse/reallocate/apply_unapplied`. Huỷ không delete.
-- `actual_weight_kg` authoritative ở Receipt line. Kg quy cho từng PO chỉ là projection theo barem/tỷ lệ với quy tắc làm tròn và residual cố định; không tạo nguồn sổ cân thứ hai.
-- Receipt vượt nominal chỉ được đưa vào `unapplied_receipt_qty` khi chính sách cho phép và chưa vượt trần settlement window. Không nhét phần dư vào PO cuối. Áp phần dư về PO mới phải tạo event mới.
-- Settlement window được mở/đóng bằng event có quyền và lý do; tổng đặt của window không thay đổi ngược sau khi đóng. Action `Đối soát giao cuối / Đóng trong dung sai` kiểm min–max, số dư chưa áp và ghi `settlement_variance` bất biến.
-- Chốt edge cases trước code: Receipt nhập lùi ngày; cancel Receipt khi có allocation mới hơn; reallocation sau reversal; PO cancel/amend sau khi đã nhận; reopen settlement; đổi supplier/item master; manual FIFO override có lý do và quyền.
-- UI cần preview phân bổ trước submit. Override chỉ dành cho role được phép, phải nhập lý do, và kết quả vẫn ghi ledger đầy đủ.
-- Migration/backfill: thêm `0027_*` append-only. Dữ liệu cũ chỉ có PO + item_code phải backfill khi xác định duy nhất; trường hợp mơ hồ ghi `legacy_unresolved` hoặc đưa vào hàng đợi đối chiếu thủ công, không đoán `row_id`.
-- Projection `received_percentage`, tồn danh nghĩa và báo cáo nợ phải chuyển sang allocation ledger. Không duy trì progress ledger cũ và allocation ledger mới như hai nguồn sự thật; có thể giữ bảng cũ làm compatibility projection được sinh từ allocation.
-- UI trên PO: số đặt, đã phân bổ, còn danh nghĩa, các Receipt đã bù, tuổi nợ và settlement variance. UI trên Receipt: mỗi dòng đã trừ PO nào, bao nhiêu cây, barem, cân thực và phần chưa áp. Báo cáo NCC: tổng đặt, tổng về, nợ danh nghĩa, dải giao cuối và PO cũ nhất.
-- File dự kiến: `server/packages/contracts/src/index.ts`, `server/packages/clouderp-core/src/types.ts`, `server/packages/clouderp-core/src/controllers.ts`, tenant routing/coordinator, document kernel/D1 store, migration `server/migrations/tenant/0027_*.sql`, generator `server/scripts/build-alumdoor-v2-brief.mjs`, output brief, report metadata/UI và test.
-- Test bắt buộc: 200+100/nhận 230; 4 PO trong một tháng; PO mở qua tháng; một Receipt bù nhiều PO; nhiều dòng Receipt; hàng trăm allocation rows; submit đồng thời; retry cùng command id; backdated Receipt; cancel/reallocate; PO amend/cancel; dư nominal/unapplied; settlement 55/85 pass và 54/86 fail; cùng mã khác quy cách không trộn; kg thực không đổi số cây còn nợ; backfill legacy rõ/mơ hồ.
-- Hoàn thành khi: toàn bộ trạng thái dựng lại được từ ledger bất biến, không double allocation dưới concurrency, không đổi lịch sử khi cancel/backdated và dung sai chỉ áp trong settlement window đã chốt.
-- Phụ thuộc: chốt coordinator/CAS, settlement window, cancel/reallocation, backfill legacy và quyền override; P0 production smoke hoàn tất trước deployment tiếp theo.
+- Điểm review thiết kế sau chốt: **9,2/10**. Trạng thái: **ready for implementation**, chưa ready for production.
+- Kịch bản khóa: PO 200 + 100 cây, Receipt 230 cây/644,184 kg barem/630 kg thực => allocation 200 + 30, còn nợ danh nghĩa 70.
+- Quyết định concurrency đã chốt: `PurchaseAllocationCoordinator` theo `tenant + company + supplier`, cộng D1 revision claim/trigger authoritative trong cùng batch. Không lock riêng từng vật tư.
+- Quyết định lifecycle đã chốt: obligation queue chạy liên tục; settlement window hữu hạn và snapshot tolerance. Window chỉ close/reverse bằng action có quyền và lý do.
+- Quyết định ordering đã chốt: FIFO tại thời điểm commit; backdated Receipt không viết lại allocation cũ; cancel Receipt chỉ reverse chính Receipt đó, không auto-rebalance Receipt mới hơn.
+- Quyết định PO đã chốt: identity/qty bất biến sau submit; cancel chỉ khi net allocation bằng 0 và window chưa settled; amend qua successor `amended_from`.
+- Quyết định material key đã chốt: canonical hash schema v1 gồm `item_code + length_m + theoretical_kg_per_m + color + is_stamped + measurement_profile + stock_uom`, do server tạo.
+- Quyết định kg đã chốt: cân thực authoritative ở Receipt line; kg theo PO là projection versioned theo barem, residual dồn allocation cuối.
+- Quyết định legacy đã chốt: backfill từ `versions.snapshot_json`; exact unique => resolved, mơ hồ => `legacy_unresolved`; không đoán PO row id.
+- Quyết định cutover đã chốt: allocation ledger là nguồn sự thật; progress table cũ chỉ là compatibility projection sinh từ allocation plan.
+
+### M1 — Schema và contract
+
+- Thêm migration append-only `server/migrations/tenant/0027_purchase_receipt_allocation.sql`.
+- Thêm tables cho queue, settlement window, obligations, allocations, unapplied, settlement events và revision claims.
+- Thêm triggers/unique/check guards cho revision, sign, lifecycle, live row id và idempotency.
+- Mở rộng `MutationPlan`, contracts và D1 store để ghi allocation cùng document/stock/procurement.
+- Test SQL: revision mismatch abort toàn batch; live allocation thiếu PO row bị từ chối; reversal sign/lifecycle hợp lệ.
+
+### M2 — Canonical material key
+
+- Viết canonicalizer thuần hàm, fixed-point micros, canonical JSON và SHA-256.
+- Snapshot hash + các field giải thích được trên PO/Receipt/allocation.
+- Test khác chiều dài, barem, màu, dập hoặc profile không trộn; null/empty normalization ổn định.
+
+### M3 — Coordinator và retry
+
+- Thêm `PurchaseAllocationCoordinator` và route các mutation ảnh hưởng stream.
+- Draft create/save giữ Aggregate Coordinator hiện tại.
+- Retry revision conflict tối đa 3 lần với cùng command id; idempotency receipt vẫn authoritative.
+- Test hai Receipt submit đồng thời, PO submit cạnh Receipt, retry sau conflict và không double allocation.
+
+### M4 — Allocation planner
+
+- Planner thuần hàm nhận obligations + Receipt line + window snapshot và trả allocation/unapplied/events.
+- FIFO theo `transaction_date → created_at → PO name → idx → row_id`.
+- Một Receipt line bù nhiều PO; một Receipt nhiều dòng; hàng trăm rows.
+- Receipt vượt current maximum bị block; vượt nominal nhưng trong maximum ghi unapplied.
+- PO mới trước settlement tự apply unapplied cũ bằng event mới.
+
+### M5 — Lifecycle và edge cases
+
+- Cancel Receipt ghi reverse, không rebalance lịch sử.
+- Backdated Receipt dùng posting date cho sổ, stream sequence cho allocation.
+- PO cancel/amend guards.
+- Manual override cùng supplier/material/window, permission + reason bắt buộc.
+- Settlement close/reverse rules, integer min/max, shortage/overage variance.
+
+### M6 — Backfill và cutover
+
+- Viết `server/scripts/backfill-purchase-receipt-allocations.mjs` với dry-run mặc định.
+- Dùng voucher revision, line key và `versions.snapshot_json` để dựng source row.
+- Xuất resolved/unresolved/checksum; không execute nếu PO-level quantity không khớp.
+- Chuyển `received_percentage`, tồn danh nghĩa và báo cáo sang ledger mới.
+- Compatibility progress rows được sinh từ allocation plan, không ghi độc lập.
+
+### M7 — UI và báo cáo
+
+- Preview allocation trước submit Receipt.
+- Timeline PO/Receipt với drill-down.
+- Hiển thị nominal remaining, actual received, unapplied, settlement range và variance.
+- Manual override/settlement action có permission, reason và cảnh báo backdated.
+- Báo cáo NCC: tổng đặt, tổng về, nợ danh nghĩa, window, dải giao cuối và PO cũ nhất.
+
+### M8 — Gate và rollout
+
+- Targeted unit/SQL/integration/concurrency/stress tests.
+- Root `pnpm.cmd run test`, `pnpm.cmd run typecheck`, `pnpm.cmd run build`, frontend lint.
+- Đo D1 batch size/latency với hàng trăm allocation rows và supplier contention.
+- Dry-run backfill trên backup production, review unresolved và checksum.
+- Staging migration/smoke trước; production chỉ sau backup mới và explicit deploy approval.
+
+- File chính dự kiến: `server/packages/contracts/src/index.ts`, `server/packages/clouderp-core/src/types.ts`, `server/packages/clouderp-core/src/controllers.ts`, tenant routing/coordinator, document kernel/D1 store, migration `0027`, backfill script, Alumdoor generator/brief, report/UI và tests.
+- Hoàn thành khi: trạng thái dựng lại hoàn toàn từ ledger bất biến; không double allocation; cancel/backdated không sửa lịch sử; settlement boundary đúng; legacy checksum khớp; browser workflow usable.
+- Phụ thuộc: P0 production smoke nên hoàn tất trước deployment tiếp theo. Implementation local/staging có thể bắt đầu theo M1.
 
 ## P1 — Kiểm thử ổn định bản in Purchase Order Alumdoor
 
