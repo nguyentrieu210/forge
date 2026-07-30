@@ -131,9 +131,13 @@ Không submit chứng từ nghiệp vụ trong Browser QA; các side effect đã
   `cloudforge-drill-alumdoor-catalog-a-20260730` và
   `cloudforge-drill-alumdoor-catalog-b-20260730`: 67 bảng, `quick_check=ok`, không đổi route.
 - Migration danh mục chạy hai lần trên drill; lần hai ghi 0 dòng. Production tạo năm Item còn
-  thiếu (tổng 299), chuẩn hóa đủ 17 mã mục tiêu về mua/tồn Kg, tạo 12 ánh xạ mã Tiến Đạt và
-  ngừng dùng ba mã ghép. Chạy lại production ghi 0 dòng; stock ledger vẫn 0,
-  `quick_check=ok`.
+  thiếu, chuẩn hóa đủ 17 mã mục tiêu về mua/tồn Kg, tạo 12 ánh xạ mã Tiến Đạt và gỡ hẳn ba
+  mã ghép. Sáu lô bộ lịch sử được tách thành 24 lô con, không tự đặt số kg khi nguồn không có
+  cân thực. Trạng thái cuối là 296 Item và 1.275 lô; chạy lại production ghi 0 dòng, stock
+  ledger vẫn 0, `quick_check=ok`.
+- Backup ngay trước bước tách lô: `alu-2026-07-30T05-34-14-166Z.sql`, SHA-256
+  `43d62ad131b4217c7bae90e985d6b99f5091b54b34a56274cec1f2709a9b4de7`; bản DPAPI lưu
+  ngoài thư mục Cloudflare.
 - Phạm vi correction được khóa bằng test: không có công thức đơn mua, tự tính kg, phân bổ hàng
   nhập FIFO hoặc logic công nợ.
 

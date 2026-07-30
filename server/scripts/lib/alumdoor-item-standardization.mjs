@@ -97,7 +97,7 @@ const SUPPLEMENTAL_KG_ITEMS = [
   },
   {
     itemCode: "RNHUA-DR",
-    itemName: "RON NHỰA ĐÁY RAY",
+    itemName: "RON NHỰA",
     itemGroup: "Phụ kiện",
     inventoryMode: "Hàng thường",
     isSalesItem: true,
@@ -106,7 +106,7 @@ const SUPPLEMENTAL_KG_ITEMS = [
   },
   {
     itemCode: "RNINOX-DR",
-    itemName: "RON INOX ĐÁY RAY",
+    itemName: "RON INOX",
     itemGroup: "Phụ kiện",
     inventoryMode: "Hàng thường",
     isSalesItem: true,
@@ -138,16 +138,25 @@ export const COMPOSITE_ITEMS = [
     itemCode: "RONNHUA_INOX",
     children: ["RNHUA-DR", "RNINOX-DR"],
     reason: "Ron nhựa và ron inox là hai vật tư nhập kho riêng.",
+    deleteWhenUnreferenced: true,
   },
   {
     itemCode: "TP-BO3LADAY",
     children: ["TP-TD325", "TP-TD326", "TP-TD327"],
     reason: "Bộ ba lá đáy đã tách thành lá đáy lớn, lá trung gian và lá yếm.",
+    deleteWhenUnreferenced: true,
   },
   {
     itemCode: "BỘ BA LÁ ĐÁY + LÁ ĐẦU",
     children: ["TP-TD325", "TP-TD326", "TP-TD327", "TP-A282"],
     reason: "Bộ ghép không phải một mặt hàng tồn kho nguyên tử.",
+    deleteWhenUnreferenced: true,
+    splitHistoricalLots: [
+      { itemCode: "TP-TD325", suffix: "TD325" },
+      { itemCode: "TP-TD326", suffix: "TD326" },
+      { itemCode: "TP-TD327", suffix: "TD327" },
+      { itemCode: "TP-A282", suffix: "A282" },
+    ],
   },
 ];
 
@@ -343,6 +352,162 @@ WHERE tenant_id='alu'
 
   for (const composite of COMPOSITE_ITEMS) {
     const replacement = composite.children.join(", ");
+    if (composite.splitHistoricalLots) {
+      for (const child of composite.splitHistoricalLots) {
+        const lotNote = `Tách từ lô bộ cũ; 1 bộ = 1 cái ${child.itemCode}. ĐVT nhập/tồn của mặt hàng vẫn là Kg.`;
+        sql.push(`INSERT INTO documents
+  (tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,modified_by,payload_json)
+SELECT
+  tenant_id,
+  'Aluminium Lot:' || name || ${quote(`-${child.suffix}`)},
+  'Aluminium Lot',
+  name || ${quote(`-${child.suffix}`)},
+  owner,
+  docstatus,
+  status,
+  1,
+  created_at,
+  ${quote(MIGRATION_AT)},
+  'admin',
+  json_set(
+    payload_json,
+    '$.profile',${quote(child.itemCode)},
+    '$.legacy_parent_lot',name,
+    '$.legacy_component_split',json('true'),
+    '$.note',${quote(lotNote)},
+    '$._migration_source',${quote(MIGRATION_SOURCE)}
+  )
+FROM documents
+WHERE tenant_id='alu'
+  AND doctype='Aluminium Lot'
+  AND json_extract(payload_json,'$.profile')=${quote(composite.itemCode)}
+ON CONFLICT(tenant_id,doc_key) DO UPDATE SET
+  payload_json=excluded.payload_json,
+  modified_at=excluded.modified_at,
+  modified_by=excluded.modified_by,
+  version=documents.version+1
+WHERE documents.payload_json<>excluded.payload_json;`);
+        sql.push(`INSERT INTO document_search(tenant_id,doctype,name,title,content,modified_at)
+SELECT
+  tenant_id,
+  'Aluminium Lot',
+  name || ${quote(`-${child.suffix}`)},
+  ${quote(child.itemCode)} || ' · ' || COALESCE(json_extract(payload_json,'$.colour'),'') || ' · ' || COALESCE(json_extract(payload_json,'$.width_m'),'') || ' m',
+  ${quote(child.itemCode)} || ' ' || COALESCE(json_extract(payload_json,'$.colour'),'') || ' '
+    || COALESCE(json_extract(payload_json,'$.generation'),'') || ' '
+    || COALESCE(json_extract(payload_json,'$.width_m'),'') || ' '
+    || COALESCE(json_extract(payload_json,'$.warehouse'),'') || ' '
+    || COALESCE(json_extract(payload_json,'$.quality_status'),''),
+  ${quote(MIGRATION_AT)}
+FROM documents
+WHERE tenant_id='alu'
+  AND doctype='Aluminium Lot'
+  AND json_extract(payload_json,'$.profile')=${quote(composite.itemCode)}
+ON CONFLICT(tenant_id,doctype,name) DO UPDATE SET
+  title=excluded.title,
+  content=excluded.content,
+  modified_at=excluded.modified_at
+WHERE document_search.title<>excluded.title
+   OR document_search.content<>excluded.content;`);
+      }
+      sql.push(`DELETE FROM versions
+WHERE tenant_id='alu'
+  AND doc_key IN (
+    SELECT doc_key FROM documents
+    WHERE tenant_id='alu'
+      AND doctype='Aluminium Lot'
+      AND json_extract(payload_json,'$.profile')=${quote(composite.itemCode)}
+  );`);
+      for (const table of ["document_comments", "document_shares", "document_tags", "assignments"]) {
+        sql.push(`DELETE FROM ${table}
+WHERE tenant_id='alu'
+  AND doctype='Aluminium Lot'
+  AND name IN (
+    SELECT name FROM documents
+    WHERE tenant_id='alu'
+      AND doctype='Aluminium Lot'
+      AND json_extract(payload_json,'$.profile')=${quote(composite.itemCode)}
+  );`);
+      }
+      sql.push(`DELETE FROM files
+WHERE tenant_id='alu'
+  AND attached_to_doctype='Aluminium Lot'
+  AND attached_to_name IN (
+    SELECT name FROM documents
+    WHERE tenant_id='alu'
+      AND doctype='Aluminium Lot'
+      AND json_extract(payload_json,'$.profile')=${quote(composite.itemCode)}
+  );`);
+      sql.push(`DELETE FROM document_search
+WHERE tenant_id='alu'
+  AND doctype='Aluminium Lot'
+  AND name IN (
+    SELECT name FROM documents
+    WHERE tenant_id='alu'
+      AND doctype='Aluminium Lot'
+      AND json_extract(payload_json,'$.profile')=${quote(composite.itemCode)}
+  );`);
+      sql.push(`DELETE FROM documents
+WHERE tenant_id='alu'
+  AND doctype='Aluminium Lot'
+  AND json_extract(payload_json,'$.profile')=${quote(composite.itemCode)};`);
+    }
+    if (composite.deleteWhenUnreferenced) {
+      sql.push(`DELETE FROM versions
+WHERE tenant_id='alu'
+  AND doc_key IN (
+    SELECT doc_key FROM documents
+    WHERE tenant_id='alu'
+      AND (
+        (doctype='Item' AND name=${quote(composite.itemCode)})
+        OR (doctype='Item Price' AND json_extract(payload_json,'$.item_code')=${quote(composite.itemCode)})
+      )
+  );`);
+      for (const table of ["document_comments", "document_shares", "document_tags", "assignments"]) {
+        sql.push(`DELETE FROM ${table}
+WHERE tenant_id='alu'
+  AND (
+    (doctype='Item' AND name=${quote(composite.itemCode)})
+    OR (doctype='Item Price' AND name IN (
+      SELECT name FROM documents
+      WHERE tenant_id='alu'
+        AND doctype='Item Price'
+        AND json_extract(payload_json,'$.item_code')=${quote(composite.itemCode)}
+    ))
+  );`);
+      }
+      sql.push(`DELETE FROM files
+WHERE tenant_id='alu'
+  AND (
+    (attached_to_doctype='Item' AND attached_to_name=${quote(composite.itemCode)})
+    OR (attached_to_doctype='Item Price' AND attached_to_name IN (
+      SELECT name FROM documents
+      WHERE tenant_id='alu'
+        AND doctype='Item Price'
+        AND json_extract(payload_json,'$.item_code')=${quote(composite.itemCode)}
+    ))
+  );`);
+      sql.push(`DELETE FROM document_search
+WHERE tenant_id='alu'
+  AND (
+    (doctype='Item' AND name=${quote(composite.itemCode)})
+    OR (doctype='Item Price' AND name IN (
+      SELECT name FROM documents
+      WHERE tenant_id='alu'
+        AND doctype='Item Price'
+        AND json_extract(payload_json,'$.item_code')=${quote(composite.itemCode)}
+    ))
+  );`);
+      sql.push(`DELETE FROM documents
+WHERE tenant_id='alu'
+  AND doctype='Item Price'
+  AND json_extract(payload_json,'$.item_code')=${quote(composite.itemCode)};`);
+      sql.push(`DELETE FROM documents
+WHERE tenant_id='alu'
+  AND doctype='Item'
+  AND name=${quote(composite.itemCode)};`);
+      continue;
+    }
     const patch = {
       is_purchase_item: false,
       is_sales_item: false,
@@ -376,8 +541,9 @@ WHERE tenant_id='alu'
     migration_source: MIGRATION_SOURCE,
     scope: {
       purchase_and_stock_uom: "Kg",
+      physical_piece_or_set_count_is_auxiliary: true,
       split_atomic_items: true,
-      disable_composite_items: true,
+      remove_composite_items: true,
       purchase_order_formula: false,
       automatic_kg_calculation: false,
       fifo_receipt_allocation: false,
@@ -387,7 +553,11 @@ WHERE tenant_id='alu'
       kg_items: targets.length,
       source_supplier_items: targets.filter((row) => row.supplierCode).length,
       newly_created_items: targets.filter((row) => row.create).length,
-      disabled_composites: COMPOSITE_ITEMS.length,
+      processed_composites: COMPOSITE_ITEMS.length,
+      deleted_composites: COMPOSITE_ITEMS.filter((row) => row.deleteWhenUnreferenced).length,
+      retained_historical_composites: COMPOSITE_ITEMS.filter((row) => !row.deleteWhenUnreferenced).length,
+      split_historical_lots_from: 6,
+      split_historical_lots_to: 24,
     },
     preflight: {
       required_stock_ledger_rows: 0,

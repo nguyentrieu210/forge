@@ -3,8 +3,9 @@
   "migration_source": "alumdoor-item-standardization-2026-07-30",
   "scope": {
     "purchase_and_stock_uom": "Kg",
+    "physical_piece_or_set_count_is_auxiliary": true,
     "split_atomic_items": true,
-    "disable_composite_items": true,
+    "remove_composite_items": true,
     "purchase_order_formula": false,
     "automatic_kg_calculation": false,
     "fifo_receipt_allocation": false,
@@ -14,7 +15,11 @@
     "kg_items": 17,
     "source_supplier_items": 12,
     "newly_created_items": 5,
-    "disabled_composites": 3
+    "processed_composites": 3,
+    "deleted_composites": 3,
+    "retained_historical_composites": 0,
+    "split_historical_lots_from": 6,
+    "split_historical_lots_to": 24
   },
   "preflight": {
     "required_stock_ledger_rows": 0,
@@ -198,7 +203,7 @@
     {
       "item_code": "RNHUA-DR",
       "supplier_code": null,
-      "item_name": "RON NHỰA ĐÁY RAY",
+      "item_name": "RON NHỰA",
       "item_group": "Phụ kiện",
       "stock_uom": "Kg",
       "purchase_uom": "Kg",
@@ -210,7 +215,7 @@
     {
       "item_code": "RNINOX-DR",
       "supplier_code": null,
-      "item_name": "RON INOX ĐÁY RAY",
+      "item_name": "RON INOX",
       "item_group": "Phụ kiện",
       "stock_uom": "Kg",
       "purchase_uom": "Kg",
@@ -251,7 +256,8 @@
         "RNHUA-DR",
         "RNINOX-DR"
       ],
-      "reason": "Ron nhựa và ron inox là hai vật tư nhập kho riêng."
+      "reason": "Ron nhựa và ron inox là hai vật tư nhập kho riêng.",
+      "deleteWhenUnreferenced": true
     },
     {
       "itemCode": "TP-BO3LADAY",
@@ -260,7 +266,8 @@
         "TP-TD326",
         "TP-TD327"
       ],
-      "reason": "Bộ ba lá đáy đã tách thành lá đáy lớn, lá trung gian và lá yếm."
+      "reason": "Bộ ba lá đáy đã tách thành lá đáy lớn, lá trung gian và lá yếm.",
+      "deleteWhenUnreferenced": true
     },
     {
       "itemCode": "BỘ BA LÁ ĐÁY + LÁ ĐẦU",
@@ -270,7 +277,26 @@
         "TP-TD327",
         "TP-A282"
       ],
-      "reason": "Bộ ghép không phải một mặt hàng tồn kho nguyên tử."
+      "reason": "Bộ ghép không phải một mặt hàng tồn kho nguyên tử.",
+      "deleteWhenUnreferenced": true,
+      "splitHistoricalLots": [
+        {
+          "itemCode": "TP-TD325",
+          "suffix": "TD325"
+        },
+        {
+          "itemCode": "TP-TD326",
+          "suffix": "TD326"
+        },
+        {
+          "itemCode": "TP-TD327",
+          "suffix": "TD327"
+        },
+        {
+          "itemCode": "TP-A282",
+          "suffix": "A282"
+        }
+      ]
     }
   ]
 }

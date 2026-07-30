@@ -298,11 +298,16 @@ Sau khi chốt mới migrate Item; phải kiểm tra stock ledger trước khi �
 - Ron nhựa chốt `0,263 kg/m`, ron inox `0,124 kg/m`; hai trục giữ `4,40` và `4,70 kg/m`.
 - 12 mã NCC Tiến Đạt đã khớp `Supplier Item`; tạo thêm năm mặt hàng nguyên tử còn thiếu:
   `TD-TG-ALD`, `RHM8(2.4MM)`, `CQ-VM111`, `TDU26`, `AL-YST`.
-- Ngừng dùng ba mã ghép `RONNHUA_INOX`, `TP-BO3LADAY`, `BỘ BA LÁ ĐÁY + LÁ ĐẦU`;
-  giá của các mã ghép cũng bị vô hiệu hóa.
-- Production tăng từ 294 lên 299 Item; 17 `Material Specification`, 12 `Supplier Item`,
-  một `Measurement Profile` được tạo. Migration chạy lại ghi 0 dòng, ledger vẫn 0,
-  `quick_check=ok`.
+- Gỡ hẳn khỏi danh mục ba mã ghép `RONNHUA_INOX`, `TP-BO3LADAY`,
+  `BỘ BA LÁ ĐÁY + LÁ ĐẦU`.
+- Sáu lô bộ lịch sử được tách thành 24 lô con: mỗi bộ sinh một cái `TP-TD325`, `TP-TD326`,
+  `TP-TD327`, `TP-A282` cùng chiều dài. ĐVT nhập/tồn của các mã con vẫn là Kg; không bịa kg
+  vì workbook nguồn không có số cân thật.
+- Tên hiển thị hai mã con được rút gọn rõ ràng thành `RON NHỰA` và `RON INOX`.
+- Production hiện có 296 Item sau khi thêm năm mã nguyên tử và gỡ ba mã ghép; 17
+  `Material Specification`, 12 `Supplier Item`, một `Measurement Profile` được tạo. Sáu lô
+  bộ cũ đã được thay bằng 24 lô con nên tổng lô là 1.275. Migration chạy lại ghi 0 dòng,
+  ledger vẫn 0, `quick_check=ok`.
 
 Đây là correction danh mục thuần dữ liệu. Không đưa công thức đặt hàng, tự tính kg, FIFO hàng
 về hoặc công nợ của commit thử nghiệm vào production. Cửa thành phẩm có stock UOM Kg nhưng

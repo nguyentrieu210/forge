@@ -160,8 +160,11 @@ Không rollback bằng cách sửa trực tiếp `installed_apps`, xóa migratio
   `alu-2026-07-30T05-17-21-159Z.sql` (SHA-256
   `1b24d419fa78e0d59d1679b8c39dfa4ed3d33724498ed2ccb67782255915f602`) có bản DPAPI;
   hai restore drill độc lập đạt 67 bảng và `quick_check=ok`;
-- production hiện có 299 Item; 17 mã mục tiêu mua/tồn Kg, 12 ánh xạ mã Tiến Đạt, năm Item
-  nguyên tử mới và ba mã ghép bị vô hiệu hóa. Migration chạy lại ghi 0 dòng, ledger vẫn 0.
+- production hiện có 296 Item; 17 mã mục tiêu mua/tồn Kg, 12 ánh xạ mã Tiến Đạt và năm Item
+  nguyên tử mới. Ba mã ghép đã bị gỡ hẳn; 6 lô bộ cũ đã tách thành 24 lô con, tổng 1.275 lô.
+  Migration chạy lại ghi 0 dòng, ledger vẫn 0, `quick_check=ok`. Backup ngay trước bước tách
+  lô là `alu-2026-07-30T05-34-14-166Z.sql`, SHA-256
+  `43d62ad131b4217c7bae90e985d6b99f5091b54b34a56274cec1f2709a9b4de7`.
   Correction này không triển khai công thức đơn mua/FIFO/công nợ.
 
 Chưa chạy pilot có ghi ledger. Dữ liệu vừa nhập là master/chứng từ lịch sử tham chiếu; workbook

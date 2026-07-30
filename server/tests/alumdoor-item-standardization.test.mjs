@@ -46,13 +46,17 @@ test("ron, ray, trục and atomic leaves are purchased and stocked by Kg", async
   assert.equal(targets.find((row) => row.itemCode === "RNINOX-DR")?.kgPerM, 0.124);
 });
 
-test("three composite catalog records are disabled in favor of atomic children", () => {
+test("three composite catalog records are removed in favor of atomic children", () => {
   assert.deepEqual(
     COMPOSITE_ITEMS.map((row) => row.itemCode),
     ["RONNHUA_INOX", "TP-BO3LADAY", "BỘ BA LÁ ĐÁY + LÁ ĐẦU"],
   );
   assert.deepEqual(COMPOSITE_ITEMS[0].children, ["RNHUA-DR", "RNINOX-DR"]);
   assert.deepEqual(COMPOSITE_ITEMS[1].children, ["TP-TD325", "TP-TD326", "TP-TD327"]);
+  assert.equal(COMPOSITE_ITEMS[0].deleteWhenUnreferenced, true);
+  assert.equal(COMPOSITE_ITEMS[1].deleteWhenUnreferenced, true);
+  assert.equal(COMPOSITE_ITEMS[2].deleteWhenUnreferenced, true);
+  assert.equal(COMPOSITE_ITEMS[2].splitHistoricalLots.length, 4);
 });
 
 test("migration is catalog-only and contains no purchasing formula implementation", async () => {
@@ -63,5 +67,13 @@ test("migration is catalog-only and contains no purchasing formula implementatio
   assert.equal(audit.scope.automatic_kg_calculation, false);
   assert.equal(audit.scope.fifo_receipt_allocation, false);
   assert.equal(audit.counts.newly_created_items, 5);
-  assert.equal(audit.counts.disabled_composites, 3);
+  assert.equal(audit.scope.remove_composite_items, true);
+  assert.equal(audit.counts.processed_composites, 3);
+  assert.equal(audit.counts.deleted_composites, 3);
+  assert.equal(audit.counts.retained_historical_composites, 0);
+  assert.equal(audit.counts.split_historical_lots_from, 6);
+  assert.equal(audit.counts.split_historical_lots_to, 24);
+  assert.match(sql, /DELETE FROM documents[\s\S]+name='RONNHUA_INOX'/);
+  assert.match(sql, /DELETE FROM documents[\s\S]+name='TP-BO3LADAY'/);
+  assert.match(sql, /legacy_component_split/);
 });

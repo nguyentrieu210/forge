@@ -789,7 +789,7 @@ WHERE document_search.title<>excluded.title
 INSERT INTO documents
   (tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,modified_by,payload_json)
 VALUES
-  ('alu','Material Specification:ĐM-RNHUA-DR','Material Specification','ĐM-RNHUA-DR','admin',0,'Draft',1,'2026-07-30T16:30:00.000Z','2026-07-30T16:30:00.000Z','admin','{"spec_code":"ĐM-RNHUA-DR","spec_name":"Định mức RON NHỰA ĐÁY RAY","profile_system":"Alumdoor","section_code":"RNHUA-DR","theoretical_kg_per_m":0.263,"note":"Định mức xác nhận: 0.263 kg/m. Chỉ lưu để đối chiếu và quy đổi đơn vị; không tự sinh số kg đặt mua.","disabled":false,"_migration_source":"alumdoor-item-standardization-2026-07-30"}')
+  ('alu','Material Specification:ĐM-RNHUA-DR','Material Specification','ĐM-RNHUA-DR','admin',0,'Draft',1,'2026-07-30T16:30:00.000Z','2026-07-30T16:30:00.000Z','admin','{"spec_code":"ĐM-RNHUA-DR","spec_name":"Định mức RON NHỰA","profile_system":"Alumdoor","section_code":"RNHUA-DR","theoretical_kg_per_m":0.263,"note":"Định mức xác nhận: 0.263 kg/m. Chỉ lưu để đối chiếu và quy đổi đơn vị; không tự sinh số kg đặt mua.","disabled":false,"_migration_source":"alumdoor-item-standardization-2026-07-30"}')
 ON CONFLICT(tenant_id,doc_key) DO UPDATE SET
   payload_json=json_patch(documents.payload_json,excluded.payload_json),
   modified_at=excluded.modified_at,
@@ -798,7 +798,7 @@ ON CONFLICT(tenant_id,doc_key) DO UPDATE SET
 WHERE documents.payload_json<>json_patch(documents.payload_json,excluded.payload_json);
 
 INSERT INTO document_search(tenant_id,doctype,name,title,content,modified_at)
-VALUES('alu','Material Specification','ĐM-RNHUA-DR','Định mức RON NHỰA ĐÁY RAY','ĐM-RNHUA-DR RNHUA-DR  0.263 kg/m','2026-07-30T16:30:00.000Z')
+VALUES('alu','Material Specification','ĐM-RNHUA-DR','Định mức RON NHỰA','ĐM-RNHUA-DR RNHUA-DR  0.263 kg/m','2026-07-30T16:30:00.000Z')
 ON CONFLICT(tenant_id,doctype,name) DO UPDATE SET
   title=excluded.title,
   content=excluded.content,
@@ -809,7 +809,7 @@ WHERE document_search.title<>excluded.title
 INSERT INTO documents
   (tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,modified_by,payload_json)
 VALUES
-  ('alu','Item:RNHUA-DR','Item','RNHUA-DR','admin',0,'Draft',1,'2026-07-30T16:30:00.000Z','2026-07-30T16:30:00.000Z','admin','{"item_code":"RNHUA-DR","item_name":"RON NHỰA ĐÁY RAY","item_group":"Phụ kiện","item_nature":"Hàng tồn kho","material_stage":"Nguyên vật liệu","supply_type":"Mua ngoài","is_stock_item":true,"is_purchase_item":true,"is_sales_item":true,"include_item_in_manufacturing":true,"inventory_mode":"Hàng thường","stock_uom":"Kg","default_purchase_uom":"Kg","default_sales_uom":"Mét","uom_conversions":[{"row_id":"UOM-MÉT","uom":"Mét","conversion_factor":0.263}],"material_specification":"ĐM-RNHUA-DR","valuation_method":"FIFO","has_batch_no":false,"has_serial_no":false,"allow_negative_stock":false,"description":"Vật tư nguyên tử; mua và tồn theo Kg. Nguồn BRD Q8: chốt định mức ron nhựa 0,263 kg/m. Định mức kg/m chỉ là dữ liệu đối chiếu, không tự tính số lượng mua hoặc tồn.","disabled":false,"_migration_source":"alumdoor-item-standardization-2026-07-30"}')
+  ('alu','Item:RNHUA-DR','Item','RNHUA-DR','admin',0,'Draft',1,'2026-07-30T16:30:00.000Z','2026-07-30T16:30:00.000Z','admin','{"item_code":"RNHUA-DR","item_name":"RON NHỰA","item_group":"Phụ kiện","item_nature":"Hàng tồn kho","material_stage":"Nguyên vật liệu","supply_type":"Mua ngoài","is_stock_item":true,"is_purchase_item":true,"is_sales_item":true,"include_item_in_manufacturing":true,"inventory_mode":"Hàng thường","stock_uom":"Kg","default_purchase_uom":"Kg","default_sales_uom":"Mét","uom_conversions":[{"row_id":"UOM-MÉT","uom":"Mét","conversion_factor":0.263}],"material_specification":"ĐM-RNHUA-DR","valuation_method":"FIFO","has_batch_no":false,"has_serial_no":false,"allow_negative_stock":false,"description":"Vật tư nguyên tử; mua và tồn theo Kg. Nguồn BRD Q8: chốt định mức ron nhựa 0,263 kg/m. Định mức kg/m chỉ là dữ liệu đối chiếu, không tự tính số lượng mua hoặc tồn.","disabled":false,"_migration_source":"alumdoor-item-standardization-2026-07-30"}')
 ON CONFLICT(tenant_id,doc_key) DO UPDATE SET
   payload_json=json_patch(documents.payload_json,excluded.payload_json),
   modified_at=excluded.modified_at,
@@ -818,7 +818,7 @@ ON CONFLICT(tenant_id,doc_key) DO UPDATE SET
 WHERE documents.payload_json<>json_patch(documents.payload_json,excluded.payload_json);
 
 INSERT INTO document_search(tenant_id,doctype,name,title,content,modified_at)
-VALUES('alu','Item','RNHUA-DR','RON NHỰA ĐÁY RAY','RNHUA-DR RON NHỰA ĐÁY RAY Phụ kiện Kg ','2026-07-30T16:30:00.000Z')
+VALUES('alu','Item','RNHUA-DR','RON NHỰA','RNHUA-DR RON NHỰA Phụ kiện Kg ','2026-07-30T16:30:00.000Z')
 ON CONFLICT(tenant_id,doctype,name) DO UPDATE SET
   title=excluded.title,
   content=excluded.content,
@@ -829,7 +829,7 @@ WHERE document_search.title<>excluded.title
 INSERT INTO documents
   (tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,modified_by,payload_json)
 VALUES
-  ('alu','Material Specification:ĐM-RNINOX-DR','Material Specification','ĐM-RNINOX-DR','admin',0,'Draft',1,'2026-07-30T16:30:00.000Z','2026-07-30T16:30:00.000Z','admin','{"spec_code":"ĐM-RNINOX-DR","spec_name":"Định mức RON INOX ĐÁY RAY","profile_system":"Alumdoor","section_code":"RNINOX-DR","theoretical_kg_per_m":0.124,"note":"Định mức xác nhận: 0.124 kg/m. Chỉ lưu để đối chiếu và quy đổi đơn vị; không tự sinh số kg đặt mua.","disabled":false,"_migration_source":"alumdoor-item-standardization-2026-07-30"}')
+  ('alu','Material Specification:ĐM-RNINOX-DR','Material Specification','ĐM-RNINOX-DR','admin',0,'Draft',1,'2026-07-30T16:30:00.000Z','2026-07-30T16:30:00.000Z','admin','{"spec_code":"ĐM-RNINOX-DR","spec_name":"Định mức RON INOX","profile_system":"Alumdoor","section_code":"RNINOX-DR","theoretical_kg_per_m":0.124,"note":"Định mức xác nhận: 0.124 kg/m. Chỉ lưu để đối chiếu và quy đổi đơn vị; không tự sinh số kg đặt mua.","disabled":false,"_migration_source":"alumdoor-item-standardization-2026-07-30"}')
 ON CONFLICT(tenant_id,doc_key) DO UPDATE SET
   payload_json=json_patch(documents.payload_json,excluded.payload_json),
   modified_at=excluded.modified_at,
@@ -838,7 +838,7 @@ ON CONFLICT(tenant_id,doc_key) DO UPDATE SET
 WHERE documents.payload_json<>json_patch(documents.payload_json,excluded.payload_json);
 
 INSERT INTO document_search(tenant_id,doctype,name,title,content,modified_at)
-VALUES('alu','Material Specification','ĐM-RNINOX-DR','Định mức RON INOX ĐÁY RAY','ĐM-RNINOX-DR RNINOX-DR  0.124 kg/m','2026-07-30T16:30:00.000Z')
+VALUES('alu','Material Specification','ĐM-RNINOX-DR','Định mức RON INOX','ĐM-RNINOX-DR RNINOX-DR  0.124 kg/m','2026-07-30T16:30:00.000Z')
 ON CONFLICT(tenant_id,doctype,name) DO UPDATE SET
   title=excluded.title,
   content=excluded.content,
@@ -849,7 +849,7 @@ WHERE document_search.title<>excluded.title
 INSERT INTO documents
   (tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,modified_by,payload_json)
 VALUES
-  ('alu','Item:RNINOX-DR','Item','RNINOX-DR','admin',0,'Draft',1,'2026-07-30T16:30:00.000Z','2026-07-30T16:30:00.000Z','admin','{"item_code":"RNINOX-DR","item_name":"RON INOX ĐÁY RAY","item_group":"Phụ kiện","item_nature":"Hàng tồn kho","material_stage":"Nguyên vật liệu","supply_type":"Mua ngoài","is_stock_item":true,"is_purchase_item":true,"is_sales_item":true,"include_item_in_manufacturing":true,"inventory_mode":"Hàng thường","stock_uom":"Kg","default_purchase_uom":"Kg","default_sales_uom":"Mét","uom_conversions":[{"row_id":"UOM-MÉT","uom":"Mét","conversion_factor":0.124}],"material_specification":"ĐM-RNINOX-DR","valuation_method":"FIFO","has_batch_no":false,"has_serial_no":false,"allow_negative_stock":false,"description":"Vật tư nguyên tử; mua và tồn theo Kg. Nguồn BRD: chốt định mức ron inox 0,124 kg/m. Định mức kg/m chỉ là dữ liệu đối chiếu, không tự tính số lượng mua hoặc tồn.","disabled":false,"_migration_source":"alumdoor-item-standardization-2026-07-30"}')
+  ('alu','Item:RNINOX-DR','Item','RNINOX-DR','admin',0,'Draft',1,'2026-07-30T16:30:00.000Z','2026-07-30T16:30:00.000Z','admin','{"item_code":"RNINOX-DR","item_name":"RON INOX","item_group":"Phụ kiện","item_nature":"Hàng tồn kho","material_stage":"Nguyên vật liệu","supply_type":"Mua ngoài","is_stock_item":true,"is_purchase_item":true,"is_sales_item":true,"include_item_in_manufacturing":true,"inventory_mode":"Hàng thường","stock_uom":"Kg","default_purchase_uom":"Kg","default_sales_uom":"Mét","uom_conversions":[{"row_id":"UOM-MÉT","uom":"Mét","conversion_factor":0.124}],"material_specification":"ĐM-RNINOX-DR","valuation_method":"FIFO","has_batch_no":false,"has_serial_no":false,"allow_negative_stock":false,"description":"Vật tư nguyên tử; mua và tồn theo Kg. Nguồn BRD: chốt định mức ron inox 0,124 kg/m. Định mức kg/m chỉ là dữ liệu đối chiếu, không tự tính số lượng mua hoặc tồn.","disabled":false,"_migration_source":"alumdoor-item-standardization-2026-07-30"}')
 ON CONFLICT(tenant_id,doc_key) DO UPDATE SET
   payload_json=json_patch(documents.payload_json,excluded.payload_json),
   modified_at=excluded.modified_at,
@@ -858,7 +858,7 @@ ON CONFLICT(tenant_id,doc_key) DO UPDATE SET
 WHERE documents.payload_json<>json_patch(documents.payload_json,excluded.payload_json);
 
 INSERT INTO document_search(tenant_id,doctype,name,title,content,modified_at)
-VALUES('alu','Item','RNINOX-DR','RON INOX ĐÁY RAY','RNINOX-DR RON INOX ĐÁY RAY Phụ kiện Kg ','2026-07-30T16:30:00.000Z')
+VALUES('alu','Item','RNINOX-DR','RON INOX','RNINOX-DR RON INOX Phụ kiện Kg ','2026-07-30T16:30:00.000Z')
 ON CONFLICT(tenant_id,doctype,name) DO UPDATE SET
   title=excluded.title,
   content=excluded.content,
@@ -956,62 +956,579 @@ WHERE tenant_id='alu'
   AND json_extract(payload_json,'$.item_code') IN ('TP-TD325', 'TP-TD326', 'TP-TD327', 'TP-A282', 'TP-RAYHOP', 'TP-RAY HỘP TD U100', 'TP-TD87A1 GS', 'RON-DD', 'RNHUA-DR', 'RNINOX-DR', 'TRỤC 114_1.8LY', 'TRỤC 114_2.1LY')
   AND COALESCE(json_extract(payload_json,'$.uom'),'')<>'Mét';
 
-UPDATE documents
-SET payload_json=json_patch(payload_json,'{"is_purchase_item":false,"is_sales_item":false,"disabled":true,"description":"Ron nhựa và ron inox là hai vật tư nhập kho riêng. Dùng các mã con: RNHUA-DR, RNINOX-DR.","_replacement_items":["RNHUA-DR","RNINOX-DR"],"_migration_source":"alumdoor-item-standardization-2026-07-30"}'),
-    modified_at='2026-07-30T16:30:00.000Z',
-    modified_by='admin',
-    version=version+1
+DELETE FROM versions
 WHERE tenant_id='alu'
-  AND doctype='Item'
-  AND name='RONNHUA_INOX'
-  AND payload_json<>json_patch(payload_json,'{"is_purchase_item":false,"is_sales_item":false,"disabled":true,"description":"Ron nhựa và ron inox là hai vật tư nhập kho riêng. Dùng các mã con: RNHUA-DR, RNINOX-DR.","_replacement_items":["RNHUA-DR","RNINOX-DR"],"_migration_source":"alumdoor-item-standardization-2026-07-30"}');
+  AND doc_key IN (
+    SELECT doc_key FROM documents
+    WHERE tenant_id='alu'
+      AND (
+        (doctype='Item' AND name='RONNHUA_INOX')
+        OR (doctype='Item Price' AND json_extract(payload_json,'$.item_code')='RONNHUA_INOX')
+      )
+  );
 
-UPDATE documents
-SET payload_json=json_set(payload_json,'$.disabled',json('true')),
-    modified_at='2026-07-30T16:30:00.000Z',
-    modified_by='admin',
-    version=version+1
+DELETE FROM document_comments
+WHERE tenant_id='alu'
+  AND (
+    (doctype='Item' AND name='RONNHUA_INOX')
+    OR (doctype='Item Price' AND name IN (
+      SELECT name FROM documents
+      WHERE tenant_id='alu'
+        AND doctype='Item Price'
+        AND json_extract(payload_json,'$.item_code')='RONNHUA_INOX'
+    ))
+  );
+
+DELETE FROM document_shares
+WHERE tenant_id='alu'
+  AND (
+    (doctype='Item' AND name='RONNHUA_INOX')
+    OR (doctype='Item Price' AND name IN (
+      SELECT name FROM documents
+      WHERE tenant_id='alu'
+        AND doctype='Item Price'
+        AND json_extract(payload_json,'$.item_code')='RONNHUA_INOX'
+    ))
+  );
+
+DELETE FROM document_tags
+WHERE tenant_id='alu'
+  AND (
+    (doctype='Item' AND name='RONNHUA_INOX')
+    OR (doctype='Item Price' AND name IN (
+      SELECT name FROM documents
+      WHERE tenant_id='alu'
+        AND doctype='Item Price'
+        AND json_extract(payload_json,'$.item_code')='RONNHUA_INOX'
+    ))
+  );
+
+DELETE FROM assignments
+WHERE tenant_id='alu'
+  AND (
+    (doctype='Item' AND name='RONNHUA_INOX')
+    OR (doctype='Item Price' AND name IN (
+      SELECT name FROM documents
+      WHERE tenant_id='alu'
+        AND doctype='Item Price'
+        AND json_extract(payload_json,'$.item_code')='RONNHUA_INOX'
+    ))
+  );
+
+DELETE FROM files
+WHERE tenant_id='alu'
+  AND (
+    (attached_to_doctype='Item' AND attached_to_name='RONNHUA_INOX')
+    OR (attached_to_doctype='Item Price' AND attached_to_name IN (
+      SELECT name FROM documents
+      WHERE tenant_id='alu'
+        AND doctype='Item Price'
+        AND json_extract(payload_json,'$.item_code')='RONNHUA_INOX'
+    ))
+  );
+
+DELETE FROM document_search
+WHERE tenant_id='alu'
+  AND (
+    (doctype='Item' AND name='RONNHUA_INOX')
+    OR (doctype='Item Price' AND name IN (
+      SELECT name FROM documents
+      WHERE tenant_id='alu'
+        AND doctype='Item Price'
+        AND json_extract(payload_json,'$.item_code')='RONNHUA_INOX'
+    ))
+  );
+
+DELETE FROM documents
 WHERE tenant_id='alu'
   AND doctype='Item Price'
-  AND json_extract(payload_json,'$.item_code')='RONNHUA_INOX'
-  AND COALESCE(json_extract(payload_json,'$.disabled'),0)<>1;
+  AND json_extract(payload_json,'$.item_code')='RONNHUA_INOX';
 
-UPDATE documents
-SET payload_json=json_patch(payload_json,'{"is_purchase_item":false,"is_sales_item":false,"disabled":true,"description":"Bộ ba lá đáy đã tách thành lá đáy lớn, lá trung gian và lá yếm. Dùng các mã con: TP-TD325, TP-TD326, TP-TD327.","_replacement_items":["TP-TD325","TP-TD326","TP-TD327"],"_migration_source":"alumdoor-item-standardization-2026-07-30"}'),
-    modified_at='2026-07-30T16:30:00.000Z',
-    modified_by='admin',
-    version=version+1
+DELETE FROM documents
 WHERE tenant_id='alu'
   AND doctype='Item'
-  AND name='TP-BO3LADAY'
-  AND payload_json<>json_patch(payload_json,'{"is_purchase_item":false,"is_sales_item":false,"disabled":true,"description":"Bộ ba lá đáy đã tách thành lá đáy lớn, lá trung gian và lá yếm. Dùng các mã con: TP-TD325, TP-TD326, TP-TD327.","_replacement_items":["TP-TD325","TP-TD326","TP-TD327"],"_migration_source":"alumdoor-item-standardization-2026-07-30"}');
+  AND name='RONNHUA_INOX';
 
-UPDATE documents
-SET payload_json=json_set(payload_json,'$.disabled',json('true')),
-    modified_at='2026-07-30T16:30:00.000Z',
-    modified_by='admin',
-    version=version+1
+DELETE FROM versions
+WHERE tenant_id='alu'
+  AND doc_key IN (
+    SELECT doc_key FROM documents
+    WHERE tenant_id='alu'
+      AND (
+        (doctype='Item' AND name='TP-BO3LADAY')
+        OR (doctype='Item Price' AND json_extract(payload_json,'$.item_code')='TP-BO3LADAY')
+      )
+  );
+
+DELETE FROM document_comments
+WHERE tenant_id='alu'
+  AND (
+    (doctype='Item' AND name='TP-BO3LADAY')
+    OR (doctype='Item Price' AND name IN (
+      SELECT name FROM documents
+      WHERE tenant_id='alu'
+        AND doctype='Item Price'
+        AND json_extract(payload_json,'$.item_code')='TP-BO3LADAY'
+    ))
+  );
+
+DELETE FROM document_shares
+WHERE tenant_id='alu'
+  AND (
+    (doctype='Item' AND name='TP-BO3LADAY')
+    OR (doctype='Item Price' AND name IN (
+      SELECT name FROM documents
+      WHERE tenant_id='alu'
+        AND doctype='Item Price'
+        AND json_extract(payload_json,'$.item_code')='TP-BO3LADAY'
+    ))
+  );
+
+DELETE FROM document_tags
+WHERE tenant_id='alu'
+  AND (
+    (doctype='Item' AND name='TP-BO3LADAY')
+    OR (doctype='Item Price' AND name IN (
+      SELECT name FROM documents
+      WHERE tenant_id='alu'
+        AND doctype='Item Price'
+        AND json_extract(payload_json,'$.item_code')='TP-BO3LADAY'
+    ))
+  );
+
+DELETE FROM assignments
+WHERE tenant_id='alu'
+  AND (
+    (doctype='Item' AND name='TP-BO3LADAY')
+    OR (doctype='Item Price' AND name IN (
+      SELECT name FROM documents
+      WHERE tenant_id='alu'
+        AND doctype='Item Price'
+        AND json_extract(payload_json,'$.item_code')='TP-BO3LADAY'
+    ))
+  );
+
+DELETE FROM files
+WHERE tenant_id='alu'
+  AND (
+    (attached_to_doctype='Item' AND attached_to_name='TP-BO3LADAY')
+    OR (attached_to_doctype='Item Price' AND attached_to_name IN (
+      SELECT name FROM documents
+      WHERE tenant_id='alu'
+        AND doctype='Item Price'
+        AND json_extract(payload_json,'$.item_code')='TP-BO3LADAY'
+    ))
+  );
+
+DELETE FROM document_search
+WHERE tenant_id='alu'
+  AND (
+    (doctype='Item' AND name='TP-BO3LADAY')
+    OR (doctype='Item Price' AND name IN (
+      SELECT name FROM documents
+      WHERE tenant_id='alu'
+        AND doctype='Item Price'
+        AND json_extract(payload_json,'$.item_code')='TP-BO3LADAY'
+    ))
+  );
+
+DELETE FROM documents
 WHERE tenant_id='alu'
   AND doctype='Item Price'
-  AND json_extract(payload_json,'$.item_code')='TP-BO3LADAY'
-  AND COALESCE(json_extract(payload_json,'$.disabled'),0)<>1;
+  AND json_extract(payload_json,'$.item_code')='TP-BO3LADAY';
 
-UPDATE documents
-SET payload_json=json_patch(payload_json,'{"is_purchase_item":false,"is_sales_item":false,"disabled":true,"description":"Bộ ghép không phải một mặt hàng tồn kho nguyên tử. Dùng các mã con: TP-TD325, TP-TD326, TP-TD327, TP-A282.","_replacement_items":["TP-TD325","TP-TD326","TP-TD327","TP-A282"],"_migration_source":"alumdoor-item-standardization-2026-07-30"}'),
-    modified_at='2026-07-30T16:30:00.000Z',
-    modified_by='admin',
-    version=version+1
+DELETE FROM documents
 WHERE tenant_id='alu'
   AND doctype='Item'
-  AND name='BỘ BA LÁ ĐÁY + LÁ ĐẦU'
-  AND payload_json<>json_patch(payload_json,'{"is_purchase_item":false,"is_sales_item":false,"disabled":true,"description":"Bộ ghép không phải một mặt hàng tồn kho nguyên tử. Dùng các mã con: TP-TD325, TP-TD326, TP-TD327, TP-A282.","_replacement_items":["TP-TD325","TP-TD326","TP-TD327","TP-A282"],"_migration_source":"alumdoor-item-standardization-2026-07-30"}');
+  AND name='TP-BO3LADAY';
 
-UPDATE documents
-SET payload_json=json_set(payload_json,'$.disabled',json('true')),
-    modified_at='2026-07-30T16:30:00.000Z',
-    modified_by='admin',
-    version=version+1
+INSERT INTO documents
+  (tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,modified_by,payload_json)
+SELECT
+  tenant_id,
+  'Aluminium Lot:' || name || '-TD325',
+  'Aluminium Lot',
+  name || '-TD325',
+  owner,
+  docstatus,
+  status,
+  1,
+  created_at,
+  '2026-07-30T16:30:00.000Z',
+  'admin',
+  json_set(
+    payload_json,
+    '$.profile','TP-TD325',
+    '$.legacy_parent_lot',name,
+    '$.legacy_component_split',json('true'),
+    '$.note','Tách từ lô bộ cũ; 1 bộ = 1 cái TP-TD325. ĐVT nhập/tồn của mặt hàng vẫn là Kg.',
+    '$._migration_source','alumdoor-item-standardization-2026-07-30'
+  )
+FROM documents
+WHERE tenant_id='alu'
+  AND doctype='Aluminium Lot'
+  AND json_extract(payload_json,'$.profile')='BỘ BA LÁ ĐÁY + LÁ ĐẦU'
+ON CONFLICT(tenant_id,doc_key) DO UPDATE SET
+  payload_json=excluded.payload_json,
+  modified_at=excluded.modified_at,
+  modified_by=excluded.modified_by,
+  version=documents.version+1
+WHERE documents.payload_json<>excluded.payload_json;
+
+INSERT INTO document_search(tenant_id,doctype,name,title,content,modified_at)
+SELECT
+  tenant_id,
+  'Aluminium Lot',
+  name || '-TD325',
+  'TP-TD325' || ' · ' || COALESCE(json_extract(payload_json,'$.colour'),'') || ' · ' || COALESCE(json_extract(payload_json,'$.width_m'),'') || ' m',
+  'TP-TD325' || ' ' || COALESCE(json_extract(payload_json,'$.colour'),'') || ' '
+    || COALESCE(json_extract(payload_json,'$.generation'),'') || ' '
+    || COALESCE(json_extract(payload_json,'$.width_m'),'') || ' '
+    || COALESCE(json_extract(payload_json,'$.warehouse'),'') || ' '
+    || COALESCE(json_extract(payload_json,'$.quality_status'),''),
+  '2026-07-30T16:30:00.000Z'
+FROM documents
+WHERE tenant_id='alu'
+  AND doctype='Aluminium Lot'
+  AND json_extract(payload_json,'$.profile')='BỘ BA LÁ ĐÁY + LÁ ĐẦU'
+ON CONFLICT(tenant_id,doctype,name) DO UPDATE SET
+  title=excluded.title,
+  content=excluded.content,
+  modified_at=excluded.modified_at
+WHERE document_search.title<>excluded.title
+   OR document_search.content<>excluded.content;
+
+INSERT INTO documents
+  (tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,modified_by,payload_json)
+SELECT
+  tenant_id,
+  'Aluminium Lot:' || name || '-TD326',
+  'Aluminium Lot',
+  name || '-TD326',
+  owner,
+  docstatus,
+  status,
+  1,
+  created_at,
+  '2026-07-30T16:30:00.000Z',
+  'admin',
+  json_set(
+    payload_json,
+    '$.profile','TP-TD326',
+    '$.legacy_parent_lot',name,
+    '$.legacy_component_split',json('true'),
+    '$.note','Tách từ lô bộ cũ; 1 bộ = 1 cái TP-TD326. ĐVT nhập/tồn của mặt hàng vẫn là Kg.',
+    '$._migration_source','alumdoor-item-standardization-2026-07-30'
+  )
+FROM documents
+WHERE tenant_id='alu'
+  AND doctype='Aluminium Lot'
+  AND json_extract(payload_json,'$.profile')='BỘ BA LÁ ĐÁY + LÁ ĐẦU'
+ON CONFLICT(tenant_id,doc_key) DO UPDATE SET
+  payload_json=excluded.payload_json,
+  modified_at=excluded.modified_at,
+  modified_by=excluded.modified_by,
+  version=documents.version+1
+WHERE documents.payload_json<>excluded.payload_json;
+
+INSERT INTO document_search(tenant_id,doctype,name,title,content,modified_at)
+SELECT
+  tenant_id,
+  'Aluminium Lot',
+  name || '-TD326',
+  'TP-TD326' || ' · ' || COALESCE(json_extract(payload_json,'$.colour'),'') || ' · ' || COALESCE(json_extract(payload_json,'$.width_m'),'') || ' m',
+  'TP-TD326' || ' ' || COALESCE(json_extract(payload_json,'$.colour'),'') || ' '
+    || COALESCE(json_extract(payload_json,'$.generation'),'') || ' '
+    || COALESCE(json_extract(payload_json,'$.width_m'),'') || ' '
+    || COALESCE(json_extract(payload_json,'$.warehouse'),'') || ' '
+    || COALESCE(json_extract(payload_json,'$.quality_status'),''),
+  '2026-07-30T16:30:00.000Z'
+FROM documents
+WHERE tenant_id='alu'
+  AND doctype='Aluminium Lot'
+  AND json_extract(payload_json,'$.profile')='BỘ BA LÁ ĐÁY + LÁ ĐẦU'
+ON CONFLICT(tenant_id,doctype,name) DO UPDATE SET
+  title=excluded.title,
+  content=excluded.content,
+  modified_at=excluded.modified_at
+WHERE document_search.title<>excluded.title
+   OR document_search.content<>excluded.content;
+
+INSERT INTO documents
+  (tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,modified_by,payload_json)
+SELECT
+  tenant_id,
+  'Aluminium Lot:' || name || '-TD327',
+  'Aluminium Lot',
+  name || '-TD327',
+  owner,
+  docstatus,
+  status,
+  1,
+  created_at,
+  '2026-07-30T16:30:00.000Z',
+  'admin',
+  json_set(
+    payload_json,
+    '$.profile','TP-TD327',
+    '$.legacy_parent_lot',name,
+    '$.legacy_component_split',json('true'),
+    '$.note','Tách từ lô bộ cũ; 1 bộ = 1 cái TP-TD327. ĐVT nhập/tồn của mặt hàng vẫn là Kg.',
+    '$._migration_source','alumdoor-item-standardization-2026-07-30'
+  )
+FROM documents
+WHERE tenant_id='alu'
+  AND doctype='Aluminium Lot'
+  AND json_extract(payload_json,'$.profile')='BỘ BA LÁ ĐÁY + LÁ ĐẦU'
+ON CONFLICT(tenant_id,doc_key) DO UPDATE SET
+  payload_json=excluded.payload_json,
+  modified_at=excluded.modified_at,
+  modified_by=excluded.modified_by,
+  version=documents.version+1
+WHERE documents.payload_json<>excluded.payload_json;
+
+INSERT INTO document_search(tenant_id,doctype,name,title,content,modified_at)
+SELECT
+  tenant_id,
+  'Aluminium Lot',
+  name || '-TD327',
+  'TP-TD327' || ' · ' || COALESCE(json_extract(payload_json,'$.colour'),'') || ' · ' || COALESCE(json_extract(payload_json,'$.width_m'),'') || ' m',
+  'TP-TD327' || ' ' || COALESCE(json_extract(payload_json,'$.colour'),'') || ' '
+    || COALESCE(json_extract(payload_json,'$.generation'),'') || ' '
+    || COALESCE(json_extract(payload_json,'$.width_m'),'') || ' '
+    || COALESCE(json_extract(payload_json,'$.warehouse'),'') || ' '
+    || COALESCE(json_extract(payload_json,'$.quality_status'),''),
+  '2026-07-30T16:30:00.000Z'
+FROM documents
+WHERE tenant_id='alu'
+  AND doctype='Aluminium Lot'
+  AND json_extract(payload_json,'$.profile')='BỘ BA LÁ ĐÁY + LÁ ĐẦU'
+ON CONFLICT(tenant_id,doctype,name) DO UPDATE SET
+  title=excluded.title,
+  content=excluded.content,
+  modified_at=excluded.modified_at
+WHERE document_search.title<>excluded.title
+   OR document_search.content<>excluded.content;
+
+INSERT INTO documents
+  (tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,modified_by,payload_json)
+SELECT
+  tenant_id,
+  'Aluminium Lot:' || name || '-A282',
+  'Aluminium Lot',
+  name || '-A282',
+  owner,
+  docstatus,
+  status,
+  1,
+  created_at,
+  '2026-07-30T16:30:00.000Z',
+  'admin',
+  json_set(
+    payload_json,
+    '$.profile','TP-A282',
+    '$.legacy_parent_lot',name,
+    '$.legacy_component_split',json('true'),
+    '$.note','Tách từ lô bộ cũ; 1 bộ = 1 cái TP-A282. ĐVT nhập/tồn của mặt hàng vẫn là Kg.',
+    '$._migration_source','alumdoor-item-standardization-2026-07-30'
+  )
+FROM documents
+WHERE tenant_id='alu'
+  AND doctype='Aluminium Lot'
+  AND json_extract(payload_json,'$.profile')='BỘ BA LÁ ĐÁY + LÁ ĐẦU'
+ON CONFLICT(tenant_id,doc_key) DO UPDATE SET
+  payload_json=excluded.payload_json,
+  modified_at=excluded.modified_at,
+  modified_by=excluded.modified_by,
+  version=documents.version+1
+WHERE documents.payload_json<>excluded.payload_json;
+
+INSERT INTO document_search(tenant_id,doctype,name,title,content,modified_at)
+SELECT
+  tenant_id,
+  'Aluminium Lot',
+  name || '-A282',
+  'TP-A282' || ' · ' || COALESCE(json_extract(payload_json,'$.colour'),'') || ' · ' || COALESCE(json_extract(payload_json,'$.width_m'),'') || ' m',
+  'TP-A282' || ' ' || COALESCE(json_extract(payload_json,'$.colour'),'') || ' '
+    || COALESCE(json_extract(payload_json,'$.generation'),'') || ' '
+    || COALESCE(json_extract(payload_json,'$.width_m'),'') || ' '
+    || COALESCE(json_extract(payload_json,'$.warehouse'),'') || ' '
+    || COALESCE(json_extract(payload_json,'$.quality_status'),''),
+  '2026-07-30T16:30:00.000Z'
+FROM documents
+WHERE tenant_id='alu'
+  AND doctype='Aluminium Lot'
+  AND json_extract(payload_json,'$.profile')='BỘ BA LÁ ĐÁY + LÁ ĐẦU'
+ON CONFLICT(tenant_id,doctype,name) DO UPDATE SET
+  title=excluded.title,
+  content=excluded.content,
+  modified_at=excluded.modified_at
+WHERE document_search.title<>excluded.title
+   OR document_search.content<>excluded.content;
+
+DELETE FROM versions
+WHERE tenant_id='alu'
+  AND doc_key IN (
+    SELECT doc_key FROM documents
+    WHERE tenant_id='alu'
+      AND doctype='Aluminium Lot'
+      AND json_extract(payload_json,'$.profile')='BỘ BA LÁ ĐÁY + LÁ ĐẦU'
+  );
+
+DELETE FROM document_comments
+WHERE tenant_id='alu'
+  AND doctype='Aluminium Lot'
+  AND name IN (
+    SELECT name FROM documents
+    WHERE tenant_id='alu'
+      AND doctype='Aluminium Lot'
+      AND json_extract(payload_json,'$.profile')='BỘ BA LÁ ĐÁY + LÁ ĐẦU'
+  );
+
+DELETE FROM document_shares
+WHERE tenant_id='alu'
+  AND doctype='Aluminium Lot'
+  AND name IN (
+    SELECT name FROM documents
+    WHERE tenant_id='alu'
+      AND doctype='Aluminium Lot'
+      AND json_extract(payload_json,'$.profile')='BỘ BA LÁ ĐÁY + LÁ ĐẦU'
+  );
+
+DELETE FROM document_tags
+WHERE tenant_id='alu'
+  AND doctype='Aluminium Lot'
+  AND name IN (
+    SELECT name FROM documents
+    WHERE tenant_id='alu'
+      AND doctype='Aluminium Lot'
+      AND json_extract(payload_json,'$.profile')='BỘ BA LÁ ĐÁY + LÁ ĐẦU'
+  );
+
+DELETE FROM assignments
+WHERE tenant_id='alu'
+  AND doctype='Aluminium Lot'
+  AND name IN (
+    SELECT name FROM documents
+    WHERE tenant_id='alu'
+      AND doctype='Aluminium Lot'
+      AND json_extract(payload_json,'$.profile')='BỘ BA LÁ ĐÁY + LÁ ĐẦU'
+  );
+
+DELETE FROM files
+WHERE tenant_id='alu'
+  AND attached_to_doctype='Aluminium Lot'
+  AND attached_to_name IN (
+    SELECT name FROM documents
+    WHERE tenant_id='alu'
+      AND doctype='Aluminium Lot'
+      AND json_extract(payload_json,'$.profile')='BỘ BA LÁ ĐÁY + LÁ ĐẦU'
+  );
+
+DELETE FROM document_search
+WHERE tenant_id='alu'
+  AND doctype='Aluminium Lot'
+  AND name IN (
+    SELECT name FROM documents
+    WHERE tenant_id='alu'
+      AND doctype='Aluminium Lot'
+      AND json_extract(payload_json,'$.profile')='BỘ BA LÁ ĐÁY + LÁ ĐẦU'
+  );
+
+DELETE FROM documents
+WHERE tenant_id='alu'
+  AND doctype='Aluminium Lot'
+  AND json_extract(payload_json,'$.profile')='BỘ BA LÁ ĐÁY + LÁ ĐẦU';
+
+DELETE FROM versions
+WHERE tenant_id='alu'
+  AND doc_key IN (
+    SELECT doc_key FROM documents
+    WHERE tenant_id='alu'
+      AND (
+        (doctype='Item' AND name='BỘ BA LÁ ĐÁY + LÁ ĐẦU')
+        OR (doctype='Item Price' AND json_extract(payload_json,'$.item_code')='BỘ BA LÁ ĐÁY + LÁ ĐẦU')
+      )
+  );
+
+DELETE FROM document_comments
+WHERE tenant_id='alu'
+  AND (
+    (doctype='Item' AND name='BỘ BA LÁ ĐÁY + LÁ ĐẦU')
+    OR (doctype='Item Price' AND name IN (
+      SELECT name FROM documents
+      WHERE tenant_id='alu'
+        AND doctype='Item Price'
+        AND json_extract(payload_json,'$.item_code')='BỘ BA LÁ ĐÁY + LÁ ĐẦU'
+    ))
+  );
+
+DELETE FROM document_shares
+WHERE tenant_id='alu'
+  AND (
+    (doctype='Item' AND name='BỘ BA LÁ ĐÁY + LÁ ĐẦU')
+    OR (doctype='Item Price' AND name IN (
+      SELECT name FROM documents
+      WHERE tenant_id='alu'
+        AND doctype='Item Price'
+        AND json_extract(payload_json,'$.item_code')='BỘ BA LÁ ĐÁY + LÁ ĐẦU'
+    ))
+  );
+
+DELETE FROM document_tags
+WHERE tenant_id='alu'
+  AND (
+    (doctype='Item' AND name='BỘ BA LÁ ĐÁY + LÁ ĐẦU')
+    OR (doctype='Item Price' AND name IN (
+      SELECT name FROM documents
+      WHERE tenant_id='alu'
+        AND doctype='Item Price'
+        AND json_extract(payload_json,'$.item_code')='BỘ BA LÁ ĐÁY + LÁ ĐẦU'
+    ))
+  );
+
+DELETE FROM assignments
+WHERE tenant_id='alu'
+  AND (
+    (doctype='Item' AND name='BỘ BA LÁ ĐÁY + LÁ ĐẦU')
+    OR (doctype='Item Price' AND name IN (
+      SELECT name FROM documents
+      WHERE tenant_id='alu'
+        AND doctype='Item Price'
+        AND json_extract(payload_json,'$.item_code')='BỘ BA LÁ ĐÁY + LÁ ĐẦU'
+    ))
+  );
+
+DELETE FROM files
+WHERE tenant_id='alu'
+  AND (
+    (attached_to_doctype='Item' AND attached_to_name='BỘ BA LÁ ĐÁY + LÁ ĐẦU')
+    OR (attached_to_doctype='Item Price' AND attached_to_name IN (
+      SELECT name FROM documents
+      WHERE tenant_id='alu'
+        AND doctype='Item Price'
+        AND json_extract(payload_json,'$.item_code')='BỘ BA LÁ ĐÁY + LÁ ĐẦU'
+    ))
+  );
+
+DELETE FROM document_search
+WHERE tenant_id='alu'
+  AND (
+    (doctype='Item' AND name='BỘ BA LÁ ĐÁY + LÁ ĐẦU')
+    OR (doctype='Item Price' AND name IN (
+      SELECT name FROM documents
+      WHERE tenant_id='alu'
+        AND doctype='Item Price'
+        AND json_extract(payload_json,'$.item_code')='BỘ BA LÁ ĐÁY + LÁ ĐẦU'
+    ))
+  );
+
+DELETE FROM documents
 WHERE tenant_id='alu'
   AND doctype='Item Price'
-  AND json_extract(payload_json,'$.item_code')='BỘ BA LÁ ĐÁY + LÁ ĐẦU'
-  AND COALESCE(json_extract(payload_json,'$.disabled'),0)<>1;
+  AND json_extract(payload_json,'$.item_code')='BỘ BA LÁ ĐÁY + LÁ ĐẦU';
+
+DELETE FROM documents
+WHERE tenant_id='alu'
+  AND doctype='Item'
+  AND name='BỘ BA LÁ ĐÁY + LÁ ĐẦU';

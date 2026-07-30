@@ -94,20 +94,26 @@ Mua / Tồn / Bán là **ba câu hỏi khác nhau**, và luật đã chốt vớ
 | Nhóm | Mua | Tồn | Bán |
 |---|---|---|---|
 | Nhôm cây/lá | Kg | **Kg** | m² (qua thành phẩm) |
-| Lá nhiều kích thước | Kg | Cây | m² |
+| Lá nhiều kích thước | Kg | **Kg** | Mét/m² theo mặt hàng |
 | Ray, trục | Kg | Kg | Mét |
 | Ron nhựa / inox | Kg | Kg | Mét |
 | Cửa thành phẩm | — | **Bộ** | **m²** (hệ số động theo kích thước) |
 | Phụ kiện | Cái/Bộ/Cặp | như mua | như mua |
+
+`Cây/Lá/Cái/Bộ` trên dòng nhập là **số đếm vật lý phụ** khi mặt hàng cần đếm nguyên món.
+Nó không thay `Kg` làm ĐVT nhập/tồn và không được dùng để tự suy ra kg thực cân.
 
 Hiện có **126 mã** khai ĐVT bán khác ĐVT tồn — mỗi mã trong số đó **bắt buộc** phải có hệ số quy
 đổi, trừ nhóm bán m² dùng hệ số động.
 
 ### Mặt hàng nguyên tử đã chốt ngày 2026-07-30
 
-- `RONNHUA_INOX` ngừng dùng; thay bằng `RNHUA-DR` và `RNINOX-DR`.
-- `TP-BO3LADAY` ngừng dùng; thay bằng `TP-TD325`, `TP-TD326`, `TP-TD327`.
-- `BỘ BA LÁ ĐÁY + LÁ ĐẦU` ngừng dùng; thay bằng ba lá đáy trên và `TP-A282`.
+- `RONNHUA_INOX` được gỡ khỏi danh mục; thay bằng `RNHUA-DR` (**RON NHỰA**) và
+  `RNINOX-DR` (**RON INOX**).
+- `TP-BO3LADAY` được gỡ khỏi danh mục; thay bằng `TP-TD325`, `TP-TD326`, `TP-TD327`.
+- `BỘ BA LÁ ĐÁY + LÁ ĐẦU` được tách thành ba lá đáy trên và `TP-A282`, rồi gỡ khỏi danh mục.
+  Sáu lô bộ lịch sử được tách thành 24 lô con theo nguyên tắc một bộ có một cái của mỗi thành
+  phần; số lượng Kg không bị suy diễn vì file nguồn không có kg cân thật.
 - 12 mã Tiến Đạt đã được khớp với mặt hàng nguyên tử; năm mặt hàng còn thiếu được tạo:
   `TD-TG-ALD`, `RHM8(2.4MM)`, `CQ-VM111`, `TDU26`, `AL-YST`.
 - 17 mặt hàng ron, lá đáy, ray và trục trong đợt chuẩn hóa này đều mua/tồn theo **Kg**.
