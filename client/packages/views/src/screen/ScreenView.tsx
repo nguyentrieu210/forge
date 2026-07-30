@@ -9,7 +9,9 @@ import type {
 } from "@metaforge/core";
 import type { ReactNode } from "react";
 import { resolveIcon } from "@metaforge/shell";
-import { Button, Skeleton, cn } from "@metaforge/ui";
+import {
+  Button, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, cn,
+} from "@metaforge/ui";
 import { ArrowRight, Gauge, List, PlayCircle } from "lucide-react";
 import { ActionScreen } from "../action/ActionScreen.js";
 import { useCount, useList, useMeta } from "../container/hooks.js";
@@ -95,7 +97,7 @@ function MetricBlock({ block, onNavigate }: { block: AppScreenMetricBlock; onNav
   );
   const className = "mf-screen-block mf-surface flex h-full w-full flex-col items-stretch justify-start text-left transition-colors hover:border-primary/35";
   return block.route
-    ? <button type="button" className={className} onClick={() => onNavigate(block.route!)}>{content}</button>
+    ? <Button type="button" variant="ghost" className={className} onClick={() => onNavigate(block.route!)}>{content}</Button>
     : <article className={className}>{content}</article>;
 }
 
@@ -128,22 +130,23 @@ function ListBlock({ block, onNavigate }: { block: AppScreenListBlock; onNavigat
           : !query.data?.length
             ? <p className="p-[var(--mf-block-padding)] text-sm text-muted-foreground">{block.empty_text ?? "Chưa có dữ liệu."}</p>
             : <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/55 text-left text-xs text-muted-foreground">
-                    <tr>{fields.map((field) => <th key={field.fieldname} className="px-4 py-2 font-medium">{field.label}</th>)}</tr>
-                  </thead>
-                  <tbody>
+                <Table unwrapped className="w-full text-sm">
+                  <TableHeader className="bg-muted/55 text-left text-xs text-muted-foreground">
+                    <TableRow>{fields.map((field) => <TableHead key={field.fieldname} className="px-4 py-2 font-medium">{field.label}</TableHead>)}</TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {query.data.map((row) => (
-                      <tr
+                      <TableRow
                         key={row.name}
                         className="mf-screen-list-row cursor-pointer border-t transition-colors hover:bg-muted/45"
                         onClick={() => onNavigate(`/app/${encodeURIComponent(block.doctype)}/${encodeURIComponent(row.name)}`)}
                       >
                         {fields.map(({ fieldname, field }, index) => (
-                          <td key={fieldname} className="px-4 py-2.5">
+                          <TableCell key={fieldname} className="px-4 py-2.5">
                             {index === 0
-                              ? <button
+                              ? <Button
                                   type="button"
+                                  variant="ghost"
                                   className="w-full text-left focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                   aria-label={`Mở ${block.doctype} ${row.name}`}
                                   onClick={(event) => {
@@ -152,14 +155,14 @@ function ListBlock({ block, onNavigate }: { block: AppScreenListBlock; onNavigat
                                   }}
                                 >
                                   {formatCell(row[fieldname], field, fmt)}
-                                </button>
+                                </Button>
                               : formatCell(row[fieldname], field, fmt)}
-                          </td>
+                          </TableCell>
                         ))}
-                      </tr>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>}
       <div className="border-t p-2">
         <Button variant="ghost" size="sm" className="w-full justify-between" onClick={() => onNavigate(`/app/${encodeURIComponent(block.doctype)}`)}>

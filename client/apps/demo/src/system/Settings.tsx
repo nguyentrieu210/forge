@@ -153,7 +153,10 @@ function BrandSwitch() {
     <div className="flex flex-wrap gap-2">
       {BRANDS.map((b) => (
         <Button key={b.id} variant={brand === b.id ? "default" : "outline"} size="sm" onClick={() => setBrand(b.id)} className="gap-2">
-          <span className="size-3 rounded-full border" style={{ background: b.swatch }} />
+          <span
+            className="size-3 rounded-full border [background:var(--mf-brand-swatch)]"
+            style={{ "--mf-brand-swatch": b.swatch } as React.CSSProperties}
+          />
           {b.label}
         </Button>
       ))}

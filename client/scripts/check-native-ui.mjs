@@ -40,6 +40,8 @@ for (const f of files) {
   const rel = relative(ROOT, f);
   const lines = src.split("\n");
   lines.forEach((line, i) => {
+    // Comments and JSDoc examples are documentation, not rendered JSX.
+    if (/^(?:\*|\/\/)/.test(line.trim())) return;
     const at = `${rel}:${i + 1}`;
     if (/style=\{\{/.test(line) && !ALLOW_STYLE.test(line)) violations.push([at, "inline style", line.trim().slice(0, 80)]);
     // \b bắt cả element multi-line (<input\n…) — component viết hoa (<Input) KHÔNG khớp (case-sensitive).

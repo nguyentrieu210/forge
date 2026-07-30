@@ -18,7 +18,10 @@ import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalList
 import { CSS } from "@dnd-kit/utilities";
 import { Undo2, Redo2, X, GripVertical } from "lucide-react";
 import { AUTHORABLE_FIELDTYPES, type DocTypeMeta, type DocField, type Fieldtype } from "@metaforge/core";
-import { cn, Button, Input, Textarea, Checkbox, ConfirmDialog } from "@metaforge/ui";
+import {
+  cn, Button, Input, Textarea, Checkbox, ConfirmDialog,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@metaforge/ui";
 import { useBuilder } from "../kernel.js";
 import { addField, moveField, newField, removeField, updateField, indexOfField } from "./meta-build.js";
 import { validateDraft, type ValidationResult } from "./validate.js";
@@ -235,16 +238,18 @@ function FieldProps({ field, onPatch }: { field: DocField; onPatch: (p: Partial<
         </Row>
       ) : null}
       <Row label="Độ rộng trên form">
-        <select
-          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground"
-          value={field.form_width ?? ""}
-          onChange={(event) => onPatch({ form_width: (event.target.value || undefined) as DocField["form_width"] })}
+        <Select
+          value={field.form_width ?? "auto"}
+          onValueChange={(value) => onPatch({ form_width: (value === "auto" ? undefined : value) as DocField["form_width"] })}
         >
-          <option value="">Tự động theo loại field</option>
-          <option value="full">Toàn hàng (1 ô/hàng)</option>
-          <option value="half">Nửa hàng (2 ô/hàng)</option>
-          <option value="third">Một phần ba (3 ô/hàng)</option>
-        </select>
+          <SelectTrigger><SelectValue placeholder="Tự động theo loại field" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="auto">Tự động theo loại field</SelectItem>
+            <SelectItem value="full">Toàn hàng (1 ô/hàng)</SelectItem>
+            <SelectItem value="half">Nửa hàng (2 ô/hàng)</SelectItem>
+            <SelectItem value="third">Một phần ba (3 ô/hàng)</SelectItem>
+          </SelectContent>
+        </Select>
       </Row>
       <Check label="Bắt buộc" checked={field.reqd === 1} onChange={(v) => onPatch({ reqd: v ? 1 : 0 })} />
       <Check label="Hiện ở List" checked={field.in_list_view === 1} onChange={(v) => onPatch({ in_list_view: v ? 1 : 0 })} />

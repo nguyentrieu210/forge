@@ -3,13 +3,14 @@ import { Button, type ButtonProps } from "./button.js";
 
 export interface FileButtonProps extends Omit<ButtonProps, "onChange"> {
   accept?: string;
+  capture?: boolean | "user" | "environment";
   multiple?: boolean;
   onFiles: (files: FileList | null) => void;
 }
 
 /** Nút chọn tệp — bọc <input type=file> ẩn (nơi DUY NHẤT dùng native file input, trong @metaforge/ui). */
 export const FileButton = React.forwardRef<HTMLButtonElement, FileButtonProps>(
-  ({ accept, multiple, onFiles, children, disabled, onClick, ...props }, ref) => {
+  ({ accept, capture, multiple, onFiles, children, disabled, onClick, ...props }, ref) => {
     const inputRef = React.useRef<HTMLInputElement>(null);
     return (
       <>
@@ -38,9 +39,13 @@ export const FileButton = React.forwardRef<HTMLButtonElement, FileButtonProps>(
           ref={inputRef}
           type="file"
           accept={accept}
+          capture={capture}
           multiple={multiple}
           className="hidden"
-          onChange={(e) => onFiles(e.target.files)}
+          onChange={(e) => {
+            onFiles(e.target.files);
+            e.target.value = "";
+          }}
         />
       </>
     );

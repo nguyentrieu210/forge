@@ -17,7 +17,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2, Minus, PackageSearch, Plus, Search, ShoppingCart, Trash2 } from "lucide-react";
 import type { FrappeAdapter } from "@metaforge/adapter-frappe";
-import { Button, Input, Label, cn } from "@metaforge/ui";
+import {
+  Button, Checkbox, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, cn,
+} from "@metaforge/ui";
 
 export type StorefrontPage = "/shop" | "/shop/product" | "/shop/cart" | "/shop/track";
 
@@ -240,15 +242,17 @@ function CatalogPage({ adapter, cart }: { adapter: FrappeAdapter; cart: Cart }) 
 
 function FacetChip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
-    <button
+    <Button
       type="button"
+      variant="outline"
+      size="sm"
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "rounded-full border px-3 py-1.5 text-sm transition",
+        "h-auto rounded-full px-3 py-1.5 text-sm transition",
         active ? "border-primary bg-primary text-primary-foreground" : "hover:bg-muted",
       )}
-    >{label}</button>
+    >{label}</Button>
   );
 }
 
@@ -434,24 +438,21 @@ function CartPage({ adapter, cart }: { adapter: FrappeAdapter; cart: Cart }) {
         <Field label="Tỉnh/Thành" value={form.province} onChange={(value) => setForm({ ...form, province: value })} />
         <div className="space-y-1.5">
           <Label htmlFor="payment">Hình thức thanh toán</Label>
-          <select
-            id="payment"
-            className="h-9 w-full rounded-md border bg-background px-3 text-sm"
-            value={form.payment_method}
-            onChange={(event) => setForm({ ...form, payment_method: event.target.value })}
-          >
-            <option value="COD">Thanh toán khi nhận hàng (COD)</option>
-            <option value="Chuyển khoản">Chuyển khoản</option>
-          </select>
+          <Select value={form.payment_method} onValueChange={(value) => setForm({ ...form, payment_method: value })}>
+            <SelectTrigger id="payment"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="COD">Thanh toán khi nhận hàng (COD)</SelectItem>
+              <SelectItem value="Chuyển khoản">Chuyển khoản</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <Field label="Ghi chú" value={form.note} onChange={(value) => setForm({ ...form, note: value })} />
         {needsAgeCheck ? (
           <label className="flex items-start gap-2 rounded-md border p-3 text-sm">
-            <input
-              type="checkbox"
+            <Checkbox
               className="mt-0.5"
               checked={form.age_confirmed}
-              onChange={(event) => setForm({ ...form, age_confirmed: event.target.checked })}
+              onCheckedChange={(checked) => setForm({ ...form, age_confirmed: Boolean(checked) })}
             />
             <span>Tôi xác nhận đã đủ 18 tuổi. Đơn hàng có sản phẩm chứa cồn.</span>
           </label>

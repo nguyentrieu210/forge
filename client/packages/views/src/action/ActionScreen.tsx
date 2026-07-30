@@ -18,7 +18,9 @@
  */
 import { useMemo, useState, type ReactNode } from "react";
 import type { AppAction, AppActionCall, AppActionField, DocField, Fieldtype } from "@metaforge/core";
-import { Button, Input, Label } from "@metaforge/ui";
+import {
+  Button, Input, Label, Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@metaforge/ui";
 import { useMetaForge } from "../container/provider.js";
 
 type Values = Record<string, unknown>;
@@ -236,23 +238,23 @@ function ResultTable({ rows, format, onOpen }: { rows: unknown[]; format: (value
   return (
     // Bảng cuộn TRONG khung của nó — trang không bao giờ trượt ngang.
     <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead className="border-b bg-muted/40 text-left text-xs uppercase text-muted-foreground">
-          <tr>{columns.map((key) => <th key={key} className="px-4 py-2 font-medium">{key}</th>)}</tr>
-        </thead>
-        <tbody>
+      <Table unwrapped className="w-full text-sm">
+        <TableHeader className="border-b bg-muted/40 text-left text-xs uppercase text-muted-foreground">
+          <TableRow>{columns.map((key) => <TableHead key={key} className="px-4 py-2 font-medium">{key}</TableHead>)}</TableRow>
+        </TableHeader>
+        <TableBody>
           {rows.map((row, index) => {
             const record = (row ?? {}) as Record<string, unknown>;
             return (
-              <tr key={index} className="border-b last:border-0">
+              <TableRow key={index} className="border-b last:border-0">
                 {columns.map((key) => (
-                  <td key={key} className="px-4 py-2 tabular-nums">{cell(record[key], format, onOpen)}</td>
+                  <TableCell key={key} className="px-4 py-2 tabular-nums">{cell(record[key], format, onOpen)}</TableCell>
                 ))}
-              </tr>
+              </TableRow>
             );
           })}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }
@@ -268,7 +270,7 @@ function scalar(value: unknown, format: (value: number) => string): ReactNode {
 function cell(value: unknown, format: (value: number) => string, onOpen?: (doctype: string, name: string) => void): ReactNode {
   if (typeof value === "object" && value !== null && "doctype" in value && "name" in value && onOpen) {
     const link = value as { doctype: string; name: string };
-    return <button className="text-primary underline-offset-2 hover:underline" onClick={() => onOpen(link.doctype, link.name)}>{link.name}</button>;
+    return <Button type="button" variant="link" className="h-auto p-0" onClick={() => onOpen(link.doctype, link.name)}>{link.name}</Button>;
   }
   return scalar(value, format);
 }

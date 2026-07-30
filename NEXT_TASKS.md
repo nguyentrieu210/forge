@@ -1,12 +1,12 @@
 # NEXT TASKS
 
-## P0 — Khôi phục test gate Alumdoor
+## Hoàn thành — Khôi phục test gate Alumdoor
 
 **Mục tiêu:** làm test phản ánh contract v2.0.34 hiện hành mà không quay lại layout/cột cũ.
 
 - File dự kiến: `server/tests/alumdoor-item-model.test.mjs`, `server/scripts/build-alumdoor-v2-brief.mjs`, đối chiếu `server/briefs/alumdoor-v2.json`.
 - Rủi ro: sửa test theo output sai sẽ hợp thức hóa regression; cần chốt print contract với BRD/mẫu đã duyệt.
-- Hoàn thành khi: hai test hiện fail pass, root `pnpm.cmd run test` chạy tới cuối.
+- Trạng thái: hoàn thành; root `pnpm.cmd run test` đã chạy tới cuối và pass.
 - Kiểm tra: test server, SQL tests, client selfcheck; render một Purchase Order thật ở preview và PDF.
 - Phụ thuộc: không.
 
@@ -20,13 +20,13 @@
 - Kiểm tra: build brief, cài vào tenant thử nghiệm, tải PDF thật, so visual ở A4 portrait.
 - Phụ thuộc: P0.
 
-## P1 — Xử lý 26 lỗi lint có kiểm soát
+## Hoàn thành — Xử lý 26 lỗi lint có kiểm soát
 
 **Mục tiêu:** đưa `pnpm.cmd --filter metaforge run lint` về xanh mà không đổi UI/behavior.
 
 - File dự kiến: 9 file liệt kê trong `CURRENT_STATUS.md`, và chỉ sửa `client/scripts/check-native-ui.mjs` nếu chứng minh false positive.
 - Rủi ro: thay native element bằng shared component có thể đổi event, accessibility hoặc layout.
-- Hoàn thành khi: lint pass và các màn liên quan không regression.
+- Trạng thái: hoàn thành; lint, typecheck, test và build đều pass local.
 - Kiểm tra: lint, typecheck, build, visual smoke ở Storefront, DocTypeBuilder, AppShell, ChildGrid, ActionScreen.
 - Phụ thuộc: không.
 

@@ -9,12 +9,14 @@ Repo gốc là `C:\Forge`. Package manager là pnpm 9, Node yêu cầu từ 22.
 ## Hiện trạng
 
 - Branch: `hotfix/alumdoor-print-list-delete`.
-- Latest commit: `e21a281 fix(alumdoor): căn giữa nội dung thân bảng in`.
+- Baseline đã kéo: `7bbf20f test(alumdoor): align v2.0.34 contract`.
 - Typecheck: pass.
 - Build toàn monorepo: pass, có warning bundle lớn.
-- Lint: fail 26 lỗi trong 9 frontend files.
-- Test: fail 2 stale Alumdoor tests tại `server/tests/alumdoor-item-model.test.mjs`; suite dừng trước SQL/client tests.
-- Không có thay đổi logic trong lần audit này. `server/work/` và `tmp/` là untracked generated/work directories có sẵn, không xóa.
+- Lint: pass, 0 native UI violations và 0 hook-order violations.
+- Test: pass toàn bộ server, SQL/migration và 87 nhóm frontend selfcheck.
+- Frozen install: pass sau khi đồng bộ lockfile với `html2canvas`/`jspdf`.
+- `.github/workflows/ci.yml` chạy install, lint, test, typecheck và build; tuyệt đối không deploy.
+- `server/work/` và `tmp/` là untracked generated/work directories có sẵn, không xóa.
 
 ## Kiến trúc cốt lõi
 
@@ -32,15 +34,13 @@ Migration tenant đi từ `server/migrations/tenant/0001_core.sql` tới `0026_s
 
 Alumdoor v2.0.34 đang là app được chỉnh gần nhất. Nguồn generator là `server/scripts/build-alumdoor-v2-brief.mjs`, output là `server/briefs/alumdoor-v2.json`. Công việc cuối tập trung vào Purchase Order print: layout A4 dọc, cột/căn giữa/header/logo và preview/PDF; commit cuối căn giữa nội dung thân bảng. Trước đó router đã được sửa để merge partial Frappe PUT với stored document trước controller normalization.
 
-Hai test Alumdoor hiện còn kỳ vọng version `2.0.7`, header text/asset và cột cũ (`qty_bundle`, `theoretical_kg`), nên test gate đỏ dù build xanh.
+Test Alumdoor đã được gộp lại thành một file test bình thường và kiểm tra trực tiếp contract v2.0.34; workaround đọc/ghi source runtime tạm đã được bỏ.
 
 ## Nên làm tiếp
 
-1. Đọc BRD/mẫu Alumdoor và xác nhận contract print v2.0.34.
-2. Sửa test stale, không revert generator về contract cũ.
-3. Chạy root test đến hết để biết SQL/client suite thật sự xanh hay đỏ.
-4. Thêm visual/integration fixture cho preview và PDF.
-5. Xử lý lint từng component, không mass replace native controls.
+1. Theo dõi GitHub Actions đến khi run trên commit mới xanh.
+2. Thêm visual/integration fixture cho preview và PDF.
+3. Chỉ sau khi CI xanh mới tạo Cloudflare staging và smoke test login/CRUD/print/PDF.
 
 Backlog đầy đủ ở `NEXT_TASKS.md`.
 

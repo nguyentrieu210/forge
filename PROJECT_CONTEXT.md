@@ -45,8 +45,7 @@ Người dùng mục tiêu là doanh nghiệp cần ERP theo vai trò: quản tr
 - `client/apps/runtime/src/main.tsx` còn `DeskFallback` cho một số page/dashboard chưa có renderer chuyên biệt.
 - `ProcessContainer` đã có phía client nhưng comment trong luồng gọi cho biết API process chưa hoàn chỉnh; `server/packages/frappe-api/src/router.ts` vẫn có nhánh trả not-implemented cho method không được đăng ký.
 - UI collaboration mới nối một phần: picker assign, upload attachment và inline tag còn được ghi Partial trong `client/docs/implementation-traceability.md`.
-- Lint frontend đang có 26 vi phạm native UI/inline style trong 9 file; chi tiết ở `CURRENT_STATUS.md`.
-- Hai test Alumdoor đang lệch với brief/print format hiện tại trong `server/tests/alumdoor-item-model.test.mjs`.
+- Lint frontend đã được đưa về 0 vi phạm và full test đã chạy hết sau khi đồng bộ contract Alumdoor v2.0.34; chi tiết ở `CURRENT_STATUS.md`.
 - `server/STATUS.md` và một số tài liệu cũ không còn phản ánh migration/phiên bản hiện tại. Khi mâu thuẫn, ưu tiên code, migration và manifest đang build.
 
 ## 4. Luồng nghiệp vụ chính
@@ -118,4 +117,4 @@ Người dùng mục tiêu là doanh nghiệp cần ERP theo vai trò: quản tr
 
 ## 12. Vấn đề kỹ thuật và hướng tiếp theo
 
-Ưu tiên hiện tại là đồng bộ test Alumdoor với contract v2.0.34, xử lý lỗi lint theo từng component, bổ sung test render/PDF ổn định và hoàn thiện renderer/API còn fallback. Sau đó mới tối ưu bundle Vite đang cảnh báo chunk 500 KB–1.1 MB. Backlog cụ thể ở `NEXT_TASKS.md`.
+Ưu tiên hiện tại là giữ GitHub Actions xanh, bổ sung test render/PDF ổn định và hoàn thiện renderer/API còn fallback. Sau đó mới tối ưu bundle Vite đang cảnh báo chunk 500 KB–1.1 MB. Backlog cụ thể ở `NEXT_TASKS.md`.

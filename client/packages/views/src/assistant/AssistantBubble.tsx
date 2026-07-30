@@ -9,7 +9,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { Bot, Loader2, Send, X } from "lucide-react";
-import { Button } from "@metaforge/ui";
+import { Button, Input } from "@metaforge/ui";
 
 interface Message { role: "user" | "assistant"; text: string }
 
@@ -64,15 +64,16 @@ export function AssistantBubble({ appName = "Trợ lý" }: { appName?: string })
 
   if (!open) {
     return (
-      <button
+      <Button
         type="button"
+        size="icon"
         onClick={() => setOpen(true)}
-        className="fixed bottom-20 right-4 z-50 grid size-12 place-items-center rounded-full bg-primary text-primary-foreground shadow-lg transition hover:brightness-110"
+        className="fixed bottom-20 right-4 z-50 size-12 rounded-full shadow-lg transition hover:brightness-110"
         aria-label="Mở trợ lý"
         title="Hỏi trợ lý về dữ liệu đang xem"
       >
         <Bot className="size-5" />
-      </button>
+      </Button>
     );
   }
 
@@ -108,12 +109,12 @@ export function AssistantBubble({ appName = "Trợ lý" }: { appName?: string })
       </div>
 
       <div className="flex shrink-0 items-center gap-2 border-t p-2">
-        <input
+        <Input
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void send(); } }}
           placeholder="Hỏi về màn hình đang mở…"
-          className="h-9 min-w-0 flex-1 rounded-md border bg-background px-2.5 text-sm"
+          className="min-w-0 flex-1"
         />
         <Button type="button" size="icon" onClick={() => void send()} disabled={busy || !draft.trim()} aria-label="Gửi">
           <Send />

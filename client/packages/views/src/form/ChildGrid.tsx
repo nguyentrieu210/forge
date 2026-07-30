@@ -4,13 +4,13 @@
  * cột = field in_list_view của child, cell = control từ registry (inline edit), thêm/xoá row.
  * Data-driven từ child meta (KHÔNG hardcode).
  */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { aiHeaders } from "../assistant/AssistantBubble.js";
 import { ArrowDown, ArrowDownToLine, ArrowUp, Columns3, Copy, Maximize2, Pin, PinOff, Plus, RotateCcw, ScanLine, Trash2, Undo2, X } from "lucide-react";
 import { resolveField, type DocTypeMeta, type DocField, type Doc } from "@metaforge/core";
 import { ControlRegistry, FallbackControl, type FieldServices } from "@metaforge/controls";
 import {
-  Button, Checkbox, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Input,
+  Button, Checkbox, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, FileButton, Input,
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell, useT,
 } from "@metaforge/ui";
 
@@ -1352,7 +1352,7 @@ export function ChildGrid(props: ChildGridProps) {
         <Table className={expanded ? "w-full table-fixed" : "table-fixed"} style={expanded ? undefined : { minWidth: `${minWidthRem}rem` }}>
           <colgroup>
             {!readOnly ? <col className="w-10" /> : null}
-            <col style={{ width: "2.5rem" }} />
+            <col className="w-10" />
             {/*
               MỌI cột đều khai bề rộng — kể cả cột ghi chú.
               Để trống một cột nghĩa là "cột này nhận phần CÒN LẠI", và phần còn lại không có
@@ -1362,9 +1362,13 @@ export function ChildGrid(props: ChildGridProps) {
               bề ngang, và không còn cột nào có thể biến mất.
             */}
             {cols.map((c) => (
-              <col key={c.fieldname} style={{ width: columnWidth(c) || (c.fieldname === flexible ? "10rem" : gridWidth(c)) }} />
+              <col
+                key={c.fieldname}
+                className="[width:var(--mf-col-width)]"
+                style={{ "--mf-col-width": columnWidth(c) || (c.fieldname === flexible ? "10rem" : gridWidth(c)) } as CSSProperties}
+              />
             ))}
-            {!readOnly ? <col style={{ width: "4.5rem" }} /> : null}
+            {!readOnly ? <col className="w-[4.5rem]" /> : null}
           </colgroup>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
@@ -1597,18 +1601,18 @@ export function ChildGrid(props: ChildGridProps) {
           <Button type="button" variant="outline" size="sm" disabled={pickedRow == null} onClick={() => pickedRow != null && fillDown(pickedRow)} title="Chép giá trị của dòng đang chọn xuống các ô còn TRỐNG ở dưới">
             <ArrowDownToLine /> Điền xuống
           </Button>
-          <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium hover:bg-accent">
+          <FileButton
+            accept="image/*"
+            capture="environment"
+            disabled={reading}
+            onFiles={(files) => {
+              const file = files?.[0];
+              if (file) void onPickReceiptImage(file);
+            }}
+          >
             <ScanLine className="size-4" />
             {reading ? "Đang đọc ảnh…" : "Đọc phiếu bằng ảnh"}
-            <input
-              type="file" accept="image/*" capture="environment" className="sr-only" disabled={reading}
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                event.target.value = "";                 // chọn lại đúng tệp đó vẫn phải chạy
-                if (file) void onPickReceiptImage(file);
-              }}
-            />
-          </label>
+          </FileButton>
           <span className="text-xs text-muted-foreground">Chép vùng trong Excel rồi Ctrl+V ngay trên bảng</span>
         </>
       ) : (
@@ -1719,7 +1723,7 @@ export function ChildGrid(props: ChildGridProps) {
             {readError ? (
               <div className="shrink-0 border-b bg-amber-500/10 px-4 py-2 text-sm text-amber-700 dark:text-amber-400" role="status">
                 {readError}
-                <button type="button" className="ml-2 underline" onClick={() => setReadError(null)}>bỏ qua</button>
+                <Button type="button" variant="link" className="ml-2 h-auto p-0" onClick={() => setReadError(null)}>bỏ qua</Button>
               </div>
             ) : null}
             {/* Bảng chiếm trọn bề ngang. Field không có cột ở đây vẫn tới được qua nút chi tiết
