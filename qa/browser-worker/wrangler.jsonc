@@ -4,7 +4,7 @@
   "main": "src/index.ts",
   "workers_dev": true,
   "preview_urls": false,
-  "compatibility_date": "2026-07-31",
+  "compatibility_date": "2026-07-30",
   "compatibility_flags": ["nodejs_compat"],
   "upload_source_maps": true,
   "browser": {
