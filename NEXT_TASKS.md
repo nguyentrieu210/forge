@@ -2,21 +2,25 @@
 
 Ngày cập nhật: **2026-07-31**.
 
-## P0 — Xác minh và phát hành sidebar gọn
+## P0 — Xác minh release sidebar gọn trên production
 
-**Mục tiêu:** đưa thay đổi sidebar desktop tại HEAD mới lên Gateway production mà không ảnh hưởng route hoặc permission.
+**Mục tiêu:** xác nhận Cloudflare đã đưa bản sidebar desktop gọn lên Gateway production mà không ảnh hưởng route hoặc permission.
 
 Hiện trạng:
 
-- Code commit: `87cd45aa9272f5600ff3d5914f697ce9a26994b6`.
-- File sửa: `client/apps/runtime/src/styles.css`.
+- Code sidebar: `87cd45aa9272f5600ff3d5914f697ce9a26994b6`.
+- Release target: `da04f7fcfdc4c8e4ddf7ff70c79e3a10458ce412`.
+- Production trigger: `9a7bbc14b8e7f3e556404cce19914da1e21e5e10`.
+- Trigger file: `.github/release/gateway-production.trigger`.
+- File giao diện sửa: `client/apps/runtime/src/styles.css`.
 - Sidebar mở rộng còn `15.75rem`; group header, menu row, icon và search được thu gọn.
 - Không ẩn mục menu và không thay đổi quyền.
+- Chưa có Cloudflare deployment/version ID hoặc smoke evidence sau trigger.
 
 Việc cần làm:
 
-1. Chờ CI push cho HEAD cuối cùng hoàn tất test/typecheck/build.
-2. Xác nhận Cloudflare Gateway build dùng:
+1. Xác nhận Cloudflare build mới nhất lấy commit có chứa trigger `9a7bbc14...` hoặc HEAD kế tiếp chỉ cập nhật tài liệu.
+2. Xác nhận Gateway build dùng:
 
 ```bash
 pnpm --filter metaforge run build && node server/scripts/stage-client-bundle.mjs
@@ -35,8 +39,9 @@ pnpm --dir server exec wrangler deploy --config apps/gateway-worker/wrangler.jso
    - pin, tìm menu và thu gọn sidebar vẫn hoạt động;
    - không có console error mới.
 5. Ghi Gateway deployment/version ID và ảnh smoke vào bằng chứng release.
+6. Kiểm tra CI/check của HEAD mới; hiện GitHub connector chưa trả workflow run hoặc status.
 
-Hoàn thành khi CI xanh, Cloudflare build/deploy xanh và sidebar production hiển thị bản mới.
+Hoàn thành khi Cloudflare build/deploy xanh, production hiển thị sidebar mới và smoke không có regression.
 
 ## P0 — Xác minh production tenant `alu`
 
