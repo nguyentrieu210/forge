@@ -10,8 +10,8 @@ permissions:
   pull-requests: write
 
 concurrency:
-  group: cloudflare-preview-qa-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: cloudflare-preview-qa
+  cancel-in-progress: false
 
 jobs:
   preview-qa:
@@ -88,6 +88,7 @@ jobs:
           fi
 
           QA_TOKEN="$(openssl rand -hex 32)"
+          echo "::add-mask::$QA_TOKEN"
           printf '%s' "$QA_TOKEN" | (
             cd qa/browser-worker
             npx wrangler secret put QA_TOKEN
@@ -120,7 +121,7 @@ jobs:
             "${{ steps.preview.outputs.url }}"
 
           curl --fail --silent --show-error \
-            --retry 3 --retry-all-errors \
+            --retry 6 --retry-delay 3 --retry-all-errors \
             -H "Authorization: Bearer ${{ steps.qa_worker.outputs.token }}" \
             -H "Content-Type: application/json" \
             --data-binary @/tmp/qa-request.json \
@@ -171,9 +172,6 @@ jobs:
       - name: Comment QA report on pull request
         if: always() && github.event_name == 'pull_request'
         uses: actions/github-script@v7
-        env:
-          PREVIEW_URL: ${{ steps.preview.outputs.url }}
-          QA_STATUS: ${{ steps.qa.outputs.status }}
         with:
           script: |
             const fs = require('node:fs');
