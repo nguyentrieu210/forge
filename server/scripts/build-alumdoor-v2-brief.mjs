@@ -17,7 +17,6 @@ const here = dirname(fileURLToPath(import.meta.url));
 const SRC = resolve(here, "../briefs/alumdoor.json");
 const OUT = resolve(here, "../briefs/alumdoor-v2.json");
 const ORDER_LOGO = `data:image/png;base64,${readFileSync(resolve(here, "../../client/apps/runtime/public/alumdoor-order-logo.png")).toString("base64")}`;
-const ORDER_COMPANY_HEADER = `data:image/png;base64,${readFileSync(resolve(here, "../../client/apps/runtime/public/alumdoor-company-header.png")).toString("base64")}`;
 
 const brief = JSON.parse(readFileSync(SRC, "utf8"));
 const log = [];
@@ -49,7 +48,7 @@ const replaceField = (dt, name, next) => {
 };
 
 // ─────────────────────────── HEADER ───────────────────────────
-brief.version = "2.0.24";
+brief.version = "2.0.25";
 brief.locale.dateFormat = "dd/mm/yyyy"; // Q11 — chủ xưởng chốt gạch chéo
 // Nỗi đau #1 của BRD: người mở app phải thấy ngay tồn KHẢ DỤNG theo khổ, không phải tự lấy tồn tổng
 // rồi trừ các phiếu giữ bằng tay. Báo cáo này nằm ở query engine nền tảng vì nó đọc cùng sổ kho.
@@ -1026,7 +1025,7 @@ brief.prints.push({
   ],
   html: [
     `<div class="letterhead"><img class="brand-logo" src="${ORDER_LOGO}" alt="ALUMDOOR">`,
-    `<img class="company-header-img" src="${ORDER_COMPANY_HEADER}" alt="Thông tin công ty ALUMDOOR"></div>`,
+    "<img class=\"company-header-img\" src=\"/alumdoor-company-header.png\" alt=\"Thông tin công ty ALUMDOOR\"></div>",
     "<div class=\"title\">Đơn<span class=\"ws\">.</span>đặt<span class=\"ws\">.</span>hàng</div>",
     "<div class=\"meta\"><div><b>Tên<span class=\"ws\">.</span>nhà<span class=\"ws\">.</span>cung<span class=\"ws\">.</span>cấp:</b>{{ supplier }}</div><div><b>Ngày<span class=\"ws\">.</span>đặt<span class=\"ws\">.</span>hàng:</b>{{ transaction_date | date }}</div><div><b>Ngày<span class=\"ws\">.</span>giao<span class=\"ws\">.</span>hàng:</b>{{ schedule_date | date }}</div></div>",
     "<table><colgroup><col style=\"width:3%\"><col style=\"width:7%\"><col style=\"width:10%\"><col style=\"width:8%\"><col style=\"width:7%\"><col style=\"width:7%\"><col style=\"width:7%\"><col style=\"width:8%\"><col style=\"width:4%\"><col style=\"width:9%\"><col style=\"width:12%\"><col style=\"width:7%\"><col style=\"width:11%\"></colgroup><thead><tr>",
