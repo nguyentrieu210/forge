@@ -1,4 +1,4 @@
-import type { JsonObject, JsonValue, MutationPlan } from "./index.js";
+import type { JsonObject, JsonValue } from "./index.js";
 
 export type PurchaseAllocationSource = "live" | "legacy";
 export type PurchaseAllocationResolution = "resolved" | "legacy_unresolved";
@@ -143,5 +143,17 @@ export interface PurchaseAllocationMutationPlanExtension {
   purchase_revision_claims?: PurchaseAllocationRevisionClaim[];
 }
 
-export type PurchaseAllocationMutationPlan<T extends JsonObject = JsonObject> =
-  MutationPlan<T> & PurchaseAllocationMutationPlanExtension;
+/**
+ * Keep the allocation fields on the canonical MutationPlan interface without
+ * forcing every unrelated controller to populate empty arrays. This augmentation
+ * is type-only; the runtime shape remains the ordinary plan object.
+ */
+declare module "./index.js" {
+  interface MutationPlan<T extends JsonObject = JsonObject> extends PurchaseAllocationMutationPlanExtension {}
+  interface MutationSnapshot {
+    purchase_obligation_entries?: PurchaseWindowObligationEntry[];
+    purchase_allocation_entries?: PurchaseReceiptAllocationEntry[];
+    purchase_unapplied_entries?: PurchaseUnappliedReceiptEntry[];
+    purchase_settlement_entries?: PurchaseSettlementEntry[];
+  }
+}
