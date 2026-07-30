@@ -1,10 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  AllocatingPurchaseOrderController,
-  AllocatingPurchaseReceiptController,
+  RolloutPurchaseOrderController,
+  RolloutPurchaseReceiptController,
 } from "../dist/packages/clouderp-core/src/index.js";
-import { InMemoryPurchaseAllocationMutationStore } from "../dist/packages/document-kernel/src/index.js";
+import { InMemoryRolloutPurchaseAllocationMutationStore } from "../dist/packages/document-kernel/src/index.js";
 
 const actor = { user_id: "Administrator", roles: ["System Manager", "Stock Manager"] };
 const tenant = "demo";
@@ -74,11 +74,31 @@ function purchaseOrderData(qtyBar, transactionDate) {
   };
 }
 
-test("PO submit opens obligations and Receipt 230 allocates FIFO as 200 + 30", async () => {
-  const store = new InMemoryPurchaseAllocationMutationStore();
+test("rollout disabled keeps the legacy Purchase Order path", async () => {
+  const store = new InMemoryRolloutPurchaseAllocationMutationStore();
   seedMasters(store);
-  const poController = new AllocatingPurchaseOrderController();
-  const receiptController = new AllocatingPurchaseReceiptController();
+  const poController = new RolloutPurchaseOrderController();
+
+  const draft = await apply(
+    poController,
+    store,
+    "create",
+    "PO-LEGACY",
+    purchaseOrderData(10, "2026-06-30"),
+    "PO-LEGACY-create",
+  );
+  await apply(poController, store, "submit", "PO-LEGACY", draft.data, "PO-LEGACY-submit");
+
+  assert.equal(store.snapshot().purchase_obligation_entries.length, 0,
+    "no rollout row means no allocation ledger writes");
+});
+
+test("enabled rollout opens obligations and Receipt 230 allocates FIFO as 200 + 30", async () => {
+  const store = new InMemoryRolloutPurchaseAllocationMutationStore();
+  store.setPurchaseAllocationEnabled(true);
+  seedMasters(store);
+  const poController = new RolloutPurchaseOrderController();
+  const receiptController = new RolloutPurchaseReceiptController();
 
   const po1Draft = await apply(poController, store, "create", "PO-01", purchaseOrderData(200, "2026-07-01"), "PO-01-create");
   await apply(poController, store, "submit", "PO-01", po1Draft.data, "PO-01-submit");
