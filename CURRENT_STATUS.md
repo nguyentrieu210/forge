@@ -6,7 +6,9 @@ Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
 
 - Repository: `nguyentrieu210/forge`.
 - Branch/default branch: `hotfix/alumdoor-print-list-delete`.
-- HEAD sau thay đổi sidebar: `87cd45aa9272f5600ff3d5914f697ce9a26994b6` (`fix(ui): compact desktop sidebar`).
+- Code sidebar: `87cd45aa9272f5600ff3d5914f697ce9a26994b6` (`fix(ui): compact desktop sidebar`).
+- Release target trước trigger: `da04f7fcfdc4c8e4ddf7ff70c79e3a10458ce412`.
+- Gateway production trigger: `9a7bbc14b8e7f3e556404cce19914da1e21e5e10` (`release: trigger compact sidebar gateway production`).
 - Baseline code/schema đã qua CI trước đó: `591ca359937d6ae12803d36c74996db8482060af`.
 - `server/work/`, `tmp/`, backup SQL, `.env` và generated artifacts không được commit.
 
@@ -16,7 +18,13 @@ Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
 - Sidebar rộng `15.75rem` thay vì `17rem` khi mở.
 - Group header, ô tìm kiếm, dòng menu, icon và khoảng cách dọc được giảm kích thước.
 - Không ẩn route, không đổi permission và không xoá mục Báo cáo/Danh mục.
-- CI và Cloudflare build cho HEAD mới đang chờ xác minh; chưa ghi nhận smoke browser cho thay đổi này.
+
+## Gateway production release
+
+- Đã push `.github/release/gateway-production.trigger` lên default branch để kích hoạt Cloudflare Git build cho `cloudforge-gateway`.
+- Trigger trỏ tới code target `da04f7fcfdc4c8e4ddf7ff70c79e3a10458ce412`, môi trường `production`, lý do `compact-sidebar-release`.
+- Việc này chỉ phát hành Gateway/frontend; không chạy tenant migration, không deploy lại tenant Worker và không bật FIFO.
+- Chưa có provider evidence từ Cloudflare cho build/deployment/version ID hoặc smoke production sau trigger.
 
 ## CI
 
@@ -27,7 +35,7 @@ Baseline đã xác minh:
 - Exact head: `591ca359937d6ae12803d36c74996db8482060af`.
 - Install/test/typecheck/build: **PASS**.
 
-HEAD sidebar `87cd45aa...` vừa được push; cần chờ CI push hoàn tất trước khi coi là verified.
+HEAD sidebar/release mới chưa có workflow run hoặc combined status qua GitHub connector; không coi là CI-verified cho tới khi có bằng chứng.
 
 ## Cloudflare production tenant `alu`
 
@@ -46,7 +54,7 @@ pnpm --filter metaforge run build && node server/scripts/stage-client-bundle.mjs
 pnpm --dir server exec wrangler deploy --config apps/gateway-worker/wrangler.jsonc
 ```
 
-- Còn thiếu bằng chứng ghi vào repo: deployment/version ID mới nhất, kết quả `/health`, login/CRUD/print/PDF và ảnh sidebar production sau HEAD mới.
+- Còn thiếu bằng chứng ghi vào repo: deployment/version ID mới nhất, kết quả `/health`, login/CRUD/print/PDF và ảnh sidebar production sau trigger.
 
 ## FIFO Purchase Receipt vào nhiều Purchase Order
 
