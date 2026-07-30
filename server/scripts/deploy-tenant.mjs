@@ -20,6 +20,7 @@ import { spawnSync } from "node:child_process";
 import { fail, wrangler } from "./wrangler-cli.mjs";
 import { readdirSync } from "node:fs";
 import path from "node:path";
+import { meaningfulGitStatus } from "./git-worktree.mjs";
 import { findTenantDatabaseId, findTenantOrigin, removeTenantConfig, tenantScriptName, writeTenantConfig } from "./tenant-wrangler.mjs";
 import { d1BindingOf, d1Query, serverRoot } from "./wrangler-cli.mjs";
 
@@ -68,7 +69,9 @@ if (execute && confirm !== (all ? "ALL" : single)) {
 if (execute && !allowDirty) {
   const status = spawnSync("git", ["status", "--porcelain"], { cwd: new URL("..", import.meta.url), encoding: "utf8" });
   if (status.status !== 0) fail("could not inspect git worktree before deployment");
-  if (status.stdout.trim()) fail("worktree is dirty; commit the verified release or pass --allow-dirty with an explicit risk decision");
+  if (meaningfulGitStatus(status.stdout)) {
+    fail("worktree is dirty; commit the verified release or pass --allow-dirty with an explicit risk decision");
+  }
 }
 
 const databases = JSON.parse(wrangler(["d1", "list", "--json"]));
@@ -89,7 +92,7 @@ for (const tenant of tenants) {
   if (behind.length) {
     removeTenantConfig(configPath);
     console.log(`${tenant.padEnd(12)} REFUSED  ${behind.length} migration(s) not applied: ${behind.join(", ")}`);
-    console.log(`${" ".repeat(12)}          run first: node scripts/d1-migrate-remote.mjs --config <generated ${tenant} config>`);
+    console.log(`${" ".repeat(12)}          run first: node scripts/migrate-tenant.mjs --tenant ${tenant}`);
     console.log(`${" ".repeat(12)}          deploying code ahead of its schema is how login broke on 2026-07-27.`);
     failures += 1;
     continue;
