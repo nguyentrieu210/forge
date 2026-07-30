@@ -80,7 +80,8 @@ Backlog chi tiết ở `NEXT_TASKS.md`.
 11. `server/packages/document-kernel/src/purchase-allocation-d1-store.ts`
 12. `server/packages/document-kernel/src/purchase-allocation-domain-store.ts`
 13. `server/apps/tenant-worker/src/aggregate-do.ts`
-14. Các migration/planner/controller/rollout tests mới trong `server/scripts/` và `server/tests/`.
+14. `server/scripts/migrate-tenant.mjs`
+15. Các migration/planner/controller/rollout tests mới trong `server/scripts/` và `server/tests/`.
 
 ## Giả định không được tự ý thay đổi
 
@@ -112,10 +113,13 @@ CI run `30567772883` đã pass đủ test/typecheck/build cho code rollout-safe 
 
 ## Deploy
 
+- Backup: `server/scripts/backup-tenant.mjs`.
+- Tenant-safe migration wrapper: `server/scripts/migrate-tenant.mjs`.
+- Low-level remote migration engine: `server/scripts/d1-migrate-remote.mjs`.
+- Tenant deploy: `server/scripts/deploy-tenant.mjs`.
 - Stage client: `server/scripts/stage-client-bundle.mjs`.
 - Gateway: `server/apps/gateway-worker/wrangler.jsonc`.
-- Tenant: `server/scripts/deploy-tenant.mjs`.
-- Remote migrations: `server/scripts/d1-migrate-remote.mjs`.
-- Backup: `server/scripts/backup-tenant.mjs`.
 
-Implementation FIFO mới chưa deploy. Không sửa production secrets. Code chỉ được coi là safe-to-deploy khi rollout vẫn tắt; activation production phải chờ M5–M7, backfill checksum, staging smoke và explicit approval.
+Safe operator order: backup → `migrate-tenant` dry-run → live migration with explicit confirmation → tenant deploy dry-run → live deploy with explicit confirmation. The rollout remains disabled after code/schema deployment.
+
+Implementation FIFO mới chưa deploy. Không sửa production secrets. Code chỉ được coi là safe-to-deploy when rollout vẫn tắt; activation production phải chờ M5–M7, backfill checksum, staging smoke và explicit approval.
