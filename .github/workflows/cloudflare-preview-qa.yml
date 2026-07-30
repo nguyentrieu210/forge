@@ -77,6 +77,26 @@ jobs:
           echo "subdomain=$WORKERS_SUBDOMAIN" >> "$GITHUB_OUTPUT"
           echo "Workers subdomain resolved."
 
+      - name: Enable gateway preview URLs
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            -X POST \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H "Content-Type: application/json" \
+            --data '{"enabled":true,"previews_enabled":true}' \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/cloudforge-gateway/subdomain" \
+            --output /tmp/gateway-subdomain.json
+
+          node -e '
+            const response = require("/tmp/gateway-subdomain.json");
+            if (!response.success || !response.result?.previews_enabled) {
+              console.error(JSON.stringify(response));
+              process.exit(1);
+            }
+          '
+
       - name: Upload gateway preview version
         id: preview
         shell: bash
