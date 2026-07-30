@@ -1,1 +1,1 @@
-Trigger the temporary Alumdoor v2.0.34 validation workflow after the self-reporting runner was installed.
+Trigger the simplified temporary Alumdoor v2.0.34 validation workflow.
