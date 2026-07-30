@@ -2,39 +2,46 @@
 
 Ngày cập nhật: **2026-07-31**.
 
-## P0 — Có đường release Cloudflare có kiểm soát
+## P0 — Xác minh và phát hành sidebar gọn
 
-**Mục tiêu:** biến release từ lệnh chạy thủ công trên máy vận hành thành một quy trình có provider evidence, không đưa secret vào ChatGPT hoặc Git.
+**Mục tiêu:** đưa thay đổi sidebar desktop tại HEAD mới lên Gateway production mà không ảnh hưởng route hoặc permission.
 
 Hiện trạng:
 
-- Code HEAD `591ca359937d6ae12803d36c74996db8482060af` đã PASS CI run `30570000862`, job `90964015638` cho install/test/typecheck/build.
-- Repository hiện chỉ có `.github/workflows/ci.yml`; chưa có allowlisted staging/production release workflow.
-- Phiên ChatGPT hiện tại không có Cloudflare plugin, token hoặc account ID nên không thể tự backup/migrate/deploy.
-- `ForgeSkills.zip` chỉ chứa quy trình/gate, không chứa credential hoặc executor.
+- Code commit: `87cd45aa9272f5600ff3d5914f697ce9a26994b6`.
+- File sửa: `client/apps/runtime/src/styles.css`.
+- Sidebar mở rộng còn `15.75rem`; group header, menu row, icon và search được thu gọn.
+- Không ẩn mục menu và không thay đổi quyền.
 
 Việc cần làm:
 
-1. Tạo GitHub Actions workflow release riêng, chỉ `workflow_dispatch`, dùng GitHub Environment secrets.
-2. Tách staging và production environment; production cần approval gate.
-3. Workflow phải nhận exact SHA và tenant ID, không tự dùng branch head mơ hồ.
-4. Release step theo thứ tự: backup → migration dry-run → migration live → deploy dry-run → deploy live → smoke.
-5. Không log secret hoặc customer data; chỉ ghi tên binding/secret bị thiếu.
-6. Lưu deployment/version ID, migration versions, timestamp và smoke result.
-7. Production workflow không bật FIFO rollout; activation là action riêng sau M5–M7/backfill.
+1. Chờ CI push cho HEAD cuối cùng hoàn tất test/typecheck/build.
+2. Xác nhận Cloudflare Gateway build dùng:
 
-Hoàn thành khi:
+```bash
+pnpm --filter metaforge run build && node server/scripts/stage-client-bundle.mjs
+```
 
-- Có workflow staging allowlisted chạy thành công trên exact CI-green SHA.
-- Có Cloudflare deployment/version ID và smoke evidence.
-- Production workflow được bảo vệ bằng Environment approval và rollback procedure.
+3. Xác nhận deploy command:
 
-## P0 — Xác minh production tenant `alu` hiện hành
+```bash
+pnpm --dir server exec wrangler deploy --config apps/gateway-worker/wrangler.jsonc
+```
 
-**Mục tiêu:** chứng minh phiên bản đang live hoạt động đúng.
+4. Smoke desktop/mobile tại `alu.kairo.vn`:
+   - sidebar không tràn ngang;
+   - nhãn dài vẫn đọc được bằng tooltip/ellipsis hợp lý;
+   - group đóng/mở bình thường;
+   - pin, tìm menu và thu gọn sidebar vẫn hoạt động;
+   - không có console error mới.
+5. Ghi Gateway deployment/version ID và ảnh smoke vào bằng chứng release.
+
+Hoàn thành khi CI xanh, Cloudflare build/deploy xanh và sidebar production hiển thị bản mới.
+
+## P0 — Xác minh production tenant `alu`
 
 - Xác nhận Gateway version và production traffic.
-- Smoke `alu.kairo.vn`: login, list, form, create/update/delete chứng từ thử, Purchase Order preview và tải PDF.
+- Smoke `alu.kairo.vn`: health, login, list, form, create/update/delete chứng từ thử, Purchase Order preview và tải PDF.
 - Ghi deployment/version ID, thời điểm và kết quả từng bước; không ghi secret hoặc dữ liệu khách hàng.
 - Rollback trigger: login/API 5xx, sai tenant/database, mất dữ liệu CRUD, permission regression hoặc print/PDF lỗi nghiêm trọng.
 
@@ -127,7 +134,7 @@ Còn lại:
 5. Backfill dry-run trên staging/production backup.
 6. Review unresolved/checksum.
 7. Staging smoke PO → Receipt → cancel → settlement → report.
-8. Explicit production approval trước migrate/deploy/activation.
+8. Explicit production approval trước activation.
 
 ## P1 — Purchase Order print/PDF verification
 
