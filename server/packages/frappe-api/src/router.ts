@@ -34,7 +34,7 @@ import {
 } from "./meta-shape.js";
 import {
   blocksSelfApproval, mergeCustomizations, parseCsvImport, parseCustomField, parseDocTypeMeta,
-  parsePropertySetter, renderPrintFormat, resolveAutoname, validateWorkflow,
+  parsePropertySetter, permissionAllows, renderPrintFormat, resolveAutoname, validateWorkflow,
 } from "../../frappe-model/src/index.js";
 import type { CustomFieldRecord, CustomizationStore, D1SearchStore, PropertySetterRecord } from "../../frappe-model/src/index.js";
 import type { D1UserStore } from "../../auth/src/index.js";
@@ -1381,7 +1381,7 @@ async function capabilityFlags(
       return false;
     }
   };
-  const [read, write, create, submit, cancel, amend] = await Promise.all([
+  const [read, checkedWrite, create, submit, cancel, amend] = await Promise.all([
     check("read"),
     check("save"),
     check("create"),
@@ -1389,6 +1389,15 @@ async function capabilityFlags(
     submittable ? check("cancel") : Promise.resolve(false),
     submittable ? check("amend") : Promise.resolve(false),
   ]);
+  // A list request has no concrete owner/document. Asking the document permission
+  // service to assert "save" in that shape is intentionally denied, which used to
+  // hide every row action even for users with ordinary DocType write permission.
+  // Owner-only rules stay false here; the kernel still re-checks the selected row.
+  const write = document
+    ? checkedWrite
+    : isPlatformAdmin(context) || meta.permissions.some((permission) =>
+      permissionAllows(permission, context.actor, "save"),
+    );
   return {
     read,
     write,
