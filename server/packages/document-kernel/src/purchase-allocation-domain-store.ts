@@ -167,8 +167,9 @@ export class D1PurchaseAllocationDomainStore extends D1PurchaseAllocationMutatio
     purchaseReceipt: string,
   ): Promise<PurchaseReceiptAllocationSourceState[]> {
     const result = await this.allocationReader.prepare(
-      `SELECT source.entry_id, source.queue_key, source.window_id, source.receipt_item_row_id,
-              source.purchase_order, source.purchase_order_item_row_id,
+      `SELECT source.entry_id, source.queue_key, queue.revision AS queue_revision,
+              source.window_id, window.revision AS window_revision, window.status AS window_status,
+              source.receipt_item_row_id, source.purchase_order, source.purchase_order_item_row_id,
               source.qty_micros + COALESCE(SUM(reversal.qty_micros),0) AS qty_micros,
               source.barem_weight_micros + COALESCE(SUM(reversal.barem_weight_micros),0) AS barem_weight_micros,
               CASE WHEN source.projected_actual_weight_micros IS NULL THEN NULL
@@ -176,6 +177,10 @@ export class D1PurchaseAllocationDomainStore extends D1PurchaseAllocationMutatio
                         + COALESCE(SUM(reversal.projected_actual_weight_micros),0) END AS projected_actual_weight_micros,
               source.projection_version, source.allocation_sequence, source.posting_at
        FROM purchase_receipt_allocation_entries source
+       JOIN purchase_obligation_queues queue
+         ON queue.tenant_id=source.tenant_id AND queue.queue_key=source.queue_key
+       JOIN purchase_settlement_windows window
+         ON window.tenant_id=source.tenant_id AND window.window_id=source.window_id
        LEFT JOIN purchase_receipt_allocation_entries reversal
          ON reversal.tenant_id=source.tenant_id
         AND reversal.reversal_of_entry_id=source.entry_id
@@ -190,7 +195,10 @@ export class D1PurchaseAllocationDomainStore extends D1PurchaseAllocationMutatio
     return (result.results ?? []).map((row) => ({
       entry_id: String(row.entry_id),
       queue_key: String(row.queue_key),
+      queue_revision: Number(row.queue_revision),
       window_id: String(row.window_id),
+      window_revision: Number(row.window_revision),
+      window_status: String(row.window_status) as PurchaseReceiptAllocationSourceState["window_status"],
       receipt_item_row_id: String(row.receipt_item_row_id),
       purchase_order: String(row.purchase_order),
       purchase_order_item_row_id: String(row.purchase_order_item_row_id),
@@ -210,10 +218,16 @@ export class D1PurchaseAllocationDomainStore extends D1PurchaseAllocationMutatio
     purchaseReceipt: string,
   ): Promise<PurchaseUnappliedSourceState[]> {
     const result = await this.allocationReader.prepare(
-      `SELECT source.entry_id, source.queue_key, source.window_id, source.receipt_item_row_id,
+      `SELECT source.entry_id, source.queue_key, queue.revision AS queue_revision,
+              source.window_id, window.revision AS window_revision, window.status AS window_status,
+              source.receipt_item_row_id,
               source.qty_micros + COALESCE(SUM(movement.qty_micros),0) AS qty_micros,
               source.posting_at
        FROM purchase_unapplied_receipt_entries source
+       JOIN purchase_obligation_queues queue
+         ON queue.tenant_id=source.tenant_id AND queue.queue_key=source.queue_key
+       JOIN purchase_settlement_windows window
+         ON window.tenant_id=source.tenant_id AND window.window_id=source.window_id
        LEFT JOIN purchase_unapplied_receipt_entries movement
          ON movement.tenant_id=source.tenant_id AND movement.source_entry_id=source.entry_id
        WHERE source.tenant_id=?1 AND source.voucher_no=?2 AND source.entry_kind='receive'
@@ -224,7 +238,10 @@ export class D1PurchaseAllocationDomainStore extends D1PurchaseAllocationMutatio
     return (result.results ?? []).map((row) => ({
       entry_id: String(row.entry_id),
       queue_key: String(row.queue_key),
+      queue_revision: Number(row.queue_revision),
       window_id: String(row.window_id),
+      window_revision: Number(row.window_revision),
+      window_status: String(row.window_status) as PurchaseUnappliedSourceState["window_status"],
       receipt_item_row_id: String(row.receipt_item_row_id),
       qty_micros: Number(row.qty_micros),
       posting_at: String(row.posting_at),
