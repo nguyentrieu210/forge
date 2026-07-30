@@ -67,7 +67,7 @@ export function AssistantBubble({ appName = "Trợ lý" }: { appName?: string })
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed bottom-4 right-4 z-50 grid size-12 place-items-center rounded-full bg-primary text-primary-foreground shadow-lg transition hover:brightness-110"
+        className="fixed bottom-20 right-4 z-50 grid size-12 place-items-center rounded-full bg-primary text-primary-foreground shadow-lg transition hover:brightness-110"
         aria-label="Mở trợ lý"
         title="Hỏi trợ lý về dữ liệu đang xem"
       >
@@ -77,7 +77,7 @@ export function AssistantBubble({ appName = "Trợ lý" }: { appName?: string })
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex h-[min(30rem,80vh)] w-[min(24rem,92vw)] flex-col overflow-hidden rounded-xl border bg-card shadow-2xl">
+    <div className="fixed bottom-20 right-4 z-50 flex h-[min(30rem,calc(100dvh-6rem))] w-[min(24rem,92vw)] flex-col overflow-hidden rounded-xl border bg-card shadow-2xl">
       <div className="flex shrink-0 items-center gap-2 border-b px-3 py-2">
         <Bot className="size-4 text-primary" />
         <strong className="text-sm">{appName}</strong>

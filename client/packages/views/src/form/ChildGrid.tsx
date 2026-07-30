@@ -1449,14 +1449,18 @@ export function ChildGrid(props: ChildGridProps) {
                    * nhiễu); ở trang tính thì cột phải có sẵn để còn dán cả khối vào.
                    */
                   if (!rf.visible && !expanded) {
-                    return <TableCell key={c.fieldname} className={`align-top text-center text-xs text-muted-foreground ${sticky.className}`} style={sticky.style}>—</TableCell>;
+                    return <TableCell key={c.fieldname} className={`align-top !bg-muted/80 text-center text-xs text-muted-foreground ${sticky.className}`} style={sticky.style}>—</TableCell>;
                   }
                   return (
                     <TableCell
                       key={c.fieldname}
                       data-cell={`${ri}:${cols.indexOf(c)}`}
                       data-editable={cellReadOnly ? "false" : "true"}
-                      className={`align-top ${cellReadOnly ? "!bg-muted/60 text-muted-foreground" : "bg-background"} ${sticky.className}`}
+                      className={`align-top transition-colors ${
+                        cellReadOnly
+                          ? "!bg-muted/80 text-muted-foreground [&_.mf-control]:border-muted-foreground/20 [&_.mf-control]:bg-muted/40"
+                          : "!bg-primary/[0.07] ring-1 ring-inset ring-primary/25 focus-within:!bg-primary/[0.12] focus-within:ring-2 focus-within:ring-primary/60 [&_.mf-control]:border-primary/40 [&_.mf-control]:bg-background"
+                      } ${sticky.className}`}
                       style={sticky.style}
                       title={cellHint}
                       onFocusCapture={() => { setPickedRow(ri); setPickedColumn(cols.indexOf(c)); }}
@@ -1606,20 +1610,20 @@ export function ChildGrid(props: ChildGridProps) {
             />
           </label>
           <span className="text-xs text-muted-foreground">Chép vùng trong Excel rồi Ctrl+V ngay trên bảng</span>
-          <span className="inline-flex items-center gap-3 text-xs text-muted-foreground" aria-label="Chú thích trạng thái ô">
-            <span className="inline-flex items-center gap-1">
-              <span className="size-3 rounded-sm border bg-background" /> Ô nhập liệu
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <span className="size-3 rounded-sm border bg-muted" /> Tự tính / không áp dụng
-            </span>
-          </span>
         </>
       ) : (
         <Button type="button" variant="outline" size="sm" onClick={() => { setExpanded(true); setPickedRow(rows.length ? 0 : null); }}>
           <Maximize2 /> Mở bảng lớn
         </Button>
       )}
+      <span className="inline-flex items-center gap-3 rounded-md border bg-card px-2.5 py-1.5 text-xs font-medium" aria-label="Chú thích trạng thái ô">
+        <span className="inline-flex items-center gap-1.5 text-foreground">
+          <span className="size-3.5 rounded-sm border border-primary/50 bg-primary/10 ring-1 ring-primary/20" /> Ô nhập liệu
+        </span>
+        <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+          <span className="size-3.5 rounded-sm border border-muted-foreground/20 bg-muted" /> Tự tính / không áp dụng
+        </span>
+      </span>
       {/* Kéo nhầm một cột về 3rem rồi mở lại vẫn thấy nó bé tí là một cái bẫy không lối ra —
           tuỳ chỉnh nào lưu lại được cũng phải có đường hoàn tác. */}
       {hasCustomLayout ? (
