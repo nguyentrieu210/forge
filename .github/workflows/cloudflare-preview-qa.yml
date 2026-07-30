@@ -142,7 +142,10 @@ jobs:
           )
 
           QA_TOKEN="$(openssl rand -hex 32)"
+          QA_TOKEN_FILE="${RUNNER_TEMP}/cloudforge-preview-qa-token"
           echo "::add-mask::$QA_TOKEN"
+          umask 077
+          printf '%s' "$QA_TOKEN" > "$QA_TOKEN_FILE"
           printf '%s' "$QA_TOKEN" | (
             cd qa/browser-worker
             npx wrangler secret put QA_TOKEN
@@ -150,7 +153,6 @@ jobs:
 
           QA_URL="https://cloudforge-preview-qa.${{ steps.workers.outputs.subdomain }}.workers.dev"
           echo "url=$QA_URL" >> "$GITHUB_OUTPUT"
-          echo "token=$QA_TOKEN" >> "$GITHUB_OUTPUT"
 
       - name: Wait for QA worker
         shell: bash
@@ -172,12 +174,20 @@ jobs:
           set -euo pipefail
           mkdir -p qa-results/screenshots
 
+          QA_TOKEN_FILE="${RUNNER_TEMP}/cloudforge-preview-qa-token"
+          if [ ! -s "$QA_TOKEN_FILE" ]; then
+            echo "QA token file is missing or empty." >&2
+            exit 1
+          fi
+          QA_TOKEN="$(cat "$QA_TOKEN_FILE")"
+          echo "::add-mask::$QA_TOKEN"
+
           node -e 'const fs=require("node:fs"); fs.writeFileSync("/tmp/qa-request.json", JSON.stringify({url: process.argv[1], paths: ["/health"]}))' \
             "${{ steps.preview.outputs.url }}"
 
           curl --fail --silent --show-error \
             --retry 6 --retry-delay 3 --retry-all-errors \
-            -H "Authorization: Bearer ${{ steps.qa_worker.outputs.token }}" \
+            -H "Authorization: Bearer ${QA_TOKEN}" \
             -H "Content-Type: application/json" \
             --data-binary @/tmp/qa-request.json \
             "${{ steps.qa_worker.outputs.url }}/run" \
