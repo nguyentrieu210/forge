@@ -48,7 +48,7 @@ const replaceField = (dt, name, next) => {
 };
 
 // ─────────────────────────── HEADER ───────────────────────────
-brief.version = "2.0.16";
+brief.version = "2.0.17";
 brief.locale.dateFormat = "dd/mm/yyyy"; // Q11 — chủ xưởng chốt gạch chéo
 // Nỗi đau #1 của BRD: người mở app phải thấy ngay tồn KHẢ DỤNG theo khổ, không phải tự lấy tồn tổng
 // rồi trừ các phiếu giữ bằng tay. Báo cáo này nằm ở query engine nền tảng vì nó đọc cùng sổ kho.
@@ -1006,11 +1006,11 @@ brief.prints.push({
   default: true,
   css: [
     "@page{size:A4 portrait;margin:0}",
-    "@font-face{font-family:Roboto;src:url('/fonts/Roboto-Regular.ttf') format('truetype');font-style:normal;font-weight:400;font-display:block}",
-    "@font-face{font-family:Roboto;src:url('/fonts/Roboto-Bold.ttf') format('truetype');font-style:normal;font-weight:700;font-display:block}",
-    "@font-face{font-family:Roboto;src:url('/fonts/Roboto-Italic.ttf') format('truetype');font-style:italic;font-weight:400;font-display:block}",
-    "@font-face{font-family:Roboto;src:url('/fonts/Roboto-BoldItalic.ttf') format('truetype');font-style:italic;font-weight:700;font-display:block}",
-    "*{box-sizing:border-box;font-family:Roboto,Arial,sans-serif!important} html,body{margin:0}body{width:210mm;min-height:297mm;font-family:Roboto,Arial,sans-serif!important;font-size:9px;color:#111;padding:23.7mm 8mm 8mm}",
+    "@font-face{font-family:Roboto;src:url('/fonts/Roboto-Normal-Latin.woff2') format('woff2');font-style:normal;font-weight:100 900;font-stretch:100%;font-display:block;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}",
+    "@font-face{font-family:Roboto;src:url('/fonts/Roboto-Normal-Vietnamese.woff2') format('woff2');font-style:normal;font-weight:100 900;font-stretch:100%;font-display:block;unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB}",
+    "@font-face{font-family:Roboto;src:url('/fonts/Roboto-Italic-Latin.woff2') format('woff2');font-style:italic;font-weight:100 900;font-stretch:100%;font-display:block;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}",
+    "@font-face{font-family:Roboto;src:url('/fonts/Roboto-Italic-Vietnamese.woff2') format('woff2');font-style:italic;font-weight:100 900;font-stretch:100%;font-display:block;unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB}",
+    "*{box-sizing:border-box;font-family:Roboto,Arial,sans-serif!important;font-kerning:normal;letter-spacing:normal;word-spacing:normal} html,body{margin:0}body{width:210mm;min-height:297mm;font-family:Roboto,Arial,sans-serif!important;font-size:9px;color:#111;padding:23.7mm 8mm 8mm}",
     ".letterhead{position:relative;width:166mm;height:17mm;margin-left:14mm}",
     ".brand-logo{position:absolute;left:2.7mm;top:2.8mm;width:43.6mm;height:auto}",
     ".company-block{position:absolute;right:2.7mm;top:0;width:94mm;text-align:right;font-size:7.5px;font-style:italic;line-height:1.4}",
