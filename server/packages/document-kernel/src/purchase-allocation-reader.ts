@@ -1,5 +1,4 @@
 import type { DomainReader } from "./store.js";
-import type { PurchaseAllocationObligation } from "../../clouderp-core/src/purchase-allocation.js";
 
 export interface PurchaseOpenWindowState {
   window_id: string;
@@ -18,6 +17,18 @@ export interface PurchaseAllocationQueueState {
 export interface PurchaseAllocationWindowTotals {
   nominal_qty_micros: number;
   received_qty_micros: number;
+}
+
+/** Read model consumed structurally by the pure FIFO planner in clouderp-core. */
+export interface PurchaseAllocationObligationState {
+  queue_key: string;
+  window_id: string;
+  purchase_order: string;
+  purchase_order_item_row_id: string;
+  remaining_qty_micros: number;
+  transaction_date: string;
+  purchase_order_created_at: string;
+  item_idx: number;
 }
 
 export interface PurchaseObligationRowState {
@@ -66,7 +77,7 @@ export interface PurchaseAllocationReader extends DomainReader {
     tenantId: string,
     queueKey: string,
     windowId: string,
-  ): Promise<PurchaseAllocationObligation[]>;
+  ): Promise<PurchaseAllocationObligationState[]>;
   getPurchaseAllocationWindowTotals(
     tenantId: string,
     windowId: string,
