@@ -1,6 +1,6 @@
 import { ControllerRegistry } from "../../document-kernel/src/index.js";
 import { JournalEntryController, MaterialRequestController, PurchaseInvoiceController, RequestForQuotationController, StockEntryController, SupplierQuotationController } from "./controllers.js";
-import { AllocatingPurchaseOrderController, AllocatingPurchaseReceiptController } from "./purchase-allocation-controllers.js";
+import { RolloutPurchaseOrderController, RolloutPurchaseReceiptController } from "./purchase-allocation-rollout-controllers.js";
 
 export function registerErpCoreControllers(registry: ControllerRegistry): ControllerRegistry {
   return registry
@@ -8,8 +8,8 @@ export function registerErpCoreControllers(registry: ControllerRegistry): Contro
     .register(new MaterialRequestController())
     .register(new RequestForQuotationController())
     .register(new SupplierQuotationController())
-    .register(new AllocatingPurchaseOrderController())
-    .register(new AllocatingPurchaseReceiptController())
+    .register(new RolloutPurchaseOrderController())
+    .register(new RolloutPurchaseReceiptController())
     .register(new PurchaseInvoiceController())
     .register(new StockEntryController());
 }
