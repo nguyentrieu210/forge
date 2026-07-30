@@ -161,6 +161,7 @@ const BIG_COLUMNS: string[][] = [
   // Trọng lượng trung bình — số MÁY tính, đặt sau tiền vì nó để ĐỐI CHIẾU chứ không phải để
   // gõ: lệch nhiều so với kg/m danh nghĩa nghĩa là cân sai hoặc ghi nhầm khổ.
   ["actual_kg_per_m"],
+  ["actual_kg_per_sqm"],
   ["note", "install_note"],
 ];
 /**
@@ -176,7 +177,8 @@ const BIG_WIDTH: Record<string, string> = {
   // một cột màu không đọc được màu thì bằng không có cột. Màu và ĐVT cần 8rem.
   item_code: "14rem", color: "8rem", colour: "8rem",
   height_m: "6rem", width_m: "6rem", length_m: "6rem",
-  qty: "7rem", qty_bar: "6rem", set_count: "6rem", actual_weight_kg: "7rem", actual_kg_per_m: "7rem", uom: "8rem",
+  qty: "7rem", qty_bar: "6rem", set_count: "7rem", actual_weight_kg: "7rem",
+  actual_kg_per_m: "7rem", actual_kg_per_sqm: "7rem", uom: "8rem",
   rate: "8rem", amount: "9rem", note: "8rem", install_note: "8rem",
 };
 function bigColumns(fields: DocField[]): DocField[] {
@@ -192,8 +194,9 @@ function bigColumns(fields: DocField[]): DocField[] {
 
 export interface AverageWeightResult {
   totalLengthM?: number;
+  totalAreaSqm?: number;
   averageWeight?: number;
-  basis?: "kg/m" | "kg/cây" | "kg/ĐVT";
+  basis?: "kg/m" | "kg/m²" | "kg/cây" | "kg/ĐVT";
 }
 
 /**
@@ -201,6 +204,7 @@ export interface AverageWeightResult {
  *
  * - giao dịch theo Kg: `qty` chính là tổng kg;
  * - giao dịch theo Bộ/Cái/Cây/...: phải nhập riêng `actual_weight_kg`;
+ * - hàng theo diện tích: chia tổng kg cho `cao × rộng × số cái/bộ`;
  * - tuyệt đối không coi số Bộ/Cái trong `qty` là kg, vì vậy dòng 222 Bộ không thể tự sinh 0,10 kg/cái.
  */
 export function deriveAverageWeight(row: Doc): AverageWeightResult {
@@ -214,11 +218,22 @@ export function deriveAverageWeight(row: Doc): AverageWeightResult {
   const bars = positive(row.qty_bar);
   const length = positive(row.length_m);
   const quantity = positive(row.qty);
+  const width = positive(row.width_m);
+  const height = positive(row.height_m);
+  const pieces = positive(row.set_count);
+  const inventoryMode = String(row.inventory_mode ?? "").trim();
+  const isAreaItem = inventoryMode === "Tấm/Kính" || inventoryMode === "Thành phẩm theo m2";
+  const totalAreaSqm = isAreaItem && width > 0 && height > 0 && pieces > 0
+    ? width * height * pieces
+    : undefined;
   const totalLengthM = bars > 0 && length > 0 ? bars * length : length || undefined;
 
   let divisor = 0;
   let basis: AverageWeightResult["basis"];
-  if (totalLengthM) {
+  if (totalAreaSqm) {
+    divisor = totalAreaSqm;
+    basis = "kg/m²";
+  } else if (totalLengthM) {
     divisor = totalLengthM;
     basis = "kg/m";
   } else if (bars > 0) {
@@ -230,6 +245,7 @@ export function deriveAverageWeight(row: Doc): AverageWeightResult {
   }
 
   return {
+    ...(totalAreaSqm ? { totalAreaSqm } : {}),
     ...(totalLengthM ? { totalLengthM } : {}),
     ...(totalKg > 0 && divisor > 0 ? { averageWeight: totalKg / divisor, basis } : {}),
   };
@@ -438,7 +454,8 @@ export function ChildGrid(props: ChildGridProps) {
     "conversion_factor", "uom", "stock_uom", "stock_qty", "inventory_mode", "measurement_profile", "min_area_sqm",
     "item_name", "description", "color", "colour", "rate", "amount",
     "formula_policy", "width_basis", "cut_width_m", "billable_area_sqm",
-    "length_m", "qty_bundle", "qty_bar", "actual_weight_kg", "total_length_m", "actual_kg_per_m", "so_no",
+    "length_m", "qty_bundle", "qty_bar", "actual_weight_kg", "total_length_m",
+    "actual_kg_per_m", "actual_kg_per_sqm", "so_no",
   ];
   const withComputed = (row: Doc): Doc => {
     const has = (f: string) => (childMeta.fields ?? []).some((x) => x.fieldname === f);
@@ -483,12 +500,17 @@ export function ChildGrid(props: ChildGridProps) {
      * Chỉ tính khi đã xác định được TỔNG KG thật: `qty` nếu ĐVT là Kg, nếu không phải dùng ô
      * `actual_weight_kg`. Nhờ đó số lượng Bộ/Cái không bao giờ bị lấy nhầm làm trọng lượng.
      */
-    if (has("actual_kg_per_m") || has("total_length_m")) {
+    if (has("actual_kg_per_m") || has("actual_kg_per_sqm") || has("total_length_m")) {
       const derived = deriveAverageWeight(next);
       next = {
         ...next,
         ...(has("total_length_m") ? { total_length_m: derived.totalLengthM } : {}),
-        ...(has("actual_kg_per_m") ? { actual_kg_per_m: derived.averageWeight } : {}),
+        ...(has("actual_kg_per_m")
+          ? { actual_kg_per_m: derived.basis === "kg/m²" ? undefined : derived.averageWeight }
+          : {}),
+        ...(has("actual_kg_per_sqm")
+          ? { actual_kg_per_sqm: derived.basis === "kg/m²" ? derived.averageWeight : undefined }
+          : {}),
       };
     }
     if (has("stock_qty") && has("qty") && has("conversion_factor")) {
@@ -744,9 +766,14 @@ export function ChildGrid(props: ChildGridProps) {
      * sẽ tạo một dòng motor mang 51 cây × 8,5 m trong payload dù giao diện đã giấu chúng.
      */
     if (patch.inventory_mode !== "Nhôm cây/lá") {
-      for (const fieldname of ["length_m", "qty_bundle", "qty_bar", "so_no", "total_length_m", "actual_kg_per_m"]) {
+      for (const fieldname of [
+        "length_m", "qty_bundle", "qty_bar", "so_no", "total_length_m", "actual_kg_per_m",
+      ]) {
         if (has(fieldname)) patch[fieldname] = undefined;
       }
+    }
+    if (patch.inventory_mode !== "Tấm/Kính" && patch.inventory_mode !== "Thành phẩm theo m2") {
+      if (has("actual_kg_per_sqm")) patch.actual_kg_per_sqm = undefined;
     }
     return patch;
   };

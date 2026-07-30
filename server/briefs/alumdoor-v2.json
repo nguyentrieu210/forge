@@ -2,7 +2,7 @@
  "$schema": "./brief.schema.json",
  "id": "alumdoor",
  "name": "Alumdoor",
- "version": "2.0.0",
+ "version": "2.0.1",
  "module": "Alumdoor",
  "domain": "alumdoor",
  "brand": "warm",
@@ -3712,11 +3712,17 @@
    "list": [
     "item_code",
     "color",
+    "height_m",
+    "width_m",
+    "set_count",
     "length_m",
     "uom",
     "qty",
     "qty_bundle",
     "qty_bar",
+    "actual_weight_kg",
+    "actual_kg_per_m",
+    "actual_kg_per_sqm",
     "rate",
     "amount",
     "so_no",
@@ -3755,7 +3761,8 @@
      "fieldtype": "Link",
      "options": "Item Color",
      "label": "Màu",
-     "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'"
+     "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá' || doc.inventory_mode == 'Tấm/Kính' || doc.inventory_mode == 'Thành phẩm theo m2'",
+     "mandatory_depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá' || doc.inventory_mode == 'Thành phẩm theo m2'"
     },
     {
      "fieldname": "length_m",
@@ -3782,9 +3789,12 @@
     {
      "fieldname": "set_count",
      "fieldtype": "Int",
-     "label": "Số bộ",
+     "label": "Số cái/bộ",
      "default": 1,
-     "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'"
+     "depends_on": "eval:doc.inventory_mode == 'Tấm/Kính' || doc.inventory_mode == 'Thành phẩm theo m2'",
+     "mandatory_depends_on": "eval:doc.inventory_mode == 'Tấm/Kính' || doc.inventory_mode == 'Thành phẩm theo m2'",
+     "non_negative": true,
+     "description": "Số tấm hoặc số bộ cửa thực nhận. Dùng cùng Cao × Rộng để tính tổng diện tích thực."
     },
     {
      "fieldname": "qty_bundle",
@@ -3809,22 +3819,31 @@
      "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'"
     },
     {
-     "//": "QĐ-2: với hàng catch weight, đây là số lượng tồn thứ hai chứ không còn là số đối chiếu.",
+     "//": "QĐ-2: với hàng catch weight đây là số lượng tồn thứ hai; với cửa/tấm đây là số cân để đối chiếu TL kg/m².",
      "fieldname": "actual_weight_kg",
      "fieldtype": "Float",
      "label": "Tổng kg thực cân",
-     "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
+     "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá' || doc.inventory_mode == 'Tấm/Kính' || doc.inventory_mode == 'Thành phẩm theo m2'",
      "mandatory_depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
      "non_negative": true,
-     "description": "Số kg thực nhận được ghi cùng số cây/lá vào sổ kho. Bắt buộc trước khi ghi sổ hàng nhôm cân theo kiện; huỷ phiếu sẽ đảo cả cây/lá, kg và giá trị."
+     "description": "Nhôm cây/lá: số kg thực nhận đi vào sổ kho. Cửa/tấm: số kg cân để đối chiếu TL thực theo m²; không bắt buộc nếu NCC không cân."
     },
     {
      "fieldname": "actual_kg_per_m",
      "fieldtype": "Float",
-     "label": "TL trung bình (kg/m · kg/cái)",
+     "label": "TL thực (kg/m)",
      "read_only": true,
-     "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá' || doc.actual_weight_kg > 0",
-     "description": "ĐVT Kg: lấy SL làm tổng kg. ĐVT khác: chỉ tính khi có Tổng kg thực cân; tuyệt đối không coi số Bộ/Cái là kg. Chia cho tổng mét, số cây hoặc số lượng giao dịch. Số để đối chiếu, không vào sổ."
+     "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
+     "description": "Nhôm cây/lá: Tổng kg ÷ (chiều dài một cây × số cây/lá). Chỉ để đối chiếu, không nhập tay."
+    },
+    {
+     "//": "TL theo diện tích thật, tách riêng khỏi kg/m của nhôm để không trộn hai đơn vị.",
+     "fieldname": "actual_kg_per_sqm",
+     "fieldtype": "Float",
+     "label": "TL thực (kg/m²)",
+     "read_only": true,
+     "depends_on": "eval:(doc.inventory_mode == 'Tấm/Kính' || doc.inventory_mode == 'Thành phẩm theo m2') && doc.actual_weight_kg > 0",
+     "description": "Tự tính = Tổng kg thực cân ÷ (Cao × Rộng × Số cái/bộ). Cao và Rộng nhập theo mét; kết quả chỉ để đối chiếu."
     },
     {
      "fieldname": "so_no",

@@ -385,9 +385,44 @@ async function validatePurchaseMeasurement(
     const code = String(row.item_code ?? "").trim();
     if (!code) continue;
     const item = items.get(code);
-    if (!item || item.inventory_mode !== "Nhôm cây/lá") continue;
-
+    if (!item) continue;
     const line = `Dòng ${index + 1} (${code})`;
+
+    /**
+     * Cửa/tấm được cân theo diện tích thật, không dùng kg/m của nhôm cây:
+     *
+     *   TL thực (kg/m²) = Tổng kg ÷ (Cao × Rộng × Số cái/bộ)
+     *
+     * Tổng kg là tùy chọn với nhóm này; nhưng một khi người dùng đã nhập thì snapshot dẫn
+     * xuất phải có và phải khớp. Nhờ vậy gọi API thẳng không thể lưu một TL kg/m² giả khác
+     * với bốn số nguồn mà người dùng nhìn thấy trên phiếu.
+     */
+    const isAreaItem = item.inventory_mode === "Tấm/Kính" || item.inventory_mode === "Thành phẩm theo m2";
+    const hasActualWeight = row.actual_weight_kg !== undefined
+      && row.actual_weight_kg !== null
+      && row.actual_weight_kg !== "";
+    if (subject.doctype === "Purchase Receipt" && isAreaItem && hasActualWeight) {
+      const totalKg = Number(row.actual_weight_kg);
+      const width = Number(row.width_m);
+      const height = Number(row.height_m);
+      const pieces = Number(row.set_count);
+      if (!Number.isFinite(totalKg) || totalKg <= 0) {
+        return refuse(`${line}: Tổng kg thực cân phải lớn hơn 0.`);
+      }
+      if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) {
+        return refuse(`${line}: cần nhập Cao và Rộng lớn hơn 0 để tính TL thực kg/m².`);
+      }
+      if (!Number.isFinite(pieces) || pieces <= 0) {
+        return refuse(`${line}: Số cái/bộ phải lớn hơn 0 để tính TL thực kg/m².`);
+      }
+      const expected = totalKg / (height * width * pieces);
+      const declared = Number(row.actual_kg_per_sqm);
+      if (!Number.isFinite(declared) || !nearlyEqual(declared, expected)) {
+        return refuse(`${line}: TL thực phải là ${expected.toFixed(6)} kg/m² (= ${totalKg} kg ÷ ${height} m ÷ ${width} m ÷ ${pieces} cái/bộ).`);
+      }
+    }
+
+    if (item.inventory_mode !== "Nhôm cây/lá") continue;
     /**
      * TIỀN luôn theo Kg thực cân — đây là điều không đổi, vì hoá đơn nhà cung cấp ghi Kg và
      * phiếu giao có cột Kg do chính họ cân.
@@ -534,7 +569,7 @@ async function validateTransactionLines(
     let expectedStockQuantity = quantity * expectedFactor;
     if (mode === "Thành phẩm theo m2") {
       const sets = Number(row.set_count ?? 1);
-      if (!Number.isFinite(sets) || sets <= 0) return refuse(`${line}: số bộ phải lớn hơn 0.`);
+      if (!Number.isFinite(sets) || sets <= 0) return refuse(`${line}: Số cái/bộ phải lớn hơn 0.`);
       if (["m2", "m²", "sqm"].includes(selected)) {
         const width = Number(row.width_m);
         const height = Number(row.height_m);
@@ -1843,7 +1878,8 @@ async function stampQuotation(call: PlatformCall, quote: QuotationDoc, order: st
 const PURCHASE_LINE_FIELDS = [
   "item_code", "item_name", "inventory_mode", "measurement_profile", "stock_uom", "min_area_sqm", "color",
   "width_m", "height_m", "set_count",
-  "length_m", "qty_bundle", "qty_bar", "actual_weight_kg", "total_length_m", "actual_kg_per_m", "so_no",
+  "length_m", "qty_bundle", "qty_bar", "actual_weight_kg", "total_length_m",
+  "actual_kg_per_m", "actual_kg_per_sqm", "so_no",
   "qty", "uom", "conversion_factor", "stock_qty", "rate", "amount", "note",
 ] as const;
 

@@ -12,6 +12,7 @@
 
 ## Unreleased — Visual Directions review import
 
+- Alumdoor `2.0.1`: Phiếu nhập mua hiển thị Cao, Rộng, Số cái/bộ, Tổng kg và tự tính TL thực `kg/m² = kg ÷ (cao × rộng × số cái/bộ)` cho cửa/tấm; giữ riêng `kg/m` cho nhôm cây và xác minh lại công thức ở server.
 - Alumdoor `1.18.2`: dọn 43 khách thử, 22 NCC thử, 9 bảng giá đại lý giả và 2 phiếu thu nháp không có bút toán; xoá cả chỉ mục tìm kiếm mồ côi.
 - Alumdoor: vật chất hoá 6 bộ quy cách tồn, 6 mã màu từ lịch sử tồn nhôm, 8 thương hiệu xuất hiện trực tiếp trong danh mục và 15 quy cách lá có đủ độ dày/bản lá; liên kết lại 55 mặt hàng theo hãng và 15 mặt hàng theo quy cách.
 - Warehouse master screens now render the existing lazy tree view correctly; expand/add/rename/delete controls no longer bubble into record navigation.

@@ -29,7 +29,7 @@
 | So sánh hạn mức bằng **đơn vị tồn** | Doc-comment: *"Đặt 20 CÂY rồi nhận 117 MÉT là nhận đúng đủ, không phải nhận vượt 97 lần"* |
 | `item_code.link_filters = {is_purchase_item:1, disabled:0}` | Ô chọn chỉ hiện mặt hàng được mua — 300 mã gồm cả dịch vụ và phụ thu |
 | `qty_bar` · `length_m` · `color` · `total_length_m` | Số cây, khổ, màu của nhôm đã có chỗ ghi |
-| `actual_weight_kg` · `actual_kg_per_m` | Kg thực cân và TL trung bình để đối chiếu |
+| `actual_weight_kg` · `actual_kg_per_m` · `actual_kg_per_sqm` | Kg thực cân và TL trung bình theo đúng đơn vị vật lý để đối chiếu |
 | `conversion_factor` · `stock_qty` · `valuation_rate` trên dòng | Hệ số của dòng **thắng** bảng ở Item — đúng, vì cây nhôm không phải lúc nào cũng 5,85 m |
 | `warehouse` bắt buộc **trên dòng** | Nhân từ chối nếu thiếu |
 | `grand_total` · `total_qty` | Người nhập soát được tổng ngay lúc gõ |
@@ -48,6 +48,7 @@ Thiết kế này tốt hơn hẳn ấn tượng ban đầu. V2 **không đập 
 | R4 | **Dung sai ±5%** khi đóng hạn mức đơn mua | Sổ yêu cầu 30/07: *"nhà máy có thể giao thiếu hoặc hơn số lượng cây là ±5%"*. Hiện `assertPurchaseRemaining` từ chối mọi phần vượt ⇒ **không lập nổi phiếu** |
 | R5 | Ảnh bắt buộc: **hàng nhận + phiếu giấy NCC** | `media-capture-contract`: nhập kho là điểm chụp bắt buộc |
 | R6 | Cảnh báo lệch cân | `|kg thực − kg barem| ÷ kg barem > weight_tolerance_pct` → cảnh báo vàng, **không chặn** |
+| R7 | Cửa/tấm hiện trực tiếp **Cao · Rộng · Số cái/bộ · Tổng kg · TL thực kg/m²** | Người nhập không phải tính tay; `TL kg/m² = Tổng kg ÷ (Cao × Rộng × Số cái/bộ)`. Tách khỏi `kg/m` của nhôm cây |
 
 ---
 
@@ -117,6 +118,15 @@ Thiếu hàng thì **không tự đóng đơn** — nhà máy còn nợ cho tớ
 
 | Field | Kiểu | Bắt buộc | Validate + câu lỗi | Nghiệp vụ |
 |---|---|---|---|---|
+| `height_m` | Float | ✅ với cửa/tấm | >0 → *"Cần nhập Cao lớn hơn 0"* | Cao thực nhận, đơn vị mét |
+| `width_m` | Float | ✅ với cửa/tấm | >0 → *"Cần nhập Rộng lớn hơn 0"* | Rộng thực nhận, đơn vị mét |
+| `set_count` | Int | ✅ với cửa/tấm | >0 → *"Số cái/bộ phải lớn hơn 0"* | Số tấm hoặc số bộ cửa |
+| `actual_weight_kg` | Float | ✅ với nhôm; tùy chọn với cửa/tấm | nếu đã nhập thì >0 | Tổng kg thực cân |
+| `actual_kg_per_m` | Float, read-only | — | nhôm: `Tổng kg ÷ (length_m × qty_bar)` | Chỉ dùng cho nhôm cây/lá |
+| `actual_kg_per_sqm` | Float, read-only | — | cửa/tấm: `Tổng kg ÷ (height_m × width_m × set_count)`; server từ chối snapshot sai | TL thực theo diện tích, không nhập tay |
+
+| Field | Kiểu | Bắt buộc | Validate + câu lỗi | Nghiệp vụ |
+|---|---|---|---|---|
 | `serial_and_batch_bundle` | Link(Serial and Batch Bundle) | ✅ khi `item.has_batch_no` | thiếu → `buildTrackedStockLines` **TỪ CHỐI submit** (`tracking.ts:29`) | **MỚI (R1)** — bundle chiều `Inward`, mỗi dòng bundle là một lô. Nhập một chuyến vào một lô ⇒ bundle 1 dòng. Tên trường **copy đúng của nền tảng**, đổi tên là mất kết nối |
 | `condition` | Select(Thô, Đã sơn, Lỗi) | ✅ khi `profile.require_condition` | — | **MỚI** — chưa có ở bản cũ, mà bảng giá NCC phân biệt THÔ / MÀU chưa dập / MÀU đã dập |
 | `is_stamped` | Check | — | — | **MỚI** — dập / chưa dập, quyết định bậc giá NCC |
@@ -175,4 +185,5 @@ lại không tạo bút toán hai lần. Thêm một lớp nữa của nền t�
 | Dung sai vượt | Đơn 200 cây, nhận 215 → **từ chối**, câu lỗi nêu đủ số |
 | FIFO không tràn | Đơn A 200 + đơn B 100, về 230 → A nhận **đúng 200**, B nhận 30, còn nợ B 70 |
 | Lệch cân | 200 cây × 7,2 m, barem 0,389 → lý thuyết 560,16; cân thật 640 (+14%) → **cảnh báo vàng**, vẫn ghi được |
+| TL thực cửa/tấm | Cao 2 m × Rộng 3 m × 4 bộ, Tổng kg 48 → `actual_kg_per_sqm = 2 kg/m²`; gửi API với 3 kg/m² → **từ chối** |
 | Huỷ khi đã cắt | Lô đã cắt → huỷ phiếu nhập bị **từ chối** kèm số phiếu cắt |

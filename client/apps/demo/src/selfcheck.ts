@@ -1009,6 +1009,20 @@ check("TL trung bình không lấy nhầm số lượng Bộ làm kg", () => {
     deriveAverageWeight({ doctype: "Purchase Order Item", name: "3", uom: "Bộ", qty: 10, actual_weight_kg: 25 }),
     { averageWeight: 2.5, basis: "kg/ĐVT" },
   );
+  assert.deepEqual(
+    deriveAverageWeight({
+      doctype: "Purchase Receipt Item",
+      name: "4",
+      inventory_mode: "Thành phẩm theo m2",
+      uom: "m2",
+      qty: 24,
+      width_m: 3,
+      height_m: 2,
+      set_count: 4,
+      actual_weight_kg: 48,
+    }),
+    { totalAreaSqm: 24, averageWeight: 2, basis: "kg/m²" },
+  );
 });
 
 check("ChildGrid render: cột child meta + thêm dòng + resolve depends_on theo row", () => {

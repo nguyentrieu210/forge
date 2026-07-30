@@ -47,7 +47,7 @@ const replaceField = (dt, name, next) => {
 };
 
 // ─────────────────────────── HEADER ───────────────────────────
-brief.version = "2.0.0";
+brief.version = "2.0.1";
 brief.locale.dateFormat = "dd/mm/yyyy"; // Q11 — chủ xưởng chốt gạch chéo
 // Nỗi đau #1 của BRD: người mở app phải thấy ngay tồn KHẢ DỤNG theo khổ, không phải tự lấy tồn tổng
 // rồi trừ các phiếu giữ bằng tay. Báo cáo này nằm ở query engine nền tảng vì nó đọc cùng sổ kho.
@@ -60,7 +60,7 @@ brief.links.unshift({
 });
 brief.navigation.items.unshift("report:Tồn nhôm theo khổ");
 brief.home = "report:Tồn nhôm theo khổ";
-note(`header: version 2.0.0 · dateFormat dd/mm/yyyy · home = Tồn nhôm theo khổ`);
+note(`header: version 2.0.1 · dateFormat dd/mm/yyyy · home = Tồn nhôm theo khổ`);
 
 // Các chứng từ V2 có controller sổ kho chuyên biệt, nhưng app hook vẫn cần khai để lớp validator
 // ngành kiểm các Link/màu/quy cách trước khi lệnh đi vào kernel.
@@ -191,16 +191,58 @@ addAfter(pr, "note",
 );
 
 const pri = doctype("Purchase Receipt Item");
+replaceField(pri, "color", {
+  fieldname: "color",
+  fieldtype: "Link",
+  options: "Item Color",
+  label: "Màu",
+  depends_on: "eval:doc.inventory_mode == 'Nhôm cây/lá' || doc.inventory_mode == 'Tấm/Kính' || doc.inventory_mode == 'Thành phẩm theo m2'",
+  mandatory_depends_on: "eval:doc.inventory_mode == 'Nhôm cây/lá' || doc.inventory_mode == 'Thành phẩm theo m2'",
+});
+replaceField(pri, "set_count", {
+  fieldname: "set_count",
+  fieldtype: "Int",
+  label: "Số cái/bộ",
+  default: 1,
+  depends_on: "eval:doc.inventory_mode == 'Tấm/Kính' || doc.inventory_mode == 'Thành phẩm theo m2'",
+  mandatory_depends_on: "eval:doc.inventory_mode == 'Tấm/Kính' || doc.inventory_mode == 'Thành phẩm theo m2'",
+  non_negative: true,
+  description: "Số tấm hoặc số bộ cửa thực nhận. Dùng cùng Cao × Rộng để tính tổng diện tích thực.",
+});
 replaceField(pri, "actual_weight_kg", {
-  "//": "QĐ-2: với hàng catch weight, đây là số lượng tồn thứ hai chứ không còn là số đối chiếu.",
+  "//": "QĐ-2: với hàng catch weight đây là số lượng tồn thứ hai; với cửa/tấm đây là số cân để đối chiếu TL kg/m².",
   fieldname: "actual_weight_kg",
   fieldtype: "Float",
   label: "Tổng kg thực cân",
-  depends_on: "eval:doc.inventory_mode == 'Nhôm cây/lá'",
+  depends_on: "eval:doc.inventory_mode == 'Nhôm cây/lá' || doc.inventory_mode == 'Tấm/Kính' || doc.inventory_mode == 'Thành phẩm theo m2'",
   mandatory_depends_on: "eval:doc.inventory_mode == 'Nhôm cây/lá'",
   non_negative: true,
-  description: "Số kg thực nhận được ghi cùng số cây/lá vào sổ kho. Bắt buộc trước khi ghi sổ hàng nhôm cân theo kiện; huỷ phiếu sẽ đảo cả cây/lá, kg và giá trị.",
+  description: "Nhôm cây/lá: số kg thực nhận đi vào sổ kho. Cửa/tấm: số kg cân để đối chiếu TL thực theo m²; không bắt buộc nếu NCC không cân.",
 });
+replaceField(pri, "actual_kg_per_m", {
+  fieldname: "actual_kg_per_m",
+  fieldtype: "Float",
+  label: "TL thực (kg/m)",
+  read_only: true,
+  depends_on: "eval:doc.inventory_mode == 'Nhôm cây/lá'",
+  description: "Nhôm cây/lá: Tổng kg ÷ (chiều dài một cây × số cây/lá). Chỉ để đối chiếu, không nhập tay.",
+});
+addAfter(pri, "actual_kg_per_m", {
+  "//": "TL theo diện tích thật, tách riêng khỏi kg/m của nhôm để không trộn hai đơn vị.",
+  fieldname: "actual_kg_per_sqm",
+  fieldtype: "Float",
+  label: "TL thực (kg/m²)",
+  read_only: true,
+  depends_on: "eval:(doc.inventory_mode == 'Tấm/Kính' || doc.inventory_mode == 'Thành phẩm theo m2') && doc.actual_weight_kg > 0",
+  description: "Tự tính = Tổng kg thực cân ÷ (Cao × Rộng × Số cái/bộ). Cao và Rộng nhập theo mét; kết quả chỉ để đối chiếu.",
+});
+pri.list = [
+  "item_code", "color",
+  "height_m", "width_m", "set_count",
+  "length_m", "uom", "qty", "qty_bundle", "qty_bar",
+  "actual_weight_kg", "actual_kg_per_m", "actual_kg_per_sqm",
+  "rate", "amount", "so_no", "note",
+];
 addAfter(pri, "warehouse",
   {
     "//": [

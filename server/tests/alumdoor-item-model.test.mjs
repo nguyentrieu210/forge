@@ -8,6 +8,11 @@ const brief = JSON.parse(await readFile(new URL("../briefs/alumdoor.json", impor
 const app = compileBrief(brief);
 const doctype = (name) => app.doctypes.find((entry) => entry.name === name);
 const field = (doctypeName, fieldname) => doctype(doctypeName)?.fields.find((entry) => entry.fieldname === fieldname);
+const v2Brief = JSON.parse(await readFile(new URL("../briefs/alumdoor-v2.json", import.meta.url), "utf8"));
+const v2App = compileBrief(v2Brief);
+const v2Doctype = (name) => v2App.doctypes.find((entry) => entry.name === name);
+const v2Field = (doctypeName, fieldname) =>
+  v2Doctype(doctypeName)?.fields.find((entry) => entry.fieldname === fieldname);
 
 test("Alumdoor Item declares reusable inventory measurement profiles", () => {
   assert.equal(doctype("Item Group")?.is_tree, true);
@@ -133,6 +138,26 @@ test("purchase rows expose aluminium dimensions only for aluminium items", () =>
   assert.ok(field("Sales Order", "install_address"));
   assert.match(field("Delivery Note Item", "width_m")?.depends_on ?? "", /Thành phẩm theo m2/);
   assert.equal(brief.actions.find((entry) => entry.name === "don-ban-thanh-phieu-xuat")?.menu, false);
+});
+
+test("V2 purchase receipt exposes dimensions and area weight without mixing kg/m", () => {
+  assert.equal(v2Brief.version, "2.0.1");
+  const receiptItem = v2Doctype("Purchase Receipt Item");
+  for (const fieldname of [
+    "height_m", "width_m", "set_count", "actual_weight_kg", "actual_kg_per_m", "actual_kg_per_sqm",
+  ]) {
+    const entry = receiptItem?.fields.find((candidate) => candidate.fieldname === fieldname);
+    assert.ok(entry, `thiếu ${fieldname}`);
+    assert.equal(entry.in_list_view, true, `${fieldname} phải có trong bảng gọn`);
+  }
+  assert.equal(v2Field("Purchase Receipt Item", "set_count")?.label, "Số cái/bộ");
+  assert.match(v2Field("Purchase Receipt Item", "set_count")?.depends_on ?? "", /Tấm\/Kính/);
+  assert.match(v2Field("Purchase Receipt Item", "color")?.depends_on ?? "", /Thành phẩm theo m2/);
+  assert.match(v2Field("Purchase Receipt Item", "actual_weight_kg")?.depends_on ?? "", /Thành phẩm theo m2/);
+  assert.equal(v2Field("Purchase Receipt Item", "actual_kg_per_m")?.label, "TL thực (kg/m)");
+  assert.equal(v2Field("Purchase Receipt Item", "actual_kg_per_sqm")?.label, "TL thực (kg/m²)");
+  assert.equal(v2Field("Purchase Receipt Item", "actual_kg_per_sqm")?.read_only, true);
+  assert.match(v2Field("Purchase Receipt Item", "actual_kg_per_sqm")?.description ?? "", /Cao × Rộng × Số cái\/bộ/);
 });
 
 function validatorRequest(items) {
@@ -374,6 +399,49 @@ test("ordinary items keep the simple qty/uom path", async () => {
     {},
   );
   assert.equal(response.status, 200);
+});
+
+test("purchase receipt validates actual kg per square metre from height, width and pieces", async () => {
+  const item = {
+    inventory_mode: "Thành phẩm theo m2",
+    stock_uom: "m2",
+    default_purchase_uom: "m2",
+    min_area_sqm: 0,
+    is_purchase_item: 1,
+  };
+  const base = {
+    item_code: "CUA-M2",
+    uom: "m2",
+    qty: 24,
+    width_m: 3,
+    height_m: 2,
+    set_count: 4,
+    color: "GS",
+    actual_weight_kg: 48,
+    actual_kg_per_sqm: 2,
+    conversion_factor: 1,
+    stock_qty: 24,
+  };
+  const env = { PLATFORM: platform({ "CUA-M2": item, GS: { disabled: 0 } }) };
+
+  const valid = await alumdoorWorker.fetch(validatorRequest([base]), env, {});
+  assert.equal(valid.status, 200, await valid.text());
+
+  const forged = await alumdoorWorker.fetch(
+    validatorRequest([{ ...base, actual_kg_per_sqm: 3 }]),
+    env,
+    {},
+  );
+  assert.equal(forged.status, 422);
+  assert.match((await forged.json()).message, /TL thực phải là 2\.000000 kg\/m²/);
+
+  const missingPieces = await alumdoorWorker.fetch(
+    validatorRequest([{ ...base, set_count: 0, actual_kg_per_sqm: undefined }]),
+    env,
+    {},
+  );
+  assert.equal(missingPieces.status, 422);
+  assert.match((await missingPieces.json()).message, /Số cái\/bộ phải lớn hơn 0/);
 });
 
 test("m2 sales derives a dynamic conversion to exact set stock", async () => {

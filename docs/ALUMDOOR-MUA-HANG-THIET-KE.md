@@ -131,6 +131,19 @@ Nhân **từ chối huỷ** khi đã có phiếu nhập/hoá đơn (`getProcured
 | `stock_account` | `Link(Account)=(Hàng tồn kho)` | ✅ `ledger()` ghi Nợ | — | §6b — đã sửa |
 | `stock_received_but_not_billed` | `Link(Account)=(Hàng nhận chưa có hoá đơn)` | ✅ `ledger()` ghi Có | — | §6b — đã sửa |
 
+#### 4.4.1 — Dòng cửa/tấm trên `Purchase Receipt Item`
+
+| Field | Kiểu brief | Ràng buộc/validate | Autofill/dẫn xuất | Nhân ĐỌC? | Nghiệp vụ |
+|---|---|---|---|---|---|
+| `height_m` | `Float` | >0 khi cửa/tấm có Tổng kg | lấy từ dòng đơn mua nếu có | ✅ validator app | Cao thực nhận, mét |
+| `width_m` | `Float` | >0 khi cửa/tấm có Tổng kg | lấy từ dòng đơn mua nếu có | ✅ validator app | Rộng thực nhận, mét |
+| `set_count` | `Int` | >0; câu lỗi *"Số cái/bộ phải lớn hơn 0"* | mặc định 1 | ✅ validator app | Số tấm hoặc số bộ cửa |
+| `actual_weight_kg` | `Float` | tùy chọn với cửa/tấm; nếu nhập phải >0 | — | ✅ validator app | Tổng kg cân thực tế |
+| `actual_kg_per_sqm` | `Float~` | read-only; server từ chối nếu lệch công thức | `actual_weight_kg ÷ (height_m × width_m × set_count)` | ✅ validator app | TL thực kg/m² để đối chiếu |
+
+`actual_kg_per_m` tiếp tục chỉ dùng cho nhôm cây/lá. Không dùng một field “TL trung bình” chung
+cho cả kg/m và kg/m² vì khi xuất/đối chiếu sẽ mất đơn vị gốc.
+
 ### 4.5 — `Purchase Invoice` · Hoá đơn mua
 
 | Field | Kiểu brief | Nhân ĐỌC? | Chặn? | Nghiệp vụ |

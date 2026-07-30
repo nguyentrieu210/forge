@@ -350,9 +350,20 @@ chưa có ledger. Bổ sung:
 
 Giữ nguyên: `item_code` (+`link_filters {is_purchase_item:1, disabled:0}`) · `item_name` · `inventory_mode`
 (hidden) · `measurement_profile` (hidden) · `stock_uom` · `color` · `length_m` · `uom` · `qty` ·
-`qty_bundle` · `qty_bar` · `total_length_m` · `actual_weight_kg` · `actual_kg_per_m` · `so_no` · `rate` ·
+`qty_bundle` · `qty_bar` · `total_length_m` · `actual_weight_kg` · `actual_kg_per_m` · `actual_kg_per_sqm` · `so_no` · `rate` ·
 `amount` · `note` · `warehouse` · `purchase_order` · `conversion_factor` · `stock_qty` · `valuation_rate`
 · `width_m`/`height_m`/`set_count` (cho hàng khác).
+
+**Bổ sung 2.0.1 — TL thực của cửa/tấm:** `set_count` hiển thị nhãn **Số cái/bộ**; các dòng
+`inventory_mode ∈ {Tấm/Kính, Thành phẩm theo m2}` hiện Cao, Rộng, Số cái/bộ và Tổng kg thực cân.
+Client dẫn xuất và server xác minh:
+
+```
+actual_kg_per_sqm = actual_weight_kg / (height_m * width_m * set_count)
+```
+
+`actual_kg_per_sqm` là read-only và chỉ có ý nghĩa kg/m². `actual_kg_per_m` giữ riêng cho nhôm
+cây/lá (`actual_weight_kg / (length_m * qty_bar)`), tuyệt đối không dùng chung một field cho hai đơn vị.
 
 | Field MỚI | Kiểu | Ràng buộc | Validate + câu lỗi VN | Nhân ĐỌC? |
 |---|---|---|---|---|
