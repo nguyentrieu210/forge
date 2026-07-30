@@ -17,6 +17,7 @@ import { spawnSync } from "node:child_process";
 import process from "node:process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { meaningfulGitStatus } from "./git-worktree.mjs";
 import {
   findTenantDatabaseId,
   findTenantOrigin,
@@ -48,7 +49,7 @@ if (execute && !allowDirty) {
     encoding: "utf8",
   });
   if (status.status !== 0) fail("could not inspect git worktree before migration");
-  if (status.stdout.trim()) {
+  if (meaningfulGitStatus(status.stdout)) {
     fail("worktree is dirty; commit the verified release or pass --allow-dirty with an explicit risk decision");
   }
 }
