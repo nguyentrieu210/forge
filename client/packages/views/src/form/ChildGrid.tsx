@@ -701,16 +701,19 @@ export function ChildGrid(props: ChildGridProps) {
   }, [formulaCustomerGroup]);
 
   const setCell = (rowIdx: number, fieldname: string, value: unknown) => {
+    // Luôn ghép trên snapshot mới nhất. Hai ô số có thể phát onChange trước khi React render lại;
+    // dùng prop `rows` cũ ở lần sửa sau sẽ làm mất giá trị người dùng vừa nhập ở lần trước.
+    const currentRows = latestRows.current;
     // Mọi thao tác trên dòng đều làm kết quả công thức đang bay trở nên cũ. Tăng version ngay,
     // kể cả field vừa sửa không tham gia phép tính, để phản hồi chậm không ghi đè dữ liệu mới.
-    const formulaKey = String(rows[rowIdx]?.name ?? rowIdx);
+    const formulaKey = String(currentRows[rowIdx]?.name ?? rowIdx);
     const formulaVersion = (formulaLoadVersion.current.get(formulaKey) ?? 0) + 1;
     formulaLoadVersion.current.set(formulaKey, formulaVersion);
     if (["uom", "color", "colour"].includes(fieldname)) {
-      const loadKey = String(rows[rowIdx]?.name ?? rowIdx);
+      const loadKey = String(currentRows[rowIdx]?.name ?? rowIdx);
       itemLoadVersion.current.set(loadKey, (itemLoadVersion.current.get(loadKey) ?? 0) + 1);
     }
-    const next = rows.map((r, i) => {
+    const next = currentRows.map((r, i) => {
       if (i !== rowIdx) return r;
       const changingItem = fieldname === "item_code" && value !== r.item_code;
       const reset = changingItem
@@ -774,7 +777,10 @@ export function ChildGrid(props: ChildGridProps) {
       ? await services.fetchDocument("Item", itemCode).catch(() => undefined)
       : undefined;
     const readItemValue = async (fieldname: string): Promise<unknown> => {
-      if (item) return item[fieldname];
+      // Form profile có thể lược bớt field khỏi document đã tải. Khi field đó trống, vẫn phải hỏi
+      // riêng master value; nếu không ĐVT mua/tồn có dữ liệu nhưng bảng con chỉ hiện dấu "—".
+      const documentValue = item?.[fieldname];
+      if (documentValue !== undefined && documentValue !== null && documentValue !== "") return documentValue;
       return services?.fetchValue?.("Item", itemCode, fieldname).catch(() => undefined);
     };
     // nguồn trên Item → các ô đích trên dòng bảng con
@@ -904,13 +910,29 @@ export function ChildGrid(props: ChildGridProps) {
     // nếu không màu/UOM của mặt hàng trước sẽ chui vào dòng mới rồi bị server từ chối lúc lưu.
     if (itemLoadVersion.current.get(loadKey) !== loadVersion) return;
     if (Object.keys(patch).length === 0) return;
-    const merged = base.map((r, i) => (i === rowIdx ? { ...r, ...patch } : r));
+    const currentRows = latestRows.current;
+    const currentRowIdx = currentRows.findIndex((entry, index) => String(entry.name ?? index) === loadKey);
+    if (currentRowIdx < 0 || String(currentRows[currentRowIdx]?.item_code ?? "") !== itemCode) return;
+    const currentRow = currentRows[currentRowIdx]!;
+    // Master Item tải bất đồng bộ. Trong lúc chờ, người dùng có thể đã nhập SL/Đơn giá; chỉ tự điền
+    // vào ô còn trống, còn các field phân loại thuộc chính Item luôn phải đồng bộ theo mã vừa chọn.
+    const authoritativeItemFields = new Set([
+      "stock_uom", "inventory_mode", "measurement_profile", "material_specification",
+      "item_name", "description", "min_area_sqm", "theoretical_kg_per_m",
+    ]);
+    const safePatch = Object.fromEntries(Object.entries(patch).filter(([fieldname]) => {
+      if (authoritativeItemFields.has(fieldname)) return true;
+      const current = currentRow[fieldname];
+      return current === undefined || current === null || current === ""
+        || (rowDefaults?.[fieldname] !== undefined && current === rowDefaults[fieldname]);
+    }));
+    const merged = currentRows.map((r, i) => (i === currentRowIdx ? { ...r, ...safePatch } : r));
     // Đơn giá vừa mồi xong thì thành tiền phải theo ngay, không đợi người dùng chạm vào ô.
-    const computed = merged.map((r, i) => (i === rowIdx ? withComputed(r) : r));
+    const computed = merged.map((r, i) => (i === currentRowIdx ? withComputed(r) : r));
     emitRows(computed);
     const formulaVersion = (formulaLoadVersion.current.get(loadKey) ?? 0) + 1;
     formulaLoadVersion.current.set(loadKey, formulaVersion);
-    void fillDoorFormula(rowIdx, computed, loadKey, formulaVersion);
+    void fillDoorFormula(currentRowIdx, computed, loadKey, formulaVersion);
   };
 
   /** Điền cho NHIỀU dòng rồi ghi MỘT lần — đường dán từ Excel đi lối này. */
