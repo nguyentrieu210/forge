@@ -48,7 +48,7 @@ const replaceField = (dt, name, next) => {
 };
 
 // ─────────────────────────── HEADER ───────────────────────────
-brief.version = "2.0.31";
+brief.version = "2.0.32";
 brief.locale.dateFormat = "dd/mm/yyyy"; // Q11 — chủ xưởng chốt gạch chéo
 // Nỗi đau #1 của BRD: người mở app phải thấy ngay tồn KHẢ DỤNG theo khổ, không phải tự lấy tồn tổng
 // rồi trừ các phiếu giữ bằng tay. Báo cáo này nằm ở query engine nền tảng vì nó đọc cùng sổ kho.
@@ -1008,7 +1008,7 @@ brief.prints.push({
     "@page{size:A4 portrait;margin:0}",
     "*{box-sizing:border-box}html,body{margin:0;width:210mm;min-height:297mm}body{font-family:Arial,'Liberation Sans',sans-serif;font-size:9px;color:#111;padding:23.7mm 8mm 8mm;font-kerning:none;letter-spacing:0;word-spacing:0}",
     ".letterhead{position:relative;width:194mm;height:17mm;margin-left:0;overflow:hidden}",
-    ".brand-logo{position:absolute;left:0;top:0;width:88.4mm;height:auto}",
+    ".brand-logo{position:absolute;left:0;top:1.35mm;width:74mm;height:auto}",
     ".company-header-img{position:absolute;right:-13.5mm;top:0;width:114.3mm;height:auto;display:block}",
     ".title{width:194mm;font-family:Arial,'Liberation Sans',sans-serif;font-size:18px;line-height:1.2;font-weight:700;color:#f15a24;text-transform:uppercase;text-align:center;margin:0 0 6mm}",
     ".meta{width:194mm;margin-left:0;font-size:8px;font-weight:400;line-height:1.45;margin-bottom:4.5mm}.meta-row{display:grid;grid-template-columns:30mm 1fr;min-height:2.8mm}.meta-label{font-weight:700}.meta-value{font-weight:400;white-space:pre-wrap}",
