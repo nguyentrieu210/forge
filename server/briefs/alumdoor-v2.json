@@ -2,7 +2,7 @@
  "$schema": "./brief.schema.json",
  "id": "alumdoor",
  "name": "Alumdoor",
- "version": "2.0.13",
+ "version": "2.0.14",
  "module": "Alumdoor",
  "domain": "alumdoor",
  "brand": "warm",
@@ -5623,7 +5623,7 @@
    "default": true,
    "css": [
     "@page{size:A4 portrait;margin:0}",
-    "*{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif} html,body{margin:0}body{width:210mm;min-height:297mm;font-family:Arial,Helvetica,sans-serif;font-size:9px;color:#111;padding:23.7mm 8mm 8mm}",
+    "*{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif!important} html,body{margin:0}body{width:210mm;min-height:297mm;font-family:Arial,Helvetica,sans-serif!important;font-size:9px;color:#111;padding:23.7mm 8mm 8mm}",
     ".letterhead{position:relative;width:166mm;height:17mm;margin-left:14mm}",
     ".brand-logo{position:absolute;left:2.7mm;top:2.8mm;width:43.6mm;height:auto}",
     ".company-block{position:absolute;right:2.7mm;top:0;width:94mm;text-align:center;font-size:7.5px;font-style:italic;line-height:1.4}",
@@ -5635,7 +5635,7 @@
     "th{background:#f3f3f3;font-size:7.5pt;text-transform:uppercase;white-space:normal}",
     "td{font-size:8pt;white-space:normal;overflow-wrap:anywhere}.n{text-align:center;font-variant-numeric:tabular-nums}.c{text-align:center}.code{font-weight:700}.item-cell,.note-cell{white-space:normal;overflow-wrap:anywhere}",
     ".index-col{white-space:nowrap}.note-col,.note-cell{white-space:normal}",
-    "tfoot td{font-size:10pt;font-weight:800;line-height:1.25;background:#fff;padding-top:4pt;padding-bottom:4pt}.total-label{text-align:right;padding-right:5pt}.total-value{text-align:right;color:#c55a11;white-space:nowrap;padding-left:4pt;padding-right:4pt}",
+    "tfoot td{font-family:Arial,Helvetica,sans-serif!important;font-size:8.5pt;font-weight:700;line-height:1.2;background:#fff;padding-top:3pt;padding-bottom:3pt}.total-label{text-align:right;padding-right:5pt}.total-value{text-align:center;color:#c55a11;white-space:normal;padding-left:2pt;padding-right:2pt}",
     ".sign{display:flex;width:100%;justify-content:space-between;text-align:center;margin-top:18px}.sign div{width:30%}.sign b{display:block;margin-bottom:35px;font-size:8px}"
    ],
    "html": [
