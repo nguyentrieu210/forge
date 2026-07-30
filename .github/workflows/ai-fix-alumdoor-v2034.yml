@@ -1,0 +1,104 @@
+name: AI fix Alumdoor v2.0.34 tests
+
+on:
+  push:
+    branches:
+      - hotfix/alumdoor-print-list-delete
+    paths:
+      - .github/workflows/ai-fix-alumdoor-v2034.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ai-fix-alumdoor-v2034
+  cancel-in-progress: false
+
+jobs:
+  patch-and-validate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: hotfix/alumdoor-print-list-delete
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Align stale Alumdoor tests with v2.0.34
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("server/tests/alumdoor-item-model.test.mjs")
+          text = path.read_text(encoding="utf-8")
+
+          old_version = 'assert.equal(v2Brief.version, "2.0.7");'
+          new_version = 'assert.equal(v2Brief.version, "2.0.34");'
+          if text.count(old_version) != 1:
+              raise SystemExit(f"Expected exactly one stale version assertion, found {text.count(old_version)}")
+          text = text.replace(old_version, new_version)
+
+          start_marker = 'test("V2 purchase order print matches the supplied ALUMDOOR A4 template", () => {'
+          end_marker = '\n\nfunction validatorRequest'
+          start = text.find(start_marker)
+          end = text.find(end_marker, start)
+          if start < 0 or end < 0:
+              raise SystemExit("Could not locate the stale Purchase Order print test")
+
+          replacement = r'''test("V2 purchase order print matches the supplied ALUMDOOR A4 template", () => {
+            const print = v2Brief.prints.find((entry) => entry.doctype === "Purchase Order" && entry.default);
+            assert.ok(print, "thiếu mẫu in Purchase Order mặc định");
+            assert.equal(print.name, "Đơn nhập hàng ALUMDOOR");
+            const css = (print.css ?? []).join("\n");
+            const html = (print.html ?? []).join("\n");
+            assert.match(css, /size:A4 portrait/i);
+            assert.match(html, /class="brand-logo" src="data:image\/png;base64,/);
+            assert.match(html, /\/alumdoor-company-header\.png/);
+            assert.match(html, /Tên nhà cung cấp/);
+            assert.match(html, /Ngày giao hàng/);
+            assert.match(html, /SỐ<br><span class="nowrap">CÂY&#47;LÁ<\/span>/);
+            assert.match(html, /{{ theoretical_kg_per_m \| number }}/);
+            assert.match(html, /{{ qty_bar \| number }}/);
+            assert.match(html, /{{ is_stamped }}/);
+            assert.match(html, /{{ note }}/);
+            assert.doesNotMatch(html, /qty_bundle/);
+            assert.doesNotMatch(html, /{{\s*theoretical_kg\s*[|}]/);
+            assert.ok(html.indexOf(">Dập<") < html.indexOf("Ghi chú"), "cột Dập phải đứng trước Ghi chú");
+          });'''
+
+          text = text[:start] + replacement + text[end:]
+          path.write_text(text, encoding="utf-8")
+
+      - name: Run full test suite
+        run: pnpm run test
+
+      - name: Run typecheck
+        run: pnpm run typecheck
+
+      - name: Run build
+        run: pnpm run build
+
+      - name: Commit validated test fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add server/tests/alumdoor-item-model.test.mjs
+          git diff --cached --check
+          git commit -m "test(alumdoor): align v2.0.34 contract"
+          git push origin HEAD:hotfix/alumdoor-print-list-delete
