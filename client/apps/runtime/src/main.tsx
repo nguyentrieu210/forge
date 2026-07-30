@@ -5,7 +5,7 @@ import { mergeLocale, resolveHomeRoute, validateManifest, type ApplicationCatalo
 import { FrappeAdapterImpl, createScopeKey, type MetaForgeBootDTO } from "@metaforge/adapter-frappe";
 import { MetaForgeProvider } from "@metaforge/views/provider";
 import { createFullRegistry } from "@metaforge/views/registry";
-import { AssistantBubble, loadRecentDocs, setAssistantContext } from "@metaforge/views";
+import { AssistantBubble, loadRecentDocs, PrintContainer, setAssistantContext } from "@metaforge/views";
 import type { UrlStateBridge } from "@metaforge/views/url-state";
 import {
   AppShell, AuthBoundary, BusinessContextBar, BusinessContextProvider, I18nProvider,
@@ -467,6 +467,7 @@ function RuntimeRoutes({ manifest, boot, logout, nav, catalogError }: ScreenProp
       <Route path="/x/:key" element={<ExperienceScreen {...screen} />} />
       <Route path="/app/:doctype" element={<DoctypeScreen {...screen} />} />
       <Route path="/app/:doctype/:name" element={<DoctypeScreen {...screen} />} />
+      <Route path="/print/:doctype/:name" element={<PrintScreen {...screen} />} />
       <Route path="/report/:report" element={<ReportScreen {...screen} />} />
       <Route path="/import" element={<ImportScreen {...screen} />} />
       <Route path="/page/:page" element={<DeskFallback {...screen} kind="Page" />} />
@@ -607,6 +608,24 @@ function DoctypeScreen({ manifest, boot, logout, nav }: ScreenProps) {
     setAssistantContext({ man_hinh: title, doctype, ban_ghi: name ?? null });
   }, [title, doctype, name]);
   return <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={active} breadcrumbs={[{ label: title }]}><div className="h-full p-3 md:p-4"><DoctypeWorkspace doctype={doctype} name={name} bridge={bridge} onNavigate={navigateKeepingListState} /></div></Shell>;
+}
+function PrintScreen(props: ScreenProps) {
+  const navigate = useNavigate();
+  const { doctype = "", name = "" } = useParams();
+  const decodedDoctype = decodeURIComponent(doctype);
+  const decodedName = decodeURIComponent(name);
+  const title = props.nav.find((item) => item.doctype === decodedDoctype)?.label ?? decodedDoctype;
+  return (
+    <Shell {...props} active={decodedDoctype} breadcrumbs={[{ label: title }, { label: decodedName }, { label: "Bản in" }]}>
+      <div className="h-full overflow-hidden p-3 md:p-4">
+        <PrintContainer
+          doctype={decodedDoctype}
+          name={decodedName}
+          onBack={() => navigate(`/app/${encodeURIComponent(decodedDoctype)}/${encodeURIComponent(decodedName)}`)}
+        />
+      </div>
+    </Shell>
+  );
 }
 function OverviewScreen(props: ScreenProps) { const navigate = useNavigate(); const { domain = props.manifest.domain ?? "stock" } = useParams(); return <Shell {...props} active="__overview" breadcrumbs={[{ label: "Tổng quan" }]}><div className="h-full overflow-auto p-4"><OverviewContainer domain={domain} onNavigate={navigate} /></div></Shell>; }
 function ProcessScreen(props: ScreenProps) { const navigate = useNavigate(); const { domain = props.manifest.domain ?? "stock" } = useParams(); return <Shell {...props} active="__process" breadcrumbs={[{ label: "Quy trình" }]}><div className="h-full overflow-auto p-4"><ProcessContainer domain={domain} onNavigate={navigate} /></div></Shell>; }
