@@ -155,8 +155,7 @@ const BIG_COLUMNS: string[][] = [
    * nào đứng nhầm chỗ.
    */
   ["width_m", "length_m"],
-  ["theoretical_kg_per_m"], ["qty_bar", "set_count"], ["theoretical_kg", "qty"],
-  ["is_stamped"],
+  ["qty"], ["qty_bar", "set_count"],
   ["uom"], ["rate"], ["amount"],
   ["actual_weight_kg"],
   // Trọng lượng trung bình — số MÁY tính, đặt sau tiền vì nó để ĐỐI CHIẾU chứ không phải để
@@ -179,7 +178,6 @@ const BIG_WIDTH: Record<string, string> = {
   item_code: "14rem", color: "8rem", colour: "8rem",
   height_m: "6rem", width_m: "6rem", length_m: "6rem",
   qty: "7rem", qty_bar: "6rem", set_count: "7rem", actual_weight_kg: "7rem",
-  theoretical_kg_per_m: "7rem", theoretical_kg: "8rem", is_stamped: "6rem",
   actual_kg_per_m: "7rem", actual_kg_per_sqm: "7rem", uom: "8rem",
   rate: "8rem", amount: "9rem", note: "8rem", install_note: "8rem",
 };
@@ -348,6 +346,7 @@ export function ChildGrid(props: ChildGridProps) {
   const [lastDeleted, setLastDeleted] = useState<Array<{ row: Doc; index: number }> | null>(null);
   const [columnSettingsOpen, setColumnSettingsOpen] = useState(false);
   const itemLoadVersion = useRef(new Map<string, number>());
+  const automaticItemLoads = useRef(new Set<string>());
   const compactCols = visibleColumns(gridColumns(childMeta), childMeta, rows, parentDoc, roles);
   const fallbackCols = (childMeta.fields ?? []).filter((field) => !isLayout(field.fieldtype)).slice(0, 6);
   const bigCols = visibleColumns(
@@ -854,6 +853,30 @@ export function ChildGrid(props: ChildGridProps) {
    * dòng, mỗi lần lập phiếu. Mặc định của field (`default` trong metadata) cũng bị bỏ qua ở
    * bảng con dù form cha vẫn dùng — hai chỗ cùng một khái niệm mà hành xử khác nhau.
    */
+  /**
+   * Link picker có thể trả mã hàng trước khi lượt lấy master đầu tiên hoàn tất. Nếu lượt đó bị
+   * thay thế bởi một cập nhật cùng dòng, các cột quy cách đã mở nhưng định mức vẫn trống. Tự bù
+   * lại theo trạng thái dòng: chỉ chạy khi đã có mã hàng mà chưa có kg/m và chặn request trùng.
+   */
+  useEffect(() => {
+    if (!(childMeta.fields ?? []).some((field) => field.fieldname === "theoretical_kg_per_m")) return;
+    rows.forEach((row, rowIdx) => {
+      const itemCode = String(row.item_code ?? "").trim();
+      const kgPerM = Number(row.theoretical_kg_per_m);
+      if (!itemCode || (Number.isFinite(kgPerM) && kgPerM > 0)) return;
+      const loadKey = String(row.name ?? rowIdx);
+      const requestKey = `${loadKey}:${itemCode}`;
+      if (automaticItemLoads.current.has(requestKey)) return;
+      automaticItemLoads.current.add(requestKey);
+      const loadVersion = (itemLoadVersion.current.get(loadKey) ?? 0) + 1;
+      itemLoadVersion.current.set(loadKey, loadVersion);
+      void fillItemDefaults(rowIdx, itemCode, rows, loadKey, loadVersion)
+        .finally(() => automaticItemLoads.current.delete(requestKey));
+    });
+    // `rows` là nguồn sự thật; service và metadata ổn định trong vòng đời bảng.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows]);
+
   const addRow = () => {
     const seed: Doc = { name: `new-${Date.now()}`, doctype: childMeta.name } as Doc;
     for (const field of childMeta.fields ?? []) {
