@@ -145,8 +145,7 @@ function gridWidth(field: DocField): string {
 const BIG_COLUMNS: string[][] = [
   // KHÔNG có `item_name`: ô mã hàng đã in sẵn tên bên dưới mã, nên cột tên là bản sao chiếm
   // chỗ của những cột phải gõ tay. Bỏ nó đi thì Màu và ĐVT mới đủ rộng để đọc được chữ.
-  ["item_code"], ["color", "colour"],
-  ["height_m"],
+  ["item_code"],
   /**
    * RỘNG lấy `width_m` trước, `length_m` sau — cả hai đều là MÉT.
    *
@@ -154,9 +153,15 @@ const BIG_COLUMNS: string[][] = [
    * `length_m` (khổ cây), đúng số chia trong công thức kg/m. Một cột, hai chứng từ, không ô
    * nào đứng nhầm chỗ.
    */
-  ["width_m", "length_m"],
-  ["qty"], ["qty_bar", "set_count"],
-  ["uom"], ["rate"], ["amount"],
+  ["length_m", "width_m"],
+  ["height_m"],
+  ["theoretical_kg_per_m"],
+  ["qty_bar", "set_count"],
+  ["theoretical_kg", "qty"],
+  ["rate"], ["amount"],
+  ["color", "colour"],
+  ["is_stamped"],
+  ["uom"],
   ["actual_weight_kg"],
   // Trọng lượng trung bình — số MÁY tính, đặt sau tiền vì nó để ĐỐI CHIẾU chứ không phải để
   // gõ: lệch nhiều so với kg/m danh nghĩa nghĩa là cân sai hoặc ghi nhầm khổ.
@@ -178,20 +183,10 @@ const BIG_WIDTH: Record<string, string> = {
   item_code: "14rem", color: "8rem", colour: "8rem",
   height_m: "6rem", width_m: "6rem", length_m: "6rem",
   qty: "7rem", qty_bar: "6rem", set_count: "7rem", actual_weight_kg: "7rem",
+  theoretical_kg_per_m: "7rem", theoretical_kg: "8rem", is_stamped: "6rem",
   actual_kg_per_m: "7rem", actual_kg_per_sqm: "7rem", uom: "8rem",
   rate: "8rem", amount: "9rem", note: "8rem", install_note: "8rem",
 };
-function bigColumns(fields: DocField[]): DocField[] {
-  const out: DocField[] = [];
-  for (const names of BIG_COLUMNS) {
-    for (const name of names) {
-      const found = fields.find((f) => f.fieldname === name);
-      if (found) { out.push(found); break; }
-    }
-  }
-  return out;
-}
-
 export interface AverageWeightResult {
   totalLengthM?: number;
   totalAreaSqm?: number;
@@ -349,13 +344,13 @@ export function ChildGrid(props: ChildGridProps) {
   const automaticItemLoads = useRef(new Set<string>());
   const compactCols = visibleColumns(gridColumns(childMeta), childMeta, rows, parentDoc, roles);
   const fallbackCols = (childMeta.fields ?? []).filter((field) => !isLayout(field.fieldtype)).slice(0, 6);
-  const bigCols = visibleColumns(
-    bigColumns((childMeta.fields ?? []).filter((f) => !isLayout(f.fieldtype))),
-    childMeta,
-    rows,
-    parentDoc,
-    roles,
-  );
+  const allBigFields = (childMeta.fields ?? []).filter((field) => !isLayout(field.fieldtype));
+  const bigCols = BIG_COLUMNS.flatMap((names) => {
+    const alternatives = names
+      .map((name) => allBigFields.find((field) => field.fieldname === name))
+      .filter((field): field is DocField => Boolean(field));
+    return visibleColumns(alternatives, childMeta, rows, parentDoc, roles).slice(0, 1);
+  });
   // DocType con nhỏ (vd checklist 2 cột) không có field nào trong preset bảng lớn theo chứng từ.
   // Không được biến bảng thành chỉ còn "#" và nút xoá; dùng bộ cột gọn làm fallback đầy đủ.
   const baseCols = expanded && bigCols.length ? bigCols : (compactCols.length ? compactCols : fallbackCols);
