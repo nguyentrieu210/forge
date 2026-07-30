@@ -45,7 +45,10 @@ export interface PurchaseObligationRowState {
 export interface PurchaseReceiptAllocationSourceState {
   entry_id: string;
   queue_key: string;
+  queue_revision: number;
   window_id: string;
+  window_revision: number;
+  window_status: "Open" | "Settled" | "Reversed";
   receipt_item_row_id: string;
   purchase_order: string;
   purchase_order_item_row_id: string;
@@ -60,7 +63,10 @@ export interface PurchaseReceiptAllocationSourceState {
 export interface PurchaseUnappliedSourceState {
   entry_id: string;
   queue_key: string;
+  queue_revision: number;
   window_id: string;
+  window_revision: number;
+  window_status: "Open" | "Settled" | "Reversed";
   receipt_item_row_id: string;
   qty_micros: number;
   posting_at: string;
@@ -97,20 +103,25 @@ export interface PurchaseAllocationReader extends DomainReader {
   ): Promise<PurchaseUnappliedSourceState[]>;
 }
 
-export function requirePurchaseAllocationReader(reader: DomainReader): PurchaseAllocationReader {
+const PURCHASE_ALLOCATION_READER_METHODS: Array<keyof PurchaseAllocationReader> = [
+  "getPurchaseAllocationQueueState",
+  "listPurchaseAllocationObligations",
+  "getPurchaseAllocationWindowTotals",
+  "getPurchaseObligationRowState",
+  "listPurchaseReceiptAllocationSources",
+  "listPurchaseReceiptUnappliedSources",
+];
+
+export function hasPurchaseAllocationReader(reader: DomainReader): reader is PurchaseAllocationReader {
   const candidate = reader as Partial<PurchaseAllocationReader>;
-  const methods: Array<keyof PurchaseAllocationReader> = [
-    "getPurchaseAllocationQueueState",
-    "listPurchaseAllocationObligations",
-    "getPurchaseAllocationWindowTotals",
-    "getPurchaseObligationRowState",
-    "listPurchaseReceiptAllocationSources",
-    "listPurchaseReceiptUnappliedSources",
-  ];
-  for (const method of methods) {
-    if (typeof candidate[method] !== "function") {
-      throw new Error(`Purchase allocation reader is missing ${String(method)}`);
-    }
+  return PURCHASE_ALLOCATION_READER_METHODS.every((method) => typeof candidate[method] === "function");
+}
+
+export function requirePurchaseAllocationReader(reader: DomainReader): PurchaseAllocationReader {
+  if (!hasPurchaseAllocationReader(reader)) {
+    const candidate = reader as Partial<PurchaseAllocationReader>;
+    const missing = PURCHASE_ALLOCATION_READER_METHODS.find((method) => typeof candidate[method] !== "function");
+    throw new Error(`Purchase allocation reader is missing ${String(missing)}`);
   }
-  return reader as PurchaseAllocationReader;
+  return reader;
 }
