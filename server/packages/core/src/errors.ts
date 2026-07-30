@@ -31,6 +31,12 @@ export const errors = {
     false,
     currentVersion === undefined ? undefined : { current_version: currentVersion },
   ),
+  purchaseAllocationConflict: () => new CloudForgeError(
+    "PURCHASE_ALLOCATION_REVISION_CONFLICT",
+    "The purchase allocation queue changed while this document was being committed",
+    409,
+    true,
+  ),
   idempotency: () => new CloudForgeError("IDEMPOTENCY_KEY_REUSED", "Command ID was reused with a different payload", 422),
   ledger: (message: string) => new CloudForgeError("LEDGER_INVARIANT_FAILED", message, 422),
   overloaded: (message = "Storage is temporarily overloaded") => new CloudForgeError("D1_OVERLOADED", message, 503, true),
@@ -53,13 +59,15 @@ export function asCloudForgeError(value: unknown): CloudForgeError {
   if (structured) return structured;
   if (value instanceof TypeError) return errors.validation(value.message);
   const message = value instanceof Error ? value.message : "Unknown failure";
+  if (message.includes("PURCHASE_ALLOCATION_REVISION_CONFLICT")) return errors.purchaseAllocationConflict();
   if (message.includes("VERSION_CONFLICT")) return errors.version();
   if (message.includes("DOCUMENT_NOT_FOUND")) return errors.notFound();
   if (message.includes("DOCUMENT_ALREADY_EXISTS")) return errors.exists();
   if (message.includes("IDEMPOTENCY_KEY_REUSED") || message.includes("UNIQUE constraint failed: mutation_receipts")) return errors.idempotency();
-  if (/REFERENCE_SOURCE_NOT_FOUND|REFERENCE_ITEM_NOT_FOUND|REFERENCE_QUANTITY_NEGATIVE|REFERENCE_QUANTITY_EXCEEDED|OUTSTANDING_EXCEEDED|ACTIVE_FULFILLMENT_EXISTS|ACTIVE_PAYMENT_ALLOCATIONS|NEGATIVE_STOCK|STOCK_RESERVATION_EXCEEDED|BANK_TRANSACTION_NOT_SUBMITTED|BANK_RECONCILIATION_NEGATIVE|BANK_RECONCILIATION_OVER_ALLOCATED|SALARY_SLIP_ALREADY_IN_PAYROLL|E_INVOICE_ALREADY_SUBMITTED/.test(message)) {
-    return errors.reference(message.replace(/^.*?(REFERENCE_|OUTSTANDING_|ACTIVE_)/, "$1"));
+  if (/REFERENCE_SOURCE_NOT_FOUND|REFERENCE_ITEM_NOT_FOUND|REFERENCE_QUANTITY_NEGATIVE|REFERENCE_QUANTITY_EXCEEDED|OUTSTANDING_EXCEEDED|ACTIVE_FULFILLMENT_EXISTS|ACTIVE_PAYMENT_ALLOCATIONS|NEGATIVE_STOCK|STOCK_RESERVATION_EXCEEDED|BANK_TRANSACTION_NOT_SUBMITTED|BANK_RECONCILIATION_NEGATIVE|BANK_RECONCILIATION_OVER_ALLOCATED|SALARY_SLIP_ALREADY_IN_PAYROLL|E_INVOICE_ALREADY_SUBMITTED|PURCHASE_ALLOCATION_(?:WINDOW_NOT_OPEN|PO_NOT_SUBMITTED|PO_NOT_CANCELLED|PO_ROW_NOT_FOUND|RECEIPT_ROW_NOT_FOUND|REVERSAL_SOURCE_INVALID|REVERSAL_EXCEEDED|QUANTITY_NEGATIVE|QUANTITY_EXCEEDED)|PURCHASE_OBLIGATION_QUANTITY_NEGATIVE|PURCHASE_UNAPPLIED_(?:SOURCE_INVALID|QUANTITY_EXCEEDED)/.test(message)) {
+    return errors.reference(message.replace(/^.*?(REFERENCE_|OUTSTANDING_|ACTIVE_|PURCHASE_)/, "$1"));
   }
+  if (message.includes("PURCHASE_SETTLEMENT_")) return errors.lifecycle("Purchase settlement lifecycle validation failed");
   if (message.includes("INVALID_LIFECYCLE_TRANSITION")) return errors.lifecycle("Invalid document lifecycle transition");
   // Fallback paths must not reflect raw internal/DB text (schema, constraint or
   // config details) to the client. Use fixed generic messages; errorResponse
