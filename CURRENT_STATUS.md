@@ -5,14 +5,16 @@ Ngày audit: **2026-07-30**, workspace `C:\Forge`.
 ## Git
 
 - Branch: `hotfix/alumdoor-print-list-delete`
-- Baseline đã kéo và kiểm chứng: `7bbf20f45ecebf329af7b349e02e61827dfe32fe`
-- Trước khi tạo bộ tài liệu này, Git status chỉ có hai thư mục untracked đã tồn tại: `server/work/` và `tmp/`.
+- HEAD xác nhận khi bắt đầu đợt tiếp tục: `9e2b4ad7c3d541afe7b772347039b68cdb55027d` (`docs: record CI and Cloudflare build connection`).
+- Commit code mới: `f5186c4ef6fb54d819bad95ee4eb17f2fd1a18e1` (`test(alumdoor): add purchase order print fixture`).
+- Baseline chức năng Alumdoor đã kéo và kiểm chứng trước đó: `7bbf20f45ecebf329af7b349e02e61827dfe32fe`.
+- Trước khi tạo bộ tài liệu ban đầu, Git status chỉ có hai thư mục untracked đã tồn tại: `server/work/` và `tmp/`.
 - Hai thư mục trên là output/work/cache, được giữ nguyên và không đưa vào manifest bàn giao.
 
 ## Những gì chạy được
 
-- Root/server/client TypeScript typecheck: **PASS**.
-- Build toàn monorepo: **PASS**.
+- Root/server/client TypeScript typecheck: **PASS** ở đợt audit trước.
+- Build toàn monorepo: **PASS** ở đợt audit trước.
 - Runtime React, server Workers, app/package builds đều hoàn tất.
 - Core Frappe-shaped CRUD/metadata/workflow/print/report/import/export routes có implementation trong `server/packages/frappe-api/src/router.ts`.
 - Auth cookie/JWT, server permission, metadata rendering và app manifest flow có implementation thật, không phải mock.
@@ -30,6 +32,16 @@ Ngày audit: **2026-07-30**, workspace `C:\Forge`.
 
 PowerShell trên máy chặn shim `pnpm.ps1`; dùng `pnpm.cmd` hoạt động bình thường. Đây là policy môi trường, không phải lỗi code.
 
+## Đợt tiếp tục — fixture bản in Purchase Order
+
+- Thêm `server/tests/alumdoor-purchase-order-print.test.mjs`.
+- Test đọc đúng `server/briefs/alumdoor-v2.json` và chạy qua renderer production `renderPrintFormat`, không tự dựng một renderer giả song song.
+- Fixture có cả dòng nhôm và hàng thường, cố ý đảo thứ tự đầu vào để kiểm tra renderer sắp theo `idx`.
+- Test khóa 13 cột, tổng độ rộng 100%, thứ tự `Dập` trước `Ghi chú`, không có `Số bó`, các ô căn giữa, A4 portrait, logo/header và không còn placeholder sau render.
+- Test cũng khóa việc hàng thường không bị điền giả các trường kích thước, kg/m và số cây/lá.
+- Chưa chạy local trong phiên GitHub connector này; cần GitHub Actions hoặc workspace local chạy `pnpm.cmd run test`, `pnpm.cmd run typecheck` và `pnpm.cmd run build` để xác nhận commit mới.
+- Visual pixel-level của browser preview và file PDF thật vẫn chưa được tự động hóa; fixture hiện khóa cấu trúc HTML dùng chung cho cả hai đường.
+
 ## Test và lint đã được khôi phục
 
 - Hai assertion Alumdoor đã được cập nhật trực tiếp theo contract v2.0.34 trong `server/tests/alumdoor-item-model.test.mjs`.
@@ -39,7 +51,7 @@ PowerShell trên máy chặn shim `pnpm.ps1`; dùng `pnpm.cmd` hoạt động b�
 
 ## Build
 
-`pnpm.cmd run build` exit code 0. Có warning không chặn:
+`pnpm.cmd run build` exit code 0 ở đợt audit trước. Có warning không chặn:
 
 - Một số Vite chunk lớn hơn 500 KB; sample/kho app có bundle khoảng 1 MB.
 - `NewFormContainer` vừa được import động vừa import tĩnh nên không tách chunk như dự kiến.
@@ -61,7 +73,8 @@ PowerShell trên máy chặn shim `pnpm.ps1`; dùng `pnpm.cmd` hoạt động b�
 
 ## Lỗi/rủi ro đã biết
 
-- CI cần được theo dõi trên GitHub sau khi push để xác nhận runner hosted thực thi trọn vẹn, không chỉ local.
+- CI cần được theo dõi trên GitHub sau commit mới để xác nhận runner hosted thực thi trọn vẹn, không chỉ trạng thái audit cũ.
+- Fixture mới chưa thay thế visual regression test trên Chromium và kiểm tra PDF tải xuống thực tế.
 - Tài liệu trạng thái cũ như `server/STATUS.md` lệch migration/phiên bản hiện hành; cần tránh dùng làm nguồn sự thật.
 - Bundle client lớn, ảnh hưởng tải trang nhưng chưa chặn build.
 - Renderer chuyên biệt chưa phủ hết page/dashboard/process.
@@ -69,7 +82,7 @@ PowerShell trên máy chặn shim `pnpm.ps1`; dùng `pnpm.cmd` hoạt động b�
 
 ## Deploy dự kiến
 
-Không deploy trong audit này. Luồng dự kiến:
+Không deploy trong audit hoặc đợt fixture này. Luồng dự kiến:
 
 - Build/stage client: script `server/scripts/stage-client-bundle.mjs`.
 - Gateway: Wrangler với `server/apps/gateway-worker/wrangler.jsonc`.
@@ -80,7 +93,7 @@ Phải đọc `server/README.md`, kiểm tra pending migration và đúng Cloudf
 
 ## CI và Cloudflare Workers Builds
 
-- GitHub Actions hosted runner đã chạy trọn bộ `install`, `test`, `typecheck` và `build`: **PASS** ngày 2026-07-30.
+- GitHub Actions hosted runner đã chạy trọn bộ `install`, `test`, `typecheck` và `build`: **PASS** ngày 2026-07-30 cho trạng thái trước commit fixture mới.
 - Worker `cloudforge-gateway` đã kết nối với repository `nguyentrieu210/forge` trên production branch `hotfix/alumdoor-print-list-delete`.
 - Cloudflare build command: `pnpm --filter runtime run build && node server/scripts/stage-client-bundle.mjs`.
 - Cloudflare deploy command hiện dùng `wrangler versions upload` để tạo version kiểm tra, chưa tự động promote thành production deployment.
