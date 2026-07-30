@@ -21,6 +21,23 @@
 - Hoàn thành khi: Gateway và tenant đều đúng version dự kiến, smoke test xanh, không có lỗi production mới và backup đã được chuyển khỏi nơi lưu plaintext thông thường.
 - Phụ thuộc: tenant live deploy đã operator-confirmed; Gateway production traffic chưa được xác nhận độc lập.
 
+## P1 — Sổ phân bổ nhập nhôm FIFO và nợ nhà máy
+
+**Mục tiêu:** một lần hàng về có thể tự trừ nhiều dòng đơn mua cũ trước, giữ lịch sử bất biến và tính đúng số cây còn nợ cùng dải dung sai gộp.
+
+- Kịch bản khóa: PO ngày 1 đặt AL71 7,2 m × 0,389 × 200 cây; PO ngày 2 đặt 100 cây; Receipt ngày 3 nhận 230 cây, barem 644,184 kg và cân thực 630 kg. Hệ thống phải phân bổ FIFO 200 cây vào PO ngày 1, 30 cây vào PO ngày 2 và báo tồn danh nghĩa 70 cây trên PO ngày 2.
+- Luật dung sai khách yêu cầu là **pool gộp có chủ đích**: tổng 300 cây, ±5% ⇒ chấp nhận tổng 285–315 cây; sau khi đã nhận 230 thì lần giao cuối hợp lệ 55–85 cây. Không tự gộp mọi PO cùng mã vô thời hạn; cần `delivery_pool`/`supplier_contract` hoặc khoá nhóm tương đương.
+- Thiết kế dữ liệu: thêm migration append-only `0027_*`; sổ allocation phải chứa receipt, receipt item row, PO, PO item row, thứ tự phân bổ, qty cây, kg barem snapshot, kg thực tế/phân bổ, ngày và loại `allocate/reverse`.
+- Không chỉ dùng `item_code`: khoá đối chiếu phải bám `purchase_order_item.row_id` và snapshot quy cách tối thiểu `item_code + length_m + color + is_stamped/measurement profile`, để AL71 khác khổ không trừ nhầm nhau.
+- Thuật toán submit Receipt: lấy các PO line mở đúng supplier/pool/quy cách, sắp `transaction_date → created_at → PO name → row idx`, phân bổ FIFO, kiểm trần dung sai pool, rồi ghi allocation trong cùng mutation với stock/procurement ledger. Huỷ Receipt ghi dòng đảo, không delete.
+- Trạng thái cần có: `Partially Received`, `Nominally Complete`, `Within Tolerance — Awaiting Close`, `Closed Within Tolerance`; không tự đóng thiếu chỉ vì đã chạm ngưỡng tối thiểu, cần hành động xác nhận “giao cuối/đóng trong dung sai”.
+- UI/báo cáo: timeline trên PO và Receipt phải diễn giải “PR-X nhận 230 cây/630 kg; trừ PO1 200, PO2 30; còn PO2 70; dải giao cuối 55–85”, cùng drill-down về chứng từ gốc.
+- File dự kiến: `server/packages/contracts/src/index.ts`, `server/packages/clouderp-core/src/types.ts`, `server/packages/clouderp-core/src/controllers.ts`, D1 store/document kernel persistence, `server/migrations/tenant/0027_*.sql`, generator `server/scripts/build-alumdoor-v2-brief.mjs`, output `server/briefs/alumdoor-v2.json`, report/UI metadata và test.
+- Test bắt buộc: đúng kịch bản 200+100/nhận 230; nhận cuối 55 và 85 pass; 54 và 86 fail; nhiều receipt liên tiếp; cancel/reversal; cùng mã khác khổ không trộn; manual override có kiểm soát; hai receipt đồng thời không phân bổ trùng; kg thực không làm thay đổi số cây còn nợ.
+- Rủi ro: code hiện tại kiểm dung sai theo từng PO và cộng tiến độ theo `item_code`; sửa nửa vời sẽ tạo hai nguồn sự thật giữa progress ledger và allocation ledger.
+- Hoàn thành khi: tồn danh nghĩa, dải dung sai, lịch sử phân bổ và báo cáo đều được tính lại từ sổ allocation; không có cột tổng hợp nhập tay làm nguồn authoritative.
+- Phụ thuộc: chốt pool key và hành vi “đóng trong dung sai”; P0 production smoke nên hoàn tất trước deployment tiếp theo.
+
 ## P1 — Kiểm thử ổn định bản in Purchase Order Alumdoor
 
 **Mục tiêu:** khóa các yêu cầu gần nhất: cột đúng thứ tự, Dập trước Ghi chú, không Số bó, căn giữa theo hàng, logo/header/tựa đề không dính và preview khớp PDF.
