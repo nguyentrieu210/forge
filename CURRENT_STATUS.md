@@ -5,7 +5,7 @@ Ngày audit/cập nhật: **2026-07-30**, workspace chuẩn `C:\Forge`.
 ## Git
 
 - Branch/default branch: `hotfix/alumdoor-print-list-delete`.
-- HEAD trước commit cập nhật trạng thái này: `c88760769c994593734521a4f391ba818f3cae77` (`test(procurement): lock allocation rollout switch behavior`).
+- HEAD code/tài liệu đã được CI xác minh trước commit trạng thái này: `53a4ced5d43f79b297d088c3e6a3e85ddf47e9b2` (`docs: add tenant-safe migration handoff`).
 - Contract thiết kế v1: `server/docs/ALUMDOOR-PURCHASE-RECEIPT-ALLOCATION.md`, commit `ed840e14d4e290d637454342accbdc42a553a7de`.
 - Baseline chức năng Alumdoor: `7bbf20f45ecebf329af7b349e02e61827dfe32fe`.
 - Purchase Order print fixture: `f5186c4ef6fb54d819bad95ee4eb17f2fd1a18e1`.
@@ -18,7 +18,8 @@ Draft PR tạm `#6` được dùng chỉ để kích hoạt workflow `pull_reque
 - Run `30566567625`: **FAIL** ở compile trong bước test; phát hiện field `env` che `DurableObject.env` và strict optional plan fields.
 - Run `30566858785`: **PASS** toàn bộ test, typecheck và build sau khi sửa compile.
 - Run `30567772883`: **PASS** toàn bộ test, typecheck và build cho bản có rollout gate mặc định tắt.
-- Job cuối: `90956501124`, kết luận `success`.
+- Run cuối `30568727428`, job `90959777600`: **PASS** test, typecheck và build, gồm cả syntax gate cho `scripts/migrate-tenant.mjs`.
+- PR `#6` đã đóng tại HEAD `53a4ced5d43f79b297d088c3e6a3e85ddf47e9b2`, không merge.
 - Temporary base branch `ci/allocation-base` còn tồn tại vì connector hiện không cung cấp thao tác xóa ref; branch này không chứa code production mới và không được merge.
 
 ## Production deployment tenant `alu`
@@ -128,7 +129,19 @@ Migration `0029_purchase_allocation_rollout.sql` làm feature **disabled by defa
 - Chỉ `enabled=1` khi có backfill checksum, `unresolved_count=0`, actor và timestamp.
 - Database chặn tắt lại sau khi đã kích hoạt để tránh hai nguồn sự thật chạy luân phiên.
 
-Nhờ gate này, code có thể được deploy trước mà chưa thay đổi hành vi PO/Receipt hiện hành. Tuy nhiên feature FIFO chưa hoạt động cho tenant cho đến khi backfill/cutover hoàn tất.
+Nhờ gate này, code và schema có thể được deploy trước mà chưa thay đổi hành vi PO/Receipt hiện hành. Feature FIFO chưa hoạt động cho tenant cho đến khi backfill/cutover hoàn tất.
+
+## Tenant-safe migration wrapper
+
+Đã thêm `server/scripts/migrate-tenant.mjs` và script `tenant:migrate` trong `server/package.json`:
+
+- Resolve D1 theo tenant convention, không yêu cầu người vận hành đoán generated config.
+- Dry-run mặc định.
+- Live migration yêu cầu `--execute --confirm <tenant>`.
+- Live mode từ chối dirty worktree, trừ khi có quyết định rủi ro rõ ràng với `--allow-dirty`.
+- Tạo và xóa generated Wrangler config trong cùng lần chạy.
+- Gọi `d1-migrate-remote.mjs`, là đường migration hiện hành xử lý đúng trigger có nested `CASE`.
+- Syntax của wrapper được kiểm trong SQL test gate và đã PASS ở CI run `30568727428`.
 
 ## Test đã thêm
 
@@ -151,10 +164,20 @@ Các test cover schema/triggers, rollback atomic, revision conflict, PO cancel r
 
 ## Deploy và rollback
 
+Safe operator order cho code/schema với rollout vẫn tắt:
+
+1. Backup tenant ra ngoài repository.
+2. `node scripts/migrate-tenant.mjs --tenant alu`.
+3. `node scripts/migrate-tenant.mjs --tenant alu --execute --confirm alu`.
+4. `node scripts/deploy-tenant.mjs --tenant alu`.
+5. `node scripts/deploy-tenant.mjs --tenant alu --execute --confirm alu`.
+
+Các tool liên quan:
+
 - Build/stage client: `server/scripts/stage-client-bundle.mjs`.
 - Gateway: `server/apps/gateway-worker/wrangler.jsonc`.
-- Tenant: `server/scripts/deploy-tenant.mjs`.
-- Remote migrations: `server/scripts/d1-migrate-remote.mjs`.
+- Tenant migration wrapper: `server/scripts/migrate-tenant.mjs`.
+- Tenant deploy: `server/scripts/deploy-tenant.mjs`.
 - Backup: `server/scripts/backup-tenant.mjs`; SQL backup là plaintext và phải chuyển sang nơi lưu mã hóa.
 
-Không deploy FIFO production hoặc bật rollout cho `alu` trước khi M5–M7, backfill checksum và staging smoke hoàn tất. Code hiện tại chỉ an toàn để deploy ở trạng thái rollout tắt.
+Không bật rollout FIFO cho `alu` trước khi M5–M7, backfill checksum và staging smoke hoàn tất. Code/schema hiện tại chỉ an toàn để deploy ở trạng thái rollout tắt.
