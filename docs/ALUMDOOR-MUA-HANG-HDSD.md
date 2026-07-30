@@ -40,7 +40,7 @@ Với nhôm cây/lá, mỗi dòng nhập đúng các cột xưởng yêu cầu:
 | Đơn giá | Giá một Kg |
 | Thành tiền | Máy tính `kg barem × đơn giá` |
 | Màu | Chọn màu hợp lệ của mã hàng |
-| Dập | Bật nếu dập, tắt nếu không dập |
+| Dập | Bắt buộc chọn rõ `Có` hoặc `Không`; mặc định `Không` |
 
 Đơn đặt **không có kg thực cân** và không có số lần nhập. Kg thực chỉ nhập trên Phiếu nhập
 mua khi xe hàng về. Soát xong bấm **Ghi sổ**.

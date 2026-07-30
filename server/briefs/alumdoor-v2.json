@@ -2,7 +2,7 @@
  "$schema": "./brief.schema.json",
  "id": "alumdoor",
  "name": "Alumdoor",
- "version": "2.0.1",
+ "version": "2.0.2",
  "module": "Alumdoor",
  "domain": "alumdoor",
  "brand": "warm",
@@ -3644,11 +3644,13 @@
     },
     {
      "fieldname": "is_stamped",
-     "fieldtype": "Check",
+     "fieldtype": "Select",
+     "options": "Có\nKhông",
      "label": "Dập",
-     "default": false,
+     "required": true,
+     "default": "Không",
      "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
-     "description": "Bật = dập; tắt = không dập."
+     "description": "Bắt buộc chọn rõ Có hoặc Không."
     },
     {
      "fieldname": "so_no",

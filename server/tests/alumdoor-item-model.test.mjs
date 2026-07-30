@@ -88,7 +88,10 @@ test("purchase rows expose aluminium dimensions only for aluminium items", () =>
       assert.equal(field(child, "length_m")?.label, "Kích thước (chiều rộng) (m)");
       assert.equal(field(child, "theoretical_kg_per_m")?.read_only, true);
       assert.equal(field(child, "theoretical_kg")?.read_only, true);
-      assert.equal(field(child, "is_stamped")?.fieldtype, "Check");
+      assert.equal(field(child, "is_stamped")?.fieldtype, "Select");
+      assert.equal(field(child, "is_stamped")?.options, "Có\nKhông");
+      assert.equal(field(child, "is_stamped")?.required, true);
+      assert.equal(field(child, "is_stamped")?.default, "Không");
       assert.equal(field(child, "qty")?.label, "Số kg đặt (barem)");
       assert.match(field(child, "qty")?.read_only_depends_on ?? "", /Nhôm cây\/lá/);
       assert.equal(field(child, "actual_weight_kg"), undefined);
@@ -151,7 +154,7 @@ test("purchase rows expose aluminium dimensions only for aluminium items", () =>
 });
 
 test("V2 purchase receipt exposes dimensions and area weight without mixing kg/m", () => {
-  assert.equal(v2Brief.version, "2.0.1");
+  assert.equal(v2Brief.version, "2.0.2");
   const receiptItem = v2Doctype("Purchase Receipt Item");
   for (const fieldname of [
     "height_m", "width_m", "set_count", "actual_weight_kg", "actual_kg_per_m", "actual_kg_per_sqm",

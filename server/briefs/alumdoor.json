@@ -2,7 +2,7 @@
   "$schema": "./brief.schema.json",
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "1.27.0",
+  "version": "1.27.1",
   "module": "Alumdoor",
   "domain": "alumdoor",
   "brand": "warm",
@@ -3476,14 +3476,16 @@
           "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
           "description": "Kích thước × trọng lượng định mức × số cây/lá."
         },
-        {
-          "fieldname": "is_stamped",
-          "fieldtype": "Check",
-          "label": "Dập",
-          "default": false,
-          "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
-          "description": "Bật = dập; tắt = không dập."
-        },
+      {
+        "fieldname": "is_stamped",
+        "fieldtype": "Select",
+        "options": "Có\nKhông",
+        "label": "Dập",
+        "required": true,
+        "default": "Không",
+        "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
+        "description": "Bắt buộc chọn rõ Có hoặc Không."
+      },
         {
           "fieldname": "so_no",
           "fieldtype": "Data",
