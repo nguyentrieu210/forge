@@ -81,6 +81,13 @@ export default {
           });
           const page = await context.newPage();
 
+          // Browsers may request /favicon.ico even for a JSON health endpoint. That request
+          // is unrelated to the page under test, so satisfy only this conventional asset
+          // instead of weakening console-error checks for the application itself.
+          await page.route("**/favicon.ico", async (route: any) => {
+            await route.fulfill({ status: 204, body: "" });
+          });
+
           page.on("console", (message: any) => {
             if (message.type() === "error") consoleErrors.push(message.text());
           });
