@@ -28,5 +28,6 @@ test("canonical colors preserve supplier codes and group scopes", () => {
   const plated = alumdoorColorPayload(ALUMDOOR_COLOR_CATALOG.find((color) => color.code === "XANH NGỌC - VÀNG KEM"));
   assert.equal(white.supplier_color_code, "9512");
   assert.equal(burgundy.supplier_color_code, "4004");
+  assert.deepEqual(white.applies_to_groups.map((row) => row.item_group), ["Cửa CN Đức", "Cửa siêu trường"]);
   assert.deepEqual(plated.applies_to_groups.map((row) => row.item_group), ["Cửa tấm liền Úc", "Cửa Đài Loan"]);
 });

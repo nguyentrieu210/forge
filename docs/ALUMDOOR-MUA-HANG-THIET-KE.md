@@ -1,5 +1,12 @@
 # Phân hệ MUA HÀNG — thiết kế kỹ thuật (Field Ledger)
 
+> **Quyết định duyệt lại 30/07/2026:** phần nào bên dưới còn ghi `qty` của nhôm là số cây
+> thì đã lỗi thời. `qty` là **Số lượng tính tiền theo ĐVT mua**; `amount = qty × rate`.
+> Hàng Cái/Bộ/Mét nhập `qty` thủ công. Đơn mua nhôm tự tính
+> `qty = length_m × theoretical_kg_per_m × qty_bar` và dùng ĐVT `Kg`.
+> Phiếu nhập giữ riêng `theoretical_kg` và kg thực nhận; số cây/số bó là số lượng phụ để
+> phân bổ giao hàng FIFO, không thay thế `qty`.
+
 > **Quy trình áp dụng.** Đi theo kỷ luật cổng chặn của skill `app-factory` (`C:\AppWeb`), nhưng
 > **KHÔNG chạy PHA 4/5/7 của skill đó** — chúng khoá cứng vào stack React+Hono+D1 REST và công
 > cụ `scaffold.mjs` / `verify.mjs` mà Forge không có. Forge dựng app bằng **dữ liệu**

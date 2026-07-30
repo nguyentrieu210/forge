@@ -24,24 +24,46 @@ interface GridLayout {
 
 const EMPTY_LAYOUT: GridLayout = { w: {}, order: [], hidden: [], pinned: [], labels: {} };
 
-const PURCHASE_ORDER_ITEM_COMPACT_FIELDS = ["item_code", "qty", "uom", "rate", "amount"];
+const PURCHASE_COMPACT_FIELDS = ["item_code", "qty", "uom", "rate", "amount"];
 const PURCHASE_ORDER_ITEM_FULL_FIELDS = [
   "item_code",
-  "color",
   "length_m",
+  "theoretical_kg_per_m",
   "qty_bundle",
   "qty_bar",
-  "theoretical_kg_per_m",
   "qty",
-  "theoretical_kg",
   "uom",
   "rate",
   "amount",
+  "theoretical_kg",
+  "color",
   "is_stamped",
   "so_no",
   "warehouse",
   "note",
 ];
+const PURCHASE_RECEIPT_ITEM_FULL_FIELDS = [
+  "item_code",
+  "length_m",
+  "qty_bundle",
+  "qty_bar",
+  "qty",
+  "uom",
+  "rate",
+  "amount",
+  "theoretical_kg",
+  "actual_weight_kg",
+  "color",
+  "is_stamped",
+  "so_no",
+  "warehouse",
+  "purchase_order",
+  "note",
+];
+
+function isPurchaseGrid(meta: DocTypeMeta): boolean {
+  return meta.name === "Purchase Order Item" || meta.name === "Purchase Receipt Item";
+}
 
 export interface ChildGridProps {
   childMeta: DocTypeMeta;
@@ -110,6 +132,11 @@ export function resolveChildGridColumns(
       .map((fieldname) => (meta.fields ?? []).find((field) => field.fieldname === fieldname))
       .filter((field): field is DocField => Boolean(field));
   }
+  if (meta.name === "Purchase Receipt Item") {
+    return PURCHASE_RECEIPT_ITEM_FULL_FIELDS
+      .map((fieldname) => (meta.fields ?? []).find((field) => field.fieldname === fieldname))
+      .filter((field): field is DocField => Boolean(field));
+  }
   const visible = visibleColumns(gridColumns(meta), meta, rows, parentDoc, roles);
   if (visible.length) return visible;
   return (meta.fields ?? []).filter((field) => !isLayout(field.fieldtype)).slice(0, 6);
@@ -117,14 +144,14 @@ export function resolveChildGridColumns(
 
 /** Mặc định form đơn mua chỉ giữ năm cột nhập nhanh; nút Cột vẫn có thể mở thêm. */
 export function defaultChildGridHiddenColumns(meta: DocTypeMeta, columns: DocField[], expanded: boolean): string[] {
-  if (meta.name !== "Purchase Order Item" || expanded) return [];
+  if (!isPurchaseGrid(meta) || expanded) return [];
   return columns
-    .filter((field) => !PURCHASE_ORDER_ITEM_COMPACT_FIELDS.includes(field.fieldname))
+    .filter((field) => !PURCHASE_COMPACT_FIELDS.includes(field.fieldname))
     .map((field) => field.fieldname);
 }
 
 function childGridColumnLabel(meta: DocTypeMeta, field: DocField): string {
-  if (meta.name === "Purchase Order Item") {
+  if (isPurchaseGrid(meta)) {
     if (field.fieldname === "qty") return "Số lượng";
     if (field.fieldname === "uom") return "ĐVT";
   }
@@ -339,6 +366,7 @@ export function ChildGrid(props: ChildGridProps) {
   const t = useT();
   const { childMeta, rows, onChange, registry, services, readOnly, parentDoc, roles, rowDefaults } = props;
   const [detailRow, setDetailRow] = useState<number | null>(null);
+  const [allowedColorsByItem, setAllowedColorsByItem] = useState<Record<string, string[]>>({});
   /**
    * BẢNG LỚN — bảng con chiếm trọn màn hình để nhập, rồi quay lại chứng từ.
    *
@@ -402,6 +430,15 @@ export function ChildGrid(props: ChildGridProps) {
     try { localStorage.setItem(layoutKey, JSON.stringify(next)); } catch { /* hết quota — vẫn dùng được trong phiên */ }
   };
   const resetLayout = () => saveLayout(defaultLayout());
+  const hiddenIsDefault = layout.hidden.length === defaultHidden.length
+    && defaultHidden.every((fieldname) => layout.hidden.includes(fieldname));
+  const hasCustomLayout = Boolean(
+    layout.order.length
+    || Object.keys(layout.w).length
+    || layout.pinned.length
+    || Object.keys(layout.labels).length
+    || !hiddenIsDefault,
+  );
 
   // Cột người dùng đã xếp lên trước; cột chưa từng xếp giữ nguyên thứ tự gốc ở phía sau, nên
   // một cột MỚI thêm vào doctype vẫn xuất hiện thay vì biến mất vì không có trong thứ tự cũ.
@@ -481,6 +518,22 @@ export function ChildGrid(props: ChildGridProps) {
     "material_specification", "theoretical_kg_per_m", "theoretical_kg",
     "actual_kg_per_m", "actual_kg_per_sqm", "so_no",
   ];
+  /**
+   * Item.allowed_colors là chiều chặn thật của màu. Link phải dùng đúng danh sách đó ngay
+   * khi tìm kiếm, nếu không người dùng vẫn thấy cả màu mạ trên một dòng STĐ rồi chỉ bị báo
+   * lỗi sau khi bấm lưu. Danh sách rỗng được lọc về một mã không tồn tại (fail closed).
+   */
+  const fieldForRow = (field: DocField, row: Doc): DocField => {
+    if (field.fieldname !== "color" && field.fieldname !== "colour") return field;
+    const itemCode = String(row.item_code ?? "").trim();
+    const allowed = allowedColorsByItem[itemCode] ?? [];
+    return {
+      ...field,
+      link_filters: JSON.stringify([
+        ["Item Color", "name", "in", allowed.length ? allowed : ["__NO_ALLOWED_COLOR_CONFIG__"]],
+      ]),
+    };
+  };
   const withComputed = (row: Doc): Doc => {
     const has = (f: string) => (childMeta.fields ?? []).some((x) => x.fieldname === f);
     let next = { ...row };
@@ -757,6 +810,23 @@ export function ChildGrid(props: ChildGridProps) {
       if (v === undefined || v === null || v === "") return;
       for (const d of targets) patch[d] = v;
     }));
+    const allowedColors = Array.isArray(item?.allowed_colors)
+      ? item.allowed_colors
+        .map((entry) => entry && typeof entry === "object"
+          ? String((entry as Record<string, unknown>).color ?? "").trim()
+          : "")
+        .filter(Boolean)
+      : [];
+    setAllowedColorsByItem((current) => (
+      current[itemCode]?.join("\u0000") === allowedColors.join("\u0000")
+        ? current
+        : { ...current, [itemCode]: allowedColors }
+    ));
+    const currentColor = String(base[rowIdx]?.color ?? base[rowIdx]?.colour ?? "").trim();
+    if (currentColor && !allowedColors.includes(currentColor)) {
+      if (has("color")) patch.color = undefined;
+      if (has("colour")) patch.colour = undefined;
+    }
     if (has("theoretical_kg_per_m")) {
       const specification = String(patch.material_specification ?? item?.material_specification ?? "").trim();
       if (specification && services.fetchDocument) {
@@ -871,11 +941,16 @@ export function ChildGrid(props: ChildGridProps) {
    * lại theo trạng thái dòng: chỉ chạy khi đã có mã hàng mà chưa có kg/m và chặn request trùng.
    */
   useEffect(() => {
-    if (!(childMeta.fields ?? []).some((field) => field.fieldname === "theoretical_kg_per_m")) return;
+    const hasBaremField = (childMeta.fields ?? []).some((field) => field.fieldname === "theoretical_kg_per_m");
+    const hasColorField = (childMeta.fields ?? []).some((field) => field.fieldname === "color" || field.fieldname === "colour");
+    if (!hasBaremField && !hasColorField) return;
     rows.forEach((row, rowIdx) => {
       const itemCode = String(row.item_code ?? "").trim();
       const kgPerM = Number(row.theoretical_kg_per_m);
-      if (!itemCode || (Number.isFinite(kgPerM) && kgPerM > 0)) return;
+      const needsBarem = hasBaremField && !(Number.isFinite(kgPerM) && kgPerM > 0);
+      const needsColorPolicy = hasColorField
+        && !Object.prototype.hasOwnProperty.call(allowedColorsByItem, itemCode);
+      if (!itemCode || (!needsBarem && !needsColorPolicy)) return;
       const loadKey = String(row.name ?? rowIdx);
       const requestKey = `${loadKey}:${itemCode}`;
       if (automaticItemLoads.current.has(requestKey)) return;
@@ -887,7 +962,7 @@ export function ChildGrid(props: ChildGridProps) {
     });
     // `rows` là nguồn sự thật; service và metadata ổn định trong vòng đời bảng.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows]);
+  }, [rows, allowedColorsByItem]);
 
   const addRow = () => {
     const seed: Doc = { name: `new-${Date.now()}`, doctype: childMeta.name } as Doc;
@@ -1357,7 +1432,7 @@ export function ChildGrid(props: ChildGridProps) {
                       onClick={() => { setPickedRow(ri); setPickedColumn(cols.indexOf(c)); }}
                     >
                       <Control
-                        field={c}
+                        field={fieldForRow(c, row)}
                         value={row[c.fieldname]}
                         onChange={(v: unknown) => setCell(ri, c.fieldname, v)}
                         readOnly={cellReadOnly}
@@ -1433,7 +1508,7 @@ export function ChildGrid(props: ChildGridProps) {
                 {f.reqd ? <span className="mf-required ml-0.5 text-destructive">*</span> : null}
               </label>
               <Control
-                field={f}
+                field={fieldForRow(f, row)}
                 value={row[f.fieldname]}
                 onChange={(v: unknown) => setCell(idx, f.fieldname, v)}
                 readOnly={readOnly || rf.readOnly}
@@ -1516,7 +1591,7 @@ export function ChildGrid(props: ChildGridProps) {
       )}
       {/* Kéo nhầm một cột về 3rem rồi mở lại vẫn thấy nó bé tí là một cái bẫy không lối ra —
           tuỳ chỉnh nào lưu lại được cũng phải có đường hoàn tác. */}
-      {layout.order.length || Object.keys(layout.w).length || layout.hidden.length || layout.pinned.length || Object.keys(layout.labels).length ? (
+      {hasCustomLayout ? (
         <Button type="button" variant="ghost" size="sm" onClick={resetLayout}>
           <RotateCcw /> Cột về mặc định
         </Button>

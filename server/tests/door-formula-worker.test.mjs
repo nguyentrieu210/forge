@@ -16,6 +16,7 @@ const item = {
   default_sales_uom: "m2",
   is_sales_item: true,
   min_area_sqm: 0,
+  allowed_colors: [{ row_id: "COLOR-01", color: "GS" }],
 };
 
 const platform = {

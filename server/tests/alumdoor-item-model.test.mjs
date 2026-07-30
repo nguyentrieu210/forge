@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { compileBrief } from "../scripts/lib/compile-brief.mjs";
-import alumdoorWorker from "../dist/apps-src/alumdoor-worker/src/index.js";
+import alumdoorWorker, { allocateBarsFifo } from "../dist/apps-src/alumdoor-worker/src/index.js";
 
 const brief = JSON.parse(await readFile(new URL("../briefs/alumdoor.json", import.meta.url), "utf8"));
 const app = compileBrief(brief);
@@ -13,6 +13,32 @@ const v2App = compileBrief(v2Brief);
 const v2Doctype = (name) => v2App.doctypes.find((entry) => entry.name === name);
 const v2Field = (doctypeName, fieldname) =>
   v2Doctype(doctypeName)?.fields.find((entry) => entry.fieldname === fieldname);
+
+test("nhôm giao về được trừ FIFO và chỉ nhận dư trong tổng dung sai còn lại", () => {
+  const sourceLine = { item_code: "AL71", length_m: 7.2, theoretical_kg_per_m: 0.389 };
+  const balances = [
+    { purchase_order: "PO-001", transaction_date: "2026-07-01", ordered_bars: 200, received_bars: 0, source_line: sourceLine },
+    { purchase_order: "PO-002", transaction_date: "2026-07-02", ordered_bars: 100, received_bars: 0, source_line: sourceLine },
+  ];
+  assert.deepEqual(
+    allocateBarsFifo(balances, 230, 5).map(({ purchase_order, allocated_bars, kind }) => ({
+      purchase_order, allocated_bars, kind,
+    })),
+    [
+      { purchase_order: "PO-001", allocated_bars: 200, kind: "Theo đơn" },
+      { purchase_order: "PO-002", allocated_bars: 30, kind: "Theo đơn" },
+    ],
+  );
+  assert.equal(allocateBarsFifo(balances, 315, 5).at(-1).kind, "Dung sai");
+  assert.throws(() => allocateBarsFifo(balances, 315.00001, 5), /dung sai 5%/i);
+
+  const afterPriorExcess = balances.map((row, index) => ({
+    ...row,
+    received_bars: index === 0 ? 210 : 0,
+  }));
+  assert.doesNotThrow(() => allocateBarsFifo(afterPriorExcess, 105, 5));
+  assert.throws(() => allocateBarsFifo(afterPriorExcess, 105.00001, 5), /dung sai 5%/i);
+});
 
 test("Alumdoor Item declares reusable inventory measurement profiles", () => {
   assert.equal(doctype("Item Group")?.is_tree, true);
@@ -94,7 +120,8 @@ test("purchase rows expose aluminium dimensions only for aluminium items", () =>
       assert.equal(field(child, "is_stamped")?.options, "Có\nKhông");
       assert.equal(field(child, "is_stamped")?.required, true);
       assert.equal(field(child, "is_stamped")?.default, "Không");
-      assert.equal(field(child, "qty")?.label, "Số kg đặt (barem)");
+      assert.equal(field(child, "qty")?.label, "Số lượng");
+      assert.match(field(child, "qty")?.description ?? "", /Số lượng tính tiền/);
       assert.match(field(child, "qty")?.read_only_depends_on ?? "", /Nhôm cây\/lá/);
       assert.equal(field(child, "actual_weight_kg"), undefined);
     } else {
@@ -156,7 +183,7 @@ test("purchase rows expose aluminium dimensions only for aluminium items", () =>
 });
 
 test("V2 purchase receipt exposes dimensions and area weight without mixing kg/m", () => {
-  assert.equal(v2Brief.version, "2.0.3");
+  assert.equal(v2Brief.version, "2.0.4");
   const receiptItem = v2Doctype("Purchase Receipt Item");
   for (const fieldname of [
     "height_m", "width_m", "set_count", "actual_weight_kg", "actual_kg_per_m", "actual_kg_per_sqm",
@@ -173,6 +200,13 @@ test("V2 purchase receipt exposes dimensions and area weight without mixing kg/m
   assert.equal(v2Field("Purchase Receipt Item", "actual_kg_per_sqm")?.label, "TL thực (kg/m²)");
   assert.equal(v2Field("Purchase Receipt Item", "actual_kg_per_sqm")?.read_only, true);
   assert.match(v2Field("Purchase Receipt Item", "actual_kg_per_sqm")?.description ?? "", /Cao × Rộng × Số cái\/bộ/);
+  assert.equal(v2Field("Purchase Receipt Item", "is_stamped")?.fieldtype, "Select");
+  assert.equal(v2Field("Purchase Receipt Item", "is_stamped")?.options, "Có\nKhông");
+  assert.equal(v2Field("Purchase Receipt Item", "is_stamped")?.default, "Không");
+  assert.equal(
+    v2Brief.fixtures.find((entry) => entry.type === "Measurement Profile" && entry.name === "Nhôm cây/lá")?.data?.stock_uom,
+    "Kg",
+  );
 });
 
 function validatorRequest(items) {
@@ -463,7 +497,7 @@ test("purchase order uses width, kg-per-m and trees to derive barem kg", async (
     qty: baremKg,
     rate,
     amount: baremKg * rate,
-    is_stamped: 0,
+    is_stamped: "Không",
   };
   const valid = await alumdoorWorker.fetch(purchaseOrderValidatorRequest([line]), env, {});
   assert.equal(valid.status, 200, await valid.text());
@@ -492,6 +526,7 @@ test("purchase receipt validates actual kg per square metre from height, width a
     default_purchase_uom: "m2",
     min_area_sqm: 0,
     is_purchase_item: 1,
+    allowed_colors: [{ color: "GS" }],
   };
   const base = {
     item_code: "CUA-M2",
@@ -588,6 +623,7 @@ test("aluminium is authoritative Kg stock plus required physical dimensions", as
       qty_bundle: 6,
       so_no: "14JJ",
       color: "GS",
+      is_stamped: "Không",
     }]),
     env,
     {},
@@ -595,7 +631,7 @@ test("aluminium is authoritative Kg stock plus required physical dimensions", as
   assert.equal(valid.status, 200, await valid.text());
 
   const wrongUnit = await alumdoorWorker.fetch(
-    validatorRequest([{ item_code: "A282", color: "GS", uom: "Cây", qty: 51, length_m: 8.5, qty_bar: 51 }]),
+    validatorRequest([{ item_code: "A282", color: "GS", is_stamped: "Không", uom: "Cây", qty: 51, length_m: 8.5, qty_bar: 51 }]),
     env,
     {},
   );
@@ -603,7 +639,7 @@ test("aluminium is authoritative Kg stock plus required physical dimensions", as
   assert.match((await wrongUnit.json()).message, /phải nhập theo Kg/);
 
   const missingDimensions = await alumdoorWorker.fetch(
-    validatorRequest([{ item_code: "A282", color: "GS", uom: "Kg", qty: 191.4 }]),
+    validatorRequest([{ item_code: "A282", color: "GS", is_stamped: "Không", uom: "Kg", qty: 191.4 }]),
     env,
     {},
   );

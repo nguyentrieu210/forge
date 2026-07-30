@@ -721,9 +721,19 @@ export class InMemoryMutationStore implements MutationStore {
       const key = `${line.purchase_order}:${line.kind}:${line.item_code}`;
       const existing = this.procurementEntries.filter((entry) => entry.purchase_order === line.purchase_order && entry.kind === line.kind && entry.item_code === line.item_code).reduce((total, entry) => total + entry.qty_micros, 0);
       const next = existing + (pending.get(key) ?? 0) + line.qty_micros;
+      const supplier = String(plan.document.data.supplier ?? source.data.supplier ?? "");
+      const supplierData = this.masterRecords.get(`${plan.command.tenant_id}:Supplier:${supplier}`);
+      const tolerancePct = line.kind === "Receipt" ? Number(supplierData?.receipt_tolerance_pct ?? 0) : 0;
+      if (!Number.isFinite(tolerancePct) || tolerancePct < 0 || tolerancePct > 50) {
+        throw errors.validation("Supplier receipt tolerance must be between 0 and 50%");
+      }
+      const permitted = Math.floor(ordered * (1 + tolerancePct / 100));
       if (ordered <= 0) throw errors.reference(`Item ${line.item_code} is not present in Purchase Order ${line.purchase_order}`);
       if (next < 0) throw errors.reference(`Reversal exceeds committed ${line.kind.toLowerCase()} quantity`);
-      if (next > ordered) throw errors.reference(`${line.kind} quantity for ${line.item_code} exceeds Purchase Order quantity`);
+      if (next > permitted) {
+        const tolerance = tolerancePct > 0 ? ` plus ${tolerancePct}% supplier tolerance` : "";
+        throw errors.reference(`${line.kind} quantity for ${line.item_code} exceeds Purchase Order quantity${tolerance}`);
+      }
       pending.set(key, (pending.get(key) ?? 0) + line.qty_micros);
     }
   }

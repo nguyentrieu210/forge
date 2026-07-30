@@ -7,13 +7,7 @@
 
 const STATIC_GROUPS = [
   "Cửa CN Đức",
-  "Cửa tấm liền Úc",
   "Cửa siêu trường",
-  "Cửa Đài Loan",
-  "Cửa kéo Đài Loan",
-  "Cửa Lưới",
-  "Phụ kiện",
-  "Phụ kiện CN Đức",
 ];
 
 const staticColor = (code, extra = {}) => ({
@@ -90,7 +84,9 @@ export function alumdoorColorPayload(color) {
       item_group: itemGroup,
     })),
     ...(color.supplierColorCode ? { supplier_color_code: color.supplierColorCode } : {}),
-    note: "Bảng màu chuẩn do chủ xưởng cung cấp ngày 2026-07-30.",
+    note: color.finish === "Sơn tĩnh điện"
+      ? "Màu STĐ áp toàn nhóm Cửa CN Đức/Cửa siêu trường; Cửa Úc, Đài Loan, Lưới và phụ kiện chỉ áp cho từng Item có STĐ/STD."
+      : "Bảng màu chuẩn do chủ xưởng cung cấp ngày 2026-07-30.",
     disabled: false,
     _migration_source: "alumdoor-color-catalog-2026-07-30",
   };

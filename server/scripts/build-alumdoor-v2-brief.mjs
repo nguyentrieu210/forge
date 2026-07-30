@@ -47,7 +47,7 @@ const replaceField = (dt, name, next) => {
 };
 
 // ─────────────────────────── HEADER ───────────────────────────
-brief.version = "2.0.1";
+brief.version = "2.0.4";
 brief.locale.dateFormat = "dd/mm/yyyy"; // Q11 — chủ xưởng chốt gạch chéo
 // Nỗi đau #1 của BRD: người mở app phải thấy ngay tồn KHẢ DỤNG theo khổ, không phải tự lấy tồn tổng
 // rồi trừ các phiếu giữ bằng tay. Báo cáo này nằm ở query engine nền tảng vì nó đọc cùng sổ kho.
@@ -265,9 +265,13 @@ addAfter(pri, "warehouse",
   {
     "//": "Sơn và dập là HAI chiều độc lập — 'đã sơn + chưa dập' là tổ hợp có thật trong bảng giá NCC.",
     fieldname: "is_stamped",
-    fieldtype: "Check",
-    label: "Đã dập",
+    fieldtype: "Select",
+    options: "Có\nKhông",
+    label: "Dập",
+    required: true,
+    default: "Không",
     depends_on: "eval:doc.inventory_mode == 'Nhôm cây/lá'",
+    description: "Bắt buộc chọn rõ Có hoặc Không; lưu cùng lô nhận để đối chiếu giá nhà cung cấp.",
   },
   {
     fieldname: "theoretical_kg",
@@ -1007,13 +1011,12 @@ const fixture = (type, name) => {
   return f;
 };
 
-// ── G1. `Nhôm cây/lá` đang seed đúng cái giá trị mà validator sinh ra để TỪ CHỐI ──
-// TECHNICAL_DESIGN §4 chốt câu báo lỗi: «Đơn vị tồn "Kg" không khớp bộ quy cách "Nhôm cây/lá"
-// (đề xuất: Cây)». Fixture lại đang đặt đúng "Kg". Đây là quyển sổ CŨ còn sót: bản cũ để
-// `qty` = tổng kg; QĐ-2 đổi `qty` = số CÂY, kg thành catch weight. Không sửa fixture thì
-// mọi mặt hàng nhôm tạo từ bộ quy cách này sinh ra sai ngay từ đơn vị.
-fixture("Measurement Profile", "Nhôm cây/lá").data.stock_uom = "Cây";
-note('G1 · Measurement Profile "Nhôm cây/lá": stock_uom Kg → Cây (QĐ-2)');
+// ── G1. Chủ xưởng chốt lại ngày 30/07: nhôm nhập và tồn theo KG ──
+// Số cây/lá, số bó và chiều dài là quy cách vật lý để tính barem và theo dõi nhà máy giao;
+// không thay thế số lượng giao dịch. `qty` của đơn mua là kg barem, `qty` của phiếu nhập là
+// số lượng thực nhận theo ĐVT mua. Vì vậy profile nhôm phải giữ stock_uom = Kg.
+fixture("Measurement Profile", "Nhôm cây/lá").data.stock_uom = "Kg";
+note('G1 · Measurement Profile "Nhôm cây/lá": nhập/tồn Kg; cây/lá là số lượng phụ');
 
 // ── G2. `leaf_formula` BẮT BUỘC mà không fixture nào khai ──
 // Thêm 9 trường chia lá vào Cutting Policy nhưng để nguyên 7 fixture bản cũ.

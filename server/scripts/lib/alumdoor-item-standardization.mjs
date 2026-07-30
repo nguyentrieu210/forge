@@ -186,7 +186,7 @@ function itemPatch(target) {
     is_sales_item: target.isSalesItem,
     include_item_in_manufacturing: true,
     inventory_mode: target.inventoryMode,
-    ...(target.inventoryMode === "Nhôm cây/lá" ? { measurement_profile: "Nhôm cây/lá" } : {}),
+    measurement_profile: target.inventoryMode,
     stock_uom: "Kg",
     default_purchase_uom: "Kg",
     ...(target.isSalesItem
@@ -288,6 +288,70 @@ export async function buildStandardization(repoRoot) {
     "Nhôm cây/lá",
     "Nhôm cây lá Kg chiều dài số cây màu tình trạng",
   );
+  appendPatchUpsert(sql, "Measurement Profile", "Hàng thường", {
+    profile_name: "Hàng thường",
+    inventory_mode: "Hàng thường",
+    stock_uom: "Cái",
+    track_dimension_lot: false,
+    require_color: false,
+    require_condition: false,
+    require_length: false,
+    require_width: false,
+    require_piece_qty: false,
+    require_bundle_qty: false,
+    disabled: false,
+    _migration_source: MIGRATION_SOURCE,
+  });
+  appendSearchUpsert(
+    sql,
+    "Measurement Profile",
+    "Hàng thường",
+    "Hàng thường",
+    "Hàng thường số lượng theo đơn vị tính của mặt hàng",
+  );
+  appendPatchUpsert(sql, "Measurement Profile", "Thành phẩm theo m2", {
+    profile_name: "Thành phẩm theo m2",
+    inventory_mode: "Thành phẩm theo m2",
+    stock_uom: "m2",
+    track_dimension_lot: false,
+    require_color: true,
+    require_condition: false,
+    require_length: true,
+    require_width: true,
+    require_piece_qty: true,
+    require_bundle_qty: false,
+    disabled: false,
+    _migration_source: MIGRATION_SOURCE,
+  });
+  appendSearchUpsert(
+    sql,
+    "Measurement Profile",
+    "Thành phẩm theo m2",
+    "Thành phẩm theo m2",
+    "Thành phẩm cửa theo chiều rộng chiều cao số bộ màu",
+  );
+  appendPatchUpsert(sql, "Supplier", SUPPLIER, {
+    supplier_name: SUPPLIER,
+    receipt_tolerance_pct: 5,
+    disabled: false,
+    _migration_source: MIGRATION_SOURCE,
+  });
+
+  // Các bản ghi nhập cũ đã có inventory_mode nhưng chưa có Link bộ quy cách. Chỉ điền đúng
+  // profile cùng tên kiểu quản lý; không đổi ĐVT, giá hay bất kỳ số tồn nào.
+  sql.push(`UPDATE documents
+SET payload_json=json_set(
+      payload_json,
+      '$.measurement_profile',
+      json_extract(payload_json,'$.inventory_mode')
+    ),
+    modified_at=${quote(MIGRATION_AT)},
+    modified_by='admin',
+    version=version+1
+WHERE tenant_id='alu'
+  AND doctype='Item'
+  AND json_extract(payload_json,'$.inventory_mode') IN ('Hàng thường','Thành phẩm theo m2')
+  AND COALESCE(json_extract(payload_json,'$.measurement_profile'),'')<>json_extract(payload_json,'$.inventory_mode');`);
 
   for (const target of targets) {
     const spec = specCode(target);

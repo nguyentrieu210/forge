@@ -307,7 +307,46 @@ function assertPurchaseContext(target:{supplier:string;company:string;currency:s
  * đơn vị chung là cách duy nhất so được hai chứng từ khai bằng hai đơn vị khác nhau; sổ
  * tiến độ (`purchase_order_progress_entries`) vì thế cũng ghi bằng đơn vị tồn.
  */
-async function assertPurchaseRemaining(context:ControllerContext<JsonObject>,po:CanonicalDocument<PurchaseOrderData>,items:PurchaseItem[],kind:"Receipt"|"Billing"):Promise<void>{const ordered=new Map<string,number>();for(const i of po.data.items)ordered.set(i.item_code,(ordered.get(i.item_code)??0)+stockQtyMicros(i));const requested=new Map<string,number>();for(const i of items)requested.set(i.item_code,(requested.get(i.item_code)??0)+stockQtyMicros(i));for(const[item,qty]of requested){const max=ordered.get(item);if(max===undefined)throw errors.reference(`Item ${item} is not in Purchase Order ${po.name}`);const used=await context.reader.getProcuredQuantityMicros(context.command.tenant_id,po.name,kind,item);if(used+qty>max)throw errors.reference(`${kind} quantity for ${item} exceeds Purchase Order quantity`)}}
+async function assertPurchaseRemaining(
+  context: ControllerContext<JsonObject>,
+  po: CanonicalDocument<PurchaseOrderData>,
+  items: PurchaseItem[],
+  kind: "Receipt" | "Billing",
+): Promise<void> {
+  const ordered = new Map<string, number>();
+  for (const item of po.data.items) {
+    ordered.set(item.item_code, (ordered.get(item.item_code) ?? 0) + stockQtyMicros(item));
+  }
+  const requested = new Map<string, number>();
+  for (const item of items) {
+    requested.set(item.item_code, (requested.get(item.item_code) ?? 0) + stockQtyMicros(item));
+  }
+  let tolerancePct = 0;
+  if (kind === "Receipt" && po.data.supplier) {
+    const supplier = await context.reader.getMasterRecordData(
+      context.command.tenant_id,
+      "Supplier",
+      po.data.supplier,
+    );
+    const declared = Number(supplier?.receipt_tolerance_pct ?? 0);
+    if (!Number.isFinite(declared) || declared < 0 || declared > 50) {
+      throw errors.validation("Supplier receipt tolerance must be between 0 and 50%");
+    }
+    tolerancePct = declared;
+  }
+  for (const [item, qty] of requested) {
+    const orderedQty = ordered.get(item);
+    if (orderedQty === undefined) throw errors.reference(`Item ${item} is not in Purchase Order ${po.name}`);
+    const max = Math.floor(orderedQty * (1 + tolerancePct / 100));
+    const used = await context.reader.getProcuredQuantityMicros(context.command.tenant_id, po.name, kind, item);
+    if (used + qty > max) {
+      throw errors.reference(
+        `${kind} quantity for ${item} exceeds Purchase Order quantity`
+        + (tolerancePct > 0 ? ` plus ${tolerancePct}% supplier tolerance` : ""),
+      );
+    }
+  }
+}
 
 /**
  * Không đặt mua quá số đã yêu cầu — cùng một luật, một tầng cao hơn.

@@ -32,6 +32,20 @@ const aliases = [...ALUMDOOR_LEGACY_COLOR_MAP.entries()]
   .filter(([legacy]) => ["GS", "VK", "CF", "XF", "4004", "9512 ( TRẮNG )"].includes(legacy));
 const cases = aliases.map(([legacy, canonical]) => `WHEN ${sqlText(legacy)} THEN ${sqlText(canonical)}`).join(" ");
 const legacyList = aliases.map(([legacy]) => sqlText(legacy)).join(",");
+const colorRows = (colors) => colors.map((color, index) => ({
+  row_id: `COLOR-${String(index + 1).padStart(2, "0")}`,
+  color: color.code,
+}));
+const staticColors = ALUMDOOR_COLOR_CATALOG.filter((color) => color.finish === "Sơn tĩnh điện");
+const rawAluminiumColors = colorRows([
+  ALUMDOOR_COLOR_CATALOG.find((color) => color.code === "THÔ"),
+  ...staticColors,
+].filter(Boolean));
+const staticAllowed = colorRows(staticColors);
+const australiaPlated = colorRows(ALUMDOOR_COLOR_CATALOG.filter((color) =>
+  color.finish === "Mạ" && color.groups.includes("Cửa tấm liền Úc")));
+const taiwanPlated = colorRows(ALUMDOOR_COLOR_CATALOG.filter((color) =>
+  color.finish === "Mạ" && color.groups.includes("Cửa Đài Loan")));
 
 const sql = `-- Alumdoor canonical color catalogue correction.
 -- Idempotent: upsert 24 canonical colors, normalize legacy lot links, then remove obsolete aliases.
@@ -69,6 +83,37 @@ WHERE tenant_id=${sqlText(tenant)} AND doctype='Item Color' AND name IN (${legac
 
 DELETE FROM documents
 WHERE tenant_id=${sqlText(tenant)} AND doctype='Item Color' AND name IN (${legacyList});
+
+-- Chiều chặn thật nằm trên Item.allowed_colors. Không dùng phạm vi nhóm rộng để cấp màu:
+-- Cửa Úc/Đài Loan/Lưới/Phụ kiện chỉ được STĐ khi chính mã hàng ghi STĐ/STD.
+UPDATE documents
+SET payload_json=json_set(
+      payload_json,
+      '$.allowed_colors',
+      CASE
+        WHEN json_extract(payload_json,'$.inventory_mode')='Nhôm cây/lá'
+          THEN json(${sqlText(JSON.stringify(rawAluminiumColors))})
+        WHEN json_extract(payload_json,'$.item_group') IN ('Cửa CN Đức','Cửa siêu trường')
+          OR json_extract(payload_json,'$.item_name') LIKE '%STĐ%'
+          OR json_extract(payload_json,'$.item_name') LIKE '%STD%'
+          OR json_extract(payload_json,'$.description') LIKE '%STĐ%'
+          OR json_extract(payload_json,'$.description') LIKE '%STD%'
+          OR json_extract(payload_json,'$.item_name') LIKE '%Sơn tĩnh điện%'
+          OR json_extract(payload_json,'$.item_name') LIKE '%SƠN TĨNH ĐIỆN%'
+          THEN json(${sqlText(JSON.stringify(staticAllowed))})
+        WHEN json_extract(payload_json,'$.item_group')='Cửa tấm liền Úc'
+          THEN json(${sqlText(JSON.stringify(australiaPlated))})
+        WHEN json_extract(payload_json,'$.item_group')='Cửa Đài Loan'
+          THEN json(${sqlText(JSON.stringify(taiwanPlated))})
+        ELSE json('[]')
+      END
+    ),
+    modified_at=${sqlText(importedAt)},
+    modified_by='admin',
+    version=version+1
+WHERE tenant_id=${sqlText(tenant)}
+  AND doctype='Item'
+  AND COALESCE(json_extract(payload_json,'$.disabled'),0)=0;
 `;
 
 await writeFile(path.resolve(output), sql, "utf8");

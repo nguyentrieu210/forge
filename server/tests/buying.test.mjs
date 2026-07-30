@@ -90,6 +90,25 @@ test("đặt 20 CÂY rồi nhận 117 MÉT là nhận ĐÚNG ĐỦ, không phả
   );
 });
 
+test("dung sai nhận hàng lấy từ Supplier và chặn đúng ngoài ±5%", async () => {
+  const { store, kernel } = setup();
+  store.seedMaster("Supplier", "SUP-1", "demo", { receipt_tolerance_pct: 5 });
+  await createAndSubmit(kernel, order("PO-TOLERANCE", [
+    { row_id: "R1", item_code: "PHU-KIEN", qty: "100", rate: "5000" },
+  ]));
+  await createAndSubmit(kernel, { doctype: "Purchase Receipt", name: "PR-TOLERANCE", document: {
+    supplier: "SUP-1", company: "Demo", currency: "USD", posting_at: now(), against_purchase_order: "PO-TOLERANCE",
+    items: [{ row_id: "R1", item_code: "PHU-KIEN", qty: "105", rate: "5000", warehouse: "Stores" }],
+  }});
+  await assert.rejects(
+    createAndSubmit(kernel, { doctype: "Purchase Receipt", name: "PR-TOLERANCE-OVER", document: {
+      supplier: "SUP-1", company: "Demo", currency: "USD", posting_at: now(), against_purchase_order: "PO-TOLERANCE",
+      items: [{ row_id: "R1", item_code: "PHU-KIEN", qty: "0.000001", rate: "5000", warehouse: "Stores" }],
+    }}),
+    /plus 5% supplier tolerance/,
+  );
+});
+
 test("đơn vị lạ mà mặt hàng chưa khai quy đổi thì TỪ CHỐI, không lặng lẽ lấy hệ số 1", async () => {
   const { kernel } = setup();
   await assert.rejects(

@@ -20,7 +20,7 @@ Mốc release phải nhớ:
 - Nhánh release là `feat/platform-design-screens`, commit `f484662`; merge V2 ở `f5187ee`.
 - Gói production là `alumdoor@2.0.0`, content hash
   `b62cb1818d0aafc28f71a8ad5735dff8e866d0ec0f37a08c7c2d2fd449e74387`.
-- 69 DocType, 1 workflow, 57 fixture, 67 mục điều hướng; migration tenant đạt 25/25.
+- 69 DocType, 1 workflow, 57 fixture; migration tenant hiện hành đạt 26/26.
 - 529/529 unit server, toàn bộ SQL, 132/132 tenant Worker, 3/3 query Worker,
   83 nhóm selfcheck client, typecheck và production build đều đạt.
 - Backup release đã kiểm checksum và restore thành công vào hai D1 drill độc lập.
@@ -59,7 +59,7 @@ Tài liệu `docs/ALUMDOOR-QUY-TRINH.md` và `docs/ALUMDOOR-MUA-HANG-THIET-KE.md
 - D1 database id: `6781cbc1-8635-4b6e-af46-09297c120cff`
 - App đang cài: `alumdoor@2.0.0`
 - Content hash: `b62cb1818d0aafc28f71a8ad5735dff8e866d0ec0f37a08c7c2d2fd449e74387`
-- Tenant migration: `25/25`, mới nhất `0025_alumdoor_inventory_views.sql`
+- Tenant migration: `26/26`, mới nhất `0026_supplier_receipt_tolerance.sql`
 - Gateway version: `27f09d52-40c9-4b44-9533-e656c3469440`
 - App Worker version: `641348f5-3aa8-46aa-affe-9180c7865def`
 - Bản V2 đã deploy đủ frontend/gateway, tenant Worker, app Worker và metadata.

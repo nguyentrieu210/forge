@@ -29,6 +29,71 @@ WHERE document_search.title<>excluded.title
 INSERT INTO documents
   (tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,modified_by,payload_json)
 VALUES
+  ('alu','Measurement Profile:Hàng thường','Measurement Profile','Hàng thường','admin',0,'Draft',1,'2026-07-30T16:30:00.000Z','2026-07-30T16:30:00.000Z','admin','{"profile_name":"Hàng thường","inventory_mode":"Hàng thường","stock_uom":"Cái","track_dimension_lot":false,"require_color":false,"require_condition":false,"require_length":false,"require_width":false,"require_piece_qty":false,"require_bundle_qty":false,"disabled":false,"_migration_source":"alumdoor-item-standardization-2026-07-30"}')
+ON CONFLICT(tenant_id,doc_key) DO UPDATE SET
+  payload_json=json_patch(documents.payload_json,excluded.payload_json),
+  modified_at=excluded.modified_at,
+  modified_by=excluded.modified_by,
+  version=documents.version+1
+WHERE documents.payload_json<>json_patch(documents.payload_json,excluded.payload_json);
+
+INSERT INTO document_search(tenant_id,doctype,name,title,content,modified_at)
+VALUES('alu','Measurement Profile','Hàng thường','Hàng thường','Hàng thường số lượng theo đơn vị tính của mặt hàng','2026-07-30T16:30:00.000Z')
+ON CONFLICT(tenant_id,doctype,name) DO UPDATE SET
+  title=excluded.title,
+  content=excluded.content,
+  modified_at=excluded.modified_at
+WHERE document_search.title<>excluded.title
+   OR document_search.content<>excluded.content;
+
+INSERT INTO documents
+  (tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,modified_by,payload_json)
+VALUES
+  ('alu','Measurement Profile:Thành phẩm theo m2','Measurement Profile','Thành phẩm theo m2','admin',0,'Draft',1,'2026-07-30T16:30:00.000Z','2026-07-30T16:30:00.000Z','admin','{"profile_name":"Thành phẩm theo m2","inventory_mode":"Thành phẩm theo m2","stock_uom":"m2","track_dimension_lot":false,"require_color":true,"require_condition":false,"require_length":true,"require_width":true,"require_piece_qty":true,"require_bundle_qty":false,"disabled":false,"_migration_source":"alumdoor-item-standardization-2026-07-30"}')
+ON CONFLICT(tenant_id,doc_key) DO UPDATE SET
+  payload_json=json_patch(documents.payload_json,excluded.payload_json),
+  modified_at=excluded.modified_at,
+  modified_by=excluded.modified_by,
+  version=documents.version+1
+WHERE documents.payload_json<>json_patch(documents.payload_json,excluded.payload_json);
+
+INSERT INTO document_search(tenant_id,doctype,name,title,content,modified_at)
+VALUES('alu','Measurement Profile','Thành phẩm theo m2','Thành phẩm theo m2','Thành phẩm cửa theo chiều rộng chiều cao số bộ màu','2026-07-30T16:30:00.000Z')
+ON CONFLICT(tenant_id,doctype,name) DO UPDATE SET
+  title=excluded.title,
+  content=excluded.content,
+  modified_at=excluded.modified_at
+WHERE document_search.title<>excluded.title
+   OR document_search.content<>excluded.content;
+
+INSERT INTO documents
+  (tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,modified_by,payload_json)
+VALUES
+  ('alu','Supplier:TIẾN ĐẠT','Supplier','TIẾN ĐẠT','admin',0,'Draft',1,'2026-07-30T16:30:00.000Z','2026-07-30T16:30:00.000Z','admin','{"supplier_name":"TIẾN ĐẠT","receipt_tolerance_pct":5,"disabled":false,"_migration_source":"alumdoor-item-standardization-2026-07-30"}')
+ON CONFLICT(tenant_id,doc_key) DO UPDATE SET
+  payload_json=json_patch(documents.payload_json,excluded.payload_json),
+  modified_at=excluded.modified_at,
+  modified_by=excluded.modified_by,
+  version=documents.version+1
+WHERE documents.payload_json<>json_patch(documents.payload_json,excluded.payload_json);
+
+UPDATE documents
+SET payload_json=json_set(
+      payload_json,
+      '$.measurement_profile',
+      json_extract(payload_json,'$.inventory_mode')
+    ),
+    modified_at='2026-07-30T16:30:00.000Z',
+    modified_by='admin',
+    version=version+1
+WHERE tenant_id='alu'
+  AND doctype='Item'
+  AND json_extract(payload_json,'$.inventory_mode') IN ('Hàng thường','Thành phẩm theo m2')
+  AND COALESCE(json_extract(payload_json,'$.measurement_profile'),'')<>json_extract(payload_json,'$.inventory_mode');
+
+INSERT INTO documents
+  (tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,modified_by,payload_json)
+VALUES
   ('alu','Material Specification:ĐM-TD325','Material Specification','ĐM-TD325','admin',0,'Draft',1,'2026-07-30T16:30:00.000Z','2026-07-30T16:30:00.000Z','admin','{"spec_code":"ĐM-TD325","spec_name":"Định mức LÁ ĐÁY LỚN","profile_system":"TIẾN ĐẠT","section_code":"TD325","theoretical_kg_per_m":0.619,"note":"Định mức xác nhận: 0.619 kg/m. Chỉ lưu để đối chiếu và quy đổi đơn vị; không tự sinh số kg đặt mua.","disabled":false,"_migration_source":"alumdoor-item-standardization-2026-07-30"}')
 ON CONFLICT(tenant_id,doc_key) DO UPDATE SET
   payload_json=json_patch(documents.payload_json,excluded.payload_json),
@@ -769,7 +834,7 @@ WHERE document_search.title<>excluded.title
 INSERT INTO documents
   (tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,modified_by,payload_json)
 VALUES
-  ('alu','Item:RON-DD','Item','RON-DD','admin',0,'Draft',1,'2026-07-30T16:30:00.000Z','2026-07-30T16:30:00.000Z','admin','{"item_code":"RON-DD","item_name":"RON ĐÁY ĐỨC","item_group":"Phụ kiện","item_nature":"Hàng tồn kho","material_stage":"Nguyên vật liệu","supply_type":"Mua ngoài","is_stock_item":true,"is_purchase_item":true,"is_sales_item":true,"include_item_in_manufacturing":true,"inventory_mode":"Hàng thường","stock_uom":"Kg","default_purchase_uom":"Kg","default_sales_uom":"Mét","uom_conversions":[{"row_id":"UOM-MÉT","uom":"Mét","conversion_factor":0.117}],"material_specification":"ĐM-RON-DD","valuation_method":"FIFO","has_batch_no":false,"has_serial_no":false,"allow_negative_stock":false,"description":"Vật tư nguyên tử; mua và tồn theo Kg. Nguồn alumdoor-uom-correction-2026-07-28.sql. Định mức kg/m chỉ là dữ liệu đối chiếu, không tự tính số lượng mua hoặc tồn.","disabled":false,"_migration_source":"alumdoor-item-standardization-2026-07-30"}')
+  ('alu','Item:RON-DD','Item','RON-DD','admin',0,'Draft',1,'2026-07-30T16:30:00.000Z','2026-07-30T16:30:00.000Z','admin','{"item_code":"RON-DD","item_name":"RON ĐÁY ĐỨC","item_group":"Phụ kiện","item_nature":"Hàng tồn kho","material_stage":"Nguyên vật liệu","supply_type":"Mua ngoài","is_stock_item":true,"is_purchase_item":true,"is_sales_item":true,"include_item_in_manufacturing":true,"inventory_mode":"Hàng thường","measurement_profile":"Hàng thường","stock_uom":"Kg","default_purchase_uom":"Kg","default_sales_uom":"Mét","uom_conversions":[{"row_id":"UOM-MÉT","uom":"Mét","conversion_factor":0.117}],"material_specification":"ĐM-RON-DD","valuation_method":"FIFO","has_batch_no":false,"has_serial_no":false,"allow_negative_stock":false,"description":"Vật tư nguyên tử; mua và tồn theo Kg. Nguồn alumdoor-uom-correction-2026-07-28.sql. Định mức kg/m chỉ là dữ liệu đối chiếu, không tự tính số lượng mua hoặc tồn.","disabled":false,"_migration_source":"alumdoor-item-standardization-2026-07-30"}')
 ON CONFLICT(tenant_id,doc_key) DO UPDATE SET
   payload_json=json_patch(documents.payload_json,excluded.payload_json),
   modified_at=excluded.modified_at,
@@ -809,7 +874,7 @@ WHERE document_search.title<>excluded.title
 INSERT INTO documents
   (tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,modified_by,payload_json)
 VALUES
-  ('alu','Item:RNHUA-DR','Item','RNHUA-DR','admin',0,'Draft',1,'2026-07-30T16:30:00.000Z','2026-07-30T16:30:00.000Z','admin','{"item_code":"RNHUA-DR","item_name":"RON NHỰA","item_group":"Phụ kiện","item_nature":"Hàng tồn kho","material_stage":"Nguyên vật liệu","supply_type":"Mua ngoài","is_stock_item":true,"is_purchase_item":true,"is_sales_item":true,"include_item_in_manufacturing":true,"inventory_mode":"Hàng thường","stock_uom":"Kg","default_purchase_uom":"Kg","default_sales_uom":"Mét","uom_conversions":[{"row_id":"UOM-MÉT","uom":"Mét","conversion_factor":0.263}],"material_specification":"ĐM-RNHUA-DR","valuation_method":"FIFO","has_batch_no":false,"has_serial_no":false,"allow_negative_stock":false,"description":"Vật tư nguyên tử; mua và tồn theo Kg. Nguồn BRD Q8: chốt định mức ron nhựa 0,263 kg/m. Định mức kg/m chỉ là dữ liệu đối chiếu, không tự tính số lượng mua hoặc tồn.","disabled":false,"_migration_source":"alumdoor-item-standardization-2026-07-30"}')
+  ('alu','Item:RNHUA-DR','Item','RNHUA-DR','admin',0,'Draft',1,'2026-07-30T16:30:00.000Z','2026-07-30T16:30:00.000Z','admin','{"item_code":"RNHUA-DR","item_name":"RON NHỰA","item_group":"Phụ kiện","item_nature":"Hàng tồn kho","material_stage":"Nguyên vật liệu","supply_type":"Mua ngoài","is_stock_item":true,"is_purchase_item":true,"is_sales_item":true,"include_item_in_manufacturing":true,"inventory_mode":"Hàng thường","measurement_profile":"Hàng thường","stock_uom":"Kg","default_purchase_uom":"Kg","default_sales_uom":"Mét","uom_conversions":[{"row_id":"UOM-MÉT","uom":"Mét","conversion_factor":0.263}],"material_specification":"ĐM-RNHUA-DR","valuation_method":"FIFO","has_batch_no":false,"has_serial_no":false,"allow_negative_stock":false,"description":"Vật tư nguyên tử; mua và tồn theo Kg. Nguồn BRD Q8: chốt định mức ron nhựa 0,263 kg/m. Định mức kg/m chỉ là dữ liệu đối chiếu, không tự tính số lượng mua hoặc tồn.","disabled":false,"_migration_source":"alumdoor-item-standardization-2026-07-30"}')
 ON CONFLICT(tenant_id,doc_key) DO UPDATE SET
   payload_json=json_patch(documents.payload_json,excluded.payload_json),
   modified_at=excluded.modified_at,
@@ -849,7 +914,7 @@ WHERE document_search.title<>excluded.title
 INSERT INTO documents
   (tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,modified_by,payload_json)
 VALUES
-  ('alu','Item:RNINOX-DR','Item','RNINOX-DR','admin',0,'Draft',1,'2026-07-30T16:30:00.000Z','2026-07-30T16:30:00.000Z','admin','{"item_code":"RNINOX-DR","item_name":"RON INOX","item_group":"Phụ kiện","item_nature":"Hàng tồn kho","material_stage":"Nguyên vật liệu","supply_type":"Mua ngoài","is_stock_item":true,"is_purchase_item":true,"is_sales_item":true,"include_item_in_manufacturing":true,"inventory_mode":"Hàng thường","stock_uom":"Kg","default_purchase_uom":"Kg","default_sales_uom":"Mét","uom_conversions":[{"row_id":"UOM-MÉT","uom":"Mét","conversion_factor":0.124}],"material_specification":"ĐM-RNINOX-DR","valuation_method":"FIFO","has_batch_no":false,"has_serial_no":false,"allow_negative_stock":false,"description":"Vật tư nguyên tử; mua và tồn theo Kg. Nguồn BRD: chốt định mức ron inox 0,124 kg/m. Định mức kg/m chỉ là dữ liệu đối chiếu, không tự tính số lượng mua hoặc tồn.","disabled":false,"_migration_source":"alumdoor-item-standardization-2026-07-30"}')
+  ('alu','Item:RNINOX-DR','Item','RNINOX-DR','admin',0,'Draft',1,'2026-07-30T16:30:00.000Z','2026-07-30T16:30:00.000Z','admin','{"item_code":"RNINOX-DR","item_name":"RON INOX","item_group":"Phụ kiện","item_nature":"Hàng tồn kho","material_stage":"Nguyên vật liệu","supply_type":"Mua ngoài","is_stock_item":true,"is_purchase_item":true,"is_sales_item":true,"include_item_in_manufacturing":true,"inventory_mode":"Hàng thường","measurement_profile":"Hàng thường","stock_uom":"Kg","default_purchase_uom":"Kg","default_sales_uom":"Mét","uom_conversions":[{"row_id":"UOM-MÉT","uom":"Mét","conversion_factor":0.124}],"material_specification":"ĐM-RNINOX-DR","valuation_method":"FIFO","has_batch_no":false,"has_serial_no":false,"allow_negative_stock":false,"description":"Vật tư nguyên tử; mua và tồn theo Kg. Nguồn BRD: chốt định mức ron inox 0,124 kg/m. Định mức kg/m chỉ là dữ liệu đối chiếu, không tự tính số lượng mua hoặc tồn.","disabled":false,"_migration_source":"alumdoor-item-standardization-2026-07-30"}')
 ON CONFLICT(tenant_id,doc_key) DO UPDATE SET
   payload_json=json_patch(documents.payload_json,excluded.payload_json),
   modified_at=excluded.modified_at,

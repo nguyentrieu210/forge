@@ -125,7 +125,9 @@ function positive(value: unknown): boolean {
 }
 
 function checked(value: unknown): boolean {
-  return value === true || value === 1 || value === "1";
+  if (value === true || value === 1 || value === "1") return true;
+  const normalized = String(value ?? "").trim().toLocaleLowerCase("vi");
+  return normalized === "có" || normalized === "co" || normalized === "yes" || normalized === "true";
 }
 
 /**
@@ -424,6 +426,10 @@ async function validatePurchaseMeasurement(
     }
 
     if (item.inventory_mode !== "Nhôm cây/lá") continue;
+    const stamped = String(row.is_stamped ?? "").trim();
+    if (stamped !== "Có" && stamped !== "Không") {
+      return refuse(`${line}: cần chọn Dập là Có hoặc Không.`);
+    }
     if (subject.doctype === "Purchase Order") {
       const specificationName = String(item.material_specification ?? "").trim();
       if (!specificationName) {
@@ -702,7 +708,7 @@ async function validateTransactionLines(
 /**
  * Màu là một chiều của hàng thật, không phải ghi chú.
  *
- * - Item quyết định màu nào được dùng (danh sách rỗng = mọi màu đang hoạt động).
+ * - Item quyết định màu nào được dùng. Danh sách rỗng là lỗi cấu hình, không được mở toàn bộ màu.
  * - Measurement Profile quyết định chứng từ có bắt buộc chọn màu hay không.
  * - Mọi chứng từ giữ MÃ màu chuẩn; không cho "ghi gần giống" thành một vị trí tồn khác.
  */
@@ -758,7 +764,10 @@ async function validateDocumentColors(
     if (required && !color) return refuse(`${line}: cần chọn Mã màu.`);
     if (!color) continue;
     const allowed = colorNames(item);
-    if (allowed.length && !allowed.includes(color)) {
+    if (!allowed.length) {
+      return refuse(`${line}: mặt hàng chưa được cấu hình Các màu được phép.`);
+    }
+    if (!allowed.includes(color)) {
       return refuse(`${line}: màu ${color} không nằm trong Các màu được phép của mặt hàng.`);
     }
   }
@@ -1916,6 +1925,7 @@ const PURCHASE_LINE_FIELDS = [
   "item_code", "item_name", "inventory_mode", "measurement_profile", "stock_uom", "min_area_sqm", "color",
   "width_m", "height_m", "set_count",
   "length_m", "qty_bundle", "qty_bar", "is_stamped", "actual_weight_kg", "total_length_m",
+  "material_specification", "theoretical_kg_per_m", "theoretical_kg",
   "actual_kg_per_m", "actual_kg_per_sqm", "so_no",
   "qty", "uom", "conversion_factor", "stock_qty", "rate", "amount", "note",
 ] as const;
@@ -1925,11 +1935,84 @@ interface PurchaseDoc {
   supplier?: string;
   company?: string;
   currency?: string;
+  against_purchase_order?: string;
+  transaction_date?: string;
+  docstatus?: number;
   supplier_group?: string;
   buying_price_list?: string;
   schedule_date?: string;
   items?: Array<Record<string, unknown>>;
   modified?: string;
+}
+
+export interface FifoBarBalance {
+  purchase_order: string;
+  transaction_date: string;
+  ordered_bars: number;
+  received_bars: number;
+  source_line: Record<string, unknown>;
+}
+
+export interface FifoBarAllocation {
+  purchase_order: string;
+  transaction_date: string;
+  allocated_bars: number;
+  kind: "Theo đơn" | "Dung sai";
+  source_line: Record<string, unknown>;
+}
+
+/**
+ * Phân bổ số cây nhà máy giao theo đơn cũ nhất trước. Dung sai chỉ nhận phần DƯ sau khi
+ * mọi số cây đã đặt đã được lấp đầy; không dùng +5% của đơn cũ để ăn mất cây của đơn mới.
+ */
+export function allocateBarsFifo(
+  balances: FifoBarBalance[],
+  deliveredBars: number,
+  tolerancePct: number,
+): FifoBarAllocation[] {
+  if (!Number.isFinite(deliveredBars) || deliveredBars <= 0) throw new Error("Số cây thực nhận phải lớn hơn 0.");
+  if (!Number.isFinite(tolerancePct) || tolerancePct < 0 || tolerancePct > 50) {
+    throw new Error("Dung sai nhận hàng phải từ 0 đến 50%.");
+  }
+  const ordered = [...balances].sort((left, right) =>
+    left.transaction_date.localeCompare(right.transaction_date)
+    || left.purchase_order.localeCompare(right.purchase_order));
+  const allocations: FifoBarAllocation[] = [];
+  let remaining = deliveredBars;
+  const totalCapacity = ordered.reduce(
+    (sum, balance) => sum + balance.ordered_bars * (1 + tolerancePct / 100),
+    0,
+  );
+  const totalReceived = ordered.reduce((sum, balance) => sum + balance.received_bars, 0);
+  if (deliveredBars > totalCapacity - totalReceived + 1e-6) {
+    throw new Error(`Số cây giao vượt tổng số đặt và dung sai ${tolerancePct}%.`);
+  }
+  for (const balance of ordered) {
+    const outstanding = Math.max(0, balance.ordered_bars - balance.received_bars);
+    const take = Math.min(remaining, outstanding);
+    if (take > 0) {
+      allocations.push({
+        purchase_order: balance.purchase_order,
+        transaction_date: balance.transaction_date,
+        allocated_bars: take,
+        kind: "Theo đơn",
+        source_line: balance.source_line,
+      });
+      remaining -= take;
+    }
+    if (remaining <= 0) return allocations;
+  }
+  // Phần giao dư thuộc đơn gần nhất, trong tổng dung sai của các đơn cùng mã/quy cách.
+  const latest = ordered.at(-1);
+  if (!latest) throw new Error("Không có đơn mua phù hợp để phân bổ.");
+  allocations.push({
+    purchase_order: latest.purchase_order,
+    transaction_date: latest.transaction_date,
+    allocated_bars: remaining,
+    kind: "Dung sai",
+    source_line: latest.source_line,
+  });
+  return allocations;
 }
 
 function purchaseLines(source: PurchaseDoc, warehouse: string): Array<Record<string, unknown>> {
@@ -2119,6 +2202,169 @@ async function receiptFromPurchaseOrder(call: PlatformCall, args: Record<string,
   if (!created.ok) return refuse(`Không tạo được phiếu nhập: ${(await created.text()).slice(0, 200)}`);
   const receipt = ((await created.json()) as { data?: { name?: string } }).data?.name ?? "";
   return answer({ purchase_receipt: receipt, purchase_order: order, items, lines: items.length, draft: true });
+}
+
+function sameAluminiumReceiptShape(line: Record<string, unknown>, args: Record<string, unknown>): boolean {
+  if (String(line.item_code ?? "").trim() !== String(args.item_code ?? "").trim()) return false;
+  const expectedLength = Number(args.length_m);
+  if (Number.isFinite(expectedLength) && expectedLength > 0
+    && !nearlyEqual(Number(line.length_m), expectedLength)) return false;
+  const color = String(args.color ?? "").trim();
+  if (color && String(line.color ?? "").trim() !== color) return false;
+  const stamped = String(args.is_stamped ?? "").trim();
+  if (stamped && checked(line.is_stamped) !== checked(stamped)) return false;
+  return true;
+}
+
+async function listSubmittedPurchaseDocuments(
+  call: PlatformCall,
+  doctype: "Purchase Order" | "Purchase Receipt",
+  supplier: string,
+): Promise<PurchaseDoc[]> {
+  const filters = [["supplier", "=", supplier], ["docstatus", "=", 1]];
+  const query = new URLSearchParams({
+    fields: JSON.stringify(["name"]),
+    filters: JSON.stringify(filters),
+    limit_page_length: "500",
+  });
+  const response = await call(`resource/${encodeURIComponent(doctype)}?${query}`);
+  if (!response.ok) throw new Error(`Không đọc được ${doctype} đã ghi sổ của ${supplier}.`);
+  const names = (((await response.json()) as { data?: Array<{ name?: string }> }).data ?? [])
+    .map((row) => String(row.name ?? "").trim())
+    .filter(Boolean);
+  return (await Promise.all(names.map(async (name) => {
+    try { return await readDoc<PurchaseDoc>(call, doctype, name); } catch { return null; }
+  }))).filter((doc): doc is PurchaseDoc => Boolean(doc));
+}
+
+async function fifoReceiptDraft(
+  call: PlatformCall,
+  args: Record<string, unknown>,
+  create: boolean,
+): Promise<Response> {
+  const supplier = String(args.supplier ?? "").trim();
+  const itemCode = String(args.item_code ?? "").trim();
+  const deliveredBars = Number(args.qty_bar);
+  const lengthM = Number(args.length_m);
+  const actualKg = Number(args.actual_weight_kg);
+  const rate = Number(args.rate ?? 0);
+  const color = String(args.color ?? "").trim();
+  const stamped = String(args.is_stamped ?? "").trim();
+  const warehouse = String(args.warehouse ?? "").trim();
+  if (!supplier || !itemCode) return refuse("Cần chọn Nhà cung cấp và Mã hàng.");
+  if (!Number.isFinite(deliveredBars) || deliveredBars <= 0) return refuse("Số cây thực nhận phải lớn hơn 0.");
+  if (!Number.isFinite(lengthM) || lengthM <= 0) return refuse("Chiều dài cây phải lớn hơn 0.");
+  if (!Number.isFinite(actualKg) || actualKg <= 0) return refuse("Cần nhập Tổng kg thực cân lớn hơn 0.");
+  if (!Number.isFinite(rate) || rate < 0) return refuse("Đơn giá theo Kg không hợp lệ.");
+  if (!color) return refuse("Cần chọn Màu.");
+  if (stamped !== "Có" && stamped !== "Không") return refuse("Cần chọn Dập là Có hoặc Không.");
+  if (!warehouse) return refuse("Cần chọn Kho nhập.");
+
+  const [supplierDoc, orders, receipts] = await Promise.all([
+    readMaster(call, "Supplier", supplier),
+    listSubmittedPurchaseDocuments(call, "Purchase Order", supplier),
+    listSubmittedPurchaseDocuments(call, "Purchase Receipt", supplier),
+  ]);
+  const tolerance = Number(supplierDoc?.receipt_tolerance_pct ?? 0);
+  const receivedByOrder = new Map<string, number>();
+  for (const receipt of receipts) {
+    for (const line of receipt.items ?? []) {
+      if (!sameAluminiumReceiptShape(line, args)) continue;
+      const order = String(line.purchase_order ?? receipt.against_purchase_order ?? "").trim();
+      if (!order) continue;
+      const bars = Number(line.qty_bar);
+      if (Number.isFinite(bars) && bars > 0) receivedByOrder.set(order, (receivedByOrder.get(order) ?? 0) + bars);
+    }
+  }
+  const balances: FifoBarBalance[] = [];
+  for (const order of orders) {
+    let receivedPool = receivedByOrder.get(order.name) ?? 0;
+    for (const line of order.items ?? []) {
+      if (!sameAluminiumReceiptShape(line, args)) continue;
+      const bars = Number(line.qty_bar);
+      if (!Number.isFinite(bars) || bars <= 0) continue;
+      const receivedForLine = Math.min(receivedPool, bars * (1 + tolerance / 100));
+      receivedPool = Math.max(0, receivedPool - receivedForLine);
+      balances.push({
+        purchase_order: order.name,
+        transaction_date: String(order.transaction_date ?? ""),
+        ordered_bars: bars,
+        received_bars: receivedForLine,
+        source_line: line,
+      });
+    }
+  }
+  if (!balances.length) return refuse(`Không có đơn mua đã ghi sổ còn phù hợp cho ${itemCode}.`);
+
+  let allocations: FifoBarAllocation[];
+  try { allocations = allocateBarsFifo(balances, deliveredBars, tolerance); } catch (error) {
+    return refuse(error instanceof Error ? error.message : "Không phân bổ được hàng nhận.");
+  }
+  const actualPerBar = actualKg / deliveredBars;
+  const items = allocations.map((allocation, index) => {
+    const source = allocation.source_line;
+    const kgPerM = Number(source.theoretical_kg_per_m);
+    const baremKg = Number.isFinite(kgPerM) && kgPerM > 0
+      ? lengthM * kgPerM * allocation.allocated_bars
+      : undefined;
+    const quantityKg = actualPerBar * allocation.allocated_bars;
+    return {
+      row_id: `FIFO-${index + 1}`,
+      item_code: itemCode,
+      item_name: source.item_name,
+      inventory_mode: "Nhôm cây/lá",
+      measurement_profile: source.measurement_profile ?? "Nhôm cây/lá",
+      stock_uom: "Kg",
+      material_specification: source.material_specification,
+      theoretical_kg_per_m: source.theoretical_kg_per_m,
+      theoretical_kg: baremKg,
+      length_m: lengthM,
+      qty_bar: allocation.allocated_bars,
+      qty_bundle: source.qty_bundle,
+      total_length_m: lengthM * allocation.allocated_bars,
+      qty: quantityKg,
+      actual_weight_kg: quantityKg,
+      uom: "Kg",
+      conversion_factor: 1,
+      stock_qty: quantityKg,
+      rate,
+      amount: quantityKg * rate,
+      color,
+      is_stamped: stamped,
+      so_no: source.so_no,
+      warehouse,
+      purchase_order: allocation.purchase_order,
+      note: `FIFO ${allocation.kind.toLowerCase()} · đơn ngày ${allocation.transaction_date}`,
+    };
+  });
+  if (!create) {
+    return answer({
+      supplier,
+      item_code: itemCode,
+      delivered_bars: deliveredBars,
+      actual_weight_kg: actualKg,
+      tolerance_pct: tolerance,
+      allocations,
+      items,
+    });
+  }
+  const firstOrder = orders.find((order) => order.name === allocations[0]?.purchase_order);
+  const response = await call("resource/Purchase%20Receipt", {
+    method: "POST",
+    body: JSON.stringify({
+      supplier,
+      company: firstOrder?.company,
+      currency: firstOrder?.currency,
+      posting_at: new Date().toISOString(),
+      ...(args.supplier_invoice_no ? { supplier_invoice_no: String(args.supplier_invoice_no) } : {}),
+      ...(args.driver ? { driver: String(args.driver) } : {}),
+      items,
+      note: `Phân bổ FIFO ${deliveredBars} cây ${itemCode} từ đơn cũ nhất đến mới nhất.`,
+    }),
+  });
+  if (!response.ok) return refuse(`Không tạo được phiếu nhập FIFO: ${(await response.text()).slice(0, 200)}`);
+  const receipt = ((await response.json()) as { data?: { name?: string } }).data?.name ?? "";
+  return answer({ purchase_receipt: receipt, supplier, allocations, items, draft: true });
 }
 
 interface SalesOrderDoc {
@@ -2576,6 +2822,8 @@ export default {
         if (method === "alumdoor.purchase.order_from_quotation") return await orderFromSupplierQuotation(call, args);
         if (method === "alumdoor.purchase.preview_receipt") return await previewPurchaseReceipt(call, args);
         if (method === "alumdoor.purchase.receipt_from_order") return await receiptFromPurchaseOrder(call, args);
+        if (method === "alumdoor.purchase.preview_fifo_receipt") return await fifoReceiptDraft(call, args, false);
+        if (method === "alumdoor.purchase.fifo_receipt") return await fifoReceiptDraft(call, args, true);
         if (method === "alumdoor.sales.preview_delivery") return await previewDelivery(call, args);
         if (method === "alumdoor.sales.delivery_from_order") return await deliveryFromSalesOrder(call, args);
         if (method === "alumdoor.ocr.parse") return await parseOcr(call, env, args);

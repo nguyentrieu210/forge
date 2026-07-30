@@ -2,7 +2,7 @@
   "$schema": "./brief.schema.json",
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "1.27.2",
+  "version": "1.27.3",
   "module": "Alumdoor",
   "domain": "alumdoor",
   "brand": "warm",
@@ -296,6 +296,32 @@
       ],
       "preview": "alumdoor.purchase.preview_receipt | Xem còn thiếu bao nhiêu",
       "commit": "alumdoor.purchase.receipt_from_order | Tạo phiếu nhập nháp | Tạo phiếu nhập nháp cho phần hàng còn lại?",
+      "resultTable": "items"
+    },
+    {
+      "//": "Hàng nhôm nhà máy giao được phân bổ số cây vào đơn cũ nhất trước; một phiếu có thể mang nhiều dòng, mỗi dòng trỏ đúng đơn bị trừ.",
+      "name": "nhap-nhom-fifo",
+      "label": "Nhập nhôm FIFO theo đơn cũ",
+      "menu": true,
+      "icon": "truck",
+      "group": "Mua hàng",
+      "description": "Nhập số cây và kg thực cân; hệ thống xem trước rồi chia vào các đơn mua cũ nhất, giữ lịch sử trên từng dòng.",
+      "permission": "Purchase Receipt",
+      "fields": [
+        "supplier:Link(Supplier)! Nhà cung cấp",
+        "item_code:Link(Item)! Mã hàng",
+        "length_m:Float! Chiều dài cây (m)",
+        "qty_bar:Float! Số cây thực nhận",
+        "actual_weight_kg:Float! Tổng kg thực cân",
+        "rate:Currency! Đơn giá/kg",
+        "color:Link(Item Color)! Màu",
+        "is_stamped:Select(Có,Không)!=(Không) Dập",
+        "warehouse:Link(Warehouse)! Kho nhập",
+        "supplier_invoice_no:Data Số phiếu giao NCC",
+        "driver:Data Người giao"
+      ],
+      "preview": "alumdoor.purchase.preview_fifo_receipt | Xem phân bổ FIFO",
+      "commit": "alumdoor.purchase.fifo_receipt | Tạo phiếu nhập FIFO | Tạo phiếu nhập nháp và trừ đơn cũ nhất trước?",
       "resultTable": "items"
     },
     {
@@ -3407,9 +3433,10 @@
         {
           "fieldname": "qty",
           "fieldtype": "Float",
-          "label": "Số kg đặt (barem)",
+          "label": "Số lượng",
           "required": true,
-          "read_only_depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'"
+          "read_only_depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
+          "description": "Số lượng tính tiền theo ĐVT mua. Riêng nhôm cây/lá tự tính bằng chiều dài × định mức kg/m × số cây/lá."
         },
         {
           "fieldname": "width_m",

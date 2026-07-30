@@ -44,7 +44,7 @@
 - [x] Tạo backup D1 production mới, kiểm checksum và tạo bản mã hoá DPAPI ngoài Cloudflare.
 - [x] Restore drill lần 1 vào D1 mới, không đổi route.
 - [x] Restore drill lần 2 vào một D1 mới khác, không tái sử dụng đích lần 1.
-- [x] Chạy migration tới `0025_alumdoor_inventory_views.sql` và nâng gói production.
+- [x] Chạy migration tồn nhôm tới `0025_alumdoor_inventory_views.sql`; bản 2.0.4 bổ sung `0026_supplier_receipt_tolerance.sql`.
 - [ ] Pilot nhập — giữ chỗ — cắt/đầu thừa — kiểm kê; đối chiếu ledger, báo cáo và `/health`.
 - [x] Có phê duyệt rõ ràng từ người dùng để nhập nhánh design và deploy production.
 - [x] Deploy gateway/client, tenant Worker, app Worker và `alumdoor@2.0.0`.

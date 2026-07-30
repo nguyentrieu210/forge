@@ -16,6 +16,7 @@
 | Giữ chỗ | Availability theo ngưỡng chiều dài; cắt chặn giữ chỗ của chứng từ khác; apply idempotent; maintenance tự nhả sau hạn |
 | Kiểm kê | Snapshot hai đơn vị, lý do bắt buộc, điều chỉnh weight-only, cảnh báo voucher phát sinh sau snapshot |
 | Báo cáo | Migration 0025 tạo các view tồn/khả dụng; report `Tồn nhôm theo khổ` là home của V2 |
+| Dung sai nhập | Migration 0026 khóa tổng phiếu nhận theo dung sai trên Supplier; Worker phân bổ số cây FIFO theo đơn cũ nhất |
 | Khóa kỳ | Current row + event ledger; D1 batch atomic; role/company/date/reason được kiểm ở server |
 | AI | Action chỉ đọc theo quyền người gọi; câu trả lời thành công ghi `ai_logs`; không tự ghi chứng từ |
 | Lịch nền tảng | Nhả giữ chỗ, nhắc kiểm kê tháng/quý, báo cáo cuối ngày có lệch cân; health có last run/failure/stale |

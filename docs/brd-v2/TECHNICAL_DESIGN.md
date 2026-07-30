@@ -5,6 +5,13 @@
 > **Luật của pha này** (`field-ledger.md`): *"Trường không có trong ledger = **không được code**. Muốn
 > thêm trường = quay lại sửa ledger trước."* PHA 5 chỉ dịch máy móc ledger thành brief + controller.
 
+> **BẢN SỬA ĐÃ DUYỆT 30/07/2026:** các đoạn cũ mô tả nhôm tồn theo Cây/catch-weight đã bị
+> thay thế. Nhôm mua và tồn theo `Kg`; `qty` là số lượng tính tiền. Trên Đơn mua nhôm,
+> `qty = length_m × theoretical_kg_per_m × qty_bar`; trên Phiếu nhập, `qty` là số lượng thực nhận
+> theo ĐVT và `theoretical_kg` là barem đối chiếu. Với Cái/Bộ/Mét, `qty` nhập tay và
+> `amount = qty × rate`. `qty_bar`, `qty_bundle`, kích thước, màu và dập là snapshot phụ.
+> Màu bắt buộc lọc/chặn bằng `Item.allowed_colors`; danh sách rỗng là lỗi cấu hình.
+
 ---
 
 ## 1. Ledger của Forge khác AppWeb ở hai cột

@@ -1,6 +1,6 @@
 # ALUMDOOR V2 — RELEASE / ROLLBACK RUNBOOK
 
-> Production hiện hành: `alumdoor@2.0.0` trên tenant `alu` từ 2026-07-30.
+> Bản phát hành hiện hành của tài liệu: `alumdoor@2.0.4` trên tenant `alu`, ngày 2026-07-30.
 > Release đã nâng cấp từ bản thực tế đọc trực tiếp `alumdoor@1.26.2`, cùng app id `alumdoor`.
 > Tài liệu này không cấp quyền deploy. Chỉ chạy bước production sau khi có phê duyệt rõ ràng.
 
@@ -34,7 +34,7 @@ node scripts/forge-app.mjs briefs/alumdoor-v2.json --dry-run --out work/alumdoor
 
 Xác nhận package:
 
-- id `alumdoor`, version `2.0.0`;
+- id `alumdoor`, version `2.0.4`;
 - 69 DocType, 1 workflow, 57 fixture;
 - home `report:Tồn nhôm theo khổ`;
 - không có bí mật trong package.
@@ -77,8 +77,8 @@ Hai evidence phải cùng trỏ tới SHA-256 của backup release.
 ## 4. Staging/pilot
 
 1. Đóng băng ghi nghiệp vụ trong lúc chụp backup và nâng cấp.
-2. Áp migration tenant theo thứ tự tới `0025_alumdoor_inventory_views.sql`.
-3. Cài package `alumdoor@2.0.0` như một **upgrade của cùng app id**, không cài app song song.
+2. Áp migration tenant theo thứ tự tới `0026_supplier_receipt_tolerance.sql`.
+3. Cài package `alumdoor@2.0.4` như một **upgrade của cùng app id**, không cài app song song.
 4. Deploy tenant Worker/platform tương thích trước khi mở UI V2.
 5. Deploy runtime client đã build.
 6. Kiểm `/health`: service OK, migration hiện hành, maintenance không failed/stale.
@@ -102,9 +102,9 @@ Chỉ thực hiện sau khi staging/pilot đạt và có phê duyệt:
 
 1. Thông báo cửa sổ bảo trì, dừng ghi.
 2. Chụp backup production cuối cùng nếu backup gate không còn sát thời điểm.
-3. Áp migration tới 0025.
+3. Áp migration tới 0026.
 4. Deploy platform/tenant Worker tương thích.
-5. Cài `alumdoor@2.0.0`.
+5. Cài `alumdoor@2.0.4`.
 6. Deploy client.
 7. Chạy health/smoke và pilot rút gọn.
 8. Đối chiếu ledger/report; ghi thời điểm mở lại hệ thống.

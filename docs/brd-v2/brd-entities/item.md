@@ -5,6 +5,10 @@
 > **Nguyên tắc phân vai:** Item giữ **sự thật ỔN ĐỊNH** của một mặt hàng. Thứ thay đổi theo từng
 > chuyến hàng — màu, khổ, tình trạng, kg thực cân — nằm ở **Batch + Custom Field (E02)**, không nằm ở đây.
 
+> **Quyết định duyệt lại 30/07/2026:** nhôm mua và tồn theo `Kg`; số cây/lá và số bó là
+> số lượng phụ theo từng dòng/lô. `qty` luôn là số lượng tính tiền theo `uom`.
+> `allowed_colors` rỗng là chưa cấu hình và phải chặn; không còn nghĩa “mọi màu”.
+
 ---
 
 ## 1. Thay đổi so với bản cũ (`briefs/alumdoor.json`)
@@ -67,7 +71,7 @@
 | Field | Kiểu | Bắt buộc | Validate + câu lỗi | Nghiệp vụ |
 |---|---|---|---|---|
 | `default_color` | Link(Item Color) | — | phải nằm trong `allowed_colors` nếu bảng đó có khai | Gợi ý, không ép |
-| `allowed_colors` | Table(Item Allowed Color) | — | màu phải đang hoạt động | Trống = dùng được mọi màu đang hoạt động. **Đây là chiều CHẶN duy nhất** — xem ghi chú dưới |
+| `allowed_colors` | Table(Item Allowed Color) | — | màu phải đang hoạt động | Trống = **chưa cấu hình, không cho chọn/lưu màu**. Đây là chiều CHẶN duy nhất |
 
 > **⚠️ Sửa lại nhận định trước đó của chính tài liệu này.** Có lúc em định ép ràng buộc theo
 > `Item Color.applies_to` ("Màu XÁM–XANH DƯƠNG chỉ dùng cho Cửa Đài Loan"). **Không làm được** — đọc

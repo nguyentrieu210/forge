@@ -4,6 +4,15 @@
 > 2026-07-29, gồm §10 bốn quyết định kiến trúc QĐ-1…QĐ-4).
 > Chuẩn nghiệm thu: **một AI/dev khác chưa từng gặp chủ xưởng đọc xong code đúng, không phải hỏi lại.**
 
+> **QUYẾT ĐỊNH NGHIỆP VỤ DUYỆT LẠI 30/07/2026 — ưu tiên cao hơn mọi đoạn QĐ-2 cũ bên dưới:**
+> `qty` luôn là **Số lượng tính tiền theo ĐVT mua** và `amount = qty × rate`.
+> Hàng Cái/Bộ/Mét nhập `qty` thủ công theo đúng ĐVT. Chỉ `Nhôm cây/lá` trên Đơn mua tự tính
+> `qty = theoretical_kg = length_m × theoretical_kg_per_m × qty_bar`, ĐVT `Kg`.
+> Nhôm nhập và tồn theo `Kg`; số bó/số cây/chiều dài là số lượng phụ để theo dõi giao hàng.
+> Phiếu nhập nhôm lưu riêng kg barem và kg thực nhận. Màu STĐ chỉ áp toàn nhóm Cửa CN Đức,
+> Cửa Siêu Trường; Cửa Úc/Đài Loan/Lưới/Phụ kiện chỉ áp từng Item có `STĐ`/`STD`.
+> `Item.allowed_colors` rỗng là **chưa cấu hình và phải chặn**, không còn mang nghĩa “mọi màu”.
+
 ---
 
 ## §0. NHẬT KÝ ĐỌC CONTRACT
