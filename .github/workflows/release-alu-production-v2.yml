@@ -1,0 +1,123 @@
+name: Release alu production v2
+
+on:
+  push:
+    branches:
+      - release/alu-fifo-core-20260731
+    paths:
+      - .github/release/alu-fifo-core.deploy.trigger
+      - .github/workflows/release-alu-production-v2.yml
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: production-alu
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Backup, migrate, deploy and smoke alu
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    environment: production
+    env:
+      TENANT: alu
+      TARGET_SHA: 591ca359937d6ae12803d36c74996db8482060af
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: d4d5a24d4e56f28f27fe58b64ef149a5
+      EVIDENCE_DIR: /tmp/forge-release-evidence
+      BACKUP_DIR: /tmp/forge-backup/alu
+
+    steps:
+      - name: Checkout exact verified release
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Verify release inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$TENANT" = "alu"
+          test "$TARGET_SHA" = "591ca359937d6ae12803d36c74996db8482060af"
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          mkdir -p "$EVIDENCE_DIR" "$BACKUP_DIR"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Backup tenant
+        shell: bash
+        run: |
+          set -euo pipefail
+          node server/scripts/backup-tenant.mjs --tenant "$TENANT"
+          node server/scripts/backup-tenant.mjs --tenant "$TENANT" --execute --output-dir "$BACKUP_DIR"
+
+      - name: Upload pre-release backup
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alu-pre-release-backup-${{ github.run_id }}
+          path: /tmp/forge-backup/alu/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Migrate tenant
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd server
+          node scripts/migrate-tenant.mjs --tenant "$TENANT"
+          node scripts/migrate-tenant.mjs --tenant "$TENANT" --execute --confirm "$TENANT"
+
+      - name: Deploy tenant
+        shell: bash
+        env:
+          WRANGLER_OUTPUT_FILE_PATH: /tmp/forge-release-evidence/wrangler-output.ndjson
+        run: |
+          set -euo pipefail
+          cd server
+          node scripts/deploy-tenant.mjs --tenant "$TENANT"
+          node scripts/deploy-tenant.mjs --tenant "$TENANT" --execute --confirm "$TENANT"
+
+      - name: Smoke production
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://alu.kairo.vn"
+          health=0
+          for attempt in $(seq 1 18); do
+            health="$(curl --silent --show-error --output "$EVIDENCE_DIR/health.json" --write-out '%{http_code}' "$BASE/health" || true)"
+            [ "$health" = "200" ] && break
+            sleep 5
+          done
+          test "$health" = "200"
+          boot="$(curl --silent --show-error --output "$EVIDENCE_DIR/guest-boot.json" --write-out '%{http_code}' "$BASE/api/method/metaforge.api.get_boot" || true)"
+          test "$boot" = "403"
+          echo "ALU_RELEASE_PASS target_sha=$TARGET_SHA health=$health guest_boot=$boot rollout=disabled"
+
+      - name: Upload release evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alu-release-evidence-${{ github.run_id }}
+          path: /tmp/forge-release-evidence/
+          if-no-files-found: warn
+          retention-days: 30
