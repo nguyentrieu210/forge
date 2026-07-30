@@ -110,6 +110,7 @@ interface InventoryItem {
   default_purchase_uom?: string;
   default_sales_uom?: string;
   measurement_profile?: string;
+  material_specification?: string;
   min_area_sqm?: number;
   is_purchase_item?: unknown;
   is_sales_item?: unknown;
@@ -423,6 +424,42 @@ async function validatePurchaseMeasurement(
     }
 
     if (item.inventory_mode !== "Nhôm cây/lá") continue;
+    if (subject.doctype === "Purchase Order") {
+      const specificationName = String(item.material_specification ?? "").trim();
+      if (!specificationName) {
+        return refuse(`${line}: mặt hàng chưa có định mức kg/m để lập đơn đặt hàng.`);
+      }
+      const specification = await readMaster(call, "Material Specification", specificationName);
+      const kgPerM = Number(specification?.theoretical_kg_per_m);
+      const length = Number(row.length_m);
+      const bars = Number(row.qty_bar);
+      if (!Number.isFinite(kgPerM) || kgPerM <= 0) {
+        return refuse(`${line}: định mức kg/m của ${specificationName} chưa hợp lệ.`);
+      }
+      if (!Number.isFinite(length) || length <= 0) {
+        return refuse(`${line}: cần nhập kích thước/chiều dài lớn hơn 0.`);
+      }
+      if (!Number.isFinite(bars) || bars <= 0) {
+        return refuse(`${line}: cần nhập số cây/lá lớn hơn 0.`);
+      }
+      const expected = length * kgPerM * bars;
+      const declaredBarem = Number(row.theoretical_kg);
+      const declaredQty = Number(row.qty);
+      const declaredRate = Number(row.rate);
+      const declaredAmount = Number(row.amount);
+      if (!Number.isFinite(declaredBarem) || !nearlyEqual(declaredBarem, expected)
+        || !Number.isFinite(declaredQty) || !nearlyEqual(declaredQty, expected)) {
+        return refuse(`${line}: số kg barem phải là ${expected.toFixed(6)} kg (= ${length} m × ${kgPerM} kg/m × ${bars} cây/lá).`);
+      }
+      if (!Number.isFinite(declaredRate) || declaredRate < 0) {
+        return refuse(`${line}: đơn giá theo Kg không hợp lệ.`);
+      }
+      const expectedAmount = expected * declaredRate;
+      if (!Number.isFinite(declaredAmount) || !nearlyEqual(declaredAmount, expectedAmount)) {
+        return refuse(`${line}: thành tiền phải là ${expectedAmount.toFixed(0)} (= ${expected.toFixed(6)} kg barem × ${declaredRate}).`);
+      }
+      continue;
+    }
     /**
      * TIỀN luôn theo Kg thực cân — đây là điều không đổi, vì hoá đơn nhà cung cấp ghi Kg và
      * phiếu giao có cột Kg do chính họ cân.
@@ -1878,7 +1915,7 @@ async function stampQuotation(call: PlatformCall, quote: QuotationDoc, order: st
 const PURCHASE_LINE_FIELDS = [
   "item_code", "item_name", "inventory_mode", "measurement_profile", "stock_uom", "min_area_sqm", "color",
   "width_m", "height_m", "set_count",
-  "length_m", "qty_bundle", "qty_bar", "actual_weight_kg", "total_length_m",
+  "length_m", "qty_bundle", "qty_bar", "is_stamped", "actual_weight_kg", "total_length_m",
   "actual_kg_per_m", "actual_kg_per_sqm", "so_no",
   "qty", "uom", "conversion_factor", "stock_qty", "rate", "amount", "note",
 ] as const;

@@ -169,3 +169,26 @@ test("print format qrcode filter renders a self-contained QR image", () => {
   assert.match(printed, /data:image\/gif;base64,/);
   assert.doesNotMatch(printed, /{{\s*name/);
 });
+
+test("print yesno filter renders stamping choice in Vietnamese", () => {
+  const format = {
+    name: "Purchase Order",
+    doc_type: "Purchase Order",
+    format_type: "Standard",
+    html: "<span>{{ is_stamped | yesno }}</span>",
+    revision: 1,
+  };
+  const checkMeta = meta([{ fieldname: "is_stamped", fieldtype: "Check" }]);
+  const stamped = renderPrintFormat(format, {
+    doctype: "Purchase Order",
+    name: "DMH-1",
+    data: { is_stamped: 1 },
+  }, "vi", checkMeta);
+  const plain = renderPrintFormat(format, {
+    doctype: "Purchase Order",
+    name: "DMH-2",
+    data: { is_stamped: 0 },
+  }, "vi", checkMeta);
+  assert.match(stamped, /<span>Dập<\/span>/);
+  assert.match(plain, /<span>Không dập<\/span>/);
+});

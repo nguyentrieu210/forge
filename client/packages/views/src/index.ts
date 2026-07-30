@@ -63,6 +63,7 @@ export { useFormState, type FormApi } from "./form/useFormState.js";
 export {
   ChildGrid,
   deriveAverageWeight,
+  derivePurchaseOrderBarem,
   type ChildGridProps,
   type AverageWeightResult,
 } from "./form/ChildGrid.js";

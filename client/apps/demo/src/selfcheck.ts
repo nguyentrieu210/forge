@@ -44,7 +44,7 @@ import {
 } from "@metaforge/core";
 import { ControlRegistry, createDefaultRegistry, DateControl, AttachControl, GeolocationControl, LinkControl } from "@metaforge/controls";
 import {
-  FormView, groupLayout, resolveFormFieldWidth, ChildGrid, deriveAverageWeight, createFullRegistry, KanbanView, TreeView, ReportView, PrintView, DashboardView, CalendarView, GanttView, type TreeNodeItem,
+  FormView, groupLayout, resolveFormFieldWidth, ChildGrid, deriveAverageWeight, derivePurchaseOrderBarem, createFullRegistry, KanbanView, TreeView, ReportView, PrintView, DashboardView, CalendarView, GanttView, type TreeNodeItem,
   deriveColumns, applyClientQuery, buildServerQuery, countQuery, deriveStandardFilters, deriveSearchFields, statusVariant, emptyListState,
   applyColumnOrder, columnPreferenceKey, hasCustomColumnPreferences, moveColumn, normalizeColumnPreferences, stableColumnPreferenceScope,
   resolveFormActions, resolveWorkflowActions, editableCodeField, suggestEditableCode, type FormActionCtx,
@@ -1022,6 +1022,29 @@ check("TL trung bình không lấy nhầm số lượng Bộ làm kg", () => {
       actual_weight_kg: 48,
     }),
     { totalAreaSqm: 24, averageWeight: 2, basis: "kg/m²" },
+  );
+});
+
+check("Đơn mua nhôm tính kg barem từ kích thước × định mức × số cây", () => {
+  assert.equal(
+    derivePurchaseOrderBarem({
+      doctype: "Purchase Order Item",
+      name: "AL71",
+      length_m: 7.2,
+      theoretical_kg_per_m: 0.389,
+      qty_bar: 200,
+    }),
+    560.16,
+  );
+  assert.equal(
+    derivePurchaseOrderBarem({
+      doctype: "Purchase Order Item",
+      name: "AL71",
+      length_m: 7.2,
+      theoretical_kg_per_m: 0,
+      qty_bar: 200,
+    }),
+    undefined,
   );
 });
 

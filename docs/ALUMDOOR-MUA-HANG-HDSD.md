@@ -25,8 +25,27 @@ Không bắt buộc đi hết. **Mua quen thì bắt đầu thẳng ở Đơn mu
 
 ### Đặt hàng
 
-**Mua hàng → Đơn mua hàng → Tạo mới.** Chọn nhà cung cấp, ngày hẹn giao, thêm dòng hàng, rồi
-**Ghi sổ**.
+**Mua hàng → Đơn mua hàng → Tạo mới.** Chọn nhà cung cấp, ngày hẹn giao, thêm dòng hàng.
+
+Với nhôm cây/lá, mỗi dòng nhập đúng các cột xưởng yêu cầu:
+
+| Cột | Cách dùng |
+|---|---|
+| Ngày | Ngày đặt ở đầu phiếu |
+| Mã hàng | Chọn mã được phép mua |
+| Kích thước (chiều rộng) | Nhập mét, ví dụ `7,2` |
+| Trọng lượng định mức | Máy lấy từ quy cách kỹ thuật của mã, ví dụ `0,389 kg/m` |
+| Số cây/lá | Nhập số nhà máy phải giao |
+| Số kg barem | Máy tính `kích thước × định mức × số cây` |
+| Đơn giá | Giá một Kg |
+| Thành tiền | Máy tính `kg barem × đơn giá` |
+| Màu | Chọn màu hợp lệ của mã hàng |
+| Dập | Bật nếu dập, tắt nếu không dập |
+
+Đơn đặt **không có kg thực cân** và không có số lần nhập. Kg thực chỉ nhập trên Phiếu nhập
+mua khi xe hàng về. Soát xong bấm **Ghi sổ**.
+
+Ví dụ `AL71`: `7,2 × 0,389 × 200 = 560,16 kg barem`.
 
 In gửi NCC: mở đơn → **In** → *Đơn mua hàng ALUMDOOR*.
 

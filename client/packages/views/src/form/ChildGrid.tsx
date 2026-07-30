@@ -155,7 +155,8 @@ const BIG_COLUMNS: string[][] = [
    * nào đứng nhầm chỗ.
    */
   ["width_m", "length_m"],
-  ["qty"], ["qty_bar", "set_count"],
+  ["theoretical_kg_per_m"], ["qty_bar", "set_count"], ["theoretical_kg", "qty"],
+  ["is_stamped"],
   ["uom"], ["rate"], ["amount"],
   ["actual_weight_kg"],
   // Trọng lượng trung bình — số MÁY tính, đặt sau tiền vì nó để ĐỐI CHIẾU chứ không phải để
@@ -178,6 +179,7 @@ const BIG_WIDTH: Record<string, string> = {
   item_code: "14rem", color: "8rem", colour: "8rem",
   height_m: "6rem", width_m: "6rem", length_m: "6rem",
   qty: "7rem", qty_bar: "6rem", set_count: "7rem", actual_weight_kg: "7rem",
+  theoretical_kg_per_m: "7rem", theoretical_kg: "8rem", is_stamped: "6rem",
   actual_kg_per_m: "7rem", actual_kg_per_sqm: "7rem", uom: "8rem",
   rate: "8rem", amount: "9rem", note: "8rem", install_note: "8rem",
 };
@@ -197,6 +199,16 @@ export interface AverageWeightResult {
   totalAreaSqm?: number;
   averageWeight?: number;
   basis?: "kg/m" | "kg/m²" | "kg/cây" | "kg/ĐVT";
+}
+
+export function derivePurchaseOrderBarem(row: Doc): number | undefined {
+  const length = Number(row.length_m);
+  const bars = Number(row.qty_bar);
+  const kgPerM = Number(row.theoretical_kg_per_m);
+  if (!Number.isFinite(length) || length <= 0
+    || !Number.isFinite(bars) || bars <= 0
+    || !Number.isFinite(kgPerM) || kgPerM <= 0) return undefined;
+  return length * bars * kgPerM;
 }
 
 /**
@@ -447,7 +459,7 @@ export function ChildGrid(props: ChildGridProps) {
    * làm gì — không đoán, không ghi đè field người dùng tự nhập.
    */
   const COMPUTED_FROM = new Set([
-    "qty", "rate", "qty_bar", "length_m", "width_m", "height_m", "set_count",
+    "qty", "rate", "qty_bar", "length_m", "theoretical_kg_per_m", "width_m", "height_m", "set_count",
     "mesh_height_m", "sales_mode", "has_butterfly_bracket", "uom", "conversion_factor", "actual_weight_kg",
   ]);
   const ITEM_DERIVED_FIELDS = [
@@ -455,11 +467,22 @@ export function ChildGrid(props: ChildGridProps) {
     "item_name", "description", "color", "colour", "rate", "amount",
     "formula_policy", "width_basis", "cut_width_m", "billable_area_sqm",
     "length_m", "qty_bundle", "qty_bar", "actual_weight_kg", "total_length_m",
+    "material_specification", "theoretical_kg_per_m", "theoretical_kg", "is_stamped",
     "actual_kg_per_m", "actual_kg_per_sqm", "so_no",
   ];
   const withComputed = (row: Doc): Doc => {
     const has = (f: string) => (childMeta.fields ?? []).some((x) => x.fieldname === f);
     let next = { ...row };
+    if (has("theoretical_kg") && next.inventory_mode === "Nhôm cây/lá") {
+      const baremKg = derivePurchaseOrderBarem(next);
+      if (baremKg !== undefined) {
+        next.theoretical_kg = baremKg;
+        if (has("qty")) next.qty = baremKg;
+      } else {
+        next.theoretical_kg = undefined;
+        if (has("qty")) next.qty = undefined;
+      }
+    }
     if (next.inventory_mode === "Thành phẩm theo m2" && has("qty")) {
       const width = Number(next.width_m);
       const height = Number(next.height_m);
@@ -695,6 +718,7 @@ export function ChildGrid(props: ChildGridProps) {
       ["stock_uom", ["stock_uom"]],
       ["inventory_mode", ["inventory_mode"]],
       ["measurement_profile", ["measurement_profile"]],
+      ["material_specification", ["material_specification"]],
       ["item_name", ["item_name"]],
       ["description", ["description"]],
       ["default_color", ["color", "colour"]],
@@ -722,6 +746,14 @@ export function ChildGrid(props: ChildGridProps) {
       if (v === undefined || v === null || v === "") return;
       for (const d of targets) patch[d] = v;
     }));
+    if (has("theoretical_kg_per_m")) {
+      const specification = String(patch.material_specification ?? item?.material_specification ?? "").trim();
+      if (specification && services.fetchDocument) {
+        const spec = await services.fetchDocument("Material Specification", specification).catch(() => undefined);
+        const kgPerM = Number(spec?.theoretical_kg_per_m);
+        if (Number.isFinite(kgPerM) && kgPerM > 0) patch.theoretical_kg_per_m = kgPerM;
+      }
+    }
 
     /**
      * ĐVT giao dịch có ưu tiên theo NGỮ CẢNH, không đồng nhất với ĐVT tồn:
@@ -768,6 +800,7 @@ export function ChildGrid(props: ChildGridProps) {
     if (patch.inventory_mode !== "Nhôm cây/lá") {
       for (const fieldname of [
         "length_m", "qty_bundle", "qty_bar", "so_no", "total_length_m", "actual_kg_per_m",
+        "material_specification", "theoretical_kg_per_m", "theoretical_kg", "is_stamped",
       ]) {
         if (has(fieldname)) patch[fieldname] = undefined;
       }

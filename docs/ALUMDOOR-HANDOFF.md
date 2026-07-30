@@ -313,6 +313,15 @@ Sau khi chốt mới migrate Item; phải kiểm tra stock ledger trước khi �
 về hoặc công nợ của commit thử nghiệm vào production. Cửa thành phẩm có stock UOM Kg nhưng
 sales UOM m² vẫn thuộc quyết định P0 riêng ở trên, không bị đổi trong correction này.
 
+### 🚧 Form Đơn đặt hàng `2.0.1`
+
+- Form nhôm dùng các cột: ngày, mã hàng, kích thước (chiều rộng), trọng lượng định mức kg/m,
+  số cây/lá, số kg barem, đơn giá, thành tiền, màu và dập/không dập.
+- Định mức lấy từ `Material Specification`; kg barem = kích thước × định mức × số cây/lá.
+- `qty` của Đơn mua nhôm là kg barem dự kiến; kg thực cân chỉ xuất hiện ở Phiếu nhập mua.
+- Client tự tính để người lập soát ngay; Worker tính lại khi lưu để chặn sửa payload/API.
+- Phạm vi này chưa thay thế bước phân bổ FIFO hàng về, dung sai ±5% và báo cáo nợ cây/mét.
+
 ### P1 — Phân bổ tồn K36/K12
 
 - File Excel không có kho nên toàn bộ lô được gán K36.

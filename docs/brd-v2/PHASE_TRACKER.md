@@ -1,6 +1,6 @@
 # THEO DÕI PHA — ALUMDOOR V2
 
-> Cập nhật: 2026-07-30 · nhánh `feat/platform-design-screens` · gói `alumdoor@2.0.0`
+> Cập nhật: 2026-07-30 · nhánh `feat/alumdoor-purchase-order-form` · gói kế tiếp `alumdoor@2.0.1`
 
 | Pha | Trạng thái | Bằng chứng |
 |---|---|---|
@@ -25,6 +25,8 @@
 - [x] `Hỏi trợ lý` chỉ đọc trong quyền người gọi; câu trả lời thành công ghi `ai_logs`.
 - [x] Lịch nền tảng: nhả giữ chỗ hết hạn, nhắc kiểm kê tháng/quý, báo cáo cuối ngày gồm nhập/xuất/cắt và cảnh báo lệch cân.
 - [x] QR trong mẫu in; trình render và kiểu trường đã có test.
+- [x] Form Đơn mua nhôm: kích thước (chiều rộng), định mức kg/m từ master, số cây/lá,
+  kg barem và thành tiền tự tính, màu, dập/không dập; server tính lại và chặn payload giả.
 - [x] Trình cài gói hỗ trợ đúng quy mô V2 mà vẫn giữ một `D1 batch` atomic dưới giới hạn 100 câu lệnh.
 - [x] Danh bạ icon frontend phủ các icon V2; Browser QA không còn cảnh báo icon ở bundle hiện hành.
 

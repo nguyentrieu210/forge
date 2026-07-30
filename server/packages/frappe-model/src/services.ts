@@ -305,6 +305,11 @@ function applyFilter(value: string, filter: string | undefined, locale: string):
     const pad = (part: number) => String(part).padStart(2, "0");
     return `${pad(date.getUTCDate())}-${pad(date.getUTCMonth() + 1)}-${date.getUTCFullYear()}`;
   }
+  if (filter === "yesno") {
+    return ["1", "true", "yes", "có", "dập"].includes(value.trim().toLocaleLowerCase("vi"))
+      ? "Dập"
+      : "Không dập";
+  }
   return value;
 }
 

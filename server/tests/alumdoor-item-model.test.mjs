@@ -84,10 +84,20 @@ test("purchase rows expose aluminium dimensions only for aluminium items", () =>
     assert.match(field(child, "length_m")?.mandatory_depends_on ?? "", /Nhôm cây\/lá/);
     assert.match(field(child, "qty_bar")?.mandatory_depends_on ?? "", /Nhôm cây\/lá/);
     assert.equal(field(child, "total_length_m")?.read_only, true);
-    assert.equal(field(child, "actual_weight_kg")?.non_negative, true);
-    assert.match(field(child, "actual_weight_kg")?.depends_on ?? "", /uom != 'Kg'/);
-    assert.equal(field(child, "actual_kg_per_m")?.read_only, true);
-    assert.match(field(child, "actual_kg_per_m")?.description ?? "", /không coi số Bộ\/Cái là kg/);
+    if (child === "Purchase Order Item") {
+      assert.equal(field(child, "length_m")?.label, "Kích thước (chiều rộng) (m)");
+      assert.equal(field(child, "theoretical_kg_per_m")?.read_only, true);
+      assert.equal(field(child, "theoretical_kg")?.read_only, true);
+      assert.equal(field(child, "is_stamped")?.fieldtype, "Check");
+      assert.equal(field(child, "qty")?.label, "Số kg đặt (barem)");
+      assert.match(field(child, "qty")?.read_only_depends_on ?? "", /Nhôm cây\/lá/);
+      assert.equal(field(child, "actual_weight_kg"), undefined);
+    } else {
+      assert.equal(field(child, "actual_weight_kg")?.non_negative, true);
+      assert.match(field(child, "actual_weight_kg")?.depends_on ?? "", /uom != 'Kg'/);
+      assert.equal(field(child, "actual_kg_per_m")?.read_only, true);
+      assert.match(field(child, "actual_kg_per_m")?.description ?? "", /không coi số Bộ\/Cái là kg/);
+    }
     if (child !== "Supplier Quotation Item") {
       assert.equal(field(child, "conversion_factor")?.label, "Hệ số quy đổi về ĐVT tồn");
     }
@@ -172,6 +182,23 @@ function validatorRequest(items) {
       doctype: "Purchase Receipt",
       name: "NEW-PURCHASE-RECEIPT",
       action: "submit",
+      payload: { items },
+    }),
+  });
+}
+
+function purchaseOrderValidatorRequest(items) {
+  return new Request("https://app.internal/hooks/validate", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-cloudforge-tenant": "tenant-test",
+      "x-cloudforge-callback": "https://tenant.test/_app/",
+    },
+    body: JSON.stringify({
+      doctype: "Purchase Order",
+      name: "NEW-PURCHASE-ORDER",
+      action: "create",
       payload: { items },
     }),
   });
@@ -399,6 +426,58 @@ test("ordinary items keep the simple qty/uom path", async () => {
     {},
   );
   assert.equal(response.status, 200);
+});
+
+test("purchase order uses width, kg-per-m and trees to derive barem kg", async () => {
+  const baremKg = 7.2 * 0.389 * 200;
+  const rate = 105_000;
+  const env = {
+    PLATFORM: masterPlatform({
+      "Item:AL71": {
+        inventory_mode: "Nhôm cây/lá",
+        stock_uom: "Kg",
+        measurement_profile: "Nhôm cây/lá",
+        material_specification: "ĐM-AL71",
+        allowed_colors: [{ color: "GS" }],
+      },
+      "Measurement Profile:Nhôm cây/lá": { require_color: 1 },
+      "Material Specification:ĐM-AL71": {
+        theoretical_kg_per_m: 0.389,
+      },
+      "Item Color:GS": { disabled: 0 },
+    }),
+  };
+  const line = {
+    item_code: "AL71",
+    color: "GS",
+    uom: "Kg",
+    length_m: 7.2,
+    theoretical_kg_per_m: 0.389,
+    qty_bar: 200,
+    theoretical_kg: baremKg,
+    qty: baremKg,
+    rate,
+    amount: baremKg * rate,
+    is_stamped: 0,
+  };
+  const valid = await alumdoorWorker.fetch(purchaseOrderValidatorRequest([line]), env, {});
+  assert.equal(valid.status, 200, await valid.text());
+
+  const forgedKg = await alumdoorWorker.fetch(
+    purchaseOrderValidatorRequest([{ ...line, theoretical_kg: 500, qty: 500 }]),
+    env,
+    {},
+  );
+  assert.equal(forgedKg.status, 422);
+  assert.match((await forgedKg.json()).message, /số kg barem phải là 560\.160000/);
+
+  const forgedAmount = await alumdoorWorker.fetch(
+    purchaseOrderValidatorRequest([{ ...line, amount: 1 }]),
+    env,
+    {},
+  );
+  assert.equal(forgedAmount.status, 422);
+  assert.match((await forgedAmount.json()).message, /thành tiền phải là/);
 });
 
 test("purchase receipt validates actual kg per square metre from height, width and pieces", async () => {

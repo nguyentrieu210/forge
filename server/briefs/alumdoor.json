@@ -3334,8 +3334,8 @@
     {
       "//": "Dòng đơn mua dùng chung cho mọi mặt hàng. `inventory_mode` lấy từ Item để hàng thường chỉ hiện SL/ĐVT/giá, còn nhôm mới mở quy cách.",
       "//do": [
-        "NHÔM: `qty` là kg thực đặt/mua và cũng là đơn vị tồn chính. Số cây, bó và chiều dài",
-        "là quy cách vật lý của lô — không dùng `cây ÷ kg` để đổi sổ kho sang cây.",
+        "NHÔM: đơn đặt chưa có kg cân thực. Người lập nhập kích thước (chiều rộng), định mức",
+        "được lấy từ Material Specification, số cây/lá; form tính `qty = theoretical_kg`.",
         "HÀNG THƯỜNG: các field quy cách có depends_on nên không xuất hiện và đường qty/uom/rate",
         "giữ nguyên như trước."
       ],
@@ -3350,11 +3350,13 @@
         "color",
         "length_m",
         "uom",
-        "qty",
+        "theoretical_kg_per_m",
         "qty_bundle",
         "qty_bar",
+        "theoretical_kg",
         "rate",
         "amount",
+        "is_stamped",
         "so_no",
         "note"
       ],
@@ -3396,13 +3398,19 @@
         {
           "fieldname": "length_m",
           "fieldtype": "Float",
-          "label": "KT (m)",
+          "label": "Kích thước (chiều rộng) (m)",
           "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
           "mandatory_depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
           "non_negative": true
         },
-        "uom:Link(UOM) ĐVT mua",
-        "qty:Float! Số lượng",
+        "uom:Link(UOM)~- ĐVT mua",
+        {
+          "fieldname": "qty",
+          "fieldtype": "Float",
+          "label": "Số kg đặt (barem)",
+          "required": true,
+          "read_only_depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'"
+        },
         {
           "fieldname": "width_m",
           "fieldtype": "Float",
@@ -3432,7 +3440,7 @@
         {
           "fieldname": "qty_bar",
           "fieldtype": "Float",
-          "label": "SL (cây/lá)",
+          "label": "Số cây/lá",
           "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
           "mandatory_depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
           "non_negative": true
@@ -3445,20 +3453,36 @@
           "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'"
         },
         {
-          "fieldname": "actual_weight_kg",
-          "fieldtype": "Float",
-          "label": "Tổng kg thực cân",
-          "depends_on": "eval:doc.uom != 'Kg' && doc.uom != 'KG' && doc.uom != 'kg'",
-          "non_negative": true,
-          "description": "Chỉ nhập khi ĐVT giao dịch không phải Kg nhưng vẫn cần đối chiếu trọng lượng bình quân. Không thay đổi số lượng mua hay tồn kho."
+          "fieldname": "material_specification",
+          "fieldtype": "Link",
+          "options": "Material Specification",
+          "label": "Quy cách định mức",
+          "read_only": true,
+          "hidden": true
         },
         {
-          "fieldname": "actual_kg_per_m",
+          "fieldname": "theoretical_kg_per_m",
           "fieldtype": "Float",
-          "label": "TL trung bình (kg/m · kg/cái)",
+          "label": "Trọng lượng định mức (kg/m)",
           "read_only": true,
-          "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá' || doc.actual_weight_kg > 0",
-          "description": "ĐVT Kg: lấy SL làm tổng kg. ĐVT khác: chỉ tính khi có Tổng kg thực cân; tuyệt đối không coi số Bộ/Cái là kg. Chia cho tổng mét, số cây hoặc số lượng giao dịch. Số để đối chiếu, không vào sổ."
+          "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
+          "description": "Tự lấy từ quy cách kỹ thuật của mã hàng."
+        },
+        {
+          "fieldname": "theoretical_kg",
+          "fieldtype": "Float",
+          "label": "Số kg barem",
+          "read_only": true,
+          "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
+          "description": "Kích thước × trọng lượng định mức × số cây/lá."
+        },
+        {
+          "fieldname": "is_stamped",
+          "fieldtype": "Check",
+          "label": "Dập",
+          "default": false,
+          "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
+          "description": "Bật = dập; tắt = không dập."
         },
         {
           "fieldname": "so_no",
@@ -4721,8 +4745,8 @@
         "  <div class=\"row\"><b>Theo báo giá</b><span>{{ supplier_quotation }}</span></div>",
         "  <div class=\"row\"><b>Tiền tệ</b><span>{{ currency }}</span></div>",
         "</div>",
-        "<table><thead><tr><th style=\"width:34px\">#</th><th>Mã hàng</th><th class=\"n\">Số lượng</th><th>ĐVT</th><th class=\"n\">Quy ra</th><th class=\"n\">Đơn giá</th><th class=\"n\">Thành tiền</th></tr></thead><tbody>",
-        "{{#each items}}<tr><td>{{ _index }}</td><td>{{ item_code }}<br><span class=\"sub\">{{ note }}</span></td><td class=\"n\">{{ qty | number }}</td><td>{{ uom }}</td><td class=\"n\">{{ stock_qty | number }} {{ stock_uom }}</td><td class=\"n\">{{ rate | money }}</td><td class=\"n\">{{ amount | money }}</td></tr>{{/each}}",
+        "<table><thead><tr><th style=\"width:34px\">STT</th><th>Ngày</th><th>Mã hàng</th><th class=\"n\">Kích thước (chiều rộng)</th><th class=\"n\">Trọng lượng</th><th class=\"n\">Số cây</th><th class=\"n\">Số kg</th><th class=\"n\">Đơn giá</th><th class=\"n\">Thành tiền</th><th>Màu</th><th>Dập</th></tr></thead><tbody>",
+        "{{#each items}}<tr><td>{{ _index }}</td><td>{{ transaction_date | date }}</td><td>{{ item_code }}<br><span class=\"sub\">{{ note }}</span></td><td class=\"n\">{{ length_m | number }} m</td><td class=\"n\">{{ theoretical_kg_per_m | number }} kg/m</td><td class=\"n\">{{ qty_bar | number }}</td><td class=\"n\">{{ theoretical_kg | number }}</td><td class=\"n\">{{ rate | money }}</td><td class=\"n\">{{ amount | money }}</td><td>{{ color }}</td><td>{{ is_stamped | yesno }}</td></tr>{{/each}}",
         "</tbody></table>",
         "<div class=\"tot\"><div class=\"row big\"><span>Tổng cộng</span><span>{{ grand_total | money }} ₫</span></div></div>",
         "<div class=\"note\">Giao hàng tại: Xưởng 1 — 12B đường số 2, P. Bình Hưng Hoà, Q. Bình Tân, TP.HCM\nGhi chú: {{ note }}</div>",
