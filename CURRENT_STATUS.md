@@ -5,7 +5,8 @@ Ngày audit: **2026-07-30**, workspace `C:\Forge`.
 ## Git
 
 - Branch: `hotfix/alumdoor-print-list-delete`
-- HEAD xác nhận trước khi review kiến trúc hàng đợi mua liên tục: `4d08c158cee6b2f718ee4cd41a0322693c93f493` (`docs: model continuous PO receipt queue`).
+- HEAD xác nhận trước khi chốt contract phân bổ nhập hàng: `8730e71918dd195028303473111923338464b8aa` (`docs: record receipt allocation architecture review`).
+- Contract thiết kế v1: commit `ed840e14d4e290d637454342accbdc42a553a7de`, file `server/docs/ALUMDOOR-PURCHASE-RECEIPT-ALLOCATION.md`.
 - Commit code fixture bản in: `f5186c4ef6fb54d819bad95ee4eb17f2fd1a18e1` (`test(alumdoor): add purchase order print fixture`).
 - Baseline chức năng Alumdoor đã kéo và kiểm chứng trước đó: `7bbf20f45ecebf329af7b349e02e61827dfe32fe`.
 - Trước khi tạo bộ tài liệu ban đầu, Git status chỉ có hai thư mục untracked đã tồn tại: `server/work/` và `tmp/`.
@@ -53,27 +54,32 @@ Ngày **2026-07-30**, người vận hành xác nhận đã chạy hoàn tất t
 - Trạng thái này là **operator-confirmed**. GitHub connector không có quyền đọc Cloudflare deployment/version hoặc log terminal local nên chưa xác minh độc lập deployment ID, timestamp, health hoặc traffic.
 - Việc deploy Gateway `cloudforge-gateway` lên 100% production traffic chưa được xác nhận trong tài liệu này.
 
-## Yêu cầu mới — hàng đợi phân bổ nhập nhôm liên tục
+## Contract đã chốt — phân bổ nhập nhôm FIFO và nợ nhà máy
 
-- Thực tế vận hành được làm rõ: một Purchase Order có thể mất cả tháng mới giao xong; cùng một vật tư có thể được đặt 3–4 lần trong tháng; một xe hàng có thể mang số lượng lớn và bù đồng thời rất nhiều đơn.
-- Vì vậy không yêu cầu người dùng chọn `delivery_pool` trên từng PO hoặc Receipt. Hệ thống phải tự duy trì **hàng đợi nghĩa vụ mua đang mở** theo `company + supplier + khóa quy cách vật tư`; PO line mới đúng khóa tự gia nhập hàng đợi đang mở.
-- Receipt line tự phân bổ FIFO qua tất cả PO line còn mở đúng khóa, theo `transaction_date → created_at → PO name → row idx`; một dòng Receipt có thể sinh nhiều allocation rows và một Receipt có thể chạm rất nhiều PO.
-- Mỗi lần nhập phải giữ lịch sử bất biến: phiếu nhập, dòng nhập, dòng PO được trừ, số cây, kg barem, kg cân thực tế, thứ tự phân bổ và allocate/reverse. Huỷ chứng từ ghi dòng đảo, không delete.
-- Code hiện tại đã cộng dồn `purchase_order_progress_entries` và chặn nhận vượt theo `receipt_tolerance_pct`, nhưng kiểm theo từng Purchase Order và `item_code`; chưa có hàng đợi FIFO xuyên nhiều PO, chưa bám `purchase_order_item.row_id`, chưa có số dư Receipt chưa áp và chưa có hành động đối soát cuối.
-- `ProcurementEntry` hiện chỉ có Purchase Order, loại tiến độ, mã hàng, số lượng và ngày; chưa đủ nguồn dòng phiếu nhập/dòng đơn mua, kg barem, kg thực tế, allocation sequence và lifecycle đối soát.
+Contract authoritative nằm tại `server/docs/ALUMDOOR-PURCHASE-RECEIPT-ALLOCATION.md`.
 
-## Review kiến trúc hàng đợi FIFO liên tục
+Các quyết định đã chốt:
 
-- Điểm hiện tại: **7,3/10**. Ý tưởng lõi FIFO + ledger bất biến + timeline có thể đạt khoảng 9/10, nhưng chưa đủ an toàn để bắt đầu code toàn bộ.
-- Điểm mạnh: bám đúng PO line, không dùng cột tổng hợp nhập tay làm nguồn sự thật, hỗ trợ một Receipt chạm nhiều PO, có reversal thay vì xoá và tách số cây khỏi kg cân thực tế.
-- Blocker 1 — ranh giới khóa: request hiện được route vào Durable Object theo `tenant:doctype:name`, nên hai Purchase Receipt khác tên chạy ở hai coordinator khác nhau. Câu “khóa stream bằng Aggregate Durable Object” chưa đúng với kiến trúc hiện tại; cần coordinator riêng theo `tenant + company + supplier` hoặc commit guard/CAS ở D1.
-- Blocker 2 — đang trộn hai khái niệm: hàng đợi FIFO có thể chạy liên tục, nhưng dung sai ±5% cần một **kỳ đối soát có ranh giới**. Không dùng chính stream vô thời hạn làm mẫu số dung sai, vì đơn mới sẽ làm thay đổi ngược dải thiếu/dư của các lần giao cũ.
-- Blocker 3 — `material_match_key` phải do server chuẩn hoá, có `schema_version` và hash từ snapshot; không ghép chuỗi tự do hoặc tin field do client gửi.
-- Blocker 4 — kg cân thực tế authoritative ở Receipt line. Kg “phân bổ cho PO” chỉ là projection theo barem/tỷ lệ có quy tắc làm tròn; không nên là nguồn sổ thứ hai.
-- Blocker 5 — chưa chốt hành vi receipt nhập lùi ngày, huỷ receipt sau khi đã có allocation mới hơn, PO amendment/cancel, reopen kỳ đã đối soát và manual override có lý do.
-- Blocker 6 — chưa có kế hoạch backfill dữ liệu production từ `purchase_order_progress_entries` cũ vốn chỉ bám PO + item_code. Dòng lịch sử mơ hồ phải được đánh dấu legacy hoặc đối chiếu thủ công, không đoán row_id.
-- Test cần nâng từ “10 PO lines” lên stress case nhiều dòng Receipt, hàng trăm allocation rows, submit đồng thời, retry idempotent, cancel/reallocate và backdated receipt.
-- Chưa sửa code nghiệp vụ trong đợt review này; không chạy lại test/typecheck/build vì chỉ cập nhật tài liệu thiết kế.
+- Tách **obligation queue** chạy liên tục để FIFO và **settlement window** hữu hạn để tính dung sai; không lấy queue vô thời hạn làm mẫu số ±5%.
+- Thêm `PurchaseAllocationCoordinator` theo `tenant + company + supplier`; mọi PO/Receipt/settlement mutation ảnh hưởng queue đi qua một coordinator, không lock riêng từng vật tư.
+- D1 revision claim/trigger là lớp guard authoritative trong cùng batch với document, stock, procurement và allocation; mismatch abort toàn batch.
+- `material_match_key` do server hash từ canonical snapshot v1 gồm item, chiều dài, barem kg/m, màu, dập, measurement profile và stock UOM; không tin key client gửi.
+- FIFO được đánh giá tại thời điểm commit. Receipt lùi ngày dùng `posting_at` cho sổ nhưng không viết lại allocation cũ.
+- Cancel Receipt chỉ ghi reversal cho chính Receipt đó; không auto-rebalance các Receipt mới hơn. PO cũ mở nợ lại và Receipt tiếp theo bù theo FIFO.
+- PO đã submit có identity/qty bất biến; chỉ cancel khi net allocation bằng 0 và window chưa settled.
+- Settlement close dùng integer boundary `ceil(min)`/`floor(max)`, reason và permission bắt buộc. Không reopen tuỳ ý; chỉ reverse settlement khi window kế tiếp chưa có activity.
+- Kg cân thực tế authoritative ở Receipt line. Kg theo PO là projection versioned theo barem, residual dồn vào allocation cuối.
+- Dữ liệu legacy được backfill qua `versions.snapshot_json`; dòng xác định duy nhất ghi resolved, dòng mơ hồ ghi `legacy_unresolved`, tuyệt đối không đoán row id.
+- Progress table cũ chỉ còn compatibility projection sinh từ allocation plan; báo cáo và `received_percentage` chuyển sang ledger mới.
+
+## Review sau khi chốt
+
+- Điểm thiết kế: **9,2/10**.
+- Điểm nghiệp vụ/audit: mạnh; đã cover nhiều PO, nhiều xe, FIFO, dung sai, reversal, backdated, manual override và legacy migration.
+- Concurrency có hai lớp: supplier coordinator và D1 revision guard.
+- Chưa đạt 10/10 vì chưa có bằng chứng implementation cho giới hạn D1 batch khi một xe sinh hàng trăm allocation rows, contention theo supplier, UX preview/settlement và dry-run backfill production.
+- Trạng thái: **ready for implementation**, chưa ready for production.
+- Chưa sửa code nghiệp vụ trong đợt chốt contract này; không chạy lại test/typecheck/build vì chỉ thêm và cập nhật tài liệu thiết kế.
 
 ## Test và lint đã được khôi phục
 
@@ -109,8 +115,8 @@ Ngày **2026-07-30**, người vận hành xác nhận đã chạy hoàn tất t
 - GitHub connector chưa trả check-run cho HEAD hiện tại; không dùng trạng thái audit cũ để suy ra CI của commit mới.
 - Tenant `alu` đã được operator xác nhận deploy, nhưng chưa có smoke-test production được ghi nhận cho login, CRUD, list/delete, print preview và PDF.
 - Chưa xác nhận Gateway version nào đang nhận 100% production traffic.
-- Tiến độ mua hiện gộp theo `item_code`; cùng mã nhưng khác chiều dài/màu/dập hoặc có hai dòng trong một đơn có thể bị đối chiếu nhầm nếu dùng nguyên mô hình này cho FIFO.
-- Dung sai hiện chỉ chặn trần nhận tối đa theo từng PO; chưa có kỳ đối soát, mức tối thiểu khi đóng, số dư Receipt chưa áp hoặc hành động đối soát cuối.
+- Contract allocation đã chốt nhưng code hiện hành vẫn tiến độ theo `purchase_order + item_code`; chưa có migration `0027`, coordinator, allocation ledger hoặc settlement actions.
+- Chưa đo D1 batch/latency cho hàng trăm allocation rows và chưa chạy dry-run backfill trên production backup.
 - Fixture mới chưa thay thế visual regression test trên Chromium và kiểm tra PDF tải xuống thực tế.
 - Tài liệu trạng thái cũ như `server/STATUS.md` lệch migration/phiên bản hiện hành; cần tránh dùng làm nguồn sự thật.
 - Bundle client lớn, ảnh hưởng tải trang nhưng chưa chặn build.
