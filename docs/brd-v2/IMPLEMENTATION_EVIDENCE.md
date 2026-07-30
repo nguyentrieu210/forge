@@ -38,7 +38,8 @@ pnpm.cmd run verify
 
 Kết quả:
 
-- `pnpm run test:unit`: **520/520 unit PASS** sau merge design và bổ sung kiểm thử restore D1.
+- `pnpm run test:unit`: **529/529 unit PASS** sau merge design, bổ sung kiểm thử restore D1
+  và khóa phạm vi correction mặt hàng Kg/mặt hàng con.
 - Toàn bộ SQL PASS, gồm 25 migration và các bài tranh chấp 100 request.
 - Worker Workerd/D1: **132/132 tenant PASS** và **3/3 query PASS**; test app-registry dùng đúng quy mô **69 DocType + 57 fixture**.
 - Worker typecheck, brief schema/dry-run và repo/secrets verify: PASS.
@@ -122,6 +123,19 @@ Không submit chứng từ nghiệp vụ trong Browser QA; các side effect đã
   24 Item Color, 1.257 Aluminium Lot và khóa duy nhất tương ứng; ledger 0, `quick_check=ok`.
 - Production correction áp một lần; `documents=document_search=4.191`, không còn Item Color
   alias cũ, không có Item Price trỏ Item thiếu. Smoke đăng nhập đọc đúng count và phạm vi màu.
+- Correction mặt hàng nguyên tử dùng backup
+  `alu-2026-07-30T05-17-21-159Z.sql`, SHA-256
+  `1b24d419fa78e0d59d1679b8c39dfa4ed3d33724498ed2ccb67782255915f602`; bản DPAPI được
+  lưu riêng ngoài thư mục Cloudflare.
+- Cùng backup đã restore độc lập vào
+  `cloudforge-drill-alumdoor-catalog-a-20260730` và
+  `cloudforge-drill-alumdoor-catalog-b-20260730`: 67 bảng, `quick_check=ok`, không đổi route.
+- Migration danh mục chạy hai lần trên drill; lần hai ghi 0 dòng. Production tạo năm Item còn
+  thiếu (tổng 299), chuẩn hóa đủ 17 mã mục tiêu về mua/tồn Kg, tạo 12 ánh xạ mã Tiến Đạt và
+  ngừng dùng ba mã ghép. Chạy lại production ghi 0 dòng; stock ledger vẫn 0,
+  `quick_check=ok`.
+- Phạm vi correction được khóa bằng test: không có công thức đơn mua, tự tính kg, phân bổ hàng
+  nhập FIFO hoặc logic công nợ.
 
 ## 6. Ranh giới còn lại
 

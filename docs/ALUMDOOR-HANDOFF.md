@@ -21,7 +21,7 @@ Mốc release phải nhớ:
 - Gói production là `alumdoor@2.0.0`, content hash
   `b62cb1818d0aafc28f71a8ad5735dff8e866d0ec0f37a08c7c2d2fd449e74387`.
 - 69 DocType, 1 workflow, 57 fixture, 67 mục điều hướng; migration tenant đạt 25/25.
-- 520/520 unit server, toàn bộ SQL, 132/132 tenant Worker, 3/3 query Worker,
+- 529/529 unit server, toàn bộ SQL, 132/132 tenant Worker, 3/3 query Worker,
   83 nhóm selfcheck client, typecheck và production build đều đạt.
 - Backup release đã kiểm checksum và restore thành công vào hai D1 drill độc lập.
 - Gateway, tenant Worker, app Worker, metadata V2 và giao diện design đều đã lên production.
@@ -292,17 +292,21 @@ Phiên sau phải xác định một trong hai mô hình:
 
 Sau khi chốt mới migrate Item; phải kiểm tra stock ledger trước khi đổi UOM tồn.
 
-### P1 — Dọn các khoảng trống quy đổi Item
+### ✅ Đã dọn mặt hàng Kg và mặt hàng ghép ngày 2026-07-30
 
-Audit gần nhất còn các mã cần kiểm tra/khôi phục quy đổi:
+- 17 mã ron, lá đáy, ray và trục đã chuẩn hóa mua/tồn `Kg`; mã bán lẻ giữ ĐVT bán `Mét`.
+- Ron nhựa chốt `0,263 kg/m`, ron inox `0,124 kg/m`; hai trục giữ `4,40` và `4,70 kg/m`.
+- 12 mã NCC Tiến Đạt đã khớp `Supplier Item`; tạo thêm năm mặt hàng nguyên tử còn thiếu:
+  `TD-TG-ALD`, `RHM8(2.4MM)`, `CQ-VM111`, `TDU26`, `AL-YST`.
+- Ngừng dùng ba mã ghép `RONNHUA_INOX`, `TP-BO3LADAY`, `BỘ BA LÁ ĐÁY + LÁ ĐẦU`;
+  giá của các mã ghép cũng bị vô hiệu hóa.
+- Production tăng từ 294 lên 299 Item; 17 `Material Specification`, 12 `Supplier Item`,
+  một `Measurement Profile` được tạo. Migration chạy lại ghi 0 dòng, ledger vẫn 0,
+  `quick_check=ok`.
 
-- `RNHUA-DR`: Kg ↔ Mét, dữ liệu định mức đang có `0,10 kg/m`.
-- `RNINOX-DR`: Kg ↔ Mét, dữ liệu định mức đang có `0,12 kg/m`.
-- `TRỤC 114_1.8LY`: Kg ↔ Mét, khoảng `4,40 kg/m`.
-- `TRỤC 114_2.1LY`: Kg ↔ Mét, khoảng `4,70 kg/m`.
-- Một số Item cửa thành phẩm đang có stock UOM Kg nhưng sales UOM m²; phải xử lý sau quyết định P0 ở trên.
-
-Trước khi migrate phải chạy `server/scripts/audit-alumdoor-item-uom.mjs`, đọc stock ledger và chỉ sửa các Item không có lịch sử hoặc có phương án chuyển đổi rõ.
+Đây là correction danh mục thuần dữ liệu. Không đưa công thức đặt hàng, tự tính kg, FIFO hàng
+về hoặc công nợ của commit thử nghiệm vào production. Cửa thành phẩm có stock UOM Kg nhưng
+sales UOM m² vẫn thuộc quyết định P0 riêng ở trên, không bị đổi trong correction này.
 
 ### P1 — Phân bổ tồn K36/K12
 
@@ -398,7 +402,7 @@ cd C:\Forge-worktrees\platform-design\server
 npm.cmd run test:unit
 ```
 
-Mốc release hiện tại: **520/520 test đạt**.
+Mốc release hiện tại: **529/529 test đạt**.
 
 ### Đọc version production
 

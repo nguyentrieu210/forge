@@ -1,0 +1,276 @@
+{
+  "generated_at": "2026-07-30T16:30:00.000Z",
+  "migration_source": "alumdoor-item-standardization-2026-07-30",
+  "scope": {
+    "purchase_and_stock_uom": "Kg",
+    "split_atomic_items": true,
+    "disable_composite_items": true,
+    "purchase_order_formula": false,
+    "automatic_kg_calculation": false,
+    "fifo_receipt_allocation": false,
+    "payable_logic": false
+  },
+  "counts": {
+    "kg_items": 17,
+    "source_supplier_items": 12,
+    "newly_created_items": 5,
+    "disabled_composites": 3
+  },
+  "preflight": {
+    "required_stock_ledger_rows": 0,
+    "item_codes": [
+      "TP-TD325",
+      "TP-TD326",
+      "TP-TD327",
+      "TP-A282",
+      "TD-TG-ALD",
+      "TP-RAYHOP",
+      "TP-RAY HỘP TD U100",
+      "TP-TD87A1 GS",
+      "RHM8(2.4MM)",
+      "CQ-VM111",
+      "TDU26",
+      "AL-YST",
+      "RON-DD",
+      "RNHUA-DR",
+      "RNINOX-DR",
+      "TRỤC 114_1.8LY",
+      "TRỤC 114_2.1LY"
+    ]
+  },
+  "kg_items": [
+    {
+      "item_code": "TP-TD325",
+      "supplier_code": "TD325",
+      "item_name": "LÁ ĐÁY LỚN",
+      "item_group": "Nan/lá cửa",
+      "stock_uom": "Kg",
+      "purchase_uom": "Kg",
+      "sales_uom": "Mét",
+      "kg_per_m_reference": 0.619,
+      "creates_new_item": false,
+      "evidence": "data/trong-luong-nhom.json"
+    },
+    {
+      "item_code": "TP-TD326",
+      "supplier_code": "TD326",
+      "item_name": "LÁ TRUNG GIAN",
+      "item_group": "Nan/lá cửa",
+      "stock_uom": "Kg",
+      "purchase_uom": "Kg",
+      "sales_uom": "Mét",
+      "kg_per_m_reference": 0.395,
+      "creates_new_item": false,
+      "evidence": "data/trong-luong-nhom.json"
+    },
+    {
+      "item_code": "TP-TD327",
+      "supplier_code": "TD327",
+      "item_name": "LÁ YẾM",
+      "item_group": "Nan/lá cửa",
+      "stock_uom": "Kg",
+      "purchase_uom": "Kg",
+      "sales_uom": "Mét",
+      "kg_per_m_reference": 0.153,
+      "creates_new_item": false,
+      "evidence": "data/trong-luong-nhom.json"
+    },
+    {
+      "item_code": "TP-A282",
+      "supplier_code": "A282",
+      "item_name": "LÁ ĐẦU",
+      "item_group": "Nan/lá cửa",
+      "stock_uom": "Kg",
+      "purchase_uom": "Kg",
+      "sales_uom": "Mét",
+      "kg_per_m_reference": 0.452,
+      "creates_new_item": false,
+      "evidence": "data/trong-luong-nhom.json"
+    },
+    {
+      "item_code": "TD-TG-ALD",
+      "supplier_code": "TD-TG-ALD",
+      "item_name": "LÁ TRUNG GIAN ALUM",
+      "item_group": "Nan/lá cửa",
+      "stock_uom": "Kg",
+      "purchase_uom": "Kg",
+      "sales_uom": null,
+      "kg_per_m_reference": 0.36,
+      "creates_new_item": true,
+      "evidence": "data/trong-luong-nhom.json"
+    },
+    {
+      "item_code": "TP-RAYHOP",
+      "supplier_code": "RHM8",
+      "item_name": "RAY HỘP TD U76",
+      "item_group": "Ray và trục",
+      "stock_uom": "Kg",
+      "purchase_uom": "Kg",
+      "sales_uom": "Mét",
+      "kg_per_m_reference": 1.119,
+      "creates_new_item": false,
+      "evidence": "data/trong-luong-nhom.json"
+    },
+    {
+      "item_code": "TP-RAY HỘP TD U100",
+      "supplier_code": "RHU100",
+      "item_name": "RAY HỘP TD U100",
+      "item_group": "Ray và trục",
+      "stock_uom": "Kg",
+      "purchase_uom": "Kg",
+      "sales_uom": "Mét",
+      "kg_per_m_reference": 1.419,
+      "creates_new_item": false,
+      "evidence": "data/trong-luong-nhom.json"
+    },
+    {
+      "item_code": "TP-TD87A1 GS",
+      "supplier_code": "TD87A1",
+      "item_name": "RAY ĐƠN TD U76",
+      "item_group": "Ray và trục",
+      "stock_uom": "Kg",
+      "purchase_uom": "Kg",
+      "sales_uom": "Mét",
+      "kg_per_m_reference": 0.635,
+      "creates_new_item": false,
+      "evidence": "data/trong-luong-nhom.json"
+    },
+    {
+      "item_code": "RHM8(2.4MM)",
+      "supplier_code": "RHM8(2.4MM)",
+      "item_name": "RAY HỘP U76 2.4MM",
+      "item_group": "Ray và trục",
+      "stock_uom": "Kg",
+      "purchase_uom": "Kg",
+      "sales_uom": null,
+      "kg_per_m_reference": 1.872,
+      "creates_new_item": true,
+      "evidence": "data/trong-luong-nhom.json"
+    },
+    {
+      "item_code": "CQ-VM111",
+      "supplier_code": "CQ-VM111",
+      "item_name": "THANH ĐÁY ÚC MÓC CONG",
+      "item_group": "Nan/lá cửa",
+      "stock_uom": "Kg",
+      "purchase_uom": "Kg",
+      "sales_uom": null,
+      "kg_per_m_reference": 0.576,
+      "creates_new_item": true,
+      "evidence": "data/trong-luong-nhom.json"
+    },
+    {
+      "item_code": "TDU26",
+      "supplier_code": "TDU26",
+      "item_name": "THANH ĐÁY U76 TỰ DỪNG ALUM",
+      "item_group": "Nan/lá cửa",
+      "stock_uom": "Kg",
+      "purchase_uom": "Kg",
+      "sales_uom": null,
+      "kg_per_m_reference": 0.408,
+      "creates_new_item": true,
+      "evidence": "data/trong-luong-nhom.json"
+    },
+    {
+      "item_code": "AL-YST",
+      "supplier_code": "AL-YST",
+      "item_name": "THANH ĐÁY LƯ ĐÀI LOAN SIÊU TRƯỜNG",
+      "item_group": "Nan/lá cửa",
+      "stock_uom": "Kg",
+      "purchase_uom": "Kg",
+      "sales_uom": null,
+      "kg_per_m_reference": 0.301,
+      "creates_new_item": true,
+      "evidence": "data/trong-luong-nhom.json"
+    },
+    {
+      "item_code": "RON-DD",
+      "supplier_code": null,
+      "item_name": "RON ĐÁY ĐỨC",
+      "item_group": "Phụ kiện",
+      "stock_uom": "Kg",
+      "purchase_uom": "Kg",
+      "sales_uom": "Mét",
+      "kg_per_m_reference": 0.117,
+      "creates_new_item": false,
+      "evidence": "alumdoor-uom-correction-2026-07-28.sql"
+    },
+    {
+      "item_code": "RNHUA-DR",
+      "supplier_code": null,
+      "item_name": "RON NHỰA ĐÁY RAY",
+      "item_group": "Phụ kiện",
+      "stock_uom": "Kg",
+      "purchase_uom": "Kg",
+      "sales_uom": "Mét",
+      "kg_per_m_reference": 0.263,
+      "creates_new_item": false,
+      "evidence": "BRD Q8: chốt định mức ron nhựa 0,263 kg/m"
+    },
+    {
+      "item_code": "RNINOX-DR",
+      "supplier_code": null,
+      "item_name": "RON INOX ĐÁY RAY",
+      "item_group": "Phụ kiện",
+      "stock_uom": "Kg",
+      "purchase_uom": "Kg",
+      "sales_uom": "Mét",
+      "kg_per_m_reference": 0.124,
+      "creates_new_item": false,
+      "evidence": "BRD: chốt định mức ron inox 0,124 kg/m"
+    },
+    {
+      "item_code": "TRỤC 114_1.8LY",
+      "supplier_code": null,
+      "item_name": "TRỤC 114_1.8LY",
+      "item_group": "Ray và trục",
+      "stock_uom": "Kg",
+      "purchase_uom": "Kg",
+      "sales_uom": "Mét",
+      "kg_per_m_reference": 4.4,
+      "creates_new_item": false,
+      "evidence": "alumdoor-uom-correction-2026-07-28.sql"
+    },
+    {
+      "item_code": "TRỤC 114_2.1LY",
+      "supplier_code": null,
+      "item_name": "TRỤC 114_2.1LY",
+      "item_group": "Ray và trục",
+      "stock_uom": "Kg",
+      "purchase_uom": "Kg",
+      "sales_uom": "Mét",
+      "kg_per_m_reference": 4.7,
+      "creates_new_item": false,
+      "evidence": "alumdoor-uom-correction-2026-07-28.sql"
+    }
+  ],
+  "composites": [
+    {
+      "itemCode": "RONNHUA_INOX",
+      "children": [
+        "RNHUA-DR",
+        "RNINOX-DR"
+      ],
+      "reason": "Ron nhựa và ron inox là hai vật tư nhập kho riêng."
+    },
+    {
+      "itemCode": "TP-BO3LADAY",
+      "children": [
+        "TP-TD325",
+        "TP-TD326",
+        "TP-TD327"
+      ],
+      "reason": "Bộ ba lá đáy đã tách thành lá đáy lớn, lá trung gian và lá yếm."
+    },
+    {
+      "itemCode": "BỘ BA LÁ ĐÁY + LÁ ĐẦU",
+      "children": [
+        "TP-TD325",
+        "TP-TD326",
+        "TP-TD327",
+        "TP-A282"
+      ],
+      "reason": "Bộ ghép không phải một mặt hàng tồn kho nguyên tử."
+    }
+  ]
+}

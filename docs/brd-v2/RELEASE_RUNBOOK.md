@@ -156,6 +156,13 @@ Không rollback bằng cách sửa trực tiếp `installed_apps`, xóa migratio
   sang tên đầy đủ;
 - hậu kiểm production: 4.191 hồ sơ/search row, Item Price không trỏ mã thiếu, không còn alias
   Item Color cũ, ledger vẫn 0 và `quick_check=ok`; API đăng nhập đọc đúng count.
+- correction mặt hàng Kg/mặt hàng con: backup mới
+  `alu-2026-07-30T05-17-21-159Z.sql` (SHA-256
+  `1b24d419fa78e0d59d1679b8c39dfa4ed3d33724498ed2ccb67782255915f602`) có bản DPAPI;
+  hai restore drill độc lập đạt 67 bảng và `quick_check=ok`;
+- production hiện có 299 Item; 17 mã mục tiêu mua/tồn Kg, 12 ánh xạ mã Tiến Đạt, năm Item
+  nguyên tử mới và ba mã ghép bị vô hiệu hóa. Migration chạy lại ghi 0 dòng, ledger vẫn 0.
+  Correction này không triển khai công thức đơn mua/FIFO/công nợ.
 
 Chưa chạy pilot có ghi ledger. Dữ liệu vừa nhập là master/chứng từ lịch sử tham chiếu; workbook
 tồn không có kg nên không thể tạo số dư mở đầu đáng tin cậy. Checklist pilot mục 4 vẫn phải

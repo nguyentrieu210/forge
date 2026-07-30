@@ -103,6 +103,19 @@ Mua / Tồn / Bán là **ba câu hỏi khác nhau**, và luật đã chốt vớ
 Hiện có **126 mã** khai ĐVT bán khác ĐVT tồn — mỗi mã trong số đó **bắt buộc** phải có hệ số quy
 đổi, trừ nhóm bán m² dùng hệ số động.
 
+### Mặt hàng nguyên tử đã chốt ngày 2026-07-30
+
+- `RONNHUA_INOX` ngừng dùng; thay bằng `RNHUA-DR` và `RNINOX-DR`.
+- `TP-BO3LADAY` ngừng dùng; thay bằng `TP-TD325`, `TP-TD326`, `TP-TD327`.
+- `BỘ BA LÁ ĐÁY + LÁ ĐẦU` ngừng dùng; thay bằng ba lá đáy trên và `TP-A282`.
+- 12 mã Tiến Đạt đã được khớp với mặt hàng nguyên tử; năm mặt hàng còn thiếu được tạo:
+  `TD-TG-ALD`, `RHM8(2.4MM)`, `CQ-VM111`, `TDU26`, `AL-YST`.
+- 17 mặt hàng ron, lá đáy, ray và trục trong đợt chuẩn hóa này đều mua/tồn theo **Kg**.
+  Mã đang bán lẻ giữ ĐVT bán **Mét** và định mức kg/m riêng.
+
+Migration chỉ sửa danh mục, mã NCC, đơn vị và định mức. Nó **không** mang theo công thức đặt
+hàng, tự tính số kg, phân bổ hàng về theo FIFO hay công nợ từ nhánh thử nghiệm cũ.
+
 ---
 
 ## 4. Màu — tách hẳn khỏi mã hàng
