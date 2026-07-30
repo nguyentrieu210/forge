@@ -1,0 +1,212 @@
+name: Cloudflare Preview QA
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: cloudflare-preview-qa-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  preview-qa:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install Forge dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build MetaForge runtime
+        run: pnpm --filter runtime run build
+
+      - name: Stage runtime assets for gateway
+        run: node server/scripts/stage-client-bundle.mjs
+
+      - name: Upload gateway preview version
+        id: preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          PR_NUMBER="${{ github.event.pull_request.number || github.run_number }}"
+          PREVIEW_ALIAS="pr-${PR_NUMBER}"
+
+          pnpm --dir server exec wrangler versions upload \
+            --config apps/gateway-worker/wrangler.jsonc \
+            --preview-alias "$PREVIEW_ALIAS" \
+            --keep-vars 2>&1 | tee /tmp/gateway-preview.log
+
+          PREVIEW_URL="$(grep -Eo 'https://[a-zA-Z0-9.-]+\.workers\.dev' /tmp/gateway-preview.log | tail -n 1)"
+          if [ -z "$PREVIEW_URL" ]; then
+            echo "Wrangler uploaded a version but no preview URL was found." >&2
+            exit 1
+          fi
+
+          echo "url=$PREVIEW_URL" >> "$GITHUB_OUTPUT"
+          echo "alias=$PREVIEW_ALIAS" >> "$GITHUB_OUTPUT"
+          echo "Preview: $PREVIEW_URL"
+
+      - name: Install Browser QA worker dependencies
+        run: npm install --prefix qa/browser-worker --no-audit --no-fund
+
+      - name: Deploy Browser QA worker
+        id: qa_worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          (
+            cd qa/browser-worker
+            npx wrangler deploy 2>&1
+          ) | tee /tmp/qa-worker-deploy.log
+
+          QA_URL="$(grep -Eo 'https://[a-zA-Z0-9.-]+\.workers\.dev' /tmp/qa-worker-deploy.log | tail -n 1)"
+          if [ -z "$QA_URL" ]; then
+            echo "QA Worker deployed but its workers.dev URL was not found." >&2
+            exit 1
+          fi
+
+          QA_TOKEN="$(openssl rand -hex 32)"
+          printf '%s' "$QA_TOKEN" | (
+            cd qa/browser-worker
+            npx wrangler secret put QA_TOKEN
+          )
+
+          echo "url=$QA_URL" >> "$GITHUB_OUTPUT"
+          echo "token=$QA_TOKEN" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for QA worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 12); do
+            if curl --fail --silent --show-error "${{ steps.qa_worker.outputs.url }}/health" >/dev/null; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "QA Worker did not become healthy." >&2
+          exit 1
+
+      - name: Run Cloudflare browser checks
+        id: qa
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p qa-results/screenshots
+
+          node -e 'const fs=require("node:fs"); fs.writeFileSync("/tmp/qa-request.json", JSON.stringify({url: process.argv[1], paths: ["/"]}))' \
+            "${{ steps.preview.outputs.url }}"
+
+          curl --fail --silent --show-error \
+            --retry 3 --retry-all-errors \
+            -H "Authorization: Bearer ${{ steps.qa_worker.outputs.token }}" \
+            -H "Content-Type: application/json" \
+            --data-binary @/tmp/qa-request.json \
+            "${{ steps.qa_worker.outputs.url }}/run" \
+            --output qa-results/raw.json
+
+          STATUS="$(node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const data = JSON.parse(fs.readFileSync('qa-results/raw.json', 'utf8'));
+          const lines = [
+            '# Cloudflare Preview QA',
+            '',
+            `Preview: ${data.previewUrl}`,
+            '',
+            '| Check | HTTP | Console | Page | Requests | Result |',
+            '|---|---:|---:|---:|---:|---|',
+          ];
+
+          for (const result of data.results ?? []) {
+            if (result.screenshotBase64) {
+              const output = path.join('qa-results', 'screenshots', `${result.name}.png`);
+              fs.writeFileSync(output, Buffer.from(result.screenshotBase64, 'base64'));
+            }
+            delete result.screenshotBase64;
+            lines.push(`| ${result.name} | ${result.httpStatus} | ${(result.consoleErrors ?? []).length} | ${(result.pageErrors ?? []).length} | ${(result.requestFailures ?? []).length} | ${result.passed ? 'PASS' : 'FAIL'} |`);
+          }
+
+          lines.push('', data.passed ? '**Overall: PASS**' : '**Overall: FAIL**');
+          fs.writeFileSync('qa-results/report.json', JSON.stringify(data, null, 2));
+          fs.writeFileSync('qa-results/summary.md', `${lines.join('\n')}\n`);
+          process.stdout.write(data.passed ? 'passed' : 'failed');
+          NODE
+          )"
+
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          cat qa-results/summary.md
+
+      - name: Upload QA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloudflare-preview-qa-${{ github.event.pull_request.number || github.run_number }}
+          path: qa-results/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Comment QA report on pull request
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        env:
+          PREVIEW_URL: ${{ steps.preview.outputs.url }}
+          QA_STATUS: ${{ steps.qa.outputs.status }}
+        with:
+          script: |
+            const fs = require('node:fs');
+            const summary = fs.existsSync('qa-results/summary.md')
+              ? fs.readFileSync('qa-results/summary.md', 'utf8')
+              : '# Cloudflare Preview QA\n\nThe pipeline failed before a browser report was produced.';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const marker = '<!-- cloudforge-preview-qa -->';
+            const body = `${marker}\n${summary}\n[Workflow run and downloadable screenshots](${runUrl})`;
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const previous = comments.find(comment => comment.body?.includes(marker));
+            if (previous) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: previous.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+      - name: Enforce browser QA result
+        if: always() && steps.qa.outputs.status != 'passed'
+        run: |
+          echo "Cloudflare browser QA did not pass." >&2
+          exit 1
