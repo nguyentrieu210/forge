@@ -73,6 +73,7 @@ export interface PurchaseUnappliedSourceState {
 }
 
 export interface PurchaseAllocationReader extends DomainReader {
+  isPurchaseAllocationEnabled(tenantId: string): Promise<boolean>;
   getPurchaseAllocationQueueState(
     tenantId: string,
     company: string,
@@ -104,6 +105,7 @@ export interface PurchaseAllocationReader extends DomainReader {
 }
 
 const PURCHASE_ALLOCATION_READER_METHODS: Array<keyof PurchaseAllocationReader> = [
+  "isPurchaseAllocationEnabled",
   "getPurchaseAllocationQueueState",
   "listPurchaseAllocationObligations",
   "getPurchaseAllocationWindowTotals",
@@ -115,6 +117,13 @@ const PURCHASE_ALLOCATION_READER_METHODS: Array<keyof PurchaseAllocationReader> 
 export function hasPurchaseAllocationReader(reader: DomainReader): reader is PurchaseAllocationReader {
   const candidate = reader as Partial<PurchaseAllocationReader>;
   return PURCHASE_ALLOCATION_READER_METHODS.every((method) => typeof candidate[method] === "function");
+}
+
+export async function isPurchaseAllocationActive(
+  reader: DomainReader,
+  tenantId: string,
+): Promise<reader is PurchaseAllocationReader> {
+  return hasPurchaseAllocationReader(reader) && await reader.isPurchaseAllocationEnabled(tenantId);
 }
 
 export function requirePurchaseAllocationReader(reader: DomainReader): PurchaseAllocationReader {
