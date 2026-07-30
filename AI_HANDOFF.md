@@ -9,9 +9,9 @@ Repo local chuẩn: `C:\Forge`. Package manager pnpm 9, Node từ 22.
 ## Hiện trạng
 
 - Branch/default branch: `hotfix/alumdoor-print-list-delete`.
-- HEAD code FIFO đã được CI xác minh: `c88760769c994593734521a4f391ba818f3cae77`.
-- CI run `30567772883`: test, typecheck và build **PASS**.
-- Commit tài liệu trạng thái sau run xanh: xem HEAD GitHub hiện tại và `CURRENT_STATUS.md`.
+- HEAD code/tài liệu được CI xác minh trước các commit trạng thái cuối: `53a4ced5d43f79b297d088c3e6a3e85ddf47e9b2`.
+- CI run cuối `30568727428`, job `90959777600`: test, typecheck và build **PASS**, gồm syntax gate cho tenant migration wrapper.
+- Draft PR CI tạm `#6` đã đóng, không merge và không deploy.
 - Contract authoritative: `server/docs/ALUMDOOR-PURCHASE-RECEIPT-ALLOCATION.md`.
 - Purchase Order print fixture: `f5186c4 test(alumdoor): add purchase order print fixture`.
 - `server/work/` và `tmp/` là generated/work directories, không xóa hoặc commit.
@@ -52,7 +52,7 @@ Feature FIFO **disabled by default** qua `purchase_allocation_rollout_state`:
 - Chỉ bật khi có backfill checksum, `unresolved_count=0`, actor và timestamp.
 - Database chặn tắt lại sau khi activation.
 
-Vì vậy code hiện tại có thể deploy ở trạng thái rollout tắt mà không thay đổi hành vi dữ liệu cũ. Không được bật FIFO cho `alu` trước backfill/cutover và staging smoke.
+Vì vậy code và schema có thể deploy ở trạng thái rollout tắt mà không thay đổi hành vi dữ liệu cũ. Không được bật FIFO cho `alu` trước backfill/cutover và staging smoke.
 
 ## Nên làm tiếp
 
@@ -109,7 +109,7 @@ pnpm.cmd run typecheck
 pnpm.cmd run build
 ```
 
-CI run `30567772883` đã pass đủ test/typecheck/build cho code rollout-safe tại `c8876076`.
+CI run `30568727428` đã pass đủ test/typecheck/build cho code, rollout gate và tenant migration wrapper.
 
 ## Deploy
 
@@ -120,6 +120,6 @@ CI run `30567772883` đã pass đủ test/typecheck/build cho code rollout-safe 
 - Stage client: `server/scripts/stage-client-bundle.mjs`.
 - Gateway: `server/apps/gateway-worker/wrangler.jsonc`.
 
-Safe operator order: backup → `migrate-tenant` dry-run → live migration with explicit confirmation → tenant deploy dry-run → live deploy with explicit confirmation. The rollout remains disabled after code/schema deployment.
+Safe operator order: backup → `migrate-tenant` dry-run → live migration với explicit confirmation → tenant deploy dry-run → live deploy với explicit confirmation. Rollout vẫn tắt sau khi deploy code/schema.
 
-Implementation FIFO mới chưa deploy. Không sửa production secrets. Code chỉ được coi là safe-to-deploy when rollout vẫn tắt; activation production phải chờ M5–M7, backfill checksum, staging smoke và explicit approval.
+Implementation FIFO mới chưa deploy. Không sửa production secrets. Code chỉ an toàn để deploy khi rollout vẫn tắt; activation production phải chờ M5–M7, backfill checksum, staging smoke và explicit approval.
