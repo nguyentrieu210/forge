@@ -383,7 +383,10 @@ export function FormView(props: FormViewProps) {
 
   // P0-04: chốt chặn thứ 2 (ngoài disable UI) — thao tác đổi trạng thái KHÔNG chạy khi form dirty.
   const guardedAction = (k: FormActionKind) => {
-    if (k !== "save" && k !== "delete" && form.formState.isDirty) { toast.error(t("form.dirty_guard", DIRTY_GUARD_REASON)); return; }
+    // In/nhân bản/xoá đều làm việc trên bản đã lưu ở server, không đổi trạng thái
+    // của dữ liệu đang gõ dở. Chỉ các thao tác nghiệp vụ mới phải bị chặn.
+    const allowedWhileDirty = k === "save" || k === "delete" || k === "print" || k === "duplicate";
+    if (!allowedWhileDirty && form.formState.isDirty) { toast.error(t("form.dirty_guard", DIRTY_GUARD_REASON)); return; }
     props.onAction?.(k);
   };
   const guardedWorkflow = (a: string) => {
