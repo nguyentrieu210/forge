@@ -48,7 +48,7 @@ const replaceField = (dt, name, next) => {
 };
 
 // ─────────────────────────── HEADER ───────────────────────────
-brief.version = "2.0.26";
+brief.version = "2.0.27";
 brief.locale.dateFormat = "dd/mm/yyyy"; // Q11 — chủ xưởng chốt gạch chéo
 // Nỗi đau #1 của BRD: người mở app phải thấy ngay tồn KHẢ DỤNG theo khổ, không phải tự lấy tồn tổng
 // rồi trừ các phiếu giữ bằng tay. Báo cáo này nằm ở query engine nền tảng vì nó đọc cùng sổ kho.
@@ -1007,15 +1007,15 @@ brief.prints.push({
   css: [
     "@page{size:A4 portrait;margin:0}",
     "*{box-sizing:border-box}html,body{margin:0;width:210mm;min-height:297mm}body{font-family:Arial,'Liberation Sans',sans-serif;font-size:9px;color:#111;padding:23.7mm 8mm 8mm;font-kerning:none;letter-spacing:0;word-spacing:0}",
-    ".letterhead{position:relative;width:166mm;height:17mm;margin-left:14mm}",
-    ".brand-logo{position:absolute;left:2.7mm;top:2.8mm;width:43.6mm;height:auto}",
+    ".letterhead{position:relative;width:194mm;height:17mm;margin-left:0}",
+    ".brand-logo{position:absolute;left:0;top:2.8mm;width:43.6mm;height:auto}",
     ".company-header-img{position:absolute;right:0;top:0;width:100.8mm;height:auto;display:block}",
     ".title{width:166mm;font-family:Arial,'Liberation Sans',sans-serif;font-size:18px;line-height:1.15;font-weight:700;color:#f15a24;text-transform:uppercase;text-align:center;margin:0 0 3.2mm 14mm}",
     ".meta{width:166mm;margin-left:14mm;font-size:8px;font-weight:400;line-height:1.45;margin-bottom:4.5mm}.meta-row{display:grid;grid-template-columns:30mm 1fr;min-height:2.8mm}.meta-label{font-weight:700}.meta-value{font-weight:400;white-space:pre-wrap}",
     "table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}th,td{border:1px solid #777;padding:3pt 1.5pt;vertical-align:middle;text-align:center;line-height:1.2}",
     "th{background:#f3f3f3;font-size:7.5pt;text-transform:uppercase;white-space:normal}",
     "td{font-size:8pt;white-space:normal;overflow-wrap:anywhere}.n{text-align:center;font-variant-numeric:tabular-nums}.c{text-align:center}.code{font-weight:700}.item-cell,.note-cell{white-space:normal;overflow-wrap:anywhere}",
-    ".index-col{white-space:nowrap}.note-col,.note-cell{white-space:normal}",
+    ".index-col,.nowrap{white-space:nowrap}.note-col,.note-cell{white-space:normal}",
     "tfoot td{font-family:Arial,'Liberation Sans',sans-serif;font-size:8.5pt;font-weight:700;line-height:1.2;background:#fff;padding-top:3pt;padding-bottom:3pt}.total-label{text-align:right;padding-right:5pt}.total-value{text-align:center;color:#c55a11;white-space:nowrap;font-size:8pt;padding-left:1pt;padding-right:1pt}",
     ".sign{display:flex;width:100%;justify-content:space-between;text-align:center;margin-top:18px}.sign div{width:30%}.sign b{display:block;margin-bottom:35px;font-size:8px}",
   ],
@@ -1025,7 +1025,7 @@ brief.prints.push({
     "<div class=\"title\">ĐƠN ĐẶT HÀNG</div>",
     "<div class=\"meta\"><div class=\"meta-row\"><span class=\"meta-label\">Tên nhà cung cấp:</span><span class=\"meta-value\">{{ supplier }}</span></div><div class=\"meta-row\"><span class=\"meta-label\">Ngày đặt hàng:</span><span class=\"meta-value\">{{ transaction_date | date }}</span></div><div class=\"meta-row\"><span class=\"meta-label\">Ngày giao hàng:</span><span class=\"meta-value\">{{ schedule_date | date }}</span></div></div>",
     "<table><colgroup><col style=\"width:3%\"><col style=\"width:7%\"><col style=\"width:10%\"><col style=\"width:8%\"><col style=\"width:7%\"><col style=\"width:7%\"><col style=\"width:7%\"><col style=\"width:8%\"><col style=\"width:4%\"><col style=\"width:9%\"><col style=\"width:12%\"><col style=\"width:7%\"><col style=\"width:11%\"></colgroup><thead><tr>",
-    "<th class=\"index-col\">STT</th><th>Mã hàng</th><th>Tên hàng</th><th>Màu sắc</th><th>Kích thước</th><th>Trọng lượng</th><th>Số cây/lá</th><th>Số lượng</th><th>ĐVT</th><th>Đơn giá</th><th>Thành tiền</th><th>Dập</th><th class=\"note-col\">Ghi chú</th>",
+    "<th class=\"index-col\">STT</th><th>Mã hàng</th><th>Tên hàng</th><th>Màu sắc</th><th>Kích thước</th><th>Trọng lượng</th><th>SỐ<br><span class=\"nowrap\">CÂY&#47;LÁ</span></th><th>Số lượng</th><th>ĐVT</th><th>Đơn giá</th><th>Thành tiền</th><th>Dập</th><th class=\"note-col\">Ghi chú</th>",
     "</tr></thead><tbody>",
     "{{#each items}}<tr><td class=\"c index-col\">{{ _index }}</td><td class=\"code\">{{ item_code }}</td><td class=\"item-cell\">{{ item_name }}</td><td class=\"c\">{{ color }}</td><td class=\"n\">{{ length_m | number }}</td><td class=\"n\">{{ theoretical_kg_per_m | number }}</td><td class=\"n\">{{ qty_bar | number }}</td><td class=\"n\">{{ qty | number2 }}</td><td class=\"c\">{{ uom }}</td><td class=\"n\">{{ rate | money }}</td><td class=\"n\">{{ amount | money }}</td><td class=\"c\">{{ is_stamped }}</td><td class=\"note-cell\">{{ note }}</td></tr>{{/each}}",
     "</tbody><tfoot><tr><td class=\"total-label\" colspan=\"10\">Tổng tiền</td><td class=\"total-value\">{{ grand_total | money }} {{ currency }}</td><td colspan=\"2\"></td></tr></tfoot></table>",
