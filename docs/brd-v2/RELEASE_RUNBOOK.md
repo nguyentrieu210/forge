@@ -151,6 +151,11 @@ Không rollback bằng cách sửa trực tiếp `installed_apps`, xóa migratio
   stock/GL/payment ledger vẫn bằng 0, migration 25/25, `quick_check=ok`;
 - smoke đăng nhập đọc đúng count danh sách chính, đăng xuất thành công; health/shell 200 và
   guest API 403.
+- correction catalogue ngày 2026-07-30: backup mới + restore drill riêng đạt; nhập đủ 277
+  mặt hàng danh mục cộng 17 profile, 292 dòng giá và 24 màu chuẩn; sáu mã màu lô cũ đã đổi
+  sang tên đầy đủ;
+- hậu kiểm production: 4.191 hồ sơ/search row, Item Price không trỏ mã thiếu, không còn alias
+  Item Color cũ, ledger vẫn 0 và `quick_check=ok`; API đăng nhập đọc đúng count.
 
 Chưa chạy pilot có ghi ledger. Dữ liệu vừa nhập là master/chứng từ lịch sử tham chiếu; workbook
 tồn không có kg nên không thể tạo số dư mở đầu đáng tin cậy. Checklist pilot mục 4 vẫn phải

@@ -22,6 +22,11 @@ import { unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
+import {
+  ALUMDOOR_COLOR_CATALOG,
+  alumdoorColorPayload,
+  canonicalAlumdoorColor,
+} from "./lib/alumdoor-color-catalog.mjs";
 
 const args = process.argv.slice(2);
 const argOf = (name, fallback) => {
@@ -652,7 +657,7 @@ for (const sheetName of stockBook.SheetNames) {
       skippedEmptyLots += 1;
       continue;
     }
-    const colour = clean(row[cColour]) || "KHÔNG RÕ";
+    const colour = canonicalAlumdoorColor(row[cColour]) || "KHÔNG RÕ";
     const rawGeneration = upper(row[cGeneration]);
     const generation = generationMap.get(rawGeneration) ?? "MỚI";
     if (rawGeneration && !generationMap.has(rawGeneration)) unknownGenerations += 1;
@@ -726,17 +731,27 @@ const profileItems = [...profiles].sort((a, b) => a.localeCompare(b, "vi")).map(
     _migration_source: "alumdoor-current-lots-2026",
   },
 }));
-const colourRecords = [...colours].sort((a, b) => a.localeCompare(b, "vi")).map((name) => ({
-  name,
-  payload: {
-    color_code: name,
-    color_name: name === "THÔ" ? "Thô" : name,
-    finish: name === "THÔ" ? "Thô" : "Khác",
-    note: "Mã màu có trong tồn nhôm 2026.",
-    disabled: false,
-    _migration_source: "alumdoor-current-lots-2026",
-  },
-}));
+const canonicalColourNames = new Set(ALUMDOOR_COLOR_CATALOG.map((color) => color.code));
+const colourRecords = [
+  ...ALUMDOOR_COLOR_CATALOG.map((color) => ({
+    name: color.code,
+    payload: alumdoorColorPayload(color),
+  })),
+  ...[...colours]
+    .filter((name) => !canonicalColourNames.has(name))
+    .sort((a, b) => a.localeCompare(b, "vi"))
+    .map((name) => ({
+      name,
+      payload: {
+        color_code: name,
+        color_name: name,
+        finish: "Khác",
+        note: "Mã màu chưa có trong bảng chuẩn; giữ nguyên để không làm mất tham chiếu nguồn.",
+        disabled: false,
+        _migration_source: "alumdoor-current-lots-2026",
+      },
+    })),
+];
 
 // ── 8. Build document records and SQL ────────────────────────────────────────
 const customerRecords = [...customers.values()]

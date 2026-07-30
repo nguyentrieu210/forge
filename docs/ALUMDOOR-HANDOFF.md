@@ -1,6 +1,6 @@
 # ALUMDOOR — BÀN GIAO CHO PHIÊN SAU
 
-> Cập nhật: **2026-07-30 04:37 (UTC+7)**
+> Cập nhật: **2026-07-30 11:01 (UTC+7)**
 > Mã nguồn release: **`C:\Forge-worktrees\platform-design`**
 > Production: **<https://alu.kairo.vn>** — app **Alumdoor 2.0.0**
 > Tenant `alu` · D1 `cloudforge-alu` · id `6781cbc1-8635-4b6e-af46-09297c120cff`
@@ -31,6 +31,9 @@ Mốc release phải nhớ:
 - Dữ liệu thật từ ba workbook đã được nhập vào production theo dạng master/chứng từ lịch sử:
   **3.562 hồ sơ**, gồm 1.257 lô, 439 khách hàng và 1.474 đơn hàng cũ; import chạy đúng một
   lần, không sinh stock/GL/payment ledger giả.
+- Đã sửa thiếu phạm vi danh mục: nhập đủ **277 mặt hàng kinh doanh + 17 mã nhôm lô = 294
+  Item**, **292 dòng giá** và **24 màu chuẩn**. Tổng production hiện là **4.191 hồ sơ**;
+  mã màu cũ trong lô đã đổi sang tên đầy đủ.
 - Chưa tạo giao dịch nghiệp vụ giả trên production. Pilot có ghi ledger và đối chiếu
   cây/kg/giá trị vẫn là việc vận hành cần thực hiện sau khi có số kg cân thật.
 
@@ -87,15 +90,29 @@ Tài liệu `docs/ALUMDOOR-QUY-TRINH.md` và `docs/ALUMDOOR-MUA-HANG-THIET-KE.md
 - Cùng bộ import đã được áp hai lần trên drill; số khóa vẫn giữ nguyên 3.562, chứng minh
   cơ chế upsert không nhân bản dữ liệu.
 
-### 2.4 Số liệu đọc lại trực tiếp sau import production
+### 2.4 Bản sao trước khi sửa danh mục mặt hàng và màu
+
+- SQL: `C:\Forge-worktrees\platform-design\server\backups\alu\alu-2026-07-30T03-57-41-654Z.sql`
+- SHA-256: `f9b12f831a692cd5ebd2bf951ff22e9e813b2b07f34bde047e48c96dbc7c4f85`
+- Dung lượng: `8.070.355` byte
+- Bản mã hoá DPAPI:
+  `C:\AppWeb\_BanGiao\backups\Alumdoor\alu-2026-07-30T03-57-41-654Z.sql.dpapi`
+- SHA-256 bản mã hoá: `1cf70ddf948d527fc339d08a93fb576d05fef0331a61b0b4b7468298c2e464a5`
+- Restore drill: `cloudforge-drill-alumdoor-catalog-20260730`
+  (`0fea97f4-a195-41cc-9428-c07b7e171a43`) — 67 bảng, không đổi route.
+- Bản sửa được áp hai lần trên drill; count và khóa duy nhất không đổi, ledger vẫn bằng 0,
+  `quick_check=ok`.
+
+### 2.5 Số liệu đọc lại trực tiếp sau import production
 
 | Hạng mục | Kết quả |
 |---|---:|
-| Tổng hồ sơ trong tenant | 3.562 |
+| Tổng hồ sơ trong tenant | 4.191 |
 | Khách hàng | 439 |
 | Nhà cung cấp | 22 |
-| Item nhôm | 17 |
-| Màu nhôm | 7 |
+| Item | 294 = 277 danh mục + 17 mã nhôm lô |
+| Item Price | 292 |
+| Màu chuẩn | 24 = 18 sơn tĩnh điện + 5 mạ + 1 THÔ |
 | Lô nhôm | 1.257 |
 | Tổng số cây/lá trong lô | 43.601 |
 | Đơn hàng cũ | 1.474 |
@@ -108,13 +125,14 @@ Tài liệu `docs/ALUMDOOR-QUY-TRINH.md` và `docs/ALUMDOOR-MUA-HANG-THIET-KE.md
 | Print Format thuộc app | 7 |
 | Stock ledger | 0 |
 | GL / Payment ledger | 0 / 0 |
-| Search index / khóa duy nhất | 3.562 / 3.562 |
+| Search index / hồ sơ | 4.191 / 4.191 |
 | Migration tenant | 25 |
 | D1 quick check | `ok` |
 
-Đăng nhập thật qua API production đã đọc được đúng tổng của các danh sách chính: 1.257 lô,
-439 khách hàng, 1.474 đơn hàng cũ và 254 nhật ký nhập cũ. Con số 4.435 chứng từ ở bản bàn giao
-cũ không phải số hiện hành; D1 production và audit import này là nguồn có thẩm quyền.
+Đăng nhập thật qua API production đã đọc đúng 294 Item, 292 Item Price, 24 Item Color và
+1.257 lô. Màu `XANH NGỌC - VÀNG KEM` đọc được đúng bề mặt `Mạ` và hai phạm vi Cửa tấm
+liền Úc / Cửa Đài Loan. Con số 4.435 chứng từ ở bản bàn giao cũ không phải số hiện hành;
+D1 production và audit import này là nguồn có thẩm quyền.
 
 ## 3. Việc vừa hoàn thành ở 1.20.1
 
@@ -207,7 +225,11 @@ Không nên viết lại toàn bộ UI nữa nếu không có lỗi tái hiện 
 
 - 439 khách hàng.
 - 22 nhà cung cấp.
-- 17 Item/profile nhôm và 7 mã màu xuất hiện trong sổ tồn.
+- 277 mặt hàng từ workbook `Hàng hoá _ Vật tư-20260728-2018.xlsx`, cộng 17 Item/profile
+  nhôm phục vụ sổ lô: tổng 294 Item; 292 dòng giá, không có dòng giá trỏ Item thiếu.
+- 24 màu chuẩn: 18 sơn tĩnh điện, 5 mạ màu và `THÔ`. Sáu mã cũ trên lô đã chuẩn hoá:
+  `GS→GHI SẦN`, `VK→VÀNG KEM`, `CF→CAFÉ`, `XF→XÁM XINGFA`, `4004→ĐỎ ĐÔ`,
+  `9512 ( TRẮNG )→TRẮNG`.
 - 1.257 lô nhôm / 43.601 cây-lá; 106 lô LM/phế, 4 lô được đánh dấu chọn cắt,
   163 lô có ghi chú nhập.
 - Trạng thái lô: 1.149 `TỒN`, 55 `SẮP HẾT`, 53 `HẾT`.

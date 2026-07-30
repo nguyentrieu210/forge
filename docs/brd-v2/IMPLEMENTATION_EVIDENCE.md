@@ -110,6 +110,18 @@ Không submit chứng từ nghiệp vụ trong Browser QA; các side effect đã
   `quick_check=ok`.
 - Smoke đăng nhập production sau import đọc đúng count của bốn danh sách chính và đăng xuất
   thành công; `/health` 200, shell 200, guest API vẫn 403.
+- Hậu kiểm phát hiện lượt import đầu chỉ lấy 17 profile và 7 mã màu phát sinh trong workbook
+  tồn, chưa lấy workbook danh mục. Đã đối chiếu `Hàng hoá _ Vật tư-20260728-2018.xlsx`:
+  277/277 mã duy nhất khớp bộ SQL catalogue đã audit, không có mã thừa/thiếu.
+- Bảng màu chủ xưởng được hiện thực đủ 24 dòng: 18 sơn tĩnh điện, 5 mạ màu, 1 THÔ; mã cũ
+  của lô được chuẩn hoá sang tên đầy đủ và mã NCC `9512`/`4004` được giữ trên TRẮNG/ĐỎ ĐÔ.
+- Trước correction đã backup `alu-2026-07-30T03-57-41-654Z.sql`, SHA-256
+  `f9b12f831a692cd5ebd2bf951ff22e9e813b2b07f34bde047e48c96dbc7c4f85`; restore vào
+  `cloudforge-drill-alumdoor-catalog-20260730` đạt 67 bảng, không đổi route.
+- Catalogue + color correction áp hai lần trên drill vẫn giữ đúng 294 Item, 292 Item Price,
+  24 Item Color, 1.257 Aluminium Lot và khóa duy nhất tương ứng; ledger 0, `quick_check=ok`.
+- Production correction áp một lần; `documents=document_search=4.191`, không còn Item Color
+  alias cũ, không có Item Price trỏ Item thiếu. Smoke đăng nhập đọc đúng count và phạm vi màu.
 
 ## 6. Ranh giới còn lại
 
