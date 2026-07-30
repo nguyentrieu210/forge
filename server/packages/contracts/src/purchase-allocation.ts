@@ -69,6 +69,13 @@ export interface PurchaseReceiptAllocationEntry {
   queue_key: string;
   window_id: string;
   line_key: string;
+  /**
+   * Normally the mutation aggregate supplies the voucher identity. Cross-voucher
+   * events such as `apply_unapplied` are triggered by a PO command but still
+   * belong to the originating Purchase Receipt, so they must override both fields.
+   */
+  voucher_no?: string;
+  voucher_revision?: number;
   receipt_item_row_id?: string;
   purchase_order: string;
   purchase_order_item_row_id?: string;
@@ -92,9 +99,20 @@ export interface PurchaseUnappliedReceiptEntry {
   queue_key: string;
   window_id: string;
   line_key: string;
+  /** See PurchaseReceiptAllocationEntry.voucher_no for cross-voucher events. */
+  voucher_no?: string;
+  voucher_revision?: number;
   receipt_item_row_id: string;
   entry_kind: "receive" | "apply" | "reverse" | "settle";
   qty_micros: number;
+  /**
+   * Weight attribution travels with the unapplied balance so a later PO can
+   * create a truthful allocation without rereading or guessing mutable UI data.
+   * Persistence support is added by the following append-only migration slice.
+   */
+  barem_weight_micros?: number;
+  projected_actual_weight_micros?: number;
+  projection_version?: number;
   source_entry_id?: string;
   allocation_entry_id?: string;
   posting_at: string;
