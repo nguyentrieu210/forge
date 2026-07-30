@@ -117,7 +117,11 @@ function visibleColumns(
 ): DocField[] {
   const probes: Doc[] = rows.length ? rows : [{ name: "probe", doctype: meta.name } as Doc];
   return cols.filter((column) =>
-    probes.some((row) => resolveField(column, meta, { doc: row, parent: parentDoc, roles, assumeWritable: true }).visible));
+    probes.some((row) => resolveField(
+      column.list_only ? { ...column, list_only: 0 } : column,
+      meta,
+      { doc: row, parent: parentDoc, roles, assumeWritable: true },
+    ).visible));
 }
 
 /** Một bộ cột chuẩn dùng chung cho cả bảng trong form và bảng lớn. */
@@ -1418,11 +1422,14 @@ export function ChildGrid(props: ChildGridProps) {
                 {cols.map((c) => {
                   const sticky = stickyColumn(c.fieldname);
                   const Control = registry.resolve(c.fieldtype) ?? FallbackControl;
+                  // `list_only` means "show in a table", not "hide from a table". The shared form
+                  // resolver hides it for standalone form fields, so clear the flag inside ChildGrid.
+                  const gridField = fieldForRow(c.list_only ? { ...c, list_only: 0 } : c, row);
                   // P1-06 canonical: trạng thái field con theo depends_on/read_only_depends_on/docstatus,
                   // eval trong ngữ cảnh row (doc) + doc cha (parent). assumeWritable: quyền ghi bảng con
                   // KẾ THỪA từ cha (DocType con permissions rỗng) — grid đã gate bằng readOnly field cha
                   // (H1). Vẫn tôn trọng read_only/read_only_depends_on/docstatus + masked_fields server.
-                  const rf = resolveField(c, childMeta, { doc: row, parent: parentDoc, roles, assumeWritable: true });
+                  const rf = resolveField(gridField, childMeta, { doc: row, parent: parentDoc, roles, assumeWritable: true });
                   const cellReadOnly = Boolean(readOnly || rf.readOnly || (expanded && !rf.visible));
                   const cellHint = !rf.visible
                     ? "Không áp dụng cho mặt hàng này"
@@ -1454,7 +1461,7 @@ export function ChildGrid(props: ChildGridProps) {
                       onClick={() => { setPickedRow(ri); setPickedColumn(cols.indexOf(c)); }}
                     >
                       <Control
-                        field={fieldForRow(c, row)}
+                        field={gridField}
                         value={row[c.fieldname]}
                         onChange={(v: unknown) => setCell(ri, c.fieldname, v)}
                         readOnly={cellReadOnly}

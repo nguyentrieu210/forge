@@ -1120,6 +1120,7 @@ check("ChildGrid render: cột child meta + thêm dòng + resolve depends_on the
     fields: [
       { fieldname: "item_code", fieldtype: "Data", label: "Mã hàng", in_list_view: 1, reqd: 1 },
       { fieldname: "qty", fieldtype: "Float", label: "SL", in_list_view: 1 },
+      { fieldname: "uom", fieldtype: "Data", label: "ĐVT", in_list_view: 1, list_only: 1, read_only: 1 },
       // P1-06: field con chỉ hiện khi qty > 5 (depends_on eval theo row)
       { fieldname: "discount", fieldtype: "Float", label: "CK", in_list_view: 1, depends_on: "eval:doc.qty > 5" },
     ],
@@ -1129,8 +1130,8 @@ check("ChildGrid render: cột child meta + thêm dòng + resolve depends_on the
     h(ChildGrid, {
       childMeta,
       rows: [
-        { name: "r1", doctype: "Sales Order Item", item_code: "ITEM-1", qty: 3 },  // qty≤5 → discount ẩn
-        { name: "r2", doctype: "Sales Order Item", item_code: "ITEM-2", qty: 10 }, // qty>5 → discount hiện
+        { name: "r1", doctype: "Sales Order Item", item_code: "ITEM-1", qty: 3, uom: "Bộ" },  // qty≤5 → discount ẩn
+        { name: "r2", doctype: "Sales Order Item", item_code: "ITEM-2", qty: 10, uom: "Cái" }, // qty>5 → discount hiện
       ],
       onChange: () => {},
       registry: createFullRegistry(),
@@ -1138,6 +1139,7 @@ check("ChildGrid render: cột child meta + thêm dòng + resolve depends_on the
   );
   assert.ok(html.includes("Mã hàng"), "header child");
   assert.ok(html.includes("ITEM-1"), "giá trị cell");
+  assert.ok(html.includes("Bộ"), "field list_only phải hiện trong bảng con");
   assert.ok(html.includes("Thêm dòng"), "nút thêm dòng");
   // canonical: row qty=3 → cell discount bị ẩn (placeholder "—"); có ít nhất 1 dấu — cho row đầu
   assert.ok(html.includes("—"), "depends_on ẩn cell discount ở row qty≤5 (P1-06)");
