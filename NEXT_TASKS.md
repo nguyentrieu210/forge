@@ -25,7 +25,9 @@
 
 **Mục tiêu:** triển khai contract đã chốt tại `server/docs/ALUMDOOR-PURCHASE-RECEIPT-ALLOCATION.md` để một Receipt có thể tự bù nhiều PO line, giữ lịch sử bất biến và đối soát dung sai chính xác.
 
-- Điểm review thiết kế sau chốt: **9,2/10**. Trạng thái: **ready for implementation**, chưa ready for production.
+- Ngày **2026-07-30**, người dùng dự án đã **duyệt** contract v1 và cho phép bắt đầu implementation từ M1.
+- Phê duyệt implementation không bao gồm quyền deploy production hoặc sửa production secrets; rollout vẫn phải qua M8 và explicit deploy approval.
+- Điểm review thiết kế sau chốt: **9,2/10**. Trạng thái: **approved and ready for implementation**, chưa ready for production.
 - Kịch bản khóa: PO 200 + 100 cây, Receipt 230 cây/644,184 kg barem/630 kg thực => allocation 200 + 30, còn nợ danh nghĩa 70.
 - Quyết định concurrency đã chốt: `PurchaseAllocationCoordinator` theo `tenant + company + supplier`, cộng D1 revision claim/trigger authoritative trong cùng batch. Không lock riêng từng vật tư.
 - Quyết định lifecycle đã chốt: obligation queue chạy liên tục; settlement window hữu hạn và snapshot tolerance. Window chỉ close/reverse bằng action có quyền và lý do.
@@ -38,6 +40,7 @@
 
 ### M1 — Schema và contract
 
+- Trạng thái: **được phép bắt đầu**.
 - Thêm migration append-only `server/migrations/tenant/0027_purchase_receipt_allocation.sql`.
 - Thêm tables cho queue, settlement window, obligations, allocations, unapplied, settlement events và revision claims.
 - Thêm triggers/unique/check guards cho revision, sign, lifecycle, live row id và idempotency.
