@@ -6,3 +6,43 @@
 @source "../node_modules/@metaforge/shell/dist";
 @source "../node_modules/@metaforge/controls/dist";
 @source "../node_modules/@metaforge/builder/dist";
+
+/* Compact desktop navigation without hiding routes or changing permissions. */
+@media (min-width: 768px) {
+  .mf-shell-sidebar[data-collapsed="false"] {
+    width: 15.75rem !important;
+  }
+
+  .mf-shell-sidebar .mf-shell-brand {
+    height: 2.75rem;
+    padding-inline: 0.625rem;
+  }
+
+  .mf-shell-sidebar input[aria-label="Tìm menu"] {
+    height: 1.875rem;
+    font-size: 0.75rem;
+  }
+
+  .mf-shell-sidebar .mf-shell-nav-group-label {
+    min-height: 1.625rem;
+    padding-block: 0.125rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.035em;
+    line-height: 1rem;
+    text-transform: uppercase;
+  }
+
+  .mf-shell-sidebar .mf-shell-nav-item {
+    min-height: 1.875rem;
+    margin-bottom: 0.125rem;
+    padding-block: 0.25rem;
+    font-size: 0.8125rem;
+    line-height: 1rem;
+  }
+
+  .mf-shell-sidebar .mf-shell-nav-item svg {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+}
