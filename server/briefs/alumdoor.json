@@ -2,7 +2,7 @@
   "$schema": "./brief.schema.json",
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "1.27.1",
+  "version": "1.27.2",
   "module": "Alumdoor",
   "domain": "alumdoor",
   "brand": "warm",
@@ -3464,6 +3464,7 @@
           "fieldname": "theoretical_kg_per_m",
           "fieldtype": "Float",
           "label": "Trọng lượng định mức (kg/m)",
+          "precision": 3,
           "read_only": true,
           "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
           "description": "Tự lấy từ quy cách kỹ thuật của mã hàng."
@@ -3472,6 +3473,7 @@
           "fieldname": "theoretical_kg",
           "fieldtype": "Float",
           "label": "Số kg barem",
+          "precision": 3,
           "read_only": true,
           "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
           "description": "Kích thước × trọng lượng định mức × số cây/lá."

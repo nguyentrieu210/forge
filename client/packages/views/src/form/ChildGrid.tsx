@@ -461,7 +461,7 @@ export function ChildGrid(props: ChildGridProps) {
     "item_name", "description", "color", "colour", "rate", "amount",
     "formula_policy", "width_basis", "cut_width_m", "billable_area_sqm",
     "length_m", "qty_bundle", "qty_bar", "actual_weight_kg", "total_length_m",
-    "material_specification", "theoretical_kg_per_m", "theoretical_kg", "is_stamped",
+    "material_specification", "theoretical_kg_per_m", "theoretical_kg",
     "actual_kg_per_m", "actual_kg_per_sqm", "so_no",
   ];
   const withComputed = (row: Doc): Doc => {
