@@ -4,6 +4,7 @@ export * from "./document-list.js";
 export * from "./in-memory-store.js";
 export * from "./kernel.js";
 export * from "./lifecycle.js";
+export * from "./purchase-allocation-d1-store.js";
 export * from "./reconciliation.js";
 export * from "./status.js";
 export * from "./store.js";
