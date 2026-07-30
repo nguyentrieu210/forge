@@ -13,7 +13,7 @@
 
 **Mục tiêu:** đưa contract tại `server/docs/ALUMDOOR-PURCHASE-RECEIPT-ALLOCATION.md` từ backend core đã xanh CI thành workflow production đầy đủ, có backfill và UI vận hành được.
 
-- HEAD implementation đã qua CI run `30567772883`: test, typecheck và build **PASS**.
+- HEAD code + tenant migration wrapper đã qua CI run `30568727428`, job `90959777600`: test, typecheck và build **PASS**.
 - Feature rollout mặc định **tắt**. Không có rollout row hoặc `enabled=0` thì PO/Receipt tiếp tục dùng controller legacy.
 - Không bật rollout cho `alu` trước backfill/checksum, M5–M7 và staging smoke.
 
@@ -91,8 +91,10 @@ Còn lại:
 
 Đã xong:
 
-- CI test/typecheck/build xanh trên run `30567772883`.
-- Rollout gate mặc định tắt và database chặn bật nếu thiếu checksum/unresolved còn tồn.
+- CI test/typecheck/build xanh trên run cuối `30568727428`.
+- Rollout gate mặc định tắt và database chặn bật nếu thiếu checksum hoặc unresolved còn tồn.
+- Tenant-safe migration wrapper `server/scripts/migrate-tenant.mjs` có dry-run, explicit confirmation, clean-worktree guard và generated config cleanup.
+- Syntax migration wrapper đã nằm trong test gate và PASS.
 - Draft PR CI tạm #6 đã đóng, không merge và không deploy.
 
 Còn lại:
@@ -103,6 +105,14 @@ Còn lại:
 - Dry-run backfill staging/backup, review unresolved/checksum.
 - Staging smoke toàn luồng PO→Receipt→cancel→settlement→report.
 - Chỉ sau explicit production approval mới migrate/deploy/activate `alu`.
+
+Safe deploy code/schema với rollout tắt dùng thứ tự:
+
+1. Backup.
+2. `node scripts/migrate-tenant.mjs --tenant alu`.
+3. `node scripts/migrate-tenant.mjs --tenant alu --execute --confirm alu`.
+4. `node scripts/deploy-tenant.mjs --tenant alu`.
+5. `node scripts/deploy-tenant.mjs --tenant alu --execute --confirm alu`.
 
 ## P1 — Kiểm thử ổn định bản in Purchase Order Alumdoor
 
