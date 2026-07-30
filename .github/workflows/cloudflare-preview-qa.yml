@@ -51,9 +51,31 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
-            echo "::error::Cloudflare Git integration is connected, but GitHub Actions has no CLOUDFLARE_API_TOKEN/CF_API_TOKEN/CLOUDFLARE_TOKEN secret in the repository or production environment."
+            echo "::error::GitHub Actions has no Cloudflare API token secret."
             exit 1
           fi
+
+      - name: Resolve Workers subdomain
+        id: workers
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/subdomain" \
+            --output /tmp/workers-subdomain.json
+
+          WORKERS_SUBDOMAIN="$(node -e '
+            const response = require("/tmp/workers-subdomain.json");
+            if (!response.success || !response.result?.subdomain) {
+              console.error(JSON.stringify(response));
+              process.exit(1);
+            }
+            process.stdout.write(response.result.subdomain);
+          ')"
+
+          echo "subdomain=$WORKERS_SUBDOMAIN" >> "$GITHUB_OUTPUT"
+          echo "Workers subdomain resolved."
 
       - name: Upload gateway preview version
         id: preview
@@ -62,21 +84,29 @@ jobs:
           set -euo pipefail
           PR_NUMBER="${{ github.event.pull_request.number || github.run_number }}"
           PREVIEW_ALIAS="pr-${PR_NUMBER}"
+          PREVIEW_URL="https://${PREVIEW_ALIAS}-cloudforge-gateway.${{ steps.workers.outputs.subdomain }}.workers.dev"
 
           pnpm --dir server exec wrangler versions upload \
             --config apps/gateway-worker/wrangler.jsonc \
             --preview-alias "$PREVIEW_ALIAS" \
             --keep-vars 2>&1 | tee /tmp/gateway-preview.log
 
-          PREVIEW_URL="$(grep -Eo 'https://[a-zA-Z0-9.-]+\.workers\.dev' /tmp/gateway-preview.log | tail -n 1)"
-          if [ -z "$PREVIEW_URL" ]; then
-            echo "Wrangler uploaded a version but no preview URL was found." >&2
-            exit 1
-          fi
-
           echo "url=$PREVIEW_URL" >> "$GITHUB_OUTPUT"
           echo "alias=$PREVIEW_ALIAS" >> "$GITHUB_OUTPUT"
           echo "Preview: $PREVIEW_URL"
+
+      - name: Wait for gateway preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            if curl --fail --silent --show-error "${{ steps.preview.outputs.url }}/health" >/dev/null; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Gateway preview did not become healthy." >&2
+          exit 1
 
       - name: Install Browser QA worker dependencies
         run: npm install --prefix qa/browser-worker --no-audit --no-fund
@@ -88,14 +118,8 @@ jobs:
           set -euo pipefail
           (
             cd qa/browser-worker
-            npx wrangler deploy 2>&1
-          ) | tee /tmp/qa-worker-deploy.log
-
-          QA_URL="$(grep -Eo 'https://[a-zA-Z0-9.-]+\.workers\.dev' /tmp/qa-worker-deploy.log | tail -n 1)"
-          if [ -z "$QA_URL" ]; then
-            echo "QA Worker deployed but its workers.dev URL was not found." >&2
-            exit 1
-          fi
+            npx wrangler deploy
+          )
 
           QA_TOKEN="$(openssl rand -hex 32)"
           echo "::add-mask::$QA_TOKEN"
@@ -104,6 +128,7 @@ jobs:
             npx wrangler secret put QA_TOKEN
           )
 
+          QA_URL="https://cloudforge-preview-qa.${{ steps.workers.outputs.subdomain }}.workers.dev"
           echo "url=$QA_URL" >> "$GITHUB_OUTPUT"
           echo "token=$QA_TOKEN" >> "$GITHUB_OUTPUT"
 
@@ -111,7 +136,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for attempt in $(seq 1 12); do
+          for attempt in $(seq 1 18); do
             if curl --fail --silent --show-error "${{ steps.qa_worker.outputs.url }}/health" >/dev/null; then
               exit 0
             fi
@@ -127,7 +152,7 @@ jobs:
           set -euo pipefail
           mkdir -p qa-results/screenshots
 
-          node -e 'const fs=require("node:fs"); fs.writeFileSync("/tmp/qa-request.json", JSON.stringify({url: process.argv[1], paths: ["/"]}))' \
+          node -e 'const fs=require("node:fs"); fs.writeFileSync("/tmp/qa-request.json", JSON.stringify({url: process.argv[1], paths: ["/health"]}))' \
             "${{ steps.preview.outputs.url }}"
 
           curl --fail --silent --show-error \
