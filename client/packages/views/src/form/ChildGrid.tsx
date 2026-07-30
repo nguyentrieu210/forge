@@ -79,6 +79,18 @@ function visibleColumns(
     probes.some((row) => resolveField(column, meta, { doc: row, parent: parentDoc, roles, assumeWritable: true }).visible));
 }
 
+/** Một bộ cột chuẩn dùng chung cho cả bảng trong form và bảng lớn. */
+export function resolveChildGridColumns(
+  meta: DocTypeMeta,
+  rows: Doc[],
+  parentDoc?: Record<string, unknown>,
+  roles?: string[],
+): DocField[] {
+  const visible = visibleColumns(gridColumns(meta), meta, rows, parentDoc, roles);
+  if (visible.length) return visible;
+  return (meta.fields ?? []).filter((field) => !isLayout(field.fieldtype)).slice(0, 6);
+}
+
 /**
  * BỀ RỘNG CỘT LÀ TUYỆT ĐỐI, và đúng MỘT cột co giãn.
  *
@@ -132,43 +144,6 @@ function gridWidth(field: DocField): string {
   return GRID_WIDTH[fieldtype] ?? "11rem";
 }
 
-/**
- * Cột của BẢNG LỚN — cố định, ít, theo đúng thứ tự người lập phiếu đọc tờ giấy trên tay.
- *
- * Bản đầu cho bảng lớn hiện MỌI field của dòng. Trên phiếu nhập nhôm đó là 26 cột, mỗi ô
- * Link lại tự đi hỏi danh mục — mở ra là đơ. Và phần lớn số cột ấy không ai nhập bằng tay:
- * chúng là số máy tự dẫn xuất (hệ số quy đổi, tổng chiều dài, kg/m thực).
- *
- * Mỗi mục là một nhóm TÊN THAY THẾ: bảng con của phiếu bán gọi bề rộng là `width_m`, phiếu
- * nhập nhôm gọi khổ là `length_m`. Lấy cái đầu tiên có thật trong doctype con.
- */
-const BIG_COLUMNS: string[][] = [
-  // KHÔNG có `item_name`: ô mã hàng đã in sẵn tên bên dưới mã, nên cột tên là bản sao chiếm
-  // chỗ của những cột phải gõ tay. Bỏ nó đi thì Màu và ĐVT mới đủ rộng để đọc được chữ.
-  ["item_code"],
-  /**
-   * RỘNG lấy `width_m` trước, `length_m` sau — cả hai đều là MÉT.
-   *
-   * Phiếu bán cửa dùng `width_m` (rộng khách đặt); phiếu nhập nhôm không có nó và rơi về
-   * `length_m` (khổ cây), đúng số chia trong công thức kg/m. Một cột, hai chứng từ, không ô
-   * nào đứng nhầm chỗ.
-   */
-  ["length_m", "width_m"],
-  ["height_m"],
-  ["theoretical_kg_per_m"],
-  ["qty_bar", "set_count"],
-  ["theoretical_kg", "qty"],
-  ["rate"], ["amount"],
-  ["color", "colour"],
-  ["is_stamped"],
-  ["uom"],
-  ["actual_weight_kg"],
-  // Trọng lượng trung bình — số MÁY tính, đặt sau tiền vì nó để ĐỐI CHIẾU chứ không phải để
-  // gõ: lệch nhiều so với kg/m danh nghĩa nghĩa là cân sai hoặc ghi nhầm khổ.
-  ["actual_kg_per_m"],
-  ["actual_kg_per_sqm"],
-  ["note", "install_note"],
-];
 /**
  * Bề rộng cột của BẢNG LỚN — hẹp, để 12 cột vừa trọn màn hình thay vì phải cuộn ngang.
  *
@@ -342,37 +317,36 @@ export function ChildGrid(props: ChildGridProps) {
   const [columnSettingsOpen, setColumnSettingsOpen] = useState(false);
   const itemLoadVersion = useRef(new Map<string, number>());
   const automaticItemLoads = useRef(new Set<string>());
-  const compactCols = visibleColumns(gridColumns(childMeta), childMeta, rows, parentDoc, roles);
-  const fallbackCols = (childMeta.fields ?? []).filter((field) => !isLayout(field.fieldtype)).slice(0, 6);
-  const allBigFields = (childMeta.fields ?? []).filter((field) => !isLayout(field.fieldtype));
-  const bigCols = BIG_COLUMNS.flatMap((names) => {
-    const alternatives = names
-      .map((name) => allBigFields.find((field) => field.fieldname === name))
-      .filter((field): field is DocField => Boolean(field));
-    return visibleColumns(alternatives, childMeta, rows, parentDoc, roles).slice(0, 1);
-  });
-  // DocType con nhỏ (vd checklist 2 cột) không có field nào trong preset bảng lớn theo chứng từ.
-  // Không được biến bảng thành chỉ còn "#" và nút xoá; dùng bộ cột gọn làm fallback đầy đủ.
-  const baseCols = expanded && bigCols.length ? bigCols : (compactCols.length ? compactCols : fallbackCols);
+  const canonicalCols = resolveChildGridColumns(childMeta, rows, parentDoc, roles);
+  /**
+   * Bảng trong form là nguồn chuẩn duy nhất cho danh sách và thứ tự cột.
+   *
+   * Bảng lớn chỉ đổi không gian làm việc và thêm tiện ích nhập nhanh; không được tự dùng một
+   * preset khác vì như vậy các cột nghiệp vụ như SL (bó), Số SO NCC hoặc cột mới trong metadata
+   * sẽ biến mất khi người dùng bấm "Mở bảng lớn".
+   */
+  const baseCols = canonicalCols;
 
   /**
    * BỀ RỘNG VÀ THỨ TỰ CỘT do người dùng đặt, và NHỚ LẠI ở lần mở sau.
    *
    * Bề rộng mặc định ở đây chỉ là phỏng đoán từ kiểu field: nó không biết xưởng này ghi chú
    * dài hay ngắn, mã hàng của họ mấy ký tự, hay người nhập quen đọc cột nào trước. Chỉnh
-   * được mà mở lại mất hết thì cũng như không chỉnh — nên lưu theo TỪNG doctype con và từng
-   * chế độ bảng, vào localStorage.
+   * được mà mở lại mất hết thì cũng như không chỉnh — nên lưu theo TỪNG doctype con, dùng chung
+   * cho bảng trong form và bảng lớn.
    *
    * Hỏng localStorage (chế độ riêng tư, hết quota) chỉ mất phần tuỳ chỉnh, bảng vẫn dựng
    * bằng mặc định — không được phép làm chết cả bảng vì một tiện ích.
    */
-  const layoutKey = `mf-grid-layout:${childMeta.name}:${expanded ? "big" : "compact"}`;
+  const layoutKey = `mf-grid-layout:${childMeta.name}`;
   const [layout, setLayout] = useState<GridLayout>(() => ({ ...EMPTY_LAYOUT, w: {}, order: [], hidden: [], pinned: [], labels: {} }));
   const loadedKey = useRef("");
   if (loadedKey.current !== layoutKey) {
     loadedKey.current = layoutKey;
     try {
-      const saved = localStorage.getItem(layoutKey);
+      const saved = localStorage.getItem(layoutKey)
+        ?? localStorage.getItem(`${layoutKey}:compact`)
+        ?? localStorage.getItem(`${layoutKey}:big`);
       const parsed = saved ? JSON.parse(saved) as Partial<GridLayout> : {};
       layout.w = parsed.w ?? {};
       layout.order = parsed.order ?? [];

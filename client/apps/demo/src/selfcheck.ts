@@ -44,7 +44,7 @@ import {
 } from "@metaforge/core";
 import { ControlRegistry, createDefaultRegistry, DateControl, AttachControl, GeolocationControl, LinkControl } from "@metaforge/controls";
 import {
-  FormView, groupLayout, resolveFormFieldWidth, ChildGrid, deriveAverageWeight, derivePurchaseOrderBarem, createFullRegistry, KanbanView, TreeView, ReportView, PrintView, DashboardView, CalendarView, GanttView, type TreeNodeItem,
+  FormView, groupLayout, resolveFormFieldWidth, ChildGrid, deriveAverageWeight, derivePurchaseOrderBarem, resolveChildGridColumns, createFullRegistry, KanbanView, TreeView, ReportView, PrintView, DashboardView, CalendarView, GanttView, type TreeNodeItem,
   deriveColumns, applyClientQuery, buildServerQuery, countQuery, deriveStandardFilters, deriveSearchFields, statusVariant, emptyListState,
   applyColumnOrder, columnPreferenceKey, hasCustomColumnPreferences, moveColumn, normalizeColumnPreferences, stableColumnPreferenceScope,
   resolveFormActions, resolveWorkflowActions, editableCodeField, suggestEditableCode, type FormActionCtx,
@@ -1045,6 +1045,34 @@ check("Đơn mua nhôm tính kg barem từ kích thước × định mức × s�
       qty_bar: 200,
     }),
     undefined,
+  );
+});
+
+check("Bảng con trong form và bảng lớn dùng chung đủ cột đơn mua", () => {
+  const purchaseItemMeta: DocTypeMeta = {
+    name: "Purchase Order Item",
+    fields: [
+      { fieldname: "item_code", fieldtype: "Link", options: "Item", label: "Mã sản phẩm", in_list_view: 1 },
+      { fieldname: "color", fieldtype: "Link", options: "Item Color", label: "Màu", in_list_view: 1 },
+      { fieldname: "length_m", fieldtype: "Float", label: "Kích thước", in_list_view: 1 },
+      { fieldname: "qty_bundle", fieldtype: "Float", label: "SL (bó)", in_list_view: 1 },
+      { fieldname: "qty_bar", fieldtype: "Float", label: "Số cây/lá", in_list_view: 1 },
+      { fieldname: "theoretical_kg_per_m", fieldtype: "Float", label: "Định mức", in_list_view: 1 },
+      { fieldname: "theoretical_kg", fieldtype: "Float", label: "Số kg barem", in_list_view: 1 },
+      { fieldname: "is_stamped", fieldtype: "Select", options: "Có\nKhông", label: "Dập", in_list_view: 1 },
+      { fieldname: "so_no", fieldtype: "Data", label: "Số SO NCC", in_list_view: 1 },
+    ],
+    permissions: [],
+  };
+  const columns = resolveChildGridColumns(purchaseItemMeta, [{
+    name: "r1",
+    doctype: "Purchase Order Item",
+    item_code: "AL71",
+    qty_bundle: 10,
+  }]);
+  assert.deepEqual(
+    columns.map((field) => field.fieldname),
+    ["item_code", "color", "length_m", "qty_bundle", "qty_bar", "theoretical_kg_per_m", "theoretical_kg", "is_stamped", "so_no"],
   );
 });
 
