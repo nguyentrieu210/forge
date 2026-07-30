@@ -131,16 +131,18 @@ export interface PurchaseAllocationRevisionClaim {
  * M1 extension of the normal document mutation plan. The D1 adapter must persist
  * every supplied row in the same batch as the document, stock and compatibility
  * procurement projection. All arrays are optional so unaffected controllers keep
- * their existing plan shape.
+ * their existing plan shape. Explicit undefined is accepted because some plan
+ * combinators copy optional fields from another partial plan under strict optional
+ * property semantics.
  */
 export interface PurchaseAllocationMutationPlanExtension {
-  purchase_queue_seeds?: PurchaseObligationQueueSeed[];
-  purchase_window_seeds?: PurchaseSettlementWindowSeed[];
-  purchase_obligation_entries?: PurchaseWindowObligationEntry[];
-  purchase_allocation_entries?: PurchaseReceiptAllocationEntry[];
-  purchase_unapplied_entries?: PurchaseUnappliedReceiptEntry[];
-  purchase_settlement_entries?: PurchaseSettlementEntry[];
-  purchase_revision_claims?: PurchaseAllocationRevisionClaim[];
+  purchase_queue_seeds?: PurchaseObligationQueueSeed[] | undefined;
+  purchase_window_seeds?: PurchaseSettlementWindowSeed[] | undefined;
+  purchase_obligation_entries?: PurchaseWindowObligationEntry[] | undefined;
+  purchase_allocation_entries?: PurchaseReceiptAllocationEntry[] | undefined;
+  purchase_unapplied_entries?: PurchaseUnappliedReceiptEntry[] | undefined;
+  purchase_settlement_entries?: PurchaseSettlementEntry[] | undefined;
+  purchase_revision_claims?: PurchaseAllocationRevisionClaim[] | undefined;
 }
 
 /**
