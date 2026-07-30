@@ -48,7 +48,7 @@ const replaceField = (dt, name, next) => {
 };
 
 // ─────────────────────────── HEADER ───────────────────────────
-brief.version = "2.0.30";
+brief.version = "2.0.31";
 brief.locale.dateFormat = "dd/mm/yyyy"; // Q11 — chủ xưởng chốt gạch chéo
 // Nỗi đau #1 của BRD: người mở app phải thấy ngay tồn KHẢ DỤNG theo khổ, không phải tự lấy tồn tổng
 // rồi trừ các phiếu giữ bằng tay. Báo cáo này nằm ở query engine nền tảng vì nó đọc cùng sổ kho.
@@ -1012,7 +1012,7 @@ brief.prints.push({
     ".company-header-img{position:absolute;right:-13.5mm;top:0;width:114.3mm;height:auto;display:block}",
     ".title{width:194mm;font-family:Arial,'Liberation Sans',sans-serif;font-size:18px;line-height:1.2;font-weight:700;color:#f15a24;text-transform:uppercase;text-align:center;margin:0 0 6mm}",
     ".meta{width:194mm;margin-left:0;font-size:8px;font-weight:400;line-height:1.45;margin-bottom:4.5mm}.meta-row{display:grid;grid-template-columns:30mm 1fr;min-height:2.8mm}.meta-label{font-weight:700}.meta-value{font-weight:400;white-space:pre-wrap}",
-    "table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}th,td{border:1px solid #777;padding:3pt 1.5pt;vertical-align:middle;text-align:center;line-height:1.2}",
+    "table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}th,td{border:1px solid #777;padding:3pt 1.5pt 4pt;vertical-align:middle;text-align:center;line-height:1.25}",
     "th{background:#f3f3f3;font-size:7.5pt;text-transform:uppercase;white-space:normal}",
     "td{font-size:8pt;white-space:normal;overflow-wrap:anywhere}.n{text-align:center;font-variant-numeric:tabular-nums}.c{text-align:center}.code{font-weight:700}.item-cell,.note-cell{white-space:normal;overflow-wrap:anywhere}",
     ".index-col,.nowrap{white-space:nowrap}.note-col,.note-cell{white-space:normal}",
