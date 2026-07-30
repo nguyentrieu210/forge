@@ -119,11 +119,12 @@ export function hasPurchaseAllocationReader(reader: DomainReader): reader is Pur
   return PURCHASE_ALLOCATION_READER_METHODS.every((method) => typeof candidate[method] === "function");
 }
 
-export async function isPurchaseAllocationActive(
+export async function activePurchaseAllocationReader(
   reader: DomainReader,
   tenantId: string,
-): Promise<reader is PurchaseAllocationReader> {
-  return hasPurchaseAllocationReader(reader) && await reader.isPurchaseAllocationEnabled(tenantId);
+): Promise<PurchaseAllocationReader | null> {
+  if (!hasPurchaseAllocationReader(reader)) return null;
+  return await reader.isPurchaseAllocationEnabled(tenantId) ? reader : null;
 }
 
 export function requirePurchaseAllocationReader(reader: DomainReader): PurchaseAllocationReader {
