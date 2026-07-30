@@ -3,7 +3,7 @@
  * PrintView (M13, presentational) — render HTML từ printview.get_html_and_style (§6, đã ghép style+html).
  * Dùng iframe cô lập để CSS print-format không rò rỉ ra app. HTML là nội dung tin cậy cùng site (§F3).
  */
-import { forwardRef, useCallback, useEffect, useRef, useState } from "react";
+import { forwardRef, useCallback, useRef } from "react";
 import { useT } from "@metaforge/ui";
 
 export interface PrintViewProps {
@@ -21,33 +21,18 @@ export const PrintView = forwardRef<HTMLIFrameElement, PrintViewProps>(function 
   const landscape = /@page\s*\{[^}]*size\s*:\s*A4\s+landscape/i.test(props.html);
   const pageWidth = landscape ? 1123 : 794;
   const pageHeight = landscape ? 794 : 1123;
-  const wrapRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLIFrameElement | null>(null);
-  const [availableSize, setAvailableSize] = useState({ width: pageWidth, height: pageHeight });
-  useEffect(() => {
-    const element = wrapRef.current;
-    if (!element) return;
-    const update = () => setAvailableSize({
-      width: Math.max(320, element.clientWidth - 16),
-      height: Math.max(320, element.clientHeight - 16),
-    });
-    update();
-    const observer = new ResizeObserver(update);
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [props.loading, pageWidth, pageHeight]);
   const setFrameRef = useCallback((node: HTMLIFrameElement | null) => {
     frameRef.current = node;
     if (typeof ref === "function") ref(node);
     else if (ref) ref.current = node;
   }, [ref]);
-  // Mặc định vừa chiều ngang để nội dung chứng từ đủ lớn để đọc.
-  // Chiều dọc được cuộn trong vùng xem thay vì ép toàn bộ A4 vào chiều cao màn hình.
-  const fitScale = Math.min(1, availableSize.width / pageWidth);
-  const pageScale = fitScale * zoom;
+  // 100% luôn là đúng kích thước A4 ở 96 dpi. Màn hình hẹp cuộn ngang/dọc,
+  // không tự co trang vì việc co tự động làm chữ nhỏ và khác tỷ lệ bản PDF.
+  const pageScale = zoom;
   if (props.loading) return <div className="mf-print mf-print-loading">{t("print.rendering")}</div>;
   return (
-    <div ref={wrapRef} className="mf-print-frame-wrap flex h-full min-h-0 overflow-auto p-2" style={{ minHeight: 320 }}>
+    <div className="mf-print-frame-wrap flex h-full min-h-0 overflow-auto p-2" style={{ minHeight: 320 }}>
     <div style={{ width: pageWidth * pageScale, minWidth: pageWidth * pageScale, height: pageHeight * pageScale, margin: "0 auto" }}>
       <iframe
       ref={setFrameRef}

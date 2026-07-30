@@ -88,14 +88,14 @@ export async function downloadPrintPdf(html: string, filename: string): Promise<
       context.drawImage(canvas, 0, offset, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
       if (page > 0) pdf.addPage("a4", landscape ? "landscape" : "portrait");
       pdf.addImage(
-        slice.toDataURL("image/jpeg", 0.96),
-        "JPEG",
+        slice.toDataURL("image/png"),
+        "PNG",
         0,
         0,
         pageWidthMm,
         pageWidthMm * sliceHeight / canvas.width,
         undefined,
-        "FAST",
+        "MEDIUM",
       );
       offset += sliceHeight;
       page += 1;

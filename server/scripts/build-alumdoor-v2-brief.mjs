@@ -48,7 +48,7 @@ const replaceField = (dt, name, next) => {
 };
 
 // ─────────────────────────── HEADER ───────────────────────────
-brief.version = "2.0.25";
+brief.version = "2.0.26";
 brief.locale.dateFormat = "dd/mm/yyyy"; // Q11 — chủ xưởng chốt gạch chéo
 // Nỗi đau #1 của BRD: người mở app phải thấy ngay tồn KHẢ DỤNG theo khổ, không phải tự lấy tồn tổng
 // rồi trừ các phiếu giữ bằng tay. Báo cáo này nằm ở query engine nền tảng vì nó đọc cùng sổ kho.
@@ -1006,34 +1006,30 @@ brief.prints.push({
   default: true,
   css: [
     "@page{size:A4 portrait;margin:0}",
-    "@font-face{font-family:Roboto;src:url('/fonts/Roboto-Normal-Latin.woff2') format('woff2');font-style:normal;font-weight:100 900;font-stretch:100%;font-display:block;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}",
-    "@font-face{font-family:Roboto;src:url('/fonts/Roboto-Normal-Vietnamese.woff2') format('woff2');font-style:normal;font-weight:100 900;font-stretch:100%;font-display:block;unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB}",
-    "@font-face{font-family:Roboto;src:url('/fonts/Roboto-Italic-Latin.woff2') format('woff2');font-style:italic;font-weight:100 900;font-stretch:100%;font-display:block;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}",
-    "@font-face{font-family:Roboto;src:url('/fonts/Roboto-Italic-Vietnamese.woff2') format('woff2');font-style:italic;font-weight:100 900;font-stretch:100%;font-display:block;unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB}",
-    "*{box-sizing:border-box;font-family:Roboto,Arial,sans-serif!important;font-kerning:normal;letter-spacing:normal;word-spacing:normal} html,body{margin:0}body{width:210mm;min-height:297mm;font-family:Roboto,Arial,sans-serif!important;font-size:9px;color:#111;padding:23.7mm 8mm 8mm}",
+    "*{box-sizing:border-box}html,body{margin:0;width:210mm;min-height:297mm}body{font-family:Arial,'Liberation Sans',sans-serif;font-size:9px;color:#111;padding:23.7mm 8mm 8mm;font-kerning:none;letter-spacing:0;word-spacing:0}",
     ".letterhead{position:relative;width:166mm;height:17mm;margin-left:14mm}",
     ".brand-logo{position:absolute;left:2.7mm;top:2.8mm;width:43.6mm;height:auto}",
-    ".company-header-img{position:absolute;right:0;top:0;width:100.8mm;height:auto}.ws{display:inline-block;width:4px;color:transparent;font-size:1px;line-height:1;overflow:hidden}.title .ws{width:5px}.sign .ws{width:4px}",
-    ".title{width:166mm;font-size:18px;font-weight:700;color:#f15a24;text-transform:uppercase;text-align:center;margin:0 0 3.2mm 14mm}",
-    ".meta{width:166mm;margin-left:14mm;font-size:8px;font-weight:400;line-height:1.45;margin-bottom:4.5mm}.meta div{min-height:2.8mm}.meta b{display:inline-block;min-width:30mm}",
+    ".company-header-img{position:absolute;right:0;top:0;width:100.8mm;height:auto;display:block}",
+    ".title{width:166mm;font-family:Arial,'Liberation Sans',sans-serif;font-size:18px;line-height:1.15;font-weight:700;color:#f15a24;text-transform:uppercase;text-align:center;margin:0 0 3.2mm 14mm}",
+    ".meta{width:166mm;margin-left:14mm;font-size:8px;font-weight:400;line-height:1.45;margin-bottom:4.5mm}.meta-row{display:grid;grid-template-columns:30mm 1fr;min-height:2.8mm}.meta-label{font-weight:700}.meta-value{font-weight:400;white-space:pre-wrap}",
     "table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}th,td{border:1px solid #777;padding:3pt 1.5pt;vertical-align:middle;text-align:center;line-height:1.2}",
     "th{background:#f3f3f3;font-size:7.5pt;text-transform:uppercase;white-space:normal}",
     "td{font-size:8pt;white-space:normal;overflow-wrap:anywhere}.n{text-align:center;font-variant-numeric:tabular-nums}.c{text-align:center}.code{font-weight:700}.item-cell,.note-cell{white-space:normal;overflow-wrap:anywhere}",
     ".index-col{white-space:nowrap}.note-col,.note-cell{white-space:normal}",
-    "tfoot td{font-family:Roboto,Arial,sans-serif!important;font-size:8.5pt;font-weight:700;line-height:1.2;background:#fff;padding-top:3pt;padding-bottom:3pt}.total-label{text-align:right;padding-right:5pt}.total-value{text-align:center;color:#c55a11;white-space:nowrap;font-size:8pt;padding-left:1pt;padding-right:1pt}",
+    "tfoot td{font-family:Arial,'Liberation Sans',sans-serif;font-size:8.5pt;font-weight:700;line-height:1.2;background:#fff;padding-top:3pt;padding-bottom:3pt}.total-label{text-align:right;padding-right:5pt}.total-value{text-align:center;color:#c55a11;white-space:nowrap;font-size:8pt;padding-left:1pt;padding-right:1pt}",
     ".sign{display:flex;width:100%;justify-content:space-between;text-align:center;margin-top:18px}.sign div{width:30%}.sign b{display:block;margin-bottom:35px;font-size:8px}",
   ],
   html: [
     `<div class="letterhead"><img class="brand-logo" src="${ORDER_LOGO}" alt="ALUMDOOR">`,
     "<img class=\"company-header-img\" src=\"/alumdoor-company-header.png\" alt=\"Thông tin công ty ALUMDOOR\"></div>",
-    "<div class=\"title\">Đơn<span class=\"ws\">.</span>đặt<span class=\"ws\">.</span>hàng</div>",
-    "<div class=\"meta\"><div><b>Tên<span class=\"ws\">.</span>nhà<span class=\"ws\">.</span>cung<span class=\"ws\">.</span>cấp:</b>{{ supplier }}</div><div><b>Ngày<span class=\"ws\">.</span>đặt<span class=\"ws\">.</span>hàng:</b>{{ transaction_date | date }}</div><div><b>Ngày<span class=\"ws\">.</span>giao<span class=\"ws\">.</span>hàng:</b>{{ schedule_date | date }}</div></div>",
+    "<div class=\"title\">ĐƠN ĐẶT HÀNG</div>",
+    "<div class=\"meta\"><div class=\"meta-row\"><span class=\"meta-label\">Tên nhà cung cấp:</span><span class=\"meta-value\">{{ supplier }}</span></div><div class=\"meta-row\"><span class=\"meta-label\">Ngày đặt hàng:</span><span class=\"meta-value\">{{ transaction_date | date }}</span></div><div class=\"meta-row\"><span class=\"meta-label\">Ngày giao hàng:</span><span class=\"meta-value\">{{ schedule_date | date }}</span></div></div>",
     "<table><colgroup><col style=\"width:3%\"><col style=\"width:7%\"><col style=\"width:10%\"><col style=\"width:8%\"><col style=\"width:7%\"><col style=\"width:7%\"><col style=\"width:7%\"><col style=\"width:8%\"><col style=\"width:4%\"><col style=\"width:9%\"><col style=\"width:12%\"><col style=\"width:7%\"><col style=\"width:11%\"></colgroup><thead><tr>",
-    "<th class=\"index-col\">STT</th><th>Mã<span class=\"ws\">.</span>hàng</th><th>Tên<span class=\"ws\">.</span>hàng</th><th>Màu<span class=\"ws\">.</span>sắc</th><th>Kích<span class=\"ws\">.</span>thước</th><th>Trọng<span class=\"ws\">.</span>lượng</th><th>Số<span class=\"ws\">.</span>cây/lá</th><th>Số<span class=\"ws\">.</span>lượng</th><th>ĐVT</th><th>Đơn<span class=\"ws\">.</span>giá</th><th>Thành<span class=\"ws\">.</span>tiền</th><th>Dập</th><th class=\"note-col\">Ghi<span class=\"ws\">.</span>chú</th>",
+    "<th class=\"index-col\">STT</th><th>Mã hàng</th><th>Tên hàng</th><th>Màu sắc</th><th>Kích thước</th><th>Trọng lượng</th><th>Số cây/lá</th><th>Số lượng</th><th>ĐVT</th><th>Đơn giá</th><th>Thành tiền</th><th>Dập</th><th class=\"note-col\">Ghi chú</th>",
     "</tr></thead><tbody>",
     "{{#each items}}<tr><td class=\"c index-col\">{{ _index }}</td><td class=\"code\">{{ item_code }}</td><td class=\"item-cell\">{{ item_name }}</td><td class=\"c\">{{ color }}</td><td class=\"n\">{{ length_m | number }}</td><td class=\"n\">{{ theoretical_kg_per_m | number }}</td><td class=\"n\">{{ qty_bar | number }}</td><td class=\"n\">{{ qty | number2 }}</td><td class=\"c\">{{ uom }}</td><td class=\"n\">{{ rate | money }}</td><td class=\"n\">{{ amount | money }}</td><td class=\"c\">{{ is_stamped }}</td><td class=\"note-cell\">{{ note }}</td></tr>{{/each}}",
-    "</tbody><tfoot><tr><td class=\"total-label\" colspan=\"10\">Tổng<span class=\"ws\">.</span>tiền</td><td class=\"total-value\">{{ grand_total | money }} {{ currency }}</td><td colspan=\"2\"></td></tr></tfoot></table>",
-    "<div class=\"sign\"><div><b>Người<span class=\"ws\">.</span>lập<span class=\"ws\">.</span>đơn</b>(ký, ghi rõ họ tên)</div><div><b>Người<span class=\"ws\">.</span>duyệt</b>(ký, ghi rõ họ tên)</div><div><b>Nhà<span class=\"ws\">.</span>cung<span class=\"ws\">.</span>cấp<span class=\"ws\">.</span>xác<span class=\"ws\">.</span>nhận</b>(ký, ghi rõ họ tên)</div></div>",
+    "</tbody><tfoot><tr><td class=\"total-label\" colspan=\"10\">Tổng tiền</td><td class=\"total-value\">{{ grand_total | money }} {{ currency }}</td><td colspan=\"2\"></td></tr></tfoot></table>",
+    "<div class=\"sign\"><div><b>Người lập đơn</b>(ký, ghi rõ họ tên)</div><div><b>Người duyệt</b>(ký, ghi rõ họ tên)</div><div><b>Nhà cung cấp xác nhận</b>(ký, ghi rõ họ tên)</div></div>",
   ],
 });
 note("prints: + Đơn nhập hàng A4 dọc, đầu trang đúng lề mẫu và bảng 13 cột dùng font theo pt");
