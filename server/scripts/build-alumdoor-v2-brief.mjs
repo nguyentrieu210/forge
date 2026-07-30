@@ -48,7 +48,7 @@ const replaceField = (dt, name, next) => {
 };
 
 // ─────────────────────────── HEADER ───────────────────────────
-brief.version = "2.0.17";
+brief.version = "2.0.18";
 brief.locale.dateFormat = "dd/mm/yyyy"; // Q11 — chủ xưởng chốt gạch chéo
 // Nỗi đau #1 của BRD: người mở app phải thấy ngay tồn KHẢ DỤNG theo khổ, không phải tự lấy tồn tổng
 // rồi trừ các phiếu giữ bằng tay. Báo cáo này nằm ở query engine nền tảng vì nó đọc cùng sổ kho.
@@ -1013,8 +1013,8 @@ brief.prints.push({
     "*{box-sizing:border-box;font-family:Roboto,Arial,sans-serif!important;font-kerning:normal;letter-spacing:normal;word-spacing:normal} html,body{margin:0}body{width:210mm;min-height:297mm;font-family:Roboto,Arial,sans-serif!important;font-size:9px;color:#111;padding:23.7mm 8mm 8mm}",
     ".letterhead{position:relative;width:166mm;height:17mm;margin-left:14mm}",
     ".brand-logo{position:absolute;left:2.7mm;top:2.8mm;width:43.6mm;height:auto}",
-    ".company-block{position:absolute;right:2.7mm;top:0;width:94mm;text-align:right;font-size:7.5px;font-style:italic;line-height:1.4}",
-    ".tagline{color:#f15a24;font-size:8.5px;font-style:normal;font-weight:800;text-decoration:underline;white-space:nowrap}",
+    ".company-block{position:absolute;right:0;top:0;width:100mm;text-align:right;font-size:7.5px;font-style:italic;line-height:1.4}",
+    ".tagline{color:#f15a24;font-size:8.2px;font-style:normal;font-weight:800;text-decoration:underline;white-space:nowrap;word-spacing:.7px}",
     ".company-block b{font-style:normal}.website{font-style:normal}",
     ".title{width:166mm;font-size:18px;font-weight:700;color:#f15a24;text-transform:uppercase;text-align:center;margin:0 0 3.2mm 14mm}",
     ".meta{width:166mm;margin-left:14mm;font-size:8px;font-weight:400;line-height:1.45;margin-bottom:4.5mm}.meta div{min-height:2.8mm}.meta b{display:inline-block;min-width:30mm}",
@@ -1022,20 +1022,20 @@ brief.prints.push({
     "th{background:#f3f3f3;font-size:7.5pt;text-transform:uppercase;white-space:normal}",
     "td{font-size:8pt;white-space:normal;overflow-wrap:anywhere}.n{text-align:center;font-variant-numeric:tabular-nums}.c{text-align:center}.code{font-weight:700}.item-cell,.note-cell{white-space:normal;overflow-wrap:anywhere}",
     ".index-col{white-space:nowrap}.note-col,.note-cell{white-space:normal}",
-    "tfoot td{font-family:Roboto,Arial,sans-serif!important;font-size:8.5pt;font-weight:700;line-height:1.2;background:#fff;padding-top:3pt;padding-bottom:3pt}.total-label{text-align:right;padding-right:5pt}.total-value{text-align:center;color:#c55a11;white-space:normal;padding-left:2pt;padding-right:2pt}",
+    "tfoot td{font-family:Roboto,Arial,sans-serif!important;font-size:8.5pt;font-weight:700;line-height:1.2;background:#fff;padding-top:3pt;padding-bottom:3pt}.total-label{text-align:right;padding-right:5pt}.total-value{text-align:center;color:#c55a11;white-space:nowrap;font-size:8pt;padding-left:1pt;padding-right:1pt}",
     ".sign{display:flex;width:100%;justify-content:space-between;text-align:center;margin-top:18px}.sign div{width:30%}.sign b{display:block;margin-bottom:35px;font-size:8px}",
   ],
   html: [
     `<div class="letterhead"><img class="brand-logo" src="${ORDER_LOGO}" alt="ALUMDOOR">`,
-    "<div class=\"company-block\"><div class=\"tagline\">CHUYÊN SẢN XUẤT: CỬA CUỐN CÔNG NGHỆ ÚC/ ĐỨC - CỬA MẮT VÕNG/ SONG NGANG</div><div><b>N/M 01:</b> Số 12B đường số 2, P. Bình Hưng Hòa, Q. Bình Tân, TP.HCM</div><div><b>N/M 02:</b> Số 36 đường số 7, P. Bình Hưng Hòa, Q. Bình Tân, TP.HCM</div><div><b>Điện thoại:</b> 096.515.9595 - 0966.988.233</div><div class=\"website\"><b>Website:</b> www.alumdoor.vn</div></div></div>",
-    "<div class=\"title\">Đơn đặt hàng</div>",
+    "<div class=\"company-block\"><div class=\"tagline\">CHUYÊN&nbsp;SẢN&nbsp;XUẤT: CỬA&nbsp;CUỐN&nbsp;CÔNG&nbsp;NGHỆ&nbsp;ÚC/&nbsp;ĐỨC - CỬA&nbsp;MẮT&nbsp;VÕNG/&nbsp;SONG&nbsp;NGANG</div><div><b>N/M 01:</b> Số 12B đường số 2, P. Bình Hưng Hòa, Q. Bình Tân, TP.HCM</div><div><b>N/M 02:</b> Số 36 đường số 7, P. Bình Hưng Hòa, Q. Bình Tân, TP.HCM</div><div><b>Điện thoại:</b> 096.515.9595 - 0966.988.233</div><div class=\"website\"><b>Website:</b> www.alumdoor.vn</div></div></div>",
+    "<div class=\"title\">Đơn&nbsp;đặt&nbsp;hàng</div>",
     "<div class=\"meta\"><div><b>Tên nhà cung cấp:</b>{{ supplier }}</div><div><b>Ngày đặt hàng:</b>{{ transaction_date | date }}</div><div><b>Ngày giao hàng:</b>{{ schedule_date | date }}</div></div>",
-    "<table><colgroup><col style=\"width:3%\"><col style=\"width:7%\"><col style=\"width:10%\"><col style=\"width:8%\"><col style=\"width:7%\"><col style=\"width:7%\"><col style=\"width:7%\"><col style=\"width:8%\"><col style=\"width:4%\"><col style=\"width:9%\"><col style=\"width:11%\"><col style=\"width:7%\"><col style=\"width:12%\"></colgroup><thead><tr>",
+    "<table><colgroup><col style=\"width:3%\"><col style=\"width:7%\"><col style=\"width:10%\"><col style=\"width:8%\"><col style=\"width:7%\"><col style=\"width:7%\"><col style=\"width:7%\"><col style=\"width:8%\"><col style=\"width:4%\"><col style=\"width:9%\"><col style=\"width:12%\"><col style=\"width:7%\"><col style=\"width:11%\"></colgroup><thead><tr>",
     "<th class=\"index-col\">STT</th><th>Mã hàng</th><th>Tên hàng</th><th>Màu sắc</th><th>Kích thước</th><th>Trọng lượng</th><th>Số cây/lá</th><th>Số lượng</th><th>ĐVT</th><th>Đơn giá</th><th>Thành tiền</th><th>Dập</th><th class=\"note-col\">Ghi chú</th>",
     "</tr></thead><tbody>",
     "{{#each items}}<tr><td class=\"c index-col\">{{ _index }}</td><td class=\"code\">{{ item_code }}</td><td class=\"item-cell\">{{ item_name }}</td><td class=\"c\">{{ color }}</td><td class=\"n\">{{ length_m | number }}</td><td class=\"n\">{{ theoretical_kg_per_m | number }}</td><td class=\"n\">{{ qty_bar | number }}</td><td class=\"n\">{{ qty | number2 }}</td><td class=\"c\">{{ uom }}</td><td class=\"n\">{{ rate | money }}</td><td class=\"n\">{{ amount | money }}</td><td class=\"c\">{{ is_stamped }}</td><td class=\"note-cell\">{{ note }}</td></tr>{{/each}}",
     "</tbody><tfoot><tr><td class=\"total-label\" colspan=\"10\">Tổng tiền</td><td class=\"total-value\">{{ grand_total | money }} {{ currency }}</td><td colspan=\"2\"></td></tr></tfoot></table>",
-    "<div class=\"sign\"><div><b>Người lập đơn</b>(ký, ghi rõ họ tên)</div><div><b>Người duyệt</b>(ký, ghi rõ họ tên)</div><div><b>Nhà cung cấp xác nhận</b>(ký, ghi rõ họ tên)</div></div>",
+    "<div class=\"sign\"><div><b>Người&nbsp;lập&nbsp;đơn</b>(ký, ghi rõ họ tên)</div><div><b>Người&nbsp;duyệt</b>(ký, ghi rõ họ tên)</div><div><b>Nhà&nbsp;cung&nbsp;cấp&nbsp;xác&nbsp;nhận</b>(ký, ghi rõ họ tên)</div></div>",
   ],
 });
 note("prints: + Đơn nhập hàng A4 dọc, đầu trang đúng lề mẫu và bảng 13 cột dùng font theo pt");
