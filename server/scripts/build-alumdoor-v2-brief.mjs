@@ -48,7 +48,7 @@ const replaceField = (dt, name, next) => {
 };
 
 // ─────────────────────────── HEADER ───────────────────────────
-brief.version = "2.0.22";
+brief.version = "2.0.23";
 brief.locale.dateFormat = "dd/mm/yyyy"; // Q11 — chủ xưởng chốt gạch chéo
 // Nỗi đau #1 của BRD: người mở app phải thấy ngay tồn KHẢ DỤNG theo khổ, không phải tự lấy tồn tổng
 // rồi trừ các phiếu giữ bằng tay. Báo cáo này nằm ở query engine nền tảng vì nó đọc cùng sổ kho.
@@ -1013,8 +1013,8 @@ brief.prints.push({
     "*{box-sizing:border-box;font-family:Roboto,Arial,sans-serif!important;font-kerning:normal;letter-spacing:normal;word-spacing:normal} html,body{margin:0}body{width:210mm;min-height:297mm;font-family:Roboto,Arial,sans-serif!important;font-size:9px;color:#111;padding:23.7mm 8mm 8mm}",
     ".letterhead{position:relative;width:166mm;height:17mm;margin-left:14mm}",
     ".brand-logo{position:absolute;left:2.7mm;top:2.8mm;width:43.6mm;height:auto}",
-    ".company-block{position:absolute;right:0;top:0;width:100mm;text-align:right;font-size:7.5px;font-style:italic;line-height:1.4}",
-    ".tagline{display:flex;justify-content:flex-end;align-items:baseline;gap:4px;color:#f15a24;font-size:8px;font-style:normal;font-weight:800;text-decoration:underline;white-space:nowrap}.tagline span{display:block;flex:0 0 auto}.ws{display:inline-block;width:4px;color:transparent;font-size:1px;line-height:1;overflow:hidden}.title .ws{width:5px}.sign .ws{width:4px}",
+    ".company-block{position:absolute;right:0;top:0;width:115mm;text-align:right;font-size:7.5px;font-style:italic;line-height:1.4}",
+    ".tagline{display:flex;justify-content:flex-end;align-items:baseline;gap:8px;color:#f15a24;font-size:8px;font-style:normal;font-weight:800;text-decoration:underline;white-space:nowrap}.tagline span{display:block;flex:0 0 auto}.ws{display:inline-block;width:4px;color:transparent;font-size:1px;line-height:1;overflow:hidden}.title .ws{width:5px}.sign .ws{width:4px}",
     ".company-block b{font-style:normal}.website{font-style:normal}",
     ".title{width:166mm;font-size:18px;font-weight:700;color:#f15a24;text-transform:uppercase;text-align:center;margin:0 0 3.2mm 14mm}",
     ".meta{width:166mm;margin-left:14mm;font-size:8px;font-weight:400;line-height:1.45;margin-bottom:4.5mm}.meta div{min-height:2.8mm}.meta b{display:inline-block;min-width:30mm}",
