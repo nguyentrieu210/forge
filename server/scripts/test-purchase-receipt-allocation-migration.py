@@ -7,6 +7,7 @@ connection = sqlite3.connect(":memory:")
 connection.execute("PRAGMA foreign_keys=ON")
 connection.executescript((root / "migrations/tenant/0001_core.sql").read_text())
 connection.executescript((root / "migrations/tenant/0027_purchase_receipt_allocation.sql").read_text())
+connection.executescript((root / "migrations/tenant/0028_purchase_allocation_cancel_guard.sql").read_text())
 
 TENANT = "demo"
 QUEUE = "a" * 64
@@ -38,7 +39,16 @@ def insert_document(doctype: str, name: str, rows: list[tuple[str, int]]) -> Non
         )
 
 
-def insert_obligation(entry_id: str, po: str, row_id: str, qty_micros: int, idx: int) -> None:
+def insert_obligation(
+    entry_id: str,
+    po: str,
+    row_id: str,
+    qty_micros: int,
+    idx: int,
+    *,
+    kind: str = "open",
+    voucher_revision: int = 1,
+) -> None:
     connection.execute(
         """INSERT INTO purchase_window_obligation_entries(
         tenant_id,entry_id,queue_key,window_id,voucher_type,voucher_no,voucher_revision,line_key,
@@ -46,8 +56,8 @@ def insert_obligation(entry_id: str, po: str, row_id: str, qty_micros: int, idx:
         purchase_order_created_at,item_idx,committed_at,actor,command_id,source,resolution)
         VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         (
-            TENANT, entry_id, QUEUE, WINDOW, "Purchase Order", po, 1, entry_id,
-            po, row_id, "open", qty_micros, "2026-07-01", NOW, idx, NOW,
+            TENANT, entry_id, QUEUE, WINDOW, "Purchase Order", po, voucher_revision, entry_id,
+            po, row_id, kind, qty_micros, "2026-07-01", NOW, idx, NOW,
             "Administrator", f"cmd-{entry_id}", "live", "resolved",
         ),
     )
@@ -84,6 +94,7 @@ def insert_allocation(
 
 insert_document("Purchase Order", "PO-01", [("PO-01-ROW-1", 1)])
 insert_document("Purchase Order", "PO-02", [("PO-02-ROW-1", 1)])
+insert_document("Purchase Order", "PO-CANCEL", [("PO-CANCEL-ROW-1", 1)])
 insert_document("Purchase Receipt", "PR-01", [("PR-01-ROW-1", 1)])
 insert_document("Purchase Receipt", "PR-02", [("PR-02-ROW-1", 1)])
 
@@ -98,12 +109,28 @@ connection.execute(
 
 insert_obligation("OBL-01", "PO-01", "PO-01-ROW-1", 200_000_000, 1)
 insert_obligation("OBL-02", "PO-02", "PO-02-ROW-1", 100_000_000, 1)
+insert_obligation("OBL-CANCEL-OPEN", "PO-CANCEL", "PO-CANCEL-ROW-1", 10_000_000, 1)
+connection.execute(
+    "UPDATE documents SET docstatus=2,status='Cancelled',version=2 WHERE tenant_id=? AND doc_key=?",
+    (TENANT, "Purchase Order:PO-CANCEL"),
+)
+insert_obligation(
+    "OBL-CANCEL-REVERSE", "PO-CANCEL", "PO-CANCEL-ROW-1", -10_000_000, 1,
+    kind="cancel", voucher_revision=2,
+)
+assert connection.execute(
+    """SELECT SUM(qty_micros) FROM purchase_window_obligation_entries
+       WHERE tenant_id=? AND purchase_order='PO-CANCEL' AND purchase_order_item_row_id='PO-CANCEL-ROW-1'""",
+    (TENANT,),
+).fetchone() == (0,)
+
 insert_allocation("ALLOC-01", "PR-01", "PR-01-ROW-1", "PO-01", "PO-01-ROW-1", 200_000_000, 1)
 insert_allocation("ALLOC-02", "PR-01", "PR-01-ROW-1", "PO-02", "PO-02-ROW-1", 30_000_000, 2)
 
 balances = connection.execute(
     """SELECT purchase_order, nominal_qty_micros, allocated_qty_micros, remaining_qty_micros
-       FROM purchase_obligation_balances ORDER BY purchase_order"""
+       FROM purchase_obligation_balances
+       WHERE purchase_order IN ('PO-01','PO-02') ORDER BY purchase_order"""
 ).fetchall()
 assert balances == [
     ("PO-01", 200_000_000, 200_000_000, 0),
