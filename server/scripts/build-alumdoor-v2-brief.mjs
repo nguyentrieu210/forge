@@ -48,7 +48,7 @@ const replaceField = (dt, name, next) => {
 };
 
 // ─────────────────────────── HEADER ───────────────────────────
-brief.version = "2.0.20";
+brief.version = "2.0.21";
 brief.locale.dateFormat = "dd/mm/yyyy"; // Q11 — chủ xưởng chốt gạch chéo
 // Nỗi đau #1 của BRD: người mở app phải thấy ngay tồn KHẢ DỤNG theo khổ, không phải tự lấy tồn tổng
 // rồi trừ các phiếu giữ bằng tay. Báo cáo này nằm ở query engine nền tảng vì nó đọc cùng sổ kho.
@@ -1014,7 +1014,7 @@ brief.prints.push({
     ".letterhead{position:relative;width:166mm;height:17mm;margin-left:14mm}",
     ".brand-logo{position:absolute;left:2.7mm;top:2.8mm;width:43.6mm;height:auto}",
     ".company-block{position:absolute;right:0;top:0;width:100mm;text-align:right;font-size:7.5px;font-style:italic;line-height:1.4}",
-    ".tagline{color:#f15a24;font-size:8.2px;font-style:normal;font-weight:800;text-decoration:underline;white-space:nowrap}.ws{display:inline-block;width:4px}.tagline .ws{width:5px}.title .ws{width:5px}.sign .ws{width:4px}",
+    ".tagline{color:#f15a24;font-size:8.2px;font-style:normal;font-weight:800;text-decoration:underline;white-space:nowrap}.ws{display:inline-block;width:4px;color:transparent;font-size:1px;line-height:1;overflow:hidden}.tagline .ws{width:5px}.title .ws{width:5px}.sign .ws{width:4px}",
     ".company-block b{font-style:normal}.website{font-style:normal}",
     ".title{width:166mm;font-size:18px;font-weight:700;color:#f15a24;text-transform:uppercase;text-align:center;margin:0 0 3.2mm 14mm}",
     ".meta{width:166mm;margin-left:14mm;font-size:8px;font-weight:400;line-height:1.45;margin-bottom:4.5mm}.meta div{min-height:2.8mm}.meta b{display:inline-block;min-width:30mm}",
@@ -1027,15 +1027,15 @@ brief.prints.push({
   ],
   html: [
     `<div class="letterhead"><img class="brand-logo" src="${ORDER_LOGO}" alt="ALUMDOOR">`,
-    "<div class=\"company-block\"><div class=\"tagline\">CHUYÊN<span class=\"ws\"></span>SẢN<span class=\"ws\"></span>XUẤT:<span class=\"ws\"></span>CỬA<span class=\"ws\"></span>CUỐN<span class=\"ws\"></span>CÔNG<span class=\"ws\"></span>NGHỆ<span class=\"ws\"></span>ÚC/<span class=\"ws\"></span>ĐỨC<span class=\"ws\"></span>-<span class=\"ws\"></span>CỬA<span class=\"ws\"></span>MẮT<span class=\"ws\"></span>VÕNG/<span class=\"ws\"></span>SONG<span class=\"ws\"></span>NGANG</div><div><b>N/M<span class=\"ws\"></span>01:</b> Số 12B đường số 2, P. Bình Hưng Hòa, Q. Bình Tân, TP.HCM</div><div><b>N/M<span class=\"ws\"></span>02:</b> Số 36 đường số 7, P. Bình Hưng Hòa, Q. Bình Tân, TP.HCM</div><div><b>Điện<span class=\"ws\"></span>thoại:</b> 096.515.9595 - 0966.988.233</div><div class=\"website\"><b>Website:</b> www.alumdoor.vn</div></div></div>",
-    "<div class=\"title\">Đơn<span class=\"ws\"></span>đặt<span class=\"ws\"></span>hàng</div>",
-    "<div class=\"meta\"><div><b>Tên<span class=\"ws\"></span>nhà<span class=\"ws\"></span>cung<span class=\"ws\"></span>cấp:</b>{{ supplier }}</div><div><b>Ngày<span class=\"ws\"></span>đặt<span class=\"ws\"></span>hàng:</b>{{ transaction_date | date }}</div><div><b>Ngày<span class=\"ws\"></span>giao<span class=\"ws\"></span>hàng:</b>{{ schedule_date | date }}</div></div>",
+    "<div class=\"company-block\"><div class=\"tagline\">CHUYÊN<span class=\"ws\">.</span>SẢN<span class=\"ws\">.</span>XUẤT:<span class=\"ws\">.</span>CỬA<span class=\"ws\">.</span>CUỐN<span class=\"ws\">.</span>CÔNG<span class=\"ws\">.</span>NGHỆ<span class=\"ws\">.</span>ÚC/<span class=\"ws\">.</span>ĐỨC<span class=\"ws\">.</span>-<span class=\"ws\">.</span>CỬA<span class=\"ws\">.</span>MẮT<span class=\"ws\">.</span>VÕNG/<span class=\"ws\">.</span>SONG<span class=\"ws\">.</span>NGANG</div><div><b>N/M<span class=\"ws\">.</span>01:</b> Số 12B đường số 2, P. Bình Hưng Hòa, Q. Bình Tân, TP.HCM</div><div><b>N/M<span class=\"ws\">.</span>02:</b> Số 36 đường số 7, P. Bình Hưng Hòa, Q. Bình Tân, TP.HCM</div><div><b>Điện<span class=\"ws\">.</span>thoại:</b> 096.515.9595 - 0966.988.233</div><div class=\"website\"><b>Website:</b> www.alumdoor.vn</div></div></div>",
+    "<div class=\"title\">Đơn<span class=\"ws\">.</span>đặt<span class=\"ws\">.</span>hàng</div>",
+    "<div class=\"meta\"><div><b>Tên<span class=\"ws\">.</span>nhà<span class=\"ws\">.</span>cung<span class=\"ws\">.</span>cấp:</b>{{ supplier }}</div><div><b>Ngày<span class=\"ws\">.</span>đặt<span class=\"ws\">.</span>hàng:</b>{{ transaction_date | date }}</div><div><b>Ngày<span class=\"ws\">.</span>giao<span class=\"ws\">.</span>hàng:</b>{{ schedule_date | date }}</div></div>",
     "<table><colgroup><col style=\"width:3%\"><col style=\"width:7%\"><col style=\"width:10%\"><col style=\"width:8%\"><col style=\"width:7%\"><col style=\"width:7%\"><col style=\"width:7%\"><col style=\"width:8%\"><col style=\"width:4%\"><col style=\"width:9%\"><col style=\"width:12%\"><col style=\"width:7%\"><col style=\"width:11%\"></colgroup><thead><tr>",
-    "<th class=\"index-col\">STT</th><th>Mã<span class=\"ws\"></span>hàng</th><th>Tên<span class=\"ws\"></span>hàng</th><th>Màu<span class=\"ws\"></span>sắc</th><th>Kích<span class=\"ws\"></span>thước</th><th>Trọng<span class=\"ws\"></span>lượng</th><th>Số<span class=\"ws\"></span>cây/lá</th><th>Số<span class=\"ws\"></span>lượng</th><th>ĐVT</th><th>Đơn<span class=\"ws\"></span>giá</th><th>Thành<span class=\"ws\"></span>tiền</th><th>Dập</th><th class=\"note-col\">Ghi<span class=\"ws\"></span>chú</th>",
+    "<th class=\"index-col\">STT</th><th>Mã<span class=\"ws\">.</span>hàng</th><th>Tên<span class=\"ws\">.</span>hàng</th><th>Màu<span class=\"ws\">.</span>sắc</th><th>Kích<span class=\"ws\">.</span>thước</th><th>Trọng<span class=\"ws\">.</span>lượng</th><th>Số<span class=\"ws\">.</span>cây/lá</th><th>Số<span class=\"ws\">.</span>lượng</th><th>ĐVT</th><th>Đơn<span class=\"ws\">.</span>giá</th><th>Thành<span class=\"ws\">.</span>tiền</th><th>Dập</th><th class=\"note-col\">Ghi<span class=\"ws\">.</span>chú</th>",
     "</tr></thead><tbody>",
     "{{#each items}}<tr><td class=\"c index-col\">{{ _index }}</td><td class=\"code\">{{ item_code }}</td><td class=\"item-cell\">{{ item_name }}</td><td class=\"c\">{{ color }}</td><td class=\"n\">{{ length_m | number }}</td><td class=\"n\">{{ theoretical_kg_per_m | number }}</td><td class=\"n\">{{ qty_bar | number }}</td><td class=\"n\">{{ qty | number2 }}</td><td class=\"c\">{{ uom }}</td><td class=\"n\">{{ rate | money }}</td><td class=\"n\">{{ amount | money }}</td><td class=\"c\">{{ is_stamped }}</td><td class=\"note-cell\">{{ note }}</td></tr>{{/each}}",
-    "</tbody><tfoot><tr><td class=\"total-label\" colspan=\"10\">Tổng<span class=\"ws\"></span>tiền</td><td class=\"total-value\">{{ grand_total | money }} {{ currency }}</td><td colspan=\"2\"></td></tr></tfoot></table>",
-    "<div class=\"sign\"><div><b>Người<span class=\"ws\"></span>lập<span class=\"ws\"></span>đơn</b>(ký, ghi rõ họ tên)</div><div><b>Người<span class=\"ws\"></span>duyệt</b>(ký, ghi rõ họ tên)</div><div><b>Nhà<span class=\"ws\"></span>cung<span class=\"ws\"></span>cấp<span class=\"ws\"></span>xác<span class=\"ws\"></span>nhận</b>(ký, ghi rõ họ tên)</div></div>",
+    "</tbody><tfoot><tr><td class=\"total-label\" colspan=\"10\">Tổng<span class=\"ws\">.</span>tiền</td><td class=\"total-value\">{{ grand_total | money }} {{ currency }}</td><td colspan=\"2\"></td></tr></tfoot></table>",
+    "<div class=\"sign\"><div><b>Người<span class=\"ws\">.</span>lập<span class=\"ws\">.</span>đơn</b>(ký, ghi rõ họ tên)</div><div><b>Người<span class=\"ws\">.</span>duyệt</b>(ký, ghi rõ họ tên)</div><div><b>Nhà<span class=\"ws\">.</span>cung<span class=\"ws\">.</span>cấp<span class=\"ws\">.</span>xác<span class=\"ws\">.</span>nhận</b>(ký, ghi rõ họ tên)</div></div>",
   ],
 });
 note("prints: + Đơn nhập hàng A4 dọc, đầu trang đúng lề mẫu và bảng 13 cột dùng font theo pt");
