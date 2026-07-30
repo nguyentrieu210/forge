@@ -4,7 +4,7 @@ import { createO2CControllerRegistry } from "../../../packages/clouderp-selling/
 import { registerErpCoreControllers } from "../../../packages/clouderp-core/src/index.js";
 import { registerStockControllers } from "../../../packages/clouderp-stock/src/index.js";
 import { registerErpNextCoreControllers } from "../../../packages/clouderp-erpnext/src/index.js";
-import { D1PurchaseAllocationMutationStore, DocumentKernel } from "../../../packages/document-kernel/src/index.js";
+import { D1PurchaseAllocationDomainStore, DocumentKernel } from "../../../packages/document-kernel/src/index.js";
 import { errors } from "../../../packages/core/src/index.js";
 import { D1DocumentAccessStore, D1MetadataStore, GenericMetadataController, MetadataPermissionService } from "../../../packages/frappe-model/src/index.js";
 import type { TenantEnv } from "./env.js";
@@ -31,7 +31,7 @@ const PURCHASE_ALLOCATION_DOCTYPES = new Set(["Purchase Order", "Purchase Receip
  */
 export class AggregateCoordinator extends DurableObject<TenantEnv> {
   private readonly kernel: DocumentKernel;
-  private readonly store: D1PurchaseAllocationMutationStore;
+  private readonly store: D1PurchaseAllocationDomainStore;
   private readonly env: TenantEnv;
 
   constructor(ctx: DurableObjectState, env: TenantEnv) {
@@ -41,7 +41,7 @@ export class AggregateCoordinator extends DurableObject<TenantEnv> {
     const registry = registerErpNextCoreControllers(
       registerStockControllers(registerErpCoreControllers(createO2CControllerRegistry())),
     ).setFallback(new GenericMetadataController(metadata));
-    this.store = new D1PurchaseAllocationMutationStore(env.DB);
+    this.store = new D1PurchaseAllocationDomainStore(env.DB);
     this.kernel = new DocumentKernel(
       registry,
       this.store,
@@ -72,9 +72,7 @@ export class AggregateCoordinator extends DurableObject<TenantEnv> {
 
     const key = `purchase:${command.tenant_id}:${encodeURIComponent(company)}:${encodeURIComponent(supplier)}`;
     const stub = this.env.AGGREGATES.getByName(key) as AggregateStub;
-    return typeof stub.mutatePurchase === "function"
-      ? stub.mutatePurchase(command)
-      : callPurchaseFetch(stub, command);
+    return stub.mutatePurchase(command);
   }
 
   /** Called only by another instance in this Worker's AGGREGATES namespace. */
@@ -90,17 +88,4 @@ export class AggregateCoordinator extends DurableObject<TenantEnv> {
 function textField(value: JsonObject | undefined, field: string): string {
   const candidate = value?.[field];
   return typeof candidate === "string" ? candidate.trim() : "";
-}
-
-async function callPurchaseFetch<T extends JsonObject>(
-  stub: AggregateStub,
-  command: MutationCommand<T>,
-): Promise<MutationReceipt> {
-  const response = await stub.fetch("https://aggregate.internal/purchase", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(command),
-  });
-  if (!response.ok) throw new Error(`Purchase coordinator returned ${response.status}`);
-  return response.json<MutationReceipt>();
 }
