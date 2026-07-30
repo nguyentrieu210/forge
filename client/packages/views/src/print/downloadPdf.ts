@@ -50,7 +50,11 @@ export async function downloadPrintPdf(html: string, filename: string): Promise<
       import("html2canvas"),
       import("jspdf"),
     ]);
-    const contentHeight = Math.max(pageHeightPx, printDocument.body.scrollHeight, printDocument.documentElement.scrollHeight);
+    const measuredHeight = Math.max(printDocument.body.scrollHeight, printDocument.documentElement.scrollHeight);
+    // A4 297 mm quy đổi 96 dpi ra 1122,52 px rồi làm tròn thành 1123 px. Trình duyệt đôi lúc
+    // báo scrollHeight dư 1–2 px do làm tròn font/đường viền; nếu giữ phần dư giả này, jsPDF
+    // tạo thêm một trang trắng chỉ cao vài pixel. Chỉ coi là trang tiếp theo khi thực sự tràn.
+    const contentHeight = measuredHeight <= pageHeightPx + 2 ? pageHeightPx : measuredHeight;
     const canvas = await html2canvas(printDocument.body, {
       backgroundColor: "#ffffff",
       logging: false,
@@ -73,6 +77,7 @@ export async function downloadPrintPdf(html: string, filename: string): Promise<
     let page = 0;
     while (offset < canvas.height) {
       const sliceHeight = Math.min(pixelsPerPage, canvas.height - offset);
+      if (page > 0 && sliceHeight <= 4) break;
       const slice = document.createElement("canvas");
       slice.width = canvas.width;
       slice.height = sliceHeight;
