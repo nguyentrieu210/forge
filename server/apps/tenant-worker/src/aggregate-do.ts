@@ -4,7 +4,7 @@ import { createO2CControllerRegistry } from "../../../packages/clouderp-selling/
 import { registerErpCoreControllers } from "../../../packages/clouderp-core/src/index.js";
 import { registerStockControllers } from "../../../packages/clouderp-stock/src/index.js";
 import { registerErpNextCoreControllers } from "../../../packages/clouderp-erpnext/src/index.js";
-import { D1PurchaseAllocationDomainStore, DocumentKernel } from "../../../packages/document-kernel/src/index.js";
+import { D1RolloutPurchaseAllocationDomainStore, DocumentKernel } from "../../../packages/document-kernel/src/index.js";
 import { asCloudForgeError, errors } from "../../../packages/core/src/index.js";
 import { D1DocumentAccessStore, D1MetadataStore, GenericMetadataController, MetadataPermissionService } from "../../../packages/frappe-model/src/index.js";
 import type { TenantEnv } from "./env.js";
@@ -32,7 +32,7 @@ const PURCHASE_REVISION_RETRIES = 3;
  */
 export class AggregateCoordinator extends DurableObject<TenantEnv> {
   private readonly kernel: DocumentKernel;
-  private readonly store: D1PurchaseAllocationDomainStore;
+  private readonly store: D1RolloutPurchaseAllocationDomainStore;
 
   constructor(ctx: DurableObjectState, env: TenantEnv) {
     super(ctx, env);
@@ -40,7 +40,7 @@ export class AggregateCoordinator extends DurableObject<TenantEnv> {
     const registry = registerErpNextCoreControllers(
       registerStockControllers(registerErpCoreControllers(createO2CControllerRegistry())),
     ).setFallback(new GenericMetadataController(metadata));
-    this.store = new D1PurchaseAllocationDomainStore(env.DB);
+    this.store = new D1RolloutPurchaseAllocationDomainStore(env.DB);
     this.kernel = new DocumentKernel(
       registry,
       this.store,
