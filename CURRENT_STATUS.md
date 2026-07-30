@@ -5,7 +5,7 @@ Ngày audit: **2026-07-30**, workspace `C:\Forge`.
 ## Git
 
 - Branch: `hotfix/alumdoor-print-list-delete`
-- HEAD xác nhận trước khi chốt contract phân bổ nhập hàng: `8730e71918dd195028303473111923338464b8aa` (`docs: record receipt allocation architecture review`).
+- HEAD xác nhận trước khi ghi nhận phê duyệt contract: `67923909a28a0eabf3ff09da5998e12a24420ab9` (`docs: hand off finalized allocation contract`).
 - Contract thiết kế v1: commit `ed840e14d4e290d637454342accbdc42a553a7de`, file `server/docs/ALUMDOOR-PURCHASE-RECEIPT-ALLOCATION.md`.
 - Commit code fixture bản in: `f5186c4ef6fb54d819bad95ee4eb17f2fd1a18e1` (`test(alumdoor): add purchase order print fixture`).
 - Baseline chức năng Alumdoor đã kéo và kiểm chứng trước đó: `7bbf20f45ecebf329af7b349e02e61827dfe32fe`.
@@ -58,6 +58,9 @@ Ngày **2026-07-30**, người vận hành xác nhận đã chạy hoàn tất t
 
 Contract authoritative nằm tại `server/docs/ALUMDOOR-PURCHASE-RECEIPT-ALLOCATION.md`.
 
+- Ngày **2026-07-30**, người dùng dự án xác nhận **duyệt** phương án thiết kế v1 và cho phép bắt đầu implementation theo M1–M8.
+- Phê duyệt này chỉ áp dụng cho implementation code/local test/staging theo gate; không đồng nghĩa với phê duyệt deploy production hoặc sửa production secrets.
+
 Các quyết định đã chốt:
 
 - Tách **obligation queue** chạy liên tục để FIFO và **settlement window** hữu hạn để tính dung sai; không lấy queue vô thời hạn làm mẫu số ±5%.
@@ -78,8 +81,8 @@ Các quyết định đã chốt:
 - Điểm nghiệp vụ/audit: mạnh; đã cover nhiều PO, nhiều xe, FIFO, dung sai, reversal, backdated, manual override và legacy migration.
 - Concurrency có hai lớp: supplier coordinator và D1 revision guard.
 - Chưa đạt 10/10 vì chưa có bằng chứng implementation cho giới hạn D1 batch khi một xe sinh hàng trăm allocation rows, contention theo supplier, UX preview/settlement và dry-run backfill production.
-- Trạng thái: **ready for implementation**, chưa ready for production.
-- Chưa sửa code nghiệp vụ trong đợt chốt contract này; không chạy lại test/typecheck/build vì chỉ thêm và cập nhật tài liệu thiết kế.
+- Trạng thái: **approved and ready for implementation**, chưa ready for production.
+- Chưa sửa code nghiệp vụ trong đợt ghi nhận phê duyệt này; không chạy lại test/typecheck/build vì chỉ cập nhật tài liệu trạng thái.
 
 ## Test và lint đã được khôi phục
 
@@ -115,7 +118,7 @@ Các quyết định đã chốt:
 - GitHub connector chưa trả check-run cho HEAD hiện tại; không dùng trạng thái audit cũ để suy ra CI của commit mới.
 - Tenant `alu` đã được operator xác nhận deploy, nhưng chưa có smoke-test production được ghi nhận cho login, CRUD, list/delete, print preview và PDF.
 - Chưa xác nhận Gateway version nào đang nhận 100% production traffic.
-- Contract allocation đã chốt nhưng code hiện hành vẫn tiến độ theo `purchase_order + item_code`; chưa có migration `0027`, coordinator, allocation ledger hoặc settlement actions.
+- Contract allocation đã chốt và được duyệt nhưng code hiện hành vẫn tiến độ theo `purchase_order + item_code`; chưa có migration `0027`, coordinator, allocation ledger hoặc settlement actions.
 - Chưa đo D1 batch/latency cho hàng trăm allocation rows và chưa chạy dry-run backfill trên production backup.
 - Fixture mới chưa thay thế visual regression test trên Chromium và kiểm tra PDF tải xuống thực tế.
 - Tài liệu trạng thái cũ như `server/STATUS.md` lệch migration/phiên bản hiện hành; cần tránh dùng làm nguồn sự thật.
