@@ -5,7 +5,7 @@ Ngày audit: **2026-07-30**, workspace `C:\Forge`.
 ## Git
 
 - Branch: `hotfix/alumdoor-print-list-delete`
-- HEAD xác nhận trước khi làm rõ mô hình hàng đợi mua liên tục: `30a5250bfa3df282f42121257297550553150b75` (`docs: define aluminium receipt allocation ledger`).
+- HEAD xác nhận trước khi review kiến trúc hàng đợi mua liên tục: `4d08c158cee6b2f718ee4cd41a0322693c93f493` (`docs: model continuous PO receipt queue`).
 - Commit code fixture bản in: `f5186c4ef6fb54d819bad95ee4eb17f2fd1a18e1` (`test(alumdoor): add purchase order print fixture`).
 - Baseline chức năng Alumdoor đã kéo và kiểm chứng trước đó: `7bbf20f45ecebf329af7b349e02e61827dfe32fe`.
 - Trước khi tạo bộ tài liệu ban đầu, Git status chỉ có hai thư mục untracked đã tồn tại: `server/work/` và `tmp/`.
@@ -58,13 +58,22 @@ Ngày **2026-07-30**, người vận hành xác nhận đã chạy hoàn tất t
 - Thực tế vận hành được làm rõ: một Purchase Order có thể mất cả tháng mới giao xong; cùng một vật tư có thể được đặt 3–4 lần trong tháng; một xe hàng có thể mang số lượng lớn và bù đồng thời rất nhiều đơn.
 - Vì vậy không yêu cầu người dùng chọn `delivery_pool` trên từng PO hoặc Receipt. Hệ thống phải tự duy trì **hàng đợi nghĩa vụ mua đang mở** theo `company + supplier + khóa quy cách vật tư`; PO line mới đúng khóa tự gia nhập hàng đợi đang mở.
 - Receipt line tự phân bổ FIFO qua tất cả PO line còn mở đúng khóa, theo `transaction_date → created_at → PO name → row idx`; một dòng Receipt có thể sinh nhiều allocation rows và một Receipt có thể chạm rất nhiều PO.
-- Chu kỳ chỉ kết thúc khi người có quyền xác nhận “nhà máy giao cuối/đối soát xong”. Sau khi đóng, PO mới cùng quy cách mở chu kỳ kế tiếp; nhờ vậy không gộp vô hạn lịch sử cũ nhưng cũng không bắt nhân viên quản lý nhóm thủ công.
-- Dung sai ±5% được tính trên tổng nghĩa vụ của chu kỳ đang mở. Ví dụ tổng đặt 300 cây, đã nhận 230 thì dải giao cuối là 55–85 cây. FIFO vẫn diễn giải danh nghĩa PO1 nhận 200 và PO2 nhận 30; phần thiếu/dư khi đóng là variance của chu kỳ, không sửa xoá lịch sử phân bổ.
-- Nếu xe về vượt tổng nominal nhưng chưa vượt trần dung sai, phần vượt phải vào số dư `unapplied receipt/tolerance variance` của chu kỳ. PO line mới gia nhập trước khi chu kỳ đóng có thể được bù bằng số dư này qua allocation event mới; không được sửa ngược allocation cũ.
 - Mỗi lần nhập phải giữ lịch sử bất biến: phiếu nhập, dòng nhập, dòng PO được trừ, số cây, kg barem, kg cân thực tế, thứ tự phân bổ và allocate/reverse. Huỷ chứng từ ghi dòng đảo, không delete.
-- Code hiện tại đã cộng dồn `purchase_order_progress_entries` và chặn nhận vượt theo `receipt_tolerance_pct`, nhưng kiểm theo từng Purchase Order và `item_code`; chưa có hàng đợi FIFO xuyên nhiều PO, chưa bám `purchase_order_item.row_id`, chưa có số dư Receipt chưa áp và chưa có hành động đóng chu kỳ.
-- `ProcurementEntry` hiện chỉ có Purchase Order, loại tiến độ, mã hàng, số lượng và ngày; chưa đủ nguồn dòng phiếu nhập/dòng đơn mua, kg barem, kg thực tế, allocation sequence và lifecycle của chu kỳ.
-- Chưa sửa code trong đợt làm rõ này. Thiết kế tiếp theo là sổ receipt-to-PO-line allocation bất biến, obligation stream tự động, FIFO, số dư chưa áp, đóng trong dung sai và báo cáo lịch sử/nợ nhà máy.
+- Code hiện tại đã cộng dồn `purchase_order_progress_entries` và chặn nhận vượt theo `receipt_tolerance_pct`, nhưng kiểm theo từng Purchase Order và `item_code`; chưa có hàng đợi FIFO xuyên nhiều PO, chưa bám `purchase_order_item.row_id`, chưa có số dư Receipt chưa áp và chưa có hành động đối soát cuối.
+- `ProcurementEntry` hiện chỉ có Purchase Order, loại tiến độ, mã hàng, số lượng và ngày; chưa đủ nguồn dòng phiếu nhập/dòng đơn mua, kg barem, kg thực tế, allocation sequence và lifecycle đối soát.
+
+## Review kiến trúc hàng đợi FIFO liên tục
+
+- Điểm hiện tại: **7,3/10**. Ý tưởng lõi FIFO + ledger bất biến + timeline có thể đạt khoảng 9/10, nhưng chưa đủ an toàn để bắt đầu code toàn bộ.
+- Điểm mạnh: bám đúng PO line, không dùng cột tổng hợp nhập tay làm nguồn sự thật, hỗ trợ một Receipt chạm nhiều PO, có reversal thay vì xoá và tách số cây khỏi kg cân thực tế.
+- Blocker 1 — ranh giới khóa: request hiện được route vào Durable Object theo `tenant:doctype:name`, nên hai Purchase Receipt khác tên chạy ở hai coordinator khác nhau. Câu “khóa stream bằng Aggregate Durable Object” chưa đúng với kiến trúc hiện tại; cần coordinator riêng theo `tenant + company + supplier` hoặc commit guard/CAS ở D1.
+- Blocker 2 — đang trộn hai khái niệm: hàng đợi FIFO có thể chạy liên tục, nhưng dung sai ±5% cần một **kỳ đối soát có ranh giới**. Không dùng chính stream vô thời hạn làm mẫu số dung sai, vì đơn mới sẽ làm thay đổi ngược dải thiếu/dư của các lần giao cũ.
+- Blocker 3 — `material_match_key` phải do server chuẩn hoá, có `schema_version` và hash từ snapshot; không ghép chuỗi tự do hoặc tin field do client gửi.
+- Blocker 4 — kg cân thực tế authoritative ở Receipt line. Kg “phân bổ cho PO” chỉ là projection theo barem/tỷ lệ có quy tắc làm tròn; không nên là nguồn sổ thứ hai.
+- Blocker 5 — chưa chốt hành vi receipt nhập lùi ngày, huỷ receipt sau khi đã có allocation mới hơn, PO amendment/cancel, reopen kỳ đã đối soát và manual override có lý do.
+- Blocker 6 — chưa có kế hoạch backfill dữ liệu production từ `purchase_order_progress_entries` cũ vốn chỉ bám PO + item_code. Dòng lịch sử mơ hồ phải được đánh dấu legacy hoặc đối chiếu thủ công, không đoán row_id.
+- Test cần nâng từ “10 PO lines” lên stress case nhiều dòng Receipt, hàng trăm allocation rows, submit đồng thời, retry idempotent, cancel/reallocate và backdated receipt.
+- Chưa sửa code nghiệp vụ trong đợt review này; không chạy lại test/typecheck/build vì chỉ cập nhật tài liệu thiết kế.
 
 ## Test và lint đã được khôi phục
 
@@ -101,7 +110,7 @@ Ngày **2026-07-30**, người vận hành xác nhận đã chạy hoàn tất t
 - Tenant `alu` đã được operator xác nhận deploy, nhưng chưa có smoke-test production được ghi nhận cho login, CRUD, list/delete, print preview và PDF.
 - Chưa xác nhận Gateway version nào đang nhận 100% production traffic.
 - Tiến độ mua hiện gộp theo `item_code`; cùng mã nhưng khác chiều dài/màu/dập hoặc có hai dòng trong một đơn có thể bị đối chiếu nhầm nếu dùng nguyên mô hình này cho FIFO.
-- Dung sai hiện chỉ chặn trần nhận tối đa theo từng PO; chưa có chu kỳ nghĩa vụ tự động, mức tối thiểu khi đóng, số dư Receipt chưa áp hoặc hành động đối soát cuối.
+- Dung sai hiện chỉ chặn trần nhận tối đa theo từng PO; chưa có kỳ đối soát, mức tối thiểu khi đóng, số dư Receipt chưa áp hoặc hành động đối soát cuối.
 - Fixture mới chưa thay thế visual regression test trên Chromium và kiểm tra PDF tải xuống thực tế.
 - Tài liệu trạng thái cũ như `server/STATUS.md` lệch migration/phiên bản hiện hành; cần tránh dùng làm nguồn sự thật.
 - Bundle client lớn, ảnh hưởng tải trang nhưng chưa chặn build.
