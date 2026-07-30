@@ -77,3 +77,11 @@ Không deploy trong audit này. Luồng dự kiến:
 - Provision tenant mới: `server/scripts/provision-tenant.mjs`.
 
 Phải đọc `server/README.md`, kiểm tra pending migration và đúng Cloudflare account trước khi chạy.
+
+## CI và Cloudflare Workers Builds
+
+- GitHub Actions hosted runner đã chạy trọn bộ `install`, `test`, `typecheck` và `build`: **PASS** ngày 2026-07-30.
+- Worker `cloudforge-gateway` đã kết nối với repository `nguyentrieu210/forge` trên production branch `hotfix/alumdoor-print-list-delete`.
+- Cloudflare build command: `pnpm --filter runtime run build && node server/scripts/stage-client-bundle.mjs`.
+- Cloudflare deploy command hiện dùng `wrangler versions upload` để tạo version kiểm tra, chưa tự động promote thành production deployment.
+- Non-production branch builds đang tắt; root directory là repository root `/`.
