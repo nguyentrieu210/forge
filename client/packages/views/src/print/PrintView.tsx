@@ -23,11 +23,14 @@ export const PrintView = forwardRef<HTMLIFrameElement, PrintViewProps>(function 
   const pageHeight = landscape ? 794 : 1123;
   const wrapRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLIFrameElement | null>(null);
-  const [availableWidth, setAvailableWidth] = useState(pageWidth);
+  const [availableSize, setAvailableSize] = useState({ width: pageWidth, height: pageHeight });
   useEffect(() => {
     const element = wrapRef.current;
     if (!element) return;
-    const update = () => setAvailableWidth(Math.max(320, element.clientWidth - 2));
+    const update = () => setAvailableSize({
+      width: Math.max(320, element.clientWidth - 16),
+      height: Math.max(320, element.clientHeight - 16),
+    });
     update();
     const observer = new ResizeObserver(update);
     observer.observe(element);
@@ -38,18 +41,19 @@ export const PrintView = forwardRef<HTMLIFrameElement, PrintViewProps>(function 
     if (typeof ref === "function") ref(node);
     else if (ref) ref.current = node;
   }, [ref]);
-  const pageScale = Math.min(1, availableWidth / pageWidth) * zoom;
+  const fitScale = Math.min(1, availableSize.width / pageWidth, availableSize.height / pageHeight);
+  const pageScale = fitScale * zoom;
   if (props.loading) return <div className="mf-print mf-print-loading">{t("print.rendering")}</div>;
   return (
-    <div ref={wrapRef} className="mf-print-frame-wrap overflow-auto" style={{ minHeight: 600 }}>
-    <div style={{ width: pageWidth * pageScale, minWidth: pageWidth * pageScale, height: pageHeight * pageScale, margin: "0 auto" }}>
+    <div ref={wrapRef} className="mf-print-frame-wrap flex h-full min-h-0 overflow-auto p-2" style={{ minHeight: 320 }}>
+    <div style={{ width: pageWidth * pageScale, minWidth: pageWidth * pageScale, height: pageHeight * pageScale, margin: "auto" }}>
       <iframe
       ref={setFrameRef}
       className="mf-print-frame"
       title={props.title ?? "Print preview"}
       srcDoc={props.html}
-      /* P0-07: chặn JS/same-origin/form/popup trong print HTML (chỉ render HTML+CSS tĩnh) */
-      sandbox=""
+      /* Chỉ cho cùng nguồn để nạp font đóng gói; vẫn chặn JS, form và popup trong HTML in. */
+      sandbox="allow-same-origin"
       referrerPolicy="no-referrer"
       style={{ width: pageWidth, height: pageHeight, transform: `scale(${pageScale})`, transformOrigin: "top left", border: "1px solid var(--border)", borderRadius: "var(--mf-panel-radius)", background: "#fff" }}
     />

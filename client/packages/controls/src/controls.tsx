@@ -92,8 +92,9 @@ export function NumberControl(p: FieldControlProps) {
   const fmt = p.services?.fmt;
   if (p.readOnly && fmt && p.value !== null && p.value !== undefined && p.value !== "") {
     const ft = p.field.fieldtype;
-    const prec = typeof p.field.precision === "string" && p.field.precision !== ""
-      ? Number(p.field.precision) : undefined;
+    const rawPrecision = p.field.precision;
+    const prec = rawPrecision !== undefined && rawPrecision !== null && rawPrecision !== ""
+      ? Number(rawPrecision) : undefined;
     const text = ft === "Currency" ? fmt.currency(p.value as number, prec)
       : ft === "Int" ? fmt.number(p.value as number, 0)
       : fmt.number(p.value as number, prec);
@@ -156,6 +157,9 @@ function GroupedNumberInput(p: FieldControlProps & { suffix?: string }) {
   const caret = useRef<number | null>(null);
   /** Vị trí con trỏ TUYỆT ĐỐI, cho lần chèn dấu thập phân — nó không thêm chữ số nào. */
   const caretExact = useRef<number | null>(null);
+  const rawPrecision = p.field.precision;
+  const precision = rawPrecision !== undefined && rawPrecision !== null && rawPrecision !== ""
+    ? Number(rawPrecision) : undefined;
 
   const digitsBefore = (text: string, at: number) => text.slice(0, at).replace(/\D/g, "").length;
   const groupDigits = (raw: string) => (group ? raw.replace(/\B(?=(\d{3})+(?!\d))/g, group) : raw);
@@ -173,7 +177,11 @@ function GroupedNumberInput(p: FieldControlProps & { suffix?: string }) {
   /** Số → chuỗi đã nhóm. Giữ nguyên phần thập phân người dùng đang gõ, không tự làm tròn. */
   const display = (value: unknown): string => {
     if (value === null || value === undefined || value === "") return "";
-    const [whole, fraction] = String(value).split(".");
+    const numeric = Number(value);
+    const normalized = Number.isFinite(numeric) && Number.isInteger(precision) && precision! >= 0
+      ? numeric.toFixed(precision!)
+      : String(value);
+    const [whole, fraction] = normalized.split(".");
     const sign = whole?.startsWith("-") ? "-" : "";
     const grouped = groupDigits((whole ?? "").replace("-", ""));
     return sign + grouped + (fraction === undefined ? "" : decimal + fraction);

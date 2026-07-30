@@ -48,7 +48,7 @@ const replaceField = (dt, name, next) => {
 };
 
 // ─────────────────────────── HEADER ───────────────────────────
-brief.version = "2.0.14";
+brief.version = "2.0.15";
 brief.locale.dateFormat = "dd/mm/yyyy"; // Q11 — chủ xưởng chốt gạch chéo
 // Nỗi đau #1 của BRD: người mở app phải thấy ngay tồn KHẢ DỤNG theo khổ, không phải tự lấy tồn tổng
 // rồi trừ các phiếu giữ bằng tay. Báo cáo này nằm ở query engine nền tảng vì nó đọc cùng sổ kho.
@@ -62,6 +62,26 @@ brief.links.unshift({
 brief.navigation.items.unshift("report:Tồn nhôm theo khổ");
 brief.home = "report:Tồn nhôm theo khổ";
 note(`header: version 2.0.1 · dateFormat dd/mm/yyyy · home = Tồn nhôm theo khổ`);
+
+const purchaseOrderItem = doctype("Purchase Order Item");
+replaceField(purchaseOrderItem, "qty", {
+  fieldname: "qty",
+  fieldtype: "Float",
+  label: "Số lượng",
+  precision: 2,
+  required: true,
+  read_only_depends_on: "eval:doc.inventory_mode == 'Nhôm cây/lá'",
+  description: "Số lượng tính tiền theo ĐVT mua. Riêng nhôm cây/lá tự tính bằng chiều dài × định mức kg/m × số cây/lá.",
+});
+replaceField(purchaseOrderItem, "theoretical_kg", {
+  fieldname: "theoretical_kg",
+  fieldtype: "Float",
+  label: "Số kg barem",
+  precision: 2,
+  read_only: true,
+  depends_on: "eval:doc.inventory_mode == 'Nhôm cây/lá'",
+  description: "Kích thước × trọng lượng định mức × số cây/lá.",
+});
 
 // Các chứng từ V2 có controller sổ kho chuyên biệt, nhưng app hook vẫn cần khai để lớp validator
 // ngành kiểm các Link/màu/quy cách trước khi lệnh đi vào kernel.
@@ -986,7 +1006,11 @@ brief.prints.push({
   default: true,
   css: [
     "@page{size:A4 portrait;margin:0}",
-    "*{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif!important} html,body{margin:0}body{width:210mm;min-height:297mm;font-family:Arial,Helvetica,sans-serif!important;font-size:9px;color:#111;padding:23.7mm 8mm 8mm}",
+    "@font-face{font-family:Roboto;src:url('/fonts/Roboto-Regular.ttf') format('truetype');font-style:normal;font-weight:400;font-display:block}",
+    "@font-face{font-family:Roboto;src:url('/fonts/Roboto-Bold.ttf') format('truetype');font-style:normal;font-weight:700;font-display:block}",
+    "@font-face{font-family:Roboto;src:url('/fonts/Roboto-Italic.ttf') format('truetype');font-style:italic;font-weight:400;font-display:block}",
+    "@font-face{font-family:Roboto;src:url('/fonts/Roboto-BoldItalic.ttf') format('truetype');font-style:italic;font-weight:700;font-display:block}",
+    "*{box-sizing:border-box;font-family:Roboto,Arial,sans-serif!important} html,body{margin:0}body{width:210mm;min-height:297mm;font-family:Roboto,Arial,sans-serif!important;font-size:9px;color:#111;padding:23.7mm 8mm 8mm}",
     ".letterhead{position:relative;width:166mm;height:17mm;margin-left:14mm}",
     ".brand-logo{position:absolute;left:2.7mm;top:2.8mm;width:43.6mm;height:auto}",
     ".company-block{position:absolute;right:2.7mm;top:0;width:94mm;text-align:center;font-size:7.5px;font-style:italic;line-height:1.4}",
@@ -998,7 +1022,7 @@ brief.prints.push({
     "th{background:#f3f3f3;font-size:7.5pt;text-transform:uppercase;white-space:normal}",
     "td{font-size:8pt;white-space:normal;overflow-wrap:anywhere}.n{text-align:center;font-variant-numeric:tabular-nums}.c{text-align:center}.code{font-weight:700}.item-cell,.note-cell{white-space:normal;overflow-wrap:anywhere}",
     ".index-col{white-space:nowrap}.note-col,.note-cell{white-space:normal}",
-    "tfoot td{font-family:Arial,Helvetica,sans-serif!important;font-size:8.5pt;font-weight:700;line-height:1.2;background:#fff;padding-top:3pt;padding-bottom:3pt}.total-label{text-align:right;padding-right:5pt}.total-value{text-align:center;color:#c55a11;white-space:normal;padding-left:2pt;padding-right:2pt}",
+    "tfoot td{font-family:Roboto,Arial,sans-serif!important;font-size:8.5pt;font-weight:700;line-height:1.2;background:#fff;padding-top:3pt;padding-bottom:3pt}.total-label{text-align:right;padding-right:5pt}.total-value{text-align:center;color:#c55a11;white-space:normal;padding-left:2pt;padding-right:2pt}",
     ".sign{display:flex;width:100%;justify-content:space-between;text-align:center;margin-top:18px}.sign div{width:30%}.sign b{display:block;margin-bottom:35px;font-size:8px}",
   ],
   html: [

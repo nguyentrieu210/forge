@@ -9,7 +9,7 @@
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { useForm, useWatch, Controller, type FieldValues } from "react-hook-form";
 import { z } from "zod";
-import { AlertTriangle, History, X } from "lucide-react";
+import { AlertTriangle, X } from "lucide-react";
 import { resolveMeta, collectFetchFrom, type DocTypeMeta, type Doc, type ResolvedField } from "@metaforge/core";
 import { ControlRegistry, FallbackControl, type FieldServices } from "@metaforge/controls";
 import type { WorkflowTransition } from "@metaforge/adapter-frappe";
@@ -100,51 +100,13 @@ export function FormView(props: FormViewProps) {
   const prevLinks = useRef<Record<string, unknown>>({}); // giá trị link lần trước → phát hiện user đổi
   const fetchDocKey = useRef<string>(""); // doc đang đồng bộ → bỏ vòng fetch của lần (re)load (L1)
 
-  // Mỗi tab tạo mới có một mã riêng nhưng giữ mã đó qua refresh. Vì vậy hai cửa sổ cùng tạo
-  // một DocType không còn ghi đè bản nháp của nhau như khoá cố định "...:new".
-  const draftSessionStorageKey = `mf-draft-session:${meta.name}:${typeof location === "undefined" ? "form" : location.pathname}`;
-  const draftSession = useRef("");
-  if (!draftSession.current) {
-    try {
-      draftSession.current = sessionStorage.getItem(draftSessionStorageKey) ?? "";
-      if (!draftSession.current) {
-        draftSession.current = typeof crypto !== "undefined" && "randomUUID" in crypto
-          ? crypto.randomUUID()
-          : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-        sessionStorage.setItem(draftSessionStorageKey, draftSession.current);
-      }
-    } catch {
-      draftSession.current = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    }
-  }
-  const newDocument = props.isNew ?? (!doc.name || doc.name === "new");
-  const draftKey = `mf-draft:${meta.name}:${newDocument ? `new:${draftSession.current}` : String(doc.name)}`;
-  const previousDraftKey = useRef(draftKey);
-  const isFirstDocLoad = useRef(true);
-  const [draftAvailable, setDraftAvailable] = useState(false);
-
   // reset khi đổi document (name) hoặc tải lại (modified) — RHF tự lo dirty/back-to-initial.
   useEffect(() => {
-    const staleDraftKey = previousDraftKey.current;
-    previousDraftKey.current = draftKey;
     form.reset({ ...doc });
     // seed link đã-load ⇒ fetch_from KHÔNG kích hoạt lúc tải (chỉ user đổi link mới fetch).
     const seed: Record<string, unknown> = {};
     for (const r of fetchRules) seed[r.linkField] = doc[r.linkField];
     prevLinks.current = seed;
-    if (isFirstDocLoad.current) {
-      // Mở doc lần đầu (mount) — có bản nháp cũ bỏ dở (vd tab bị đóng nhầm) thì hỏi khôi phục.
-      isFirstDocLoad.current = false;
-      try { setDraftAvailable(Boolean(localStorage.getItem(draftKey))); } catch { /* private mode */ }
-    } else {
-      // Doc vừa reload sau khi lưu THÀNH CÔNG (modified đổi) — bản nháp cũ đã lỗi thời, xoá.
-      try {
-        localStorage.removeItem(staleDraftKey);
-        localStorage.removeItem(draftKey);
-        if (staleDraftKey !== draftKey && !newDocument) sessionStorage.removeItem(draftSessionStorageKey);
-      } catch { /* ignore */ }
-      setDraftAvailable(false);
-    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doc.name, doc.modified]);
 
@@ -207,26 +169,6 @@ export function FormView(props: FormViewProps) {
     return current;
   }, [form, reactiveFields, reactiveValues]);
 
-  // Ghi bản nháp debounce 800ms nhưng không bắt component cha render lại ở mỗi phím gõ.
-  useEffect(() => {
-    if (!isDirty) return;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const schedule = (next: FieldValues) => {
-      if (timer) clearTimeout(timer);
-      timer = setTimeout(() => {
-        try { localStorage.setItem(draftKey, JSON.stringify(next)); } catch { /* quota/private mode */ }
-      }, 800);
-    };
-    // Thay đổi đầu tiên đã xảy ra trước khi `isDirty` làm effect này chạy; phải xếp lịch lưu
-    // ngay giá trị hiện tại, nếu không người dùng chỉ sửa đúng một ô rồi đóng tab sẽ mất bản nháp.
-    schedule(form.getValues());
-    const subscription = form.watch((next) => schedule(next as FieldValues));
-    return () => {
-      if (timer) clearTimeout(timer);
-      subscription.unsubscribe();
-    };
-  }, [draftKey, form, isDirty]);
-
   // Ctrl/Cmd+S = Lưu (chặn hộp thoại lưu trang mặc định của trình duyệt). Đọc isDirty/onValid MỚI
   // NHẤT qua ref — đăng ký listener 1 lần, không tái đăng ký mỗi phím gõ.
   const onValidRef = useRef<(vals: FieldValues) => void>(() => {});
@@ -240,18 +182,6 @@ export function FormView(props: FormViewProps) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [form]);
-
-  const restoreDraft = () => {
-    try {
-      const raw = localStorage.getItem(draftKey);
-      if (raw) form.reset(JSON.parse(raw) as FieldValues, { keepDefaultValues: true });
-    } catch { /* corrupt draft — bỏ qua, không phá form */ }
-    setDraftAvailable(false);
-  };
-  const dismissDraft = () => {
-    try { localStorage.removeItem(draftKey); } catch { /* ignore */ }
-    setDraftAvailable(false);
-  };
 
   // P1-09 fetch_from: khi user đổi Link nguồn → nạp source_field của doc đích, điền field đích.
   // Link xoá → xoá field đích. Seed ở reset ⇒ KHÔNG chạy lúc tải. Bỏ kết quả nếu link đổi tiếp.
@@ -502,14 +432,6 @@ export function FormView(props: FormViewProps) {
             <ul className="mt-1 list-disc space-y-0.5 pl-5">
               {errorEntries.map((entry) => <li key={entry.fieldname}><Button type="button" variant="link" className="h-auto p-0 text-left text-destructive underline" onClick={() => focusField(entry.fieldname)}>{entry.label}: {entry.message}</Button></li>)}
             </ul>
-          </div>
-        ) : null}
-        {draftAvailable ? (
-          <div className="mf-draft-banner m-3 flex items-start gap-2 rounded-md border border-amber-400/40 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-400" role="status">
-            <History className="mt-0.5 size-4 shrink-0" />
-            <div className="flex-1">{t("form.draft_found")}</div>
-            <Button variant="outline" size="sm" type="button" onClick={dismissDraft}>{t("form.draft_dismiss")}</Button>
-            <Button size="sm" type="button" onClick={restoreDraft}>{t("form.draft_restore")}</Button>
           </div>
         ) : null}
         {props.conflict ? (
