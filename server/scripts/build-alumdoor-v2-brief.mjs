@@ -47,7 +47,7 @@ const replaceField = (dt, name, next) => {
 };
 
 // ─────────────────────────── HEADER ───────────────────────────
-brief.version = "2.0.6";
+brief.version = "2.0.7";
 brief.locale.dateFormat = "dd/mm/yyyy"; // Q11 — chủ xưởng chốt gạch chéo
 // Nỗi đau #1 của BRD: người mở app phải thấy ngay tồn KHẢ DỤNG theo khổ, không phải tự lấy tồn tổng
 // rồi trừ các phiếu giữ bằng tay. Báo cáo này nằm ở query engine nền tảng vì nó đọc cùng sổ kho.
@@ -984,13 +984,15 @@ brief.prints.push({
   doctype: "Purchase Order",
   default: true,
   css: [
-    "@page{size:A4 portrait;margin:8mm}",
-    "*{box-sizing:border-box} body{font-family:'Segoe UI',Arial,sans-serif;font-size:8px;color:#111;margin:0;padding:0}",
-    ".letterhead{display:grid;grid-template-columns:155px 1fr;gap:10px;align-items:start;border-bottom:1px solid #c55a11;padding-bottom:5px}",
-    ".brand{font-size:26px;font-weight:900;font-style:italic;letter-spacing:-2px;color:#c55a11;line-height:1}.brand i{color:#17365d;font-style:normal}.tagline{font-size:7px;font-weight:800;color:#c55a11;text-align:right;text-transform:uppercase;line-height:1.35}",
-    ".contact{grid-column:1/-1;font-size:7px;line-height:1.45}.contact b{color:#17365d}.website{color:#c55a11;font-weight:700}",
-    ".title{font-size:16px;font-weight:800;color:#c55a11;text-transform:uppercase;text-align:center;margin:7px 0 5px}",
-    ".meta{display:grid;grid-template-columns:1.45fr 1fr;gap:3px 16px;margin-bottom:7px;font-size:8px}.meta b{display:inline-block;min-width:78px}",
+    "@page{size:A4 portrait;margin:0}",
+    "*{box-sizing:border-box} body{font-family:Arial,sans-serif;font-size:8px;color:#111;margin:0;padding:23.7mm 22mm 8mm}",
+    ".letterhead{position:relative;height:14.8mm}",
+    ".brand-logo{position:absolute;left:2.7mm;top:2.8mm;width:43.6mm;height:auto}",
+    ".company-block{position:absolute;right:0;top:0;width:94mm;text-align:center;font-size:6.5px;font-style:italic;line-height:1.45}",
+    ".tagline{color:#f15a24;font-size:7px;font-style:normal;font-weight:800;text-decoration:underline;white-space:nowrap}",
+    ".company-block b{font-style:normal}.website{font-style:normal}",
+    ".title{font-size:15px;font-weight:700;color:#f15a24;text-transform:uppercase;text-align:center;margin:0 0 3.2mm}",
+    ".meta{font-size:7px;font-weight:400;line-height:1.45;margin-bottom:4.5mm}.meta div{min-height:2.6mm}.meta b{display:inline-block;min-width:30mm}",
     "table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}th,td{border:1px solid #777;padding:2px 1.5px;vertical-align:middle;overflow-wrap:anywhere}",
     "th{background:#f3f3f3;font-size:6.2px;text-transform:uppercase;text-align:center;line-height:1.12}",
     ".n{text-align:right;font-variant-numeric:tabular-nums}.c{text-align:center}.code{font-weight:700}.small{font-size:6px;color:#555}",
@@ -998,10 +1000,10 @@ brief.prints.push({
     ".sign{display:flex;justify-content:space-between;text-align:center;margin-top:18px}.sign div{width:30%}.sign b{display:block;margin-bottom:35px;font-size:8px}",
   ],
   html: [
-    "<div class=\"letterhead\"><div class=\"brand\"><i>ALUM</i>DOOR</div><div class=\"tagline\">Chuyên sản xuất: Cửa cuốn công nghệ Úc/ Đức - Cửa mắt võng/ song ngang</div>",
-    "<div class=\"contact\"><b>N/M 01:</b> Số 12B đường số 2, P. Bình Hưng Hòa, Q. Bình Tân, TP.HCM<br><b>N/M 02:</b> Số 36 đường số 7, P. Bình Hưng Hòa, Q. Bình Tân, TP.HCM<br><b>Điện thoại:</b> 096.515.9595 - 0966.988.233 &nbsp; <span class=\"website\">Website: www.alumdoor.vn</span></div></div>",
+    "<div class=\"letterhead\"><img class=\"brand-logo\" src=\"/alumdoor-order-logo.png\" alt=\"ALUMDOOR\">",
+    "<div class=\"company-block\"><div class=\"tagline\">CHUYÊN SẢN XUẤT: CỬA CUỐN CÔNG NGHỆ ÚC/ ĐỨC - CỬA MẮT VÕNG/ SONG NGANG</div><div><b>N/M 01:</b> Số 12B đường số 2, P. Bình Hưng Hòa, Q. Bình Tân, TP.HCM</div><div><b>N/M 02:</b> Số 36 đường số 7, P. Bình Hưng Hòa, Q. Bình Tân, TP.HCM</div><div><b>Điện thoại:</b> 096.515.9595 - 0966.988.233</div><div class=\"website\"><b>Website:</b> www.alumdoor.vn</div></div></div>",
     "<div class=\"title\">Đơn đặt hàng</div>",
-    "<div class=\"meta\"><div><b>Tên nhà cung cấp:</b> {{ supplier }}</div><div><b>Số đơn:</b> {{ name }}</div><div><b>Ngày đặt hàng:</b> {{ transaction_date | date }}</div><div><b>Ngày giao hàng:</b> {{ schedule_date | date }}</div></div>",
+    "<div class=\"meta\"><div><b>Tên nhà cung cấp:</b>{{ supplier }}</div><div><b>Ngày đặt hàng:</b>{{ transaction_date | date }}</div><div><b>Ngày giao hàng:</b>{{ schedule_date | date }}</div></div>",
     "<table><thead><tr>",
     "<th style=\"width:24px\">STT</th><th style=\"width:105px\">Mã hàng</th><th style=\"width:48px\">Kích thước (m)</th><th style=\"width:54px\">Trọng lượng (kg/m)</th><th style=\"width:38px\">SL bó</th><th style=\"width:42px\">Số cây/lá</th><th style=\"width:54px\">Số kg barem</th><th style=\"width:50px\">Số lượng</th><th style=\"width:34px\">ĐVT</th><th style=\"width:62px\">Đơn giá</th><th style=\"width:72px\">Thành tiền</th><th style=\"width:50px\">Màu</th><th style=\"width:38px\">Dập</th><th style=\"width:55px\">Số SO NCC</th><th>Ghi chú</th>",
     "</tr></thead><tbody>",

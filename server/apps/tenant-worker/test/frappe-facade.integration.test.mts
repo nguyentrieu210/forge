@@ -114,6 +114,7 @@ async function seed(): Promise<void> {
       { fieldname: "visit_seconds", label: "Duration", fieldtype: "Duration" },
       { fieldname: "contract_no", label: "Contract", fieldtype: "Data", set_only_once: true },
       { fieldname: "fee", label: "Fee", fieldtype: "Currency", non_negative: true },
+      { fieldname: "visit_date", label: "Visit Date", fieldtype: "Date", default: "Today" },
     ],
     permissions: [{ role: "System Manager", read: true, write: true, create: true, submit: true, cancel: true, amend: true, share: true, report: true }],
     revision: 1,
@@ -330,6 +331,7 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     expect(doc.docstatus).toBe(0);
     expect(doc.owner).toBe("sales@example.com");
     expect(doc.modified_by).toBe("sales@example.com");
+    expect(doc.visit_date).toBe("2026-07-30");
     createdName = doc.name;
     createdModified = doc.modified;
   });

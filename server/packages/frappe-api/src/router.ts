@@ -623,6 +623,20 @@ async function createDocument(doctype: string, args: FrappeArgs, context: Frappe
   });
 
   let payload = toKernelPayload(submitted, meta);
+  // Frappe defaults are part of the server contract, not merely a UI convenience.
+  // Applying them here also covers specialised ERP controllers, which run before the
+  // generic metadata controller and therefore cannot otherwise see hidden defaults
+  // such as Company/Currency on a Purchase Order.
+  for (const field of meta.fields) {
+    if (payload[field.fieldname] !== undefined || field.default === undefined) continue;
+    if (field.default === "Today" && field.fieldtype === "Date") {
+      payload[field.fieldname] = context.now().slice(0, 10);
+    } else if (field.default === "Now" && field.fieldtype === "Datetime") {
+      payload[field.fieldname] = context.now().slice(0, 19).replace("T", " ");
+    } else {
+      payload[field.fieldname] = structuredClone(field.default);
+    }
+  }
   if (amendedFrom) {
     const source = await loadReadable(doctype, amendedFrom, context);
     if (source.docstatus !== 2) throw errors.lifecycle("Only a cancelled document can be amended");
