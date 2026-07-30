@@ -33,11 +33,9 @@ const PURCHASE_REVISION_RETRIES = 3;
 export class AggregateCoordinator extends DurableObject<TenantEnv> {
   private readonly kernel: DocumentKernel;
   private readonly store: D1PurchaseAllocationDomainStore;
-  private readonly env: TenantEnv;
 
   constructor(ctx: DurableObjectState, env: TenantEnv) {
     super(ctx, env);
-    this.env = env;
     const metadata = new D1MetadataStore(env.DB);
     const registry = registerErpNextCoreControllers(
       registerStockControllers(registerErpCoreControllers(createO2CControllerRegistry())),
