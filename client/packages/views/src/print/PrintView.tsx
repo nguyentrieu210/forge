@@ -35,7 +35,7 @@ export const PrintView = forwardRef<HTMLIFrameElement, PrintViewProps>(function 
     const observer = new ResizeObserver(update);
     observer.observe(element);
     return () => observer.disconnect();
-  }, []);
+  }, [props.loading, pageWidth, pageHeight]);
   const setFrameRef = useCallback((node: HTMLIFrameElement | null) => {
     frameRef.current = node;
     if (typeof ref === "function") ref(node);
