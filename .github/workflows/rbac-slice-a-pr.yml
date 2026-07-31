@@ -111,6 +111,30 @@ jobs:
               '  const removed = await callMethod("metaforge.api.remove_user_permission", { id }, fixture.context);',
               '  const removed = await callMethod("metaforge.api.remove_user_permission", { id }, fixture.context, "POST");',
           )
+
+          # The direct router is the final Slice A implementation. Remove the temporary
+          # façade used while the large router patch was being reviewed, otherwise the
+          # package export keeps routing tests through obsolete code.
+          index_path = Path('server/packages/frappe-api/src/index.ts')
+          index_value = index_path.read_text(encoding='utf-8')
+          for obsolete in (
+              'export { routeFrappeApi } from "./router-rbac-public.js";\n',
+              'export { parseUserPermissionIdentity } from "./router-rbac-public.js";\n',
+          ):
+              if index_value.count(obsolete) != 1:
+                  raise SystemExit(f'{index_path}: expected one obsolete façade export')
+              index_value = index_value.replace(obsolete, '', 1)
+          index_path.write_text(index_value, encoding='utf-8')
+
+          for obsolete in (
+              Path('server/packages/frappe-api/src/router-rbac.ts'),
+              Path('server/packages/frappe-api/src/router-rbac-public.ts'),
+              Path('server/tests/rbac-router.test.mjs'),
+              Path('server/tests/rbac-remove-id.test.mjs'),
+          ):
+              if not obsolete.exists():
+                  raise SystemExit(f'{obsolete}: temporary façade file is missing')
+              obsolete.unlink()
           PY
 
       - name: Install dependencies
@@ -135,11 +159,16 @@ jobs:
         run: |
           git config user.name "Forge RBAC CI"
           git config user.email "actions@users.noreply.github.com"
-          git add server/packages/frappe-api/src/access-control.ts \
-                  server/packages/frappe-api/src/router.ts \
-                  server/tests/rbac-contract.test.mjs \
-                  client/packages/adapter-frappe/src/adapter.ts \
-                  client/packages/adapter-frappe/src/frappe-adapter.ts \
-                  client/packages/views/src/access/PermissionCenter.tsx
+          git add -A server/packages/frappe-api/src/access-control.ts \
+                     server/packages/frappe-api/src/router.ts \
+                     server/packages/frappe-api/src/index.ts \
+                     server/packages/frappe-api/src/router-rbac.ts \
+                     server/packages/frappe-api/src/router-rbac-public.ts \
+                     server/tests/rbac-contract.test.mjs \
+                     server/tests/rbac-router.test.mjs \
+                     server/tests/rbac-remove-id.test.mjs \
+                     client/packages/adapter-frappe/src/adapter.ts \
+                     client/packages/adapter-frappe/src/frappe-adapter.ts \
+                     client/packages/views/src/access/PermissionCenter.tsx
           git commit -m "feat(rbac): complete permission inspection contract"
           git push origin HEAD:feat/rbac-permission-completion-20260731
