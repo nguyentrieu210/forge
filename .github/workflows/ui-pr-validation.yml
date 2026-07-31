@@ -102,13 +102,14 @@ jobs:
           pnpm exec wrangler d1 migrations apply cloudforge-demo --local --config apps/tenant-worker/wrangler.purchase-qa.jsonc
           node scripts/seed-local.mjs --auth-only --user "$FORGE_AUTH_USER" --password "$FORGE_AUTH_PASSWORD"
 
-      - name: Start local tenant and Alumdoor app workers
+      - name: Start local tenant, callback gateway and Alumdoor app workers
         working-directory: server
         shell: bash
         run: |
           set -euo pipefail
           nohup pnpm exec wrangler dev \
             --config apps/tenant-worker/wrangler.purchase-qa.jsonc \
+            --config apps/purchase-qa-callback/wrangler.jsonc \
             --config apps-src/alumdoor-worker/wrangler.purchase-qa.jsonc \
             --port 8801 \
             --local \
@@ -164,7 +165,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
-      - name: Stop local tenant worker
+      - name: Stop local Purchase QA workers
         if: always()
         shell: bash
         run: |
