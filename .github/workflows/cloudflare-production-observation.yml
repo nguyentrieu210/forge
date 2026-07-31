@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 concurrency:
   group: observe-production-alu
@@ -22,9 +23,10 @@ jobs:
 
     steps:
       - name: Smoke production endpoints
+        id: smoke
         shell: bash
         run: |
-          set -euo pipefail
+          set -uo pipefail
           BASE='https://alu.kairo.vn'
           EVIDENCE_DIR="$RUNNER_TEMP/alu-production-observation"
           mkdir -p "$EVIDENCE_DIR"
@@ -33,13 +35,62 @@ jobs:
           root="$(curl --silent --show-error --output "$EVIDENCE_DIR/root.html" --write-out '%{http_code}' "$BASE/" || true)"
           guest_boot="$(curl --silent --show-error --output "$EVIDENCE_DIR/guest-boot.json" --write-out '%{http_code}' "$BASE/api/method/metaforge.api.get_boot" || true)"
 
-          test "$health" = '200'
-          test "$root" = '200'
-          test "$guest_boot" = '403'
+          result='pass'
+          if [ "$health" != '200' ] || [ "$root" != '200' ] || [ "$guest_boot" != '403' ]; then
+            result='fail'
+          fi
 
-          printf 'observed_at=%s\nsource_sha=%s\nhealth=%s\nroot=%s\nguest_boot=%s\nresult=pass\n' \
-            "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$GITHUB_SHA" "$health" "$root" "$guest_boot" \
+          observed_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          printf 'observed_at=%s\nsource_sha=%s\nhealth=%s\nroot=%s\nguest_boot=%s\nresult=%s\n' \
+            "$observed_at" "$GITHUB_SHA" "$health" "$root" "$guest_boot" "$result" \
             > "$EVIDENCE_DIR/state.txt"
+
+          test "$result" = 'pass'
+
+      - name: Publish observation summary
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OBSERVATION_ISSUE: "84"
+        shell: bash
+        run: |
+          set -euo pipefail
+          state_file="$RUNNER_TEMP/alu-production-observation/state.txt"
+          if [ -f "$state_file" ]; then
+            state="$(cat "$state_file")"
+            result="$(awk -F= '$1 == "result" { print $2 }' "$state_file")"
+          else
+            state='state_file_missing=true'
+            result='unknown'
+          fi
+
+          if [ "$result" = 'pass' ]; then
+            heading='PASS'
+          else
+            heading='FAIL'
+          fi
+
+          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          body="$(cat <<EOF
+          <!-- alu-production-observation -->
+          ## alu production smoke observation: ${heading}
+
+          - Run ID: \`${GITHUB_RUN_ID}\`
+          - Branch: \`${GITHUB_REF_NAME}\`
+          - Event: \`${GITHUB_EVENT_NAME}\`
+          - Workflow run: ${run_url}
+
+          \`\`\`text
+          ${state}
+          \`\`\`
+
+          This observation is read-only. It does not deploy, migrate, mutate D1, change secrets/DNS, or enable FIFO.
+          EOF
+          )"
+
+          gh api --method POST \
+            "repos/${GITHUB_REPOSITORY}/issues/${OBSERVATION_ISSUE}/comments" \
+            -f body="$body"
 
       - name: Upload observation evidence
         if: always()
