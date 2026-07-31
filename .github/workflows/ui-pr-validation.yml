@@ -111,6 +111,7 @@ jobs:
           nohup pnpm exec wrangler dev \
             --config apps/tenant-worker/wrangler.purchase-qa.jsonc \
             --port 8801 \
+            --inspector-port 9231 \
             --local \
             --var "SESSION_SECRET:$FORGE_AUTH_SESSION_SECRET" \
             --var "INTERNAL_AUTH_SECRET:$FORGE_INTERNAL_AUTH_SECRET" \
@@ -120,6 +121,7 @@ jobs:
           nohup pnpm exec wrangler dev \
             --config apps/purchase-qa-callback/wrangler.jsonc \
             --port 8802 \
+            --inspector-port 9232 \
             --local \
             --var "INTERNAL_AUTH_SECRET:$FORGE_INTERNAL_AUTH_SECRET" \
             > "$RUNNER_TEMP/forge-callback-gateway.log" 2>&1 &
@@ -128,6 +130,7 @@ jobs:
           nohup pnpm exec wrangler dev \
             --config apps-src/alumdoor-worker/wrangler.purchase-qa.jsonc \
             --port 8803 \
+            --inspector-port 9233 \
             --local \
             > "$RUNNER_TEMP/forge-alumdoor-worker.log" 2>&1 &
           echo $! > "$RUNNER_TEMP/forge-alumdoor-worker.pid"
