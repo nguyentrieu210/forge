@@ -9,9 +9,8 @@ Ngày cập nhật: **2026-07-31**.
 - PR `#14` đã squash-merge thành `7b3dc06dbbecbb5370ddb48259aa1614aef2ff32`.
 - Tenant release run `30631386714`: backup, migration, deploy và endpoint smoke **PASS**.
 - Tenant Worker production version: `9ec0d1d3-c1fd-4263-ae35-4fae81c09968`.
-- Gateway release PR `#57` đã merge thành `f50993ef7736a0321f6a0e8c308c5cb069497472`.
-- Gateway run `30631951946`, job `91160176928`: build, stage, deploy, smoke và provider evidence **PASS**.
-- Gateway production version: `6352386d-8385-4ea8-af31-15ac62e21943`.
+- Gateway release PR `#57` đã merge thành `f50993ef7736a0321f6a0e8c308c5cb069497472`; version `6352386d-8385-4ea8-af31-15ac62e21943` là phiên bản lịch sử, đã được thay bởi UI child-grid release.
+- Gateway production hiện hành: `7d0c77ee-588e-44cb-abff-1c217a754316`.
 - FIFO rollout vẫn **disabled**; không có activation, DNS hay production secret change.
 - PR `#63` đã materialize source thật tại `2b8219f8325dd41e4c9cd833f48f85a0d5b87d55`; không còn payload/workflow one-shot.
 - Migration `0032_purchase_reversed_window_corrections.sql`, lifecycle `close → reverse → cancel` và SQL/unit regression đã hoàn tất.
@@ -21,8 +20,8 @@ Ngày cập nhật: **2026-07-31**.
 
 ### P0 — hoàn tất PR #63
 
-1. Chạy exact-head CI sau commit tài liệu cuối.
-2. Xác nhận PR vẫn mergeable, không còn temp/generated artifact.
+1. Đồng bộ default và chạy exact-head CI trên merge-sync/doc head cuối.
+2. Xác nhận PR mergeable, không còn temp/generated artifact.
 3. Chuyển PR khỏi draft và merge khi toàn bộ required checks xanh.
 4. Sau merge, nếu phát hành correction code/migration `0032`, dùng release path chuẩn và giữ FIFO **disabled**.
 
@@ -48,6 +47,14 @@ Ngày cập nhật: **2026-07-31**.
 
 - Quyết định có cần standalone global Supplier Debt Report hay chỉ giữ report permission-scoped theo PO/Receipt timeline.
 - Nếu cần global report, phải có contract data-scope, permission, filters và export riêng trước khi implement.
+
+## UI child table — production functional smoke còn lại
+
+1. Xác nhận không còn nhóm `Lựa chọn gần đây` trong Link dropdown.
+2. Kiểm dropdown tự cuộn khi còn khoảng cuộn và relay wheel về đúng child grid khi chạm đầu/cuối.
+3. Kiểm cả child grid gọn và bảng mở rộng.
+4. Xác nhận Item, UOM và Warehouse vẫn chọn được, giữ đúng filter/quyền.
+5. Dùng tài khoản/dữ liệu thử phù hợp và không lưu cookie, token hoặc dữ liệu khách hàng trong evidence.
 
 ## Bán hàng — functional browser acceptance còn lại
 
