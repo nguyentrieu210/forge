@@ -59,9 +59,12 @@ function platformOwnershipView(db: D1Database, state: AdoptionState): D1Database
   const wrap = (target: D1Target): D1Target => new Proxy(target, {
     get(current, property) {
       if (property === "withSession") {
-        const withSession = Reflect.get(current, property, current);
+        const withSession = Reflect.get(current, property, current) as
+          | ((constraintOrBookmark?: string) => D1DatabaseSession)
+          | undefined;
         if (typeof withSession !== "function") return undefined;
-        return (...args: unknown[]) => wrap(withSession.apply(current, args) as D1DatabaseSession);
+        return (constraintOrBookmark?: string) =>
+          wrap(withSession.call(current, constraintOrBookmark));
       }
 
       if (property !== "prepare") return bindMethod(current, property);
