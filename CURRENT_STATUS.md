@@ -9,6 +9,16 @@ Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
 - GitHub là nguồn sự thật cho code, PR, CI và release evidence.
 - Không commit `.env`, `.dev.vars`, secret, `server/work/`, `tmp/`, backup SQL hoặc generated artifacts.
 
+## UI child table — bỏ lựa chọn gần đây và sửa wheel khi dropdown mở
+
+- Working branch: `hotfix/child-grid-dropdown-scroll-20260731`.
+- PR `#58`: `fix(ui): remove recent links and restore child-grid scroll`.
+- `recent-links.ts` không còn đọc/ghi lịch sử lựa chọn; key localStorage v2 cũ được dọn khi dropdown mở.
+- `PopoverContent` giữ wheel cho dropdown khi danh sách còn cuộn được; khi chạm biên, wheel được relay về scroll ancestor của đúng child grid thông qua trigger `aria-controls`.
+- Regression mới kiểm đầu/giữa/cuối vùng cuộn và vùng không tràn.
+- Exact final head phải được lấy lại sau commit handoff này; required CI chưa được coi là hoàn tất cho tới khi sáu workflow PASS trên đúng head đó.
+- PR chưa merge, chưa deploy Gateway/tenant, không migration, không sửa production secrets; FIFO vẫn disabled.
+
 ## Bán hàng — lọc mặt hàng trong child table đã phát hành production
 
 ### Lỗi và nguyên nhân
