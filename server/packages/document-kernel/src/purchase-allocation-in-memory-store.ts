@@ -16,10 +16,12 @@ import { errors } from "../../core/src/index.js";
 import { InMemoryMutationStore } from "./in-memory-store.js";
 import type {
   PurchaseAllocationObligationState,
+  PurchaseAllocationOverrideSourceState,
   PurchaseAllocationQueueState,
   PurchaseAllocationWindowTotals,
   PurchaseObligationRowState,
   PurchaseReceiptAllocationSourceState,
+  PurchaseSettlementWindowState,
   PurchaseUnappliedQueueSourceState,
   PurchaseUnappliedSourceState,
 } from "./purchase-allocation-reader.js";
@@ -359,6 +361,84 @@ export class InMemoryPurchaseAllocationMutationStore extends InMemoryMutationSto
     }
     return rows.sort((left, right) => left.committed_at.localeCompare(right.committed_at)
       || left.entry_id.localeCompare(right.entry_id));
+  }
+
+
+  async getPurchaseSettlementWindowState(
+    tenantId: string,
+    queueKey: string,
+    windowId: string,
+  ): Promise<PurchaseSettlementWindowState | null> {
+    const queue = this.purchaseQueues.get(queueMapKey(tenantId, queueKey));
+    const window = this.purchaseWindows.get(windowMapKey(tenantId, windowId));
+    if (!queue || !window || window.queue_key !== queueKey) return null;
+    const totals = await this.getPurchaseAllocationWindowTotals(tenantId, windowId);
+    const close = this.purchaseSettlements.find((entry) =>
+      entry.queue_key === queueKey && entry.window_id === windowId && entry.entry_kind === "close");
+    return {
+      queue_key: queueKey,
+      queue_revision: queue.revision,
+      window_id: windowId,
+      window_revision: window.revision,
+      window_sequence: window.window_sequence,
+      window_status: window.status,
+      tolerance_bps: window.tolerance_bps,
+      nominal_qty_micros: totals.nominal_qty_micros,
+      received_qty_micros: totals.received_qty_micros,
+      ...(close ? {
+        close_entry_id: close.entry_id,
+        close_committed_at: close.committed_at,
+        close_reason: close.reason,
+        minimum_qty_micros: close.minimum_qty_micros,
+        maximum_qty_micros: close.maximum_qty_micros,
+        shortage_variance_micros: close.shortage_variance_micros,
+        overage_variance_micros: close.overage_variance_micros,
+      } : {}),
+    };
+  }
+
+  async getPurchaseAllocationOverrideSource(
+    tenantId: string,
+    entryId: string,
+  ): Promise<PurchaseAllocationOverrideSourceState | null> {
+    const source = this.purchaseAllocations.find((entry) => entry.entry_id === entryId && entry.qty_micros > 0);
+    if (!source || !source.voucher_no || source.voucher_revision === undefined
+      || !source.receipt_item_row_id || !source.purchase_order_item_row_id) return null;
+    const queue = this.purchaseQueues.get(queueMapKey(tenantId, source.queue_key));
+    const window = this.purchaseWindows.get(windowMapKey(tenantId, source.window_id));
+    if (!queue || !window) return null;
+    const reversals = this.purchaseAllocations.filter((entry) =>
+      entry.entry_kind === "reverse" && entry.reversal_of_entry_id === source.entry_id);
+    const qty = source.qty_micros + reversals.reduce((sum, entry) => sum + entry.qty_micros, 0);
+    if (qty <= 0) return null;
+    const barem = source.barem_weight_micros
+      + reversals.reduce((sum, entry) => sum + entry.barem_weight_micros, 0);
+    const actual = source.projected_actual_weight_micros === undefined
+      ? undefined
+      : source.projected_actual_weight_micros
+        + reversals.reduce((sum, entry) => sum + (entry.projected_actual_weight_micros ?? 0), 0);
+    const nextSequence = this.purchaseAllocations
+      .filter((entry) => entry.voucher_no === source.voucher_no)
+      .reduce((maximum, entry) => Math.max(maximum, entry.allocation_sequence), 0) + 1;
+    return {
+      entry_id: source.entry_id,
+      queue_key: source.queue_key,
+      queue_revision: queue.revision,
+      window_id: source.window_id,
+      window_revision: window.revision,
+      window_status: window.status,
+      voucher_no: source.voucher_no,
+      voucher_revision: source.voucher_revision,
+      receipt_item_row_id: source.receipt_item_row_id,
+      purchase_order: source.purchase_order,
+      purchase_order_item_row_id: source.purchase_order_item_row_id,
+      qty_micros: qty,
+      barem_weight_micros: barem,
+      ...(actual === undefined ? {} : { projected_actual_weight_micros: actual }),
+      ...(source.projection_version === undefined ? {} : { projection_version: source.projection_version }),
+      posting_at: source.posting_at,
+      next_allocation_sequence: nextSequence,
+    };
   }
 
   override snapshot(): MutationSnapshot {
