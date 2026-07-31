@@ -2,73 +2,94 @@
 
 Ngày cập nhật: **2026-07-31**.
 
-## Purchase/FIFO — code, release nền và browser QA
+## P0 — Functional production smoke cho hotfix tự điền đơn giá
 
-### Đã hoàn thành
+Hotfix đã merge và release tenant production:
+
+- Feature PR `#65` squash-merge SHA `db2d5abd8273a5a6c266ba7343554ebeac27618c`.
+- Release preparation PR `#67` merge SHA `87b9410a0a1499100aeafce75b018117fda81ab6`.
+- Execution PR `#68` đã đóng không merge sau release.
+- Release run `30640747900`, job `91189756848`: backup, migration, deploy, smoke và Wrangler evidence **PASS**.
+- Tenant Worker production version: `7542bba4-dc20-4794-8c92-9d26af349531`.
+- `/health` = `200`, unauthenticated boot = `403`.
+- Không deploy Gateway, không sửa secrets, FIFO vẫn **disabled**.
+
+Kiểm bằng tài khoản production phù hợp và dữ liệu thử có thể huỷ/xoá an toàn:
+
+1. Hard refresh, mở Báo giá hoặc Đơn hàng mới.
+2. Chọn `Bảng giá áp dụng`, sau đó chọn Item có Item Price đúng `Bảng giá + Mã hàng + ĐVT`.
+3. Xác minh `ĐVT`, `Đơn giá`, `Thành tiền` và trạng thái giá tự cập nhật trong child grid.
+4. Đổi sang ĐVT thứ hai và xác minh không lấy chéo giá của ĐVT trước.
+5. Đổi bảng giá ở header khi dòng đã có Item; giá dòng phải được tải lại.
+6. Kiểm bản ghi Item Price có tên legacy hoặc không canonical vẫn tự điền theo field.
+7. Kiểm giá disabled, sai currency, thiếu currency và duplicate active prices không trở thành rate dùng được; giao diện phải hiện chẩn đoán phù hợp.
+8. Lưu chứng từ thử để xác minh server authoritative trả cùng giá preview.
+9. Huỷ hoặc xoá chứng từ thử theo quy trình nghiệp vụ.
+10. Nếu lỗi, ghi rõ Item, Price List, UOM, currency và thông báo trạng thái đã redacted; không ghi credential/cookie hoặc dữ liệu khách hàng thật vào evidence.
+
+## P0 — Functional production smoke cho Link dropdown trong child table
+
+Bản vá wheel đúng đã merge và phát hành:
+
+- Feature PR `#62` merge SHA `b3dd1d15a1b52de698d0874b29feae79efe7ed6c`.
+- Release PR `#64` merge SHA `eaf6b32709abc731bd37285501676ed1ec6267af`.
+- Gateway run `30635980509`, job `91173574419`: build, stage, deploy, smoke và provider evidence **PASS**.
+- Gateway production version: `b0d0ce5b-408c-47ab-a734-fa55ba4d9c00`.
+- Targeted Playwright trên desktop/tablet/mobile đã phát `mouse.wheel` và xác minh `scrollTop` của dropdown tăng.
+
+Kiểm trực tiếp sau hard refresh bằng tài khoản production phù hợp, không ghi credential/cookie/dữ liệu khách hàng vào evidence:
+
+1. Mở Báo giá hoặc Đơn hàng và mở bảng child lớn.
+2. Mở dropdown `Mã hàng` có danh sách dài.
+3. Đặt con trỏ trên text hoặc icon của một lựa chọn rồi dùng con lăn:
+   - danh sách dropdown phải cuộn dọc;
+   - không cần kéo thumb scrollbar bằng chuột.
+4. Cuộn tới cuối và tiếp tục lăn xuống:
+   - dropdown không cuộn quá biên;
+   - vùng child grid phía sau tiếp tục cuộn nếu còn khoảng cuộn.
+5. Lặp lại ở đầu danh sách theo hướng ngược lại.
+6. Kiểm thêm dropdown UOM và Warehouse trong bảng lớn.
+7. Đóng bảng lớn, kiểm dropdown ở bảng gọn vẫn chọn và cuộn bình thường.
+8. Xác minh không còn nhóm `Lựa chọn gần đây` sau khi chọn, đóng và mở lại dropdown.
+9. Xác minh Item picker vẫn giữ filter bán hàng và tìm được theo mã/tên.
+10. Nếu thất bại, ghi rõ viewport, loại dropdown, vị trí con trỏ, hướng wheel và ảnh/video đã redacted.
+
+## Purchase/FIFO — functional browser QA còn lại
 
 - PR `#14` đã squash-merge thành `7b3dc06dbbecbb5370ddb48259aa1614aef2ff32`.
-- Tenant release run `30631386714`: backup, migration, deploy và endpoint smoke **PASS**.
-- Tenant Worker production version: `9ec0d1d3-c1fd-4263-ae35-4fae81c09968`.
-- Gateway release PR `#57` đã merge thành `f50993ef7736a0321f6a0e8c308c5cb069497472`; version `6352386d-8385-4ea8-af31-15ac62e21943` là phiên bản lịch sử, đã được thay bởi UI child-grid release.
-- Gateway production hiện hành: `7d0c77ee-588e-44cb-abff-1c217a754316`.
-- FIFO rollout vẫn **disabled**; không có activation, DNS hay production secret change.
-- PR `#63` đã materialize source thật tại `2b8219f8325dd41e4c9cd833f48f85a0d5b87d55`; không còn payload/workflow one-shot.
-- Migration `0032_purchase_reversed_window_corrections.sql`, lifecycle `close → reverse → cancel` và SQL/unit regression đã hoàn tất.
-- Chromium Purchase QA đã **PASS 6/6** trên desktop/mobile trong UI run `30641219079`, job `91191344929`.
-- UI workflow còn PASS build, Alumdoor browser QA và local cookie-auth smoke; evidence artifacts `8797591671`, `8797601615`.
-- Exact-head CI, PR Validation, Purchase, Inventory/Manufacturing và Sales workflows đều **SUCCESS** trên source commit thật.
+- Tenant Worker production hiện hành: `7542bba4-dc20-4794-8c92-9d26af349531`.
+- FIFO rollout vẫn **disabled**; deploy code không phải approval kích hoạt FIFO.
 
-### P0 — hoàn tất PR #63
+Dùng dữ liệu thử phù hợp:
 
-1. Đồng bộ default và chạy exact-head CI trên merge-sync/doc head cuối.
-2. Xác nhận PR mergeable, không còn temp/generated artifact.
-3. Chuyển PR khỏi draft và merge khi toàn bộ required checks xanh.
-4. Sau merge, nếu phát hành correction code/migration `0032`, dùng release path chuẩn và giữ FIFO **disabled**.
+1. Desktop/mobile: mở Purchase Order/Purchase Receipt, kiểm submit preview và allocation timeline.
+2. Kiểm settlement close/reverse, reason bắt buộc, capability/permission và confirmation scope.
+3. Kiểm manual FIFO override, validation reason và audit append-only.
+4. Kiểm supplier debt drill-down, filters, summaries và CSV export.
+5. Smoke PO → Receipt → cancel → settlement/reverse bằng chứng từ test có thể dọn/hủy an toàn.
 
-### P0 — blocker trước khi kích hoạt FIFO production
+### Blocker trước khi kích hoạt FIFO production
 
-1. Có staging tenant hoặc bản sao dữ liệu phù hợp, không dùng dữ liệu khách hàng thô làm artifact.
-2. Chạy staging migration và backfill dry-run.
-3. Review resolved/unresolved report và PO-level checksum; `unresolved_count` phải bằng `0`.
-4. Chạy backfill execute trên staging và xác minh ledger counts/checksum trong rollout state, vẫn giữ `enabled=0`.
-5. Chạy authenticated staging business smoke đầy đủ PO → Receipt → cancel → settlement/reverse → manual override → supplier debt report.
-6. Xác minh supplier contention và D1 latency ở tải gần production.
-7. Tạo production backup mới ngay trước activation và chuẩn bị rollback plan.
-8. Chỉ activation khi có explicit approval riêng kèm exact checksum; không gộp approval deploy code với approval bật FIFO.
-
-### P0 — production business acceptance còn lại
-
-- Hard refresh bundle đã deploy và kiểm Purchase Order/Purchase Receipt bằng tài khoản thử phù hợp.
-- Kiểm submit preview, allocation timeline, settlement reason/capability, manual override và supplier debt CSV trên dữ liệu test có thể dọn an toàn.
-- Không ghi credential, cookie, token hoặc dữ liệu khách hàng thật vào evidence.
-- Nếu phát hiện lỗi Critical/High, rollback đúng Gateway/Tenant version và mở issue có evidence đã redacted.
-
-### P1 — product/report decisions
-
-- Quyết định có cần standalone global Supplier Debt Report hay chỉ giữ report permission-scoped theo PO/Receipt timeline.
-- Nếu cần global report, phải có contract data-scope, permission, filters và export riêng trước khi implement.
-
-## UI child table — production functional smoke còn lại
-
-1. Xác nhận không còn nhóm `Lựa chọn gần đây` trong Link dropdown.
-2. Kiểm dropdown tự cuộn khi còn khoảng cuộn và relay wheel về đúng child grid khi chạm đầu/cuối.
-3. Kiểm cả child grid gọn và bảng mở rộng.
-4. Xác nhận Item, UOM và Warehouse vẫn chọn được, giữ đúng filter/quyền.
-5. Dùng tài khoản/dữ liệu thử phù hợp và không lưu cookie, token hoặc dữ liệu khách hàng trong evidence.
+1. Chạy staging migration và backfill dry-run trên bản sao dữ liệu phù hợp.
+2. Review resolved/unresolved report và PO-level checksum.
+3. `unresolved_count` phải bằng `0`; không đoán hoặc tự sửa row ID.
+4. Chạy staging smoke đầy đủ PO → Receipt → cancel → settlement/manual override → report.
+5. Xác minh supplier contention/D1 latency ở tải gần production.
+6. Tạo production backup mới ngay trước activation.
+7. Chỉ activation khi có explicit approval riêng.
 
 ## Bán hàng — functional browser acceptance còn lại
 
 1. Item picker chỉ hiện Item `is_sales_item=1`, `disabled=0` khi tìm trống và tìm theo mã/tên.
-2. Recent links không làm lộ Item disabled hoặc mất quyền bán.
-3. Multi-UOM: kiểm giá/tồn theo Item + Kho + ĐVT, không lấy chéo UOM.
-4. Kiểm Price List/Item Price với role `Kinh doanh` và `Kế toán`.
-5. Huỷ hoặc xoá chứng từ test theo quy trình nghiệp vụ sau khi thu evidence.
+2. Multi-UOM: kiểm giá/tồn theo Item + Kho + ĐVT, không lấy chéo UOM.
+3. Kiểm Price List/Item Price với role `Kinh doanh` và `Kế toán`.
+4. Huỷ hoặc xoá chứng từ test theo quy trình nghiệp vụ sau khi thu evidence.
 
 ## Theo dõi production
 
-- Theo dõi Gateway/Tenant 4xx/5xx mới liên quan Purchase allocation, settlement, supplier debt và sales item context.
-- Rollback khi có login/API 5xx diện rộng, sai tenant/database, permission regression, mất dữ liệu CRUD hoặc print/PDF lỗi nghiêm trọng.
-- Endpoint smoke và component/browser harness không thay thế authenticated production business smoke.
+- Theo dõi Gateway/Tenant 4xx/5xx mới, lỗi lấy `alumdoor.sales.item_context`, lỗi pricing khi lưu và lỗi mở/chọn Link dropdown.
+- Rollback khi có API 5xx diện rộng, pricing sai có thể ghi chứng từ, permission regression hoặc mất dữ liệu CRUD.
+- Endpoint smoke đã đạt nhưng không thay thế functional browser smoke có đăng nhập.
 
 ## RBAC
 
@@ -77,10 +98,10 @@ Ngày cập nhật: **2026-07-31**.
 
 ## Release automation
 
-- Ở tenant release kế tiếp, xác minh `.github/workflows/ci.yml` tạo summary/version từ Wrangler NDJSON và không còn lỗi hậu kiểm `404`.
 - Giữ `.github/workflows/gateway-production-release.yml` làm đường Gateway có exact SHA, smoke và provider evidence.
+- Tenant release dùng `.github/workflows/ci.yml`: backup → migrate → deploy → smoke → Wrangler version evidence.
+- Execution PR chỉ dùng để kích hoạt release và phải đóng không merge sau khi hoàn tất.
 - `cloudflare-production-observation.yml` chỉ dùng manual smoke; không dùng để suy ra version/deployment ID.
-- Chuẩn hóa release branch/date-specific trigger bằng PR riêng, không phát hành production chỉ để thử workflow.
 
 ## Safety
 
