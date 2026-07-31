@@ -38,11 +38,12 @@ Technical plan: `server/docs/ALUMDOOR-PURCHASE-RECEIPT-COMPLETION-PLAN.md`.
 - [x] Server errors được map và hiển thị, không optimistic-update ledger.
 - [x] SQL metadata migration test dùng toàn bộ production-shaped migration chain.
 - [x] Unit test operator timeline queue scope.
-- [x] Exact implementation head `c99da53d38e74b541d9a9abe8806c7e7854502ea` PASS:
-  - Purchase Feature CI `30619923285`, job `91121820282`;
-  - PR Validation `30619923258`, job `91121820000`;
-  - CI `30619923233`, job `91121819867`;
-  - production release job `91121820309` skipped.
+- [x] Base `acd0a8df95eb35342b15de282b65102ac4314801` đã merge vào feature tại `09688b8712a4add2e384095601729c8d72ab4513`.
+- [x] Exact merge head PASS:
+  - Purchase Feature CI `30620458525`, job `91123529123`;
+  - PR Validation `30620458601`, job `91123529201`;
+  - CI `30620458550`, job `91123529211`;
+  - production release job `91123529832` skipped.
 
 ## P0 kế tiếp — UI verification
 
@@ -96,13 +97,12 @@ Technical plan: `server/docs/ALUMDOOR-PURCHASE-RECEIPT-COMPLETION-PLAN.md`.
 
 ## P0 — Staging và release gate
 
-1. Xác nhận exact-head CI xanh lại sau base merge cuối.
-2. Staging migrations.
-3. Backfill dry-run.
-4. `unresolved_count=0` và checksum match.
-5. Smoke PO → Receipt → cancel → settlement → report.
-6. Review theo rubric 100 điểm; sửa mọi Critical/High và đạt ít nhất 95/100.
-7. Backup mới, rollback plan và explicit production approval riêng.
+1. Staging migrations.
+2. Backfill dry-run.
+3. `unresolved_count=0` và checksum match.
+4. Smoke PO → Receipt → cancel → settlement → report.
+5. Review theo rubric 100 điểm; sửa mọi Critical/High và đạt ít nhất 95/100.
+6. Backup mới, rollback plan và explicit production approval riêng.
 
 ## Production boundary
 
