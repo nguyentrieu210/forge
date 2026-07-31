@@ -31,16 +31,11 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p server/tests server/scripts
-          cat \
-            server/scripts/.sales-production-payload/module-00.txt \
-            server/scripts/.sales-production-payload/module-12.txt \
-            server/scripts/.sales-production-payload/module-34.txt \
+          cat server/scripts/.sales-production-payload-v2/module-*.txt \
             | base64 -d | gzip -d > server/apps-src/alumdoor-worker/src/sales-production.ts
-          cat server/scripts/.sales-production-payload/test-00.txt \
+          cat server/scripts/.sales-production-payload-v2/test-*.txt \
             | base64 -d | gzip -d > server/tests/sales-production-flow.test.mjs
-          cat \
-            server/scripts/.sales-production-payload/patch-01.txt \
-            server/scripts/.sales-production-payload/patch-23.txt \
+          cat server/scripts/.sales-production-payload-v2/patch-*.txt \
             | base64 -d | gzip -d > server/scripts/apply-sales-production-feature.mjs
           node --check server/scripts/apply-sales-production-feature.mjs
           node --check server/tests/sales-production-flow.test.mjs
@@ -79,7 +74,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf server/scripts/.sales-production-payload
+          rm -rf server/scripts/.sales-production-payload server/scripts/.sales-production-payload-v2
           rm -f server/scripts/apply-sales-production-feature.mjs
           rm -f .github/workflows/apply-sales-production-feature-once.yml
           git config user.name github-actions[bot]
