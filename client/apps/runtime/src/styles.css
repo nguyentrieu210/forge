@@ -46,3 +46,175 @@
     height: 0.875rem;
   }
 }
+
+/* Chromium lets the native input own hit-testing even when an absolutely positioned
+   sibling is painted above it. Use a compound control instead of overlapping hit areas. */
+#mf-login-pwd {
+  width: calc(100% - 2.5rem);
+  border-right: 0;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+#mf-login-pwd + button[aria-pressed] {
+  top: 0;
+  right: 0;
+  width: 2.5rem;
+  height: 100%;
+  border: 1px solid var(--input);
+  border-left: 0;
+  border-radius: 0 0.75rem 0.75rem 0;
+  background: color-mix(in srgb, var(--background) 65%, transparent);
+  translate: none;
+  z-index: 1;
+  pointer-events: auto;
+}
+
+#mf-login-pwd:focus-visible + button[aria-pressed] {
+  border-color: var(--ring);
+  background: var(--card);
+}
+
+/* Alumdoor public experience. The palette follows the supplied Alumdoor order-form
+   artwork: signature orange, technical charcoal, white paper and restrained neutrals. */
+[data-alumdoor-landing] {
+  color-scheme: light;
+  --background: #f7f6f4;
+  --foreground: #393938;
+  --card: #ffffff;
+  --card-foreground: #393938;
+  --popover: #ffffff;
+  --popover-foreground: #393938;
+  --primary: #f15c2d;
+  --primary-foreground: #18181b;
+  --secondary: #f2eee9;
+  --secondary-foreground: #393938;
+  --muted: #faf8f6;
+  --muted-foreground: #716b66;
+  --accent: #fff0e9;
+  --accent-foreground: #a93614;
+  --border: #ded8d3;
+  --input: #d5cec8;
+  --ring: #f15c2d;
+  --subtle: #746e69;
+  --info: #f15c2d;
+  --info-text: #a93614;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #393938;
+  background:
+    linear-gradient(90deg, #f15c2d 0 31%, #393938 31% 100%) top / 100% 0.25rem no-repeat,
+    linear-gradient(180deg, #ffffff 0%, #f7f6f4 54%, #f1efec 100%);
+}
+
+[data-theme="dark"] [data-alumdoor-landing] {
+  color-scheme: dark;
+  --background: #1d1d1c;
+  --foreground: #faf8f5;
+  --card: #282827;
+  --card-foreground: #faf8f5;
+  --popover: #282827;
+  --popover-foreground: #faf8f5;
+  --primary: #f15c2d;
+  --primary-foreground: #18181b;
+  --secondary: #343230;
+  --secondary-foreground: #faf8f5;
+  --muted: #242321;
+  --muted-foreground: #b9b1aa;
+  --accent: #4a2a1e;
+  --accent-foreground: #ffb194;
+  --border: #4b4642;
+  --input: #5a534e;
+  --ring: #ff7549;
+  --subtle: #aaa098;
+  --info: #ff7549;
+  --info-text: #ffb194;
+  --sidebar: #232322;
+  --sidebar-foreground: #faf8f5;
+  background:
+    linear-gradient(90deg, #f15c2d 0 31%, #faf8f5 31% 100%) top / 100% 0.25rem no-repeat,
+    linear-gradient(180deg, #222221 0%, #1d1d1c 58%, #191918 100%);
+}
+
+[data-alumdoor-landing] header {
+  position: relative;
+  border-color: color-mix(in srgb, var(--foreground) 14%, transparent);
+  background: color-mix(in srgb, var(--card) 94%, transparent);
+  box-shadow: 0 0.35rem 1.4rem -1.2rem color-mix(in srgb, var(--foreground) 44%, transparent);
+}
+
+[data-alumdoor-landing] header::after {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 1px;
+  background: linear-gradient(90deg, var(--primary), transparent 38%);
+  content: "";
+}
+
+[data-alumdoor-landing] .mf-brand-mark {
+  border: 0;
+  border-radius: 0.4rem;
+  background: linear-gradient(120deg, #f15c2d 0 53%, #393938 53% 100%);
+  color: #ffffff;
+  font-family: "Arial Narrow", "Roboto Condensed", sans-serif;
+  font-weight: 900;
+  letter-spacing: -0.08em;
+  box-shadow: 0 0.55rem 1.2rem -0.75rem rgb(57 57 56 / 58%);
+}
+
+[data-alumdoor-landing] header .mf-brand-mark + div > p:first-child,
+[data-alumdoor-landing] .mf-login-card .mf-brand-mark + div > p:first-child {
+  color: var(--foreground);
+  font-family: "Arial Narrow", "Roboto Condensed", sans-serif;
+  font-weight: 900;
+  letter-spacing: -0.035em;
+  text-transform: uppercase;
+}
+
+[data-alumdoor-landing] main > section:first-child {
+  background:
+    linear-gradient(115deg, color-mix(in srgb, var(--primary) 7%, transparent), transparent 42%),
+    linear-gradient(180deg, color-mix(in srgb, var(--card) 74%, transparent), transparent 72%);
+}
+
+[data-alumdoor-landing] .mf-login-card {
+  border-color: color-mix(in srgb, var(--foreground) 17%, var(--border));
+  background: var(--card);
+  box-shadow:
+    inset 0 0.2rem 0 var(--primary),
+    0 2rem 4.5rem -3rem color-mix(in srgb, var(--foreground) 56%, transparent);
+}
+
+[data-alumdoor-landing] .mf-login-card input {
+  border-color: color-mix(in srgb, var(--foreground) 20%, var(--input));
+}
+
+[data-alumdoor-landing] .mf-login-card input:focus-visible {
+  border-color: var(--primary);
+}
+
+[data-alumdoor-landing] article,
+[data-alumdoor-landing] main .rounded-3xl {
+  border-color: color-mix(in srgb, var(--foreground) 14%, var(--border));
+}
+
+[data-alumdoor-landing] footer {
+  border-color: color-mix(in srgb, var(--foreground) 16%, var(--border));
+  background: color-mix(in srgb, var(--card) 88%, transparent);
+}
+
+[data-alumdoor-landing] ::selection {
+  background: color-mix(in srgb, var(--primary) 30%, transparent);
+  color: var(--foreground);
+}
+
+@media (max-width: 767px) {
+  [data-alumdoor-landing] .mf-brand-mark {
+    border-radius: 0.35rem;
+  }
+
+  [data-alumdoor-landing] .mf-login-card {
+    border-radius: 1.35rem;
+  }
+}
