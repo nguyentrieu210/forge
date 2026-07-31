@@ -4,6 +4,12 @@
  * something to log into and something to write.
  *
  *   npm run dev:seed -- [--user dev@example.com] [--password local-dev-password-1]
+ *   node scripts/seed-local.mjs --auth-only --user qa@example.test --password ...
+ *
+ * `--auth-only` creates only the System Manager account. It exists for CI flows
+ * that must log in before installing an authoritative app; pre-seeding demo
+ * DocTypes or master records would make the app installer correctly reject those
+ * names as unowned metadata.
  *
  * Emits SQL and applies it with `wrangler d1 execute --local`. It refuses to run
  * against a remote database: seeding a fixed password into a real tenant would hand
@@ -38,10 +44,19 @@ const argOf = (name, fallback) => {
  */
 const remote = args.includes("--remote");
 const withUser = !args.includes("--no-user");
+const authOnly = args.includes("--auth-only");
 if (remote && withUser) {
   console.error("refusing: this seed carries a known password, so --remote needs --no-user");
   console.error("  metadata only:  node scripts/seed-local.mjs --remote --no-user");
   console.error("  the account:    node scripts/seed-remote-admin.mjs --config apps/tenant-worker/wrangler.jsonc");
+  process.exit(2);
+}
+if (authOnly && !withUser) {
+  console.error("refusing: --auth-only and --no-user would produce an empty seed");
+  process.exit(2);
+}
+if (authOnly && remote) {
+  console.error("refusing: --auth-only is local-only; use seed-remote-admin.mjs for remote accounts");
   process.exit(2);
 }
 
@@ -92,8 +107,7 @@ const accountStatements = [
   `INSERT INTO user_roles(tenant_id,user_id,role) VALUES('${quote(tenant)}','${quote(user)}','System Manager') ON CONFLICT DO NOTHING;`,
 ];
 
-const statements = [
-  ...(withUser ? accountStatements : []),
+const metadataStatements = [
   ...masters.map(([type, name, data]) =>
     `INSERT INTO master_records(tenant_id,record_type,name,data_json,modified_at)
      VALUES('${quote(tenant)}','${quote(type)}','${quote(name)}','${quote(JSON.stringify(data))}','${now}')
@@ -104,6 +118,11 @@ const statements = [
   `INSERT INTO translations(tenant_id,language,source_text,translated_text,context,modified_at)
    VALUES('${quote(tenant)}','vi','Subject','Chủ đề','','${now}')
    ON CONFLICT(tenant_id,language,context,source_text) DO UPDATE SET translated_text=excluded.translated_text;`,
+];
+
+const statements = [
+  ...(withUser ? accountStatements : []),
+  ...(authOnly ? [] : metadataStatements),
 ];
 
 const sqlFile = path.join(process.cwd(), "seed-local.sql");
@@ -141,7 +160,8 @@ if (result.status !== 0) {
 // The password is echoed only when this seed actually created the account; printing it
 // for a metadata-only run would name a credential that does not exist.
 const target = remote ? "REMOTE" : "local";
-console.log(`SEED_PASS target=${target} tenant=${tenant} doctype="Field Visit"${withUser ? ` user=${user} password=${password}` : " (metadata only, no account)"}`);
+const mode = authOnly ? "auth-only" : "demo-metadata";
+console.log(`SEED_PASS target=${target} mode=${mode} tenant=${tenant}${authOnly ? "" : ' doctype="Field Visit"'}${withUser ? ` user=${user} password=${password}` : " (metadata only, no account)"}`);
 if (!remote) {
   console.log("next: npx wrangler dev --config apps/tenant-worker/wrangler.jsonc --port 8799 --local");
   console.log("then: npm run smoke:http");
