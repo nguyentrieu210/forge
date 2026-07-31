@@ -140,3 +140,31 @@ Không bật rollout FIFO cho `alu` trước khi các blocker trên được x�
 - G5 staging/browser QA: **CHƯA CHẠY**.
 - Việc tiếp theo là mở branch/PR Slice B riêng cho audit append-only, atomic user/roles và last-admin/self-lockout guards.
 - Không deploy Cloudflare, không sửa production secrets và không bật FIFO.
+
+## RBAC Slice B đang review
+
+- Branch: `feat/rbac-permission-slice-b-core-20260731`.
+- PR authoritative: `#43`, draft, chưa merge.
+- PR `#38`, `#39` và `#42` đã đóng, không merge; chúng chỉ ghi lại các lần thay thế gate/PR snapshot.
+- Core exact head đã qua CI: `287e8362684f95cfa1a5c71e11d096fa6fe47175`.
+- Wiring implementation commit: `35da85cc3c8db4603df3cf0308b36dc422b524a7`.
+- Final code diff trước handoff gồm 7 file:
+  - `server/migrations/tenant/0030_rbac_audit.sql`;
+  - `server/packages/auth/src/rbac-administration.ts`;
+  - `server/packages/auth/src/user-store.ts`;
+  - `server/packages/frappe-api/src/router.ts`;
+  - `server/scripts/test-rbac-audit-migration.py`;
+  - `server/tests/rbac-administration.test.mjs`;
+  - `server/tests/rbac-contract.test.mjs`.
+- Migration tạo audit ledger append-only, JSON checks, indexes và database backstop cho tenant admin cuối cùng.
+- Service D1 ghi user/role/scope/session mutation và audit trong cùng batch.
+- Self-disable, self-demote và last-admin guard đã có ở application layer; last-admin còn có database trigger chống race.
+- Password, hash, token, cookie, secret và trusted identity không được ghi vào audit.
+- Service tests: 8/8 PASS trên Node 22 + disposable SQLite.
+- Core PR Validation run `30622251469`, job `91129287256`: root test/typecheck/build PASS.
+- Wiring gate run `30623092302`:
+  - job `91131952789` (`Wire and gate RBAC Slice B`): PASS;
+  - job `91131952849` (`Test, typecheck and build`): PASS.
+- Workflow `.github/workflows/pr-validation.yml` đã được khôi phục về `contents: read` tại default commit `952e7dd5443e3ace23b94935aca7f23978d1948a`.
+- Còn lại: exact-head PR Validation sau commit bàn giao này, review final diff và explicit approval trước merge.
+- Không deploy Cloudflare, không sửa production secrets và không bật FIFO.
