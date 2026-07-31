@@ -69,12 +69,13 @@ interface ShortcutCardProps {
 
 function ShortcutCard({ title, description, icon, onClick, primary }: ShortcutCardProps) {
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
       onClick={onClick}
       className={cn(
-        "group flex min-h-28 w-full items-start gap-3 rounded-lg border bg-card p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md",
-        primary && "border-primary/30 bg-primary/[0.04]",
+        "group flex h-auto min-h-28 w-full items-start justify-start gap-3 whitespace-normal rounded-lg border bg-card p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:bg-card hover:shadow-md",
+        primary && "border-primary/30 bg-primary/[0.04] hover:bg-primary/[0.06]",
       )}
     >
       <span className={cn(
@@ -85,7 +86,7 @@ function ShortcutCard({ title, description, icon, onClick, primary }: ShortcutCa
         <span className="block font-semibold text-foreground">{title}</span>
         <span className="mt-1 block text-xs leading-5 text-muted-foreground">{description}</span>
       </span>
-    </button>
+    </Button>
   );
 }
 
@@ -199,15 +200,16 @@ export function MetaProcessWorkspace({ onNavigate }: NavigateProps) {
           <Separator />
           <div className="grid gap-2 sm:grid-cols-2">
             {META_CREATE_OPTIONS.map((option) => (
-              <button
+              <Button
                 key={option.target}
                 type="button"
-                className="flex items-start gap-3 rounded-lg border p-3 text-left transition hover:border-primary/40 hover:bg-primary/[0.04]"
+                variant="ghost"
+                className="h-auto items-start justify-start gap-3 whitespace-normal rounded-lg border p-3 text-left transition hover:border-primary/40 hover:bg-primary/[0.04]"
                 onClick={() => { setCreateOpen(false); onNavigate(option.target); }}
               >
                 <span className="mt-0.5 text-primary [&_svg]:size-4">{option.icon}</span>
                 <span><span className="block text-sm font-medium">{option.label}</span><span className="block text-xs text-muted-foreground">{option.description}</span></span>
-              </button>
+              </Button>
             ))}
           </div>
         </DialogContent>
@@ -232,11 +234,19 @@ export function MetaOverviewWorkspace({ onNavigate }: NavigateProps) {
       </div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {cards.map((card) => (
-          <button key={card.target} type="button" onClick={() => onNavigate(card.target)} className="rounded-xl border bg-card p-4 text-left shadow-sm transition hover:border-primary/40 hover:shadow-md">
-            <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">{card.label}</span><span className="text-primary [&_svg]:size-5">{card.icon}</span></div>
-            <div className="mt-3 text-3xl font-semibold">{card.value}</div>
-            <div className="mt-1 text-xs text-muted-foreground">Mở trình quản lý</div>
-          </button>
+          <Button
+            key={card.target}
+            type="button"
+            variant="ghost"
+            onClick={() => onNavigate(card.target)}
+            className="h-auto justify-start rounded-xl border bg-card p-4 text-left shadow-sm transition hover:border-primary/40 hover:bg-card hover:shadow-md"
+          >
+            <span className="w-full">
+              <span className="flex items-center justify-between"><span className="text-sm text-muted-foreground">{card.label}</span><span className="text-primary [&_svg]:size-5">{card.icon}</span></span>
+              <span className="mt-3 block text-3xl font-semibold">{card.value}</span>
+              <span className="mt-1 block text-xs text-muted-foreground">Mở trình quản lý</span>
+            </span>
+          </Button>
         ))}
       </div>
       <section className="rounded-xl border bg-card p-5 shadow-sm">
