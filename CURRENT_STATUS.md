@@ -6,12 +6,12 @@ Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Default head đã đồng bộ vào nhánh tài chính: `fbae2164403cd6b8ab7b31ee745e9d9ec82620b5`.
+- Default head đã đồng bộ vào nhánh tài chính: `984c8655db5fea4de10baa41be59c79df99b2aa9`.
 - Working branch: `feat/finance-ar-ap-completion`.
 - Draft PR: `#15` — `feat(finance): add invoice due dates and AR/AP aging`.
 - Finance code/test head: `93c3f2ab5c7dd286c9f03cd13ad769ba14a65d8e`.
-- Latest default merge commit trước commit trạng thái này: `a692a6ccc2939f09790dcbb13f92e9c5e1fc05d3`.
-- PR mergeable; branch chứa workflow `pr-validation.yml` mới nhất từ default.
+- Latest default merge commit trước commit trạng thái này: `e03dbca7fa4c22594131a9bfd32653c1da77102f`.
+- PR mergeable; branch zero commits behind default.
 - Backup trước đồng bộ base: `backup/finance-ar-ap-pre-rebase-20260731` tại `a0f787e2a8abde287b184d5709985aec8cfd4eb8`.
 - Workflow tạm dùng để đồng bộ branch và workflow tạm thử Worker đều đã bị xóa khỏi final diff.
 - Final diff có 16 file finance/docs/test; không có workflow tạm, `.env`, `server/work/`, `tmp/`, backup SQL hoặc generated artifacts.
@@ -79,15 +79,19 @@ Trước khi thêm Worker route regression test:
 - Job: `91122345078` — `Test, typecheck and build`.
 - Install, `pnpm test`, `pnpm typecheck`, `pnpm build`: **PASS**.
 
-### Các failure trước runner đã quan sát
+### Failure trước runner đã quan sát
 
-- `30620542741`, job `91123803489`;
-- `30620645454`, job `91124137658`, rerun job `91124386934`;
-- `30620830770`, job `91124730973`.
+Các run `30620542741`, `30620645454`, `30620830770`, `30621194949` và `30621242982` tạo job nhưng `steps` rỗng, chưa checkout và log download trả `BlobNotFound`.
 
-Các job trên có `steps` rỗng, chưa checkout và log download trả `BlobNotFound`. Chưa có bằng chứng code regression từ các run đó.
+Đối chiếu PR #38 cho thấy cùng workflow cũng thất bại trước runner. Default sau đó sửa chuỗi workflow RBAC qua:
 
-Default đã cập nhật `pr-validation.yml` qua `1207333163fdf31c576caa6ec8c11e88b078ca6e` và bản idempotent `fbae2164403cd6b8ab7b31ee745e9d9ec82620b5`; finance branch đã merge đúng workflow mới. Với PR #15, RBAC Slice B job phải skip và chỉ `validate / Test, typecheck and build` cần chạy.
+- `1207333163fdf31c576caa6ec8c11e88b078ca6e`;
+- `fbae2164403cd6b8ab7b31ee745e9d9ec82620b5`;
+- `c65260e4eadd569997908b5c4b7d6a5631863b9e`;
+- `39b240aef9e75fecc24713b9e8b77a974c23e43c`;
+- `984c8655db5fea4de10baa41be59c79df99b2aa9`.
+
+Finance branch đã merge bản workflow cuối. Cần đọc PR Validation trên commit người dùng kế tiếp. Với PR #15, RBAC job phải thoát sớm không thay đổi dữ liệu; finance gate là `Test, typecheck and build`.
 
 PR vẫn draft và chưa được coi là exact-head verified sau Worker route test cho tới khi install/test/typecheck/build chạy thật.
 
@@ -114,5 +118,4 @@ PR vẫn draft và chưa được coi là exact-head verified sau Worker route t
 ## RBAC
 
 - Slice A đã squash-merge vào default qua commit `93ac85a0f16c2668b706ffcf8e15d3da53c8c7a9`.
-- Slice B đang dùng workflow gate riêng trên PR #38; điều kiện không áp dụng cho PR finance #15.
-- Finance PR chỉ cần job `Test, typecheck and build`.
+- Slice B đang dùng gate riêng cho PR #38; finance PR #15 không được áp dụng payload RBAC.
