@@ -53,7 +53,23 @@ test("legacy two-part Item Price remains readable only for the matching UOM", as
   );
 });
 
-test("price-list sales require an explicit UOM", async () => {
-  const masters = new Map([currency]);
-  await assert.rejects(resolveServerPrice(context(masters), base(undefined)), /selling UOM is required/);
+test("untyped legacy Item Price remains compatible with an untyped sales row", async () => {
+  const masters = new Map([
+    currency,
+    ["Item Price:BANG-GIA:ITEM-1", { currency: "VND", rate: "125000" }],
+  ]);
+  const result = await resolveServerPrice(context(masters), base(undefined));
+  assert.equal(result.rate, "125000.00");
+  assert.equal(result.item_price, "BANG-GIA:ITEM-1");
+});
+
+test("typed legacy Item Price requires an explicit matching sales UOM", async () => {
+  const masters = new Map([
+    currency,
+    ["Item Price:BANG-GIA:ITEM-1", { uom: "Cái", currency: "VND", rate: "125000" }],
+  ]);
+  await assert.rejects(
+    resolveServerPrice(context(masters), base(undefined)),
+    /document row must provide a matching selling UOM/,
+  );
 });
