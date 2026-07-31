@@ -5,39 +5,62 @@ Ngày cập nhật: **2026-07-31**.
 ## Repository
 
 - Repository: `nguyentrieu210/forge`.
-- Default branch: `hotfix/alumdoor-print-list-delete`.
-- Working branch: `feat/metaforge-misa-workspace-tabs`.
 - Base: `hotfix/alumdoor-print-list-delete`.
-- Không commit `.env`, `.dev.vars`, secret, `server/work/`, `tmp/`, backup SQL hoặc generated evidence.
+- Working branch: `feat/metaforge-misa-workspace-tabs`.
+- Draft PR: `#81` — `feat(ui): add MISA-style workspace tabs for MetaForge`.
+- GitHub là nguồn sự thật cho code, CI và trạng thái release.
+- Không commit `.env`, `.dev.vars`, secret, `server/work/`, `tmp/`, backup SQL hoặc generated artifacts.
 
-## MetaForge UI — MISA-style workspace tabs
+## MetaForge UI — workspace theo MISA AMIS
 
-### Đã triển khai
+Nguồn tham chiếu hành vi trong phiên làm việc: file người dùng cung cấp `misa-amis-ba.zip`, đặc biệt `00_MISA_AMIS_Observed_Menu_Map.md` và các ghi chép module Kho/Mua hàng/Tổng quan. File khảo sát không được commit vào repository.
+
+### Cấu trúc đã triển khai
+
+- Sidebar trái chứa **phân hệ**: hiện có `Nghiệp vụ` và `Meta`.
+- Thanh ngang nằm đầu vùng nội dung của phân hệ.
+- Thứ tự tab bắt buộc:
+  1. `Quy trình nghiệp vụ`;
+  2. `Báo cáo tổng quan`;
+  3. từ đây trở đi là tab nghiệp vụ/DocType.
+- Một tab DocType có thể bao phủ nhiều route con như list, form, kanban, lịch, cây hoặc in; chuyển route con không làm đổi tab đang hoạt động.
+
+### File code
 
 - `client/apps/demo/src/DemoShell.tsx`
-  - suy ra các tab phân hệ trực tiếp từ `NavItem.group`;
-  - hiển thị tab phân hệ/nghiệp vụ trên vùng đầu shell;
-  - tab đang hoạt động bám theo `activeKey`;
-  - bấm tab chuyển tới mục khả dụng đầu tiên của phân hệ;
-  - sidebar chỉ còn các mục thuộc phân hệ đang chọn;
-  - giữ tương thích ngược: nếu không có ít nhất hai group thì không hiện tab và sidebar hoạt động như cũ;
-  - hỗ trợ cuộn ngang, `aria-label` và `aria-current`.
+  - thêm metadata `WorkspaceMeta`, `WorkspaceModuleMeta`, `WorkspaceTabMeta`;
+  - phân loại tab `process | overview | doctype`;
+  - hỗ trợ `activeKeys` để gom các route con vào cùng tab DocType;
+  - sidebar sinh từ module metadata, không còn dùng group sidebar làm tab;
+  - tab ngang cuộn được và có `aria-current`.
+- `client/apps/demo/src/workspace-meta.tsx`
+  - khai báo module `Nghiệp vụ` và `Meta`;
+  - màn Quy trình có sơ đồ bước, shortcut tới DocType/builder và modal tạo mới;
+  - màn Tổng quan Meta có các thẻ DocType, Workflow, Print Format và Dashboard;
+  - toàn bộ thao tác dùng `Button` của design system, không dùng native `<button>`.
+- `client/apps/demo/src/App.tsx`
+  - nối metadata vào `DemoShell`;
+  - route mặc định mở `Quy trình nghiệp vụ`;
+  - module Meta có chuỗi tab: Quy trình → Tổng quan → DocType → Workflow → Print Format → Dashboard;
+  - Command Palette vẫn truy cập được toàn bộ route demo.
 
-### Quyết định kiến trúc
+### Phạm vi có chủ ý
 
-- Không tạo thêm manifest module riêng ở bước này.
-- `NavItem.group` tiếp tục là nguồn sự thật duy nhất cho cả tab phân hệ và nhóm điều hướng, tránh cấu hình trùng rồi lệch nhau.
-- Phạm vi hiện tại nằm ở demo shell để kiểm chứng hành vi trước khi nâng API thành primitive dùng chung trong `@metaforge/shell`.
+- Thay đổi hiện áp dụng cho mock/demo `App.tsx` để chốt UI và hành vi.
+- `LiveApp.tsx` vẫn dùng navigation runtime cũ. Chưa đưa Meta tĩnh vào live vì live chưa có route builder Meta thật; thêm menu trước khi có route/quyền tương ứng sẽ tạo liên kết hỏng.
+- Bước tiếp theo của live phải sinh workspace từ application catalog/manifest và khai báo route, permission cho builder trước.
 
-### Verification
+## Verification
 
-- Chưa chạy local typecheck/build vì môi trường làm việc chỉ có GitHub connector, không có checkout repository và dependency cache.
-- Cần dùng CI của draft PR để xác nhận exact head.
-- Không deploy Cloudflare, không sửa production secrets/DNS và không đụng dữ liệu tenant.
+- Exact code commit trước cập nhật tài liệu: `3104c6ac567d23b0a5fa7f7fd135ca62625a757b`.
+- Sáu workflow trên head cũ `464b713af4d8a0403f766f354d04ebcaee32e6b8` đều **PASS**, nhưng không đại diện cho code UI mới nhất.
+- Tại thời điểm cập nhật, GitHub chưa trả workflow run nào cho exact code head mới; không được tuyên bố final CI xanh.
+- Đã đọc gate `client/scripts/check-native-ui.mjs` và thay toàn bộ native button mới bằng component `Button`.
+- Chưa chạy local lint/test/typecheck/build vì môi trường hiện tại không có repository checkout và dependency cache.
 
-## Purchase/FIFO hiện hành
+## Safety
 
-- Purchase/FIFO lifecycle correction đã merge qua PR `#63`.
-- Tenant production release hiện được ghi nhận ở tài liệu cũ với Worker version `88c508a7-f3f7-4844-9c8b-85a02bc362f3`.
-- FIFO rollout vẫn **disabled**.
-- Nhánh/PR Purchase `#75` là luồng công việc độc lập; cần kiểm GitHub trực tiếp trước khi tiếp tục vì handoff cũ từng trỏ nhầm nhánh.
+- Không deploy Cloudflare.
+- Không sửa production secrets hoặc DNS.
+- Không đụng dữ liệu tenant.
+- FIFO rollout vẫn **disabled**; luồng Purchase/FIFO độc lập với PR này.
