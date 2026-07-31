@@ -28,7 +28,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
 
-      - name: Reconstruct and apply source patch
+      - name: Reconstruct and normalize source patch
         shell: bash
         run: |
           set -euo pipefail
@@ -42,33 +42,76 @@ jobs:
           git apply /tmp/purchase-completion.patch
 
           python3 - <<'PY'
+          import json
+          import shutil
           from pathlib import Path
 
           playwright = Path('client/e2e-forge/playwright.purchase.config.ts')
-          text = playwright.read_text()
-          old = '''    command: `pnpm --dir client exec vite --config e2e-forge/vite.purchase.config.ts --port ${port}`,
+          playwright_text = playwright.read_text()
+          old_server = '''    command: `pnpm --dir client exec vite --config e2e-forge/vite.purchase.config.ts --port ${port}`,
               cwd: path.join(here, "..", ".."),'''
-          new = '''    command: `pnpm exec vite --config vite.purchase-e2e.config.ts --port ${port} --strictPort`,
+          new_server = '''    command: `pnpm exec vite --config vite.purchase-e2e.config.ts --port ${port} --strictPort`,
               cwd: path.join(here, "..", "apps", "runtime"),'''
-          if old not in text:
+          if old_server not in playwright_text:
               raise SystemExit('purchase Playwright webServer block was not found')
-          playwright.write_text(text.replace(old, new))
+          playwright.write_text(playwright_text.replace(old_server, new_server))
 
-          source = Path('client/e2e-forge/vite.purchase.config.ts')
-          runtime = Path('client/apps/runtime/vite.purchase-e2e.config.ts')
-          config = source.read_text().replace(
-              'root: path.join(here, "purchase-harness"),',
-              'root: path.resolve(here, "..", "..", "e2e-forge", "purchase-harness"),',
+          source_harness = Path('client/e2e-forge/purchase-harness')
+          runtime_harness = Path('client/apps/runtime/purchase-harness')
+          if not source_harness.is_dir():
+              raise SystemExit('purchase harness source directory was not created by the patch')
+          if runtime_harness.exists():
+              raise SystemExit('runtime purchase harness already exists unexpectedly')
+          shutil.move(str(source_harness), str(runtime_harness))
+
+          main = runtime_harness / 'main.tsx'
+          main_text = main.read_text()
+          required = [
+              'import { QueryClient } from "@tanstack/react-query";\n',
+              '../../packages/views/src/container/provider.js',
+              '../../packages/views/src/container/AllocationTimelineDialog.js',
+              '../../apps/runtime/src/styles.css',
+              '        queryClient={new QueryClient({ defaultOptions: { queries: { retry: false } } })}\n',
+          ]
+          missing = [value for value in required if value not in main_text]
+          if missing:
+              raise SystemExit(f'purchase harness normalization markers missing: {missing}')
+          main_text = main_text.replace('import { QueryClient } from "@tanstack/react-query";\n', '')
+          main_text = main_text.replace('../../packages/views/', '../../../packages/views/')
+          main_text = main_text.replace('../../apps/runtime/src/styles.css', '../src/styles.css')
+          main_text = main_text.replace(
+              '        queryClient={new QueryClient({ defaultOptions: { queries: { retry: false } } })}\n',
+              '',
           )
-          runtime.write_text(config)
-          source.unlink()
+          main.write_text(main_text)
+
+          old_vite = Path('client/e2e-forge/vite.purchase.config.ts')
+          if not old_vite.is_file():
+              raise SystemExit('purchase Vite config was not created by the patch')
+          runtime_vite = Path('client/apps/runtime/vite.purchase-e2e.config.ts')
+          runtime_vite.write_text('''import { defineConfig } from "vite";
+          import react from "@vitejs/plugin-react";
+          import tailwindcss from "@tailwindcss/vite";
+          import path from "node:path";
+          import { fileURLToPath } from "node:url";
+
+          const here = path.dirname(fileURLToPath(import.meta.url));
+
+          export default defineConfig({
+            root: path.resolve(here, "purchase-harness"),
+            plugins: [react(), tailwindcss()],
+            server: { host: "127.0.0.1" },
+          });
+          '''.replace('          ', ''))
+          old_vite.unlink()
 
           tsconfig = Path('client/e2e-forge/tsconfig.json')
-          ts_text = tsconfig.read_text().replace(
-              '    "playwright.purchase.config.ts",\n    "vite.purchase.config.ts"\n',
-              '    "playwright.purchase.config.ts"\n',
-          )
-          tsconfig.write_text(ts_text)
+          ts_data = json.loads(tsconfig.read_text())
+          ts_data['include'] = [
+              value for value in ts_data.get('include', [])
+              if value not in {'purchase-harness/**/*.tsx', 'vite.purchase.config.ts'}
+          ]
+          tsconfig.write_text(json.dumps(ts_data, ensure_ascii=False, indent=2) + '\n')
           PY
 
           rm -f .github/purchase-completion.patch.gz.b64
@@ -116,8 +159,6 @@ jobs:
         run: pnpm --dir client/apps/runtime exec vite --version
 
       - name: Purchase browser QA
-        id: purchase_browser
-        continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
@@ -136,43 +177,6 @@ jobs:
             client/e2e-forge/test-results/purchase-ui/
           if-no-files-found: warn
           retention-days: 14
-
-      - name: Report browser failure on PR
-        if: steps.purchase_browser.outcome == 'failure'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            const marker = '<!-- purchase-completion-browser-failure -->';
-            const path = `${process.env.RUNNER_TEMP}/purchase-browser/playwright.log`;
-            const text = fs.existsSync(path) ? fs.readFileSync(path, 'utf8').slice(-12000) : 'Browser log unavailable.';
-            const body = `${marker}\n## Purchase browser QA failed\n\n\`\`\`text\n${text}\n\`\`\`\n\n[Workflow and artifacts](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`;
-            const comments = await github.paginate(github.rest.issues.listComments, {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              per_page: 100,
-            });
-            const existing = comments.find((comment) => comment.body?.includes(marker));
-            if (existing) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: existing.id,
-                body,
-              });
-            } else {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                body,
-              });
-            }
-
-      - name: Enforce browser QA result
-        if: steps.purchase_browser.outcome == 'failure'
-        run: exit 1
 
       - name: Verify generated source diff
         shell: bash
@@ -259,8 +263,8 @@ jobs:
               f'- Commit object: `{commit["sha"]}`\n'
               f'- Parent: `{parent}`\n'
               f'- Tree: `{tree["sha"]}`\n'
-              f'- All lint, unit, SQL, client, typecheck, build and Chromium QA gates passed.\n\n'
-              'The branch ref has not been moved by this workflow.'
+              '- Lint, unit, SQL, client, typecheck, build and Chromium QA all passed.\n\n'
+              'The workflow intentionally did not update the branch ref.'
           )
           comments = request('GET', f'/repos/{repository}/issues/{pr_number}/comments?per_page=100')
           existing = next((item for item in comments if marker in (item.get('body') or '')), None)
