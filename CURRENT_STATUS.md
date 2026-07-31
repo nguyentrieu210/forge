@@ -6,107 +6,73 @@ Ngày cập nhật: **2026-08-01**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Release base/default head: `fd0a3e697a25dc3907c5e7aa751a593ad8c01628`.
-- Inventory Slice D feature merge: `a7e6ef65b2352f596e285ea34d8e6438dff11a95` — PR #82.
-- Production workflow fix merge: `fd0a3e697a25dc3907c5e7aa751a593ad8c01628` — PR #130.
+- Default head đã đồng bộ vào nhánh Sales-to-Production: `a8846dc7ca522c5c47d0a8a1dfbe95657c0a7b24`.
 - Canonical queue: `EPIC_STATUS.md`.
+- Quy tắc giao hàng: `DELIVERY_POLICY.md`.
 
-## Inventory Slice D — MERGED
+## Sales-to-Production clean rebuild
 
-PR #82 đã merge authoritative physical-stock foundation:
+PR canonical: **#131 — `feat(sales): rebuild order to production flow`**.
 
-- append-only physical-stock read model, không tạo stock book thứ hai;
-- bounded D1 ledger reader;
-- authenticated native/Frappe report và CSV export endpoints;
-- tenant/company/warehouse/role permission scope;
-- lineage explicit opt-in;
-- cursor validation `422`;
-- exact quantity/value/physical-count reconciliation;
-- regression cho tenant isolation, export safety, D1 mapping và API boundary.
+- Branch: `feat/sales-order-production-flow-clean-20260801`.
+- Exact synchronized feature head đã kiểm: `732180b180d248595e54ee37b06b665f72e1d948`.
+- So với default tại thời điểm kiểm: `behind_by=0`.
+- PR vẫn là **draft**; chưa merge và chưa release production.
+- Final diff gồm 19 file source/test/brief; không có workflow dùng một lần, transport/sync workflow, hidden trigger hoặc generated artifact.
 
-Exact feature head trước merge đã qua CI, PR Validation, Inventory/Manufacturing, Purchase, Sales và UI/browser/auth gates.
+### Phạm vi đã triển khai
 
-## Full-estate production release — SUCCESS
+- Sales Order Item giữ luồng compact và có bảng nghiệp vụ mở rộng.
+- Field mở rộng `in_list_view` giữ `depends_on`, read-only, mask và cập nhật dòng.
+- Door policy có phiên bản, hỗ trợ Cửa tấm liền Úc và snapshot cơ cấu lá AL70.
+- Production Request tách theo từng bộ/loại cửa.
+- Work Order draft idempotent.
+- Cut/Paint theo Batch thực tế, có trạng thái `THÔ`.
+- Delivery truy vết bằng `sales_order_row_id`, có fallback dữ liệu cũ có kiểm soát.
+- Unicode Item Price normalization được giữ trong cùng luồng.
+- Thiếu policy/BOM bị chặn, không đoán dữ liệu.
+- Duplicate-list probe của Production Request, Work Order và Paint Job fail-closed trước mọi write.
 
-Ba production target liên quan đã được release và xác minh.
+### Exact-head evidence trên `732180b1...`
 
-### Alumdoor app Worker
+- CI run `30661155948`: **SUCCESS** — full tests, typecheck và build PASS.
+- PR Validation run `30661155848`: **SUCCESS**.
+- Sales Feature CI run `30661155940`: **SUCCESS**.
+- Purchase Feature CI run `30661155820`: **SUCCESS**.
+- Inventory and Manufacturing CI run `30661154919`: **SUCCESS**.
+- UI Pull Request Validation run `30661154877`: **SUCCESS** — frontend lint, browser build và Alumdoor browser QA PASS.
 
-- Worker: `cloudforge-app-alumdoor`.
-- Dispatch namespace: `cloudforge-production`.
-- Workflow run: `30657418272` — **SUCCESS**.
-- Release head: `e54de092fe8c4c68c21e43375de46b0d80f0a3ee`.
-- Version ID: `cbd99611-daf3-4190-b1e4-fc2b4ce74227`.
-- Deployment time: `2026-07-31T19:01:08.862Z`.
-- Build, focused regression, strict Wrangler dry-run, deploy, provider script identity và bindings `PLATFORM`/`AI`: PASS.
-- Artifact: `8803798231`, digest `sha256:0a8f6973a695f7701eda107d9e273a6420e50e913e0f441ee158904c8e590815`, expiry `2026-08-30T19:01:09Z`.
+Regression mới xác nhận lỗi `503` ở duplicate-list probe dừng trước mọi write.
 
-### Gateway / runtime UI
+## Trạng thái đã merge/release trước PR #131
 
-- Worker: `cloudforge-gateway`.
-- Host chính: `https://alu.kairo.vn`.
-- Workflow run: `30659230293` — **SUCCESS**.
-- Release head: `fd0a3e697a25dc3907c5e7aa751a593ad8c01628`.
-- Version ID: `7a3c1130-4c7e-4089-96b9-9b6fcc7a2ca7`.
-- Deployment time: `2026-07-31T19:30:29.196Z`.
-- Lint, tests, typecheck, build, stage, dry-run, deploy và provider evidence: PASS.
-- Smoke: `health=200`, `root=200`, `guest_boot=403`, exact release SHA xuất hiện trong HTML.
-- Gateway deploy cũng cập nhật các custom domains được bind trong Wrangler: `edu.kairo.vn`, `hrm.kairo.vn`, `chotdon.kairo.vn`, `alu.kairo.vn`, `phanbon.kairo.vn`.
-- Artifact: `8804509081`, digest `sha256:e1642270f1d8ee4b9b743dc1a22a7113dee1529c862c081369884bcb4a9a8710`, expiry `2026-08-30T19:30:30Z`.
-
-### alu Tenant Worker
-
-- Worker: `cloudforge-tenant-alu`.
-- Dispatch namespace: `cloudforge-production`.
-- Workflow run: `30659229116` — **SUCCESS**.
-- Release head: `fd0a3e697a25dc3907c5e7aa751a593ad8c01628`.
-- Version ID: `c5db02b4-eee9-4da8-8c3f-f5a346b2230c`.
-- Deployment time: `2026-07-31T19:30:37.983Z`.
-- Build và focused physical-stock regressions: PASS.
-- Pre-release backup: PASS và upload trước migration.
-- Recorded tenant migration dry-run + confirmed execution: PASS.
-- Deploy dry-run + confirmed execution: PASS.
-- Smoke: `health=200`, `guest_boot=403`, unauthenticated physical-stock route `401`, không lộ dữ liệu.
-- Release artifact: `8804512429`, digest `sha256:f31567541667e52e4696e6f90c8744bdfe7fe074e8031477009d35915325df09`, expiry `2026-08-30T19:30:39Z`.
-- Backup artifact: `8804497476`, digest `sha256:9c3c78801e8d118261892e9016b1f2e2d2878df7b428be48df1f8052891007e3`, expiry `2026-08-14T19:30:00Z`.
-
-## Production workflow incident và fix
-
-Tenant/Gateway workflow ban đầu dùng `${{ runner.temp }}` ở job-level `env`, khiến GitHub fail trước khi tạo job. Không có secret, migration hoặc deploy nào chạy trong các lượt failure đó.
-
-PR #130 sửa toàn bộ evidence/output paths sang `/tmp/...`, exact head `b5963939b9e63300a85f92814c632ec327492f83` đã qua:
-
-- CI `30658970590`: SUCCESS;
-- PR Validation `30658971326`: SUCCESS;
-- Sales Feature CI `30658971431`: SUCCESS;
-- Purchase Feature CI `30658970196`: SUCCESS;
-- Inventory and Manufacturing CI `30658971107`: SUCCESS;
-- UI Pull Request Validation `30658970422`: SUCCESS.
-
-Sau merge `fd0a3e69...`, tenant và Gateway đều tạo job thật và release thành công.
+- Inventory Slice D: PR #82, merge `a7e6ef65b2352f596e285ea34d8e6438dff11a95`.
+- Production workflow fix: PR #130, merge `fd0a3e697a25dc3907c5e7aa751a593ad8c01628`.
+- Alumdoor app Worker, Gateway và alu Tenant Worker đã có release thành công trước PR #131.
+- PR #131 chưa thay đổi production vì chưa merge/release.
 
 ## CI architecture
 
-- `CI` là nơi duy nhất chạy full test + typecheck + build.
-- `PR Validation` là policy/changed-file gate nhẹ.
-- Sales/Purchase/Inventory và UI chỉ chạy focused gate đúng scope hoặc fast path.
+- `CI` chạy full test + typecheck + build.
+- `PR Validation` chạy policy/changed-file gate.
+- Sales/Purchase/Inventory/UI chạy focused gate theo phạm vi.
 - Release chỉ chạy từ merged SHA qua dedicated production workflow.
 
 ## Trạng thái nghiệp vụ
 
-1. Sales-to-Production — `NEXT / CLEAN REBUILD`.
-2. Purchase authenticated QA — `QUEUED / CLEAN REBUILD`.
+1. Sales-to-Production — `DRAFT PR #131 / EXACT-HEAD CI PASS / NOT MERGED`.
+2. Purchase authenticated QA — `QUEUED AFTER SALES MERGE`.
 3. Finance — `QUEUED / REBUILD`.
 4. Daily ledger — `QUEUED`.
 5. Warranty / Capacity — `QUEUED`.
 6. End-to-end acceptance — `QUEUED`.
 
-Toàn hệ thống chưa đạt end-to-end acceptance; Slice D backend foundation và ba target production liên quan đã release thành công.
+Toàn hệ thống chưa đạt end-to-end acceptance. Sales-to-Production còn final review, merge, authenticated operator journey và release evidence nếu production được yêu cầu.
 
 ## Safety
 
 - Không sửa production secret hoặc DNS.
 - Không xóa Cloudflare resource.
 - FIFO vẫn **disabled**.
-- Tenant migration có backup và recovery artifact trước khi execute.
-- Không commit `.env`, `server/work/`, `tmp`, backup, credential hoặc generated evidence.
+- Không deploy PR #131 khi chưa có lệnh riêng.
+- Không commit `.env`, `server/work/`, `tmp`, backup hoặc generated evidence.
