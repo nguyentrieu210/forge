@@ -22,7 +22,7 @@ async function openSidebarModule(page: Page, label: string) {
 }
 
 test.describe("MetaForge MISA-style workspace", () => {
-  test("keeps overview in sidebar and compact nghiệp vụ tabs", async ({ page }) => {
+  test("keeps overview in sidebar and compact nghiệp vụ tabs", async ({ page }, testInfo) => {
     await page.goto("/");
 
     await expect(page).toHaveURL(/\/view\/overview$/);
@@ -47,9 +47,10 @@ test.describe("MetaForge MISA-style workspace", () => {
     await expect(page).toHaveURL(/\/view\/catalog$/);
     await expect(page.getByRole("heading", { name: "Danh mục", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "DocType", exact: true })).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath("workspace-catalog.png"), fullPage: true });
   });
 
-  test("opens the Meta report builder with data, widget, canvas and inspector panels", async ({ page }) => {
+  test("opens the Meta report builder with data, widget, canvas and inspector panels", async ({ page }, testInfo) => {
     await page.goto("/view/meta-process");
 
     const metaTabs = page.locator(".mf-workspace-tabs nav");
@@ -73,6 +74,7 @@ test.describe("MetaForge MISA-style workspace", () => {
     await page.getByRole("button", { name: "Chỉ tiêu", exact: true }).first().click();
     await expect(page.getByText("Chỉ tiêu 1", { exact: true })).toBeVisible();
     await expect(page.getByDisplayValue("Chỉ tiêu 1")).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath("report-builder.png"), fullPage: true });
   });
 
   test("exposes exactly 13 color palettes", async () => {
