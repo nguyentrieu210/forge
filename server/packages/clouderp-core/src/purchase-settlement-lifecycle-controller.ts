@@ -7,7 +7,9 @@ type SettlementContext = Parameters<SettlementController["buildPlan"]>[0];
 
 /** Adds the cross-window lifecycle preflight without duplicating settlement math. */
 export class PurchaseSettlementLifecycleController extends PurchaseSettlementController {
-  override async buildPlan(context: SettlementContext) {
+  override async buildPlan(
+    context: SettlementContext,
+  ): ReturnType<InstanceType<typeof PurchaseSettlementController>["buildPlan"]> {
     const data = context.command.document;
     if (context.command.action === "submit"
       && data.operation === "Reverse"
