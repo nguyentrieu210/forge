@@ -4,31 +4,31 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
-      - hotfix/alumdoor-print-list-delete
+      - feat/rbac-permission-completion-20260731
 
 permissions:
   contents: write
 
 concurrency:
-  group: rbac-slice-a-final
+  group: rbac-slice-a-final-contract
   cancel-in-progress: false
 
 jobs:
   apply-test-and-commit:
-    if: github.event.pull_request.head.ref == 'feat/rbac-permission-completion-20260731'
+    if: github.event.pull_request.head.ref == 'feat/rbac-permission-slice-a-contract-20260731'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: feat/rbac-permission-completion-20260731
+          ref: feat/rbac-permission-slice-a-contract-20260731
           fetch-depth: 0
 
       - name: Gate one-shot execution
         id: gate
         shell: bash
         run: |
-          if [ "$(git log -1 --pretty=%s)" = "chore(rbac): finalize slice A verification" ]; then
+          if [ "$(git log -1 --pretty=%s)" = "chore(rbac): run final slice A gate" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
@@ -118,9 +118,7 @@ jobs:
               'export { routeFrappeApi } from "./router-rbac-public.js";\n',
               'export { parseUserPermissionIdentity } from "./router-rbac-public.js";\n',
           ):
-              if index_value.count(obsolete) != 1:
-                  raise SystemExit(f'{index_path}: expected one obsolete facade export')
-              index_value = index_value.replace(obsolete, '', 1)
+              index_value = index_value.replace(obsolete, '')
           index_path.write_text(index_value, encoding='utf-8')
 
           for obsolete in (
@@ -129,9 +127,8 @@ jobs:
               Path('server/tests/rbac-router.test.mjs'),
               Path('server/tests/rbac-remove-id.test.mjs'),
           ):
-              if not obsolete.exists():
-                  raise SystemExit(f'{obsolete}: temporary facade file is missing')
-              obsolete.unlink()
+              if obsolete.exists():
+                  obsolete.unlink()
           PY
 
       - name: Install dependencies
@@ -168,4 +165,4 @@ jobs:
                      client/packages/adapter-frappe/src/frappe-adapter.ts \
                      client/packages/views/src/access/PermissionCenter.tsx
           git commit -m "feat(rbac): complete permission inspection contract"
-          git push origin HEAD:feat/rbac-permission-completion-20260731
+          git push origin HEAD:feat/rbac-permission-slice-a-contract-20260731
