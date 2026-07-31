@@ -162,3 +162,14 @@ Còn lại:
 - Giảm frontend chunk lớn có đo lường.
 - Chuẩn hóa local onboarding Gateway + Tenant + D1 từ config mẫu, không dùng production secret.
 - Cài Forge project pack (`FORGE.md`, `.forge/manifest.json`) qua một PR riêng sau khi review nội dung ZIP; không chạy installer mù quáng.
+
+## P0 — RBAC Slice A
+
+- Implementation: `ab974f92ffbcf015fb71d3051df33508c9f09942`.
+- Exact head: `2f0de9db871f3dbe32facf26abb84f1558be0824`.
+- Draft verification PR: `#34`.
+- G3 PASS: workflow `30612014393`, job `91101823154`.
+- G4 BLOCKED: workflow `PR Validation` chưa được GitHub Actions đăng ký/chạy; combined status rỗng.
+- Kiểm tra trạng thái workflow trong GitHub Actions, chạy test/typecheck/build trên exact head, ghi run/job ID rồi mới review merge.
+- Sau khi Slice A merge mới mở Slice B cho audit append-only, atomic user/roles và last-admin/self-lockout guards.
+- Không merge, deploy, sửa production secrets hoặc bật FIFO khi G4 chưa có bằng chứng xanh.
