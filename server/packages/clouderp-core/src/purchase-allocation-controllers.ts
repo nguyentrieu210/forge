@@ -523,7 +523,7 @@ async function buildPurchaseReceiptCancelAllocation(
   const procurement: ProcurementEntry[] = [];
 
   for (const source of sources) {
-    if (source.window_status !== "Open") {
+    if (source.window_status !== "Open" && source.window_status !== "Reversed") {
       throw errors.lifecycle("Reverse settlement before cancelling this Purchase Receipt");
     }
     addClaim(claims, "queue", source.queue_key, source.queue_revision, context.now);
@@ -564,7 +564,7 @@ async function buildPurchaseReceiptCancelAllocation(
     });
   }
   for (const source of unappliedSources) {
-    if (source.window_status !== "Open") {
+    if (source.window_status !== "Open" && source.window_status !== "Reversed") {
       throw errors.lifecycle("Reverse settlement before cancelling unapplied Receipt quantity");
     }
     addClaim(claims, "queue", source.queue_key, source.queue_revision, context.now);
