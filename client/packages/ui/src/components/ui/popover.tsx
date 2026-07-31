@@ -2,46 +2,8 @@ import * as React from "react";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 import { cn } from "../../lib/cn.js";
 
-const PopoverDialogContext = React.createContext<(insideDialog: boolean) => void>(() => undefined);
-
-/**
- * Popover portalled ra body từ bên trong Radix Dialog sẽ bị lớp scroll-lock của Dialog chặn wheel.
- * Chỉ bật modal cho Popover nằm trong Dialog; Popover ngoài form giữ nguyên hành vi non-modal cũ.
- */
-export function resolvePopoverModal(explicitModal: boolean | undefined, insideDialog: boolean): boolean {
-  return explicitModal ?? insideDialog;
-}
-
-export function Popover({ modal, ...props }: React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Root>) {
-  const [insideDialog, setInsideDialog] = React.useState(false);
-  return (
-    <PopoverDialogContext.Provider value={setInsideDialog}>
-      <PopoverPrimitive.Root modal={resolvePopoverModal(modal, insideDialog)} {...props} />
-    </PopoverDialogContext.Provider>
-  );
-}
-
-export const PopoverTrigger = React.forwardRef<
-  React.ElementRef<typeof PopoverPrimitive.Trigger>,
-  React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Trigger>
->((props, ref) => {
-  const reportInsideDialog = React.useContext(PopoverDialogContext);
-  const localRef = React.useRef<React.ElementRef<typeof PopoverPrimitive.Trigger> | null>(null);
-  const setRef = React.useCallback((node: React.ElementRef<typeof PopoverPrimitive.Trigger> | null) => {
-    localRef.current = node;
-    if (typeof ref === "function") ref(node);
-    else if (ref) ref.current = node;
-  }, [ref]);
-
-  React.useEffect(() => {
-    reportInsideDialog(Boolean(localRef.current?.closest('[role="dialog"]')));
-    return () => reportInsideDialog(false);
-  }, [reportInsideDialog]);
-
-  return <PopoverPrimitive.Trigger ref={setRef} {...props} />;
-});
-PopoverTrigger.displayName = PopoverPrimitive.Trigger.displayName;
-
+export const Popover = PopoverPrimitive.Root;
+export const PopoverTrigger = PopoverPrimitive.Trigger;
 export const PopoverAnchor = PopoverPrimitive.Anchor;
 
 /**
@@ -70,15 +32,20 @@ function elementCanConsumeWheel(element: HTMLElement, deltaX: number, deltaY: nu
   return canX || canY;
 }
 
-/** Dropdown còn tự cuộn được thì không được giành wheel của nó. */
-function popoverCanConsumeWheel(content: HTMLElement, target: EventTarget | null, deltaX: number, deltaY: number): boolean {
+/** Trả đúng phần tử trong dropdown còn có thể tiêu thụ wheel. */
+function popoverWheelTarget(
+  content: HTMLElement,
+  target: EventTarget | null,
+  deltaX: number,
+  deltaY: number,
+): HTMLElement | undefined {
   let node: Element | null = target instanceof Element ? target : null;
   while (node && content.contains(node)) {
-    if (node instanceof HTMLElement && elementCanConsumeWheel(node, deltaX, deltaY)) return true;
+    if (node instanceof HTMLElement && elementCanConsumeWheel(node, deltaX, deltaY)) return node;
     if (node === content) break;
     node = node.parentElement;
   }
-  return false;
+  return undefined;
 }
 
 function triggerForContent(content: HTMLElement): HTMLElement | undefined {
@@ -114,6 +81,10 @@ function wheelPixels(event: React.WheelEvent<HTMLElement>): { deltaX: number; de
   return { deltaX: event.deltaX * factor, deltaY: event.deltaY * factor };
 }
 
+function scrollByWheel(target: HTMLElement, deltaX: number, deltaY: number): void {
+  target.scrollBy({ left: deltaX, top: deltaY, behavior: "auto" });
+}
+
 export const PopoverContent = React.forwardRef<
   React.ElementRef<typeof PopoverPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Content>
@@ -133,20 +104,31 @@ export const PopoverContent = React.forwardRef<
         className,
       )}
       onWheel={(event) => {
+        // Radix Dialog/RemoveScroll có thể preventDefault ở capture phase trước khi React
+        // nhận event. Khi đó dựa vào cuộn mặc định của trình duyệt sẽ không làm gì, dù kéo
+        // thanh scrollbar bằng chuột vẫn hoạt động. Chỉ tôn trọng preventDefault do chính
+        // callback của caller tạo ra; nếu event đã bị lớp ngoài chặn, ta cuộn thủ công.
+        const preventedBeforeCaller = event.defaultPrevented;
         onWheel?.(event);
-        if (event.defaultPrevented) return;
+        if (!preventedBeforeCaller && event.defaultPrevented) return;
 
         const content = event.currentTarget;
         const { deltaX, deltaY } = wheelPixels(event);
-        if (popoverCanConsumeWheel(content, event.target, deltaX, deltaY)) return;
+        const dropdownTarget = popoverWheelTarget(content, event.target, deltaX, deltaY);
+        if (dropdownTarget) {
+          event.preventDefault();
+          event.stopPropagation();
+          scrollByWheel(dropdownTarget, deltaX, deltaY);
+          return;
+        }
 
         const trigger = triggerForContent(content);
-        const target = trigger ? childGridScrollTarget(trigger, deltaX, deltaY) : undefined;
-        if (!target) return;
+        const gridTarget = trigger ? childGridScrollTarget(trigger, deltaX, deltaY) : undefined;
+        if (!gridTarget) return;
 
         event.preventDefault();
         event.stopPropagation();
-        target.scrollBy({ left: deltaX, top: deltaY, behavior: "auto" });
+        scrollByWheel(gridTarget, deltaX, deltaY);
       }}
       {...props}
     />
