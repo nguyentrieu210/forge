@@ -41,19 +41,27 @@ jobs:
           from pathlib import Path
           path = Path('server/scripts/apply-sales-production-feature.mjs')
           source = path.read_text().replace('\\\\n', '\\n')
-          before = '''  const cut = findDoctype(brief, "Cut Order");
+          cut_before = '''  const cut = findDoctype(brief, "Cut Order");
             addField(cut, "work_order:Link(Work Order) Theo lệnh sản xuất", "so_reference");
             addField(cut, "target_color:Link(Item Color) Màu thành phẩm cần đạt", "work_order");
           '''
-          after = '''  const cut = brief.doctypes.find((entry) => entry.name === "Cut Order");
+          cut_after = '''  const cut = brief.doctypes.find((entry) => entry.name === "Cut Order");
             if (cut) {
               addField(cut, "work_order:Link(Work Order) Theo lệnh sản xuất", "so_reference");
               addField(cut, "target_color:Link(Item Color) Màu thành phẩm cần đạt", "work_order");
             }
           '''
-          if before not in source:
+          if cut_before not in source:
               raise SystemExit('Cut Order compatibility patch target not found')
-          path.write_text(source.replace(before, after))
+          source = source.replace(cut_before, cut_after)
+          target_before = "    '    const copied: Record<string, unknown> = { row_id: `R${index + 1}` };',"
+          target_after = "    '    const orderedQty = Number(line.qty ?? 0);\\n    const copied: Record<string, unknown> = { row_id: `R${index + 1}` };',"
+          replacement_before = "    '    const copied: Record<string, unknown> = { row_id: `R${index + 1}`, sales_order_row_id: sourceRow };',"
+          replacement_after = "    '    const orderedQty = Number(line.qty ?? 0);\\n    const copied: Record<string, unknown> = { row_id: `R${index + 1}`, sales_order_row_id: sourceRow };',"
+          if target_before not in source or replacement_before not in source:
+              raise SystemExit('Delivery row context patch target not found')
+          source = source.replace(target_before, target_after).replace(replacement_before, replacement_after)
+          path.write_text(source)
           PY
           node --check server/scripts/apply-sales-production-feature.mjs
           node --check server/tests/sales-production-flow.test.mjs
