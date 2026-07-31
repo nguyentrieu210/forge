@@ -46,7 +46,7 @@ jobs:
 
   rbac_slice_b_apply:
     name: Apply and gate RBAC Slice B
-    if: "${{ github.event.pull_request.number == 38 && github.event.pull_request.head.sha == 'ba8becc149644ad024b7decadd476a05c65a4f7f' }}"
+    if: "${{ github.event.pull_request.number == 38 && github.event.pull_request.head.ref == 'feat/rbac-permission-slice-b-20260731' }}"
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
@@ -57,13 +57,24 @@ jobs:
           ref: feat/rbac-permission-slice-b-20260731
           fetch-depth: 0
 
+      - name: Detect pending payload
+        id: payload
+        run: |
+          if [ -f .github/rbac-slice-b-patch.gz.b64 ]; then
+            echo "pending=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "pending=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Install pnpm
+        if: steps.payload.outputs.pending == 'true'
         uses: pnpm/action-setup@v4
         with:
           version: 9.15.0
           run_install: false
 
       - name: Set up Node.js
+        if: steps.payload.outputs.pending == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -71,23 +82,29 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Apply reviewed Slice B patch
+        if: steps.payload.outputs.pending == 'true'
         run: |
           base64 --decode .github/rbac-slice-b-patch.gz.b64 | gzip --decompress > /tmp/apply-rbac-slice-b.py
           python /tmp/apply-rbac-slice-b.py
 
       - name: Install dependencies
+        if: steps.payload.outputs.pending == 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Run tests
+        if: steps.payload.outputs.pending == 'true'
         run: pnpm test
 
       - name: Run typecheck
+        if: steps.payload.outputs.pending == 'true'
         run: pnpm typecheck
 
       - name: Build
+        if: steps.payload.outputs.pending == 'true'
         run: pnpm build
 
       - name: Commit verified implementation
+        if: steps.payload.outputs.pending == 'true'
         run: |
           rm -f .github/workflows/rbac-slice-b-one-shot.yml .github/rbac-slice-b-patch.gz.b64
           git config user.name "github-actions[bot]"
@@ -107,7 +124,7 @@ jobs:
           git push origin HEAD:feat/rbac-permission-slice-b-20260731
 
       - name: Comment failure
-        if: failure()
+        if: failure() && steps.payload.outputs.pending == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
