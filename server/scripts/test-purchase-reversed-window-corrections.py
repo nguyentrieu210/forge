@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+"""Regression-check migration 0032 against Reversed settlement-window write rules."""
+
 import sqlite3
 from pathlib import Path
 
