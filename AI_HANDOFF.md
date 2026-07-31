@@ -6,40 +6,41 @@ Ngày cập nhật: **2026-07-31**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Working branch: `feat/purchase-fifo-staging-checksum-lock-20260731`.
-- Draft PR: `#77` — `fix(purchase): lock staging backfill to reviewed checksum`.
-- Base/default head khi mở nhánh: `f0768d59ff66d04c333fd290c120f7672a80ea96`.
+- Default head khi mở nhánh: `89e9a532c63a7a94ba3f3fc123b9ada3a1816303`.
+- Working branch: `chore/alu-production-smoke-trigger-20260731`.
+- GitHub là nguồn sự thật cho code, CI và release evidence.
 
-## Mục tiêu
+## Trạng thái vừa hoàn tất
 
-Ngăn staging/production backfill write chạy trên dữ liệu đã thay đổi sau khi checksum dry-run được review.
+- PR `#77` đã squash-merge thành `a67d62377f1869d95906320636eabbd9bbd56ab7`.
+- Purchase/FIFO staging backfill hiện bắt buộc checksum đã review cho mọi write mode.
+- FIFO rollout vẫn **disabled**.
+
+## Mục tiêu nhánh hiện tại
+
+Cho phép chạy workflow quan sát production read-only mà không cần dispatch thủ công và không đi qua release/deploy workflow.
 
 ## Thay đổi
 
-- `server/scripts/backfill-purchase-receipt-allocations.mjs`
-  - mọi `--execute` bắt buộc `--expected-checksum`;
-  - plan được recompute và checksum được so sánh trong cùng tiến trình trước bất kỳ D1 write nào;
-  - activation dùng chung checksum gate;
-  - thiếu/malformed/drift checksum đều fail closed.
-- `server/tests/purchase-allocation-write-checksum.test.mjs`
-  - thiếu checksum bị chặn trước khi đọc nguồn;
-  - checksum drift bị chặn trước fixture/write protection;
-  - checksum khớp đi qua approval gate.
-- `server/docs/ALUMDOOR-PURCHASE-FIFO-ACTIVATION-RUNBOOK.md`
-  - staging execute bắt buộc checksum đã review.
+- `.github/workflows/cloudflare-production-observation.yml`
+  - giữ `workflow_dispatch`;
+  - thêm push trigger chỉ cho `ops/observe-alu-production-*`;
+  - chỉ kiểm `https://alu.kairo.vn/health`, `/`, và guest boot;
+  - ghi source SHA vào evidence;
+  - không backup, migrate, deploy, mutate D1 hoặc dùng production secret.
+
+## Việc tiếp theo
+
+1. Mở PR và kiểm exact-head CI.
+2. Khi xanh, merge workflow trigger.
+3. Tạo branch `ops/observe-alu-production-<stamp>` từ exact default để kích hoạt smoke-only run.
+4. Xác nhận `health=200`, `root=200`, `guest_boot=403` và artifact evidence.
+5. Authenticated business smoke vẫn cần credential/session hợp lệ; không giả lập bằng guest endpoint.
 
 ## Safety
 
 - Không deploy Cloudflare.
-- Không chạy backfill tenant thật.
-- Không bật FIFO.
 - Không sửa production secrets hoặc DNS.
-- Không commit `server/work/`, `tmp/`, `.env`, backup hoặc generated evidence.
-
-## Việc tiếp theo
-
-1. Kiểm exact final head PR `#77`.
-2. Đọc failed step nếu CI lỗi; chỉ sửa theo bằng chứng.
-3. Khi đủ CI, cập nhật PR body và chuyển khỏi draft.
-4. Sau merge mới chạy readiness trên staging/production-shaped copy.
-5. Activation production vẫn cần fresh backup và explicit approval riêng.
+- Không migrate/mutate D1.
+- Không bật FIFO.
+- Không commit `.env`, `server/work/`, `tmp/`, backup hoặc generated evidence.
