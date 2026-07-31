@@ -7,6 +7,12 @@ on:
     paths:
       - 'server/**'
       - '.github/workflows/purchase-concurrency-debug.yml'
+  pull_request:
+    branches:
+      - hotfix/alumdoor-print-list-delete
+    paths:
+      - 'server/**'
+      - '.github/workflows/purchase-concurrency-debug.yml'
   workflow_dispatch:
 
 permissions:
