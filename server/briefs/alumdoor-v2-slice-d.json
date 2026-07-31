@@ -1,0 +1,494 @@
+{
+  "$schema": "./brief-overlay.schema.json",
+  "$extends": "./alumdoor-v2.json",
+  "set": {
+    "version": "2.0.35"
+  },
+  "doctypeUpserts": [
+    {
+      "name": "Work Order Required Item",
+      "child": true,
+      "label": "Vật tư theo snapshot",
+      "group": "Sản xuất",
+      "naming": "autoincrement",
+      "title": "item_code",
+      "list": [
+        "item_code",
+        "required_qty",
+        "source_warehouse"
+      ],
+      "fields": [
+        "item_code:Link(Item)~- Vật tư",
+        "required_qty:Float~- Số lượng yêu cầu",
+        {
+          "fieldname": "required_qty_micros",
+          "fieldtype": "Int",
+          "label": "Số lượng yêu cầu (micros)",
+          "read_only": true,
+          "hidden": true
+        },
+        "source_warehouse:Link(Warehouse)~- Kho xuất"
+      ],
+      "permissions": {
+        "Chủ xưởng": "r",
+        "Sản xuất": "r",
+        "Thủ kho": "r",
+        "Kế toán": "r"
+      }
+    }
+  ],
+  "doctypePatches": [
+    {
+      "name": "BOM Item",
+      "listAppend": [
+        "uom",
+        "qty_basis",
+        "conversion_factor"
+      ],
+      "fieldUpserts": [
+        {
+          "fieldname": "uom",
+          "fieldtype": "Link",
+          "options": "UOM",
+          "label": "ĐVT định mức",
+          "required": true,
+          "description": "Đơn vị của số lượng định mức trên dòng, có thể khác đơn vị tồn."
+        },
+        {
+          "fieldname": "conversion_factor",
+          "fieldtype": "Float",
+          "label": "Hệ số về ĐVT tồn",
+          "default": 1,
+          "required": true,
+          "description": "Ví dụ 1 Cây = 5,85 Mét thì nhập 5,85."
+        },
+        {
+          "fieldname": "stock_uom",
+          "fieldtype": "Link",
+          "options": "UOM",
+          "label": "ĐVT tồn",
+          "read_only": true
+        },
+        {
+          "fieldname": "stock_qty",
+          "fieldtype": "Float",
+          "label": "Số lượng quy đổi tồn",
+          "read_only": true
+        },
+        {
+          "fieldname": "qty_basis",
+          "fieldtype": "Select",
+          "options": "Cố định\nTheo chiều cao\nTheo chiều rộng\nTheo diện tích\nTheo số lá",
+          "label": "Nhân theo",
+          "default": "Cố định",
+          "required": true,
+          "description": "Số bộ luôn nhân thêm ở ngoài; trường này chỉ chọn đại lượng hình học của một bộ."
+        }
+      ]
+    },
+    {
+      "name": "Bill of Materials",
+      "listAppend": [
+        "revision",
+        "bom_status",
+        "effective_from",
+        "effective_to"
+      ],
+      "searchAppend": [
+        "bom_checksum"
+      ],
+      "fieldUpserts": [
+        "revision:Int!=(1) Phiên bản",
+        "bom_status:Select(Draft,Active,Retired)!=(Draft) Trạng thái phiên bản",
+        "effective_from:Date!=(Today) Hiệu lực từ",
+        "effective_to:Date Hiệu lực đến",
+        "output_uom:Link(UOM)! ĐVT đầu ra",
+        {
+          "fieldname": "output_conversion_factor",
+          "fieldtype": "Float",
+          "label": "Hệ số đầu ra về ĐVT tồn",
+          "default": 1,
+          "required": true
+        },
+        {
+          "fieldname": "output_stock_qty",
+          "fieldtype": "Float",
+          "label": "Sản lượng quy đổi tồn",
+          "read_only": true
+        },
+        {
+          "fieldname": "bom_checksum",
+          "fieldtype": "Data",
+          "label": "Mã kiểm định mức",
+          "read_only": true,
+          "description": "SHA-256 của snapshot định mức; dùng đối chiếu Work Order."
+        },
+        {
+          "fieldname": "is_active",
+          "fieldtype": "Check",
+          "label": "Cờ áp dụng cũ",
+          "read_only": true,
+          "hidden": true,
+          "description": "Giữ để đọc dữ liệu cũ; BOM mới dùng Trạng thái phiên bản và khoảng hiệu lực."
+        }
+      ]
+    },
+    {
+      "name": "Work Order",
+      "listAppend": [
+        "bom_revision",
+        "bom_effective_from"
+      ],
+      "searchAppend": [
+        "bom_checksum"
+      ],
+      "fieldUpserts": [
+        "wip_warehouse:Link(Warehouse) Kho đang sản xuất",
+        "leaf_count:Float Số lá theo công thức",
+        "bom_revision:Int~- Phiên bản BOM đã chụp",
+        "bom_effective_from:Date~- BOM hiệu lực từ",
+        "bom_effective_to:Date~- BOM hiệu lực đến",
+        "bom_checksum:Data~- Mã kiểm BOM đã chụp",
+        "released_at:Datetime~- Phát hành lúc",
+        {
+          "fieldname": "required_items",
+          "fieldtype": "Table",
+          "options": "Work Order Required Item",
+          "label": "Vật tư theo snapshot",
+          "read_only": true,
+          "description": "Được chụp khi phát hành; sửa BOM sau đó không đổi lệnh này."
+        },
+        {
+          "fieldname": "manufacturing_snapshot",
+          "fieldtype": "JSON",
+          "label": "Snapshot sản xuất",
+          "read_only": true,
+          "hidden": true
+        },
+        {
+          "fieldname": "operating_cost_minor",
+          "fieldtype": "Int",
+          "label": "Chi phí gia công (minor)",
+          "read_only": true,
+          "hidden": true
+        }
+      ]
+    },
+    {
+      "name": "Stock Entry Item",
+      "listAppend": [
+        "manufacturing_kind",
+        "bom_row_id",
+        "physical_identity_key"
+      ],
+      "fieldUpserts": [
+        {
+          "fieldname": "work_order",
+          "fieldtype": "Link",
+          "options": "Work Order",
+          "label": "Lệnh sản xuất",
+          "read_only": true,
+          "hidden": true
+        },
+        "bom_row_id:Data Dòng BOM",
+        {
+          "fieldname": "manufacturing_kind",
+          "fieldtype": "Select",
+          "options": "Issue\nConsumption\nScrap\nOffcut",
+          "label": "Loại tiến độ sản xuất"
+        },
+        "work_order_bom_checksum:Data~- Mã kiểm BOM của lệnh",
+        "inventory_mode:Data~- Kiểu quản lý tồn",
+        "measurement_profile:Link(Measurement Profile)~- Bộ quy cách",
+        "color:Link(Item Color) Màu",
+        "condition:Data~- Tình trạng vật lý",
+        "generation:Data~- Đời sản phẩm",
+        "length_m:Float Dài / khổ (m)",
+        "width_m:Float Rộng (m)",
+        "height_m:Float Cao (m)",
+        "thickness_mm:Float Dày (mm)",
+        "physical_identity_key:Data~- Khoá nhận dạng vật lý",
+        {
+          "fieldname": "physical_count_micros",
+          "fieldtype": "Int",
+          "label": "Số đếm vật lý (micros)",
+          "read_only": true,
+          "hidden": true
+        },
+        {
+          "fieldname": "physical_lot_refs",
+          "fieldtype": "JSON",
+          "label": "Lô vật lý",
+          "read_only": true
+        },
+        "source_warehouse_role:Data~- Vai trò kho xuất",
+        "target_warehouse_role:Data~- Vai trò kho nhập",
+        {
+          "fieldname": "stock_value_difference_minor",
+          "fieldtype": "Int",
+          "label": "Chênh giá trị tồn (minor)",
+          "read_only": true
+        }
+      ]
+    },
+    {
+      "name": "Stock Entry",
+      "listAppend": [
+        "work_order"
+      ],
+      "fieldUpserts": [
+        "quality_release_reference:Link(Quality Inspection) Phiếu KCS cho hàng cách ly",
+        "recovery_reason:Link(Lý do huỷ) Lý do nhập kho phế / đầu thừa",
+        "finished_good_bundle:Link(Serial and Batch Bundle) Lô thành phẩm",
+        {
+          "fieldname": "finished_good_physical_identity",
+          "fieldtype": "JSON",
+          "label": "Nhận dạng thành phẩm",
+          "read_only": true
+        }
+      ]
+    }
+  ],
+  "reportUpserts": [
+    {
+      "name": "BOM theo phiên bản",
+      "doctype": "Bill of Materials",
+      "columns": [
+        "item:Link(Item) Thành phẩm",
+        "revision:Int Phiên bản",
+        "bom_status:Data Trạng thái",
+        "effective_from:Date Hiệu lực từ",
+        "effective_to:Date Hiệu lực đến",
+        "bom_checksum:Data Mã kiểm"
+      ],
+      "orderBy": "effective_from desc",
+      "filters": [
+        "item",
+        "bom_status",
+        "effective_from",
+        "effective_to"
+      ],
+      "icon": "list-tree",
+      "group": "Sản xuất"
+    },
+    {
+      "name": "Lệnh sản xuất theo snapshot",
+      "doctype": "Work Order",
+      "columns": [
+        "production_item:Link(Item) Thành phẩm",
+        "count(name):Int Số lệnh",
+        "sum(qty):Float Kế hoạch",
+        "sum(produced_qty):Float Đã sản xuất",
+        "avg(produced_percentage):Float Tiến độ bình quân (%)",
+        "max(bom_revision):Int Phiên bản BOM mới nhất"
+      ],
+      "groupBy": "production_item",
+      "orderBy": "avg(produced_percentage) asc",
+      "filters": [
+        "production_item",
+        "bom_no",
+        "bom_revision",
+        "planned_end_date"
+      ],
+      "icon": "factory",
+      "group": "Sản xuất"
+    },
+    {
+      "name": "Vật tư phát sinh theo lệnh",
+      "doctype": "Stock Entry Item",
+      "columns": [
+        "work_order:Link(Work Order) Lệnh sản xuất",
+        "count(name):Int Số dòng",
+        "sum(qty):Float Tổng số lượng",
+        "sum(stock_value_difference_minor):Currency Chênh giá trị tồn"
+      ],
+      "groupBy": "work_order",
+      "orderBy": "count(name) desc",
+      "filters": [
+        "work_order",
+        "manufacturing_kind",
+        "item_code"
+      ],
+      "icon": "boxes",
+      "group": "Sản xuất"
+    },
+    {
+      "name": "Phế và đầu thừa sản xuất",
+      "doctype": "Stock Entry Item",
+      "columns": [
+        "manufacturing_kind:Data Loại",
+        "count(name):Int Số dòng",
+        "sum(qty):Float Số lượng",
+        "sum(stock_value_difference_minor):Currency Giá trị tồn"
+      ],
+      "groupBy": "manufacturing_kind",
+      "orderBy": "sum(qty) desc",
+      "filters": [
+        "work_order",
+        "item_code",
+        "manufacturing_kind"
+      ],
+      "icon": "recycle",
+      "group": "Sản xuất"
+    },
+    {
+      "name": "Nhật ký nhận dạng vật lý",
+      "doctype": "Stock Entry Item",
+      "columns": [
+        "physical_identity_key:Data Nhận dạng vật lý",
+        "count(name):Int Số dòng",
+        "sum(qty):Float Số lượng",
+        "sum(stock_value_difference_minor):Currency Chênh giá trị tồn"
+      ],
+      "groupBy": "physical_identity_key",
+      "orderBy": "count(name) desc",
+      "filters": [
+        "item_code",
+        "source_warehouse_role",
+        "target_warehouse_role",
+        "manufacturing_kind"
+      ],
+      "icon": "fingerprint",
+      "group": "Kho"
+    }
+  ],
+  "linkUpserts": [
+    {
+      "report": "BOM theo phiên bản",
+      "label": "BOM theo phiên bản",
+      "permission": "Bill of Materials",
+      "icon": "list-tree",
+      "group": "Sản xuất"
+    },
+    {
+      "report": "Lệnh sản xuất theo snapshot",
+      "label": "Lệnh theo snapshot",
+      "permission": "Work Order",
+      "icon": "factory",
+      "group": "Sản xuất"
+    },
+    {
+      "report": "Vật tư phát sinh theo lệnh",
+      "label": "Vật tư theo lệnh",
+      "permission": "Work Order",
+      "icon": "boxes",
+      "group": "Sản xuất"
+    },
+    {
+      "report": "Phế và đầu thừa sản xuất",
+      "label": "Phế và đầu thừa",
+      "permission": "Stock Entry",
+      "icon": "recycle",
+      "group": "Sản xuất"
+    },
+    {
+      "report": "Nhật ký nhận dạng vật lý",
+      "label": "Nhận dạng vật lý",
+      "permission": "Stock Entry",
+      "icon": "fingerprint",
+      "group": "Kho"
+    }
+  ],
+  "screenUpserts": [
+    {
+      "name": "dieu-hanh-san-xuat",
+      "label": "Điều hành sản xuất",
+      "description": "BOM đang hiệu lực, lệnh đang chạy và phiếu sản xuất gần nhất trên cùng một màn.",
+      "icon": "factory",
+      "group": "Sản xuất",
+      "permission": "Work Order",
+      "mode": "desk",
+      "columns": 3,
+      "blocks": [
+        {
+          "id": "bom-active",
+          "type": "metric",
+          "label": "BOM đang hiệu lực",
+          "doctype": "Bill of Materials",
+          "filters": {
+            "bom_status": "Active"
+          },
+          "tone": "info",
+          "route": "/app/Bill%20of%20Materials"
+        },
+        {
+          "id": "work-orders-open",
+          "type": "metric",
+          "label": "Lệnh đã phát hành",
+          "doctype": "Work Order",
+          "filters": {
+            "docstatus": 1
+          },
+          "tone": "warning",
+          "route": "/app/Work%20Order"
+        },
+        {
+          "id": "manufacture-postings",
+          "type": "metric",
+          "label": "Phiếu sản xuất",
+          "doctype": "Stock Entry",
+          "filters": {
+            "purpose": "Manufacture"
+          },
+          "tone": "success",
+          "route": "/app/Stock%20Entry"
+        },
+        {
+          "id": "work-order-list",
+          "type": "list",
+          "label": "Lệnh cần theo dõi",
+          "doctype": "Work Order",
+          "fields": [
+            "production_item",
+            "bom_revision",
+            "qty",
+            "produced_percentage",
+            "planned_end_date"
+          ],
+          "filters": {
+            "docstatus": 1
+          },
+          "orderBy": "planned_end_date asc",
+          "limit": 12,
+          "span": 2,
+          "emptyText": "Không có lệnh đã phát hành."
+        },
+        {
+          "id": "bom-list",
+          "type": "list",
+          "label": "BOM đang áp dụng",
+          "doctype": "Bill of Materials",
+          "fields": [
+            "item",
+            "revision",
+            "effective_from",
+            "effective_to"
+          ],
+          "filters": {
+            "bom_status": "Active"
+          },
+          "orderBy": "effective_from desc",
+          "limit": 8
+        },
+        {
+          "id": "stock-entry-list",
+          "type": "list",
+          "label": "Ghi sổ sản xuất gần nhất",
+          "doctype": "Stock Entry",
+          "fields": [
+            "purpose",
+            "work_order",
+            "posting_at",
+            "status"
+          ],
+          "filters": {
+            "purpose": "Manufacture"
+          },
+          "orderBy": "posting_at desc",
+          "limit": 10,
+          "span": 3
+        }
+      ]
+    }
+  ]
+}
