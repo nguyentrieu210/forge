@@ -42,7 +42,7 @@ export interface PurchaseSupplierDebtReport {
   summary: Array<{ label: string; value: string }>;
 }
 
-interface FilterState {
+interface FilterState extends Record<string, unknown> {
   company: string;
   supplier: string;
   item_code: string;
