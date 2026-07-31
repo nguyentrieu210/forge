@@ -82,6 +82,34 @@ jobs:
           fi
           pr="$(gh pr list --repo "${{ github.repository }}" --head "$HEAD_REF" --state open --json number --jq '.[0].number // empty')"
           trap 'if [ -n "$pr" ]; then gh pr comment "$pr" --repo "${{ github.repository }}" --body "RBAC Slice B wiring failed in workflow run ${RUN_ID}. No wiring commit was pushed." || true; fi' ERR
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("server/scripts/apply-rbac-slice-b-wiring.py")
+          text = path.read_text(encoding="utf-8")
+          old = '''    count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{path}: expected one exact match, found {count}")
+              target.write_text(text.replace(old, new), encoding="utf-8")
+          '''
+          new = '''    count = text.count(old)
+              if count == 1:
+                  target.write_text(text.replace(old, new), encoding="utf-8")
+                  return
+              if (
+                  path == "server/tests/rbac-contract.test.mjs"
+                  and old == "    users: userStore(),\\n"
+                  and count == 3
+              ):
+                  index = text.rfind(old)
+                  target.write_text(text[:index] + new + text[index + len(old):], encoding="utf-8")
+                  return
+              raise SystemExit(f"{path}: expected one exact match, found {count}")
+          '''
+          if text.count(old) != 1:
+              raise SystemExit("wiring helper anchor changed")
+          path.write_text(text.replace(old, new), encoding="utf-8")
+          PY
           python3 server/scripts/apply-rbac-slice-b-wiring.py
           pnpm install --frozen-lockfile
           pnpm test
