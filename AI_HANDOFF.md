@@ -6,46 +6,54 @@ Ngày cập nhật: **2026-07-31**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Working branch: `feat/purchase-fifo-activation-readiness-20260731`.
-- Pull request: `#75` — draft.
-- GitHub là nguồn sự thật cho code, CI và trạng thái release.
+- Working branch: `feat/inventory-physical-stock-slice-b-20260731`.
+- Pull request: `#49` — `feat(inventory): canonical physical stock identity and warehouse roles`.
+- GitHub là nguồn sự thật cho code, CI và trạng thái dự án.
 
 ## Mục tiêu hiện tại
 
-Hoàn tất Purchase/FIFO activation readiness mà không bật rollout và không đụng production.
+Hoàn tất Inventory Slice B: canonical physical identity, warehouse roles, lineage, exact reversal và cross-voucher stock concurrency.
 
-## Thay đổi trên PR #75
+## Implementation
 
-- `server/scripts/prepare-purchase-fifo-activation.mjs`: wrapper read-only, chặn write/activate và bắt buộc evidence ngoài repo.
-- `server/tests/purchase-fifo-activation-readiness.test.mjs`: regression cho safety guards.
-- `server/docs/ALUMDOOR-PURCHASE-FIFO-ACTIVATION-RUNBOOK.md`: runbook staging/backfill/smoke/activation.
-- `CURRENT_STATUS.md`, `NEXT_TASKS.md`, `AI_HANDOFF.md`: trạng thái và bước tiếp theo được làm gọn theo Purchase/FIFO.
+- `server/packages/clouderp-erpnext/src/physical-stock-entry.ts`.
+- `server/apps/tenant-worker/src/inventory-coordinator.ts`.
+- `server/apps/tenant-worker/src/aggregate-do.ts`.
+- Registry/export trong `server/packages/clouderp-erpnext/src/`.
+- Focused tests:
+  - `server/tests/alumdoor-physical-stock.test.mjs`;
+  - `server/tests/alumdoor-physical-stock-concurrency.test.mjs`;
+  - `server/tests/inventory-coordinator.test.mjs`.
+- Review: `server/docs/ALUMDOOR-INVENTORY-SLICE-B-REVIEW.md`, score **97/100**, Critical **0**, High **0**.
 
-## CI đã xác nhận
+## Git hiện tại
 
-Trên head trước commit tài liệu `d586456e6e8b13f6097e19e7832c0032dd942745`:
-
-- CI `30644592982`: PASS.
-- PR Validation `30644592947`: PASS.
-- Sales Feature CI `30644590752`: PASS.
-- Inventory and Manufacturing CI `30644590579`: PASS.
-- Purchase Feature CI `30644590592`: PASS.
-- UI Pull Request Validation `30644593053`: đang chạy browser QA/auth smoke tại thời điểm handoff.
-
-Commit tài liệu mới sẽ kích hoạt lại CI; phải kiểm exact final head trước khi chuyển PR khỏi draft hoặc merge.
-
-## Safety state
-
-- FIFO rollout vẫn **disabled**.
-- Không deploy Cloudflare.
-- Không backfill tenant thật.
-- Không sửa production secrets hoặc DNS.
-- Không commit `server/work/`, `tmp/`, `.env`, backup SQL hoặc generated evidence.
+- Default mới nhất đã merge PR #75 tại `f0768d59ff66d04c333fd290c120f7672a80ea96`.
+- Nhánh kho đã đồng bộ bằng merge commit `47acf088135cb770dc30d021b5a45a9fcdca3c21`.
+- Khi đồng bộ, default được giữ làm nền; chỉ code/test/docs riêng của Slice B được phủ lại.
+- Không cho bản handoff Purchase trên default ghi đè mục tiêu nhánh kho.
 
 ## Việc tiếp theo
 
-1. Lấy exact final head của PR `#75`.
-2. Kiểm đủ sáu workflow trên exact final head.
-3. Nếu xanh toàn bộ, chuyển PR khỏi draft.
-4. Sau merge mới chuẩn bị staging tenant/production-shaped copy và chạy read-only readiness.
-5. Không execute backfill hoặc activation production nếu chưa có explicit approval riêng.
+1. Lấy exact final head sau commit tài liệu.
+2. Kiểm PR #49 mergeable và unresolved review threads.
+3. Chờ đủ sáu workflow PASS trên exact final head.
+4. Cập nhật PR body và chuyển khỏi draft khi sạch.
+5. Không merge PR #49 nếu chưa có yêu cầu merge rõ ràng.
+6. Sau merge mới retarget/rebase Slice C và bắt đầu Slice D UI/report/read model.
+
+## Release gates còn lại
+
+- Read-only live tenant catalog audit và remediation plan.
+- Staging receive/transfer/issue/quarantine/scrap/cancel journeys.
+- Production load/latency observation cho company-wide inventory lock.
+- Physical-stock UI/report/read model trong Slice D.
+- Explicit deployment approval riêng.
+
+## Safety
+
+- Không deploy Cloudflare.
+- Không mutate tenant hoặc production data.
+- Không sửa production secrets/DNS.
+- FIFO vẫn disabled.
+- Không commit `.env`, `server/work/`, `tmp/`, backup hoặc generated evidence.
