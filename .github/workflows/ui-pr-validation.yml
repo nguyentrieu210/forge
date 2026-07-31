@@ -135,8 +135,10 @@ jobs:
           set -euo pipefail
           node scripts/forge-app.mjs briefs/alumdoor-v2.json \
             --origin "$FORGE_ORIGIN" \
-            --admin "$FORGE_ADMIN_USER"
-          node scripts/seed-purchase-qa-local.mjs
+            --admin "$FORGE_ADMIN_USER" \
+            2>&1 | tee "$RUNNER_TEMP/forge-app-install.log"
+          node scripts/seed-purchase-qa-local.mjs \
+            2>&1 | tee "$RUNNER_TEMP/purchase-qa-seed.log"
 
       - name: Run Alumdoor cookie auth and Purchase lifecycle QA
         env:
@@ -152,6 +154,8 @@ jobs:
             client/e2e-forge/test-results/auth-session/
             client/e2e-forge/playwright-report/auth-session/
             ${{ runner.temp }}/forge-auth-backend.log
+            ${{ runner.temp }}/forge-app-install.log
+            ${{ runner.temp }}/purchase-qa-seed.log
           if-no-files-found: warn
           retention-days: 30
 
