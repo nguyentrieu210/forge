@@ -2,6 +2,7 @@
 import { readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import { pathToFileURL } from "node:url";
 import { planPurchaseAllocationBackfill } from "./purchase-allocation-backfill-planner.mjs";
 import {
   findTenantDatabaseId,
@@ -11,7 +12,7 @@ import {
 } from "./tenant-wrangler.mjs";
 import { d1Query, fail, quote, serverRoot, wrangler } from "./wrangler-cli.mjs";
 
-main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
 function main() {
   const args = parseArgs(process.argv.slice(2));
@@ -156,21 +157,26 @@ function activate(database, plan, args) {
     fail(`current dry-run checksum ${plan.checksum} differs from approved ${args.expectedChecksum}`);
   }
   if (plan.unresolved.length > 0) fail("activation is blocked while unresolved rows remain");
+  const enabledAt = new Date().toISOString();
+  d1Query(database, renderActivationSql(plan.tenant_id, args.actor, args.expectedChecksum, enabledAt));
   const tenant = quote(plan.tenant_id);
-  const actor = quote(args.actor);
-  const checksum = quote(args.expectedChecksum);
-  d1Query(database, `
-    UPDATE purchase_allocation_rollout_state
-    SET enabled=1,activated_by='${actor}',activated_at='${quote(new Date().toISOString())}'
-    WHERE tenant_id='${tenant}' AND enabled=0
-      AND backfill_checksum='${checksum}' AND unresolved_count=0`);
   const state = d1Query(database, `
-    SELECT enabled,backfill_checksum,unresolved_count,activated_by,activated_at
+    SELECT enabled,backfill_checksum,unresolved_count,enabled_by,enabled_at
     FROM purchase_allocation_rollout_state WHERE tenant_id='${tenant}'`)[0];
-  if (Number(state?.enabled) !== 1 || String(state?.backfill_checksum) !== args.expectedChecksum) {
+  if (Number(state?.enabled) !== 1
+    || String(state?.backfill_checksum) !== args.expectedChecksum
+    || String(state?.enabled_by) !== args.actor
+    || !state?.enabled_at) {
     fail(`activation did not converge: ${JSON.stringify(state)}`);
   }
   console.log(`Purchase allocation rollout activated for ${plan.tenant_id} by ${args.actor}.`);
+}
+
+export function renderActivationSql(tenantId, actor, expectedChecksum, enabledAt) {
+  return `UPDATE purchase_allocation_rollout_state
+    SET enabled=1,enabled_by=${sql(actor)},enabled_at=${sql(enabledAt)},updated_at=${sql(enabledAt)}
+    WHERE tenant_id=${sql(tenantId)} AND enabled=0
+      AND backfill_checksum=${sql(expectedChecksum)} AND unresolved_count=0;`;
 }
 
 function ledgerCountSql(tenant) {
@@ -200,7 +206,7 @@ function assertBackfillVerification(row, plan) {
   }
 }
 
-function renderBackfillSql(plan, actor) {
+export function renderBackfillSql(plan, actor) {
   const tenant = sql(plan.tenant_id);
   const command = sql(`backfill:${plan.checksum}`);
   const actorSql = sql(actor);
@@ -219,7 +225,7 @@ function renderBackfillSql(plan, actor) {
   for (const row of plan.allocations) statements.push(renderAllocation(row, tenant, actorSql, command));
   for (const row of plan.unapplied) statements.push(renderUnapplied(row, tenant, actorSql, command));
   statements.push(`INSERT INTO purchase_allocation_rollout_state(
-    tenant_id,enabled,backfill_checksum,unresolved_count,activated_by,activated_at,updated_at)
+    tenant_id,enabled,backfill_checksum,unresolved_count,enabled_by,enabled_at,updated_at)
     VALUES(${tenant},0,${sql(plan.checksum)},0,NULL,NULL,${sql(plan.generated_at)})
     ON CONFLICT(tenant_id) DO UPDATE SET
       backfill_checksum=excluded.backfill_checksum,unresolved_count=0,updated_at=excluded.updated_at;`);
