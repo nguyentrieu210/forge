@@ -62,8 +62,8 @@ jobs:
       TARGET_SHA: 591ca359937d6ae12803d36c74996db8482060af
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: d4d5a24d4e56f28f27fe58b64ef149a5
-      EVIDENCE_DIR: ${{ runner.temp }}/alu-release-evidence
-      BACKUP_DIR: ${{ runner.temp }}/alu-backup
+      EVIDENCE_DIR: /tmp/alu-release-evidence
+      BACKUP_DIR: /tmp/alu-backup
 
     steps:
       - name: Checkout verified code
@@ -115,7 +115,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: alu-pre-release-backup-${{ github.run_id }}
-          path: ${{ runner.temp }}/alu-backup/
+          path: /tmp/alu-backup/
           if-no-files-found: warn
           retention-days: 14
 
@@ -133,7 +133,7 @@ jobs:
       - name: Deploy tenant
         shell: bash
         env:
-          WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/alu-release-evidence/wrangler-output.ndjson
+          WRANGLER_OUTPUT_FILE_PATH: /tmp/alu-release-evidence/wrangler-output.ndjson
         run: |
           set -euo pipefail
           cd server
@@ -219,7 +219,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: alu-production-release-${{ github.run_id }}
-          path: ${{ runner.temp }}/alu-release-evidence/
+          path: /tmp/alu-release-evidence/
           if-no-files-found: warn
           retention-days: 30
 
