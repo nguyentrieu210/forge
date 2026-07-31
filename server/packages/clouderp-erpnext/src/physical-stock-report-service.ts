@@ -72,6 +72,50 @@ export class PhysicalStockReportService {
     const tenant = requireText(tenantId, "tenantId", 160);
     const company = requireText(request.company, "company", 240);
     const scope = normalizeScope(await this.access.getScope(actor, tenant));
+    return this.runWithScope(tenant, company, request, scope);
+  }
+
+  async exportCsv(
+    actor: Actor,
+    tenantId: string,
+    request: Omit<PhysicalStockReportRequest, "cursor" | "limit" | "include_lineage">,
+  ): Promise<PhysicalStockCsvExport> {
+    const tenant = requireText(tenantId, "tenantId", 160);
+    const company = requireText(request.company, "company", 240);
+    const scope = normalizeScope(await this.access.getScope(actor, tenant));
+    if (!scope.can_export) throw errors.permission("Physical stock export is not permitted");
+
+    // Permission and row scope must come from one snapshot. Re-reading the policy here
+    // would allow a concurrent grant/revoke to authorize with one scope and read with
+    // another, which is a small but real export TOCTOU boundary.
+    const page = await this.runWithScope(
+      tenant,
+      company,
+      { ...request, company, limit: scope.max_rows, include_lineage: false },
+      scope,
+    );
+    if (page.next_cursor) throw errors.validation(`Physical stock export exceeds the ${scope.max_rows} row limit`);
+
+    const fields = [
+      "item_code", "warehouse", "warehouse_role", "inventory_mode", "measurement_profile",
+      "color", "condition", "generation", "length_micros", "width_micros", "height_micros",
+      "thickness_micros", "batch_no", "serial_no", "quantity_micros", "value_micros",
+      "physical_count_micros", "first_posting_at", "last_posting_at",
+    ];
+    return {
+      filename: `physical-stock-${safeFilename(company)}.csv`,
+      content_type: "text/csv; charset=utf-8",
+      content: `\uFEFF${encodeCsv(fields, page.rows)}`,
+      row_count: page.rows.length,
+    };
+  }
+
+  private async runWithScope(
+    tenant: string,
+    company: string,
+    request: PhysicalStockReportRequest,
+    scope: Required<PhysicalStockAccessScope>,
+  ): Promise<PhysicalStockReportPage> {
     assertCompanyScope(scope, company);
     assertRequestedScope(scope, request);
 
@@ -95,36 +139,6 @@ export class PhysicalStockReportService {
       ...page,
       rows: page.rows.map((row) => showLineage ? row : redactLineage(row)),
       lineage_redacted: !showLineage,
-    };
-  }
-
-  async exportCsv(
-    actor: Actor,
-    tenantId: string,
-    request: Omit<PhysicalStockReportRequest, "cursor" | "limit" | "include_lineage">,
-  ): Promise<PhysicalStockCsvExport> {
-    const tenant = requireText(tenantId, "tenantId", 160);
-    const scope = normalizeScope(await this.access.getScope(actor, tenant));
-    if (!scope.can_export) throw errors.permission("Physical stock export is not permitted");
-
-    const page = await this.run(actor, tenant, {
-      ...request,
-      limit: scope.max_rows,
-      include_lineage: false,
-    });
-    if (page.next_cursor) throw errors.validation(`Physical stock export exceeds the ${scope.max_rows} row limit`);
-
-    const fields = [
-      "item_code", "warehouse", "warehouse_role", "inventory_mode", "measurement_profile",
-      "color", "condition", "generation", "length_micros", "width_micros", "height_micros",
-      "thickness_micros", "batch_no", "serial_no", "quantity_micros", "value_micros",
-      "physical_count_micros", "first_posting_at", "last_posting_at",
-    ];
-    return {
-      filename: `physical-stock-${safeFilename(request.company)}.csv`,
-      content_type: "text/csv; charset=utf-8",
-      content: `\uFEFF${encodeCsv(fields, page.rows)}`,
-      row_count: page.rows.length,
     };
   }
 }
