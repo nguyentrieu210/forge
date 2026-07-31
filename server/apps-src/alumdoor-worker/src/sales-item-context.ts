@@ -31,6 +31,83 @@ async function readResource(call: SalesPlatformCall, doctype: string, name: stri
   return ((await response.json()) as { data?: Json }).data ?? null;
 }
 
+async function listResources(
+  call: SalesPlatformCall,
+  doctype: string,
+  fields: string[],
+  filters: unknown[],
+  limit = 20,
+): Promise<Json[]> {
+  const query = new URLSearchParams({
+    fields: JSON.stringify(fields),
+    filters: JSON.stringify(filters),
+    limit_page_length: String(limit),
+  });
+  const response = await call(`resource/${encodeURIComponent(doctype)}?${query.toString()}`);
+  if (!response.ok) throw new Error(`Không tra được ${doctype} theo trường dữ liệu (HTTP ${response.status}).`);
+  return ((await response.json()) as { data?: Json[] }).data ?? [];
+}
+
+interface ItemPriceLookup {
+  price: Json | null;
+  name: string;
+}
+
+/**
+ * Tên bản ghi là tối ưu, không phải nguồn sự thật duy nhất.
+ *
+ * Metadata cũ tạo Item Price theo `<bảng giá>:<mã hàng>`, metadata mới dùng thêm ĐVT. Dữ liệu
+ * nhập tay hoặc đã migrate cũng có thể mang một tên khác. Chỉ dựa vào tên khiến một bản ghi có
+ * đủ `price_list + item_code + uom` vẫn bị coi là không tồn tại, và child grid chỉ để trống giá.
+ * Vì vậy giữ hai fast-path theo tên, rồi fallback bằng chính ba field nghiệp vụ.
+ */
+async function resolveItemPriceRecord(
+  call: SalesPlatformCall,
+  priceList: string,
+  itemCode: string,
+  selectedUom: string,
+): Promise<ItemPriceLookup> {
+  const exactName = `${priceList}:${itemCode}:${selectedUom}`;
+  const legacyName = `${priceList}:${itemCode}`;
+  const exact = await readResource(call, "Item Price", exactName);
+  const legacy = await readResource(call, "Item Price", legacyName);
+  const compatibleLegacy = legacy && String(legacy.uom ?? "").trim() === selectedUom ? legacy : null;
+
+  if (exact && !truthy(exact.disabled)) return { price: exact, name: exactName };
+  if (compatibleLegacy && !truthy(compatibleLegacy.disabled)) return { price: compatibleLegacy, name: legacyName };
+
+  const rows = await listResources(
+    call,
+    "Item Price",
+    ["name", "price_list", "item_code", "uom", "rate", "currency", "disabled"],
+    [
+      ["Item Price", "price_list", "=", priceList],
+      ["Item Price", "item_code", "=", itemCode],
+      ["Item Price", "uom", "=", selectedUom],
+    ],
+  );
+  const matching = rows.filter((row) =>
+    String(row.price_list ?? "").trim() === priceList
+    && String(row.item_code ?? "").trim() === itemCode
+    && String(row.uom ?? "").trim() === selectedUom);
+  const active = matching.filter((row) => !truthy(row.disabled));
+  if (active.length > 1) {
+    throw new Error(`Có nhiều đơn giá đang hoạt động cho ${itemCode} · ${selectedUom} trong bảng giá ${priceList}.`);
+  }
+  if (active.length === 1) {
+    const selected = active[0]!;
+    return { price: selected, name: String(selected.name ?? exactName) };
+  }
+
+  const disabled = exact ?? compatibleLegacy ?? matching[0] ?? null;
+  return {
+    price: disabled,
+    name: disabled
+      ? String(disabled.name ?? (disabled === compatibleLegacy ? legacyName : exactName))
+      : exactName,
+  };
+}
+
 async function reportRows(call: SalesPlatformCall, reportName: string, filters: Json): Promise<Json[]> {
   const response = await call("method/frappe.desk.query_report.run", {
     method: "POST",
@@ -101,37 +178,36 @@ export async function salesItemContext(call: SalesPlatformCall, args: Json): Pro
   let priceMissing = false;
   let priceError: string | null = null;
   if (priceList) {
-    const exactName = `${priceList}:${itemCode}:${selectedUom}`;
-    const legacyName = `${priceList}:${itemCode}`;
-    let price = await readResource(call, "Item Price", exactName);
-    itemPrice = exactName;
-    if (!price) {
-      const legacy = await readResource(call, "Item Price", legacyName);
-      if (legacy && String(legacy.uom ?? "").trim() === selectedUom) {
-        price = legacy;
-        itemPrice = legacyName;
-      }
-    }
-    if (price && !truthy(price.disabled)) {
-      const priceCurrency = String(price.currency ?? "").trim();
-      const parsed = Number(price.rate);
-      currency = priceCurrency || documentCurrency;
-      if (!priceCurrency) {
-        priceMissing = true;
-        priceError = `Đơn giá ${selectedUom} chưa khai tiền tệ.`;
-      } else if (priceCurrency !== documentCurrency) {
-        priceMissing = true;
-        priceError = `Giá ${selectedUom} dùng ${priceCurrency}, chứng từ dùng ${documentCurrency}.`;
-      } else if (!Number.isFinite(parsed) || parsed < 0) {
-        priceMissing = true;
-        priceError = `Đơn giá ${selectedUom} không hợp lệ.`;
+    const expectedName = `${priceList}:${itemCode}:${selectedUom}`;
+    try {
+      const lookup = await resolveItemPriceRecord(call, priceList, itemCode, selectedUom);
+      const price = lookup.price;
+      itemPrice = lookup.name;
+      if (price && !truthy(price.disabled)) {
+        const priceCurrency = String(price.currency ?? "").trim();
+        const parsed = Number(price.rate);
+        currency = priceCurrency || documentCurrency;
+        if (!priceCurrency) {
+          priceMissing = true;
+          priceError = `Đơn giá ${selectedUom} chưa khai tiền tệ.`;
+        } else if (priceCurrency !== documentCurrency) {
+          priceMissing = true;
+          priceError = `Giá ${selectedUom} dùng ${priceCurrency}, chứng từ dùng ${documentCurrency}.`;
+        } else if (!Number.isFinite(parsed) || parsed < 0) {
+          priceMissing = true;
+          priceError = `Đơn giá ${selectedUom} không hợp lệ.`;
+        } else {
+          rate = parsed;
+        }
       } else {
-        rate = parsed;
+        priceMissing = true;
+        if (price && truthy(price.disabled)) priceError = `Giá ${selectedUom} đã ngừng áp dụng.`;
+        itemPrice = itemPrice || expectedName;
       }
-    } else {
+    } catch (error) {
       priceMissing = true;
-      if (price && truthy(price.disabled)) priceError = `Giá ${selectedUom} đã ngừng áp dụng.`;
-      itemPrice = itemPrice || exactName;
+      priceError = error instanceof Error ? error.message : `Không tra được đơn giá ${selectedUom}.`;
+      itemPrice = expectedName;
     }
   } else {
     const standard = Number(item.standard_rate);
