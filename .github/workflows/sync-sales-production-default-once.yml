@@ -1,0 +1,51 @@
+name: Sync Sales Production With Default Once
+
+on:
+  push:
+    branches:
+      - feat/sales-order-production-flow-20260801
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/sales-order-production-flow-20260801
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Merge current default
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin hotfix/alumdoor-print-list-delete
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git merge --no-edit origin/hotfix/alumdoor-print-list-delete
+          rm -f .github/workflows/sync-sales-production-default-once.yml
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Verify merged feature
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          pnpm --filter cloudforge run build
+          node --test server/tests/door-formulas.test.mjs server/tests/sales-production-flow.test.mjs server/tests/sales-price-unicode-normalization.test.mjs
+          pnpm --filter metaforge run typecheck
+          git add -A
+          git diff --cached --check
+          git commit -m 'chore(sales): remove one-time default sync workflow'
+          git push origin HEAD:feat/sales-order-production-flow-20260801
