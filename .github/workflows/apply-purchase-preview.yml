@@ -5,7 +5,7 @@ on:
     branches:
       - feat/purchase-receipt-complete-20260731
     paths:
-      - .github/one-shot/purchase-preview.patch
+      - .github/one-shot/*.patch
   workflow_dispatch:
 
 permissions:
@@ -33,17 +33,19 @@ jobs:
           set -euo pipefail
           test "$(git branch --show-current)" = "feat/purchase-receipt-complete-20260731"
           git merge-base --is-ancestor 798d60c7edf476c26b90c51cbe0f5c0346789594 HEAD
-          unexpected="$(git diff --name-only 798d60c7edf476c26b90c51cbe0f5c0346789594..HEAD | grep -Ev '^(\.github/workflows/apply-purchase-preview\.yml|\.github/one-shot/purchase-preview\.patch)$' || true)"
+          unexpected="$(git diff --name-only 798d60c7edf476c26b90c51cbe0f5c0346789594..HEAD | grep -Ev '^(\.github/workflows/apply-purchase-preview\.yml|\.github/one-shot/[^/]+\.patch)$' || true)"
           test -z "$unexpected"
-          test -f .github/one-shot/purchase-preview.patch
+          compgen -G '.github/one-shot/*.patch' >/dev/null
 
-      - name: Apply reviewed patch
+      - name: Apply reviewed patches
         shell: bash
         run: |
           set -euo pipefail
-          git apply --check .github/one-shot/purchase-preview.patch
-          git apply .github/one-shot/purchase-preview.patch
-          rm .github/one-shot/purchase-preview.patch
+          for patch in .github/one-shot/*.patch; do
+            git apply --check "$patch"
+            git apply "$patch"
+          done
+          rm -rf .github/one-shot
           rm .github/workflows/apply-purchase-preview.yml
 
       - name: Install pnpm
