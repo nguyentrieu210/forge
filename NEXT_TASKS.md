@@ -2,23 +2,25 @@
 
 Ngày cập nhật: **2026-07-31**.
 
-## P0 — chạy production smoke read-only
+## P0 — hoàn tất production smoke read-only
 
-1. Mở PR từ `chore/alu-production-smoke-trigger-20260731`.
+1. Mở PR từ `chore/alu-production-smoke-reporting-20260731`.
 2. Kiểm exact final head và required CI.
-3. Merge khi CI xanh và PR conflict-free.
-4. Tạo branch `ops/observe-alu-production-<stamp>` từ exact default head.
-5. Xác nhận workflow `Cloudflare Production Smoke Observation`:
+3. Merge khi CI xanh và conflict-free.
+4. Tạo fresh branch `ops/observe-alu-production-<stamp>` từ exact default head.
+5. Đọc observation comment trên PR `#84` và xác nhận:
+   - run ID/run URL;
+   - exact source SHA;
    - health `200`;
    - root `200`;
    - guest boot `403`;
-   - job conclusion `success`;
-   - artifact evidence tồn tại.
-6. Cập nhật `CURRENT_STATUS.md`, `NEXT_TASKS.md`, `AI_HANDOFF.md` với run ID/artifact.
+   - result `pass`.
+6. Fetch workflow jobs và artifact bằng exact run ID.
+7. Cập nhật `CURRENT_STATUS.md`, `NEXT_TASKS.md`, `AI_HANDOFF.md` với final evidence.
 
 ## P0 — authenticated functional smoke
 
-Endpoint smoke không thay thế business smoke sau đăng nhập. Khi có credential/session hợp lệ, kiểm:
+Endpoint observation không thay thế business smoke sau đăng nhập. Khi có credential/session hợp lệ, kiểm:
 
 - đăng nhập và boot tenant;
 - mở module Mua hàng;
