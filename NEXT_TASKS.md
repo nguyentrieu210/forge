@@ -2,6 +2,34 @@
 
 Ngày cập nhật: **2026-07-31**.
 
+## P0 — Merge, release và smoke hotfix tự điền đơn giá
+
+PR `#65` sửa child grid không tự điền giá khi Item Price có field đúng nhưng tên record không canonical.
+
+### Trước merge
+
+1. Xác minh PR vẫn mergeable và base không tiến thêm thay đổi xung đột.
+2. Kiểm exact final head sau hai commit handoff; không dùng kết quả CI của code head cũ để merge head mới.
+3. Cả sáu workflow phải PASS; Gateway/Tenant release jobs trong PR phải SKIPPED.
+4. Squash-merge chỉ khi người dùng yêu cầu rõ.
+
+### Khi được yêu cầu release
+
+1. Hotfix sửa cả `alumdoor.sales.item_context` và pricing authoritative trong tenant runtime, nên release cần Tenant Worker `alu`; chỉ release Gateway nếu có thay đổi frontend riêng.
+2. Dùng exact merged SHA, backup production D1 theo workflow chuẩn trước tenant deploy, chạy migration dry-run/live dù dự kiến không có migration mới, deploy và smoke `/health` + guest boot.
+3. Không sửa production secrets, không kích hoạt FIFO và không mutate dữ liệu Item Price trong release.
+
+### Functional production smoke sau deploy
+
+1. Hard refresh, mở Báo giá hoặc Đơn hàng mới.
+2. Chọn `Bảng giá áp dụng`, sau đó chọn Item có Item Price đúng `Bảng giá + Mã hàng + ĐVT`.
+3. Xác minh `ĐVT`, `Đơn giá`, `Thành tiền` và trạng thái giá tự cập nhật trong child grid.
+4. Đổi sang ĐVT thứ hai và xác minh không lấy chéo giá của ĐVT trước.
+5. Đổi bảng giá ở header khi dòng đã có Item; giá dòng phải được tải lại.
+6. Kiểm bản ghi Item Price có tên legacy hoặc không canonical vẫn tự điền theo field.
+7. Kiểm giá disabled, sai currency, thiếu currency và duplicate active prices không trở thành rate dùng được; giao diện phải hiện chẩn đoán phù hợp.
+8. Lưu chứng từ thử để xác minh server authoritative trả cùng giá preview; sau đó huỷ/xoá chứng từ thử theo quy trình.
+
 ## P0 — Functional production smoke cho Link dropdown trong child table
 
 Bản vá wheel đúng đã merge và phát hành:
