@@ -96,6 +96,10 @@ jobs:
         if: steps.scope.outputs.ui == 'true'
         run: pnpm --filter e2e-forge exec playwright install --with-deps chromium
 
+      - name: Run MetaForge workspace browser QA
+        if: steps.scope.outputs.ui == 'true'
+        run: pnpm --filter @metaforge/demo run e2e
+
       - name: Run Alumdoor browser QA
         if: steps.scope.outputs.ui == 'true'
         run: pnpm --filter e2e-forge exec playwright test --config playwright.ui.config.ts
@@ -108,8 +112,9 @@ jobs:
         if: steps.scope.outputs.ui == 'true' && always()
         uses: actions/upload-artifact@v4
         with:
-          name: alumdoor-ui-evidence-${{ github.run_id }}
+          name: ui-evidence-${{ github.run_id }}
           path: |
+            client/apps/demo/test-results/
             client/e2e-forge/test-results/ui-visual/
             client/e2e-forge/playwright-report/ui-visual/
             client/e2e-forge/test-results/purchase-ui/
