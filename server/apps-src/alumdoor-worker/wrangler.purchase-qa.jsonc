@@ -1,0 +1,13 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "cloudforge-app-alumdoor",
+  "main": "src/entry.ts",
+  "compatibility_date": "2026-07-27",
+  "compatibility_flags": ["nodejs_compat"],
+  "services": [
+    {
+      "binding": "PLATFORM",
+      "service": "cloudforge-tenant-purchase-qa"
+    }
+  ]
+}
