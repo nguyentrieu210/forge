@@ -22,6 +22,22 @@ Ngày cập nhật: **2026-07-31**.
 - `/health` = `200`, `/` = `200`, unauthenticated boot = `403`.
 - FIFO rollout vẫn disabled; không sửa production secrets.
 
+### P0 — Hotfix lọc mặt hàng trong child table
+
+Production browser đã phát hiện picker `Mã hàng` vẫn hiện Item ngoài phạm vi bán dù metadata có `is_sales_item=1` và `disabled=0`.
+
+- Branch: `hotfix/sales-child-item-filter-20260731`.
+- Fix `buildLinkFilters` để nhận cả object form và array form.
+- Regression riêng kiểm object filter bán hàng, `eval:` context và operator tuple.
+- Chờ required CI trên exact final HEAD.
+- Sau CI cần browser smoke trên Báo giá và Đơn hàng:
+  - Item `is_sales_item=1`, `disabled=0` phải xuất hiện;
+  - Item `is_sales_item=0` phải không xuất hiện;
+  - Item `disabled=1` phải không xuất hiện;
+  - tìm theo mã/tên vẫn giữ filter;
+  - recent links không được làm lộ Item đã bị filter.
+- Chưa merge hoặc deploy Gateway/frontend; cần yêu cầu rõ trước production release.
+
 ### P0 — Browser sales smoke sau release
 
 Rủi ro này đã được chấp nhận để merge/deploy nhưng vẫn phải đóng bằng bằng chứng thật:
