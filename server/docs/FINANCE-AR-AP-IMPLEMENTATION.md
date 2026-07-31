@@ -33,6 +33,13 @@ Hard database presence enforcement requires a later append-only migration after:
 3. checksum is reviewed;
 4. staging migration and smoke pass.
 
+## Branch reconciliation
+
+- Finance branch was merged with the latest default branch without force-push.
+- The temporary reconciliation workflow removed itself before the merge commit was pushed.
+- The PR is mergeable and zero commits behind the default branch.
+- The first exact-head PR Validation run after the bot-authored merge required a user-authored commit; this documentation commit intentionally triggers the real code gate.
+
 ## Independent evidence
 
 - Compatibility migration fixture: PASS.
@@ -45,7 +52,7 @@ Hard database presence enforcement requires a later append-only migration after:
 - Root `pnpm test`.
 - Root `pnpm typecheck`.
 - Root `pnpm build`.
-- GitHub workflow `CI` exact-head PASS.
+- GitHub workflow `PR Validation`, job `Test, typecheck and build`, exact-head PASS.
 - Worker-level D1 report integration if the root suite does not already cover compiler injection.
 
 ## Explicit non-actions
