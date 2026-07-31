@@ -29,3 +29,19 @@ export async function executePurchaseCommandWithRevisionRetry<T>(
 
   throw errors.purchaseAllocationConflict();
 }
+
+/**
+ * Durable Object requests may interleave while awaiting database work. Keep the
+ * full purchase mutation, including plan construction and commit, serialized for
+ * one supplier coordinator instance. Failed operations release the queue so a
+ * later command cannot be permanently blocked.
+ */
+export class PurchaseCommandSerialExecutor {
+  private tail: Promise<void> = Promise.resolve();
+
+  execute<T>(operation: () => Promise<T>): Promise<T> {
+    const run = this.tail.then(() => executePurchaseCommandWithRevisionRetry(operation));
+    this.tail = run.then(() => undefined, () => undefined);
+    return run;
+  }
+}
