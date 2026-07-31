@@ -34,7 +34,7 @@ jobs:
     env:
       TARGET_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.target_sha || github.sha }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      EVIDENCE_DIR: ${{ runner.temp }}/gateway-production-evidence
+      EVIDENCE_DIR: /tmp/gateway-production-evidence
       BASE_URL: https://alu.kairo.vn
 
     steps:
@@ -110,7 +110,7 @@ jobs:
       - name: Deploy Gateway production
         shell: bash
         env:
-          WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/gateway-production-evidence/wrangler-output.ndjson
+          WRANGLER_OUTPUT_FILE_PATH: /tmp/gateway-production-evidence/wrangler-output.ndjson
         run: |
           set -euo pipefail
           pnpm --dir server exec wrangler deploy \
@@ -165,6 +165,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: gateway-production-release-${{ github.run_id }}
-          path: ${{ runner.temp }}/gateway-production-evidence/
+          path: /tmp/gateway-production-evidence/
           if-no-files-found: warn
           retention-days: 30

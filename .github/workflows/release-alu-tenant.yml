@@ -38,8 +38,8 @@ jobs:
       TENANT: alu
       TARGET_SHA: ${{ inputs.target_sha || github.sha }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      EVIDENCE_DIR: ${{ runner.temp }}/alu-tenant-release-evidence
-      BACKUP_DIR: ${{ runner.temp }}/alu-tenant-backup
+      EVIDENCE_DIR: /tmp/alu-tenant-release-evidence
+      BACKUP_DIR: /tmp/alu-tenant-backup
 
     steps:
       - name: Checkout selected code
@@ -105,7 +105,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: alu-tenant-pre-release-backup-${{ github.run_id }}
-          path: ${{ runner.temp }}/alu-tenant-backup/
+          path: /tmp/alu-tenant-backup/
           if-no-files-found: error
           retention-days: 14
 
@@ -121,7 +121,7 @@ jobs:
       - name: Deploy tenant Worker
         shell: bash
         env:
-          WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/alu-tenant-release-evidence/wrangler-output.ndjson
+          WRANGLER_OUTPUT_FILE_PATH: /tmp/alu-tenant-release-evidence/wrangler-output.ndjson
         run: |
           set -euo pipefail
           cd server
@@ -179,6 +179,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: alu-tenant-production-release-${{ github.run_id }}
-          path: ${{ runner.temp }}/alu-tenant-release-evidence/
+          path: /tmp/alu-tenant-release-evidence/
           if-no-files-found: warn
           retention-days: 30
