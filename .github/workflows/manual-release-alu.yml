@@ -47,17 +47,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
-      TARGET_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.event_name == 'workflow_dispatch' && inputs.target_sha || github.event_name == 'push' && contains(github.event.head_commit.message, '[release-target-before]') && github.event.before || github.sha }}
+      TARGET_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.event_name == 'workflow_dispatch' && inputs.target_sha || '6bb697f59862d0d44877da2ba3be5ce1c0331970' }}
       GATE_DIR: /tmp/alu-full-release-gate
 
     outputs:
       target_sha: ${{ steps.lock.outputs.target_sha }}
 
     steps:
-      - name: Checkout exact release candidate
+      - name: Checkout workflow revision for actionlint
         uses: actions/checkout@v4
         with:
-          ref: ${{ env.TARGET_SHA }}
+          ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -72,17 +72,30 @@ jobs:
           go-version: '1.24.x'
           cache: false
 
+      - name: Run actionlint on every workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$GATE_DIR"
+          go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 .github/workflows/*.yml 2>&1 | tee "$GATE_DIR/actionlint.log"
+
+      - name: Checkout exact release candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
       - name: Lock exact target SHA
         id: lock
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p "$GATE_DIR"
           actual="$(git rev-parse HEAD)"
           expected="$(git rev-parse "$TARGET_SHA")"
           test "$actual" = "$expected"
           echo "target_sha=$actual" >> "$GITHUB_OUTPUT"
-          printf 'target_sha=%s\nstarted_at=%s\n' "$actual" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$GATE_DIR/state.txt"
+          printf 'target_sha=%s\nstarted_at=%s\nactionlint=pass\n' "$actual" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$GATE_DIR/state.txt"
 
       - name: Install exact pnpm and dependencies
         shell: bash
@@ -91,13 +104,6 @@ jobs:
           corepack enable
           corepack prepare pnpm@9.15.0 --activate
           pnpm install --frozen-lockfile 2>&1 | tee "$GATE_DIR/install.log"
-
-      - name: Run actionlint on every workflow
-        shell: bash
-        run: |
-          set -euo pipefail
-          go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 .github/workflows/*.yml 2>&1 | tee "$GATE_DIR/actionlint.log"
-          echo 'actionlint=pass' >> "$GATE_DIR/state.txt"
 
       - name: Run repository full release gate
         shell: bash
@@ -160,6 +166,7 @@ jobs:
       EVIDENCE_DIR: /tmp/alu-production-release
       TENANT_ROLLBACK_DIR: /tmp/alu-tenant-rollback
       APP_ROLLBACK_DIR: /tmp/alu-app-rollback
+      RESUME_TENANT_RUN_ID: '30664641971'
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: d4d5a24d4e56f28f27fe58b64ef149a5
       GH_TOKEN: ${{ github.token }}
@@ -274,7 +281,23 @@ jobs:
           set -euo pipefail
           workflow="$1"
           output_dir="$2"
+          resume_run_id="${3:-}"
           mkdir -p "$output_dir"
+
+          if [ -n "$resume_run_id" ]; then
+            run_id="$resume_run_id"
+            gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id" > "$output_dir/run.json"
+            status="$(jq -r '.status' "$output_dir/run.json")"
+            conclusion="$(jq -r '.conclusion // empty' "$output_dir/run.json")"
+            test "$status" = 'completed'
+            test "$conclusion" = 'success'
+            gh run download "$run_id" --repo "$GITHUB_REPOSITORY" --dir "$output_dir/artifacts"
+            gh run view "$run_id" --repo "$GITHUB_REPOSITORY" --log > "$output_dir/run.log" 2>&1 || true
+            grep -R --fixed-strings "target_sha=$TARGET_SHA" "$output_dir/artifacts" >/dev/null
+            printf 'run_id=%s\nconclusion=%s\nresumed=true\n' "$run_id" "$conclusion" > "$output_dir/state.txt"
+            exit 0
+          fi
+
           dispatched_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           jq -n --arg ref "$DEFAULT_BRANCH" --arg sha "$TARGET_SHA" '{ref:$ref,inputs:{target_sha:$sha}}' \
             | gh api --method POST "repos/$GITHUB_REPOSITORY/actions/workflows/$workflow/dispatches" --input -
@@ -282,7 +305,7 @@ jobs:
           run_id=''
           for attempt in $(seq 1 30); do
             gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$workflow/runs?event=workflow_dispatch&branch=$DEFAULT_BRANCH&per_page=30" > "$output_dir/runs.json"
-            run_id="$(jq -r --arg sha "$TARGET_SHA" --arg since "$dispatched_at" \
+            run_id="$(jq -r --arg sha "$GITHUB_SHA" --arg since "$dispatched_at" \
               '[.workflow_runs[] | select(.head_sha == $sha and .created_at >= $since)] | sort_by(.created_at) | last | .id // empty' \
               "$output_dir/runs.json")"
             [ -n "$run_id" ] && break
@@ -291,6 +314,7 @@ jobs:
           test -n "$run_id"
           echo "$run_id" > "$output_dir/run-id.txt"
 
+          status=''
           conclusion=''
           for attempt in $(seq 1 180); do
             gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id" > "$output_dir/run.json"
@@ -301,22 +325,28 @@ jobs:
           done
           gh run download "$run_id" --repo "$GITHUB_REPOSITORY" --dir "$output_dir/artifacts" || true
           gh run view "$run_id" --repo "$GITHUB_REPOSITORY" --log > "$output_dir/run.log" 2>&1 || true
-          printf 'run_id=%s\nconclusion=%s\n' "$run_id" "$conclusion" > "$output_dir/state.txt"
+          printf 'run_id=%s\nconclusion=%s\nresumed=false\n' "$run_id" "$conclusion" > "$output_dir/state.txt"
+          test "$status" = 'completed'
           test "$conclusion" = 'success'
+          grep -R --fixed-strings "target_sha=$TARGET_SHA" "$output_dir/artifacts" >/dev/null
           SCRIPT
           chmod +x "$RUNNER_TEMP/dispatch-release-workflow.sh"
 
-      - name: Release tenant alu
+      - name: Resume verified tenant release
         id: tenant_release
         shell: bash
         run: |
-          "$RUNNER_TEMP/dispatch-release-workflow.sh" release-alu-tenant.yml "$EVIDENCE_DIR/tenant"
+          "$RUNNER_TEMP/dispatch-release-workflow.sh" release-alu-tenant.yml "$EVIDENCE_DIR/tenant" "$RESUME_TENANT_RUN_ID"
 
       - name: Restore previous tenant content after tenant release failure
         if: ${{ failure() && steps.tenant_release.outcome == 'failure' }}
         shell: bash
         run: |
           set -euo pipefail
+          if [ ! -f "$EVIDENCE_DIR/tenant/state.txt" ] || ! grep -q '^conclusion=failure$' "$EVIDENCE_DIR/tenant/state.txt"; then
+            echo 'rollback=skipped_without_failed_child' >> "$EVIDENCE_DIR/tenant/rollback-state.txt"
+            exit 0
+          fi
           tenant_base="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/dispatch/namespaces/$DISPATCH_NAMESPACE/scripts/$TENANT_WORKER"
           curl --fail --silent --show-error -X PUT \
             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
@@ -343,6 +373,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          if [ ! -f "$EVIDENCE_DIR/app/state.txt" ] || ! grep -q '^conclusion=failure$' "$EVIDENCE_DIR/app/state.txt"; then
+            echo 'rollback=skipped_without_failed_child' >> "$EVIDENCE_DIR/app/rollback-state.txt"
+            exit 0
+          fi
           app_base="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/dispatch/namespaces/$DISPATCH_NAMESPACE/scripts/$APP_WORKER"
           curl --fail --silent --show-error -X PUT \
             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
