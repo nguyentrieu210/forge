@@ -35,6 +35,7 @@ const FILTER_FIELDS = new Set([
   "currency",
   "voucher_no",
   "due_date",
+  "due_date_source",
   "aging_bucket",
 ]);
 
@@ -95,6 +96,7 @@ function agingSource(config: AgingReportConfig): string {
       voucher_no,
       posting_date,
       due_date,
+      due_date_source,
       CAST(invoice_total_minor AS REAL) / ${divisor} AS invoice_total,
       CAST(invoice_total_minor - outstanding_minor AS REAL) / ${divisor} AS allocated_amount,
       CAST(outstanding_minor AS REAL) / ${divisor} AS outstanding_amount,
@@ -118,6 +120,7 @@ function agingSource(config: AgingReportConfig): string {
         t.voucher_no,
         t.posting_date,
         t.due_date,
+        t.due_date_source,
         t.invoice_total_minor,
         SUM(p.amount_minor) AS outstanding_minor
       FROM payment_ledger_entries p
@@ -140,6 +143,7 @@ function agingSource(config: AgingReportConfig): string {
         t.voucher_no,
         t.posting_date,
         t.due_date,
+        t.due_date_source,
         t.invoice_total_minor
       HAVING SUM(p.amount_minor) > 0
     ) AS balances
@@ -205,6 +209,7 @@ function agingColumns(config: AgingReportConfig): ReportColumn[] {
     { field: "voucher_no", label: "Voucher", type: "Link", options: config.voucherType },
     { field: "posting_date", label: "Posting Date", type: "Date" },
     { field: "due_date", label: "Due Date", type: "Date" },
+    { field: "due_date_source", label: "Due Date Source", type: "Data" },
     { field: "invoice_total", label: "Invoice Total", type: "Currency" },
     { field: "allocated_amount", label: "Allocated", type: "Currency" },
     { field: "outstanding_amount", label: "Outstanding", type: "Currency" },
