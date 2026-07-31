@@ -23,11 +23,18 @@ function loadAIProvider(): AIProvider | null {
   return createEchoProvider();
 }
 
+/** Vai trò của tab theo cấu trúc MISA: quy trình, tổng quan, rồi mới tới nghiệp vụ/DocType. */
+export type WorkspaceTabKind = "process" | "overview" | "doctype";
+
 /** Một tab nghiệp vụ/DocType nằm trên đầu vùng nội dung của phân hệ. */
 export interface WorkspaceTabMeta {
   key: string;
   label: string;
   targetKey: string;
+  kind: WorkspaceTabKind;
+  /** Các route con vẫn thuộc cùng tab, ví dụ list/form/kanban của một DocType. */
+  activeKeys?: string[];
+  doctype?: string;
   disabledReason?: string;
 }
 
@@ -82,6 +89,10 @@ function isEditable(el: Element | null): boolean {
   return tag === "INPUT" || tag === "TEXTAREA" || (el as HTMLElement).isContentEditable;
 }
 
+export function matchesWorkspaceTab(tab: WorkspaceTabMeta, activeKey: string): boolean {
+  return tab.targetKey === activeKey || Boolean(tab.activeKeys?.includes(activeKey));
+}
+
 function WorkspaceTabs({ module, activeKey, onNavigate }: {
   module: WorkspaceModuleMeta;
   activeKey: string;
@@ -91,7 +102,7 @@ function WorkspaceTabs({ module, activeKey, onNavigate }: {
     <div className="mf-workspace-tabs sticky top-0 z-20 overflow-x-auto border-b bg-background/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/85">
       <nav className="flex min-w-max items-stretch" aria-label={`Nghiệp vụ ${module.label}`}>
         {module.tabs.map((tab) => {
-          const active = tab.targetKey === activeKey;
+          const active = matchesWorkspaceTab(tab, activeKey);
           return (
             <Button
               key={tab.key}
@@ -100,6 +111,7 @@ function WorkspaceTabs({ module, activeKey, onNavigate }: {
               size="sm"
               disabled={Boolean(tab.disabledReason)}
               title={tab.disabledReason}
+              data-kind={tab.kind}
               className={cn(
                 "relative h-10 shrink-0 rounded-none border-x-0 border-t-0 border-b-2 border-transparent px-4 text-xs font-medium",
                 active
@@ -125,7 +137,7 @@ export function DemoShell(props: DemoShellProps) {
   const [aiProvider, setAiProvider] = useState<AIProvider | null>(() => props.ai?.provider ?? loadAIProvider());
 
   const activeModule = useMemo(
-    () => props.workspace?.modules.find((module) => module.tabs.some((tab) => tab.targetKey === props.activeKey)),
+    () => props.workspace?.modules.find((module) => module.tabs.some((tab) => matchesWorkspaceTab(tab, props.activeKey))),
     [props.activeKey, props.workspace],
   );
 
@@ -135,7 +147,7 @@ export function DemoShell(props: DemoShellProps) {
           key: module.key,
           label: module.label,
           icon: module.icon,
-          group: "Phân hệ",
+          keywords: module.tabs.flatMap((tab) => [tab.label, tab.doctype ?? ""]).filter(Boolean),
           disabledReason: module.tabs.some((tab) => !tab.disabledReason) ? undefined : "Chưa có màn hình khả dụng",
         }))
       : props.nav,
