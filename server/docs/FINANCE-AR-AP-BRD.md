@@ -7,8 +7,6 @@ Branch: `feat/finance-ar-ap-completion`
 
 ## 1. Quyết định đã duyệt
 
-Người dùng cho phép tiếp tục theo phương án mặc định an toàn:
-
 1. Phạm vi áp dụng cho cả Customer AR và Supplier AP.
 2. Aging bucket mặc định:
    - `Chưa đến hạn`;
@@ -33,28 +31,24 @@ Forge đã có nền tảng kế toán giao dịch:
 - Payment Entry hiện bắt buộc phân bổ toàn bộ số tiền vào hóa đơn.
 - Chưa có aging theo ngày đến hạn, advance balance, party statement hoặc debt summary.
 
-## 3. Vấn đề cần giải quyết
-
-1. Không biết khoản nào sắp đến hạn hoặc quá hạn bao lâu.
-2. Không ghi nhận đúng tiền ứng trước/chưa xác định hóa đơn.
-3. Không có phân bổ lại/reverse allocation append-only.
-4. Không có sao kê đối tác với opening, movement và closing balance.
-5. Không có tổng hợp due, overdue, advance và net exposure.
-6. Quyền điều chỉnh và audit chưa đóng thành contract xuyên backend, query và UI.
-
-## 4. Mục tiêu và acceptance criteria
+## 3. Mục tiêu
 
 ### G1 — Hạn thanh toán và aging
 
-- Sales Invoice và Purchase Invoice có `due_date` canonical.
-- Khi submit, due date bắt buộc, là ISO `YYYY-MM-DD` hợp lệ và không trước posting date.
-- Sales Invoice metadata đánh dấu Due Date là required; Purchase Invoice tiếp tục có field due date hiện hữu và database guard là authoritative.
-- Legacy invoice thiếu due date không bị rewrite tự động; report tạm fallback về posting date cho tới backfill.
+- Sales Invoice metadata yêu cầu người dùng nhập Due Date cho chứng từ mới.
+- Database xác thực due date khi được cung cấp:
+  - đúng ISO `YYYY-MM-DD`;
+  - là ngày tồn tại;
+  - không trước posting date.
+- Để không phá API và fixture cũ, invoice thiếu due date vẫn được chấp nhận trong giai đoạn compatibility rollout.
+- Invoice thiếu due date dùng posting date làm fallback và được đánh dấu `due_date_source = posting_date_fallback`.
+- Invoice có due date rõ ràng được đánh dấu `due_date_source = explicit`.
+- Hard database enforcement cho sự hiện diện của due date chỉ được bật bằng migration append-only sau khi backfill/checksum xác nhận `unresolved = 0` và staging smoke pass.
 - AR/AP Aging bắt buộc `as_of_date`.
 - Chỉ cộng Payment Ledger rows có posting date không sau cutoff.
-- Mỗi dòng có party, company, account, currency, voucher, posting date, due date, invoice total, allocated, outstanding, days overdue và bucket.
+- Mỗi dòng có party, company, account, currency, voucher, posting date, due date, due-date source, invoice total, allocated, outstanding, days overdue và bucket.
 - Tổng bucket phải bằng tổng outstanding theo cùng filter/currency.
-- User filters phải parameterized và whitelist.
+- User filters phải whitelist và parameterized.
 
 ### G2 — Advance và phân bổ
 
@@ -81,7 +75,7 @@ Forge đã có nền tảng kế toán giao dịch:
 - Payment Entry không cancel nếu advance đã được downstream allocation sử dụng.
 - Mọi schema thay đổi dùng migration append-only.
 
-## 5. Tác nhân và quyền
+## 4. Tác nhân và quyền
 
 | Tác nhân | Phạm vi |
 |---|---|
@@ -94,17 +88,18 @@ Forge đã có nền tảng kế toán giao dịch:
 
 Tenant, company và data scope phải được áp dụng ở server/query layer. UI ẩn nút không phải security boundary.
 
-## 6. Contract dữ liệu
+## 5. Contract dữ liệu
 
-### 6.1 Invoice terms
+### 5.1 Invoice terms
 
-- `due_date: string` — ISO date, bắt buộc khi submit.
-- `payment_terms_days?: number` — snapshot cho pha payment terms sau.
-- `payment_terms_template?: string` — optional link cho pha derive sau.
+- `due_date?: string` trong compatibility phase.
+- `due_date_source: explicit | posting_date_fallback` trong read model.
+- `payment_terms_days?: number` dành cho pha payment terms sau.
+- `payment_terms_template?: string` dành cho pha derive sau.
 
-Pha hiện tại yêu cầu người dùng nhập due date rõ ràng. Tự derive từ template/payment days thuộc lát cắt tiếp theo để tránh đưa logic không được kiểm chứng vào migration đầu.
+Sau cutover, `due_date` trở thành bắt buộc ở database bằng migration mới. Không sửa migration `0030` sau khi chạy.
 
-### 6.2 Payment Entry advance
+### 5.2 Payment Entry advance
 
 - `references: PaymentReference[]` có thể rỗng.
 - `allocated_amount_minor` là tổng references.
@@ -112,7 +107,7 @@ Pha hiện tại yêu cầu người dùng nhập due date rõ ràng. Tự deriv
 - GL ghi tiền/bank và party account như hiện tại.
 - Payment Ledger tách phần allocated và advance source.
 
-### 6.3 Payment Allocation
+### 5.3 Payment Allocation
 
 Submittable document:
 
@@ -129,7 +124,7 @@ Submittable document:
 
 Submit giảm advance source và target outstanding bằng append-only Payment Ledger rows. Cancel tạo reversal rows, không delete.
 
-### 6.4 Read models
+### 5.4 Read models
 
 - `finance_invoice_terms`
 - AR Aging
@@ -140,30 +135,31 @@ Submit giảm advance source và target outstanding bằng append-only Payment L
 
 Read models derive từ immutable ledger + canonical invoice payload.
 
-## 7. Luồng nghiệp vụ
+## 6. Luồng nghiệp vụ
 
-### 7.1 Invoice
+### 6.1 Invoice compatibility phase
 
-1. Người dùng nhập invoice và due date.
-2. Server/database validate due date.
-3. Submit ghi document + GL + Payment Ledger atomic.
-4. Aging đọc được invoice theo cutoff.
+1. UI yêu cầu due date cho invoice mới.
+2. Server/database xác thực due date nếu có.
+3. Legacy/API payload thiếu due date vẫn submit được trong giai đoạn chuyển tiếp.
+4. Aging đánh dấu rõ fallback để backfill, không giả vờ đó là hạn thanh toán đã được xác nhận.
+5. Sau backfill và staging smoke, migration mới bật hard-presence guard.
 
-### 7.2 Payment phân bổ ngay
+### 6.2 Payment phân bổ ngay
 
 1. Payment Entry tham chiếu invoice.
 2. Server kiểm tra company/party/account/currency.
 3. Guard chặn vượt outstanding.
 4. GL và Payment Ledger ghi atomic.
 
-### 7.3 Payment ứng trước
+### 6.3 Payment ứng trước
 
 1. Payment Entry có references rỗng hoặc chưa dùng hết tiền.
 2. Server ghi GL như payment bình thường.
 3. Payment Ledger ghi phần invoice allocation và phần advance source.
 4. Debt Summary hiển thị outstanding, advance và net exposure.
 
-### 7.4 Phân bổ advance
+### 6.4 Phân bổ advance
 
 1. Accounts User tạo Payment Allocation.
 2. Server đọc source remaining và target outstanding.
@@ -171,32 +167,17 @@ Read models derive từ immutable ledger + canonical invoice payload.
 4. D1 guard chặn source/target over-allocation.
 5. Cancel append reversal.
 
-### 7.5 Statement
-
-1. Người dùng chọn party, company, currency và period/cutoff.
-2. Query trả opening, movement và closing.
-3. Tổng đối chiếu với Payment Ledger.
-
-## 8. Bề mặt tương tác
-
-- Metadata-driven form cho Payment Entry và Payment Allocation.
-- Report navigation cho AR Aging, AP Aging, Party Statement và Debt Summary.
-- Invoice form hiển thị due date, outstanding và timeline payment/allocation.
-- Party form có shortcut tới statement/debt summary.
-- Không tạo dashboard framework riêng.
-
-## 9. Ngoài phạm vi
+## 7. Ngoài phạm vi
 
 - Kế toán hợp nhất nhiều công ty.
 - Cross-currency allocation.
 - Credit-limit/Sales Order blocking trong pha đầu.
 - Dự báo dòng tiền bằng ML.
 - Reminder tự động SMS/email/Zalo.
-- Factoring, LC, bảo lãnh ngân hàng.
 - Statutory closing/chứng nhận pháp lý Việt Nam đầy đủ.
 - Production deploy, secret hoặc activation nếu chưa có yêu cầu rõ.
 
-## 10. Invariant không được phá
+## 8. Invariant không được phá
 
 1. Mọi write qua DocumentKernel và Durable Object.
 2. GL/Payment Ledger append-only; cancel bằng reversal.
@@ -206,12 +187,12 @@ Read models derive từ immutable ledger + canonical invoice payload.
 6. Không commit `.env`, `server/work/`, `tmp/`, backup SQL hoặc generated artifacts.
 7. Không deploy Cloudflare/production nếu chưa có explicit request.
 
-## 11. Kế hoạch và trạng thái
+## 9. Trạng thái triển khai
 
 ### M1A — Due date và aging backend: implemented, chờ exact-head CI
 
 - Migration `0030_finance_invoice_aging.sql`.
-- `finance_invoice_terms`.
+- `finance_invoice_terms` với `due_date_source`.
 - AR/AP Aging compiler.
 - Query Worker wiring.
 - Permission mapping.
@@ -220,7 +201,7 @@ Read models derive từ immutable ledger + canonical invoice payload.
 
 Evidence độc lập:
 
-- migration test PASS sau khi kiểm tra metadata required;
+- compatibility migration fixture PASS;
 - strict TypeScript harness PASS;
 - SQL cutoff execution PASS.
 
@@ -231,6 +212,14 @@ Chưa hoàn thành cho tới khi root test/typecheck/build và GitHub exact-head
 - Root tests/typecheck/build.
 - D1ReportService/Query Worker integration fixture nếu cần.
 - CI exact-head.
+
+### M1C — Backfill và hard enforcement
+
+- Dry-run report cho `posting_date_fallback`.
+- Unresolved list/checksum.
+- Operator-approved due-date correction.
+- Staging migration/smoke.
+- Append-only hard-presence migration khi unresolved = 0.
 
 ### M2 — Advance và Payment Allocation
 
@@ -253,18 +242,11 @@ Chưa hoàn thành cho tới khi root test/typecheck/build và GitHub exact-head
 - Invoice/payment timeline.
 - Reverse/override confirmation + reason.
 
-### M5 — Backfill và rollout
-
-- Legacy dry-run.
-- Unresolved/checksum report.
-- Staging migration and smoke.
-- Explicit production approval.
-
-## 12. Definition of done
+## 10. Definition of done
 
 - Acceptance criteria đạt bằng automated tests.
 - Root test/typecheck/build PASS.
 - GitHub exact-head CI PASS.
-- Không có unresolved migration/backfill trước activation.
+- Không có unresolved migration/backfill trước hard enforcement hoặc activation.
 - CURRENT_STATUS, NEXT_TASKS và AI_HANDOFF ghi đúng SHA/evidence.
 - Không deploy production trong PR phát triển này.
