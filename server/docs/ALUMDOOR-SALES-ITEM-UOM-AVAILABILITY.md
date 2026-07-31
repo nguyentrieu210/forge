@@ -15,7 +15,8 @@ Khi nhân viên Kinh doanh lập Báo giá hoặc Đơn hàng:
 ## Quy tắc dữ liệu
 
 - Khoá Item Price mới: `<price_list>:<item_code>:<uom>`.
-- Dữ liệu cũ `<price_list>:<item_code>` chỉ được dùng khi trường `uom` khớp tuyệt đối với dòng bán.
+- Dữ liệu cũ `<price_list>:<item_code>` không khai UOM vẫn được dùng cho dòng cũ cũng không khai UOM.
+- Dữ liệu cũ `<price_list>:<item_code>` đã khai UOM chỉ được dùng khi UOM trên dòng bán khớp tuyệt đối.
 - Không tự đổi giá từ Cái sang Thùng bằng hệ số. Giá bán theo ĐVT là quyết định thương mại, không phải phép quy đổi kho.
 - `conversion_factor` chỉ đổi số lượng giao dịch về `stock_uom`.
 - Nếu có Bảng giá mà thiếu Item Price đúng ĐVT, form báo **Chưa khai giá** và máy chủ từ chối lưu theo đường định giá hiện hành.
@@ -28,7 +29,7 @@ Khi nhân viên Kinh doanh lập Báo giá hoặc Đơn hàng:
 - AC2: ĐVT không nằm trong Item/UOM Conversion không xuất hiện trong picker và API trả lỗi nếu gọi trực tiếp.
 - AC3: Dòng hiển thị `Còn N <ĐVT>`, `Hết hàng`, `Chưa chọn kho` hoặc `Không quản lý tồn`.
 - AC4: Tồn được đọc từ Stock Balance theo đúng item + warehouse và chia cho conversion factor để hiển thị theo ĐVT bán.
-- AC5: Item Price legacy chỉ hoạt động khi UOM khớp; UOM khác phải báo thiếu giá.
+- AC5: Item Price legacy không UOM vẫn tương thích với dòng legacy không UOM; legacy có UOM chỉ hoạt động khi dòng khớp.
 - AC6: Pricing Rule hiện có vẫn chạy sau khi lấy đúng Item Price nền.
 - AC7: Delivery Note submit vẫn chặn thiếu tồn bằng server ledger guard; form preview không làm yếu chốt này.
 
