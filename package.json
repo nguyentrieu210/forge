@@ -20,7 +20,7 @@
   },
   "scripts": {
     "server:build": "pnpm --filter cloudforge run build",
-    "server:test": "pnpm --filter cloudforge run test",
+    "server:test": "node server/scripts/prepare-rbac-slice-a-test.mjs && pnpm --filter cloudforge run test",
     "server:check": "pnpm --filter cloudforge run check:business-suite",
     "server:typecheck": "pnpm --filter cloudforge run typecheck:workers",
     "client:build": "pnpm --filter metaforge run build",
