@@ -19,7 +19,7 @@ Contract: `server/docs/FINANCE-AR-AP-BRD.md` trên branch `feat/finance-ar-ap-co
 - Migration append-only `0030_finance_invoice_aging.sql`.
 - Database guard cho due date bắt buộc/hợp lệ và không trước posting date.
 - Legacy invoice thiếu due date fallback về posting date trong `finance_invoice_terms`.
-- Metadata Sales Invoice có field Due Date.
+- Metadata Sales Invoice có field Due Date bắt buộc.
 - `FinanceQueryCompiler` cho:
   - `Accounts Receivable Aging`;
   - `Accounts Payable Aging`.
@@ -29,10 +29,11 @@ Contract: `server/docs/FINANCE-AR-AP-BRD.md` trên branch `feat/finance-ar-ap-co
 - D1 guard map thành validation 422 an toàn.
 - SQL test mới đã được nối vào `server/package.json`.
 - Targeted tests đã thêm cho migration, query compiler, permission và error mapping.
+- Implementation head trước các commit trạng thái cuối: `0c6193090471d447936131bb38e9e4b6306916af`.
 
 ### Verification hiện có
 
-- Migration test độc lập: **PASS**.
+- Migration test độc lập: **PASS** sau khi kiểm metadata required.
 - TypeScript strict harness cho finance compiler: **PASS**.
 - SQL execution fixture tại cutoff `2026-07-31`: invoice 1.000, đã thanh toán 300, thanh toán 700 sau cutoff => outstanding 700, overdue 21 ngày, bucket 1–30 ngày: **PASS**.
 - Chưa có root `pnpm run test`, `pnpm run typecheck`, `pnpm run build` hoặc GitHub code CI exact-head.
@@ -41,10 +42,11 @@ Contract: `server/docs/FINANCE-AR-AP-BRD.md` trên branch `feat/finance-ar-ap-co
 
 #### M1B — Đóng gate aging backend
 
-1. Chạy root test/typecheck/build trên exact branch head.
-2. Sửa mọi regression từ full repo, đặc biệt query-worker worker typecheck và migration chain.
+1. Đọc workflow `CI` mới nhất cho exact branch head sau commit trạng thái cuối.
+2. Chạy/đợi root test/typecheck/build và sửa mọi regression, đặc biệt query-worker worker typecheck và migration chain.
 3. Thêm worker-level report request fixture nếu root tests chưa cover D1ReportService với finance compiler.
-4. Cập nhật PR title/body và chỉ chuyển ready khi exact-head CI xanh.
+4. Cập nhật exact PASS SHA vào CURRENT_STATUS/NEXT_TASKS/AI_HANDOFF.
+5. Chỉ chuyển PR ready khi exact-head CI xanh.
 
 #### M2 — Advance và Payment Allocation
 
