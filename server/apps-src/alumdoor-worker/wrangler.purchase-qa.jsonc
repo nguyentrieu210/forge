@@ -7,7 +7,7 @@
   "services": [
     {
       "binding": "PLATFORM",
-      "service": "cloudforge-tenant-purchase-qa"
+      "service": "cloudforge-purchase-qa-callback"
     }
   ]
 }
