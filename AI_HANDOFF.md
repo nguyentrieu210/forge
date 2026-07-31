@@ -6,65 +6,76 @@ Ngày cập nhật: **2026-08-01**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Default head khi đồng bộ branch sửa CI: `04c33c0193815196bd6f10492be77fe64d175bbe`.
-- Working branch: `ci/stop-duplicate-builds-20260801`.
+- Default head sau CI cleanup: `60e19f0a6f498a2471a14210ec6939b3bdf1a0fd`.
+- CI cleanup PR: #127.
+- Working branch tài liệu: `docs/record-ci-cleanup-merge-20260801`.
 - Đọc theo thứ tự: `EPIC_STATUS.md` → `CURRENT_STATUS.md` → `NEXT_TASKS.md` → `DELIVERY_POLICY.md`.
 - GitHub là nguồn sự thật cho code, PR, mergeability và CI.
 
-## Kết luận nguyên nhân chạy vòng
+## CI cleanup — MERGED
 
-Quy trình cũ kích nhiều bộ build cho cùng một push:
+PR #127 đã squash-merge.
 
-- `CI` chạy cả push trên feature branch và pull request;
-- `PR Validation` lặp nguyên test, typecheck và build;
-- Sales, Purchase, Inventory và UI đều dùng path quá rộng nên cùng chạy nặng;
-- production observation tạo thêm một run bị skip trên mọi PR;
-- workflow one-shot tự cherry-pick, amend và force-push làm đổi head khi CI đang chạy.
+- Exact PR head: `a2dd1fe684b17eb7acf71f0413c96143fcf540e7`.
+- Merge SHA: `60e19f0a6f498a2471a14210ec6939b3bdf1a0fd`.
+- Exact-head workflows:
+  - CI `30658270361`: SUCCESS;
+  - PR Validation `30658270951`: SUCCESS;
+  - Sales Feature CI `30658272023`: SUCCESS;
+  - Purchase Feature CI `30658271484`: SUCCESS;
+  - Inventory and Manufacturing CI `30658270984`: SUCCESS;
+  - UI Pull Request Validation `30658270824`: SUCCESS.
+- Không có Cloudflare Production Smoke Observation hoặc release workflow chạy trên PR.
+- Không deploy Cloudflare, không sửa secret/DNS, không migration và không mutate tenant data.
 
-PR #103, #107 và #119 đã đóng. Không tự reopen. Branch của chúng chỉ được dùng làm nguồn tham khảo khi dựng PR sạch.
+## Kiến trúc CI hiện tại
 
-## Đợt sửa CI hiện tại
+1. `CI` là nơi duy nhất chạy full test + typecheck + build.
+2. Push feature branch không còn tạo thêm full CI ngoài PR run.
+3. Docs-only đi fast path, không cài dependencies.
+4. `PR Validation` chỉ kiểm changed-file policy; không test/build/deploy lần hai.
+5. Sales, Purchase và Inventory/Manufacturing chỉ chạy focused regression đúng phạm vi hoặc PASS nhanh.
+6. UI/browser/auth chỉ chạy khi thay đổi liên quan.
+7. Production observation không còn trigger trên mọi PR.
+8. Release chỉ chạy từ exact merged SHA qua dedicated release workflow.
 
-Branch `ci/stop-duplicate-builds-20260801` thực hiện:
+## File tạm đã loại bỏ
 
-1. `CI` chỉ chạy push trên default và pull request vào default; docs-only đi fast path.
-2. `PR Validation` trở thành policy gate nhẹ, không cài dependency, không test/build lần hai và không deploy.
-3. Sales, Purchase, Inventory/Manufacturing giữ tên required check nhưng chỉ chạy nặng khi đúng phạm vi.
-4. UI/browser/auth QA chỉ chạy khi thay đổi liên quan UI, Gateway, tenant runtime hoặc browser QA.
-5. Production smoke observation không còn trigger trên mọi PR.
-6. Xóa `.github/workflows/sync-sales-production-clean-once.yml` và `server/scripts/.sync-sales-production-trigger`.
-7. Production release vẫn nằm trong các dedicated release workflow; đợt này không gọi release và không deploy Cloudflare.
+- `.github/workflows/sync-sales-production-clean-once.yml`.
+- `server/scripts/.sync-sales-production-trigger`.
 
-## Quy tắc bắt buộc sau khi merge
+Cấm workflow `*once*`, transport/sync workflow, hidden trigger hoặc workflow tự amend/force-push feature branch.
+
+## Quy tắc làm việc
 
 1. Một epic chỉ có một branch và một PR canonical.
-2. Không push/amend/force-push khi exact-head CI đang chạy.
-3. Sửa lỗi trực tiếp trên branch; cấm workflow `*once*`, transport/sync workflow và hidden trigger.
-4. Focused test xanh trước khi push.
-5. Một full CI chịu trách nhiệm test + typecheck + build toàn repo.
-6. Feature workflow chỉ chạy focused regression đúng phạm vi.
-7. Release chỉ chạy từ exact merged SHA qua dedicated release workflow.
+2. Focused test xanh trước khi push.
+3. Sau khi mở PR, khóa exact head; không push/amend/force-push khi CI đang chạy.
+4. Nếu CI fail, đọc log và sửa đúng lỗi trên cùng branch; không tạo PR thay thế.
+5. Chỉ merge khi exact-head checks xanh, branch mergeable và final diff sạch.
+6. Release production là bước riêng sau merge và chỉ thực hiện khi phạm vi công việc yêu cầu.
 
 ## Hàng đợi nghiệp vụ
 
-1. Sales-to-Production — rebuild sạch sau khi CI cleanup merge.
-2. Purchase authenticated QA — rebuild sạch sau Sales; PR #103 chỉ là nguồn tham khảo.
-3. Finance — rebuild từ current default; PR #15 chỉ dùng tham khảo.
-4. Daily ledger.
-5. Warranty / Capacity.
-6. End-to-end acceptance.
+1. **Sales-to-Production** — next active clean rebuild.
+2. **Purchase authenticated QA** — clean rebuild sau Sales; PR #103 chỉ dùng tham khảo.
+3. **Finance** — rebuild từ current default; PR #15 chỉ dùng tham khảo.
+4. **Daily ledger**.
+5. **Warranty / Capacity**.
+6. **End-to-end acceptance**.
+
+PR #103, #107, #119 và #122 đã đóng; không reopen.
 
 ## Việc tiếp theo
 
-- Hoàn tất exact-head CI cho PR sửa CI.
-- Review final diff, xác minh không có production secret, release trigger mới hoặc generated artifact.
-- Merge CI cleanup khi required checks xanh.
-- Dựng lại Sales-to-Production từ exact default mới, mang source/test thật và không mang workflow tạm.
+- Dựng một branch Sales-to-Production từ exact current default.
+- Chỉ mang source/test thật từ nhánh cũ; không mang workflow/trigger tạm.
+- Chạy door formulas, Sales production flow và Unicode pricing trước khi push.
+- Mở một PR, khóa head và dùng scoped CI mới.
 
 ## Safety
 
-- Không deploy Cloudflare trong đợt sửa CI này.
-- Không sửa production secrets hoặc DNS.
+- Không deploy Cloudflare hoặc sửa production secret/DNS nếu chưa có lệnh rõ.
 - Không bật FIFO.
-- Không mutate dữ liệu khách hàng.
+- Không mutate dữ liệu khách hàng ngoài smoke an toàn có cleanup.
 - Không commit `.env`, `server/work/`, `tmp/`, backup hoặc generated evidence.
