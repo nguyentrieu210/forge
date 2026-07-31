@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "clean": "node scripts/clean.mjs",
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node scripts/ensure-tenant-worker-core.mjs",
     "test": "npm run test:unit && npm run test:sql",
     "verify": "node scripts/verify-repo.mjs && node scripts/verify-secrets.mjs",
     "check": "npm run check:business-suite",
