@@ -1,74 +1,82 @@
 # NEXT TASKS
 
-## P0 — Bán hàng multi-UOM và tồn khả dụng
-
-Đã xong:
-
-- Exact Item Price theo `Bảng giá + Mặt hàng + ĐVT`.
-- Tương thích an toàn với Item Price legacy.
-- Picker ĐVT theo Item/UOM Conversion.
-- Nạp giá và tồn theo Item + Kho + ĐVT trên Báo giá/Đơn hàng.
-- Preview từ chối giá thiếu/sai tiền tệ, âm/sai định dạng hoặc đã ngừng áp dụng.
-- Test tích hợp trực tiếp `alumdoor.sales.item_context` cho exact UOM price, tồn quy đổi, currency mismatch, disabled/malformed price, legacy UOM và undeclared UOM.
-- Test quyền metadata thật: `Kinh doanh` chỉ đọc `Price List`/`Item Price`, bị từ chối create/save; `Kế toán` vẫn create/save được cả hai.
-- GitHub Actions từng lỗi trước `Set up job`; rerun không đổi code đã chạy bình thường, xác nhận đây là lỗi hạ tầng tạm thời.
-- Sales Feature CI rerun `30620774111`, job `91136237101`: unit, SQL, brief, client test, typecheck và build **PASS** trên HEAD `442a0b59c683ffd26cf012db8131a84f684b512b`.
-- PR Validation rerun `30620774088`, job `91136251549`: test, typecheck và build **PASS** trên cùng HEAD.
-
-Còn lại trước khi đề nghị merge/deploy:
-
-1. Smoke Báo giá/Đơn hàng trên staging: chọn Item, đổi ĐVT, đổi Bảng giá, đổi Kho, kiểm trạng thái tồn và giá.
-2. Nạp ít nhất hai Item Price khác ĐVT cho cùng một Item trên staging và xác minh giá không bị quy đổi chéo.
-3. Xác minh Item Price legacy không UOM vẫn chạy; legacy có UOM chỉ chạy khi dòng khớp.
-4. Smoke các lỗi giá mới: thiếu currency, currency khác chứng từ, rate âm/sai định dạng và giá disabled không được điền vào dòng.
-5. Smoke quyền bằng tài khoản thật: `Kinh doanh` đọc được Bảng giá/Đơn giá nhưng không tạo, sửa hoặc xoá master; `Kế toán` vẫn quản lý được.
-6. Thiết kế bước tiếp theo: reservation/ATP theo Sales Order; chưa bật trong đợt này.
-7. Chỉ chuyển PR #25 khỏi draft sau browser/staging smoke.
-8. Không merge hoặc deploy production nếu chưa có explicit approval.
-
 Ngày cập nhật: **2026-07-31**.
 
-## P0 — Finalize PR #27 for merge review
+## P0 — Slice B: warehouse roles và canonical physical stock identity
 
-Branch: `feat/inventory-manufacturing-item-catalog-20260731`.
+Branch: `feat/inventory-physical-stock-slice-b-20260731`.
 
-PR: `#27`.
+Base lúc mở nhánh: `4d566a44fd1f04979e4e6de952fd81da9b28e93e`.
 
-Authoritative metadata: `server/briefs/alumdoor-v2.json`, version `2.0.34`.
+Kickoff: `server/docs/ALUMDOOR-INVENTORY-MANUFACTURING-SLICE-BC-KICKOFF.md`.
 
-### Đã đạt
+### Gate hiện tại
 
 - G0 Scope: **PASS**.
-- G1 Requirements/BRD: **PASS**.
-- G2 Technical plan: **PASS**.
-- Slice A implementation: **hoàn thành**.
-- Review score: **96/100**.
-- Critical: **0**.
-- High: **0** sau remediation.
-- Required workflows đã chứng minh focused tests/audit/SQL/brief/lint/full tests/typecheck/build đều PASS trong quá trình đóng gate.
-- Không migration, deploy, production mutation hoặc secret change.
+- G1 BRD: **PASS**.
+- G2 plan refresh: **PASS cho kickoff**, nhưng table/contract names phải được khóa sau inspection.
+- G3 implementation: **chưa bắt đầu**.
 
-Review authoritative:
+### Việc làm đầu tiên
 
-- `server/docs/ALUMDOOR-INVENTORY-MANUFACTURING-SLICE-A-REVIEW.md`.
+1. Đọc và map chính xác:
+   - `server/packages/clouderp-stock/src/types.ts`;
+   - `server/packages/clouderp-stock/src/tracking.ts`;
+   - `server/packages/clouderp-erpnext/src/alumdoor-inventory.ts`;
+   - `server/packages/clouderp-erpnext/src/controllers.ts`;
+   - `server/packages/document-kernel/src/store.ts`;
+   - `server/packages/document-kernel/src/d1-store.ts`;
+   - Aluminium Lot và manufacturing progress schema hiện tại.
+2. Viết focused failing tests cho:
+   - canonical dimension/colour/condition/lot identity;
+   - warehouse role theo purpose;
+   - exact transfer/cancel lineage;
+   - stale revision và concurrent issue;
+   - không drift giữa generic stock và physical projection.
+3. Khóa contract và transaction boundary trước khi sửa schema.
+4. Không tạo migration cho tới khi coordination gate bên dưới được giải quyết.
+5. Sau mỗi patch: focused test → SQL → full test/typecheck/build → exact-head CI.
 
-### Việc còn lại trước merge
+### Acceptance chính
 
-1. Xác minh hai required workflows xanh trên **current PR head**:
-   - `Inventory and Manufacturing CI`;
-   - `PR Validation`.
-2. Cập nhật PR body với exact current HEAD, run ID và job ID.
-3. Xác minh branch behind `0`, `mergeable=true` và không có unresolved review thread.
-4. Chuyển PR khỏi draft sang ready for review.
-5. Không merge trước yêu cầu merge rõ ràng của người dùng.
+- Physical identity được dựng server-side, không tin hash/balance từ browser.
+- Generic stock, physical movement, document và manufacturing projection commit atomically.
+- Transfer bảo toàn quantity/value và source lineage.
+- Cancellation append exact reversal từ original movement.
+- Rollout mặc định disabled.
 
-PR body là nguồn authoritative cho exact-head evidence, tránh sửa handoff chỉ để thay một SHA rồi tự tạo thêm một SHA khác.
+## P0 — Migration coordination
 
-## P1 — Sau khi Slice A merge
+- RBAC PR #45 đã merge migration `0030_rbac_audit.sql`.
+- Purchase PR #14 vẫn open/draft và đang giữ `0031_purchase_allocation_control_metadata.sql`.
+- Không reserve `0031`, `0032` hoặc số nào khác trong Slice B/C trước khi #14 merge/close và default migration head được kiểm lại.
+- Nếu #14 đổi migration hoặc default tiến thêm, refresh plan trước schema commit.
 
-### Audit dữ liệu live tenant `alu`
+## P1 — Slice C: versioned BOM và immutable Work Order snapshot
 
-Chạy read-only, redacted từ môi trường vận hành có Cloudflare credential:
+Branch: `feat/manufacturing-bom-workorder-slice-c-20260731`.
+
+Topology: branch này phải được tạo từ Slice B kickoff head và PR phải target Slice B cho tới khi Slice B merge.
+
+### Việc làm đầu tiên
+
+1. Chỉ dùng physical identity/movement contract do Slice B sở hữu; không định nghĩa lại.
+2. Viết tests cho:
+   - active BOM revision selection theo effective time;
+   - duplicate/overlap/circular BOM rejection;
+   - immutable Work Order snapshot/checksum;
+   - partial issue/manufacture;
+   - over-consumption/over-production;
+   - concurrent manufacture;
+   - exact reversal và offcut/scrap lineage.
+3. Thêm BOM fields: revision, effective interval, status, output UOM/conversion, row UOM/conversion/qty basis.
+4. Snapshot BOM rows, checksum, output, operations và warehouse expectations khi release Work Order.
+5. Mở rộng append-only manufacturing progress với BOM row và physical movement references.
+6. Legacy Work Orders vẫn đọc được; rollout mới mặc định disabled.
+
+## P1 — Live tenant catalog audit
+
+Trước data remediation, staging hoặc rollout Slice B/C, chạy audit tenant `alu` ở chế độ read-only/redacted từ môi trường vận hành có Cloudflare credential:
 
 ```powershell
 New-Item -ItemType Directory -Force C:\Forge-Audit | Out-Null
@@ -78,87 +86,28 @@ node server/scripts/audit-alumdoor-catalog.mjs `
   --output C:\Forge-Audit\alu-catalog-redacted.json
 ```
 
-Không commit report. Chỉ ghi vào handoff/issue:
+Không commit report thô. Chỉ ghi checksum, counts và finding codes đã redacted.
 
-- checksum;
-- records;
-- active/disabled Item;
-- active BOM/Production Standard;
-- Critical/High/Medium/Low;
-- finding code redacted.
+## P2 — Các PR đang hoạt động cần tránh xung đột
 
-Lập remediation plan riêng. Audit CLI không tự sửa dữ liệu.
+- PR #14 Purchase FIFO: open/draft, chạm procurement/stock và migration `0031`.
+- PR #25 Sales multi-UOM: còn browser/staging smoke trước merge/deploy.
+- Khi default thay đổi, cả Slice B và C phải sync/rebase rồi chạy lại full gates.
 
-### Staging
+## P3 — Slice D sau B/C
 
-Staging chỉ bắt đầu sau live audit review và khi có branch cho Slice B/C. Slice A không deploy production.
-
-## P2 — Điều phối với PR mua hàng #14
-
-- PR #14 vẫn open/draft.
-- Nội dung PR hiện có migration `0031_purchase_allocation_control_metadata.sql`; phải xác minh migration head lại sau khi #14 merge.
-- Không tạo migration inventory/manufacturing mới trước coordination gate.
-- FIFO rollout tenant `alu` vẫn disabled.
-
-## Slice B — Inventory completeness
-
-Chỉ mở runtime/migration sau Slice A merge, live audit review và migration coordination.
-
-1. Warehouse roles: RAW, WIP, FINISHED, QUARANTINE, SCRAP/OFFCUT, GENERAL.
-2. Canonical physical stock identity cho nhôm, kính/tấm, cuộn và batch/serial.
-3. Append-only physical movement projection và atomic stock ledger persistence.
-4. Stock Entry giữ source lot/dimension, colour/condition, source/target role và reversal identity.
-5. Cover receipt, transfer, issue, manufacture, return, reconciliation, cancel và concurrency.
-6. Rollout mặc định tắt.
-
-## Slice C — Manufacturing completeness
-
-1. BOM/Production Standard revision và effective dates.
-2. Immutable Work Order BOM snapshot/checksum.
-3. Issue/consume/produce/scrap/offcut progress với reversal reference.
-4. Partial issue/manufacture, over-consumption/production guard, close/cancel.
-5. WIP, thiếu vật tư, định mức/thực tế và phế/offcut reports.
-
-## Slice D — UI, QA và release
-
-1. Item/BOM completeness indicators.
-2. Work Order snapshot và variance UI.
-3. Desktop/mobile Browser QA.
-4. Staging smoke toàn luồng.
-5. Production chỉ sau yêu cầu deploy riêng.
-
-## RBAC Slice B — ready for final gate
-
-- Final branch: `feat/rbac-permission-slice-b-final-20260731`, rebase sạch từ default `7af5f96a4a6bc756eb2c46511db17a609a49fdc5`.
-- PR authoritative: `#45`, ready for review, chưa merge.
-- Đã hoàn thành:
-  1. migration `0030_rbac_audit.sql` append-only;
-  2. audit ledger tenant scoped, JSON validated và cấm UPDATE/DELETE;
-  3. atomic create user + role grants;
-  4. atomic replace roles;
-  5. atomic enable/disable và session epoch;
-  6. atomic password change/reset và session revoke;
-  7. atomic User Permission upsert/remove;
-  8. application và database last-admin guard;
-  9. self-disable và self-demote guard;
-  10. router wiring và allowed/forbidden endpoint contract tests;
-  11. audit không ghi password/hash/token/cookie/secret/trusted identity.
-- Bằng chứng đã có:
-  - service tests 8/8 PASS trên Node 22 + disposable SQLite;
-  - core run `30622251469`, job `91129287256`: root test/typecheck/build PASS;
-  - wiring run `30623092302`, jobs `91131952789` và `91131952849`: PASS;
-  - các exact-head runs trước khi default dịch chuyển đều PASS, gồm browser QA và cookie auth smoke.
-- Còn lại:
-  1. standard read-only `PR Validation` và `UI Pull Request Validation` trên exact head sau rebase hiện tại;
-  2. xác minh ahead/behind, mergeable và không có unresolved review thread;
-  3. cập nhật PR body/comment với final head và run/job IDs, không sửa handoff thêm;
-  4. chỉ merge sau explicit approval;
-  5. G5 staging/browser QA nghiệp vụ quyền sau khi Slice B/C hoàn tất.
+1. Item/BOM completeness UI.
+2. Physical lot selector cho Stock Entry.
+3. Work Order snapshot/progress/variance UI.
+4. Reports tồn theo physical identity, WIP, shortage, variance, scrap/offcut.
+5. Desktop/mobile Browser QA và staging smoke toàn luồng.
+6. Production chỉ sau yêu cầu deploy riêng.
 
 ## Safety
 
-- Không mutate/migrate tenant `alu` từ các PR review hiện hành.
-- Không deploy Gateway/Tenant Worker.
-- Không sửa Cloudflare secret.
-- FIFO rollout vẫn disabled.
-- Không commit raw report, `.env`, `server/work/`, `tmp/`, backup hoặc generated artifact.
+- Không deploy Cloudflare từ Slice B/C kickoff.
+- Không migrate hoặc mutate tenant `alu`.
+- Không sửa production secrets.
+- Không bật FIFO.
+- Không commit raw report, `.env`, `server/work/`, `tmp/`, backup hoặc generated artifacts.
+- Không bypass failed/missing/cancelled CI.
