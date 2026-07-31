@@ -6,110 +6,65 @@ Ngày cập nhật: **2026-08-01**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Default head tại snapshot này: `b9a5489903d746858f46a131561325b835b870c3`.
-- Working branch handoff: `docs/forge-epic-control-20260801`.
+- Default head khi đồng bộ branch sửa CI: `04c33c0193815196bd6f10492be77fe64d175bbe`.
+- Working branch: `ci/stop-duplicate-builds-20260801`.
 - Đọc theo thứ tự: `EPIC_STATUS.md` → `CURRENT_STATUS.md` → `NEXT_TASKS.md` → `DELIVERY_POLICY.md`.
-- GitHub là nguồn sự thật cho code, PR, mergeability và CI; tài liệu chỉ khóa thứ tự làm việc.
+- GitHub là nguồn sự thật cho code, PR, mergeability và CI.
 
-## Quy trình bắt buộc khi tiếp tục
+## Kết luận nguyên nhân chạy vòng
 
-1. Đọc bốn file trên.
-2. Kiểm default head mới nhất.
-3. Kiểm exact head, final diff, mergeability và workflow của PR canonical.
-4. Không coi title/body PR là bằng chứng code đã vào default.
-5. Sau mỗi merge cập nhật lại bốn file trạng thái.
+Quy trình cũ kích nhiều bộ build cho cùng một push:
 
-## Các merge mới đã xác minh
+- `CI` chạy cả push trên feature branch và pull request;
+- `PR Validation` lặp nguyên test, typecheck và build;
+- Sales, Purchase, Inventory và UI đều dùng path quá rộng nên cùng chạy nặng;
+- production observation tạo thêm một run bị skip trên mọi PR;
+- workflow one-shot tự cherry-pick, amend và force-push làm đổi head khi CI đang chạy.
 
-### Inventory Slice D
+PR #103, #107 và #119 đã đóng. Không tự reopen. Branch của chúng chỉ được dùng làm nguồn tham khảo khi dựng PR sạch.
 
-- PR #82 đã merge.
-- Merge SHA: `a7e6ef65b2352f596e285ea34d8e6438dff11a95`.
-- Read model và API báo cáo tồn vật lý đã vào default.
-- Explorer UI và báo cáo WIP/shortage/variance/scrap/offcut/ageing còn là follow-up.
+## Đợt sửa CI hiện tại
 
-### Tenant release workflow
+Branch `ci/stop-duplicate-builds-20260801` thực hiện:
 
-- PR #113 đã merge.
-- Merge SHA: `0b29cbb3aed1850bb633fd49facf9d8242b2a9e1`.
-- Workflow release tenant `alu` đã vào default.
-- Không tuyên bố production DONE nếu chưa có exact run ID, Worker version và smoke result.
+1. `CI` chỉ chạy push trên default và pull request vào default; docs-only đi fast path.
+2. `PR Validation` trở thành policy gate nhẹ, không cài dependency, không test/build lần hai và không deploy.
+3. Sales, Purchase, Inventory/Manufacturing giữ tên required check nhưng chỉ chạy nặng khi đúng phạm vi.
+4. UI/browser/auth QA chỉ chạy khi thay đổi liên quan UI, Gateway, tenant runtime hoặc browser QA.
+5. Production smoke observation không còn trigger trên mọi PR.
+6. Xóa `.github/workflows/sync-sales-production-clean-once.yml` và `server/scripts/.sync-sales-production-trigger`.
+7. Production release vẫn nằm trong các dedicated release workflow; đợt này không gọi release và không deploy Cloudflare.
 
-### Runtime workspace
+## Quy tắc bắt buộc sau khi merge
 
-- PR #114 đã merge.
-- Merge SHA: `6db933aec8f211103ee2887e0cb364d346079cb2`.
-- Workspace navigation/runtime shell và Gateway release workflow đã vào default.
-- PR #81/#109 cần kiểm diff rồi retire nếu không còn giá trị unique.
+1. Một epic chỉ có một branch và một PR canonical.
+2. Không push/amend/force-push khi exact-head CI đang chạy.
+3. Sửa lỗi trực tiếp trên branch; cấm workflow `*once*`, transport/sync workflow và hidden trigger.
+4. Focused test xanh trước khi push.
+5. Một full CI chịu trách nhiệm test + typecheck + build toàn repo.
+6. Feature workflow chỉ chạy focused regression đúng phạm vi.
+7. Release chỉ chạy từ exact merged SHA qua dedicated release workflow.
 
-### Sales-to-Production PR #115
+## Hàng đợi nghiệp vụ
 
-- PR #115 đã merge.
-- Merge SHA: `eab228aa72bbf54575ec573b4f7eadaa9a8060f7`.
-- Final diff chỉ chứa workflow đồng bộ một lần và file trigger:
-  - `.github/workflows/sync-sales-production-clean-once.yml`;
-  - `server/scripts/.sync-sales-production-trigger`.
-- Code Sales-to-Production chưa được chứng minh đã vào default.
-- Workflow chỉ trigger trên push vào feature branch, nên merge #115 không được tính là hoàn thành nghiệp vụ.
-- Phải dựng PR sạch mới từ current default, mang code thật vào final diff và xóa toàn bộ transport workflow/trigger.
+1. Sales-to-Production — rebuild sạch sau khi CI cleanup merge.
+2. Purchase authenticated QA — rebuild sạch sau Sales; PR #103 chỉ là nguồn tham khảo.
+3. Finance — rebuild từ current default; PR #15 chỉ dùng tham khảo.
+4. Daily ledger.
+5. Warranty / Capacity.
+6. End-to-end acceptance.
 
-### Observable production release
+## Việc tiếp theo
 
-- PR #117 đã merge.
-- Merge SHA: `b9a5489903d746858f46a131561325b835b870c3`.
-- Release workflows đã có thêm trạng thái/evidence dễ đọc hơn.
-- Đây là platform support, không thay đổi thứ tự epic.
-
-## Hàng đợi nghiệp vụ canonical
-
-1. **Sales-to-Production** — `BLOCKED / REBUILD`.
-2. **Purchase authenticated QA** — PR #103, `ACTIVE / DRAFT`.
-3. **Finance** — rebuild từ current default; PR #15 chỉ dùng tham khảo.
-4. **Daily ledger** — chưa có PR.
-5. **Warranty / Capacity** — chưa có PR.
-6. **End-to-end acceptance** — chưa có PR.
-
-Tối đa hai epic nghiệp vụ ACTIVE cùng lúc. Hiện Purchase QA có PR canonical còn sống; Sales-to-Production phải tạo lại nhánh sạch trước khi tính là ACTIVE.
-
-## Chi tiết việc tiếp theo
-
-### 1. Sales-to-Production
-
-- Dựng branch từ current default.
-- Cherry-pick hoặc tái áp phần code nghiệp vụ đã review, không dùng workflow/payload vận chuyển trong final diff.
-- Phạm vi phải có Đơn bán → Production Request → Work Order → Cut/Paint → Delivery theo row identity.
-- Chạy door formula regression, Sales production flow, Unicode pricing, server build, client typecheck và full exact-head CI.
-- Chỉ merge khi final diff sạch và toàn bộ required checks xanh.
-
-### 2. Purchase QA
-
-- PR #103 head tại lần kiểm gần nhất: `94ccc11ff79b2d0cd9269abb5804009887b950a8`.
-- Draft, mergeable tại lần kiểm gần nhất; exact-head workflows đang chạy.
-- Phải PASS lifecycle PO → Receipt trên Desktop Chrome và Pixel 7, giữ FIFO disabled.
-- Sau khi xanh: chuyển Ready, kiểm diff/review rồi merge.
-
-### 3. Finance
-
-- Không merge PR #15 hiện tại.
-- Dựng lại từ current default.
-- Bao gồm AR/AP aging, Payment Entry partial/unallocated, Payment Allocation, Party Statement, Debt Summary, Advance Balance và UI/report navigation.
-- Migration/backfill phải append-only, có checksum, staging evidence và rollback.
-
-### 4–6
-
-Chi tiết nằm trong `NEXT_TASKS.md` và thứ tự không được đảo nếu chưa cập nhật `EPIC_STATUS.md`.
-
-## Nền tảng đã có
-
-- Sales MVP và Unicode pricing đã merge/release trước đó.
-- Purchase core/FIFO safeguards đã merge nhưng FIFO vẫn disabled.
-- Inventory Slice B/D và Manufacturing Slice C đã merge.
-- RBAC, login/landing và runtime workspace đã merge.
-- Production-first policy PR #108 đã merge.
+- Hoàn tất exact-head CI cho PR sửa CI.
+- Review final diff, xác minh không có production secret, release trigger mới hoặc generated artifact.
+- Merge CI cleanup khi required checks xanh.
+- Dựng lại Sales-to-Production từ exact default mới, mang source/test thật và không mang workflow tạm.
 
 ## Safety
 
-- Không sửa production secret hoặc DNS nếu chưa có lệnh riêng.
+- Không deploy Cloudflare trong đợt sửa CI này.
+- Không sửa production secrets hoặc DNS.
 - Không bật FIFO.
-- Không mutate dữ liệu khách hàng ngoài smoke an toàn có cleanup.
-- Không commit `.env`, `server/work/`, `tmp`, backup hoặc generated evidence.
+- Không mutate dữ liệu khách hàng.
+- Không commit `.env`, `server/work/`, `tmp/`, backup hoặc generated evidence.

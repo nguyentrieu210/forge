@@ -1,45 +1,62 @@
 name: Sales Feature CI
 
 on:
-  push:
-    branches:
-      - feat/sales-complete-20260731
   pull_request:
     branches:
       - hotfix/alumdoor-print-list-delete
-    paths:
-      - 'server/**'
-      - 'client/**'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
-      - '.github/workflows/sales-feature-ci.yml'
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: sales-feature-${{ github.ref }}
+  group: sales-feature-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   focused-gates:
     name: Sales feature gates
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect Sales scope
+        id: scope
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          sales=true
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            git diff --name-only "$BASE_SHA" "$GITHUB_SHA" > "$RUNNER_TEMP/changed-files.txt"
+            if ! grep -Eq '^(server/apps-src/alumdoor-worker/src/(sales-|door-formulas\.ts$|index\.ts$)|server/packages/clouderp-pricing/|server/briefs/alumdoor[^/]*\.json$|server/tests/(sales-|door-formulas)|client/packages/views/src/form/ChildGrid\.tsx$|client/e2e-forge/.*sales|package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|\.github/workflows/sales-feature-ci\.yml$)' "$RUNNER_TEMP/changed-files.txt"; then
+              sales=false
+            fi
+          fi
+          cat "$RUNNER_TEMP/changed-files.txt" 2>/dev/null || true
+          echo "sales=$sales" >> "$GITHUB_OUTPUT"
+
+      - name: Unrelated fast path
+        if: steps.scope.outputs.sales != 'true'
+        run: echo "No Sales-to-Production or shared pricing files changed."
 
       - name: Install pnpm
+        if: steps.scope.outputs.sales == 'true'
         uses: pnpm/action-setup@v4
         with:
           version: 9.15.0
           run_install: false
 
       - name: Set up Node.js
+        if: steps.scope.outputs.sales == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -47,72 +64,23 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
+        if: steps.scope.outputs.sales == 'true'
         run: pnpm install --frozen-lockfile
 
-      - name: Server unit tests
-        shell: bash
-        run: |
-          set +e
-          pnpm --dir server run test:unit > /tmp/server-unit.log 2>&1
-          status=$?
-          if [ "$status" -ne 0 ]; then
-            echo '--- failing test context ---'
-            grep -n -B 12 -A 36 -E 'not ok|AssertionError|ERR_ASSERTION|testCodeFailure' /tmp/server-unit.log || true
-            echo '--- end failing test context ---'
-          fi
-          tail -n 240 /tmp/server-unit.log
-          exit $status
+      - name: Build server
+        if: steps.scope.outputs.sales == 'true'
+        run: pnpm --filter cloudforge run build
 
-      - name: Upload unit-test log
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: sales-server-unit-log-${{ github.run_id }}
-          path: /tmp/server-unit.log
-          if-no-files-found: error
-          retention-days: 7
-
-      - name: Server SQL tests
-        shell: bash
+      - name: Run focused Sales regressions
+        if: steps.scope.outputs.sales == 'true'
         run: |
-          set +e
-          pnpm --dir server run test:sql > /tmp/server-sql.log 2>&1
-          status=$?
-          tail -n 240 /tmp/server-sql.log
-          exit $status
+          node --test \
+            server/tests/door-formulas.test.mjs \
+            server/tests/sales-production-flow.test.mjs \
+            server/tests/sales-price-unicode-normalization.test.mjs
 
-      - name: Alumdoor brief check
-        shell: bash
+      - name: Validate Alumdoor briefs
+        if: steps.scope.outputs.sales == 'true'
         run: |
-          set +e
-          pnpm --dir server exec node scripts/forge-app.mjs briefs/alumdoor.json --dry-run > /tmp/alumdoor-brief.log 2>&1
-          status=$?
-          tail -n 240 /tmp/alumdoor-brief.log
-          exit $status
-
-      - name: Client tests
-        shell: bash
-        run: |
-          set +e
-          pnpm run client:test > /tmp/client-test.log 2>&1
-          status=$?
-          tail -n 240 /tmp/client-test.log
-          exit $status
-
-      - name: Typecheck
-        shell: bash
-        run: |
-          set +e
-          pnpm typecheck > /tmp/typecheck.log 2>&1
-          status=$?
-          tail -n 240 /tmp/typecheck.log
-          exit $status
-
-      - name: Build
-        shell: bash
-        run: |
-          set +e
-          pnpm build > /tmp/build.log 2>&1
-          status=$?
-          tail -n 240 /tmp/build.log
-          exit $status
+          pnpm --dir server exec node scripts/forge-app.mjs briefs/alumdoor.json --dry-run
+          pnpm --dir server exec node scripts/forge-app.mjs briefs/alumdoor-v2.json --dry-run
