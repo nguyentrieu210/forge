@@ -134,14 +134,9 @@ jobs:
         run: |
           git config user.name "Forge RBAC CI"
           git config user.email "actions@users.noreply.github.com"
-          git add -A server/packages/frappe-api/src/access-control.ts \
-                     server/packages/frappe-api/src/router.ts \
-                     server/packages/frappe-api/src/index.ts \
-                     server/packages/frappe-api/src/router-rbac.ts \
-                     server/packages/frappe-api/src/router-rbac-public.ts \
+          git rm .github/rbac-slice-a.queue
+          git add -A server/packages/frappe-api/src \
                      server/tests/rbac-contract.test.mjs \
-                     server/tests/rbac-router.test.mjs \
-                     server/tests/rbac-remove-id.test.mjs \
                      client/packages/adapter-frappe/src/adapter.ts \
                      client/packages/adapter-frappe/src/frappe-adapter.ts \
                      client/packages/views/src/access/PermissionCenter.tsx
