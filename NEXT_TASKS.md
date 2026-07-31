@@ -2,69 +2,80 @@
 
 Ngày cập nhật: **2026-07-31**.
 
-## P0 — Duyệt BRD tài chính và công nợ AR/AP
+## P0 — Hoàn thiện tài chính và công nợ AR/AP
 
-Contract draft: `server/docs/FINANCE-AR-AP-BRD.md` trên branch `feat/finance-ar-ap-completion`.
+Contract: `server/docs/FINANCE-AR-AP-BRD.md` trên branch `feat/finance-ar-ap-completion`, draft PR `#15`.
 
-Hiện trạng:
+### Quyết định đã chốt
 
-- Nền tảng hiện có: Sales/Purchase Invoice, GL, immutable Payment Ledger, Payment Entry, Credit/Debit Note, Journal Entry, Bank Reconciliation và báo cáo AR/AP cơ bản.
-- Payment Entry hiện bắt buộc phân bổ toàn bộ số tiền vào hóa đơn.
-- Báo cáo AR/AP hiện chưa có due-date aging, as-of cutoff, party statement, advance balance hoặc debt summary.
-- BRD commit đầu tiên: `5dc8a2313dbdfe83ba3320fe155cf265f333e5be`.
-- Chưa sửa schema/application logic và chưa deploy.
+- Customer AR + Supplier AP cùng workstream.
+- Aging bucket: chưa đến hạn, 1–30, 31–60, 61–90, trên 90 ngày.
+- Allocation chỉ cùng company, party, party account và currency.
+- Credit-limit/Sales Order blocking và cross-currency allocation để pha sau.
+- Không deploy Cloudflare hoặc sửa production secrets trong workstream nếu chưa có yêu cầu rõ.
 
-Việc cần chốt tại G1:
+### Đã implement — M1A due date và aging backend
 
-1. Duyệt scope Customer AR + Supplier AP cùng một workstream.
-2. Duyệt bucket aging mặc định: chưa đến hạn, 1–30, 31–60, 61–90, trên 90 ngày.
-3. Duyệt mô hình Payment Entry cho phép partial/unallocated và chứng từ append-only `Payment Allocation`.
-4. Duyệt nguyên tắc chỉ allocation cùng company, party, party account và currency.
-5. Quyết định hạn mức tín dụng/chặn Sales Order là pha hiện tại hay backlog sau.
+- Migration append-only `0030_finance_invoice_aging.sql`.
+- Database guard cho due date bắt buộc/hợp lệ và không trước posting date.
+- Legacy invoice thiếu due date fallback về posting date trong `finance_invoice_terms`.
+- Metadata Sales Invoice có field Due Date.
+- `FinanceQueryCompiler` cho:
+  - `Accounts Receivable Aging`;
+  - `Accounts Payable Aging`.
+- `as_of_date` bắt buộc, tenant/cutoff/filter dùng bind parameter.
+- Query Worker dùng finance compiler cho synchronous và prepared reports.
+- Permission server-side cho Accounts, Sales Manager và Purchase Manager theo domain.
+- D1 guard map thành validation 422 an toàn.
+- SQL test mới đã được nối vào `server/package.json`.
+- Targeted tests đã thêm cho migration, query compiler, permission và error mapping.
 
-Sau khi G1 được duyệt, thực hiện:
+### Verification hiện có
 
-### M1 — Contract và migration
+- Migration test độc lập: **PASS**.
+- TypeScript strict harness cho finance compiler: **PASS**.
+- SQL execution fixture tại cutoff `2026-07-31`: invoice 1.000, đã thanh toán 300, thanh toán 700 sau cutoff => outstanding 700, overdue 21 ngày, bucket 1–30 ngày: **PASS**.
+- Chưa có root `pnpm run test`, `pnpm run typecheck`, `pnpm run build` hoặc GitHub code CI exact-head.
 
-- Bổ sung canonical due date/payment terms cho Sales Invoice và Purchase Invoice.
-- Migration append-only cho Payment Allocation guards, advance balance và aging/statement views.
-- SQL tests cho source advance cap, target outstanding cap, cancel guard và as-of cutoff.
+### Việc tiếp theo
 
-### M2 — Controller và atomic persistence
+#### M1B — Đóng gate aging backend
 
-- Nới Payment Entry để hỗ trợ zero/partial/full allocation.
-- Thêm Payment Allocation controller; reclassify Payment Ledger mà không tạo GL mới.
-- D1 atomic batch, idempotency, OCC và party/account coordinator.
+1. Chạy root test/typecheck/build trên exact branch head.
+2. Sửa mọi regression từ full repo, đặc biệt query-worker worker typecheck và migration chain.
+3. Thêm worker-level report request fixture nếu root tests chưa cover D1ReportService với finance compiler.
+4. Cập nhật PR title/body và chỉ chuyển ready khi exact-head CI xanh.
 
-### M3 — Query và báo cáo
+#### M2 — Advance và Payment Allocation
 
-- Accounts Receivable Aging.
-- Accounts Payable Aging.
+1. Nới Payment Entry để hỗ trợ zero/partial/full allocation.
+2. Thiết kế Payment Ledger row cho unallocated advance có source Payment Entry rõ ràng.
+3. Migration append-only cho source advance cap, target outstanding cap và cancel guards.
+4. Thêm submittable `Payment Allocation`, reclassify Payment Ledger mà không tạo GL mới.
+5. Serialize theo company/party/account/currency, giữ idempotency/OCC/D1 atomic batch.
+6. Unit, SQL, integration và worker concurrency tests.
+
+#### M3 — Báo cáo còn lại
+
 - Party Statement.
-- Debt Summary và Advance Balance.
-- Đối chiếu tổng report với Payment Ledger theo cùng cutoff/currency.
+- Debt Summary.
+- Advance Balance.
+- Đối chiếu tổng từng report với Payment Ledger theo cùng cutoff/currency.
 
-### M4 — Metadata/UI
+#### M4 — Metadata/UI
 
+- Hiển thị AR/AP Aging trong report navigation.
 - Form Payment Allocation metadata-driven.
 - Invoice/payment timeline và drill-down.
 - Confirmation + reason cho reverse/override.
 
-### M5 — Backfill/rollout
+#### M5 — Backfill/rollout
 
 - Dry-run legacy invoice thiếu due date và payment chưa phân bổ.
 - Unresolved report/checksum; không activation khi còn ambiguity.
 - Staging migration và smoke trước mọi production action.
 
-### M6 — Gate
-
-- Targeted unit/integration/SQL/worker concurrency tests.
-- `pnpm run test`.
-- `pnpm run typecheck`.
-- `pnpm run build`.
-- GitHub CI xanh cho exact head SHA.
-
-Hoàn thành khi aging/advance/allocation/statement/debt summary đạt acceptance criteria trong BRD, root gates pass và handoff ghi đúng bằng chứng. Không deploy Cloudflare hoặc sửa production secrets trong workstream nếu chưa có yêu cầu rõ.
+Hoàn thành khi aging/advance/allocation/statement/debt summary đạt acceptance criteria trong BRD, root gates pass và handoff ghi đúng bằng chứng.
 
 ## P0 — Xác minh release sidebar gọn trên production
 
