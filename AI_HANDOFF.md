@@ -6,7 +6,7 @@ Ngày cập nhật: **2026-07-31**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Default head khi mở nhánh: `a48524b93489c92296c57fc5f223e41d505de7aa`.
+- Default head hiện tại: `077d9944b1cfc1f436da87472f070ee2bd864b44`.
 - Working branch: `docs/record-alu-production-observation-20260731`.
 - GitHub là nguồn sự thật cho code, CI và release evidence.
 
@@ -22,8 +22,16 @@ Ngày cập nhật: **2026-07-31**.
   - Purchase Feature CI `30647908408`;
   - Inventory and Manufacturing CI `30647910730`;
   - UI Pull Request Validation `30647910724`.
-- Follow-up này chưa có controlled production release evidence sau merge.
-- Hotfix production trước đó vẫn ở Worker version `7738ee39-bb39-4a38-bf8d-5e2e1834e572`.
+
+## Sales production release preparation
+
+- PR `#93` — `release: target sales Unicode hotfix for alu production` — đã merge.
+- Release-preparation merge SHA: `077d9944b1cfc1f436da87472f070ee2bd864b44`.
+- Workflow `TARGET_SHA` và fail-closed assertion đã khóa vào `a48524b93489c92296c57fc5f223e41d505de7aa`.
+- PR `#93` **không deploy**.
+- Production execution vẫn bị giới hạn ở branch `release/execute-alu-production-20260731`.
+- Chưa có run/job/Worker-version evidence cho release follow-up này.
+- Hotfix production trước đó vẫn ở Worker version `7738ee39-bb39-4a38-bf8d-5e2e1834e572` cho tới khi controlled release mới được xác nhận.
 
 ## Production observation đã chạy
 
@@ -60,11 +68,12 @@ Ngày cập nhật: **2026-07-31**.
 
 ## Việc tiếp theo
 
-1. Chuẩn bị controlled release cho Sales PR `#91` vào tenant `alu` theo exact merge SHA `a48524b93489c92296c57fc5f223e41d505de7aa`; không tự deploy nếu không có yêu cầu release rõ.
-2. Sau release, chạy authenticated Sales smoke cho `Giá niêm yết + TRỤC 114_1.8LY + Mét = 180000 VND`.
-3. Sửa observation reporting để không gọi issue-comment API bằng Actions token, rồi chạy lại để workflow conclusion `success`.
-4. Authenticated Purchase smoke vẫn là gate riêng; endpoint guest smoke không thay thế business acceptance.
-5. Production FIFO activation vẫn cần staging evidence, backup và explicit approval riêng.
+1. Chỉ chạy controlled release tenant `alu` từ execution branch đã khóa khi có yêu cầu release rõ; target phải là `a48524b93489c92296c57fc5f223e41d505de7aa`.
+2. Thu backup, migrations, deploy, endpoint smoke, Worker version và deployment time từ exact release run.
+3. Sau release, chạy authenticated Sales smoke cho `Giá niêm yết + TRỤC 114_1.8LY + Mét = 180000 VND`.
+4. Sửa observation reporting để không gọi issue-comment API bằng Actions token, rồi chạy lại để workflow conclusion `success`.
+5. Authenticated Purchase smoke vẫn là gate riêng; endpoint guest smoke không thay thế business acceptance.
+6. Production FIFO activation vẫn cần staging evidence, backup và explicit approval riêng.
 
 ## Safety
 
