@@ -72,6 +72,15 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      - name: Server SQL tests
+        shell: bash
+        run: |
+          set +e
+          pnpm --dir server run test:sql > /tmp/server-sql.log 2>&1
+          status=$?
+          tail -n 240 /tmp/server-sql.log
+          exit $status
+
       - name: Alumdoor brief check
         shell: bash
         run: |
