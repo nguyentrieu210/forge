@@ -9,6 +9,56 @@ Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
 - GitHub là nguồn sự thật cho code, PR, CI và release evidence.
 - Không commit `.env`, `.dev.vars`, secret, `server/work/`, `tmp/`, backup SQL hoặc generated artifacts.
 
+## Purchase/FIFO — lifecycle correction và browser QA đã merge, Tenant production đã release
+
+### Merge và phạm vi
+
+- PR `#63`: `feat(purchase): finish FIFO QA, cutover and activation gates`.
+- Exact final head: `733ba52aca3ee5563252c7e41e635ad431afdc2b`.
+- Squash merge SHA: `ac0c2241b2dc16abfd16b4b3e70943d8bbff8476`.
+- Source thật đã được materialize; không còn payload base64 hoặc workflow apply/materialize one-shot.
+- Migration append-only `0032_purchase_reversed_window_corrections.sql` cho phép chỉ entry `reverse` ghi vào settlement window `Reversed`; obligation mới vẫn chỉ được ghi khi `Open`.
+- Lifecycle `close → reverse → cancel` được hỗ trợ và có regression xác nhận quantity/weight trở về `0`, window giữ `Reversed`.
+- Browser harness chạy actual `AllocationTimelineDialog` trong package `runtime`.
+- Playwright desktop/mobile đã PASS 6/6 cho settlement reason/actions, manual override validation và supplier debt filters/reset/CSV.
+
+### Exact-head CI
+
+Trên `733ba52aca3ee5563252c7e41e635ad431afdc2b`:
+
+- Purchase Feature CI `30642237953`: **PASS**.
+- CI `30642237968`: **PASS**.
+- PR Validation `30642238103`: **PASS**.
+- Inventory and Manufacturing CI `30642238048`: **PASS**.
+- Sales Feature CI `30642237985`: **PASS**.
+- UI Pull Request Validation `30642237974`, job `91194797008`: lint, tests, typecheck, build, Alumdoor browser QA, Purchase browser QA và local cookie-auth smoke **PASS**.
+
+### Tenant production release
+
+- Release preparation PR `#70` squash-merge thành `160ac81f28da3de6d96fc64741d257eccb0903a9`, khóa workflow vào exact target SHA `ac0c2241b2dc16abfd16b4b3e70943d8bbff8476`.
+- Execution PR `#72` chỉ kích hoạt release, đã đóng **không merge**.
+- Release run `30643069110`.
+- Release job `91197586569` (`Release alu production`) — **SUCCESS**.
+- Backup tenant: **PASS**; artifact `alu-pre-release-backup-30643069110`, ID `8798262944`.
+- Recorded migrations dry-run/live: **PASS**, gồm migration `0032`.
+- Tenant deploy: **PASS**.
+- Production smoke: `/health` = `200`, unauthenticated boot = `403`.
+- Tenant Worker: `cloudforge-tenant-alu`.
+- Production version ID: `88c508a7-f3f7-4844-9c8b-85a02bc362f3`.
+- Deployment time: `2026-07-31T15:30:24.210Z`.
+- Release evidence artifact: `alu-production-release-30643069110`, ID `8798283613`.
+- CI run `30643069110` và PR Validation `30643069140`: **PASS**.
+- Không deploy Gateway vì PR `#63` chỉ thêm browser harness/workflow phía client, không đổi production UI bundle.
+- Không sửa production secrets hoặc DNS.
+- FIFO rollout vẫn **disabled**; release code/migration không phải approval activation.
+
+### Gate còn lại trước FIFO activation
+
+- Chưa có staging backfill/checksum evidence trên bản sao dữ liệu phù hợp.
+- `unresolved_count=0` chưa được chứng minh trên staging/production-shaped copy.
+- Chưa chạy authenticated business smoke đầy đủ PO → Receipt → cancel → settlement/reverse → manual override → supplier debt report trên dữ liệu thử kiểm soát.
+- Cần production backup mới ngay trước activation và explicit approval riêng.
+
 ## Bán hàng — hotfix tự điền đơn giá child grid đã phát hành production
 
 - Lỗi production: chọn `Bảng giá áp dụng` và mặt hàng nhưng ô `Đơn giá` trong child grid có thể không tự điền.
@@ -41,8 +91,7 @@ Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
 - Recorded migrations dry-run/live: **PASS**.
 - Tenant deploy: **PASS**.
 - Production smoke: `/health` = `200`, unauthenticated boot = `403`.
-- Tenant Worker: `cloudforge-tenant-alu`.
-- Production version ID: `7542bba4-dc20-4794-8c92-9d26af349531`.
+- Tenant Worker version khi đó: `7542bba4-dc20-4794-8c92-9d26af349531`; đã được thay bởi Purchase correction release nêu trên.
 - Deployment time: `2026-07-31T14:57:41.354Z`.
 - CI run `30640747900` và PR Validation `30640747905`: **PASS**.
 - Không deploy Gateway vì hotfix không đổi frontend.
@@ -118,19 +167,6 @@ Targeted Playwright đã chứng minh wheel làm dropdown list thay đổi `scro
 - kiểm cả bảng gọn và bảng mở rộng;
 - Item, UOM, Warehouse vẫn chọn được và giữ đúng filter/quyền.
 
-## Purchase/FIFO — đã merge và phát hành production
-
-- Feature PR `#14` squash-merge thành `7b3dc06dbbecbb5370ddb48259aa1614aef2ff32`.
-- FIFO activation không được yêu cầu và rollout vẫn **disabled**.
-- Tenant release run `30631386714`; exact code `7b3dc06dbbecbb5370ddb48259aa1614aef2ff32`.
-- Backup, migration, tenant deploy và endpoint smoke **PASS**.
-- Tenant Worker khi đó `cloudforge-tenant-alu` version `9ec0d1d3-c1fd-4263-ae35-4fae81c09968`; phiên bản hiện hành đã được thay bởi hotfix giá nêu trên.
-- Backup artifact `alu-pre-release-backup-30631386714`, ID `8793480138`.
-- Release artifact `alu-production-release-30631386714`, ID `8793494701`.
-- Gateway purchase release run `30631951946`, job `91160176928`, version `6352386d-8385-4ea8-af31-15ac62e21943`; phiên bản này đã được thay bởi các UI hotfix nêu trên.
-- Chưa có functional browser evidence production đầy đủ cho Purchase UI trên desktop/mobile.
-- Không bật FIFO trước backfill checksum, `unresolved_count=0`, staging evidence, backup mới và explicit approval riêng.
-
 ## Bán hàng — lọc mặt hàng và multi-UOM
 
 - Hotfix lọc Item PR `#53` squash-merge thành `48fa4d77eefb46384272550f8f6c0699ed054fa6`.
@@ -139,7 +175,7 @@ Targeted Playwright đã chứng minh wheel làm dropdown list thay đổi `scro
 
 ## Production versions hiện hành
 
-- Tenant Worker `cloudforge-tenant-alu`: `7542bba4-dc20-4794-8c92-9d26af349531`.
+- Tenant Worker `cloudforge-tenant-alu`: `88c508a7-f3f7-4844-9c8b-85a02bc362f3`.
 - Gateway `cloudforge-gateway`: `b0d0ce5b-408c-47ab-a734-fa55ba4d9c00`.
 - FIFO rollout: **disabled**.
 
