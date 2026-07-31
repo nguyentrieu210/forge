@@ -80,6 +80,13 @@ async function requireOk(path, options = {}) {
   return result.body;
 }
 
+function unwrap(body) {
+  if (!body || typeof body !== "object") return body;
+  if ("data" in body) return body.data;
+  if ("message" in body) return body.message;
+  return body;
+}
+
 async function login() {
   await requireOk("/api/method/login", {
     method: "POST",
@@ -105,23 +112,19 @@ async function ensureResource(doctype, name, document) {
   });
 }
 
-async function activeLeafItemGroup() {
-  const query = new URLSearchParams({
-    fields: JSON.stringify(["name", "is_group", "disabled"]),
-    filters: JSON.stringify([
-      ["is_group", "=", 0],
-      ["disabled", "=", 0],
-    ]),
-    order_by: "name asc",
-    limit_page_length: "100",
-  });
-  const result = await requireOk(`/api/resource/${encodeURIComponent("Item Group")}?${query}`);
-  const rows = result && typeof result === "object" && Array.isArray(result.data) ? result.data : [];
-  const selected = rows
-    .map((row) => String(row?.name ?? "").trim())
-    .find(Boolean);
-  if (!selected) throw new Error("authoritative Alumdoor app installed no active leaf Item Group");
-  return selected;
+async function requireLeafItemGroup(name) {
+  const body = await requireOk(`/api/resource/${encodeURIComponent("Item Group")}/${encodeURIComponent(name)}`);
+  const group = unwrap(body);
+  if (!group || typeof group !== "object") {
+    throw new Error(`authoritative Alumdoor app returned no Item Group ${name}`);
+  }
+  if (Number(group.is_group ?? 0) !== 0) {
+    throw new Error(`authoritative Item Group ${name} is not a leaf`);
+  }
+  if (Number(group.disabled ?? 0) !== 0) {
+    throw new Error(`authoritative Item Group ${name} is disabled`);
+  }
+  return name;
 }
 
 await login();
@@ -143,12 +146,14 @@ await ensureResource("Supplier", "TIEN-DAT", {
   note: "Local authenticated Tiến Đạt FIFO QA only",
 });
 
-const itemGroup = await activeLeafItemGroup();
-console.log(`PURCHASE_QA_ITEM_GROUP selected=${JSON.stringify(itemGroup)} source=authoritative`);
+const regularItemGroup = await requireLeafItemGroup("Phụ kiện");
+const aluminiumItemGroup = await requireLeafItemGroup("Nan/lá cửa");
+console.log(`PURCHASE_QA_ITEM_GROUP regular=${JSON.stringify(regularItemGroup)} aluminium=${JSON.stringify(aluminiumItemGroup)} source=authoritative`);
+
 await ensureResource("Item", "QA-PURCHASE-ITEM", {
   item_code: "QA-PURCHASE-ITEM",
   item_name: "QA Purchase Item",
-  item_group: itemGroup,
+  item_group: regularItemGroup,
   item_nature: "Hàng tồn kho",
   material_stage: "Hàng hoá",
   supply_type: "Mua ngoài",
@@ -174,7 +179,7 @@ await ensureResource("Item", "QA-PURCHASE-ITEM", {
 await ensureResource("Item", "AL71-QA", {
   item_code: "AL71-QA",
   item_name: "Nhôm AL71 QA",
-  item_group: itemGroup,
+  item_group: aluminiumItemGroup,
   item_nature: "Nguyên vật liệu",
   material_stage: "Nguyên vật liệu",
   supply_type: "Mua ngoài",
@@ -197,4 +202,4 @@ await ensureResource("Item", "AL71-QA", {
   description: "Deterministic local fixture for Tiến Đạt FIFO QA",
 });
 
-console.log(`PURCHASE_QA_SEED_PASS suppliers=QA-SUPPLIER,TIEN-DAT items=QA-PURCHASE-ITEM,AL71-QA item_group=${JSON.stringify(itemGroup)} origin=loopback`);
+console.log(`PURCHASE_QA_SEED_PASS suppliers=QA-SUPPLIER,TIEN-DAT items=QA-PURCHASE-ITEM,AL71-QA regular_item_group=${JSON.stringify(regularItemGroup)} aluminium_item_group=${JSON.stringify(aluminiumItemGroup)} origin=loopback`);
