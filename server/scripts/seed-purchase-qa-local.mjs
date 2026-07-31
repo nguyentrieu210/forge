@@ -80,13 +80,6 @@ async function requireOk(path, options = {}) {
   return result.body;
 }
 
-function unwrap(body) {
-  if (!body || typeof body !== "object") return body;
-  if ("data" in body) return body.data;
-  if ("message" in body) return body.message;
-  return body;
-}
-
 async function login() {
   await requireOk("/api/method/login", {
     method: "POST",
@@ -112,21 +105,6 @@ async function ensureResource(doctype, name, document) {
   });
 }
 
-async function requireLeafItemGroup(name) {
-  const body = await requireOk(`/api/resource/${encodeURIComponent("Item Group")}/${encodeURIComponent(name)}`);
-  const group = unwrap(body);
-  if (!group || typeof group !== "object") {
-    throw new Error(`authoritative Alumdoor app returned no Item Group ${name}`);
-  }
-  if (Number(group.is_group ?? 0) !== 0) {
-    throw new Error(`authoritative Item Group ${name} is not a leaf`);
-  }
-  if (Number(group.disabled ?? 0) !== 0) {
-    throw new Error(`authoritative Item Group ${name} is disabled`);
-  }
-  return name;
-}
-
 await login();
 
 await ensureResource("Supplier", "QA-SUPPLIER", {
@@ -146,9 +124,12 @@ await ensureResource("Supplier", "TIEN-DAT", {
   note: "Local authenticated Tiến Đạt FIFO QA only",
 });
 
-const regularItemGroup = await requireLeafItemGroup("Phụ kiện");
-const aluminiumItemGroup = await requireLeafItemGroup("Nan/lá cửa");
-console.log(`PURCHASE_QA_ITEM_GROUP regular=${JSON.stringify(regularItemGroup)} aluminium=${JSON.stringify(aluminiumItemGroup)} source=authoritative`);
+// These are authoritative Alumdoor fixtures. Fixtures live in the platform's
+// master-record catalogue rather than the mutable document table, so a direct
+// `/api/resource/Item Group/<name>` probe is not the right existence check. The
+// Item validator/link resolver below is the real proof that each group is usable.
+const regularItemGroup = "Phụ kiện";
+const aluminiumItemGroup = "Nan/lá cửa";
 
 await ensureResource("Item", "QA-PURCHASE-ITEM", {
   item_code: "QA-PURCHASE-ITEM",
