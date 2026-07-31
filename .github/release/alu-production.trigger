@@ -1,6 +1,6 @@
 tenant=alu
-target_sha=cbf7506dd8f04cb93f77e30f5c5fba3b6770b04f
-feature=sales-preview-stale-state-hotfix
+target_sha=ac0c2241b2dc16abfd16b4b3e70943d8bbff8476
+feature=purchase-lifecycle-correction
 rollout=disabled
-staging_sales_smoke=accepted-risk
-requested_at=2026-07-31T12:55:00Z
+staging_purchase_smoke=component-browser-pass_business-smoke-pending
+requested_at=2026-07-31T15:27:45Z
