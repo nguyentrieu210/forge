@@ -5,10 +5,40 @@ Ngày cập nhật: **2026-08-01**.
 ## Repository
 
 - Repository: `nguyentrieu210/forge`.
-- Default branch: `hotfix/alumdoor-print-list-delete`.
-- Default head khi mở nhánh: `cbe60228fb10a3b51b52880fb178c164b63ff9f8`.
-- Working branch: `docs/record-alumdoor-app-worker-release-20260801`.
+- Base branch: `hotfix/alumdoor-print-list-delete`.
+- Base head đã đồng bộ: `f27d4c6efe37a0cca91e3f1672a199d33b09cbab`.
+- Working branch: `feat/metaforge-misa-workspace-tabs`.
+- Draft PR: `#81`.
 - Không commit `.env`, secret, `server/work/`, `tmp`, backup hoặc generated evidence.
+
+## MetaForge UI — workspace theo MISA AMIS
+
+### Yêu cầu đã chốt
+
+- Sidebar trái chứa các phân hệ.
+- Tab đầu là `Quy trình nghiệp vụ`, có shortcut mở DocType hoặc modal tạo mới.
+- Tab thứ hai là `Báo cáo tổng quan`.
+- Tab từ vị trí ba là nghiệp vụ/DocType.
+- Phân hệ Meta: Quy trình → Tổng quan → DocType → Workflow → Print Format → Dashboard.
+
+### Đã triển khai
+
+- `client/apps/demo/src/DemoShell.tsx`: metadata module/tab `process | overview | doctype`, sidebar phân hệ, route aliases và tab active.
+- `client/apps/demo/src/workspace-meta.tsx`: module Nghiệp vụ/Meta, process flow, shortcut, modal tạo mới và tổng quan Meta.
+- `client/apps/demo/src/App.tsx`: route mặc định Quy trình, create mode `?new=1`, Task mới dùng `NEW_TASK_DOC`.
+- `client/apps/demo/src/BuilderRoutes.tsx` và `BuilderRoutesLazy.tsx`: DocType mới dùng `blankDocType()`.
+- `client/apps/demo/src/workspace-navigation-selfcheck.ts`: khóa thứ tự tab, aliases và sáu tab Meta; đã nối vào `pnpm test`.
+- `client/apps/demo/e2e/workspace-navigation.spec.ts`: browser journey desktop/mobile cho Quy trình, modal tạo Task, sidebar Meta, modal tạo Meta, DocType builder, Tổng quan và kiểm không tràn ngang document.
+- `.github/workflows/ui-pr-validation.yml`: thêm required step `Run Meta workspace browser QA` và upload screenshot evidence.
+
+### Verification
+
+- Forge Skills pack `0.1.0`: `node scripts/validate-pack.mjs` PASS, 7 skills hợp lệ.
+- Head cũ `962648a0cc2bff8e301dbe0c96e79d40a8ad50e4` đã PASS CI, PR Validation, Sales, Purchase, Inventory và UI Pull Request Validation trước khi thêm dedicated browser test.
+- Feature đã được dựng lại trên base mới `f27d4c6efe37a0cca91e3f1672a199d33b09cbab` để không làm mất 84 commit Sales/Inventory/Manufacturing.
+- Exact final head sau handoff phải chạy lại toàn bộ required CI; không dùng kết quả head cũ để ready/merge.
+- Prototype hiện chỉ áp dụng cho mock/demo `App.tsx`; `LiveApp.tsx` chưa nối Meta vì chưa có route và permission builder thật.
+- Repository chưa cài `FORGE.md` và `.forge/manifest.json`; phiên này dùng Forge Skills pack ngoài repo. Không trộn việc cài pack vào PR UI.
 
 ## Bán hàng — Unicode Item Price đã release đúng app Worker
 
@@ -98,15 +128,17 @@ Ngày cập nhật: **2026-08-01**.
 
 ## Gate hiện tại
 
-1. Hard refresh và authenticated Sales smoke: Item, UOM `Mét`, rate `180000 VND`, amount và save-time pricing.
-2. Đổi Item/UOM/bảng giá để xác minh không lấy chéo hoặc giữ giá cũ.
-3. Authenticated Purchase smoke vẫn chưa hoàn tất.
-4. Sửa observation reporting `403` rồi chạy lại để toàn job conclusion xanh.
-5. FIFO activation vẫn cần staging readiness, backup và explicit approval riêng.
+1. PR `#81`: chạy exact-head required CI và dedicated Meta workspace browser QA; kiểm screenshot artifact; giữ draft đến khi người dùng duyệt UI hoặc ra lệnh rõ.
+2. Hard refresh và authenticated Sales smoke: Item, UOM `Mét`, rate `180000 VND`, amount và save-time pricing.
+3. Đổi Item/UOM/bảng giá để xác minh không lấy chéo hoặc giữ giá cũ.
+4. Authenticated Purchase smoke vẫn chưa hoàn tất.
+5. Sửa observation reporting `403` rồi chạy lại để toàn job conclusion xanh.
+6. FIFO activation vẫn cần staging readiness, backup và explicit approval riêng.
 
 ## Safety
 
+- Không deploy Cloudflare trong PR UI `#81`.
 - App Worker Sales release đã hoàn tất qua controlled workflow và Cloudflare provider verification.
 - Không sửa production secrets hoặc DNS.
-- Không thay đổi D1, KV hoặc dữ liệu nghiệp vụ trong app Worker release.
+- Không thay đổi D1, KV hoặc dữ liệu nghiệp vụ trong PR UI.
 - Không bật FIFO.
