@@ -5,75 +5,64 @@ Ngày cập nhật: **2026-08-01**.
 ## Repository
 
 - Repository: `nguyentrieu210/forge`.
-- Default branch: `hotfix/alumdoor-print-list-delete`.
-- Current default head trước docs handoff: `1d05ed97836aa7bb753f8aa50a56991201a8d10a`.
-- Sales-to-Production PR #131 merge: `e315007db174d70d6f73c68f2115e7956b09bf1d`.
-- Tiến Đạt purchase FIFO PR #134 merge: `1d05ed97836aa7bb753f8aa50a56991201a8d10a`.
-- Quy tắc giao hàng: `DELIVERY_POLICY.md`.
+- Default branch hiện tại: `hotfix/alumdoor-print-list-delete`.
+- Default head trước đợt closeout: `76b71aab3c2eacf816986c247b25f564fc808a96`.
+- GitHub là nguồn sự thật cho code, CI, PR và release evidence.
 
-## Tiến Đạt purchase FIFO — DONE / MERGED
+## PR tồn đọng — CLOSED
 
-Yêu cầu đã có trên default:
+Đã đóng toàn bộ PR còn mở tại thời điểm kiểm tra:
 
-- form chi tiết đặt nhôm hiển thị STT, ngày chứng từ, mã hàng, chiều dài, kg/m, số cây, kg barem, đơn giá, thành tiền, màu và dập/không dập;
-- chỉ đọc Purchase Order và Purchase Receipt đã ghi sổ của đúng nhà cung cấp;
-- khớp nghĩa vụ theo mã hàng + chiều dài + màu + trạng thái dập;
-- phân bổ số cây nhận vào đơn có ngày xa nhất trước;
-- mỗi dòng phiếu nhập nháp giữ liên kết `purchase_order` và diễn giải ngày đơn bị trừ;
-- preview trả lịch sử phiếu nhập, số cây, số mét, kg barem, kg thực tế và số dư từng đơn;
-- công nợ gồm số còn thiếu danh nghĩa và khoảng giao thêm hợp lệ theo dung sai;
-- Tiến Đạt mặc định dung sai `5%` khi Supplier chưa khai riêng; cấu hình trên Supplier được ưu tiên;
-- nhận vượt tổng số đặt cộng dung sai bị từ chối;
-- dữ liệu lịch sử vượt capacity hoặc cùng quy cách có nhiều kg/m bị fail closed.
+- `#15`, `#35`, `#36`, `#40`, `#73`, `#74`, `#79`, `#81`, `#103`, `#106`, `#109`.
 
-### Ví dụ đã khóa bằng regression
+Không PR nào trong nhóm trên được merge nguyên trạng vì tất cả đều đang `mergeable=false` và diverged từ `116` đến `351` commit so với current default. Các branch vẫn được giữ nguyên làm nguồn tham khảo, nên không mất code.
 
-- Ngày 1: `200` cây AL71, `7.2 m`, `0.389 kg/m` → `560.16 kg` barem.
-- Ngày 2: `100` cây → `280.08 kg` barem.
-- Nhận `230` cây → phân bổ `200` cây vào ngày 1 và `30` cây vào ngày 2.
-- Nợ danh nghĩa còn `70` cây = `504 m`.
-- Dung sai cộng dồn `±15` cây → khoảng giao thêm hợp lệ `55–85` cây.
-- Barem lần nhận: `644.184 kg`.
+Phân loại:
 
-### Exact-head evidence PR #134
+- `#74` đã được thay thế bằng phiên bản Item Price lookup mới hơn trên default.
+- `#35`, `#73`, `#79` là workflow/readiness cũ, không còn phù hợp current release path.
+- `#36`, `#40`, `#109` là tmp/backup/duplicate branch.
+- `#81`, `#103`, `#15` có source hữu ích nhưng phải dựng lại sạch từ current default.
+- `#106` là audit tài liệu cũ, không được phép đè ba file handoff mới.
 
-Head `39eb6f25b337dd3fc973bf2b7a9d6b0e7204a420`:
+## Đã hoàn tất trên default
 
-- CI `30666118057`: SUCCESS — tests, typecheck, build.
-- PR Validation `30666118031`: SUCCESS.
-- Purchase Feature CI `30666118118`: SUCCESS.
-- UI Pull Request Validation `30666118096`: SUCCESS — browser QA, purchase allocation QA và cookie-auth smoke.
-- Sales Feature CI `30666118049`: SUCCESS.
-- Inventory and Manufacturing CI `30666118064`: SUCCESS.
+### Sales-to-Production
 
-Merge SHA: `1d05ed97836aa7bb753f8aa50a56991201a8d10a`.
+- PR `#131` merge SHA: `e315007db174d70d6f73c68f2115e7956b09bf1d`.
+- Sales Order → Production Request → Work Order → Paint Job → Delivery lineage đã có trên default.
 
-### File chính
+### Tiến Đạt purchase FIFO
 
-- `server/apps-src/alumdoor-worker/src/purchase-fifo-receipt.ts`
-- `server/apps-src/alumdoor-worker/src/entry.ts`
-- `client/packages/views/src/form/ChildGridWithExtensions.tsx`
-- `server/tests/tien-dat-purchase-fifo.test.mjs`
+- PR `#134` merge SHA: `1d05ed97836aa7bb753f8aa50a56991201a8d10a`.
+- Form đặt nhôm, FIFO theo ngày đơn, lịch sử nhận, công nợ cây/mét và dung sai Tiến Đạt `5%` đã có trên default.
+- Regression khóa ví dụ `200 + 100`, nhận `230`, phân bổ `200 + 30`, nợ danh nghĩa `70` cây / `504 m`, khoảng giao thêm `55–85` cây.
+
+## Chưa được phép gọi là hoàn tất toàn quy trình
+
+Tài liệu `25.7 QUY TRÌNH.docx` yêu cầu ba vùng nghiệp vụ chính: theo dõi chung, tồn kho vật tư và sổ chi tiết khóa theo ngày; đồng thời yêu cầu lịch sản xuất, chi tiết sơn, lỗi/bảo hành, công nợ và luồng xuất kho. Current default chưa có đủ authenticated acceptance cho toàn bộ chuỗi này.
+
+Các phần còn thiếu hoặc chưa chứng minh:
+
+1. Purchase authenticated QA sạch trên desktop và Pixel 7, gồm Tiến Đạt FIFO journey.
+2. Finance hoàn chỉnh: AR/AP aging, Payment Allocation, Party Statement, Debt Summary, Advance Balance và UI/report navigation.
+3. Daily detailed ledger snapshot, freeze và adjustment theo vai trò.
+4. Warranty/defect bốn nguyên nhân, supplier debt hold/offset và capacity/overtime.
+5. End-to-end acceptance từ Sales Order đến production, inventory, delivery, debt, daily ledger, adjustment và warranty.
 
 ## Release boundary
 
-- Không deploy Cloudflare trong đợt này.
-- Không sửa secret hoặc DNS.
-- Không thay đổi `purchase_allocation_rollout_state`; generic FIFO production vẫn disabled.
-- Không mutate dữ liệu tenant production.
-- App-level flow tạo Purchase Receipt nháp và theo dõi bằng chứng từ đã ghi sổ; authenticated acceptance với dữ liệu QA vẫn là bước tiếp theo.
+- Không deploy Cloudflare trong đợt đóng PR tồn đọng này.
+- Không sửa production secret, DNS hoặc rollout state.
+- Không migrate hoặc mutate dữ liệu tenant production.
+- Generic FIFO production vẫn disabled.
 
-## Hàng đợi nghiệp vụ
+## CI
 
-1. Purchase authenticated QA — `NEXT / CLEAN REBUILD`.
-2. Finance — `QUEUED / REBUILD`.
-3. Daily ledger — `QUEUED`.
-4. Warranty / Capacity — `QUEUED`.
-5. End-to-end acceptance — `QUEUED`.
+- Current default head `76b71aab...` không có combined status được GitHub connector trả về.
+- Không được coi các branch đã đóng là verified cho current default dù chúng từng có CI trên head cũ.
 
 ## Safety
 
-- Không sửa production secret hoặc DNS.
-- Không xóa Cloudflare resource.
-- Generic FIFO production vẫn disabled.
-- Không commit `.env`, `server/work/`, `tmp`, backup, credential hoặc generated evidence.
+- Không commit `.env`, `server/work/`, `tmp`, backup, cookie, token hoặc generated evidence.
+- Không merge branch stale/conflicted chỉ để làm sạch danh sách PR.
