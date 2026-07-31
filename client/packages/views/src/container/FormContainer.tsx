@@ -9,7 +9,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Doc } from "@metaforge/core";
 import type { ListViewSnapshot } from "@metaforge/adapter-frappe";
-import { ConfirmDialog, PromptDialog, toast, useT } from "@metaforge/ui";
+import { Button, ConfirmDialog, PromptDialog, toast, useT } from "@metaforge/ui";
 import { FormView } from "../form/FormView.js";
 import type { FormActionKind } from "../detail/formActions.js";
 import { useMetaForge } from "./provider.js";
@@ -17,6 +17,7 @@ import { useDoc, useFormMeta, useTransitions, useCapabilities, NO_CAPS } from ".
 import { stashDuplicate } from "./duplicate.js";
 import { recordRecentDoc } from "./recent-docs.js";
 import { SubmitPreviewDialog, type SubmitPreview } from "./SubmitPreviewDialog.js";
+import { AllocationTimelineDialog, type AllocationTimeline } from "./AllocationTimelineDialog.js";
 
 export interface FormContainerProps {
   doctype: string;
@@ -54,6 +55,11 @@ export function FormContainer(props: FormContainerProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [submitPreview, setSubmitPreview] = useState<SubmitPreview | null>(null);
+  const [allocationTimelineOpen, setAllocationTimelineOpen] = useState(false);
+  const [allocationTimeline, setAllocationTimeline] = useState<AllocationTimeline | null>(null);
+  const [allocationTimelineLoading, setAllocationTimelineLoading] = useState(false);
+  const [allocationTimelineError, setAllocationTimelineError] = useState<string | null>(null);
+  const supportsAllocationTimeline = doctype === "Purchase Order" || doctype === "Purchase Receipt";
 
   // "Gần đây" (CommandPalette đã có sẵn UI, trước đây không app nào cấp dữ liệu) — ghi mỗi lần mở
   // 1 bản ghi đã lưu thành công (doc?.modified đổi ⇒ mở doc mới HOẶC vừa lưu xong đều tính là "vừa xem").
@@ -189,6 +195,24 @@ export function FormContainer(props: FormContainerProps) {
     }
   };
 
+  const openAllocationTimeline = async () => {
+    setAllocationTimelineOpen(true);
+    setAllocationTimelineLoading(true);
+    setAllocationTimelineError(null);
+    try {
+      const timeline = await adapter.callGet<AllocationTimeline | null>(
+        "metaforge.api.get_purchase_allocation_timeline",
+        { doctype, name },
+      );
+      setAllocationTimeline(timeline);
+    } catch (error) {
+      setAllocationTimeline(null);
+      setAllocationTimelineError(adapter.mapError(error).message);
+    } finally {
+      setAllocationTimelineLoading(false);
+    }
+  };
+
   const doDelete = async () => {
     setSaving(true);
     try {
@@ -237,7 +261,21 @@ export function FormContainer(props: FormContainerProps) {
     <>
       <FormView
         onClose={props.onClose}
-        headerActions={props.headerActions}
+        headerActions={(
+          <>
+            {props.headerActions}
+            {supportsAllocationTimeline && Number(doc.docstatus ?? 0) !== 0 ? (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={allocationTimelineLoading}
+                onClick={() => void openAllocationTimeline()}
+              >
+                {allocationTimelineLoading ? "Đang tải…" : "Phân bổ"}
+              </Button>
+            ) : null}
+          </>
+        )}
         meta={metaQ.data}
         doc={doc}
         registry={registry}
@@ -285,6 +323,13 @@ export function FormContainer(props: FormContainerProps) {
         saving={saving}
         onCancel={() => setSubmitPreview(null)}
         onConfirm={() => void confirmSubmit()}
+      />
+      <AllocationTimelineDialog
+        open={allocationTimelineOpen}
+        timeline={allocationTimeline}
+        loading={allocationTimelineLoading}
+        error={allocationTimelineError}
+        onClose={() => setAllocationTimelineOpen(false)}
       />
     </>
   );

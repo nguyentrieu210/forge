@@ -18,7 +18,7 @@ import type { TrustedIdentityKey } from "../../../packages/auth/src/index.js";
 import type { Actor, CanonicalDocument, DomainEvent, JsonObject, MutationCommand, MutationReceipt } from "../../../packages/contracts/src/index.js";
 import { parseMutationCommandInput } from "../../../packages/contracts/src/index.js";
 import { previewPurchaseReceiptSubmission } from "../../../packages/clouderp-core/src/index.js";
-import { D1CommercialReconciliationService, D1DocumentListStore, D1MutationStore, D1RolloutPurchaseAllocationDomainStore, DocumentListService } from "../../../packages/document-kernel/src/index.js";
+import { D1CommercialReconciliationService, D1DocumentListStore, D1MutationStore, D1PurchaseAllocationTimelineService, D1RolloutPurchaseAllocationDomainStore, DocumentListService } from "../../../packages/document-kernel/src/index.js";
 import { asCloudForgeError, commandPayloadHash, errorResponse, errors, jsonResponse, randomId, readJson } from "../../../packages/core/src/index.js";
 import {
   D1CollaborationService, D1DocumentAccessStore, D1MetadataStore, D1SearchStore,
@@ -1103,6 +1103,29 @@ async function serveFrappeApiInner(
       now: now(),
     });
     return jsonResponse({ message: preview });
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/method/metaforge.api.get_purchase_allocation_timeline") {
+    const requestedDoctype = requireShortText(url.searchParams.get("doctype"), "doctype", 160);
+    const name = requireShortText(url.searchParams.get("name"), "name", 320);
+    if (requestedDoctype !== "Purchase Order" && requestedDoctype !== "Purchase Receipt") {
+      return jsonResponse({ message: null });
+    }
+
+    const document = await documents.getDocument(tenantId, requestedDoctype, name);
+    if (!document) throw errors.notFound(requestedDoctype + " " + name + " was not found");
+    await permissions.assert({
+      actor,
+      tenantId,
+      doctype: requestedDoctype,
+      name,
+      owner: document.owner,
+      data: document.data,
+      action: "read",
+    });
+    const timeline = await new D1PurchaseAllocationTimelineService(requestDb)
+      .getTimeline(tenantId, requestedDoctype, name);
+    return jsonResponse({ message: timeline });
   }
 
   const installedApps = new AppInstaller(requestDb, metadata, users);
