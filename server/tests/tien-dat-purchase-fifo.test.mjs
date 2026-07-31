@@ -153,7 +153,7 @@ test("preview FIFO trả đủ phân bổ, công nợ cây/mét và lịch sử"
   const platform = {
     async fetch(outbound) {
       const url = new URL(outbound.url);
-      const path = decodeURIComponent(url.pathname);
+      const path = decodeURIComponent(url.pathname).replace(/^\/api/, "");
       if (path === "/resource/Supplier/Tiến Đạt") {
         return response({ supplier_name: "Tiến Đạt" });
       }
@@ -209,8 +209,8 @@ test("preview FIFO trả đủ phân bổ, công nợ cây/mét và lịch sử"
   });
 
   const preview = await handlePurchaseFifoRequest(request, { PLATFORM: platform }, false);
-  assert.equal(preview.status, 200);
   const body = await preview.json();
+  assert.equal(preview.status, 200, body.message);
   assert.equal(body.tolerance_pct, 5);
   assert.equal(body.delivered_barem_weight_kg, 644.184);
   assert.deepEqual(body.allocations.map((row) => [row.purchase_order, row.allocated_bars]), [
