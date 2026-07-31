@@ -6,11 +6,11 @@ Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Default head đã đồng bộ vào nhánh tài chính: `1207333163fdf31c576caa6ec8c11e88b078ca6e`.
+- Default head đã đồng bộ vào nhánh tài chính: `fbae2164403cd6b8ab7b31ee745e9d9ec82620b5`.
 - Working branch: `feat/finance-ar-ap-completion`.
 - Draft PR: `#15` — `feat(finance): add invoice due dates and AR/AP aging`.
 - Finance code/test head: `93c3f2ab5c7dd286c9f03cd13ad769ba14a65d8e`.
-- Latest default merge commit trước commit trạng thái này: `43ef6cb6942b42a7f600086fefdad7c621e3f6ca`.
+- Latest default merge commit trước commit trạng thái này: `a692a6ccc2939f09790dcbb13f92e9c5e1fc05d3`.
 - PR mergeable; branch chứa workflow `pr-validation.yml` mới nhất từ default.
 - Backup trước đồng bộ base: `backup/finance-ar-ap-pre-rebase-20260731` tại `a0f787e2a8abde287b184d5709985aec8cfd4eb8`.
 - Workflow tạm dùng để đồng bộ branch và workflow tạm thử Worker đều đã bị xóa khỏi final diff.
@@ -87,7 +87,7 @@ Trước khi thêm Worker route regression test:
 
 Các job trên có `steps` rỗng, chưa checkout và log download trả `BlobNotFound`. Chưa có bằng chứng code regression từ các run đó.
 
-Default sau đó cập nhật `pr-validation.yml` tại `1207333163fdf31c576caa6ec8c11e88b078ca6e`; finance branch đã merge đúng workflow mới. Cần đọc PR Validation trên commit người dùng kế tiếp để xác định blocker đã hết hay chưa.
+Default đã cập nhật `pr-validation.yml` qua `1207333163fdf31c576caa6ec8c11e88b078ca6e` và bản idempotent `fbae2164403cd6b8ab7b31ee745e9d9ec82620b5`; finance branch đã merge đúng workflow mới. Với PR #15, RBAC Slice B job phải skip và chỉ `validate / Test, typecheck and build` cần chạy.
 
 PR vẫn draft và chưa được coi là exact-head verified sau Worker route test cho tới khi install/test/typecheck/build chạy thật.
 
