@@ -69,6 +69,9 @@ export interface PurchaseUnappliedSourceState {
   window_status: "Open" | "Settled" | "Reversed";
   receipt_item_row_id: string;
   qty_micros: number;
+  barem_weight_micros: number;
+  projected_actual_weight_micros?: number;
+  projection_version?: number;
   posting_at: string;
 }
 
