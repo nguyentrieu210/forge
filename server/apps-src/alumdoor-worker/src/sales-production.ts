@@ -20,6 +20,13 @@ export {
 };
 export type { LeafPlan, ProductionPlatformCall, SalesProductionLine };
 
+export interface PaintSyncResult {
+  cut_order: string;
+  created: string[];
+  existing: string[];
+  cancelled: string[];
+}
+
 type Json = Record<string, unknown>;
 
 function text(value: unknown): string {
@@ -90,7 +97,7 @@ export async function syncPaintJobsFromCut(
   call: ProductionPlatformCall,
   cutOrderName: string,
   direction: 1 | -1,
-) {
+): Promise<PaintSyncResult> {
   const cutOrder = text(cutOrderName);
   if (cutOrder) {
     await ensureListReadable(
