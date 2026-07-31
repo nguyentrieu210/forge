@@ -1,5 +1,5 @@
 service=cloudforge-gateway
 environment=production
-target_code_sha=48fa4d77eefb46384272550f8f6c0699ed054fa6
-requested_at=2026-07-31T12:31:00Z
-reason=sales-child-item-filter-hotfix-pr53-owner-approved
+target_code_sha=7b3dc06dbbecbb5370ddb48259aa1614aef2ff32
+requested_at=2026-07-31T12:44:20Z
+reason=purchase-fifo-release-pr14-owner-override
