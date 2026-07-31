@@ -6,53 +6,40 @@ Ngày cập nhật: **2026-07-31**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Working branch: `feat/purchase-fifo-staging-checksum-lock-20260731`.
-- Draft PR: `#77` — `fix(purchase): lock staging backfill to reviewed checksum`.
-- Base/default head: `f0768d59ff66d04c333fd290c120f7672a80ea96`.
+- Default head khi mở nhánh: `89e9a532c63a7a94ba3f3fc123b9ada3a1816303`.
+- Working branch: `chore/alu-production-smoke-trigger-20260731`.
+- Không commit `.env`, secret, `server/work/`, `tmp/`, backup hoặc generated evidence.
 
 ## Purchase/FIFO
 
-### Đã hoàn tất
-
-- PR `#63` hoàn tất lifecycle correction và browser QA.
-- Tenant production code/migration đã release; Worker hiện hành `88c508a7-f3f7-4844-9c8b-85a02bc362f3`.
-- PR `#75` thêm read-only readiness wrapper, safety regression và activation runbook; squash merge `f0768d59ff66d04c333fd290c120f7672a80ea96`.
+- PR `#63` đã release lifecycle correction lên tenant `alu`.
+- PR `#75` đã merge readiness wrapper/runbook.
+- PR `#77` đã merge checksum lock cho mọi staging/production write mode.
+- Merge SHA PR `#77`: `a67d62377f1869d95906320636eabbd9bbd56ab7`.
 - FIFO rollout vẫn **disabled**.
 
-### PR #77 — checksum lock cho write mode
+## Production smoke
 
-Lỗ hổng vận hành được xử lý:
+Workflow hiện hữu `Cloudflare Production Smoke Observation` chỉ chạy read-only:
 
-- trước đây staging `--execute` không bắt buộc checksum đã review;
-- dữ liệu có thể thay đổi giữa dry-run và execute mà write vẫn tiếp tục;
-- activation đã có checksum gate nhưng staging backfill chưa có cùng bảo vệ.
+- `GET https://alu.kairo.vn/health` phải trả `200`;
+- `GET https://alu.kairo.vn/` phải trả `200`;
+- guest boot phải trả `403`;
+- evidence được upload ngoài repository.
 
-Cách sửa:
+Nhánh hiện tại thêm trigger giới hạn cho `ops/observe-alu-production-*`, vì connector không có quyền gọi `workflow_dispatch` trực tiếp. Workflow không deploy, không migrate, không mutate tenant và không đọc production secrets.
 
-- mọi `--execute` bắt buộc `--expected-checksum`;
-- plan hiện tại được recompute và so với checksum approved trước D1 mutation;
-- missing/malformed/drift checksum fail closed;
-- activation tái sử dụng cùng gate;
-- runbook staging command đã thêm checksum bắt buộc;
-- regression CLI bao phủ missing, mismatch và matching checksum.
+## Gate hiện tại
 
-## Verification
-
-- Chưa chạy tenant thật hoặc Cloudflare.
-- GitHub Actions sẽ là nguồn xác nhận test/typecheck/build trên exact final head PR `#77`.
-
-## Gate còn lại trước activation
-
-1. PR `#77` CI xanh và merge.
-2. Chọn staging tenant hoặc production-shaped sanitized copy.
-3. Read-only dry-run, `unresolved_count=0`, review checksum/PO rows.
-4. Execute staging bằng chính checksum approved; rollout phải vẫn `enabled=0`.
-5. Authenticated business smoke và contention/latency evidence.
-6. Fresh production backup và explicit activation approval riêng.
+1. Exact-head CI của PR smoke-trigger phải PASS.
+2. Merge workflow trigger.
+3. Tạo branch quan sát để chạy smoke-only workflow.
+4. Ghi run ID, job conclusion và artifact ID.
+5. Authenticated Purchase business smoke chưa được coi là PASS nếu không có phiên đăng nhập hợp lệ.
 
 ## Safety
 
-- Không deploy Cloudflare.
-- Không backfill tenant thật trong PR này.
-- Không sửa secrets/DNS/production.
-- Không commit `.env`, `server/work/`, `tmp/`, backup hoặc generated evidence.
+- Không deploy Cloudflare trong công việc này.
+- Không sửa production secrets hoặc DNS.
+- Không migrate/mutate D1.
+- Không bật FIFO.
