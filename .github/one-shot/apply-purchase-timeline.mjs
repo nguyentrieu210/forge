@@ -139,4 +139,3 @@ replaceOnce(
 );
 
 fs.rmSync(".github/one-shot/apply-purchase-timeline.mjs");
-execFileSync("git", ["checkout", "HEAD^", "--", ".github/workflows/purchase-feature-ci.yml"]);
