@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle } from "@metaforge/ui";
-import { useMetaForge } from "./provider.js";
 
 export type SupplierDebtWindowStatus = "Open" | "Settled" | "Reversed";
 
@@ -63,48 +62,45 @@ const EMPTY_FILTERS: FilterState = {
 
 export interface PurchaseSupplierDebtReportDialogProps {
   open: boolean;
-  refreshKey: number;
+  reports: PurchaseSupplierDebtReport[];
   onClose: () => void;
 }
 
 export function PurchaseSupplierDebtReportDialog(props: PurchaseSupplierDebtReportDialogProps) {
-  const { open, refreshKey, onClose } = props;
-  const { adapter } = useMetaForge();
+  const { open, reports, onClose } = props;
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
-  const [report, setReport] = useState<PurchaseSupplierDebtReport | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const loadReport = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const args: Record<string, unknown> = { limit: 500 };
-      for (const [key, value] of Object.entries(filters)) {
-        if (value) args[key] = value;
-      }
-      const next = await adapter.callGet<PurchaseSupplierDebtReport | null>(
-        "metaforge.api.get_purchase_supplier_debt_report",
-        args,
-      );
-      setReport(next);
-    } catch (caught) {
-      setReport(null);
-      setError(adapter.mapError(caught).message);
-    } finally {
-      setLoading(false);
+  const columns = reports[0]?.columns ?? [];
+  const generatedAt = reports.reduce(
+    (latest, report) => Date.parse(report.generated_at) > Date.parse(latest) ? report.generated_at : latest,
+    reports[0]?.generated_at ?? "",
+  );
+  const allRows = useMemo(() => {
+    const rows = new Map<string, PurchaseSupplierDebtReportRow>();
+    for (const report of reports) {
+      for (const row of report.rows) rows.set(`${row.queue_key}:${row.window_id}`, row);
     }
-  };
-
-  useEffect(() => {
-    if (!open) return;
-    void loadReport();
-    // refreshKey deliberately reloads the report after a settlement/override mutation.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, refreshKey]);
+    return [...rows.values()];
+  }, [reports]);
+  const filteredRows = useMemo(
+    () => allRows.filter((row) => matchesFilters(row, filters)),
+    [allRows, filters],
+  );
+  const summary = useMemo(() => summarizeRows(filteredRows), [filteredRows]);
 
   const exportCsv = () => {
-    if (!report?.rows.length) return;
+    if (!filteredRows.length) return;
+    const report: PurchaseSupplierDebtReport = {
+      kind: "purchase_supplier_debt_report",
+      title: "Công nợ giao hàng nhà cung cấp",
+      description: "Các cửa sổ liên quan đến chứng từ đang mở.",
+      generated_at: generatedAt,
+      csv_filename: `purchase-supplier-debt-${(generatedAt || new Date().toISOString()).slice(0, 10)}.csv`,
+      filters,
+      columns,
+      rows: filteredRows,
+      summary,
+    };
     const blob = new Blob([`\uFEFF${buildSupplierDebtCsv(report)}`], { type: "text/csv;charset=utf-8" });
     const href = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
@@ -115,20 +111,17 @@ export function PurchaseSupplierDebtReportDialog(props: PurchaseSupplierDebtRepo
   };
 
   return (
-    <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen && !loading) onClose(); }}>
+    <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
       <DialogContent className="flex max-h-[94vh] w-[min(98vw,1500px)] max-w-none flex-col overflow-hidden p-0">
         <DialogHeader className="shrink-0 border-b px-5 py-4">
-          <DialogTitle>{report?.title ?? "Công nợ giao hàng nhà cung cấp"}</DialogTitle>
+          <DialogTitle>Công nợ giao hàng nhà cung cấp</DialogTitle>
           <p className="text-sm text-muted-foreground">
-            {report?.description ?? "Đọc trực tiếp từ allocation ledger của máy chủ."}
+            Snapshot ledger của các cửa sổ liên quan đến chứng từ đang mở. Không dùng bảng progress tương thích làm nguồn sự thật.
           </p>
         </DialogHeader>
 
         <div className="min-h-0 flex-1 space-y-4 overflow-auto px-5 py-4">
-          <form
-            className="grid gap-3 rounded-lg border p-3 sm:grid-cols-2 lg:grid-cols-6"
-            onSubmit={(event) => { event.preventDefault(); void loadReport(); }}
-          >
+          <div className="grid gap-3 rounded-lg border p-3 sm:grid-cols-2 lg:grid-cols-6">
             <FilterInput label="Công ty" value={filters.company} onChange={(value) => setFilters((current) => ({ ...current, company: value }))} />
             <FilterInput label="Nhà cung cấp" value={filters.supplier} onChange={(value) => setFilters((current) => ({ ...current, supplier: value }))} />
             <FilterInput label="Mã vật tư" value={filters.item_code} onChange={(value) => setFilters((current) => ({ ...current, item_code: value }))} />
@@ -148,42 +141,26 @@ export function PurchaseSupplierDebtReportDialog(props: PurchaseSupplierDebtRepo
                 <option value="Reversed">Đã đảo</option>
               </select>
             </label>
-            <FilterInput type="date" label="Từ ngày" value={filters.from_date} onChange={(value) => setFilters((current) => ({ ...current, from_date: value }))} />
-            <FilterInput type="date" label="Đến ngày" value={filters.to_date} onChange={(value) => setFilters((current) => ({ ...current, to_date: value }))} />
+            <FilterInput type="date" label="PO mở cũ nhất từ" value={filters.from_date} onChange={(value) => setFilters((current) => ({ ...current, from_date: value }))} />
+            <FilterInput type="date" label="PO mở cũ nhất đến" value={filters.to_date} onChange={(value) => setFilters((current) => ({ ...current, to_date: value }))} />
             <div className="flex flex-wrap gap-2 sm:col-span-2 lg:col-span-6">
-              <Button type="submit" size="sm" disabled={loading}>Lọc báo cáo</Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={loading}
-                onClick={() => {
-                  setFilters(EMPTY_FILTERS);
-                  queueMicrotask(() => { void loadReport(); });
-                }}
-              >
+              <Button type="button" size="sm" variant="outline" onClick={() => setFilters(EMPTY_FILTERS)}>
                 Đặt lại
               </Button>
-              <Button type="button" size="sm" variant="outline" disabled={!report?.rows.length} onClick={exportCsv}>
+              <Button type="button" size="sm" variant="outline" disabled={!filteredRows.length} onClick={exportCsv}>
                 Xuất CSV
               </Button>
             </div>
-          </form>
+          </div>
 
-          {loading ? (
-            <div className="grid min-h-40 place-items-center text-sm text-muted-foreground">Đang tải báo cáo…</div>
-          ) : error ? (
-            <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive" role="alert">
-              {error}
-            </div>
-          ) : !report ? (
+          {!reports.length ? (
             <div className="rounded-lg border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
-              FIFO chưa được kích hoạt hoặc bạn không có quyền xem báo cáo tổng hợp.
+              FIFO chưa được kích hoạt hoặc chứng từ chưa có cửa sổ phân bổ.
             </div>
           ) : (
             <>
               <dl className="grid gap-2 sm:grid-cols-2 lg:grid-cols-7">
-                {report.summary.map((entry) => (
+                {summary.map((entry) => (
                   <div key={entry.label} className="rounded-lg border px-3 py-2">
                     <dt className="text-xs text-muted-foreground">{entry.label}</dt>
                     <dd className="mt-1 font-semibold tabular-nums">{entry.value}</dd>
@@ -192,16 +169,16 @@ export function PurchaseSupplierDebtReportDialog(props: PurchaseSupplierDebtRepo
               </dl>
 
               <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-                <span>{report.rows.length} dòng</span>
-                <span>Cập nhật {formatDateTime(report.generated_at)}</span>
+                <span>{filteredRows.length} / {allRows.length} cửa sổ</span>
+                {generatedAt ? <span>Cập nhật {formatDateTime(generatedAt)}</span> : null}
               </div>
 
-              {report.rows.length ? (
+              {filteredRows.length ? (
                 <div className="overflow-x-auto rounded-lg border">
                   <table className="w-full min-w-[1650px] text-sm">
                     <thead className="bg-muted/60 text-muted-foreground">
                       <tr>
-                        {report.columns.map((column) => (
+                        {columns.map((column) => (
                           <th
                             key={column.key}
                             className={column.align === "right" ? "px-3 py-2 text-right font-medium" : "px-3 py-2 text-left font-medium"}
@@ -212,9 +189,9 @@ export function PurchaseSupplierDebtReportDialog(props: PurchaseSupplierDebtRepo
                       </tr>
                     </thead>
                     <tbody>
-                      {report.rows.map((row) => (
+                      {filteredRows.map((row) => (
                         <tr key={`${row.queue_key}:${row.window_id}`} className="border-t align-top">
-                          {report.columns.map((column) => (
+                          {columns.map((column) => (
                             <td
                               key={column.key}
                               className={column.align === "right" ? "whitespace-nowrap px-3 py-2 text-right tabular-nums" : "px-3 py-2"}
@@ -237,7 +214,7 @@ export function PurchaseSupplierDebtReportDialog(props: PurchaseSupplierDebtRepo
         </div>
 
         <div className="flex shrink-0 justify-end border-t px-5 py-3">
-          <Button type="button" variant="outline" disabled={loading} onClick={onClose}>Đóng</Button>
+          <Button type="button" variant="outline" onClick={onClose}>Đóng</Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -261,6 +238,41 @@ function FilterInput(props: {
       />
     </label>
   );
+}
+
+function matchesFilters(row: PurchaseSupplierDebtReportRow, filters: FilterState): boolean {
+  const contains = (value: string, query: string): boolean =>
+    !query || value.toLocaleLowerCase("vi").includes(query.toLocaleLowerCase("vi"));
+  if (!contains(row.company, filters.company)) return false;
+  if (!contains(row.supplier, filters.supplier)) return false;
+  if (!contains(row.item_code, filters.item_code)) return false;
+  if (filters.status && row.window_status !== filters.status) return false;
+  if (filters.from_date && (!row.oldest_open_po_date || row.oldest_open_po_date < filters.from_date)) return false;
+  if (filters.to_date && (!row.oldest_open_po_date || row.oldest_open_po_date > filters.to_date)) return false;
+  return true;
+}
+
+function summarizeRows(rows: PurchaseSupplierDebtReportRow[]): Array<{ label: string; value: string }> {
+  const sum = (field: "ordered_qty" | "allocated_qty" | "nominal_remaining_qty" | "unapplied_receipt_qty"): string =>
+    formatDecimal(rows.reduce((total, row) => total + numeric(row[field]), 0));
+  return [
+    { label: "Nhà cung cấp", value: String(new Set(rows.map((row) => row.supplier)).size) },
+    { label: "Luồng vật tư", value: String(new Set(rows.map((row) => row.queue_key)).size) },
+    { label: "Cửa sổ", value: String(rows.length) },
+    { label: "Đã đặt", value: sum("ordered_qty") },
+    { label: "Đã phân bổ", value: sum("allocated_qty") },
+    { label: "Nợ danh nghĩa", value: sum("nominal_remaining_qty") },
+    { label: "Phiếu nhập chờ", value: sum("unapplied_receipt_qty") },
+  ];
+}
+
+function numeric(value: string): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatDecimal(value: number): string {
+  return value.toFixed(6).replace(/\.0+$/, "").replace(/(\.\d*?)0+$/, "$1");
 }
 
 export function buildSupplierDebtCsv(report: PurchaseSupplierDebtReport): string {
