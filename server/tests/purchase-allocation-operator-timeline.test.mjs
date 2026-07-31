@@ -35,6 +35,7 @@ test("operator timeline attaches the authoritative queue key to every settlement
   ]);
   assert.equal(result.windows[0].queue_key, "q".repeat(64));
   assert.equal(result.windows[0].status, "Open");
+  assert.deepEqual(result.supplier_debt_reports, []);
 });
 
 test("operator timeline fails closed when a window loses its queue scope", () => {
