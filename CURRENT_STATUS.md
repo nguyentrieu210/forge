@@ -6,7 +6,7 @@ Ngày cập nhật: **2026-08-01**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch hiện tại: `hotfix/alumdoor-print-list-delete`.
-- Current default head trước docs handoff: `29fee0200d8118eef2d0ae9e524a3a00acfab00f`.
+- Current default head: `4d86c1fd8c191f26f3961762b281fca1ad765855`.
 - GitHub là nguồn sự thật cho code, CI, PR và release evidence.
 
 ## PR tồn đọng cũ — CLOSED
@@ -52,6 +52,15 @@ Authenticated scope đã PASS:
 - Desktop Chrome và Pixel 7;
 - Tiến Đạt FIFO `200 + 100`, nhận `230` phân bổ `200 + 30`, draft giữ đúng hai đơn, đọc lại lịch sử và công nợ; `85` được phép, `86` bị từ chối.
 
+## MetaForge MISA-style UI — ACTIVE SEPARATE BRANCH
+
+- Branch: `feat/metaforge-misa-workspace-ui-clean`.
+- Base exact default head: `4d86c1fd8c191f26f3961762b281fca1ad765855`.
+- Phạm vi: app/module rail phía trên sidebar, workspace tabs cho Doctype và nghiệp vụ, điều hướng và trạng thái tab theo phong cách MISA.
+- Closed PR `#81/#109` chỉ dùng làm nguồn tham khảo từng file; không merge nguyên branch cũ.
+- Login/landing không trộn vào branch này.
+- Base head không có combined status hoặc workflow run được GitHub connector trả về tại thời điểm tạo branch.
+
 ## Chưa được phép gọi là hoàn tất toàn quy trình
 
 Tài liệu `25.7 QUY TRÌNH.docx` còn yêu cầu sổ chi tiết khóa theo ngày, công nợ tổng hợp, lỗi/bảo hành, năng lực sản xuất và kiểm nhận xuyên suốt. Current default chưa đủ các phần dưới đây:
@@ -63,7 +72,7 @@ Tài liệu `25.7 QUY TRÌNH.docx` còn yêu cầu sổ chi tiết khóa theo ng
 
 ## Release boundary
 
-- Không deploy Cloudflare trong đợt Purchase QA.
+- Không deploy Cloudflare nếu chưa có lệnh riêng.
 - Không sửa production secret, DNS hoặc rollout state.
 - Không migrate hoặc mutate dữ liệu tenant production.
 - Generic FIFO production vẫn disabled.
@@ -74,7 +83,8 @@ Tài liệu `25.7 QUY TRÌNH.docx` còn yêu cầu sổ chi tiết khóa theo ng
 2. Daily detailed ledger — `QUEUED`.
 3. Warranty / defects / capacity — `QUEUED`.
 4. End-to-end acceptance — `QUEUED`.
-5. UI MetaForge MISA-style và login/landing — `SEPARATE UI BACKLOG`.
+5. UI MetaForge MISA-style — `ACTIVE SEPARATE BRANCH`.
+6. Login/landing — `SEPARATE UI BACKLOG`.
 
 ## Safety
 
