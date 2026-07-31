@@ -7,11 +7,10 @@ root = Path(__file__).resolve().parents[1]
 connection = sqlite3.connect(":memory:")
 connection.execute("PRAGMA foreign_keys=ON")
 
-for migration in [
-    root / "migrations/tenant/0001_core.sql",
-    root / "migrations/tenant/0004_frappe_platform.sql",
-    root / "migrations/tenant/0005_erp_core.sql",
-]:
+control_migration = "0031_purchase_allocation_control_metadata.sql"
+for migration in sorted((root / "migrations/tenant").glob("*.sql")):
+    if migration.name >= control_migration:
+        break
     connection.executescript(migration.read_text(encoding="utf-8"))
 
 # Simulate an already-provisioned real tenant before the append-only migration runs.
@@ -25,7 +24,7 @@ connection.execute(
        WHERE tenant_id='__standard__' AND doctype='Purchase Order'"""
 )
 connection.executescript(
-    (root / "migrations/tenant/0031_purchase_allocation_control_metadata.sql").read_text(encoding="utf-8")
+    (root / "migrations/tenant" / control_migration).read_text(encoding="utf-8")
 )
 
 for tenant in ("demo", "__standard__", "alu"):
@@ -67,7 +66,7 @@ for tenant in ("demo", "__standard__", "alu"):
 
 # Append-only reruns stay idempotent.
 connection.executescript(
-    (root / "migrations/tenant/0031_purchase_allocation_control_metadata.sql").read_text(encoding="utf-8")
+    (root / "migrations/tenant" / control_migration).read_text(encoding="utf-8")
 )
 assert connection.execute(
     "SELECT COUNT(*) FROM doctype_definitions WHERE tenant_id='alu' AND doctype IN ('Purchase Settlement','Purchase Allocation Override')"
