@@ -72,6 +72,27 @@ export interface PurchaseUnappliedSourceState {
   posting_at: string;
 }
 
+/**
+ * Remaining balance of one original unapplied Receipt row. Rows are returned in
+ * commit order so a later PO consumes the oldest physical receipt source first.
+ */
+export interface PurchaseUnappliedQueueSourceState {
+  entry_id: string;
+  queue_key: string;
+  window_id: string;
+  voucher_no: string;
+  voucher_revision: number;
+  receipt_item_row_id: string;
+  item_code: string;
+  qty_micros: number;
+  barem_weight_micros: number;
+  projected_actual_weight_micros?: number;
+  projection_version?: number;
+  posting_at: string;
+  committed_at: string;
+  next_allocation_sequence: number;
+}
+
 export interface PurchaseAllocationReader extends DomainReader {
   isPurchaseAllocationEnabled(tenantId: string): Promise<boolean>;
   getPurchaseAllocationQueueState(
@@ -102,6 +123,11 @@ export interface PurchaseAllocationReader extends DomainReader {
     tenantId: string,
     purchaseReceipt: string,
   ): Promise<PurchaseUnappliedSourceState[]>;
+  listPurchaseUnappliedQueueSources(
+    tenantId: string,
+    queueKey: string,
+    windowId: string,
+  ): Promise<PurchaseUnappliedQueueSourceState[]>;
 }
 
 const PURCHASE_ALLOCATION_READER_METHODS: Array<keyof PurchaseAllocationReader> = [
@@ -112,6 +138,7 @@ const PURCHASE_ALLOCATION_READER_METHODS: Array<keyof PurchaseAllocationReader> 
   "getPurchaseObligationRowState",
   "listPurchaseReceiptAllocationSources",
   "listPurchaseReceiptUnappliedSources",
+  "listPurchaseUnappliedQueueSources",
 ];
 
 export function hasPurchaseAllocationReader(reader: DomainReader): reader is PurchaseAllocationReader {
