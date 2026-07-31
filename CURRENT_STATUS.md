@@ -6,107 +6,81 @@ Ngày cập nhật: **2026-08-01**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Default head tại snapshot: `b9a5489903d746858f46a131561325b835b870c3`.
-- Handoff branch: `docs/forge-epic-control-20260801`.
+- Default head khi đồng bộ branch sửa CI: `04c33c0193815196bd6f10492be77fe64d175bbe`.
+- Working branch: `ci/stop-duplicate-builds-20260801`.
 - Canonical queue: `EPIC_STATUS.md`.
 
 ## Trạng thái tổng thể
 
-- Toàn hệ thống **chưa đạt end-to-end acceptance**.
-- Kho vật lý, BOM/Work Order, Purchase core, Sales MVP, RBAC và runtime workspace đã có nền tảng đã merge.
-- Các khoảng trống lớn còn lại: Sales-to-Production thật, Purchase authenticated QA, Finance đầy đủ, daily ledger, warranty/capacity và whole-process acceptance.
+- Toàn hệ thống chưa đạt end-to-end acceptance.
+- Nghiệp vụ đang tạm dừng để sửa đường CI bị chạy lặp.
+- PR #103, #107 và #119 đã đóng; không dùng làm nguồn merge.
+- PR #122 docs cũ bị supersede bởi đợt sửa CI này.
 
-## Merge mới
+## Root cause CI
 
-| PR | Nội dung | Merge SHA | Kết luận |
-|---|---|---|---|
-| #82 | Inventory Slice D foundation | `a7e6ef65b2352f596e285ea34d8e6438dff11a95` | Backend/read model/API đã merge; UI/report follow-up còn thiếu |
-| #113 | Protected release workflow cho tenant `alu` | `0b29cbb3aed1850bb633fd49facf9d8242b2a9e1` | Workflow đã merge; production evidence phải kiểm riêng |
-| #114 | Runtime workspace production | `6db933aec8f211103ee2887e0cb364d346079cb2` | Navigation/runtime shell và Gateway workflow đã merge |
-| #115 | Sales-to-Production transport sync | `eab228aa72bbf54575ec573b4f7eadaa9a8060f7` | Chỉ workflow + trigger; không tính code nghiệp vụ hoàn thành |
-| #117 | Observable production release | `b9a5489903d746858f46a131561325b835b870c3` | Platform evidence support; không thay đổi hàng đợi nghiệp vụ |
+- `CI` chạy trên mọi push và pull request, tạo hai lượt cho cùng một commit feature.
+- `PR Validation` lặp toàn bộ `pnpm test`, `pnpm typecheck`, `pnpm build`.
+- Sales/Purchase/Inventory dùng `server/**` và `client/**`, nên hầu hết code PR kích cả ba workflow.
+- UI validation cũng dùng `server/**`, vì vậy nhiều thay đổi backend vẫn cài Chromium và chạy browser QA.
+- Production observation trigger trên mọi PR rồi tự skip.
+- One-shot workflow tự cherry-pick, amend và force-push làm head đổi giữa lúc CI chạy.
 
-## Hàng đợi hiện tại
+## Thay đổi trên branch hiện tại
 
-### 1. Sales-to-Production — BLOCKED / REBUILD
+| File | Thay đổi |
+|---|---|
+| `.github/workflows/ci.yml` | Chỉ push default + PR vào default; docs-only fast path; bỏ release job cũ khỏi CI |
+| `.github/workflows/pr-validation.yml` | Policy gate nhẹ; bỏ duplicate build/test và bỏ deploy khỏi PR validation |
+| `.github/workflows/sales-feature-ci.yml` | Focused Sales scope và ba regression chính |
+| `.github/workflows/purchase-feature-ci.yml` | Focused Purchase scope, Purchase tests và SQL safeguards |
+| `.github/workflows/inventory-feature-ci.yml` | Focused Inventory/Manufacturing scope, catalog/item regression và brief audit |
+| `.github/workflows/ui-pr-validation.yml` | UI/browser/auth chỉ chạy khi đúng phạm vi |
+| `.github/workflows/cloudflare-production-observation.yml` | Không còn tạo run trên mọi PR |
+| `.github/workflows/sync-sales-production-clean-once.yml` | Đã xóa |
+| `server/scripts/.sync-sales-production-trigger` | Đã xóa |
 
-- PR #115 đã merge sai phạm vi kết luận: final diff không có code nghiệp vụ.
-- PR #107 là nhánh transport cũ, không dùng làm PR canonical.
-- Cần nhánh sạch từ current default với source thật và full gate.
+## Mô hình CI sau khi merge
 
-### 2. Purchase authenticated QA — ACTIVE / DRAFT
+### Docs-only PR
 
-- PR: #103.
-- Branch: `feat/purchase-authenticated-lifecycle-qa-20260731`.
-- Exact head gần nhất: `94ccc11ff79b2d0cd9269abb5804009887b950a8`.
-- GitHub từng báo mergeable; full exact-head workflows đang chạy tại lần kiểm gần nhất.
-- Gate còn lại: Desktop Chrome + Pixel 7 lifecycle, full CI, Ready for review, final diff/review.
+- `CI`: fast path, không cài dependency.
+- `PR Validation`: policy check nhẹ.
+- Feature/UI check: fast path nếu branch protection yêu cầu tên check.
+- Không build, không browser QA, không production observation.
 
-### 3. Finance — QUEUED / REBUILD
+### Code PR
 
-- PR #15 stale và không mergeable.
-- Chỉ dùng code/test trong PR #15 làm nguồn tham khảo.
-- Phải dựng lại từ current default và bổ sung Payment Entry/Allocation, statement, debt summary, advance balance và UI.
+- Một `CI` duy nhất chạy full test + typecheck + build.
+- Chỉ feature workflow liên quan chạy focused regression.
+- UI workflow chỉ chạy browser/auth khi thay đổi liên quan.
+- Push mới cùng PR hủy run cũ bằng `cancel-in-progress`.
 
-### 4. Daily ledger — QUEUED
+### Sau merge
 
-- Chưa có PR canonical.
-- Chưa có contract hoàn chỉnh cho snapshot cuối ngày, khóa sửa và adjustment document.
+- Dedicated release workflow quyết định release theo path/exact SHA.
+- CI và PR validation không deploy production.
 
-### 5. Warranty / Capacity — QUEUED
+## Hàng đợi nghiệp vụ
 
-- Chưa có PR canonical.
-- Chưa hoàn thiện defect/warranty lifecycle và production capacity/overtime scheduling.
+1. Sales-to-Production — `BLOCKED / CLEAN REBUILD`.
+2. Purchase authenticated QA — `QUEUED / CLEAN REBUILD`.
+3. Finance — `QUEUED / REBUILD`.
+4. Daily ledger — `QUEUED`.
+5. Warranty / Capacity — `QUEUED`.
+6. End-to-end acceptance — `QUEUED`.
 
-### 6. End-to-end acceptance — QUEUED
+## Gate merge cho CI cleanup
 
-- Chỉ chạy sau khi năm epic trên có code merged và release evidence.
-- Journey bắt buộc: Sales Order → production → inventory → delivery → debt → daily ledger.
-
-## Các nhánh không phải nguồn merge
-
-- #107: Sales transport cũ.
-- #81/#109: MetaForge prototype/rebase cũ; so với #114 rồi retire.
-- #116: có khả năng đã bị #117 thay thế.
-- #40: Finance backup.
-- #36: tmp UI rebase.
-- #35/#73/#74/#79: CI/hotfix cũ hoặc đã có bản thay thế.
-
-Không đóng trước khi kiểm unique diff chưa nằm trên default.
-
-## Production evidence đã có trước đó
-
-### Alumdoor app Worker
-
-- Feature merge SHA: `a48524b93489c92296c57fc5f223e41d505de7aa`.
-- Release run: `30651057535`.
-- Worker: `cloudforge-app-alumdoor`.
-- Namespace: `cloudforge-production`.
-- Version ID: `734fd53b-94ce-401d-86e8-ca4cd0ffee2e`.
-
-### Tenant Worker evidence cũ
-
-- Run: `30649182082`.
-- Worker: `cloudforge-tenant-alu`.
-- Version: `ed5852cf-94ef-4a02-b0b9-1e64020c2d0d`.
-
-Evidence cũ không tự chứng minh các merge #82–#117 đã được release đúng exact SHA.
-
-## Gate merge chung
-
-Một PR chỉ được ghi `MERGE READY` khi:
-
-- exact head được chốt;
-- mergeable và không stale/conflict;
-- required CI đều SUCCESS;
-- không có unresolved review blocker;
-- final diff chỉ chứa source/test/docs cần thiết;
-- không còn workflow/payload/trigger tạm;
-- release/rollback boundary đã ghi rõ.
+- Branch phải ahead current default và behind 0.
+- Workflow YAML phải được GitHub nhận và exact-head checks phải kết thúc.
+- Final diff chỉ gồm workflow + handoff docs + xóa transport files.
+- Không có application source, production secret, DNS, migration hoặc customer data change.
 
 ## Safety
 
-- Không sửa production secrets hoặc DNS nếu chưa có lệnh riêng.
+- Không deploy Cloudflare trong đợt này.
+- Không sửa production secrets hoặc DNS.
 - Không bật FIFO.
-- Không mutate tenant data ngoài smoke an toàn có cleanup.
+- Không mutate tenant data.
 - Không commit `.env`, `server/work/`, `tmp`, backup hoặc generated evidence.
