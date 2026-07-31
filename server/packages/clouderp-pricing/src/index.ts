@@ -6,6 +6,20 @@ import type { PricingContext, ResolvedPrice } from "./types.js";
 
 export type { PricingContext, ResolvedPrice } from "./types.js";
 
+function disabled(value: unknown): boolean {
+  if (value === true || value === 1 || value === "1") return true;
+  return ["true", "yes", "có", "co"].includes(String(value ?? "").trim().toLocaleLowerCase("vi"));
+}
+
+function fieldMatchedPrice(data: JsonObject, input: PricingContext, lineUom: string): boolean {
+  const priceList = typeof data.price_list === "string" ? data.price_list.trim() : "";
+  const itemCode = typeof data.item_code === "string" ? data.item_code.trim() : "";
+  const priceUom = typeof data.uom === "string" ? data.uom.trim() : "";
+  return priceList === input.priceList
+    && itemCode === input.itemCode
+    && (lineUom ? priceUom === lineUom : !priceUom);
+}
+
 export async function resolveServerPrice(
   context: ControllerContext<JsonObject>,
   input: PricingContext,
@@ -13,30 +27,68 @@ export async function resolveServerPrice(
   const lineUom = typeof input.uom === "string" ? input.uom.trim() : "";
   const legacyPriceName = `${input.priceList}:${input.itemCode}`;
   const exactPriceName = lineUom ? `${legacyPriceName}:${lineUom}` : "";
-  let priceName = lineUom ? exactPriceName : legacyPriceName;
-  let itemPrice = lineUom
+  const exact = lineUom
     ? await context.reader.getMasterRecordData(context.command.tenant_id, "Item Price", exactPriceName)
     : null;
+  const legacy = await context.reader.getMasterRecordData(context.command.tenant_id, "Item Price", legacyPriceName);
+  const legacyUom = typeof legacy?.uom === "string" ? legacy.uom.trim() : "";
+  const compatibleLegacy = legacy && (lineUom ? legacyUom === lineUom : !legacyUom) ? legacy : null;
 
-  // Existing tenants can still have the pre-UOM key. A typed legacy price is accepted only
-  // when its declared UOM exactly matches the sales row. The older untyped form remains
-  // compatible only when the row is also untyped; once either side declares a UOM, matching
-  // becomes mandatory so a price for one commercial unit cannot leak into another.
+  let priceName = lineUom ? exactPriceName : legacyPriceName;
+  let itemPrice: JsonObject | null = null;
+  if (exact && !disabled(exact.disabled)) {
+    itemPrice = exact;
+    priceName = exactPriceName;
+  } else if (compatibleLegacy && !disabled(compatibleLegacy.disabled)) {
+    itemPrice = compatibleLegacy;
+    priceName = legacyPriceName;
+  }
+
+  /**
+   * Record name is an optimization, not the only source of truth.
+   *
+   * Older app metadata named Item Price `<price_list>:<item_code>`, while the multi-UOM
+   * runtime uses `<price_list>:<item_code>:<uom>`. Imported or manually renamed data can also
+   * carry a different name. If both fast paths miss, resolve by the actual business fields so
+   * a valid price does not disappear merely because its record id came from an older schema.
+   */
+  let fieldMatches: Array<{ name: string; data: JsonObject }> = [];
   if (!itemPrice) {
-    const legacy = await context.reader.getMasterRecordData(context.command.tenant_id, "Item Price", legacyPriceName);
-    const legacyUom = typeof legacy?.uom === "string" ? legacy.uom.trim() : "";
-    const compatible = lineUom ? legacyUom === lineUom : !legacyUom;
-    if (legacy && compatible) {
-      itemPrice = legacy;
-      priceName = legacyPriceName;
-    } else if (legacy && !lineUom && legacyUom) {
-      throw errors.validation(`Item Price ${legacyPriceName} declares UOM "${legacyUom}"; the document row must provide a matching selling UOM`);
+    const listed = await context.reader.listMasterRecordData(context.command.tenant_id, "Item Price");
+    fieldMatches = listed.filter(({ data }) => fieldMatchedPrice(data, input, lineUom));
+    const active = fieldMatches.filter(({ data }) => !disabled(data.disabled));
+    if (active.length > 1) {
+      throw errors.validation(
+        `Multiple active Item Price records match ${input.priceList} / ${input.itemCode} / ${lineUom || "(no UOM)"}`,
+      );
     }
+    if (active.length === 1) {
+      itemPrice = active[0]!.data;
+      priceName = active[0]!.name;
+    }
+  }
+
+  if (!itemPrice) {
+    const disabledCandidate = exact
+      ? { name: exactPriceName, data: exact }
+      : compatibleLegacy
+        ? { name: legacyPriceName, data: compatibleLegacy }
+        : fieldMatches[0];
+    if (disabledCandidate) {
+      itemPrice = disabledCandidate.data;
+      priceName = disabledCandidate.name;
+    }
+  }
+
+  if (!itemPrice && legacy && !lineUom && legacyUom) {
+    throw errors.validation(`Item Price ${legacyPriceName} declares UOM "${legacyUom}"; the document row must provide a matching selling UOM`);
   }
   if (!itemPrice) {
     const missingName = lineUom ? exactPriceName : legacyPriceName;
     throw errors.reference(`Item Price ${missingName} does not exist`);
   }
+  if (disabled(itemPrice.disabled)) throw errors.reference(`Item Price ${priceName} is disabled`);
+
   const currency = typeof itemPrice.currency === "string" ? itemPrice.currency : "";
   if (!currency) throw errors.reference(`Item Price ${priceName} must define currency`);
   if (currency !== input.documentCurrency) throw errors.reference(`Item Price ${priceName} currency does not match document currency`);

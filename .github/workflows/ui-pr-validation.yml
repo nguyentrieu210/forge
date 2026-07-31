@@ -62,6 +62,9 @@ jobs:
       - name: Run Alumdoor browser QA
         run: pnpm --filter e2e-forge exec playwright test --config playwright.ui.config.ts
 
+      - name: Run purchase allocation browser QA
+        run: pnpm --filter e2e-forge exec playwright test --config playwright.purchase.config.ts
+
       - name: Upload browser evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -70,6 +73,8 @@ jobs:
           path: |
             client/e2e-forge/test-results/ui-visual/
             client/e2e-forge/playwright-report/ui-visual/
+            client/e2e-forge/test-results/purchase-ui/
+            client/e2e-forge/playwright-report/purchase-ui/
           if-no-files-found: warn
           retention-days: 30
 

@@ -216,3 +216,63 @@ test("manual override is rejected without an authorized server role", async () =
     (error) => error?.code === "PERMISSION_DENIED",
   );
 });
+
+
+test("Receipt cancellation requires settlement reversal and then conserves allocation and weight", async () => {
+  const { store, po, receipt, settlement } = fixture();
+  await submitDocument(po, store, "PO-CANCEL-AFTER-SETTLE", poData(100, "2026-07-01"), "PO-CANCEL-AFTER-SETTLE");
+  const submittedReceipt = await submitDocument(
+    receipt,
+    store,
+    "PR-CANCEL-AFTER-SETTLE",
+    receiptData(105, 295),
+    "PR-CANCEL-AFTER-SETTLE",
+  );
+  const source = store.snapshot().purchase_allocation_entries[0];
+  await submitDocument(settlement, store, "SETTLE-CANCEL-GUARD", {
+    operation: "Close",
+    queue_key: source.queue_key,
+    window_id: source.window_id,
+    reason: "Đóng chuyến giao trước khi phát hiện cần hủy phiếu nhập",
+  }, "SETTLE-CANCEL-GUARD");
+
+  await assert.rejects(
+    () => apply(
+      receipt,
+      store,
+      "cancel",
+      "PR-CANCEL-AFTER-SETTLE",
+      submittedReceipt.data,
+      "PR-CANCEL-BLOCKED",
+    ),
+    (error) => error?.code === "INVALID_LIFECYCLE_TRANSITION",
+  );
+
+  await submitDocument(settlement, store, "SETTLE-CANCEL-REVERSE", {
+    operation: "Reverse",
+    queue_key: source.queue_key,
+    window_id: source.window_id,
+    reason: "Mở quyền ghi correction để hủy phiếu nhập",
+  }, "SETTLE-CANCEL-REVERSE");
+  await apply(
+    receipt,
+    store,
+    "cancel",
+    "PR-CANCEL-AFTER-SETTLE",
+    submittedReceipt.data,
+    "PR-CANCEL-AFTER-REVERSE",
+  );
+
+  const snapshot = store.snapshot();
+  assert.equal(snapshot.purchase_allocation_entries.reduce((sum, row) => sum + row.qty_micros, 0), 0);
+  assert.equal(snapshot.purchase_unapplied_entries.reduce((sum, row) => sum + row.qty_micros, 0), 0);
+  assert.equal(snapshot.purchase_allocation_entries.reduce((sum, row) => sum + row.barem_weight_micros, 0), 0);
+  assert.equal(snapshot.purchase_allocation_entries.reduce(
+    (sum, row) => sum + (row.projected_actual_weight_micros ?? 0), 0), 0);
+  assert.equal(snapshot.purchase_unapplied_entries.reduce(
+    (sum, row) => sum + (row.barem_weight_micros ?? 0), 0), 0);
+  assert.equal(snapshot.purchase_unapplied_entries.reduce(
+    (sum, row) => sum + (row.projected_actual_weight_micros ?? 0), 0), 0);
+  const state = await store.getPurchaseSettlementWindowState(tenant, source.queue_key, source.window_id);
+  assert.equal(state.window_status, "Reversed");
+});
