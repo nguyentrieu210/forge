@@ -1,9 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { pathToFileURL } from "node:url";
-import { resolve } from "node:path";
 
-const moduleUrl = pathToFileURL(resolve("server/packages/clouderp-erpnext/dist/physical-stock-read-model.js")).href;
+const moduleUrl = new URL("../packages/clouderp-erpnext/dist/physical-stock-read-model.js", import.meta.url).href;
 
 async function loadModule() {
   return import(moduleUrl);
