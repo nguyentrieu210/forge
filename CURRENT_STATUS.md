@@ -2,128 +2,130 @@
 
 Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
 
+## Alumdoor landing/login refresh — PR #17
+
+- Branch: `feat/login-landing-ui-refresh`.
+- Exact code head đã kiểm chứng trước cập nhật tài liệu: `b90fc6760439f6bb90a5bb42a417fe7c9c1c409d`.
+- Base đã rebase sạch: `81697d454db5e22e758a8aeda8cc40f1f247b18a`.
+- Phạm vi: landing guest và login riêng cho Alumdoor; không thay đổi Social Commerce, auth API, permission hoặc nghiệp vụ.
+- Nhận diện dùng cam `#F15C2D`, than `#393938`, nền trắng/xám kỹ thuật theo mẫu logo Alumdoor.
+- `PR Validation` run `30622672127`, job `91130621484`: install, tests, typecheck và build **PASS**.
+- `UI Pull Request Validation` run `30622672113`, job `91130621422`: lint, tests, typecheck, build, Chromium browser QA, artifact ảnh và cookie auth smoke **PASS**.
+- Auth smoke tạo user/password/session secret ngẫu nhiên chỉ trong runner; không commit secret và không sửa production secret.
+- Không deploy Cloudflare trong đợt này.
+
 ## Git
 
 - Repository: `nguyentrieu210/forge`.
-- Default branch: `hotfix/alumdoor-print-list-delete`.
-- Feature branch: `feat/purchase-receipt-complete-20260731`.
-- Tracking issue: `#13`.
-- Draft PR: `#14`, open và mergeable.
-- Supplier debt implementation head đã qua CI: `554500502aeff45f75381e195517539eed5b94c2`.
-- Current verified base-sync merge head trước commit tài liệu này: `ee9ffe8092dedfa3bac496a0efb766a55469c238`.
-- Default head đã nhập vào feature: `7da22ab3b01012a369c9d697b2a7e9c3fd64a989`.
-- Helper sync PR `#41` đã merge đúng hướng default → feature.
-- Không commit `server/work/`, `tmp/`, backup SQL, `.env` hoặc generated artifacts.
+- Branch/default branch: `hotfix/alumdoor-print-list-delete`.
+- Code sidebar: `87cd45aa9272f5600ff3d5914f697ce9a26994b6` (`fix(ui): compact desktop sidebar`).
+- Release target trước trigger: `da04f7fcfdc4c8e4ddf7ff70c79e3a10458ce412`.
+- Gateway production trigger: `9a7bbc14b8e7f3e556404cce19914da1e21e5e10` (`release: trigger compact sidebar gateway production`).
+- Baseline code/schema đã qua CI trước đó: `591ca359937d6ae12803d36c74996db8482060af`.
+- `server/work/`, `tmp/`, backup SQL, `.env` và generated artifacts không được commit.
 
-## Production boundary
+## Sidebar/runtime UI
 
-- Không sửa Cloudflare production secrets hoặc DNS.
-- Không chạy tenant migration hoặc bật FIFO production.
-- `purchase_allocation_rollout_state.enabled` vẫn phải giữ `0` cho tới khi backfill/checksum, staging smoke và explicit approval riêng đều hoàn tất.
-- Khi mở helper PR `#41`, Cloudflare Git integration tự đăng bằng chứng Gateway production deployment thành công cho default commit `7da22ab3`; assistant không gọi deploy API hoặc sửa cấu hình Cloudflare. Sự kiện tự động này cần được operator xem lại riêng, không được coi là staging/Browser QA của purchase epic.
+- Đã làm gọn sidebar desktop tại `client/apps/runtime/src/styles.css`.
+- Sidebar rộng `15.75rem` thay vì `17rem` khi mở.
+- Group header, ô tìm kiếm, dòng menu, icon và khoảng cách dọc được giảm kích thước.
+- Không ẩn route, không đổi permission và không xoá mục Báo cáo/Danh mục.
 
-## Purchase Order / Purchase Receipt FIFO
+## Gateway production release
+
+- Đã push `.github/release/gateway-production.trigger` lên default branch để kích hoạt Cloudflare Git build cho `cloudforge-gateway`.
+- Trigger trỏ tới code target `da04f7fcfdc4c8e4ddf7ff70c79e3a10458ce412`, môi trường `production`, lý do `compact-sidebar-release`.
+- Việc này chỉ phát hành Gateway/frontend; không chạy tenant migration, không deploy lại tenant Worker và không bật FIFO.
+- Chưa có provider evidence từ Cloudflare cho build/deployment/version ID hoặc smoke production sau trigger.
+
+## CI
+
+Baseline đã xác minh:
+
+- Workflow run: `30570000862`.
+- Job: `90964015638` (`Test, typecheck and build`).
+- Exact head: `591ca359937d6ae12803d36c74996db8482060af`.
+- Install/test/typecheck/build: **PASS**.
+
+## Cloudflare production tenant `alu`
+
+- Người vận hành xác nhận workflow release đã chạy được sau khi sửa credential.
+- Code/schema FIFO target `591ca359...` đã được đưa qua quy trình backup, migration và tenant deploy theo xác nhận vận hành.
+- FIFO rollout vẫn phải giữ **disabled**.
+- Gateway `cloudforge-gateway` dùng Cloudflare Git build; build command đúng cho monorepo là:
+
+```bash
+pnpm --filter metaforge run build && node server/scripts/stage-client-bundle.mjs
+```
+
+- Deploy command Gateway:
+
+```bash
+pnpm --dir server exec wrangler deploy --config apps/gateway-worker/wrangler.jsonc
+```
+
+- Còn thiếu bằng chứng ghi vào repo: deployment/version ID mới nhất, kết quả `/health`, login/CRUD/print/PDF và ảnh sidebar production sau trigger.
+
+## FIFO Purchase Receipt vào nhiều Purchase Order
 
 Contract authoritative: `server/docs/ALUMDOOR-PURCHASE-RECEIPT-ALLOCATION.md`.
 
-### Backend lifecycle, settlement và cutover
+### Đã hoàn thành và qua CI
 
-Đã hoàn thành:
+- Migration append-only: `0027_purchase_receipt_allocation.sql`, `0028_purchase_allocation_cancel_guard.sql`, `0029_purchase_allocation_rollout.sql`.
+- Allocation schema: queue, settlement windows, obligations, allocations, unapplied quantities, settlement events và revision claims.
+- D1 atomic batch cho document, stock, procurement compatibility rows, allocation rows và mutation receipt.
+- Canonical material key do server tạo từ item, chiều dài, barem kg/m, màu, dập, measurement profile và stock UOM.
+- Supplier coordinator theo `purchase:<tenant>:<company>:<supplier>` trong namespace `AGGREGATES`.
+- Revision conflict retry tối đa ba lần.
+- PO submit mở obligation theo row; Receipt submit tự FIFO qua nhiều PO; Receipt cancel sinh reversal theo nguồn.
+- Nhôm `inventory_mode = Nhôm cây/lá` dùng `qty_bar` làm số cây/lá nghĩa vụ/tồn; kg barem và kg cân thực tế giữ riêng.
+- Integration scenario: PO 200 + 100 cây, Receipt 230 cây => allocation 200 + 30, còn 70; stock 230 cây, actual weight 630 kg.
+- Stress planner cover 250 obligation rows.
 
-- Cross-voucher allocation/unapplied attribution và migration `0030_purchase_unapplied_weight_attribution.sql`.
-- PO submit tự hút Receipt chờ theo FIFO trong cùng mutation plan.
-- Settlement close/reverse và manual FIFO override với permission, reason và append-only audit.
-- Reverse settlement bị chặn khi cửa sổ kế tiếp trực tiếp đã có activity.
-- Backfill planner/CLI, unresolved report, checksum và activation guards.
-- Rollout schema dùng đúng `enabled_by` / `enabled_at` và SQL renderer chạy qua migrations thật.
+### Rollout safety
 
-### Operator UI
+`purchase_allocation_rollout_state` mặc định tắt:
 
-Đã hoàn thành:
+- Không có row hoặc `enabled=0`: PO/Receipt dùng controller legacy.
+- Chỉ bật khi có backfill checksum, `unresolved_count=0`, actor và timestamp.
+- Database chặn tắt lại sau activation.
 
-- Server-authoritative FIFO preview trước submit Purchase Receipt.
-- PO/Receipt allocation timeline và drill-down từ append-only ledger.
-- Close/reverse/manual-override dialogs theo server capabilities, reason bắt buộc và scope confirmation.
-- Mutation tạo + submit control document qua DocumentKernel/Durable Object; không có write bypass.
-- Sau mutation, document/list/overview bị invalidate và timeline được đọc lại từ server; không optimistic-update ledger.
+Code/schema có thể live khi rollout tắt, nhưng FIFO chưa hoạt động cho tenant cho tới khi backfill/cutover hoàn tất.
 
-### Supplier debt report — scoped drill-down
+## Tenant-safe migration/deploy
 
-Đã triển khai và qua CI:
+Các script hiện hành:
 
-- `D1PurchaseSupplierDebtReportService` đọc trực tiếp từ allocation ledger:
-  - `purchase_obligation_queues`;
-  - `purchase_settlement_windows`;
-  - `purchase_window_obligation_entries`;
-  - `purchase_receipt_allocation_entries`;
-  - `purchase_unapplied_receipt_entries`.
-- Không dùng procurement compatibility/progress table làm nguồn sự thật.
-- Cột gồm supplier/company/material, ordered, received, allocated, nominal remaining, unapplied Receipt, window/status/tolerance, oldest open PO age và barem/actual weight.
-- Report trả `null` khi FIFO rollout disabled.
-- Operator timeline gắn `supplier_debt_reports` cho đúng các settlement window đã được permission-checked của chứng từ hiện tại; không mở rộng sang supplier/material không liên quan.
-- Dialog `Công nợ NCC` có summary, filter company/supplier/item/status/oldest-open-PO date, responsive overflow và CSV export có phòng chống spreadsheet formula injection.
-- Settlement/override refetch timeline nên report snapshot cũng được làm mới.
-- Phạm vi hiện tại là drill-down theo các window của PO/Receipt đang mở, chưa phải màn hình global tổng hợp toàn bộ nhà cung cấp.
+- Backup: `server/scripts/backup-tenant.mjs`.
+- Tenant-safe migration: `server/scripts/migrate-tenant.mjs`.
+- Low-level migration engine: `server/scripts/d1-migrate-remote.mjs`.
+- Tenant deploy: `server/scripts/deploy-tenant.mjs`.
+- Stage client: `server/scripts/stage-client-bundle.mjs`.
 
-Files chính:
+Thứ tự an toàn: backup → migration dry-run → migration live với explicit confirmation → tenant deploy dry-run → tenant deploy live với explicit confirmation → smoke health/login/CRUD/print/PDF.
 
-- `server/packages/document-kernel/src/purchase-supplier-debt-report.ts`.
-- `server/packages/document-kernel/src/purchase-allocation-operator-timeline.ts`.
-- `server/packages/document-kernel/src/index.ts`.
-- `server/tests/purchase-supplier-debt-report.test.mjs`.
-- `server/tests/purchase-allocation-operator-timeline.test.mjs`.
-- `client/packages/views/src/container/PurchaseSupplierDebtReportDialog.tsx`.
-- `client/packages/views/src/container/AllocationTimelineDialog.tsx`.
+## Blocker trước khi bật FIFO production
 
-## Verification
+1. Tự `apply_unapplied` khi PO mới gia nhập window.
+2. Settlement close/reverse API/action, manual override, permission và reason.
+3. Backfill script, resolved/unresolved report, PO-level checksum và activation transaction.
+4. UI preview/timeline/report vận hành.
+5. D1 batch/latency và supplier contention test.
+6. Staging migration, backfill dry-run và smoke toàn luồng.
+7. Production backup mới và explicit approval trước activation.
+8. Xác minh Gateway production version/traffic và browser smoke hiện hành.
 
-### Report code head `554500502aeff45f75381e195517539eed5b94c2`
+Không bật rollout FIFO cho `alu` trước khi các blocker trên được xử lý.
 
-- Purchase Feature CI `30622609267`, job `91130424211`: **PASS**.
-- PR Validation `30622609247`, job `91130423800`: **PASS**.
-- CI `30622609312`, job `91130424161`: **PASS**.
-- Production release job `91130425008`: **SKIPPED**.
-- Unit, SQL, client tests, typecheck và build: **PASS**.
-- Lần chạy trước tại `0ad4ea44...` bắt được lỗi TypeScript `FilterState` thiếu index signature; đã sửa tại `55450050...`.
+## RBAC Slice A đã merge
 
-### Base-sync merge head `ee9ffe8092dedfa3bac496a0efb766a55469c238`
-
-- Purchase Feature CI `30623044989`, job `91131834137`: **PASS**.
-- PR Validation `30623044983`, job `91131803690`: **PASS**.
-- RBAC helper no-op job `91131804061`: **PASS**, không áp wiring vào purchase branch.
-- CI `30623044993`, job `91131855980`: **PASS**.
-- Production release job `91131856480`: **SKIPPED**.
-
-## Review
-
-- Review vòng 1 Critical rollout schema mismatch: **RESOLVED**.
-- Review vòng 1 High next-window reverse lifecycle: **RESOLVED**.
-- Review vòng 2 ID `4827031228` xác nhận hai finding đã đóng.
-- PR tiếp tục draft vì còn concurrency/cancel, browser, staging và final rubric.
-
-## Phần còn thiếu trước release gate
-
-1. Interaction/E2E tests cho capability, required reason, success/error/refetch, CSV và mobile/focus behavior.
-2. Worker/Durable Object concurrency tests.
-3. Production-shaped Receipt cancel lifecycle tests.
-4. Quyết định business có cần standalone global supplier-debt screen hay scoped drill-down hiện tại đã đủ.
-5. Cloudflare Browser Preview QA desktop `1440x1000` và mobile `390x844`.
-6. Staging migrations, backfill dry-run và smoke PO → Receipt → cancel → settlement → report.
-7. Review rubric >= 95/100, không còn Critical/High.
-8. Backup, rollback plan và explicit production approval riêng trước activation.
-
-## Gate hiện tại
-
-- G0 Scope: **PASS**.
-- G1 Requirements: **PASS**.
-- G2 Technical plan: **PASS**.
-- G3 Tests/typecheck/build: **PASS** trên `ee9ffe80...`.
-- G4 Exact-head code/base-sync CI: **PASS** trên `ee9ffe80...`.
-- G5 Staging + Browser QA: **NOT STARTED**.
-- Production FIFO activation: **NOT ALLOWED**.
-
-## RBAC và Sidebar
-
-- RBAC Slice A đã merge vào default qua PR `#37`.
-- RBAC Slice B tiếp tục trên branch/PR riêng; purchase branch chỉ đồng bộ workflow default, không mang wiring payload.
-- Sidebar/Gateway production vẫn cần provider evidence và browser smoke riêng; không dùng bot comment thay purchase staging/Browser QA.
+- Implementation gốc: `ab974f92ffbcf015fb71d3051df33508c9f09942`.
+- Branch kiểm chứng sạch: `feat/rbac-slice-a-rebased-20260731`.
+- Exact head đã kiểm chứng: `0db13898ed00cbfe3835ce511f90c84aef38c8e8`.
+- PR `#37` đã squash-merge vào default; merge commit `93ac85a0f16c2668b706ffcf8e15d3da53c8c7a9`.
+- G3 trước rebase PASS tại workflow `30612014393`, job `91101823154`.
+- G4 exact-head PASS trên các run `30618821462`, `30619133964`, `30619408760`.
+- G5 staging/browser QA: **CHƯA CHẠY**.
+- Việc tiếp theo là Slice B riêng cho audit append-only, atomic user/roles và last-admin/self-lockout guards.
+- Không deploy Cloudflare, không sửa production secrets và không bật FIFO.
