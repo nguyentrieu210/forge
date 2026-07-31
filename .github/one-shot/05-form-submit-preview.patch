@@ -31,7 +31,7 @@ diff --git a/client/packages/views/src/container/FormContainer.tsx b/client/pack
    const onSave = async (changed: Record<string, unknown>) => {
      setSaving(true);
      setFieldErrors(undefined);
-@@ -151,10 +160,29 @@ export function FormContainer(props: FormContainerProps) {
+@@ -151,10 +160,28 @@ export function FormContainer(props: FormContainerProps) {
      // không gọi API, chỉ stash + để cha điều hướng.
      if (kind === "duplicate") { stashDuplicate(doctype, doc as Record<string, unknown>); props.onDuplicate?.(); return; }
      if (kind === "print") { props.onPrint?.(); return; }
@@ -62,7 +62,7 @@ diff --git a/client/packages/views/src/container/FormContainer.tsx b/client/pack
        else if (kind === "amend") { await adapter.amend(doctype, name); invalidateCollection(); toast.success(t("form.amended")); props.onSaved?.(); }
      } catch (e) {
        toast.error(adapter.mapError(e).message);
-@@ -163,6 +191,18 @@ export function FormContainer(props: FormContainerProps) {
+@@ -163,6 +190,17 @@ export function FormContainer(props: FormContainerProps) {
      }
    };
  
@@ -80,7 +80,7 @@ diff --git a/client/packages/views/src/container/FormContainer.tsx b/client/pack
    const doDelete = async () => {
      setSaving(true);
      try {
-@@ -229,6 +269,12 @@ export function FormContainer(props: FormContainerProps) {
+@@ -229,6 +267,12 @@ export function FormContainer(props: FormContainerProps) {
          confirmLabel={t("form.rename_title")}
          onConfirm={doRename}
        />
