@@ -6,10 +6,10 @@ Ngày cập nhật: **2026-07-31**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Default head tại lần sync gần nhất: `51f462c7e76dd2c669c5721bcd625fdb1453a008`.
+- Default head tại lần sync gần nhất: `df2dffc3d3303841a76993b4b8acf8bf2e344e17`.
 - Working branch: `feat/inventory-physical-stock-slice-b-20260731`.
 - PR `#49` — Inventory Slice B.
-- Sync merge commit: `2f31b2dc74c6f44ca119bb9a53fe7bc13cae844d`.
+- Sync merge đầu: `2f31b2dc74c6f44ca119bb9a53fe7bc13cae844d`; merge sync cuối bổ sung default head mới `df2dffc3d3303841a76993b4b8acf8bf2e344e17`.
 
 ## Inventory Slice B
 
@@ -38,8 +38,8 @@ Ngày cập nhật: **2026-07-31**.
 - Critical: **0**.
 - High: **0**.
 - Head trước sync `423af47b7e2bfb31c160934aa241716511449107` có toàn bộ required workflows PASS.
-- Sau default tiến thêm 10 commit, branch đã được dựng lại trên current default bằng merge commit `2f31b2dc74c6f44ca119bb9a53fe7bc13cae844d`.
-- Exact-head CI sau sync/handoff là merge gate hiện tại.
+- Head `9e6712c454fb1bb685fb4f80f57cdb52fda9a8d2` đã PASS repository CI, PR Validation, Sales, Purchase và Inventory CI; UI browser/auth gate đang chạy khi default tiến thêm một docs commit.
+- Branch được merge-sync lại với default `df2dffc3d3303841a76993b4b8acf8bf2e344e17`; chỉ exact-head CI sau sync cuối được dùng làm merge evidence.
 
 ## Stack
 
