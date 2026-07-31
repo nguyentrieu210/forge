@@ -284,15 +284,25 @@ export class InMemoryPurchaseAllocationMutationStore extends InMemoryMutationSto
     return this.purchaseUnapplied
       .filter((source) => source.entry_kind === "receive" && source.voucher_no === purchaseReceipt)
       .map((source) => {
-        const movement = this.purchaseUnapplied
-          .filter((entry) => entry.source_entry_id === source.entry_id)
-          .reduce((sum, entry) => sum + entry.qty_micros, 0);
+        const movements = this.purchaseUnapplied.filter((entry) => entry.source_entry_id === source.entry_id);
         const queue = this.purchaseQueues.get(queueMapKey(tenantId, source.queue_key));
         const window = this.purchaseWindows.get(windowMapKey(tenantId, source.window_id));
-        return { source, net: source.qty_micros + movement, queue, window };
+        return {
+          source,
+          movements,
+          net: source.qty_micros + movements.reduce((sum, entry) => sum + entry.qty_micros, 0),
+          barem: (source.barem_weight_micros ?? 0)
+            + movements.reduce((sum, entry) => sum + (entry.barem_weight_micros ?? 0), 0),
+          actual: source.projected_actual_weight_micros === undefined
+            ? undefined
+            : source.projected_actual_weight_micros
+              + movements.reduce((sum, entry) => sum + (entry.projected_actual_weight_micros ?? 0), 0),
+          queue,
+          window,
+        };
       })
       .filter(({ net, queue, window }) => net > 0 && Boolean(queue && window))
-      .map(({ source, net, queue, window }) => ({
+      .map(({ source, net, barem, actual, queue, window }) => ({
         entry_id: source.entry_id,
         queue_key: source.queue_key,
         queue_revision: queue!.revision,
@@ -301,6 +311,9 @@ export class InMemoryPurchaseAllocationMutationStore extends InMemoryMutationSto
         window_status: window!.status,
         receipt_item_row_id: source.receipt_item_row_id,
         qty_micros: net,
+        barem_weight_micros: barem,
+        ...(actual === undefined ? {} : { projected_actual_weight_micros: actual }),
+        ...(source.projection_version === undefined ? {} : { projection_version: source.projection_version }),
         posting_at: source.posting_at,
       }));
   }
