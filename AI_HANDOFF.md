@@ -6,24 +6,15 @@ Ngày cập nhật: **2026-08-01**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Default head trước closeout docs: `76b71aab3c2eacf816986c247b25f564fc808a96`.
+- Current default head trước docs handoff: `29fee0200d8118eef2d0ae9e524a3a00acfab00f`.
 - Đọc theo thứ tự: `CURRENT_STATUS.md` → `NEXT_TASKS.md` → `DELIVERY_POLICY.md`.
 - GitHub là nguồn sự thật cho code, CI, merge và release evidence.
 
 ## PR cleanup
 
-Toàn bộ PR còn mở đã được đóng:
+Toàn bộ PR stale trước đây đã đóng: `#15`, `#35`, `#36`, `#40`, `#73`, `#74`, `#79`, `#81`, `#103`, `#106`, `#109`.
 
-`#15`, `#35`, `#36`, `#40`, `#73`, `#74`, `#79`, `#81`, `#103`, `#106`, `#109`.
-
-Lý do chung:
-
-- tất cả `mergeable=false`;
-- diverged từ `116` đến `351` commit so với current default;
-- nhiều PR là backup/tmp/duplicate hoặc workflow cũ;
-- branch vẫn được giữ nguyên làm nguồn tham khảo, không mất code.
-
-Không reopen và không merge nguyên branch cũ. Mọi epic phải dựng lại từ exact current default và chỉ mang từng file đã review.
+Không reopen và không merge nguyên branch cũ. Branch cũ chỉ làm nguồn tham khảo từng file cho nhánh sạch từ current default.
 
 ## Đã merge trên default
 
@@ -37,34 +28,54 @@ Không reopen và không merge nguyên branch cũ. Mọi epic phải dựng lạ
 - Form đặt nhôm, FIFO đơn cũ trước, lịch sử nhập, công nợ cây/mét và dung sai Tiến Đạt `5%` đã có.
 - Regression: `200 + 100`, nhận `230` → `200 + 30`, nợ `70` cây / `504 m`, khoảng thêm `55–85`.
 
+### Purchase authenticated QA
+
+- PR `#137` merge SHA: `29fee0200d8118eef2d0ae9e524a3a00acfab00f`.
+- Exact PR head: `fd03d22872c2234d50f616a5d8956c8b62f26b40`.
+- CI `30670524038`: SUCCESS.
+- PR Validation `30670524052`: SUCCESS.
+- Purchase Feature CI `30670524133`: SUCCESS.
+- UI Pull Request Validation `30670524072`: SUCCESS.
+- Sales `30670524058` và Inventory `30670523976`: SUCCESS.
+
+Authenticated evidence đã khóa:
+
+- cookie + CSRF thật;
+- authoritative Alumdoor app cài vào D1 local;
+- Item/UOM search;
+- Purchase Order create/save/submit/reopen;
+- Purchase Receipt create/save/preview/submit/cancel/reopen;
+- Desktop Chrome và Pixel 7;
+- Tiến Đạt `200 + 100`, nhận `230` ra `200 + 30`, lưu đúng hai `purchase_order`, đọc lại lịch sử, `85` được phép và `86` bị từ chối.
+
+QA chỉ dùng local/ephemeral. Không deploy Cloudflare, không mutate production, không bật generic FIFO rollout.
+
 ## Trạng thái thật
 
 Không được tuyên bố toàn bộ quy trình `25.7 QUY TRÌNH.docx` đã hoàn tất.
 
 Còn thiếu hoặc chưa chứng minh:
 
-1. Purchase authenticated QA clean rebuild.
-2. Finance full scope.
-3. Daily detailed ledger snapshot/freeze/adjustment.
-4. Warranty/defects và capacity/overtime.
-5. Authenticated end-to-end acceptance.
-6. UI MetaForge MISA-style và login/landing cần rebuild riêng nếu vẫn còn yêu cầu.
+1. Finance full scope.
+2. Daily detailed ledger snapshot/freeze/adjustment.
+3. Warranty/defects và capacity/overtime.
+4. Authenticated end-to-end acceptance.
+5. UI MetaForge MISA-style và login/landing cần rebuild riêng nếu vẫn còn yêu cầu.
 
 ## Việc tiếp theo
 
-Bắt đầu `P0 — Purchase authenticated QA clean rebuild` từ exact current default mới nhất.
+Bắt đầu `P1 — Finance clean rebuild` từ exact current default mới nhất.
 
-- Không reopen PR `#103`.
-- Chỉ mang từng file QA cần thiết.
-- Bổ sung authenticated Tiến Đạt FIFO journey.
-- Desktop Chrome + Pixel 7.
-- Merge chỉ khi full CI, Purchase gate và UI authenticated gate xanh trên exact head.
+- Dùng closed PR `#15` và backup `#40` chỉ để tham khảo từng file.
+- Phạm vi bắt buộc: due date, AR/AP aging, Payment Entry partial/unallocated, Payment Allocation, Party Statement, Debt Summary, Advance Balance, UI/report navigation và permission.
+- Migration append-only, dry-run, checksum, rollback và production-shaped evidence.
+- Merge chỉ khi full CI và Finance-specific gates xanh trên exact head.
 
-Sau Purchase QA: Finance → Daily ledger → Warranty/Capacity → end-to-end acceptance.
+Sau Finance: Daily ledger → Warranty/Capacity → end-to-end acceptance.
 
 ## Release boundary
 
-- Không deploy Cloudflare trong đợt closeout PR.
+- Không deploy Cloudflare nếu chưa có lệnh riêng.
 - Không sửa production secret hoặc DNS.
 - Không thay rollout state.
 - Không mutate dữ liệu khách hàng.
