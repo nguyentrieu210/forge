@@ -2,6 +2,67 @@
 
 Ngày cập nhật: **2026-08-01**.
 
+## P0 — chốt PR #81 Meta workspace
+
+### Mục tiêu
+
+Xác nhận navigation MetaForge theo MISA AMIS chạy đúng trên desktop/mobile và đủ provider evidence trên exact final head.
+
+### File/module
+
+- `client/apps/demo/src/DemoShell.tsx`
+- `client/apps/demo/src/workspace-meta.tsx`
+- `client/apps/demo/src/App.tsx`
+- `client/apps/demo/e2e/workspace-navigation.spec.ts`
+- `.github/workflows/ui-pr-validation.yml`
+
+### Việc phải làm
+
+1. Lấy exact final head sau khi branch được đặt lại trên base `f27d4c6efe37a0cca91e3f1672a199d33b09cbab`.
+2. Kiểm trên cùng SHA:
+   - CI;
+   - PR Validation;
+   - Sales Feature CI;
+   - Purchase Feature CI;
+   - Inventory and Manufacturing CI;
+   - UI Pull Request Validation.
+3. Trong UI workflow, xác nhận step `Run Meta workspace browser QA` PASS cho desktop và mobile.
+4. Kiểm artifact có `meta-process.png` và `meta-overview.png`.
+5. Xác nhận browser journey:
+   - sidebar là phân hệ;
+   - tab đầu Quy trình, tab hai Tổng quan, tab sau là DocType;
+   - modal Tạo công việc mở `/view/form?new=1`;
+   - sidebar Meta mở quy trình Meta;
+   - modal Tạo mới Meta mở DocType builder `?new=1`;
+   - không có document-level horizontal overflow.
+6. Nếu fail, đọc log/trace và sửa direct cause; không xóa test để lấy màu xanh.
+7. Cập nhật PR body bằng exact SHA, run IDs và artifact evidence.
+8. Giữ PR draft tới khi người dùng duyệt UI hoặc ra lệnh rõ chuyển ready/merge.
+
+### Done condition
+
+- Branch behind base = 0 và không conflict.
+- Tất cả required checks PASS trên exact final head.
+- Dedicated browser QA PASS và screenshot evidence tồn tại.
+
+### Rủi ro
+
+- Selector sidebar khác role dự kiến ở collapsed/mobile.
+- Lazy builder tải chậm hoặc route create mode lộ lỗi thật.
+- `LiveApp.tsx` chưa có route/permission builder; không được mở Meta trong live bằng route giả.
+
+### Dependency
+
+- GitHub Actions tạo run cho event branch update/reopen.
+- Không cần Cloudflare hoặc production credential.
+
+## P1 — nâng Meta workspace sang LiveApp
+
+- Sinh metadata từ application catalog/manifest thay vì hard-code demo.
+- Chỉ hiện Meta khi route builder tồn tại và user có quyền.
+- Nâng workspace primitive vào `@metaforge/shell` sau khi prototype được duyệt.
+- Thêm authenticated navigation smoke desktop/mobile.
+
 ## P0 — authenticated Sales smoke sau app Worker release
 
 Sales Unicode fix đã được deploy đúng Worker thực thi nghiệp vụ:
@@ -93,8 +154,15 @@ Evidence hiện tại:
 - Functional acceptance, contention/latency evidence, fresh production backup.
 - Production activation chỉ sau explicit approval riêng.
 
+## P2 — cài Forge Skills vào repository
+
+- Repository chưa có `FORGE.md` và `.forge/manifest.json`.
+- Nếu cài, mở PR riêng từ base; không trộn vào PR `#81`.
+- Dùng installer của Forge Skills pack và kiểm diff chỉ gồm skill/versioned instruction files.
+
 ## Không được làm
 
+- Không deploy Cloudflare trong PR UI `#81` nếu chưa được yêu cầu rõ.
 - Không sửa production secrets hoặc DNS.
 - Không bật FIFO.
 - Không commit `.env`, `server/work/`, `tmp`, backup hoặc generated evidence.
