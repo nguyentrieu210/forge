@@ -4,279 +4,156 @@ Ngày cập nhật: **2026-07-31**.
 
 ## P0 — Hoàn thiện tài chính và công nợ AR/AP
 
-Contract: `server/docs/FINANCE-AR-AP-BRD.md` trên branch `feat/finance-ar-ap-completion`, draft PR `#15`.
+Contract: `server/docs/FINANCE-AR-AP-BRD.md`  
+Branch: `feat/finance-ar-ap-completion`  
+Draft PR: `#15`
 
 ### Quyết định đã chốt
 
-- Customer AR + Supplier AP cùng workstream.
+- Customer AR + Supplier AP.
 - Aging bucket: chưa đến hạn, 1–30, 31–60, 61–90, trên 90 ngày.
 - Allocation chỉ cùng company, party, party account và currency.
 - Credit-limit/Sales Order blocking và cross-currency allocation để pha sau.
-- Không deploy Cloudflare hoặc sửa production secrets trong workstream nếu chưa có yêu cầu rõ.
+- Không deploy Cloudflare, migrate production hoặc sửa production secrets khi chưa có yêu cầu rõ.
 
-### Đã implement — M1A due date và aging backend
+### Hoàn thành — M1A due date và aging backend
 
 - Migration append-only `0030_finance_invoice_aging.sql`.
-- Xác thực due date khi có; chặn ngày sai và ngày trước posting date.
-- Metadata Sales Invoice yêu cầu Due Date.
-- API/fixtures cũ thiếu due date vẫn tương thích bằng `posting_date_fallback`.
-- `finance_invoice_terms` ghi `due_date_source` là `explicit` hoặc `posting_date_fallback`.
-- Hard database presence enforcement để migration sau, chỉ bật sau backfill/checksum không còn unresolved.
-- `FinanceQueryCompiler` cho:
-  - `Accounts Receivable Aging`;
-  - `Accounts Payable Aging`.
-- `as_of_date` bắt buộc, tenant/cutoff/filter dùng bind parameter.
-- Aging report trả/lọc `due_date_source` để xác định dữ liệu cần backfill.
-- Query Worker dùng finance compiler cho synchronous và prepared reports.
-- Permission server-side cho Accounts, Sales Manager và Purchase Manager theo domain.
-- D1 guard map thành validation 422 an toàn.
-- SQL test mới đã được nối vào `server/package.json`.
-- Targeted tests đã thêm cho migration, query compiler, permission và error mapping.
-- Implementation head trước commit trạng thái cuối: `90ef9ac2b4a3681cda86cd8ae0ad304f3ebd0c34`.
+- Xác thực explicit due date; chặn ngày sai và ngày trước posting date.
+- Sales Invoice metadata yêu cầu Due Date.
+- Legacy/API invoice thiếu due date dùng `posting_date_fallback`.
+- `finance_invoice_terms.due_date_source` phân biệt `explicit` và `posting_date_fallback`.
+- `FinanceQueryCompiler` cho AR Aging và AP Aging.
+- `as_of_date` bắt buộc; tenant/cutoff/filter parameterized.
+- Outstanding derive từ Payment Ledger theo đúng cutoff.
+- Query Worker dùng finance compiler cho synchronous/prepared reports.
+- Permission cho Accounts/Sales Manager/Purchase Manager theo domain.
+- D1 guard errors map thành validation 422.
+- Migration/query/policy/error tests và Worker route regression test đã thêm.
+- Nhánh đã đồng bộ default, PR mergeable và zero commits behind.
 
 ### Verification hiện có
 
-- Compatibility migration fixture: **PASS**.
-- TypeScript strict harness cho finance compiler: **PASS**.
-- SQL execution fixture tại cutoff: outstanding, days overdue, bucket và `due_date_source` đều đúng: **PASS**.
-- Chưa có root `pnpm run test`, `pnpm run typecheck`, `pnpm run build` hoặc GitHub code CI exact-head.
+- Migration compatibility fixture: **PASS**.
+- Finance compiler strict harness: **PASS**.
+- SQL cutoff/due-date-source fixture: **PASS**.
+- PR Validation PASS trước Worker route test:
+  - head `2afc670f4ed755c897837fd0fddd3633f7d5628d`;
+  - run `30620083625`;
+  - job `91122345078`;
+  - test/typecheck/build đều PASS.
+- Worker route test mới nằm trong `server/tests/*.test.mjs`, nên sẽ chạy bằng root `pnpm test` khi Actions khởi động được.
 
-### Việc tiếp theo
+### M1B — Đóng gate aging backend
 
-#### M1B — Đóng gate aging backend
+#### Blocker hạ tầng hiện tại
 
-1. Đọc workflow `CI` mới nhất cho exact branch head sau commit trạng thái cuối.
-2. Chạy/đợi root test/typecheck/build và sửa mọi regression, đặc biệt query-worker worker typecheck và migration chain.
-3. Thêm worker-level report request fixture nếu root tests chưa cover D1ReportService với finance compiler.
-4. Cập nhật exact PASS SHA vào CURRENT_STATUS/NEXT_TASKS/AI_HANDOFF.
-5. Chỉ chuyển PR ready khi exact-head CI xanh.
+GitHub Actions đang fail trước runner trên nhiều SHA/run:
 
-#### M1C — Backfill và hard due-date enforcement
+- `30620542741` / `91123803489`;
+- `30620645454` / `91124137658`, rerun `91124386934`;
+- `30620830770` / `91124730973`.
 
-1. Viết dry-run report đếm invoice dùng `posting_date_fallback` theo tenant/company/doctype.
-2. Xuất unresolved list/checksum, không tự đoán payment terms.
-3. Cho phép operator bổ sung due date theo dữ liệu đã duyệt.
-4. Chỉ thêm migration hard-presence guard khi unresolved = 0 và staging smoke pass.
+Các job không có step, không checkout và không có test log. Đây chưa phải code failure.
 
-#### M2 — Advance và Payment Allocation
+#### Việc cần làm
+
+1. Kiểm tra trong GitHub UI:
+   - Actions billing/spending limit;
+   - Actions permissions của repository private;
+   - runner/GitHub-hosted runner availability;
+   - thông báo yêu cầu approval hoặc account restriction trên run.
+2. Rerun workflow `PR Validation` trên exact head hiện hành.
+3. Yêu cầu job `Test, typecheck and build` chạy thật và PASS:
+   - install;
+   - `pnpm test`, gồm `finance-aging-worker-route.test.mjs`;
+   - `pnpm typecheck`;
+   - `pnpm build`.
+4. Ghi exact PASS head/run/job vào `CURRENT_STATUS.md`, `NEXT_TASKS.md`, `AI_HANDOFF.md` và PR body.
+5. Giữ PR draft cho tới khi exact-head gate xanh; không merge tự động.
+
+### M1C — Backfill và hard due-date enforcement
+
+1. Viết dry-run inventory cho `posting_date_fallback` theo tenant/company/doctype.
+2. Xuất unresolved list và deterministic checksum; không đoán payment terms.
+3. Cho operator bổ sung due date từ dữ liệu đã review.
+4. Chỉ tạo migration hard-presence mới khi:
+   - unresolved = 0;
+   - checksum được duyệt;
+   - staging migration và smoke PASS.
+5. Không sửa migration `0030` sau khi đã tồn tại trên branch.
+
+### M2 — Advance và Payment Allocation
 
 1. Nới Payment Entry để hỗ trợ zero/partial/full allocation.
-2. Thiết kế Payment Ledger row cho unallocated advance có source Payment Entry rõ ràng.
-3. Migration append-only cho source advance cap, target outstanding cap và cancel guards.
-4. Thêm submittable `Payment Allocation`, reclassify Payment Ledger mà không tạo GL mới.
-5. Serialize theo company/party/account/currency, giữ idempotency/OCC/D1 atomic batch.
-6. Unit, SQL, integration và worker concurrency tests.
+2. Server tính `unallocated_amount_minor`; client không authoritative.
+3. Biểu diễn advance bằng immutable Payment Ledger row có source Payment Entry.
+4. Thêm submittable `Payment Allocation` để reclassify Payment Ledger, không tạo GL mới.
+5. Migration append-only cho source advance cap, target outstanding cap và cancel guards.
+6. Serialize theo company/party/account/currency; giữ idempotency, OCC và D1 atomic batch.
+7. Unit, SQL, route/integration và worker concurrency tests.
 
-#### M3 — Báo cáo còn lại
+### M3 — Báo cáo còn lại
 
 - Party Statement.
 - Debt Summary.
 - Advance Balance.
-- Đối chiếu tổng từng report với Payment Ledger theo cùng cutoff/currency.
+- Reconciliation totals với Payment Ledger theo cùng cutoff/currency.
 
-#### M4 — Metadata/UI
+### M4 — Metadata/UI
 
-- Hiển thị AR/AP Aging trong report navigation.
+- Đưa AR/AP Aging vào report navigation.
 - Form Payment Allocation metadata-driven.
 - Invoice/payment timeline và drill-down.
 - Confirmation + reason cho reverse/override.
 
-#### M5 — Backfill/rollout
+## P0 — Gateway/sidebar production verification
 
-- Dry-run legacy invoice thiếu due date và payment chưa phân bổ.
-- Unresolved report/checksum; không activation khi còn ambiguity.
-- Staging migration và smoke trước mọi production action.
+- Xác nhận Gateway version/deployment ID chứa compact-sidebar trigger.
+- Browser smoke desktop/mobile tại `alu.kairo.vn`.
+- Kiểm sidebar overflow, tooltip/ellipsis, search, pin, collapse và console errors.
+- Không dùng workflow Cloudflare observation của PR finance làm code gate.
 
-Hoàn thành khi aging/advance/allocation/statement/debt summary đạt acceptance criteria trong BRD, root gates pass và handoff ghi đúng bằng chứng.
+## P0 — FIFO Purchase Receipt
 
-## P0 — Xác minh release sidebar gọn trên production
+### Core đã hoàn thành
 
-**Mục tiêu:** xác nhận Cloudflare đã đưa bản sidebar desktop gọn lên Gateway production mà không ảnh hưởng route hoặc permission.
+- Migration `0027`–`0029`.
+- Atomic document/stock/procurement/allocation persistence.
+- Canonical material key.
+- Supplier coordinator và retry revision conflict.
+- PO obligation, Receipt FIFO submit và cancel reversal.
+- Integration 200 + 100, nhận 230 => 200 + 30, còn 70.
+- Baseline CI xanh tại `591ca359937d6ae12803d36c74996db8482060af`.
 
-Hiện trạng:
+### Còn lại trước activation
 
-- Code sidebar: `87cd45aa9272f5600ff3d5914f697ce9a26994b6`.
-- Release target: `da04f7fcfdc4c8e4ddf7ff70c79e3a10458ce412`.
-- Production trigger: `9a7bbc14b8e7f3e556404cce19914da1e21e5e10`.
-- Trigger file: `.github/release/gateway-production.trigger`.
-- File giao diện sửa: `client/apps/runtime/src/styles.css`.
-- Sidebar mở rộng còn `15.75rem`; group header, menu row, icon và search được thu gọn.
-- Không ẩn mục menu và không thay đổi quyền.
-- Chưa có Cloudflare deployment/version ID hoặc smoke evidence sau trigger.
+1. Apply unapplied Receipt quantity khi PO mới gia nhập window.
+2. Production-shaped cancel/multi-line/concurrency tests.
+3. Settlement close/reverse, manual override, permission và reason.
+4. Backfill resolved/unresolved/checksum và atomic activation.
+5. Allocation preview/timeline/report.
+6. Batch latency và supplier contention load test.
+7. Staging migration/backfill/smoke.
+8. Production backup mới và explicit approval.
 
-Việc cần làm:
+FIFO rollout tiếp tục **disabled**.
 
-1. Xác nhận Cloudflare build mới nhất lấy commit có chứa trigger `9a7bbc14...` hoặc HEAD kế tiếp chỉ cập nhật tài liệu.
-2. Xác nhận Gateway build dùng:
+## P0 — RBAC Slice B riêng
 
-```bash
-pnpm --filter metaforge run build && node server/scripts/stage-client-bundle.mjs
-```
+1. Mở branch từ default head hiện hành, không gộp vào PR finance.
+2. Migration append-only cho permission audit.
+3. Atomic create user + roles và atomic replace roles.
+4. Last-admin guard và self-disable/self-demote guard.
+5. Audit role/scope/enable-disable/password reset/session revoke.
+6. Không ghi password, hash, token hoặc secret.
+7. Targeted tests, root test/typecheck/build và exact-head PR Validation.
 
-3. Xác nhận deploy command:
+## P1/P2 backlog
 
-```bash
-pnpm --dir server exec wrangler deploy --config apps/gateway-worker/wrangler.jsonc
-```
-
-4. Smoke desktop/mobile tại `alu.kairo.vn`:
-   - sidebar không tràn ngang;
-   - nhãn dài vẫn đọc được bằng tooltip/ellipsis hợp lý;
-   - group đóng/mở bình thường;
-   - pin, tìm menu và thu gọn sidebar vẫn hoạt động;
-   - không có console error mới.
-5. Ghi Gateway deployment/version ID và ảnh smoke vào bằng chứng release.
-6. Kiểm tra CI/check của HEAD mới; hiện GitHub connector chưa trả workflow run hoặc status.
-
-Hoàn thành khi Cloudflare build/deploy xanh, production hiển thị sidebar mới và smoke không có regression.
-
-## P0 — Xác minh production tenant `alu`
-
-- Xác nhận Gateway version và production traffic.
-- Smoke `alu.kairo.vn`: health, login, list, form, create/update/delete chứng từ thử, Purchase Order preview và tải PDF.
-- Ghi deployment/version ID, thời điểm và kết quả từng bước; không ghi secret hoặc dữ liệu khách hàng.
-- Rollback trigger: login/API 5xx, sai tenant/database, mất dữ liệu CRUD, permission regression hoặc print/PDF lỗi nghiêm trọng.
-
-## P0 — Hoàn thiện FIFO Purchase Receipt
-
-Contract authoritative: `server/docs/ALUMDOOR-PURCHASE-RECEIPT-ALLOCATION.md`.
-
-### Hoàn thành — M1: Schema, contracts và atomic persistence
-
-- Migration `0027`, `0028`, `0029`.
-- Queue, windows, obligations, allocations, unapplied, settlement entries, revision claims, views và triggers.
-- Allocation được ghi cùng D1 batch với document, stock, procurement compatibility projection và mutation receipt.
-- Revision conflict abort toàn batch và được phân loại retryable.
-- SQL tests cover stale revision, row guards, reversal cap, PO cancel, settlement boundary và rollout activation constraints.
-
-### Hoàn thành — M2: Canonical material key
-
-- Server hash schema v1 từ item, chiều dài, barem kg/m, màu, dập, measurement profile và stock UOM.
-- Fixed-point micros, canonical JSON và null/empty normalization.
-- Khác quy cách không được bù lẫn.
-
-### Hoàn thành — M3: Supplier coordinator
-
-- PO/Receipt submit/cancel serialize theo `purchase:<tenant>:<company>:<supplier>`.
-- Revision conflict retry tối đa ba lần với cùng command ID.
-- Không nuốt business/version conflict khác.
-
-### Đang làm — M4: FIFO lifecycle
-
-Đã xong:
-
-- PO submit mở obligation theo row.
-- Receipt submit tự FIFO qua nhiều PO.
-- Một Receipt nhiều dòng xử lý tuần tự theo queue.
-- Vượt nominal nhưng trong tolerance tạo unapplied quantity.
-- Receipt cancel tạo reversal theo nguồn.
-- Nhôm cây/lá lấy `qty_bar` làm nghĩa vụ/tồn; barem và actual weight giữ riêng.
-- Integration test 200 + 100, nhận 230 => 200 + 30, còn 70.
-- Stress planner 250 obligation rows.
-
-Còn lại:
-
-1. Khi PO mới gia nhập window có unapplied quantity, tạo `apply_unapplied` allocation event và giảm source trong cùng batch.
-2. Production-shaped integration test cho Receipt cancel.
-3. Test nhiều Receipt lines cùng queue.
-4. Worker/DO concurrency test, không chỉ planner/SQL.
-
-### P0 — M5: Settlement và edge cases
-
-- Server action `Đối soát giao cuối / Đóng trong dung sai`.
-- Server-side permission và reason bắt buộc.
-- Integer min/max, shortage/overage variance và append-only settlement event.
-- Reverse settlement chỉ khi window kế tiếp chưa có activity.
-- Manual FIFO override trong cùng supplier/material/window, có permission + reason.
-- Backdated Receipt warning nhưng allocation theo commit sequence.
-- PO amend/cancel và Receipt cancel theo settlement lifecycle.
-
-### P0 — M6: Backfill và cutover
-
-- Viết `server/scripts/backfill-purchase-receipt-allocations.mjs`, dry-run mặc định.
-- Đọc voucher revision, line key, `versions.snapshot_json`, child rows và legacy progress.
-- Exact unique => resolved; mơ hồ => `legacy_unresolved`; không đoán row ID.
-- Xuất resolved/unresolved count và PO-level checksum.
-- Không activation nếu checksum lệch hoặc unresolved > 0.
-- Activation ghi checksum, actor và timestamp vào rollout state.
-- Sau activation, allocation ledger là nguồn sự thật; progress table cũ chỉ là compatibility projection.
-
-### P1 — M7: UI và báo cáo
-
-- Preview allocation trước submit Receipt.
-- PO/Receipt timeline và drill-down.
-- Hiển thị nominal remaining, actual received, unapplied, settlement range và variance.
-- Settlement/manual override action có confirmation, permission và reason.
-- Báo cáo NCC: tổng đặt, tổng về, nợ danh nghĩa, window, dải giao cuối và tuổi PO cũ nhất.
-
-### P0 — M8: Gate và rollout
-
-Đã xong:
-
-- Exact code SHA `591ca359...` PASS install/test/typecheck/build trên run `30570000862`.
-- Rollout gate mặc định tắt; database chặn activation thiếu checksum hoặc còn unresolved.
-- Tenant-safe migration wrapper có dry-run, explicit confirmation, clean-worktree guard và generated config cleanup.
-
-Còn lại:
-
-1. D1 batch size/latency với hàng trăm allocations.
-2. Supplier contention load test.
-3. Backup production mới.
-4. Staging migrations.
-5. Backfill dry-run trên staging/production backup.
-6. Review unresolved/checksum.
-7. Staging smoke PO → Receipt → cancel → settlement → report.
-8. Explicit production approval trước activation.
-
-## P1 — Purchase Order print/PDF verification
-
-- Fixture production renderer đã khóa A4 portrait, 13 cột, Dập trước Ghi chú, không Số bó, căn giữa, logo/header, row order, number format và không placeholder.
-- Còn lại: browser smoke production, tải PDF thật, kiểm font, tràn nội dung, trang trắng và visual regression Chromium.
-
-## P1 — Partial submitted-document save test
-
-- Cover PUT partial merge cho normal doc, submitted doc, child table và concurrency/timestamp.
-- Targeted facade/integration test và root gate.
-
-## P2 — Runtime completeness
-
-- Hoàn thiện page/dashboard/process renderers.
-- Hoàn thiện assign picker, attachment upload/delete và tag UI.
-- Đồng bộ `server/STATUS.md`, known gaps và traceability với code/migrations.
-
-## P3 — Engineering hygiene
-
-- Giảm frontend chunk lớn có đo lường.
-- Chuẩn hóa local onboarding Gateway + Tenant + D1 từ config mẫu, không dùng production secret.
-- Cài Forge project pack (`FORGE.md`, `.forge/manifest.json`) qua một PR riêng sau khi review nội dung ZIP; không chạy installer mù quáng.
-
-## P0 — RBAC
-
-### Slice A — hoàn thành và đã merge
-
-- Implementation gốc: `ab974f92ffbcf015fb71d3051df33508c9f09942`.
-- Exact head đã kiểm chứng: `0db13898ed00cbfe3835ce511f90c84aef38c8e8`.
-- PR `#37` đã squash-merge.
-- Merge commit: `93ac85a0f16c2668b706ffcf8e15d3da53c8c7a9`.
-- Final diff: 9 file code/test/tài liệu RBAC, không có workflow/harness/placeholder tạm.
-- G3 PASS trước rebase: workflow `30612014393`, job `91101823154`.
-- G4 PASS trên exact head:
-  - workflow `30618821462`, job `91118225164`;
-  - workflow `30619133964`, job `91119230663`;
-  - workflow `30619408760`, job `91120101038`.
-- `pnpm test`, `pnpm typecheck`, `pnpm build`: PASS.
-
-### Việc tiếp theo — Slice B riêng
-
-1. Mở branch mới từ default head sau merge, dự kiến `feat/rbac-permission-slice-b-20260731`.
-2. Viết migration append-only cho RBAC audit.
-3. Làm atomic create user + role grants.
-4. Làm atomic replace roles.
-5. Thêm last-admin guard.
-6. Thêm self-disable/self-demote guard.
-7. Audit role/scope/enable-disable/password reset/session revoke.
-8. Không ghi password, hash, token hoặc secret vào audit.
-9. Chạy targeted tests, root `pnpm test`, `pnpm typecheck`, `pnpm build` và exact-head PR Validation.
-10. Sau Slice B/C mới chạy G5 staging/browser QA.
-
-Không deploy Cloudflare, sửa production secrets hoặc bật FIFO trong luồng RBAC khi chưa có yêu cầu riêng.
+- Purchase Order browser/PDF verification.
+- Partial submitted-document save tests.
+- Runtime page/dashboard/process completeness.
+- Assign picker, attachment UI và tag UI.
+- Frontend chunk reduction có đo lường.
+- Local onboarding chuẩn, không dùng production secrets.
