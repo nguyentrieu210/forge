@@ -30,7 +30,6 @@
 import type { Actor, JsonObject, JsonValue } from "../../contracts/src/index.js";
 import { createTrustedIdentity, deriveAppCallKey, IDENTITY_HEADER, IDENTITY_SIGNATURE_HEADER } from "../../auth/src/index.js";
 import { errors } from "../../core/src/index.js";
-import type { AppManifest } from "./manifest.js";
 
 /**
  * Wall-clock budget for one app method call.
@@ -89,10 +88,46 @@ export function appMethodTarget(
   if (separator <= 0) return null;
   const appId = methodName.slice(0, separator);
   const entry = installed.find((candidate) => candidate.app_id === appId);
-  // An app with no Worker has no method to call. Returning null rather than throwing
-  // keeps the caller's honest "not implemented" answer for that case too.
   if (!entry?.worker) return null;
   return { appId, worker: entry.worker };
+}
+
+function isLoopbackOrigin(value: string | undefined): boolean {
+  if (!value) return false;
+  try {
+    const hostname = new URL(value).hostname;
+    return hostname === "127.0.0.1" || hostname === "localhost" || hostname === "[::1]" || hostname === "::1";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Production supplies a DispatchNamespace. Authenticated local QA instead binds the
+ * single authoritative Alumdoor Worker as a service Fetcher because Wrangler cannot
+ * emulate Workers-for-Platforms dispatch locally.
+ *
+ * Service-binding RPC proxies report arbitrary properties as callable methods, so the
+ * loopback Fetcher shape must be selected before probing `.get`. Deployed origins still
+ * require the real DispatchNamespace and therefore keep the production fail-closed path.
+ */
+function appMethodWorker(env: AppMethodEnv, target: AppMethodTarget): Fetcher {
+  const dispatcher = env.DISPATCHER;
+  if (!dispatcher) throw errors.misconfigured("DISPATCHER binding is required to call app methods");
+
+  const localFetcher = dispatcher as unknown as Fetcher;
+  if (isLoopbackOrigin(env.PUBLIC_ORIGIN) && typeof localFetcher.fetch === "function") {
+    return localFetcher;
+  }
+
+  const maybeGet = Reflect.get(dispatcher as object, "get");
+  if (typeof maybeGet === "function") {
+    return maybeGet.call(dispatcher, target.worker, {}, {
+      limits: { cpuMs: 200, subRequests: 50 },
+    }) as Fetcher;
+  }
+
+  throw errors.misconfigured("DISPATCHER binding is not a DispatchNamespace");
 }
 
 export interface AppMethodResult {
@@ -126,18 +161,11 @@ export async function dispatchAppMethod(input: {
     deriveAppCallKey(env.INTERNAL_AUTH_SECRET, tenantId, target.appId),
     createTrustedIdentity({
       tenantId, actor, traceId, masterSecret: env.INTERNAL_AUTH_SECRET, keyId,
-      // Just longer than the call budget. The app is given the caller's identity so it
-      // can act on their behalf; a long-lived one would be a bearer credential for that
-      // user sitting in third-party code.
       ttlSeconds: Math.ceil(APP_METHOD_TIMEOUT_MS / 1000) + 5,
     }),
   ]);
 
-  const worker = env.DISPATCHER.get(target.worker, {}, {
-    // The app runs on its own budget, as hooks do: a runaway app must exhaust its own
-    // allowance rather than the platform's.
-    limits: { cpuMs: 200, subRequests: 50 },
-  });
+  const worker = appMethodWorker(env, target);
 
   let response: Response;
   try {
@@ -151,8 +179,6 @@ export async function dispatchAppMethod(input: {
         authorization: `Bearer ${callKey}`,
         [IDENTITY_HEADER]: identity.encoded,
         [IDENTITY_SIGNATURE_HEADER]: identity.signature,
-        // Where to call back, and under which prefix. Both are sent so an app never
-        // has to know how this platform is deployed.
         ...(env.PUBLIC_ORIGIN ? { "x-cloudforge-callback": `${env.PUBLIC_ORIGIN.replace(/\/$/, "")}/_app/` } : {}),
       },
       body: JSON.stringify({ method: methodName, args }),
@@ -171,30 +197,12 @@ export async function dispatchAppMethod(input: {
   }
 
   if (!response.ok) {
-    // The app's own message is surfaced, attributed to the app. Its STATUS is not
-    // honoured: letting an app answer 401 would let it log a user out of the platform.
     const message = typeof body?.message === "string" && body.message
       ? body.message
       : `App ${target.appId} returned ${response.status}`;
     throw errors.validation(message, { app_id: target.appId, method: methodName });
   }
 
-  /**
-   * `message` if the app used the Frappe envelope, otherwise the body as-is — an app
-   * author should not have to know which convention the platform prefers.
-   *
-   * The envelope is `{message: …}` and **nothing else**. Unwrapping any body that merely
-   * CONTAINS a `message` key silently threw away every sibling field, and that is the
-   * common shape for an app answer: rows plus a sentence explaining them. A preview that
-   * answered `{items: […], lines: 12, message: "đọc được 12 dòng"}` reached the caller as
-   * the bare string — the screen showed a sentence and an empty table, with nothing
-   * anywhere reporting a loss.
-   *
-   * Sole-key is the right test because it is exactly what the envelope means. An app that
-   * really wants to send one value keeps sending `{message: value}` and is unaffected; an
-   * app that sends data ALONGSIDE a message was already losing it, so no working caller
-   * can be relying on the old behaviour.
-   */
   const keys = body ? Object.keys(body) : [];
   const enveloped = body !== null && keys.length === 1 && keys[0] === "message";
   const value = (enveloped ? (body as JsonObject).message : body) ?? null;
