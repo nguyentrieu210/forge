@@ -19,6 +19,7 @@ on:
 
 permissions:
   contents: read
+  statuses: write
 
 concurrency:
   group: gateway-production
@@ -69,6 +70,21 @@ jobs:
           printf 'run_id=%s\ntarget_sha=%s\nworker=cloudforge-gateway\nhost=alu.kairo.vn\nstarted_at=%s\n' \
             "$GITHUB_RUN_ID" "$TARGET_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             > "$EVIDENCE_DIR/state.txt"
+
+      - name: Publish running production status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: process.env.TARGET_SHA,
+              state: 'pending',
+              context: 'production/gateway-alu',
+              description: 'Gateway production release is running',
+              target_url: runUrl,
+            });
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -167,3 +183,22 @@ jobs:
           path: ${{ runner.temp }}/gateway-production-evidence/
           if-no-files-found: warn
           retention-days: 30
+
+      - name: Publish terminal production status
+        if: always()
+        uses: actions/github-script@v7
+        env:
+          JOB_STATUS: ${{ job.status }}
+        with:
+          script: |
+            const succeeded = process.env.JOB_STATUS === 'success';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: process.env.TARGET_SHA,
+              state: succeeded ? 'success' : 'failure',
+              context: 'production/gateway-alu',
+              description: succeeded ? 'alu.kairo.vn serves the exact release SHA' : 'Gateway production release failed',
+              target_url: runUrl,
+            });
