@@ -1,214 +1,165 @@
 # AI HANDOFF
 
-## Dự án này là gì
+## Dự án
 
-Forge là monorepo ERP đa tenant trên Cloudflare. Backend CloudForge cung cấp API tương thích hình dạng Frappe; frontend MetaForge là React Desk metadata-driven dùng chung. Ứng dụng ngành dọc được đóng gói thành manifest/brief và app Worker thay vì fork runtime.
+Forge là monorepo ERP đa tenant trên Cloudflare. Backend CloudForge cung cấp API hình dạng Frappe; frontend MetaForge là React Desk metadata-driven dùng chung. Repo vận hành chuẩn: `C:\Forge`, pnpm 9, Node 22+.
 
-Repo local chuẩn: `C:\Forge`. Package manager pnpm 9, Node từ 22.
+## Git hiện tại
 
-## Hiện trạng Git
-
+- Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Latest default-branch commit quan sát: `cd60f8c09c48105db84a82c12ad3b32d9f075064`.
+- Default head đã merge vào finance branch: `acd0a8df95eb35342b15de282b65102ac4314801`.
 - Working branch: `feat/finance-ar-ap-completion`.
 - Draft PR: `#15` — `feat(finance): add invoice due dates and AR/AP aging`.
-- Finance code head trước các commit handoff cuối: `eb16f07d38ec12380777845940c8147090d0f5bb`.
-- Baseline code/schema đã qua CI trước đó: `591ca359937d6ae12803d36c74996db8482060af`, run `30570000862`, job `90964015638`: test/typecheck/build PASS.
-- Finance branch chưa có exact-head code CI evidence.
-- Workflow quan sát Cloudflare không được tính là code gate.
-- `server/work/` và `tmp/` là generated/work directories, không xóa hoặc commit.
+- Finance code/test head trước các commit handoff cuối: `93c3f2ab5c7dd286c9f03cd13ad769ba14a65d8e`.
+- Backup trước đồng bộ base: `backup/finance-ar-ap-pre-rebase-20260731` tại `a0f787e2a8abde287b184d5709985aec8cfd4eb8`.
+- PR mergeable, zero commits behind default.
+- Final PR diff không chứa workflow tạm.
 
-## Workstream hiện tại — Tài chính và công nợ AR/AP
-
-Người dùng đã cho phép tiếp tục theo phương án mặc định an toàn:
-
-- Customer AR + Supplier AP.
-- Aging bucket: chưa đến hạn, 1–30, 31–60, 61–90, trên 90 ngày.
-- Allocation chỉ cùng company, party, party account và currency.
-- Credit-limit/Sales Order blocking và cross-currency allocation để pha sau.
-
-Contract authoritative: `server/docs/FINANCE-AR-AP-BRD.md`, trạng thái G1 đã duyệt.
-
-### Đã implement — due date và aging backend
-
-- `server/migrations/tenant/0030_finance_invoice_aging.sql`
-  - xác thực explicit due date;
-  - chặn ngày không hợp lệ hoặc trước posting date;
-  - metadata Sales Invoice có Due Date required;
-  - giữ compatibility cho invoice/API cũ thiếu due date;
-  - fallback về posting date và đánh dấu `due_date_source = posting_date_fallback`;
-  - explicit due date được đánh dấu `due_date_source = explicit`.
-- `server/packages/query/src/finance-aging.ts`
-  - `Accounts Receivable Aging`;
-  - `Accounts Payable Aging`;
-  - bắt buộc `as_of_date` ISO;
-  - tenant/cutoff/filter parameterized;
-  - outstanding tại cutoff derive từ immutable Payment Ledger;
-  - trả và lọc `due_date_source`.
-- `server/apps/query-worker/src/index.ts`
-  - dùng `FinanceQueryCompiler` cho synchronous và prepared reports.
-- `server/packages/policy/src/index.ts`
-  - report permissions theo Accounts/Sales/Purchase domain.
-- `server/packages/core/src/errors.ts`
-  - map due-date D1 guards thành validation 422 an toàn.
-- `server/package.json`
-  - nối migration test mới vào SQL gate.
-
-Targeted tests:
-
-- `server/scripts/test-finance-aging-migration.py`
-- `server/tests/finance-aging-query.test.mjs`
-- `server/tests/finance-aging-policy.test.mjs`
-- `server/tests/finance-aging-errors.test.mjs`
-
-Evidence độc lập:
-
-- compatibility migration fixture: PASS;
-- strict TypeScript harness cho finance compiler: PASS;
-- SQL cutoff execution: PASS;
-- `due_date_source` projection/filter: PASS.
-
-### Compatibility boundary quan trọng
-
-Migration `0030` chưa hard-reject invoice thiếu due date. Lý do: API clients, fixtures và legacy invoices hiện hữu chưa được backfill đầy đủ.
-
-Hard database presence enforcement chỉ được thêm bằng migration append-only mới sau khi:
-
-1. dry-run liệt kê toàn bộ `posting_date_fallback`;
-2. unresolved count bằng 0;
-3. checksum được review;
-4. staging migration và smoke pass.
-
-Không sửa migration `0030` sau khi đã chạy ở bất kỳ tenant nào.
-
-### Chưa xong
-
-1. Root `pnpm test`, `pnpm typecheck`, `pnpm build` và GitHub exact-head CI.
-2. Worker-level D1 report integration nếu full suite chưa cover compiler injection.
-3. UI/report navigation cho AR/AP Aging.
-4. Backfill và hard due-date enforcement.
-5. Payment Entry partial/unallocated.
-6. Payment Allocation append-only + source/target guards.
-7. Party Statement, Debt Summary và Advance Balance.
-
-Không deploy Cloudflare, không migrate production và không sửa production secrets trong workstream này nếu chưa có yêu cầu rõ.
-
-## Kiến trúc cốt lõi
-
-Browser vào Gateway Worker. Gateway resolve tenant, phục vụ SPA, loại identity header không tin cậy, ký trusted identity và dispatch tenant Worker.
-
-Tenant Worker mount native API và Frappe facade. Mọi write phải qua DocumentKernel và Durable Object, tạo mutation receipt, ledger/outbox; không bypass đường write này.
-
-Frontend production là runtime metadata-driven. Server permission là authoritative; việc UI ẩn nút không phải security boundary.
-
-D1 migrations là append-only. Migration finance mới hiện đi tới:
-
-- `0030_finance_invoice_aging.sql`
-
-Purchase allocation migrations trước đó:
-
-- `0027_purchase_receipt_allocation.sql`
-- `0028_purchase_allocation_cancel_guard.sql`
-- `0029_purchase_allocation_rollout.sql`
-
-## FIFO Purchase Receipt vào nhiều Purchase Order
-
-Backend core M1–M4 đã được implement và baseline trước đó qua CI:
-
-- Allocation schema, windows, obligations, allocations, unapplied, settlement rows và revision claims.
-- D1 atomic batch cho document + stock + procurement compatibility + allocation + mutation receipt.
-- Server canonical material key theo item/chiều dài/barem/màu/dập/profile/UOM.
-- Supplier coordinator dùng key `purchase:<tenant>:<company>:<supplier>` trong namespace `AGGREGATES` hiện có.
-- Revision conflict retry tối đa ba lần.
-- PO submit mở obligation; Receipt submit tự FIFO qua nhiều PO; Receipt cancel tạo reversal.
-- Nhôm cây/lá dùng `qty_bar` làm số cây/lá nghĩa vụ/tồn; kg barem và actual weight tách riêng.
-- Integration test khóa 200 + 100, nhận 230 => 200 + 30, còn 70; stock 230 cây, actual weight 630 kg.
-- Stress planner cover 250 obligation rows.
-
-## Rollout safety
-
-Feature FIFO disabled by default qua `purchase_allocation_rollout_state`:
-
-- Không có row hoặc `enabled=0`: dùng Purchase Order/Purchase Receipt controller legacy.
-- Chỉ bật khi có backfill checksum, `unresolved_count=0`, actor và timestamp.
-- Database chặn tắt lại sau khi activation.
-
-Không được bật FIFO cho `alu` trước backfill/cutover và staging smoke.
-
-## Nên làm tiếp
-
-### Finance P0
-
-1. Đọc exact-head workflow `CI` và sửa mọi regression.
-2. Thêm worker-level report integration nếu root suite chưa cover.
-3. Viết dry-run backfill cho `posting_date_fallback` và hard-presence migration sau unresolved = 0.
-4. Sau aging gate xanh, thêm Payment Entry partial/unallocated và Payment Allocation trong lát cắt riêng.
-5. Thêm Party Statement, Debt Summary, Advance Balance và metadata UI.
-
-### FIFO P0 còn lại
-
-1. Tự apply unapplied Receipt quantity khi PO mới gia nhập window; thêm worker-level concurrency/cancel tests.
-2. Settlement close/reverse action, manual override, permission/reason và edge-case lifecycle.
-3. Backfill/checksum/activation transaction.
-4. Allocation preview/timeline/report.
-5. Staging/load/smoke và explicit production approval.
-
-Backlog chi tiết ở `NEXT_TASKS.md`.
-
-## File nên đọc đầu tiên
+Đọc đầu tiên khi tiếp tục:
 
 1. `CURRENT_STATUS.md`
 2. `NEXT_TASKS.md`
 3. `server/docs/FINANCE-AR-AP-BRD.md`
 4. `server/docs/FINANCE-AR-AP-IMPLEMENTATION.md`
-5. `server/migrations/tenant/0030_finance_invoice_aging.sql`
-6. `server/packages/query/src/finance-aging.ts`
-7. `server/apps/query-worker/src/index.ts`
-8. `server/packages/policy/src/index.ts`
-9. `server/packages/core/src/errors.ts`
-10. Các finance migration/query/policy/error tests mới.
-11. `server/docs/ALUMDOOR-PURCHASE-RECEIPT-ALLOCATION.md`
+5. PR #15 và exact-head Actions state
 
-## Giả định không được tự ý thay đổi
+## Finance AR/AP scope đã chốt
 
-- Frappe-shaped API là compatibility contract.
-- Frontend production là runtime metadata-driven dùng chung.
-- Server permission là authoritative.
-- Mọi mutation phải qua kernel/DO.
-- D1 migration append-only; không sửa migration đã chạy.
-- Brief sinh tự động phải sửa từ generator.
-- Tenant deploy phải qua script tạo đúng tenant/database config.
+- Customer AR + Supplier AP.
+- Bucket aging: chưa đến hạn, 1–30, 31–60, 61–90, trên 90 ngày.
+- Allocation chỉ cùng company, party, party account và currency.
+- Credit-limit/Sales Order blocking và cross-currency để pha sau.
 - GL/Payment Ledger là nguồn sự thật; không lưu outstanding mutable client-authoritative.
-- Finance allocation không cross-currency trong pha đầu.
-- Hard due-date presence không bật trước backfill/checksum/staging.
-- Allocation ledger sau FIFO activation là nguồn sự thật; progress table cũ chỉ là compatibility projection sinh từ cùng plan.
-- Không bật rollout nếu unresolved > 0 hoặc checksum chưa được review.
-- Không đưa `.env`, `.dev.vars`, token, private key, session secret hoặc Cloudflare secret vào Git/log/tài liệu.
-- Không commit `server/work/`, `tmp/`, backup SQL hoặc generated artifacts.
 
-## Test và build
+## Đã implement — M1A due date và aging
 
-Từ `C:\Forge`:
+### Migration
 
-```powershell
-pnpm.cmd install --frozen-lockfile
-pnpm.cmd --filter metaforge run lint
-pnpm.cmd run test
-pnpm.cmd run typecheck
-pnpm.cmd run build
-```
+`server/migrations/tenant/0030_finance_invoice_aging.sql`
 
-Finance branch phải có exact-head CI xanh trước khi coi lát cắt aging hoàn tất.
+- Xác thực explicit due date.
+- Chặn ngày không tồn tại hoặc trước posting date.
+- Sales Invoice metadata có Due Date required.
+- Legacy/API invoice thiếu due date vẫn hoạt động bằng posting-date fallback.
+- `finance_invoice_terms.due_date_source`:
+  - `explicit`;
+  - `posting_date_fallback`.
+- Chưa hard-reject omitted due date trước backfill/checksum/staging.
 
-## Deploy
+Không sửa migration `0030` sau khi đã tồn tại; hard presence enforcement phải là migration append-only mới.
 
-- Backup: `server/scripts/backup-tenant.mjs`.
-- Tenant-safe migration wrapper: `server/scripts/migrate-tenant.mjs`.
-- Low-level remote migration engine: `server/scripts/d1-migrate-remote.mjs`.
-- Tenant deploy: `server/scripts/deploy-tenant.mjs`.
-- Stage client: `server/scripts/stage-client-bundle.mjs`.
-- Gateway: `server/apps/gateway-worker/wrangler.jsonc`.
+### Query/report
 
-Safe operator order: backup → `migrate-tenant` dry-run → live migration với explicit confirmation → tenant deploy dry-run → live deploy với explicit confirmation.
+`server/packages/query/src/finance-aging.ts`
 
-Finance migration `0030` chưa deploy. Không sửa production secrets và không chạy production migration/deploy nếu chưa có yêu cầu rõ.
+- `Accounts Receivable Aging`.
+- `Accounts Payable Aging`.
+- Bắt buộc `as_of_date` ISO.
+- Tenant/cutoff/filter parameterized.
+- Outstanding tại cutoff derive từ immutable Payment Ledger.
+- Trả và lọc `due_date_source`.
+
+`server/apps/query-worker/src/index.ts` dùng `FinanceQueryCompiler` cho synchronous và prepared reports.
+
+### Permission/error
+
+- `server/packages/policy/src/index.ts`: Accounts/Sales Manager/Purchase Manager theo domain.
+- `server/packages/core/src/errors.ts`: D1 due-date guards thành validation 422 an toàn.
+- `server/package.json`: migration test nối vào SQL gate.
+
+### Tests
+
+- `server/scripts/test-finance-aging-migration.py`
+- `server/tests/finance-aging-query.test.mjs`
+- `server/tests/finance-aging-policy.test.mjs`
+- `server/tests/finance-aging-errors.test.mjs`
+- `server/tests/finance-aging-worker-route.test.mjs`
+
+Worker route regression test nằm trong root `server/tests/*.test.mjs`, kiểm:
+
+`HTTP -> permission -> FinanceQueryCompiler -> D1ReportService`.
+
+SQL cutoff thực thi thật được kiểm độc lập bằng migration fixture SQLite.
+
+## Verification
+
+### PASS trước Worker route test
+
+- Head: `2afc670f4ed755c897837fd0fddd3633f7d5628d`.
+- PR Validation run: `30620083625`.
+- Job: `91122345078` — `Test, typecheck and build`.
+- Install/test/typecheck/build: PASS.
+
+### Targeted evidence
+
+- Compatibility migration fixture: PASS.
+- Strict compiler harness: PASS.
+- SQL cutoff fixture: PASS.
+- `due_date_source` projection/filter: PASS.
+
+### Current blocker: GitHub Actions before runner
+
+Runs after the Worker route test or workflow cleanup fail before checkout and expose no steps/logs:
+
+- `30620542741` / `91123803489`;
+- `30620645454` / `91124137658`, rerun `91124386934`;
+- `30620830770` / `91124730973`.
+
+The jobs have empty steps; log download returns `BlobNotFound`. The same `pr-validation.yml` passed immediately before. Classify this as Actions infrastructure/repository billing-or-runner configuration until GitHub UI shows otherwise.
+
+Next operator action:
+
+1. Inspect GitHub Actions billing/spending limit and repository Actions settings.
+2. Inspect the failed run UI for approval/account/runner restriction.
+3. Rerun PR Validation on exact current head.
+4. Do not claim exact-head PASS until checkout/test/typecheck/build actually execute.
+
+PR remains draft. Do not merge automatically.
+
+## Remaining finance roadmap
+
+1. Close exact-head CI gate.
+2. M1C dry-run inventory/checksum for `posting_date_fallback`.
+3. Hard due-date presence migration only after unresolved = 0 and staging smoke.
+4. M2 Payment Entry zero/partial/full allocation and unallocated advance.
+5. Append-only Payment Allocation with source/target caps and cancel guards.
+6. Party Statement, Debt Summary, Advance Balance.
+7. Aging/report navigation and allocation UI/timeline.
+
+## Architecture invariants
+
+- Browser enters Gateway Worker; Gateway resolves tenant and signs trusted identity.
+- Tenant Worker/Frappe facade must enforce server-side permission.
+- All business mutations go through DocumentKernel/Durable Object.
+- D1 migrations are append-only.
+- UI hidden buttons are not a security boundary.
+- No cross-tenant reads/writes.
+- Finance allocation remains same-currency in phase one.
+
+## Other project status
+
+### FIFO Purchase Receipt
+
+- Core migrations `0027`–`0029`, allocation persistence, material key, supplier coordinator and FIFO submit/cancel exist.
+- Baseline CI green: `591ca359937d6ae12803d36c74996db8482060af`, run `30570000862`.
+- Rollout remains disabled.
+- Remaining: apply unapplied, settlement/override, backfill/checksum/activation, concurrency/load, UI/report, staging smoke.
+
+### RBAC
+
+- Slice A merged into default at `93ac85a0f16c2668b706ffcf8e15d3da53c8c7a9` with exact-head PR Validation PASS.
+- Slice B must be a separate branch/PR for audit, atomic user/roles and last-admin/self-lockout guards.
+
+### Gateway/sidebar
+
+- Compact sidebar code exists.
+- Production deployment/version ID and browser smoke evidence remain incomplete.
+
+## Safety
+
+- Do not deploy Cloudflare without explicit request.
+- Do not migrate production without explicit request.
+- Do not edit production secrets.
+- Do not enable FIFO rollout.
+- Do not commit `.env`, `.dev.vars`, `server/work/`, `tmp/`, backups or generated artifacts.
