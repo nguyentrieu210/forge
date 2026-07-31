@@ -9,29 +9,45 @@ Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
 - GitHub là nguồn sự thật cho code, PR, CI và release evidence.
 - Không commit `.env`, `.dev.vars`, secret, `server/work/`, `tmp/`, backup SQL hoặc generated artifacts.
 
-## Bán hàng — hotfix tự điền đơn giá child grid đang ở PR #65
+## Bán hàng — hotfix tự điền đơn giá child grid đã phát hành production
 
-- Người dùng production xác nhận chọn `Bảng giá áp dụng` và mặt hàng nhưng ô `Đơn giá` trong child grid không tự điền.
-- PR `#65`: `fix(sales): restore price autofill in child grids`.
-- Branch: `hotfix/sales-price-autofill-20260731`.
-- Code head đã kiểm: `eaff9931e9f02171d3d23e3d81b75743efa4ca04`.
+- Lỗi production: chọn `Bảng giá áp dụng` và mặt hàng nhưng ô `Đơn giá` trong child grid có thể không tự điền.
 - Nguyên nhân: preview `alumdoor.sales.item_context` và pricing authoritative phụ thuộc vào tên bản ghi Item Price. Dữ liệu cũ/import/đổi tên có thể có đủ `price_list + item_code + uom` nhưng tên không khớp key canonical, khiến preview trả `price_missing` và client xoá `rate`.
+- PR `#65`: `fix(sales): restore price autofill in child grids`.
+- Exact final head trước merge: `9a1a2b2cf33ac71216a49d6b13e33ffb046765e7`.
+- Squash merge SHA: `db2d5abd8273a5a6c266ba7343554ebeac27618c`.
 - Cách sửa:
   - giữ fast-path tên ba phần và legacy hai phần;
   - fallback bằng chính các field `price_list + item_code + uom`;
   - áp cùng quy tắc cho preview child grid và pricing lúc lưu/submit;
   - từ chối nhiều giá hoạt động cùng khớp thay vì chọn ngẫu nhiên;
   - giữ chẩn đoán giá disabled/malformed khi callback list không tồn tại.
-- Regression mới: `server/tests/sales-price-field-lookup.test.mjs` kiểm tên record không canonical, duplicate active prices và authoritative pricing fallback.
-- Exact code-head CI trên `eaff9931e9f02171d3d23e3d81b75743efa4ca04`:
-  - PR Validation `30639117520`: **PASS**; Gateway/Tenant release **SKIPPED**.
-  - CI `30639117471`: **PASS**.
-  - Sales Feature CI `30639117554`: unit, SQL, brief, client tests, typecheck và build **PASS**.
-  - Purchase Feature CI `30639117591`: **PASS**.
-  - Inventory and Manufacturing CI `30639117483`: **PASS**.
-  - UI Pull Request Validation `30639117562`: lint, tests, typecheck, build, Chromium QA và cookie-auth smoke **PASS**.
-- PR hiện chưa merge và chưa deploy. Production vẫn dùng lookup cũ cho tới khi có approval merge/release riêng.
-- Không migration hoặc mutate D1, không sửa production secrets, FIFO vẫn **disabled**.
+- Regression: `server/tests/sales-price-field-lookup.test.mjs` kiểm tên record không canonical, duplicate active prices và authoritative pricing fallback.
+- Exact final-head CI của PR `#65`:
+  - PR Validation `30639484698`: **PASS**; Gateway/Tenant release **SKIPPED**.
+  - CI `30639485165`: **PASS**.
+  - Sales Feature CI `30639485448`: unit, SQL, brief, client tests, typecheck và build **PASS**.
+  - Purchase Feature CI `30639484434`: **PASS**.
+  - Inventory and Manufacturing CI `30639485204`: **PASS**.
+  - UI Pull Request Validation `30639485828`: lint, tests, typecheck, build, Chromium QA và cookie-auth smoke **PASS**.
+
+### Tenant production release
+
+- Release preparation PR `#67` squash-merge thành `87b9410a0a1499100aeafce75b018117fda81ab6`, khóa workflow vào exact target SHA `db2d5abd8273a5a6c266ba7343554ebeac27618c`.
+- Execution PR `#68` chỉ đổi `.github/release/alu-production.trigger`, đã đóng **không merge** sau khi release hoàn tất.
+- Release run: `30640747900`.
+- Release job: `91189756848` (`Release alu production`) — **SUCCESS**.
+- Backup tenant: **PASS**.
+- Recorded migrations dry-run/live: **PASS**.
+- Tenant deploy: **PASS**.
+- Production smoke: `/health` = `200`, unauthenticated boot = `403`.
+- Tenant Worker: `cloudforge-tenant-alu`.
+- Production version ID: `7542bba4-dc20-4794-8c92-9d26af349531`.
+- Deployment time: `2026-07-31T14:57:41.354Z`.
+- CI run `30640747900` và PR Validation `30640747905`: **PASS**.
+- Không deploy Gateway vì hotfix không đổi frontend.
+- Không mutate Item Price, không sửa production secrets, FIFO vẫn **disabled**.
+- Còn thiếu functional production smoke có đăng nhập để xác minh giá tự điền bằng dữ liệu thử thực tế.
 
 ## UI child table — recent links đã bỏ, wheel dropdown trong Dialog đã sửa đúng và phát hành production
 
@@ -108,7 +124,7 @@ Targeted Playwright đã chứng minh wheel làm dropdown list thay đổi `scro
 - FIFO activation không được yêu cầu và rollout vẫn **disabled**.
 - Tenant release run `30631386714`; exact code `7b3dc06dbbecbb5370ddb48259aa1614aef2ff32`.
 - Backup, migration, tenant deploy và endpoint smoke **PASS**.
-- Tenant Worker `cloudforge-tenant-alu` version `9ec0d1d3-c1fd-4263-ae35-4fae81c09968`.
+- Tenant Worker khi đó `cloudforge-tenant-alu` version `9ec0d1d3-c1fd-4263-ae35-4fae81c09968`; phiên bản hiện hành đã được thay bởi hotfix giá nêu trên.
 - Backup artifact `alu-pre-release-backup-30631386714`, ID `8793480138`.
 - Release artifact `alu-production-release-30631386714`, ID `8793494701`.
 - Gateway purchase release run `30631951946`, job `91160176928`, version `6352386d-8385-4ea8-af31-15ac62e21943`; phiên bản này đã được thay bởi các UI hotfix nêu trên.
@@ -123,7 +139,7 @@ Targeted Playwright đã chứng minh wheel làm dropdown list thay đổi `scro
 
 ## Production versions hiện hành
 
-- Tenant Worker `cloudforge-tenant-alu`: `9ec0d1d3-c1fd-4263-ae35-4fae81c09968`.
+- Tenant Worker `cloudforge-tenant-alu`: `7542bba4-dc20-4794-8c92-9d26af349531`.
 - Gateway `cloudforge-gateway`: `b0d0ce5b-408c-47ab-a734-fa55ba4d9c00`.
 - FIFO rollout: **disabled**.
 
