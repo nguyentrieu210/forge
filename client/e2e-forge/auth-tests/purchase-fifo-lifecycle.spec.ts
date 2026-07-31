@@ -241,6 +241,6 @@ test("authenticated Tiến Đạt receipt allocates oldest order first and enfor
   expect(accepted.status, accepted.text).toBe(200);
 
   const rejected = await callFifo(page, csrf, "preview_fifo_receipt", lengthM, 86, `${suffix}-over`);
-  expect(rejected.status, rejected.text).toBe(422);
+  expect(rejected.status, rejected.text).toBe(417);
   expect(rejected.text).toMatch(/vượt|dung sai|không phân bổ/i);
 });
