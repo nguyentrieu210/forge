@@ -165,11 +165,29 @@ Còn lại:
 
 ## P0 — RBAC Slice A
 
-- Implementation: `ab974f92ffbcf015fb71d3051df33508c9f09942`.
-- Exact head: `2f0de9db871f3dbe32facf26abb84f1558be0824`.
-- Draft verification PR: `#34`.
-- G3 PASS: workflow `30612014393`, job `91101823154`.
-- G4 BLOCKED: workflow `PR Validation` chưa được GitHub Actions đăng ký/chạy; combined status rỗng.
-- Kiểm tra trạng thái workflow trong GitHub Actions, chạy test/typecheck/build trên exact head, ghi run/job ID rồi mới review merge.
-- Sau khi Slice A merge mới mở Slice B cho audit append-only, atomic user/roles và last-admin/self-lockout guards.
-- Không merge, deploy, sửa production secrets hoặc bật FIFO khi G4 chưa có bằng chứng xanh.
+- Implementation gốc: `ab974f92ffbcf015fb71d3051df33508c9f09942`.
+- Branch hiện hành: `feat/rbac-slice-a-rebased-20260731`.
+- Exact head đã kiểm chứng: `0db13898ed00cbfe3835ce511f90c84aef38c8e8`.
+- PR hiện hành: `#37`, ready for review, mergeable, chưa merge.
+- PR #34 đã đóng, không merge, vì merge conflict với default.
+- Final diff: 9 file code/test/tài liệu RBAC, không có workflow/harness/placeholder tạm.
+- G3 PASS trước rebase: workflow `30612014393`, job `91101823154`.
+- G4 PASS hai lần trên exact head:
+  - workflow `30618821462`, job `91118225164`;
+  - workflow `30619133964`, job `91119230663`.
+- `pnpm test`, `pnpm typecheck`, `pnpm build`: PASS.
+
+### Việc tiếp theo
+
+1. Review final diff PR #37 và merge riêng Slice A khi được duyệt merge.
+2. Không gộp thêm Slice B vào PR #37.
+3. Sau khi Slice A merge, mở branch/PR Slice B riêng cho:
+   - migration append-only RBAC audit;
+   - atomic create user + role grants;
+   - atomic replace roles;
+   - last-admin guard;
+   - self-disable/self-demote guard;
+   - audit role/scope/enable-disable/password reset/session revoke;
+   - không ghi password/hash/token/secret.
+4. Sau Slice B/C mới chạy G5 staging/browser QA.
+5. Không deploy Cloudflare, sửa production secrets hoặc bật FIFO trong luồng RBAC khi chưa có yêu cầu riêng.
