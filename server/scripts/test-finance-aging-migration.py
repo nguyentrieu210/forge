@@ -113,7 +113,9 @@ sales_fields = json.loads(
         "SELECT metadata_json FROM doctype_definitions WHERE tenant_id='demo' AND doctype='Sales Invoice'"
     ).fetchone()[0]
 )["fields"]
-assert [field["fieldname"] for field in sales_fields].count("due_date") == 1
+due_fields = [field for field in sales_fields if field["fieldname"] == "due_date"]
+assert len(due_fields) == 1
+assert due_fields[0]["required"] is True
 
 legacy = db.execute(
     "SELECT posting_date,due_date,party,account FROM finance_invoice_terms WHERE tenant_id='demo' AND voucher_no='SI-LEGACY'"
