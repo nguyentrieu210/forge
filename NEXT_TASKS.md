@@ -2,26 +2,27 @@
 
 Ngày cập nhật: **2026-07-31**.
 
-## P0 — chốt Slice D read model checkpoint
+## P0 — chốt Slice D D1/report checkpoint
 
-1. Lấy exact final head sau handoff/status/tasks commits.
+1. Lấy exact final head sau các commit handoff/status/tasks.
 2. Kiểm PR #82 mergeability và unresolved review threads.
 3. Chạy exact-head CI:
    - PR Validation;
    - CI;
    - Inventory and Manufacturing CI;
    - UI Pull Request Validation.
-4. Sửa typecheck/build/test failures, đặc biệt Worker-runtime compatibility.
-5. Bổ sung review scorecard sau khi checkpoint xanh.
+4. Sửa mọi test/typecheck/build failure trên exact head.
+5. Bổ sung review scorecard khi checkpoint xanh.
 
-## P0 — tenant/report adapter
+## P0 — tenant report endpoint
 
-- Đọc ledger theo tenant/company và permission scope.
-- Không nhận `tenant_id` từ client nếu khác authenticated tenant.
-- Map ledger rows sang physical identity snapshot của Slice B.
-- Trả deterministic page, totals và lineage.
-- Thêm export contract, maximum row limit và redaction rules.
-- Thêm regression cho tenant isolation, permission denial và malformed ledger rows.
+- Gắn `D1PhysicalStockLedgerReader` vào `PhysicalStockReportService`.
+- Lấy tenant từ authenticated request context, không nhận tenant tùy ý từ client.
+- Áp dụng report permission và User Permission cho Company/Warehouse.
+- Tách quyền xem lineage và export.
+- Parse/filter inputs theo budget; chặn malformed cursor và unbounded source scans.
+- Trả deterministic page, totals, lineage-redaction metadata và CSV response.
+- Regression cho unauthorized role, tenant isolation, company/warehouse scope và export denial.
 
 ## P0 — operator UI
 
@@ -66,7 +67,7 @@ Ngày cập nhật: **2026-07-31**.
 
 - Read-only Item/BOM/Warehouse audit trên staging hoặc production-shaped copy.
 - Receipt/transfer/quarantine/release/manufacture/cancel journey.
-- Quantity/value reconciliation và exact lineage.
+- Quantity/value/physical-count reconciliation và exact lineage.
 - Benchmark company-wide inventory lock: contention, retry, latency percentiles.
 - Xác định alert thresholds, rollback criteria và capacity boundary.
 
