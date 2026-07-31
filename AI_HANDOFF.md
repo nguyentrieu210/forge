@@ -6,15 +6,23 @@ Ngày cập nhật: **2026-07-31**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Default head hiện tại: `077d9944b1cfc1f436da87472f070ee2bd864b44`.
-- Working branch: `docs/record-alu-production-observation-20260731`.
+- Default head khi mở nhánh: `51f462c7e76dd2c669c5721bcd625fdb1453a008`.
+- Working branch: `docs/sales-price-unicode-release-status-v2-20260731`.
 - GitHub là nguồn sự thật cho code, CI và release evidence.
 
-## Sales Unicode Item Price
+## Sales Unicode Item Price — đã merge và release production
+
+### Feature
 
 - PR `#91` — `fix(sales): normalize Unicode Item Price lookup` — đã squash-merge.
 - Exact feature head: `c0d9df33a9fbde7540683107fd948c388a026682`.
 - Merge SHA: `a48524b93489c92296c57fc5f223e41d505de7aa`.
+- Fix bao phủ:
+  - chuẩn hóa Price List, Item, UOM, Currency và Warehouse về Unicode NFC;
+  - legacy Item Price lookup trước;
+  - exact-name probe lỗi khác `404` không chặn field fallback;
+  - preview và authoritative save/submit dùng cùng canonical matching.
+- Regression: `server/tests/sales-price-unicode-normalization.test.mjs`.
 - Exact-head CI đã PASS:
   - CI `30647911536`;
   - PR Validation `30647908313`;
@@ -23,15 +31,23 @@ Ngày cập nhật: **2026-07-31**.
   - Inventory and Manufacturing CI `30647910730`;
   - UI Pull Request Validation `30647910724`.
 
-## Sales production release preparation
+### Controlled production release
 
-- PR `#93` — `release: target sales Unicode hotfix for alu production` — đã merge.
-- Release-preparation merge SHA: `077d9944b1cfc1f436da87472f070ee2bd864b44`.
-- Workflow `TARGET_SHA` và fail-closed assertion đã khóa vào `a48524b93489c92296c57fc5f223e41d505de7aa`.
-- PR `#93` **không deploy**.
-- Production execution vẫn bị giới hạn ở branch `release/execute-alu-production-20260731`.
-- Chưa có run/job/Worker-version evidence cho release follow-up này.
-- Hotfix production trước đó vẫn ở Worker version `7738ee39-bb39-4a38-bf8d-5e2e1834e572` cho tới khi controlled release mới được xác nhận.
+- Release-preparation PR `#93` merge SHA `077d9944b1cfc1f436da87472f070ee2bd864b44`.
+- Workflow target và fail-closed assertion khóa vào exact feature merge SHA `a48524b93489c92296c57fc5f223e41d505de7aa`.
+- Execution PR `#95` đã đóng, **không merge**.
+- Release run: `30648518868`.
+- Release job: `91215801064` — SUCCESS.
+- Target SHA: `a48524b93489c92296c57fc5f223e41d505de7aa`.
+- Worker: `cloudforge-tenant-alu`.
+- Production version ID: `09ab6ce6-3998-4f76-8b45-c9005eeb1152`.
+- Deployment time: `2026-07-31T16:49:07.992Z`.
+- Backup tenant: PASS.
+- Recorded migrations: PASS.
+- Tenant deploy: PASS.
+- `/health=200`; guest boot `403`.
+- FIFO rollout vẫn **disabled**.
+- Không deploy Gateway, không sửa DNS hoặc production secrets.
 
 ## Production observation đã chạy
 
@@ -59,7 +75,7 @@ Ngày cập nhật: **2026-07-31**.
 - Artifact upload: PASS.
 - Workflow conclusion bị `failure` vì bước tự comment nhận `403 Resource not accessible by integration`.
 - Đây là lỗi reporting permission, không phải lỗi production endpoint.
-- Bản sửa để bỏ API comment và dùng job summary đã bị tool safety layer chặn; chưa được commit.
+- Cần bỏ issue-comment API khỏi workflow hoặc làm bước reporting non-fatal, dùng `$GITHUB_STEP_SUMMARY` và artifact làm evidence.
 
 ## Purchase/FIFO
 
@@ -68,17 +84,24 @@ Ngày cập nhật: **2026-07-31**.
 
 ## Việc tiếp theo
 
-1. Chỉ chạy controlled release tenant `alu` từ execution branch đã khóa khi có yêu cầu release rõ; target phải là `a48524b93489c92296c57fc5f223e41d505de7aa`.
-2. Thu backup, migrations, deploy, endpoint smoke, Worker version và deployment time từ exact release run.
-3. Sau release, chạy authenticated Sales smoke cho `Giá niêm yết + TRỤC 114_1.8LY + Mét = 180000 VND`.
-4. Sửa observation reporting để không gọi issue-comment API bằng Actions token, rồi chạy lại để workflow conclusion `success`.
+1. Hard refresh và chạy authenticated Sales smoke:
+   - Sales Order mới;
+   - `Giá niêm yết`;
+   - `TRỤC 114_1.8LY`;
+   - ĐVT `Mét`;
+   - Đơn giá `180000 VND`;
+   - Thành tiền đúng theo số lượng;
+   - save-time authoritative pricing giữ cùng rate.
+2. Đổi Item/UOM/bảng giá để xác minh không lấy chéo hoặc giữ giá cũ.
+3. Huỷ hoặc xoá chứng từ thử an toàn; không ghi credential/cookie/dữ liệu khách hàng vào evidence.
+4. Sửa production-observation reporting `403` rồi chạy lại read-only để toàn job conclusion `success`.
 5. Authenticated Purchase smoke vẫn là gate riêng; endpoint guest smoke không thay thế business acceptance.
 6. Production FIFO activation vẫn cần staging evidence, backup và explicit approval riêng.
 
 ## Safety
 
-- Không deploy Cloudflare trong đợt observation này.
-- Không backup, migrate hoặc mutate D1.
+- Production Sales release đã hoàn tất qua controlled workflow có backup và evidence.
 - Không sửa production secrets hoặc DNS.
+- Không mutate Item Price hay dữ liệu khách hàng.
 - Không bật FIFO.
 - Không commit `.env`, `server/work/`, `tmp`, backup hoặc generated evidence.
