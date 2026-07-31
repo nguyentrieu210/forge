@@ -81,6 +81,42 @@ export function validatorsFor(
   return targets;
 }
 
+function isLoopbackOrigin(value: string | undefined): boolean {
+  if (!value) return false;
+  try {
+    const hostname = new URL(value).hostname;
+    return hostname === "127.0.0.1" || hostname === "localhost" || hostname === "[::1]" || hostname === "::1";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Production uses a Workers-for-Platforms DispatchNamespace. Wrangler cannot simulate
+ * user Workers inside a local dispatch namespace, so the authenticated browser gate runs
+ * the real app Worker beside the tenant Worker and binds it as a single Fetcher named
+ * DISPATCHER.
+ *
+ * The fallback is intentionally narrow: loopback callback, exactly one validator target,
+ * and an actual Fetcher. A deployed origin, or a tenant with more than one validating app,
+ * still requires a real DispatchNamespace and fails closed.
+ */
+function validatorWorker(env: AppMethodEnv, target: ValidatorTarget, targetCount: number): Fetcher {
+  const dispatcher = env.DISPATCHER;
+  if (!dispatcher) throw errors.misconfigured("App validator dispatcher is missing");
+
+  const maybeGet = Reflect.get(dispatcher as object, "get");
+  if (typeof maybeGet === "function") {
+    return maybeGet.call(dispatcher, target.worker, {}, { limits: { cpuMs: 100, subRequests: 20 } }) as Fetcher;
+  }
+
+  const localFetcher = dispatcher as unknown as Fetcher;
+  if (targetCount !== 1 || !isLoopbackOrigin(env.PUBLIC_ORIGIN) || typeof localFetcher.fetch !== "function") {
+    throw errors.misconfigured("App validator dispatcher is not a DispatchNamespace");
+  }
+  return localFetcher;
+}
+
 /**
  * Runs every matching validator; throws on the first refusal.
  *
@@ -113,7 +149,7 @@ export async function runAppValidators(input: {
       }),
     ]);
 
-    const worker = env.DISPATCHER.get(target.worker, {}, { limits: { cpuMs: 100, subRequests: 20 } });
+    const worker = validatorWorker(env, target, targets.length);
     let response: Response;
     try {
       response = await withTimeout(worker.fetch("https://app.internal/hooks/validate", {
