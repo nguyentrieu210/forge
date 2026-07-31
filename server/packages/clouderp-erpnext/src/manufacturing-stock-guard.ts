@@ -1,4 +1,10 @@
-import type { CanonicalDocument, JsonObject, MutationPlan, StockLedgerEntry } from "../../contracts/src/index.js";
+import type {
+  CanonicalDocument,
+  JsonObject,
+  ManufacturingEntry,
+  MutationPlan,
+  StockLedgerEntry,
+} from "../../contracts/src/index.js";
 import type { StockEntryData } from "../../clouderp-core/src/types.js";
 import { errors } from "../../core/src/index.js";
 import type { ControllerContext } from "../../document-kernel/src/index.js";
@@ -88,9 +94,26 @@ export class GuardedManufacturingStockEntryController extends ManufacturingStock
 
   override async buildPlan(context: ControllerContext<StockEntryData>): Promise<MutationPlan<StockEntryData>> {
     const plan = await super.buildPlan(context);
-    if (context.command.action !== "submit") return plan;
     const data = plan.document.data as ProgressDocument;
-    if (data.purpose !== "Manufacture") return plan;
+
+    if (context.command.action === "cancel" && data.purpose === "Material Transfer" && data.work_order) {
+      const reversals: ManufacturingEntry[] = data.items
+        .filter((row) => (row.manufacturing_kind ?? "Issue") === "Issue")
+        .map((row, index) => ({
+          line_key: `REV-ISSUE-${row.bom_row_id ?? row.row_id ?? index + 1}-${row.row_id ?? index + 1}`,
+          work_order: data.work_order!,
+          kind: "Material Transfer",
+          item_code: row.item_code,
+          qty_micros: -(row.qty_micros ?? toScaledInt(row.qty, 6, `items[${index}].qty`)),
+          posting_at: data.posting_at,
+        }));
+      return {
+        ...plan,
+        manufacturing_entries: [...(plan.manufacturing_entries ?? []), ...reversals],
+      };
+    }
+
+    if (context.command.action !== "submit" || data.purpose !== "Manufacture") return plan;
 
     const recoveryPrefixes = data.items
       .filter((row) => (row.manufacturing_kind === "Scrap" || row.manufacturing_kind === "Offcut") && row.target_warehouse)
