@@ -1,6 +1,7 @@
 /** @jsxImportSource react */
 import { resolveField, type Doc, type DocField, type DocTypeMeta } from "@metaforge/core";
 import { FallbackControl } from "@metaforge/controls";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@metaforge/ui";
 import {
   ChildGrid as BaseChildGrid,
   deriveAverageWeight,
@@ -81,21 +82,21 @@ function ExtensionGrid(props: ChildGridProps) {
       <div className="border-b bg-muted/30 px-3 py-2 text-xs font-medium text-muted-foreground">
         Trường mở rộng
       </div>
-      <table className="w-full border-collapse text-sm">
-        <thead>
-          <tr className="border-b bg-muted/20">
-            <th className="w-10 px-2 py-2 text-right font-medium text-muted-foreground">#</th>
+      <Table className="w-full text-sm">
+        <TableHeader>
+          <TableRow className="bg-muted/20 hover:bg-muted/20">
+            <TableHead className="w-10 text-right">#</TableHead>
             {columns.map((field) => (
-              <th key={field.fieldname} className="min-w-32 px-2 py-2 text-left font-medium">
+              <TableHead key={field.fieldname} className="min-w-32">
                 {field.label || field.fieldname}{field.reqd ? <span className="ml-0.5 text-destructive">*</span> : null}
-              </th>
+              </TableHead>
             ))}
-          </tr>
-        </thead>
-        <tbody>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {rows.map((row, rowIndex) => (
-            <tr key={String(row.name ?? rowIndex)} className="border-b last:border-b-0">
-              <td className="px-2 py-2 text-right text-xs text-muted-foreground">{rowIndex + 1}</td>
+            <TableRow key={String(row.name ?? rowIndex)}>
+              <TableCell className="text-right text-xs text-muted-foreground">{rowIndex + 1}</TableCell>
               {columns.map((field) => {
                 const gridField = field.list_only ? { ...field, list_only: 0 } : field;
                 const resolved = resolveField(gridField, childMeta, {
@@ -106,14 +107,14 @@ function ExtensionGrid(props: ChildGridProps) {
                 });
                 if (!resolved.visible) {
                   return (
-                    <td key={field.fieldname} className="bg-muted/60 px-2 py-2 text-center text-xs text-muted-foreground">
+                    <TableCell key={field.fieldname} className="bg-muted/60 text-center text-xs text-muted-foreground">
                       —
-                    </td>
+                    </TableCell>
                   );
                 }
                 const Control = registry.resolve(field.fieldtype) ?? FallbackControl;
                 return (
-                  <td key={field.fieldname} className="min-w-32 px-2 py-1.5 align-top">
+                  <TableCell key={field.fieldname} className="min-w-32 align-top">
                     <Control
                       field={gridField}
                       value={row[field.fieldname]}
@@ -128,13 +129,13 @@ function ExtensionGrid(props: ChildGridProps) {
                       roles={roles}
                       compact
                     />
-                  </td>
+                  </TableCell>
                 );
               })}
-            </tr>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }
