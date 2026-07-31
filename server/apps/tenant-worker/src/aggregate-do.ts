@@ -8,7 +8,7 @@ import { D1RolloutPurchaseAllocationDomainStore, DocumentKernel } from "../../..
 import { errors } from "../../../packages/core/src/index.js";
 import { D1DocumentAccessStore, D1MetadataStore, GenericMetadataController, MetadataPermissionService } from "../../../packages/frappe-model/src/index.js";
 import type { TenantEnv } from "./env.js";
-import { executePurchaseCommandWithRevisionRetry } from "./purchase-command-retry.js";
+import { PurchaseCommandSerialExecutor } from "./purchase-command-retry.js";
 
 interface AggregateStub extends DurableObjectStub {
   mutate<T extends JsonObject>(command: MutationCommand<T>): Promise<MutationReceipt>;
@@ -33,6 +33,7 @@ const PURCHASE_ALLOCATION_DOCTYPES = new Set(["Purchase Order", "Purchase Receip
 export class AggregateCoordinator extends DurableObject<TenantEnv> {
   private readonly kernel: DocumentKernel;
   private readonly store: D1RolloutPurchaseAllocationDomainStore;
+  private readonly purchaseExecutor = new PurchaseCommandSerialExecutor();
 
   constructor(ctx: DurableObjectState, env: TenantEnv) {
     super(ctx, env);
@@ -81,7 +82,7 @@ export class AggregateCoordinator extends DurableObject<TenantEnv> {
       throw errors.validation("mutatePurchase accepts only submitted purchase allocation commands");
     }
 
-    return executePurchaseCommandWithRevisionRetry(() => this.kernel.execute(command));
+    return this.purchaseExecutor.execute(() => this.kernel.execute(command));
   }
 }
 
