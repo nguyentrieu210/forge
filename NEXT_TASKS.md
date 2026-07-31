@@ -1,5 +1,31 @@
 # NEXT TASKS
 
+## P0 — Bán hàng multi-UOM và tồn khả dụng
+
+Đã xong:
+
+- Exact Item Price theo `Bảng giá + Mặt hàng + ĐVT`.
+- Tương thích an toàn với Item Price legacy.
+- Picker ĐVT theo Item/UOM Conversion.
+- Nạp giá và tồn theo Item + Kho + ĐVT trên Báo giá/Đơn hàng.
+- Preview từ chối giá thiếu/sai tiền tệ, âm/sai định dạng hoặc đã ngừng áp dụng.
+- Test tích hợp trực tiếp `alumdoor.sales.item_context` cho exact UOM price, tồn quy đổi, currency mismatch, disabled/malformed price, legacy UOM và undeclared UOM.
+- Test quyền metadata thật: `Kinh doanh` chỉ đọc `Price List`/`Item Price`, bị từ chối create/save; `Kế toán` vẫn create/save được cả hai.
+- GitHub Actions từng lỗi trước `Set up job`; rerun không đổi code đã chạy bình thường, xác nhận đây là lỗi hạ tầng tạm thời.
+- Sales Feature CI rerun `30620774111`, job `91136237101`: unit, SQL, brief, client test, typecheck và build **PASS** trên HEAD `442a0b59c683ffd26cf012db8131a84f684b512b`.
+- PR Validation rerun `30620774088`, job `91136251549`: test, typecheck và build **PASS** trên cùng HEAD.
+
+Còn lại trước khi đề nghị merge/deploy:
+
+1. Smoke Báo giá/Đơn hàng trên staging: chọn Item, đổi ĐVT, đổi Bảng giá, đổi Kho, kiểm trạng thái tồn và giá.
+2. Nạp ít nhất hai Item Price khác ĐVT cho cùng một Item trên staging và xác minh giá không bị quy đổi chéo.
+3. Xác minh Item Price legacy không UOM vẫn chạy; legacy có UOM chỉ chạy khi dòng khớp.
+4. Smoke các lỗi giá mới: thiếu currency, currency khác chứng từ, rate âm/sai định dạng và giá disabled không được điền vào dòng.
+5. Smoke quyền bằng tài khoản thật: `Kinh doanh` đọc được Bảng giá/Đơn giá nhưng không tạo, sửa hoặc xoá master; `Kế toán` vẫn quản lý được.
+6. Thiết kế bước tiếp theo: reservation/ATP theo Sales Order; chưa bật trong đợt này.
+7. Chỉ chuyển PR #25 khỏi draft sau browser/staging smoke.
+8. Không merge hoặc deploy production nếu chưa có explicit approval.
+
 Ngày cập nhật: **2026-07-31**.
 
 ## P0 — Finalize PR #27 for merge review

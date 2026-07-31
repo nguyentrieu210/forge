@@ -31,6 +31,7 @@ import {
   type DoorFormulaPurpose,
   type SalesMode,
 } from "./door-formulas.js";
+import { salesItemContext } from "./sales-item-context.js";
 
 interface Env {
   INTERNAL_AUTH_SECRET?: string;
@@ -2799,6 +2800,7 @@ export default {
         }
 
         const call = platformCaller(request, env);
+        if (method === "alumdoor.sales.item_context") return await salesItemContext(call, args);
         if (method === "alumdoor.door.calculate") return await calculateDoor(call, args);
         if (method === "alumdoor.cut.propose") return await proposeCutV2(call, args);
         if (method === "alumdoor.cut.draft") return await draftCutV2(call, args);

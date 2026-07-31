@@ -1,5 +1,24 @@
 # CURRENT STATUS
 
+## Nhánh Bán hàng — multi-UOM price và tồn trên form
+
+- Branch: `feat/sales-complete-20260731`, base `cd60f8c09c48105db84a82c12ad3b32d9f075064`.
+- Draft PR: `#25` — `feat(sales): multi-UOM pricing and stock availability`.
+- Snapshot code/test trước commit trạng thái: `9bcb36f4f068e662cfad2e1f64591390808cbe8f`; HEAD đã gồm tài liệu trước lượt rerun: `442a0b59c683ffd26cf012db8131a84f684b512b`.
+- Đã triển khai khoá giá chính xác theo `Bảng giá + Mặt hàng + ĐVT`; dữ liệu Item Price cũ không có UOM vẫn tương thích, còn dữ liệu cũ đã khai UOM chỉ được dùng khi dòng bán khớp tuyệt đối.
+- Báo giá/Đơn hàng lấy danh sách ĐVT hợp lệ từ Item, nạp giá đúng ĐVT và hiện tồn theo kho/ĐVT bán qua method chỉ đọc `alumdoor.sales.item_context`.
+- Preview giá từ chối Item Price thiếu tiền tệ, sai tiền tệ chứng từ, đơn giá âm/sai định dạng hoặc đã ngừng áp dụng; không đẩy rate không dùng được vào dòng bán.
+- `server/tests/alumdoor-sales-item-context.test.mjs` có 5 test tích hợp trực tiếp cho exact UOM price, quy đổi tồn, currency mismatch, disabled/malformed price, legacy UOM và undeclared UOM.
+- `server/tests/alumdoor-sales-permissions.test.mjs` nạp metadata thật từ `server/briefs/alumdoor.json` vào `MetadataPermissionService`: vai trò `Kinh doanh` đọc được nhưng bị từ chối create/save trên `Price List` và `Item Price`; vai trò `Kế toán` vẫn create/save được cả hai.
+- Dòng bán hiển thị `Còn N <ĐVT>`, `Hết hàng`, `Chưa chọn kho`, `Không quản lý tồn` hoặc lỗi đọc tồn/giá.
+- Preview tồn không giữ chỗ; chốt thiếu tồn ở Delivery Note submit vẫn authoritative.
+- GitHub Actions từng thất bại trước `Set up job` với `steps=null`; rerun không đổi code đã xác nhận đó là lỗi hạ tầng tạm thời.
+- Sales Feature CI rerun run `30620774111`, job `91136237101`: install, server unit tests, SQL tests, Alumdoor brief check, client tests, typecheck và build đều **PASS** trên HEAD `442a0b59c683ffd26cf012db8131a84f684b512b`.
+- PR Validation rerun run `30620774088`, job `91136251549`: test, typecheck và build đều **PASS** trên cùng HEAD.
+- G4 đã mở lại; blocker còn lại trước khi đề nghị merge là browser/staging smoke với dữ liệu và tài khoản thật.
+- Chưa thiết kế reservation/ATP theo Sales Order.
+- Chưa merge PR, chưa deploy Cloudflare hoặc production, không sửa secrets.
+
 Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
 
 ## Git và nguồn sự thật

@@ -10,14 +10,37 @@ export async function resolveServerPrice(
   context: ControllerContext<JsonObject>,
   input: PricingContext,
 ): Promise<ResolvedPrice> {
-  const priceName = `${input.priceList}:${input.itemCode}`;
-  const itemPrice = await context.reader.getMasterRecordData(context.command.tenant_id, "Item Price", priceName);
-  if (!itemPrice) throw errors.reference(`Item Price ${priceName} does not exist`);
+  const lineUom = typeof input.uom === "string" ? input.uom.trim() : "";
+  const legacyPriceName = `${input.priceList}:${input.itemCode}`;
+  const exactPriceName = lineUom ? `${legacyPriceName}:${lineUom}` : "";
+  let priceName = lineUom ? exactPriceName : legacyPriceName;
+  let itemPrice = lineUom
+    ? await context.reader.getMasterRecordData(context.command.tenant_id, "Item Price", exactPriceName)
+    : null;
+
+  // Existing tenants can still have the pre-UOM key. A typed legacy price is accepted only
+  // when its declared UOM exactly matches the sales row. The older untyped form remains
+  // compatible only when the row is also untyped; once either side declares a UOM, matching
+  // becomes mandatory so a price for one commercial unit cannot leak into another.
+  if (!itemPrice) {
+    const legacy = await context.reader.getMasterRecordData(context.command.tenant_id, "Item Price", legacyPriceName);
+    const legacyUom = typeof legacy?.uom === "string" ? legacy.uom.trim() : "";
+    const compatible = lineUom ? legacyUom === lineUom : !legacyUom;
+    if (legacy && compatible) {
+      itemPrice = legacy;
+      priceName = legacyPriceName;
+    } else if (legacy && !lineUom && legacyUom) {
+      throw errors.validation(`Item Price ${legacyPriceName} declares UOM "${legacyUom}"; the document row must provide a matching selling UOM`);
+    }
+  }
+  if (!itemPrice) {
+    const missingName = lineUom ? exactPriceName : legacyPriceName;
+    throw errors.reference(`Item Price ${missingName} does not exist`);
+  }
   const currency = typeof itemPrice.currency === "string" ? itemPrice.currency : "";
   if (!currency) throw errors.reference(`Item Price ${priceName} must define currency`);
   if (currency !== input.documentCurrency) throw errors.reference(`Item Price ${priceName} currency does not match document currency`);
   const priceUom = typeof itemPrice.uom === "string" ? itemPrice.uom.trim() : "";
-  const lineUom = typeof input.uom === "string" ? input.uom.trim() : "";
   if (priceUom && lineUom && priceUom !== lineUom) {
     throw errors.validation(`Item Price ${priceName} applies to UOM "${priceUom}", but the document row uses "${lineUom}"`);
   }
