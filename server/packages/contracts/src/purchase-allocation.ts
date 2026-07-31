@@ -30,7 +30,7 @@ export interface PurchaseObligationQueueSeed {
   modified_at: string;
 }
 
-/** One finite tolerance period inside a continuous obligation queue. */
+/** One finite tolerance period inside a continuous supplier/material obligation queue. */
 export interface PurchaseSettlementWindowSeed {
   window_id: string;
   queue_key: string;
@@ -108,7 +108,6 @@ export interface PurchaseUnappliedReceiptEntry {
   /**
    * Weight attribution travels with the unapplied balance so a later PO can
    * create a truthful allocation without rereading or guessing mutable UI data.
-   * Persistence support is added by the following append-only migration slice.
    */
   barem_weight_micros?: number;
   projected_actual_weight_micros?: number;
@@ -149,9 +148,7 @@ export interface PurchaseAllocationRevisionClaim {
  * M1 extension of the normal document mutation plan. The D1 adapter must persist
  * every supplied row in the same batch as the document, stock and compatibility
  * procurement projection. All arrays are optional so unaffected controllers keep
- * their existing plan shape. Explicit undefined is accepted because some plan
- * combinators copy optional fields from another partial plan under strict optional
- * property semantics.
+ * their existing plan shape.
  */
 export interface PurchaseAllocationMutationPlanExtension {
   purchase_queue_seeds?: PurchaseObligationQueueSeed[] | undefined;
@@ -164,11 +161,17 @@ export interface PurchaseAllocationMutationPlanExtension {
 }
 
 /**
- * Keep the allocation fields on the canonical MutationPlan interface without
- * forcing every unrelated controller to populate empty arrays. This augmentation
- * is type-only; the runtime shape remains the ordinary plan object.
+ * Keep the allocation fields on canonical contracts without forcing unrelated
+ * controllers to populate empty arrays. The optional voucher fields on
+ * ProcurementEntry let a PO-triggered `apply_unapplied` compatibility row retain
+ * the originating Purchase Receipt identity.
  */
 declare module "./index.js" {
+  interface ProcurementEntry {
+    voucher_type?: string;
+    voucher_no?: string;
+    voucher_revision?: number;
+  }
   interface MutationPlan<T extends JsonObject = JsonObject> extends PurchaseAllocationMutationPlanExtension {}
   interface MutationSnapshot {
     purchase_obligation_entries?: PurchaseWindowObligationEntry[];
