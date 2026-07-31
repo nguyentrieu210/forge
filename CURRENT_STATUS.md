@@ -6,69 +6,89 @@ Ngày cập nhật: **2026-07-31**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Default head khi mở nhánh: `13a4fcf021ac51f36ccd04d8ffa66da262eaf563`.
-- Working branch: `hotfix/sales-price-unicode-normalization-20260731`.
+- Default head khi mở nhánh: `a48524b93489c92296c57fc5f223e41d505de7aa`.
+- Working branch: `docs/record-alu-production-observation-20260731`.
 - Không commit `.env`, secret, `server/work/`, `tmp`, backup hoặc generated evidence.
 
-## Bán hàng — follow-up production cho đơn giá trống
+## Bán hàng — Unicode Item Price follow-up
 
-- Functional evidence trên `alu.kairo.vn`: chọn `TRỤC 114_1.8LY`, ĐVT `Mét` hiển thị nhưng `Đơn giá` vẫn trống.
-- Production đã chạy sales hotfix trước đó, nên đây không phải lỗi chưa cập nhật Worker.
-- Khoảng trống còn lại:
-  - dữ liệu import có thể lưu cùng chữ `Mét` bằng dạng Unicode tổ hợp khác;
-  - probe exact `<price_list>:<item_code>:<uom>` trả lỗi khác `404` đang chặn field fallback.
-- Nhánh hiện tại:
-  - chuẩn hóa Price List, Item, UOM, Currency và Warehouse về Unicode NFC trước so khớp;
-  - đọc legacy Item Price trước;
-  - cho field fallback tiếp tục khi exact-name probe lỗi;
-  - field fallback chỉ lọc server theo Price List + Item rồi so UOM đã chuẩn hóa trong code;
-  - áp cùng quy tắc cho preview và pricing authoritative lúc lưu/submit.
-- Regression mới: `server/tests/sales-price-unicode-normalization.test.mjs`.
-- Focused local verification:
-  - preview legacy với `Mét` dạng Unicode khác: PASS;
-  - preview fallback sau exact probe HTTP 400: PASS;
-  - authoritative pricing với UOM Unicode tương đương: PASS.
-- Chưa merge hoặc deploy thay đổi follow-up này; GitHub CI exact-head là gate tiếp theo.
+- PR `#91` đã squash-merge.
+- Exact feature head: `c0d9df33a9fbde7540683107fd948c388a026682`.
+- Merge SHA: `a48524b93489c92296c57fc5f223e41d505de7aa`.
+- Exact-head CI đều PASS:
+  - CI `30647911536`;
+  - PR Validation `30647908313`;
+  - Sales Feature CI `30647908363`;
+  - Purchase Feature CI `30647908408`;
+  - Inventory and Manufacturing CI `30647910730`;
+  - UI Pull Request Validation `30647910724`.
+- Fix bao phủ Unicode NFC, exact-probe failure fallback và cùng canonical matching cho preview/save/submit.
+- Chưa có release evidence cho merge SHA mới.
 
-## Bán hàng — hotfix trước đã release production
+## Bán hàng — production release trước
 
-- Feature PR `#78` squash-merge SHA `60c604de69804b9daf9fb90bf9a5d6e86bb3af2d`.
-- Release run `30646396613`, job `91208710455`: **SUCCESS**.
+- Feature PR `#78` merge SHA `60c604de69804b9daf9fb90bf9a5d6e86bb3af2d`.
+- Release run `30646396613`, job `91208710455`: SUCCESS.
 - Tenant Worker: `cloudforge-tenant-alu`.
 - Production version ID: `7738ee39-bb39-4a38-bf8d-5e2e1834e572`.
 - Deployment time: `2026-07-31T16:17:08.332Z`.
 - Backup, recorded migrations, deploy và endpoint smoke: PASS.
-- `/health = 200`; guest boot = `403`.
-- Không deploy Gateway, không sửa DNS/secrets, FIFO rollout vẫn **disabled**.
+- Follow-up PR `#91` chưa được xác nhận đã release production.
 
 ## Purchase/FIFO
 
 - PR `#63` đã release lifecycle correction lên tenant `alu`.
 - PR `#75` đã merge readiness wrapper/runbook.
-- PR `#77` đã merge checksum lock cho mọi staging/production write mode.
-- Merge SHA PR `#77`: `a67d62377f1869d95906320636eabbd9bbd56ab7`.
+- PR `#77` merge SHA `a67d62377f1869d95906320636eabbd9bbd56ab7` khóa write mode bằng approved checksum.
 - FIFO rollout vẫn **disabled**.
 
-## Production smoke
+## Production observation — 2026-07-31
 
-Workflow `Cloudflare Production Smoke Observation` chỉ chạy read-only:
+### Trigger và phạm vi
 
-- `GET https://alu.kairo.vn/health` phải trả `200`;
-- `GET https://alu.kairo.vn/` phải trả `200`;
-- guest boot phải trả `403`;
-- evidence được upload ngoài repository.
+- PR `#88` merge SHA `0488d9bb59de445b8d17b23da0c049a90ee16785`.
+- PR `#89` merge SHA `44839abb848284747aef92ab73f67699691cae44`.
+- Observation PR `#92` đã đóng và không merge.
+- Workflow chỉ thực hiện GET tới `/health`, `/` và guest boot; không deploy hoặc mutation.
+
+### Evidence
+
+- Run ID: `30648098602`.
+- Job ID: `91214435446`.
+- Source SHA thực thi: `eadaac669d98c19b92121a0bd8d2b04010d43572`.
+- Observed at: `2026-07-31T16:41:00Z`.
+- `health=200`.
+- `root=200`.
+- `guest_boot=403`.
+- `result=pass`.
+- Health payload: `{"ok":true,"service":"gateway-worker"}`.
+- Guest boot trả expected login-required `PermissionError`.
+- Artifact ID: `8800251206`.
+- Artifact name: `alu-production-observation-30648098602`.
+- Artifact size: `1144` bytes.
+- Artifact digest: `sha256:667a9f2a760ff5074ae4d97df4193e53cc45db1d96e237ffc39fe4f934abae7d`.
+- Artifact expiry: `2026-08-14T16:41:00Z`.
+- Evidence summary đã được comment vào PR `#84`.
+
+### Workflow conclusion nuance
+
+- `Smoke production endpoints`: PASS.
+- `Upload observation evidence`: PASS.
+- `Publish observation summary`: FAIL với GitHub API `403 Resource not accessible by integration`.
+- Vì vậy toàn job conclusion là `failure`, nhưng production endpoint result và artifact đều PASS.
+- Reporting permission cần được sửa riêng; không được diễn giải lỗi này thành production outage.
 
 ## Gate hiện tại
 
-1. Mở PR cho hotfix Unicode normalization.
-2. Required CI phải PASS trên exact final head.
-3. Squash-merge theo yêu cầu sửa và deploy production của chủ dự án.
-4. Cập nhật release target vào exact merge SHA.
-5. Chạy controlled tenant release: backup → recorded migrations → deploy → smoke → Worker version evidence.
-6. Functional authenticated smoke vẫn cần người dùng xác minh trực tiếp child grid sau hard refresh.
+1. Controlled release cho merge SHA Sales `a48524b93489c92296c57fc5f223e41d505de7aa` nếu có yêu cầu release rõ.
+2. Authenticated Sales smoke sau release: Item, UOM `Mét`, rate `180000 VND`, amount và save-time authoritative pricing.
+3. Authenticated Purchase smoke vẫn chưa hoàn tất.
+4. Sửa observation reporting 403 rồi chạy lại để job conclusion xanh.
+5. FIFO activation vẫn cần staging readiness, backup và explicit approval riêng.
 
 ## Safety
 
+- Production observation không deploy Cloudflare.
+- Không backup, migrate hoặc mutate D1 trong observation.
 - Không sửa production secrets hoặc DNS.
-- Không migrate/mutate D1 ngoài controlled release workflow.
 - Không bật FIFO.
