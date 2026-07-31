@@ -1,4 +1,16 @@
-import { Button, Dialog, DialogContent, DialogHeader, DialogTitle } from "@metaforge/ui";
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@metaforge/ui";
 
 export interface SubmitPreviewColumn {
   key: string;
@@ -50,34 +62,34 @@ export function SubmitPreviewDialog(props: SubmitPreviewDialogProps) {
             </div>
           ))}
           <div className="overflow-x-auto rounded-lg border">
-            <table className="w-full min-w-[720px] text-sm">
-              <thead className="bg-muted/60 text-muted-foreground">
-                <tr>
+            <Table unwrapped className="w-full min-w-[720px] text-sm">
+              <TableHeader className="bg-muted/60 text-muted-foreground">
+                <TableRow>
                   {(preview?.columns ?? []).map((column) => (
-                    <th
+                    <TableHead
                       key={column.key}
                       className={column.align === "right" ? "px-3 py-2 text-right font-medium" : "px-3 py-2 text-left font-medium"}
                     >
                       {column.label}
-                    </th>
+                    </TableHead>
                   ))}
-                </tr>
-              </thead>
-              <tbody>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {(preview?.rows ?? []).map((row, rowIndex) => (
-                  <tr key={`${rowIndex}-${String(row.receipt_row ?? "row")}`} className="border-t">
+                  <TableRow key={`${rowIndex}-${String(row.receipt_row ?? "row")}`}>
                     {(preview?.columns ?? []).map((column) => (
-                      <td
+                      <TableCell
                         key={column.key}
                         className={column.align === "right" ? "px-3 py-2 text-right tabular-nums" : "px-3 py-2"}
                       >
                         {previewCell(row[column.key])}
-                      </td>
+                      </TableCell>
                     ))}
-                  </tr>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
           <dl className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
             {(preview?.summary ?? []).map((entry) => (
