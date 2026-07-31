@@ -1,11 +1,11 @@
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import {
   AppShell, CommandPalette, AIPanel, useTheme,
   createOpenAICompatProvider, createEchoProvider,
   type NavItem, type Breadcrumb, type AwesomeAction, type AwesomeDoctype, type AwesomeRecord,
-  type AIProvider, type AIAction, type AIContext, type AIConfig, type NotificationItem,
+  type AIProvider, type AIAction, type AIContext, type NotificationItem,
 } from "@metaforge/shell";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, Toaster } from "@metaforge/ui";
+import { Button, Sheet, SheetContent, SheetHeader, SheetTitle, Toaster, cn } from "@metaforge/ui";
 import { loadAIConfig } from "./system/ai-config.js";
 
 /**
@@ -58,11 +58,71 @@ function isEditable(el: Element | null): boolean {
   return tag === "INPUT" || tag === "TEXTAREA" || (el as HTMLElement).isContentEditable;
 }
 
+/**
+ * MISA-style two-level navigation:
+ * - the hanging tabs select a business/DocType section;
+ * - the sidebar contains only entries belonging to that section.
+ *
+ * Existing callers already describe sections through NavItem.group, so this remains
+ * backward compatible and avoids a second navigation manifest that would drift later.
+ */
+function WorkspaceTabs({ nav, activeKey, onNavigate }: Pick<DemoShellProps, "nav" | "activeKey" | "onNavigate">) {
+  const groups = useMemo(() => {
+    const result = new Map<string, NavItem[]>();
+    for (const item of nav) {
+      const group = item.group?.trim();
+      if (!group) continue;
+      const entries = result.get(group) ?? [];
+      entries.push(item);
+      result.set(group, entries);
+    }
+    return [...result.entries()];
+  }, [nav]);
+
+  if (groups.length < 2) return null;
+  const activeGroup = nav.find((item) => item.key === activeKey)?.group;
+
+  return (
+    <nav className="flex max-w-[min(52vw,44rem)] items-end gap-1 overflow-x-auto px-1" aria-label="Phân hệ nghiệp vụ">
+      {groups.map(([group, items]) => {
+        const active = group === activeGroup;
+        return (
+          <Button
+            key={group}
+            type="button"
+            variant="ghost"
+            size="sm"
+            className={cn(
+              "relative h-9 shrink-0 rounded-b-none border border-transparent px-3 text-xs font-medium",
+              active
+                ? "border-border border-b-background bg-background text-primary shadow-sm after:absolute after:-bottom-px after:inset-x-0 after:h-px after:bg-background"
+                : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
+            )}
+            aria-current={active ? "page" : undefined}
+            onClick={() => {
+              const target = items.find((item) => !item.disabledReason);
+              if (target) onNavigate(target.key);
+            }}
+          >
+            {group}
+          </Button>
+        );
+      })}
+    </nav>
+  );
+}
+
 export function DemoShell(props: DemoShellProps) {
   const [theme, setTheme] = useTheme();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   const [aiProvider, setAiProvider] = useState<AIProvider | null>(() => props.ai?.provider ?? loadAIProvider());
+
+  const activeGroup = props.nav.find((item) => item.key === props.activeKey)?.group;
+  const visibleNav = useMemo(
+    () => activeGroup ? props.nav.filter((item) => item.group === activeGroup) : props.nav,
+    [activeGroup, props.nav],
+  );
 
   function openAI() {
     // Đọc lại config mỗi lần mở để cập nhật nếu vừa lưu ở Thiết lập.
@@ -84,17 +144,25 @@ export function DemoShell(props: DemoShellProps) {
     return () => window.removeEventListener("keydown", onKey);
   }, [paletteOpen]);
 
+  const workspaceTabs = <WorkspaceTabs nav={props.nav} activeKey={props.activeKey} onNavigate={props.onNavigate} />;
+  const shellContext = workspaceTabs || props.businessContext ? (
+    <div className="flex min-w-0 items-end gap-2">
+      {workspaceTabs}
+      {props.businessContext ? <div className="min-w-0 shrink-0">{props.businessContext}</div> : null}
+    </div>
+  ) : undefined;
+
   return (
     <>
       <AppShell
         brand="MetaForge"
-        nav={props.nav}
+        nav={visibleNav}
         activeKey={props.activeKey}
         onNavigate={props.onNavigate}
         breadcrumbs={props.breadcrumbs}
         fullName={props.fullName}
         userSubtitle={props.userSubtitle}
-        businessContext={props.businessContext}
+        businessContext={shellContext}
         onLogout={props.onLogout}
         onChangePassword={props.onChangePassword}
         onLogoutOtherSessions={props.onLogoutOtherSessions}
