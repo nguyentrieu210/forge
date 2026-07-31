@@ -197,3 +197,17 @@ test("Item validator merges partial saves with the current Item before validatio
   assert.equal(response.status, 422);
   assert.match(await message(response), /phải có Bộ quy cách/i);
 });
+
+test("Item catalog invariants merge partial saves before checking purchase eligibility", async () => {
+  const current = validRawItem();
+  const response = await validateItem({ is_purchase_item: 0 }, {
+    action: "save",
+    name: "RAW",
+    masters: {
+      ...leafGroup,
+      "Item:RAW": current,
+    },
+  });
+  assert.equal(response.status, 422);
+  assert.match(await message(response), /Nguồn cung Mua ngoài phải bật Được phép mua/i);
+});
