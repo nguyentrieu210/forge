@@ -8,13 +8,13 @@ Forge là monorepo ERP đa tenant trên Cloudflare. Backend CloudForge cung cấ
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Default head đã merge vào finance branch: `fbae2164403cd6b8ab7b31ee745e9d9ec82620b5`.
+- Default head đã merge vào finance branch: `984c8655db5fea4de10baa41be59c79df99b2aa9`.
 - Working branch: `feat/finance-ar-ap-completion`.
 - Draft PR: `#15` — `feat(finance): add invoice due dates and AR/AP aging`.
 - Finance code/test head: `93c3f2ab5c7dd286c9f03cd13ad769ba14a65d8e`.
-- Latest default merge commit trước handoff cuối: `a692a6ccc2939f09790dcbb13f92e9c5e1fc05d3`.
+- Latest default merge commit trước handoff cuối: `e03dbca7fa4c22594131a9bfd32653c1da77102f`.
 - Backup trước đồng bộ base: `backup/finance-ar-ap-pre-rebase-20260731` tại `a0f787e2a8abde287b184d5709985aec8cfd4eb8`.
-- PR mergeable; default workflow mới nhất đã được merge bằng commit hai parent, không force-push.
+- PR mergeable, zero commits behind default tại thời điểm handoff.
 - Final PR diff không chứa workflow tạm.
 
 Đọc đầu tiên khi tiếp tục:
@@ -43,9 +43,7 @@ Forge là monorepo ERP đa tenant trên Cloudflare. Backend CloudForge cung cấ
 - Chặn ngày không tồn tại hoặc trước posting date.
 - Sales Invoice metadata có Due Date required.
 - Legacy/API invoice thiếu due date vẫn hoạt động bằng posting-date fallback.
-- `finance_invoice_terms.due_date_source`:
-  - `explicit`;
-  - `posting_date_fallback`.
+- `finance_invoice_terms.due_date_source` là `explicit` hoặc `posting_date_fallback`.
 - Chưa hard-reject omitted due date trước backfill/checksum/staging.
 
 Không sửa migration `0030`; hard presence enforcement phải là migration append-only mới.
@@ -81,7 +79,7 @@ Worker route regression nằm trong root `server/tests/*.test.mjs`, kiểm:
 
 `HTTP -> permission -> FinanceQueryCompiler -> D1ReportService`.
 
-SQL cutoff thực thi thật được kiểm độc lập bằng migration fixture SQLite.
+SQL cutoff thực thi thật được kiểm bằng migration fixture SQLite.
 
 ## Verification
 
@@ -99,17 +97,17 @@ SQL cutoff thực thi thật được kiểm độc lập bằng migration fixtu
 - SQL cutoff fixture: PASS.
 - `due_date_source` projection/filter: PASS.
 
-### Failure trước runner đã quan sát
+### Workflow diagnosis
 
-- `30620542741` / `91123803489`;
-- `30620645454` / `91124137658`, rerun `91124386934`;
-- `30620830770` / `91124730973`.
+Nhiều run sau đó fail trước runner với `steps=[]`, chưa checkout và log `BlobNotFound`. PR #38 dùng cùng workflow cũng gặp đúng triệu chứng, nên không phải finance test failure.
 
-Các job trên không có step, chưa checkout và log download trả `BlobNotFound`; vì vậy chưa phải bằng chứng code failure.
+Default đã sửa workflow RBAC qua chuỗi commit đến `984c8655db5fea4de10baa41be59c79df99b2aa9`; finance branch đã merge bản simplified gate cuối. Đọc PR Validation trên commit người dùng mới nhất. Với PR #15:
 
-Default đã cập nhật `pr-validation.yml` tại `1207333163fdf31c576caa6ec8c11e88b078ca6e` và `fbae2164403cd6b8ab7b31ee745e9d9ec82620b5`. Finance branch đã merge workflow này. Đọc run trên commit người dùng mới nhất; với PR #15 chỉ job `validate / Test, typecheck and build` áp dụng, RBAC Slice B job có điều kiện PR #38 và phải skip.
+- job `Test, typecheck and build` phải chạy đầy đủ;
+- RBAC Slice B job phải thoát sớm vì `PR_NUMBER != 38`;
+- không công nhận PASS nếu checkout/test/typecheck/build chưa thực thi.
 
-PR giữ draft. Không merge nếu exact-head install/test/typecheck/build chưa chạy thật và PASS.
+PR giữ draft. Không merge nếu exact-head gate chưa PASS.
 
 ## Remaining finance roadmap
 
@@ -143,7 +141,7 @@ PR giữ draft. Không merge nếu exact-head install/test/typecheck/build chưa
 ### RBAC
 
 - Slice A merged into default at `93ac85a0f16c2668b706ffcf8e15d3da53c8c7a9` with exact-head PR Validation PASS.
-- Slice B is isolated to PR #38 and its conditional workflow does not apply to finance PR #15.
+- Slice B is isolated to PR #38 and its workflow must not mutate finance PR #15.
 
 ### Gateway/sidebar
 
