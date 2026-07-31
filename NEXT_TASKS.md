@@ -5,79 +5,95 @@ Ngày cập nhật: **2026-07-31**.
 ## P0 — Verify PR #66 exact final HEAD
 
 1. Lấy exact final HEAD của `chore/optimize-gateway-ci-cd-20260731`.
-2. Kiểm các workflow mới:
+2. Kiểm các workflow PR:
    - `PR Validation`;
    - `Business Domain CI`;
-   - `UI Pull Request Validation` nếu scope phù hợp.
-3. Xác minh router/result jobs luôn trả kết quả rõ ràng khi focused/heavy job bị skip.
-4. Đọc đúng failed step và log; không sửa code nếu job chưa checkout hoặc không có steps.
-5. Kiểm branch protection required check names. Không merge nếu required check cũ bị mất hoặc treo Pending.
-6. Giữ PR draft cho tới khi exact-head checks cần thiết PASS.
+   - `UI Pull Request Validation` khi scope phù hợp.
+3. Xác minh local composite action `.github/actions/setup-forge/action.yml` được resolve sau checkout.
+4. Xác minh router/result jobs trả kết quả rõ ràng khi focused/heavy job bị skip.
+5. Đọc đúng failed step và log; không sửa code nghiệp vụ nếu workflow chưa parse hoặc job chưa checkout.
+6. Kiểm branch protection required check names.
+7. Giữ PR draft và không merge cho tới khi exact-head checks cần thiết PASS.
 
-## P0 — Review workflow inventory
+## P0 — Static review release workflows
 
-Workflow mục tiêu còn lại:
+Không chạy release trong bước này.
 
-- `pr-validation.yml`.
-- `business-domain-ci.yml`.
-- `ui-pr-validation.yml`.
-- `gateway-production-release.yml`.
+Review bắt buộc:
+
+1. `gateway-release-candidate.yml`
+   - exact SHA validation;
+   - build/stage một lần;
+   - Wrangler output type `version-upload`;
+   - `release.json` có target SHA/version ID.
+2. `gateway-production-release.yml`
+   - manual-only;
+   - production environment;
+   - không có build command;
+   - `versions view` trước promote;
+   - `versions deploy <id>@100% -y`;
+   - smoke và provider evidence.
+3. `tenant-production-release.yml`
+   - `environment: production` nằm đúng cấp job;
+   - backup/migration/deploy/smoke không đổi thứ tự.
+4. Không chạy candidate hoặc production release khi chưa có yêu cầu phát hành rõ ràng.
+
+## P0 — Workflow inventory mục tiêu
+
+Workflow lâu dài:
+
+- `pr-validation.yml`;
+- `business-domain-ci.yml`;
+- `ui-pr-validation.yml`;
+- `gateway-release-candidate.yml`;
+- `gateway-production-release.yml`;
 - `tenant-production-release.yml`.
-- `purchase-completion-apply.yml` tạm thời cho PR #63.
 
-Đã xóa thêm trong checkpoint workflow-history cleanup:
+Workflow tạm:
 
-- `manual-release-alu.yml` vì trùng đường Tenant release mới.
-- `cloudflare-preview-qa.yml` vì workflow cũ mang Cloudflare token vào PR, deploy QA worker và trùng UI/browser QA.
-
-Lưu ý sidebar Actions:
-
-1. Tên workflow cũ có thể vẫn hiện vì historical runs dù file đã bị xóa.
-2. `inventory-remote-*` là ví dụ đã được xóa từ commit `88885b0f03cc00754da771b10a6f85f71db5fce6`.
-3. Không tạo lại workflow hoặc sửa code để xử lý tên lịch sử.
-4. Chỉ xóa historical runs/disable workflow bằng GitHub UI/API khi người dùng yêu cầu thao tác quản trị riêng.
+- `purchase-completion-apply.yml` cho PR #63.
 
 Sau khi PR #63 kết thúc:
 
-1. Xác nhận không còn gate nào phụ thuộc `purchase-completion-apply.yml`.
-2. Xóa workflow tạm.
-3. Cập nhật runbook và status.
+1. Xác nhận không còn gate phụ thuộc workflow tạm.
+2. Xóa workflow.
+3. Cập nhật runbook/status.
 
-## P1 — Gateway immutable-version release
+## P1 — Release manifest validation
 
-Checkpoint riêng sau cleanup:
+Sau khi PR #66 merge và CI xanh:
 
-1. CI build/stage Gateway frontend một lần.
-2. Upload immutable Worker version và lưu target SHA + version ID.
-3. Gateway production release chỉ promote exact version đã xác minh.
-4. Không build frontend lần nữa trong release job.
-5. Giữ smoke `/health`, `/`, guest boot và provider version evidence.
-6. Không triển khai production nếu chưa có yêu cầu release rõ ràng.
+1. Thêm script schema validation cho `release.json` nếu cần automation mạnh hơn.
+2. Candidate và production release phải dùng cùng target SHA/version ID.
+3. Không tự chọn version gần nhất từ Cloudflare.
+4. Không commit release artifact vào repository.
 
-## P1 — Tighten Business Domain routing
+## P1 — Rollback workflow
 
-Sau một số PR thực tế:
+Chỉ thiết kế sau khi immutable promotion được xác minh:
 
-1. Review file patterns bị false positive/false negative.
-2. Thêm mapping có bằng chứng, không mở rộng thành toàn bộ `server/**` hoặc `client/**`.
-3. Nếu focused test file naming không ổn định, tạo manifest/script test-domain trong repository thay vì thêm workflow mới.
+1. Manual-only.
+2. Exact known-good version ID.
+3. Confirmation phrase riêng.
+4. Provider verification trước promote.
+5. Smoke và evidence sau rollback.
+6. Không tạo rollback workflow trước khi có yêu cầu và review rõ ràng.
 
-## P1 — UI browser QA scope
+## P1 — Routing calibration
 
-- Theo dõi các PR backend không liên quan để đảm bảo Playwright không chạy.
-- Theo dõi UI/auth PR để đảm bảo browser QA vẫn xuất hiện.
-- Không đưa Chromium trở lại workflow deploy hoặc domain CI.
+- Theo dõi false positive/false negative của Business Domain router.
+- Không mở rộng trở lại toàn bộ `server/**` hoặc `client/**` nếu chưa có bằng chứng.
+- Theo dõi backend-only PR để bảo đảm Playwright không chạy.
 
 ## Runbook bắt buộc
 
-Mọi AI tiếp tục công việc phải đọc và làm theo:
+Mọi AI tiếp tục công việc phải đọc:
 
-- `AI_HANDOFF.md`.
-- `CURRENT_STATUS.md`.
-- `NEXT_TASKS.md`.
-- `docs/runbooks/AI_CI_CD_RUNBOOK.md`.
-
-Không tạo workflow mới nếu chưa chứng minh workflow hiện có không đáp ứng được và chưa ghi điều kiện xóa.
+- `AI_HANDOFF.md`;
+- `CURRENT_STATUS.md`;
+- `NEXT_TASKS.md`;
+- `docs/runbooks/AI_CI_CD_RUNBOOK.md`;
+- `docs/runbooks/AI_RELEASE.md`.
 
 ## Production safety
 
