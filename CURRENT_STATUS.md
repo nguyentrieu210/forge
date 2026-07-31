@@ -4,7 +4,7 @@
 
 - Branch: `feat/sales-complete-20260731`, base `cd60f8c09c48105db84a82c12ad3b32d9f075064`.
 - Draft PR: `#25` — `feat(sales): multi-UOM pricing and stock availability`.
-- Exact branch head: `56aa25e0153bf57e911f5d6f7029403a680b9b74`.
+- Snapshot code/tài liệu đã được CI xác minh trước commit ghi trạng thái: `56aa25e0153bf57e911f5d6f7029403a680b9b74`.
 - Đã triển khai khoá giá chính xác theo `Bảng giá + Mặt hàng + ĐVT`; dữ liệu Item Price cũ không có UOM vẫn tương thích, còn dữ liệu cũ đã khai UOM chỉ được dùng khi dòng bán khớp tuyệt đối.
 - Báo giá/Đơn hàng lấy danh sách ĐVT hợp lệ từ Item, nạp giá đúng ĐVT và hiện tồn theo kho/ĐVT bán qua method chỉ đọc `alumdoor.sales.item_context`.
 - Dòng bán hiển thị `Còn N <ĐVT>`, `Hết hàng`, `Chưa chọn kho`, `Không quản lý tồn` hoặc lỗi đọc tồn/giá.
