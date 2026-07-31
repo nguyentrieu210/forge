@@ -124,7 +124,21 @@ jobs:
             exit 1
           fi
 
-      - name: Run Alumdoor cookie auth smoke
+      - name: Install authoritative Alumdoor app and Purchase QA masters
+        working-directory: server
+        shell: bash
+        env:
+          FORGE_ORIGIN: http://127.0.0.1:8801
+          FORGE_ADMIN_USER: ${{ env.FORGE_AUTH_USER }}
+          FORGE_ADMIN_PASSWORD: ${{ env.FORGE_AUTH_PASSWORD }}
+        run: |
+          set -euo pipefail
+          node scripts/forge-app.mjs briefs/alumdoor-v2.json \
+            --origin "$FORGE_ORIGIN" \
+            --admin "$FORGE_ADMIN_USER"
+          node scripts/seed-purchase-qa-local.mjs
+
+      - name: Run Alumdoor cookie auth and Purchase lifecycle QA
         env:
           FORGE_AUTH_BACKEND: http://127.0.0.1:8801
         run: pnpm --filter e2e-forge exec playwright test --config playwright.auth.config.ts
