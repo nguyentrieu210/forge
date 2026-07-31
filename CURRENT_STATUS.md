@@ -66,7 +66,7 @@ Contract authoritative: `server/docs/ALUMDOOR-PURCHASE-RECEIPT-ALLOCATION.md`.
   - `server/migrations/tenant/0027_purchase_receipt_allocation.sql`
   - `server/migrations/tenant/0028_purchase_allocation_cancel_guard.sql`
   - `server/migrations/tenant/0029_purchase_allocation_rollout.sql`
-- Allocation schema: queue, settlement windows, obligations, allocations, unapplied quantities, settlement events và revision claims.
+- Allocation schema: queue, windows, obligations, allocations, unapplied quantities, settlement events và revision claims.
 - D1 atomic batch cho document, stock, procurement compatibility rows, allocation rows và mutation receipt.
 - Canonical material key do server tạo từ item, chiều dài, barem kg/m, màu, dập, measurement profile và stock UOM.
 - Supplier coordinator theo `purchase:<tenant>:<company>:<supplier>` trong namespace `AGGREGATES`.
@@ -124,25 +124,35 @@ Không bật rollout FIFO cho `alu` trước khi các blocker trên được x�
 
 - Branch triển khai: `feat/rbac-permission-completion-20260731`.
 - Base audit: `cd60f8c09c48105db84a82c12ad3b32d9f075064`.
-- BRD G1: `server/docs/RBAC-PERMISSION-BRD.md`.
+- Draft PR: `#22` — `docs(rbac): approve requirements and implementation plan`.
+- BRD authoritative: `server/docs/RBAC-PERMISSION-BRD.md`.
+- G2 plan authoritative: `server/docs/RBAC-PERMISSION-IMPLEMENTATION-PLAN.md`.
 - Commit BRD đầu tiên: `5f0a78f7e61ca2dae9f35d05885ed1135181a432`.
+- Commit kế hoạch G2: `9bbc2f646fbc9a39c9fd100c1474b67eeb285021`.
 - Chưa sửa runtime, migration hoặc production config.
+
+### Quyết định đã duyệt
+
+1. **D1=A:** giữ `Administrator`/`System Manager` là full tenant superadmin trong đợt này; bắt buộc last-admin guard, self-lockout guard, audit và test.
+2. **D2=A:** DocPerm do app/platform sở hữu; Permission Center chỉ đọc, thay đổi qua brief/manifest.
+3. **D3=A:** exact-value User Permission; từ chối `hide_descendants=true` cho tới khi có hierarchy contract.
 
 ### Phát hiện đã xác minh
 
 1. `PermissionCenter` cho chọn user khác khi kiểm tra quyền và adapter gửi tham số `user`, nhưng server `explain_permission` vẫn tính bằng `context.actor`; kết quả quản trị có thể hiển thị quyền của admin thay vì user được chọn.
 2. UI đọc `data.trace` nhưng endpoint hiện chưa trả trace giải thích.
 3. Xoá User Permission lệch contract: profile không trả scope id, adapter gửi `{name}`, còn server yêu cầu `user/allow/for_value/applicable_for`.
-4. `System Manager` đang được coi như admin bypass toàn bộ MetadataPermissionService; cần chốt đây là contract tương thích hay phải tách Access Manager.
-5. `hide_descendants` được lưu nhưng evaluator chỉ exact-match Link value; cờ chưa có semantics có thể chứng minh.
+4. `System Manager` đang bypass toàn bộ MetadataPermissionService; semantics này được giữ để tương thích nhưng phải có guard/audit rõ.
+5. `hide_descendants` được lưu nhưng evaluator chỉ exact-match Link value; G2 yêu cầu từ chối cờ này.
 6. Tạo user và gán roles dùng hai write riêng, có thể để lại user không hoàn chỉnh nếu bước role thất bại.
 7. Audit trail cho role/scope/disable/reset password chưa có contract bắt buộc được chứng minh.
 
 ### Gate hiện tại
 
 - G0 scope: **PASS**.
-- G1 requirements/audit: **DRAFT**, chờ duyệt D1–D3 trong BRD.
-- G2 implementation plan: chưa mở.
-- Test/typecheck/build: chưa chạy vì đợt này chỉ thêm tài liệu.
-- CI exact branch HEAD: GitHub connector chưa trả workflow run hoặc status.
-- Không deploy Cloudflare và không sửa production secrets.
+- G1 requirements/audit: **PASS**, D1=A, D2=A, D3=A.
+- G2 implementation plan: **PASS** tại `9bbc2f646fbc9a39c9fd100c1474b67eeb285021`.
+- Bước tiếp theo: Slice A — selected-user evaluation, trace và User Permission round-trip.
+- Test/typecheck/build: chưa chạy vì HEAD hiện chỉ thay đổi tài liệu.
+- Exact-head CI cho `9bbc2f...`: chưa có bằng chứng test/typecheck/build; workflow production observation của commit trước không thay thế CI code.
+- Không deploy Cloudflare, không bật FIFO và không sửa production secrets.
