@@ -5,8 +5,8 @@ import { PhysicalStockEntryController } from "./physical-stock-entry.js";
 import { GuardedManufacturingStockEntryController } from "./manufacturing-stock-guard.js";
 
 interface WorkOrderRolloutData extends JsonObject {
-  manufacturing_snapshot?: unknown;
-  bom_checksum?: unknown;
+  manufacturing_snapshot?: JsonObject;
+  bom_checksum?: string;
 }
 
 /**
