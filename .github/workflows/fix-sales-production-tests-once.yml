@@ -61,13 +61,38 @@ jobs:
           corepack prepare pnpm@9.15.0 --activate
           pnpm install --frozen-lockfile
 
-      - name: Run full unit, typecheck and build
+      - name: Run full server unit suite
+        id: unit
         shell: bash
         run: |
-          set -euo pipefail
-          pnpm --dir server run test:unit
-          pnpm --filter metaforge run typecheck
-          pnpm --filter cloudforge run build
+          set +e
+          set -o pipefail
+          pnpm --dir server run test:unit 2>&1 | tee server-unit.log
+          status=${PIPESTATUS[0]}
+          echo "status=${status}" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Upload full server unit log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sales-production-full-unit-${{ github.run_id }}
+          path: server-unit.log
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Enforce server unit result
+        if: steps.unit.outputs.status != '0'
+        shell: bash
+        run: |
+          echo "Full server unit suite failed with status ${{ steps.unit.outputs.status }}"
+          exit 1
+
+      - name: Client typecheck
+        run: pnpm --filter metaforge run typecheck
+
+      - name: Server build
+        run: pnpm --filter cloudforge run build
 
       - name: Commit verified test updates
         shell: bash
