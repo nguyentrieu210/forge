@@ -6,81 +6,76 @@ Ngày cập nhật: **2026-08-01**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Default head khi đồng bộ branch sửa CI: `04c33c0193815196bd6f10492be77fe64d175bbe`.
-- Working branch: `ci/stop-duplicate-builds-20260801`.
+- Current default head tại snapshot: `1efac7e1bdafae32a58d4c64386e9e42d4e32cc4`.
+- CI cleanup merge SHA: `60e19f0a6f498a2471a14210ec6939b3bdf1a0fd`.
+- CI cleanup PR: #127.
 - Canonical queue: `EPIC_STATUS.md`.
 
-## Trạng thái tổng thể
+Commit `1efac7e1...` sau cleanup chỉ cập nhật Gateway production trigger; không sửa workflow/handoff của #127.
 
-- Toàn hệ thống chưa đạt end-to-end acceptance.
-- Nghiệp vụ đang tạm dừng để sửa đường CI bị chạy lặp.
-- PR #103, #107 và #119 đã đóng; không dùng làm nguồn merge.
-- PR #122 docs cũ bị supersede bởi đợt sửa CI này.
+## CI cleanup — DONE
 
-## Root cause CI
+PR #127 đã squash-merge từ exact head `a2dd1fe684b17eb7acf71f0413c96143fcf540e7`.
 
-- `CI` chạy trên mọi push và pull request, tạo hai lượt cho cùng một commit feature.
-- `PR Validation` lặp toàn bộ `pnpm test`, `pnpm typecheck`, `pnpm build`.
-- Sales/Purchase/Inventory dùng `server/**` và `client/**`, nên hầu hết code PR kích cả ba workflow.
-- UI validation cũng dùng `server/**`, vì vậy nhiều thay đổi backend vẫn cài Chromium và chạy browser QA.
-- Production observation trigger trên mọi PR rồi tự skip.
-- One-shot workflow tự cherry-pick, amend và force-push làm head đổi giữa lúc CI chạy.
+| Workflow | Run | Kết quả |
+|---|---:|---|
+| CI | `30658270361` | SUCCESS |
+| PR Validation | `30658270951` | SUCCESS |
+| Sales Feature CI | `30658272023` | SUCCESS |
+| Purchase Feature CI | `30658271484` | SUCCESS |
+| Inventory and Manufacturing CI | `30658270984` | SUCCESS |
+| UI Pull Request Validation | `30658270824` | SUCCESS |
 
-## Thay đổi trên branch hiện tại
+Không có production observation hoặc release job chạy trên PR này.
 
-| File | Thay đổi |
-|---|---|
-| `.github/workflows/ci.yml` | Chỉ push default + PR vào default; docs-only fast path; bỏ release job cũ khỏi CI |
-| `.github/workflows/pr-validation.yml` | Policy gate nhẹ; bỏ duplicate build/test và bỏ deploy khỏi PR validation |
-| `.github/workflows/sales-feature-ci.yml` | Focused Sales scope và ba regression chính |
-| `.github/workflows/purchase-feature-ci.yml` | Focused Purchase scope, Purchase tests và SQL safeguards |
-| `.github/workflows/inventory-feature-ci.yml` | Focused Inventory/Manufacturing scope, catalog/item regression và brief audit |
-| `.github/workflows/ui-pr-validation.yml` | UI/browser/auth chỉ chạy khi đúng phạm vi |
-| `.github/workflows/cloudflare-production-observation.yml` | Không còn tạo run trên mọi PR |
-| `.github/workflows/sync-sales-production-clean-once.yml` | Đã xóa |
-| `server/scripts/.sync-sales-production-trigger` | Đã xóa |
+## Thay đổi đã vào default
 
-## Mô hình CI sau khi merge
+- `CI` chỉ chạy push trên default và PR vào default.
+- Docs-only có fast path không cài dependency.
+- `PR Validation` là policy gate nhẹ, không duplicate test/typecheck/build và không deploy.
+- Sales/Purchase/Inventory giữ required check nhưng chỉ chạy focused gate đúng phạm vi.
+- UI/browser/auth QA chỉ chạy khi file liên quan thay đổi.
+- Production observation không trigger trên mọi PR.
+- One-shot Sales sync workflow và hidden trigger đã bị xóa.
+- Dedicated release workflows vẫn tồn tại riêng.
 
-### Docs-only PR
+## Hành vi đã xác minh
 
-- `CI`: fast path, không cài dependency.
-- `PR Validation`: policy check nhẹ.
-- Feature/UI check: fast path nếu branch protection yêu cầu tên check.
-- Không build, không browser QA, không production observation.
+- Một exact head duy nhất được giữ suốt lượt CI của #127.
+- Full test, typecheck và build chạy một lần trong CI.
+- Sales, Purchase và Inventory focused tests đều xanh.
+- UI build và Alumdoor browser QA xanh.
+- Purchase browser QA và auth smoke được skip đúng vì #127 không sửa phạm vi Purchase/auth.
+- PR Validation hoàn tất nhanh, không cài dependencies.
 
-### Code PR
+## Trạng thái nghiệp vụ
 
-- Một `CI` duy nhất chạy full test + typecheck + build.
-- Chỉ feature workflow liên quan chạy focused regression.
-- UI workflow chỉ chạy browser/auth khi thay đổi liên quan.
-- Push mới cùng PR hủy run cũ bằng `cancel-in-progress`.
-
-### Sau merge
-
-- Dedicated release workflow quyết định release theo path/exact SHA.
-- CI và PR validation không deploy production.
-
-## Hàng đợi nghiệp vụ
-
-1. Sales-to-Production — `BLOCKED / CLEAN REBUILD`.
+1. Sales-to-Production — `NEXT / CLEAN REBUILD`.
 2. Purchase authenticated QA — `QUEUED / CLEAN REBUILD`.
 3. Finance — `QUEUED / REBUILD`.
 4. Daily ledger — `QUEUED`.
 5. Warranty / Capacity — `QUEUED`.
 6. End-to-end acceptance — `QUEUED`.
 
-## Gate merge cho CI cleanup
+Toàn hệ thống chưa đạt end-to-end acceptance.
 
-- Branch phải ahead current default và behind 0.
-- Workflow YAML phải được GitHub nhận và exact-head checks phải kết thúc.
-- Final diff chỉ gồm workflow + handoff docs + xóa transport files.
-- Không có application source, production secret, DNS, migration hoặc customer data change.
+## PR không được reopen
+
+- #103: Purchase QA stale/diverged.
+- #107: Sales transport cũ.
+- #119: Sales branch đổi head và mang workflow one-shot.
+- #122: docs cleanup cũ, đã bị #127 thay thế.
+
+## Lỗi còn lại
+
+- Chưa có PR Sales-to-Production sạch trên default mới.
+- Purchase authenticated desktop/mobile QA chưa được dựng lại.
+- Finance, daily ledger, warranty/capacity và whole-process acceptance còn thiếu.
 
 ## Safety
 
-- Không deploy Cloudflare trong đợt này.
-- Không sửa production secrets hoặc DNS.
+- Không deploy Cloudflare trong đợt cleanup.
+- Không sửa production secret hoặc DNS.
 - Không bật FIFO.
 - Không mutate tenant data.
 - Không commit `.env`, `server/work/`, `tmp`, backup hoặc generated evidence.
