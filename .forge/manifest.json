@@ -1,8 +1,0 @@
-{
-  "pack": "forge-skills",
-  "version": "0.2.0",
-  "source": "external project pack",
-  "installed_for": "Forge SaaS",
-  "default_branch": "hotfix/alumdoor-print-list-delete",
-  "delivery_policy": "DELIVERY_POLICY.md"
-}
