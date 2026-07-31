@@ -9,9 +9,10 @@ Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
 - Feature branch: `feat/purchase-receipt-complete-20260731`.
 - Tracking issue: `#13`.
 - Draft PR: `#14`.
-- Latest verified feature code SHA: `38b0c3374e9c6c00efae95b4699c1a0831252ad2` (`feat(purchase): add allocation timeline and drill-down`).
-- Review baseline HEAD: `8ceee27a7b7faa9e3c79ccaa8b5266f27498e9d5`.
-- Standard CI workflow restored at `9a5e11cc0770237eae299d69e8ffc1f18b8be976`.
+- Review baseline: `8ceee27a7b7faa9e3c79ccaa8b5266f27498e9d5`.
+- Blocker-fix implementation head trước commit tài liệu: `99a896bd6b16b2f4e004205070f908d15ec3ef70`.
+- Base head đã kiểm tra: `ad9b91083fe686987aacae44e83a890e4ba592cc`.
+- Đã đồng bộ workflow read-only `.github/workflows/pr-validation.yml` từ base vào feature.
 - Technical plan: `server/docs/ALUMDOOR-PURCHASE-RECEIPT-COMPLETION-PLAN.md`.
 - Không commit `server/work/`, `tmp/`, backup SQL, `.env` hoặc generated artifacts.
 
@@ -25,15 +26,6 @@ Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
 ## Purchase Order / Purchase Receipt FIFO
 
 Contract authoritative: `server/docs/ALUMDOOR-PURCHASE-RECEIPT-ALLOCATION.md`.
-
-### Baseline trước epic
-
-- Migrations `0027`, `0028`, `0029`.
-- Queue, settlement window, obligation, allocation, unapplied, settlement event và revision claim.
-- Canonical material key do server tạo.
-- Supplier-level Durable Object coordination và revision-conflict retry.
-- PO submit mở obligation; Receipt submit FIFO qua nhiều PO; Receipt cancel tạo reversal.
-- Nhôm cây/lá dùng `qty_bar`; barem và actual weight giữ riêng.
 
 ### Slice A — cross-voucher unapplied lifecycle
 
@@ -49,103 +41,105 @@ Contract authoritative: `server/docs/ALUMDOOR-PURCHASE-RECEIPT-ALLOCATION.md`.
 
 ### Slice B — settlement và override backend
 
-Đã triển khai server-side nhưng review vòng 1 phát hiện lifecycle guard còn thiếu:
+Đã triển khai:
 
 - Close settlement window với permission và reason bắt buộc.
 - Integer tolerance bounds, shortage/overage variance và append-only settlement event.
 - Manual FIFO override có permission/reason và audit data.
-- Registry/action controllers và targeted tests.
 - Backdated Receipt warning; allocation vẫn theo commit sequence.
-- **Blocker High:** reverse settlement hiện chỉ kiểm tra window đang `Settled`; chưa chặn khi window kế tiếp đã có activity như completion plan yêu cầu.
+- `PurchaseSettlementLifecycleController` chặn mở lại cửa sổ cũ khi cửa sổ kế tiếp đã có ledger activity.
+- `D1RolloutPurchaseAllocationDomainStore` chỉ xét cửa sổ kế tiếp trực tiếp theo `MIN(window_sequence)` và kiểm tra obligation/allocation/unapplied/settlement activity.
+- Registry dùng lifecycle controller mới.
+- Unit test khóa controller rejection và D1 read-model query.
+
+Các commit chính:
+
+- `a46a34a1707c20d26ab74c31c67471185ab87870` — thêm lifecycle controller.
+- `90e70980a1729de4cd823b618f6b1759d2d81f67` — D1 next-window activity read.
+- `12e6dddb795cf6192aef3dd853e6b8ed5a650ced` — đăng ký lifecycle controller.
+- `84a3902673c930c682a33d94f40bfbad22cb317e` — lifecycle tests.
+- `c147bb2120708bb05a241730ad2e520a7fce55fb` — sửa type context.
 
 ### Slice C — backfill và cutover tooling
 
-Planner và CLI đã được thêm, nhưng write path chưa đạt gate:
+Đã sửa blocker schema:
 
-- `server/scripts/purchase-allocation-backfill-planner.mjs`.
-- `server/scripts/backfill-purchase-receipt-allocations.mjs`, dry-run mặc định.
-- Resolve deterministic từ voucher revisions/snapshots/child row identity; ambiguous rows thành unresolved, không đoán.
-- Resolved/unresolved report và PO-level checksum.
-- **Blocker Critical:** CLI dùng cột `activated_by` / `activated_at`, trong khi migration `0029` tạo `enabled_by` / `enabled_at`. Cả backfill write SQL và activation SQL sẽ lỗi trên schema thật.
-- Cần integration test chạy SQL render/activation trên schema migration thật để khóa regression này.
+- CLI dùng đúng `enabled_by` / `enabled_at` theo migration `0029`.
+- `renderBackfillSql` và `renderActivationSql` được export để chạy integration test trên chính SQL renderer.
+- Script chỉ chạy `main()` khi được gọi trực tiếp, không chạy side effect khi import test.
+- Activation ghi `updated_at`, kiểm tra checksum, actor và timestamp sau update.
+- `server/scripts/test-purchase-allocation-backfill-sql.py` áp migrations `0027`, `0029`, `0030` trên SQLite, chạy SQL backfill và activation thật rồi xác minh rollout row.
+- Test mới đã được nối vào `server/package.json` `test:sql`.
 
-### Slice D1 — server-authoritative submit preview
+Các commit chính:
 
-Commit `a54ae45c8aa49194fee8199a584ed47e0f775f31`:
+- `50b00ceafca78017c8a2a06b67405417fa0160e4` — sửa schema/renderer.
+- `b25a44c99c23c0f09cdb885ab0eba98b3d7ad856` — schema integration test.
+- `0f089860212e17f5d710d12b00b4c957d441befa` — đưa test vào SQL gate.
 
-- `server/packages/clouderp-core/src/purchase-allocation-preview.ts`.
-- GET API `metaforge.api.get_submit_preview` có draft + submit permission checks.
-- Preview dùng chính `AllocatingPurchaseReceiptController.buildPlan`, không duy trì thuật toán FIFO thứ hai.
-- `FormContainer` gọi preview trước submit và fail closed khi preview lỗi.
-- `SubmitPreviewDialog` responsive hiển thị PO đích, quantity, barem/actual weight, unapplied và cảnh báo lùi ngày.
-- Real submit vẫn chạy lại dưới supplier Durable Object và kiểm tra revision trước write.
+### Slice D — operator read UI
 
-### Slice D2 — allocation timeline và drill-down
+Đã hoàn thành:
 
-Code SHA `38b0c3374e9c6c00efae95b4699c1a0831252ad2`:
+- Server-authoritative FIFO preview trước submit Purchase Receipt.
+- PO/Receipt allocation timeline và drill-down từ append-only ledger.
+- Summary ordered/received/remaining, allocated/unapplied, barem/actual weight, window status, tolerance, bounds và variance.
+- Loading/error/empty states và responsive overflow.
 
-- `server/packages/document-kernel/src/purchase-allocation-timeline.ts` thêm read model từ append-only allocation ledger.
-- Read model chỉ hoạt động khi rollout state enabled; không đọc bảng procurement compatibility làm nguồn sự thật.
-- Hỗ trợ Purchase Order và Purchase Receipt.
-- Projection gồm ordered/received/remaining, allocated/unapplied, barem/actual weight, active/settled/reversed window, tolerance, bounds, variance và reason.
-- GET API `metaforge.api.get_purchase_allocation_timeline` kiểm tra document tồn tại và permission `read` trước khi trả dữ liệu.
-- `AllocationTimelineDialog.tsx` có summary cards, settlement-window cards, ledger event table, loading/error/empty states và horizontal overflow cho màn hình hẹp.
-- `FormContainer` hiện nút **Phân bổ** trên PO/Receipt đã submit hoặc cancel; draft Receipt tiếp tục dùng submit preview.
-- Test projection cover PO 300 đặt / 230 nhận / 70 còn lại và Receipt 200 allocated / 30 unapplied, kèm weight/window/event labels.
-- One-shot script đã tự xóa; workflow đã khôi phục `contents: read`, không còn đường commit/push trong CI chuẩn.
+Code timeline chính: `38b0c3374e9c6c00efae95b4699c1a0831252ad2`.
 
 ## Verification
 
-### Exact-head trước timeline
-
-SHA `9861a73fd9680aa3fa9fe84c4d42e7e186529c0a`:
-
-- CI run `30613828515`: **PASS**.
-- Purchase Feature CI run `30613828388`: **PASS**.
-
-### Timeline implementation
-
-Workflow run `30615852058`, attempt cuối job `91109594425`:
-
-- Apply exact-branch one-shot: **PASS**.
-- Server unit tests: **PASS**, 561/561.
-- Server SQL tests: **PASS**, gồm 30 migrations và allocation rollout/weight suites.
-- Client tests/selfcheck: **PASS**, 87 nhóm assert.
-- Typecheck: **PASS**.
-- Build: **PASS**.
-- Commit/push verified implementation: **PASS**.
-- Resulting code SHA: `38b0c3374e9c6c00efae95b4699c1a0831252ad2`.
-- Chỉ còn warning bundle size/dynamic import đã tồn tại; không có build failure.
-
-### Review baseline exact-head
+### Baseline trước blocker fixes
 
 SHA `8ceee27a7b7faa9e3c79ccaa8b5266f27498e9d5`:
 
 - CI run `30616566387`: **PASS**.
 - Purchase Feature CI run `30616566366`: **PASS**.
-- Review vòng 1: **REQUEST CHANGES** vì 1 Critical và 1 High blocker nêu trên.
-- CI xanh không chứng minh write path backfill dùng đúng schema vì hiện chưa có integration test render/execute SQL đó.
+- Review vòng 1 phát hiện 1 Critical và 1 High.
+
+### Blocker fixes
+
+- Code và tests đã commit tới `0f089860212e17f5d710d12b00b4c957d441befa`.
+- Workflow PR Validation từ base được đồng bộ tại `99a896bd6b16b2f4e004205070f908d15ec3ef70`.
+- Trước đồng bộ, feature ahead 95 commits và behind base 5 commits; base chỉ thêm workflow PR validation và cập nhật hai tài liệu trạng thái, không có thay đổi nghiệp vụ.
+- Exact-head CI cho blocker fixes chưa được tính PASS cho tới khi PR hết conflict và workflow tạo run trên mergeable head.
 
 ## Phần còn thiếu trước release gate
 
-1. Sửa tên cột rollout trong backfill/activation CLI và thêm schema-level integration test.
-2. Thêm guard + test: reverse settlement chỉ khi window kế tiếp chưa có activity.
-3. Settlement/reverse/manual-override dialogs trong operator UI, có permission, reason và confirmation.
-4. Supplier debt report từ allocation ledger: ordered, received, nominal debt, active window, oldest PO age.
-5. Worker/Durable Object concurrency và production-shaped Receipt cancel lifecycle tests.
-6. Exact-head standard CI green sau khi sửa review blockers.
+1. Đồng bộ base vào feature và xác nhận PR #14 trở lại mergeable.
+2. Exact-head CI green cho toàn bộ blocker fixes.
+3. Review lại hai finding và ghi kết quả.
+4. Settlement/reverse/manual-override dialogs trong operator UI, có permission, reason và confirmation.
+5. Supplier debt report từ allocation ledger.
+6. Worker/Durable Object concurrency và production-shaped Receipt cancel lifecycle tests.
 7. Cloudflare Browser Preview QA desktop `1440x1000` và mobile `390x844`.
 8. Staging migrations, backfill dry-run và smoke PO → Receipt → cancel → settlement → report.
-9. Review lại đạt >= 95/100, không có Critical/High.
-10. Backup + explicit production approval riêng; FIFO vẫn disabled khi chỉ deploy code/schema.
+9. Review rubric >= 95/100, không có Critical/High.
 
 ## Gate hiện tại
 
 - G0 Scope: **PASS**.
 - G1 Requirements: **PASS**.
 - G2 Technical plan: **PASS**.
-- G3 Full tests/typecheck/build: **PASS**, nhưng coverage còn thiếu cho backfill write path và next-window reverse guard.
-- G4 Exact-head standard CI: **PASS** tại review baseline `8ceee27a...`.
+- G3 Tests/typecheck/build: baseline **PASS**; blocker-fix exact head **PENDING**.
+- G4 Exact-head standard CI: **PENDING BASE SYNC**.
 - G5 Staging + Browser QA: **NOT STARTED**.
-- Review score: **BLOCKED**, có 1 Critical và 1 High finding.
+- Review vòng 1: findings đã sửa trong code, đang chờ CI và review lại.
 - Production: không được phép từ feature branch.
+
+## RBAC Slice A và G4 CI
+
+- Implementation commit: `ab974f92ffbcf015fb71d3051df33508c9f09942`.
+- Exact code/docs head cần kiểm chứng: `2f0de9db871f3dbe32facf26abb84f1558be0824`.
+- PR kiểm chứng hiện hành: `#34`, branch `feat/rbac-permission-slice-a-final-20260731`, trạng thái draft.
+- PR `#22` đã đóng khi phát lại event; không merge.
+- G3 PASS tại workflow `30612014393`, job `91101823154`: 566 server tests + SQL suite, root typecheck và root build.
+- Default branch đã thêm workflow read-only `.github/workflows/pr-validation.yml` qua các commit:
+  - `3495292f1f94b2f1a29a0dfb7dbc4f89fc95cd0d`;
+  - `3634e2735a691f84deb1d49c34a981f800117e8a`;
+  - `0a1044c258aa57b68ab37eb29d573ccd1bb66b02`.
+- Đã thử event `reopened` và `ready_for_review`; GitHub chỉ lập run `Cloudflare Production Release Observation`, không lập run `PR Validation`; combined status của head vẫn rỗng.
+- Connector không cung cấp API enable/dispatch workflow. Không chèn job vào workflow production đang giữ secret.
+- G4 exact-head CI: **BLOCKED bởi workflow registration/state ở cấp GitHub Actions**.
+- Không merge PR RBAC, không deploy Cloudflare, không sửa production secrets và không bật FIFO.
