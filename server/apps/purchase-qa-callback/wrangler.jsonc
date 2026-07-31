@@ -1,0 +1,16 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "cloudforge-purchase-qa-callback",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-27",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "TENANT_ID": "demo"
+  },
+  "services": [
+    {
+      "binding": "TENANT",
+      "service": "cloudforge-tenant-purchase-qa"
+    }
+  ]
+}
