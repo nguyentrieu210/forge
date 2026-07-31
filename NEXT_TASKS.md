@@ -2,6 +2,21 @@
 
 Ngày cập nhật: **2026-07-31**.
 
+## P0 — Validate CI routing optimization PR #66
+
+- Exact branch: `chore/optimize-gateway-ci-cd-20260731`.
+- Draft PR: `#66` — `ci: reduce duplicate and irrelevant workflow runs`.
+- Kiểm exact final HEAD sau mọi chỉnh sửa:
+  1. `CI` router chạy thành công.
+  2. Purchase, Sales và Inventory/Manufacturing router chạy thành công.
+  3. Vì PR #66 sửa chính các workflow này, job nặng của ba workflow phải chạy để tự kiểm chứng cấu hình.
+  4. Xác minh commit docs-only tiếp theo chỉ chạy router nhẹ và không cài dependency/build lại.
+  5. Kiểm branch protection không yêu cầu tên job đã bị đổi hoặc job bị skip theo cách làm check treo pending.
+- Sau khi CI xanh, review diff workflow và chỉ merge khi có yêu cầu rõ ràng.
+- Bước tối ưu tiếp theo: tách Gateway build thành immutable Worker version rồi release chỉ promote version đã kiểm chứng; chưa triển khai trong checkpoint router này.
+- Cloudflare Git Build đã được người dùng tắt trong dashboard.
+- Không deploy Cloudflare, không sửa production secrets, không migrate/mutate D1 và không bật FIFO trong PR này.
+
 ## P0 — Functional production smoke cho Link dropdown trong child table
 
 Bản vá wheel đúng đã merge và phát hành:
