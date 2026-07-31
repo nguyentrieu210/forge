@@ -7,7 +7,7 @@ on:
     types: [opened, synchronize, reopened]
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: purchase-completion-apply-${{ github.event.pull_request.number }}
@@ -108,13 +108,11 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Commit verified source
+      - name: Verify generated source diff
         shell: bash
         run: |
           set -euo pipefail
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
           git diff --cached --check
-          git commit -m 'fix(purchase): complete lifecycle gates'
-          git push origin HEAD:feat/purchase-fifo-production-completion-20260731
+          test -n "$(git diff --cached --name-only)"
+          git diff --cached --stat
