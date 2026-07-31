@@ -6,6 +6,7 @@ on:
       - feat/purchase-receipt-complete-20260731
     paths:
       - .github/one-shot/purchase-preview.patch
+      - .github/workflows/apply-purchase-preview.yml
 
 permissions:
   contents: write
