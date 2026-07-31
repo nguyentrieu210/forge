@@ -7,6 +7,7 @@
  */
 
 import { errors } from "../../core/src/index.js";
+import { D1RbacAdministrationService } from "./rbac-administration.js";
 
 export interface UserRecord {
   user_id: string;
@@ -37,11 +38,13 @@ export interface AuthenticatedUser extends UserRecord {
 
 export class D1UserStore {
   private readonly db: D1Database | D1DatabaseSession;
+  readonly administration: D1RbacAdministrationService;
 
   constructor(db: D1Database) {
     // Authentication must never read a stale replica: a just-revoked session or a
     // just-changed password has to take effect immediately.
     this.db = db.withSession?.("first-primary") ?? db;
+    this.administration = new D1RbacAdministrationService(db);
   }
 
   async findByLogin(tenantId: string, login: string): Promise<{ user: UserRecord; passwordHash: string } | null> {
