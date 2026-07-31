@@ -59,10 +59,10 @@ interface ItemPriceLookup {
 /**
  * Tên bản ghi là tối ưu, không phải nguồn sự thật duy nhất.
  *
- * Metadata cũ tạo Item Price theo `<bảng giá>:<mã hàng>`, metadata mới dùng thêm ĐVT. Dữ liệu
- * nhập tay hoặc đã migrate cũng có thể mang một tên khác. Chỉ dựa vào tên khiến một bản ghi có
- * đủ `price_list + item_code + uom` vẫn bị coi là không tồn tại, và child grid chỉ để trống giá.
- * Vì vậy giữ hai fast-path theo tên, rồi fallback bằng chính ba field nghiệp vụ.
+ * Metadata authoritative hiện tạo Item Price theo `<bảng giá>:<mã hàng>`. Một số dữ liệu mới
+ * có thể dùng thêm ĐVT. Luôn thử tên authoritative trước: tên exact có ĐVT như `Mét` có thể bị
+ * callback cũ từ chối trước khi trả 404, và không được phép chặn bản ghi legacy hoàn toàn hợp lệ.
+ * Sau hai fast-path mới fallback bằng chính ba field nghiệp vụ.
  */
 async function resolveItemPriceRecord(
   call: SalesPlatformCall,
@@ -72,12 +72,17 @@ async function resolveItemPriceRecord(
 ): Promise<ItemPriceLookup> {
   const exactName = `${priceList}:${itemCode}:${selectedUom}`;
   const legacyName = `${priceList}:${itemCode}`;
-  const exact = await readResource(call, "Item Price", exactName);
+
+  // Brief hiện hành dùng tên legacy. Đọc nó trước để một probe exact có ĐVT Unicode không thể
+  // chặn giá đang tồn tại bằng lỗi transport/routing khác 404.
   const legacy = await readResource(call, "Item Price", legacyName);
   const compatibleLegacy = legacy && String(legacy.uom ?? "").trim() === selectedUom ? legacy : null;
+  if (compatibleLegacy && !truthy(compatibleLegacy.disabled)) {
+    return { price: compatibleLegacy, name: legacyName };
+  }
 
+  const exact = await readResource(call, "Item Price", exactName);
   if (exact && !truthy(exact.disabled)) return { price: exact, name: exactName };
-  if (compatibleLegacy && !truthy(compatibleLegacy.disabled)) return { price: compatibleLegacy, name: legacyName };
 
   const rows = await listResources(
     call,
@@ -102,7 +107,9 @@ async function resolveItemPriceRecord(
     return { price: selected, name: String(selected.name ?? exactName) };
   }
 
-  const disabled = exact ?? compatibleLegacy ?? matching[0] ?? null;
+  // A legacy record for another UOM is not a diagnostic candidate and must never escape as
+  // a usable price. Only an explicitly compatible legacy row can represent this transaction.
+  const disabled = compatibleLegacy ?? exact ?? matching[0] ?? null;
   return {
     price: disabled,
     name: disabled
