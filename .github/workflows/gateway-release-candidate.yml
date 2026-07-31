@@ -1,0 +1,73 @@
+name: Gateway Release Candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Exact verified 40-character commit SHA
+        required: true
+        type: string
+      confirm:
+        description: Type BUILD_GATEWAY_CANDIDATE
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gateway-release-candidate-${{ inputs.target_sha }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build and upload immutable Gateway version
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      TARGET_SHA: ${{ inputs.target_sha }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      EVIDENCE_DIR: ${{ runner.temp }}/gateway-release-candidate
+    steps:
+      - name: Validate authorization
+        shell: bash
+        run: |
+          set -euo pipefail
+          test '${{ inputs.confirm }}' = 'BUILD_GATEWAY_CANDIDATE'
+          test "${#TARGET_SHA}" -eq 40
+          test "$TARGET_SHA" = "${TARGET_SHA#refs/heads/}"
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+      - name: Checkout exact verified commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          persist-credentials: false
+      - name: Set up Forge
+        uses: ./.github/actions/setup-forge
+      - name: Prepare evidence
+        shell: bash
+        run: mkdir -p "$EVIDENCE_DIR"
+      - name: Build and stage Gateway frontend
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm --filter metaforge run build 2>&1 | tee "$EVIDENCE_DIR/build.log"
+          node server/scripts/stage-client-bundle.mjs 2>&1 | tee "$EVIDENCE_DIR/stage.log"
+      - name: Upload immutable Worker version
+        shell: bash
+        env:
+          WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/gateway-release-candidate/wrangler-output.ndjson
+        run: |
+          set -euo pipefail
+          pnpm --dir server exec wrangler versions upload --config apps/gateway-worker/wrangler.jsonc --tag "$TARGET_SHA" --message "Forge Gateway candidate $TARGET_SHA" 2>&1 | tee "$EVIDENCE_DIR/upload.log"
+          version_id="$(node -e "const fs=require('fs');const rows=fs.readFileSync(process.env.EVIDENCE_DIR+'/wrangler-output.ndjson','utf8').trim().split(/\\r?\\n/).filter(Boolean).map(JSON.parse);const row=[...rows].reverse().find(x=>x.type==='version-upload'&&x.version_id);process.stdout.write(row?.version_id||'')")"
+          test -n "$version_id"
+          node -e "const fs=require('fs');fs.writeFileSync(process.env.EVIDENCE_DIR+'/release.json',JSON.stringify({schema:1,kind:'gateway',target_sha:process.env.TARGET_SHA,version_id:process.argv[1],created_at:new Date().toISOString(),run_id:process.env.GITHUB_RUN_ID},null,2)+'\\n')" "$version_id"
+      - name: Upload candidate evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gateway-release-candidate-${{ inputs.target_sha }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/gateway-release-candidate/
+          if-no-files-found: error
+          retention-days: 30
