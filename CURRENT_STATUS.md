@@ -9,7 +9,7 @@ Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
 - Latest default-branch commit quan sát qua GitHub: `cd60f8c09c48105db84a82c12ad3b32d9f075064` (`ci: split production observation workflow`).
 - Working branch tài chính/công nợ: `feat/finance-ar-ap-completion`.
 - Draft PR: `#15`.
-- Finance implementation exact head trước commit trạng thái này: `0c6193090471d447936131bb38e9e4b6306916af`.
+- Finance implementation exact head trước commit trạng thái này: `90ef9ac2b4a3681cda86cd8ae0ad304f3ebd0c34`.
 - Code sidebar: `87cd45aa9272f5600ff3d5914f697ce9a26994b6` (`fix(ui): compact desktop sidebar`).
 - Release target trước trigger: `da04f7fcfdc4c8e4ddf7ff70c79e3a10458ce412`.
 - Gateway production trigger: `9a7bbc14b8e7f3e556404cce19914da1e21e5e10` (`release: trigger compact sidebar gateway production`).
@@ -30,30 +30,35 @@ Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
 ### Lát cắt đã implement — due date và aging backend
 
 - Migration append-only `server/migrations/tenant/0030_finance_invoice_aging.sql`:
-  - database guard bắt `due_date` hợp lệ khi submit Sales Invoice/Purchase Invoice;
-  - chặn due date trước posting date;
-  - giữ legacy invoice thiếu due date bằng fallback về posting date trong projection;
-  - thêm `finance_invoice_terms` view;
-  - thêm field Due Date bắt buộc vào metadata Sales Invoice mà không sửa migration cũ.
+  - xác thực due date nếu được cung cấp và chặn ngày sai/ngày trước posting date;
+  - thêm field Due Date bắt buộc vào metadata Sales Invoice;
+  - giữ API/fixture cũ thiếu due date hoạt động bằng compatibility fallback về posting date;
+  - đánh dấu nguồn ngày hạn `explicit` hoặc `posting_date_fallback` trong `finance_invoice_terms`;
+  - chưa bật hard database presence enforcement trước khi backfill xác nhận không còn unresolved.
 - Query compiler mới `server/packages/query/src/finance-aging.ts`:
   - `Accounts Receivable Aging`;
   - `Accounts Payable Aging`;
   - bắt buộc filter `as_of_date` chuẩn ISO;
   - tenant/cutoff và user filters đều bind parameter;
-  - outstanding tính từ immutable Payment Ledger tới đúng cutoff.
+  - outstanding tính từ immutable Payment Ledger tới đúng cutoff;
+  - trả và cho phép lọc `due_date_source` để nhận diện dữ liệu cần backfill.
 - Query Worker dùng `FinanceQueryCompiler` cho synchronous và prepared reports.
 - Permission server-side đã thêm cho Accounts, Sales Manager và Purchase Manager theo đúng domain.
-- D1 due-date guard được map thành `VALIDATION_ERROR` 422, không lộ raw database error.
+- D1 due-date guards được map thành `VALIDATION_ERROR` 422, không lộ raw database error.
 - `server/package.json` đã đưa migration test mới vào `test:sql`.
 
 ### Verification hiện có
 
-- `python3 server/scripts/test-finance-aging-migration.py`: **PASS** trong workspace kiểm tra độc lập, gồm metadata required.
+- Compatibility migration fixture: **PASS**.
+  - thiếu due date => fallback về posting date;
+  - due date hợp lệ => source `explicit`;
+  - ngày không tồn tại hoặc trước posting date => bị chặn;
+  - Sales Invoice metadata Due Date là required.
 - TypeScript slice `finance-aging.ts` với `strict`: **PASS** trong harness độc lập.
 - SQL aging thực thi thật với invoice 1.000, payment 300 trước cutoff và 700 sau cutoff:
   - outstanding tại `2026-07-31`: `700`;
-  - days overdue: `21`;
-  - bucket: `1–30 ngày`.
+  - fallback due date source được trả đúng;
+  - days overdue và aging bucket được tính đúng từ cutoff.
 - Test source đã thêm:
   - `server/tests/finance-aging-query.test.mjs`;
   - `server/tests/finance-aging-policy.test.mjs`;
@@ -65,6 +70,7 @@ Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
 - Chưa có root `pnpm test/typecheck/build` cho exact head qua GitHub Actions.
 - Workflow quan sát Cloudflare không được tính là code CI gate.
 - Branch chưa CI-verified cho tới khi workflow `CI` job `Test, typecheck and build` xanh trên exact head.
+- Hard database enforcement cho due-date presence phải chờ backfill/checksum và migration append-only tiếp theo.
 - UI/menu cho aging, Payment Entry partial/unallocated, Payment Allocation, Party Statement và Debt Summary chưa implement.
 - Không deploy Cloudflare, không chạy tenant migration production và không sửa production secrets.
 
