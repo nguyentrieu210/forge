@@ -37,6 +37,24 @@ jobs:
             | base64 -d | gzip -d > server/tests/sales-production-flow.test.mjs
           cat server/scripts/.sales-production-payload-v2/patch-*.txt \
             | base64 -d | gzip -d > server/scripts/apply-sales-production-feature.mjs
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('server/scripts/apply-sales-production-feature.mjs')
+          source = path.read_text()
+          before = '''  const cut = findDoctype(brief, "Cut Order");
+            addField(cut, "work_order:Link(Work Order) Theo lệnh sản xuất", "so_reference");
+            addField(cut, "target_color:Link(Item Color) Màu thành phẩm cần đạt", "work_order");
+          '''
+          after = '''  const cut = brief.doctypes.find((entry) => entry.name === "Cut Order");
+            if (cut) {
+              addField(cut, "work_order:Link(Work Order) Theo lệnh sản xuất", "so_reference");
+              addField(cut, "target_color:Link(Item Color) Màu thành phẩm cần đạt", "work_order");
+            }
+          '''
+          if before not in source:
+              raise SystemExit('Cut Order compatibility patch target not found')
+          path.write_text(source.replace(before, after))
+          PY
           node --check server/scripts/apply-sales-production-feature.mjs
           node --check server/tests/sales-production-flow.test.mjs
 
