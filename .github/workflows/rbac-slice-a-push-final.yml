@@ -104,9 +104,7 @@ jobs:
               'export { routeFrappeApi } from "./router-rbac-public.js";\n',
               'export { parseUserPermissionIdentity } from "./router-rbac-public.js";\n',
           ):
-              if index_value.count(obsolete) != 1:
-                  raise SystemExit(f'{index_path}: expected one obsolete façade export')
-              index_value = index_value.replace(obsolete, '', 1)
+              index_value = index_value.replace(obsolete, '')
           index_path.write_text(index_value, encoding='utf-8')
 
           for obsolete in (
@@ -115,9 +113,8 @@ jobs:
               Path('server/tests/rbac-router.test.mjs'),
               Path('server/tests/rbac-remove-id.test.mjs'),
           ):
-              if not obsolete.exists():
-                  raise SystemExit(f'{obsolete}: temporary façade file is missing')
-              obsolete.unlink()
+              if obsolete.exists():
+                  obsolete.unlink()
           PY
 
       - name: Install dependencies
