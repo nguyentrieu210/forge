@@ -74,6 +74,43 @@ Chưa chạy browser sales smoke bằng dữ liệu và tài khoản production/
 
 Rủi ro này đã được ghi nhận trước merge/deploy. Không được diễn giải release thành bằng chứng rằng browser sales smoke đã hoàn tất.
 
+## RBAC Slice A/B và hậu kiểm — hoàn thành code gate
+
+### Git
+
+- Slice A PR `#37` đã squash-merge thành `93ac85a0f16c2668b706ffcf8e15d3da53c8c7a9`.
+- Slice B PR `#45` đã squash-merge thành `4341091b8a8dc0cea3de96510c34dc68a8b00ecb`.
+- Post-merge QA PR `#48` đã squash-merge thành `dfd8f0c737e452cd0183b67acde8a631871f7274`.
+- QA exact head trước merge: `0c8c20093f561392ae3f6ad05f019bf980b5ed3f`.
+
+### Phạm vi đã xác minh
+
+- Login lookup không phân biệt hoa/thường và ghi `last_login_at`.
+- Role mới có hiệu lực ngay trên phiên hiện tại.
+- Password reset tăng `session_epoch`; phiên cũ bị thu hồi.
+- Vô hiệu hóa user làm phiên hiện tại bị từ chối.
+- Self-disable và self-demote bị chặn.
+- Last enabled tenant admin không thể bị vô hiệu hóa hoặc hạ quyền.
+- Audit lifecycle append-only, tenant scoped và không chứa password hash, token, cookie hoặc trusted identity.
+- User Permission add/remove và audit được cô lập theo tenant.
+- Regression authoritative: `server/tests/rbac-post-merge-qa.test.mjs`.
+
+### Exact-head QA evidence
+
+Trên `0c8c20093f561392ae3f6ad05f019bf980b5ed3f`:
+
+- PR Validation run `30628567731`, job `91149404125`: tests, typecheck, build **PASS**.
+- Sales Feature CI run `30628565369`, job `91149395506`: unit, SQL, brief, client tests, typecheck, build **PASS**.
+- Inventory and Manufacturing CI run `30628565336`, job `91149395103`: focused tests, audit, SQL, lint, repository tests, typecheck, build **PASS**.
+- UI Pull Request Validation run `30628565311`, job `91149394897`: lint, tests, typecheck, build, Chromium browser QA và cookie-auth smoke **PASS**.
+- Tenant và Gateway production release jobs trong PR Validation đều **SKIPPED**.
+
+### Còn lại
+
+- Chưa chạy RBAC staging/browser QA bằng tài khoản và tenant thật cho thao tác tạo/sửa/vô hiệu hóa user, đổi role/password, đọc audit log và tenant isolation.
+- Không có production mutation RBAC trong đợt hậu kiểm này.
+- Slice C chỉ mở sau staging QA hoặc quyết định scope riêng.
+
 ## Release automation hiện hành
 
 - `.github/workflows/pr-validation.yml` giữ gate PR và tenant release path.
@@ -85,7 +122,6 @@ Rủi ro này đã được ghi nhận trước merge/deploy. Không được di
 ## Các luồng khác
 
 - Inventory/manufacturing: PR `#27`; PR body và exact-head CI của PR là nguồn authoritative.
-- RBAC Slice B: PR `#45`; PR body và exact-head CI của PR là nguồn authoritative.
 - Purchase/FIFO: PR `#14`; phải kiểm migration head và rollout gate trước mọi bước tiếp theo.
 - FIFO tenant `alu` vẫn **disabled**.
 
