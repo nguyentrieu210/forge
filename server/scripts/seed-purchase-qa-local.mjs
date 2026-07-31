@@ -136,6 +136,7 @@ await ensureResource("Supplier", "QA-SUPPLIER", {
 });
 
 const itemGroup = await activeLeafItemGroup();
+console.log(`PURCHASE_QA_ITEM_GROUP selected=${JSON.stringify(itemGroup)} source=authoritative`);
 await ensureResource("Item", "QA-PURCHASE-ITEM", {
   item_code: "QA-PURCHASE-ITEM",
   item_name: "QA Purchase Item",
