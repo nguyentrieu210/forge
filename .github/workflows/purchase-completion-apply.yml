@@ -105,6 +105,14 @@ jobs:
           '''.replace('          ', ''))
           old_vite.unlink()
 
+          spec = Path('client/e2e-forge/purchase-tests/purchase-allocation-ui.spec.ts')
+          spec_text = spec.read_text()
+          old_selector = '  const supplier = page.getByLabel("Nhà cung cấp");'
+          new_selector = '  const supplier = page.getByRole("textbox", { name: "Nhà cung cấp" });'
+          if old_selector not in spec_text:
+              raise SystemExit('supplier filter selector marker was not found')
+          spec.write_text(spec_text.replace(old_selector, new_selector))
+
           tsconfig = Path('client/e2e-forge/tsconfig.json')
           ts_data = json.loads(tsconfig.read_text())
           ts_data['include'] = [
