@@ -1,7 +1,9 @@
 name: RBAC Slice B One Shot
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - feat/rbac-permission-slice-b-20260731
 
 permissions:
   contents: write
@@ -10,6 +12,7 @@ permissions:
 
 jobs:
   apply:
+    if: "${{ github.event.head_commit.message == 'chore(rbac): trigger Slice B implementation' }}"
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
