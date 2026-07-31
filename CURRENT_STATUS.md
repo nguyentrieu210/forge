@@ -6,10 +6,10 @@ Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Default HEAD kiểm tra gần nhất: `cd60f8c09c48105db84a82c12ad3b32d9f075064`.
+- Default HEAD đã đồng bộ: `ad9b91083fe686987aacae44e83a890e4ba592cc`.
 - Branch nghiệp vụ: `feat/inventory-manufacturing-item-catalog-20260731`.
-- Base branch SHA: `cd60f8c09c48105db84a82c12ad3b32d9f075064`.
-- Code HEAD trước commit trạng thái này: `3dec64432e46cbd1c67fd23aad1f705254115f97`.
+- Merge default vào feature: `5b48548acc6c0872409afddb5404632904b3b842`.
+- Code HEAD đã qua CI trước commit tài liệu này: `2ada71006af123753ad9f81ec154d77e2726ca32`.
 - Draft PR: `#27` — `feat(inventory): audit Alumdoor Item catalog and manufacturing readiness`.
 - Không commit `server/work/`, `tmp/`, backup SQL, `.env`, secret hoặc generated artifacts.
 
@@ -17,7 +17,7 @@ Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
 
 - Nguồn nghiệp vụ chính: `server/briefs/alumdoor-v2.json`, version `2.0.34`.
 - `server/briefs/alumdoor.json` version `1.27.3` chỉ dùng tương thích/đối chiếu; không nhận thay đổi nghiệp vụ song song.
-- Tài liệu authoritative của nhánh:
+- Tài liệu authoritative:
   - `server/docs/ALUMDOOR-INVENTORY-MANUFACTURING-ITEM-AUDIT.md`;
   - `server/docs/ALUMDOOR-INVENTORY-MANUFACTURING-BRD.md`;
   - `server/docs/ALUMDOOR-INVENTORY-MANUFACTURING-TECHNICAL-PLAN.md`.
@@ -28,104 +28,107 @@ Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
 - G1 BRD: **PASS**, được người dùng ủy quyền duyệt.
 - G2 Technical plan: **PASS cho Slice A**.
 - G3 Test/lint/typecheck/build: **PASS cho Slice A**.
-- G4 Exact-head CI: **PASS cho code HEAD `3dec644...`**.
+- G4 Exact code-head CI: **PASS tại `2ada710...`**.
 - G5 Staging: **chưa bắt đầu**.
 
 ## Slice A — Catalog audit và Item validator
 
-Đã triển khai:
+### Audit tooling
 
 - `server/scripts/alumdoor-catalog-audit-planner.mjs`
   - audit Item, Item Group, UOM, Measurement Profile, Warehouse, Bill of Materials và Production Standard;
   - finding có severity/code ổn định, count và SHA-256 checksum xác định;
   - phát hiện Item sai loại/cờ/UOM/profile/kho, BOM thiếu/trùng/vòng lặp;
-  - phát hiện nguồn audit không có Item/BOM thay vì coi tập rỗng là sạch;
-  - đọc cả `warehouse_role` và `stock_role`, chuẩn hóa vai trò tiếng Việt sang `RAW_MATERIAL`, `WIP`, `FINISHED_GOODS`, `QUARANTINE`, `SCRAP_OFFCUT`, `GENERAL`;
-  - kiểm tra coverage vai trò kho sản xuất.
+  - phát hiện nguồn không có Item/BOM thay vì coi tập rỗng là sạch;
+  - đọc `warehouse_role` và `stock_role`, chuẩn hóa vai trò tiếng Việt;
+  - kiểm tra coverage `RAW_MATERIAL`, `WIP`, `FINISHED_GOODS`, `QUARANTINE`, `SCRAP_OFFCUT`, `GENERAL`.
 - `server/scripts/audit-alumdoor-catalog.mjs`
   - CLI read-only;
-  - hỗ trợ `--input`, `--brief` và `--tenant`;
+  - hỗ trợ `--input`, `--brief`, `--tenant`;
   - remote mặc định redacted;
   - từ chối `--execute`, `--apply`, `--fix`, `--write-back`;
   - report có tên không được ghi trong repository.
-- `server/tests/alumdoor-catalog-audit.test.mjs`
-  - catalog hợp lệ, lỗi Item/UOM/BOM, BOM trùng/vòng lặp, checksum, redaction, CLI read-only và audit trực tiếp brief v2.0.34.
-- `server/tests/alumdoor-catalog-warehouse-role.test.mjs`
-  - khóa alias tiếng Việt, bao gồm `Kho đầu thừa`, `Kho phế`, `Kho chính`, kho NVL/WIP/thành phẩm/chờ kiểm.
+
+### Runtime Item validation
+
+- `server/apps-src/alumdoor-worker/src/item-catalog-invariants.ts`
+  - dịch vụ không được tham gia sản xuất;
+  - dịch vụ không được giữ ĐVT tồn, kho mặc định hoặc reorder level;
+  - khóa enum giai đoạn vật tư và nguồn cung;
+  - `Mua ngoài`/`Mua hoặc sản xuất` phải bật `is_purchase_item`;
+  - bán thành phẩm, thành phẩm hoặc nguồn tự sản xuất phải bật `include_item_in_manufacturing`;
+  - partial save đọc record hiện tại qua callback/binding rồi mới kiểm invariant.
+- `server/apps-src/alumdoor-worker/src/entry.ts`
+  - compose validator lịch sử và invariant mới trên `/hooks/validate` cho Item;
+  - hai phép kiểm chạy song song;
+  - route khác chuyển nguyên vẹn sang Worker hiện hữu.
+- `server/apps-src/alumdoor-worker/wrangler.jsonc`
+  - entrypoint đổi từ `src/index.ts` sang `src/entry.ts`;
+  - không thay binding hoặc secret.
 - `server/tests/alumdoor-item-validator.test.mjs`
-  - gọi đúng HTTP surface `/hooks/validate` của Alumdoor Worker;
-  - cover Item nguyên liệu hợp lệ, dịch vụ giữ stock, profile thiếu/disabled, conversion thiếu và partial-save merge.
-- `.github/workflows/inventory-feature-ci.yml`
-  - workflow chỉ kiểm thử, không deploy;
-  - build server, focused tests, audit redacted, artifact, SQL, brief check, frontend lint, full tests, typecheck và build.
-- `server/package.json`
-  - command `audit:alumdoor-catalog`.
+  - chạy qua HTTP surface thật;
+  - cover dịch vụ, purchase/manufacturing flags, enum, Item Group, profile, conversion và partial save của cả validator cũ lẫn invariant mới.
 
-Commit đáng chú ý:
+### CI và artifact
 
-- `daca0e0b9df3679102ebc84721a139a6561b1e86` — CLI đọc authoritative brief.
-- `fb6e53f20412d4b7708966258cbcdb99da86c1b9` — test brief v2.0.34.
-- `b584a605629bbcffefbe8d8be3a9e67dddb6e870` — Item validator HTTP tests.
-- `17468c08197040b760f0f2bc5995d127ccf658ba` — dedicated inventory CI.
-- `e7b6b383784a267eca43c67cd8b8cd17faed93cd` — sửa cách chạy audit artifact.
-- `55b7ed8dfd9208303ba38d6f268cf508e321753b` — source completeness và warehouse role coverage.
-- `0c2205845abc8bd61bbbd5c16fc94c171e4a3ee0` — chuẩn hóa chữ `đ` trong role tiếng Việt.
-- `c196ef9ae12f03093b1511b4ff5e992e24da87b3` — regression warehouse role aliases.
-- `3dec64432e46cbd1c67fd23aad1f705254115f97` — đưa regression mới vào focused CI.
+Workflow chuyên biệt: `Inventory and Manufacturing CI`.
 
-## CI exact-head
-
-Workflow: `Inventory and Manufacturing CI`.
-
-- Run: `30613060416`.
-- Job: `91100056915` — `Audit, test, typecheck and build`.
-- Exact head: `3dec64432e46cbd1c67fd23aad1f705254115f97`.
-- Install: **PASS**.
-- Focused catalog + Item validator tests: **PASS, 14/14**.
-- Redacted authoritative brief audit: **PASS tạo artifact**.
-- Server SQL tests: **PASS**.
+- Run: `30618647612`.
+- Job: `91117731059`.
+- Exact code head: `2ada71006af123753ad9f81ec154d77e2726ca32`.
+- Focused catalog/warehouse-role/Item tests: **PASS**.
+- Redacted authoritative brief audit artifact: **PASS**.
+- Server SQL: **PASS**.
 - Brief validation: **PASS**.
 - Frontend lint: **PASS**.
 - Repository tests: **PASS**.
 - Typecheck: **PASS**.
 - Build: **PASS**.
 
-Workflow `Cloudflare Production Release Observation` vẫn xuất hiện trên push nhưng không phải bằng chứng CI của nhánh này và không được tính vào gate.
+Workflow chuẩn từ default: `PR Validation`.
+
+- Run: `30618647081`.
+- Job: `91117676626`.
+- Tests, typecheck và build: **PASS** tại cùng code head.
+
+Workflow `Cloudflare Production Release Observation` không phải bằng chứng CI của nhánh này và không được tính vào gate.
 
 ## Audit authoritative brief v2.0.34
 
-Artifact:
+Artifact gần nhất trước thay đổi validator:
 
-- Run: `30613060416`.
-- Artifact ID: `8786245329`.
-- Artifact name: `alumdoor-v2-catalog-audit-30613060416`.
-- Report checksum: `3eaf1f6780dcaaa5ebb58c275ab405f3df416a715743b54650271db5e2a3a2b4`.
+- Run: `30613404344`.
+- Artifact ID: `8786370029`.
+- Checksum: `3eaf1f6780dcaaa5ebb58c275ab405f3df416a715743b54650271db5e2a3a2b4`.
 
 Kết quả redacted:
 
-- Tổng fixture được audit: `39`.
-- UOM: `14`.
-- Item Group: `13`.
-- Measurement Profile: `6`.
-- Warehouse: `6`.
+- 39 fixture: 14 UOM, 13 Item Group, 6 Measurement Profile, 6 Warehouse.
 - Item: `0`.
 - Active BOM/Production Standard: `0`.
-- Warehouse role hiện có: `GENERAL = 2`, `SCRAP_OFFCUT = 3`.
+- Warehouse role: `GENERAL = 2`, `SCRAP_OFFCUT = 3`.
 - Findings: `0 Critical`, `2 High`, `4 Medium`, `0 Low`.
-- Hai High:
-  - `SOURCE_ITEM_RECORDS_MISSING`;
-  - `SOURCE_BOM_RECORDS_MISSING`.
-- Bốn Medium: thiếu coverage `RAW_MATERIAL`, `WIP`, `FINISHED_GOODS`, `QUARANTINE`.
+- High: `SOURCE_ITEM_RECORDS_MISSING`, `SOURCE_BOM_RECORDS_MISSING`.
+- Medium: thiếu `RAW_MATERIAL`, `WIP`, `FINISHED_GOODS`, `QUARANTINE`.
 
-Kết luận: brief v2.0.34 định nghĩa schema và master khung tốt nhưng **không phải catalog Item/BOM đầy đủ**. Không thể dùng report này để tuyên bố gần 300 Item live hoặc BOM đã sẵn sàng. Cần remote audit read-only tenant `alu` hoặc một export redacted authoritative ngoài Git.
+Kết luận: brief v2.0.34 chứng minh schema và master khung, không chứng minh catalog Item/BOM live đã sẵn sàng.
 
-## Điều phối với PR mua hàng #14
+## Remote audit tenant `alu`
 
-- PR `#14` vẫn open/draft, chưa merge.
-- Head kiểm tra gần nhất: `c18bc8d4f3be1f84c1a5d3a3d1647f419712d003`.
-- PR #14 đang dùng migration `0030` và chạm procurement/stock contracts.
-- Nhánh tồn kho/sản xuất không tạo migration mới trước khi PR #14 merge hoặc migration head được xác nhận lại.
-- Sau merge phải rebase và chạy lại toàn bộ tests/typecheck/build/exact-head CI.
+- CLI đã sẵn sàng cho audit read-only và redacted.
+- Chưa có kết quả remote audit tenant `alu`.
+- Đã thử dựng workflow một lần nhưng không giữ lại vì GitHub/connector chặn commit workflow chứa credential context và cấu hình thử nghiệm có nguy cơ làm mù CI.
+- Workflow thử nghiệm và script patch tạm đã bị xóa khỏi branch.
+- Không yêu cầu hoặc ghi token vào chat/repo.
+- Remote audit phải chạy trong môi trường vận hành đã có Cloudflare credential hợp lệ; chỉ count, checksum và finding code redacted được đưa vào handoff.
+
+## Điều phối nhánh khác
+
+- PR mua hàng `#14`: open/draft, head kiểm tra gần nhất `7201226103d54f6b87a62ed6d020c58926ff9ef0`.
+- PR #14 dùng migration `0030` và chạm procurement/stock contracts.
+- Nhánh tồn kho/sản xuất chưa tạo migration; phải kiểm tra lại migration head sau khi PR #14 merge.
+- PR RBAC `#34` vẫn open/draft; nhánh này không sửa phạm vi RBAC.
+- Default đã bổ sung `.github/workflows/pr-validation.yml`; workflow này đã chạy thành công trên PR #27.
 
 ## Production safety
 
