@@ -1,158 +1,106 @@
 # CURRENT STATUS
 
-Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
+Ngày cập nhật: **2026-07-31**. Workspace chuẩn: `C:\Forge`.
 
-## Git
+## Git và nguyên tắc vận hành
 
 - Repository: `nguyentrieu210/forge`.
-- Branch/default branch: `hotfix/alumdoor-print-list-delete`.
-- Code sidebar: `87cd45aa9272f5600ff3d5914f697ce9a26994b6` (`fix(ui): compact desktop sidebar`).
-- Release target trước trigger: `da04f7fcfdc4c8e4ddf7ff70c79e3a10458ce412`.
-- Gateway production trigger: `9a7bbc14b8e7f3e556404cce19914da1e21e5e10` (`release: trigger compact sidebar gateway production`).
-- Baseline code/schema đã qua CI trước đó: `591ca359937d6ae12803d36c74996db8482060af`.
-- `server/work/`, `tmp/`, backup SQL, `.env` và generated artifacts không được commit.
+- Default/base branch: `hotfix/alumdoor-print-list-delete`.
+- Branch RBAC: `feat/rbac-permission-completion-20260731`.
+- Draft PR RBAC: `#22`.
+- Không commit `.env`, `server/work/`, `tmp`, backup SQL hoặc generated artifacts.
+- Không deploy Cloudflare, sửa production secrets hoặc bật FIFO nếu chưa có yêu cầu riêng.
 
-## Sidebar/runtime UI
+## Production/Gateway hiện hành
 
-- Đã làm gọn sidebar desktop tại `client/apps/runtime/src/styles.css`.
-- Sidebar rộng `15.75rem` thay vì `17rem` khi mở.
-- Group header, ô tìm kiếm, dòng menu, icon và khoảng cách dọc được giảm kích thước.
-- Không ẩn route, không đổi permission và không xoá mục Báo cáo/Danh mục.
+- Sidebar desktop gọn tại commit `87cd45aa9272f5600ff3d5914f697ce9a26994b6`.
+- Gateway release trigger: `9a7bbc14b8e7f3e556404cce19914da1e21e5e10`.
+- Baseline code/schema FIFO đã qua CI: `591ca359937d6ae12803d36c74996db8482060af`, workflow `30570000862`, job `90964015638`.
+- Còn thiếu provider evidence mới nhất cho Gateway deployment/version ID và browser smoke production.
+- FIFO production vẫn phải giữ **disabled**.
 
-## Gateway production release
-
-- Đã push `.github/release/gateway-production.trigger` lên default branch để kích hoạt Cloudflare Git build cho `cloudforge-gateway`.
-- Trigger trỏ tới code target `da04f7fcfdc4c8e4ddf7ff70c79e3a10458ce412`, môi trường `production`, lý do `compact-sidebar-release`.
-- Việc này chỉ phát hành Gateway/frontend; không chạy tenant migration, không deploy lại tenant Worker và không bật FIFO.
-- Chưa có provider evidence từ Cloudflare cho build/deployment/version ID hoặc smoke production sau trigger.
-
-## CI
-
-Baseline đã xác minh:
-
-- Workflow run: `30570000862`.
-- Job: `90964015638` (`Test, typecheck and build`).
-- Exact head: `591ca359937d6ae12803d36c74996db8482060af`.
-- Install/test/typecheck/build: **PASS**.
-
-HEAD sidebar/release mới chưa có workflow run hoặc combined status qua GitHub connector; không coi là CI-verified cho tới khi có bằng chứng.
-
-## Cloudflare production tenant `alu`
-
-- Người vận hành xác nhận workflow release đã chạy được sau khi sửa credential.
-- Code/schema FIFO target `591ca359...` đã được đưa qua quy trình backup, migration và tenant deploy theo xác nhận vận hành.
-- FIFO rollout vẫn phải giữ **disabled**.
-- Gateway `cloudforge-gateway` dùng Cloudflare Git build; build command đúng cho monorepo là:
-
-```bash
-pnpm --filter metaforge run build && node server/scripts/stage-client-bundle.mjs
-```
-
-- Deploy command Gateway:
-
-```bash
-pnpm --dir server exec wrangler deploy --config apps/gateway-worker/wrangler.jsonc
-```
-
-- Còn thiếu bằng chứng ghi vào repo: deployment/version ID mới nhất, kết quả `/health`, login/CRUD/print/PDF và ảnh sidebar production sau trigger.
-
-## FIFO Purchase Receipt vào nhiều Purchase Order
+## FIFO Purchase Receipt
 
 Contract authoritative: `server/docs/ALUMDOOR-PURCHASE-RECEIPT-ALLOCATION.md`.
 
-### Đã hoàn thành và qua CI
+Đã có schema/migrations `0027`–`0029`, canonical material key, supplier coordinator, atomic D1 persistence, PO obligation, Receipt FIFO allocation, reversal khi cancel và rollout gate mặc định tắt.
 
-- Migration append-only:
-  - `server/migrations/tenant/0027_purchase_receipt_allocation.sql`
-  - `server/migrations/tenant/0028_purchase_allocation_cancel_guard.sql`
-  - `server/migrations/tenant/0029_purchase_allocation_rollout.sql`
-- Allocation schema: queue, windows, obligations, allocations, unapplied quantities, settlement events và revision claims.
-- D1 atomic batch cho document, stock, procurement compatibility rows, allocation rows và mutation receipt.
-- Canonical material key do server tạo từ item, chiều dài, barem kg/m, màu, dập, measurement profile và stock UOM.
-- Supplier coordinator theo `purchase:<tenant>:<company>:<supplier>` trong namespace `AGGREGATES`.
-- Revision conflict retry tối đa ba lần.
-- PO submit mở obligation theo row.
-- Receipt submit tự FIFO qua nhiều PO.
-- Receipt cancel sinh reversal theo nguồn.
-- Nhôm `inventory_mode = Nhôm cây/lá` dùng `qty_bar` làm số cây/lá nghĩa vụ/tồn; kg barem và kg cân thực tế giữ riêng.
-- Integration scenario: PO 200 + 100 cây, Receipt 230 cây => allocation 200 + 30, còn 70; stock 230 cây, actual weight 630 kg.
-- Stress planner cover 250 obligation rows.
+Blocker trước activation production:
 
-### Rollout safety
+1. Apply unapplied quantity khi PO mới gia nhập window.
+2. Settlement close/reverse, manual override, permission và reason.
+3. Backfill/checksum/unresolved report và activation transaction.
+4. UI preview/timeline/report.
+5. D1 latency/contention tests.
+6. Staging migration/backfill/smoke và production backup mới.
 
-`purchase_allocation_rollout_state` mặc định tắt:
+## RBAC và data scope
 
-- Không có row hoặc `enabled=0`: PO/Receipt dùng controller legacy.
-- Chỉ bật khi có backfill checksum, `unresolved_count=0`, actor và timestamp.
-- Database chặn tắt lại sau activation.
+Tài liệu authoritative:
 
-Code/schema có thể live khi rollout tắt, nhưng FIFO chưa hoạt động cho tenant cho tới khi backfill/cutover hoàn tất.
+- `server/docs/RBAC-PERMISSION-BRD.md` — **APPROVED G1**.
+- `server/docs/RBAC-PERMISSION-IMPLEMENTATION-PLAN.md` — **APPROVED G2**.
 
-## Tenant-safe migration/deploy
+Quyết định đã duyệt:
 
-Các script hiện hành:
+- **D1=A:** giữ `Administrator`/`System Manager` là tenant superadmin để tương thích; Slice B phải thêm last-admin, self-lockout, audit và test.
+- **D2=A:** DocPerm do app/platform sở hữu; Permission Center chỉ đọc.
+- **D3=A:** User Permission exact-value; từ chối `hide_descendants=true` tới khi có hierarchy contract.
 
-- Backup: `server/scripts/backup-tenant.mjs`.
-- Tenant-safe migration: `server/scripts/migrate-tenant.mjs`.
-- Low-level migration engine: `server/scripts/d1-migrate-remote.mjs`.
-- Tenant deploy: `server/scripts/deploy-tenant.mjs`.
-- Stage client: `server/scripts/stage-client-bundle.mjs`.
+### Slice A đã triển khai
 
-Thứ tự an toàn:
+Implementation commit:
 
-1. Backup tenant ra ngoài repository và chuyển backup plaintext sang nơi lưu mã hóa.
-2. Migration dry-run.
-3. Migration live với explicit confirmation.
-4. Tenant deploy dry-run.
-5. Tenant deploy live với explicit confirmation.
-6. Smoke health/login/CRUD/print/PDF.
+`ab974f92ffbcf015fb71d3051df33508c9f09942` — `feat(rbac): complete permission inspection contract`
 
-## Blocker trước khi bật FIFO production
+File runtime/test chính:
 
-1. Tự `apply_unapplied` khi PO mới gia nhập window.
-2. Settlement close/reverse API/action, manual override, permission và reason.
-3. Backfill script, resolved/unresolved report, PO-level checksum và activation transaction.
-4. UI preview/timeline/report vận hành.
-5. D1 batch/latency và supplier contention test.
-6. Staging migration, backfill dry-run và smoke toàn luồng.
-7. Production backup mới và explicit approval trước activation.
-8. Xác minh Gateway production version/traffic và browser smoke hiện hành.
+- `server/packages/frappe-api/src/access-control.ts`
+- `server/packages/frappe-api/src/router.ts`
+- `server/packages/frappe-api/src/index.ts`
+- `server/tests/rbac-contract.test.mjs`
+- `client/packages/adapter-frappe/src/adapter.ts`
+- `client/packages/adapter-frappe/src/frappe-adapter.ts`
+- `client/packages/views/src/access/PermissionCenter.tsx`
 
-Không bật rollout FIFO cho `alu` trước khi các blocker trên được xử lý.
+Hành vi đã sửa:
 
-## RBAC và phân quyền
+1. `explain_permission(user=B)` resolve B từ `D1UserStore`, dùng đúng roles/scope của B và không nhận role giả từ browser.
+2. Non-admin không được inspect user khác; user không tồn tại hoặc disabled không rơi về actor admin.
+3. Capability và `trace` được tính từ cùng permission evaluator.
+4. Access profile trả stable User Permission id.
+5. Add/profile/remove scope dùng cùng composite identity; adapter xoá bằng `{ id }`.
+6. `hide_descendants=true` bị từ chối rõ ràng.
+7. Client dùng fallback `trace ?? []` và không crash khi trace rỗng.
+8. Frappe contract version tăng từ `16.0.0-forge.2` lên `16.0.0-forge.3`.
 
-- Branch triển khai: `feat/rbac-permission-completion-20260731`.
-- Base audit: `cd60f8c09c48105db84a82c12ad3b32d9f075064`.
-- Draft PR: `#22` — `docs(rbac): approve requirements and implementation plan`.
-- BRD authoritative: `server/docs/RBAC-PERMISSION-BRD.md`.
-- G2 plan authoritative: `server/docs/RBAC-PERMISSION-IMPLEMENTATION-PLAN.md`.
-- Commit BRD đầu tiên: `5f0a78f7e61ca2dae9f35d05885ed1135181a432`.
-- Commit kế hoạch G2: `9bbc2f646fbc9a39c9fd100c1474b67eeb285021`.
-- Chưa sửa runtime, migration hoặc production config.
+### Gate Slice A
 
-### Quyết định đã duyệt
+Workflow run: `30612014393`  
+Successful job: `91101823154`
 
-1. **D1=A:** giữ `Administrator`/`System Manager` là full tenant superadmin trong đợt này; bắt buộc last-admin guard, self-lockout guard, audit và test.
-2. **D2=A:** DocPerm do app/platform sở hữu; Permission Center chỉ đọc, thay đổi qua brief/manifest.
-3. **D3=A:** exact-value User Permission; từ chối `hide_descendants=true` cho tới khi có hierarchy contract.
+- Patch/apply: **PASS**.
+- Install: **PASS**.
+- Server tests: **PASS** — 566 tests và SQL suite.
+- Root typecheck: **PASS**.
+- Root build: **PASS**.
+- Commit/push implementation: **PASS**.
 
-### Phát hiện đã xác minh
-
-1. `PermissionCenter` cho chọn user khác khi kiểm tra quyền và adapter gửi tham số `user`, nhưng server `explain_permission` vẫn tính bằng `context.actor`; kết quả quản trị có thể hiển thị quyền của admin thay vì user được chọn.
-2. UI đọc `data.trace` nhưng endpoint hiện chưa trả trace giải thích.
-3. Xoá User Permission lệch contract: profile không trả scope id, adapter gửi `{name}`, còn server yêu cầu `user/allow/for_value/applicable_for`.
-4. `System Manager` đang bypass toàn bộ MetadataPermissionService; semantics này được giữ để tương thích nhưng phải có guard/audit rõ.
-5. `hide_descendants` được lưu nhưng evaluator chỉ exact-match Link value; G2 yêu cầu từ chối cờ này.
-6. Tạo user và gán roles dùng hai write riêng, có thể để lại user không hoàn chỉnh nếu bước role thất bại.
-7. Audit trail cho role/scope/disable/reset password chưa có contract bắt buộc được chứng minh.
+Temporary workflows, pretest hook và placeholder façade/tests đã được xoá sau khi implementation hạ cánh. Root `server:test` đã được khôi phục về lệnh chuẩn.
 
 ### Gate hiện tại
 
 - G0 scope: **PASS**.
-- G1 requirements/audit: **PASS**, D1=A, D2=A, D3=A.
-- G2 implementation plan: **PASS** tại `9bbc2f646fbc9a39c9fd100c1474b67eeb285021`.
-- Bước tiếp theo: Slice A — selected-user evaluation, trace và User Permission round-trip.
-- Test/typecheck/build: chưa chạy vì HEAD hiện chỉ thay đổi tài liệu.
-- Exact-head CI cho `9bbc2f...`: chưa có bằng chứng test/typecheck/build; workflow production observation của commit trước không thay thế CI code.
-- Không deploy Cloudflare, không bật FIFO và không sửa production secrets.
+- G1 requirements: **PASS**.
+- G2 implementation plan: **PASS**.
+- Slice A implementation/tests/typecheck/build: **PASS**.
+- Exact-head verification sau cleanup và status update: **chưa chạy**.
+- Browser/staging QA: **chưa chạy**.
+- PR vẫn draft; chưa merge và chưa deploy.
+
+## Việc tiếp theo
+
+1. Chạy exact-head test/typecheck/build sau cleanup tài liệu.
+2. Review diff PR #22 để loại toàn bộ file điều phối tạm khỏi final diff.
+3. Thực hiện Slice B: atomic user+roles, last-admin/self-lockout guard và append-only audit.
+4. Sau Slice B/C mới làm staging/browser QA; production vẫn ngoài phạm vi.
