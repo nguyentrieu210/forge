@@ -25,6 +25,12 @@ export default {
       baseWorker.fetch(request, env, ctx),
       validateItemCatalogInvariants(invariantRequest, env),
     ]);
-    return baseResponse.ok ? invariantResponse : baseResponse;
+
+    // Preserve infrastructure/auth failures from the established validator. When both
+    // validators return a business validation response, the stricter catalog invariant
+    // is authoritative so its field-level reason is not hidden by a broader legacy error.
+    if (!baseResponse.ok && baseResponse.status !== 422) return baseResponse;
+    if (!invariantResponse.ok) return invariantResponse;
+    return baseResponse;
   },
 };
