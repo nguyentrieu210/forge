@@ -11,12 +11,21 @@ function disabled(value: unknown): boolean {
   return ["true", "yes", "có", "co"].includes(String(value ?? "").trim().toLocaleLowerCase("vi"));
 }
 
-function fieldMatchedPrice(data: JsonObject, input: PricingContext, lineUom: string): boolean {
-  const priceList = typeof data.price_list === "string" ? data.price_list.trim() : "";
-  const itemCode = typeof data.item_code === "string" ? data.item_code.trim() : "";
-  const priceUom = typeof data.uom === "string" ? data.uom.trim() : "";
-  return priceList === input.priceList
-    && itemCode === input.itemCode
+function normalizedText(value: unknown): string {
+  return String(value ?? "").normalize("NFC").trim();
+}
+
+function fieldMatchedPrice(
+  data: JsonObject,
+  priceList: string,
+  itemCode: string,
+  lineUom: string,
+): boolean {
+  const dataPriceList = normalizedText(data.price_list);
+  const dataItemCode = normalizedText(data.item_code);
+  const priceUom = normalizedText(data.uom);
+  return dataPriceList === priceList
+    && dataItemCode === itemCode
     && (lineUom ? priceUom === lineUom : !priceUom);
 }
 
@@ -24,24 +33,27 @@ export async function resolveServerPrice(
   context: ControllerContext<JsonObject>,
   input: PricingContext,
 ): Promise<ResolvedPrice> {
-  const lineUom = typeof input.uom === "string" ? input.uom.trim() : "";
-  const legacyPriceName = `${input.priceList}:${input.itemCode}`;
+  const priceList = normalizedText(input.priceList);
+  const itemCode = normalizedText(input.itemCode);
+  const lineUom = normalizedText(input.uom);
+  const documentCurrency = normalizedText(input.documentCurrency);
+  const legacyPriceName = `${priceList}:${itemCode}`;
   const exactPriceName = lineUom ? `${legacyPriceName}:${lineUom}` : "";
+  const legacy = await context.reader.getMasterRecordData(context.command.tenant_id, "Item Price", legacyPriceName);
+  const legacyUom = normalizedText(legacy?.uom);
+  const compatibleLegacy = legacy && (lineUom ? legacyUom === lineUom : !legacyUom) ? legacy : null;
   const exact = lineUom
     ? await context.reader.getMasterRecordData(context.command.tenant_id, "Item Price", exactPriceName)
     : null;
-  const legacy = await context.reader.getMasterRecordData(context.command.tenant_id, "Item Price", legacyPriceName);
-  const legacyUom = typeof legacy?.uom === "string" ? legacy.uom.trim() : "";
-  const compatibleLegacy = legacy && (lineUom ? legacyUom === lineUom : !legacyUom) ? legacy : null;
 
   let priceName = lineUom ? exactPriceName : legacyPriceName;
   let itemPrice: JsonObject | null = null;
-  if (exact && !disabled(exact.disabled)) {
-    itemPrice = exact;
-    priceName = exactPriceName;
-  } else if (compatibleLegacy && !disabled(compatibleLegacy.disabled)) {
+  if (compatibleLegacy && !disabled(compatibleLegacy.disabled)) {
     itemPrice = compatibleLegacy;
     priceName = legacyPriceName;
+  } else if (exact && !disabled(exact.disabled)) {
+    itemPrice = exact;
+    priceName = exactPriceName;
   }
 
   /**
@@ -49,17 +61,17 @@ export async function resolveServerPrice(
    *
    * Older app metadata named Item Price `<price_list>:<item_code>`, while the multi-UOM
    * runtime uses `<price_list>:<item_code>:<uom>`. Imported or manually renamed data can also
-   * carry a different name. If both fast paths miss, resolve by the actual business fields so
-   * a valid price does not disappear merely because its record id came from an older schema.
+   * carry a different name. Business fields are normalized to NFC before comparison so a UOM
+   * that renders identically cannot miss merely because its Unicode bytes use another form.
    */
   let fieldMatches: Array<{ name: string; data: JsonObject }> = [];
   if (!itemPrice) {
     const listed = await context.reader.listMasterRecordData(context.command.tenant_id, "Item Price");
-    fieldMatches = listed.filter(({ data }) => fieldMatchedPrice(data, input, lineUom));
+    fieldMatches = listed.filter(({ data }) => fieldMatchedPrice(data, priceList, itemCode, lineUom));
     const active = fieldMatches.filter(({ data }) => !disabled(data.disabled));
     if (active.length > 1) {
       throw errors.validation(
-        `Multiple active Item Price records match ${input.priceList} / ${input.itemCode} / ${lineUom || "(no UOM)"}`,
+        `Multiple active Item Price records match ${priceList} / ${itemCode} / ${lineUom || "(no UOM)"}`,
       );
     }
     if (active.length === 1) {
@@ -69,10 +81,10 @@ export async function resolveServerPrice(
   }
 
   if (!itemPrice) {
-    const disabledCandidate = exact
-      ? { name: exactPriceName, data: exact }
-      : compatibleLegacy
-        ? { name: legacyPriceName, data: compatibleLegacy }
+    const disabledCandidate = compatibleLegacy
+      ? { name: legacyPriceName, data: compatibleLegacy }
+      : exact
+        ? { name: exactPriceName, data: exact }
         : fieldMatches[0];
     if (disabledCandidate) {
       itemPrice = disabledCandidate.data;
@@ -89,10 +101,10 @@ export async function resolveServerPrice(
   }
   if (disabled(itemPrice.disabled)) throw errors.reference(`Item Price ${priceName} is disabled`);
 
-  const currency = typeof itemPrice.currency === "string" ? itemPrice.currency : "";
+  const currency = normalizedText(itemPrice.currency);
   if (!currency) throw errors.reference(`Item Price ${priceName} must define currency`);
-  if (currency !== input.documentCurrency) throw errors.reference(`Item Price ${priceName} currency does not match document currency`);
-  const priceUom = typeof itemPrice.uom === "string" ? itemPrice.uom.trim() : "";
+  if (currency !== documentCurrency) throw errors.reference(`Item Price ${priceName} currency does not match document currency`);
+  const priceUom = normalizedText(itemPrice.uom);
   if (priceUom && lineUom && priceUom !== lineUom) {
     throw errors.validation(`Item Price ${priceName} applies to UOM "${priceUom}", but the document row uses "${lineUom}"`);
   }
