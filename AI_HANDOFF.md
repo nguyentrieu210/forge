@@ -6,45 +6,90 @@ Ngày cập nhật: **2026-07-31**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Default head khi đồng bộ Inventory: `df2dffc3d3303841a76993b4b8acf8bf2e344e17`.
-- Working branch: `feat/inventory-physical-stock-slice-b-20260731`.
-- Pull request: `#49` — `feat(inventory): canonical physical stock identity and warehouse roles`.
-- GitHub là nguồn sự thật cho code, CI và trạng thái release.
+- Default head khi mở nhánh: `df2dffc3d3303841a76993b4b8acf8bf2e344e17`.
+- Working branch: `docs/record-sales-unicode-release-rerun-20260731`.
+- GitHub là nguồn sự thật cho code, CI và release evidence.
 
-## Inventory Slice B
+## Sales Unicode Item Price — đã release production
 
-- Canonical physical identity được server xây dựng từ Item, inventory mode/profile, màu, tình trạng, đời, kích thước và physical count.
-- Batch/serial/Aluminium Lot lineage, exact bundle quantity và warehouse-role rules đã có.
-- `stock_ledger_entries` vẫn là append-only quantity/value ledger duy nhất; không có parallel stock book hoặc migration mới.
-- Exact reversal và company-wide inventory coordinator cho Stock Entry/Work Order submit/cancel đã có.
-- Review `server/docs/ALUMDOOR-INVENTORY-SLICE-B-REVIEW.md`: **97/100**, Critical **0**, High **0**.
-- Sync commits với current default: `2f31b2dc74c6f44ca119bb9a53fe7bc13cae844d` và merge sync cuối chứa `df2dffc3d3303841a76993b4b8acf8bf2e344e17`.
-- Default được dùng làm lịch sử nền; chỉ implementation/test/review riêng của Slice B được phủ lại.
+### Feature
 
-## Stack tiếp theo
+- PR `#91` đã squash-merge.
+- Exact feature head: `c0d9df33a9fbde7540683107fd948c388a026682`.
+- Merge SHA: `a48524b93489c92296c57fc5f223e41d505de7aa`.
+- Fix bao phủ Unicode NFC, exact-name probe failure fallback và cùng canonical matching cho preview/save/submit.
+- Regression: `server/tests/sales-price-unicode-normalization.test.mjs`.
+- Exact-head CI đã PASS:
+  - CI `30647911536`;
+  - PR Validation `30647908313`;
+  - Sales Feature CI `30647908363`;
+  - Purchase Feature CI `30647908408`;
+  - Inventory and Manufacturing CI `30647910730`;
+  - UI Pull Request Validation `30647910724`.
 
-- PR `#50` Manufacturing Slice C đang stack trên branch Slice B; chỉ retarget lên default sau khi #49 merge.
-- PR `#82` Inventory Slice D đang stack trên Slice C; chỉ retarget sau khi #50 merge.
-- Không merge vượt dependency.
+### Controlled production release mới nhất
 
-## Default safety/release state được giữ lại
+- Release-preparation PR `#93` merge SHA `077d9944b1cfc1f436da87472f070ee2bd864b44`.
+- Workflow target và fail-closed assertion khóa vào `a48524b93489c92296c57fc5f223e41d505de7aa`.
+- Execution PR `#98` đã đóng, **không merge**.
+- Execution trigger head: `6352d5b65149aa22889128be4e8e767c362715af`.
+- Release run: `30649182082` — SUCCESS.
+- Release job: `91217965586` — SUCCESS.
+- PR Validation: `30649182059` — SUCCESS.
+- Target SHA: `a48524b93489c92296c57fc5f223e41d505de7aa`.
+- Worker: `cloudforge-tenant-alu`.
+- Production version ID: `ed5852cf-94ef-4a02-b0b9-1e64020c2d0d`.
+- Deployment time: `2026-07-31T16:58:24.659Z`.
+- Backup tenant: PASS.
+- Recorded migrations: PASS.
+- Tenant deploy: PASS.
+- `/health=200`; guest boot `403`.
+- FIFO rollout vẫn **disabled**.
+- Không deploy Gateway, không sửa DNS hoặc production secrets.
 
-- Sales Unicode Item Price PR `#91` merge SHA `a48524b93489c92296c57fc5f223e41d505de7aa`.
-- Release preparation PR `#93` merge SHA `077d9944b1cfc1f436da87472f070ee2bd864b44`; không tự động deploy.
-- Production observation run `30648098602`: health/root PASS, guest boot expected `403`; workflow reporting từng lỗi `403` ở bước tự comment, không phải endpoint failure.
-- Purchase/FIFO checksum lock PR `#77` merge SHA `a67d62377f1869d95906320636eabbd9bbd56ab7`.
+### Release artifacts
+
+- Backup artifact ID: `8800689182`.
+- Backup artifact: `alu-pre-release-backup-30649182082`.
+- Backup digest: `sha256:2764be993caf757abf9b2263ea28bccc06e74adbb477ed239cd0df4db8b9f244`.
+- Backup expiry: `2026-08-14T16:57:33Z`.
+- Release evidence artifact ID: `8800710784`.
+- Release evidence artifact: `alu-production-release-30649182082`.
+- Release digest: `sha256:16227979a15a4fa41b4ca1610cfe0e2db21b6c0806962c76fa93fd8035124835`.
+- Release evidence expiry: `2026-08-30T16:58:26Z`.
+
+## Production observation
+
+- Read-only run `30648098602`, job `91214435446`.
+- `health=200`, `root=200`, `guest_boot=403`, endpoint result PASS.
+- Artifact ID `8800251206`, digest `sha256:667a9f2a760ff5074ae4d97df4193e53cc45db1d96e237ffc39fe4f934abae7d`.
+- Job đỏ chỉ vì issue-comment API trả `403 Resource not accessible by integration`; production endpoint và artifact đều PASS.
+
+## Purchase/FIFO
+
+- PR `#77` merge SHA `a67d62377f1869d95906320636eabbd9bbd56ab7` khóa mọi write mode bằng approved checksum.
 - FIFO rollout vẫn **disabled**.
 
 ## Việc tiếp theo
 
-1. Chờ exact-head CI của #49 PASS sau merge sync cuối.
-2. Kiểm `behind_by=0`, mergeability và review threads rồi merge #49 theo approval hiện tại.
-3. Retarget #50 lên default mới, chạy lại exact-head CI và chỉ merge khi sạch.
-4. Retarget #82 sau #50; tiếp tục tenant report endpoint, physical-stock UI và reports.
-5. Không deploy Cloudflare, migrate/mutate tenant hoặc sửa production secrets/DNS trong chuỗi merge này.
+1. Hard refresh `https://alu.kairo.vn` và chạy authenticated Sales smoke:
+   - Sales Order mới;
+   - `Giá niêm yết`;
+   - `TRỤC 114_1.8LY`;
+   - ĐVT `Mét`;
+   - Đơn giá `180000 VND`;
+   - Thành tiền đúng theo số lượng;
+   - save-time authoritative pricing giữ cùng rate.
+2. Đổi Item/UOM/bảng giá để xác minh không lấy chéo hoặc giữ giá cũ.
+3. Huỷ hoặc xoá chứng từ thử an toàn; không ghi credential/cookie/dữ liệu khách hàng vào evidence.
+4. Sửa production-observation reporting `403` rồi chạy lại read-only để toàn job conclusion `success`.
+5. Authenticated Purchase smoke vẫn là gate riêng.
+6. Production FIFO activation vẫn cần staging evidence, backup và explicit approval riêng.
 
-## Không commit
+## Safety
 
-- `.env`, `.dev.vars`, secrets.
-- `server/work/`, `tmp/`.
-- backup SQL, generated evidence hoặc artifacts.
+- Production Sales release đã hoàn tất qua controlled workflow có backup và evidence.
+- Không sửa production secrets hoặc DNS.
+- Không mutate Item Price hay dữ liệu khách hàng.
+- Không bật FIFO.
+- Không commit `.env`, `server/work/`, `tmp`, backup hoặc generated evidence.
