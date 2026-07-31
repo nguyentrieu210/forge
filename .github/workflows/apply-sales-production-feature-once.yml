@@ -86,19 +86,28 @@ jobs:
 
           production_path = Path('server/apps-src/alumdoor-worker/src/sales-production.ts')
           production_source = production_path.read_text()
-          replacements = {
-              '      mesh_height_m: row.mesh_height_m == null || row.mesh_height_m === "" ? undefined : Number(row.mesh_height_m),':
+          replacements = [
+              (
+                  '      mesh_height_m: row.mesh_height_m == null || row.mesh_height_m === "" ? undefined : Number(row.mesh_height_m),',
                   '      ...(row.mesh_height_m == null || row.mesh_height_m === "" ? {} : { mesh_height_m: Number(row.mesh_height_m) }),',
-              '      kg_per_m2: Number(item.purchase_kg_per_m2 ?? 0) || undefined,':
+                  1,
+              ),
+              (
+                  '      kg_per_m2: Number(item.purchase_kg_per_m2 ?? 0) || undefined,',
                   '      ...(Number(item.purchase_kg_per_m2 ?? 0) > 0 ? { kg_per_m2: Number(item.purchase_kg_per_m2) } : {}),',
-              '      mesh_height_m: args.mesh_height_m == null || args.mesh_height_m === "" ? undefined : Number(args.mesh_height_m),':
+                  2,
+              ),
+              (
+                  '      mesh_height_m: args.mesh_height_m == null || args.mesh_height_m === "" ? undefined : Number(args.mesh_height_m),',
                   '      ...(args.mesh_height_m == null || args.mesh_height_m === "" ? {} : { mesh_height_m: Number(args.mesh_height_m) }),',
-          }
-          for before, after in replacements.items():
+                  1,
+              ),
+          ]
+          for before, after, expected in replacements:
               count = production_source.count(before)
-              if count != 1:
-                  raise SystemExit(f'strict optional target count={count}: {before}')
-              production_source = production_source.replace(before, after, 1)
+              if count != expected:
+                  raise SystemExit(f'strict optional target count={count}, expected={expected}: {before}')
+              production_source = production_source.replace(before, after)
           production_path.write_text(production_source)
           PY
 
