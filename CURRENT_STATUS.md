@@ -6,8 +6,9 @@ Ngày cập nhật: **2026-07-31**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Default head khi mở nhánh: `df2dffc3d3303841a76993b4b8acf8bf2e344e17`.
-- Working branch: `docs/record-sales-unicode-release-rerun-20260731`.
+- Default head sau khi merge Inventory Slice B và Manufacturing Slice C: `a4a966dbe57e3d25ec1b3644e91252d9731faaff`.
+- Working branch: `feat/inventory-physical-stock-ui-reports-slice-d-20260731`.
+- Draft PR: `#82` — `feat(inventory): add physical stock read model and Slice D foundation`.
 - Không commit `.env`, secret, `server/work/`, `tmp`, backup hoặc generated evidence.
 
 ## Bán hàng — Unicode Item Price đã release production
@@ -74,16 +75,61 @@ Ngày cập nhật: **2026-07-31**.
 - Artifact digest `sha256:667a9f2a760ff5074ae4d97df4193e53cc45db1d96e237ffc39fe4f934abae7d`.
 - Workflow conclusion đỏ do bước issue-comment nhận GitHub API `403`; endpoint smoke và artifact upload đều PASS.
 
+## Inventory và Manufacturing
+
+### Inventory Slice B — PR #49
+
+- Exact feature head: `130e39dec9a30b30ef117d66e5617f574f28deff`.
+- Merge SHA: `5e607be97f4ee21e668ad95421e44abbe5d6ff2d`.
+- Review score **97/100**, Critical **0**, High **0**, unresolved review threads **0**.
+- Exact-head CI PASS:
+  - PR Validation `30650027445`;
+  - CI `30650027498`;
+  - Inventory and Manufacturing CI `30650027478`;
+  - Purchase Feature CI `30650027463`;
+  - Sales Feature CI `30650027485`;
+  - UI Pull Request Validation `30650027497`.
+- Canonical physical identity, warehouse roles, lineage, exact reversal và company-wide stock coordination đã merge.
+
+### Manufacturing Slice C — PR #50
+
+- Exact feature head: `3147fb863c4d0114dd95ec321a765b958addb428`.
+- Merge SHA: `a4a966dbe57e3d25ec1b3644e91252d9731faaff`.
+- Review score **97/100**, Critical **0**, High **0**, unresolved review threads **0**.
+- Exact-head CI PASS:
+  - PR Validation `30650379129`;
+  - CI `30650372093`;
+  - Inventory and Manufacturing CI `30650371891`;
+  - UI Pull Request Validation `30650371981`.
+- Versioned BOM, immutable Work Order snapshot, partial production, scrap/offcut, exact reversal và legacy rollout guards đã merge.
+
+### Inventory Slice D — PR #82
+
+- Retargeted trực tiếp lên default sau khi #49 và #50 merge.
+- Code head đã xác minh: `97ad28d32925eed436e083c3e5b2724d9bc899e3`.
+- Diff hiệu dụng: 8 file read-model/report/D1-reader/test, không ghi đè global handoff docs.
+- Exact-head CI PASS:
+  - PR Validation `30650745935`;
+  - CI `30650741953`;
+  - Inventory and Manufacturing CI `30650742332`;
+  - UI Pull Request Validation `30650740427`.
+- Release Alumdoor App Worker `30650742059` bị skip đúng thiết kế.
+- PR vẫn draft và chưa merge vì tenant report endpoint, operator UI và báo cáo nghiệp vụ chưa hoàn tất.
+
 ## Gate hiện tại
 
-1. Hard refresh và authenticated Sales smoke: Item, UOM `Mét`, rate `180000 VND`, amount và save-time pricing.
-2. Đổi Item/UOM/bảng giá để xác minh không lấy chéo hoặc giữ giá cũ.
-3. Authenticated Purchase smoke vẫn chưa hoàn tất.
-4. Sửa observation reporting `403` rồi chạy lại để toàn job conclusion xanh.
-5. FIFO activation vẫn cần staging readiness, backup và explicit approval riêng.
+1. Hoàn thiện Slice D tenant report endpoint và permission/data scope.
+2. Làm physical-stock explorer, lineage drill-down, quarantine/release và Work Order progress UI.
+3. Làm WIP, shortage, variance, scrap/offcut, ageing và condition reports.
+4. Bổ sung runtime harness và Playwright desktop/mobile cho các luồng Slice D.
+5. Hard refresh và authenticated Sales smoke: Item, UOM `Mét`, rate `180000 VND`, amount và save-time pricing.
+6. Authenticated Purchase smoke vẫn chưa hoàn tất.
+7. Sửa observation reporting `403` rồi chạy lại để toàn job conclusion xanh.
+8. FIFO activation vẫn cần staging readiness, backup và explicit approval riêng.
 
 ## Safety
 
-- Production Sales release đã hoàn tất qua controlled workflow có backup và evidence.
+- Không deploy Cloudflare trong đợt merge Inventory/Manufacturing này.
+- Không migration, backfill hoặc mutate tenant.
 - Không sửa production secrets hoặc DNS.
 - Không bật FIFO.

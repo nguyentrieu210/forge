@@ -2,6 +2,31 @@
 
 Ngày cập nhật: **2026-07-31**.
 
+## P0 — hoàn thiện Inventory Slice D PR #82
+
+Stack nền đã chốt:
+
+- Inventory Slice B PR `#49` merge SHA `5e607be97f4ee21e668ad95421e44abbe5d6ff2d`;
+- Manufacturing Slice C PR `#50` merge SHA `a4a966dbe57e3d25ec1b3644e91252d9731faaff`;
+- Slice D đã retarget lên default;
+- code head đã xác minh `97ad28d32925eed436e083c3e5b2724d9bc899e3`;
+- PR Validation, CI, Inventory/Manufacturing CI và UI Validation đều PASS;
+- PR vẫn draft, chưa merge.
+
+Việc cần làm tiếp:
+
+1. Gắn `D1PhysicalStockLedgerReader` và `PhysicalStockReportService` vào tenant report endpoint.
+2. Server phải inject authenticated tenant; không nhận tenant scope do client tự chọn.
+3. Áp company, warehouse, warehouse-role, lineage và export permission scope.
+4. Thêm endpoint regression cho tenant isolation, permission denial, malformed source rows và row cap.
+5. Làm physical-stock explorer với filters Item, warehouse/role, inventory mode/profile, màu, tình trạng, đời, kích thước, batch và serial.
+6. Làm lineage drill-down tới voucher, revision, row và exact reversal source.
+7. Làm quarantine/release và Work Order progress view.
+8. Làm báo cáo WIP, material shortage, planned-vs-actual variance, scrap/offcut recovery, ageing và condition.
+9. Thêm runtime harness và Playwright desktop/mobile.
+10. Chỉ chuyển PR khỏi draft khi endpoint, UI, reports và exact-head CI đều hoàn tất.
+11. Không merge #82 chỉ vì foundation CI xanh.
+
 ## P0 — authenticated Sales smoke sau release
 
 Sales Unicode hotfix đang ở production:
@@ -15,23 +40,16 @@ Sales Unicode hotfix đang ở production:
 - backup, recorded migrations, deploy, `/health=200` và guest boot `403`: PASS;
 - FIFO rollout vẫn disabled.
 
-Việc cần làm ngay:
+Việc cần làm:
 
 1. Mở `https://alu.kairo.vn` và hard refresh.
 2. Đăng nhập bằng tài khoản thử phù hợp.
-3. Mở Sales Order mới.
-4. Chọn `Giá niêm yết`.
-5. Chọn `TRỤC 114_1.8LY`.
-6. Xác minh:
-   - ĐVT `Mét`;
-   - Đơn giá `180000 VND`;
-   - Thành tiền đúng theo số lượng;
-   - không có lỗi callback Unicode-UOM.
-7. Đổi Item/UOM khác và xác minh không lấy chéo giá.
-8. Đổi bảng giá ở header và xác minh rate reload đúng.
-9. Lưu thử để pricing authoritative giữ cùng rate.
-10. Huỷ hoặc xoá chứng từ thử an toàn.
-11. Không ghi credential, cookie, token hoặc dữ liệu khách hàng thật vào evidence.
+3. Mở Sales Order mới và chọn `Giá niêm yết`.
+4. Chọn `TRỤC 114_1.8LY`.
+5. Xác minh ĐVT `Mét`, đơn giá `180000 VND`, Thành tiền và save-time authoritative pricing.
+6. Đổi Item/UOM/bảng giá và xác minh không lấy chéo hoặc giữ giá cũ.
+7. Huỷ hoặc xoá chứng từ thử an toàn.
+8. Không ghi credential, cookie, token hoặc dữ liệu khách hàng thật vào evidence.
 
 ## Release evidence mới nhất
 
@@ -80,6 +98,8 @@ Evidence hiện tại:
 
 ## Không được làm
 
+- Không deploy Cloudflare nếu chưa có yêu cầu release rõ.
+- Không migration, backfill hoặc mutate tenant trong Slice D.
 - Không sửa production secrets hoặc DNS.
 - Không bật FIFO.
 - Không commit `.env`, `server/work/`, `tmp`, backup hoặc generated evidence.
