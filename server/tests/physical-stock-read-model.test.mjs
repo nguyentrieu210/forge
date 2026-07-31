@@ -144,7 +144,7 @@ test("physical stock pagination is deterministic and rejects unknown cursors", a
   assert.deepEqual(second.rows.map((row) => row.item_code), ["C"]);
   assert.throws(
     () => buildPhysicalStockPage(rows, { tenant_id: "alu", company: "Alumdoor", cursor: "missing" }),
-    /invalid physical stock cursor/,
+    (error) => error?.status === 422 && /invalid physical stock cursor/i.test(error.message),
   );
 });
 
