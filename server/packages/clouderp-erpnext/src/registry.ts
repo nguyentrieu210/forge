@@ -16,8 +16,8 @@ import {
   CutOrderController, StockReconciliationController, StockReservationController,
 } from "./alumdoor-inventory.js";
 import { VersionedBillOfMaterialsController } from "./manufacturing-lifecycle.js";
+import { ReportingManufacturingStockEntryController } from "./manufacturing-reporting.js";
 import { StockUomSnapshotWorkOrderController } from "./manufacturing-work-order-guard.js";
-import { RolloutManufacturingStockEntryController } from "./manufacturing-rollout.js";
 
 export function registerErpNextCoreControllers(registry: ControllerRegistry): ControllerRegistry {
   return registry
@@ -26,7 +26,7 @@ export function registerErpNextCoreControllers(registry: ControllerRegistry): Co
     .register(new StockReturnController())
     .register(new VersionedBillOfMaterialsController())
     .register(new StockUomSnapshotWorkOrderController())
-    .register(new RolloutManufacturingStockEntryController())
+    .register(new ReportingManufacturingStockEntryController())
     .register(new AssetController())
     .register(new AssetDepreciationController())
     .register(new ProductionPlanController())
