@@ -1,15 +1,23 @@
 name: Gateway Production Release
 
 on:
-  push:
-    branches:
-      - hotfix/alumdoor-print-list-delete
-    paths:
-      - .github/release/gateway-production.trigger
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Exact verified commit SHA used to build the candidate
+        required: true
+        type: string
+      version_id:
+        description: Immutable Cloudflare Worker version ID from release.json
+        required: true
+        type: string
+      confirm:
+        description: Type RELEASE_GATEWAY
+        required: true
+        type: string
 
 permissions:
   contents: read
-  pull-requests: write
 
 concurrency:
   group: production-gateway
@@ -17,64 +25,63 @@ concurrency:
 
 jobs:
   release:
-    name: Build and deploy Gateway
+    name: Promote Gateway version and smoke production
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 20
     environment: production
     env:
-      TARGET_SHA: b3dd1d15a1b52de698d0874b29feae79efe7ed6c
+      TARGET_SHA: ${{ inputs.target_sha }}
+      VERSION_ID: ${{ inputs.version_id }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-
+      EVIDENCE_DIR: ${{ runner.temp }}/gateway-release-evidence
     steps:
-      - name: Checkout verified release
+      - name: Validate explicit release authorization
+        shell: bash
+        run: |
+          set -euo pipefail
+          test '${{ inputs.confirm }}' = 'RELEASE_GATEWAY'
+          test "${#TARGET_SHA}" -eq 40
+          test "$TARGET_SHA" = "${TARGET_SHA#refs/heads/}"
+          printf '%s' "$VERSION_ID" | grep -Eq '^[0-9a-fA-F-]{16,}$'
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+
+      - name: Checkout exact candidate source
         uses: actions/checkout@v4
         with:
           ref: ${{ env.TARGET_SHA }}
           persist-credentials: false
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.0
-          run_install: false
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
+      - name: Set up Forge
+        uses: ./.github/actions/setup-forge
 
       - name: Prepare evidence
         shell: bash
         run: |
           set -euo pipefail
-          test "$TARGET_SHA" = "b3dd1d15a1b52de698d0874b29feae79efe7ed6c"
-          test -n "${CLOUDFLARE_API_TOKEN:-}"
-          echo "EVIDENCE_DIR=$RUNNER_TEMP/gateway-release-evidence" >> "$GITHUB_ENV"
-          mkdir -p "$RUNNER_TEMP/gateway-release-evidence"
-          printf 'run_id=%s\ntarget_sha=%s\nstarted_at=%s\n' \
-            "$GITHUB_RUN_ID" "$TARGET_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            > "$RUNNER_TEMP/gateway-release-evidence/state.txt"
+          mkdir -p "$EVIDENCE_DIR"
+          printf 'run_id=%s\ntarget_sha=%s\ngateway_version_id=%s\nstarted_at=%s\n' \
+            "$GITHUB_RUN_ID" "$TARGET_SHA" "$VERSION_ID" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            > "$EVIDENCE_DIR/state.txt"
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build and stage frontend
+      - name: Verify immutable Worker version
         shell: bash
         run: |
           set -euo pipefail
-          pnpm --filter metaforge run build 2>&1 | tee "$EVIDENCE_DIR/build.log"
-          node server/scripts/stage-client-bundle.mjs 2>&1 | tee "$EVIDENCE_DIR/stage.log"
-          echo 'build=pass' >> "$EVIDENCE_DIR/state.txt"
+          pnpm --dir server exec wrangler versions view "$VERSION_ID" \
+            --config apps/gateway-worker/wrangler.jsonc \
+            --json > "$EVIDENCE_DIR/version.json"
+          node -e "const fs=require('fs');const v=JSON.parse(fs.readFileSync(process.env.EVIDENCE_DIR+'/version.json','utf8'));if((v.id||v.version_id)!==process.env.VERSION_ID)process.exit(1)"
+          echo 'version_verified=pass' >> "$EVIDENCE_DIR/state.txt"
 
-      - name: Deploy Gateway
+      - name: Promote exact version to production
         shell: bash
         env:
           WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/gateway-release-evidence/wrangler-output.ndjson
         run: |
           set -euo pipefail
-          pnpm --dir server exec wrangler deploy --config apps/gateway-worker/wrangler.jsonc 2>&1 | tee "$EVIDENCE_DIR/deploy.log"
+          pnpm --dir server exec wrangler versions deploy "$VERSION_ID@100%" \
+            --config apps/gateway-worker/wrangler.jsonc \
+            -y 2>&1 | tee "$EVIDENCE_DIR/deploy.log"
           echo 'deploy=pass' >> "$EVIDENCE_DIR/state.txt"
 
       - name: Smoke production
@@ -82,43 +89,33 @@ jobs:
         run: |
           set -euo pipefail
           BASE='https://alu.kairo.vn'
-          health="$(curl --silent --show-error --output "$EVIDENCE_DIR/health.json" --write-out '%{http_code}' "$BASE/health" || true)"
-          root="$(curl --silent --show-error --output "$EVIDENCE_DIR/root.html" --write-out '%{http_code}' "$BASE/" || true)"
+          health=0
+          root=0
+          for attempt in $(seq 1 18); do
+            health="$(curl --silent --show-error --output "$EVIDENCE_DIR/health.json" --write-out '%{http_code}' "$BASE/health" || true)"
+            root="$(curl --silent --show-error --output "$EVIDENCE_DIR/root.html" --write-out '%{http_code}' "$BASE/" || true)"
+            [ "$health" = '200' ] && [ "$root" = '200' ] && break
+            sleep 5
+          done
           boot="$(curl --silent --show-error --output "$EVIDENCE_DIR/guest-boot.json" --write-out '%{http_code}' "$BASE/api/method/metaforge.api.get_boot" || true)"
           test "$health" = '200'
           test "$root" = '200'
           test "$boot" = '403'
           printf 'health=%s\nroot=%s\nguest_boot=%s\nsmoke=pass\n' "$health" "$root" "$boot" >> "$EVIDENCE_DIR/state.txt"
 
-      - name: Extract version evidence
+      - name: Verify provider deployment evidence
         shell: bash
         run: |
           set -euo pipefail
-          version_id="$(node -e "const fs=require('fs');const rows=fs.readFileSync(process.env.EVIDENCE_DIR+'/wrangler-output.ndjson','utf8').trim().split(/\\r?\\n/).map(x=>JSON.parse(x));const row=[...rows].reverse().find(x=>x.type==='deploy'&&x.version_id);process.stdout.write(row?.version_id||'')")"
-          test -n "$version_id"
-          printf 'gateway_version_id=%s\nprovider_evidence=pass\n' "$version_id" >> "$EVIDENCE_DIR/state.txt"
+          deployed="$(node -e "const fs=require('fs');const rows=fs.readFileSync(process.env.EVIDENCE_DIR+'/wrangler-output.ndjson','utf8').trim().split(/\\r?\\n/).filter(Boolean).map(JSON.parse);const row=[...rows].reverse().find(x=>x.type==='version-deploy');const ids=(row?.versions||row?.version_ids||[]).map(v=>typeof v==='string'?v:v.version_id||v.id);process.stdout.write(ids.includes(process.env.VERSION_ID)?process.env.VERSION_ID:'')")"
+          test "$deployed" = "$VERSION_ID"
+          echo 'provider_evidence=pass' >> "$EVIDENCE_DIR/state.txt"
 
-      - name: Upload evidence
+      - name: Upload release evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: gateway-production-release-${{ github.run_id }}
+          name: gateway-production-release-${{ inputs.version_id }}-${{ github.run_id }}
           path: ${{ runner.temp }}/gateway-release-evidence/
           if-no-files-found: warn
           retention-days: 30
-
-      - name: Report dialog dropdown wheel release result on PR 62
-        if: always()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('node:fs');
-            const dir = `${process.env.RUNNER_TEMP}/gateway-release-evidence`;
-            const state = fs.existsSync(`${dir}/state.txt`) ? fs.readFileSync(`${dir}/state.txt`, 'utf8') : 'release job did not create state.txt';
-            const marker = '<!-- gateway-dialog-dropdown-wheel-production-release -->';
-            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            const body = `${marker}\n# Gateway dialog dropdown wheel production release\n\n\`\`\`text\n${state}\n\`\`\`\n\n[Workflow and artifacts](${runUrl})`;
-            const comments = await github.paginate(github.rest.issues.listComments, { owner: context.repo.owner, repo: context.repo.repo, issue_number: 62 });
-            const previous = comments.find((comment) => comment.body?.includes(marker));
-            if (previous) await github.rest.issues.updateComment({ owner: context.repo.owner, repo: context.repo.repo, comment_id: previous.id, body });
-            else await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: 62, body });
