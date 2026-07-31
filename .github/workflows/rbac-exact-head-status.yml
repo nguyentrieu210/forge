@@ -92,3 +92,5 @@ jobs:
               context: 'rbac/exact-head',
               description: 'Test, typecheck or build failed'
             });
+
+# Trigger commit after workflow exists on the verification branch.
