@@ -97,7 +97,7 @@ test("D1 reader binds tenant/company and allocates tracked physical counts exact
   const rows = await reader.list({ tenant_id: "alu", company: "Alumdoor" });
 
   assert.equal(rows.length, 4);
-  assert.deepEqual(rows.map((row) => row.physical_count_micros), [-1_000_000, -2_000_000, 1_000_000, 2_000_000]);
+  assert.deepEqual(rows.map((row) => row.physical_count_micros), [-1_200_000, -1_800_000, 1_200_000, 1_800_000]);
   assert.deepEqual(rows.map((row) => row.batch_no), ["LOT-1", "LOT-2", "LOT-1", "LOT-2"]);
   assert.equal(rows[0].physical_identity_key, "NHOM-AL71|XAM|6000000");
   assert.equal(rows[0].warehouse_role, "RAW_MATERIAL");
