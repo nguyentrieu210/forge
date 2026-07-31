@@ -104,3 +104,5 @@ jobs:
           path: ${{ runner.temp }}/alu-production-observation/
           if-no-files-found: warn
           retention-days: 14
+
+# Observation request 2026-07-31 23:40 Asia/Ho_Chi_Minh. This PR will not be merged.
