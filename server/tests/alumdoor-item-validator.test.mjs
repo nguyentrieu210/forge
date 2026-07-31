@@ -107,7 +107,21 @@ test("Item validator rejects service warehouse and reorder configuration", async
     reorder_levels: [{ warehouse: "K36", reorder_level: 1 }],
   }, { masters: leafGroup });
   assert.equal(response.status, 422);
-  assert.match(await message(response), /không được giữ ĐVT tồn, kho mặc định hoặc mức đặt lại/i);
+  assert.match(await message(response), /không được giữ ĐVT tồn, kho mặc định, batch\/serial hoặc mức đặt lại/i);
+});
+
+test("Item validator rejects batch or serial tracking on services", async () => {
+  const response = await validateItem({
+    item_code: "SERVICE-TRACKED",
+    item_group: "Nguyên vật liệu",
+    item_nature: "Dịch vụ",
+    is_stock_item: 0,
+    has_batch_no: 1,
+    has_serial_no: 1,
+    inventory_mode: "Hàng thường",
+  }, { masters: leafGroup });
+  assert.equal(response.status, 422);
+  assert.match(await message(response), /batch\/serial/i);
 });
 
 test("Item validator requires purchase eligibility for externally supplied stock", async () => {
@@ -146,6 +160,16 @@ test("Item validator rejects invalid material stage and supply enums", async () 
   const invalidSupply = await validateItem({ ...validRawItem(), supply_type: "Tự đoán" }, { masters: leafGroup });
   assert.equal(invalidSupply.status, 422);
   assert.match(await message(invalidSupply), /Nguồn cung Tự đoán không hợp lệ/i);
+});
+
+test("Item validator rejects missing material stage and supply type", async () => {
+  const missingStage = await validateItem({ ...validRawItem(), material_stage: "" }, { masters: leafGroup });
+  assert.equal(missingStage.status, 422);
+  assert.match(await message(missingStage), /Giai đoạn vật tư <trống> không hợp lệ/i);
+
+  const missingSupply = await validateItem({ ...validRawItem(), supply_type: "" }, { masters: leafGroup });
+  assert.equal(missingSupply.status, 422);
+  assert.match(await message(missingSupply), /Nguồn cung <trống> không hợp lệ/i);
 });
 
 test("Item validator requires an active Measurement Profile for dimensioned stock", async () => {
