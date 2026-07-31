@@ -2,6 +2,25 @@
 
 Ngày cập nhật: **2026-07-31**.
 
+## P0 — functional production smoke cho hotfix giá bán
+
+Release đã hoàn tất trên Tenant Worker version `7738ee39-bb39-4a38-bf8d-5e2e1834e572`, target SHA `60c604de69804b9daf9fb90bf9a5d6e86bb3af2d`.
+
+1. Hard refresh và đăng nhập bằng tài khoản thử phù hợp.
+2. Mở Sales Order mới.
+3. Chọn `Giá niêm yết`.
+4. Chọn `TRỤC 114_1.8LY`.
+5. Xác minh:
+   - ĐVT `Mét`;
+   - Đơn giá `180000 VND`;
+   - Thành tiền cập nhật đúng theo số lượng;
+   - không xuất hiện lỗi callback Unicode-UOM.
+6. Đổi sang Item/UOM khác và xác minh không lấy chéo giá.
+7. Đổi bảng giá ở header khi dòng đã có Item và xác minh giá reload đúng.
+8. Lưu chứng từ thử để pricing authoritative giữ cùng rate.
+9. Huỷ hoặc xoá chứng từ thử an toàn.
+10. Không ghi credential, cookie, token hoặc dữ liệu khách hàng thật vào evidence.
+
 ## P0 — chốt PR #77
 
 1. Kiểm exact final head của `feat/purchase-fifo-staging-checksum-lock-20260731`.
@@ -28,7 +47,7 @@ Ngày cập nhật: **2026-07-31**.
    - output ngoài repository.
 5. Xác minh stored checksum/counts khớp và rollout vẫn `enabled=0`.
 
-## P0 — functional acceptance
+## P0 — functional acceptance Purchase/FIFO
 
 - Purchase Order submit;
 - Purchase Receipt preview/submit;
@@ -49,8 +68,7 @@ Ngày cập nhật: **2026-07-31**.
 
 ## Không được làm
 
-- Không deploy Cloudflare nếu chưa được yêu cầu rõ.
 - Không sửa production secrets hoặc DNS.
-- Không bật FIFO production trong PR `#77`.
+- Không bật FIFO production khi chưa có explicit approval riêng.
 - Không commit `.env`, `server/work/`, `tmp/`, backup hoặc generated reports.
 - Không chỉnh migration đã áp dụng; forward-fix bằng migration mới.
