@@ -1,0 +1,37 @@
+name: Purchase Concurrency Debug
+
+on:
+  push:
+    branches:
+      - feat/purchase-receipt-complete-20260731
+    paths:
+      - 'server/**'
+      - '.github/workflows/purchase-concurrency-debug.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  targeted:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: Build server and views
+        run: |
+          pnpm --dir server run clean
+          pnpm --dir server run build
+          pnpm --filter @metaforge/views run build
+      - name: Run purchase concurrency tests
+        run: node --test server/tests/purchase-worker-concurrency.test.mjs
