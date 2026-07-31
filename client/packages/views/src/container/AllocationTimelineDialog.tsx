@@ -2,7 +2,20 @@ import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Doc } from "@metaforge/core";
 import { NO_CAPS, type Capabilities } from "@metaforge/adapter-frappe";
-import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, toast } from "@metaforge/ui";
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  toast,
+} from "@metaforge/ui";
 import { useMetaForge } from "./provider.js";
 import {
   PurchaseAllocationActionDialog,
@@ -218,44 +231,44 @@ export function AllocationTimelineDialog(props: AllocationTimelineDialogProps) {
                   <h3 className="mb-2 text-sm font-semibold">Sự kiện ledger</h3>
                   {effectiveTimeline.rows.length ? (
                     <div className="overflow-x-auto rounded-lg border">
-                      <table className="w-full min-w-[1180px] text-sm">
-                        <thead className="bg-muted/60 text-muted-foreground">
-                          <tr>
+                      <Table unwrapped className="w-full min-w-[1180px] text-sm">
+                        <TableHeader className="bg-muted/60 text-muted-foreground">
+                          <TableRow>
                             {effectiveTimeline.columns.map((column) => (
-                              <th
+                              <TableHead
                                 key={column.key}
                                 className={column.align === "right" ? "px-3 py-2 text-right font-medium" : "px-3 py-2 text-left font-medium"}
                               >
                                 {column.label}
-                              </th>
+                              </TableHead>
                             ))}
-                            {canOverride ? <th className="px-3 py-2 text-right font-medium">Thao tác</th> : null}
-                          </tr>
-                        </thead>
-                        <tbody>
+                            {canOverride ? <TableHead className="px-3 py-2 text-right font-medium">Thao tác</TableHead> : null}
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
                           {effectiveTimeline.rows.map((row, rowIndex) => (
-                            <tr key={String(row.row_id ?? rowIndex)} className="border-t align-top">
+                            <TableRow key={String(row.row_id ?? rowIndex)} className="align-top">
                               {effectiveTimeline.columns.map((column) => (
-                                <td
+                                <TableCell
                                   key={column.key}
                                   className={column.align === "right" ? "whitespace-nowrap px-3 py-2 text-right tabular-nums" : "px-3 py-2"}
                                 >
                                   {timelineCell(column.key, row[column.key as keyof AllocationTimelineRow])}
-                                </td>
+                                </TableCell>
                               ))}
                               {canOverride ? (
-                                <td className="whitespace-nowrap px-3 py-2 text-right">
+                                <TableCell className="whitespace-nowrap px-3 py-2 text-right">
                                   {isOverrideSource(row) ? (
                                     <Button type="button" size="sm" variant="outline" onClick={() => setAction({ kind: "override", row })}>
                                       Điều chỉnh
                                     </Button>
                                   ) : null}
-                                </td>
+                                </TableCell>
                               ) : null}
-                            </tr>
+                            </TableRow>
                           ))}
-                        </tbody>
-                      </table>
+                        </TableBody>
+                      </Table>
                     </div>
                   ) : (
                     <div className="rounded-lg border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
