@@ -130,7 +130,6 @@ export function DemoShell(props: DemoShellProps) {
           key: module.key,
           label: module.label,
           icon: module.icon,
-          group: "Phân hệ",
         }))
       : props.nav,
     [props.nav, props.workspace],
