@@ -3,7 +3,8 @@ import type { Actor, JsonObject } from "../../../packages/contracts/src/index.js
 import { asCloudForgeError, errorResponse, errors, jsonResponse, randomId, readJson } from "../../../packages/core/src/index.js";
 import { PermissionService } from "../../../packages/policy/src/index.js";
 import type { QueryRequest } from "../../../packages/query/src/index.js";
-import { D1ReportService, parseQueryRequest, QueryCompiler } from "../../../packages/query/src/index.js";
+import { D1ReportService, parseQueryRequest } from "../../../packages/query/src/index.js";
+import { FinanceQueryCompiler } from "../../../packages/query/src/finance-aging.js";
 
 interface PreparedReportMessage {
   tenant_id: string;
@@ -43,7 +44,7 @@ export default {
       if (request.method === "POST" && url.pathname === "/api/v1/reports/run") {
         const input = parseQueryRequest(await readJson<JsonObject>(request), tenantId);
         permission.assertReport(actor, input.report);
-        const compiler = new QueryCompiler();
+        const compiler = new FinanceQueryCompiler();
         const compiled = compiler.compile(input);
         if (compiled.prepared) {
           if (!env.REPORT_QUEUE) throw new Error("REPORT_QUEUE binding is missing");
@@ -57,7 +58,7 @@ export default {
           await env.REPORT_QUEUE.send({ tenant_id: tenantId, job_id: jobId, actor_id: actor.user_id, request: input });
           return jsonResponse({ prepared: true, report: input.report, job_id: jobId, status: "queued" }, 202);
         }
-        const result = await new D1ReportService(env.DB).run(input, true);
+        const result = await new D1ReportService(env.DB, compiler).run(input, true);
         return jsonResponse(result, 200, { "x-cloudforge-trace-id": traceId });
       }
 
@@ -102,7 +103,7 @@ export default {
           `UPDATE prepared_reports SET status='running', started_at=?3
            WHERE tenant_id=?1 AND job_id=?2 AND status='queued'`,
         ).bind(job.tenant_id, job.job_id, new Date().toISOString()).run();
-        const result = await new D1ReportService(env.DB).run(job.request, true);
+        const result = await new D1ReportService(env.DB, new FinanceQueryCompiler()).run(job.request, true);
         await env.DB.prepare(
           `UPDATE prepared_reports SET status='completed', result_json=?3, completed_at=?4
            WHERE tenant_id=?1 AND job_id=?2`,
