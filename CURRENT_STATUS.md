@@ -6,15 +6,15 @@ Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Default head đã đồng bộ vào nhánh tài chính: `acd0a8df95eb35342b15de282b65102ac4314801`.
+- Default head đã đồng bộ vào nhánh tài chính: `1207333163fdf31c576caa6ec8c11e88b078ca6e`.
 - Working branch: `feat/finance-ar-ap-completion`.
 - Draft PR: `#15` — `feat(finance): add invoice due dates and AR/AP aging`.
 - Finance code/test head: `93c3f2ab5c7dd286c9f03cd13ad769ba14a65d8e`.
-- Handoff/docs head trước commit trạng thái cuối: `3855267a0e096baf535e1d0e2c563e8b55ad7920`.
-- PR mergeable và branch không còn commit phía sau default.
+- Latest default merge commit trước commit trạng thái này: `43ef6cb6942b42a7f600086fefdad7c621e3f6ca`.
+- PR mergeable; branch chứa workflow `pr-validation.yml` mới nhất từ default.
 - Backup trước đồng bộ base: `backup/finance-ar-ap-pre-rebase-20260731` tại `a0f787e2a8abde287b184d5709985aec8cfd4eb8`.
 - Workflow tạm dùng để đồng bộ branch và workflow tạm thử Worker đều đã bị xóa khỏi final diff.
-- Final diff hiện có 16 file finance/docs/test; không có workflow tạm, `.env`, `server/work/`, `tmp/`, backup SQL hoặc generated artifacts.
+- Final diff có 16 file finance/docs/test; không có workflow tạm, `.env`, `server/work/`, `tmp/`, backup SQL hoặc generated artifacts.
 
 ## Tài chính và công nợ AR/AP
 
@@ -79,24 +79,17 @@ Trước khi thêm Worker route regression test:
 - Job: `91122345078` — `Test, typecheck and build`.
 - Install, `pnpm test`, `pnpm typecheck`, `pnpm build`: **PASS**.
 
-### Blocker hiện tại — GitHub Actions trước runner
-
-Sau khi thêm rồi loại bỏ workflow thử nghiệm, các run sau thất bại trước bước `Checkout repository`:
+### Các failure trước runner đã quan sát
 
 - `30620542741`, job `91123803489`;
 - `30620645454`, job `91124137658`, rerun job `91124386934`;
 - `30620830770`, job `91124730973`.
 
-Đặc điểm chung:
+Các job trên có `steps` rỗng, chưa checkout và log download trả `BlobNotFound`. Chưa có bằng chứng code regression từ các run đó.
 
-- job conclusion `failure`;
-- `steps` rỗng;
-- không có checkout/install/test/typecheck/build;
-- log download trả `BlobNotFound`;
-- rerun cùng SHA vẫn chết trước bước đầu tiên;
-- workflow `pr-validation.yml` trên branch khớp default và đã PASS trước đó.
+Default sau đó cập nhật `pr-validation.yml` tại `1207333163fdf31c576caa6ec8c11e88b078ca6e`; finance branch đã merge đúng workflow mới. Cần đọc PR Validation trên commit người dùng kế tiếp để xác định blocker đã hết hay chưa.
 
-Phân loại: **Actions infrastructure/repository billing-or-runner configuration**, chưa có bằng chứng code regression. Cần kiểm GitHub Actions billing/spending limit, repository Actions settings và runner availability trong UI, sau đó rerun `PR Validation` trên exact head. PR vẫn draft và chưa được coi là exact-head verified sau Worker route test.
+PR vẫn draft và chưa được coi là exact-head verified sau Worker route test cho tới khi install/test/typecheck/build chạy thật.
 
 ## Safety
 
@@ -110,7 +103,7 @@ Phân loại: **Actions infrastructure/repository billing-or-runner configuratio
 
 - Sidebar desktop đã gọn tại `client/apps/runtime/src/styles.css`; không đổi route hoặc permission.
 - Gateway trigger hiện có nhưng vẫn thiếu deployment/version ID và browser smoke production được ghi thành bằng chứng.
-- Workflow Cloudflare Production Release Observation trên PR finance không phải code gate và các failure của nó không được dùng để đánh giá finance.
+- Workflow Cloudflare Production Release Observation trên PR finance không phải code gate.
 
 ## FIFO Purchase Receipt
 
@@ -121,5 +114,5 @@ Phân loại: **Actions infrastructure/repository billing-or-runner configuratio
 ## RBAC
 
 - Slice A đã squash-merge vào default qua commit `93ac85a0f16c2668b706ffcf8e15d3da53c8c7a9`.
-- Exact-head PR Validation của Slice A đã PASS.
-- Slice B phải là branch/PR riêng cho audit append-only, atomic user/role mutation và last-admin/self-lockout guards.
+- Slice B đang dùng workflow gate riêng trên PR #38; điều kiện không áp dụng cho PR finance #15.
+- Finance PR chỉ cần job `Test, typecheck and build`.
