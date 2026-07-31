@@ -32,6 +32,13 @@ import {
   type SalesMode,
 } from "./door-formulas.js";
 import { salesItemContext } from "./sales-item-context.js";
+import {
+  calculateSalesProductionLine,
+  createSalesProduction,
+  previewSalesProduction,
+  syncPaintJobsFromCut,
+  validateProductionRequest,
+} from "./sales-production.js";
 
 interface Env {
   INTERNAL_AUTH_SECRET?: string;
@@ -1015,6 +1022,8 @@ interface V2CutOrder {
   cutting_policy?: string;
   customer?: string;
   so_reference?: string;
+  work_order?: string;
+  target_color?: string;
   cut_state?: string;
   company?: string;
   currency?: string;
@@ -1264,6 +1273,8 @@ async function draftCutV2(call: PlatformCall, args: Record<string, unknown>): Pr
       cutting_policy: cuttingPolicy,
       ...(args.customer ? { customer: String(args.customer) } : {}),
       ...(args.so_reference ? { so_reference: String(args.so_reference) } : {}),
+      ...(args.work_order ? { work_order: String(args.work_order) } : {}),
+      ...(args.target_color ? { target_color: String(args.target_color) } : {}),
       items,
       cut_state: "Nháp",
     });
@@ -1310,11 +1321,13 @@ async function applyCutV2(call: PlatformCall, args: Record<string, unknown>): Pr
     await submitV2Doc(call, "Cut Order", name, cut as V2CutOrder & Record<string, unknown>);
   }
   const reservations = await consumeReservationsForCut(call, name, cut.so_reference);
+  const paint = await syncPaintJobsFromCut(call, name, 1);
   return answer({
     cut_order: name,
     submitted: true,
     idempotent: cut.cut_state === "Đã cắt",
     reservations,
+    paint,
     message: `Đã cắt và trừ tồn theo phiếu ${name}; ${reservations.used} phiếu giữ chỗ đã chuyển sang Đã dùng.`
       + (reservations.failed.length ? ` Cần kiểm tra lại: ${reservations.failed.join(", ")}.` : ""),
   });
@@ -1361,7 +1374,8 @@ async function reverseCutV2(call: PlatformCall, args: Record<string, unknown>): 
     cancel_reason: reason,
     note: String(args.note ?? ""),
   } as Record<string, unknown>);
-  return answer({ cut_order: name, reversed: true, message: `Đã đảo đúng bút toán gốc của phiếu ${name}.` });
+  const paint = await syncPaintJobsFromCut(call, name, -1);
+  return answer({ cut_order: name, reversed: true, paint, message: `Đã đảo đúng bút toán gốc của phiếu ${name}.` });
 }
 
 async function returnCutV2(call: PlatformCall, args: Record<string, unknown>): Promise<Response> {
@@ -1766,6 +1780,9 @@ const QUOTE_LINE_FIELDS = [
   "formula_policy", "width_basis", "cut_width_m", "billable_area_sqm", "length_m", "qty_bar",
   "qty", "uom", "conversion_factor", "stock_uom", "stock_qty", "rate", "amount",
   "color", "motor_model", "accessories", "note",
+  "door_type", "leaf_variant", "leaf_height_deduction_m", "leaf_divisor_m", "leaf_rounding", "leaf_count",
+  "single_layer_leaf_count", "double_layer_leaf_count", "estimated_weight_kg", "estimated_minutes",
+  "formula_version", "formula_explanation", "paint_required",
 ] as const;
 
 interface QuotationDoc {
@@ -2381,10 +2398,10 @@ interface SalesOrderDoc {
 
 const SALES_DELIVERY_LINE_FIELDS = [
   ...QUOTE_LINE_FIELDS,
-  "install_note", "warehouse",
+  "install_note", "warehouse", "sales_order_row_id",
 ] as const;
 
-/** Số đã giao được đọc từ các phiếu xuất ĐÃ GHI SỔ, theo đơn vị tồn. */
+/** Số đã giao được đọc theo khóa dòng đơn; dữ liệu cũ thiếu khóa mới lùi về mã hàng. */
 async function deliveredByItem(call: PlatformCall, order: string): Promise<Map<string, number>> {
   const delivered = new Map<string, number>();
   const query = new URLSearchParams({
@@ -2401,9 +2418,11 @@ async function deliveredByItem(call: PlatformCall, order: string): Promise<Map<s
   }));
   for (const note of notes) {
     for (const line of note?.items ?? []) {
-      const code = String(line.item_code ?? "");
+      const rowId = String(line.sales_order_row_id ?? "").trim();
+      const code = String(line.item_code ?? "").trim();
+      const key = rowId ? `row:${rowId}` : code ? `item:${code}` : "";
       const quantity = Number(line.stock_qty ?? line.qty ?? 0);
-      if (code && Number.isFinite(quantity)) delivered.set(code, (delivered.get(code) ?? 0) + quantity);
+      if (key && Number.isFinite(quantity)) delivered.set(key, (delivered.get(key) ?? 0) + quantity);
     }
   }
   return delivered;
@@ -2425,13 +2444,20 @@ async function remainingDeliveryLines(
     const code = String(line.item_code ?? "");
     if (!code) continue;
     const orderedStock = Number(line.stock_qty ?? line.qty ?? 0);
-    const pool = delivered.get(code) ?? 0;
-    const consumed = Math.min(pool, orderedStock);
-    delivered.set(code, pool - consumed);
+    const sourceRow = String(line.row_id ?? line.name ?? `R${index + 1}`).trim();
+    const rowKey = `row:${sourceRow}`;
+    const legacyKey = `item:${code}`;
+    const rowPool = delivered.get(rowKey) ?? 0;
+    const rowConsumed = Math.min(rowPool, orderedStock);
+    delivered.set(rowKey, rowPool - rowConsumed);
+    const legacyPool = delivered.get(legacyKey) ?? 0;
+    const legacyConsumed = Math.min(legacyPool, orderedStock - rowConsumed);
+    delivered.set(legacyKey, legacyPool - legacyConsumed);
+    const consumed = rowConsumed + legacyConsumed;
     const outstandingStock = orderedStock - consumed;
     if (outstandingStock <= 0) continue;
     const orderedQty = Number(line.qty ?? 0);
-    const copied: Record<string, unknown> = { row_id: `R${index + 1}` };
+    const copied: Record<string, unknown> = { row_id: `R${index + 1}`, sales_order_row_id: sourceRow };
     for (const field of SALES_DELIVERY_LINE_FIELDS) {
       if (line[field] !== undefined && line[field] !== null && line[field] !== "") copied[field] = line[field];
     }
@@ -2801,6 +2827,9 @@ export default {
 
         const call = platformCaller(request, env);
         if (method === "alumdoor.sales.item_context") return await salesItemContext(call, args);
+        if (method === "alumdoor.sales.production_line_context") return await calculateSalesProductionLine(call, args);
+        if (method === "alumdoor.sales.preview_production") return await previewSalesProduction(call, args);
+        if (method === "alumdoor.sales.create_production") return await createSalesProduction(call, args);
         if (method === "alumdoor.door.calculate") return await calculateDoor(call, args);
         if (method === "alumdoor.cut.propose") return await proposeCutV2(call, args);
         if (method === "alumdoor.cut.draft") return await draftCutV2(call, args);
@@ -2839,18 +2868,20 @@ export default {
       if (url.pathname === "/hooks/event") {
         const event = (await request.json()) as { event_type?: string; aggregate?: { doctype?: string; name?: string } };
         const type = String(event.event_type ?? "");
-        const receipt = String(event.aggregate?.name ?? "");
-        if (!receipt || !type.startsWith("purchase_receipt.")) return new Response(null, { status: 204 });
+        const aggregate = String(event.aggregate?.name ?? "");
+        if (!aggregate) return new Response(null, { status: 204 });
         const call = platformCaller(request, env);
         const direction = type.endsWith(".cancelled") ? -1 : 1;
-        const result = await syncLotsFromReceipt(call, receipt, direction);
-        /**
-         * Dòng hỏng KHÔNG được nuốt: trả lỗi để nền tảng giao lại, và sau 12 lần thì đánh
-         * dấu bỏ cuộc — có dấu vết để lần ra. Im lặng ở đây là quay lại đúng cái bệnh cũ:
-         * hai quyển sổ lệch nhau mà không ai biết.
-         */
-        const status = result.failed.length ? 500 : 200;
-        return new Response(JSON.stringify(result), { status, headers: { "content-type": "application/json" } });
+        if (type.startsWith("purchase_receipt.")) {
+          const result = await syncLotsFromReceipt(call, aggregate, direction);
+          const status = result.failed.length ? 500 : 200;
+          return new Response(JSON.stringify(result), { status, headers: { "content-type": "application/json" } });
+        }
+        if (type.startsWith("cut_order.")) {
+          const result = await syncPaintJobsFromCut(call, aggregate, direction);
+          return new Response(JSON.stringify(result), { status: 200, headers: { "content-type": "application/json" } });
+        }
+        return new Response(null, { status: 204 });
       }
       if (url.pathname === "/hooks/validate") {
         const subject = (await request.json()) as ValidatorSubject;
@@ -2875,6 +2906,10 @@ export default {
           const transaction = await validateTransactionLines(call, subject, "sales", doc);
           if (!transaction.ok) return transaction;
           return await validateDocumentColors(call, subject, doc);
+        }
+        if (subject.doctype === "Production Request") {
+          const call = platformCaller(request, env);
+          return await validateProductionRequest(call, subject);
         }
         if ([
           "Material Request",

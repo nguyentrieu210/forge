@@ -25,6 +25,15 @@ interface GridLayout {
 const EMPTY_LAYOUT: GridLayout = { w: {}, order: [], hidden: [], pinned: [], labels: {} };
 
 const PURCHASE_COMPACT_FIELDS = ["item_code", "qty", "uom", "rate", "amount"];
+const SALES_COMPACT_FIELDS = ["item_code", "uom", "qty", "rate", "amount"];
+const SALES_ORDER_ITEM_FULL_FIELDS = [
+  "item_code", "door_type", "width_m", "height_m", "mesh_height_m", "set_count", "color", "sales_mode",
+  "has_butterfly_bracket", "leaf_variant", "leaf_height_deduction_m", "leaf_divisor_m", "leaf_rounding",
+  "leaf_count", "single_layer_leaf_count", "double_layer_leaf_count", "cut_width_m", "billable_area_sqm",
+  "estimated_weight_kg", "estimated_minutes", "formula_policy", "formula_version", "formula_explanation",
+  "uom", "qty", "rate", "amount", "motor_model", "accessories", "install_note", "warehouse",
+  "availability_status", "note",
+];
 const PURCHASE_ORDER_ITEM_FULL_FIELDS = [
   "item_code",
   "length_m",
@@ -63,6 +72,10 @@ const PURCHASE_RECEIPT_ITEM_FULL_FIELDS = [
 
 function isPurchaseGrid(meta: DocTypeMeta): boolean {
   return meta.name === "Purchase Order Item" || meta.name === "Purchase Receipt Item";
+}
+
+function isSalesOrderGrid(meta: DocTypeMeta): boolean {
+  return meta.name === "Quotation Item" || meta.name === "Sales Order Item";
 }
 
 export interface ChildGridProps {
@@ -141,6 +154,11 @@ export function resolveChildGridColumns(
       .map((fieldname) => (meta.fields ?? []).find((field) => field.fieldname === fieldname))
       .filter((field): field is DocField => Boolean(field));
   }
+  if (isSalesOrderGrid(meta)) {
+    return SALES_ORDER_ITEM_FULL_FIELDS
+      .map((fieldname) => (meta.fields ?? []).find((field) => field.fieldname === fieldname))
+      .filter((field): field is DocField => Boolean(field));
+  }
   const visible = visibleColumns(gridColumns(meta), meta, rows, parentDoc, roles);
   if (visible.length) return visible;
   return (meta.fields ?? []).filter((field) => !isLayout(field.fieldtype)).slice(0, 6);
@@ -148,9 +166,11 @@ export function resolveChildGridColumns(
 
 /** Mặc định form đơn mua chỉ giữ năm cột nhập nhanh; nút Cột vẫn có thể mở thêm. */
 export function defaultChildGridHiddenColumns(meta: DocTypeMeta, columns: DocField[], expanded: boolean): string[] {
-  if (!isPurchaseGrid(meta) || expanded) return [];
+  if (expanded) return [];
+  const compact = isPurchaseGrid(meta) ? PURCHASE_COMPACT_FIELDS : isSalesOrderGrid(meta) ? SALES_COMPACT_FIELDS : null;
+  if (!compact) return [];
   return columns
-    .filter((field) => !PURCHASE_COMPACT_FIELDS.includes(field.fieldname))
+    .filter((field) => !compact.includes(field.fieldname))
     .map((field) => field.fieldname);
 }
 
@@ -416,7 +436,7 @@ export function ChildGrid(props: ChildGridProps) {
    */
   // big-v3 resets the previous default order so the customer-approved purchase sequence is applied
   // even on browsers that already persisted the old big-table layout.
-  const layoutKey = `mf-grid-layout:${childMeta.name}:${expanded ? "big-v3" : "compact-v2"}`;
+  const layoutKey = `mf-grid-layout:${childMeta.name}:${expanded ? "big-v4" : "compact-v3"}`;
   const [layout, setLayout] = useState<GridLayout>(() => ({ ...EMPTY_LAYOUT, w: {}, order: [], hidden: [], pinned: [], labels: {} }));
   const loadedKey = useRef("");
   if (loadedKey.current !== layoutKey) {
@@ -521,7 +541,9 @@ export function ChildGrid(props: ChildGridProps) {
   const ITEM_DERIVED_FIELDS = [
     "conversion_factor", "uom", "stock_uom", "stock_qty", "inventory_mode", "measurement_profile", "min_area_sqm",
     "item_name", "description", "color", "colour", "rate", "amount",
-    "formula_policy", "width_basis", "cut_width_m", "billable_area_sqm",
+    "formula_policy", "formula_version", "formula_explanation", "width_basis", "cut_width_m", "billable_area_sqm",
+    "door_type", "leaf_variant", "leaf_height_deduction_m", "leaf_divisor_m", "leaf_rounding", "leaf_count",
+    "single_layer_leaf_count", "double_layer_leaf_count", "estimated_weight_kg", "estimated_minutes", "paint_required",
     "length_m", "qty_bundle", "qty_bar", "actual_weight_kg", "total_length_m",
     "material_specification", "theoretical_kg_per_m", "theoretical_kg",
     "actual_kg_per_m", "actual_kg_per_sqm", "so_no",
@@ -655,7 +677,7 @@ export function ChildGrid(props: ChildGridProps) {
     if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) return;
     if (!["m2", "m²", "sqm"].includes(normalizedUom)) return;
     try {
-      const calculated = await services.callPost<Record<string, unknown>>("alumdoor.door.calculate", {
+      const calculated = await services.callPost<Record<string, unknown>>("alumdoor.sales.production_line_context", {
         item_code: row.item_code,
         customer: parentDoc?.customer,
         customer_group: parentDoc?.customer_group,
@@ -665,6 +687,9 @@ export function ChildGrid(props: ChildGridProps) {
         height_m: height,
         mesh_height_m: row.mesh_height_m,
         set_count: row.set_count ?? 1,
+        leaf_variant: row.leaf_variant,
+        leaf_divisor_m: row.leaf_divisor_m,
+        single_layer_leaf_count: row.single_layer_leaf_count,
         purpose: "Bán hàng",
       });
       if (formulaLoadVersion.current.get(loadKey) !== loadVersion) return;
@@ -682,6 +707,13 @@ export function ChildGrid(props: ChildGridProps) {
       if (has("width_basis")) patch.width_basis = calculated.width_basis;
       if (has("cut_width_m")) patch.cut_width_m = cutWidthM;
       if (has("billable_area_sqm")) patch.billable_area_sqm = billable;
+      for (const fieldname of [
+        "door_type", "leaf_height_deduction_m", "leaf_divisor_m", "leaf_rounding", "leaf_count",
+        "single_layer_leaf_count", "double_layer_leaf_count", "estimated_weight_kg", "estimated_minutes",
+        "formula_version", "formula_explanation",
+      ]) {
+        if (has(fieldname) && calculated[fieldname] !== undefined && calculated[fieldname] !== null) patch[fieldname] = calculated[fieldname];
+      }
       if (["bộ", "bo", "set"].includes(String(currentRow.stock_uom ?? "").trim().toLocaleLowerCase("vi"))
         && Number.isFinite(sets) && sets > 0) {
         if (has("conversion_factor")) patch.conversion_factor = sets / billable;
@@ -827,6 +859,9 @@ export function ChildGrid(props: ChildGridProps) {
       ["description", ["description"]],
       ["default_color", ["color", "colour"]],
       ["min_area_sqm", ["min_area_sqm"]],
+      ["door_type", ["door_type"]],
+      ["purchase_kg_per_m2", ["purchase_kg_per_m2"]],
+      ["leaf_divisor_m", ["leaf_divisor_m"]],
       ["standard_rate", ["rate"]],
       /**
        * KHO MẶC ĐỊNH của chính mặt hàng — nan nhôm về kho nhôm, mô tơ về kho phụ kiện.
@@ -938,6 +973,9 @@ export function ChildGrid(props: ChildGridProps) {
         if (has("available_stock_qty")) patch.available_stock_qty = salesContext.available_stock_qty;
         if (has("available_stock_uom")) patch.available_stock_uom = salesContext.stock_uom;
         if (has("availability_status")) patch.availability_status = salesContext.availability_status;
+        for (const fieldname of ["door_type", "purchase_kg_per_m2", "leaf_divisor_m"]) {
+          if (has(fieldname) && salesContext[fieldname] !== undefined && salesContext[fieldname] !== null) patch[fieldname] = salesContext[fieldname];
+        }
         if (parentDoc?.selling_price_list && has("rate")) {
           patch.rate = salesContext.price_missing ? undefined : salesContext.rate;
         }

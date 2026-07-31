@@ -9,7 +9,7 @@ import { X } from "lucide-react";
 import type { DocTypeMeta, Doc } from "@metaforge/core";
 import { ControlRegistry, type FieldControlProps } from "@metaforge/controls";
 import { Badge, Button, Input, useT } from "@metaforge/ui";
-import { ChildGrid } from "./ChildGrid.js";
+import { ChildGrid } from "./ChildGridWithExtensions.js";
 import { useMetaForgeOptional } from "../container/provider.js";
 
 interface WithRegistry {

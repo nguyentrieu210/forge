@@ -2,68 +2,64 @@
 
 Ngày cập nhật: **2026-08-01**.
 
-Mọi agent phải đọc `EPIC_STATUS.md` trước file này. Inventory Slice D foundation đã merge và các production target liên quan đã release thành công. Không mở thêm task release/observer cho đợt này nếu không có lỗi mới được chứng minh bằng log.
+Mọi agent phải đọc `EPIC_STATUS.md`, `CURRENT_STATUS.md`, `DELIVERY_POLICY.md` và `AI_HANDOFF.md` trước khi tiếp tục.
 
-## Release vừa hoàn tất
+## P0 — Hoàn tất Sales-to-Production PR #131
 
-- PR #82 merge: `a7e6ef65b2352f596e285ea34d8e6438dff11a95`.
-- Workflow fix PR #130 merge: `fd0a3e697a25dc3907c5e7aa751a593ad8c01628`.
-- Alumdoor app Worker run `30657418272`: SUCCESS, version `cbd99611-daf3-4190-b1e4-fc2b4ce74227`.
-- Gateway run `30659230293`: SUCCESS, version `7a3c1130-4c7e-4089-96b9-9b6fcc7a2ca7`, exact-SHA smoke PASS.
-- alu Tenant Worker run `30659229116`: SUCCESS, version `c5db02b4-eee9-4da8-8c3f-f5a346b2230c`, backup/migration/deploy/smoke PASS.
-- FIFO vẫn disabled; không sửa DNS hoặc secret.
+### Trạng thái hiện tại
 
-## P0 — Sales-to-Production clean rebuild
+- PR: #131 — `feat(sales): rebuild order to production flow`.
+- Branch: `feat/sales-order-production-flow-clean-20260801`.
+- Default head: `5252b196b8cef5b1710c69d8bde04136741d0cc9`.
+- Exact code head sau review: `4d60d26e8791c87cd9fa359d0310ef026f428c59`.
+- PR mergeable; 19 commit mới trên default không chồng lên file source/test nghiệp vụ của PR.
+- Finding partial Paint Job retry đã sửa và có regression.
+- PR vẫn draft; chưa merge và chưa release.
 
-### Nguồn
+### Việc tiếp theo
 
-- Tạo một branch duy nhất từ exact current default.
-- PR #107 và #119 đã đóng; chỉ đọc hoặc trích từng file source/test đã review.
-- Không cherry-pick workflow `*once*`, sync/transport commit, hidden trigger hoặc generated evidence.
-
-### Phạm vi bắt buộc
-
-- Sales Order Item mở rộng; compact vẫn giữ luồng nhập nhanh.
-- Door policy có phiên bản và hỗ trợ `Cửa tấm liền Úc`.
-- Snapshot số lá, cơ cấu lá AL70, kg dự toán, phút định mức và giải thích công thức.
-- Production Request theo từng bộ/loại cửa.
-- Work Order draft idempotent.
-- Cut/Paint theo Batch thực tế có tình trạng `THÔ`.
-- Delivery theo `sales_order_row_id`, fallback dữ liệu cũ có kiểm soát.
-- Fail closed khi thiếu policy/BOM.
-
-### Trình tự
-
-1. Đọc lại `AI_HANDOFF.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md`, `EPIC_STATUS.md` từ GitHub.
-2. Lấy exact default head mới nhất và tạo branch canonical.
-3. Mang source/test thật; final diff không có workflow vận chuyển tạm.
-4. Chạy trước khi push:
-   - server build;
-   - `door-formulas.test.mjs`;
-   - `sales-production-flow.test.mjs`;
-   - `sales-price-unicode-normalization.test.mjs`;
-   - client typecheck nếu sửa UI.
-5. Push một lần và mở một PR canonical.
-6. Khóa exact head trong lúc CI chạy.
-7. Sửa direct cause từ log trên cùng branch; không mở PR thay thế.
-8. Merge khi full CI, Sales focused gate và UI gate liên quan đều xanh.
-9. Chỉ release production nếu thay đổi thuộc target app/Gateway/tenant và dedicated workflow đủ backup/smoke tương ứng.
+1. Lấy exact final head sau hai cập nhật handoff.
+2. Chờ các workflow trên exact final head chạy terminal:
+   - CI;
+   - PR Validation;
+   - Sales Feature CI;
+   - Purchase Feature CI;
+   - Inventory and Manufacturing CI;
+   - UI Pull Request Validation.
+3. Nếu fail, chỉ sửa direct cause từ log trên cùng branch; không mở PR thay thế.
+4. Review final diff, tập trung vào:
+   - Production Request theo từng bộ;
+   - Work Order draft idempotent;
+   - Paint Job theo từng `batch_no`, partial retry và batch aggregation;
+   - delivery lineage bằng `sales_order_row_id`;
+   - bảng Sales mở rộng và `depends_on`;
+   - fail-closed khi duplicate-list lỗi trước hoặc sau preflight.
+5. Khi exact-head checks xanh và không còn finding Critical/High, chuyển PR khỏi draft và merge bằng expected head SHA theo delivery policy.
+6. Không deploy Cloudflare trong đợt này nếu chưa có yêu cầu rõ.
+7. Sau merge, chạy authenticated operator journey tối thiểu:
+   - tạo Sales Order có nhiều bộ;
+   - sinh Production Request/Work Order đúng số bộ;
+   - lặp lại thao tác không tạo trùng;
+   - Cut/Paint theo Batch `THÔ`, retry tạo đúng batch còn thiếu;
+   - Delivery giữ đúng lineage dòng bán.
 
 ### Done condition
 
-- Code nghiệp vụ thật có trên default.
-- Exact-head checks xanh.
-- Authenticated operator journey tối thiểu PASS.
-- Final diff không có file vận chuyển tạm.
-- Release evidence tồn tại nếu production target thay đổi.
+- Code có trên default.
+- Exact merged SHA có CI xanh.
+- Authenticated operator journey PASS.
+- Không có workflow tạm hoặc generated artifact trong diff.
+- Có release evidence nếu sau này được yêu cầu deploy production.
 
 ## P1 — Purchase authenticated QA clean rebuild
 
-- Không reopen PR #103.
-- Dựng branch mới từ default sau Sales merge.
-- Chỉ mang các file QA đã review từ branch cũ.
-- Chạy focused Purchase tests trước push.
-- Desktop Chrome và Pixel 7 lifecycle phải PASS.
+Bắt đầu ngay sau khi Sales-to-Production merge ổn định:
+
+- tạo branch mới từ exact current default;
+- không reopen PR #103;
+- chỉ mang source/test QA đã review;
+- chạy focused Purchase tests trước push;
+- Desktop Chrome và Pixel 7 lifecycle phải PASS;
 - FIFO vẫn disabled.
 
 ## P2 — Finance
@@ -71,43 +67,40 @@ Mọi agent phải đọc `EPIC_STATUS.md` trước file này. Inventory Slice D
 - PR #15 chỉ dùng tham khảo.
 - Dựng lại từ current default.
 - Bao gồm AR/AP aging, Payment Entry partial/unallocated, Payment Allocation, Party Statement, Debt Summary, Advance Balance và UI/report navigation.
-- Migration/backfill append-only, có checksum, dry-run, rollback và staging/production-shaped evidence.
+- Migration/backfill append-only, có checksum, dry-run, rollback và production-shaped evidence.
 
 ## P3 — Daily ledger
 
 - Immutable daily snapshot theo ngày/company/warehouse/customer/order.
+- Chỉ kế toán tổng hợp, kế toán trưởng và Giám đốc được sửa sau cập nhật.
 - Khóa sửa sau đóng ngày.
 - Adjustment document có reason, actor và audit.
 - Reconciliation Sales/Purchase/Inventory/Manufacturing/Finance.
+- Có thao tác cập nhật dữ liệu từ theo dõi chung vào sổ chi tiết hàng ngày.
 
 ## P4 — Warranty / Capacity
 
-- Bốn nguyên nhân lỗi/bảo hành và accounting effect.
-- Capacity theo workstation, thời gian định mức, overtime, WIP và overload policy.
+- Bốn nguyên nhân lỗi/bảo hành và accounting effect:
+  - motor/bình lưu điện theo thời hạn bảo hành;
+  - lỗi sản xuất và người chịu trách nhiệm;
+  - lỗi nhà cung cấp và công nợ hàng đổi trả;
+  - lỗi khách hàng và chi phí theo công đoạn.
+- Truy vết lỗi về số chứng từ và ngày giao hàng.
+- Capacity theo workstation, thời gian định mức, tổng phút/ngày, 8 giờ hành chính, overtime, WIP và overload policy.
 
 ## P5 — End-to-end acceptance
 
 Sales Order → production → inventory → delivery → debt → daily ledger → adjustment → warranty.
 
-## Quy tắc CI bắt buộc
+## Quy tắc bắt buộc
 
 - Một epic, một branch, một PR.
-- Focused test trước khi push.
 - Không thay head khi exact-head CI đang chạy.
-- Không workflow `*once*`, transport/sync workflow hoặc hidden trigger.
-- Một full CI chịu trách nhiệm test/typecheck/build.
+- Không workflow dùng một lần, transport/sync workflow hoặc hidden trigger.
+- Full CI chịu trách nhiệm test/typecheck/build.
 - Feature/UI workflow chỉ chạy đúng scope.
 - Release chỉ từ exact merged SHA qua dedicated production workflow.
-
-## Destructive boundary
-
-Cần lệnh riêng trước khi:
-
-- sửa production secret hoặc DNS;
-- xóa Cloudflare resource;
-- chạy migration không có backup/recovery;
-- bật FIFO production;
-- mutate dữ liệu khách hàng ngoài smoke an toàn.
+- Không sửa production secret/DNS, xóa Cloudflare resource, bật FIFO hoặc mutate dữ liệu thật nếu chưa có lệnh riêng.
 
 ## File cấm commit
 
@@ -116,4 +109,4 @@ Cần lệnh riêng trước khi:
 - `tmp/`;
 - backup;
 - generated evidence;
-- credential, cookie hoặc token.
+- cookie hoặc token.
