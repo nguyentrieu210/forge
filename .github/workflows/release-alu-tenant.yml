@@ -38,8 +38,8 @@ jobs:
       TENANT: alu
       TARGET_SHA: ${{ inputs.target_sha || github.sha }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      EVIDENCE_DIR: ${{ runner.temp }}/alu-tenant-release-evidence
-      BACKUP_DIR: ${{ runner.temp }}/alu-tenant-backup
+      EVIDENCE_DIR: /tmp/alu-tenant-release-evidence
+      BACKUP_DIR: /tmp/alu-tenant-backup
 
     steps:
       - name: Checkout selected code
