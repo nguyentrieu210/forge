@@ -228,8 +228,8 @@ export class FrappeAdapterImpl implements FrappeAdapter {
     });
     return this.unwrap(r);
   }
-  async removeUserPermission(name: string): Promise<void> {
-    await this.app.call().post("metaforge.api.remove_user_permission", { name });
+  async removeUserPermission(id: string): Promise<void> {
+    await this.app.call().post("metaforge.api.remove_user_permission", { id });
   }
   async setUserRoles(user: string, roles: string[], roleProfile?: string): Promise<string[]> {
     const r = await this.app.call().post<Envelope<{ roles: string[] }>>("metaforge.api.set_user_roles", { user, roles: JSON.stringify(roles), role_profile: roleProfile ?? "" });

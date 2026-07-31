@@ -124,7 +124,7 @@ export interface FrappeAdapter {
   getAccessProfile(user?: string): Promise<AccessProfileSummary>;
   explainPermission(doctype: string, name?: string, selection?: BusinessContextSelection, user?: string): Promise<EffectivePermissionResult>;
   addUserPermission(args: { user: string; allow: string; forValue: string; applicableFor?: string; isDefault?: boolean; hideDescendants?: boolean }): Promise<Record<string, unknown>>;
-  removeUserPermission(name: string): Promise<void>;
+  removeUserPermission(id: string): Promise<void>;
   setUserRoles(user: string, roles: string[], roleProfile?: string): Promise<string[]>;
   /** Mọi tài khoản đăng nhập được của tenant, kèm vai trò và danh sách vai trò gán được. */
   listUsers(): Promise<{ users: TenantUser[]; available_roles: string[] }>;

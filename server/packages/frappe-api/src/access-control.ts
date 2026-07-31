@@ -58,6 +58,7 @@ export async function resolveAccessInspectionActor(input: {
 
   const user = await input.users.get(input.tenantId, requested);
   if (!user) throw errors.notFound("User not found");
+  if (!user.enabled) throw errors.permission("User account is disabled");
   const roles = await input.users.listRoles(input.tenantId, user.user_id);
   return {
     user_id: user.user_id,
@@ -77,6 +78,29 @@ export function userPermissionIdentity(input: {
   return [input.user, input.allow, input.forValue, input.applicableFor ?? ""]
     .map((part) => encodeURIComponent(part))
     .join("|");
+}
+
+/** Decodes the stable User Permission identity without trusting browser-supplied roles or tenant. */
+export function parseUserPermissionIdentity(identity: string): {
+  user: string;
+  allow: string;
+  forValue: string;
+  applicableFor?: string;
+} {
+  const parts = identity.split("|");
+  if (parts.length !== 4) throw errors.validation("User Permission id is invalid");
+  let decoded: string[];
+  try {
+    decoded = parts.map((part) => decodeURIComponent(part));
+  } catch {
+    throw errors.validation("User Permission id is invalid");
+  }
+  const user = decoded[0] ?? "";
+  const allow = decoded[1] ?? "";
+  const forValue = decoded[2] ?? "";
+  const applicableFor = decoded[3] ?? "";
+  if (!user || !allow || !forValue) throw errors.validation("User Permission id is invalid");
+  return { user, allow, forValue, ...(applicableFor ? { applicableFor } : {}) };
 }
 
 /** D3: exact-value scope only until a hierarchy contract and evaluator exist. */
