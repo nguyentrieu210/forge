@@ -101,6 +101,47 @@ async function submitWorkOrder(kernel, name, options = {}) {
   });
 }
 
+async function submitMaterialReceipt(kernel, name, qty = "10", valuationRate = "2") {
+  return createAndSubmit(kernel, {
+    doctype: "Stock Entry",
+    name,
+    document: {
+      company: "Demo",
+      posting_at: NOW,
+      purpose: "Material Receipt",
+      items: [{
+        row_id: "OPEN-1",
+        item_code: "RAW",
+        qty,
+        valuation_rate: valuationRate,
+        target_warehouse: "Raw",
+      }],
+    },
+  });
+}
+
+async function submitMaterialTransfer(kernel, name, workOrder, qty = "4") {
+  return createAndSubmit(kernel, {
+    doctype: "Stock Entry",
+    name,
+    document: {
+      company: "Demo",
+      posting_at: NOW,
+      purpose: "Material Transfer",
+      work_order: workOrder,
+      items: [{
+        row_id: "ISSUE-1",
+        item_code: "RAW",
+        qty,
+        source_warehouse: "Raw",
+        target_warehouse: "WIP",
+        bom_row_id: "RAW-1",
+        manufacturing_kind: "Issue",
+      }],
+    },
+  });
+}
+
 async function submitManufacture(kernel, name, workOrder, items, finishedQty = "2") {
   return createAndSubmit(kernel, {
     doctype: "Stock Entry",
@@ -206,12 +247,47 @@ test("split lines cannot bypass the Work Order BOM-row cap", async () => {
   assert.equal(await store.getStockBalanceMicros("demo", "RAW", "Raw"), 11_000_000);
 });
 
+test("Material Transfer issue progress and stock reverse exactly on cancel", async () => {
+  const { store, kernel } = setup();
+  await submitBom(kernel, "BOM-FG-R1");
+  await submitWorkOrder(kernel, "WO-ISSUE", { bomNo: "BOM-FG-R1" });
+  await submitMaterialReceipt(kernel, "RAW-ISSUE-OPEN");
+
+  await submitMaterialTransfer(kernel, "ISSUE-WIP", "WO-ISSUE", "4");
+  assert.equal(await store.getStockBalanceMicros("demo", "RAW", "Raw"), 6_000_000);
+  assert.equal(await store.getStockBalanceMicros("demo", "RAW", "WIP"), 4_000_000);
+  assert.equal(await store.getManufacturedQuantityMicros("demo", "WO-ISSUE", "Material Transfer", "RAW"), 4_000_000);
+
+  await mutate(kernel, {
+    commandId: "ISSUE-WIP-cancel",
+    doctype: "Stock Entry",
+    name: "ISSUE-WIP",
+    action: "cancel",
+    expectedVersion: 2,
+    document: {},
+  });
+  assert.equal(await store.getStockBalanceMicros("demo", "RAW", "Raw"), 10_000_000);
+  assert.equal(await store.getStockBalanceMicros("demo", "RAW", "WIP"), 0);
+  assert.equal(await store.getManufacturedQuantityMicros("demo", "WO-ISSUE", "Material Transfer", "RAW"), 0);
+
+  await mutate(kernel, {
+    commandId: "WO-ISSUE-cancel",
+    doctype: "Work Order",
+    name: "WO-ISSUE",
+    action: "cancel",
+    expectedVersion: 2,
+    document: {},
+  });
+  assert.equal((await store.getDocument("demo", "Work Order", "WO-ISSUE")).docstatus, 2);
+});
+
 test("offcut value is retained once, finished value is corrected, and cancel reverses exactly", async () => {
   const { store, kernel } = setup();
   await submitBom(kernel, "BOM-FG-R1");
   await submitWorkOrder(kernel, "WO-OFFCUT", { bomNo: "BOM-FG-R1" });
-  store.seedStock({ itemCode: "RAW", warehouse: "Raw", qty: "10.000000", valuationRate: "2.00" });
+  await submitMaterialReceipt(kernel, "RAW-OFFCUT-OPEN");
   const before = await store.getTrackedStockState("demo", "RAW", "Raw");
+  assert.equal(before.stock_value_minor, 2_000);
 
   await submitManufacture(kernel, "MFG-OFFCUT", "WO-OFFCUT", [
     consumptionRow("C-1", "8"),
@@ -228,8 +304,8 @@ test("offcut value is retained once, finished value is corrected, and cancel rev
   assert.equal(scrap.qty_micros, 2_000_000);
   assert.equal(finished.qty_micros, 2_000_000);
   assert.equal(scrap.stock_value_minor + finished.stock_value_minor, before.stock_value_minor);
-  assert.ok(scrap.stock_value_minor > 0);
-  assert.ok(finished.stock_value_minor > 0);
+  assert.equal(scrap.stock_value_minor, 400);
+  assert.equal(finished.stock_value_minor, 1_600);
 
   const document = await store.getDocument("demo", "Stock Entry", "MFG-OFFCUT");
   assert.equal(document.data.items[1].manufacturing_kind, "Offcut");
@@ -244,9 +320,15 @@ test("offcut value is retained once, finished value is corrected, and cancel rev
     expectedVersion: 2,
     document: {},
   });
-  assert.equal((await store.getTrackedStockState("demo", "RAW", "Raw")).qty_micros, 10_000_000);
-  assert.equal((await store.getTrackedStockState("demo", "RAW", "Scrap")).qty_micros, 0);
-  assert.equal((await store.getTrackedStockState("demo", "FG", "Finished")).qty_micros, 0);
+  const restoredRaw = await store.getTrackedStockState("demo", "RAW", "Raw");
+  const restoredScrap = await store.getTrackedStockState("demo", "RAW", "Scrap");
+  const restoredFinished = await store.getTrackedStockState("demo", "FG", "Finished");
+  assert.equal(restoredRaw.qty_micros, 10_000_000);
+  assert.equal(restoredRaw.stock_value_minor, before.stock_value_minor);
+  assert.equal(restoredScrap.qty_micros, 0);
+  assert.equal(restoredScrap.stock_value_minor, 0);
+  assert.equal(restoredFinished.qty_micros, 0);
+  assert.equal(restoredFinished.stock_value_minor, 0);
   assert.equal(await store.getManufacturedQuantityMicros("demo", "WO-OFFCUT", "Consumption", "RAW"), 0);
   assert.equal(await store.getManufacturedQuantityMicros("demo", "WO-OFFCUT", "Manufacture", "FG"), 0);
 });
