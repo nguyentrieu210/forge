@@ -273,6 +273,14 @@ export async function salesItemContext(call: SalesPlatformCall, args: Json): Pro
 
   return json({
     item_code: itemCode,
+    item_group: normalizedText(item.item_group),
+    door_type: normalizedText(item.door_type) || null,
+    inventory_mode: normalizedText(item.inventory_mode),
+    measurement_profile: normalizedText(item.measurement_profile) || null,
+    min_area_sqm: Number(item.min_area_sqm ?? 0) || 0,
+    purchase_kg_per_m2: positive(item.purchase_kg_per_m2),
+    leaf_divisor_m: positive(item.leaf_divisor_m),
+    default_color: normalizedText(item.default_color) || null,
     selected_uom: selectedUom,
     allowed_uoms: allowedUoms,
     uom_options: allowedUoms.map((uom) => ({ uom, conversion_factor: factorByUom.get(uom) })),
