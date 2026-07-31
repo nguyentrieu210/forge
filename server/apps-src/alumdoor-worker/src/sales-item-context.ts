@@ -92,10 +92,12 @@ export async function salesItemContext(call: SalesPlatformCall, args: Json): Pro
   const conversionFactor = factorByUom.get(selectedUom) ?? 1;
 
   const priceList = String(args.price_list ?? "").trim();
+  const documentCurrency = String(args.currency ?? item.currency ?? "VND").trim() || "VND";
   let rate: number | null = null;
-  let currency = String(args.currency ?? item.currency ?? "VND").trim() || "VND";
+  let currency = documentCurrency;
   let itemPrice: string | null = null;
   let priceMissing = false;
+  let priceError: string | null = null;
   if (priceList) {
     const exactName = `${priceList}:${itemCode}:${selectedUom}`;
     const legacyName = `${priceList}:${itemCode}`;
@@ -109,12 +111,25 @@ export async function salesItemContext(call: SalesPlatformCall, args: Json): Pro
       }
     }
     if (price && !truthy(price.disabled)) {
+      const priceCurrency = String(price.currency ?? "").trim();
       const parsed = Number(price.rate);
-      if (Number.isFinite(parsed) && parsed >= 0) rate = parsed;
-      currency = String(price.currency ?? currency).trim() || currency;
+      currency = priceCurrency || documentCurrency;
+      if (!priceCurrency) {
+        priceMissing = true;
+        priceError = `Đơn giá ${selectedUom} chưa khai tiền tệ.`;
+      } else if (priceCurrency !== documentCurrency) {
+        priceMissing = true;
+        priceError = `Giá ${selectedUom} dùng ${priceCurrency}, chứng từ dùng ${documentCurrency}.`;
+      } else if (!Number.isFinite(parsed) || parsed < 0) {
+        priceMissing = true;
+        priceError = `Đơn giá ${selectedUom} không hợp lệ.`;
+      } else {
+        rate = parsed;
+      }
     } else {
       priceMissing = true;
-      itemPrice = exactName;
+      if (price && truthy(price.disabled)) priceError = `Giá ${selectedUom} đã ngừng áp dụng.`;
+      itemPrice = itemPrice || exactName;
     }
   } else {
     const standard = Number(item.standard_rate);
@@ -149,7 +164,7 @@ export async function salesItemContext(call: SalesPlatformCall, args: Json): Pro
   }
 
   const priceStatus = priceList
-    ? (priceMissing ? `Chưa khai giá ${selectedUom}` : `Giá ${selectedUom}: ${cleanNumber(rate ?? 0)} ${currency}`)
+    ? (priceError ?? (priceMissing ? `Chưa khai giá ${selectedUom}` : `Giá ${selectedUom}: ${cleanNumber(rate ?? 0)} ${currency}`))
     : "Giá nhập tay";
 
   return json({
@@ -168,6 +183,7 @@ export async function salesItemContext(call: SalesPlatformCall, args: Json): Pro
     currency,
     item_price: itemPrice,
     price_missing: priceMissing,
+    price_error: priceError,
     stock_read_error: stockReadError,
   });
 }
