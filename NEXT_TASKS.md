@@ -4,63 +4,64 @@ Ngày cập nhật: **2026-08-01**.
 
 Mọi agent phải đọc `EPIC_STATUS.md`, `CURRENT_STATUS.md`, `DELIVERY_POLICY.md` và `AI_HANDOFF.md` trước khi tiếp tục.
 
-## P0 — Hoàn tất Sales-to-Production PR #131
+## P0 — Hoàn tất Tiến Đạt purchase FIFO
 
 ### Trạng thái hiện tại
 
-- PR: #131 — `feat(sales): rebuild order to production flow`.
-- Branch: `feat/sales-order-production-flow-clean-20260801`.
-- Default head: `5252b196b8cef5b1710c69d8bde04136741d0cc9`.
-- Exact code head sau review: `4d60d26e8791c87cd9fa359d0310ef026f428c59`.
-- PR mergeable; 19 commit mới trên default không chồng lên file source/test nghiệp vụ của PR.
-- Finding partial Paint Job retry đã sửa và có regression.
-- PR vẫn draft; chưa merge và chưa release.
+- Branch: `feat/tien-dat-purchase-fifo-20260801`.
+- Base exact: `e315007db174d70d6f73c68f2115e7956b09bf1d`.
+- Code head trước handoff: `13d49cf4587f30c77837cbed9ac8d58add9296f2`.
+- Form đặt nhôm, FIFO theo ngày đơn, lịch sử nhận, công nợ cây/mét và dung sai Tiến Đạt 5% đã có code + regression.
+- Chưa merge, chưa deploy Cloudflare, chưa bật generic FIFO production rollout.
 
 ### Việc tiếp theo
 
-1. Lấy exact final head sau hai cập nhật handoff.
-2. Chờ các workflow trên exact final head chạy terminal:
-   - CI;
+1. Mở một PR canonical từ branch hiện tại.
+2. Khóa exact final head trong lúc CI chạy.
+3. Chạy và kiểm terminal:
+   - CI: test, typecheck, build;
    - PR Validation;
-   - Sales Feature CI;
    - Purchase Feature CI;
-   - Inventory and Manufacturing CI;
-   - UI Pull Request Validation.
-3. Nếu fail, chỉ sửa direct cause từ log trên cùng branch; không mở PR thay thế.
-4. Review final diff, tập trung vào:
-   - Production Request theo từng bộ;
-   - Work Order draft idempotent;
-   - Paint Job theo từng `batch_no`, partial retry và batch aggregation;
-   - delivery lineage bằng `sales_order_row_id`;
-   - bảng Sales mở rộng và `depends_on`;
-   - fail-closed khi duplicate-list lỗi trước hoặc sau preflight.
-5. Khi exact-head checks xanh và không còn finding Critical/High, chuyển PR khỏi draft và merge bằng expected head SHA theo delivery policy.
-6. Không deploy Cloudflare trong đợt này nếu chưa có yêu cầu rõ.
-7. Sau merge, chạy authenticated operator journey tối thiểu:
-   - tạo Sales Order có nhiều bộ;
-   - sinh Production Request/Work Order đúng số bộ;
-   - lặp lại thao tác không tạo trùng;
-   - Cut/Paint theo Batch `THÔ`, retry tạo đúng batch còn thiếu;
-   - Delivery giữ đúng lineage dòng bán.
+   - UI Pull Request Validation;
+   - Sales/Inventory focused gate nếu workflow kích hoạt.
+4. Nếu fail, sửa direct cause trên cùng branch, không mở PR thay thế.
+5. Review exact diff:
+   - entrypoint chỉ intercept hai method FIFO;
+   - route khác tiếp tục delegate sang worker cũ;
+   - Tiến Đạt mặc định 5% nhưng Supplier config được ưu tiên;
+   - phân bổ 230 cây đúng `200 + 30`;
+   - nợ danh nghĩa `70`, khoảng giao thêm `55–85`;
+   - lịch sử chỉ đọc phiếu nhập đã ghi sổ;
+   - draft receipt giữ `purchase_order` trên từng dòng;
+   - final diff không có workflow tạm, secret, backup hoặc generated artifact.
+6. Merge bằng expected exact head khi required checks xanh và không còn finding Critical/High.
+7. Sau merge, bắt đầu Purchase authenticated QA clean rebuild từ exact default mới.
+8. Không deploy Cloudflare hoặc bật rollout FIFO production nếu chưa có yêu cầu riêng.
+
+### Authenticated acceptance sau merge
+
+- Tạo hai Purchase Order Tiến Đạt cùng mã/quy cách, ngày khác nhau, `200` và `100` cây.
+- Mở `Nhập nhôm FIFO theo đơn cũ`, nhập `230` cây và `644.184 kg`.
+- Preview phải hiện `PO ngày 1: 200`, `PO ngày 2: 30`.
+- Phiếu nhập nháp có hai dòng trỏ đúng hai đơn.
+- Sau khi ghi sổ, preview lần sau phải hiện lịch sử nhận và nợ danh nghĩa `70` cây / `504 m`.
+- Khoảng giao thêm hợp lệ phải là `55–85` cây với dung sai 5%.
+- Thử `86` cây phải bị từ chối; `85` cây phải được phép.
 
 ### Done condition
 
-- Code có trên default.
 - Exact merged SHA có CI xanh.
-- Authenticated operator journey PASS.
-- Không có workflow tạm hoặc generated artifact trong diff.
-- Có release evidence nếu sau này được yêu cầu deploy production.
+- Authenticated desktop flow PASS.
+- Lịch sử và số dư đọc lại đúng sau submit.
+- Không thay đổi rollout/production state ngoài phạm vi code.
 
 ## P1 — Purchase authenticated QA clean rebuild
 
-Bắt đầu ngay sau khi Sales-to-Production merge ổn định:
-
-- tạo branch mới từ exact current default;
-- không reopen PR #103;
-- chỉ mang source/test QA đã review;
-- chạy focused Purchase tests trước push;
-- Desktop Chrome và Pixel 7 lifecycle phải PASS;
-- FIFO vẫn disabled.
+- Tạo branch mới từ exact default sau FIFO merge.
+- Không reopen PR #103.
+- Chỉ mang source/test QA đã review.
+- Desktop Chrome và Pixel 7 lifecycle phải PASS.
+- FIFO generic rollout vẫn disabled cho tới khi có lệnh riêng.
 
 ## P2 — Finance
 
@@ -72,21 +73,14 @@ Bắt đầu ngay sau khi Sales-to-Production merge ổn định:
 ## P3 — Daily ledger
 
 - Immutable daily snapshot theo ngày/company/warehouse/customer/order.
-- Chỉ kế toán tổng hợp, kế toán trưởng và Giám đốc được sửa sau cập nhật.
 - Khóa sửa sau đóng ngày.
 - Adjustment document có reason, actor và audit.
 - Reconciliation Sales/Purchase/Inventory/Manufacturing/Finance.
-- Có thao tác cập nhật dữ liệu từ theo dõi chung vào sổ chi tiết hàng ngày.
 
 ## P4 — Warranty / Capacity
 
-- Bốn nguyên nhân lỗi/bảo hành và accounting effect:
-  - motor/bình lưu điện theo thời hạn bảo hành;
-  - lỗi sản xuất và người chịu trách nhiệm;
-  - lỗi nhà cung cấp và công nợ hàng đổi trả;
-  - lỗi khách hàng và chi phí theo công đoạn.
-- Truy vết lỗi về số chứng từ và ngày giao hàng.
-- Capacity theo workstation, thời gian định mức, tổng phút/ngày, 8 giờ hành chính, overtime, WIP và overload policy.
+- Bốn nguyên nhân lỗi/bảo hành và accounting effect.
+- Capacity theo workstation, thời gian định mức, overtime, WIP và overload policy.
 
 ## P5 — End-to-end acceptance
 
