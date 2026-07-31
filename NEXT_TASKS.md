@@ -2,79 +2,84 @@
 
 Ngày cập nhật: **2026-07-31**.
 
-## P0 — chốt Slice D D1/report checkpoint
+## P0 — authenticated Sales smoke sau release
 
-1. Lấy exact final head sau các commit handoff/status/tasks.
-2. Kiểm PR #82 mergeability và unresolved review threads.
-3. Chạy exact-head CI:
-   - PR Validation;
-   - CI;
-   - Inventory and Manufacturing CI;
-   - UI Pull Request Validation.
-4. Sửa mọi test/typecheck/build failure trên exact head.
-5. Bổ sung review scorecard khi checkpoint xanh.
+Sales Unicode hotfix đang ở production:
 
-## P0 — tenant report endpoint
+- feature merge SHA `a48524b93489c92296c57fc5f223e41d505de7aa`;
+- execution PR `#98` đã đóng không merge;
+- release run `30649182082`;
+- release job `91217965586`;
+- Worker version `ed5852cf-94ef-4a02-b0b9-1e64020c2d0d`;
+- deployment time `2026-07-31T16:58:24.659Z`;
+- backup, recorded migrations, deploy, `/health=200` và guest boot `403`: PASS;
+- FIFO rollout vẫn disabled.
 
-- Gắn `D1PhysicalStockLedgerReader` vào `PhysicalStockReportService`.
-- Lấy tenant từ authenticated request context, không nhận tenant tùy ý từ client.
-- Áp dụng report permission và User Permission cho Company/Warehouse.
-- Tách quyền xem lineage và export.
-- Parse/filter inputs theo budget; chặn malformed cursor và unbounded source scans.
-- Trả deterministic page, totals, lineage-redaction metadata và CSV response.
-- Regression cho unauthorized role, tenant isolation, company/warehouse scope và export denial.
+Việc cần làm ngay:
 
-## P0 — operator UI
+1. Mở `https://alu.kairo.vn` và hard refresh.
+2. Đăng nhập bằng tài khoản thử phù hợp.
+3. Mở Sales Order mới.
+4. Chọn `Giá niêm yết`.
+5. Chọn `TRỤC 114_1.8LY`.
+6. Xác minh:
+   - ĐVT `Mét`;
+   - Đơn giá `180000 VND`;
+   - Thành tiền đúng theo số lượng;
+   - không có lỗi callback Unicode-UOM.
+7. Đổi Item/UOM khác và xác minh không lấy chéo giá.
+8. Đổi bảng giá ở header và xác minh rate reload đúng.
+9. Lưu thử để pricing authoritative giữ cùng rate.
+10. Huỷ hoặc xoá chứng từ thử an toàn.
+11. Không ghi credential, cookie, token hoặc dữ liệu khách hàng thật vào evidence.
 
-- Physical stock explorer với filters:
-  - Item;
-  - warehouse/warehouse role;
-  - inventory mode/profile;
-  - màu;
-  - tình trạng;
-  - đời;
-  - batch/serial;
-  - kích thước.
-- Lineage drill-down tới voucher/revision/row/reversal.
-- Quarantine và quality-release view.
-- Work Order progress theo immutable snapshot và BOM row.
-- UI chỉ hiển thị server-authoritative balances; không tự cộng trừ tồn.
+## Release evidence mới nhất
 
-## P0 — reports
+- Backup artifact ID `8800689182`.
+- Backup digest `sha256:2764be993caf757abf9b2263ea28bccc06e74adbb477ed239cd0df4db8b9f244`.
+- Backup expiry `2026-08-14T16:57:33Z`.
+- Release artifact ID `8800710784`.
+- Release digest `sha256:16227979a15a4fa41b4ca1610cfe0e2db21b6c0806962c76fa93fd8035124835`.
+- Release artifact expiry `2026-08-30T16:58:26Z`.
 
-- WIP.
-- Material shortage.
-- Planned vs actual variance.
-- Scrap/offcut recovery.
-- Stock ageing và condition.
-- Lineage/reversal audit.
-- CSV/XLSX export theo permission/data scope.
+## P0 — sửa production observation reporting
 
-## P0 — browser QA
+Endpoint smoke read-only đã PASS nhưng job cũ đỏ do Actions token không được comment PR.
 
-- Runtime harness dùng actual components.
-- Playwright desktop/mobile cho filters, pagination, lineage, quarantine, Work Order progress và export.
-- Cookie-auth smoke giữ tenant isolation.
+1. Bỏ issue-comment API khỏi workflow hoặc làm reporting non-fatal.
+2. Dùng `$GITHUB_STEP_SUMMARY` và artifact làm evidence mặc định.
+3. Giữ `permissions: contents: read` tối thiểu.
+4. Chạy lại observation PR read-only.
+5. Xác nhận `health=200`, `root=200`, `guest_boot=403`, smoke và artifact PASS, toàn job conclusion `success`.
+6. Observation PR phải đóng không merge.
 
-## P0 — stack completion
+Evidence hiện tại:
 
-- PR #49 phải merge trước PR #50.
-- PR #50 phải được retarget/rebase lên default và CI lại trước merge.
-- PR #82 phải được retarget/rebase sau Slice C.
-- Không merge stacked PR vượt dependency.
+- run `30648098602`;
+- job `91214435446`;
+- artifact `8800251206`;
+- digest `sha256:667a9f2a760ff5074ae4d97df4193e53cc45db1d96e237ffc39fe4f934abae7d`.
 
-## P1 — acceptance và vận hành
+## P0 — authenticated functional smoke Purchase
 
-- Read-only Item/BOM/Warehouse audit trên staging hoặc production-shaped copy.
-- Receipt/transfer/quarantine/release/manufacture/cancel journey.
-- Quantity/value/physical-count reconciliation và exact lineage.
-- Benchmark company-wide inventory lock: contention, retry, latency percentiles.
-- Xác định alert thresholds, rollback criteria và capacity boundary.
+- đăng nhập và boot tenant;
+- mở module Mua hàng;
+- Purchase Order create/save/submit;
+- Purchase Receipt preview/save/submit/cancel;
+- item picker, UOM, giá và dropdown;
+- desktop/mobile;
+- FIFO phải tiếp tục disabled.
 
-## Safety
+## Purchase/FIFO activation gates
 
-- Không deploy Cloudflare nếu chưa có yêu cầu rõ.
-- Không mutate production tenant hoặc chạy remediation tự động.
+- Chọn staging tenant hoặc production-shaped sanitized copy.
+- Read-only readiness, `unresolved_count=0`, review checksum/counts.
+- Staging execute dùng exact approved checksum và rollout giữ `enabled=0`.
+- Functional acceptance, contention/latency evidence, fresh production backup.
+- Production activation chỉ sau explicit approval riêng.
+
+## Không được làm
+
 - Không sửa production secrets hoặc DNS.
-- Không commit `server/work/`, `tmp`, `.env`, backup hoặc generated reports.
-- FIFO vẫn disabled cho tới approval activation riêng.
+- Không bật FIFO.
+- Không commit `.env`, `server/work/`, `tmp`, backup hoặc generated evidence.

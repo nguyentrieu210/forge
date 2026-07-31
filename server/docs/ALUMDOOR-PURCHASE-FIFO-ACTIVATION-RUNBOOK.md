@@ -20,11 +20,12 @@ Authoritative implementation:
 1. Never run activation against production before staging evidence is complete.
 2. Never guess an ambiguous legacy Purchase Order or Purchase Receipt child row.
 3. `unresolved_count` must be exactly `0`.
-4. The approved checksum must match a fresh dry-run immediately before execute or activation.
-5. Backfill execution must leave `purchase_allocation_rollout_state.enabled=0`.
-6. Production activation requires a fresh backup, rollback plan, exact checksum, named actor, and separate explicit approval.
-7. Evidence, database exports, cookies, credentials, and customer data must not be committed to the repository.
-8. Generated reports must be written outside the repository.
+4. Every write command must include the approved checksum from a fresh dry-run.
+5. The command recomputes the plan and rejects checksum drift before any D1 write.
+6. Backfill execution must leave `purchase_allocation_rollout_state.enabled=0`.
+7. Production activation requires a fresh backup, rollback plan, exact checksum, named actor, and separate explicit approval.
+8. Evidence, database exports, cookies, credentials, and customer data must not be committed to the repository.
+9. Generated reports must be written outside the repository.
 
 ## Gate A: read-only readiness dry-run
 
@@ -74,7 +75,7 @@ Do not paste document payloads, supplier data, credentials, cookies, tokens, or 
 
 ## Gate C: controlled staging backfill
 
-Only after Gate A and Gate B pass:
+Only after Gate A and Gate B pass. Copy the exact reviewed checksum into the write command:
 
 ```bash
 cd server
@@ -83,8 +84,18 @@ node scripts/backfill-purchase-receipt-allocations.mjs \
   --output /absolute/path/outside/repository/backfill-execute.json \
   --execute \
   --confirm <staging-tenant> \
-  --actor <named-operator>
+  --actor <named-operator> \
+  --expected-checksum <reviewed-lowercase-sha256>
 ```
+
+The write command recomputes the plan from the current tenant state and rejects the operation before any D1 mutation when:
+
+- `--expected-checksum` is missing or malformed;
+- the current checksum differs from the reviewed checksum;
+- unresolved rows remain;
+- the tenant confirmation does not match;
+- rollout is already enabled;
+- allocation ledger history already exists.
 
 Required postconditions:
 
