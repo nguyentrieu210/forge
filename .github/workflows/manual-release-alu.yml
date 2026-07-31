@@ -47,7 +47,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
-      TARGET_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.event_name == 'workflow_dispatch' && inputs.target_sha || '6bb697f59862d0d44877da2ba3be5ce1c0331970' }}
+      TARGET_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.event_name == 'workflow_dispatch' && inputs.target_sha || 'e315007db174d70d6f73c68f2115e7956b09bf1d' }}
       GATE_DIR: /tmp/alu-full-release-gate
 
     outputs:
@@ -166,7 +166,6 @@ jobs:
       EVIDENCE_DIR: /tmp/alu-production-release
       TENANT_ROLLBACK_DIR: /tmp/alu-tenant-rollback
       APP_ROLLBACK_DIR: /tmp/alu-app-rollback
-      RESUME_TENANT_RUN_ID: '30664641971'
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: d4d5a24d4e56f28f27fe58b64ef149a5
       GH_TOKEN: ${{ github.token }}
@@ -281,22 +280,7 @@ jobs:
           set -euo pipefail
           workflow="$1"
           output_dir="$2"
-          resume_run_id="${3:-}"
           mkdir -p "$output_dir"
-
-          if [ -n "$resume_run_id" ]; then
-            run_id="$resume_run_id"
-            gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id" > "$output_dir/run.json"
-            status="$(jq -r '.status' "$output_dir/run.json")"
-            conclusion="$(jq -r '.conclusion // empty' "$output_dir/run.json")"
-            test "$status" = 'completed'
-            test "$conclusion" = 'success'
-            gh run download "$run_id" --repo "$GITHUB_REPOSITORY" --dir "$output_dir/artifacts"
-            gh run view "$run_id" --repo "$GITHUB_REPOSITORY" --log > "$output_dir/run.log" 2>&1 || true
-            grep -R --fixed-strings "target_sha=$TARGET_SHA" "$output_dir/artifacts" >/dev/null
-            printf 'run_id=%s\nconclusion=%s\nresumed=true\n' "$run_id" "$conclusion" > "$output_dir/state.txt"
-            exit 0
-          fi
 
           dispatched_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           jq -n --arg ref "$DEFAULT_BRANCH" --arg sha "$TARGET_SHA" '{ref:$ref,inputs:{target_sha:$sha}}' \
@@ -305,8 +289,8 @@ jobs:
           run_id=''
           for attempt in $(seq 1 30); do
             gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$workflow/runs?event=workflow_dispatch&branch=$DEFAULT_BRANCH&per_page=30" > "$output_dir/runs.json"
-            run_id="$(jq -r --arg sha "$GITHUB_SHA" --arg since "$dispatched_at" \
-              '[.workflow_runs[] | select(.head_sha == $sha and .created_at >= $since)] | sort_by(.created_at) | last | .id // empty' \
+            run_id="$(jq -r --arg since "$dispatched_at" \
+              '[.workflow_runs[] | select(.created_at >= $since)] | sort_by(.created_at) | last | .id // empty' \
               "$output_dir/runs.json")"
             [ -n "$run_id" ] && break
             sleep 5
@@ -325,18 +309,18 @@ jobs:
           done
           gh run download "$run_id" --repo "$GITHUB_REPOSITORY" --dir "$output_dir/artifacts" || true
           gh run view "$run_id" --repo "$GITHUB_REPOSITORY" --log > "$output_dir/run.log" 2>&1 || true
-          printf 'run_id=%s\nconclusion=%s\nresumed=false\n' "$run_id" "$conclusion" > "$output_dir/state.txt"
+          printf 'run_id=%s\nconclusion=%s\n' "$run_id" "$conclusion" > "$output_dir/state.txt"
           test "$status" = 'completed'
           test "$conclusion" = 'success'
           grep -R --fixed-strings "target_sha=$TARGET_SHA" "$output_dir/artifacts" >/dev/null
           SCRIPT
           chmod +x "$RUNNER_TEMP/dispatch-release-workflow.sh"
 
-      - name: Resume verified tenant release
+      - name: Release tenant alu
         id: tenant_release
         shell: bash
         run: |
-          "$RUNNER_TEMP/dispatch-release-workflow.sh" release-alu-tenant.yml "$EVIDENCE_DIR/tenant" "$RESUME_TENANT_RUN_ID"
+          "$RUNNER_TEMP/dispatch-release-workflow.sh" release-alu-tenant.yml "$EVIDENCE_DIR/tenant"
 
       - name: Restore previous tenant content after tenant release failure
         if: ${{ failure() && steps.tenant_release.outcome == 'failure' }}
