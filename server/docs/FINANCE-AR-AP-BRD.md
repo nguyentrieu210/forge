@@ -48,6 +48,7 @@ Forge đã có nền tảng kế toán giao dịch:
 
 - Sales Invoice và Purchase Invoice có `due_date` canonical.
 - Khi submit, due date bắt buộc, là ISO `YYYY-MM-DD` hợp lệ và không trước posting date.
+- Sales Invoice metadata đánh dấu Due Date là required; Purchase Invoice tiếp tục có field due date hiện hữu và database guard là authoritative.
 - Legacy invoice thiếu due date không bị rewrite tự động; report tạm fallback về posting date cho tới backfill.
 - AR/AP Aging bắt buộc `as_of_date`.
 - Chỉ cộng Payment Ledger rows có posting date không sau cutoff.
@@ -219,7 +220,7 @@ Read models derive từ immutable ledger + canonical invoice payload.
 
 Evidence độc lập:
 
-- migration test PASS;
+- migration test PASS sau khi kiểm tra metadata required;
 - strict TypeScript harness PASS;
 - SQL cutoff execution PASS.
 
