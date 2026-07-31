@@ -43,6 +43,8 @@ function main() {
       report: output,
     }, null, 2));
 
+    if (args.execute) assertApprovedChecksum(plan.checksum, args.expectedChecksum);
+
     if (!args.execute) {
       if (plan.unresolved.length > 0) process.exitCode = 2;
     } else if (!source.database) {
@@ -59,15 +61,27 @@ function main() {
 
 function validateArgs(args) {
   if (!args.tenant) {
-    fail("usage: node scripts/backfill-purchase-receipt-allocations.mjs --tenant <id> [--input fixture.json] [--output report.json] [--execute --confirm <id>] [--activate --actor <user> --expected-checksum <sha256>]");
+    fail("usage: node scripts/backfill-purchase-receipt-allocations.mjs --tenant <id> [--input fixture.json] [--output report.json] [--execute --confirm <id> --expected-checksum <sha256>] [--activate --actor <user>]");
   }
   if ((args.execute || args.activate) && args.confirm !== args.tenant) {
     fail(`write mode requires --confirm ${args.tenant}`);
   }
-  if (args.activate && (!args.actor || !args.expectedChecksum)) {
-    fail("activation requires --actor <user> and --expected-checksum <sha256>");
+  if (args.execute && !args.expectedChecksum) {
+    fail("write mode requires --expected-checksum <sha256> from an approved dry-run report");
+  }
+  if (args.activate && !args.actor) {
+    fail("activation requires --actor <user>");
   }
   if (args.activate && !args.execute) fail("activation requires --execute");
+}
+
+export function assertApprovedChecksum(currentChecksum, expectedChecksum) {
+  if (!/^[a-f0-9]{64}$/.test(String(expectedChecksum ?? ""))) {
+    fail("--expected-checksum must be lowercase SHA-256");
+  }
+  if (currentChecksum !== expectedChecksum) {
+    fail(`current dry-run checksum ${currentChecksum} differs from approved ${expectedChecksum}`);
+  }
 }
 
 function modeOf(args) {
@@ -150,12 +164,6 @@ function executeBackfill(database, plan, args) {
 }
 
 function activate(database, plan, args) {
-  if (!/^[a-f0-9]{64}$/.test(args.expectedChecksum)) {
-    fail("--expected-checksum must be lowercase SHA-256");
-  }
-  if (plan.checksum !== args.expectedChecksum) {
-    fail(`current dry-run checksum ${plan.checksum} differs from approved ${args.expectedChecksum}`);
-  }
   if (plan.unresolved.length > 0) fail("activation is blocked while unresolved rows remain");
   const enabledAt = new Date().toISOString();
   d1Query(database, renderActivationSql(plan.tenant_id, args.actor, args.expectedChecksum, enabledAt));
