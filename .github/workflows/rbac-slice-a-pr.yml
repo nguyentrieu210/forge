@@ -112,9 +112,6 @@ jobs:
               '  const removed = await callMethod("metaforge.api.remove_user_permission", { id }, fixture.context, "POST");',
           )
 
-          # The direct router is the final Slice A implementation. Remove the temporary
-          # façade used while the large router patch was being reviewed, otherwise the
-          # package export keeps routing tests through obsolete code.
           index_path = Path('server/packages/frappe-api/src/index.ts')
           index_value = index_path.read_text(encoding='utf-8')
           for obsolete in (
@@ -122,7 +119,7 @@ jobs:
               'export { parseUserPermissionIdentity } from "./router-rbac-public.js";\n',
           ):
               if index_value.count(obsolete) != 1:
-                  raise SystemExit(f'{index_path}: expected one obsolete façade export')
+                  raise SystemExit(f'{index_path}: expected one obsolete facade export')
               index_value = index_value.replace(obsolete, '', 1)
           index_path.write_text(index_value, encoding='utf-8')
 
@@ -133,7 +130,7 @@ jobs:
               Path('server/tests/rbac-remove-id.test.mjs'),
           ):
               if not obsolete.exists():
-                  raise SystemExit(f'{obsolete}: temporary façade file is missing')
+                  raise SystemExit(f'{obsolete}: temporary facade file is missing')
               obsolete.unlink()
           PY
 
@@ -159,11 +156,7 @@ jobs:
         run: |
           git config user.name "Forge RBAC CI"
           git config user.email "actions@users.noreply.github.com"
-          git add -A server/packages/frappe-api/src/access-control.ts \
-                     server/packages/frappe-api/src/router.ts \
-                     server/packages/frappe-api/src/index.ts \
-                     server/packages/frappe-api/src/router-rbac.ts \
-                     server/packages/frappe-api/src/router-rbac-public.ts \
+          git add -A server/packages/frappe-api/src \
                      server/tests/rbac-contract.test.mjs \
                      server/tests/rbac-router.test.mjs \
                      server/tests/rbac-remove-id.test.mjs \
