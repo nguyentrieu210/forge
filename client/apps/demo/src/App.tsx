@@ -10,9 +10,12 @@ import type { AwesomeRecord, NavItem } from "@metaforge/shell";
 import { FormView, KanbanView, TreeView, ReportView, PrintView, DashboardView, CalendarView, GanttView, SplitView, ContextPanel, createFullRegistry, type TreeNodeItem, type TimelineItem } from "@metaforge/views";
 import { AIPanel, I18nProvider } from "@metaforge/shell";
 import type { WorkflowTransition } from "@metaforge/adapter-frappe";
-import { DemoShell } from "./DemoShell.js";
+import { DemoShell, matchesWorkspaceTab } from "./DemoShell.js";
 import { MockList } from "./list-glue.js";
 import { BuilderRoutes } from "./BuilderRoutesLazy.js";
+import {
+  MetaOverviewWorkspace, MetaProcessWorkspace, OperationsProcessWorkspace, WORKSPACE_META,
+} from "./workspace-meta.js";
 import { toast } from "@metaforge/ui";
 
 const registry = createFullRegistry();
@@ -25,7 +28,6 @@ const checklistMeta: DocTypeMeta = {
   ], permissions: [],
 };
 
-// taskMeta với ≥3 Tab Break (chứng minh tabs) + standard filter + search_fields (M04)
 const taskMeta: DocTypeMeta & { search_fields?: string } = {
   name: "Task", title_field: "subject", search_fields: "subject,assignee",
   fields: [
@@ -70,6 +72,15 @@ const rows: Doc[] = [
   { name: "TASK-0012", doctype: "Task", subject: "Đóng gói release", status: "Open", priority: "High", assignee: "Minh", progress: 15, exp_date: "2026-08-12" },
 ];
 
+const NEW_TASK_DOC: Doc = {
+  name: "new",
+  doctype: "Task",
+  status: "Open",
+  priority: "Medium",
+  progress: 0,
+  checklist: [],
+};
+
 const mockTransitions: WorkflowTransition[] = [
   { action: "Hoàn thành", next_state: "Closed", allowed: "All" },
   { action: "Tạm dừng", next_state: "Paused", allowed: "All" },
@@ -103,13 +114,21 @@ const NAV: NavItem[] = [
   { key: "b-print", label: "Print Builder", icon: <Receipt />, group: "Tạo app" },
   { key: "b-dashboard", label: "Dashboard Builder", icon: <LayoutDashboard />, group: "Tạo app" },
 ];
-const LABEL: Record<string, string> = Object.fromEntries(NAV.map((n) => [n.key, n.label]));
+
+function findWorkspaceLocation(activeKey: string) {
+  for (const module of WORKSPACE_META.modules) {
+    const tab = module.tabs.find((entry) => matchesWorkspaceTab(entry, activeKey));
+    if (tab) return { module, tab };
+  }
+  return undefined;
+}
 
 function Screen() {
   const navigate = useNavigate();
-  const { key = "form" } = useParams();
+  const { key = "process" } = useParams();
   const [sp, setSp] = useSearchParams();
   const active = key;
+  const createNew = sp.get("new") === "1";
 
   const openName = sp.get("open");
   const openDoc = rows.find((r) => String(r.name) === openName);
@@ -126,32 +145,59 @@ function Screen() {
   const awesomebar = useMemo(
     () => ({
       actions: [
-        { id: "new-task", label: "Tạo mới Task", icon: <Plus />, hint: "Task", run: () => navigate("/view/form") },
+        { id: "new-task", label: "Tạo mới Task", icon: <Plus />, hint: "Task", run: () => navigate("/view/form?new=1") },
+        ...WORKSPACE_META.modules.flatMap((module) => module.tabs.map((tab) => ({
+          id: `workspace-${module.key}-${tab.key}`,
+          label: `${module.label}: ${tab.label}`,
+          hint: tab.doctype ?? module.label,
+          run: () => navigate(`/view/${tab.targetKey}`),
+        }))),
         ...NAV.map((n) => ({ id: `go-${n.key}`, label: `Đi tới ${n.label}`, run: () => navigate(`/view/${n.key}`) })),
       ],
-      doctypes: [{ name: "Task", label: "Công việc" }],
+      doctypes: [
+        { name: "Task", label: "Công việc" },
+        { name: "DocType", label: "DocType" },
+        { name: "Workflow", label: "Workflow" },
+        { name: "Print Format", label: "Print Format" },
+        { name: "Dashboard", label: "Dashboard" },
+      ],
       recent: rows.slice(0, 3).map((r) => ({ doctype: "Task", name: String(r.name), title: String(r.subject) })) as AwesomeRecord[],
       searchRecords: async (q: string) => rows.filter((r) => String(r.subject).toLowerCase().includes(q.toLowerCase())).map((r) => ({ doctype: "Task", name: String(r.name), title: String(r.subject) })),
       onSelectRecord: () => navigate("/view/form"),
-      onSelectDoctype: () => navigate("/view/list"),
+      onSelectDoctype: (doctype: string) => {
+        const target = WORKSPACE_META.modules.flatMap((module) => module.tabs).find((tab) => tab.doctype === doctype)?.targetKey;
+        navigate(`/view/${target ?? "list"}`);
+      },
     }),
     [navigate],
   );
 
-  const breadcrumbs = [{ label: "Task", onClick: () => navigate("/view/list") }, { label: LABEL[active] ?? active }];
+  const location = findWorkspaceLocation(active);
+  const breadcrumbs = location
+    ? [
+        { label: location.module.label, onClick: () => navigate(`/view/${location.module.tabs[0]?.targetKey ?? active}`) },
+        { label: createNew ? `Tạo mới ${location.tab.label}` : location.tab.label },
+      ]
+    : [{ label: "MetaForge" }, { label: active }];
   const statusLabels = Array.from(new Set(rows.map((row) => String(row.status ?? "Chưa phân loại"))));
   const statusValues = statusLabels.map((status) => rows.filter((row) => String(row.status ?? "Chưa phân loại") === status).length);
 
   return (
-    <DemoShell nav={NAV} activeKey={active} onNavigate={(k) => navigate(`/view/${k}`)} breadcrumbs={breadcrumbs} fullName="Demo User" awesomebar={awesomebar}>
-      {active === "list" ? (
+    <DemoShell workspace={WORKSPACE_META} nav={NAV} activeKey={active} onNavigate={(k) => navigate(`/view/${k}`)} breadcrumbs={breadcrumbs} fullName="Demo User" awesomebar={awesomebar}>
+      {active === "process" ? (
+        <OperationsProcessWorkspace onNavigate={(target) => navigate(`/view/${target}`)} />
+      ) : active === "meta-process" ? (
+        <MetaProcessWorkspace onNavigate={(target) => navigate(`/view/${target}`)} />
+      ) : active === "meta-overview" ? (
+        <MetaOverviewWorkspace onNavigate={(target) => navigate(`/view/${target}`)} />
+      ) : active === "list" ? (
         <div className="h-full p-4">
           <SplitView
             autoSaveId="mf-mock-split"
             hasDetail={Boolean(openDoc)}
             contextTitle={openName ?? undefined}
             onCloseDetail={() => setOpen(null)}
-            list={<MockList meta={taskMeta} allRows={rows} activeRow={openName ?? undefined} onRowClick={(r) => setOpen(String(r.name))} onCreate={() => navigate("/view/form")} />}
+            list={<MockList meta={taskMeta} allRows={rows} activeRow={openName ?? undefined} onRowClick={(r) => setOpen(String(r.name))} onCreate={() => navigate("/view/form?new=1")} />}
             detail={openDoc ? (
               <FormView
                 meta={taskMeta}
@@ -186,7 +232,7 @@ function Screen() {
         </div>
       ) : (
         <div className="p-4">
-          {active === "form" && <FormView meta={taskMeta} doc={rows[0]!} registry={registry} services={services} roles={["All"]} onSave={(c) => toast.success(`Đã lưu ${Object.keys(c).length} thay đổi (mock)`)} />}
+          {active === "form" && <FormView key={createNew ? "new-task" : String(rows[0]!.name)} meta={taskMeta} doc={createNew ? NEW_TASK_DOC : rows[0]!} registry={registry} services={services} roles={["All"]} onSave={(c) => toast.success(`${createNew ? "Đã tạo" : "Đã lưu"} ${Object.keys(c).length} thay đổi (mock)`)} />}
           {active === "kanban" && <KanbanView meta={taskMeta} fieldName="status" columns={["Open", "Working", "Closed"]} rows={rows} />}
           {active === "tree" && <TreeView roots={treeRoots} childrenOf={(v) => treeKids[v]} expanded={new Set(["Products"])} onToggle={() => {}} />}
           {active === "calendar" && <CalendarView year={2026} month={7} dateField="exp_date" titleField="subject" events={rows} />}
@@ -194,7 +240,7 @@ function Screen() {
           {active === "dashboard" && <DashboardView cards={[{ label: "Tổng công việc", value: rows.length }, { label: "Đang làm", value: rows.filter((row) => row.status === "Working").length }, { label: "Đã đóng", value: rows.filter((row) => row.status === "Closed").length }]} charts={[{ title: "Theo trạng thái", labels: statusLabels, datasets: [{ name: "Công việc", values: statusValues }] }]} filterSummary="Toàn bộ dữ liệu demo" />}
           {active === "report" && <ReportView columns={[{ label: "Mã", fieldname: "name" }, { label: "Trạng thái", fieldname: "status" }]} result={rows.map((r) => ({ name: r.name, status: r.status }))} />}
           {active === "print" && <PrintView html={`<div><h3>HÓA ĐƠN — ${String(rows[0]!.name)}</h3></div>`} />}
-          {active.startsWith("b-") && <BuilderRoutes which={active} taskMeta={taskMeta} registry={registry} services={services} />}
+          {active.startsWith("b-") && <BuilderRoutes key={`${active}:${createNew ? "new" : "manage"}`} which={active} createNew={createNew} taskMeta={taskMeta} registry={registry} services={services} />}
         </div>
       )}
     </DemoShell>
@@ -206,9 +252,9 @@ export function App() {
     <I18nProvider>
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Navigate to="/view/form" replace />} />
+        <Route path="/" element={<Navigate to="/view/process" replace />} />
         <Route path="/view/:key" element={<Screen />} />
-        <Route path="*" element={<Navigate to="/view/form" replace />} />
+        <Route path="*" element={<Navigate to="/view/process" replace />} />
       </Routes>
     </BrowserRouter>
     </I18nProvider>
