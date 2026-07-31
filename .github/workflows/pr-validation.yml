@@ -44,73 +44,42 @@ jobs:
       - name: Build
         run: pnpm build
 
-  rbac_slice_b_apply:
+  rbac-slice-b-apply:
     name: Apply and gate RBAC Slice B
-    if: "${{ github.event.pull_request.number == 38 && github.event.pull_request.head.ref == 'feat/rbac-permission-slice-b-20260731' }}"
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
     steps:
-      - name: Checkout exact PR branch
+      - name: Checkout Slice B branch
         uses: actions/checkout@v4
         with:
           ref: feat/rbac-permission-slice-b-20260731
           fetch-depth: 0
 
-      - name: Detect pending payload
-        id: payload
+      - name: Apply, verify and commit when pending
+        env:
+          PR_NUMBER: ${{ github.event.number }}
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.run_id }}
         run: |
-          if [ -f .github/rbac-slice-b-patch.gz.b64 ]; then
-            echo "pending=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "pending=false" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          if [ "$PR_NUMBER" != "38" ] || [ ! -f .github/rbac-slice-b-patch.gz.b64 ]; then
+            echo "No pending Slice B payload for this pull request."
+            exit 0
           fi
-
-      - name: Install pnpm
-        if: steps.payload.outputs.pending == 'true'
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.0
-          run_install: false
-
-      - name: Set up Node.js
-        if: steps.payload.outputs.pending == 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Apply reviewed Slice B patch
-        if: steps.payload.outputs.pending == 'true'
-        run: |
+          trap 'gh pr comment 38 --repo "${{ github.repository }}" --body "RBAC Slice B apply/gate failed in workflow run ${RUN_ID}. No implementation commit was pushed." || true' ERR
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
           base64 --decode .github/rbac-slice-b-patch.gz.b64 | gzip --decompress > /tmp/apply-rbac-slice-b.py
           python /tmp/apply-rbac-slice-b.py
-
-      - name: Install dependencies
-        if: steps.payload.outputs.pending == 'true'
-        run: pnpm install --frozen-lockfile
-
-      - name: Run tests
-        if: steps.payload.outputs.pending == 'true'
-        run: pnpm test
-
-      - name: Run typecheck
-        if: steps.payload.outputs.pending == 'true'
-        run: pnpm typecheck
-
-      - name: Build
-        if: steps.payload.outputs.pending == 'true'
-        run: pnpm build
-
-      - name: Commit verified implementation
-        if: steps.payload.outputs.pending == 'true'
-        run: |
-          rm -f .github/workflows/rbac-slice-b-one-shot.yml .github/rbac-slice-b-patch.gz.b64
+          pnpm install --frozen-lockfile
+          pnpm test
+          pnpm typecheck
+          pnpm build
+          rm -f .github/rbac-slice-b-patch.gz.b64
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add \
-            .github/workflows/rbac-slice-b-one-shot.yml \
             .github/rbac-slice-b-patch.gz.b64 \
             server/migrations/tenant/0030_rbac_audit.sql \
             server/scripts/test-rbac-audit-migration.py \
@@ -122,10 +91,3 @@ jobs:
           git diff --cached --check
           git commit -m "feat(rbac): add atomic access administration and audit"
           git push origin HEAD:feat/rbac-permission-slice-b-20260731
-
-      - name: Comment failure
-        if: failure() && steps.payload.outputs.pending == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh pr comment 38 --repo "${{ github.repository }}" --body "RBAC Slice B apply/gate failed in workflow run ${{ github.run_id }}. No implementation commit was pushed."
