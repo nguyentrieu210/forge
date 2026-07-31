@@ -1,0 +1,6 @@
+worker=cloudforge-app-alumdoor
+dispatch_namespace=cloudforge-production
+target_sha=a48524b93489c92296c57fc5f223e41d505de7aa
+feature=sales-unicode-item-price
+workflow_fix=cbe60228fb10a3b51b52880fb178c164b63ff9f8
+requested_at=2026-08-01T00:24:30+07:00
