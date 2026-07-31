@@ -4,13 +4,16 @@ on:
   push:
     branches:
       - feat/sales-order-production-flow-20260801
+  pull_request:
+    branches:
+      - hotfix/alumdoor-print-list-delete
 
 permissions:
   contents: write
 
 jobs:
   sync:
-    if: ${{ github.actor != 'github-actions[bot]' }}
+    if: ${{ github.actor != 'github-actions[bot]' && (github.head_ref == 'feat/sales-order-production-flow-20260801' || github.ref_name == 'feat/sales-order-production-flow-20260801') }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
