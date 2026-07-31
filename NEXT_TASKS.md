@@ -2,49 +2,45 @@
 
 Ngày cập nhật: **2026-07-31**.
 
-## P0 — chốt PR #75
+## P0 — xác nhận MetaForge workspace tabs
 
-1. Đợi CI chạy lại trên exact final head sau commit tài liệu.
-2. Nếu mọi workflow PASS, chuyển PR `#75` khỏi draft.
-3. Không merge nếu UI browser QA hoặc auth smoke chưa PASS.
+1. Mở draft PR từ `feat/metaforge-misa-workspace-tabs` vào `hotfix/alumdoor-print-list-delete`.
+2. Kiểm CI trên exact final head:
+   - lint;
+   - test;
+   - typecheck;
+   - build;
+   - UI Pull Request Validation/browser QA nếu workflow được kích hoạt.
+3. Sửa lỗi trực tiếp nếu TypeScript báo `Button`/`cn` export hoặc JSX typing không khớp phiên bản UI package.
+4. Kiểm desktop, mobile drawer và sidebar collapsed:
+   - tab active đúng theo route;
+   - chuyển tab đi tới mục khả dụng đầu tiên;
+   - sidebar chỉ hiện mục của phân hệ;
+   - tab dài cuộn ngang, không đẩy vỡ topbar;
+   - app chỉ có một group không bị thay đổi hành vi.
 
-## P0 — staging readiness
+## P1 — nâng thành primitive dùng chung
 
-1. Chọn staging tenant hoặc production-shaped copy phù hợp.
-2. Chạy read-only readiness command theo `server/docs/ALUMDOOR-PURCHASE-FIFO-ACTIVATION-RUNBOOK.md`.
-3. Lưu report/evidence ngoài repository.
-4. Review:
-   - checksum SHA-256;
-   - `unresolved_count=0`;
-   - PO-level checksum rows;
-   - không có ambiguous legacy child-row mapping.
-5. Chỉ sau review mới execute backfill trên staging.
-6. Xác minh sau backfill:
-   - ledger counts khớp plan;
-   - stored checksum khớp approved checksum;
-   - `unresolved_count=0`;
-   - rollout vẫn `enabled=0`.
+Sau khi demo được duyệt:
 
-## P0 — functional acceptance
+1. Đưa khái niệm `WorkspaceTab`/`moduleKey` vào `client/packages/shell/src/AppShell.tsx` hoặc một component riêng trong `@metaforge/shell`.
+2. Cho runtime app tạo tab từ metadata Workspace/Module/DocType thay vì hard-code.
+3. Tách rõ:
+   - tab treo: phân hệ/nghiệp vụ;
+   - sidebar: DocType, báo cáo, thao tác thuộc phân hệ đang chọn.
+4. Bổ sung selfcheck/unit test cho lọc nav, active tab và fallback không group.
 
-Chạy authenticated business smoke trên dữ liệu thử kiểm soát:
+## P2 — hoàn thiện trải nghiệm MISA
 
-- Purchase Order submit;
-- Purchase Receipt allocation preview và submit;
-- partial/multiple-source FIFO;
-- cancel Receipt;
-- close settlement window;
-- reverse settlement;
-- manual allocation override với reason/permission;
-- supplier debt report/filter/export;
-- desktop và mobile.
+- Lưu tab phân hệ gần nhất theo app/user khi route không chỉ ra phân hệ.
+- Hỗ trợ badge, icon và quyền truy cập ở cấp tab.
+- Bổ sung overflow menu khi số tab vượt chiều rộng màn hình nhỏ.
+- Đồng bộ Command Palette để vẫn tìm toàn bộ ứng dụng dù sidebar đang lọc theo tab.
 
-## P0 — activation preparation
+## Luồng Purchase/FIFO độc lập
 
-- Thu contention/retry và latency evidence.
-- Tạo fresh production backup ngay trước activation.
-- Ghi exact target SHA, checksum, actor và approval.
-- Activation là thao tác riêng; không gộp vào deploy code/migration.
+- FIFO rollout vẫn disabled.
+- Tiếp tục kiểm GitHub/CI của PR Purchase trước khi staging readiness hoặc activation.
 - Không bật FIFO production khi chưa có explicit approval.
 
 ## Không được làm
