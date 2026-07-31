@@ -5,6 +5,7 @@ const ITEM_NATURES = new Set(["Hàng tồn kho", "Dịch vụ", "Tài sản"]);
 const MATERIAL_STAGES = new Set(["Nguyên vật liệu", "Vật tư tiêu hao", "Bán thành phẩm", "Thành phẩm", "Hàng hoá"]);
 const SUPPLY_TYPES = new Set(["Mua ngoài", "Tự sản xuất", "Mua hoặc sản xuất"]);
 const QTY_BASES = new Set(["Cố định", "Theo chiều cao", "Theo chiều rộng", "Theo diện tích", "Theo số lá"]);
+const REQUIRED_WAREHOUSE_ROLES = ["RAW_MATERIAL", "WIP", "FINISHED_GOODS", "QUARANTINE", "SCRAP_OFFCUT"];
 
 export function planAlumdoorCatalogAudit({
   metadataVersion = EXPECTED_METADATA_VERSION,
@@ -42,6 +43,17 @@ export function planAlumdoorCatalogAudit({
     }, "version", `Expected authoritative Alumdoor metadata ${EXPECTED_METADATA_VERSION}, received ${metadataVersion}.`);
   }
 
+  if (items.size === 0) {
+    add("High", "SOURCE_ITEM_RECORDS_MISSING", {
+      doctype: "Catalog Source", name: "Item", data: {},
+    }, "records", "Audit source contains no Item records, so Item readiness cannot be assessed.");
+  }
+  if (boms.length === 0) {
+    add("High", "SOURCE_BOM_RECORDS_MISSING", {
+      doctype: "Catalog Source", name: "BOM", data: {},
+    }, "records", "Audit source contains no active Bill of Materials or Production Standard records, so manufacturing readiness cannot be assessed.");
+  }
+
   const activeBomsByItem = new Map();
   for (const bom of boms) {
     const finishedItem = text(bom.data.item ?? bom.data.production_item ?? bom.data.finished_item);
@@ -69,10 +81,26 @@ export function planAlumdoorCatalogAudit({
 
   detectCircularBoms(activeBomsByItem, add);
 
+  const observedWarehouseRoles = new Set();
   for (const warehouse of warehouses.values()) {
     if (isDisabled(warehouse.data) || checked(warehouse.data.is_group)) continue;
-    if (!text(warehouse.data.warehouse_role)) {
-      add("Medium", "WAREHOUSE_ROLE_MISSING", warehouse, "warehouse_role", "Operational warehouse requires an explicit role before production rollout.");
+    const declaredRole = text(warehouse.data.warehouse_role ?? warehouse.data.stock_role);
+    const role = normalizeWarehouseRole(declaredRole);
+    if (!declaredRole) {
+      add("Medium", "WAREHOUSE_ROLE_MISSING", warehouse, "stock_role", "Operational warehouse requires an explicit role before production rollout.");
+      continue;
+    }
+    if (!role) {
+      add("Medium", "WAREHOUSE_ROLE_UNKNOWN", warehouse, "stock_role", `Warehouse role ${declaredRole} is not mapped to a supported production role.`);
+      continue;
+    }
+    observedWarehouseRoles.add(role);
+  }
+  for (const role of REQUIRED_WAREHOUSE_ROLES) {
+    if (!observedWarehouseRoles.has(role)) {
+      add("Medium", "WAREHOUSE_ROLE_COVERAGE_MISSING", {
+        doctype: "Warehouse Role", name: role, data: {},
+      }, "role", `No active operational warehouse is assigned role ${role}.`);
     }
   }
 
@@ -83,6 +111,10 @@ export function planAlumdoorCatalogAudit({
     active_items: [...items.values()].filter((item) => !isDisabled(item.data)).length,
     disabled_items: [...items.values()].filter((item) => isDisabled(item.data)).length,
     active_boms: boms.length,
+    warehouse_roles: Object.fromEntries([...observedWarehouseRoles].sort().map((role) => [role, [...warehouses.values()].filter((warehouse) => {
+      if (isDisabled(warehouse.data) || checked(warehouse.data.is_group)) return false;
+      return normalizeWarehouseRole(text(warehouse.data.warehouse_role ?? warehouse.data.stock_role)) === role;
+    }).length])),
     findings: findings.length,
     critical: findings.filter((finding) => finding.severity === "Critical").length,
     high: findings.filter((finding) => finding.severity === "High").length,
@@ -342,6 +374,32 @@ function dynamicSquareMetreToSet(mode, uom, stockUom) {
   return mode === "Thành phẩm theo m2"
     && ["m2", "m²", "sqm"].includes(normalizedUom(uom))
     && ["bo", "set"].includes(normalizedUom(stockUom));
+}
+function normalizeWarehouseRole(value) {
+  const normalized = normalizedUom(value).replace(/[\s_-]+/g, " ");
+  const aliases = new Map([
+    ["raw material", "RAW_MATERIAL"],
+    ["nguyen vat lieu", "RAW_MATERIAL"],
+    ["kho nguyen vat lieu", "RAW_MATERIAL"],
+    ["wip", "WIP"],
+    ["work in progress", "WIP"],
+    ["dang san xuat", "WIP"],
+    ["kho dang san xuat", "WIP"],
+    ["finished goods", "FINISHED_GOODS"],
+    ["thanh pham", "FINISHED_GOODS"],
+    ["kho thanh pham", "FINISHED_GOODS"],
+    ["quarantine", "QUARANTINE"],
+    ["cho kiem", "QUARANTINE"],
+    ["kho cho kiem", "QUARANTINE"],
+    ["scrap offcut", "SCRAP_OFFCUT"],
+    ["scrap", "SCRAP_OFFCUT"],
+    ["offcut", "SCRAP_OFFCUT"],
+    ["kho dau thua", "SCRAP_OFFCUT"],
+    ["kho phe", "SCRAP_OFFCUT"],
+    ["general", "GENERAL"],
+    ["kho chinh", "GENERAL"],
+  ]);
+  return aliases.get(normalized) ?? "";
 }
 function compareFinding(a, b) {
   return severityRank(a.severity) - severityRank(b.severity)
