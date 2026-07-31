@@ -73,6 +73,15 @@ const rows: Doc[] = [
   { name: "TASK-0012", doctype: "Task", subject: "Đóng gói release", status: "Open", priority: "High", assignee: "Minh", progress: 15, exp_date: "2026-08-12" },
 ];
 
+const NEW_TASK_DOC: Doc = {
+  name: "new",
+  doctype: "Task",
+  status: "Open",
+  priority: "Medium",
+  progress: 0,
+  checklist: [],
+};
+
 const mockTransitions: WorkflowTransition[] = [
   { action: "Hoàn thành", next_state: "Closed", allowed: "All" },
   { action: "Tạm dừng", next_state: "Paused", allowed: "All" },
@@ -120,6 +129,7 @@ function Screen() {
   const { key = "process" } = useParams();
   const [sp, setSp] = useSearchParams();
   const active = key;
+  const createNew = sp.get("new") === "1";
 
   const openName = sp.get("open");
   const openDoc = rows.find((r) => String(r.name) === openName);
@@ -136,7 +146,7 @@ function Screen() {
   const awesomebar = useMemo(
     () => ({
       actions: [
-        { id: "new-task", label: "Tạo mới Task", icon: <Plus />, hint: "Task", run: () => navigate("/view/form") },
+        { id: "new-task", label: "Tạo mới Task", icon: <Plus />, hint: "Task", run: () => navigate("/view/form?new=1") },
         ...WORKSPACE_META.modules.flatMap((module) => module.tabs.map((tab) => ({
           id: `workspace-${module.key}-${tab.key}`,
           label: `${module.label}: ${tab.label}`,
@@ -167,7 +177,7 @@ function Screen() {
   const breadcrumbs = location
     ? [
         { label: location.module.label, onClick: () => navigate(`/view/${location.module.tabs[0]?.targetKey ?? active}`) },
-        { label: location.tab.label },
+        { label: createNew ? `Tạo mới ${location.tab.label}` : location.tab.label },
       ]
     : [{ label: "MetaForge" }, { label: active }];
   const statusLabels = Array.from(new Set(rows.map((row) => String(row.status ?? "Chưa phân loại"))));
@@ -176,11 +186,11 @@ function Screen() {
   return (
     <DemoShell workspace={WORKSPACE_META} nav={NAV} activeKey={active} onNavigate={(k) => navigate(`/view/${k}`)} breadcrumbs={breadcrumbs} fullName="Demo User" awesomebar={awesomebar}>
       {active === "process" ? (
-        <OperationsProcessWorkspace onNavigate={(key) => navigate(`/view/${key}`)} />
+        <OperationsProcessWorkspace onNavigate={(target) => navigate(`/view/${target}`)} />
       ) : active === "meta-process" ? (
-        <MetaProcessWorkspace onNavigate={(key) => navigate(`/view/${key}`)} />
+        <MetaProcessWorkspace onNavigate={(target) => navigate(`/view/${target}`)} />
       ) : active === "meta-overview" ? (
-        <MetaOverviewWorkspace onNavigate={(key) => navigate(`/view/${key}`)} />
+        <MetaOverviewWorkspace onNavigate={(target) => navigate(`/view/${target}`)} />
       ) : active === "list" ? (
         <div className="h-full p-4">
           <SplitView
@@ -188,7 +198,7 @@ function Screen() {
             hasDetail={Boolean(openDoc)}
             contextTitle={openName ?? undefined}
             onCloseDetail={() => setOpen(null)}
-            list={<MockList meta={taskMeta} allRows={rows} activeRow={openName ?? undefined} onRowClick={(r) => setOpen(String(r.name))} onCreate={() => navigate("/view/form")} />}
+            list={<MockList meta={taskMeta} allRows={rows} activeRow={openName ?? undefined} onRowClick={(r) => setOpen(String(r.name))} onCreate={() => navigate("/view/form?new=1")} />}
             detail={openDoc ? (
               <FormView
                 meta={taskMeta}
@@ -223,7 +233,7 @@ function Screen() {
         </div>
       ) : (
         <div className="p-4">
-          {active === "form" && <FormView meta={taskMeta} doc={rows[0]!} registry={registry} services={services} roles={["All"]} onSave={(c) => toast.success(`Đã lưu ${Object.keys(c).length} thay đổi (mock)`)} />}
+          {active === "form" && <FormView key={createNew ? "new-task" : String(rows[0]!.name)} meta={taskMeta} doc={createNew ? NEW_TASK_DOC : rows[0]!} registry={registry} services={services} roles={["All"]} onSave={(c) => toast.success(`${createNew ? "Đã tạo" : "Đã lưu"} ${Object.keys(c).length} thay đổi (mock)`)} />}
           {active === "kanban" && <KanbanView meta={taskMeta} fieldName="status" columns={["Open", "Working", "Closed"]} rows={rows} />}
           {active === "tree" && <TreeView roots={treeRoots} childrenOf={(v) => treeKids[v]} expanded={new Set(["Products"])} onToggle={() => {}} />}
           {active === "calendar" && <CalendarView year={2026} month={7} dateField="exp_date" titleField="subject" events={rows} />}
@@ -231,7 +241,7 @@ function Screen() {
           {active === "dashboard" && <DashboardView cards={[{ label: "Tổng công việc", value: rows.length }, { label: "Đang làm", value: rows.filter((row) => row.status === "Working").length }, { label: "Đã đóng", value: rows.filter((row) => row.status === "Closed").length }]} charts={[{ title: "Theo trạng thái", labels: statusLabels, datasets: [{ name: "Công việc", values: statusValues }] }]} filterSummary="Toàn bộ dữ liệu demo" />}
           {active === "report" && <ReportView columns={[{ label: "Mã", fieldname: "name" }, { label: "Trạng thái", fieldname: "status" }]} result={rows.map((r) => ({ name: r.name, status: r.status }))} />}
           {active === "print" && <PrintView html={`<div><h3>HÓA ĐƠN — ${String(rows[0]!.name)}</h3></div>`} />}
-          {active.startsWith("b-") && <BuilderRoutes which={active} taskMeta={taskMeta} registry={registry} services={services} />}
+          {active.startsWith("b-") && <BuilderRoutes key={`${active}:${createNew ? "new" : "manage"}`} which={active} createNew={createNew} taskMeta={taskMeta} registry={registry} services={services} />}
         </div>
       )}
     </DemoShell>
