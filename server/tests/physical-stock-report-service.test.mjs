@@ -62,12 +62,16 @@ test("report service injects authenticated tenant and applies warehouse scope", 
   assert.equal("lineage" in page.rows[0], false);
 });
 
-test("report service exposes lineage only when scope permits it", async () => {
+test("report service exposes lineage only when scope and request permit it", async () => {
   const { PhysicalStockReportService } = await loadModule();
   const service = new PhysicalStockReportService(
     { list: async () => [ledger()] },
     policy({ companies: "*", can_view_lineage: true, max_rows: 100 }),
   );
+
+  const defaultPage = await service.run(actor, "alu", { company: "Alumdoor" });
+  assert.equal(defaultPage.lineage_redacted, true);
+  assert.equal("lineage" in defaultPage.rows[0], false);
 
   const page = await service.run(actor, "alu", { company: "Alumdoor", include_lineage: true });
   assert.equal(page.lineage_redacted, false);
