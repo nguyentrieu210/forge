@@ -59,6 +59,46 @@ Thiết kế riêng sau khi sales smoke hoàn tất:
 - concurrency và chống oversell;
 - UI phân biệt tồn hiện tại, đã giữ và khả dụng.
 
+## RBAC — Slice A/B và post-merge QA đã hoàn thành
+
+### Đã xong
+
+- Slice A PR `#37` đã merge.
+- Slice B PR `#45` đã merge thành `4341091b8a8dc0cea3de96510c34dc68a8b00ecb`.
+- Post-merge QA PR `#48` đã merge thành `dfd8f0c737e452cd0183b67acde8a631871f7274`.
+- Regression `server/tests/rbac-post-merge-qa.test.mjs` đã được giữ trên default.
+- Exact-head `0c8c20093f561392ae3f6ad05f019bf980b5ed3f` đã PASS:
+  - PR Validation run `30628567731`, job `91149404125`;
+  - Sales Feature CI run `30628565369`, job `91149395506`;
+  - Inventory and Manufacturing CI run `30628565336`, job `91149395103`;
+  - UI Pull Request Validation run `30628565311`, job `91149394897`.
+- Browser QA và local tenant cookie-auth smoke PASS.
+- Tenant/Gateway release jobs đều skipped; không deploy trong đợt QA này.
+
+### P0 — RBAC staging QA chuyên biệt
+
+Chỉ chạy trên staging hoặc tenant thử nghiệm được chỉ định rõ, không dùng dữ liệu khách hàng thật:
+
+1. Tạo user mới cùng role grant và xác minh audit `user.create`.
+2. Thay role và xác minh quyền đổi ngay trên phiên hiện tại.
+3. Vô hiệu hóa user và xác minh phiên đang mở bị từ chối.
+4. Reset password và xác minh session epoch làm phiên cũ hết hiệu lực.
+5. Xác minh self-disable, self-demote và last-admin guard bằng tài khoản thử.
+6. Đọc audit log thực, kiểm before/after, actor, source, trace và không có secret/hash/token.
+7. Thêm/xóa User Permission trên hai tenant thử và xác minh không rò scope chéo tenant.
+8. Ghi evidence đã redacted; không commit credential, cookie, token, raw database dump hoặc dữ liệu khách hàng.
+
+### P1 — RBAC Slice C
+
+Chỉ mở branch riêng sau khi staging QA được review hoặc có quyết định scope rõ:
+
+- audit query/read model và UI xem lịch sử;
+- UX quản trị user/role/scope hoàn chỉnh;
+- pagination/filter/export redacted cho audit;
+- session administration và revoke reason;
+- staging/browser regression chuyên biệt;
+- không deploy production nếu chưa có approval riêng.
+
 ## Release automation cleanup
 
 - Giữ `.github/workflows/gateway-production-release.yml` làm đường Gateway có version evidence.
@@ -73,12 +113,6 @@ Thiết kế riêng sau khi sales smoke hoàn tất:
 - PR `#27` là nguồn authoritative cho scope, exact HEAD, CI và merge readiness.
 - Sau merge mới chạy live catalog audit read-only/redacted rồi lập remediation plan.
 - Không commit raw audit report.
-
-### RBAC Slice B
-
-- PR `#45` là nguồn authoritative cho exact HEAD, CI và review state.
-- Chỉ merge sau gate hiện hành và explicit approval.
-- Browser QA nghiệp vụ quyền thật vẫn là bước sau code gate.
 
 ### Purchase/FIFO
 
