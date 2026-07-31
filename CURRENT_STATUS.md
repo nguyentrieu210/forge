@@ -121,3 +121,19 @@ Hai High là thiếu source Item/BOM trong brief, không phải code finding. Br
 - Không deploy Gateway/Tenant Worker từ nhánh này.
 - Không migrate/mutate tenant `alu`.
 - Không sửa Cloudflare secret.
+
+## RBAC Slice B ready for review
+
+- Final branch: `feat/rbac-permission-slice-b-final-20260731`, được rebase sạch từ default `7af5f96a4a6bc756eb2c46511db17a609a49fdc5` sau khi default nhận thêm inventory/manufacturing work.
+- PR authoritative: `#45`, ready for review, chưa merge.
+- Code scope gồm migration `0030_rbac_audit.sql`, atomic administration service, router wiring, migration/service/allowed-forbidden contract tests.
+- Audit ledger append-only, tenant scoped, JSON validated; database trigger chặn race xoá/khoá tenant admin cuối cùng.
+- User create + roles, role replacement, enable/disable, password/session revoke và User Permission add/remove được ghi cùng audit trong một D1 batch.
+- Self-disable, self-demote và last-admin guard đã có; audit không chứa password/hash/token/cookie/secret/trusted identity.
+- Service tests: 8/8 PASS trên Node 22 + disposable SQLite.
+- Core run `30622251469`, job `91129287256`: root test/typecheck/build PASS.
+- Wiring run `30623092302`: jobs `91131952789` và `91131952849` PASS.
+- Exact-head trước khi default dịch chuyển: runs `30623976677`, `30623976754`, `30624234745`, `30624234722`, `30624657390`, `30624657406` đều PASS các gate tương ứng, gồm browser QA và cookie auth smoke.
+- Branch final giữ nguyên toàn bộ inventory/manufacturing handoff hiện hành; chỉ append phần RBAC.
+- Còn lại: standard read-only exact-head CI sau rebase hiện tại, review diff/threads/mergeability và explicit approval trước merge.
+- Không deploy Cloudflare, không sửa production secrets và không bật FIFO.

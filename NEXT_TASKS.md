@@ -101,9 +101,38 @@ Chỉ mở runtime/migration sau Slice A merge, live audit review và migration 
 4. Staging smoke toàn luồng.
 5. Production chỉ sau yêu cầu deploy riêng.
 
+## RBAC Slice B — ready for final gate
+
+- Final branch: `feat/rbac-permission-slice-b-final-20260731`, rebase sạch từ default `7af5f96a4a6bc756eb2c46511db17a609a49fdc5`.
+- PR authoritative: `#45`, ready for review, chưa merge.
+- Đã hoàn thành:
+  1. migration `0030_rbac_audit.sql` append-only;
+  2. audit ledger tenant scoped, JSON validated và cấm UPDATE/DELETE;
+  3. atomic create user + role grants;
+  4. atomic replace roles;
+  5. atomic enable/disable và session epoch;
+  6. atomic password change/reset và session revoke;
+  7. atomic User Permission upsert/remove;
+  8. application và database last-admin guard;
+  9. self-disable và self-demote guard;
+  10. router wiring và allowed/forbidden endpoint contract tests;
+  11. audit không ghi password/hash/token/cookie/secret/trusted identity.
+- Bằng chứng đã có:
+  - service tests 8/8 PASS trên Node 22 + disposable SQLite;
+  - core run `30622251469`, job `91129287256`: root test/typecheck/build PASS;
+  - wiring run `30623092302`, jobs `91131952789` và `91131952849`: PASS;
+  - các exact-head runs trước khi default dịch chuyển đều PASS, gồm browser QA và cookie auth smoke.
+- Còn lại:
+  1. standard read-only `PR Validation` và `UI Pull Request Validation` trên exact head sau rebase hiện tại;
+  2. xác minh ahead/behind, mergeable và không có unresolved review thread;
+  3. cập nhật PR body/comment với final head và run/job IDs, không sửa handoff thêm;
+  4. chỉ merge sau explicit approval;
+  5. G5 staging/browser QA nghiệp vụ quyền sau khi Slice B/C hoàn tất.
+
 ## Safety
 
-- Không mutate/migrate tenant `alu` từ PR #27.
+- Không mutate/migrate tenant `alu` từ các PR review hiện hành.
 - Không deploy Gateway/Tenant Worker.
 - Không sửa Cloudflare secret.
+- FIFO rollout vẫn disabled.
 - Không commit raw report, `.env`, `server/work/`, `tmp/`, backup hoặc generated artifact.
