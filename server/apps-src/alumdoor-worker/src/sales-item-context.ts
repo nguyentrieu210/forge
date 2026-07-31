@@ -24,6 +24,14 @@ function positive(value: unknown): number | null {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
+function normalizedText(value: unknown): string {
+  return String(value ?? "").normalize("NFC").trim();
+}
+
+function sameText(left: unknown, right: unknown): boolean {
+  return normalizedText(left) === normalizedText(right);
+}
+
 async function readResource(call: SalesPlatformCall, doctype: string, name: string): Promise<Json | null> {
   const response = await call(`resource/${encodeURIComponent(doctype)}/${encodeURIComponent(name)}`);
   if (response.status === 404) return null;
@@ -60,9 +68,9 @@ interface ItemPriceLookup {
  * Tên bản ghi là tối ưu, không phải nguồn sự thật duy nhất.
  *
  * Metadata authoritative hiện tạo Item Price theo `<bảng giá>:<mã hàng>`. Một số dữ liệu mới
- * có thể dùng thêm ĐVT. Luôn thử tên authoritative trước: tên exact có ĐVT như `Mét` có thể bị
- * callback cũ từ chối trước khi trả 404, và không được phép chặn bản ghi legacy hoàn toàn hợp lệ.
- * Sau hai fast-path mới fallback bằng chính ba field nghiệp vụ.
+ * có thể dùng thêm ĐVT. Luôn thử tên authoritative trước. So khớp nghiệp vụ được chuẩn hóa NFC
+ * để dữ liệu import có dấu tổ hợp không bị nhìn giống nhau trên UI nhưng khác byte trong code.
+ * Probe exact có ĐVT và callback list chỉ là fallback, không được phép chặn legacy hợp lệ.
  */
 async function resolveItemPriceRecord(
   call: SalesPlatformCall,
@@ -73,47 +81,55 @@ async function resolveItemPriceRecord(
   const exactName = `${priceList}:${itemCode}:${selectedUom}`;
   const legacyName = `${priceList}:${itemCode}`;
 
-  // Brief hiện hành dùng tên legacy. Đọc nó trước để một probe exact có ĐVT Unicode không thể
-  // chặn giá đang tồn tại bằng lỗi transport/routing khác 404.
   const legacy = await readResource(call, "Item Price", legacyName);
-  const compatibleLegacy = legacy && String(legacy.uom ?? "").trim() === selectedUom ? legacy : null;
+  const compatibleLegacy = legacy && sameText(legacy.uom, selectedUom) ? legacy : null;
   if (compatibleLegacy && !truthy(compatibleLegacy.disabled)) {
     return { price: compatibleLegacy, name: legacyName };
   }
 
-  const exact = await readResource(call, "Item Price", exactName);
+  let exact: Json | null = null;
+  let exactReadError: Error | null = null;
+  try {
+    exact = await readResource(call, "Item Price", exactName);
+  } catch (error) {
+    exactReadError = error instanceof Error ? error : new Error(String(error));
+  }
   if (exact && !truthy(exact.disabled)) return { price: exact, name: exactName };
 
-  const rows = await listResources(
-    call,
-    "Item Price",
-    ["name", "price_list", "item_code", "uom", "rate", "currency", "disabled"],
-    [
-      ["Item Price", "price_list", "=", priceList],
-      ["Item Price", "item_code", "=", itemCode],
-      ["Item Price", "uom", "=", selectedUom],
-    ],
-  );
+  let rows: Json[];
+  try {
+    rows = await listResources(
+      call,
+      "Item Price",
+      ["name", "price_list", "item_code", "uom", "rate", "currency", "disabled"],
+      [
+        ["Item Price", "price_list", "=", priceList],
+        ["Item Price", "item_code", "=", itemCode],
+      ],
+      100,
+    );
+  } catch (error) {
+    throw exactReadError ?? error;
+  }
   const matching = rows.filter((row) =>
-    String(row.price_list ?? "").trim() === priceList
-    && String(row.item_code ?? "").trim() === itemCode
-    && String(row.uom ?? "").trim() === selectedUom);
+    sameText(row.price_list, priceList)
+    && sameText(row.item_code, itemCode)
+    && sameText(row.uom, selectedUom));
   const active = matching.filter((row) => !truthy(row.disabled));
   if (active.length > 1) {
     throw new Error(`Có nhiều đơn giá đang hoạt động cho ${itemCode} · ${selectedUom} trong bảng giá ${priceList}.`);
   }
   if (active.length === 1) {
     const selected = active[0]!;
-    return { price: selected, name: String(selected.name ?? exactName) };
+    return { price: selected, name: normalizedText(selected.name) || exactName };
   }
 
-  // A legacy record for another UOM is not a diagnostic candidate and must never escape as
-  // a usable price. Only an explicitly compatible legacy row can represent this transaction.
   const disabled = compatibleLegacy ?? exact ?? matching[0] ?? null;
+  if (!disabled && exactReadError) throw exactReadError;
   return {
     price: disabled,
     name: disabled
-      ? String(disabled.name ?? (disabled === compatibleLegacy ? legacyName : exactName))
+      ? normalizedText(disabled.name) || (disabled === compatibleLegacy ? legacyName : exactName)
       : exactName,
   };
 }
@@ -147,7 +163,7 @@ function cleanNumber(value: number): string {
 }
 
 export async function salesItemContext(call: SalesPlatformCall, args: Json): Promise<Response> {
-  const itemCode = String(args.item_code ?? "").trim();
+  const itemCode = normalizedText(args.item_code);
   if (!itemCode) return json({ message: "Cần chọn mặt hàng bán." }, 422);
 
   const item = await readResource(call, "Item", itemCode);
@@ -155,15 +171,15 @@ export async function salesItemContext(call: SalesPlatformCall, args: Json): Pro
     return json({ message: `Mặt hàng ${itemCode} không tồn tại, đã ngừng dùng hoặc không được phép bán.` }, 422);
   }
 
-  const stockUom = String(item.stock_uom ?? "").trim();
-  const defaultSalesUom = String(item.default_sales_uom ?? "").trim() || stockUom;
+  const stockUom = normalizedText(item.stock_uom);
+  const defaultSalesUom = normalizedText(item.default_sales_uom) || stockUom;
   const conversions = Array.isArray(item.uom_conversions)
     ? item.uom_conversions.filter((row): row is Json => Boolean(row) && typeof row === "object" && !Array.isArray(row))
     : [];
   const factorByUom = new Map<string, number>();
   if (stockUom) factorByUom.set(stockUom, 1);
   for (const row of conversions) {
-    const uom = String(row.uom ?? "").trim();
+    const uom = normalizedText(row.uom);
     const factor = positive(row.conversion_factor);
     if (uom && factor) factorByUom.set(uom, factor);
   }
@@ -171,7 +187,7 @@ export async function salesItemContext(call: SalesPlatformCall, args: Json): Pro
     factorByUom.set(defaultSalesUom, 1);
   }
   const allowedUoms = [...factorByUom.keys()];
-  const selectedUom = String(args.uom ?? "").trim() || defaultSalesUom || stockUom;
+  const selectedUom = normalizedText(args.uom) || defaultSalesUom || stockUom;
   if (!selectedUom || !factorByUom.has(selectedUom)) {
     return json({
       message: `ĐVT "${selectedUom || "(trống)"}" chưa được khai trên mặt hàng ${itemCode}.`,
@@ -180,8 +196,8 @@ export async function salesItemContext(call: SalesPlatformCall, args: Json): Pro
   }
   const conversionFactor = factorByUom.get(selectedUom) ?? 1;
 
-  const priceList = String(args.price_list ?? "").trim();
-  const documentCurrency = String(args.currency ?? item.currency ?? "VND").trim() || "VND";
+  const priceList = normalizedText(args.price_list);
+  const documentCurrency = normalizedText(args.currency ?? item.currency ?? "VND") || "VND";
   let rate: number | null = null;
   let currency = documentCurrency;
   let itemPrice: string | null = null;
@@ -194,7 +210,7 @@ export async function salesItemContext(call: SalesPlatformCall, args: Json): Pro
       const price = lookup.price;
       itemPrice = lookup.name;
       if (price && !truthy(price.disabled)) {
-        const priceCurrency = String(price.currency ?? "").trim();
+        const priceCurrency = normalizedText(price.currency);
         const parsed = Number(price.rate);
         currency = priceCurrency || documentCurrency;
         if (!priceCurrency) {
@@ -224,8 +240,8 @@ export async function salesItemContext(call: SalesPlatformCall, args: Json): Pro
     if (Number.isFinite(standard) && standard >= 0) rate = standard;
   }
 
-  const managedStock = !(item.is_stock_item === 0 || item.is_stock_item === false || String(item.item_nature ?? "") === "Dịch vụ");
-  const warehouse = String(args.warehouse ?? item.default_warehouse ?? "").trim();
+  const managedStock = !(item.is_stock_item === 0 || item.is_stock_item === false || normalizedText(item.item_nature) === "Dịch vụ");
+  const warehouse = normalizedText(args.warehouse ?? item.default_warehouse);
   let availableStockQty: number | null = null;
   let availableQty: number | null = null;
   let stockStatus = "Không quản lý tồn";
@@ -237,8 +253,8 @@ export async function salesItemContext(call: SalesPlatformCall, args: Json): Pro
       try {
         const rows = await reportRows(call, "Stock Balance", { item_code: itemCode, warehouse });
         availableStockQty = rows
-          .filter((row) => (!row.item_code || String(row.item_code) === itemCode)
-            && (!row.warehouse || String(row.warehouse) === warehouse))
+          .filter((row) => (!row.item_code || sameText(row.item_code, itemCode))
+            && (!row.warehouse || sameText(row.warehouse, warehouse)))
           .reduce((sum, row) => sum + quantityFromRow(row), 0);
         availableQty = availableStockQty / conversionFactor;
         stockStatus = availableStockQty > 0
