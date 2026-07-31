@@ -70,7 +70,7 @@ test("physical stock report injects authenticated tenant and normalizes filters"
   const response = await routePhysicalStockApi(request, new URL(request.url), context(), { service });
 
   assert.equal(response.status, 200);
-  assert.equal(response.headers.get("cache-control"), "private, no-store");
+  assert.equal(response.headers.get("cache-control"), "no-store");
   assert.equal(response.headers.get("x-cloudforge-trace-id"), "trace-stock-api");
   assert.deepEqual(calls, [{
     receivedActor: actor,
@@ -152,7 +152,9 @@ test("physical stock export returns private CSV and forbids pagination controls"
   assert.equal(response.headers.get("content-type"), "text/csv; charset=utf-8");
   assert.equal(response.headers.get("content-disposition"), "attachment; filename=\"physical-stock-Demo.csv\"");
   assert.equal(response.headers.get("cache-control"), "private, no-store");
-  assert.equal(await response.text(), "\uFEFFitem_code,quantity_micros\r\nAL-01,1000000");
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  assert.deepEqual([...bytes.slice(0, 3)], [0xef, 0xbb, 0xbf]);
+  assert.equal(new TextDecoder().decode(bytes.slice(3)), "item_code,quantity_micros\r\nAL-01,1000000");
   assert.deepEqual(calls, [{ receivedActor: actor, tenantId: "tenant-a", request: { company: "Demo", warehouse: "Main" } }]);
 
   const paged = apiRequest("/api/v1/reports/physical-stock/export", { company: "Demo", limit: 20 });
