@@ -2,33 +2,48 @@
 
 Ngày cập nhật: **2026-07-31**.
 
-## Purchase/FIFO — merge và production release đã hoàn tất
+## P0 — Functional production smoke cho Link dropdown trong child table
 
-### Đã hoàn thành
+Bản vá wheel đúng đã merge và phát hành:
+
+- Feature PR `#62` merge SHA `b3dd1d15a1b52de698d0874b29feae79efe7ed6c`.
+- Release PR `#64` merge SHA `eaf6b32709abc731bd37285501676ed1ec6267af`.
+- Gateway run `30635980509`, job `91173574419`: build, stage, deploy, smoke và provider evidence **PASS**.
+- Gateway production version: `b0d0ce5b-408c-47ab-a734-fa55ba4d9c00`.
+- Targeted Playwright trên desktop/tablet/mobile đã phát `mouse.wheel` và xác minh `scrollTop` của dropdown tăng.
+
+Kiểm trực tiếp sau hard refresh bằng tài khoản production phù hợp, không ghi credential/cookie/dữ liệu khách hàng vào evidence:
+
+1. Mở Báo giá hoặc Đơn hàng và mở bảng child lớn.
+2. Mở dropdown `Mã hàng` có danh sách dài.
+3. Đặt con trỏ trên text hoặc icon của một lựa chọn rồi dùng con lăn:
+   - danh sách dropdown phải cuộn dọc;
+   - không cần kéo thumb scrollbar bằng chuột.
+4. Cuộn tới cuối và tiếp tục lăn xuống:
+   - dropdown không cuộn quá biên;
+   - vùng child grid phía sau tiếp tục cuộn nếu còn khoảng cuộn.
+5. Lặp lại ở đầu danh sách theo hướng ngược lại.
+6. Kiểm thêm dropdown UOM và Warehouse trong bảng lớn.
+7. Đóng bảng lớn, kiểm dropdown ở bảng gọn vẫn chọn và cuộn bình thường.
+8. Xác minh không còn nhóm `Lựa chọn gần đây` sau khi chọn, đóng và mở lại dropdown.
+9. Xác minh Item picker vẫn giữ filter bán hàng và tìm được theo mã/tên.
+10. Nếu thất bại, ghi rõ viewport, loại dropdown, vị trí con trỏ, hướng wheel và ảnh/video đã redacted.
+
+## Purchase/FIFO — functional browser QA còn lại
 
 - PR `#14` đã squash-merge thành `7b3dc06dbbecbb5370ddb48259aa1614aef2ff32`.
-- Tenant release run `30631386714`: backup, migration, deploy và endpoint smoke **PASS**.
 - Tenant Worker production version: `9ec0d1d3-c1fd-4263-ae35-4fae81c09968`.
-- Gateway release PR `#57` đã merge thành `f50993ef7736a0321f6a0e8c308c5cb069497472`.
-- Gateway run `30631951946`, job `91160176928`: build, stage, deploy, smoke và provider evidence **PASS**.
-- Gateway production version: `6352386d-8385-4ea8-af31-15ac62e21943`.
-- FIFO rollout vẫn **disabled**; không có activation, DNS hay production secret change.
-- Workflow tenant release đã sửa để đọc version từ Wrangler NDJSON; workflow/trigger one-shot đã được dọn.
+- FIFO rollout vẫn **disabled**; deploy code không phải approval kích hoạt FIFO.
 
-### P0 — Functional browser QA Purchase sau deploy
+Dùng dữ liệu thử phù hợp:
 
-Dùng tài khoản và dữ liệu thử phù hợp; không ghi credential, cookie hoặc dữ liệu khách hàng vào evidence:
-
-1. Desktop và mobile: mở Purchase Order/Purchase Receipt, kiểm submit preview và allocation timeline.
+1. Desktop/mobile: mở Purchase Order/Purchase Receipt, kiểm submit preview và allocation timeline.
 2. Kiểm settlement close/reverse, reason bắt buộc, capability/permission và confirmation scope.
 3. Kiểm manual FIFO override, validation reason và audit append-only.
 4. Kiểm supplier debt drill-down, filters, summaries và CSV export.
 5. Smoke PO → Receipt → cancel → settlement/reverse bằng chứng từ test có thể dọn/hủy an toàn.
-6. Hard refresh và kiểm bundle/cache cũ không che UI mới.
-7. Ghi ảnh/evidence đã redacted; không chụp token, cookie, secret hoặc dữ liệu khách hàng thật.
-8. Nếu phát hiện lỗi Critical/High, rollback Gateway/Tenant theo version trước và mở issue có evidence.
 
-### P0 — Blocker trước khi kích hoạt FIFO production
+### Blocker trước khi kích hoạt FIFO production
 
 1. Chạy staging migration và backfill dry-run trên bản sao dữ liệu phù hợp.
 2. Review resolved/unresolved report và PO-level checksum.
@@ -36,26 +51,20 @@ Dùng tài khoản và dữ liệu thử phù hợp; không ghi credential, cook
 4. Chạy staging smoke đầy đủ PO → Receipt → cancel → settlement/manual override → report.
 5. Xác minh supplier contention/D1 latency ở tải gần production.
 6. Tạo production backup mới ngay trước activation.
-7. Chỉ activation khi có explicit approval riêng; không gộp approval deploy code với approval bật FIFO.
-
-### P1 — Product/report decisions
-
-- Quyết định có cần standalone global Supplier Debt Report hay chỉ giữ report permission-scoped theo PO/Receipt timeline.
-- Nếu cần global report, phải có contract data-scope, permission, filters và export riêng trước khi implement.
+7. Chỉ activation khi có explicit approval riêng.
 
 ## Bán hàng — functional browser acceptance còn lại
 
 1. Item picker chỉ hiện Item `is_sales_item=1`, `disabled=0` khi tìm trống và tìm theo mã/tên.
-2. Recent links không làm lộ Item disabled hoặc mất quyền bán.
-3. Multi-UOM: kiểm giá/tồn theo Item + Kho + ĐVT, không lấy chéo UOM.
-4. Kiểm Price List/Item Price với role `Kinh doanh` và `Kế toán`.
-5. Huỷ hoặc xoá chứng từ test theo quy trình nghiệp vụ sau khi thu evidence.
+2. Multi-UOM: kiểm giá/tồn theo Item + Kho + ĐVT, không lấy chéo UOM.
+3. Kiểm Price List/Item Price với role `Kinh doanh` và `Kế toán`.
+4. Huỷ hoặc xoá chứng từ test theo quy trình nghiệp vụ sau khi thu evidence.
 
 ## Theo dõi production
 
-- Theo dõi Gateway/Tenant 4xx/5xx mới liên quan Purchase allocation, settlement, supplier debt và sales item context.
-- Rollback khi có login/API 5xx diện rộng, sai tenant/database, permission regression, mất dữ liệu CRUD hoặc print/PDF lỗi nghiêm trọng.
-- Endpoint smoke hiện đã đạt nhưng không thay thế browser/business smoke.
+- Theo dõi Gateway 4xx/5xx mới, lỗi mở/chọn Link dropdown, focus trap hoặc keyboard navigation regression.
+- Rollback khi có login/API 5xx diện rộng, Link dropdown không mở/chọn được, permission regression hoặc mất dữ liệu CRUD.
+- Endpoint smoke đã đạt nhưng không thay thế functional browser smoke có đăng nhập.
 
 ## RBAC
 
@@ -64,10 +73,9 @@ Dùng tài khoản và dữ liệu thử phù hợp; không ghi credential, cook
 
 ## Release automation
 
-- Ở tenant release kế tiếp, xác minh `.github/workflows/ci.yml` tạo summary/version từ Wrangler NDJSON và không còn lỗi hậu kiểm `404`.
 - Giữ `.github/workflows/gateway-production-release.yml` làm đường Gateway có exact SHA, smoke và provider evidence.
+- Ở tenant release kế tiếp, xác minh `.github/workflows/ci.yml` tạo summary/version từ Wrangler NDJSON.
 - `cloudflare-production-observation.yml` chỉ dùng manual smoke; không dùng để suy ra version/deployment ID.
-- Chuẩn hóa release branch/date-specific trigger bằng PR riêng, không phát hành production chỉ để thử workflow.
 
 ## Safety
 
