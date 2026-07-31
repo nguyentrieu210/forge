@@ -2,13 +2,23 @@
 
 ## P0 — Bán hàng multi-UOM và tồn khả dụng
 
-1. Chạy full CI: test, typecheck, build và brief check.
-2. Smoke Báo giá/Đơn hàng: chọn Item, đổi ĐVT, đổi Bảng giá, đổi Kho, kiểm trạng thái tồn và giá.
-3. Nạp ít nhất hai Item Price khác ĐVT cho cùng một Item trên staging.
-4. Xác minh Item Price legacy chỉ dùng khi UOM khớp.
-5. Thiết kế bước tiếp theo: reservation/ATP theo Sales Order; chưa bật trong đợt này.
-6. Không deploy production nếu chưa có explicit approval.
+Đã xong:
 
+- Exact Item Price theo `Bảng giá + Mặt hàng + ĐVT`.
+- Tương thích an toàn với Item Price legacy.
+- Picker ĐVT theo Item/UOM Conversion.
+- Nạp giá và tồn theo Item + Kho + ĐVT trên Báo giá/Đơn hàng.
+- Sales Feature CI run `30612497110`, job `91098266796`: unit, SQL, brief, client test, typecheck và build **PASS**.
+
+Còn lại trước khi đề nghị merge/deploy:
+
+1. Smoke Báo giá/Đơn hàng trên staging: chọn Item, đổi ĐVT, đổi Bảng giá, đổi Kho, kiểm trạng thái tồn và giá.
+2. Nạp ít nhất hai Item Price khác ĐVT cho cùng một Item trên staging và xác minh giá không bị quy đổi chéo.
+3. Xác minh Item Price legacy không UOM vẫn chạy; legacy có UOM chỉ chạy khi dòng khớp.
+4. Kiểm tra quyền Kinh doanh chỉ đọc Bảng giá/Item Price và không tự sửa giá master.
+5. Thiết kế bước tiếp theo: reservation/ATP theo Sales Order; chưa bật trong đợt này.
+6. Chỉ chuyển PR #25 khỏi draft sau browser/staging smoke.
+7. Không merge hoặc deploy production nếu chưa có explicit approval.
 
 Ngày cập nhật: **2026-07-31**.
 
