@@ -1,0 +1,88 @@
+name: Fix Sales Production Tests Once
+
+on:
+  push:
+    branches:
+      - feat/sales-order-production-flow-final-20260801
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fix-sales-production-tests-once
+  cancel-in-progress: false
+
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/sales-order-production-flow-final-20260801
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Update exact metadata assertions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          audit = Path('server/tests/alumdoor-catalog-audit.test.mjs')
+          source = audit.read_text()
+          before = '''  assert.equal(report.metadata_version, "2.0.34");
+          assert.equal(report.expected_metadata_version, "2.0.34");'''
+          after = '''  assert.equal(report.metadata_version, "2.0.35");
+          assert.equal(report.expected_metadata_version, "2.0.35");'''
+          if source.count(before) != 1:
+              raise SystemExit(f'audit metadata assertion count={source.count(before)}')
+          audit.write_text(source.replace(before, after, 1))
+
+          model = Path('server/tests/alumdoor-item-model.test.mjs')
+          source = model.read_text()
+          validator_before = '''    { doctype: "Aluminium Lot", actions: ["create", "save"] },
+          ]);'''
+          validator_after = '''    { doctype: "Aluminium Lot", actions: ["create", "save"] },
+            { doctype: "Production Request", actions: ["create", "save"] },
+          ]);'''
+          if source.count(validator_before) != 1:
+              raise SystemExit(f'validator snapshot target count={source.count(validator_before)}')
+          source = source.replace(validator_before, validator_after, 1)
+          version_before = '  assert.equal(v2Brief.version, "2.0.34");'
+          version_after = '  assert.equal(v2Brief.version, "2.0.35");'
+          if source.count(version_before) != 1:
+              raise SystemExit(f'v2 version assertion count={source.count(version_before)}')
+          model.write_text(source.replace(version_before, version_after, 1))
+          PY
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+          pnpm install --frozen-lockfile
+
+      - name: Run full unit, typecheck and build
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm --dir server run test:unit
+          pnpm --filter metaforge run typecheck
+          pnpm --filter cloudforge run build
+
+      - name: Commit verified test updates
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/fix-sales-production-tests-once.yml
+          rm -f server/scripts/.fix-sales-production-tests-trigger
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git diff --cached --check
+          git commit -m "test(sales): update production flow metadata expectations"
+          git push origin HEAD:feat/sales-order-production-flow-final-20260801
