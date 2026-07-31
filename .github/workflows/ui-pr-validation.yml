@@ -1,0 +1,137 @@
+name: UI Pull Request Validation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - "client/**"
+      - "server/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/ui-pr-validation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ui-pr-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Install, gate, browser QA and auth smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run frontend lint
+        run: pnpm --filter metaforge run lint
+
+      - name: Run tests
+        run: pnpm test
+
+      - name: Run typecheck
+        run: pnpm typecheck
+
+      - name: Build
+        run: pnpm build
+
+      - name: Install Chromium for visual QA
+        run: pnpm --filter e2e-forge exec playwright install --with-deps chromium
+
+      - name: Run Alumdoor browser QA
+        run: pnpm --filter e2e-forge exec playwright test --config playwright.ui.config.ts
+
+      - name: Upload browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alumdoor-login-landing-evidence-${{ github.run_id }}
+          path: |
+            client/e2e-forge/test-results/ui-visual/
+            client/e2e-forge/playwright-report/ui-visual/
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Create ephemeral local auth credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          auth_user="qa-${GITHUB_RUN_ID}@example.test"
+          auth_password="$(openssl rand -hex 24)"
+          echo "::add-mask::$auth_password"
+          echo "FORGE_AUTH_USER=$auth_user" >> "$GITHUB_ENV"
+          echo "FORGE_AUTH_PASSWORD=$auth_password" >> "$GITHUB_ENV"
+
+      - name: Prepare local tenant database
+        working-directory: server
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm exec wrangler d1 migrations apply cloudforge-demo --local --config apps/tenant-worker/wrangler.jsonc
+          node scripts/seed-local.mjs --user "$FORGE_AUTH_USER" --password "$FORGE_AUTH_PASSWORD"
+
+      - name: Start local tenant worker
+        working-directory: server
+        shell: bash
+        run: |
+          set -euo pipefail
+          nohup pnpm exec wrangler dev --config apps/tenant-worker/wrangler.jsonc --port 8801 --local > "$RUNNER_TEMP/forge-auth-backend.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/forge-auth-backend.pid"
+          ready=0
+          for attempt in $(seq 1 45); do
+            if curl --fail --silent --show-error http://127.0.0.1:8801/health > /dev/null; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+          if [ "$ready" != "1" ]; then
+            cat "$RUNNER_TEMP/forge-auth-backend.log"
+            exit 1
+          fi
+
+      - name: Run Alumdoor cookie auth smoke
+        env:
+          FORGE_AUTH_BACKEND: http://127.0.0.1:8801
+        run: pnpm --filter e2e-forge exec playwright test --config playwright.auth.config.ts
+
+      - name: Upload auth evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alumdoor-auth-session-evidence-${{ github.run_id }}
+          path: |
+            client/e2e-forge/test-results/auth-session/
+            client/e2e-forge/playwright-report/auth-session/
+            ${{ runner.temp }}/forge-auth-backend.log
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Stop local tenant worker
+        if: always()
+        shell: bash
+        run: |
+          if [ -f "$RUNNER_TEMP/forge-auth-backend.pid" ]; then
+            kill "$(cat "$RUNNER_TEMP/forge-auth-backend.pid")" 2>/dev/null || true
+          fi
