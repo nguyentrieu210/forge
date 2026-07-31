@@ -16,6 +16,7 @@ import { useMetaForge } from "./provider.js";
 import { useDoc, useFormMeta, useTransitions, useCapabilities, NO_CAPS } from "./hooks.js";
 import { stashDuplicate } from "./duplicate.js";
 import { recordRecentDoc } from "./recent-docs.js";
+import { SubmitPreviewDialog, type SubmitPreview } from "./SubmitPreviewDialog.js";
 
 export interface FormContainerProps {
   doctype: string;
@@ -52,6 +53,7 @@ export function FormContainer(props: FormContainerProps) {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string> | undefined>();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [renaming, setRenaming] = useState(false);
+  const [submitPreview, setSubmitPreview] = useState<SubmitPreview | null>(null);
 
   // "Gần đây" (CommandPalette đã có sẵn UI, trước đây không app nào cấp dữ liệu) — ghi mỗi lần mở
   // 1 bản ghi đã lưu thành công (doc?.modified đổi ⇒ mở doc mới HOẶC vừa lưu xong đều tính là "vừa xem").
@@ -108,6 +110,13 @@ export function FormContainer(props: FormContainerProps) {
     ]).catch(() => undefined);
   };
 
+  const submitCurrent = async () => {
+    const updated = await adapter.submit(doc);
+    publishMutation(updated);
+    toast.success(t("form.submitted"));
+    setSubmitPreview(null);
+  };
+
   const onSave = async (changed: Record<string, unknown>) => {
     setSaving(true);
     setFieldErrors(undefined);
@@ -139,11 +148,40 @@ export function FormContainer(props: FormContainerProps) {
     // không gọi API, chỉ stash + để cha điều hướng.
     if (kind === "duplicate") { stashDuplicate(doctype, doc as Record<string, unknown>); props.onDuplicate?.(); return; }
     if (kind === "print") { props.onPrint?.(); return; }
+    if (kind === "submit") {
+      setSaving(true);
+      try {
+        // Fail closed: preview is server-authoritative. A failed preview must not
+        // silently fall through to submit, because the operator would confirm one
+        // allocation while the server writes another.
+        const preview = await adapter.callGet<SubmitPreview | null>(
+          "metaforge.api.get_submit_preview",
+          { doctype, name },
+        );
+        if (preview) setSubmitPreview(preview);
+        else await submitCurrent();
+      } catch (e) {
+        toast.error(adapter.mapError(e).message);
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
     setSaving(true);
     try {
-      if (kind === "submit") { const updated = await adapter.submit(doc); publishMutation(updated); toast.success(t("form.submitted")); }
-      else if (kind === "cancel") { const updated = await adapter.cancel(doctype, name); publishMutation(updated); toast.success(t("form.cancelled")); }
+      if (kind === "cancel") { const updated = await adapter.cancel(doctype, name); publishMutation(updated); toast.success(t("form.cancelled")); }
       else if (kind === "amend") { await adapter.amend(doctype, name); invalidateCollection(); toast.success(t("form.amended")); props.onSaved?.(); }
+    } catch (e) {
+      toast.error(adapter.mapError(e).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const confirmSubmit = async () => {
+    setSaving(true);
+    try {
+      await submitCurrent();
     } catch (e) {
       toast.error(adapter.mapError(e).message);
     } finally {
@@ -241,6 +279,12 @@ export function FormContainer(props: FormContainerProps) {
         defaultValue={name}
         confirmLabel={t("form.rename_title")}
         onConfirm={doRename}
+      />
+      <SubmitPreviewDialog
+        preview={submitPreview}
+        saving={saving}
+        onCancel={() => setSubmitPreview(null)}
+        onConfirm={() => void confirmSubmit()}
       />
     </>
   );

@@ -17,7 +17,8 @@ import {
 import type { TrustedIdentityKey } from "../../../packages/auth/src/index.js";
 import type { Actor, CanonicalDocument, DomainEvent, JsonObject, MutationCommand, MutationReceipt } from "../../../packages/contracts/src/index.js";
 import { parseMutationCommandInput } from "../../../packages/contracts/src/index.js";
-import { D1CommercialReconciliationService, D1DocumentListStore, D1MutationStore, DocumentListService } from "../../../packages/document-kernel/src/index.js";
+import { previewPurchaseReceiptSubmission } from "../../../packages/clouderp-core/src/index.js";
+import { D1CommercialReconciliationService, D1DocumentListStore, D1MutationStore, D1RolloutPurchaseAllocationDomainStore, DocumentListService } from "../../../packages/document-kernel/src/index.js";
 import { asCloudForgeError, commandPayloadHash, errorResponse, errors, jsonResponse, randomId, readJson } from "../../../packages/core/src/index.js";
 import {
   D1CollaborationService, D1DocumentAccessStore, D1MetadataStore, D1SearchStore,
@@ -1074,6 +1075,36 @@ async function serveFrappeApiInner(
   const access = new D1DocumentAccessStore(requestDb);
   const permissions = new MetadataPermissionService(metadata, undefined, access);
   const documents = new D1MutationStore(requestDb);
+
+  if (request.method === "GET" && url.pathname === "/api/method/metaforge.api.get_submit_preview") {
+    const doctype = requireShortText(url.searchParams.get("doctype"), "doctype", 160);
+    const name = requireShortText(url.searchParams.get("name"), "name", 320);
+    if (doctype !== "Purchase Receipt") return jsonResponse({ message: null });
+
+    const document = await documents.getDocument(tenantId, doctype, name);
+    if (!document) throw errors.notFound(`${doctype} ${name} was not found`);
+    if (document.docstatus !== 0) {
+      throw errors.lifecycle("Only a draft document can be previewed for submission");
+    }
+    await permissions.assert({
+      actor,
+      tenantId,
+      doctype,
+      name,
+      owner: document.owner,
+      data: document.data,
+      action: "submit",
+    });
+    const preview = await previewPurchaseReceiptSubmission({
+      tenantId,
+      actor,
+      document,
+      reader: new D1RolloutPurchaseAllocationDomainStore(requestDb),
+      now: now(),
+    });
+    return jsonResponse({ message: preview });
+  }
+
   const installedApps = new AppInstaller(requestDb, metadata, users);
 
   /**
