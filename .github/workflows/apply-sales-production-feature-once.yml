@@ -69,7 +69,7 @@ jobs:
       - name: Apply metadata and integration patch
         run: node server/scripts/apply-sales-production-feature.mjs
 
-      - name: Complete policy fixtures and strict TypeScript
+      - name: Complete policy fixtures, parser and strict TypeScript
         shell: bash
         run: |
           set -euo pipefail
@@ -109,6 +109,36 @@ jobs:
                   ],
               })
               brief_path.write_text(json.dumps(brief, ensure_ascii=False, indent=2) + '\n')
+
+          door_path = Path('server/apps-src/alumdoor-worker/src/door-formulas.ts')
+          door_source = door_path.read_text()
+          parser_anchor = '    ...(input.note ? { note: String(input.note) } : {}),\n  };\n}'
+          parser_replacement = '''    ...(input.note ? { note: String(input.note) } : {}),
+              ...(input.ray_type ? { ray_type: String(input.ray_type) as NonNullable<DoorFormulaPolicy["ray_type"]> } : {}),
+              ...(input.leaf_formula ? { leaf_formula: String(input.leaf_formula) as NonNullable<DoorFormulaPolicy["leaf_formula"]> } : {}),
+              ...(input.leaf_height_deduction_m == null || input.leaf_height_deduction_m === ""
+                ? {}
+                : { leaf_height_deduction_m: Number(input.leaf_height_deduction_m) }),
+              ...(input.leaf_divisor_source
+                ? { leaf_divisor_source: String(input.leaf_divisor_source) as NonNullable<DoorFormulaPolicy["leaf_divisor_source"]> }
+                : {}),
+              ...(input.leaf_divisor_const == null || input.leaf_divisor_const === ""
+                ? {}
+                : { leaf_divisor_const: Number(input.leaf_divisor_const) }),
+              ...(input.leaf_rounding
+                ? { leaf_rounding: String(input.leaf_rounding) as NonNullable<DoorFormulaPolicy["leaf_rounding"]> }
+                : {}),
+              ...(input.leaf_round_threshold == null || input.leaf_round_threshold === ""
+                ? {}
+                : { leaf_round_threshold: Number(input.leaf_round_threshold) }),
+              ...(Array.isArray(input.leaf_variants)
+                ? { leaf_variants: input.leaf_variants as NonNullable<DoorFormulaPolicy["leaf_variants"]> }
+                : {}),
+            };
+          }'''
+          if door_source.count(parser_anchor) != 1:
+              raise SystemExit(f'policy parser anchor count={door_source.count(parser_anchor)}')
+          door_path.write_text(door_source.replace(parser_anchor, parser_replacement, 1))
 
           index_path = Path('server/apps-src/alumdoor-worker/src/index.ts')
           index_source = index_path.read_text()
