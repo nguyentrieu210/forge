@@ -25,6 +25,18 @@ Workflow mục tiêu còn lại:
 - `tenant-production-release.yml`.
 - `purchase-completion-apply.yml` tạm thời cho PR #63.
 
+Đã xóa thêm trong checkpoint workflow-history cleanup:
+
+- `manual-release-alu.yml` vì trùng đường Tenant release mới.
+- `cloudflare-preview-qa.yml` vì workflow cũ mang Cloudflare token vào PR, deploy QA worker và trùng UI/browser QA.
+
+Lưu ý sidebar Actions:
+
+1. Tên workflow cũ có thể vẫn hiện vì historical runs dù file đã bị xóa.
+2. `inventory-remote-*` là ví dụ đã được xóa từ commit `88885b0f03cc00754da771b10a6f85f71db5fce6`.
+3. Không tạo lại workflow hoặc sửa code để xử lý tên lịch sử.
+4. Chỉ xóa historical runs/disable workflow bằng GitHub UI/API khi người dùng yêu cầu thao tác quản trị riêng.
+
 Sau khi PR #63 kết thúc:
 
 1. Xác nhận không còn gate nào phụ thuộc `purchase-completion-apply.yml`.
