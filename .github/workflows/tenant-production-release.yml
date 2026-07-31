@@ -1,0 +1,152 @@
+name: Tenant Production Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tenant:
+        description: Tenant slug
+        required: true
+        default: alu
+        type: string
+      target_sha:
+        description: Exact verified commit SHA
+        required: true
+        type: string
+      confirm:
+        description: Type RELEASE_TENANT to authorize production release
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+environment: production
+
+concurrency:
+  group: production-tenant-${{ inputs.tenant }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Backup, migrate, deploy and smoke tenant
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      TENANT: ${{ inputs.tenant }}
+      TARGET_SHA: ${{ inputs.target_sha }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      EVIDENCE_DIR: ${{ runner.temp }}/tenant-release-evidence
+      BACKUP_DIR: ${{ runner.temp }}/tenant-backup
+    steps:
+      - name: Validate explicit release authorization
+        shell: bash
+        run: |
+          set -euo pipefail
+          test '${{ inputs.confirm }}' = 'RELEASE_TENANT'
+          test -n "$TENANT"
+          test "$TENANT" = 'alu'
+          test "$TARGET_SHA" = "${TARGET_SHA#refs/heads/}"
+          test "${#TARGET_SHA}" -eq 40
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+
+      - name: Checkout exact verified commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prepare evidence directories
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$EVIDENCE_DIR" "$BACKUP_DIR"
+          printf 'run_id=%s\ntenant=%s\ntarget_sha=%s\nstarted_at=%s\nfifo_rollout=disabled\n' \
+            "$GITHUB_RUN_ID" "$TENANT" "$TARGET_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            > "$EVIDENCE_DIR/state.txt"
+
+      - name: Backup tenant
+        shell: bash
+        run: |
+          set -euo pipefail
+          node server/scripts/backup-tenant.mjs --tenant "$TENANT" 2>&1 | tee "$EVIDENCE_DIR/backup-dry.log"
+          node server/scripts/backup-tenant.mjs --tenant "$TENANT" --execute --output-dir "$BACKUP_DIR" 2>&1 | tee "$EVIDENCE_DIR/backup-live.log"
+          echo 'backup=pass' >> "$EVIDENCE_DIR/state.txt"
+
+      - name: Upload backup
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.tenant }}-pre-release-backup-${{ github.run_id }}
+          path: ${{ runner.temp }}/tenant-backup/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Migrate tenant
+        working-directory: server
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/migrate-tenant.mjs --tenant "$TENANT" 2>&1 | tee "$EVIDENCE_DIR/migrate-dry.log"
+          node scripts/migrate-tenant.mjs --tenant "$TENANT" --execute --confirm "$TENANT" 2>&1 | tee "$EVIDENCE_DIR/migrate-live.log"
+          echo 'migration=pass' >> "$EVIDENCE_DIR/state.txt"
+
+      - name: Deploy tenant
+        working-directory: server
+        shell: bash
+        env:
+          WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/tenant-release-evidence/wrangler-output.ndjson
+        run: |
+          set -euo pipefail
+          node scripts/deploy-tenant.mjs --tenant "$TENANT" 2>&1 | tee "$EVIDENCE_DIR/deploy-dry.log"
+          node scripts/deploy-tenant.mjs --tenant "$TENANT" --execute --confirm "$TENANT" 2>&1 | tee "$EVIDENCE_DIR/deploy-live.log"
+          echo 'deploy=pass' >> "$EVIDENCE_DIR/state.txt"
+
+      - name: Smoke tenant production
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='https://alu.kairo.vn'
+          health=0
+          for attempt in $(seq 1 18); do
+            health="$(curl --silent --show-error --output "$EVIDENCE_DIR/health.json" --write-out '%{http_code}' "$BASE/health" || true)"
+            [ "$health" = '200' ] && break
+            sleep 5
+          done
+          test "$health" = '200'
+          boot="$(curl --silent --show-error --output "$EVIDENCE_DIR/guest-boot.json" --write-out '%{http_code}' "$BASE/api/method/metaforge.api.get_boot" || true)"
+          test "$boot" = '403'
+          printf 'health=%s\nguest_boot=%s\nsmoke=pass\n' "$health" "$boot" >> "$EVIDENCE_DIR/state.txt"
+
+      - name: Collect provider version evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          version_id="$(node -e "const fs=require('fs');const rows=fs.readFileSync(process.env.EVIDENCE_DIR+'/wrangler-output.ndjson','utf8').trim().split(/\\r?\\n/).filter(Boolean).map(JSON.parse);const row=[...rows].reverse().find(x=>x.type==='deploy'&&x.version_id);process.stdout.write(row?.version_id||'')")"
+          test -n "$version_id"
+          printf 'tenant_version_id=%s\nprovider_evidence=pass\n' "$version_id" >> "$EVIDENCE_DIR/state.txt"
+
+      - name: Upload release evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.tenant }}-production-release-${{ github.run_id }}
+          path: ${{ runner.temp }}/tenant-release-evidence/
+          if-no-files-found: warn
+          retention-days: 30
