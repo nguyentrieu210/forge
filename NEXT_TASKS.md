@@ -2,7 +2,7 @@
 
 Ngày cập nhật: **2026-07-31**.
 
-## Purchase/FIFO — merge và production release đã hoàn tất
+## Purchase/FIFO — code, release nền và browser QA
 
 ### Đã hoàn thành
 
@@ -13,32 +13,38 @@ Ngày cập nhật: **2026-07-31**.
 - Gateway run `30631951946`, job `91160176928`: build, stage, deploy, smoke và provider evidence **PASS**.
 - Gateway production version: `6352386d-8385-4ea8-af31-15ac62e21943`.
 - FIFO rollout vẫn **disabled**; không có activation, DNS hay production secret change.
-- Workflow tenant release đã sửa để đọc version từ Wrangler NDJSON; workflow/trigger one-shot đã được dọn.
+- PR `#63` đã materialize source thật tại `2b8219f8325dd41e4c9cd833f48f85a0d5b87d55`; không còn payload/workflow one-shot.
+- Migration `0032_purchase_reversed_window_corrections.sql`, lifecycle `close → reverse → cancel` và SQL/unit regression đã hoàn tất.
+- Chromium Purchase QA đã **PASS 6/6** trên desktop/mobile trong UI run `30641219079`, job `91191344929`.
+- UI workflow còn PASS build, Alumdoor browser QA và local cookie-auth smoke; evidence artifacts `8797591671`, `8797601615`.
+- Exact-head CI, PR Validation, Purchase, Inventory/Manufacturing và Sales workflows đều **SUCCESS** trên source commit thật.
 
-### P0 — Functional browser QA Purchase sau deploy
+### P0 — hoàn tất PR #63
 
-Dùng tài khoản và dữ liệu thử phù hợp; không ghi credential, cookie hoặc dữ liệu khách hàng vào evidence:
+1. Chạy exact-head CI sau commit tài liệu cuối.
+2. Xác nhận PR vẫn mergeable, không còn temp/generated artifact.
+3. Chuyển PR khỏi draft và merge khi toàn bộ required checks xanh.
+4. Sau merge, nếu phát hành correction code/migration `0032`, dùng release path chuẩn và giữ FIFO **disabled**.
 
-1. Desktop và mobile: mở Purchase Order/Purchase Receipt, kiểm submit preview và allocation timeline.
-2. Kiểm settlement close/reverse, reason bắt buộc, capability/permission và confirmation scope.
-3. Kiểm manual FIFO override, validation reason và audit append-only.
-4. Kiểm supplier debt drill-down, filters, summaries và CSV export.
-5. Smoke PO → Receipt → cancel → settlement/reverse bằng chứng từ test có thể dọn/hủy an toàn.
-6. Hard refresh và kiểm bundle/cache cũ không che UI mới.
-7. Ghi ảnh/evidence đã redacted; không chụp token, cookie, secret hoặc dữ liệu khách hàng thật.
-8. Nếu phát hiện lỗi Critical/High, rollback Gateway/Tenant theo version trước và mở issue có evidence.
+### P0 — blocker trước khi kích hoạt FIFO production
 
-### P0 — Blocker trước khi kích hoạt FIFO production
+1. Có staging tenant hoặc bản sao dữ liệu phù hợp, không dùng dữ liệu khách hàng thô làm artifact.
+2. Chạy staging migration và backfill dry-run.
+3. Review resolved/unresolved report và PO-level checksum; `unresolved_count` phải bằng `0`.
+4. Chạy backfill execute trên staging và xác minh ledger counts/checksum trong rollout state, vẫn giữ `enabled=0`.
+5. Chạy authenticated staging business smoke đầy đủ PO → Receipt → cancel → settlement/reverse → manual override → supplier debt report.
+6. Xác minh supplier contention và D1 latency ở tải gần production.
+7. Tạo production backup mới ngay trước activation và chuẩn bị rollback plan.
+8. Chỉ activation khi có explicit approval riêng kèm exact checksum; không gộp approval deploy code với approval bật FIFO.
 
-1. Chạy staging migration và backfill dry-run trên bản sao dữ liệu phù hợp.
-2. Review resolved/unresolved report và PO-level checksum.
-3. `unresolved_count` phải bằng `0`; không đoán hoặc tự sửa row ID.
-4. Chạy staging smoke đầy đủ PO → Receipt → cancel → settlement/manual override → report.
-5. Xác minh supplier contention/D1 latency ở tải gần production.
-6. Tạo production backup mới ngay trước activation.
-7. Chỉ activation khi có explicit approval riêng; không gộp approval deploy code với approval bật FIFO.
+### P0 — production business acceptance còn lại
 
-### P1 — Product/report decisions
+- Hard refresh bundle đã deploy và kiểm Purchase Order/Purchase Receipt bằng tài khoản thử phù hợp.
+- Kiểm submit preview, allocation timeline, settlement reason/capability, manual override và supplier debt CSV trên dữ liệu test có thể dọn an toàn.
+- Không ghi credential, cookie, token hoặc dữ liệu khách hàng thật vào evidence.
+- Nếu phát hiện lỗi Critical/High, rollback đúng Gateway/Tenant version và mở issue có evidence đã redacted.
+
+### P1 — product/report decisions
 
 - Quyết định có cần standalone global Supplier Debt Report hay chỉ giữ report permission-scoped theo PO/Receipt timeline.
 - Nếu cần global report, phải có contract data-scope, permission, filters và export riêng trước khi implement.
@@ -55,7 +61,7 @@ Dùng tài khoản và dữ liệu thử phù hợp; không ghi credential, cook
 
 - Theo dõi Gateway/Tenant 4xx/5xx mới liên quan Purchase allocation, settlement, supplier debt và sales item context.
 - Rollback khi có login/API 5xx diện rộng, sai tenant/database, permission regression, mất dữ liệu CRUD hoặc print/PDF lỗi nghiêm trọng.
-- Endpoint smoke hiện đã đạt nhưng không thay thế browser/business smoke.
+- Endpoint smoke và component/browser harness không thay thế authenticated production business smoke.
 
 ## RBAC
 
@@ -75,11 +81,3 @@ Dùng tài khoản và dữ liệu thử phù hợp; không ghi credential, cook
 - Không commit `server/work/`, `tmp/`, backup SQL hoặc generated artifacts.
 - D1 migrations append-only.
 - Mọi production activation cần backup, rollback plan, exact evidence và approval riêng.
-
-## PR #63 — việc còn lại sau khi bỏ Playwright gate
-
-1. Chờ exact-head CI của commit tài liệu cuối chạy xong; workflow không còn cài hoặc chạy Playwright.
-2. Review generated source diff từ patch trong runner trước khi merge.
-3. Không khôi phục bước auto-push trong workflow khi repository rule `GH013` còn yêu cầu mọi thay đổi đi qua pull request.
-4. Nếu cần materialize toàn bộ patch thành source files, thực hiện bằng một PR/commit hợp lệ riêng thay vì cho GitHub Actions đẩy thẳng vào nhánh.
-5. Giữ functional browser QA Purchase thành công việc thủ công hoặc workflow riêng, không chặn deploy.
