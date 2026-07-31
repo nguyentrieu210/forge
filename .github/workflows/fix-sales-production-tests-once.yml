@@ -1,9 +1,9 @@
 name: Fix Sales Production Tests Once
 
 on:
-  push:
+  pull_request:
     branches:
-      - feat/sales-order-production-flow-final-20260801
+      - hotfix/alumdoor-print-list-delete
 
 permissions:
   contents: write
@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   fix:
-    if: github.actor != 'github-actions[bot]'
+    if: github.head_ref == 'feat/sales-order-production-flow-final-20260801'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -33,21 +33,16 @@ jobs:
 
           audit = Path('server/tests/alumdoor-catalog-audit.test.mjs')
           source = audit.read_text()
-          before = '''  assert.equal(report.metadata_version, "2.0.34");
-          assert.equal(report.expected_metadata_version, "2.0.34");'''
-          after = '''  assert.equal(report.metadata_version, "2.0.35");
-          assert.equal(report.expected_metadata_version, "2.0.35");'''
+          before = '  assert.equal(report.metadata_version, "2.0.34");\n  assert.equal(report.expected_metadata_version, "2.0.34");'
+          after = '  assert.equal(report.metadata_version, "2.0.35");\n  assert.equal(report.expected_metadata_version, "2.0.35");'
           if source.count(before) != 1:
               raise SystemExit(f'audit metadata assertion count={source.count(before)}')
           audit.write_text(source.replace(before, after, 1))
 
           model = Path('server/tests/alumdoor-item-model.test.mjs')
           source = model.read_text()
-          validator_before = '''    { doctype: "Aluminium Lot", actions: ["create", "save"] },
-          ]);'''
-          validator_after = '''    { doctype: "Aluminium Lot", actions: ["create", "save"] },
-            { doctype: "Production Request", actions: ["create", "save"] },
-          ]);'''
+          validator_before = '    { doctype: "Aluminium Lot", actions: ["create", "save"] },\n  ]);'
+          validator_after = '    { doctype: "Aluminium Lot", actions: ["create", "save"] },\n    { doctype: "Production Request", actions: ["create", "save"] },\n  ]);'
           if source.count(validator_before) != 1:
               raise SystemExit(f'validator snapshot target count={source.count(validator_before)}')
           source = source.replace(validator_before, validator_after, 1)
