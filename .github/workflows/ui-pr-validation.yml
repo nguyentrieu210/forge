@@ -55,9 +55,11 @@ jobs:
             fi
           fi
           cat "$RUNNER_TEMP/changed-files.txt" 2>/dev/null || true
-          echo "ui=$ui" >> "$GITHUB_OUTPUT"
-          echo "purchase=$purchase" >> "$GITHUB_OUTPUT"
-          echo "auth=$auth" >> "$GITHUB_OUTPUT"
+          {
+            echo "ui=$ui"
+            echo "purchase=$purchase"
+            echo "auth=$auth"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Unrelated fast path
         if: steps.scope.outputs.ui != 'true'
@@ -125,9 +127,11 @@ jobs:
           auth_session_secret="$(openssl rand -hex 32)"
           echo "::add-mask::$auth_password"
           echo "::add-mask::$auth_session_secret"
-          echo "FORGE_AUTH_USER=$auth_user" >> "$GITHUB_ENV"
-          echo "FORGE_AUTH_PASSWORD=$auth_password" >> "$GITHUB_ENV"
-          echo "FORGE_AUTH_SESSION_SECRET=$auth_session_secret" >> "$GITHUB_ENV"
+          {
+            echo "FORGE_AUTH_USER=$auth_user"
+            echo "FORGE_AUTH_PASSWORD=$auth_password"
+            echo "FORGE_AUTH_SESSION_SECRET=$auth_session_secret"
+          } >> "$GITHUB_ENV"
 
       - name: Prepare local tenant database
         if: steps.scope.outputs.auth == 'true'
@@ -150,9 +154,9 @@ jobs:
             --local \
             --var "SESSION_SECRET:$FORGE_AUTH_SESSION_SECRET" \
             > "$RUNNER_TEMP/forge-auth-backend.log" 2>&1 &
-          echo $! > "$RUNNER_TEMP/forge-auth-backend.pid"
+          echo "$!" > "$RUNNER_TEMP/forge-auth-backend.pid"
           ready=0
-          for attempt in $(seq 1 45); do
+          for ((attempt = 1; attempt <= 45; attempt++)); do
             if curl --fail --silent --show-error http://127.0.0.1:8801/health > /dev/null; then
               ready=1
               break
