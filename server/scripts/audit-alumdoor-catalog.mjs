@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -39,7 +40,7 @@ async function main() {
       records: source.records,
       redacted,
     });
-    const output = resolveOutput(args, redacted);
+    const output = resolveOutput(args);
     writeFileSync(output, `${JSON.stringify({
       generated_at: new Date().toISOString(),
       source: sourceDescriptor(args),
@@ -95,12 +96,24 @@ async function readRemote(tenant) {
   const types = AUDITED_DOCTYPES.map((value) => `'${cli.quote(value)}'`).join(",");
   const tenantLiteral = cli.quote(tenant);
   const rows = cli.d1Query(database, `
-    SELECT record_type, name, data_json, source_rank FROM (
-      SELECT record_type, name, data_json, 0 AS source_rank
+    SELECT
+      record_type,
+      name,
+      CASE
+        WHEN source_rank=0 THEN json_set(
+          CASE WHEN json_valid(data_json) THEN data_json ELSE '{}' END,
+          '$.disabled',
+          COALESCE(disabled_state, 0)
+        )
+        ELSE data_json
+      END AS data_json,
+      source_rank
+    FROM (
+      SELECT record_type, name, data_json, disabled AS disabled_state, 0 AS source_rank
       FROM master_records
-      WHERE tenant_id='${tenantLiteral}' AND disabled=0 AND record_type IN (${types})
+      WHERE tenant_id='${tenantLiteral}' AND record_type IN (${types})
       UNION ALL
-      SELECT doctype AS record_type, name, payload_json AS data_json, 1 AS source_rank
+      SELECT doctype AS record_type, name, payload_json AS data_json, NULL AS disabled_state, 1 AS source_rank
       FROM documents
       WHERE tenant_id='${tenantLiteral}' AND docstatus<>2 AND doctype IN (${types})
     )
@@ -124,13 +137,15 @@ function sourceDescriptor(args) {
   return { kind: "tenant", tenant_hash: sha(args.tenant).slice(0, 16) };
 }
 
-function resolveOutput(args, redacted) {
+function resolveOutput(args) {
   const label = args.tenant ? sha(args.tenant).slice(0, 12) : args.brief ? "brief" : "fixture";
-  const output = path.resolve(process.cwd(), args.output ?? `alumdoor-catalog-audit-${label}.json`);
+  const output = args.output
+    ? path.resolve(process.cwd(), args.output)
+    : path.join(tmpdir(), `alumdoor-catalog-audit-${label}.json`);
   const repoRoot = path.resolve(serverRoot, "..");
   const relative = path.relative(repoRoot, output);
   const insideRepo = relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
-  if (insideRepo && !redacted) fail("unredacted audit output cannot be written inside the repository; use --redacted or choose an external path");
+  if (insideRepo) fail("audit output must stay outside the repository; choose an external --output path");
   return output;
 }
 
