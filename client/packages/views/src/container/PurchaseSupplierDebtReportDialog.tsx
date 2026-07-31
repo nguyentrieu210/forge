@@ -1,5 +1,23 @@
 import { useMemo, useState } from "react";
-import { Button, Dialog, DialogContent, DialogHeader, DialogTitle } from "@metaforge/ui";
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@metaforge/ui";
 
 export type SupplierDebtWindowStatus = "Open" | "Settled" | "Reversed";
 
@@ -127,19 +145,23 @@ export function PurchaseSupplierDebtReportDialog(props: PurchaseSupplierDebtRepo
             <FilterInput label="Mã vật tư" value={filters.item_code} onChange={(value) => setFilters((current) => ({ ...current, item_code: value }))} />
             <label className="space-y-1 text-sm">
               <span className="text-xs text-muted-foreground">Trạng thái</span>
-              <select
-                className="h-9 w-full rounded-md border bg-background px-2"
-                value={filters.status}
-                onChange={(event) => setFilters((current) => ({
+              <Select
+                value={filters.status || "all"}
+                onValueChange={(value) => setFilters((current) => ({
                   ...current,
-                  status: event.target.value as FilterState["status"],
+                  status: value === "all" ? "" : value as SupplierDebtWindowStatus,
                 }))}
               >
-                <option value="">Tất cả</option>
-                <option value="Open">Đang mở</option>
-                <option value="Settled">Đã tất toán</option>
-                <option value="Reversed">Đã đảo</option>
-              </select>
+                <SelectTrigger className="h-9 w-full">
+                  <SelectValue placeholder="Tất cả" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả</SelectItem>
+                  <SelectItem value="Open">Đang mở</SelectItem>
+                  <SelectItem value="Settled">Đã tất toán</SelectItem>
+                  <SelectItem value="Reversed">Đã đảo</SelectItem>
+                </SelectContent>
+              </Select>
             </label>
             <FilterInput type="date" label="PO mở cũ nhất từ" value={filters.from_date} onChange={(value) => setFilters((current) => ({ ...current, from_date: value }))} />
             <FilterInput type="date" label="PO mở cũ nhất đến" value={filters.to_date} onChange={(value) => setFilters((current) => ({ ...current, to_date: value }))} />
@@ -175,34 +197,34 @@ export function PurchaseSupplierDebtReportDialog(props: PurchaseSupplierDebtRepo
 
               {filteredRows.length ? (
                 <div className="overflow-x-auto rounded-lg border">
-                  <table className="w-full min-w-[1650px] text-sm">
-                    <thead className="bg-muted/60 text-muted-foreground">
-                      <tr>
+                  <Table unwrapped className="w-full min-w-[1650px] text-sm">
+                    <TableHeader className="bg-muted/60 text-muted-foreground">
+                      <TableRow>
                         {columns.map((column) => (
-                          <th
+                          <TableHead
                             key={column.key}
                             className={column.align === "right" ? "px-3 py-2 text-right font-medium" : "px-3 py-2 text-left font-medium"}
                           >
                             {column.label}
-                          </th>
+                          </TableHead>
                         ))}
-                      </tr>
-                    </thead>
-                    <tbody>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {filteredRows.map((row) => (
-                        <tr key={`${row.queue_key}:${row.window_id}`} className="border-t align-top">
+                        <TableRow key={`${row.queue_key}:${row.window_id}`} className="align-top">
                           {columns.map((column) => (
-                            <td
+                            <TableCell
                               key={column.key}
                               className={column.align === "right" ? "whitespace-nowrap px-3 py-2 text-right tabular-nums" : "px-3 py-2"}
                             >
                               {reportCell(column.key, row[column.key])}
-                            </td>
+                            </TableCell>
                           ))}
-                        </tr>
+                        </TableRow>
                       ))}
-                    </tbody>
-                  </table>
+                    </TableBody>
+                  </Table>
                 </div>
               ) : (
                 <div className="rounded-lg border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
@@ -230,8 +252,8 @@ function FilterInput(props: {
   return (
     <label className="space-y-1 text-sm">
       <span className="text-xs text-muted-foreground">{props.label}</span>
-      <input
-        className="h-9 w-full rounded-md border bg-background px-2"
+      <Input
+        className="h-9 w-full"
         type={props.type ?? "text"}
         value={props.value}
         onChange={(event) => props.onChange(event.target.value)}
