@@ -530,7 +530,7 @@ function CheckPanel({ meta, doctype, setDoctype, users }: { meta: RolesAndDoctyp
           <div>
             <h3 className="mb-2 text-sm font-semibold">Vì sao</h3>
             <div className="space-y-2">
-              {data.trace.map((item, index) => (
+              {(data.trace ?? []).map((item, index) => (
                 <div key={`${item.source}:${item.label}:${index}`} className={cn("rounded-lg border p-3", item.effect === "deny" && "border-destructive/30 bg-destructive/5", item.effect === "allow" && "border-emerald-500/30 bg-emerald-500/5")}>
                   <div className="flex items-center gap-2"><Badge variant="outline">{item.source}</Badge><span className="text-sm font-medium">{item.label}</span></div>
                   {item.detail ? <p className="mt-1 text-xs text-muted-foreground">{item.detail}</p> : null}
