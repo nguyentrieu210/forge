@@ -120,3 +120,61 @@ test("successful duplicate-list reads do not block a later write", async () => {
   assert.equal(writeResponse.status, 201);
   assert.equal(writes.length, 1);
 });
+
+test("paint retry keeps completed batches and creates only the missing THÔ batch", async () => {
+  const writes = [];
+  const paths = [];
+  const call = Object.assign(async (path, init = {}) => {
+    paths.push(path);
+    const method = String(init.method ?? "GET").toUpperCase();
+    if (method !== "GET") {
+      const body = JSON.parse(init.body ?? "{}");
+      writes.push({ path, method, body });
+      return dataResponse({ ...body, name: "PAINT-BATCH-2" }, 201);
+    }
+    if (path.startsWith("resource/Paint%20Job?")) {
+      return dataResponse([{ name: "PAINT-BATCH-1", batch_no: "BATCH-1", state: "Chờ sơn" }]);
+    }
+    if (path === "resource/Cut%20Order/CUT-RETRY") {
+      return dataResponse({
+        name: "CUT-RETRY",
+        work_order: "WO-1",
+        target_color: "Ghi sần",
+        items: [{ item_code: "AL548", serial_and_batch_bundle: "BUNDLE-1" }],
+      });
+    }
+    if (path === "resource/Work%20Order/WO-1") {
+      return dataResponse({
+        name: "WO-1",
+        production_request: "PR-1",
+        production_request_line_key: "ROW-1-SET-1",
+      });
+    }
+    if (path === "resource/Serial%20and%20Batch%20Bundle/BUNDLE-1") {
+      return dataResponse({
+        entries: [
+          { batch_no: "BATCH-1", qty: 1 },
+          { batch_no: "BATCH-2", qty: 2 },
+          { batch_no: "BATCH-2", qty: 3 },
+        ],
+      });
+    }
+    if (path === "resource/Batch/BATCH-1") {
+      return dataResponse({ name: "BATCH-1", item_code: "AL548", condition: "THÔ", color: "THÔ" });
+    }
+    if (path === "resource/Batch/BATCH-2") {
+      return dataResponse({ name: "BATCH-2", item_code: "AL548", condition: "THÔ", color: "THÔ" });
+    }
+    throw new Error(`unexpected platform path: ${path}`);
+  }, { via: "test" });
+
+  const result = await syncPaintJobsFromCut(call, "CUT-RETRY", 1);
+
+  assert.deepEqual(result.existing, ["PAINT-BATCH-1"]);
+  assert.deepEqual(result.created, ["PAINT-BATCH-2"]);
+  assert.equal(writes.length, 1);
+  assert.equal(writes[0].path, "resource/Paint%20Job");
+  assert.equal(writes[0].body.batch_no, "BATCH-2");
+  assert.equal(writes[0].body.qty, 5);
+  assert.equal(paths.filter((path) => path === "resource/Batch/BATCH-2").length, 1);
+});
