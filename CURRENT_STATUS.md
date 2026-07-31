@@ -6,7 +6,7 @@ Ngày cập nhật: **2026-07-31**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Default head khi mở nhánh: `a48524b93489c92296c57fc5f223e41d505de7aa`.
+- Default head hiện tại: `077d9944b1cfc1f436da87472f070ee2bd864b44`.
 - Working branch: `docs/record-alu-production-observation-20260731`.
 - Không commit `.env`, secret, `server/work/`, `tmp`, backup hoặc generated evidence.
 
@@ -23,7 +23,15 @@ Ngày cập nhật: **2026-07-31**.
   - Inventory and Manufacturing CI `30647910730`;
   - UI Pull Request Validation `30647910724`.
 - Fix bao phủ Unicode NFC, exact-probe failure fallback và cùng canonical matching cho preview/save/submit.
-- Chưa có release evidence cho merge SHA mới.
+
+## Bán hàng — release preparation mới
+
+- PR `#93` đã merge thành `077d9944b1cfc1f436da87472f070ee2bd864b44`.
+- Controlled release workflow đã khóa `TARGET_SHA=a48524b93489c92296c57fc5f223e41d505de7aa`.
+- Fail-closed assertion dùng cùng exact target SHA.
+- PR `#93` không deploy production.
+- Execution chỉ được phép từ branch `release/execute-alu-production-20260731`.
+- Chưa có release run, job, backup, deployment time hoặc Worker-version evidence cho follow-up này.
 
 ## Bán hàng — production release trước
 
@@ -80,11 +88,12 @@ Ngày cập nhật: **2026-07-31**.
 
 ## Gate hiện tại
 
-1. Controlled release cho merge SHA Sales `a48524b93489c92296c57fc5f223e41d505de7aa` nếu có yêu cầu release rõ.
-2. Authenticated Sales smoke sau release: Item, UOM `Mét`, rate `180000 VND`, amount và save-time authoritative pricing.
-3. Authenticated Purchase smoke vẫn chưa hoàn tất.
-4. Sửa observation reporting 403 rồi chạy lại để job conclusion xanh.
-5. FIFO activation vẫn cần staging readiness, backup và explicit approval riêng.
+1. Chỉ execute controlled release cho Sales target `a48524b93489c92296c57fc5f223e41d505de7aa` khi có yêu cầu release rõ.
+2. Thu đầy đủ backup, migrations, deploy, endpoint smoke và Worker evidence từ exact run.
+3. Authenticated Sales smoke sau release: Item, UOM `Mét`, rate `180000 VND`, amount và save-time authoritative pricing.
+4. Authenticated Purchase smoke vẫn chưa hoàn tất.
+5. Sửa observation reporting 403 rồi chạy lại để job conclusion xanh.
+6. FIFO activation vẫn cần staging readiness, backup và explicit approval riêng.
 
 ## Safety
 
