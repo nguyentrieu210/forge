@@ -107,11 +107,13 @@ async function resolveItemPriceRecord(
     return { price: selected, name: String(selected.name ?? exactName) };
   }
 
-  const disabled = compatibleLegacy ?? exact ?? legacy ?? matching[0] ?? null;
+  // A legacy record for another UOM is not a diagnostic candidate and must never escape as
+  // a usable price. Only an explicitly compatible legacy row can represent this transaction.
+  const disabled = compatibleLegacy ?? exact ?? matching[0] ?? null;
   return {
     price: disabled,
     name: disabled
-      ? String(disabled.name ?? (disabled === legacy || disabled === compatibleLegacy ? legacyName : exactName))
+      ? String(disabled.name ?? (disabled === compatibleLegacy ? legacyName : exactName))
       : exactName,
   };
 }
