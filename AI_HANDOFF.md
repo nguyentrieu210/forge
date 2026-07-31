@@ -2,118 +2,135 @@
 
 Ngày cập nhật: **2026-08-01**.
 
-## Dự án
+## Dự án và Git
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Default head khi mở nhánh: `cbe60228fb10a3b51b52880fb178c164b63ff9f8`.
-- Working branch: `docs/record-alumdoor-app-worker-release-20260801`.
-- GitHub là nguồn sự thật cho code, CI và release evidence.
+- Audited default head: `f27d4c6efe37a0cca91e3f1672a199d33b09cbab`.
+- Working branch: `docs/alumdoor-process-audit-20260801`.
+- Audit source: owner-supplied `25.7 QUY TRÌNH.docx`.
+- Audit report: `server/docs/ALUMDOOR-PROCESS-TRACEABILITY-AUDIT-20260801.md`.
+- GitHub là nguồn sự thật cho source, PR, CI và release evidence.
 
-## Sales Unicode Item Price — feature đã merge
+## Đọc đầu tiên khi tiếp tục
 
-- PR `#91` đã squash-merge.
-- Exact feature head: `c0d9df33a9fbde7540683107fd948c388a026682`.
-- Merge SHA: `a48524b93489c92296c57fc5f223e41d505de7aa`.
-- Fix bao phủ Unicode NFC, exact-name probe failure fallback và cùng canonical matching cho preview/save/submit.
-- Regression: `server/tests/sales-price-unicode-normalization.test.mjs`.
-- Exact-head CI đã PASS:
-  - CI `30647911536`;
-  - PR Validation `30647908313`;
-  - Sales Feature CI `30647908363`;
-  - Purchase Feature CI `30647908408`;
-  - Inventory and Manufacturing CI `30647910730`;
-  - UI Pull Request Validation `30647910724`.
+1. `server/docs/ALUMDOOR-PROCESS-TRACEABILITY-AUDIT-20260801.md`
+2. `CURRENT_STATUS.md`
+3. `NEXT_TASKS.md`
+4. `PROJECT_CONTEXT.md`
+5. `ARCHITECTURE.md`
+6. Current default head, current open PRs and exact-head CI state on GitHub
 
-## Đính chính release target
+## Whole-process verdict
 
-- Logic preview đơn giá nằm trong `server/apps-src/alumdoor-worker` và chạy ở app Worker `cloudforge-app-alumdoor`.
-- Các release trước chỉ deploy tenant Worker `cloudforge-tenant-alu`; chúng không cập nhật app Worker chứa `sales-item-context.ts`.
-- Cloudflare Dashboard evidence của chủ dự án đã phát hiện `cloudforge-app-alumdoor` vẫn là deployment cũ.
-- Không được dùng `/health` của Gateway hoặc version tenant Worker làm bằng chứng rằng app Worker đã được cập nhật.
+**Forge chưa đạt toàn bộ quy trình 25.7 end-to-end.**
 
-## Controlled Alumdoor app Worker release — SUCCESS
+Đã có nền tảng mạnh:
 
-### Release workflow
+- metadata-driven documents và permissions;
+- stock/accounting ledgers;
+- canonical physical stock identity và warehouse roles;
+- versioned BOM và immutable Work Order snapshot;
+- manufacturing progress, offcut/scrap và exact reversal;
+- Purchase/FIFO safety;
+- Sales pricing/availability;
+- Alumdoor slat, door formula và aluminium cutting logic.
 
-- PR `#100` thêm `.github/workflows/release-alumdoor-app.yml`.
-- PR `#100` merge SHA: `1487dbd76f516c0d505120924012b262a5f19857`.
-- Workflow khóa vào:
-  - target SHA `a48524b93489c92296c57fc5f223e41d505de7aa`;
-  - Worker `cloudforge-app-alumdoor`;
-  - dispatch namespace `cloudforge-production`.
-- PR `#102` sửa thứ tự build trước regression.
-- PR `#102` merge SHA: `cbe60228fb10a3b51b52880fb178c164b63ff9f8`.
-- Exact-head workflow-fix gates:
-  - CI `30650781602`: SUCCESS;
-  - PR Validation `30650779877`: SUCCESS.
+Nhưng còn thiếu hoặc chưa chứng minh:
 
-### Execution history
+- central order/export tracking đủ cột/lệnh/trạng thái;
+- Sales Order orchestration sang production schedule/order, painting và defects;
+- production capacity/overtime;
+- daily detailed-ledger snapshot/freeze/restricted amendment;
+- controlled four-cause warranty/defect lifecycle và accounting effects;
+- complete customer debt/report journey;
+- authenticated operator UI/reports for inventory/manufacturing;
+- whole-process staging acceptance.
 
-- Execution PR `#101` / run `30650655515` thất bại **trước deploy** do thiếu `server/dist`; Wrangler dry-run và live deploy đều bị skip.
-- Execution PR `#104` đã đóng, **không merge**.
-- Execution trigger head: `ee1b652af810f91cba1e042eb34b7a6c37c199a9`.
-- Release run: `30651057535` — SUCCESS.
-- Release job: `91224118455` — SUCCESS.
-- Build server artifacts: PASS.
-- Focused Unicode pricing regression: PASS.
-- Strict Wrangler dry-run: PASS.
-- Live dispatch-namespace deploy: PASS.
-- Cloudflare script identity + namespace verification: PASS.
-- Required bindings `PLATFORM` và `AI`: PASS.
+Không được dùng review score của từng slice để tuyên bố cả sản phẩm complete.
 
-### Provider evidence
+## Important evidence
 
-- Target SHA: `a48524b93489c92296c57fc5f223e41d505de7aa`.
+### Formulas
+
+- `server/apps-src/alumdoor-worker/src/slats.ts` implements:
+  - `0.13 m` allowance;
+  - profile divisors;
+  - AL70 no-subtract decision;
+  - Australia offsets `2 / 1.5 / 1.3`;
+  - Australia rounding `0 / 0.3 / 0.7 / 1`.
+- `server/apps-src/alumdoor-worker/src/door-formulas.ts` centralizes width/purchase/sales/production geometry through `Cutting Policy`.
+- `Cửa Siêu Trường` still has a temporary Germany-like policy in `server/scripts/build-alumdoor-v2-brief.mjs`.
+
+### Inventory / manufacturing
+
+- PR `#49` merged physical identity and warehouse roles.
+- PR `#50` merged versioned BOM and Work Order snapshot.
+- PR `#82` remains open draft because endpoint/UI/operational reports are incomplete.
+
+### Purchase
+
+- Purchase/FIFO backend and safety gates exist.
+- FIFO remains disabled.
+- PR `#103` remains draft/open for authenticated PO → Receipt lifecycle QA.
+
+### Finance
+
+- PR `#15` remains open draft, stale/conflicted and is not on default.
+- It explicitly does not complete Payment Allocation, Party Statement, Debt Summary, Advance Balance or report navigation/UI.
+
+### Warranty
+
+- `Warranty Claim` exists, but `issue_cause` is free-text `Data`.
+- Four controlled causes, one-year motor/battery eligibility, responsibility confirmation and accounting transitions are not proved.
+
+## Process compliance findings
+
+- `FORGE.md` and `.forge/manifest.json` are absent on default. Use `forge-onboard`; install the pack through a separate draft PR.
+- Current default head `f27d4c...` returned no workflow run/combined status. Do not claim current default CI green.
+- Default branch is still named as a hotfix branch.
+- Multiple old/conflicted/backup/superseded PRs remain open and need triage.
+- No production deploy, secret/DNS change, migration or tenant mutation was performed by this audit.
+
+## Gate
+
+Whole-process scope is at **G0/G1**.
+
+Before implementation, the owner must approve:
+
+1. ERP workspace/report mapping for the three requested files.
+2. Capacity unit behind the 8-hour day.
+3. Daily snapshot amendment roles and adjustment semantics.
+4. Supplier-defect debt offset timing.
+5. Germany rounding interpretation.
+6. Actual Super-long door formula.
+7. Partial leaf-only order representation.
+8. Meaning and precedence of `THÔ`.
+
+## Highest-priority next work
+
+1. Open/finish the Forge onboarding PR.
+2. Get owner approval on the audit/BRD decisions.
+3. Design central order orchestration and daily immutable detailed ledger.
+4. Design controlled defects/warranty lifecycle.
+5. Finish production schedule/capacity and Slice D operator reports.
+6. Complete authenticated Sales and Purchase acceptance.
+7. Rebuild finance/customer-debt work onto current default.
+
+## Existing Sales Unicode release evidence
+
+- Feature merge SHA: `a48524b934e54dfb10a920303fb60876334cb8d`.
 - Worker: `cloudforge-app-alumdoor`.
 - Dispatch namespace: `cloudforge-production`.
+- Release run `30651057535`: SUCCESS.
+- Release job `91224118455`: SUCCESS.
 - Cloudflare Version ID: `734fd53b-94ce-401d-86e8-ca4cd0ffee2e`.
-- Deployment time: `2026-07-31T17:25:19.115Z`.
-- Evidence artifact ID: `8801385744`.
-- Artifact name: `alumdoor-app-production-release-30651057535`.
-- Artifact digest: `sha256:0cf123014d3b4d0c1256f1d37b0e9b7a11882581e22c19c0da6a664b4f4b4e20`.
-- Artifact expiry: `2026-08-30T17:25:19Z`.
-- Không sửa DNS, secrets, D1, KV hoặc dữ liệu nghiệp vụ.
-
-## Tenant Worker release trước đó
-
-- Release run `30649182082`, job `91217965586`: SUCCESS.
-- Worker `cloudforge-tenant-alu`, version `ed5852cf-94ef-4a02-b0b9-1e64020c2d0d`.
-- Backup, recorded migrations, tenant deploy, `/health=200` và guest boot `403`: PASS.
-- Đây là release nền tảng tenant, **không phải** bằng chứng app Worker Alumdoor đã cập nhật.
-
-## Production observation
-
-- Read-only run `30648098602`, job `91214435446`.
-- `health=200`, `root=200`, `guest_boot=403`, endpoint result PASS.
-- Artifact ID `8800251206`, digest `sha256:667a9f2a760ff5074ae4d97df4193e53cc45db1d96e237ffc39fe4f934abae7d`.
-- Job đỏ chỉ vì issue-comment API trả `403 Resource not accessible by integration`; production endpoint và artifact đều PASS.
-
-## Purchase/FIFO
-
-- PR `#77` merge SHA `a67d62377f1869d95906320636eabbd9bbd56ab7` khóa mọi write mode bằng approved checksum.
-- FIFO rollout vẫn **disabled**.
-
-## Việc tiếp theo
-
-1. Hard refresh `https://alu.kairo.vn` và chạy authenticated Sales smoke:
-   - Sales Order mới;
-   - `Giá niêm yết`;
-   - `TRỤC 114_1.8LY`;
-   - ĐVT `Mét`;
-   - Đơn giá `180000 VND`;
-   - Thành tiền đúng theo số lượng;
-   - save-time authoritative pricing giữ cùng rate.
-2. Đổi Item/UOM/bảng giá để xác minh không lấy chéo hoặc giữ giá cũ.
-3. Huỷ hoặc xoá chứng từ thử an toàn; không ghi credential/cookie/dữ liệu khách hàng vào evidence.
-4. Sửa production-observation reporting `403` rồi chạy lại read-only để toàn job conclusion `success`.
-5. Authenticated Purchase smoke vẫn là gate riêng.
-6. Production FIFO activation vẫn cần staging evidence, backup và explicit approval riêng.
+- Authenticated Sales smoke is still required.
 
 ## Safety
 
-- App Worker Sales release đã hoàn tất qua controlled workflow và provider verification.
-- Không sửa production secrets hoặc DNS.
-- Không mutate Item Price hay dữ liệu khách hàng.
-- Không bật FIFO.
-- Không commit `.env`, `server/work/`, `tmp`, backup hoặc generated evidence.
+- Do not deploy Cloudflare without explicit instruction.
+- Do not merge without a new explicit instruction.
+- Do not change production secrets/DNS.
+- Do not activate FIFO.
+- Do not commit `.env`, `server/work/`, `tmp`, backups or generated evidence.
