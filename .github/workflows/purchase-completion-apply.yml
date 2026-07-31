@@ -32,13 +32,26 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          payload="$(tr -d '\r\n' < .github/purchase-completion-v2.patch.gz.b64)"
+          payload="$(tr -d '\r\n' < .github/purchase-completion.patch.gz.b64)"
           actual="$(printf '%s' "$payload" | sha256sum | awk '{print $1}')"
-          expected='176bdc817e3e83b9958dc4d52b5d7ebd7bcb5c18b71961d0e90829cd28973721'
+          expected='6995a2a9aca39363db69b394e447932e0a22186448081ed73bc9efacf4099183'
+          printf 'payload_sha256=%s\n' "$actual"
           test "$actual" = "$expected"
           printf '%s' "$payload" | base64 --decode | gzip -dc > /tmp/purchase-completion.patch
           git apply --check /tmp/purchase-completion.patch
           git apply /tmp/purchase-completion.patch
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('client/e2e-forge/playwright.purchase.config.ts')
+          text = path.read_text()
+          old = '''command: `pnpm --dir client exec vite --config e2e-forge/vite.purchase.config.ts --port ${port}`,
+              cwd: path.join(here, "..", ".."),'''
+          new = '''command: `pnpm exec vite --config e2e-forge/vite.purchase.config.ts --port ${port}`,
+              cwd: path.join(here, ".."),'''
+          if old not in text:
+              raise SystemExit('purchase Playwright webServer block was not found')
+          path.write_text(text.replace(old, new))
+          PY
           rm -f .github/purchase-completion.patch.gz.b64
           rm -f .github/purchase-completion-v2.patch.gz.b64
           rm -f .github/workflows/purchase-completion-apply.yml
