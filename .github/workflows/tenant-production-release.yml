@@ -20,8 +20,6 @@ on:
 permissions:
   contents: read
 
-environment: production
-
 concurrency:
   group: production-tenant-${{ inputs.tenant }}
   cancel-in-progress: false
@@ -31,6 +29,7 @@ jobs:
     name: Backup, migrate, deploy and smoke tenant
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    environment: production
     env:
       TENANT: ${{ inputs.tenant }}
       TARGET_SHA: ${{ inputs.target_sha }}
@@ -56,21 +55,8 @@ jobs:
           ref: ${{ env.TARGET_SHA }}
           persist-credentials: false
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.0
-          run_install: false
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Set up Forge
+        uses: ./.github/actions/setup-forge
 
       - name: Prepare evidence directories
         shell: bash
