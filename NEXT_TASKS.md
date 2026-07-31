@@ -11,45 +11,56 @@ Technical plan: `server/docs/ALUMDOOR-PURCHASE-RECEIPT-COMPLETION-PLAN.md`.
 
 ### P0 — FIFO lifecycle và review blockers
 
-- [x] Cross-voucher source voucher/revision cho allocation và unapplied movements.
-- [x] Append-only migration `0030_purchase_unapplied_weight_attribution.sql`.
-- [x] D1/in-memory storage và reader cho remaining qty/barem/actual weight.
-- [x] Receipt submit ghi unapplied weight.
-- [x] PO submit tự áp Receipt chờ theo FIFO, hỗ trợ partial/multiple sources và compatibility projection.
+- [x] Cross-voucher allocation/unapplied lifecycle và weight attribution.
+- [x] PO submit tự áp Receipt chờ theo FIFO trong cùng mutation.
 - [x] Settlement close/reverse và manual FIFO override backend với permission/reason/audit.
-- [x] Backdated warning nhưng commit-order allocation.
+- [x] Next-window activity lifecycle guard cho reverse settlement.
 - [x] Backfill planner/CLI, unresolved report, checksum và activation guards.
-- [x] Sửa rollout schema mismatch: dùng `enabled_by` / `enabled_at`.
-- [x] Export SQL renderer và thêm SQLite integration test chạy trên migrations thật.
-- [x] Thêm cross-window settlement lifecycle controller.
-- [x] D1 read model kiểm tra activity của cửa sổ kế tiếp trực tiếp.
-- [x] Unit test controller rejection và D1 query shape.
-- [x] Merge base hiện tại vào feature tại `7201226103d54f6b87a62ed6d020c58926ff9ef0`.
-- [x] PR #14 trở lại mergeable.
-- [x] Purchase Feature CI `30618438268`: PASS.
-- [x] PR Validation `30618438292`: PASS.
-- [x] CI `30618438353`: PASS; release job skipped.
+- [x] Sửa rollout schema mismatch và chạy SQL renderer trên schema migrations thật.
 - [x] Review vòng 2 đóng Critical/High findings, review ID `4827031228`.
 
-### P1 — Operator UI phần đã xong
+### P1 — Operator read UI
 
 - [x] Server-authoritative FIFO preview trước submit Purchase Receipt.
-- [x] PO/Receipt allocation timeline và drill-down từ append-only ledger.
-- [x] Hiển thị nominal remaining, received/allocated/unapplied, barem/actual weight, window status, tolerance, bounds và variance.
-- [x] Loading/error/empty states và responsive overflow cho timeline dialog.
+- [x] PO/Receipt timeline và drill-down từ append-only ledger.
+- [x] Summary quantity/weight/window/tolerance/variance.
+- [x] Loading/error/empty states và responsive overflow.
 
-## P0 kế tiếp — Settlement và override UI
+### P0 — Settlement và override UI
 
-1. Mở server capabilities/read model cho action availability:
-   - close settlement window;
-   - reverse settlement;
-   - manual FIFO override.
-2. Thêm dialogs bắt buộc confirmation và reason, không cho gửi reason rỗng.
-3. Hiển thị window/queue/material/supplier scope và tolerance/bounds trước khi xác nhận.
-4. Gọi mutation qua DocumentKernel/DO hiện có, không tạo API write bypass.
-5. Refetch document, timeline và supplier debt report sau mutation thành công.
-6. Fail closed khi server từ chối permission, stale revision hoặc lifecycle rule.
-7. Tests cho hidden/disabled actions, required reason, success/error/refetch states và mobile layout.
+- [x] Migration `0031_purchase_allocation_control_metadata.sql` provision `Purchase Settlement` và `Purchase Allocation Override` cho catalogue tenant hiện có và `__standard__`.
+- [x] Server timeline trả `queue_key` authoritative cho từng settlement window.
+- [x] Action visibility fail-closed theo server capabilities `create` + `submit`.
+- [x] Close/reverse dialogs có confirmation, reason bắt buộc, queue/window/tolerance/bounds scope.
+- [x] Manual FIFO override dialog có allocation source, PO đích, row đích, quantity và reason.
+- [x] Mutation tạo + submit control document qua DocumentKernel/Durable Object; không có write bypass.
+- [x] Refetch document/timeline và invalidate list/overview sau thành công.
+- [x] Server errors được map và hiển thị, không optimistic-update ledger.
+- [x] SQL metadata migration test dùng toàn bộ production-shaped migration chain.
+- [x] Unit test operator timeline queue scope.
+- [x] Exact implementation head `c99da53d38e74b541d9a9abe8806c7e7854502ea` PASS:
+  - Purchase Feature CI `30619923285`, job `91121820282`;
+  - PR Validation `30619923258`, job `91121820000`;
+  - CI `30619923233`, job `91121819867`;
+  - production release job `91121820309` skipped.
+
+## P0 kế tiếp — UI verification
+
+1. Thêm interaction/E2E coverage cho:
+   - hidden actions khi capability thiếu;
+   - close chỉ ở window `Open`;
+   - reverse chỉ ở window `Settled`;
+   - reason bắt buộc;
+   - quantity override phải dương;
+   - success/error/refetch states;
+   - mobile layout và keyboard/focus behavior.
+2. Browser Preview QA:
+   - desktop `1440x1000`;
+   - mobile `390x844`;
+   - Purchase Receipt submit preview;
+   - PO/Receipt timeline;
+   - close/reverse/override dialogs.
+3. Không dùng production observation thay Browser Preview QA.
 
 ## P1 kế tiếp — Supplier debt report
 
@@ -67,8 +78,9 @@ Technical plan: `server/docs/ALUMDOOR-PURCHASE-RECEIPT-COMPLETION-PLAN.md`.
 4. Filters supplier/company/item/window/status/date.
 5. Loading/error/empty states, desktop/mobile và export-compatible result shape.
 6. Unit projection + D1 query/integration tests.
+7. Refetch report sau settlement/override mutation.
 
-## P0 — Verification còn thiếu
+## P0 — Lifecycle verification còn thiếu
 
 1. Worker/Durable Object concurrency tests:
    - concurrent Receipt submit cùng supplier queue;
@@ -79,29 +91,27 @@ Technical plan: `server/docs/ALUMDOOR-PURCHASE-RECEIPT-COMPLETION-PLAN.md`.
    - cross-voucher apply rồi cancel;
    - settled/reversed window rules;
    - weight conservation và compatibility projection.
-3. Cloudflare Browser Preview QA, không dùng production observation thay QA:
-   - desktop `1440x1000`;
-   - mobile `390x844`;
-   - preview submit;
-   - PO/Receipt timeline;
-   - settlement/override dialogs;
-   - supplier debt report.
-4. Staging:
-   - migrations;
-   - backfill dry-run;
-   - `unresolved_count=0` và checksum match;
-   - smoke PO → Receipt → cancel → settlement → report.
-5. Review theo rubric 100 điểm; sửa mọi Critical/High và đạt ít nhất 95/100.
+3. D1 batch size/latency với hàng trăm allocations.
+4. Supplier contention load test.
+
+## P0 — Staging và release gate
+
+1. Xác nhận exact-head CI xanh lại sau base merge cuối.
+2. Staging migrations.
+3. Backfill dry-run.
+4. `unresolved_count=0` và checksum match.
+5. Smoke PO → Receipt → cancel → settlement → report.
+6. Review theo rubric 100 điểm; sửa mọi Critical/High và đạt ít nhất 95/100.
+7. Backup mới, rollback plan và explicit production approval riêng.
 
 ## Production boundary
-
-Chỉ phát hành sau explicit approval riêng, exact SHA CI xanh, staging evidence, backup và rollback plan.
 
 Khi chỉ đưa code/schema sang môi trường chạy:
 
 - giữ `purchase_allocation_rollout_state.enabled = 0`;
 - không activation FIFO;
-- không sửa secrets, DNS hoặc Cloudflare production resources ngoài release allowlist.
+- không sửa secrets, DNS hoặc Cloudflare production resources ngoài release allowlist;
+- không merge PR #14 khi staging/browser/review gates chưa đủ.
 
 ## Rubric
 
@@ -114,13 +124,23 @@ Khi chỉ đưa code/schema sang môi trường chạy:
 
 Release gate: >= 95/100, không có Critical/High, CI/staging/browser QA PASS.
 
-## P0 — RBAC Slice A
+## RBAC
 
-- Implementation: `ab974f92ffbcf015fb71d3051df33508c9f09942`.
-- Exact head: `2f0de9db871f3dbe32facf26abb84f1558be0824`.
-- Draft verification PR: `#34`.
-- G3 PASS: workflow `30612014393`, job `91101823154`.
-- G4 BLOCKED: workflow `PR Validation` chưa được GitHub Actions đăng ký/chạy; combined status rỗng.
-- Kiểm tra trạng thái workflow trong GitHub Actions, chạy test/typecheck/build trên exact head, ghi run/job ID rồi mới review merge.
-- Sau khi Slice A merge mới mở Slice B cho audit append-only, atomic user/roles và last-admin/self-lockout guards.
-- Không merge, deploy, sửa production secrets hoặc bật FIFO khi G4 chưa có bằng chứng xanh.
+### Slice A — hoàn thành và đã merge
+
+- Exact head đã kiểm chứng: `0db13898ed00cbfe3835ce511f90c84aef38c8e8`.
+- PR `#37` đã squash-merge tại `93ac85a0f16c2668b706ffcf8e15d3da53c8c7a9`.
+- G4 PASS trên exact head, run mới nhất `30619408760`, job `91120101038`.
+- Base sync vào purchase branch mang theo access-control contract, router/API, adapter typing, Permission Center fix và RBAC tests.
+
+### Slice B — branch/PR riêng
+
+1. Mở branch mới từ default head.
+2. Append-only RBAC audit.
+3. Atomic create user + role grants và atomic replace roles.
+4. Last-admin guard.
+5. Self-disable/self-demote guard.
+6. Audit role/scope/enable-disable/password reset/session revoke, không ghi password/hash/token/secret.
+7. Targeted tests + root test/typecheck/build + exact-head PR Validation.
+
+Không deploy Cloudflare, sửa production secrets hoặc bật FIFO trong luồng RBAC khi chưa có yêu cầu riêng.
