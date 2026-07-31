@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
   validate:
@@ -168,3 +169,28 @@ jobs:
           path: ${{ runner.temp }}/alu-release-evidence/
           if-no-files-found: warn
           retention-days: 30
+
+      - name: Report release result on PR 47
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('node:fs');
+            const dir = `${process.env.RUNNER_TEMP}/alu-release-evidence`;
+            const state = fs.existsSync(`${dir}/state.txt`)
+              ? fs.readFileSync(`${dir}/state.txt`, 'utf8')
+              : 'release job did not create state.txt';
+            const marker = '<!-- alu-sales-production-release -->';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = `${marker}\n# alu sales production release\n\n\`\`\`text\n${state}\n\`\`\`\n\n[Workflow and artifacts](${runUrl})`;
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: 47,
+            });
+            const previous = comments.find((comment) => comment.body?.includes(marker));
+            if (previous) {
+              await github.rest.issues.updateComment({ owner: context.repo.owner, repo: context.repo.repo, comment_id: previous.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: 47, body });
+            }
