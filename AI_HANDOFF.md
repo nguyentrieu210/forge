@@ -36,8 +36,17 @@ Ngày cập nhật: **2026-07-31**.
 - `.github/workflows/sales-feature-ci.yml`.
 - `.github/workflows/inventory-feature-ci.yml`.
 - `.github/workflows/cloudflare-production-observation.yml`.
+- `.github/workflows/manual-release-alu.yml`.
+- `.github/workflows/cloudflare-preview-qa.yml`.
 
-Lý do: trùng full test/typecheck/build, trộn validation với release hoặc lặp smoke đã có trong release workflow.
+Lý do: trùng full test/typecheck/build, trộn validation với release, lặp smoke đã có trong release workflow hoặc mang Cloudflare deployment/token vào PR validation.
+
+## GitHub Actions sidebar
+
+- Sidebar có thể vẫn hiển thị workflow đã bị xóa vì historical runs còn tồn tại.
+- Không suy ra file còn tồn tại chỉ từ sidebar.
+- `inventory-remote-*` đã được xóa từ commit `88885b0f03cc00754da771b10a6f85f71db5fce6` nhưng vẫn có thể hiện trong lịch sử.
+- Chỉ xóa historical runs hoặc disable workflow bằng GitHub UI/API khi người dùng yêu cầu thao tác quản trị riêng.
 
 ## Safety
 
