@@ -1,0 +1,5 @@
+target=cloudforge-app-alumdoor
+namespace=cloudforge-production
+reason=full-estate-observable-release
+source_inventory_merge=a7e6ef65b2352f596e285ea34d8e6438dff11a95
+requested_at=2026-08-01
