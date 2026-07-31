@@ -1,0 +1,203 @@
+name: Release Alumdoor App Worker
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: release-alumdoor-app-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release-alumdoor-app:
+    name: Release Alumdoor app production
+    if: ${{ github.event_name == 'pull_request' && github.head_ref == 'release/execute-alumdoor-app-production-20260801' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    env:
+      TARGET_SHA: a48524b93489c92296c57fc5f223e41d505de7aa
+      APP_WORKER: cloudforge-app-alumdoor
+      DISPATCH_NAMESPACE: cloudforge-production
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: d4d5a24d4e56f28f27fe58b64ef149a5
+      EVIDENCE_DIR: /tmp/alumdoor-app-release-evidence
+
+    steps:
+      - name: Checkout verified code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Verify release inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$TARGET_SHA" = 'a48524b93489c92296c57fc5f223e41d505de7aa'
+          test "$APP_WORKER" = 'cloudforge-app-alumdoor'
+          test "$DISPATCH_NAMESPACE" = 'cloudforge-production'
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          grep -q '"name": "cloudforge-app-alumdoor"' server/apps-src/alumdoor-worker/wrangler.jsonc
+          mkdir -p "$EVIDENCE_DIR"
+          printf 'run_id=%s\ntarget_sha=%s\nworker=%s\nnamespace=%s\nstarted_at=%s\n' \
+            "$GITHUB_RUN_ID" "$TARGET_SHA" "$APP_WORKER" "$DISPATCH_NAMESPACE" \
+            "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$EVIDENCE_DIR/state.txt"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Focused regression
+        run: node --test server/tests/sales-price-unicode-normalization.test.mjs
+
+      - name: Dry-run bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd server
+          pnpm exec wrangler deploy \
+            --config apps-src/alumdoor-worker/wrangler.jsonc \
+            --name "$APP_WORKER" \
+            --dispatch-namespace "$DISPATCH_NAMESPACE" \
+            --strict \
+            --dry-run \
+            --outdir "$EVIDENCE_DIR/dry-run" \
+            2>&1 | tee "$EVIDENCE_DIR/dry-run.log"
+
+      - name: Deploy app Worker to dispatch namespace
+        shell: bash
+        env:
+          WRANGLER_OUTPUT_FILE_PATH: /tmp/alumdoor-app-release-evidence/wrangler-output.ndjson
+        run: |
+          set -euo pipefail
+          cd server
+          pnpm exec wrangler deploy \
+            --config apps-src/alumdoor-worker/wrangler.jsonc \
+            --name "$APP_WORKER" \
+            --dispatch-namespace "$DISPATCH_NAMESPACE" \
+            --strict \
+            2>&1 | tee "$EVIDENCE_DIR/deploy-live.log"
+          echo 'deploy=pass' >> "$EVIDENCE_DIR/state.txt"
+
+      - name: Verify Cloudflare script and bindings
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/dispatch/namespaces/$DISPATCH_NAMESPACE/scripts/$APP_WORKER"
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "$base" > "$EVIDENCE_DIR/script-details.json"
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "$base/bindings" > "$EVIDENCE_DIR/script-bindings.json"
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const dir = process.env.EVIDENCE_DIR;
+          const details = JSON.parse(fs.readFileSync(`${dir}/script-details.json`, 'utf8'));
+          const bindingsPayload = JSON.parse(fs.readFileSync(`${dir}/script-bindings.json`, 'utf8'));
+          if (!details.success) throw new Error('Cloudflare script-details request failed');
+          const result = details.result ?? {};
+          if (result.dispatch_namespace !== process.env.DISPATCH_NAMESPACE) {
+            throw new Error(`Unexpected dispatch namespace: ${result.dispatch_namespace ?? 'missing'}`);
+          }
+          if (result.script?.id !== process.env.APP_WORKER) {
+            throw new Error(`Unexpected app Worker id: ${result.script?.id ?? 'missing'}`);
+          }
+          if (!bindingsPayload.success || !Array.isArray(bindingsPayload.result)) {
+            throw new Error('Cloudflare bindings request failed');
+          }
+          const names = new Set(bindingsPayload.result.map((entry) => entry?.name).filter(Boolean));
+          for (const required of ['PLATFORM', 'AI']) {
+            if (!names.has(required)) throw new Error(`Missing required binding ${required}`);
+          }
+          fs.appendFileSync(`${dir}/state.txt`, `provider_script=pass\nprovider_bindings=pass\nmodified_on=${result.modified_on ?? ''}\n`);
+          NODE
+
+      - name: Collect release evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const dir = process.env.EVIDENCE_DIR;
+          const rows = fs.readFileSync(`${dir}/wrangler-output.ndjson`, 'utf8')
+            .split(/\r?\n/)
+            .filter(Boolean)
+            .map((line) => JSON.parse(line));
+          const deploy = [...rows].reverse().find((entry) => entry.type === 'deploy' && entry.version_id);
+          if (!deploy?.version_id) throw new Error('Wrangler did not return a Worker version ID');
+          const details = JSON.parse(fs.readFileSync(`${dir}/script-details.json`, 'utf8')).result ?? {};
+          const summary = {
+            target_sha: process.env.TARGET_SHA,
+            worker_name: process.env.APP_WORKER,
+            dispatch_namespace: process.env.DISPATCH_NAMESPACE,
+            version_id: deploy.version_id,
+            deployment_created_on: deploy.timestamp ?? details.modified_on ?? null,
+            required_bindings: ['PLATFORM', 'AI'],
+            passed: true,
+          };
+          fs.writeFileSync(`${dir}/summary.json`, `${JSON.stringify(summary, null, 2)}\n`);
+          fs.writeFileSync(`${dir}/summary.md`, [
+            '# Alumdoor app Worker production release',
+            '',
+            `- Target SHA: \`${summary.target_sha}\``,
+            `- Worker: \`${summary.worker_name}\``,
+            `- Dispatch namespace: \`${summary.dispatch_namespace}\``,
+            `- Version ID: \`${summary.version_id}\``,
+            `- Deployment time: \`${summary.deployment_created_on ?? 'not returned'}\``,
+            '- Required bindings: `PLATFORM`, `AI` — PASS',
+            '',
+            '**Overall: PASS**',
+          ].join('\n') + '\n');
+          NODE
+
+      - name: Upload release evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alumdoor-app-production-release-${{ github.run_id }}
+          path: /tmp/alumdoor-app-release-evidence/
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Report release result
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('node:fs');
+            const dir = process.env.EVIDENCE_DIR;
+            const summary = fs.existsSync(`${dir}/summary.md`)
+              ? fs.readFileSync(`${dir}/summary.md`, 'utf8')
+              : `# Alumdoor app Worker production release\n\n**Overall: FAIL**\n\n\`\`\`text\n${fs.existsSync(`${dir}/state.txt`) ? fs.readFileSync(`${dir}/state.txt`, 'utf8') : 'No state file'}\n\`\`\``;
+            const marker = '<!-- alumdoor-app-production-release -->';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = `${marker}\n${summary}\n[Workflow and artifacts](${runUrl})`;
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const previous = comments.find((comment) => comment.body?.includes(marker));
+            if (previous) {
+              await github.rest.issues.updateComment({ owner: context.repo.owner, repo: context.repo.repo, comment_id: previous.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body });
+            }
