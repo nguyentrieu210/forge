@@ -8,27 +8,29 @@ import { D1RolloutPurchaseAllocationDomainStore, DocumentKernel } from "../../..
 import { asCloudForgeError, errors } from "../../../packages/core/src/index.js";
 import { D1DocumentAccessStore, D1MetadataStore, GenericMetadataController, MetadataPermissionService } from "../../../packages/frappe-model/src/index.js";
 import type { TenantEnv } from "./env.js";
+import { manufacturingCoordinatorKey } from "./manufacturing-coordinator.js";
 
 interface AggregateStub extends DurableObjectStub {
   mutate<T extends JsonObject>(command: MutationCommand<T>): Promise<MutationReceipt>;
   mutatePurchase<T extends JsonObject>(command: MutationCommand<T>): Promise<MutationReceipt>;
+  mutateManufacturing<T extends JsonObject>(command: MutationCommand<T>): Promise<MutationReceipt>;
 }
 
 const PURCHASE_ALLOCATION_DOCTYPES = new Set(["Purchase Order", "Purchase Receipt"]);
 const PURCHASE_REVISION_RETRIES = 3;
 
 /**
- * One class serves two logical coordinator roles inside the existing AGGREGATES
+ * One class serves several logical coordinator roles inside the existing AGGREGATES
  * namespace:
  *
  * - document key: tenant:doctype:name, preserving ordinary aggregate serialization;
  * - purchase key: purchase:tenant:company:supplier, serializing every PO/Receipt
- *   that can compete for the same supplier obligations.
+ *   that can compete for the same supplier obligations;
+ * - Work Order key: tenant:Work Order:name, serializing the Work Order and every
+ *   Material Transfer/Manufacture Stock Entry that competes for its snapshot limits.
  *
- * Reusing the namespace avoids a second Durable Object binding and migration while
- * still giving all competing receipts exactly one lock. The supplier-key instance
- * enters through mutatePurchase(), which executes directly and therefore cannot
- * recursively route back to itself.
+ * Reusing the namespace avoids extra bindings and schema churn while making the lock
+ * follow the business invariant rather than whichever voucher name happened to arrive.
  */
 export class AggregateCoordinator extends DurableObject<TenantEnv> {
   private readonly kernel: DocumentKernel;
@@ -49,6 +51,12 @@ export class AggregateCoordinator extends DurableObject<TenantEnv> {
   }
 
   async mutate<T extends JsonObject>(command: MutationCommand<T>): Promise<MutationReceipt> {
+    const manufacturingKey = await this.resolveManufacturingKey(command);
+    if (manufacturingKey) {
+      const stub = this.env.AGGREGATES.getByName(manufacturingKey) as AggregateStub;
+      return stub.mutateManufacturing(command);
+    }
+
     if (!PURCHASE_ALLOCATION_DOCTYPES.has(command.aggregate.doctype)
       || !["submit", "cancel"].includes(command.action)) {
       return this.kernel.execute(command);
@@ -93,6 +101,26 @@ export class AggregateCoordinator extends DurableObject<TenantEnv> {
       }
     }
     throw errors.purchaseAllocationConflict();
+  }
+
+  /** Called only by a Stock Entry coordinator that resolved the same Work Order key. */
+  async mutateManufacturing<T extends JsonObject>(command: MutationCommand<T>): Promise<MutationReceipt> {
+    const key = await this.resolveManufacturingKey(command);
+    if (!key) {
+      throw errors.validation("mutateManufacturing accepts only Work Order stock commands");
+    }
+    return this.kernel.execute(command);
+  }
+
+  private async resolveManufacturingKey<T extends JsonObject>(command: MutationCommand<T>): Promise<string | null> {
+    const direct = manufacturingCoordinatorKey(command as MutationCommand<JsonObject>);
+    if (direct || command.aggregate.doctype !== "Stock Entry") return direct;
+    const existing = await this.store.getDocument<JsonObject>(
+      command.tenant_id,
+      command.aggregate.doctype,
+      command.aggregate.name,
+    );
+    return manufacturingCoordinatorKey(command as MutationCommand<JsonObject>, existing?.data);
   }
 }
 
