@@ -1,7 +1,7 @@
 diff --git a/server/packages/clouderp-core/src/purchase-allocation-preview.ts b/server/packages/clouderp-core/src/purchase-allocation-preview.ts
 --- a/server/packages/clouderp-core/src/purchase-allocation-preview.ts
 +++ b/server/packages/clouderp-core/src/purchase-allocation-preview.ts
-@@ -69,6 +69,7 @@ export async function previewPurchaseReceiptSubmission(
+@@ -69,5 +69,6 @@ export async function previewPurchaseReceiptSubmission(
    const existing = input.document as CanonicalDocument<PurchaseReceiptData>;
    const command: MutationCommand<PurchaseReceiptData> = {
 +    schema_version: 1,
