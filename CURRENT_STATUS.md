@@ -6,59 +6,53 @@ Ngày cập nhật: **2026-07-31**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Working branch: `feat/purchase-fifo-activation-readiness-20260731`.
-- Draft PR: `#75` — `feat(purchase): add FIFO activation readiness safeguards`.
-- Không commit `.env`, `.dev.vars`, secret, `server/work/`, `tmp/`, backup SQL hoặc generated evidence.
+- Working branch: `feat/purchase-fifo-staging-checksum-lock-20260731`.
+- Draft PR: `#77` — `fix(purchase): lock staging backfill to reviewed checksum`.
+- Base/default head: `f0768d59ff66d04c333fd290c120f7672a80ea96`.
 
 ## Purchase/FIFO
 
-### Đã hoàn tất trước nhánh này
+### Đã hoàn tất
 
-- Purchase/FIFO lifecycle correction đã merge qua PR `#63`.
-- Merge SHA: `ac0c2241b2dc16abfd16b4b3e70943d8bbff8476`.
-- Tenant production release đã thành công với Worker version `88c508a7-f3f7-4844-9c8b-85a02bc362f3`.
-- FIFO rollout vẫn **disabled**. Release code/migration không phải approval activation.
+- PR `#63` hoàn tất lifecycle correction và browser QA.
+- Tenant production code/migration đã release; Worker hiện hành `88c508a7-f3f7-4844-9c8b-85a02bc362f3`.
+- PR `#75` thêm read-only readiness wrapper, safety regression và activation runbook; squash merge `f0768d59ff66d04c333fd290c120f7672a80ea96`.
+- FIFO rollout vẫn **disabled**.
 
-### PR #75 — activation readiness safeguards
+### PR #77 — checksum lock cho write mode
 
-Exact head đã xác nhận trước commit tài liệu này: `d586456e6e8b13f6097e19e7832c0032dd942745`.
+Lỗ hổng vận hành được xử lý:
 
-Thay đổi:
+- trước đây staging `--execute` không bắt buộc checksum đã review;
+- dữ liệu có thể thay đổi giữa dry-run và execute mà write vẫn tiếp tục;
+- activation đã có checksum gate nhưng staging backfill chưa có cùng bảo vệ.
 
-- `server/scripts/prepare-purchase-fifo-activation.mjs`
-  - chỉ chạy dry-run;
-  - chặn cờ write/activate;
-  - bắt buộc evidence nằm ngoài repository;
-  - kiểm checksum SHA-256 và unresolved rows;
-  - sinh readiness summary.
-- `server/tests/purchase-fifo-activation-readiness.test.mjs`
-  - regression cho write guards và evidence path guards.
-- `server/docs/ALUMDOOR-PURCHASE-FIFO-ACTIVATION-RUNBOOK.md`
-  - quy trình dry-run, review, staging backfill, authenticated smoke, production preparation và activation approval.
+Cách sửa:
 
-CI trên exact head `d586456e6e8b13f6097e19e7832c0032dd942745`:
+- mọi `--execute` bắt buộc `--expected-checksum`;
+- plan hiện tại được recompute và so với checksum approved trước D1 mutation;
+- missing/malformed/drift checksum fail closed;
+- activation tái sử dụng cùng gate;
+- runbook staging command đã thêm checksum bắt buộc;
+- regression CLI bao phủ missing, mismatch và matching checksum.
 
-- CI `30644592982`: **PASS**.
-- PR Validation `30644592947`: **PASS**.
-- Sales Feature CI `30644590752`: **PASS**.
-- Inventory and Manufacturing CI `30644590579`: **PASS**.
-- Purchase Feature CI `30644590592`: **PASS**.
-- UI Pull Request Validation `30644593053`: browser QA/auth smoke vẫn đang chạy tại thời điểm cập nhật này.
+## Verification
 
-Không deploy Cloudflare, không backfill tenant thật, không sửa production secrets/DNS và không bật FIFO.
+- Chưa chạy tenant thật hoặc Cloudflare.
+- GitHub Actions sẽ là nguồn xác nhận test/typecheck/build trên exact final head PR `#77`.
 
 ## Gate còn lại trước activation
 
-1. UI Pull Request Validation của PR `#75` phải PASS trên exact final head.
-2. Chạy readiness dry-run trên staging hoặc production-shaped copy.
-3. Bắt buộc `unresolved_count=0` và checksum được review.
-4. Execute backfill chỉ trên staging trước; rollout phải vẫn `enabled=0`.
-5. Chạy authenticated smoke: PO → Receipt → cancel → settlement/reverse → manual override → supplier debt report.
-6. Thu contention/latency evidence.
-7. Tạo fresh production backup và ghi explicit activation approval riêng.
+1. PR `#77` CI xanh và merge.
+2. Chọn staging tenant hoặc production-shaped sanitized copy.
+3. Read-only dry-run, `unresolved_count=0`, review checksum/PO rows.
+4. Execute staging bằng chính checksum approved; rollout phải vẫn `enabled=0`.
+5. Authenticated business smoke và contention/latency evidence.
+6. Fresh production backup và explicit activation approval riêng.
 
-## Production hiện hành
+## Safety
 
-- Tenant Worker `cloudforge-tenant-alu`: `88c508a7-f3f7-4844-9c8b-85a02bc362f3`.
-- Gateway `cloudforge-gateway`: `b0d0ce5b-408c-47ab-a734-fa55ba4d9c00`.
-- FIFO rollout: **disabled**.
+- Không deploy Cloudflare.
+- Không backfill tenant thật trong PR này.
+- Không sửa secrets/DNS/production.
+- Không commit `.env`, `server/work/`, `tmp/`, backup hoặc generated evidence.
