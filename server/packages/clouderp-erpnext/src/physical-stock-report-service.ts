@@ -134,7 +134,7 @@ export class PhysicalStockReportService {
     );
     reconcilePhysicalStockPage(page);
 
-    const showLineage = scope.can_view_lineage && request.include_lineage !== false;
+    const showLineage = scope.can_view_lineage && request.include_lineage === true;
     return {
       ...page,
       rows: page.rows.map((row) => showLineage ? row : redactLineage(row)),
