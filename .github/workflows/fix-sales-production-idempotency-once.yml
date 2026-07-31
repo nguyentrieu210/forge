@@ -1,0 +1,145 @@
+name: Fix Sales Production Idempotency Once
+
+on:
+  pull_request:
+    branches:
+      - hotfix/alumdoor-print-list-delete
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: ${{ github.actor != 'github-actions[bot]' && github.head_ref == 'feat/sales-order-production-flow-20260801' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/sales-order-production-flow-20260801
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Fail closed on idempotency probes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('server/apps-src/alumdoor-worker/src/sales-production.ts')
+          source = path.read_text()
+          replacements = [
+          ('''  const rows = await listDocs<{ name?: string }>(
+              call,
+              "Production Request",
+              ["name", "sales_order", "request_state"],
+              [["sales_order", "=", order]],
+              10,
+            ).catch(() => []);
+            return text(rows.find((row) => row.name)?.name);''', '''  const rows = await listDocs<{ name?: string }>(
+              call,
+              "Production Request",
+              ["name", "sales_order", "request_state"],
+              [["sales_order", "=", order]],
+              10,
+            );
+            if (rows.length > 1) throw new Error(`Đơn hàng ${order} có nhiều Yêu cầu sản xuất; cần xử lý dữ liệu trùng trước khi tạo tiếp.`);
+            return text(rows[0]?.name);'''),
+          ('''  const rows = await listDocs<{ name?: string }>(
+              call,
+              "Work Order",
+              ["name", "production_request", "production_request_line_key", "docstatus"],
+              [["production_request", "=", request], ["production_request_line_key", "=", lineKey]],
+              3,
+            ).catch(() => []);
+            return text(rows[0]?.name);''', '''  const rows = await listDocs<{ name?: string }>(
+              call,
+              "Work Order",
+              ["name", "production_request", "production_request_line_key", "docstatus"],
+              [["production_request", "=", request], ["production_request_line_key", "=", lineKey]],
+              3,
+            );
+            if (rows.length > 1) throw new Error(`Khóa ${lineKey} có nhiều Work Order trong ${request}; cần xử lý dữ liệu trùng trước khi tạo tiếp.`);
+            return text(rows[0]?.name);'''),
+          ('''  const existingRows = await listDocs<{ name?: string; modified?: string; state?: string }>(
+              call,
+              "Paint Job",
+              ["name", "cut_order", "work_order", "state", "modified"],
+              [["cut_order", "=", cutOrder]],
+              200,
+            ).catch(() => []);''', '''  const existingRows = await listDocs<{ name?: string; modified?: string; state?: string }>(
+              call,
+              "Paint Job",
+              ["name", "cut_order", "work_order", "state", "modified"],
+              [["cut_order", "=", cutOrder]],
+              200,
+            );'''),
+          ('''    await updateDoc(call, "Production Request", requestName, {
+              request_state: "Đã tạo lệnh",
+              work_order_count: created.length + existing.length,
+              modified: request.modified,
+            }).catch(() => undefined);
+
+            return answer({''', '''    let requestUpdateWarning = "";
+            try {
+              await updateDoc(call, "Production Request", requestName, {
+                request_state: "Đã tạo lệnh",
+                work_order_count: created.length + existing.length,
+                modified: request.modified,
+              });
+            } catch (error) {
+              requestUpdateWarning = error instanceof Error ? error.message : "Không cập nhật được trạng thái Yêu cầu sản xuất.";
+            }
+
+            return answer({'''),
+          ('''      draft: true,
+              message: `Đã lập ${lines.length} bộ sản xuất từ ${order}; tạo mới ${created.length}, đã có ${existing.length}.`,''', '''      draft: true,
+              ...(requestUpdateWarning ? { warning: requestUpdateWarning } : {}),
+              message: `Đã lập ${lines.length} bộ sản xuất từ ${order}; tạo mới ${created.length}, đã có ${existing.length}.`''')
+          ]
+          for before, after in replacements:
+              count = source.count(before)
+              if count != 1:
+                  raise SystemExit(f'idempotency patch target count={count}: {before[:80]}')
+              source = source.replace(before, after, 1)
+          path.write_text(source)
+
+          test_path = Path('server/tests/sales-production-flow.test.mjs')
+          test_source = test_path.read_text()
+          marker = 'test("idempotency probes fail closed instead of creating duplicates"'
+          if marker not in test_source:
+              test_source += '''\n\ntest("idempotency probes fail closed instead of creating duplicates", async () => {
+                const source = await readFile(new URL("../apps-src/alumdoor-worker/src/sales-production.ts", import.meta.url), "utf8");
+                const requestBlock = source.slice(source.indexOf("async function findExistingRequest"), source.indexOf("export async function createSalesProduction"));
+                assert.doesNotMatch(requestBlock, /\\.catch\\(\\(\\) => \\[\\]\\)/);
+                assert.match(requestBlock, /nhiều Yêu cầu sản xuất/);
+                assert.match(requestBlock, /nhiều Work Order/);
+                const paintBlock = source.slice(source.indexOf("export async function syncPaintJobsFromCut"));
+                assert.doesNotMatch(paintBlock, /existingRows[\\s\\S]*?\\.catch\\(\\(\\) => \\[\\]\\)/);
+                assert.match(source, /requestUpdateWarning/);
+              });\n'''
+          test_path.write_text(test_source)
+          PY
+          rm -f .github/workflows/fix-sales-production-idempotency-once.yml
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Verify and commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          pnpm --filter cloudforge run build
+          node --test server/tests/door-formulas.test.mjs server/tests/sales-production-flow.test.mjs server/tests/sales-price-unicode-normalization.test.mjs
+          pnpm --filter metaforge run typecheck
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git diff --cached --check
+          git commit -m 'fix(sales): fail closed on production idempotency probes'
+          git push origin HEAD:feat/sales-order-production-flow-20260801
