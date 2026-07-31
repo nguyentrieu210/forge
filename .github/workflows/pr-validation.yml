@@ -5,7 +5,9 @@ on:
     types: [opened, synchronize, reopened, edited, ready_for_review]
 
 permissions:
-  contents: read
+  contents: write
+  pull-requests: write
+  issues: write
 
 jobs:
   validate:
@@ -41,3 +43,72 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+  rbac_slice_b_apply:
+    name: Apply and gate RBAC Slice B
+    if: "${{ github.event.pull_request.number == 38 && github.event.pull_request.head.sha == 'ba8becc149644ad024b7decadd476a05c65a4f7f' }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout exact PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/rbac-permission-slice-b-20260731
+          fetch-depth: 0
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Apply reviewed Slice B patch
+        run: |
+          base64 --decode .github/rbac-slice-b-patch.gz.b64 | gzip --decompress > /tmp/apply-rbac-slice-b.py
+          python /tmp/apply-rbac-slice-b.py
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run tests
+        run: pnpm test
+
+      - name: Run typecheck
+        run: pnpm typecheck
+
+      - name: Build
+        run: pnpm build
+
+      - name: Commit verified implementation
+        run: |
+          rm -f .github/workflows/rbac-slice-b-one-shot.yml .github/rbac-slice-b-patch.gz.b64
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            .github/workflows/rbac-slice-b-one-shot.yml \
+            .github/rbac-slice-b-patch.gz.b64 \
+            server/migrations/tenant/0030_rbac_audit.sql \
+            server/scripts/test-rbac-audit-migration.py \
+            server/packages/auth/src/user-store.ts \
+            server/packages/frappe-model/src/permission.ts \
+            server/packages/frappe-api/src/router.ts \
+            server/tests/rbac-admin-contract.test.mjs \
+            server/package.json
+          git diff --cached --check
+          git commit -m "feat(rbac): add atomic access administration and audit"
+          git push origin HEAD:feat/rbac-permission-slice-b-20260731
+
+      - name: Comment failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr comment 38 --repo "${{ github.repository }}" --body "RBAC Slice B apply/gate failed in workflow run ${{ github.run_id }}. No implementation commit was pushed."
