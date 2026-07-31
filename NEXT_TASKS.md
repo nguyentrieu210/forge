@@ -2,50 +2,58 @@
 
 Ngày cập nhật: **2026-07-31**.
 
-## P0 — xác nhận MetaForge workspace tabs
+## P0 — xác nhận PR #81 trên exact final head
 
-1. Mở draft PR từ `feat/metaforge-misa-workspace-tabs` vào `hotfix/alumdoor-print-list-delete`.
-2. Kiểm CI trên exact final head:
-   - lint;
-   - test;
-   - typecheck;
-   - build;
-   - UI Pull Request Validation/browser QA nếu workflow được kích hoạt.
-3. Sửa lỗi trực tiếp nếu TypeScript báo `Button`/`cn` export hoặc JSX typing không khớp phiên bản UI package.
-4. Kiểm desktop, mobile drawer và sidebar collapsed:
-   - tab active đúng theo route;
-   - chuyển tab đi tới mục khả dụng đầu tiên;
-   - sidebar chỉ hiện mục của phân hệ;
-   - tab dài cuộn ngang, không đẩy vỡ topbar;
-   - app chỉ có một group không bị thay đổi hành vi.
+1. Lấy exact head mới nhất của `feat/metaforge-misa-workspace-tabs` sau các commit tài liệu.
+2. Kiểm đủ workflow:
+   - CI;
+   - PR Validation;
+   - UI Pull Request Validation;
+   - Purchase Feature CI;
+   - Sales Feature CI;
+   - Inventory and Manufacturing CI.
+3. Nếu GitHub không tự tạo run cho head mới, kích hoạt lại validation từ PR/Actions trước khi chuyển PR khỏi draft.
+4. Không merge chỉ dựa trên workflow xanh của head cũ `464b713af4d8a0403f766f354d04ebcaee32e6b8`.
 
-## P1 — nâng thành primitive dùng chung
+## P0 — browser acceptance
 
-Sau khi demo được duyệt:
+Kiểm desktop, mobile drawer và sidebar collapsed:
 
-1. Đưa khái niệm `WorkspaceTab`/`moduleKey` vào `client/packages/shell/src/AppShell.tsx` hoặc một component riêng trong `@metaforge/shell`.
-2. Cho runtime app tạo tab từ metadata Workspace/Module/DocType thay vì hard-code.
-3. Tách rõ:
-   - tab treo: phân hệ/nghiệp vụ;
-   - sidebar: DocType, báo cáo, thao tác thuộc phân hệ đang chọn.
-4. Bổ sung selfcheck/unit test cho lọc nav, active tab và fallback không group.
+- sidebar chỉ hiện các phân hệ `Nghiệp vụ` và `Meta`;
+- bấm phân hệ luôn đi tới tab `Quy trình nghiệp vụ`;
+- tab 1 mở shortcut và modal tạo mới;
+- tab 2 mở báo cáo/dashboard tổng quan;
+- từ tab 3 trở đi là nghiệp vụ/DocType;
+- list/form/kanban/calendar của Task vẫn giữ tab `Công việc` active;
+- Meta hiển thị đúng thứ tự Quy trình → Tổng quan → DocType → Workflow → Print Format → Dashboard;
+- tab dài cuộn ngang, không phá topbar;
+- modal đóng đúng và điều hướng tới builder tương ứng;
+- Command Palette vẫn tìm được route ngoài tab đang mở.
 
-## P2 — hoàn thiện trải nghiệm MISA
+## P1 — nâng sang LiveApp/runtime
 
-- Lưu tab phân hệ gần nhất theo app/user khi route không chỉ ra phân hệ.
-- Hỗ trợ badge, icon và quyền truy cập ở cấp tab.
-- Bổ sung overflow menu khi số tab vượt chiều rộng màn hình nhỏ.
-- Đồng bộ Command Palette để vẫn tìm toàn bộ ứng dụng dù sidebar đang lọc theo tab.
+Chỉ làm sau khi prototype được duyệt:
 
-## Luồng Purchase/FIFO độc lập
+1. Đưa primitive workspace tabs vào `@metaforge/shell` thay vì giữ riêng trong demo.
+2. Sinh module/tab từ `ApplicationCatalog` và `AppManifest`.
+3. Định nghĩa route và permission thật cho Meta builders:
+   - DocType;
+   - Workflow;
+   - Print Format;
+   - Dashboard.
+4. Không hiển thị module/tab khi user không có quyền hoặc route chưa tồn tại.
+5. Giữ quy tắc tab đầu `process`, tab hai `overview`, tab sau `doctype` bằng validator metadata.
 
-- FIFO rollout vẫn disabled.
-- Tiếp tục kiểm GitHub/CI của PR Purchase trước khi staging readiness hoặc activation.
-- Không bật FIFO production khi chưa có explicit approval.
+## P1 — test tự động
+
+- Bổ sung selfcheck cho thứ tự tab và route alias.
+- Bổ sung browser test cho sidebar module, active tab, modal tạo mới và responsive overflow.
+- Kiểm lint `check-native-ui` vẫn bằng 0 vi phạm.
 
 ## Không được làm
 
 - Không deploy Cloudflare nếu chưa được yêu cầu rõ.
 - Không sửa production secrets hoặc DNS.
 - Không commit `server/work/`, `tmp/`, `.env`, backup hoặc generated reports.
-- Không chỉnh migration đã áp dụng; forward-fix bằng migration mới.
+- Không đưa tab Meta vào LiveApp bằng route giả hoặc builder mock.
+- Không bật FIFO production khi chưa có explicit approval.
