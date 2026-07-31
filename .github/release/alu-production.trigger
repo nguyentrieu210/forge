@@ -1,6 +1,6 @@
 tenant=alu
-target_sha=4500799f13de48ada1948ab583afcf2e52b4c2dd
-feature=sales-multi-uom-price-stock
+target_sha=7b3dc06dbbecbb5370ddb48259aa1614aef2ff32
+feature=purchase-receipt-fifo-completion
 rollout=disabled
-staging_sales_smoke=accepted-risk
-requested_at=2026-07-31T11:25:00Z
+playwright_purchase_qa=accepted-risk
+requested_at=2026-07-31T12:39:20Z
