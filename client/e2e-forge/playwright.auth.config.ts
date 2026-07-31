@@ -10,7 +10,7 @@ const backend = process.env.FORGE_AUTH_BACKEND ?? "http://127.0.0.1:8801";
 export default defineConfig({
   testDir: "./auth-tests",
   outputDir: "./test-results/auth-session",
-  timeout: 90_000,
+  timeout: 120_000,
   expect: { timeout: 15_000 },
   workers: 1,
   fullyParallel: false,
@@ -20,12 +20,25 @@ export default defineConfig({
   ],
   use: {
     baseURL: `http://127.0.0.1:${port}`,
-    ...devices["Desktop Chrome"],
-    viewport: { width: 1440, height: 1000 },
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "off",
   },
+  projects: [
+    {
+      name: "desktop-chromium",
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 1440, height: 1000 },
+      },
+    },
+    {
+      name: "mobile-chromium",
+      use: {
+        ...devices["Pixel 7"],
+      },
+    },
+  ],
   webServer: {
     command: "node serve-cookie-proxy.mjs",
     cwd: here,

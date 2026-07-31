@@ -52,7 +52,7 @@ test("Alumdoor LoginForm preserves a real cookie session across logout and re-lo
   expect(logout.status, logout.text).toBe(200);
 
   await page.reload();
-  await expect(page.locator("[data-alumdoor-landing]")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Đăng nhập" })).toBeVisible();
   await expect(page.locator("#mf-login-usr")).toBeVisible();
   expect((await boot(page)).status).toBe(403);
 

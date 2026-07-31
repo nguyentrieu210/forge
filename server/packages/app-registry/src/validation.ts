@@ -81,6 +81,47 @@ export function validatorsFor(
   return targets;
 }
 
+function isLoopbackOrigin(value: string | undefined): boolean {
+  if (!value) return false;
+  try {
+    const hostname = new URL(value).hostname;
+    return hostname === "127.0.0.1" || hostname === "localhost" || hostname === "[::1]" || hostname === "::1";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Production uses a Workers-for-Platforms DispatchNamespace. Wrangler cannot simulate
+ * user Workers inside a local dispatch namespace, so the authenticated browser gate runs
+ * the real app Worker beside the tenant Worker and binds it as a single Fetcher named
+ * DISPATCHER.
+ *
+ * Service bindings are RPC proxies: asking one for an arbitrary property such as `get`
+ * yields a callable RPC method even when the receiver does not implement it. Therefore the
+ * loopback-only shape must be selected before probing the DispatchNamespace API.
+ *
+ * The fallback is intentionally narrow: loopback callback, exactly one validator target,
+ * and an actual Fetcher. A deployed origin, or a tenant with more than one validating app,
+ * still requires a real DispatchNamespace and fails closed.
+ */
+function validatorWorker(env: AppMethodEnv, target: ValidatorTarget, targetCount: number): Fetcher {
+  const dispatcher = env.DISPATCHER;
+  if (!dispatcher) throw errors.misconfigured("App validator dispatcher is missing");
+
+  const localFetcher = dispatcher as unknown as Fetcher;
+  if (targetCount === 1 && isLoopbackOrigin(env.PUBLIC_ORIGIN) && typeof localFetcher.fetch === "function") {
+    return localFetcher;
+  }
+
+  const maybeGet = Reflect.get(dispatcher as object, "get");
+  if (typeof maybeGet === "function") {
+    return maybeGet.call(dispatcher, target.worker, {}, { limits: { cpuMs: 100, subRequests: 20 } }) as Fetcher;
+  }
+
+  throw errors.misconfigured("App validator dispatcher is not a DispatchNamespace");
+}
+
 /**
  * Runs every matching validator; throws on the first refusal.
  *
@@ -98,8 +139,6 @@ export async function runAppValidators(input: {
   const { env, tenantId, actor, traceId, subject, targets } = input;
   if (!targets.length) return;
   if (!env.DISPATCHER || !env.INTERNAL_AUTH_SECRET) {
-    // Validators were declared and cannot be run. Allowing the write would drop the
-    // rule silently; this says so instead.
     throw errors.misconfigured("App validators are declared but this deployment cannot reach app Workers");
   }
 
@@ -113,7 +152,7 @@ export async function runAppValidators(input: {
       }),
     ]);
 
-    const worker = env.DISPATCHER.get(target.worker, {}, { limits: { cpuMs: 100, subRequests: 20 } });
+    const worker = validatorWorker(env, target, targets.length);
     let response: Response;
     try {
       response = await withTimeout(worker.fetch("https://app.internal/hooks/validate", {
@@ -145,8 +184,6 @@ export async function runAppValidators(input: {
     } catch {
       message = "";
     }
-    // The app's own wording, attributed. A refusal is a VALIDATION_ERROR whatever status
-    // the app chose — an app must not be able to answer 401 and log the user out.
     throw errors.validation(message || `${target.appId} refused this change`, { app_id: target.appId });
   }
 }

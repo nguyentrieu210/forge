@@ -16,9 +16,9 @@ concurrency:
 
 jobs:
   validate:
-    name: Install, gate, browser QA and auth smoke
+    name: Install, gate, browser QA and authenticated Purchase
     runs-on: ubuntu-latest
-    timeout-minutes: 70
+    timeout-minutes: 90
 
     steps:
       - name: Checkout repository
@@ -43,14 +43,14 @@ jobs:
             purchase=false
             auth=false
 
-            if grep -Eq '^(client/|server/apps/gateway-worker/|server/apps/tenant-worker/|server/apps-src/alumdoor-worker/|server/apps/purchase-qa-callback/|server/scripts/(seed-local|seed-purchase-qa-local)\.mjs$|package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|\.github/workflows/ui-pr-validation\.yml$)' "$RUNNER_TEMP/changed-files.txt"; then
+            if grep -Eq '^(client/|server/apps/gateway-worker/|server/apps/tenant-worker/|server/apps-src/alumdoor-worker/|server/apps/purchase-qa-callback/|server/scripts/(seed-local|seed-purchase-qa-local)\.mjs$|server/packages/app-registry/|package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|\.github/workflows/ui-pr-validation\.yml$)' "$RUNNER_TEMP/changed-files.txt"; then
               ui=true
             fi
             if grep -Eiq '^(client/e2e-forge/.*purchase|server/.*purchase)' "$RUNNER_TEMP/changed-files.txt"; then
               purchase=true
               auth=true
             fi
-            if grep -Eq '^(client/e2e-forge/auth-tests/|client/e2e-forge/playwright\.auth\.config\.ts$|server/apps/tenant-worker/|server/scripts/(seed-local|seed-purchase-qa-local)\.mjs$)' "$RUNNER_TEMP/changed-files.txt"; then
+            if grep -Eq '^(client/e2e-forge/auth-tests/|client/e2e-forge/playwright\.auth\.config\.ts$|server/apps/tenant-worker/|server/apps/purchase-qa-callback/|server/apps-src/alumdoor-worker/wrangler\.purchase-qa\.jsonc$|server/packages/app-registry/|server/scripts/(seed-local|seed-purchase-qa-local)\.mjs$)' "$RUNNER_TEMP/changed-files.txt"; then
               auth=true
             fi
           fi
@@ -125,12 +125,15 @@ jobs:
           auth_user="qa-${GITHUB_RUN_ID}@example.test"
           auth_password="$(openssl rand -hex 24)"
           auth_session_secret="$(openssl rand -hex 32)"
+          internal_auth_secret="$(openssl rand -hex 32)"
           echo "::add-mask::$auth_password"
           echo "::add-mask::$auth_session_secret"
+          echo "::add-mask::$internal_auth_secret"
           {
             echo "FORGE_AUTH_USER=$auth_user"
             echo "FORGE_AUTH_PASSWORD=$auth_password"
             echo "FORGE_AUTH_SESSION_SECRET=$auth_session_secret"
+            echo "FORGE_INTERNAL_AUTH_SECRET=$internal_auth_secret"
           } >> "$GITHUB_ENV"
 
       - name: Prepare local tenant database
@@ -139,36 +142,82 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          pnpm exec wrangler d1 migrations apply cloudforge-demo --local --config apps/tenant-worker/wrangler.jsonc
-          node scripts/seed-local.mjs --user "$FORGE_AUTH_USER" --password "$FORGE_AUTH_PASSWORD"
+          pnpm exec wrangler d1 migrations apply cloudforge-demo --local --config apps/tenant-worker/wrangler.purchase-qa.jsonc
+          node scripts/seed-local.mjs --auth-only --user "$FORGE_AUTH_USER" --password "$FORGE_AUTH_PASSWORD"
 
-      - name: Start local tenant worker
+      - name: Start local tenant, callback gateway and Alumdoor app workers
         if: steps.scope.outputs.auth == 'true'
         working-directory: server
         shell: bash
         run: |
           set -euo pipefail
+
           nohup pnpm exec wrangler dev \
-            --config apps/tenant-worker/wrangler.jsonc \
+            --config apps/tenant-worker/wrangler.purchase-qa.jsonc \
             --port 8801 \
+            --inspector-port 9231 \
             --local \
             --var "SESSION_SECRET:$FORGE_AUTH_SESSION_SECRET" \
+            --var "INTERNAL_AUTH_SECRET:$FORGE_INTERNAL_AUTH_SECRET" \
             > "$RUNNER_TEMP/forge-auth-backend.log" 2>&1 &
           echo "$!" > "$RUNNER_TEMP/forge-auth-backend.pid"
-          ready=0
-          for ((attempt = 1; attempt <= 45; attempt++)); do
-            if curl --fail --silent --show-error http://127.0.0.1:8801/health > /dev/null; then
-              ready=1
+
+          nohup pnpm exec wrangler dev \
+            --config apps/purchase-qa-callback/wrangler.jsonc \
+            --port 8802 \
+            --inspector-port 9232 \
+            --local \
+            --var "INTERNAL_AUTH_SECRET:$FORGE_INTERNAL_AUTH_SECRET" \
+            > "$RUNNER_TEMP/forge-callback-gateway.log" 2>&1 &
+          echo "$!" > "$RUNNER_TEMP/forge-callback-gateway.pid"
+
+          nohup pnpm exec wrangler dev \
+            --config apps-src/alumdoor-worker/wrangler.purchase-qa.jsonc \
+            --port 8803 \
+            --inspector-port 9233 \
+            --local \
+            > "$RUNNER_TEMP/forge-alumdoor-worker.log" 2>&1 &
+          echo "$!" > "$RUNNER_TEMP/forge-alumdoor-worker.pid"
+
+          tenant_ready=0
+          callback_ready=0
+          app_ready=0
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent --show-error http://127.0.0.1:8801/health > /dev/null; then tenant_ready=1; fi
+            if curl --fail --silent --show-error http://127.0.0.1:8802/health > /dev/null; then callback_ready=1; fi
+            if curl --silent --show-error --output /dev/null http://127.0.0.1:8803/health; then app_ready=1; fi
+            if [ "$tenant_ready" = "1" ] && [ "$callback_ready" = "1" ] && [ "$app_ready" = "1" ]; then
               break
             fi
             sleep 2
           done
-          if [ "$ready" != "1" ]; then
-            cat "$RUNNER_TEMP/forge-auth-backend.log"
+          if [ "$tenant_ready" != "1" ] || [ "$callback_ready" != "1" ] || [ "$app_ready" != "1" ]; then
+            echo "tenant_ready=$tenant_ready callback_ready=$callback_ready app_ready=$app_ready"
+            cat "$RUNNER_TEMP/forge-auth-backend.log" || true
+            cat "$RUNNER_TEMP/forge-callback-gateway.log" || true
+            cat "$RUNNER_TEMP/forge-alumdoor-worker.log" || true
             exit 1
           fi
+          sleep 2
 
-      - name: Run Alumdoor cookie auth smoke
+      - name: Install authoritative Alumdoor app and Purchase QA masters
+        if: steps.scope.outputs.auth == 'true'
+        working-directory: server
+        shell: bash
+        env:
+          FORGE_ORIGIN: http://127.0.0.1:8801
+          FORGE_ADMIN_USER: ${{ env.FORGE_AUTH_USER }}
+          FORGE_ADMIN_PASSWORD: ${{ env.FORGE_AUTH_PASSWORD }}
+        run: |
+          set -euo pipefail
+          node scripts/forge-app.mjs briefs/alumdoor-v2.json \
+            --origin "$FORGE_ORIGIN" \
+            --admin "$FORGE_ADMIN_USER" \
+            2>&1 | tee "$RUNNER_TEMP/forge-app-install.log"
+          node scripts/seed-purchase-qa-local.mjs \
+            2>&1 | tee "$RUNNER_TEMP/purchase-qa-seed.log"
+
+      - name: Run Alumdoor cookie auth and Purchase lifecycle QA
         if: steps.scope.outputs.auth == 'true'
         env:
           FORGE_AUTH_BACKEND: http://127.0.0.1:8801
@@ -183,13 +232,22 @@ jobs:
             client/e2e-forge/test-results/auth-session/
             client/e2e-forge/playwright-report/auth-session/
             ${{ runner.temp }}/forge-auth-backend.log
+            ${{ runner.temp }}/forge-callback-gateway.log
+            ${{ runner.temp }}/forge-alumdoor-worker.log
+            ${{ runner.temp }}/forge-app-install.log
+            ${{ runner.temp }}/purchase-qa-seed.log
           if-no-files-found: warn
-          retention-days: 14
+          retention-days: 30
 
-      - name: Stop local tenant worker
+      - name: Stop local Purchase QA workers
         if: steps.scope.outputs.auth == 'true' && always()
         shell: bash
         run: |
-          if [ -f "$RUNNER_TEMP/forge-auth-backend.pid" ]; then
-            kill "$(cat "$RUNNER_TEMP/forge-auth-backend.pid")" 2>/dev/null || true
-          fi
+          for pid_file in \
+            "$RUNNER_TEMP/forge-auth-backend.pid" \
+            "$RUNNER_TEMP/forge-callback-gateway.pid" \
+            "$RUNNER_TEMP/forge-alumdoor-worker.pid"; do
+            if [ -f "$pid_file" ]; then
+              kill "$(cat "$pid_file")" 2>/dev/null || true
+            fi
+          done
