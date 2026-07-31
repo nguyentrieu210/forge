@@ -1,0 +1,94 @@
+name: RBAC Exact Head Verification
+
+on:
+  push:
+    branches:
+      - ci/rbac-exact-head-2f0de9
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: rbac-exact-head-2f0de9
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: github.event.head_commit.message == 'ci(rbac): verify exact head 2f0de9'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      TARGET_SHA: 2f0de9db871f3dbe32facf26abb84f1558be0824
+    steps:
+      - name: Mark pending
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: process.env.TARGET_SHA,
+              state: 'pending',
+              context: 'rbac/exact-head',
+              description: 'Running test, typecheck and build'
+            });
+
+      - name: Checkout exact target
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Test
+        run: pnpm test
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Build
+        run: pnpm build
+
+      - name: Mark success
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: process.env.TARGET_SHA,
+              state: 'success',
+              context: 'rbac/exact-head',
+              description: 'Test, typecheck and build passed'
+            });
+
+      - name: Mark failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: process.env.TARGET_SHA,
+              state: 'failure',
+              context: 'rbac/exact-head',
+              description: 'Test, typecheck or build failed'
+            });
