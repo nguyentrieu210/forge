@@ -2,57 +2,65 @@
 
 Ngày cập nhật: **2026-07-31**.
 
-## P0 — chốt Inventory Slice B PR #49
+## P0 — chốt Manufacturing Slice C PR #50
 
-1. Kiểm exact final head sau các commit tài liệu.
-2. Kiểm mergeability và unresolved review threads.
-3. Chờ đủ sáu workflow PASS trên exact final head:
-   - PR Validation;
-   - CI;
-   - Inventory and Manufacturing CI;
-   - Purchase Feature CI;
-   - Sales Feature CI;
-   - UI Pull Request Validation.
-4. Cập nhật PR body với final SHA và run IDs.
-5. Chuyển PR khỏi draft khi toàn bộ gate xanh.
-6. Không merge nếu chưa có yêu cầu merge rõ ràng.
+1. Kiểm exact final head sau commit tài liệu.
+2. Chờ đủ required workflows PASS trên exact final head.
+3. Kiểm mergeability và unresolved review threads.
+4. Cập nhật PR body với final SHA và CI run IDs.
+5. Chuyển PR #50 khỏi draft khi toàn bộ gate xanh.
+6. Không merge PR #50 trước PR #49.
+7. Sau khi PR #49 merge, retarget/rebase PR #50 lên default mới và chạy lại exact-head CI.
 
-## P0 — audit và staging kho
+## P0 — Slice D physical-stock read model
 
-- Chạy read-only catalog audit cho tenant `alu`; chỉ lưu evidence redacted ngoài repository.
-- Lập remediation plan cho Item/UOM/Measurement Profile/Warehouse/BOM findings.
-- Chạy staging journeys:
-  - receipt vào kho nguyên liệu;
-  - transfer giữa kho;
-  - issue cho sản xuất;
-  - quarantine và quality release;
+- Tạo projection chỉ đọc từ authoritative append-only ledger, không tạo stock book thứ hai.
+- Nhóm tồn theo Item, warehouse, batch/serial và canonical physical identity.
+- Hỗ trợ inventory mode/profile, màu, tình trạng, đời, kích thước và physical count.
+- Trả lineage tới voucher, revision, row và reversal source.
+- Thêm permission/data-scope, deterministic pagination và export contract.
+- Thêm focused tests cho quantity/value reconciliation, filters, reversal và tenant isolation.
+
+## P0 — Slice D operator UI và reports
+
+- Physical stock explorer với filters và lineage drill-down.
+- Warehouse quarantine/release view.
+- Work Order progress view theo snapshot và BOM row.
+- Reports:
+  - WIP;
+  - material shortage;
+  - planned vs actual variance;
   - scrap/offcut recovery;
-  - cancel/reversal đúng lineage.
-- Xác minh không có sai lệch quantity/value giữa physical identity snapshot và append-only stock ledger.
+  - stock ageing/condition;
+  - lineage/reversal audit.
+- Runtime browser harness và Playwright desktop/mobile cho các luồng chính.
+- Không cho UI tự tính số dư authoritative ở client.
 
-## P1 — Slice D physical-stock UI/report/read model
+## P0 — audit và staging acceptance
 
-- Thiết kế read model cho tồn kho theo Item, warehouse, batch/serial và canonical physical identity.
-- Bổ sung filters cho inventory mode/profile, màu, tình trạng, đời và kích thước.
-- Hiển thị lineage tới voucher/revision/row và exact reversal.
-- Không tạo parallel stock book; read model phải suy ra từ ledger authoritative.
-- Thêm permission/data-scope và export contract trước khi làm UI.
+- Chạy read-only Item/BOM/Warehouse audit trên staging hoặc production-shaped copy.
+- Lập remediation plan; không auto-fix tenant thật.
+- Chạy journeys:
+  - receipt và transfer;
+  - quarantine và quality release;
+  - activate BOM revision;
+  - release Work Order;
+  - partial issue và manufacture;
+  - scrap/offcut recovery;
+  - cancel/reversal;
+  - WIP/shortage/variance reports.
+- Xác minh quantity/value reconciliation và exact lineage.
 
 ## P1 — hiệu năng và vận hành
 
-- Benchmark company-wide inventory Durable Object lock ở tải gần production.
+- Benchmark company-wide inventory Durable Object lock.
 - Thu contention, retry và latency percentiles.
-- Xác định ngưỡng cảnh báo và rollback criteria trước deployment.
+- Xác định alert thresholds, rollback criteria và capacity boundary.
+- Chuẩn bị backup, rollback plan và release evidence path trước deployment.
 
-## Sau khi Slice B merge
+## Safety
 
-1. Retarget/rebase PR #50 Slice C lên default mới.
-2. Chạy lại CI exact-head cho Slice C.
-3. Không để Slice C định nghĩa lại canonical physical identity của Slice B.
-
-## Không được làm
-
-- Không deploy Cloudflare nếu chưa được yêu cầu rõ.
+- Không deploy Cloudflare nếu chưa có yêu cầu rõ.
 - Không mutate production tenant hoặc chạy remediation tự động.
 - Không sửa production secrets hoặc DNS.
 - Không commit `server/work/`, `tmp/`, `.env`, backup hoặc generated reports.
