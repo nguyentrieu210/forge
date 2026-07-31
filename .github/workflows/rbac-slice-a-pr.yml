@@ -1,0 +1,98 @@
+name: Verify RBAC Slice A
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - hotfix/alumdoor-print-list-delete
+
+permissions:
+  contents: write
+
+concurrency:
+  group: rbac-slice-a-pr
+  cancel-in-progress: false
+
+jobs:
+  apply-and-verify:
+    if: github.event.pull_request.head.ref == 'feat/rbac-permission-completion-20260731'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/rbac-permission-completion-20260731
+          fetch-depth: 0
+
+      - name: Decide whether to apply
+        id: gate
+        shell: bash
+        run: |
+          if [ "$(git log -1 --pretty=%s)" = "chore(rbac): observe slice A implementation" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: pnpm/action-setup@v4
+        if: steps.gate.outputs.run == 'true'
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        if: steps.gate.outputs.run == 'true'
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Apply reviewed Slice A patch
+        if: steps.gate.outputs.run == 'true'
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          source = Path('.github/workflows/rbac-slice-a-apply.yml').read_text(encoding='utf-8')
+          start = "      - name: Apply reviewed Slice A patch\n        shell: bash\n        run: |\n"
+          end = "\n      - name: Install dependencies\n"
+          if source.count(start) != 1 or source.count(end) != 1:
+              raise SystemExit('one-shot patch markers are missing or ambiguous')
+          block = source.split(start, 1)[1].split(end, 1)[0]
+          lines = block.splitlines()
+          script = '\n'.join(line[10:] if line.startswith('          ') else line for line in lines) + '\n'
+          Path('/tmp/apply-rbac-slice-a.sh').write_text(script, encoding='utf-8')
+          PY
+          bash /tmp/apply-rbac-slice-a.sh
+
+      - name: Install dependencies
+        if: steps.gate.outputs.run == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Server tests
+        if: steps.gate.outputs.run == 'true'
+        run: pnpm run server:test
+
+      - name: Typecheck
+        if: steps.gate.outputs.run == 'true'
+        run: pnpm run typecheck
+
+      - name: Build
+        if: steps.gate.outputs.run == 'true'
+        run: pnpm run build
+
+      - name: Commit verified implementation
+        if: steps.gate.outputs.run == 'true'
+        shell: bash
+        run: |
+          git config user.name "Forge RBAC CI"
+          git config user.email "actions@users.noreply.github.com"
+          git add server/packages/frappe-api/src/access-control.ts \
+                  server/packages/frappe-api/src/router.ts \
+                  server/tests/rbac-contract.test.mjs \
+                  client/packages/adapter-frappe/src/adapter.ts \
+                  client/packages/adapter-frappe/src/frappe-adapter.ts \
+                  client/packages/views/src/access/PermissionCenter.tsx
+          git commit -m "feat(rbac): complete permission inspection contract"
+          git push origin HEAD:feat/rbac-permission-completion-20260731
