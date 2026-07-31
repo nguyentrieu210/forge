@@ -122,16 +122,17 @@ Không bật rollout FIFO cho `alu` trước khi các blocker trên được x�
 
 ## RBAC Slice A và G4 CI
 
-- Implementation commit: `ab974f92ffbcf015fb71d3051df33508c9f09942`.
-- Exact code/docs head cần kiểm chứng: `2f0de9db871f3dbe32facf26abb84f1558be0824`.
-- PR kiểm chứng hiện hành: `#34`, branch `feat/rbac-permission-slice-a-final-20260731`, trạng thái draft.
-- PR `#22` đã đóng khi phát lại event; không merge.
-- G3 PASS tại workflow `30612014393`, job `91101823154`: 566 server tests + SQL suite, root typecheck và root build.
-- Default branch đã thêm workflow read-only `.github/workflows/pr-validation.yml` qua các commit:
-  - `3495292f1f94b2f1a29a0dfb7dbc4f89fc95cd0d`;
-  - `3634e2735a691f84deb1d49c34a981f800117e8a`;
-  - `0a1044c258aa57b68ab37eb29d573ccd1bb66b02`.
-- Đã thử event `reopened` và `ready_for_review`; GitHub chỉ lập run `Cloudflare Production Release Observation`, không lập run `PR Validation`; combined status của head vẫn rỗng.
-- Connector không cung cấp API enable/dispatch workflow. Không chèn job vào workflow production đang giữ secret.
-- G4 exact-head CI: **BLOCKED bởi workflow registration/state ở cấp GitHub Actions**.
-- Không merge PR RBAC, không deploy Cloudflare, không sửa production secrets và không bật FIFO.
+- Implementation gốc: `ab974f92ffbcf015fb71d3051df33508c9f09942`.
+- Branch kiểm chứng sạch từ default hiện tại: `feat/rbac-slice-a-rebased-20260731`.
+- Exact head đã kiểm chứng: `0db13898ed00cbfe3835ce511f90c84aef38c8e8`.
+- PR hiện hành: `#37`, trạng thái ready for review, mergeable, chưa merge.
+- PR `#34` đã đóng, không merge, do merge conflict với default.
+- Final diff PR #37 có 9 file code/test/tài liệu RBAC; không có workflow tạm, pretest hook, placeholder, `CURRENT_STATUS.md` hoặc `NEXT_TASKS.md`.
+- G3 trước rebase PASS tại workflow `30612014393`, job `91101823154`: 566 server tests + SQL suite, root typecheck và root build.
+- G4 exact-head PASS hai lần bằng workflow `PR Validation`:
+  - run `30618821462`, job `91118225164`;
+  - run sau khi chuyển Ready for review `30619133964`, job `91119230663`.
+- Cả hai run đều PASS `pnpm test`, `pnpm typecheck` và `pnpm build`.
+- G4: **PASS**.
+- G5 staging/browser QA: **CHƯA CHẠY**.
+- Không merge tự động, không deploy Cloudflare, không sửa production secrets và không bật FIFO.
