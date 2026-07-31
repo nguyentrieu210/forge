@@ -193,3 +193,33 @@ Còn lại:
 10. Sau Slice B/C mới chạy G5 staging/browser QA.
 
 Không deploy Cloudflare, sửa production secrets hoặc bật FIFO trong luồng RBAC khi chưa có yêu cầu riêng.
+
+### Cập nhật authoritative — Slice B đã implement, chờ review
+
+- Branch: `feat/rbac-permission-slice-b-core-20260731`.
+- Draft PR authoritative: `#43`; PR `#38`, `#39`, `#42` đã đóng và không merge.
+- Wiring implementation commit: `35da85cc3c8db4603df3cf0308b36dc422b524a7`.
+- Đã hoàn thành:
+  1. migration `0030_rbac_audit.sql` append-only;
+  2. audit ledger tenant scoped và JSON validated;
+  3. atomic create user + role grants;
+  4. atomic replace roles;
+  5. atomic enable/disable + session epoch;
+  6. atomic password change/reset + session revoke;
+  7. atomic User Permission upsert/remove;
+  8. application và database last-admin guard;
+  9. self-disable và self-demote guard;
+  10. audit redaction, không ghi password/hash/token/cookie/secret/trusted identity;
+  11. router wiring và allowed/forbidden endpoint contract tests.
+- Bằng chứng:
+  - service tests 8/8 PASS;
+  - core run `30622251469`, job `91129287256`: root test/typecheck/build PASS;
+  - wiring run `30623092302`, job `91131952789`: PASS;
+  - cùng run, job `91131952849`: root test/typecheck/build PASS.
+- Workflow tạm đã được gỡ; default `PR Validation` đã trở lại `contents: read` tại `952e7dd5443e3ace23b94935aca7f23978d1948a`.
+- Còn lại:
+  1. exact-head PR Validation sau commit bàn giao;
+  2. review final diff, unresolved threads và mergeability;
+  3. chỉ merge sau explicit approval;
+  4. G5 staging/browser QA sau khi Slice B/C hoàn tất.
+- Không deploy Cloudflare, sửa production secrets hoặc bật FIFO trong luồng RBAC khi chưa có yêu cầu riêng.
