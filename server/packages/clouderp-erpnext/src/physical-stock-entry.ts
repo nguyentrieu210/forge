@@ -83,12 +83,9 @@ interface ModeValidation {
 }
 
 /**
- * Adds an immutable, server-built physical identity snapshot to every Stock Entry row.
- *
- * The append-only stock ledger remains the only quantity/value movement ledger. Physical
- * dimensions and warehouse-role meaning are frozen on the canonical voucher row, while
- * the existing ledger keeps voucher revision, warehouse, quantity, weight, value and
- * batch/serial lineage. This avoids inventing another stock ledger that could drift.
+ * Freezes server-built physical identity and warehouse-role meaning on Stock Entry rows.
+ * The append-only stock ledger remains the only quantity/value movement ledger, so the
+ * identity snapshot cannot drift into a parallel third stock book.
  */
 export class PhysicalStockEntryController extends AdvancedStockEntryController {
   override async normalize(context: ControllerContext<StockEntryData>): Promise<StockEntryData> {
@@ -156,10 +153,19 @@ async function enrichPhysicalRow(
     index,
   );
 
-  const color = text(row.color ?? row.colour) || hints.color || text(item?.default_color);
-  const condition = text(row.condition) || hints.condition || "";
-  const generation = text(row.generation) || hints.generation || "";
-  const lengthMicros = positiveMicros(row.length_m, `items[${index}].length_m`) ?? hints.lengthMicros;
+  const explicitColor = text(row.color ?? row.colour);
+  const explicitCondition = text(row.condition);
+  const explicitGeneration = text(row.generation);
+  const explicitLengthMicros = positiveMicros(row.length_m, `items[${index}].length_m`);
+  assertStringCompatible("màu", explicitColor, hints.color, index);
+  assertStringCompatible("tình trạng", explicitCondition, hints.condition, index);
+  assertStringCompatible("đời sản phẩm", explicitGeneration, hints.generation, index);
+  assertNumberCompatible("chiều dài", explicitLengthMicros, hints.lengthMicros, index);
+
+  const color = explicitColor || hints.color || text(item?.default_color);
+  const condition = explicitCondition || hints.condition || "";
+  const generation = explicitGeneration || hints.generation || "";
+  const lengthMicros = explicitLengthMicros ?? hints.lengthMicros;
   const widthMicros = positiveMicros(row.width_m ?? row.roll_width_m, `items[${index}].width_m`);
   const heightMicros = positiveMicros(row.height_m, `items[${index}].height_m`);
   const thicknessMicros = positiveMicros(row.thickness_mm, `items[${index}].thickness_mm`);
@@ -299,9 +305,9 @@ async function readPhysicalLotRefs(
     if (text(aluminiumLot.profile) && text(aluminiumLot.profile) !== row.item_code) {
       throw errors.reference(`Lô nhôm ${entry.batch_no} thuộc mã khác ${row.item_code}`);
     }
-    if (direction === "Outward" && warehouse && text(aluminiumLot.warehouse) && text(aluminiumLot.warehouse) !== warehouse) {
-      throw errors.reference(`Lô nhôm ${entry.batch_no} không nằm trong kho ${warehouse}`);
-    }
+    // `Aluminium Lot.warehouse` is a legacy descriptive projection. The stock ledger's
+    // batch balance is authoritative after transfer, so a stale lot warehouse must not
+    // reject a valid second movement.
     setStringHint(hints, "color", text(aluminiumLot.colour ?? aluminiumLot.color), entry.batch_no);
     setStringHint(hints, "condition", text(aluminiumLot.condition), entry.batch_no);
     setStringHint(hints, "generation", text(aluminiumLot.generation), entry.batch_no);
@@ -319,6 +325,28 @@ async function readPhysicalLotRefs(
   return { refs, hints };
 }
 
+function assertStringCompatible(
+  label: string,
+  explicitValue: string,
+  lotValue: string | undefined,
+  index: number,
+): void {
+  if (explicitValue && lotValue && normalizeText(explicitValue) !== normalizeText(lotValue)) {
+    throw errors.reference(`Dòng ${index + 1} khai ${label} ${explicitValue} nhưng lô vật lý là ${lotValue}`);
+  }
+}
+
+function assertNumberCompatible(
+  label: string,
+  explicitValue: number | undefined,
+  lotValue: number | undefined,
+  index: number,
+): void {
+  if (explicitValue !== undefined && lotValue !== undefined && explicitValue !== lotValue) {
+    throw errors.reference(`Dòng ${index + 1} khai ${label} khác lô vật lý`);
+  }
+}
+
 function setStringHint(
   hints: IdentityHints,
   field: "color" | "condition" | "generation",
@@ -327,7 +355,7 @@ function setStringHint(
 ): void {
   if (!value) return;
   const current = hints[field];
-  if (current && current !== value) {
+  if (current && normalizeText(current) !== normalizeText(value)) {
     throw errors.reference(`Các lô trong cùng dòng có ${field} khác nhau; tách lô ${lot} sang dòng riêng`);
   }
   if (field === "color") hints.color = value;
