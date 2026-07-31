@@ -2,7 +2,7 @@
 
 Ngày cập nhật: **2026-07-31**.
 
-## P0 — Mở exact-head merge gate cho PR #27
+## P0 — Đóng final merge gate cho PR #27
 
 Branch: `feat/inventory-manufacturing-item-catalog-20260731`.
 
@@ -15,52 +15,32 @@ Authoritative metadata: `server/briefs/alumdoor-v2.json`, version `2.0.34`.
 - G0 Scope: **PASS**.
 - G1 Requirements/BRD: **PASS**.
 - G2 Technical plan: **PASS**.
-- Slice A implementation: **hoàn thành về code**.
+- Slice A implementation: **hoàn thành**.
 - Review score: **96/100**.
 - Critical: **0**.
 - High: **0** sau remediation.
-- Default đã đồng bộ tới `81697d454db5e22e758a8aeda8cc40f1f247b18a` qua merge `05477f70f74374516961127cc700f8341ce01196`.
+- Default synchronized, behind `0`, PR conflict-free trước handoff commit cuối.
+- Exact code head `39201fbb4a3816530a311273b68867584a9c5026` đã qua:
+  - PR Validation run `30622748689`, job `91130862243`: tests/typecheck/build **PASS**;
+  - Inventory and Manufacturing CI run `30622748750`, job `91130862871`: focused tests/audit/SQL/brief/lint/full tests/typecheck/build **PASS**.
 - Không migration, deploy, production mutation hoặc secret change.
 
 Review authoritative:
 
 - `server/docs/ALUMDOOR-INVENTORY-MANUFACTURING-SLICE-A-REVIEW.md`.
 
-### Blocker duy nhất trước khi chuyển PR ready
-
-Required GitHub Actions chưa chạy được trên exact final HEAD.
-
-Các run gần nhất thất bại trước checkout/`Set up job`; job records có `steps=null` và không có downloadable log. Không test, typecheck hoặc build command nào thực sự chạy.
-
-Phân loại: **GitHub Actions pre-run infrastructure/configuration blocker; nguyên nhân cụ thể chưa đủ bằng chứng**.
-
 ### Việc thực hiện ngay
 
-1. Kiểm tra default HEAD mới nhất.
-2. Nếu default tiến thêm, sync đúng file thay đổi vào branch và kiểm conflict.
-3. Trigger/retry:
-   - `Inventory and Manufacturing CI`;
-   - `PR Validation`.
-4. Chỉ khi job có steps thực sự:
-   - đọc failed step/log nếu đỏ;
-   - phân loại code/config/infrastructure;
-   - sửa code chỉ khi có code failure.
-5. Yêu cầu exact final-head evidence:
-   - install PASS;
-   - focused catalog/warehouse/Item tests PASS;
-   - redacted audit artifact PASS;
-   - server SQL PASS;
-   - brief check PASS;
-   - frontend lint PASS;
-   - repository tests PASS;
-   - typecheck PASS;
-   - build PASS.
-6. Khi cả hai required workflows xanh:
-   - cập nhật PR body với exact HEAD/run/job/artifact;
-   - xác minh `mergeable=true`, behind=0, không unresolved review thread;
-   - chuyển PR khỏi draft;
-   - báo người dùng PR sẵn sàng merge.
-7. Không merge trước yêu cầu merge rõ ràng của người dùng.
+1. Chờ hai workflow bắt buộc chạy trên final handoff-doc HEAD tạo bởi cập nhật `CURRENT_STATUS.md` và file này.
+2. Nếu đỏ:
+   - đọc đúng failed step/log;
+   - sửa code/config chỉ khi có lỗi thật;
+   - không bypass hoặc coi cancelled/missing run là PASS.
+3. Khi cả hai workflow xanh trên cùng final HEAD:
+   - cập nhật PR body với final SHA/run/job;
+   - xác minh default behind `0`, `mergeable=true` và không có unresolved review thread;
+   - chuyển PR khỏi draft sang ready for review.
+4. Không merge trước yêu cầu merge rõ ràng của người dùng.
 
 ## P1 — Sau khi Slice A merge
 
@@ -96,16 +76,11 @@ Staging chỉ bắt đầu sau live audit review và khi có branch cho Slice B/
 - PR #14 vẫn open/draft.
 - Nội dung PR hiện có migration `0031_purchase_allocation_control_metadata.sql`; phải xác minh migration head lại sau khi #14 merge.
 - Không tạo migration inventory/manufacturing mới trước coordination gate.
-- Sau #14 merge:
-  1. sync/rebase branch kế tiếp;
-  2. xử lý conflict;
-  3. kiểm migration head;
-  4. chạy full tests/typecheck/build và exact-head CI.
 - FIFO rollout tenant `alu` vẫn disabled.
 
 ## Slice B — Inventory completeness
 
-Chỉ mở branch/runtime migration sau Slice A merge, live audit review và migration coordination.
+Chỉ mở runtime/migration sau Slice A merge, live audit review và migration coordination.
 
 1. Warehouse roles: RAW, WIP, FINISHED, QUARANTINE, SCRAP/OFFCUT, GENERAL.
 2. Canonical physical stock identity cho nhôm, kính/tấm, cuộn và batch/serial.
@@ -136,4 +111,3 @@ Chỉ mở branch/runtime migration sau Slice A merge, live audit review và mig
 - Không deploy Gateway/Tenant Worker.
 - Không sửa Cloudflare secret.
 - Không commit raw report, `.env`, `server/work/`, `tmp/`, backup hoặc generated artifact.
-- Không bypass failed/missing/cancelled/infrastructure-blocked CI.
