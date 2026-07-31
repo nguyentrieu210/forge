@@ -1,0 +1,106 @@
+name: Business Domain CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: business-domain-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  scope:
+    name: Detect business domains
+    runs-on: ubuntu-latest
+    outputs:
+      sales: ${{ steps.scope.outputs.sales }}
+      purchase: ${{ steps.scope.outputs.purchase }}
+      inventory: ${{ steps.scope.outputs.inventory }}
+      any: ${{ steps.scope.outputs.any }}
+    steps:
+      - name: Classify changed files
+        id: scope
+        uses: actions/github-script@v7
+        with:
+          script: |
+            let filenames = [];
+            if (context.eventName === 'workflow_dispatch') {
+              filenames = ['server/shared', 'client/shared'];
+            } else {
+              const files = await github.paginate(github.rest.pulls.listFiles, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.issue.number,
+                per_page: 100,
+              });
+              filenames = files.map((file) => file.filename.toLowerCase());
+            }
+            const workflowChanged = filenames.includes('.github/workflows/business-domain-ci.yml');
+            const shared = filenames.some((file) =>
+              file === 'package.json' || file === 'pnpm-lock.yaml' || file === 'pnpm-workspace.yaml' ||
+              file.startsWith('server/packages/') || file.startsWith('client/packages/core/') || file.startsWith('client/packages/ui/')
+            );
+            const has = (terms) => shared || workflowChanged || filenames.some((file) => terms.some((term) => file.includes(term)));
+            const sales = has(['sales', 'quotation', 'sales-order', 'sales_invoice', 'item-price', 'price-list']);
+            const purchase = has(['purchase', 'supplier', 'fifo', 'receipt-allocation']);
+            const inventory = has(['inventory', 'manufactur', 'stock', 'warehouse', 'work-order', 'bom', 'alumdoor-catalog']);
+            core.setOutput('sales', String(sales));
+            core.setOutput('purchase', String(purchase));
+            core.setOutput('inventory', String(inventory));
+            core.setOutput('any', String(sales || purchase || inventory));
+            core.info(JSON.stringify({ sales, purchase, inventory, files: filenames }, null, 2));
+
+  focused:
+    name: Focused business checks
+    needs: scope
+    if: needs.scope.outputs.any == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Forge
+        uses: ./.github/actions/setup-forge
+      - name: Build server test target
+        run: pnpm --dir server run build
+      - name: Run sales-focused tests
+        if: needs.scope.outputs.sales == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t tests < <(find server/tests -maxdepth 1 -type f \( -iname '*sales*.test.mjs' -o -iname '*price*.test.mjs' -o -iname '*quotation*.test.mjs' \) | sort)
+          if [ "${#tests[@]}" -eq 0 ]; then echo 'No sales-focused tests found.'; else node --test "${tests[@]}"; fi
+      - name: Run purchase-focused tests
+        if: needs.scope.outputs.purchase == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t tests < <(find server/tests -maxdepth 1 -type f \( -iname '*purchase*.test.mjs' -o -iname '*supplier*.test.mjs' -o -iname '*fifo*.test.mjs' \) | sort)
+          if [ "${#tests[@]}" -eq 0 ]; then echo 'No purchase-focused tests found.'; else node --test "${tests[@]}"; fi
+      - name: Run inventory and manufacturing focused tests
+        if: needs.scope.outputs.inventory == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t tests < <(find server/tests -maxdepth 1 -type f \( -iname '*inventory*.test.mjs' -o -iname '*stock*.test.mjs' -o -iname '*warehouse*.test.mjs' -o -iname '*manufactur*.test.mjs' -o -iname '*work-order*.test.mjs' -o -iname '*bom*.test.mjs' -o -iname '*catalog*.test.mjs' \) | sort)
+          if [ "${#tests[@]}" -eq 0 ]; then echo 'No inventory-focused tests found.'; else node --test "${tests[@]}"; fi
+
+  result:
+    name: Business Domain Result
+    needs: [scope, focused]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enforce focused result
+        shell: bash
+        run: |
+          set -euo pipefail
+          test '${{ needs.scope.result }}' = 'success'
+          focused='${{ needs.focused.result }}'
+          if [ "$focused" != 'success' ] && [ "$focused" != 'skipped' ]; then exit 1; fi
+          echo "Business domain result: pass ($focused)"
