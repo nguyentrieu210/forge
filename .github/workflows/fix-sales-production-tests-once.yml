@@ -24,20 +24,35 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
 
-      - name: Update exact metadata assertions
+      - name: Align authoritative metadata version and assertions
         shell: bash
         run: |
           set -euo pipefail
           python - <<'PY'
           from pathlib import Path
 
-          audit = Path('server/tests/alumdoor-catalog-audit.test.mjs')
-          source = audit.read_text()
-          before = '  assert.equal(report.metadata_version, "2.0.34");\n  assert.equal(report.expected_metadata_version, "2.0.34");'
-          after = '  assert.equal(report.metadata_version, "2.0.35");\n  assert.equal(report.expected_metadata_version, "2.0.35");'
+          planner = Path('server/scripts/alumdoor-catalog-audit-planner.mjs')
+          source = planner.read_text()
+          before = 'const EXPECTED_METADATA_VERSION = "2.0.34";'
+          after = 'const EXPECTED_METADATA_VERSION = "2.0.35";'
           if source.count(before) != 1:
-              raise SystemExit(f'audit metadata assertion count={source.count(before)}')
-          audit.write_text(source.replace(before, after, 1))
+              raise SystemExit(f'planner metadata constant count={source.count(before)}')
+          planner.write_text(source.replace(before, after, 1))
+
+          audit_cli = Path('server/scripts/audit-alumdoor-catalog.mjs')
+          source = audit_cli.read_text()
+          before = '    metadataVersion: "2.0.34",'
+          after = '    metadataVersion: "2.0.35",'
+          if source.count(before) != 1:
+              raise SystemExit(f'remote audit metadata constant count={source.count(before)}')
+          audit_cli.write_text(source.replace(before, after, 1))
+
+          audit_test = Path('server/tests/alumdoor-catalog-audit.test.mjs')
+          source = audit_test.read_text()
+          count = source.count('2.0.34')
+          if count < 2:
+              raise SystemExit(f'audit test old-version occurrences={count}')
+          audit_test.write_text(source.replace('2.0.34', '2.0.35'))
 
           model = Path('server/tests/alumdoor-item-model.test.mjs')
           source = model.read_text()
@@ -94,7 +109,7 @@ jobs:
       - name: Server build
         run: pnpm --filter cloudforge run build
 
-      - name: Commit verified test updates
+      - name: Commit verified metadata updates
         shell: bash
         run: |
           set -euo pipefail
@@ -104,5 +119,5 @@ jobs:
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add -A
           git diff --cached --check
-          git commit -m "test(sales): update production flow metadata expectations"
+          git commit -m "fix(sales): align production metadata version"
           git push origin HEAD:feat/sales-order-production-flow-final-20260801
