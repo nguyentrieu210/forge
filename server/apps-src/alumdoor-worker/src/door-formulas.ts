@@ -12,6 +12,7 @@ export const DOOR_TYPES = [
   "Cửa Lưới",
   "Cửa Đài Loan",
   "Cửa Siêu Trường",
+  "Cửa tấm liền Úc",
 ] as const;
 
 export type DoorType = typeof DOOR_TYPES[number];
@@ -48,6 +49,14 @@ export interface DoorFormulaPolicy {
   priority?: number;
   disabled?: unknown;
   note?: string;
+  ray_type?: "U75" | "U100" | "Ray sắt U70" | "Không dùng ray";
+  leaf_formula?: "Kiểu Đức" | "Kiểu Úc" | "Kiểu tấm liền Úc" | "Kiểu Đài Loan Lưới";
+  leaf_height_deduction_m?: number;
+  leaf_divisor_source?: "Bản lá của bộ quy cách" | "Hằng số của chính sách";
+  leaf_divisor_const?: number;
+  leaf_rounding?: "Ngưỡng trừ-một-lá" | "Nấc 0-0.3-0.7-1" | "Làm tròn xuống";
+  leaf_round_threshold?: number;
+  leaf_variants?: Array<{ variant_label?: string; addend?: number; note?: string }>;
 }
 
 export interface DoorFormulaInput {
@@ -98,7 +107,7 @@ export interface DoorFormulaResult {
 
 const ITEM_GROUP_DOOR_TYPE: Record<string, DoorType> = {
   "cửa cn đức": "Cửa Đức",
-  "cửa tấm liền úc": "Cửa Úc",
+  "cửa tấm liền úc": "Cửa tấm liền Úc",
   "cửa lưới": "Cửa Lưới",
   "cửa đài loan": "Cửa Đài Loan",
   "cửa đài loan inox": "Cửa Đài Loan",
@@ -177,7 +186,27 @@ export function parseDoorPolicy(input: Record<string, unknown>): DoorFormulaPoli
     ...(input.priority == null || input.priority === "" ? {} : { priority: Number(input.priority) || 0 }),
     ...(input.disabled == null ? {} : { disabled: input.disabled }),
     ...(input.note ? { note: String(input.note) } : {}),
-  };
+  ...(input.ray_type ? { ray_type: String(input.ray_type) as NonNullable<DoorFormulaPolicy["ray_type"]> } : {}),
+  ...(input.leaf_formula ? { leaf_formula: String(input.leaf_formula) as NonNullable<DoorFormulaPolicy["leaf_formula"]> } : {}),
+  ...(input.leaf_height_deduction_m == null || input.leaf_height_deduction_m === ""
+    ? {}
+    : { leaf_height_deduction_m: Number(input.leaf_height_deduction_m) }),
+  ...(input.leaf_divisor_source
+    ? { leaf_divisor_source: String(input.leaf_divisor_source) as NonNullable<DoorFormulaPolicy["leaf_divisor_source"]> }
+    : {}),
+  ...(input.leaf_divisor_const == null || input.leaf_divisor_const === ""
+    ? {}
+    : { leaf_divisor_const: Number(input.leaf_divisor_const) }),
+  ...(input.leaf_rounding
+    ? { leaf_rounding: String(input.leaf_rounding) as NonNullable<DoorFormulaPolicy["leaf_rounding"]> }
+    : {}),
+  ...(input.leaf_round_threshold == null || input.leaf_round_threshold === ""
+    ? {}
+    : { leaf_round_threshold: Number(input.leaf_round_threshold) }),
+  ...(Array.isArray(input.leaf_variants)
+    ? { leaf_variants: input.leaf_variants as NonNullable<DoorFormulaPolicy["leaf_variants"]> }
+    : {}),
+};
 }
 
 /** Item mới khai thẳng loại cửa; dữ liệu cũ được ánh xạ từ nhóm hàng đã chốt. */
