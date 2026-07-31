@@ -165,81 +165,47 @@ Còn lại:
 
 ## P0 — Hoàn thiện RBAC và data scope
 
-Branch: `feat/rbac-permission-completion-20260731`.
+Branch: `feat/rbac-permission-completion-20260731`.  
+Draft PR: `#22`.
 
 Tài liệu authoritative:
 
 - BRD: `server/docs/RBAC-PERMISSION-BRD.md`.
-- Kế hoạch G2: `server/docs/RBAC-PERMISSION-IMPLEMENTATION-PLAN.md`.
-- Draft PR: `#22`.
+- Kế hoạch: `server/docs/RBAC-PERMISSION-IMPLEMENTATION-PLAN.md`.
 
-### Gate đã chốt
+### Gate hiện tại
 
 - G0 scope: **PASS**.
 - G1 requirements: **PASS** với D1=A, D2=A, D3=A.
-- G2 implementation plan: **PASS** tại commit `9bbc2f646fbc9a39c9fd100c1474b67eeb285021`.
-- G3/G4/G5: chưa mở.
+- G2 implementation plan: **PASS**.
+- Slice A implementation: **PASS** tại `ab974f92ffbcf015fb71d3051df33508c9f09942`.
+- G3 server tests/root typecheck/root build: **PASS** trên run `30612014393`, job `91101823154`.
+- G4 exact-head CI sau cleanup/docs: **CHƯA CÓ BẰNG CHỨNG**.
+- G5 staging/browser QA: **CHƯA CHẠY**.
 
-### Quyết định áp dụng
+### Slice A — hoàn thành
 
-1. Giữ `Administrator`/`System Manager` là tenant superadmin để tương thích, nhưng thêm last-admin/self-lockout guard, audit và test.
-2. DocPerm do app/platform sở hữu; Permission Center chỉ đọc.
-3. User Permission exact-value; từ chối `hide_descendants=true`.
+1. `explain_permission` dùng đúng user được chọn, roles và scope từ tenant user store.
+2. Non-admin không được inspect user khác; target không tồn tại/disabled bị từ chối.
+3. Capability và trace dùng cùng evaluator, không có bộ luật UI song song.
+4. Stable composite User Permission id cho add/profile/remove.
+5. Adapter xoá scope bằng `{ id }`; UI không crash khi trace rỗng.
+6. `hide_descendants=true` bị từ chối fail-closed.
+7. Contract version tăng lên `16.0.0-forge.3`.
+8. Targeted RBAC tests và root gate đã xanh; workflow/harness/placeholder tạm đã được loại khỏi final diff.
 
-### Việc tiếp theo — Slice A: sửa contract P0
+### Việc tiếp theo — theo thứ tự
 
-1. Refactor server resolve target actor cho `explain_permission`:
-   - không truyền user => actor hiện tại;
-   - user khác => chỉ tenant superadmin;
-   - tải user/roles/enabled từ `D1UserStore` trong đúng tenant;
-   - không rơi về actor admin khi target sai.
-2. Refactor capability calculation nhận actor đích thay vì đóng cứng `context.actor`.
-3. Trả `trace` từ cùng permission evaluator, fail-closed và không lộ dữ liệu nhạy cảm.
-4. Chuẩn hoá User Permission identity bằng composite key `user + allow + value + applicable_for`.
-5. Access profile trả identity ổn định; adapter/UI xoá bằng cùng contract.
-6. Add/remove idempotent và round-trip đúng sau refresh.
-7. Từ chối `hide_descendants=true` bằng validation rõ.
-8. UI Check Panel dùng fallback trace rỗng, hiển thị rõ user đang được kiểm tra và không crash.
+1. **G4:** chạy workflow `CI` chuẩn trên exact HEAD của PR #22 sau commit tài liệu cuối; yêu cầu `test`, `typecheck`, `build` PASS.
+2. Review final diff để xác nhận chỉ còn code, test và tài liệu RBAC; không còn workflow điều phối tạm.
+3. **Slice B:**
+   - migration append-only cho RBAC audit;
+   - atomic create user + role grants;
+   - atomic replace roles;
+   - last-admin guard và self-disable/self-demote guard;
+   - audit role/scope/enable-disable/password reset/session revoke;
+   - không ghi password/hash/token/secret.
+4. **Slice C:** chốt static-vs-metadata authority, scope nhất quán trên list/count/read/write/report/export/search/print, share không bypass scope, field/file/action/cross-tenant tests.
+5. **Slice D:** staging/browser QA, selected-user UX, role matrix read-only, scope reload, cảnh báo last-admin/session revocation và responsive layout.
 
-### Targeted tests Slice A
-
-- admin explain user B dùng đúng role/scope B;
-- non-admin explain B bị từ chối;
-- target không tồn tại/disabled không rơi về admin;
-- add → profile refresh → remove → profile refresh;
-- remove lần hai trả idempotent;
-- `hide_descendants=true` bị từ chối;
-- adapter request shape khớp API;
-- UI render với `trace=[]`.
-
-### Slice B — sau khi Gate A xanh
-
-1. Migration append-only audit RBAC.
-2. Atomic create user + roles.
-3. Atomic replace roles, last-admin guard và self-lockout guard.
-4. Audit role/scope/enable-disable/password reset/session revoke.
-5. Không ghi password/hash/token/secret.
-
-### Slice C — evaluator completeness
-
-1. Chốt static-vs-metadata authority và conflict validation.
-2. User Permission nhất quán trên list/count/read/write/report/export/search/print.
-3. Share không bypass scope.
-4. Field permlevel, attachment và app action tests.
-5. Cross-tenant isolation tests.
-
-### Slice D — UI và QA
-
-1. Permission Center hiển thị đúng selected user.
-2. Role matrix app-owned read-only.
-3. Scope add/remove hoạt động sau reload.
-4. Cảnh báo last-admin và session revocation.
-5. Desktop/mobile browser QA.
-
-### Gate tổng
-
-1. Targeted tests từng slice.
-2. Root `test`, `typecheck`, `build` PASS.
-3. Exact-head CI PASS.
-4. Staging với user đại diện từng role/scope.
-5. Không deploy production hoặc sửa secret nếu chưa có approval riêng.
+Không deploy production, sửa secret hoặc bật FIFO trong công việc RBAC nếu chưa có approval riêng.
