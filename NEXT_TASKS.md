@@ -10,31 +10,38 @@ Mọi agent phải đọc `EPIC_STATUS.md`, `CURRENT_STATUS.md`, `DELIVERY_POLIC
 
 - PR: #131 — `feat(sales): rebuild order to production flow`.
 - Branch: `feat/sales-order-production-flow-clean-20260801`.
-- Exact code head đã kiểm: `c38141dedabccafd0a3fc7c4346e96cf87a496f8`.
-- Zero-behind tại thời điểm kiểm.
-- Full CI, PR policy, Sales, Purchase, Inventory và UI/browser gates: PASS.
-- Duplicate-list guard đã đóng cả outage trước preflight lẫn outage phát sinh sau preflight, trước write.
+- Default head: `5252b196b8cef5b1710c69d8bde04136741d0cc9`.
+- Exact code head sau review: `4d60d26e8791c87cd9fa359d0310ef026f428c59`.
+- PR mergeable; 19 commit mới trên default không chồng lên file source/test nghiệp vụ của PR.
+- Finding partial Paint Job retry đã sửa và có regression.
 - PR vẫn draft; chưa merge và chưa release.
 
 ### Việc tiếp theo
 
-1. Xác nhận branch vẫn zero-behind và exact final head chỉ thêm cập nhật tài liệu sau code head đã kiểm.
-2. Review final diff, tập trung vào:
+1. Lấy exact final head sau hai cập nhật handoff.
+2. Chờ các workflow trên exact final head chạy terminal:
+   - CI;
+   - PR Validation;
+   - Sales Feature CI;
+   - Purchase Feature CI;
+   - Inventory and Manufacturing CI;
+   - UI Pull Request Validation.
+3. Nếu fail, chỉ sửa direct cause từ log trên cùng branch; không mở PR thay thế.
+4. Review final diff, tập trung vào:
    - Production Request theo từng bộ;
    - Work Order draft idempotent;
-   - Paint Job theo Batch;
+   - Paint Job theo từng `batch_no`, partial retry và batch aggregation;
    - delivery lineage bằng `sales_order_row_id`;
    - bảng Sales mở rộng và `depends_on`;
    - fail-closed khi duplicate-list lỗi trước hoặc sau preflight.
-3. Giữ PR draft cho tới khi final review không còn finding Critical/High.
-4. Chỉ merge khi có lệnh riêng; dùng expected exact head SHA.
-5. Sau merge, chạy authenticated operator journey tối thiểu:
+5. Khi exact-head checks xanh và không còn finding Critical/High, chuyển PR khỏi draft và merge bằng expected head SHA theo delivery policy.
+6. Không deploy Cloudflare trong đợt này nếu chưa có yêu cầu rõ.
+7. Sau merge, chạy authenticated operator journey tối thiểu:
    - tạo Sales Order có nhiều bộ;
    - sinh Production Request/Work Order đúng số bộ;
    - lặp lại thao tác không tạo trùng;
-   - Cut/Paint theo Batch và trạng thái `THÔ`;
+   - Cut/Paint theo Batch `THÔ`, retry tạo đúng batch còn thiếu;
    - Delivery giữ đúng lineage dòng bán.
-6. Chỉ release production khi có lệnh riêng và dedicated workflow có build, migration/backup nếu cần, deploy, smoke và provider evidence.
 
 ### Done condition
 
@@ -42,11 +49,11 @@ Mọi agent phải đọc `EPIC_STATUS.md`, `CURRENT_STATUS.md`, `DELIVERY_POLIC
 - Exact merged SHA có CI xanh.
 - Authenticated operator journey PASS.
 - Không có workflow tạm hoặc generated artifact trong diff.
-- Có release evidence nếu production target được thay đổi.
+- Có release evidence nếu sau này được yêu cầu deploy production.
 
 ## P1 — Purchase authenticated QA clean rebuild
 
-Bắt đầu sau khi Sales-to-Production merge ổn định:
+Bắt đầu ngay sau khi Sales-to-Production merge ổn định:
 
 - tạo branch mới từ exact current default;
 - không reopen PR #103;
@@ -65,14 +72,21 @@ Bắt đầu sau khi Sales-to-Production merge ổn định:
 ## P3 — Daily ledger
 
 - Immutable daily snapshot theo ngày/company/warehouse/customer/order.
+- Chỉ kế toán tổng hợp, kế toán trưởng và Giám đốc được sửa sau cập nhật.
 - Khóa sửa sau đóng ngày.
 - Adjustment document có reason, actor và audit.
 - Reconciliation Sales/Purchase/Inventory/Manufacturing/Finance.
+- Có thao tác cập nhật dữ liệu từ theo dõi chung vào sổ chi tiết hàng ngày.
 
 ## P4 — Warranty / Capacity
 
-- Bốn nguyên nhân lỗi/bảo hành và accounting effect.
-- Capacity theo workstation, thời gian định mức, overtime, WIP và overload policy.
+- Bốn nguyên nhân lỗi/bảo hành và accounting effect:
+  - motor/bình lưu điện theo thời hạn bảo hành;
+  - lỗi sản xuất và người chịu trách nhiệm;
+  - lỗi nhà cung cấp và công nợ hàng đổi trả;
+  - lỗi khách hàng và chi phí theo công đoạn.
+- Truy vết lỗi về số chứng từ và ngày giao hàng.
+- Capacity theo workstation, thời gian định mức, tổng phút/ngày, 8 giờ hành chính, overtime, WIP và overload policy.
 
 ## P5 — End-to-end acceptance
 
