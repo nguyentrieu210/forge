@@ -15,10 +15,10 @@ Ngày cập nhật: **2026-08-01**.
 PR canonical: **#131 — `feat(sales): rebuild order to production flow`**.
 
 - Branch: `feat/sales-order-production-flow-clean-20260801`.
-- Exact synchronized feature head đã kiểm: `732180b180d248595e54ee37b06b665f72e1d948`.
+- Exact code head đã kiểm: `c38141dedabccafd0a3fc7c4346e96cf87a496f8`.
 - So với default tại thời điểm kiểm: `behind_by=0`.
 - PR vẫn là **draft**; chưa merge và chưa release production.
-- Final diff gồm 19 file source/test/brief; không có workflow dùng một lần, transport/sync workflow, hidden trigger hoặc generated artifact.
+- Final diff không có workflow dùng một lần, transport/sync workflow, hidden trigger hoặc generated artifact.
 
 ### Phạm vi đã triển khai
 
@@ -32,17 +32,22 @@ PR canonical: **#131 — `feat(sales): rebuild order to production flow`**.
 - Unicode Item Price normalization được giữ trong cùng luồng.
 - Thiếu policy/BOM bị chặn, không đoán dữ liệu.
 - Duplicate-list probe của Production Request, Work Order và Paint Job fail-closed trước mọi write.
+- Lỗi duplicate-list phát sinh sau preflight cũng được ghi nhớ và chặn write kế tiếp, đóng khe TOCTOU giữa preflight và lần đọc thực tế.
 
-### Exact-head evidence trên `732180b1...`
+### Exact-code-head evidence trên `c38141de...`
 
-- CI run `30661155948`: **SUCCESS** — full tests, typecheck và build PASS.
-- PR Validation run `30661155848`: **SUCCESS**.
-- Sales Feature CI run `30661155940`: **SUCCESS**.
-- Purchase Feature CI run `30661155820`: **SUCCESS**.
-- Inventory and Manufacturing CI run `30661154919`: **SUCCESS**.
-- UI Pull Request Validation run `30661154877`: **SUCCESS** — frontend lint, browser build và Alumdoor browser QA PASS.
+- CI run `30661942530`: **SUCCESS** — full tests, typecheck và build PASS.
+- PR Validation run `30661942514`: **SUCCESS**.
+- Sales Feature CI run `30661942524`: **SUCCESS**.
+- Purchase Feature CI run `30661942518`: **SUCCESS**.
+- Inventory and Manufacturing CI run `30661942526`: **SUCCESS**.
+- UI Pull Request Validation run `30661942591`: **SUCCESS** — frontend lint, browser build và Alumdoor browser QA PASS.
 
-Regression mới xác nhận lỗi `503` ở duplicate-list probe dừng trước mọi write.
+Regression xác nhận:
+
+- lỗi `503` ở preflight duplicate-list dừng trước mọi write;
+- preflight đọc thành công nhưng lần duplicate-list sau đó lỗi vẫn chặn write;
+- duplicate-list thành công không chặn write hợp lệ.
 
 ## Trạng thái đã merge/release trước PR #131
 
@@ -60,14 +65,14 @@ Regression mới xác nhận lỗi `503` ở duplicate-list probe dừng trướ
 
 ## Trạng thái nghiệp vụ
 
-1. Sales-to-Production — `DRAFT PR #131 / EXACT-HEAD CI PASS / NOT MERGED`.
+1. Sales-to-Production — `DRAFT PR #131 / EXACT CODE HEAD CI PASS / NOT MERGED`.
 2. Purchase authenticated QA — `QUEUED AFTER SALES MERGE`.
 3. Finance — `QUEUED / REBUILD`.
 4. Daily ledger — `QUEUED`.
 5. Warranty / Capacity — `QUEUED`.
 6. End-to-end acceptance — `QUEUED`.
 
-Toàn hệ thống chưa đạt end-to-end acceptance. Sales-to-Production còn final review, merge, authenticated operator journey và release evidence nếu production được yêu cầu.
+Toàn hệ thống chưa đạt end-to-end acceptance. Sales-to-Production còn final merge decision, authenticated operator journey và release evidence nếu production được yêu cầu.
 
 ## Safety
 

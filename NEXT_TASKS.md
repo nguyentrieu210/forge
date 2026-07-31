@@ -10,21 +10,22 @@ Mọi agent phải đọc `EPIC_STATUS.md`, `CURRENT_STATUS.md`, `DELIVERY_POLIC
 
 - PR: #131 — `feat(sales): rebuild order to production flow`.
 - Branch: `feat/sales-order-production-flow-clean-20260801`.
-- Exact synchronized feature head đã kiểm: `732180b180d248595e54ee37b06b665f72e1d948`.
+- Exact code head đã kiểm: `c38141dedabccafd0a3fc7c4346e96cf87a496f8`.
 - Zero-behind tại thời điểm kiểm.
 - Full CI, PR policy, Sales, Purchase, Inventory và UI/browser gates: PASS.
+- Duplicate-list guard đã đóng cả outage trước preflight lẫn outage phát sinh sau preflight, trước write.
 - PR vẫn draft; chưa merge và chưa release.
 
 ### Việc tiếp theo
 
-1. Review final diff 19 file, tập trung vào:
+1. Xác nhận branch vẫn zero-behind và exact final head chỉ thêm cập nhật tài liệu sau code head đã kiểm.
+2. Review final diff, tập trung vào:
    - Production Request theo từng bộ;
    - Work Order draft idempotent;
    - Paint Job theo Batch;
    - delivery lineage bằng `sales_order_row_id`;
    - bảng Sales mở rộng và `depends_on`;
-   - duplicate-list preflight fail-closed.
-2. Xác nhận branch vẫn zero-behind trước quyết định merge.
+   - fail-closed khi duplicate-list lỗi trước hoặc sau preflight.
 3. Giữ PR draft cho tới khi final review không còn finding Critical/High.
 4. Chỉ merge khi có lệnh riêng; dùng expected exact head SHA.
 5. Sau merge, chạy authenticated operator journey tối thiểu:
