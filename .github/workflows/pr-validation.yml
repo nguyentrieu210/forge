@@ -58,7 +58,7 @@ jobs:
     environment: production
     env:
       TENANT: alu
-      TARGET_SHA: 4500799f13de48ada1948ab583afcf2e52b4c2dd
+      TARGET_SHA: cbf7506dd8f04cb93f77e30f5c5fba3b6770b04f
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
     steps:
@@ -86,7 +86,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$TENANT" = "alu"
-          test "$TARGET_SHA" = "4500799f13de48ada1948ab583afcf2e52b4c2dd"
+          test "$TARGET_SHA" = "cbf7506dd8f04cb93f77e30f5c5fba3b6770b04f"
           test -n "${CLOUDFLARE_API_TOKEN:-}"
           echo "EVIDENCE_DIR=$RUNNER_TEMP/alu-release-evidence" >> "$GITHUB_ENV"
           echo "BACKUP_DIR=$RUNNER_TEMP/alu-backup" >> "$GITHUB_ENV"
@@ -191,7 +191,7 @@ jobs:
     timeout-minutes: 35
     environment: production
     env:
-      TARGET_SHA: 4500799f13de48ada1948ab583afcf2e52b4c2dd
+      TARGET_SHA: cbf7506dd8f04cb93f77e30f5c5fba3b6770b04f
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
     steps:
@@ -218,7 +218,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$TARGET_SHA" = "4500799f13de48ada1948ab583afcf2e52b4c2dd"
+          test "$TARGET_SHA" = "cbf7506dd8f04cb93f77e30f5c5fba3b6770b04f"
           test -n "${CLOUDFLARE_API_TOKEN:-}"
           echo "EVIDENCE_DIR=$RUNNER_TEMP/gateway-release-evidence" >> "$GITHUB_ENV"
           mkdir -p "$RUNNER_TEMP/gateway-release-evidence"
