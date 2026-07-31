@@ -1,12 +1,12 @@
 name: Apply reviewed purchase preview patch
 
 on:
-  push:
+  pull_request:
     branches:
       - feat/purchase-receipt-complete-20260731
     paths:
       - .github/one-shot/purchase-preview.patch
-      - .github/workflows/apply-purchase-preview.yml
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -17,6 +17,7 @@ concurrency:
 
 jobs:
   apply-and-verify:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 55
     steps:
@@ -30,7 +31,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$GITHUB_REF_NAME" = "feat/purchase-receipt-complete-20260731"
+          test "$(git branch --show-current)" = "feat/purchase-receipt-complete-20260731"
           git merge-base --is-ancestor 798d60c7edf476c26b90c51cbe0f5c0346789594 HEAD
           unexpected="$(git diff --name-only 798d60c7edf476c26b90c51cbe0f5c0346789594..HEAD | grep -Ev '^(\.github/workflows/apply-purchase-preview\.yml|\.github/one-shot/purchase-preview\.patch)$' || true)"
           test -z "$unexpected"
