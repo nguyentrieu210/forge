@@ -120,19 +120,23 @@ Thứ tự an toàn:
 
 Không bật rollout FIFO cho `alu` trước khi các blocker trên được xử lý.
 
-## RBAC Slice A và G4 CI
+## RBAC Slice A đã merge
 
 - Implementation gốc: `ab974f92ffbcf015fb71d3051df33508c9f09942`.
-- Branch kiểm chứng sạch từ default hiện tại: `feat/rbac-slice-a-rebased-20260731`.
+- Branch kiểm chứng sạch: `feat/rbac-slice-a-rebased-20260731`.
 - Exact head đã kiểm chứng: `0db13898ed00cbfe3835ce511f90c84aef38c8e8`.
-- PR hiện hành: `#37`, trạng thái ready for review, mergeable, chưa merge.
+- PR `#37` đã squash-merge vào default.
+- Merge commit: `93ac85a0f16c2668b706ffcf8e15d3da53c8c7a9`.
 - PR `#34` đã đóng, không merge, do merge conflict với default.
-- Final diff PR #37 có 9 file code/test/tài liệu RBAC; không có workflow tạm, pretest hook, placeholder, `CURRENT_STATUS.md` hoặc `NEXT_TASKS.md`.
-- G3 trước rebase PASS tại workflow `30612014393`, job `91101823154`: 566 server tests + SQL suite, root typecheck và root build.
-- G4 exact-head PASS hai lần bằng workflow `PR Validation`:
+- Final diff có 9 file code/test/tài liệu RBAC; không có workflow tạm, pretest hook, placeholder, `CURRENT_STATUS.md` hoặc `NEXT_TASKS.md`.
+- G3 trước rebase PASS tại workflow `30612014393`, job `91101823154`.
+- G4 exact-head PASS bằng workflow `PR Validation`:
   - run `30618821462`, job `91118225164`;
-  - run sau khi chuyển Ready for review `30619133964`, job `91119230663`.
-- Cả hai run đều PASS `pnpm test`, `pnpm typecheck` và `pnpm build`.
+  - run `30619133964`, job `91119230663`;
+  - run mới nhất `30619408760`, job `91120101038`.
+- Các run trên PASS `pnpm test`, `pnpm typecheck` và `pnpm build`.
+- Không có review thread hoặc change request chưa xử lý khi merge.
 - G4: **PASS**.
 - G5 staging/browser QA: **CHƯA CHẠY**.
-- Không merge tự động, không deploy Cloudflare, không sửa production secrets và không bật FIFO.
+- Việc tiếp theo là mở branch/PR Slice B riêng cho audit append-only, atomic user/roles và last-admin/self-lockout guards.
+- Không deploy Cloudflare, không sửa production secrets và không bật FIFO.
