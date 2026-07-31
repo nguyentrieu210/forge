@@ -2,186 +2,103 @@
 
 Ngày cập nhật: **2026-08-01**.
 
-Mọi agent phải đọc `EPIC_STATUS.md` trước file này. Không tự đổi thứ tự hoặc mở thêm epic nghiệp vụ nếu chưa cập nhật hàng đợi canonical.
+Mọi agent phải đọc `EPIC_STATUS.md` trước file này. Không tự mở lại #103, #107 hoặc #119.
 
-## P0 — Sales-to-Production
+## P0 — Sales-to-Production clean rebuild
 
-### Trạng thái
+### Nguồn tham khảo
 
-- PR #115 đã merge nhưng final diff chỉ có workflow đồng bộ và file trigger.
-- Merge SHA #115: `eab228aa72bbf54575ec573b4f7eadaa9a8060f7`.
-- Không ghi epic DONE.
-- PR #107 là nhánh transport cũ, không dùng làm nguồn merge.
+- PR #119 branch `feat/sales-order-production-flow-final-20260801` giữ code/test tham khảo.
+- Không reopen hoặc merge nguyên PR #119.
+- Không dùng #107 hoặc workflow transport từ #115.
 
-### Việc làm
+### Việc làm bắt buộc
 
-1. Tạo branch sạch từ current default.
-2. Mang code nghiệp vụ thật vào final diff, không giữ workflow/payload/trigger vận chuyển.
-3. Xác minh đầy đủ:
-   - Sales Order Item mở rộng;
-   - door policy có version và `Cửa tấm liền Úc`;
-   - snapshot số lá, kg và phút định mức;
-   - Production Request theo từng bộ/loại cửa;
-   - Work Order draft idempotent;
-   - Cut/Paint theo Batch `THÔ`;
-   - Delivery theo `sales_order_row_id`;
-   - fail closed khi thiếu policy/BOM.
-4. Chạy server build.
-5. Chạy door formula regression.
-6. Chạy Sales production flow regression.
-7. Chạy Unicode Item Price regression.
-8. Chạy client typecheck và full required CI.
-9. Review final diff, bảo đảm không còn file transport tạm.
-10. Merge và ghi exact merge/release evidence.
-
-### Done condition
-
-- Code nghiệp vụ thật có trên default.
-- Exact-head required CI xanh.
-- Authenticated operator journey tối thiểu PASS.
-- Release exact merged SHA có evidence hoặc được ghi rõ còn pending.
-
-## P1 — Purchase authenticated QA
-
-### Trạng thái
-
-- PR #103.
-- Branch `feat/purchase-authenticated-lifecycle-qa-20260731`.
-- Head gần nhất `94ccc11ff79b2d0cd9269abb5804009887b950a8`.
-- Draft; exact-head workflows đang chạy tại lần kiểm gần nhất.
-
-### Việc làm
-
-1. Kiểm lại exact head/base/mergeability.
-2. Đọc UI workflow log nếu fail; sửa nguyên nhân thật, không xóa test.
-3. PASS lifecycle đăng nhập thật:
-   - Item/UOM purchase filters;
-   - Purchase Order create/save/submit/open;
-   - Purchase Receipt create/save/preview/submit/cancel/open;
-   - tổng tiền, số lượng và trạng thái;
-   - allocation timeline null khi FIFO disabled.
-4. Chạy Desktop Chrome và Pixel 7.
-5. Chạy full exact-head CI.
-6. Chuyển Ready for review.
-7. Review final diff và merge.
+1. Lấy current default head mới nhất.
+2. Tạo đúng một branch mới từ current default.
+3. Mang từng file code/test semantic từ #119 sang branch mới.
+4. Không mang:
+   - `.github/workflows/sync-sales-production-clean-once.yml`;
+   - `.github/workflows/fix-sales-production-tests-once.yml`;
+   - `.sync-sales-production-trigger`;
+   - `.fix-sales-production-tests-trigger`;
+   - payload hoặc generated artifact.
+5. Giữ thay đổi brief ở mức semantic, không reformat toàn bộ hai file JSON.
+6. Chốt brief version. Nếu `2.0.35` là version đúng, cập nhật các test contract đang khóa `2.0.34`; nếu không, trả brief về `2.0.34`.
+7. Cập nhật assertion permission để phản ánh `Production Request` mới mà không làm lỏng các quyền khác.
+8. Chạy theo thứ tự, dừng ngay khi lỗi:
+   - `server/tests/alumdoor-catalog-audit.test.mjs`;
+   - `server/tests/alumdoor-item-model.test.mjs`;
+   - `server/tests/door-formulas.test.mjs`;
+   - `server/tests/sales-production-flow.test.mjs`;
+   - `server/tests/sales-price-unicode-normalization.test.mjs`;
+   - server build;
+   - client typecheck;
+   - full server unit tests;
+   - `git diff --check`.
+9. Review final filenames; không được còn file one-shot.
+10. Chốt exact head và không push thêm trong khi CI chạy.
+11. Mở một PR canonical, cập nhật body đúng exact head.
+12. Chạy full required CI đúng một lượt.
+13. Chỉ sửa/push lại khi có lỗi cụ thể từ lượt CI đó.
 
 ### Done condition
 
-- Desktop/mobile authenticated lifecycle PASS.
-- All required checks SUCCESS.
-- FIFO vẫn disabled.
-- PR merged và handoff cập nhật.
+- Final diff chỉ có code, test và metadata semantic cần thiết.
+- 697+ server unit tests pass.
+- Required CI xanh trên một exact head đứng yên.
+- Mergeable, không stale/conflict, không review blocker.
+- Code nghiệp vụ thật được merge vào default.
+
+## P1 — Purchase authenticated QA clean rebuild
+
+Chỉ bắt đầu sau khi Sales-to-Production merge hoặc đạt exact-head green ổn định.
+
+1. Lấy current default mới nhất.
+2. Tạo branch mới.
+3. Trích đúng các file QA cần thiết từ #103.
+4. Không merge lịch sử cũ vì #103 từng behind default 112 commit và mergeable=false.
+5. Chạy focused Purchase lifecycle trước.
+6. Chạy Desktop Chrome và Pixel 7.
+7. Chốt head rồi chạy một lượt full CI.
+8. Merge khi exact-head xanh và final diff sạch.
 
 ## P2 — Finance
 
-### Trạng thái
-
-- PR #15 stale, draft và không mergeable.
-- Không cố sync rồi merge nguyên nhánh cũ.
-
-### Việc làm
-
-1. Tạo branch mới từ current default.
-2. Trích phần có giá trị từ PR #15 theo từng commit/file đã review.
-3. Hoàn thiện:
-   - due date và AR/AP aging;
-   - Payment Entry partial/unallocated;
-   - Payment Allocation;
-   - Party Statement;
-   - Debt Summary;
-   - Advance Balance;
-   - navigation và UI/report đầy đủ.
-4. Chốt permission/data-scope theo company/party/account/currency.
-5. Thiết kế backfill/hard-enforcement append-only với checksum.
-6. Chạy migration fixture, query/compiler tests, worker routes, UI và full CI.
-7. Chạy staging smoke trước production migration.
-
-### Done condition
-
-- Finance branch sạch, mergeable và exact-head CI xanh.
-- Migration/backfill có dry-run, checksum, rollback và staging evidence.
-- AR/AP operator journey PASS.
+- Dựng lại từ default; #15 chỉ là nguồn tham khảo.
+- Hoàn thiện due date, AR/AP aging, Payment Entry partial/unallocated, Payment Allocation, Party Statement, Debt Summary, Advance Balance và UI/report navigation.
+- Không mở nhánh trước khi một trong hai epic đầu đã ra khỏi hàng.
 
 ## P3 — Daily ledger
 
-### Phạm vi bắt buộc
-
-- Immutable daily snapshot theo ngày/company/warehouse/customer/order.
-- Khóa sửa dữ liệu sau khi đóng ngày.
-- Mọi sửa sau khóa đi qua adjustment document có reason, actor và audit.
-- Đối chiếu Sales, Purchase, Inventory, Manufacturing và Finance.
-- Báo cáo mở ngày/đóng ngày/chênh lệch/export.
-- Quyền đóng ngày, mở lại và phê duyệt adjustment.
-
-### Done condition
-
-- Không sửa ngược snapshot đã khóa.
-- Adjustment có exact lineage và audit.
-- Reconciliation tests và authenticated operator smoke PASS.
+- Immutable daily snapshot.
+- Khóa sửa sau đóng ngày.
+- Adjustment document có reason, actor, permission và exact audit lineage.
+- Reconcile Sales, Purchase, Inventory, Manufacturing và Finance.
 
 ## P4 — Warranty / Capacity
 
-### Warranty và lỗi
-
-- Bốn nguyên nhân: motor/battery warranty, production fault, supplier fault, customer fault.
-- Ghi rõ stage phát hiện, người chịu trách nhiệm, hàng thay thế/sửa chữa và accounting effect.
-- Supplier fault phải có quy tắc giữ/ghi giảm công nợ rõ ràng.
-- Warranty one-year rule phải dùng ngày và chứng từ nguồn authoritative.
-
-### Capacity và lịch sản xuất
-
-- Kế hoạch theo ngày, khách hàng, sản phẩm, kích thước, diện tích và công đoạn.
-- Capacity theo bộ phận/workstation.
-- Thời gian định mức và overtime.
-- WIP, shortage và planned-vs-actual.
-- Không tự đoán capacity khi thiếu dữ liệu cấu hình.
-
-### Done condition
-
-- Lỗi/warranty có lifecycle, permission, audit và accounting tests.
-- Scheduler không overbook âm thầm; overload phải hiển thị hoặc bị chặn theo policy.
-- Desktop/mobile operator smoke PASS.
+- Lifecycle lỗi/bảo hành bốn nguyên nhân và accounting effect.
+- Kế hoạch/công suất theo bộ phận, thời gian định mức, overtime, WIP và overload policy.
 
 ## P5 — End-to-end acceptance
 
-### Journey bắt buộc
+- Sales Order → Production Request → Work Order → cấp vật tư → cắt/sơn → nhập thành phẩm → giao hàng → công nợ → daily ledger.
+- Authenticated desktop/mobile evidence.
+- Exact merge/release SHA, run IDs, deployment/version IDs và reconciliation.
+- Critical/High blocker bằng 0.
 
-1. Tạo Sales Order có bảng giá, UOM, kích thước và loại cửa.
-2. Sinh Production Request và Work Order.
-3. Cấp vật tư, cắt, sơn, ghi WIP/offcut/scrap.
-4. Nhập thành phẩm và giao theo Sales Order row.
-5. Ghi nhận công nợ khách hàng và liên kết chứng từ.
-6. Đóng daily ledger.
-7. Thử adjustment có quyền.
-8. Chạy một case lỗi/warranty.
-9. Kiểm báo cáo kho, sản xuất, Finance và daily ledger khớp nhau.
-10. Cleanup dữ liệu thử hoặc dùng tenant acceptance riêng.
+## Quy tắc tài nguyên CI
 
-### Evidence bắt buộc
-
-- Exact merged SHA.
-- CI run IDs.
-- Release run IDs và version/deployment IDs.
-- Authenticated desktop/mobile smoke.
-- Reconciliation result.
-- Danh sách lỗi còn lại; Critical/High phải bằng 0.
-
-## Công việc platform không được chen vào hàng nghiệp vụ
-
-- PR #117 đã merge để làm release evidence dễ quan sát hơn.
-- PR #116 có khả năng đã bị #117 thay thế, cần kiểm diff rồi đóng nếu không còn giá trị unique.
-- Platform support chỉ làm song song khi không đổi source nghiệp vụ và không chiếm quá một slot platform.
-- Không dùng merge CI/docs để tuyên bố epic nghiệp vụ DONE.
+- Tối đa một PR nghiệp vụ active cho tới khi P0 ổn định.
+- Không chạy full CI để tìm lỗi mà focused tests có thể bắt trong vài phút.
+- Không push để “thử xem CI nói gì” khi chưa đọc log lượt trước.
+- Không mở PR thay thế khi PR cũ chưa được đóng và ghi superseded.
+- Platform/docs không được dùng để tuyên bố nghiệp vụ DONE.
 
 ## Destructive boundary
 
-Cần lệnh riêng trước khi:
-
-- sửa production secret hoặc DNS;
-- xoá Cloudflare resource;
-- chạy migration không có backup/recovery;
-- bật FIFO production;
-- mutate dữ liệu khách hàng ngoài smoke an toàn.
+Cần lệnh riêng trước khi sửa production secret/DNS, xoá resource, bật FIFO hoặc chạy mutation/migration không có backup và rollback.
 
 ## File cấm commit
 
