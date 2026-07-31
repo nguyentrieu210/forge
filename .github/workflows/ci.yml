@@ -7,15 +7,64 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write
+  pull-requests: read
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
+  scope:
+    name: Detect validation scope
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.scope.outputs.run }}
+    steps:
+      - name: Classify changed files
+        id: scope
+        uses: actions/github-script@v7
+        with:
+          script: |
+            if (context.eventName === 'workflow_dispatch') {
+              core.setOutput('run', 'true');
+              return;
+            }
+            let filenames = [];
+            if (context.eventName === 'pull_request') {
+              const files = await github.paginate(github.rest.pulls.listFiles, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.issue.number,
+                per_page: 100,
+              });
+              filenames = files.map((file) => file.filename);
+            } else {
+              const before = context.payload.before;
+              const after = context.payload.after;
+              if (!before || /^0+$/.test(before)) {
+                core.setOutput('run', 'true');
+                return;
+              }
+              const comparison = await github.rest.repos.compareCommitsWithBasehead({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                basehead: `${before}...${after}`,
+                per_page: 100,
+              });
+              filenames = (comparison.data.files || []).map((file) => file.filename);
+            }
+            const ignored = filenames.every((filename) =>
+              filename.endsWith('.md') ||
+              filename.startsWith('.github/release/') ||
+              filename.startsWith('docs/')
+            );
+            core.info(`Heavy validation: ${!ignored}; files: ${filenames.join(', ')}`);
+            core.setOutput('run', String(!ignored));
+
   validate:
     name: Test, typecheck and build
+    needs: scope
+    if: needs.scope.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
