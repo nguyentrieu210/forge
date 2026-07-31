@@ -5,12 +5,24 @@ Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
 ## Git
 
 - Repository: `nguyentrieu210/forge`.
-- Branch/default branch: `hotfix/alumdoor-print-list-delete`.
+- Default branch: `hotfix/alumdoor-print-list-delete`.
+- Latest default-branch commit quan sát qua GitHub: `cd60f8c09c48105db84a82c12ad3b32d9f075064` (`ci: split production observation workflow`).
+- Working branch tài chính/công nợ: `feat/finance-ar-ap-completion`.
+- Finance BRD commit: `5dc8a2313dbdfe83ba3320fe155cf265f333e5be` (`docs(finance): define AR AP completion BRD`).
 - Code sidebar: `87cd45aa9272f5600ff3d5914f697ce9a26994b6` (`fix(ui): compact desktop sidebar`).
 - Release target trước trigger: `da04f7fcfdc4c8e4ddf7ff70c79e3a10458ce412`.
 - Gateway production trigger: `9a7bbc14b8e7f3e556404cce19914da1e21e5e10` (`release: trigger compact sidebar gateway production`).
 - Baseline code/schema đã qua CI trước đó: `591ca359937d6ae12803d36c74996db8482060af`.
 - `server/work/`, `tmp/`, backup SQL, `.env` và generated artifacts không được commit.
+
+## Tài chính và công nợ AR/AP
+
+- Đã dùng Forge skills `forge-orchestrate`, `forge-brd`, `forge-github-ci` và `forge-handoff` để kiểm tra repo, phân loại scope và mở workstream an toàn.
+- BRD authoritative đang chờ duyệt G1 tại `server/docs/FINANCE-AR-AP-BRD.md`.
+- Nền tảng hiện có: Sales/Purchase Invoice, GL, immutable Payment Ledger, Payment Entry, Credit/Debit Note, Journal Entry, Bank Reconciliation và báo cáo AR/AP cơ bản.
+- Khoảng trống đã xác định: due-date aging, tiền ứng trước/chưa phân bổ, chứng từ phân bổ/reverse append-only, party statement, debt summary và quyền/audit vận hành.
+- Chưa sửa application logic, schema hoặc production config trong workstream này.
+- Gate hiện tại: **G1 Requirements**. Chỉ mở G2 technical plan/implementation sau khi BRD được duyệt hoặc chỉnh phạm vi.
 
 ## Sidebar/runtime UI
 
@@ -35,7 +47,12 @@ Baseline đã xác minh:
 - Exact head: `591ca359937d6ae12803d36c74996db8482060af`.
 - Install/test/typecheck/build: **PASS**.
 
-HEAD sidebar/release mới chưa có workflow run hoặc combined status qua GitHub connector; không coi là CI-verified cho tới khi có bằng chứng.
+GitHub connector chưa trả workflow run hoặc combined status cho:
+
+- default head quan sát `cd60f8c09c48105db84a82c12ad3b32d9f075064`;
+- finance BRD head `5dc8a2313dbdfe83ba3320fe155cf265f333e5be`.
+
+Không coi các SHA này là CI-verified cho tới khi có bằng chứng exact-head.
 
 ## Cloudflare production tenant `alu`
 
