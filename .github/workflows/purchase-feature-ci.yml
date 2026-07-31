@@ -20,7 +20,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: purchase-feature-${{ github.ref }}
+  group: purchase-feature-timeline-one-shot
   cancel-in-progress: true
 
 jobs:
@@ -33,13 +33,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          ref: feat/purchase-receipt-complete-20260731
           fetch-depth: 2
 
       - name: Apply one-shot purchase timeline integration
-        if: github.event_name == 'push' && github.ref == 'refs/heads/feat/purchase-receipt-complete-20260731'
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'feat/purchase-receipt-complete-20260731'
         shell: bash
         run: |
           set -euo pipefail
+          test "$(git branch --show-current)" = "feat/purchase-receipt-complete-20260731"
           if [[ -f .github/one-shot/apply-purchase-timeline.mjs ]]; then
             node .github/one-shot/apply-purchase-timeline.mjs
           fi
@@ -106,7 +108,7 @@ jobs:
           exit $status
 
       - name: Commit verified purchase timeline
-        if: github.event_name == 'push' && github.ref == 'refs/heads/feat/purchase-receipt-complete-20260731'
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'feat/purchase-receipt-complete-20260731'
         shell: bash
         run: |
           set -euo pipefail
