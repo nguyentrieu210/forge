@@ -5,9 +5,13 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - "client/**"
-      - "server/**"
+      - "server/apps/gateway-worker/**"
+      - "server/apps/tenant-worker/**"
+      - "server/migrations/**"
+      - "server/scripts/seed-local.mjs"
       - "package.json"
       - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
       - ".github/workflows/ui-pr-validation.yml"
   workflow_dispatch:
 
@@ -15,15 +19,14 @@ permissions:
   contents: read
 
 concurrency:
-  group: ui-pr-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ui-pr-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   validate:
-    name: Install, gate, browser QA and auth smoke
+    name: Frontend gate, browser QA and auth smoke
     runs-on: ubuntu-latest
-    timeout-minutes: 70
-
+    timeout-minutes: 55
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -47,16 +50,18 @@ jobs:
       - name: Run frontend lint
         run: pnpm --filter metaforge run lint
 
-      - name: Run tests
-        run: pnpm test
+      - name: Run frontend tests
+        run: pnpm run client:test
 
-      - name: Run typecheck
-        run: pnpm typecheck
+      - name: Run frontend typecheck
+        run: pnpm run client:typecheck
 
-      - name: Build
-        run: pnpm build
+      - name: Build and stage frontend
+        run: |
+          pnpm run client:build
+          node server/scripts/stage-client-bundle.mjs
 
-      - name: Install Chromium for visual QA
+      - name: Install Chromium for browser QA
         run: pnpm --filter e2e-forge exec playwright install --with-deps chromium
 
       - name: Run Alumdoor browser QA
@@ -71,7 +76,7 @@ jobs:
             client/e2e-forge/test-results/ui-visual/
             client/e2e-forge/playwright-report/ui-visual/
           if-no-files-found: warn
-          retention-days: 30
+          retention-days: 14
 
       - name: Create ephemeral local auth credential
         shell: bash
@@ -134,7 +139,7 @@ jobs:
             client/e2e-forge/playwright-report/auth-session/
             ${{ runner.temp }}/forge-auth-backend.log
           if-no-files-found: warn
-          retention-days: 30
+          retention-days: 14
 
       - name: Stop local tenant worker
         if: always()
