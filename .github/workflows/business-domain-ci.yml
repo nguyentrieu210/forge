@@ -47,7 +47,8 @@ jobs:
               file === 'pnpm-workspace.yaml' ||
               file.startsWith('server/packages/') ||
               file.startsWith('client/packages/core/') ||
-              file.startsWith('client/packages/ui/')
+              file.startsWith('client/packages/ui/') ||
+              file.startsWith('.github/actions/setup-forge/')
             );
             const has = (terms) => shared || workflowChanged || filenames.some((file) => terms.some((term) => file.includes(term)));
             const sales = has(['sales', 'quotation', 'sales-order', 'sales_invoice', 'item-price', 'price-list']);
@@ -69,21 +70,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.0
-          run_install: false
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Set up Forge
+        uses: ./.github/actions/setup-forge
 
       - name: Build server test target
         run: pnpm --dir server run build
