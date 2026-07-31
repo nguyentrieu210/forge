@@ -6,56 +6,58 @@ Ngày cập nhật: **2026-07-31**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Working branch: `feat/purchase-fifo-activation-readiness-20260731`.
-- Draft PR: `#75` — `feat(purchase): add FIFO activation readiness safeguards`.
+- Working branch: `feat/inventory-physical-stock-slice-b-20260731`.
+- Draft PR: `#49` — `feat(inventory): canonical physical stock identity and warehouse roles`.
 - Không commit `.env`, `.dev.vars`, secret, `server/work/`, `tmp/`, backup SQL hoặc generated evidence.
 
-## Purchase/FIFO
+## Inventory Slice B
 
-### Đã hoàn tất trước nhánh này
+### Phạm vi đã hoàn thành
 
-- Purchase/FIFO lifecycle correction đã merge qua PR `#63`.
-- Merge SHA: `ac0c2241b2dc16abfd16b4b3e70943d8bbff8476`.
-- Tenant production release đã thành công với Worker version `88c508a7-f3f7-4844-9c8b-85a02bc362f3`.
-- FIFO rollout vẫn **disabled**. Release code/migration không phải approval activation.
+- Server-built physical identity cho inventory mode/profile, màu, tình trạng, đời, kích thước và physical count.
+- Batch/serial/Aluminium Lot lineage và kiểm quantity/direction của bundle.
+- Warehouse-role rules cho receipt, transfer, issue/manufacture, quarantine và scrap/offcut recovery.
+- Exact cancellation dựa trên ledger gốc; không tạo stock book thứ hai.
+- Company-wide Durable Object coordination cho Stock Entry và Work Order submit/cancel.
+- Regression cho identity mismatch, stale lot warehouse, second transfer, quarantine/recovery và concurrent issue.
 
-### PR #75 — activation readiness safeguards
+### Review
 
-Exact head đã xác nhận trước commit tài liệu này: `d586456e6e8b13f6097e19e7832c0032dd942745`.
+- Review file: `server/docs/ALUMDOOR-INVENTORY-SLICE-B-REVIEW.md`.
+- Score: **97/100**.
+- Critical: **0**.
+- High: **0** sau remediation.
 
-Thay đổi:
+### Đồng bộ default
 
-- `server/scripts/prepare-purchase-fifo-activation.mjs`
-  - chỉ chạy dry-run;
-  - chặn cờ write/activate;
-  - bắt buộc evidence nằm ngoài repository;
-  - kiểm checksum SHA-256 và unresolved rows;
-  - sinh readiness summary.
-- `server/tests/purchase-fifo-activation-readiness.test.mjs`
-  - regression cho write guards và evidence path guards.
-- `server/docs/ALUMDOOR-PURCHASE-FIFO-ACTIVATION-RUNBOOK.md`
-  - quy trình dry-run, review, staging backfill, authenticated smoke, production preparation và activation approval.
+- Default mới nhất: `f0768d59ff66d04c333fd290c120f7672a80ea96`.
+- Default chứa Purchase/FIFO activation readiness safeguards từ PR `#75`.
+- Nhánh kho đã đồng bộ bằng merge commit `47acf088135cb770dc30d021b5a45a9fcdca3c21`.
+- Code/test riêng Slice B được giữ nguyên; Purchase tooling mới từ default được giữ lại.
+- Handoff/status/tasks được chỉnh lại để phản ánh đúng nhánh kho.
 
-CI trên exact head `d586456e6e8b13f6097e19e7832c0032dd942745`:
+### Exact final head
 
-- CI `30644592982`: **PASS**.
-- PR Validation `30644592947`: **PASS**.
-- Sales Feature CI `30644590752`: **PASS**.
-- Inventory and Manufacturing CI `30644590579`: **PASS**.
-- Purchase Feature CI `30644590592`: **PASS**.
-- UI Pull Request Validation `30644593053`: browser QA/auth smoke vẫn đang chạy tại thời điểm cập nhật này.
+- Commit handoff sau sync: `20360dfd79bdd97f8fd46362250ce7fc43b956c8`.
+- Các commit tài liệu tiếp theo sẽ tạo final head mới và kích hoạt lại CI.
+- Chỉ CI trên exact final head mới được dùng làm merge evidence.
 
-Không deploy Cloudflare, không backfill tenant thật, không sửa production secrets/DNS và không bật FIFO.
+## Purchase/FIFO trên default
 
-## Gate còn lại trước activation
+- PR `#63` lifecycle correction đã merge và release tenant production.
+- PR `#75` bổ sung read-only activation readiness safeguards và runbook.
+- FIFO rollout vẫn **disabled**.
+- Không có activation, backfill production hoặc secret/DNS change trong đợt kho này.
 
-1. UI Pull Request Validation của PR `#75` phải PASS trên exact final head.
-2. Chạy readiness dry-run trên staging hoặc production-shaped copy.
-3. Bắt buộc `unresolved_count=0` và checksum được review.
-4. Execute backfill chỉ trên staging trước; rollout phải vẫn `enabled=0`.
-5. Chạy authenticated smoke: PO → Receipt → cancel → settlement/reverse → manual override → supplier debt report.
-6. Thu contention/latency evidence.
-7. Tạo fresh production backup và ghi explicit activation approval riêng.
+## Gate còn lại cho Inventory
+
+1. Toàn bộ required workflows PASS trên exact final head.
+2. PR #49 conflict-free, review threads sạch và chuyển khỏi draft.
+3. Read-only live tenant catalog audit và remediation plan.
+4. Staging receive/transfer/issue/quarantine/scrap/cancel journeys.
+5. Production load/latency observation cho company-wide inventory lock.
+6. Physical-stock UI/report/read model trong Slice D.
+7. Explicit merge/deployment approval riêng.
 
 ## Production hiện hành
 
