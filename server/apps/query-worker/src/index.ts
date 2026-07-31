@@ -3,7 +3,8 @@ import type { Actor, JsonObject } from "../../../packages/contracts/src/index.js
 import { asCloudForgeError, errorResponse, errors, jsonResponse, randomId, readJson } from "../../../packages/core/src/index.js";
 import { PermissionService } from "../../../packages/policy/src/index.js";
 import type { QueryRequest } from "../../../packages/query/src/index.js";
-import { D1ReportService, parseQueryRequest, QueryCompiler } from "../../../packages/query/src/index.js";
+import { D1ReportService, parseQueryRequest } from "../../../packages/query/src/index.js";
+import { FinanceQueryCompiler } from "../../../packages/query/src/finance-aging.js";
 
 interface PreparedReportMessage {
   tenant_id: string;
@@ -29,10 +30,6 @@ export default {
     try {
       const url = new URL(request.url);
       if (url.pathname === "/health") return jsonResponse({ ok: true, service: "query-worker" });
-      // In development the tenant must be pinned by TENANT_ID; the ?tenant param
-      // is only honoured in production, where authenticate() re-binds it to the
-      // JWT tenant. This prevents a dev-mode instance from serving any tenant's
-      // ledger via an attacker-chosen ?tenant.
       const tenantId = env.AUTH_MODE === "development"
         ? env.TENANT_ID
         : env.TENANT_ID ?? url.searchParams.get("tenant");
@@ -43,7 +40,7 @@ export default {
       if (request.method === "POST" && url.pathname === "/api/v1/reports/run") {
         const input = parseQueryRequest(await readJson<JsonObject>(request), tenantId);
         permission.assertReport(actor, input.report);
-        const compiler = new QueryCompiler();
+        const compiler = new FinanceQueryCompiler();
         const compiled = compiler.compile(input);
         if (compiled.prepared) {
           if (!env.REPORT_QUEUE) throw new Error("REPORT_QUEUE binding is missing");
@@ -57,7 +54,7 @@ export default {
           await env.REPORT_QUEUE.send({ tenant_id: tenantId, job_id: jobId, actor_id: actor.user_id, request: input });
           return jsonResponse({ prepared: true, report: input.report, job_id: jobId, status: "queued" }, 202);
         }
-        const result = await new D1ReportService(env.DB).run(input, true);
+        const result = await new D1ReportService(env.DB, compiler).run(input, true);
         return jsonResponse(result, 200, { "x-cloudforge-trace-id": traceId });
       }
 
@@ -72,15 +69,15 @@ export default {
           error_message: string | null; created_at: string; completed_at: string | null; expires_at: string;
         }>();
         if (!row) return jsonResponse({ error: { code: "PREPARED_REPORT_NOT_FOUND" } }, 404);
-        if (row.actor_id !== actor.user_id && !actor.roles.includes("System Manager")) throw errors.permission("Prepared report belongs to another user");
+        if (row.actor_id !== actor.user_id && !actor.roles.includes("System Manager")) {
+          throw errors.permission("Prepared report belongs to another user");
+        }
         permission.assertReport(actor, row.report_name);
         return jsonResponse({
           job_id: row.job_id,
           report: row.report_name,
           status: row.status,
           result: row.result_json ? JSON.parse(row.result_json) : null,
-          // error_message stores only a safe error CODE (raw detail is server-logged),
-          // so the client never sees raw D1/schema/binding text.
           error: row.error_message ? { code: row.error_message, message: "Prepared report execution failed" } : null,
           created_at: row.created_at,
           completed_at: row.completed_at,
@@ -102,7 +99,7 @@ export default {
           `UPDATE prepared_reports SET status='running', started_at=?3
            WHERE tenant_id=?1 AND job_id=?2 AND status='queued'`,
         ).bind(job.tenant_id, job.job_id, new Date().toISOString()).run();
-        const result = await new D1ReportService(env.DB).run(job.request, true);
+        const result = await new D1ReportService(env.DB, new FinanceQueryCompiler()).run(job.request, true);
         await env.DB.prepare(
           `UPDATE prepared_reports SET status='completed', result_json=?3, completed_at=?4
            WHERE tenant_id=?1 AND job_id=?2`,
@@ -110,14 +107,10 @@ export default {
         message.ack();
       } catch (error) {
         const normalized = asCloudForgeError(error);
-        // Raw detail goes to the server log only — never into error_message, which
-        // the GET endpoint returns to the client.
         console.error(JSON.stringify({
           level: "error", scope: "prepared-report", tenant_id: job.tenant_id, job_id: job.job_id,
           code: normalized.code, detail: error instanceof Error ? error.message : String(error),
         }));
-        // Transient failures (D1 overload/timeouts) are retried by the queue rather
-        // than marked terminally failed.
         if (normalized.retryable && message.attempts < 5) {
           message.retry({ delaySeconds: Math.min(60, 2 ** message.attempts) });
           continue;
@@ -136,11 +129,6 @@ export default {
   },
 };
 
-/**
- * Re-enqueues prepared-report jobs stuck in 'queued' — e.g. when REPORT_QUEUE.send()
- * failed after the row was inserted. Re-sending is safe because the consumer only
- * transitions rows WHERE status='queued', so a job already picked up is ignored.
- */
 async function reconcileStalePreparedReports(env: QueryEnv): Promise<void> {
   const cutoff = new Date(Date.now() - 5 * 60 * 1000).toISOString();
   const stale = await env.DB.prepare(
@@ -159,8 +147,6 @@ async function authenticate(request: Request, env: QueryEnv, tenantId: string): 
   if (env.AUTH_MODE === "development") return staticDevelopmentActor(env.DEV_ACTOR_JSON);
   const claims = await verifyBearerJwt(request, {
     secret: requireConfig(env.JWT_SECRET, "JWT_SECRET"),
-    // Mandatory in production, mirroring the gateway, to reject tokens minted
-    // for another audience under a shared secret.
     issuer: requireConfig(env.JWT_ISSUER, "JWT_ISSUER"),
     audience: requireConfig(env.JWT_AUDIENCE, "JWT_AUDIENCE"),
   });
