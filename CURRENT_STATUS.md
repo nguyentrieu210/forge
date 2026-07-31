@@ -9,6 +9,30 @@ Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
 - GitHub là nguồn sự thật cho code, PR, CI và release evidence.
 - Không commit `.env`, `.dev.vars`, secret, `server/work/`, `tmp/`, backup SQL hoặc generated artifacts.
 
+## Bán hàng — follow-up tự điền giá đang ở PR #74
+
+- Production evidence: `Giá niêm yết + TRỤC 114_1.8LY + Mét` có Item Price `180.000 VND`, nhưng Sales Order child grid vẫn để trống `Đơn giá`.
+- PR `#74`: `fix(sales): prefer legacy Item Price lookup before Unicode UOM probe`.
+- Branch: `hotfix/sales-legacy-price-lookup-20260731`.
+- Code head đã kiểm: `6980daeebf7b0384b7b365e38cb0d9238bf74137`.
+- Nguyên nhân phù hợp với dữ liệu production: brief authoritative vẫn đặt tên Item Price theo `<bảng giá>:<mã hàng>`, nhưng preview probe tên ba phần có ĐVT trước; probe chứa Unicode như `Mét` có thể lỗi khác 404 và chặn bản ghi legacy hợp lệ.
+- Cách sửa:
+  - đọc tên legacy authoritative trước;
+  - chỉ nhận legacy khi `uom` khớp và record active;
+  - exact-UOM và fallback theo field chỉ chạy khi legacy không dùng được;
+  - legacy khác ĐVT không được dùng làm giá hoặc chẩn đoán giá hiện tại.
+- Regression `server/tests/sales-price-legacy-priority.test.mjs` dùng đúng dữ liệu production và bắt buộc trả `180000`, đồng thời xác minh không gọi probe exact Unicode khi legacy hợp lệ.
+- Exact code-head CI trên `6980daeebf7b0384b7b365e38cb0d9238bf74137`:
+  - PR Validation `30644282809`: **PASS**; release jobs **SKIPPED**.
+  - CI `30644280454`: **PASS**.
+  - Sales Feature CI `30644280216`: unit, SQL, brief, client tests, typecheck và build **PASS**.
+  - Purchase Feature CI `30644282968`: **PASS**.
+  - Inventory and Manufacturing CI `30644283908`: **PASS**.
+  - UI Pull Request Validation `30644280364`: lint, tests, typecheck, build, Alumdoor/Purchase browser QA và cookie-auth smoke **PASS**.
+- PR chưa merge, chưa staging và chưa production release.
+- Theo quy trình release mới, cần staging functional smoke đúng hành trình `Giá niêm yết + TRỤC 114_1.8LY + Mét → 180.000` trước một lệnh production riêng.
+- Không migration/mutate D1, không sửa secrets, FIFO vẫn **disabled**.
+
 ## Purchase/FIFO — lifecycle correction và browser QA đã merge, Tenant production đã release
 
 ### Merge và phạm vi
