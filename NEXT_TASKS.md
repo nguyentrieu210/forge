@@ -2,76 +2,115 @@
 
 Ngày cập nhật: **2026-07-31**.
 
-## Purchase/FIFO — merge và production release đã hoàn tất
+## P0 — Hoàn tất PR #49 Physical inventory
 
-### Đã hoàn thành
+1. Đồng bộ branch `feat/inventory-physical-stock-slice-b-20260731` với default hiện tại; behind phải bằng `0`.
+2. Chạy exact-final-head:
+   - `PR Validation`;
+   - `Inventory and Manufacturing CI`;
+   - `CI`;
+   - `UI Pull Request Validation` gồm Chromium QA và cookie-auth smoke.
+3. Đọc log và sửa code/config nếu có lỗi thật; không coi missing/cancelled run là PASS.
+4. Xác minh:
+   - review score `97/100`;
+   - Critical/High `0`;
+   - mergeable;
+   - không unresolved review thread;
+   - không migration/deploy/secret/tenant mutation.
+5. Cập nhật PR #49 body bằng exact head/run/job IDs và kiến trúc company-wide inventory coordinator.
+6. Chuyển PR #49 khỏi draft khi toàn bộ gate xanh.
+7. Không merge trước explicit approval riêng.
 
-- PR `#14` đã squash-merge thành `7b3dc06dbbecbb5370ddb48259aa1614aef2ff32`.
-- Tenant release run `30631386714`: backup, migration, deploy và endpoint smoke **PASS**.
-- Tenant Worker production version: `9ec0d1d3-c1fd-4263-ae35-4fae81c09968`.
-- Gateway release PR `#57` đã merge thành `f50993ef7736a0321f6a0e8c308c5cb069497472`.
-- Gateway run `30631951946`, job `91160176928`: build, stage, deploy, smoke và provider evidence **PASS**.
-- Gateway production version: `6352386d-8385-4ea8-af31-15ac62e21943`.
-- FIFO rollout vẫn **disabled**; không có activation, DNS hay production secret change.
-- Workflow tenant release đã sửa để đọc version từ Wrangler NDJSON; workflow/trigger one-shot đã được dọn.
+## P0 — Hoàn tất stacked PR #50 Manufacturing lifecycle
 
-### P0 — Functional browser QA Purchase sau deploy
+1. Giữ PR #50 target vào branch Slice B cho tới khi PR #49 merge.
+2. Đồng bộ final Slice B head vào C; effective diff chỉ gồm manufacturing lifecycle và tests/review của C.
+3. Exact-final-head phải qua cùng các workflow bắt buộc.
+4. Xác minh:
+   - review score `97/100`;
+   - Critical/High `0`;
+   - BOM revision/effective interval/checksum;
+   - immutable Work Order snapshot;
+   - BOM-row progress caps;
+   - stock-UOM output guard;
+   - offcut/scrap value conservation;
+   - exact cancel;
+   - legacy Work Order rollout;
+   - company-wide inventory coordinator được kế thừa, không còn Work Order-only coordinator.
+5. Cập nhật PR #50 body với exact head/base/run/job IDs.
+6. Chuyển PR #50 thành ready cho stacked review khi gate xanh.
+7. Chỉ retarget/rebase default sau khi Slice B merge; chạy lại exact-head gates sau retarget.
+8. Không merge trước explicit approval riêng.
 
-Dùng tài khoản và dữ liệu thử phù hợp; không ghi credential, cookie hoặc dữ liệu khách hàng vào evidence:
+## P1 — Sau khi Slice B/C merge
 
-1. Desktop và mobile: mở Purchase Order/Purchase Receipt, kiểm submit preview và allocation timeline.
-2. Kiểm settlement close/reverse, reason bắt buộc, capability/permission và confirmation scope.
-3. Kiểm manual FIFO override, validation reason và audit append-only.
-4. Kiểm supplier debt drill-down, filters, summaries và CSV export.
-5. Smoke PO → Receipt → cancel → settlement/reverse bằng chứng từ test có thể dọn/hủy an toàn.
-6. Hard refresh và kiểm bundle/cache cũ không che UI mới.
-7. Ghi ảnh/evidence đã redacted; không chụp token, cookie, secret hoặc dữ liệu khách hàng thật.
-8. Nếu phát hiện lỗi Critical/High, rollback Gateway/Tenant theo version trước và mở issue có evidence.
+### Live catalog audit
 
-### P0 — Blocker trước khi kích hoạt FIFO production
+Chạy read-only, redacted từ môi trường vận hành có Cloudflare credential hợp lệ:
 
-1. Chạy staging migration và backfill dry-run trên bản sao dữ liệu phù hợp.
+```powershell
+New-Item -ItemType Directory -Force C:\Forge-Audit | Out-Null
+node server/scripts/audit-alumdoor-catalog.mjs `
+  --tenant alu `
+  --redacted `
+  --output C:\Forge-Audit\alu-catalog-redacted.json
+```
+
+Không commit report thô. Chỉ ghi checksum, counts, severity và finding codes đã redacted. Lập remediation plan riêng; audit CLI không tự sửa dữ liệu.
+
+### Staging inventory/manufacturing
+
+1. Nhận vật tư dimensioned và kiểm physical identity/lineage.
+2. Transfer RAW → WIP → FINISHED; chuyển khỏi quarantine với release reference.
+3. Scrap/offcut recovery với reason và exact cancel.
+4. Tạo BOM revision, kiểm overlap/circular/UOM/quantity basis.
+5. Release Work Order và xác minh snapshot không đổi sau BOM mới.
+6. Partial issue, partial manufacture, split lines, concurrency và over-limit guards.
+7. Offcut/scrap value, finished value và cancellation conservation.
+8. Kiểm legacy submitted Work Order vẫn chạy.
+9. Đo latency/throughput của company-wide inventory lock ở tải gần production.
+
+### Slice D
+
+- Physical-stock availability/lineage report.
+- WIP, shortage, production progress và standard-vs-actual variance.
+- Scrap/offcut reusable balance.
+- Item/BOM completeness indicators.
+- Work Order snapshot/progress UI.
+- Desktop/mobile business Browser QA.
+
+## Purchase/FIFO — production follow-up
+
+### Functional browser QA
+
+1. Desktop/mobile PO và Receipt: submit preview, allocation timeline.
+2. Settlement close/reverse, reason, capability/permission và confirmation scope.
+3. Manual FIFO override và append-only audit.
+4. Supplier debt drill-down, filters, summaries và CSV export.
+5. Controlled PO → Receipt → cancel → settlement/reverse journey.
+6. Hard refresh và kiểm cache/bundle cũ.
+7. Evidence phải redacted; không chụp token, cookie, secret hoặc dữ liệu khách hàng thật.
+
+### Trước FIFO activation
+
+1. Staging migration và backfill dry-run trên bản sao dữ liệu phù hợp.
 2. Review resolved/unresolved report và PO-level checksum.
-3. `unresolved_count` phải bằng `0`; không đoán hoặc tự sửa row ID.
-4. Chạy staging smoke đầy đủ PO → Receipt → cancel → settlement/manual override → report.
-5. Xác minh supplier contention/D1 latency ở tải gần production.
-6. Tạo production backup mới ngay trước activation.
-7. Chỉ activation khi có explicit approval riêng; không gộp approval deploy code với approval bật FIFO.
+3. `unresolved_count` phải bằng `0`.
+4. Staging smoke đầy đủ.
+5. Supplier contention/D1 latency ở tải gần production.
+6. Production backup mới ngay trước activation.
+7. Activation cần explicit approval riêng, không gộp với approval deploy code.
 
-### P1 — Product/report decisions
+## Bán hàng/RBAC follow-up
 
-- Quyết định có cần standalone global Supplier Debt Report hay chỉ giữ report permission-scoped theo PO/Receipt timeline.
-- Nếu cần global report, phải có contract data-scope, permission, filters và export riêng trước khi implement.
-
-## Bán hàng — functional browser acceptance còn lại
-
-1. Item picker chỉ hiện Item `is_sales_item=1`, `disabled=0` khi tìm trống và tìm theo mã/tên.
-2. Recent links không làm lộ Item disabled hoặc mất quyền bán.
-3. Multi-UOM: kiểm giá/tồn theo Item + Kho + ĐVT, không lấy chéo UOM.
-4. Kiểm Price List/Item Price với role `Kinh doanh` và `Kế toán`.
-5. Huỷ hoặc xoá chứng từ test theo quy trình nghiệp vụ sau khi thu evidence.
-
-## Theo dõi production
-
-- Theo dõi Gateway/Tenant 4xx/5xx mới liên quan Purchase allocation, settlement, supplier debt và sales item context.
-- Rollback khi có login/API 5xx diện rộng, sai tenant/database, permission regression, mất dữ liệu CRUD hoặc print/PDF lỗi nghiêm trọng.
-- Endpoint smoke hiện đã đạt nhưng không thay thế browser/business smoke.
-
-## RBAC
-
-- Chạy staging/browser QA riêng cho user lifecycle, role refresh, password/session revoke, audit log và tenant isolation.
+- Browser smoke Item picker và multi-UOM theo Item + Kho + ĐVT.
+- Role smoke `Kinh doanh`/`Kế toán` cho Price List và Item Price.
+- RBAC staging QA cho user lifecycle, role refresh, session revoke, audit và tenant isolation.
 - Không dùng dữ liệu khách hàng thật hoặc commit credential/evidence thô.
-
-## Release automation
-
-- Ở tenant release kế tiếp, xác minh `.github/workflows/ci.yml` tạo summary/version từ Wrangler NDJSON và không còn lỗi hậu kiểm `404`.
-- Giữ `.github/workflows/gateway-production-release.yml` làm đường Gateway có exact SHA, smoke và provider evidence.
-- `cloudflare-production-observation.yml` chỉ dùng manual smoke; không dùng để suy ra version/deployment ID.
-- Chuẩn hóa release branch/date-specific trigger bằng PR riêng, không phát hành production chỉ để thử workflow.
 
 ## Safety
 
 - Không commit `.env`, `.dev.vars`, token, secret, private key hoặc session secret.
 - Không commit `server/work/`, `tmp/`, backup SQL hoặc generated artifacts.
 - D1 migrations append-only.
-- Mọi production activation cần backup, rollback plan, exact evidence và approval riêng.
+- Không deploy Slice B/C, không migrate/mutate tenant `alu`, không bật FIFO và không sửa production secrets nếu chưa có explicit approval riêng.
