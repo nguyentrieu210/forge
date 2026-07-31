@@ -132,6 +132,13 @@ export class D1RbacAdministrationService {
     await this.assertRolesExist(tenantId, afterRoles);
 
     if (
+      userId === audit.actorUserId
+      && isTenantSuperadmin(userId, beforeRoles)
+      && !isTenantSuperadmin(userId, afterRoles)
+    ) {
+      throw errors.validation("Không tự hạ quyền quản trị của chính mình.");
+    }
+    if (
       Boolean(user.enabled)
       && isTenantSuperadmin(userId, beforeRoles)
       && !isTenantSuperadmin(userId, afterRoles)
