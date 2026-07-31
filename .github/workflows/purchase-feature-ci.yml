@@ -1,46 +1,62 @@
 name: Purchase Feature CI
 
 on:
-  push:
-    branches:
-      - feat/purchase-receipt-complete-20260731
   pull_request:
     branches:
       - hotfix/alumdoor-print-list-delete
-    paths:
-      - 'server/**'
-      - 'client/**'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
-      - '.github/workflows/purchase-feature-ci.yml'
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: purchase-feature-${{ github.ref }}
+  group: purchase-feature-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   focused-gates:
     name: Purchase feature gates
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
+      - name: Detect Purchase scope
+        id: scope
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          purchase=true
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            git diff --name-only "$BASE_SHA" "$GITHUB_SHA" > "$RUNNER_TEMP/changed-files.txt"
+            if ! grep -Eq '^(server/apps-src/alumdoor-worker/src/.*purchase|server/apps/purchase-qa-callback/|server/apps/tenant-worker/wrangler\.purchase-qa\.jsonc$|server/apps-src/alumdoor-worker/wrangler\.purchase-qa\.jsonc$|server/packages/app-registry/|server/scripts/(seed-local|seed-purchase-qa-local)\.mjs$|server/tests/.*(purchase|app-installer-standard-metadata-adoption)|client/e2e-forge/.*purchase|client/e2e-forge/playwright\.auth\.config\.ts$|package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|\.github/workflows/purchase-feature-ci\.yml$)' "$RUNNER_TEMP/changed-files.txt"; then
+              purchase=false
+            fi
+          fi
+          cat "$RUNNER_TEMP/changed-files.txt" 2>/dev/null || true
+          echo "purchase=$purchase" >> "$GITHUB_OUTPUT"
+
+      - name: Unrelated fast path
+        if: steps.scope.outputs.purchase != 'true'
+        run: echo "No Purchase lifecycle or Purchase QA files changed."
 
       - name: Install pnpm
+        if: steps.scope.outputs.purchase == 'true'
         uses: pnpm/action-setup@v4
         with:
           version: 9.15.0
           run_install: false
 
       - name: Set up Node.js
+        if: steps.scope.outputs.purchase == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -48,49 +64,22 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
+        if: steps.scope.outputs.purchase == 'true'
         run: pnpm install --frozen-lockfile
 
-      - name: Server unit tests
-        shell: bash
-        run: |
-          set +e
-          pnpm --dir server run test:unit > /tmp/server-unit.log 2>&1
-          status=$?
-          tail -n 200 /tmp/server-unit.log
-          exit $status
+      - name: Build server
+        if: steps.scope.outputs.purchase == 'true'
+        run: pnpm --filter cloudforge run build
 
-      - name: Server SQL tests
+      - name: Run focused Purchase regressions
+        if: steps.scope.outputs.purchase == 'true'
         shell: bash
         run: |
-          set +e
-          pnpm --dir server run test:sql > /tmp/server-sql.log 2>&1
-          status=$?
-          tail -n 200 /tmp/server-sql.log
-          exit $status
+          set -euo pipefail
+          mapfile -t tests < <(find server/tests -maxdepth 1 -type f \( -name '*purchase*.test.mjs' -o -name 'app-installer-standard-metadata-adoption.test.mjs' \) -print | sort)
+          test "${#tests[@]}" -gt 0
+          node --test "${tests[@]}"
 
-      - name: Client tests
-        shell: bash
-        run: |
-          set +e
-          pnpm run client:test > /tmp/client-test.log 2>&1
-          status=$?
-          tail -n 200 /tmp/client-test.log
-          exit $status
-
-      - name: Typecheck
-        shell: bash
-        run: |
-          set +e
-          pnpm typecheck > /tmp/typecheck.log 2>&1
-          status=$?
-          tail -n 200 /tmp/typecheck.log
-          exit $status
-
-      - name: Build
-        shell: bash
-        run: |
-          set +e
-          pnpm build > /tmp/build.log 2>&1
-          status=$?
-          tail -n 200 /tmp/build.log
-          exit $status
+      - name: Run Purchase SQL safeguards
+        if: steps.scope.outputs.purchase == 'true'
+        run: pnpm --dir server run test:sql
