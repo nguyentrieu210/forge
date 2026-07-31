@@ -2,77 +2,52 @@
 
 Ngày cập nhật: **2026-08-01**.
 
-## P0 — merge production-first delivery policy
+## P0 — hoàn tất PR #81 và deploy MetaForge UI production
 
 ### Mục tiêu
 
-Đưa `DELIVERY_POLICY.md` và workflow Alumdoor app Worker mới vào default branch để mọi session sau không quay lại preview/staging-first hoặc hỏi approval lặp lại.
-
-### File
-
-- `DELIVERY_POLICY.md`
-- `.github/workflows/release-alumdoor-app.yml`
-- `AI_HANDOFF.md`
-- `CURRENT_STATUS.md`
-- `NEXT_TASKS.md`
-
-### Việc làm
-
-1. Mở PR từ `chore/production-first-delivery-runbook` vào `hotfix/alumdoor-print-list-delete`.
-2. Chạy CI trên exact head.
-3. Nếu fail, đọc đúng log và sửa direct cause; không hạ gate.
-4. Khi required checks xanh và PR mergeable, merge luôn; không hỏi lại.
-5. Xác nhận policy-only merge không kích hoạt nhầm app Worker deploy vì không thay đổi path app Worker/dependency được allowlist.
-
-### Done condition
-
-- PR merge.
-- Exact-head required CI xanh.
-- Default branch chứa policy và workflow mới.
-- Không có secret/DNS/data mutation.
-
-## P0 — hoàn tất PR #81 rồi deploy MetaForge UI production
-
-### Mục tiêu
-
-Không dừng ở demo hoặc preview. Giao diện workspace phải xuất hiện trên product thật.
+Không dừng ở demo hoặc preview. Workspace MetaForge phải xuất hiện trên product thật, đúng permission và có authenticated smoke.
 
 ### Việc làm
 
 1. Đọc lại `AI_HANDOFF.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md` trên branch `feat/metaforge-misa-workspace-tabs`.
-2. Lấy exact head, base head và CI mới nhất.
-3. Lấy log/trace của dedicated Meta browser QA và sửa direct cause.
-4. Xác định phần nào phải nối vào `LiveApp.tsx`, application catalog và permission thật.
+2. Lấy exact head, base head, mergeability và CI hiện tại.
+3. Lấy log/trace của dedicated Meta browser QA; sửa direct cause, không xoá test.
+4. Xác định phần workspace phải nối vào `LiveApp.tsx`, application catalog và permission thật.
 5. Xác định frontend production target:
    - Cloudflare Pages/Worker project;
    - production hostname;
-   - build command và `VITE_LIVE` mode;
-   - secret/binding names;
+   - build command;
+   - `VITE_LIVE` mode;
+   - required secret/binding names;
    - rollback.
-6. Thêm protected auto-production workflow theo path UI.
-7. Merge khi required checks xanh.
-8. Tự deploy production và chạy authenticated desktop/mobile smoke.
-9. Báo URL, merge SHA, workflow run ID, deployment/version ID và smoke result.
+6. Thêm trusted auto-production workflow theo path UI.
+7. Merge khi exact-head required CI xanh.
+8. Tự deploy production.
+9. Chạy authenticated desktop/mobile smoke cho sidebar, tab, create route, refresh route và console/network.
+10. Báo URL, merge SHA, workflow run ID, deployment/version ID và smoke result.
 
 ### Done condition
 
-- Không còn route chỉ tồn tại trong mock/demo cho hành trình đã yêu cầu.
-- CI xanh trên exact SHA.
-- Production UI live và authenticated smoke PASS.
+- Không còn hành trình đã yêu cầu chỉ tồn tại trong mock/demo.
+- Required CI xanh trên exact SHA.
+- Production UI live.
+- Authenticated smoke PASS.
 
 ## P0 — chuẩn hoá tenant Worker auto production
 
 ### Mục tiêu
 
-Mọi thay đổi tenant Worker sau merge tự release đúng tenant mà không tạo execution PR thủ công.
+Mọi thay đổi tenant Worker sau merge tự release đúng tenant, không cần execution PR thủ công.
 
 ### Việc làm
 
 1. Xác định workflow tenant hiện tại, target mapping và path filters.
 2. Giữ backup, recorded migrations, dry-run và health/auth smoke.
-3. Trigger từ protected merge/default push hoặc trusted dispatch đúng SHA.
-4. Ghi step summary và artifact; không phụ thuộc comment API.
-5. Không trộn app Worker evidence với tenant Worker evidence.
+3. Trigger từ protected default push hoặc trusted dispatch đúng SHA.
+4. Ghi `$GITHUB_STEP_SUMMARY` và artifact.
+5. Không phụ thuộc issue-comment API.
+6. Không trộn app Worker evidence với tenant Worker evidence.
 
 ### Done condition
 
@@ -112,6 +87,13 @@ Evidence cũ:
 - Cài `FORGE.md`, `.forge/manifest.json`, `.forge/skills/**` bằng PR riêng.
 - Chạy installer test, build và validate.
 - Không trộn generated pack files vào feature PR.
+
+## Đã hoàn tất
+
+- PR `#108` production-first policy đã merge.
+- Merge SHA `5d73dcfbd6e0d24776cb4233fc86a45ccd507f53`.
+- Exact-head CI, PR Validation và Inventory/Manufacturing CI: SUCCESS.
+- Alumdoor app Worker workflow đã chuyển sang automatic production release theo merged path changes.
 
 ## Destructive boundary
 

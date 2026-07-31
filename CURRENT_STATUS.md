@@ -6,67 +6,52 @@ Ngày cập nhật: **2026-08-01**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Working branch: `chore/production-first-delivery-runbook`.
-- Mục tiêu branch: đổi delivery model từ preview/staging-first sang production-first, ít hỏi lại và có evidence đầy đủ.
+- Default head: `5d73dcfbd6e0d24776cb4233fc86a45ccd507f53`.
+- Handoff branch: `docs/record-production-first-merge-20260801`.
 - Không commit `.env`, secret, `server/work/`, `tmp`, backup hoặc generated evidence.
 
-## Delivery policy
+## Production-first delivery — ACTIVE
 
-`DELIVERY_POLICY.md` là policy mới trên branch:
+PR `#108` đã squash-merge.
 
-- yêu cầu làm code mặc định bao gồm merge và deploy production;
-- không hỏi lại approval ở mỗi chặng;
+- Exact PR head: `508993c8b0868cfac323e6e06c7a399ca4f44b07`.
+- Merge SHA: `5d73dcfbd6e0d24776cb4233fc86a45ccd507f53`.
+- CI `30654314727`: SUCCESS.
+- PR Validation `30654314760`: SUCCESS.
+- Inventory and Manufacturing CI `30654314685`: SUCCESS.
+- Production observation `30654314783`: SKIPPED đúng phạm vi.
+
+`DELIVERY_POLICY.md` hiện là policy canonical:
+
+- code request mặc định bao gồm merge và production deploy;
+- không hỏi approval lặp lại;
 - preview/staging là ngoại lệ, không phải done condition;
-- required CI phải xanh trên exact SHA;
-- production deploy phải có target identity, run ID, version/deployment ID và smoke;
-- DNS, secret, resource deletion, irreversible migration/data activation và FIFO vẫn là destructive boundary cần lệnh riêng.
+- chỉ deploy exact verified SHA;
+- production evidence phải có target identity, run ID, version/deployment ID và smoke;
+- destructive infrastructure/data boundary vẫn cần lệnh riêng.
 
-## Alumdoor app Worker workflow
+## Alumdoor app Worker auto release
 
-`.github/workflows/release-alumdoor-app.yml` đã được chuyển từ workflow one-off phụ thuộc execution PR sang tự động production delivery.
+`.github/workflows/release-alumdoor-app.yml` hiện:
 
-### Trigger
-
-- push/merge vào `hotfix/alumdoor-print-list-delete`;
-- chỉ khi thay đổi:
-  - `server/apps-src/alumdoor-worker/**`;
-  - `server/src/**`;
-  - `server/package.json`;
-  - root `package.json`;
-  - `pnpm-lock.yaml`;
-- manual `workflow_dispatch` vẫn có `target_sha` để re-release đúng commit khi cần.
-
-### Gate và evidence
-
-- checkout đúng target SHA;
-- verify Worker `cloudforge-app-alumdoor` và namespace `cloudforge-production`;
-- install dependency bằng lockfile;
-- build server;
-- focused Sales Unicode regression;
+- tự chạy trên merged/default push khi app Worker hoặc dependency server allowlist thay đổi;
+- hỗ trợ manual exact `target_sha`;
+- build server và focused regression;
 - Wrangler strict dry-run;
-- live deploy;
-- Cloudflare script identity và bindings `PLATFORM`, `AI`;
-- `$GITHUB_STEP_SUMMARY` và artifact evidence;
-- không dùng issue-comment API làm điều kiện kết luận.
+- deploy `cloudforge-app-alumdoor` vào `cloudforge-production`;
+- verify identity và bindings `PLATFORM`, `AI`;
+- ghi step summary và artifact;
+- không phụ thuộc issue/PR comment API.
 
-Workflow commit: `e7a28ff9153b03da8b015f57a00c153dc24bbcf2`.
+Policy merge không sửa app Worker source/dependency allowlist nên không cần redeploy cùng binary chỉ vì thay runbook.
 
 ## Forge Skills runbook 0.2.0
 
-Bản pack ngoài repository đã được cập nhật đồng bộ:
-
-- production-first flow;
-- initial code request là authorization cho merge/deploy trừ khi user opt-out;
-- staging optional;
-- CI và deploy tách trusted boundary;
-- handoff ghi production evidence;
-- BRD/build giảm approval ceremony, chỉ dừng ở destructive ambiguity.
-
-Validation:
+Pack ngoài repository đã đồng bộ production-first:
 
 - `npm test`: PASS;
 - `npm run build`: PASS, 28 files;
-- `npm run validate`: PASS, 7 skills version `0.2.0`;
+- `npm run validate`: PASS, 7 skills;
 - ZIP SHA-256: `6183dedc51d6258f0618feb95db87d27500d2f388671410ffb24595f4b6dee90`.
 
 ## Production hiện tại
@@ -84,27 +69,27 @@ Validation:
 - Run `30649182082`, job `91217965586`: SUCCESS.
 - Worker `cloudforge-tenant-alu`.
 - Version `ed5852cf-94ef-4a02-b0b9-1e64020c2d0d`.
-- Không dùng evidence này thay cho app Worker.
+- Không dùng tenant evidence thay cho app Worker.
 
 ## MetaForge UI
 
-- PR `#81` đang ở branch `feat/metaforge-misa-workspace-tabs` và vẫn tách khỏi policy branch.
-- Prototype hiện có phần mock/demo; không được gọi là production UI.
-- Exact known head `1ed3d8e578e060984f68549eb868dfb550eb4167` từng fail dedicated Meta browser QA dù lint/test/typecheck/build pass.
-- Production frontend target và live permission mapping chưa được ghi rõ trong repository.
-- Theo policy mới, việc UI chỉ hoàn tất sau khi sửa QA, nối live entrypoint, xác định target, deploy production và authenticated smoke.
+- PR `#81` vẫn ở branch `feat/metaforge-misa-workspace-tabs`.
+- Known head `1ed3d8e578e060984f68549eb868dfb550eb4167` từng fail dedicated Meta browser QA dù lint/test/typecheck/build pass.
+- Prototype có phần mock/demo; chưa được coi là production UI.
+- Frontend target, hostname, `VITE_LIVE` build mode và live permission mapping chưa được ghi đầy đủ.
+- Theo policy mới, task UI chỉ hoàn tất sau live integration, green CI, production deploy và authenticated smoke.
 
 ## Gate hiện tại
 
-1. Mở PR policy branch.
-2. Chạy required CI trên exact branch head.
-3. Merge tự động khi xanh và mergeable.
-4. Không có production deploy cho policy-only change vì path app Worker không thay đổi.
-5. Sau merge, thay đổi app Worker tương lai sẽ tự deploy production.
-6. Tiếp tục chuẩn hoá auto production cho tenant Worker và frontend.
+1. Merge handoff-only PR ghi nhận policy merge.
+2. Quay lại PR `#81`.
+3. Sửa Meta browser QA bằng evidence thật.
+4. Xác định và tự động hoá frontend production target.
+5. Merge, deploy production, chạy authenticated smoke.
+6. Sau đó chuẩn hoá tenant Worker auto production và observation reporting.
 
 ## Safety
 
 - Không sửa production secrets hoặc DNS.
 - Không bật FIFO.
-- Không mutate D1, KV hoặc dữ liệu nghiệp vụ trong policy change.
+- Không mutate D1, KV hoặc dữ liệu nghiệp vụ trong policy/handoff changes.
