@@ -119,3 +119,12 @@ Thứ tự an toàn:
 8. Xác minh Gateway production version/traffic và browser smoke hiện hành.
 
 Không bật rollout FIFO cho `alu` trước khi các blocker trên được xử lý.
+
+## Inventory, manufacturing and Item catalog branch
+
+- Đã mở branch `feat/inventory-manufacturing-item-catalog-20260731` từ default HEAD `cd60f8c09c48105db84a82c12ad3b32d9f075064`.
+- Audit authoritative trên branch: `server/docs/ALUMDOOR-INVENTORY-MANUFACTURING-ITEM-AUDIT.md`.
+- Kết luận: schema `Item` đủ tốt làm nền, nhưng chưa có bằng chứng rằng dữ liệu live, BOM, lô và kho đã đủ cho vận hành tồn kho/sản xuất hoàn chỉnh.
+- Blocker chính: chưa có export/audit catalog live; hai brief Alumdoor `1.27.3` và `2.0.34` cùng tồn tại; warehouse chưa có vai trò NVL/WIP/thành phẩm/chờ kiểm/phế; `Stock Entry Item` chưa giữ dimension/lot của nhôm; BOM/UOM/revision và Work Order lifecycle chưa được chứng minh end-to-end.
+- Branch mới độc lập với draft PR `#14`; sau khi PR mua hàng merge phải rebase và kiểm tra xung đột trước khi mở release PR.
+- Chưa sửa code runtime, chưa chạy test/typecheck/build và chưa deploy từ branch này.
