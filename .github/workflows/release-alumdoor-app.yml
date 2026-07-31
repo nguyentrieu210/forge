@@ -64,6 +64,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build server artifacts
+        run: pnpm --filter cloudforge run build
+
       - name: Focused regression
         run: node --test server/tests/sales-price-unicode-normalization.test.mjs
 
