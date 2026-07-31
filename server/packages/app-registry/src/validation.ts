@@ -97,6 +97,10 @@ function isLoopbackOrigin(value: string | undefined): boolean {
  * the real app Worker beside the tenant Worker and binds it as a single Fetcher named
  * DISPATCHER.
  *
+ * Service bindings are RPC proxies: asking one for an arbitrary property such as `get`
+ * yields a callable RPC method even when the receiver does not implement it. Therefore the
+ * loopback-only shape must be selected before probing the DispatchNamespace API.
+ *
  * The fallback is intentionally narrow: loopback callback, exactly one validator target,
  * and an actual Fetcher. A deployed origin, or a tenant with more than one validating app,
  * still requires a real DispatchNamespace and fails closed.
@@ -105,16 +109,17 @@ function validatorWorker(env: AppMethodEnv, target: ValidatorTarget, targetCount
   const dispatcher = env.DISPATCHER;
   if (!dispatcher) throw errors.misconfigured("App validator dispatcher is missing");
 
+  const localFetcher = dispatcher as unknown as Fetcher;
+  if (targetCount === 1 && isLoopbackOrigin(env.PUBLIC_ORIGIN) && typeof localFetcher.fetch === "function") {
+    return localFetcher;
+  }
+
   const maybeGet = Reflect.get(dispatcher as object, "get");
   if (typeof maybeGet === "function") {
     return maybeGet.call(dispatcher, target.worker, {}, { limits: { cpuMs: 100, subRequests: 20 } }) as Fetcher;
   }
 
-  const localFetcher = dispatcher as unknown as Fetcher;
-  if (targetCount !== 1 || !isLoopbackOrigin(env.PUBLIC_ORIGIN) || typeof localFetcher.fetch !== "function") {
-    throw errors.misconfigured("App validator dispatcher is not a DispatchNamespace");
-  }
-  return localFetcher;
+  throw errors.misconfigured("App validator dispatcher is not a DispatchNamespace");
 }
 
 /**
