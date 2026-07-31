@@ -9,88 +9,93 @@ Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
 - GitHub là nguồn sự thật cho code, PR, CI và release evidence.
 - Không commit `.env`, `.dev.vars`, secret, `server/work/`, `tmp/`, backup SQL hoặc generated artifacts.
 
-## Bán hàng — lọc mặt hàng trong child table đã phát hành production
-
-### Lỗi và nguyên nhân
-
-Production từng hiển thị Item không được phép bán hoặc đã disabled trong ô `Mã hàng` của child table Báo giá/Đơn hàng dù metadata đã khai `{"is_sales_item":1,"disabled":0}`.
-
-Nguyên nhân nằm ở MetaForge core: `buildLinkFilters` chỉ đọc `link_filters` dạng JSON array, nên object-form filter hợp lệ bị bỏ qua và Link search chạy không có điều kiện.
+## Purchase/FIFO — đã merge và phát hành production
 
 ### Merge
 
-- Hotfix PR `#53`: `fix(sales): filter sellable items in child grids`.
-- Exact feature head trước merge: `c6e136a47283f973d9c5d4150884b91036ab6fae`.
-- Squash merge SHA: `48fa4d77eefb46384272550f8f6c0699ed054fa6`.
-- Fix hỗ trợ object form, array form, operator tuple và dependent `eval:` filters; chặn các khóa prototype nguy hiểm.
-- Regression mới chạy trong client selfcheck với đúng filter bán hàng đang dùng.
+- Feature PR `#14`: `feat(purchase): complete Purchase Order and Receipt FIFO workflow`.
+- Feature head cuối trước merge: `697fdf60fb48671ee6655f321700bc036b51b01f`.
+- Squash merge SHA: `7b3dc06dbbecbb5370ddb48259aa1614aef2ff32`.
+- Phạm vi gồm FIFO allocation/unapplied, settlement close/reverse, manual override có permission/reason, backfill/cutover tooling, submit preview, allocation timeline, supplier debt drill-down và operator UI.
+- Người vận hành duyệt merge/deploy ngay và chấp nhận rủi ro browser Playwright của luồng Purchase chưa hoàn tất.
+- FIFO activation **không được yêu cầu** và rollout vẫn **disabled**.
 
-### Exact-head CI
+### Tenant Worker production `alu`
 
-Trên `c6e136a47283f973d9c5d4150884b91036ab6fae`:
-
-- PR Validation run `30630332229`, job `91154938153`: tests, typecheck, build **PASS**.
-- CI run `30630332276`, job `91154938420`: tests, typecheck, build **PASS**.
-- Sales Feature CI run `30630331930`, job `91154937868`: server unit, SQL, brief, client regression, typecheck, build **PASS**.
-- Purchase Feature CI run `30630331847`, job `91154937227`: server unit, SQL, client regression, typecheck, build **PASS**.
-- Inventory and Manufacturing CI run `30630332239`, job `91154938438`: focused tests, redacted audit, SQL, authoritative brief validation, lint, repository tests, typecheck, build **PASS**.
-- UI Pull Request Validation run `30630332351`, job `91154938570`: lint, tests, typecheck, build, Chromium browser QA và local cookie-auth smoke **PASS**.
-- Production release jobs trong PR gate đều **SKIPPED**.
+- Execution PR `#55` chỉ dùng kích hoạt release, đã đóng và **không merge**.
+- Release run: `30631386714`.
+- Release job: `91158315099` (`Release alu production`).
+- Exact code checkout/deploy: `7b3dc06dbbecbb5370ddb48259aa1614aef2ff32`.
+- Backup remote: **PASS**, kích thước `8,971,462` bytes, SHA-256 `fe41aa7e4eb42b1761107d21795897c91a85a4f4066c0411683541e325a55a24`.
+- Backup artifact: `alu-pre-release-backup-30631386714`, artifact ID `8793480138`.
+- Migration dry-run/live: **PASS**; D1 báo toàn bộ `32` migration đã được ghi nhận, không còn migration chờ áp dụng.
+- Tenant deploy dry-run/live: **PASS**.
+- Worker: `cloudforge-tenant-alu`.
+- Tenant Worker version ID từ Wrangler NDJSON: `9ec0d1d3-c1fd-4263-ae35-4fae81c09968`.
+- Deploy timestamp từ Wrangler: `2026-07-31T12:40:34.352Z`.
+- Production smoke: `/health` = `200`, unauthenticated boot = `403`.
+- Release evidence artifact: `alu-production-release-30631386714`, artifact ID `8793494701`.
+- Job tổng thể bị GitHub đánh `failure` chỉ vì bước hậu kiểm gọi Cloudflare deployments REST endpoint trả `404`; backup, migration, deploy và smoke đều **PASS**.
+- `.github/workflows/ci.yml` đã được sửa tại `d8959d559b5ee651e17ce5f12e1f9475e25404e1` để lấy provider evidence trực tiếp từ Wrangler NDJSON.
 
 ### Gateway/frontend production
 
-- Release PR `#54`: `release: deploy sales item-filter hotfix to Gateway`.
-- Release PR squash merge SHA: `671b72ca374ae0227ec8f52c09d65de83108e1a2`.
-- Exact code SHA được checkout/deploy: `48fa4d77eefb46384272550f8f6c0699ed054fa6`.
-- Gateway production run: `30630931291`.
-- Job: `91156832579` — `Build and deploy Gateway` — **SUCCESS**.
-- Build và stage frontend: **PASS**.
+- Release PR `#57`: `release: deploy purchase UI to Gateway production`.
+- Release merge SHA: `f50993ef7736a0321f6a0e8c308c5cb069497472`.
+- Exact code checkout/build/deploy: `7b3dc06dbbecbb5370ddb48259aa1614aef2ff32`.
+- Gateway run: `30631951946`.
+- Job: `91160176928` (`Build and deploy Gateway`) — **SUCCESS**.
+- Build MetaForge và stage frontend: **PASS**.
 - Wrangler deploy `cloudforge-gateway`: **PASS**.
-- Gateway version ID: `dc6eada4-e4a1-451a-a92f-66fe04050707`.
+- Gateway version ID: `6352386d-8385-4ea8-af31-15ac62e21943`.
 - Production smoke: `/health` = `200`, `/` = `200`, unauthenticated boot = `403`.
 - Provider evidence từ Wrangler NDJSON: **PASS**.
-- Evidence artifact: `gateway-production-release-30630931291`, artifact ID `8793326579`.
-- Không deploy tenant Worker, không migration, không mutate D1, không sửa production secrets.
-- FIFO rollout vẫn **disabled**.
+- Evidence artifact: `gateway-production-release-30631951946`, artifact ID `8793729472`.
+
+### Release cleanup
+
+- Đã xóa workflow tenant one-shot `.github/workflows/release-alu-purchase-20260731.yml`.
+- Đã xóa hai trigger tạm `alu-purchase-production.trigger` và `alu-purchase-observe.trigger`.
+- `cloudflare-production-observation.yml` được thu gọn thành manual smoke-only workflow; không còn gọi deployments REST endpoint đã trả `404`.
+- Các PR execution cũ `#11`, `#52`, `#55` đã đóng và không merge.
 
 ### Residual verification
 
-Endpoint smoke và CI đã hoàn tất, nhưng chưa có functional browser evidence sau deploy bằng dữ liệu production thật để xác nhận picker:
+- Chưa có functional browser evidence production cho toàn bộ Purchase UI trên desktop/mobile.
+- Chưa thực hiện production business smoke có đăng nhập cho PO → Receipt → cancel → settlement/manual override → supplier debt report bằng dữ liệu thử đã kiểm soát.
+- Không được diễn giải endpoint smoke thành bằng chứng UI/nghiệp vụ đầy đủ.
+- Không bật FIFO production trước backfill checksum, `unresolved_count=0`, staging evidence, backup mới và explicit approval riêng.
 
-- Item `is_sales_item=1`, `disabled=0` xuất hiện;
-- Item `is_sales_item=0` không xuất hiện;
-- Item `disabled=1` không xuất hiện;
-- filter vẫn giữ khi tìm theo mã/tên;
-- recent links không làm lộ Item đã bị loại.
+## Bán hàng — lọc mặt hàng child table đã phát hành production
 
-Không được diễn giải endpoint smoke thành bằng chứng rằng functional picker smoke đã hoàn tất.
+- Hotfix PR `#53` đã squash-merge thành `48fa4d77eefb46384272550f8f6c0699ed054fa6`.
+- `buildLinkFilters` hỗ trợ object-form, array-form, operator tuple và dependent `eval:` filters; chặn prototype-key nguy hiểm.
+- Sáu workflow exact-head đã **PASS**, gồm Chromium QA và local cookie-auth smoke.
+- Gateway release trước đó run `30630931291`, version `dc6eada4-e4a1-451a-a92f-66fe04050707`; phiên bản này đã được thay bởi Gateway Purchase release nêu trên.
+- Functional browser smoke production cho Item picker và multi-UOM vẫn là việc riêng.
 
-## Bán hàng multi-UOM hiện hành
+## Production versions hiện hành
 
-- Hotfix hậu kiểm 2026-07-31: bỏ qua cột tồn rỗng trước khi đọc số dư hợp lệ và xóa giá/tồn preview cũ khi `alumdoor.sales.item_context` lỗi, tránh hiển thị dữ liệu của lựa chọn trước.
-
-- Giá theo đúng `Bảng giá + Mặt hàng + ĐVT`.
-- ĐVT lấy từ Item/UOM Conversion.
-- Báo giá/Đơn hàng đọc giá và tồn theo Item + Kho + ĐVT qua `alumdoor.sales.item_context`.
-- Preview tồn không giữ chỗ; Delivery Note submit vẫn authoritative chống âm kho.
-- Tenant Worker production hiện hành: `cloudforge-tenant-alu`, version `e15bc6ad-e343-49af-aa2f-c65d31c09fea`.
-- Gateway production hiện hành sau hotfix: version `dc6eada4-e4a1-451a-a92f-66fe04050707`.
+- Tenant Worker `cloudforge-tenant-alu`: `9ec0d1d3-c1fd-4263-ae35-4fae81c09968`.
+- Gateway `cloudforge-gateway`: `6352386d-8385-4ea8-af31-15ac62e21943`.
+- FIFO rollout: **disabled**.
 
 ## RBAC
 
 - Slice A PR `#37`, Slice B PR `#45` và post-merge QA PR `#48` đã merge.
 - Regression hậu merge giữ tại `server/tests/rbac-post-merge-qa.test.mjs`.
-- Staging/browser QA bằng tài khoản và tenant thử thật vẫn là việc riêng; không có production mutation RBAC trong đợt hotfix này.
+- Staging/browser QA bằng tài khoản và tenant thử thật vẫn là việc riêng.
 
 ## Release automation
 
 - `.github/workflows/gateway-production-release.yml` là đường phát hành Gateway có exact target SHA, smoke và Wrangler version evidence.
 - `.github/release/gateway-production.trigger` là trigger Gateway production.
-- `.github/workflows/pr-validation.yml` giữ PR gates và tenant release path.
-- Tenant provider evidence phải lấy từ Wrangler NDJSON, không dựa vào deployments REST endpoint từng trả `404`.
+- `.github/workflows/ci.yml` giữ tenant release path backup → migrate → deploy → smoke và đọc version từ Wrangler NDJSON.
+- `.github/workflows/cloudflare-production-observation.yml` chỉ chạy thủ công để kiểm endpoint smoke.
+- Không dùng Cloudflare deployments REST endpoint làm nguồn provider evidence cho Tenant Worker.
 
-## Các luồng khác
+## Safety
 
-- Inventory/manufacturing, purchase/FIFO và các PR đang mở không bị sửa trong đợt hotfix này.
-- PR body, exact-head CI và trạng thái GitHub hiện hành của từng luồng là nguồn authoritative trước mọi merge/deploy tiếp theo.
-- Không merge hoặc deploy luồng khác nếu chưa có yêu cầu rõ.
+- D1 migrations append-only.
+- Không sửa production secrets trong đợt này.
+- Không kích hoạt FIFO, không thay DNS và không commit backup SQL/evidence thô.
