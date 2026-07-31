@@ -6,122 +6,87 @@ Ngày cập nhật: **2026-07-31**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Working branch: `feat/inventory-manufacturing-item-catalog-20260731`.
-- Draft PR: `#27` — `feat(inventory): audit Alumdoor Item catalog and manufacturing readiness`.
+- Working branch: `feat/inventory-physical-stock-slice-b-20260731`.
+- Pull request: `#49` — `feat(inventory): canonical physical stock identity and warehouse roles`.
 - Authoritative Alumdoor metadata: `server/briefs/alumdoor-v2.json`, version `2.0.34`.
-- Không commit `.env`, secret, `server/work/`, `tmp/`, backup hoặc generated report.
+- GitHub là nguồn sự thật cho code, PR, CI và release evidence.
 
 ## Mục tiêu nhánh
 
-Slice A xây nền an toàn để hoàn thiện danh mục Item, tồn kho và sản xuất:
+Slice B hoàn thiện nền tồn kho vật lý:
 
-1. BRD và technical plan.
-2. Audit planner/CLI read-only cho Item, UOM, Measurement Profile, Warehouse và BOM/Production Standard.
-3. Runtime Item validator server-side.
-4. Regression tests và dedicated CI.
-5. Review score `>=95` trước khi mở merge gate.
+1. Server-built physical identity cho Item theo inventory mode/profile, màu, tình trạng, đời, kích thước và physical count.
+2. Batch/serial/Aluminium Lot lineage và kiểm bundle quantity/direction.
+3. Warehouse-role rules cho receipt, transfer, issue/manufacture, quarantine và scrap/offcut recovery.
+4. Exact cancellation từ ledger gốc.
+5. Company-wide Durable Object coordination cho Stock Entry và Work Order submit/cancel.
+6. Regression tests và review score `>=95`.
 
-Slice B/C/D về physical stock ledger, manufacturing lifecycle và UI chưa nằm trong PR merge này.
+Không nằm trong nhánh này: manufacturing lifecycle Slice C, physical-stock UI/report/read model Slice D, live data remediation hoặc production deployment.
 
-## Implementation hiện tại
+## Implementation chính
 
-### Audit
+- `server/packages/clouderp-erpnext/src/physical-stock-entry.ts`.
+- `server/apps/tenant-worker/src/inventory-coordinator.ts`.
+- `server/apps/tenant-worker/src/aggregate-do.ts`.
+- `server/packages/clouderp-erpnext/src/registry.ts`.
+- `server/packages/clouderp-erpnext/src/index.ts`.
 
-- `server/scripts/alumdoor-catalog-audit-planner.mjs`
-  - deterministic finding code/severity/count/checksum;
-  - redaction;
-  - Item/UOM/profile/warehouse/BOM validation;
-  - duplicate/circular BOM;
-  - source completeness và warehouse-role coverage.
-- `server/scripts/audit-alumdoor-catalog.mjs`
-  - `--input`, `--brief`, `--tenant`;
-  - read-only, từ chối write/fix/apply flags;
-  - remote mặc định redacted;
-  - đọc cả active và disabled master records;
-  - output mặc định vào OS temp và từ chối output trong repository.
+## Tests
 
-### Runtime validation
-
-- `server/apps-src/alumdoor-worker/src/entry.ts` compose validator lịch sử và invariant mới.
-- `server/apps-src/alumdoor-worker/src/item-catalog-invariants.ts`:
-  - service không được stock/manufacturing/batch/serial/reorder;
-  - non-service bắt buộc stage/supply hợp lệ;
-  - nguồn mua phải có purchase eligibility;
-  - hàng sản xuất phải có manufacturing eligibility;
-  - partial save đọc và ghép current Item;
-  - thiếu `PLATFORM` binding thì fail closed, không fallback ra mạng.
-- `server/apps-src/alumdoor-worker/wrangler.jsonc` dùng `src/entry.ts` làm entrypoint; không đổi binding/secret.
-
-### Test
-
-- `server/tests/alumdoor-catalog-audit.test.mjs`.
-- `server/tests/alumdoor-catalog-warehouse-role.test.mjs`.
-- `server/tests/alumdoor-item-validator.test.mjs`.
-- `.github/workflows/inventory-feature-ci.yml` chạy build server, focused tests, redacted audit artifact, SQL, brief check, frontend lint, repository tests, typecheck và build.
+- `server/tests/alumdoor-physical-stock.test.mjs`.
+- `server/tests/alumdoor-physical-stock-concurrency.test.mjs`.
+- `server/tests/inventory-coordinator.test.mjs`.
 
 ## Review
 
-Review authoritative:
-
-- `server/docs/ALUMDOOR-INVENTORY-MANUFACTURING-SLICE-A-REVIEW.md`.
-- Điểm: **96/100**.
+- Review: `server/docs/ALUMDOOR-INVENTORY-SLICE-B-REVIEW.md`.
+- Score: **97/100**.
 - Critical: **0**.
 - High: **0** sau remediation.
 
-Các lỗi đã sửa trong review:
+## Git hiện tại
 
-1. Remote audit bỏ mất disabled Item.
-2. Service Item chưa chặn batch/serial.
-3. Partial-save có fallback global network khi thiếu binding.
-4. Stage/supply rỗng được runtime chấp nhận.
-5. Generated audit report có thể rơi vào repository.
+- Default SHA lúc đồng bộ: `4cbcd2a3a8f742da7dd1b7e0c5b29899af4cfce0`.
+- Branch cũ từng ahead `25`, behind `12` và diverged.
+- Sync merge commit: `59c364a1b8443713921efad84b710b07ce9823a9`.
+- PR `#49` sau sync: conflict-free, `mergeable=true`, vẫn draft.
+- Stale branch copies của `AI_HANDOFF.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md` không được phép ghi đè trạng thái production mới từ default.
 
-## Git và đồng bộ
+## CI
 
-- Default đã được đồng bộ qua merge commit `05477f70f74374516961127cc700f8341ce01196`, nhận workflow `PR Validation` được khôi phục từ default `81697d454db5e22e758a8aeda8cc40f1f247b18a`.
-- Implementation/test head trước scorecard/handoff docs: `367743016a7e61a27afe04b8eb9f39e489a5c4b7`.
-- Scorecard commit: `d885b25a14fa84f3c282847c3dac7e444f6d2384`.
-- PR mergeable sau lần kiểm gần nhất nhưng vẫn draft.
+Trên code head `59c364a1b8443713921efad84b710b07ce9823a9`:
 
-## CI blocker hiện tại
+- PR Validation `30644981424`: PASS.
+- Sales Feature CI `30644945918`: PASS.
+- Inventory and Manufacturing CI `30644945877`: PASS.
+- CI `30644945928`: PASS.
+- Purchase Feature CI `30644945921`: PASS.
+- UI Pull Request Validation `30644945919`: đang chạy browser/auth gates tại thời điểm cập nhật.
 
-Các workflow trên implementation head và merge-sync head thất bại trước checkout/`Set up job`:
-
-- job record có `steps=null`;
-- downloadable log không tồn tại;
-- cả `Inventory and Manufacturing CI`, `PR Validation` và workflow quan sát production cùng bị ảnh hưởng;
-- hiện tượng tương tự được ghi nhận trên PR khác trong cùng repository.
-
-Không có test assertion, typecheck hoặc build command nào chạy trong các failed run này. Phân loại hiện tại: **GitHub Actions pre-run infrastructure/configuration blocker; chưa đủ bằng chứng để kết luận runner, billing, policy hay provider**.
-
-Không được coi G4 PASS, không chuyển PR ready và không merge cho tới khi hai workflow bắt buộc xanh trên exact final HEAD.
-
-## Merge policy cho Slice A
-
-Merge được phép khi:
-
-1. Review score `>=95` — hiện **PASS 96/100**.
-2. Critical/High code finding = 0 — hiện **PASS**.
-3. Branch đồng bộ default và conflict-free — kiểm lại trước merge.
-4. `Inventory and Manufacturing CI` PASS trên exact final HEAD.
-5. `PR Validation` PASS trên exact final HEAD.
-6. Người dùng đưa yêu cầu merge rõ ràng sau khi xem trạng thái cuối.
-
-Live tenant audit `alu` và staging không phải điều kiện để merge công cụ audit/validator Slice A. Chúng là gate trước remediation dữ liệu, Slice B/C và mọi deployment.
+Commit tài liệu này tạo exact final head mới; phải dùng CI của final head, không dùng các run cũ làm merge evidence.
 
 ## Việc tiếp theo
 
-1. Đọc `CURRENT_STATUS.md`, `NEXT_TASKS.md` và review scorecard.
-2. Kiểm tra default HEAD và PR #27 head.
-3. Retry/retrigger required workflows khi GitHub Actions có thể cấp runner.
-4. Nếu CI chạy, đọc đúng failed step; chỉ sửa code khi có code failure.
-5. Khi cả hai workflow PASS trên exact final HEAD, cập nhật PR body, chuyển khỏi draft và báo sẵn sàng merge.
-6. Không merge hoặc deploy nếu người dùng chưa yêu cầu rõ hành động đó.
+1. Kiểm exact final head sau các commit tài liệu.
+2. Chờ toàn bộ required workflows PASS trên exact final head.
+3. Cập nhật PR body với final SHA và CI run IDs.
+4. Chuyển PR khỏi draft khi mergeable, review threads sạch và CI xanh.
+5. Không merge PR #49 nếu chưa có yêu cầu merge rõ ràng.
+6. Sau merge mới retarget/rebase Slice C và tiếp tục Slice D.
+
+## Release gates còn lại
+
+- Read-only live tenant catalog audit và remediation plan.
+- Staging receive/transfer/issue/quarantine/scrap/cancel journeys.
+- Production load/latency observation cho company-wide inventory lock.
+- Physical-stock UI/report/read model trong Slice D.
+- Explicit deployment approval riêng.
 
 ## Safety
 
-- Không migration trong PR #27.
-- Không mutate tenant `alu`.
-- Không deploy Gateway/Tenant Worker.
-- Không sửa Cloudflare secret.
-- FIFO Purchase Receipt vẫn giữ disabled.
+- Không Cloudflare deployment.
+- Không tenant migration hoặc mutation.
+- Không sửa production secrets/DNS.
+- FIFO vẫn disabled.
+- Không commit `.env`, `.dev.vars`, `server/work/`, `tmp/`, backup hoặc generated artifacts.
