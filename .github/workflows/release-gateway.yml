@@ -124,7 +124,7 @@ jobs:
           set -euo pipefail
           health=0
           root=0
-          for attempt in $(seq 1 24); do
+          for ((attempt = 1; attempt <= 24; attempt++)); do
             health="$(curl --silent --show-error --output "$EVIDENCE_DIR/health.json" --write-out '%{http_code}' \
               -H 'cache-control: no-cache' "$BASE_URL/health?release=$TARGET_SHA" || true)"
             root="$(curl --silent --show-error --output "$EVIDENCE_DIR/root.html" --write-out '%{http_code}' \
@@ -154,8 +154,8 @@ jobs:
             echo '# Gateway production release'
             echo
             echo "- Target SHA: \`$TARGET_SHA\`"
-            echo '- Worker: `cloudforge-gateway`'
-            echo '- Host: `https://alu.kairo.vn`'
+            echo "- Worker: \`cloudforge-gateway\`"
+            echo "- Host: \`https://alu.kairo.vn\`"
             echo "- Version ID: \`$version_id\`"
             echo '- Runtime tests/build/stage/dry-run/deploy/smoke: **PASS**'
           } >> "$GITHUB_STEP_SUMMARY"
