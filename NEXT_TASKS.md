@@ -167,52 +167,78 @@ Còn lại:
 
 Branch: `feat/rbac-permission-completion-20260731`.
 
-BRD authoritative: `server/docs/RBAC-PERMISSION-BRD.md`.
+Tài liệu authoritative:
 
-### G1 — Chờ duyệt requirement decisions
+- BRD: `server/docs/RBAC-PERMISSION-BRD.md`.
+- Kế hoạch G2: `server/docs/RBAC-PERMISSION-IMPLEMENTATION-PLAN.md`.
+- Draft PR: `#22`.
 
-Chốt ba quyết định trước khi sửa runtime:
+### Gate đã chốt
 
-1. **D1 System Manager:** đề xuất giữ full tenant superadmin trong đợt này, thêm last-admin/self-lockout guard, audit và test.
-2. **D2 DocPerm ownership:** đề xuất app/platform sở hữu; Permission Center chỉ đọc, thay đổi qua brief/manifest.
-3. **D3 hierarchy scope:** đề xuất exact-value scope; từ chối `hide_descendants=true` cho tới khi có hierarchy contract.
+- G0 scope: **PASS**.
+- G1 requirements: **PASS** với D1=A, D2=A, D3=A.
+- G2 implementation plan: **PASS** tại commit `9bbc2f646fbc9a39c9fd100c1474b67eeb285021`.
+- G3/G4/G5: chưa mở.
 
-### Slice A — Sửa contract P0
+### Quyết định áp dụng
 
-1. `explain_permission` phải dùng đúng user được chọn, chỉ admin được mô phỏng người khác.
-2. Trả `trace` từ cùng permission evaluator và fail-closed.
-3. Chuẩn hoá User Permission identity/composite key giữa profile, adapter và server.
-4. Add/remove scope round-trip, idempotent và có test adapter ↔ API.
-5. UI không crash nếu trace rỗng hoặc API từ chối.
+1. Giữ `Administrator`/`System Manager` là tenant superadmin để tương thích, nhưng thêm last-admin/self-lockout guard, audit và test.
+2. DocPerm do app/platform sở hữu; Permission Center chỉ đọc.
+3. User Permission exact-value; từ chối `hide_descendants=true`.
 
-### Slice B — Hardening quản trị
+### Việc tiếp theo — Slice A: sửa contract P0
 
-1. Tạo user + role grants atomic; role invalid không để lại user.
-2. Bảo vệ access admin cuối cùng và self-lockout/self-escalation.
-3. Audit append-only cho role, scope, enable/disable, reset password và session revoke.
-4. Không ghi plaintext password, token hoặc secret vào event/log.
-5. Role change và disable có hiệu lực request kế tiếp.
+1. Refactor server resolve target actor cho `explain_permission`:
+   - không truyền user => actor hiện tại;
+   - user khác => chỉ tenant superadmin;
+   - tải user/roles/enabled từ `D1UserStore` trong đúng tenant;
+   - không rơi về actor admin khi target sai.
+2. Refactor capability calculation nhận actor đích thay vì đóng cứng `context.actor`.
+3. Trả `trace` từ cùng permission evaluator, fail-closed và không lộ dữ liệu nhạy cảm.
+4. Chuẩn hoá User Permission identity bằng composite key `user + allow + value + applicable_for`.
+5. Access profile trả identity ổn định; adapter/UI xoá bằng cùng contract.
+6. Add/remove idempotent và round-trip đúng sau refresh.
+7. Từ chối `hide_descendants=true` bằng validation rõ.
+8. UI Check Panel dùng fallback trace rỗng, hiển thị rõ user đang được kiểm tra và không crash.
 
-### Slice C — Evaluator completeness
+### Targeted tests Slice A
 
-1. Chốt authority cho static permission và metadata DocPerm; validate conflict.
-2. User Permission áp nhất quán cho list/count/read/write/report/export/search/print.
-3. Share không bypass User Permission.
-4. Field permlevel redaction/write tests.
-5. Attachment upload/delete và app action permission tests.
-6. Tenant isolation tests cho user, role, scope, document và report.
+- admin explain user B dùng đúng role/scope B;
+- non-admin explain B bị từ chối;
+- target không tồn tại/disabled không rơi về admin;
+- add → profile refresh → remove → profile refresh;
+- remove lần hai trả idempotent;
+- `hide_descendants=true` bị từ chối;
+- adapter request shape khớp API;
+- UI render với `trace=[]`.
+
+### Slice B — sau khi Gate A xanh
+
+1. Migration append-only audit RBAC.
+2. Atomic create user + roles.
+3. Atomic replace roles, last-admin guard và self-lockout guard.
+4. Audit role/scope/enable-disable/password reset/session revoke.
+5. Không ghi password/hash/token/secret.
+
+### Slice C — evaluator completeness
+
+1. Chốt static-vs-metadata authority và conflict validation.
+2. User Permission nhất quán trên list/count/read/write/report/export/search/print.
+3. Share không bypass scope.
+4. Field permlevel, attachment và app action tests.
+5. Cross-tenant isolation tests.
 
 ### Slice D — UI và QA
 
 1. Permission Center hiển thị đúng selected user.
-2. Role matrix app-owned read-only và giải thích nguồn quyền.
-3. Scope add/remove hoạt động sau refresh.
-4. Cảnh báo last-admin, disable/reset session và lỗi có thể hành động.
+2. Role matrix app-owned read-only.
+3. Scope add/remove hoạt động sau reload.
+4. Cảnh báo last-admin và session revocation.
 5. Desktop/mobile browser QA.
 
-### Slice E — Gate
+### Gate tổng
 
-1. Targeted server/client tests.
+1. Targeted tests từng slice.
 2. Root `test`, `typecheck`, `build` PASS.
 3. Exact-head CI PASS.
 4. Staging với user đại diện từng role/scope.
