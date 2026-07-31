@@ -9,7 +9,8 @@ Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
 - Feature branch: `feat/purchase-receipt-complete-20260731`.
 - Tracking issue: `#13`.
 - Draft PR: `#14`.
-- Feature implementation HEAD trước commit trạng thái này: `a54ae45c8aa49194fee8199a584ed47e0f775f31` (`feat(purchase): add server-authoritative submit preview`).
+- Latest verified feature code SHA: `38b0c3374e9c6c00efae95b4699c1a0831252ad2` (`feat(purchase): add allocation timeline and drill-down`).
+- Standard CI workflow restored at `9a5e11cc0770237eae299d69e8ffc1f18b8be976`.
 - Technical plan: `server/docs/ALUMDOOR-PURCHASE-RECEIPT-COMPLETION-PLAN.md`.
 - Không commit `server/work/`, `tmp/`, backup SQL, `.env` hoặc generated artifacts.
 
@@ -35,7 +36,7 @@ Contract authoritative: `server/docs/ALUMDOOR-PURCHASE-RECEIPT-ALLOCATION.md`.
 
 ### Slice A — cross-voucher unapplied lifecycle
 
-Đã triển khai:
+Đã hoàn thành:
 
 - Contract giữ source Purchase Receipt voucher/revision cho allocation và unapplied movements.
 - Migration append-only `0030_purchase_unapplied_weight_attribution.sql` thêm barem/actual-weight attribution và guards.
@@ -45,20 +46,20 @@ Contract authoritative: `server/docs/ALUMDOOR-PURCHASE-RECEIPT-ALLOCATION.md`.
 - PO submit tự hút unapplied Receipt nguồn theo FIFO, tạo `apply_unapplied` allocation + negative movement + compatibility projection trong cùng mutation plan.
 - Tests cover partial/multiple source, source history, weight conservation và regression controller/store.
 
-### Slice B — settlement và override
+### Slice B — settlement và override backend
 
-Đã triển khai server-side:
+Đã hoàn thành server-side:
 
 - Close settlement window với permission và reason bắt buộc.
 - Integer tolerance bounds, shortage/overage variance và append-only settlement event.
 - Reverse settlement lifecycle guard.
 - Manual FIFO override có permission/reason và audit data.
 - Registry/action controllers và targeted tests.
-- Backdated Receipt warning được đưa vào submit preview; allocation vẫn theo commit sequence.
+- Backdated Receipt warning; allocation vẫn theo commit sequence.
 
 ### Slice C — backfill và cutover tooling
 
-Đã triển khai:
+Đã hoàn thành:
 
 - `server/scripts/purchase-allocation-backfill-planner.mjs`.
 - `server/scripts/backfill-purchase-receipt-allocations.mjs`, dry-run mặc định.
@@ -69,54 +70,70 @@ Contract authoritative: `server/docs/ALUMDOOR-PURCHASE-RECEIPT-ALLOCATION.md`.
 
 ### Slice D1 — server-authoritative submit preview
 
-Commit `a54ae45c8aa49194fee8199a584ed47e0f775f31` thêm:
+Commit `a54ae45c8aa49194fee8199a584ed47e0f775f31`:
 
 - `server/packages/clouderp-core/src/purchase-allocation-preview.ts`.
-- GET API `metaforge.api.get_submit_preview` tại tenant worker, có draft + submit permission checks.
+- GET API `metaforge.api.get_submit_preview` có draft + submit permission checks.
 - Preview dùng chính `AllocatingPurchaseReceiptController.buildPlan`, không duy trì thuật toán FIFO thứ hai.
-- UI generic trong `FormContainer` gọi preview trước submit và fail closed khi preview lỗi.
-- `SubmitPreviewDialog` responsive, hiển thị PO đích, quantity, barem/actual weight, unapplied và cảnh báo chứng từ lùi ngày.
+- `FormContainer` gọi preview trước submit và fail closed khi preview lỗi.
+- `SubmitPreviewDialog` responsive hiển thị PO đích, quantity, barem/actual weight, unapplied và cảnh báo lùi ngày.
 - Real submit vẫn chạy lại dưới supplier Durable Object và kiểm tra revision trước write.
-- Test khóa PO 200 + 100, Receipt 230 => preview 200 + 30; preview không mutate store; rollout disabled trả null.
+
+### Slice D2 — allocation timeline và drill-down
+
+Code SHA `38b0c3374e9c6c00efae95b4699c1a0831252ad2`:
+
+- `server/packages/document-kernel/src/purchase-allocation-timeline.ts` thêm read model từ append-only allocation ledger.
+- Read model chỉ hoạt động khi rollout state enabled; không đọc bảng procurement compatibility làm nguồn sự thật.
+- Hỗ trợ Purchase Order và Purchase Receipt.
+- Projection gồm ordered/received/remaining, allocated/unapplied, barem/actual weight, active/settled/reversed window, tolerance, bounds, variance và reason.
+- GET API `metaforge.api.get_purchase_allocation_timeline` kiểm tra document tồn tại và permission `read` trước khi trả dữ liệu.
+- `AllocationTimelineDialog.tsx` có summary cards, settlement-window cards, ledger event table, loading/error/empty states và horizontal overflow cho màn hình hẹp.
+- `FormContainer` hiện nút **Phân bổ** trên PO/Receipt đã submit hoặc cancel; draft Receipt tiếp tục dùng submit preview.
+- Test projection cover PO 300 đặt / 230 nhận / 70 còn lại và Receipt 200 allocated / 30 unapplied, kèm weight/window/event labels.
+- One-shot script đã tự xóa; workflow đã khôi phục `contents: read`, không còn đường commit/push trong CI chuẩn.
 
 ## Verification
 
-One-shot verified implementation run:
+### Exact-head trước timeline
 
-- Workflow run: `30613480237`.
-- Apply reviewed patches: **PASS**.
-- Full tests: **PASS**.
+SHA `9861a73fd9680aa3fa9fe84c4d42e7e186529c0a`:
+
+- CI run `30613828515`: **PASS**.
+- Purchase Feature CI run `30613828388`: **PASS**.
+
+### Timeline implementation
+
+Workflow run `30615852058`, attempt cuối job `91109594425`:
+
+- Apply exact-branch one-shot: **PASS**.
+- Server unit tests: **PASS**, 561/561.
+- Server SQL tests: **PASS**, gồm 30 migrations và allocation rollout/weight suites.
+- Client tests/selfcheck: **PASS**, 87 nhóm assert.
 - Typecheck: **PASS**.
 - Build: **PASS**.
-- Commit verified implementation: **PASS**.
-- Resulting SHA: `a54ae45c8aa49194fee8199a584ed47e0f775f31`.
-
-Exact-head standard workflows created for the bot-pushed SHA:
-
-- CI run `30613658678`: `action_required`, không có job.
-- Purchase Feature CI run `30613658682`: `action_required`, không có job.
-- Đây không phải test failure; cần một user-authored follow-up commit để kích hoạt lại exact-head CI bình thường.
+- Commit/push verified implementation: **PASS**.
+- Resulting code SHA: `38b0c3374e9c6c00efae95b4699c1a0831252ad2`.
+- Chỉ còn warning bundle size/dynamic import đã tồn tại; không có build failure.
 
 ## Phần còn thiếu trước release gate
 
-1. Allocation timeline/read model cho Purchase Order và Purchase Receipt.
-2. Settlement/reverse/manual-override dialogs trong operator UI.
-3. Supplier debt report từ allocation ledger: ordered, received, nominal debt, active window, oldest PO age.
-4. Loading/error/empty states và responsive browser verification.
-5. Worker/Durable Object concurrency và production-shaped cancel lifecycle tests còn thiếu.
-6. Exact-head standard CI green sau commit tài liệu hiện tại.
-7. Cloudflare Browser Preview QA desktop/mobile.
-8. Staging migrations, backfill dry-run và smoke PO → Receipt → cancel → settlement → report.
-9. Review rubric >= 95/100, không có Critical/High.
-10. Backup + explicit production approval riêng; FIFO vẫn disabled khi chỉ deploy code/schema.
+1. Settlement/reverse/manual-override dialogs trong operator UI, có permission, reason và confirmation.
+2. Supplier debt report từ allocation ledger: ordered, received, nominal debt, active window, oldest PO age.
+3. Worker/Durable Object concurrency và production-shaped Receipt cancel lifecycle tests.
+4. Exact-head standard CI green cho HEAD tài liệu cuối cùng.
+5. Cloudflare Browser Preview QA desktop `1440x1000` và mobile `390x844`.
+6. Staging migrations, backfill dry-run và smoke PO → Receipt → cancel → settlement → report.
+7. Review rubric >= 95/100, không có Critical/High.
+8. Backup + explicit production approval riêng; FIFO vẫn disabled khi chỉ deploy code/schema.
 
 ## Gate hiện tại
 
 - G0 Scope: **PASS**.
 - G1 Requirements: **PASS**.
 - G2 Technical plan: **PASS**.
-- G3 Full tests/typecheck/build: **PASS** trên verified implementation run `30613480237`.
-- G4 Exact-head standard CI: **PENDING RETRIGGER** sau bot-authored commit.
+- G3 Full tests/typecheck/build: **PASS**.
+- G4 Exact-head standard CI: **PASS** tại `9861a73...`; cần xác minh lại trên HEAD tài liệu cuối cùng.
 - G5 Staging + Browser QA: **NOT STARTED**.
 - Review score: chưa chấm vòng cuối.
 - Production: không được phép từ feature branch.
