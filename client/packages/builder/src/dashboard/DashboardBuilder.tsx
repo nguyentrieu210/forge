@@ -158,10 +158,10 @@ export function DashboardBuilder(props: DashboardBuilderProps) {
               <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"><Database className="size-3.5" /> Nguồn dữ liệu</div>
               <div className="space-y-1.5">
                 {DATA_SOURCES.map(([label, doctype]) => (
-                  <button key={label} type="button" className="flex w-full items-center gap-2 rounded-lg border bg-background px-2.5 py-2 text-left transition hover:border-primary/40 hover:bg-primary/[0.04]">
-                    <Database className="size-4 text-primary" />
+                  <Button key={label} type="button" variant="ghost" className="h-auto w-full justify-start gap-2 rounded-lg border bg-background px-2.5 py-2 text-left transition hover:border-primary/40 hover:bg-primary/[0.04]">
+                    <Database className="size-4 shrink-0 text-primary" />
                     <span className="min-w-0"><span className="block truncate text-xs font-medium">{label}</span><span className="block truncate text-[10px] text-muted-foreground">{doctype}</span></span>
-                  </button>
+                  </Button>
                 ))}
               </div>
             </section>
