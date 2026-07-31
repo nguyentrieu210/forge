@@ -22,7 +22,7 @@ jobs:
     timeout-minutes: 35
     environment: production
     env:
-      TARGET_SHA: db1cac83438f1d99ad9689005a7dd6e6d7979068
+      TARGET_SHA: b3dd1d15a1b52de698d0874b29feae79efe7ed6c
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
     steps:
@@ -49,7 +49,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$TARGET_SHA" = "db1cac83438f1d99ad9689005a7dd6e6d7979068"
+          test "$TARGET_SHA" = "b3dd1d15a1b52de698d0874b29feae79efe7ed6c"
           test -n "${CLOUDFLARE_API_TOKEN:-}"
           echo "EVIDENCE_DIR=$RUNNER_TEMP/gateway-release-evidence" >> "$GITHUB_ENV"
           mkdir -p "$RUNNER_TEMP/gateway-release-evidence"
@@ -107,7 +107,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
-      - name: Report child-grid scroll release result on PR 58
+      - name: Report dialog dropdown wheel release result on PR 62
         if: always()
         uses: actions/github-script@v7
         with:
@@ -115,10 +115,10 @@ jobs:
             const fs = require('node:fs');
             const dir = `${process.env.RUNNER_TEMP}/gateway-release-evidence`;
             const state = fs.existsSync(`${dir}/state.txt`) ? fs.readFileSync(`${dir}/state.txt`, 'utf8') : 'release job did not create state.txt';
-            const marker = '<!-- gateway-child-grid-scroll-production-release -->';
+            const marker = '<!-- gateway-dialog-dropdown-wheel-production-release -->';
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            const body = `${marker}\n# Gateway child-grid dropdown scroll production release\n\n\`\`\`text\n${state}\n\`\`\`\n\n[Workflow and artifacts](${runUrl})`;
-            const comments = await github.paginate(github.rest.issues.listComments, { owner: context.repo.owner, repo: context.repo.repo, issue_number: 58 });
+            const body = `${marker}\n# Gateway dialog dropdown wheel production release\n\n\`\`\`text\n${state}\n\`\`\`\n\n[Workflow and artifacts](${runUrl})`;
+            const comments = await github.paginate(github.rest.issues.listComments, { owner: context.repo.owner, repo: context.repo.repo, issue_number: 62 });
             const previous = comments.find((comment) => comment.body?.includes(marker));
             if (previous) await github.rest.issues.updateComment({ owner: context.repo.owner, repo: context.repo.repo, comment_id: previous.id, body });
-            else await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: 58, body });
+            else await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: 62, body });
