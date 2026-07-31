@@ -2,6 +2,56 @@
 
 Ngày cập nhật: **2026-07-31**.
 
+## P0 — Hoàn thiện tồn kho, sản xuất và danh mục Item
+
+Branch: `feat/inventory-manufacturing-item-catalog-20260731`.
+
+Audit: `server/docs/ALUMDOOR-INVENTORY-MANUFACTURING-ITEM-AUDIT.md`.
+
+Kết luận hiện tại: schema Item đủ làm nền nhưng dữ liệu và luồng chưa đủ để gọi là hoàn chỉnh.
+
+### Slice A — Catalog audit và validator
+
+1. Chốt brief Alumdoor authoritative giữa `alumdoor.json` và `alumdoor-v2.json`.
+2. Viết dry-run audit script cho Item, UOM conversion, Item Group, warehouse, BOM và Production Standard.
+3. Xuất catalog live tenant `alu` ra ngoài Git, chỉ ghi count/checksum/lỗi không chứa dữ liệu nhạy cảm vào repo.
+4. Validate theo loại Item: nguyên vật liệu, tiêu hao, bán thành phẩm, thành phẩm, hàng hoá, dịch vụ.
+5. Chặn Item có cờ mua/bán/sản xuất, stock UOM, measurement profile, account hoặc warehouse mâu thuẫn.
+6. Thêm regression tests cho Item validator và dữ liệu brief.
+
+### Slice B — Inventory completeness
+
+1. Khai vai trò kho: nguyên vật liệu, WIP, thành phẩm, chờ kiểm và phế/offcut.
+2. Bổ sung canonical lot/dimension reference cho Stock Entry Item hoặc bắt buộc dimensioned material đi qua dedicated action.
+3. Đồng bộ Aluminium Lot/Cut với stock ledger, transfer, issue, return và reconciliation.
+4. Chặn negative stock, sai kho, sai màu/khổ/lô và concurrent issue.
+5. Hoàn thiện opening balance và stock reconciliation theo kho/lô/quy cách.
+6. Báo cáo tồn khả dụng, đã giữ chỗ, WIP, phế/offcut và tuổi lô.
+
+### Slice C — Manufacturing completeness
+
+1. Validate BOM UOM và conversion về stock UOM; chặn circular/duplicate/zero-yield BOM.
+2. Version BOM/Production Standard và snapshot revision vào Work Order.
+3. Hoàn thiện Work Order partial issue, partial manufacture, over-consumption/over-production guard, close và cancel/reverse.
+4. Gắn tiêu hao nhôm với Aluminium Lot/Cut và giữ dấu vết offcut/phế liệu.
+5. Bổ sung operation/routing, tổ hoặc workstation, thời gian, QC, scrap/by-product và rework theo phase.
+6. Báo cáo định mức so với thực tế, WIP, tiến độ, variance và vật tư thiếu.
+
+### Slice D — UI, QA và release
+
+1. Làm gọn form Item theo loại mặt hàng, chỉ hiện trường liên quan.
+2. Hiển thị completeness/error indicator cho Item và BOM.
+3. Desktop/mobile Browser QA cho Item, Stock Entry, BOM và Work Order.
+4. PASS unit, SQL, worker concurrency, typecheck và build trên exact HEAD.
+5. Staging smoke: nhập kho → chuyển kho → Work Order → xuất vật tư → nhập thành phẩm → cancel/reverse → reports.
+6. Không deploy production hoặc sửa secret trước explicit approval riêng.
+
+### Điều phối với PR mua hàng
+
+- Draft PR `#14` đang hoàn thiện Purchase Order/Purchase Receipt trên branch riêng.
+- Nhánh tồn kho/sản xuất không phụ thuộc draft đó để bắt đầu audit.
+- Sau khi PR `#14` merge, rebase branch này và chạy lại toàn bộ gate do cùng chạm Item/stock/procurement contracts.
+
 ## P0 — Xác minh release sidebar gọn trên production
 
 **Mục tiêu:** xác nhận Cloudflare đã đưa bản sidebar desktop gọn lên Gateway production mà không ảnh hưởng route hoặc permission.
