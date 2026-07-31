@@ -6,11 +6,14 @@ Ngày cập nhật: **2026-08-01**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Default head sau CI cleanup: `60e19f0a6f498a2471a14210ec6939b3bdf1a0fd`.
+- Current default head tại snapshot: `1efac7e1bdafae32a58d4c64386e9e42d4e32cc4`.
+- CI cleanup merge SHA: `60e19f0a6f498a2471a14210ec6939b3bdf1a0fd`.
 - CI cleanup PR: #127.
 - Working branch tài liệu: `docs/record-ci-cleanup-merge-20260801`.
 - Đọc theo thứ tự: `EPIC_STATUS.md` → `CURRENT_STATUS.md` → `NEXT_TASKS.md` → `DELIVERY_POLICY.md`.
 - GitHub là nguồn sự thật cho code, PR, mergeability và CI.
+
+Commit `1efac7e1...` sau CI cleanup chỉ thay `.github/release/gateway-production.trigger`; không thuộc đợt sửa CI này.
 
 ## CI cleanup — MERGED
 
@@ -26,7 +29,7 @@ PR #127 đã squash-merge.
   - Inventory and Manufacturing CI `30658270984`: SUCCESS;
   - UI Pull Request Validation `30658270824`: SUCCESS.
 - Không có Cloudflare Production Smoke Observation hoặc release workflow chạy trên PR.
-- Không deploy Cloudflare, không sửa secret/DNS, không migration và không mutate tenant data.
+- Không deploy Cloudflare, không sửa secret/DNS, không migration và không mutate tenant data trong đợt cleanup.
 
 ## Kiến trúc CI hiện tại
 
