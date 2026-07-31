@@ -47,7 +47,9 @@ async function reportRows(call: SalesPlatformCall, reportName: string, filters: 
 
 function quantityFromRow(row: Json): number {
   for (const key of ["actual_qty", "balance_qty", "closing_qty", "stock_qty", "qty"]) {
-    const value = Number(row[key]);
+    const raw = row[key];
+    if (raw === null || raw === undefined || raw === "") continue;
+    const value = Number(raw);
     if (Number.isFinite(value)) return value;
   }
   return 0;

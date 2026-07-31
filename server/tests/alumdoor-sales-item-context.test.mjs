@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { salesItemContext } from "../dist/apps-src/alumdoor-worker/src/sales-item-context.js";
 
 function platform(records, report = []) {
@@ -68,6 +69,44 @@ test("sales item context returns exact UOM price and converted warehouse stock",
   assert.equal(result.body.price_missing, false);
   assert.match(result.body.availability_status, /Còn 3,5 Thùng/);
   assert.match(result.body.availability_status, /Giá Thùng: 1\.200\.000 VND/);
+});
+
+test("sales item context skips empty stock columns before using the populated balance", async () => {
+  const records = new Map([
+    ["Item:ITEM-1", item()],
+    ["Item Price:BẢNG GIÁ:ITEM-1:Thùng", { uom: "Thùng", currency: "VND", rate: "1200000" }],
+  ]);
+  const call = platform(records, [{
+    item_code: "ITEM-1",
+    warehouse: "Kho A",
+    actual_qty: null,
+    balance_qty: 35,
+  }]);
+  const result = await read(await salesItemContext(call, {
+    item_code: "ITEM-1",
+    uom: "Thùng",
+    warehouse: "Kho A",
+    price_list: "BẢNG GIÁ",
+    currency: "VND",
+  }));
+
+  assert.equal(result.status, 200);
+  assert.equal(result.body.available_stock_qty, 35);
+  assert.equal(result.body.available_qty, 3.5);
+});
+
+test("sales grid clears authoritative preview values when item context cannot be read", () => {
+  const source = readFileSync(
+    new URL("../../client/packages/views/src/form/ChildGrid.tsx", import.meta.url),
+    "utf8",
+  );
+  const failureBlock = source.match(/\} catch \{([\s\S]*?)Không đọc được tồn \/ giá/);
+
+  assert.ok(failureBlock, "sales item context failure handler must remain present");
+  assert.match(failureBlock[1], /patch\.available_qty = undefined/);
+  assert.match(failureBlock[1], /patch\.available_stock_qty = undefined/);
+  assert.match(failureBlock[1], /patch\.available_stock_uom = undefined/);
+  assert.match(failureBlock[1], /patch\.rate = undefined/);
 });
 
 test("sales item context rejects an Item Price whose currency differs from the document", async () => {

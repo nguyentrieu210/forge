@@ -942,6 +942,10 @@ export function ChildGrid(props: ChildGridProps) {
           patch.rate = salesContext.price_missing ? undefined : salesContext.rate;
         }
       } catch {
+        if (has("available_qty")) patch.available_qty = undefined;
+        if (has("available_stock_qty")) patch.available_stock_qty = undefined;
+        if (has("available_stock_uom")) patch.available_stock_uom = undefined;
+        if (parentDoc?.selling_price_list && has("rate")) patch.rate = undefined;
         if (has("availability_status")) patch.availability_status = "Không đọc được tồn / giá";
       }
     }
