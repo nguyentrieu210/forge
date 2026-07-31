@@ -68,13 +68,49 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
 
-          path = Path('server/packages/frappe-api/src/router.ts')
-          value = path.read_text(encoding='utf-8')
-          old = '    requestedUser: args.text("user"),'
-          new = '    ...(args.text("user") ? { requestedUser: args.text("user")! } : {}),'
-          if value.count(old) != 1:
-              raise SystemExit(f'router selected-user optional patch expected one match, found {value.count(old)}')
-          path.write_text(value.replace(old, new, 1), encoding='utf-8')
+          def replace_once(path: Path, old: str, new: str) -> None:
+              value = path.read_text(encoding='utf-8')
+              count = value.count(old)
+              if count != 1:
+                  raise SystemExit(f'{path}: expected one exact match, found {count}')
+              path.write_text(value.replace(old, new, 1), encoding='utf-8')
+
+          router = Path('server/packages/frappe-api/src/router.ts')
+          replace_once(
+              router,
+              '    requestedUser: args.text("user"),',
+              '    ...(args.text("user") ? { requestedUser: args.text("user")! } : {}),',
+          )
+
+          test_path = Path('server/tests/rbac-contract.test.mjs')
+          replace_once(
+              test_path,
+              'async function callMethod(method, params, context) {',
+              'async function callMethod(method, params, context, httpMethod = "GET") {',
+          )
+          replace_once(
+              test_path,
+              '  const response = await routeFrappeApi(new Request(url), url, context);',
+              '  const response = await routeFrappeApi(new Request(url, { method: httpMethod }), url, context);',
+          )
+          replace_once(
+              test_path,
+              '''  const added = await callMethod("metaforge.api.add_user_permission", {
+    user: USER.user_id,
+    allow: "Warehouse",
+    for_value: "KHO-1",
+  }, fixture.context);''',
+              '''  const added = await callMethod("metaforge.api.add_user_permission", {
+    user: USER.user_id,
+    allow: "Warehouse",
+    for_value: "KHO-1",
+  }, fixture.context, "POST");''',
+          )
+          replace_once(
+              test_path,
+              '  const removed = await callMethod("metaforge.api.remove_user_permission", { id }, fixture.context);',
+              '  const removed = await callMethod("metaforge.api.remove_user_permission", { id }, fixture.context, "POST");',
+          )
           PY
 
       - name: Install dependencies
