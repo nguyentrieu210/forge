@@ -74,13 +74,13 @@ FROM documents
 WHERE doctype IN ('Sales Invoice', 'Purchase Invoice')
   AND docstatus = 1;
 
--- Purchase Invoice already exposes due_date. Add the same metadata field to
--- Sales Invoice without rewriting the generator-produced historical migration.
+-- Purchase Invoice already exposes due_date. Add the same required metadata
+-- field to Sales Invoice without rewriting the generator-produced migration.
 UPDATE doctype_definitions
 SET metadata_json = json_insert(
       metadata_json,
       '$.fields[#]',
-      json('{"fieldname":"due_date","label":"Due Date","fieldtype":"Date","in_list_view":true,"in_standard_filter":true}')
+      json('{"fieldname":"due_date","label":"Due Date","fieldtype":"Date","required":true,"in_list_view":true,"in_standard_filter":true}')
     ),
     revision = revision + 1,
     modified_by = 'migration',
