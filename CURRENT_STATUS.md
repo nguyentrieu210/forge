@@ -9,9 +9,10 @@ Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
 - Default head đã đồng bộ vào nhánh tài chính: `acd0a8df95eb35342b15de282b65102ac4314801`.
 - Working branch: `feat/finance-ar-ap-completion`.
 - Draft PR: `#15` — `feat(finance): add invoice due dates and AR/AP aging`.
-- Finance code/test head trước commit trạng thái này: `93c3f2ab5c7dd286c9f03cd13ad769ba14a65d8e`.
-- PR hiện mergeable và branch không còn commit phía sau default.
-- Backup trước khi đồng bộ base: `backup/finance-ar-ap-pre-rebase-20260731` tại `a0f787e2a8abde287b184d5709985aec8cfd4eb8`.
+- Finance code/test head: `93c3f2ab5c7dd286c9f03cd13ad769ba14a65d8e`.
+- Handoff/docs head trước commit trạng thái cuối: `3855267a0e096baf535e1d0e2c563e8b55ad7920`.
+- PR mergeable và branch không còn commit phía sau default.
+- Backup trước đồng bộ base: `backup/finance-ar-ap-pre-rebase-20260731` tại `a0f787e2a8abde287b184d5709985aec8cfd4eb8`.
 - Workflow tạm dùng để đồng bộ branch và workflow tạm thử Worker đều đã bị xóa khỏi final diff.
 - Final diff hiện có 16 file finance/docs/test; không có workflow tạm, `.env`, `server/work/`, `tmp/`, backup SQL hoặc generated artifacts.
 
