@@ -1,4 +1,4 @@
-# Synchronize PR #38 after the active default-branch gate was installed.
+# Synchronize PR #38 after the simplified default-branch gate was installed.
 name: RBAC Slice B One Shot
 
 on:
