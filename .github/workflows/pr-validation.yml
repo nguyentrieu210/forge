@@ -76,11 +76,10 @@ jobs:
           pnpm test
           pnpm typecheck
           pnpm build
-          rm -f .github/workflows/rbac-slice-b-one-shot.yml .github/rbac-slice-b-patch.gz.b64
+          rm -f .github/rbac-slice-b-patch.gz.b64
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add \
-            .github/workflows/rbac-slice-b-one-shot.yml \
             .github/rbac-slice-b-patch.gz.b64 \
             server/migrations/tenant/0030_rbac_audit.sql \
             server/scripts/test-rbac-audit-migration.py \
