@@ -2,6 +2,7 @@ export * from "./types.js";
 export * from "./pricing.js";
 export * from "./controllers.js";
 export * from "./physical-stock-entry.js";
+export * from "./manufacturing-lifecycle.js";
 export * from "./registry.js";
 export * from "./suite-controllers.js";
 export * from "./enterprise-types.js";
