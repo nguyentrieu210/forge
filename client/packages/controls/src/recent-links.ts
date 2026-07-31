@@ -1,8 +1,11 @@
-/** Ghi nhớ vài giá trị Link vừa chọn theo từng doctype đích (localStorage, client-only) — hiện
- * "Gần đây" trong dropdown khi ô tìm còn trống, đỡ phải gõ lại giá trị vừa dùng. */
-// v2 drops old client-only entries that can outlive records deleted on the server.
-const PREFIX = "mf-recent-link:v2:";
-const MAX = 5;
+/**
+ * Recent Link choices đã bị loại khỏi sản phẩm.
+ *
+ * Giữ hai hàm no-op để LinkCombobox cũ vẫn tương thích trong lúc tránh một diff khổng lồ ở
+ * controls.tsx. Dropdown luôn nhận danh sách rỗng và lựa chọn mới không còn được ghi vào
+ * localStorage. Key v2 cũ được dọn khi dropdown mở lần đầu.
+ */
+const LEGACY_PREFIX = "mf-recent-link:v2:";
 
 export interface RecentLinkEntry {
   value: string;
@@ -11,16 +14,13 @@ export interface RecentLinkEntry {
 
 export function loadRecentLinks(doctype: string): RecentLinkEntry[] {
   try {
-    const raw = localStorage.getItem(PREFIX + doctype);
-    return raw ? (JSON.parse(raw) as RecentLinkEntry[]) : [];
+    localStorage.removeItem(LEGACY_PREFIX + doctype);
   } catch {
-    return [];
+    // Storage bị chặn không ảnh hưởng chức năng Link.
   }
+  return [];
 }
 
-export function recordRecentLink(doctype: string, entry: RecentLinkEntry): void {
-  try {
-    const next = [entry, ...loadRecentLinks(doctype).filter((e) => e.value !== entry.value)].slice(0, MAX);
-    localStorage.setItem(PREFIX + doctype, JSON.stringify(next));
-  } catch { /* private mode — bỏ qua, không phá chức năng chọn */ }
+export function recordRecentLink(_doctype: string, _entry: RecentLinkEntry): void {
+  // Tính năng Lựa chọn gần đây đã bị loại: không lưu client-side history.
 }
