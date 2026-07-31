@@ -92,13 +92,15 @@ function ShortcutCard({ title, description, icon, onClick, primary }: ShortcutCa
 
 function ProcessFlow({ steps }: { steps: string[] }) {
   return (
-    <div className="flex min-w-max items-center justify-center gap-2 overflow-x-auto px-1 py-2" aria-label="Các bước quy trình">
-      {steps.map((step, index) => (
-        <div key={step} className="flex items-center gap-2">
-          <div className="rounded-lg border bg-background px-4 py-3 text-center text-sm font-medium shadow-sm">{step}</div>
-          {index < steps.length - 1 ? <ArrowRight className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" /> : null}
-        </div>
-      ))}
+    <div className="w-full overflow-x-auto" aria-label="Các bước quy trình">
+      <div className="flex min-w-max items-center justify-center gap-2 px-1 py-2">
+        {steps.map((step, index) => (
+          <div key={step} className="flex items-center gap-2">
+            <div className="rounded-lg border bg-background px-4 py-3 text-center text-sm font-medium shadow-sm">{step}</div>
+            {index < steps.length - 1 ? <ArrowRight className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" /> : null}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -129,7 +131,7 @@ export function OperationsProcessWorkspace({ onNavigate }: NavigateProps) {
           <DialogHeader><DialogTitle>Tạo mới công việc</DialogTitle></DialogHeader>
           <p className="text-sm text-muted-foreground">Chọn thao tác phù hợp để tiếp tục.</p>
           <div className="grid gap-2 pt-2">
-            <Button className="justify-start gap-2" onClick={() => { setCreateOpen(false); onNavigate("form"); }}><Plus className="size-4" /> Mở biểu mẫu Task mới</Button>
+            <Button className="justify-start gap-2" onClick={() => { setCreateOpen(false); onNavigate("form?new=1"); }}><Plus className="size-4" /> Mở biểu mẫu Task mới</Button>
             <Button variant="outline" className="justify-start gap-2" onClick={() => { setCreateOpen(false); onNavigate("list"); }}><ListChecks className="size-4" /> Mở danh sách công việc</Button>
           </div>
         </DialogContent>
@@ -146,10 +148,10 @@ interface MetaCreateOption {
 }
 
 const META_CREATE_OPTIONS: MetaCreateOption[] = [
-  { label: "DocType mới", description: "Cấu trúc dữ liệu và trường", target: "b-doctype", icon: <FileText /> },
-  { label: "Workflow mới", description: "Trạng thái và chuyển tiếp", target: "b-workflow", icon: <Workflow /> },
-  { label: "Print Format mới", description: "Mẫu in chứng từ", target: "b-print", icon: <Receipt /> },
-  { label: "Dashboard mới", description: "KPI và biểu đồ", target: "b-dashboard", icon: <LayoutDashboard /> },
+  { label: "DocType mới", description: "Cấu trúc dữ liệu và trường", target: "b-doctype?new=1", icon: <FileText /> },
+  { label: "Workflow mới", description: "Trạng thái và chuyển tiếp", target: "b-workflow?new=1", icon: <Workflow /> },
+  { label: "Print Format mới", description: "Mẫu in chứng từ", target: "b-print?new=1", icon: <Receipt /> },
+  { label: "Dashboard mới", description: "KPI và biểu đồ", target: "b-dashboard?new=1", icon: <LayoutDashboard /> },
 ];
 
 export function MetaProcessWorkspace({ onNavigate }: NavigateProps) {
