@@ -97,7 +97,7 @@ jobs:
         run: |
           set -euo pipefail
           pnpm exec wrangler d1 migrations apply cloudforge-demo --local --config apps/tenant-worker/wrangler.jsonc
-          node scripts/seed-local.mjs --user "$FORGE_AUTH_USER" --password "$FORGE_AUTH_PASSWORD"
+          node scripts/seed-local.mjs --auth-only --user "$FORGE_AUTH_USER" --password "$FORGE_AUTH_PASSWORD"
 
       - name: Start local tenant worker
         working-directory: server
