@@ -55,8 +55,22 @@ jobs:
           set +e
           pnpm --dir server run test:unit > /tmp/server-unit.log 2>&1
           status=$?
+          if [ "$status" -ne 0 ]; then
+            echo '--- failing test context ---'
+            grep -n -B 12 -A 36 -E 'not ok|AssertionError|ERR_ASSERTION|testCodeFailure' /tmp/server-unit.log || true
+            echo '--- end failing test context ---'
+          fi
           tail -n 240 /tmp/server-unit.log
           exit $status
+
+      - name: Upload unit-test log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sales-server-unit-log-${{ github.run_id }}
+          path: /tmp/server-unit.log
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Alumdoor brief check
         shell: bash
