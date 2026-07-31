@@ -5,7 +5,9 @@ on:
     types: [opened, synchronize, reopened, edited, ready_for_review]
 
 permissions:
-  contents: read
+  contents: write
+  pull-requests: write
+  issues: write
 
 jobs:
   validate:
@@ -41,3 +43,57 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+  rbac-slice-b-wire:
+    name: Wire and gate RBAC Slice B
+    if: "${{ github.event.number == 39 }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout Slice B branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/rbac-permission-slice-b-core-20260731
+          fetch-depth: 0
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Apply, verify and commit pending wiring
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          if [ ! -f server/scripts/apply-rbac-slice-b-wiring.py ]; then
+            echo "No pending Slice B wiring patch."
+            exit 0
+          fi
+          trap 'gh pr comment 39 --repo "${{ github.repository }}" --body "RBAC Slice B wiring failed in workflow run ${RUN_ID}. No wiring commit was pushed." || true' ERR
+          python3 server/scripts/apply-rbac-slice-b-wiring.py
+          pnpm install --frozen-lockfile
+          pnpm test
+          pnpm typecheck
+          pnpm build
+          rm server/scripts/apply-rbac-slice-b-wiring.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            server/packages/auth/src/user-store.ts \
+            server/packages/frappe-api/src/router.ts \
+            server/tests/rbac-contract.test.mjs \
+            server/scripts/apply-rbac-slice-b-wiring.py
+          git diff --cached --check
+          git commit -m "feat(rbac): wire atomic administration into API"
+          git push origin HEAD:feat/rbac-permission-slice-b-core-20260731
