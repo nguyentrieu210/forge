@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
@@ -33,9 +33,12 @@ function validRecords() {
   ];
 }
 
+function cliScript() {
+  return fileURLToPath(new URL("../scripts/audit-alumdoor-catalog.mjs", import.meta.url));
+}
+
 function runCli(args) {
-  const script = fileURLToPath(new URL("../scripts/audit-alumdoor-catalog.mjs", import.meta.url));
-  return spawnSync(process.execPath, [script, ...args], { encoding: "utf8" });
+  return spawnSync(process.execPath, [cliScript(), ...args], { encoding: "utf8" });
 }
 
 test("valid catalog produces no Critical/High finding", () => {
@@ -45,6 +48,19 @@ test("valid catalog produces no Critical/High finding", () => {
   assert.equal(report.counts.active_items, 2);
   assert.equal(report.counts.active_boms, 1);
   assert.match(report.checksum, /^[a-f0-9]{64}$/);
+});
+
+test("disabled Items remain counted without creating active-readiness defects", () => {
+  const records = validRecords();
+  records.push({
+    doctype: "Item",
+    name: "DISABLED-BROKEN",
+    data: { item_code: "DISABLED-BROKEN", disabled: 1 },
+  });
+  const report = planAlumdoorCatalogAudit({ metadataVersion: "2.0.34", records });
+  assert.equal(report.counts.active_items, 2);
+  assert.equal(report.counts.disabled_items, 1);
+  assert.ok(report.findings.every((finding) => finding.name !== "DISABLED-BROKEN"));
 });
 
 test("audit reports service, conversion, manufactured-item and BOM defects", () => {
@@ -127,6 +143,35 @@ test("CLI remains read-only and writes a deterministic fixture report", () => {
   const denied = runCli(["--input", fixture, "--execute"]);
   assert.notEqual(denied.status, 0);
   assert.match(`${denied.stderr}${denied.stdout}`, /read-only/);
+});
+
+test("CLI defaults generated reports outside the repository", () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "forge-catalog-default-output-"));
+  const fixture = path.join(dir, "fixture.json");
+  writeFileSync(fixture, JSON.stringify({ metadata_version: "2.0.34", records: validRecords() }));
+  const run = runCli(["--input", fixture, "--redacted"]);
+  assert.equal(run.status, 0, run.stderr || run.stdout);
+  const summary = JSON.parse(run.stdout);
+  assert.equal(path.relative(tmpdir(), summary.output).startsWith(".."), false);
+  assert.equal(existsSync(summary.output), true);
+});
+
+test("CLI refuses generated audit output inside the repository", () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "forge-catalog-repo-output-"));
+  const fixture = path.join(dir, "fixture.json");
+  const forbiddenOutput = fileURLToPath(new URL("../alumdoor-catalog-audit-should-not-exist.json", import.meta.url));
+  writeFileSync(fixture, JSON.stringify({ metadata_version: "2.0.34", records: validRecords() }));
+  const run = runCli(["--input", fixture, "--output", forbiddenOutput, "--redacted"]);
+  assert.notEqual(run.status, 0);
+  assert.match(`${run.stderr}${run.stdout}`, /outside the repository/i);
+  assert.equal(existsSync(forbiddenOutput), false);
+});
+
+test("remote audit query preserves disabled master state", () => {
+  const source = readFileSync(cliScript(), "utf8");
+  assert.doesNotMatch(source, /disabled\s*=\s*0/);
+  assert.match(source, /disabled AS disabled_state/);
+  assert.match(source, /'\$\.disabled'/);
 });
 
 test("CLI audits the authoritative alumdoor-v2 brief fixtures directly", () => {
