@@ -1,7 +1,7 @@
 import type { ControllerRegistry } from "../../document-kernel/src/index.js";
 import {
-  AssetController, AssetDepreciationController, BillOfMaterialsController,
-  CreditNoteController, DebitNoteController, StockReturnController, WorkOrderController,
+  AssetController, AssetDepreciationController,
+  CreditNoteController, DebitNoteController, StockReturnController,
 } from "./controllers.js";
 import {
   AssetDisposalController, AssetMaintenanceController, AssetMovementController, ExpenseClaimController,
@@ -15,16 +15,20 @@ import {
 import {
   CutOrderController, StockReconciliationController, StockReservationController,
 } from "./alumdoor-inventory.js";
-import { PhysicalStockEntryController } from "./physical-stock-entry.js";
+import {
+  ManufacturingStockEntryController,
+  SnapshotWorkOrderController,
+  VersionedBillOfMaterialsController,
+} from "./manufacturing-lifecycle.js";
 
 export function registerErpNextCoreControllers(registry: ControllerRegistry): ControllerRegistry {
   return registry
     .register(new CreditNoteController())
     .register(new DebitNoteController())
     .register(new StockReturnController())
-    .register(new BillOfMaterialsController())
-    .register(new WorkOrderController())
-    .register(new PhysicalStockEntryController())
+    .register(new VersionedBillOfMaterialsController())
+    .register(new SnapshotWorkOrderController())
+    .register(new ManufacturingStockEntryController())
     .register(new AssetController())
     .register(new AssetDepreciationController())
     .register(new ProductionPlanController())
