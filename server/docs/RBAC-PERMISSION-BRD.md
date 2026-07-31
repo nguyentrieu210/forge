@@ -1,11 +1,11 @@
 # RBAC AND DATA-SCOPE COMPLETION BRD
 
-Trạng thái: **DRAFT — G1 requirements**  
+Trạng thái: **APPROVED — G1 requirements**  
 Ngày: **2026-07-31**  
 Branch: `feat/rbac-permission-completion-20260731`  
 Base đã audit: `cd60f8c09c48105db84a82c12ad3b32d9f075064`
 
-Tài liệu này chốt yêu cầu cho phân quyền Forge trước khi sửa runtime. Không triển khai code, migration hoặc production rollout cho tới khi các quyết định ở mục 12 được duyệt.
+Tài liệu này chốt yêu cầu cho phân quyền Forge trước khi sửa runtime. Các quyết định D1–D3 đã được duyệt theo phương án A; kế hoạch triển khai G2 nằm tại `server/docs/RBAC-PERMISSION-IMPLEMENTATION-PLAN.md`. Việc duyệt requirements không cho phép production rollout hoặc sửa secrets.
 
 ## 1. Bối cảnh và nguồn sự thật
 
@@ -242,7 +242,9 @@ Thực hiện nghiệp vụ theo role, DocPerm, workflow, field permission, scop
 - CI exact HEAD xanh.
 - Không production deploy từ branch này.
 
-## 11. Kế hoạch slice sau khi BRD được duyệt
+## 11. Kế hoạch slice đã duyệt
+
+Kế hoạch file/test chi tiết nằm tại `server/docs/RBAC-PERMISSION-IMPLEMENTATION-PLAN.md`.
 
 ### Slice A — Sửa contract hiện có
 
@@ -259,7 +261,7 @@ Thực hiện nghiệp vụ theo role, DocPerm, workflow, field permission, scop
 ### Slice C — Evaluator completeness
 
 - Chốt static-vs-metadata authority.
-- Chốt hierarchy semantics.
+- Giữ exact-value scope theo D3.
 - Phủ report/export/print/search/files/actions bằng tests.
 
 ### Slice D — UI và QA
@@ -274,28 +276,19 @@ Thực hiện nghiệp vụ theo role, DocPerm, workflow, field permission, scop
 - Staging với user đại diện từng role và data scope.
 - Không deploy production nếu chưa có approval riêng.
 
-## 12. Quyết định cần duyệt trước G2
+## 12. Quyết định đã duyệt
 
 ### D1 — Quyền của System Manager
 
-- **A — Giữ full tenant superadmin để tương thích**, nhưng thêm last-admin, self-lockout, audit và test rõ ràng.
-- B — Tách `Access Manager` khỏi `System Manager`; System Manager quản metadata nhưng không bypass dữ liệu.
-
-Đề xuất: **A** trong đợt này để tránh phá tenant hiện có; thiết kế tách role là migration riêng.
+**Đã duyệt A:** giữ full tenant superadmin để tương thích, nhưng thêm last-admin, self-lockout, audit và test rõ ràng. Thiết kế tách `Access Manager` là migration riêng.
 
 ### D2 — Ai sở hữu DocPerm
 
-- **A — App/platform sở hữu, Permission Center chỉ đọc.** Muốn đổi phải sửa brief/manifest và cài phiên bản mới.
-- B — Cho tenant override DocPerm bằng lớp overlay có migration, audit và conflict policy.
-
-Đề xuất: **A**. Overlay quyền là một nguồn thứ ba và rất dễ biến cập nhật app thành trò đoán ý người tiền nhiệm.
+**Đã duyệt A:** app/platform sở hữu, Permission Center chỉ đọc. Muốn đổi phải sửa brief/manifest và cài phiên bản mới.
 
 ### D3 — Hierarchy scope
 
-- **A — Exact-value scope trong đợt này; từ chối `hide_descendants=true` cho tới khi có hierarchy contract.**
-- B — Implement descendant expansion ngay cho từng cây Company/Branch/Territory/Warehouse.
-
-Đề xuất: **A**. Lưu một cờ không có tác dụng còn nguy hiểm hơn không có cờ.
+**Đã duyệt A:** exact-value scope trong đợt này; từ chối `hide_descendants=true` cho tới khi có hierarchy contract.
 
 ## 13. Definition of done
 
