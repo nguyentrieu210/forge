@@ -5,10 +5,81 @@ Ngày cập nhật: **2026-08-01**.
 ## Dự án
 
 - Repository: `nguyentrieu210/forge`.
-- Default branch: `hotfix/alumdoor-print-list-delete`.
-- Default head khi mở nhánh: `cbe60228fb10a3b51b52880fb178c164b63ff9f8`.
-- Working branch: `docs/record-alumdoor-app-worker-release-20260801`.
+- Base branch: `hotfix/alumdoor-print-list-delete`.
+- Base head đã đồng bộ: `f27d4c6efe37a0cca91e3f1672a199d33b09cbab`.
+- Working branch: `feat/metaforge-misa-workspace-tabs`.
+- Draft PR: `#81`.
 - GitHub là nguồn sự thật cho code, CI và release evidence.
+
+## Đọc trước khi tiếp tục PR #81
+
+1. `CURRENT_STATUS.md`
+2. `NEXT_TASKS.md`
+3. `client/apps/demo/src/DemoShell.tsx`
+4. `client/apps/demo/src/workspace-meta.tsx`
+5. `client/apps/demo/src/App.tsx`
+6. `client/apps/demo/e2e/workspace-navigation.spec.ts`
+7. `.github/workflows/ui-pr-validation.yml`
+
+Repository chưa cài `FORGE.md` và `.forge/manifest.json`. Phiên này dùng Forge Skills pack `0.1.0` người dùng cung cấp ngoài repo; `node scripts/validate-pack.mjs` PASS với 7 skills. Nếu cài pack vào project, phải làm PR riêng, không trộn vào PR UI.
+
+## MetaForge workspace — yêu cầu đã chốt
+
+Navigation theo mẫu MISA AMIS:
+
+1. sidebar là các phân hệ;
+2. tab đầu là `Quy trình nghiệp vụ`, có shortcut mở DocType hoặc modal tạo mới;
+3. tab thứ hai là `Báo cáo tổng quan`;
+4. tab từ vị trí ba là nghiệp vụ/DocType;
+5. module Meta: Quy trình → Tổng quan → DocType → Workflow → Print Format → Dashboard.
+
+## MetaForge workspace — đã làm
+
+- `DemoShell.tsx`: workspace metadata, module sidebar, tab kind và route aliases.
+- `workspace-meta.tsx`: hai module, process flow, shortcut, modal tạo mới và dashboard Meta.
+- `App.tsx`: route mặc định `/view/process`, create mode `?new=1`, Task mới dùng `NEW_TASK_DOC`.
+- `BuilderRoutes.tsx`: DocType create mode dùng `blankDocType()`.
+- `workspace-navigation-selfcheck.ts`: khóa thứ tự tab, aliases và sáu tab Meta; đã nối vào `pnpm test`.
+- `workspace-navigation.spec.ts`: browser journey thật cho Quy trình, modal tạo Task, sidebar Meta, modal tạo Meta, DocType builder, Báo cáo tổng quan và document overflow; chụp `meta-process.png` và `meta-overview.png`.
+- `ui-pr-validation.yml`: thêm required step `Run Meta workspace browser QA` và upload demo test-results.
+
+## MetaForge workspace — trạng thái gate
+
+- G0 Scope: PASS.
+- G1 Requirements: PASS theo mô tả người dùng.
+- G2 Plan: PASS; thay đổi hẹp ở demo workspace và CI test.
+- Head cũ `962648a0cc2bff8e301dbe0c96e79d40a8ad50e4` đã PASS đủ CI trước dedicated browser test.
+- Feature đã được dựng lại trên base mới `f27d4c6efe37a0cca91e3f1672a199d33b09cbab`; không làm mất 84 commit Sales/Inventory/Manufacturing mới.
+- G3/G4 trên exact final head mới vẫn cần provider evidence.
+- Không dùng kết quả head cũ để ready/merge.
+- Giữ PR ở draft tới khi dedicated browser QA và toàn bộ required checks PASS, sau đó vẫn cần người dùng duyệt UI hoặc ra lệnh rõ chuyển ready/merge.
+- G5 Staging không áp dụng; không deploy Cloudflare cho PR UI.
+
+## MetaForge workspace — việc tiếp theo
+
+1. Lấy exact final head sau khi branch PR được đặt lại từ nhánh rebase.
+2. Xác nhận branch behind base = 0 và không conflict.
+3. Theo dõi CI, PR Validation, Sales, Purchase, Inventory và UI Pull Request Validation trên cùng SHA.
+4. Trong UI workflow, kiểm step `Run Meta workspace browser QA` và artifact screenshot.
+5. Nếu fail, đọc log/trace và sửa direct cause theo bounded fix loop; không xóa test để lấy màu xanh.
+6. Cập nhật PR body bằng exact SHA, run IDs và artifact evidence.
+7. Không ready/merge nếu chưa có lệnh rõ.
+
+## MetaForge workspace — phạm vi còn lại
+
+- UI mới hiện ở mock/demo `App.tsx`.
+- `LiveApp.tsx` chưa nối Meta vì chưa có route và permission builder thật.
+- Không tạo menu live dẫn tới route giả.
+- Nâng sang live là P1 riêng, cần product decision về quyền Meta builder.
+
+## Lệnh kiểm tra liên quan
+
+- `pnpm --filter @metaforge/demo run selfcheck`
+- `pnpm --filter @metaforge/demo exec playwright test e2e/workspace-navigation.spec.ts --config playwright.config.ts`
+- `pnpm typecheck`
+- `pnpm build`
+
+Môi trường ChatGPT hiện tại không có checkout/dependency cache; dùng GitHub Actions làm provider evidence, không tuyên bố local command đã chạy nếu chưa có log.
 
 ## Sales Unicode Item Price — feature đã merge
 
@@ -94,7 +165,7 @@ Ngày cập nhật: **2026-08-01**.
 - PR `#77` merge SHA `a67d62377f1869d95906320636eabbd9bbd56ab7` khóa mọi write mode bằng approved checksum.
 - FIFO rollout vẫn **disabled**.
 
-## Việc tiếp theo
+## Các việc production còn lại
 
 1. Hard refresh `https://alu.kairo.vn` và chạy authenticated Sales smoke:
    - Sales Order mới;
@@ -112,8 +183,9 @@ Ngày cập nhật: **2026-08-01**.
 
 ## Safety
 
+- Không deploy Cloudflare trong PR UI `#81`.
 - App Worker Sales release đã hoàn tất qua controlled workflow và provider verification.
 - Không sửa production secrets hoặc DNS.
-- Không mutate Item Price hay dữ liệu khách hàng.
+- Không mutate Item Price, D1, KV hoặc dữ liệu khách hàng trong PR UI.
 - Không bật FIFO.
 - Không commit `.env`, `server/work/`, `tmp`, backup hoặc generated evidence.
