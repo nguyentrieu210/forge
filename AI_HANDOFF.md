@@ -50,27 +50,29 @@ Không nằm trong nhánh này: manufacturing lifecycle Slice C, physical-stock 
 - Default SHA lúc đồng bộ: `4cbcd2a3a8f742da7dd1b7e0c5b29899af4cfce0`.
 - Branch cũ từng ahead `25`, behind `12` và diverged.
 - Sync merge commit: `59c364a1b8443713921efad84b710b07ce9823a9`.
-- PR `#49` sau sync: conflict-free, `mergeable=true`, vẫn draft.
-- Stale branch copies của `AI_HANDOFF.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md` không được phép ghi đè trạng thái production mới từ default.
+- Exact final head sau cập nhật handoff/status/tasks: `a1ba0500ec638bb10d25d9a1c6fd860fd567fe34`.
+- PR `#49`: conflict-free, `mergeable=true`, vẫn draft.
 
 ## CI
 
-Trên code head `59c364a1b8443713921efad84b710b07ce9823a9`:
+Code head `59c364a1b8443713921efad84b710b07ce9823a9` đã PASS PR Validation, CI, Inventory and Manufacturing, Purchase và Sales; UI run cũ đang chạy khi tài liệu được cập nhật.
 
-- PR Validation `30644981424`: PASS.
-- Sales Feature CI `30644945918`: PASS.
-- Inventory and Manufacturing CI `30644945877`: PASS.
-- CI `30644945928`: PASS.
-- Purchase Feature CI `30644945921`: PASS.
-- UI Pull Request Validation `30644945919`: đang chạy browser/auth gates tại thời điểm cập nhật.
+Exact final head `a1ba0500ec638bb10d25d9a1c6fd860fd567fe34` đã kích hoạt lại required workflows:
 
-Commit tài liệu này tạo exact final head mới; phải dùng CI của final head, không dùng các run cũ làm merge evidence.
+- PR Validation `30645267314`.
+- UI Pull Request Validation `30645267303`.
+- CI `30645267108`.
+- Sales Feature CI `30645267226`.
+- Inventory and Manufacturing CI `30645267301`.
+- Purchase Feature CI `30645267263`.
+
+Các run này đang queued/pending tại thời điểm cập nhật. Chỉ kết quả trên exact final head mới là merge evidence.
 
 ## Việc tiếp theo
 
-1. Kiểm exact final head sau các commit tài liệu.
-2. Chờ toàn bộ required workflows PASS trên exact final head.
-3. Cập nhật PR body với final SHA và CI run IDs.
+1. Chờ toàn bộ required workflows PASS trên exact final head.
+2. Cập nhật PR body với kết quả cuối.
+3. Kiểm unresolved review threads.
 4. Chuyển PR khỏi draft khi mergeable, review threads sạch và CI xanh.
 5. Không merge PR #49 nếu chưa có yêu cầu merge rõ ràng.
 6. Sau merge mới retarget/rebase Slice C và tiếp tục Slice D.
