@@ -135,7 +135,7 @@ jobs:
           set -euo pipefail
           BASE='https://alu.kairo.vn'
           health=0
-          for attempt in $(seq 1 18); do
+          for ((attempt = 1; attempt <= 18; attempt++)); do
             health="$(curl --silent --show-error --output "$EVIDENCE_DIR/health.json" --write-out '%{http_code}' "$BASE/health" || true)"
             [ "$health" = '200' ] && break
             sleep 5
