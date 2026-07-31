@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
@@ -94,16 +94,29 @@ export function parseReadinessArgs(argv) {
 }
 
 export function resolveEvidenceDirectory(outputDir, options = {}) {
-  const repo = path.resolve(options.repositoryRoot ?? repositoryRoot);
+  const repo = resolvePhysicalPath(options.repositoryRoot ?? repositoryRoot);
   const requested = outputDir
     ? path.resolve(options.cwd ?? process.cwd(), outputDir)
     : path.join(options.tempRoot ?? os.tmpdir(), "forge-purchase-fifo-readiness");
-  const resolved = path.resolve(requested);
+  const resolved = resolvePhysicalPath(requested);
   const relative = path.relative(repo, resolved);
   if (relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative))) {
     throw new Error(`evidence directory must be outside repository: ${resolved}`);
   }
   return resolved;
+}
+
+export function resolvePhysicalPath(targetPath) {
+  let cursor = path.resolve(targetPath);
+  const missingSegments = [];
+  while (!existsSync(cursor)) {
+    const parent = path.dirname(cursor);
+    if (parent === cursor) break;
+    missingSegments.unshift(path.basename(cursor));
+    cursor = parent;
+  }
+  const physicalBase = existsSync(cursor) ? realpathSync(cursor) : cursor;
+  return path.resolve(physicalBase, ...missingSegments);
 }
 
 export function buildBackfillArgs(args, reportPath) {
