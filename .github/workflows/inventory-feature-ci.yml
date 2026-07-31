@@ -94,3 +94,87 @@ jobs:
 
       - name: Build repository
         run: pnpm build
+
+  audit-alu:
+    name: Read-only redacted alu catalog audit
+    if: ${{ github.event_name == 'pull_request' && github.head_ref == 'feat/inventory-manufacturing-item-catalog-20260731' }}
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: d4d5a24d4e56f28f27fe58b64ef149a5
+      REPORT_PATH: ${{ runner.temp }}/alu-catalog-redacted.json
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify read-only audit credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+
+      - name: Audit tenant alu without mutation
+        shell: bash
+        run: |
+          set +e
+          node server/scripts/audit-alumdoor-catalog.mjs \
+            --tenant alu \
+            --redacted \
+            --output "$REPORT_PATH"
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ] && [ "$status" -ne 2 ]; then
+            exit "$status"
+          fi
+          printf 'remote_catalog_audit_exit=%s\n' "$status" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Summarize redacted findings
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const report = JSON.parse(fs.readFileSync(process.env.REPORT_PATH, 'utf8'));
+          const codes = [...new Set((report.findings ?? []).map((row) => row.code))].sort();
+          const lines = [
+            '# alu live catalog audit',
+            '',
+            '- Mode: read-only, redacted',
+            `- Checksum: \`${report.checksum}\``,
+            `- Records: ${report.counts?.records ?? 0}`,
+            `- Active Items: ${report.counts?.active_items ?? 0}`,
+            `- Disabled Items: ${report.counts?.disabled_items ?? 0}`,
+            `- Active BOM/Production Standard: ${report.counts?.active_boms ?? 0}`,
+            `- Findings: Critical ${report.counts?.critical ?? 0}, High ${report.counts?.high ?? 0}, Medium ${report.counts?.medium ?? 0}, Low ${report.counts?.low ?? 0}`,
+            `- Finding codes: ${codes.length ? codes.map((code) => `\`${code}\``).join(', ') : 'none'}`,
+          ];
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join('\n')}\n`);
+          NODE
+
+      - name: Upload redacted live catalog audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: alu-live-catalog-redacted-${{ github.run_id }}
+          path: ${{ runner.temp }}/alu-catalog-redacted.json
+          if-no-files-found: error
+          retention-days: 14
