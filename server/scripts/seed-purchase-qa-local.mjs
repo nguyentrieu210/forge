@@ -107,6 +107,26 @@ async function ensureResource(doctype, name, document) {
 
 await login();
 
+// Authoritative app fixtures are immutable catalogue records. Create the small
+// mutable records needed by search_link and app callback reads so the browser QA
+// exercises the same public resource surface used by a human.
+await ensureResource("UOM", "Cái", {
+  uom_name: "Cái",
+  must_be_whole_number: 1,
+  disabled: 0,
+});
+await ensureResource("UOM", "Kg", {
+  uom_name: "Kg",
+  must_be_whole_number: 0,
+  disabled: 0,
+});
+await ensureResource("Item Color", "THÔ", {
+  color_code: "THÔ",
+  color_name: "THÔ",
+  finish: "Thô",
+  disabled: 0,
+});
+
 await ensureResource("Supplier", "QA-SUPPLIER", {
   supplier_name: "QA-SUPPLIER",
   supplier_group: "Khác",
@@ -124,10 +144,6 @@ await ensureResource("Supplier", "TIEN-DAT", {
   note: "Local authenticated Tiến Đạt FIFO QA only",
 });
 
-// App fixtures are immutable catalogue records and are not exposed as mutable
-// `/api/resource` documents in the local topology. Create deterministic QA leaf
-// groups through the authenticated resource API so Item link validation exercises
-// the same path as a human-created group.
 const regularItemGroup = "QA Purchase Items";
 const aluminiumItemGroup = "QA Aluminium";
 
@@ -190,4 +206,4 @@ await ensureResource("Item", "AL71-QA", {
   description: "Deterministic local fixture for Tiến Đạt FIFO QA",
 });
 
-console.log(`PURCHASE_QA_SEED_PASS suppliers=QA-SUPPLIER,TIEN-DAT items=QA-PURCHASE-ITEM,AL71-QA regular_item_group=${JSON.stringify(regularItemGroup)} aluminium_item_group=${JSON.stringify(aluminiumItemGroup)} origin=loopback`);
+console.log(`PURCHASE_QA_SEED_PASS suppliers=QA-SUPPLIER,TIEN-DAT items=QA-PURCHASE-ITEM,AL71-QA uom=Cái,Kg color=THÔ regular_item_group=${JSON.stringify(regularItemGroup)} aluminium_item_group=${JSON.stringify(aluminiumItemGroup)} origin=loopback`);
