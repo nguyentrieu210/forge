@@ -10,6 +10,8 @@ on:
       - "server/package.json"
       - "package.json"
       - "pnpm-lock.yaml"
+      - ".github/release/alumdoor-app-production.trigger"
+      - ".github/workflows/release-alumdoor-app.yml"
   workflow_dispatch:
     inputs:
       target_sha:
