@@ -47,7 +47,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
-      TARGET_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.event_name == 'workflow_dispatch' && inputs.target_sha || github.sha }}
+      TARGET_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.event_name == 'workflow_dispatch' && inputs.target_sha || github.event_name == 'push' && contains(github.event.head_commit.message, '[release-target-before]') && github.event.before || github.sha }}
       GATE_DIR: /tmp/alu-full-release-gate
 
     outputs:
@@ -158,6 +158,7 @@ jobs:
       GATEWAY_WORKER: cloudforge-gateway
       DISPATCH_NAMESPACE: cloudforge-production
       EVIDENCE_DIR: /tmp/alu-production-release
+      TENANT_ROLLBACK_DIR: /tmp/alu-tenant-rollback
       APP_ROLLBACK_DIR: /tmp/alu-app-rollback
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: d4d5a24d4e56f28f27fe58b64ef149a5
@@ -186,21 +187,24 @@ jobs:
           test "$(git rev-parse HEAD)" = "$(git rev-parse "$TARGET_SHA")"
           test -n "${CLOUDFLARE_API_TOKEN:-}"
           test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
-          mkdir -p "$EVIDENCE_DIR/preflight" "$EVIDENCE_DIR/tenant" "$EVIDENCE_DIR/app" "$EVIDENCE_DIR/gateway" "$EVIDENCE_DIR/smoke" "$EVIDENCE_DIR/browser" "$EVIDENCE_DIR/summary" "$APP_ROLLBACK_DIR"
+          mkdir -p "$EVIDENCE_DIR/preflight" "$EVIDENCE_DIR/tenant" "$EVIDENCE_DIR/app" "$EVIDENCE_DIR/gateway" "$EVIDENCE_DIR/smoke" "$EVIDENCE_DIR/browser" "$EVIDENCE_DIR/summary" "$TENANT_ROLLBACK_DIR" "$APP_ROLLBACK_DIR"
           corepack enable
           corepack prepare pnpm@9.15.0 --activate
           pnpm install --frozen-lockfile 2>&1 | tee "$EVIDENCE_DIR/preflight/install.log"
           printf 'target_sha=%s\nstarted_at=%s\n' "$TARGET_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$EVIDENCE_DIR/summary/state.txt"
 
-      - name: Capture current Cloudflare versions and app rollback content
+      - name: Capture current Cloudflare versions and rollback content
         shell: bash
         run: |
           set -euo pipefail
           api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID"
           auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
-          curl --fail --silent --show-error "${auth[@]}" "$api/workers/scripts/$TENANT_WORKER/deployments" > "$EVIDENCE_DIR/preflight/tenant-deployments.json"
-          curl --fail --silent --show-error "${auth[@]}" "$api/workers/scripts/$GATEWAY_WORKER/deployments" > "$EVIDENCE_DIR/preflight/gateway-deployments.json"
+          tenant_base="$api/workers/dispatch/namespaces/$DISPATCH_NAMESPACE/scripts/$TENANT_WORKER"
           app_base="$api/workers/dispatch/namespaces/$DISPATCH_NAMESPACE/scripts/$APP_WORKER"
+
+          curl --fail --silent --show-error "${auth[@]}" "$tenant_base" > "$EVIDENCE_DIR/preflight/tenant-details.json"
+          curl --fail --silent --show-error --dump-header "$TENANT_ROLLBACK_DIR/content.headers" "${auth[@]}" "$tenant_base/content" > "$TENANT_ROLLBACK_DIR/content.bin"
+          curl --fail --silent --show-error "${auth[@]}" "$api/workers/scripts/$GATEWAY_WORKER/deployments" > "$EVIDENCE_DIR/preflight/gateway-deployments.json"
           curl --fail --silent --show-error "${auth[@]}" "$app_base" > "$EVIDENCE_DIR/preflight/app-details.json"
           curl --fail --silent --show-error "${auth[@]}" "$app_base/bindings" > "$EVIDENCE_DIR/preflight/app-bindings.json"
           curl --fail --silent --show-error --dump-header "$APP_ROLLBACK_DIR/content.headers" "${auth[@]}" "$app_base/content" > "$APP_ROLLBACK_DIR/content.bin"
@@ -221,34 +225,44 @@ jobs:
             if (!version) throw new Error(`No active version in ${path}`);
             return normalize(version);
           };
-          const tenant = active(`${process.env.EVIDENCE_DIR}/preflight/tenant-deployments.json`);
+          const dispatchHandle = (path, expectedWorker) => {
+            const payload = JSON.parse(fs.readFileSync(path, 'utf8'));
+            const result = payload.result ?? {};
+            const version = normalize(result.script?.deployment_id);
+            const etag = result.script?.etag ?? '';
+            if (!payload.success || result.dispatch_namespace !== process.env.DISPATCH_NAMESPACE || result.script?.id !== expectedWorker || !version || !etag) {
+              throw new Error(`Missing dispatch rollback handle for ${expectedWorker}`);
+            }
+            return { version, etag };
+          };
+          const tenant = dispatchHandle(`${process.env.EVIDENCE_DIR}/preflight/tenant-details.json`, process.env.TENANT_WORKER);
           const gateway = active(`${process.env.EVIDENCE_DIR}/preflight/gateway-deployments.json`);
-          const appPayload = JSON.parse(fs.readFileSync(`${process.env.EVIDENCE_DIR}/preflight/app-details.json`, 'utf8'));
-          const app = appPayload.result ?? {};
-          const appVersion = normalize(app.script?.deployment_id);
-          const appEtag = app.script?.etag ?? '';
-          if (!appPayload.success || !appVersion || !appEtag) throw new Error('Missing app rollback handle');
+          const app = dispatchHandle(`${process.env.EVIDENCE_DIR}/preflight/app-details.json`, process.env.APP_WORKER);
           const bindings = JSON.parse(fs.readFileSync(`${process.env.EVIDENCE_DIR}/preflight/app-bindings.json`, 'utf8'));
           const names = new Set((bindings.result ?? []).map((entry) => entry?.name).filter(Boolean));
           for (const required of ['PLATFORM', 'AI']) if (!names.has(required)) throw new Error(`Missing app binding ${required}`);
           fs.appendFileSync(process.env.GITHUB_ENV, [
-            `PREVIOUS_TENANT_VERSION=${tenant}`,
+            `PREVIOUS_TENANT_VERSION=${tenant.version}`,
+            `PREVIOUS_TENANT_ETAG=${tenant.etag}`,
             `PREVIOUS_GATEWAY_VERSION=${gateway}`,
-            `PREVIOUS_APP_VERSION=${appVersion}`,
-            `PREVIOUS_APP_ETAG=${appEtag}`,
+            `PREVIOUS_APP_VERSION=${app.version}`,
+            `PREVIOUS_APP_ETAG=${app.etag}`,
             '',
           ].join('\n'));
           fs.writeFileSync(`${process.env.EVIDENCE_DIR}/preflight/versions.txt`, [
-            `tenant=${tenant}`,
-            `app=${appVersion}`,
+            `tenant=${tenant.version}`,
+            `app=${app.version}`,
             `gateway=${gateway}`,
             '',
           ].join('\n'));
           NODE
 
-          content_type="$(awk 'BEGIN{IGNORECASE=1} /^content-type:/ {sub(/^[^:]+:[[:space:]]*/, ""); sub(/\r$/, ""); print; exit}' "$APP_ROLLBACK_DIR/content.headers")"
-          test -n "$content_type"
-          echo "APP_ROLLBACK_CONTENT_TYPE=$content_type" >> "$GITHUB_ENV"
+          tenant_content_type="$(awk 'BEGIN{IGNORECASE=1} /^content-type:/ {sub(/^[^:]+:[[:space:]]*/, ""); sub(/\r$/, ""); print; exit}' "$TENANT_ROLLBACK_DIR/content.headers")"
+          app_content_type="$(awk 'BEGIN{IGNORECASE=1} /^content-type:/ {sub(/^[^:]+:[[:space:]]*/, ""); sub(/\r$/, ""); print; exit}' "$APP_ROLLBACK_DIR/content.headers")"
+          test -n "$tenant_content_type"
+          test -n "$app_content_type"
+          echo "TENANT_ROLLBACK_CONTENT_TYPE=$tenant_content_type" >> "$GITHUB_ENV"
+          echo "APP_ROLLBACK_CONTENT_TYPE=$app_content_type" >> "$GITHUB_ENV"
           echo 'preflight=pass' >> "$EVIDENCE_DIR/summary/state.txt"
 
       - name: Create sequential workflow dispatcher
@@ -298,15 +312,25 @@ jobs:
         run: |
           "$RUNNER_TEMP/dispatch-release-workflow.sh" release-alu-tenant.yml "$EVIDENCE_DIR/tenant"
 
-      - name: Roll back tenant Worker after tenant release failure
+      - name: Restore previous tenant content after tenant release failure
         if: ${{ failure() && steps.tenant_release.outcome == 'failure' }}
         shell: bash
         run: |
           set -euo pipefail
-          cd server
-          pnpm exec wrangler rollback "$PREVIOUS_TENANT_VERSION" --name "$TENANT_WORKER" --message "Rollback failed ALU release $TARGET_SHA" 2>&1 | tee "$EVIDENCE_DIR/tenant/rollback.log"
+          tenant_base="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/dispatch/namespaces/$DISPATCH_NAMESPACE/scripts/$TENANT_WORKER"
+          curl --fail --silent --show-error -X PUT \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H "Content-Type: $TENANT_ROLLBACK_CONTENT_TYPE" \
+            --data-binary "@$TENANT_ROLLBACK_DIR/content.bin" \
+            "$tenant_base/content" > "$EVIDENCE_DIR/tenant/rollback-response.json"
+          curl --fail --silent --show-error -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$tenant_base" > "$EVIDENCE_DIR/tenant/rollback-details.json"
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const payload = JSON.parse(fs.readFileSync(`${process.env.EVIDENCE_DIR}/tenant/rollback-details.json`, 'utf8'));
+          if (payload.result?.script?.etag !== process.env.PREVIOUS_TENANT_ETAG) throw new Error('Tenant rollback etag mismatch');
+          fs.appendFileSync(`${process.env.EVIDENCE_DIR}/tenant/state.txt`, 'rollback=pass\ndatabase_restore=not_attempted\n');
+          NODE
           curl --fail --silent --show-error "$BASE_URL/health" > "$EVIDENCE_DIR/tenant/rollback-health.json"
-          printf 'rollback=pass\ndatabase_restore=not_attempted\n' >> "$EVIDENCE_DIR/tenant/state.txt"
 
       - name: Release Alumdoor app Worker
         id: app_release
