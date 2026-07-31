@@ -4,60 +4,53 @@ Ngày cập nhật: **2026-08-01**.
 
 Mọi agent phải đọc `AI_HANDOFF.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md` và `DELIVERY_POLICY.md` trước khi tiếp tục.
 
-## Trạng thái hàng đợi
+## Hoàn tất — Purchase authenticated QA
 
-- Toàn bộ PR tồn đọng cũ đã đóng: `#15`, `#35`, `#36`, `#40`, `#73`, `#74`, `#79`, `#81`, `#103`, `#106`, `#109`.
-- Không reopen hoặc merge nguyên branch cũ.
-- Branch cũ chỉ là nguồn tham khảo từng file.
-- Mọi việc tiếp theo phải bắt đầu từ exact current default.
-
-## P0 — Purchase authenticated QA clean rebuild
-
-### Phạm vi
-
-- Login và boot tenant local bằng cookie + CSRF thật.
-- Cài app Alumdoor authoritative vào D1 local.
-- Item/UOM dropdown search.
-- Purchase Order create/save/submit và mở lại form thật.
-- Purchase Receipt create/save/preview/submit/cancel và mở lại form thật.
-- Desktop Chrome và Pixel 7.
-- Tiến Đạt FIFO journey:
-  - tạo hai đơn `200` và `100` cây cùng mã/quy cách, ngày khác nhau;
-  - preview nhận `230` cây phải ra `200 + 30`;
-  - draft receipt giữ đúng hai `purchase_order`;
-  - sau submit, preview lần sau hiện lịch sử và nợ `70` cây / `504 m`;
-  - khoảng giao thêm `55–85` cây;
-  - `86` cây bị từ chối, `85` cây được phép.
-
-### Nguồn tham khảo
-
-- Closed PR `#103`, chỉ mang từng file đã review.
-- Không mang workflow stale, handoff cũ hoặc generated evidence.
-
-### Done condition
-
-- Authenticated Purchase lifecycle PASS trên desktop và Pixel 7.
-- Authenticated Tiến Đạt FIFO journey PASS.
-- Full CI, Purchase gate và UI authenticated gate xanh trên exact head.
-- Merge vào default, sau đó cập nhật handoff.
+- PR `#137` merge SHA: `29fee0200d8118eef2d0ae9e524a3a00acfab00f`.
+- Exact PR head: `fd03d22872c2234d50f616a5d8956c8b62f26b40`.
+- Full CI, PR Validation, Purchase, Sales, Inventory và UI authenticated gates: SUCCESS.
+- Desktop Chrome + Pixel 7 lifecycle PASS.
+- Tiến Đạt FIFO authenticated journey PASS: `200 + 100`, nhận `230` → `200 + 30`, lịch sử và công nợ đúng; `85` được phép, `86` bị từ chối.
+- Không deploy Cloudflare, không thay rollout state và không mutate dữ liệu production.
 
 ## P1 — Finance clean rebuild
 
-### Phạm vi
+### Nguồn
 
-- Due date và AR/AP aging.
-- Payment Entry partial/unallocated.
-- Payment Allocation cùng company/party/account/currency.
-- Party Statement.
-- Debt Summary.
-- Advance Balance.
-- UI/report navigation và permission.
-- Migration append-only, dry-run, checksum, rollback và staging evidence.
+- Tạo branch mới từ exact current default sau docs merge.
+- Closed PR `#15` và backup `#40` chỉ dùng tham khảo từng file.
+- Không reopen hoặc merge nguyên branch cũ.
 
-### Nguồn tham khảo
+### Phạm vi bắt buộc
 
-- Closed PR `#15` và backup `#40`.
-- Không merge nguyên branch vì đã diverged và thiếu exact-head verification.
+- Due date và AR/AP aging theo ngày đến hạn.
+- Payment Entry hỗ trợ partial payment và unallocated amount.
+- Payment Allocation ràng buộc cùng company, party, account và currency.
+- Party Statement có opening, invoice, payment, allocation và running balance.
+- Debt Summary theo customer/supplier, aging bucket và overdue.
+- Advance Balance theo party/currency/account.
+- UI/report navigation, permission và export boundary.
+- Migration append-only, có dry-run, checksum, rollback và production-shaped evidence.
+- Không dùng floating point cho bút toán tiền; tiếp tục dùng minor/micros theo kernel.
+
+### Trình tự
+
+1. Đọc exact default head và CI hiện tại từ GitHub.
+2. Tạo một branch canonical từ default.
+3. Review từng file từ PR `#15`; chỉ mang phần còn đúng với kiến trúc hiện tại.
+4. Bổ sung phần còn thiếu thay vì chỉ merge AR/AP aging cũ.
+5. Viết focused unit/integration tests và route/report tests.
+6. Chạy migration dry-run/checksum/rollback trên local/ephemeral D1.
+7. Mở một PR canonical và khóa exact head khi CI chạy.
+8. Merge khi full CI và Finance-specific gate đều xanh.
+9. Không deploy Cloudflare nếu chưa có yêu cầu rõ.
+
+### Done condition
+
+- AR/AP, allocations, statements, debt summary và advance balance PASS.
+- Migration/backfill có bằng chứng dry-run, checksum và rollback.
+- UI/report navigation và permission PASS.
+- Exact merged SHA có CI xanh.
 
 ## P2 — Daily detailed ledger
 
@@ -82,11 +75,11 @@ Sales Order → production request → Work Order → material issue/consume →
 
 Bắt buộc có desktop và mobile authenticated journey trên một exact head SHA.
 
-## UI backlog có thể dựng lại riêng
+## UI backlog riêng
 
 - MetaForge MISA-style workspace tabs từ closed PR `#81/#109`.
 - Login/landing từ closed PR `#36`.
-- Hai phần này là scope UI riêng, không được trộn vào Purchase hoặc Finance PR.
+- Hai phần này không được trộn vào Finance hoặc nghiệp vụ ledger.
 
 ## Quy tắc bắt buộc
 
