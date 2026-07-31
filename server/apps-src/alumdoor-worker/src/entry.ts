@@ -8,7 +8,7 @@ type WorkerContext = Parameters<typeof baseWorker.fetch>[2];
  * Entrypoint triển khai của Alumdoor.
  *
  * Item đi qua cả validator lịch sử và các invariant catalog mới. Hai phép kiểm chạy song
- * song vì lớp mới không đọc mạng; mọi route khác được chuyển nguyên vẹn sang Worker cũ.
+ * song; mọi route khác được chuyển nguyên vẹn sang Worker cũ.
  */
 export default {
   async fetch(request: Request, env: WorkerEnv, ctx: WorkerContext): Promise<Response> {
@@ -23,7 +23,7 @@ export default {
 
     const [baseResponse, invariantResponse] = await Promise.all([
       baseWorker.fetch(request, env, ctx),
-      validateItemCatalogInvariants(invariantRequest),
+      validateItemCatalogInvariants(invariantRequest, env),
     ]);
     return baseResponse.ok ? invariantResponse : baseResponse;
   },
