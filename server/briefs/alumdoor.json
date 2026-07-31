@@ -2,7 +2,7 @@
   "$schema": "./brief.schema.json",
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "1.27.3",
+  "version": "1.27.4",
   "module": "Alumdoor",
   "domain": "alumdoor",
   "brand": "warm",
@@ -161,6 +161,13 @@
         "create",
         "save"
       ]
+    },
+    {
+      "doctype": "Production Request",
+      "actions": [
+        "create",
+        "save"
+      ]
     }
   ],
   "//hooks": [
@@ -169,7 +176,9 @@
   ],
   "hooks": [
     "purchase_receipt.submitted",
-    "purchase_receipt.cancelled"
+    "purchase_receipt.cancelled",
+    "cut_order.submitted",
+    "cut_order.cancelled"
   ],
   "//actions": [
     "Ba màn thao tác. Không phải sửa một bản ghi, nên không dựng bằng form doctype được:",
@@ -376,6 +385,25 @@
       ],
       "preview": "alumdoor.ocr.parse | Đọc thử ảnh",
       "commit": "alumdoor.ocr.apply | Tạo chứng từ nháp | Tạo chứng từ NHÁP từ ảnh này? Bản nháp chưa vào sổ — anh vẫn phải soát lại từng số.",
+      "resultTable": "items"
+    },
+    {
+      "name": "don-hang-thanh-san-xuat",
+      "label": "Đơn hàng → Sản xuất",
+      "icon": "factory",
+      "group": "Sản xuất",
+      "description": "Tách từng bộ cửa theo dòng đơn, chụp công thức/số lá/kg/phút và tạo Yêu cầu sản xuất cùng Work Order nháp.",
+      "permission": "Work Order",
+      "fields": [
+        "sales_order:Link(Sales Order)! Đơn hàng đã ghi sổ",
+        "source_warehouse:Link(Warehouse)! Kho nguyên vật liệu",
+        "target_warehouse:Link(Warehouse)! Kho nhập thành phẩm",
+        "planned_start_date:Datetime Ngày bắt đầu",
+        "planned_end_date:Date Ngày hẹn hoàn thành",
+        "note:Small Text Ghi chú xưởng"
+      ],
+      "preview": "alumdoor.sales.preview_production | Xem kế hoạch",
+      "commit": "alumdoor.sales.create_production | Tạo yêu cầu và lệnh sản xuất | Tạo Work Order nháp theo từng bộ cửa?",
       "resultTable": "items"
     }
   ],
@@ -731,7 +759,12 @@
         "dealer_full_sales_basis": "Phủ bì nhựa",
         "retail_sales_basis": "Phủ bì ray",
         "purchase_formula": "Kg thực tế",
-        "note": "Sản xuất: đại lý PB nhựa − 0,02; lẻ PB ray − 0,08. Mua: kg thực tế × đơn giá."
+        "note": "Sản xuất: đại lý PB nhựa − 0,02; lẻ PB ray − 0,08. Mua: kg thực tế × đơn giá.",
+        "leaf_divisor_source": "Bản lá của bộ quy cách",
+        "leaf_rounding": "Ngưỡng trừ-một-lá",
+        "leaf_round_threshold": 0.6,
+        "leaf_formula": "Kiểu Đức",
+        "leaf_height_deduction_m": 0.13
       }
     },
     {
@@ -750,7 +783,30 @@
         "purchase_formula": "Barem kg/m2",
         "purchase_height_basis": "Cao phủ bì",
         "purchase_width_basis": "Rộng cắt lá",
-        "note": "Rộng cắt = PB ray − 0,03. Mua: barem × Cao PB × Rộng cắt. Bán: Cao PB × PB ray."
+        "note": "Rộng cắt = PB ray − 0,03. Mua: barem × Cao PB × Rộng cắt. Bán: Cao PB × PB ray.",
+        "leaf_height_deduction_m": 0,
+        "leaf_rounding": "Nấc 0-0.3-0.7-1",
+        "leaf_variants": [
+          {
+            "variant_label": "motor trong",
+            "addend": 2
+          },
+          {
+            "variant_label": "kéo tay",
+            "addend": 2
+          },
+          {
+            "variant_label": "motor ngoài",
+            "addend": 1.5
+          },
+          {
+            "variant_label": "motor ngoài tự dừng",
+            "addend": 1.3
+          }
+        ],
+        "leaf_formula": "Kiểu Úc",
+        "leaf_divisor_source": "Hằng số của chính sách",
+        "leaf_divisor_const": 0.465
       }
     },
     {
@@ -1594,6 +1650,13 @@
           "description": "Khối lượng nhà cung cấp tính cho một m2 cửa. Dùng cho dự toán mua của cửa Úc, Lưới, Đài Loan và Siêu Trường; Cửa Đức dùng kg cân thực tế."
         },
         {
+          "fieldname": "leaf_divisor_m",
+          "fieldtype": "Float",
+          "label": "Bản lá / ước số chia (m)",
+          "depends_on": "eval:doc.door_type",
+          "description": "Ước số kỹ thuật dùng chia số lá khi Công thức cửa chọn lấy từ bộ quy cách/Item. Để trống sẽ chặn tạo lệnh sản xuất."
+        },
+        {
           "fieldname": "measurement_profile",
           "fieldtype": "Link",
           "options": "Measurement Profile",
@@ -2106,6 +2169,98 @@
         "cut_width_m:Float~- Rộng cắt lá (m)",
         "billable_area_sqm:Float~- Diện tích tính tiền (m2)",
         {
+          "fieldname": "door_type",
+          "fieldtype": "Select",
+          "options": "Cửa Đức\nCửa Úc\nCửa Lưới\nCửa Đài Loan\nCửa Siêu Trường\nCửa tấm liền Úc",
+          "label": "Loại cửa",
+          "read_only": true,
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'"
+        },
+        {
+          "fieldname": "leaf_variant",
+          "fieldtype": "Select",
+          "options": "motor trong\nkéo tay\nmotor ngoài\nmotor ngoài tự dừng",
+          "label": "Biến thể chia lá",
+          "depends_on": "eval:doc.door_type == 'Cửa Úc'"
+        },
+        {
+          "fieldname": "leaf_height_deduction_m",
+          "fieldtype": "Float",
+          "label": "Trừ cao chia lá (m)",
+          "read_only": true,
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'"
+        },
+        {
+          "fieldname": "leaf_divisor_m",
+          "fieldtype": "Float",
+          "label": "Ước số chia lá (m)",
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'",
+          "description": "Mặc định lấy từ Item hoặc Công thức cửa; chỉ nhập khi bộ cửa dùng bản lá riêng."
+        },
+        {
+          "fieldname": "leaf_rounding",
+          "fieldtype": "Data",
+          "label": "Cách làm tròn lá",
+          "read_only": true,
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'"
+        },
+        {
+          "fieldname": "leaf_count",
+          "fieldtype": "Float",
+          "label": "Tổng số lá",
+          "read_only": true,
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'"
+        },
+        {
+          "fieldname": "single_layer_leaf_count",
+          "fieldtype": "Float",
+          "label": "Lá một lớp",
+          "depends_on": "eval:doc.door_type == 'Cửa tấm liền Úc'"
+        },
+        {
+          "fieldname": "double_layer_leaf_count",
+          "fieldtype": "Float",
+          "label": "Lá hai lớp",
+          "read_only": true,
+          "depends_on": "eval:doc.door_type == 'Cửa tấm liền Úc'"
+        },
+        {
+          "fieldname": "estimated_weight_kg",
+          "fieldtype": "Float",
+          "label": "Kg dự toán",
+          "read_only": true,
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'"
+        },
+        {
+          "fieldname": "estimated_minutes",
+          "fieldtype": "Float",
+          "label": "Phút sản xuất",
+          "read_only": true,
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'"
+        },
+        {
+          "fieldname": "formula_version",
+          "fieldtype": "Data",
+          "label": "Phiên bản công thức",
+          "read_only": true,
+          "hidden": true
+        },
+        {
+          "fieldname": "formula_explanation",
+          "fieldtype": "Small Text",
+          "label": "Giải thích công thức",
+          "read_only": true,
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'"
+        },
+        {
+          "fieldname": "paint_required",
+          "fieldtype": "Check",
+          "label": "Dự kiến cần sơn",
+          "read_only": true,
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'",
+          "description": "Kết luận cuối chỉ có sau khi chọn lô cắt; lô THÔ sẽ tự sinh việc sơn."
+        },
+        {
           "fieldname": "length_m",
           "fieldtype": "Float",
           "label": "Dài một cây (m)",
@@ -2342,6 +2497,98 @@
         "cut_width_m:Float~- Rộng cắt lá (m)",
         "billable_area_sqm:Float~- Diện tích tính tiền (m2)",
         {
+          "fieldname": "door_type",
+          "fieldtype": "Select",
+          "options": "Cửa Đức\nCửa Úc\nCửa Lưới\nCửa Đài Loan\nCửa Siêu Trường\nCửa tấm liền Úc",
+          "label": "Loại cửa",
+          "read_only": true,
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'"
+        },
+        {
+          "fieldname": "leaf_variant",
+          "fieldtype": "Select",
+          "options": "motor trong\nkéo tay\nmotor ngoài\nmotor ngoài tự dừng",
+          "label": "Biến thể chia lá",
+          "depends_on": "eval:doc.door_type == 'Cửa Úc'"
+        },
+        {
+          "fieldname": "leaf_height_deduction_m",
+          "fieldtype": "Float",
+          "label": "Trừ cao chia lá (m)",
+          "read_only": true,
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'"
+        },
+        {
+          "fieldname": "leaf_divisor_m",
+          "fieldtype": "Float",
+          "label": "Ước số chia lá (m)",
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'",
+          "description": "Mặc định lấy từ Item hoặc Công thức cửa; chỉ nhập khi bộ cửa dùng bản lá riêng."
+        },
+        {
+          "fieldname": "leaf_rounding",
+          "fieldtype": "Data",
+          "label": "Cách làm tròn lá",
+          "read_only": true,
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'"
+        },
+        {
+          "fieldname": "leaf_count",
+          "fieldtype": "Float",
+          "label": "Tổng số lá",
+          "read_only": true,
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'"
+        },
+        {
+          "fieldname": "single_layer_leaf_count",
+          "fieldtype": "Float",
+          "label": "Lá một lớp",
+          "depends_on": "eval:doc.door_type == 'Cửa tấm liền Úc'"
+        },
+        {
+          "fieldname": "double_layer_leaf_count",
+          "fieldtype": "Float",
+          "label": "Lá hai lớp",
+          "read_only": true,
+          "depends_on": "eval:doc.door_type == 'Cửa tấm liền Úc'"
+        },
+        {
+          "fieldname": "estimated_weight_kg",
+          "fieldtype": "Float",
+          "label": "Kg dự toán",
+          "read_only": true,
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'"
+        },
+        {
+          "fieldname": "estimated_minutes",
+          "fieldtype": "Float",
+          "label": "Phút sản xuất",
+          "read_only": true,
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'"
+        },
+        {
+          "fieldname": "formula_version",
+          "fieldtype": "Data",
+          "label": "Phiên bản công thức",
+          "read_only": true,
+          "hidden": true
+        },
+        {
+          "fieldname": "formula_explanation",
+          "fieldtype": "Small Text",
+          "label": "Giải thích công thức",
+          "read_only": true,
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'"
+        },
+        {
+          "fieldname": "paint_required",
+          "fieldtype": "Check",
+          "label": "Dự kiến cần sơn",
+          "read_only": true,
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'",
+          "description": "Kết luận cuối chỉ có sau khi chọn lô cắt; lô THÔ sẽ tự sinh việc sơn."
+        },
+        {
           "fieldname": "length_m",
           "fieldtype": "Float",
           "label": "Dài một cây (m)",
@@ -2456,6 +2703,14 @@
           "link_filters": "{\"is_sales_item\":1,\"disabled\":0}"
         },
         "item_name:Data~- Tên hàng",
+        {
+          "fieldname": "sales_order_row_id",
+          "fieldtype": "Data",
+          "label": "Dòng đơn hàng nguồn",
+          "read_only": true,
+          "hidden": true,
+          "description": "Khóa giao hàng theo đúng dòng, không cộng nhầm hai dòng cùng mã nhưng khác màu/kích thước."
+        },
         "inventory_mode:Data~- Kiểu tính",
         "measurement_profile:Link(Measurement Profile)~- Bộ quy cách",
         "stock_uom:Link(UOM)~- ĐVT tồn",
@@ -3515,16 +3770,16 @@
           "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
           "description": "Kích thước × trọng lượng định mức × số cây/lá."
         },
-      {
-        "fieldname": "is_stamped",
-        "fieldtype": "Select",
-        "options": "Có\nKhông",
-        "label": "Dập",
-        "required": true,
-        "default": "Không",
-        "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
-        "description": "Bắt buộc chọn rõ Có hoặc Không."
-      },
+        {
+          "fieldname": "is_stamped",
+          "fieldtype": "Select",
+          "options": "Có\nKhông",
+          "label": "Dập",
+          "required": true,
+          "default": "Không",
+          "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
+          "description": "Bắt buộc chọn rõ Có hoặc Không."
+        },
         {
           "fieldname": "so_no",
           "fieldtype": "Data",
@@ -4147,6 +4402,82 @@
         "width_m:Float! Rộng (m)",
         "height_m:Float! Cao (m)",
         "set_count:Int=(1) Số bộ",
+        {
+          "fieldname": "leaf_count",
+          "fieldtype": "Float",
+          "label": "Số lá",
+          "read_only": true
+        },
+        "production_request:Link(Production Request) Yêu cầu sản xuất",
+        {
+          "fieldname": "production_request_line_key",
+          "fieldtype": "Data",
+          "label": "Khóa bộ sản xuất",
+          "read_only": true
+        },
+        {
+          "fieldname": "sales_order_row_id",
+          "fieldtype": "Data",
+          "label": "Dòng đơn hàng",
+          "read_only": true
+        },
+        {
+          "fieldname": "set_no",
+          "fieldtype": "Int",
+          "label": "Bộ số",
+          "read_only": true
+        },
+        {
+          "fieldname": "door_type",
+          "fieldtype": "Select",
+          "options": "Cửa Đức\nCửa Úc\nCửa Lưới\nCửa Đài Loan\nCửa Siêu Trường\nCửa tấm liền Úc",
+          "label": "Loại cửa",
+          "read_only": true
+        },
+        {
+          "fieldname": "cut_width_m",
+          "fieldtype": "Float",
+          "label": "Rộng cắt lá (m)",
+          "read_only": true
+        },
+        {
+          "fieldname": "estimated_weight_kg",
+          "fieldtype": "Float",
+          "label": "Kg dự toán",
+          "read_only": true
+        },
+        {
+          "fieldname": "estimated_minutes",
+          "fieldtype": "Float",
+          "label": "Phút dự toán",
+          "read_only": true
+        },
+        {
+          "fieldname": "formula_policy",
+          "fieldtype": "Link",
+          "options": "Cutting Policy",
+          "label": "Công thức đã chụp",
+          "read_only": true
+        },
+        {
+          "fieldname": "formula_version",
+          "fieldtype": "Data",
+          "label": "Phiên bản công thức",
+          "read_only": true
+        },
+        {
+          "fieldname": "formula_snapshot",
+          "fieldtype": "Long Text",
+          "label": "Snapshot công thức",
+          "read_only": true,
+          "hidden": true
+        },
+        {
+          "fieldname": "paint_required",
+          "fieldtype": "Check",
+          "label": "Cần sơn",
+          "read_only": true
+        },
         "color:Link(Item Color) Màu / mã sơn",
         "motor_model:Link(Item) Mô tơ",
         "source_warehouse:Link(Warehouse)! Kho nguyên vật liệu",
@@ -4371,7 +4702,28 @@
       ],
       "fields": [
         "department:Data*! Bộ phận / công đoạn",
+        {
+          "fieldname": "door_type",
+          "fieldtype": "Select",
+          "options": "Cửa Đức\nCửa Úc\nCửa Lưới\nCửa Đài Loan\nCửa Siêu Trường\nCửa tấm liền Úc",
+          "label": "Loại cửa"
+        },
+        {
+          "fieldname": "operation",
+          "fieldtype": "Data",
+          "label": "Công đoạn",
+          "default": "Sản xuất"
+        },
         "standard_time:Small Text! Định mức thời gian",
+        {
+          "fieldname": "minutes_per_set",
+          "fieldtype": "Float",
+          "label": "Phút / bộ",
+          "non_negative": true,
+          "description": "Số dùng để cộng tải lịch; trường thời gian chữ cũ chỉ còn tương thích."
+        },
+        "effective_from:Date Ngày hiệu lực",
+        "effective_to:Date Hết hiệu lực",
         "note:Small Text Ghi chú",
         "disabled:Check Ngừng dùng"
       ],
@@ -4380,6 +4732,156 @@
         "Sản xuất": "rwc",
         "Kinh doanh": "r",
         "Thủ kho": "r",
+        "Kế toán": "r"
+      }
+    },
+    {
+      "name": "Production Request Item",
+      "child": true,
+      "label": "Dòng yêu cầu sản xuất",
+      "group": "Sản xuất",
+      "naming": "autoincrement",
+      "title": "item_code",
+      "list": [
+        "request_line_key",
+        "item_code",
+        "door_type",
+        "set_no",
+        "width_m",
+        "height_m",
+        "leaf_count",
+        "estimated_minutes"
+      ],
+      "fields": [
+        "request_line_key:Data*! Khóa bộ sản xuất",
+        "sales_order_row_id:Data! Dòng đơn hàng nguồn",
+        "item_code:Link(Item)! Thành phẩm",
+        "item_group:Link(Item Group) Nhóm sản phẩm",
+        "door_type:Select(Cửa Đức,Cửa Úc,Cửa Lưới,Cửa Đài Loan,Cửa Siêu Trường,Cửa tấm liền Úc)! Loại cửa",
+        "department:Data! Bộ phận",
+        "set_no:Int! Bộ số",
+        "set_count:Int!=(1) Số bộ dòng",
+        "width_m:Float! Rộng (m)",
+        "height_m:Float! Cao (m)",
+        "mesh_height_m:Float Cao lưới (m)",
+        "color:Link(Item Color) Màu",
+        "motor_model:Link(Item) Mô tơ",
+        "sales_mode:Select(Trọn bộ,Tách món)! Cách bán",
+        "formula_policy:Link(Cutting Policy)! Công thức",
+        "formula_version:Data! Phiên bản công thức",
+        "width_basis:Data! Cơ sở rộng",
+        "cut_width_m:Float! Rộng cắt lá (m)",
+        "billable_area_sqm:Float! Diện tích tính tiền (m2)",
+        "leaf_count:Float! Tổng số lá",
+        "single_layer_leaf_count:Float Lá một lớp",
+        "double_layer_leaf_count:Float Lá hai lớp",
+        "estimated_weight_kg:Float Kg dự toán",
+        "estimated_minutes:Float Phút dự toán",
+        "schedule_warning:Data Cảnh báo lịch",
+        "source_warehouse:Link(Warehouse)! Kho vật tư",
+        "target_warehouse:Link(Warehouse)! Kho thành phẩm",
+        "bom_no:Link(Bill of Materials)! BOM áp dụng",
+        "output_qty:Float! Số lượng đầu ra",
+        "stock_uom:Link(UOM)! ĐVT đầu ra",
+        "paint_required:Check Dự kiến cần sơn",
+        {
+          "fieldname": "formula_snapshot",
+          "fieldtype": "Long Text",
+          "label": "Snapshot công thức",
+          "read_only": true,
+          "hidden": true
+        },
+        "accessories:Small Text Phụ kiện",
+        "install_note:Small Text Ghi chú lắp đặt",
+        "note:Small Text Ghi chú dòng"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Sản xuất": "rwc",
+        "Kinh doanh": "r",
+        "Thủ kho": "r",
+        "Kế toán": "r"
+      }
+    },
+    {
+      "name": "Production Request",
+      "label": "Yêu cầu sản xuất",
+      "icon": "factory",
+      "group": "Sản xuất",
+      "naming": "YCSX-.YYYY.-####",
+      "title": "sales_order",
+      "list": [
+        "sales_order",
+        "customer",
+        "delivery_date",
+        "request_state",
+        "work_order_count"
+      ],
+      "search": [
+        "sales_order",
+        "customer"
+      ],
+      "fields": [
+        "sales_order:Link(Sales Order)! Đơn hàng",
+        "customer:Link(Customer)! Khách hàng",
+        "requested_on:Datetime!=(Now) Lập lúc",
+        "delivery_date:Date Ngày hẹn giao",
+        "source_warehouse:Link(Warehouse)! Kho nguyên vật liệu",
+        "target_warehouse:Link(Warehouse)! Kho nhập thành phẩm",
+        "request_state:Select(Nháp,Đang tạo lệnh,Đã tạo lệnh,Đang sản xuất,Hoàn thành,Đã huỷ)!=(Nháp) Trạng thái",
+        "work_order_count:Int~ Số lệnh sản xuất",
+        "items:Table(Production Request Item)! Từng bộ cửa",
+        "note:Small Text Ghi chú"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Sản xuất": "rwc",
+        "Kinh doanh": "r",
+        "Thủ kho": "r",
+        "Kế toán": "r"
+      }
+    },
+    {
+      "name": "Paint Job",
+      "label": "Việc sơn",
+      "icon": "paintbrush",
+      "group": "Sản xuất",
+      "naming": "SON-.YYYY.-#####",
+      "title": "work_order",
+      "list": [
+        "planned_on",
+        "work_order",
+        "batch_no",
+        "target_color",
+        "qty",
+        "state"
+      ],
+      "search": [
+        "work_order",
+        "cut_order",
+        "batch_no"
+      ],
+      "fields": [
+        "work_order:Link(Work Order)! Lệnh sản xuất",
+        "production_request:Link(Production Request) Yêu cầu sản xuất",
+        "production_request_line_key:Data Khóa bộ sản xuất",
+        "cut_order:Link(Cut Order)! Phiếu cắt",
+        "batch_no:Link(Batch)! Lô thô",
+        "item_code:Link(Item)! Mã vật tư",
+        "source_color:Link(Item Color) Màu hiện tại",
+        "target_color:Link(Item Color)! Màu cần sơn",
+        "qty:Float! Số lượng",
+        "state:Select(Chờ sơn,Đang sơn,Đã sơn,Đã huỷ)!=(Chờ sơn) Trạng thái",
+        "planned_on:Datetime Ngày vào lò dự kiến",
+        "completed_on:Datetime Hoàn thành lúc",
+        "kcs_by:Link(User) KCS xác nhận",
+        "note:Small Text Ghi chú"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Sản xuất": "rwc",
+        "Thủ kho": "r",
+        "Kinh doanh": "r",
         "Kế toán": "r"
       }
     }

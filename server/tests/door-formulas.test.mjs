@@ -28,7 +28,7 @@ test("danh mục có đúng một công thức hoạt động cho mỗi loại c
 
 test("dữ liệu Item cũ suy ra loại cửa từ các nhóm hàng thật", () => {
   assert.equal(inferDoorType(undefined, "Cửa CN Đức"), "Cửa Đức");
-  assert.equal(inferDoorType(undefined, "Cửa tấm liền Úc"), "Cửa Úc");
+  assert.equal(inferDoorType(undefined, "Cửa tấm liền Úc"), "Cửa tấm liền Úc");
   assert.equal(inferDoorType(undefined, "Cửa Lưới"), "Cửa Lưới");
   assert.equal(inferDoorType(undefined, "Cửa Đài Loan Inox"), "Cửa Đài Loan");
   assert.equal(inferDoorType(undefined, "Cửa kéo Đài Loan"), "Cửa Đài Loan");
