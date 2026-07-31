@@ -6,77 +6,54 @@ Ngày cập nhật: **2026-08-01**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Default head hiện tại: `5252b196b8cef5b1710c69d8bde04136741d0cc9`.
-- Canonical queue: `EPIC_STATUS.md`.
+- Exact default/base head: `e315007db174d70d6f73c68f2115e7956b09bf1d`.
+- Sales-to-Production PR #131 đã merge tại `e315007db174d70d6f73c68f2115e7956b09bf1d`.
+- Canonical branch hiện tại: `feat/tien-dat-purchase-fifo-20260801`.
 - Quy tắc giao hàng: `DELIVERY_POLICY.md`.
 
-## Sales-to-Production clean rebuild
+## Tiến Đạt purchase FIFO — IMPLEMENTED / CI PENDING
 
-PR canonical: **#131 — `feat(sales): rebuild order to production flow`**.
+Phạm vi yêu cầu đã được nối vào Alumdoor app entrypoint:
 
-- Branch: `feat/sales-order-production-flow-clean-20260801`.
-- Exact code head sau review: `4d60d26e8791c87cd9fa359d0310ef026f428c59`.
-- PR mergeable; nhánh đang sau default 19 commit chỉ thuộc workflow/release/package và không chồng lên 19 file source/test nghiệp vụ.
-- PR vẫn là **draft**; chưa merge và chưa release production.
-- Final diff không có workflow dùng một lần, transport/sync workflow, hidden trigger hoặc generated artifact.
+- form chi tiết đặt nhôm hiển thị STT, ngày chứng từ, mã hàng, chiều dài, kg/m, số cây, kg barem, đơn giá, thành tiền, màu và dập/không dập;
+- chỉ đọc các Purchase Order và Purchase Receipt đã ghi sổ của đúng nhà cung cấp;
+- khớp theo mã hàng + chiều dài + màu + trạng thái dập;
+- phân bổ số cây nhận vào đơn có ngày xa nhất trước;
+- mỗi dòng phiếu nhập giữ liên kết `purchase_order` và diễn giải ngày đơn bị trừ;
+- trả lịch sử phiếu nhập đã ghi sổ, số cây, số mét, kg barem và kg thực tế;
+- trả công nợ danh nghĩa và khoảng giao thêm hợp lệ theo dung sai;
+- Tiến Đạt mặc định dung sai `5%` khi Supplier chưa khai riêng; cấu hình trên Supplier luôn được ưu tiên;
+- không cho nhận vượt tổng số đặt cộng dung sai;
+- fail closed khi lịch sử cũ vượt năng lực các dòng đơn hoặc cùng quy cách có nhiều kg/m khác nhau.
 
-### Phạm vi đã triển khai
+### Ví dụ đã khóa bằng regression
 
-- Sales Order Item giữ luồng compact và có bảng nghiệp vụ mở rộng.
-- Field mở rộng `in_list_view` giữ `depends_on`, read-only, mask và cập nhật dòng.
-- Door policy có phiên bản, hỗ trợ Cửa tấm liền Úc và snapshot cơ cấu lá AL70.
-- Production Request tách theo từng bộ/loại cửa.
-- Work Order draft idempotent.
-- Cut/Paint theo Batch thực tế, có trạng thái `THÔ`.
-- Delivery truy vết bằng `sales_order_row_id`, có fallback dữ liệu cũ có kiểm soát.
-- Unicode Item Price normalization được giữ trong cùng luồng.
-- Thiếu policy/BOM bị chặn, không đoán dữ liệu.
-- Duplicate-list probe của Production Request, Work Order và Paint Job fail-closed trước mọi write.
-- Lỗi duplicate-list phát sinh sau preflight cũng được ghi nhớ và chặn write kế tiếp.
+- Ngày 1: `200` cây AL71, `7.2 m`, `0.389 kg/m` → `560.16 kg` barem.
+- Ngày 2: `100` cây → `280.08 kg` barem.
+- Nhận `230` cây → phân bổ `200` cây vào ngày 1 và `30` cây vào ngày 2.
+- Nợ danh nghĩa còn `70` cây = `504 m`.
+- Dung sai cộng dồn `±15` cây → khoảng giao thêm hợp lệ `55–85` cây.
+- Barem lần nhận: `644.184 kg`.
 
-### Finding đã sửa trong review 2026-08-01
+### File chính
 
-Paint Job trước đây dừng đồng bộ khi thấy bất kỳ job cũ nào của phiếu cắt. Nếu lần chạy trước tạo được một lô rồi lỗi ở lô sau, retry sẽ bỏ sót lô còn lại; cùng một batch xuất hiện nhiều entry cũng có thể sinh trùng job.
+- `server/apps-src/alumdoor-worker/src/purchase-fifo-receipt.ts`
+- `server/apps-src/alumdoor-worker/src/entry.ts`
+- `client/packages/views/src/form/ChildGridWithExtensions.tsx`
+- `server/tests/tien-dat-purchase-fifo.test.mjs`
 
-Đã sửa tại exact code head `4d60d26e...`:
+### Trạng thái kiểm tra
 
-- đối chiếu idempotency theo `batch_no`, không theo toàn bộ phiếu cắt;
-- retry giữ job đã có và chỉ tạo batch `THÔ` còn thiếu;
-- cộng gộp số lượng nếu cùng batch xuất hiện nhiều entry;
-- cache đọc Batch trong một lần đồng bộ;
-- fail closed khi Paint Job cũ thiếu `batch_no` hoặc có nhiều job active cho cùng batch;
-- thêm regression cho partial retry và batch aggregation.
+- Code head trước cập nhật handoff: `13d49cf4587f30c77837cbed9ac8d58add9296f2`.
+- Chưa mở PR tại thời điểm ghi file này.
+- Full CI, Purchase focused gate và UI gate chưa chạy trên exact final head.
+- Chưa merge feature này.
+- Chưa deploy Cloudflare hoặc bật rollout FIFO production.
 
-### CI evidence
+## Hàng đợi nghiệp vụ
 
-Exact head trước finding, `f8bd58178eed491f1edbb50d69bfeb4441002178`, đã PASS:
-
-- CI `30662282319`;
-- PR Validation `30662282855`;
-- Sales Feature CI `30662282651`;
-- Purchase Feature CI `30662282843`;
-- Inventory and Manufacturing CI `30662282438`;
-- UI Pull Request Validation `30662283106`.
-
-Exact head mới sau finding đang chờ GitHub Actions chạy lại. Không dùng evidence của `f8bd5817...` để merge head mới.
-
-## Đối chiếu yêu cầu 25.7
-
-Tài liệu 25.7 được chia thành queue hiện hành:
-
-1. Sales-to-Production — PR #131 đang hoàn tất.
-2. Purchase authenticated QA — kiểm luồng nhập hàng và chứng từ mua.
-3. Finance — thu/chi, công nợ chi tiết, phân bổ thanh toán và báo cáo công nợ.
-4. Daily ledger — sổ chi tiết theo ngày, khóa sửa, adjustment và reconciliation.
-5. Warranty / Capacity — bốn nguyên nhân lỗi, đổi trả/NCC/KH và tổng phút sản xuất, tăng ca.
-6. End-to-end acceptance — đơn hàng → sản xuất → tồn kho → giao hàng → công nợ → sổ ngày → điều chỉnh → bảo hành.
-
-Inventory physical-stock Slice D foundation đã merge ở PR #82. Toàn bộ yêu cầu chưa hoàn tất cho tới khi sáu epic trên đều DONE và authenticated end-to-end PASS.
-
-## Trạng thái nghiệp vụ
-
-1. Sales-to-Production — `DRAFT PR #131 / NEW HEAD CI PENDING / NOT MERGED`.
-2. Purchase authenticated QA — `QUEUED AFTER SALES MERGE`.
+1. Tiến Đạt purchase FIFO — `IMPLEMENTED / CI PENDING`.
+2. Purchase authenticated QA — `QUEUED AFTER FIFO MERGE`.
 3. Finance — `QUEUED / REBUILD`.
 4. Daily ledger — `QUEUED`.
 5. Warranty / Capacity — `QUEUED`.
@@ -86,6 +63,6 @@ Inventory physical-stock Slice D foundation đã merge ở PR #82. Toàn bộ y�
 
 - Không sửa production secret hoặc DNS.
 - Không xóa Cloudflare resource.
-- FIFO vẫn **disabled**.
-- Chưa deploy PR #131.
-- Không commit `.env`, `server/work/`, `tmp`, backup hoặc generated evidence.
+- Không thay đổi `purchase_allocation_rollout_state`; generic FIFO production vẫn disabled.
+- Không deploy Cloudflare trong đợt này khi chưa có yêu cầu rõ.
+- Không commit `.env`, `server/work/`, `tmp`, backup, credential hoặc generated evidence.

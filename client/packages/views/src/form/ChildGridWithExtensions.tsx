@@ -24,6 +24,18 @@ const SALES_STANDARD_FIELDS = new Set([
   "availability_status", "note",
 ]);
 
+const PURCHASE_ORDER_DETAIL_FIELDS = [
+  "item_code",
+  "length_m",
+  "theoretical_kg_per_m",
+  "qty_bar",
+  "theoretical_kg",
+  "rate",
+  "amount",
+  "color",
+  "is_stamped",
+] as const;
+
 const LAYOUT_TYPES = new Set([
   "Section Break", "Column Break", "Tab Break", "Fold", "Heading", "HTML", "Button", "Table", "Table MultiSelect",
 ]);
@@ -32,7 +44,16 @@ function isSalesGrid(meta: DocTypeMeta): boolean {
   return meta.name === "Quotation Item" || meta.name === "Sales Order Item";
 }
 
+function isPurchaseOrderGrid(meta: DocTypeMeta): boolean {
+  return meta.name === "Purchase Order Item";
+}
+
 function extensionColumns(meta: DocTypeMeta): DocField[] {
+  if (isPurchaseOrderGrid(meta)) {
+    return PURCHASE_ORDER_DETAIL_FIELDS
+      .map((fieldname) => (meta.fields ?? []).find((field) => field.fieldname === fieldname))
+      .filter((field): field is DocField => Boolean(field));
+  }
   if (!isSalesGrid(meta)) return [];
   return (meta.fields ?? []).filter((field) =>
     field.in_list_view === 1
@@ -72,6 +93,8 @@ function ExtensionGrid(props: ChildGridProps) {
   const { childMeta, rows, onChange, registry, services, readOnly, parentDoc, roles } = props;
   const columns = extensionColumns(childMeta);
   if (!columns.length) return null;
+  const purchaseOrder = isPurchaseOrderGrid(childMeta);
+  const orderDate = String(parentDoc?.transaction_date ?? "").trim();
 
   const setCell = (rowIndex: number, fieldname: string, value: unknown) => {
     onChange(rows.map((row, index) => index === rowIndex ? { ...row, [fieldname]: value } : row));
@@ -80,12 +103,13 @@ function ExtensionGrid(props: ChildGridProps) {
   return (
     <div className="mt-2 overflow-x-auto rounded-md border" data-child-grid-extensions={childMeta.name}>
       <div className="border-b bg-muted/30 px-3 py-2 text-xs font-medium text-muted-foreground">
-        Trường mở rộng
+        {purchaseOrder ? "Chi tiết đặt nhôm" : "Trường mở rộng"}
       </div>
       <Table className="w-full text-sm">
         <TableHeader>
           <TableRow className="bg-muted/20 hover:bg-muted/20">
-            <TableHead className="w-10 text-right">#</TableHead>
+            <TableHead className="w-10 text-right">{purchaseOrder ? "STT" : "#"}</TableHead>
+            {purchaseOrder ? <TableHead className="min-w-28">Ngày</TableHead> : null}
             {columns.map((field) => (
               <TableHead key={field.fieldname} className="min-w-32">
                 {field.label || field.fieldname}{field.reqd ? <span className="ml-0.5 text-destructive">*</span> : null}
@@ -97,6 +121,11 @@ function ExtensionGrid(props: ChildGridProps) {
           {rows.map((row, rowIndex) => (
             <TableRow key={String(row.name ?? rowIndex)}>
               <TableCell className="text-right text-xs text-muted-foreground">{rowIndex + 1}</TableCell>
+              {purchaseOrder ? (
+                <TableCell className="min-w-28 text-sm text-muted-foreground">
+                  {orderDate || "—"}
+                </TableCell>
+              ) : null}
               {columns.map((field) => {
                 const gridField: DocField = field.list_only ? { ...field, list_only: 0 } : field;
                 const resolved = resolveField(gridField, childMeta, {

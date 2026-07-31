@@ -6,102 +6,58 @@ Ngày cập nhật: **2026-08-01**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Current release/default head: `fd0a3e697a25dc3907c5e7aa751a593ad8c01628`.
+- Exact default/base head: `e315007db174d70d6f73c68f2115e7956b09bf1d`.
+- Current canonical branch: `feat/tien-dat-purchase-fifo-20260801`.
 - Đọc theo thứ tự: `EPIC_STATUS.md` → `CURRENT_STATUS.md` → `NEXT_TASKS.md` → `DELIVERY_POLICY.md`.
-- GitHub là nguồn sự thật cho code, CI, release run và artifact.
+- GitHub là nguồn sự thật cho code, CI, merge và release evidence.
 
-## Inventory Slice D foundation — MERGED
+## Sales-to-Production — MERGED
 
-- PR #82 merge SHA: `a7e6ef65b2352f596e285ea34d8e6438dff11a95`.
-- Physical-stock read model đọc append-only ledger; không tạo balance book thứ hai.
-- D1 reader fail closed trên tenant/company leak, malformed snapshot, overflow và source cap.
-- Native/Frappe endpoints có authenticated tenant injection, CSRF/trusted identity và User Permission scope.
-- CSV có BOM, formula-injection protection và export permission snapshot.
-- Invalid cursor trả `422`; lineage chỉ explicit opt-in.
-- Tenant-worker wrapper giữ router cũ trong `index-core.ts` và intercept đúng physical-stock routes.
+- PR #131 merge SHA: `e315007db174d70d6f73c68f2115e7956b09bf1d`.
+- Exact PR head `c906db398ab562c64aed6f5409eb413f0f516f7a` đã qua CI, PR Validation, Sales, Purchase, Inventory và UI.
+- Không deploy Cloudflare trong phiên merge đó.
 
-## Full-estate production release — SUCCESS
+## Tiến Đạt purchase FIFO — IMPLEMENTED / CI PENDING
 
-### Alumdoor app Worker
+Yêu cầu hiện tại:
 
-- Run `30657418272`: SUCCESS.
-- Release head: `e54de092fe8c4c68c21e43375de46b0d80f0a3ee`.
-- Worker: `cloudforge-app-alumdoor`.
-- Namespace: `cloudforge-production`.
-- Version: `cbd99611-daf3-4190-b1e4-fc2b4ce74227`.
-- Deployment time: `2026-07-31T19:01:08.862Z`.
-- Build, focused regression, dry-run, deploy, provider identity và `PLATFORM`/`AI` bindings: PASS.
-- Artifact `8803798231`, digest `sha256:0a8f6973a695f7701eda107d9e273a6420e50e913e0f441ee158904c8e590815`.
+- form đặt nhôm có STT, ngày, mã hàng, chiều dài, kg/m, số cây, kg barem, đơn giá, thành tiền, màu, dập/không dập;
+- hàng nhận trừ đơn cũ nhất trước;
+- theo dõi nợ nhà máy bằng số cây và mét theo đúng mã/quy cách;
+- lưu lịch sử phiếu nhập và lịch sử phân bổ;
+- Tiến Đạt có dung sai mặc định `±5%`, Supplier config được ưu tiên;
+- ví dụ `200 + 100`, nhận `230` phải ra `200 + 30`, nợ danh nghĩa `70`, khoảng giao thêm `55–85`.
 
-### Gateway / runtime UI
+Code đã thêm:
 
-- Run `30659230293`: SUCCESS.
-- Release head: `fd0a3e697a25dc3907c5e7aa751a593ad8c01628`.
-- Worker: `cloudforge-gateway`.
-- Version: `7a3c1130-4c7e-4089-96b9-9b6fcc7a2ca7`.
-- Deployment time: `2026-07-31T19:30:29.196Z`.
-- Runtime lint/test/typecheck/build, stage, dry-run, deploy và provider evidence: PASS.
-- Smoke: health/root `200`, guest boot `403`, exact release SHA visible in HTML.
-- Custom domains trong release: `edu.kairo.vn`, `hrm.kairo.vn`, `chotdon.kairo.vn`, `alu.kairo.vn`, `phanbon.kairo.vn`.
-- Artifact `8804509081`, digest `sha256:e1642270f1d8ee4b9b743dc1a22a7113dee1529c862c081369884bcb4a9a8710`.
+- `server/apps-src/alumdoor-worker/src/purchase-fifo-receipt.ts` — handler FIFO, debt summary, history, tolerance.
+- `server/apps-src/alumdoor-worker/src/entry.ts` — intercept đúng hai method FIFO rồi delegate mọi route khác.
+- `client/packages/views/src/form/ChildGridWithExtensions.tsx` — bảng Chi tiết đặt nhôm theo contract cột.
+- `server/tests/tien-dat-purchase-fifo.test.mjs` — regression yêu cầu và preview end-to-end bằng platform fake.
 
-### alu Tenant Worker
+Code head trước handoff docs: `13d49cf4587f30c77837cbed9ac8d58add9296f2`.
+Final head phải lấy lại từ GitHub sau commit tài liệu.
 
-- Run `30659229116`: SUCCESS.
-- Release head: `fd0a3e697a25dc3907c5e7aa751a593ad8c01628`.
-- Worker: `cloudforge-tenant-alu`.
-- Namespace: `cloudforge-production`.
-- Version: `c5db02b4-eee9-4da8-8c3f-f5a346b2230c`.
-- Deployment time: `2026-07-31T19:30:37.983Z`.
-- Build, physical-stock regressions, backup, recorded migration, dry-run/deploy và provider evidence: PASS.
-- Smoke: health `200`, guest boot `403`, unauthenticated physical-stock `401`.
-- Release artifact `8804512429`, digest `sha256:f31567541667e52e4696e6f90c8744bdfe7fe074e8031477009d35915325df09`.
-- Pre-release backup artifact `8804497476`, digest `sha256:9c3c78801e8d118261892e9016b1f2e2d2878df7b428be48df1f8052891007e3`.
+## Kiến trúc liên quan
 
-## Production workflow fix
-
-Tenant và Gateway ban đầu fail trước khi tạo job vì dùng `${{ runner.temp }}` ở job-level `env`. Không có secret, migration hoặc deploy nào chạy trong các failure rỗng.
-
-PR #130:
-
-- exact head `b5963939b9e63300a85f92814c632ec327492f83`;
-- merge `fd0a3e697a25dc3907c5e7aa751a593ad8c01628`;
-- chuyển evidence/output paths sang `/tmp/...`;
-- CI `30658970590`, PR Validation `30658971326`, Sales `30658971431`, Purchase `30658970196`, Inventory `30658971107`, UI `30658970422`: SUCCESS.
-
-Sau merge, tenant và Gateway tạo job thật và release thành công.
-
-## CI architecture hiện hành
-
-1. `CI` là full test + typecheck + build duy nhất.
-2. `PR Validation` chỉ policy/changed-file gate.
-3. Feature/UI workflows chạy focused scope hoặc fast path.
-4. Production release chạy từ exact merged SHA qua dedicated workflow.
-5. Cấm workflow `*once*`, transport/sync workflow và hidden trigger.
-
-## Canonical queue
-
-1. **Sales-to-Production** — next clean rebuild.
-2. **Purchase authenticated QA** — clean rebuild sau Sales.
-3. **Finance** — rebuild.
-4. **Daily ledger**.
-5. **Warranty / Capacity**.
-6. **End-to-end acceptance**.
-
-Không reopen PR #103, #107, #119, #122 hoặc temporary inspector #128.
+- Generic append-only purchase allocation engine, timeline và báo cáo công nợ NCC đã tồn tại trong `server/packages/clouderp-core` và `server/packages/document-kernel`.
+- `purchase_allocation_rollout_state` không được thay đổi trong feature này.
+- Generic FIFO production vẫn disabled.
+- Alumdoor action `nhap-nhom-fifo` dùng handler app-level mới để preview và tạo Purchase Receipt nháp.
 
 ## Việc tiếp theo
 
-- Tạo một Sales-to-Production branch từ exact current default.
-- Chỉ mang source/test thật; không mang trigger/workflow vận chuyển.
-- Chạy `door-formulas`, `sales-production-flow`, Unicode pricing và build trước push.
-- Một PR canonical, khóa exact head khi CI chạy.
-- Release production chỉ từ merged SHA nếu target thay đổi.
+1. Mở một PR canonical từ branch hiện tại.
+2. Chạy exact-head CI, Purchase focused gate và UI gate.
+3. Sửa direct cause trên cùng branch nếu có lỗi.
+4. Merge bằng expected exact head khi mọi required check xanh.
+5. Sau merge, bắt đầu Purchase authenticated QA clean rebuild.
+6. Không deploy Cloudflare hoặc bật FIFO production nếu chưa có yêu cầu riêng.
 
 ## Safety
 
 - Không sửa production secret hoặc DNS.
 - Không xóa Cloudflare resource.
-- FIFO vẫn **disabled**.
-- Migration production phải có backup/recovery trước execute.
+- Không thay rollout state.
+- Không mutate dữ liệu khách hàng.
 - Không commit `.env`, `server/work/`, `tmp`, backup, credential hoặc generated evidence.

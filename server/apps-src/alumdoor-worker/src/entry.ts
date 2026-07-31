@@ -1,5 +1,6 @@
 import baseWorker from "./index.js";
 import { validateItemCatalogInvariants } from "./item-catalog-invariants.js";
+import { handlePurchaseFifoRequest } from "./purchase-fifo-receipt.js";
 
 type WorkerEnv = Parameters<typeof baseWorker.fetch>[1];
 type WorkerContext = Parameters<typeof baseWorker.fetch>[2];
@@ -8,11 +9,21 @@ type WorkerContext = Parameters<typeof baseWorker.fetch>[2];
  * Entrypoint triển khai của Alumdoor.
  *
  * Item đi qua cả validator lịch sử và các invariant catalog mới. Hai phép kiểm chạy song
- * song; mọi route khác được chuyển nguyên vẹn sang Worker cũ.
+ * song; nhập nhôm FIFO dùng bộ theo dõi công nợ Tiến Đạt; route khác chuyển nguyên vẹn.
  */
 export default {
   async fetch(request: Request, env: WorkerEnv, ctx: WorkerContext): Promise<Response> {
     const url = new URL(request.url);
+    if (url.pathname.startsWith("/api/method/")) {
+      const method = decodeURIComponent(url.pathname.slice("/api/method/".length));
+      if (method === "alumdoor.purchase.preview_fifo_receipt") {
+        return handlePurchaseFifoRequest(request, env, false);
+      }
+      if (method === "alumdoor.purchase.fifo_receipt") {
+        return handlePurchaseFifoRequest(request, env, true);
+      }
+    }
+
     if (url.pathname !== "/hooks/validate" || request.method !== "POST") {
       return baseWorker.fetch(request, env, ctx);
     }
