@@ -11,25 +11,20 @@
 - Preview từ chối giá thiếu/sai tiền tệ, âm/sai định dạng hoặc đã ngừng áp dụng.
 - Test tích hợp trực tiếp `alumdoor.sales.item_context` cho exact UOM price, tồn quy đổi, currency mismatch, disabled/malformed price, legacy UOM và undeclared UOM.
 - Test quyền metadata thật: `Kinh doanh` chỉ đọc `Price List`/`Item Price`, bị từ chối create/save; `Kế toán` vẫn create/save được cả hai.
-- Exact head `22b13a8aa597855792848dd085af741f467efaf7` đã qua Sales Feature CI run `30620312791` và PR Validation run `30620312786`.
-
-Blocker hiện tại:
-
-- Exact head có test quyền `9bcb36f4f068e662cfad2e1f64591390808cbe8f` chưa đạt G4 vì GitHub Actions thất bại trước khi job bắt đầu, `steps=null` và không có log.
-- Runs gần nhất: Sales Feature CI `30620681609`, PR Validation `30620681661`, Cloudflare observation `30620681614`.
-- Phân loại: **infrastructure**. Không sửa code theo các run này và không coi chúng là test failure.
+- GitHub Actions từng lỗi trước `Set up job`; rerun không đổi code đã chạy bình thường, xác nhận đây là lỗi hạ tầng tạm thời.
+- Sales Feature CI rerun `30620774111`, job `91136237101`: unit, SQL, brief, client test, typecheck và build **PASS** trên HEAD `442a0b59c683ffd26cf012db8131a84f684b512b`.
+- PR Validation rerun `30620774088`, job `91136251549`: test, typecheck và build **PASS** trên cùng HEAD.
 
 Còn lại trước khi đề nghị merge/deploy:
 
-1. Khôi phục GitHub Actions runner/quota/billing hoặc nguyên nhân hạ tầng tương ứng, rồi chạy lại Sales Feature CI và PR Validation trên exact head hiện hành; mọi step phải xanh.
-2. Smoke Báo giá/Đơn hàng trên staging: chọn Item, đổi ĐVT, đổi Bảng giá, đổi Kho, kiểm trạng thái tồn và giá.
-3. Nạp ít nhất hai Item Price khác ĐVT cho cùng một Item trên staging và xác minh giá không bị quy đổi chéo.
-4. Xác minh Item Price legacy không UOM vẫn chạy; legacy có UOM chỉ chạy khi dòng khớp.
-5. Smoke các lỗi giá mới: thiếu currency, currency khác chứng từ, rate âm/sai định dạng và giá disabled không được điền vào dòng.
-6. Smoke quyền bằng tài khoản thật: `Kinh doanh` đọc được Bảng giá/Đơn giá nhưng không tạo, sửa hoặc xoá master; `Kế toán` vẫn quản lý được.
-7. Thiết kế bước tiếp theo: reservation/ATP theo Sales Order; chưa bật trong đợt này.
-8. Chỉ chuyển PR #25 khỏi draft sau exact-head CI xanh và browser/staging smoke.
-9. Không merge hoặc deploy production nếu chưa có explicit approval.
+1. Smoke Báo giá/Đơn hàng trên staging: chọn Item, đổi ĐVT, đổi Bảng giá, đổi Kho, kiểm trạng thái tồn và giá.
+2. Nạp ít nhất hai Item Price khác ĐVT cho cùng một Item trên staging và xác minh giá không bị quy đổi chéo.
+3. Xác minh Item Price legacy không UOM vẫn chạy; legacy có UOM chỉ chạy khi dòng khớp.
+4. Smoke các lỗi giá mới: thiếu currency, currency khác chứng từ, rate âm/sai định dạng và giá disabled không được điền vào dòng.
+5. Smoke quyền bằng tài khoản thật: `Kinh doanh` đọc được Bảng giá/Đơn giá nhưng không tạo, sửa hoặc xoá master; `Kế toán` vẫn quản lý được.
+6. Thiết kế bước tiếp theo: reservation/ATP theo Sales Order; chưa bật trong đợt này.
+7. Chỉ chuyển PR #25 khỏi draft sau browser/staging smoke.
+8. Không merge hoặc deploy production nếu chưa có explicit approval.
 
 Ngày cập nhật: **2026-07-31**.
 
