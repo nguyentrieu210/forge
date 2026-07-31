@@ -34,7 +34,7 @@ replaceOnce(
     }
 
     const document = await documents.getDocument(tenantId, requestedDoctype, name);
-    if (!document) throw errors.notFound(\`${requestedDoctype} ${name} was not found\`);
+    if (!document) throw errors.notFound(requestedDoctype + " " + name + " was not found");
     await permissions.assert({
       actor,
       tenantId,
