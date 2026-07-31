@@ -1,5 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import {
   buildBackfillArgs,
@@ -51,6 +53,28 @@ test("readiness evidence cannot be written inside the repository", () => {
       tempRoot: "/tmp",
     }),
     path.resolve("/tmp/forge-purchase-evidence"),
+  );
+});
+
+test("readiness evidence rejects an external symlink that resolves into the repository", (t) => {
+  const root = mkdtempSync(path.join(os.tmpdir(), "forge-readiness-symlink-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+
+  const repositoryRoot = path.join(root, "repository");
+  const repositoryEvidence = path.join(repositoryRoot, "server", "work", "evidence");
+  const externalRoot = path.join(root, "external");
+  const symlinkPath = path.join(externalRoot, "evidence-link");
+  mkdirSync(repositoryEvidence, { recursive: true });
+  mkdirSync(externalRoot, { recursive: true });
+  symlinkSync(repositoryEvidence, symlinkPath, process.platform === "win32" ? "junction" : "dir");
+
+  assert.throws(
+    () => resolveEvidenceDirectory(path.join(symlinkPath, "nested"), {
+      cwd: externalRoot,
+      repositoryRoot,
+      tempRoot: root,
+    }),
+    /must be outside repository/,
   );
 });
 
