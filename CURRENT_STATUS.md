@@ -9,6 +9,21 @@ Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
 - GitHub là nguồn sự thật cho code, PR, CI và release evidence.
 - Không commit `.env`, `.dev.vars`, secret, `server/work/`, `tmp/`, backup SQL hoặc generated artifacts.
 
+## CI/CD optimization — PR #66
+
+- Branch: `chore/optimize-gateway-ci-cd-20260731`.
+- Draft PR: `#66` — `ci: reduce duplicate and irrelevant workflow runs`.
+- Cloudflare Git Build đã được người dùng tắt trong dashboard, nên push GitHub không còn kích hoạt một lượt build Cloudflare riêng.
+- `.github/workflows/ci.yml` có router nhẹ:
+  - thay đổi chỉ ở Markdown, `docs/` hoặc `.github/release/` không chạy full test/typecheck/build;
+  - workflow vẫn có check thành công thay vì bị bỏ qua toàn bộ bởi `paths-ignore`.
+- Purchase, Sales và Inventory/Manufacturing CI có router theo file thay đổi:
+  - workflow luôn tạo check phân loại nhẹ;
+  - job nặng chỉ chạy khi thay đổi thuộc domain hoặc shared dependency liên quan;
+  - commit mới trên cùng PR hủy run cũ bằng concurrency theo số PR.
+- Các push trigger cũ gắn với branch feature đã hoàn thành được bỏ khỏi ba workflow nghiệp vụ.
+- Chưa deploy Cloudflare, chưa sửa production secrets, chưa migrate/mutate D1 và chưa bật FIFO.
+
 ## UI child table — recent links đã bỏ, wheel dropdown trong Dialog đã sửa đúng và phát hành production
 
 ### Phase 1 — PR #58
