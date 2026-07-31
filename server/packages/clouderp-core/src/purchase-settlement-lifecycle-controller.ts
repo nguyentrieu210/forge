@@ -2,7 +2,8 @@ import { errors } from "../../core/src/index.js";
 import { activePurchaseAllocationReader } from "../../document-kernel/src/index.js";
 import { PurchaseSettlementController } from "./purchase-allocation-action-controllers.js";
 
-type SettlementContext = Parameters<PurchaseSettlementController["buildPlan"]>[0];
+type SettlementController = InstanceType<typeof PurchaseSettlementController>;
+type SettlementContext = Parameters<SettlementController["buildPlan"]>[0];
 
 /** Adds the cross-window lifecycle preflight without duplicating settlement math. */
 export class PurchaseSettlementLifecycleController extends PurchaseSettlementController {
