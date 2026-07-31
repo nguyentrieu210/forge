@@ -9,6 +9,10 @@
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <script type="module">
+      const fixture = new URLSearchParams(window.location.search).has("dialog-wheel-fixture");
+      if (fixture) import("/src/dialog-wheel-fixture-main.tsx");
+      else import("/src/main.tsx");
+    </script>
   </body>
 </html>
