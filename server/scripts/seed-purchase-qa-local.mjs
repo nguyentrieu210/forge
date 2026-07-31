@@ -105,6 +105,25 @@ async function ensureResource(doctype, name, document) {
   });
 }
 
+async function activeLeafItemGroup() {
+  const query = new URLSearchParams({
+    fields: JSON.stringify(["name", "is_group", "disabled"]),
+    filters: JSON.stringify([
+      ["is_group", "=", 0],
+      ["disabled", "=", 0],
+    ]),
+    order_by: "name asc",
+    limit_page_length: "100",
+  });
+  const result = await requireOk(`/api/resource/${encodeURIComponent("Item Group")}?${query}`);
+  const rows = result && typeof result === "object" && Array.isArray(result.data) ? result.data : [];
+  const selected = rows
+    .map((row) => String(row?.name ?? "").trim())
+    .find(Boolean);
+  if (!selected) throw new Error("authoritative Alumdoor app installed no active leaf Item Group");
+  return selected;
+}
+
 await login();
 
 await ensureResource("Supplier", "QA-SUPPLIER", {
@@ -116,10 +135,11 @@ await ensureResource("Supplier", "QA-SUPPLIER", {
   note: "Local authenticated Purchase lifecycle QA only",
 });
 
+const itemGroup = await activeLeafItemGroup();
 await ensureResource("Item", "QA-PURCHASE-ITEM", {
   item_code: "QA-PURCHASE-ITEM",
   item_name: "QA Purchase Item",
-  item_group: "Phụ kiện",
+  item_group: itemGroup,
   item_nature: "Hàng tồn kho",
   material_stage: "Hàng hoá",
   supply_type: "Mua ngoài",
@@ -142,4 +162,4 @@ await ensureResource("Item", "QA-PURCHASE-ITEM", {
   description: "Deterministic local fixture for authenticated Purchase QA",
 });
 
-console.log("PURCHASE_QA_SEED_PASS supplier=QA-SUPPLIER item=QA-PURCHASE-ITEM origin=loopback");
+console.log(`PURCHASE_QA_SEED_PASS supplier=QA-SUPPLIER item=QA-PURCHASE-ITEM item_group=${JSON.stringify(itemGroup)} origin=loopback`);
