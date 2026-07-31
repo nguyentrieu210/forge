@@ -42,6 +42,10 @@ export interface PhysicalStockFilters {
   color?: string;
   condition?: string;
   generation?: string;
+  length_micros?: number;
+  width_micros?: number;
+  height_micros?: number;
+  thickness_micros?: number;
   batch_no?: string;
   serial_no?: string;
   include_zero?: boolean;
@@ -92,14 +96,17 @@ export interface PhysicalStockBalance {
   lineage: PhysicalStockLineageEvent[];
 }
 
+export interface PhysicalStockTotals {
+  quantity_micros: number;
+  value_micros: number;
+  physical_count_micros: number;
+}
+
 export interface PhysicalStockPage {
   rows: PhysicalStockBalance[];
   next_cursor?: string;
-  totals: {
-    quantity_micros: number;
-    value_micros: number;
-    physical_count_micros: number;
-  };
+  totals: PhysicalStockTotals;
+  complete: boolean;
 }
 
 /**
@@ -120,100 +127,117 @@ export function buildPhysicalStockPage(
     const event = lineageEvent(row);
     const current = groups.get(key);
     if (!current) {
-      groups.set(key, {
-        key,
-        tenant_id: row.tenant_id,
-        company: row.company,
-        item_code: row.item_code,
-        warehouse: row.warehouse,
-        warehouse_role: text(row.warehouse_role),
-        physical_identity_key: text(row.physical_identity_key),
-        inventory_mode: text(row.inventory_mode) || "Hàng thường",
-        measurement_profile: text(row.measurement_profile),
-        color: text(row.color),
-        condition: text(row.condition),
-        generation: text(row.generation),
-        ...(row.length_micros === undefined ? {} : { length_micros: row.length_micros }),
-        ...(row.width_micros === undefined ? {} : { width_micros: row.width_micros }),
-        ...(row.height_micros === undefined ? {} : { height_micros: row.height_micros }),
-        ...(row.thickness_micros === undefined ? {} : { thickness_micros: row.thickness_micros }),
-        batch_no: text(row.batch_no),
-        serial_no: text(row.serial_no),
-        quantity_micros: row.quantity_micros,
-        value_micros: row.value_micros ?? 0,
-        physical_count_micros: row.physical_count_micros ?? 0,
-        first_posting_at: row.posting_at,
-        last_posting_at: row.posting_at,
-        lineage: [event],
-      });
+      groups.set(key, createBalance(key, row, event));
       continue;
     }
-    current.quantity_micros += row.quantity_micros;
-    current.value_micros += row.value_micros ?? 0;
-    current.physical_count_micros += row.physical_count_micros ?? 0;
+    current.quantity_micros = addMicros(current.quantity_micros, row.quantity_micros);
+    current.value_micros = addMicros(current.value_micros, row.value_micros ?? 0);
+    current.physical_count_micros = addMicros(current.physical_count_micros, row.physical_count_micros ?? 0);
     if (row.posting_at < current.first_posting_at) current.first_posting_at = row.posting_at;
     if (row.posting_at > current.last_posting_at) current.last_posting_at = row.posting_at;
     current.lineage.push(event);
   }
 
   const all = [...groups.values()]
-    .filter((row) => filters.include_zero || row.quantity_micros !== 0 || row.value_micros !== 0 || row.physical_count_micros !== 0)
-    .map((row) => ({ ...row, lineage: row.lineage.sort(compareEvents) }))
+    .filter((row) => filters.include_zero || !isZeroBalance(row))
+    .map((row) => ({ ...row, lineage: [...row.lineage].sort(compareEvents) }))
     .sort(compareBalances);
 
   const start = cursorIndex(all, filters.cursor);
   const limit = Math.min(Math.max(filters.limit ?? 100, 1), 500);
   const rows = all.slice(start, start + limit);
-  const next = start + rows.length < all.length ? encodeCursor(rows.at(-1)!.key) : undefined;
+  const hasMore = start + rows.length < all.length;
+  const last = rows[rows.length - 1];
 
   return {
     rows,
-    ...(next ? { next_cursor: next } : {}),
-    totals: all.reduce(
-      (totals, row) => ({
-        quantity_micros: totals.quantity_micros + row.quantity_micros,
-        value_micros: totals.value_micros + row.value_micros,
-        physical_count_micros: totals.physical_count_micros + row.physical_count_micros,
-      }),
-      { quantity_micros: 0, value_micros: 0, physical_count_micros: 0 },
-    ),
+    ...(hasMore && last ? { next_cursor: encodeCursor(last.key) } : {}),
+    totals: sumBalances(all),
+    complete: start === 0 && !hasMore,
   };
 }
 
 export function reconcilePhysicalStockPage(page: PhysicalStockPage): void {
-  const quantity = page.rows.reduce((sum, row) => sum + row.quantity_micros, 0);
-  const value = page.rows.reduce((sum, row) => sum + row.value_micros, 0);
-  const count = page.rows.reduce((sum, row) => sum + row.physical_count_micros, 0);
-  if (!page.next_cursor && (quantity !== page.totals.quantity_micros || value !== page.totals.value_micros || count !== page.totals.physical_count_micros)) {
-    throw new Error("physical stock totals do not reconcile");
-  }
   for (const row of page.rows) {
-    const eventQuantity = row.lineage.reduce((sum, event) => sum + event.quantity_micros, 0);
-    const eventValue = row.lineage.reduce((sum, event) => sum + event.value_micros, 0);
-    const eventCount = row.lineage.reduce((sum, event) => sum + event.physical_count_micros, 0);
-    if (eventQuantity !== row.quantity_micros || eventValue !== row.value_micros || eventCount !== row.physical_count_micros) {
+    const eventTotals = sumEvents(row.lineage);
+    if (
+      eventTotals.quantity_micros !== row.quantity_micros
+      || eventTotals.value_micros !== row.value_micros
+      || eventTotals.physical_count_micros !== row.physical_count_micros
+    ) {
       throw new Error(`physical stock lineage does not reconcile for ${row.key}`);
     }
   }
+
+  if (!page.complete) return;
+  const pageTotals = sumBalances(page.rows);
+  if (
+    pageTotals.quantity_micros !== page.totals.quantity_micros
+    || pageTotals.value_micros !== page.totals.value_micros
+    || pageTotals.physical_count_micros !== page.totals.physical_count_micros
+  ) {
+    throw new Error("physical stock totals do not reconcile");
+  }
+}
+
+function createBalance(
+  key: string,
+  row: PhysicalStockLedgerRow,
+  event: PhysicalStockLineageEvent,
+): PhysicalStockBalance {
+  return {
+    key,
+    tenant_id: row.tenant_id,
+    company: row.company,
+    item_code: row.item_code,
+    warehouse: row.warehouse,
+    warehouse_role: text(row.warehouse_role),
+    physical_identity_key: text(row.physical_identity_key),
+    inventory_mode: text(row.inventory_mode) || "Hàng thường",
+    measurement_profile: text(row.measurement_profile),
+    color: text(row.color),
+    condition: text(row.condition),
+    generation: text(row.generation),
+    ...(row.length_micros === undefined ? {} : { length_micros: row.length_micros }),
+    ...(row.width_micros === undefined ? {} : { width_micros: row.width_micros }),
+    ...(row.height_micros === undefined ? {} : { height_micros: row.height_micros }),
+    ...(row.thickness_micros === undefined ? {} : { thickness_micros: row.thickness_micros }),
+    batch_no: text(row.batch_no),
+    serial_no: text(row.serial_no),
+    quantity_micros: row.quantity_micros,
+    value_micros: row.value_micros ?? 0,
+    physical_count_micros: row.physical_count_micros ?? 0,
+    first_posting_at: row.posting_at,
+    last_posting_at: row.posting_at,
+    lineage: [event],
+  };
 }
 
 function matches(row: PhysicalStockLedgerRow, filters: PhysicalStockFilters): boolean {
   return row.tenant_id === filters.tenant_id
     && row.company === filters.company
-    && match(row.item_code, filters.item_code)
-    && match(row.warehouse, filters.warehouse)
-    && match(row.warehouse_role, filters.warehouse_role)
-    && match(row.inventory_mode, filters.inventory_mode)
-    && match(row.measurement_profile, filters.measurement_profile)
-    && match(row.color, filters.color)
-    && match(row.condition, filters.condition)
-    && match(row.generation, filters.generation)
-    && match(row.batch_no, filters.batch_no)
-    && match(row.serial_no, filters.serial_no);
+    && matchText(row.item_code, filters.item_code)
+    && matchText(row.warehouse, filters.warehouse)
+    && matchText(row.warehouse_role, filters.warehouse_role)
+    && matchText(row.inventory_mode, filters.inventory_mode)
+    && matchText(row.measurement_profile, filters.measurement_profile)
+    && matchText(row.color, filters.color)
+    && matchText(row.condition, filters.condition)
+    && matchText(row.generation, filters.generation)
+    && matchNumber(row.length_micros, filters.length_micros)
+    && matchNumber(row.width_micros, filters.width_micros)
+    && matchNumber(row.height_micros, filters.height_micros)
+    && matchNumber(row.thickness_micros, filters.thickness_micros)
+    && matchText(row.batch_no, filters.batch_no)
+    && matchText(row.serial_no, filters.serial_no);
 }
 
-function match(value: unknown, expected: string | undefined): boolean {
+function matchText(value: unknown, expected: string | undefined): boolean {
   return expected === undefined || text(value) === expected;
+}
+
+function matchNumber(value: number | undefined, expected: number | undefined): boolean {
+  return expected === undefined || value === expected;
 }
 
 function balanceKey(row: PhysicalStockLedgerRow): string {
@@ -273,29 +297,73 @@ function cursorIndex(rows: PhysicalStockBalance[], cursor: string | undefined): 
 }
 
 function encodeCursor(key: string): string {
-  return Buffer.from(key, "utf8").toString("base64url");
+  return encodeURIComponent(key);
 }
 
 function decodeCursor(cursor: string): string {
   try {
-    return Buffer.from(cursor, "base64url").toString("utf8");
+    return decodeURIComponent(cursor);
   } catch {
     throw new Error("invalid physical stock cursor");
   }
 }
 
+function sumBalances(rows: readonly PhysicalStockBalance[]): PhysicalStockTotals {
+  return rows.reduce<PhysicalStockTotals>(
+    (totals, row) => ({
+      quantity_micros: addMicros(totals.quantity_micros, row.quantity_micros),
+      value_micros: addMicros(totals.value_micros, row.value_micros),
+      physical_count_micros: addMicros(totals.physical_count_micros, row.physical_count_micros),
+    }),
+    { quantity_micros: 0, value_micros: 0, physical_count_micros: 0 },
+  );
+}
+
+function sumEvents(events: readonly PhysicalStockLineageEvent[]): PhysicalStockTotals {
+  return events.reduce<PhysicalStockTotals>(
+    (totals, event) => ({
+      quantity_micros: addMicros(totals.quantity_micros, event.quantity_micros),
+      value_micros: addMicros(totals.value_micros, event.value_micros),
+      physical_count_micros: addMicros(totals.physical_count_micros, event.physical_count_micros),
+    }),
+    { quantity_micros: 0, value_micros: 0, physical_count_micros: 0 },
+  );
+}
+
+function isZeroBalance(row: PhysicalStockBalance): boolean {
+  return row.quantity_micros === 0 && row.value_micros === 0 && row.physical_count_micros === 0;
+}
+
 function assertFilters(filters: PhysicalStockFilters): void {
   if (!text(filters.tenant_id)) throw new Error("tenant_id is required");
   if (!text(filters.company)) throw new Error("company is required");
+  if (filters.limit !== undefined && !Number.isInteger(filters.limit)) throw new Error("limit must be an integer");
+  for (const value of [filters.length_micros, filters.width_micros, filters.height_micros, filters.thickness_micros]) {
+    if (value !== undefined && !Number.isSafeInteger(value)) throw new Error("physical dimension filters must use safe integer micros");
+  }
 }
 
 function assertLedgerRow(row: PhysicalStockLedgerRow): void {
   if (!text(row.item_code) || !text(row.warehouse) || !text(row.posting_at) || !text(row.voucher_type) || !text(row.voucher_no)) {
     throw new Error("physical stock ledger row is incomplete");
   }
-  for (const value of [row.quantity_micros, row.value_micros ?? 0, row.physical_count_micros ?? 0]) {
-    if (!Number.isSafeInteger(value)) throw new Error("physical stock ledger micros must be safe integers");
+  for (const value of [
+    row.quantity_micros,
+    row.value_micros ?? 0,
+    row.physical_count_micros ?? 0,
+    row.length_micros,
+    row.width_micros,
+    row.height_micros,
+    row.thickness_micros,
+  ]) {
+    if (value !== undefined && !Number.isSafeInteger(value)) throw new Error("physical stock ledger micros must be safe integers");
   }
+}
+
+function addMicros(left: number, right: number): number {
+  const value = left + right;
+  if (!Number.isSafeInteger(value)) throw new Error("physical stock micros overflow");
+  return value;
 }
 
 function escapePart(value: unknown): string {
