@@ -1,4 +1,4 @@
-import type { CanonicalDocument } from "../../contracts/src/index.js";
+import type { CanonicalDocument, JsonObject, MutationPlan, StockLedgerEntry } from "../../contracts/src/index.js";
 import type { StockEntryData } from "../../clouderp-core/src/types.js";
 import { errors } from "../../core/src/index.js";
 import type { ControllerContext } from "../../document-kernel/src/index.js";
@@ -8,21 +8,22 @@ import {
   type ManufacturingRowKind,
 } from "./manufacturing-lifecycle.js";
 
-interface SnapshotRow {
+interface SnapshotRow extends JsonObject {
   bom_row_id: string;
   required_qty_micros: number;
 }
 
-interface SnapshotData extends StockEntryData {
+interface SnapshotData extends JsonObject {
   manufacturing_snapshot?: { bom_checksum: string; rows: SnapshotRow[] };
   bom_checksum?: string;
 }
 
-interface ProgressRow {
+interface ProgressRow extends JsonObject {
   row_id: string;
   item_code: string;
   qty: string | number;
   qty_micros?: number;
+  target_warehouse?: string;
   bom_row_id?: string;
   manufacturing_kind?: ManufacturingRowKind;
   work_order_bom_checksum?: string;
@@ -32,7 +33,14 @@ interface ProgressDocument extends StockEntryData {
   items: ProgressRow[];
 }
 
-/** Final aggregate guard after row normalization, including multiple lines in one voucher. */
+/**
+ * Final aggregate guard after row normalization.
+ *
+ * It prevents split rows from exceeding one BOM row and rebalances the value retained
+ * in scrap/offcut warehouses out of the finished-good valuation. Quantity/value still
+ * live in the existing append-only stock ledger; no parallel manufacturing ledger is
+ * introduced merely because humans enjoy reconciling avoidable duplicates.
+ */
 export class GuardedManufacturingStockEntryController extends ManufacturingStockEntryController {
   override async normalize(context: ControllerContext<StockEntryData>): Promise<StockEntryData> {
     const normalized = await super.normalize(context) as ProgressDocument;
@@ -77,6 +85,64 @@ export class GuardedManufacturingStockEntryController extends ManufacturingStock
     }
     return normalized;
   }
+
+  override async buildPlan(context: ControllerContext<StockEntryData>): Promise<MutationPlan<StockEntryData>> {
+    const plan = await super.buildPlan(context);
+    if (context.command.action !== "submit") return plan;
+    const data = plan.document.data as ProgressDocument;
+    if (data.purpose !== "Manufacture") return plan;
+
+    const recoveryPrefixes = data.items
+      .filter((row) => (row.manufacturing_kind === "Scrap" || row.manufacturing_kind === "Offcut") && row.target_warehouse)
+      .map((row) => `TGT-${row.row_id}`);
+    if (recoveryPrefixes.length === 0) return plan;
+
+    const stockEntries = plan.stock_entries ?? [];
+    const recoveredValueMinor = stockEntries
+      .filter((line) => recoveryPrefixes.some((prefix) => line.line_key.startsWith(prefix)))
+      .reduce((sum, line) => sum + Math.max(0, line.stock_value_difference_minor), 0);
+    if (recoveredValueMinor === 0) return plan;
+
+    return {
+      ...plan,
+      stock_entries: rebalanceFinishedValue(stockEntries, recoveredValueMinor),
+    };
+  }
+}
+
+function rebalanceFinishedValue(entries: StockLedgerEntry[], recoveredValueMinor: number): StockLedgerEntry[] {
+  const finishedIndexes = entries
+    .map((entry, index) => ({ entry, index }))
+    .filter(({ entry }) => entry.line_key.startsWith("FINISHED") && entry.actual_qty_micros > 0);
+  if (finishedIndexes.length === 0) throw errors.validation("Manufacture recovery requires a finished-good stock posting");
+
+  const oldFinishedValue = finishedIndexes.reduce(
+    (sum, { entry }) => sum + Math.max(0, entry.stock_value_difference_minor),
+    0,
+  );
+  const correctedValue = oldFinishedValue - recoveredValueMinor;
+  if (correctedValue < 0) {
+    throw errors.validation("Recovered scrap/offcut value cannot exceed total finished-good value");
+  }
+  const totalQty = finishedIndexes.reduce((sum, { entry }) => sum + entry.actual_qty_micros, 0);
+  if (totalQty <= 0) throw errors.validation("Finished-good quantity must be positive");
+
+  const result = [...entries];
+  let assigned = 0;
+  for (const [position, { entry, index }] of finishedIndexes.entries()) {
+    const isLast = position === finishedIndexes.length - 1;
+    const value = isLast
+      ? correctedValue - assigned
+      : safeNumber(divideRounded(BigInt(correctedValue) * BigInt(entry.actual_qty_micros), BigInt(totalQty)));
+    assigned += value;
+    const rate = safeNumber(divideRounded(BigInt(value) * 1_000_000n, BigInt(entry.actual_qty_micros)));
+    result[index] = {
+      ...entry,
+      valuation_rate_minor: rate,
+      stock_value_difference_minor: value,
+    };
+  }
+  return result;
 }
 
 function sumPrior(
@@ -96,4 +162,15 @@ function sumPrior(
     }
   }
   return total;
+}
+
+function divideRounded(numerator: bigint, denominator: bigint): bigint {
+  if (denominator <= 0n) throw new RangeError("denominator must be positive");
+  return (numerator + denominator / 2n) / denominator;
+}
+
+function safeNumber(value: bigint): number {
+  const number = Number(value);
+  if (!Number.isSafeInteger(number)) throw errors.validation("Stock value exceeds safe integer range");
+  return number;
 }
