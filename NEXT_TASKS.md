@@ -75,3 +75,11 @@ Dùng tài khoản và dữ liệu thử phù hợp; không ghi credential, cook
 - Không commit `server/work/`, `tmp/`, backup SQL hoặc generated artifacts.
 - D1 migrations append-only.
 - Mọi production activation cần backup, rollback plan, exact evidence và approval riêng.
+
+## PR #63 — việc còn lại sau khi bỏ Playwright gate
+
+1. Chờ exact-head CI của commit tài liệu cuối chạy xong; workflow không còn cài hoặc chạy Playwright.
+2. Review generated source diff từ patch trong runner trước khi merge.
+3. Không khôi phục bước auto-push trong workflow khi repository rule `GH013` còn yêu cầu mọi thay đổi đi qua pull request.
+4. Nếu cần materialize toàn bộ patch thành source files, thực hiện bằng một PR/commit hợp lệ riêng thay vì cho GitHub Actions đẩy thẳng vào nhánh.
+5. Giữ functional browser QA Purchase thành công việc thủ công hoặc workflow riêng, không chặn deploy.
