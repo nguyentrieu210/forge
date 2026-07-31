@@ -65,6 +65,17 @@ jobs:
           Path('/tmp/apply-rbac-slice-a.sh').write_text(script, encoding='utf-8')
           PY
           bash /tmp/apply-rbac-slice-a.sh
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('server/packages/frappe-api/src/router.ts')
+          value = path.read_text(encoding='utf-8')
+          old = '    requestedUser: args.text("user"),'
+          new = '    ...(args.text("user") ? { requestedUser: args.text("user")! } : {}),'
+          if value.count(old) != 1:
+              raise SystemExit(f'router selected-user optional patch expected one match, found {value.count(old)}')
+          path.write_text(value.replace(old, new, 1), encoding='utf-8')
+          PY
 
       - name: Install dependencies
         if: steps.gate.outputs.run == 'true'
