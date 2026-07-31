@@ -8,11 +8,11 @@ Forge là monorepo ERP đa tenant trên Cloudflare. Backend CloudForge cung cấ
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Default head đã merge vào finance branch: `1207333163fdf31c576caa6ec8c11e88b078ca6e`.
+- Default head đã merge vào finance branch: `fbae2164403cd6b8ab7b31ee745e9d9ec82620b5`.
 - Working branch: `feat/finance-ar-ap-completion`.
 - Draft PR: `#15` — `feat(finance): add invoice due dates and AR/AP aging`.
 - Finance code/test head: `93c3f2ab5c7dd286c9f03cd13ad769ba14a65d8e`.
-- Latest default merge commit trước handoff cuối: `43ef6cb6942b42a7f600086fefdad7c621e3f6ca`.
+- Latest default merge commit trước handoff cuối: `a692a6ccc2939f09790dcbb13f92e9c5e1fc05d3`.
 - Backup trước đồng bộ base: `backup/finance-ar-ap-pre-rebase-20260731` tại `a0f787e2a8abde287b184d5709985aec8cfd4eb8`.
 - PR mergeable; default workflow mới nhất đã được merge bằng commit hai parent, không force-push.
 - Final PR diff không chứa workflow tạm.
@@ -107,7 +107,7 @@ SQL cutoff thực thi thật được kiểm độc lập bằng migration fixtu
 
 Các job trên không có step, chưa checkout và log download trả `BlobNotFound`; vì vậy chưa phải bằng chứng code failure.
 
-Default đã cập nhật `pr-validation.yml` tại `1207333163fdf31c576caa6ec8c11e88b078ca6e`. Finance branch đã merge workflow này. Đọc run trên commit người dùng mới nhất; với PR #15 chỉ job `validate / Test, typecheck and build` áp dụng, RBAC Slice B job có điều kiện PR #38 và phải skip.
+Default đã cập nhật `pr-validation.yml` tại `1207333163fdf31c576caa6ec8c11e88b078ca6e` và `fbae2164403cd6b8ab7b31ee745e9d9ec82620b5`. Finance branch đã merge workflow này. Đọc run trên commit người dùng mới nhất; với PR #15 chỉ job `validate / Test, typecheck and build` áp dụng, RBAC Slice B job có điều kiện PR #38 và phải skip.
 
 PR giữ draft. Không merge nếu exact-head install/test/typecheck/build chưa chạy thật và PASS.
 
