@@ -4,6 +4,7 @@ import type {
   PurchaseAllocationWindowTotals,
   PurchaseObligationRowState,
   PurchaseReceiptAllocationSourceState,
+  PurchaseUnappliedQueueSourceState,
   PurchaseUnappliedSourceState,
 } from "./purchase-allocation-reader.js";
 import { D1PurchaseAllocationMutationStore } from "./purchase-allocation-d1-store.js";
@@ -245,6 +246,58 @@ export class D1PurchaseAllocationDomainStore extends D1PurchaseAllocationMutatio
       receipt_item_row_id: String(row.receipt_item_row_id),
       qty_micros: Number(row.qty_micros),
       posting_at: String(row.posting_at),
+    }));
+  }
+
+  async listPurchaseUnappliedQueueSources(
+    tenantId: string,
+    queueKey: string,
+    windowId: string,
+  ): Promise<PurchaseUnappliedQueueSourceState[]> {
+    const result = await this.allocationReader.prepare(
+      `SELECT source.entry_id, source.queue_key, source.window_id,
+              source.voucher_no, source.voucher_revision, source.receipt_item_row_id,
+              COALESCE(json_extract(child.payload_json,'$.item_code'),'') AS item_code,
+              source.qty_micros + COALESCE(SUM(movement.qty_micros),0) AS qty_micros,
+              source.barem_weight_micros + COALESCE(SUM(movement.barem_weight_micros),0) AS barem_weight_micros,
+              CASE WHEN source.projected_actual_weight_micros IS NULL THEN NULL
+                   ELSE source.projected_actual_weight_micros
+                     + COALESCE(SUM(movement.projected_actual_weight_micros),0) END AS projected_actual_weight_micros,
+              source.projection_version, source.posting_at, source.committed_at,
+              COALESCE((SELECT MAX(allocation.allocation_sequence)
+                        FROM purchase_receipt_allocation_entries allocation
+                        WHERE allocation.tenant_id=source.tenant_id
+                          AND allocation.voucher_no=source.voucher_no),0)+1 AS next_allocation_sequence
+       FROM purchase_unapplied_receipt_entries source
+       LEFT JOIN purchase_unapplied_receipt_entries movement
+         ON movement.tenant_id=source.tenant_id AND movement.source_entry_id=source.entry_id
+       LEFT JOIN document_children child
+         ON child.tenant_id=source.tenant_id
+        AND child.parent_key='Purchase Receipt:' || source.voucher_no
+        AND child.fieldname='items' AND child.row_id=source.receipt_item_row_id
+       WHERE source.tenant_id=?1 AND source.queue_key=?2 AND source.window_id=?3
+         AND source.entry_kind='receive'
+       GROUP BY source.tenant_id, source.entry_id
+       HAVING source.qty_micros + COALESCE(SUM(movement.qty_micros),0)>0
+       ORDER BY source.committed_at, source.entry_id`,
+    ).bind(tenantId, queueKey, windowId).all<Record<string, unknown>>();
+    return (result.results ?? []).map((row) => ({
+      entry_id: String(row.entry_id),
+      queue_key: String(row.queue_key),
+      window_id: String(row.window_id),
+      voucher_no: String(row.voucher_no),
+      voucher_revision: Number(row.voucher_revision),
+      receipt_item_row_id: String(row.receipt_item_row_id),
+      item_code: String(row.item_code),
+      qty_micros: Number(row.qty_micros),
+      barem_weight_micros: Number(row.barem_weight_micros),
+      ...(row.projected_actual_weight_micros == null
+        ? {}
+        : { projected_actual_weight_micros: Number(row.projected_actual_weight_micros) }),
+      ...(row.projection_version == null ? {} : { projection_version: Number(row.projection_version) }),
+      posting_at: String(row.posting_at),
+      committed_at: String(row.committed_at),
+      next_allocation_sequence: Number(row.next_allocation_sequence),
     }));
   }
 }
