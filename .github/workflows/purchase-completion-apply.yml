@@ -42,15 +42,34 @@ jobs:
           git apply /tmp/purchase-completion.patch
           python3 - <<'PY'
           from pathlib import Path
-          path = Path('client/e2e-forge/playwright.purchase.config.ts')
-          text = path.read_text()
+
+          playwright = Path('client/e2e-forge/playwright.purchase.config.ts')
+          text = playwright.read_text()
           old = '''command: `pnpm --dir client exec vite --config e2e-forge/vite.purchase.config.ts --port ${port}`,
               cwd: path.join(here, "..", ".."),'''
-          new = '''command: `pnpm --dir client/apps/runtime exec vite --config ../../e2e-forge/vite.purchase.config.ts --port ${port} --strictPort`,
+          new = '''command: `pnpm --dir client/apps/runtime exec vite --config vite.purchase.config.ts --port ${port} --strictPort`,
               cwd: path.join(here, "..", ".."),'''
           if old not in text:
               raise SystemExit('purchase Playwright webServer block was not found')
-          path.write_text(text.replace(old, new))
+          playwright.write_text(text.replace(old, new))
+
+          source = Path('client/e2e-forge/vite.purchase.config.ts')
+          runtime = Path('client/apps/runtime/vite.purchase.config.ts')
+          config = source.read_text()
+          config = config.replace(
+              'root: path.join(here, "purchase-harness"),',
+              'root: path.join(here, "..", "..", "e2e-forge", "purchase-harness"),',
+          )
+          runtime.write_text(config)
+          source.unlink()
+
+          tsconfig = Path('client/e2e-forge/tsconfig.json')
+          ts_text = tsconfig.read_text()
+          ts_text = ts_text.replace(
+              '    "playwright.purchase.config.ts",\n    "vite.purchase.config.ts"\n',
+              '    "playwright.purchase.config.ts"\n',
+          )
+          tsconfig.write_text(ts_text)
           PY
           rm -f .github/purchase-completion.patch.gz.b64
           rm -f .github/purchase-completion-v2.patch.gz.b64
