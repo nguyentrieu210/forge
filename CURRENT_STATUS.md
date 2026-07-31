@@ -9,119 +9,98 @@ Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
 - GitHub là nguồn sự thật cho code, PR, CI và release evidence.
 - Không commit `.env`, `.dev.vars`, secret, `server/work/`, `tmp/`, backup SQL hoặc generated artifacts.
 
-## UI child table — đã bỏ lựa chọn gần đây và sửa wheel dropdown trên production
+## UI child table — recent links đã bỏ, wheel dropdown trong Dialog đã sửa đúng và phát hành production
 
-### Merge và phạm vi
+### Phase 1 — PR #58
 
-- Feature PR `#58`: `fix(ui): remove recent links and restore child-grid scroll`.
+- PR `#58`: `fix(ui): remove recent links and restore child-grid scroll`.
 - Exact final head trước merge: `d8e9abe99b2f1050af76eabf48d516a364ffe02a`.
 - Squash merge SHA: `db1cac83438f1d99ad9689005a7dd6e6d7979068`.
 - Link dropdown không còn đọc/ghi lịch sử lựa chọn client-side; key localStorage v2 cũ được dọn khi mở dropdown.
-- Dropdown tự tiêu thụ wheel khi danh sách còn cuộn được; khi chạm đầu/cuối, wheel được relay về scroll ancestor của đúng child grid thông qua trigger `aria-controls`.
-- Regression kiểm trạng thái đầu/giữa/cuối vùng cuộn và vùng không tràn.
+- Bổ sung relay wheel từ dropdown đã chạm biên về scroll ancestor của đúng child grid.
+- Release PR `#61` merge thành `d3da59045ea836f0b7529cab07a4a7cfe656de2a`.
+- Gateway run `30633258896`, job `91164460608`: build, deploy, smoke và provider evidence **PASS**.
+- Gateway version khi đó: `7d0c77ee-588e-44cb-abff-1c217a754316`.
+- Sau release, functional production evidence của người dùng cho thấy Link dropdown trong bảng child mở rộng vẫn không cuộn bằng mouse wheel; kéo scrollbar thumb bằng chuột vẫn hoạt động.
+- Kết luận: PR `#58` hoàn thành việc bỏ recent links và boundary relay, nhưng **không giải quyết** Dialog scroll-lock đối với wheel trong chính dropdown.
 
-### Exact-head CI
+### Phase 2 — PR #62, bản vá wheel thực tế
 
-Trên `d8e9abe99b2f1050af76eabf48d516a364ffe02a`:
+- PR `#62`: `fix(ui): restore mouse-wheel scrolling in dialog dropdowns`.
+- Exact final head trước merge: `89e8f7a3f3707c04d9bbb33ef2e8420aa4b60935`.
+- Squash merge SHA: `b3dd1d15a1b52de698d0874b29feae79efe7ed6c`.
+- Nguyên nhân: Radix Dialog/RemoveScroll có thể `preventDefault` wheel ở capture phase vì Popover nằm trong portal ngoài Dialog. Handler cũ thấy event đã bị chặn rồi thoát và trông chờ browser default scroll, nên danh sách đứng yên.
+- Cách sửa:
+  - xác định phần tử cuộn thật bên trong dropdown;
+  - nếu còn khoảng cuộn, `PopoverContent` tự `scrollBy` phần tử đó;
+  - chỉ relay wheel về child grid khi dropdown đã chạm đầu/cuối;
+  - vẫn tôn trọng `preventDefault` do callback `onWheel` của caller chủ động tạo ra.
+- Thử nghiệm tự chuyển Popover sang `modal=true` đã bị loại bỏ sau khi targeted test chứng minh không giải quyết lỗi.
+- Thêm runtime fixture dùng đúng `Dialog + LinkCombobox` với 40 lựa chọn.
+- Thêm Playwright regression phát `mouse.wheel` và bắt buộc `scrollTop` của `[cmdk-list]` tăng trên desktop, tablet và mobile.
 
-- PR Validation run `30632886191`: tests, typecheck và build **PASS**; Gateway/Tenant release jobs **SKIPPED**.
-- CI run `30632886290`: tests, typecheck và build **PASS**; tenant release **SKIPPED**.
-- Sales Feature CI run `30632887264`: server unit, SQL, brief, client selfcheck, typecheck và build **PASS**.
-- Purchase Feature CI run `30632886620`: server unit, SQL, client tests, typecheck và build **PASS**.
-- Inventory and Manufacturing CI run `30632886217`: focused tests, redacted audit, SQL, authoritative brief validation, lint, repository tests, typecheck và build **PASS**.
-- UI Pull Request Validation run `30632886367`, job `91163242280`: lint, tests, typecheck, build, Chromium browser QA và local cookie-auth smoke **PASS**.
+### Exact-head CI cho PR #62
 
-### Gateway/frontend production
+Trên `89e8f7a3f3707c04d9bbb33ef2e8420aa4b60935`:
 
-- Release PR `#61`: `release: deploy child-grid dropdown scroll hotfix`.
-- Release PR squash merge SHA: `d3da59045ea836f0b7529cab07a4a7cfe656de2a`.
-- Exact code checkout/build/deploy: `db1cac83438f1d99ad9689005a7dd6e6d7979068`.
-- Gateway release run: `30633258896`.
-- Job: `91164460608` (`Build and deploy Gateway`) — **SUCCESS**.
+- PR Validation run `30635559900`, job `91172155959`: tests, typecheck và build **PASS**; Gateway/Tenant release jobs **SKIPPED**.
+- CI run `30635537827`: tests, typecheck và build **PASS**.
+- Sales Feature CI run `30635536148`: server unit, SQL, brief, client selfchecks, typecheck và build **PASS**.
+- Purchase Feature CI run `30635537538`: server unit, SQL, client tests, typecheck và build **PASS**.
+- Inventory and Manufacturing CI run `30635536207`: focused tests, redacted audit, SQL, authoritative brief validation, lint, repository tests, typecheck và build **PASS**.
+- UI Pull Request Validation run `30635538108`, job `91172095844`: lint, tests, typecheck, build, targeted Dialog dropdown wheel Playwright trên ba viewport, Chromium browser QA và local cookie-auth smoke **PASS**.
+- Browser evidence artifact: `alumdoor-login-landing-evidence-30635538108`, artifact ID `8795217072`.
+- Auth evidence artifact: `alumdoor-auth-session-evidence-30635538108`, artifact ID `8795226210`.
+
+### Gateway/frontend production hiện hành
+
+- Release PR `#64`: `release: deploy dialog dropdown wheel hotfix`.
+- Release PR squash merge SHA: `eaf6b32709abc731bd37285501676ed1ec6267af`.
+- Exact code checkout/build/deploy: `b3dd1d15a1b52de698d0874b29feae79efe7ed6c`.
+- Gateway release run: `30635980509`.
+- Job: `91173574419` (`Build and deploy Gateway`) — **SUCCESS**.
 - Build MetaForge và stage frontend: **PASS**.
 - Wrangler deploy `cloudforge-gateway`: **PASS**.
-- Gateway version ID: `7d0c77ee-588e-44cb-abff-1c217a754316`.
+- Gateway version ID: `b0d0ce5b-408c-47ab-a734-fa55ba4d9c00`.
 - Production smoke: `/health` = `200`, `/` = `200`, unauthenticated boot = `403`.
 - Provider evidence từ Wrangler NDJSON: **PASS**.
-- Evidence artifact: `gateway-production-release-30633258896`, artifact ID `8794245099`.
+- Evidence artifact: `gateway-production-release-30635980509`, artifact ID `8795369194`.
 - Không deploy tenant Worker, không migration/mutate D1, không sửa production secrets.
 - FIFO rollout vẫn **disabled**.
 
 ### Residual verification
 
-Endpoint smoke và CI đã hoàn tất, nhưng vẫn cần functional browser smoke production có đăng nhập:
+Targeted Playwright đã chứng minh wheel làm dropdown list thay đổi `scrollTop`. Vẫn cần functional production smoke có đăng nhập sau hard refresh:
 
-- không còn nhóm `Lựa chọn gần đây` trong Link dropdown;
-- dropdown cuộn được khi còn khoảng cuộn;
-- ở đầu/cuối dropdown, wheel tiếp tục cuộn child grid;
-- kiểm cả child grid gọn và bảng mở rộng;
+- không còn nhóm `Lựa chọn gần đây`;
+- wheel cuộn được chính danh sách dropdown trong bảng child mở rộng;
+- khi dropdown chạm đầu/cuối, wheel tiếp tục cuộn vùng child grid;
+- kiểm cả bảng gọn và bảng mở rộng;
 - Item, UOM, Warehouse vẫn chọn được và giữ đúng filter/quyền.
 
 ## Purchase/FIFO — đã merge và phát hành production
 
-### Merge
+- Feature PR `#14` squash-merge thành `7b3dc06dbbecbb5370ddb48259aa1614aef2ff32`.
+- FIFO activation không được yêu cầu và rollout vẫn **disabled**.
+- Tenant release run `30631386714`; exact code `7b3dc06dbbecbb5370ddb48259aa1614aef2ff32`.
+- Backup, migration, tenant deploy và endpoint smoke **PASS**.
+- Tenant Worker `cloudforge-tenant-alu` version `9ec0d1d3-c1fd-4263-ae35-4fae81c09968`.
+- Backup artifact `alu-pre-release-backup-30631386714`, ID `8793480138`.
+- Release artifact `alu-production-release-30631386714`, ID `8793494701`.
+- Gateway purchase release run `30631951946`, job `91160176928`, version `6352386d-8385-4ea8-af31-15ac62e21943`; phiên bản này đã được thay bởi các UI hotfix nêu trên.
+- Chưa có functional browser evidence production đầy đủ cho Purchase UI trên desktop/mobile.
+- Không bật FIFO trước backfill checksum, `unresolved_count=0`, staging evidence, backup mới và explicit approval riêng.
 
-- Feature PR `#14`: `feat(purchase): complete Purchase Order and Receipt FIFO workflow`.
-- Feature head cuối trước merge: `697fdf60fb48671ee6655f321700bc036b51b01f`.
-- Squash merge SHA: `7b3dc06dbbecbb5370ddb48259aa1614aef2ff32`.
-- Phạm vi gồm FIFO allocation/unapplied, settlement close/reverse, manual override có permission/reason, backfill/cutover tooling, submit preview, allocation timeline, supplier debt drill-down và operator UI.
-- Người vận hành duyệt merge/deploy ngay và chấp nhận rủi ro browser Playwright của luồng Purchase chưa hoàn tất.
-- FIFO activation **không được yêu cầu** và rollout vẫn **disabled**.
+## Bán hàng — lọc mặt hàng và multi-UOM
 
-### Tenant Worker production `alu`
-
-- Execution PR `#55` chỉ dùng kích hoạt release, đã đóng và **không merge**.
-- Release run: `30631386714`.
-- Release job: `91158315099` (`Release alu production`).
-- Exact code checkout/deploy: `7b3dc06dbbecbb5370ddb48259aa1614aef2ff32`.
-- Backup remote: **PASS**, kích thước `8,971,462` bytes, SHA-256 `fe41aa7e4eb42b1761107d21795897c91a85a4f4066c0411683541e325a55a24`.
-- Backup artifact: `alu-pre-release-backup-30631386714`, artifact ID `8793480138`.
-- Migration dry-run/live: **PASS**; D1 báo toàn bộ `32` migration đã được ghi nhận, không còn migration chờ áp dụng.
-- Tenant deploy dry-run/live: **PASS**.
-- Worker: `cloudforge-tenant-alu`.
-- Tenant Worker version ID từ Wrangler NDJSON: `9ec0d1d3-c1fd-4263-ae35-4fae81c09968`.
-- Deploy timestamp từ Wrangler: `2026-07-31T12:40:34.352Z`.
-- Production smoke: `/health` = `200`, unauthenticated boot = `403`.
-- Release evidence artifact: `alu-production-release-30631386714`, artifact ID `8793494701`.
-- Job tổng thể bị GitHub đánh `failure` chỉ vì bước hậu kiểm gọi Cloudflare deployments REST endpoint trả `404`; backup, migration, deploy và smoke đều **PASS**.
-- `.github/workflows/ci.yml` đã được sửa tại `d8959d559b5ee651e17ce5f12e1f9475e25404e1` để lấy provider evidence trực tiếp từ Wrangler NDJSON.
-
-### Gateway/frontend production lịch sử
-
-- Release PR `#57`: `release: deploy purchase UI to Gateway production`.
-- Release merge SHA: `f50993ef7736a0321f6a0e8c308c5cb069497472`.
-- Exact code checkout/build/deploy: `7b3dc06dbbecbb5370ddb48259aa1614aef2ff32`.
-- Gateway run: `30631951946`.
-- Job: `91160176928` (`Build and deploy Gateway`) — **SUCCESS**.
-- Gateway version ID: `6352386d-8385-4ea8-af31-15ac62e21943`; phiên bản này đã được thay bởi UI child-grid hotfix nêu trên.
-- Production smoke và provider evidence: **PASS**.
-- Evidence artifact: `gateway-production-release-30631951946`, artifact ID `8793729472`.
-
-### Release cleanup
-
-- Đã xóa workflow tenant one-shot `.github/workflows/release-alu-purchase-20260731.yml`.
-- Đã xóa hai trigger tạm `alu-purchase-production.trigger` và `alu-purchase-observe.trigger`.
-- `cloudflare-production-observation.yml` được thu gọn thành manual smoke-only workflow; không còn gọi deployments REST endpoint đã trả `404`.
-- Các PR execution cũ `#11`, `#52`, `#55` đã đóng và không merge.
-
-### Residual verification
-
-- Chưa có functional browser evidence production cho toàn bộ Purchase UI trên desktop/mobile.
-- Chưa thực hiện production business smoke có đăng nhập cho PO → Receipt → cancel → settlement/manual override → supplier debt report bằng dữ liệu thử đã kiểm soát.
-- Không được diễn giải endpoint smoke thành bằng chứng UI/nghiệp vụ đầy đủ.
-- Không bật FIFO production trước backfill checksum, `unresolved_count=0`, staging evidence, backup mới và explicit approval riêng.
-
-## Bán hàng — lọc mặt hàng child table đã phát hành production
-
-- Hotfix PR `#53` đã squash-merge thành `48fa4d77eefb46384272550f8f6c0699ed054fa6`.
+- Hotfix lọc Item PR `#53` squash-merge thành `48fa4d77eefb46384272550f8f6c0699ed054fa6`.
 - `buildLinkFilters` hỗ trợ object-form, array-form, operator tuple và dependent `eval:` filters; chặn prototype-key nguy hiểm.
-- Sáu workflow exact-head đã **PASS**, gồm Chromium QA và local cookie-auth smoke.
-- Functional browser smoke production cho Item picker và multi-UOM vẫn là việc riêng.
+- Sales multi-UOM và Item picker vẫn cần functional production smoke bằng dữ liệu thử đã kiểm soát.
 
 ## Production versions hiện hành
 
 - Tenant Worker `cloudforge-tenant-alu`: `9ec0d1d3-c1fd-4263-ae35-4fae81c09968`.
-- Gateway `cloudforge-gateway`: `7d0c77ee-588e-44cb-abff-1c217a754316`.
+- Gateway `cloudforge-gateway`: `b0d0ce5b-408c-47ab-a734-fa55ba4d9c00`.
 - FIFO rollout: **disabled**.
 
 ## RBAC
