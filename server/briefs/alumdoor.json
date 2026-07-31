@@ -1830,7 +1830,7 @@
       "//do": [
         "Đơn hàng để TRỐNG `selling_price_list` thì giá gõ tay như cũ — đó là mặc định, và là",
         "cách xưởng đang làm ('tùy trường hợp'). CHỌN một bảng giá thì giá do SERVER quyết:",
-        "nhân đọc `Item Price` tên `<bảng giá>:<mã hàng>`, áp `Pricing Rule` khớp nhất, rồi GHI",
+        "nhân đọc `Item Price` tên `<bảng giá>:<mã hàng>:<ĐVT>`, áp `Pricing Rule` khớp nhất, rồi GHI",
         "ĐÈ đơn giá trên dòng. Thiếu dòng Item Price cho một mặt hàng thì ĐƠN BỊ TỪ CHỐI, không",
         "im lặng lấy giá 0 — nhưng cũng có nghĩa là bật bảng giá thì phải nạp đủ giá trước."
       ],
@@ -1857,12 +1857,12 @@
       }
     },
     {
-      "//": "Đơn giá một mặt hàng trong một bảng giá. TÊN bản ghi phải là `<bảng giá>:<mã hàng>` — đó là khoá nhân định giá tra.",
+      "//": "Đơn giá một mặt hàng theo đúng ĐVT trong một bảng giá. TÊN bản ghi là `<bảng giá>:<mã hàng>:<ĐVT>`; dữ liệu cũ hai thành phần chỉ được đọc khi ĐVT khớp tuyệt đối.",
       "name": "Item Price",
       "label": "Đơn giá theo bảng giá",
       "icon": "circle-dollar-sign",
       "group": "Danh mục",
-      "naming": "format:{price_list}:{item_code}",
+      "naming": "format:{price_list}:{item_code}:{uom}",
       "title": "item_code",
       "list": [
         "price_list",
@@ -2035,6 +2035,7 @@
       "list": [
         "item_code",
         "uom",
+        "availability_status",
         "qty",
         "rate",
         "amount"
@@ -2126,6 +2127,10 @@
         },
         "conversion_factor:Float~- Hệ số về ĐVT tồn",
         "stock_qty:Float~- SL quy đổi tồn",
+        "available_qty:Float~- Còn theo ĐVT bán",
+        "available_stock_qty:Float~- Còn theo ĐVT tồn",
+        "available_stock_uom:Link(UOM)~- ĐVT tồn khả dụng",
+        "availability_status:Data~- Tồn và giá",
         "rate:Currency! Đơn giá",
         "amount:Currency~ Thành tiền",
         "motor_model:Link(Item) Mô tơ kèm theo",
@@ -2266,6 +2271,7 @@
       "list": [
         "item_code",
         "uom",
+        "availability_status",
         "qty",
         "rate",
         "amount"
@@ -2357,6 +2363,10 @@
         },
         "conversion_factor:Float~- Hệ số về ĐVT tồn",
         "stock_qty:Float~- SL quy đổi tồn",
+        "available_qty:Float~- Còn theo ĐVT bán",
+        "available_stock_qty:Float~- Còn theo ĐVT tồn",
+        "available_stock_uom:Link(UOM)~- ĐVT tồn khả dụng",
+        "availability_status:Data~- Tồn và giá",
         "rate:Currency! Đơn giá",
         "amount:Currency~ Thành tiền",
         "motor_model:Link(Item) Mô tơ kèm theo",

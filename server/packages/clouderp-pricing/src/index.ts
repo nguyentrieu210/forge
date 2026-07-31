@@ -10,14 +10,30 @@ export async function resolveServerPrice(
   context: ControllerContext<JsonObject>,
   input: PricingContext,
 ): Promise<ResolvedPrice> {
-  const priceName = `${input.priceList}:${input.itemCode}`;
-  const itemPrice = await context.reader.getMasterRecordData(context.command.tenant_id, "Item Price", priceName);
-  if (!itemPrice) throw errors.reference(`Item Price ${priceName} does not exist`);
+  const lineUom = typeof input.uom === "string" ? input.uom.trim() : "";
+  if (!lineUom) throw errors.validation("A selling UOM is required when a price list is selected");
+
+  const exactPriceName = `${input.priceList}:${input.itemCode}:${lineUom}`;
+  const legacyPriceName = `${input.priceList}:${input.itemCode}`;
+  let priceName = exactPriceName;
+  let itemPrice = await context.reader.getMasterRecordData(context.command.tenant_id, "Item Price", exactPriceName);
+
+  // Existing tenants can still have the pre-UOM key. Accept it only when its declared UOM
+  // exactly matches the sales row; silently borrowing another unit's price is worse than a
+  // visible missing-price error.
+  if (!itemPrice) {
+    const legacy = await context.reader.getMasterRecordData(context.command.tenant_id, "Item Price", legacyPriceName);
+    const legacyUom = typeof legacy?.uom === "string" ? legacy.uom.trim() : "";
+    if (legacy && legacyUom === lineUom) {
+      itemPrice = legacy;
+      priceName = legacyPriceName;
+    }
+  }
+  if (!itemPrice) throw errors.reference(`Item Price ${exactPriceName} does not exist`);
   const currency = typeof itemPrice.currency === "string" ? itemPrice.currency : "";
   if (!currency) throw errors.reference(`Item Price ${priceName} must define currency`);
   if (currency !== input.documentCurrency) throw errors.reference(`Item Price ${priceName} currency does not match document currency`);
   const priceUom = typeof itemPrice.uom === "string" ? itemPrice.uom.trim() : "";
-  const lineUom = typeof input.uom === "string" ? input.uom.trim() : "";
   if (priceUom && lineUom && priceUom !== lineUom) {
     throw errors.validation(`Item Price ${priceName} applies to UOM "${priceUom}", but the document row uses "${lineUom}"`);
   }

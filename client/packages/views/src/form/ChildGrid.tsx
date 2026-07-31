@@ -231,7 +231,7 @@ const BIG_WIDTH: Record<string, string> = {
   qty: "7rem", qty_bar: "6rem", set_count: "7rem", actual_weight_kg: "7rem",
   theoretical_kg_per_m: "7rem", theoretical_kg: "8rem", is_stamped: "6rem",
   actual_kg_per_m: "7rem", actual_kg_per_sqm: "7rem", uom: "8rem",
-  rate: "8rem", amount: "9rem", note: "8rem", install_note: "8rem",
+  rate: "8rem", amount: "9rem", available_qty: "8rem", availability_status: "13rem", note: "8rem", install_note: "8rem",
 };
 export interface AverageWeightResult {
   totalLengthM?: number;
@@ -371,6 +371,7 @@ export function ChildGrid(props: ChildGridProps) {
   const { childMeta, rows, onChange, registry, services, readOnly, parentDoc, roles, rowDefaults } = props;
   const [detailRow, setDetailRow] = useState<number | null>(null);
   const [allowedColorsByItem, setAllowedColorsByItem] = useState<Record<string, string[]>>({});
+  const [allowedUomsByItem, setAllowedUomsByItem] = useState<Record<string, string[]>>({});
   /**
    * BẢNG LỚN — bảng con chiếm trọn màn hình để nhập, rồi quay lại chứng từ.
    *
@@ -458,6 +459,7 @@ export function ChildGrid(props: ChildGridProps) {
   const cols = orderedCols.filter((column) => column.fieldname === baseIdentity || !layout.hidden.includes(column.fieldname));
   const formulaLoadVersion = useRef(new Map<string, number>());
   const previousFormulaGroup = useRef("");
+  const previousSellingContext = useRef("");
   const latestRows = useRef(rows);
   useEffect(() => {
     latestRows.current = rows;
@@ -523,6 +525,7 @@ export function ChildGrid(props: ChildGridProps) {
     "length_m", "qty_bundle", "qty_bar", "actual_weight_kg", "total_length_m",
     "material_specification", "theoretical_kg_per_m", "theoretical_kg",
     "actual_kg_per_m", "actual_kg_per_sqm", "so_no",
+    "available_qty", "available_stock_qty", "available_stock_uom", "availability_status",
   ];
   /**
    * Item.allowed_colors là chiều chặn thật của màu. Link phải dùng đúng danh sách đó ngay
@@ -530,8 +533,17 @@ export function ChildGrid(props: ChildGridProps) {
    * lỗi sau khi bấm lưu. Danh sách rỗng được lọc về một mã không tồn tại (fail closed).
    */
   const fieldForRow = (field: DocField, row: Doc): DocField => {
-    if (field.fieldname !== "color" && field.fieldname !== "colour") return field;
     const itemCode = String(row.item_code ?? "").trim();
+    if (field.fieldname === "uom" && itemCode && Object.hasOwn(allowedUomsByItem, itemCode)) {
+      const allowed = allowedUomsByItem[itemCode] ?? [];
+      return {
+        ...field,
+        link_filters: JSON.stringify([
+          ["UOM", "name", "in", allowed.length ? allowed : ["__NO_CONFIGURED_SALES_UOM__"]],
+        ]),
+      };
+    }
+    if (field.fieldname !== "color" && field.fieldname !== "colour") return field;
     const allowed = allowedColorsByItem[itemCode] ?? [];
     return {
       ...field,
@@ -706,6 +718,22 @@ export function ChildGrid(props: ChildGridProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formulaCustomerGroup]);
 
+  const sellingContextKey = [parentDoc?.selling_price_list, parentDoc?.currency].map((value) => String(value ?? "")).join("\u0000");
+  useEffect(() => {
+    if (!isDoorSalesGrid || !sellingContextKey || sellingContextKey === previousSellingContext.current) return;
+    previousSellingContext.current = sellingContextKey;
+    rows.forEach((row, rowIdx) => {
+      const itemCode = String(row.item_code ?? "").trim();
+      if (!itemCode) return;
+      const loadKey = String(row.name ?? rowIdx);
+      const loadVersion = (itemLoadVersion.current.get(loadKey) ?? 0) + 1;
+      itemLoadVersion.current.set(loadKey, loadVersion);
+      void fillItemDefaults(rowIdx, itemCode, rows, loadKey, loadVersion);
+    });
+    // Item rows are refreshed by setCell; this effect is only for a header price-list/currency change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sellingContextKey]);
+
   const setCell = (rowIdx: number, fieldname: string, value: unknown) => {
     // Luôn ghép trên snapshot mới nhất. Hai ô số có thể phát onChange trước khi React render lại;
     // dùng prop `rows` cũ ở lần sửa sau sẽ làm mất giá trị người dùng vừa nhập ở lần trước.
@@ -746,7 +774,7 @@ export function ChildGrid(props: ChildGridProps) {
       const loadVersion = (itemLoadVersion.current.get(loadKey) ?? 0) + 1;
       itemLoadVersion.current.set(loadKey, loadVersion);
       void fillItemDefaults(rowIdx, String(value), next, loadKey, loadVersion);
-    } else if (fieldname === "uom" && next[rowIdx]?.item_code) {
+    } else if ((fieldname === "uom" || fieldname === "warehouse") && next[rowIdx]?.item_code) {
       const loadKey = String(next[rowIdx]?.name ?? rowIdx);
       const loadVersion = (itemLoadVersion.current.get(loadKey) ?? 0) + 1;
       itemLoadVersion.current.set(loadKey, loadVersion);
@@ -883,6 +911,40 @@ export function ChildGrid(props: ChildGridProps) {
         if (Number.isFinite(factor) && factor > 0) patch.conversion_factor = factor;
       }
     }
+
+    if (isDoorSalesGrid && services?.callPost) {
+      try {
+        const salesContext = await services.callPost<Record<string, unknown>>("alumdoor.sales.item_context", {
+          item_code: itemCode,
+          uom: patch.uom ?? base[rowIdx]?.uom,
+          warehouse: patch.warehouse ?? base[rowIdx]?.warehouse,
+          price_list: parentDoc?.selling_price_list,
+          currency: parentDoc?.currency,
+          qty: base[rowIdx]?.qty,
+        });
+        const allowedUoms = Array.isArray(salesContext.allowed_uoms)
+          ? salesContext.allowed_uoms.map((value) => String(value ?? "").trim()).filter(Boolean)
+          : [];
+        setAllowedUomsByItem((current) => (
+          current[itemCode]?.join("\u0000") === allowedUoms.join("\u0000")
+            ? current
+            : { ...current, [itemCode]: allowedUoms }
+        ));
+        const selectedUom = String(salesContext.selected_uom ?? "").trim();
+        if (has("uom") && !base[rowIdx]?.uom && selectedUom) patch.uom = selectedUom;
+        const factor = Number(salesContext.conversion_factor);
+        if (has("conversion_factor") && Number.isFinite(factor) && factor > 0) patch.conversion_factor = factor;
+        if (has("available_qty")) patch.available_qty = salesContext.available_qty;
+        if (has("available_stock_qty")) patch.available_stock_qty = salesContext.available_stock_qty;
+        if (has("available_stock_uom")) patch.available_stock_uom = salesContext.stock_uom;
+        if (has("availability_status")) patch.availability_status = salesContext.availability_status;
+        if (parentDoc?.selling_price_list && has("rate")) {
+          patch.rate = salesContext.price_missing ? undefined : salesContext.rate;
+        }
+      } catch {
+        if (has("availability_status")) patch.availability_status = "Không đọc được tồn / giá";
+      }
+    }
     // Item tạo trước khi có kiểu quản lý được coi là hàng thường — tương thích ngược.
     if (has("inventory_mode") && !Object.hasOwn(patch, "inventory_mode")) patch.inventory_mode = "Hàng thường";
 
@@ -925,7 +987,12 @@ export function ChildGrid(props: ChildGridProps) {
     const authoritativeItemFields = new Set([
       "stock_uom", "inventory_mode", "measurement_profile", "material_specification",
       "item_name", "description", "min_area_sqm", "theoretical_kg_per_m",
+      "available_qty", "available_stock_qty", "available_stock_uom", "availability_status",
     ]);
+    if (parentDoc?.selling_price_list) {
+      authoritativeItemFields.add("rate");
+      authoritativeItemFields.add("conversion_factor");
+    }
     const safePatch = Object.fromEntries(Object.entries(patch).filter(([fieldname]) => {
       if (authoritativeItemFields.has(fieldname)) return true;
       const current = currentRow[fieldname];

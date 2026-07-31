@@ -1,5 +1,15 @@
 # NEXT TASKS
 
+## P0 — Bán hàng multi-UOM và tồn khả dụng
+
+1. Chạy full CI: test, typecheck, build và brief check.
+2. Smoke Báo giá/Đơn hàng: chọn Item, đổi ĐVT, đổi Bảng giá, đổi Kho, kiểm trạng thái tồn và giá.
+3. Nạp ít nhất hai Item Price khác ĐVT cho cùng một Item trên staging.
+4. Xác minh Item Price legacy chỉ dùng khi UOM khớp.
+5. Thiết kế bước tiếp theo: reservation/ATP theo Sales Order; chưa bật trong đợt này.
+6. Không deploy production nếu chưa có explicit approval.
+
+
 Ngày cập nhật: **2026-07-31**.
 
 ## P0 — Xác minh release sidebar gọn trên production

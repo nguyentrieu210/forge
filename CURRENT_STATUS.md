@@ -1,5 +1,15 @@
 # CURRENT STATUS
 
+## Nhánh Bán hàng — multi-UOM price và tồn trên form
+
+- Branch: `feat/sales-complete-20260731`, base `cd60f8c09c48105db84a82c12ad3b32d9f075064`.
+- Đã triển khai khoá giá chính xác theo `Bảng giá + Mặt hàng + ĐVT`, kèm fallback dữ liệu cũ chỉ khi UOM khớp.
+- Báo giá/Đơn hàng lấy danh sách ĐVT từ Item, nạp giá đúng ĐVT và hiện tồn theo kho/ĐVT bán qua method chỉ đọc `alumdoor.sales.item_context`.
+- Preview tồn không giữ chỗ; chốt thiếu tồn ở Delivery Note submit vẫn authoritative.
+- Chưa deploy Cloudflare hoặc production.
+- Bằng chứng test/CI và commit SHA được điền sau khi CI của PR chạy.
+
+
 Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
 
 ## Git
