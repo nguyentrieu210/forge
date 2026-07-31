@@ -2,7 +2,7 @@ diff --git a/server/tests/purchase-receipt-submit-preview.test.mjs b/server/test
 new file mode 100644
 --- /dev/null
 +++ b/server/tests/purchase-receipt-submit-preview.test.mjs
-@@ -0,0 +1,152 @@
+@@ -0,0 +1,154 @@
 +import test from "node:test";
 +import assert from "node:assert/strict";
 +import {
@@ -143,9 +143,11 @@ new file mode 100644
 +
 +test("submit preview is absent while purchase allocation rollout is disabled", async () => {
 +  const store = new InMemoryRolloutPurchaseAllocationMutationStore();
++  store.setPurchaseAllocationEnabled(true);
 +  seedMasters(store);
 +  const receipt = new RolloutPurchaseReceiptController();
 +  const draft = await apply(receipt, store, "create", "PR-LEGACY", receiptData(1, now), "PR-LEGACY-create");
++  store.setPurchaseAllocationEnabled(false);
 +  const preview = await previewPurchaseReceiptSubmission({
 +    tenantId: tenant,
 +    actor,
