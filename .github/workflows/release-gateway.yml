@@ -9,6 +9,7 @@ on:
       - "server/apps/gateway-worker/**"
       - "server/scripts/stage-client-bundle.mjs"
       - "pnpm-lock.yaml"
+      - ".github/release/gateway-production.trigger"
       - ".github/workflows/release-gateway.yml"
   workflow_dispatch:
     inputs:
