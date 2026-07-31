@@ -69,12 +69,46 @@ jobs:
       - name: Apply metadata and integration patch
         run: node server/scripts/apply-sales-production-feature.mjs
 
-      - name: Fix generated strict TypeScript
+      - name: Complete policy fixtures and strict TypeScript
         shell: bash
         run: |
           set -euo pipefail
           python - <<'PY'
+          import json
           from pathlib import Path
+
+          for brief_path in [Path('server/briefs/alumdoor.json'), Path('server/briefs/alumdoor-v2.json')]:
+              brief = json.loads(brief_path.read_text())
+              fixtures = {
+                  fixture.get('name'): fixture.setdefault('data', {})
+                  for fixture in brief.get('fixtures', [])
+                  if fixture.get('type') == 'Cutting Policy'
+              }
+              german = fixtures.get('Cửa Đức — công thức chuẩn')
+              australian = fixtures.get('Cửa Úc — công thức chuẩn')
+              if german is None or australian is None:
+                  raise SystemExit(f'{brief_path}: missing canonical German/Australian policy fixture')
+              german.update({
+                  'leaf_formula': 'Kiểu Đức',
+                  'leaf_height_deduction_m': 0.13,
+                  'leaf_divisor_source': 'Bản lá của bộ quy cách',
+                  'leaf_rounding': 'Ngưỡng trừ-một-lá',
+                  'leaf_round_threshold': 0.6,
+              })
+              australian.update({
+                  'leaf_formula': 'Kiểu Úc',
+                  'leaf_height_deduction_m': 0,
+                  'leaf_divisor_source': 'Hằng số của chính sách',
+                  'leaf_divisor_const': 0.465,
+                  'leaf_rounding': 'Nấc 0-0.3-0.7-1',
+                  'leaf_variants': [
+                      {'variant_label': 'motor trong', 'addend': 2},
+                      {'variant_label': 'kéo tay', 'addend': 2},
+                      {'variant_label': 'motor ngoài', 'addend': 1.5},
+                      {'variant_label': 'motor ngoài tự dừng', 'addend': 1.3},
+                  ],
+              })
+              brief_path.write_text(json.dumps(brief, ensure_ascii=False, indent=2) + '\n')
 
           index_path = Path('server/apps-src/alumdoor-worker/src/index.ts')
           index_source = index_path.read_text()
