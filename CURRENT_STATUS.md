@@ -9,6 +9,30 @@ Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
 - GitHub là nguồn sự thật cho code, PR, CI và release evidence.
 - Không commit `.env`, `.dev.vars`, secret, `server/work/`, `tmp/`, backup SQL hoặc generated artifacts.
 
+## Bán hàng — hotfix tự điền đơn giá child grid đang ở PR #65
+
+- Người dùng production xác nhận chọn `Bảng giá áp dụng` và mặt hàng nhưng ô `Đơn giá` trong child grid không tự điền.
+- PR `#65`: `fix(sales): restore price autofill in child grids`.
+- Branch: `hotfix/sales-price-autofill-20260731`.
+- Code head đã kiểm: `eaff9931e9f02171d3d23e3d81b75743efa4ca04`.
+- Nguyên nhân: preview `alumdoor.sales.item_context` và pricing authoritative phụ thuộc vào tên bản ghi Item Price. Dữ liệu cũ/import/đổi tên có thể có đủ `price_list + item_code + uom` nhưng tên không khớp key canonical, khiến preview trả `price_missing` và client xoá `rate`.
+- Cách sửa:
+  - giữ fast-path tên ba phần và legacy hai phần;
+  - fallback bằng chính các field `price_list + item_code + uom`;
+  - áp cùng quy tắc cho preview child grid và pricing lúc lưu/submit;
+  - từ chối nhiều giá hoạt động cùng khớp thay vì chọn ngẫu nhiên;
+  - giữ chẩn đoán giá disabled/malformed khi callback list không tồn tại.
+- Regression mới: `server/tests/sales-price-field-lookup.test.mjs` kiểm tên record không canonical, duplicate active prices và authoritative pricing fallback.
+- Exact code-head CI trên `eaff9931e9f02171d3d23e3d81b75743efa4ca04`:
+  - PR Validation `30639117520`: **PASS**; Gateway/Tenant release **SKIPPED**.
+  - CI `30639117471`: **PASS**.
+  - Sales Feature CI `30639117554`: unit, SQL, brief, client tests, typecheck và build **PASS**.
+  - Purchase Feature CI `30639117591`: **PASS**.
+  - Inventory and Manufacturing CI `30639117483`: **PASS**.
+  - UI Pull Request Validation `30639117562`: lint, tests, typecheck, build, Chromium QA và cookie-auth smoke **PASS**.
+- PR hiện chưa merge và chưa deploy. Production vẫn dùng lookup cũ cho tới khi có approval merge/release riêng.
+- Không migration hoặc mutate D1, không sửa production secrets, FIFO vẫn **disabled**.
+
 ## UI child table — recent links đã bỏ, wheel dropdown trong Dialog đã sửa đúng và phát hành production
 
 ### Phase 1 — PR #58
