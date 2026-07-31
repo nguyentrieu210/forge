@@ -1,10 +1,10 @@
-import type { MutationPlan } from "../../contracts/src/index.js";
+import type { JsonObject, MutationPlan } from "../../contracts/src/index.js";
 import type { StockEntryData } from "../../clouderp-core/src/types.js";
 import type { ControllerContext } from "../../document-kernel/src/index.js";
 import { PhysicalStockEntryController } from "./physical-stock-entry.js";
 import { GuardedManufacturingStockEntryController } from "./manufacturing-stock-guard.js";
 
-interface WorkOrderRolloutData {
+interface WorkOrderRolloutData extends JsonObject {
   manufacturing_snapshot?: unknown;
   bom_checksum?: unknown;
 }
