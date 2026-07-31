@@ -34,9 +34,9 @@ function elementCanConsumeWheel(element: HTMLElement, deltaX: number, deltaY: nu
 
 /** Dropdown còn tự cuộn được thì không được giành wheel của nó. */
 function popoverCanConsumeWheel(content: HTMLElement, target: EventTarget | null, deltaX: number, deltaY: number): boolean {
-  let node = target instanceof HTMLElement ? target : null;
+  let node: Element | null = target instanceof Element ? target : null;
   while (node && content.contains(node)) {
-    if (elementCanConsumeWheel(node, deltaX, deltaY)) return true;
+    if (node instanceof HTMLElement && elementCanConsumeWheel(node, deltaX, deltaY)) return true;
     if (node === content) break;
     node = node.parentElement;
   }
