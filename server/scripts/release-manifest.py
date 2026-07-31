@@ -77,6 +77,9 @@ def main():
         expected = json.loads(manifest_path.read_text())
         for field in ["format", "package", "version", "file_count", "tree_sha256", "files"]:
             if expected.get(field) != current.get(field):
+                print("RELEASE_CONTENT_MANIFEST_CURRENT_BEGIN")
+                print(json.dumps(current, indent=2))
+                print("RELEASE_CONTENT_MANIFEST_CURRENT_END")
                 raise SystemExit(f"RELEASE_MANIFEST_MISMATCH:{field}")
         print(f"RELEASE_CONTENT_MANIFEST_PASS files={current['file_count']} tree={current['tree_sha256']}")
         return
