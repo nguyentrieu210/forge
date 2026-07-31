@@ -25,11 +25,13 @@ async function readCurrentItem(
 ): Promise<Record<string, unknown> | null> {
   const callback = request.headers.get("x-cloudforge-callback")?.replace(/\/$/, "");
   if (!callback || !name) return null;
+  if (!env.PLATFORM) throw new Error("thiếu PLATFORM service binding để đọc Item hiện tại");
+
   const headers = new Headers(request.headers);
   headers.delete("content-length");
   headers.set("content-type", "application/json");
   const outbound = new Request(`${callback}/resource/Item/${encodeURIComponent(name)}`, { headers });
-  const response = env.PLATFORM ? await env.PLATFORM.fetch(outbound) : await fetch(outbound);
+  const response = await env.PLATFORM.fetch(outbound);
   if (response.status === 404) return null;
   if (!response.ok) throw new Error(`không đọc được Item ${name} (HTTP ${response.status})`);
   return ((await response.json()) as { data?: Record<string, unknown> }).data ?? null;
@@ -58,14 +60,19 @@ export async function validateItemCatalogInvariants(
     const supply = String(doc.supply_type ?? "").trim();
 
     if (nature === "Dịch vụ") {
+      if (checked(doc.is_stock_item)) {
+        return refuse(`${code}: dịch vụ không được bật Quản lý tồn kho.`);
+      }
       if (checked(doc.include_item_in_manufacturing)) {
         return refuse(`${code}: dịch vụ không được tham gia sản xuất.`);
       }
       const reorderLevels = Array.isArray(doc.reorder_levels) ? doc.reorder_levels : [];
       if (String(doc.stock_uom ?? "").trim()
         || String(doc.default_warehouse ?? "").trim()
+        || checked(doc.has_batch_no)
+        || checked(doc.has_serial_no)
         || reorderLevels.length) {
-        return refuse(`${code}: dịch vụ không được giữ ĐVT tồn, kho mặc định hoặc mức đặt lại.`);
+        return refuse(`${code}: dịch vụ không được giữ ĐVT tồn, kho mặc định, batch/serial hoặc mức đặt lại.`);
       }
       return accept();
     }
@@ -79,11 +86,11 @@ export async function validateItemCatalogInvariants(
     ]);
     const allowedSupplies = new Set(["Mua ngoài", "Tự sản xuất", "Mua hoặc sản xuất"]);
 
-    if (stage && !allowedStages.has(stage)) {
-      return refuse(`${code}: Giai đoạn vật tư ${stage} không hợp lệ.`);
+    if (!allowedStages.has(stage)) {
+      return refuse(`${code}: Giai đoạn vật tư ${stage || "<trống>"} không hợp lệ.`);
     }
-    if (supply && !allowedSupplies.has(supply)) {
-      return refuse(`${code}: Nguồn cung ${supply} không hợp lệ.`);
+    if (!allowedSupplies.has(supply)) {
+      return refuse(`${code}: Nguồn cung ${supply || "<trống>"} không hợp lệ.`);
     }
     if ((supply === "Mua ngoài" || supply === "Mua hoặc sản xuất")
       && !checked(doc.is_purchase_item)) {
