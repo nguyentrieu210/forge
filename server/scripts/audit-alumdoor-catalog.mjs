@@ -20,13 +20,18 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const forbidden = process.argv.slice(2).find((value) => FORBIDDEN_WRITE_FLAGS.has(value));
   if (forbidden) fail(`${forbidden} is not supported; this command is read-only.`);
-  if (Boolean(args.input) === Boolean(args.tenant)) {
-    fail("usage: node scripts/audit-alumdoor-catalog.mjs (--input fixture.json | --tenant <id>) [--output report.json] [--redacted|--include-names]");
+  const sources = [args.input, args.brief, args.tenant].filter(Boolean);
+  if (sources.length !== 1) {
+    fail("usage: node scripts/audit-alumdoor-catalog.mjs (--input fixture.json | --brief briefs/alumdoor-v2.json | --tenant <id>) [--output report.json] [--redacted|--include-names]");
   }
 
   let cleanup = null;
   try {
-    const source = args.input ? readFixture(args.input) : await readRemote(args.tenant);
+    const source = args.input
+      ? readFixture(args.input)
+      : args.brief
+        ? readBrief(args.brief)
+        : await readRemote(args.tenant);
     cleanup = source.cleanup ?? null;
     const redacted = args.redacted || (Boolean(args.tenant) && !args.includeNames);
     const report = planAlumdoorCatalogAudit({
@@ -37,9 +42,7 @@ async function main() {
     const output = resolveOutput(args, redacted);
     writeFileSync(output, `${JSON.stringify({
       generated_at: new Date().toISOString(),
-      source: args.input
-        ? { kind: "fixture", file: path.basename(path.resolve(args.input)) }
-        : { kind: "tenant", tenant_hash: sha(args.tenant).slice(0, 16) },
+      source: sourceDescriptor(args),
       ...report,
     }, null, 2)}\n`, "utf8");
     console.log(JSON.stringify({
@@ -59,6 +62,24 @@ function readFixture(file) {
   const fixture = JSON.parse(readFileSync(path.resolve(process.cwd(), file), "utf8"));
   const normalized = normalizeCatalogFixture(fixture);
   return { metadataVersion: normalized.metadataVersion, records: normalized.records };
+}
+
+function readBrief(file) {
+  const absolute = path.resolve(process.cwd(), file);
+  const brief = JSON.parse(readFileSync(absolute, "utf8"));
+  if (!brief || typeof brief !== "object" || Array.isArray(brief)) fail("Alumdoor brief must be a JSON object.");
+  if (!Array.isArray(brief.fixtures)) fail("Alumdoor brief does not contain a fixtures array.");
+  const records = brief.fixtures
+    .filter((row) => row && typeof row === "object" && AUDITED_DOCTYPES.includes(String(row.type ?? "")))
+    .map((row) => ({
+      doctype: String(row.type),
+      name: String(row.name ?? ""),
+      data: row.data && typeof row.data === "object" && !Array.isArray(row.data) ? row.data : {},
+    }));
+  return {
+    metadataVersion: String(brief.version ?? ""),
+    records,
+  };
 }
 
 async function readRemote(tenant) {
@@ -97,8 +118,15 @@ async function readRemote(tenant) {
   };
 }
 
+function sourceDescriptor(args) {
+  if (args.input) return { kind: "fixture", file: path.basename(path.resolve(args.input)) };
+  if (args.brief) return { kind: "brief", file: path.basename(path.resolve(args.brief)) };
+  return { kind: "tenant", tenant_hash: sha(args.tenant).slice(0, 16) };
+}
+
 function resolveOutput(args, redacted) {
-  const output = path.resolve(process.cwd(), args.output ?? `alumdoor-catalog-audit-${args.tenant ? sha(args.tenant).slice(0, 12) : "fixture"}.json`);
+  const label = args.tenant ? sha(args.tenant).slice(0, 12) : args.brief ? "brief" : "fixture";
+  const output = path.resolve(process.cwd(), args.output ?? `alumdoor-catalog-audit-${label}.json`);
   const repoRoot = path.resolve(serverRoot, "..");
   const relative = path.relative(repoRoot, output);
   const insideRepo = relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
@@ -107,15 +135,16 @@ function resolveOutput(args, redacted) {
 }
 
 function parseArgs(argv) {
-  const result = { input: "", tenant: "", output: "", redacted: false, includeNames: false };
+  const result = { input: "", brief: "", tenant: "", output: "", redacted: false, includeNames: false };
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
     if (token === "--redacted") result.redacted = true;
     else if (token === "--include-names") result.includeNames = true;
-    else if (["--input", "--tenant", "--output"].includes(token)) {
+    else if (["--input", "--brief", "--tenant", "--output"].includes(token)) {
       const value = argv[++index];
       if (!value) fail(`${token} requires a value`);
       if (token === "--input") result.input = value;
+      else if (token === "--brief") result.brief = value;
       else if (token === "--tenant") result.tenant = value;
       else result.output = value;
     } else if (!FORBIDDEN_WRITE_FLAGS.has(token)) fail(`unknown argument: ${token}`);
