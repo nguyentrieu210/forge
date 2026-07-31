@@ -5,9 +5,7 @@ on:
     types: [opened, synchronize, reopened, edited, ready_for_review]
 
 permissions:
-  contents: write
-  pull-requests: write
-  issues: write
+  contents: read
 
 jobs:
   validate:
@@ -43,51 +41,3 @@ jobs:
 
       - name: Build
         run: pnpm build
-
-  rbac-slice-b-apply:
-    name: Apply and gate RBAC Slice B
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-
-    steps:
-      - name: Checkout Slice B branch
-        uses: actions/checkout@v4
-        with:
-          ref: feat/rbac-permission-slice-b-20260731
-          fetch-depth: 0
-
-      - name: Apply, verify and commit when pending
-        env:
-          PR_NUMBER: ${{ github.event.number }}
-          GH_TOKEN: ${{ github.token }}
-          RUN_ID: ${{ github.run_id }}
-        run: |
-          set -euo pipefail
-          if [ "$PR_NUMBER" != "38" ] || [ ! -f .github/rbac-slice-b-patch.gz.b64 ]; then
-            echo "No pending Slice B payload for this pull request."
-            exit 0
-          fi
-          trap 'gh pr comment 38 --repo "${{ github.repository }}" --body "RBAC Slice B apply/gate failed in workflow run ${RUN_ID}. No implementation commit was pushed." || true' ERR
-          corepack enable
-          corepack prepare pnpm@9.15.0 --activate
-          base64 --decode .github/rbac-slice-b-patch.gz.b64 | gzip --decompress > /tmp/apply-rbac-slice-b.py
-          python /tmp/apply-rbac-slice-b.py
-          pnpm install --frozen-lockfile
-          pnpm test
-          pnpm typecheck
-          pnpm build
-          rm -f .github/rbac-slice-b-patch.gz.b64
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add \
-            .github/rbac-slice-b-patch.gz.b64 \
-            server/migrations/tenant/0030_rbac_audit.sql \
-            server/scripts/test-rbac-audit-migration.py \
-            server/packages/auth/src/user-store.ts \
-            server/packages/frappe-model/src/permission.ts \
-            server/packages/frappe-api/src/router.ts \
-            server/tests/rbac-admin-contract.test.mjs \
-            server/package.json
-          git diff --cached --check
-          git commit -m "feat(rbac): add atomic access administration and audit"
-          git push origin HEAD:feat/rbac-permission-slice-b-20260731
