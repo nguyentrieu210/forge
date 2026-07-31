@@ -6,134 +6,130 @@ Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Default HEAD đã đồng bộ: `ad9b91083fe686987aacae44e83a890e4ba592cc`.
-- Branch nghiệp vụ: `feat/inventory-manufacturing-item-catalog-20260731`.
-- Merge default vào feature: `5b48548acc6c0872409afddb5404632904b3b842`.
-- Code HEAD đã qua CI trước commit tài liệu này: `2ada71006af123753ad9f81ec154d77e2726ca32`.
+- Working branch: `feat/inventory-manufacturing-item-catalog-20260731`.
 - Draft PR: `#27` — `feat(inventory): audit Alumdoor Item catalog and manufacturing readiness`.
-- Không commit `server/work/`, `tmp/`, backup SQL, `.env`, secret hoặc generated artifacts.
+- Default đã đồng bộ tới commit `81697d454db5e22e758a8aeda8cc40f1f247b18a` qua merge `05477f70f74374516961127cc700f8341ce01196`.
+- Implementation/test head trước review/handoff docs: `367743016a7e61a27afe04b8eb9f39e489a5c4b7`.
+- Review scorecard commit: `d885b25a14fa84f3c282847c3dac7e444f6d2384`.
+- Không commit `.env`, secret, `server/work/`, `tmp/`, backup hoặc generated report.
 
-## Nguồn metadata Alumdoor
+## Authoritative metadata và tài liệu
 
-- Nguồn nghiệp vụ chính: `server/briefs/alumdoor-v2.json`, version `2.0.34`.
-- `server/briefs/alumdoor.json` version `1.27.3` chỉ dùng tương thích/đối chiếu; không nhận thay đổi nghiệp vụ song song.
-- Tài liệu authoritative:
-  - `server/docs/ALUMDOOR-INVENTORY-MANUFACTURING-ITEM-AUDIT.md`;
+- Alumdoor metadata: `server/briefs/alumdoor-v2.json`, version `2.0.34`.
+- Tài liệu:
   - `server/docs/ALUMDOOR-INVENTORY-MANUFACTURING-BRD.md`;
-  - `server/docs/ALUMDOOR-INVENTORY-MANUFACTURING-TECHNICAL-PLAN.md`.
+  - `server/docs/ALUMDOOR-INVENTORY-MANUFACTURING-TECHNICAL-PLAN.md`;
+  - `server/docs/ALUMDOOR-INVENTORY-MANUFACTURING-ITEM-AUDIT.md`;
+  - `server/docs/ALUMDOOR-INVENTORY-MANUFACTURING-SLICE-A-REVIEW.md`.
 
-## Gate
+## Slice A đã hoàn thiện về code
 
-- G0 Scope: **PASS**.
-- G1 BRD: **PASS**, được người dùng ủy quyền duyệt.
-- G2 Technical plan: **PASS cho Slice A**.
-- G3 Test/lint/typecheck/build: **PASS cho Slice A**.
-- G4 Exact code-head CI: **PASS tại `2ada710...`**.
-- G5 Staging: **chưa bắt đầu**.
-
-## Slice A — Catalog audit và Item validator
-
-### Audit tooling
+### Catalog audit
 
 - `server/scripts/alumdoor-catalog-audit-planner.mjs`
-  - audit Item, Item Group, UOM, Measurement Profile, Warehouse, Bill of Materials và Production Standard;
-  - finding có severity/code ổn định, count và SHA-256 checksum xác định;
-  - phát hiện Item sai loại/cờ/UOM/profile/kho, BOM thiếu/trùng/vòng lặp;
-  - phát hiện nguồn không có Item/BOM thay vì coi tập rỗng là sạch;
-  - đọc `warehouse_role` và `stock_role`, chuẩn hóa vai trò tiếng Việt;
-  - kiểm tra coverage `RAW_MATERIAL`, `WIP`, `FINISHED_GOODS`, `QUARANTINE`, `SCRAP_OFFCUT`, `GENERAL`.
+  - audit Item, Item Group, UOM, Measurement Profile, Warehouse, BOM và Production Standard;
+  - deterministic finding code/severity/count/checksum;
+  - redaction;
+  - missing source, duplicate/circular BOM, UOM/profile/warehouse và warehouse-role coverage.
 - `server/scripts/audit-alumdoor-catalog.mjs`
-  - CLI read-only;
-  - hỗ trợ `--input`, `--brief`, `--tenant`;
+  - read-only;
+  - hỗ trợ fixture, authoritative brief và tenant source;
   - remote mặc định redacted;
-  - từ chối `--execute`, `--apply`, `--fix`, `--write-back`;
-  - report có tên không được ghi trong repository.
+  - từ chối write/fix/apply flags;
+  - đọc cả active và disabled master rows;
+  - output mặc định ở OS temp;
+  - từ chối output nằm trong repository.
 
 ### Runtime Item validation
 
-- `server/apps-src/alumdoor-worker/src/item-catalog-invariants.ts`
-  - dịch vụ không được tham gia sản xuất;
-  - dịch vụ không được giữ ĐVT tồn, kho mặc định hoặc reorder level;
-  - khóa enum giai đoạn vật tư và nguồn cung;
-  - `Mua ngoài`/`Mua hoặc sản xuất` phải bật `is_purchase_item`;
-  - bán thành phẩm, thành phẩm hoặc nguồn tự sản xuất phải bật `include_item_in_manufacturing`;
-  - partial save đọc record hiện tại qua callback/binding rồi mới kiểm invariant.
-- `server/apps-src/alumdoor-worker/src/entry.ts`
-  - compose validator lịch sử và invariant mới trên `/hooks/validate` cho Item;
-  - hai phép kiểm chạy song song;
-  - route khác chuyển nguyên vẹn sang Worker hiện hữu.
-- `server/apps-src/alumdoor-worker/wrangler.jsonc`
-  - entrypoint đổi từ `src/index.ts` sang `src/entry.ts`;
-  - không thay binding hoặc secret.
-- `server/tests/alumdoor-item-validator.test.mjs`
-  - chạy qua HTTP surface thật;
-  - cover dịch vụ, purchase/manufacturing flags, enum, Item Group, profile, conversion và partial save của cả validator cũ lẫn invariant mới.
+- `server/apps-src/alumdoor-worker/src/entry.ts` compose validator cũ và invariant mới.
+- `server/apps-src/alumdoor-worker/src/item-catalog-invariants.ts`:
+  - service không được stock/manufacturing/batch/serial/reorder;
+  - non-service bắt buộc stage/supply hợp lệ;
+  - purchase/manufacturing eligibility server-side;
+  - partial-save merge current Item;
+  - thiếu `PLATFORM` binding thì fail closed.
+- `server/apps-src/alumdoor-worker/wrangler.jsonc` dùng `src/entry.ts`; không đổi secret/binding.
 
-### CI và artifact
+### Regression
 
-Workflow chuyên biệt: `Inventory and Manufacturing CI`.
+- `server/tests/alumdoor-catalog-audit.test.mjs`.
+- `server/tests/alumdoor-catalog-warehouse-role.test.mjs`.
+- `server/tests/alumdoor-item-validator.test.mjs`.
+- Cover disabled rows, redaction, deterministic checksum, output safety, service tracking, required stage/supply, UOM/profile/group và partial save.
 
-- Run: `30618647612`.
-- Job: `91117731059`.
-- Exact code head: `2ada71006af123753ad9f81ec154d77e2726ca32`.
-- Focused catalog/warehouse-role/Item tests: **PASS**.
-- Redacted authoritative brief audit artifact: **PASS**.
-- Server SQL: **PASS**.
-- Brief validation: **PASS**.
-- Frontend lint: **PASS**.
-- Repository tests: **PASS**.
-- Typecheck: **PASS**.
-- Build: **PASS**.
+## Review score
 
-Workflow chuẩn từ default: `PR Validation`.
+- Review: `server/docs/ALUMDOOR-INVENTORY-MANUFACTURING-SLICE-A-REVIEW.md`.
+- Điểm: **96/100**.
+- Critical: **0**.
+- High: **0** sau remediation.
+- Quality threshold `>=95`: **PASS**.
 
-- Run: `30618647081`.
-- Job: `91117676626`.
-- Tests, typecheck và build: **PASS** tại cùng code head.
+## GitHub Actions blocker
 
-Workflow `Cloudflare Production Release Observation` không phải bằng chứng CI của nhánh này và không được tính vào gate.
+Các run gần nhất thất bại trước checkout/`Set up job`:
 
-## Audit authoritative brief v2.0.34
+- `Inventory and Manufacturing CI` run `30621757557`.
+- `PR Validation` run `30621757553`.
+- Workflow quan sát production run `30621757590` cũng bị cùng hiện tượng.
+- Job records có `steps=null`; downloadable logs không tồn tại.
+- Retry các run trước đó cho kết quả pre-run failure tương tự.
+- PR #14 trong cùng repository cũng ghi nhận độc lập cùng hiện tượng.
 
-Artifact gần nhất trước thay đổi validator:
+Không test assertion, typecheck hoặc build command nào chạy trong các run thất bại này. Phân loại: **GitHub Actions pre-run infrastructure/configuration blocker; nguyên nhân cụ thể chưa đủ bằng chứng**.
 
-- Run: `30613404344`.
-- Artifact ID: `8786370029`.
-- Checksum: `3eaf1f6780dcaaa5ebb58c275ab405f3df416a715743b54650271db5e2a3a2b4`.
+G4 exact final-head CI: **BLOCKED**.
 
-Kết quả redacted:
+## Merge readiness
 
-- 39 fixture: 14 UOM, 13 Item Group, 6 Measurement Profile, 6 Warehouse.
-- Item: `0`.
-- Active BOM/Production Standard: `0`.
-- Warehouse role: `GENERAL = 2`, `SCRAP_OFFCUT = 3`.
-- Findings: `0 Critical`, `2 High`, `4 Medium`, `0 Low`.
-- High: `SOURCE_ITEM_RECORDS_MISSING`, `SOURCE_BOM_RECORDS_MISSING`.
-- Medium: thiếu `RAW_MATERIAL`, `WIP`, `FINISHED_GOODS`, `QUARANTINE`.
+Đã đạt:
 
-Kết luận: brief v2.0.34 chứng minh schema và master khung, không chứng minh catalog Item/BOM live đã sẵn sàng.
+- G0 Scope: **PASS**.
+- G1 Requirements/BRD: **PASS**.
+- G2 Plan: **PASS**.
+- Review score >=95: **PASS, 96/100**.
+- Critical/High code finding: **0**.
+- Không migration, deploy, secret hoặc tenant mutation.
 
-## Remote audit tenant `alu`
+Chưa đạt:
 
-- CLI đã sẵn sàng cho audit read-only và redacted.
-- Chưa có kết quả remote audit tenant `alu`.
-- Đã thử dựng workflow một lần nhưng không giữ lại vì GitHub/connector chặn commit workflow chứa credential context và cấu hình thử nghiệm có nguy cơ làm mù CI.
-- Workflow thử nghiệm và script patch tạm đã bị xóa khỏi branch.
-- Không yêu cầu hoặc ghi token vào chat/repo.
-- Remote audit phải chạy trong môi trường vận hành đã có Cloudflare credential hợp lệ; chỉ count, checksum và finding code redacted được đưa vào handoff.
+- `Inventory and Manufacturing CI` PASS trên exact final HEAD.
+- `PR Validation` PASS trên exact final HEAD.
+- Chuyển PR khỏi draft.
+- Yêu cầu merge rõ ràng sau khi xem bằng chứng cuối.
 
-## Điều phối nhánh khác
+PR không được merge khi G4 còn blocked.
 
-- PR mua hàng `#14`: open/draft, head kiểm tra gần nhất `7201226103d54f6b87a62ed6d020c58926ff9ef0`.
-- PR #14 dùng migration `0030` và chạm procurement/stock contracts.
-- Nhánh tồn kho/sản xuất chưa tạo migration; phải kiểm tra lại migration head sau khi PR #14 merge.
-- PR RBAC `#34` vẫn open/draft; nhánh này không sửa phạm vi RBAC.
-- Default đã bổ sung `.github/workflows/pr-validation.yml`; workflow này đã chạy thành công trên PR #27.
+## Authoritative brief audit
+
+Audit brief v2.0.34 xác nhận:
+
+- 39 master fixtures;
+- 14 UOM;
+- 13 Item Group;
+- 6 Measurement Profile;
+- 6 Warehouse;
+- 0 Item;
+- 0 active BOM/Production Standard;
+- 0 Critical, 2 High, 4 Medium.
+
+Hai High là thiếu source Item/BOM trong brief, không phải code finding. Brief chứng minh schema/master scaffold, không chứng minh dữ liệu live.
+
+## Live tenant audit và staging
+
+- Chưa chạy remote audit tenant `alu`.
+- Chưa staging/deploy.
+- Live audit và staging là gate trước remediation dữ liệu, Slice B/C và production release; không phải điều kiện code-quality để merge Slice A.
+
+## Điều phối
+
+- PR mua hàng `#14` vẫn open/draft và sở hữu migration `0031` theo nội dung PR hiện tại; phải xác minh lại migration head trước Slice B/C.
+- FIFO rollout tenant `alu` vẫn disabled.
 
 ## Production safety
 
-- Chưa deploy Gateway hoặc Tenant Worker từ nhánh này.
-- Chưa migration hoặc mutate tenant `alu`.
-- Chưa chạy remote catalog audit production.
-- Chưa sửa Cloudflare secret.
-- FIFO Purchase Receipt production vẫn phải giữ disabled.
+- Không deploy Gateway/Tenant Worker từ nhánh này.
+- Không migrate/mutate tenant `alu`.
+- Không sửa Cloudflare secret.
+- Không bật FIFO.
