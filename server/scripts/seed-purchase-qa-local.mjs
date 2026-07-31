@@ -124,12 +124,21 @@ await ensureResource("Supplier", "TIEN-DAT", {
   note: "Local authenticated Tiến Đạt FIFO QA only",
 });
 
-// These are authoritative Alumdoor fixtures. Fixtures live in the platform's
-// master-record catalogue rather than the mutable document table, so a direct
-// `/api/resource/Item Group/<name>` probe is not the right existence check. The
-// Item validator/link resolver below is the real proof that each group is usable.
-const regularItemGroup = "Phụ kiện";
-const aluminiumItemGroup = "Nan/lá cửa";
+// App fixtures are immutable catalogue records and are not exposed as mutable
+// `/api/resource` documents in the local topology. Create deterministic QA leaf
+// groups through the authenticated resource API so Item link validation exercises
+// the same path as a human-created group.
+const regularItemGroup = "QA Purchase Items";
+const aluminiumItemGroup = "QA Aluminium";
+
+await ensureResource("Item Group", regularItemGroup, {
+  item_group_name: regularItemGroup,
+  is_group: 0,
+});
+await ensureResource("Item Group", aluminiumItemGroup, {
+  item_group_name: aluminiumItemGroup,
+  is_group: 0,
+});
 
 await ensureResource("Item", "QA-PURCHASE-ITEM", {
   item_code: "QA-PURCHASE-ITEM",
