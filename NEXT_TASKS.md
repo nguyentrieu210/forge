@@ -1,19 +1,20 @@
 # NEXT TASKS
 
-Ngày cập nhật: **2026-07-31**.
+Ngày cập nhật: **2026-08-01**.
 
-## P0 — authenticated Sales smoke sau release
+## P0 — authenticated Sales smoke sau app Worker release
 
-Sales Unicode hotfix đang ở production:
+Sales Unicode fix đã được deploy đúng Worker thực thi nghiệp vụ:
 
 - feature merge SHA `a48524b93489c92296c57fc5f223e41d505de7aa`;
-- execution PR `#98` đã đóng không merge;
-- release run `30649182082`;
-- release job `91217965586`;
-- Worker version `ed5852cf-94ef-4a02-b0b9-1e64020c2d0d`;
-- deployment time `2026-07-31T16:58:24.659Z`;
-- backup, recorded migrations, deploy, `/health=200` và guest boot `403`: PASS;
-- FIFO rollout vẫn disabled.
+- Worker `cloudforge-app-alumdoor`;
+- dispatch namespace `cloudforge-production`;
+- execution PR `#104` đã đóng không merge;
+- release run `30651057535`;
+- release job `91224118455`;
+- Version ID `734fd53b-94ce-401d-86e8-ca4cd0ffee2e`;
+- deployment time `2026-07-31T17:25:19.115Z`;
+- build, focused regression, Wrangler dry-run, live deploy, provider identity/namespace và bindings: PASS.
 
 Việc cần làm ngay:
 
@@ -33,14 +34,28 @@ Việc cần làm ngay:
 10. Huỷ hoặc xoá chứng từ thử an toàn.
 11. Không ghi credential, cookie, token hoặc dữ liệu khách hàng thật vào evidence.
 
-## Release evidence mới nhất
+## App Worker release evidence
 
-- Backup artifact ID `8800689182`.
-- Backup digest `sha256:2764be993caf757abf9b2263ea28bccc06e74adbb477ed239cd0df4db8b9f244`.
-- Backup expiry `2026-08-14T16:57:33Z`.
-- Release artifact ID `8800710784`.
-- Release digest `sha256:16227979a15a4fa41b4ca1610cfe0e2db21b6c0806962c76fa93fd8035124835`.
-- Release artifact expiry `2026-08-30T16:58:26Z`.
+- Workflow PR `#100`, merge SHA `1487dbd76f516c0d505120924012b262a5f19857`.
+- Workflow fix PR `#102`, merge SHA `cbe60228fb10a3b51b52880fb178c164b63ff9f8`.
+- Lượt fail trước deploy: run `30650655515`, job `91222799878`; không có Wrangler live deploy.
+- Lượt thành công: run `30651057535`, job `91224118455`.
+- Artifact ID `8801385744`.
+- Artifact digest `sha256:0cf123014d3b4d0c1256f1d37b0e9b7a11882581e22c19c0da6a664b4f4b4e20`.
+- Artifact expiry `2026-08-30T17:25:19Z`.
+
+## P0 — tránh lặp lại sai release target
+
+1. Mọi thay đổi dưới `server/apps-src/alumdoor-worker/**` phải release `cloudforge-app-alumdoor` vào `cloudforge-production`.
+2. Không coi version `cloudforge-tenant-alu` hoặc Gateway `/health` là bằng chứng app Worker đã cập nhật.
+3. Release evidence phải có:
+   - exact code SHA;
+   - app Worker name;
+   - dispatch namespace;
+   - Cloudflare Version ID;
+   - provider script identity;
+   - bindings `PLATFORM` và `AI`.
+4. Execution PR phải đóng không merge.
 
 ## P0 — sửa production observation reporting
 
