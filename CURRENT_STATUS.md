@@ -4,12 +4,12 @@
 
 - Branch: `feat/sales-complete-20260731`, base `cd60f8c09c48105db84a82c12ad3b32d9f075064`.
 - Draft PR: `#25` — `feat(sales): multi-UOM pricing and stock availability`.
-- Implementation head đã xác minh: `dcbe2d717e5bbb23ddc94602b538dd2ca06b180c`.
+- Exact branch head: `56aa25e0153bf57e911f5d6f7029403a680b9b74`.
 - Đã triển khai khoá giá chính xác theo `Bảng giá + Mặt hàng + ĐVT`; dữ liệu Item Price cũ không có UOM vẫn tương thích, còn dữ liệu cũ đã khai UOM chỉ được dùng khi dòng bán khớp tuyệt đối.
 - Báo giá/Đơn hàng lấy danh sách ĐVT hợp lệ từ Item, nạp giá đúng ĐVT và hiện tồn theo kho/ĐVT bán qua method chỉ đọc `alumdoor.sales.item_context`.
 - Dòng bán hiển thị `Còn N <ĐVT>`, `Hết hàng`, `Chưa chọn kho`, `Không quản lý tồn` hoặc lỗi đọc tồn/giá.
 - Preview tồn không giữ chỗ; chốt thiếu tồn ở Delivery Note submit vẫn authoritative.
-- Sales Feature CI run `30612497110`, job `91098266796`: install, server unit tests, SQL tests, Alumdoor brief check, client tests, typecheck và build đều **PASS**.
+- Sales Feature CI run `30613008518`, job `91099881678`: install, server unit tests, SQL tests, Alumdoor brief check, client tests, typecheck và build đều **PASS**.
 - Chưa browser/staging smoke với dữ liệu thật, chưa thiết kế reservation/ATP theo Sales Order.
 - Chưa merge PR, chưa deploy Cloudflare hoặc production, không sửa secrets.
 
