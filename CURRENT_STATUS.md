@@ -99,3 +99,12 @@ Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
 - D1 migrations append-only.
 - Không sửa production secrets trong đợt này.
 - Không kích hoạt FIFO, không thay DNS và không commit backup SQL/evidence thô.
+
+## PR #63 — Purchase completion CI
+
+- Nhánh: `feat/purchase-fifo-production-completion-20260731`, base `hotfix/alumdoor-print-list-delete`.
+- Đã bỏ toàn bộ bước cài Chromium, chạy Playwright, upload browser evidence, comment lỗi và browser gate khỏi `.github/workflows/purchase-completion-apply.yml`.
+- Run `30638248773` xác nhận frontend lint, server unit tests, server SQL tests, client tests, typecheck và build đều **PASS**.
+- Bước cuối cũ thất bại do repository rule `GH013` cấm GitHub Actions tự push trực tiếp vào nhánh; không phải lỗi test hay build.
+- Workflow hiện chỉ reconstruct/apply patch tạm trong runner, chạy các kiểm tra còn lại và xác minh generated diff; không tự commit/push.
+- Không deploy Cloudflare, không sửa production secrets và không kích hoạt FIFO trong thay đổi này.
