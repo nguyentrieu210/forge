@@ -2,99 +2,74 @@
 
 Ngày cập nhật: **2026-07-31**.
 
-## P0 — Validate CI routing optimization PR #66
+## P0 — Verify PR #66 exact final HEAD
 
-- Exact branch: `chore/optimize-gateway-ci-cd-20260731`.
-- Draft PR: `#66` — `ci: reduce duplicate and irrelevant workflow runs`.
-- Kiểm exact final HEAD sau mọi chỉnh sửa:
-  1. `CI` router chạy thành công.
-  2. Purchase, Sales và Inventory/Manufacturing router chạy thành công.
-  3. Vì PR #66 sửa chính các workflow này, job nặng của ba workflow phải chạy để tự kiểm chứng cấu hình.
-  4. Xác minh commit docs-only tiếp theo chỉ chạy router nhẹ và không cài dependency/build lại.
-  5. Kiểm branch protection không yêu cầu tên job đã bị đổi hoặc job bị skip theo cách làm check treo pending.
-- Sau khi CI xanh, review diff workflow và chỉ merge khi có yêu cầu rõ ràng.
-- Bước tối ưu tiếp theo: tách Gateway build thành immutable Worker version rồi release chỉ promote version đã kiểm chứng; chưa triển khai trong checkpoint router này.
-- Cloudflare Git Build đã được người dùng tắt trong dashboard.
-- Không deploy Cloudflare, không sửa production secrets, không migrate/mutate D1 và không bật FIFO trong PR này.
+1. Lấy exact final HEAD của `chore/optimize-gateway-ci-cd-20260731`.
+2. Kiểm các workflow mới:
+   - `PR Validation`;
+   - `Business Domain CI`;
+   - `UI Pull Request Validation` nếu scope phù hợp.
+3. Xác minh router/result jobs luôn trả kết quả rõ ràng khi focused/heavy job bị skip.
+4. Đọc đúng failed step và log; không sửa code nếu job chưa checkout hoặc không có steps.
+5. Kiểm branch protection required check names. Không merge nếu required check cũ bị mất hoặc treo Pending.
+6. Giữ PR draft cho tới khi exact-head checks cần thiết PASS.
 
-## P0 — Functional production smoke cho Link dropdown trong child table
+## P0 — Review workflow inventory
 
-Bản vá wheel đúng đã merge và phát hành:
+Workflow mục tiêu còn lại:
 
-- Feature PR `#62` merge SHA `b3dd1d15a1b52de698d0874b29feae79efe7ed6c`.
-- Release PR `#64` merge SHA `eaf6b32709abc731bd37285501676ed1ec6267af`.
-- Gateway run `30635980509`, job `91173574419`: build, stage, deploy, smoke và provider evidence **PASS**.
-- Gateway production version: `b0d0ce5b-408c-47ab-a734-fa55ba4d9c00`.
-- Targeted Playwright trên desktop/tablet/mobile đã phát `mouse.wheel` và xác minh `scrollTop` của dropdown tăng.
+- `pr-validation.yml`.
+- `business-domain-ci.yml`.
+- `ui-pr-validation.yml`.
+- `gateway-production-release.yml`.
+- `tenant-production-release.yml`.
+- `purchase-completion-apply.yml` tạm thời cho PR #63.
 
-Kiểm trực tiếp sau hard refresh bằng tài khoản production phù hợp, không ghi credential/cookie/dữ liệu khách hàng vào evidence:
+Sau khi PR #63 kết thúc:
 
-1. Mở Báo giá hoặc Đơn hàng và mở bảng child lớn.
-2. Mở dropdown `Mã hàng` có danh sách dài.
-3. Đặt con trỏ trên text hoặc icon của một lựa chọn rồi dùng con lăn:
-   - danh sách dropdown phải cuộn dọc;
-   - không cần kéo thumb scrollbar bằng chuột.
-4. Cuộn tới cuối và tiếp tục lăn xuống:
-   - dropdown không cuộn quá biên;
-   - vùng child grid phía sau tiếp tục cuộn nếu còn khoảng cuộn.
-5. Lặp lại ở đầu danh sách theo hướng ngược lại.
-6. Kiểm thêm dropdown UOM và Warehouse trong bảng lớn.
-7. Đóng bảng lớn, kiểm dropdown ở bảng gọn vẫn chọn và cuộn bình thường.
-8. Xác minh không còn nhóm `Lựa chọn gần đây` sau khi chọn, đóng và mở lại dropdown.
-9. Xác minh Item picker vẫn giữ filter bán hàng và tìm được theo mã/tên.
-10. Nếu thất bại, ghi rõ viewport, loại dropdown, vị trí con trỏ, hướng wheel và ảnh/video đã redacted.
+1. Xác nhận không còn gate nào phụ thuộc `purchase-completion-apply.yml`.
+2. Xóa workflow tạm.
+3. Cập nhật runbook và status.
 
-## Purchase/FIFO — functional browser QA còn lại
+## P1 — Gateway immutable-version release
 
-- PR `#14` đã squash-merge thành `7b3dc06dbbecbb5370ddb48259aa1614aef2ff32`.
-- Tenant Worker production version: `9ec0d1d3-c1fd-4263-ae35-4fae81c09968`.
-- FIFO rollout vẫn **disabled**; deploy code không phải approval kích hoạt FIFO.
+Checkpoint riêng sau cleanup:
 
-Dùng dữ liệu thử phù hợp:
+1. CI build/stage Gateway frontend một lần.
+2. Upload immutable Worker version và lưu target SHA + version ID.
+3. Gateway production release chỉ promote exact version đã xác minh.
+4. Không build frontend lần nữa trong release job.
+5. Giữ smoke `/health`, `/`, guest boot và provider version evidence.
+6. Không triển khai production nếu chưa có yêu cầu release rõ ràng.
 
-1. Desktop/mobile: mở Purchase Order/Purchase Receipt, kiểm submit preview và allocation timeline.
-2. Kiểm settlement close/reverse, reason bắt buộc, capability/permission và confirmation scope.
-3. Kiểm manual FIFO override, validation reason và audit append-only.
-4. Kiểm supplier debt drill-down, filters, summaries và CSV export.
-5. Smoke PO → Receipt → cancel → settlement/reverse bằng chứng từ test có thể dọn/hủy an toàn.
+## P1 — Tighten Business Domain routing
 
-### Blocker trước khi kích hoạt FIFO production
+Sau một số PR thực tế:
 
-1. Chạy staging migration và backfill dry-run trên bản sao dữ liệu phù hợp.
-2. Review resolved/unresolved report và PO-level checksum.
-3. `unresolved_count` phải bằng `0`; không đoán hoặc tự sửa row ID.
-4. Chạy staging smoke đầy đủ PO → Receipt → cancel → settlement/manual override → report.
-5. Xác minh supplier contention/D1 latency ở tải gần production.
-6. Tạo production backup mới ngay trước activation.
-7. Chỉ activation khi có explicit approval riêng.
+1. Review file patterns bị false positive/false negative.
+2. Thêm mapping có bằng chứng, không mở rộng thành toàn bộ `server/**` hoặc `client/**`.
+3. Nếu focused test file naming không ổn định, tạo manifest/script test-domain trong repository thay vì thêm workflow mới.
 
-## Bán hàng — functional browser acceptance còn lại
+## P1 — UI browser QA scope
 
-1. Item picker chỉ hiện Item `is_sales_item=1`, `disabled=0` khi tìm trống và tìm theo mã/tên.
-2. Multi-UOM: kiểm giá/tồn theo Item + Kho + ĐVT, không lấy chéo UOM.
-3. Kiểm Price List/Item Price với role `Kinh doanh` và `Kế toán`.
-4. Huỷ hoặc xoá chứng từ test theo quy trình nghiệp vụ sau khi thu evidence.
+- Theo dõi các PR backend không liên quan để đảm bảo Playwright không chạy.
+- Theo dõi UI/auth PR để đảm bảo browser QA vẫn xuất hiện.
+- Không đưa Chromium trở lại workflow deploy hoặc domain CI.
 
-## Theo dõi production
+## Runbook bắt buộc
 
-- Theo dõi Gateway 4xx/5xx mới, lỗi mở/chọn Link dropdown, focus trap hoặc keyboard navigation regression.
-- Rollback khi có login/API 5xx diện rộng, Link dropdown không mở/chọn được, permission regression hoặc mất dữ liệu CRUD.
-- Endpoint smoke đã đạt nhưng không thay thế functional browser smoke có đăng nhập.
+Mọi AI tiếp tục công việc phải đọc và làm theo:
 
-## RBAC
+- `AI_HANDOFF.md`.
+- `CURRENT_STATUS.md`.
+- `NEXT_TASKS.md`.
+- `docs/runbooks/AI_CI_CD_RUNBOOK.md`.
 
-- Chạy staging/browser QA riêng cho user lifecycle, role refresh, password/session revoke, audit log và tenant isolation.
-- Không dùng dữ liệu khách hàng thật hoặc commit credential/evidence thô.
+Không tạo workflow mới nếu chưa chứng minh workflow hiện có không đáp ứng được và chưa ghi điều kiện xóa.
 
-## Release automation
+## Production safety
 
-- Giữ `.github/workflows/gateway-production-release.yml` làm đường Gateway có exact SHA, smoke và provider evidence.
-- Ở tenant release kế tiếp, xác minh `.github/workflows/ci.yml` tạo summary/version từ Wrangler NDJSON.
-- `cloudflare-production-observation.yml` chỉ dùng manual smoke; không dùng để suy ra version/deployment ID.
-
-## Safety
-
-- Không commit `.env`, `.dev.vars`, token, secret, private key hoặc session secret.
-- Không commit `server/work/`, `tmp/`, backup SQL hoặc generated artifacts.
-- D1 migrations append-only.
-- Mọi production activation cần backup, rollback plan, exact evidence và approval riêng.
+- Không deploy Cloudflare hoặc migrate D1 trong PR #66.
+- Không sửa production secrets.
+- FIFO rollout giữ **disabled**.
+- Không commit `.env`, `.dev.vars`, `server/work/`, `tmp/`, backup hoặc generated artifacts.
