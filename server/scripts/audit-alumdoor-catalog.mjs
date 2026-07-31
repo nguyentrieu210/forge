@@ -120,7 +120,7 @@ async function readRemote(tenant) {
     ORDER BY record_type, name, source_rank
   `);
   return {
-    metadataVersion: "2.0.34",
+    metadataVersion: "2.0.35",
     records: rows.map((row) => ({
       doctype: row.record_type,
       name: row.name,

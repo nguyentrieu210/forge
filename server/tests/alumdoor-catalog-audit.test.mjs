@@ -42,7 +42,7 @@ function runCli(args) {
 }
 
 test("valid catalog produces no Critical/High finding", () => {
-  const report = planAlumdoorCatalogAudit({ metadataVersion: "2.0.34", records: validRecords() });
+  const report = planAlumdoorCatalogAudit({ metadataVersion: "2.0.35", records: validRecords() });
   assert.equal(report.counts.critical, 0);
   assert.equal(report.counts.high, 0);
   assert.equal(report.counts.active_items, 2);
@@ -57,7 +57,7 @@ test("disabled Items remain counted without creating active-readiness defects", 
     name: "DISABLED-BROKEN",
     data: { item_code: "DISABLED-BROKEN", disabled: 1 },
   });
-  const report = planAlumdoorCatalogAudit({ metadataVersion: "2.0.34", records });
+  const report = planAlumdoorCatalogAudit({ metadataVersion: "2.0.35", records });
   assert.equal(report.counts.active_items, 2);
   assert.equal(report.counts.disabled_items, 1);
   assert.ok(report.findings.every((finding) => finding.name !== "DISABLED-BROKEN"));
@@ -77,7 +77,7 @@ test("audit reports service, conversion, manufactured-item and BOM defects", () 
       supply_type: "Tự sản xuất", is_stock_item: 1, include_item_in_manufacturing: 1, inventory_mode: "Hàng thường", stock_uom: "Cái",
     } },
   );
-  const report = planAlumdoorCatalogAudit({ metadataVersion: "2.0.34", records });
+  const report = planAlumdoorCatalogAudit({ metadataVersion: "2.0.35", records });
   const codes = new Set(report.findings.map((finding) => finding.code));
   assert.ok(codes.has("ITEM_SERVICE_STOCK_ENABLED"));
   assert.ok(codes.has("ITEM_SERVICE_MANUFACTURING_ENABLED"));
@@ -97,7 +97,7 @@ test("duplicate and circular active BOMs are rejected", () => {
     { doctype: "Bill of Materials", name: "BOM-SUB", data: { item: "SUB", quantity: 1, revision: 1, status: "Active", items: [{ item_code: "FG", qty: 1, uom: "Cái", qty_basis: "Cố định" }] } },
   );
   records.find((record) => record.name === "BOM-FG-R1").data.items.push({ item_code: "SUB", qty: 1, uom: "Cái", qty_basis: "Cố định" });
-  const report = planAlumdoorCatalogAudit({ metadataVersion: "2.0.34", records });
+  const report = planAlumdoorCatalogAudit({ metadataVersion: "2.0.35", records });
   const codes = new Set(report.findings.map((finding) => finding.code));
   assert.ok(codes.has("BOM_DUPLICATE_ACTIVE"));
   assert.ok(codes.has("BOM_CIRCULAR_DEPENDENCY"));
@@ -110,8 +110,8 @@ test("checksum is stable across record and object-key order", () => {
     data: Object.fromEntries(Object.entries(record.data).reverse()),
     doctype: record.doctype,
   }));
-  const first = planAlumdoorCatalogAudit({ metadataVersion: "2.0.34", records: a, redacted: true });
-  const second = planAlumdoorCatalogAudit({ metadataVersion: "2.0.34", records: b, redacted: true });
+  const first = planAlumdoorCatalogAudit({ metadataVersion: "2.0.35", records: a, redacted: true });
+  const second = planAlumdoorCatalogAudit({ metadataVersion: "2.0.35", records: b, redacted: true });
   assert.equal(first.checksum, second.checksum);
   assert.deepEqual(first.findings, second.findings);
 });
@@ -134,7 +134,7 @@ test("CLI remains read-only and writes a deterministic fixture report", () => {
   const dir = mkdtempSync(path.join(tmpdir(), "forge-catalog-audit-"));
   const fixture = path.join(dir, "fixture.json");
   const output = path.join(dir, "report.json");
-  writeFileSync(fixture, JSON.stringify({ metadata_version: "2.0.34", records: validRecords() }));
+  writeFileSync(fixture, JSON.stringify({ metadata_version: "2.0.35", records: validRecords() }));
   const run = runCli(["--input", fixture, "--output", output, "--redacted"]);
   assert.equal(run.status, 0, run.stderr || run.stdout);
   const report = JSON.parse(readFileSync(output, "utf8"));
@@ -148,7 +148,7 @@ test("CLI remains read-only and writes a deterministic fixture report", () => {
 test("CLI defaults generated reports outside the repository", () => {
   const dir = mkdtempSync(path.join(tmpdir(), "forge-catalog-default-output-"));
   const fixture = path.join(dir, "fixture.json");
-  writeFileSync(fixture, JSON.stringify({ metadata_version: "2.0.34", records: validRecords() }));
+  writeFileSync(fixture, JSON.stringify({ metadata_version: "2.0.35", records: validRecords() }));
   const run = runCli(["--input", fixture, "--redacted"]);
   assert.equal(run.status, 0, run.stderr || run.stdout);
   const summary = JSON.parse(run.stdout);
@@ -160,7 +160,7 @@ test("CLI refuses generated audit output inside the repository", () => {
   const dir = mkdtempSync(path.join(tmpdir(), "forge-catalog-repo-output-"));
   const fixture = path.join(dir, "fixture.json");
   const forbiddenOutput = fileURLToPath(new URL("../alumdoor-catalog-audit-should-not-exist.json", import.meta.url));
-  writeFileSync(fixture, JSON.stringify({ metadata_version: "2.0.34", records: validRecords() }));
+  writeFileSync(fixture, JSON.stringify({ metadata_version: "2.0.35", records: validRecords() }));
   const run = runCli(["--input", fixture, "--output", forbiddenOutput, "--redacted"]);
   assert.notEqual(run.status, 0);
   assert.match(`${run.stderr}${run.stdout}`, /outside the repository/i);
@@ -183,8 +183,8 @@ test("CLI audits the authoritative alumdoor-v2 brief fixtures directly", () => {
   const report = JSON.parse(readFileSync(output, "utf8"));
   assert.equal(report.source.kind, "brief");
   assert.equal(report.source.file, "alumdoor-v2.json");
-  assert.equal(report.metadata_version, "2.0.34");
-  assert.equal(report.expected_metadata_version, "2.0.34");
+  assert.equal(report.metadata_version, "2.0.35");
+  assert.equal(report.expected_metadata_version, "2.0.35");
   assert.ok(report.counts.records > 0);
   assert.ok((report.counts.by_doctype.UOM ?? 0) > 0);
   assert.ok((report.counts.by_doctype["Item Group"] ?? 0) > 0);

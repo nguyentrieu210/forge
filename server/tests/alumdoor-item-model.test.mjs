@@ -148,6 +148,7 @@ test("purchase rows expose aluminium dimensions only for aluminium items", () =>
     { doctype: "Sales Invoice", actions: ["create", "save", "submit"] },
     { doctype: "Work Order", actions: ["create", "save", "submit"] },
     { doctype: "Aluminium Lot", actions: ["create", "save"] },
+    { doctype: "Production Request", actions: ["create", "save"] },
   ]);
   for (const [child, colorField] of [
     ["Quotation Item", "color"],
@@ -183,7 +184,7 @@ test("purchase rows expose aluminium dimensions only for aluminium items", () =>
 });
 
 test("V2 purchase receipt exposes dimensions and area weight without mixing kg/m", () => {
-  assert.equal(v2Brief.version, "2.0.34");
+  assert.equal(v2Brief.version, "2.0.35");
   const receiptItem = v2Doctype("Purchase Receipt Item");
   for (const fieldname of [
     "height_m", "width_m", "set_count", "actual_weight_kg", "actual_kg_per_m", "actual_kg_per_sqm",
