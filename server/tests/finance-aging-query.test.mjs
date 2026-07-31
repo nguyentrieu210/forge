@@ -21,6 +21,7 @@ test("AR aging compiler binds tenant and cutoff and exposes aging columns", () =
   assert.match(compiled.sql, /finance_invoice_terms/);
   assert.match(compiled.sql, /p\.tenant_id = \?1/);
   assert.match(compiled.sql, /date\(p\.posting_at\) <= date\(\?2\)/);
+  assert.match(compiled.sql, /due_date_source/);
   assert.ok(!compiled.sql.includes("OR 1=1"));
   assert.deepEqual(compiled.params.slice(0, 5), [
     "tenant-a",
@@ -29,21 +30,27 @@ test("AR aging compiler binds tenant and cutoff and exposes aging columns", () =
     "1–30 ngày",
     "31–60 ngày",
   ]);
+  assert.ok(compiled.columns.some((column) => column.field === "due_date_source"));
   assert.ok(compiled.columns.some((column) => column.field === "days_overdue"));
   assert.ok(compiled.columns.some((column) => column.field === "aging_bucket"));
   assert.equal(compiled.prepared, false);
 });
 
-test("AP aging compiler uses payable ledger and purchase invoices", () => {
+test("AP aging compiler uses payable ledger and can filter fallback due dates", () => {
   const compiled = new FinanceQueryCompiler().compile({
     report: "Accounts Payable Aging",
     tenant_id: "tenant-a",
-    filters: [asOf, { field: "company", operator: "=", value: "Demo" }],
+    filters: [
+      asOf,
+      { field: "company", operator: "=", value: "Demo" },
+      { field: "due_date_source", operator: "=", value: "posting_date_fallback" },
+    ],
   });
 
   assert.match(compiled.sql, /p\.account_type = 'Payable'/);
   assert.match(compiled.sql, /t\.voucher_type = 'Purchase Invoice'/);
   assert.equal(compiled.params[2], "Demo");
+  assert.equal(compiled.params[3], "posting_date_fallback");
   assert.equal(compiled.columns[0].label, "Supplier");
 });
 
