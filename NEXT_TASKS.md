@@ -24,7 +24,12 @@ Technical plan: `server/docs/ALUMDOOR-PURCHASE-RECEIPT-COMPLETION-PLAN.md`.
 - [x] Thêm cross-window settlement lifecycle controller.
 - [x] D1 read model kiểm tra activity của cửa sổ kế tiếp trực tiếp.
 - [x] Unit test controller rejection và D1 query shape.
-- [x] Đồng bộ `.github/workflows/pr-validation.yml` từ base.
+- [x] Merge base hiện tại vào feature tại `7201226103d54f6b87a62ed6d020c58926ff9ef0`.
+- [x] PR #14 trở lại mergeable.
+- [x] Purchase Feature CI `30618438268`: PASS.
+- [x] PR Validation `30618438292`: PASS.
+- [x] CI `30618438353`: PASS; release job skipped.
+- [x] Review vòng 2 đóng Critical/High findings, review ID `4827031228`.
 
 ### P1 — Operator UI phần đã xong
 
@@ -33,33 +38,18 @@ Technical plan: `server/docs/ALUMDOOR-PURCHASE-RECEIPT-COMPLETION-PLAN.md`.
 - [x] Hiển thị nominal remaining, received/allocated/unapplied, barem/actual weight, window status, tolerance, bounds và variance.
 - [x] Loading/error/empty states và responsive overflow cho timeline dialog.
 
-## P0 ngay tiếp theo — base sync, CI và review lại
-
-1. Hợp nhất base `hotfix/alumdoor-print-list-delete` vào feature branch mà không force-push lịch sử.
-2. Xác nhận PR #14 trở lại `mergeable`.
-3. Chạy exact-head:
-   - server unit tests;
-   - SQL suite, gồm `test-purchase-allocation-backfill-sql.py`;
-   - client tests;
-   - typecheck;
-   - build.
-4. Sửa mọi failure trên exact head.
-5. Review lại hai finding vòng 1:
-   - backfill SQL phải chạy đúng schema migration;
-   - settlement cũ phải bị chặn khi cửa sổ kế tiếp có activity.
-6. Ghi run/job ID và review result vào `CURRENT_STATUS.md`.
-
 ## P0 kế tiếp — Settlement và override UI
 
-1. Thêm action visibility theo server capabilities/permissions cho:
+1. Mở server capabilities/read model cho action availability:
    - close settlement window;
    - reverse settlement;
    - manual FIFO override.
-2. Dialog bắt buộc confirmation và reason, không cho gửi reason rỗng.
-3. Hiển thị window/queue/material/supplier scope trước khi xác nhận.
-4. Refetch document, timeline và report sau mutation thành công.
-5. Fail closed khi server từ chối permission, stale revision hoặc lifecycle rule.
-6. Tests cho hidden/disabled actions, required reason, success/error/refetch states và mobile layout.
+2. Thêm dialogs bắt buộc confirmation và reason, không cho gửi reason rỗng.
+3. Hiển thị window/queue/material/supplier scope và tolerance/bounds trước khi xác nhận.
+4. Gọi mutation qua DocumentKernel/DO hiện có, không tạo API write bypass.
+5. Refetch document, timeline và supplier debt report sau mutation thành công.
+6. Fail closed khi server từ chối permission, stale revision hoặc lifecycle rule.
+7. Tests cho hidden/disabled actions, required reason, success/error/refetch states và mobile layout.
 
 ## P1 kế tiếp — Supplier debt report
 
