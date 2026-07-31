@@ -140,6 +140,22 @@ test("user creation, grants and audit commit together", async () => {
   assert.deepEqual(JSON.parse(rows[0].after_json).roles, ["Stock User"]);
 });
 
+test("a failed audit insert rolls back user creation and grants", async () => {
+  const { db, service } = fixture();
+  await assert.rejects(
+    service.createUserWithRoles(
+      "tenant-a",
+      input("rollback@example.com"),
+      ["Stock User"],
+      { actorUserId: "admin@example.com", traceId: "trace-rbac-b", source: "" },
+      NOW,
+    ),
+  );
+  assert.equal(db.rows("SELECT * FROM users WHERE user_id='rollback@example.com'").length, 0);
+  assert.equal(db.rows("SELECT * FROM user_roles WHERE user_id='rollback@example.com'").length, 0);
+  assert.equal(db.rows("SELECT * FROM rbac_audit_events WHERE target_user_id='rollback@example.com'").length, 0);
+});
+
 test("last-admin guards are tenant scoped", async () => {
   const { db, service } = fixture();
   await service.createUserWithRoles("tenant-a", input("admin-a@example.com"), ["System Manager"], audit("seed"), NOW);
@@ -150,13 +166,13 @@ test("last-admin guards are tenant scoped", async () => {
     /quản trị viên tenant cuối cùng/,
   );
   await assert.rejects(
-    service.replaceRoles("tenant-a", "admin-a@example.com", ["Stock User"], audit("admin-a@example.com"), NOW),
+    service.replaceRoles("tenant-a", "admin-a@example.com", ["Stock User"], audit("operator@example.com"), NOW),
     /quyền quản trị.*cuối cùng/,
   );
   assert.equal(db.rows("SELECT enabled FROM users WHERE tenant_id='tenant-a' AND user_id='admin-a@example.com'")[0].enabled, 1);
 });
 
-test("self-disable is blocked and self-demote works when another admin remains", async () => {
+test("self-disable and self-demote are blocked even when another admin remains", async () => {
   const { service } = fixture();
   await service.createUserWithRoles("tenant-a", input("admin-a@example.com"), ["System Manager"], audit("seed"), NOW);
   await service.createUserWithRoles("tenant-a", input("admin-b@example.com"), ["System Manager"], audit("seed"), NOW);
@@ -165,9 +181,9 @@ test("self-disable is blocked and self-demote works when another admin remains",
     service.setUserEnabled("tenant-a", "admin-a@example.com", false, audit("admin-a@example.com"), NOW),
     /Không tự khoá/,
   );
-  assert.deepEqual(
-    await service.replaceRoles("tenant-a", "admin-a@example.com", ["Stock User"], audit("admin-a@example.com"), NOW),
-    ["Stock User"],
+  await assert.rejects(
+    service.replaceRoles("tenant-a", "admin-a@example.com", ["Stock User"], audit("admin-a@example.com"), NOW),
+    /Không tự hạ quyền/,
   );
 });
 
@@ -175,7 +191,7 @@ test("admin role transition inserts replacement before deleting the previous gra
   const { service } = fixture();
   await service.createUserWithRoles("tenant-a", input("admin@example.com"), ["System Manager"], audit("seed"), NOW);
   assert.deepEqual(
-    await service.replaceRoles("tenant-a", "admin@example.com", ["Administrator"], audit("admin@example.com"), NOW),
+    await service.replaceRoles("tenant-a", "admin@example.com", ["Administrator"], audit("operator@example.com"), NOW),
     ["Administrator"],
   );
 });
