@@ -163,31 +163,33 @@ Còn lại:
 - Chuẩn hóa local onboarding Gateway + Tenant + D1 từ config mẫu, không dùng production secret.
 - Cài Forge project pack (`FORGE.md`, `.forge/manifest.json`) qua một PR riêng sau khi review nội dung ZIP; không chạy installer mù quáng.
 
-## P0 — RBAC Slice A
+## P0 — RBAC
+
+### Slice A — hoàn thành và đã merge
 
 - Implementation gốc: `ab974f92ffbcf015fb71d3051df33508c9f09942`.
-- Branch hiện hành: `feat/rbac-slice-a-rebased-20260731`.
 - Exact head đã kiểm chứng: `0db13898ed00cbfe3835ce511f90c84aef38c8e8`.
-- PR hiện hành: `#37`, ready for review, mergeable, chưa merge.
-- PR #34 đã đóng, không merge, vì merge conflict với default.
+- PR `#37` đã squash-merge.
+- Merge commit: `93ac85a0f16c2668b706ffcf8e15d3da53c8c7a9`.
 - Final diff: 9 file code/test/tài liệu RBAC, không có workflow/harness/placeholder tạm.
 - G3 PASS trước rebase: workflow `30612014393`, job `91101823154`.
-- G4 PASS hai lần trên exact head:
+- G4 PASS trên exact head:
   - workflow `30618821462`, job `91118225164`;
-  - workflow `30619133964`, job `91119230663`.
+  - workflow `30619133964`, job `91119230663`;
+  - workflow `30619408760`, job `91120101038`.
 - `pnpm test`, `pnpm typecheck`, `pnpm build`: PASS.
 
-### Việc tiếp theo
+### Việc tiếp theo — Slice B riêng
 
-1. Review final diff PR #37 và merge riêng Slice A khi được duyệt merge.
-2. Không gộp thêm Slice B vào PR #37.
-3. Sau khi Slice A merge, mở branch/PR Slice B riêng cho:
-   - migration append-only RBAC audit;
-   - atomic create user + role grants;
-   - atomic replace roles;
-   - last-admin guard;
-   - self-disable/self-demote guard;
-   - audit role/scope/enable-disable/password reset/session revoke;
-   - không ghi password/hash/token/secret.
-4. Sau Slice B/C mới chạy G5 staging/browser QA.
-5. Không deploy Cloudflare, sửa production secrets hoặc bật FIFO trong luồng RBAC khi chưa có yêu cầu riêng.
+1. Mở branch mới từ default head sau merge, dự kiến `feat/rbac-permission-slice-b-20260731`.
+2. Viết migration append-only cho RBAC audit.
+3. Làm atomic create user + role grants.
+4. Làm atomic replace roles.
+5. Thêm last-admin guard.
+6. Thêm self-disable/self-demote guard.
+7. Audit role/scope/enable-disable/password reset/session revoke.
+8. Không ghi password, hash, token hoặc secret vào audit.
+9. Chạy targeted tests, root `pnpm test`, `pnpm typecheck`, `pnpm build` và exact-head PR Validation.
+10. Sau Slice B/C mới chạy G5 staging/browser QA.
+
+Không deploy Cloudflare, sửa production secrets hoặc bật FIFO trong luồng RBAC khi chưa có yêu cầu riêng.
