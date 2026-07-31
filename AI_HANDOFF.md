@@ -6,56 +6,66 @@ Ngày cập nhật: **2026-07-31**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Default head khi mở nhánh: `13a4fcf021ac51f36ccd04d8ffa66da262eaf563`.
-- Working branch: `hotfix/sales-price-unicode-normalization-20260731`.
+- Default head sau release preparation: `077d9944b1cfc1f436da87472f070ee2bd864b44`.
+- Working branch: `docs/sales-price-unicode-release-status-20260731`.
 - GitHub là nguồn sự thật cho code, CI và release evidence.
 
-## Mục tiêu hiện tại
+## Đã hoàn tất
 
-Sửa production case Sales Order đã hiện `TRỤC 114_1.8LY` và ĐVT `Mét` nhưng `Đơn giá` vẫn trống, sau đó release ngay lên tenant `alu` theo yêu cầu rõ của chủ dự án.
+Sửa và release production case Sales Order hiện `TRỤC 114_1.8LY` và ĐVT `Mét` nhưng `Đơn giá` trống.
 
-## Root cause được bao phủ
-
-- UOM nhìn giống `Mét` có thể dùng dạng Unicode tổ hợp khác trong dữ liệu import.
-- Exact Item Price probe `<price_list>:<item_code>:<uom>` có thể trả HTTP khác `404` và chặn field fallback.
-- Preview và authoritative pricing trước đây chưa dùng cùng một canonical text rule.
-
-## Thay đổi
+### Code
 
 - `server/apps-src/alumdoor-worker/src/sales-item-context.ts`
-  - chuẩn hóa text NFC;
-  - legacy lookup trước;
-  - exact probe lỗi không chặn field fallback;
-  - field fallback query Price List + Item rồi so UOM canonical trong code.
+  - chuẩn hóa Price List, Item, UOM, Currency và Warehouse về Unicode NFC;
+  - legacy Item Price lookup trước;
+  - exact-name probe lỗi không chặn field fallback;
+  - fallback query Price List + Item rồi so UOM canonical trong code.
 - `server/packages/clouderp-pricing/src/index.ts`
-  - áp cùng Unicode normalization cho pricing lúc lưu/submit;
+  - áp cùng canonical matching cho pricing lúc lưu/submit;
   - legacy trước exact;
-  - field matching và UOM/currency validation dùng canonical text.
+  - UOM và currency validation dùng text đã chuẩn hóa.
 - `server/tests/sales-price-unicode-normalization.test.mjs`
-  - legacy UOM Unicode tương đương;
+  - UOM Unicode tương đương;
   - exact probe HTTP 400 vẫn fallback được;
   - authoritative pricing trả `180000.00` và UOM `Mét`.
 
-## Verification đã chạy cục bộ
+### Merge và CI
 
-- TypeScript parse cho hai file nguồn: PASS.
-- Focused preview tests: 2/2 PASS.
-- Focused authoritative pricing test: 1/1 PASS.
-- Full repository CI chưa có kết quả; phải dùng exact final PR head.
+- Feature PR `#91` squash-merge SHA `a48524b93489c92296c57fc5f223e41d505de7aa`.
+- Exact feature head `c0d9df33a9fbde7540683107fd948c388a026682`.
+- Required workflows đều PASS:
+  - CI `30647911536`;
+  - Inventory and Manufacturing CI `30647910730`;
+  - UI Pull Request Validation `30647910724`;
+  - Purchase Feature CI `30647908408`;
+  - PR Validation `30647908313`;
+  - Sales Feature CI `30647908363`.
+
+### Production release
+
+- Release preparation PR `#93` merge SHA `077d9944b1cfc1f436da87472f070ee2bd864b44`.
+- Execution PR `#95` đã đóng không merge.
+- Release run `30648518868`: SUCCESS.
+- Target SHA: `a48524b93489c92296c57fc5f223e41d505de7aa`.
+- Worker: `cloudforge-tenant-alu`.
+- Version ID: `09ab6ce6-3998-4f76-8b45-c9005eeb1152`.
+- Deployment time: `2026-07-31T16:49:07.992Z`.
+- Backup, recorded migrations, deploy, `/health=200` và guest boot `403`: PASS.
+- Không deploy Gateway, không sửa DNS/secrets, FIFO vẫn disabled.
 
 ## Việc tiếp theo
 
-1. Mở PR.
-2. Chờ đủ required CI PASS trên exact head.
-3. Squash-merge theo lệnh sửa và deploy production hiện tại.
-4. Cập nhật controlled release target vào exact merge SHA.
-5. Chạy backup → migrations → tenant deploy → endpoint smoke → Worker evidence.
-6. Cập nhật `CURRENT_STATUS.md`, `NEXT_TASKS.md`, `AI_HANDOFF.md` với final release evidence.
-7. Người dùng hard refresh và xác minh child grid tự điền `180000 VND`.
+1. Người dùng hard refresh `alu.kairo.vn`.
+2. Mở Sales Order mới.
+3. Chọn `Giá niêm yết`, `TRỤC 114_1.8LY`, ĐVT `Mét`.
+4. Xác minh Đơn giá `180000 VND`, Thành tiền và save-time pricing.
+5. Đổi Item/UOM/bảng giá để xác minh không lấy chéo hoặc giữ giá cũ.
+6. Huỷ/xoá chứng từ thử an toàn.
 
 ## Safety
 
 - Không sửa production secrets hoặc DNS.
-- Không mutate Item Price hay dữ liệu nghiệp vụ.
+- Không mutate Item Price hay dữ liệu khách hàng.
 - Không bật FIFO.
 - Không commit `.env`, `server/work/`, `tmp`, backup hoặc generated evidence.
