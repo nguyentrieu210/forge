@@ -5,9 +5,10 @@ import { registerErpCoreControllers } from "../../../packages/clouderp-core/src/
 import { registerStockControllers } from "../../../packages/clouderp-stock/src/index.js";
 import { registerErpNextCoreControllers } from "../../../packages/clouderp-erpnext/src/index.js";
 import { D1RolloutPurchaseAllocationDomainStore, DocumentKernel } from "../../../packages/document-kernel/src/index.js";
-import { asCloudForgeError, errors } from "../../../packages/core/src/index.js";
+import { errors } from "../../../packages/core/src/index.js";
 import { D1DocumentAccessStore, D1MetadataStore, GenericMetadataController, MetadataPermissionService } from "../../../packages/frappe-model/src/index.js";
 import type { TenantEnv } from "./env.js";
+import { PurchaseCommandSerialExecutor } from "./purchase-command-retry.js";
 
 interface AggregateStub extends DurableObjectStub {
   mutate<T extends JsonObject>(command: MutationCommand<T>): Promise<MutationReceipt>;
@@ -15,7 +16,6 @@ interface AggregateStub extends DurableObjectStub {
 }
 
 const PURCHASE_ALLOCATION_DOCTYPES = new Set(["Purchase Order", "Purchase Receipt"]);
-const PURCHASE_REVISION_RETRIES = 3;
 
 /**
  * One class serves two logical coordinator roles inside the existing AGGREGATES
@@ -33,6 +33,7 @@ const PURCHASE_REVISION_RETRIES = 3;
 export class AggregateCoordinator extends DurableObject<TenantEnv> {
   private readonly kernel: DocumentKernel;
   private readonly store: D1RolloutPurchaseAllocationDomainStore;
+  private readonly purchaseExecutor = new PurchaseCommandSerialExecutor();
 
   constructor(ctx: DurableObjectState, env: TenantEnv) {
     super(ctx, env);
@@ -81,18 +82,7 @@ export class AggregateCoordinator extends DurableObject<TenantEnv> {
       throw errors.validation("mutatePurchase accepts only submitted purchase allocation commands");
     }
 
-    for (let attempt = 1; attempt <= PURCHASE_REVISION_RETRIES; attempt += 1) {
-      try {
-        return await this.kernel.execute(command);
-      } catch (error) {
-        const normalized = asCloudForgeError(error);
-        if (normalized.code !== "PURCHASE_ALLOCATION_REVISION_CONFLICT"
-          || attempt === PURCHASE_REVISION_RETRIES) {
-          throw normalized;
-        }
-      }
-    }
-    throw errors.purchaseAllocationConflict();
+    return this.purchaseExecutor.execute(() => this.kernel.execute(command));
   }
 }
 

@@ -708,8 +708,14 @@ export class InMemoryMutationStore implements MutationStore {
   private assertProcurementInvariants<T extends JsonObject>(plan: MutationPlan<T>): void {
     const pending = new Map<string, number>();
     for (const line of plan.procurement_entries ?? []) {
-      const source = this.documents.get(this.docKey(plan.command.tenant_id, "Purchase Order", line.purchase_order));
-      if (!source || source.docstatus !== 1) throw errors.reference(`Submitted Purchase Order ${line.purchase_order} is required`);
+      const storedSource = this.documents.get(this.docKey(plan.command.tenant_id, "Purchase Order", line.purchase_order));
+      const currentSource = plan.document.doctype === "Purchase Order"
+        && plan.document.name === line.purchase_order
+        && plan.document.docstatus === 1
+        ? plan.document
+        : null;
+      const source = storedSource?.docstatus === 1 ? storedSource : currentSource;
+      if (!source) throw errors.reference(`Submitted Purchase Order ${line.purchase_order} is required`);
       // Theo ĐƠN VỊ TỒN — phải khớp từng chữ với trigger `purchase_progress_reference_guard`
       // (migrations/tenant/0023). Hai bản kiểm cùng một luật mà lệch nhau thì test xanh trên
       // bản in-memory rồi ABORT ở SQLite lúc chạy thật.

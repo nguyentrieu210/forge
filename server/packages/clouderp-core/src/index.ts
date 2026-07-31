@@ -3,5 +3,7 @@ export * from "./uom.js";
 export * from "./controllers.js";
 export * from "./purchase-allocation.js";
 export * from "./purchase-allocation-controllers.js";
+export * from "./purchase-allocation-action-controllers.js";
+export * from "./purchase-allocation-preview.js";
 export * from "./purchase-allocation-rollout-controllers.js";
 export * from "./registry.js";

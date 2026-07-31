@@ -16,10 +16,13 @@ import { errors } from "../../core/src/index.js";
 import { InMemoryMutationStore } from "./in-memory-store.js";
 import type {
   PurchaseAllocationObligationState,
+  PurchaseAllocationOverrideSourceState,
   PurchaseAllocationQueueState,
   PurchaseAllocationWindowTotals,
   PurchaseObligationRowState,
   PurchaseReceiptAllocationSourceState,
+  PurchaseSettlementWindowState,
+  PurchaseUnappliedQueueSourceState,
   PurchaseUnappliedSourceState,
 } from "./purchase-allocation-reader.js";
 
@@ -31,10 +34,7 @@ interface StoredWindow extends PurchaseSettlementWindowSeed {
   tenant_id: string;
 }
 
-/**
- * Test adapter mirroring the allocation tables and revision semantics used by D1.
- * It lets controller/kernel tests run the same queue reads used by production.
- */
+/** Test adapter mirroring allocation tables and revision semantics used by D1. */
 export class InMemoryPurchaseAllocationMutationStore extends InMemoryMutationStore {
   private readonly purchaseQueues = new Map<string, StoredQueue>();
   private readonly purchaseWindows = new Map<string, StoredWindow>();
@@ -47,8 +47,9 @@ export class InMemoryPurchaseAllocationMutationStore extends InMemoryMutationSto
     const tenantId = plan.command.tenant_id;
     const queues = new Map(this.purchaseQueues);
     const windows = new Map(this.purchaseWindows);
+    const effectivePlan = materializeVoucherIdentity(plan);
 
-    for (const seed of plan.purchase_queue_seeds ?? []) {
+    for (const seed of effectivePlan.purchase_queue_seeds ?? []) {
       const key = queueMapKey(tenantId, seed.queue_key);
       const existing = queues.get(key);
       if (existing) {
@@ -61,7 +62,7 @@ export class InMemoryPurchaseAllocationMutationStore extends InMemoryMutationSto
         queues.set(key, { tenant_id: tenantId, ...structuredClone(seed) });
       }
     }
-    for (const seed of plan.purchase_window_seeds ?? []) {
+    for (const seed of effectivePlan.purchase_window_seeds ?? []) {
       const key = windowMapKey(tenantId, seed.window_id);
       if (!queues.has(queueMapKey(tenantId, seed.queue_key))) {
         throw errors.reference("Purchase settlement window references a missing queue");
@@ -75,7 +76,7 @@ export class InMemoryPurchaseAllocationMutationStore extends InMemoryMutationSto
       if (!windows.has(key)) windows.set(key, { tenant_id: tenantId, ...structuredClone(seed) });
     }
 
-    for (const claim of plan.purchase_revision_claims ?? []) {
+    for (const claim of effectivePlan.purchase_revision_claims ?? []) {
       if (claim.scope_type === "queue") {
         const key = queueMapKey(tenantId, claim.scope_key);
         const row = queues.get(key);
@@ -89,19 +90,19 @@ export class InMemoryPurchaseAllocationMutationStore extends InMemoryMutationSto
       }
     }
 
-    this.assertAllocationPlan(tenantId, plan, windows);
-    const receipt = await super.execute(plan);
+    this.assertAllocationPlan(tenantId, effectivePlan, windows);
+    const receipt = await super.execute(effectivePlan);
 
     this.purchaseQueues.clear();
     for (const [key, value] of queues) this.purchaseQueues.set(key, value);
     this.purchaseWindows.clear();
     for (const [key, value] of windows) this.purchaseWindows.set(key, value);
-    this.purchaseObligations.push(...structuredClone(plan.purchase_obligation_entries ?? []));
-    this.purchaseAllocations.push(...structuredClone(plan.purchase_allocation_entries ?? []));
-    this.purchaseUnapplied.push(...structuredClone(plan.purchase_unapplied_entries ?? []));
-    this.purchaseSettlements.push(...structuredClone(plan.purchase_settlement_entries ?? []));
+    this.purchaseObligations.push(...structuredClone(effectivePlan.purchase_obligation_entries ?? []));
+    this.purchaseAllocations.push(...structuredClone(effectivePlan.purchase_allocation_entries ?? []));
+    this.purchaseUnapplied.push(...structuredClone(effectivePlan.purchase_unapplied_entries ?? []));
+    this.purchaseSettlements.push(...structuredClone(effectivePlan.purchase_settlement_entries ?? []));
 
-    for (const settlement of plan.purchase_settlement_entries ?? []) {
+    for (const settlement of effectivePlan.purchase_settlement_entries ?? []) {
       const key = windowMapKey(tenantId, settlement.window_id);
       const window = this.purchaseWindows.get(key);
       if (!window) continue;
@@ -110,7 +111,7 @@ export class InMemoryPurchaseAllocationMutationStore extends InMemoryMutationSto
           ...window,
           status: "Settled",
           settled_at: settlement.committed_at,
-          settled_by: plan.command.actor.user_id,
+          settled_by: effectivePlan.command.actor.user_id,
           settlement_reason: settlement.reason,
         });
       } else {
@@ -240,23 +241,22 @@ export class InMemoryPurchaseAllocationMutationStore extends InMemoryMutationSto
     purchaseReceipt: string,
   ): Promise<PurchaseReceiptAllocationSourceState[]> {
     return this.purchaseAllocations
-      .filter((source) => source.entry_kind !== "reverse" && source.qty_micros > 0)
+      .filter((source) => source.voucher_no === purchaseReceipt
+        && source.entry_kind !== "reverse" && source.qty_micros > 0)
       .map((source) => {
-        const reversed = this.purchaseAllocations
-          .filter((entry) => entry.reversal_of_entry_id === source.entry_id)
-          .reduce((sum, entry) => sum + entry.qty_micros, 0);
+        const reversals = this.purchaseAllocations.filter((entry) => entry.reversal_of_entry_id === source.entry_id);
         const queue = this.purchaseQueues.get(queueMapKey(tenantId, source.queue_key));
         const window = this.purchaseWindows.get(windowMapKey(tenantId, source.window_id));
-        return { source, net: source.qty_micros + reversed, queue, window };
+        return {
+          source,
+          net: source.qty_micros + reversals.reduce((sum, entry) => sum + entry.qty_micros, 0),
+          reversals,
+          queue,
+          window,
+        };
       })
-      .filter(({ source, net, queue, window }) =>
-        source.entry_id.includes("") && net > 0 && Boolean(queue && window))
-      .filter(({ source }) => source.line_key.length > 0)
-      .filter(({ source }) => {
-        const allocationReceipt = source.entry_id.split(":")[1] ?? "";
-        return allocationReceipt === purchaseReceipt || source.entry_id.includes(purchaseReceipt);
-      })
-      .map(({ source, net, queue, window }) => ({
+      .filter(({ net, queue, window }) => net > 0 && Boolean(queue && window))
+      .map(({ source, net, reversals, queue, window }) => ({
         entry_id: source.entry_id,
         queue_key: source.queue_key,
         queue_revision: queue!.revision,
@@ -268,14 +268,10 @@ export class InMemoryPurchaseAllocationMutationStore extends InMemoryMutationSto
         purchase_order_item_row_id: source.purchase_order_item_row_id!,
         qty_micros: net,
         barem_weight_micros: source.barem_weight_micros
-          + this.purchaseAllocations
-            .filter((entry) => entry.reversal_of_entry_id === source.entry_id)
-            .reduce((sum, entry) => sum + entry.barem_weight_micros, 0),
+          + reversals.reduce((sum, entry) => sum + entry.barem_weight_micros, 0),
         ...(source.projected_actual_weight_micros === undefined ? {} : {
           projected_actual_weight_micros: source.projected_actual_weight_micros
-            + this.purchaseAllocations
-              .filter((entry) => entry.reversal_of_entry_id === source.entry_id)
-              .reduce((sum, entry) => sum + (entry.projected_actual_weight_micros ?? 0), 0),
+            + reversals.reduce((sum, entry) => sum + (entry.projected_actual_weight_micros ?? 0), 0),
         }),
         ...(source.projection_version === undefined ? {} : { projection_version: source.projection_version }),
         allocation_sequence: source.allocation_sequence,
@@ -288,17 +284,27 @@ export class InMemoryPurchaseAllocationMutationStore extends InMemoryMutationSto
     purchaseReceipt: string,
   ): Promise<PurchaseUnappliedSourceState[]> {
     return this.purchaseUnapplied
-      .filter((source) => source.entry_kind === "receive" && source.entry_id.includes(purchaseReceipt))
+      .filter((source) => source.entry_kind === "receive" && source.voucher_no === purchaseReceipt)
       .map((source) => {
-        const movement = this.purchaseUnapplied
-          .filter((entry) => entry.source_entry_id === source.entry_id)
-          .reduce((sum, entry) => sum + entry.qty_micros, 0);
+        const movements = this.purchaseUnapplied.filter((entry) => entry.source_entry_id === source.entry_id);
         const queue = this.purchaseQueues.get(queueMapKey(tenantId, source.queue_key));
         const window = this.purchaseWindows.get(windowMapKey(tenantId, source.window_id));
-        return { source, net: source.qty_micros + movement, queue, window };
+        return {
+          source,
+          movements,
+          net: source.qty_micros + movements.reduce((sum, entry) => sum + entry.qty_micros, 0),
+          barem: (source.barem_weight_micros ?? 0)
+            + movements.reduce((sum, entry) => sum + (entry.barem_weight_micros ?? 0), 0),
+          actual: source.projected_actual_weight_micros === undefined
+            ? undefined
+            : source.projected_actual_weight_micros
+              + movements.reduce((sum, entry) => sum + (entry.projected_actual_weight_micros ?? 0), 0),
+          queue,
+          window,
+        };
       })
       .filter(({ net, queue, window }) => net > 0 && Boolean(queue && window))
-      .map(({ source, net, queue, window }) => ({
+      .map(({ source, net, barem, actual, queue, window }) => ({
         entry_id: source.entry_id,
         queue_key: source.queue_key,
         queue_revision: queue!.revision,
@@ -307,8 +313,132 @@ export class InMemoryPurchaseAllocationMutationStore extends InMemoryMutationSto
         window_status: window!.status,
         receipt_item_row_id: source.receipt_item_row_id,
         qty_micros: net,
+        barem_weight_micros: barem,
+        ...(actual === undefined ? {} : { projected_actual_weight_micros: actual }),
+        ...(source.projection_version === undefined ? {} : { projection_version: source.projection_version }),
         posting_at: source.posting_at,
       }));
+  }
+
+  async listPurchaseUnappliedQueueSources(
+    tenantId: string,
+    queueKey: string,
+    windowId: string,
+  ): Promise<PurchaseUnappliedQueueSourceState[]> {
+    const rows: PurchaseUnappliedQueueSourceState[] = [];
+    for (const source of this.purchaseUnapplied) {
+      if (source.entry_kind !== "receive" || source.queue_key !== queueKey || source.window_id !== windowId) continue;
+      const movements = this.purchaseUnapplied.filter((entry) => entry.source_entry_id === source.entry_id);
+      const qty = source.qty_micros + movements.reduce((sum, entry) => sum + entry.qty_micros, 0);
+      if (qty <= 0) continue;
+      const barem = (source.barem_weight_micros ?? 0)
+        + movements.reduce((sum, entry) => sum + (entry.barem_weight_micros ?? 0), 0);
+      const actual = source.projected_actual_weight_micros === undefined
+        ? undefined
+        : source.projected_actual_weight_micros
+          + movements.reduce((sum, entry) => sum + (entry.projected_actual_weight_micros ?? 0), 0);
+      const voucherNo = source.voucher_no!;
+      const document = await this.getDocument(tenantId, "Purchase Receipt", voucherNo);
+      const nextSequence = this.purchaseAllocations
+        .filter((entry) => entry.voucher_no === voucherNo)
+        .reduce((maximum, entry) => Math.max(maximum, entry.allocation_sequence), 0) + 1;
+      rows.push({
+        entry_id: source.entry_id,
+        queue_key: source.queue_key,
+        window_id: source.window_id,
+        voucher_no: voucherNo,
+        voucher_revision: source.voucher_revision!,
+        receipt_item_row_id: source.receipt_item_row_id,
+        item_code: itemCodeForRow(document?.data, source.receipt_item_row_id),
+        qty_micros: qty,
+        barem_weight_micros: barem,
+        ...(actual === undefined ? {} : { projected_actual_weight_micros: actual }),
+        ...(source.projection_version === undefined ? {} : { projection_version: source.projection_version }),
+        posting_at: source.posting_at,
+        committed_at: source.committed_at,
+        next_allocation_sequence: nextSequence,
+      });
+    }
+    return rows.sort((left, right) => left.committed_at.localeCompare(right.committed_at)
+      || left.entry_id.localeCompare(right.entry_id));
+  }
+
+
+  async getPurchaseSettlementWindowState(
+    tenantId: string,
+    queueKey: string,
+    windowId: string,
+  ): Promise<PurchaseSettlementWindowState | null> {
+    const queue = this.purchaseQueues.get(queueMapKey(tenantId, queueKey));
+    const window = this.purchaseWindows.get(windowMapKey(tenantId, windowId));
+    if (!queue || !window || window.queue_key !== queueKey) return null;
+    const totals = await this.getPurchaseAllocationWindowTotals(tenantId, windowId);
+    const close = this.purchaseSettlements.find((entry) =>
+      entry.queue_key === queueKey && entry.window_id === windowId && entry.entry_kind === "close");
+    return {
+      queue_key: queueKey,
+      queue_revision: queue.revision,
+      window_id: windowId,
+      window_revision: window.revision,
+      window_sequence: window.window_sequence,
+      window_status: window.status,
+      tolerance_bps: window.tolerance_bps,
+      nominal_qty_micros: totals.nominal_qty_micros,
+      received_qty_micros: totals.received_qty_micros,
+      ...(close ? {
+        close_entry_id: close.entry_id,
+        close_committed_at: close.committed_at,
+        close_reason: close.reason,
+        minimum_qty_micros: close.minimum_qty_micros,
+        maximum_qty_micros: close.maximum_qty_micros,
+        shortage_variance_micros: close.shortage_variance_micros,
+        overage_variance_micros: close.overage_variance_micros,
+      } : {}),
+    };
+  }
+
+  async getPurchaseAllocationOverrideSource(
+    tenantId: string,
+    entryId: string,
+  ): Promise<PurchaseAllocationOverrideSourceState | null> {
+    const source = this.purchaseAllocations.find((entry) => entry.entry_id === entryId && entry.qty_micros > 0);
+    if (!source || !source.voucher_no || source.voucher_revision === undefined
+      || !source.receipt_item_row_id || !source.purchase_order_item_row_id) return null;
+    const queue = this.purchaseQueues.get(queueMapKey(tenantId, source.queue_key));
+    const window = this.purchaseWindows.get(windowMapKey(tenantId, source.window_id));
+    if (!queue || !window) return null;
+    const reversals = this.purchaseAllocations.filter((entry) =>
+      entry.entry_kind === "reverse" && entry.reversal_of_entry_id === source.entry_id);
+    const qty = source.qty_micros + reversals.reduce((sum, entry) => sum + entry.qty_micros, 0);
+    if (qty <= 0) return null;
+    const barem = source.barem_weight_micros
+      + reversals.reduce((sum, entry) => sum + entry.barem_weight_micros, 0);
+    const actual = source.projected_actual_weight_micros === undefined
+      ? undefined
+      : source.projected_actual_weight_micros
+        + reversals.reduce((sum, entry) => sum + (entry.projected_actual_weight_micros ?? 0), 0);
+    const nextSequence = this.purchaseAllocations
+      .filter((entry) => entry.voucher_no === source.voucher_no)
+      .reduce((maximum, entry) => Math.max(maximum, entry.allocation_sequence), 0) + 1;
+    return {
+      entry_id: source.entry_id,
+      queue_key: source.queue_key,
+      queue_revision: queue.revision,
+      window_id: source.window_id,
+      window_revision: window.revision,
+      window_status: window.status,
+      voucher_no: source.voucher_no,
+      voucher_revision: source.voucher_revision,
+      receipt_item_row_id: source.receipt_item_row_id,
+      purchase_order: source.purchase_order,
+      purchase_order_item_row_id: source.purchase_order_item_row_id,
+      qty_micros: qty,
+      barem_weight_micros: barem,
+      ...(actual === undefined ? {} : { projected_actual_weight_micros: actual }),
+      ...(source.projection_version === undefined ? {} : { projection_version: source.projection_version }),
+      posting_at: source.posting_at,
+      next_allocation_sequence: nextSequence,
+    };
   }
 
   override snapshot(): MutationSnapshot {
@@ -361,6 +491,63 @@ export class InMemoryPurchaseAllocationMutationStore extends InMemoryMutationSto
       }
     }
   }
+}
+
+function materializeVoucherIdentity<T extends JsonObject>(plan: MutationPlan<T>): MutationPlan<T> {
+  const fallbackNo = plan.command.aggregate.name;
+  const fallbackRevision = plan.document.version;
+  return {
+    ...plan,
+    ...(plan.procurement_entries === undefined ? {} : {
+      procurement_entries: plan.procurement_entries.map((line) => ({
+        ...line,
+        voucher_type: line.voucher_type ?? plan.command.aggregate.doctype,
+        ...resolveVoucherIdentity(line, fallbackNo, fallbackRevision),
+      })),
+    }),
+    ...(plan.purchase_allocation_entries === undefined ? {} : {
+      purchase_allocation_entries: plan.purchase_allocation_entries.map((line) => ({
+        ...line,
+        ...resolveVoucherIdentity(line, fallbackNo, fallbackRevision),
+      })),
+    }),
+    ...(plan.purchase_unapplied_entries === undefined ? {} : {
+      purchase_unapplied_entries: plan.purchase_unapplied_entries.map((line) => ({
+        ...line,
+        ...resolveVoucherIdentity(line, fallbackNo, fallbackRevision),
+      })),
+    }),
+  };
+}
+
+function resolveVoucherIdentity(
+  line: { voucher_no?: string; voucher_revision?: number },
+  fallbackNo: string,
+  fallbackRevision: number,
+): { voucher_no: string; voucher_revision: number } {
+  const hasNo = line.voucher_no !== undefined;
+  const hasRevision = line.voucher_revision !== undefined;
+  if (hasNo !== hasRevision) {
+    throw errors.validation("Purchase source voucher_no and voucher_revision must be supplied together");
+  }
+  const voucherNo = line.voucher_no ?? fallbackNo;
+  const voucherRevision = line.voucher_revision ?? fallbackRevision;
+  if (!voucherNo.trim()) throw errors.validation("Purchase source voucher_no is required");
+  if (!Number.isSafeInteger(voucherRevision) || voucherRevision <= 0) {
+    throw errors.validation("Purchase source voucher_revision must be a positive safe integer");
+  }
+  return { voucher_no: voucherNo, voucher_revision: voucherRevision };
+}
+
+function itemCodeForRow(data: JsonObject | undefined, rowId: string): string {
+  const rows = data?.items;
+  if (!Array.isArray(rows)) return "";
+  for (const candidate of rows) {
+    if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) continue;
+    const row = candidate as JsonObject;
+    if (row.row_id === rowId && typeof row.item_code === "string") return row.item_code;
+  }
+  return "";
 }
 
 function queueMapKey(tenantId: string, queueKey: string): string {

@@ -19,6 +19,7 @@ import {
   hasPurchaseAllocationReader,
   type PurchaseAllocationQueueState,
   type PurchaseAllocationReader,
+  type PurchaseUnappliedQueueSourceState,
 } from "../../document-kernel/src/index.js";
 import type { DecimalInput } from "../../money/src/index.js";
 import { fromScaledInt, multiplyScaled, toScaledInt } from "../../money/src/index.js";
@@ -50,6 +51,8 @@ interface AllocationPlanParts extends PurchaseAllocationMutationPlanExtension {
   procurement_entries: ProcurementEntry[];
 }
 
+type MutableUnappliedSource = PurchaseUnappliedQueueSourceState;
+
 /** Purchase Order controller that creates/cancels immutable PO-line obligations. */
 export class AllocatingPurchaseOrderController extends PurchaseOrderController {
   override async buildPlan(context: ControllerContext<PurchaseOrderData>): Promise<MutationPlan<PurchaseOrderData>> {
@@ -60,7 +63,14 @@ export class AllocatingPurchaseOrderController extends PurchaseOrderController {
     const extension = context.command.action === "submit"
       ? await buildPurchaseOrderSubmitAllocation(context, plan.document, context.reader)
       : await buildPurchaseOrderCancelAllocation(context, plan.document, context.reader);
-    return { ...plan, ...extension };
+    return {
+      ...plan,
+      ...extension,
+      procurement_entries: [
+        ...(plan.procurement_entries ?? []),
+        ...(extension.procurement_entries ?? []),
+      ],
+    };
   }
 }
 
@@ -133,12 +143,16 @@ async function buildPurchaseOrderSubmitAllocation(
   context: ControllerContext<PurchaseOrderData>,
   document: CanonicalDocument<PurchaseOrderData>,
   reader: PurchaseAllocationReader,
-): Promise<PurchaseAllocationMutationPlanExtension> {
+): Promise<AllocationPlanParts> {
   const toleranceBps = await supplierToleranceBps(context, document.data.supplier);
   const resolved = new Map<string, ResolvedQueue>();
+  const sourceCache = new Map<string, MutableUnappliedSource[]>();
   const queueSeeds: PurchaseObligationQueueSeed[] = [];
   const windowSeeds: PurchaseSettlementWindowSeed[] = [];
   const obligations: PurchaseWindowObligationEntry[] = [];
+  const allocations: PurchaseReceiptAllocationEntry[] = [];
+  const unappliedMovements: PurchaseUnappliedReceiptEntry[] = [];
+  const procurement: ProcurementEntry[] = [];
   const claims = new Map<string, PurchaseAllocationRevisionClaim>();
 
   for (const [index, item] of document.data.items.entries()) {
@@ -179,11 +193,125 @@ async function buildPurchaseOrderSubmitAllocation(
       source: "live",
       resolution: "resolved",
     });
+
+    // A newly seeded window cannot contain historical unapplied rows. Existing
+    // open windows are read once and mutated locally so multiple PO rows cannot
+    // consume the same source balance twice inside one command.
+    if (queue.window_seed) continue;
+    let sources = sourceCache.get(queue.window_id);
+    if (!sources) {
+      sources = (await reader.listPurchaseUnappliedQueueSources(
+        context.command.tenant_id,
+        queue.queue_key,
+        queue.window_id,
+      )).map((source) => ({ ...source }));
+      sourceCache.set(queue.window_id, sources);
+    }
+
+    let remaining = qty;
+    for (const source of sources) {
+      if (remaining === 0) break;
+      if (source.qty_micros <= 0) continue;
+      if (!source.item_code) throw errors.reference(`Receipt ${source.voucher_no} row ${source.receipt_item_row_id} has no item_code`);
+      if (source.item_code !== item.item_code) {
+        throw errors.reference("Unapplied Receipt source item does not match the Purchase Order queue");
+      }
+      const sourceQtyBefore = source.qty_micros;
+      const appliedQty = Math.min(remaining, sourceQtyBefore);
+      const appliedBarem = proportionalPart(
+        source.barem_weight_micros,
+        appliedQty,
+        sourceQtyBefore,
+        "unapplied_barem_weight_micros",
+      );
+      const appliedActual = source.projected_actual_weight_micros === undefined
+        ? undefined
+        : proportionalPart(
+            source.projected_actual_weight_micros,
+            appliedQty,
+            sourceQtyBefore,
+            "unapplied_projected_actual_weight_micros",
+          );
+      const sequence = source.next_allocation_sequence;
+      source.next_allocation_sequence += 1;
+      source.qty_micros -= appliedQty;
+      source.barem_weight_micros -= appliedBarem;
+      if (appliedActual !== undefined && source.projected_actual_weight_micros !== undefined) {
+        source.projected_actual_weight_micros -= appliedActual;
+      }
+      remaining -= appliedQty;
+
+      const identity = `${source.entry_id}:${rowId}`;
+      const allocationEntryId = allocationId("APPLY-UNAPPLIED", context.command.command_id, identity, sequence);
+      allocations.push({
+        entry_id: allocationEntryId,
+        queue_key: queue.queue_key,
+        window_id: queue.window_id,
+        line_key: `APPLY-${safeSegment(context.command.command_id)}-${safeSegment(rowId)}-${sequence}`,
+        voucher_no: source.voucher_no,
+        voucher_revision: source.voucher_revision,
+        receipt_item_row_id: source.receipt_item_row_id,
+        purchase_order: document.name,
+        purchase_order_item_row_id: rowId,
+        entry_kind: "apply_unapplied",
+        qty_micros: appliedQty,
+        barem_weight_micros: appliedBarem,
+        ...(appliedActual === undefined
+          ? {}
+          : {
+              projected_actual_weight_micros: appliedActual,
+              projection_version: source.projection_version ?? 1,
+            }),
+        allocation_sequence: sequence,
+        posting_at: source.posting_at,
+        committed_at: context.now,
+        reason: `Applied when Purchase Order ${document.name} opened`,
+        source: "live",
+        resolution: "resolved",
+      });
+      unappliedMovements.push({
+        entry_id: allocationId("UNAPPLIED-APPLY", context.command.command_id, identity, sequence),
+        queue_key: queue.queue_key,
+        window_id: queue.window_id,
+        line_key: `APPLY-${safeSegment(context.command.command_id)}-${safeSegment(rowId)}-${sequence}`,
+        voucher_no: source.voucher_no,
+        voucher_revision: source.voucher_revision,
+        receipt_item_row_id: source.receipt_item_row_id,
+        entry_kind: "apply",
+        qty_micros: -appliedQty,
+        barem_weight_micros: -appliedBarem,
+        ...(appliedActual === undefined
+          ? {}
+          : {
+              projected_actual_weight_micros: -appliedActual,
+              projection_version: source.projection_version ?? 1,
+            }),
+        source_entry_id: source.entry_id,
+        allocation_entry_id: allocationEntryId,
+        posting_at: source.posting_at,
+        committed_at: context.now,
+        reason: `Applied to Purchase Order ${document.name}`,
+      });
+      procurement.push({
+        line_key: `APPLY-RECEIPT-${safeSegment(context.command.command_id)}-${safeSegment(rowId)}-${sequence}`,
+        voucher_type: "Purchase Receipt",
+        voucher_no: source.voucher_no,
+        voucher_revision: source.voucher_revision,
+        purchase_order: document.name,
+        kind: "Receipt",
+        item_code: source.item_code,
+        qty_micros: appliedQty,
+        posting_at: source.posting_at,
+      });
+    }
   }
   return {
+    procurement_entries: procurement,
     purchase_queue_seeds: queueSeeds,
     purchase_window_seeds: windowSeeds,
     purchase_obligation_entries: obligations,
+    purchase_allocation_entries: allocations,
+    purchase_unapplied_entries: unappliedMovements,
     purchase_revision_claims: [...claims.values()],
   };
 }
@@ -192,7 +320,7 @@ async function buildPurchaseOrderCancelAllocation(
   context: ControllerContext<PurchaseOrderData>,
   document: CanonicalDocument<PurchaseOrderData>,
   reader: PurchaseAllocationReader,
-): Promise<PurchaseAllocationMutationPlanExtension> {
+): Promise<AllocationPlanParts> {
   const obligations: PurchaseWindowObligationEntry[] = [];
   const claims = new Map<string, PurchaseAllocationRevisionClaim>();
   for (const [index, item] of document.data.items.entries()) {
@@ -229,6 +357,7 @@ async function buildPurchaseOrderCancelAllocation(
     });
   }
   return {
+    procurement_entries: [],
     purchase_obligation_entries: obligations,
     purchase_revision_claims: [...claims.values()],
   };
@@ -269,6 +398,7 @@ async function buildPurchaseReceiptSubmitAllocation(
   const unapplied: PurchaseUnappliedReceiptEntry[] = [];
   const procurement: ProcurementEntry[] = [];
   const claims = new Map<string, PurchaseAllocationRevisionClaim>();
+  let sequence = 0;
 
   for (const group of groups.values()) {
     const window = group.queue.open_window!;
@@ -282,7 +412,6 @@ async function buildPurchaseReceiptSubmitAllocation(
       window.window_id,
     );
     let receivedBefore = totals.received_qty_micros;
-    let sequence = 0;
     addClaim(claims, "queue", group.queue.queue_key, group.queue.revision, context.now);
     addClaim(claims, "window", window.window_id, window.revision, context.now);
 
@@ -353,6 +482,13 @@ async function buildPurchaseReceiptSubmitAllocation(
           receipt_item_row_id: rowId,
           entry_kind: "receive",
           qty_micros: result.unapplied_qty_micros,
+          barem_weight_micros: result.unapplied_barem_weight_micros,
+          ...(result.unapplied_projected_actual_weight_micros === undefined
+            ? {}
+            : {
+                projected_actual_weight_micros: result.unapplied_projected_actual_weight_micros,
+                projection_version: 1,
+              }),
           posting_at: data.posting_at,
           committed_at: context.now,
         });
@@ -441,6 +577,13 @@ async function buildPurchaseReceiptCancelAllocation(
       receipt_item_row_id: source.receipt_item_row_id,
       entry_kind: "reverse",
       qty_micros: -source.qty_micros,
+      barem_weight_micros: -source.barem_weight_micros,
+      ...(source.projected_actual_weight_micros === undefined
+        ? {}
+        : {
+            projected_actual_weight_micros: -source.projected_actual_weight_micros,
+            projection_version: source.projection_version ?? 1,
+          }),
       source_entry_id: source.entry_id,
       posting_at: data.posting_at,
       committed_at: context.now,
@@ -614,6 +757,19 @@ function addClaim(
     expected_revision: expectedRevision,
     claimed_at: claimedAt,
   });
+}
+
+function proportionalPart(total: number, partQty: number, wholeQty: number, field: string): number {
+  if (!Number.isSafeInteger(total) || total < 0
+    || !Number.isSafeInteger(partQty) || partQty < 0
+    || !Number.isSafeInteger(wholeQty) || wholeQty <= 0
+    || partQty > wholeQty) {
+    throw errors.validation(`${field} has invalid proportional inputs`);
+  }
+  if (partQty === wholeQty) return total;
+  const result = Number(BigInt(total) * BigInt(partQty) / BigInt(wholeQty));
+  if (!Number.isSafeInteger(result)) throw errors.validation(`${field} exceeds safe integer range`);
+  return result;
 }
 
 function requiredRowId(item: PurchaseItem, index: number): string {
