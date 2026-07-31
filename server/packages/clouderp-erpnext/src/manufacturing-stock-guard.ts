@@ -113,6 +113,13 @@ export class GuardedManufacturingStockEntryController extends ManufacturingStock
       };
     }
 
+    if (context.command.action === "submit" && data.purpose === "Material Transfer") {
+      return {
+        ...plan,
+        manufacturing_entries: uniqueIssueLineKeys(plan.manufacturing_entries ?? [], data.items),
+      };
+    }
+
     if (context.command.action !== "submit" || data.purpose !== "Manufacture") return plan;
 
     const recoveryPrefixes = data.items
@@ -131,6 +138,21 @@ export class GuardedManufacturingStockEntryController extends ManufacturingStock
       stock_entries: rebalanceFinishedValue(stockEntries, recoveredValueMinor),
     };
   }
+}
+
+function uniqueIssueLineKeys(entries: ManufacturingEntry[], rows: ProgressRow[]): ManufacturingEntry[] {
+  let issueIndex = 0;
+  return entries.map((entry) => {
+    if (entry.kind !== "Material Transfer" || !entry.line_key.startsWith("ISSUE-")) return entry;
+    const row = rows[issueIndex];
+    const index = issueIndex;
+    issueIndex += 1;
+    if (!row) throw errors.validation("Material Transfer progress does not match normalized rows");
+    return {
+      ...entry,
+      line_key: `ISSUE-${row.bom_row_id ?? row.row_id ?? index + 1}-${row.row_id ?? index + 1}`,
+    };
+  });
 }
 
 function rebalanceFinishedValue(entries: StockLedgerEntry[], recoveredValueMinor: number): StockLedgerEntry[] {
