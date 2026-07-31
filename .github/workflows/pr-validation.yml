@@ -51,7 +51,9 @@ jobs:
         run: pnpm build
 
   release_alu:
-    if: github.event_name == 'push' && contains(github.event.head_commit.modified, '.github/release/alu-production.trigger')
+    # The workflow-level paths filter already restricts push releases to the trigger files.
+    # `head_commit.modified` is incomplete for squash merges and previously skipped a valid release.
+    if: github.event_name == 'push'
     name: Release alu production
     runs-on: ubuntu-latest
     timeout-minutes: 35
