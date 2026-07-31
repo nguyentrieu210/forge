@@ -2,32 +2,18 @@
 
 Ngày cập nhật: **2026-07-31**.
 
-## P0 — execute controlled Sales Unicode release
-
-Feature PR `#91` đã merge thành `a48524b93489c92296c57fc5f223e41d505de7aa` và sáu workflow exact-head đều PASS.
-
-Release-preparation PR `#93` đã merge thành `077d9944b1cfc1f436da87472f070ee2bd864b44`:
-
-- `TARGET_SHA` đã khóa vào `a48524b93489c92296c57fc5f223e41d505de7aa`;
-- fail-closed assertion dùng cùng SHA;
-- PR `#93` không deploy;
-- execution chỉ được phép từ `release/execute-alu-production-20260731`.
-
-Khi có yêu cầu release production rõ:
-
-1. Tạo hoặc cập nhật execution branch từ exact default hiện hành.
-2. Xác minh workflow target vẫn là `a48524b93489c92296c57fc5f223e41d505de7aa`.
-3. Chạy controlled tenant release:
-   - backup tenant;
-   - recorded migrations;
-   - deploy `cloudforge-tenant-alu`;
-   - `/health = 200`;
-   - guest boot `= 403`;
-   - ghi run ID, job ID, Worker version và deployment time.
-4. Không deploy Gateway nếu target chỉ là tenant Worker.
-5. Không sửa secrets hoặc DNS.
-
 ## P0 — authenticated Sales smoke sau release
+
+Sales Unicode hotfix đã release production:
+
+- feature merge SHA `a48524b93489c92296c57fc5f223e41d505de7aa`;
+- release run `30648518868`;
+- release job `91215801064`;
+- Worker version `09ab6ce6-3998-4f76-8b45-c9005eeb1152`;
+- deployment time `2026-07-31T16:49:07.992Z`;
+- backup, recorded migrations, deploy, `/health=200` và guest boot `403`: PASS.
+
+Functional smoke còn lại:
 
 1. Hard refresh và đăng nhập bằng tài khoản thử phù hợp.
 2. Mở Sales Order mới.
@@ -91,7 +77,6 @@ Endpoint observation không thay thế business smoke sau đăng nhập:
 
 ## Không được làm
 
-- Không tự deploy Cloudflare khi chưa có yêu cầu release rõ.
 - Không sửa production secrets hoặc DNS.
 - Không bật FIFO.
 - Không commit `.env`, `server/work/`, `tmp`, backup hoặc generated evidence.

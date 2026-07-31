@@ -6,12 +6,19 @@ Ngày cập nhật: **2026-07-31**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Default head hiện tại: `077d9944b1cfc1f436da87472f070ee2bd864b44`.
-- Working branch: `docs/record-alu-production-observation-20260731`.
+- Default head khi mở nhánh: `51f462c7e76dd2c669c5721bcd625fdb1453a008`.
+- Working branch: `docs/sales-price-unicode-release-status-v2-20260731`.
 - Không commit `.env`, secret, `server/work/`, `tmp`, backup hoặc generated evidence.
 
-## Bán hàng — Unicode Item Price follow-up
+## Bán hàng — Unicode Item Price follow-up đã release production
 
+### Feature
+
+- Functional evidence ban đầu: Sales Order trên `alu.kairo.vn` hiện `TRỤC 114_1.8LY` và ĐVT `Mét` nhưng `Đơn giá` trống.
+- Root cause được xử lý:
+  - text import có thể hiển thị giống nhau nhưng khác dạng Unicode canonical;
+  - exact Item Price probe trả lỗi khác `404` từng chặn field fallback;
+  - preview và authoritative pricing chưa dùng cùng canonical matching.
 - PR `#91` đã squash-merge.
 - Exact feature head: `c0d9df33a9fbde7540683107fd948c388a026682`.
 - Merge SHA: `a48524b93489c92296c57fc5f223e41d505de7aa`.
@@ -24,24 +31,23 @@ Ngày cập nhật: **2026-07-31**.
   - UI Pull Request Validation `30647910724`.
 - Fix bao phủ Unicode NFC, exact-probe failure fallback và cùng canonical matching cho preview/save/submit.
 
-## Bán hàng — release preparation mới
+### Production release
 
-- PR `#93` đã merge thành `077d9944b1cfc1f436da87472f070ee2bd864b44`.
-- Controlled release workflow đã khóa `TARGET_SHA=a48524b93489c92296c57fc5f223e41d505de7aa`.
-- Fail-closed assertion dùng cùng exact target SHA.
-- PR `#93` không deploy production.
-- Execution chỉ được phép từ branch `release/execute-alu-production-20260731`.
-- Chưa có release run, job, backup, deployment time hoặc Worker-version evidence cho follow-up này.
-
-## Bán hàng — production release trước
-
-- Feature PR `#78` merge SHA `60c604de69804b9daf9fb90bf9a5d6e86bb3af2d`.
-- Release run `30646396613`, job `91208710455`: SUCCESS.
+- Release-preparation PR `#93` merge SHA `077d9944b1cfc1f436da87472f070ee2bd864b44`.
+- Controlled release workflow khóa `TARGET_SHA=a48524b93489c92296c57fc5f223e41d505de7aa` và fail-closed assertion dùng cùng SHA.
+- Execution PR `#95` đã đóng, không merge.
+- Release run `30648518868`: SUCCESS.
+- Release job `91215801064`: SUCCESS.
+- Target SHA: `a48524b93489c92296c57fc5f223e41d505de7aa`.
 - Tenant Worker: `cloudforge-tenant-alu`.
-- Production version ID: `7738ee39-bb39-4a38-bf8d-5e2e1834e572`.
-- Deployment time: `2026-07-31T16:17:08.332Z`.
-- Backup, recorded migrations, deploy và endpoint smoke: PASS.
-- Follow-up PR `#91` chưa được xác nhận đã release production.
+- Production version ID: `09ab6ce6-3998-4f76-8b45-c9005eeb1152`.
+- Deployment time: `2026-07-31T16:49:07.992Z`.
+- Backup tenant: PASS.
+- Recorded migrations: PASS.
+- Tenant deploy: PASS.
+- `/health=200`; guest boot `403`.
+- Không deploy Gateway, không sửa DNS/secrets, FIFO rollout vẫn **disabled**.
+- Còn lại: authenticated functional smoke trực tiếp để xác minh child grid tự điền `180000 VND`, Thành tiền và save-time pricing.
 
 ## Purchase/FIFO
 
@@ -88,16 +94,15 @@ Ngày cập nhật: **2026-07-31**.
 
 ## Gate hiện tại
 
-1. Chỉ execute controlled release cho Sales target `a48524b93489c92296c57fc5f223e41d505de7aa` khi có yêu cầu release rõ.
-2. Thu đầy đủ backup, migrations, deploy, endpoint smoke và Worker evidence từ exact run.
-3. Authenticated Sales smoke sau release: Item, UOM `Mét`, rate `180000 VND`, amount và save-time authoritative pricing.
-4. Authenticated Purchase smoke vẫn chưa hoàn tất.
-5. Sửa observation reporting 403 rồi chạy lại để job conclusion xanh.
-6. FIFO activation vẫn cần staging readiness, backup và explicit approval riêng.
+1. Hard refresh và authenticated Sales smoke: Item, UOM `Mét`, rate `180000 VND`, amount và save-time authoritative pricing.
+2. Đổi Item/UOM/bảng giá để xác minh không lấy chéo hoặc giữ giá cũ.
+3. Authenticated Purchase smoke vẫn chưa hoàn tất.
+4. Sửa observation reporting `403` rồi chạy lại để toàn job conclusion xanh.
+5. FIFO activation vẫn cần staging readiness, backup và explicit approval riêng.
 
 ## Safety
 
+- Production Sales release đã hoàn tất qua controlled workflow có backup và evidence.
 - Production observation không deploy Cloudflare.
-- Không backup, migrate hoặc mutate D1 trong observation.
 - Không sửa production secrets hoặc DNS.
 - Không bật FIFO.
