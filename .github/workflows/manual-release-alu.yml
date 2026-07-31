@@ -12,6 +12,7 @@ on:
       - ".github/workflows/release-alumdoor-app.yml"
       - ".github/workflows/release-gateway.yml"
       - ".github/workflows/production-release-status.yml"
+      - "server/RELEASE_CONTENT_MANIFEST.json"
   push:
     branches:
       - hotfix/alumdoor-print-list-delete
@@ -22,6 +23,7 @@ on:
       - ".github/workflows/release-alumdoor-app.yml"
       - ".github/workflows/release-gateway.yml"
       - ".github/workflows/production-release-status.yml"
+      - "server/RELEASE_CONTENT_MANIFEST.json"
   workflow_dispatch:
     inputs:
       confirm:
