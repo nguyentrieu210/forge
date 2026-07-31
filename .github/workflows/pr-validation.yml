@@ -1,15 +1,11 @@
 name: PR Validation
 
-"on":
+on:
   pull_request:
-  workflow_dispatch:
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: read
-
-concurrency:
-  group: pr-validation-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
 
 jobs:
   validate:
