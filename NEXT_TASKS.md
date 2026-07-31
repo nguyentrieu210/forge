@@ -6,209 +6,116 @@ Ngày cập nhật: **2026-07-31**.
 
 Branch: `feat/inventory-manufacturing-item-catalog-20260731`.
 
-Audit: `server/docs/ALUMDOOR-INVENTORY-MANUFACTURING-ITEM-AUDIT.md`.
+Authoritative metadata: `server/briefs/alumdoor-v2.json` version `2.0.34`.
 
-Kết luận hiện tại: schema Item đủ làm nền nhưng dữ liệu và luồng chưa đủ để gọi là hoàn chỉnh.
+Tài liệu:
+
+- `server/docs/ALUMDOOR-INVENTORY-MANUFACTURING-ITEM-AUDIT.md`
+- `server/docs/ALUMDOOR-INVENTORY-MANUFACTURING-BRD.md`
+- `server/docs/ALUMDOOR-INVENTORY-MANUFACTURING-TECHNICAL-PLAN.md`
+
+Gate hiện tại:
+
+- G0 Scope: complete.
+- G1 BRD: approved.
+- G2 Plan: approved for Slice A.
+- G3 Verification: partial, focused audit tests PASS 6/6.
+- G4 Exact-head CI: chưa có evidence.
+- G5 Staging: chưa bắt đầu.
 
 ### Slice A — Catalog audit và validator
 
-1. Chốt brief Alumdoor authoritative giữa `alumdoor.json` và `alumdoor-v2.json`.
-2. Viết dry-run audit script cho Item, UOM conversion, Item Group, warehouse, BOM và Production Standard.
-3. Xuất catalog live tenant `alu` ra ngoài Git, chỉ ghi count/checksum/lỗi không chứa dữ liệu nhạy cảm vào repo.
-4. Validate theo loại Item: nguyên vật liệu, tiêu hao, bán thành phẩm, thành phẩm, hàng hoá, dịch vụ.
-5. Chặn Item có cờ mua/bán/sản xuất, stock UOM, measurement profile, account hoặc warehouse mâu thuẫn.
-6. Thêm regression tests cho Item validator và dữ liệu brief.
+Đã xong:
+
+1. Chốt `alumdoor-v2.json` v2.0.34 là nguồn nghiệp vụ chính.
+2. Viết planner audit cho Item, Item Group, UOM, Measurement Profile, Warehouse, BOM và Production Standard.
+3. Viết CLI read-only:
+   - fixture `--input`;
+   - tenant `--tenant`;
+   - remote mặc định redacted;
+   - không có chế độ sửa/execute.
+4. Thêm finding code/severity, count và checksum xác định.
+5. Cover Item sai loại, UOM/conversion, profile/kho, thiếu BOM, BOM trùng/vòng lặp, redaction và CLI read-only.
+6. Thêm package command `audit:alumdoor-catalog`.
+7. Focused syntax + fixture tests PASS 6/6.
+
+Việc tiếp theo:
+
+1. Bổ sung regression test trực tiếp cho Alumdoor worker Item validator theo BRD:
+   - dịch vụ không được giữ stock/manufacturing config;
+   - thành phẩm/bán thành phẩm phải có nguồn cung và cờ sản xuất phù hợp;
+   - nguyên liệu mua ngoài phải có cờ mua;
+   - UOM conversion/profile bắt buộc và record disabled bị từ chối.
+2. Audit metadata v2.0.34 bằng fixture sinh từ brief, không chỉ fixture nhỏ thủ công.
+3. Chạy full gate trên exact HEAD:
+
+```bash
+pnpm --dir server run build
+pnpm --dir server run test:unit
+pnpm --dir server run test:sql
+pnpm --dir server run brief:check
+pnpm --filter metaforge run lint
+pnpm run test
+pnpm run typecheck
+pnpm run build
+```
+
+4. Sửa toàn bộ lỗi do nhánh gây ra; không skip/nới assertion để lấy màu xanh.
+5. Chỉ sau full gate mới mở draft PR và lấy exact-head CI.
+6. Remote audit tenant `alu` là read-only, nhưng chỉ chạy trong môi trường có Cloudflare credential hợp lệ; không đưa credential hoặc raw report vào Git.
+7. Report trong repo chỉ chứa count/checksum/error category đã redacted; raw export và report có tên lưu ngoài repo.
 
 ### Slice B — Inventory completeness
 
-1. Khai vai trò kho: nguyên vật liệu, WIP, thành phẩm, chờ kiểm và phế/offcut.
-2. Bổ sung canonical lot/dimension reference cho Stock Entry Item hoặc bắt buộc dimensioned material đi qua dedicated action.
-3. Đồng bộ Aluminium Lot/Cut với stock ledger, transfer, issue, return và reconciliation.
-4. Chặn negative stock, sai kho, sai màu/khổ/lô và concurrent issue.
-5. Hoàn thiện opening balance và stock reconciliation theo kho/lô/quy cách.
-6. Báo cáo tồn khả dụng, đã giữ chỗ, WIP, phế/offcut và tuổi lô.
+Chưa bắt đầu code. Chờ PR #14 merge/rebase và xác nhận migration head.
+
+1. Khai vai trò kho: `RAW_MATERIAL`, `WIP`, `FINISHED_GOODS`, `QUARANTINE`, `SCRAP_OFFCUT`.
+2. Thiết kế canonical physical stock identity cho nhôm, kính/tấm, cuộn và batch/serial.
+3. Bổ sung append-only physical movement projection, revision claim và atomic persistence cùng stock ledger.
+4. Stock Entry bắt buộc giữ nguồn lot/dimension, colour/condition và warehouse role phù hợp.
+5. Cover receipt, transfer, issue, manufacture, return, reconciliation, cancel và concurrent issue.
+6. Rollout mới mặc định tắt; không backfill/activation trước staging.
 
 ### Slice C — Manufacturing completeness
 
-1. Validate BOM UOM và conversion về stock UOM; chặn circular/duplicate/zero-yield BOM.
-2. Version BOM/Production Standard và snapshot revision vào Work Order.
-3. Hoàn thiện Work Order partial issue, partial manufacture, over-consumption/over-production guard, close và cancel/reverse.
-4. Gắn tiêu hao nhôm với Aluminium Lot/Cut và giữ dấu vết offcut/phế liệu.
-5. Bổ sung operation/routing, tổ hoặc workstation, thời gian, QC, scrap/by-product và rework theo phase.
-6. Báo cáo định mức so với thực tế, WIP, tiến độ, variance và vật tư thiếu.
+Chưa bắt đầu code.
+
+1. Version BOM/Production Standard bằng revision và effective dates.
+2. Validate finished/raw Item flags, UOM conversion, qty basis, circular và duplicate active BOM.
+3. Work Order lưu immutable BOM snapshot/checksum.
+4. Manufacturing progress giữ BOM row, lot movement, issue/consume/produce/scrap/offcut và reversal reference.
+5. Hoàn thiện partial issue/partial manufacture, over-consumption/over-production guard, close và cancel/reverse.
+6. Báo cáo WIP, thiếu vật tư, tiến độ, định mức so với thực tế và phế/offcut.
 
 ### Slice D — UI, QA và release
 
-1. Làm gọn form Item theo loại mặt hàng, chỉ hiện trường liên quan.
-2. Hiển thị completeness/error indicator cho Item và BOM.
-3. Desktop/mobile Browser QA cho Item, Stock Entry, BOM và Work Order.
-4. PASS unit, SQL, worker concurrency, typecheck và build trên exact HEAD.
-5. Staging smoke: nhập kho → chuyển kho → Work Order → xuất vật tư → nhập thành phẩm → cancel/reverse → reports.
-6. Không deploy production hoặc sửa secret trước explicit approval riêng.
+1. Làm gọn Item theo loại nhưng giữ server permission authoritative.
+2. Thêm completeness/error indicator cho Item và BOM.
+3. Work Order hiển thị snapshot, required/issued/produced/scrap/variance.
+4. Desktop/mobile Browser QA cho Item, Stock Entry, BOM và Work Order.
+5. Staging smoke toàn luồng trước production.
+6. Không deploy production hoặc sửa secret nếu chưa có explicit approval riêng.
 
-### Điều phối với PR mua hàng
+## P0 — Điều phối với PR mua hàng #14
 
-- Draft PR `#14` đang hoàn thiện Purchase Order/Purchase Receipt trên branch riêng.
-- Nhánh tồn kho/sản xuất không phụ thuộc draft đó để bắt đầu audit.
-- Sau khi PR `#14` merge, rebase branch này và chạy lại toàn bộ gate do cùng chạm Item/stock/procurement contracts.
+- PR #14 vẫn draft/open, head kiểm tra gần nhất `2768188b438d8ce0cd41d7b792aab1848f48210f`.
+- PR này đang dùng migration `0030` và chạm procurement/stock contracts.
+- Nhánh tồn kho/sản xuất không lấy số migration khi #14 chưa merge.
+- Sau merge: rebase, xử lý conflict, xác minh lại contract, chạy lại full tests/typecheck/build và exact-head CI.
+- FIFO rollout tenant `alu` vẫn disabled.
 
-## P0 — Xác minh release sidebar gọn trên production
+## P0 — Production safety
 
-**Mục tiêu:** xác nhận Cloudflare đã đưa bản sidebar desktop gọn lên Gateway production mà không ảnh hưởng route hoặc permission.
+- Không migrate hoặc mutate tenant `alu` từ nhánh này.
+- Không deploy Gateway/Tenant Worker từ nhánh này.
+- Không sửa Cloudflare secret.
+- Không commit report raw, backup, `server/work/`, `tmp/`, `.env` hoặc generated artifacts.
+- Production chỉ được cân nhắc sau G4 CI, G5 staging, catalog audit sạch và một yêu cầu deploy riêng.
 
-Hiện trạng:
+## P1 — Các việc hiện hành ngoài nhánh này
 
-- Code sidebar: `87cd45aa9272f5600ff3d5914f697ce9a26994b6`.
-- Release target: `da04f7fcfdc4c8e4ddf7ff70c79e3a10458ce412`.
-- Production trigger: `9a7bbc14b8e7f3e556404cce19914da1e21e5e10`.
-- Trigger file: `.github/release/gateway-production.trigger`.
-- File giao diện sửa: `client/apps/runtime/src/styles.css`.
-- Sidebar mở rộng còn `15.75rem`; group header, menu row, icon và search được thu gọn.
-- Không ẩn mục menu và không thay đổi quyền.
-- Chưa có Cloudflare deployment/version ID hoặc smoke evidence sau trigger.
-
-Việc cần làm:
-
-1. Xác nhận Cloudflare build mới nhất lấy commit có chứa trigger `9a7bbc14...` hoặc HEAD kế tiếp chỉ cập nhật tài liệu.
-2. Xác nhận Gateway build dùng:
-
-```bash
-pnpm --filter metaforge run build && node server/scripts/stage-client-bundle.mjs
-```
-
-3. Xác nhận deploy command:
-
-```bash
-pnpm --dir server exec wrangler deploy --config apps/gateway-worker/wrangler.jsonc
-```
-
-4. Smoke desktop/mobile tại `alu.kairo.vn`:
-   - sidebar không tràn ngang;
-   - nhãn dài vẫn đọc được bằng tooltip/ellipsis hợp lý;
-   - group đóng/mở bình thường;
-   - pin, tìm menu và thu gọn sidebar vẫn hoạt động;
-   - không có console error mới.
-5. Ghi Gateway deployment/version ID và ảnh smoke vào bằng chứng release.
-6. Kiểm tra CI/check của HEAD mới; hiện GitHub connector chưa trả workflow run hoặc status.
-
-Hoàn thành khi Cloudflare build/deploy xanh, production hiển thị sidebar mới và smoke không có regression.
-
-## P0 — Xác minh production tenant `alu`
-
-- Xác nhận Gateway version và production traffic.
-- Smoke `alu.kairo.vn`: health, login, list, form, create/update/delete chứng từ thử, Purchase Order preview và tải PDF.
-- Ghi deployment/version ID, thời điểm và kết quả từng bước; không ghi secret hoặc dữ liệu khách hàng.
-- Rollback trigger: login/API 5xx, sai tenant/database, mất dữ liệu CRUD, permission regression hoặc print/PDF lỗi nghiêm trọng.
-
-## P0 — Hoàn thiện FIFO Purchase Receipt
-
-Contract authoritative: `server/docs/ALUMDOOR-PURCHASE-RECEIPT-ALLOCATION.md`.
-
-### Hoàn thành — M1: Schema, contracts và atomic persistence
-
-- Migration `0027`, `0028`, `0029`.
-- Queue, windows, obligations, allocations, unapplied, settlement entries, revision claims, views và triggers.
-- Allocation được ghi cùng D1 batch với document, stock, procurement compatibility projection và mutation receipt.
-- Revision conflict abort toàn batch và được phân loại retryable.
-- SQL tests cover stale revision, row guards, reversal cap, PO cancel, settlement boundary và rollout activation constraints.
-
-### Hoàn thành — M2: Canonical material key
-
-- Server hash schema v1 từ item, chiều dài, barem kg/m, màu, dập, measurement profile và stock UOM.
-- Fixed-point micros, canonical JSON và null/empty normalization.
-- Khác quy cách không được bù lẫn.
-
-### Hoàn thành — M3: Supplier coordinator
-
-- PO/Receipt submit/cancel serialize theo `purchase:<tenant>:<company>:<supplier>`.
-- Revision conflict retry tối đa ba lần với cùng command ID.
-- Không nuốt business/version conflict khác.
-
-### Đang làm — M4: FIFO lifecycle
-
-Đã xong:
-
-- PO submit mở obligation theo row.
-- Receipt submit tự FIFO qua nhiều PO.
-- Một Receipt nhiều dòng xử lý tuần tự theo queue.
-- Vượt nominal nhưng trong tolerance tạo unapplied quantity.
-- Receipt cancel tạo reversal theo nguồn.
-- Nhôm cây/lá lấy `qty_bar` làm nghĩa vụ/tồn; barem và actual weight giữ riêng.
-- Integration test 200 + 100, nhận 230 => 200 + 30, còn 70.
-- Stress planner 250 obligation rows.
-
-Còn lại:
-
-1. Khi PO mới gia nhập window có unapplied quantity, tạo `apply_unapplied` allocation event và giảm source trong cùng batch.
-2. Production-shaped integration test cho Receipt cancel.
-3. Test nhiều Receipt lines cùng queue.
-4. Worker/DO concurrency test, không chỉ planner/SQL.
-
-### P0 — M5: Settlement và edge cases
-
-- Server action `Đối soát giao cuối / Đóng trong dung sai`.
-- Server-side permission và reason bắt buộc.
-- Integer min/max, shortage/overage variance và append-only settlement event.
-- Reverse settlement chỉ khi window kế tiếp chưa có activity.
-- Manual FIFO override trong cùng supplier/material/window, có permission + reason.
-- Backdated Receipt warning nhưng allocation theo commit sequence.
-- PO amend/cancel và Receipt cancel theo settlement lifecycle.
-
-### P0 — M6: Backfill và cutover
-
-- Viết `server/scripts/backfill-purchase-receipt-allocations.mjs`, dry-run mặc định.
-- Đọc voucher revision, line key, `versions.snapshot_json`, child rows và legacy progress.
-- Exact unique => resolved; mơ hồ => `legacy_unresolved`; không đoán row ID.
-- Xuất resolved/unresolved count và PO-level checksum.
-- Không activation nếu checksum lệch hoặc unresolved > 0.
-- Activation ghi checksum, actor và timestamp vào rollout state.
-- Sau activation, allocation ledger là nguồn sự thật; progress table cũ chỉ là compatibility projection.
-
-### P1 — M7: UI và báo cáo
-
-- Preview allocation trước submit Receipt.
-- PO/Receipt timeline và drill-down.
-- Hiển thị nominal remaining, actual received, unapplied, settlement range và variance.
-- Settlement/manual override action có confirmation, permission và reason.
-- Báo cáo NCC: tổng đặt, tổng về, nợ danh nghĩa, window, dải giao cuối và tuổi PO cũ nhất.
-
-### P0 — M8: Gate và rollout
-
-Đã xong:
-
-- Exact code SHA `591ca359...` PASS install/test/typecheck/build trên run `30570000862`.
-- Rollout gate mặc định tắt; database chặn activation thiếu checksum hoặc còn unresolved.
-- Tenant-safe migration wrapper có dry-run, explicit confirmation, clean-worktree guard và generated config cleanup.
-
-Còn lại:
-
-1. D1 batch size/latency với hàng trăm allocations.
-2. Supplier contention load test.
-3. Backup production mới.
-4. Staging migrations.
-5. Backfill dry-run trên staging/production backup.
-6. Review unresolved/checksum.
-7. Staging smoke PO → Receipt → cancel → settlement → report.
-8. Explicit production approval trước activation.
-
-## P1 — Purchase Order print/PDF verification
-
-- Fixture production renderer đã khóa A4 portrait, 13 cột, Dập trước Ghi chú, không Số bó, căn giữa, logo/header, row order, number format và không placeholder.
-- Còn lại: browser smoke production, tải PDF thật, kiểm font, tràn nội dung, trang trắng và visual regression Chromium.
-
-## P1 — Partial submitted-document save test
-
-- Cover PUT partial merge cho normal doc, submitted doc, child table và concurrency/timestamp.
-- Targeted facade/integration test và root gate.
-
-## P2 — Runtime completeness
-
-- Hoàn thiện page/dashboard/process renderers.
-- Hoàn thiện assign picker, attachment upload/delete và tag UI.
-- Đồng bộ `server/STATUS.md`, known gaps và traceability với code/migrations.
-
-## P3 — Engineering hygiene
-
-- Giảm frontend chunk lớn có đo lường.
-- Chuẩn hóa local onboarding Gateway + Tenant + D1 từ config mẫu, không dùng production secret.
-- Cài Forge project pack (`FORGE.md`, `.forge/manifest.json`) qua một PR riêng sau khi review nội dung ZIP; không chạy installer mù quáng.
+- Xác minh đầy đủ Gateway/sidebar production và browser smoke.
+- Hoàn thiện PR #14 mua hàng/nhập hàng và controlled FIFO rollout.
+- Purchase Order print/PDF visual verification.
+- Runtime page/dashboard/process, attachment và assign completeness.
+- Cài Forge project pack bằng PR riêng sau khi review, không trộn vào nhánh nghiệp vụ này.
