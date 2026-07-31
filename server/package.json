@@ -17,7 +17,7 @@
     "types:gateway": "wrangler types apps/gateway-worker/worker-configuration.d.ts --config apps/gateway-worker/wrangler.jsonc --env-interface GatewayWorkerBindings --include-runtime false",
     "types:query": "wrangler types apps/query-worker/worker-configuration.d.ts --config apps/query-worker/wrangler.jsonc --env-interface QueryWorkerBindings --include-runtime false",
     "types": "npm run types:tenant && npm run types:gateway && npm run types:query",
-    "types:check": "wrangler types apps/tenant-worker/worker-configuration.d.ts --config apps/tenant-worker/wrangler.jsonc --env-interface TenantWorkerBindings --include-runtime false --check && wrangler types apps/gateway-worker/worker-configuration.d.ts --config apps/gateway-worker/wrangler.jsonc --env-interface GatewayWorkerBindings --include-runtime false --check && wrangler types apps/query-worker/worker-configuration.d.ts --config apps/query-worker/wrangler.jsonc --env-interface QueryWorkerBindings --include-runtime false --check",
+    "types:check": "npm run types && git diff -- apps/tenant-worker/worker-configuration.d.ts apps/gateway-worker/worker-configuration.d.ts apps/query-worker/worker-configuration.d.ts && git diff --exit-code -- apps/tenant-worker/worker-configuration.d.ts apps/gateway-worker/worker-configuration.d.ts apps/query-worker/worker-configuration.d.ts",
     "dev:tenant": "npx wrangler dev --config apps/tenant-worker/wrangler.jsonc",
     "dev:gateway": "npx wrangler dev --config apps/gateway-worker/wrangler.jsonc",
     "deploy:tenant": "node scripts/deploy-tenant.mjs",
