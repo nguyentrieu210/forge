@@ -369,7 +369,9 @@ function checked(value) {
 function isDisabled(data) { return checked(data?.disabled); }
 function positive(value) { const number = Number(value); return Number.isFinite(number) && number > 0; }
 function text(value) { return typeof value === "string" || typeof value === "number" ? String(value).trim() : ""; }
-function normalizedUom(value) { return text(value).normalize("NFD").replace(/\p{Diacritic}/gu, "").toLocaleLowerCase("vi"); }
+function normalizedUom(value) {
+  return text(value).normalize("NFD").replace(/\p{Diacritic}/gu, "").replaceAll("đ", "d").toLocaleLowerCase("vi");
+}
 function dynamicSquareMetreToSet(mode, uom, stockUom) {
   return mode === "Thành phẩm theo m2"
     && ["m2", "m²", "sqm"].includes(normalizedUom(uom))
