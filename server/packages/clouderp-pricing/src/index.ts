@@ -11,25 +11,32 @@ export async function resolveServerPrice(
   input: PricingContext,
 ): Promise<ResolvedPrice> {
   const lineUom = typeof input.uom === "string" ? input.uom.trim() : "";
-  if (!lineUom) throw errors.validation("A selling UOM is required when a price list is selected");
-
-  const exactPriceName = `${input.priceList}:${input.itemCode}:${lineUom}`;
   const legacyPriceName = `${input.priceList}:${input.itemCode}`;
-  let priceName = exactPriceName;
-  let itemPrice = await context.reader.getMasterRecordData(context.command.tenant_id, "Item Price", exactPriceName);
+  const exactPriceName = lineUom ? `${legacyPriceName}:${lineUom}` : "";
+  let priceName = lineUom ? exactPriceName : legacyPriceName;
+  let itemPrice = lineUom
+    ? await context.reader.getMasterRecordData(context.command.tenant_id, "Item Price", exactPriceName)
+    : null;
 
-  // Existing tenants can still have the pre-UOM key. Accept it only when its declared UOM
-  // exactly matches the sales row; silently borrowing another unit's price is worse than a
-  // visible missing-price error.
+  // Existing tenants can still have the pre-UOM key. A typed legacy price is accepted only
+  // when its declared UOM exactly matches the sales row. The older untyped form remains
+  // compatible only when the row is also untyped; once either side declares a UOM, matching
+  // becomes mandatory so a price for one commercial unit cannot leak into another.
   if (!itemPrice) {
     const legacy = await context.reader.getMasterRecordData(context.command.tenant_id, "Item Price", legacyPriceName);
     const legacyUom = typeof legacy?.uom === "string" ? legacy.uom.trim() : "";
-    if (legacy && legacyUom === lineUom) {
+    const compatible = lineUom ? legacyUom === lineUom : !legacyUom;
+    if (legacy && compatible) {
       itemPrice = legacy;
       priceName = legacyPriceName;
+    } else if (legacy && !lineUom && legacyUom) {
+      throw errors.validation(`Item Price ${legacyPriceName} declares UOM "${legacyUom}"; the document row must provide a matching selling UOM`);
     }
   }
-  if (!itemPrice) throw errors.reference(`Item Price ${exactPriceName} does not exist`);
+  if (!itemPrice) {
+    const missingName = lineUom ? exactPriceName : legacyPriceName;
+    throw errors.reference(`Item Price ${missingName} does not exist`);
+  }
   const currency = typeof itemPrice.currency === "string" ? itemPrice.currency : "";
   if (!currency) throw errors.reference(`Item Price ${priceName} must define currency`);
   if (currency !== input.documentCurrency) throw errors.reference(`Item Price ${priceName} currency does not match document currency`);
