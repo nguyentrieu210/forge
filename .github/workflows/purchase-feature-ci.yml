@@ -17,10 +17,10 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: purchase-feature-timeline-one-shot
+  group: purchase-feature-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -32,19 +32,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          ref: feat/purchase-receipt-complete-20260731
-          fetch-depth: 2
-
-      - name: Apply one-shot purchase timeline integration
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'feat/purchase-receipt-complete-20260731'
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$(git branch --show-current)" = "feat/purchase-receipt-complete-20260731"
-          if [[ -f .github/one-shot/apply-purchase-timeline.mjs ]]; then
-            node .github/one-shot/apply-purchase-timeline.mjs
-          fi
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -106,17 +93,3 @@ jobs:
           status=$?
           tail -n 200 /tmp/build.log
           exit $status
-
-      - name: Commit verified purchase timeline
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'feat/purchase-receipt-complete-20260731'
-        shell: bash
-        run: |
-          set -euo pipefail
-          if git diff --quiet && git diff --cached --quiet; then
-            exit 0
-          fi
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
-          git commit -m 'feat(purchase): add allocation timeline and drill-down'
-          git push origin HEAD:feat/purchase-receipt-complete-20260731
