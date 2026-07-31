@@ -44,6 +44,9 @@ async function listResources(
     limit_page_length: String(limit),
   });
   const response = await call(`resource/${encodeURIComponent(doctype)}?${query.toString()}`);
+  // Older callback mocks and deployments only exposed single-record reads. Treat an absent
+  // list endpoint as "no field fallback" so exact/legacy diagnostics remain truthful.
+  if (response.status === 404) return [];
   if (!response.ok) throw new Error(`Không tra được ${doctype} theo trường dữ liệu (HTTP ${response.status}).`);
   return ((await response.json()) as { data?: Json[] }).data ?? [];
 }
