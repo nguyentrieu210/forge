@@ -98,7 +98,7 @@ function ExtensionGrid(props: ChildGridProps) {
             <TableRow key={String(row.name ?? rowIndex)}>
               <TableCell className="text-right text-xs text-muted-foreground">{rowIndex + 1}</TableCell>
               {columns.map((field) => {
-                const gridField = field.list_only ? { ...field, list_only: 0 } : field;
+                const gridField: DocField = field.list_only ? { ...field, list_only: 0 } : field;
                 const resolved = resolveField(gridField, childMeta, {
                   doc: row,
                   parent: parentDoc,
