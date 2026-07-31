@@ -119,7 +119,7 @@ Before implementation, the owner must approve:
 
 ## Existing Sales Unicode release evidence
 
-- Feature merge SHA: `a48524b934e54dfb10a920303fb60876334cb8d`.
+- Feature merge SHA: `a48524b93489c92296c57fc5f223e41d505de7aa`.
 - Worker: `cloudforge-app-alumdoor`.
 - Dispatch namespace: `cloudforge-production`.
 - Release run `30651057535`: SUCCESS.
