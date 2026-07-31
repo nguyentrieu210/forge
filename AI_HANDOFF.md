@@ -8,12 +8,13 @@ Forge là monorepo ERP đa tenant trên Cloudflare. Backend CloudForge cung cấ
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Default head đã merge vào finance branch: `acd0a8df95eb35342b15de282b65102ac4314801`.
+- Default head đã merge vào finance branch: `1207333163fdf31c576caa6ec8c11e88b078ca6e`.
 - Working branch: `feat/finance-ar-ap-completion`.
 - Draft PR: `#15` — `feat(finance): add invoice due dates and AR/AP aging`.
-- Finance code/test head trước các commit handoff cuối: `93c3f2ab5c7dd286c9f03cd13ad769ba14a65d8e`.
+- Finance code/test head: `93c3f2ab5c7dd286c9f03cd13ad769ba14a65d8e`.
+- Latest default merge commit trước handoff cuối: `43ef6cb6942b42a7f600086fefdad7c621e3f6ca`.
 - Backup trước đồng bộ base: `backup/finance-ar-ap-pre-rebase-20260731` tại `a0f787e2a8abde287b184d5709985aec8cfd4eb8`.
-- PR mergeable, zero commits behind default.
+- PR mergeable; default workflow mới nhất đã được merge bằng commit hai parent, không force-push.
 - Final PR diff không chứa workflow tạm.
 
 Đọc đầu tiên khi tiếp tục:
@@ -47,7 +48,7 @@ Forge là monorepo ERP đa tenant trên Cloudflare. Backend CloudForge cung cấ
   - `posting_date_fallback`.
 - Chưa hard-reject omitted due date trước backfill/checksum/staging.
 
-Không sửa migration `0030` sau khi đã tồn tại; hard presence enforcement phải là migration append-only mới.
+Không sửa migration `0030`; hard presence enforcement phải là migration append-only mới.
 
 ### Query/report
 
@@ -76,7 +77,7 @@ Không sửa migration `0030` sau khi đã tồn tại; hard presence enforcemen
 - `server/tests/finance-aging-errors.test.mjs`
 - `server/tests/finance-aging-worker-route.test.mjs`
 
-Worker route regression test nằm trong root `server/tests/*.test.mjs`, kiểm:
+Worker route regression nằm trong root `server/tests/*.test.mjs`, kiểm:
 
 `HTTP -> permission -> FinanceQueryCompiler -> D1ReportService`.
 
@@ -98,24 +99,17 @@ SQL cutoff thực thi thật được kiểm độc lập bằng migration fixtu
 - SQL cutoff fixture: PASS.
 - `due_date_source` projection/filter: PASS.
 
-### Current blocker: GitHub Actions before runner
-
-Runs after the Worker route test or workflow cleanup fail before checkout and expose no steps/logs:
+### Failure trước runner đã quan sát
 
 - `30620542741` / `91123803489`;
 - `30620645454` / `91124137658`, rerun `91124386934`;
 - `30620830770` / `91124730973`.
 
-The jobs have empty steps; log download returns `BlobNotFound`. The same `pr-validation.yml` passed immediately before. Classify this as Actions infrastructure/repository billing-or-runner configuration until GitHub UI shows otherwise.
+Các job trên không có step, chưa checkout và log download trả `BlobNotFound`; vì vậy chưa phải bằng chứng code failure.
 
-Next operator action:
+Default đã cập nhật `pr-validation.yml` tại `1207333163fdf31c576caa6ec8c11e88b078ca6e`. Finance branch đã merge workflow này. Đọc run trên commit người dùng mới nhất; với PR #15 chỉ job `validate / Test, typecheck and build` áp dụng, RBAC Slice B job có điều kiện PR #38 và phải skip.
 
-1. Inspect GitHub Actions billing/spending limit and repository Actions settings.
-2. Inspect the failed run UI for approval/account/runner restriction.
-3. Rerun PR Validation on exact current head.
-4. Do not claim exact-head PASS until checkout/test/typecheck/build actually execute.
-
-PR remains draft. Do not merge automatically.
+PR giữ draft. Không merge nếu exact-head install/test/typecheck/build chưa chạy thật và PASS.
 
 ## Remaining finance roadmap
 
@@ -130,7 +124,7 @@ PR remains draft. Do not merge automatically.
 ## Architecture invariants
 
 - Browser enters Gateway Worker; Gateway resolves tenant and signs trusted identity.
-- Tenant Worker/Frappe facade must enforce server-side permission.
+- Tenant Worker/Frappe facade enforces server-side permission.
 - All business mutations go through DocumentKernel/Durable Object.
 - D1 migrations are append-only.
 - UI hidden buttons are not a security boundary.
@@ -149,7 +143,7 @@ PR remains draft. Do not merge automatically.
 ### RBAC
 
 - Slice A merged into default at `93ac85a0f16c2668b706ffcf8e15d3da53c8c7a9` with exact-head PR Validation PASS.
-- Slice B must be a separate branch/PR for audit, atomic user/roles and last-admin/self-lockout guards.
+- Slice B is isolated to PR #38 and its conditional workflow does not apply to finance PR #15.
 
 ### Gateway/sidebar
 
