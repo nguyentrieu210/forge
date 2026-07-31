@@ -30,6 +30,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          echo '7fa6d3de463492cba7ed2f4e15fe03686a626d1ea814950cbdb0c08ee460506e  .github/purchase-final-patch.00' | sha256sum --check
+          echo 'd68f5d4f6aa018f0f43dbe950fceb7ba43e83b6a8655938fc416b0cec9b351ef  .github/purchase-final-patch.01' | sha256sum --check
           cat .github/purchase-final-patch.00 .github/purchase-final-patch.01 > /tmp/purchase-final.patch.gz.b64
           base64 --decode /tmp/purchase-final.patch.gz.b64 | gzip --decompress > /tmp/purchase-final.patch
           echo '21cd11534aeb2b018babf5fbfe6895f4e3c9d518937a1891cdfaea460e5c1538  /tmp/purchase-final.patch' | sha256sum --check
