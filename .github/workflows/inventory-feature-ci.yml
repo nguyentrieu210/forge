@@ -54,6 +54,29 @@ jobs:
           pnpm --dir server run build
           node --test server/tests/alumdoor-catalog-audit.test.mjs server/tests/alumdoor-item-validator.test.mjs
 
+      - name: Generate redacted authoritative catalog audit
+        shell: bash
+        run: |
+          set +e
+          pnpm --dir server run audit:alumdoor-catalog -- \
+            --brief briefs/alumdoor-v2.json \
+            --redacted \
+            --output "$RUNNER_TEMP/alumdoor-v2-catalog-audit.json"
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ] && [ "$status" -ne 2 ]; then
+            exit "$status"
+          fi
+          printf 'catalog_audit_exit=%s\n' "$status" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload redacted catalog audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: alumdoor-v2-catalog-audit-${{ github.run_id }}
+          path: ${{ runner.temp }}/alumdoor-v2-catalog-audit.json
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Run server SQL tests
         run: pnpm --dir server run test:sql
 
