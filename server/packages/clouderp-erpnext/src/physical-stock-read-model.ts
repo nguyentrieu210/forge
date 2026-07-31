@@ -1,4 +1,5 @@
 import type { JsonObject } from "../../contracts/src/index.js";
+import { errors } from "../../core/src/index.js";
 
 export interface PhysicalStockLedgerRow extends JsonObject {
   tenant_id: string;
@@ -292,7 +293,7 @@ function cursorIndex(rows: PhysicalStockBalance[], cursor: string | undefined): 
   if (!cursor) return 0;
   const key = decodeCursor(cursor);
   const index = rows.findIndex((row) => row.key === key);
-  if (index < 0) throw new Error("invalid physical stock cursor");
+  if (index < 0) throw errors.validation("Invalid physical stock cursor");
   return index + 1;
 }
 
@@ -304,7 +305,7 @@ function decodeCursor(cursor: string): string {
   try {
     return decodeURIComponent(cursor);
   } catch {
-    throw new Error("invalid physical stock cursor");
+    throw errors.validation("Invalid physical stock cursor");
   }
 }
 
