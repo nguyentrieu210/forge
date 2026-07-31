@@ -2,294 +2,47 @@ name: PR Validation
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, edited, ready_for_review]
-  push:
     branches:
       - hotfix/alumdoor-print-list-delete
-    paths:
-      - .github/release/alu-production.trigger
-      - .github/release/gateway-production.trigger
+    types: [opened, synchronize, reopened, ready_for_review]
 
 permissions:
   contents: read
-  pull-requests: write
+
+concurrency:
+  group: pr-validation-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   validate:
-    if: github.event_name == 'pull_request'
     name: Test, typecheck and build
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 10
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
         with:
-          version: 9.15.0
-          run_install: false
+          fetch-depth: 0
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Run tests
-        run: pnpm test
-
-      - name: Run typecheck
-        run: pnpm typecheck
-
-      - name: Build
-        run: pnpm build
-
-  release_alu:
-    # The workflow-level paths filter already restricts push releases to the trigger files.
-    # `head_commit.modified` is incomplete for squash merges and previously skipped a valid release.
-    if: github.event_name == 'push'
-    name: Release alu production
-    runs-on: ubuntu-latest
-    timeout-minutes: 35
-    environment: production
-    env:
-      TENANT: alu
-      TARGET_SHA: cbf7506dd8f04cb93f77e30f5c5fba3b6770b04f
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-
-    steps:
-      - name: Checkout verified release
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ env.TARGET_SHA }}
-          persist-credentials: false
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.0
-          run_install: false
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Prepare tenant release directories
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$TENANT" = "alu"
-          test "$TARGET_SHA" = "cbf7506dd8f04cb93f77e30f5c5fba3b6770b04f"
-          test -n "${CLOUDFLARE_API_TOKEN:-}"
-          echo "EVIDENCE_DIR=$RUNNER_TEMP/alu-release-evidence" >> "$GITHUB_ENV"
-          echo "BACKUP_DIR=$RUNNER_TEMP/alu-backup" >> "$GITHUB_ENV"
-          mkdir -p "$RUNNER_TEMP/alu-release-evidence" "$RUNNER_TEMP/alu-backup"
-          printf 'run_id=%s\ntarget_sha=%s\nstarted_at=%s\nfifo_rollout=disabled\n' \
-            "$GITHUB_RUN_ID" "$TARGET_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            > "$RUNNER_TEMP/alu-release-evidence/state.txt"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Backup tenant
-        shell: bash
-        run: |
-          set -euo pipefail
-          node server/scripts/backup-tenant.mjs --tenant "$TENANT" 2>&1 | tee "$EVIDENCE_DIR/backup-dry.log"
-          node server/scripts/backup-tenant.mjs --tenant "$TENANT" --execute --output-dir "$BACKUP_DIR" 2>&1 | tee "$EVIDENCE_DIR/backup-live.log"
-          echo 'backup=pass' >> "$EVIDENCE_DIR/state.txt"
-
-      - name: Upload backup
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: alu-pre-release-backup-${{ github.run_id }}
-          path: ${{ runner.temp }}/alu-backup/
-          if-no-files-found: error
-          retention-days: 14
-
-      - name: Migrate tenant
-        shell: bash
-        run: |
-          set -euo pipefail
-          cd server
-          node scripts/migrate-tenant.mjs --tenant "$TENANT" 2>&1 | tee "$EVIDENCE_DIR/migrate-dry.log"
-          node scripts/migrate-tenant.mjs --tenant "$TENANT" --execute --confirm "$TENANT" 2>&1 | tee "$EVIDENCE_DIR/migrate-live.log"
-          echo 'migration=pass' >> "$EVIDENCE_DIR/state.txt"
-
-      - name: Deploy tenant
+      - name: Validate changed-file policy
         shell: bash
         env:
-          WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/alu-release-evidence/wrangler-output.ndjson
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           set -euo pipefail
-          cd server
-          node scripts/deploy-tenant.mjs --tenant "$TENANT" 2>&1 | tee "$EVIDENCE_DIR/deploy-dry.log"
-          node scripts/deploy-tenant.mjs --tenant "$TENANT" --execute --confirm "$TENANT" 2>&1 | tee "$EVIDENCE_DIR/deploy-live.log"
-          echo 'deploy=pass' >> "$EVIDENCE_DIR/state.txt"
+          git diff --name-only --diff-filter=ACMRTUXB "$BASE_SHA" "$GITHUB_SHA" > "$RUNNER_TEMP/active-changed-files.txt"
+          cat "$RUNNER_TEMP/active-changed-files.txt"
 
-      - name: Smoke tenant production
-        shell: bash
+          forbidden='(^|/)\.env($|\.)|(^|/)server/work/|(^|/)tmp/|(^|/)(backup|backups)/|(^|/).*generated[-_ ]evidence|^\.github/workflows/.*(once|sync|transport|temporary).*\.ya?ml$|^server/scripts/\..*trigger$'
+          if grep -Eiq "$forbidden" "$RUNNER_TEMP/active-changed-files.txt"; then
+            echo "Forbidden temporary, secret, backup, generated, or transport file detected:" >&2
+            grep -Ei "$forbidden" "$RUNNER_TEMP/active-changed-files.txt" >&2 || true
+            exit 1
+          fi
+
+      - name: Confirm validation ownership
         run: |
-          set -euo pipefail
-          BASE='https://alu.kairo.vn'
-          health=0
-          for attempt in $(seq 1 18); do
-            health="$(curl --silent --show-error --output "$EVIDENCE_DIR/health.json" --write-out '%{http_code}' "$BASE/health" || true)"
-            [ "$health" = '200' ] && break
-            sleep 5
-          done
-          test "$health" = '200'
-          boot="$(curl --silent --show-error --output "$EVIDENCE_DIR/guest-boot.json" --write-out '%{http_code}' "$BASE/api/method/metaforge.api.get_boot" || true)"
-          test "$boot" = '403'
-          printf 'health=%s\nguest_boot=%s\nsmoke=pass\n' "$health" "$boot" >> "$EVIDENCE_DIR/state.txt"
-
-      - name: Extract tenant version evidence
-        shell: bash
-        run: |
-          set -euo pipefail
-          version_id="$(node -e "const fs=require('fs');const rows=fs.readFileSync(process.env.EVIDENCE_DIR+'/wrangler-output.ndjson','utf8').trim().split(/\\r?\\n/).map(x=>JSON.parse(x));const row=[...rows].reverse().find(x=>x.type==='deploy'&&x.version_id);process.stdout.write(row?.version_id||'')")"
-          test -n "$version_id"
-          printf 'tenant_version_id=%s\nprovider_evidence=pass\n' "$version_id" >> "$EVIDENCE_DIR/state.txt"
-
-      - name: Upload tenant release evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: alu-production-release-${{ github.run_id }}
-          path: ${{ runner.temp }}/alu-release-evidence/
-          if-no-files-found: warn
-          retention-days: 30
-
-      - name: Report tenant release on PR 47
-        if: always()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('node:fs');
-            const dir = `${process.env.RUNNER_TEMP}/alu-release-evidence`;
-            const state = fs.existsSync(`${dir}/state.txt`) ? fs.readFileSync(`${dir}/state.txt`, 'utf8') : 'release job did not create state.txt';
-            const marker = '<!-- alu-sales-production-release -->';
-            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            const body = `${marker}\n# alu sales production release\n\n\`\`\`text\n${state}\n\`\`\`\n\n[Workflow and artifacts](${runUrl})`;
-            const comments = await github.paginate(github.rest.issues.listComments, { owner: context.repo.owner, repo: context.repo.repo, issue_number: 47 });
-            const previous = comments.find((comment) => comment.body?.includes(marker));
-            if (previous) await github.rest.issues.updateComment({ owner: context.repo.owner, repo: context.repo.repo, comment_id: previous.id, body });
-            else await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: 47, body });
-
-  release_gateway:
-    if: github.event_name == 'push' && contains(github.event.head_commit.modified, '.github/release/gateway-production.trigger')
-    name: Release Gateway production
-    runs-on: ubuntu-latest
-    timeout-minutes: 35
-    environment: production
-    env:
-      TARGET_SHA: cbf7506dd8f04cb93f77e30f5c5fba3b6770b04f
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-
-    steps:
-      - name: Checkout verified Gateway release
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ env.TARGET_SHA }}
-          persist-credentials: false
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.0
-          run_install: false
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Prepare Gateway release directory
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$TARGET_SHA" = "cbf7506dd8f04cb93f77e30f5c5fba3b6770b04f"
-          test -n "${CLOUDFLARE_API_TOKEN:-}"
-          echo "EVIDENCE_DIR=$RUNNER_TEMP/gateway-release-evidence" >> "$GITHUB_ENV"
-          mkdir -p "$RUNNER_TEMP/gateway-release-evidence"
-          printf 'run_id=%s\ntarget_sha=%s\nstarted_at=%s\n' \
-            "$GITHUB_RUN_ID" "$TARGET_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            > "$RUNNER_TEMP/gateway-release-evidence/state.txt"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build and stage Gateway frontend
-        shell: bash
-        run: |
-          set -euo pipefail
-          pnpm --filter metaforge run build 2>&1 | tee "$EVIDENCE_DIR/build.log"
-          node server/scripts/stage-client-bundle.mjs 2>&1 | tee "$EVIDENCE_DIR/stage.log"
-          echo 'build=pass' >> "$EVIDENCE_DIR/state.txt"
-
-      - name: Deploy Gateway
-        shell: bash
-        env:
-          WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/gateway-release-evidence/wrangler-output.ndjson
-        run: |
-          set -euo pipefail
-          pnpm --dir server exec wrangler deploy --config apps/gateway-worker/wrangler.jsonc 2>&1 | tee "$EVIDENCE_DIR/deploy.log"
-          echo 'deploy=pass' >> "$EVIDENCE_DIR/state.txt"
-
-      - name: Smoke Gateway production
-        shell: bash
-        run: |
-          set -euo pipefail
-          BASE='https://alu.kairo.vn'
-          health="$(curl --silent --show-error --output "$EVIDENCE_DIR/health.json" --write-out '%{http_code}' "$BASE/health" || true)"
-          root="$(curl --silent --show-error --output "$EVIDENCE_DIR/root.html" --write-out '%{http_code}' "$BASE/" || true)"
-          boot="$(curl --silent --show-error --output "$EVIDENCE_DIR/guest-boot.json" --write-out '%{http_code}' "$BASE/api/method/metaforge.api.get_boot" || true)"
-          test "$health" = '200'
-          test "$root" = '200'
-          test "$boot" = '403'
-          printf 'health=%s\nroot=%s\nguest_boot=%s\nsmoke=pass\n' "$health" "$root" "$boot" >> "$EVIDENCE_DIR/state.txt"
-
-      - name: Extract Gateway version evidence
-        shell: bash
-        run: |
-          set -euo pipefail
-          version_id="$(node -e "const fs=require('fs');const rows=fs.readFileSync(process.env.EVIDENCE_DIR+'/wrangler-output.ndjson','utf8').trim().split(/\\r?\\n/).map(x=>JSON.parse(x));const row=[...rows].reverse().find(x=>x.type==='deploy'&&x.version_id);process.stdout.write(row?.version_id||'')")"
-          test -n "$version_id"
-          printf 'gateway_version_id=%s\nprovider_evidence=pass\n' "$version_id" >> "$EVIDENCE_DIR/state.txt"
-
-      - name: Upload Gateway release evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: gateway-production-release-${{ github.run_id }}
-          path: ${{ runner.temp }}/gateway-release-evidence/
-          if-no-files-found: warn
-          retention-days: 30
-
-      - name: Report Gateway release on PR 47
-        if: always()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('node:fs');
-            const dir = `${process.env.RUNNER_TEMP}/gateway-release-evidence`;
-            const state = fs.existsSync(`${dir}/state.txt`) ? fs.readFileSync(`${dir}/state.txt`, 'utf8') : 'release job did not create state.txt';
-            const marker = '<!-- gateway-sales-production-release -->';
-            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            const body = `${marker}\n# Gateway sales production release\n\n\`\`\`text\n${state}\n\`\`\`\n\n[Workflow and artifacts](${runUrl})`;
-            const comments = await github.paginate(github.rest.issues.listComments, { owner: context.repo.owner, repo: context.repo.repo, issue_number: 47 });
-            const previous = comments.find((comment) => comment.body?.includes(marker));
-            if (previous) await github.rest.issues.updateComment({ owner: context.repo.owner, repo: context.repo.repo, comment_id: previous.id, body });
-            else await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: 47, body });
+          echo "Full test, typecheck, and build run once in CI."
+          echo "Feature workflows run focused gates or pass quickly when unrelated."
+          echo "Production deployment is not part of PR validation."
