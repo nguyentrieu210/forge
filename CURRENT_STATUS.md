@@ -6,9 +6,12 @@ Ngày cập nhật: **2026-08-01**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Default head sau CI cleanup: `60e19f0a6f498a2471a14210ec6939b3bdf1a0fd`.
+- Current default head tại snapshot: `1efac7e1bdafae32a58d4c64386e9e42d4e32cc4`.
+- CI cleanup merge SHA: `60e19f0a6f498a2471a14210ec6939b3bdf1a0fd`.
 - CI cleanup PR: #127.
 - Canonical queue: `EPIC_STATUS.md`.
+
+Commit `1efac7e1...` sau cleanup chỉ cập nhật Gateway production trigger; không sửa workflow/handoff của #127.
 
 ## CI cleanup — DONE
 
