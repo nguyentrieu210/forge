@@ -6,18 +6,22 @@ on:
       - feat/inventory-manufacturing-item-catalog-20260731
     paths:
       - ".github/workflows/inventory-remote-audit.yml"
+  pull_request:
+    paths:
+      - ".github/workflows/inventory-remote-audit.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: inventory-remote-catalog-audit
+  group: inventory-remote-catalog-audit-${{ github.event_name }}
   cancel-in-progress: false
 
 jobs:
   audit-alu:
     name: Read-only redacted alu catalog audit
+    if: ${{ github.event_name != 'pull_request' || github.head_ref == 'feat/inventory-manufacturing-item-catalog-20260731' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
