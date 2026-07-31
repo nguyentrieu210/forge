@@ -16,16 +16,32 @@ class StatementAdapter {
     return this;
   }
 
+  parameters() {
+    if (!/\?\d+/.test(this.sql)) return this.args;
+    return Object.fromEntries(this.args.map((value, index) => [String(index + 1), value]));
+  }
+
   async first() {
-    return this.db.prepare(this.sql).get(...this.args) ?? null;
+    const parameters = this.parameters();
+    return (Array.isArray(parameters)
+      ? this.db.prepare(this.sql).get(...parameters)
+      : this.db.prepare(this.sql).get(parameters)) ?? null;
   }
 
   async all() {
-    return { results: this.db.prepare(this.sql).all(...this.args) };
+    const parameters = this.parameters();
+    return {
+      results: Array.isArray(parameters)
+        ? this.db.prepare(this.sql).all(...parameters)
+        : this.db.prepare(this.sql).all(parameters),
+    };
   }
 
   async run() {
-    const result = this.db.prepare(this.sql).run(...this.args);
+    const parameters = this.parameters();
+    const result = Array.isArray(parameters)
+      ? this.db.prepare(this.sql).run(...parameters)
+      : this.db.prepare(this.sql).run(parameters);
     return { meta: { changes: Number(result.changes ?? 0) } };
   }
 }
