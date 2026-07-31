@@ -6,15 +6,16 @@ Forge là monorepo ERP đa tenant trên Cloudflare. Backend CloudForge cung cấ
 
 Repo local chuẩn: `C:\Forge`. Package manager pnpm 9, Node từ 22.
 
-## Hiện trạng
+## Hiện trạng Git
 
 - Default branch: `hotfix/alumdoor-print-list-delete`.
 - Latest default-branch commit quan sát: `cd60f8c09c48105db84a82c12ad3b32d9f075064`.
 - Working branch: `feat/finance-ar-ap-completion`.
-- Draft PR: `#15`.
-- Finance exact head trước commit handoff này: `be615aac9e2d9943dcda0615ce1e5302c7a5670a`.
+- Draft PR: `#15` — `feat(finance): add invoice due dates and AR/AP aging`.
+- Finance code head trước các commit handoff cuối: `eb16f07d38ec12380777845940c8147090d0f5bb`.
 - Baseline code/schema đã qua CI trước đó: `591ca359937d6ae12803d36c74996db8482060af`, run `30570000862`, job `90964015638`: test/typecheck/build PASS.
-- Finance branch chưa có exact-head code CI evidence; workflow quan sát Cloudflare không được tính là code gate.
+- Finance branch chưa có exact-head code CI evidence.
+- Workflow quan sát Cloudflare không được tính là code gate.
 - `server/work/` và `tmp/` là generated/work directories, không xóa hoặc commit.
 
 ## Workstream hiện tại — Tài chính và công nợ AR/AP
@@ -26,24 +27,26 @@ Người dùng đã cho phép tiếp tục theo phương án mặc định an to
 - Allocation chỉ cùng company, party, party account và currency.
 - Credit-limit/Sales Order blocking và cross-currency allocation để pha sau.
 
-Contract: `server/docs/FINANCE-AR-AP-BRD.md`, trạng thái G1 đã duyệt.
+Contract authoritative: `server/docs/FINANCE-AR-AP-BRD.md`, trạng thái G1 đã duyệt.
 
 ### Đã implement — due date và aging backend
 
 - `server/migrations/tenant/0030_finance_invoice_aging.sql`
-  - due-date guards cho submitted Sales/Purchase Invoice;
-  - chặn ngày hạn trước ngày hạch toán;
-  - `finance_invoice_terms` projection;
-  - legacy invoice thiếu hạn fallback về posting date;
-  - metadata Sales Invoice có Due Date required.
+  - xác thực explicit due date;
+  - chặn ngày không hợp lệ hoặc trước posting date;
+  - metadata Sales Invoice có Due Date required;
+  - giữ compatibility cho invoice/API cũ thiếu due date;
+  - fallback về posting date và đánh dấu `due_date_source = posting_date_fallback`;
+  - explicit due date được đánh dấu `due_date_source = explicit`.
 - `server/packages/query/src/finance-aging.ts`
   - `Accounts Receivable Aging`;
   - `Accounts Payable Aging`;
   - bắt buộc `as_of_date` ISO;
   - tenant/cutoff/filter parameterized;
-  - outstanding tại cutoff derive từ Payment Ledger.
+  - outstanding tại cutoff derive từ immutable Payment Ledger;
+  - trả và lọc `due_date_source`.
 - `server/apps/query-worker/src/index.ts`
-  - dùng `FinanceQueryCompiler` cho sync và prepared reports.
+  - dùng `FinanceQueryCompiler` cho synchronous và prepared reports.
 - `server/packages/policy/src/index.ts`
   - report permissions theo Accounts/Sales/Purchase domain.
 - `server/packages/core/src/errors.ts`
@@ -58,21 +61,35 @@ Targeted tests:
 - `server/tests/finance-aging-policy.test.mjs`
 - `server/tests/finance-aging-errors.test.mjs`
 
-Evidence cục bộ độc lập:
+Evidence độc lập:
 
-- migration test: PASS, gồm metadata required;
+- compatibility migration fixture: PASS;
 - strict TypeScript harness cho finance compiler: PASS;
-- SQL execution cutoff fixture: invoice 1.000, payment 300 trước cutoff, payment 700 sau cutoff => outstanding 700, overdue 21 ngày, bucket 1–30 ngày: PASS.
+- SQL cutoff execution: PASS;
+- `due_date_source` projection/filter: PASS.
+
+### Compatibility boundary quan trọng
+
+Migration `0030` chưa hard-reject invoice thiếu due date. Lý do: API clients, fixtures và legacy invoices hiện hữu chưa được backfill đầy đủ.
+
+Hard database presence enforcement chỉ được thêm bằng migration append-only mới sau khi:
+
+1. dry-run liệt kê toàn bộ `posting_date_fallback`;
+2. unresolved count bằng 0;
+3. checksum được review;
+4. staging migration và smoke pass.
+
+Không sửa migration `0030` sau khi đã chạy ở bất kỳ tenant nào.
 
 ### Chưa xong
 
 1. Root `pnpm test`, `pnpm typecheck`, `pnpm build` và GitHub exact-head CI.
-2. Worker-level D1 report integration nếu full test suite chưa cover compiler injection.
+2. Worker-level D1 report integration nếu full suite chưa cover compiler injection.
 3. UI/report navigation cho AR/AP Aging.
-4. Payment Entry partial/unallocated.
-5. Payment Allocation append-only + source/target guards.
-6. Party Statement, Debt Summary và Advance Balance.
-7. Backfill/cutover legacy finance data.
+4. Backfill và hard due-date enforcement.
+5. Payment Entry partial/unallocated.
+6. Payment Allocation append-only + source/target guards.
+7. Party Statement, Debt Summary và Advance Balance.
 
 Không deploy Cloudflare, không migrate production và không sửa production secrets trong workstream này nếu chưa có yêu cầu rõ.
 
@@ -123,10 +140,10 @@ Không được bật FIFO cho `alu` trước backfill/cutover và staging smoke
 ### Finance P0
 
 1. Đọc exact-head workflow `CI` và sửa mọi regression.
-2. Sau CI xanh, thêm Payment Entry partial/unallocated và Payment Allocation trong lát cắt riêng.
-3. Thêm Party Statement, Debt Summary, Advance Balance.
-4. Thêm metadata UI/report navigation.
-5. Backfill dry-run, staging migration và reconciliation trước production.
+2. Thêm worker-level report integration nếu root suite chưa cover.
+3. Viết dry-run backfill cho `posting_date_fallback` và hard-presence migration sau unresolved = 0.
+4. Sau aging gate xanh, thêm Payment Entry partial/unallocated và Payment Allocation trong lát cắt riêng.
+5. Thêm Party Statement, Debt Summary, Advance Balance và metadata UI.
 
 ### FIFO P0 còn lại
 
@@ -143,13 +160,14 @@ Backlog chi tiết ở `NEXT_TASKS.md`.
 1. `CURRENT_STATUS.md`
 2. `NEXT_TASKS.md`
 3. `server/docs/FINANCE-AR-AP-BRD.md`
-4. `server/migrations/tenant/0030_finance_invoice_aging.sql`
-5. `server/packages/query/src/finance-aging.ts`
-6. `server/apps/query-worker/src/index.ts`
-7. `server/packages/policy/src/index.ts`
-8. `server/packages/core/src/errors.ts`
-9. Các finance migration/query/policy/error tests mới.
-10. `server/docs/ALUMDOOR-PURCHASE-RECEIPT-ALLOCATION.md`
+4. `server/docs/FINANCE-AR-AP-IMPLEMENTATION.md`
+5. `server/migrations/tenant/0030_finance_invoice_aging.sql`
+6. `server/packages/query/src/finance-aging.ts`
+7. `server/apps/query-worker/src/index.ts`
+8. `server/packages/policy/src/index.ts`
+9. `server/packages/core/src/errors.ts`
+10. Các finance migration/query/policy/error tests mới.
+11. `server/docs/ALUMDOOR-PURCHASE-RECEIPT-ALLOCATION.md`
 
 ## Giả định không được tự ý thay đổi
 
@@ -162,6 +180,7 @@ Backlog chi tiết ở `NEXT_TASKS.md`.
 - Tenant deploy phải qua script tạo đúng tenant/database config.
 - GL/Payment Ledger là nguồn sự thật; không lưu outstanding mutable client-authoritative.
 - Finance allocation không cross-currency trong pha đầu.
+- Hard due-date presence không bật trước backfill/checksum/staging.
 - Allocation ledger sau FIFO activation là nguồn sự thật; progress table cũ chỉ là compatibility projection sinh từ cùng plan.
 - Không bật rollout nếu unresolved > 0 hoặc checksum chưa được review.
 - Không đưa `.env`, `.dev.vars`, token, private key, session secret hoặc Cloudflare secret vào Git/log/tài liệu.
