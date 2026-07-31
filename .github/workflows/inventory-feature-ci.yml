@@ -58,8 +58,8 @@ jobs:
         shell: bash
         run: |
           set +e
-          pnpm --dir server run audit:alumdoor-catalog -- \
-            --brief briefs/alumdoor-v2.json \
+          node server/scripts/audit-alumdoor-catalog.mjs \
+            --brief server/briefs/alumdoor-v2.json \
             --redacted \
             --output "$RUNNER_TEMP/alumdoor-v2-catalog-audit.json"
           status=$?
