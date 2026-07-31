@@ -64,6 +64,18 @@ export function asCloudForgeError(value: unknown): CloudForgeError {
   if (message.includes("DOCUMENT_NOT_FOUND")) return errors.notFound();
   if (message.includes("DOCUMENT_ALREADY_EXISTS")) return errors.exists();
   if (message.includes("IDEMPOTENCY_KEY_REUSED") || message.includes("UNIQUE constraint failed: mutation_receipts")) return errors.idempotency();
+  if (message.includes("INVOICE_DUE_DATE_REQUIRED")) {
+    return errors.validation("Invoice due date is required before submission");
+  }
+  if (message.includes("INVOICE_DUE_DATE_INVALID")) {
+    return errors.validation("Invoice due date must be a valid YYYY-MM-DD date");
+  }
+  if (message.includes("INVOICE_DUE_DATE_BEFORE_POSTING")) {
+    return errors.validation("Invoice due date cannot be before the posting date");
+  }
+  if (message.includes("INVOICE_POSTING_DATE_INVALID")) {
+    return errors.validation("Invoice posting date is invalid");
+  }
   if (/REFERENCE_SOURCE_NOT_FOUND|REFERENCE_ITEM_NOT_FOUND|REFERENCE_QUANTITY_NEGATIVE|REFERENCE_QUANTITY_EXCEEDED|OUTSTANDING_EXCEEDED|ACTIVE_FULFILLMENT_EXISTS|ACTIVE_PAYMENT_ALLOCATIONS|NEGATIVE_STOCK|STOCK_RESERVATION_EXCEEDED|BANK_TRANSACTION_NOT_SUBMITTED|BANK_RECONCILIATION_NEGATIVE|BANK_RECONCILIATION_OVER_ALLOCATED|SALARY_SLIP_ALREADY_IN_PAYROLL|E_INVOICE_ALREADY_SUBMITTED|PURCHASE_ALLOCATION_(?:WINDOW_NOT_OPEN|PO_NOT_SUBMITTED|PO_NOT_CANCELLED|PO_ROW_NOT_FOUND|RECEIPT_ROW_NOT_FOUND|REVERSAL_SOURCE_INVALID|REVERSAL_EXCEEDED|QUANTITY_NEGATIVE|QUANTITY_EXCEEDED)|PURCHASE_OBLIGATION_QUANTITY_NEGATIVE|PURCHASE_UNAPPLIED_(?:SOURCE_INVALID|QUANTITY_EXCEEDED)/.test(message)) {
     return errors.reference(message.replace(/^.*?(REFERENCE_|OUTSTANDING_|ACTIVE_|PURCHASE_)/, "$1"));
   }
