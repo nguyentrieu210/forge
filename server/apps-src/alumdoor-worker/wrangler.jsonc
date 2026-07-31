@@ -1,19 +1,16 @@
 {
   "$schema": "../../node_modules/wrangler/config-schema.json",
   "name": "cloudforge-app-alumdoor",
-  "main": "src/index.ts",
+  "main": "src/entry.ts",
   "compatibility_date": "2026-07-27",
   "compatibility_flags": ["nodejs_compat"],
-  // Không binding nào chạm được dữ liệu. Mọi đọc/ghi đi ngược qua gateway với danh tính của
-  // chính người dùng vừa gọi, nên Worker này không tự làm được gì thay mặt ai.
-  //
-  // Binding dưới đây là đường ĐI NGƯỢC đó: `fetch()` thẳng tới hostname của tenant trả 522 vì
-  // Worker chạy sau cùng zone. Service binding gọi thẳng script gateway — không DNS, không
-  // zone — và gateway vẫn đòi đủ credential theo (tenant, app) cùng danh tính đã ký.
-  "services": [{ "binding": "PLATFORM", "service": "cloudforge-gateway" }],
-
-  // Đọc ảnh bảng giá / hoá đơn NCC. Workers AI KHÔNG chạm được dữ liệu của tenant: nó chỉ
-  // nhận đúng những byte mà Worker này đưa cho, và những byte đó đến từ một lời gọi ngược
-  // đã được kiểm quyền bằng danh tính của chính người bấm nút.
-  "ai": { "binding": "AI" }
+  "services": [
+    {
+      "binding": "PLATFORM",
+      "service": "cloudforge-gateway"
+    }
+  ],
+  "ai": {
+    "binding": "AI"
+  }
 }
