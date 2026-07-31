@@ -2,6 +2,25 @@
 
 Ngày cập nhật: **2026-07-31**.
 
+## P0 — Merge gate và staging smoke cho PR #74
+
+PR `#74` sửa lookup Item Price legacy cho trường hợp production `Giá niêm yết + TRỤC 114_1.8LY + Mét = 180.000 VND`.
+
+1. Kiểm PR vẫn mergeable và exact final HEAD không đổi.
+2. Cả sáu workflow phải PASS trên exact final HEAD sau commit handoff; release jobs trong PR phải SKIPPED.
+3. Chỉ squash-merge khi có yêu cầu merge rõ ràng.
+4. Sau merge, deploy **staging trước** bằng exact merge SHA; không nối tự động sang production.
+5. Staging functional smoke có đăng nhập:
+   - mở Sales Order mới;
+   - chọn `Giá niêm yết`;
+   - chọn `TRỤC 114_1.8LY`;
+   - xác minh ĐVT `Mét`, Đơn giá `180.000`, Thành tiền cập nhật khi nhập số lượng;
+   - đổi sang Item/UOM khác và xác minh không lấy chéo giá;
+   - lưu chứng từ thử và xác minh pricing authoritative giữ cùng rate;
+   - huỷ/xoá chứng từ thử an toàn.
+6. Chỉ production sau staging evidence và một lệnh production riêng.
+7. Không migration/mutate Item Price, không sửa secrets và FIFO vẫn disabled.
+
 ## Purchase/FIFO — code correction và Tenant release đã hoàn tất
 
 - PR `#63` squash-merge SHA `ac0c2241b2dc16abfd16b4b3e70943d8bbff8476`.
