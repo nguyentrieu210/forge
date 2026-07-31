@@ -6,6 +6,7 @@ const Lazy = lazy(() => import("./BuilderRoutes.js"));
 
 export interface BuilderRoutesProps {
   which: string;
+  createNew?: boolean;
   taskMeta: DocTypeMeta;
   registry: ControlRegistry;
   services: FieldServices;
