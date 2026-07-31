@@ -2,130 +2,122 @@
 
 Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
 
-## Alumdoor landing/login refresh — PR #17
-
-- Branch: `feat/login-landing-ui-refresh`.
-- Exact code head đã kiểm chứng trước cập nhật tài liệu: `b90fc6760439f6bb90a5bb42a417fe7c9c1c409d`.
-- Base đã rebase sạch: `81697d454db5e22e758a8aeda8cc40f1f247b18a`.
-- Phạm vi: landing guest và login riêng cho Alumdoor; không thay đổi Social Commerce, auth API, permission hoặc nghiệp vụ.
-- Nhận diện dùng cam `#F15C2D`, than `#393938`, nền trắng/xám kỹ thuật theo mẫu logo Alumdoor.
-- `PR Validation` run `30622672127`, job `91130621484`: install, tests, typecheck và build **PASS**.
-- `UI Pull Request Validation` run `30622672113`, job `91130621422`: lint, tests, typecheck, build, Chromium browser QA, artifact ảnh và cookie auth smoke **PASS**.
-- Auth smoke tạo user/password/session secret ngẫu nhiên chỉ trong runner; không commit secret và không sửa production secret.
-- Không deploy Cloudflare trong đợt này.
-
-## Git
+## Git và nguồn sự thật
 
 - Repository: `nguyentrieu210/forge`.
-- Branch/default branch: `hotfix/alumdoor-print-list-delete`.
-- Code sidebar: `87cd45aa9272f5600ff3d5914f697ce9a26994b6` (`fix(ui): compact desktop sidebar`).
-- Release target trước trigger: `da04f7fcfdc4c8e4ddf7ff70c79e3a10458ce412`.
-- Gateway production trigger: `9a7bbc14b8e7f3e556404cce19914da1e21e5e10` (`release: trigger compact sidebar gateway production`).
-- Baseline code/schema đã qua CI trước đó: `591ca359937d6ae12803d36c74996db8482060af`.
-- `server/work/`, `tmp/`, backup SQL, `.env` và generated artifacts không được commit.
+- Default branch: `hotfix/alumdoor-print-list-delete`.
+- Working branch: `feat/inventory-manufacturing-item-catalog-20260731`.
+- PR: `#27` — `feat(inventory): audit Alumdoor Item catalog and manufacturing readiness`.
+- Default đã đồng bộ tới `81697d454db5e22e758a8aeda8cc40f1f247b18a`; branch behind `0` và conflict-free tại lần kiểm gần nhất.
+- PR body là nguồn authoritative cho final branch HEAD và exact-head workflow run/job IDs.
+- Không commit `.env`, secret, `server/work/`, `tmp/`, backup hoặc generated report.
 
-## Sidebar/runtime UI
+## Authoritative metadata và tài liệu
 
-- Đã làm gọn sidebar desktop tại `client/apps/runtime/src/styles.css`.
-- Sidebar rộng `15.75rem` thay vì `17rem` khi mở.
-- Group header, ô tìm kiếm, dòng menu, icon và khoảng cách dọc được giảm kích thước.
-- Không ẩn route, không đổi permission và không xoá mục Báo cáo/Danh mục.
+- Alumdoor metadata: `server/briefs/alumdoor-v2.json`, version `2.0.34`.
+- Tài liệu:
+  - `server/docs/ALUMDOOR-INVENTORY-MANUFACTURING-BRD.md`;
+  - `server/docs/ALUMDOOR-INVENTORY-MANUFACTURING-TECHNICAL-PLAN.md`;
+  - `server/docs/ALUMDOOR-INVENTORY-MANUFACTURING-ITEM-AUDIT.md`;
+  - `server/docs/ALUMDOOR-INVENTORY-MANUFACTURING-SLICE-A-REVIEW.md`.
 
-## Gateway production release
+## Slice A đã hoàn thiện
 
-- Đã push `.github/release/gateway-production.trigger` lên default branch để kích hoạt Cloudflare Git build cho `cloudforge-gateway`.
-- Trigger trỏ tới code target `da04f7fcfdc4c8e4ddf7ff70c79e3a10458ce412`, môi trường `production`, lý do `compact-sidebar-release`.
-- Việc này chỉ phát hành Gateway/frontend; không chạy tenant migration, không deploy lại tenant Worker và không bật FIFO.
-- Chưa có provider evidence từ Cloudflare cho build/deployment/version ID hoặc smoke production sau trigger.
+### Catalog audit
 
-## CI
+- `server/scripts/alumdoor-catalog-audit-planner.mjs`
+  - audit Item, Item Group, UOM, Measurement Profile, Warehouse, BOM và Production Standard;
+  - finding code/severity/count/checksum xác định;
+  - redaction;
+  - missing source, duplicate/circular BOM, UOM/profile/warehouse và warehouse-role coverage.
+- `server/scripts/audit-alumdoor-catalog.mjs`
+  - chỉ đọc;
+  - hỗ trợ fixture, authoritative brief và tenant source;
+  - remote mặc định redacted;
+  - từ chối write/fix/apply flags;
+  - đọc cả active và disabled master rows;
+  - output mặc định ở OS temp và từ chối output nằm trong repository.
 
-Baseline đã xác minh:
+### Runtime Item validation
 
-- Workflow run: `30570000862`.
-- Job: `90964015638` (`Test, typecheck and build`).
-- Exact head: `591ca359937d6ae12803d36c74996db8482060af`.
-- Install/test/typecheck/build: **PASS**.
+- `server/apps-src/alumdoor-worker/src/entry.ts` compose validator lịch sử và invariant catalog.
+- Lỗi hệ thống/auth của validator lịch sử được giữ nguyên; khi cả hai là lỗi nghiệp vụ 422, invariant catalog nghiêm hơn được trả về để không che lý do field-level.
+- `server/apps-src/alumdoor-worker/src/item-catalog-invariants.ts` khóa:
+  - dịch vụ không stock/manufacturing/batch/serial/reorder;
+  - non-service bắt buộc stage/supply hợp lệ;
+  - purchase/manufacturing eligibility server-side;
+  - partial-save merge current Item;
+  - thiếu `PLATFORM` binding thì fail closed.
+- `server/apps-src/alumdoor-worker/wrangler.jsonc` dùng `src/entry.ts`; không đổi secret hoặc binding.
 
-## Cloudflare production tenant `alu`
+### Regression
 
-- Người vận hành xác nhận workflow release đã chạy được sau khi sửa credential.
-- Code/schema FIFO target `591ca359...` đã được đưa qua quy trình backup, migration và tenant deploy theo xác nhận vận hành.
-- FIFO rollout vẫn phải giữ **disabled**.
-- Gateway `cloudforge-gateway` dùng Cloudflare Git build; build command đúng cho monorepo là:
+- `server/tests/alumdoor-catalog-audit.test.mjs`.
+- `server/tests/alumdoor-catalog-warehouse-role.test.mjs`.
+- `server/tests/alumdoor-item-validator.test.mjs`.
+- Cover disabled rows, redaction, deterministic checksum, output safety, service tracking, required stage/supply, UOM/profile/group và partial save.
 
-```bash
-pnpm --filter metaforge run build && node server/scripts/stage-client-bundle.mjs
-```
+## Review score
 
-- Deploy command Gateway:
+- Review: `server/docs/ALUMDOOR-INVENTORY-MANUFACTURING-SLICE-A-REVIEW.md`.
+- Điểm: **96/100**.
+- Critical: **0**.
+- High: **0** sau remediation.
+- Quality threshold `>=95`: **PASS**.
 
-```bash
-pnpm --dir server exec wrangler deploy --config apps/gateway-worker/wrangler.jsonc
-```
+## CI evidence
 
-- Còn thiếu bằng chứng ghi vào repo: deployment/version ID mới nhất, kết quả `/health`, login/CRUD/print/PDF và ảnh sidebar production sau trigger.
+Hai required workflows đã chạy xanh trên cả implementation head và handoff-doc head trong quá trình đóng gate:
 
-## FIFO Purchase Receipt vào nhiều Purchase Order
+- `PR Validation`: repository tests, typecheck và build **PASS**.
+- `Inventory and Manufacturing CI`: focused tests, redacted audit artifact, server SQL, brief validation, frontend lint, repository tests, typecheck và build **PASS**.
 
-Contract authoritative: `server/docs/ALUMDOOR-PURCHASE-RECEIPT-ALLOCATION.md`.
+Final merge chỉ dùng workflow result gắn với **current PR head**; exact SHA/run/job được cập nhật trong PR body sau vòng final CI. Workflow `Cloudflare Production Release Observation` không phải merge gate và không được tính vào bằng chứng test.
 
-### Đã hoàn thành và qua CI
+## Merge readiness
 
-- Migration append-only: `0027_purchase_receipt_allocation.sql`, `0028_purchase_allocation_cancel_guard.sql`, `0029_purchase_allocation_rollout.sql`.
-- Allocation schema: queue, settlement windows, obligations, allocations, unapplied quantities, settlement events và revision claims.
-- D1 atomic batch cho document, stock, procurement compatibility rows, allocation rows và mutation receipt.
-- Canonical material key do server tạo từ item, chiều dài, barem kg/m, màu, dập, measurement profile và stock UOM.
-- Supplier coordinator theo `purchase:<tenant>:<company>:<supplier>` trong namespace `AGGREGATES`.
-- Revision conflict retry tối đa ba lần.
-- PO submit mở obligation theo row; Receipt submit tự FIFO qua nhiều PO; Receipt cancel sinh reversal theo nguồn.
-- Nhôm `inventory_mode = Nhôm cây/lá` dùng `qty_bar` làm số cây/lá nghĩa vụ/tồn; kg barem và kg cân thực tế giữ riêng.
-- Integration scenario: PO 200 + 100 cây, Receipt 230 cây => allocation 200 + 30, còn 70; stock 230 cây, actual weight 630 kg.
-- Stress planner cover 250 obligation rows.
+Đã đạt:
 
-### Rollout safety
+- G0 Scope: **PASS**.
+- G1 Requirements/BRD: **PASS**.
+- G2 Plan: **PASS**.
+- G3 tests/typecheck/build: **PASS**.
+- Review score: **96/100**.
+- Critical/High code finding: **0**.
+- Default synchronized, behind `0`, conflict-free tại lần kiểm gần nhất.
+- Không migration, deploy, secret hoặc tenant mutation.
 
-`purchase_allocation_rollout_state` mặc định tắt:
+Quy tắc cuối:
 
-- Không có row hoặc `enabled=0`: PO/Receipt dùng controller legacy.
-- Chỉ bật khi có backfill checksum, `unresolved_count=0`, actor và timestamp.
-- Database chặn tắt lại sau activation.
+1. Hai required workflows phải xanh trên current PR head.
+2. Khi xanh, PR được chuyển khỏi draft sang ready for review.
+3. Không merge trước yêu cầu merge rõ ràng của người dùng.
 
-Code/schema có thể live khi rollout tắt, nhưng FIFO chưa hoạt động cho tenant cho tới khi backfill/cutover hoàn tất.
+## Authoritative brief audit
 
-## Tenant-safe migration/deploy
+Audit brief v2.0.34 xác nhận:
 
-Các script hiện hành:
+- 39 master fixtures;
+- 14 UOM;
+- 13 Item Group;
+- 6 Measurement Profile;
+- 6 Warehouse;
+- 0 Item;
+- 0 active BOM/Production Standard;
+- 0 Critical, 2 High, 4 Medium.
 
-- Backup: `server/scripts/backup-tenant.mjs`.
-- Tenant-safe migration: `server/scripts/migrate-tenant.mjs`.
-- Low-level migration engine: `server/scripts/d1-migrate-remote.mjs`.
-- Tenant deploy: `server/scripts/deploy-tenant.mjs`.
-- Stage client: `server/scripts/stage-client-bundle.mjs`.
+Hai High là thiếu source Item/BOM trong brief, không phải code finding. Brief chứng minh schema/master scaffold, không chứng minh dữ liệu live.
 
-Thứ tự an toàn: backup → migration dry-run → migration live với explicit confirmation → tenant deploy dry-run → tenant deploy live với explicit confirmation → smoke health/login/CRUD/print/PDF.
+## Live tenant audit và staging
 
-## Blocker trước khi bật FIFO production
+- Chưa chạy remote audit tenant `alu`.
+- Chưa staging/deploy.
+- Live audit và staging là gate trước remediation dữ liệu, Slice B/C và production release; không phải điều kiện code-quality để merge Slice A.
 
-1. Tự `apply_unapplied` khi PO mới gia nhập window.
-2. Settlement close/reverse API/action, manual override, permission và reason.
-3. Backfill script, resolved/unresolved report, PO-level checksum và activation transaction.
-4. UI preview/timeline/report vận hành.
-5. D1 batch/latency và supplier contention test.
-6. Staging migration, backfill dry-run và smoke toàn luồng.
-7. Production backup mới và explicit approval trước activation.
-8. Xác minh Gateway production version/traffic và browser smoke hiện hành.
+## Điều phối và production safety
 
-Không bật rollout FIFO cho `alu` trước khi các blocker trên được xử lý.
-
-## RBAC Slice A đã merge
-
-- Implementation gốc: `ab974f92ffbcf015fb71d3051df33508c9f09942`.
-- Branch kiểm chứng sạch: `feat/rbac-slice-a-rebased-20260731`.
-- Exact head đã kiểm chứng: `0db13898ed00cbfe3835ce511f90c84aef38c8e8`.
-- PR `#37` đã squash-merge vào default; merge commit `93ac85a0f16c2668b706ffcf8e15d3da53c8c7a9`.
-- G3 trước rebase PASS tại workflow `30612014393`, job `91101823154`.
-- G4 exact-head PASS trên các run `30618821462`, `30619133964`, `30619408760`.
-- G5 staging/browser QA: **CHƯA CHẠY**.
-- Việc tiếp theo là Slice B riêng cho audit append-only, atomic user/roles và last-admin/self-lockout guards.
-- Không deploy Cloudflare, không sửa production secrets và không bật FIFO.
+- PR mua hàng `#14` vẫn open/draft và có migration `0031`; phải xác minh migration head trước Slice B/C.
+- FIFO rollout tenant `alu` vẫn disabled.
+- Không deploy Gateway/Tenant Worker từ nhánh này.
+- Không migrate/mutate tenant `alu`.
+- Không sửa Cloudflare secret.

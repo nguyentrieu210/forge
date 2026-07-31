@@ -2,110 +2,108 @@
 
 Ngày cập nhật: **2026-07-31**.
 
-## Hoàn thành — Alumdoor landing/login refresh
+## P0 — Finalize PR #27 for merge review
 
-- PR `#17`, branch `feat/login-landing-ui-refresh`.
-- Code head đã kiểm chứng trước cập nhật tài liệu: `b90fc6760439f6bb90a5bb42a417fe7c9c1c409d`.
-- `PR Validation` run `30622672127`, job `91130621484`: **PASS**.
-- `UI Pull Request Validation` run `30622672113`, job `91130621422`: lint, tests, typecheck, build, Chromium browser QA, artifact ảnh và cookie auth smoke **PASS**.
-- Việc còn lại trong luồng này: kiểm exact-head docs commit, bỏ Draft và merge PR; không deploy Cloudflare.
+Branch: `feat/inventory-manufacturing-item-catalog-20260731`.
 
-## P0 — Xác minh release sidebar gọn trên production
+PR: `#27`.
 
-**Mục tiêu:** xác nhận Cloudflare đã đưa bản sidebar desktop gọn lên Gateway production mà không ảnh hưởng route hoặc permission.
+Authoritative metadata: `server/briefs/alumdoor-v2.json`, version `2.0.34`.
 
-- Code sidebar: `87cd45aa9272f5600ff3d5914f697ce9a26994b6`.
-- Release target: `da04f7fcfdc4c8e4ddf7ff70c79e3a10458ce412`.
-- Production trigger: `9a7bbc14b8e7f3e556404cce19914da1e21e5e10`.
-- Chưa có Cloudflare deployment/version ID hoặc smoke evidence sau trigger.
-- Cần smoke desktop/mobile tại `alu.kairo.vn`, ghi deployment/version ID và ảnh; không đổi permission hay route.
+### Đã đạt
 
-## P0 — Xác minh production tenant `alu`
+- G0 Scope: **PASS**.
+- G1 Requirements/BRD: **PASS**.
+- G2 Technical plan: **PASS**.
+- Slice A implementation: **hoàn thành**.
+- Review score: **96/100**.
+- Critical: **0**.
+- High: **0** sau remediation.
+- Required workflows đã chứng minh focused tests/audit/SQL/brief/lint/full tests/typecheck/build đều PASS trong quá trình đóng gate.
+- Không migration, deploy, production mutation hoặc secret change.
 
-- Xác nhận Gateway version và production traffic.
-- Smoke `alu.kairo.vn`: health, login, list, form, CRUD chứng từ thử, Purchase Order preview và tải PDF.
-- Ghi deployment/version ID, thời điểm và kết quả từng bước; không ghi secret hoặc dữ liệu khách hàng.
-- Rollback trigger: login/API 5xx, sai tenant/database, mất dữ liệu CRUD, permission regression hoặc print/PDF lỗi nghiêm trọng.
+Review authoritative:
 
-## P0 — Hoàn thiện FIFO Purchase Receipt
+- `server/docs/ALUMDOOR-INVENTORY-MANUFACTURING-SLICE-A-REVIEW.md`.
 
-Contract authoritative: `server/docs/ALUMDOOR-PURCHASE-RECEIPT-ALLOCATION.md`.
+### Việc còn lại trước merge
 
-### Hoàn thành
+1. Xác minh hai required workflows xanh trên **current PR head**:
+   - `Inventory and Manufacturing CI`;
+   - `PR Validation`.
+2. Cập nhật PR body với exact current HEAD, run ID và job ID.
+3. Xác minh branch behind `0`, `mergeable=true` và không có unresolved review thread.
+4. Chuyển PR khỏi draft sang ready for review.
+5. Không merge trước yêu cầu merge rõ ràng của người dùng.
 
-- M1 schema/contracts/atomic persistence với migration `0027`, `0028`, `0029`.
-- M2 canonical material key.
-- M3 supplier coordinator.
-- M4 hiện có PO obligation, Receipt FIFO qua nhiều PO, unapplied quantity, reversal khi cancel, integration 200 + 100 nhận 230, và stress planner 250 rows.
+PR body là nguồn authoritative cho exact-head evidence, tránh sửa handoff chỉ để thay một SHA rồi tự tạo thêm một SHA khác.
 
-### Còn lại M4
+## P1 — Sau khi Slice A merge
 
-1. `apply_unapplied` khi PO mới gia nhập window.
-2. Production-shaped Receipt cancel integration test.
-3. Test nhiều Receipt lines cùng queue.
-4. Worker/DO concurrency test.
+### Audit dữ liệu live tenant `alu`
 
-### P0 — M5 Settlement và edge cases
+Chạy read-only, redacted từ môi trường vận hành có Cloudflare credential:
 
-- Close/reverse settlement, permission và reason bắt buộc.
-- Shortage/overage variance, append-only settlement event.
-- Manual FIFO override có permission + reason.
-- Backdated Receipt warning và lifecycle PO amend/cancel, Receipt cancel.
+```powershell
+New-Item -ItemType Directory -Force C:\Forge-Audit | Out-Null
+node server/scripts/audit-alumdoor-catalog.mjs `
+  --tenant alu `
+  --redacted `
+  --output C:\Forge-Audit\alu-catalog-redacted.json
+```
 
-### P0 — M6 Backfill và cutover
+Không commit report. Chỉ ghi vào handoff/issue:
 
-- Viết `backfill-purchase-receipt-allocations.mjs`, dry-run mặc định.
-- Xuất resolved/unresolved và PO-level checksum; không đoán row ID.
-- Không activation nếu checksum lệch hoặc unresolved > 0.
-- Activation ghi checksum, actor và timestamp.
+- checksum;
+- records;
+- active/disabled Item;
+- active BOM/Production Standard;
+- Critical/High/Medium/Low;
+- finding code redacted.
 
-### P1 — M7 UI và báo cáo
+Lập remediation plan riêng. Audit CLI không tự sửa dữ liệu.
 
-- Allocation preview, timeline/drill-down, remaining/received/unapplied/variance.
-- Settlement/manual override action có confirmation, permission và reason.
-- Báo cáo nhà cung cấp.
+### Staging
 
-### P0 — M8 Gate và rollout
+Staging chỉ bắt đầu sau live audit review và khi có branch cho Slice B/C. Slice A không deploy production.
 
-- Đo D1 batch/latency và supplier contention.
-- Backup production mới, staging migrations, backfill dry-run, review unresolved/checksum.
-- Staging smoke PO → Receipt → cancel → settlement → report.
-- Explicit production approval trước activation.
+## P2 — Điều phối với PR mua hàng #14
 
-## P1 — Purchase Order print/PDF verification
+- PR #14 vẫn open/draft.
+- Nội dung PR hiện có migration `0031_purchase_allocation_control_metadata.sql`; phải xác minh migration head lại sau khi #14 merge.
+- Không tạo migration inventory/manufacturing mới trước coordination gate.
+- FIFO rollout tenant `alu` vẫn disabled.
 
-- Còn lại browser smoke production, tải PDF thật, kiểm font, tràn nội dung, trang trắng và visual regression Chromium.
+## Slice B — Inventory completeness
 
-## P1 — Partial submitted-document save test
+Chỉ mở runtime/migration sau Slice A merge, live audit review và migration coordination.
 
-- Cover PUT partial merge cho normal doc, submitted doc, child table và concurrency/timestamp.
+1. Warehouse roles: RAW, WIP, FINISHED, QUARANTINE, SCRAP/OFFCUT, GENERAL.
+2. Canonical physical stock identity cho nhôm, kính/tấm, cuộn và batch/serial.
+3. Append-only physical movement projection và atomic stock ledger persistence.
+4. Stock Entry giữ source lot/dimension, colour/condition, source/target role và reversal identity.
+5. Cover receipt, transfer, issue, manufacture, return, reconciliation, cancel và concurrency.
+6. Rollout mặc định tắt.
 
-## P2 — Runtime completeness
+## Slice C — Manufacturing completeness
 
-- Hoàn thiện page/dashboard/process renderers.
-- Hoàn thiện assign picker, attachment upload/delete và tag UI.
-- Đồng bộ `server/STATUS.md`, known gaps và traceability.
+1. BOM/Production Standard revision và effective dates.
+2. Immutable Work Order BOM snapshot/checksum.
+3. Issue/consume/produce/scrap/offcut progress với reversal reference.
+4. Partial issue/manufacture, over-consumption/production guard, close/cancel.
+5. WIP, thiếu vật tư, định mức/thực tế và phế/offcut reports.
 
-## P3 — Engineering hygiene
+## Slice D — UI, QA và release
 
-- Giảm frontend chunk lớn có đo lường.
-- Chuẩn hóa local onboarding Gateway + Tenant + D1, không dùng production secret.
-- Cài Forge project pack qua PR riêng sau khi review ZIP; không chạy installer mù quáng.
+1. Item/BOM completeness indicators.
+2. Work Order snapshot và variance UI.
+3. Desktop/mobile Browser QA.
+4. Staging smoke toàn luồng.
+5. Production chỉ sau yêu cầu deploy riêng.
 
-## P0 — RBAC
+## Safety
 
-### Slice A — hoàn thành và đã merge
-
-- PR `#37`, merge commit `93ac85a0f16c2668b706ffcf8e15d3da53c8c7a9`.
-- G3 và G4 PASS; G5 staging/browser QA chưa chạy.
-
-### Slice B riêng
-
-1. Migration append-only cho RBAC audit.
-2. Atomic create user + role grants và replace roles.
-3. Last-admin và self-disable/self-demote guards.
-4. Audit role/scope/enable-disable/password reset/session revoke, không ghi secret.
-5. Targeted tests, root test/typecheck/build và exact-head PR Validation.
-6. Sau Slice B/C mới chạy G5 staging/browser QA.
-
-Không deploy Cloudflare, sửa production secrets hoặc bật FIFO khi chưa có yêu cầu riêng.
+- Không mutate/migrate tenant `alu` từ PR #27.
+- Không deploy Gateway/Tenant Worker.
+- Không sửa Cloudflare secret.
+- Không commit raw report, `.env`, `server/work/`, `tmp/`, backup hoặc generated artifact.
