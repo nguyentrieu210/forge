@@ -2,75 +2,67 @@
 
 Ngày cập nhật: **2026-07-31**.
 
-## Bán hàng — hotfix lọc mặt hàng child table
+## P0 — PR #58: Link dropdown và child-grid scroll
 
-### Đã hoàn thành
+### Trạng thái
 
-- PR `#53` đã squash-merge.
-- Feature merge SHA: `48fa4d77eefb46384272550f8f6c0699ed054fa6`.
-- `buildLinkFilters` hỗ trợ object-form và array-form metadata filters.
-- Regression kiểm đúng `{"is_sales_item":1,"disabled":0}`, operator tuple, dependent `eval:` và prototype-key guards.
-- Sáu workflow exact-head đều **PASS**: PR Validation, CI, Sales, Purchase, Inventory/Manufacturing và UI Pull Request Validation.
-- Release PR `#54` đã squash-merge thành `671b72ca374ae0227ec8f52c09d65de83108e1a2`.
-- Gateway release run `30630931291`, job `91156832579`: build, stage, deploy, smoke và provider evidence **PASS**.
-- Gateway version production: `dc6eada4-e4a1-451a-a92f-66fe04050707`.
-- Evidence artifact: `gateway-production-release-30630931291`, artifact ID `8793326579`.
-- Không deploy tenant Worker, không migration/mutate D1, không sửa production secrets.
-- FIFO vẫn disabled.
+- Branch: `hotfix/child-grid-dropdown-scroll-20260731`.
+- PR: `#58` — `fix(ui): remove recent links and restore child-grid scroll`.
+- Code head trước handoff docs: `7e84c94f65374a071aa8be44ab14f943f72c5a7f`.
+- Chưa merge, chưa deploy.
 
-### P0 — Functional browser smoke sau deploy
+### Gate trước merge
 
-Dùng dữ liệu và tài khoản production phù hợp, không ghi credential hoặc dữ liệu khách hàng vào evidence:
+1. Kiểm exact final HEAD sau cập nhật `CURRENT_STATUS.md` và `NEXT_TASKS.md`.
+2. Required workflows phải PASS trên exact final HEAD:
+   - PR Validation;
+   - CI;
+   - Sales Feature CI;
+   - Purchase Feature CI;
+   - Inventory and Manufacturing CI;
+   - UI Pull Request Validation.
+3. Đọc failed step/log thật nếu có; không đoán lỗi từ tên workflow.
+4. Xác minh PR vẫn mergeable và không bị default branch tiến lên gây conflict.
+5. Không merge nếu chưa có yêu cầu rõ của người dùng.
 
-1. Mở Báo giá và Đơn hàng, thêm dòng mới trong child table.
-2. Kiểm picker `Mã hàng` khi ô tìm kiếm trống:
-   - Item `is_sales_item=1`, `disabled=0` phải xuất hiện;
-   - Item `is_sales_item=0` phải không xuất hiện;
-   - Item `disabled=1` phải không xuất hiện.
-3. Gõ tìm theo cả mã và tên, xác minh filter không bị mất.
-4. Kiểm recent links không hiển thị lại Item đã bị disabled hoặc mất quyền bán.
-5. Hard refresh trình duyệt rồi kiểm lại để loại cache bundle/metadata cũ.
-6. Kiểm ít nhất một dòng Báo giá và một dòng Đơn hàng chọn được Item hợp lệ, tự nạp ĐVT/giá/tồn như trước.
-7. Ghi thời điểm, actor role, mã Item thử và kết quả đã redacted; không chụp token, cookie, secret hoặc dữ liệu khách hàng.
-8. Nếu thất bại, ghi rõ trường hợp: empty search, typed search, recent links hay metadata cache; mở issue kèm evidence đã redacted.
+### Browser QA cần có
 
-## Bán hàng multi-UOM — browser acceptance còn lại
+Trên form có child table, ưu tiên Báo giá và Đơn hàng:
 
-1. Item có ít nhất hai ĐVT và hai Item Price khác nhau.
-2. Đổi Item, ĐVT, Bảng giá và Kho trên Báo giá/Đơn hàng.
-3. Xác minh giá không bị lấy chéo giữa ĐVT.
-4. Xác minh tồn quy đổi đúng ĐVT bán.
-5. Smoke Item Price legacy và các giá lỗi: thiếu/sai currency, rate âm/sai định dạng, disabled.
-6. Dùng role `Kinh doanh` và `Kế toán` để xác minh quyền Price List/Item Price.
-7. Huỷ hoặc xoá chứng từ test theo quy trình nghiệp vụ sau khi thu evidence.
+1. Mở Link dropdown trong một dòng child.
+2. Xác minh không còn heading hoặc nhóm `Lựa chọn gần đây` khi ô tìm kiếm trống.
+3. Chọn một bản ghi, đóng/mở lại dropdown và xác minh lựa chọn vừa dùng không được lưu thành nhóm gần đây.
+4. Với danh sách dropdown dài:
+   - wheel vẫn cuộn danh sách khi danh sách còn khoảng cuộn;
+   - ở đầu/cuối danh sách, wheel tiếp tục cuộn vùng child grid tương ứng;
+   - wheel trên icon hoặc text trong option cho cùng kết quả.
+5. Kiểm cả bảng child gọn trong form và bảng lớn nếu màn nghiệp vụ hỗ trợ mở rộng.
+6. Kiểm scroll ngang bằng trackpad hoặc Shift+wheel khi bảng rộng.
+7. Xác minh dropdown vẫn chọn được Item, UOM, Warehouse và không mất filter/quyền.
+8. Ghi evidence đã redacted; không ghi cookie, token, secret hoặc dữ liệu khách hàng.
 
-## Theo dõi production
+### Sau merge
 
-- Theo dõi Gateway 4xx/5xx mới liên quan Link search và `alumdoor.sales.item_context`.
-- Rollback nếu có login/API 5xx diện rộng, Link picker không tải được, permission regression hoặc mất khả năng tạo chứng từ.
-- Không bật reservation/ATP trong release này.
+- Gateway/frontend release phải là PR riêng, khóa exact merge SHA và có build, deploy, `/health`, `/`, guest boot cùng Wrangler version evidence.
+- Không deploy tenant Worker vì phạm vi này chỉ là client/UI.
+- Không migration hoặc mutate D1.
 
-## RBAC
+## Bán hàng production còn phải smoke
 
-- Chạy staging/browser QA riêng cho user lifecycle, role refresh, password/session revoke, audit log và tenant isolation.
-- Không dùng dữ liệu khách hàng thật hoặc commit credential/evidence thô.
-- Slice tiếp theo chỉ mở khi scope rõ và có gate riêng.
-
-## Release automation cleanup
-
-- Giữ `.github/workflows/gateway-production-release.yml` làm đường Gateway có exact SHA, smoke và Wrangler version evidence.
-- Tenant evidence lấy từ Wrangler NDJSON.
-- Rà phần release trùng lặp trong `.github/workflows/pr-validation.yml` bằng PR riêng; không phát hành production chỉ để thử workflow.
+- Picker chỉ hiện Item `is_sales_item=1`, `disabled=0` khi tìm trống và khi gõ mã/tên.
+- Một Item có hai ĐVT và hai Item Price khác nhau phải nạp đúng giá theo ĐVT.
+- Đổi Item, ĐVT, Bảng giá và Kho phải nạp lại giá/tồn, không giữ preview cũ.
+- Role `Kinh doanh` và `Kế toán` phải giữ đúng quyền Price List/Item Price.
 
 ## Các luồng khác
 
-- Inventory/manufacturing, purchase/FIFO và các PR đang mở không thay đổi trong đợt hotfix này.
-- Trước khi tiếp tục, đọc PR body, exact-head CI, `AI_HANDOFF.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md` và kiểm default HEAD hiện hành.
-- Không merge hoặc deploy luồng khác nếu chưa có yêu cầu rõ.
+- Inventory/manufacturing, purchase/FIFO, RBAC và release automation không thay đổi trong PR `#58`.
+- Trước khi tiếp tục bất kỳ luồng nào, đọc `AI_HANDOFF.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md`, PR body và exact-head CI.
+- FIFO giữ disabled cho tới khi có rollout gate và approval riêng.
 
 ## Safety
 
 - Không commit `.env`, `.dev.vars`, token, secret, private key hoặc session secret.
 - Không commit `server/work/`, `tmp/`, backup SQL hoặc generated artifacts.
 - D1 migrations append-only.
-- Mọi production release cần exact target SHA, provider evidence và smoke phù hợp phạm vi.
+- Không merge/deploy production nếu chưa có yêu cầu rõ và evidence phù hợp phạm vi.
