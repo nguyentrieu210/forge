@@ -12,9 +12,9 @@ Repo local chuẩn: `C:\Forge`. Package manager pnpm 9, Node từ 22.
 - Latest default-branch commit quan sát: `cd60f8c09c48105db84a82c12ad3b32d9f075064`.
 - Working branch: `feat/finance-ar-ap-completion`.
 - Draft PR: `#15`.
-- Finance code head trước các commit handoff cuối: `6a19bebaf30e62587435983b0adaaede89acb452`.
+- Finance exact head trước commit handoff này: `be615aac9e2d9943dcda0615ce1e5302c7a5670a`.
 - Baseline code/schema đã qua CI trước đó: `591ca359937d6ae12803d36c74996db8482060af`, run `30570000862`, job `90964015638`: test/typecheck/build PASS.
-- Finance branch chưa có exact-head code CI evidence; run quan sát Cloudflare bị cancelled không được tính là code gate.
+- Finance branch chưa có exact-head code CI evidence; workflow quan sát Cloudflare không được tính là code gate.
 - `server/work/` và `tmp/` là generated/work directories, không xóa hoặc commit.
 
 ## Workstream hiện tại — Tài chính và công nợ AR/AP
@@ -26,7 +26,7 @@ Người dùng đã cho phép tiếp tục theo phương án mặc định an to
 - Allocation chỉ cùng company, party, party account và currency.
 - Credit-limit/Sales Order blocking và cross-currency allocation để pha sau.
 
-Contract: `server/docs/FINANCE-AR-AP-BRD.md`.
+Contract: `server/docs/FINANCE-AR-AP-BRD.md`, trạng thái G1 đã duyệt.
 
 ### Đã implement — due date và aging backend
 
@@ -35,7 +35,7 @@ Contract: `server/docs/FINANCE-AR-AP-BRD.md`.
   - chặn ngày hạn trước ngày hạch toán;
   - `finance_invoice_terms` projection;
   - legacy invoice thiếu hạn fallback về posting date;
-  - metadata Sales Invoice có Due Date.
+  - metadata Sales Invoice có Due Date required.
 - `server/packages/query/src/finance-aging.ts`
   - `Accounts Receivable Aging`;
   - `Accounts Payable Aging`;
@@ -60,7 +60,7 @@ Targeted tests:
 
 Evidence cục bộ độc lập:
 
-- migration test: PASS;
+- migration test: PASS, gồm metadata required;
 - strict TypeScript harness cho finance compiler: PASS;
 - SQL execution cutoff fixture: invoice 1.000, payment 300 trước cutoff, payment 700 sau cutoff => outstanding 700, overdue 21 ngày, bucket 1–30 ngày: PASS.
 
@@ -122,7 +122,7 @@ Không được bật FIFO cho `alu` trước backfill/cutover và staging smoke
 
 ### Finance P0
 
-1. Chờ/chạy exact-head CI cho finance branch và sửa mọi regression.
+1. Đọc exact-head workflow `CI` và sửa mọi regression.
 2. Sau CI xanh, thêm Payment Entry partial/unallocated và Payment Allocation trong lát cắt riêng.
 3. Thêm Party Statement, Debt Summary, Advance Balance.
 4. Thêm metadata UI/report navigation.
