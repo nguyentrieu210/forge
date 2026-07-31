@@ -107,28 +107,51 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+
           nohup pnpm exec wrangler dev \
             --config apps/tenant-worker/wrangler.purchase-qa.jsonc \
-            --config apps/purchase-qa-callback/wrangler.jsonc \
-            --config apps-src/alumdoor-worker/wrangler.purchase-qa.jsonc \
             --port 8801 \
             --local \
             --var "SESSION_SECRET:$FORGE_AUTH_SESSION_SECRET" \
             --var "INTERNAL_AUTH_SECRET:$FORGE_INTERNAL_AUTH_SECRET" \
             > "$RUNNER_TEMP/forge-auth-backend.log" 2>&1 &
           echo $! > "$RUNNER_TEMP/forge-auth-backend.pid"
-          ready=0
-          for attempt in $(seq 1 45); do
-            if curl --fail --silent --show-error http://127.0.0.1:8801/health > /dev/null; then
-              ready=1
+
+          nohup pnpm exec wrangler dev \
+            --config apps/purchase-qa-callback/wrangler.jsonc \
+            --port 8802 \
+            --local \
+            --var "INTERNAL_AUTH_SECRET:$FORGE_INTERNAL_AUTH_SECRET" \
+            > "$RUNNER_TEMP/forge-callback-gateway.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/forge-callback-gateway.pid"
+
+          nohup pnpm exec wrangler dev \
+            --config apps-src/alumdoor-worker/wrangler.purchase-qa.jsonc \
+            --port 8803 \
+            --local \
+            > "$RUNNER_TEMP/forge-alumdoor-worker.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/forge-alumdoor-worker.pid"
+
+          tenant_ready=0
+          callback_ready=0
+          app_ready=0
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent --show-error http://127.0.0.1:8801/health > /dev/null; then tenant_ready=1; fi
+            if curl --fail --silent --show-error http://127.0.0.1:8802/health > /dev/null; then callback_ready=1; fi
+            if curl --silent --show-error --output /dev/null http://127.0.0.1:8803/health; then app_ready=1; fi
+            if [ "$tenant_ready" = "1" ] && [ "$callback_ready" = "1" ] && [ "$app_ready" = "1" ]; then
               break
             fi
             sleep 2
           done
-          if [ "$ready" != "1" ]; then
-            cat "$RUNNER_TEMP/forge-auth-backend.log"
+          if [ "$tenant_ready" != "1" ] || [ "$callback_ready" != "1" ] || [ "$app_ready" != "1" ]; then
+            echo "tenant_ready=$tenant_ready callback_ready=$callback_ready app_ready=$app_ready"
+            cat "$RUNNER_TEMP/forge-auth-backend.log" || true
+            cat "$RUNNER_TEMP/forge-callback-gateway.log" || true
+            cat "$RUNNER_TEMP/forge-alumdoor-worker.log" || true
             exit 1
           fi
+          sleep 2
 
       - name: Install authoritative Alumdoor app and Purchase QA masters
         working-directory: server
@@ -160,6 +183,8 @@ jobs:
             client/e2e-forge/test-results/auth-session/
             client/e2e-forge/playwright-report/auth-session/
             ${{ runner.temp }}/forge-auth-backend.log
+            ${{ runner.temp }}/forge-callback-gateway.log
+            ${{ runner.temp }}/forge-alumdoor-worker.log
             ${{ runner.temp }}/forge-app-install.log
             ${{ runner.temp }}/purchase-qa-seed.log
           if-no-files-found: warn
@@ -169,6 +194,11 @@ jobs:
         if: always()
         shell: bash
         run: |
-          if [ -f "$RUNNER_TEMP/forge-auth-backend.pid" ]; then
-            kill "$(cat "$RUNNER_TEMP/forge-auth-backend.pid")" 2>/dev/null || true
-          fi
+          for pid_file in \
+            "$RUNNER_TEMP/forge-auth-backend.pid" \
+            "$RUNNER_TEMP/forge-callback-gateway.pid" \
+            "$RUNNER_TEMP/forge-alumdoor-worker.pid"; do
+            if [ -f "$pid_file" ]; then
+              kill "$(cat "$pid_file")" 2>/dev/null || true
+            fi
+          done
