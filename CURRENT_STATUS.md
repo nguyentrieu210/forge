@@ -6,40 +6,38 @@ Ngày cập nhật: **2026-07-31**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Default head khi mở nhánh: `13a4fcf021ac51f36ccd04d8ffa66da262eaf563`.
-- Working branch: `hotfix/sales-price-unicode-normalization-20260731`.
+- Default head sau release preparation: `077d9944b1cfc1f436da87472f070ee2bd864b44`.
+- Working branch: `docs/sales-price-unicode-release-status-20260731`.
 - Không commit `.env`, secret, `server/work/`, `tmp`, backup hoặc generated evidence.
 
-## Bán hàng — follow-up production cho đơn giá trống
+## Bán hàng — Unicode Item Price hotfix đã release production
 
-- Functional evidence trên `alu.kairo.vn`: chọn `TRỤC 114_1.8LY`, ĐVT `Mét` hiển thị nhưng `Đơn giá` vẫn trống.
-- Production đã chạy sales hotfix trước đó, nên đây không phải lỗi chưa cập nhật Worker.
-- Khoảng trống còn lại:
-  - dữ liệu import có thể lưu cùng chữ `Mét` bằng dạng Unicode tổ hợp khác;
-  - probe exact `<price_list>:<item_code>:<uom>` trả lỗi khác `404` đang chặn field fallback.
-- Nhánh hiện tại:
-  - chuẩn hóa Price List, Item, UOM, Currency và Warehouse về Unicode NFC trước so khớp;
-  - đọc legacy Item Price trước;
-  - cho field fallback tiếp tục khi exact-name probe lỗi;
-  - field fallback chỉ lọc server theo Price List + Item rồi so UOM đã chuẩn hóa trong code;
-  - áp cùng quy tắc cho preview và pricing authoritative lúc lưu/submit.
-- Regression mới: `server/tests/sales-price-unicode-normalization.test.mjs`.
-- Focused local verification:
-  - preview legacy với `Mét` dạng Unicode khác: PASS;
-  - preview fallback sau exact probe HTTP 400: PASS;
-  - authoritative pricing với UOM Unicode tương đương: PASS.
-- Chưa merge hoặc deploy thay đổi follow-up này; GitHub CI exact-head là gate tiếp theo.
-
-## Bán hàng — hotfix trước đã release production
-
-- Feature PR `#78` squash-merge SHA `60c604de69804b9daf9fb90bf9a5d6e86bb3af2d`.
-- Release run `30646396613`, job `91208710455`: **SUCCESS**.
+- Functional evidence ban đầu: Sales Order trên `alu.kairo.vn` hiện `TRỤC 114_1.8LY` và ĐVT `Mét` nhưng `Đơn giá` trống.
+- Root cause được xử lý:
+  - text import có thể hiển thị giống nhau nhưng khác dạng Unicode canonical;
+  - exact Item Price probe trả lỗi khác `404` từng chặn field fallback;
+  - preview và authoritative pricing chưa dùng cùng canonical matching.
+- Feature PR `#91` squash-merge SHA `a48524b93489c92296c57fc5f223e41d505de7aa`.
+- Exact feature head `c0d9df33a9fbde7540683107fd948c388a026682`; sáu workflow đều PASS:
+  - CI `30647911536`;
+  - Inventory and Manufacturing CI `30647910730`;
+  - UI Pull Request Validation `30647910724`;
+  - Purchase Feature CI `30647908408`;
+  - PR Validation `30647908313`;
+  - Sales Feature CI `30647908363`.
+- Release preparation PR `#93` merge SHA `077d9944b1cfc1f436da87472f070ee2bd864b44`.
+- Execution PR `#95` đã đóng không merge sau release.
+- Release run `30648518868`: **SUCCESS**.
+- Target SHA: `a48524b93489c92296c57fc5f223e41d505de7aa`.
 - Tenant Worker: `cloudforge-tenant-alu`.
-- Production version ID: `7738ee39-bb39-4a38-bf8d-5e2e1834e572`.
-- Deployment time: `2026-07-31T16:17:08.332Z`.
-- Backup, recorded migrations, deploy và endpoint smoke: PASS.
+- Production version ID: `09ab6ce6-3998-4f76-8b45-c9005eeb1152`.
+- Deployment time: `2026-07-31T16:49:07.992Z`.
+- Backup tenant: PASS.
+- Recorded migrations: PASS.
+- Tenant deploy: PASS.
 - `/health = 200`; guest boot = `403`.
 - Không deploy Gateway, không sửa DNS/secrets, FIFO rollout vẫn **disabled**.
+- Còn lại: authenticated functional smoke trực tiếp để xác minh child grid tự điền `180000 VND`, Thành tiền và save-time pricing.
 
 ## Purchase/FIFO
 
@@ -60,15 +58,14 @@ Workflow `Cloudflare Production Smoke Observation` chỉ chạy read-only:
 
 ## Gate hiện tại
 
-1. Mở PR cho hotfix Unicode normalization.
-2. Required CI phải PASS trên exact final head.
-3. Squash-merge theo yêu cầu sửa và deploy production của chủ dự án.
-4. Cập nhật release target vào exact merge SHA.
-5. Chạy controlled tenant release: backup → recorded migrations → deploy → smoke → Worker version evidence.
-6. Functional authenticated smoke vẫn cần người dùng xác minh trực tiếp child grid sau hard refresh.
+1. Người dùng hard refresh `alu.kairo.vn`.
+2. Mở Sales Order mới, chọn `Giá niêm yết`, `TRỤC 114_1.8LY`, ĐVT `Mét`.
+3. Xác minh Đơn giá `180000 VND` và Thành tiền cập nhật theo số lượng.
+4. Lưu thử để pricing authoritative giữ cùng rate.
+5. Đổi Item/UOM khác và xác minh không lấy chéo giá.
 
 ## Safety
 
 - Không sửa production secrets hoặc DNS.
-- Không migrate/mutate D1 ngoài controlled release workflow.
+- Không mutate Item Price hay dữ liệu nghiệp vụ ngoài chứng từ test do người dùng kiểm soát.
 - Không bật FIFO.
