@@ -8,8 +8,8 @@ Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
 - Latest default-branch commit quan sát qua GitHub: `cd60f8c09c48105db84a82c12ad3b32d9f075064` (`ci: split production observation workflow`).
 - Working branch tài chính/công nợ: `feat/finance-ar-ap-completion`.
-- Draft PR: `#15` — `docs(finance): define AR/AP completion scope`.
-- Finance implementation code head trước commit trạng thái: `6a19bebaf30e62587435983b0adaaede89acb452`.
+- Draft PR: `#15`.
+- Finance implementation exact head trước commit trạng thái này: `0c6193090471d447936131bb38e9e4b6306916af`.
 - Code sidebar: `87cd45aa9272f5600ff3d5914f697ce9a26994b6` (`fix(ui): compact desktop sidebar`).
 - Release target trước trigger: `da04f7fcfdc4c8e4ddf7ff70c79e3a10458ce412`.
 - Gateway production trigger: `9a7bbc14b8e7f3e556404cce19914da1e21e5e10` (`release: trigger compact sidebar gateway production`).
@@ -25,7 +25,7 @@ Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
 - Aging bucket: `Chưa đến hạn`, `1–30 ngày`, `31–60 ngày`, `61–90 ngày`, `Trên 90 ngày`.
 - Allocation chỉ cùng company, party, party account và currency.
 - Credit-limit/Sales Order blocking và cross-currency allocation để pha sau.
-- BRD authoritative: `server/docs/FINANCE-AR-AP-BRD.md`.
+- BRD authoritative: `server/docs/FINANCE-AR-AP-BRD.md`, trạng thái G1 đã duyệt.
 
 ### Lát cắt đã implement — due date và aging backend
 
@@ -34,7 +34,7 @@ Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
   - chặn due date trước posting date;
   - giữ legacy invoice thiếu due date bằng fallback về posting date trong projection;
   - thêm `finance_invoice_terms` view;
-  - thêm field Due Date vào metadata Sales Invoice mà không sửa migration cũ.
+  - thêm field Due Date bắt buộc vào metadata Sales Invoice mà không sửa migration cũ.
 - Query compiler mới `server/packages/query/src/finance-aging.ts`:
   - `Accounts Receivable Aging`;
   - `Accounts Payable Aging`;
@@ -48,7 +48,7 @@ Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
 
 ### Verification hiện có
 
-- `python3 server/scripts/test-finance-aging-migration.py`: **PASS** trong workspace kiểm tra độc lập.
+- `python3 server/scripts/test-finance-aging-migration.py`: **PASS** trong workspace kiểm tra độc lập, gồm metadata required.
 - TypeScript slice `finance-aging.ts` với `strict`: **PASS** trong harness độc lập.
 - SQL aging thực thi thật với invoice 1.000, payment 300 trước cutoff và 700 sau cutoff:
   - outstanding tại `2026-07-31`: `700`;
@@ -63,8 +63,8 @@ Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
 ### Gate và giới hạn
 
 - Chưa có root `pnpm test/typecheck/build` cho exact head qua GitHub Actions.
-- Workflow exact-head `30612455773` là Cloudflare Production Release Observation và bị `cancelled` do concurrency; đây không phải code CI gate.
-- Combined status của `6a19beba...` đang trống, vì vậy branch **chưa CI-verified**.
+- Workflow quan sát Cloudflare không được tính là code CI gate.
+- Branch chưa CI-verified cho tới khi workflow `CI` job `Test, typecheck and build` xanh trên exact head.
 - UI/menu cho aging, Payment Entry partial/unallocated, Payment Allocation, Party Statement và Debt Summary chưa implement.
 - Không deploy Cloudflare, không chạy tenant migration production và không sửa production secrets.
 
@@ -91,7 +91,7 @@ Baseline đã xác minh:
 - Exact head: `591ca359937d6ae12803d36c74996db8482060af`.
 - Install/test/typecheck/build: **PASS**.
 
-Finance branch hiện chưa có exact-head code CI evidence. Không dùng run quan sát Cloudflare thay cho test/typecheck/build.
+Finance branch hiện chưa có exact-head code CI evidence. Workflow `.github/workflows/ci.yml` có trigger `push` và `pull_request`; cần đọc run mới nhất sau commit cuối.
 
 ## Cloudflare production tenant `alu`
 
