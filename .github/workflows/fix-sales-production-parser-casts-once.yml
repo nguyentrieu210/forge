@@ -1,0 +1,48 @@
+name: Fix Sales Production Parser Casts Once
+
+on:
+  push:
+    branches:
+      - feat/sales-order-production-flow-20260801
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/sales-order-production-flow-20260801
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Remove invalid indexed-access casts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('.github/workflows/apply-sales-production-feature-once.yml')
+          source = path.read_text()
+          replacements = {
+            'String(input.ray_type) as NonNullable<DoorFormulaPolicy["ray_type"]>': 'String(input.ray_type) as "U75" | "U100" | "Ray sắt U70" | "Không dùng ray"',
+            'String(input.leaf_formula) as NonNullable<DoorFormulaPolicy["leaf_formula"]>': 'String(input.leaf_formula) as "Kiểu Đức" | "Kiểu Úc" | "Kiểu tấm liền Úc" | "Kiểu Đài Loan Lưới"',
+            'String(input.leaf_divisor_source) as NonNullable<DoorFormulaPolicy["leaf_divisor_source"]>': 'String(input.leaf_divisor_source) as "Bản lá của bộ quy cách" | "Hằng số của chính sách"',
+            'String(input.leaf_rounding) as NonNullable<DoorFormulaPolicy["leaf_rounding"]>': 'String(input.leaf_rounding) as "Ngưỡng trừ-một-lá" | "Nấc 0-0.3-0.7-1" | "Làm tròn xuống"',
+            'input.leaf_variants as NonNullable<DoorFormulaPolicy["leaf_variants"]>': 'input.leaf_variants as Array<{ variant_label?: string; addend?: number }>',
+          }
+          for before, after in replacements.items():
+              if source.count(before) != 1:
+                  raise SystemExit(f'cast target count={source.count(before)}: {before}')
+              source = source.replace(before, after)
+          path.write_text(source)
+          PY
+          rm -f .github/workflows/fix-sales-production-parser-casts-once.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git diff --cached --check
+          git commit -m 'fix(sales): type production policy parser fields'
+          git push origin HEAD:feat/sales-order-production-flow-20260801
