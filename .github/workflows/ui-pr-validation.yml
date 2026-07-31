@@ -85,30 +85,35 @@ jobs:
           auth_user="qa-${GITHUB_RUN_ID}@example.test"
           auth_password="$(openssl rand -hex 24)"
           auth_session_secret="$(openssl rand -hex 32)"
+          internal_auth_secret="$(openssl rand -hex 32)"
           echo "::add-mask::$auth_password"
           echo "::add-mask::$auth_session_secret"
+          echo "::add-mask::$internal_auth_secret"
           echo "FORGE_AUTH_USER=$auth_user" >> "$GITHUB_ENV"
           echo "FORGE_AUTH_PASSWORD=$auth_password" >> "$GITHUB_ENV"
           echo "FORGE_AUTH_SESSION_SECRET=$auth_session_secret" >> "$GITHUB_ENV"
+          echo "FORGE_INTERNAL_AUTH_SECRET=$internal_auth_secret" >> "$GITHUB_ENV"
 
       - name: Prepare local tenant database
         working-directory: server
         shell: bash
         run: |
           set -euo pipefail
-          pnpm exec wrangler d1 migrations apply cloudforge-demo --local --config apps/tenant-worker/wrangler.jsonc
+          pnpm exec wrangler d1 migrations apply cloudforge-demo --local --config apps/tenant-worker/wrangler.purchase-qa.jsonc
           node scripts/seed-local.mjs --auth-only --user "$FORGE_AUTH_USER" --password "$FORGE_AUTH_PASSWORD"
 
-      - name: Start local tenant worker
+      - name: Start local tenant and Alumdoor app workers
         working-directory: server
         shell: bash
         run: |
           set -euo pipefail
           nohup pnpm exec wrangler dev \
-            --config apps/tenant-worker/wrangler.jsonc \
+            --config apps/tenant-worker/wrangler.purchase-qa.jsonc \
+            --config apps-src/alumdoor-worker/wrangler.purchase-qa.jsonc \
             --port 8801 \
             --local \
             --var "SESSION_SECRET:$FORGE_AUTH_SESSION_SECRET" \
+            --var "INTERNAL_AUTH_SECRET:$FORGE_INTERNAL_AUTH_SECRET" \
             > "$RUNNER_TEMP/forge-auth-backend.log" 2>&1 &
           echo $! > "$RUNNER_TEMP/forge-auth-backend.pid"
           ready=0
