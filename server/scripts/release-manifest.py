@@ -9,7 +9,7 @@ from pathlib import Path
 root = Path(__file__).resolve().parents[1]
 manifest_path = root / "RELEASE_CONTENT_MANIFEST.json"
 excluded_dirs = {"dist", "node_modules", ".git", ".wrangler", "coverage", "__pycache__", "backups"}
-excluded_files = {manifest_path.name, "PROMOTION_EVIDENCE.json"}
+excluded_files = {manifest_path.name, "PROMOTION_EVIDENCE.json", "BUILD_REPORT.md", "VERIFY.json"}
 excluded_suffixes = {".log", ".pyc"}
 excluded_secret_prefixes = (".dev.vars", ".env")
 excluded_prefixes = {
@@ -18,6 +18,7 @@ excluded_prefixes = {
     "docs/spec/source-exact/oracle/differential",
     "docs/spec/source-exact/runtime",
 }
+verified_fields = ["format", "package", "version", "file_count", "tree_sha256"]
 
 
 def files():
@@ -68,6 +69,15 @@ def build():
     }
 
 
+def tracked_manifest(current):
+    # The tree hash already commits to every path, content digest, and byte size.
+    # Keep the tracked release record compact; emit the full per-file inventory only
+    # as diagnostic evidence when verification fails.
+    return {key: current[key] for key in [
+        "format", "package", "version", "generated_at", "file_count", "tree_sha256", "excluded"
+    ]}
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--verify", action="store_true")
@@ -75,12 +85,15 @@ def main():
     current = build()
     if args.verify:
         expected = json.loads(manifest_path.read_text())
-        for field in ["format", "package", "version", "file_count", "tree_sha256", "files"]:
+        for field in verified_fields:
             if expected.get(field) != current.get(field):
+                print("RELEASE_CONTENT_MANIFEST_CURRENT_BEGIN")
+                print(json.dumps(current, indent=2))
+                print("RELEASE_CONTENT_MANIFEST_CURRENT_END")
                 raise SystemExit(f"RELEASE_MANIFEST_MISMATCH:{field}")
         print(f"RELEASE_CONTENT_MANIFEST_PASS files={current['file_count']} tree={current['tree_sha256']}")
         return
-    manifest_path.write_text(json.dumps(current, indent=2) + "\n")
+    manifest_path.write_text(json.dumps(tracked_manifest(current), indent=2) + "\n")
     print(f"RELEASE_CONTENT_MANIFEST_WRITTEN files={current['file_count']} tree={current['tree_sha256']}")
 
 

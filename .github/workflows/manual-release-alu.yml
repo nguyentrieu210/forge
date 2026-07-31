@@ -1,108 +1,513 @@
-name: Manual release alu production
+name: ALU full production release
 
 on:
+  pull_request:
+    branches:
+      - hotfix/alumdoor-print-list-delete
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - ".github/workflows/manual-release-alu.yml"
+      - ".github/workflows/cloudflare-preview-qa.yml"
+      - ".github/workflows/release-alu-tenant.yml"
+      - ".github/workflows/release-alumdoor-app.yml"
+      - ".github/workflows/release-gateway.yml"
+      - ".github/workflows/production-release-status.yml"
+  push:
+    branches:
+      - hotfix/alumdoor-print-list-delete
+    paths:
+      - ".github/workflows/manual-release-alu.yml"
+      - ".github/workflows/cloudflare-preview-qa.yml"
+      - ".github/workflows/release-alu-tenant.yml"
+      - ".github/workflows/release-alumdoor-app.yml"
+      - ".github/workflows/release-gateway.yml"
+      - ".github/workflows/production-release-status.yml"
   workflow_dispatch:
     inputs:
       confirm:
         description: Type alu to confirm production release
         required: true
         type: string
+      target_sha:
+        description: Exact verified commit SHA; defaults to the selected ref SHA
+        required: false
+        type: string
 
 permissions:
+  actions: write
   contents: read
 
 concurrency:
-  group: production-alu
+  group: production-alu-full-release
   cancel-in-progress: false
 
 jobs:
-  release:
-    if: ${{ inputs.confirm == 'alu' }}
+  gate:
+    name: Actionlint and full release gate
     runs-on: ubuntu-latest
-    timeout-minutes: 35
-    environment: production
+    timeout-minutes: 90
     env:
-      TENANT: alu
-      TARGET_SHA: 591ca359937d6ae12803d36c74996db8482060af
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: d4d5a24d4e56f28f27fe58b64ef149a5
-      BACKUP_DIR: ${{ runner.temp }}/alu-backup
+      TARGET_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.event_name == 'workflow_dispatch' && inputs.target_sha || github.sha }}
+      GATE_DIR: /tmp/alu-full-release-gate
+
+    outputs:
+      target_sha: ${{ steps.lock.outputs.target_sha }}
 
     steps:
-      - name: Checkout verified code
+      - name: Checkout exact release candidate
         uses: actions/checkout@v4
         with:
           ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 0
           persist-credentials: false
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.0
-          run_install: false
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
 
-      - name: Verify release inputs
+      - name: Set up Go for actionlint
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+          cache: false
+
+      - name: Lock exact target SHA
+        id: lock
         shell: bash
         run: |
           set -euo pipefail
-          test "${{ inputs.confirm }}" = "alu"
-          test -n "${CLOUDFLARE_API_TOKEN:-}"
-          mkdir -p "$BACKUP_DIR"
+          mkdir -p "$GATE_DIR"
+          actual="$(git rev-parse HEAD)"
+          expected="$(git rev-parse "$TARGET_SHA")"
+          test "$actual" = "$expected"
+          echo "target_sha=$actual" >> "$GITHUB_OUTPUT"
+          printf 'target_sha=%s\nstarted_at=%s\n' "$actual" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$GATE_DIR/state.txt"
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Backup tenant
+      - name: Install exact pnpm and dependencies
         shell: bash
         run: |
           set -euo pipefail
-          node server/scripts/backup-tenant.mjs --tenant "$TENANT"
-          node server/scripts/backup-tenant.mjs --tenant "$TENANT" --execute --output-dir "$BACKUP_DIR"
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+          pnpm install --frozen-lockfile 2>&1 | tee "$GATE_DIR/install.log"
 
-      - name: Upload backup
+      - name: Run actionlint on every workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 .github/workflows/*.yml 2>&1 | tee "$GATE_DIR/actionlint.log"
+          echo 'actionlint=pass' >> "$GATE_DIR/state.txt"
+
+      - name: Run repository full release gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm run release:check 2>&1 | tee "$GATE_DIR/release-check.log"
+          echo 'release_check=pass' >> "$GATE_DIR/state.txt"
+
+      - name: Verify deployment-specific server targets
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm --filter cloudforge run build 2>&1 | tee "$GATE_DIR/server-build.log"
+          node --test \
+            server/tests/physical-stock-read-model.test.mjs \
+            server/tests/physical-stock-report-service.test.mjs \
+            server/tests/d1-physical-stock-ledger-reader.test.mjs \
+            server/tests/physical-stock-api.test.mjs \
+            server/tests/sales-price-unicode-normalization.test.mjs \
+            2>&1 | tee "$GATE_DIR/server-focused-tests.log"
+          printf 'server_build=pass\nserver_focused_tests=pass\n' >> "$GATE_DIR/state.txt"
+
+      - name: Verify production UI and embedded SHA
+        shell: bash
+        env:
+          VITE_FORGE_RELEASE_SHA: ${{ env.TARGET_SHA }}
+        run: |
+          set -euo pipefail
+          pnpm --filter metaforge run lint 2>&1 | tee "$GATE_DIR/ui-lint.log"
+          pnpm --filter metaforge run test 2>&1 | tee "$GATE_DIR/ui-test.log"
+          pnpm --filter metaforge run typecheck 2>&1 | tee "$GATE_DIR/ui-typecheck.log"
+          pnpm --filter metaforge run build 2>&1 | tee "$GATE_DIR/ui-build.log"
+          grep -R --fixed-strings "$TARGET_SHA" client/apps/runtime/dist/index.html
+          printf 'ui_lint=pass\nui_test=pass\ntypecheck=pass\nui_build=pass\nrelease_sha_embedded=pass\n' >> "$GATE_DIR/state.txt"
+
+      - name: Upload full gate evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: alu-pre-release-backup-${{ github.run_id }}
-          path: ${{ runner.temp }}/alu-backup/
+          name: alu-full-release-gate-${{ github.run_id }}
+          path: /tmp/alu-full-release-gate/
           if-no-files-found: warn
-          retention-days: 14
+          retention-days: 30
 
-      - name: Migrate tenant
+  release:
+    name: Sequential ALU production release
+    needs: gate
+    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.confirm == 'alu') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    environment: production
+    env:
+      TARGET_SHA: ${{ needs.gate.outputs.target_sha }}
+      DEFAULT_BRANCH: hotfix/alumdoor-print-list-delete
+      BASE_URL: https://alu.kairo.vn
+      TENANT_WORKER: cloudforge-tenant-alu
+      APP_WORKER: cloudforge-app-alumdoor
+      GATEWAY_WORKER: cloudforge-gateway
+      DISPATCH_NAMESPACE: cloudforge-production
+      EVIDENCE_DIR: /tmp/alu-production-release
+      APP_ROLLBACK_DIR: /tmp/alu-app-rollback
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: d4d5a24d4e56f28f27fe58b64ef149a5
+      GH_TOKEN: ${{ github.token }}
+      ALU_QA_USERNAME: ${{ secrets.ALU_QA_USERNAME }}
+      ALU_QA_PASSWORD: ${{ secrets.ALU_QA_PASSWORD }}
+
+    steps:
+      - name: Checkout locked production SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Initialize release executor
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$TARGET_SHA"
+          test "$(git rev-parse HEAD)" = "$(git rev-parse "$TARGET_SHA")"
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          mkdir -p "$EVIDENCE_DIR/preflight" "$EVIDENCE_DIR/tenant" "$EVIDENCE_DIR/app" "$EVIDENCE_DIR/gateway" "$EVIDENCE_DIR/smoke" "$EVIDENCE_DIR/browser" "$EVIDENCE_DIR/summary" "$APP_ROLLBACK_DIR"
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+          pnpm install --frozen-lockfile 2>&1 | tee "$EVIDENCE_DIR/preflight/install.log"
+          printf 'target_sha=%s\nstarted_at=%s\n' "$TARGET_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$EVIDENCE_DIR/summary/state.txt"
+
+      - name: Capture current Cloudflare versions and app rollback content
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID"
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          curl --fail --silent --show-error "${auth[@]}" "$api/workers/scripts/$TENANT_WORKER/deployments" > "$EVIDENCE_DIR/preflight/tenant-deployments.json"
+          curl --fail --silent --show-error "${auth[@]}" "$api/workers/scripts/$GATEWAY_WORKER/deployments" > "$EVIDENCE_DIR/preflight/gateway-deployments.json"
+          app_base="$api/workers/dispatch/namespaces/$DISPATCH_NAMESPACE/scripts/$APP_WORKER"
+          curl --fail --silent --show-error "${auth[@]}" "$app_base" > "$EVIDENCE_DIR/preflight/app-details.json"
+          curl --fail --silent --show-error "${auth[@]}" "$app_base/bindings" > "$EVIDENCE_DIR/preflight/app-bindings.json"
+          curl --fail --silent --show-error --dump-header "$APP_ROLLBACK_DIR/content.headers" "${auth[@]}" "$app_base/content" > "$APP_ROLLBACK_DIR/content.bin"
+
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const normalize = (value) => {
+            const raw = String(value ?? '').replaceAll('-', '').toLowerCase();
+            if (!/^[0-9a-f]{32}$/.test(raw)) return String(value ?? '');
+            return `${raw.slice(0, 8)}-${raw.slice(8, 12)}-${raw.slice(12, 16)}-${raw.slice(16, 20)}-${raw.slice(20)}`;
+          };
+          const active = (path) => {
+            const payload = JSON.parse(fs.readFileSync(path, 'utf8'));
+            if (!payload.success) throw new Error(`Cloudflare query failed: ${path}`);
+            const deployments = payload.result?.deployments ?? payload.result ?? [];
+            const first = Array.isArray(deployments) ? deployments[0] : null;
+            const version = first?.versions?.[0]?.version_id ?? first?.versions?.[0]?.id ?? first?.version_id;
+            if (!version) throw new Error(`No active version in ${path}`);
+            return normalize(version);
+          };
+          const tenant = active(`${process.env.EVIDENCE_DIR}/preflight/tenant-deployments.json`);
+          const gateway = active(`${process.env.EVIDENCE_DIR}/preflight/gateway-deployments.json`);
+          const appPayload = JSON.parse(fs.readFileSync(`${process.env.EVIDENCE_DIR}/preflight/app-details.json`, 'utf8'));
+          const app = appPayload.result ?? {};
+          const appVersion = normalize(app.script?.deployment_id);
+          const appEtag = app.script?.etag ?? '';
+          if (!appPayload.success || !appVersion || !appEtag) throw new Error('Missing app rollback handle');
+          const bindings = JSON.parse(fs.readFileSync(`${process.env.EVIDENCE_DIR}/preflight/app-bindings.json`, 'utf8'));
+          const names = new Set((bindings.result ?? []).map((entry) => entry?.name).filter(Boolean));
+          for (const required of ['PLATFORM', 'AI']) if (!names.has(required)) throw new Error(`Missing app binding ${required}`);
+          fs.appendFileSync(process.env.GITHUB_ENV, [
+            `PREVIOUS_TENANT_VERSION=${tenant}`,
+            `PREVIOUS_GATEWAY_VERSION=${gateway}`,
+            `PREVIOUS_APP_VERSION=${appVersion}`,
+            `PREVIOUS_APP_ETAG=${appEtag}`,
+            '',
+          ].join('\n'));
+          fs.writeFileSync(`${process.env.EVIDENCE_DIR}/preflight/versions.txt`, [
+            `tenant=${tenant}`,
+            `app=${appVersion}`,
+            `gateway=${gateway}`,
+            '',
+          ].join('\n'));
+          NODE
+
+          content_type="$(awk 'BEGIN{IGNORECASE=1} /^content-type:/ {sub(/^[^:]+:[[:space:]]*/, ""); sub(/\r$/, ""); print; exit}' "$APP_ROLLBACK_DIR/content.headers")"
+          test -n "$content_type"
+          echo "APP_ROLLBACK_CONTENT_TYPE=$content_type" >> "$GITHUB_ENV"
+          echo 'preflight=pass' >> "$EVIDENCE_DIR/summary/state.txt"
+
+      - name: Create sequential workflow dispatcher
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/dispatch-release-workflow.sh" <<'SCRIPT'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          workflow="$1"
+          output_dir="$2"
+          mkdir -p "$output_dir"
+          dispatched_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          jq -n --arg ref "$DEFAULT_BRANCH" --arg sha "$TARGET_SHA" '{ref:$ref,inputs:{target_sha:$sha}}' \
+            | gh api --method POST "repos/$GITHUB_REPOSITORY/actions/workflows/$workflow/dispatches" --input -
+
+          run_id=''
+          for attempt in $(seq 1 30); do
+            gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$workflow/runs?event=workflow_dispatch&branch=$DEFAULT_BRANCH&per_page=30" > "$output_dir/runs.json"
+            run_id="$(jq -r --arg sha "$TARGET_SHA" --arg since "$dispatched_at" \
+              '[.workflow_runs[] | select(.head_sha == $sha and .created_at >= $since)] | sort_by(.created_at) | last | .id // empty' \
+              "$output_dir/runs.json")"
+            [ -n "$run_id" ] && break
+            sleep 5
+          done
+          test -n "$run_id"
+          echo "$run_id" > "$output_dir/run-id.txt"
+
+          conclusion=''
+          for attempt in $(seq 1 180); do
+            gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id" > "$output_dir/run.json"
+            status="$(jq -r '.status' "$output_dir/run.json")"
+            conclusion="$(jq -r '.conclusion // empty' "$output_dir/run.json")"
+            [ "$status" = 'completed' ] && break
+            sleep 10
+          done
+          gh run download "$run_id" --repo "$GITHUB_REPOSITORY" --dir "$output_dir/artifacts" || true
+          gh run view "$run_id" --repo "$GITHUB_REPOSITORY" --log > "$output_dir/run.log" 2>&1 || true
+          printf 'run_id=%s\nconclusion=%s\n' "$run_id" "$conclusion" > "$output_dir/state.txt"
+          test "$conclusion" = 'success'
+          SCRIPT
+          chmod +x "$RUNNER_TEMP/dispatch-release-workflow.sh"
+
+      - name: Release tenant alu
+        id: tenant_release
+        shell: bash
+        run: |
+          "$RUNNER_TEMP/dispatch-release-workflow.sh" release-alu-tenant.yml "$EVIDENCE_DIR/tenant"
+
+      - name: Roll back tenant Worker after tenant release failure
+        if: ${{ failure() && steps.tenant_release.outcome == 'failure' }}
         shell: bash
         run: |
           set -euo pipefail
           cd server
-          node scripts/migrate-tenant.mjs --tenant "$TENANT"
-          node scripts/migrate-tenant.mjs --tenant "$TENANT" --execute --confirm "$TENANT"
+          pnpm exec wrangler rollback "$PREVIOUS_TENANT_VERSION" --name "$TENANT_WORKER" --message "Rollback failed ALU release $TARGET_SHA" 2>&1 | tee "$EVIDENCE_DIR/tenant/rollback.log"
+          curl --fail --silent --show-error "$BASE_URL/health" > "$EVIDENCE_DIR/tenant/rollback-health.json"
+          printf 'rollback=pass\ndatabase_restore=not_attempted\n' >> "$EVIDENCE_DIR/tenant/state.txt"
 
-      - name: Deploy tenant
+      - name: Release Alumdoor app Worker
+        id: app_release
+        shell: bash
+        run: |
+          "$RUNNER_TEMP/dispatch-release-workflow.sh" release-alumdoor-app.yml "$EVIDENCE_DIR/app"
+
+      - name: Restore previous app content after app release failure
+        if: ${{ failure() && steps.app_release.outcome == 'failure' }}
         shell: bash
         run: |
           set -euo pipefail
-          cd server
-          node scripts/deploy-tenant.mjs --tenant "$TENANT"
-          node scripts/deploy-tenant.mjs --tenant "$TENANT" --execute --confirm "$TENANT"
+          app_base="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/dispatch/namespaces/$DISPATCH_NAMESPACE/scripts/$APP_WORKER"
+          curl --fail --silent --show-error -X PUT \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H "Content-Type: $APP_ROLLBACK_CONTENT_TYPE" \
+            --data-binary "@$APP_ROLLBACK_DIR/content.bin" \
+            "$app_base/content" > "$EVIDENCE_DIR/app/rollback-response.json"
+          curl --fail --silent --show-error -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$app_base" > "$EVIDENCE_DIR/app/rollback-details.json"
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const payload = JSON.parse(fs.readFileSync(`${process.env.EVIDENCE_DIR}/app/rollback-details.json`, 'utf8'));
+          if (payload.result?.script?.etag !== process.env.PREVIOUS_APP_ETAG) throw new Error('App rollback etag mismatch');
+          fs.appendFileSync(`${process.env.EVIDENCE_DIR}/app/state.txt`, 'rollback=pass\n');
+          NODE
 
-      - name: Smoke production
+      - name: Release Gateway and production UI
+        id: gateway_release
+        shell: bash
+        run: |
+          "$RUNNER_TEMP/dispatch-release-workflow.sh" release-gateway.yml "$EVIDENCE_DIR/gateway"
+
+      - name: Run full production HTTP smoke
+        id: http_smoke
         shell: bash
         run: |
           set -euo pipefail
-          BASE='https://alu.kairo.vn'
           health=0
-          for attempt in $(seq 1 18); do
-            health="$(curl --silent --show-error --output /tmp/health.json --write-out '%{http_code}' "$BASE/health" || true)"
-            [ "$health" = '200' ] && break
+          root=0
+          for ((attempt = 1; attempt <= 24; attempt++)); do
+            health="$(curl --silent --show-error --dump-header "$EVIDENCE_DIR/smoke/health.headers" --output "$EVIDENCE_DIR/smoke/health.json" --write-out '%{http_code}' -H 'cache-control: no-cache' "$BASE_URL/health?release=$TARGET_SHA" || true)"
+            root="$(curl --silent --show-error --dump-header "$EVIDENCE_DIR/smoke/root.headers" --output "$EVIDENCE_DIR/smoke/root.html" --write-out '%{http_code}' -H 'cache-control: no-cache' "$BASE_URL/?release=$TARGET_SHA" || true)"
+            if [ "$health" = '200' ] && [ "$root" = '200' ] && grep -q --fixed-strings "$TARGET_SHA" "$EVIDENCE_DIR/smoke/root.html"; then break; fi
             sleep 5
           done
           test "$health" = '200'
-          boot="$(curl --silent --show-error --output /tmp/guest-boot.json --write-out '%{http_code}' "$BASE/api/method/metaforge.api.get_boot" || true)"
+          test "$root" = '200'
+          grep -q --fixed-strings "$TARGET_SHA" "$EVIDENCE_DIR/smoke/root.html"
+          boot="$(curl --silent --show-error --dump-header "$EVIDENCE_DIR/smoke/guest-boot.headers" --output "$EVIDENCE_DIR/smoke/guest-boot.json" --write-out '%{http_code}' -H 'cache-control: no-cache' "$BASE_URL/api/method/metaforge.api.get_boot" || true)"
           test "$boot" = '403'
-          echo "ALU_RELEASE_PASS target_sha=$TARGET_SHA health=$health guest_boot=$boot rollout=disabled"
+          if grep -qi '^content-type:.*text/html' "$EVIDENCE_DIR/smoke/guest-boot.headers"; then
+            echo 'Guest boot returned HTML' >&2
+            exit 1
+          fi
+          physical_stock="$(curl --silent --show-error --dump-header "$EVIDENCE_DIR/smoke/physical-stock.headers" --output "$EVIDENCE_DIR/smoke/physical-stock.json" --write-out '%{http_code}' -X POST -H 'content-type: application/json' -H 'cache-control: no-cache' --data '{"company":"Alumdoor"}' "$BASE_URL/api/v1/reports/physical-stock" || true)"
+          case "$physical_stock" in 401|403) ;; *) exit 1 ;; esac
+          if grep -qi '^content-type:.*text/html' "$EVIDENCE_DIR/smoke/physical-stock.headers"; then
+            echo 'Physical-stock API returned HTML' >&2
+            exit 1
+          fi
+          printf 'health=%s\nroot=%s\nexact_sha_visible=pass\nguest_boot=%s\nphysical_stock_guest=%s\napi_html_fallback=absent\nhttp_smoke=pass\n' "$health" "$root" "$boot" "$physical_stock" > "$EVIDENCE_DIR/smoke/state.txt"
+
+      - name: Run browser smoke on desktop and mobile
+        id: browser_smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm --filter e2e-forge exec playwright install --with-deps chromium 2>&1 | tee "$EVIDENCE_DIR/browser/install.log"
+          pnpm --filter e2e-forge exec node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import { chromium } from '@playwright/test';
+          const browser = await chromium.launch({ headless: true });
+          const profiles = [
+            { name: 'desktop', viewport: { width: 1440, height: 1000 } },
+            { name: 'mobile', viewport: { width: 412, height: 915 }, isMobile: true },
+          ];
+          const results = [];
+          try {
+            for (const profile of profiles) {
+              const context = await browser.newContext({ viewport: profile.viewport, isMobile: profile.isMobile ?? false });
+              const page = await context.newPage();
+              const failures = [];
+              page.on('pageerror', (error) => failures.push(`pageerror:${error.message}`));
+              page.on('requestfailed', (request) => {
+                if (['script', 'stylesheet'].includes(request.resourceType())) failures.push(`requestfailed:${request.url()}`);
+              });
+              page.on('response', (response) => {
+                if (['script', 'stylesheet'].includes(response.request().resourceType()) && response.status() >= 400) failures.push(`asset:${response.status()}:${response.url()}`);
+              });
+              const response = await page.goto(`${process.env.BASE_URL}/?release=${process.env.TARGET_SHA}`, { waitUntil: 'networkidle', timeout: 60000 });
+              if (!response || response.status() !== 200) throw new Error(`${profile.name}: root status ${response?.status() ?? 'missing'}`);
+              await page.locator('body').waitFor({ state: 'visible', timeout: 15000 });
+              const bodyText = (await page.locator('body').innerText()).trim();
+              if (bodyText.length < 20) throw new Error(`${profile.name}: blank page`);
+              const loginMarker = (await page.locator('input[type="password"], form').count()) + (await page.getByText(/đăng nhập|login/i).count());
+              if (loginMarker < 1) throw new Error(`${profile.name}: login screen not rendered`);
+              if (failures.length) throw new Error(`${profile.name}: ${failures.join('; ')}`);
+              await page.screenshot({ path: `${process.env.EVIDENCE_DIR}/browser/${profile.name}.png`, fullPage: true });
+
+              let qaLogin = 'not-configured';
+              if (profile.name === 'desktop' && process.env.ALU_QA_USERNAME && process.env.ALU_QA_PASSWORD) {
+                const userInput = page.locator('input[type="email"], input[name="username"], input[name="email"], input[autocomplete="username"]').first();
+                const passwordInput = page.locator('input[type="password"]').first();
+                const submit = page.locator('button[type="submit"], button:has-text("Đăng nhập"), button:has-text("Login")').first();
+                if (await userInput.count() < 1 || await passwordInput.count() < 1 || await submit.count() < 1) throw new Error('QA credentials exist but login controls were not found');
+                await userInput.fill(process.env.ALU_QA_USERNAME);
+                await passwordInput.fill(process.env.ALU_QA_PASSWORD);
+                await submit.click();
+                await page.waitForLoadState('networkidle', { timeout: 60000 }).catch(() => undefined);
+                if (await page.locator('input[type="password"]').count()) throw new Error('QA login remained on login screen');
+                await page.screenshot({ path: `${process.env.EVIDENCE_DIR}/browser/desktop-authenticated.png`, fullPage: true });
+                qaLogin = 'pass';
+              }
+              results.push({ viewport: profile.name, root: 200, login_rendered: true, assets: 'pass', qa_login: qaLogin });
+              await context.close();
+            }
+          } finally {
+            await browser.close();
+          }
+          fs.writeFileSync(`${process.env.EVIDENCE_DIR}/browser/results.json`, `${JSON.stringify(results, null, 2)}\n`);
+          fs.writeFileSync(`${process.env.EVIDENCE_DIR}/browser/state.txt`, 'desktop=pass\nmobile=pass\nassets=pass\nbrowser_smoke=pass\n');
+          NODE
+
+      - name: Roll back Gateway after Gateway or final smoke failure
+        if: ${{ failure() && (steps.gateway_release.outcome == 'failure' || steps.http_smoke.outcome == 'failure' || steps.browser_smoke.outcome == 'failure') }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd server
+          pnpm exec wrangler rollback "$PREVIOUS_GATEWAY_VERSION" --name "$GATEWAY_WORKER" --message "Rollback failed ALU release $TARGET_SHA" 2>&1 | tee "$EVIDENCE_DIR/gateway/rollback.log"
+          health="$(curl --silent --show-error --output "$EVIDENCE_DIR/gateway/rollback-health.json" --write-out '%{http_code}' "$BASE_URL/health" || true)"
+          root="$(curl --silent --show-error --output "$EVIDENCE_DIR/gateway/rollback-root.html" --write-out '%{http_code}' "$BASE_URL/" || true)"
+          boot="$(curl --silent --show-error --output "$EVIDENCE_DIR/gateway/rollback-boot.json" --write-out '%{http_code}' "$BASE_URL/api/method/metaforge.api.get_boot" || true)"
+          test "$health" = '200'
+          test "$root" = '200'
+          test "$boot" = '403'
+          printf 'rollback=pass\nrollback_health=%s\nrollback_root=%s\nrollback_guest_boot=%s\n' "$health" "$root" "$boot" >> "$EVIDENCE_DIR/gateway/state.txt"
+
+      - name: Build final release summary
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          overall=PASS
+          for file in "$EVIDENCE_DIR/tenant/state.txt" "$EVIDENCE_DIR/app/state.txt" "$EVIDENCE_DIR/gateway/state.txt" "$EVIDENCE_DIR/smoke/state.txt" "$EVIDENCE_DIR/browser/state.txt"; do
+            [ -f "$file" ] || overall=FAIL
+          done
+          [ "$(awk -F= '$1=="conclusion"{print $2}' "$EVIDENCE_DIR/tenant/state.txt" 2>/dev/null)" = success ] || overall=FAIL
+          [ "$(awk -F= '$1=="conclusion"{print $2}' "$EVIDENCE_DIR/app/state.txt" 2>/dev/null)" = success ] || overall=FAIL
+          [ "$(awk -F= '$1=="conclusion"{print $2}' "$EVIDENCE_DIR/gateway/state.txt" 2>/dev/null)" = success ] || overall=FAIL
+          grep -q '^http_smoke=pass$' "$EVIDENCE_DIR/smoke/state.txt" 2>/dev/null || overall=FAIL
+          grep -q '^browser_smoke=pass$' "$EVIDENCE_DIR/browser/state.txt" 2>/dev/null || overall=FAIL
+
+          tenant_version="$(find "$EVIDENCE_DIR/tenant/artifacts" -name state.txt -type f -exec awk -F= '$1=="tenant_version_id" || $1=="version_id"{print $2}' {} + 2>/dev/null | tail -1)"
+          app_version="$(find "$EVIDENCE_DIR/app/artifacts" -name summary.json -type f -exec jq -r '.version_id // empty' {} + 2>/dev/null | tail -1)"
+          gateway_version="$(find "$EVIDENCE_DIR/gateway/artifacts" -name state.txt -type f -exec awk -F= '$1=="gateway_version_id" || $1=="version_id"{print $2}' {} + 2>/dev/null | tail -1)"
+          health="$(awk -F= '$1=="health"{print $2}' "$EVIDENCE_DIR/smoke/state.txt" 2>/dev/null)"
+          root="$(awk -F= '$1=="root"{print $2}' "$EVIDENCE_DIR/smoke/state.txt" 2>/dev/null)"
+          boot="$(awk -F= '$1=="guest_boot"{print $2}' "$EVIDENCE_DIR/smoke/state.txt" 2>/dev/null)"
+
+          cat > "$EVIDENCE_DIR/summary/final-summary.md" <<EOF
+          Target SHA: $TARGET_SHA
+          Full release gate: PASS
+
+          Tenant:
+          - Backup: $(find "$EVIDENCE_DIR/tenant/artifacts" -type f | grep -q 'backup' && echo PASS || echo FAIL)
+          - Migration: $(find "$EVIDENCE_DIR/tenant/artifacts" -name state.txt -type f -exec grep -q '^migration=pass$' {} \; -print | grep -q . && echo PASS || echo FAIL)
+          - Worker: $TENANT_WORKER
+          - Version ID: ${tenant_version:-missing}
+          - Smoke: $(find "$EVIDENCE_DIR/tenant/artifacts" -name state.txt -type f -exec grep -q '^smoke=pass$' {} \; -print | grep -q . && echo PASS || echo FAIL)
+
+          Alumdoor app:
+          - Worker: $APP_WORKER
+          - Namespace: $DISPATCH_NAMESPACE
+          - Version ID: ${app_version:-missing}
+          - PLATFORM binding: $(find "$EVIDENCE_DIR/app/artifacts" -name state.txt -type f -exec grep -q '^provider_bindings=pass$' {} \; -print | grep -q . && echo PASS || echo FAIL)
+          - AI binding: $(find "$EVIDENCE_DIR/app/artifacts" -name state.txt -type f -exec grep -q '^provider_bindings=pass$' {} \; -print | grep -q . && echo PASS || echo FAIL)
+
+          Gateway/UI:
+          - Worker: $GATEWAY_WORKER
+          - Version ID: ${gateway_version:-missing}
+          - URL: $BASE_URL
+          - Health: ${health:-FAIL}
+          - Root: ${root:-FAIL}
+          - Exact SHA visible: $(grep -q '^exact_sha_visible=pass$' "$EVIDENCE_DIR/smoke/state.txt" 2>/dev/null && echo PASS || echo FAIL)
+          - Guest boot: ${boot:-FAIL}
+          - Browser desktop: $(grep -q '^desktop=pass$' "$EVIDENCE_DIR/browser/state.txt" 2>/dev/null && echo PASS || echo FAIL)
+          - Browser mobile: $(grep -q '^mobile=pass$' "$EVIDENCE_DIR/browser/state.txt" 2>/dev/null && echo PASS || echo FAIL)
+
+          Overall production release: $overall
+          EOF
+          sed -i 's/^          //' "$EVIDENCE_DIR/summary/final-summary.md"
+          cat "$EVIDENCE_DIR/summary/final-summary.md" >> "$GITHUB_STEP_SUMMARY"
+          printf 'overall=%s\nfinished_at=%s\n' "$overall" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$EVIDENCE_DIR/summary/state.txt"
+          test "$overall" = PASS
+
+      - name: Upload aggregate production evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alu-full-production-release-${{ github.run_id }}
+          path: /tmp/alu-production-release/
+          if-no-files-found: warn
+          retention-days: 30
