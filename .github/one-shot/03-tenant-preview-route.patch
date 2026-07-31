@@ -7,7 +7,7 @@ diff --git a/server/apps/tenant-worker/src/index.ts b/server/apps/tenant-worker/
 +import { previewPurchaseReceiptSubmission } from "../../../packages/clouderp-core/src/index.js";
 +import { D1CommercialReconciliationService, D1DocumentListStore, D1MutationStore, D1RolloutPurchaseAllocationDomainStore, DocumentListService } from "../../../packages/document-kernel/src/index.js";
  import { asCloudForgeError, commandPayloadHash, errorResponse, errors, jsonResponse, randomId, readJson } from "../../../packages/core/src/index.js";
-@@ -1068,7 +1069,37 @@
+@@ -1068,6 +1069,36 @@
    const access = new D1DocumentAccessStore(requestDb);
    const permissions = new MetadataPermissionService(metadata, undefined, access);
    const documents = new D1MutationStore(requestDb);
