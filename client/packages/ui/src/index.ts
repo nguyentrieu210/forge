@@ -20,7 +20,10 @@ export {
 } from "./components/ui/dialog.js";
 export { ConfirmDialog, type ConfirmDialogProps } from "./components/ui/confirm-dialog.js";
 export { PromptDialog, type PromptDialogProps } from "./components/ui/prompt-dialog.js";
-export { Popover, PopoverTrigger, PopoverAnchor, PopoverContent, canConsumeScrollDelta } from "./components/ui/popover.js";
+export {
+  Popover, PopoverTrigger, PopoverAnchor, PopoverContent,
+  canConsumeScrollDelta, resolvePopoverModal,
+} from "./components/ui/popover.js";
 export {
   Command, CommandDialog, CommandInput, CommandList, CommandEmpty, CommandGroup,
   CommandItem, CommandSeparator, CommandShortcut,
