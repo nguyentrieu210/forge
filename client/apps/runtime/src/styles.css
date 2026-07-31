@@ -46,3 +46,31 @@
     height: 0.875rem;
   }
 }
+
+/* Chromium lets the native input own hit-testing even when an absolutely positioned
+   sibling is painted above it. Use a compound control instead of overlapping hit areas. */
+#mf-login-pwd {
+  width: calc(100% - 2.5rem);
+  border-right: 0;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+#mf-login-pwd + button[aria-pressed] {
+  top: 0;
+  right: 0;
+  width: 2.5rem;
+  height: 100%;
+  border: 1px solid var(--input);
+  border-left: 0;
+  border-radius: 0 0.75rem 0.75rem 0;
+  background: color-mix(in srgb, var(--background) 65%, transparent);
+  translate: none;
+  z-index: 1;
+  pointer-events: auto;
+}
+
+#mf-login-pwd:focus-visible + button[aria-pressed] {
+  border-color: var(--ring);
+  background: var(--card);
+}
