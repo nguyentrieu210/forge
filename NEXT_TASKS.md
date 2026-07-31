@@ -2,7 +2,7 @@
 
 Ngày cập nhật: **2026-07-31**.
 
-## P0 — Đóng final merge gate cho PR #27
+## P0 — Finalize PR #27 for merge review
 
 Branch: `feat/inventory-manufacturing-item-catalog-20260731`.
 
@@ -19,28 +19,24 @@ Authoritative metadata: `server/briefs/alumdoor-v2.json`, version `2.0.34`.
 - Review score: **96/100**.
 - Critical: **0**.
 - High: **0** sau remediation.
-- Default synchronized, behind `0`, PR conflict-free trước handoff commit cuối.
-- Exact code head `39201fbb4a3816530a311273b68867584a9c5026` đã qua:
-  - PR Validation run `30622748689`, job `91130862243`: tests/typecheck/build **PASS**;
-  - Inventory and Manufacturing CI run `30622748750`, job `91130862871`: focused tests/audit/SQL/brief/lint/full tests/typecheck/build **PASS**.
+- Required workflows đã chứng minh focused tests/audit/SQL/brief/lint/full tests/typecheck/build đều PASS trong quá trình đóng gate.
 - Không migration, deploy, production mutation hoặc secret change.
 
 Review authoritative:
 
 - `server/docs/ALUMDOOR-INVENTORY-MANUFACTURING-SLICE-A-REVIEW.md`.
 
-### Việc thực hiện ngay
+### Việc còn lại trước merge
 
-1. Chờ hai workflow bắt buộc chạy trên final handoff-doc HEAD tạo bởi cập nhật `CURRENT_STATUS.md` và file này.
-2. Nếu đỏ:
-   - đọc đúng failed step/log;
-   - sửa code/config chỉ khi có lỗi thật;
-   - không bypass hoặc coi cancelled/missing run là PASS.
-3. Khi cả hai workflow xanh trên cùng final HEAD:
-   - cập nhật PR body với final SHA/run/job;
-   - xác minh default behind `0`, `mergeable=true` và không có unresolved review thread;
-   - chuyển PR khỏi draft sang ready for review.
-4. Không merge trước yêu cầu merge rõ ràng của người dùng.
+1. Xác minh hai required workflows xanh trên **current PR head**:
+   - `Inventory and Manufacturing CI`;
+   - `PR Validation`.
+2. Cập nhật PR body với exact current HEAD, run ID và job ID.
+3. Xác minh branch behind `0`, `mergeable=true` và không có unresolved review thread.
+4. Chuyển PR khỏi draft sang ready for review.
+5. Không merge trước yêu cầu merge rõ ràng của người dùng.
+
+PR body là nguồn authoritative cho exact-head evidence, tránh sửa handoff chỉ để thay một SHA rồi tự tạo thêm một SHA khác.
 
 ## P1 — Sau khi Slice A merge
 
