@@ -52,7 +52,7 @@ jobs:
       - name: Run focused Alumdoor catalog tests
         run: |
           pnpm --dir server run build
-          node --test server/tests/alumdoor-catalog-audit.test.mjs server/tests/alumdoor-item-validator.test.mjs
+          node --test server/tests/alumdoor-catalog-audit.test.mjs server/tests/alumdoor-catalog-warehouse-role.test.mjs server/tests/alumdoor-item-validator.test.mjs
 
       - name: Generate redacted authoritative catalog audit
         shell: bash
