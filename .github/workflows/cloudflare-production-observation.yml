@@ -2,6 +2,9 @@ name: Cloudflare Production Smoke Observation
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - "ops/observe-alu-production-*"
 
 permissions:
   contents: read
@@ -34,8 +37,8 @@ jobs:
           test "$root" = '200'
           test "$guest_boot" = '403'
 
-          printf 'observed_at=%s\nhealth=%s\nroot=%s\nguest_boot=%s\nresult=pass\n' \
-            "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$health" "$root" "$guest_boot" \
+          printf 'observed_at=%s\nsource_sha=%s\nhealth=%s\nroot=%s\nguest_boot=%s\nresult=pass\n' \
+            "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$GITHUB_SHA" "$health" "$root" "$guest_boot" \
             > "$EVIDENCE_DIR/state.txt"
 
       - name: Upload observation evidence
