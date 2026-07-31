@@ -1,23 +1,30 @@
 -- Finance AR/AP due-date and aging foundation.
 --
 -- Outstanding remains derived from the immutable Payment Ledger. This migration
--- only adds canonical invoice-term validation, a JSON projection for report
--- queries, and metadata for the Sales Invoice due-date field.
+-- validates explicit invoice terms, adds a JSON projection for report queries,
+-- and exposes a required Sales Invoice due-date field in the metadata UI.
+--
+-- Hard database enforcement of presence is intentionally deferred until the
+-- legacy backfill reports zero unresolved invoices. API clients and historical
+-- fixtures that omit due_date remain compatible; the projection uses posting date
+-- as an explicit fallback until cutover.
 
 CREATE TRIGGER IF NOT EXISTS finance_invoice_due_date_insert_guard
 BEFORE INSERT ON documents
 WHEN NEW.doctype IN ('Sales Invoice', 'Purchase Invoice') AND NEW.docstatus = 1
 BEGIN
   SELECT CASE
-    WHEN COALESCE(json_extract(NEW.payload_json, '$.due_date'), '') = ''
-      THEN RAISE(ABORT, 'INVOICE_DUE_DATE_REQUIRED')
-    WHEN length(json_extract(NEW.payload_json, '$.due_date')) <> 10
-      OR date(json_extract(NEW.payload_json, '$.due_date')) IS NULL
-      OR date(json_extract(NEW.payload_json, '$.due_date')) <> json_extract(NEW.payload_json, '$.due_date')
+    WHEN COALESCE(json_extract(NEW.payload_json, '$.due_date'), '') <> ''
+      AND (
+        length(json_extract(NEW.payload_json, '$.due_date')) <> 10
+        OR date(json_extract(NEW.payload_json, '$.due_date')) IS NULL
+        OR date(json_extract(NEW.payload_json, '$.due_date')) <> json_extract(NEW.payload_json, '$.due_date')
+      )
       THEN RAISE(ABORT, 'INVOICE_DUE_DATE_INVALID')
     WHEN date(json_extract(NEW.payload_json, '$.posting_at')) IS NULL
       THEN RAISE(ABORT, 'INVOICE_POSTING_DATE_INVALID')
-    WHEN date(json_extract(NEW.payload_json, '$.due_date')) < date(json_extract(NEW.payload_json, '$.posting_at'))
+    WHEN COALESCE(json_extract(NEW.payload_json, '$.due_date'), '') <> ''
+      AND date(json_extract(NEW.payload_json, '$.due_date')) < date(json_extract(NEW.payload_json, '$.posting_at'))
       THEN RAISE(ABORT, 'INVOICE_DUE_DATE_BEFORE_POSTING')
   END;
 END;
@@ -32,15 +39,17 @@ WHEN NEW.doctype IN ('Sales Invoice', 'Purchase Invoice')
  )
 BEGIN
   SELECT CASE
-    WHEN COALESCE(json_extract(NEW.payload_json, '$.due_date'), '') = ''
-      THEN RAISE(ABORT, 'INVOICE_DUE_DATE_REQUIRED')
-    WHEN length(json_extract(NEW.payload_json, '$.due_date')) <> 10
-      OR date(json_extract(NEW.payload_json, '$.due_date')) IS NULL
-      OR date(json_extract(NEW.payload_json, '$.due_date')) <> json_extract(NEW.payload_json, '$.due_date')
+    WHEN COALESCE(json_extract(NEW.payload_json, '$.due_date'), '') <> ''
+      AND (
+        length(json_extract(NEW.payload_json, '$.due_date')) <> 10
+        OR date(json_extract(NEW.payload_json, '$.due_date')) IS NULL
+        OR date(json_extract(NEW.payload_json, '$.due_date')) <> json_extract(NEW.payload_json, '$.due_date')
+      )
       THEN RAISE(ABORT, 'INVOICE_DUE_DATE_INVALID')
     WHEN date(json_extract(NEW.payload_json, '$.posting_at')) IS NULL
       THEN RAISE(ABORT, 'INVOICE_POSTING_DATE_INVALID')
-    WHEN date(json_extract(NEW.payload_json, '$.due_date')) < date(json_extract(NEW.payload_json, '$.posting_at'))
+    WHEN COALESCE(json_extract(NEW.payload_json, '$.due_date'), '') <> ''
+      AND date(json_extract(NEW.payload_json, '$.due_date')) < date(json_extract(NEW.payload_json, '$.posting_at'))
       THEN RAISE(ABORT, 'INVOICE_DUE_DATE_BEFORE_POSTING')
   END;
 END;
@@ -69,6 +78,10 @@ SELECT
     date(json_extract(payload_json, '$.due_date')),
     date(json_extract(payload_json, '$.posting_at'))
   ) AS due_date,
+  CASE
+    WHEN COALESCE(json_extract(payload_json, '$.due_date'), '') = '' THEN 'posting_date_fallback'
+    ELSE 'explicit'
+  END AS due_date_source,
   COALESCE(CAST(json_extract(payload_json, '$.grand_total_minor') AS INTEGER), 0) AS invoice_total_minor
 FROM documents
 WHERE doctype IN ('Sales Invoice', 'Purchase Invoice')
