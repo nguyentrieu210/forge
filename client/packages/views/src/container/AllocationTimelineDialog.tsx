@@ -11,6 +11,10 @@ import {
   type PurchaseAllocationActionTarget,
   type PurchaseAllocationActionWindow,
 } from "./PurchaseAllocationActionDialog.js";
+import {
+  PurchaseSupplierDebtReportDialog,
+  type PurchaseSupplierDebtReport,
+} from "./PurchaseSupplierDebtReportDialog.js";
 
 export interface AllocationTimelineColumn {
   key: string;
@@ -39,6 +43,7 @@ export interface AllocationTimeline {
   rows: AllocationTimelineRow[];
   summary: Array<{ label: string; value: string }>;
   windows: AllocationTimelineWindow[];
+  supplier_debt_reports?: PurchaseSupplierDebtReport[];
 }
 
 export interface AllocationTimelineDialogProps {
@@ -58,6 +63,7 @@ export function AllocationTimelineDialog(props: AllocationTimelineDialogProps) {
   const [overrideCaps, setOverrideCaps] = useState<Capabilities>(NO_CAPS);
   const [action, setAction] = useState<PurchaseAllocationActionTarget | null>(null);
   const [actionSaving, setActionSaving] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
 
   useEffect(() => {
     setDisplayTimeline(timeline);
@@ -68,6 +74,7 @@ export function AllocationTimelineDialog(props: AllocationTimelineDialogProps) {
       setSettlementCaps(NO_CAPS);
       setOverrideCaps(NO_CAPS);
       setAction(null);
+      setReportOpen(false);
       return;
     }
     let active = true;
@@ -260,7 +267,15 @@ export function AllocationTimelineDialog(props: AllocationTimelineDialogProps) {
             )}
           </div>
 
-          <div className="flex shrink-0 justify-end border-t px-5 py-3">
+          <div className="flex shrink-0 items-center justify-between gap-2 border-t px-5 py-3">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={loading || !effectiveTimeline}
+              onClick={() => setReportOpen(true)}
+            >
+              Công nợ NCC
+            </Button>
             <Button type="button" variant="outline" disabled={loading || actionSaving} onClick={onClose}>Đóng</Button>
           </div>
         </DialogContent>
@@ -271,6 +286,11 @@ export function AllocationTimelineDialog(props: AllocationTimelineDialogProps) {
         saving={actionSaving}
         onCancel={() => setAction(null)}
         onSubmit={(submission) => { void submitAction(submission); }}
+      />
+      <PurchaseSupplierDebtReportDialog
+        open={reportOpen}
+        reports={effectiveTimeline?.supplier_debt_reports ?? []}
+        onClose={() => setReportOpen(false)}
       />
     </>
   );
