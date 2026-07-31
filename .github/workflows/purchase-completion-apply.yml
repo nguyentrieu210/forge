@@ -1,0 +1,105 @@
+name: Purchase Completion Apply
+
+on:
+  pull_request:
+    branches:
+      - hotfix/alumdoor-print-list-delete
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: purchase-completion-apply-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  apply-and-verify:
+    name: Apply and verify purchase completion
+    if: ${{ github.head_ref == 'feat/purchase-fifo-production-completion-20260731' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+
+    steps:
+      - name: Checkout exact pull-request head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Reconstruct and apply patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          payload="$(tr -d '\r\n' < .github/purchase-completion.patch.gz.b64)"
+          actual="$(printf '%s' "$payload" | sha256sum | awk '{print $1}')"
+          expected='6995a2a9aca39363db69b394e447932e0a22186448081ed73bc9efacf4099183'
+          test "$actual" = "$expected"
+          printf '%s' "$payload" | base64 --decode | gzip -dc > /tmp/purchase-completion.patch
+          git apply --check /tmp/purchase-completion.patch
+          git apply /tmp/purchase-completion.patch
+          rm -f .github/purchase-completion.patch.gz.b64
+          rm -f .github/workflows/purchase-completion-apply.yml
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Frontend lint
+        run: pnpm --filter metaforge run lint
+
+      - name: Server unit tests
+        run: pnpm --dir server run test:unit
+
+      - name: Server SQL tests
+        run: pnpm --dir server run test:sql
+
+      - name: Client tests
+        run: pnpm run client:test
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Build
+        run: pnpm build
+
+      - name: Install Chromium
+        run: pnpm --filter e2e-forge exec playwright install --with-deps chromium
+
+      - name: Purchase browser QA
+        run: pnpm --filter e2e-forge exec playwright test --config playwright.purchase.config.ts
+
+      - name: Upload browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: purchase-completion-browser-${{ github.run_id }}
+          path: |
+            client/e2e-forge/playwright-report-purchase/
+            client/e2e-forge/test-results-purchase/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Commit verified source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'fix(purchase): complete lifecycle and browser QA'
+          git push origin HEAD:feat/purchase-fifo-production-completion-20260731
