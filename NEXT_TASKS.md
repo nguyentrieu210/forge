@@ -2,42 +2,71 @@
 
 Ngày cập nhật: **2026-07-31**.
 
-## P0 — Hoàn thiện Slice A bằng audit dữ liệu live
+## P0 — Mở exact-head merge gate cho PR #27
 
 Branch: `feat/inventory-manufacturing-item-catalog-20260731`.
 
-Draft PR: `#27`.
+PR: `#27`.
 
-Authoritative metadata: `server/briefs/alumdoor-v2.json` version `2.0.34`.
+Authoritative metadata: `server/briefs/alumdoor-v2.json`, version `2.0.34`.
 
-Gate hiện tại:
+### Đã đạt
 
 - G0 Scope: **PASS**.
-- G1 BRD: **PASS**.
-- G2 Slice A plan: **PASS**.
-- G3 Test/lint/typecheck/build: **PASS**.
-- G4 Exact code-head CI: **PASS tại `2ada710...`**.
-- G5 Staging: **chưa bắt đầu**.
+- G1 Requirements/BRD: **PASS**.
+- G2 Technical plan: **PASS**.
+- Slice A implementation: **hoàn thành về code**.
+- Review score: **96/100**.
+- Critical: **0**.
+- High: **0** sau remediation.
+- Default đã đồng bộ tới `81697d454db5e22e758a8aeda8cc40f1f247b18a` qua merge `05477f70f74374516961127cc700f8341ce01196`.
+- Không migration, deploy, production mutation hoặc secret change.
 
-### Đã xong
+Review authoritative:
 
-1. Planner và CLI audit read-only cho Item/UOM/profile/warehouse/BOM.
-2. Audit trực tiếp brief v2.0.34, redacted artifact và checksum.
-3. Warehouse role normalization và coverage checks.
-4. Runtime Item invariants:
-   - dịch vụ không giữ manufacturing/stock configuration;
-   - nguồn mua phải có cờ mua;
-   - hàng sản xuất phải có cờ manufacturing;
-   - enum stage/supply được khóa;
-   - partial save ghép record hiện tại trước khi kiểm.
-5. Entrypoint `src/entry.ts` compose validator cũ và invariant mới.
-6. Focused HTTP tests, SQL, brief check, lint, repository tests, typecheck và build đều PASS.
-7. Đồng bộ default head `ad9b910...` và nhận workflow `PR Validation`.
-8. Xóa toàn bộ workflow/script thử nghiệm sau khi connector không cho chạy remote audit an toàn.
+- `server/docs/ALUMDOOR-INVENTORY-MANUFACTURING-SLICE-A-REVIEW.md`.
 
-### Việc tiếp theo
+### Blocker duy nhất trước khi chuyển PR ready
 
-1. Chạy remote audit **read-only, redacted** từ môi trường vận hành đã có Cloudflare credential:
+Required GitHub Actions chưa chạy được trên exact final HEAD.
+
+Các run gần nhất thất bại trước checkout/`Set up job`; job records có `steps=null` và không có downloadable log. Không test, typecheck hoặc build command nào thực sự chạy.
+
+Phân loại: **GitHub Actions pre-run infrastructure/configuration blocker; nguyên nhân cụ thể chưa đủ bằng chứng**.
+
+### Việc thực hiện ngay
+
+1. Kiểm tra default HEAD mới nhất.
+2. Nếu default tiến thêm, sync đúng file thay đổi vào branch và kiểm conflict.
+3. Trigger/retry:
+   - `Inventory and Manufacturing CI`;
+   - `PR Validation`.
+4. Chỉ khi job có steps thực sự:
+   - đọc failed step/log nếu đỏ;
+   - phân loại code/config/infrastructure;
+   - sửa code chỉ khi có code failure.
+5. Yêu cầu exact final-head evidence:
+   - install PASS;
+   - focused catalog/warehouse/Item tests PASS;
+   - redacted audit artifact PASS;
+   - server SQL PASS;
+   - brief check PASS;
+   - frontend lint PASS;
+   - repository tests PASS;
+   - typecheck PASS;
+   - build PASS.
+6. Khi cả hai required workflows xanh:
+   - cập nhật PR body với exact HEAD/run/job/artifact;
+   - xác minh `mergeable=true`, behind=0, không unresolved review thread;
+   - chuyển PR khỏi draft;
+   - báo người dùng PR sẵn sàng merge.
+7. Không merge trước yêu cầu merge rõ ràng của người dùng.
+
+## P1 — Sau khi Slice A merge
+
+### Audit dữ liệu live tenant `alu`
+
+Chạy read-only, redacted từ môi trường vận hành có Cloudflare credential:
 
 ```powershell
 New-Item -ItemType Directory -Force C:\Forge-Audit | Out-Null
@@ -47,74 +76,64 @@ node server/scripts/audit-alumdoor-catalog.mjs `
   --output C:\Forge-Audit\alu-catalog-redacted.json
 ```
 
-2. Không commit report; chỉ ghi các trường sau vào handoff/PR:
-   - checksum;
-   - records/active/disabled Item;
-   - active BOM/Production Standard;
-   - Critical/High/Medium/Low;
-   - danh sách finding code redacted.
-3. Review từng nhóm High của dữ liệu live:
-   - category và cờ mua/bán/sản xuất;
-   - UOM và conversion;
-   - Measurement Profile;
-   - default warehouse/account;
-   - active BOM/Production Standard;
-   - BOM duplicate/circular/UOM/qty basis.
-4. Lập remediation plan riêng. Không tự sửa dữ liệu live từ audit CLI.
-5. Chạy lại exact-head CI nếu remediation làm thay đổi validator/planner.
+Không commit report. Chỉ ghi vào handoff/issue:
 
-## P0 — Điều phối với PR mua hàng #14
+- checksum;
+- records;
+- active/disabled Item;
+- active BOM/Production Standard;
+- Critical/High/Medium/Low;
+- finding code redacted.
 
-- PR #14 vẫn open/draft, head gần nhất `7201226103d54f6b87a62ed6d020c58926ff9ef0`.
-- PR này sở hữu migration `0030` và chạm procurement/stock contracts.
-- Nhánh tồn kho/sản xuất **không tạo migration mới** trước khi PR #14 merge hoặc migration head được xác minh lại.
-- Sau merge:
-  1. đồng bộ/rebase branch;
+Lập remediation plan riêng. Audit CLI không tự sửa dữ liệu.
+
+### Staging
+
+Staging chỉ bắt đầu sau live audit review và khi có branch cho Slice B/C. Slice A không deploy production.
+
+## P2 — Điều phối với PR mua hàng #14
+
+- PR #14 vẫn open/draft.
+- Nội dung PR hiện có migration `0031_purchase_allocation_control_metadata.sql`; phải xác minh migration head lại sau khi #14 merge.
+- Không tạo migration inventory/manufacturing mới trước coordination gate.
+- Sau #14 merge:
+  1. sync/rebase branch kế tiếp;
   2. xử lý conflict;
-  3. xác minh migration head;
+  3. kiểm migration head;
   4. chạy full tests/typecheck/build và exact-head CI.
 - FIFO rollout tenant `alu` vẫn disabled.
 
 ## Slice B — Inventory completeness
 
-Chỉ bắt đầu runtime/migration sau remote audit và coordination gate với PR #14.
+Chỉ mở branch/runtime migration sau Slice A merge, live audit review và migration coordination.
 
-1. Chốt warehouse role model:
-   - `RAW_MATERIAL`;
-   - `WIP`;
-   - `FINISHED_GOODS`;
-   - `QUARANTINE`;
-   - `SCRAP_OFFCUT`;
-   - `GENERAL` chỉ cho stock ngoài sản xuất.
-2. Map hoặc bổ sung kho vật lý cho RAW, WIP, thành phẩm và chờ kiểm.
-3. Thiết kế canonical physical stock identity cho nhôm, kính/tấm, cuộn và batch/serial.
-4. Thêm append-only physical movement projection, revision claim và persistence atomic với stock ledger.
-5. Stock Entry phải giữ source lot/dimension, colour/condition, source/target role và reversal identity.
-6. Cover receipt, transfer, issue, manufacture, return, reconciliation, cancel và concurrent issue.
-7. Rollout mặc định tắt; không backfill/activation trước staging.
+1. Warehouse roles: RAW, WIP, FINISHED, QUARANTINE, SCRAP/OFFCUT, GENERAL.
+2. Canonical physical stock identity cho nhôm, kính/tấm, cuộn và batch/serial.
+3. Append-only physical movement projection và atomic stock ledger persistence.
+4. Stock Entry giữ source lot/dimension, colour/condition, source/target role và reversal identity.
+5. Cover receipt, transfer, issue, manufacture, return, reconciliation, cancel và concurrency.
+6. Rollout mặc định tắt.
 
 ## Slice C — Manufacturing completeness
 
-1. Version BOM/Production Standard bằng revision và effective dates.
-2. Validate finished/raw Item flags, UOM conversion, qty basis, circular và duplicate active BOM.
-3. Work Order lưu immutable BOM snapshot/checksum.
-4. Manufacturing progress giữ BOM row, physical lot, issue/consume/produce/scrap/offcut và reversal reference.
-5. Hoàn thiện partial issue, partial manufacture, over-consumption/over-production guard, close và cancel/reverse.
-6. Báo cáo WIP, thiếu vật tư, tiến độ, định mức so với thực tế và phế/offcut.
+1. BOM/Production Standard revision và effective dates.
+2. Immutable Work Order BOM snapshot/checksum.
+3. Issue/consume/produce/scrap/offcut progress với reversal reference.
+4. Partial issue/manufacture, over-consumption/production guard, close/cancel.
+5. WIP, thiếu vật tư, định mức/thực tế và phế/offcut reports.
 
 ## Slice D — UI, QA và release
 
-1. Làm gọn form Item theo loại, giữ server permission authoritative.
-2. Thêm completeness/error indicator cho Item và BOM.
-3. Work Order hiển thị snapshot, required/issued/produced/scrap/variance.
-4. Desktop/mobile Browser QA cho Item, Stock Entry, BOM và Work Order.
-5. Staging smoke toàn luồng trước production.
-6. Không deploy production hoặc sửa secret nếu chưa có yêu cầu riêng.
+1. Item/BOM completeness indicators.
+2. Work Order snapshot và variance UI.
+3. Desktop/mobile Browser QA.
+4. Staging smoke toàn luồng.
+5. Production chỉ sau yêu cầu deploy riêng.
 
-## Production safety
+## Safety
 
-- Không migrate hoặc mutate tenant `alu` từ nhánh này.
-- Không deploy Gateway/Tenant Worker từ nhánh này.
+- Không mutate/migrate tenant `alu` từ PR #27.
+- Không deploy Gateway/Tenant Worker.
 - Không sửa Cloudflare secret.
-- Không commit report raw, backup, `server/work/`, `tmp/`, `.env` hoặc generated artifacts.
-- Production chỉ được cân nhắc sau G5 staging, live catalog audit được review và yêu cầu deploy riêng.
+- Không commit raw report, `.env`, `server/work/`, `tmp/`, backup hoặc generated artifact.
+- Không bypass failed/missing/cancelled/infrastructure-blocked CI.
