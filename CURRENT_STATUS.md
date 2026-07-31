@@ -1,116 +1,96 @@
 # CURRENT STATUS
 
-## Tồn kho/Sản xuất — Slice B và Slice C đã mở
-
-- Default tại thời điểm mở nhánh: `4d566a44fd1f04979e4e6de952fd81da9b28e93e`.
-- Slice B branch: `feat/inventory-physical-stock-slice-b-20260731`.
-- Slice C branch dự kiến: `feat/manufacturing-bom-workorder-slice-c-20260731`, xếp chồng lên Slice B.
-- Kickoff authoritative: `server/docs/ALUMDOOR-INVENTORY-MANUFACTURING-SLICE-BC-KICKOFF.md`.
-- Metadata authoritative: `server/briefs/alumdoor-v2.json`, version `2.0.34`.
-- G0/G1: PASS; G2 đã refresh theo default hiện tại; G3 cho Slice B/C chưa bắt đầu.
-- RBAC PR #45 đã merge và đưa migration `0030_rbac_audit.sql` vào default.
-- Purchase PR #14 vẫn open/draft và đang giữ migration `0031_purchase_allocation_control_metadata.sql`.
-- Slice B/C chưa được phép nhận số migration cho tới khi #14 merge/close và migration head được kiểm lại.
-- Chưa sửa runtime/schema, chưa migration tenant, chưa deploy, chưa đổi secret và FIFO vẫn disabled.
-
-## Nhánh Bán hàng — multi-UOM price và tồn trên form
-
-- Branch: `feat/sales-complete-20260731`, base `cd60f8c09c48105db84a82c12ad3b32d9f075064`.
-- Draft PR: `#25` — `feat(sales): multi-UOM pricing and stock availability`.
-- Snapshot code/test trước commit trạng thái: `9bcb36f4f068e662cfad2e1f64591390808cbe8f`; HEAD đã gồm tài liệu trước lượt rerun: `442a0b59c683ffd26cf012db8131a84f684b512b`.
-- Đã triển khai khoá giá chính xác theo `Bảng giá + Mặt hàng + ĐVT`; dữ liệu Item Price cũ không có UOM vẫn tương thích, còn dữ liệu cũ đã khai UOM chỉ được dùng khi dòng bán khớp tuyệt đối.
-- Báo giá/Đơn hàng lấy danh sách ĐVT hợp lệ từ Item, nạp giá đúng ĐVT và hiện tồn theo kho/ĐVT bán qua method chỉ đọc `alumdoor.sales.item_context`.
-- Preview giá từ chối Item Price thiếu tiền tệ, sai tiền tệ chứng từ, đơn giá âm/sai định dạng hoặc đã ngừng áp dụng; không đẩy rate không dùng được vào dòng bán.
-- `server/tests/alumdoor-sales-item-context.test.mjs` có 5 test tích hợp trực tiếp cho exact UOM price, quy đổi tồn, currency mismatch, disabled/malformed price, legacy UOM và undeclared UOM.
-- `server/tests/alumdoor-sales-permissions.test.mjs` nạp metadata thật từ `server/briefs/alumdoor.json` vào `MetadataPermissionService`: vai trò `Kinh doanh` đọc được nhưng bị từ chối create/save trên `Price List` và `Item Price`; vai trò `Kế toán` vẫn create/save được cả hai.
-- Dòng bán hiển thị `Còn N <ĐVT>`, `Hết hàng`, `Chưa chọn kho`, `Không quản lý tồn` hoặc lỗi đọc tồn/giá.
-- Preview tồn không giữ chỗ; chốt thiếu tồn ở Delivery Note submit vẫn authoritative.
-- GitHub Actions từng thất bại trước `Set up job` với `steps=null`; rerun không đổi code đã xác nhận đó là lỗi hạ tầng tạm thời.
-- Sales Feature CI rerun run `30620774111`, job `91136237101`: install, server unit tests, SQL tests, Alumdoor brief check, client tests, typecheck và build đều **PASS** trên HEAD `442a0b59c683ffd26cf012db8131a84f684b512b`.
-- PR Validation rerun run `30620774088`, job `91136251549`: test, typecheck và build đều **PASS** trên cùng HEAD.
-- G4 đã mở lại; blocker còn lại trước khi đề nghị merge là browser/staging smoke với dữ liệu và tài khoản thật.
-- Chưa thiết kế reservation/ATP theo Sales Order.
-- Chưa merge PR, chưa deploy Cloudflare hoặc production, không sửa secrets.
-
 Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
 
-## Git và nguồn sự thật
+## Repository
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Working branch cũ của Slice A: `feat/inventory-manufacturing-item-catalog-20260731`.
-- PR #27 đã merge với merge commit `7af5f96a4a6bc756eb2c46511db17a609a49fdc5`.
-- Không commit `.env`, secret, `server/work/`, `tmp/`, backup hoặc generated report.
+- GitHub là nguồn sự thật cho code, PR, CI và release evidence.
+- Không commit `.env`, `.dev.vars`, secret, `server/work/`, `tmp/`, backup SQL hoặc generated artifacts.
 
-## Authoritative metadata và tài liệu
+## Bán hàng — lọc mặt hàng trong child table đã phát hành production
 
-- Alumdoor metadata: `server/briefs/alumdoor-v2.json`, version `2.0.34`.
-- Tài liệu:
-  - `server/docs/ALUMDOOR-INVENTORY-MANUFACTURING-BRD.md`;
-  - `server/docs/ALUMDOOR-INVENTORY-MANUFACTURING-TECHNICAL-PLAN.md`;
-  - `server/docs/ALUMDOOR-INVENTORY-MANUFACTURING-ITEM-AUDIT.md`;
-  - `server/docs/ALUMDOOR-INVENTORY-MANUFACTURING-SLICE-A-REVIEW.md`.
+### Lỗi và nguyên nhân
 
-## Slice A đã hoàn thiện và merge
+Production từng hiển thị Item không được phép bán hoặc đã disabled trong ô `Mã hàng` của child table Báo giá/Đơn hàng dù metadata đã khai `{"is_sales_item":1,"disabled":0}`.
 
-### Catalog audit
+Nguyên nhân nằm ở MetaForge core: `buildLinkFilters` chỉ đọc `link_filters` dạng JSON array, nên object-form filter hợp lệ bị bỏ qua và Link search chạy không có điều kiện.
 
-- `server/scripts/alumdoor-catalog-audit-planner.mjs`
-  - audit Item, Item Group, UOM, Measurement Profile, Warehouse, BOM và Production Standard;
-  - finding code/severity/count/checksum xác định;
-  - redaction;
-  - missing source, duplicate/circular BOM, UOM/profile/warehouse và warehouse-role coverage.
-- `server/scripts/audit-alumdoor-catalog.mjs`
-  - chỉ đọc;
-  - hỗ trợ fixture, authoritative brief và tenant source;
-  - remote mặc định redacted;
-  - từ chối write/fix/apply flags;
-  - đọc cả active và disabled master rows;
-  - output mặc định ở OS temp và từ chối output nằm trong repository.
+### Merge
 
-### Runtime Item validation
+- Hotfix PR `#53`: `fix(sales): filter sellable items in child grids`.
+- Exact feature head trước merge: `c6e136a47283f973d9c5d4150884b91036ab6fae`.
+- Squash merge SHA: `48fa4d77eefb46384272550f8f6c0699ed054fa6`.
+- Fix hỗ trợ object form, array form, operator tuple và dependent `eval:` filters; chặn các khóa prototype nguy hiểm.
+- Regression mới chạy trong client selfcheck với đúng filter bán hàng đang dùng.
 
-- `server/apps-src/alumdoor-worker/src/entry.ts` compose validator lịch sử và invariant catalog.
-- Lỗi hệ thống/auth của validator lịch sử được giữ nguyên; khi cả hai là lỗi nghiệp vụ 422, invariant catalog nghiêm hơn được trả về để không che lý do field-level.
-- `server/apps-src/alumdoor-worker/src/item-catalog-invariants.ts` khóa:
-  - dịch vụ không stock/manufacturing/batch/serial/reorder;
-  - non-service bắt buộc stage/supply hợp lệ;
-  - purchase/manufacturing eligibility server-side;
-  - partial-save merge current Item;
-  - thiếu `PLATFORM` binding thì fail closed.
-- `server/apps-src/alumdoor-worker/wrangler.jsonc` dùng `src/entry.ts`; không đổi secret hoặc binding.
+### Exact-head CI
 
-### Regression
+Trên `c6e136a47283f973d9c5d4150884b91036ab6fae`:
 
-- `server/tests/alumdoor-catalog-audit.test.mjs`.
-- `server/tests/alumdoor-catalog-warehouse-role.test.mjs`.
-- `server/tests/alumdoor-item-validator.test.mjs`.
-- Cover disabled rows, redaction, deterministic checksum, output safety, service tracking, required stage/supply, UOM/profile/group và partial save.
+- PR Validation run `30630332229`, job `91154938153`: tests, typecheck, build **PASS**.
+- CI run `30630332276`, job `91154938420`: tests, typecheck, build **PASS**.
+- Sales Feature CI run `30630331930`, job `91154937868`: server unit, SQL, brief, client regression, typecheck, build **PASS**.
+- Purchase Feature CI run `30630331847`, job `91154937227`: server unit, SQL, client regression, typecheck, build **PASS**.
+- Inventory and Manufacturing CI run `30630332239`, job `91154938438`: focused tests, redacted audit, SQL, authoritative brief validation, lint, repository tests, typecheck, build **PASS**.
+- UI Pull Request Validation run `30630332351`, job `91154938570`: lint, tests, typecheck, build, Chromium browser QA và local cookie-auth smoke **PASS**.
+- Production release jobs trong PR gate đều **SKIPPED**.
 
-## Review score Slice A
+### Gateway/frontend production
 
-- Review: `server/docs/ALUMDOOR-INVENTORY-MANUFACTURING-SLICE-A-REVIEW.md`.
-- Điểm: **96/100**.
-- Critical: **0**.
-- High: **0** sau remediation.
-- Quality threshold `>=95`: **PASS**.
+- Release PR `#54`: `release: deploy sales item-filter hotfix to Gateway`.
+- Release PR squash merge SHA: `671b72ca374ae0227ec8f52c09d65de83108e1a2`.
+- Exact code SHA được checkout/deploy: `48fa4d77eefb46384272550f8f6c0699ed054fa6`.
+- Gateway production run: `30630931291`.
+- Job: `91156832579` — `Build and deploy Gateway` — **SUCCESS**.
+- Build và stage frontend: **PASS**.
+- Wrangler deploy `cloudforge-gateway`: **PASS**.
+- Gateway version ID: `dc6eada4-e4a1-451a-a92f-66fe04050707`.
+- Production smoke: `/health` = `200`, `/` = `200`, unauthenticated boot = `403`.
+- Provider evidence từ Wrangler NDJSON: **PASS**.
+- Evidence artifact: `gateway-production-release-30630931291`, artifact ID `8793326579`.
+- Không deploy tenant Worker, không migration, không mutate D1, không sửa production secrets.
+- FIFO rollout vẫn **disabled**.
 
-## Live tenant audit và staging
+### Residual verification
 
-- Chưa chạy remote audit tenant `alu`.
-- Chưa staging/deploy cho tồn kho/sản xuất.
-- Live audit và staging là gate trước remediation dữ liệu, rollout hoặc production release của Slice B/C.
+Endpoint smoke và CI đã hoàn tất, nhưng chưa có functional browser evidence sau deploy bằng dữ liệu production thật để xác nhận picker:
 
-## Điều phối và production safety
+- Item `is_sales_item=1`, `disabled=0` xuất hiện;
+- Item `is_sales_item=0` không xuất hiện;
+- Item `disabled=1` không xuất hiện;
+- filter vẫn giữ khi tìm theo mã/tên;
+- recent links không làm lộ Item đã bị loại.
 
-- PR mua hàng `#14` vẫn open/draft và có migration `0031`; phải xác minh migration head trước schema Slice B/C.
-- FIFO rollout tenant `alu` vẫn disabled.
-- Không deploy Gateway/Tenant Worker từ nhánh này.
-- Không migrate/mutate tenant `alu`.
-- Không sửa Cloudflare secret.
+Không được diễn giải endpoint smoke thành bằng chứng rằng functional picker smoke đã hoàn tất.
 
-## RBAC Slice B đã merge
+## Bán hàng multi-UOM hiện hành
 
-- PR #45 đã merge với merge commit `4341091b8a8dc0cea3de96510c34dc68a8b00ecb`.
-- Migration `0030_rbac_audit.sql` là migration head đã biết trên default trước khi PR #14 merge.
-- Atomic administration, audit ledger và last-admin guard đã vào default.
+- Hotfix hậu kiểm 2026-07-31: bỏ qua cột tồn rỗng trước khi đọc số dư hợp lệ và xóa giá/tồn preview cũ khi `alumdoor.sales.item_context` lỗi, tránh hiển thị dữ liệu của lựa chọn trước.
+
+- Giá theo đúng `Bảng giá + Mặt hàng + ĐVT`.
+- ĐVT lấy từ Item/UOM Conversion.
+- Báo giá/Đơn hàng đọc giá và tồn theo Item + Kho + ĐVT qua `alumdoor.sales.item_context`.
+- Preview tồn không giữ chỗ; Delivery Note submit vẫn authoritative chống âm kho.
+- Tenant Worker production hiện hành: `cloudforge-tenant-alu`, version `e15bc6ad-e343-49af-aa2f-c65d31c09fea`.
+- Gateway production hiện hành sau hotfix: version `dc6eada4-e4a1-451a-a92f-66fe04050707`.
+
+## RBAC
+
+- Slice A PR `#37`, Slice B PR `#45` và post-merge QA PR `#48` đã merge.
+- Regression hậu merge giữ tại `server/tests/rbac-post-merge-qa.test.mjs`.
+- Staging/browser QA bằng tài khoản và tenant thử thật vẫn là việc riêng; không có production mutation RBAC trong đợt hotfix này.
+
+## Release automation
+
+- `.github/workflows/gateway-production-release.yml` là đường phát hành Gateway có exact target SHA, smoke và Wrangler version evidence.
+- `.github/release/gateway-production.trigger` là trigger Gateway production.
+- `.github/workflows/pr-validation.yml` giữ PR gates và tenant release path.
+- Tenant provider evidence phải lấy từ Wrangler NDJSON, không dựa vào deployments REST endpoint từng trả `404`.
+
+## Các luồng khác
+
+- Inventory/manufacturing, purchase/FIFO và các PR đang mở không bị sửa trong đợt hotfix này.
+- PR body, exact-head CI và trạng thái GitHub hiện hành của từng luồng là nguồn authoritative trước mọi merge/deploy tiếp theo.
+- Không merge hoặc deploy luồng khác nếu chưa có yêu cầu rõ.

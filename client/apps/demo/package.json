@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -b",
-    "selfcheck": "tsc -b && esbuild src/selfcheck.ts --bundle --platform=node --format=cjs --jsx=automatic --outfile=.selfcheck.cjs && node .selfcheck.cjs",
+    "selfcheck": "tsc -b && esbuild src/selfcheck.ts --bundle --platform=node --format=cjs --jsx=automatic --outfile=.selfcheck.cjs && node .selfcheck.cjs && esbuild src/link-query-object-selfcheck.ts --bundle --platform=node --format=cjs --outfile=.link-query-object-selfcheck.cjs && node .link-query-object-selfcheck.cjs",
     "e2e": "playwright test",
     "e2e:live": "playwright test --config playwright.live.config.ts",
     "smoke": "tsx src/smoke.ts",

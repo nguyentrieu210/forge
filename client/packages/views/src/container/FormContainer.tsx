@@ -9,13 +9,15 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Doc } from "@metaforge/core";
 import type { ListViewSnapshot } from "@metaforge/adapter-frappe";
-import { ConfirmDialog, PromptDialog, toast, useT } from "@metaforge/ui";
+import { Button, ConfirmDialog, PromptDialog, toast, useT } from "@metaforge/ui";
 import { FormView } from "../form/FormView.js";
 import type { FormActionKind } from "../detail/formActions.js";
 import { useMetaForge } from "./provider.js";
 import { useDoc, useFormMeta, useTransitions, useCapabilities, NO_CAPS } from "./hooks.js";
 import { stashDuplicate } from "./duplicate.js";
 import { recordRecentDoc } from "./recent-docs.js";
+import { SubmitPreviewDialog, type SubmitPreview } from "./SubmitPreviewDialog.js";
+import { AllocationTimelineDialog, type AllocationTimeline } from "./AllocationTimelineDialog.js";
 
 export interface FormContainerProps {
   doctype: string;
@@ -52,6 +54,12 @@ export function FormContainer(props: FormContainerProps) {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string> | undefined>();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [renaming, setRenaming] = useState(false);
+  const [submitPreview, setSubmitPreview] = useState<SubmitPreview | null>(null);
+  const [allocationTimelineOpen, setAllocationTimelineOpen] = useState(false);
+  const [allocationTimeline, setAllocationTimeline] = useState<AllocationTimeline | null>(null);
+  const [allocationTimelineLoading, setAllocationTimelineLoading] = useState(false);
+  const [allocationTimelineError, setAllocationTimelineError] = useState<string | null>(null);
+  const supportsAllocationTimeline = doctype === "Purchase Order" || doctype === "Purchase Receipt";
 
   // "Gần đây" (CommandPalette đã có sẵn UI, trước đây không app nào cấp dữ liệu) — ghi mỗi lần mở
   // 1 bản ghi đã lưu thành công (doc?.modified đổi ⇒ mở doc mới HOẶC vừa lưu xong đều tính là "vừa xem").
@@ -108,6 +116,13 @@ export function FormContainer(props: FormContainerProps) {
     ]).catch(() => undefined);
   };
 
+  const submitCurrent = async () => {
+    const updated = await adapter.submit(doc);
+    publishMutation(updated);
+    toast.success(t("form.submitted"));
+    setSubmitPreview(null);
+  };
+
   const onSave = async (changed: Record<string, unknown>) => {
     setSaving(true);
     setFieldErrors(undefined);
@@ -139,15 +154,62 @@ export function FormContainer(props: FormContainerProps) {
     // không gọi API, chỉ stash + để cha điều hướng.
     if (kind === "duplicate") { stashDuplicate(doctype, doc as Record<string, unknown>); props.onDuplicate?.(); return; }
     if (kind === "print") { props.onPrint?.(); return; }
+    if (kind === "submit") {
+      setSaving(true);
+      try {
+        // Fail closed: preview is server-authoritative. A failed preview must not
+        // silently fall through to submit, because the operator would confirm one
+        // allocation while the server writes another.
+        const preview = await adapter.callGet<SubmitPreview | null>(
+          "metaforge.api.get_submit_preview",
+          { doctype, name },
+        );
+        if (preview) setSubmitPreview(preview);
+        else await submitCurrent();
+      } catch (e) {
+        toast.error(adapter.mapError(e).message);
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
     setSaving(true);
     try {
-      if (kind === "submit") { const updated = await adapter.submit(doc); publishMutation(updated); toast.success(t("form.submitted")); }
-      else if (kind === "cancel") { const updated = await adapter.cancel(doctype, name); publishMutation(updated); toast.success(t("form.cancelled")); }
+      if (kind === "cancel") { const updated = await adapter.cancel(doctype, name); publishMutation(updated); toast.success(t("form.cancelled")); }
       else if (kind === "amend") { await adapter.amend(doctype, name); invalidateCollection(); toast.success(t("form.amended")); props.onSaved?.(); }
     } catch (e) {
       toast.error(adapter.mapError(e).message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const confirmSubmit = async () => {
+    setSaving(true);
+    try {
+      await submitCurrent();
+    } catch (e) {
+      toast.error(adapter.mapError(e).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openAllocationTimeline = async () => {
+    setAllocationTimelineOpen(true);
+    setAllocationTimelineLoading(true);
+    setAllocationTimelineError(null);
+    try {
+      const timeline = await adapter.callGet<AllocationTimeline | null>(
+        "metaforge.api.get_purchase_allocation_timeline",
+        { doctype, name },
+      );
+      setAllocationTimeline(timeline);
+    } catch (error) {
+      setAllocationTimeline(null);
+      setAllocationTimelineError(adapter.mapError(error).message);
+    } finally {
+      setAllocationTimelineLoading(false);
     }
   };
 
@@ -199,7 +261,21 @@ export function FormContainer(props: FormContainerProps) {
     <>
       <FormView
         onClose={props.onClose}
-        headerActions={props.headerActions}
+        headerActions={(
+          <>
+            {props.headerActions}
+            {supportsAllocationTimeline && Number(doc.docstatus ?? 0) !== 0 ? (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={allocationTimelineLoading}
+                onClick={() => void openAllocationTimeline()}
+              >
+                {allocationTimelineLoading ? "Đang tải…" : "Phân bổ"}
+              </Button>
+            ) : null}
+          </>
+        )}
         meta={metaQ.data}
         doc={doc}
         registry={registry}
@@ -241,6 +317,19 @@ export function FormContainer(props: FormContainerProps) {
         defaultValue={name}
         confirmLabel={t("form.rename_title")}
         onConfirm={doRename}
+      />
+      <SubmitPreviewDialog
+        preview={submitPreview}
+        saving={saving}
+        onCancel={() => setSubmitPreview(null)}
+        onConfirm={() => void confirmSubmit()}
+      />
+      <AllocationTimelineDialog
+        open={allocationTimelineOpen}
+        timeline={allocationTimeline}
+        loading={allocationTimelineLoading}
+        error={allocationTimelineError}
+        onClose={() => setAllocationTimelineOpen(false)}
       />
     </>
   );

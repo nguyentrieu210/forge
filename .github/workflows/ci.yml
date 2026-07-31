@@ -59,11 +59,11 @@ jobs:
       cancel-in-progress: false
     env:
       TENANT: alu
-      TARGET_SHA: 591ca359937d6ae12803d36c74996db8482060af
+      TARGET_SHA: 7b3dc06dbbecbb5370ddb48259aa1614aef2ff32
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: d4d5a24d4e56f28f27fe58b64ef149a5
-      EVIDENCE_DIR: ${{ runner.temp }}/alu-release-evidence
-      BACKUP_DIR: ${{ runner.temp }}/alu-backup
+      EVIDENCE_DIR: /tmp/alu-release-evidence
+      BACKUP_DIR: /tmp/alu-backup
 
     steps:
       - name: Checkout verified code
@@ -90,7 +90,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$TENANT" = "alu"
-          test "$TARGET_SHA" = "591ca359937d6ae12803d36c74996db8482060af"
+          test "$TARGET_SHA" = "7b3dc06dbbecbb5370ddb48259aa1614aef2ff32"
           test -n "${CLOUDFLARE_API_TOKEN:-}"
           mkdir -p "$EVIDENCE_DIR" "$BACKUP_DIR"
           printf 'run_id=%s\ntarget_sha=%s\nstarted_at=%s\n' \
@@ -115,7 +115,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: alu-pre-release-backup-${{ github.run_id }}
-          path: ${{ runner.temp }}/alu-backup/
+          path: /tmp/alu-backup/
           if-no-files-found: warn
           retention-days: 14
 
@@ -133,7 +133,7 @@ jobs:
       - name: Deploy tenant
         shell: bash
         env:
-          WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/alu-release-evidence/wrangler-output.ndjson
+          WRANGLER_OUTPUT_FILE_PATH: /tmp/alu-release-evidence/wrangler-output.ndjson
         run: |
           set -euo pipefail
           cd server
@@ -190,7 +190,7 @@ jobs:
             deployment_id: latest.id ?? null,
             deployment_created_on: latest.created_on ?? null,
             version_id: versionId,
-            migrations: ['0027', '0028', '0029'],
+            migrations: ['0027', '0028', '0029', '0030', '0031'],
             fifo_rollout_enabled: false,
             health: 200,
             guest_boot: 403,
@@ -204,7 +204,7 @@ jobs:
             `- Deployment ID: \`${summary.deployment_id ?? 'not returned'}\``,
             `- Version ID: \`${summary.version_id ?? 'not returned'}\``,
             `- Deployment time: \`${summary.deployment_created_on ?? 'not returned'}\``,
-            '- Migrations 0027–0029: PASS',
+            '- Migrations 0027–0031: PASS',
             '- FIFO rollout remains disabled: PASS',
             '- Health: 200',
             '- Guest boot: 403',
@@ -219,7 +219,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: alu-production-release-${{ github.run_id }}
-          path: ${{ runner.temp }}/alu-release-evidence/
+          path: /tmp/alu-release-evidence/
           if-no-files-found: warn
           retention-days: 30
 

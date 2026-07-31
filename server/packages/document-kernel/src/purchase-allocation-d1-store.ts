@@ -4,14 +4,9 @@ import { asCloudForgeError, documentKey, errors } from "../../core/src/index.js"
 import { D1MutationStore } from "./d1-store.js";
 
 /**
- * D1 mutation adapter that extends the ordinary document batch with the M1
- * Purchase Receipt allocation ledgers. All statements, including revision
- * claims, execute in the same D1 batch as document/stock/procurement writes.
- *
- * This class intentionally inherits every read method from D1MutationStore. The
- * override is isolated here until the allocation plan becomes a core MutationPlan
- * field and the statement builder can be folded back into d1-store.ts without a
- * flag day for unrelated controllers.
+ * D1 mutation adapter that extends the ordinary document batch with Purchase
+ * Receipt allocation ledgers. Every row, including cross-voucher apply events,
+ * is committed in the same D1 batch as the triggering document mutation.
  */
 export class D1PurchaseAllocationMutationStore extends D1MutationStore {
   private readonly allocationWriter: D1Database | D1DatabaseSession;
@@ -138,12 +133,14 @@ export class D1PurchaseAllocationMutationStore extends D1MutationStore {
       ));
     }
     for (const line of plan.procurement_entries ?? []) {
+      const voucher = resolveVoucherIdentity(line, command.aggregate.name, plan.document.version);
       statements.push(database.prepare(
         `INSERT INTO purchase_order_progress_entries
          (tenant_id,voucher_type,voucher_no,voucher_revision,line_key,purchase_order,kind,item_code,qty_micros,posting_at)
          VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10)`,
       ).bind(
-        command.tenant_id, command.aggregate.doctype, command.aggregate.name, plan.document.version,
+        command.tenant_id, line.voucher_type ?? command.aggregate.doctype,
+        voucher.voucher_no, voucher.voucher_revision,
         line.line_key, line.purchase_order, line.kind, line.item_code, line.qty_micros, line.posting_at,
       ));
     }
@@ -202,6 +199,7 @@ export class D1PurchaseAllocationMutationStore extends D1MutationStore {
       ));
     }
     for (const line of allocationPlan.purchase_allocation_entries ?? []) {
+      const voucher = resolveVoucherIdentity(line, command.aggregate.name, plan.document.version);
       statements.push(database.prepare(
         `INSERT INTO purchase_receipt_allocation_entries(
            tenant_id,entry_id,queue_key,window_id,voucher_type,voucher_no,voucher_revision,line_key,
@@ -211,7 +209,7 @@ export class D1PurchaseAllocationMutationStore extends D1MutationStore {
          VALUES(?1,?2,?3,?4,'Purchase Receipt',?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21,?22,?23,?24)`,
       ).bind(
         command.tenant_id, line.entry_id, line.queue_key, line.window_id,
-        command.aggregate.name, plan.document.version, line.line_key, line.receipt_item_row_id ?? null,
+        voucher.voucher_no, voucher.voucher_revision, line.line_key, line.receipt_item_row_id ?? null,
         line.purchase_order, line.purchase_order_item_row_id ?? null, line.entry_kind, line.qty_micros,
         line.barem_weight_micros, line.projected_actual_weight_micros ?? null,
         line.projection_version ?? null, line.allocation_sequence, line.posting_at, line.committed_at,
@@ -220,17 +218,20 @@ export class D1PurchaseAllocationMutationStore extends D1MutationStore {
       ));
     }
     for (const line of allocationPlan.purchase_unapplied_entries ?? []) {
+      const voucher = resolveVoucherIdentity(line, command.aggregate.name, plan.document.version);
       statements.push(database.prepare(
         `INSERT INTO purchase_unapplied_receipt_entries(
            tenant_id,entry_id,queue_key,window_id,voucher_type,voucher_no,voucher_revision,line_key,
-           receipt_item_row_id,entry_kind,qty_micros,source_entry_id,allocation_entry_id,posting_at,
-           committed_at,actor,reason,command_id)
-         VALUES(?1,?2,?3,?4,'Purchase Receipt',?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17)`,
+           receipt_item_row_id,entry_kind,qty_micros,barem_weight_micros,
+           projected_actual_weight_micros,projection_version,source_entry_id,allocation_entry_id,
+           posting_at,committed_at,actor,reason,command_id)
+         VALUES(?1,?2,?3,?4,'Purchase Receipt',?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20)`,
       ).bind(
         command.tenant_id, line.entry_id, line.queue_key, line.window_id,
-        command.aggregate.name, plan.document.version, line.line_key, line.receipt_item_row_id,
-        line.entry_kind, line.qty_micros, line.source_entry_id ?? null,
-        line.allocation_entry_id ?? null, line.posting_at, line.committed_at,
+        voucher.voucher_no, voucher.voucher_revision, line.line_key, line.receipt_item_row_id,
+        line.entry_kind, line.qty_micros, line.barem_weight_micros ?? 0,
+        line.projected_actual_weight_micros ?? null, line.projection_version ?? null,
+        line.source_entry_id ?? null, line.allocation_entry_id ?? null, line.posting_at, line.committed_at,
         command.actor.user_id, line.reason ?? null, command.command_id,
       ));
     }
@@ -369,6 +370,25 @@ export class D1PurchaseAllocationMutationStore extends D1MutationStore {
       throw asCloudForgeError(error);
     }
   }
+}
+
+function resolveVoucherIdentity(
+  line: { voucher_no?: string; voucher_revision?: number },
+  fallbackNo: string,
+  fallbackRevision: number,
+): { voucher_no: string; voucher_revision: number } {
+  const hasNo = line.voucher_no !== undefined;
+  const hasRevision = line.voucher_revision !== undefined;
+  if (hasNo !== hasRevision) {
+    throw errors.validation("Purchase source voucher_no and voucher_revision must be supplied together");
+  }
+  const voucherNo = line.voucher_no ?? fallbackNo;
+  const voucherRevision = line.voucher_revision ?? fallbackRevision;
+  if (!voucherNo.trim()) throw errors.validation("Purchase source voucher_no is required");
+  if (!Number.isSafeInteger(voucherRevision) || voucherRevision <= 0) {
+    throw errors.validation("Purchase source voucher_revision must be a positive safe integer");
+  }
+  return { voucher_no: voucherNo, voucher_revision: voucherRevision };
 }
 
 function searchableContent(data: JsonObject): string {
