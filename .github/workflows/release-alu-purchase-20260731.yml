@@ -1,6 +1,11 @@
 name: Release alu purchase production
 
 on:
+  push:
+    branches:
+      - hotfix/alumdoor-print-list-delete
+    paths:
+      - .github/release/alu-purchase-production.trigger
   pull_request:
     types: [opened, synchronize, reopened]
   workflow_dispatch:
@@ -12,7 +17,7 @@ permissions:
 jobs:
   release-alu:
     name: Release alu purchase production
-    if: ${{ github.event_name == 'pull_request' && github.head_ref == 'release/execute-alu-purchase-20260731' }}
+    if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/hotfix/alumdoor-print-list-delete') || (github.event_name == 'pull_request' && github.head_ref == 'release/execute-alu-purchase-20260731') || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
     environment: production
@@ -170,7 +175,7 @@ jobs:
           retention-days: 30
 
       - name: Comment release result
-        if: always()
+        if: ${{ always() && github.event_name == 'pull_request' }}
         uses: actions/github-script@v7
         with:
           script: |
