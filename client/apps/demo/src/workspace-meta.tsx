@@ -1,13 +1,19 @@
 import { useState, type ReactNode } from "react";
 import {
-  BarChart3, FilePlus2, FileText, LayoutDashboard, ListChecks, Plus, Receipt,
-  Route, Workflow, Wrench,
+  ArrowRight, BarChart3, FilePlus2, FileText, LayoutDashboard, ListChecks, Plus,
+  Receipt, Route, Workflow, Wrench,
 } from "lucide-react";
 import {
   Button, Dialog, DialogContent, DialogHeader, DialogTitle, Separator, cn,
 } from "@metaforge/ui";
 import type { WorkspaceMeta } from "./DemoShell.js";
 
+/**
+ * MISA-style workspace contract:
+ * 1. Quy trình nghiệp vụ.
+ * 2. Báo cáo tổng quan.
+ * 3+. Một tab cho từng nghiệp vụ/DocType; các route list/form/view là trạng thái con của tab đó.
+ */
 export const WORKSPACE_META: WorkspaceMeta = {
   modules: [
     {
@@ -16,13 +22,21 @@ export const WORKSPACE_META: WorkspaceMeta = {
       icon: <ListChecks />,
       tabs: [
         { key: "process", label: "Quy trình nghiệp vụ", targetKey: "process", kind: "process" },
-        { key: "overview", label: "Báo cáo tổng quan", targetKey: "dashboard", kind: "overview" },
-        { key: "form", label: "Biểu mẫu", targetKey: "form", kind: "doctype", doctype: "Task" },
-        { key: "list", label: "Danh sách chứng từ", targetKey: "list", kind: "doctype", doctype: "Task" },
-        { key: "kanban", label: "Kanban", targetKey: "kanban", kind: "doctype", doctype: "Task" },
-        { key: "calendar", label: "Lịch", targetKey: "calendar", kind: "doctype", doctype: "Task" },
-        { key: "gantt", label: "Gantt", targetKey: "gantt", kind: "doctype", doctype: "Task" },
-        { key: "report", label: "Báo cáo", targetKey: "report", kind: "doctype", doctype: "Task" },
+        {
+          key: "overview",
+          label: "Báo cáo tổng quan",
+          targetKey: "dashboard",
+          activeKeys: ["dashboard", "report"],
+          kind: "overview",
+        },
+        {
+          key: "task",
+          label: "Công việc",
+          targetKey: "list",
+          activeKeys: ["list", "form", "kanban", "tree", "calendar", "gantt", "print"],
+          kind: "doctype",
+          doctype: "Task",
+        },
       ],
     },
     {
@@ -34,8 +48,8 @@ export const WORKSPACE_META: WorkspaceMeta = {
         { key: "meta-overview", label: "Báo cáo tổng quan", targetKey: "meta-overview", kind: "overview" },
         { key: "doctype", label: "DocType", targetKey: "b-doctype", kind: "doctype", doctype: "DocType" },
         { key: "workflow", label: "Workflow", targetKey: "b-workflow", kind: "doctype", doctype: "Workflow" },
-        { key: "print-builder", label: "Print Builder", targetKey: "b-print", kind: "doctype", doctype: "Print Format" },
-        { key: "dashboard-builder", label: "Dashboard Builder", targetKey: "b-dashboard", kind: "doctype", doctype: "Dashboard" },
+        { key: "print-format", label: "Print Format", targetKey: "b-print", kind: "doctype", doctype: "Print Format" },
+        { key: "dashboard", label: "Dashboard", targetKey: "b-dashboard", kind: "doctype", doctype: "Dashboard" },
       ],
     },
   ],
@@ -75,6 +89,19 @@ function ShortcutCard({ title, description, icon, onClick, primary }: ShortcutCa
   );
 }
 
+function ProcessFlow({ steps }: { steps: string[] }) {
+  return (
+    <div className="flex min-w-max items-center justify-center gap-2 overflow-x-auto px-1 py-2" aria-label="Các bước quy trình">
+      {steps.map((step, index) => (
+        <div key={step} className="flex items-center gap-2">
+          <div className="rounded-lg border bg-background px-4 py-3 text-center text-sm font-medium shadow-sm">{step}</div>
+          {index < steps.length - 1 ? <ArrowRight className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" /> : null}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function OperationsProcessWorkspace({ onNavigate }: NavigateProps) {
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -83,29 +110,46 @@ export function OperationsProcessWorkspace({ onNavigate }: NavigateProps) {
       <section className="rounded-xl border bg-card shadow-sm">
         <div className="border-b px-5 py-4">
           <h1 className="text-base font-semibold">QUY TRÌNH NGHIỆP VỤ CÔNG VIỆC</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Mở nhanh danh sách, biểu mẫu tạo mới hoặc các màn xử lý công việc.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Đi từ khởi tạo, phân công, theo dõi đến hoàn tất công việc.</p>
+        </div>
+        <div className="border-b bg-muted/20 p-5">
+          <ProcessFlow steps={["Khởi tạo", "Phân công", "Theo dõi", "Hoàn tất"]} />
         </div>
         <div className="grid gap-4 p-5 sm:grid-cols-2 xl:grid-cols-4">
-          <ShortcutCard title="Danh sách công việc" description="Mở DocType Task ở chế độ danh sách chứng từ." icon={<ListChecks />} onClick={() => onNavigate("list")} />
-          <ShortcutCard title="Tạo công việc" description="Mở modal chọn thao tác tạo mới trước khi vào biểu mẫu." icon={<FilePlus2 />} onClick={() => setCreateOpen(true)} primary />
+          <ShortcutCard title="Danh sách công việc" description="Mở DocType Task ở chế độ danh sách." icon={<ListChecks />} onClick={() => onNavigate("list")} />
+          <ShortcutCard title="Tạo công việc" description="Chọn cách khởi tạo trước khi mở biểu mẫu." icon={<FilePlus2 />} onClick={() => setCreateOpen(true)} primary />
           <ShortcutCard title="Kanban xử lý" description="Theo dõi và chuyển trạng thái công việc theo cột." icon={<Route />} onClick={() => onNavigate("kanban")} />
-          <ShortcutCard title="Báo cáo công việc" description="Xem dữ liệu tổng hợp và danh sách báo cáo." icon={<BarChart3 />} onClick={() => onNavigate("report")} />
+          <ShortcutCard title="Báo cáo tổng quan" description="Xem KPI, biểu đồ và số liệu tổng hợp." icon={<BarChart3 />} onClick={() => onNavigate("dashboard")} />
         </div>
       </section>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>Tạo mới công việc</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">Chọn cách khởi tạo. Một modal nhỏ, thay vì bắt người dùng đoán xem nút cộng sẽ đưa họ đi đâu.</p>
+          <p className="text-sm text-muted-foreground">Chọn thao tác phù hợp để tiếp tục.</p>
           <div className="grid gap-2 pt-2">
             <Button className="justify-start gap-2" onClick={() => { setCreateOpen(false); onNavigate("form"); }}><Plus className="size-4" /> Mở biểu mẫu Task mới</Button>
-            <Button variant="outline" className="justify-start gap-2" onClick={() => { setCreateOpen(false); onNavigate("list"); }}><ListChecks className="size-4" /> Mở danh sách trước</Button>
+            <Button variant="outline" className="justify-start gap-2" onClick={() => { setCreateOpen(false); onNavigate("list"); }}><ListChecks className="size-4" /> Mở danh sách công việc</Button>
           </div>
         </DialogContent>
       </Dialog>
     </div>
   );
 }
+
+interface MetaCreateOption {
+  label: string;
+  description: string;
+  target: string;
+  icon: ReactNode;
+}
+
+const META_CREATE_OPTIONS: MetaCreateOption[] = [
+  { label: "DocType mới", description: "Cấu trúc dữ liệu và trường", target: "b-doctype", icon: <FileText /> },
+  { label: "Workflow mới", description: "Trạng thái và chuyển tiếp", target: "b-workflow", icon: <Workflow /> },
+  { label: "Print Format mới", description: "Mẫu in chứng từ", target: "b-print", icon: <Receipt /> },
+  { label: "Dashboard mới", description: "KPI và biểu đồ", target: "b-dashboard", icon: <LayoutDashboard /> },
+];
 
 export function MetaProcessWorkspace({ onNavigate }: NavigateProps) {
   const [createOpen, setCreateOpen] = useState(false);
@@ -118,6 +162,9 @@ export function MetaProcessWorkspace({ onNavigate }: NavigateProps) {
             <h1 className="text-base font-semibold">QUY TRÌNH THIẾT KẾ META</h1>
             <p className="mt-1 text-sm text-muted-foreground">Tạo cấu trúc dữ liệu, quy trình, mẫu in và dashboard từ một điểm bắt đầu.</p>
           </div>
+          <div className="border-b bg-muted/20 p-5">
+            <ProcessFlow steps={["DocType", "Workflow", "Giao diện", "Báo cáo"]} />
+          </div>
           <div className="p-5">
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <ShortcutCard title="DocType" description="Mở danh sách và trình thiết kế cấu trúc dữ liệu." icon={<FileText />} onClick={() => onNavigate("b-doctype")} />
@@ -125,14 +172,7 @@ export function MetaProcessWorkspace({ onNavigate }: NavigateProps) {
               <ShortcutCard title="Print Format" description="Thiết kế biểu mẫu in cho chứng từ." icon={<Receipt />} onClick={() => onNavigate("b-print")} />
               <ShortcutCard title="Dashboard" description="Ghép chỉ số và biểu đồ tổng quan." icon={<LayoutDashboard />} onClick={() => onNavigate("b-dashboard")} />
             </div>
-
-            <div className="my-7 flex items-center gap-3" aria-hidden="true">
-              <span className="h-px flex-1 bg-border" />
-              <span className="rounded-full border bg-background px-3 py-1 text-xs text-muted-foreground">DocType → Workflow → Giao diện → Báo cáo</span>
-              <span className="h-px flex-1 bg-border" />
-            </div>
-
-            <Button onClick={() => setCreateOpen(true)} className="mx-auto flex gap-2"><Plus className="size-4" /> Tạo mới cấu hình Meta</Button>
+            <Button onClick={() => setCreateOpen(true)} className="mx-auto mt-6 flex gap-2"><Plus className="size-4" /> Tạo mới cấu hình Meta</Button>
           </div>
         </section>
 
@@ -155,23 +195,18 @@ export function MetaProcessWorkspace({ onNavigate }: NavigateProps) {
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>Tạo mới cấu hình Meta</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">Chọn loại tài nguyên cần tạo. Sau bước này builder tương ứng sẽ chịu trách nhiệm phần còn lại, như một hệ thống có tổ chức tối thiểu.</p>
+          <p className="text-sm text-muted-foreground">Chọn loại tài nguyên cần tạo để mở builder tương ứng.</p>
           <Separator />
           <div className="grid gap-2 sm:grid-cols-2">
-            {[
-              ["DocType mới", "Cấu trúc dữ liệu và trường", "b-doctype", <FileText key="doctype" />],
-              ["Workflow mới", "Trạng thái và chuyển tiếp", "b-workflow", <Workflow key="workflow" />],
-              ["Print Format mới", "Mẫu in chứng từ", "b-print", <Receipt key="print" />],
-              ["Dashboard mới", "KPI và biểu đồ", "b-dashboard", <LayoutDashboard key="dashboard" />],
-            ].map(([label, description, target, icon]) => (
+            {META_CREATE_OPTIONS.map((option) => (
               <button
-                key={String(target)}
+                key={option.target}
                 type="button"
                 className="flex items-start gap-3 rounded-lg border p-3 text-left transition hover:border-primary/40 hover:bg-primary/[0.04]"
-                onClick={() => { setCreateOpen(false); onNavigate(String(target)); }}
+                onClick={() => { setCreateOpen(false); onNavigate(option.target); }}
               >
-                <span className="mt-0.5 text-primary [&_svg]:size-4">{icon}</span>
-                <span><span className="block text-sm font-medium">{label}</span><span className="block text-xs text-muted-foreground">{description}</span></span>
+                <span className="mt-0.5 text-primary [&_svg]:size-4">{option.icon}</span>
+                <span><span className="block text-sm font-medium">{option.label}</span><span className="block text-xs text-muted-foreground">{option.description}</span></span>
               </button>
             ))}
           </div>
@@ -183,23 +218,23 @@ export function MetaProcessWorkspace({ onNavigate }: NavigateProps) {
 
 export function MetaOverviewWorkspace({ onNavigate }: NavigateProps) {
   const cards = [
-    ["DocType", "1", "b-doctype", <FileText key="doctype" />],
-    ["Workflow", "1", "b-workflow", <Workflow key="workflow" />],
-    ["Print Format", "1", "b-print", <Receipt key="print" />],
-    ["Dashboard", "1", "b-dashboard", <LayoutDashboard key="dashboard" />],
-  ] as const;
+    { label: "DocType", value: "1", target: "b-doctype", icon: <FileText /> },
+    { label: "Workflow", value: "1", target: "b-workflow", icon: <Workflow /> },
+    { label: "Print Format", value: "1", target: "b-print", icon: <Receipt /> },
+    { label: "Dashboard", value: "1", target: "b-dashboard", icon: <LayoutDashboard /> },
+  ];
 
   return (
     <div className="space-y-4 bg-muted/20 p-4 md:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div><h1 className="text-lg font-semibold">Báo cáo tổng quan Meta</h1><p className="text-sm text-muted-foreground">Tổng hợp nhanh các tài nguyên cấu hình và điểm truy cập builder.</p></div>
+        <div><h1 className="text-lg font-semibold">Báo cáo tổng quan Meta</h1><p className="text-sm text-muted-foreground">Tổng hợp nhanh tài nguyên cấu hình và trạng thái thiết kế.</p></div>
         <Button variant="outline" className="gap-2" onClick={() => onNavigate("meta-process")}><Wrench className="size-4" /> Về quy trình</Button>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {cards.map(([label, value, target, icon]) => (
-          <button key={target} type="button" onClick={() => onNavigate(target)} className="rounded-xl border bg-card p-4 text-left shadow-sm transition hover:border-primary/40 hover:shadow-md">
-            <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">{label}</span><span className="text-primary [&_svg]:size-5">{icon}</span></div>
-            <div className="mt-3 text-3xl font-semibold">{value}</div>
+        {cards.map((card) => (
+          <button key={card.target} type="button" onClick={() => onNavigate(card.target)} className="rounded-xl border bg-card p-4 text-left shadow-sm transition hover:border-primary/40 hover:shadow-md">
+            <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">{card.label}</span><span className="text-primary [&_svg]:size-5">{card.icon}</span></div>
+            <div className="mt-3 text-3xl font-semibold">{card.value}</div>
             <div className="mt-1 text-xs text-muted-foreground">Mở trình quản lý</div>
           </button>
         ))}
