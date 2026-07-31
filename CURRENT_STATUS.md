@@ -54,6 +54,16 @@ Ngày cập nhật: **2026-07-31**.
 - `.github/workflows/sales-feature-ci.yml`.
 - `.github/workflows/inventory-feature-ci.yml`.
 - `.github/workflows/cloudflare-production-observation.yml`.
+- `.github/workflows/manual-release-alu.yml` vì đã được thay bằng `tenant-production-release.yml` manual-only có exact SHA và confirmation.
+- `.github/workflows/cloudflare-preview-qa.yml` vì workflow cũ vừa quan sát production vừa mang Cloudflare token vào PR workflow, trùng UI QA và không phù hợp boundary validation/release.
+
+### Sidebar Actions và workflow lịch sử
+
+- GitHub có thể tiếp tục hiện tên workflow cũ trong sidebar do còn historical runs, ngay cả khi file workflow đã bị xóa.
+- Ví dụ `inventory-remote-*` đã được xóa từ commit lịch sử `88885b0f03cc00754da771b10a6f85f71db5fce6` nhưng vẫn có thể xuất hiện trong danh sách.
+- Không được tạo lại hoặc sửa code chỉ để làm biến mất tên lịch sử.
+- Sau khi PR #66 merge, workflow không còn file trên default sẽ không được kích hoạt bởi event mới.
+- Nếu cần làm sạch giao diện hoàn toàn, phải xóa historical workflow runs hoặc disable workflow trong GitHub Actions UI/API như một thao tác quản trị riêng; việc này không thay đổi code và không nằm trong PR #66.
 
 ### Workflow tạm còn giữ
 
