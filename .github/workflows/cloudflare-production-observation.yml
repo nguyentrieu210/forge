@@ -100,3 +100,5 @@ jobs:
           path: ${{ runner.temp }}/alu-production-observation/
           if-no-files-found: warn
           retention-days: 14
+
+# Observation trigger only; this branch is never merged.
