@@ -465,7 +465,9 @@ export class InMemoryPurchaseAllocationMutationStore extends InMemoryMutationSto
     }
     for (const entry of plan.purchase_allocation_entries ?? []) {
       const window = windows.get(windowMapKey(tenantId, entry.window_id));
-      if (!window || window.status !== "Open") throw errors.lifecycle("Purchase allocation window is not open");
+      const windowAcceptsEntry = window?.status === "Open"
+        || (window?.status === "Reversed" && entry.entry_kind === "reverse");
+      if (!windowAcceptsEntry) throw errors.lifecycle("Purchase allocation window is not open");
       if (entry.source === "live" && (!entry.receipt_item_row_id || !entry.purchase_order_item_row_id)) {
         throw errors.reference("Live purchase allocation requires Receipt and PO row ids");
       }
@@ -489,6 +491,12 @@ export class InMemoryPurchaseAllocationMutationStore extends InMemoryMutationSto
       if (current + incoming < 0 || current + incoming > nominal) {
         throw errors.reference("Purchase allocation quantity is outside the PO obligation");
       }
+    }
+    for (const entry of plan.purchase_unapplied_entries ?? []) {
+      const window = windows.get(windowMapKey(tenantId, entry.window_id));
+      const windowAcceptsEntry = window?.status === "Open"
+        || (window?.status === "Reversed" && entry.entry_kind === "reverse");
+      if (!windowAcceptsEntry) throw errors.lifecycle("Purchase allocation window is not open");
     }
   }
 }
