@@ -17,6 +17,8 @@ import type {
 
 const REPORT_PATH = "/api/v1/reports/physical-stock";
 const EXPORT_PATH = "/api/v1/reports/physical-stock/export";
+const FRAPPE_REPORT_PATH = "/api/method/metaforge.inventory.physical_stock";
+const FRAPPE_EXPORT_PATH = "/api/method/metaforge.inventory.physical_stock_export";
 const STOCK_PERMISSION_DOCTYPE = "Stock Entry";
 const MAX_BODY_BYTES = 32_000;
 
@@ -72,12 +74,27 @@ export interface PhysicalStockApiDependencies {
   service?: PhysicalStockApiService;
 }
 
+interface PhysicalStockRouteKind {
+  export: boolean;
+  frappe: boolean;
+}
+
+export function isPhysicalStockApiPath(pathname: string): boolean {
+  return classifyRoute(pathname) !== null;
+}
+
+export function isPhysicalStockFrappePath(pathname: string): boolean {
+  return pathname === FRAPPE_REPORT_PATH || pathname === FRAPPE_EXPORT_PATH;
+}
+
 /**
- * Native authenticated endpoint seam for Slice D.
+ * Authenticated endpoint seam for Slice D.
  *
  * Tenant scope is supplied only by the already-authenticated Worker context. Request
  * bodies containing a tenant selector are rejected instead of silently ignored, so a
  * client cannot believe it selected another tenant while the server did something else.
+ * Native routes return the platform envelope directly; Frappe methods wrap JSON results
+ * in `message` while CSV remains a binary download.
  */
 export async function routePhysicalStockApi(
   request: Request,
@@ -85,7 +102,8 @@ export async function routePhysicalStockApi(
   context: PhysicalStockApiContext,
   dependencies: PhysicalStockApiDependencies = {},
 ): Promise<Response | null> {
-  if (url.pathname !== REPORT_PATH && url.pathname !== EXPORT_PATH) return null;
+  const route = classifyRoute(url.pathname);
+  if (!route) return null;
   if (request.method.toUpperCase() !== "POST") {
     return jsonResponse(
       { error: { code: "METHOD_NOT_ALLOWED", message: "Physical stock reports require POST" } },
@@ -94,11 +112,13 @@ export async function routePhysicalStockApi(
     );
   }
 
-  const body = await readJson<JsonObject>(request, MAX_BODY_BYTES);
+  const raw = await readJson<JsonObject>(request, MAX_BODY_BYTES);
+  rejectTenantSelector(raw);
+  const body = route.frappe ? unwrapFrappeArgs(raw) : raw;
   const input = parsePhysicalStockRequest(body);
   const service = dependencies.service ?? createPhysicalStockApiService(context.db, context.permissions);
 
-  if (url.pathname === EXPORT_PATH) {
+  if (route.export) {
     if (input.cursor !== undefined || input.limit !== undefined || input.include_lineage !== undefined) {
       throw errors.validation("Physical stock export does not accept cursor, limit or include_lineage");
     }
@@ -116,7 +136,7 @@ export async function routePhysicalStockApi(
   }
 
   const page = await service.run(context.actor, context.tenantId, input);
-  return jsonResponse(page, 200, {
+  return jsonResponse(route.frappe ? { message: page } : page, 200, {
     "cache-control": "private, no-store",
     "x-content-type-options": "nosniff",
     "x-cloudforge-trace-id": context.traceId,
@@ -168,10 +188,33 @@ export class MetadataPhysicalStockAccessPolicy implements PhysicalStockAccessPol
   }
 }
 
-function parsePhysicalStockRequest(body: JsonObject): PhysicalStockReportRequest {
-  if (Object.hasOwn(body, "tenant_id") || Object.hasOwn(body, "tenantId")) {
-    throw errors.validation("Physical stock tenant scope is controlled by the authenticated server context");
+function classifyRoute(pathname: string): PhysicalStockRouteKind | null {
+  if (pathname === REPORT_PATH) return { export: false, frappe: false };
+  if (pathname === EXPORT_PATH) return { export: true, frappe: false };
+  if (pathname === FRAPPE_REPORT_PATH) return { export: false, frappe: true };
+  if (pathname === FRAPPE_EXPORT_PATH) return { export: true, frappe: true };
+  return null;
+}
+
+function unwrapFrappeArgs(body: JsonObject): JsonObject {
+  const args = body.args;
+  if (args === undefined) return body;
+  if (typeof args === "string") {
+    try {
+      const parsed = JSON.parse(args) as unknown;
+      if (isObject(parsed)) return parsed;
+    } catch {
+      // Fall through to one stable validation error below.
+    }
+    throw errors.validation("Physical stock Frappe args must contain a JSON object");
   }
+  if (!isObject(args)) throw errors.validation("Physical stock Frappe args must be an object");
+  rejectTenantSelector(args);
+  return args;
+}
+
+function parsePhysicalStockRequest(body: JsonObject): PhysicalStockReportRequest {
+  rejectTenantSelector(body);
   for (const key of Object.keys(body)) {
     if (!ALLOWED_FIELDS.has(key)) throw errors.validation(`Unknown physical stock report field: ${key}`);
   }
@@ -202,6 +245,12 @@ function parsePhysicalStockRequest(body: JsonObject): PhysicalStockReportRequest
     output[field] = value;
   }
   return output as unknown as PhysicalStockReportRequest;
+}
+
+function rejectTenantSelector(body: JsonObject): void {
+  if (Object.hasOwn(body, "tenant_id") || Object.hasOwn(body, "tenantId")) {
+    throw errors.validation("Physical stock tenant scope is controlled by the authenticated server context");
+  }
 }
 
 function constraintValues(scope: ReadAccessScope, doctype: string): string[] {
@@ -240,4 +289,8 @@ function isSystemManager(actor: Actor): boolean {
   return actor.user_id === "Administrator"
     || actor.roles.includes("Administrator")
     || actor.roles.includes("System Manager");
+}
+
+function isObject(value: unknown): value is JsonObject {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
