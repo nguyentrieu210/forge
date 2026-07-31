@@ -59,6 +59,9 @@ jobs:
       - name: Install Chromium for visual QA
         run: pnpm --filter e2e-forge exec playwright install --with-deps chromium
 
+      - name: Run Meta workspace browser QA
+        run: pnpm --filter @metaforge/demo exec playwright test e2e/workspace-navigation.spec.ts --config playwright.config.ts
+
       - name: Run Alumdoor browser QA
         run: pnpm --filter e2e-forge exec playwright test --config playwright.ui.config.ts
 
@@ -71,6 +74,7 @@ jobs:
         with:
           name: alumdoor-login-landing-evidence-${{ github.run_id }}
           path: |
+            client/apps/demo/test-results/
             client/e2e-forge/test-results/ui-visual/
             client/e2e-forge/playwright-report/ui-visual/
             client/e2e-forge/test-results/purchase-ui/

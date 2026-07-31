@@ -1,33 +1,29 @@
 import { useState } from "react";
 import type { DocTypeMeta } from "@metaforge/core";
-import type { FieldServices } from "@metaforge/controls";
+import type { FieldServices, ControlRegistry } from "@metaforge/controls";
 import { FormView } from "@metaforge/views";
 import { toast } from "@metaforge/ui";
-import type { ControlRegistry } from "@metaforge/controls";
 import {
   DocTypeBuilder, WorkflowBuilder, PrintFormatBuilder, DashboardBuilder,
-  blankWorkflow, printModelFromFields, blankDashboard,
+  blankDocType, blankWorkflow, printModelFromFields, blankDashboard,
 } from "@metaforge/builder";
 
-/**
- * BuilderRoutes — gom 4 builder vào 1 chunk async (lazy-load ở App).
- * Kéo theo reactflow / react-grid-layout / dnd-kit ra khỏi bundle chính (chiến lược >100KB).
- */
 export interface BuilderRoutesProps {
   which: string;
+  createNew?: boolean;
   taskMeta: DocTypeMeta;
   registry: ControlRegistry;
   services: FieldServices;
 }
 
 export default function BuilderRoutes(props: BuilderRoutesProps) {
-  const { which, taskMeta, registry, services } = props;
-  const [builtMeta, setBuiltMeta] = useState<DocTypeMeta>(taskMeta);
+  const { which, createNew = false, taskMeta, registry, services } = props;
+  const [builtMeta, setBuiltMeta] = useState<DocTypeMeta>(() => createNew ? blankDocType() : taskMeta);
 
   if (which === "b-doctype") {
     return (
       <div className="space-y-4">
-        <h2 className="text-lg font-semibold">DocType Builder — kéo fieldtype → xem Form render LIVE</h2>
+        <h2 className="text-lg font-semibold">DocType Builder — {createNew ? "tạo mới" : "kéo fieldtype → xem Form render LIVE"}</h2>
         <div className="grid items-start gap-4 2xl:grid-cols-[minmax(0,3fr)_minmax(22rem,2fr)]">
           <DocTypeBuilder initial={builtMeta} onChange={setBuiltMeta} onSave={(m) => toast.success(`Đã lưu bản thiết kế ${m.name} (${m.fields.length} trường)`)} />
           <aside className="space-y-2 2xl:sticky 2xl:top-3">
