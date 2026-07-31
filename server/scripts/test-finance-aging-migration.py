@@ -118,13 +118,15 @@ assert len(due_fields) == 1
 assert due_fields[0]["required"] is True
 
 legacy = db.execute(
-    "SELECT posting_date,due_date,party,account FROM finance_invoice_terms WHERE tenant_id='demo' AND voucher_no='SI-LEGACY'"
+    "SELECT posting_date,due_date,due_date_source,party,account FROM finance_invoice_terms WHERE tenant_id='demo' AND voucher_no='SI-LEGACY'"
 ).fetchone()
-assert legacy == ("2026-06-01", "2026-06-01", "CUST-1", "131")
+assert legacy == ("2026-06-01", "2026-06-01", "posting_date_fallback", "CUST-1", "131")
 
 insert_sql = "INSERT INTO documents VALUES(?,?,?,?,?,?,?,?,?,?,?)"
-expect_integrity(
-    db,
+
+# Compatibility path: submitted API payloads that omit due_date remain valid
+# until the explicit backfill/cutover enables hard presence enforcement.
+db.execute(
     insert_sql,
     (
         "demo",
@@ -137,10 +139,22 @@ expect_integrity(
         1,
         "2026-07-01",
         "2026-07-01",
-        payload(customer="CUST-1", company="Demo", currency="VND", posting_at="2026-07-01", debit_to="131"),
+        payload(
+            customer="CUST-1",
+            company="Demo",
+            currency="VND",
+            currency_scale=0,
+            posting_at="2026-07-01T09:00:00Z",
+            debit_to="131",
+            grand_total_minor=1500000,
+        ),
     ),
-    "INVOICE_DUE_DATE_REQUIRED",
 )
+missing = db.execute(
+    "SELECT due_date,due_date_source FROM finance_invoice_terms WHERE tenant_id='demo' AND voucher_no='SI-MISSING'"
+).fetchone()
+assert missing == ("2026-07-01", "posting_date_fallback")
+
 expect_integrity(
     db,
     insert_sql,
@@ -203,8 +217,13 @@ db.execute(
         ),
     ),
 )
+explicit = db.execute(
+    "SELECT due_date,due_date_source FROM finance_invoice_terms WHERE tenant_id='demo' AND voucher_no='SI-VALID'"
+).fetchone()
+assert explicit == ("2026-07-31", "explicit")
 
-# Drafts may remain incomplete, but crossing into submitted state is guarded.
+# Drafts may remain incomplete and legacy API clients may submit them during the
+# compatibility phase; the report marks the fallback source for later backfill.
 db.execute(
     insert_sql,
     (
@@ -221,11 +240,12 @@ db.execute(
         payload(supplier="SUP-1", company="Demo", currency="VND", posting_at="2026-07-02", credit_to="331"),
     ),
 )
-expect_integrity(
-    db,
-    "UPDATE documents SET docstatus=1,status='Unpaid' WHERE tenant_id='demo' AND doc_key='Purchase Invoice:PI-DRAFT'",
-    (),
-    "INVOICE_DUE_DATE_REQUIRED",
+db.execute(
+    "UPDATE documents SET docstatus=1,status='Unpaid' WHERE tenant_id='demo' AND doc_key='Purchase Invoice:PI-DRAFT'"
 )
+purchase_fallback = db.execute(
+    "SELECT due_date,due_date_source FROM finance_invoice_terms WHERE tenant_id='demo' AND voucher_no='PI-DRAFT'"
+).fetchone()
+assert purchase_fallback == ("2026-07-02", "posting_date_fallback")
 
 print("FINANCE_AGING_MIGRATION_0030_PASS")
