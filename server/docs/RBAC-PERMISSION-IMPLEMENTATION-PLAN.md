@@ -1,6 +1,6 @@
 # RBAC AND DATA-SCOPE IMPLEMENTATION PLAN
 
-Trạng thái: **APPROVED — G2 implementation plan**  
+Trạng thái: **APPROVED — G2 implementation plan; Slice A gate queued**  
 Ngày: **2026-07-31**  
 Branch: `feat/rbac-permission-completion-20260731`  
 BRD: `server/docs/RBAC-PERMISSION-BRD.md`
@@ -304,3 +304,8 @@ RBAC completion chỉ hoàn thành khi:
 6. exact-head CI PASS;
 7. staging/browser QA PASS;
 8. `CURRENT_STATUS.md` và `NEXT_TASKS.md` ghi exact SHA, test và lỗi còn lại.
+
+## 9. Gate execution log
+
+- Slice A one-shot push gate queued on **2026-07-31**.
+- The gate applies only the reviewed Slice A patch, runs server tests, root typecheck and root build, and commits implementation only after every step passes.
