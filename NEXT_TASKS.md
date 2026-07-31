@@ -7,93 +7,86 @@ Draft PR: `#14`.
 Working branch: `feat/purchase-receipt-complete-20260731`.
 Technical plan: `server/docs/ALUMDOOR-PURCHASE-RECEIPT-COMPLETION-PLAN.md`.
 
-## P0 — Slice A: hoàn tất FIFO lifecycle
+## Đã hoàn thành
 
-Đã xong phần nền:
+### P0 — FIFO lifecycle
 
-- [x] Contract có source voucher override cho cross-voucher allocation/unapplied rows.
-- [x] Contract giữ barem và projected actual-weight attribution trên unapplied balance.
+- [x] Cross-voucher source voucher/revision cho allocation và unapplied movements.
 - [x] Append-only migration `0030_purchase_unapplied_weight_attribution.sql`.
-- [x] SQL regression test cho sign, projection pair/version và net weight balance.
-- [x] Đưa test mới vào root `test:sql` chain.
+- [x] D1/in-memory storage và reader cho remaining qty/barem/actual weight.
+- [x] Receipt submit ghi unapplied weight.
+- [x] PO submit tự áp Receipt chờ theo FIFO, hỗ trợ partial/multiple sources và compatibility projection.
+- [x] Settlement close/reverse và manual FIFO override backend với permission/reason/audit.
+- [x] Backdated warning nhưng commit-order allocation.
+- [x] Backfill planner/CLI, unresolved report, checksum và activation guards.
 
-Việc kế tiếp theo thứ tự:
+### P1 — Operator UI phần đã xong
 
-1. Mở rộng `ProcurementEntry` với optional source voucher identity và cập nhật D1 progress writer.
-2. Cập nhật D1 allocation/unapplied writer:
-   - dùng source voucher override khi có;
-   - ghi weight columns của migration `0030`;
-   - giữ default current aggregate cho luồng cũ.
-3. Cập nhật in-memory store:
-   - materialize effective voucher identity;
-   - bỏ cách suy voucher từ `entry_id`;
-   - tính remaining qty/barem/actual weight đúng theo source + movements.
-4. Thêm reader projection `listPurchaseUnappliedQueueSources` theo queue/window, commit order, voucher revision và next allocation sequence.
-5. Receipt submit phải ghi planner-returned unapplied weight vào ledger.
-6. PO submit phải:
-   - áp source cũ theo commit order;
-   - hỗ trợ partial/multiple sources và nhiều PO rows;
-   - tạo `apply_unapplied` allocation;
-   - tạo negative `apply` movement trỏ đúng source/allocation;
-   - tạo compatibility procurement row với Purchase Receipt nguồn;
-   - ghi obligation, allocation, movement và revision claims cùng D1 batch.
-7. Tests:
-   - partial apply;
-   - nhiều source;
-   - nhiều PO rows;
-   - source voucher/revision history;
-   - barem/actual-weight conservation;
-   - idempotency và revision conflict;
-   - Receipt cancel và nhiều Receipt lines cùng queue;
-   - worker/DO concurrency.
+- [x] Server-authoritative FIFO preview trước submit Purchase Receipt.
+- [x] PO/Receipt allocation timeline và drill-down từ append-only ledger.
+- [x] Hiển thị nominal remaining, received/allocated/unapplied, barem/actual weight, window status, tolerance, bounds và variance.
+- [x] Loading/error/empty states và responsive overflow cho timeline dialog.
 
-Hoàn thành Slice A khi targeted tests và root test/typecheck/build PASS.
+## P0 kế tiếp — Settlement và override UI
 
-## P0 — Slice B: settlement và override
+1. Thêm action visibility theo server capabilities/permissions cho:
+   - close settlement window;
+   - reverse settlement;
+   - manual FIFO override.
+2. Dialog bắt buộc confirmation và reason, không cho gửi reason rỗng.
+3. Hiển thị window/queue/material/supplier scope trước khi xác nhận.
+4. Refetch document, timeline và report sau mutation thành công.
+5. Fail closed khi server từ chối permission, stale revision hoặc lifecycle guard.
+6. Tests cho hidden/disabled actions, required reason, success/error/refetch states và mobile layout.
 
-- Close window có server permission và reason bắt buộc.
-- Integer tolerance bounds, shortage/overage variance và append-only close event.
-- Reverse settlement chỉ khi window kế tiếp chưa có activity.
-- Manual FIFO override trong cùng tenant/company/supplier/material/window, có permission + reason.
-- Lifecycle guards cho PO amend/cancel và Receipt cancel.
-- Backdated Receipt warning nhưng allocation theo commit sequence.
+## P1 kế tiếp — Supplier debt report
 
-## P0 — Slice C: backfill và cutover
+1. Tạo read model từ allocation ledger, không dùng procurement compatibility table làm nguồn sự thật.
+2. Cột tối thiểu:
+   - supplier/company/material;
+   - ordered quantity;
+   - received/allocated quantity;
+   - nominal remaining debt;
+   - unapplied receipt quantity;
+   - active window và tolerance;
+   - oldest open PO age;
+   - barem/actual weight khi có.
+3. Server permission checks và tenant isolation.
+4. Filters supplier/company/item/window/status/date.
+5. Loading/error/empty states, desktop/mobile và export-compatible result shape.
+6. Unit projection + D1 query/integration tests.
 
-- Viết `server/scripts/backfill-purchase-receipt-allocations.mjs`, dry-run mặc định.
-- Resolve từ versions snapshot và child row IDs; không đoán ambiguous rows.
-- Xuất resolved/unresolved count và PO-level checksum.
-- Activation transaction chặn checksum mismatch hoặc unresolved > 0.
-- Ghi actor và timestamp khi activation.
+## P0 — Verification còn thiếu
 
-## P1 — Slice D: UI và báo cáo
-
-- FIFO preview trước submit Purchase Receipt.
-- PO/Receipt allocation timeline và drill-down.
-- Hiển thị nominal remaining, actual received, unapplied, settlement bounds và variance.
-- Settlement/manual override dialogs có confirmation, permission và reason.
-- Backdated warning.
-- Supplier debt report: ordered, received, nominal debt, active window, oldest PO age.
-- Loading/error/empty states và responsive desktop/mobile.
-
-## P0 — Slice E: review, CI và staging
-
-1. Targeted unit/integration/SQL/worker concurrency tests.
-2. `pnpm install --frozen-lockfile`.
-3. Lint, test, typecheck, build.
-4. Exact-head CI green trên PR #14.
-5. Khôi phục đúng Cloudflare Browser Preview QA; production observation không được dùng thay CI/QA.
-6. Browser QA desktop 1440x1000 và mobile 390x844.
-7. Staging migration + backfill dry-run.
-8. Smoke PO -> Receipt -> cancel -> settlement -> report.
-9. Review một vòng theo rubric 100 điểm.
-10. Sửa toàn bộ Critical/High và nâng tổng điểm lên ít nhất 95/100.
+1. Worker/Durable Object concurrency tests:
+   - concurrent Receipt submit cùng supplier queue;
+   - concurrent PO auto-apply từ cùng unapplied source;
+   - revision conflict retry và idempotent receipt.
+2. Production-shaped Receipt cancel lifecycle:
+   - allocated + unapplied source;
+   - cross-voucher apply rồi cancel;
+   - settled/reversed window guards;
+   - weight conservation và compatibility projection.
+3. Exact-head standard CI green trên HEAD cuối của PR #14.
+4. Cloudflare Browser Preview QA, không dùng production observation thay QA:
+   - desktop `1440x1000`;
+   - mobile `390x844`;
+   - preview submit;
+   - PO/Receipt timeline;
+   - settlement/override dialogs;
+   - supplier debt report.
+5. Staging:
+   - migrations;
+   - backfill dry-run;
+   - `unresolved_count=0` và checksum match;
+   - smoke PO → Receipt → cancel → settlement → report.
+6. Review theo rubric 100 điểm; sửa mọi Critical/High và đạt ít nhất 95/100.
 
 ## Production boundary
 
-Chỉ deploy production sau một explicit approval riêng, exact SHA CI xanh, staging evidence, backup và rollback plan.
+Chỉ deploy production sau explicit approval riêng, exact SHA CI xanh, staging evidence, backup và rollback plan.
 
-Khi deploy code/schema:
+Khi chỉ deploy code/schema:
 
 - giữ `purchase_allocation_rollout_state.enabled = 0`;
 - không activation FIFO;
