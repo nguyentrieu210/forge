@@ -142,21 +142,21 @@ export function DashboardBuilder(props: DashboardBuilderProps) {
   return (
     <div className="mf-builder mf-dashboard-builder -m-4 flex min-h-[calc(100vh-6rem)] flex-col overflow-hidden bg-background">
       <header className="flex h-12 shrink-0 items-center gap-2 border-b bg-card px-3">
-        <Input className="h-8 min-w-44 max-w-72 font-medium" value={model.name} onChange={(event) => builder.set({ ...model, name: event.target.value })} placeholder="Tên báo cáo" />
+        <Input className="h-8 min-w-0 flex-1 font-medium sm:max-w-72" value={model.name} onChange={(event) => builder.set({ ...model, name: event.target.value })} placeholder="Tên báo cáo" />
         <Button variant="outline" size="icon-sm" onClick={builder.undo} disabled={!builder.canUndo} aria-label="Hoàn tác"><Undo2 /></Button>
         <Button variant="outline" size="icon-sm" onClick={builder.redo} disabled={!builder.canRedo} aria-label="Làm lại"><Redo2 /></Button>
-        <div className="ml-auto flex items-center gap-2">
-          <Button variant={preview ? "secondary" : "outline"} size="sm" className="gap-1.5" onClick={() => setPreview((value) => !value)}><Eye className="size-4" /> Xem trước</Button>
-          <Button size="sm" className="gap-1.5" onClick={() => props.onSave?.(model)} disabled={props.saving}><Save className="size-4" /> Lưu</Button>
+        <div className="ml-auto flex items-center gap-1 sm:gap-2">
+          <Button variant={preview ? "secondary" : "outline"} size="sm" className="gap-1.5 px-2 sm:px-3" onClick={() => setPreview((value) => !value)}><Eye className="size-4" /><span className="hidden sm:inline">Xem trước</span></Button>
+          <Button size="sm" className="gap-1.5 px-2 sm:px-3" onClick={() => props.onSave?.(model)} disabled={props.saving}><Save className="size-4" /><span className="hidden sm:inline">Lưu</span></Button>
         </div>
       </header>
 
-      <div className={`grid min-h-0 flex-1 overflow-hidden ${preview ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-[15rem_minmax(0,1fr)_17rem]"}`}>
+      <div className={`grid min-h-0 flex-1 overflow-y-auto lg:overflow-hidden ${preview ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-[15rem_minmax(0,1fr)_17rem]"}`}>
         {!preview ? (
-          <aside className="min-h-0 overflow-y-auto border-r bg-card">
+          <aside className="min-h-0 border-r bg-card lg:overflow-y-auto">
             <section className="border-b p-3">
               <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"><Database className="size-3.5" /> Nguồn dữ liệu</div>
-              <div className="space-y-1.5">
+              <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-1">
                 {DATA_SOURCES.map(([label, doctype]) => (
                   <Button key={label} type="button" variant="ghost" className="h-auto w-full justify-start gap-2 rounded-lg border bg-background px-2.5 py-2 text-left transition hover:border-primary/40 hover:bg-primary/[0.04]">
                     <Database className="size-4 shrink-0 text-primary" />
@@ -168,22 +168,22 @@ export function DashboardBuilder(props: DashboardBuilderProps) {
 
             <section className="p-3">
               <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"><LayoutGrid className="size-3.5" /> Thành phần</div>
-              <div className="grid grid-cols-2 gap-2">
-                <Button variant="outline" className="h-20 flex-col gap-1.5 text-xs" onClick={addCard}><Hash className="size-5 text-primary" /> Chỉ tiêu</Button>
-                <Button variant="outline" className="h-20 flex-col gap-1.5 text-xs" onClick={addChart}><BarChart3 className="size-5 text-primary" /> Biểu đồ</Button>
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-6 lg:grid-cols-2">
+                <Button variant="outline" className="h-16 flex-col gap-1 text-xs lg:h-20 lg:gap-1.5" onClick={addCard}><Hash className="size-5 text-primary" /> Chỉ tiêu</Button>
+                <Button variant="outline" className="h-16 flex-col gap-1 text-xs lg:h-20 lg:gap-1.5" onClick={addChart}><BarChart3 className="size-5 text-primary" /> Biểu đồ</Button>
                 {FUTURE_WIDGETS.map(([label, icon]) => (
-                  <Button key={label} variant="outline" className="h-20 flex-col gap-1.5 text-xs" disabled title="Sẽ bổ sung ở phiên bản widget mở rộng">{icon}<span>{label}</span></Button>
+                  <Button key={label} variant="outline" className="h-16 flex-col gap-1 text-xs lg:h-20 lg:gap-1.5" disabled title="Sẽ bổ sung ở phiên bản widget mở rộng">{icon}<span>{label}</span></Button>
                 ))}
               </div>
             </section>
           </aside>
         ) : null}
 
-        <main className="min-h-0 overflow-auto bg-muted/30 p-3 md:p-5">
+        <main className="min-h-[34rem] bg-muted/30 p-3 lg:min-h-0 lg:overflow-auto md:p-5">
           <section className={`mx-auto min-h-full rounded-xl border bg-card shadow-sm ${canvasMode === "fixed" ? "max-w-5xl" : "w-full"}`}>
             <div className="flex items-center gap-2 border-b px-3 py-2">
               <span className="text-xs font-medium">Canvas báo cáo</span>
-              <span className="text-[10px] text-muted-foreground">{columns} cột · kéo và thay đổi kích thước</span>
+              <span className="hidden text-[10px] text-muted-foreground sm:inline">{columns} cột · kéo và thay đổi kích thước</span>
               {!preview && selected ? (
                 <Button variant="ghost" size="sm" className="ml-auto h-7 gap-1 text-xs text-destructive hover:text-destructive" onClick={() => removeWidget(selected.kind, selected.index)}><Trash2 className="size-3.5" /> Xóa</Button>
               ) : null}
@@ -194,7 +194,7 @@ export function DashboardBuilder(props: DashboardBuilderProps) {
                 <ResponsiveGrid
                   className="layout min-h-[34rem]"
                   layouts={{ lg: layouts, md: layouts, sm: layouts }}
-                  breakpoints={{ lg: 1200, md: 768, sm: 480 }}
+                  breakpoints={{ lg: 1200, md: 768, sm: 0 }}
                   cols={{ lg: columns, md: Math.min(columns, 8), sm: Math.min(columns, 4) }}
                   rowHeight={42}
                   isDraggable={!preview}
@@ -210,7 +210,7 @@ export function DashboardBuilder(props: DashboardBuilderProps) {
                           <GripVertical className="size-3.5 text-muted-foreground" />
                           <span className="truncate">{widget.label}</span>
                           {!preview ? (
-                            <Button variant="ghost" size="icon-sm" className="ml-auto size-6 opacity-0 group-hover:opacity-100" onClick={(event) => { event.stopPropagation(); removeWidget(widget.kind, widget.index); }} aria-label="Xóa thành phần"><X className="size-3.5" /></Button>
+                            <Button variant="ghost" size="icon-sm" className="ml-auto size-6 opacity-0 group-hover:opacity-100 focus:opacity-100" onClick={(event) => { event.stopPropagation(); removeWidget(widget.kind, widget.index); }} aria-label="Xóa thành phần"><X className="size-3.5" /></Button>
                           ) : null}
                         </div>
                         {widget.kind === "card" ? (
@@ -230,24 +230,24 @@ export function DashboardBuilder(props: DashboardBuilderProps) {
         </main>
 
         {!preview ? (
-          <aside className="min-h-0 overflow-y-auto border-l bg-card">
+          <aside className="min-h-0 border-l bg-card lg:overflow-y-auto">
             <div className="grid grid-cols-2 border-b">
               <Button variant="ghost" className={`rounded-none border-b-2 text-xs ${inspector === "layout" ? "border-primary text-primary" : "border-transparent"}`} onClick={() => setInspector("layout")}><LayoutGrid className="mr-1 size-3.5" /> Bố cục</Button>
               <Button variant="ghost" className={`rounded-none border-b-2 text-xs ${inspector === "properties" ? "border-primary text-primary" : "border-transparent"}`} onClick={() => setInspector("properties")}><Settings2 className="mr-1 size-3.5" /> Thuộc tính</Button>
             </div>
 
             {inspector === "layout" ? (
-              <div className="space-y-4 p-3">
+              <div className="grid gap-4 p-3 sm:grid-cols-2 lg:grid-cols-1">
                 <div><label className="mb-1.5 block text-xs font-medium">Số cột</label><Select value={columnCount} onValueChange={setColumnCount}><SelectTrigger className="h-8"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="12">12 cột</SelectItem><SelectItem value="10">10 cột</SelectItem><SelectItem value="8">8 cột</SelectItem><SelectItem value="6">6 cột</SelectItem></SelectContent></Select></div>
                 <div><label className="mb-1.5 block text-xs font-medium">Chiều rộng canvas</label><Select value={canvasMode} onValueChange={setCanvasMode}><SelectTrigger className="h-8"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="fluid">Tự động</SelectItem><SelectItem value="fixed">Cố định</SelectItem></SelectContent></Select></div>
-                <div className="rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">Kéo tiêu đề widget để đổi vị trí. Kéo góc widget để đổi kích thước.</div>
+                <div className="rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground sm:col-span-2 lg:col-span-1">Kéo tiêu đề widget để đổi vị trí. Kéo góc widget để đổi kích thước.</div>
               </div>
             ) : (
-              <div className="space-y-4 p-3">
-                {!selected ? <div className="rounded-lg border border-dashed p-4 text-center text-xs text-muted-foreground">Chọn một thành phần trên canvas để chỉnh thuộc tính.</div> : null}
+              <div className="grid gap-4 p-3 sm:grid-cols-2 lg:grid-cols-1">
+                {!selected ? <div className="rounded-lg border border-dashed p-4 text-center text-xs text-muted-foreground sm:col-span-2 lg:col-span-1">Chọn một thành phần trên canvas để chỉnh thuộc tính.</div> : null}
                 {selectedCard ? <><div><label className="mb-1.5 block text-xs font-medium">Tên chỉ tiêu</label><Input className="h-8" value={selectedCard.label} onChange={(event) => patchCard({ label: event.target.value })} /></div><div><label className="mb-1.5 block text-xs font-medium">DocType</label><Input className="h-8" value={selectedCard.document_type} onChange={(event) => patchCard({ document_type: event.target.value })} /></div><div><label className="mb-1.5 block text-xs font-medium">Phép tính</label><Select value={selectedCard.function} onValueChange={(value) => patchCard({ function: value as DashCardCfg["function"] })}><SelectTrigger className="h-8"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Count">Đếm</SelectItem><SelectItem value="Sum">Tổng</SelectItem><SelectItem value="Average">Trung bình</SelectItem></SelectContent></Select></div>{selectedCard.function !== "Count" ? <div><label className="mb-1.5 block text-xs font-medium">Trường tính toán</label><Input className="h-8" value={selectedCard.aggregate_field ?? ""} onChange={(event) => patchCard({ aggregate_field: event.target.value })} /></div> : null}</> : null}
                 {selectedChart ? <><div><label className="mb-1.5 block text-xs font-medium">Tên biểu đồ</label><Input className="h-8" value={selectedChart.title} onChange={(event) => patchChart({ title: event.target.value })} /></div><div><label className="mb-1.5 block text-xs font-medium">DocType</label><Input className="h-8" value={selectedChart.document_type} onChange={(event) => patchChart({ document_type: event.target.value })} /></div><div><label className="mb-1.5 block text-xs font-medium">Loại biểu đồ</label><Select value={selectedChart.chart_type} onValueChange={(value) => patchChart({ chart_type: value as DashChartCfg["chart_type"] })}><SelectTrigger className="h-8"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Bar">Cột</SelectItem><SelectItem value="Line">Đường</SelectItem><SelectItem value="Pie">Tròn</SelectItem><SelectItem value="Percentage">Phần trăm</SelectItem></SelectContent></Select></div></> : null}
-                {selected ? <Button variant="outline" className="w-full gap-1.5 text-destructive hover:text-destructive" onClick={() => removeWidget(selected.kind, selected.index)}><Trash2 className="size-4" /> Xóa thành phần</Button> : null}
+                {selected ? <Button variant="outline" className="w-full gap-1.5 text-destructive hover:text-destructive sm:col-span-2 lg:col-span-1" onClick={() => removeWidget(selected.kind, selected.index)}><Trash2 className="size-4" /> Xóa thành phần</Button> : null}
               </div>
             )}
           </aside>
