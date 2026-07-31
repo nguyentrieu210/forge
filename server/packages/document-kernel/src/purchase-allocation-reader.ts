@@ -96,6 +96,46 @@ export interface PurchaseUnappliedQueueSourceState {
   next_allocation_sequence: number;
 }
 
+export interface PurchaseSettlementWindowState {
+  queue_key: string;
+  queue_revision: number;
+  window_id: string;
+  window_revision: number;
+  window_sequence: number;
+  window_status: "Open" | "Settled" | "Reversed";
+  tolerance_bps: number;
+  nominal_qty_micros: number;
+  received_qty_micros: number;
+  close_entry_id?: string;
+  close_committed_at?: string;
+  close_reason?: string;
+  minimum_qty_micros?: number;
+  maximum_qty_micros?: number;
+  shortage_variance_micros?: number;
+  overage_variance_micros?: number;
+}
+
+/** Positive source allocation and its current unreversed balance for manual reassignment. */
+export interface PurchaseAllocationOverrideSourceState {
+  entry_id: string;
+  queue_key: string;
+  queue_revision: number;
+  window_id: string;
+  window_revision: number;
+  window_status: "Open" | "Settled" | "Reversed";
+  voucher_no: string;
+  voucher_revision: number;
+  receipt_item_row_id: string;
+  purchase_order: string;
+  purchase_order_item_row_id: string;
+  qty_micros: number;
+  barem_weight_micros: number;
+  projected_actual_weight_micros?: number;
+  projection_version?: number;
+  posting_at: string;
+  next_allocation_sequence: number;
+}
+
 export interface PurchaseAllocationReader extends DomainReader {
   isPurchaseAllocationEnabled(tenantId: string): Promise<boolean>;
   getPurchaseAllocationQueueState(
@@ -131,6 +171,15 @@ export interface PurchaseAllocationReader extends DomainReader {
     queueKey: string,
     windowId: string,
   ): Promise<PurchaseUnappliedQueueSourceState[]>;
+  getPurchaseSettlementWindowState(
+    tenantId: string,
+    queueKey: string,
+    windowId: string,
+  ): Promise<PurchaseSettlementWindowState | null>;
+  getPurchaseAllocationOverrideSource(
+    tenantId: string,
+    entryId: string,
+  ): Promise<PurchaseAllocationOverrideSourceState | null>;
 }
 
 const PURCHASE_ALLOCATION_READER_METHODS: Array<keyof PurchaseAllocationReader> = [
@@ -142,6 +191,8 @@ const PURCHASE_ALLOCATION_READER_METHODS: Array<keyof PurchaseAllocationReader> 
   "listPurchaseReceiptAllocationSources",
   "listPurchaseReceiptUnappliedSources",
   "listPurchaseUnappliedQueueSources",
+  "getPurchaseSettlementWindowState",
+  "getPurchaseAllocationOverrideSource",
 ];
 
 export function hasPurchaseAllocationReader(reader: DomainReader): reader is PurchaseAllocationReader {
