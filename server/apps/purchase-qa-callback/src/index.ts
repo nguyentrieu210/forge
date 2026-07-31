@@ -7,7 +7,7 @@ import {
   stripUntrustedPlatformHeaders,
   verifyTrustedIdentity,
 } from "../../../packages/auth/src/index.js";
-import { errorResponse, errors, randomId, timingSafeEqualString } from "../../../packages/core/src/index.js";
+import { errorResponse, errors, jsonResponse, randomId, timingSafeEqualString } from "../../../packages/core/src/index.js";
 
 interface Env {
   TENANT: Fetcher;
@@ -35,6 +35,9 @@ export default {
     const traceId = request.headers.get("x-cloudforge-trace-id") ?? randomId("trace");
     try {
       const url = new URL(request.url);
+      if (url.pathname === "/health") {
+        return jsonResponse({ ok: true, service: "purchase-qa-callback" });
+      }
       if (!url.pathname.startsWith(CALLBACK_PREFIX)) {
         throw errors.notFound("Unknown local app callback path");
       }
