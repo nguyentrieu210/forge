@@ -17,25 +17,28 @@ Contract: `server/docs/FINANCE-AR-AP-BRD.md` trên branch `feat/finance-ar-ap-co
 ### Đã implement — M1A due date và aging backend
 
 - Migration append-only `0030_finance_invoice_aging.sql`.
-- Database guard cho due date bắt buộc/hợp lệ và không trước posting date.
-- Legacy invoice thiếu due date fallback về posting date trong `finance_invoice_terms`.
-- Metadata Sales Invoice có field Due Date bắt buộc.
+- Xác thực due date khi có; chặn ngày sai và ngày trước posting date.
+- Metadata Sales Invoice yêu cầu Due Date.
+- API/fixtures cũ thiếu due date vẫn tương thích bằng `posting_date_fallback`.
+- `finance_invoice_terms` ghi `due_date_source` là `explicit` hoặc `posting_date_fallback`.
+- Hard database presence enforcement để migration sau, chỉ bật sau backfill/checksum không còn unresolved.
 - `FinanceQueryCompiler` cho:
   - `Accounts Receivable Aging`;
   - `Accounts Payable Aging`.
 - `as_of_date` bắt buộc, tenant/cutoff/filter dùng bind parameter.
+- Aging report trả/lọc `due_date_source` để xác định dữ liệu cần backfill.
 - Query Worker dùng finance compiler cho synchronous và prepared reports.
 - Permission server-side cho Accounts, Sales Manager và Purchase Manager theo domain.
 - D1 guard map thành validation 422 an toàn.
 - SQL test mới đã được nối vào `server/package.json`.
 - Targeted tests đã thêm cho migration, query compiler, permission và error mapping.
-- Implementation head trước các commit trạng thái cuối: `0c6193090471d447936131bb38e9e4b6306916af`.
+- Implementation head trước commit trạng thái cuối: `90ef9ac2b4a3681cda86cd8ae0ad304f3ebd0c34`.
 
 ### Verification hiện có
 
-- Migration test độc lập: **PASS** sau khi kiểm metadata required.
+- Compatibility migration fixture: **PASS**.
 - TypeScript strict harness cho finance compiler: **PASS**.
-- SQL execution fixture tại cutoff `2026-07-31`: invoice 1.000, đã thanh toán 300, thanh toán 700 sau cutoff => outstanding 700, overdue 21 ngày, bucket 1–30 ngày: **PASS**.
+- SQL execution fixture tại cutoff: outstanding, days overdue, bucket và `due_date_source` đều đúng: **PASS**.
 - Chưa có root `pnpm run test`, `pnpm run typecheck`, `pnpm run build` hoặc GitHub code CI exact-head.
 
 ### Việc tiếp theo
@@ -47,6 +50,13 @@ Contract: `server/docs/FINANCE-AR-AP-BRD.md` trên branch `feat/finance-ar-ap-co
 3. Thêm worker-level report request fixture nếu root tests chưa cover D1ReportService với finance compiler.
 4. Cập nhật exact PASS SHA vào CURRENT_STATUS/NEXT_TASKS/AI_HANDOFF.
 5. Chỉ chuyển PR ready khi exact-head CI xanh.
+
+#### M1C — Backfill và hard due-date enforcement
+
+1. Viết dry-run report đếm invoice dùng `posting_date_fallback` theo tenant/company/doctype.
+2. Xuất unresolved list/checksum, không tự đoán payment terms.
+3. Cho phép operator bổ sung due date theo dữ liệu đã duyệt.
+4. Chỉ thêm migration hard-presence guard khi unresolved = 0 và staging smoke pass.
 
 #### M2 — Advance và Payment Allocation
 
