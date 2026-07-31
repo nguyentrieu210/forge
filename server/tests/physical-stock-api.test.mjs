@@ -85,11 +85,42 @@ test("physical stock report injects authenticated tenant and normalizes filters"
   }]);
 });
 
+test("Frappe physical stock method unwraps args and returns message envelope", async () => {
+  const calls = [];
+  const service = {
+    async run(receivedActor, tenantId, request) {
+      calls.push({ receivedActor, tenantId, request });
+      return emptyPage();
+    },
+    async exportCsv() { throw new Error("unused"); },
+  };
+  const request = apiRequest("/api/method/metaforge.inventory.physical_stock", {
+    args: JSON.stringify({ company: "Demo", warehouse_role: "Kho chính", limit: 50 }),
+  });
+  const response = await routePhysicalStockApi(request, new URL(request.url), context(), { service });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { message: emptyPage() });
+  assert.deepEqual(calls, [{
+    receivedActor: actor,
+    tenantId: "tenant-a",
+    request: { company: "Demo", warehouse_role: "Kho chính", limit: 50 },
+  }]);
+});
+
 test("physical stock report rejects client-selected tenant and unknown fields", async () => {
   const service = { async run() { return emptyPage(); }, async exportCsv() { throw new Error("unused"); } };
   const tenantRequest = apiRequest("/api/v1/reports/physical-stock", { company: "Demo", tenant_id: "tenant-b" });
   await assert.rejects(
     () => routePhysicalStockApi(tenantRequest, new URL(tenantRequest.url), context(), { service }),
+    /tenant scope is controlled by the authenticated server context/,
+  );
+
+  const frappeTenantRequest = apiRequest("/api/method/metaforge.inventory.physical_stock", {
+    args: { company: "Demo", tenantId: "tenant-b" },
+  });
+  await assert.rejects(
+    () => routePhysicalStockApi(frappeTenantRequest, new URL(frappeTenantRequest.url), context(), { service }),
     /tenant scope is controlled by the authenticated server context/,
   );
 
