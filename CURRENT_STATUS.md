@@ -5,108 +5,104 @@ Ngày cập nhật: **2026-08-01**.
 ## Repository
 
 - Repository: `nguyentrieu210/forge`.
-- Default branch: `hotfix/alumdoor-print-list-delete`.
-- Default head khi mở nhánh: `cbe60228fb10a3b51b52880fb178c164b63ff9f8`.
-- Working branch: `docs/record-alumdoor-app-worker-release-20260801`.
+- Default/base branch: `hotfix/alumdoor-print-list-delete`.
+- Working branch: `feat/inventory-physical-stock-ui-reports-slice-d-20260731`.
+- Pull request: `#82` — `feat(inventory): add physical stock read model and Slice D foundation`.
+- Base head: `f27d4c6efe37a0cca91e3f1672a199d33b09cbab`.
+- Code checkpoint head: `bdc07ed6ada9e60382e429715d7704005bd6984c`.
+- Branch so với base: `behind_by=0`; PR open, draft và mergeable.
 - Không commit `.env`, secret, `server/work/`, `tmp`, backup hoặc generated evidence.
 
-## Bán hàng — Unicode Item Price đã release đúng app Worker
+## Inventory Slice D foundation
 
-### Feature
+### Authoritative physical-stock read model
 
-- PR `#91` đã squash-merge.
-- Exact feature head: `c0d9df33a9fbde7540683107fd948c388a026682`.
-- Merge SHA: `a48524b93489c92296c57fc5f223e41d505de7aa`.
-- Exact-head CI đều PASS:
-  - CI `30647911536`;
-  - PR Validation `30647908313`;
-  - Sales Feature CI `30647908363`;
-  - Purchase Feature CI `30647908408`;
-  - Inventory and Manufacturing CI `30647910730`;
-  - UI Pull Request Validation `30647910724`.
-- Fix bao phủ Unicode NFC, exact-probe failure fallback và cùng canonical matching cho preview/save/submit.
+- Đọc từ append-only `stock_ledger_entries`; không tạo sổ tồn thứ hai.
+- Nhóm theo tenant, company, Item, warehouse, canonical physical identity, batch và serial.
+- Hỗ trợ filter warehouse role, inventory mode/profile, màu, condition, generation, dimensions, batch và serial.
+- Cộng quantity, value và physical count bằng safe integers.
+- Reconcile lineage và totals; exact reversal được giữ trong lineage.
+- Cursor pagination deterministic, giới hạn tối đa 500 rows.
+- Cursor sai trả validation `422`, không biến lỗi client thành `500`.
 
-### Release-target correction
+### Bounded D1 reader
 
-- Logic tự điền giá nằm trong `server/apps-src/alumdoor-worker/src/sales-item-context.ts`.
-- Worker thực thi logic đó là `cloudforge-app-alumdoor` trong dispatch namespace `cloudforge-production`.
-- Release tenant Worker `cloudforge-tenant-alu` trước đó không cập nhật app Worker này.
-- Dashboard evidence của chủ dự án phát hiện app Worker vẫn cũ; đây là nguyên nhân deployment trước không làm thay đổi ô giá.
+- Parameter-bind tenant/company khi đọc ledger và document snapshots.
+- Map source, target, finished-good và reversal rows.
+- Join child-row hoặc finished-good physical identity snapshots.
+- Chia physical count theo tỷ lệ trên split batch rows và giữ đúng tổng.
+- Fail closed khi scan vượt hạn mức, tenant/company leakage, malformed JSON hoặc unsafe integer.
 
-### App Worker production release
+### Tenant report endpoint
 
-- Release workflow PR `#100` merge SHA `1487dbd76f516c0d505120924012b262a5f19857`.
-- Workflow-order fix PR `#102` merge SHA `cbe60228fb10a3b51b52880fb178c164b63ff9f8`.
-- PR `#102` exact-head CI `30650781602`: SUCCESS.
-- PR `#102` PR Validation `30650779877`: SUCCESS.
-- Lượt execution đầu, PR `#101` / run `30650655515`, dừng trước deploy vì chưa build `server/dist`.
-- Lượt execution thành công: PR `#104`, đã đóng và không merge.
-- Execution head: `ee1b652af810f91cba1e042eb34b7a6c37c199a9`.
-- Release run `30651057535`: SUCCESS.
-- Release job `91224118455`: SUCCESS.
-- Build server: PASS.
-- Focused Unicode pricing regression: PASS.
-- Wrangler dry-run: PASS.
-- Live deploy: PASS.
-- Cloudflare script/namespace verification: PASS.
-- Bindings `PLATFORM` và `AI`: PASS.
-- Worker: `cloudforge-app-alumdoor`.
-- Dispatch namespace: `cloudforge-production`.
-- Production Version ID: `734fd53b-94ce-401d-86e8-ca4cd0ffee2e`.
-- Deployment time: `2026-07-31T17:25:19.115Z`.
+- Native routes:
+  - `POST /api/v1/reports/physical-stock`;
+  - `POST /api/v1/reports/physical-stock/export`.
+- Frappe methods:
+  - `metaforge.inventory.physical_stock`;
+  - `metaforge.inventory.physical_stock_export`.
+- Tenant chỉ lấy từ authenticated server context; body không được chọn `tenant_id`/`tenantId`.
+- Native route dùng trusted identity; Frappe route dùng cookie session + CSRF hoặc app callback trusted identity.
+- D1 request dùng `first-primary` session.
+- Quyền dựa trên `Stock Entry` report/export và User Permission cho Company, Warehouse, Warehouse Role.
+- Owner/share-only read scope bị từ chối vì ledger không có owner/share semantics an toàn.
+- Lineage mặc định redacted; chỉ trả khi request explicit `include_lineage: true` và scope cho phép.
+- CSV có UTF-8 BOM, spreadsheet-formula protection, private no-store và không chấp nhận pagination controls.
+- Export dùng đúng một permission/scope snapshot để tránh authorization TOCTOU.
 
-### App Worker release artifact
+### Entrypoint/build
 
-- Artifact ID: `8801385744`.
-- Name: `alumdoor-app-production-release-30651057535`.
-- Size: `114195` bytes.
-- Digest: `sha256:0cf123014d3b4d0c1256f1d37b0e9b7a11882581e22c19c0da6a664b4f4b4e20`.
-- Expiry: `2026-08-30T17:25:19Z`.
+- Router tenant cũ được giữ trong `server/apps/tenant-worker/src/index-core.ts`.
+- `index.ts` là wrapper nhỏ chỉ intercept physical-stock routes; route và scheduled task cũ delegate vào core.
+- `server/scripts/ensure-tenant-worker-core.mjs` bắt buộc emit `index-core.js/.d.ts/.map` sau `tsc` và fail rõ nếu output thiếu.
 
-### Tenant Worker release trước đó
+### Regression
 
-- Run `30649182082`, job `91217965586`: SUCCESS.
-- Tenant Worker `cloudforge-tenant-alu`, version `ed5852cf-94ef-4a02-b0b9-1e64020c2d0d`.
-- Backup, recorded migrations, deploy, `/health=200` và guest boot `403`: PASS.
-- Release này là nền tảng tenant, không thay thế app Worker release.
+- `server/tests/physical-stock-read-model.test.mjs`.
+- `server/tests/physical-stock-report-service.test.mjs`.
+- `server/tests/d1-physical-stock-ledger-reader.test.mjs`.
+- `server/tests/physical-stock-api.test.mjs`.
+- Bao phủ tenant injection, Company/Warehouse scope, owner/share rejection, Frappe args/envelope, export permission, BOM bytes, formula safety, single-scope export, explicit lineage opt-in và cursor `422`.
 
-### Functional acceptance còn lại
+## Code checkpoint validation
 
-- Cần authenticated smoke trực tiếp để xác minh child grid tự điền `180000 VND`, Thành tiền và save-time authoritative pricing.
-- Cần đổi Item/UOM/bảng giá để xác minh không lấy chéo hoặc giữ giá cũ.
+Exact code head `bdc07ed6ada9e60382e429715d7704005bd6984c`:
 
-## Inventory / Manufacturing
+- CI `30653484654`: **SUCCESS**.
+- Sales Feature CI `30653484739`: **SUCCESS**.
+- Purchase Feature CI `30653484672`: **SUCCESS**.
+- PR Validation `30653484621`: tests/typecheck PASS, build đang hoàn tất khi cập nhật file này.
+- Inventory and Manufacturing CI `30653484708`: focused tests, SQL, briefs và lint PASS; full repository gates đang chạy khi cập nhật file này.
+- UI Pull Request Validation `30653484644`: lint/tests/typecheck/build PASS; browser/auth smoke đang chạy khi cập nhật file này.
+- Release Alumdoor App Worker và production observation: skipped đúng điều kiện PR.
 
-- PR `#49` đã merge canonical physical stock identity và warehouse roles.
-- PR `#50` đã merge versioned BOM và immutable Work Order snapshot.
-- Các thay đổi này chạy song song trên default; app Worker release không sửa dữ liệu kho hoặc sản xuất.
+## Review fixes trong đợt này
 
-## Purchase/FIFO
+- Sửa build thiếu `index-core.js` bằng targeted TypeScript emit có diagnostics.
+- Sửa test header theo `jsonResponse` platform semantics.
+- Kiểm BOM CSV bằng raw bytes vì `Response.text()` loại BOM khi decode.
+- Khóa export permission và data scope vào một snapshot.
+- Đổi invalid cursor thành validation `422`.
+- Đổi lineage thành explicit opt-in.
+- Review threads hiện tại: `0`.
 
-- PR `#63` đã release lifecycle correction lên tenant `alu`.
-- PR `#75` đã merge readiness wrapper/runbook.
-- PR `#77` merge SHA `a67d62377f1869d95906320636eabbd9bbd56ab7` khóa write mode bằng approved checksum.
+## Việc còn lại của Slice D
+
+- Physical-stock explorer và lineage drill-down UI.
+- Quarantine/release và Work Order progress views.
+- WIP, shortage, planned-vs-actual variance, scrap/offcut, ageing và condition reports.
+- Runtime harness và Playwright desktop/mobile cho các màn Slice D.
+- Benchmark source scan, pagination, CSV và large-tenant behavior.
+
+## Trạng thái release khác cần giữ
+
+- Sales Unicode Item Price đã release đúng app Worker `cloudforge-app-alumdoor`, production Version ID `734fd53b-94ce-401d-86e8-ca4cd0ffee2e`.
+- Tenant Worker release nền tảng trước đó vẫn là `cloudforge-tenant-alu`, version `ed5852cf-94ef-4a02-b0b9-1e64020c2d0d`.
 - FIFO rollout vẫn **disabled**.
-
-## Production observation — 2026-07-31
-
-- Read-only run `30648098602`, job `91214435446`.
-- `health=200`, `root=200`, `guest_boot=403`, endpoint result PASS.
-- Artifact ID `8800251206`.
-- Artifact digest `sha256:667a9f2a760ff5074ae4d97df4193e53cc45db1d96e237ffc39fe4f934abae7d`.
-- Workflow conclusion đỏ do bước issue-comment nhận GitHub API `403`; endpoint smoke và artifact upload đều PASS.
-
-## Gate hiện tại
-
-1. Hard refresh và authenticated Sales smoke: Item, UOM `Mét`, rate `180000 VND`, amount và save-time pricing.
-2. Đổi Item/UOM/bảng giá để xác minh không lấy chéo hoặc giữ giá cũ.
-3. Authenticated Purchase smoke vẫn chưa hoàn tất.
-4. Sửa observation reporting `403` rồi chạy lại để toàn job conclusion xanh.
-5. FIFO activation vẫn cần staging readiness, backup và explicit approval riêng.
 
 ## Safety
 
-- App Worker Sales release đã hoàn tất qua controlled workflow và Cloudflare provider verification.
+- Không deploy Cloudflare trong PR #82.
 - Không sửa production secrets hoặc DNS.
-- Không thay đổi D1, KV hoặc dữ liệu nghiệp vụ trong app Worker release.
+- Không migration hoặc mutate tenant data.
 - Không bật FIFO.
