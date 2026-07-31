@@ -46,6 +46,14 @@ import {
 } from "../../app-registry/src/index.js";
 import type { D1TranslationStore } from "./translations.js";
 import { assertKanbanField, type D1DeskViewStore } from "./desk-views.js";
+import {
+  assertExactUserPermission,
+  evaluatePermissionCapabilities,
+  isAccessAdministrator,
+  parseUserPermissionIdentity,
+  resolveAccessInspectionActor,
+  userPermissionIdentity,
+} from "./access-control.js";
 
 /**
  * Contract version, surfaced to the client as `frappe_version`.
@@ -54,7 +62,7 @@ import { assertKanbanField, type D1DeskViewStore } from "./desk-views.js";
  * wire contract changes — otherwise a browser keeps serving documents shaped by
  * the previous contract after a deploy.
  */
-export const FORGE_CONTRACT_VERSION = "16.0.0-forge.2";
+export const FORGE_CONTRACT_VERSION = "16.0.0-forge.3";
 
 export interface FrappeRouterContext {
   tenantId: string;
@@ -1722,23 +1730,23 @@ async function globalSearch(args: FrappeArgs, context: FrappeRouterContext): Pro
 
 async function accessProfile(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
   const requested = args.text("user");
-  // Inspecting somebody else's access is an administrative act.
   if (requested && requested !== context.actor.user_id) requireMetadataAdmin(context);
   const user = requested ?? context.actor.user_id;
+  const userRecord = await context.users.get(context.tenantId, user);
+  if (!userRecord) throw errors.notFound("User not found");
   const roles = user === context.actor.user_id ? [...context.actor.roles] : await context.users.listRoles(context.tenantId, user);
   const permissions = await context.access.listUserPermissions(context.tenantId, user);
-  /**
-   * `scopes` is what the client actually reads — grouped by doctype, not a flat list.
-   *
-   * The server sent only `user_permissions`, so `profile.scopes` was `undefined` and the
-   * permission screen crashed on `scopes.reduce(...)` before rendering anything: a blank
-   * page, not an error message. Two implementations of one contract, disagreeing quietly.
-   * `user_permissions` is kept alongside because the Frappe-shaped surface promises it.
-   */
   const byDoctype = new Map<string, JsonObject[]>();
   for (const record of permissions) {
+    const id = userPermissionIdentity({
+      user,
+      allow: record.allow_doctype,
+      forValue: record.allow_name,
+      applicableFor: record.applicable_for_doctype,
+    });
     const list = byDoctype.get(record.allow_doctype) ?? [];
     list.push({
+      id,
       value: record.allow_name,
       label: record.allow_name,
       ...(record.applicable_for_doctype ? { applicableFor: record.applicable_for_doctype } : {}),
@@ -1749,12 +1757,19 @@ async function accessProfile(args: FrappeArgs, context: FrappeRouterContext): Pr
   }
   return {
     user,
+    fullName: userRecord.full_name,
+    enabled: userRecord.enabled,
     roles,
+    assignedRoles: roles,
     scopes: [...byDoctype].map(([doctype, values]) => ({ doctype, values })) as unknown as JsonValue,
-    // Only a System Manager may change anyone's access, so the screen hides its own
-    // controls rather than offering buttons the server will refuse.
-    canManage: isPlatformAdmin(context),
+    canManage: isAccessAdministrator(context.actor),
     user_permissions: permissions.map((record) => ({
+      id: userPermissionIdentity({
+        user,
+        allow: record.allow_doctype,
+        forValue: record.allow_name,
+        applicableFor: record.applicable_for_doctype,
+      }),
       allow: record.allow_doctype,
       for_value: record.allow_name,
       applicable_for: record.applicable_for_doctype || null,
@@ -1774,19 +1789,37 @@ async function accessProfile(args: FrappeArgs, context: FrappeRouterContext): Pr
 async function explainPermission(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
   const doctype = args.requireText("doctype", 160);
   const name = args.text("name");
+  const actor = await resolveAccessInspectionActor({
+    ...(args.text("user") ? { requestedUser: args.text("user")! } : {}),
+    caller: context.actor,
+    tenantId: context.tenantId,
+    users: context.users,
+  });
   const meta = await requireMeta(doctype, context);
   const document = name ? await context.documents.getDocument(context.tenantId, doctype, name) : null;
   if (name && !document) throw errors.notFound();
-  const scope = await context.permissions.getReadScope(context.actor, context.tenantId, doctype).catch(() => null);
+  const scope = await context.permissions.getReadScope(actor, context.tenantId, doctype).catch(() => null);
+  const evaluation = await evaluatePermissionCapabilities({
+    actor,
+    tenantId: context.tenantId,
+    doctype,
+    meta,
+    document,
+    permissions: context.permissions,
+  });
   return {
+    user: actor.user_id,
     doctype,
     ...(name ? { name } : {}),
-    roles: [...context.actor.roles],
+    roles: [...actor.roles],
     read_scope: scope?.mode ?? "denied",
     user_permissions: (scope?.user_permissions ?? []).map((constraint) => ({
-      allow: constraint.allow_doctype, fields: constraint.fields, allowed_values: constraint.allowed_values,
+      allow: constraint.allow_doctype,
+      fields: constraint.fields,
+      allowed_values: constraint.allowed_values,
     })),
-    capabilities: await capabilityFlags(doctype, meta, document, context),
+    capabilities: evaluation.capabilities,
+    trace: evaluation.trace as unknown as JsonValue,
   };
 }
 
@@ -1796,42 +1829,67 @@ async function addUserPermission(args: FrappeArgs, context: FrappeRouterContext)
   const allow = args.requireText("allow", 160);
   const forValue = args.requireText("for_value", 320);
   const applicable = args.text("applicable_for") ?? "";
+  const targetUser = await context.users.get(context.tenantId, user);
+  if (!targetUser) throw errors.notFound("User not found");
+  const hideDescendants = args.bool("hide_descendants", false);
+  assertExactUserPermission(hideDescendants);
 
-  // The referenced value must exist, or the restriction would silently deny
-  // everything rather than restricting to something.
   const exists = await context.documents.hasMasterRecord(context.tenantId, allow, forValue)
     || Boolean(await context.documents.getDocument(context.tenantId, allow, forValue));
   if (!exists) throw errors.reference(`${allow} ${forValue} does not exist`);
 
   if (applicable) {
     const target = await context.metadata.getDocType(context.tenantId, applicable);
-    // Without a Link field to restrict on, the permission can never be applied.
     if (!target || !target.fields.some((field) => field.fieldtype === "Link" && field.options === allow)) {
       throw errors.validation(`${applicable} has no Link field to ${allow}`);
     }
   }
 
+  const isDefault = args.bool("is_default", false);
   const record = await context.access.putUserPermission?.(context.tenantId, {
     user,
     allow_doctype: allow,
     allow_name: forValue,
     applicable_for_doctype: applicable,
-    is_default: args.bool("is_default", false),
-    hide_descendants: args.bool("hide_descendants", false),
+    is_default: isDefault,
+    hide_descendants: false,
     created_by: context.actor.user_id,
     created_at: context.now(),
   });
   if (!record) throw errors.validation("User permissions are not writable on this deployment");
-  return record as unknown as JsonObject;
+  return {
+    id: userPermissionIdentity({ user, allow, forValue, applicableFor: applicable }),
+    user,
+    allow,
+    for_value: forValue,
+    applicable_for: applicable || null,
+    is_default: isDefault ? 1 : 0,
+    hide_descendants: 0,
+  };
 }
 
 async function removeUserPermission(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
   requireMetadataAdmin(context);
-  const user = args.requireText("user", 320);
-  const allow = args.requireText("allow", 160);
-  const forValue = args.requireText("for_value", 320);
-  await context.access.deleteUserPermission?.(context.tenantId, user, allow, forValue, args.text("applicable_for") ?? "");
-  return { removed: true };
+  const encoded = args.text("id");
+  const identity = encoded
+    ? parseUserPermissionIdentity(encoded)
+    : {
+      user: args.requireText("user", 320),
+      allow: args.requireText("allow", 160),
+      forValue: args.requireText("for_value", 320),
+      ...(args.text("applicable_for") ? { applicableFor: args.text("applicable_for")! } : {}),
+    };
+  if (!context.access.deleteUserPermission) {
+    throw errors.validation("User permissions are not writable on this deployment");
+  }
+  await context.access.deleteUserPermission(
+    context.tenantId,
+    identity.user,
+    identity.allow,
+    identity.forValue,
+    identity.applicableFor ?? "",
+  );
+  return { id: userPermissionIdentity(identity), removed: true };
 }
 
 async function setUserRoles(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
