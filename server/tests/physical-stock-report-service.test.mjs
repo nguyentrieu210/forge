@@ -124,6 +124,30 @@ test("report service caps rows and requires export permission", async () => {
   );
 });
 
+test("CSV export uses one authorization and scope snapshot", async () => {
+  const { PhysicalStockReportService } = await loadModule();
+  let scopeReads = 0;
+  const service = new PhysicalStockReportService(
+    { list: async () => [ledger()] },
+    {
+      async getScope() {
+        scopeReads += 1;
+        if (scopeReads > 1) throw new Error("permission scope was re-read during one export");
+        return {
+          companies: ["Alumdoor"],
+          warehouses: ["KHO-NVL"],
+          max_rows: 20,
+          can_export: true,
+        };
+      },
+    },
+  );
+
+  const exported = await service.exportCsv(actor, "alu", { company: "Alumdoor" });
+  assert.equal(scopeReads, 1);
+  assert.equal(exported.row_count, 1);
+});
+
 test("CSV export is scoped, BOM-safe and spreadsheet-formula safe", async () => {
   const { PhysicalStockReportService } = await loadModule();
   const service = new PhysicalStockReportService(
