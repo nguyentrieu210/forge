@@ -2,24 +2,19 @@
 
 Ngày cập nhật: **2026-07-31**.
 
-## P0 — Merge, release và smoke hotfix tự điền đơn giá
+## P0 — Functional production smoke cho hotfix tự điền đơn giá
 
-PR `#65` sửa child grid không tự điền giá khi Item Price có field đúng nhưng tên record không canonical.
+Hotfix đã merge và release tenant production:
 
-### Trước merge
+- Feature PR `#65` squash-merge SHA `db2d5abd8273a5a6c266ba7343554ebeac27618c`.
+- Release preparation PR `#67` merge SHA `87b9410a0a1499100aeafce75b018117fda81ab6`.
+- Execution PR `#68` đã đóng không merge sau release.
+- Release run `30640747900`, job `91189756848`: backup, migration, deploy, smoke và Wrangler evidence **PASS**.
+- Tenant Worker production version: `7542bba4-dc20-4794-8c92-9d26af349531`.
+- `/health` = `200`, unauthenticated boot = `403`.
+- Không deploy Gateway, không sửa secrets, FIFO vẫn **disabled**.
 
-1. Xác minh PR vẫn mergeable và base không tiến thêm thay đổi xung đột.
-2. Kiểm exact final head sau hai commit handoff; không dùng kết quả CI của code head cũ để merge head mới.
-3. Cả sáu workflow phải PASS; Gateway/Tenant release jobs trong PR phải SKIPPED.
-4. Squash-merge chỉ khi người dùng yêu cầu rõ.
-
-### Khi được yêu cầu release
-
-1. Hotfix sửa cả `alumdoor.sales.item_context` và pricing authoritative trong tenant runtime, nên release cần Tenant Worker `alu`; chỉ release Gateway nếu có thay đổi frontend riêng.
-2. Dùng exact merged SHA, backup production D1 theo workflow chuẩn trước tenant deploy, chạy migration dry-run/live dù dự kiến không có migration mới, deploy và smoke `/health` + guest boot.
-3. Không sửa production secrets, không kích hoạt FIFO và không mutate dữ liệu Item Price trong release.
-
-### Functional production smoke sau deploy
+Kiểm bằng tài khoản production phù hợp và dữ liệu thử có thể huỷ/xoá an toàn:
 
 1. Hard refresh, mở Báo giá hoặc Đơn hàng mới.
 2. Chọn `Bảng giá áp dụng`, sau đó chọn Item có Item Price đúng `Bảng giá + Mã hàng + ĐVT`.
@@ -28,7 +23,9 @@ PR `#65` sửa child grid không tự điền giá khi Item Price có field đú
 5. Đổi bảng giá ở header khi dòng đã có Item; giá dòng phải được tải lại.
 6. Kiểm bản ghi Item Price có tên legacy hoặc không canonical vẫn tự điền theo field.
 7. Kiểm giá disabled, sai currency, thiếu currency và duplicate active prices không trở thành rate dùng được; giao diện phải hiện chẩn đoán phù hợp.
-8. Lưu chứng từ thử để xác minh server authoritative trả cùng giá preview; sau đó huỷ/xoá chứng từ thử theo quy trình.
+8. Lưu chứng từ thử để xác minh server authoritative trả cùng giá preview.
+9. Huỷ hoặc xoá chứng từ thử theo quy trình nghiệp vụ.
+10. Nếu lỗi, ghi rõ Item, Price List, UOM, currency và thông báo trạng thái đã redacted; không ghi credential/cookie hoặc dữ liệu khách hàng thật vào evidence.
 
 ## P0 — Functional production smoke cho Link dropdown trong child table
 
@@ -60,7 +57,7 @@ Kiểm trực tiếp sau hard refresh bằng tài khoản production phù hợp,
 ## Purchase/FIFO — functional browser QA còn lại
 
 - PR `#14` đã squash-merge thành `7b3dc06dbbecbb5370ddb48259aa1614aef2ff32`.
-- Tenant Worker production version: `9ec0d1d3-c1fd-4263-ae35-4fae81c09968`.
+- Tenant Worker production hiện hành: `7542bba4-dc20-4794-8c92-9d26af349531`.
 - FIFO rollout vẫn **disabled**; deploy code không phải approval kích hoạt FIFO.
 
 Dùng dữ liệu thử phù hợp:
@@ -90,8 +87,8 @@ Dùng dữ liệu thử phù hợp:
 
 ## Theo dõi production
 
-- Theo dõi Gateway 4xx/5xx mới, lỗi mở/chọn Link dropdown, focus trap hoặc keyboard navigation regression.
-- Rollback khi có login/API 5xx diện rộng, Link dropdown không mở/chọn được, permission regression hoặc mất dữ liệu CRUD.
+- Theo dõi Gateway/Tenant 4xx/5xx mới, lỗi lấy `alumdoor.sales.item_context`, lỗi pricing khi lưu và lỗi mở/chọn Link dropdown.
+- Rollback khi có API 5xx diện rộng, pricing sai có thể ghi chứng từ, permission regression hoặc mất dữ liệu CRUD.
 - Endpoint smoke đã đạt nhưng không thay thế functional browser smoke có đăng nhập.
 
 ## RBAC
@@ -102,7 +99,8 @@ Dùng dữ liệu thử phù hợp:
 ## Release automation
 
 - Giữ `.github/workflows/gateway-production-release.yml` làm đường Gateway có exact SHA, smoke và provider evidence.
-- Ở tenant release kế tiếp, xác minh `.github/workflows/ci.yml` tạo summary/version từ Wrangler NDJSON.
+- Tenant release dùng `.github/workflows/ci.yml`: backup → migrate → deploy → smoke → Wrangler version evidence.
+- Execution PR chỉ dùng để kích hoạt release và phải đóng không merge sau khi hoàn tất.
 - `cloudflare-production-observation.yml` chỉ dùng manual smoke; không dùng để suy ra version/deployment ID.
 
 ## Safety
