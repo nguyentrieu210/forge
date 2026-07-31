@@ -169,7 +169,7 @@ await ensureResource("Item", "AL71-QA", {
   item_code: "AL71-QA",
   item_name: "Nhôm AL71 QA",
   item_group: aluminiumItemGroup,
-  item_nature: "Nguyên vật liệu",
+  item_nature: "Hàng tồn kho",
   material_stage: "Nguyên vật liệu",
   supply_type: "Mua ngoài",
   is_stock_item: 1,
