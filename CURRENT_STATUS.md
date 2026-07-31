@@ -67,6 +67,8 @@ Không được diễn giải endpoint smoke thành bằng chứng rằng functi
 
 ## Bán hàng multi-UOM hiện hành
 
+- Hotfix hậu kiểm 2026-07-31: bỏ qua cột tồn rỗng trước khi đọc số dư hợp lệ và xóa giá/tồn preview cũ khi `alumdoor.sales.item_context` lỗi, tránh hiển thị dữ liệu của lựa chọn trước.
+
 - Giá theo đúng `Bảng giá + Mặt hàng + ĐVT`.
 - ĐVT lấy từ Item/UOM Conversion.
 - Báo giá/Đơn hàng đọc giá và tồn theo Item + Kho + ĐVT qua `alumdoor.sales.item_context`.
