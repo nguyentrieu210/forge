@@ -3,13 +3,13 @@ name: Run Final RBAC Slice A Gate
 on:
   push:
     branches:
-      - feat/rbac-permission-completion-20260731
+      - feat/rbac-permission-slice-a-contract-20260731
 
 permissions:
   contents: write
 
 concurrency:
-  group: rbac-slice-a-push-final
+  group: rbac-slice-a-push-final-contract
   cancel-in-progress: false
 
 jobs:
@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: feat/rbac-permission-completion-20260731
+          ref: feat/rbac-permission-slice-a-contract-20260731
           fetch-depth: 0
 
       - uses: pnpm/action-setup@v4
@@ -146,4 +146,4 @@ jobs:
                      client/packages/adapter-frappe/src/frappe-adapter.ts \
                      client/packages/views/src/access/PermissionCenter.tsx
           git commit -m "feat(rbac): complete permission inspection contract"
-          git push origin HEAD:feat/rbac-permission-completion-20260731
+          git push origin HEAD:feat/rbac-permission-slice-a-contract-20260731
