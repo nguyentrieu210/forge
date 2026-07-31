@@ -152,6 +152,15 @@ function requireMetadataAdmin(context: FrappeRouterContext): void {
   throw errors.permission("System Manager is required to change metadata");
 }
 
+function rbacAudit(context: FrappeRouterContext, source: string, reason?: string) {
+  return {
+    actorUserId: context.actor.user_id,
+    traceId: context.traceId,
+    source,
+    ...(reason ? { reason } : {}),
+  };
+}
+
 const RESOURCE_PATH = /^\/api\/resource\/([^/]+)(?:\/([^/]+))?$/;
 const METHOD_PATH = /^\/api\/method\/([A-Za-z0-9_.]+)$/;
 
@@ -1846,17 +1855,21 @@ async function addUserPermission(args: FrappeArgs, context: FrappeRouterContext)
   }
 
   const isDefault = args.bool("is_default", false);
-  const record = await context.access.putUserPermission?.(context.tenantId, {
-    user,
-    allow_doctype: allow,
-    allow_name: forValue,
-    applicable_for_doctype: applicable,
-    is_default: isDefault,
-    hide_descendants: false,
-    created_by: context.actor.user_id,
-    created_at: context.now(),
-  });
-  if (!record) throw errors.validation("User permissions are not writable on this deployment");
+  const now = context.now();
+  await context.users.administration.putUserPermission(
+    context.tenantId,
+    {
+      user,
+      allowDoctype: allow,
+      allowName: forValue,
+      ...(applicable ? { applicableForDoctype: applicable } : {}),
+      isDefault,
+      hideDescendants: false,
+      createdBy: context.actor.user_id,
+    },
+    rbacAudit(context, "metaforge.api.add_user_permission", args.text("reason")),
+    now,
+  );
   return {
     id: userPermissionIdentity({ user, allow, forValue, applicableFor: applicable }),
     user,
@@ -1879,24 +1892,31 @@ async function removeUserPermission(args: FrappeArgs, context: FrappeRouterConte
       forValue: args.requireText("for_value", 320),
       ...(args.text("applicable_for") ? { applicableFor: args.text("applicable_for")! } : {}),
     };
-  if (!context.access.deleteUserPermission) {
-    throw errors.validation("User permissions are not writable on this deployment");
-  }
-  await context.access.deleteUserPermission(
+  const removed = await context.users.administration.removeUserPermission(
     context.tenantId,
-    identity.user,
-    identity.allow,
-    identity.forValue,
-    identity.applicableFor ?? "",
+    {
+      user: identity.user,
+      allowDoctype: identity.allow,
+      allowName: identity.forValue,
+      ...(identity.applicableFor ? { applicableForDoctype: identity.applicableFor } : {}),
+    },
+    rbacAudit(context, "metaforge.api.remove_user_permission", args.text("reason")),
+    context.now(),
   );
-  return { id: userPermissionIdentity(identity), removed: true };
+  return { id: userPermissionIdentity(identity), removed };
 }
 
 async function setUserRoles(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
   requireMetadataAdmin(context);
   const user = args.requireText("user", 320);
-  const roles = args.array<string>("roles") ?? [];
-  const applied = await context.users.setRoles(context.tenantId, user, roles.map((role) => String(role)), context.now());
+  const roles = (args.array<string>("roles") ?? []).map((role) => String(role));
+  const applied = await context.users.administration.replaceRoles(
+    context.tenantId,
+    user,
+    roles,
+    rbacAudit(context, "metaforge.api.set_user_roles", args.text("reason")),
+    context.now(),
+  );
   return { user, roles: applied };
 }
 
@@ -1958,17 +1978,21 @@ async function createUser(args: FrappeArgs, context: FrappeRouterContext): Promi
   if (existing) throw errors.validation(`Tên đăng nhập "${user}" đã tồn tại. Mở tài khoản đó để sửa, hoặc chọn tên khác.`);
 
   const now = context.now();
-  await context.users.upsert(context.tenantId, {
-    userId: user,
-    fullName: args.text("full_name") ?? user,
-    email: args.text("email") ?? (user.includes("@") ? user : ""),
-    enabled: args.bool("enabled", true),
-    userType: "System User",
-    passwordHash: await hashPassword(password),
-  }, now);
-
   const roles = (args.array<string>("roles") ?? []).map((role) => String(role));
-  const applied = roles.length ? await context.users.setRoles(context.tenantId, user, roles, now) : [];
+  const applied = await context.users.administration.createUserWithRoles(
+    context.tenantId,
+    {
+      userId: user,
+      fullName: args.text("full_name") ?? user,
+      email: args.text("email") ?? (user.includes("@") ? user : ""),
+      enabled: args.bool("enabled", true),
+      userType: "System User",
+      passwordHash: await hashPassword(password),
+    },
+    roles,
+    rbacAudit(context, "metaforge.api.create_user", args.text("reason")),
+    now,
+  );
   return { user, roles: applied as unknown as JsonValue, created: true };
 }
 
@@ -1982,10 +2006,13 @@ async function setUserEnabled(args: FrappeArgs, context: FrappeRouterContext): P
   requireMetadataAdmin(context);
   const user = args.requireText("user", 320);
   const enabled = args.bool("enabled", false);
-  if (user === context.actor.user_id && !enabled) {
-    throw errors.validation("Không tự khoá tài khoản của chính mình — sẽ không còn ai mở lại được.");
-  }
-  await context.users.setEnabled(context.tenantId, user, enabled, context.now());
+  await context.users.administration.setUserEnabled(
+    context.tenantId,
+    user,
+    enabled,
+    rbacAudit(context, "metaforge.api.set_user_enabled", args.text("reason")),
+    context.now(),
+  );
   return { user, enabled };
 }
 
@@ -1999,7 +2026,12 @@ async function setUserEnabled(args: FrappeArgs, context: FrappeRouterContext): P
  * than by one that might miss a session.
  */
 async function logoutOtherSessions(context: FrappeRouterContext): Promise<JsonObject> {
-  const epoch = await context.users.bumpSessionEpoch(context.tenantId, context.actor.user_id, context.now());
+  const epoch = await context.users.administration.revokeSessions(
+    context.tenantId,
+    context.actor.user_id,
+    rbacAudit(context, "metaforge.api.logout_other_sessions"),
+    context.now(),
+  );
   return { revoked: true, session_epoch: epoch, reauthenticate_required: true };
 }
 
@@ -2026,10 +2058,14 @@ async function updatePassword(args: FrappeArgs, context: FrappeRouterContext): P
   }
 
   const now = context.now();
-  await context.users.upsert(context.tenantId, { userId: targetUser, passwordHash: await hashPassword(newPassword) }, now);
-  // A password change must end every existing session, or a stolen one would keep
-  // working after the owner rotated their credential.
-  const epoch = await context.users.bumpSessionEpoch(context.tenantId, targetUser, now);
+  const epoch = await context.users.administration.updatePasswordAndRevoke(
+    context.tenantId,
+    targetUser,
+    await hashPassword(newPassword),
+    isSelf ? "password.change" : "password.reset",
+    rbacAudit(context, "frappe.core.doctype.user.user.update_password", args.text("reason")),
+    now,
+  );
   return { user: targetUser, session_epoch: epoch, reauthenticate_required: true };
 }
 

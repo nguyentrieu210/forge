@@ -142,6 +142,7 @@ test("hierarchy scope is refused until descendant semantics exist", () => {
 function routeFixture() {
   const permissions = [];
   const permissionCalls = [];
+  const administrationCalls = [];
   const meta = {
     name: "Stock Entry",
     module: "Stock",
@@ -168,7 +169,61 @@ function routeFixture() {
     actor: ADMIN,
     traceId: "trace-rbac",
     now: () => "2026-07-31T00:00:00.000Z",
-    users: userStore(),
+    users: {
+      ...userStore(),
+      administration: {
+        async createUserWithRoles(tenantId, input, roles, auditContext, now) {
+          administrationCalls.push({ action: "createUserWithRoles", tenantId, input, roles, auditContext, now });
+          return [...new Set(roles)].sort();
+        },
+        async replaceRoles(tenantId, user, roles, auditContext, now) {
+          administrationCalls.push({ action: "replaceRoles", tenantId, user, roles, auditContext, now });
+          return [...new Set(roles)].sort();
+        },
+        async setUserEnabled(tenantId, user, enabled, auditContext, now) {
+          administrationCalls.push({ action: "setUserEnabled", tenantId, user, enabled, auditContext, now });
+        },
+        async revokeSessions(tenantId, user, auditContext, now) {
+          administrationCalls.push({ action: "revokeSessions", tenantId, user, auditContext, now });
+          return 1;
+        },
+        async updatePasswordAndRevoke(tenantId, user, passwordHash, eventType, auditContext, now) {
+          administrationCalls.push({ action: "updatePasswordAndRevoke", tenantId, user, passwordHash, eventType, auditContext, now });
+          return 1;
+        },
+        async putUserPermission(tenantId, input, auditContext, now) {
+          administrationCalls.push({ action: "putUserPermission", tenantId, input, auditContext, now });
+          const record = {
+            user: input.user,
+            allow_doctype: input.allowDoctype,
+            allow_name: input.allowName,
+            applicable_for_doctype: input.applicableForDoctype ?? "",
+            is_default: input.isDefault,
+            hide_descendants: input.hideDescendants,
+            created_by: input.createdBy,
+            created_at: now,
+          };
+          const index = permissions.findIndex((current) =>
+            current.user === record.user
+            && current.allow_doctype === record.allow_doctype
+            && current.allow_name === record.allow_name
+            && current.applicable_for_doctype === record.applicable_for_doctype);
+          if (index >= 0) permissions[index] = record;
+          else permissions.push(record);
+        },
+        async removeUserPermission(tenantId, input, auditContext, now) {
+          administrationCalls.push({ action: "removeUserPermission", tenantId, input, auditContext, now });
+          const index = permissions.findIndex((record) =>
+            record.user === input.user
+            && record.allow_doctype === input.allowDoctype
+            && record.allow_name === input.allowName
+            && record.applicable_for_doctype === (input.applicableForDoctype ?? ""));
+          if (index < 0) return false;
+          permissions.splice(index, 1);
+          return true;
+        },
+      },
+    },
     metadata: {
       async getDocType(tenantId, doctype) {
         assert.equal(tenantId, "tenant-a");
@@ -223,7 +278,7 @@ record.user === user
       },
     },
   };
-  return { context, permissionCalls, permissions };
+  return { context, permissionCalls, permissions, administrationCalls };
 }
 
 async function callMethod(method, params, context, httpMethod = "GET") {
@@ -271,4 +326,55 @@ test("User Permission add/profile/remove uses one stable id contract", async () 
   assert.equal(removed.response.status, 200);
   assert.equal(removed.body.message.id, id);
   assert.equal(fixture.permissions.length, 0);
+});
+
+test("admin account mutations use the atomic administration service with audit context", async () => {
+  const fixture = routeFixture();
+  const created = await callMethod("metaforge.api.create_user", {
+    user: "new.user@example.com",
+    password: "strong-password",
+    roles: JSON.stringify(["Stock User"]),
+  }, fixture.context, "POST");
+  assert.equal(created.response.status, 200);
+
+  await callMethod("metaforge.api.set_user_roles", {
+    user: USER.user_id,
+    roles: JSON.stringify(["Stock Manager"]),
+    reason: "promotion",
+  }, fixture.context, "POST");
+  await callMethod("metaforge.api.set_user_enabled", {
+    user: USER.user_id,
+    enabled: "0",
+  }, fixture.context, "POST");
+  await callMethod("metaforge.api.logout_other_sessions", {}, fixture.context, "POST");
+  await callMethod("frappe.core.doctype.user.user.update_password", {
+    user: USER.user_id,
+    new_password: "new-strong-password",
+  }, fixture.context, "POST");
+
+  assert.deepEqual(
+    fixture.administrationCalls.map((entry) => entry.action),
+    ["createUserWithRoles", "replaceRoles", "setUserEnabled", "revokeSessions", "updatePasswordAndRevoke"],
+  );
+  for (const entry of fixture.administrationCalls) {
+    assert.equal(entry.tenantId, "tenant-a");
+    assert.equal(entry.auditContext.actorUserId, ADMIN.user_id);
+    assert.equal(entry.auditContext.traceId, "trace-rbac");
+  }
+  const serialized = JSON.stringify(fixture.administrationCalls);
+  assert.equal(serialized.includes("strong-password"), false);
+  assert.equal(serialized.includes("new-strong-password"), false);
+  assert.equal(fixture.administrationCalls.at(-1).eventType, "password.reset");
+});
+
+test("a non-admin cannot call account administration endpoints", async () => {
+  const fixture = routeFixture();
+  fixture.context.actor = USER;
+  const result = await callMethod("metaforge.api.create_user", {
+    user: "blocked@example.com",
+    password: "strong-password",
+    roles: JSON.stringify(["Stock User"]),
+  }, fixture.context, "POST");
+  assert.equal(result.response.status, 403);
+  assert.equal(fixture.administrationCalls.length, 0);
 });
