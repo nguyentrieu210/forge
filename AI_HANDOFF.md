@@ -6,46 +6,43 @@ Ngày cập nhật: **2026-07-31**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Working branch: `feat/purchase-fifo-activation-readiness-20260731`.
-- Pull request: `#75` — draft.
+- Working branch: `feat/metaforge-misa-workspace-tabs`.
 - GitHub là nguồn sự thật cho code, CI và trạng thái release.
 
 ## Mục tiêu hiện tại
 
-Hoàn tất Purchase/FIFO activation readiness mà không bật rollout và không đụng production.
+Bổ sung điều hướng MetaForge theo hướng MISA: tab treo chọn phân hệ/nhóm Doctype-nghiệp vụ, sidebar chỉ hiển thị các mục thuộc phân hệ đang hoạt động.
 
-## Thay đổi trên PR #75
+## Thay đổi hiện có
 
-- `server/scripts/prepare-purchase-fifo-activation.mjs`: wrapper read-only, chặn write/activate và bắt buộc evidence ngoài repo.
-- `server/tests/purchase-fifo-activation-readiness.test.mjs`: regression cho safety guards.
-- `server/docs/ALUMDOOR-PURCHASE-FIFO-ACTIVATION-RUNBOOK.md`: runbook staging/backfill/smoke/activation.
-- `CURRENT_STATUS.md`, `NEXT_TASKS.md`, `AI_HANDOFF.md`: trạng thái và bước tiếp theo được làm gọn theo Purchase/FIFO.
+- `client/apps/demo/src/DemoShell.tsx`
+  - thêm `WorkspaceTabs`;
+  - tab được sinh từ `NavItem.group`, không thêm manifest trùng;
+  - active tab theo `activeKey`;
+  - click tab điều hướng tới mục khả dụng đầu tiên;
+  - lọc nav truyền vào `AppShell` theo group đang hoạt động;
+  - giữ nguyên Command Palette trên toàn bộ nav;
+  - fallback không đổi hành vi nếu chỉ có dưới hai group.
+- `CURRENT_STATUS.md`: ghi trạng thái, quyết định kiến trúc và giới hạn verification.
+- `NEXT_TASKS.md`: ưu tiên CI/UI validation và hướng nâng lên primitive dùng chung.
 
-## CI đã xác nhận
+## Verification
 
-Trên head trước commit tài liệu `d586456e6e8b13f6097e19e7832c0032dd942745`:
-
-- CI `30644592982`: PASS.
-- PR Validation `30644592947`: PASS.
-- Sales Feature CI `30644590752`: PASS.
-- Inventory and Manufacturing CI `30644590579`: PASS.
-- Purchase Feature CI `30644590592`: PASS.
-- UI Pull Request Validation `30644593053`: đang chạy browser QA/auth smoke tại thời điểm handoff.
-
-Commit tài liệu mới sẽ kích hoạt lại CI; phải kiểm exact final head trước khi chuyển PR khỏi draft hoặc merge.
+- Chưa chạy local lint/test/typecheck/build vì không có checkout repository trong môi trường hiện tại.
+- Cần mở draft PR và lấy kết quả CI trên exact final head.
+- Nếu CI báo lỗi export, kiểm `Button` và `cn` từ `@metaforge/ui` trước.
 
 ## Safety state
 
-- FIFO rollout vẫn **disabled**.
 - Không deploy Cloudflare.
-- Không backfill tenant thật.
 - Không sửa production secrets hoặc DNS.
-- Không commit `server/work/`, `tmp/`, `.env`, backup SQL hoặc generated evidence.
+- Không commit `server/work/`, `tmp/`, `.env`, backup hoặc generated artifacts.
+- FIFO rollout vẫn disabled; Purchase/FIFO là luồng độc lập.
 
 ## Việc tiếp theo
 
-1. Lấy exact final head của PR `#75`.
-2. Kiểm đủ sáu workflow trên exact final head.
-3. Nếu xanh toàn bộ, chuyển PR khỏi draft.
-4. Sau merge mới chuẩn bị staging tenant/production-shaped copy và chạy read-only readiness.
-5. Không execute backfill hoặc activation production nếu chưa có explicit approval riêng.
+1. Mở draft PR từ `feat/metaforge-misa-workspace-tabs` vào `hotfix/alumdoor-print-list-delete`.
+2. Kiểm exact PR head và toàn bộ CI.
+3. Sửa lỗi typecheck/build nếu có.
+4. Chạy browser QA cho desktop/mobile/collapsed sidebar.
+5. Sau khi hành vi được duyệt, nâng API workspace tabs vào `@metaforge/shell` và sinh tab từ metadata runtime.
