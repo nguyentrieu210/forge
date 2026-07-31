@@ -223,7 +223,11 @@ export class D1PurchaseAllocationDomainStore extends D1PurchaseAllocationMutatio
               source.window_id, window.revision AS window_revision, window.status AS window_status,
               source.receipt_item_row_id,
               source.qty_micros + COALESCE(SUM(movement.qty_micros),0) AS qty_micros,
-              source.posting_at
+              source.barem_weight_micros + COALESCE(SUM(movement.barem_weight_micros),0) AS barem_weight_micros,
+              CASE WHEN source.projected_actual_weight_micros IS NULL THEN NULL
+                   ELSE source.projected_actual_weight_micros
+                     + COALESCE(SUM(movement.projected_actual_weight_micros),0) END AS projected_actual_weight_micros,
+              source.projection_version, source.posting_at
        FROM purchase_unapplied_receipt_entries source
        JOIN purchase_obligation_queues queue
          ON queue.tenant_id=source.tenant_id AND queue.queue_key=source.queue_key
@@ -245,6 +249,11 @@ export class D1PurchaseAllocationDomainStore extends D1PurchaseAllocationMutatio
       window_status: String(row.window_status) as PurchaseUnappliedSourceState["window_status"],
       receipt_item_row_id: String(row.receipt_item_row_id),
       qty_micros: Number(row.qty_micros),
+      barem_weight_micros: Number(row.barem_weight_micros),
+      ...(row.projected_actual_weight_micros == null
+        ? {}
+        : { projected_actual_weight_micros: Number(row.projected_actual_weight_micros) }),
+      ...(row.projection_version == null ? {} : { projection_version: Number(row.projection_version) }),
       posting_at: String(row.posting_at),
     }));
   }
