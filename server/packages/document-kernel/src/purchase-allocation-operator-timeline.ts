@@ -4,6 +4,10 @@ import {
   type PurchaseAllocationTimelineDoctype,
   type PurchaseAllocationTimelineWindow,
 } from "./purchase-allocation-timeline.js";
+import {
+  D1PurchaseSupplierDebtReportService,
+  type PurchaseSupplierDebtReport,
+} from "./purchase-supplier-debt-report.js";
 
 export interface PurchaseAllocationOperatorWindow extends PurchaseAllocationTimelineWindow {
   queue_key: string;
@@ -11,6 +15,12 @@ export interface PurchaseAllocationOperatorWindow extends PurchaseAllocationTime
 
 export interface PurchaseAllocationOperatorTimeline extends Omit<PurchaseAllocationTimeline, "windows"> {
   windows: PurchaseAllocationOperatorWindow[];
+  /**
+   * Report snapshots are restricted to the settlement windows already visible in
+   * this document timeline. The API permission check therefore cannot widen into
+   * unrelated suppliers or materials.
+   */
+  supplier_debt_reports: PurchaseSupplierDebtReport[];
 }
 
 interface WindowScopeRow {
@@ -19,16 +29,18 @@ interface WindowScopeRow {
 }
 
 /**
- * Operator read model. It keeps the existing append-only timeline projection and
- * adds the queue identity required to submit settlement control documents through
- * DocumentKernel. No permission or lifecycle decision is made here.
+ * Operator read model. It keeps the existing append-only timeline projection,
+ * adds queue identity for settlement controls, and attaches supplier-debt report
+ * snapshots for exactly the windows represented by the current document.
  */
 export class D1PurchaseAllocationOperatorTimelineService {
   private readonly base: D1PurchaseAllocationBaseTimelineService;
+  private readonly reports: D1PurchaseSupplierDebtReportService;
   private readonly reader: D1Database | D1DatabaseSession;
 
   constructor(db: D1Database) {
     this.base = new D1PurchaseAllocationBaseTimelineService(db);
+    this.reports = new D1PurchaseSupplierDebtReportService(db);
     this.reader = db.withSession?.("first-primary") ?? db;
   }
 
@@ -38,7 +50,10 @@ export class D1PurchaseAllocationOperatorTimelineService {
     name: string,
   ): Promise<PurchaseAllocationOperatorTimeline | null> {
     const timeline = await this.base.getTimeline(tenantId, doctype, name);
-    if (!timeline || timeline.windows.length === 0) return timeline as PurchaseAllocationOperatorTimeline | null;
+    if (!timeline) return null;
+    if (timeline.windows.length === 0) {
+      return { ...timeline, windows: [], supplier_debt_reports: [] };
+    }
 
     const placeholders = timeline.windows.map((_, index) => `?${index + 2}`).join(",");
     const result = await this.reader.prepare(
@@ -47,7 +62,20 @@ export class D1PurchaseAllocationOperatorTimelineService {
        WHERE tenant_id=?1 AND window_id IN (${placeholders})`,
     ).bind(tenantId, ...timeline.windows.map((window) => window.window_id)).all<WindowScopeRow>();
 
-    return attachPurchaseAllocationQueueKeys(timeline, result.results ?? []);
+    const scoped = attachPurchaseAllocationQueueKeys(timeline, result.results ?? []);
+    const generatedAt = new Date().toISOString();
+    const reportResults = await Promise.all(
+      [...new Set(scoped.windows.map((window) => window.window_id))].map((windowId) =>
+        this.reports.run(tenantId, { window_id: windowId, limit: 1 }, generatedAt),
+      ),
+    );
+
+    return {
+      ...scoped,
+      supplier_debt_reports: reportResults.filter(
+        (report): report is PurchaseSupplierDebtReport => report !== null,
+      ),
+    };
   }
 }
 
@@ -63,5 +91,6 @@ export function attachPurchaseAllocationQueueKeys(
       if (!queueKey) throw new Error(`Purchase allocation queue scope is missing for ${window.window_id}`);
       return { ...window, queue_key: queueKey };
     }),
+    supplier_debt_reports: [],
   };
 }
