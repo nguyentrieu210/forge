@@ -5,10 +5,6 @@ on:
   push:
     branches:
       - "ops/observe-alu-production-*"
-  pull_request:
-    types: [opened, synchronize, reopened]
-    branches:
-      - "hotfix/alumdoor-print-list-delete"
 
 permissions:
   contents: read
@@ -21,7 +17,6 @@ concurrency:
 jobs:
   observe-release:
     name: Observe alu production smoke
-    if: github.event_name != 'pull_request' || startsWith(github.head_ref, 'ops/observe-alu-production-')
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
