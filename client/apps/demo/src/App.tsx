@@ -10,9 +10,12 @@ import type { AwesomeRecord, NavItem } from "@metaforge/shell";
 import { FormView, KanbanView, TreeView, ReportView, PrintView, DashboardView, CalendarView, GanttView, SplitView, ContextPanel, createFullRegistry, type TreeNodeItem, type TimelineItem } from "@metaforge/views";
 import { AIPanel, I18nProvider } from "@metaforge/shell";
 import type { WorkflowTransition } from "@metaforge/adapter-frappe";
-import { DemoShell } from "./DemoShell.js";
+import { DemoShell, matchesWorkspaceTab } from "./DemoShell.js";
 import { MockList } from "./list-glue.js";
 import { BuilderRoutes } from "./BuilderRoutesLazy.js";
+import {
+  MetaOverviewWorkspace, MetaProcessWorkspace, OperationsProcessWorkspace, WORKSPACE_META,
+} from "./workspace-meta.js";
 import { toast } from "@metaforge/ui";
 
 const registry = createFullRegistry();
@@ -103,11 +106,18 @@ const NAV: NavItem[] = [
   { key: "b-print", label: "Print Builder", icon: <Receipt />, group: "Tạo app" },
   { key: "b-dashboard", label: "Dashboard Builder", icon: <LayoutDashboard />, group: "Tạo app" },
 ];
-const LABEL: Record<string, string> = Object.fromEntries(NAV.map((n) => [n.key, n.label]));
+
+function findWorkspaceLocation(activeKey: string) {
+  for (const module of WORKSPACE_META.modules) {
+    const tab = module.tabs.find((entry) => matchesWorkspaceTab(entry, activeKey));
+    if (tab) return { module, tab };
+  }
+  return undefined;
+}
 
 function Screen() {
   const navigate = useNavigate();
-  const { key = "form" } = useParams();
+  const { key = "process" } = useParams();
   const [sp, setSp] = useSearchParams();
   const active = key;
 
@@ -127,24 +137,51 @@ function Screen() {
     () => ({
       actions: [
         { id: "new-task", label: "Tạo mới Task", icon: <Plus />, hint: "Task", run: () => navigate("/view/form") },
+        ...WORKSPACE_META.modules.flatMap((module) => module.tabs.map((tab) => ({
+          id: `workspace-${module.key}-${tab.key}`,
+          label: `${module.label}: ${tab.label}`,
+          hint: tab.doctype ?? module.label,
+          run: () => navigate(`/view/${tab.targetKey}`),
+        }))),
         ...NAV.map((n) => ({ id: `go-${n.key}`, label: `Đi tới ${n.label}`, run: () => navigate(`/view/${n.key}`) })),
       ],
-      doctypes: [{ name: "Task", label: "Công việc" }],
+      doctypes: [
+        { name: "Task", label: "Công việc" },
+        { name: "DocType", label: "DocType" },
+        { name: "Workflow", label: "Workflow" },
+        { name: "Print Format", label: "Print Format" },
+        { name: "Dashboard", label: "Dashboard" },
+      ],
       recent: rows.slice(0, 3).map((r) => ({ doctype: "Task", name: String(r.name), title: String(r.subject) })) as AwesomeRecord[],
       searchRecords: async (q: string) => rows.filter((r) => String(r.subject).toLowerCase().includes(q.toLowerCase())).map((r) => ({ doctype: "Task", name: String(r.name), title: String(r.subject) })),
       onSelectRecord: () => navigate("/view/form"),
-      onSelectDoctype: () => navigate("/view/list"),
+      onSelectDoctype: (doctype: string) => {
+        const target = WORKSPACE_META.modules.flatMap((module) => module.tabs).find((tab) => tab.doctype === doctype)?.targetKey;
+        navigate(`/view/${target ?? "list"}`);
+      },
     }),
     [navigate],
   );
 
-  const breadcrumbs = [{ label: "Task", onClick: () => navigate("/view/list") }, { label: LABEL[active] ?? active }];
+  const location = findWorkspaceLocation(active);
+  const breadcrumbs = location
+    ? [
+        { label: location.module.label, onClick: () => navigate(`/view/${location.module.tabs[0]?.targetKey ?? active}`) },
+        { label: location.tab.label },
+      ]
+    : [{ label: "MetaForge" }, { label: active }];
   const statusLabels = Array.from(new Set(rows.map((row) => String(row.status ?? "Chưa phân loại"))));
   const statusValues = statusLabels.map((status) => rows.filter((row) => String(row.status ?? "Chưa phân loại") === status).length);
 
   return (
-    <DemoShell nav={NAV} activeKey={active} onNavigate={(k) => navigate(`/view/${k}`)} breadcrumbs={breadcrumbs} fullName="Demo User" awesomebar={awesomebar}>
-      {active === "list" ? (
+    <DemoShell workspace={WORKSPACE_META} nav={NAV} activeKey={active} onNavigate={(k) => navigate(`/view/${k}`)} breadcrumbs={breadcrumbs} fullName="Demo User" awesomebar={awesomebar}>
+      {active === "process" ? (
+        <OperationsProcessWorkspace onNavigate={(key) => navigate(`/view/${key}`)} />
+      ) : active === "meta-process" ? (
+        <MetaProcessWorkspace onNavigate={(key) => navigate(`/view/${key}`)} />
+      ) : active === "meta-overview" ? (
+        <MetaOverviewWorkspace onNavigate={(key) => navigate(`/view/${key}`)} />
+      ) : active === "list" ? (
         <div className="h-full p-4">
           <SplitView
             autoSaveId="mf-mock-split"
@@ -206,9 +243,9 @@ export function App() {
     <I18nProvider>
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Navigate to="/view/form" replace />} />
+        <Route path="/" element={<Navigate to="/view/process" replace />} />
         <Route path="/view/:key" element={<Screen />} />
-        <Route path="*" element={<Navigate to="/view/form" replace />} />
+        <Route path="*" element={<Navigate to="/view/process" replace />} />
       </Routes>
     </BrowserRouter>
     </I18nProvider>
