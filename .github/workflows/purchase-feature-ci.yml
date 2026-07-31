@@ -17,72 +17,15 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: purchase-feature-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  patch-backfill-cli:
-    name: Patch backfill CLI control flow
-    if: github.event_name == 'push' && github.ref_name == 'feat/purchase-receipt-complete-20260731'
-    runs-on: ubuntu-latest
-    outputs:
-      changed: ${{ steps.patch.outputs.changed }}
-    steps:
-      - name: Checkout feature branch
-        uses: actions/checkout@v4
-        with:
-          ref: feat/purchase-receipt-complete-20260731
-          fetch-depth: 0
-      - name: Replace top-level returns
-        id: patch
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          path = Path('server/scripts/backfill-purchase-receipt-allocations.mjs')
-          text = path.read_text()
-          old = '''  if (!args.execute) {
-            if (plan.unresolved.length > 0) process.exitCode = 2;
-            return;
-          }
-          if (!source.database) fail("--execute is unavailable with --input; use a remote tenant database");
-          if (args.activate) {
-            activate(source.database, plan, args);
-            return;
-          }
-          executeBackfill(source.database, plan, args);'''
-          new = '''  if (!args.execute) {
-            if (plan.unresolved.length > 0) process.exitCode = 2;
-          } else if (!source.database) {
-            fail("--execute is unavailable with --input; use a remote tenant database");
-          } else if (args.activate) {
-            activate(source.database, plan, args);
-          } else {
-            executeBackfill(source.database, plan, args);
-          }'''
-          if old not in text:
-              raise SystemExit('expected backfill CLI block not found')
-          path.write_text(text.replace(old, new, 1))
-          PY
-          if git diff --quiet; then
-            echo 'changed=false' >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          echo 'changed=true' >> "$GITHUB_OUTPUT"
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add server/scripts/backfill-purchase-receipt-allocations.mjs
-          git commit -m 'fix(procurement): use valid backfill CLI control flow'
-          git pull --rebase origin feat/purchase-receipt-complete-20260731
-          git push origin HEAD:feat/purchase-receipt-complete-20260731
-
   focused-gates:
     name: Purchase feature gates
-    needs: patch-backfill-cli
-    if: always() && (needs.patch-backfill-cli.result == 'skipped' || needs.patch-backfill-cli.outputs.changed == 'false')
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
