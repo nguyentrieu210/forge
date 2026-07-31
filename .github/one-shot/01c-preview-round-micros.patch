@@ -1,7 +1,7 @@
 diff --git a/server/packages/clouderp-core/src/purchase-allocation-preview.ts b/server/packages/clouderp-core/src/purchase-allocation-preview.ts
 --- a/server/packages/clouderp-core/src/purchase-allocation-preview.ts
 +++ b/server/packages/clouderp-core/src/purchase-allocation-preview.ts
-@@ -185,3 +185,8 @@
+@@ -185,3 +185,7 @@
  function micros(value: number): string {
 -  return fromScaledInt(value, 6);
 +  const formatted = fromScaledInt(Math.round(value), 6);
