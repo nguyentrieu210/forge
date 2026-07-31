@@ -1,5 +1,5 @@
 service=cloudforge-gateway
 environment=production
-target_code_sha=da04f7fcfdc4c8e4ddf7ff70c79e3a10458ce412
-requested_at=2026-07-30T20:44:00Z
-reason=compact-sidebar-release
+target_code_sha=4500799f13de48ada1948ab583afcf2e52b4c2dd
+requested_at=2026-07-31T11:25:00Z
+reason=sales-multi-uom-price-stock-release
