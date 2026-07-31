@@ -6,107 +6,105 @@ Ngày cập nhật: **2026-08-01**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Default head khi mở nhánh: `cbe60228fb10a3b51b52880fb178c164b63ff9f8`.
-- Working branch: `docs/record-alumdoor-app-worker-release-20260801`.
+- Working branch: `chore/production-first-delivery-runbook`.
+- Mục tiêu branch: đổi delivery model từ preview/staging-first sang production-first, ít hỏi lại và có evidence đầy đủ.
 - Không commit `.env`, secret, `server/work/`, `tmp`, backup hoặc generated evidence.
 
-## Bán hàng — Unicode Item Price đã release đúng app Worker
+## Delivery policy
 
-### Feature
+`DELIVERY_POLICY.md` là policy mới trên branch:
 
-- PR `#91` đã squash-merge.
-- Exact feature head: `c0d9df33a9fbde7540683107fd948c388a026682`.
-- Merge SHA: `a48524b93489c92296c57fc5f223e41d505de7aa`.
-- Exact-head CI đều PASS:
-  - CI `30647911536`;
-  - PR Validation `30647908313`;
-  - Sales Feature CI `30647908363`;
-  - Purchase Feature CI `30647908408`;
-  - Inventory and Manufacturing CI `30647910730`;
-  - UI Pull Request Validation `30647910724`.
-- Fix bao phủ Unicode NFC, exact-probe failure fallback và cùng canonical matching cho preview/save/submit.
+- yêu cầu làm code mặc định bao gồm merge và deploy production;
+- không hỏi lại approval ở mỗi chặng;
+- preview/staging là ngoại lệ, không phải done condition;
+- required CI phải xanh trên exact SHA;
+- production deploy phải có target identity, run ID, version/deployment ID và smoke;
+- DNS, secret, resource deletion, irreversible migration/data activation và FIFO vẫn là destructive boundary cần lệnh riêng.
 
-### Release-target correction
+## Alumdoor app Worker workflow
 
-- Logic tự điền giá nằm trong `server/apps-src/alumdoor-worker/src/sales-item-context.ts`.
-- Worker thực thi logic đó là `cloudforge-app-alumdoor` trong dispatch namespace `cloudforge-production`.
-- Release tenant Worker `cloudforge-tenant-alu` trước đó không cập nhật app Worker này.
-- Dashboard evidence của chủ dự án phát hiện app Worker vẫn cũ; đây là nguyên nhân deployment trước không làm thay đổi ô giá.
+`.github/workflows/release-alumdoor-app.yml` đã được chuyển từ workflow one-off phụ thuộc execution PR sang tự động production delivery.
 
-### App Worker production release
+### Trigger
 
-- Release workflow PR `#100` merge SHA `1487dbd76f516c0d505120924012b262a5f19857`.
-- Workflow-order fix PR `#102` merge SHA `cbe60228fb10a3b51b52880fb178c164b63ff9f8`.
-- PR `#102` exact-head CI `30650781602`: SUCCESS.
-- PR `#102` PR Validation `30650779877`: SUCCESS.
-- Lượt execution đầu, PR `#101` / run `30650655515`, dừng trước deploy vì chưa build `server/dist`.
-- Lượt execution thành công: PR `#104`, đã đóng và không merge.
-- Execution head: `ee1b652af810f91cba1e042eb34b7a6c37c199a9`.
-- Release run `30651057535`: SUCCESS.
-- Release job `91224118455`: SUCCESS.
-- Build server: PASS.
-- Focused Unicode pricing regression: PASS.
-- Wrangler dry-run: PASS.
-- Live deploy: PASS.
-- Cloudflare script/namespace verification: PASS.
-- Bindings `PLATFORM` và `AI`: PASS.
-- Worker: `cloudforge-app-alumdoor`.
-- Dispatch namespace: `cloudforge-production`.
-- Production Version ID: `734fd53b-94ce-401d-86e8-ca4cd0ffee2e`.
-- Deployment time: `2026-07-31T17:25:19.115Z`.
+- push/merge vào `hotfix/alumdoor-print-list-delete`;
+- chỉ khi thay đổi:
+  - `server/apps-src/alumdoor-worker/**`;
+  - `server/src/**`;
+  - `server/package.json`;
+  - root `package.json`;
+  - `pnpm-lock.yaml`;
+- manual `workflow_dispatch` vẫn có `target_sha` để re-release đúng commit khi cần.
 
-### App Worker release artifact
+### Gate và evidence
 
-- Artifact ID: `8801385744`.
-- Name: `alumdoor-app-production-release-30651057535`.
-- Size: `114195` bytes.
-- Digest: `sha256:0cf123014d3b4d0c1256f1d37b0e9b7a11882581e22c19c0da6a664b4f4b4e20`.
-- Expiry: `2026-08-30T17:25:19Z`.
+- checkout đúng target SHA;
+- verify Worker `cloudforge-app-alumdoor` và namespace `cloudforge-production`;
+- install dependency bằng lockfile;
+- build server;
+- focused Sales Unicode regression;
+- Wrangler strict dry-run;
+- live deploy;
+- Cloudflare script identity và bindings `PLATFORM`, `AI`;
+- `$GITHUB_STEP_SUMMARY` và artifact evidence;
+- không dùng issue-comment API làm điều kiện kết luận.
 
-### Tenant Worker release trước đó
+Workflow commit: `e7a28ff9153b03da8b015f57a00c153dc24bbcf2`.
+
+## Forge Skills runbook 0.2.0
+
+Bản pack ngoài repository đã được cập nhật đồng bộ:
+
+- production-first flow;
+- initial code request là authorization cho merge/deploy trừ khi user opt-out;
+- staging optional;
+- CI và deploy tách trusted boundary;
+- handoff ghi production evidence;
+- BRD/build giảm approval ceremony, chỉ dừng ở destructive ambiguity.
+
+Validation:
+
+- `npm test`: PASS;
+- `npm run build`: PASS, 28 files;
+- `npm run validate`: PASS, 7 skills version `0.2.0`;
+- ZIP SHA-256: `6183dedc51d6258f0618feb95db87d27500d2f388671410ffb24595f4b6dee90`.
+
+## Production hiện tại
+
+### Alumdoor app Worker
+
+- Feature merge SHA `a48524b93489c92296c57fc5f223e41d505de7aa`.
+- Release run `30651057535`, job `91224118455`: SUCCESS.
+- Worker `cloudforge-app-alumdoor`.
+- Namespace `cloudforge-production`.
+- Version ID `734fd53b-94ce-401d-86e8-ca4cd0ffee2e`.
+
+### Tenant Worker
 
 - Run `30649182082`, job `91217965586`: SUCCESS.
-- Tenant Worker `cloudforge-tenant-alu`, version `ed5852cf-94ef-4a02-b0b9-1e64020c2d0d`.
-- Backup, recorded migrations, deploy, `/health=200` và guest boot `403`: PASS.
-- Release này là nền tảng tenant, không thay thế app Worker release.
+- Worker `cloudforge-tenant-alu`.
+- Version `ed5852cf-94ef-4a02-b0b9-1e64020c2d0d`.
+- Không dùng evidence này thay cho app Worker.
 
-### Functional acceptance còn lại
+## MetaForge UI
 
-- Cần authenticated smoke trực tiếp để xác minh child grid tự điền `180000 VND`, Thành tiền và save-time authoritative pricing.
-- Cần đổi Item/UOM/bảng giá để xác minh không lấy chéo hoặc giữ giá cũ.
-
-## Inventory / Manufacturing
-
-- PR `#49` đã merge canonical physical stock identity và warehouse roles.
-- PR `#50` đã merge versioned BOM và immutable Work Order snapshot.
-- Các thay đổi này chạy song song trên default; app Worker release không sửa dữ liệu kho hoặc sản xuất.
-
-## Purchase/FIFO
-
-- PR `#63` đã release lifecycle correction lên tenant `alu`.
-- PR `#75` đã merge readiness wrapper/runbook.
-- PR `#77` merge SHA `a67d62377f1869d95906320636eabbd9bbd56ab7` khóa write mode bằng approved checksum.
-- FIFO rollout vẫn **disabled**.
-
-## Production observation — 2026-07-31
-
-- Read-only run `30648098602`, job `91214435446`.
-- `health=200`, `root=200`, `guest_boot=403`, endpoint result PASS.
-- Artifact ID `8800251206`.
-- Artifact digest `sha256:667a9f2a760ff5074ae4d97df4193e53cc45db1d96e237ffc39fe4f934abae7d`.
-- Workflow conclusion đỏ do bước issue-comment nhận GitHub API `403`; endpoint smoke và artifact upload đều PASS.
+- PR `#81` đang ở branch `feat/metaforge-misa-workspace-tabs` và vẫn tách khỏi policy branch.
+- Prototype hiện có phần mock/demo; không được gọi là production UI.
+- Exact known head `1ed3d8e578e060984f68549eb868dfb550eb4167` từng fail dedicated Meta browser QA dù lint/test/typecheck/build pass.
+- Production frontend target và live permission mapping chưa được ghi rõ trong repository.
+- Theo policy mới, việc UI chỉ hoàn tất sau khi sửa QA, nối live entrypoint, xác định target, deploy production và authenticated smoke.
 
 ## Gate hiện tại
 
-1. Hard refresh và authenticated Sales smoke: Item, UOM `Mét`, rate `180000 VND`, amount và save-time pricing.
-2. Đổi Item/UOM/bảng giá để xác minh không lấy chéo hoặc giữ giá cũ.
-3. Authenticated Purchase smoke vẫn chưa hoàn tất.
-4. Sửa observation reporting `403` rồi chạy lại để toàn job conclusion xanh.
-5. FIFO activation vẫn cần staging readiness, backup và explicit approval riêng.
+1. Mở PR policy branch.
+2. Chạy required CI trên exact branch head.
+3. Merge tự động khi xanh và mergeable.
+4. Không có production deploy cho policy-only change vì path app Worker không thay đổi.
+5. Sau merge, thay đổi app Worker tương lai sẽ tự deploy production.
+6. Tiếp tục chuẩn hoá auto production cho tenant Worker và frontend.
 
 ## Safety
 
-- App Worker Sales release đã hoàn tất qua controlled workflow và Cloudflare provider verification.
 - Không sửa production secrets hoặc DNS.
-- Không thay đổi D1, KV hoặc dữ liệu nghiệp vụ trong app Worker release.
 - Không bật FIFO.
+- Không mutate D1, KV hoặc dữ liệu nghiệp vụ trong policy change.
