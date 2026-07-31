@@ -8,17 +8,21 @@
 - Tương thích an toàn với Item Price legacy.
 - Picker ĐVT theo Item/UOM Conversion.
 - Nạp giá và tồn theo Item + Kho + ĐVT trên Báo giá/Đơn hàng.
-- Sales Feature CI run `30612497110`, job `91098266796`: unit, SQL, brief, client test, typecheck và build **PASS**.
+- Preview từ chối giá thiếu/sai tiền tệ, âm/sai định dạng hoặc đã ngừng áp dụng.
+- Test tích hợp trực tiếp `alumdoor.sales.item_context` cho exact UOM price, tồn quy đổi, currency mismatch, disabled/malformed price, legacy UOM và undeclared UOM.
+- Sales Feature CI run `30619989044`, job `91122036987`: unit, SQL, brief, client test, typecheck và build **PASS**.
+- PR Validation run `30619989057`, job `91122037316`: test, typecheck và build **PASS**.
 
 Còn lại trước khi đề nghị merge/deploy:
 
 1. Smoke Báo giá/Đơn hàng trên staging: chọn Item, đổi ĐVT, đổi Bảng giá, đổi Kho, kiểm trạng thái tồn và giá.
 2. Nạp ít nhất hai Item Price khác ĐVT cho cùng một Item trên staging và xác minh giá không bị quy đổi chéo.
 3. Xác minh Item Price legacy không UOM vẫn chạy; legacy có UOM chỉ chạy khi dòng khớp.
-4. Kiểm tra quyền Kinh doanh chỉ đọc Bảng giá/Item Price và không tự sửa giá master.
-5. Thiết kế bước tiếp theo: reservation/ATP theo Sales Order; chưa bật trong đợt này.
-6. Chỉ chuyển PR #25 khỏi draft sau browser/staging smoke.
-7. Không merge hoặc deploy production nếu chưa có explicit approval.
+4. Smoke các lỗi giá mới: thiếu currency, currency khác chứng từ, rate âm/sai định dạng và giá disabled không được điền vào dòng.
+5. Kiểm tra quyền Kinh doanh chỉ đọc Bảng giá/Item Price và không tự sửa giá master.
+6. Thiết kế bước tiếp theo: reservation/ATP theo Sales Order; chưa bật trong đợt này.
+7. Chỉ chuyển PR #25 khỏi draft sau browser/staging smoke.
+8. Không merge hoặc deploy production nếu chưa có explicit approval.
 
 Ngày cập nhật: **2026-07-31**.
 
