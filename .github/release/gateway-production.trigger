@@ -1,5 +1,7 @@
 service=cloudforge-gateway
 environment=production
-target_code_sha=b3dd1d15a1b52de698d0874b29feae79efe7ed6c
-requested_at=2026-07-31T13:51:00Z
-reason=dialog-dropdown-wheel-hotfix-pr62-owner-approved
+feature=runtime-workspace-navigation
+source_merge_sha=6db933aec8f211103ee2887e0cb364d346079cb2
+release_from_default_sha=b832b56a31a72fa30dc6397d12d81d42fb4a3eb1
+release_mode=build-stage-dry-run-deploy-exact-sha-smoke
+requested_at=2026-08-01
