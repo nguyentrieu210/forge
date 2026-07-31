@@ -8,8 +8,17 @@ async function expectNoHorizontalOverflow(locator: Locator) {
   ).toBeLessThanOrEqual(1);
 }
 
+async function sidebarButton(page: Page, label: string): Promise<Locator> {
+  const button = page.getByRole("button", { name: label, exact: true }).first();
+  if (!(await button.isVisible().catch(() => false))) {
+    await page.getByRole("button", { name: "Mở menu", exact: true }).click();
+  }
+  await expect(button).toBeVisible();
+  return button;
+}
+
 async function openSidebarModule(page: Page, label: string) {
-  await page.getByRole("button", { name: label, exact: true }).first().click();
+  await (await sidebarButton(page, label)).click();
 }
 
 test.describe("MetaForge MISA-style workspace", () => {
@@ -18,7 +27,7 @@ test.describe("MetaForge MISA-style workspace", () => {
 
     await expect(page).toHaveURL(/\/view\/overview$/);
     await expect(page.getByRole("heading", { name: "Tổng quan điều hành" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Tổng quan", exact: true }).first()).toBeVisible();
+    await expect(await sidebarButton(page, "Tổng quan")).toBeVisible();
 
     await openSidebarModule(page, "Nghiệp vụ");
     await expect(page).toHaveURL(/\/view\/process$/);
@@ -61,7 +70,7 @@ test.describe("MetaForge MISA-style workspace", () => {
     await expect(page.getByRole("button", { name: "Bố cục", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Thuộc tính", exact: true })).toBeVisible();
 
-    await page.getByRole("button", { name: "Chỉ tiêu", exact: true }).click();
+    await page.getByRole("button", { name: "Chỉ tiêu", exact: true }).first().click();
     await expect(page.getByText("Chỉ tiêu 1", { exact: true })).toBeVisible();
     await expect(page.getByDisplayValue("Chỉ tiêu 1")).toBeVisible();
   });
