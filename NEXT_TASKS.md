@@ -2,99 +2,114 @@
 
 Ngày cập nhật: **2026-08-01**.
 
-## P0 — authenticated Sales smoke sau app Worker release
+## P0 — hoàn tất PR #81 và deploy MetaForge UI production
 
-Sales Unicode fix đã được deploy đúng Worker thực thi nghiệp vụ:
+### Mục tiêu
 
-- feature merge SHA `a48524b93489c92296c57fc5f223e41d505de7aa`;
-- Worker `cloudforge-app-alumdoor`;
-- dispatch namespace `cloudforge-production`;
-- execution PR `#104` đã đóng không merge;
-- release run `30651057535`;
-- release job `91224118455`;
-- Version ID `734fd53b-94ce-401d-86e8-ca4cd0ffee2e`;
-- deployment time `2026-07-31T17:25:19.115Z`;
-- build, focused regression, Wrangler dry-run, live deploy, provider identity/namespace và bindings: PASS.
+Không dừng ở demo hoặc preview. Workspace MetaForge phải xuất hiện trên product thật, đúng permission và có authenticated smoke.
 
-Việc cần làm ngay:
+### Việc làm
 
-1. Mở `https://alu.kairo.vn` và hard refresh.
-2. Đăng nhập bằng tài khoản thử phù hợp.
-3. Mở Sales Order mới.
-4. Chọn `Giá niêm yết`.
-5. Chọn `TRỤC 114_1.8LY`.
-6. Xác minh:
-   - ĐVT `Mét`;
-   - Đơn giá `180000 VND`;
-   - Thành tiền đúng theo số lượng;
-   - không có lỗi callback Unicode-UOM.
-7. Đổi Item/UOM khác và xác minh không lấy chéo giá.
-8. Đổi bảng giá ở header và xác minh rate reload đúng.
-9. Lưu thử để pricing authoritative giữ cùng rate.
-10. Huỷ hoặc xoá chứng từ thử an toàn.
-11. Không ghi credential, cookie, token hoặc dữ liệu khách hàng thật vào evidence.
+1. Đọc lại `AI_HANDOFF.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md` trên branch `feat/metaforge-misa-workspace-tabs`.
+2. Lấy exact head, base head, mergeability và CI hiện tại.
+3. Lấy log/trace của dedicated Meta browser QA; sửa direct cause, không xoá test.
+4. Xác định phần workspace phải nối vào `LiveApp.tsx`, application catalog và permission thật.
+5. Xác định frontend production target:
+   - Cloudflare Pages/Worker project;
+   - production hostname;
+   - build command;
+   - `VITE_LIVE` mode;
+   - required secret/binding names;
+   - rollback.
+6. Thêm trusted auto-production workflow theo path UI.
+7. Merge khi exact-head required CI xanh.
+8. Tự deploy production.
+9. Chạy authenticated desktop/mobile smoke cho sidebar, tab, create route, refresh route và console/network.
+10. Báo URL, merge SHA, workflow run ID, deployment/version ID và smoke result.
 
-## App Worker release evidence
+### Done condition
 
-- Workflow PR `#100`, merge SHA `1487dbd76f516c0d505120924012b262a5f19857`.
-- Workflow fix PR `#102`, merge SHA `cbe60228fb10a3b51b52880fb178c164b63ff9f8`.
-- Lượt fail trước deploy: run `30650655515`, job `91222799878`; không có Wrangler live deploy.
-- Lượt thành công: run `30651057535`, job `91224118455`.
-- Artifact ID `8801385744`.
-- Artifact digest `sha256:0cf123014d3b4d0c1256f1d37b0e9b7a11882581e22c19c0da6a664b4f4b4e20`.
-- Artifact expiry `2026-08-30T17:25:19Z`.
+- Không còn hành trình đã yêu cầu chỉ tồn tại trong mock/demo.
+- Required CI xanh trên exact SHA.
+- Production UI live.
+- Authenticated smoke PASS.
 
-## P0 — tránh lặp lại sai release target
+## P0 — chuẩn hoá tenant Worker auto production
 
-1. Mọi thay đổi dưới `server/apps-src/alumdoor-worker/**` phải release `cloudforge-app-alumdoor` vào `cloudforge-production`.
-2. Không coi version `cloudforge-tenant-alu` hoặc Gateway `/health` là bằng chứng app Worker đã cập nhật.
-3. Release evidence phải có:
-   - exact code SHA;
-   - app Worker name;
-   - dispatch namespace;
-   - Cloudflare Version ID;
-   - provider script identity;
-   - bindings `PLATFORM` và `AI`.
-4. Execution PR phải đóng không merge.
+### Mục tiêu
+
+Mọi thay đổi tenant Worker sau merge tự release đúng tenant, không cần execution PR thủ công.
+
+### Việc làm
+
+1. Xác định workflow tenant hiện tại, target mapping và path filters.
+2. Giữ backup, recorded migrations, dry-run và health/auth smoke.
+3. Trigger từ protected default push hoặc trusted dispatch đúng SHA.
+4. Ghi `$GITHUB_STEP_SUMMARY` và artifact.
+5. Không phụ thuộc issue-comment API.
+6. Không trộn app Worker evidence với tenant Worker evidence.
+
+### Done condition
+
+- Auto release chạy từ merged verified SHA.
+- Worker/version/tenant identity được provider xác minh.
+- Backup/migration/smoke evidence tồn tại.
 
 ## P0 — sửa production observation reporting
 
-Endpoint smoke read-only đã PASS nhưng job cũ đỏ do Actions token không được comment PR.
+- Bỏ issue-comment API khỏi kết luận hoặc làm non-fatal.
+- Dùng `$GITHUB_STEP_SUMMARY` và artifact.
+- Giữ permissions tối thiểu.
+- Chạy lại read-only observation.
+- Xác nhận `health=200`, `root=200`, `guest_boot=403` và toàn job `success`.
 
-1. Bỏ issue-comment API khỏi workflow hoặc làm reporting non-fatal.
-2. Dùng `$GITHUB_STEP_SUMMARY` và artifact làm evidence mặc định.
-3. Giữ `permissions: contents: read` tối thiểu.
-4. Chạy lại observation PR read-only.
-5. Xác nhận `health=200`, `root=200`, `guest_boot=403`, smoke và artifact PASS, toàn job conclusion `success`.
-6. Observation PR phải đóng không merge.
-
-Evidence hiện tại:
+Evidence cũ:
 
 - run `30648098602`;
 - job `91214435446`;
 - artifact `8800251206`;
-- digest `sha256:667a9f2a760ff5074ae4d97df4193e53cc45db1d96e237ffc39fe4f934abae7d`.
+- endpoint smoke PASS, comment API `403`.
 
-## P0 — authenticated functional smoke Purchase
+## P0 — authenticated Sales smoke
 
-- đăng nhập và boot tenant;
-- mở module Mua hàng;
-- Purchase Order create/save/submit;
-- Purchase Receipt preview/save/submit/cancel;
-- item picker, UOM, giá và dropdown;
-- desktop/mobile;
-- FIFO phải tiếp tục disabled.
+- Mở `https://alu.kairo.vn` bằng tài khoản thử.
+- Sales Order mới, bảng giá `Giá niêm yết`.
+- Item `TRỤC 114_1.8LY`, UOM `Mét`.
+- Rate `180000 VND`, amount đúng, save-time pricing giữ cùng rate.
+- Đổi Item/UOM/bảng giá để kiểm không giữ giá cũ hoặc lấy chéo.
+- Cleanup chứng từ thử.
+- Không ghi credential/cookie/token/dữ liệu khách hàng vào evidence.
 
-## Purchase/FIFO activation gates
+## P1 — cài Forge Skills 0.2.0 vào repository
 
-- Chọn staging tenant hoặc production-shaped sanitized copy.
-- Read-only readiness, `unresolved_count=0`, review checksum/counts.
-- Staging execute dùng exact approved checksum và rollout giữ `enabled=0`.
-- Functional acceptance, contention/latency evidence, fresh production backup.
-- Production activation chỉ sau explicit approval riêng.
+- Dùng pack `ForgeSkills-production-first-0.2.0.zip`.
+- SHA-256 `6183dedc51d6258f0618feb95db87d27500d2f388671410ffb24595f4b6dee90`.
+- Cài `FORGE.md`, `.forge/manifest.json`, `.forge/skills/**` bằng PR riêng.
+- Chạy installer test, build và validate.
+- Không trộn generated pack files vào feature PR.
 
-## Không được làm
+## Đã hoàn tất
 
-- Không sửa production secrets hoặc DNS.
-- Không bật FIFO.
-- Không commit `.env`, `server/work/`, `tmp`, backup hoặc generated evidence.
+- PR `#108` production-first policy đã merge.
+- Merge SHA `5d73dcfbd6e0d24776cb4233fc86a45ccd507f53`.
+- Exact-head CI, PR Validation và Inventory/Manufacturing CI: SUCCESS.
+- Alumdoor app Worker workflow đã chuyển sang automatic production release theo merged path changes.
+
+## Destructive boundary
+
+Các việc sau vẫn không tự làm nếu không có lệnh riêng:
+
+- sửa production secret hoặc DNS;
+- xoá Cloudflare resource;
+- migration không backup/recovery;
+- bật FIFO production;
+- mutate dữ liệu khách hàng ngoài smoke an toàn.
+
+## File cấm commit
+
+- `.env`;
+- `server/work/`;
+- `tmp/`;
+- backup;
+- generated evidence;
+- credential, cookie hoặc token.

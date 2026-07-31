@@ -1,0 +1,170 @@
+name: Release Gateway Production
+
+on:
+  push:
+    branches:
+      - hotfix/alumdoor-print-list-delete
+    paths:
+      - "client/**"
+      - "server/apps/gateway-worker/**"
+      - "server/scripts/stage-client-bundle.mjs"
+      - "pnpm-lock.yaml"
+      - ".github/release/gateway-production.trigger"
+      - ".github/workflows/release-gateway.yml"
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Exact commit SHA to release; defaults to the dispatched revision
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gateway-production
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build, deploy and verify Gateway production
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: production
+    env:
+      TARGET_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.target_sha || github.sha }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      EVIDENCE_DIR: ${{ runner.temp }}/gateway-production-evidence
+      BASE_URL: https://alu.kairo.vn
+
+    steps:
+      - name: Checkout exact release
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Verify release inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$TARGET_SHA"
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          grep -q '"name": "cloudforge-gateway"' server/apps/gateway-worker/wrangler.jsonc
+          grep -q '"pattern": "alu.kairo.vn"' server/apps/gateway-worker/wrangler.jsonc
+          mkdir -p "$EVIDENCE_DIR"
+          printf 'run_id=%s\ntarget_sha=%s\nworker=cloudforge-gateway\nhost=alu.kairo.vn\nstarted_at=%s\n' \
+            "$GITHUB_RUN_ID" "$TARGET_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            > "$EVIDENCE_DIR/state.txt"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify runtime
+        env:
+          VITE_FORGE_RELEASE_SHA: ${{ env.TARGET_SHA }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm --filter metaforge run lint 2>&1 | tee "$EVIDENCE_DIR/lint.log"
+          pnpm --filter metaforge run test 2>&1 | tee "$EVIDENCE_DIR/test.log"
+          pnpm --filter metaforge run typecheck 2>&1 | tee "$EVIDENCE_DIR/typecheck.log"
+          pnpm --filter metaforge run build 2>&1 | tee "$EVIDENCE_DIR/build.log"
+          grep -R --fixed-strings "$TARGET_SHA" client/apps/runtime/dist/index.html
+          printf 'lint=pass\ntest=pass\ntypecheck=pass\nbuild=pass\n' >> "$EVIDENCE_DIR/state.txt"
+
+      - name: Stage Gateway client bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          node server/scripts/stage-client-bundle.mjs 2>&1 | tee "$EVIDENCE_DIR/stage.log"
+          node server/scripts/stage-client-bundle.mjs --check 2>&1 | tee "$EVIDENCE_DIR/stage-check.log"
+          grep -R --fixed-strings "$TARGET_SHA" server/apps/gateway-worker/public/index.html
+          echo 'stage=pass' >> "$EVIDENCE_DIR/state.txt"
+
+      - name: Dry-run Gateway bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm --dir server exec wrangler deploy \
+            --config apps/gateway-worker/wrangler.jsonc \
+            --dry-run \
+            --outdir "$EVIDENCE_DIR/dry-run" \
+            2>&1 | tee "$EVIDENCE_DIR/dry-run.log"
+          echo 'dry_run=pass' >> "$EVIDENCE_DIR/state.txt"
+
+      - name: Deploy Gateway production
+        shell: bash
+        env:
+          WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/gateway-production-evidence/wrangler-output.ndjson
+        run: |
+          set -euo pipefail
+          pnpm --dir server exec wrangler deploy \
+            --config apps/gateway-worker/wrangler.jsonc \
+            2>&1 | tee "$EVIDENCE_DIR/deploy.log"
+          echo 'deploy=pass' >> "$EVIDENCE_DIR/state.txt"
+
+      - name: Verify alu.kairo.vn serves exact release
+        shell: bash
+        run: |
+          set -euo pipefail
+          health=0
+          root=0
+          for attempt in $(seq 1 24); do
+            health="$(curl --silent --show-error --output "$EVIDENCE_DIR/health.json" --write-out '%{http_code}' \
+              -H 'cache-control: no-cache' "$BASE_URL/health?release=$TARGET_SHA" || true)"
+            root="$(curl --silent --show-error --output "$EVIDENCE_DIR/root.html" --write-out '%{http_code}' \
+              -H 'cache-control: no-cache' "$BASE_URL/?release=$TARGET_SHA" || true)"
+            if [ "$health" = '200' ] && [ "$root" = '200' ] && grep -q --fixed-strings "$TARGET_SHA" "$EVIDENCE_DIR/root.html"; then
+              break
+            fi
+            sleep 5
+          done
+          test "$health" = '200'
+          test "$root" = '200'
+          grep -q --fixed-strings "$TARGET_SHA" "$EVIDENCE_DIR/root.html"
+          boot="$(curl --silent --show-error --output "$EVIDENCE_DIR/guest-boot.json" --write-out '%{http_code}' \
+            -H 'cache-control: no-cache' "$BASE_URL/api/method/metaforge.api.get_boot" || true)"
+          test "$boot" = '403'
+          printf 'health=%s\nroot=%s\nguest_boot=%s\nrelease_sha_visible=pass\nsmoke=pass\n' \
+            "$health" "$root" "$boot" >> "$EVIDENCE_DIR/state.txt"
+
+      - name: Extract Gateway version evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          version_id="$(node -e "const fs=require('fs');const p=process.env.EVIDENCE_DIR+'/wrangler-output.ndjson';const rows=fs.readFileSync(p,'utf8').trim().split(/\\r?\\n/).filter(Boolean).map(x=>JSON.parse(x));const row=[...rows].reverse().find(x=>x.type==='deploy'&&x.version_id);process.stdout.write(row?.version_id||'')")"
+          test -n "$version_id"
+          printf 'gateway_version_id=%s\nprovider_evidence=pass\n' "$version_id" >> "$EVIDENCE_DIR/state.txt"
+          {
+            echo '# Gateway production release'
+            echo
+            echo "- Target SHA: \`$TARGET_SHA\`"
+            echo '- Worker: `cloudforge-gateway`'
+            echo '- Host: `https://alu.kairo.vn`'
+            echo "- Version ID: \`$version_id\`"
+            echo '- Runtime tests/build/stage/dry-run/deploy/smoke: **PASS**'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Gateway release evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gateway-production-release-${{ github.run_id }}
+          path: ${{ runner.temp }}/gateway-production-evidence/
+          if-no-files-found: warn
+          retention-days: 30

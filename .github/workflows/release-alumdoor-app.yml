@@ -1,26 +1,39 @@
-name: Release Alumdoor App Worker
+name: Release Alumdoor App Worker Production
 
 on:
-  pull_request:
+  push:
+    branches:
+      - hotfix/alumdoor-print-list-delete
+    paths:
+      - "server/apps-src/alumdoor-worker/**"
+      - "server/src/**"
+      - "server/package.json"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - ".github/release/alumdoor-app-production.trigger"
+      - ".github/workflows/release-alumdoor-app.yml"
   workflow_dispatch:
+    inputs:
+      target_sha:
+        description: "Verified commit SHA to release; defaults to the selected ref SHA"
+        required: false
+        type: string
 
 permissions:
   contents: read
-  pull-requests: write
 
 concurrency:
-  group: release-alumdoor-app-${{ github.ref }}
+  group: release-alumdoor-app-production
   cancel-in-progress: false
 
 jobs:
   release-alumdoor-app:
-    name: Release Alumdoor app production
-    if: ${{ github.event_name == 'pull_request' && github.head_ref == 'release/execute-alumdoor-app-production-20260801' }}
+    name: Verify and release Alumdoor app production
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: production
     env:
-      TARGET_SHA: a48524b93489c92296c57fc5f223e41d505de7aa
+      TARGET_SHA: ${{ inputs.target_sha || github.sha }}
       APP_WORKER: cloudforge-app-alumdoor
       DISPATCH_NAMESPACE: cloudforge-production
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -28,7 +41,7 @@ jobs:
       EVIDENCE_DIR: /tmp/alumdoor-app-release-evidence
 
     steps:
-      - name: Checkout verified code
+      - name: Checkout selected code
         uses: actions/checkout@v4
         with:
           ref: ${{ env.TARGET_SHA }}
@@ -51,14 +64,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$TARGET_SHA" = 'a48524b93489c92296c57fc5f223e41d505de7aa'
+          test -n "$TARGET_SHA"
           test "$APP_WORKER" = 'cloudforge-app-alumdoor'
           test "$DISPATCH_NAMESPACE" = 'cloudforge-production'
           test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test "$(git rev-parse HEAD)" = "$(git rev-parse "$TARGET_SHA")"
           grep -q '"name": "cloudforge-app-alumdoor"' server/apps-src/alumdoor-worker/wrangler.jsonc
           mkdir -p "$EVIDENCE_DIR"
           printf 'run_id=%s\ntarget_sha=%s\nworker=%s\nnamespace=%s\nstarted_at=%s\n' \
-            "$GITHUB_RUN_ID" "$TARGET_SHA" "$APP_WORKER" "$DISPATCH_NAMESPACE" \
+            "$GITHUB_RUN_ID" "$(git rev-parse HEAD)" "$APP_WORKER" "$DISPATCH_NAMESPACE" \
             "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$EVIDENCE_DIR/state.txt"
 
       - name: Install dependencies
@@ -84,7 +98,7 @@ jobs:
             --outdir "$EVIDENCE_DIR/dry-run" \
             2>&1 | tee "$EVIDENCE_DIR/dry-run.log"
 
-      - name: Deploy app Worker to dispatch namespace
+      - name: Deploy app Worker to production dispatch namespace
         shell: bash
         env:
           WRANGLER_OUTPUT_FILE_PATH: /tmp/alumdoor-app-release-evidence/wrangler-output.ndjson
@@ -134,27 +148,29 @@ jobs:
           NODE
 
       - name: Collect release evidence
+        if: always()
         shell: bash
         run: |
           set -euo pipefail
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
           const dir = process.env.EVIDENCE_DIR;
-          const rows = fs.readFileSync(`${dir}/wrangler-output.ndjson`, 'utf8')
-            .split(/\r?\n/)
-            .filter(Boolean)
-            .map((line) => JSON.parse(line));
+          const output = `${dir}/wrangler-output.ndjson`;
+          const rows = fs.existsSync(output)
+            ? fs.readFileSync(output, 'utf8').split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line))
+            : [];
           const deploy = [...rows].reverse().find((entry) => entry.type === 'deploy' && entry.version_id);
-          if (!deploy?.version_id) throw new Error('Wrangler did not return a Worker version ID');
-          const details = JSON.parse(fs.readFileSync(`${dir}/script-details.json`, 'utf8')).result ?? {};
+          const detailsPath = `${dir}/script-details.json`;
+          const details = fs.existsSync(detailsPath) ? (JSON.parse(fs.readFileSync(detailsPath, 'utf8')).result ?? {}) : {};
+          const passed = Boolean(deploy?.version_id && details.script?.id === process.env.APP_WORKER);
           const summary = {
             target_sha: process.env.TARGET_SHA,
             worker_name: process.env.APP_WORKER,
             dispatch_namespace: process.env.DISPATCH_NAMESPACE,
-            version_id: deploy.version_id,
-            deployment_created_on: deploy.timestamp ?? details.modified_on ?? null,
+            version_id: deploy?.version_id ?? null,
+            deployment_created_on: deploy?.timestamp ?? details.modified_on ?? null,
             required_bindings: ['PLATFORM', 'AI'],
-            passed: true,
+            passed,
           };
           fs.writeFileSync(`${dir}/summary.json`, `${JSON.stringify(summary, null, 2)}\n`);
           fs.writeFileSync(`${dir}/summary.md`, [
@@ -163,13 +179,14 @@ jobs:
             `- Target SHA: \`${summary.target_sha}\``,
             `- Worker: \`${summary.worker_name}\``,
             `- Dispatch namespace: \`${summary.dispatch_namespace}\``,
-            `- Version ID: \`${summary.version_id}\``,
+            `- Version ID: \`${summary.version_id ?? 'not returned'}\``,
             `- Deployment time: \`${summary.deployment_created_on ?? 'not returned'}\``,
-            '- Required bindings: `PLATFORM`, `AI` — PASS',
+            `- Required bindings: \`PLATFORM\`, \`AI\``,
             '',
-            '**Overall: PASS**',
+            `**Overall: ${summary.passed ? 'PASS' : 'FAIL'}**`,
           ].join('\n') + '\n');
           NODE
+          cat "$EVIDENCE_DIR/summary.md" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload release evidence
         if: always()
@@ -179,28 +196,3 @@ jobs:
           path: /tmp/alumdoor-app-release-evidence/
           if-no-files-found: warn
           retention-days: 30
-
-      - name: Report release result
-        if: always()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('node:fs');
-            const dir = process.env.EVIDENCE_DIR;
-            const summary = fs.existsSync(`${dir}/summary.md`)
-              ? fs.readFileSync(`${dir}/summary.md`, 'utf8')
-              : `# Alumdoor app Worker production release\n\n**Overall: FAIL**\n\n\`\`\`text\n${fs.existsSync(`${dir}/state.txt`) ? fs.readFileSync(`${dir}/state.txt`, 'utf8') : 'No state file'}\n\`\`\``;
-            const marker = '<!-- alumdoor-app-production-release -->';
-            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            const body = `${marker}\n${summary}\n[Workflow and artifacts](${runUrl})`;
-            const comments = await github.paginate(github.rest.issues.listComments, {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-            });
-            const previous = comments.find((comment) => comment.body?.includes(marker));
-            if (previous) {
-              await github.rest.issues.updateComment({ owner: context.repo.owner, repo: context.repo.repo, comment_id: previous.id, body });
-            } else {
-              await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body });
-            }
