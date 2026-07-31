@@ -6,63 +6,75 @@ Ngày cập nhật: **2026-08-01**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Current default head trước docs handoff: `1d05ed97836aa7bb753f8aa50a56991201a8d10a`.
-- Đọc theo thứ tự: `EPIC_STATUS.md` → `CURRENT_STATUS.md` → `NEXT_TASKS.md` → `DELIVERY_POLICY.md`.
+- Default head trước closeout docs: `76b71aab3c2eacf816986c247b25f564fc808a96`.
+- Đọc theo thứ tự: `CURRENT_STATUS.md` → `NEXT_TASKS.md` → `DELIVERY_POLICY.md`.
 - GitHub là nguồn sự thật cho code, CI, merge và release evidence.
 
-## Sales-to-Production — MERGED
+## PR cleanup
 
-- PR #131 merge SHA: `e315007db174d70d6f73c68f2115e7956b09bf1d`.
-- Exact PR head `c906db398ab562c64aed6f5409eb413f0f516f7a` đã qua CI, PR Validation, Sales, Purchase, Inventory và UI.
-- Không deploy Cloudflare trong phiên merge đó.
+Toàn bộ PR còn mở đã được đóng:
 
-## Tiến Đạt purchase FIFO — MERGED
+`#15`, `#35`, `#36`, `#40`, `#73`, `#74`, `#79`, `#81`, `#103`, `#106`, `#109`.
 
-- PR #134 merge SHA: `1d05ed97836aa7bb753f8aa50a56991201a8d10a`.
-- Exact PR head: `39eb6f25b337dd3fc973bf2b7a9d6b0e7204a420`.
-- CI `30666118057`: SUCCESS.
-- PR Validation `30666118031`: SUCCESS.
-- Purchase Feature CI `30666118118`: SUCCESS.
-- UI Pull Request Validation `30666118096`: SUCCESS.
-- Sales `30666118049` và Inventory `30666118064`: SUCCESS.
+Lý do chung:
 
-Yêu cầu đã giao:
+- tất cả `mergeable=false`;
+- diverged từ `116` đến `351` commit so với current default;
+- nhiều PR là backup/tmp/duplicate hoặc workflow cũ;
+- branch vẫn được giữ nguyên làm nguồn tham khảo, không mất code.
 
-- form đặt nhôm có STT, ngày, mã hàng, chiều dài, kg/m, số cây, kg barem, đơn giá, thành tiền, màu, dập/không dập;
-- hàng nhận trừ đơn cũ nhất trước;
-- theo dõi nợ nhà máy bằng số cây và mét theo đúng mã/quy cách;
-- lưu lịch sử phiếu nhập và lịch sử phân bổ;
-- Tiến Đạt có dung sai mặc định `±5%`, Supplier config được ưu tiên;
-- ví dụ `200 + 100`, nhận `230` ra `200 + 30`, nợ danh nghĩa `70`, khoảng giao thêm `55–85`.
+Không reopen và không merge nguyên branch cũ. Mọi epic phải dựng lại từ exact current default và chỉ mang từng file đã review.
 
-File chính:
+## Đã merge trên default
 
-- `server/apps-src/alumdoor-worker/src/purchase-fifo-receipt.ts`
-- `server/apps-src/alumdoor-worker/src/entry.ts`
-- `client/packages/views/src/form/ChildGridWithExtensions.tsx`
-- `server/tests/tien-dat-purchase-fifo.test.mjs`
+### Sales-to-Production
 
-## Kiến trúc và ranh giới
+- PR `#131` merge SHA: `e315007db174d70d6f73c68f2115e7956b09bf1d`.
 
-- App entrypoint chỉ intercept `alumdoor.purchase.preview_fifo_receipt` và `alumdoor.purchase.fifo_receipt`; route khác delegate sang worker cũ.
-- Generic append-only purchase allocation engine, timeline và báo cáo công nợ NCC vẫn tồn tại trong `server/packages/clouderp-core` và `server/packages/document-kernel`.
-- `purchase_allocation_rollout_state` không bị thay đổi.
-- Generic FIFO production vẫn disabled.
-- Flow mới tạo Purchase Receipt nháp, đọc lịch sử từ Purchase Receipt đã ghi sổ và không mutate production trong CI.
-- Không deploy Cloudflare trong đợt này.
+### Tiến Đạt purchase FIFO
+
+- PR `#134` merge SHA: `1d05ed97836aa7bb753f8aa50a56991201a8d10a`.
+- Form đặt nhôm, FIFO đơn cũ trước, lịch sử nhập, công nợ cây/mét và dung sai Tiến Đạt `5%` đã có.
+- Regression: `200 + 100`, nhận `230` → `200 + 30`, nợ `70` cây / `504 m`, khoảng thêm `55–85`.
+
+## Trạng thái thật
+
+Không được tuyên bố toàn bộ quy trình `25.7 QUY TRÌNH.docx` đã hoàn tất.
+
+Còn thiếu hoặc chưa chứng minh:
+
+1. Purchase authenticated QA clean rebuild.
+2. Finance full scope.
+3. Daily detailed ledger snapshot/freeze/adjustment.
+4. Warranty/defects và capacity/overtime.
+5. Authenticated end-to-end acceptance.
+6. UI MetaForge MISA-style và login/landing cần rebuild riêng nếu vẫn còn yêu cầu.
 
 ## Việc tiếp theo
 
-1. Bắt đầu Purchase authenticated QA clean rebuild từ exact default mới.
-2. Không reopen PR #103; chỉ mang từng file QA đã review.
-3. Bổ sung desktop + Pixel 7 lifecycle và authenticated Tiến Đạt FIFO journey.
-4. Giữ QA local/ephemeral; không bật generic FIFO rollout.
-5. Sau Purchase QA, tiếp tục Finance → Daily ledger → Warranty/Capacity → end-to-end acceptance.
+Bắt đầu `P0 — Purchase authenticated QA clean rebuild` từ exact current default mới nhất.
 
-## Safety
+- Không reopen PR `#103`.
+- Chỉ mang từng file QA cần thiết.
+- Bổ sung authenticated Tiến Đạt FIFO journey.
+- Desktop Chrome + Pixel 7.
+- Merge chỉ khi full CI, Purchase gate và UI authenticated gate xanh trên exact head.
 
+Sau Purchase QA: Finance → Daily ledger → Warranty/Capacity → end-to-end acceptance.
+
+## Release boundary
+
+- Không deploy Cloudflare trong đợt closeout PR.
 - Không sửa production secret hoặc DNS.
-- Không xóa Cloudflare resource.
 - Không thay rollout state.
 - Không mutate dữ liệu khách hàng.
-- Không commit `.env`, `server/work/`, `tmp`, backup, credential hoặc generated evidence.
+- Generic FIFO production vẫn disabled.
+
+## File cấm commit
+
+- `.env`;
+- `server/work/`;
+- `tmp/`;
+- backup;
+- cookie/token;
+- generated evidence.
