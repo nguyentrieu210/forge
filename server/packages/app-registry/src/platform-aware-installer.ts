@@ -38,7 +38,8 @@ const UNOWNED_DOCTYPE_PROBE =
 
 /** Exported so the security boundary has a small deterministic regression surface. */
 export function canAdoptPlatformDocType(existingIsCustom: unknown, incomingCustom: boolean): boolean {
-  return Number(existingIsCustom) === 0 && incomingCustom === false;
+  const isStandardDefinition = existingIsCustom === 0 || existingIsCustom === "0";
+  return isStandardDefinition && incomingCustom === false;
 }
 
 function normalizeSql(sql: string): string {
@@ -95,7 +96,7 @@ function platformOwnershipView(db: D1Database, state: AdoptionState): D1Database
                     const doctype = String(values[1] ?? "");
                     const existing = await current.prepare(
                       "SELECT is_custom FROM doctype_definitions WHERE tenant_id=?1 AND doctype=?2",
-                    ).bind(tenantId, doctype).first<{ is_custom: number }>();
+                    ).bind(tenantId, doctype).first<{ is_custom: number | string }>();
 
                     if (
                       existing
