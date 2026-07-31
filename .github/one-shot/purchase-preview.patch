@@ -1,0 +1,603 @@
+diff --git a/server/packages/clouderp-core/src/purchase-allocation-preview.ts b/server/packages/clouderp-core/src/purchase-allocation-preview.ts
+new file mode 100644
+index 0000000..fdbef65
+--- /dev/null
++++ b/server/packages/clouderp-core/src/purchase-allocation-preview.ts
+@@ -0,0 +1,180 @@
++import type { Actor, CanonicalDocument, JsonObject, MutationCommand } from "../../contracts/src/index.js";
++import { errors } from "../../core/src/index.js";
++import {
++  activePurchaseAllocationReader,
++  type DomainReader,
++} from "../../document-kernel/src/index.js";
++import { fromScaledInt } from "../../money/src/index.js";
++import { AllocatingPurchaseReceiptController } from "./purchase-allocation-controllers.js";
++import type { PurchaseItem, PurchaseReceiptData } from "./types.js";
++
++export interface SubmitPreviewColumn {
++  key: string;
++  label: string;
++  align?: "left" | "right";
++}
++
++export interface SubmitPreviewSummary {
++  label: string;
++  value: string;
++}
++
++export interface PurchaseReceiptSubmitPreviewRow {
++  receipt_row: string;
++  item_code: string;
++  destination: string;
++  destination_row: string | null;
++  allocation_kind: "FIFO" | "Chưa phân bổ";
++  qty: string;
++  barem_weight_kg: string;
++  actual_weight_kg: string | null;
++}
++
++export interface PurchaseReceiptSubmitPreview {
++  kind: "purchase_receipt_fifo";
++  title: string;
++  description: string;
++  confirmation_label: string;
++  warnings: string[];
++  columns: SubmitPreviewColumn[];
++  rows: PurchaseReceiptSubmitPreviewRow[];
++  summary: SubmitPreviewSummary[];
++}
++
++export interface PurchaseReceiptSubmitPreviewInput {
++  tenantId: string;
++  actor: Actor;
++  document: CanonicalDocument<JsonObject>;
++  reader: DomainReader;
++  now: string;
++}
++
++/**
++ * Builds the exact submit plan without executing it, then projects only the rows an
++ * operator needs to review. The real submit runs the same controller again under the
++ * supplier Durable Object and re-checks revisions, so this preview can never become a
++ * second source of allocation truth.
++ */
++export async function previewPurchaseReceiptSubmission(
++  input: PurchaseReceiptSubmitPreviewInput,
++): Promise<PurchaseReceiptSubmitPreview | null> {
++  if (input.document.doctype !== "Purchase Receipt") return null;
++  if (input.document.docstatus !== 0) {
++    throw errors.lifecycle("Only a draft Purchase Receipt can be previewed for submission");
++  }
++  const reader = await activePurchaseAllocationReader(input.reader, input.tenantId);
++  if (!reader) return null;
++
++  const existing = input.document as CanonicalDocument<PurchaseReceiptData>;
++  const command: MutationCommand<PurchaseReceiptData> = {
++    command_id: `preview:${input.tenantId}:${existing.name}:${existing.version}`,
++    tenant_id: input.tenantId,
++    aggregate: { doctype: "Purchase Receipt", name: existing.name },
++    action: "submit",
++    expected_version: existing.version,
++    payload_hash: "0".repeat(64),
++    actor: input.actor,
++    document: existing.data,
++  };
++  const plan = await new AllocatingPurchaseReceiptController().buildPlan({
++    command,
++    existing,
++    now: input.now,
++    nextVersion: existing.version + 1,
++    reader,
++  });
++
++  const itemByRow = new Map<string, PurchaseItem>();
++  for (const [index, item] of plan.document.data.items.entries()) {
++    itemByRow.set(String(item.row_id ?? `ROW-${index + 1}`), item);
++  }
++
++  const rows: PurchaseReceiptSubmitPreviewRow[] = [];
++  let allocatedQty = 0;
++  let unappliedQty = 0;
++  let baremWeight = 0;
++  let actualWeight = 0;
++  let hasActualWeight = false;
++
++  for (const entry of plan.purchase_allocation_entries ?? []) {
++    if (entry.qty_micros <= 0 || entry.entry_kind === "reverse") continue;
++    const rowId = String(entry.receipt_item_row_id);
++    const item = itemByRow.get(rowId);
++    rows.push({
++      receipt_row: rowId,
++      item_code: String(item?.item_code ?? ""),
++      destination: entry.purchase_order,
++      destination_row: entry.purchase_order_item_row_id,
++      allocation_kind: "FIFO",
++      qty: micros(entry.qty_micros),
++      barem_weight_kg: micros(entry.barem_weight_micros),
++      actual_weight_kg: optionalMicros(entry.projected_actual_weight_micros),
++    });
++    allocatedQty += entry.qty_micros;
++    baremWeight += entry.barem_weight_micros;
++    if (entry.projected_actual_weight_micros !== undefined) {
++      actualWeight += entry.projected_actual_weight_micros;
++      hasActualWeight = true;
++    }
++  }
++
++  for (const entry of plan.purchase_unapplied_entries ?? []) {
++    if (entry.qty_micros <= 0 || entry.entry_kind !== "receive") continue;
++    const rowId = String(entry.receipt_item_row_id);
++    const item = itemByRow.get(rowId);
++    rows.push({
++      receipt_row: rowId,
++      item_code: String(item?.item_code ?? ""),
++      destination: "Chờ PO tiếp theo trong cửa sổ",
++      destination_row: null,
++      allocation_kind: "Chưa phân bổ",
++      qty: micros(entry.qty_micros),
++      barem_weight_kg: micros(entry.barem_weight_micros),
++      actual_weight_kg: optionalMicros(entry.projected_actual_weight_micros),
++    });
++    unappliedQty += entry.qty_micros;
++    baremWeight += entry.barem_weight_micros;
++    if (entry.projected_actual_weight_micros !== undefined) {
++      actualWeight += entry.projected_actual_weight_micros;
++      hasActualWeight = true;
++    }
++  }
++
++  const warnings: string[] = [];
++  const postingDate = String(plan.document.data.posting_at ?? "").slice(0, 10);
++  const previewDate = input.now.slice(0, 10);
++  if (postingDate && postingDate < previewDate) {
++    warnings.push(
++      `Ngày hạch toán ${postingDate} lùi trước ngày hiện tại ${previewDate}; FIFO vẫn theo thứ tự commit, không xếp lại lịch sử.`,
++    );
++  }
++  if (unappliedQty > 0) {
++    warnings.push(
++      `${micros(unappliedQty)} đơn vị chưa có nghĩa vụ PO và sẽ được giữ trong cửa sổ để tự áp khi PO phù hợp mở sau.`,
++    );
++  }
++
++  return {
++    kind: "purchase_receipt_fifo",
++    title: `Xem phân bổ FIFO trước khi gửi ${existing.name}`,
++    description: "Bản xem trước dùng đúng controller submit. Khi xác nhận, server vẫn khóa theo nhà cung cấp và kiểm tra lại revision trước khi ghi.",
++    confirmation_label: "Gửi phiếu nhập",
++    warnings,
++    columns: [
++      { key: "receipt_row", label: "Dòng phiếu" },
++      { key: "item_code", label: "Mặt hàng" },
++      { key: "destination", label: "Đích phân bổ" },
++      { key: "allocation_kind", label: "Trạng thái" },
++      { key: "qty", label: "Số lượng", align: "right" },
++      { key: "barem_weight_kg", label: "Kg barem", align: "right" },
++      { key: "actual_weight_kg", label: "Kg thực tế", align: "right" },
++    ],
++    rows,
++    summary: [
++      { label: "Tổng nhận", value: micros(allocatedQty + unappliedQty) },
++      { label: "Đã phân bổ", value: micros(allocatedQty) },
++      { label: "Chưa phân bổ", value: micros(unappliedQty) },
++      { label: "Kg barem", value: micros(baremWeight) },
++      ...(hasActualWeight ? [{ label: "Kg thực tế", value: micros(actualWeight) }] : []),
++    ],
++  };
++}
++
++function micros(value: number): string {
++  return fromScaledInt(value, 6);
++}
++
++function optionalMicros(value: number | undefined): string | null {
++  return value === undefined ? null : micros(value);
++}
++diff --git a/server/packages/clouderp-core/src/index.ts b/server/packages/clouderp-core/src/index.ts
++index d3fc278..b4e1f76 100644
++--- a/server/packages/clouderp-core/src/index.ts
+++++ b/server/packages/clouderp-core/src/index.ts
++@@ -4,6 +4,7 @@ export * from "./controllers.js";
++ export * from "./purchase-allocation.js";
++ export * from "./purchase-allocation-controllers.js";
++ export * from "./purchase-allocation-action-controllers.js";
+++export * from "./purchase-allocation-preview.js";
++ export * from "./purchase-allocation-rollout-controllers.js";
++ export * from "./registry.js";
++diff --git a/server/apps/tenant-worker/src/index.ts b/server/apps/tenant-worker/src/index.ts
++index 8b1cc23..5418064 100644
++--- a/server/apps/tenant-worker/src/index.ts
+++++ b/server/apps/tenant-worker/src/index.ts
++@@ -17,7 +17,8 @@ import {
++ } from "../../../packages/app-registry/src/index.js";
++ import type { TrustedIdentityKey } from "../../../packages/auth/src/index.js";
++ import type { Actor, CanonicalDocument, DomainEvent, JsonObject, MutationCommand, MutationReceipt } from "../../../packages/contracts/src/index.js";
++ import { parseMutationCommandInput } from "../../../packages/contracts/src/index.js";
++-import { D1CommercialReconciliationService, D1DocumentListStore, D1MutationStore, DocumentListService } from "../../../packages/document-kernel/src/index.js";
+++import { previewPurchaseReceiptSubmission } from "../../../packages/clouderp-core/src/index.js";
+++import { D1CommercialReconciliationService, D1DocumentListStore, D1MutationStore, D1RolloutPurchaseAllocationDomainStore, DocumentListService } from "../../../packages/document-kernel/src/index.js";
++ import { asCloudForgeError, commandPayloadHash, errorResponse, errors, jsonResponse, randomId, readJson } from "../../../packages/core/src/index.js";
++ import {
++   D1CollaborationService, D1DocumentAccessStore, D1MetadataStore, D1SearchStore,
++@@ -1068,6 +1069,33 @@ async function serveFrappeApiInner(
++   const access = new D1DocumentAccessStore(requestDb);
++   const permissions = new MetadataPermissionService(metadata, undefined, access);
++   const documents = new D1MutationStore(requestDb);
+++
+++  if (request.method === "POST" && url.pathname === "/api/method/metaforge.api.get_submit_preview") {
+++    const body = await readJson<JsonObject>(request, 16_000);
+++    const doctype = requireShortText(body.doctype, "doctype", 160);
+++    const name = requireShortText(body.name, "name", 320);
+++    if (doctype !== "Purchase Receipt") return jsonResponse({ message: null });
+++
+++    const document = await documents.getDocument(tenantId, doctype, name);
+++    if (!document) throw errors.notFound();
+++    if (document.docstatus !== 0) throw errors.lifecycle("Only a draft document can be previewed for submission");
+++    await permissions.assert({
+++      actor,
+++      tenantId,
+++      doctype,
+++      name,
+++      owner: document.owner,
+++      data: document.data,
+++      action: "submit",
+++    });
+++    const preview = await previewPurchaseReceiptSubmission({
+++      tenantId,
+++      actor,
+++      document,
+++      reader: new D1RolloutPurchaseAllocationDomainStore(requestDb),
+++      now: now(),
+++    });
+++    return jsonResponse({ message: preview });
+++  }
+++
++   const installedApps = new AppInstaller(requestDb, metadata, users);
++ 
++   /**
++diff --git a/client/packages/views/src/container/FormContainer.tsx b/client/packages/views/src/container/FormContainer.tsx
++index b31b3b3..6e8d4b1 100644
++--- a/client/packages/views/src/container/FormContainer.tsx
+++++ b/client/packages/views/src/container/FormContainer.tsx
++@@ -8,7 +8,10 @@ import { useEffect, useState, type ReactNode } from "react";
++ import { useQueryClient } from "@tanstack/react-query";
++ import type { Doc } from "@metaforge/core";
++ import type { ListViewSnapshot } from "@metaforge/adapter-frappe";
++-import { ConfirmDialog, PromptDialog, toast, useT } from "@metaforge/ui";
+++import {
+++  Button, ConfirmDialog, Dialog, DialogContent, DialogHeader, DialogTitle,
+++  PromptDialog, toast, useT,
+++} from "@metaforge/ui";
++ import { FormView } from "../form/FormView.js";
++ import type { FormActionKind } from "../detail/formActions.js";
++ import { useMetaForge } from "./provider.js";
++@@ -33,6 +36,27 @@ export interface FormContainerProps {
++   headerActions?: ReactNode;
++ }
++ 
+++interface SubmitPreviewColumn {
+++  key: string;
+++  label: string;
+++  align?: "left" | "right";
+++}
+++
+++interface SubmitPreview {
+++  kind: string;
+++  title: string;
+++  description?: string;
+++  confirmation_label?: string;
+++  warnings?: string[];
+++  columns?: SubmitPreviewColumn[];
+++  rows?: Array<Record<string, unknown>>;
+++  summary?: Array<{ label: string; value: string }>;
+++}
+++
+++function previewCell(value: unknown): string {
+++  if (value === null || value === undefined || value === "") return "—";
+++  return String(value);
+++}
+++
++ export function FormContainer(props: FormContainerProps) {
++   const t = useT();
++   const { doctype, name } = props;
++@@ -50,6 +74,7 @@ export function FormContainer(props: FormContainerProps) {
++   const [confirmDelete, setConfirmDelete] = useState(false);
++   const [renaming, setRenaming] = useState(false);
+++  const [submitPreview, setSubmitPreview] = useState<SubmitPreview | null>(null);
++ 
++   // "Gần đây" (CommandPalette đã có sẵn UI, trước đây không app nào cấp dữ liệu) — ghi mỗi lần mở
++   // 1 bản ghi đã lưu thành công (doc?.modified đổi ⇒ mở doc mới HOẶC vừa lưu xong đều tính là "vừa xem").
++@@ -126,6 +151,13 @@ export function FormContainer(props: FormContainerProps) {
++     ]).catch(() => undefined);
++   };
++ 
+++  const submitCurrent = async () => {
+++    const updated = await adapter.submit(doc);
+++    publishMutation(updated);
+++    toast.success(t("form.submitted"));
+++    setSubmitPreview(null);
+++  };
+++
++   const onSave = async (changed: Record<string, unknown>) => {
++     setSaving(true);
++     setFieldErrors(undefined);
++@@ -151,6 +183,25 @@ export function FormContainer(props: FormContainerProps) {
++     // Nhân bản đọc bản ĐÃ LƯU (doc từ server), không phải giá trị đang gõ dở trên form — cục bộ,
++     // không gọi API, chỉ stash + để cha điều hướng.
++     if (kind === "duplicate") { stashDuplicate(doctype, doc as Record<string, unknown>); props.onDuplicate?.(); return; }
++     if (kind === "print") { props.onPrint?.(); return; }
+++    if (kind === "submit") {
+++      setSaving(true);
+++      try {
+++        // Fail closed: preview is server-authoritative. A failed preview must never
+++        // silently fall through to submit, because the operator would confirm one
+++        // allocation while the server writes another.
+++        const preview = await adapter.callPost<SubmitPreview | null>(
+++          "metaforge.api.get_submit_preview",
+++          { doctype, name },
+++        );
+++        if (preview) setSubmitPreview(preview);
+++        else await submitCurrent();
+++      } catch (e) {
+++        toast.error(adapter.mapError(e).message);
+++      } finally {
+++        setSaving(false);
+++      }
+++      return;
+++    }
++     setSaving(true);
++     try {
++-      if (kind === "submit") { const updated = await adapter.submit(doc); publishMutation(updated); toast.success(t("form.submitted")); }
++-      else if (kind === "cancel") { const updated = await adapter.cancel(doctype, name); publishMutation(updated); toast.success(t("form.cancelled")); }
+++      if (kind === "cancel") { const updated = await adapter.cancel(doctype, name); publishMutation(updated); toast.success(t("form.cancelled")); }
++       else if (kind === "amend") { await adapter.amend(doctype, name); invalidateCollection(); toast.success(t("form.amended")); props.onSaved?.(); }
++     } catch (e) {
++       toast.error(adapter.mapError(e).message);
++@@ -160,6 +211,18 @@ export function FormContainer(props: FormContainerProps) {
++     }
++   };
++ 
+++  const confirmSubmit = async () => {
+++    setSaving(true);
+++    try {
+++      await submitCurrent();
+++    } catch (e) {
+++      toast.error(adapter.mapError(e).message);
+++    } finally {
+++      setSaving(false);
+++    }
+++  };
+++
++   const doDelete = async () => {
++     setSaving(true);
++     try {
++@@ -229,6 +292,65 @@ export function FormContainer(props: FormContainerProps) {
++         confirmLabel={t("form.rename_title")}
++         onConfirm={doRename}
++       />
+++      <Dialog
+++        open={Boolean(submitPreview)}
+++        onOpenChange={(open) => { if (!open && !saving) setSubmitPreview(null); }}
+++      >
+++        <DialogContent className="flex max-h-[90vh] w-[min(96vw,980px)] max-w-none flex-col overflow-hidden p-0">
+++          <DialogHeader className="shrink-0 border-b px-5 py-4">
+++            <DialogTitle>{submitPreview?.title ?? t("form.submit")}</DialogTitle>
+++            {submitPreview?.description ? (
+++              <p className="text-sm text-muted-foreground">{submitPreview.description}</p>
+++            ) : null}
+++          </DialogHeader>
+++          <div className="min-h-0 flex-1 space-y-4 overflow-auto px-5 py-4">
+++            {(submitPreview?.warnings ?? []).map((warning) => (
+++              <div key={warning} className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-sm">
+++                {warning}
+++              </div>
+++            ))}
+++            <div className="overflow-x-auto rounded-lg border">
+++              <table className="w-full min-w-[720px] text-sm">
+++                <thead className="bg-muted/60 text-muted-foreground">
+++                  <tr>
+++                    {(submitPreview?.columns ?? []).map((column) => (
+++                      <th
+++                        key={column.key}
+++                        className={column.align === "right" ? "px-3 py-2 text-right font-medium" : "px-3 py-2 text-left font-medium"}
+++                      >
+++                        {column.label}
+++                      </th>
+++                    ))}
+++                  </tr>
+++                </thead>
+++                <tbody>
+++                  {(submitPreview?.rows ?? []).map((row, rowIndex) => (
+++                    <tr key={`${rowIndex}-${String(row.receipt_row ?? "row")}`} className="border-t">
+++                      {(submitPreview?.columns ?? []).map((column) => (
+++                        <td
+++                          key={column.key}
+++                          className={column.align === "right" ? "px-3 py-2 text-right tabular-nums" : "px-3 py-2"}
+++                        >
+++                          {previewCell(row[column.key])}
+++                        </td>
+++                      ))}
+++                    </tr>
+++                  ))}
+++                </tbody>
+++              </table>
+++            </div>
+++            <dl className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+++              {(submitPreview?.summary ?? []).map((entry) => (
+++                <div key={entry.label} className="rounded-lg border px-3 py-2">
+++                  <dt className="text-xs text-muted-foreground">{entry.label}</dt>
+++                  <dd className="mt-1 font-semibold tabular-nums">{entry.value}</dd>
+++                </div>
+++              ))}
+++            </dl>
+++          </div>
+++          <div className="flex shrink-0 justify-end gap-2 border-t px-5 py-3">
+++            <Button type="button" variant="outline" disabled={saving} onClick={() => setSubmitPreview(null)}>
+++              {t("common.cancel")}
+++            </Button>
+++            <Button type="button" disabled={saving} onClick={() => void confirmSubmit()}>
+++              {saving ? t("common.loading") : (submitPreview?.confirmation_label ?? t("form.submit"))}
+++            </Button>
+++          </div>
+++        </DialogContent>
+++      </Dialog>
++     </>
++   );
++ }
++diff --git a/server/tests/purchase-receipt-submit-preview.test.mjs b/server/tests/purchase-receipt-submit-preview.test.mjs
++new file mode 100644
++index 0000000..18a756a
++--- /dev/null
+++++ b/server/tests/purchase-receipt-submit-preview.test.mjs
++@@ -0,0 +1,158 @@
+++import test from "node:test";
+++import assert from "node:assert/strict";
+++import {
+++  previewPurchaseReceiptSubmission,
+++  RolloutPurchaseOrderController,
+++  RolloutPurchaseReceiptController,
+++} from "../dist/packages/clouderp-core/src/index.js";
+++import { InMemoryRolloutPurchaseAllocationMutationStore } from "../dist/packages/document-kernel/src/index.js";
+++
+++const actor = { user_id: "Administrator", roles: ["System Manager", "Stock Manager"] };
+++const tenant = "demo";
+++const now = "2026-07-31T06:00:00.000Z";
+++
+++function seedMasters(store) {
+++  store.seedMaster("Company", "Alumdoor", tenant, { default_currency: "VND" });
+++  store.seedMaster("Supplier", "FACTORY-1", tenant, { receipt_tolerance_pct: 5 });
+++  store.seedMaster("Currency", "VND", tenant, { currency_scale: 2 });
+++  store.seedMaster("Warehouse", "Main", tenant);
+++  store.seedMaster("Item", "AL71", tenant, {
+++    stock_uom: "Cây",
+++    default_purchase_uom: "Kg",
+++    inventory_mode: "Nhôm cây/lá",
+++    measurement_profile: "AL-BAR",
+++    has_catch_weight: true,
+++    weight_uom: "Kg",
+++  });
+++}
+++
+++async function apply(controller, store, action, name, document, commandId) {
+++  const existing = await store.getDocument(tenant, controller.doctype, name);
+++  const command = {
+++    command_id: commandId,
+++    tenant_id: tenant,
+++    aggregate: { doctype: controller.doctype, name },
+++    action,
+++    expected_version: existing?.version ?? null,
+++    payload_hash: "0".repeat(64),
+++    actor,
+++    document,
+++  };
+++  const plan = await controller.buildPlan({
+++    command,
+++    existing,
+++    now,
+++    nextVersion: (existing?.version ?? 0) + 1,
+++    reader: store,
+++  });
+++  await store.execute(plan);
+++  return store.getDocument(tenant, controller.doctype, name);
+++}
+++
+++function purchaseOrderData(qtyBar, transactionDate, rowId = "ROW-1") {
+++  const theoreticalKg = qtyBar * 7.2 * 0.389;
+++  return {
+++    supplier: "FACTORY-1",
+++    company: "Alumdoor",
+++    currency: "VND",
+++    transaction_date: transactionDate,
+++    taxes: [],
+++    items: [{
+++      row_id: rowId,
+++      item_code: "AL71",
+++      qty: theoreticalKg.toFixed(3),
+++      qty_bar: qtyBar,
+++      theoretical_kg: theoreticalKg.toFixed(3),
+++      length_m: 7.2,
+++      theoretical_kg_per_m: 0.389,
+++      color: "GS",
+++      is_stamped: "Có",
+++      uom: "Kg",
+++      stock_uom: "Cây",
+++      conversion_factor: (qtyBar / theoreticalKg).toFixed(6),
+++      rate: 100_000,
+++    }],
+++  };
+++}
+++
+++function receiptData(qtyBar, postingAt = "2026-07-03T00:00:00.000Z") {
+++  const theoreticalKg = qtyBar * 7.2 * 0.389;
+++  return {
+++    supplier: "FACTORY-1",
+++    company: "Alumdoor",
+++    currency: "VND",
+++    posting_at: postingAt,
+++    items: [{
+++      row_id: "PR-ROW-1",
+++      item_code: "AL71",
+++      warehouse: "Main",
+++      qty: theoreticalKg.toFixed(3),
+++      qty_bar: qtyBar,
+++      theoretical_kg: theoreticalKg.toFixed(3),
+++      actual_weight_kg: "630",
+++      length_m: 7.2,
+++      theoretical_kg_per_m: 0.389,
+++      color: "GS",
+++      is_stamped: "Có",
+++      uom: "Kg",
+++      stock_uom: "Cây",
+++      conversion_factor: (qtyBar / theoreticalKg).toFixed(6),
+++      rate: 100_000,
+++      valuation_rate: 100_000,
+++    }],
+++  };
+++}
+++
+++test("submit preview uses the FIFO controller and does not mutate the store", async () => {
+++  const store = new InMemoryRolloutPurchaseAllocationMutationStore();
+++  store.setPurchaseAllocationEnabled(true);
+++  seedMasters(store);
+++  const po = new RolloutPurchaseOrderController();
+++  const receipt = new RolloutPurchaseReceiptController();
+++
+++  const po1 = await apply(po, store, "create", "PO-01", purchaseOrderData(200, "2026-07-01"), "PO-01-create");
+++  await apply(po, store, "submit", "PO-01", po1.data, "PO-01-submit");
+++  const po2 = await apply(po, store, "create", "PO-02", purchaseOrderData(100, "2026-07-02"), "PO-02-create");
+++  await apply(po, store, "submit", "PO-02", po2.data, "PO-02-submit");
+++  const draft = await apply(receipt, store, "create", "PR-PREVIEW", receiptData(230), "PR-PREVIEW-create");
+++
+++  const before = structuredClone(store.snapshot());
+++  const preview = await previewPurchaseReceiptSubmission({
+++    tenantId: tenant,
+++    actor,
+++    document: draft,
+++    reader: store,
+++    now,
+++  });
+++  assert.ok(preview);
+++  assert.equal(preview.kind, "purchase_receipt_fifo");
+++  assert.deepEqual(preview.rows.map((row) => ({ po: row.destination, qty: row.qty })), [
+++    { po: "PO-01", qty: "200" },
+++    { po: "PO-02", qty: "30" },
+++  ]);
+++  assert.equal(preview.summary.find((entry) => entry.label === "Tổng nhận")?.value, "230");
+++  assert.match(preview.warnings.join("\n"), /FIFO vẫn theo thứ tự commit/);
+++  assert.deepEqual(store.snapshot(), before);
+++});
+++
+++test("submit preview is absent while purchase allocation rollout is disabled", async () => {
+++  const store = new InMemoryRolloutPurchaseAllocationMutationStore();
+++  seedMasters(store);
+++  const receipt = new RolloutPurchaseReceiptController();
+++  const draft = await apply(receipt, store, "create", "PR-LEGACY", receiptData(1, now), "PR-LEGACY-create");
+++  const preview = await previewPurchaseReceiptSubmission({
+++    tenantId: tenant,
+++    actor,
+++    document: draft,
+++    reader: store,
+++    now,
+++  });
+++  assert.equal(preview, null);
+++});
