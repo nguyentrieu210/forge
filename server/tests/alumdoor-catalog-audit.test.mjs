@@ -4,6 +4,7 @@ import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { planAlumdoorCatalogAudit } from "../scripts/alumdoor-catalog-audit-planner.mjs";
 
 function validRecords() {
@@ -30,6 +31,11 @@ function validRecords() {
       items: [{ row_id: "1", item_code: "RAW", qty: 2, uom: "Kg", qty_basis: "Cố định" }],
     } },
   ];
+}
+
+function runCli(args) {
+  const script = fileURLToPath(new URL("../scripts/audit-alumdoor-catalog.mjs", import.meta.url));
+  return spawnSync(process.execPath, [script, ...args], { encoding: "utf8" });
 }
 
 test("valid catalog produces no Critical/High finding", () => {
@@ -113,13 +119,31 @@ test("CLI remains read-only and writes a deterministic fixture report", () => {
   const fixture = path.join(dir, "fixture.json");
   const output = path.join(dir, "report.json");
   writeFileSync(fixture, JSON.stringify({ metadata_version: "2.0.34", records: validRecords() }));
-  const script = new URL("../scripts/audit-alumdoor-catalog.mjs", import.meta.url);
-  const run = spawnSync(process.execPath, [script.pathname, "--input", fixture, "--output", output, "--redacted"], { encoding: "utf8" });
+  const run = runCli(["--input", fixture, "--output", output, "--redacted"]);
   assert.equal(run.status, 0, run.stderr || run.stdout);
   const report = JSON.parse(readFileSync(output, "utf8"));
   assert.equal(report.schema_version, 1);
   assert.equal(report.counts.high, 0);
-  const denied = spawnSync(process.execPath, [script.pathname, "--input", fixture, "--execute"], { encoding: "utf8" });
+  const denied = runCli(["--input", fixture, "--execute"]);
   assert.notEqual(denied.status, 0);
   assert.match(`${denied.stderr}${denied.stdout}`, /read-only/);
+});
+
+test("CLI audits the authoritative alumdoor-v2 brief fixtures directly", () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "forge-catalog-brief-"));
+  const output = path.join(dir, "brief-report.json");
+  const brief = fileURLToPath(new URL("../briefs/alumdoor-v2.json", import.meta.url));
+  const run = runCli(["--brief", brief, "--output", output, "--redacted"]);
+  assert.ok(run.status === 0 || run.status === 2, run.stderr || run.stdout);
+  const report = JSON.parse(readFileSync(output, "utf8"));
+  assert.equal(report.source.kind, "brief");
+  assert.equal(report.source.file, "alumdoor-v2.json");
+  assert.equal(report.metadata_version, "2.0.34");
+  assert.equal(report.expected_metadata_version, "2.0.34");
+  assert.ok(report.counts.records > 0);
+  assert.ok((report.counts.by_doctype.UOM ?? 0) > 0);
+  assert.ok((report.counts.by_doctype["Item Group"] ?? 0) > 0);
+  assert.ok((report.counts.by_doctype["Measurement Profile"] ?? 0) > 0);
+  assert.ok((report.counts.by_doctype.Warehouse ?? 0) > 0);
+  assert.ok(report.findings.every((finding) => finding.code !== "METADATA_VERSION_UNEXPECTED"));
 });
