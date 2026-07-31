@@ -84,12 +84,10 @@ export class PhysicalStockReportService {
 
     const scopedRows = sourceRows.filter((row) => rowAllowed(scope, row));
     const limit = Math.min(request.limit ?? scope.max_rows, scope.max_rows);
-    const page = buildPhysicalStockPage(scopedRows, {
-      ...request,
-      tenant_id: tenant,
-      company,
-      limit,
-    });
+    const page = buildPhysicalStockPage(
+      scopedRows,
+      toPhysicalStockFilters(request, tenant, company, limit),
+    );
     reconcilePhysicalStockPage(page);
 
     const showLineage = scope.can_view_lineage && request.include_lineage !== false;
@@ -129,6 +127,35 @@ export class PhysicalStockReportService {
       row_count: page.rows.length,
     };
   }
+}
+
+function toPhysicalStockFilters(
+  request: PhysicalStockReportRequest,
+  tenantId: string,
+  company: string,
+  limit: number,
+): PhysicalStockFilters {
+  return {
+    tenant_id: tenantId,
+    company,
+    limit,
+    ...(request.item_code === undefined ? {} : { item_code: request.item_code }),
+    ...(request.warehouse === undefined ? {} : { warehouse: request.warehouse }),
+    ...(request.warehouse_role === undefined ? {} : { warehouse_role: request.warehouse_role }),
+    ...(request.inventory_mode === undefined ? {} : { inventory_mode: request.inventory_mode }),
+    ...(request.measurement_profile === undefined ? {} : { measurement_profile: request.measurement_profile }),
+    ...(request.color === undefined ? {} : { color: request.color }),
+    ...(request.condition === undefined ? {} : { condition: request.condition }),
+    ...(request.generation === undefined ? {} : { generation: request.generation }),
+    ...(request.length_micros === undefined ? {} : { length_micros: request.length_micros }),
+    ...(request.width_micros === undefined ? {} : { width_micros: request.width_micros }),
+    ...(request.height_micros === undefined ? {} : { height_micros: request.height_micros }),
+    ...(request.thickness_micros === undefined ? {} : { thickness_micros: request.thickness_micros }),
+    ...(request.batch_no === undefined ? {} : { batch_no: request.batch_no }),
+    ...(request.serial_no === undefined ? {} : { serial_no: request.serial_no }),
+    ...(request.include_zero === undefined ? {} : { include_zero: request.include_zero }),
+    ...(request.cursor === undefined ? {} : { cursor: request.cursor }),
+  };
 }
 
 function normalizeScope(input: PhysicalStockAccessScope): Required<PhysicalStockAccessScope> {
