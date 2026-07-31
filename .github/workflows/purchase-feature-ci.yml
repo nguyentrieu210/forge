@@ -17,7 +17,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: purchase-feature-${{ github.ref }}
@@ -30,23 +30,8 @@ jobs:
     timeout-minutes: 45
 
     steps:
-      - name: Checkout exact feature branch
+      - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          ref: feat/purchase-receipt-complete-20260731
-          fetch-depth: 0
-
-      - name: Apply supplier debt integration
-        id: patch
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ -f .github/apply-purchase-supplier-debt.py ]; then
-            python .github/apply-purchase-supplier-debt.py
-            echo "pending=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "pending=false" >> "$GITHUB_OUTPUT"
-          fi
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -108,20 +93,3 @@ jobs:
           status=$?
           tail -n 200 /tmp/build.log
           exit $status
-
-      - name: Commit verified integration
-        if: steps.patch.outputs.pending == 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          rm -f .github/apply-purchase-supplier-debt.py
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add \
-            .github/apply-purchase-supplier-debt.py \
-            server/apps/tenant-worker/src/index.ts \
-            client/packages/views/src/container/AllocationTimelineDialog.tsx \
-            client/packages/views/src/container/PurchaseSupplierDebtReportDialog.tsx
-          git diff --cached --check
-          git commit -m "feat(purchase): integrate supplier debt report"
-          git push origin HEAD:feat/purchase-receipt-complete-20260731
