@@ -6,90 +6,107 @@ Ngày cập nhật: **2026-08-01**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Default head: `5d73dcfbd6e0d24776cb4233fc86a45ccd507f53`.
-- Handoff branch: `docs/record-production-first-merge-20260801`.
-- Không commit `.env`, secret, `server/work/`, `tmp`, backup hoặc generated evidence.
+- Default head tại snapshot: `b9a5489903d746858f46a131561325b835b870c3`.
+- Handoff branch: `docs/forge-epic-control-20260801`.
+- Canonical queue: `EPIC_STATUS.md`.
 
-## Production-first delivery — ACTIVE
+## Trạng thái tổng thể
 
-PR `#108` đã squash-merge.
+- Toàn hệ thống **chưa đạt end-to-end acceptance**.
+- Kho vật lý, BOM/Work Order, Purchase core, Sales MVP, RBAC và runtime workspace đã có nền tảng đã merge.
+- Các khoảng trống lớn còn lại: Sales-to-Production thật, Purchase authenticated QA, Finance đầy đủ, daily ledger, warranty/capacity và whole-process acceptance.
 
-- Exact PR head: `508993c8b0868cfac323e6e06c7a399ca4f44b07`.
-- Merge SHA: `5d73dcfbd6e0d24776cb4233fc86a45ccd507f53`.
-- CI `30654314727`: SUCCESS.
-- PR Validation `30654314760`: SUCCESS.
-- Inventory and Manufacturing CI `30654314685`: SUCCESS.
-- Production observation `30654314783`: SKIPPED đúng phạm vi.
+## Merge mới
 
-`DELIVERY_POLICY.md` hiện là policy canonical:
+| PR | Nội dung | Merge SHA | Kết luận |
+|---|---|---|---|
+| #82 | Inventory Slice D foundation | `a7e6ef65b2352f596e285ea34d8e6438dff11a95` | Backend/read model/API đã merge; UI/report follow-up còn thiếu |
+| #113 | Protected release workflow cho tenant `alu` | `0b29cbb3aed1850bb633fd49facf9d8242b2a9e1` | Workflow đã merge; production evidence phải kiểm riêng |
+| #114 | Runtime workspace production | `6db933aec8f211103ee2887e0cb364d346079cb2` | Navigation/runtime shell và Gateway workflow đã merge |
+| #115 | Sales-to-Production transport sync | `eab228aa72bbf54575ec573b4f7eadaa9a8060f7` | Chỉ workflow + trigger; không tính code nghiệp vụ hoàn thành |
+| #117 | Observable production release | `b9a5489903d746858f46a131561325b835b870c3` | Platform evidence support; không thay đổi hàng đợi nghiệp vụ |
 
-- code request mặc định bao gồm merge và production deploy;
-- không hỏi approval lặp lại;
-- preview/staging là ngoại lệ, không phải done condition;
-- chỉ deploy exact verified SHA;
-- production evidence phải có target identity, run ID, version/deployment ID và smoke;
-- destructive infrastructure/data boundary vẫn cần lệnh riêng.
+## Hàng đợi hiện tại
 
-## Alumdoor app Worker auto release
+### 1. Sales-to-Production — BLOCKED / REBUILD
 
-`.github/workflows/release-alumdoor-app.yml` hiện:
+- PR #115 đã merge sai phạm vi kết luận: final diff không có code nghiệp vụ.
+- PR #107 là nhánh transport cũ, không dùng làm PR canonical.
+- Cần nhánh sạch từ current default với source thật và full gate.
 
-- tự chạy trên merged/default push khi app Worker hoặc dependency server allowlist thay đổi;
-- hỗ trợ manual exact `target_sha`;
-- build server và focused regression;
-- Wrangler strict dry-run;
-- deploy `cloudforge-app-alumdoor` vào `cloudforge-production`;
-- verify identity và bindings `PLATFORM`, `AI`;
-- ghi step summary và artifact;
-- không phụ thuộc issue/PR comment API.
+### 2. Purchase authenticated QA — ACTIVE / DRAFT
 
-Policy merge không sửa app Worker source/dependency allowlist nên không cần redeploy cùng binary chỉ vì thay runbook.
+- PR: #103.
+- Branch: `feat/purchase-authenticated-lifecycle-qa-20260731`.
+- Exact head gần nhất: `94ccc11ff79b2d0cd9269abb5804009887b950a8`.
+- GitHub từng báo mergeable; full exact-head workflows đang chạy tại lần kiểm gần nhất.
+- Gate còn lại: Desktop Chrome + Pixel 7 lifecycle, full CI, Ready for review, final diff/review.
 
-## Forge Skills runbook 0.2.0
+### 3. Finance — QUEUED / REBUILD
 
-Pack ngoài repository đã đồng bộ production-first:
+- PR #15 stale và không mergeable.
+- Chỉ dùng code/test trong PR #15 làm nguồn tham khảo.
+- Phải dựng lại từ current default và bổ sung Payment Entry/Allocation, statement, debt summary, advance balance và UI.
 
-- `npm test`: PASS;
-- `npm run build`: PASS, 28 files;
-- `npm run validate`: PASS, 7 skills;
-- ZIP SHA-256: `6183dedc51d6258f0618feb95db87d27500d2f388671410ffb24595f4b6dee90`.
+### 4. Daily ledger — QUEUED
 
-## Production hiện tại
+- Chưa có PR canonical.
+- Chưa có contract hoàn chỉnh cho snapshot cuối ngày, khóa sửa và adjustment document.
+
+### 5. Warranty / Capacity — QUEUED
+
+- Chưa có PR canonical.
+- Chưa hoàn thiện defect/warranty lifecycle và production capacity/overtime scheduling.
+
+### 6. End-to-end acceptance — QUEUED
+
+- Chỉ chạy sau khi năm epic trên có code merged và release evidence.
+- Journey bắt buộc: Sales Order → production → inventory → delivery → debt → daily ledger.
+
+## Các nhánh không phải nguồn merge
+
+- #107: Sales transport cũ.
+- #81/#109: MetaForge prototype/rebase cũ; so với #114 rồi retire.
+- #116: có khả năng đã bị #117 thay thế.
+- #40: Finance backup.
+- #36: tmp UI rebase.
+- #35/#73/#74/#79: CI/hotfix cũ hoặc đã có bản thay thế.
+
+Không đóng trước khi kiểm unique diff chưa nằm trên default.
+
+## Production evidence đã có trước đó
 
 ### Alumdoor app Worker
 
-- Feature merge SHA `a48524b93489c92296c57fc5f223e41d505de7aa`.
-- Release run `30651057535`, job `91224118455`: SUCCESS.
-- Worker `cloudforge-app-alumdoor`.
-- Namespace `cloudforge-production`.
-- Version ID `734fd53b-94ce-401d-86e8-ca4cd0ffee2e`.
+- Feature merge SHA: `a48524b93489c92296c57fc5f223e41d505de7aa`.
+- Release run: `30651057535`.
+- Worker: `cloudforge-app-alumdoor`.
+- Namespace: `cloudforge-production`.
+- Version ID: `734fd53b-94ce-401d-86e8-ca4cd0ffee2e`.
 
-### Tenant Worker
+### Tenant Worker evidence cũ
 
-- Run `30649182082`, job `91217965586`: SUCCESS.
-- Worker `cloudforge-tenant-alu`.
-- Version `ed5852cf-94ef-4a02-b0b9-1e64020c2d0d`.
-- Không dùng tenant evidence thay cho app Worker.
+- Run: `30649182082`.
+- Worker: `cloudforge-tenant-alu`.
+- Version: `ed5852cf-94ef-4a02-b0b9-1e64020c2d0d`.
 
-## MetaForge UI
+Evidence cũ không tự chứng minh các merge #82–#117 đã được release đúng exact SHA.
 
-- PR `#81` vẫn ở branch `feat/metaforge-misa-workspace-tabs`.
-- Known head `1ed3d8e578e060984f68549eb868dfb550eb4167` từng fail dedicated Meta browser QA dù lint/test/typecheck/build pass.
-- Prototype có phần mock/demo; chưa được coi là production UI.
-- Frontend target, hostname, `VITE_LIVE` build mode và live permission mapping chưa được ghi đầy đủ.
-- Theo policy mới, task UI chỉ hoàn tất sau live integration, green CI, production deploy và authenticated smoke.
+## Gate merge chung
 
-## Gate hiện tại
+Một PR chỉ được ghi `MERGE READY` khi:
 
-1. Merge handoff-only PR ghi nhận policy merge.
-2. Quay lại PR `#81`.
-3. Sửa Meta browser QA bằng evidence thật.
-4. Xác định và tự động hoá frontend production target.
-5. Merge, deploy production, chạy authenticated smoke.
-6. Sau đó chuẩn hoá tenant Worker auto production và observation reporting.
+- exact head được chốt;
+- mergeable và không stale/conflict;
+- required CI đều SUCCESS;
+- không có unresolved review blocker;
+- final diff chỉ chứa source/test/docs cần thiết;
+- không còn workflow/payload/trigger tạm;
+- release/rollback boundary đã ghi rõ.
 
 ## Safety
 
-- Không sửa production secrets hoặc DNS.
+- Không sửa production secrets hoặc DNS nếu chưa có lệnh riêng.
 - Không bật FIFO.
-- Không mutate D1, KV hoặc dữ liệu nghiệp vụ trong policy/handoff changes.
+- Không mutate tenant data ngoài smoke an toàn có cleanup.
+- Không commit `.env`, `server/work/`, `tmp`, backup hoặc generated evidence.
