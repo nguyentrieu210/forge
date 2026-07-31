@@ -74,6 +74,18 @@ Chưa chạy browser sales smoke bằng dữ liệu và tài khoản production/
 
 Rủi ro này đã được ghi nhận trước merge/deploy. Không được diễn giải release thành bằng chứng rằng browser sales smoke đã hoàn tất.
 
+### Hotfix picker mặt hàng child table — đang chờ CI, chưa deploy
+
+Browser production xác nhận ô `Mã hàng` trong child table chưa lọc đúng mặt hàng được phép bán.
+
+- Metadata authoritative đã khai `link_filters` dạng object: `{"is_sales_item":1,"disabled":0}`.
+- Nguyên nhân ở client core: `buildLinkFilters` chỉ nhận JSON dạng mảng điều kiện, nên object hợp lệ bị bỏ qua và Link search chạy không filter.
+- Branch: `hotfix/sales-child-item-filter-20260731`.
+- Code commit đầu: `b0f85e477044c87464e58986fb2f7bf136000e3f`.
+- Regression test commits: `b5b131463321ed4569a788c029c44d6de0272a0e`, `3486c0dcb2364b2d11fa04833f322cce083922d2`.
+- Fix hỗ trợ cả object form, array form, operator tuple và `eval:` context; chặn các khoá prototype nguy hiểm.
+- Chưa merge, chưa deploy Gateway/frontend, chưa sửa production secrets.
+
 ## RBAC Slice A/B và hậu kiểm — hoàn thành code gate
 
 ### Git
