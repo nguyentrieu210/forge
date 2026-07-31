@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   materialize:
-    name: Materialize verified purchase source
+    name: Export verified purchase source blobs
     if: ${{ github.head_ref == 'feat/purchase-fifo-production-completion-20260731' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -49,10 +49,7 @@ jobs:
           end = next(index for index in range(start, len(lines)) if lines[index] == '          PY')
           body = []
           for line in lines[start:end]:
-              if line.startswith('          '):
-                  body.append(line[10:])
-              else:
-                  body.append(line)
+              body.append(line[10:] if line.startswith('          ') else line)
           Path('/tmp/purchase-normalize.py').write_text('\n'.join(body) + '\n')
           PY
           python3 /tmp/purchase-normalize.py
@@ -67,8 +64,7 @@ jobs:
           test -n "$(git diff --cached --name-only)"
           git diff --cached --stat
 
-      - name: Create commit object and publish SHA
-        id: commit
+      - name: Create blobs and manifest
         env:
           GH_TOKEN: ${{ github.token }}
           PARENT_SHA: ${{ github.event.pull_request.head.sha }}
@@ -77,6 +73,7 @@ jobs:
           set -euo pipefail
           python3 - <<'PY'
           import base64
+          import hashlib
           import json
           import os
           import pathlib
@@ -91,9 +88,7 @@ jobs:
           def request(method, path, payload=None):
               data = None if payload is None else json.dumps(payload).encode()
               req = urllib.request.Request(
-                  f'{api}{path}',
-                  data=data,
-                  method=method,
+                  f'{api}{path}', data=data, method=method,
                   headers={
                       'Authorization': f'Bearer {token}',
                       'Accept': 'application/vnd.github+json',
@@ -122,30 +117,26 @@ jobs:
               })
               entries.append({'path': path, 'mode': '100644', 'type': 'blob', 'sha': blob['sha']})
 
-          tree = request('POST', f'/repos/{repository}/git/trees', {
-              'base_tree': parent_commit['tree']['sha'],
-              'tree': entries,
-          })
-          commit = request('POST', f'/repos/{repository}/git/commits', {
-              'message': 'fix(purchase): complete lifecycle and browser QA',
-              'tree': tree['sha'],
-              'parents': [parent],
-          })
-          print(f'VERIFIED_COMMIT_SHA={commit["sha"]}')
-          print(f'VERIFIED_TREE_SHA={tree["sha"]}')
-          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output:
-              output.write(f'sha={commit["sha"]}\n')
-              output.write(f'tree={tree["sha"]}\n')
+          diff = subprocess.check_output(['git', 'diff', '--cached', '--binary'])
+          manifest = {
+              'repository': repository,
+              'parent_sha': parent,
+              'base_tree_sha': parent_commit['tree']['sha'],
+              'diff_sha256': hashlib.sha256(diff).hexdigest(),
+              'entries': entries,
+          }
+          target = pathlib.Path('/tmp/purchase-source-manifest.json')
+          target.write_text(json.dumps(manifest, indent=2) + '\n')
+          print(f'MANIFEST_PARENT_SHA={parent}')
+          print(f'MANIFEST_BASE_TREE_SHA={manifest["base_tree_sha"]}')
+          print(f'MANIFEST_DIFF_SHA256={manifest["diff_sha256"]}')
+          print(f'MANIFEST_ENTRY_COUNT={len(entries)}')
           PY
 
-      - name: Publish commit evidence
-        shell: bash
-        run: |
-          echo "verified_commit_sha=${{ steps.commit.outputs.sha }}"
-          echo "verified_tree_sha=${{ steps.commit.outputs.tree }}"
-          {
-            echo '## Purchase source materialized'
-            echo
-            echo "Commit object: \`${{ steps.commit.outputs.sha }}\`"
-            echo "Tree: \`${{ steps.commit.outputs.tree }}\`"
-          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload source manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: purchase-source-manifest-${{ github.run_id }}
+          path: /tmp/purchase-source-manifest.json
+          if-no-files-found: error
+          retention-days: 3
