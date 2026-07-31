@@ -119,3 +119,30 @@ Thứ tự an toàn:
 8. Xác minh Gateway production version/traffic và browser smoke hiện hành.
 
 Không bật rollout FIFO cho `alu` trước khi các blocker trên được xử lý.
+
+## RBAC và phân quyền
+
+- Branch triển khai: `feat/rbac-permission-completion-20260731`.
+- Base audit: `cd60f8c09c48105db84a82c12ad3b32d9f075064`.
+- BRD G1: `server/docs/RBAC-PERMISSION-BRD.md`.
+- Commit BRD đầu tiên: `5f0a78f7e61ca2dae9f35d05885ed1135181a432`.
+- Chưa sửa runtime, migration hoặc production config.
+
+### Phát hiện đã xác minh
+
+1. `PermissionCenter` cho chọn user khác khi kiểm tra quyền và adapter gửi tham số `user`, nhưng server `explain_permission` vẫn tính bằng `context.actor`; kết quả quản trị có thể hiển thị quyền của admin thay vì user được chọn.
+2. UI đọc `data.trace` nhưng endpoint hiện chưa trả trace giải thích.
+3. Xoá User Permission lệch contract: profile không trả scope id, adapter gửi `{name}`, còn server yêu cầu `user/allow/for_value/applicable_for`.
+4. `System Manager` đang được coi như admin bypass toàn bộ MetadataPermissionService; cần chốt đây là contract tương thích hay phải tách Access Manager.
+5. `hide_descendants` được lưu nhưng evaluator chỉ exact-match Link value; cờ chưa có semantics có thể chứng minh.
+6. Tạo user và gán roles dùng hai write riêng, có thể để lại user không hoàn chỉnh nếu bước role thất bại.
+7. Audit trail cho role/scope/disable/reset password chưa có contract bắt buộc được chứng minh.
+
+### Gate hiện tại
+
+- G0 scope: **PASS**.
+- G1 requirements/audit: **DRAFT**, chờ duyệt D1–D3 trong BRD.
+- G2 implementation plan: chưa mở.
+- Test/typecheck/build: chưa chạy vì đợt này chỉ thêm tài liệu.
+- CI exact branch HEAD: GitHub connector chưa trả workflow run hoặc status.
+- Không deploy Cloudflare và không sửa production secrets.
