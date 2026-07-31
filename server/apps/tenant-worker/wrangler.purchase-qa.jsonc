@@ -7,8 +7,7 @@
   "vars": {
     "TENANT_ID": "demo",
     "AUTH_MODE": "production",
-    "PUBLIC_ORIGIN": "http://127.0.0.1:8801",
-    "INTERNAL_AUTH_KEY_ID": "purchase-qa-k1"
+    "PUBLIC_ORIGIN": "http://127.0.0.1:8801"
   },
   "d1_databases": [
     {
