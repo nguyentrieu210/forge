@@ -131,7 +131,7 @@ jobs:
           pnpm --filter metaforge run typecheck 2>&1 | tee "$GATE_DIR/ui-typecheck.log"
           pnpm --filter metaforge run build 2>&1 | tee "$GATE_DIR/ui-build.log"
           grep -R --fixed-strings "$TARGET_SHA" client/apps/runtime/dist/index.html
-          printf 'ui_lint=pass\nui_test=pass\nui_typecheck=pass\nui_build=pass\nrelease_sha_embedded=pass\n' >> "$GATE_DIR/state.txt"
+          printf 'ui_lint=pass\nui_test=pass\ntypecheck=pass\nui_build=pass\nrelease_sha_embedded=pass\n' >> "$GATE_DIR/state.txt"
 
       - name: Upload full gate evidence
         if: always()
@@ -295,7 +295,8 @@ jobs:
       - name: Release tenant alu
         id: tenant_release
         shell: bash
-        run: "$RUNNER_TEMP/dispatch-release-workflow.sh release-alu-tenant.yml $EVIDENCE_DIR/tenant"
+        run: |
+          "$RUNNER_TEMP/dispatch-release-workflow.sh" release-alu-tenant.yml "$EVIDENCE_DIR/tenant"
 
       - name: Roll back tenant Worker after tenant release failure
         if: ${{ failure() && steps.tenant_release.outcome == 'failure' }}
@@ -310,7 +311,8 @@ jobs:
       - name: Release Alumdoor app Worker
         id: app_release
         shell: bash
-        run: "$RUNNER_TEMP/dispatch-release-workflow.sh release-alumdoor-app.yml $EVIDENCE_DIR/app"
+        run: |
+          "$RUNNER_TEMP/dispatch-release-workflow.sh" release-alumdoor-app.yml "$EVIDENCE_DIR/app"
 
       - name: Restore previous app content after app release failure
         if: ${{ failure() && steps.app_release.outcome == 'failure' }}
@@ -334,7 +336,8 @@ jobs:
       - name: Release Gateway and production UI
         id: gateway_release
         shell: bash
-        run: "$RUNNER_TEMP/dispatch-release-workflow.sh release-gateway.yml $EVIDENCE_DIR/gateway"
+        run: |
+          "$RUNNER_TEMP/dispatch-release-workflow.sh" release-gateway.yml "$EVIDENCE_DIR/gateway"
 
       - name: Run full production HTTP smoke
         id: http_smoke
@@ -343,7 +346,7 @@ jobs:
           set -euo pipefail
           health=0
           root=0
-          for attempt in $(seq 1 24); do
+          for ((attempt = 1; attempt <= 24; attempt++)); do
             health="$(curl --silent --show-error --dump-header "$EVIDENCE_DIR/smoke/health.headers" --output "$EVIDENCE_DIR/smoke/health.json" --write-out '%{http_code}' -H 'cache-control: no-cache' "$BASE_URL/health?release=$TARGET_SHA" || true)"
             root="$(curl --silent --show-error --dump-header "$EVIDENCE_DIR/smoke/root.headers" --output "$EVIDENCE_DIR/smoke/root.html" --write-out '%{http_code}' -H 'cache-control: no-cache' "$BASE_URL/?release=$TARGET_SHA" || true)"
             if [ "$health" = '200' ] && [ "$root" = '200' ] && grep -q --fixed-strings "$TARGET_SHA" "$EVIDENCE_DIR/smoke/root.html"; then break; fi
@@ -354,10 +357,16 @@ jobs:
           grep -q --fixed-strings "$TARGET_SHA" "$EVIDENCE_DIR/smoke/root.html"
           boot="$(curl --silent --show-error --dump-header "$EVIDENCE_DIR/smoke/guest-boot.headers" --output "$EVIDENCE_DIR/smoke/guest-boot.json" --write-out '%{http_code}' -H 'cache-control: no-cache' "$BASE_URL/api/method/metaforge.api.get_boot" || true)"
           test "$boot" = '403'
-          ! grep -qi '^content-type:.*text/html' "$EVIDENCE_DIR/smoke/guest-boot.headers"
+          if grep -qi '^content-type:.*text/html' "$EVIDENCE_DIR/smoke/guest-boot.headers"; then
+            echo 'Guest boot returned HTML' >&2
+            exit 1
+          fi
           physical_stock="$(curl --silent --show-error --dump-header "$EVIDENCE_DIR/smoke/physical-stock.headers" --output "$EVIDENCE_DIR/smoke/physical-stock.json" --write-out '%{http_code}' -X POST -H 'content-type: application/json' -H 'cache-control: no-cache' --data '{"company":"Alumdoor"}' "$BASE_URL/api/v1/reports/physical-stock" || true)"
           case "$physical_stock" in 401|403) ;; *) exit 1 ;; esac
-          ! grep -qi '^content-type:.*text/html' "$EVIDENCE_DIR/smoke/physical-stock.headers"
+          if grep -qi '^content-type:.*text/html' "$EVIDENCE_DIR/smoke/physical-stock.headers"; then
+            echo 'Physical-stock API returned HTML' >&2
+            exit 1
+          fi
           printf 'health=%s\nroot=%s\nexact_sha_visible=pass\nguest_boot=%s\nphysical_stock_guest=%s\napi_html_fallback=absent\nhttp_smoke=pass\n' "$health" "$root" "$boot" "$physical_stock" > "$EVIDENCE_DIR/smoke/state.txt"
 
       - name: Run browser smoke on desktop and mobile
