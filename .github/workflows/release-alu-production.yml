@@ -16,12 +16,13 @@ concurrency:
 
 jobs:
   release:
+    if: ${{ github.head_ref == 'release/alu-sales-production-20260731' }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
     environment: production
     env:
       TENANT: alu
-      TARGET_SHA: 591ca359937d6ae12803d36c74996db8482060af
+      TARGET_SHA: 4500799f13de48ada1948ab583afcf2e52b4c2dd
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: d4d5a24d4e56f28f27fe58b64ef149a5
       EVIDENCE_DIR: ${{ runner.temp }}/alu-release-evidence
@@ -34,7 +35,7 @@ jobs:
           ref: ${{ env.TARGET_SHA }}
           persist-credentials: false
 
-      - name: Set up pnpm
+      - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 9.15.0
@@ -47,15 +48,16 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
-      - name: Verify inputs
+      - name: Verify release inputs
         shell: bash
         run: |
           set -euo pipefail
           test "$TENANT" = "alu"
-          test "$TARGET_SHA" = "591ca359937d6ae12803d36c74996db8482060af"
+          test "$TARGET_SHA" = "4500799f13de48ada1948ab583afcf2e52b4c2dd"
+          test "$GITHUB_HEAD_REF" = "release/alu-sales-production-20260731"
           test -n "${CLOUDFLARE_API_TOKEN:-}"
           mkdir -p "$EVIDENCE_DIR" "$BACKUP_DIR"
-          printf 'run_id=%s\ntarget_sha=%s\nstarted_at=%s\n' \
+          printf 'run_id=%s\ntarget_sha=%s\nstarted_at=%s\nfifo_rollout=disabled\n' \
             "$GITHUB_RUN_ID" "$TARGET_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             > "$EVIDENCE_DIR/state.txt"
 
@@ -78,7 +80,7 @@ jobs:
         with:
           name: alu-pre-release-backup-${{ github.run_id }}
           path: ${{ runner.temp }}/alu-backup/
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 14
 
       - name: Migrate tenant
@@ -116,9 +118,9 @@ jobs:
             [ "$health" = '200' ] && break
             sleep 5
           done
-          [ "$health" = '200' ]
+          test "$health" = '200'
           boot="$(curl --silent --show-error --output "$EVIDENCE_DIR/guest-boot.json" --write-out '%{http_code}' "$BASE/api/method/metaforge.api.get_boot" || true)"
-          [ "$boot" = '403' ]
+          test "$boot" = '403'
           printf 'health=%s\nguest_boot=%s\nsmoke=pass\n' "$health" "$boot" >> "$EVIDENCE_DIR/state.txt"
 
       - name: Collect deployment evidence
@@ -152,7 +154,6 @@ jobs:
             deployment_id: latest.id ?? null,
             deployment_created_on: latest.created_on ?? null,
             version_id: versionId,
-            migrations: ['0027', '0028', '0029'],
             fifo_rollout_enabled: false,
             health: 200,
             guest_boot: 403,
@@ -166,7 +167,9 @@ jobs:
             `- Deployment ID: \`${summary.deployment_id ?? 'not returned'}\``,
             `- Version ID: \`${summary.version_id ?? 'not returned'}\``,
             `- Deployment time: \`${summary.deployment_created_on ?? 'not returned'}\``,
-            '- Migrations 0027–0029: PASS',
+            '- Backup: PASS',
+            '- Migration wrapper: PASS',
+            '- Tenant deploy wrapper: PASS',
             '- FIFO rollout remains disabled: PASS',
             '- Health: 200',
             '- Guest boot: 403',
