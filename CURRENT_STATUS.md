@@ -6,61 +6,57 @@ Ngày cập nhật: **2026-07-31**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
+- Default head tại lần sync gần nhất: `51f462c7e76dd2c669c5721bcd625fdb1453a008`.
 - Working branch: `feat/inventory-physical-stock-slice-b-20260731`.
-- Draft PR: `#49` — `feat(inventory): canonical physical stock identity and warehouse roles`.
-- Không commit `.env`, `.dev.vars`, secret, `server/work/`, `tmp/`, backup SQL hoặc generated evidence.
+- PR `#49` — Inventory Slice B.
+- Sync merge commit: `2f31b2dc74c6f44ca119bb9a53fe7bc13cae844d`.
 
 ## Inventory Slice B
 
-### Phạm vi đã hoàn thành
+### Đã triển khai
 
-- Server-built physical identity cho inventory mode/profile, màu, tình trạng, đời, kích thước và physical count.
-- Batch/serial/Aluminium Lot lineage và kiểm quantity/direction của bundle.
-- Warehouse-role rules cho receipt, transfer, issue/manufacture, quarantine và scrap/offcut recovery.
-- Exact cancellation dựa trên ledger gốc; không tạo stock book thứ hai.
+- Physical identity server-authoritative cho hàng thường và hàng có kích thước.
+- Inventory mode/profile, màu, tình trạng, đời, dimensions và physical count snapshot.
+- Batch/serial/Aluminium Lot lineage và exact bundle quantity/direction.
+- Warehouse roles cho receipt, transfer, issue/manufacture, quarantine và scrap/offcut recovery.
+- Exact cancellation/reversal từ append-only ledger rows.
 - Company-wide Durable Object coordination cho Stock Entry và Work Order submit/cancel.
-- Regression cho identity mismatch, stale lot warehouse, second transfer, quarantine/recovery và concurrent issue.
+- Không thêm migration hoặc stock ledger thứ hai.
 
-### Review
+### Files chính
 
-- Review file: `server/docs/ALUMDOOR-INVENTORY-SLICE-B-REVIEW.md`.
-- Score: **97/100**.
+- `server/packages/clouderp-erpnext/src/physical-stock-entry.ts`.
+- `server/apps/tenant-worker/src/inventory-coordinator.ts`.
+- `server/apps/tenant-worker/src/aggregate-do.ts`.
+- `server/tests/alumdoor-physical-stock.test.mjs`.
+- `server/tests/alumdoor-physical-stock-concurrency.test.mjs`.
+- `server/tests/inventory-coordinator.test.mjs`.
+
+### Review và validation
+
+- Review score: **97/100**.
 - Critical: **0**.
-- High: **0** sau remediation.
+- High: **0**.
+- Head trước sync `423af47b7e2bfb31c160934aa241716511449107` có toàn bộ required workflows PASS.
+- Sau default tiến thêm 10 commit, branch đã được dựng lại trên current default bằng merge commit `2f31b2dc74c6f44ca119bb9a53fe7bc13cae844d`.
+- Exact-head CI sau sync/handoff là merge gate hiện tại.
 
-### Đồng bộ default
+## Stack
 
-- Default mới nhất: `f0768d59ff66d04c333fd290c120f7672a80ea96`.
-- Default chứa Purchase/FIFO activation readiness safeguards từ PR `#75`.
-- Nhánh kho đã đồng bộ bằng merge commit `47acf088135cb770dc30d021b5a45a9fcdca3c21`.
-- Code/test riêng Slice B được giữ nguyên; Purchase tooling mới từ default được giữ lại.
-- Handoff/status/tasks được chỉnh lại để phản ánh đúng nhánh kho.
+- PR `#50` Manufacturing Slice C: stack trên Slice B, required CI từng PASS trên head `df708fb13ae1a1e0538e8260a24a0251b0dff347`; cần retarget và CI lại sau #49.
+- PR `#82` Inventory Slice D: stack trên Slice C, head gần nhất `fbbd39568fb50c179659147ef800ae14e3e12dd9`; cần retarget sau #50.
 
-### Exact final head
+## Default production/release evidence được bảo toàn
 
-- Commit handoff sau sync: `20360dfd79bdd97f8fd46362250ce7fc43b956c8`.
-- Các commit tài liệu tiếp theo sẽ tạo final head mới và kích hoạt lại CI.
-- Chỉ CI trên exact final head mới được dùng làm merge evidence.
-
-## Purchase/FIFO trên default
-
-- PR `#63` lifecycle correction đã merge và release tenant production.
-- PR `#75` bổ sung read-only activation readiness safeguards và runbook.
-- FIFO rollout vẫn **disabled**.
-- Không có activation, backfill production hoặc secret/DNS change trong đợt kho này.
-
-## Gate còn lại cho Inventory
-
-1. Toàn bộ required workflows PASS trên exact final head.
-2. PR #49 conflict-free, review threads sạch và chuyển khỏi draft.
-3. Read-only live tenant catalog audit và remediation plan.
-4. Staging receive/transfer/issue/quarantine/scrap/cancel journeys.
-5. Production load/latency observation cho company-wide inventory lock.
-6. Physical-stock UI/report/read model trong Slice D.
-7. Explicit merge/deployment approval riêng.
-
-## Production hiện hành
-
-- Tenant Worker `cloudforge-tenant-alu`: `88c508a7-f3f7-4844-9c8b-85a02bc362f3`.
-- Gateway `cloudforge-gateway`: `b0d0ce5b-408c-47ab-a734-fa55ba4d9c00`.
+- Sales Unicode Item Price merge: `a48524b93489c92296c57fc5f223e41d505de7aa`.
+- Sales release preparation merge: `077d9944b1cfc1f436da87472f070ee2bd864b44`; chưa coi là production execution evidence.
+- Production observation run `30648098602`: endpoint checks PASS; reporting comment permission từng lỗi `403`.
+- Purchase/FIFO checksum lock merge: `a67d62377f1869d95906320636eabbd9bbd56ab7`.
 - FIFO rollout: **disabled**.
+
+## Safety
+
+- Không deploy Cloudflare trong chuỗi merge này.
+- Không migration, backup, backfill hoặc mutate tenant.
+- Không sửa production secrets hoặc DNS.
+- Không commit `.env`, `server/work/`, `tmp`, backup hoặc generated artifacts.
