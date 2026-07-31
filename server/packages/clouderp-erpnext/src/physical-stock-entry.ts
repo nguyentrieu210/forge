@@ -68,20 +68,32 @@ interface IdentityHints {
   lengthMicros?: number;
 }
 
+interface ModeValidation {
+  action: string;
+  itemCode: string;
+  mode: string;
+  profile: string;
+  color: string;
+  lengthMicros: number | undefined;
+  widthMicros: number | undefined;
+  heightMicros: number | undefined;
+  physicalCountMicros: number;
+  refs: PhysicalLotRef[];
+  index: number;
+}
+
 /**
  * Adds an immutable, server-built physical identity snapshot to every Stock Entry row.
  *
- * The append-only stock ledger remains the only quantity/value movement ledger. The
- * snapshot lives on the canonical voucher row and the ledger already stores batch/serial,
- * voucher revision, warehouse, quantity, weight and value. This deliberately avoids a
- * second movement table that could drift from stock valuation while still preserving the
- * dimensions and warehouse-role meaning used when the voucher was posted.
+ * The append-only stock ledger remains the only quantity/value movement ledger. Physical
+ * dimensions and warehouse-role meaning are frozen on the canonical voucher row, while
+ * the existing ledger keeps voucher revision, warehouse, quantity, weight, value and
+ * batch/serial lineage. This avoids inventing another stock ledger that could drift.
  */
 export class PhysicalStockEntryController extends AdvancedStockEntryController {
   override async normalize(context: ControllerContext<StockEntryData>): Promise<StockEntryData> {
     const normalized = await super.normalize(context) as PhysicalStockData;
     const rows: PhysicalStockRow[] = [];
-
     for (const [index, input] of normalized.items.entries()) {
       rows.push(await enrichPhysicalRow(context, normalized, input as PhysicalStockRow, index));
     }
@@ -92,18 +104,18 @@ export class PhysicalStockEntryController extends AdvancedStockEntryController {
         row_id: "FINISHED",
         item_code: normalized.finished_good_item,
         qty: normalized.finished_good_qty ?? "0",
-        qty_micros: normalized.finished_good_qty_micros,
         target_warehouse: normalized.target_warehouse,
-        serial_and_batch_bundle: normalized.finished_good_bundle,
-        color: normalized.finished_good_color,
-        condition: normalized.finished_good_condition,
-        generation: normalized.finished_good_generation,
-        length_m: normalized.finished_good_length_m,
-        width_m: normalized.finished_good_width_m,
-        height_m: normalized.finished_good_height_m,
-        roll_width_m: normalized.finished_good_roll_width_m,
-        thickness_mm: normalized.finished_good_thickness_mm,
-        set_count: normalized.finished_good_set_count,
+        ...(normalized.finished_good_qty_micros === undefined ? {} : { qty_micros: normalized.finished_good_qty_micros }),
+        ...(normalized.finished_good_bundle ? { serial_and_batch_bundle: normalized.finished_good_bundle } : {}),
+        ...(normalized.finished_good_color ? { color: normalized.finished_good_color } : {}),
+        ...(normalized.finished_good_condition ? { condition: normalized.finished_good_condition } : {}),
+        ...(normalized.finished_good_generation ? { generation: normalized.finished_good_generation } : {}),
+        ...(normalized.finished_good_length_m === undefined ? {} : { length_m: normalized.finished_good_length_m }),
+        ...(normalized.finished_good_width_m === undefined ? {} : { width_m: normalized.finished_good_width_m }),
+        ...(normalized.finished_good_height_m === undefined ? {} : { height_m: normalized.finished_good_height_m }),
+        ...(normalized.finished_good_roll_width_m === undefined ? {} : { roll_width_m: normalized.finished_good_roll_width_m }),
+        ...(normalized.finished_good_thickness_mm === undefined ? {} : { thickness_mm: normalized.finished_good_thickness_mm }),
+        ...(normalized.finished_good_set_count === undefined ? {} : { set_count: normalized.finished_good_set_count }),
       };
       const enriched = await enrichPhysicalRow(context, normalized, pseudoRow, rows.length, true);
       finishedGoodPhysicalIdentity = physicalSnapshot(enriched);
@@ -125,20 +137,13 @@ async function enrichPhysicalRow(
   finishedGood = false,
 ): Promise<PhysicalStockRow> {
   const item = await context.reader.getMasterRecordData(context.command.tenant_id, "Item", row.item_code);
-  if (!item && context.command.action === "submit") {
-    throw errors.reference(`Item ${row.item_code} does not exist`);
-  }
+  if (!item && context.command.action === "submit") throw errors.reference(`Item ${row.item_code} does not exist`);
 
   const mode = text(item?.inventory_mode) || "Hàng thường";
   const profile = text(item?.measurement_profile);
-  const sourceRole = row.source_warehouse
-    ? await warehouseRole(context, row.source_warehouse)
-    : undefined;
-  const targetRole = row.target_warehouse
-    ? await warehouseRole(context, row.target_warehouse)
-    : undefined;
-
-  assertWarehouseRoles(document, row, sourceRole, targetRole, finishedGood, index);
+  const sourceRole = row.source_warehouse ? await warehouseRole(context, row.source_warehouse) : undefined;
+  const targetRole = row.target_warehouse ? await warehouseRole(context, row.target_warehouse) : undefined;
+  assertWarehouseRoles(document, sourceRole, targetRole, finishedGood, index);
 
   const direction = row.source_warehouse ? "Outward" : "Inward";
   const bundleWarehouse = row.source_warehouse ?? row.target_warehouse;
@@ -152,8 +157,8 @@ async function enrichPhysicalRow(
   );
 
   const color = text(row.color ?? row.colour) || hints.color || text(item?.default_color);
-  const condition = text(row.condition) || hints.condition;
-  const generation = text(row.generation) || hints.generation;
+  const condition = text(row.condition) || hints.condition || "";
+  const generation = text(row.generation) || hints.generation || "";
   const lengthMicros = positiveMicros(row.length_m, `items[${index}].length_m`) ?? hints.lengthMicros;
   const widthMicros = positiveMicros(row.width_m ?? row.roll_width_m, `items[${index}].width_m`);
   const heightMicros = positiveMicros(row.height_m, `items[${index}].height_m`);
@@ -198,10 +203,10 @@ async function enrichPhysicalRow(
     physical_identity_version: 1,
     physical_identity_key: identityKey,
     physical_count_micros: physicalCountMicros,
-    ...(lengthMicros ? { length_m: fromScaledInt(lengthMicros, 6), length_micros: lengthMicros } : {}),
-    ...(widthMicros ? { width_m: fromScaledInt(widthMicros, 6), width_micros: widthMicros } : {}),
-    ...(heightMicros ? { height_m: fromScaledInt(heightMicros, 6), height_micros: heightMicros } : {}),
-    ...(thicknessMicros ? { thickness_mm: fromScaledInt(thicknessMicros, 6), thickness_micros: thicknessMicros } : {}),
+    ...(lengthMicros === undefined ? {} : { length_m: fromScaledInt(lengthMicros, 6), length_micros: lengthMicros }),
+    ...(widthMicros === undefined ? {} : { width_m: fromScaledInt(widthMicros, 6), width_micros: widthMicros }),
+    ...(heightMicros === undefined ? {} : { height_m: fromScaledInt(heightMicros, 6), height_micros: heightMicros }),
+    ...(thicknessMicros === undefined ? {} : { thickness_mm: fromScaledInt(thicknessMicros, 6), thickness_micros: thicknessMicros }),
     ...(sourceRole ? { source_warehouse_role: sourceRole } : {}),
     ...(targetRole ? { target_warehouse_role: targetRole } : {}),
     ...(refs.length ? { physical_lot_refs: refs } : {}),
@@ -218,11 +223,11 @@ function physicalSnapshot(row: PhysicalStockRow): JsonObject {
     ...(row.color ? { color: row.color } : {}),
     ...(row.condition ? { condition: row.condition } : {}),
     ...(row.generation ? { generation: row.generation } : {}),
-    ...(row.physical_count_micros !== undefined ? { physical_count_micros: row.physical_count_micros } : {}),
-    ...(row.length_micros !== undefined ? { length_micros: row.length_micros } : {}),
-    ...(row.width_micros !== undefined ? { width_micros: row.width_micros } : {}),
-    ...(row.height_micros !== undefined ? { height_micros: row.height_micros } : {}),
-    ...(row.thickness_micros !== undefined ? { thickness_micros: row.thickness_micros } : {}),
+    ...(row.physical_count_micros === undefined ? {} : { physical_count_micros: row.physical_count_micros }),
+    ...(row.length_micros === undefined ? {} : { length_micros: row.length_micros }),
+    ...(row.width_micros === undefined ? {} : { width_micros: row.width_micros }),
+    ...(row.height_micros === undefined ? {} : { height_micros: row.height_micros }),
+    ...(row.thickness_micros === undefined ? {} : { thickness_micros: row.thickness_micros }),
     ...(row.target_warehouse_role ? { target_warehouse_role: row.target_warehouse_role } : {}),
     ...(row.physical_lot_refs ? { physical_lot_refs: row.physical_lot_refs } : {}),
   };
@@ -244,19 +249,19 @@ async function readPhysicalLotRefs(
     return { refs: [], hints: {} };
   }
 
-  const bundleDocument = await context.reader.getDocument<SerialBatchBundleData>(
+  const document = await context.reader.getDocument<SerialBatchBundleData>(
     context.command.tenant_id,
     "Serial and Batch Bundle",
     bundleName,
   );
-  if (!bundleDocument) {
+  if (!document) {
     if (context.command.action === "submit") throw errors.reference(`Serial and Batch Bundle ${bundleName} does not exist`);
     return { refs: [], hints: {} };
   }
-  if (context.command.action === "submit" && bundleDocument.docstatus !== 1) {
+  if (context.command.action === "submit" && document.docstatus !== 1) {
     throw errors.reference(`Serial and Batch Bundle ${bundleName} must be submitted`);
   }
-  const bundle = bundleDocument.data;
+  const bundle = document.data;
   if (bundle.item_code !== row.item_code || (warehouse && bundle.warehouse !== warehouse) || bundle.type !== direction) {
     throw errors.reference(`Serial and Batch Bundle ${bundleName} does not match physical item, warehouse or direction`);
   }
@@ -286,9 +291,7 @@ async function readPhysicalLotRefs(
       context.reader.getMasterRecordData(context.command.tenant_id, "Batch", entry.batch_no),
       context.reader.getMasterRecordData(context.command.tenant_id, "Aluminium Lot", entry.batch_no),
     ]);
-    if (direction === "Outward" && !batch) {
-      throw errors.reference(`Batch ${entry.batch_no} does not exist`);
-    }
+    if (direction === "Outward" && !batch) throw errors.reference(`Batch ${entry.batch_no} does not exist`);
     if (batch && text(batch.item_code) && text(batch.item_code) !== row.item_code) {
       throw errors.reference(`Batch ${entry.batch_no} belongs to another Item`);
     }
@@ -299,11 +302,11 @@ async function readPhysicalLotRefs(
     if (direction === "Outward" && warehouse && text(aluminiumLot.warehouse) && text(aluminiumLot.warehouse) !== warehouse) {
       throw errors.reference(`Lô nhôm ${entry.batch_no} không nằm trong kho ${warehouse}`);
     }
-    mergeHint(hints, "color", text(aluminiumLot.colour ?? aluminiumLot.color), entry.batch_no);
-    mergeHint(hints, "condition", text(aluminiumLot.condition), entry.batch_no);
-    mergeHint(hints, "generation", text(aluminiumLot.generation), entry.batch_no);
+    setStringHint(hints, "color", text(aluminiumLot.colour ?? aluminiumLot.color), entry.batch_no);
+    setStringHint(hints, "condition", text(aluminiumLot.condition), entry.batch_no);
+    setStringHint(hints, "generation", text(aluminiumLot.generation), entry.batch_no);
     const lotLength = positiveMicros(aluminiumLot.width_m ?? aluminiumLot.length_m, `Aluminium Lot ${entry.batch_no}.width_m`);
-    if (lotLength !== undefined) mergeHint(hints, "lengthMicros", lotLength, entry.batch_no);
+    if (lotLength !== undefined) setLengthHint(hints, lotLength, entry.batch_no);
   }
 
   const rowQty = row.qty_micros ?? toScaledInt(row.qty, 6, `items[${index}].qty`);
@@ -316,18 +319,27 @@ async function readPhysicalLotRefs(
   return { refs, hints };
 }
 
-function mergeHint<K extends keyof IdentityHints>(
-  target: IdentityHints,
-  field: K,
-  value: IdentityHints[K],
+function setStringHint(
+  hints: IdentityHints,
+  field: "color" | "condition" | "generation",
+  value: string,
   lot: string,
 ): void {
-  if (value === undefined || value === "") return;
-  const current = target[field];
-  if (current !== undefined && current !== value) {
-    throw errors.reference(`Các lô trong cùng dòng có ${String(field)} khác nhau; tách lô ${lot} sang dòng riêng`);
+  if (!value) return;
+  const current = hints[field];
+  if (current && current !== value) {
+    throw errors.reference(`Các lô trong cùng dòng có ${field} khác nhau; tách lô ${lot} sang dòng riêng`);
   }
-  target[field] = value;
+  if (field === "color") hints.color = value;
+  else if (field === "condition") hints.condition = value;
+  else hints.generation = value;
+}
+
+function setLengthHint(hints: IdentityHints, value: number, lot: string): void {
+  if (hints.lengthMicros !== undefined && hints.lengthMicros !== value) {
+    throw errors.reference(`Các lô trong cùng dòng có chiều dài khác nhau; tách lô ${lot} sang dòng riêng`);
+  }
+  hints.lengthMicros = value;
 }
 
 async function warehouseRole(
@@ -351,7 +363,6 @@ async function warehouseRole(
 
 function assertWarehouseRoles(
   document: PhysicalStockData,
-  row: PhysicalStockRow,
   sourceRole: WarehouseRole | undefined,
   targetRole: WarehouseRole | undefined,
   finishedGood: boolean,
@@ -363,11 +374,8 @@ function assertWarehouseRoles(
   } else if (document.purpose === "Material Issue") {
     assertAllowed(sourceRole, ["RAW_MATERIAL", "WIP", "FINISHED_GOODS", "SCRAP_OFFCUT", "GENERAL"], `${label}: kho xuất`);
   } else if (document.purpose === "Manufacture") {
-    if (finishedGood) {
-      assertAllowed(targetRole, ["WIP", "FINISHED_GOODS", "QUARANTINE", "GENERAL"], `${label}: kho nhập`);
-    } else {
-      assertAllowed(sourceRole, ["RAW_MATERIAL", "WIP", "GENERAL"], `${label}: kho cấp vật tư`);
-    }
+    if (finishedGood) assertAllowed(targetRole, ["WIP", "FINISHED_GOODS", "QUARANTINE", "GENERAL"], `${label}: kho nhập`);
+    else assertAllowed(sourceRole, ["RAW_MATERIAL", "WIP", "GENERAL"], `${label}: kho cấp vật tư`);
   }
 
   if (document.purpose === "Material Transfer" && sourceRole === "QUARANTINE" && targetRole !== "QUARANTINE") {
@@ -380,55 +388,32 @@ function assertWarehouseRoles(
       throw errors.validation(`${label}: phục hồi hàng từ kho phế/đầu thừa phải có recovery_reason`);
     }
   }
-
-  if (row.source_warehouse && row.target_warehouse && sourceRole === "QUARANTINE" && targetRole === "FINISHED_GOODS") {
-    if (!text(document.quality_release_reference)) {
-      throw errors.validation(`${label}: nhập thành phẩm từ kho chờ kiểm phải có quality_release_reference`);
-    }
-  }
 }
 
-function assertAllowed(
-  role: WarehouseRole | undefined,
-  allowed: WarehouseRole[],
-  label: string,
-): void {
-  if (!role) return;
-  if (!allowed.includes(role)) {
+function assertAllowed(role: WarehouseRole | undefined, allowed: WarehouseRole[], label: string): void {
+  if (role && !allowed.includes(role)) {
     throw errors.validation(`${label} có vai trò ${role}, không hợp lệ cho mục đích chứng từ`);
   }
 }
 
-function validateModeFields(input: {
-  action: string;
-  itemCode: string;
-  mode: string;
-  profile: string;
-  color: string;
-  lengthMicros?: number;
-  widthMicros?: number;
-  heightMicros?: number;
-  physicalCountMicros: number;
-  refs: PhysicalLotRef[];
-  index: number;
-}): void {
+function validateModeFields(input: ModeValidation): void {
   if (!isDimensionedMode(input.mode)) return;
   if (!input.profile && input.action === "submit") {
     throw errors.validation(`Dòng ${input.index + 1} của ${input.itemCode} thiếu Measurement Profile`);
   }
   if (input.action !== "submit") return;
-  const normalized = normalizeText(input.mode);
-  if (normalized === "nhom cay/la") {
+  const mode = normalizeText(input.mode);
+  if (mode === "nhom cay/la") {
     if (!input.color || !input.lengthMicros || input.physicalCountMicros <= 0) {
       throw errors.validation(`Dòng ${input.index + 1} của ${input.itemCode} thiếu màu, chiều dài hoặc số cây/lá`);
     }
-  } else if (normalized === "tam/kinh" || normalized === "kinh/tam") {
+  } else if (mode === "tam/kinh" || mode === "kinh/tam") {
     if (!input.widthMicros || !input.heightMicros) {
       throw errors.validation(`Dòng ${input.index + 1} của ${input.itemCode} thiếu rộng/cao tấm kính`);
     }
-  } else if (normalized === "cuon") {
+  } else if (mode === "cuon") {
     if (!input.widthMicros) throw errors.validation(`Dòng ${input.index + 1} của ${input.itemCode} thiếu khổ cuộn`);
-  } else if (normalized === "thanh pham theo m2") {
+  } else if (mode === "thanh pham theo m2") {
     if (!input.widthMicros || !input.heightMicros || input.physicalCountMicros <= 0) {
       throw errors.validation(`Dòng ${input.index + 1} của ${input.itemCode} thiếu rộng/cao/số bộ thành phẩm`);
     }
@@ -440,12 +425,8 @@ function validateModeFields(input: {
 
 function physicalCount(row: PhysicalStockRow, mode: string, index: number): number {
   const normalized = normalizeText(mode);
-  if (normalized === "nhom cay/la") {
-    return positiveMicros(row.qty_bar, `items[${index}].qty_bar`) ?? 0;
-  }
-  if (normalized === "thanh pham theo m2") {
-    return positiveMicros(row.set_count, `items[${index}].set_count`) ?? 0;
-  }
+  if (normalized === "nhom cay/la") return positiveMicros(row.qty_bar, `items[${index}].qty_bar`) ?? 0;
+  if (normalized === "thanh pham theo m2") return positiveMicros(row.set_count, `items[${index}].set_count`) ?? 0;
   return row.qty_micros ?? toScaledInt(row.qty, 6, `items[${index}].qty`);
 }
 
@@ -456,10 +437,10 @@ function canonicalIdentityKey(input: {
   color: string;
   condition: string;
   generation: string;
-  lengthMicros?: number;
-  widthMicros?: number;
-  heightMicros?: number;
-  thicknessMicros?: number;
+  lengthMicros: number | undefined;
+  widthMicros: number | undefined;
+  heightMicros: number | undefined;
+  thicknessMicros: number | undefined;
   refs: PhysicalLotRef[];
 }): string {
   const lots = input.refs
