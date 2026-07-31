@@ -69,7 +69,7 @@ jobs:
       - name: Apply metadata and integration patch
         run: node server/scripts/apply-sales-production-feature.mjs
 
-      - name: Complete policy fixtures, parser and strict TypeScript
+      - name: Complete policy fixtures, interface, parser and strict TypeScript
         shell: bash
         run: |
           set -euo pipefail
@@ -112,29 +112,46 @@ jobs:
 
           door_path = Path('server/apps-src/alumdoor-worker/src/door-formulas.ts')
           door_source = door_path.read_text()
+          interface_anchor = '  note?: string;\n}\n\nexport interface DoorFormulaInput'
+          interface_replacement = '''  note?: string;
+            ray_type?: "U75" | "U100" | "Ray sắt U70" | "Không dùng ray";
+            leaf_formula?: "Kiểu Đức" | "Kiểu Úc" | "Kiểu tấm liền Úc" | "Kiểu Đài Loan Lưới";
+            leaf_height_deduction_m?: number;
+            leaf_divisor_source?: "Bản lá của bộ quy cách" | "Hằng số của chính sách";
+            leaf_divisor_const?: number;
+            leaf_rounding?: "Ngưỡng trừ-một-lá" | "Nấc 0-0.3-0.7-1" | "Làm tròn xuống";
+            leaf_round_threshold?: number;
+            leaf_variants?: Array<{ variant_label?: string; addend?: number; note?: string }>;
+          }
+
+          export interface DoorFormulaInput'''
+          if door_source.count(interface_anchor) != 1:
+              raise SystemExit(f'policy interface anchor count={door_source.count(interface_anchor)}')
+          door_source = door_source.replace(interface_anchor, interface_replacement, 1)
+
           parser_anchor = '    ...(input.note ? { note: String(input.note) } : {}),\n  };\n}'
           parser_replacement = '''    ...(input.note ? { note: String(input.note) } : {}),
-              ...(input.ray_type ? { ray_type: String(input.ray_type) as NonNullable<DoorFormulaPolicy["ray_type"]> } : {}),
-              ...(input.leaf_formula ? { leaf_formula: String(input.leaf_formula) as NonNullable<DoorFormulaPolicy["leaf_formula"]> } : {}),
-              ...(input.leaf_height_deduction_m == null || input.leaf_height_deduction_m === ""
-                ? {}
-                : { leaf_height_deduction_m: Number(input.leaf_height_deduction_m) }),
-              ...(input.leaf_divisor_source
-                ? { leaf_divisor_source: String(input.leaf_divisor_source) as NonNullable<DoorFormulaPolicy["leaf_divisor_source"]> }
-                : {}),
-              ...(input.leaf_divisor_const == null || input.leaf_divisor_const === ""
-                ? {}
-                : { leaf_divisor_const: Number(input.leaf_divisor_const) }),
-              ...(input.leaf_rounding
-                ? { leaf_rounding: String(input.leaf_rounding) as NonNullable<DoorFormulaPolicy["leaf_rounding"]> }
-                : {}),
-              ...(input.leaf_round_threshold == null || input.leaf_round_threshold === ""
-                ? {}
-                : { leaf_round_threshold: Number(input.leaf_round_threshold) }),
-              ...(Array.isArray(input.leaf_variants)
-                ? { leaf_variants: input.leaf_variants as NonNullable<DoorFormulaPolicy["leaf_variants"]> }
-                : {}),
-            };
+            ...(input.ray_type ? { ray_type: String(input.ray_type) as NonNullable<DoorFormulaPolicy["ray_type"]> } : {}),
+            ...(input.leaf_formula ? { leaf_formula: String(input.leaf_formula) as NonNullable<DoorFormulaPolicy["leaf_formula"]> } : {}),
+            ...(input.leaf_height_deduction_m == null || input.leaf_height_deduction_m === ""
+              ? {}
+              : { leaf_height_deduction_m: Number(input.leaf_height_deduction_m) }),
+            ...(input.leaf_divisor_source
+              ? { leaf_divisor_source: String(input.leaf_divisor_source) as NonNullable<DoorFormulaPolicy["leaf_divisor_source"]> }
+              : {}),
+            ...(input.leaf_divisor_const == null || input.leaf_divisor_const === ""
+              ? {}
+              : { leaf_divisor_const: Number(input.leaf_divisor_const) }),
+            ...(input.leaf_rounding
+              ? { leaf_rounding: String(input.leaf_rounding) as NonNullable<DoorFormulaPolicy["leaf_rounding"]> }
+              : {}),
+            ...(input.leaf_round_threshold == null || input.leaf_round_threshold === ""
+              ? {}
+              : { leaf_round_threshold: Number(input.leaf_round_threshold) }),
+            ...(Array.isArray(input.leaf_variants)
+              ? { leaf_variants: input.leaf_variants as NonNullable<DoorFormulaPolicy["leaf_variants"]> }
+              : {}),
+          };
           }'''
           if door_source.count(parser_anchor) != 1:
               raise SystemExit(f'policy parser anchor count={door_source.count(parser_anchor)}')
