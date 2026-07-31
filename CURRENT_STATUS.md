@@ -1,5 +1,18 @@
 # CURRENT STATUS
 
+## Tồn kho/Sản xuất — Slice B và Slice C đã mở
+
+- Default tại thời điểm mở nhánh: `4d566a44fd1f04979e4e6de952fd81da9b28e93e`.
+- Slice B branch: `feat/inventory-physical-stock-slice-b-20260731`.
+- Slice C branch dự kiến: `feat/manufacturing-bom-workorder-slice-c-20260731`, xếp chồng lên Slice B.
+- Kickoff authoritative: `server/docs/ALUMDOOR-INVENTORY-MANUFACTURING-SLICE-BC-KICKOFF.md`.
+- Metadata authoritative: `server/briefs/alumdoor-v2.json`, version `2.0.34`.
+- G0/G1: PASS; G2 đã refresh theo default hiện tại; G3 cho Slice B/C chưa bắt đầu.
+- RBAC PR #45 đã merge và đưa migration `0030_rbac_audit.sql` vào default.
+- Purchase PR #14 vẫn open/draft và đang giữ migration `0031_purchase_allocation_control_metadata.sql`.
+- Slice B/C chưa được phép nhận số migration cho tới khi #14 merge/close và migration head được kiểm lại.
+- Chưa sửa runtime/schema, chưa migration tenant, chưa deploy, chưa đổi secret và FIFO vẫn disabled.
+
 ## Nhánh Bán hàng — multi-UOM price và tồn trên form
 
 - Branch: `feat/sales-complete-20260731`, base `cd60f8c09c48105db84a82c12ad3b32d9f075064`.
@@ -25,10 +38,8 @@ Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Working branch: `feat/inventory-manufacturing-item-catalog-20260731`.
-- PR: `#27` — `feat(inventory): audit Alumdoor Item catalog and manufacturing readiness`.
-- Default đã đồng bộ tới `81697d454db5e22e758a8aeda8cc40f1f247b18a`; branch behind `0` và conflict-free tại lần kiểm gần nhất.
-- PR body là nguồn authoritative cho final branch HEAD và exact-head workflow run/job IDs.
+- Working branch cũ của Slice A: `feat/inventory-manufacturing-item-catalog-20260731`.
+- PR #27 đã merge với merge commit `7af5f96a4a6bc756eb2c46511db17a609a49fdc5`.
 - Không commit `.env`, secret, `server/work/`, `tmp/`, backup hoặc generated report.
 
 ## Authoritative metadata và tài liệu
@@ -40,7 +51,7 @@ Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
   - `server/docs/ALUMDOOR-INVENTORY-MANUFACTURING-ITEM-AUDIT.md`;
   - `server/docs/ALUMDOOR-INVENTORY-MANUFACTURING-SLICE-A-REVIEW.md`.
 
-## Slice A đã hoàn thiện
+## Slice A đã hoàn thiện và merge
 
 ### Catalog audit
 
@@ -76,7 +87,7 @@ Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
 - `server/tests/alumdoor-item-validator.test.mjs`.
 - Cover disabled rows, redaction, deterministic checksum, output safety, service tracking, required stage/supply, UOM/profile/group và partial save.
 
-## Review score
+## Review score Slice A
 
 - Review: `server/docs/ALUMDOOR-INVENTORY-MANUFACTURING-SLICE-A-REVIEW.md`.
 - Điểm: **96/100**.
@@ -84,75 +95,22 @@ Ngày cập nhật: **2026-07-31**. Workspace vận hành chuẩn: `C:\Forge`.
 - High: **0** sau remediation.
 - Quality threshold `>=95`: **PASS**.
 
-## CI evidence
-
-Hai required workflows đã chạy xanh trên cả implementation head và handoff-doc head trong quá trình đóng gate:
-
-- `PR Validation`: repository tests, typecheck và build **PASS**.
-- `Inventory and Manufacturing CI`: focused tests, redacted audit artifact, server SQL, brief validation, frontend lint, repository tests, typecheck và build **PASS**.
-
-Final merge chỉ dùng workflow result gắn với **current PR head**; exact SHA/run/job được cập nhật trong PR body sau vòng final CI. Workflow `Cloudflare Production Release Observation` không phải merge gate và không được tính vào bằng chứng test.
-
-## Merge readiness
-
-Đã đạt:
-
-- G0 Scope: **PASS**.
-- G1 Requirements/BRD: **PASS**.
-- G2 Plan: **PASS**.
-- G3 tests/typecheck/build: **PASS**.
-- Review score: **96/100**.
-- Critical/High code finding: **0**.
-- Default synchronized, behind `0`, conflict-free tại lần kiểm gần nhất.
-- Không migration, deploy, secret hoặc tenant mutation.
-
-Quy tắc cuối:
-
-1. Hai required workflows phải xanh trên current PR head.
-2. Khi xanh, PR được chuyển khỏi draft sang ready for review.
-3. Không merge trước yêu cầu merge rõ ràng của người dùng.
-
-## Authoritative brief audit
-
-Audit brief v2.0.34 xác nhận:
-
-- 39 master fixtures;
-- 14 UOM;
-- 13 Item Group;
-- 6 Measurement Profile;
-- 6 Warehouse;
-- 0 Item;
-- 0 active BOM/Production Standard;
-- 0 Critical, 2 High, 4 Medium.
-
-Hai High là thiếu source Item/BOM trong brief, không phải code finding. Brief chứng minh schema/master scaffold, không chứng minh dữ liệu live.
-
 ## Live tenant audit và staging
 
 - Chưa chạy remote audit tenant `alu`.
-- Chưa staging/deploy.
-- Live audit và staging là gate trước remediation dữ liệu, Slice B/C và production release; không phải điều kiện code-quality để merge Slice A.
+- Chưa staging/deploy cho tồn kho/sản xuất.
+- Live audit và staging là gate trước remediation dữ liệu, rollout hoặc production release của Slice B/C.
 
 ## Điều phối và production safety
 
-- PR mua hàng `#14` vẫn open/draft và có migration `0031`; phải xác minh migration head trước Slice B/C.
+- PR mua hàng `#14` vẫn open/draft và có migration `0031`; phải xác minh migration head trước schema Slice B/C.
 - FIFO rollout tenant `alu` vẫn disabled.
 - Không deploy Gateway/Tenant Worker từ nhánh này.
 - Không migrate/mutate tenant `alu`.
 - Không sửa Cloudflare secret.
 
-## RBAC Slice B ready for review
+## RBAC Slice B đã merge
 
-- Final branch: `feat/rbac-permission-slice-b-final-20260731`, được rebase sạch từ default `7af5f96a4a6bc756eb2c46511db17a609a49fdc5` sau khi default nhận thêm inventory/manufacturing work.
-- PR authoritative: `#45`, ready for review, chưa merge.
-- Code scope gồm migration `0030_rbac_audit.sql`, atomic administration service, router wiring, migration/service/allowed-forbidden contract tests.
-- Audit ledger append-only, tenant scoped, JSON validated; database trigger chặn race xoá/khoá tenant admin cuối cùng.
-- User create + roles, role replacement, enable/disable, password/session revoke và User Permission add/remove được ghi cùng audit trong một D1 batch.
-- Self-disable, self-demote và last-admin guard đã có; audit không chứa password/hash/token/cookie/secret/trusted identity.
-- Service tests: 8/8 PASS trên Node 22 + disposable SQLite.
-- Core run `30622251469`, job `91129287256`: root test/typecheck/build PASS.
-- Wiring run `30623092302`: jobs `91131952789` và `91131952849` PASS.
-- Exact-head trước khi default dịch chuyển: runs `30623976677`, `30623976754`, `30624234745`, `30624234722`, `30624657390`, `30624657406` đều PASS các gate tương ứng, gồm browser QA và cookie auth smoke.
-- Branch final giữ nguyên toàn bộ inventory/manufacturing handoff hiện hành; chỉ append phần RBAC.
-- Còn lại: standard read-only exact-head CI sau rebase hiện tại, review diff/threads/mergeability và explicit approval trước merge.
-- Không deploy Cloudflare, không sửa production secrets và không bật FIFO.
+- PR #45 đã merge với merge commit `4341091b8a8dc0cea3de96510c34dc68a8b00ecb`.
+- Migration `0030_rbac_audit.sql` là migration head đã biết trên default trước khi PR #14 merge.
+- Atomic administration, audit ledger và last-admin guard đã vào default.
