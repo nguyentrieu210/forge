@@ -64,13 +64,41 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Verify repository
+      - name: Run tests
         shell: bash
         run: |
-          set -euo pipefail
-          pnpm test
-          pnpm typecheck
-          pnpm build
+          set +e
+          pnpm test > /tmp/purchase-preview-test.log 2>&1
+          status=$?
+          tail -n 240 /tmp/purchase-preview-test.log
+          exit $status
+
+      - name: Run typecheck
+        shell: bash
+        run: |
+          set +e
+          pnpm typecheck > /tmp/purchase-preview-typecheck.log 2>&1
+          status=$?
+          tail -n 240 /tmp/purchase-preview-typecheck.log
+          exit $status
+
+      - name: Run build
+        shell: bash
+        run: |
+          set +e
+          pnpm build > /tmp/purchase-preview-build.log 2>&1
+          status=$?
+          tail -n 240 /tmp/purchase-preview-build.log
+          exit $status
+
+      - name: Upload verification logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: purchase-preview-verification-${{ github.run_id }}
+          path: /tmp/purchase-preview-*.log
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Commit verified implementation
         shell: bash
