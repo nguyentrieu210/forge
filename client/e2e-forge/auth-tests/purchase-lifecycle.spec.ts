@@ -125,6 +125,10 @@ function tomorrow(): string {
   return date.toISOString().slice(0, 10);
 }
 
+function expectDocumentRoute(page: Page, doctype: string, name: string) {
+  expect(page.url()).toContain(`/app/${encodeURIComponent(doctype)}/${encodeURIComponent(name)}`);
+}
+
 test("authenticated Purchase Order to Purchase Receipt lifecycle works with FIFO disabled", async ({ page }) => {
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(String(error)));
@@ -187,7 +191,7 @@ test("authenticated Purchase Order to Purchase Receipt lifecycle works with FIFO
   expect(number(submittedOrder.grand_total)).toBe(200000);
 
   await page.goto(`/app/${encodeURIComponent("Purchase Order")}/${encodeURIComponent(submittedOrder.name)}`);
-  await expect(page.locator("body")).toContainText(submittedOrder.name);
+  expectDocumentRoute(page, "Purchase Order", submittedOrder.name);
   await expect(page.locator("body")).toContainText("QA-SUPPLIER");
 
   const createdReceipt = await createResource(page, csrf, "Purchase Receipt", {
@@ -224,8 +228,8 @@ test("authenticated Purchase Order to Purchase Receipt lifecycle works with FIFO
   });
   expect(createdReceipt.docstatus).toBe(0);
   expect(createdReceipt.name).toMatch(/^PNM-/);
-  expect(number(createdReceipt.grand_total)).toBe(200000);
-  expect(number(createdReceipt.total_qty)).toBe(2);
+  expect(number(createdReceipt.items?.[0]?.amount)).toBe(200000);
+  expect(number(createdReceipt.items?.[0]?.qty)).toBe(2);
 
   const savedReceipt = await updateResource(page, csrf, createdReceipt, {
     note: `Authenticated Purchase receipt saved ${qaSuffix}`,
@@ -242,12 +246,13 @@ test("authenticated Purchase Order to Purchase Receipt lifecycle works with FIFO
   expect(afterPreview.modified).toBe(beforePreview.modified);
 
   await page.goto(`/app/${encodeURIComponent("Purchase Receipt")}/${encodeURIComponent(savedReceipt.name)}`);
-  await expect(page.locator("body")).toContainText(savedReceipt.name);
+  expectDocumentRoute(page, "Purchase Receipt", savedReceipt.name);
   await expect(page.locator("body")).toContainText("QA-SUPPLIER");
 
   const submittedReceipt = await submit(page, csrf, afterPreview);
   expect(submittedReceipt.docstatus).toBe(1);
-  expect(number(submittedReceipt.grand_total)).toBe(200000);
+  expect(number(submittedReceipt.items?.[0]?.amount)).toBe(200000);
+  expect(number(submittedReceipt.items?.[0]?.qty)).toBe(2);
 
   const allocationTimeline = await browserRequest(
     page,

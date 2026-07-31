@@ -202,6 +202,11 @@ await ensureResource("Item", "AL71-QA", {
   valuation_method: "FIFO",
   has_catch_weight: 1,
   allow_negative_stock: 0,
+  allowed_colors: [{
+    doctype: "Item Allowed Color",
+    color: "THÔ",
+    note: "Local authenticated Tiến Đạt FIFO QA",
+  }],
   disabled: 0,
   description: "Deterministic local fixture for Tiến Đạt FIFO QA",
 });
