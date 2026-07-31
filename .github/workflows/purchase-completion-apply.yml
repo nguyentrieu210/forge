@@ -46,8 +46,8 @@ jobs:
           text = path.read_text()
           old = '''command: `pnpm --dir client exec vite --config e2e-forge/vite.purchase.config.ts --port ${port}`,
               cwd: path.join(here, "..", ".."),'''
-          new = '''command: `pnpm exec vite --config e2e-forge/vite.purchase.config.ts --port ${port}`,
-              cwd: path.join(here, ".."),'''
+          new = '''command: `pnpm --dir client/apps/runtime exec vite --config ../../e2e-forge/vite.purchase.config.ts --port ${port} --strictPort`,
+              cwd: path.join(here, "..", ".."),'''
           if old not in text:
               raise SystemExit('purchase Playwright webServer block was not found')
           path.write_text(text.replace(old, new))
@@ -92,6 +92,9 @@ jobs:
 
       - name: Install Chromium
         run: pnpm --filter e2e-forge exec playwright install --with-deps chromium
+
+      - name: Verify purchase harness Vite
+        run: pnpm --dir client/apps/runtime exec vite --version
 
       - name: Purchase browser QA
         id: purchase_browser
