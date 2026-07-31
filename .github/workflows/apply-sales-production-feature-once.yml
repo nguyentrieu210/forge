@@ -40,7 +40,7 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           path = Path('server/scripts/apply-sales-production-feature.mjs')
-          source = path.read_text()
+          source = path.read_text().replace('\\\\n', '\\n')
           before = '''  const cut = findDoctype(brief, "Cut Order");
             addField(cut, "work_order:Link(Work Order) Theo lệnh sản xuất", "so_reference");
             addField(cut, "target_color:Link(Item Color) Màu thành phẩm cần đạt", "work_order");
