@@ -9,7 +9,24 @@ export * from "./purchase-allocation-domain-store.js";
 export * from "./purchase-allocation-in-memory-store.js";
 export * from "./purchase-allocation-reader.js";
 export * from "./purchase-allocation-rollout-store.js";
-export * from "./purchase-allocation-timeline.js";
+export {
+  D1PurchaseAllocationTimelineService as D1PurchaseAllocationBaseTimelineService,
+  buildPurchaseAllocationTimeline,
+  type PurchaseAllocationTimeline,
+  type PurchaseAllocationTimelineColumn,
+  type PurchaseAllocationTimelineDoctype,
+  type PurchaseAllocationTimelineLedgerRow,
+  type PurchaseAllocationTimelineRow,
+  type PurchaseAllocationTimelineSummary,
+  type PurchaseAllocationTimelineWindow,
+  type PurchaseAllocationTimelineWindowRow,
+} from "./purchase-allocation-timeline.js";
+export {
+  D1PurchaseAllocationOperatorTimelineService as D1PurchaseAllocationTimelineService,
+  attachPurchaseAllocationQueueKeys,
+  type PurchaseAllocationOperatorTimeline,
+  type PurchaseAllocationOperatorWindow,
+} from "./purchase-allocation-operator-timeline.js";
 export * from "./reconciliation.js";
 export * from "./status.js";
 export * from "./store.js";
