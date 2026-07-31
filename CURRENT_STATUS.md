@@ -4,15 +4,16 @@
 
 - Branch: `feat/sales-complete-20260731`, base `cd60f8c09c48105db84a82c12ad3b32d9f075064`.
 - Draft PR: `#25` — `feat(sales): multi-UOM pricing and stock availability`.
-- HEAD nghiệp vụ trước commit trạng thái: `7e733546cb061d9069fdb74718880392123bf2b4`.
+- HEAD nghiệp vụ trước commit trạng thái: `9bcb36f4f068e662cfad2e1f64591390808cbe8f`.
 - Đã triển khai khoá giá chính xác theo `Bảng giá + Mặt hàng + ĐVT`; dữ liệu Item Price cũ không có UOM vẫn tương thích, còn dữ liệu cũ đã khai UOM chỉ được dùng khi dòng bán khớp tuyệt đối.
 - Báo giá/Đơn hàng lấy danh sách ĐVT hợp lệ từ Item, nạp giá đúng ĐVT và hiện tồn theo kho/ĐVT bán qua method chỉ đọc `alumdoor.sales.item_context`.
 - Preview giá hiện từ chối Item Price thiếu tiền tệ, sai tiền tệ chứng từ, đơn giá âm/sai định dạng hoặc đã ngừng áp dụng; không đẩy một rate không dùng được vào dòng bán.
-- Đã thêm `server/tests/alumdoor-sales-item-context.test.mjs` với 5 test tích hợp trực tiếp cho exact UOM price, quy đổi tồn, currency mismatch, disabled/malformed price, legacy UOM và undeclared UOM.
+- `server/tests/alumdoor-sales-item-context.test.mjs` có 5 test tích hợp trực tiếp cho exact UOM price, quy đổi tồn, currency mismatch, disabled/malformed price, legacy UOM và undeclared UOM.
+- `server/tests/alumdoor-sales-permissions.test.mjs` nạp metadata thật từ `server/briefs/alumdoor.json` vào `MetadataPermissionService`: vai trò `Kinh doanh` đọc được nhưng bị từ chối cả create/save trên `Price List` và `Item Price`; vai trò `Kế toán` vẫn create/save được cả hai.
 - Dòng bán hiển thị `Còn N <ĐVT>`, `Hết hàng`, `Chưa chọn kho`, `Không quản lý tồn` hoặc lỗi đọc tồn/giá.
 - Preview tồn không giữ chỗ; chốt thiếu tồn ở Delivery Note submit vẫn authoritative.
-- Sales Feature CI run `30619989044`, job `91122036987`: install, server unit tests, SQL tests, Alumdoor brief check, client tests, typecheck và build đều **PASS**.
-- PR Validation run `30619989057`, job `91122037316`: test, typecheck và build đều **PASS**.
+- Exact head `22b13a8aa597855792848dd085af741f467efaf7` trước test quyền đã qua Sales Feature CI run `30620312791` và PR Validation run `30620312786`, đều **PASS**.
+- Hai lượt CI cho test quyền (`9e535293...` và `9bcb36f4...`) thất bại trước khi có bất kỳ step nào: jobs trả `steps=null`, không có log để tải. Runs gần nhất: Sales Feature CI `30620681609`, PR Validation `30620681661`, Cloudflare observation `30620681614`. Phân loại hiện tại: **infrastructure**, không phải code failure; G4 vẫn đóng cho exact head mới.
 - Chưa browser/staging smoke với dữ liệu thật, chưa thiết kế reservation/ATP theo Sales Order.
 - Chưa merge PR, chưa deploy Cloudflare hoặc production, không sửa secrets.
 
