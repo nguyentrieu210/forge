@@ -5,44 +5,64 @@ Ngày cập nhật: **2026-07-31**.
 ## Dự án
 
 - Repository: `nguyentrieu210/forge`.
-- Default branch: `hotfix/alumdoor-print-list-delete`.
+- Base: `hotfix/alumdoor-print-list-delete`.
 - Working branch: `feat/metaforge-misa-workspace-tabs`.
-- GitHub là nguồn sự thật cho code, CI và trạng thái release.
+- Draft PR: `#81`.
+- GitHub là nguồn sự thật cho code và CI.
 
-## Mục tiêu hiện tại
+## Yêu cầu đã chốt
 
-Bổ sung điều hướng MetaForge theo hướng MISA: tab treo chọn phân hệ/nhóm Doctype-nghiệp vụ, sidebar chỉ hiển thị các mục thuộc phân hệ đang hoạt động.
+Thiết kế navigation theo cấu trúc quan sát trong `misa-amis-ba.zip`:
 
-## Thay đổi hiện có
+1. sidebar là các phân hệ;
+2. tab đầu của mỗi phân hệ là `Quy trình nghiệp vụ`, có shortcut mở DocType hoặc modal tạo mới;
+3. tab thứ hai là `Báo cáo tổng quan`;
+4. từ tab thứ ba trở đi là các nghiệp vụ/DocType.
+
+Phân hệ Meta phải có: Quy trình → Tổng quan → DocType → Workflow → Print Format → Dashboard.
+
+## Đã làm
 
 - `client/apps/demo/src/DemoShell.tsx`
-  - thêm `WorkspaceTabs`;
-  - tab được sinh từ `NavItem.group`, không thêm manifest trùng;
-  - active tab theo `activeKey`;
-  - click tab điều hướng tới mục khả dụng đầu tiên;
-  - lọc nav truyền vào `AppShell` theo group đang hoạt động;
-  - giữ nguyên Command Palette trên toàn bộ nav;
-  - fallback không đổi hành vi nếu chỉ có dưới hai group.
-- `CURRENT_STATUS.md`: ghi trạng thái, quyết định kiến trúc và giới hạn verification.
-- `NEXT_TASKS.md`: ưu tiên CI/UI validation và hướng nâng lên primitive dùng chung.
+  - thêm workspace/module/tab metadata;
+  - phân loại `process | overview | doctype`;
+  - hỗ trợ route alias để list/form/kanban cùng giữ một tab DocType active;
+  - sidebar sinh từ module, tab nằm đầu vùng nội dung.
+- `client/apps/demo/src/workspace-meta.tsx`
+  - module Nghiệp vụ và Meta;
+  - màn quy trình, shortcut, modal tạo mới;
+  - báo cáo tổng quan Meta;
+  - dùng design-system `Button`, không dùng native button.
+- `client/apps/demo/src/App.tsx`
+  - nối route và metadata;
+  - route mặc định `/view/process`;
+  - Command Palette giữ toàn bộ route.
+
+## Quyết định phạm vi
+
+- Prototype hiện chỉ áp dụng cho mock/demo `App.tsx`.
+- Chưa nối `LiveApp.tsx` vì live chưa có route và permission builder Meta thật. Không tạo menu dẫn tới route giả.
+- Việc nâng sang live nằm trong `NEXT_TASKS.md`.
 
 ## Verification
 
-- Chưa chạy local lint/test/typecheck/build vì không có checkout repository trong môi trường hiện tại.
-- Cần mở draft PR và lấy kết quả CI trên exact final head.
-- Nếu CI báo lỗi export, kiểm `Button` và `cn` từ `@metaforge/ui` trước.
-
-## Safety state
-
-- Không deploy Cloudflare.
-- Không sửa production secrets hoặc DNS.
-- Không commit `server/work/`, `tmp/`, `.env`, backup hoặc generated artifacts.
-- FIFO rollout vẫn disabled; Purchase/FIFO là luồng độc lập.
+- Code commit trước tài liệu: `3104c6ac567d23b0a5fa7f7fd135ca62625a757b`.
+- Head cũ `464b713af4d8a0403f766f354d04ebcaee32e6b8` đã PASS sáu workflow, nhưng chưa chứa implementation cuối.
+- GitHub chưa trả workflow run cho exact code head mới tại thời điểm handoff.
+- Đã kiểm gate `check-native-ui` và sửa native button mới.
+- Chưa có local checkout/dependency cache để chạy lint/test/typecheck/build.
 
 ## Việc tiếp theo
 
-1. Mở draft PR từ `feat/metaforge-misa-workspace-tabs` vào `hotfix/alumdoor-print-list-delete`.
-2. Kiểm exact PR head và toàn bộ CI.
-3. Sửa lỗi typecheck/build nếu có.
-4. Chạy browser QA cho desktop/mobile/collapsed sidebar.
-5. Sau khi hành vi được duyệt, nâng API workspace tabs vào `@metaforge/shell` và sinh tab từ metadata runtime.
+1. Lấy exact final head sau commit tài liệu.
+2. Chạy/kiểm đủ sáu workflow trên exact final head.
+3. Sửa mọi lỗi lint/typecheck/build trước khi rời draft.
+4. Chạy browser QA theo checklist trong `NEXT_TASKS.md`.
+5. Sau khi prototype được duyệt mới thiết kế workspace metadata runtime cho LiveApp.
+
+## Safety
+
+- Không deploy Cloudflare.
+- Không sửa production secrets/DNS.
+- Không commit `.env`, `server/work/`, `tmp/` hoặc generated artifacts.
+- Không đụng dữ liệu tenant và không bật FIFO.
