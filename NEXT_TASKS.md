@@ -13,6 +13,40 @@ Mọi agent phải đọc `AI_HANDOFF.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md` 
 - Tiến Đạt FIFO authenticated journey PASS: `200 + 100`, nhận `230` → `200 + 30`, lịch sử và công nợ đúng; `85` được phép, `86` bị từ chối.
 - Không deploy Cloudflare, không thay rollout state và không mutate dữ liệu production.
 
+## UI MetaForge MISA-style — ACTIVE SEPARATE BRANCH
+
+### Branch
+
+- Branch: `feat/metaforge-misa-workspace-ui-clean`.
+- Base exact default head: `4d86c1fd8c191f26f3961762b281fca1ad765855`.
+- Closed PR `#81/#109` chỉ dùng tham khảo từng file; không reopen hoặc merge nguyên branch cũ.
+- Login/landing từ closed PR `#36` giữ ở backlog riêng, không đưa vào branch này.
+
+### Phạm vi
+
+- App/module rail nằm phía trên sidebar.
+- Sidebar hiển thị nhóm workspace hiện tại.
+- Workspace tabs biểu diễn các Doctype và luồng nghiệp vụ đang mở.
+- Đồng bộ route, active state, đóng/chuyển tab và khôi phục tab hợp lý.
+- Responsive desktop/mobile và không phá authenticated application shell hiện tại.
+
+### Trình tự
+
+1. Review current application shell trên exact branch head.
+2. Review từng file hữu ích từ closed PR `#81/#109`.
+3. Chỉ port phần còn phù hợp kiến trúc hiện tại.
+4. Bổ sung component/state/route còn thiếu cho app rail và workspace tabs.
+5. Viết focused component, route và authenticated UI tests.
+6. Chạy test, typecheck, build và UI validation trên exact head.
+7. Mở một PR canonical; không thay head khi CI exact-head đang chạy.
+
+### Done condition
+
+- App/module rail, sidebar workspace và Doctype/nghiệp vụ tabs hoạt động thống nhất.
+- Route và active state không mất khi chuyển tab.
+- Desktop và mobile authenticated journey PASS.
+- Full CI và UI-specific validation xanh trên exact PR head.
+
 ## P1 — Finance clean rebuild
 
 ### Nguồn
@@ -77,9 +111,8 @@ Bắt buộc có desktop và mobile authenticated journey trên một exact head
 
 ## UI backlog riêng
 
-- MetaForge MISA-style workspace tabs từ closed PR `#81/#109`.
 - Login/landing từ closed PR `#36`.
-- Hai phần này không được trộn vào Finance hoặc nghiệp vụ ledger.
+- Không trộn login/landing vào MetaForge workspace UI, Finance hoặc nghiệp vụ ledger.
 
 ## Quy tắc bắt buộc
 
