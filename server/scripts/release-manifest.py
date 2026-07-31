@@ -9,7 +9,7 @@ from pathlib import Path
 root = Path(__file__).resolve().parents[1]
 manifest_path = root / "RELEASE_CONTENT_MANIFEST.json"
 excluded_dirs = {"dist", "node_modules", ".git", ".wrangler", "coverage", "__pycache__", "backups"}
-excluded_files = {manifest_path.name, "PROMOTION_EVIDENCE.json"}
+excluded_files = {manifest_path.name, "PROMOTION_EVIDENCE.json", "BUILD_REPORT.md", "VERIFY.json"}
 excluded_suffixes = {".log", ".pyc"}
 excluded_secret_prefixes = (".dev.vars", ".env")
 excluded_prefixes = {
