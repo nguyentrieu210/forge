@@ -63,7 +63,7 @@ test.describe("MetaForge MISA-style workspace", () => {
 
     await page.getByRole("button", { name: "Chỉ tiêu", exact: true }).click();
     await expect(page.getByText("Chỉ tiêu 1", { exact: true })).toBeVisible();
-    await expect(page.getByLabel("Tên chỉ tiêu")).toBeVisible();
+    await expect(page.getByDisplayValue("Chỉ tiêu 1")).toBeVisible();
   });
 
   test("exposes exactly 13 color palettes", async () => {
