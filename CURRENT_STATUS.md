@@ -52,9 +52,10 @@ Nguồn tham chiếu hành vi trong phiên làm việc: file người dùng cung
 
 ## Verification
 
-- Exact code commit trước cập nhật tài liệu: `3104c6ac567d23b0a5fa7f7fd135ca62625a757b`.
-- Sáu workflow trên head cũ `464b713af4d8a0403f766f354d04ebcaee32e6b8` đều **PASS**, nhưng không đại diện cho code UI mới nhất.
-- Tại thời điểm cập nhật, GitHub chưa trả workflow run nào cho exact code head mới; không được tuyên bố final CI xanh.
+- Exact implementation commit: `3104c6ac567d23b0a5fa7f7fd135ca62625a757b`.
+- Các commit sau implementation chỉ cập nhật `CURRENT_STATUS.md`, `NEXT_TASKS.md` và `AI_HANDOFF.md`.
+- Sáu workflow trên head cũ `464b713af4d8a0403f766f354d04ebcaee32e6b8` đều **PASS**, nhưng không đại diện cho implementation cuối.
+- Tại thời điểm cập nhật, GitHub chưa trả workflow run nào cho final branch head; không được tuyên bố final CI xanh.
 - Đã đọc gate `client/scripts/check-native-ui.mjs` và thay toàn bộ native button mới bằng component `Button`.
 - Chưa chạy local lint/test/typecheck/build vì môi trường hiện tại không có repository checkout và dependency cache.
 
