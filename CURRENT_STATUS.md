@@ -6,61 +6,65 @@ Ngày cập nhật: **2026-07-31**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Working branch: `feat/inventory-physical-stock-slice-b-20260731`.
-- Draft PR: `#49` — `feat(inventory): canonical physical stock identity and warehouse roles`.
+- Working branch: `feat/manufacturing-bom-workorder-slice-c-20260731`.
+- Stacked PR: `#50` — `feat(manufacturing): versioned BOM and immutable Work Order snapshot`.
+- Base branch: `feat/inventory-physical-stock-slice-b-20260731`.
 - Không commit `.env`, `.dev.vars`, secret, `server/work/`, `tmp/`, backup SQL hoặc generated evidence.
 
 ## Inventory Slice B
 
+- PR `#49` exact head: `423af47b7e2bfb31c160934aa241716511449107`.
+- GitHub reports `mergeable=true`.
+- Review score: **97/100**; Critical **0**; High **0**.
+- PR Validation, CI, Inventory and Manufacturing CI, Purchase Feature CI, Sales Feature CI và UI Pull Request Validation đều **PASS** trên exact head.
+- PR `#49` đã chuyển khỏi draft và đang ready for review.
+- Chưa merge vào default; merge và deployment vẫn cần yêu cầu rõ ràng.
+
+## Manufacturing Slice C
+
 ### Phạm vi đã hoàn thành
 
-- Server-built physical identity cho inventory mode/profile, màu, tình trạng, đời, kích thước và physical count.
-- Batch/serial/Aluminium Lot lineage và kiểm quantity/direction của bundle.
-- Warehouse-role rules cho receipt, transfer, issue/manufacture, quarantine và scrap/offcut recovery.
-- Exact cancellation dựa trên ledger gốc; không tạo stock book thứ hai.
-- Company-wide Durable Object coordination cho Stock Entry và Work Order submit/cancel.
-- Regression cho identity mismatch, stale lot warehouse, second transfer, quarantine/recovery và concurrent issue.
+- Versioned BOM revision/effective interval và Draft/Active/Retired lifecycle.
+- Output/row UOM conversion và quantity-basis semantics.
+- Deterministic BOM snapshot/checksum; overlap, circular và self-consumption guards.
+- Immutable Work Order snapshot tại release.
+- Append-only issue, consumption, production, scrap và offcut progress theo BOM row.
+- Partial production và aggregate over-consumption/over-production guards.
+- Company-wide inventory coordination kế thừa Slice B.
+- Exact cancellation reversal và legacy Work Order compatibility.
+- Không thêm migration; canonical document JSON và append-only projections vẫn là source of truth.
 
-### Review
+### Focused tests
 
-- Review file: `server/docs/ALUMDOOR-INVENTORY-SLICE-B-REVIEW.md`.
-- Score: **97/100**.
-- Critical: **0**.
-- High: **0** sau remediation.
+- `server/tests/alumdoor-manufacturing-lifecycle.test.mjs`.
+- `server/tests/manufacturing-issue-line-key.test.mjs`.
+- `server/tests/manufacturing-legacy-rollout.test.mjs`.
+- `server/tests/manufacturing-output-uom.test.mjs`.
 
-### Đồng bộ default
+### Review và đồng bộ
 
-- Default mới nhất: `f0768d59ff66d04c333fd290c120f7672a80ea96`.
-- Default chứa Purchase/FIFO activation readiness safeguards từ PR `#75`.
-- Nhánh kho đã đồng bộ bằng merge commit `47acf088135cb770dc30d021b5a45a9fcdca3c21`.
-- Code/test riêng Slice B được giữ nguyên; Purchase tooling mới từ default được giữ lại.
-- Handoff/status/tasks được chỉnh lại để phản ánh đúng nhánh kho.
+- Review: `server/docs/ALUMDOOR-MANUFACTURING-SLICE-C-REVIEW.md`.
+- Score: **97/100**; Critical **0**; High **0**.
+- Branch cũ diverged khỏi Slice B: ahead `34`, behind `22`.
+- Đã dựng lại trên current Slice B bằng merge commit `41f0f88fad378eabdd3fb40ff54bb02643aabb84`.
+- PR `#50` hiện `mergeable=true`, diff hiệu dụng 12 file.
+- Exact-head CI đang chạy trên `41f0f88fad378eabdd3fb40ff54bb02643aabb84`.
 
-### Exact final head
+## Phần còn lại
 
-- Commit handoff sau sync: `20360dfd79bdd97f8fd46362250ce7fc43b956c8`.
-- Các commit tài liệu tiếp theo sẽ tạo final head mới và kích hoạt lại CI.
-- Chỉ CI trên exact final head mới được dùng làm merge evidence.
+1. Chờ exact-head CI của PR #50 PASS và chuyển PR khỏi draft.
+2. Sau khi Slice B merge, retarget/rebase Slice C lên default và chạy lại CI.
+3. Slice D: physical-stock read model, operator UI và WIP/shortage/variance/offcut reports.
+4. Read-only live Item/BOM audit và remediation plan.
+5. Staging journey đầy đủ cho kho và sản xuất.
+6. Benchmark contention/retry/latency của company-wide inventory coordination.
+7. Merge/deploy production chỉ theo approval riêng.
 
-## Purchase/FIFO trên default
+## Production và safety
 
-- PR `#63` lifecycle correction đã merge và release tenant production.
-- PR `#75` bổ sung read-only activation readiness safeguards và runbook.
+- Không deploy Cloudflare trong đợt này.
+- Không migration hoặc mutate tenant.
+- Không sửa production secrets hoặc DNS.
 - FIFO rollout vẫn **disabled**.
-- Không có activation, backfill production hoặc secret/DNS change trong đợt kho này.
-
-## Gate còn lại cho Inventory
-
-1. Toàn bộ required workflows PASS trên exact final head.
-2. PR #49 conflict-free, review threads sạch và chuyển khỏi draft.
-3. Read-only live tenant catalog audit và remediation plan.
-4. Staging receive/transfer/issue/quarantine/scrap/cancel journeys.
-5. Production load/latency observation cho company-wide inventory lock.
-6. Physical-stock UI/report/read model trong Slice D.
-7. Explicit merge/deployment approval riêng.
-
-## Production hiện hành
-
-- Tenant Worker `cloudforge-tenant-alu`: `88c508a7-f3f7-4844-9c8b-85a02bc362f3`.
-- Gateway `cloudforge-gateway`: `b0d0ce5b-408c-47ab-a734-fa55ba4d9c00`.
-- FIFO rollout: **disabled**.
+- Tenant Worker production hiện hành: `88c508a7-f3f7-4844-9c8b-85a02bc362f3`.
+- Gateway production hiện hành: `b0d0ce5b-408c-47ab-a734-fa55ba4d9c00`.
