@@ -2,8 +2,46 @@ import * as React from "react";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 import { cn } from "../../lib/cn.js";
 
-export const Popover = PopoverPrimitive.Root;
-export const PopoverTrigger = PopoverPrimitive.Trigger;
+const PopoverDialogContext = React.createContext<(insideDialog: boolean) => void>(() => undefined);
+
+/**
+ * Popover portalled ra body từ bên trong Radix Dialog sẽ bị lớp scroll-lock của Dialog chặn wheel.
+ * Chỉ bật modal cho Popover nằm trong Dialog; Popover ngoài form giữ nguyên hành vi non-modal cũ.
+ */
+export function resolvePopoverModal(explicitModal: boolean | undefined, insideDialog: boolean): boolean {
+  return explicitModal ?? insideDialog;
+}
+
+export function Popover({ modal, ...props }: React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Root>) {
+  const [insideDialog, setInsideDialog] = React.useState(false);
+  return (
+    <PopoverDialogContext.Provider value={setInsideDialog}>
+      <PopoverPrimitive.Root modal={resolvePopoverModal(modal, insideDialog)} {...props} />
+    </PopoverDialogContext.Provider>
+  );
+}
+
+export const PopoverTrigger = React.forwardRef<
+  React.ElementRef<typeof PopoverPrimitive.Trigger>,
+  React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Trigger>
+>((props, ref) => {
+  const reportInsideDialog = React.useContext(PopoverDialogContext);
+  const localRef = React.useRef<React.ElementRef<typeof PopoverPrimitive.Trigger> | null>(null);
+  const setRef = React.useCallback((node: React.ElementRef<typeof PopoverPrimitive.Trigger> | null) => {
+    localRef.current = node;
+    if (typeof ref === "function") ref(node);
+    else if (ref) ref.current = node;
+  }, [ref]);
+
+  React.useEffect(() => {
+    reportInsideDialog(Boolean(localRef.current?.closest('[role="dialog"]')));
+    return () => reportInsideDialog(false);
+  }, [reportInsideDialog]);
+
+  return <PopoverPrimitive.Trigger ref={setRef} {...props} />;
+});
+PopoverTrigger.displayName = PopoverPrimitive.Trigger.displayName;
+
 export const PopoverAnchor = PopoverPrimitive.Anchor;
 
 /**
