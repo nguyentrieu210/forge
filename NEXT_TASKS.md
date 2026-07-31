@@ -2,6 +2,70 @@
 
 Ngày cập nhật: **2026-07-31**.
 
+## P0 — Duyệt BRD tài chính và công nợ AR/AP
+
+Contract draft: `server/docs/FINANCE-AR-AP-BRD.md` trên branch `feat/finance-ar-ap-completion`.
+
+Hiện trạng:
+
+- Nền tảng hiện có: Sales/Purchase Invoice, GL, immutable Payment Ledger, Payment Entry, Credit/Debit Note, Journal Entry, Bank Reconciliation và báo cáo AR/AP cơ bản.
+- Payment Entry hiện bắt buộc phân bổ toàn bộ số tiền vào hóa đơn.
+- Báo cáo AR/AP hiện chưa có due-date aging, as-of cutoff, party statement, advance balance hoặc debt summary.
+- BRD commit đầu tiên: `5dc8a2313dbdfe83ba3320fe155cf265f333e5be`.
+- Chưa sửa schema/application logic và chưa deploy.
+
+Việc cần chốt tại G1:
+
+1. Duyệt scope Customer AR + Supplier AP cùng một workstream.
+2. Duyệt bucket aging mặc định: chưa đến hạn, 1–30, 31–60, 61–90, trên 90 ngày.
+3. Duyệt mô hình Payment Entry cho phép partial/unallocated và chứng từ append-only `Payment Allocation`.
+4. Duyệt nguyên tắc chỉ allocation cùng company, party, party account và currency.
+5. Quyết định hạn mức tín dụng/chặn Sales Order là pha hiện tại hay backlog sau.
+
+Sau khi G1 được duyệt, thực hiện:
+
+### M1 — Contract và migration
+
+- Bổ sung canonical due date/payment terms cho Sales Invoice và Purchase Invoice.
+- Migration append-only cho Payment Allocation guards, advance balance và aging/statement views.
+- SQL tests cho source advance cap, target outstanding cap, cancel guard và as-of cutoff.
+
+### M2 — Controller và atomic persistence
+
+- Nới Payment Entry để hỗ trợ zero/partial/full allocation.
+- Thêm Payment Allocation controller; reclassify Payment Ledger mà không tạo GL mới.
+- D1 atomic batch, idempotency, OCC và party/account coordinator.
+
+### M3 — Query và báo cáo
+
+- Accounts Receivable Aging.
+- Accounts Payable Aging.
+- Party Statement.
+- Debt Summary và Advance Balance.
+- Đối chiếu tổng report với Payment Ledger theo cùng cutoff/currency.
+
+### M4 — Metadata/UI
+
+- Form Payment Allocation metadata-driven.
+- Invoice/payment timeline và drill-down.
+- Confirmation + reason cho reverse/override.
+
+### M5 — Backfill/rollout
+
+- Dry-run legacy invoice thiếu due date và payment chưa phân bổ.
+- Unresolved report/checksum; không activation khi còn ambiguity.
+- Staging migration và smoke trước mọi production action.
+
+### M6 — Gate
+
+- Targeted unit/integration/SQL/worker concurrency tests.
+- `pnpm run test`.
+- `pnpm run typecheck`.
+- `pnpm run build`.
+- GitHub CI xanh cho exact head SHA.
+
+Hoàn thành khi aging/advance/allocation/statement/debt summary đạt acceptance criteria trong BRD, root gates pass và handoff ghi đúng bằng chứng. Không deploy Cloudflare hoặc sửa production secrets trong workstream nếu chưa có yêu cầu rõ.
+
 ## P0 — Xác minh release sidebar gọn trên production
 
 **Mục tiêu:** xác nhận Cloudflare đã đưa bản sidebar desktop gọn lên Gateway production mà không ảnh hưởng route hoặc permission.
