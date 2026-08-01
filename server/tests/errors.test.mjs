@@ -23,3 +23,23 @@ test("asCloudForgeError reconstructs a CloudForgeError flattened across a Durabl
   assert.equal(internal.code, "INTERNAL_ERROR");
   assert.equal(internal.message, "Internal error");
 });
+
+test("asCloudForgeError maps Daily Detailed Ledger integrity guards to stable client errors", () => {
+  const freezeContext = asCloudForgeError(new Error("D1_ERROR: DAILY_LEDGER_FREEZE_CONTEXT_MISMATCH"));
+  assert.equal(freezeContext.code, "REFERENCE_VALIDATION_FAILED");
+  assert.equal(freezeContext.status, 422);
+
+  const notFrozen = asCloudForgeError(new Error("D1_ERROR: DAILY_LEDGER_NOT_FROZEN"));
+  assert.equal(notFrozen.code, "INVALID_LIFECYCLE_TRANSITION");
+  assert.equal(notFrozen.status, 409);
+
+  for (const trigger of [
+    "DAILY_LEDGER_IMMUTABLE",
+    "DAILY_LEDGER_FREEZE_IMMUTABLE",
+    "DAILY_LEDGER_ADJUSTMENT_IMMUTABLE",
+  ]) {
+    const mapped = asCloudForgeError(new Error(`SQLITE_CONSTRAINT_TRIGGER: ${trigger}`));
+    assert.equal(mapped.code, "INVALID_LIFECYCLE_TRANSITION");
+    assert.equal(mapped.status, 409);
+  }
+});

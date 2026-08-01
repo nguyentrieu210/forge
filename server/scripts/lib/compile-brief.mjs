@@ -1044,6 +1044,24 @@ export function compileBrief(brief) {
     });
   }
 
+  // Native operational experiences are shipped by the shared runtime but selected by
+  // app metadata. The permission DocType keeps the sidebar and the deep-link gate aligned.
+  for (const [index, experience] of (brief.experiences ?? []).entries()) {
+    const where = `experiences[${index}]`;
+    if (!experience?.key || !experience.key.includes(":")) fail(`${where} needs a prefixed key`);
+    if (!experience.label) fail(`${where} needs a label`);
+    if (!experience.permission || !doctypeNames.has(experience.permission)) fail(`${where} needs a permission DocType declared by this app`);
+    nav.push({
+      key: experience.key,
+      label: experience.label,
+      kind: "experience",
+      permission_doctype: experience.permission,
+      required_roles: [...(experience.roles ?? [])],
+      icon: experience.icon ?? "panel-top",
+      group: experience.group ?? module,
+    });
+  }
+
   /**
    * Mẫu in và link tới báo cáo sẵn có của nền tảng.
    *

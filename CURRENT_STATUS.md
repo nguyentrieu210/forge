@@ -5,10 +5,35 @@ Ngày cập nhật: **2026-08-01**.
 ## Repository
 
 - Repository: `nguyentrieu210/forge`.
-- Default branch: `hotfix/alumdoor-print-list-delete`.
-- Current default head trước epic này: `f916d066f9b45b1c3a5238259be9d6953d6cf0f3`.
-- Active epic branch: `feat/alumdoor-pwa-real-brand-assets`.
+- Default branch: `main`.
+- Current default head trước khi đồng bộ epic: `9e0a9a5634afea5ee86fe71ec69e720a995c7a61`.
+- Active epic branch: `feat/alumdoor-pwa-real-brand-assets` (PR `#150`).
 - GitHub là nguồn sự thật cho current branch head, CI, PR và release evidence.
+
+## In progress — Print design PR #141
+
+- Branch: `feat/print-design-sales-documents-20260801`.
+- Nhánh hoàn thiện local: `fix/print-router-missing-state`, dựng từ head print `53e664bcb376e9140de2cb70a619cc0c54c6c971`.
+- PR: `#141` — `feat(print): add Alumdoor operational print formats`.
+- Sidecar `server/briefs/alumdoor-v2.prints.json` nối với các mẫu in sẵn có trước schema validation/compile; không ghi đè mảng `prints` của brief gốc.
+- Loader hỗ trợ filesystem path và `file:` URL, có regression riêng.
+- `Đơn bán hàng ALUMDOOR` — Sales Order, A4 portrait, 13 cột = `100%`.
+- `Phiếu giao hàng / lắp đặt ALUMDOOR` — Delivery Note, A4 portrait, 11 cột = `100%`, không in giá, có checklist và ba khu vực ký.
+- `Phiếu yêu cầu sản xuất ALUMDOOR` — Production Request, A4 portrait, 14 cột = `100%`.
+- `Phiếu cắt nhôm ALUMDOOR` — Cut Order, A4 portrait, 13 cột = `100%`; bundle lô mẹ + bundle đầu thừa giữ nguyên để truy vết, QR chứng từ dùng filter `qrcode` authoritative của renderer.
+- QR Cut Order được regression qua renderer thật và phải ra `data:image/gif;base64,...`, không phải URL/token nhạy cảm.
+- `Biên bản bàn giao / nghiệm thu ALUMDOOR` — Delivery Note, `default: false`, A4 portrait, 11 cột = `100%`; dùng dữ liệu giao/lắp thật và để vùng kết quả/checklist cho ký tay tại công trình.
+- Cả năm mẫu dùng cùng brand system với Purchase Order mặc định `Đơn nhập hàng ALUMDOOR`: logo `/alumdoor-order-logo.png` giống từng byte với logo gốc nhúng, company header `/alumdoor-company-header.png`, letterhead `194mm × 17mm`, lề trên `23.7mm` và tiêu đề cam `#f15a24`.
+- Regression renderer dùng dữ liệu dài cho Sales Order, Delivery Note, Production Request, Cut Order và Biên bản nghiệm thu.
+- Runtime `/print/:doctype/:name?format=<tên mẫu>` tải danh sách mẫu theo đúng quyền trên chứng từ, cho chọn mẫu phụ và giữ lựa chọn trong URL.
+- DocType chưa có mẫu in hiện trạng thái “Chưa có mẫu in” với đường quay lại chứng từ; không còn biến trường hợp này thành khối lỗi đỏ.
+- Đã sửa false-negative làm CI PR đỏ: test QR kiểm nội dung text sau khi bỏ thẻ HTML thay vì đòi số chứng từ đứng sát nhãn `<b>` trong raw HTML.
+- Verify local: typecheck toàn repo PASS; client selfcheck `88/88`; tenant facade `72/72`; server unit `746/746` + toàn bộ SQL migration PASS; full server/client build PASS.
+- Exact-head Acceptance `c7d93e77d4a062a095cccc916e50127fcc603595`: 6/6 workflow SUCCESS.
+- Run IDs Acceptance: CI `30689143646`, PR Validation `30689143618`, UI `30689143691`, Purchase `30689143635`, Sales `30689143650`, Inventory/Manufacturing `30689143661`.
+- QR Cut Order đang ở staging và phải qua exact-head CI sau khi đưa vào PR branch.
+- Visual QA A4 năm mẫu PASS: cả hai ảnh thương hiệu tải thành công, bảng nằm trong vùng in `194mm`, vùng chữ ký thấp nhất vẫn nằm trong trang A4 và không có tràn ngang.
+- Production đã được phát hành trực tiếp theo chỉ đạo: Gateway version `aff41705-29f2-443f-be5c-fee161061097`, tenant Worker hiện hành và năm print format đã cài vào D1 sau backup; gate còn lại trước merge chỉ là exact-head CI và PR mergeable với current default.
 
 ## Đã hoàn tất trên default
 
@@ -52,13 +77,12 @@ Ngày cập nhật: **2026-08-01**.
 
 - PR `#145` merge SHA: `898b19d0c58c84a32f99d73dfe0bf33f9ec78dd6`.
 - Exact validated head: `73dc960e3c9685708ac1b1e51c7eb5d2c1a71a9a`.
-- Landing Alumdoor guest có hero, navigation, dịch vụ, danh mục sản phẩm, liên hệ và login nội bộ.
-- PR `#148` merge SHA `d8997dc6ea2231c5d546b24cf89b9cc14b456ff5` đã kích hoạt luồng Gateway production cho landing.
-- Ops snapshot PR `#149` merge SHA `f916d066f9b45b1c3a5238259be9d6953d6cf0f3`.
+- Landing Alumdoor guest đã được thiết kế lại theo cấu trúc thương hiệu/sản phẩm công khai trên `alumdoor.vn`, giữ form đăng nhập nội bộ trong cùng trải nghiệm.
+- Browser QA PASS desktop/tablet/mobile, gồm dark/reduced-motion, login, no horizontal overflow và link VIP-ST500.
 
 ## Active — Alumdoor PWA + official brand/media
 
-Branch: `feat/alumdoor-pwa-real-brand-assets`.
+Branch: `feat/alumdoor-pwa-real-brand-assets`; PR `#150`.
 
 Đã triển khai trên branch, đang chờ exact-head CI/PR:
 
@@ -80,11 +104,38 @@ Branch: `feat/alumdoor-pwa-real-brand-assets`.
 - Production smoke `alu.kairo.vn`, `/mobile/warehouse/`, manifest, icon và service worker.
 - Authenticated backend lifecycle riêng cho bốn phiếu kho mobile trên production vẫn chưa được chạy; không mutate dữ liệu khách hàng chỉ để smoke giao diện.
 
+## Hoàn thiện quy trình 25.7 trên `main`
+
+### PR #146 — Sổ chi tiết hằng ngày (đang trên nhánh tính năng)
+
+- Nhánh `feat/daily-detailed-ledger-20260801`, chưa merge và chưa deploy.
+- Quyền truy cập/cập nhật/khóa/điều chỉnh chỉ dành cho ba nhóm nghiệp vụ: Kế toán tổng hợp, Kế toán trưởng và Giám đốc; `Administrator` giữ quyền cứu hộ nền tảng.
+- Ảnh chụp hằng ngày bao phủ sáu miền: Bán hàng, Mua hàng, Kho, Sản xuất, Bảo hành/Lỗi và Tài chính.
+- Runtime có màn “Sổ chi tiết hằng ngày” cho desktop và mobile, gồm Cập nhật, Đối chiếu, Khóa sổ và Điều chỉnh append-only.
+- Brief Alumdoor `2.0.35` khai báo màn và một DocType quyền riêng để menu được lọc trước khi gửi xuống client.
+- Sổ ngày nhận cả dòng `ordered` của Sales Order mới, không phụ thuộc đã có Delivery Note.
+
+### Hoàn thiện quy trình 25.7 trên cùng nhánh (production 2.0.35 đã deploy 2026-08-01)
+
+- Trung tâm vận hành hợp nhất đơn/ngày giao/khách/phụ trách/nhóm hàng/tiền thu/trạng thái giao-sản xuất-lỗi và ghi chú từ chứng từ gốc.
+- Bảo hành/lỗi bắt buộc truy về Sales Order, Delivery Note đã ghi sổ, ngày giao và Item; motor/pin tính hạn 12 tháng; nguyên nhân chỉ nhận bốn nhóm chuẩn.
+- Lỗi NCC ở trạng thái chờ đổi; Kế toán tổng hợp/Kế toán trưởng xác nhận mới tạo Giấy báo Nợ nháp gắn Purchase Invoice. Khóa idempotency ngăn tạo hai giấy cho một hồ sơ.
+- Lỗi sản xuất bắt buộc người chịu trách nhiệm; lỗi do khách tính chi phí từ từng dòng công việc.
+- Định mức sản xuất hỗ trợ `m2`, `set`, `operation`, `batch`; tải ca 8 giờ, số người/ca, hiệu suất, workstation, mẻ sơn theo màu và tăng ca.
+- Giao hàng theo ngày có preview, kết quả từng đơn, khóa `ngày + Sales Order`, tạo Delivery Note nháp và trả danh sách chứng từ để in.
+- Migration `0034_alumdoor_process_25_7.sql`, Golden Order contract và tài liệu `docs/brd-v2/PROCESS_25_7_COMPLETION.md` đã có.
+
+- Chưa map `client/apps/kho/dist-mobile` vào production route `/mobile/warehouse/`.
+- Chưa chạy authenticated backend lifecycle riêng cho bốn phiếu kho mobile trên môi trường release.
+- Gateway, tenant Worker, app Worker, metadata 2.0.35 và hai migration 0033/0034 đã deploy trực tiếp từ local; production health/browser smoke đạt.
+- Không sửa production secrets hoặc DNS.
+
 ## Business backlog còn lại
 
-1. Daily detailed ledger snapshot/freeze/adjustment.
-2. Warranty, defects, supplier hold/offset và capacity/overtime.
-3. End-to-end acceptance xuyên Sales, Production, Inventory, Delivery, Finance và Warranty.
+1. Hoàn tất PR `#150` trên nền `main` mới và phát hành PWA kho cùng Gateway.
+2. Chạy authenticated Golden Order trên tenant staging/release với dữ liệu thử có cleanup và đối chiếu bản in theo máy in khách hàng.
+3. Nâng màn Trung tâm vận hành từ input JSON kỹ thuật sang form nghiệp vụ cho năng lực/bảo hành.
+4. Pilot end-to-end với dữ liệu thật xuyên Sales, Production, Inventory, Delivery, Finance và Warranty.
 
 ## Release boundary
 

@@ -33,6 +33,15 @@ import {
 } from "./door-formulas.js";
 import { salesItemContext } from "./sales-item-context.js";
 import {
+  confirmSupplierOffset,
+  planCapacity,
+  previewDailyDeliveries,
+  validateWarrantyClaim,
+  type CapacityDemand,
+  type CapacityResource,
+  type WarrantyClaimInput,
+} from "./operations-core.js";
+import {
   calculateSalesProductionLine,
   createSalesProduction,
   previewSalesProduction,
@@ -979,6 +988,23 @@ async function readDoc<T>(call: PlatformCall, doctype: string, name: string): Pr
   const response = await call(`resource/${encodeURIComponent(doctype)}/${encodeURIComponent(name)}`);
   if (!response.ok) throw new Error(`không đọc được ${doctype} ${name} (HTTP ${response.status})`);
   return ((await response.json()) as { data?: T & { modified?: string } }).data ?? ({} as T & { modified?: string });
+}
+
+async function listResource<T>(
+  call: PlatformCall,
+  doctype: string,
+  fields: string[],
+  filters: Array<[string, string, unknown]> = [],
+  limit = 500,
+): Promise<T[]> {
+  const query = new URLSearchParams({
+    fields: JSON.stringify(fields),
+    filters: JSON.stringify(filters),
+    limit_page_length: String(limit),
+  });
+  const response = await call(`resource/${encodeURIComponent(doctype)}?${query}`);
+  if (!response.ok) throw new Error(`không đọc được danh sách ${doctype} (HTTP ${response.status})`);
+  return ((await response.json()) as { data?: T[] }).data ?? [];
 }
 
 interface V2BatchBalance {
@@ -2506,6 +2532,7 @@ async function deliveryFromSalesOrder(call: PlatformCall, args: Record<string, u
       company: sales.company,
       currency: sales.currency,
       against_sales_order: order,
+      ...(args.delivery_batch_key ? { delivery_batch_key: String(args.delivery_batch_key) } : {}),
       posting_at: new Date().toISOString(),
       install_address: String(args.install_address ?? sales.install_address ?? ""),
       ...(args.install_date ? { install_date: String(args.install_date) } : {}),
@@ -2519,6 +2546,214 @@ async function deliveryFromSalesOrder(call: PlatformCall, args: Record<string, u
   if (!created.ok) return refuse(`Không tạo được phiếu xuất: ${(await created.text()).slice(0, 200)}`);
   const delivery = ((await created.json()) as { data?: { name?: string } }).data?.name ?? "";
   return answer({ delivery_note: delivery, sales_order: order, items, lines: items.length, draft: true });
+}
+
+async function previewDailyDeliveryBatch(call: PlatformCall, args: Record<string, unknown>): Promise<Response> {
+  const deliveryDate = String(args.delivery_date ?? new Date().toISOString().slice(0, 10));
+  try {
+    const [orders, notes] = await Promise.all([
+      listResource<{ name: string; delivery_date?: string; docstatus?: number; delivered_percentage?: number; customer?: string }>(
+        call, "Sales Order", ["name", "delivery_date", "docstatus", "delivered_percentage", "customer"], [["docstatus", "=", 1]],
+      ),
+      listResource<{ name?: string; against_sales_order?: string; delivery_batch_key?: string; docstatus?: number }>(
+        call, "Delivery Note", ["name", "against_sales_order", "delivery_batch_key", "docstatus"], [],
+      ),
+    ]);
+    const rows = previewDailyDeliveries(deliveryDate, orders, notes);
+    return answer({ delivery_date: deliveryDate, rows, ready: rows.filter((row) => row.status === "Sẵn sàng").length });
+  } catch (error) {
+    return refuse(error instanceof Error ? error.message : "không lập được danh sách giao hàng trong ngày");
+  }
+}
+
+async function createDailyDeliveryBatch(call: PlatformCall, args: Record<string, unknown>): Promise<Response> {
+  const preview = await previewDailyDeliveryBatch(call, args);
+  if (!preview.ok) return preview;
+  const payload = await preview.json() as { delivery_date: string; rows: Array<{ sales_order: string; delivery_batch_key: string; status: string; existing_delivery_note?: string }> };
+  const selected = new Set(Array.isArray(args.sales_orders) ? args.sales_orders.map(String) : []);
+  const rows = selected.size ? payload.rows.filter((row) => selected.has(row.sales_order)) : payload.rows;
+  const results: Array<Record<string, unknown>> = [];
+  for (const row of rows) {
+    if (row.status === "Đã tạo") {
+      results.push({ sales_order: row.sales_order, delivery_note: row.existing_delivery_note, status: "Đã có", idempotent: true });
+      continue;
+    }
+    const response = await deliveryFromSalesOrder(call, { ...args, sales_order: row.sales_order, delivery_batch_key: row.delivery_batch_key });
+    const result = await response.json() as Record<string, unknown>;
+    results.push(response.ok
+      ? { ...result, status: "Đã tạo", idempotent: false }
+      : { sales_order: row.sales_order, status: "Lỗi", message: result.message ?? "Không tạo được phiếu" });
+  }
+  return answer({ delivery_date: payload.delivery_date, results, print_documents: results.flatMap((row) => row.delivery_note ? [{ doctype: "Delivery Note", name: row.delivery_note }] : []) });
+}
+
+async function capacityPreview(args: Record<string, unknown>): Promise<Response> {
+  try {
+    const demandsSource = typeof args.demands_json === "string" ? JSON.parse(args.demands_json) : args.demands;
+    const resourceSource = typeof args.resource_json === "string" ? JSON.parse(args.resource_json) : args.resource;
+    const demands = (Array.isArray(demandsSource) ? demandsSource : []) as CapacityDemand[];
+    const resource = (resourceSource && typeof resourceSource === "object" ? resourceSource : {}) as CapacityResource;
+    if (!demands.length) return refuse("Cần ít nhất một nhu cầu sản xuất để lập tải.");
+    return answer(planCapacity(demands, resource));
+  } catch (error) {
+    return refuse(error instanceof Error ? error.message : "không tính được năng lực");
+  }
+}
+
+async function operationsOverview(call: PlatformCall, args: Record<string, unknown>): Promise<Response> {
+  const fromDate = String(args.from_date ?? "").slice(0, 10);
+  const toDate = String(args.to_date ?? "").slice(0, 10);
+  const dateFilters: Array<[string, string, unknown]> = [["docstatus", "=", 1]];
+  if (fromDate) dateFilters.push(["delivery_date", ">=", fromDate]);
+  if (toDate) dateFilters.push(["delivery_date", "<=", toDate]);
+  try {
+    const [orders, deliveries, production, claims, invoices] = await Promise.all([
+      listResource<Record<string, unknown>>(call, "Sales Order", [
+        "name", "transaction_date", "delivery_date", "customer", "customer_group", "responsible_person", "product_group",
+        "manual_note", "grand_total", "delivered_percentage", "billed_percentage", "status",
+      ], dateFilters),
+      listResource<Record<string, unknown>>(call, "Delivery Note", ["name", "against_sales_order", "posting_at", "docstatus"], [["docstatus", "=", 1]]).catch(() => []),
+      listResource<Record<string, unknown>>(call, "Production Request", ["name", "sales_order", "request_status", "docstatus"], []).catch(() => []),
+      listResource<Record<string, unknown>>(call, "Warranty Claim", ["name", "sales_order", "warranty_status", "issue_cause"], []).catch(() => []),
+      listResource<Record<string, unknown>>(call, "Sales Invoice", ["name", "against_sales_order", "grand_total", "outstanding_amount", "docstatus"], [["docstatus", "=", 1]]).catch(() => []),
+    ]);
+    const rows = orders.map((order) => {
+      const salesOrder = String(order.name ?? "");
+      const orderDeliveries = deliveries.filter((row) => row.against_sales_order === salesOrder);
+      const orderProduction = production.filter((row) => row.sales_order === salesOrder);
+      const orderClaims = claims.filter((row) => row.sales_order === salesOrder);
+      const orderInvoices = invoices.filter((row) => row.against_sales_order === salesOrder);
+      const collected = orderInvoices.reduce((sum, row) => sum + Math.max(0, Number(row.grand_total ?? 0) - Number(row.outstanding_amount ?? 0)), 0);
+      return {
+        ...order,
+        sales_order: salesOrder,
+        delivery_notes: orderDeliveries.map((row) => row.name),
+        delivery_status: Number(order.delivered_percentage ?? 0) >= 100 ? "Đã giao" : orderDeliveries.length ? "Giao một phần" : "Chưa giao",
+        production_status: orderProduction.length ? String(orderProduction.at(-1)?.request_status ?? "Đã tạo") : "Chưa tạo",
+        defect_status: orderClaims.length ? String(orderClaims.at(-1)?.warranty_status ?? "Đang xử lý") : "Không có",
+        amount_collected: Math.round(collected * 100) / 100,
+      };
+    });
+    return answer({ rows, count: rows.length });
+  } catch (error) {
+    return refuse(error instanceof Error ? error.message : "không đọc được trung tâm vận hành");
+  }
+}
+
+async function updateOperationalOrder(request: Request, call: PlatformCall, args: Record<string, unknown>): Promise<Response> {
+  const actor = platformActorIdentity(request);
+  const allowed = new Set(["Chủ xưởng", "Kinh doanh", "Kế toán", "General Accountant", "Chief Accountant", "Kế toán tổng hợp", "Kế toán trưởng"]);
+  if (!actor.roles.some((role) => allowed.has(role))) return refuse("Tài khoản không có quyền cập nhật vận hành đơn hàng.");
+  const name = String(args.sales_order ?? "");
+  if (!name) return refuse("Cần chọn đơn hàng.");
+  const changes: Record<string, unknown> = {};
+  if (args.delivery_date) changes.delivery_date = String(args.delivery_date);
+  if (args.manual_note != null) changes.manual_note = String(args.manual_note);
+  if (!Object.keys(changes).length) return refuse("Chỉ được đổi ngày giao hoặc ghi chú vận hành.");
+  try {
+    const current = await readDoc<Record<string, unknown>>(call, "Sales Order", name);
+    const response = await call(`resource/Sales%20Order/${encodeURIComponent(name)}`, {
+      method: "PUT",
+      body: JSON.stringify({ ...changes, modified: current.modified, operational_change_reason: String(args.reason ?? "Điều phối theo dõi chung") }),
+    });
+    if (!response.ok) return refuse(`Không cập nhật được đơn hàng: ${(await response.text()).slice(0, 200)}`);
+    return answer({ sales_order: name, changed: Object.keys(changes), actor: actor.user_id });
+  } catch (error) {
+    return refuse(error instanceof Error ? error.message : "không cập nhật được đơn hàng");
+  }
+}
+
+async function confirmWarrantySupplierOffset(request: Request, call: PlatformCall, args: Record<string, unknown>): Promise<Response> {
+  const name = String(args.warranty_claim ?? "");
+  if (!name) return refuse("Cần chọn hồ sơ bảo hành.");
+  try {
+    const current = await readDoc<WarrantyClaimInput>(call, "Warranty Claim", name);
+    const actor = platformActorIdentity(request);
+    const accountingRoles = new Set(["General Accountant", "Chief Accountant", "Kế toán tổng hợp", "Kế toán trưởng"]);
+    if (!actor.roles.some((role) => accountingRoles.has(role))) throw new Error("Chỉ Kế toán tổng hợp/Kế toán trưởng được xác nhận xử lý bảo hành.");
+    const confirmed = current.issue_cause === "Nhà cung cấp"
+      ? confirmSupplierOffset(current, actor)
+      : {
+          ...current,
+          accounting_confirmed_by: actor.user_id,
+          accounting_confirmed_on: new Date().toISOString(),
+          warranty_status: "Đã đóng",
+        };
+    if (current.issue_cause === "Sản xuất" && (!current.responsible_person || !String((current as Record<string, unknown>).production_conclusion ?? "").trim())) {
+      throw new Error("Lỗi sản xuất phải có người chịu trách nhiệm và kết luận sản xuất trước khi kế toán xác nhận.");
+    }
+    let debitNote = String(current.debit_note ?? "");
+    if (debitNote) {
+      try {
+        const linked = await readDoc<Record<string, unknown>>(call, "Debit Note", debitNote);
+        if (linked.docstatus === 2) debitNote = "";
+      } catch {
+        debitNote = "";
+      }
+    }
+    if (current.issue_cause === "Nhà cung cấp" && !debitNote) {
+      const existing = await listResource<{ name?: string }>(call, "Debit Note", ["name"], [["warranty_claim", "=", name]], 1);
+      debitNote = String(existing[0]?.name ?? "");
+    }
+    if (current.issue_cause === "Nhà cung cấp" && !debitNote) {
+      const invoice = await readDoc<Record<string, unknown>>(call, "Purchase Invoice", String(current.purchase_document));
+      const created = await createV2Doc(call, "Debit Note", {
+        supplier: current.supplier,
+        company: invoice.company,
+        currency: invoice.currency,
+        return_against: current.purchase_document,
+        warranty_claim: name,
+        posting_at: new Date().toISOString(),
+        credit_to: invoice.credit_to,
+        default_expense_account: String(args.default_expense_account ?? "Hàng tồn kho"),
+        items: [{ row_id: "1", item_code: current.item_code, qty: 1, rate: current.supplier_offset_amount, note: `Bù trừ bảo hành ${name}` }],
+        note: `Hồ sơ bảo hành ${name} — chờ kế toán soát và ghi sổ.`,
+      });
+      debitNote = created.name;
+    }
+    const response = await call(`resource/Warranty%20Claim/${encodeURIComponent(name)}`, {
+      method: "PUT",
+      body: JSON.stringify({ ...confirmed, debit_note: debitNote, modified: current.modified }),
+    });
+    if (!response.ok) return refuse(`Không xác nhận được bù trừ: ${(await response.text()).slice(0, 200)}`);
+    return answer({ warranty_claim: name, ...(debitNote ? { debit_note: debitNote, draft: true } : {}), warranty_status: confirmed.warranty_status, accounting_confirmed_by: confirmed.accounting_confirmed_by });
+  } catch (error) {
+    return refuse(error instanceof Error ? error.message : "không xác nhận được bù trừ");
+  }
+}
+
+async function openWarrantyClaim(call: PlatformCall, args: Record<string, unknown>): Promise<Response> {
+  const salesOrder = String(args.sales_order ?? "");
+  const deliveryNote = String(args.delivery_note ?? "");
+  const itemCode = String(args.item_code ?? "");
+  if (!salesOrder || !deliveryNote || !itemCode) return refuse("Cần Đơn bán, Phiếu giao và Mặt hàng để mở hồ sơ.");
+  try {
+    const [delivery, sales] = await Promise.all([
+      readDoc<Record<string, unknown>>(call, "Delivery Note", deliveryNote),
+      readDoc<Record<string, unknown>>(call, "Sales Order", salesOrder),
+    ]);
+    if (delivery.docstatus !== 1 || delivery.against_sales_order !== salesOrder) throw new Error("Phiếu giao phải đã ghi sổ và thuộc đúng Đơn bán.");
+    const items = Array.isArray(delivery.items) ? delivery.items as Array<Record<string, unknown>> : [];
+    if (!items.some((row) => row.item_code === itemCode)) throw new Error(`Mặt hàng ${itemCode} không có trên Phiếu giao ${deliveryNote}.`);
+    const customerCosts = typeof args.customer_costs_json === "string" ? JSON.parse(args.customer_costs_json) : args.customer_costs;
+    const normalized = validateWarrantyClaim({
+      ...args,
+      sales_order: salesOrder,
+      delivery_note: deliveryNote,
+      delivery_date: String(delivery.posting_at ?? "").slice(0, 10),
+      item_code: itemCode,
+      ...(Array.isArray(customerCosts) ? { customer_costs: customerCosts } : {}),
+    } as WarrantyClaimInput);
+    const created = await createV2Doc(call, "Warranty Claim", {
+      ...normalized,
+      legacy_key: String(args.claim_key ?? `BH-${deliveryNote}-${itemCode}-${String(args.received_fault_on ?? "").slice(0, 10)}`),
+      customer: sales.customer,
+      item_description: String(args.item_description ?? itemCode),
+    });
+    return answer({ warranty_claim: created.name, warranty_status: normalized.warranty_status, warranty_expires_on: normalized.warranty_expires_on, warranty_eligible: normalized.warranty_eligible });
+  } catch (error) {
+    return refuse(error instanceof Error ? error.message : "không mở được hồ sơ bảo hành");
+  }
 }
 
 // ── ẢNH BẢNG GIÁ → DÒNG HÀNG ────────────────────────────────────────────────
@@ -2857,6 +3092,14 @@ export default {
         if (method === "alumdoor.purchase.fifo_receipt") return await fifoReceiptDraft(call, args, true);
         if (method === "alumdoor.sales.preview_delivery") return await previewDelivery(call, args);
         if (method === "alumdoor.sales.delivery_from_order") return await deliveryFromSalesOrder(call, args);
+        if (method === "alumdoor.delivery_batch.preview") return await previewDailyDeliveryBatch(call, args);
+        if (method === "alumdoor.delivery_batch.create") return await createDailyDeliveryBatch(call, args);
+        if (method === "alumdoor.capacity.preview") return await capacityPreview(args);
+        if (method === "alumdoor.operations.overview") return await operationsOverview(call, args);
+        if (method === "alumdoor.operations.update_order") return await updateOperationalOrder(request, call, args);
+        if (method === "alumdoor.warranty.confirm_supplier_offset") return await confirmWarrantySupplierOffset(request, call, args);
+        if (method === "alumdoor.warranty.confirm_resolution") return await confirmWarrantySupplierOffset(request, call, args);
+        if (method === "alumdoor.warranty.open") return await openWarrantyClaim(call, args);
         if (method === "alumdoor.ocr.parse") return await parseOcr(call, env, args);
         if (method === "alumdoor.ocr.apply") return await applyOcr(call, env, args);
         return new Response(JSON.stringify({ message: `Không có method ${method}` }), { status: 404 });
@@ -2910,6 +3153,44 @@ export default {
         if (subject.doctype === "Production Request") {
           const call = platformCaller(request, env);
           return await validateProductionRequest(call, subject);
+        }
+        if (subject.doctype === "Warranty Claim") {
+          const call = platformCaller(request, env);
+          try {
+            const doc = await validationDocument(call, subject);
+            const normalized = validateWarrantyClaim(doc as WarrantyClaimInput);
+            if (String(doc.warranty_expires_on ?? "") !== normalized.warranty_expires_on
+              || Number(doc.warranty_eligible ?? -1) !== normalized.warranty_eligible
+              || Number(doc.customer_cost_total ?? -1) !== normalized.customer_cost_total) {
+              return refuse("Hạn bảo hành/chi phí dẫn xuất không khớp. Hãy mở hồ sơ bằng action “Mở hồ sơ bảo hành/lỗi” để hệ thống tính từ Phiếu giao.");
+            }
+            if (subject.action === "save") {
+              const current = await readMaster(call, "Warranty Claim", subject.name) ?? {};
+              const before = String(current.warranty_status ?? "Mới");
+              const after = String(doc.warranty_status ?? before);
+              const allowed: Record<string, string[]> = {
+                "Mới": ["Đang xử lý", "Chờ NCC đổi"],
+                "Đang xử lý": ["Đã đổi cho khách", "Đã đóng"],
+                "Đã đổi cho khách": ["Đã đóng"],
+                "Chờ NCC đổi": ["Đang gửi NCC", "Đã xác nhận bù trừ"],
+                "Đang gửi NCC": ["Đã nhận từ NCC", "Đã xác nhận bù trừ"],
+                "Đã nhận từ NCC": ["Đã xác nhận bù trừ", "Đã đóng"],
+                "Đã xác nhận bù trừ": ["Đã đóng"],
+                "Đã đóng": [],
+              };
+              if (after !== before && !(allowed[before] ?? []).includes(after)) return refuse(`Không được chuyển bảo hành từ “${before}” sang “${after}”.`);
+              if (after !== before && ["Đã xác nhận bù trừ", "Đã đóng"].includes(after)) {
+                const actor = platformActorIdentity(request);
+                const accountingRoles = new Set(["General Accountant", "Chief Accountant", "Kế toán tổng hợp", "Kế toán trưởng"]);
+                if (!actor.roles.some((role) => accountingRoles.has(role)) || doc.accounting_confirmed_by !== actor.user_id) {
+                  return refuse("Bước kết luận phải đi qua action xác nhận của Kế toán tổng hợp/Kế toán trưởng.");
+                }
+              }
+            }
+            return accept();
+          } catch (error) {
+            return refuse(error instanceof Error ? error.message : "Hồ sơ bảo hành không hợp lệ.");
+          }
         }
         if ([
           "Material Request",

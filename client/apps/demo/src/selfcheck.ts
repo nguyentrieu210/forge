@@ -44,7 +44,7 @@ import {
 } from "@metaforge/core";
 import { ControlRegistry, createDefaultRegistry, DateControl, AttachControl, GeolocationControl, LinkControl } from "@metaforge/controls";
 import {
-  FormView, groupLayout, resolveFormFieldWidth, ChildGrid, deriveAverageWeight, derivePurchaseOrderBarem, resolveChildGridColumns, defaultChildGridHiddenColumns, createFullRegistry, ListView, KanbanView, TreeView, ReportView, PrintView, DashboardView, CalendarView, GanttView, type TreeNodeItem,
+  FormView, groupLayout, resolveFormFieldWidth, ChildGrid, deriveAverageWeight, derivePurchaseOrderBarem, resolveChildGridColumns, defaultChildGridHiddenColumns, createFullRegistry, ListView, KanbanView, TreeView, ReportView, PrintView, buildPrintPath, DashboardView, CalendarView, GanttView, type TreeNodeItem,
   deriveColumns, applyClientQuery, buildServerQuery, countQuery, deriveStandardFilters, deriveSearchFields, statusVariant, emptyListState,
   applyColumnOrder, columnPreferenceKey, hasCustomColumnPreferences, moveColumn, normalizeColumnPreferences, stableColumnPreferenceScope,
   resolveFormActions, resolveWorkflowActions, editableCodeField, suggestEditableCode, type FormActionCtx,
@@ -1278,6 +1278,13 @@ check("PrintView render: iframe với html", () => {
   assert.ok(html.includes("<iframe"), "dùng iframe cô lập");
   assert.ok(html.toLowerCase().includes("srcdoc"), "có srcDoc");
   assert.ok(html.includes("HÓA ĐƠN"), "nội dung print trong iframe");
+});
+
+check("print route mã hoá DocType, tên chứng từ và mẫu in", () => {
+  assert.equal(
+    buildPrintPath("Delivery Note", "DN/0001", "Biên bản bàn giao / nghiệm thu ALUMDOOR"),
+    "/print/Delivery%20Note/DN%2F0001?format=Bi%C3%AAn%20b%E1%BA%A3n%20b%C3%A0n%20giao%20%2F%20nghi%E1%BB%87m%20thu%20ALUMDOOR",
+  );
 });
 
 // 38. DashboardView render: number card + chart bar (SVG).

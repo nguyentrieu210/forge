@@ -13,6 +13,7 @@ import { NewFormContainer } from "../container/NewFormContainer.js";
 import { ContextContainer } from "../container/ContextContainer.js";
 import { TreeContainer } from "../tree/TreeContainer.js";
 import type { UrlStateBridge } from "../list/useListState.js";
+import { buildPrintPath } from "../print/printRoute.js";
 
 export interface DoctypeWorkspaceProps {
   doctype: string;
@@ -71,7 +72,9 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
             onDeleted={() => onNavigate(listPath)}
             onDuplicate={() => onNavigate(`${listPath}/new`)}
             onRenamed={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)}
-            onPrint={() => onNavigate(`${printBase}/${doctype}/${encodeURIComponent(decoded)}`)}
+            onPrint={() => onNavigate(printBase === "/print"
+              ? buildPrintPath(doctype, decoded)
+              : `${printBase}/${encodeURIComponent(doctype)}/${encodeURIComponent(decoded)}`)}
             onClose={() => onNavigate(listPath)}
           />
         ) : isTree ? (

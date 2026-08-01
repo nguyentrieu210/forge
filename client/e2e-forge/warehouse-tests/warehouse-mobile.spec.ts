@@ -32,7 +32,9 @@ test("renders the installable Alumdoor warehouse experience without desktop shel
   await page.goto("/mobile/warehouse/");
 
   await expect(page).toHaveTitle("Alumdoor Kho");
-  await expect(page.getByRole("img", { name: "Alumdoor" }).first()).toBeVisible();
+  const brandLogo = page.locator("[data-alumdoor-logo]").first();
+  await expect(brandLogo).toBeVisible();
+  await expect(brandLogo.locator('img[alt="Alumdoor"]')).toHaveAttribute("src", /alumdoor\.vn\/wp-content\/uploads\/2022\/04\/logo-am-ban-doi-alumdoor/);
   await expect(page.getByText("Hôm nay cần làm gì ở kho?", { exact: true })).toBeVisible();
 
   for (const label of ["Trang chủ", "Nghiệp vụ", "Tra tồn", "Tôi"]) {

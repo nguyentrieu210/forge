@@ -40,6 +40,7 @@ import type {
   CustomizeChanges,
   WorkflowDef,
   PrintFormatDef,
+  PrintFormatSummary,
   DashboardDef,
   DocTypeMetaInput,
 } from "./adapter.js";
@@ -691,6 +692,15 @@ export class FrappeAdapterImpl implements FrappeAdapter {
   }
 
   // ── print/email §6 ────────────────────────────────────────────────────────
+  async getPrintFormats(dt: string, name: string): Promise<PrintFormatSummary[]> {
+    const r = await this.app
+      .call()
+      .get<Envelope<PrintFormatSummary[]>>("metaforge.api.get_print_formats", {
+        doctype: dt,
+        name,
+      });
+    return this.unwrap(r) ?? [];
+  }
   async printHtml(dt: string, name: string, format?: string): Promise<string> {
     // v16: chỉ get_html_and_style được whitelist (KHÔNG có get_html) → trả {html, style}
     //

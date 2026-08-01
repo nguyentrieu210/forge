@@ -25,6 +25,8 @@ export interface AppNavItem {
   kind?: NavKind;
   /** path tuỳ biến khi kind="route". */
   route?: string;
+  /** Server-side role gate used for sensitive operational screens. */
+  required_roles?: string[];
 }
 
 /**

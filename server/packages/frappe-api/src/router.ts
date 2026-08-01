@@ -990,6 +990,9 @@ async function dispatchMethod(
       return methodResponse(await updatePassword(args, context));
 
     // ---- printing, bulk actions, workspaces --------------------------------
+    case "metaforge.api.get_print_formats":
+      return methodResponse(await printFormats(args, context));
+
     case "frappe.www.printview.get_html_and_style":
       return methodResponse(await printView(args, context));
 
@@ -2070,6 +2073,30 @@ async function updatePassword(args: FrappeArgs, context: FrappeRouterContext): P
 }
 
 // ---- printing, bulk actions, workspaces -------------------------------------
+
+/**
+ * Lists the enabled print formats for one concrete document.
+ *
+ * The document-level print assertion is intentional: owner/share rules cannot be
+ * resolved safely from the DocType alone. The client uses this before rendering so
+ * "no format configured" is an ordinary empty state, not a failed print request.
+ */
+async function printFormats(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject[]> {
+  const doctype = args.requireText("doctype", 160);
+  const name = args.requireText("name", 320);
+  const document = await context.documents.getDocument(context.tenantId, doctype, name);
+  if (!document) throw errors.notFound();
+  await context.permissions.assert({
+    actor: context.actor, tenantId: context.tenantId, doctype, name,
+    owner: document.owner, data: document.data, action: "print",
+  });
+  await requireMeta(doctype, context);
+  return (await context.metadata.listPrintFormats(context.tenantId, doctype)).map((format) => ({
+    name: format.name,
+    doc_type: format.doc_type,
+    is_default: Boolean(format.is_default),
+  }));
+}
 
 /**
  * Renders a print format.
@@ -3244,8 +3271,9 @@ async function overviewDashboard(args: FrappeArgs, context: FrappeRouterContext)
 }
 
 /** Nav entries whose target this actor may actually open. */
-async function permittedNav<T extends { key: string; kind?: string; permission_doctype?: string }>(nav: T[], context: FrappeRouterContext): Promise<T[]> {
+async function permittedNav<T extends { key: string; kind?: string; permission_doctype?: string; required_roles?: string[] }>(nav: T[], context: FrappeRouterContext): Promise<T[]> {
   const visible = await Promise.all(nav.map(async (item) => {
+    if (!hasRequiredNavRole(context.actor, item.required_roles)) return false;
     // Data-backed experiences (approval inboxes today, richer workspaces later)
     // must be hidden by the same read gate as their underlying DocType.
     const permissionDoctype = item.permission_doctype
@@ -3263,6 +3291,12 @@ async function permittedNav<T extends { key: string; kind?: string; permission_d
     }
   }));
   return nav.filter((_, index) => visible[index]);
+}
+
+export function hasRequiredNavRole(actor: Actor, requiredRoles?: readonly string[]): boolean {
+  if (!requiredRoles?.length) return true;
+  if (actor.user_id === "Administrator" || actor.roles.includes("Administrator")) return true;
+  return requiredRoles.some((role) => actor.roles.includes(role));
 }
 
 /**

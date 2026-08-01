@@ -54,5 +54,5 @@ test("renders the full Alumdoor landing catalog with official media and no horiz
   await expect(page.getByText(/cskh\.alumdoor@gmail\.com/)).toBeVisible();
 
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
-  await page.screenshot({ path: testInfo.outputPath("alumdoor-landing.png"), fullPage: true });
+  await landing.screenshot({ path: testInfo.outputPath("alumdoor-landing.png"), animations: "disabled" });
 });

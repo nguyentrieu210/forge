@@ -63,6 +63,14 @@ interface ProductionStandard extends Json {
   door_type?: string;
   operation?: string;
   minutes_per_set?: number;
+  capacity_basis?: "m2" | "set" | "operation" | "batch";
+  minutes_per_unit?: number;
+  batch_capacity?: number;
+  persons?: number;
+  shift_hours?: number;
+  efficiency?: number;
+  workstation?: string;
+  default_overtime_hours?: number;
   standard_time?: string;
   effective_from?: string;
   effective_to?: string;
@@ -364,18 +372,33 @@ function parseMinutes(value: unknown): number | null {
   return Number.isFinite(total) && total > 0 ? total : null;
 }
 
-function findStandard(standards: ProductionStandard[], doorType: DoorType, department: string, on: string): { minutes: number; warning?: string } {
+function findStandard(
+  standards: ProductionStandard[], doorType: DoorType, department: string, on: string, quantity: { area_sqm: number; sets: number },
+): { minutes: number; basis?: string; warning?: string } {
   const candidates = standards
     .filter((row) => activeOn(row, on))
     .filter((row) => !text(row.door_type) || text(row.door_type) === doorType)
     .filter((row) => text(row.department) === department || text(row.department) === doorType)
-    .map((row) => ({ row, minutes: parseMinutes(row.minutes_per_set ?? row.standard_time) }))
+    .map((row) => {
+      const parsed = parseMinutes(row.minutes_per_unit ?? row.minutes_per_set ?? row.standard_time);
+      const operation = normalized(row.operation);
+      return { row, minutes: parsed ?? (operation.includes("sơn") || operation.includes("son") ? 180 : null) };
+    })
     .filter((entry): entry is { row: ProductionStandard; minutes: number } => entry.minutes !== null)
     .sort((left, right) => Number(right.row.minutes_per_set != null) - Number(left.row.minutes_per_set != null));
   if (!candidates.length) {
     return { minutes: 0, warning: `Chưa có định mức phút cho ${doorType}/${department}.` };
   }
-  return { minutes: round(candidates[0]!.minutes, 2) };
+  const selected = candidates[0]!;
+  const operation = normalized(selected.row.operation);
+  const inferredBasis = operation.includes("sơn") || operation.includes("son")
+    ? "batch"
+    : ["Cửa Úc", "Cửa Lưới", "Cửa tấm liền Úc"].includes(doorType) ? "m2" : "set";
+  const basis = text(selected.row.capacity_basis) || inferredBasis;
+  const factor = basis === "m2" ? quantity.area_sqm
+    : basis === "batch" ? Math.ceil(quantity.sets / Math.max(1, Number(selected.row.batch_capacity ?? 1)))
+      : quantity.sets;
+  return { minutes: round(selected.minutes * factor, 2), basis };
 }
 
 function productionDepartment(doorType: DoorType): string {
@@ -437,8 +460,8 @@ export function buildSalesProductionLines(input: BuildInputs): SalesProductionLi
     });
     const leaf = calculateLeafPlan(chosen.raw, row);
     const department = productionDepartment(doorType);
-    const standard = findStandard(input.standards, doorType, department, on);
     const billablePerSet = round(finitePositive(formula.billable_area_sqm, "Diện tích tính tiền") / sets);
+    const standard = findStandard(input.standards, doorType, department, on, { area_sqm: billablePerSet, sets: 1 });
     const estimatedWeightPerSet = formula.purchase_kg == null ? undefined : round(Number(formula.purchase_kg) / sets);
     const color = text(row.color);
     const bomNo = selectBom(input.boms, itemCode, color, on);
@@ -536,7 +559,8 @@ async function loadBuildInputs(call: ProductionPlatformCall, args: Json): Promis
       "leaf_divisor_source", "leaf_divisor_const", "leaf_rounding", "leaf_round_threshold", "leaf_variants",
     ]),
     listDocs<ProductionStandard>(call, "Production Standard", [
-      "name", "department", "door_type", "operation", "minutes_per_set", "standard_time",
+      "name", "department", "door_type", "operation", "minutes_per_set", "minutes_per_unit", "capacity_basis", "batch_capacity",
+      "persons", "shift_hours", "efficiency", "workstation", "default_overtime_hours", "standard_time",
       "effective_from", "effective_to", "disabled",
     ]).catch(() => []),
     listDocs<BomDoc>(call, "Bill of Materials", [
@@ -584,7 +608,8 @@ export async function calculateSalesProductionLine(
         "leaf_divisor_source", "leaf_divisor_const", "leaf_rounding", "leaf_round_threshold", "leaf_variants",
       ]),
       listDocs<ProductionStandard>(call, "Production Standard", [
-        "name", "department", "door_type", "operation", "minutes_per_set", "standard_time",
+        "name", "department", "door_type", "operation", "minutes_per_set", "minutes_per_unit", "capacity_basis", "batch_capacity",
+        "persons", "shift_hours", "efficiency", "workstation", "default_overtime_hours", "standard_time",
         "effective_from", "effective_to", "disabled",
       ]).catch(() => []),
     ]);
@@ -616,7 +641,10 @@ export async function calculateSalesProductionLine(
       leafError = error instanceof Error ? error.message : "Không tính được số lá.";
     }
     const department = productionDepartment(doorType);
-    const standard = findStandard(standards, doorType, department, new Date().toISOString().slice(0, 10));
+    const standard = findStandard(standards, doorType, department, new Date().toISOString().slice(0, 10), {
+      area_sqm: Number(formula.billable_area_sqm ?? 0) / sets,
+      sets: 1,
+    });
     return answer({
       ...formula,
       item_code: itemCode,

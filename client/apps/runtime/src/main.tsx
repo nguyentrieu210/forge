@@ -5,7 +5,7 @@ import { mergeLocale, resolveHomeRoute, validateManifest, type ApplicationCatalo
 import { FrappeAdapterImpl, createScopeKey, type MetaForgeBootDTO } from "@metaforge/adapter-frappe";
 import { MetaForgeProvider } from "@metaforge/views/provider";
 import { createFullRegistry } from "@metaforge/views/registry";
-import { AssistantBubble, loadRecentDocs, PrintContainer, setAssistantContext } from "@metaforge/views";
+import { AssistantBubble, buildPrintPath, loadRecentDocs, PrintContainer, setAssistantContext } from "@metaforge/views";
 import type { UrlStateBridge } from "@metaforge/views/url-state";
 import {
   AppShell, AuthBoundary, BusinessContextBar, BusinessContextProvider, I18nProvider,
@@ -30,6 +30,8 @@ const ActionScreen = lazy(() => import("@metaforge/views/action").then((module) 
 const ScreenView = lazy(() => import("@metaforge/views/screen").then((module) => ({ default: module.ScreenView })));
 const ApprovalInbox = lazy(() => import("./experiences/ApprovalInbox.js").then((module) => ({ default: module.ApprovalInbox })));
 const SocialCommerce = lazy(() => import("./experiences/SocialCommerce.js").then((module) => ({ default: module.SocialCommerce })));
+const DailyDetailedLedger = lazy(() => import("./experiences/DailyDetailedLedger.js").then((module) => ({ default: module.DailyDetailedLedger })));
+const AlumdoorOperationsCenter = lazy(() => import("./experiences/AlumdoorOperationsCenter.js").then((module) => ({ default: module.AlumdoorOperationsCenter })));
 
 /**
  * The GENERIC runtime — one bundle that serves every app on the platform.
@@ -560,6 +562,20 @@ function ExperienceScreen({ manifest, boot, logout, nav }: ScreenProps) {
       </Shell>
     );
   }
+  if (kind === "daily-ledger") {
+    return (
+      <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={experienceKey} breadcrumbs={[{ label: "Sổ chi tiết hằng ngày" }]}>
+        <DailyDetailedLedger />
+      </Shell>
+    );
+  }
+  if (kind === "alumdoor-operations") {
+    return (
+      <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={experienceKey} breadcrumbs={[{ label: "Trung tâm vận hành" }]}>
+        <AlumdoorOperationsCenter />
+      </Shell>
+    );
+  }
   return <>{renderExperience(experienceKey, manifest, navigate)}</>;
 }
 
@@ -611,9 +627,11 @@ function DoctypeScreen({ manifest, boot, logout, nav }: ScreenProps) {
 }
 function PrintScreen(props: ScreenProps) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { doctype = "", name = "" } = useParams();
   const decodedDoctype = decodeURIComponent(doctype);
   const decodedName = decodeURIComponent(name);
+  const format = searchParams.get("format") ?? undefined;
   const title = props.nav.find((item) => item.doctype === decodedDoctype)?.label ?? decodedDoctype;
   return (
     <Shell {...props} active={decodedDoctype} breadcrumbs={[{ label: title }, { label: decodedName }, { label: "Bản in" }]}>
@@ -621,6 +639,8 @@ function PrintScreen(props: ScreenProps) {
         <PrintContainer
           doctype={decodedDoctype}
           name={decodedName}
+          format={format}
+          onFormatChange={(nextFormat) => navigate(buildPrintPath(decodedDoctype, decodedName, nextFormat), { replace: true })}
           onBack={() => navigate(`/app/${encodeURIComponent(decodedDoctype)}/${encodeURIComponent(decodedName)}`)}
         />
       </div>

@@ -48,8 +48,98 @@ const replaceField = (dt, name, next) => {
 };
 
 // ─────────────────────────── HEADER ───────────────────────────
-brief.version = "2.0.34";
+brief.version = "2.0.35";
 brief.locale.dateFormat = "dd/mm/yyyy"; // Q11 — chủ xưởng chốt gạch chéo
+for (const role of ["General Accountant", "Chief Accountant", "Director", "Kế toán tổng hợp", "Kế toán trưởng", "Giám đốc"]) {
+  if (!brief.roles.includes(role)) brief.roles.push(role);
+}
+brief.doctypes.push({
+  name: "Daily Ledger Access",
+  label: "Quyền sổ chi tiết hằng ngày",
+  menu: false,
+  fields: [{ fieldname: "note", fieldtype: "Small Text", label: "Ghi chú", read_only: true }],
+  permissions: {
+    "General Accountant": "r", "Chief Accountant": "r", Director: "r",
+    "Kế toán tổng hợp": "r", "Kế toán trưởng": "r", "Giám đốc": "r",
+  },
+});
+brief.experiences = [...(brief.experiences ?? []), {
+  key: "daily-ledger:workbench",
+  label: "Sổ chi tiết hằng ngày",
+  permission: "Daily Ledger Access",
+  roles: ["General Accountant", "Chief Accountant", "Director", "Kế toán tổng hợp", "Kế toán trưởng", "Giám đốc"],
+  icon: "notebook-tabs",
+  group: "Báo cáo",
+}, {
+  key: "alumdoor-operations:workbench",
+  label: "Trung tâm vận hành",
+  permission: "Sales Order",
+  roles: ["Chủ xưởng", "Kinh doanh", "Thủ kho", "Kế toán", "Sản xuất", "General Accountant", "Chief Accountant", "Kế toán tổng hợp", "Kế toán trưởng"],
+  icon: "panels-top-left",
+  group: "Bán hàng",
+}];
+
+const warrantyClaim = doctype("Warranty Claim");
+warrantyClaim.permissions = {
+  ...warrantyClaim.permissions,
+  "General Accountant": "rwc", "Chief Accountant": "rwc", "Kế toán tổng hợp": "rwc", "Kế toán trưởng": "rwc",
+};
+addAfter(warrantyClaim, "legacy_voucher",
+  "sales_order:Link(Sales Order)! Đơn bán",
+  "delivery_note:Link(Delivery Note)! Phiếu giao thực tế",
+  "delivery_date:Date~ Ngày giao thực tế",
+  "item_code:Link(Item)! Mặt hàng lỗi",
+  "purchase_document:Link(Purchase Invoice) Chứng từ mua liên quan",
+);
+replaceField(warrantyClaim, "issue_cause", {
+  fieldname: "issue_cause", fieldtype: "Select",
+  options: "Sản xuất\nNhà cung cấp\nKhách hàng sử dụng\nVận chuyển/lắp đặt",
+  label: "Nguyên nhân", required: true,
+});
+addAfter(warrantyClaim, "issue_cause",
+  "responsible_person:Data Người chịu trách nhiệm",
+  "production_conclusion:Small Text Kết luận sản xuất",
+  "warranty_expires_on:Date~ Hết hạn bảo hành",
+  "warranty_eligible:Check~ Còn bảo hành",
+  "customer_costs:Table(Warranty Cost Item) Chi phí do khách chịu",
+  "customer_cost_total:Currency~ Tổng chi phí khách chịu",
+  "supplier_offset_amount:Currency Số tiền bù trừ NCC",
+  "debit_note:Link(Debit Note)~ Giấy báo Nợ bù trừ",
+  "accounting_confirmed_by:Data~ Kế toán xác nhận",
+  "accounting_confirmed_on:Datetime~ Lúc xác nhận",
+);
+replaceField(warrantyClaim, "warranty_status", "warranty_status:Select(Mới,Đang xử lý,Đã đổi cho khách,Chờ NCC đổi,Đang gửi NCC,Đã nhận từ NCC,Đã xác nhận bù trừ,Đã đóng)=(Mới) Trạng thái");
+brief.doctypes.push({
+  name: "Warranty Cost Item", child: true, label: "Chi phí xử lý lỗi", group: "Bảo hành", naming: "autoincrement",
+  fields: ["operation:Data*! Công việc", "quantity:Float!=(1) Số lượng", "rate:Currency! Đơn giá", "amount:Currency~ Thành tiền", "note:Data Ghi chú"],
+  permissions: { "Chủ xưởng": "rwc", "Kinh doanh": "rwc", "Kế toán": "rwc", "Thủ kho": "rwc" },
+});
+
+const productionStandard = doctype("Production Standard");
+addAfter(productionStandard, "minutes_per_set",
+  { fieldname: "capacity_basis", fieldtype: "Select", options: "m2\nset\noperation\nbatch", label: "Cơ sở định mức", description: "Để trống: Cửa Úc/Lưới dùng m2, sơn dùng batch, các loại còn lại dùng set." },
+  "minutes_per_unit:Float Phút / đơn vị",
+  "batch_capacity:Float Sức chứa một mẻ",
+  "persons:Float=(1) Số người tiêu chuẩn",
+  "shift_hours:Float=(8) Giờ / ca",
+  "efficiency:Percent=(100) Hiệu suất",
+  "workstation:Data Trạm / máy",
+  "default_overtime_hours:Float=(0) Giờ tăng ca mặc định",
+);
+
+const operationalSalesOrder = doctype("Sales Order");
+addAfter(operationalSalesOrder, "delivery_date",
+  "responsible_person:Data Người phụ trách",
+  "product_group:Data Nhóm sản phẩm chính",
+  "manual_note:Small Text Ghi chú vận hành",
+  "operational_change_reason:Small Text- Lý do đổi vận hành",
+);
+const warrantyDebitNote = doctype("Debit Note");
+warrantyDebitNote.permissions = {
+  ...warrantyDebitNote.permissions,
+  "General Accountant": "rwcsxa", "Chief Accountant": "rwcsxa", "Kế toán tổng hợp": "rwcsxa", "Kế toán trưởng": "rwcsxa",
+};
+addAfter(warrantyDebitNote, "return_against", "warranty_claim:Link(Warranty Claim)- Hồ sơ bảo hành");
 // Nỗi đau #1 của BRD: người mở app phải thấy ngay tồn KHẢ DỤNG theo khổ, không phải tự lấy tồn tổng
 // rồi trừ các phiếu giữ bằng tay. Báo cáo này nằm ở query engine nền tảng vì nó đọc cùng sổ kho.
 brief.links.unshift({
@@ -89,6 +179,7 @@ brief.validators.push(
   { doctype: "Cut Order", actions: ["create", "save", "submit", "cancel"] },
   { doctype: "Stock Reservation", actions: ["create", "save"] },
   { doctype: "Stock Reconciliation", actions: ["create", "save", "submit"] },
+  { doctype: "Warranty Claim", actions: ["create", "save"] },
 );
 
 // ─────────────────────────── ITEM ───────────────────────────
@@ -671,6 +762,7 @@ note(`navigation: ${brief.navigation.items.length} mục`);
 
 // ══════════ DELIVERY NOTE — Q8: xuất kho KHÔNG cần đơn bán ══════════
 const dn = doctype("Delivery Note");
+addAfter(dn, "against_sales_order", "delivery_batch_key:Data- Khóa tạo phiếu theo ngày");
 // Xưởng còn xuất mẫu, xuất đổi bảo hành, xuất nội bộ — không đơn bán nào cả.
 replaceField(dn, "against_sales_order", "against_sales_order:Link(Sales Order) Theo đơn hàng (nếu có)");
 // `install_address` fetch_from đơn bán ⇒ bỏ bắt buộc đơn mà giữ bắt buộc địa chỉ là chặn ở cửa sau.
@@ -905,7 +997,50 @@ brief.actions.push(
     commit: "alumdoor.period.unlock | Mở kỳ | Chứng từ quá khứ sẽ có thể ghi lại — tiếp tục?",
   },
 );
+for (const [anchor, entries] of [
+  ["Delivery Note", ["action:giao-hang-theo-ngay"]],
+  ["Production Standard", ["action:lap-tai-san-xuat"]],
+  ["Warranty Claim", ["action:mo-ho-so-bao-hanh", "action:xac-nhan-bu-tru-bao-hanh"]],
+]) {
+  const index = brief.navigation.items.indexOf(anchor);
+  if (index >= 0) brief.navigation.items.splice(index + 1, 0, ...entries);
+}
 note(`actions: ${brief.actions.length} (3 action cắt trỏ lại Cut Order, +8 mới)`);
+
+brief.actions.push(
+  {
+    name: "mo-ho-so-bao-hanh", label: "Mở hồ sơ bảo hành/lỗi", icon: "shield-plus", group: "Bảo hành",
+    permission: "Warranty Claim", description: "Truy phiếu giao thực tế, tính hạn bảo hành 12 tháng và phân nhánh theo nguyên nhân lỗi.",
+    fields: [
+      "sales_order:Link(Sales Order)! Đơn bán", "delivery_note:Link(Delivery Note)! Phiếu giao đã ghi sổ",
+      "item_code:Link(Item)! Mặt hàng lỗi", "received_fault_on:Date! Ngày nhận lỗi",
+      "issue_cause:Select(Sản xuất,Nhà cung cấp,Khách hàng sử dụng,Vận chuyển/lắp đặt)! Nguyên nhân",
+      "responsible_person:Data Người chịu trách nhiệm", "supplier:Link(Supplier) Nhà cung cấp",
+      "purchase_document:Link(Purchase Invoice) Hoá đơn mua", "supplier_offset_amount:Currency Số tiền bù trừ",
+      "customer_costs_json:Text Chi phí theo công việc (JSON)", "item_description:Small Text Nội dung lỗi",
+    ],
+    commit: "alumdoor.warranty.open | Mở hồ sơ", resultTable: "results",
+  },
+  {
+    name: "xac-nhan-bu-tru-bao-hanh", label: "Kế toán xác nhận xử lý lỗi", icon: "badge-check", group: "Bảo hành",
+    permission: "Debit Note", description: "Chỉ Kế toán tổng hợp/Kế toán trưởng; lỗi sản xuất được chốt sau kết luận, lỗi NCC tạo Giấy báo Nợ nháp chống trùng.",
+    fields: ["warranty_claim:Link(Warranty Claim)! Hồ sơ lỗi NCC", "default_expense_account:Data Tài khoản ghi giảm"],
+    commit: "alumdoor.warranty.confirm_resolution | Xác nhận xử lý | Xác nhận kết luận lỗi và bù trừ nếu thuộc nhà cung cấp?",
+  },
+  {
+    name: "giao-hang-theo-ngay", label: "Tạo phiếu giao theo ngày", icon: "calendar-check", group: "Bán hàng",
+    permission: "Delivery Note", description: "Xem đơn đến hạn và tạo một Phiếu xuất nháp mỗi đơn; retry không tạo trùng.",
+    fields: ["delivery_date:Date!=(Today) Ngày giao", "warehouse:Link(Warehouse)! Kho xuất", "driver:Data Người giao / lái xe", "vehicle:Data Biển số"],
+    preview: "alumdoor.delivery_batch.preview | Xem đơn đến hạn",
+    commit: "alumdoor.delivery_batch.create | Tạo phiếu nháp | Tạo phiếu xuất nháp cho các đơn sẵn sàng?", resultTable: "results",
+  },
+  {
+    name: "lap-tai-san-xuat", label: "Tính năng lực và tăng ca", icon: "gauge", group: "Sản xuất",
+    permission: "Production Standard", description: "Tính tải theo m²/bộ/công đoạn/mẻ, ca 8 giờ, hiệu suất, workstation và tăng ca.",
+    fields: ["demands_json:Text! Nhu cầu sản xuất (JSON)", "resource_json:Text! Tổ/ca/trạm/tăng ca (JSON)"],
+    commit: "alumdoor.capacity.preview | Tính tải",
+  },
+);
 
 // Khoá/mở kỳ đi qua method nền tảng và bảng `accounting_period_locks`; không dựng doctype bóng.
 

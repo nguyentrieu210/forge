@@ -13,6 +13,7 @@ export interface MetadataStore {
   getWorkflow(tenantId: string, doctype: string): Promise<WorkflowMeta | null>;
   putWorkflow(tenantId: string, workflow: WorkflowMeta, actor: string, now: string): Promise<WorkflowMeta>;
   getPrintFormat(tenantId: string, doctype: string, name?: string): Promise<PrintFormatMeta | null>;
+  listPrintFormats(tenantId: string, doctype: string): Promise<PrintFormatMeta[]>;
   putPrintFormat(tenantId: string, format: PrintFormatMeta, actor: string, now: string): Promise<PrintFormatMeta>;
   /** `document` supplies values for field-, series- and format-based patterns. */
   nextName(tenantId: string, doctype: string, pattern: string, now: string, document?: JsonObject): Promise<string>;
@@ -137,6 +138,18 @@ export class D1MetadataStore implements MetadataStore {
     return row ? { ...(JSON.parse(row.format_json) as PrintFormatMeta), revision: row.revision } : null;
   }
 
+  async listPrintFormats(tenantId: string, doctype: string): Promise<PrintFormatMeta[]> {
+    const result = await this.db.prepare(
+      `SELECT format_json,revision FROM print_formats
+       WHERE tenant_id=?1 AND doc_type=?2 AND disabled=0
+       ORDER BY is_default DESC,name`,
+    ).bind(tenantId, doctype).all<PrintRow>();
+    return (result.results ?? []).map((row) => ({
+      ...(JSON.parse(row.format_json) as PrintFormatMeta),
+      revision: row.revision,
+    }));
+  }
+
   async putPrintFormat(tenantId: string, format: PrintFormatMeta, actor: string, now: string): Promise<PrintFormatMeta> {
     if (!format.name || !format.doc_type || typeof format.html !== "string") throw errors.validation("Print format name, doc_type and html are required");
     const existing = await this.db.prepare(`SELECT revision FROM print_formats WHERE tenant_id=?1 AND name=?2`).bind(tenantId, format.name).first<{ revision: number }>();
@@ -247,7 +260,18 @@ export class InMemoryMetadataStore implements MetadataStore {
   }
   async getWorkflow(tenantId: string, doctype: string): Promise<WorkflowMeta | null> { return structuredClone(this.workflows.get(this.key(tenantId, doctype)) ?? null); }
   async putWorkflow(tenantId: string, workflow: WorkflowMeta): Promise<WorkflowMeta> { this.workflows.set(this.key(tenantId, workflow.document_type), structuredClone(workflow)); return structuredClone(workflow); }
-  async getPrintFormat(tenantId: string, doctype: string, name?: string): Promise<PrintFormatMeta | null> { return structuredClone(this.formats.get(this.key(tenantId, name ?? doctype)) ?? null); }
+  async getPrintFormat(tenantId: string, doctype: string, name?: string): Promise<PrintFormatMeta | null> {
+    const formats = await this.listPrintFormats(tenantId, doctype);
+    return structuredClone(name
+      ? formats.find((format) => format.name === name) ?? null
+      : formats.find((format) => format.is_default) ?? formats[0] ?? null);
+  }
+  async listPrintFormats(tenantId: string, doctype: string): Promise<PrintFormatMeta[]> {
+    return [...this.formats.entries()]
+      .filter(([key, format]) => key.startsWith(`${tenantId}:`) && format.doc_type === doctype && !format.disabled)
+      .map(([, format]) => structuredClone(format))
+      .sort((left, right) => Number(Boolean(right.is_default)) - Number(Boolean(left.is_default)) || left.name.localeCompare(right.name));
+  }
   async putPrintFormat(tenantId: string, format: PrintFormatMeta): Promise<PrintFormatMeta> { this.formats.set(this.key(tenantId, format.name), structuredClone(format)); return structuredClone(format); }
   async provisionStandardCatalog(_tenantId: string, _actor: string, _now: string): Promise<{ doctypes: number; print_formats: number; roles: number }> { return { doctypes: 0, print_formats: 0, roles: 0 }; }
   

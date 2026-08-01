@@ -62,8 +62,8 @@ async function expectAlumdoorPalette(page: Page, mode: "light" | "dark") {
   const brandBackground = await page.locator("header .mf-brand-mark").evaluate(
     (element) => getComputedStyle(element).backgroundImage,
   );
-  expect(brandBackground).toContain("rgb(241, 92, 45)");
-  expect(brandBackground).toContain("rgb(57, 57, 56)");
+  expect(brandBackground).toContain("alumdoor.vn");
+  expect(brandBackground).toContain("logo-am-ban-doi-alumdoor");
   await expect(page.locator("header").getByRole("button", { name: "Đăng nhập", exact: true })).toHaveCSS(
     "background-color",
     "rgb(239, 107, 46)",

@@ -36,15 +36,21 @@ export function ForgeBrandLogo({
   if (isAlumdoorSurface()) {
     return (
       <span
-        className={cn("inline-flex shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#343433] px-2", className)}
+        data-alumdoor-logo
+        className={cn("relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#343433] px-2", className)}
         style={{ height: size, minWidth: Math.round(size * 2.35) }}
         title="Alumdoor"
       >
+        <span aria-hidden="true" className="absolute inset-0 grid place-items-center text-[0.58em] font-black tracking-[0.08em] text-[#ef6b2e]">
+          ALUMDOOR
+        </span>
         <img
           src={ALUMDOOR_LOGO_URL}
           alt="Alumdoor"
-          className="block h-[68%] w-auto max-w-none object-contain"
+          className="relative block h-[68%] max-w-none object-contain"
+          style={{ width: Math.round(size * 1.95) }}
           referrerPolicy="no-referrer"
+          onError={(event) => { event.currentTarget.style.display = "none"; }}
         />
       </span>
     );

@@ -27,8 +27,9 @@ Người dùng mục tiêu là doanh nghiệp cần ERP theo vai trò: quản tr
 ### Frontend
 
 - Runtime React chung khởi động tại `client/apps/runtime/src/main.tsx`.
-- Router hỗ trợ list/form/new form/print/report/workspace/overview/action screen/import trong cùng file.
-- Mọi gọi API Frappe-shaped đi qua `client/packages/adapter-frappe/src/frappe-adapter.ts`.
+- Router hỗ trợ list/form/new form/print/report/workspace/overview/action screen/import trong cùng file; route in chuẩn là `/print/:doctype/:name?format=<tên mẫu>` và trường hợp chưa cấu hình mẫu là empty-state, không phải lỗi trang.
+- Mọi gọi API Frappe-shaped đi qua `client/packages/adapter-frappe/src/frappe-adapter.ts`, gồm cả tải danh sách mẫu in theo chứng từ trước khi gọi renderer.
+- Print format Alumdoor mới phải tái sử dụng brand system của Purchase Order mặc định: `/alumdoor-order-logo.png`, `/alumdoor-company-header.png`, letterhead `194mm × 17mm`, lề trên `23.7mm` và tiêu đề `#f15a24`; regression `alumdoor-print-brand-consistency.test.mjs` khóa contract này.
 - Form/list/child table được render từ metadata bởi `client/packages/views/src/container/`, `client/packages/views/src/form/` và registry tại `client/packages/views/src/registry.ts`.
 - Field state như hidden, masked, locked và editable được suy ra bởi `client/packages/core/src/meta/resolver.ts`.
 - Session boundary/login nằm tại `client/packages/shell/src/auth/AuthBoundary.tsx`.
