@@ -230,7 +230,96 @@ jobs:
         if: steps.scope.outputs.auth == 'true'
         env:
           FORGE_AUTH_BACKEND: http://127.0.0.1:8801
-        run: pnpm --filter e2e-forge exec playwright test --config playwright.auth.config.ts
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Each device cohort runs the full authenticated suite. The production login
+          # guard remains 30 attempts/IP/15m; CI resets only the exact ephemeral tenant's
+          # persistent counter between cohorts instead of weakening that guard or forging
+          # Cloudflare-owned client-address headers.
+          pnpm --filter e2e-forge exec playwright test \
+            --config playwright.auth.config.ts \
+            --project=desktop-chromium
+
+          if [ "$FORGE_QA_TENANT_ID" != "demo" ]; then
+            echo "Refusing auth counter reset outside the local demo QA tenant"
+            exit 1
+          fi
+
+          for pid_file in \
+            "$RUNNER_TEMP/forge-auth-backend.pid" \
+            "$RUNNER_TEMP/forge-callback-gateway.pid" \
+            "$RUNNER_TEMP/forge-alumdoor-worker.pid"; do
+            if [ -f "$pid_file" ]; then
+              pid="$(cat "$pid_file")"
+              kill "$pid" 2>/dev/null || true
+              wait "$pid" 2>/dev/null || true
+            fi
+          done
+
+          (
+            cd server
+            pnpm exec wrangler d1 execute cloudforge-demo \
+              --local \
+              --config apps/tenant-worker/wrangler.purchase-qa.jsonc \
+              --command "DELETE FROM login_rate_limits WHERE tenant_id='demo';"
+          )
+
+          (
+            cd server
+            nohup pnpm exec wrangler dev \
+              --config apps/tenant-worker/wrangler.purchase-qa.jsonc \
+              --port 8801 \
+              --inspector-port 9231 \
+              --local \
+              --var "SESSION_SECRET:$FORGE_AUTH_SESSION_SECRET" \
+              --var "INTERNAL_AUTH_SECRET:$FORGE_INTERNAL_AUTH_SECRET" \
+              >> "$RUNNER_TEMP/forge-auth-backend.log" 2>&1 &
+            echo "$!" > "$RUNNER_TEMP/forge-auth-backend.pid"
+
+            nohup pnpm exec wrangler dev \
+              --config apps/purchase-qa-callback/wrangler.jsonc \
+              --port 8802 \
+              --inspector-port 9232 \
+              --local \
+              --var "INTERNAL_AUTH_SECRET:$FORGE_INTERNAL_AUTH_SECRET" \
+              >> "$RUNNER_TEMP/forge-callback-gateway.log" 2>&1 &
+            echo "$!" > "$RUNNER_TEMP/forge-callback-gateway.pid"
+
+            nohup pnpm exec wrangler dev \
+              --config apps-src/alumdoor-worker/wrangler.purchase-qa.jsonc \
+              --port 8803 \
+              --inspector-port 9233 \
+              --local \
+              >> "$RUNNER_TEMP/forge-alumdoor-worker.log" 2>&1 &
+            echo "$!" > "$RUNNER_TEMP/forge-alumdoor-worker.pid"
+          )
+
+          tenant_ready=0
+          callback_ready=0
+          app_ready=0
+          for _ in $(seq 1 60); do
+            if curl --fail --silent --show-error http://127.0.0.1:8801/health > /dev/null; then tenant_ready=1; fi
+            if curl --fail --silent --show-error http://127.0.0.1:8802/health > /dev/null; then callback_ready=1; fi
+            if curl --silent --show-error --output /dev/null http://127.0.0.1:8803/health; then app_ready=1; fi
+            if [ "$tenant_ready" = "1" ] && [ "$callback_ready" = "1" ] && [ "$app_ready" = "1" ]; then
+              break
+            fi
+            sleep 2
+          done
+          if [ "$tenant_ready" != "1" ] || [ "$callback_ready" != "1" ] || [ "$app_ready" != "1" ]; then
+            echo "tenant_ready=$tenant_ready callback_ready=$callback_ready app_ready=$app_ready"
+            tail -n 200 "$RUNNER_TEMP/forge-auth-backend.log" || true
+            tail -n 200 "$RUNNER_TEMP/forge-callback-gateway.log" || true
+            tail -n 200 "$RUNNER_TEMP/forge-alumdoor-worker.log" || true
+            exit 1
+          fi
+          sleep 2
+
+          pnpm --filter e2e-forge exec playwright test \
+            --config playwright.auth.config.ts \
+            --project=mobile-chromium
 
       - name: Stop local Purchase QA workers
         if: steps.scope.outputs.auth == 'true' && always()
