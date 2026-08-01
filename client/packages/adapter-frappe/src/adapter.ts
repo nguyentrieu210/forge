@@ -99,6 +99,7 @@ export interface CustomizeChanges {
 }
 export interface WorkflowDef { name: string; document_type: string; [k: string]: unknown; }
 export interface PrintFormatDef { name: string; doc_type: string; [k: string]: unknown; }
+export interface PrintFormatSummary { name: string; doc_type: string; is_default: boolean; }
 export interface DashboardDef { name: string; charts?: unknown[]; cards?: unknown[]; [k: string]: unknown; }
 export interface DocTypeMetaInput { [k: string]: unknown; }
 
@@ -205,6 +206,7 @@ export interface FrappeAdapter {
   getConnections(dt: string, name: string): Promise<ConnectionCount[]>;
 
   // print/email — §6
+  getPrintFormats(dt: string, name: string): Promise<PrintFormatSummary[]>;
   printHtml(dt: string, name: string, format?: string): Promise<string>;
   downloadPdf(dt: string, name: string, format?: string): Promise<Blob>;
   sendEmail(a: EmailArgs): Promise<{ name: string }>;

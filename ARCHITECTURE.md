@@ -48,7 +48,7 @@ Các thư mục `node_modules`, `dist`, `build`, `.git`, `coverage`, `server/wor
 | Control plane | `server/apps/control-plane-worker/src/index.ts` | Tenant routing/provisioning state |
 | Social ingress | `server/apps/social-ingress-worker/src/index.ts` | OAuth/webhook/social event ingress |
 
-Frontend routes được khai báo trực tiếp trong `client/apps/runtime/src/main.tsx`, gồm list/form/new/print/report/workspace/overview/catalog/permissions/import/action screen.
+Frontend routes được khai báo trực tiếp trong `client/apps/runtime/src/main.tsx`, gồm list/form/new/print/report/workspace/overview/catalog/permissions/import/action screen. Bản in dùng `/print/:doctype/:name?format=<tên mẫu>`; runtime tải danh sách mẫu đã bật cho chứng từ, chọn mẫu mặc định khi URL không chỉ định và giữ mẫu phụ trong query string.
 
 ## Request và service layers
 

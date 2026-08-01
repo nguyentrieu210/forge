@@ -128,3 +128,11 @@ Branch: `feat/alumdoor-pwa-real-brand-assets`.
 - Màn Quy trình đổi sang sơ đồ bước + truy cập nhanh sinh từ Meta; màn Báo cáo/Danh mục là hub riêng sinh từ group metadata.
 - Danh sách có dải tổng nhanh: tổng bản ghi, số dòng đang hiển thị và tối đa hai tổng số của trang hiện tại.
 - MetaForge MISA-style E2E PASS `9/9` trên desktop, Pixel 7 và iPhone 13; warehouse authenticated UI PASS `2/2` ở Pixel 7 và 390x844, không tràn ngang.
+
+### Đã hợp nhất Print design PR #141
+
+- Nguồn: `feat/print-design-sales-documents-20260801`, head `76eb64285c6b91b7d27f7de11e4cda4eb50f91c1`.
+- Sidecar `server/briefs/alumdoor-v2.prints.json` bổ sung năm mẫu: Đơn bán hàng, Phiếu giao hàng/lắp đặt, Phiếu yêu cầu sản xuất, Phiếu cắt nhôm có QR thật và Biên bản bàn giao/nghiệm thu.
+- Các mẫu dùng chung logo/header Alumdoor, khổ A4 và regression dữ liệu dài; QR Cut Order là data URL từ định danh nội bộ, không chứa token hay URL nhạy cảm.
+- Runtime `/print/:doctype/:name?format=...` tải danh sách mẫu theo quyền, cho đổi mẫu và giữ lựa chọn trên URL; DocType chưa có mẫu hiển thị empty-state thay vì lỗi đỏ.
+- Nhánh in từng được release độc lập ở Gateway version `aff41705-29f2-443f-be5c-fee161061097`; bản đó chưa có UI/PWA mới. Release kế tiếp phải build exact merge head hiện tại để có cả hai phần.

@@ -20,12 +20,12 @@
  * The password is read from FORGE_ADMIN_PASSWORD, never an argument, so it does not land in
  * shell history or in a process listing.
  */
-import { readFile } from "node:fs/promises";
 import { existsSync, statSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { compileBrief, BriefError } from "./lib/compile-brief.mjs";
 import { readAppSource } from "./lib/read-app-source.mjs";
+import { readBriefSource } from "./lib/read-brief-source.mjs";
 import { validateBriefSchema } from "./lib/validate-brief-schema.mjs";
 import { fail, serverRoot } from "./wrangler-cli.mjs";
 import { parseAppManifest } from "../dist/packages/app-registry/src/index.js";
@@ -70,7 +70,7 @@ if (isDirectory) {
 } else {
   let brief;
   try {
-    brief = JSON.parse(await readFile(source, "utf8"));
+    brief = await readBriefSource(source);
   } catch (error) {
     fail(`${briefPath}: ${error.message}`);
   }

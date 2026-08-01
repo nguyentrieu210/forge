@@ -116,3 +116,10 @@ Sales Order → production request → Work Order → material issue/consume →
 3. Ghép `origin/feat/print-design-sales-documents-20260801`, giữ thay đổi giao diện hiện tại và chạy lại test mẫu in/QR/routing.
 4. Chạy full typecheck, lint, test, build, stage check và Wrangler dry-run trên exact commit.
 5. Push branch/PR rồi deploy Gateway trực tiếp từ máy local theo yêu cầu user; ghi exact SHA và Cloudflare Version ID.
+
+### Gate mẫu in sau hợp nhất
+
+- Chạy focused test cho Sales Order, Delivery Note, Production Request, Cut Order QR, Acceptance và sidecar loader.
+- Chạy tenant facade integration để khóa danh sách mẫu, lựa chọn `?format=` và URL encoding.
+- Giữ năm mẫu A4 trong vùng `194mm`, logo/company header tải đủ và vùng ký không tràn trang.
+- Sau release kiểm tra đăng nhập hết hạn ở route in quay về trang chủ, không hiện JSON `AUTHENTICATION_REQUIRED`.
