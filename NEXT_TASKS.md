@@ -4,6 +4,35 @@ Ngày cập nhật: **2026-08-02**.
 
 Đây là hàng đợi active. Không dùng file này thay cho GitHub khi cần exact branch head, PR state hoặc CI. Trước khi làm đọc `RUNBOOK.md` và `CURRENT_STATUS.md`.
 
+## ACTIVE — PR #182 MetaForge Bulk View
+
+Mục tiêu: hoàn tất Bulk View an toàn cho master data và cấu hình ALUM hiện có, sau đó review/merge riêng; không deploy production trong slice này.
+
+### Đã có
+
+- Renderer chung `BulkGridView` + container metadata-driven.
+- Tab `Danh sách | Nhập hàng loạt` trong `DoctypeWorkspace` khi policy bật.
+- Paste Excel/Google Sheets, fill-down, search/paging, row error, discard và optimistic concurrency.
+- Generic `document_update` fail closed cho transaction/submittable, child/single, internal/read-only/server-owned và conditional-readonly field.
+- ALUM `2.1.2` bulk config cho UOM, Brand, Manufacturer, Item Color, Material Grade/Specification, Item Attribute, Supplier Item, Measurement Profile, Item, Customer, Supplier, Price List, Item Price và Pricing Rule.
+- Baseline head `c36c8024d3aaa35574f5599a9c15ed6a86727933`: required workflows 6/6 PASS trước final hardening/rebase.
+
+### Done condition PR #182
+
+- Final rebased exact PR head required workflows 6/6 PASS.
+- Không có unresolved review finding Critical/High.
+- PR vẫn không deploy Cloudflare, không sửa production secrets/DNS, không mutate tenant production.
+- Chỉ merge sau review/approval riêng; merge không tự cấp quyền deploy.
+
+### Follow-up MetaForge sau Bulk View
+
+1. **Matrix View** — primitive chuẩn kế tiếp cho User×Role, User×Warehouse/Department/Company, Item×Color, Item×UOM, Item×Reorder warehouse, Supplier×Item và account mapping.
+2. **Bulk Transaction strategy** — method/controller-backed grid cho Stock Reconciliation và BOM làm hai reference đầu tiên; tuyệt đối không mass-update ledger/document đã submit.
+3. **Nhập nhôm nhiều mã / Purchase Receipt transaction grid**.
+4. **Batch Print / QR label queue** dưới dạng action/workspace, không cần ViewKind riêng.
+5. **Resource Scheduler** chỉ khi capacity/overtime P2 đi vào runtime; Calendar/Gantt hiện giữ nguyên.
+6. First-class short-brief compiler/parser transport cho `viewPolicy.bulk`; large brief hiện dùng `.views.json` compatibility transport và runtime resolver canonical.
+
 ## DONE — Runbook / project-status cleanup
 
 - PR `#180` merged tại `09bc64e1fe8d9ded171368cfc72bd2b4b18aed72`.
