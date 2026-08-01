@@ -4,48 +4,48 @@ Ngày cập nhật: **2026-08-01**.
 
 Mọi agent phải đọc `AI_HANDOFF.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md` và `DELIVERY_POLICY.md` trước khi tiếp tục.
 
-## Hoàn tất — Forge branding và warehouse PWA
+## ACTIVE P0 — Alumdoor PWA + official brand/media
 
-- PR `#142` merge SHA: `8e9882a6143f4cf669724f654ec1b59949b90138`.
-- Exact validated head: `24621f221fad2de950d0f58cc39078e43c206f51`.
-- Full CI, typecheck, build và browser QA desktop/tablet/mobile: PASS.
-- Warehouse PWA QA: PASS trên Pixel 7 và viewport `390 × 844`.
-- Không deploy Cloudflare, không sửa production secret/DNS và không mutate dữ liệu production.
+Branch: `feat/alumdoor-pwa-real-brand-assets`.
 
-## Hoàn tất — Finance receivables, payables và advances
+Đã code trên branch:
 
-- PR `#139` merge SHA: `e404e12ef22d5bc9f2a782820787b4f30d8dce8a`.
-- Exact validated head: `0b5a629989dfa2b7972dafbda39134ad9b4bdda6`.
-- Due date, AR/AP aging, partial/unallocated Payment Entry, Advance Balance, Payment Allocation, Party Statement và Debt Summary đã có trên default.
-- Payment Ledger tiếp tục append-only; invoice outstanding không âm; advance chỉ được phân bổ về 0.
-- Full tests, typecheck, build, PR Validation, Sales, Purchase, Inventory/Manufacturing và UI validation: PASS.
+1. Stage `client/apps/kho/dist-mobile` vào Gateway tại `public/mobile/warehouse` cùng runtime desktop.
+2. Kiểm bắt buộc mobile `index.html`, `manifest.webmanifest`, `warehouse-sw.js` trước deploy.
+3. Đổi PWA thành `Alumdoor Kho`, theme cam, icon thường/maskable theo logo chính thức Alumdoor.
+4. Shared shell/mobile trên host Alumdoor dùng logo chính thức từ `alumdoor.vn`, không dùng mark Forge tím-hồng.
+5. Landing dùng logo chính thức, ảnh hero VIP-ST500 thật và media website Alumdoor cho card sản phẩm.
+6. Landing có CTA `App kho điện thoại` → `/mobile/warehouse/`.
+7. Playwright kiểm logo/media landing, manifest/icon PWA, navigation/nghiệp vụ và horizontal overflow.
 
-## Hoàn tất — Alumdoor public landing redesign
+Việc phải hoàn thành trước khi đóng epic:
 
-- PR `#145` merge SHA: `898b19d0c58c84a32f99d73dfe0bf33f9ec78dd6`.
-- Exact validated head: `73dc960e3c9685708ac1b1e51c7eb5d2c1a71a9a`.
-- Landing guest đã chuyển sang bố cục mới theo thương hiệu/sản phẩm công khai của Alumdoor, giữ login nội bộ.
-- Có hero, navigation, 4 dịch vụ, giới thiệu, 4 nhóm danh mục sản phẩm, giá/link tham chiếu, liên hệ, khu vực hỗ trợ và footer.
-- Browser QA PASS desktop/tablet/mobile, gồm dark/reduced-motion, login, no horizontal overflow và link VIP-ST500.
-- Không deploy Cloudflare trong đợt này.
-
-## P0 — Release app kho, chỉ thực hiện khi có lệnh deploy riêng
-
-1. Tạo branch release riêng từ default head mới.
-2. Map output `client/apps/kho/dist-mobile` vào route `/mobile/warehouse/` của gateway/static host.
-3. Bảo đảm SPA fallback, manifest, service worker và asset base path hoạt động cùng origin với API.
-4. Chạy authenticated smoke với backend thật cho nhập kho, xuất kho, chuyển kho và kiểm kho.
-5. Kiểm tra quyền Stock User/Stock Manager, CSRF, cookie session và logout/change-password.
-6. Chụp evidence desktop landing, login mobile, home kho, form nghiệp vụ và account screen.
-7. Chỉ deploy Cloudflare hoặc thay production route khi có yêu cầu rõ ràng.
+1. Mở PR từ exact branch head và khóa head.
+2. Chờ CI, typecheck, build, PR Validation, UI browser QA, Sales/Purchase/Inventory gates terminal xanh.
+3. Merge đúng exact-head đã validate.
+4. Để protected `Release Gateway Production` build → stage → Wrangler dry-run → deploy Cloudflare `cloudforge-gateway`.
+5. Ghi run ID, exact target SHA và Cloudflare Gateway version ID.
+6. Production smoke:
+   - `https://alu.kairo.vn/` trả landing mới;
+   - `/mobile/warehouse/` trả `Alumdoor Kho`, không rơi về desktop shell;
+   - manifest scope/start URL đúng `/mobile/warehouse/`;
+   - `alumdoor-mark.svg`, maskable icon và `warehouse-sw.js` trả 200;
+   - guest boot vẫn bị chặn đúng và API/auth không bị service worker cache.
+7. Sau deploy cập nhật `CURRENT_STATUS.md` và `NEXT_TASKS.md` bằng evidence thật.
 
 ### Done condition
 
-- `/mobile/warehouse/` trả đúng bundle PWA, không rơi về desktop runtime.
-- Manifest và service worker có scope `/mobile/warehouse/`.
-- Phiếu kho tạo thành công bằng tài khoản có quyền và bị chặn đúng với tài khoản thiếu quyền.
-- Không cache API/auth response.
-- Rollback route/static asset được ghi rõ.
+- PWA nhìn thấy và mở trực tiếp từ landing production.
+- Logo Alumdoor đúng trên landing, login/shell Alumdoor và PWA.
+- Hero/card sản phẩm dùng asset thực từ website Alumdoor thay placeholder giả.
+- `/mobile/warehouse/` được Gateway production phục vụ cùng origin API.
+- Full exact-head CI + production deploy/smoke PASS.
+
+## Sau P0 — authenticated stock lifecycle
+
+- Chạy smoke có kiểm soát cho nhập kho, xuất kho, chuyển kho và kiểm kho bằng dữ liệu thử có cleanup rõ ràng.
+- Kiểm Stock User/Stock Manager, CSRF, cookie session và failure path.
+- Không mutate dữ liệu khách hàng thật chỉ để tạo evidence.
 
 ## P1 — Daily detailed ledger
 
@@ -87,5 +87,6 @@ Sales Order → production request → Work Order → material issue/consume →
 
 - Một epic, một branch, một PR.
 - Không thay head khi exact-head CI đang chạy.
-- Không deploy Cloudflare, sửa secret/DNS, bật rollout hoặc mutate dữ liệu thật nếu chưa có lệnh riêng.
+- User đã yêu cầu deploy epic hiện tại; production release chỉ chạy sau merge exact-head xanh qua workflow bảo vệ.
+- Không sửa production secret/DNS, bật rollout dữ liệu không thể đảo ngược hoặc mutate dữ liệu khách hàng.
 - Không commit `.env`, `server/work/`, `tmp`, backup, cookie, token hoặc generated evidence.
