@@ -1,6 +1,7 @@
 import { useCallback, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { Calculator, FileLock2, Loader2, RefreshCw, Settings2, ShieldAlert } from "lucide-react";
+import { mapError } from "@metaforge/core";
 import { useMetaForge } from "@metaforge/views/provider";
 import {
   Badge, Button, Input, Label, Table, TableBody, TableCell, TableHead, TableHeader,
@@ -149,13 +150,13 @@ export function ManufacturingCosting() {
     try {
       await task();
     } catch (caught) {
-      const message = adapter.mapError(caught).message;
+      const message = mapError(caught).message;
       setError(message);
       toast.error(message);
     } finally {
       setBusy(null);
     }
-  }, [adapter]);
+  }, []);
 
   const requireWorkOrder = () => {
     const value = workOrder.trim();
