@@ -104,7 +104,7 @@ export interface PhysicalStockBalance {
 
 export interface PhysicalStockTotals {
   quantity_micros: number;
-  /** Omitted when any non-zero balance has incomplete measured-weight lineage. */
+  /** Omitted when weight is absent or any non-zero movement has unknown measured weight. */
   weight_micros?: number;
   value_micros: number;
   physical_count_micros: number;
@@ -340,7 +340,8 @@ function sumBalances(rows: readonly PhysicalStockBalance[]): PhysicalStockTotals
     }),
     { quantity_micros: 0, value_micros: 0, physical_count_micros: 0 },
   );
-  const measurable = rows.every((row) => row.quantity_micros === 0 || row.weight_micros !== undefined);
+  const hasMeasuredWeight = rows.some((row) => row.weight_micros !== undefined);
+  const measurable = hasMeasuredWeight && rows.every((row) => row.quantity_micros === 0 || row.weight_micros !== undefined);
   if (!measurable) return base;
   return {
     ...base,
@@ -357,7 +358,8 @@ function sumEvents(events: readonly PhysicalStockLineageEvent[]): PhysicalStockT
     }),
     { quantity_micros: 0, value_micros: 0, physical_count_micros: 0 },
   );
-  const measurable = events.every((event) => event.quantity_micros === 0 || event.weight_micros !== undefined);
+  const hasMeasuredWeight = events.some((event) => event.weight_micros !== undefined);
+  const measurable = hasMeasuredWeight && events.every((event) => event.quantity_micros === 0 || event.weight_micros !== undefined);
   if (!measurable) return base;
   return {
     ...base,
