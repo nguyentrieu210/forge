@@ -99,7 +99,7 @@ export class PhysicalStockReportService {
     const fields = [
       "item_code", "warehouse", "warehouse_role", "inventory_mode", "measurement_profile",
       "color", "condition", "generation", "length_micros", "width_micros", "height_micros",
-      "thickness_micros", "batch_no", "serial_no", "quantity_micros", "value_micros",
+      "thickness_micros", "batch_no", "serial_no", "quantity_micros", "weight_micros", "value_micros",
       "physical_count_micros", "first_posting_at", "last_posting_at",
     ];
     return {
