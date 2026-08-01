@@ -662,7 +662,7 @@ export class D1ManufacturingCostingService {
       ...summary,
     };
     const sourceFingerprint = await sha256Hex(canonicalize(unsigned));
-    return { ...unsigned, source_fingerprint: sourceFingerprint };
+    return { ...unsigned, source_fingerprint: sourceFingerprint } as ManufacturingCostSheet;
   }
 }
 
