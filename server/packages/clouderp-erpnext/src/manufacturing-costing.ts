@@ -1,4 +1,4 @@
-import type { Actor, CanonicalDocument, JsonObject } from "../../contracts/src/index.js";
+import type { Actor, JsonObject } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
 import type { ControllerContext } from "../../document-kernel/src/index.js";
 import { fromScaledInt, toScaledInt } from "../../money/src/index.js";
@@ -58,22 +58,41 @@ interface CostSnapshotRow extends JsonObject {
   standard_cost_minor?: number;
 }
 
+interface CostingManufacturingSnapshot extends JsonObject {
+  bom_checksum?: string;
+  work_order_qty_micros?: number;
+  rows?: CostSnapshotRow[];
+}
+
 interface CostingWorkOrderData extends JsonObject {
   company: string;
   production_item: string;
   bom_no: string;
   qty?: string | number;
   qty_micros?: number;
+  operating_cost_minor?: number;
   costing_currency?: string;
   costing_currency_scale?: number;
   standard_material_cost_minor?: number;
   standard_operating_cost_minor?: number;
   standard_total_cost_minor?: number;
-  manufacturing_snapshot?: {
-    bom_checksum?: string;
-    work_order_qty_micros?: number;
-    rows?: CostSnapshotRow[];
-  };
+  manufacturing_snapshot?: CostingManufacturingSnapshot;
+}
+
+interface CostingBomItem extends JsonObject {
+  row_id?: string;
+  rate_minor?: number;
+  amount_minor?: number;
+}
+
+interface CostingBomData extends JsonObject {
+  currency?: string;
+  currency_scale?: number;
+  raw_material_cost_minor?: number;
+  operating_cost_minor?: number;
+  quantity_micros?: number;
+  output_stock_qty_micros?: number;
+  items?: CostingBomItem[];
 }
 
 interface DocumentSqlRow {
@@ -190,6 +209,8 @@ export interface ManufacturingCostSheet extends ManufacturingCostSummary {
   currency_scale: number;
   target_qty_micros: number;
   produced_qty_micros: number;
+  standard_cost_source: "WORK_ORDER_SNAPSHOT" | "LEGACY_BOM_FALLBACK";
+  legacy_standard_warning: boolean;
   ready_to_finalize: boolean;
   missing_rate_job_cards: string[];
   material_rows: ManufacturingMaterialCostRow[];
@@ -522,10 +543,24 @@ export class D1ManufacturingCostingService {
     if (!workOrderRow) throw errors.notFound(`Submitted Work Order ${workOrder} not found`);
     const workOrderData = parseObject(workOrderRow.payload_json, `Work Order ${workOrder}`) as unknown as CostingWorkOrderData;
     const company = requireText(workOrderData.company, "company", 240);
-    const currency = requireText(workOrderData.costing_currency, "costing_currency", 32);
-    const currencyScale = safeInteger(workOrderData.costing_currency_scale, "costing_currency_scale");
+    const bomNo = requireText(workOrderData.bom_no, "bom_no", 240);
+    const bomRow = await this.db.prepare(
+      `SELECT name,payload_json FROM documents
+       WHERE tenant_id=?1 AND doctype='Bill of Materials' AND name=?2 AND docstatus=1 LIMIT 1`,
+    ).bind(tenantId, bomNo).first<DocumentSqlRow>();
+    if (!bomRow) throw errors.notFound(`Submitted Bill of Materials ${bomNo} not found`);
+    const bomData = parseObject(bomRow.payload_json, `Bill of Materials ${bomNo}`) as unknown as CostingBomData;
+    const currency = optionalText(workOrderData.costing_currency, 32) || optionalText(bomData.currency, 32) || "USD";
+    const currencyScale = optionalSafeInteger(workOrderData.costing_currency_scale)
+      ?? optionalSafeInteger(bomData.currency_scale)
+      ?? 2;
+    if (currencyScale < 0 || currencyScale > 6) throw errors.misconfigured("Manufacturing costing currency scale must be between 0 and 6");
     const targetQty = positiveInteger(workOrderData.qty_micros ?? workOrderData.manufacturing_snapshot?.work_order_qty_micros, "work_order_qty_micros");
-    const snapshotRows = Array.isArray(workOrderData.manufacturing_snapshot?.rows) ? workOrderData.manufacturing_snapshot!.rows! : [];
+    const bomOutputQty = positiveInteger(bomData.output_stock_qty_micros ?? bomData.quantity_micros ?? targetQty, "BOM output quantity");
+    const rawSnapshotRows = Array.isArray(workOrderData.manufacturing_snapshot?.rows) ? workOrderData.manufacturing_snapshot!.rows! : [];
+    const snapshotRows = hydrateSnapshotStandards(rawSnapshotRows, bomData, targetQty, bomOutputQty);
+    const hasWorkOrderCostSnapshot = Number.isSafeInteger(workOrderData.standard_material_cost_minor)
+      && Number.isSafeInteger(workOrderData.standard_operating_cost_minor);
 
     const [stockDocsResult, childResult, ledgerResult, jobCardResult, rateResult] = await Promise.all([
       this.db.prepare(
@@ -576,8 +611,24 @@ export class D1ManufacturingCostingService {
       data: parseObject(row.payload_json, `Manufacturing Cost Rate ${row.name}`) as unknown as ManufacturingCostRateData,
     }));
     const operations = buildOperationCosts(jobCardResult.results ?? [], rates, company, currency, currencyScale);
-    const standardMaterial = safeInteger(workOrderData.standard_material_cost_minor ?? material.fullStandardMaterialCostMinor, "standard_material_cost_minor");
-    const standardOperating = safeInteger(workOrderData.standard_operating_cost_minor ?? 0, "standard_operating_cost_minor");
+    const legacyMaterial = scaleMinor(
+      nonNegativeInteger(bomData.raw_material_cost_minor ?? material.fullStandardMaterialCostMinor, "BOM raw_material_cost_minor"),
+      targetQty,
+      bomOutputQty,
+    );
+    const legacyOperating = scaleMinor(
+      nonNegativeInteger(bomData.operating_cost_minor ?? 0, "BOM operating_cost_minor"),
+      targetQty,
+      bomOutputQty,
+    );
+    const standardMaterial = hasWorkOrderCostSnapshot
+      ? nonNegativeInteger(workOrderData.standard_material_cost_minor, "standard_material_cost_minor")
+      : material.fullStandardMaterialCostMinor > 0 ? material.fullStandardMaterialCostMinor : legacyMaterial;
+    const standardOperating = hasWorkOrderCostSnapshot
+      ? nonNegativeInteger(workOrderData.standard_operating_cost_minor, "standard_operating_cost_minor")
+      : Number.isSafeInteger(workOrderData.operating_cost_minor)
+        ? nonNegativeInteger(workOrderData.operating_cost_minor, "operating_cost_minor")
+        : legacyOperating;
     const summary = calculateManufacturingCostSummary({
       target_qty_micros: targetQty,
       produced_qty_micros: material.producedQtyMicros,
@@ -596,12 +647,14 @@ export class D1ManufacturingCostingService {
       work_order_version: safeInteger(workOrderRow.version ?? 1, "work_order_version"),
       company,
       production_item: requireText(workOrderData.production_item, "production_item", 240),
-      bom_no: requireText(workOrderData.bom_no, "bom_no", 240),
+      bom_no: bomNo,
       bom_checksum: optionalText(workOrderData.manufacturing_snapshot?.bom_checksum, 128),
       currency,
       currency_scale: currencyScale,
       target_qty_micros: targetQty,
       produced_qty_micros: material.producedQtyMicros,
+      standard_cost_source: hasWorkOrderCostSnapshot ? "WORK_ORDER_SNAPSHOT" : "LEGACY_BOM_FALLBACK",
+      legacy_standard_warning: !hasWorkOrderCostSnapshot,
       ready_to_finalize: readyToFinalize,
       missing_rate_job_cards: operations.missingRateJobCards,
       material_rows: materialRows,
@@ -658,6 +711,28 @@ export function calculateManufacturingCostSummary(input: {
     total_variance_minor: totalVariance,
     actual_unit_cost_minor: unitCost,
   };
+}
+
+function hydrateSnapshotStandards(
+  rows: CostSnapshotRow[],
+  bom: CostingBomData,
+  targetQty: number,
+  bomOutputQty: number,
+): CostSnapshotRow[] {
+  const bomRows = new Map((bom.items ?? []).map((row, index) => [optionalText(row.row_id, 240) || `ROW-${index + 1}`, row]));
+  return rows.map((row) => {
+    const source = bomRows.get(row.bom_row_id);
+    const rate = Number.isSafeInteger(row.standard_rate_minor)
+      ? nonNegativeInteger(row.standard_rate_minor, "standard_rate_minor")
+      : nonNegativeInteger(source?.rate_minor ?? 0, "BOM row rate_minor");
+    const required = nonNegativeInteger(row.required_qty_micros, "required_qty_micros");
+    const cost = Number.isSafeInteger(row.standard_cost_minor)
+      ? nonNegativeInteger(row.standard_cost_minor, "standard_cost_minor")
+      : rate > 0
+        ? safeNumber(divideRounded(BigInt(rate) * BigInt(required), 1_000_000n))
+        : scaleMinor(nonNegativeInteger(source?.amount_minor ?? 0, "BOM row amount_minor"), targetQty, bomOutputQty);
+    return { ...row, standard_rate_minor: rate, standard_cost_minor: cost };
+  });
 }
 
 function buildMaterialActuals(
@@ -930,6 +1005,10 @@ function safeNumber(value: bigint): number {
 function safeInteger(value: unknown, label: string): number {
   if (!Number.isSafeInteger(value)) throw errors.validation(`${label} must be a safe integer`);
   return Number(value);
+}
+
+function optionalSafeInteger(value: unknown): number | undefined {
+  return Number.isSafeInteger(value) ? Number(value) : undefined;
 }
 
 function nonNegativeInteger(value: unknown, label: string): number {
