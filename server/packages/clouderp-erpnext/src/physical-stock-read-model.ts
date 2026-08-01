@@ -28,6 +28,7 @@ export interface PhysicalStockLedgerRow extends JsonObject {
   thickness_micros?: number;
   batch_no?: string;
   serial_no?: string;
+  serial_and_batch_bundle?: string;
   warehouse_role?: string;
   reversal_of_voucher_type?: string;
   reversal_of_voucher_no?: string;
@@ -62,6 +63,12 @@ export interface PhysicalStockLineageEvent {
   voucher_no: string;
   voucher_row?: string;
   revision?: number;
+  item_code: string;
+  warehouse: string;
+  physical_identity_key?: string;
+  batch_no?: string;
+  serial_no?: string;
+  serial_and_batch_bundle?: string;
   quantity_micros: number;
   /** null preserves "this movement was not weighed" instead of inventing zero kilograms. */
   weight_micros: number | null;
@@ -272,6 +279,12 @@ function lineageEvent(row: PhysicalStockLedgerRow): PhysicalStockLineageEvent {
     voucher_no: row.voucher_no,
     ...(row.voucher_row ? { voucher_row: row.voucher_row } : {}),
     ...(row.revision === undefined ? {} : { revision: row.revision }),
+    item_code: row.item_code,
+    warehouse: row.warehouse,
+    ...(text(row.physical_identity_key) ? { physical_identity_key: text(row.physical_identity_key) } : {}),
+    ...(text(row.batch_no) ? { batch_no: text(row.batch_no) } : {}),
+    ...(text(row.serial_no) ? { serial_no: text(row.serial_no) } : {}),
+    ...(text(row.serial_and_batch_bundle) ? { serial_and_batch_bundle: text(row.serial_and_batch_bundle) } : {}),
     quantity_micros: row.quantity_micros,
     weight_micros: movementWeight(row),
     value_micros: row.value_micros ?? 0,
