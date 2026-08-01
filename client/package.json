@@ -2,7 +2,7 @@
   "name": "metaforge",
   "version": "1.0.0-rc.1",
   "private": true,
-  "description": "MetaForge — React meta-driven engine copy 1:1 hành vi Frappe/ERPNext Desk, chạy trên headless Frappe v16",
+  "description": "MetaForge — React meta-driven engine tương thích hành vi Frappe/ERPNext Desk trên headless Frappe v16, với responsive form layout do MetaForge kiểm soát",
   "packageManager": "pnpm@9.15.0",
   "engines": {
     "node": ">=20"
