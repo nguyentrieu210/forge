@@ -15,6 +15,7 @@ export interface BulkGridContainerProps {
   doctype: string;
   bridge: UrlStateBridge;
   title?: string;
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
 export function BulkGridContainer(props: BulkGridContainerProps) {
@@ -46,6 +47,17 @@ export function BulkGridContainer(props: BulkGridContainerProps) {
   const rowByName = useMemo(() => new Map(rows.map((row) => [String(row.name), row])), [rows]);
   const rowSignature = useMemo(() => rows.map((row) => String(row.name)).join("\u001f"), [rows]);
   useEffect(() => setSelected(new Set()), [rowSignature]);
+  useEffect(() => { props.onDirtyChange?.(dirtyCount > 0); }, [dirtyCount, props.onDirtyChange]);
+  useEffect(() => () => { props.onDirtyChange?.(false); }, [props.onDirtyChange]);
+  useEffect(() => {
+    if (!dirtyCount) return;
+    const guard = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", guard);
+    return () => window.removeEventListener("beforeunload", guard);
+  }, [dirtyCount]);
 
   const changeCell = useCallback((name: string, fieldname: string, value: unknown) => {
     if (!policy?.editable.has(fieldname)) return;
