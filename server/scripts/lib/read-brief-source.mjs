@@ -108,7 +108,7 @@ function applyPermissionSidecar(brief, extension, source, briefSource) {
 
 function applyExtrasSidecar(brief, extension, source, briefSource) {
   assertSidecarObject(extension, source);
-  const arrayKeys = ["doctypes", "reports", "charts", "nav", "actions"];
+  const arrayKeys = ["doctypes", "reports", "charts", "nav", "actions", "experiences"];
   const allowed = new Set(["version", ...arrayKeys]);
   const unsupported = Object.keys(extension).filter((key) => !allowed.has(key) && !key.startsWith("//"));
   if (unsupported.length) {
@@ -129,7 +129,7 @@ function applyExtrasSidecar(brief, extension, source, briefSource) {
     additions += extension[key].length;
   }
   if (additions === 0) {
-    throw new Error(`${source}: extras phải bổ sung ít nhất một doctypes/reports/charts/nav/actions.`);
+    throw new Error(`${source}: extras phải bổ sung ít nhất một doctypes/reports/charts/nav/actions/experiences.`);
   }
 
   const doctypeNames = new Set();
@@ -138,6 +138,14 @@ function applyExtrasSidecar(brief, extension, source, briefSource) {
     if (!name) continue;
     if (doctypeNames.has(name)) throw new Error(`${source}: DocType bị trùng sau khi ghép extras: ${name}.`);
     doctypeNames.add(name);
+  }
+
+  const experienceKeys = new Set();
+  for (const experience of output.experiences ?? []) {
+    const key = typeof experience?.key === "string" ? experience.key : "";
+    if (!key) continue;
+    if (experienceKeys.has(key)) throw new Error(`${source}: Experience bị trùng sau khi ghép extras: ${key}.`);
+    experienceKeys.add(key);
   }
   return output;
 }
@@ -157,7 +165,7 @@ function applyExtrasSidecar(brief, extension, source, briefSource) {
  * Permission sidecars REPLACE the complete permission map for each named DocType. They do
  * not merge individual role strings, because leaving one stale grant behind during an RBAC
  * change is much worse than requiring the reviewer to see the full final role matrix.
- * Extras only APPEND bounded arrays and reject duplicate DocType names.
+ * Extras only APPEND bounded arrays and reject duplicate DocType/Experience identities.
  *
  * @param {string | URL} source
  * @returns {Promise<Record<string, unknown>>}
