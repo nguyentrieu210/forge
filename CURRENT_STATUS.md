@@ -3,7 +3,7 @@
 Ngày cập nhật: **2026-08-01**.
 
 - Alumdoor production đang chạy exact SHA `b46d322831ebe7b57e29d4363d2daa005bb56e55`. Full production release run `30707135053` và protected metadata installer run `30707517624` đều PASS; Alumdoor Meta `2.1.0` đã cài và xác minh trên tenant `alu`.
-- GitHub `main` hiện tại là `19f949c6aba3541c7d3585ad42f8a8c42ebeea74` (G03 Organization Security, CI run `30707768323` PASS). Commit này đến sau release Alumdoor nêu trên và chưa có production-release evidence trong đợt này.
+- Executable code head mới nhất trên `main` là `19f949c6aba3541c7d3585ad42f8a8c42ebeea74` (G03 Organization Security, CI run `30707768323` PASS). Các merge chỉ sửa tài liệu có thể làm SHA đầu nhánh cao hơn nhưng không thay executable head hoặc production release.
 
 ## Đã merge — Canonical DocType Meta và Alumdoor completeness
 
@@ -41,7 +41,7 @@ Ngày cập nhật: **2026-08-01**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `main`.
-- Current default head: `19f949c6aba3541c7d3585ad42f8a8c42ebeea74`.
+- Current executable code head (không tính docs-only evidence merge): `19f949c6aba3541c7d3585ad42f8a8c42ebeea74`.
 - Current code-only epic trên `main`: G03 Organization Security tại `19f949c6`; production vẫn ở Alumdoor release SHA `b46d3228`.
 - GitHub là nguồn sự thật cho current branch head, CI, PR và release evidence.
 
