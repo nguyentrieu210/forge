@@ -96,8 +96,8 @@ export class PlasticProductionRunController extends SuiteController<PlasticProdu
 
     await assertNoResourceOverlap(context, input, flag(machine.data.exclusive_resource));
 
-    let startedAt = input.started_at ? validTimestamp(input.started_at, "started_at") : undefined;
-    let endedAt = input.ended_at ? validTimestamp(input.ended_at, "ended_at") : undefined;
+    const startedAt = input.started_at ? validTimestamp(input.started_at, "started_at") : undefined;
+    const endedAt = input.ended_at ? validTimestamp(input.ended_at, "ended_at") : undefined;
     if (["Running", "Paused", "Completed"].includes(input.run_status) && !startedAt) {
       throw errors.validation("started_at is required once the run starts");
     }
@@ -238,12 +238,13 @@ function assertRunTransition(action: string, previous: PlasticRunStatus | undefi
   }
   if (requested === "Completed") throw errors.validation("Use Submit to complete a Production Run");
   if (!previous) return;
+  if (previous === "Completed") throw errors.validation("Completed Production Run is immutable; use cancel/amend semantics");
   const allowed: Record<Exclude<PlasticRunStatus, "Completed">, PlasticRunStatus[]> = {
     Planned: ["Planned", "Running"],
     Running: ["Running", "Paused"],
     Paused: ["Paused", "Running"],
   };
-  if (previous === "Completed" || !allowed[previous]?.includes(requested)) {
+  if (!allowed[previous].includes(requested)) {
     throw errors.validation(`Invalid Production Run transition ${previous} -> ${requested}`);
   }
 }
