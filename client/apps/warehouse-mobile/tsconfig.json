@@ -9,8 +9,11 @@
     "declarationMap": false,
     "jsx": "react-jsx",
     "jsxImportSource": "react",
-    "types": ["vite/client", "react", "react-dom"],
     "paths": {
+      "react": ["../kho/node_modules/@types/react/index.d.ts"],
+      "react/jsx-runtime": ["../kho/node_modules/@types/react/jsx-runtime.d.ts"],
+      "react-dom/client": ["../kho/node_modules/@types/react-dom/client.d.ts"],
+      "lucide-react": ["../kho/node_modules/lucide-react"],
       "@metaforge/adapter-frappe": ["../kho/node_modules/@metaforge/adapter-frappe"],
       "@metaforge/core": ["../kho/node_modules/@metaforge/core"],
       "@metaforge/shell": ["../kho/node_modules/@metaforge/shell"],
