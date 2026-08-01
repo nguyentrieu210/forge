@@ -34,23 +34,25 @@ Xây bộ mẫu in vận hành thống nhất cho Alumdoor. Mỗi mẫu lấy tr
    - Có loại cửa, bộ phận, màu, rộng/cao, rộng cắt, số lá, mô tơ/cảnh báo, phút dự toán và kho vật tư.
    - Header giữ đơn bán nguồn, khách hàng, ngày lập/ngày hẹn, trạng thái và kho nguyên vật liệu/thành phẩm.
 
+4. `Phiếu cắt nhôm ALUMDOOR` — Cut Order
+   - 13 cột, tổng độ rộng `100%`, bám trực tiếp `Cut Order` / `Cut Order Item` authoritative.
+   - Header có ngày cắt, công thức, khách hàng, đơn bán, Work Order, màu đích và trạng thái.
+   - Dòng cắt giữ mã nhôm, bundle lô mẹ, bundle đầu thừa, kho lô mẹ, khổ cây, rộng cắt, số lá, số nhát, kerf, kg tiêu hao/cân thật, đầu thừa và phế.
+   - Dùng bundle ID thật để truy vết; chưa tạo QR cho tới khi renderer có primitive QR authoritative.
+
 ## Hàng đợi
-
-### P0 — dùng hằng ngày
-
-1. `Phiếu cắt nhôm` — Rolling Door Work Order / Aluminum Cut Sheet, lô mẹ, rộng cắt, số lá, đầu thừa và QR chứng từ sau khi chốt schema authoritative.
 
 ### P1 — tiền, kho và nghiệm thu
 
-1. Chuẩn hóa A4 `Hoá đơn bán hàng`, không thay hóa đơn điện tử theo pháp luật.
-2. `Phiếu thu / phiếu chi` từ Payment Entry.
-3. Nâng `Phiếu nhập kho ALUMDOOR` lên cùng letterhead và kiểm thử bố cục.
-4. `Biên bản bàn giao / nghiệm thu lắp đặt`, lấy từ Delivery Note và Sales Order.
+1. `Biên bản bàn giao / nghiệm thu lắp đặt`, lấy từ Delivery Note và Sales Order.
+2. Chuẩn hóa A4 `Hoá đơn bán hàng`, không thay hóa đơn điện tử theo pháp luật.
+3. `Phiếu thu / phiếu chi` từ Payment Entry.
+4. Nâng `Phiếu nhập kho ALUMDOOR` lên cùng letterhead và kiểm thử bố cục.
 5. `Phiếu trả hàng` và `Giấy báo Nợ NCC`.
 
 ### P2 — tem và hậu mãi
 
-1. Tem QR mặt hàng/lô nhôm.
+1. Tem QR mặt hàng/lô nhôm khi renderer có primitive QR authoritative.
 2. Tem đầu thừa, có lô cha, chiều dài, màu, kho và ngày cắt.
 3. Phiếu tiếp nhận bảo hành và biên bản đổi/trả.
 4. Phiếu KCS và biên bản kiểm tra trước giao.
