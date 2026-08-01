@@ -227,7 +227,7 @@ test("authenticated receipt, issue, transfer and reconciliation preserve stock l
 
   await page.goto(`/app/${encodeURIComponent("Stock Entry")}/${encodeURIComponent(receipt.name)}`);
   expectDocumentRoute(page, "Stock Entry", receipt.name);
-  await expect(page.locator("body")).toContainText("QA-PURCHASE-ITEM");
+  await expect(page.locator("body")).toContainText("Authenticated stock QA Material Receipt");
 
   await createAndSubmitStockEntry(page, adminCsrf, "Material Issue", 2, sourceWarehouse.name);
   expect(reportQtyMicros(await physicalStock(page, adminCsrf, sourceWarehouse.name))).toBe(8_000_000);
@@ -277,7 +277,7 @@ test("authenticated receipt, issue, transfer and reconciliation preserve stock l
 
   await page.goto(`/app/${encodeURIComponent("Stock Reconciliation")}/${encodeURIComponent(submittedReconciliation.name)}`);
   expectDocumentRoute(page, "Stock Reconciliation", submittedReconciliation.name);
-  await expect(page.locator("body")).toContainText("QA-PURCHASE-ITEM");
+  await expect(page.locator("body")).toContainText(`Authenticated stock count ${suffix}`);
 
   const immutableCancel = await cancelRaw(page, managerCsrf, "Stock Reconciliation", submittedReconciliation.name);
   expect(immutableCancel.ok, immutableCancel.text).toBe(false);
