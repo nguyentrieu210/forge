@@ -161,3 +161,10 @@ Sales Order → production request → Work Order → material issue/consume →
 - [x] Typecheck/build, Playwright `8/8`, stage/dry-run/deploy và production browser smoke PASS; Gateway `79cf4d16-0bf5-4c18-bad8-99367dc382b5`.
 - [ ] Rebase/merge target branch để giải quyết conflict của PR `#150`, sau đó chạy lại required checks trên exact head trước khi merge GitHub.
 - [ ] Bổ sung khai báo biểu đồ theo Meta cho từng phân hệ; chỉ hiện tab `Biểu đồ` khi manifest của phân hệ có chart definition.
+### Đã hoàn thành trong release `8d8353d2`
+
+- [x] Giữ BottomNav mobile cố định, luôn hiện ở trang chủ và màn chi tiết nghiệp vụ.
+- [x] Chặn vuốt Back thoát app ngay; Back ưu tiên quay lại tab/màn nội bộ.
+- [x] Cho logo Alumdoor thích ứng theme tối, bỏ nền trắng cứng và tăng wordmark sidebar lên 40px.
+- [x] Nhập thay đổi mới nhất từ nhánh GitHub, build đúng merge head, stage/dry-run/deploy Gateway và smoke production.
+- [ ] Chạy authenticated production visual smoke cho sidebar sau khi có phiên đăng nhập demo đang mở; không tạo hoặc sửa chứng từ khách hàng chỉ để kiểm tra UI.

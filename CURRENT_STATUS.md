@@ -210,3 +210,12 @@ Branch: `feat/alumdoor-pwa-real-brand-assets`; PR `#150`.
 - Stage hash `db4ff4290972e2c0`; 70 assets, stage-check và Wrangler dry-run PASS. Gateway production Version ID `79cf4d16-0bf5-4c18-bad8-99367dc382b5`.
 - Production smoke PASS: root/PWA/manifest/logo HTTP 200; root chứa exact SHA; desktop 1440 và mobile 390 đều có login-only, logo 300px, autofocus đúng và overflow `0`.
 - PR `#150` hiện `CONFLICTING` và chưa có check cho head mới; đây là việc GitHub còn lại, không ảnh hưởng bundle production vừa kiểm chứng. Không đổi DNS/secrets, không migrate hoặc mutate dữ liệu tenant.
+### Mobile navigation + dark sidebar logo hotfix — 2026-08-01
+
+- Exact code/deploy SHA: `8d8353d2b27d24d2e333efb9699ce5571f2887fd`; branch `feat/alumdoor-pwa-real-brand-assets` đã nhập commit mới từ GitHub rồi push lại, không force-push.
+- App kho giữ BottomNav cố định và luôn hiển thị cả ở màn chi tiết nghiệp vụ; nội dung có safe-area padding nên không bị thanh điều hướng che.
+- Điều hướng tab/chi tiết dùng lịch sử nội bộ; vuốt Back trên điện thoại quay lại màn trước trong app thay vì thoát PWA ngay.
+- Logo Alumdoor dùng blend/filter theo theme; vùng logo sidebar đã bỏ nền trắng cứng nên nền tối không còn hiện ô trắng hoặc làm mất wordmark. Wordmark sidebar tăng từ 32px lên 40px trong vùng cao 48px.
+- Shell/kho typecheck, runtime + kho desktop/mobile exact-SHA build PASS. Local Playwright trước deploy: login + warehouse responsive `8/8` PASS, gồm BottomNav và Back.
+- Stage hash `fdeda6f72d763845`; stage-check, Wrangler dry-run 72 assets và deploy PASS. Gateway production Version ID `437867d0-3083-4e5f-ae33-7ae25872bc13`.
+- Production smoke PASS: root và PWA 200; root chứa exact SHA; login title/logo đúng, không tràn ngang. Không đổi DNS/secrets và không mutate dữ liệu tenant.
