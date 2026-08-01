@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Forge">
+  <defs>
+    <linearGradient id="g" x1="92" y1="72" x2="420" y2="440" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#6d28d9"/>
+      <stop offset="0.55" stop-color="#a21caf"/>
+      <stop offset="1" stop-color="#ec4899"/>
+    </linearGradient>
+    <clipPath id="c"><circle cx="256" cy="256" r="190"/></clipPath>
+  </defs>
+  <rect width="512" height="512" fill="#fff"/>
+  <circle cx="256" cy="256" r="190" fill="url(#g)"/>
+  <g clip-path="url(#c)" fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M78 198h86" stroke-width="28"/>
+    <path d="M66 256h88" stroke-width="28"/>
+    <path d="M92 314h54" stroke-width="28"/>
+    <path d="M158 360 250 160 350 360" stroke-width="44"/>
+    <path d="M208 284h94" stroke-width="34"/>
+  </g>
+</svg>

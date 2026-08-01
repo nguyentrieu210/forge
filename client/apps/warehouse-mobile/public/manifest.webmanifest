@@ -1,0 +1,48 @@
+{
+  "id": "/mobile/warehouse/",
+  "name": "Forge Kho",
+  "short_name": "Forge Kho",
+  "description": "Ứng dụng kho Forge tối ưu cho điện thoại.",
+  "lang": "vi",
+  "start_url": "/mobile/warehouse/",
+  "scope": "/mobile/warehouse/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#7c3aed",
+  "background_color": "#f8fafc",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "forge-mark.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "forge-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nhập kho",
+      "short_name": "Nhập kho",
+      "url": "/mobile/warehouse/?action=receipt",
+      "icons": [{ "src": "forge-mark.svg", "sizes": "any", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "Xuất kho",
+      "short_name": "Xuất kho",
+      "url": "/mobile/warehouse/?action=issue",
+      "icons": [{ "src": "forge-mark.svg", "sizes": "any", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "Tra tồn",
+      "short_name": "Tra tồn",
+      "url": "/mobile/warehouse/?tab=stock",
+      "icons": [{ "src": "forge-mark.svg", "sizes": "any", "type": "image/svg+xml" }]
+    }
+  ]
+}

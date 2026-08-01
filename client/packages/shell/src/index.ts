@@ -15,6 +15,7 @@ export interface AppShellConfig {
 }
 
 export { AppShell, type AppShellProps, type NavItem, type Breadcrumb, type NotificationItem } from "./WorkspaceAppShell.js";
+export { ForgeBrandLogo, type ForgeBrandLogoProps } from "./BrandLogo.js";
 export { I18nProvider, useI18n, useT, useLocale, type Locale } from "./i18n/index.js";
 export {
   CommandPalette, type CommandPaletteProps, type AwesomeAction, type AwesomeDoctype, type AwesomeRecord,

@@ -1,0 +1,24 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "rootDir": "src",
+    "noEmit": true,
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+    "paths": {
+      "react": ["../kho/node_modules/@types/react/index.d.ts"],
+      "react/jsx-runtime": ["../kho/node_modules/@types/react/jsx-runtime.d.ts"],
+      "react-dom/client": ["../kho/node_modules/@types/react-dom/client.d.ts"],
+      "lucide-react": ["../kho/node_modules/lucide-react"],
+      "@metaforge/adapter-frappe": ["../kho/node_modules/@metaforge/adapter-frappe"],
+      "@metaforge/core": ["../kho/node_modules/@metaforge/core"],
+      "@metaforge/shell": ["../kho/node_modules/@metaforge/shell"],
+      "@metaforge/ui": ["../kho/node_modules/@metaforge/ui"]
+    }
+  },
+  "include": ["src/**/*"]
+}

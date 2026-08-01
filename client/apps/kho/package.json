@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "typecheck": "tsc -b",
-    "build": "tsc -b && vite build"
+    "dev:mobile": "vite --config vite.mobile.config.ts",
+    "typecheck": "tsc -b && tsc -p ../warehouse-mobile/tsconfig.json",
+    "build": "tsc -b && vite build && tsc -p ../warehouse-mobile/tsconfig.json && vite build --config vite.mobile.config.ts"
   },
   "dependencies": {
     "@metaforge/adapter-frappe": "workspace:*",
