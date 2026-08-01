@@ -4,29 +4,17 @@ Ngày cập nhật: **2026-08-02**.
 
 Đây là hàng đợi active. Không dùng file này thay cho GitHub khi cần exact branch head, PR state hoặc CI. Trước khi làm đọc `RUNBOOK.md` và `CURRENT_STATUS.md`.
 
-## NOW — hoàn tất PR #180 docs/runbook cleanup
+## DONE — Runbook / project-status cleanup
 
-Branch: `chore/runbook-status-cleanup`.
+- PR `#180` merged tại `09bc64e1fe8d9ded171368cfc72bd2b4b18aed72`.
+- Final validated head: `1a631bae15637c39d06244dc8a3d8bb05eb5ecb0`.
+- Exact-head required workflows: **6/6 PASS**.
+- `RUNBOOK.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md`, `AI_HANDOFF.md` đã có vai trò rõ ràng.
+- `README.md` và `docs/ROADMAP.md` không còn là live-state source.
+- `DELIVERY_POLICY.md` không tự cấp quyền deploy production.
+- `EPIC_STATUS.md` stale đã bị xóa.
 
-Mục tiêu:
-
-- một runbook canonical;
-- một current status canonical;
-- một active task queue canonical;
-- xóa/đánh dấu tài liệu cũ để AI không hiểu snapshot lịch sử là trạng thái hiện tại;
-- không chạm executable code hoặc production.
-
-Branch đã được đồng bộ lại trên `main@3222beb66bd3e6b2abbab1b17a6009044a2d5358`, sau khi PR #175 và docs evidence PR #181 merge.
-
-Done condition:
-
-1. `RUNBOOK.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md`, `AI_HANDOFF.md` nhất quán.
-2. `README.md` và `docs/ROADMAP.md` không chứa live-state claim có thể điều phối agent sai.
-3. `DELIVERY_POLICY.md` không tự cấp quyền deploy production.
-4. `EPIC_STATUS.md` stale đã bị xóa.
-5. Diff chỉ là docs; không có `.env`, `server/work/`, `tmp/` hoặc generated artifacts.
-6. PR `#180` exact-head CI terminal theo policy repository trước merge.
-7. Sau merge, xác minh lại `main` HEAD; không tạo thêm snapshot status riêng nếu ba file canonical đã đủ.
+Không tạo thêm status/handoff file song song nếu nội dung thuộc các file canonical này.
 
 ## DONE — PR #175 Reservation acceptance
 
@@ -40,7 +28,7 @@ Không mở lại reservation slice nếu không có regression cụ thể.
 
 ## NEXT P0 — QR / lineage + cleanup QA
 
-Sau khi PR #180 hoàn tất, engineering task kế tiếp của stock acceptance là QR/lineage + cleanup QA. Mở branch mới từ exact `main` lúc bắt đầu task.
+Engineering task kế tiếp của stock acceptance là QR/lineage + cleanup QA. Khi bắt đầu, tạo branch mới từ exact current `main` sau khi kiểm tra GitHub/CI.
 
 ### QR / lineage
 
