@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS daily_ledger_snapshot_lines (
   tenant_id TEXT NOT NULL,
   snapshot_id TEXT NOT NULL,
   line_key TEXT NOT NULL,
-  domain TEXT NOT NULL CHECK (domain IN ('Sales','Purchase','Inventory','Manufacturing','Finance')),
+  domain TEXT NOT NULL CHECK (domain IN ('Sales','Purchase','Inventory','Manufacturing','Warranty','Finance')),
   source_type TEXT NOT NULL,
   source_ref TEXT NOT NULL,
   metric TEXT NOT NULL,

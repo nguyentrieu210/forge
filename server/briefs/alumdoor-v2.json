@@ -51,7 +51,13 @@
     "Kinh doanh",
     "Thủ kho",
     "Kế toán",
-    "Sản xuất"
+    "Sản xuất",
+    "General Accountant",
+    "Chief Accountant",
+    "Director",
+    "Kế toán tổng hợp",
+    "Kế toán trưởng",
+    "Giám đốc"
   ],
   "//worker": [
     "Worker riêng của Alumdoor: chia lá và cắt nhôm. Cả hai đều phải TÍNH rồi mới quyết nên",
@@ -181,6 +187,13 @@
     },
     {
       "doctype": "Production Request",
+      "actions": [
+        "create",
+        "save"
+      ]
+    },
+    {
+      "doctype": "Warranty Claim",
       "actions": [
         "create",
         "save"
@@ -544,6 +557,72 @@
       "preview": "alumdoor.sales.preview_production | Xem kế hoạch",
       "commit": "alumdoor.sales.create_production | Tạo yêu cầu và lệnh sản xuất | Tạo Work Order nháp theo từng bộ cửa?",
       "resultTable": "items"
+    },
+    {
+      "name": "mo-ho-so-bao-hanh",
+      "label": "Mở hồ sơ bảo hành/lỗi",
+      "icon": "shield-plus",
+      "group": "Bảo hành",
+      "permission": "Warranty Claim",
+      "description": "Truy phiếu giao thực tế, tính hạn bảo hành 12 tháng và phân nhánh theo nguyên nhân lỗi.",
+      "fields": [
+        "sales_order:Link(Sales Order)! Đơn bán",
+        "delivery_note:Link(Delivery Note)! Phiếu giao đã ghi sổ",
+        "item_code:Link(Item)! Mặt hàng lỗi",
+        "received_fault_on:Date! Ngày nhận lỗi",
+        "issue_cause:Select(Sản xuất,Nhà cung cấp,Khách hàng sử dụng,Vận chuyển/lắp đặt)! Nguyên nhân",
+        "responsible_person:Data Người chịu trách nhiệm",
+        "supplier:Link(Supplier) Nhà cung cấp",
+        "purchase_document:Link(Purchase Invoice) Hoá đơn mua",
+        "supplier_offset_amount:Currency Số tiền bù trừ",
+        "customer_costs_json:Text Chi phí theo công việc (JSON)",
+        "item_description:Small Text Nội dung lỗi"
+      ],
+      "commit": "alumdoor.warranty.open | Mở hồ sơ",
+      "resultTable": "results"
+    },
+    {
+      "name": "xac-nhan-bu-tru-bao-hanh",
+      "label": "Kế toán xác nhận xử lý lỗi",
+      "icon": "badge-check",
+      "group": "Bảo hành",
+      "permission": "Debit Note",
+      "description": "Chỉ Kế toán tổng hợp/Kế toán trưởng; lỗi sản xuất được chốt sau kết luận, lỗi NCC tạo Giấy báo Nợ nháp chống trùng.",
+      "fields": [
+        "warranty_claim:Link(Warranty Claim)! Hồ sơ lỗi NCC",
+        "default_expense_account:Data Tài khoản ghi giảm"
+      ],
+      "commit": "alumdoor.warranty.confirm_resolution | Xác nhận xử lý | Xác nhận kết luận lỗi và bù trừ nếu thuộc nhà cung cấp?"
+    },
+    {
+      "name": "giao-hang-theo-ngay",
+      "label": "Tạo phiếu giao theo ngày",
+      "icon": "calendar-check",
+      "group": "Bán hàng",
+      "permission": "Delivery Note",
+      "description": "Xem đơn đến hạn và tạo một Phiếu xuất nháp mỗi đơn; retry không tạo trùng.",
+      "fields": [
+        "delivery_date:Date!=(Today) Ngày giao",
+        "warehouse:Link(Warehouse)! Kho xuất",
+        "driver:Data Người giao / lái xe",
+        "vehicle:Data Biển số"
+      ],
+      "preview": "alumdoor.delivery_batch.preview | Xem đơn đến hạn",
+      "commit": "alumdoor.delivery_batch.create | Tạo phiếu nháp | Tạo phiếu xuất nháp cho các đơn sẵn sàng?",
+      "resultTable": "results"
+    },
+    {
+      "name": "lap-tai-san-xuat",
+      "label": "Tính năng lực và tăng ca",
+      "icon": "gauge",
+      "group": "Sản xuất",
+      "permission": "Production Standard",
+      "description": "Tính tải theo m²/bộ/công đoạn/mẻ, ca 8 giờ, hiệu suất, workstation và tăng ca.",
+      "fields": [
+        "demands_json:Text! Nhu cầu sản xuất (JSON)",
+        "resource_json:Text! Tổ/ca/trạm/tăng ca (JSON)"
+      ],
+      "commit": "alumdoor.capacity.preview | Tính tải"
     }
   ],
   "home": "report:Tồn nhôm theo khổ",
@@ -562,6 +641,7 @@
       "report:Tồn nhôm theo khổ",
       "Sales Order",
       "Delivery Note",
+      "action:giao-hang-theo-ngay",
       "action:cat-nhom",
       "Stock Entry",
       "action:hoan-cat",
@@ -571,8 +651,11 @@
       "Work Order",
       "Bill of Materials",
       "Production Standard",
+      "action:lap-tai-san-xuat",
       "Payment Entry",
       "Warranty Claim",
+      "action:mo-ho-so-bao-hanh",
+      "action:xac-nhan-bu-tru-bao-hanh",
       "report:Đơn hàng theo khách",
       "report:Báo giá theo khách",
       "report:Mua hàng theo nhà cung cấp",
@@ -2902,6 +2985,10 @@
         "currency:Link(Currency)-!=(VND) Tiền tệ",
         "transaction_date:Date!=(Today) Ngày đặt",
         "delivery_date:Date Ngày giao dự kiến",
+        "responsible_person:Data Người phụ trách",
+        "product_group:Data Nhóm sản phẩm chính",
+        "manual_note:Small Text Ghi chú vận hành",
+        "operational_change_reason:Small Text- Lý do đổi vận hành",
         "against_quotation:Link(Quotation) Theo báo giá",
         "selling_price_list:Link(Price List) Bảng giá áp dụng",
         {
@@ -3127,6 +3214,7 @@
           "fetch_from": "against_sales_order.currency"
         },
         "against_sales_order:Link(Sales Order) Theo đơn hàng (nếu có)",
+        "delivery_batch_key:Data- Khóa tạo phiếu theo ngày",
         "posting_at:Datetime!=(Now) Thời điểm xuất",
         "items:Table(Delivery Note Item)! Dòng hàng xuất",
         {
@@ -4545,6 +4633,7 @@
         "company:Link(Company)-!=(ALUMDOOR) Công ty",
         "currency:Link(Currency)-!=(VND) Tiền tệ",
         "return_against:Link(Purchase Invoice)! Giảm trừ cho hoá đơn mua nào",
+        "warranty_claim:Link(Warranty Claim)- Hồ sơ bảo hành",
         "posting_at:Datetime!=(Now) Ngày chứng từ",
         "credit_to:Link(Account)!=(Phải trả người bán) Tài khoản phải trả (phải khớp hoá đơn gốc)",
         "default_expense_account:Link(Account)!=(Hàng tồn kho) Tài khoản ghi giảm",
@@ -4556,6 +4645,10 @@
       "permissions": {
         "Chủ xưởng": "rwcsxa",
         "Kế toán": "rwcsxa",
+        "General Accountant": "rwcsxa",
+        "Chief Accountant": "rwcsxa",
+        "Kế toán tổng hợp": "rwcsxa",
+        "Kế toán trưởng": "rwcsxa",
         "Thủ kho": "r",
         "Kinh doanh": "r"
       }
@@ -4889,6 +4982,11 @@
       "fields": [
         "legacy_key:Data*! Khoá hồ sơ",
         "legacy_voucher:Data Số chứng từ cũ",
+        "sales_order:Link(Sales Order)! Đơn bán",
+        "delivery_note:Link(Delivery Note)! Phiếu giao thực tế",
+        "delivery_date:Date~ Ngày giao thực tế",
+        "item_code:Link(Item)! Mặt hàng lỗi",
+        "purchase_document:Link(Purchase Invoice) Chứng từ mua liên quan",
         "order_date:Date Ngày đặt hàng",
         "received_fault_on:Date Ngày nhận lỗi",
         "received_fault_qty:Float SL nhận lỗi",
@@ -4901,11 +4999,27 @@
         "supplier:Link(Supplier) Nhà cung cấp",
         "customer:Link(Customer) Khách hàng",
         "item_description:Small Text! Hàng lỗi / nội dung",
-        "issue_cause:Data Nguyên nhân",
+        {
+          "fieldname": "issue_cause",
+          "fieldtype": "Select",
+          "options": "Sản xuất\nNhà cung cấp\nKhách hàng sử dụng\nVận chuyển/lắp đặt",
+          "label": "Nguyên nhân",
+          "required": true
+        },
+        "responsible_person:Data Người chịu trách nhiệm",
+        "production_conclusion:Small Text Kết luận sản xuất",
+        "warranty_expires_on:Date~ Hết hạn bảo hành",
+        "warranty_eligible:Check~ Còn bảo hành",
+        "customer_costs:Table(Warranty Cost Item) Chi phí do khách chịu",
+        "customer_cost_total:Currency~ Tổng chi phí khách chịu",
+        "supplier_offset_amount:Currency Số tiền bù trừ NCC",
+        "debit_note:Link(Debit Note)~ Giấy báo Nợ bù trừ",
+        "accounting_confirmed_by:Data~ Kế toán xác nhận",
+        "accounting_confirmed_on:Datetime~ Lúc xác nhận",
         "customer_resolution:Data Xử lý cho khách",
         "supplier_resolution:Data Xử lý với NCC",
         "debt_offset_on:Date Ngày trừ công nợ",
-        "warranty_status:Select(Mới,Đã đổi cho khách,Đang gửi NCC,Đã nhận từ NCC,Đã đóng)=(Mới) Trạng thái",
+        "warranty_status:Select(Mới,Đang xử lý,Đã đổi cho khách,Chờ NCC đổi,Đang gửi NCC,Đã nhận từ NCC,Đã xác nhận bù trừ,Đã đóng)=(Mới) Trạng thái",
         "note:Small Text Ghi chú",
         "source_sheet:Data- Sheet nguồn",
         "source_row:Int- Dòng nguồn"
@@ -4914,8 +5028,32 @@
         "Chủ xưởng": "rwc",
         "Kinh doanh": "rwc",
         "Kế toán": "rwc",
+        "General Accountant": "rwc",
+        "Chief Accountant": "rwc",
+        "Kế toán tổng hợp": "rwc",
+        "Kế toán trưởng": "rwc",
         "Thủ kho": "rwc",
         "Sản xuất": "r"
+      }
+    },
+    {
+      "name": "Warranty Cost Item",
+      "child": true,
+      "label": "Chi phí xử lý lỗi",
+      "group": "Bảo hành",
+      "naming": "autoincrement",
+      "fields": [
+        "operation:Data*! Công việc",
+        "quantity:Float!=(1) Số lượng",
+        "rate:Currency! Đơn giá",
+        "amount:Currency~ Thành tiền",
+        "note:Data Ghi chú"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Kinh doanh": "rwc",
+        "Kế toán": "rwc",
+        "Thủ kho": "rwc"
       }
     },
     {
@@ -4953,6 +5091,20 @@
           "non_negative": true,
           "description": "Số dùng để cộng tải lịch; trường thời gian chữ cũ chỉ còn tương thích."
         },
+        {
+          "fieldname": "capacity_basis",
+          "fieldtype": "Select",
+          "options": "m2\nset\noperation\nbatch",
+          "label": "Cơ sở định mức",
+          "description": "Để trống: Cửa Úc/Lưới dùng m2, sơn dùng batch, các loại còn lại dùng set."
+        },
+        "minutes_per_unit:Float Phút / đơn vị",
+        "batch_capacity:Float Sức chứa một mẻ",
+        "persons:Float=(1) Số người tiêu chuẩn",
+        "shift_hours:Float=(8) Giờ / ca",
+        "efficiency:Percent=(100) Hiệu suất",
+        "workstation:Data Trạm / máy",
+        "default_overtime_hours:Float=(0) Giờ tăng ca mặc định",
         "effective_from:Date Ngày hiệu lực",
         "effective_to:Date Hết hiệu lực",
         "note:Small Text Ghi chú",
@@ -5518,6 +5670,27 @@
         "Thủ kho": "r",
         "Kinh doanh": "r",
         "Kế toán": "r"
+      }
+    },
+    {
+      "name": "Daily Ledger Access",
+      "label": "Quyền sổ chi tiết hằng ngày",
+      "menu": false,
+      "fields": [
+        {
+          "fieldname": "note",
+          "fieldtype": "Small Text",
+          "label": "Ghi chú",
+          "read_only": true
+        }
+      ],
+      "permissions": {
+        "General Accountant": "r",
+        "Chief Accountant": "r",
+        "Director": "r",
+        "Kế toán tổng hợp": "r",
+        "Kế toán trưởng": "r",
+        "Giám đốc": "r"
       }
     }
   ],
@@ -6189,5 +6362,40 @@
       "cut_generation:Int Đời cắt",
       "intake_note:Small Text Nhập / ghi chú"
     ]
-  }
+  },
+  "experiences": [
+    {
+      "key": "daily-ledger:workbench",
+      "label": "Sổ chi tiết hằng ngày",
+      "permission": "Daily Ledger Access",
+      "roles": [
+        "General Accountant",
+        "Chief Accountant",
+        "Director",
+        "Kế toán tổng hợp",
+        "Kế toán trưởng",
+        "Giám đốc"
+      ],
+      "icon": "notebook-tabs",
+      "group": "Báo cáo"
+    },
+    {
+      "key": "alumdoor-operations:workbench",
+      "label": "Trung tâm vận hành",
+      "permission": "Sales Order",
+      "roles": [
+        "Chủ xưởng",
+        "Kinh doanh",
+        "Thủ kho",
+        "Kế toán",
+        "Sản xuất",
+        "General Accountant",
+        "Chief Accountant",
+        "Kế toán tổng hợp",
+        "Kế toán trưởng"
+      ],
+      "icon": "panels-top-left",
+      "group": "Bán hàng"
+    }
+  ]
 }

@@ -86,6 +86,8 @@ export interface AppNavItem {
   kind: "doctype" | "route" | "workspace" | "system" | "experience";
   /** DocType whose read permission gates this navigation entry. */
   permission_doctype?: string;
+  /** Optional stricter role gate, applied before the client manifest is returned. */
+  required_roles?: string[];
   icon?: string;
   group?: string;
   route?: string;
@@ -323,7 +325,7 @@ export const CLIENT_CONTEXT_DIMENSIONS = new Set([
  * the menu entry would install cleanly and then show "chưa được triển khai" on click.
  * Adding a prefix here is the LAST step of shipping one, never the first.
  */
-export const SUPPORTED_EXPERIENCE_KINDS = new Set(["approval", "calendar", "social-commerce", "action", "screen"]);
+export const SUPPORTED_EXPERIENCE_KINDS = new Set(["approval", "calendar", "social-commerce", "daily-ledger", "alumdoor-operations", "action", "screen"]);
 
 export interface AppManifest {
   id: string;
@@ -1244,6 +1246,10 @@ function parseNav(
   const permissionDoctype = typeof input.permission_doctype === "string"
     ? text(input.permission_doctype, `nav[${index}].permission_doctype`, 160)
     : inferredPermissionDoctype;
+  const requiredRoles = input.required_roles === undefined
+    ? []
+    : array(input.required_roles, `nav[${index}].required_roles`).map((role, roleIndex) =>
+      text(role, `nav[${index}].required_roles[${roleIndex}]`, 160));
   // A doctype nav item pointing at a doctype the app does not ship would render a
   // menu entry that leads nowhere.
   if (kind === "doctype" && !doctypeNames.has(key)) {
@@ -1264,6 +1270,7 @@ function parseNav(
     label: text(input.label, `nav[${index}].label`, 160),
     kind,
     ...(permissionDoctype ? { permission_doctype: permissionDoctype } : {}),
+    ...(requiredRoles.length ? { required_roles: requiredRoles } : {}),
     ...(typeof input.icon === "string" ? { icon: input.icon } : {}),
     ...(typeof input.group === "string" ? { group: input.group } : {}),
     ...(typeof input.route === "string" ? { route: input.route } : {}),

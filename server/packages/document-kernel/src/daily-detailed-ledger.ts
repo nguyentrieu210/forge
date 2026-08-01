@@ -2,19 +2,13 @@ import type { Actor, JsonObject, JsonValue } from "../../contracts/src/index.js"
 import { errors } from "../../core/src/index.js";
 
 const MAX_SOURCE_LINES = 5000;
-const ADJUSTMENT_ROLES = new Set([
+const DAILY_LEDGER_ROLES = new Set([
   "General Accountant",
   "Chief Accountant",
   "Director",
   "Kế toán tổng hợp",
   "Kế toán trưởng",
   "Giám đốc",
-]);
-const OPERATOR_ROLES = new Set([
-  ...ADJUSTMENT_ROLES,
-  "Accounts Manager",
-  "Accounts User",
-  "System Manager",
 ]);
 
 export interface DailyLedgerContext {
@@ -27,7 +21,7 @@ export interface DailyLedgerContext {
 
 export interface DailyLedgerSourceLine {
   line_key: string;
-  domain: "Sales" | "Purchase" | "Inventory" | "Manufacturing" | "Finance";
+  domain: "Sales" | "Purchase" | "Inventory" | "Manufacturing" | "Warranty" | "Finance";
   source_type: string;
   source_ref: string;
   metric: string;
@@ -419,19 +413,18 @@ export function assertDailyLedgerAdjustmentRole(actor: Actor): void {
 }
 
 function assertOperator(actor: Actor): void {
-  if (isAdministrator(actor) || actor.roles.some((role) => OPERATOR_ROLES.has(role))) return;
-  throw errors.permission("Role is not allowed to update the Daily Detailed Ledger");
+  if (isAdministrator(actor) || actor.roles.some((role) => DAILY_LEDGER_ROLES.has(role))) return;
+  throw errors.permission("Only General Accountant, Chief Accountant or Director may access the Daily Detailed Ledger");
 }
 
 function assertAdjustmentRole(actor: Actor): void {
-  if (isAdministrator(actor) || actor.roles.some((role) => ADJUSTMENT_ROLES.has(role))) return;
+  if (isAdministrator(actor) || actor.roles.some((role) => DAILY_LEDGER_ROLES.has(role))) return;
   throw errors.permission("Only General Accountant, Chief Accountant or Director may freeze or adjust the Daily Detailed Ledger");
 }
 
 function isAdministrator(actor: Actor): boolean {
   return actor.user_id === "Administrator"
-    || actor.roles.includes("Administrator")
-    || actor.roles.includes("System Manager");
+    || actor.roles.includes("Administrator");
 }
 
 function normalizeContext(input: DailyLedgerContext): Required<DailyLedgerContext> {
@@ -452,7 +445,7 @@ function normalizeContext(input: DailyLedgerContext): Required<DailyLedgerContex
 
 function normalizeSourceLine(line: DailyLedgerSourceLine): DailyLedgerSourceLine {
   const domain = String(line.domain) as DailyLedgerSourceLine["domain"];
-  if (!["Sales", "Purchase", "Inventory", "Manufacturing", "Finance"].includes(domain)) {
+  if (!["Sales", "Purchase", "Inventory", "Manufacturing", "Warranty", "Finance"].includes(domain)) {
     throw errors.database("Daily ledger source returned an invalid domain");
   }
   return {
@@ -483,7 +476,7 @@ function canonicalLine(line: DailyLedgerSourceLine): string {
 }
 
 function domainCounts(lines: readonly DailyLedgerSourceLine[]): JsonObject {
-  const counts: Record<string, number> = { Sales: 0, Purchase: 0, Inventory: 0, Manufacturing: 0, Finance: 0 };
+  const counts: Record<string, number> = { Sales: 0, Purchase: 0, Inventory: 0, Manufacturing: 0, Warranty: 0, Finance: 0 };
   for (const line of lines) counts[line.domain] = (counts[line.domain] ?? 0) + 1;
   return counts;
 }
@@ -541,6 +534,34 @@ WITH source_lines AS (
                OR json_extract(voucher.payload_json,'$.target_warehouse')=?4)
     AND (?5='' OR json_extract(so.payload_json,'$.customer')=?5)
     AND (?6='' OR f.sales_order=?6)
+
+  UNION ALL
+
+  SELECT
+    'Sales:Sales Order:' || d.name || ':' || c.row_id,
+    'Sales',
+    'Sales Order',
+    d.name,
+    'ordered',
+    COALESCE(CAST(json_extract(c.payload_json,'$.qty_micros') AS INTEGER),0),
+    COALESCE(CAST(json_extract(c.payload_json,'$.amount_minor') AS INTEGER),0),
+    COALESCE(json_extract(d.payload_json,'$.currency'),''),
+    json_object(
+      'sales_order',d.name,
+      'item_code',json_extract(c.payload_json,'$.item_code'),
+      'customer',json_extract(d.payload_json,'$.customer'),
+      'delivery_date',json_extract(d.payload_json,'$.delivery_date'),
+      'unfulfilled',CASE WHEN COALESCE(CAST(json_extract(d.payload_json,'$.delivered_percentage') AS REAL),0) < 100 THEN 1 ELSE 0 END
+    )
+  FROM documents d
+  JOIN document_children c
+    ON c.tenant_id=d.tenant_id AND c.parent_key=d.doc_key AND c.fieldname='items'
+  WHERE d.tenant_id=?1 AND d.docstatus=1 AND d.doctype='Sales Order'
+    AND date(COALESCE(json_extract(d.payload_json,'$.transaction_date'),d.modified_at))=date(?2)
+    AND json_extract(d.payload_json,'$.company')=?3
+    AND (?4='' OR json_extract(c.payload_json,'$.warehouse')=?4 OR json_extract(d.payload_json,'$.set_warehouse')=?4)
+    AND (?5='' OR json_extract(d.payload_json,'$.customer')=?5)
+    AND (?6='' OR d.name=?6)
 
   UNION ALL
 
@@ -619,6 +640,40 @@ WITH source_lines AS (
     AND (?4='' OR json_extract(d.payload_json,'$.target_warehouse')=?4 OR json_extract(d.payload_json,'$.warehouse')=?4)
     AND (?5='' OR json_extract(d.payload_json,'$.customer')=?5)
     AND (?6='' OR json_extract(d.payload_json,'$.sales_order')=?6)
+
+  UNION ALL
+
+  SELECT
+    'Warranty:' || d.name,
+    'Warranty',
+    d.doctype,
+    d.name,
+    COALESCE(json_extract(d.payload_json,'$.issue_cause'),'warranty_claim'),
+    CAST(ROUND(COALESCE(CAST(json_extract(d.payload_json,'$.received_fault_qty') AS REAL),0) * 1000000) AS INTEGER),
+    0,
+    '',
+    json_object(
+      'customer',json_extract(d.payload_json,'$.customer'),
+      'legacy_voucher',json_extract(d.payload_json,'$.legacy_voucher'),
+      'received_fault_on',json_extract(d.payload_json,'$.received_fault_on'),
+      'replacement_sent_on',json_extract(d.payload_json,'$.replacement_sent_on'),
+      'warranty_sent_on',json_extract(d.payload_json,'$.warranty_sent_on'),
+      'warranty_received_on',json_extract(d.payload_json,'$.warranty_received_on'),
+      'debt_offset_on',json_extract(d.payload_json,'$.debt_offset_on')
+    )
+  FROM documents d
+  WHERE d.tenant_id=?1 AND d.doctype='Warranty Claim'
+    AND (
+      date(json_extract(d.payload_json,'$.received_fault_on'))=date(?2)
+      OR date(json_extract(d.payload_json,'$.replacement_sent_on'))=date(?2)
+      OR date(json_extract(d.payload_json,'$.warranty_sent_on'))=date(?2)
+      OR date(json_extract(d.payload_json,'$.warranty_received_on'))=date(?2)
+      OR date(json_extract(d.payload_json,'$.debt_offset_on'))=date(?2)
+    )
+    AND (json_extract(d.payload_json,'$.company') IS NULL OR json_extract(d.payload_json,'$.company')='' OR json_extract(d.payload_json,'$.company')=?3)
+    AND (?4='' OR json_extract(d.payload_json,'$.warehouse')=?4)
+    AND (?5='' OR json_extract(d.payload_json,'$.customer')=?5)
+    AND (?6='' OR json_extract(d.payload_json,'$.sales_order')=?6 OR json_extract(d.payload_json,'$.legacy_voucher')=?6)
 
   UNION ALL
 

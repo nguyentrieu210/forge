@@ -57,7 +57,7 @@ test("daily ledger tenant scope comes only from authenticated server context", a
     },
   });
 
-  const actor = { user_id: "accounts@example.test", roles: ["Accounts User"] };
+  const actor = { user_id: "accounts@example.test", roles: ["General Accountant"] };
   const request = makeRequest("/api/v1/daily-ledger/generate", {
     ledger_date: "2026-08-01",
     company: "ALUMDOOR",
@@ -86,7 +86,7 @@ test("Daily Detailed Ledger report uses centralized accounting permission", asyn
     },
   });
 
-  const allowed = { user_id: "accountant@example.test", roles: ["Accounts User"] };
+  const allowed = { user_id: "accountant@example.test", roles: ["General Accountant"] };
   const request = makeRequest("/api/v1/reports/daily-detailed-ledger", { snapshot_id: "DLS-1" });
   const response = await routeDailyLedgerApi(request, new URL(request.url), makeContext(allowed), { service: fake });
   assert.equal(response?.status, 200);
@@ -97,6 +97,13 @@ test("Daily Detailed Ledger report uses centralized accounting permission", asyn
   const deniedRequest = makeRequest("/api/v1/reports/daily-detailed-ledger", { snapshot_id: "DLS-1" });
   await assert.rejects(
     () => routeDailyLedgerApi(deniedRequest, new URL(deniedRequest.url), makeContext(denied), { service: fake }),
+    (error) => error?.code === "PERMISSION_DENIED" && error.status === 403,
+  );
+
+  const legacyAccountsRole = { user_id: "legacy@example.test", roles: ["Accounts Manager"] };
+  const legacyRequest = makeRequest("/api/v1/reports/daily-detailed-ledger", { snapshot_id: "DLS-1" });
+  await assert.rejects(
+    () => routeDailyLedgerApi(legacyRequest, new URL(legacyRequest.url), makeContext(legacyAccountsRole), { service: fake }),
     (error) => error?.code === "PERMISSION_DENIED" && error.status === 403,
   );
 });
@@ -119,7 +126,7 @@ test("Daily Detailed Ledger Frappe report unwraps args and wraps result in messa
 });
 
 test("daily ledger REST endpoints reject non-POST methods without invoking storage", async () => {
-  const actor = { user_id: "accounts@example.test", roles: ["Accounts User"] };
+  const actor = { user_id: "accounts@example.test", roles: ["General Accountant"] };
   const request = makeRequest("/api/v1/daily-ledger/reconcile", undefined, "GET");
   const response = await routeDailyLedgerApi(request, new URL(request.url), makeContext(actor), { service: service() });
   assert.equal(response?.status, 405);

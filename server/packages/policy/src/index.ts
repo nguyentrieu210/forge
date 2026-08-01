@@ -68,9 +68,6 @@ const REPORT_PERMISSIONS: Record<string, readonly string[]> = {
   "Debt Summary": ["System Manager", "Accounts Manager", "Accounts User"],
   "Advance Balance": ["System Manager", "Accounts Manager", "Accounts User"],
   "Daily Detailed Ledger": [
-    "System Manager",
-    "Accounts Manager",
-    "Accounts User",
     "General Accountant",
     "Chief Accountant",
     "Director",

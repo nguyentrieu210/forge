@@ -30,6 +30,8 @@ const ActionScreen = lazy(() => import("@metaforge/views/action").then((module) 
 const ScreenView = lazy(() => import("@metaforge/views/screen").then((module) => ({ default: module.ScreenView })));
 const ApprovalInbox = lazy(() => import("./experiences/ApprovalInbox.js").then((module) => ({ default: module.ApprovalInbox })));
 const SocialCommerce = lazy(() => import("./experiences/SocialCommerce.js").then((module) => ({ default: module.SocialCommerce })));
+const DailyDetailedLedger = lazy(() => import("./experiences/DailyDetailedLedger.js").then((module) => ({ default: module.DailyDetailedLedger })));
+const AlumdoorOperationsCenter = lazy(() => import("./experiences/AlumdoorOperationsCenter.js").then((module) => ({ default: module.AlumdoorOperationsCenter })));
 
 /**
  * The GENERIC runtime — one bundle that serves every app on the platform.
@@ -557,6 +559,20 @@ function ExperienceScreen({ manifest, boot, logout, nav }: ScreenProps) {
           canManageConnections={canManageConnections}
           onAuthenticationRequired={redirectToLogin}
         />
+      </Shell>
+    );
+  }
+  if (kind === "daily-ledger") {
+    return (
+      <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={experienceKey} breadcrumbs={[{ label: "Sổ chi tiết hằng ngày" }]}>
+        <DailyDetailedLedger />
+      </Shell>
+    );
+  }
+  if (kind === "alumdoor-operations") {
+    return (
+      <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={experienceKey} breadcrumbs={[{ label: "Trung tâm vận hành" }]}>
+        <AlumdoorOperationsCenter />
       </Shell>
     );
   }

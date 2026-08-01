@@ -74,6 +74,10 @@ test("post-freeze adjustments require accounting leadership roles", () => {
     () => assertDailyLedgerAdjustmentRole({ user_id: "stock@example.com", roles: ["Stock Manager"] }),
     (error) => error.code === "PERMISSION_DENIED",
   );
+  assert.throws(
+    () => assertDailyLedgerAdjustmentRole({ user_id: "manager@example.com", roles: ["System Manager"] }),
+    (error) => error.code === "PERMISSION_DENIED",
+  );
 });
 
 function sourceLine(domain, overrides = {}) {
@@ -120,12 +124,13 @@ function reconciliationDb({ snapshotFingerprint, snapshotLines, liveLines }) {
   };
 }
 
-test("daily ledger reconciliation covers Sales, Purchase, Inventory, Manufacturing and Finance", async () => {
+test("daily ledger reconciliation covers Sales, Purchase, Inventory, Manufacturing, Warranty and Finance", async () => {
   const snapshotLines = [
     sourceLine("Sales", { line_key: "Sales:Delivery Note:DN-1:1" }),
     sourceLine("Purchase", { line_key: "Purchase:Purchase Receipt:PR-1:1" }),
     sourceLine("Inventory", { line_key: "Inventory:Stock Entry:SE-1:1" }),
     sourceLine("Manufacturing", { line_key: "Manufacturing:Work Order:WO-1" }),
+    sourceLine("Warranty", { line_key: "Warranty:WC-1" }),
     sourceLine("Finance", { line_key: "Finance:GL:Sales Invoice:SI-1:AR" }),
   ];
   const snapshotFingerprint = await fingerprintDailyLedgerLines(snapshotLines);
@@ -138,8 +143,8 @@ test("daily ledger reconciliation covers Sales, Purchase, Inventory, Manufacturi
   }));
   const ok = await matching.reconcile("tenant-a", context);
   assert.equal(ok.ok, true);
-  assert.deepEqual(ok.snapshot_counts, { Sales: 1, Purchase: 1, Inventory: 1, Manufacturing: 1, Finance: 1 });
-  assert.deepEqual(ok.live_counts, { Sales: 1, Purchase: 1, Inventory: 1, Manufacturing: 1, Finance: 1 });
+  assert.deepEqual(ok.snapshot_counts, { Sales: 1, Purchase: 1, Inventory: 1, Manufacturing: 1, Warranty: 1, Finance: 1 });
+  assert.deepEqual(ok.live_counts, { Sales: 1, Purchase: 1, Inventory: 1, Manufacturing: 1, Warranty: 1, Finance: 1 });
   assert.deepEqual(ok.mismatches, []);
 
   const changedFinance = snapshotLines.map((line) => line.domain === "Finance"
