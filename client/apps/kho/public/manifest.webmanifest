@@ -1,0 +1,21 @@
+{
+  "name": "Forge Kho",
+  "short_name": "Forge Kho",
+  "description": "Ứng dụng nghiệp vụ kho tối ưu cho điện thoại.",
+  "lang": "vi",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f6f7f9",
+  "theme_color": "#ff5a2a",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "/forge-logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
