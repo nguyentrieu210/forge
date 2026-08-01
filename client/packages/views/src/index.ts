@@ -1,5 +1,5 @@
 /**
- * @metaforge/views — List/Report/Kanban/Calendar/Gantt/Tree/Dashboard/Form/Print.
+ * @metaforge/views — List/Report/Kanban/Calendar/Gantt/Tree/Dashboard/Form/Bulk/Print.
  * Scaffold: khai báo catalog view + ViewEngine contract. Renderer thật ở PHA 5
  * (P0 thứ tự: List → Form trước).
  */
@@ -7,7 +7,7 @@ import type { FrappeAdapter } from "@metaforge/adapter-frappe";
 import type { DocTypeMeta } from "@metaforge/core";
 
 export type ViewKind =
-  | "list" | "form" | "report" | "kanban"
+  | "list" | "form" | "bulk" | "report" | "kanban"
   | "calendar" | "gantt" | "tree" | "dashboard" | "print";
 
 export interface ViewContext {
@@ -47,6 +47,8 @@ export {
   type ListDensity,
 } from "./list/column-preferences.js";
 export { FormView, type FormViewProps } from "./form/FormView.js";
+export { BulkGridView, type BulkGridViewProps } from "./bulk/BulkGridView.js";
+export { BulkGridContainer, type BulkGridContainerProps } from "./bulk/BulkGridContainer.js";
 export { SplitView, useBreakpoint, type SplitViewProps, type Breakpoint } from "./detail/SplitView.js";
 export { ContextPanel, type ContextPanelProps, type TimelineItem, type TimelineKind, type ContextAttachment, type UserOption, type ContextShare, type ContextConnection } from "./detail/ContextPanel.js";
 export { WorkflowActionBar, FormActionBar, resolveWorkflowActions, type WorkflowAction } from "./detail/WorkflowActionBar.js";
@@ -107,11 +109,11 @@ export { createFullRegistry } from "./registry.js";
 export const P0_VIEW_ORDER: ViewKind[] = ["list", "form"];
 
 export const ALL_VIEWS: ViewKind[] = [
-  "list", "form", "report", "kanban",
+  "list", "form", "bulk", "report", "kanban",
   "calendar", "gantt", "tree", "dashboard", "print",
 ];
 
-export const VIEWS_VERSION = "0.1.0";
+export const VIEWS_VERSION = "0.2.0";
 export { ApplicationCatalogView, type ApplicationCatalogViewProps } from "./catalog/ApplicationCatalogView.js";
 export { ApplicationCatalogContainer } from "./catalog/ApplicationCatalogContainer.js";
 export { OverviewView, type OverviewViewProps } from "./overview/OverviewView.js";
