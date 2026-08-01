@@ -6,17 +6,21 @@
   "search_fields": ["branch_name", "branch_code"],
   "sort_field": "branch_name",
   "sort_order": "ASC",
+  "is_tree": true,
+  "nsm_parent_field": "parent_branch",
   "track_changes": true,
   "fields": [
     { "fieldname": "branch_code", "label": "Mã chi nhánh", "fieldtype": "Data", "required": true, "unique": true, "in_list_view": true, "search_index": true },
     { "fieldname": "branch_name", "label": "Tên chi nhánh", "fieldtype": "Data", "required": true, "in_list_view": true, "search_index": true },
     { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "in_list_view": true, "in_standard_filter": true },
     { "fieldname": "parent_branch", "label": "Chi nhánh cấp trên", "fieldtype": "Link", "options": "Branch" },
+    { "fieldname": "accounting_model", "label": "Mô hình hạch toán", "fieldtype": "Select", "options": "Dependent\nAccounting Unit", "required": true, "default": "Dependent", "set_only_once": true, "in_standard_filter": true },
     { "fieldname": "cost_center", "label": "Trung tâm chi phí", "fieldtype": "Link", "options": "Cost Center", "required": true },
     { "fieldname": "tax_code", "label": "Mã số thuế đơn vị phụ thuộc", "fieldtype": "Data" },
     { "fieldname": "address", "label": "Địa chỉ", "fieldtype": "Small Text", "required": true },
     { "fieldname": "manager", "label": "Người phụ trách", "fieldtype": "Link", "options": "Employee" },
     { "fieldname": "is_dependent_unit", "label": "Đơn vị phụ thuộc", "fieldtype": "Check", "default": 1 },
+    { "fieldname": "organization_status", "label": "Trạng thái tổ chức", "fieldtype": "Select", "options": "Active\nDisabled", "required": true, "default": "Active", "in_list_view": true, "in_standard_filter": true },
     { "fieldname": "disabled", "label": "Ngừng hoạt động", "fieldtype": "Check", "default": 0, "in_standard_filter": true }
   ],
   "permissions": [
@@ -25,5 +29,5 @@
     { "role": "Accounts Manager", "read": true, "write": true, "create": true, "report": true, "export": true },
     { "role": "System Manager", "read": true, "write": true, "create": true, "report": true, "export": true, "share": true }
   ],
-  "revision": 1
+  "revision": 2
 }

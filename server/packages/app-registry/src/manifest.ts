@@ -1174,8 +1174,15 @@ function parseHook(value: JsonValue, index: number): AppHook {
   return { event };
 }
 
-/** Roles the platform always provides, so an app need not redeclare them. */
-export const PLATFORM_ROLES = new Set(["System Manager", "Administrator", "All", "Guest"]);
+/**
+ * Roles the platform (or a standard foundational app) provides, so a dependent app
+ * may grant DocPerm without trying to take ownership of the same Role record.
+ *
+ * HR Manager is created by the foundational HRM package and intentionally reused by
+ * organization/security. Treating it as shareable here keeps the dependency boundary:
+ * HRM owns the role; dependent apps only reference it.
+ */
+export const PLATFORM_ROLES = new Set(["System Manager", "Administrator", "All", "Guest", "HR Manager"]);
 
 /**
  * Component-wise version comparison.

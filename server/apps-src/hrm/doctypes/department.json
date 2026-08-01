@@ -6,6 +6,8 @@
   "search_fields": ["department_name", "department_code"],
   "sort_field": "department_name",
   "sort_order": "ASC",
+  "is_tree": true,
+  "nsm_parent_field": "parent_department",
   "track_changes": true,
   "fields": [
     { "fieldname": "department_code", "label": "Mã phòng ban", "fieldtype": "Data", "required": true, "unique": true, "in_list_view": true, "search_index": true },
@@ -14,7 +16,8 @@
     { "fieldname": "branch", "label": "Chi nhánh", "fieldtype": "Link", "options": "Branch", "required": true, "in_list_view": true, "in_standard_filter": true },
     { "fieldname": "parent_department", "label": "Phòng ban cấp trên", "fieldtype": "Link", "options": "Department" },
     { "fieldname": "cost_center", "label": "Trung tâm chi phí", "fieldtype": "Link", "options": "Cost Center", "required": true },
-    { "fieldname": "department_head", "label": "Trưởng phòng", "fieldtype": "Link", "options": "Employee" },
+    { "fieldname": "manager_employee", "label": "Trưởng phòng", "fieldtype": "Link", "options": "Employee" },
+    { "fieldname": "organization_status", "label": "Trạng thái tổ chức", "fieldtype": "Select", "options": "Active\nDisabled", "required": true, "default": "Active", "in_list_view": true, "in_standard_filter": true },
     { "fieldname": "disabled", "label": "Ngừng hoạt động", "fieldtype": "Check", "default": 0, "in_standard_filter": true }
   ],
   "permissions": [
@@ -23,5 +26,5 @@
     { "role": "Accounts Manager", "read": true, "write": true, "create": true, "report": true, "export": true },
     { "role": "System Manager", "read": true, "write": true, "create": true, "report": true, "export": true, "share": true }
   ],
-  "revision": 1
+  "revision": 2
 }

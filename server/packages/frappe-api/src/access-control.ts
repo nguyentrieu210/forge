@@ -16,6 +16,9 @@ export type PermissionTraceSource =
   | "share"
   | "owner"
   | "field"
+  | "role_policy"
+  | "organization_scope"
+  | "delegation"
   | "system";
 
 export interface PermissionTraceRecord extends JsonObject {
@@ -37,6 +40,12 @@ export function isAccessAdministrator(actor: Actor): boolean {
     || actor.roles.includes("System Manager");
 }
 
+export function isAccessInspector(actor: Actor): boolean {
+  return isAccessAdministrator(actor)
+    || actor.roles.includes("Owner")
+    || actor.roles.includes("Internal Auditor");
+}
+
 /**
  * Resolves the actor whose access is being inspected.
  *
@@ -52,8 +61,8 @@ export async function resolveAccessInspectionActor(input: {
 }): Promise<Actor> {
   const requested = input.requestedUser?.trim();
   if (!requested || requested === input.caller.user_id) return input.caller;
-  if (!isAccessAdministrator(input.caller)) {
-    throw errors.permission("System Manager is required to inspect another user's access");
+  if (!isAccessInspector(input.caller)) {
+    throw errors.permission("System Manager, Owner hoặc Internal Auditor mới được kiểm tra quyền của người khác");
   }
 
   const user = await input.users.get(input.tenantId, requested);

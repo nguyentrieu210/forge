@@ -1,0 +1,6 @@
+[
+  { "role": "Owner", "desk_access": true },
+  { "role": "Internal Auditor", "desk_access": true },
+  { "role": "Domain Manager", "desk_access": true },
+  { "role": "Approver", "desk_access": true }
+]

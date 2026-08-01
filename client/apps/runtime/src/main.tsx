@@ -1,6 +1,6 @@
 import { StrictMode, Suspense, lazy, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams, useSearchParams, type NavigateFunction } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate, useParams, useSearchParams, type NavigateFunction } from "react-router-dom";
 import { mergeLocale, resolveHomeRoute, validateManifest, type ApplicationCatalog, type AppManifest } from "@metaforge/core";
 import { FrappeAdapterImpl, createScopeKey, type MetaForgeBootDTO } from "@metaforge/adapter-frappe";
 import { MetaForgeProvider } from "@metaforge/views/provider";
@@ -497,6 +497,12 @@ function RuntimeRoutes({ manifest, boot, logout, nav, catalogError }: ScreenProp
       <Route path="/master-data" element={<MetaIndexScreen {...screen} kind="masters" />} />
       <Route path="/catalog" element={<CatalogScreen {...screen} error={catalogError} />} />
       <Route path="/permissions" element={<PermissionScreen {...screen} />} />
+      <Route path="/security/roles" element={<PermissionScreen {...screen} />} />
+      <Route path="/security/approvals-audit" element={<PermissionScreen {...screen} />} />
+      <Route path="/organization" element={<OrganizationScreen {...screen} />} />
+      <Route path="/companies/:name" element={<OrganizationEntityScreen {...screen} doctype="Company" />} />
+      <Route path="/branches/:name" element={<OrganizationEntityScreen {...screen} doctype="Branch" />} />
+      <Route path="/departments/:name" element={<OrganizationEntityScreen {...screen} doctype="Department" />} />
       <Route path="/workspace/:workspace" element={<WorkspaceScreen {...screen} />} />
       {/* Touch-first experiences may still own the viewport. Social Commerce is a
           desktop operations center, so ExperienceScreen mounts that one inside the
@@ -685,7 +691,45 @@ function PrintScreen(props: ScreenProps) {
 function OverviewScreen(props: ScreenProps) { const navigate = useNavigate(); const { domain = props.manifest.domain ?? "stock" } = useParams(); return <Shell {...props} active="__overview" breadcrumbs={[{ label: "Tổng quan" }]}><div className="h-full overflow-auto bg-[color-mix(in_srgb,var(--primary)_10%,var(--background))] p-3 md:p-4"><OverviewContainer domain={domain} onNavigate={navigate} /></div></Shell>; }
 function ProcessScreen(props: ScreenProps) { const navigate = useNavigate(); const { domain = props.manifest.domain ?? "stock" } = useParams(); return <Shell {...props} active="__process" breadcrumbs={[{ label: "Quy trình" }]}><div className="h-full overflow-auto p-4"><ProcessContainer domain={domain} onNavigate={navigate} /></div></Shell>; }
 function CatalogScreen({ error, ...props }: ScreenProps & { error?: string }) { const navigate = useNavigate(); return <Shell {...props} active="__catalog" breadcrumbs={[{ label: "Danh mục ứng dụng" }]}><div className="h-full p-4">{error ? <div className="mb-3 rounded-lg border border-destructive/30 p-3 text-sm text-destructive">{error}</div> : null}<ApplicationCatalogContainer onNavigate={navigate} /></div></Shell>; }
-function PermissionScreen(props: ScreenProps) { return <Shell {...props} active="__permissions" breadcrumbs={[{ label: "Trung tâm phân quyền" }]}><div className="h-full overflow-auto p-4"><PermissionCenter /></div></Shell>; }
+function PermissionScreen(props: ScreenProps) {
+  const location = useLocation();
+  const [params] = useSearchParams();
+  const initialTab = location.pathname === "/security/roles" ? "roles"
+    : location.pathname === "/security/approvals-audit" ? "approvals"
+    : params.get("tab") === "audit" ? "audit"
+    : params.get("tab") === "approvals" ? "approvals"
+    : params.get("tab") === "roles" ? "roles" : "users";
+  const active = location.pathname === "/security/roles" ? "security-center"
+    : location.pathname === "/security/approvals-audit" ? "security-approvals-audit" : "__permissions";
+  const title = initialTab === "approvals" ? "Hộp duyệt & kiểm toán" : initialTab === "roles" ? "Vai trò & kiểm soát" : "Trung tâm phân quyền";
+  return <Shell {...props} active={active} breadcrumbs={[{ label: title }]}><div className="h-full overflow-auto p-3 md:p-4"><PermissionCenter initialTab={initialTab} /></div></Shell>;
+}
+function OrganizationScreen(props: ScreenProps) {
+  const navigate = useNavigate();
+  const bridge = useBridge();
+  const navigateOrganization = useCallback((path: string) => {
+    const prefix = "/app/Department";
+    if (path === prefix) { navigate("/organization"); return; }
+    if (path.startsWith(`${prefix}/`)) { navigate(`/departments/${path.slice(prefix.length + 1)}`); return; }
+    navigate(path);
+  }, [navigate]);
+  return <Shell {...props} active="organization-center" breadcrumbs={[{ label: "Cơ cấu tổ chức" }]}><div className="h-full p-3 md:p-4"><DoctypeWorkspace doctype="Department" title="Cơ cấu phòng ban" bridge={bridge} onNavigate={navigateOrganization} /></div></Shell>;
+}
+function OrganizationEntityScreen(props: ScreenProps & { doctype: "Company" | "Branch" | "Department" }) {
+  const navigate = useNavigate();
+  const bridge = useBridge();
+  const { name = "" } = useParams();
+  const decodedName = decodeURIComponent(name);
+  const routeSegment = props.doctype === "Company" ? "companies" : props.doctype === "Branch" ? "branches" : "departments";
+  const navigateEntity = useCallback((path: string) => {
+    const prefix = `/app/${props.doctype}`;
+    if (path === prefix) { navigate("/organization"); return; }
+    if (path.startsWith(`${prefix}/`)) { navigate(`/${routeSegment}/${path.slice(prefix.length + 1)}`); return; }
+    navigate(path);
+  }, [navigate, props.doctype, routeSegment]);
+  const entityTitle = props.doctype === "Company" ? "Công ty" : props.doctype === "Branch" ? "Chi nhánh" : "Phòng ban";
+  return <Shell {...props} active="organization-center" breadcrumbs={[{ label: "Cơ cấu tổ chức", onClick: () => navigate("/organization") }, { label: decodedName }]}><div className="h-full p-3 md:p-4"><DoctypeWorkspace doctype={props.doctype} title={entityTitle} name={decodedName} bridge={bridge} onNavigate={navigateEntity} /></div></Shell>;
+}
 function WorkspaceScreen(props: ScreenProps) { const navigate = useNavigate(); const { workspace = "" } = useParams(); const value = decodeURIComponent(workspace); return <Shell {...props} active={`workspace:${value}`} breadcrumbs={[{ label: "Ứng dụng", onClick: () => navigate("/catalog") }, { label: value }]}><WorkspaceContainer defaultWorkspace={value} onOpenLink={(link) => openWorkspace(navigate, link)} /></Shell>; }
 function openWorkspace(navigate: NavigateFunction, link: { type?: string; link_to?: string }) { if (!link.link_to) return; const type = (link.type ?? "DocType").toLowerCase(); if (type.includes("report")) navigate(`/report/${encodeURIComponent(link.link_to)}`); else if (type.includes("page")) navigate(`/page/${encodeURIComponent(link.link_to)}`); else if (type.includes("dashboard")) navigate(`/dashboard/${encodeURIComponent(link.link_to)}`); else navigate(`/app/${encodeURIComponent(link.link_to)}`); }
 function ReportScreen(props: ScreenProps) { const { report = "" } = useParams(); const value = decodeURIComponent(report); return <Shell {...props} active="__reports" breadcrumbs={[{ label: "Báo cáo", onClick: () => window.history.back() }, { label: value }]}><div className="h-full overflow-auto p-4"><ReportContainer report={value} /></div></Shell>; }

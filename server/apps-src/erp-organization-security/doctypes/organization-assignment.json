@@ -1,0 +1,29 @@
+{
+  "name": "Organization Assignment",
+  "module": "Organization Security",
+  "is_submittable": true,
+  "autoname": "ORG-ASG-.YYYY.-#####",
+  "title_field": "user",
+  "search_fields": ["user", "company", "branch", "department"],
+  "sort_field": "effective_from",
+  "sort_order": "DESC",
+  "track_changes": true,
+  "allow_import": true,
+  "fields": [
+    { "fieldname": "assignment_code", "label": "Mã phân công", "fieldtype": "Data", "read_only": true, "in_list_view": true },
+    { "fieldname": "user", "label": "Người dùng", "fieldtype": "Link", "options": "User", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true, "search_index": true },
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true, "search_index": true },
+    { "fieldname": "branch", "label": "Chi nhánh", "fieldtype": "Link", "options": "Branch", "set_only_once": true, "in_list_view": true, "in_standard_filter": true, "search_index": true },
+    { "fieldname": "department", "label": "Phòng ban", "fieldtype": "Link", "options": "Department", "set_only_once": true, "in_list_view": true, "in_standard_filter": true, "search_index": true },
+    { "fieldname": "effective_from", "label": "Hiệu lực từ", "fieldtype": "Date", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "effective_to", "label": "Hiệu lực đến", "fieldtype": "Date", "in_list_view": true },
+    { "fieldname": "workflow_state", "label": "Trạng thái", "fieldtype": "Data", "read_only": true, "in_list_view": true, "in_standard_filter": true }
+  ],
+  "permissions": [
+    { "role": "System Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "import": true, "export": true, "share": true },
+    { "role": "Owner", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "import": true, "export": true, "share": true },
+    { "role": "Internal Auditor", "read": true, "report": true, "export": true },
+    { "role": "HR Manager", "read": true, "report": true }
+  ],
+  "revision": 1
+}

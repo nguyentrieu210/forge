@@ -14,10 +14,14 @@ const manager = { user_id: "manager@example.com", roles: ["Restricted User", "Re
 class FakeAccessStore {
   shares = new Map();
   userPermissions = [];
+  organizationScopes = [];
+  rolePolicies = [];
   key(tenant, doctype, name, actor) { return `${tenant}:${doctype}:${name}:${actor}`; }
   async getShare(tenant, doctype, name, actor) { return this.shares.get(this.key(tenant, doctype, name, actor)) ?? null; }
   async hasAnyShare(tenant, doctype, actor) { return [...this.shares.entries()].some(([key, grant]) => key.startsWith(`${tenant}:${doctype}:`) && key.endsWith(`:${actor}`) && grant.read); }
   async listUserPermissions(_tenant, actor, applicable) { return this.userPermissions.filter((row) => row.user === actor && (!applicable || !row.applicable_for_doctype || row.applicable_for_doctype === applicable)); }
+  async listOrganizationScopes(_tenant, actor) { return this.organizationScopes.filter((row) => row.user_id === actor); }
+  async listRolePolicies(_tenant, roles, resource) { return this.rolePolicies.filter((row) => roles.includes(row.role) && row.resource === resource); }
 }
 
 async function setup() {
@@ -175,4 +179,99 @@ test("metadata response reflects create/save/share write capability without expo
   assert.equal(sharedRead.fields.find((field) => field.fieldname === "subject").read_only, true);
   const sharedWrite = permissions.filterMetaForActor(meta, user, "other@example.com", true, { action: "save", sharedWrite: true });
   assert.equal(sharedWrite.fields.find((field) => field.fieldname === "subject").read_only, false);
+});
+
+test("published organization assignments constrain matching company dimensions without denying unrelated dimensions", async () => {
+  const { access, permissions } = await setup();
+  access.organizationScopes.push(
+    { assignment_name: "ORG-ASG-1", user_id: user.user_id, allow_doctype: "Company", allow_name: "Demo", effective_from: "2026-01-01", effective_to: null },
+    { assignment_name: "ORG-ASG-1", user_id: user.user_id, allow_doctype: "Department", allow_name: "Sales", effective_from: "2026-01-01", effective_to: null },
+  );
+
+  const scope = await permissions.getReadScope(user, "demo", "Restricted Document");
+  assert.deepEqual(scope.user_permissions, [{ allow_doctype: "Company", fields: ["company"], allowed_values: ["Demo"] }]);
+  await permissions.assert({ actor: user, tenantId: "demo", doctype: "Restricted Document", name: "RD-1", owner: user.user_id, data: { company: "Demo" }, action: "read" });
+  await assert.rejects(
+    permissions.assert({ actor: user, tenantId: "demo", doctype: "Restricted Document", name: "RD-2", owner: user.user_id, data: { company: "Other" }, action: "read" }),
+    (error) => error.code === "PERMISSION_DENIED",
+  );
+});
+
+test("organization assignments cannot widen an explicit user permission", async () => {
+  const { access, permissions } = await setup();
+  access.userPermissions.push({
+    user: user.user_id, allow_doctype: "Company", allow_name: "Demo", applicable_for_doctype: "Restricted Document",
+    is_default: true, hide_descendants: false, created_by: "Administrator", created_at: NOW,
+  });
+  access.organizationScopes.push(
+    { assignment_name: "ORG-ASG-2", user_id: user.user_id, allow_doctype: "Company", allow_name: "Other", effective_from: "2026-01-01", effective_to: null },
+  );
+
+  const scope = await permissions.getReadScope(user, "demo", "Restricted Document");
+  assert.equal(scope.user_permissions.length, 2);
+  await assert.rejects(
+    permissions.assert({ actor: user, tenantId: "demo", doctype: "Restricted Document", name: "RD-3", owner: user.user_id, data: { company: "Demo" }, action: "read" }),
+    (error) => error.code === "PERMISSION_DENIED",
+  );
+  await assert.rejects(
+    permissions.assert({ actor: user, tenantId: "demo", doctype: "Restricted Document", name: "RD-4", owner: user.user_id, data: { company: "Other" }, action: "read" }),
+    (error) => error.code === "PERMISSION_DENIED",
+  );
+});
+
+test("a published role policy narrows static DocPerm and never grants above it", async () => {
+  const { access, permissions } = await setup();
+  access.rolePolicies.push({
+    name: "ROLE-POL-1", role: "Restricted User", resource: "Restricted Document",
+    actions: ["read"], row_rule: {}, field_rule: {},
+  });
+
+  await permissions.assert({ actor: user, tenantId: "demo", doctype: "Restricted Document", name: "RD-1", owner: user.user_id, data: { company: "Demo" }, action: "read" });
+  await assert.rejects(
+    permissions.assert({ actor: user, tenantId: "demo", doctype: "Restricted Document", name: "RD-1", owner: user.user_id, data: { company: "Demo" }, action: "save" }),
+    (error) => error.code === "PERMISSION_DENIED",
+  );
+  await assert.rejects(
+    permissions.assert({ actor: { user_id: user.user_id, roles: ["No Static Grant"] }, tenantId: "demo", doctype: "Restricted Document", name: "RD-1", owner: user.user_id, data: { company: "Demo" }, action: "read" }),
+    (error) => error.code === "PERMISSION_DENIED",
+  );
+});
+
+test("the tenant rescue administrator cannot be locked out by a role policy", async () => {
+  const { access, permissions } = await setup();
+  access.rolePolicies.push({
+    name: "ROLE-POL-LOCKOUT", role: "System Manager", resource: "Restricted Document",
+    actions: [], row_rule: {}, field_rule: { hidden: ["subject"] },
+  });
+  const administrator = { user_id: "Administrator", roles: ["System Manager"] };
+  await permissions.assert({
+    actor: administrator, tenantId: "demo", doctype: "Restricted Document", name: "RD-RESCUE",
+    owner: "someone@example.com", data: { subject: "Recovery", company: "Demo" }, action: "save",
+  });
+});
+
+test("role policy field rules redact hidden fields and block protected writes", async () => {
+  const { access, meta, permissions } = await setup();
+  access.rolePolicies.push({
+    name: "ROLE-POL-FIELD", role: "Restricted User", resource: "Restricted Document",
+    actions: ["read", "write", "create"], row_rule: {}, field_rule: { hidden: ["subject"], read_only: ["company"] },
+  });
+  const document = {
+    tenant_id: "demo", doctype: "Restricted Document", name: "RD-FIELD", owner: user.user_id,
+    docstatus: 0, status: "Draft", version: 1, created_at: NOW, modified_at: NOW,
+    data: { subject: "Sensitive", company: "Demo", _metadata_revision: 1 }, children: [],
+  };
+  const redacted = await permissions.redactDocumentWithPolicies("demo", meta, document, user);
+  assert.equal(redacted.data.subject, undefined);
+  assert.equal(redacted.data.company, "Demo");
+  const filteredMeta = await permissions.filterMetaForActorWithPolicies("demo", meta, user, user.user_id, false, { action: "save" });
+  assert.equal(filteredMeta.fields.some((field) => field.fieldname === "subject"), false);
+  assert.equal(filteredMeta.fields.find((field) => field.fieldname === "company").read_only, true);
+  await assert.rejects(
+    permissions.assert({
+      actor: user, tenantId: "demo", doctype: "Restricted Document", name: "RD-FIELD", owner: user.user_id,
+      data: { subject: "Sensitive", company: "Other" }, existingData: { subject: "Sensitive", company: "Demo" }, action: "save",
+    }),
+    (error) => error.code === "PERMISSION_DENIED",
+  );
 });

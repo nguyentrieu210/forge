@@ -6,6 +6,7 @@ import { parseAppManifest } from "../dist/packages/app-registry/src/manifest.js"
 
 const hrmRoot = new URL("../apps-src/hrm/", import.meta.url);
 const accountingRoot = new URL("../apps-src/vn-accounting/", import.meta.url);
+const securityRoot = new URL("../apps-src/erp-organization-security/", import.meta.url);
 
 function fieldMap(doctype) {
   return new Map(doctype.fields.map((field) => [field.fieldname, field]));
@@ -16,7 +17,7 @@ test("HRM package exposes company-branch-department and payroll dimensions", asy
   const parsed = parseAppManifest(source);
 
   assert.equal(parsed.id, "hrm");
-  assert.equal(parsed.version, "1.3.0");
+  assert.equal(parsed.version, "1.4.0");
   assert.ok(parsed.nav.some((item) => item.key === "Branch"));
   assert.ok(parsed.nav.some((item) => item.key === "Department"));
   assert.ok(parsed.nav.some((item) => item.key === "payroll-entry" && item.route === "/app/Payroll%20Entry"));
@@ -36,6 +37,35 @@ test("HRM package exposes company-branch-department and payroll dimensions", asy
     assert.equal(department.data.branch, "HQ");
     assert.ok(department.data.cost_center);
   }
+});
+
+test("organization security package declares versioned scopes, policies, SoD and delegations", async () => {
+  const source = await readAppSource(fileURLToPath(securityRoot));
+  const parsed = parseAppManifest(source);
+
+  assert.equal(parsed.id, "erp-organization-security");
+  assert.deepEqual(parsed.requires, [{ id: "hrm", version: ">=1.4.0" }]);
+  assert.deepEqual(
+    parsed.doctypes.map((item) => item.name).sort(),
+    ["Approval Policy", "Delegation", "Organization Assignment", "Role Policy", "SoD Rule"],
+  );
+  assert.equal(parsed.workflows.length, 5);
+  assert.ok(parsed.nav.some((item) => item.route === "/security/approvals-audit"));
+  assert.ok(parsed.reports.some((item) => item.name === "Ma trận xung đột nhiệm vụ"));
+  assert.equal(parsed.roles.some((item) => item.role === "HR Manager"), false, "dependent app must not reclaim the HRM-owned role");
+
+  const assignment = parsed.doctypes.find((item) => item.name === "Organization Assignment");
+  const assignmentFields = fieldMap(assignment);
+  for (const required of ["user", "company", "effective_from"]) {
+    assert.equal(assignmentFields.get(required)?.required, true, `${required} must be required`);
+  }
+  assert.ok(assignment.permissions.some((permission) => permission.role === "HR Manager"), "shared HR Manager keeps scoped assignment access");
+  assert.equal(assignmentFields.get("company")?.set_only_once, true);
+
+  const rolePolicy = parsed.doctypes.find((item) => item.name === "Role Policy");
+  const rolePolicyFields = fieldMap(rolePolicy);
+  assert.equal(rolePolicyFields.get("field_rule_json")?.permlevel, 1);
+  assert.equal(rolePolicyFields.get("workflow_state")?.read_only, true);
 });
 
 test("Vietnam accounting package versions legal rules and traces payroll posting", async () => {

@@ -20,6 +20,10 @@ import type {
   OverviewDashboard,
   ProcessCatalog,
   AccessProfileSummary,
+  ApprovalInboxResult,
+  AuditEventResult,
+  AuditEvidenceExport,
+  SoDCheckResult,
   TenantUser,
   EffectivePermissionResult,
   DisplayValueRequest,
@@ -124,6 +128,10 @@ export interface FrappeAdapter {
   getProcesses(domain: string, selection?: BusinessContextSelection): Promise<ProcessCatalog>;
   getAccessProfile(user?: string): Promise<AccessProfileSummary>;
   explainPermission(doctype: string, name?: string, selection?: BusinessContextSelection, user?: string): Promise<EffectivePermissionResult>;
+  getApprovalInbox(input?: { doctype?: string; search?: string; limit?: number }): Promise<ApprovalInboxResult>;
+  getAuditEvents(input?: { entityType?: string; entityName?: string; actor?: string; action?: string; from?: string; to?: string; cursor?: string; limit?: number }): Promise<AuditEventResult>;
+  exportAuditEvidence(input: { reason: string; entityType?: string; entityName?: string; actor?: string; action?: string; from?: string; to?: string; limit?: number }): Promise<AuditEvidenceExport>;
+  checkSoD(input: { doctype: string; name: string; action: string; user?: string }): Promise<SoDCheckResult>;
   addUserPermission(args: { user: string; allow: string; forValue: string; applicableFor?: string; isDefault?: boolean; hideDescendants?: boolean }): Promise<Record<string, unknown>>;
   removeUserPermission(id: string): Promise<void>;
   setUserRoles(user: string, roles: string[], roleProfile?: string): Promise<string[]>;

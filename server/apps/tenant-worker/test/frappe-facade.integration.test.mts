@@ -9,7 +9,7 @@
  */
 import { env, exports } from "cloudflare:workers";
 import { beforeAll, describe, expect, it } from "vitest";
-import { hashPassword, toFrappeModified } from "../../../packages/frappe-api/src/index.js";
+import { hashPassword, mintSession, toFrappeModified } from "../../../packages/frappe-api/src/index.js";
 
 const NOW = "2026-07-26T10:00:00.000Z";
 const PASSWORD = "supersecret-password";
@@ -42,6 +42,19 @@ async function method(name: string, args: Record<string, unknown> = {}, verb: "G
     headers: { "content-type": "application/json" },
     body: JSON.stringify(args),
   });
+}
+
+async function switchSession(user: string, password = PASSWORD): Promise<Response> {
+  const response = await call("/api/method/login", {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ usr: user, pwd: password }),
+  }, { auth: false });
+  if (response.status === 200) {
+    const cookie = response.headers.get("set-cookie") ?? "";
+    sid = decodeURIComponent(cookie.slice(cookie.indexOf("=") + 1).split(";")[0]!);
+    csrf = response.headers.get("x-frappe-csrf-token") ?? "";
+  }
+  return response;
 }
 
 /** Builds CSV text with a trailing newline, as a real upload would carry. */
@@ -1251,6 +1264,255 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     const response = await method("frappe.desk.doctype.dashboard_chart.dashboard_chart.get", { chart_name: "Anything" }, "GET");
     expect(response.status).toBe(404);
     expect((await response.json() as any).exc_type).toBe("DoesNotExistError");
+  });
+
+  it("builds the approval inbox from real workflow documents and preflights SoD conflicts", async () => {
+    const meta = {
+      name: "Approval Sample", module: "Organization Security", autoname: "APR-SAMPLE-.####",
+      title_field: "subject", search_fields: ["subject"], track_changes: true,
+      fields: [
+        { fieldname: "subject", label: "Subject", fieldtype: "Data", required: true, in_list_view: true },
+        { fieldname: "workflow_state", label: "State", fieldtype: "Data", read_only: true, in_list_view: true },
+      ],
+      permissions: [{ role: "System Manager", read: true, write: true, create: true, report: true }],
+      revision: 1,
+    };
+    const workflow = {
+      name: "Approval Sample Review", document_type: "Approval Sample", state_field: "workflow_state", is_active: true,
+      states: [
+        { state: "Draft", docstatus: 0, allow_edit: "System Manager" },
+        { state: "Review", docstatus: 0, allow_edit: "System Manager" },
+      ],
+      transitions: [
+        { state: "Draft", action: "Gửi duyệt", next_state: "Review", allowed_role: "System Manager" },
+      ],
+      revision: 1,
+    };
+    await env.DB.prepare(
+      `INSERT INTO doctype_definitions(tenant_id,doctype,module,revision,metadata_json,modified_by,modified_at)
+       VALUES('demo','Approval Sample','Organization Security',1,?1,'Administrator',?2)`,
+    ).bind(JSON.stringify(meta), NOW).run();
+    await env.DB.prepare(
+      `INSERT INTO workflows(tenant_id,name,document_type,is_active,revision,workflow_json,modified_by,modified_at)
+       VALUES('demo','Approval Sample Review','Approval Sample',1,1,?1,'Administrator',?2)`,
+    ).bind(JSON.stringify(workflow), NOW).run();
+
+    const created = (await (await call("/api/resource/Approval Sample", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ subject: "Approve a real document" }),
+    })).json() as any).data;
+    const inbox = await unwrap(await method("erp_platform.api.get_approval_inbox", { doctype: "Approval Sample" }, "GET"));
+    expect(Array.isArray(inbox.items)).toBe(true);
+    const item = inbox.items.find((entry: any) => entry.name === created.name);
+    expect(item).toMatchObject({ doctype: "Approval Sample", state: "Draft" });
+    expect(item.actions.some((action: any) => action.action === "Gửi duyệt" && action.next_state === "Review")).toBe(true);
+
+    const sod = {
+      workflow_state: "Published", document_type: "Approval Sample",
+      left_action: "prepare_approval_sample", right_action: "review",
+      severity: "Block", reason: "The preparer cannot review the same sample",
+    };
+    await env.DB.prepare(
+      `INSERT INTO documents(
+         tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,payload_json,modified_by
+       ) VALUES('demo','SoD Rule:SOD-E2E-1','SoD Rule','SOD-E2E-1','auditor@example.com',1,'Published',1,?1,?1,?2,'auditor@example.com')`,
+    ).bind(NOW, JSON.stringify(sod)).run();
+    const decision = await unwrap(await method("erp_platform.api.check_sod", {
+      doctype: "Approval Sample", name: created.name, action: "review",
+    }, "GET"));
+    expect(decision.allowed).toBe(false);
+    expect(decision.conflicts.some((conflict: any) => conflict.rule === "SOD-E2E-1" && conflict.severity === "Block")).toBe(true);
+  });
+
+  it("returns redacted, filterable audit events and exports checksum-backed evidence", async () => {
+    await env.DB.prepare(
+      `INSERT INTO rbac_audit_events(
+         tenant_id,event_id,event_type,actor_user_id,target_user_id,before_json,after_json,reason,source,trace_id,created_at
+       ) VALUES('demo','AUDIT-E2E-1','role_granted','sales@example.com','audit-target@example.com','null',?1,'test evidence','integration','trace-audit-e2e',?2)`,
+    ).bind(JSON.stringify({ role: "Approver", access_token: "must-never-leak" }), NOW).run();
+
+    const result = await unwrap(await method("erp_platform.api.get_audit_events", {
+      entity_type: "User", entity_name: "audit-target@example.com", limit: 20,
+    }, "GET"));
+    const event = result.events.find((entry: any) => entry.event_id === "AUDIT-E2E-1");
+    expect(event).toMatchObject({ correlation_id: "trace-audit-e2e", actor: "sales@example.com", source: "rbac" });
+    expect(JSON.stringify(event)).not.toContain("must-never-leak");
+    expect(event.after_json.access_token).toBe("[REDACTED]");
+
+    const evidence = await unwrap(await method("erp_platform.api.export_audit_evidence", {
+      entity_type: "User", entity_name: "audit-target@example.com", reason: "Quarterly access review",
+    }));
+    expect(evidence.file_name).toMatch(/^audit-evidence-/);
+    expect(evidence.content).toContain("event_id,correlation_id,actor,action,entity_type,entity_name,occurred_at,source");
+    expect(evidence.content).toContain("AUDIT-E2E-1");
+    expect(evidence.checksum_sha256).toMatch(/^[0-9a-f]{64}$/);
+    expect(evidence.reason).toBe("Quarterly access review");
+  });
+
+  it("honours a time-bounded delegation without widening document or organization scope", async () => {
+    const passwordHash = await hashPassword(PASSWORD, 1_000);
+    for (const role of ["Approver", "Approval Worker"]) {
+      await env.DB.prepare(
+        `INSERT INTO roles(tenant_id,role,modified_at) VALUES('demo',?1,?2) ON CONFLICT DO NOTHING`,
+      ).bind(role, NOW).run();
+    }
+    for (const user of ["approver@example.com", "delegate@example.com"]) {
+      await env.DB.prepare(
+        `INSERT INTO users(tenant_id,user_id,full_name,email,password_hash,created_at,modified_at)
+         VALUES('demo',?1,?1,?1,?2,?3,?3) ON CONFLICT(tenant_id,user_id) DO UPDATE SET password_hash=excluded.password_hash`,
+      ).bind(user, passwordHash, NOW).run();
+    }
+    await env.DB.prepare("INSERT INTO user_roles(tenant_id,user_id,role) VALUES('demo','approver@example.com','Approver') ON CONFLICT DO NOTHING").run();
+    await env.DB.prepare("INSERT INTO user_roles(tenant_id,user_id,role) VALUES('demo','delegate@example.com','Approval Worker') ON CONFLICT DO NOTHING").run();
+
+    const meta = {
+      name: "Delegated Approval", module: "Organization Security", autoname: "DLG-APR-.####", title_field: "subject",
+      fields: [
+        { fieldname: "subject", label: "Subject", fieldtype: "Data", required: true },
+        { fieldname: "company", label: "Company", fieldtype: "Link", options: "Company", required: true },
+        { fieldname: "workflow_state", label: "State", fieldtype: "Data", read_only: true },
+      ],
+      permissions: [
+        { role: "System Manager", read: true, write: true, create: true, report: true },
+        { role: "Approval Worker", read: true, write: true, report: true },
+      ], revision: 1,
+    };
+    const workflow = {
+      name: "Delegated Approval Review", document_type: "Delegated Approval", state_field: "workflow_state", is_active: true,
+      states: [{ state: "Draft", docstatus: 0, allow_edit: "Approval Worker" }, { state: "Reviewed", docstatus: 0, allow_edit: "Approval Worker" }],
+      transitions: [{ state: "Draft", action: "Review", next_state: "Reviewed", allowed_role: "Approver" }], revision: 1,
+    };
+    await env.DB.prepare(
+      `INSERT INTO doctype_definitions(tenant_id,doctype,module,revision,metadata_json,modified_by,modified_at)
+       VALUES('demo','Delegated Approval','Organization Security',1,?1,'Administrator',?2)`,
+    ).bind(JSON.stringify(meta), NOW).run();
+    await env.DB.prepare(
+      `INSERT INTO workflows(tenant_id,name,document_type,is_active,revision,workflow_json,modified_by,modified_at)
+       VALUES('demo','Delegated Approval Review','Delegated Approval',1,1,?1,'Administrator',?2)`,
+    ).bind(JSON.stringify(workflow), NOW).run();
+    const created = (await (await call("/api/resource/Delegated Approval", {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ subject: "Delegated decision", company: "Demo" }),
+    })).json() as any).data;
+    expect(created.workflow_state).toBe("Draft");
+    await env.DB.prepare(
+      `INSERT INTO master_records(tenant_id,record_type,name,data_json,modified_at)
+       VALUES('demo','Company','Other','{"default_currency":"USD"}',?1) ON CONFLICT DO NOTHING`,
+    ).bind(NOW).run();
+    const outside = (await (await call("/api/resource/Delegated Approval", {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ subject: "Outside delegated scope", company: "Other" }),
+    })).json() as any).data;
+    await env.DB.prepare(
+      `INSERT INTO erp_organization_scope_grants(
+         tenant_id,assignment_name,user_id,allow_doctype,allow_name,effective_from,effective_to,source_version,modified_at
+       ) VALUES('demo','ORG-SCOPE-E2E','approver@example.com','Company','Demo','2000-01-01','2099-12-31',1,?1)`,
+    ).bind(NOW).run();
+    const delegation = {
+      workflow_state: "Active", grantor: "approver@example.com", grantee: "delegate@example.com",
+      action_scope_json: ["review"], organization_scope_json: { Company: "Demo" },
+      effective_from: "2000-01-01T00:00:00.000Z", effective_to: "2099-12-31T23:59:59.000Z",
+    };
+    await env.DB.prepare(
+      `INSERT INTO documents(tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,payload_json,modified_by)
+       VALUES('demo','Delegation:DLG-E2E-1','Delegation','DLG-E2E-1','approver@example.com',1,'Active',1,?1,?1,?2,'approver@example.com')`,
+    ).bind(NOW, JSON.stringify(delegation)).run();
+    const activeDelegation = await env.DB.prepare(
+      `SELECT COUNT(*) AS total FROM documents WHERE tenant_id='demo' AND doctype='Delegation' AND docstatus=1
+         AND json_extract(payload_json,'$.workflow_state')='Active'
+         AND json_extract(payload_json,'$.grantee')='delegate@example.com'
+         AND datetime(json_extract(payload_json,'$.effective_from'))<=datetime('now')
+         AND datetime(json_extract(payload_json,'$.effective_to'))>=datetime('now')`,
+    ).first<{ total: number }>();
+    expect(activeDelegation?.total).toBe(1);
+
+    try {
+      expect((await switchSession("delegate@example.com")).status).toBe(200);
+      const globalAudit = await method("erp_platform.api.get_audit_events", {}, "GET");
+      expect(globalAudit.status).toBe(403);
+      const readable = await method("frappe.desk.form.load.getdoc", { doctype: "Delegated Approval", name: created.name }, "GET");
+      expect(readable.status).toBe(200);
+      const transitions = await unwrap(await method("metaforge.api.get_workflow_transitions", { doctype: "Delegated Approval", name: created.name }, "GET"));
+      expect(transitions.transitions.some((transition: any) => transition.action === "Review" && transition.delegation === "DLG-E2E-1")).toBe(true);
+      const inbox = await unwrap(await method("erp_platform.api.get_approval_inbox", { doctype: "Delegated Approval" }, "GET"));
+      expect(inbox.items.some((entry: any) => entry.name === created.name)).toBe(true);
+      expect(inbox.items.some((entry: any) => entry.name === outside.name)).toBe(false);
+      const item = inbox.items.find((entry: any) => entry.name === created.name);
+      expect(item.actions.some((action: any) => action.action === "Review"
+        && action.delegation === "DLG-E2E-1"
+        && action.delegated_by === "approver@example.com")).toBe(true);
+      const reviewed = await unwrap(await method("metaforge.api.workflow_action_with_comment", {
+        doctype: "Delegated Approval", name: created.name, action: "Review", comment: "Covered during leave",
+      }));
+      expect(reviewed.workflow_state).toBe("Reviewed");
+      expect(reviewed._delegation).toBe("DLG-E2E-1");
+      expect(reviewed._delegated_by).toBe("approver@example.com");
+    } finally {
+      expect((await switchSession("sales@example.com")).status).toBe(200);
+    }
+  });
+
+  it("requires a recent password login before publishing a security policy", async () => {
+    await env.DB.prepare(
+      `INSERT INTO roles(tenant_id,role,modified_at) VALUES('demo','Policy Target',?1) ON CONFLICT DO NOTHING`,
+    ).bind(NOW).run();
+    const meta = {
+      name: "Role Policy", module: "Organization Security", is_submittable: true, autoname: "ROLE-POL-.#####",
+      fields: [
+        { fieldname: "policy_code", label: "Code", fieldtype: "Data", read_only: true },
+        { fieldname: "version_no", label: "Version", fieldtype: "Int", required: true, read_only: true, default: 1 },
+        { fieldname: "role", label: "Role", fieldtype: "Link", options: "Role", required: true },
+        { fieldname: "resource", label: "Resource", fieldtype: "Data", required: true },
+        { fieldname: "actions_json", label: "Actions", fieldtype: "JSON", required: true, default: [] },
+        { fieldname: "row_rule_json", label: "Rows", fieldtype: "JSON", required: true, default: {} },
+        { fieldname: "field_rule_json", label: "Fields", fieldtype: "JSON", required: true, default: {} },
+        { fieldname: "workflow_state", label: "State", fieldtype: "Data", read_only: true },
+      ],
+      permissions: [{ role: "System Manager", read: true, write: true, create: true, submit: true, cancel: true, report: true }], revision: 1,
+    };
+    const workflow = {
+      name: "Role Policy Publishing", document_type: "Role Policy", state_field: "workflow_state", is_active: true,
+      states: [
+        { state: "Draft", docstatus: 0, allow_edit: "System Manager" },
+        { state: "Review", docstatus: 0, allow_edit: "System Manager" },
+        { state: "Published", docstatus: 1, allow_edit: "Owner" },
+      ],
+      transitions: [{ state: "Review", action: "Publish", next_state: "Published", allowed_role: "Owner", allow_self_approval: false }], revision: 1,
+    };
+    await env.DB.prepare(
+      `INSERT INTO doctype_definitions(tenant_id,doctype,module,is_submittable,revision,metadata_json,modified_by,modified_at)
+       VALUES('demo','Role Policy','Organization Security',1,1,?1,'Administrator',?2)`,
+    ).bind(JSON.stringify(meta), NOW).run();
+    await env.DB.prepare(
+      `INSERT INTO workflows(tenant_id,name,document_type,is_active,revision,workflow_json,modified_by,modified_at)
+       VALUES('demo','Role Policy Publishing','Role Policy',1,1,?1,'Administrator',?2)`,
+    ).bind(JSON.stringify(workflow), NOW).run();
+    const policy = {
+      workflow_state: "Review", policy_code: "ROLE-POL-E2E-1", version_no: 1,
+      role: "Policy Target", resource: "Field Visit", actions_json: ["read"], row_rule_json: {}, field_rule_json: {},
+    };
+    await env.DB.prepare(
+      `INSERT INTO documents(tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,payload_json,modified_by)
+       VALUES('demo','Role Policy:ROLE-POL-E2E-1','Role Policy','ROLE-POL-E2E-1','author@example.com',0,'Review',1,?1,?1,?2,'author@example.com')`,
+    ).bind(NOW, JSON.stringify(policy)).run();
+
+    const current = Math.floor(Date.now() / 1000);
+    const stale = await mintSession({
+      tenantId: "demo", userId: "sales@example.com", roles: ["System Manager"], epoch: 1,
+      secret: "test-session-secret-at-least-32-characters-long", now: current - 60 * 60, ttlSeconds: 2 * 60 * 60,
+    });
+    sid = stale.sid; csrf = stale.csrfToken;
+    const denied = await method("frappe.model.workflow.apply_workflow", {
+      doctype: "Role Policy", name: "ROLE-POL-E2E-1", action: "Publish",
+    });
+    expect(denied.status).not.toBe(200);
+    expect(String((await denied.json() as any).message)).toMatch(/sign in again/i);
+
+    expect((await switchSession("sales@example.com")).status).toBe(200);
+    const published = await unwrap(await method("frappe.model.workflow.apply_workflow", {
+      doctype: "Role Policy", name: "ROLE-POL-E2E-1", action: "Publish",
+    }));
+    expect(published.workflow_state).toBe("Published");
+    expect(published.policy_code).toBe("ROLE-POL-E2E-1");
+    expect(published.version_no).toBe(1);
   });
 
   it("logs out and the session stops working", async () => {

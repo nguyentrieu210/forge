@@ -17,14 +17,15 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Check, ChevronsUpDown, KeyRound, Loader2, Lock, LockOpen, Plus, RefreshCw,
-  Save, Search, ShieldAlert, ShieldCheck, Trash2, UserPlus, UserRound, UsersRound,
+  ArrowLeft, Check, ChevronsUpDown, ClipboardCheck, Download, ExternalLink, FileClock,
+  KeyRound, Loader2, Lock, LockOpen, Plus, RefreshCw, Save, Search, ShieldAlert,
+  ShieldCheck, Trash2, UserPlus, UserRound, UsersRound,
 } from "lucide-react";
 import { useMetaForge } from "../container/provider.js";
-import type { AccessProfileSummary, EffectivePermissionResult, TenantUser } from "@metaforge/core";
+import { formatDate, type AccessProfileSummary, type ApprovalInboxItem, type AuditEventItem, type Doc, type DocTypeMeta, type EffectivePermissionResult, type TenantUser } from "@metaforge/core";
 import type { RolesAndDoctypes, DocPermRule } from "@metaforge/adapter-frappe";
 import {
-  cn, Badge, Button, Checkbox, Input, Label, Skeleton, Tabs, TabsContent, TabsList, TabsTrigger, toast,
+  cn, Badge, Button, Checkbox, Input, Label, Skeleton, Tabs, TabsContent, TabsList, TabsTrigger, Textarea, toast,
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
   Popover, PopoverTrigger, PopoverContent, Command, CommandInput, CommandList, CommandEmpty, CommandItem,
@@ -36,12 +37,23 @@ const SCOPE_TYPES = [
   { value: "Warehouse", label: "Kho" },
   { value: "Company", label: "Công ty" },
   { value: "Branch", label: "Chi nhánh" },
+  { value: "Department", label: "Phòng ban" },
   { value: "Cost Center", label: "Trung tâm chi phí" },
   { value: "Project", label: "Dự án" },
   { value: "Territory", label: "Khu vực" },
 ] as const;
 
 const MIN_PASSWORD_LENGTH = 8;
+
+export type PermissionCenterTab = "users" | "roles" | "check" | "approvals" | "audit";
+
+const TAB_HEADING: Record<PermissionCenterTab, { title: string; description: string }> = {
+  users: { title: "Quản lý người dùng & phân quyền", description: "Tạo tài khoản đăng nhập, gán vai trò, giới hạn phạm vi dữ liệu và kiểm tra quyền thực tế." },
+  roles: { title: "Vai trò, phạm vi & tách nhiệm vụ", description: "Đối chiếu quyền theo tài nguyên, chính sách hiệu lực và các xung đột cần tách người." },
+  check: { title: "Mô phỏng quyền thực tế", description: "Kiểm tra một người được phép hay bị từ chối trên đúng chứng từ và phạm vi nào." },
+  approvals: { title: "Hộp duyệt của tôi", description: "Xử lý phiếu đúng vai trò, phạm vi, chính sách SoD và ủy quyền đang hiệu lực." },
+  audit: { title: "Nhật ký kiểm toán", description: "Theo dõi thay đổi bất biến, phiên bản trước–sau và xuất bằng chứng có checksum." },
+};
 
 /** Nhãn tiếng Việt cho từng quyền. Khoá lạ thì hiện nguyên khoá, không giấu đi. */
 const PTYPE_LABEL: Record<string, string> = {
@@ -50,7 +62,7 @@ const PTYPE_LABEL: Record<string, string> = {
   report: "Báo cáo", export: "Xuất file", share: "Chia sẻ", import: "Nhập file",
 };
 
-export function PermissionCenter() {
+export function PermissionCenter({ initialTab = "users" }: { initialTab?: PermissionCenterTab } = {}) {
   const { adapter } = useMetaForge();
   const [users, setUsers] = useState<TenantUser[]>([]);
   const [availableRoles, setAvailableRoles] = useState<string[]>([]);
@@ -61,6 +73,9 @@ export function PermissionCenter() {
   const [creating, setCreating] = useState(false);
   const [meta, setMeta] = useState<RolesAndDoctypes | null>(null);
   const [doctype, setDoctype] = useState("");
+  const [activeTab, setActiveTab] = useState<PermissionCenterTab>(initialTab);
+  useEffect(() => { setActiveTab(initialTab); }, [initialTab]);
+  const heading = TAB_HEADING[activeTab];
 
   const loadUsers = useCallback(async () => {
     setListLoading(true); setListError(undefined);
@@ -104,17 +119,19 @@ export function PermissionCenter() {
     <div className="mx-auto max-w-[1600px] space-y-4">
       <div className="flex flex-wrap items-start gap-3">
         <div>
-          <h1 className="flex items-center gap-2 text-2xl font-semibold"><ShieldCheck className="size-6 text-primary" /> Quản lý người dùng &amp; phân quyền</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Tạo tài khoản đăng nhập, gán vai trò, giới hạn phạm vi dữ liệu và kiểm tra quyền thực tế.</p>
+          <h1 className="flex items-center gap-2 text-2xl font-semibold"><ShieldCheck className="size-6 text-primary" /> {heading.title}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{heading.description}</p>
         </div>
-        <Button className="ml-auto" onClick={() => setCreating(true)}><UserPlus className="size-4" /> Thêm người dùng</Button>
+        {activeTab === "users" ? <Button className="ml-auto" onClick={() => setCreating(true)}><UserPlus className="size-4" /> Thêm người dùng</Button> : null}
       </div>
 
-      <Tabs defaultValue="users" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={(value: string) => setActiveTab(value as PermissionCenterTab)} className="space-y-4">
         <TabsList className="h-auto flex-wrap justify-start">
           <TabsTrigger value="users"><UsersRound className="size-4" /> Người dùng</TabsTrigger>
           <TabsTrigger value="roles"><ShieldCheck className="size-4" /> Quyền theo vai trò</TabsTrigger>
           <TabsTrigger value="check"><KeyRound className="size-4" /> Kiểm tra quyền</TabsTrigger>
+          <TabsTrigger value="approvals"><ClipboardCheck className="size-4" /> Hộp duyệt</TabsTrigger>
+          <TabsTrigger value="audit"><FileClock className="size-4" /> Nhật ký kiểm toán</TabsTrigger>
         </TabsList>
 
         <TabsContent value="users" className="space-y-4">
@@ -131,8 +148,8 @@ export function PermissionCenter() {
             </div>
 
             {listError ? <ErrorBox message={listError} /> : null}
-            {listLoading ? <div className="space-y-2 p-4">{Array.from({ length: 4 }).map((_, index) => <Skeleton key={index} className="h-11" />)}</div> : (
-              <div className="overflow-x-auto">
+            {listLoading ? <div className="space-y-2 p-4">{Array.from({ length: 4 }).map((_, index) => <Skeleton key={index} className="h-11" />)}</div> : (<>
+              <div className="hidden overflow-x-auto md:block">
                 <Table>
                   <TableHeader>
                     <TableRow className="hover:bg-transparent">
@@ -171,7 +188,28 @@ export function PermissionCenter() {
                   </TableBody>
                 </Table>
               </div>
-            )}
+              <div className="space-y-2 p-3 md:hidden">
+                {filtered.length ? filtered.map((user) => (
+                  <article key={user.user} className={cn("rounded-lg border p-3", selected === user.user && "border-primary bg-primary/5", !user.enabled && "opacity-70")}>
+                    <Button type="button" variant="ghost" className="h-auto w-full justify-start whitespace-normal p-0 text-left font-normal hover:bg-transparent" onClick={() => setSelected(user.user)}>
+                      <span className="block w-full">
+                      <span className="flex items-start gap-2">
+                        <span className="min-w-0 flex-1"><span className="block truncate font-medium">{user.full_name || user.user}</span><span className="mt-0.5 block truncate font-mono text-xs text-muted-foreground">{user.user}</span></span>
+                        <Badge variant={user.enabled ? "default" : "destructive"}>{user.enabled ? "Đang dùng" : "Đã khoá"}</Badge>
+                      </span>
+                      <span className="mt-3 flex flex-wrap gap-1">
+                        {user.roles.length ? user.roles.map((role) => <Badge key={role} variant="secondary">{role}</Badge>) : <span className="text-xs text-muted-foreground">Chưa gán vai trò</span>}
+                      </span>
+                      </span>
+                    </Button>
+                    <div className="mt-3 grid grid-cols-[1fr_auto] gap-2 border-t pt-3">
+                      <Button variant="outline" size="sm" onClick={() => setSelected(user.user)}>Phân quyền</Button>
+                      <Button variant="outline" size="icon-sm" aria-label={user.enabled ? "Khoá tài khoản" : "Mở lại tài khoản"} onClick={() => void toggleEnabled(user)}>{user.enabled ? <Lock className="size-4" /> : <LockOpen className="size-4" />}</Button>
+                    </div>
+                  </article>
+                )) : <p className="py-8 text-center text-sm text-muted-foreground">Không có tài khoản nào khớp.</p>}
+              </div>
+            </>)}
           </section>
 
           {selected ? <UserDetail key={selected} login={selected} availableRoles={availableRoles} onChanged={loadUsers} onClose={() => setSelected(undefined)} /> : null}
@@ -179,6 +217,8 @@ export function PermissionCenter() {
 
         <TabsContent value="roles"><RoleMatrix meta={meta} doctype={doctype} setDoctype={setDoctype} /></TabsContent>
         <TabsContent value="check"><CheckPanel meta={meta} doctype={doctype} setDoctype={setDoctype} users={users} /></TabsContent>
+        <TabsContent value="approvals"><ApprovalQueue /></TabsContent>
+        <TabsContent value="audit"><AuditCenter /></TabsContent>
       </Tabs>
 
       <CreateUserDialog open={creating} onOpenChange={setCreating} availableRoles={availableRoles} onCreated={async (login) => { await loadUsers(); setSelected(login); }} />
@@ -444,9 +484,9 @@ function RoleMatrix({ meta, doctype, setDoctype }: { meta: RolesAndDoctypes | nu
     <section className="rounded-xl border bg-card shadow-sm">
       <div className="flex flex-wrap items-center gap-3 border-b px-4 py-3">
         <div><h2 className="font-semibold">Quyền theo vai trò</h2><p className="text-xs text-muted-foreground">Ai làm được gì trên từng loại chứng từ.</p></div>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="flex w-full flex-col gap-1.5 sm:ml-auto sm:w-auto sm:flex-row sm:items-center sm:gap-2">
           <Label className="text-xs text-muted-foreground">Loại chứng từ</Label>
-          {meta ? <Select value={doctype} onValueChange={setDoctype}><SelectTrigger className="w-64"><SelectValue /></SelectTrigger><SelectContent>{meta.doctypes.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}</SelectContent></Select> : <Skeleton className="h-9 w-64" />}
+          {meta ? <Select value={doctype} onValueChange={setDoctype}><SelectTrigger className="w-full sm:w-64"><SelectValue /></SelectTrigger><SelectContent>{meta.doctypes.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}</SelectContent></Select> : <Skeleton className="h-9 w-full sm:w-64" />}
         </div>
       </div>
       <div className="border-b bg-muted/30 px-4 py-2 text-xs text-muted-foreground">
@@ -454,7 +494,7 @@ function RoleMatrix({ meta, doctype, setDoctype }: { meta: RolesAndDoctypes | nu
       </div>
       {loading ? <div className="space-y-2 p-4">{Array.from({ length: 4 }).map((_, index) => <Skeleton key={index} className="h-9" />)}</div>
         : error ? <ErrorBox message={error} />
-        : <div className="overflow-x-auto">
+        : <div className="hidden overflow-x-auto md:block">
             <Table>
               <TableHeader><TableRow className="hover:bg-transparent">
                 <TableHead className="sticky left-0 z-10 min-w-48 bg-card">Vai trò</TableHead>
@@ -476,6 +516,15 @@ function RoleMatrix({ meta, doctype, setDoctype }: { meta: RolesAndDoctypes | nu
               </TableBody>
             </Table>
           </div>}
+      {!loading && !error ? <div className="space-y-3 p-3 md:hidden">
+        {rules.length ? rules.map((rule, index) => {
+          const granted = ptypes.filter((ptype) => (rule as Record<string, unknown>)[ptype] === 1);
+          return <article key={`${rule.role}:${rule.permlevel}:${index}`} className="rounded-lg border p-3">
+            <div className="flex items-start gap-2"><h3 className="min-w-0 flex-1 font-medium">{rule.role}</h3>{rule.if_owner ? <Badge variant="outline">Chỉ bản ghi mình lập</Badge> : null}</div>
+            <div className="mt-3 flex flex-wrap gap-1.5">{granted.length ? granted.map((ptype) => <Badge key={ptype} variant="secondary"><Check className="mr-1 size-3" />{PTYPE_LABEL[ptype] ?? ptype}</Badge>) : <span className="text-xs text-muted-foreground">Không có hành động được cấp.</span>}</div>
+          </article>;
+        }) : <p className="py-8 text-center text-sm text-muted-foreground">Chưa có dòng phân quyền nào cho loại chứng từ này.</p>}
+      </div> : null}
     </section>
   );
 }
@@ -585,6 +634,190 @@ function ScopeValuePicker({ adapter, doctype, value, onChange }: { adapter: Retu
     </Popover>
   );
 }
+
+function ApprovalQueue() {
+  const { adapter } = useMetaForge();
+  const [items, setItems] = useState<ApprovalInboxItem[]>([]);
+  const [selectedKey, setSelectedKey] = useState<string>();
+  const [document, setDocument] = useState<Doc>();
+  const [meta, setMeta] = useState<DocTypeMeta>();
+  const [search, setSearch] = useState("");
+  const [comment, setComment] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [processing, setProcessing] = useState("");
+  const [error, setError] = useState<string>();
+
+  const load = useCallback(async () => {
+    setLoading(true); setError(undefined);
+    try {
+      const result = await adapter.getApprovalInbox({ search: search.trim() || undefined, limit: 100 });
+      setItems(result.items);
+      setSelectedKey((current) => current && result.items.some((item) => approvalKey(item) === current) ? current : undefined);
+    } catch (caught) { setItems([]); setError(adapter.mapError(caught).message); }
+    finally { setLoading(false); }
+  }, [adapter, search]);
+  useEffect(() => { void load(); }, [load]);
+
+  const selected = items.find((item) => approvalKey(item) === selectedKey);
+  useEffect(() => {
+    let alive = true;
+    setDocument(undefined); setMeta(undefined);
+    if (!selected) return () => { alive = false; };
+    setDetailLoading(true);
+    void Promise.all([adapter.getDoc(selected.doctype, selected.name), adapter.getMeta(selected.doctype)])
+      .then(([loaded, loadedMeta]) => { if (alive) { setDocument(loaded.doc); setMeta(loadedMeta); } })
+      .catch((caught) => { if (alive) setError(adapter.mapError(caught).message); })
+      .finally(() => { if (alive) setDetailLoading(false); });
+    return () => { alive = false; };
+  }, [adapter, selectedKey]);
+
+  async function act(item: ApprovalInboxItem, action: string) {
+    const needsReason = /từ chối|yêu cầu|sửa|thu hồi|hủy|huỷ|reject|return/i.test(action);
+    if (needsReason && !comment.trim()) { toast.error("Nhập lý do trước khi thực hiện hành động này."); return; }
+    setProcessing(action); setError(undefined);
+    try {
+      const sod = await adapter.checkSoD({ doctype: item.doctype, name: item.name, action });
+      if (!sod.allowed) throw new Error(sod.conflicts[0]?.reason || "Luật tách nhiệm vụ không cho phép hành động này.");
+      await adapter.workflowActionWithComment(item.doctype, item.name, action, comment.trim() || undefined);
+      toast.success(`Đã thực hiện “${action}” cho ${item.name}`);
+      setComment(""); await load();
+    } catch (caught) { setError(adapter.mapError(caught).message); }
+    finally { setProcessing(""); }
+  }
+
+  const common = { items, selected, document, meta, selectedKey, setSelectedKey, comment, setComment, processing, act, detailLoading };
+  return (
+    <section className="overflow-hidden rounded-xl border bg-card shadow-sm">
+      <div className="flex flex-wrap items-center gap-2 border-b px-4 py-3">
+        <div className="min-w-0"><h2 className="font-semibold">Hộp duyệt của tôi</h2><p className="text-xs text-muted-foreground">Phiếu đúng vai trò, phạm vi và ủy quyền đang hiệu lực.</p></div>
+        <div className="relative ml-auto min-w-52 flex-1 sm:max-w-xs">
+          <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input className="pl-8" value={search} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setSearch(event.target.value)} placeholder="Tìm phiếu chờ duyệt…" />
+        </div>
+        <Button variant="outline" size="sm" onClick={load} disabled={loading}>{loading ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />} Tải lại</Button>
+      </div>
+      {error ? <ErrorBox message={error} /> : null}
+      {loading ? <div className="grid gap-3 p-4 md:grid-cols-3">{Array.from({ length: 6 }).map((_, index) => <Skeleton key={index} className="h-28" />)}</div>
+        : !items.length ? <div className="p-8 text-center"><ClipboardCheck className="mx-auto size-9 text-muted-foreground" /><p className="mt-3 font-medium">Không có phiếu chờ duyệt</p><p className="mt-1 text-sm text-muted-foreground">Các phiếu mới sẽ xuất hiện khi đúng vai trò hoặc ủy quyền của bạn.</p></div>
+        : <>
+            <div className="hidden min-h-[34rem] md:block"><ApprovalDesktop {...common} /></div>
+            <div className="md:hidden"><ApprovalMobile {...common} /></div>
+          </>}
+    </section>
+  );
+}
+
+type ApprovalRenderProps = {
+  items: ApprovalInboxItem[]; selected?: ApprovalInboxItem; document?: Doc; meta?: DocTypeMeta;
+  selectedKey?: string; setSelectedKey: (value?: string) => void; comment: string; setComment: (value: string) => void;
+  processing: string; detailLoading: boolean; act: (item: ApprovalInboxItem, action: string) => Promise<void>;
+};
+
+function ApprovalDesktop(props: ApprovalRenderProps) {
+  return <div className="grid h-full grid-cols-[19rem_minmax(0,1fr)_19rem]">
+    <div className="overflow-y-auto border-r p-2">{props.items.map((item) => <ApprovalQueueButton key={approvalKey(item)} item={item} active={approvalKey(item) === props.selectedKey} onClick={() => props.setSelectedKey(approvalKey(item))} />)}</div>
+    <div className="min-w-0 overflow-y-auto p-5"><ApprovalDocumentPreview {...props} /></div>
+    <aside className="overflow-y-auto border-l bg-muted/20 p-4"><ApprovalActions {...props} /></aside>
+  </div>;
+}
+
+function ApprovalMobile(props: ApprovalRenderProps) {
+  if (!props.selected) return <div className="space-y-2 p-3">{props.items.map((item) => <ApprovalQueueButton key={approvalKey(item)} item={item} active={false} onClick={() => props.setSelectedKey(approvalKey(item))} />)}</div>;
+  return <div className="min-h-[32rem]">
+    <div className="sticky top-0 z-10 border-b bg-card p-2"><Button variant="ghost" onClick={() => props.setSelectedKey(undefined)}><ArrowLeft className="size-4" /> Danh sách</Button></div>
+    <div className="space-y-5 p-4"><ApprovalDocumentPreview {...props} /><ApprovalActions {...props} /></div>
+  </div>;
+}
+
+function ApprovalQueueButton({ item, active, onClick }: { item: ApprovalInboxItem; active: boolean; onClick: () => void }) {
+  return <Button type="button" variant="ghost" onClick={onClick} className={cn("mb-2 h-auto w-full justify-start whitespace-normal rounded-lg border p-3 text-left font-normal transition-colors", active ? "border-primary bg-primary/5" : "hover:bg-muted/50")}>
+    <span className="block min-w-0 flex-1"><span className="flex items-start gap-2"><span className="min-w-0 flex-1 truncate font-medium">{item.title}</span><Badge variant="outline">{item.state}</Badge></span>
+    <span className="mt-1 block truncate text-xs text-muted-foreground">{item.doctype} · {item.name}</span>
+    <span className="mt-2 block text-xs text-muted-foreground">Cập nhật {formatDate(item.modified_at, "dd/mm/yyyy")}</span></span>
+  </Button>;
+}
+
+function ApprovalDocumentPreview({ selected, document, meta, detailLoading }: ApprovalRenderProps) {
+  if (!selected) return <div className="grid h-full place-items-center text-sm text-muted-foreground">Chọn một phiếu để xem.</div>;
+  if (detailLoading) return <div className="space-y-3">{Array.from({ length: 6 }).map((_, index) => <Skeleton key={index} className="h-10" />)}</div>;
+  const fields = (meta?.fields ?? []).filter((field) => !field.hidden && !["Section Break", "Column Break", "Tab Break", "Table"].includes(field.fieldtype)).filter((field) => document?.[field.fieldname] != null && document?.[field.fieldname] !== "").slice(0, 14);
+  return <div>
+    <div className="flex flex-wrap items-start gap-3 border-b pb-4"><div className="min-w-0 flex-1"><h3 className="truncate text-lg font-semibold">{selected.title}</h3><p className="text-sm text-muted-foreground">{selected.doctype} · {selected.name}</p></div><Button asChild variant="outline" size="sm"><a href={`/app/${encodeURIComponent(selected.doctype)}/${encodeURIComponent(selected.name)}`}><ExternalLink className="size-4" /> Mở hồ sơ</a></Button></div>
+    <dl className="mt-4 grid gap-3 sm:grid-cols-2">{fields.map((field) => <div key={field.fieldname} className="rounded-lg border p-3"><dt className="text-xs text-muted-foreground">{field.label || field.fieldname}</dt><dd className="mt-1 break-words text-sm font-medium">{displayValue(document?.[field.fieldname])}</dd></div>)}</dl>
+  </div>;
+}
+
+function ApprovalActions({ selected, comment, setComment, processing, act }: ApprovalRenderProps) {
+  if (!selected) return null;
+  return <div><h3 className="font-semibold">Quyết định</h3><p className="mt-1 text-xs text-muted-foreground">Server kiểm tra lại phiên bản, phạm vi, ủy quyền và SoD trước khi ghi.</p>
+    <div className="mt-4"><Label htmlFor="approval-comment">Lý do / ghi chú</Label><Textarea id="approval-comment" className="mt-1.5 min-h-24" value={comment} onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => setComment(event.target.value)} placeholder="Bắt buộc khi từ chối hoặc yêu cầu sửa…" /></div>
+    <div className="mt-4 grid gap-2">{selected.actions.map((item) => <Button key={item.action} variant={/từ chối|sửa|thu hồi|hủy|huỷ/i.test(item.action) ? "outline" : "default"} onClick={() => void act(selected, item.action)} disabled={Boolean(processing)}>{processing === item.action ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}{item.action}</Button>)}</div>
+    {selected.actions.some((item) => item.delegation) ? <div className="mt-4 rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs">Đang xử lý theo ủy quyền hiệu lực; người ủy quyền và mã ủy quyền được ghi cùng kết quả.</div> : null}
+  </div>;
+}
+
+function AuditCenter() {
+  const { adapter } = useMetaForge();
+  const [events, setEvents] = useState<AuditEventItem[]>([]);
+  const [selectedId, setSelectedId] = useState<string>();
+  const [entityType, setEntityType] = useState("");
+  const [entityName, setEntityName] = useState("");
+  const [actorFilter, setActorFilter] = useState("");
+  const [reason, setReason] = useState("");
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
+  const [error, setError] = useState<string>();
+
+  const load = useCallback(async (append = false) => {
+    setLoading(true); setError(undefined);
+    try {
+      const result = await adapter.getAuditEvents({ entityType: entityType.trim() || undefined, entityName: entityName.trim() || undefined, actor: actorFilter.trim() || undefined, cursor: append ? cursor ?? undefined : undefined, limit: 100 });
+      setEvents((current) => append ? [...current, ...result.events] : result.events);
+      setCursor(result.next_cursor);
+      setSelectedId((current) => current && (append ? [...events, ...result.events] : result.events).some((event) => event.event_id === current) ? current : undefined);
+    } catch (caught) { if (!append) setEvents([]); setError(adapter.mapError(caught).message); }
+    finally { setLoading(false); }
+  }, [adapter, entityType, entityName, actorFilter, cursor, events]);
+  useEffect(() => { void load(false); }, [adapter]);
+  const selected = events.find((event) => event.event_id === selectedId);
+
+  async function download() {
+    if (!reason.trim()) { toast.error("Nhập lý do xuất bằng chứng kiểm toán."); return; }
+    setExporting(true);
+    try {
+      const file = await adapter.exportAuditEvidence({ reason: reason.trim(), entityType: entityType.trim() || undefined, entityName: entityName.trim() || undefined, actor: actorFilter.trim() || undefined, limit: 1000 });
+      const url = URL.createObjectURL(new Blob([file.content], { type: file.content_type }));
+      const link = document.createElement("a"); link.href = url; link.download = file.file_name; link.click(); URL.revokeObjectURL(url);
+      toast.success(`Đã xuất ${file.row_count} sự kiện; SHA-256 ${file.checksum_sha256.slice(0, 12)}…`);
+    } catch (caught) { setError(adapter.mapError(caught).message); }
+    finally { setExporting(false); }
+  }
+
+  const common = { events, selected, selectedId, setSelectedId };
+  return <section className="overflow-hidden rounded-xl border bg-card shadow-sm">
+    <div className="border-b p-4"><div className="flex flex-wrap items-start gap-2"><div><h2 className="font-semibold">Nhật ký kiểm toán bất biến</h2><p className="text-xs text-muted-foreground">Gộp lịch sử chứng từ và thay đổi tài khoản; bí mật được che trước khi trả về.</p></div><Button className="ml-auto" variant="outline" onClick={() => void download()} disabled={exporting}>{exporting ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />} Xuất bằng chứng</Button></div>
+      <div className="mt-3 grid gap-2 md:grid-cols-[1fr_1fr_1fr_auto]"><Input value={entityType} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setEntityType(event.target.value)} placeholder="Loại đối tượng" /><Input value={entityName} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setEntityName(event.target.value)} placeholder="Mã bản ghi" /><Input value={actorFilter} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setActorFilter(event.target.value)} placeholder="Người thực hiện" /><Button onClick={() => void load(false)} disabled={loading}><Search className="size-4" /> Lọc</Button></div>
+      <div className="mt-2"><Label htmlFor="audit-export-reason" className="text-xs">Lý do xuất file</Label><Input id="audit-export-reason" className="mt-1" value={reason} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setReason(event.target.value)} placeholder="Ví dụ: Hồ sơ kiểm toán quý 3/2026" /></div>
+    </div>
+    {error ? <ErrorBox message={error} /> : null}
+    {loading && !events.length ? <div className="space-y-2 p-4">{Array.from({ length: 7 }).map((_, index) => <Skeleton key={index} className="h-16" />)}</div>
+      : !events.length ? <div className="p-8 text-center"><FileClock className="mx-auto size-9 text-muted-foreground" /><p className="mt-3 font-medium">Chưa có sự kiện phù hợp</p><p className="mt-1 text-sm text-muted-foreground">Xóa bộ lọc hoặc thực hiện một thay đổi để tạo dấu vết đầu tiên.</p></div>
+      : <><div className="hidden min-h-[36rem] md:block"><AuditDesktop {...common} /></div><div className="md:hidden"><AuditMobile {...common} /></div>{cursor ? <div className="border-t p-3 text-center"><Button variant="outline" onClick={() => void load(true)} disabled={loading}>{loading ? <Loader2 className="size-4 animate-spin" /> : null} Tải thêm</Button></div> : null}</>}
+  </section>;
+}
+
+type AuditRenderProps = { events: AuditEventItem[]; selected?: AuditEventItem; selectedId?: string; setSelectedId: (value?: string) => void };
+function AuditDesktop(props: AuditRenderProps) { return <div className="grid h-full grid-cols-[20rem_minmax(0,1fr)_18rem]"><div className="overflow-y-auto border-r p-2">{props.events.map((event) => <AuditEventButton key={event.event_id} event={event} active={event.event_id === props.selectedId} onClick={() => props.setSelectedId(event.event_id)} />)}</div><div className="min-w-0 overflow-y-auto p-5"><AuditDiff event={props.selected} /></div><aside className="overflow-y-auto border-l bg-muted/20 p-4"><AuditContext event={props.selected} /></aside></div>; }
+function AuditMobile(props: AuditRenderProps) { if (!props.selected) return <div className="space-y-2 p-3">{props.events.map((event) => <AuditEventButton key={event.event_id} event={event} active={false} onClick={() => props.setSelectedId(event.event_id)} />)}</div>; return <div><div className="sticky top-0 z-10 border-b bg-card p-2"><Button variant="ghost" onClick={() => props.setSelectedId(undefined)}><ArrowLeft className="size-4" /> Nhật ký</Button></div><div className="space-y-5 p-4"><AuditDiff event={props.selected} /><AuditContext event={props.selected} /></div></div>; }
+function AuditEventButton({ event, active, onClick }: { event: AuditEventItem; active: boolean; onClick: () => void }) { return <Button type="button" variant="ghost" onClick={onClick} className={cn("mb-2 h-auto w-full justify-start whitespace-normal rounded-lg border p-3 text-left font-normal", active ? "border-primary bg-primary/5" : "hover:bg-muted/50")}><span className="block min-w-0 flex-1"><span className="flex gap-2"><Badge variant="outline">{event.action}</Badge><span className="ml-auto text-xs text-muted-foreground">{formatDate(event.occurred_at, "dd/mm/yyyy")}</span></span><span className="mt-2 block truncate text-sm font-medium">{event.entity_type} · {event.entity_name}</span><span className="mt-1 block truncate text-xs text-muted-foreground">{event.actor}</span></span></Button>; }
+function AuditDiff({ event }: { event?: AuditEventItem }) { if (!event) return <div className="grid h-full place-items-center text-sm text-muted-foreground">Chọn một sự kiện để xem thay đổi.</div>; const rows = diffAudit(event.before_json, event.after_json); return <div><h3 className="text-lg font-semibold">Thay đổi dữ liệu</h3><p className="mt-1 text-sm text-muted-foreground">{event.entity_type} · {event.entity_name}</p><div className="mt-4 space-y-2">{rows.length ? rows.map((row) => <div key={row.field} className="grid gap-2 rounded-lg border p-3 lg:grid-cols-[10rem_1fr_1fr]"><div className="text-xs font-semibold">{row.field}</div><div><span className="text-[11px] uppercase text-muted-foreground">Trước</span><p className="break-words text-sm">{row.before}</p></div><div><span className="text-[11px] uppercase text-muted-foreground">Sau</span><p className="break-words text-sm">{row.after}</p></div></div>) : <p className="rounded-lg border border-dashed p-5 text-sm text-muted-foreground">Sự kiện không có thay đổi field-level để hiển thị.</p>}</div></div>; }
+function AuditContext({ event }: { event?: AuditEventItem }) { if (!event) return null; return <div><h3 className="font-semibold">Dấu vết</h3><dl className="mt-3 space-y-3 text-sm"><div><dt className="text-xs text-muted-foreground">Người thực hiện</dt><dd className="break-all font-medium">{event.actor}</dd></div><div><dt className="text-xs text-muted-foreground">Thời điểm</dt><dd>{formatDate(event.occurred_at, "dd/mm/yyyy")} {event.occurred_at.slice(11, 19)}</dd></div><div><dt className="text-xs text-muted-foreground">Correlation ID</dt><dd className="break-all font-mono text-xs">{event.correlation_id}</dd></div><div><dt className="text-xs text-muted-foreground">Nguồn</dt><dd>{event.source === "rbac" ? "Quản trị truy cập" : "Phiên bản chứng từ"}</dd></div></dl></div>; }
+function diffAudit(beforeRaw: unknown, afterRaw: unknown): Array<{ field: string; before: string; after: string }> { const before = auditPayload(beforeRaw); const after = auditPayload(afterRaw); const keys = [...new Set([...Object.keys(before), ...Object.keys(after)])].sort(); return keys.filter((key) => JSON.stringify(before[key]) !== JSON.stringify(after[key])).slice(0, 100).map((field) => ({ field, before: displayValue(before[field]), after: displayValue(after[field]) })); }
+function auditPayload(value: unknown): Record<string, unknown> { if (!value || typeof value !== "object" || Array.isArray(value)) return {}; const object = value as Record<string, unknown>; return object.data && typeof object.data === "object" && !Array.isArray(object.data) ? object.data as Record<string, unknown> : object; }
+function displayValue(value: unknown): string { if (value == null || value === "") return "—"; if (typeof value === "boolean") return value ? "Có" : "Không"; if (typeof value === "object") return JSON.stringify(value); return String(value); }
+function approvalKey(item?: ApprovalInboxItem): string | undefined { return item ? `${item.doctype}:${item.name}` : undefined; }
 
 function ErrorBox({ message }: { message: string }) {
   return <div className="m-4 flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive" role="alert"><ShieldAlert className="size-4 shrink-0" /><span>{message}</span></div>;

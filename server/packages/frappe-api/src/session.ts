@@ -45,6 +45,8 @@ interface SessionPayload {
   e: number;
   /** Expiry, epoch seconds. */
   x: number;
+  /** Last successful primary authentication, epoch seconds. Sliding a session must preserve it. */
+  i: number;
   /** CSRF nonce, echoed by the client in the header. */
   c: string;
   /** Optional user preferences carried for the boot payload. */
@@ -58,6 +60,7 @@ export interface Session {
   epoch: number;
   csrfToken: string;
   expiresAt: number;
+  authenticatedAt: number;
 }
 
 export interface MintSessionInput {
@@ -70,6 +73,8 @@ export interface MintSessionInput {
   language?: string;
   timezone?: string;
   now?: number;
+  /** Preserved when extending a session; omitted only for a real password login. */
+  authenticatedAt?: number;
 }
 
 export interface MintedSession {
@@ -89,6 +94,7 @@ export async function mintSession(input: MintSessionInput): Promise<MintedSessio
     r: [...input.roles],
     e: input.epoch,
     x: expiresAt,
+    i: input.authenticatedAt ?? now,
     c: randomToken(),
     ...(input.language ? { l: input.language } : {}),
     ...(input.timezone ? { z: input.timezone } : {}),
@@ -125,6 +131,7 @@ export async function verifySession(sid: string, tenantId: string, secret: strin
   // failure legible instead of surfacing as a signature mismatch.
   if (payload.t !== tenantId) throw errors.authentication("Session does not belong to this tenant");
   if (!Number.isFinite(payload.x) || payload.x <= now) throw errors.authentication("Session has expired");
+  if (!Number.isFinite(payload.i) || payload.i <= 0 || payload.i > now + 60) throw errors.authentication("Session is invalid");
   if (typeof payload.u !== "string" || !payload.u) throw errors.authentication("Session is invalid");
   if (!Array.isArray(payload.r) || payload.r.some((role) => typeof role !== "string")) throw errors.authentication("Session is invalid");
 
@@ -139,6 +146,7 @@ export async function verifySession(sid: string, tenantId: string, secret: strin
     epoch: typeof payload.e === "number" ? payload.e : 0,
     csrfToken: typeof payload.c === "string" ? payload.c : "",
     expiresAt: payload.x,
+    authenticatedAt: payload.i,
   };
 }
 

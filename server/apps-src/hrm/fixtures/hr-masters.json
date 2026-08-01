@@ -2,12 +2,12 @@
   { "record_type": "Currency", "name": "VND", "data": { "currency_name": "Việt Nam đồng", "symbol": "₫", "currency_scale": 0 } },
   { "record_type": "Company", "name": "Kairo", "data": { "company_name": "Công ty Kairo", "default_currency": "VND", "country": "Việt Nam" } },
   { "record_type": "Cost Center", "name": "Kairo - KR", "data": { "cost_center_name": "Kairo", "company": "Kairo", "is_group": 1, "disabled": 0 } },
-  { "record_type": "Branch", "name": "HQ", "data": { "branch_code": "HQ", "branch_name": "Trụ sở chính", "company": "Kairo", "cost_center": "Kairo - KR", "address": "Cập nhật địa chỉ doanh nghiệp trước khi go-live", "is_dependent_unit": 0, "disabled": 0 } },
+  { "record_type": "Branch", "name": "HQ", "data": { "branch_code": "HQ", "branch_name": "Trụ sở chính", "company": "Kairo", "accounting_model": "Accounting Unit", "cost_center": "Kairo - KR", "address": "Cập nhật địa chỉ doanh nghiệp trước khi go-live", "is_dependent_unit": 0, "organization_status": "Active", "disabled": 0 } },
 
-  { "record_type": "Department", "name": "HR", "data": { "department_code": "HR", "department_name": "Phòng Nhân sự", "company": "Kairo", "branch": "HQ", "cost_center": "Kairo - KR", "disabled": 0 } },
-  { "record_type": "Department", "name": "ACC", "data": { "department_code": "ACC", "department_name": "Phòng Kế toán", "company": "Kairo", "branch": "HQ", "cost_center": "Kairo - KR", "disabled": 0 } },
-  { "record_type": "Department", "name": "SALES", "data": { "department_code": "SALES", "department_name": "Phòng Kinh doanh", "company": "Kairo", "branch": "HQ", "cost_center": "Kairo - KR", "disabled": 0 } },
-  { "record_type": "Department", "name": "TECH", "data": { "department_code": "TECH", "department_name": "Phòng Kỹ thuật", "company": "Kairo", "branch": "HQ", "cost_center": "Kairo - KR", "disabled": 0 } },
+  { "record_type": "Department", "name": "HR", "data": { "department_code": "HR", "department_name": "Phòng Nhân sự", "company": "Kairo", "branch": "HQ", "cost_center": "Kairo - KR", "organization_status": "Active", "disabled": 0 } },
+  { "record_type": "Department", "name": "ACC", "data": { "department_code": "ACC", "department_name": "Phòng Kế toán", "company": "Kairo", "branch": "HQ", "cost_center": "Kairo - KR", "organization_status": "Active", "disabled": 0 } },
+  { "record_type": "Department", "name": "SALES", "data": { "department_code": "SALES", "department_name": "Phòng Kinh doanh", "company": "Kairo", "branch": "HQ", "cost_center": "Kairo - KR", "organization_status": "Active", "disabled": 0 } },
+  { "record_type": "Department", "name": "TECH", "data": { "department_code": "TECH", "department_name": "Phòng Kỹ thuật", "company": "Kairo", "branch": "HQ", "cost_center": "Kairo - KR", "organization_status": "Active", "disabled": 0 } },
 
   { "record_type": "Designation", "name": "Nhân viên", "data": { "designation_name": "Nhân viên", "job_level": 1, "disabled": 0 } },
   { "record_type": "Designation", "name": "Trưởng nhóm", "data": { "designation_name": "Trưởng nhóm", "job_level": 2, "disabled": 0 } },

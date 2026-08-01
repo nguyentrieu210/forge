@@ -49,7 +49,7 @@ test("access inspection resolves the selected user from the tenant directory", a
   });
 });
 
-test("a non-admin cannot inspect another user's access", async () => {
+test("a caller outside the access-inspector roles cannot inspect another user's access", async () => {
   await assert.rejects(
     resolveAccessInspectionActor({
       requestedUser: USER.user_id,
@@ -57,9 +57,22 @@ test("a non-admin cannot inspect another user's access", async () => {
       tenantId: "tenant-a",
       users: userStore(),
     }),
-    /System Manager is required/,
+    /System Manager.*Owner.*Internal Auditor/,
   );
 });
+
+for (const inspectorRole of ["Owner", "Internal Auditor"]) {
+  test(`${inspectorRole} can inspect another user's access`, async () => {
+    const actor = await resolveAccessInspectionActor({
+      requestedUser: USER.user_id,
+      caller: { user_id: `${inspectorRole.toLowerCase().replaceAll(" ", "-")}@example.com`, roles: [inspectorRole] },
+      tenantId: "tenant-a",
+      users: userStore(),
+    });
+    assert.equal(actor.user_id, USER.user_id);
+    assert.deepEqual(actor.roles, USER.roles);
+  });
+}
 
 test("a disabled user is not silently simulated as an active actor", async () => {
   await assert.rejects(

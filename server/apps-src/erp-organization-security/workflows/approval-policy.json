@@ -1,0 +1,19 @@
+{
+  "name": "Duyệt chính sách phê duyệt",
+  "document_type": "Approval Policy",
+  "state_field": "workflow_state",
+  "is_active": true,
+  "states": [
+    { "state": "Draft", "docstatus": 0, "allow_edit": "Domain Manager" },
+    { "state": "Review", "docstatus": 0, "allow_edit": "Domain Manager" },
+    { "state": "Published", "docstatus": 1, "allow_edit": "Owner" },
+    { "state": "Retired", "docstatus": 2, "allow_edit": "Owner" }
+  ],
+  "transitions": [
+    { "state": "Draft", "action": "Gửi duyệt", "next_state": "Review", "allowed_role": "Domain Manager" },
+    { "state": "Review", "action": "Yêu cầu sửa", "next_state": "Draft", "allowed_role": "Owner" },
+    { "state": "Review", "action": "Công bố", "next_state": "Published", "allowed_role": "Owner", "allow_self_approval": false },
+    { "state": "Published", "action": "Ngừng áp dụng", "next_state": "Retired", "allowed_role": "Owner" }
+  ],
+  "revision": 1
+}

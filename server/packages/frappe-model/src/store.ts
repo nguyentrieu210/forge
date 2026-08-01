@@ -11,6 +11,7 @@ export interface MetadataStore {
   listDocTypes(tenantId: string): Promise<DocTypeMeta[]>;
   putDocType(tenantId: string, meta: DocTypeMeta, actor: string, now: string): Promise<DocTypeMeta>;
   getWorkflow(tenantId: string, doctype: string): Promise<WorkflowMeta | null>;
+  listWorkflowDocTypes(tenantId: string): Promise<string[]>;
   putWorkflow(tenantId: string, workflow: WorkflowMeta, actor: string, now: string): Promise<WorkflowMeta>;
   getPrintFormat(tenantId: string, doctype: string, name?: string): Promise<PrintFormatMeta | null>;
   listPrintFormats(tenantId: string, doctype: string): Promise<PrintFormatMeta[]>;
@@ -115,6 +116,13 @@ export class D1MetadataStore implements MetadataStore {
   async getWorkflow(tenantId: string, doctype: string): Promise<WorkflowMeta | null> {
     const row = await this.db.prepare(`SELECT workflow_json,revision FROM workflows WHERE tenant_id=?1 AND document_type=?2 AND is_active=1`).bind(tenantId, doctype).first<WorkflowRow>();
     return row ? { ...validateWorkflow(JSON.parse(row.workflow_json), doctype), revision: row.revision } : null;
+  }
+
+  async listWorkflowDocTypes(tenantId: string): Promise<string[]> {
+    const result = await this.db.prepare(
+      `SELECT document_type FROM workflows WHERE tenant_id=?1 AND is_active=1 ORDER BY document_type`,
+    ).bind(tenantId).all<{ document_type: string }>();
+    return (result.results ?? []).map((row) => row.document_type);
   }
 
   async putWorkflow(tenantId: string, workflow: WorkflowMeta, actor: string, now: string): Promise<WorkflowMeta> {
@@ -259,6 +267,12 @@ export class InMemoryMetadataStore implements MetadataStore {
     this.doctypes.set(this.key(tenantId, meta.name), next); return structuredClone(next);
   }
   async getWorkflow(tenantId: string, doctype: string): Promise<WorkflowMeta | null> { return structuredClone(this.workflows.get(this.key(tenantId, doctype)) ?? null); }
+  async listWorkflowDocTypes(tenantId: string): Promise<string[]> {
+    return [...this.workflows.entries()]
+      .filter(([key, workflow]) => key.startsWith(`${tenantId}:`) && workflow.is_active)
+      .map(([, workflow]) => workflow.document_type)
+      .sort();
+  }
   async putWorkflow(tenantId: string, workflow: WorkflowMeta): Promise<WorkflowMeta> { this.workflows.set(this.key(tenantId, workflow.document_type), structuredClone(workflow)); return structuredClone(workflow); }
   async getPrintFormat(tenantId: string, doctype: string, name?: string): Promise<PrintFormatMeta | null> {
     const formats = await this.listPrintFormats(tenantId, doctype);

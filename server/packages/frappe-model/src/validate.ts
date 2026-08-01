@@ -89,7 +89,11 @@ export function parseDocTypeMeta(value: unknown, expectedName?: string): DocType
   if (!permissions.length) permissions.push({ role: "System Manager", read: true, write: true, create: true, submit: true, cancel: true, amend: true, print: true, email: true, report: true, import: true, export: true, share: true });
   const searchFields = input.search_fields === undefined ? undefined : array(input.search_fields, "search_fields").map((entry, index) => text(entry, `search_fields[${index}]`, 160));
   for (const field of searchFields ?? []) if (!fields.some((entry) => entry.fieldname === field)) throw errors.validation(`Unknown search field: ${field}`);
-  const sortField = input.sort_field === undefined ? undefined : text(input.sort_field, "sort_field", 160);
+  const requestedSortField = input.sort_field === undefined ? undefined : text(input.sort_field, "sort_field", 160);
+  // Frappe names the framework timestamps `modified` and `creation` on the wire;
+  // canonical storage calls them `modified_at` and `created_at`.
+  const sortField = requestedSortField === "modified" ? "modified_at"
+    : requestedSortField === "creation" ? "created_at" : requestedSortField;
   if (sortField && !["modified_at", "created_at", "name", "docstatus", "status"].includes(sortField) && !fields.some((field) => field.fieldname === sortField)) {
     throw errors.validation(`Unknown sort field: ${sortField}`);
   }

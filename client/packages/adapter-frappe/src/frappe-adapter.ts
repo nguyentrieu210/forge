@@ -25,6 +25,10 @@ import {
   type OverviewDashboard,
   type ProcessCatalog,
   type AccessProfileSummary,
+  type ApprovalInboxResult,
+  type AuditEventResult,
+  type AuditEvidenceExport,
+  type SoDCheckResult,
   type TenantUser,
   type EffectivePermissionResult,
   type DisplayValueRequest,
@@ -220,6 +224,28 @@ export class FrappeAdapterImpl implements FrappeAdapter {
     const r = await this.app.call().get<Envelope<EffectivePermissionResult>>("metaforge.api.explain_permission", {
       doctype, name, user, context: selection ? JSON.stringify(selection) : undefined,
     });
+    return this.unwrap(r);
+  }
+  async getApprovalInbox(input: { doctype?: string; search?: string; limit?: number } = {}): Promise<ApprovalInboxResult> {
+    const r = await this.app.call().get<Envelope<ApprovalInboxResult>>("erp_platform.api.get_approval_inbox", input);
+    return this.unwrap(r);
+  }
+  async getAuditEvents(input: { entityType?: string; entityName?: string; actor?: string; action?: string; from?: string; to?: string; cursor?: string; limit?: number } = {}): Promise<AuditEventResult> {
+    const r = await this.app.call().get<Envelope<AuditEventResult>>("erp_platform.api.get_audit_events", {
+      entity_type: input.entityType, entity_name: input.entityName, actor: input.actor, action: input.action,
+      from: input.from, to: input.to, cursor: input.cursor, limit: input.limit,
+    });
+    return this.unwrap(r);
+  }
+  async exportAuditEvidence(input: { reason: string; entityType?: string; entityName?: string; actor?: string; action?: string; from?: string; to?: string; limit?: number }): Promise<AuditEvidenceExport> {
+    const r = await this.app.call().post<Envelope<AuditEvidenceExport>>("erp_platform.api.export_audit_evidence", {
+      reason: input.reason, entity_type: input.entityType, entity_name: input.entityName,
+      actor: input.actor, action: input.action, from: input.from, to: input.to, limit: input.limit,
+    });
+    return this.unwrap(r);
+  }
+  async checkSoD(input: { doctype: string; name: string; action: string; user?: string }): Promise<SoDCheckResult> {
+    const r = await this.app.call().get<Envelope<SoDCheckResult>>("erp_platform.api.check_sod", input);
     return this.unwrap(r);
   }
   async addUserPermission(args: { user: string; allow: string; forValue: string; applicableFor?: string; isDefault?: boolean; hideDescendants?: boolean }): Promise<Record<string, unknown>> {

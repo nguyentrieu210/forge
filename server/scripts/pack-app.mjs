@@ -53,7 +53,7 @@ try {
   // customer's tenant rather than here.
   manifest = parseAppManifest(pkg);
 } catch (error) {
-  console.error(`PACK_FAILED ${header.id ?? "?"}: ${error.message}`);
+  console.error(`PACK_FAILED ${pkg?.id ?? "?"}: ${error.message}`);
   process.exit(1);
 }
 

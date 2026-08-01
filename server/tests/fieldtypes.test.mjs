@@ -170,6 +170,22 @@ test("print format qrcode filter renders a self-contained QR image", () => {
   assert.doesNotMatch(printed, /{{\s*name/);
 });
 
+test("print formats may use Frappe-style doc.field without bypassing redaction", () => {
+  const printed = renderPrintFormat({
+    name: "Policy Evidence", doc_type: "Role Policy", format_type: "Jinja", revision: 1,
+    html: "<p>{{ doc.name }}</p><p>{{ doc.role }}</p><p>{{ doc.secret }}</p>",
+  }, {
+    doctype: "Role Policy", name: "ROLE-POL-1", owner: "u", docstatus: 1, status: "Published", version: 3,
+    data: { role: "Accountant", secret: "never-print" }, children: [],
+  }, "vi", meta([
+    { fieldname: "role", fieldtype: "Data" },
+    { fieldname: "secret", fieldtype: "Password", print_hide: true },
+  ]));
+  assert.match(printed, /ROLE-POL-1/);
+  assert.match(printed, /Accountant/);
+  assert.doesNotMatch(printed, /never-print/);
+});
+
 test("print yesno filter renders stamping choice in Vietnamese", () => {
   const format = {
     name: "Purchase Order",
