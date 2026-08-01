@@ -3,7 +3,7 @@ name: ALU full production release
 on:
   pull_request:
     branches:
-      - hotfix/alumdoor-print-list-delete
+      - main
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - ".github/workflows/manual-release-alu.yml"
