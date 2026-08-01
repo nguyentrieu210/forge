@@ -1,5 +1,5 @@
 /** @jsxImportSource react */
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, RefreshCw, Search } from "lucide-react";
 import { resolveBulkRenderPolicy, type Doc, type ListOpts } from "@metaforge/core";
 import { mapError } from "@metaforge/adapter-frappe";
@@ -44,6 +44,8 @@ export function BulkGridContainer(props: BulkGridContainerProps) {
   const dirtyCount = Object.keys(dirty).length;
 
   const rowByName = useMemo(() => new Map(rows.map((row) => [String(row.name), row])), [rows]);
+  const rowSignature = useMemo(() => rows.map((row) => String(row.name)).join("\u001f"), [rows]);
+  useEffect(() => setSelected(new Set()), [rowSignature]);
 
   const changeCell = useCallback((name: string, fieldname: string, value: unknown) => {
     if (!policy?.editable.has(fieldname)) return;
@@ -98,31 +100,35 @@ export function BulkGridContainer(props: BulkGridContainerProps) {
     setSaving(true);
     const failed: Record<string, string> = {};
     let saved = 0;
-    for (const [name, values] of Object.entries(dirty)) {
-      try {
-        await adapter.updateDoc(props.doctype, name, values as Partial<Doc>, originalModified[name] ?? "");
-        saved += 1;
-      } catch (error) {
-        failed[name] = mapError(error).message;
+    try {
+      for (const [name, values] of Object.entries(dirty)) {
+        try {
+          await adapter.updateDoc(props.doctype, name, values as Partial<Doc>, originalModified[name] ?? "");
+          saved += 1;
+        } catch (error) {
+          failed[name] = mapError(error).message;
+        }
       }
+      setErrors(failed);
+      if (saved) toast.success(`Đã lưu ${saved} bản ghi`);
+      const failedCount = Object.keys(failed).length;
+      if (failedCount) toast.error(`${failedCount} bản ghi chưa lưu; xem lỗi trên từng dòng`);
+      if (!failedCount) {
+        setDirty({}); setOriginalModified({}); setSelected(new Set());
+      } else {
+        setDirty((current) => Object.fromEntries(Object.entries(current).filter(([name]) => failed[name])));
+        setOriginalModified((current) => Object.fromEntries(Object.entries(current).filter(([name]) => failed[name])));
+      }
+      await viewQ.refetch();
+    } finally {
+      setSaving(false);
     }
-    setErrors(failed);
-    if (saved) toast.success(`Đã lưu ${saved} bản ghi`);
-    const failedCount = Object.keys(failed).length;
-    if (failedCount) toast.error(`${failedCount} bản ghi chưa lưu; xem lỗi trên từng dòng`);
-    if (!failedCount) {
-      setDirty({}); setOriginalModified({}); setSelected(new Set());
-    } else {
-      setDirty((current) => Object.fromEntries(Object.entries(current).filter(([name]) => failed[name])));
-      setOriginalModified((current) => Object.fromEntries(Object.entries(current).filter(([name]) => failed[name])));
-    }
-    await viewQ.refetch();
-    setSaving(false);
   }, [adapter, dirty, dirtyCount, originalModified, props.doctype, saving, viewQ, writable]);
 
   if (metaQ.isLoading) return <div className="grid h-full gap-2 p-3"><Skeleton className="h-10" /><Skeleton className="h-96" /></div>;
   if (metaQ.error) return <div className="p-4 text-sm text-destructive">{mapError(metaQ.error).message}</div>;
   if (!meta || !policy?.enabled) return <div className="grid h-40 place-items-center p-4 text-sm text-muted-foreground">DocType này chưa bật Bulk View an toàn.</div>;
+  if (viewQ.error) return <div className="p-4 text-sm text-destructive">{mapError(viewQ.error).message}</div>;
 
   const maxPage = Math.max(1, Math.ceil(total / policy.pageSize));
   const canNavigate = dirtyCount === 0 && !saving;
