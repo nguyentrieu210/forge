@@ -282,22 +282,22 @@
 }
 
 [data-brand="sakura"] {
-  --theme-bg: #fff7fb; --theme-fg: #3f172b; --theme-card: #ffffff;
-  --theme-primary: #be185d; --theme-primary-fg: #ffffff;
-  --theme-secondary: #fce7f3; --theme-muted: #fdf2f8; --theme-muted-fg: #755263;
-  --theme-accent: #fbcfe8; --theme-accent-fg: #9d174d;
-  --theme-border: #f3d3e2; --theme-ring: #db2777; --theme-sidebar: #fffafd;
-  --mf-shell-background-image: radial-gradient(circle at 86% 8%, rgb(244 114 182 / 0.16), transparent 32%);
-  --mf-sidebar-background-image: linear-gradient(180deg, #fffafd, #fff1f7);
+  --theme-bg: #fff5fa; --theme-fg: #3f1028; --theme-card: #ffffff;
+  --theme-primary: #d41467; --theme-primary-fg: #ffffff;
+  --theme-secondary: #fce0ed; --theme-muted: #fdf0f6; --theme-muted-fg: #75445c;
+  --theme-accent: #f9bad7; --theme-accent-fg: #9d174d;
+  --theme-border: #efc0d6; --theme-ring: #ec1972; --theme-sidebar: #fff7fb;
+  --mf-shell-background-image: radial-gradient(circle at 86% 8%, rgb(236 25 114 / 0.22), transparent 34%), linear-gradient(135deg, rgb(190 24 93 / 0.06), transparent 46%);
+  --mf-sidebar-background-image: linear-gradient(165deg, #fffafd 0%, #ffe5f1 58%, #ffc9e0 100%);
 }
 [data-brand="sakura"][data-theme="dark"] {
-  --theme-bg: #190f17; --theme-fg: #fff1f7; --theme-card: #251620;
-  --theme-primary: #f472b6; --theme-primary-fg: #310b22;
-  --theme-secondary: #38202e; --theme-muted: #2d1b27; --theme-muted-fg: #d8a9c0;
-  --theme-accent: #4a2035; --theme-accent-fg: #f9a8d4;
-  --theme-border: #4a2b3b; --theme-ring: #f472b6; --theme-sidebar: #20121b;
-  --mf-shell-background-image: radial-gradient(circle at 86% 8%, rgb(244 114 182 / 0.12), transparent 34%);
-  --mf-sidebar-background-image: linear-gradient(180deg, #24151f, #190f17);
+  --theme-bg: #190811; --theme-fg: #fff0f7; --theme-card: #29101d;
+  --theme-primary: #ff4b9a; --theme-primary-fg: #3d061f;
+  --theme-secondary: #41162b; --theme-muted: #341221; --theme-muted-fg: #e0a4c0;
+  --theme-accent: #65183c; --theme-accent-fg: #ffacd1;
+  --theme-border: #642641; --theme-ring: #ff4b9a; --theme-sidebar: #210a16;
+  --mf-shell-background-image: radial-gradient(circle at 86% 8%, rgb(255 75 154 / 0.2), transparent 36%), linear-gradient(135deg, rgb(190 24 93 / 0.08), transparent 48%);
+  --mf-sidebar-background-image: linear-gradient(165deg, #351020 0%, #210a16 60%, #16060d 100%);
 }
 
 [data-brand="emerald"] {

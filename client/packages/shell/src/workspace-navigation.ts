@@ -6,10 +6,15 @@ export interface WorkspaceModule {
   items: NavItem[];
 }
 
-const DEFERRED_GROUPS = new Map<string, number>([
-  ["Điều hành", 90],
-  ["Hệ thống", 100],
-]);
+const GLOBAL_GROUPS = new Set(["dieu hanh", "he thong", "bao cao", "danh muc"]);
+
+function normalizedGroup(label: string): string {
+  return label.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[đĐ]/g, "d").toLocaleLowerCase("vi").trim();
+}
+
+export function isBusinessWorkspaceGroup(label: string | undefined): boolean {
+  return Boolean(label?.trim()) && !GLOBAL_GROUPS.has(normalizedGroup(label!));
+}
 
 export function workspaceModuleKey(label: string): string {
   return `workspace-module:${label}`;
@@ -25,7 +30,7 @@ export function buildWorkspaceModules(nav: NavItem[]): WorkspaceModule[] {
   const groups = new Map<string, { index: number; items: NavItem[] }>();
   nav.forEach((item, index) => {
     const label = item.group?.trim();
-    if (!label) return;
+    if (!label || !isBusinessWorkspaceGroup(label)) return;
     const current = groups.get(label);
     if (current) current.items.push(item);
     else groups.set(label, { index, items: [item] });
@@ -37,9 +42,8 @@ export function buildWorkspaceModules(nav: NavItem[]): WorkspaceModule[] {
       label,
       items: value.items,
       sourceIndex: value.index,
-      weight: DEFERRED_GROUPS.get(label) ?? 0,
     }))
-    .sort((a, b) => a.weight - b.weight || a.sourceIndex - b.sourceIndex)
+    .sort((a, b) => a.sourceIndex - b.sourceIndex)
     .map(({ key, label, items }) => ({ key, label, items }));
 }
 

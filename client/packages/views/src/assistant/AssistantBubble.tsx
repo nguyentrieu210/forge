@@ -29,8 +29,20 @@ export function aiHeaders(): Record<string, string> {
   return { "content-type": "application/json", ...(token ? { "x-frappe-csrf-token": token } : {}) };
 }
 
-export function AssistantBubble({ appName = "Trợ lý" }: { appName?: string }) {
-  const [open, setOpen] = useState(false);
+export interface AssistantBubbleProps {
+  appName?: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  hideTrigger?: boolean;
+}
+
+export function AssistantBubble({ appName = "Trợ lý", open: controlledOpen, onOpenChange, hideTrigger = false }: AssistantBubbleProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = (next: boolean) => {
+    if (controlledOpen === undefined) setInternalOpen(next);
+    onOpenChange?.(next);
+  };
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
@@ -63,6 +75,7 @@ export function AssistantBubble({ appName = "Trợ lý" }: { appName?: string })
   };
 
   if (!open) {
+    if (hideTrigger) return null;
     return (
       <Button
         type="button"

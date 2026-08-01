@@ -510,6 +510,14 @@ export function ListView(props: ListViewProps) {
         onGroupByChange={setGroupBy}
       />
 
+      <ListSummaryStrip
+        total={props.total ?? rows.length}
+        rows={rows}
+        columns={columns}
+        fmt={props.fmt}
+        loading={props.loading}
+      />
+
       {state.selected.length > 0 ? (
         <BulkActionBar
           count={state.selected.length}
@@ -1106,6 +1114,37 @@ function SkeletonRows({ cols, rows }: { cols: number; rows: number }) {
 function aggregateColumn(rows: Doc[], column: ListColumn): number {
   const total = rows.reduce((acc, row) => acc + (Number(row[column.fieldname]) || 0), 0);
   return column.fieldtype === "Percent" && rows.length ? total / rows.length : total;
+}
+
+function ListSummaryStrip({ total, rows, columns, fmt, loading }: {
+  total: number;
+  rows: Doc[];
+  columns: ListColumn[];
+  fmt?: BoundFormatters;
+  loading?: boolean;
+}) {
+  const numeric = columns.filter((column) => ["Currency", "Float", "Int", "Percent"].includes(column.fieldtype)).slice(0, 2);
+  return (
+    <div className="grid shrink-0 grid-cols-2 border-y bg-muted/25 sm:grid-cols-4" aria-label="Tổng nhanh danh sách">
+      <div className="min-w-0 border-r px-3 py-2">
+        <div className="text-[11px] text-muted-foreground">Tổng bản ghi</div>
+        <div className="mt-0.5 font-semibold tabular-nums">{loading ? "…" : total.toLocaleString("vi-VN")}</div>
+      </div>
+      <div className="min-w-0 border-r px-3 py-2">
+        <div className="text-[11px] text-muted-foreground">Đang hiển thị</div>
+        <div className="mt-0.5 font-semibold tabular-nums">{loading ? "…" : rows.length.toLocaleString("vi-VN")}</div>
+      </div>
+      {numeric.map((column) => (
+        <div key={column.fieldname} className="min-w-0 border-r px-3 py-2">
+          <div className="truncate text-[11px] text-muted-foreground" title={`Tổng ${column.label} trên trang hiện tại`}>Tổng {column.label} · trang</div>
+          <div className="mt-0.5 truncate font-semibold tabular-nums">{loading ? "…" : formatValue(aggregateColumn(rows, column), column, fmt)}</div>
+        </div>
+      ))}
+      {Array.from({ length: Math.max(0, 2 - numeric.length) }).map((_, index) => (
+        <div key={`summary-empty-${index}`} className="hidden border-r px-3 py-2 sm:block"><div className="text-[11px] text-muted-foreground">Dữ liệu trang</div><div className="mt-0.5 font-semibold text-muted-foreground">—</div></div>
+      ))}
+    </div>
+  );
 }
 
 /** Nhãn hiển thị của 1 nhóm — Link thì đổi sang title đã resolve, Check thì Có/Không, rỗng thì "(trống)". */

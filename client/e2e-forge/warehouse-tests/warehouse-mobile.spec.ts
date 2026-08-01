@@ -32,9 +32,7 @@ test("renders the installable Alumdoor warehouse experience without desktop shel
   await page.goto("/mobile/warehouse/");
 
   await expect(page).toHaveTitle("Alumdoor Kho");
-  const brandLogo = page.locator("[data-alumdoor-logo]").first();
-  await expect(brandLogo).toBeVisible();
-  await expect(brandLogo.locator('img[alt="Alumdoor"]')).toHaveAttribute("src", /alumdoor\.vn\/wp-content\/uploads\/2022\/04\/logo-am-ban-doi-alumdoor/);
+  await expect(page.locator('img[alt="Alumdoor"]:visible')).toBeVisible();
   await expect(page.getByText("Hôm nay cần làm gì ở kho?", { exact: true })).toBeVisible();
 
   for (const label of ["Trang chủ", "Nghiệp vụ", "Tra tồn", "Tôi"]) {
@@ -53,15 +51,22 @@ test("renders the installable Alumdoor warehouse experience without desktop shel
   expect(manifest.start_url).toBe("/mobile/warehouse/");
   expect(manifest.scope).toBe("/mobile/warehouse/");
   expect(manifest.display).toBe("standalone");
-  expect(manifest.theme_color).toBe("#ef6b2e");
-  expect(manifest.icons[0]?.src).toBe("alumdoor-mark.svg");
+  expect(manifest.theme_color).toBe("#f45b24");
+  expect(manifest.icons[0]?.src).toBe("alumdoor-app-192.png");
   expect(manifest.icons[1]?.purpose).toBe("maskable");
 
-  const iconResponse = await request.get("/mobile/warehouse/alumdoor-mark.svg");
+  const iconResponse = await request.get("/mobile/warehouse/alumdoor-app-192.png");
   expect(iconResponse.ok()).toBe(true);
-  expect(await iconResponse.text()).toContain("alumdoor.vn/wp-content/uploads/2022/04/logo-am-ban-doi-alumdoor");
+  expect(iconResponse.headers()["content-type"]).toContain("image/png");
+  expect((await iconResponse.body()).byteLength).toBeGreaterThan(1_000);
 
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1);
+
+  await page.getByRole("button", { name: "Xem tất cả", exact: true }).click();
+  await expect(page.getByText("Chọn nghiệp vụ", { exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/tab=actions/);
+  await page.getByRole("button", { name: "Trang chủ", exact: true }).click();
+  await expect(page.getByText("Hôm nay cần làm gì ở kho?", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: /^Nhập kho/ }).first().click();
   await expect(page.getByText("Tạo phiếu nghiệp vụ", { exact: true })).toBeVisible();

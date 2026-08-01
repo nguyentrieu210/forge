@@ -177,10 +177,32 @@ function WarehouseMobileApp({ boot, logout }: { boot: MetaForgeBootDTO; logout: 
   const openOperation = (next: Operation) => {
     setOperation(next);
     setTab("actions");
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", "actions");
+    url.searchParams.set("action", next);
+    window.history.replaceState({}, "", url);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const pageTitle = operation ? OPERATION_META[operation].label : tab === "stock" ? "Tra tồn kho" : tab === "account" ? "Tài khoản" : "Forge Kho";
+  const closeOperation = () => {
+    setOperation(null);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("action");
+    url.searchParams.set("tab", tab);
+    window.history.replaceState({}, "", url);
+  };
+
+  const changeTab = (next: MobileTab) => {
+    setOperation(null);
+    setTab(next);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("action");
+    url.searchParams.set("tab", next);
+    window.history.replaceState({}, "", url);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const pageTitle = operation ? OPERATION_META[operation].label : tab === "stock" ? "Tra tồn kho" : tab === "account" ? "Tài khoản" : "Alumdoor Kho";
   const pageSubtitle = operation ? "Tạo phiếu nghiệp vụ" : "Ứng dụng kho trên điện thoại";
 
   return (
@@ -188,14 +210,14 @@ function WarehouseMobileApp({ boot, logout }: { boot: MetaForgeBootDTO; logout: 
       <MobileShell
         title={pageTitle}
         subtitle={pageSubtitle}
-        onBack={operation ? () => setOperation(null) : undefined}
+        onBack={operation ? closeOperation : undefined}
         right={(
-          <Button variant="ghost" size="icon" className="relative size-10 rounded-full" onClick={() => { setOperation(null); setTab("account"); }} aria-label="Tài khoản">
+          <Button variant="ghost" size="icon" className="relative size-10 rounded-full" onClick={() => changeTab("account")} aria-label="Tài khoản">
             <Avatar className="size-8"><AvatarFallback>{initials(boot.full_name)}</AvatarFallback></Avatar>
             {queue.pending.length ? <span className="absolute right-0 top-0 size-2.5 rounded-full border-2 border-card bg-amber-500" /> : null}
           </Button>
         )}
-        bottomBar={operation ? undefined : <BottomNavigation active={tab} pending={queue.pending.length} onChange={(next) => { setOperation(null); setTab(next); }} />}
+        bottomBar={operation ? undefined : <BottomNavigation active={tab} pending={queue.pending.length} onChange={changeTab} />}
       >
         {operation ? (
           <StockOperationForm
@@ -205,12 +227,11 @@ function WarehouseMobileApp({ boot, logout }: { boot: MetaForgeBootDTO; logout: 
               const result = await queue.enqueue(payload);
               navigator.vibrate?.(35);
               toast.success(result === "sent" ? "Đã tạo phiếu kho" : "Đã lưu ngoại tuyến, sẽ gửi khi có mạng");
-              setOperation(null);
-              setTab("home");
+              changeTab("home");
             }}
           />
         ) : tab === "home" ? (
-          <HomeScreen fullName={boot.full_name} pending={queue.pending.length} onOpen={openOperation} onStock={() => setTab("stock")} />
+          <HomeScreen fullName={boot.full_name} pending={queue.pending.length} onOpen={openOperation} onAll={() => changeTab("actions")} onStock={() => changeTab("stock")} />
         ) : tab === "actions" ? (
           <OperationScreen onOpen={openOperation} />
         ) : tab === "stock" ? (
@@ -232,22 +253,23 @@ function WarehouseMobileApp({ boot, logout }: { boot: MetaForgeBootDTO; logout: 
   );
 }
 
-function HomeScreen({ fullName, pending, onOpen, onStock }: {
+function HomeScreen({ fullName, pending, onOpen, onAll, onStock }: {
   fullName: string;
   pending: number;
   onOpen: (operation: Operation) => void;
+  onAll: () => void;
   onStock: () => void;
 }) {
   const firstName = fullName.trim().split(/\s+/).at(-1) ?? fullName;
   return (
     <div className="space-y-4">
-      <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-violet-600 via-fuchsia-500 to-orange-400 p-5 text-white shadow-lg">
+      <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-[#2e2e2e] via-[#3b302c] to-[#f45b24] p-5 text-white shadow-lg">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-sm text-white/80">Xin chào {firstName}</p>
             <h1 className="mt-1 text-2xl font-bold tracking-tight">Hôm nay cần làm gì ở kho?</h1>
           </div>
-          <ForgeBrandLogo size={44} className="rounded-full bg-white/15 p-1" />
+          <ForgeBrandLogo size={44} className="rounded-md bg-white p-1" />
         </div>
         <div className="mt-5 flex items-center gap-2 rounded-2xl bg-white/12 px-3 py-2 text-xs backdrop-blur">
           {pending ? <WifiOff className="size-4" /> : <CheckCircle2 className="size-4" />}
@@ -258,9 +280,9 @@ function HomeScreen({ fullName, pending, onOpen, onStock }: {
       <section>
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold">Nghiệp vụ nhanh</h2>
-          <Button variant="ghost" size="sm" onClick={() => onOpen("transfer")}>Xem tất cả</Button>
+          <Button variant="ghost" size="sm" onClick={onAll}>Xem tất cả</Button>
         </div>
-        <div className="forge-operation-grid grid grid-cols-2 gap-3">
+        <div className="forge-operation-grid grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
           {(Object.keys(OPERATION_META) as Operation[]).map((key) => (
             <OperationButton key={key} operation={key} onClick={() => onOpen(key)} />
           ))}
@@ -305,9 +327,9 @@ function OperationScreen({ onOpen }: { onOpen: (operation: Operation) => void })
 function OperationButton({ operation, onClick }: { operation: Operation; onClick: () => void }) {
   const meta = OPERATION_META[operation];
   return (
-    <Button variant="outline" className="h-auto flex-col items-start gap-3 rounded-2xl bg-card p-4 text-left" onClick={onClick}>
+    <Button variant="outline" className="h-auto min-w-0 flex-col items-start gap-3 whitespace-normal rounded-2xl bg-card p-4 text-left" onClick={onClick}>
       <span className="grid size-11 place-items-center rounded-xl bg-primary/10 text-primary [&_svg]:size-5">{meta.icon}</span>
-      <span>
+      <span className="min-w-0 w-full">
         <span className="block text-sm font-semibold">{meta.label}</span>
         <span className="mt-1 line-clamp-2 block text-xs font-normal leading-4 text-muted-foreground">{meta.description}</span>
       </span>
@@ -333,6 +355,7 @@ function StockOperationForm({ operation, pending, onSubmit }: {
     if (!itemCode.trim()) { toast.error("Chọn vật tư"); return; }
     if (!warehouse.trim()) { toast.error(operation === "receipt" ? "Chọn kho nhận" : "Chọn kho nguồn"); return; }
     if (operation === "transfer" && !targetWarehouse.trim()) { toast.error("Chọn kho đích"); return; }
+    if (operation === "transfer" && targetWarehouse.trim() === warehouse.trim()) { toast.error("Kho nguồn và kho đích phải khác nhau"); return; }
     if (qty <= 0) { toast.error("Số lượng phải lớn hơn 0"); return; }
     setSaving(true);
     try {
@@ -496,7 +519,7 @@ function StockLookup() {
     <div className="space-y-4">
       <section className="space-y-3 rounded-2xl border bg-card p-4">
         <ScanField value={query} onChange={setQuery} placeholder="Quét hoặc nhập mã vật tư" onEnter={() => void search()} />
-        <Input value={warehouse} onChange={(event) => setWarehouse(event.target.value)} placeholder="Kho (không bắt buộc)" className="h-11" />
+        <LinkInput label="Kho" doctype="Warehouse" value={warehouse} onChange={setWarehouse} icon={<Warehouse className="size-4" />} placeholder="Chọn kho (không bắt buộc)" />
         <BigButton onClick={() => void search()} disabled={loading}>{loading ? "Đang tra…" : <><Search className="mr-2 size-4" /> Tra tồn</>}</BigButton>
       </section>
 
@@ -543,14 +566,14 @@ function AccountScreen({ boot, pending, installAvailable, onInstall, onFlush, on
       </section>
 
       <section className="overflow-hidden rounded-2xl border bg-card">
-        {installAvailable ? <AccountRow icon={<Smartphone />} label="Cài Forge Kho lên điện thoại" onClick={onInstall} /> : null}
+        {installAvailable ? <AccountRow icon={<Smartphone />} label="Cài Alumdoor Kho lên điện thoại" onClick={onInstall} /> : null}
         <AccountRow icon={<Settings />} label="Đổi mật khẩu" onClick={onChangePassword} />
         <AccountRow icon={pending ? <WifiOff /> : <RefreshCw />} label={pending ? `Gửi lại ${pending} thao tác` : "Dữ liệu đã đồng bộ"} onClick={pending ? onFlush : undefined} />
         <Separator />
         <AccountRow icon={<LogOut />} label="Đăng xuất" destructive onClick={onLogout} />
       </section>
 
-      <p className="px-2 text-center text-xs leading-5 text-muted-foreground">Forge Kho chỉ giữ giao diện nghiệp vụ trên điện thoại. Báo cáo và cấu hình đầy đủ tiếp tục dùng bản desktop.</p>
+      <p className="px-2 text-center text-xs leading-5 text-muted-foreground">Alumdoor Kho tập trung nghiệp vụ hiện trường trên điện thoại. Báo cáo và cấu hình đầy đủ tiếp tục dùng bản desktop.</p>
     </div>
   );
 }
@@ -588,8 +611,7 @@ function GuestLogin({ retry }: { retry: () => void }) {
   return (
     <div className="grid min-h-dvh place-items-center bg-muted/30 p-4">
       <div className="w-full max-w-md space-y-4">
-        <div className="flex justify-center"><ForgeBrandLogo size={52} wordmark name="Forge Kho" subtitle="Ứng dụng điện thoại" /></div>
-        <LoginForm adapter={adapter} onSuccess={retry} brand="Forge Kho" title="Đăng nhập app kho" subtitle="Dùng cùng tài khoản Forge của doanh nghiệp." embedded />
+        <LoginForm adapter={adapter} onSuccess={retry} brand="Alumdoor Kho" title="Đăng nhập app kho Alumdoor" subtitle="Dùng tài khoản nội bộ đã được Alumdoor cấp quyền." embedded />
       </div>
     </div>
   );

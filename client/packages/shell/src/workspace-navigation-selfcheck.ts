@@ -13,9 +13,8 @@ const modules = buildWorkspaceModules([
   { key: "purchase-order", label: "Đơn mua hàng", group: "Mua hàng" },
 ]);
 
-assert.deepEqual(modules.map((module) => module.label), ["Bán hàng", "Mua hàng", "Điều hành", "Hệ thống"]);
+assert.deepEqual(modules.map((module) => module.label), ["Bán hàng", "Mua hàng"]);
 assert.equal(findWorkspaceModule(modules, "delivery-note")?.label, "Bán hàng");
-assert.deepEqual(workspaceItemsForTabs(modules[2]!).map((item) => item.key), []);
 assert.deepEqual(workspaceItemsForTabs(modules[0]!).map((item) => item.key), ["sales-order", "delivery-note"]);
 
 console.log("workspace navigation selfcheck: PASS");

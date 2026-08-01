@@ -1,7 +1,7 @@
 /** @jsxImportSource react */
 import { lazy, Suspense } from "react";
 import {
-  AlertTriangle, ArrowRight, BarChart3, Boxes, CalendarClock, CheckCircle2, Clock3,
+  AlertTriangle, BarChart3, Boxes, CalendarClock, CheckCircle2, Clock3,
   Coins, FileText, Loader2, Package, Plus, RefreshCw, TrendingUp, Truck, Users, Warehouse,
 } from "lucide-react";
 import type { OverviewAction, OverviewDashboard, OverviewTone } from "@metaforge/core";
@@ -66,8 +66,8 @@ export function OverviewView({ data, loading, error, onNavigate, onAction, busyA
   if (!data) return null;
   if (data.unsupported) return <div className="grid min-h-80 place-items-center rounded-xl border border-dashed bg-card p-8 text-center"><div><BarChart3 className="mx-auto size-8 text-muted-foreground" /><div className="mt-3 font-medium">{t("overview.undeclared_title")}</div><p className="mt-1 max-w-xl text-sm text-muted-foreground">{t("overview.undeclared_hint")}</p></div></div>;
   return (
-    <div className="mf-overview mx-auto max-w-[1700px] space-y-3 p-1">
-      <div className="flex flex-wrap items-start gap-3">
+    <div className="mf-overview mx-auto w-full max-w-[1700px] space-y-3">
+      <div className="flex flex-wrap items-center gap-3 border-b border-primary/25 pb-3">
         <div><h1 className="text-lg font-semibold tracking-tight">{data.label}</h1>{data.subtitle ? <p className="mt-1 text-sm text-muted-foreground">{data.subtitle}</p> : null}</div>
         <div className="ml-auto flex flex-wrap gap-2">
           {data.actions.map((a) => {
@@ -88,29 +88,24 @@ export function OverviewView({ data, loading, error, onNavigate, onAction, busyA
         </div>
       </div>
 
-      <div className="grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(9.5rem,1fr))]">
+      <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(12rem,1fr))]">
         {data.metrics.map((m) => (
-          <Button key={m.key} type="button" variant="ghost" disabled={!m.route} onClick={() => m.route && onNavigate(m.route)} className="group h-auto w-full flex-col items-stretch rounded-lg border bg-card p-2.5 text-left font-normal shadow-sm transition hover:border-primary/40 hover:bg-card disabled:pointer-events-none">
-            <div className="flex items-center justify-between"><span className="truncate text-xs text-muted-foreground">{m.label}</span><span className={cn("grid size-6 place-items-center rounded-md", TONE[m.tone ?? "neutral"])}><MetricIcon name={m.icon} /></span></div>
-            <div className="mt-1.5 text-xl font-semibold tabular-nums">{m.formatted ?? (typeof m.value === "number" ? new Intl.NumberFormat(tag, { maximumFractionDigits: 2 }).format(m.value) : m.value)}</div>
-            {m.description ? <div className="mt-0.5 truncate text-[11px] text-muted-foreground">{m.description}</div> : null}
+          <Button key={m.key} type="button" variant="ghost" disabled={!m.route} onClick={() => m.route && onNavigate(m.route)} className="group h-auto min-h-24 w-full flex-col items-stretch rounded-md border border-l-[3px] border-l-primary bg-card p-3 text-left font-normal shadow-sm transition hover:border-primary/50 hover:bg-card disabled:pointer-events-none">
+            <div className="flex items-center justify-between"><span className="truncate text-sm font-medium">{m.label}</span><span className={cn("grid size-7 place-items-center rounded-md", TONE[m.tone ?? "neutral"])}><MetricIcon name={m.icon} /></span></div>
+            <div className="mt-2 text-2xl font-semibold tabular-nums">{m.formatted ?? (typeof m.value === "number" ? new Intl.NumberFormat(tag, { maximumFractionDigits: 2 }).format(m.value) : m.value)}</div>
+            {m.description ? <div className="mt-1 truncate text-[11px] text-muted-foreground">{m.description}</div> : <div className="mt-1 text-[11px] text-muted-foreground">Dữ liệu hiện tại</div>}
 
           </Button>
         ))}
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(18rem,1fr)]">
-        <section className="rounded-lg border bg-card p-3 shadow-sm">
-          <div className="mb-2 flex items-center gap-2"><BarChart3 className="size-4 text-primary" /><h2 className="text-sm font-semibold">{t("overview.analytics")}</h2></div>
-          {data.charts.length ? (
-            <Suspense fallback={<Skeleton className="h-72 w-full" />}>
-              <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(20rem,1fr))]">
-                {data.charts.map((chart) => <LazyOverviewChartCard key={chart.key} chart={chart} onNavigate={onNavigate} />)}
-              </div>
-            </Suspense>
-          ) : <div className="grid min-h-52 place-items-center rounded-lg border border-dashed text-sm text-muted-foreground">{t("overview.no_chart")}</div>}
-        </section>
-        <section className="rounded-lg border bg-card p-3 shadow-sm">
+      <div className="grid items-start gap-3 xl:grid-cols-2">
+        {data.charts.length ? (
+          <Suspense fallback={<><Skeleton className="h-80 w-full" /><Skeleton className="h-80 w-full" /></>}>
+            {data.charts.map((chart) => <LazyOverviewChartCard key={chart.key} chart={chart} onNavigate={onNavigate} />)}
+          </Suspense>
+        ) : <div className="grid min-h-72 place-items-center rounded-md border border-dashed bg-card text-sm text-muted-foreground">{t("overview.no_chart")}</div>}
+        <section className="rounded-md border bg-card p-4 shadow-sm">
           <div className="mb-2 flex items-center gap-2"><Clock3 className="size-4 text-primary" /><h2 className="text-sm font-semibold">{t("overview.todo")}</h2></div>
           <div className="space-y-2">
             {data.tasks.length ? data.tasks.map((task) => (
@@ -123,12 +118,11 @@ export function OverviewView({ data, loading, error, onNavigate, onAction, busyA
             )) : <div className="py-10 text-center text-sm text-muted-foreground">{t("overview.no_todo")}</div>}
           </div>
         </section>
+        <section className="rounded-md border bg-card p-4 shadow-sm">
+          <h2 className="mb-2 text-sm font-semibold">{t("overview.recent")}</h2>
+          {data.activities.length ? <div className="divide-y">{data.activities.map((a) => <Button key={a.key} type="button" variant="ghost" disabled={!a.route} className="h-auto w-full justify-start gap-3 rounded-md px-2 py-3 text-left font-normal transition hover:bg-accent/50 disabled:pointer-events-none" onClick={() => a.route && onNavigate(a.route)}><span className="size-2 rounded-full bg-primary" /><span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{a.label}</span>{a.description ? <span className="block truncate text-xs text-muted-foreground">{a.description}</span> : null}</span><time className="text-xs text-muted-foreground" title={a.timestamp}>{formatActivityTime(a.timestamp, tag)}</time></Button>)}</div> : <div className="py-8 text-center text-sm text-muted-foreground">{t("overview.no_recent")}</div>}
+        </section>
       </div>
-
-      <section className="rounded-lg border bg-card p-3 shadow-sm">
-        <h2 className="mb-2 text-sm font-semibold">{t("overview.recent")}</h2>
-        {data.activities.length ? <div className="divide-y">{data.activities.map((a) => <Button key={a.key} type="button" variant="ghost" disabled={!a.route} className="h-auto w-full justify-start gap-3 rounded-md px-2 py-3 text-left font-normal transition hover:bg-accent/50 disabled:pointer-events-none" onClick={() => a.route && onNavigate(a.route)}><span className="size-2 rounded-full bg-primary" /><span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{a.label}</span>{a.description ? <span className="block truncate text-xs text-muted-foreground">{a.description}</span> : null}</span><time className="text-xs text-muted-foreground" title={a.timestamp}>{formatActivityTime(a.timestamp, tag)}</time></Button>)}</div> : <div className="py-8 text-center text-sm text-muted-foreground">{t("overview.no_recent")}</div>}
-      </section>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useMemo, useState } from "react";
-import { ArrowRight, LayoutDashboard, Workflow } from "lucide-react";
+import { CheckCircle2, Workflow } from "lucide-react";
 import { FrappeAdapterImpl } from "@metaforge/adapter-frappe";
 import { Button, cn, toast } from "@metaforge/ui";
 import {
@@ -8,7 +8,7 @@ import {
   type NavItem,
 } from "./AppShell.js";
 import { ChangePasswordDialog } from "./auth/ChangePasswordDialog.js";
-import { ForgeBrandLogo } from "./BrandLogo.js";
+import { ForgeBrandLogo, isAlumdoorSurface } from "./BrandLogo.js";
 import {
   buildWorkspaceModules,
   findWorkspaceModule,
@@ -20,6 +20,17 @@ export type { AppShellProps, NavItem, Breadcrumb, NotificationItem } from "./App
 
 const STORAGE_KEY = "mf-workspace-module";
 const accountAdapter = new FrappeAdapterImpl({});
+
+function normalizedGroup(label: string | undefined): string {
+  return (label ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[đĐ]/g, "d").toLocaleLowerCase("vi").trim();
+}
+
+function indexHubKey(item: NavItem | undefined): string | undefined {
+  const group = normalizedGroup(item?.group);
+  if (group === "bao cao") return "__reports";
+  if (group === "danh muc") return "__master-data";
+  return undefined;
+}
 
 function loadStoredModule(): string | undefined {
   try { return localStorage.getItem(STORAGE_KEY) ?? undefined; } catch { return undefined; }
@@ -33,14 +44,12 @@ function WorkspaceTabs({
   module,
   activeKey,
   processActive,
-  overviewItem,
   onProcess,
   onNavigate,
 }: {
   module: WorkspaceModule;
   activeKey: string;
   processActive: boolean;
-  overviewItem?: NavItem;
   onProcess: () => void;
   onNavigate: (key: string) => void;
 }) {
@@ -60,26 +69,8 @@ function WorkspaceTabs({
           aria-current={processActive ? "page" : undefined}
           onClick={onProcess}
         >
-          <Workflow className="mr-1.5 size-3.5" /> Quy trình nghiệp vụ
+          <Workflow className="mr-1.5 size-3.5" /> Quy trình
         </Button>
-        {overviewItem ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            data-kind="overview"
-            className={cn(
-              "relative h-10 shrink-0 rounded-none border-x-0 border-t-0 border-b-2 border-transparent px-4 text-xs font-medium",
-              !processActive && activeKey === overviewItem.key
-                ? "border-b-primary bg-primary/10 text-primary"
-                : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
-            )}
-            aria-current={!processActive && activeKey === overviewItem.key ? "page" : undefined}
-            onClick={() => onNavigate(overviewItem.key)}
-          >
-            <LayoutDashboard className="mr-1.5 size-3.5" /> Báo cáo tổng quan
-          </Button>
-        ) : null}
         {items.map((item) => {
           const active = !processActive && activeKey === item.key;
           return (
@@ -109,42 +100,60 @@ function WorkspaceTabs({
   );
 }
 
-function ProcessPanel({ module, onNavigate }: { module: WorkspaceModule; onNavigate: (key: string) => void }) {
+function ProcessPanel({ module, reports, masters, onNavigate }: { module: WorkspaceModule; reports: NavItem[]; masters: NavItem[]; onNavigate: (key: string) => void }) {
   const items = workspaceItemsForTabs(module).filter((item) => !item.disabledReason);
+  const flowItems = items.slice(0, 8);
+  const desktopPositions = [
+    "sm:col-start-1 sm:row-start-1", "sm:col-start-1 sm:row-start-2",
+    "sm:col-start-2 sm:row-start-1", "sm:col-start-2 sm:row-start-2",
+    "sm:col-start-3 sm:row-start-1", "sm:col-start-3 sm:row-start-2",
+    "sm:col-start-4 sm:row-start-1", "sm:col-start-4 sm:row-start-2",
+  ];
   return (
-    <div className="h-full overflow-auto bg-muted/20 p-4 md:p-6">
-      <section className="mx-auto max-w-6xl">
-        <div className="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">{module.label}</div>
-          <h1 className="mt-2 text-xl font-semibold md:text-2xl">Quy trình nghiệp vụ</h1>
-          <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-            Chọn nghiệp vụ để mở danh sách, chứng từ hoặc màn thao tác tương ứng. Các mục hiển thị ở đây lấy trực tiếp từ quyền và manifest của ứng dụng đang chạy.
-          </p>
-        </div>
-
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {items.map((item, index) => (
-            <Button
-              key={item.key}
-              type="button"
-              variant="outline"
-              className="group h-auto min-h-24 justify-start gap-3 rounded-xl bg-card p-4 text-left shadow-sm"
-              onClick={() => onNavigate(item.key)}
-            >
-              <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-sm font-semibold text-primary">{index + 1}</span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate font-semibold text-foreground">{item.label}</span>
-                <span className="mt-1 block text-xs font-normal text-muted-foreground">Mở nghiệp vụ trong phân hệ {module.label}</span>
-              </span>
-              <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
-            </Button>
-          ))}
-          {!items.length ? (
-            <div className="rounded-xl border border-dashed bg-card p-6 text-sm text-muted-foreground">
-              Tài khoản hiện tại chưa có nghiệp vụ khả dụng trong phân hệ này.
+    <div className="h-full overflow-auto bg-[color-mix(in_srgb,var(--primary)_8%,var(--background))] p-2 sm:p-4 lg:p-6">
+      <section className="mx-auto grid w-full max-w-6xl gap-3 lg:grid-cols-[minmax(0,1fr)_21rem]">
+        <div className="overflow-hidden rounded-md border bg-card shadow-sm">
+          <div className="border-b px-4 py-3 text-center">
+            <h1 className="text-base font-bold uppercase">Nghiệp vụ {module.label}</h1>
+          </div>
+          {flowItems.length ? (
+            <div className="relative grid min-h-[23rem] grid-cols-2 gap-x-4 gap-y-10 px-4 py-7 sm:grid-cols-4 sm:px-8">
+              <div className="absolute left-[10%] right-[10%] top-1/2 hidden h-0.5 -translate-y-1/2 bg-primary/30 sm:block" />
+              {flowItems.map((item, index) => {
+                const top = index % 2 === 0;
+                return (
+                  <div key={item.key} className={cn("relative z-10 flex min-w-0 justify-center", desktopPositions[index], top ? "sm:items-end sm:pb-8" : "sm:items-start sm:pt-8")}>
+                    <span className={cn("absolute left-1/2 hidden w-0.5 -translate-x-1/2 bg-primary/30 sm:block", top ? "bottom-0 h-8" : "top-0 h-8")} />
+                    <Button type="button" variant="ghost" className="group h-auto min-h-24 w-full min-w-0 flex-col justify-center whitespace-normal rounded-md px-2 py-2 text-center hover:bg-primary/5" onClick={() => onNavigate(item.key)}>
+                      <span className="grid size-12 place-items-center rounded-sm bg-primary text-primary-foreground shadow-sm transition-transform group-hover:-translate-y-0.5 [&_svg]:size-7">{item.icon ?? index + 1}</span>
+                      <span className="mt-2 block max-w-full text-sm font-medium leading-5">{item.label}</span>
+                    </Button>
+                  </div>
+                );
+              })}
             </div>
-          ) : null}
+          ) : <div className="m-5 rounded-lg border border-dashed p-6 text-sm text-muted-foreground">Tài khoản hiện tại chưa có nghiệp vụ khả dụng trong phân hệ này.</div>}
+          <div className="grid border-t sm:grid-cols-5">
+            {masters.slice(0, 5).map((item) => (
+              <Button key={item.key} variant="ghost" className="h-20 min-w-0 flex-col gap-2 rounded-none border-b whitespace-normal text-xs sm:border-b-0 sm:border-r" onClick={() => onNavigate(item.key)}>
+                <span className="text-primary [&_svg]:size-5">{item.icon ?? <CheckCircle2 />}</span>
+                <span className="line-clamp-2">{item.label}</span>
+              </Button>
+            ))}
+          </div>
         </div>
+        <aside className="overflow-hidden rounded-md border bg-card shadow-sm">
+          <h2 className="border-b px-4 py-3 text-center text-base font-bold uppercase">Báo cáo</h2>
+          <div className="divide-y px-4">
+            {reports.slice(0, 6).map((item) => (
+              <Button key={item.key} variant="ghost" className="h-auto min-h-14 w-full justify-start gap-3 rounded-none px-0 py-3 text-left text-sm font-normal" onClick={() => onNavigate(item.key)}>
+                <span className="size-1.5 shrink-0 rounded-full bg-muted-foreground" />
+                <span className="min-w-0 whitespace-normal">{item.label}</span>
+              </Button>
+            ))}
+          </div>
+          <Button variant="ghost" className="h-12 w-full rounded-none border-t text-primary" onClick={() => onNavigate("__reports")}>Tất cả báo cáo</Button>
+        </aside>
       </section>
     </div>
   );
@@ -152,7 +161,7 @@ function ProcessPanel({ module, onNavigate }: { module: WorkspaceModule; onNavig
 
 /**
  * Lớp điều hướng hai tầng dùng chung cho product runtime:
- * sidebar chỉ hiển thị phân hệ; vùng nội dung có tab Quy trình, Tổng quan và nghiệp vụ.
+ * sidebar hiển thị Tổng quan + phân hệ + Báo cáo/Danh mục; vùng phân hệ chỉ có Quy trình và nghiệp vụ.
  * Khi menu không khai `group`, component rơi về AppShell cũ để không phá app đơn giản.
  */
 export function AppShell(props: AppShellProps) {
@@ -169,7 +178,10 @@ export function AppShell(props: AppShellProps) {
   }, [activeModule, modules, selectedLabel]);
 
   useEffect(() => {
-    if (!activeModule || props.activeKey === "__overview") return;
+    if (!activeModule) {
+      setProcessActive(false);
+      return;
+    }
     setSelectedLabel(activeModule.label);
     storeModule(activeModule.label);
     setProcessActive(false);
@@ -183,7 +195,8 @@ export function AppShell(props: AppShellProps) {
 
   const shellProps: AppShellProps = {
     ...props,
-    brandMark: props.brandMark ?? <ForgeBrandLogo size={28} />,
+    brandMark: props.brandMark ?? <ForgeBrandLogo size={isAlumdoorSurface() ? 32 : 28} />,
+    brandLogoOnly: props.brandLogoOnly ?? isAlumdoorSurface(),
     onChangePassword: props.onChangePassword ?? (() => setPasswordOpen(true)),
     onLogoutOtherSessions: logoutOtherSessions,
   };
@@ -199,7 +212,19 @@ export function AppShell(props: AppShellProps) {
       keywords: module.items.flatMap((item) => [item.label, ...(item.keywords ?? [])]),
       disabledReason: module.items.some((item) => !item.disabledReason) ? undefined : "Chưa có màn hình khả dụng",
     }));
-    const overviewItem = props.nav.find((item) => item.key === "__overview");
+    const moduleItemKeys = new Set(modules.flatMap((module) => module.items.map((item) => item.key)));
+    const globalNav = props.nav.filter((item) => !moduleItemKeys.has(item.key) && !indexHubKey(item));
+    const overviewItem = globalNav.find((item) => item.key === "__overview");
+    const reportsItem = props.nav.find((item) => item.key === "__reports");
+    const masterItem = props.nav.find((item) => item.key === "__master-data");
+    const remainingGlobal = globalNav.filter((item) => item.key !== "__overview" && item.key !== "__reports" && item.key !== "__master-data");
+    const orderedNav = [
+      ...(overviewItem ? [overviewItem] : []),
+      ...moduleNav,
+      ...(reportsItem ? [reportsItem] : []),
+      ...(masterItem ? [masterItem] : []),
+      ...remainingGlobal,
+    ];
 
     const selectModule = (key: string) => {
       const module = modules.find((entry) => entry.key === key);
@@ -214,28 +239,37 @@ export function AppShell(props: AppShellProps) {
       props.onNavigate(key);
     };
 
+    const navigateSidebar = (key: string) => {
+      if (key.startsWith("workspace-module:")) selectModule(key);
+      else navigate(key);
+    };
+
+    const showModule = processActive || Boolean(activeModule);
+    const activeSidebarKey = indexHubKey(props.nav.find((item) => item.key === props.activeKey)) ?? props.activeKey;
+    const reportItems = props.nav.filter((item) => normalizedGroup(item.group) === "bao cao" && item.key !== "__reports" && !item.disabledReason);
+    const masterItems = props.nav.filter((item) => normalizedGroup(item.group) === "danh muc" && item.key !== "__master-data" && !item.disabledReason);
+
     shell = (
       <BaseAppShell
         {...shellProps}
-        nav={moduleNav}
-        activeKey={selectedModule.key}
-        onNavigate={selectModule}
+        nav={orderedNav}
+        activeKey={showModule ? selectedModule.key : activeSidebarKey}
+        onNavigate={navigateSidebar}
       >
-        <div className="flex h-full min-h-0 flex-col">
+        {showModule ? <div className="flex h-full min-h-0 flex-col">
           <WorkspaceTabs
             module={selectedModule}
             activeKey={props.activeKey}
             processActive={processActive}
-            overviewItem={overviewItem}
             onProcess={() => setProcessActive(true)}
             onNavigate={navigate}
           />
           <div className="min-h-0 flex-1 overflow-hidden">
             {processActive
-              ? <ProcessPanel module={selectedModule} onNavigate={navigate} />
+              ? <ProcessPanel module={selectedModule} reports={reportItems} masters={masterItems} onNavigate={navigate} />
               : props.children as ReactNode}
           </div>
-        </div>
+        </div> : props.children as ReactNode}
       </BaseAppShell>
     );
   }

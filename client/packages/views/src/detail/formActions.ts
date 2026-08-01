@@ -83,7 +83,7 @@ export function resolveFormActions(ctx: FormActionCtx): FormActionDesc[] {
 
   // In — đã lưu, không cần quyền riêng (đang xem = đã có read). KHÔNG khoá theo dirty (đọc bản đã lưu).
   if (!ctx.isNew) {
-    out.push({ kind: "print", label: "In", variant: "outline", inMenu: true, disabled: ctx.saving });
+    out.push({ kind: "print", label: "Xuất PDF", variant: "outline", inMenu: false, disabled: ctx.saving });
   }
 
   // Nhân bản — đã lưu, có quyền create (tạo bản ghi mới từ dữ liệu hiện tại). Đọc bản ĐÃ LƯU trên

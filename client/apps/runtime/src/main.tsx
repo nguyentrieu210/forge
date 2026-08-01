@@ -75,6 +75,18 @@ const manifestPrefetch = adapter.getAppManifest(REQUESTED_APP).catch(() => null)
 
 interface RuntimeNav extends NavItem { route: string; doctype?: string }
 
+function isRenderableExperience(item: AppManifest["nav"][number], manifest: AppManifest): boolean {
+  if ((item.kind ?? "doctype") !== "experience") return true;
+  const separator = item.key.indexOf(":");
+  if (separator < 1 || separator === item.key.length - 1) return false;
+  const kind = item.key.slice(0, separator);
+  const argument = item.key.slice(separator + 1);
+  if (kind === "approval" || kind === "calendar" || kind === "social-commerce") return true;
+  if (kind === "action") return (manifest.actions ?? []).some((action) => action.name === argument);
+  if (kind === "screen") return (manifest.screens ?? []).some((screen) => screen.name === argument);
+  return false;
+}
+
 /**
  * Experiences — App-mode screens, resolved by PREFIX rather than by exact key.
  *
@@ -118,16 +130,9 @@ function renderExperience(key: string, manifest: AppManifest, navigate: Navigate
       </div>
     );
   }
-  return (
-    <div className="grid min-h-[100dvh] place-items-center p-8 text-center">
-      <div className="rounded-xl border bg-card p-6">
-        <h1 className="font-semibold">Màn "{key}" chưa được triển khai</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Manifest có khai Experience này, nhưng runtime chưa có màn tương ứng. Các loại đang hỗ trợ: <code>approval:&lt;DocType&gt;</code>, <code>calendar:&lt;DocType&gt;</code>, <code>action:&lt;tên&gt;</code>, <code>screen:&lt;tên&gt;</code>.
-        </p>
-      </div>
-    </div>
-  );
+  // Manifest cũ có thể còn giữ Experience viết tay không tồn tại trong generic runtime.
+  // Không đưa người dùng vào màn chết; menu mới đã lọc mục này và URL cũ quay về Tổng quan.
+  return <Navigate to={`/overview/${encodeURIComponent(manifest.domain ?? manifest.id)}`} replace />;
 }
 
 function useBridge(): UrlStateBridge {
@@ -169,6 +174,13 @@ function buildNavigation(manifest: AppManifest, catalog: ApplicationCatalog | un
   const items: RuntimeNav[] = [
     { key: "__overview", label: "Tổng quan", group: "Điều hành", icon: resolveIcon("layout-dashboard"), route: `/overview/${manifest.domain ?? manifest.id}` },
   ];
+  const normalizeGroup = (value?: string) => (value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[đĐ]/g, "d").toLocaleLowerCase("vi").trim();
+  if (manifest.nav.some((item) => normalizeGroup(item.group) === "bao cao")) {
+    items.push({ key: "__reports", label: "Báo cáo", group: "Báo cáo", icon: resolveIcon("chart-no-axes-combined"), route: "/reports" });
+  }
+  if (manifest.nav.some((item) => normalizeGroup(item.group) === "danh muc")) {
+    items.push({ key: "__master-data", label: "Danh mục", group: "Danh mục", icon: resolveIcon("library"), route: "/master-data" });
+  }
   /**
    * "Danh mục ứng dụng" chỉ có nghĩa khi có NHIỀU hơn một app.
    *
@@ -205,6 +217,7 @@ function buildNavigation(manifest: AppManifest, catalog: ApplicationCatalog | un
     }
   }
   for (const nav of manifest.nav) {
+    if (!isRenderableExperience(nav, manifest)) continue;
     const route = manifestRoute(nav);
     if (!route || routes.has(route) || ["overview", "process"].includes(nav.kind ?? "")) continue;
     routes.add(route);
@@ -241,10 +254,22 @@ function RootApp() {
       adapter={adapter}
       renderLoading={() => <Splash>Đang kết nối…</Splash>}
       renderError={(message) => <div className="grid h-screen place-items-center text-destructive">Lỗi kết nối: {message}</div>}
-      renderGuest={(retry) => <LoginForm adapter={adapter} onSuccess={retry} title="Đăng nhập" />}
+      renderGuest={(retry) => <RuntimeGuestLogin retry={retry} />}
     >{(boot, auth) => <ManifestBoundary boot={boot} logout={auth.logout} />}</AuthBoundary>
     <Toaster />
   </I18nProvider>;
+}
+
+function RuntimeGuestLogin({ retry }: { retry: () => void }) {
+  const onSuccess = () => {
+    // Không phục hồi route in sau khi phiên đã hết. Route này cần tài liệu và quyền của
+    // phiên cũ; giữ nguyên nó khiến đăng nhập xong bị đưa trở lại màn in lỗi.
+    if (window.location.pathname.startsWith("/print/")) {
+      window.history.replaceState(null, "", "/");
+    }
+    retry();
+  };
+  return <LoginForm adapter={adapter} onSuccess={onSuccess} title="Đăng nhập" />;
 }
 
 /**
@@ -368,6 +393,7 @@ function Shell({ manifest, boot, logout, nav, active, breadcrumbs = [], children
   const navigate = useNavigate();
   const [theme, setTheme] = useTheme();
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(false);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -419,7 +445,7 @@ function Shell({ manifest, boot, logout, nav, active, breadcrumbs = [], children
       <AppShell
         brand={manifest.name}
         brandMode={manifest.brand}
-        allowBrandChange={!manifest.brand}
+        allowBrandChange
         nav={nav}
         activeKey={active}
         onNavigate={(key) => {
@@ -432,12 +458,19 @@ function Shell({ manifest, boot, logout, nav, active, breadcrumbs = [], children
         theme={theme}
         onThemeChange={setTheme}
         onOpenPalette={() => setPaletteOpen(true)}
+        onOpenAI={() => setAssistantOpen(true)}
+        aiConfigured
         onLogout={logout}
         businessContext={<BusinessContextBar compact />}
       >
         {children}
       </AppShell>
-      <AssistantBubble appName={`Trợ lý ${manifest.name}`} />
+      <AssistantBubble
+        appName={`Trợ lý ${manifest.name}`}
+        open={assistantOpen}
+        onOpenChange={setAssistantOpen}
+        hideTrigger
+      />
       <CommandPalette
         open={paletteOpen}
         onClose={() => setPaletteOpen(false)}
@@ -460,6 +493,8 @@ function RuntimeRoutes({ manifest, boot, logout, nav, catalogError }: ScreenProp
       <Route path="/" element={<Navigate to={home} replace />} />
       <Route path="/overview/:domain" element={<OverviewScreen {...screen} />} />
       <Route path="/process/:domain" element={<ProcessScreen {...screen} />} />
+      <Route path="/reports" element={<MetaIndexScreen {...screen} kind="reports" />} />
+      <Route path="/master-data" element={<MetaIndexScreen {...screen} kind="masters" />} />
       <Route path="/catalog" element={<CatalogScreen {...screen} error={catalogError} />} />
       <Route path="/permissions" element={<PermissionScreen {...screen} />} />
       <Route path="/workspace/:workspace" element={<WorkspaceScreen {...screen} />} />
@@ -647,13 +682,126 @@ function PrintScreen(props: ScreenProps) {
     </Shell>
   );
 }
-function OverviewScreen(props: ScreenProps) { const navigate = useNavigate(); const { domain = props.manifest.domain ?? "stock" } = useParams(); return <Shell {...props} active="__overview" breadcrumbs={[{ label: "Tổng quan" }]}><div className="h-full overflow-auto p-4"><OverviewContainer domain={domain} onNavigate={navigate} /></div></Shell>; }
+function OverviewScreen(props: ScreenProps) { const navigate = useNavigate(); const { domain = props.manifest.domain ?? "stock" } = useParams(); return <Shell {...props} active="__overview" breadcrumbs={[{ label: "Tổng quan" }]}><div className="h-full overflow-auto bg-[color-mix(in_srgb,var(--primary)_10%,var(--background))] p-3 md:p-4"><OverviewContainer domain={domain} onNavigate={navigate} /></div></Shell>; }
 function ProcessScreen(props: ScreenProps) { const navigate = useNavigate(); const { domain = props.manifest.domain ?? "stock" } = useParams(); return <Shell {...props} active="__process" breadcrumbs={[{ label: "Quy trình" }]}><div className="h-full overflow-auto p-4"><ProcessContainer domain={domain} onNavigate={navigate} /></div></Shell>; }
 function CatalogScreen({ error, ...props }: ScreenProps & { error?: string }) { const navigate = useNavigate(); return <Shell {...props} active="__catalog" breadcrumbs={[{ label: "Danh mục ứng dụng" }]}><div className="h-full p-4">{error ? <div className="mb-3 rounded-lg border border-destructive/30 p-3 text-sm text-destructive">{error}</div> : null}<ApplicationCatalogContainer onNavigate={navigate} /></div></Shell>; }
 function PermissionScreen(props: ScreenProps) { return <Shell {...props} active="__permissions" breadcrumbs={[{ label: "Trung tâm phân quyền" }]}><div className="h-full overflow-auto p-4"><PermissionCenter /></div></Shell>; }
 function WorkspaceScreen(props: ScreenProps) { const navigate = useNavigate(); const { workspace = "" } = useParams(); const value = decodeURIComponent(workspace); return <Shell {...props} active={`workspace:${value}`} breadcrumbs={[{ label: "Ứng dụng", onClick: () => navigate("/catalog") }, { label: value }]}><WorkspaceContainer defaultWorkspace={value} onOpenLink={(link) => openWorkspace(navigate, link)} /></Shell>; }
 function openWorkspace(navigate: NavigateFunction, link: { type?: string; link_to?: string }) { if (!link.link_to) return; const type = (link.type ?? "DocType").toLowerCase(); if (type.includes("report")) navigate(`/report/${encodeURIComponent(link.link_to)}`); else if (type.includes("page")) navigate(`/page/${encodeURIComponent(link.link_to)}`); else if (type.includes("dashboard")) navigate(`/dashboard/${encodeURIComponent(link.link_to)}`); else navigate(`/app/${encodeURIComponent(link.link_to)}`); }
-function ReportScreen(props: ScreenProps) { const { report = "" } = useParams(); const value = decodeURIComponent(report); return <Shell {...props} active={`report:${report}`} breadcrumbs={[{ label: "Báo cáo" }, { label: value }]}><div className="h-full overflow-auto p-4"><ReportContainer report={value} /></div></Shell>; }
+function ReportScreen(props: ScreenProps) { const { report = "" } = useParams(); const value = decodeURIComponent(report); return <Shell {...props} active="__reports" breadcrumbs={[{ label: "Báo cáo", onClick: () => window.history.back() }, { label: value }]}><div className="h-full overflow-auto p-4"><ReportContainer report={value} /></div></Shell>; }
+
+function indexCategory(item: RuntimeNav, kind: "reports" | "masters"): string {
+  const value = `${item.label} ${item.key}`.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[đĐ]/g, "d").toLocaleLowerCase("vi");
+  const has = (...words: string[]) => words.some((word) => value.includes(word));
+  if (kind === "reports") {
+    if (has("san xuat", "lenh san xuat", "cat nhom", "son", "tien do")) return "Sản xuất";
+    if (has("kho", "nhap", "xuat", "ton", "mua hang", "nha cung cap")) return "Kho và mua hàng";
+    if (has("cong no", "so cai", "can doi", "ket qua", "doanh thu", "chi phi", "phai thu", "phai tra")) return "Tài chính";
+    if (has("don hang", "bao gia", "khach", "lap dat", "giao hang")) return "Bán hàng";
+    return "Báo cáo điều hành";
+  }
+  if (has("khach hang", "nha cung cap", "nhan vien", "doi tuong")) return "Đối tượng";
+  if (has("kho", "vi tri", "lo nhom")) return "Kho";
+  if (has("bang gia", "don gia", "chinh sach gia", "gia ban")) return "Giá bán";
+  if (has("cong thuc", "quy cach", "mau vat tu", "mac vat lieu", "thuoc tinh", "nhom hang", "don vi tinh", "hang hoa", "vat tu", "thuong hieu", "nha san xuat")) return "Vật tư hàng hóa";
+  if (has("san xuat", "cong doan", "may", "ca lam")) return "Sản xuất";
+  if (has("tai khoan", "ngan hang", "thue", "chi phi", "dieu khoan")) return "Tài chính và hệ thống";
+  return "Khác";
+}
+
+function groupedIndexItems(items: RuntimeNav[], kind: "reports" | "masters") {
+  const groups = new Map<string, RuntimeNav[]>();
+  for (const item of items) {
+    const category = indexCategory(item, kind);
+    const current = groups.get(category) ?? [];
+    current.push(item);
+    groups.set(category, current);
+  }
+  const priority = kind === "masters"
+    ? ["Vật tư hàng hóa", "Đối tượng", "Kho", "Giá bán", "Sản xuất", "Tài chính và hệ thống", "Khác"]
+    : ["Báo cáo điều hành", "Bán hàng", "Kho và mua hàng", "Sản xuất", "Tài chính"];
+  return [...groups.entries()]
+    .sort(([left], [right]) => priority.indexOf(left) - priority.indexOf(right))
+    .map(([label, entries], index) => ({ id: `index-group-${index}`, label, entries }));
+}
+
+function MetaIndexScreen(props: ScreenProps & { kind: "reports" | "masters" }) {
+  const navigate = useNavigate();
+  const [selectedReportGroup, setSelectedReportGroup] = useState<string | null>(null);
+  const target = props.kind === "reports" ? "bao cao" : "danh muc";
+  const active = props.kind === "reports" ? "__reports" : "__master-data";
+  const title = props.kind === "reports" ? "Báo cáo" : "Danh mục";
+  const description = props.kind === "reports"
+    ? "Tra cứu báo cáo theo dữ liệu và quyền hiện có trong Meta."
+    : "Dữ liệu nền dùng chung cho bán hàng, kho, mua hàng và sản xuất.";
+  const normalize = (value?: string) => (value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[đĐ]/g, "d").toLocaleLowerCase("vi").trim();
+  const items = props.nav.filter((item) => normalize(item.group) === target && !item.disabledReason);
+  const groups = groupedIndexItems(items, props.kind);
+  const activeReportGroup = groups.find((group) => group.id === selectedReportGroup) ?? groups[0];
+  return (
+    <Shell {...props} active={active} breadcrumbs={[{ label: title }]}>
+      <div className="h-full overflow-auto bg-muted/20 p-3 md:p-4">
+        <section className="w-full overflow-hidden rounded-lg border bg-card shadow-sm">
+          <div className="border-b px-5 py-4">
+            <h1 className="text-xl font-semibold">{title}</h1>
+            <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+          </div>
+          {props.kind === "reports" ? (
+            <div className="grid min-h-[32rem] lg:grid-cols-[14rem_minmax(0,1fr)]">
+              <aside className="border-b bg-muted/25 p-3 lg:border-b-0 lg:border-r">
+                <div className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Nhóm báo cáo</div>
+                <nav className="flex gap-1 overflow-x-auto lg:block" aria-label="Nhóm báo cáo">
+                  {groups.map((group) => (
+                    <Button
+                      key={group.id}
+                      type="button"
+                      variant="ghost"
+                      className={`h-auto w-full shrink-0 justify-start rounded px-3 py-2 text-sm font-normal lg:flex ${activeReportGroup?.id === group.id ? "bg-primary/10 font-semibold text-primary" : ""}`}
+                      onClick={() => setSelectedReportGroup(group.id)}
+                    >
+                      {group.label}
+                    </Button>
+                  ))}
+                </nav>
+              </aside>
+              <div className="min-w-0 p-4 md:p-5">
+                {activeReportGroup ? (
+                  <section key={activeReportGroup.id} className="mb-6">
+                    <h2 className="mb-1 border-b bg-muted/40 px-3 py-2 text-sm font-semibold">{activeReportGroup.label}</h2>
+                    <div className="grid md:grid-cols-2 md:gap-x-8">
+                      {activeReportGroup.entries.map((item) => (
+                        <Button key={item.key} variant="ghost" className="h-auto min-w-0 justify-start gap-2 rounded-none border-b px-2 py-3 text-left font-normal text-primary" onClick={() => navigate(item.route)}>
+                          <span className="size-1.5 shrink-0 rounded-full bg-muted-foreground" />
+                          <span className="min-w-0 whitespace-normal">{item.label}</span>
+                        </Button>
+                      ))}
+                    </div>
+                  </section>
+                ) : null}
+              </div>
+            </div>
+          ) : (
+            <div className="grid gap-x-12 gap-y-8 p-5 md:grid-cols-2 xl:grid-cols-3 xl:p-7">
+              {groups.map((group) => (
+                <section key={group.id}>
+                  <h2 className="mb-2 border-b pb-2 text-sm font-bold">{group.label}</h2>
+                  <div>
+                    {group.entries.map((item) => (
+                      <Button key={item.key} variant="link" className="h-auto w-full justify-start whitespace-normal px-0 py-1.5 text-left font-normal" onClick={() => navigate(item.route)}>
+                        {item.label}
+                      </Button>
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          )}
+          {!items.length ? <div className="m-5 rounded-lg border border-dashed p-6 text-sm text-muted-foreground">Chưa có mục khả dụng theo quyền hiện tại.</div> : null}
+        </section>
+      </div>
+    </Shell>
+  );
+}
 /**
  * Nhập dữ liệu từ CSV/Excel — cùng trình thuật sĩ mà app demo vẫn dùng.
  *
