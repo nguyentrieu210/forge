@@ -10,6 +10,7 @@
   "externalDocTypes": [
     { "name": "Bill of Materials", "kind": "transaction", "app": "erpnext" },
     { "name": "Work Order", "kind": "transaction", "app": "erpnext" },
+    { "name": "Stock Entry", "kind": "transaction", "app": "erpnext" },
     { "name": "Asset", "kind": "master", "app": "erpnext" },
     { "name": "Workstation", "kind": "master", "app": "erpnext" },
     { "name": "Operation", "kind": "master", "app": "erpnext" },
@@ -28,6 +29,7 @@
     { "key": "Plastic Costing Profile", "label": "Hồ sơ giá thành", "kind": "doctype", "icon": "calculator", "group": "Giá thành" },
     { "key": "plastic-production-plan", "label": "Kế hoạch sản xuất", "kind": "route", "route": "/app/Production%20Plan", "icon": "calendar-range", "group": "Kế hoạch", "required_roles": ["Plastic Planner", "Plastic Production Manager", "System Manager"] },
     { "key": "plastic-work-orders", "label": "Lệnh sản xuất", "kind": "route", "route": "/app/Work%20Order", "icon": "clipboard-list", "group": "Sản xuất", "required_roles": ["Plastic Planner", "Plastic Production Manager", "Plastic Operator", "System Manager"] },
+    { "key": "Plastic Production Run", "label": "Chạy máy", "kind": "doctype", "icon": "play-circle", "group": "Sản xuất" },
     { "key": "plastic-quality-inspection", "label": "Phiếu kiểm chất lượng", "kind": "route", "route": "/app/Quality%20Inspection", "icon": "microscope", "group": "Chất lượng", "required_roles": ["Plastic QC User", "Plastic QC Manager", "Plastic Production Manager", "System Manager"] }
   ],
   "hooks": [],
