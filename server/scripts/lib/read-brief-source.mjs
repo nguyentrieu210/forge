@@ -26,9 +26,14 @@ function sourcePathOf(source) {
 /**
  * Read a brief plus its optional print-format sidecar.
  *
+ * Accepts either a filesystem path or a file URL so CLI paths and import.meta.url-based
+ * tests use the same loader contract.
+ *
  * Large production briefs should not have every A4 template embedded in the same JSON file.
  * A sibling `<brief>.prints.json` keeps print design independently reviewable while still
  * producing one ordinary brief before schema validation and compilation.
+ *
+ * @param {string | URL} source
  */
 export async function readBriefSource(source) {
   const sourcePath = sourcePathOf(source);
