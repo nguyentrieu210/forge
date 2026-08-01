@@ -1,0 +1,30 @@
+{
+  "name": "Salary Structure Assignment",
+  "module": "Payroll",
+  "is_submittable": true,
+  "autoname": "BLNV-.YYYY.-#####",
+  "title_field": "employee",
+  "sort_field": "from_date",
+  "sort_order": "DESC",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "employee", "label": "Nhân viên", "fieldtype": "Link", "options": "Employee", "required": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "in_standard_filter": true },
+    { "fieldname": "branch", "label": "Chi nhánh", "fieldtype": "Link", "options": "Branch", "required": true, "in_standard_filter": true },
+    { "fieldname": "department", "label": "Phòng ban", "fieldtype": "Link", "options": "Department", "required": true, "in_standard_filter": true },
+    { "fieldname": "from_date", "label": "Hiệu lực từ", "fieldtype": "Date", "required": true, "in_list_view": true },
+    { "fieldname": "base_salary", "label": "Lương cơ bản", "fieldtype": "Currency", "required": true, "permlevel": 1 },
+    { "fieldname": "payroll_cost_center", "label": "Trung tâm chi phí lương", "fieldtype": "Link", "options": "Cost Center", "required": true },
+    { "fieldname": "expense_account", "label": "Tài khoản chi phí lương", "fieldtype": "Link", "options": "Account", "required": true },
+    { "fieldname": "payable_account", "label": "Tài khoản phải trả người lao động", "fieldtype": "Link", "options": "Account", "required": true },
+    { "fieldname": "payroll_rule", "label": "Bộ quy tắc lương", "fieldtype": "Link", "options": "VN Payroll Rule", "required": true }
+  ],
+  "permissions": [
+    { "role": "Payroll User", "read": true, "write": true, "create": true, "report": true },
+    { "role": "Payroll Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true },
+    { "role": "HR Manager", "read": true, "report": true },
+    { "role": "Accounts Manager", "read": true, "report": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}

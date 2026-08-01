@@ -1,0 +1,19 @@
+{
+  "name": "Shift Type",
+  "module": "HR",
+  "autoname": "field:shift_name",
+  "title_field": "shift_name",
+  "fields": [
+    { "fieldname": "shift_name", "label": "Tên ca", "fieldtype": "Data", "required": true, "unique": true, "in_list_view": true },
+    { "fieldname": "start_time", "label": "Giờ bắt đầu", "fieldtype": "Time", "required": true, "in_list_view": true },
+    { "fieldname": "end_time", "label": "Giờ kết thúc", "fieldtype": "Time", "required": true, "in_list_view": true },
+    { "fieldname": "working_hours", "label": "Số giờ chuẩn", "fieldtype": "Float", "required": true },
+    { "fieldname": "disabled", "label": "Ngừng sử dụng", "fieldtype": "Check", "default": 0 }
+  ],
+  "permissions": [
+    { "role": "HR User", "read": true, "report": true },
+    { "role": "HR Manager", "read": true, "write": true, "create": true, "report": true, "export": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "report": true, "export": true }
+  ],
+  "revision": 1
+}

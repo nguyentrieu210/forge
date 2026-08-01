@@ -20,6 +20,38 @@
       "search_index": true
     },
     {
+      "fieldname": "company",
+      "label": "Công ty",
+      "fieldtype": "Link",
+      "options": "Company",
+      "required": true,
+      "in_list_view": true,
+      "in_standard_filter": true
+    },
+    {
+      "fieldname": "branch",
+      "label": "Chi nhánh",
+      "fieldtype": "Link",
+      "options": "Branch",
+      "required": true,
+      "in_list_view": true,
+      "in_standard_filter": true
+    },
+    {
+      "fieldname": "employee_number",
+      "label": "Mã nhân viên nội bộ",
+      "fieldtype": "Data",
+      "required": true,
+      "unique": true,
+      "in_list_view": true,
+      "search_index": true
+    },
+    {
+      "fieldname": "user_id",
+      "label": "Tài khoản người dùng",
+      "fieldtype": "Data"
+    },
+    {
       "fieldname": "department",
       "label": "Phòng ban",
       "fieldtype": "Link",
@@ -35,6 +67,21 @@
       "options": "Designation",
       "in_list_view": true,
       "in_standard_filter": true
+    },
+    {
+      "fieldname": "employment_type",
+      "label": "Loại lao động",
+      "fieldtype": "Select",
+      "options": "Chính thức\nThử việc\nThời vụ\nCộng tác viên",
+      "required": true,
+      "in_standard_filter": true
+    },
+    {
+      "fieldname": "cost_center",
+      "label": "Trung tâm chi phí",
+      "fieldtype": "Link",
+      "options": "Cost Center",
+      "required": true
     },
     {
       "fieldname": "employee_status",
@@ -61,6 +108,24 @@
       "fieldname": "mobile",
       "label": "Điện thoại",
       "fieldtype": "Data"
+    },
+    {
+      "fieldname": "tax_code",
+      "label": "Mã số thuế cá nhân",
+      "fieldtype": "Data",
+      "permlevel": 1
+    },
+    {
+      "fieldname": "social_insurance_number",
+      "label": "Mã số BHXH",
+      "fieldtype": "Data",
+      "permlevel": 1
+    },
+    {
+      "fieldname": "bank_account_no",
+      "label": "Tài khoản nhận lương",
+      "fieldtype": "Data",
+      "permlevel": 1
     },
     {
       "fieldname": "reports_to",
@@ -120,5 +185,5 @@
       "share": true
     }
   ],
-  "revision": 1
+  "revision": 2
 }
