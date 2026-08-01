@@ -9,17 +9,48 @@ Mọi agent phải đọc `AI_HANDOFF.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md` 
 - PR `#137` merge SHA: `29fee0200d8118eef2d0ae9e524a3a00acfab00f`.
 - Exact PR head: `fd03d22872c2234d50f616a5d8956c8b62f26b40`.
 - Full CI, PR Validation, Purchase, Sales, Inventory và UI authenticated gates: SUCCESS.
-- Desktop Chrome + Pixel 7 lifecycle PASS.
-- Tiến Đạt FIFO authenticated journey PASS: `200 + 100`, nhận `230` → `200 + 30`, lịch sử và công nợ đúng; `85` được phép, `86` bị từ chối.
 - Không deploy Cloudflare, không thay rollout state và không mutate dữ liệu production.
 
+## UI MetaForge MISA-style — IMPLEMENTED / VALIDATE NEXT
+
+### Branch
+
+- Branch: `feat/metaforge-misa-workspace-ui-clean`.
+- Base exact default head: `4d86c1fd8c191f26f3961762b281fca1ad765855`.
+- Implementation head trước docs: `054b7e23b8e18d74ec378316de2b132fd44aa0f7`.
+- Closed PR `#81/#109` chỉ dùng tham khảo từng file; không reopen hoặc merge nguyên branch cũ.
+- Login/landing từ closed PR `#36` giữ ở backlog riêng.
+
+### Đã triển khai
+
+- `Tổng quan` là mục sidebar độc lập và bị loại khỏi dải tab nghiệp vụ.
+- Tab nghiệp vụ/Meta chia đều chiều ngang, kích thước nhỏ, nhãn dài truncate, không cuộn ngang.
+- `Danh mục` được gom về một trang tập trung theo nhóm.
+- Quy trình nghiệp vụ và quy trình Meta được thiết kế lại.
+- Report builder có nguồn dữ liệu, widget, canvas kéo-resize, panel bố cục/thuộc tính và preview.
+- 13 bảng màu theme light/dark với tên tiếng Việt.
+- Playwright coverage cho navigation, tab overflow, catalog, report builder và theme count.
+
+### Việc tiếp theo bắt buộc
+
+1. Mở một PR canonical từ branch này vào `hotfix/alumdoor-print-list-delete`.
+2. Khóa exact PR head, không push thêm khi CI đang chạy.
+3. Chạy full CI, typecheck, build và UI PR validation.
+4. Chạy Playwright desktop và mobile; xác nhận không overflow và không mất route/active state.
+5. Sửa lỗi từ CI nếu có, sau đó cập nhật exact head evidence.
+6. Merge chỉ khi full CI và UI-specific gates xanh.
+7. Không deploy Cloudflare nếu chưa có lệnh riêng.
+
+### Done condition
+
+- Tổng quan chỉ nằm ở sidebar.
+- Danh mục tập trung hoạt động.
+- Tab nghiệp vụ/Meta không cần cuộn ngang ở desktop và mobile.
+- Report builder hoạt động với add/edit/delete card/chart, kéo-resize và preview.
+- 13 theme chọn được và lưu preference.
+- Full CI, typecheck, build và authenticated UI journey PASS trên exact head.
+
 ## P1 — Finance clean rebuild
-
-### Nguồn
-
-- Tạo branch mới từ exact current default sau docs merge.
-- Closed PR `#15` và backup `#40` chỉ dùng tham khảo từng file.
-- Không reopen hoặc merge nguyên branch cũ.
 
 ### Phạm vi bắt buộc
 
@@ -33,24 +64,7 @@ Mọi agent phải đọc `AI_HANDOFF.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md` 
 - Migration append-only, có dry-run, checksum, rollback và production-shaped evidence.
 - Không dùng floating point cho bút toán tiền; tiếp tục dùng minor/micros theo kernel.
 
-### Trình tự
-
-1. Đọc exact default head và CI hiện tại từ GitHub.
-2. Tạo một branch canonical từ default.
-3. Review từng file từ PR `#15`; chỉ mang phần còn đúng với kiến trúc hiện tại.
-4. Bổ sung phần còn thiếu thay vì chỉ merge AR/AP aging cũ.
-5. Viết focused unit/integration tests và route/report tests.
-6. Chạy migration dry-run/checksum/rollback trên local/ephemeral D1.
-7. Mở một PR canonical và khóa exact head khi CI chạy.
-8. Merge khi full CI và Finance-specific gate đều xanh.
-9. Không deploy Cloudflare nếu chưa có yêu cầu rõ.
-
-### Done condition
-
-- AR/AP, allocations, statements, debt summary và advance balance PASS.
-- Migration/backfill có bằng chứng dry-run, checksum và rollback.
-- UI/report navigation và permission PASS.
-- Exact merged SHA có CI xanh.
+Finance phải làm ở branch riêng, không trộn vào MetaForge UI.
 
 ## P2 — Daily detailed ledger
 
@@ -77,9 +91,8 @@ Bắt buộc có desktop và mobile authenticated journey trên một exact head
 
 ## UI backlog riêng
 
-- MetaForge MISA-style workspace tabs từ closed PR `#81/#109`.
 - Login/landing từ closed PR `#36`.
-- Hai phần này không được trộn vào Finance hoặc nghiệp vụ ledger.
+- Không trộn login/landing vào MetaForge workspace UI, Finance hoặc nghiệp vụ ledger.
 
 ## Quy tắc bắt buộc
 

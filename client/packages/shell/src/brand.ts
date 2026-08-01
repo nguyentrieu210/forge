@@ -1,4 +1,4 @@
-/** Bảng màu dùng chung cho mọi app MetaForge. */
+/** 13 bảng màu dùng chung cho mọi app MetaForge. */
 import { useCallback, useEffect, useState } from "react";
 
 export type BrandMode =
@@ -8,20 +8,22 @@ export type BrandMode =
 
 const KEY = "metaforge-brand";
 export const BRANDS: { id: BrandMode; label: string; swatch: string }[] = [
-  { id: "zinc", label: "Zinc", swatch: "#18181b" },
-  { id: "blue", label: "Electric Blue", swatch: "#1b4dff" },
-  { id: "warm", label: "Warm Terracotta", swatch: "#b15b2e" },
-  { id: "sakura", label: "Sakura Pink", swatch: "linear-gradient(135deg,#f472b6,#fbcfe8)" },
-  { id: "emerald", label: "Emerald", swatch: "#059669" },
-  { id: "ocean", label: "Ocean Gradient", swatch: "linear-gradient(135deg,#0284c7,#22d3ee)" },
-  { id: "violet", label: "Royal Violet", swatch: "#7c3aed" },
-  { id: "indigo", label: "Indigo Night", swatch: "#4f46e5" },
-  { id: "teal", label: "Teal Mint", swatch: "#0f766e" },
-  { id: "amber", label: "Amber Gold", swatch: "#d97706" },
-  { id: "rose", label: "Rose Quartz", swatch: "#e11d48" },
-  { id: "aurora", label: "Aurora Gradient", swatch: "linear-gradient(135deg,#14b8a6,#8b5cf6)" },
-  { id: "sunset", label: "Sunset Gradient", swatch: "linear-gradient(135deg,#f97316,#ec4899)" },
+  { id: "zinc", label: "Than chì", swatch: "#18181b" },
+  { id: "blue", label: "Xanh điện", swatch: "#1b4dff" },
+  { id: "warm", label: "Đất nung", swatch: "#b15b2e" },
+  { id: "sakura", label: "Hồng Sakura", swatch: "linear-gradient(135deg,#f472b6,#fbcfe8)" },
+  { id: "emerald", label: "Ngọc lục bảo", swatch: "#059669" },
+  { id: "ocean", label: "Đại dương", swatch: "linear-gradient(135deg,#0284c7,#22d3ee)" },
+  { id: "violet", label: "Tím hoàng gia", swatch: "#7c3aed" },
+  { id: "indigo", label: "Chàm đêm", swatch: "#4f46e5" },
+  { id: "teal", label: "Xanh ngọc", swatch: "#0f766e" },
+  { id: "amber", label: "Hổ phách", swatch: "#d97706" },
+  { id: "rose", label: "Thạch anh hồng", swatch: "#e11d48" },
+  { id: "aurora", label: "Cực quang", swatch: "linear-gradient(135deg,#14b8a6,#8b5cf6)" },
+  { id: "sunset", label: "Hoàng hôn", swatch: "linear-gradient(135deg,#f97316,#ec4899)" },
 ];
+
+export const BRAND_COLOR_COUNT = BRANDS.length;
 
 export function isBrandMode(value: unknown): value is BrandMode {
   return BRANDS.some((brand) => brand.id === value);
@@ -42,9 +44,6 @@ export function useBrand(controlled?: BrandMode): [BrandMode, (b: BrandMode) => 
   useEffect(() => {
     const effective = controlled ?? userBrand;
     applyBrand(effective);
-    // A manifest-controlled palette belongs to the app, not to the user's preference
-    // for apps that do not specify one. Do not overwrite that preference while visiting
-    // a branded app.
     if (controlled === undefined && typeof localStorage !== "undefined") {
       localStorage.setItem(KEY, effective);
     }

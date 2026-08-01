@@ -31,14 +31,13 @@ export {
 } from "./auth/AuthBoundary.js";
 export { LoginForm, type LoginFormProps } from "./auth/LoginForm.js";
 export { ChangePasswordDialog, type ChangePasswordDialogProps } from "./auth/ChangePasswordDialog.js";
-export { useBrand, applyBrand, isBrandMode, BRANDS, type BrandMode } from "./brand.js";
+export { useBrand, applyBrand, isBrandMode, BRANDS, BRAND_COLOR_COUNT, type BrandMode } from "./brand.js";
 export { applyDesign } from "./design.js";
 export { resolveIcon } from "./icon.js";
 export {
   BusinessContextProvider, BusinessContextBar, useBusinessContext,
   type BusinessContextProviderProps, type BusinessContextValue,
 } from "./BusinessContext.js";
-// App-mode — màn nghiệp vụ touch-first (mobile/tablet), khác Desk-mode auto-render
 export {
   MobileShell, type MobileShellProps,
   TouchCard, BigButton, QtyStepper, ScanField,

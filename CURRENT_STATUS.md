@@ -6,7 +6,7 @@ Ngày cập nhật: **2026-08-01**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch hiện tại: `hotfix/alumdoor-print-list-delete`.
-- Current default head trước docs handoff: `29fee0200d8118eef2d0ae9e524a3a00acfab00f`.
+- Current default head: `4d86c1fd8c191f26f3961762b281fca1ad765855`.
 - GitHub là nguồn sự thật cho code, CI, PR và release evidence.
 
 ## PR tồn đọng cũ — CLOSED
@@ -32,25 +32,33 @@ Không merge nguyên trạng các branch stale/conflicted. Branch vẫn được
 
 - PR `#137` merge SHA: `29fee0200d8118eef2d0ae9e524a3a00acfab00f`.
 - Exact PR head: `fd03d22872c2234d50f616a5d8956c8b62f26b40`.
+- CI, PR Validation, Purchase, Sales, Inventory và UI authenticated gates: SUCCESS.
+- Desktop Chrome + Pixel 7 lifecycle PASS.
 
-Exact-head evidence:
+## MetaForge MISA-style UI — IMPLEMENTED / CI PENDING
 
-- CI `30670524038`: SUCCESS — tests, typecheck, build.
-- PR Validation `30670524052`: SUCCESS.
-- Purchase Feature CI `30670524133`: SUCCESS.
-- UI Pull Request Validation `30670524072`: SUCCESS.
-- Sales Feature CI `30670524058`: SUCCESS.
-- Inventory and Manufacturing CI `30670523976`: SUCCESS.
+- Branch: `feat/metaforge-misa-workspace-ui-clean`.
+- Base exact default head: `4d86c1fd8c191f26f3961762b281fca1ad765855`.
+- Implementation head trước status docs: `054b7e23b8e18d74ec378316de2b132fd44aa0f7`.
 
-Authenticated scope đã PASS:
+Đã làm:
 
-- login/boot bằng cookie + CSRF thật;
-- authoritative Alumdoor app cài vào D1 local;
-- Item/UOM search;
-- Purchase Order create/save/submit/reopen;
-- Purchase Receipt create/save/preview/submit/cancel/reopen;
-- Desktop Chrome và Pixel 7;
-- Tiến Đạt FIFO `200 + 100`, nhận `230` phân bổ `200 + 30`, draft giữ đúng hai đơn, đọc lại lịch sử và công nợ; `85` được phép, `86` bị từ chối.
+- Đưa `Tổng quan` thành mục độc lập ở sidebar; không còn lặp trong dải tab nghiệp vụ.
+- Dải tab nghiệp vụ và Meta chia đều chiều ngang, chữ nhỏ hơn và truncate nhãn dài; không dùng cuộn ngang.
+- Gom `Danh mục` về một màn tập trung theo nhóm như MISA.
+- Thay màn quy trình cũ bằng luồng gọn và các lối tắt nghiệp vụ.
+- Bổ sung workspace Meta gồm DocType, Workflow, Mẫu in và Thiết kế báo cáo.
+- Thiết kế báo cáo có ba vùng: nguồn dữ liệu/widget bên trái, canvas kéo-resize ở giữa, bố cục/thuộc tính bên phải và chế độ xem trước.
+- Khóa đúng `13` bảng màu toàn hệ thống, có light/dark; tên màu hiển thị bằng tiếng Việt.
+- Thêm Playwright coverage cho sidebar Tổng quan, tab không overflow, Danh mục, report builder và số lượng 13 theme.
+
+Chưa được xác nhận:
+
+- Typecheck/build/e2e trên exact head mới.
+- Desktop/mobile authenticated journey.
+- PR canonical và exact-head CI.
+
+Closed PR `#81/#109` chỉ được dùng để tham khảo từng file; không merge nguyên branch cũ. Login/landing không trộn vào branch này.
 
 ## Chưa được phép gọi là hoàn tất toàn quy trình
 
@@ -63,18 +71,19 @@ Tài liệu `25.7 QUY TRÌNH.docx` còn yêu cầu sổ chi tiết khóa theo ng
 
 ## Release boundary
 
-- Không deploy Cloudflare trong đợt Purchase QA.
+- Không deploy Cloudflare nếu chưa có lệnh riêng.
 - Không sửa production secret, DNS hoặc rollout state.
 - Không migrate hoặc mutate dữ liệu tenant production.
 - Generic FIFO production vẫn disabled.
 
 ## Hàng đợi canonical
 
-1. Finance clean rebuild — `NEXT`.
-2. Daily detailed ledger — `QUEUED`.
-3. Warranty / defects / capacity — `QUEUED`.
-4. End-to-end acceptance — `QUEUED`.
-5. UI MetaForge MISA-style và login/landing — `SEPARATE UI BACKLOG`.
+1. MetaForge MISA-style UI — `IMPLEMENTED / CI PENDING`.
+2. Finance clean rebuild — `NEXT BUSINESS EPIC`.
+3. Daily detailed ledger — `QUEUED`.
+4. Warranty / defects / capacity — `QUEUED`.
+5. End-to-end acceptance — `QUEUED`.
+6. Login/landing — `SEPARATE UI BACKLOG`.
 
 ## Safety
 

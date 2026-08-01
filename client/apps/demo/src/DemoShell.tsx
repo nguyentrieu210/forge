@@ -1,19 +1,13 @@
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import {
   AppShell, CommandPalette, AIPanel, useTheme,
   createOpenAICompatProvider, createEchoProvider,
   type NavItem, type Breadcrumb, type AwesomeAction, type AwesomeDoctype, type AwesomeRecord,
-  type AIProvider, type AIAction, type AIContext, type AIConfig, type NotificationItem,
+  type AIProvider, type AIAction, type AIContext, type NotificationItem,
 } from "@metaforge/shell";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, Toaster } from "@metaforge/ui";
+import { Button, Sheet, SheetContent, SheetHeader, SheetTitle, Toaster } from "@metaforge/ui";
 import { loadAIConfig } from "./system/ai-config.js";
 
-/**
- * Đọc cấu hình AI (baseUrl/model ở localStorage, apiKey ở sessionStorage — Gate 5) → tạo provider:
- *  - có baseUrl + apiKey → provider OpenAI-compatible THẬT (cần user cấp ở Thiết lập → AI).
- *  - đã lưu baseUrl nhưng thiếu key (vd sang phiên mới, sessionStorage mất) → echo provider (offline).
- *  - chưa cấu hình gì → null → AIPanel hiện "Chưa cấu hình".
- */
 function loadAIProvider(): AIProvider | null {
   const cfg = loadAIConfig();
   if (!cfg.baseUrl && !cfg.apiKey && !cfg.model) return null;
@@ -23,8 +17,29 @@ function loadAIProvider(): AIProvider | null {
   return createEchoProvider();
 }
 
+export interface WorkspaceTabMeta {
+  key: string;
+  label: string;
+  targetKey: string;
+  activeKeys?: string[];
+  doctype?: string;
+}
+
+export interface WorkspaceModuleMeta {
+  key: string;
+  label: string;
+  icon?: ReactNode;
+  tabs: WorkspaceTabMeta[];
+  hideTabs?: boolean;
+}
+
+export interface WorkspaceMeta {
+  modules: WorkspaceModuleMeta[];
+}
+
 export interface DemoShellProps {
   nav: NavItem[];
+  workspace?: WorkspaceMeta;
   activeKey: string;
   onNavigate: (key: string) => void;
   breadcrumbs?: Breadcrumb[];
@@ -58,14 +73,81 @@ function isEditable(el: Element | null): boolean {
   return tag === "INPUT" || tag === "TEXTAREA" || (el as HTMLElement).isContentEditable;
 }
 
+export function matchesWorkspaceTab(tab: WorkspaceTabMeta, activeKey: string): boolean {
+  return tab.targetKey === activeKey || Boolean(tab.activeKeys?.includes(activeKey));
+}
+
+function WorkspaceTabs({ module, activeKey, onNavigate }: {
+  module: WorkspaceModuleMeta;
+  activeKey: string;
+  onNavigate: (key: string) => void;
+}) {
+  if (module.hideTabs || module.tabs.length <= 1) return null;
+
+  return (
+    <div className="mf-workspace-tabs sticky top-0 z-20 border-b bg-background/95 px-2 backdrop-blur supports-[backdrop-filter]:bg-background/85">
+      <nav className="flex w-full items-stretch" aria-label={`Nghiệp vụ ${module.label}`}>
+        {module.tabs.map((tab) => {
+          const active = matchesWorkspaceTab(tab, activeKey);
+          return (
+            <Button
+              key={tab.key}
+              type="button"
+              variant="ghost"
+              size="sm"
+              title={tab.label}
+              className={`relative h-9 min-w-0 flex-1 rounded-none border-x-0 border-t-0 border-b-2 px-1.5 text-[11px] font-medium sm:px-2 sm:text-xs ${
+                active
+                  ? "border-b-primary bg-primary/10 text-primary hover:bg-primary/12"
+                  : "border-b-transparent text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+              }`}
+              aria-current={active ? "page" : undefined}
+              onClick={() => onNavigate(tab.targetKey)}
+            >
+              <span className="block w-full truncate">{tab.label}</span>
+            </Button>
+          );
+        })}
+      </nav>
+    </div>
+  );
+}
+
 export function DemoShell(props: DemoShellProps) {
   const [theme, setTheme] = useTheme();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   const [aiProvider, setAiProvider] = useState<AIProvider | null>(() => props.ai?.provider ?? loadAIProvider());
 
+  const activeModule = useMemo(
+    () => props.workspace?.modules.find((module) => module.tabs.some((tab) => matchesWorkspaceTab(tab, props.activeKey))),
+    [props.activeKey, props.workspace],
+  );
+
+  const sidebarNav = useMemo<NavItem[]>(
+    () => props.workspace
+      ? props.workspace.modules.map((module) => ({
+          key: module.key,
+          label: module.label,
+          icon: module.icon,
+        }))
+      : props.nav,
+    [props.nav, props.workspace],
+  );
+
+  const sidebarActiveKey = activeModule?.key ?? props.activeKey;
+
+  const navigateFromSidebar = (moduleKey: string) => {
+    if (!props.workspace) {
+      props.onNavigate(moduleKey);
+      return;
+    }
+    const module = props.workspace.modules.find((entry) => entry.key === moduleKey);
+    const target = module?.tabs[0];
+    if (target) props.onNavigate(target.targetKey);
+  };
+
   function openAI() {
-    // Đọc lại config mỗi lần mở để cập nhật nếu vừa lưu ở Thiết lập.
     setAiProvider(props.ai?.provider ?? loadAIProvider());
     setAiOpen(true);
   }
@@ -88,9 +170,9 @@ export function DemoShell(props: DemoShellProps) {
     <>
       <AppShell
         brand="MetaForge"
-        nav={props.nav}
-        activeKey={props.activeKey}
-        onNavigate={props.onNavigate}
+        nav={sidebarNav}
+        activeKey={sidebarActiveKey}
+        onNavigate={navigateFromSidebar}
         breadcrumbs={props.breadcrumbs}
         fullName={props.fullName}
         userSubtitle={props.userSubtitle}
@@ -108,6 +190,7 @@ export function DemoShell(props: DemoShellProps) {
         onNotificationClick={props.notifications?.onClick}
         onMarkAllRead={props.notifications?.onMarkAllRead}
       >
+        {activeModule ? <WorkspaceTabs module={activeModule} activeKey={props.activeKey} onNavigate={props.onNavigate} /> : null}
         {props.children}
       </AppShell>
 
