@@ -15,8 +15,8 @@ export interface BulkRenderPolicy {
 }
 
 function legacyBulkView(meta: DocTypeMeta): DocTypeView | undefined {
-  // Compatibility bridge for brief-built packages while the short brief compiler catches up
-  // with the canonical viewPolicy.bulk key. App-source packages should declare bulk directly.
+  // Compatibility bridge for already-installed packages that carried the first Bulk policy
+  // under mobile metadata. New authoring should use canonical viewPolicy.bulk directly.
   const mobile = meta.viewPolicy?.mobile;
   const candidate = mobile && typeof mobile === "object" ? mobile.bulk : undefined;
   return candidate && typeof candidate === "object" && !Array.isArray(candidate)
@@ -29,6 +29,9 @@ function editableField(field: DocField): boolean {
     && field.surface !== "internal"
     && field.hidden !== 1
     && field.read_only !== 1
+    // Bulk v1 does not evaluate per-row read_only_depends_on expressions. Treating such a
+    // field as editable would make the grid less restrictive than the canonical Form.
+    && !field.read_only_depends_on
     && field.serverEnforced !== true
     && !["readonly", "hidden", "set_once", "immutable_after_submit"].includes(field.editMode ?? "editable");
 }
