@@ -15,8 +15,7 @@ Ngày cập nhật: **2026-08-02**.
 
 ### MetaForge Form Renderer
 
-- PR `#176` merged.
-- Merge commit: `a7643cee0102aee1c37d4f00afac1594d0261e68`.
+- PR `#176` merged tại `a7643cee0102aee1c37d4f00afac1594d0261e68`.
 - Final validated PR head: `acf53e12b3e59f21dde35ad6f27cc014fb624c00`.
 - Exact-head required workflows: 6/6 PASS.
 - `resolveFormRenderPolicy()` là composition point cho existing/full/quick Form.
@@ -27,13 +26,26 @@ Ngày cập nhật: **2026-08-02**.
 - PR `#184` merged tại `df84eaec03526eaae2e2c3de3e9b8d388ae30f1a`.
 - Final validated PR head: `1a79c28832aed7731601bb9ea378f9a4a3cc01db`.
 - Required workflows: 6/6 PASS.
-- Presentation Contract V2 hiện là extension presentation an toàn trên `DocTypeMeta`; metadata không khai `presentation` vẫn có fallback heuristic.
-- Có các archetype `master`, `transaction`, `inventory`, `production`, `approval`, `ledger`, `analysis` + `generic` fallback.
-- Mỗi archetype có visual profile riêng cho accent/hero/icon/metric/context rail; không hard-code quyền hoặc business state transition vào presentation layer.
-- Resolver chỉ dùng field còn tồn tại sau canonical form policy, nên `surface=internal`/server-owned field không thể bị presentation kéo ngược ra UI.
+- Có archetype `master`, `transaction`, `inventory`, `production`, `approval`, `ledger`, `analysis` + generic fallback.
+- Presentation resolver chỉ dùng field còn tồn tại sau canonical form policy; presentation không được kéo `surface=internal`/server-owned field trở lại UI.
 - `FormContainer` giữ server-authoritative permission/workflow/actions; Document Experience chỉ bọc presentation.
-- Regression selfcheck tham chiếu `Sales Order`, `Purchase Order`, `Stock Entry`, `Work Order`, `Customer`, `Payment Entry`.
-- List Workspace V2 chưa triển khai; phải kiểm tra Bulk View PR `#182` trước vì PR đó đang chạm `DoctypeWorkspace` và core meta types.
+
+### MetaForge Bulk View
+
+- PR `#190` merged tại `28eb4c4af6f88f0d1c3dc56c8f50e8d31fe2e968`.
+- Final validated PR head: `bc75667d1a2078e6483c1a63a4afa1e94bde9de5`.
+- Required workflows: 6/6 PASS.
+  - CI `30721227654`: tests/typecheck/build PASS.
+  - UI `30721227663`: lint/build + MetaForge workspace browser QA + Alumdoor browser QA PASS.
+  - PR Validation `30721227676`, Purchase `30721227715`, Sales `30721227669`, Inventory/Manufacturing `30721227651`: PASS.
+- PR `#182` là branch Bulk cũ đã diverged và đã đóng, không merge. Không reopen hoặc dùng nó làm live source.
+- `resolveBulkRenderPolicy()` là composition point cho generic Bulk v1.
+- Generic Bulk chỉ hỗ trợ `document_update` trên master, fail closed với transaction/submittable/child/single và protected/conditional-readonly fields.
+- `BulkGridView`/`BulkGridContainer` có selection, Excel/Sheets paste, fill-down, search/paging, discard, optimistic concurrency theo `modified` và lỗi từng dòng.
+- `DoctypeWorkspace` dùng mode `Danh sách | Nhập hàng loạt` khi policy cho phép.
+- ALUM source `2.1.2` có Bulk config cho 15 master DocType. `Item Price` chỉ bulk-edit `rate/note/disabled`; identity fields giữ read-only.
+- Canonical contract là `viewPolicy.bulk`. Large brief sidecar hiện transport qua compatibility `viewPolicy.mobile.bulk`; short-brief compiler/parser first-class transport vẫn là follow-up.
+- Matrix View là primitive tiếp theo cho quan hệ hai chiều; transaction/ledger phải dùng controller-backed Bulk Transaction strategy, không generic document update.
 
 ### Authenticated stock lifecycle
 
@@ -41,7 +53,8 @@ Ngày cập nhật: **2026-08-02**.
 - PR `#170` merged: Stock Entry operational submit RBAC.
 - PR `#173` merged: physical stock catch-weight reconciliation.
 - PR `#175` merged tại `509db8c32625168316696fb0deb3760a434aedf9`: authenticated reservation/available-stock lifecycle; final PR head `e839599ddf23e6cf89a325497b62f20085f62ffd`, required workflows 6/6 PASS.
-- Quantity + weight + reservation + permission evidence đã được khóa trên local D1 authenticated QA. Reservation giảm available stock nhưng không thay physical stock; release phục hồi available và double-release fail theo Frappe 417 contract.
+- Quantity + weight + reservation + permission evidence đã được khóa trên local D1 authenticated QA.
+- PR `#189` hiện là active clean P0 slice cho QR/lineage + cleanup QA; không tạo branch cạnh tranh nếu #189 vẫn active.
 
 ### Canonical first-party Meta boundary
 
@@ -58,14 +71,14 @@ Ngày cập nhật: **2026-08-02**.
 
 ## Production checkpoint lịch sử
 
-Checkpoint production đã được ghi nhận trước đợt cleanup này:
+Checkpoint production đã được ghi nhận trước các UX/stock slices hiện tại:
 
 - Alumdoor production exact SHA: `b46d322831ebe7b57e29d4363d2daa005bb56e55`.
 - Full production release run `30707135053`: PASS.
 - Protected Alumdoor Meta installer run `30707517624`: PASS.
 - Production Alumdoor Meta tại checkpoint đó: `2.1.0`.
 
-Đây là snapshot lịch sử. Trước mọi quyết định production phải đọc GitHub/release evidence hiện tại. Không suy ra rằng production vẫn ở đúng SHA/version này.
+Đây là snapshot lịch sử. Source ALUM hiện đã tới `2.1.2`, nhưng không được suy ra production đã được cài version đó. Trước mọi quyết định production phải đọc GitHub/release/provider evidence hiện tại.
 
 ## Phần chưa hoàn tất toàn hệ thống
 
@@ -73,11 +86,12 @@ Không được tuyên bố toàn bộ quy trình `25.7 QUY TRÌNH.docx` đã ho
 
 Các miền còn cần acceptance/implementation đầy đủ gồm:
 
-1. MetaForge UX V2: List Workspace, presentation authoring/canonical transport, related-document/activity/exception, operational workspace, mobile và personalization/AI context.
-2. Stock acceptance còn lại: QR/lineage end-to-end và cleanup QA không residue.
-3. Daily detailed ledger: snapshot/freeze/append-only adjustment/reconciliation.
-4. Warranty/defects/capacity/overtime.
-5. End-to-end acceptance xuyên Sales → Production → Inventory → Delivery → Finance → Daily Ledger → Warranty.
+1. P0 stock acceptance: QR/lineage end-to-end + cleanup QA, hiện active ở PR `#189`.
+2. MetaForge UX V2: List Workspace V2 tích hợp Bulk, Matrix View, presentation authoring/canonical transport, document context/exception, operational workspace, mobile V2 và personalization/AI context.
+3. Bulk Transaction cho Stock Reconciliation/BOM và transaction-grid nhập nhôm nhiều mã.
+4. Daily detailed ledger: snapshot/freeze/append-only adjustment/reconciliation.
+5. Warranty/defects/capacity/overtime.
+6. End-to-end acceptance xuyên Sales → Production → Inventory → Delivery → Finance → Daily Ledger → Warranty.
 
 `NEXT_TASKS.md` mới là hàng đợi active; danh sách trên chỉ mô tả phần còn thiếu ở cấp hệ thống.
 
