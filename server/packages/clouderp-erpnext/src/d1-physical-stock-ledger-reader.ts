@@ -191,6 +191,7 @@ function snapshotFields(snapshot: JsonObject | undefined): Partial<PhysicalStock
   const color = text(snapshot.color ?? snapshot.colour);
   const condition = text(snapshot.condition);
   const generation = text(snapshot.generation);
+  const serialAndBatchBundle = text(snapshot.serial_and_batch_bundle);
   const length = optionalSafeInteger(snapshot.length_micros, "length_micros");
   const width = optionalSafeInteger(snapshot.width_micros, "width_micros");
   const height = optionalSafeInteger(snapshot.height_micros, "height_micros");
@@ -202,6 +203,7 @@ function snapshotFields(snapshot: JsonObject | undefined): Partial<PhysicalStock
     ...(color ? { color } : {}),
     ...(condition ? { condition } : {}),
     ...(generation ? { generation } : {}),
+    ...(serialAndBatchBundle ? { serial_and_batch_bundle: serialAndBatchBundle } : {}),
     ...(length === undefined ? {} : { length_micros: length }),
     ...(width === undefined ? {} : { width_micros: width }),
     ...(height === undefined ? {} : { height_micros: height }),
