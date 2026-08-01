@@ -6,7 +6,7 @@ Ngày cập nhật: **2026-08-01**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `main`; vẫn phải kiểm tra lại bằng GitHub trước khi làm, không suy từ tên branch local.
-- Current default head: `19f949c6aba3541c7d3585ad42f8a8c42ebeea74` (G03 Organization Security; CI run `30707768323` PASS, chưa có production-release evidence trong đợt Alumdoor Meta).
+- Current executable code head (không tính docs-only evidence merge): `19f949c6aba3541c7d3585ad42f8a8c42ebeea74` (G03 Organization Security; CI run `30707768323` PASS, chưa có production-release evidence trong đợt Alumdoor Meta). Luôn đọc GitHub để lấy SHA đầu nhánh hiện hành vì docs-only merge có thể cao hơn executable head.
 - Alumdoor production đang chạy exact SHA `b46d322831ebe7b57e29d4363d2daa005bb56e55`; full production release run `30707135053` PASS tenant/app/gateway và HTTP/browser smoke.
 - Đọc theo thứ tự: `CURRENT_STATUS.md` → `NEXT_TASKS.md` → `DELIVERY_POLICY.md`.
 - GitHub là nguồn sự thật cho code, CI, merge và release evidence.
