@@ -31,6 +31,7 @@ interface LedgerRow {
 
 interface Reconciliation {
   ok: boolean;
+  snapshot_id: string;
   mismatches: Array<{ kind: string; domain: string; line_key: string }>;
   truncated: boolean;
 }
@@ -85,11 +86,19 @@ export function DailyDetailedLedger() {
     sales_order: salesOrder,
   }), [company, customer, ledgerDate, salesOrder, warehouse]);
 
+  const invalidateScope = useCallback(() => {
+    setSnapshot(null);
+    setRows(null);
+    setReconciliation(null);
+    setSelectedLine("");
+    setError(null);
+  }, []);
+
   const loadRows = useCallback(async (snapshotId: string) => {
     const result = await adapter.callPost<LedgerRow[]>("metaforge.accounts.daily_detailed_ledger", { snapshot_id: snapshotId });
     setRows(result);
-    if (!selectedLine && result[0]) setSelectedLine(result[0].line_key);
-  }, [adapter, selectedLine]);
+    setSelectedLine((current) => current || result[0]?.line_key || "");
+  }, [adapter]);
 
   const run = useCallback(async (operation: string, task: () => Promise<void>) => {
     setBusy(operation);
@@ -110,19 +119,28 @@ export function DailyDetailedLedger() {
     const result = await adapter.callPost<SnapshotResult>("metaforge.accounts.daily_ledger_generate", context);
     setSnapshot(result);
     setReconciliation(null);
+    setSelectedLine("");
     await loadRows(result.snapshot_id);
     toast.success(result.existing ? "Đã mở ảnh chụp dữ liệu hiện có." : `Đã cập nhật ${result.line_count} dòng vào sổ.`);
   });
 
   const reconcile = () => void run("reconcile", async () => {
+    if (!snapshot) return;
     const result = await adapter.callPost<Reconciliation>("metaforge.accounts.daily_ledger_reconcile", context);
+    if (result.snapshot_id !== snapshot.snapshot_id) {
+      setReconciliation(null);
+      throw new Error("Ảnh chụp hiện tại không còn là bản mới nhất của phạm vi này. Hãy bấm “Cập nhật sổ” rồi đối chiếu lại.");
+    }
     setReconciliation(result);
-    if (result.ok) toast.success("Sổ khớp với dữ liệu nguồn.");
+    if (result.ok) toast.success("Sổ khớp với dữ liệu nguồn và có thể khóa.");
     else toast.warning(`Phát hiện ${result.mismatches.length} chênh lệch.`);
   });
 
   const freeze = () => void run("freeze", async () => {
     if (!snapshot) return;
+    if (!reconciliation?.ok || reconciliation.snapshot_id !== snapshot.snapshot_id) {
+      throw new Error("Phải đối chiếu đúng ảnh chụp hiện tại và đạt trạng thái khớp trước khi khóa sổ.");
+    }
     await adapter.callPost("metaforge.accounts.daily_ledger_freeze", { snapshot_id: snapshot.snapshot_id, reason: freezeReason });
     setSnapshot({ ...snapshot, frozen: true });
     await loadRows(snapshot.snapshot_id);
@@ -150,6 +168,13 @@ export function DailyDetailedLedger() {
     toast.success("Đã ghi điều chỉnh vào lịch sử bất biến.");
   });
 
+  const freezeReady = Boolean(
+    snapshot
+    && !snapshot.frozen
+    && reconciliation?.ok
+    && reconciliation.snapshot_id === snapshot.snapshot_id,
+  );
+
   return (
     <div className="h-full overflow-auto bg-background p-3 sm:p-4 lg:p-6">
       <div className="mx-auto max-w-[1440px] space-y-4">
@@ -165,15 +190,15 @@ export function DailyDetailedLedger() {
         </header>
 
         <section className="grid gap-3 rounded-xl border bg-card p-4 sm:grid-cols-2 lg:grid-cols-5">
-          <Field label="Ngày sổ"><Input type="date" value={ledgerDate} onChange={(event) => setLedgerDate(event.target.value)} /></Field>
-          <Field label="Công ty"><Input value={company} onChange={(event) => setCompany(event.target.value)} placeholder="Bắt buộc" /></Field>
-          <Field label="Kho"><Input value={warehouse} onChange={(event) => setWarehouse(event.target.value)} placeholder="Tất cả" /></Field>
-          <Field label="Khách hàng"><Input value={customer} onChange={(event) => setCustomer(event.target.value)} placeholder="Tất cả" /></Field>
-          <Field label="Đơn bán"><Input value={salesOrder} onChange={(event) => setSalesOrder(event.target.value)} placeholder="Tất cả" /></Field>
+          <Field label="Ngày sổ"><Input type="date" value={ledgerDate} onChange={(event) => { setLedgerDate(event.target.value); invalidateScope(); }} /></Field>
+          <Field label="Công ty"><Input value={company} onChange={(event) => { setCompany(event.target.value); invalidateScope(); }} placeholder="Bắt buộc" /></Field>
+          <Field label="Kho"><Input value={warehouse} onChange={(event) => { setWarehouse(event.target.value); invalidateScope(); }} placeholder="Tất cả" /></Field>
+          <Field label="Khách hàng"><Input value={customer} onChange={(event) => { setCustomer(event.target.value); invalidateScope(); }} placeholder="Tất cả" /></Field>
+          <Field label="Đơn bán"><Input value={salesOrder} onChange={(event) => { setSalesOrder(event.target.value); invalidateScope(); }} placeholder="Tất cả" /></Field>
         </section>
 
         {error ? <div role="alert" className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"><ShieldAlert className="mt-0.5 size-4 shrink-0" />{error}</div> : null}
-        {reconciliation ? <div className={`flex items-center gap-2 rounded-lg border p-3 text-sm ${reconciliation.ok ? "border-emerald-300 bg-emerald-50 text-emerald-800" : "border-amber-300 bg-amber-50 text-amber-900"}`}><CheckCircle2 className="size-4" />{reconciliation.ok ? "Dữ liệu nguồn và ảnh chụp đang khớp." : `${reconciliation.mismatches.length} dòng chênh lệch; hãy cập nhật ảnh chụp mới trước khi khóa.`}</div> : null}
+        {reconciliation ? <div className={`flex items-center gap-2 rounded-lg border p-3 text-sm ${reconciliation.ok ? "border-emerald-300 bg-emerald-50 text-emerald-800" : "border-amber-300 bg-amber-50 text-amber-900"}`}><CheckCircle2 className="size-4" />{reconciliation.ok ? "Dữ liệu nguồn và đúng ảnh chụp hiện tại đang khớp. Có thể khóa sổ." : `${reconciliation.mismatches.length} dòng chênh lệch; hãy cập nhật ảnh chụp mới trước khi khóa.`}</div> : null}
 
         {busy === "generate" && rows === null ? <div className="space-y-2 rounded-xl border p-4">{Array.from({ length: 6 }, (_, index) => <Skeleton key={index} className="h-10 w-full" />)}</div> : rows === null ? (
           <div className="rounded-xl border border-dashed bg-card p-10 text-center"><FileLock2 className="mx-auto size-9 text-muted-foreground" /><h2 className="mt-3 font-medium">Chưa có ảnh chụp cho ngày này</h2><p className="mt-1 text-sm text-muted-foreground">Chọn phạm vi rồi bấm “Cập nhật sổ”.</p></div>
@@ -185,8 +210,9 @@ export function DailyDetailedLedger() {
           <div className="rounded-xl border bg-card p-4">
             <div className="flex items-center justify-between"><h2 className="font-semibold">Khóa ảnh chụp</h2><Badge variant={snapshot.frozen ? "secondary" : "outline"}>{snapshot.frozen ? "Đã khóa" : "Chưa khóa"}</Badge></div>
             <p className="mt-1 text-xs text-muted-foreground">Mã: {snapshot.snapshot_id}</p>
+            {!snapshot.frozen && !freezeReady ? <p className="mt-2 text-xs text-amber-700">Đối chiếu phải khớp đúng ảnh chụp hiện tại trước khi nút khóa được mở.</p> : null}
             <Textarea className="mt-3" value={freezeReason} onChange={(event) => setFreezeReason(event.target.value)} placeholder="Lý do khóa (khuyến nghị)" disabled={snapshot.frozen} />
-            <Button className="mt-3" variant="outline" onClick={freeze} disabled={Boolean(busy) || snapshot.frozen}><FileLock2 className="mr-2 size-4" />Khóa sổ</Button>
+            <Button className="mt-3" variant="outline" onClick={freeze} disabled={Boolean(busy) || !freezeReady}><FileLock2 className="mr-2 size-4" />Khóa sổ</Button>
           </div>
           <div className="rounded-xl border bg-card p-4">
             <h2 className="font-semibold">Điều chỉnh sau khóa</h2>
