@@ -3,7 +3,7 @@ name: Production Release Status Snapshot
 on:
   push:
     branches:
-      - hotfix/alumdoor-print-list-delete
+      - main
     paths:
       - ".github/workflows/production-release-status.yml"
       - ".github/release/production-status.trigger"
@@ -34,7 +34,7 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 workflow_id: target.file,
-                branch: 'hotfix/alumdoor-print-list-delete',
+                branch: 'main',
                 per_page: 10,
               });
               const rows = response.data.workflow_runs.slice(0, 6);

@@ -2,6 +2,8 @@
 
 Ngày cập nhật: **2026-08-01**.
 
+- PR #154 đã merge hợp đồng Meta chuẩn vào `main` tại `6c89e1a9`; lượt phát hành đầu tiên dừng an toàn trước khi đổi production vì các workflow còn trỏ nhánh hotfix đã xóa. Các trigger/dispatcher đang được chuyển đồng bộ sang nhánh mặc định `main`.
+
 ## Active — Organization, HRMS và VN Accounting
 
 - Branch: `feat/company-branch-department-hrms-accounting-20260801` từ `main`.

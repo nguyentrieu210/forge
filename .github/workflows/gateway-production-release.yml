@@ -3,7 +3,7 @@ name: Gateway Production Release
 on:
   push:
     branches:
-      - hotfix/alumdoor-print-list-delete
+      - main
     paths:
       - .github/release/gateway-production.trigger
 

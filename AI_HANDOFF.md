@@ -5,7 +5,7 @@ Ngày cập nhật: **2026-08-01**.
 ## Dự án
 
 - Repository: `nguyentrieu210/forge`.
-- Default branch: `hotfix/alumdoor-print-list-delete`.
+- Default branch: `main`.
 - Current default head trước docs handoff: `29fee0200d8118eef2d0ae9e524a3a00acfab00f`.
 - Đọc theo thứ tự: `CURRENT_STATUS.md` → `NEXT_TASKS.md` → `DELIVERY_POLICY.md`.
 - GitHub là nguồn sự thật cho code, CI, merge và release evidence.
