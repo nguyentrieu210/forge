@@ -40,15 +40,20 @@ Xây bộ mẫu in vận hành thống nhất cho Alumdoor. Mỗi mẫu lấy tr
    - Dòng cắt giữ mã nhôm, bundle lô mẹ, bundle đầu thừa, kho lô mẹ, khổ cây, rộng cắt, số lá, số nhát, kerf, kg tiêu hao/cân thật, đầu thừa và phế.
    - Dùng bundle ID thật để truy vết; chưa tạo QR cho tới khi renderer có primitive QR authoritative.
 
+5. `Biên bản bàn giao / nghiệm thu ALUMDOOR` — Delivery Note
+   - Mẫu phụ `default: false`, không thay mẫu giao hàng mặc định.
+   - 11 cột, tổng độ rộng `100%`; dữ liệu bàn giao lấy trực tiếp từ Delivery Note.
+   - Cột kết quả tại chỗ để trống cho ghi nhận thực tế; checklist nghiệm thu và kết luận là vùng ký tay, không bịa field chưa có trong schema.
+   - Có bốn khu vực ký: khách hàng, đội lắp, KCS và đại diện ALUMDOOR.
+
 ## Hàng đợi
 
-### P1 — tiền, kho và nghiệm thu
+### P1 — tiền và kho
 
-1. `Biên bản bàn giao / nghiệm thu lắp đặt`, lấy từ Delivery Note và Sales Order.
-2. Chuẩn hóa A4 `Hoá đơn bán hàng`, không thay hóa đơn điện tử theo pháp luật.
-3. `Phiếu thu / phiếu chi` từ Payment Entry.
-4. Nâng `Phiếu nhập kho ALUMDOOR` lên cùng letterhead và kiểm thử bố cục.
-5. `Phiếu trả hàng` và `Giấy báo Nợ NCC`.
+1. Chuẩn hóa A4 `Hoá đơn bán hàng`, không thay hóa đơn điện tử theo pháp luật.
+2. `Phiếu thu / phiếu chi` từ Payment Entry.
+3. Nâng `Phiếu nhập kho ALUMDOOR` lên cùng letterhead và kiểm thử bố cục.
+4. `Phiếu trả hàng` và `Giấy báo Nợ NCC`.
 
 ### P2 — tem và hậu mãi
 
