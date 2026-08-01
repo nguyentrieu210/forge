@@ -70,7 +70,7 @@ test("the same operation still cannot exceed Work Order quantity", async () => {
 
   await assert.rejects(
     () => controller.normalize(contextFor("Cắt", "1", prior)),
-    (error) => error?.code === "REFERENCE_ERROR"
+    (error) => error?.code === "REFERENCE_VALIDATION_FAILED"
       && /for Cắt exceeds Work Order quantity/.test(error.message)
       && error.details?.prior_operation_qty_micros === 10_000_000,
   );
