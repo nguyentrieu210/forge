@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Forge</title>
+  <desc id="desc">Biểu tượng Forge màu cam và than đậm</desc>
+  <rect width="512" height="512" rx="112" fill="#fff"/>
+  <path fill="#ff5a2a" d="M78 74h94l154 160-66 69-82-86v211H78V74zm100 111v94l45-47-45-47z"/>
+  <path fill="#292929" d="M187 74h247v70H255l-68-70zm72 88h175v70H326l-67-70zm91 88h84v70h-18l-66-70z"/>
+</svg>
