@@ -6,8 +6,20 @@ Ngày cập nhật: **2026-08-01**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch hiện tại: `hotfix/alumdoor-print-list-delete`.
-- Current default head trước docs handoff: `29fee0200d8118eef2d0ae9e524a3a00acfab00f`.
+- Current default head khi mở nhánh in ấn: `4d86c1fd8c191f26f3961762b281fca1ad765855`.
 - GitHub là nguồn sự thật cho code, CI, PR và release evidence.
+
+## Nhánh thiết kế in ấn — IN PROGRESS
+
+- Branch: `feat/print-design-sales-documents-20260801`.
+- Base exact SHA: `4d86c1fd8c191f26f3961762b281fca1ad765855`.
+- Mẫu đầu tiên: `Đơn bán hàng ALUMDOOR` cho `Sales Order`, A4 portrait, 13 cột, có kích thước cửa, số bộ, số lượng, đơn giá, mô tơ/phụ kiện và ghi chú lắp đặt.
+- Print format mới được tách vào `server/briefs/alumdoor-v2.prints.json`; `forge-app` ghép sidecar trước schema validation và compile.
+- Có unit test cho cơ chế sidecar và regression test qua renderer thật cho Sales Order.
+- Roadmap tiếp theo: Delivery Note/giao lắp → Production Request → Cut Order → thu/chi, nghiệm thu, tem QR và bảo hành.
+- Kiểm tra cục bộ đã chạy: Node syntax PASS, sidecar loader `3/3` PASS, JSON parse PASS, 13 độ rộng cột có tổng `100%`.
+- Full repo build/typecheck/renderer test phải lấy bằng chứng từ PR CI vì môi trường hiện tại không clone được repository qua DNS.
+- Không deploy Cloudflare, không sửa production secrets và không mutate dữ liệu tenant.
 
 ## PR tồn đọng cũ — CLOSED
 
@@ -63,7 +75,7 @@ Tài liệu `25.7 QUY TRÌNH.docx` còn yêu cầu sổ chi tiết khóa theo ng
 
 ## Release boundary
 
-- Không deploy Cloudflare trong đợt Purchase QA.
+- Không deploy Cloudflare nếu chưa có yêu cầu riêng.
 - Không sửa production secret, DNS hoặc rollout state.
 - Không migrate hoặc mutate dữ liệu tenant production.
 - Generic FIFO production vẫn disabled.
@@ -75,6 +87,7 @@ Tài liệu `25.7 QUY TRÌNH.docx` còn yêu cầu sổ chi tiết khóa theo ng
 3. Warranty / defects / capacity — `QUEUED`.
 4. End-to-end acceptance — `QUEUED`.
 5. UI MetaForge MISA-style và login/landing — `SEPARATE UI BACKLOG`.
+6. Print design — `SEPARATE SPECIALIST BRANCH`, không trộn vào Finance.
 
 ## Safety
 

@@ -4,6 +4,37 @@ Ngày cập nhật: **2026-08-01**.
 
 Mọi agent phải đọc `AI_HANDOFF.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md` và `DELIVERY_POLICY.md` trước khi tiếp tục.
 
+## Nhánh chuyên biệt — Print design
+
+Branch: `feat/print-design-sales-documents-20260801`  
+Base exact SHA: `4d86c1fd8c191f26f3961762b281fca1ad765855`
+
+### Đã làm trong đợt này
+
+- Thêm cơ chế `<brief>.prints.json` và ghép trước schema validation/compile.
+- Thêm `Đơn bán hàng ALUMDOOR` cho Sales Order.
+- Khóa bố cục A4: 13 cột, tổng độ rộng `100%`, lặp header, không cắt dòng.
+- Thêm fixture renderer cho một dòng cửa cuốn và một dòng phụ kiện thường.
+- Thêm `docs/PRINT_DESIGN_ROADMAP.md`.
+
+### Việc kế tiếp trên cùng epic
+
+1. `Phiếu giao hàng / lắp đặt` từ Delivery Note, có đơn nguồn, địa chỉ, đội giao/lắp, tài xế và biển số.
+2. `Phiếu yêu cầu sản xuất`, một dòng theo từng bộ cửa và ngày phải hoàn tất.
+3. `Phiếu cắt nhôm`, có lô mẹ, số lá, chiều rộng cắt, kerf, đầu thừa và QR nội bộ.
+4. `Biên bản bàn giao / nghiệm thu`, liên kết Sales Order và Delivery Note.
+5. Tem QR mặt hàng/lô/đầu thừa; không nhúng token hoặc URL nhạy cảm.
+6. Chuẩn hóa lại Sales Invoice, Purchase Receipt và Payment Entry theo cùng hợp đồng A4.
+
+### Gate trước merge
+
+- `npm run brief:check` PASS.
+- Focused print tests PASS.
+- `npm run build` và `npm run typecheck:web` PASS.
+- PR CI xanh trên exact head.
+- Preview/PDF thử dữ liệu dài không tràn cột.
+- Không deploy Cloudflare, không đổi secrets/DNS và không mutate production.
+
 ## Hoàn tất — Purchase authenticated QA
 
 - PR `#137` merge SHA: `29fee0200d8118eef2d0ae9e524a3a00acfab00f`.
