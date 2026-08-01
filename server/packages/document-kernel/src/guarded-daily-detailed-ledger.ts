@@ -15,7 +15,6 @@ interface DailyLedgerDelegate {
     tenantId: string,
     actor: Actor,
     input: DailyLedgerContext,
-    now?: string,
   ): Promise<DailyLedgerSnapshotResult>;
   read(tenantId: string, snapshotId: string): Promise<DailyLedgerReportRow[]>;
   reconcile(tenantId: string, input: DailyLedgerContext): Promise<DailyLedgerReconciliation>;
@@ -129,7 +128,7 @@ export class D1GuardedDailyDetailedLedgerService {
       warehouse: snapshot.warehouse,
       customer: snapshot.customer,
       sales_order: snapshot.sales_order,
-    }, now);
+    });
 
     if (
       current.snapshot_id !== normalizedSnapshotId
