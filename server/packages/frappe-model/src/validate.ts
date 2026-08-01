@@ -230,6 +230,10 @@ function parseViewPolicy(value: unknown, fields: DocFieldMeta[]): DocTypeViewPol
     const stageField = fieldRef("stageField");
     const startField = fieldRef("startField");
     const endField = fieldRef("endField");
+    const reasonRequiredOn = entry.reasonRequiredOn === undefined
+      ? undefined
+      : array(entry.reasonRequiredOn, `viewPolicy.${key}.reasonRequiredOn`).map((item, index) =>
+          text(item, `viewPolicy.${key}.reasonRequiredOn[${index}]`, 80));
     return {
       enabled: bool(entry.enabled, false),
       ...(fieldsValue ? { fields: fieldsValue } : {}),
@@ -237,6 +241,7 @@ function parseViewPolicy(value: unknown, fields: DocFieldMeta[]): DocTypeViewPol
       ...(stageField ? { stageField } : {}),
       ...(startField ? { startField } : {}),
       ...(endField ? { endField } : {}),
+      ...(reasonRequiredOn ? { reasonRequiredOn } : {}),
     };
   };
   const quickEntry = parseView("quickEntry");
