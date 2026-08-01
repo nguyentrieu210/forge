@@ -6,58 +6,136 @@ Mọi agent phải đọc `AI_HANDOFF.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md` 
 
 ## NEW EPIC — Plastic Factory ERP
 
-### Gate hiện tại: G1 Requirements
+### Gate hiện tại: G1 Requirements — enterprise scope
 
 - Branch BRD: `feat/plastic-factory-erp-brd-20260802`.
 - BRD: `docs/plastic-factory-erp/BRD.md`.
+- Enterprise scope: `docs/plastic-factory-erp/ENTERPRISE_SCOPE.md`.
+- Scope hiện bao phủ 50 domain plant-wide: organization, CRM/sales, forecast, S&OP/MPS/MRP, PLM-lite, material spec, supplier/SRM, procurement, inbound, WMS, drying/mixing, recipe/routing, machine/tooling, finite scheduling, MES-lite, process profiles, changeover, production movement, QMS/metrology/NCR, EAM/MRO, energy/EHS/sustainability, packing/shipping/recall, complaints/subcontract, costing/finance/treasury, HR operational, document control, audit/approval, BI/alerts, portals, integrations, security/DR và multi-plant foundation.
 - Không implementation sâu trên branch BRD này.
-- Cần chốt tối thiểu process profile chính của nhà máy: Injection / Extrusion / Blow / Film / Compounding / mixed.
-- Các default an toàn đã được ghi trong BRD để không phải dừng hỏi từng chi tiết.
+- G1 chưa complete cho tới khi khóa các decision ảnh hưởng process/data model.
 
-### Sau khi G1 approved — mở branch P0-A mới từ current main
+### G1 decisions cần chốt
 
-**P0-A Plastic master + recipe**
+1. Process profile: Injection / Extrusion / Blow / Film / Compounding / mixed.
+2. Production UOM: kg / pcs / m / roll / mixed.
+3. Có drying/mixing/dosing hay không.
+4. Regrind: internal / external recycler / both.
+5. Mold/die/tool depth và customer-owned tooling nếu có.
+6. QC: release gate đơn giản hay lab/SPC đầy đủ.
+7. Packing hierarchy: bag/carton/pallet/roll.
+8. Finance: operational costing trước hay full accounting cùng rollout.
+9. Single plant hay multi-plant-ready ngay từ schema.
+10. Thiết bị rollout đầu: scale, printer, scanner, PLC, energy meter.
 
-- Bổ sung plastic material profile: polymer family, grade, color, material kind, production UOM, regrind policy.
-- Tạo Machine master và Mold/Tool master với compatibility/capacity/status.
-- Mở rộng versioned BOM thành plastic Recipe theo `process_type`, tolerance, regrind max %, target cycle/scrap.
-- Giữ immutable Work Order snapshot/checksum và stock/lot identity hiện có làm canonical.
-- Server-side validation cho machine/mold compatibility, recipe tolerance và tenant/company boundary.
-- Tests/typecheck/build và exact-head CI trước merge.
+Nếu chưa có câu trả lời, schema foundation vẫn giữ extension points; không hard-code default thành invariant.
 
-**P0-B Production Run + shop-floor**
+### Sau G1 — G2 architecture/dependency decomposition
 
-- Work Order assignment machine/mold/shift.
-- Run start/pause/resume/complete.
-- Actual lot consumption, good output, scrap, regrind/by-product.
-- Concurrency/idempotency/reversal.
-- Mobile authenticated acceptance.
+Không nhảy thẳng từ BRD sang một mega-branch. Tách theo dependency, mỗi epic một branch/PR:
 
-**P0-C QC lot gate**
+**E01 Foundation + master governance**
+- Plant/workshop/work center/warehouse/bin/shift/calendar.
+- Plastic material/product specification, revision/effective-date governance.
+- Shared taxonomy: defect, downtime, scrap, root cause, disposition.
 
-- Incoming/In-process/Final inspection.
-- Release/Hold/Reject state.
-- Block consume/reservation/delivery khi lot bị Hold/Reject theo policy.
-- NCR + disposition lineage.
+**E02 Demand + S&OP/MPS/MRP**
+- Forecast/Sales Order demand.
+- MPS/MRP, BOM explosion, shortage, pegging, planned purchase/production.
 
-**P1 Capacity + operational costing**
+**E03 Supplier + procurement + inbound/QC**
+- Supplier approval, PO/receipt, supplier lot/internal lot.
+- Quarantine → incoming inspection → release/hold/reject.
 
-- Shift/calendar, machine/mold overlap, capacity/load.
-- Material actual value + recovered value + machine/labor/energy/overhead.
-- Cost per run/batch/item và variance.
+**E04 WMS + barcode/dual-UOM**
+- Zone/bin/pallet/package identities.
+- FIFO/FEFO/allocation/reservation/pick/putaway/reconcile.
+- Barcode/QR and scale/printer adapter seams.
 
-**P2 End-to-end acceptance**
+**E05 Engineering + recipe + routing**
+- Recipe/BOM revision.
+- Routing, process parameters, packaging/QC spec revision.
+- ECO/impact analysis and immutable Work Order snapshot.
 
-Purchase raw material → Incoming QC → lot release → recipe → schedule → Work Order → issue → production run → in-process QC → finished batch → final QC → stock → sales delivery → costing/traceability.
+**E06 Machine + mold/tooling + capacity**
+- Resource master/compatibility.
+- Mold/die/tool lifecycle, shots/cycles, availability.
+- Finite scheduling conflict guards.
 
-### Plastic ERP invariants
+**E07 Material preparation + changeover**
+- Drying/mixing/dosing/staging.
+- Purge/startup scrap, setup/changeover, first-piece approval.
 
-- Không tạo stock ledger/costing source thứ hai.
-- Không fork core riêng cho từng công nghệ nhựa; dùng `process_type` + domain policy.
-- Lot/batch lineage là canonical identity.
-- Submitted records append-only/reversal.
-- Resource conflict và QC gate phải enforced server-side.
+**E08 Production Run + shop-floor MES**
+- Dispatch/start/pause/resume/complete.
+- Actual lot consumption, good output, scrap/regrind/by-product.
+- Mobile authenticated acceptance, idempotency/concurrency/reversal.
+
+**E09 Process profiles**
+- Injection / Extrusion / Blow / Film / Compounding policy plugins as actually required.
+- Không fork stock/WO/costing core.
+
+**E10 QMS + NCR + CAPA + metrology**
+- Incoming/in-process/final/first-piece.
+- Hold/Reject fail-closed gates.
+- NCR, rework, CAPA/8D, calibration.
+
+**E11 Maintenance/EAM + MRO + OEE**
+- PM by calendar/runtime/shot.
+- Breakdown, spare part, downtime.
+- MTBF/MTTR/PM compliance and OEE source events.
+
+**E12 Packing + shipment + genealogy/recall**
+- Pack/carton/pallet/roll identities.
+- Label templates, pick/load verification.
+- Backward/forward trace and recall drill.
+
+**E13 Costing + finance bridge**
+- Actual material/recovery/scrap/setup/machine/labor/energy/overhead.
+- WIP/FG/COGS bridge and period close semantics.
+- Full AP/AR/GL can follow as separate finance scope if not first rollout.
+
+**E14 Document control + EHS + sustainability + energy**
+- SOP/WI/spec revisions.
+- SDS/waste/environment data.
+- Virgin/recycled/regrind mass balance.
+- Utility metering/cost hooks.
+
+**E15 Enterprise cockpit + alerts + integrations**
+- KPI definitions with source/grain/formula/drill-down.
+- Exception inbox and escalation.
+- Scanner/printer/scale/PLC/IoT adapters with idempotent integration contracts.
+
+**E16 End-to-end acceptance**
+- Order → MRP → Purchase → raw QC → prep → schedule → production → QC → packing → shipment → costing.
+- Breakdown/maintenance/OEE journey.
+- Complaint/recall journey.
+- Concurrent-device and authenticated failure-path journey.
+
+### Plastic ERP hard invariants
+
+- Một stock ledger canonical.
+- Một lot/batch genealogy canonical.
+- Một submitted-document source of truth.
+- Không fork core riêng theo công nghệ nhựa; dùng process policy.
+- Recipe/routing/spec used by released WO phải snapshot/version đúng.
+- QC gate/resource conflict/permission enforced server-side.
+- Submitted stock/cost/quality dùng reversal/adjustment, không sửa lịch sử trực tiếp.
+- Regrind phải có source lineage và valuation.
+- Lot split/merge không mất genealogy.
+- Device/PLC retry idempotent, không double stock/output.
+- KPI phải drill-down về source transaction.
 - Không deploy Cloudflare, sửa production secrets/DNS hoặc mutate customer data nếu chưa có lệnh explicit phù hợp project guardrail.
+
+### Definition of Done cho ERP nhựa toàn nhà máy
+
+- Demand/MRP/procurement/production planning chạy xuyên suốt.
+- Raw lot + QC + WMS + production genealogy đúng.
+- Shop-floor/machine/mold/changeover/regrind chạy thật.
+- QMS/NCR/CAPA và maintenance/OEE có source event thật.
+- Packing/shipment/recall forward-backward trace pass.
+- Costing reconcile inventory; finance bridge/full finance theo rollout đã chốt.
+- RBAC, tenant/company/plant, desktop/mobile, concurrency/idempotency và backup/recovery evidence pass.
 
 ## DONE — PR #175 Authenticated reservation availability lifecycle
 
