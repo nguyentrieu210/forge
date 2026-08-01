@@ -8,9 +8,23 @@ Ngày cập nhật: **2026-08-02**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `main`.
-- Exact `main` sau MetaForge Bulk View: `28eb4c4af6f88f0d1c3dc56c8f50e8d31fe2e968` — merge PR `#190`.
+- Exact `main` tại thời điểm cắt branch Plastic ERP P0-A: `e490e2ebd2e8c3cc98e004d4a7c2e394fd07812f` — merge PR `#191`.
 - PR `#182` đã đóng, không merge; PR `#190` là branch/PR canonical thay thế cho Bulk View.
 - Branch `hotfix/alumdoor-print-list-delete` cũ không còn được dùng làm current/default branch và không được coi là chỉ dẫn thực thi.
+
+## ACTIVE P0 — Plastic ERP foundation rebuild
+
+- Branch canonical hiện tại: `feat/plastic-erp-foundation-v2-20260802`.
+- Base exact `main`: `e490e2ebd2e8c3cc98e004d4a7c2e394fd07812f`.
+- Foundation code commit sau transplant sạch: `b9d5f11544a88d02c732883a2e7e4f81b44db3c6`.
+- PR `#187`/branch `feat/plastic-erp-foundation-20260802` là generation cũ đã diverged 34 commit khi kiểm tra; CI cũ fail 1/163 ở timeout `Ctrl+K` thuộc client test pipeline cũ. Không vá hoặc merge branch stale đó.
+- P0-A source hiện có `server/apps-src/plastic-erp/` với Process Profile, Material Profile, Machine, Tool/Mold, Recipe Policy, QC Specification, Capacity Calendar, Costing Profile, roles và workflow.
+- `Plastic Recipe Policy` mở rộng `Bill of Materials`; không tạo BOM cạnh tranh.
+- Máy/khuôn liên kết primitive hiện hữu (`Asset`, `Workstation`, `Operation`, `Location`) thay vì nhân đôi resource model.
+- Foundation không tạo stock ledger riêng. Production Run ở slice kế tiếp phải reconcile với `Work Order` và submitted `Stock Entry` Manufacture.
+- Có regression test `server/tests/plastic-erp-app-source.test.mjs` và `server/tests/plastic-erp-pack.test.mjs` để khóa canonical Meta v1, role/external DocType closure, child links, anti-duplication và pack/install contract.
+- Trạng thái hiện tại chưa DONE cho tới khi exact-head tests/typecheck/build và required CI PASS trên branch/PR mới.
+- Không deploy Cloudflare/production, không sửa secret/DNS và không mutate tenant/customer data.
 
 ## DONE — MetaForge Bulk View + ALUM master grids
 
@@ -98,12 +112,13 @@ Checkpoint production lịch sử gần nhất được handoff ghi nhận:
 
 ## Chưa hoàn tất toàn hệ thống
 
-1. P0 stock acceptance: PR `#189` QR/lineage end-to-end + cleanup QA đang active.
-2. MetaForge UX V2: List Workspace V2 tích hợp Bulk, Matrix View, presentation authoring/canonical transport, document context/exception, operational workspace, mobile V2 và personalization/AI context.
-3. Bulk Transaction strategy cho Stock Reconciliation/BOM và transaction-grid nhập nhôm nhiều mã chưa triển khai.
-4. P1 daily detailed ledger: snapshot, freeze, append-only adjustment, reconciliation nhiều miền.
-5. P2 warranty/defects/capacity/overtime.
-6. P3 authenticated end-to-end acceptance xuyên Sales → Production → Inventory → Delivery → Finance → Daily Ledger → Warranty.
+1. P0 Plastic ERP: foundation P0-A đang chờ exact-head gate; sau khi merge phải rebuild P0-B Production Run từ current `main`, rồi QC lot gate/MRP/costing theo roadmap.
+2. P0 stock acceptance: PR `#189` QR/lineage end-to-end + cleanup QA đang active.
+3. MetaForge UX V2: List Workspace V2 tích hợp Bulk, Matrix View, presentation authoring/canonical transport, document context/exception, operational workspace, mobile V2 và personalization/AI context.
+4. Bulk Transaction strategy cho Stock Reconciliation/BOM và transaction-grid nhập nhôm nhiều mã chưa triển khai.
+5. P1 daily detailed ledger: snapshot, freeze, append-only adjustment, reconciliation nhiều miền.
+6. P2 warranty/defects/capacity/overtime.
+7. P3 authenticated end-to-end acceptance xuyên Sales → Production → Inventory → Delivery → Finance → Daily Ledger → Warranty.
 
 ## Guardrails
 
