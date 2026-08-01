@@ -50,7 +50,7 @@ test("organization security package declares versioned scopes, policies, SoD and
     ["Approval Policy", "Delegation", "Organization Assignment", "Role Policy", "SoD Rule"],
   );
   assert.equal(parsed.workflows.length, 5);
-  assert.ok(parsed.nav.some((item) => item.route === "/security/approvals-audit"));
+  assert.ok(parsed.nav.some((item) => item.route === "/permissions?tab=approvals"));
   assert.ok(parsed.reports.some((item) => item.name === "Ma trận xung đột nhiệm vụ"));
   assert.equal(parsed.roles.some((item) => item.role === "HR Manager"), false, "dependent app must not reclaim the HRM-owned role");
 
