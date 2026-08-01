@@ -73,8 +73,8 @@ test("Query Worker routes AR aging through FinanceQueryCompiler and D1ReportServ
 
   assert.match(capture.sql, /payment_ledger_entries/);
   assert.match(capture.sql, /finance_invoice_terms/);
-  assert.match(capture.sql, /p\.tenant_id = \?1/);
-  assert.match(capture.sql, /date\(p\.posting_at\) <= date\(\?2\)/);
+  assert.match(capture.sql, /p\.tenant_id\s*=\s*\?1/);
+  assert.match(capture.sql, /date\(p\.posting_at\)\s*<=\s*date\(\?2\)/);
   assert.deepEqual(capture.params.slice(0, 3), [
     "demo",
     "2026-07-31",
