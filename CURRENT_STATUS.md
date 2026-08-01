@@ -6,7 +6,11 @@ GitHub là nguồn sự thật cho branch head, PR, CI và release evidence.
 
 ## IN PROGRESS — Plastic Factory ERP G1 Requirements
 
-- Branch: `feat/plastic-factory-erp-brd-20260802` từ current `main` head `3222beb66bd3e6b2abbab1b17a6009044a2d5358`.
+- Canonical working branch cho session này: `feat/plastic-factory-erp-brd-20260802`.
+- Branch merge-base: `3222beb66bd3e6b2abbab1b17a6009044a2d5358`.
+- Current `main` head đã xác minh qua GitHub compare: `2d0d4ab871714d84ba015afcd8e4797623bad558`; branch hiện diverged, ahead 6 / behind 12. Không merge nguyên branch trước khi sync/review conflict sau khi G1 được duyệt.
+- Current docs head sau enterprise scope update: `c83a2d3b23f67b47aba0e0d1fe76ecca77ff0c4c` trước commit status này.
+- Combined status tại docs head `c83a2d3b...`: không có status checks; thay đổi là docs-only nên test/typecheck/build chưa chạy.
 - BRD draft: `docs/plastic-factory-erp/BRD.md`.
 - Enterprise scope matrix: `docs/plastic-factory-erp/ENTERPRISE_SCOPE.md`.
 - Scope đã mở rộng từ manufacturing ERP thành plant-wide ERP: 50 domain từ commercial/demand, S&OP/MRP, PLM-lite, SRM/procurement, WMS, plastic process execution, QMS, EAM, packing/recall, costing/finance, HR operational, EHS/energy, document control, BI, integrations, security/DR và multi-plant foundation.
@@ -52,18 +56,15 @@ GitHub là nguồn sự thật cho branch head, PR, CI và release evidence.
 ## Main và production boundary
 
 - Default branch: `main`.
-- Current `main` head gồm docs evidence: `3222beb66bd3e6b2abbab1b17a6009044a2d5358`.
-- Main executable head sau PR #175: `509db8c32625168316696fb0deb3760a434aedf9`.
-- Alumdoor production vẫn chạy exact SHA `b46d322831ebe7b57e29d4363d2daa005bb56e55`.
-- Production full release run `30707135053`: PASS.
-- Protected Alumdoor Meta installer run `30707517624`: PASS.
-- Production Alumdoor Meta vẫn là `2.1.0`; source code hiện có Alumdoor metadata `2.1.1` nhưng chưa deploy.
-- G03 Organization Security có trên main nhưng chưa có production release evidence.
+- Exact current `main` head theo GitHub compare trong đợt này: `2d0d4ab871714d84ba015afcd8e4797623bad558`.
+- Main executable checkpoint sau PR #175: `509db8c32625168316696fb0deb3760a434aedf9`; phải kiểm lại nếu cần executable head mới hơn.
+- Production checkpoint trong handoff chỉ là lịch sử, không được suy ra provider hiện tại.
+- Không deploy production nếu user chưa yêu cầu rõ.
 
 ## NEXT
 
 1. **Plastic ERP G1:** review enterprise scope 50 domain và khóa process profile/dry-mix/regrind/QC/packing/finance/multi-plant/device integration decisions.
-2. **Plastic ERP G2:** tách implementation roadmap thành dependency-ordered epics; foundation phải giữ one-stock-ledger/one-genealogy/one-document-source-of-truth.
+2. **Plastic ERP G2:** sau G1, sync từ exact current `main`, resolve docs conflict, rồi tách implementation roadmap thành dependency-ordered epics; foundation phải giữ one-stock-ledger/one-genealogy/one-document-source-of-truth.
 3. **P0:** QR/lineage end-to-end và cleanup QA không residue.
 4. **P1:** daily detailed ledger: snapshot ngày, freeze, append-only adjustment, reconciliation nhiều miền.
 5. **P2:** warranty/defects/capacity theo quy trình 25.7.
