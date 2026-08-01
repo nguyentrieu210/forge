@@ -216,6 +216,10 @@ export async function slideSession(established: EstablishedSession, context: Aut
     ...(established.user.language ? { language: established.user.language } : {}),
     ...(established.user.time_zone ? { timezone: established.user.time_zone } : {}),
     now: nowSeconds,
+    // Extending an active cookie is not a new authentication ceremony. Keeping the
+    // original instant prevents a twelve-hour session from satisfying a recent-login
+    // requirement forever merely because the user kept the Desk open.
+    authenticatedAt: established.session.authenticatedAt,
   });
   return sessionCookie(minted.sid, minted.expiresAt - nowSeconds);
 }

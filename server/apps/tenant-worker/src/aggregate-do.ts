@@ -18,6 +18,7 @@ interface AggregateStub extends DurableObjectStub {
 }
 
 const PURCHASE_ALLOCATION_DOCTYPES = new Set(["Purchase Order", "Purchase Receipt"]);
+const PURCHASE_EXECUTORS = new WeakMap<object, PurchaseCommandSerialExecutor>();
 
 /**
  * One class serves several logical coordinator roles inside the existing AGGREGATES
@@ -33,26 +34,13 @@ const PURCHASE_ALLOCATION_DOCTYPES = new Set(["Purchase Order", "Purchase Receip
  * race between differently named Stock Entries consuming the same physical stock.
  */
 export class AggregateCoordinator extends DurableObject<TenantEnv> {
-  private readonly kernel: DocumentKernel;
-  private readonly store: D1RolloutPurchaseAllocationDomainStore;
-  private readonly purchaseExecutor = new PurchaseCommandSerialExecutor();
-
   constructor(ctx: DurableObjectState, env: TenantEnv) {
     super(ctx, env);
-    const metadata = new D1MetadataStore(env.DB);
-    const registry = registerErpNextCoreControllers(
-      registerStockControllers(registerErpCoreControllers(createO2CControllerRegistry())),
-    ).setFallback(new GenericMetadataController(metadata));
-    this.store = new D1RolloutPurchaseAllocationDomainStore(env.DB);
-    this.kernel = new DocumentKernel(
-      registry,
-      this.store,
-      new MetadataPermissionService(metadata, undefined, new D1DocumentAccessStore(env.DB)),
-    );
   }
 
   async mutate<T extends JsonObject>(command: MutationCommand<T>): Promise<MutationReceipt> {
-    const inventoryKey = await this.resolveInventoryKey(command);
+    const { kernel, store } = this.commandServices();
+    const inventoryKey = await this.resolveInventoryKey(command, store);
     if (inventoryKey) {
       const stub = this.env.AGGREGATES.getByName(inventoryKey) as AggregateStub;
       return stub.mutateInventory(command);
@@ -60,13 +48,13 @@ export class AggregateCoordinator extends DurableObject<TenantEnv> {
 
     if (!PURCHASE_ALLOCATION_DOCTYPES.has(command.aggregate.doctype)
       || !["submit", "cancel"].includes(command.action)) {
-      return this.kernel.execute(command);
+      return kernel.execute(command);
     }
 
     let company = textField(command.document, "company");
     let supplier = textField(command.document, "supplier");
     if (!company || !supplier) {
-      const existing = await this.store.getDocument<JsonObject>(
+      const existing = await store.getDocument<JsonObject>(
         command.tenant_id,
         command.aggregate.doctype,
         command.aggregate.name,
@@ -88,7 +76,7 @@ export class AggregateCoordinator extends DurableObject<TenantEnv> {
     if (!isInventoryCoordinatedCommand(command as MutationCommand<JsonObject>)) {
       throw errors.validation("mutateInventory accepts only Stock Entry/Work Order submit or cancel commands");
     }
-    return this.kernel.execute(command);
+    return this.commandServices().kernel.execute(command);
   }
 
   /** Called only by another instance in this Worker's AGGREGATES namespace. */
@@ -97,13 +85,44 @@ export class AggregateCoordinator extends DurableObject<TenantEnv> {
       || !["submit", "cancel"].includes(command.action)) {
       throw errors.validation("mutatePurchase accepts only submitted purchase allocation commands");
     }
-    return this.purchaseExecutor.execute(() => this.kernel.execute(command));
+    const kernel = this.commandServices().kernel;
+    let executor = PURCHASE_EXECUTORS.get(this);
+    if (!executor) {
+      executor = new PurchaseCommandSerialExecutor();
+      PURCHASE_EXECUTORS.set(this, executor);
+    }
+    return executor.execute(() => kernel.execute(command));
   }
 
-  private async resolveInventoryKey<T extends JsonObject>(command: MutationCommand<T>): Promise<string | null> {
+  /**
+   * D1 sessions are request-scoped. Initializing command services in the Durable
+   * Object constructor happens outside an RPC request and makes Workerd reject every
+   * write before the method body runs. Construct them per invocation so each session
+   * is created inside the request that owns it.
+   */
+  private commandServices(): { kernel: DocumentKernel; store: D1RolloutPurchaseAllocationDomainStore } {
+    const metadata = new D1MetadataStore(this.env.DB);
+    const registry = registerErpNextCoreControllers(
+      registerStockControllers(registerErpCoreControllers(createO2CControllerRegistry())),
+    ).setFallback(new GenericMetadataController(metadata));
+    const store = new D1RolloutPurchaseAllocationDomainStore(this.env.DB);
+    return {
+      store,
+      kernel: new DocumentKernel(
+        registry,
+        store,
+        new MetadataPermissionService(metadata, undefined, new D1DocumentAccessStore(this.env.DB)),
+      ),
+    };
+  }
+
+  private async resolveInventoryKey<T extends JsonObject>(
+    command: MutationCommand<T>,
+    store: D1RolloutPurchaseAllocationDomainStore,
+  ): Promise<string | null> {
     const direct = inventoryCoordinatorKey(command as MutationCommand<JsonObject>);
     if (direct || !isInventoryCoordinatedCommand(command as MutationCommand<JsonObject>)) return direct;
-    const existing = await this.store.getDocument<JsonObject>(
+    const existing = await store.getDocument<JsonObject>(
       command.tenant_id,
       command.aggregate.doctype,
       command.aggregate.name,

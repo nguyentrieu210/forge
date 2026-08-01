@@ -27,7 +27,9 @@ const SITE = requireEnv("SITE");
 const PORT = Number(process.env.PORT || 4190);
 const HOST = "127.0.0.1"; // loopback ONLY.
 
-const HOP = new Set(["host", "connection", "content-length", "transfer-encoding", "accept-encoding"]);
+// Node fetch transparently decompresses upstream responses. Do not forward the stale
+// Content-Encoding header or browsers will try to decompress the decoded bytes again.
+const HOP = new Set(["host", "connection", "content-length", "transfer-encoding", "accept-encoding", "content-encoding"]);
 const PROXY_PREFIXES = ["/api/method", "/api/resource"];
 const PROXY_METHODS = new Set(["GET", "HEAD", "POST", "PUT", "DELETE"]);
 

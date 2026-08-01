@@ -11,10 +11,10 @@ Luồng áp dụng: **B — tính năng lớn trên app/nền tảng có sẵn**
 | Pha 3 — thiết kế kỹ thuật | Hoàn tất | `technical/`, `field-ledgers/`, `docs/meta/doctype-meta.json`; Meta validator PASS, link/ledger/diff checks xanh. |
 | Cổng 3 — duyệt thiết kế | Đã duyệt | Chủ dự án duyệt ngày 2026-08-01; PR #153 squash-merge vào `main`, commit `d4e89691`. |
 | Pha 4 — chuẩn bị nhánh build | Hoàn tất | Nhánh `feat/erp-platform-wave1-g03-20260801`; baseline `pnpm.cmd run verify` PASS. |
-| Cổng 4 — duyệt nhánh build | Chờ duyệt | Scorecard kỹ thuật xanh; chưa viết code tính năng. |
-| Pha 5 — build | Chưa bắt đầu | Thứ tự G03 → G01 → G02 → G11. |
-| Pha 6 — verify/QA | Chưa bắt đầu | Verify, test quyền trực tiếp API, cách ly khách, kế toán oracle, UI đa kích thước. |
-| Pha 7 — PR/release/deploy | Chưa bắt đầu | PR → CI → merge → backup → canary → Cloudflare production → smoke. |
+| Cổng 4 — duyệt nhánh build | Đã duyệt | Chủ dự án duyệt triển khai và tiếp tục ngày 2026-08-01. |
+| Pha 5 — build | Đang thực hiện | G03 đã hoàn thành; thứ tự tiếp theo G01 → G02 → G11. |
+| Pha 6 — verify/QA | Đang thực hiện | G03 đã qua verify tổng, test quyền/SoD/delegation/audit và QA giao diện desktop/mobile; kế toán oracle thuộc G01. |
+| Pha 7 — PR/release/deploy | Đang thực hiện | G03 đang ở bước PR/merge; Cloudflare production chỉ thực hiện sau G01, G02 và G11, kèm backup/canary/smoke. |
 
 ## Checklist luồng B
 
@@ -31,5 +31,8 @@ Luồng áp dụng: **B — tính năng lớn trên app/nền tảng có sẵn**
 - [x] Scorecard Cổng 3 toàn xanh và user duyệt; PR thiết kế đã merge.
 - [x] Mở nhánh build G03 từ `origin/main` sau Cổng 3.
 - [x] Chạy baseline verify trên nhánh build: PASS; chỉ có cảnh báo tooling không chặn.
-- [ ] Build theo Field Ledger + Meta, không tự thêm field ngoài thiết kế.
-- [ ] Verify đầy đủ trước PR/release; không deploy khi gate đỏ.
+- [x] G03 build theo Field Ledger + Meta: organization scope, role policy, SoD, approval, delegation và audit.
+- [x] G03 verify tổng: 781/781 server, 138/138 tenant Worker, 3/3 query Worker; typecheck và toàn bộ client build PASS.
+- [x] G03 QA giao diện desktop/mobile cho trung tâm quyền, hộp duyệt và nhật ký kiểm toán.
+- [ ] G01, G02 và G11 hoàn tất theo Field Ledger + Meta.
+- [ ] Verify Wave 1 đầy đủ trước release; không deploy production khi gate đỏ.

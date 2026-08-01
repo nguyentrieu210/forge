@@ -1,0 +1,16 @@
+{
+  "name": "Hiệu lực phạm vi tổ chức",
+  "document_type": "Organization Assignment",
+  "state_field": "workflow_state",
+  "is_active": true,
+  "states": [
+    { "state": "Draft", "docstatus": 0, "allow_edit": "System Manager" },
+    { "state": "Published", "docstatus": 1, "allow_edit": "System Manager" },
+    { "state": "Retired", "docstatus": 2, "allow_edit": "System Manager" }
+  ],
+  "transitions": [
+    { "state": "Draft", "action": "Công bố", "next_state": "Published", "allowed_role": "System Manager" },
+    { "state": "Published", "action": "Kết thúc hiệu lực", "next_state": "Retired", "allowed_role": "System Manager" }
+  ],
+  "revision": 1
+}

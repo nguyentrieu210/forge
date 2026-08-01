@@ -538,6 +538,9 @@ export class D1MutationStore implements MutationStore {
        UNION ALL
        SELECT 1 AS found FROM documents WHERE tenant_id=?1 AND doctype=?2 AND name=?3
          AND docstatus<>2 AND COALESCE(CAST(json_extract(payload_json,'$.disabled') AS INTEGER),0)=0
+       UNION ALL SELECT 1 AS found FROM roles WHERE ?2='Role' AND tenant_id=?1 AND role=?3 AND disabled=0
+       UNION ALL SELECT 1 AS found FROM users WHERE ?2='User' AND tenant_id=?1 AND user_id=?3 AND enabled=1
+       UNION ALL SELECT 1 AS found FROM doctype_definitions WHERE ?2='DocType' AND tenant_id=?1 AND doctype=?3 AND disabled=0
        LIMIT 1`,
     ).bind(tenantId, recordType, name).first<{ found: number }>();
     return Boolean(row);
@@ -578,6 +581,15 @@ export class D1MutationStore implements MutationStore {
            UNION ALL
            SELECT name, data_json, 1 AS source_rank FROM master_records
              WHERE tenant_id=?1 AND record_type=?2 AND disabled=0
+           UNION ALL
+           SELECT role AS name,json_object('role',role,'label',role) AS data_json,0 AS source_rank
+             FROM roles WHERE ?2='Role' AND tenant_id=?1 AND disabled=0
+           UNION ALL
+           SELECT user_id AS name,json_object('user_id',user_id,'full_name',full_name,'email',email) AS data_json,0 AS source_rank
+             FROM users WHERE ?2='User' AND tenant_id=?1 AND enabled=1
+           UNION ALL
+           SELECT doctype AS name,metadata_json AS data_json,0 AS source_rank
+             FROM doctype_definitions WHERE ?2='DocType' AND tenant_id=?1 AND disabled=0
          )
        ) WHERE row_rank=1 ORDER BY name LIMIT ?3`,
     ).bind(tenantId, recordType, bounded).all<{ name: string; data_json: string }>();
@@ -602,6 +614,12 @@ export class D1MutationStore implements MutationStore {
        UNION ALL
        SELECT payload_json AS data_json FROM documents WHERE tenant_id=?1 AND doctype=?2 AND name=?3
          AND docstatus<>2 AND COALESCE(CAST(json_extract(payload_json,'$.disabled') AS INTEGER),0)=0
+       UNION ALL SELECT json_object('role',role,'label',role) AS data_json FROM roles
+         WHERE ?2='Role' AND tenant_id=?1 AND role=?3 AND disabled=0
+       UNION ALL SELECT json_object('user_id',user_id,'full_name',full_name,'email',email) AS data_json FROM users
+         WHERE ?2='User' AND tenant_id=?1 AND user_id=?3 AND enabled=1
+       UNION ALL SELECT metadata_json AS data_json FROM doctype_definitions
+         WHERE ?2='DocType' AND tenant_id=?1 AND doctype=?3 AND disabled=0
        LIMIT 1`,
     ).bind(tenantId, recordType, name).first<{ data_json: string }>();
     if (!row) return null;
@@ -619,7 +637,13 @@ export class D1MutationStore implements MutationStore {
       `SELECT name,data_json FROM master_records WHERE tenant_id=?1 AND record_type=?2 AND disabled=0
        UNION ALL
        SELECT name,payload_json AS data_json FROM documents WHERE tenant_id=?1 AND doctype=?2 AND docstatus<>2
-        AND COALESCE(CAST(json_extract(payload_json,'$.disabled') AS INTEGER),0)=0`,
+        AND COALESCE(CAST(json_extract(payload_json,'$.disabled') AS INTEGER),0)=0
+       UNION ALL SELECT role AS name,json_object('role',role,'label',role) AS data_json FROM roles
+         WHERE ?2='Role' AND tenant_id=?1 AND disabled=0
+       UNION ALL SELECT user_id AS name,json_object('user_id',user_id,'full_name',full_name,'email',email) AS data_json FROM users
+         WHERE ?2='User' AND tenant_id=?1 AND enabled=1
+       UNION ALL SELECT doctype AS name,metadata_json AS data_json FROM doctype_definitions
+         WHERE ?2='DocType' AND tenant_id=?1 AND disabled=0`,
     ).bind(tenantId,recordType).all<{name:string;data_json:string}>();
     const result=new Map<string,JsonObject>();
     for(const row of rows.results??[]){try{const parsed=JSON.parse(row.data_json) as unknown;result.set(row.name,parsed&&typeof parsed==="object"&&!Array.isArray(parsed)?parsed as JsonObject:{});}catch{throw errors.database("Master record data is invalid JSON");}}

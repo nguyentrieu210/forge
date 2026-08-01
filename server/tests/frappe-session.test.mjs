@@ -107,12 +107,14 @@ test("passwords that cannot be hashed meaningfully are refused at the boundary",
 // ---- session tokens ---------------------------------------------------------
 
 test("a minted session verifies and carries its user, roles and csrf nonce", async () => {
-  const minted = await mintSession({ tenantId: TENANT, userId: "u@example.com", roles: ["Sales User"], epoch: 3, secret: SECRET });
-  const session = await verifySession(minted.sid, TENANT, SECRET);
+  const now = Math.floor(Date.now() / 1000);
+  const minted = await mintSession({ tenantId: TENANT, userId: "u@example.com", roles: ["Sales User"], epoch: 3, secret: SECRET, now });
+  const session = await verifySession(minted.sid, TENANT, SECRET, now);
   assert.equal(session.actor.user_id, "u@example.com");
   assert.deepEqual(session.actor.roles, ["Sales User"]);
   assert.equal(session.epoch, 3);
   assert.equal(session.csrfToken, minted.csrfToken);
+  assert.equal(session.authenticatedAt, now);
 });
 
 test("a tampered payload or signature is rejected", async () => {
@@ -365,4 +367,7 @@ test("the cookie slides only near expiry, so an active user is not re-cookied on
   const slid = await slideSession({ session: nearSession, user: { ...user, roles: user.roles }, actor: {} }, context, now);
   assert.match(slid, /^sid=/);
   assert.match(slid, /HttpOnly/);
+  const refreshedSid = decodeURIComponent(slid.match(/^sid=([^;]+)/)[1]);
+  const refreshed = await verifySession(refreshedSid, TENANT, SECRET, now);
+  assert.equal(refreshed.authenticatedAt, nearSession.authenticatedAt);
 });

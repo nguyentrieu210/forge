@@ -17,6 +17,8 @@ import { buildPrintPath } from "../print/printRoute.js";
 
 export interface DoctypeWorkspaceProps {
   doctype: string;
+  /** Optional localized screen title when a route represents a richer business center. */
+  title?: string;
   name?: string;
   onNavigate: (path: string) => void;
   bridge: UrlStateBridge;
@@ -32,6 +34,7 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
   const { doctype, name, onNavigate, bridge } = props;
   const base = props.base ?? "/app";
   const printBase = props.printBase ?? "/print";
+  const displayTitle = props.title ?? titleMeta.data?.label ?? doctype;
   const listPath = `${base}/${doctype}`;
   const isNew = name === "new";
   const decoded = name && !isNew ? decodeURIComponent(name) : undefined;
@@ -47,7 +50,7 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
         list={isTree ? (
           <TreeContainer
             doctype={doctype}
-            title={titleMeta.data?.label ?? doctype}
+            title={displayTitle}
             selected={decoded}
             editable
             renameField={titleMeta.data?.title_field}
@@ -79,7 +82,7 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
           />
         ) : isTree ? (
           <div className="grid h-full place-items-center bg-card px-6 text-center text-sm text-muted-foreground">
-            {t("common.choose_prefix")} {(titleMeta.data?.label ?? doctype).toLocaleLowerCase("vi")}
+            {t("common.choose_prefix")} {displayTitle.toLocaleLowerCase("vi")}
           </div>
         ) : null}
         context={decoded ? (
@@ -109,7 +112,7 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
           onEscapeKeyDown={(event) => { event.preventDefault(); setCloseRequest((value) => value + 1); }}
         >
           <DialogHeader className="shrink-0 border-b px-5 py-3">
-            <DialogTitle>{t("form.create_title_prefix")} {(titleMeta.data?.label ?? doctype).toLocaleLowerCase("vi")}</DialogTitle>
+            <DialogTitle>{t("form.create_title_prefix")} {displayTitle.toLocaleLowerCase("vi")}</DialogTitle>
           </DialogHeader>
           <div className="min-h-0 flex-1 overflow-hidden">
             <NewFormContainer

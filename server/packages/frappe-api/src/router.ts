@@ -12,7 +12,7 @@
  */
 
 import type { Actor, CanonicalDocument, JsonObject, JsonValue, MutationAction, MutationCommand, MutationReceipt } from "../../contracts/src/index.js";
-import { errors } from "../../core/src/index.js";
+import { errors, sha256Hex } from "../../core/src/index.js";
 import type { D1MutationStore, DocumentListService, ListFilter } from "../../document-kernel/src/index.js";
 import type {
   D1CollaborationService, DocTypeMeta, DocumentAccessStore, ExtendedPermissionAction,
@@ -100,8 +100,22 @@ export interface FrappeRouterContext {
   appReports: AppReportService;
   /** Kanban boards and the notification log — per-user Desk state. */
   deskViews: D1DeskViewStore;
+  /** G03 organization, delegation, SoD and immutable audit query authority. */
+  organizationSecurity?: {
+    canActThroughDelegation(
+      tenantId: string, actor: Actor, transitionRole: string, doctype: string,
+      action: string, document: JsonObject, expectedGrantor?: string,
+    ): Promise<{ allowed: boolean; delegation?: string; grantor?: string }>;
+    listAuditEvents(tenantId: string, actor: Actor, input?: {
+      entity_type?: string; entity_name?: string; actor?: string; action?: string;
+      from?: string; to?: string; cursor?: string; limit?: number;
+    }): Promise<{ events: JsonObject[]; next_cursor: string | null }>;
+    checkSoD(tenantId: string, actor: Actor, doctype: string, name: string, action: string): Promise<JsonObject>;
+  };
   /** CSRF nonce of the current session, for the boot payload. */
   csrfToken: string;
+  /** Epoch seconds of the last password login; absent for app callbacks and dev actors. */
+  authenticatedAt?: number;
   fullName: string;
   language: string;
   /**
@@ -960,7 +974,20 @@ async function dispatchMethod(
       );
 
     case "metaforge.api.explain_permission":
+    case "erp_platform.api.simulate_effective_permissions":
       return methodResponse(await explainPermission(args, context));
+
+    case "erp_platform.api.check_sod":
+      return methodResponse(await checkSoD(args, context));
+
+    case "erp_platform.api.get_approval_inbox":
+      return methodResponse(await approvalInbox(args, context));
+
+    case "erp_platform.api.get_audit_events":
+      return methodResponse(await auditEvents(args, context));
+
+    case "erp_platform.api.export_audit_evidence":
+      return methodResponse(await exportAuditEvidence(args, context));
 
     case "metaforge.api.add_user_permission":
       return methodResponse(await addUserPermission(args, context));
@@ -1162,8 +1189,8 @@ async function getDocType(args: FrappeArgs, context: FrappeRouterContext): Promi
   const doctype = args.requireText("doctype", 160);
   const full = await requireMeta(doctype, context);
   const scope = await context.permissions.getReadScope(context.actor, context.tenantId, doctype);
-  const filtered = context.permissions.filterMetaForActor(
-    full, context.actor, context.actor.user_id,
+  const filtered = await context.permissions.filterMetaForActorWithPolicies(
+    context.tenantId, full, context.actor, context.actor.user_id,
     scope.mode === "shared" || scope.mode === "owner_or_shared",
     { action: "create" },
   );
@@ -1539,12 +1566,30 @@ async function applyWorkflow(args: FrappeArgs, context: FrappeRouterContext): Pr
   const workflow = await context.metadata.getWorkflow(context.tenantId, doctype);
   if (!workflow) throw errors.validation(`${doctype} has no active workflow`);
   const state = String(current.data[workflow.state_field] ?? workflow.states[0]?.state ?? "");
-  const transition = workflow.transitions.find((entry) => entry.state === state && entry.action === action
-    && (context.actor.roles.includes(entry.allowed_role) || isPlatformAdmin(context)));
+  let transition: typeof workflow.transitions[number] | undefined;
+  let delegation: { allowed: boolean; delegation?: string; grantor?: string } | undefined;
+  for (const entry of workflow.transitions.filter((candidate) => candidate.state === state && candidate.action === action)) {
+    const next = workflow.states.find((candidate) => candidate.state === entry.next_state);
+    const delegationAction = next && next.docstatus > current.docstatus ? "submit" : entry.action;
+    const decision = await workflowTransitionAccess(context, entry.allowed_role, doctype, delegationAction, current.data);
+    if (decision.allowed) { transition = entry; delegation = decision; break; }
+  }
   if (!transition) throw errors.permission(`Workflow action ${action} is not permitted from ${state}`);
 
   const target = workflow.states.find((entry) => entry.state === transition.next_state);
   if (!target) throw errors.validation("Workflow target state is invalid");
+
+  // Publishing a policy changes what other people may see or approve. A CSRF-valid
+  // twelve-hour-old browser session is not sufficient for that boundary: require a
+  // password login in the last fifteen minutes. App callbacks and development actors
+  // deliberately have no authentication instant and therefore cannot publish policy.
+  if (target.docstatus === 1 && new Set(["Organization Assignment", "Role Policy", "SoD Rule", "Approval Policy", "Delegation"]).has(doctype)) {
+    const authenticatedAt = context.authenticatedAt ?? 0;
+    const age = Math.floor(Date.now() / 1000) - authenticatedAt;
+    if (authenticatedAt <= 0 || age < -60 || age > 15 * 60) {
+      throw errors.authentication("Please sign in again before publishing an organization security policy");
+    }
+  }
 
   // Self-approval, by the SAME rule the kernel enforces and the listing offers.
   //
@@ -1560,12 +1605,24 @@ async function applyWorkflow(args: FrappeArgs, context: FrappeRouterContext): Pr
   const lifecycle: MutationAction = target.docstatus === 2 ? "cancel"
     : target.docstatus === 1 && current.docstatus === 0 ? "submit" : "save";
 
+  // The metadata controller independently re-validates the workflow role inside the
+  // Durable Object. A delegation accepted only by this router would otherwise be
+  // offered in the inbox and then rejected during commit. Add exactly the transition
+  // role to this one command; document write access and organization scope were already
+  // checked for the delegate, and the persisted actor remains the delegate's user id.
+  const commandActor = delegation?.delegation && !context.actor.roles.includes(transition.allowed_role)
+    ? { ...context.actor, roles: [...context.actor.roles, transition.allowed_role] }
+    : context.actor;
+
   await context.runCommand(await buildCommand({
-    tenantId: context.tenantId, actor: context.actor, doctype, name,
+    tenantId: context.tenantId, actor: commandActor, doctype, name,
     action: lifecycle, expectedVersion: current.version,
     document: { ...current.data, [workflow.state_field]: transition.next_state, workflow_state: transition.next_state },
   }));
-  return toFrappeDoc(await loadReadable(doctype, name, context));
+  return {
+    ...toFrappeDoc(await loadReadable(doctype, name, context)),
+    ...(delegation?.delegation ? { _delegation: delegation.delegation, _delegated_by: delegation.grantor ?? null } : {}),
+  };
 }
 
 async function workflowTransitions(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
@@ -1586,20 +1643,36 @@ async function workflowTransitions(args: FrappeArgs, context: FrappeRouterContex
   const docstatusOf = (stateName: string): number =>
     Number(workflow.states.find((entry) => entry.state === stateName)?.docstatus ?? currentDocstatus);
 
-  const transitions = workflow.transitions
-    .filter((entry) => entry.state === state && (context.actor.roles.includes(entry.allowed_role) || isPlatformAdmin(context)))
-    // An action the actor could not complete is omitted rather than offered and then
-    // refused on click. This MUST use the same rule the write path enforces: it used to
-    // exempt a platform admin and ignore the docstatus condition, so the server offered
-    // "Duyệt" and then answered the tap with 403 "Self approval is not allowed".
-    .filter((entry) => !blocksSelfApproval(entry, document.owner, context.actor.user_id, currentDocstatus, docstatusOf(entry.next_state)))
-    .map((entry) => ({
+  const transitions: JsonObject[] = [];
+  for (const entry of workflow.transitions.filter((candidate) => candidate.state === state)) {
+    const targetDocstatus = docstatusOf(entry.next_state);
+    if (blocksSelfApproval(entry, document.owner, context.actor.user_id, currentDocstatus, targetDocstatus)) continue;
+    const delegationAction = targetDocstatus > currentDocstatus ? "submit" : entry.action;
+    const decision = await workflowTransitionAccess(context, entry.allowed_role, doctype, delegationAction, document.data);
+    if (!decision.allowed) continue;
+    transitions.push({
       action: entry.action,
       next_state: entry.next_state,
       allowed: entry.allowed_role,
       allow_self_approval: entry.allow_self_approval ? 1 : 0,
-    }));
+      ...(decision.delegation ? { delegation: decision.delegation, delegated_by: decision.grantor ?? null } : {}),
+    });
+  }
   return { has_workflow: true, state, transitions };
+}
+
+async function workflowTransitionAccess(
+  context: FrappeRouterContext,
+  role: string,
+  doctype: string,
+  action: string,
+  document: JsonObject,
+): Promise<{ allowed: boolean; delegation?: string; grantor?: string }> {
+  if (context.actor.roles.includes(role) || isPlatformAdmin(context)) return { allowed: true };
+  if (!context.organizationSecurity) return { allowed: false };
+  return context.organizationSecurity.canActThroughDelegation(
+    context.tenantId, context.actor, role, doctype, action, document,
+  );
 }
 
 /** Workflow action plus a comment, as one call so the comment cannot be orphaned. */
@@ -1613,6 +1686,65 @@ async function workflowActionWithComment(args: FrappeArgs, context: FrappeRouter
     );
   }
   return document;
+}
+
+async function approvalInbox(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const requestedDoctype = args.text("doctype");
+  const search = (args.text("search") ?? "").toLocaleLowerCase("vi");
+  const limit = Math.min(Math.max(args.int("limit", 50), 1), 200);
+  const items: JsonObject[] = [];
+  for (const doctype of await context.metadata.listWorkflowDocTypes(context.tenantId)) {
+    if (requestedDoctype && doctype !== requestedDoctype) continue;
+    const meta = await context.metadata.getDocType(context.tenantId, doctype);
+    if (!meta || meta.is_child) continue;
+    const workflow = await context.metadata.getWorkflow(context.tenantId, doctype);
+    if (!workflow) continue;
+    for (const document of await context.documents.listDocumentsByDoctype<JsonObject>(context.tenantId, meta.name)) {
+      if (document.docstatus === 2) continue;
+      const state = String(document.data[workflow.state_field] ?? workflow.states[0]?.state ?? "");
+      const candidates = workflow.transitions.filter((transition) => transition.state === state);
+      if (!candidates.length) continue;
+      try {
+        await context.permissions.assert({
+          actor: context.actor, tenantId: context.tenantId, doctype: meta.name, name: document.name,
+          owner: document.owner, data: document.data, action: "save",
+        });
+      } catch { continue; }
+
+      const actions: JsonObject[] = [];
+      for (const transition of candidates) {
+        const target = workflow.states.find((candidate) => candidate.state === transition.next_state);
+        const targetDocstatus = Number(target?.docstatus ?? document.docstatus);
+        if (blocksSelfApproval(transition, document.owner, context.actor.user_id, document.docstatus, targetDocstatus)) continue;
+        const delegationAction = targetDocstatus > document.docstatus ? "submit" : transition.action;
+        const decision = await workflowTransitionAccess(context, transition.allowed_role, meta.name, delegationAction, document.data);
+        if (!decision.allowed) continue;
+        actions.push({
+          action: transition.action,
+          next_state: transition.next_state,
+          role: transition.allowed_role,
+          ...(decision.delegation ? { delegation: decision.delegation, delegated_by: decision.grantor ?? null } : {}),
+        });
+      }
+      if (!actions.length) continue;
+      const titleValue = meta.title_field ? document.data[meta.title_field] : undefined;
+      const title = typeof titleValue === "string" && titleValue.trim() ? titleValue.trim() : document.name;
+      if (search && !`${meta.name} ${document.name} ${title} ${state}`.toLocaleLowerCase("vi").includes(search)) continue;
+      items.push({
+        doctype: meta.name,
+        name: document.name,
+        title,
+        owner: document.owner,
+        state,
+        docstatus: document.docstatus,
+        version: document.version,
+        modified_at: document.modified_at,
+        actions,
+      });
+    }
+  }
+  items.sort((left, right) => String(right.modified_at).localeCompare(String(left.modified_at)) || String(left.name).localeCompare(String(right.name)));
+  return { items: items.slice(0, limit), total: items.length, limit };
 }
 
 // ---- sharing and assignment -------------------------------------------------
@@ -1819,6 +1951,17 @@ async function explainPermission(args: FrappeArgs, context: FrappeRouterContext)
     document,
     permissions: context.permissions,
   });
+  const policyTrace = context.access.listRolePolicies
+    ? await context.access.listRolePolicies(context.tenantId, actor.roles, doctype)
+    : [];
+  for (const policy of policyTrace) {
+    evaluation.trace.push({
+      source: "role_policy",
+      effect: "info",
+      label: `Chính sách ${policy.name}`,
+      detail: `Vai trò ${policy.role}; hành động ${policy.actions.join(", ") || "không có"}; policy chỉ được phép thu hẹp DocPerm nền.`,
+    });
+  }
   return {
     user: actor.user_id,
     doctype,
@@ -1833,6 +1976,72 @@ async function explainPermission(args: FrappeArgs, context: FrappeRouterContext)
     capabilities: evaluation.capabilities,
     trace: evaluation.trace as unknown as JsonValue,
   };
+}
+
+async function checkSoD(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  if (!context.organizationSecurity) throw errors.misconfigured("Organization Security service is not configured");
+  const actor = await resolveAccessInspectionActor({
+    ...(args.text("user") ? { requestedUser: args.text("user")! } : {}),
+    caller: context.actor,
+    tenantId: context.tenantId,
+    users: context.users,
+  });
+  const doctype = args.requireText("doctype", 160);
+  const name = args.requireText("name", 320);
+  const action = args.requireText("action", 160);
+  const document = await context.documents.getDocument(context.tenantId, doctype, name);
+  if (!document) throw errors.notFound();
+  await context.permissions.assert({
+    actor, tenantId: context.tenantId, doctype, name,
+    owner: document.owner, data: document.data, action: "read",
+  });
+  return context.organizationSecurity.checkSoD(context.tenantId, actor, doctype, name, action);
+}
+
+async function auditEvents(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  if (!context.organizationSecurity) throw errors.misconfigured("Organization Security service is not configured");
+  return context.organizationSecurity.listAuditEvents(context.tenantId, context.actor, {
+    ...(args.text("entity_type") ? { entity_type: args.text("entity_type")! } : {}),
+    ...(args.text("entity_name") ? { entity_name: args.text("entity_name")! } : {}),
+    ...(args.text("actor") ? { actor: args.text("actor")! } : {}),
+    ...(args.text("action") ? { action: args.text("action")! } : {}),
+    ...(args.text("from") ? { from: args.text("from")! } : {}),
+    ...(args.text("to") ? { to: args.text("to")! } : {}),
+    ...(args.text("cursor") ? { cursor: args.text("cursor")! } : {}),
+    limit: args.int("limit", 50),
+  });
+}
+
+async function exportAuditEvidence(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const reason = args.requireText("reason", 500);
+  if (!context.organizationSecurity) throw errors.misconfigured("Organization Security service is not configured");
+  const result = await context.organizationSecurity.listAuditEvents(context.tenantId, context.actor, {
+    ...(args.text("entity_type") ? { entity_type: args.text("entity_type")! } : {}),
+    ...(args.text("entity_name") ? { entity_name: args.text("entity_name")! } : {}),
+    ...(args.text("actor") ? { actor: args.text("actor")! } : {}),
+    ...(args.text("action") ? { action: args.text("action")! } : {}),
+    ...(args.text("from") ? { from: args.text("from")! } : {}),
+    ...(args.text("to") ? { to: args.text("to")! } : {}),
+    limit: Math.min(Math.max(args.int("limit", 1000), 1), 1000),
+  });
+  const events = Array.isArray(result.events) ? result.events.filter((value): value is JsonObject => Boolean(value && typeof value === "object" && !Array.isArray(value))) : [];
+  const columns = ["event_id", "correlation_id", "actor", "action", "entity_type", "entity_name", "occurred_at", "source"];
+  const csv = [columns.join(","), ...events.map((event) => columns.map((column) => csvCell(event[column])).join(","))].join("\r\n");
+  const checksum = await sha256Hex(csv);
+  return {
+    file_name: `audit-evidence-${context.now().slice(0, 10)}.csv`,
+    content_type: "text/csv; charset=utf-8",
+    content: `\uFEFF${csv}`,
+    checksum_sha256: checksum,
+    row_count: events.length,
+    reason,
+    generated_at: context.now(),
+  };
+}
+
+function csvCell(value: JsonValue | undefined): string {
+  const text = value == null ? "" : typeof value === "string" ? value : JSON.stringify(value);
+  return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 }
 
 async function addUserPermission(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
@@ -2117,7 +2326,7 @@ async function printView(args: FrappeArgs, context: FrappeRouterContext): Promis
 
   const meta = await requireMeta(doctype, context);
   const share = await context.access.getShare(context.tenantId, doctype, name, context.actor.user_id);
-  const printable = context.permissions.redactDocument(meta, document, context.actor, Boolean(share?.read));
+  const printable = await context.permissions.redactDocumentWithPolicies(context.tenantId, meta, document, context.actor, Boolean(share?.read));
   const format = await context.metadata.getPrintFormat(context.tenantId, doctype, args.text("format"));
   if (!format) throw errors.notFound("No print format is configured for this doctype");
 
@@ -3725,7 +3934,7 @@ async function loadReadable(doctype: string, name: string, context: FrappeRouter
   const meta = await context.metadata.getDocType(context.tenantId, doctype);
   if (!meta) return document;
   const share = await context.access.getShare(context.tenantId, doctype, name, context.actor.user_id);
-  return context.permissions.redactDocument(meta, document, context.actor, Boolean(share?.read));
+  return context.permissions.redactDocumentWithPolicies(context.tenantId, meta, document, context.actor, Boolean(share?.read));
 }
 
 /** Loads a document the actor may write. A refusal here is reported as a refusal. */

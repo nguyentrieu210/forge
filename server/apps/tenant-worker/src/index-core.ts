@@ -32,6 +32,7 @@ import { AppReportService, D1ReportService } from "../../../packages/query/src/i
 import { ingestFacebookMessage, storeFacebookOAuthPages, type FacebookOAuthPage } from "../../../packages/social-commerce/src/tenant-handler.js";
 import type { SocialQueueMessage } from "../../../packages/social-commerce/src/index.js";
 import { routeSocialCommerceApi } from "../../../packages/social-commerce/src/api.js";
+import { D1OrganizationSecurityGuard } from "../../../packages/organization-security/src/index.js";
 import type { TenantEnv } from "./env.js";
 
 export { AggregateCoordinator };
@@ -207,6 +208,7 @@ export default {
       const access = new D1DocumentAccessStore(env.DB);
       const permissions = new MetadataPermissionService(metadata, undefined, access);
       const documentStore = new D1MutationStore(env.DB);
+      const organizationSecurity = new D1OrganizationSecurityGuard(env.DB, metadata);
 
       if (request.method === "POST" && url.pathname === "/api/v1/social/facebook/oauth/start") {
         requireSystemManager(actor);
@@ -225,6 +227,7 @@ export default {
         const input = parseMutationCommandInput(raw);
         if (input.tenant_id !== tenantId) throw errors.authentication("Command tenant does not match authenticated tenant");
         const command: MutationCommand = { ...input, actor };
+        await organizationSecurity.assertMutation(tenantId, actor, command);
         const key = `${tenantId}:${command.aggregate.doctype}:${command.aggregate.name}`;
         const stub = env.AGGREGATES.getByName(key) as AggregateStub;
         const result = typeof stub.mutate === "function" ? await stub.mutate(command) : await callDoFetch(stub, command);
@@ -277,10 +280,10 @@ export default {
         if (requestedName) {
           const current = await loadAuthorizedDocument(documentStore, permissions, actor, tenantId, doctype, requestedName, "read", true);
           const share = await access.getShare(tenantId, doctype, requestedName, actor.user_id);
-          filtered = permissions.filterMetaForActor(meta, actor, current.owner, Boolean(share?.read), { action: "save", sharedWrite: Boolean(share?.write) });
+          filtered = await permissions.filterMetaForActorWithPolicies(tenantId, meta, actor, current.owner, Boolean(share?.read), { action: "save", sharedWrite: Boolean(share?.write) });
         } else {
           const scope = await permissions.getReadScope(actor, tenantId, doctype);
-          filtered = permissions.filterMetaForActor(meta, actor, actor.user_id, scope.mode === "shared" || scope.mode === "owner_or_shared", { action: "create" });
+          filtered = await permissions.filterMetaForActorWithPolicies(tenantId, meta, actor, actor.user_id, scope.mode === "shared" || scope.mode === "owner_or_shared", { action: "create" });
         }
         const workflow = await metadata.getWorkflow(tenantId, doctype);
         return jsonResponse({ meta: filtered, workflow }, 200, { "x-cloudforge-trace-id": traceId, etag: `W/"meta-${meta.revision}"` });
@@ -412,7 +415,7 @@ export default {
         await loadAuthorizedDocument(documentStore, permissions, actor, tenantId, doctype, name, "read", true);
         const snapshot = await new D1CollaborationService(env.DB).getVersion(tenantId, doctype, name, version); if (!snapshot) throw errors.notFound("Version not found");
         const meta = await metadata.getDocType(tenantId, doctype); const share = await access.getShare(tenantId, doctype, name, actor.user_id);
-        return jsonResponse(meta ? permissions.redactDocument(meta, snapshot, actor, Boolean(share?.read)) : snapshot);
+        return jsonResponse(meta ? await permissions.redactDocumentWithPolicies(tenantId, meta, snapshot, actor, Boolean(share?.read)) : snapshot);
       }
 
       const timelineMatch = url.pathname.match(/^\/api\/v1\/documents\/([^/]+)\/([^/]+)\/timeline$/);
@@ -477,7 +480,7 @@ export default {
         const document = await loadAuthorizedDocument(documentStore, permissions, actor, tenantId, doctype, name, "print");
         const meta = await metadata.getDocType(tenantId, doctype);
         const share = await access.getShare(tenantId, doctype, name, actor.user_id);
-        const printable = meta ? permissions.redactDocument(meta, document, actor, Boolean(share?.read)) : document;
+        const printable = meta ? await permissions.redactDocumentWithPolicies(tenantId, meta, document, actor, Boolean(share?.read)) : document;
         const format = await metadata.getPrintFormat(tenantId, doctype, url.searchParams.get("format") ?? undefined); if (!format) throw errors.notFound("Print format not found");
         return new Response(renderPrintFormat(format, printable, actor.locale), { status: 200, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff", "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; img-src data: https:; font-src data:", "x-cloudforge-trace-id": traceId } });
       }
@@ -582,7 +585,7 @@ export default {
         const document = await loadAuthorizedDocument(documentStore, permissions, actor, tenantId, doctype, name, "read", true);
         const meta = await metadata.getDocType(tenantId, doctype);
         const share = await access.getShare(tenantId, doctype, name, actor.user_id);
-        const response = meta ? permissions.redactDocument(meta, document, actor, Boolean(share?.read)) : document;
+        const response = meta ? await permissions.redactDocumentWithPolicies(tenantId, meta, document, actor, Boolean(share?.read)) : document;
         return jsonResponse(response, 200, { "x-cloudforge-trace-id": traceId });
       }
 
@@ -1075,6 +1078,7 @@ async function serveFrappeApiInner(
   const access = new D1DocumentAccessStore(requestDb);
   const permissions = new MetadataPermissionService(metadata, undefined, access);
   const documents = new D1MutationStore(requestDb);
+  const organizationSecurity = new D1OrganizationSecurityGuard(requestDb, metadata);
 
   if (request.method === "GET" && url.pathname === "/api/method/metaforge.api.get_submit_preview") {
     const doctype = requireShortText(url.searchParams.get("doctype"), "doctype", 160);
@@ -1162,6 +1166,7 @@ async function serveFrappeApiInner(
     reports: new D1ReportService(requestDb),
     appReports: new AppReportService(requestDb),
     deskViews: new D1DeskViewStore(requestDb),
+    organizationSecurity,
     // Typed explicitly: the context is now a standalone object rather than an inline
     // argument, so it no longer inherits the parameter's contextual types.
     async runCommand(command: MutationCommand) {
@@ -1171,6 +1176,7 @@ async function serveFrappeApiInner(
       //
       // Before the Durable Object, deliberately. Inside it, a slow app would stall every
       // write to that aggregate and a timeout would leave "did it commit?" unanswerable.
+      await organizationSecurity.assertMutation(tenantId, actor, command);
       await runAppValidators({
         env: appMethodEnv,
         tenantId,
@@ -1191,6 +1197,7 @@ async function serveFrappeApiInner(
     },
     now,
     csrfToken,
+    ...(established ? { authenticatedAt: established.session.authenticatedAt } : {}),
     fullName,
     language,
     // Present only when this deployment can reach app Workers. Absent, an unknown

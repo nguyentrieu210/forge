@@ -232,6 +232,11 @@ export function renderPrintFormat(format: PrintFormatMeta, document: CanonicalDo
     // instead of the literal placeholder text.
     if (field.print_hide || empty) context[field.fieldname] = "";
   }
+  // App print formats conventionally use `{{ doc.fieldname }}` (Frappe/Jinja), while
+  // older platform formats use the root shorthand `{{ fieldname }}`. Carry both views
+  // from the same already-redacted context so either style prints real values and never
+  // bypasses field masking.
+  context.doc = structuredClone(context);
 
   /**
    * Child rows, so a printed document can show its LINES.

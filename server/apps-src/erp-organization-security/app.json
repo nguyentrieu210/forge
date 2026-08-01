@@ -1,0 +1,116 @@
+{
+  "id": "erp-organization-security",
+  "name": "Tổ chức & kiểm soát nội bộ",
+  "version": "1.0.0",
+  "requires": [
+    { "id": "hrm", "version": ">=1.4.0" }
+  ],
+  "nav": [
+    {
+      "key": "organization-center",
+      "label": "Cơ cấu tổ chức",
+      "kind": "route",
+      "route": "/organization",
+      "permission_doctype": "Organization Assignment",
+      "icon": "network",
+      "group": "Tổ chức"
+    },
+    {
+      "key": "Organization Assignment",
+      "label": "Phạm vi tổ chức",
+      "kind": "doctype",
+      "icon": "waypoints",
+      "group": "Tổ chức"
+    },
+    {
+      "key": "security-center",
+      "label": "Vai trò & kiểm soát",
+      "kind": "route",
+      "route": "/security/roles",
+      "permission_doctype": "Role Policy",
+      "icon": "shield-check",
+      "group": "Bảo mật"
+    },
+    {
+      "key": "Role Policy",
+      "label": "Chính sách vai trò",
+      "kind": "doctype",
+      "icon": "key-round",
+      "group": "Bảo mật"
+    },
+    {
+      "key": "SoD Rule",
+      "label": "Luật tách nhiệm vụ",
+      "kind": "doctype",
+      "icon": "shield-alert",
+      "group": "Bảo mật"
+    },
+    {
+      "key": "Approval Policy",
+      "label": "Chính sách phê duyệt",
+      "kind": "doctype",
+      "icon": "badge-check",
+      "group": "Phê duyệt"
+    },
+    {
+      "key": "Delegation",
+      "label": "Ủy quyền",
+      "kind": "doctype",
+      "icon": "user-round-cog",
+      "group": "Phê duyệt"
+    },
+    {
+      "key": "security-approvals-audit",
+      "label": "Hộp duyệt & kiểm toán",
+      "kind": "route",
+      "route": "/security/approvals-audit",
+      "permission_doctype": "Approval Policy",
+      "icon": "list-checks",
+      "group": "Phê duyệt"
+    }
+  ],
+  "hooks": [],
+  "validators": [],
+  "reports": [
+    {
+      "name": "Phạm vi tổ chức đang hiệu lực",
+      "label": "Phạm vi tổ chức đang hiệu lực",
+      "doctype": "Organization Assignment",
+      "columns": [
+        { "field": "user", "label": "Người dùng", "type": "Link", "options": "User" },
+        { "field": "company", "label": "Công ty", "type": "Link", "options": "Company" },
+        { "field": "branch", "label": "Chi nhánh", "type": "Link", "options": "Branch" },
+        { "field": "department", "label": "Phòng ban", "type": "Link", "options": "Department" },
+        { "field": "effective_from", "label": "Hiệu lực từ", "type": "Date" },
+        { "field": "effective_to", "label": "Hiệu lực đến", "type": "Date" },
+        { "field": "workflow_state", "label": "Trạng thái", "type": "Data" }
+      ],
+      "order_by": { "column": "effective_from", "direction": "desc" },
+      "filters": ["user", "company", "branch", "department", "workflow_state"],
+      "limit": 500
+    },
+    {
+      "name": "Ma trận xung đột nhiệm vụ",
+      "label": "Ma trận xung đột nhiệm vụ",
+      "doctype": "SoD Rule",
+      "columns": [
+        { "field": "left_action", "label": "Hành động thứ nhất", "type": "Data" },
+        { "field": "right_action", "label": "Hành động thứ hai", "type": "Data" },
+        { "field": "document_type", "label": "Loại chứng từ", "type": "Link", "options": "DocType" },
+        { "field": "severity", "label": "Mức", "type": "Select" },
+        { "field": "workflow_state", "label": "Trạng thái", "type": "Data" }
+      ],
+      "order_by": { "column": "left_action", "direction": "asc" },
+      "filters": ["document_type", "severity", "workflow_state"],
+      "limit": 500
+    }
+  ],
+  "client": {
+    "brand": "indigo",
+    "domain": "hr",
+    "home": { "route": "/organization", "doctype": "Organization Assignment" },
+    "dimensions": ["company", "branch", "cost_center", "fiscal_year"],
+    "catalog_mode": "hybrid",
+    "design": { "density": "comfortable", "radius": "soft", "content_width": "wide" }
+  }
+}

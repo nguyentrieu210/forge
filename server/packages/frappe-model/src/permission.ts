@@ -27,6 +27,26 @@ export interface UserPermissionConstraint {
   allowed_values: string[];
 }
 
+/** Effective organization scope projected from submitted Organization Assignment docs. */
+export interface OrganizationScopeGrant {
+  assignment_name: string;
+  user_id: string;
+  allow_doctype: "Company" | "Branch" | "Department";
+  allow_name: string;
+  effective_from: string;
+  effective_to: string | null;
+}
+
+/** Published, versioned policy. Static DocPerm remains the grant ceiling. */
+export interface EffectiveRolePolicy {
+  name: string;
+  role: string;
+  resource: string;
+  actions: string[];
+  row_rule: JsonObject;
+  field_rule: JsonObject;
+}
+
 export interface ReadAccessScope {
   mode: "all" | "owner" | "shared" | "owner_or_shared";
   actor_user_id: string;
@@ -39,6 +59,8 @@ export interface DocumentAccessStore {
   listUserPermissions(tenantId: string, user: string, applicableForDoctype?: string): Promise<UserPermissionRecord[]>;
   putUserPermission?(tenantId: string, record: UserPermissionRecord): Promise<UserPermissionRecord>;
   deleteUserPermission?(tenantId: string, user: string, allowDoctype: string, allowName: string, applicableForDoctype: string): Promise<void>;
+  listOrganizationScopes?(tenantId: string, user: string): Promise<OrganizationScopeGrant[]>;
+  listRolePolicies?(tenantId: string, roles: string[], resource: string): Promise<EffectiveRolePolicy[]>;
 }
 
 export class D1DocumentAccessStore implements DocumentAccessStore {
@@ -46,6 +68,8 @@ export class D1DocumentAccessStore implements DocumentAccessStore {
   private readonly shareCache = new Map<string, Promise<ShareGrant | null>>();
   private readonly anyShareCache = new Map<string, Promise<boolean>>();
   private readonly userPermissionCache = new Map<string, Promise<UserPermissionRecord[]>>();
+  private readonly organizationScopeCache = new Map<string, Promise<OrganizationScopeGrant[]>>();
+  private readonly rolePolicyCache = new Map<string, Promise<EffectiveRolePolicy[]>>();
   constructor(db: D1Database) { this.db = db.withSession?.("first-primary") ?? db; }
 
   async getShare(tenantId: string, doctype: string, name: string, user: string): Promise<ShareGrant | null> {
@@ -104,6 +128,55 @@ export class D1DocumentAccessStore implements DocumentAccessStore {
     this.invalidateUserPermissions(tenantId, user);
   }
 
+  async listOrganizationScopes(tenantId: string, user: string): Promise<OrganizationScopeGrant[]> {
+    const key = [tenantId, user].join("\u0000");
+    return this.memo(this.organizationScopeCache, key, async () => {
+      const result = await this.db.prepare(
+        `SELECT assignment_name,user_id,allow_doctype,allow_name,effective_from,effective_to
+         FROM erp_organization_scope_grants
+         WHERE tenant_id=?1 AND user_id=?2
+           AND date(effective_from)<=date('now')
+           AND (effective_to IS NULL OR date(effective_to)>=date('now'))
+         ORDER BY allow_doctype,allow_name,assignment_name`,
+      ).bind(tenantId, user).all<OrganizationScopeGrant>();
+      return result.results ?? [];
+    });
+  }
+
+  async listRolePolicies(tenantId: string, roles: string[], resource: string): Promise<EffectiveRolePolicy[]> {
+    if (!roles.length) return [];
+    const normalizedRoles = [...new Set(roles)].sort();
+    const key = [tenantId, normalizedRoles.join(","), resource].join("\u0000");
+    return this.memo(this.rolePolicyCache, key, async () => {
+      const placeholders = normalizedRoles.map((_role, index) => `?${index + 3}`).join(",");
+      const result = await this.db.prepare(
+        `SELECT name,payload_json
+         FROM documents
+         WHERE tenant_id=?1 AND doctype='Role Policy' AND docstatus=1
+           AND json_extract(payload_json,'$.workflow_state')='Published'
+           AND json_extract(payload_json,'$.resource')=?2
+           AND json_extract(payload_json,'$.role') IN (${placeholders})
+         ORDER BY CAST(json_extract(payload_json,'$.version_no') AS INTEGER) DESC,name`,
+      ).bind(tenantId, resource, ...normalizedRoles).all<{ name: string; payload_json: string }>();
+      const policies: EffectiveRolePolicy[] = [];
+      for (const row of result.results ?? []) {
+        const data = JSON.parse(row.payload_json) as JsonObject;
+        const actions = Array.isArray(data.actions_json)
+          ? data.actions_json.filter((value): value is string => typeof value === "string")
+          : [];
+        policies.push({
+          name: row.name,
+          role: typeof data.role === "string" ? data.role : "",
+          resource: typeof data.resource === "string" ? data.resource : resource,
+          actions,
+          row_rule: isJsonObject(data.row_rule_json) ? data.row_rule_json : {},
+          field_rule: isJsonObject(data.field_rule_json) ? data.field_rule_json : {},
+        });
+      }
+      return policies;
+    });
+  }
+
   private async memo<T>(cache: Map<string, Promise<T>>, key: string, loader: () => Promise<T>): Promise<T> {
     const cached = cache.get(key);
     if (cached) return cached;
@@ -122,6 +195,7 @@ export class D1DocumentAccessStore implements DocumentAccessStore {
     for (const key of this.userPermissionCache.keys()) {
       if (key.startsWith(prefix)) this.userPermissionCache.delete(key);
     }
+    this.organizationScopeCache.delete([tenantId, user].join("\u0000"));
   }
 }
 
@@ -143,16 +217,20 @@ export class MetadataPermissionService {
     const meta = await this.metadata.getDocType(tenantId, request.doctype);
 
     if (this.hasDirectPermission(meta, request)) {
-      await this.assertUserPermissions(request, meta);
+      const policies = await this.assertRolePolicy(request);
+      await this.assertScopedPermissions(request, meta);
       this.assertFieldPermissions(request, meta, false);
+      this.assertPolicyFieldPermissions(request, policies);
       return;
     }
 
     if (request.name && this.access) {
       const share = await this.access.getShare(tenantId, request.doctype, request.name, request.actor.user_id);
       if (shareSupports(share, request.action)) {
-        await this.assertUserPermissions(request, meta);
+        const policies = await this.assertRolePolicy(request);
+        await this.assertScopedPermissions(request, meta);
         this.assertFieldPermissions(request, meta, Boolean(share?.write));
+        this.assertPolicyFieldPermissions(request, policies);
         return;
       }
     }
@@ -182,11 +260,13 @@ export class MetadataPermissionService {
   private async resolveReadScope(actor: Actor, tenantId: string, doctype: string): Promise<ReadAccessScope> {
     if (isAdmin(actor)) return { mode: "all", actor_user_id: actor.user_id, user_permissions: [] };
     const meta = await this.metadata.getDocType(tenantId, doctype);
-    const direct = this.directReadMode(meta, actor, doctype);
+    let direct = this.directReadMode(meta, actor, doctype);
+    const policies = await this.rolePolicies(tenantId, actor, doctype);
+    if (policies.length && !policies.some((policy) => policyAllows(policy, "read", doctype))) direct = null;
     const shared = this.access ? await this.access.hasAnyShare(tenantId, doctype, actor.user_id) : false;
     if (!direct && !shared) throw errors.permission(`Role is not allowed to read ${doctype}`);
     const mode = direct === "all" ? "all" : direct === "owner" && shared ? "owner_or_shared" : direct === "owner" ? "owner" : "shared";
-    return { mode, actor_user_id: actor.user_id, user_permissions: await this.userPermissionConstraints(tenantId, actor, doctype, meta) };
+    return { mode, actor_user_id: actor.user_id, user_permissions: await this.scopedPermissionConstraints(tenantId, actor, doctype, meta, policies) };
   }
 
   cacheStats(): { hits: number; misses: number } {
@@ -245,6 +325,26 @@ export class MetadataPermissionService {
     };
   }
 
+  /** Applies published Role Policy field restrictions on top of static permlevels. */
+  async filterMetaForActorWithPolicies(
+    tenantId: string,
+    meta: DocTypeMeta,
+    actor: Actor,
+    owner?: string,
+    sharedRead = false,
+    writeContext?: { action: "create" | "save"; sharedWrite?: boolean },
+  ): Promise<DocTypeMeta> {
+    const filtered = this.filterMetaForActor(meta, actor, owner, sharedRead, writeContext);
+    if (isAdmin(actor)) return filtered;
+    const restrictions = fieldRestrictions(await this.rolePolicies(tenantId, actor, meta.name));
+    return {
+      ...filtered,
+      fields: filtered.fields
+        .filter((field) => !restrictions.hidden.has(field.fieldname))
+        .map((field) => ({ ...field, read_only: Boolean(field.read_only) || restrictions.readOnly.has(field.fieldname) })),
+    };
+  }
+
   redactDocument(meta: DocTypeMeta, document: CanonicalDocument<JsonObject>, actor: Actor, shared = false): CanonicalDocument<JsonObject> {
     const levels = this.readablePermlevels(meta, actor, document.owner, shared);
     const allowed = new Set(meta.fields
@@ -261,6 +361,24 @@ export class MetadataPermissionService {
     }
     const tableFields = new Set(meta.fields.filter((field) => levels.has(field.permlevel ?? 0) && (field.fieldtype === "Table" || field.fieldtype === "Table MultiSelect")).map((field) => field.fieldname));
     return { ...structuredClone(document), data, children: document.children.filter((row) => tableFields.has(row.fieldname)).map((row) => structuredClone(row)) };
+  }
+
+  /** Redacts both static permlevels and dynamic hidden/mask rules before any response leaves the server. */
+  async redactDocumentWithPolicies(
+    tenantId: string,
+    meta: DocTypeMeta,
+    document: CanonicalDocument<JsonObject>,
+    actor: Actor,
+    shared = false,
+  ): Promise<CanonicalDocument<JsonObject>> {
+    const redacted = this.redactDocument(meta, document, actor, shared);
+    if (isAdmin(actor)) return redacted;
+    const restrictions = fieldRestrictions(await this.rolePolicies(tenantId, actor, meta.name));
+    if (!restrictions.hidden.size) return redacted;
+    const data = { ...redacted.data };
+    for (const fieldname of restrictions.hidden) delete data[fieldname];
+    const children = redacted.children.filter((row) => !restrictions.hidden.has(row.fieldname));
+    return { ...redacted, data, children };
   }
 
   private hasDirectPermission(meta: DocTypeMeta | null, request: DocumentPermissionRequest): boolean {
@@ -300,10 +418,74 @@ export class MetadataPermissionService {
     }
   }
 
-  private async assertUserPermissions(request: DocumentPermissionRequest, meta: DocTypeMeta | null): Promise<void> {
+  private async assertScopedPermissions(request: DocumentPermissionRequest, meta: DocTypeMeta | null): Promise<void> {
     if (!request.data || !this.access || isAdmin(request.actor)) return;
-    const constraints = await this.userPermissionConstraints(request.tenantId!, request.actor, request.doctype, meta);
+    const constraints = await this.scopedPermissionConstraints(request.tenantId!, request.actor, request.doctype, meta);
     if (!matchesUserPermissionConstraints(request.data, constraints)) throw errors.permission("Document is outside the user's permitted values");
+  }
+
+  private async assertRolePolicy(request: DocumentPermissionRequest): Promise<EffectiveRolePolicy[]> {
+    if (!this.access || isAdmin(request.actor)) return [];
+    const policies = await this.rolePolicies(request.tenantId!, request.actor, request.doctype);
+    if (policies.length && !policies.some((policy) => policyAllows(policy, request.action, request.doctype))) {
+      throw errors.permission(`Published role policy does not allow ${request.action} ${request.doctype}`);
+    }
+    return policies;
+  }
+
+  private assertPolicyFieldPermissions(request: DocumentPermissionRequest, policies: EffectiveRolePolicy[]): void {
+    if (!request.data || (request.action !== "create" && request.action !== "save") || !policies.length) return;
+    const restrictions = fieldRestrictions(policies);
+    for (const [fieldname, value] of Object.entries(request.data)) {
+      if (!restrictions.hidden.has(fieldname) && !restrictions.readOnly.has(fieldname)) continue;
+      const before = request.existingData?.[fieldname];
+      if (!sameJsonValue(before, value)) throw errors.permission(`Role policy field permission denied: ${fieldname}`);
+    }
+  }
+
+  private async rolePolicies(tenantId: string, actor: Actor, doctype: string): Promise<EffectiveRolePolicy[]> {
+    return this.access?.listRolePolicies ? this.access.listRolePolicies(tenantId, actor.roles, doctype) : [];
+  }
+
+  private async scopedPermissionConstraints(
+    tenantId: string,
+    actor: Actor,
+    doctype: string,
+    meta: DocTypeMeta | null,
+    knownPolicies?: EffectiveRolePolicy[],
+  ): Promise<UserPermissionConstraint[]> {
+    const explicit = await this.userPermissionConstraints(tenantId, actor, doctype, meta);
+    if (!meta || !this.access || isAdmin(actor)) return explicit;
+    const organization = await this.organizationScopeConstraints(tenantId, actor, meta);
+    const policy = rolePolicyConstraints(meta, knownPolicies ?? await this.rolePolicies(tenantId, actor, doctype));
+    // Every security layer narrows the preceding one. Keep the three sources as
+    // separate AND-ed constraint groups so an organization grant or role policy
+    // can never widen an explicit User Permission on the same field.
+    return [
+      ...mergePermissionConstraints(explicit),
+      ...mergePermissionConstraints(organization),
+      ...mergePermissionConstraints(policy),
+    ];
+  }
+
+  private async organizationScopeConstraints(tenantId: string, actor: Actor, meta: DocTypeMeta): Promise<UserPermissionConstraint[]> {
+    if (!this.access?.listOrganizationScopes) return [];
+    const grants = await this.access.listOrganizationScopes(tenantId, actor.user_id);
+    const grouped = new Map<string, Set<string>>();
+    for (const grant of grants) {
+      const values = grouped.get(grant.allow_doctype) ?? new Set<string>();
+      values.add(grant.allow_name);
+      grouped.set(grant.allow_doctype, values);
+    }
+    const constraints: UserPermissionConstraint[] = [];
+    for (const [allowDoctype, values] of grouped) {
+      const fields = meta.fields.filter((field) => field.fieldtype === "Link" && field.options === allowDoctype).map((field) => field.fieldname);
+      // Organization Assignment is a platform scope: a document without this dimension
+      // is not accidentally made unreadable. Explicit User Permission keeps its stricter
+      // fail-closed behavior in userPermissionConstraints above.
+      if (fields.length) constraints.push({ allow_doctype: allowDoctype, fields, allowed_values: [...values] });
+    }
+    return constraints;
   }
 
   private async userPermissionConstraints(tenantId: string, actor: Actor, doctype: string, meta: DocTypeMeta | null): Promise<UserPermissionConstraint[]> {
@@ -323,6 +505,79 @@ export class MetadataPermissionService {
     }
     return constraints;
   }
+}
+
+function rolePolicyConstraints(meta: DocTypeMeta, policies: EffectiveRolePolicy[]): UserPermissionConstraint[] {
+  const constraints: UserPermissionConstraint[] = [];
+  for (const policy of policies) {
+    const rule = policy.row_rule;
+    if (typeof rule.field === "string" && Array.isArray(rule.values)) {
+      const field = meta.fields.find((candidate) => candidate.fieldname === rule.field);
+      const values = rule.values.filter((value): value is string => typeof value === "string");
+      if (field?.fieldtype === "Link" && field.options && values.length) {
+        constraints.push({ allow_doctype: field.options, fields: [field.fieldname], allowed_values: values });
+      }
+    }
+    for (const [fieldname, raw] of Object.entries(rule)) {
+      if (["field", "operator", "values"].includes(fieldname) || !Array.isArray(raw)) continue;
+      const field = meta.fields.find((candidate) => candidate.fieldname === fieldname);
+      const values = raw.filter((value): value is string => typeof value === "string");
+      if (field?.fieldtype === "Link" && field.options && values.length) {
+        constraints.push({ allow_doctype: field.options, fields: [field.fieldname], allowed_values: values });
+      }
+    }
+  }
+  return constraints;
+}
+
+function mergePermissionConstraints(constraints: UserPermissionConstraint[]): UserPermissionConstraint[] {
+  const merged = new Map<string, { allow_doctype: string; fields: Set<string>; values: Set<string> }>();
+  for (const constraint of constraints) {
+    const key = `${constraint.allow_doctype}\u0000${[...constraint.fields].sort().join(",")}`;
+    const current = merged.get(key) ?? { allow_doctype: constraint.allow_doctype, fields: new Set<string>(), values: new Set<string>() };
+    constraint.fields.forEach((field) => current.fields.add(field));
+    constraint.allowed_values.forEach((value) => current.values.add(value));
+    merged.set(key, current);
+  }
+  return [...merged.values()].map((item) => ({ allow_doctype: item.allow_doctype, fields: [...item.fields], allowed_values: [...item.values] }));
+}
+
+function policyAllows(policy: EffectiveRolePolicy, action: ExtendedPermissionAction, doctype: string): boolean {
+  const actions = new Set(policy.actions.map((value) => value.trim().toLowerCase()));
+  const candidates = new Set<string>([action.toLowerCase()]);
+  if (action === "save") candidates.add("write");
+  if (action === "submit") {
+    candidates.add("approve");
+    if (doctype === "Journal Entry") candidates.add("post");
+  }
+  return [...candidates].some((candidate) => actions.has(candidate));
+}
+
+function fieldRestrictions(policies: EffectiveRolePolicy[]): { hidden: Set<string>; readOnly: Set<string> } {
+  const hidden = new Set<string>();
+  const readOnly = new Set<string>();
+  const collect = (target: Set<string>, value: JsonValue | undefined) => {
+    if (!Array.isArray(value)) return;
+    for (const item of value) if (typeof item === "string" && item.trim()) target.add(item.trim());
+  };
+  for (const policy of policies) {
+    const rule = policy.field_rule;
+    collect(hidden, rule.hidden);
+    collect(hidden, rule.mask);
+    collect(readOnly, rule.read_only);
+    collect(readOnly, rule.deny_write);
+    for (const [fieldname, mode] of Object.entries(rule)) {
+      if (["hidden", "mask", "read_only", "deny_write"].includes(fieldname) || typeof mode !== "string") continue;
+      const normalized = mode.trim().toLowerCase().replaceAll("-", "_");
+      if (normalized === "hidden" || normalized === "mask") hidden.add(fieldname);
+      if (normalized === "read_only" || normalized === "deny_write") readOnly.add(fieldname);
+    }
+  }
+  return { hidden, readOnly };
+}
+
+function isJsonObject(value: JsonValue | undefined): value is JsonObject {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
 
 export function permissionAllows(permission: DocPermissionMeta, actor: Actor, action: ExtendedPermissionAction, owner?: string): boolean {

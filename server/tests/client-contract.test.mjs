@@ -88,6 +88,11 @@ test("sort_field and sort_order are always present, as Frappe always sends them"
   assert.equal(explicit.sort_order, "ASC");
 });
 
+test("Frappe timestamp sort aliases normalize to canonical storage fields", () => {
+  assert.equal(parseDocTypeMeta({ ...META, sort_field: "modified" }).sort_field, "modified_at");
+  assert.equal(parseDocTypeMeta({ ...META, sort_field: "creation" }).sort_field, "created_at");
+});
+
 test("the client derives the columns the metadata declared, not a bare ID fallback", () => {
   const normalized = throughClient(META);
   const columns = deriveColumns(normalized, { roles: ROLES });
