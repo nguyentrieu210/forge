@@ -43,6 +43,17 @@ textarea {
   touch-action: manipulation;
 }
 
+/*
+ * MobileShell owns the fixed bottom navigation, while an operation screen owns its own
+ * fixed submit bar. Both previously used z-30, so the navigation could sit on top of
+ * "Lưu nhập/xuất/chuyển/kiểm kho" and intercept every tap even though the button was visible.
+ * Keep navigation below operation-level fixed actions; on normal screens there is no
+ * competing bar, so the navigation remains fully visible and interactive.
+ */
+footer:has(> .forge-mobile-bottom) {
+  z-index: 20 !important;
+}
+
 .forge-mobile-bottom {
   padding-bottom: max(0.25rem, env(safe-area-inset-bottom));
 }
