@@ -29,6 +29,10 @@ export function ForgeBrandLogo({
   name = "Forge",
   subtitle,
 }: ForgeBrandLogoProps) {
+  const id = useId().replace(/:/g, "");
+  const gradientId = `forge-gradient-${id}`;
+  const clipId = `forge-circle-${id}`;
+
   if (isAlumdoorSurface()) {
     return (
       <span
@@ -46,11 +50,7 @@ export function ForgeBrandLogo({
     );
   }
 
-  const id = useId().replace(/:/g, "");
-  const gradientId = `forge-gradient-${id}`;
-  const clipId = `forge-circle-${id}`;
   const style = { "--forge-logo-size": `${size}px` } as CSSProperties;
-
   const mark = (
     <svg viewBox="0 0 96 96" role="img" aria-label={title} className="size-full">
       <defs>
