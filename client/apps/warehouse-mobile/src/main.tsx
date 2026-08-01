@@ -588,7 +588,6 @@ function GuestLogin({ retry }: { retry: () => void }) {
   return (
     <div className="grid min-h-dvh place-items-center bg-muted/30 p-4">
       <div className="w-full max-w-md space-y-4">
-        <div className="flex justify-center"><ForgeBrandLogo size={52} wordmark name="Alumdoor Kho" subtitle="Ứng dụng điện thoại" /></div>
         <LoginForm adapter={adapter} onSuccess={retry} brand="Alumdoor Kho" title="Đăng nhập app kho Alumdoor" subtitle="Dùng tài khoản nội bộ đã được Alumdoor cấp quyền." embedded />
       </div>
     </div>

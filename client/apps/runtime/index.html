@@ -14,7 +14,7 @@
         const params = new URLSearchParams(location.search);
         const alumdoor = location.hostname.toLowerCase() === "alu.kairo.vn" || params.get("alumdoor") === "1";
         if (!alumdoor) return;
-        const logo = "/alumdoor/logo.png";
+        const logo = "/alumdoor/app-icon-192.png";
         document.querySelector('meta[name="theme-color"]')?.setAttribute("content", "#f45b24");
         document.getElementById("app-icon")?.setAttribute("href", logo);
         document.getElementById("app-touch-icon")?.setAttribute("href", logo);

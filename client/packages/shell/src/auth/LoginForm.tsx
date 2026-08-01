@@ -98,9 +98,9 @@ const ALUMDOOR_PRODUCTS: AlumdoorProductGroup[] = [
 ];
 
 const ALUMDOOR_CATEGORIES = [
-  { title: "Sản phẩm cửa cuốn", href: "#san-pham", image: "/alumdoor/category-products.png" },
-  { title: "Phụ kiện cửa cuốn", href: "#phu-kien", image: "/alumdoor/category-accessories.png" },
-  { title: "Lắp đặt và sửa chữa", href: "#dich-vu", image: "/alumdoor/category-service.png" },
+  { title: "Sản phẩm cửa cuốn", href: "#san-pham", image: "/alumdoor/vip-st700.jpg" },
+  { title: "Phụ kiện cửa cuốn", href: "#phu-kien", image: "/alumdoor/al-vip50.jpg" },
+  { title: "Lắp đặt và sửa chữa", href: "#dich-vu", image: "/alumdoor/alumroll-tr.jpg" },
 ];
 
 const ALUMDOOR_SERVICES = [
@@ -220,7 +220,7 @@ export function LoginForm({
               onChange={(event) => setUsr(event.target.value)}
               placeholder={t("auth.username_placeholder")}
               autoComplete="username"
-              autoFocus={!embedded}
+              autoFocus={!embedded && !alumdoor}
               className="h-11 rounded-xl bg-background px-3.5"
             />
           </div>
@@ -393,8 +393,8 @@ function AlumdoorLanding({ form }: { form: ReactNode }) {
       </header>
 
       <main id="top">
-        <section className="alumdoor-hero relative isolate flex min-h-[520px] items-center justify-center overflow-hidden bg-[#242424] text-white sm:min-h-[620px]">
-          <video className="absolute inset-0 -z-20 size-full object-cover" autoPlay muted loop playsInline aria-hidden="true">
+        <section className="alumdoor-hero relative isolate flex min-h-[520px] items-center justify-center overflow-hidden bg-[#242424] bg-[url('/alumdoor/vip-st500.jpg')] bg-cover bg-center text-white sm:min-h-[620px]">
+          <video className="absolute inset-0 -z-20 size-full object-cover" autoPlay muted loop playsInline poster="/alumdoor/vip-st500.jpg" aria-hidden="true">
             <source src="https://alumdoor.vn/wp-content/uploads/2021/08/video-banner.mp4" type="video/mp4" />
           </video>
           <div className="absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgba(15,15,15,0.38),rgba(15,15,15,0.68))]" />

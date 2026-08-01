@@ -52,12 +52,13 @@ test("renders the installable Alumdoor warehouse experience without desktop shel
   expect(manifest.scope).toBe("/mobile/warehouse/");
   expect(manifest.display).toBe("standalone");
   expect(manifest.theme_color).toBe("#f45b24");
-  expect(manifest.icons[0]?.src).toBe("alumdoor-mark.svg");
+  expect(manifest.icons[0]?.src).toBe("alumdoor-app-192.png");
   expect(manifest.icons[1]?.purpose).toBe("maskable");
 
-  const iconResponse = await request.get("/mobile/warehouse/alumdoor-mark.svg");
+  const iconResponse = await request.get("/mobile/warehouse/alumdoor-app-192.png");
   expect(iconResponse.ok()).toBe(true);
-  expect(await iconResponse.text()).toContain("alumdoor-logo.png");
+  expect(iconResponse.headers()["content-type"]).toContain("image/png");
+  expect((await iconResponse.body()).byteLength).toBeGreaterThan(1_000);
 
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1);
 

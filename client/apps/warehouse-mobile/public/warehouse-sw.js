@@ -1,9 +1,10 @@
-const CACHE = "alumdoor-warehouse-v3";
+const CACHE = "alumdoor-warehouse-v4";
 const APP_SHELL = [
   "/mobile/warehouse/",
   "/mobile/warehouse/manifest.webmanifest",
-  "/mobile/warehouse/alumdoor-mark.svg",
-  "/mobile/warehouse/alumdoor-maskable.svg",
+  "/mobile/warehouse/alumdoor-app-192.png",
+  "/mobile/warehouse/alumdoor-app-512.png",
+  "/mobile/warehouse/alumdoor-app-maskable-512.png",
   "/mobile/warehouse/alumdoor-logo.png",
 ];
 
