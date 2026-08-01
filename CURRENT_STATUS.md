@@ -17,6 +17,7 @@ GitHub là nguồn sự thật cho branch head, PR, CI và release evidence. B�
   - Inventory and Manufacturing CI `30712530470`: PASS.
   - PR Validation `30712530431`: PASS.
 - Final branch head sau cập nhật tài liệu phải chạy lại exact-head CI và chỉ được merge khi toàn bộ gate terminal + PASS.
+- Doc refresh đã được gom trên staging rồi fast-forward một lần; commit hiện tại tồn tại để GitHub phát `pull_request:synchronize` và tạo final exact-head checks.
 
 ### Nội dung kiến trúc đã hoàn tất trong PR #164
 
