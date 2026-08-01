@@ -97,3 +97,20 @@ Branch: `feat/alumdoor-pwa-real-brand-assets`.
 - Không sửa production secret, DNS hoặc rollout state.
 - Không migrate hoặc mutate dữ liệu tenant production cho smoke UI/PWA.
 - Không commit `.env`, `server/work/`, `tmp`, backup, cookie, token hoặc generated evidence.
+
+## Production evidence — 2026-08-01
+
+- Exact branch head: `f2f277eb999d213521cd40a126a01a4350aeeca5`; PR `#150`; GitHub required checks `6/6` PASS, merge state `CLEAN`.
+- Theo yêu cầu deploy trực tiếp từ máy local đã đăng nhập Cloudflare: client build có embedded SHA, stage runtime + warehouse PWA, stage check và Wrangler dry-run đều PASS.
+- Gateway production `cloudforge-gateway` đã deploy; Cloudflare Version ID: `a995e0a0-d85b-4cf0-a7cc-16224871cca6`.
+- Smoke PASS: `https://alu.kairo.vn/` 200 và có exact SHA; `/mobile/warehouse/`, manifest, service worker và `/alumdoor/logo.png` đều 200; guest boot 403 đúng auth boundary.
+- Không thay secrets/DNS, không migrate hay mutate dữ liệu tenant. PR `#150` chưa merge tại thời điểm ghi evidence này.
+
+### UI hotfix sau khi duyệt demo
+
+- Deployed code SHA: `3166a793550eda28d15280c33090856a3c08abb9`.
+- Cloudflare Gateway Version ID: `8ad03b38-8052-4ce3-b445-714d0b4df090`.
+- Landing không còn autofocus cuộn xuống login; production browser smoke xác nhận `scrollY=0`, hero hiển thị và 12 product images load thành công.
+- Ba category card đầu trang đã thay asset đen bằng media sản phẩm Alumdoor; hero có local product poster/fallback khi video nguồn chậm.
+- Favicon và PWA icon dùng mark A vuông 192/512, không nén nguyên wordmark vào icon nhỏ. Warehouse login đã bỏ logo lặp/cắt; header chỉ còn tên app và mô tả ngắn.
+- Lint, typecheck và exact-SHA production build/stage/stage-check/Wrangler dry-run/deploy PASS. Targeted Playwright suite bị webServer startup timeout; production Chromium smoke thay thế đã PASS cho các lỗi user báo.

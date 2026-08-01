@@ -94,3 +94,17 @@ Sales Order → production request → Work Order → material issue/consume →
 - User đã yêu cầu deploy epic hiện tại; production release chỉ chạy sau merge exact-head xanh qua workflow bảo vệ.
 - Không sửa production secret/DNS, bật rollout dữ liệu không thể đảo ngược hoặc mutate dữ liệu khách hàng.
 - Không commit `.env`, `server/work/`, `tmp`, backup, cookie, token hoặc generated evidence.
+
+## Cập nhật deploy local — 2026-08-01
+
+- Đã hoàn thành exact-head CI `6/6`, build/stage/dry-run và deploy Gateway cho SHA `f2f277eb999d213521cd40a126a01a4350aeeca5`.
+- Production Gateway version: `a995e0a0-d85b-4cf0-a7cc-16224871cca6`; landing, App kho, manifest, service worker, logo và auth-boundary smoke PASS.
+- Việc còn lại để đóng epic: merge PR `#150` mà không thay exact validated head; sau merge xác nhận workflow production không rollback/ghi đè bản `a995e0a0-d85b-4cf0-a7cc-16224871cca6` bằng một SHA khác.
+
+## P0 tiếp theo — Alumdoor Meta completeness
+
+- Inventory toàn bộc nghiệp vụ/menu/action và Link field Alumdoor hiện còn nhập tay hoặc thiếu khai báo Meta.
+- Bổ sung canonical DocType/action/report/workspace metadata từ manifest/brief; không hard-code form riêng khi Meta đã có thể sinh UI.
+- Mọi Link field phải có target DocType, query/search, permission, tenant boundary và label formatter; app tự render LinkInput/autocomplete theo Meta.
+- Thêm completeness gate liệt kê missing operations, unresolved link targets và manual-input fallback; CI fail nếu manifest Alumdoor chưa đủ.
+- Tách thành branch/PR riêng sau khi merge hotfix UI; không deploy/mutate tenant production trong lúc khách đang demo.
