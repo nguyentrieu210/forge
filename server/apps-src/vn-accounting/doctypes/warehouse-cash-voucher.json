@@ -1,0 +1,42 @@
+{
+  "name": "Warehouse Cash Voucher",
+  "module": "Accounts",
+  "is_submittable": true,
+  "autoname": "QK-.YYYY.-#####",
+  "title_field": "purpose",
+  "sort_field": "posting_date",
+  "sort_order": "DESC",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "fund", "label": "Quỹ kho", "fieldtype": "Link", "options": "Warehouse Cash Fund", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "posting_date", "label": "Ngày", "fieldtype": "Date", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "voucher_type", "label": "Loại phiếu", "fieldtype": "Select", "options": "Thu\nChi\nNạp quỹ\nHoàn quỹ\nTạm ứng\nHoàn ứng", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "amount", "label": "Số tiền", "fieldtype": "Currency", "required": true, "in_list_view": true },
+    { "fieldname": "purpose", "label": "Nội dung", "fieldtype": "Small Text", "required": true, "in_list_view": true },
+    { "fieldname": "expense_account", "label": "Tài khoản chi phí", "fieldtype": "Link", "options": "Account" },
+    { "fieldname": "counterparty_type", "label": "Đối tượng", "fieldtype": "Select", "options": "Nhân viên\nNhà cung cấp\nKhách hàng\nĐơn vị vận chuyển\nKhác", "required": true },
+    { "fieldname": "employee", "label": "Nhân viên", "fieldtype": "Link", "options": "Employee", "depends_on": "eval:doc.counterparty_type == 'Nhân viên'" },
+    { "fieldname": "supplier", "label": "Nhà cung cấp", "fieldtype": "Link", "options": "Supplier", "depends_on": "eval:doc.counterparty_type == 'Nhà cung cấp'" },
+    { "fieldname": "customer", "label": "Khách hàng", "fieldtype": "Link", "options": "Customer", "depends_on": "eval:doc.counterparty_type == 'Khách hàng'" },
+    { "fieldname": "counterparty_name", "label": "Đối tượng khác", "fieldtype": "Data", "depends_on": "eval:doc.counterparty_type == 'Đơn vị vận chuyển' || doc.counterparty_type == 'Khác'" },
+    { "fieldname": "source_doctype", "label": "Loại chứng từ nguồn", "fieldtype": "Data" },
+    { "fieldname": "source_name", "label": "Mã chứng từ nguồn", "fieldtype": "Data", "search_index": true },
+    { "fieldname": "purchase_receipt", "label": "Phiếu nhập liên quan", "fieldtype": "Link", "options": "Purchase Receipt" },
+    { "fieldname": "stock_entry", "label": "Phiếu kho liên quan", "fieldtype": "Link", "options": "Stock Entry" },
+    { "fieldname": "receipt_attachment", "label": "Ảnh / chứng từ", "fieldtype": "Attach" },
+    { "fieldname": "payment_entry", "label": "Payment Entry", "fieldtype": "Link", "options": "Payment Entry", "read_only": true, "in_list_view": true },
+    { "fieldname": "reversal_of", "label": "Đảo phiếu", "fieldtype": "Link", "options": "Warehouse Cash Voucher", "read_only": true },
+    { "fieldname": "correction_reason", "label": "Lý do điều chỉnh", "fieldtype": "Small Text" },
+    { "fieldname": "approved_by", "label": "Người duyệt", "fieldtype": "Link", "options": "User", "read_only": true },
+    { "fieldname": "approved_on", "label": "Thời điểm duyệt", "fieldtype": "Datetime", "read_only": true }
+  ],
+  "permissions": [
+    { "role": "Warehouse Cash User", "read": true, "write": true, "create": true, "report": true },
+    { "role": "Warehouse Cash Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true },
+    { "role": "General Accountant", "read": true, "write": true, "create": true, "report": true, "export": true },
+    { "role": "Chief Accountant", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true },
+    { "role": "Accounts Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}
