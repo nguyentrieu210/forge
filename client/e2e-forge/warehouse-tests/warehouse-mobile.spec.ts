@@ -96,6 +96,24 @@ test("warehouse actions translate legacy mobile fields to canonical stock contra
   const stockEntries: Array<Record<string, unknown>> = [];
   const reconciliations: Array<Record<string, unknown>> = [];
 
+  await page.route("**/api/method/frappe.desk.form.load.getdoc**", async (route) => {
+    const url = new URL(route.request().url());
+    const name = url.searchParams.get("name") ?? "K36";
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ docs: [{ doctype: "Warehouse", name, company: "ALUMDOOR" }] }),
+    });
+  });
+  await page.route("**/api/method/frappe.desk.search.search_link**", async (route) => {
+    const url = new URL(route.request().url());
+    const txt = url.searchParams.get("txt") ?? "";
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ message: txt ? [{ value: txt, description: "QA" }] : [] }),
+    });
+  });
   await page.route(/\/api\/resource\/Warehouse\/.+$/, async (route) => {
     const name = decodeURIComponent(new URL(route.request().url()).pathname.split("/").at(-1) ?? "");
     await route.fulfill({
@@ -126,8 +144,7 @@ test("warehouse actions translate legacy mobile fields to canonical stock contra
   const fillCommon = async (action: "receipt" | "issue" | "transfer" | "count") => {
     await page.goto(`/mobile/warehouse/?tab=actions&action=${action}`);
     await page.getByPlaceholder("Quét hoặc nhập mã vật tư").fill("QA-PURCHASE-ITEM");
-    const sourcePlaceholder = action === "receipt" ? "Tìm kho" : action === "transfer" || action === "issue" ? "Tìm kho" : "Tìm kho";
-    await page.getByPlaceholder(sourcePlaceholder).first().fill("K36");
+    await page.getByPlaceholder("Tìm kho").first().fill("K36");
     if (action === "transfer") await page.getByPlaceholder("Tìm kho đích").fill("K37");
   };
 
