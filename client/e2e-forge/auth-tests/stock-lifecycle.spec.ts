@@ -20,6 +20,18 @@ type BrowserResponse = {
   text: string;
 };
 
+type PhysicalStockReport = {
+  rows?: Array<{
+    item_code?: string;
+    warehouse?: string;
+    quantity_micros?: number;
+    weight_micros?: number | null;
+    lineage?: Array<{ voucher_type?: string; voucher_no?: string; quantity_micros?: number; weight_micros?: number | null }>;
+  }>;
+  totals?: { quantity_micros?: number; weight_micros?: number | null };
+  lineage_redacted?: boolean;
+};
+
 async function browserRequest(
   page: Page,
   path: string,
@@ -139,7 +151,7 @@ async function createUser(
   return unwrap(response.body) as { user: string; roles: string[] };
 }
 
-async function physicalStock(page: Page, csrf: string, warehouse: string) {
+async function physicalStock(page: Page, csrf: string, warehouse: string, itemCode: string): Promise<PhysicalStockReport> {
   const response = await browserRequest(page, "/api/method/metaforge.inventory.physical_stock", {
     method: "POST",
     csrf,
@@ -147,25 +159,34 @@ async function physicalStock(page: Page, csrf: string, warehouse: string) {
       args: JSON.stringify({
         company: "ALUMDOOR",
         warehouse,
-        item_code: "QA-PURCHASE-ITEM",
+        item_code: itemCode,
         include_lineage: true,
         limit: 50,
       }),
     },
   });
   expect(response.status, response.text).toBe(200);
-  return unwrap(response.body) as {
-    rows?: Array<{ item_code?: string; warehouse?: string; quantity_micros?: number; quantity?: string | number }>;
-    totals?: { quantity_micros?: number };
-  };
+  return unwrap(response.body) as PhysicalStockReport;
 }
 
-function reportQtyMicros(report: Awaited<ReturnType<typeof physicalStock>>): number {
+function reportQtyMicros(report: PhysicalStockReport): number {
   if (typeof report.totals?.quantity_micros === "number") return report.totals.quantity_micros;
-  return (report.rows ?? []).reduce((sum, row) => {
-    if (typeof row.quantity_micros === "number") return sum + row.quantity_micros;
-    return sum + Math.round(Number(row.quantity ?? 0) * 1_000_000);
-  }, 0);
+  return (report.rows ?? []).reduce((sum, row) => sum + Number(row.quantity_micros ?? 0), 0);
+}
+
+function reportWeightMicros(report: PhysicalStockReport): number | null {
+  if (typeof report.totals?.weight_micros === "number") return report.totals.weight_micros;
+  if (report.totals?.weight_micros === null) return null;
+  const rows = report.rows ?? [];
+  if (rows.some((row) => row.weight_micros === null || row.weight_micros === undefined)) return null;
+  return rows.reduce((sum, row) => sum + Number(row.weight_micros ?? 0), 0);
+}
+
+function lineageVouchers(report: PhysicalStockReport): string[] {
+  return (report.rows ?? [])
+    .flatMap((row) => row.lineage ?? [])
+    .map((entry) => String(entry.voucher_no ?? ""))
+    .filter(Boolean);
 }
 
 function postingAt(): string {
@@ -175,8 +196,10 @@ function postingAt(): string {
 async function createStockEntryDraft(
   page: Page,
   csrf: string,
+  itemCode: string,
   purpose: "Material Receipt" | "Material Issue" | "Material Transfer",
   qty: number,
+  weightKg: number,
   sourceWarehouse?: string,
   targetWarehouse?: string,
 ) {
@@ -184,11 +207,12 @@ async function createStockEntryDraft(
     company: "ALUMDOOR",
     posting_at: postingAt(),
     purpose,
-    note: `Authenticated stock QA ${purpose}`,
+    note: `Authenticated catch-weight QA ${purpose}`,
     items: [{
       doctype: "Stock Entry Detail",
-      item_code: "QA-PURCHASE-ITEM",
+      item_code: itemCode,
       qty,
+      weight_kg: weightKg,
       uom: "Cái",
       ...(sourceWarehouse ? { source_warehouse: sourceWarehouse } : {}),
       ...(targetWarehouse ? { target_warehouse: targetWarehouse } : {}),
@@ -202,12 +226,14 @@ async function createStockEntryDraft(
 async function createAndSubmitStockEntry(
   page: Page,
   csrf: string,
+  itemCode: string,
   purpose: "Material Receipt" | "Material Issue" | "Material Transfer",
   qty: number,
+  weightKg: number,
   sourceWarehouse?: string,
   targetWarehouse?: string,
 ) {
-  const created = await createStockEntryDraft(page, csrf, purpose, qty, sourceWarehouse, targetWarehouse);
+  const created = await createStockEntryDraft(page, csrf, itemCode, purpose, qty, weightKg, sourceWarehouse, targetWarehouse);
   const submitted = await submit(page, csrf, created);
   expect(submitted.docstatus).toBe(1);
   return submitted;
@@ -217,7 +243,7 @@ function expectDocumentRoute(page: Page, doctype: string, name: string) {
   expect(page.url()).toContain(`/app/${encodeURIComponent(doctype)}/${encodeURIComponent(name)}`);
 }
 
-test("authenticated operational roles preserve stock lifecycle and submit separation", async ({ page }, testInfo) => {
+test("authenticated operational roles preserve quantity, catch weight, lineage and submit separation", async ({ page }, testInfo) => {
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(String(error)));
 
@@ -226,6 +252,7 @@ test("authenticated operational roles preserve stock lifecycle and submit separa
   const stockUser = `stock-user-${suffix}@example.test`;
   const stockManager = `stock-manager-${suffix}@example.test`;
   const productionUser = `production-user-${suffix}@example.test`;
+  const itemCode = `QA-CATCH-${suffix}`.slice(0, 120);
   const stockUserPassword = `StockUser-${Date.now()}-Qa!`;
   const stockManagerPassword = `StockManager-${Date.now()}-Qa!`;
   const productionUserPassword = `ProductionUser-${Date.now()}-Qa!`;
@@ -252,32 +279,71 @@ test("authenticated operational roles preserve stock lifecycle and submit separa
     is_group: 0,
     disabled: 0,
   });
+  const catchWeightItem = await createResource(page, adminCsrf, "Item", {
+    item_code: itemCode,
+    item_name: `QA Catch Weight ${suffix}`,
+    item_group: "QA Purchase Items",
+    item_nature: "Hàng tồn kho",
+    material_stage: "Hàng hoá",
+    supply_type: "Mua ngoài",
+    is_stock_item: 1,
+    is_purchase_item: 1,
+    is_sales_item: 0,
+    include_item_in_manufacturing: 0,
+    measurement_profile: "Hàng thường",
+    stock_uom: "Cái",
+    default_purchase_uom: "Cái",
+    default_sales_uom: "Cái",
+    default_warehouse: sourceWarehouse.name,
+    inventory_account: "Hàng tồn kho",
+    expense_account: "Hàng tồn kho",
+    valuation_method: "FIFO",
+    has_catch_weight: 1,
+    weight_uom: "Kg",
+    allow_negative_stock: 0,
+    disabled: 0,
+    description: "Local authenticated catch-weight stock lifecycle QA",
+  });
+  expect(catchWeightItem.name).toBe(itemCode);
 
   const stockUserCsrf = await loginAs(page, stockUser, stockUserPassword);
-  const receipt = await createAndSubmitStockEntry(page, stockUserCsrf, "Material Receipt", 10, undefined, sourceWarehouse.name);
-  expect(reportQtyMicros(await physicalStock(page, stockUserCsrf, sourceWarehouse.name))).toBe(10_000_000);
+  const receipt = await createAndSubmitStockEntry(
+    page, stockUserCsrf, itemCode, "Material Receipt", 10, 65.7, undefined, sourceWarehouse.name,
+  );
+  const afterReceipt = await physicalStock(page, stockUserCsrf, sourceWarehouse.name, itemCode);
+  expect(afterReceipt.lineage_redacted).toBe(false);
+  expect(reportQtyMicros(afterReceipt)).toBe(10_000_000);
+  expect(reportWeightMicros(afterReceipt)).toBe(65_700_000);
+  expect(lineageVouchers(afterReceipt)).toContain(receipt.name);
 
   await page.goto(`/app/${encodeURIComponent("Stock Entry")}/${encodeURIComponent(receipt.name)}`);
   expectDocumentRoute(page, "Stock Entry", receipt.name);
-  await expect(page.locator("body")).toContainText("Authenticated stock QA Material Receipt");
+  await expect(page.locator("body")).toContainText("Authenticated catch-weight QA Material Receipt");
 
-  await createAndSubmitStockEntry(page, stockUserCsrf, "Material Issue", 2, sourceWarehouse.name);
-  expect(reportQtyMicros(await physicalStock(page, stockUserCsrf, sourceWarehouse.name))).toBe(8_000_000);
+  const issue = await createAndSubmitStockEntry(
+    page, stockUserCsrf, itemCode, "Material Issue", 2, 13.14, sourceWarehouse.name,
+  );
+  const afterIssue = await physicalStock(page, stockUserCsrf, sourceWarehouse.name, itemCode);
+  expect(reportQtyMicros(afterIssue)).toBe(8_000_000);
+  expect(reportWeightMicros(afterIssue)).toBe(52_560_000);
+  expect(lineageVouchers(afterIssue)).toEqual(expect.arrayContaining([receipt.name, issue.name]));
 
   const managerCsrf = await loginAs(page, stockManager, stockManagerPassword);
   const transfer = await createAndSubmitStockEntry(
-    page,
-    managerCsrf,
-    "Material Transfer",
-    3,
-    sourceWarehouse.name,
-    targetWarehouse.name,
+    page, managerCsrf, itemCode, "Material Transfer", 3, 19.71, sourceWarehouse.name, targetWarehouse.name,
   );
-  expect(reportQtyMicros(await physicalStock(page, managerCsrf, sourceWarehouse.name))).toBe(5_000_000);
-  expect(reportQtyMicros(await physicalStock(page, managerCsrf, targetWarehouse.name))).toBe(3_000_000);
+  const sourceAfterTransfer = await physicalStock(page, managerCsrf, sourceWarehouse.name, itemCode);
+  const targetAfterTransfer = await physicalStock(page, managerCsrf, targetWarehouse.name, itemCode);
+  expect(reportQtyMicros(sourceAfterTransfer)).toBe(5_000_000);
+  expect(reportWeightMicros(sourceAfterTransfer)).toBe(32_850_000);
+  expect(reportQtyMicros(targetAfterTransfer)).toBe(3_000_000);
+  expect(reportWeightMicros(targetAfterTransfer)).toBe(19_710_000);
+  expect(lineageVouchers(targetAfterTransfer)).toContain(transfer.name);
 
   const productionCsrf = await loginAs(page, productionUser, productionUserPassword);
-  const productionDraft = await createStockEntryDraft(page, productionCsrf, "Material Issue", 1, sourceWarehouse.name);
+  const productionDraft = await createStockEntryDraft(
+    page, productionCsrf, itemCode, "Material Issue", 1, 6.57, sourceWarehouse.name,
+  );
   const productionSubmit = await submitRaw(page, productionCsrf, productionDraft);
   expect(productionSubmit.ok, productionSubmit.text).toBe(false);
   expect(productionSubmit.status).toBe(403);
@@ -287,16 +353,17 @@ test("authenticated operational roles preserve stock lifecycle and submit separa
   const reconciliation = await createResource(page, stockUserCsrfForCount, "Stock Reconciliation", {
     warehouse: targetWarehouse.name,
     scope: "Một mặt hàng",
-    item_code: "QA-PURCHASE-ITEM",
+    item_code: itemCode,
     snapshot_at: postingAt(),
     counted_by: stockUser,
-    note: `Authenticated stock count ${suffix}`,
+    note: `Authenticated catch-weight count ${suffix}`,
     items: [{
       doctype: "Stock Reconciliation Item",
-      item_code: "QA-PURCHASE-ITEM",
+      item_code: itemCode,
       counted_qty: 2,
+      counted_weight_kg: 13.14,
       variance_reason: "Khác",
-      variance_note: "Authenticated QA count variance",
+      variance_note: "Authenticated catch-weight QA count variance",
     }],
   });
   expect(reconciliation.docstatus).toBe(0);
@@ -309,11 +376,14 @@ test("authenticated operational roles preserve stock lifecycle and submit separa
   const managerView = await getResource(page, "Stock Reconciliation", reconciliation.name);
   const submittedReconciliation = await submit(page, managerCsrfForApproval, managerView);
   expect(submittedReconciliation.docstatus).toBe(1);
-  expect(reportQtyMicros(await physicalStock(page, managerCsrfForApproval, targetWarehouse.name))).toBe(2_000_000);
+  const afterReconciliation = await physicalStock(page, managerCsrfForApproval, targetWarehouse.name, itemCode);
+  expect(reportQtyMicros(afterReconciliation)).toBe(2_000_000);
+  expect(reportWeightMicros(afterReconciliation)).toBe(13_140_000);
+  expect(lineageVouchers(afterReconciliation)).toEqual(expect.arrayContaining([transfer.name, submittedReconciliation.name]));
 
   await page.goto(`/app/${encodeURIComponent("Stock Reconciliation")}/${encodeURIComponent(submittedReconciliation.name)}`);
   expectDocumentRoute(page, "Stock Reconciliation", submittedReconciliation.name);
-  await expect(page.locator("body")).toContainText(`Authenticated stock count ${suffix}`);
+  await expect(page.locator("body")).toContainText(`Authenticated catch-weight count ${suffix}`);
 
   const immutableCancel = await cancelRaw(page, managerCsrfForApproval, "Stock Reconciliation", submittedReconciliation.name);
   expect(immutableCancel.ok, immutableCancel.text).toBe(false);
