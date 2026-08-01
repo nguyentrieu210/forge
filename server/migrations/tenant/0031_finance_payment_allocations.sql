@@ -69,6 +69,14 @@ WHEN NEW.against_voucher_type='Payment Entry'
      AND against_voucher_type='Payment Entry'
      AND against_voucher_no=NEW.against_voucher_no
  ),0) + NEW.base_amount_minor > 0
+ -- If transaction-currency outstanding is also exceeded, let the amount guard
+ -- own that error deterministically. The base guard is only for base-only drift.
+ AND COALESCE((
+   SELECT SUM(amount_minor) FROM payment_ledger_entries
+   WHERE tenant_id=NEW.tenant_id
+     AND against_voucher_type='Payment Entry'
+     AND against_voucher_no=NEW.against_voucher_no
+ ),0) + NEW.amount_minor <= 0
 BEGIN
   SELECT RAISE(ABORT, 'PAYMENT_ADVANCE_BASE_EXCEEDED');
 END;
