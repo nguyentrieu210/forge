@@ -30,6 +30,7 @@ export * from "./business/access.js";
 export * from "./business/display.js";
 
 export const CORE_VERSION = "0.1.0";
+/** Engine 1.x ↔ Frappe 16 (architecture §J versioning). */
 export const FRAPPE_TARGET = "16" as const;
 
 export { withAppBase } from "./util/app-base.js";
