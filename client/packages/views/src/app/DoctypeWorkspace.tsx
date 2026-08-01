@@ -34,6 +34,8 @@ export interface DoctypeWorkspaceProps {
 export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
   const t = useT();
   const [closeRequest, setCloseRequest] = useState(0);
+  const [bulkDirty, setBulkDirty] = useState(false);
+  const [confirmBulkExit, setConfirmBulkExit] = useState(false);
   const titleMeta = useMeta(props.doctype);
   const { doctype, name, onNavigate, bridge } = props;
   const base = props.base ?? "/app";
@@ -53,7 +55,13 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
         variant={bulkActive ? "ghost" : "secondary"}
         size="sm"
         className="h-8"
-        onClick={() => bridge.set({ view: null })}
+        onClick={() => {
+          if (bulkActive && bulkDirty) {
+            setConfirmBulkExit(true);
+            return;
+          }
+          bridge.set({ view: null });
+        }}
       >
         <List /> Danh sách
       </Button>
@@ -74,7 +82,7 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
         {modeTabs}
         <div className="min-h-0 flex-1">
           {bulkActive ? (
-            <BulkGridContainer doctype={doctype} bridge={bridge} title={displayTitle} />
+            <BulkGridContainer doctype={doctype} bridge={bridge} title={displayTitle} onDirtyChange={setBulkDirty} />
           ) : (
             <SplitView
               autoSaveId={`mf-split-v3-${doctype}`}
@@ -141,6 +149,30 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
           )}
         </div>
       </div>
+
+      <Dialog open={confirmBulkExit} onOpenChange={setConfirmBulkExit}>
+        <DialogContent className="w-[min(92vw,430px)] max-w-none">
+          <DialogHeader>
+            <DialogTitle>Bỏ thay đổi chưa lưu?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm leading-6 text-muted-foreground">
+            Bulk View đang có thay đổi chưa lưu. Chuyển về danh sách sẽ bỏ các chỉnh sửa này.
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setConfirmBulkExit(false)}>Tiếp tục chỉnh</Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setConfirmBulkExit(false);
+                setBulkDirty(false);
+                bridge.set({ view: null });
+              }}
+            >
+              Bỏ thay đổi
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isNew} onOpenChange={(open) => { if (!open) setCloseRequest((value) => value + 1); }}>
         <DialogContent
