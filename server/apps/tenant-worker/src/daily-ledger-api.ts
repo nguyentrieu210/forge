@@ -8,8 +8,10 @@ import {
   type DailyLedgerReportRow,
   type DailyLedgerSnapshotResult,
 } from "../../../packages/document-kernel/src/index.js";
+import { PermissionService } from "../../../packages/policy/src/index.js";
 
 const MAX_BODY_BYTES = 32_000;
+const reportPermissions = new PermissionService();
 
 const ROUTES = {
   generate: ["/api/v1/daily-ledger/generate", "/api/method/metaforge.accounts.daily_ledger_generate"],
@@ -75,10 +77,10 @@ export async function routeDailyLedgerApi(
   if (route === "generate") {
     result = await service.generate(context.tenantId, context.actor, parseContext(body));
   } else if (route === "report") {
-    assertReportRole(context.actor);
+    reportPermissions.assertReport(context.actor, "Daily Detailed Ledger");
     result = await service.read(context.tenantId, requireText(body.snapshot_id, "snapshot_id", 240));
   } else if (route === "reconcile") {
-    assertReportRole(context.actor);
+    reportPermissions.assertReport(context.actor, "Daily Detailed Ledger");
     result = await service.reconcile(context.tenantId, parseContext(body));
   } else if (route === "freeze") {
     const snapshotId = requireText(body.snapshot_id, "snapshot_id", 240);
@@ -161,22 +163,6 @@ function unwrapFrappeArgs(body: JsonObject): JsonObject {
   if (!isObject(args)) throw errors.validation("Daily ledger Frappe args must be an object");
   rejectTenantSelector(args);
   return args;
-}
-
-function assertReportRole(actor: Actor): void {
-  if (actor.user_id === "Administrator" || actor.roles.some((role) => [
-    "Administrator",
-    "System Manager",
-    "Accounts Manager",
-    "Accounts User",
-    "General Accountant",
-    "Chief Accountant",
-    "Director",
-    "Kế toán tổng hợp",
-    "Kế toán trưởng",
-    "Giám đốc",
-  ].includes(role))) return;
-  throw errors.permission("Role is not allowed to view or reconcile the Daily Detailed Ledger");
 }
 
 function rejectUnknown(body: JsonObject, allowed: Set<string>): void {
