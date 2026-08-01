@@ -110,7 +110,9 @@ test("first freeze fails closed when source changed after snapshot", async () =>
 
   await assert.rejects(
     () => service.freeze("tenant-a", ACTOR, SNAPSHOT.snapshot_id, "close day"),
-    (error) => error?.code === "LIFECYCLE_ERROR" && /source changed/i.test(error.message),
+    (error) => error?.code === "INVALID_LIFECYCLE_TRANSITION"
+      && error?.status === 409
+      && /source changed/i.test(error.message),
   );
   assert.equal(freezeCalls, 0);
 });
@@ -143,7 +145,7 @@ test("freeze permission is checked before snapshot existence lookup", async () =
 
   await assert.rejects(
     () => service.freeze("tenant-a", { user_id: "stock@example.test", roles: ["Stock Manager"] }, SNAPSHOT.snapshot_id),
-    (error) => error?.code === "PERMISSION_DENIED",
+    (error) => error?.status === 403 && /permission is denied/i.test(error.message),
   );
 });
 
@@ -153,7 +155,7 @@ test("freeze lookup remains tenant scoped and missing snapshot fails closed", as
 
   await assert.rejects(
     () => service.freeze("tenant-b", ACTOR, "DLS-FOREIGN"),
-    (error) => error?.code === "NOT_FOUND",
+    (error) => error?.code === "DOCUMENT_NOT_FOUND" && error?.status === 404,
   );
   assert.equal(database.binds[0].args[0], "tenant-b");
   assert.equal(database.binds[0].args[1], "DLS-FOREIGN");
