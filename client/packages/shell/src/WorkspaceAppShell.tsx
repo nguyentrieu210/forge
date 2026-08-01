@@ -55,16 +55,18 @@ function WorkspaceTabs({
 }) {
   const items = workspaceItemsForTabs(module);
   return (
-    <div className="mf-workspace-tabs shrink-0 overflow-x-auto border-b bg-background/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/85">
-      <nav className="flex min-w-max items-stretch" aria-label={`Nghiệp vụ ${module.label}`}>
+    <div className="mf-workspace-tabs shrink-0 overflow-x-auto border-b bg-card/90 px-2 py-1.5 backdrop-blur-xl supports-[backdrop-filter]:bg-card/80 sm:px-3">
+      <nav className="inline-flex min-w-max items-center gap-1 rounded-xl border bg-muted/40 p-1 shadow-sm" aria-label={`Nghiệp vụ ${module.label}`}>
         <Button
           type="button"
           variant="ghost"
           size="sm"
           data-kind="process"
           className={cn(
-            "relative h-10 shrink-0 rounded-none border-x-0 border-t-0 border-b-2 border-transparent px-4 text-xs font-medium",
-            processActive ? "border-b-primary bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
+            "h-8 shrink-0 rounded-lg border border-transparent px-3 text-xs font-semibold transition-all",
+            processActive
+              ? "border-border bg-card text-primary shadow-sm"
+              : "text-muted-foreground hover:bg-card/70 hover:text-foreground",
           )}
           aria-current={processActive ? "page" : undefined}
           onClick={onProcess}
@@ -83,10 +85,10 @@ function WorkspaceTabs({
               title={item.disabledReason}
               data-kind="doctype"
               className={cn(
-                "relative h-10 shrink-0 rounded-none border-x-0 border-t-0 border-b-2 border-transparent px-4 text-xs font-medium",
+                "h-8 shrink-0 rounded-lg border border-transparent px-3 text-xs font-semibold transition-all",
                 active
-                  ? "border-b-primary bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
+                  ? "border-border bg-card text-primary shadow-sm"
+                  : "text-muted-foreground hover:bg-card/70 hover:text-foreground",
               )}
               aria-current={active ? "page" : undefined}
               onClick={() => onNavigate(item.key)}
@@ -110,50 +112,114 @@ function ProcessPanel({ module, reports, masters, onNavigate }: { module: Worksp
     "sm:col-start-4 sm:row-start-1", "sm:col-start-4 sm:row-start-2",
   ];
   return (
-    <div className="h-full overflow-auto bg-[color-mix(in_srgb,var(--primary)_8%,var(--background))] p-2 sm:p-4 lg:p-6">
-      <section className="mx-auto grid w-full max-w-6xl gap-3 lg:grid-cols-[minmax(0,1fr)_21rem]">
-        <div className="overflow-hidden rounded-md border bg-card shadow-sm">
-          <div className="border-b px-4 py-3 text-center">
-            <h1 className="text-base font-bold uppercase">Nghiệp vụ {module.label}</h1>
-          </div>
-          {flowItems.length ? (
-            <div className="relative grid min-h-[23rem] grid-cols-2 gap-x-4 gap-y-10 px-4 py-7 sm:grid-cols-4 sm:px-8">
-              <div className="absolute left-[10%] right-[10%] top-1/2 hidden h-0.5 -translate-y-1/2 bg-primary/30 sm:block" />
-              {flowItems.map((item, index) => {
-                const top = index % 2 === 0;
-                return (
-                  <div key={item.key} className={cn("relative z-10 flex min-w-0 justify-center", desktopPositions[index], top ? "sm:items-end sm:pb-8" : "sm:items-start sm:pt-8")}>
-                    <span className={cn("absolute left-1/2 hidden w-0.5 -translate-x-1/2 bg-primary/30 sm:block", top ? "bottom-0 h-8" : "top-0 h-8")} />
-                    <Button type="button" variant="ghost" className="group h-auto min-h-24 w-full min-w-0 flex-col justify-center whitespace-normal rounded-md px-2 py-2 text-center hover:bg-primary/5" onClick={() => onNavigate(item.key)}>
-                      <span className="grid size-12 place-items-center rounded-sm bg-primary text-primary-foreground shadow-sm transition-transform group-hover:-translate-y-0.5 [&_svg]:size-7">{item.icon ?? index + 1}</span>
-                      <span className="mt-2 block max-w-full text-sm font-medium leading-5">{item.label}</span>
-                    </Button>
-                  </div>
-                );
-              })}
+    <div className="h-full overflow-auto bg-muted/25 p-3 sm:p-5 lg:p-7">
+      <section className="mx-auto w-full max-w-7xl space-y-4">
+        <header className="flex flex-col gap-3 rounded-2xl border bg-card px-4 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-5">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/[0.15]">
+              <Workflow className="size-5" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Không gian nghiệp vụ</p>
+              <h1 className="truncate text-lg font-semibold tracking-tight">Quy trình {module.label}</h1>
             </div>
-          ) : <div className="m-5 rounded-lg border border-dashed p-6 text-sm text-muted-foreground">Tài khoản hiện tại chưa có nghiệp vụ khả dụng trong phân hệ này.</div>}
-          <div className="grid border-t sm:grid-cols-5">
-            {masters.slice(0, 5).map((item) => (
-              <Button key={item.key} variant="ghost" className="h-20 min-w-0 flex-col gap-2 rounded-none border-b whitespace-normal text-xs sm:border-b-0 sm:border-r" onClick={() => onNavigate(item.key)}>
-                <span className="text-primary [&_svg]:size-5">{item.icon ?? <CheckCircle2 />}</span>
-                <span className="line-clamp-2">{item.label}</span>
-              </Button>
-            ))}
           </div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="rounded-full border bg-muted/40 px-2.5 py-1">{flowItems.length} nghiệp vụ chính</span>
+            {reports.length ? <span className="rounded-full border bg-muted/40 px-2.5 py-1">{reports.length} báo cáo</span> : null}
+          </div>
+        </header>
+
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_21rem]">
+          <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+            <div className="border-b bg-gradient-to-r from-primary/[0.08] via-transparent to-transparent px-4 py-3.5 sm:px-5">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-sm font-semibold">Luồng xử lý chính</h2>
+                  <p className="mt-0.5 text-xs text-muted-foreground">Chọn một bước để mở thẳng màn nghiệp vụ tương ứng.</p>
+                </div>
+                <span className="hidden rounded-full border bg-card/80 px-2.5 py-1 text-[11px] font-medium text-muted-foreground sm:inline-flex">Theo thứ tự thao tác</span>
+              </div>
+            </div>
+            {flowItems.length ? (
+              <div className="relative grid min-h-[25rem] grid-cols-2 gap-x-3 gap-y-8 px-3 py-6 sm:grid-cols-4 sm:gap-x-5 sm:px-6 sm:py-8">
+                <div className="absolute left-[9%] right-[9%] top-1/2 hidden h-px -translate-y-1/2 bg-gradient-to-r from-transparent via-primary/[0.45] to-transparent sm:block" />
+                {flowItems.map((item, index) => {
+                  const top = index % 2 === 0;
+                  return (
+                    <div key={item.key} className={cn("relative z-10 flex min-w-0 justify-center", desktopPositions[index], top ? "sm:items-end sm:pb-8" : "sm:items-start sm:pt-8")}>
+                      <span className={cn("absolute left-1/2 hidden w-px -translate-x-1/2 bg-gradient-to-b from-primary/10 via-primary/[0.45] to-primary/10 sm:block", top ? "bottom-0 h-8" : "top-0 h-8")} />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="group h-auto min-h-28 w-full min-w-0 flex-col justify-center whitespace-normal rounded-xl border border-transparent px-2.5 py-3 text-center transition-all hover:-translate-y-0.5 hover:border-primary/20 hover:bg-primary/[0.045] hover:shadow-sm"
+                        onClick={() => onNavigate(item.key)}
+                      >
+                        <span className="relative grid size-12 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm ring-4 ring-primary/10 transition-transform group-hover:scale-[1.03] [&_svg]:size-6">
+                          {item.icon ?? index + 1}
+                          <span className="absolute -right-1.5 -top-1.5 grid size-5 place-items-center rounded-full border-2 border-card bg-card text-[9px] font-bold text-primary shadow-sm">{index + 1}</span>
+                        </span>
+                        <span className="mt-2.5 block max-w-full text-sm font-semibold leading-5">{item.label}</span>
+                        <span className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">Mở nghiệp vụ</span>
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : <div className="m-5 rounded-xl border border-dashed bg-muted/20 p-7 text-center text-sm text-muted-foreground">Tài khoản hiện tại chưa có nghiệp vụ khả dụng trong phân hệ này.</div>}
+
+            {masters.length ? (
+              <div className="border-t bg-muted/20 p-4">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Danh mục nhanh</h3>
+                    <p className="mt-0.5 text-xs text-muted-foreground">Dữ liệu nền dùng thường xuyên trong phân hệ.</p>
+                  </div>
+                  <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-primary" onClick={() => onNavigate("__master-data")}>Tất cả danh mục</Button>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-5">
+                  {masters.slice(0, 5).map((item) => (
+                    <Button
+                      key={item.key}
+                      variant="ghost"
+                      className="h-auto min-h-20 min-w-0 flex-col gap-2 rounded-xl border bg-card px-2 py-3 whitespace-normal text-xs shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/25 hover:bg-card hover:shadow-md"
+                      onClick={() => onNavigate(item.key)}
+                    >
+                      <span className="grid size-8 place-items-center rounded-lg bg-primary/[0.08] text-primary [&_svg]:size-4">{item.icon ?? <CheckCircle2 />}</span>
+                      <span className="line-clamp-2 font-medium leading-4">{item.label}</span>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+          <aside className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+            <div className="border-b bg-gradient-to-br from-primary/[0.09] via-transparent to-transparent px-4 py-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">Phân tích</p>
+              <h2 className="mt-0.5 text-base font-semibold tracking-tight">Báo cáo</h2>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">Các báo cáo liên quan trực tiếp đến phân hệ {module.label}.</p>
+            </div>
+            <div className="space-y-1.5 p-2.5">
+              {reports.slice(0, 6).map((item, index) => (
+                <Button
+                  key={item.key}
+                  variant="ghost"
+                  className="group h-auto min-h-14 w-full justify-start gap-3 rounded-xl border border-transparent px-2.5 py-2.5 text-left text-sm font-normal transition-all hover:border-border hover:bg-muted/[0.45]"
+                  onClick={() => onNavigate(item.key)}
+                >
+                  <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-primary/[0.08] text-[10px] font-bold text-primary ring-1 ring-primary/10">{index + 1}</span>
+                  <span className="min-w-0 flex-1 whitespace-normal font-medium leading-5">{item.label}</span>
+                  <span className="size-1.5 shrink-0 rounded-full bg-primary/[0.35] transition-colors group-hover:bg-primary" />
+                </Button>
+              ))}
+              {!reports.length ? <div className="rounded-xl border border-dashed bg-muted/20 px-3 py-6 text-center text-xs text-muted-foreground">Chưa có báo cáo khả dụng.</div> : null}
+            </div>
+            <div className="border-t p-2.5">
+              <Button variant="outline" className="h-9 w-full rounded-lg text-primary" onClick={() => onNavigate("__reports")}>Xem tất cả báo cáo</Button>
+            </div>
+          </aside>
         </div>
-        <aside className="overflow-hidden rounded-md border bg-card shadow-sm">
-          <h2 className="border-b px-4 py-3 text-center text-base font-bold uppercase">Báo cáo</h2>
-          <div className="divide-y px-4">
-            {reports.slice(0, 6).map((item) => (
-              <Button key={item.key} variant="ghost" className="h-auto min-h-14 w-full justify-start gap-3 rounded-none px-0 py-3 text-left text-sm font-normal" onClick={() => onNavigate(item.key)}>
-                <span className="size-1.5 shrink-0 rounded-full bg-muted-foreground" />
-                <span className="min-w-0 whitespace-normal">{item.label}</span>
-              </Button>
-            ))}
-          </div>
-          <Button variant="ghost" className="h-12 w-full rounded-none border-t text-primary" onClick={() => onNavigate("__reports")}>Tất cả báo cáo</Button>
-        </aside>
       </section>
     </div>
   );
