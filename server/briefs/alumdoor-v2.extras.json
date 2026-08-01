@@ -54,7 +54,7 @@
   ],
   "experiences": [
     {
-      "key": "manufacturing-costing:workbench",
+      "key": "screen:manufacturing-costing",
       "label": "Giá thành sản xuất",
       "permission": "Manufacturing Cost Rate",
       "roles": [
