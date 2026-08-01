@@ -447,15 +447,15 @@ export class PaymentAllocationController implements DocumentController<PaymentAl
         base_allocated_amount: fromScaledInt(baseAllocated, companyScale),
       });
     }
-    if (total > sourceRemaining || totalBase > sourceBaseRemaining) {
-      throw errors.reference("Payment Allocation exceeds remaining source advance", {
-        source_remaining_minor: sourceRemaining,
-        requested_minor: total,
-        source_base_remaining_minor: sourceBaseRemaining,
-        requested_base_minor: totalBase,
-      });
-    }
     if (context.command.action === "submit") {
+      if (total > sourceRemaining || totalBase > sourceBaseRemaining) {
+        throw errors.reference("Payment Allocation exceeds remaining source advance", {
+          source_remaining_minor: sourceRemaining,
+          requested_minor: total,
+          source_base_remaining_minor: sourceBaseRemaining,
+          requested_base_minor: totalBase,
+        });
+      }
       await assertUnlocked(context as unknown as ControllerContext<JsonObject>, input.company, input.posting_at);
     }
     return {
