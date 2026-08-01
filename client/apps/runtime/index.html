@@ -63,6 +63,25 @@
         background-color: #f3f0ea !important;
       }
 
+      #alumdoor-pwa-launch {
+        display: none;
+        position: fixed;
+        right: max(1rem, env(safe-area-inset-right));
+        bottom: max(1rem, env(safe-area-inset-bottom));
+        z-index: 80;
+        align-items: center;
+        justify-content: center;
+        min-height: 2.75rem;
+        border-radius: 999px;
+        background: #ef6b2e;
+        padding: .7rem 1rem;
+        color: white;
+        font: 700 .8rem/1 system-ui, sans-serif;
+        text-decoration: none;
+        box-shadow: 0 14px 36px rgba(0,0,0,.24);
+      }
+      body:has([data-alumdoor-landing]) #alumdoor-pwa-launch { display: inline-flex; }
+
       @media (max-width: 1023px) {
         [data-alumdoor-landing] main > section:first-child {
           background-position: center, center top !important;
@@ -83,6 +102,7 @@
     </script>
   </head>
   <body>
+    <a id="alumdoor-pwa-launch" href="/mobile/warehouse/">App kho điện thoại</a>
     <div id="root"></div>
     <script type="module">
       const fixture = new URLSearchParams(window.location.search).has("dialog-wheel-fixture");
