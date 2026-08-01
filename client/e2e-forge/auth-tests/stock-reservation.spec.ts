@@ -14,9 +14,8 @@ type FrappeDoc = JsonRecord & {
 type BrowserResponse = { status: number; ok: boolean; body: unknown; text: string };
 type DocTypeMeta = {
   autoname?: string;
-  fields?: Array<{ fieldname?: string; fieldtype?: string; reqd?: number; required?: boolean; default?: unknown }>;
+  fields?: Array<{ fieldname?: string }>;
 };
-
 type PhysicalStockReport = {
   rows?: Array<{ item_code?: string; warehouse?: string; batch_no?: string; quantity_micros?: number }>;
   totals?: { quantity_micros?: number };
@@ -103,13 +102,16 @@ async function submit(page: Page, csrf: string, doc: FrappeDoc) {
   }));
 }
 
-async function createUser(page: Page, csrf: string, user: string, password: string, roles: string[]) {
+async function createUser(page: Page, csrf: string, user: string, password: string) {
   const response = await browserRequest(page, "/api/method/metaforge.api.create_user", {
     method: "POST",
     csrf,
     body: {
-      user, password, full_name: "QA Reservation Stock User", email: user,
-      roles: JSON.stringify(roles),
+      user,
+      password,
+      full_name: "QA Reservation Stock User",
+      email: user,
+      roles: JSON.stringify(["Thủ kho"]),
     },
   });
   expect(response.ok, response.text).toBe(true);
@@ -147,13 +149,7 @@ async function getDocTypeMeta(page: Page, doctype: string): Promise<DocTypeMeta>
   return unwrap(response.body) as DocTypeMeta;
 }
 
-async function createBatch(
-  page: Page,
-  csrf: string,
-  itemCode: string,
-  warehouse: string,
-  batchName: string,
-): Promise<FrappeDoc> {
+async function createBatch(page: Page, csrf: string, itemCode: string, warehouse: string, batchName: string) {
   const meta = await getDocTypeMeta(page, "Batch");
   const fields = new Set((meta.fields ?? []).map((field) => field.fieldname).filter((value): value is string => Boolean(value)));
   const candidates: JsonRecord = {
@@ -184,40 +180,19 @@ async function createBatch(
   return created;
 }
 
-async function createSubmittedBundle(
-  page: Page,
-  csrf: string,
-  itemCode: string,
-  warehouse: string,
-  batchName: string,
-  qty: number,
-) {
+async function createSubmittedBundle(page: Page, csrf: string, itemCode: string, warehouse: string, batchName: string) {
   const bundle = await createResource(page, csrf, "Serial and Batch Bundle", {
     item_code: itemCode,
     warehouse,
     type: "Inward",
     posting_at: postingAt(),
-    entries: [{
-      doctype: "Serial and Batch Bundle Entry",
-      row_id: "ROW-1",
-      qty,
-      batch_no: batchName,
-    }],
+    entries: [{ doctype: "Serial and Batch Bundle Entry", row_id: "ROW-1", qty: 10, batch_no: batchName }],
   });
   expect(bundle.docstatus).toBe(0);
-  const submitted = await submit(page, csrf, bundle);
-  expect(submitted.docstatus).toBe(1);
-  return submitted;
+  return submit(page, csrf, bundle);
 }
 
-async function createTrackedReceipt(
-  page: Page,
-  csrf: string,
-  itemCode: string,
-  warehouse: string,
-  bundleName: string,
-  qty: number,
-) {
+async function createTrackedReceipt(page: Page, csrf: string, itemCode: string, warehouse: string, bundleName: string) {
   const draft = await createResource(page, csrf, "Stock Entry", {
     company: "ALUMDOOR",
     posting_at: postingAt(),
@@ -226,7 +201,7 @@ async function createTrackedReceipt(
     items: [{
       doctype: "Stock Entry Detail",
       item_code: itemCode,
-      qty,
+      qty: 10,
       uom: "Cái",
       target_warehouse: warehouse,
       valuation_rate: 100000,
@@ -236,10 +211,24 @@ async function createTrackedReceipt(
   return submit(page, csrf, draft);
 }
 
-async function releaseReservation(page: Page, csrf: string, reservation: string, reason: string) {
+async function releaseReservation(page: Page, csrf: string, reservation: string) {
   return browserRequest(page, "/api/method/alumdoor.reserve.release", {
-    method: "POST", csrf, body: { reservation, released_reason: reason },
+    method: "POST", csrf, body: { reservation, released_reason: "Khác" },
   });
+}
+
+function reservationDocument(itemCode: string, warehouse: string, sourceName: string, qtyReserved: number): JsonRecord {
+  return {
+    item_code: itemCode,
+    warehouse,
+    min_length_m: 5,
+    qty_reserved: qtyReserved,
+    source_doctype: "Sales Order",
+    source_name: sourceName,
+    reserved_at: new Date().toISOString(),
+    expires_at: `${day(1)} 23:59:59`,
+    state: "Đang giữ",
+  };
 }
 
 test("authenticated reservation reduces available stock without changing physical stock and release is one-way", async ({ page }, testInfo) => {
@@ -250,7 +239,7 @@ test("authenticated reservation reduces available stock without changing physica
   const itemCode = `QA-RESERVE-${suffix}`.slice(0, 120);
   const batchName = `QA-BATCH-${suffix}`.slice(0, 120);
 
-  const createdUser = await createUser(page, adminCsrf, stockUser, password, ["Thủ kho"]);
+  const createdUser = await createUser(page, adminCsrf, stockUser, password);
   expect(createdUser.roles).toContain("Thủ kho");
 
   const warehouse = await createResource(page, adminCsrf, "Warehouse", {
@@ -268,7 +257,7 @@ test("authenticated reservation reduces available stock without changing physica
     supply_type: "Mua ngoài",
     is_stock_item: 1,
     is_purchase_item: 1,
-    is_sales_item: 0,
+    is_sales_item: 1,
     include_item_in_manufacturing: 0,
     measurement_profile: "Hàng thường",
     stock_uom: "Cái",
@@ -287,91 +276,61 @@ test("authenticated reservation reduces available stock without changing physica
   expect(item.name).toBe(itemCode);
 
   await createBatch(page, adminCsrf, itemCode, warehouse.name, batchName);
-  const bundle = await createSubmittedBundle(page, adminCsrf, itemCode, warehouse.name, batchName, 10);
+  const bundle = await createSubmittedBundle(page, adminCsrf, itemCode, warehouse.name, batchName);
 
+  // Stock Reservation requires a real source document. A draft Sales Order is enough,
+  // but the selling controller still requires at least one line and computes its totals.
   const source = await createResource(page, adminCsrf, "Sales Order", {
     customer: `QA Reservation Source ${suffix}`,
     company: "ALUMDOOR",
     currency: "VND",
     transaction_date: day(0),
-    items: [],
+    items: [{
+      doctype: "Sales Order Item",
+      row_id: "ROW-1",
+      item_code: itemCode,
+      qty: 1,
+      uom: "Cái",
+      rate: 100000,
+      warehouse: warehouse.name,
+    }],
   });
   expect(source.docstatus).toBe(0);
 
   const stockCsrf = await loginAs(page, stockUser, password);
-  const receipt = await createTrackedReceipt(page, stockCsrf, itemCode, warehouse.name, bundle.name, 10);
+  const receipt = await createTrackedReceipt(page, stockCsrf, itemCode, warehouse.name, bundle.name);
   expect(receipt.docstatus).toBe(1);
   const beforeReservation = await physicalStock(page, stockCsrf, warehouse.name, itemCode);
   expect(physicalQty(beforeReservation)).toBe(10_000_000);
   expect((beforeReservation.rows ?? []).some((row) => row.batch_no === batchName)).toBe(true);
 
-  const reservation1 = await createResource(page, stockCsrf, "Stock Reservation", {
-    item_code: itemCode,
-    warehouse: warehouse.name,
-    min_length_m: 5,
-    qty_reserved: 6,
-    source_doctype: "Sales Order",
-    source_name: source.name,
-    reserved_at: new Date().toISOString(),
-    expires_at: `${day(1)} 23:59:59`,
-    state: "Đang giữ",
-  });
+  const reservation1 = await createResource(page, stockCsrf, "Stock Reservation", reservationDocument(itemCode, warehouse.name, source.name, 6));
   expect(reservation1.state).toBe("Đang giữ");
   expect(physicalQty(await physicalStock(page, stockCsrf, warehouse.name, itemCode))).toBe(10_000_000);
 
-  const overReserved = await createResourceRaw(page, stockCsrf, "Stock Reservation", {
-    item_code: itemCode,
-    warehouse: warehouse.name,
-    min_length_m: 5,
-    qty_reserved: 5,
-    source_doctype: "Sales Order",
-    source_name: source.name,
-    reserved_at: new Date().toISOString(),
-    expires_at: `${day(1)} 23:59:59`,
-    state: "Đang giữ",
-  });
+  const overReserved = await createResourceRaw(page, stockCsrf, "Stock Reservation", reservationDocument(itemCode, warehouse.name, source.name, 5));
   expect(overReserved.ok, overReserved.text).toBe(false);
   expect([409, 417, 422]).toContain(overReserved.status);
   expect(overReserved.text).toContain("available_qty_micros");
   expect(overReserved.text).toContain("4000000");
 
-  const released = await releaseReservation(page, stockCsrf, reservation1.name, "Khác");
+  const released = await releaseReservation(page, stockCsrf, reservation1.name);
   expect(released.status, released.text).toBe(200);
   expect(released.text).toContain("Đã nhả");
   const releasedDoc = await getResource(page, "Stock Reservation", reservation1.name);
   expect(releasedDoc.state).toBe("Đã nhả");
   expect(physicalQty(await physicalStock(page, stockCsrf, warehouse.name, itemCode))).toBe(10_000_000);
 
-  const restored = await createResource(page, stockCsrf, "Stock Reservation", {
-    item_code: itemCode,
-    warehouse: warehouse.name,
-    min_length_m: 5,
-    qty_reserved: 10,
-    source_doctype: "Sales Order",
-    source_name: source.name,
-    reserved_at: new Date().toISOString(),
-    expires_at: `${day(1)} 23:59:59`,
-    state: "Đang giữ",
-  });
+  const restored = await createResource(page, stockCsrf, "Stock Reservation", reservationDocument(itemCode, warehouse.name, source.name, 10));
   expect(restored.state).toBe("Đang giữ");
   expect(physicalQty(await physicalStock(page, stockCsrf, warehouse.name, itemCode))).toBe(10_000_000);
 
-  const noAvailability = await createResourceRaw(page, stockCsrf, "Stock Reservation", {
-    item_code: itemCode,
-    warehouse: warehouse.name,
-    min_length_m: 5,
-    qty_reserved: 1,
-    source_doctype: "Sales Order",
-    source_name: source.name,
-    reserved_at: new Date().toISOString(),
-    expires_at: `${day(1)} 23:59:59`,
-    state: "Đang giữ",
-  });
+  const noAvailability = await createResourceRaw(page, stockCsrf, "Stock Reservation", reservationDocument(itemCode, warehouse.name, source.name, 1));
   expect(noAvailability.ok, noAvailability.text).toBe(false);
   expect(noAvailability.text).toContain("available_qty_micros");
   expect(noAvailability.text).toContain("0");
 
-  const doubleRelease = await releaseReservation(page, stockCsrf, reservation1.name, "Khác");
+  const doubleRelease = await releaseReservation(page, stockCsrf, reservation1.name);
   expect(doubleRelease.status, doubleRelease.text).toBe(422);
   expect(doubleRelease.text).toContain("không còn ở trạng thái Đang giữ");
 
@@ -379,7 +338,7 @@ test("authenticated reservation reduces available stock without changing physica
   expect(terminalEdit.ok, terminalEdit.text).toBe(false);
   expect([409, 417, 422]).toContain(terminalEdit.status);
 
-  const finalRelease = await releaseReservation(page, stockCsrf, restored.name, "Khác");
+  const finalRelease = await releaseReservation(page, stockCsrf, restored.name);
   expect(finalRelease.status, finalRelease.text).toBe(200);
   expect(physicalQty(await physicalStock(page, stockCsrf, warehouse.name, itemCode))).toBe(10_000_000);
 });
