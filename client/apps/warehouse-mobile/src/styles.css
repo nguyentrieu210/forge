@@ -20,7 +20,10 @@ html,
 body,
 #root {
   min-height: 100%;
+  width: 100%;
+  max-width: 100%;
   margin: 0;
+  overflow-x: hidden;
 }
 
 body {
@@ -46,6 +49,7 @@ textarea {
 
 .forge-operation-grid > button {
   min-height: 7rem;
+  max-width: 100%;
 }
 
 @media (min-width: 768px) {

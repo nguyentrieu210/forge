@@ -34,6 +34,8 @@ export interface AppShellProps {
   brandMode?: BrandMode;
   /** Logo app (ReactNode). Không có ⇒ rơi về chữ cái đầu của `brand`. */
   brandMark?: ReactNode;
+  /** Hiển thị riêng logo ngang, không ghép thêm tên app ở cạnh. */
+  brandLogoOnly?: boolean;
   nav: NavItem[];
   activeKey: string;
   onNavigate: (key: string) => void;
@@ -119,7 +121,10 @@ function BreadcrumbTrail({ items }: { items: Breadcrumb[] }) {
 export function AppShell(props: AppShellProps) {
   const t = useT();
   // Màu thương hiệu nằm CHUNG menu với sáng/tối — cùng là "giao diện", không tách ra màn Cài đặt.
-  const [brand, setBrand] = useBrand(props.brandMode);
+  const [brand, setBrand] = useBrand(
+    props.allowBrandChange === false ? props.brandMode : undefined,
+    props.brandMode,
+  );
   const [collapsed, setCollapsed] = useState(() => { try { return localStorage.getItem("mf-sidebar-collapsed") === "1"; } catch { return false; } });
   const [mobileOpen, setMobileOpen] = useState(false);
   const [navQuery, setNavQuery] = useState("");
@@ -224,9 +229,12 @@ export function AppShell(props: AppShellProps) {
                 dự phòng cho app chưa có logo, không phải mặc định nên dùng: nó không khớp favicon
                 và làm cùng một phần mềm trông như hai thứ khác nhau giữa tab và thanh bên. */}
             {props.brandMark
-              ? <div className="mf-brand-mark grid size-7 shrink-0 place-items-center overflow-hidden rounded-md">{props.brandMark}</div>
+              ? <div className={cn(
+                  "grid shrink-0 place-items-center overflow-hidden rounded-md",
+                  props.brandLogoOnly && !collapsed ? "h-9 w-[12.5rem] bg-white px-2" : "mf-brand-mark size-7",
+                )}>{props.brandMark}</div>
               : <div className="mf-brand-mark">{(props.brand ?? "MetaForge").trim().charAt(0).toUpperCase()}</div>}
-            {!collapsed ? <span className="truncate font-semibold">{props.brand ?? "MetaForge"}</span> : null}
+            {!collapsed && !props.brandLogoOnly ? <span className="truncate font-semibold">{props.brand ?? "MetaForge"}</span> : null}
             <Button variant="ghost" size="icon-sm" className="ml-auto md:hidden" onClick={() => setMobileOpen(false)} aria-label="Đóng menu"><X className="size-4" /></Button>
           </div>
           <Separator />

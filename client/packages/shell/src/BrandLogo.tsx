@@ -13,7 +13,7 @@ export interface ForgeBrandLogoProps {
   subtitle?: string;
 }
 
-function isAlumdoorSurface() {
+export function isAlumdoorSurface() {
   if (typeof window === "undefined") return false;
   const host = window.location.hostname.toLowerCase();
   const params = new URLSearchParams(window.location.search);

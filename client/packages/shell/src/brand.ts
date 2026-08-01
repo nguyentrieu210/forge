@@ -11,7 +11,7 @@ export const BRANDS: { id: BrandMode; label: string; swatch: string }[] = [
   { id: "zinc", label: "Than chì", swatch: "#18181b" },
   { id: "blue", label: "Xanh điện", swatch: "#1b4dff" },
   { id: "warm", label: "Đất nung", swatch: "#b15b2e" },
-  { id: "sakura", label: "Hồng Sakura", swatch: "linear-gradient(135deg,#f472b6,#fbcfe8)" },
+  { id: "sakura", label: "Hồng cánh sen", swatch: "linear-gradient(135deg,#be185d,#ec4899 55%,#f472b6)" },
   { id: "emerald", label: "Ngọc lục bảo", swatch: "#059669" },
   { id: "ocean", label: "Đại dương", swatch: "linear-gradient(135deg,#0284c7,#22d3ee)" },
   { id: "violet", label: "Tím hoàng gia", swatch: "#7c3aed" },
@@ -35,11 +35,11 @@ export function applyBrand(brand: BrandMode): void {
   else document.documentElement.setAttribute("data-brand", brand);
 }
 
-export function useBrand(controlled?: BrandMode): [BrandMode, (b: BrandMode) => void] {
+export function useBrand(controlled?: BrandMode, defaultBrand: BrandMode = "blue"): [BrandMode, (b: BrandMode) => void] {
   const [userBrand, setUserBrand] = useState<BrandMode>(() => {
-    if (typeof localStorage === "undefined") return "blue";
+    if (typeof localStorage === "undefined") return defaultBrand;
     const value = localStorage.getItem(KEY);
-    return isBrandMode(value) ? value : "blue";
+    return isBrandMode(value) ? value : defaultBrand;
   });
   useEffect(() => {
     const effective = controlled ?? userBrand;

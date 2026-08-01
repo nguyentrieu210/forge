@@ -239,10 +239,22 @@ function RootApp() {
       adapter={adapter}
       renderLoading={() => <Splash>Đang kết nối…</Splash>}
       renderError={(message) => <div className="grid h-screen place-items-center text-destructive">Lỗi kết nối: {message}</div>}
-      renderGuest={(retry) => <LoginForm adapter={adapter} onSuccess={retry} title="Đăng nhập" />}
+      renderGuest={(retry) => <RuntimeGuestLogin retry={retry} />}
     >{(boot, auth) => <ManifestBoundary boot={boot} logout={auth.logout} />}</AuthBoundary>
     <Toaster />
   </I18nProvider>;
+}
+
+function RuntimeGuestLogin({ retry }: { retry: () => void }) {
+  const onSuccess = () => {
+    // Không phục hồi route in sau khi phiên đã hết. Route này cần tài liệu và quyền của
+    // phiên cũ; giữ nguyên nó khiến đăng nhập xong bị đưa trở lại màn in lỗi.
+    if (window.location.pathname.startsWith("/print/")) {
+      window.history.replaceState(null, "", "/");
+    }
+    retry();
+  };
+  return <LoginForm adapter={adapter} onSuccess={onSuccess} title="Đăng nhập" />;
 }
 
 /**
@@ -417,7 +429,7 @@ function Shell({ manifest, boot, logout, nav, active, breadcrumbs = [], children
       <AppShell
         brand={manifest.name}
         brandMode={manifest.brand}
-        allowBrandChange={!manifest.brand}
+        allowBrandChange
         nav={nav}
         activeKey={active}
         onNavigate={(key) => {

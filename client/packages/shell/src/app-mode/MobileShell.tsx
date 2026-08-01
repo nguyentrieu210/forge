@@ -20,8 +20,8 @@ export interface MobileShellProps {
  */
 export function MobileShell({ title, subtitle, onBack, right, bottomBar, children }: MobileShellProps) {
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-muted/30 text-foreground">
-      <header className="sticky top-0 z-20 flex items-center gap-2 border-b bg-card/95 px-3 py-2.5 backdrop-blur supports-[backdrop-filter]:bg-card/80">
+    <div className="flex min-h-[100dvh] w-full min-w-0 max-w-full flex-col overflow-x-hidden bg-muted/30 text-foreground">
+      <header className="sticky top-0 z-20 flex w-full min-w-0 max-w-full items-center gap-2 border-b bg-card/95 px-3 py-2.5 backdrop-blur supports-[backdrop-filter]:bg-card/80">
         {onBack ? (
           <Button variant="ghost" size="icon" className="size-10 shrink-0" onClick={onBack} aria-label="Quay lại">
             <ArrowLeft className="size-5" />
@@ -34,11 +34,11 @@ export function MobileShell({ title, subtitle, onBack, right, bottomBar, childre
         {right}
       </header>
 
-      <main className="mx-auto w-full max-w-xl flex-1 overflow-y-auto p-3 md:max-w-3xl md:p-5">{children}</main>
+      <main className="mx-auto w-full min-w-0 max-w-xl flex-1 overflow-x-hidden overflow-y-auto p-3 md:max-w-3xl md:p-5">{children}</main>
 
       {bottomBar ? (
         <footer className={cn(
-          "sticky bottom-0 z-20 border-t bg-card/95 p-3 backdrop-blur supports-[backdrop-filter]:bg-card/80",
+          "sticky bottom-0 z-20 w-full min-w-0 max-w-full overflow-x-hidden border-t bg-card/95 p-3 backdrop-blur supports-[backdrop-filter]:bg-card/80",
           "pb-[max(0.75rem,env(safe-area-inset-bottom))]",
         )}>
           <div className="mx-auto w-full max-w-xl md:max-w-3xl">{bottomBar}</div>

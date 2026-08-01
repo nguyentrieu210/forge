@@ -8,7 +8,7 @@ import {
   type NavItem,
 } from "./AppShell.js";
 import { ChangePasswordDialog } from "./auth/ChangePasswordDialog.js";
-import { ForgeBrandLogo } from "./BrandLogo.js";
+import { ForgeBrandLogo, isAlumdoorSurface } from "./BrandLogo.js";
 import {
   buildWorkspaceModules,
   findWorkspaceModule,
@@ -183,7 +183,8 @@ export function AppShell(props: AppShellProps) {
 
   const shellProps: AppShellProps = {
     ...props,
-    brandMark: props.brandMark ?? <ForgeBrandLogo size={28} />,
+    brandMark: props.brandMark ?? <ForgeBrandLogo size={isAlumdoorSurface() ? 32 : 28} />,
+    brandLogoOnly: props.brandLogoOnly ?? isAlumdoorSurface(),
     onChangePassword: props.onChangePassword ?? (() => setPasswordOpen(true)),
     onLogoutOtherSessions: logoutOtherSessions,
   };

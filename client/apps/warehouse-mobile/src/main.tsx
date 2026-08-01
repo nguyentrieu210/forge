@@ -260,7 +260,7 @@ function HomeScreen({ fullName, pending, onOpen, onStock }: {
           <h2 className="text-sm font-semibold">Nghiệp vụ nhanh</h2>
           <Button variant="ghost" size="sm" onClick={() => onOpen("transfer")}>Xem tất cả</Button>
         </div>
-        <div className="forge-operation-grid grid grid-cols-2 gap-3">
+        <div className="forge-operation-grid grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
           {(Object.keys(OPERATION_META) as Operation[]).map((key) => (
             <OperationButton key={key} operation={key} onClick={() => onOpen(key)} />
           ))}
@@ -305,9 +305,9 @@ function OperationScreen({ onOpen }: { onOpen: (operation: Operation) => void })
 function OperationButton({ operation, onClick }: { operation: Operation; onClick: () => void }) {
   const meta = OPERATION_META[operation];
   return (
-    <Button variant="outline" className="h-auto flex-col items-start gap-3 rounded-2xl bg-card p-4 text-left" onClick={onClick}>
+    <Button variant="outline" className="h-auto min-w-0 flex-col items-start gap-3 whitespace-normal rounded-2xl bg-card p-4 text-left" onClick={onClick}>
       <span className="grid size-11 place-items-center rounded-xl bg-primary/10 text-primary [&_svg]:size-5">{meta.icon}</span>
-      <span>
+      <span className="min-w-0 w-full">
         <span className="block text-sm font-semibold">{meta.label}</span>
         <span className="mt-1 line-clamp-2 block text-xs font-normal leading-4 text-muted-foreground">{meta.description}</span>
       </span>

@@ -114,3 +114,13 @@ Branch: `feat/alumdoor-pwa-real-brand-assets`.
 - Ba category card đầu trang đã thay asset đen bằng media sản phẩm Alumdoor; hero có local product poster/fallback khi video nguồn chậm.
 - Favicon và PWA icon dùng mark A vuông 192/512, không nén nguyên wordmark vào icon nhỏ. Warehouse login đã bỏ logo lặp/cắt; header chỉ còn tên app và mô tả ngắn.
 - Lint, typecheck và exact-SHA production build/stage/stage-check/Wrangler dry-run/deploy PASS. Targeted Playwright suite bị webServer startup timeout; production Chromium smoke thay thế đã PASS cho các lỗi user báo.
+
+### UI/PWA hardening đang thực hiện
+
+- Shell desktop Alumdoor dùng riêng logo ngang, bỏ chữ app ghép cạnh logo.
+- Alumdoor mở bộ chọn đủ 13 bảng màu sáng/tối; màu mặc định vẫn là Đất nung và có theme gradient Hồng cánh sen tương phản cao.
+- App kho điện thoại chặn tràn ngang, điện thoại dùng lưới nghiệp vụ một cột và tablet/desktop hẹp mới chuyển hai cột.
+- Service worker kho chỉ cập nhật app shell từ phản hồi HTML thành công; JSON 401/403 không còn có thể ghi đè cache khởi động.
+- Sau khi phiên hết hạn ở route `/print/*`, đăng nhập lại quay về trang chủ thay vì phục hồi màn in của phiên cũ.
+- Runtime typecheck, build app kho desktop/mobile và 87 nhóm selfcheck PASS. Full monorepo build trước đó hoàn thành hầu hết app nhưng tiến trình Node Windows sập sau khi `kho-vn` đã build; build kho mục tiêu chạy lại riêng PASS.
+- Nhánh sẽ ghép trước release hoàn chỉnh: `feat/print-design-sales-documents-20260801` (PR `#141`). Không ghép nhánh daily ledger vào hotfix giao diện/in.

@@ -108,3 +108,11 @@ Sales Order → production request → Work Order → material issue/consume →
 - Mọi Link field phải có target DocType, query/search, permission, tenant boundary và label formatter; app tự render LinkInput/autocomplete theo Meta.
 - Thêm completeness gate liệt kê missing operations, unresolved link targets và manual-input fallback; CI fail nếu manifest Alumdoor chưa đủ.
 - Tách thành branch/PR riêng sau khi merge hotfix UI; không deploy/mutate tenant production trong lúc khách đang demo.
+
+## P0 hiện tại — hợp nhất giao diện và mẫu in
+
+1. Hoàn tất shell sau đăng nhập: Tổng quan ở đầu sidebar; module chỉ có Quy trình và các tab nghiệp vụ; tách Báo cáo/Danh mục; thêm dải tổng đơn giản trên màn danh sách.
+2. Visual QA desktop 1280/1440 và mobile 390/412, bao gồm logo ngang, theme Hồng cánh sen và app kho không tràn ngang.
+3. Ghép `origin/feat/print-design-sales-documents-20260801`, giữ thay đổi giao diện hiện tại và chạy lại test mẫu in/QR/routing.
+4. Chạy full typecheck, lint, test, build, stage check và Wrangler dry-run trên exact commit.
+5. Push branch/PR rồi deploy Gateway trực tiếp từ máy local theo yêu cầu user; ghi exact SHA và Cloudflare Version ID.
