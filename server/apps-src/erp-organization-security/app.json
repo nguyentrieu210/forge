@@ -109,7 +109,7 @@
   "client": {
     "brand": "indigo",
     "domain": "hr",
-    "home": { "route": "/app/Department", "doctype": "Organization Assignment" },
+    "home": { "route": "/app/Department" },
     "dimensions": ["company", "branch", "cost_center", "fiscal_year"],
     "catalog_mode": "hybrid",
     "design": { "density": "comfortable", "radius": "soft", "content_width": "wide" }
