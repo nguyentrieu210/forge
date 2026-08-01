@@ -498,6 +498,25 @@ async function installApp(args: FrappeArgs, context: FrappeRouterContext): Promi
   return await context.apps.install(context.tenantId, manifest, context.actor.user_id, context.now()) as unknown as JsonObject;
 }
 
+/**
+ * Brings an existing tenant up to the platform's standard metadata catalogue.
+ *
+ * Provisioning already uses this exact store operation for new tenants. Exposing the
+ * same operation through the authenticated Frappe surface lets the protected app
+ * installer repair an older tenant before resolving declared ERPNext dependencies.
+ * It remains an explicit, System-Manager-only POST: a normal app install never gains a
+ * hidden schema side effect, and a browser cannot trigger it from a link or image GET.
+ */
+async function provisionStandardMetadata(request: Request, context: FrappeRouterContext): Promise<JsonObject> {
+  if (request.method.toUpperCase() !== "POST") throw errors.validation("Standard metadata provisioning requires POST");
+  requireMetadataAdmin(context);
+  return await context.metadata.provisionStandardCatalog(
+    context.tenantId,
+    context.actor.user_id,
+    context.now(),
+  ) as unknown as JsonObject;
+}
+
 async function uninstallApp(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
   requireMetadataAdmin(context);
   const appId = args.requireText("app_id", 64);
@@ -864,6 +883,9 @@ async function dispatchMethod(
     // ---- app registry -------------------------------------------------------
     case "forge.apps.list":
       return methodResponse({ apps: await context.apps.list(context.tenantId) });
+
+    case "forge.apps.provision_standard_metadata":
+      return methodResponse(await provisionStandardMetadata(request, context));
 
     case "forge.apps.install":
       return methodResponse(await installApp(args, context));
