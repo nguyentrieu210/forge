@@ -106,20 +106,58 @@ function applyPermissionSidecar(brief, extension, source, briefSource) {
   };
 }
 
+function applyExtrasSidecar(brief, extension, source, briefSource) {
+  assertSidecarObject(extension, source);
+  const arrayKeys = ["doctypes", "reports", "charts", "nav", "actions"];
+  const allowed = new Set(["version", ...arrayKeys]);
+  const unsupported = Object.keys(extension).filter((key) => !allowed.has(key) && !key.startsWith("//"));
+  if (unsupported.length) {
+    throw new Error(`${source}: extras chỉ nhận version, ${arrayKeys.join(", ")} và khóa ghi chú //; không nhận ${unsupported.join(", ")}.`);
+  }
+
+  let additions = 0;
+  const output = { ...brief, ...(extension.version ? { version: extension.version } : {}) };
+  for (const key of arrayKeys) {
+    if (extension[key] === undefined) continue;
+    if (!Array.isArray(extension[key]) || extension[key].length === 0) {
+      throw new Error(`${source}: ${key} phải là mảng không rỗng khi được khai.`);
+    }
+    if (brief[key] !== undefined && !Array.isArray(brief[key])) {
+      throw new Error(`${briefSource}: ${key} hiện có phải là mảng trước khi ghép extras.`);
+    }
+    output[key] = [...(brief[key] ?? []), ...extension[key]];
+    additions += extension[key].length;
+  }
+  if (additions === 0) {
+    throw new Error(`${source}: extras phải bổ sung ít nhất một doctypes/reports/charts/nav/actions.`);
+  }
+
+  const doctypeNames = new Set();
+  for (const doctype of output.doctypes ?? []) {
+    const name = typeof doctype?.name === "string" ? doctype.name : "";
+    if (!name) continue;
+    if (doctypeNames.has(name)) throw new Error(`${source}: DocType bị trùng sau khi ghép extras: ${name}.`);
+    doctypeNames.add(name);
+  }
+  return output;
+}
+
 /**
  * Read a brief plus optional independently reviewable sidecars.
  *
  * Accepts either a filesystem path or a file URL so CLI paths and import.meta.url-based
  * tests use the same loader contract.
  *
- * Large production briefs should not have every A4 template or high-risk permission edit
- * embedded in one giant JSON file. Sibling `<brief>.prints.json` and
- * `<brief>.permissions.json` files are merged before schema validation and compilation,
- * so the compiler and installer still receive one ordinary brief and remain authoritative.
+ * Large production briefs should not have every A4 template, high-risk permission edit,
+ * or bounded business extension embedded in one giant JSON file. Sibling
+ * `<brief>.prints.json`, `<brief>.permissions.json` and `<brief>.extras.json` files are
+ * merged before schema validation and compilation, so the compiler and installer still
+ * receive one ordinary brief and remain authoritative.
  *
  * Permission sidecars REPLACE the complete permission map for each named DocType. They do
  * not merge individual role strings, because leaving one stale grant behind during an RBAC
  * change is much worse than requiring the reviewer to see the full final role matrix.
+ * Extras only APPEND bounded arrays and reject duplicate DocType names.
  *
  * @param {string | URL} source
  * @returns {Promise<Record<string, unknown>>}
@@ -136,6 +174,10 @@ export async function readBriefSource(source) {
   const permissionsSource = path.join(parsed.dir, `${parsed.name}.permissions.json`);
   const permissions = await readOptionalJson(permissionsSource);
   if (permissions) brief = applyPermissionSidecar(brief, permissions, permissionsSource, sourcePath);
+
+  const extrasSource = path.join(parsed.dir, `${parsed.name}.extras.json`);
+  const extras = await readOptionalJson(extrasSource);
+  if (extras) brief = applyExtrasSidecar(brief, extras, extrasSource, sourcePath);
 
   return brief;
 }
