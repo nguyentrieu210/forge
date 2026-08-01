@@ -11,8 +11,9 @@ test("G03 package uses only generic runtime routes", async () => {
   assert.ok(routes.includes("/permissions?tab=roles"));
   assert.ok(routes.includes("/permissions?tab=approvals"));
 
-  const legacyFeatureRoutes = ["/organization", "/security/roles", "/security/approvals-audit"];
-  for (const legacy of legacyFeatureRoutes) {
-    assert.ok(!routes.includes(legacy), `G03 source still depends on feature-specific runtime route ${legacy}`);
-  }
+  assert.ok(!routes.includes("/organization"), "G03 source must not depend on the legacy organization route");
+  assert.ok(
+    !routes.some((route) => route.startsWith("/security/")),
+    `G03 source still depends on feature-specific security routes: ${routes.filter((route) => route.startsWith("/security/")).join(", ")}`,
+  );
 });
