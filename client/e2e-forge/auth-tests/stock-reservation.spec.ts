@@ -102,16 +102,16 @@ async function submit(page: Page, csrf: string, doc: FrappeDoc) {
   }));
 }
 
-async function createUser(page: Page, csrf: string, user: string, password: string) {
+async function createUser(page: Page, csrf: string, user: string, password: string, role: string, fullName: string) {
   const response = await browserRequest(page, "/api/method/metaforge.api.create_user", {
     method: "POST",
     csrf,
     body: {
       user,
       password,
-      full_name: "QA Reservation Stock User",
+      full_name: fullName,
       email: user,
-      roles: JSON.stringify(["Thủ kho"]),
+      roles: JSON.stringify([role]),
     },
   });
   expect(response.ok, response.text).toBe(true);
@@ -235,12 +235,16 @@ test("authenticated reservation reduces available stock without changing physica
   const adminCsrf = await loginAs(page, ADMIN_USER, ADMIN_PASSWORD);
   const suffix = `${testInfo.project.name}-${Date.now()}`.toLowerCase().replace(/[^a-z0-9-]/g, "-");
   const stockUser = `reserve-stock-${suffix}@example.test`;
-  const password = `ReserveStock-${Date.now()}-Qa!`;
+  const stockManager = `reserve-manager-${suffix}@example.test`;
+  const stockPassword = `ReserveStock-${Date.now()}-Qa!`;
+  const managerPassword = `ReserveManager-${Date.now()}-Qa!`;
   const itemCode = `QA-RESERVE-${suffix}`.slice(0, 120);
   const batchName = `QA-BATCH-${suffix}`.slice(0, 120);
 
-  const createdUser = await createUser(page, adminCsrf, stockUser, password);
-  expect(createdUser.roles).toContain("Thủ kho");
+  const createdStockUser = await createUser(page, adminCsrf, stockUser, stockPassword, "Thủ kho", "QA Reservation Stock User");
+  expect(createdStockUser.roles).toContain("Thủ kho");
+  const createdManager = await createUser(page, adminCsrf, stockManager, managerPassword, "Chủ xưởng", "QA Reservation Manager");
+  expect(createdManager.roles).toContain("Chủ xưởng");
 
   const warehouse = await createResource(page, adminCsrf, "Warehouse", {
     warehouse_name: `QA Reserve ${suffix}`,
@@ -278,8 +282,6 @@ test("authenticated reservation reduces available stock without changing physica
   await createBatch(page, adminCsrf, itemCode, warehouse.name, batchName);
   const bundle = await createSubmittedBundle(page, adminCsrf, itemCode, warehouse.name, batchName);
 
-  // Stock Reservation requires a real source document. A draft Sales Order is enough,
-  // but the selling controller still requires at least one line and computes its totals.
   const source = await createResource(page, adminCsrf, "Sales Order", {
     customer: `QA Reservation Source ${suffix}`,
     company: "ALUMDOOR",
@@ -297,48 +299,57 @@ test("authenticated reservation reduces available stock without changing physica
   });
   expect(source.docstatus).toBe(0);
 
-  const stockCsrf = await loginAs(page, stockUser, password);
+  const stockCsrf = await loginAs(page, stockUser, stockPassword);
   const receipt = await createTrackedReceipt(page, stockCsrf, itemCode, warehouse.name, bundle.name);
   expect(receipt.docstatus).toBe(1);
   const beforeReservation = await physicalStock(page, stockCsrf, warehouse.name, itemCode);
   expect(physicalQty(beforeReservation)).toBe(10_000_000);
   expect((beforeReservation.rows ?? []).some((row) => row.batch_no === batchName)).toBe(true);
 
-  const reservation1 = await createResource(page, stockCsrf, "Stock Reservation", reservationDocument(itemCode, warehouse.name, source.name, 6));
-  expect(reservation1.state).toBe("Đang giữ");
-  expect(physicalQty(await physicalStock(page, stockCsrf, warehouse.name, itemCode))).toBe(10_000_000);
+  // Warehouse posting permission does not imply authority to reserve stock for another
+  // business document. Lock this boundary explicitly instead of widening RBAC for the test.
+  const stockUserDenied = await createResourceRaw(
+    page, stockCsrf, "Stock Reservation", reservationDocument(itemCode, warehouse.name, source.name, 6),
+  );
+  expect(stockUserDenied.ok, stockUserDenied.text).toBe(false);
+  expect(stockUserDenied.status).toBe(403);
 
-  const overReserved = await createResourceRaw(page, stockCsrf, "Stock Reservation", reservationDocument(itemCode, warehouse.name, source.name, 5));
+  const managerCsrf = await loginAs(page, stockManager, managerPassword);
+  const reservation1 = await createResource(page, managerCsrf, "Stock Reservation", reservationDocument(itemCode, warehouse.name, source.name, 6));
+  expect(reservation1.state).toBe("Đang giữ");
+  expect(physicalQty(await physicalStock(page, managerCsrf, warehouse.name, itemCode))).toBe(10_000_000);
+
+  const overReserved = await createResourceRaw(page, managerCsrf, "Stock Reservation", reservationDocument(itemCode, warehouse.name, source.name, 5));
   expect(overReserved.ok, overReserved.text).toBe(false);
   expect([409, 417, 422]).toContain(overReserved.status);
   expect(overReserved.text).toContain("available_qty_micros");
   expect(overReserved.text).toContain("4000000");
 
-  const released = await releaseReservation(page, stockCsrf, reservation1.name);
+  const released = await releaseReservation(page, managerCsrf, reservation1.name);
   expect(released.status, released.text).toBe(200);
   expect(released.text).toContain("Đã nhả");
   const releasedDoc = await getResource(page, "Stock Reservation", reservation1.name);
   expect(releasedDoc.state).toBe("Đã nhả");
-  expect(physicalQty(await physicalStock(page, stockCsrf, warehouse.name, itemCode))).toBe(10_000_000);
+  expect(physicalQty(await physicalStock(page, managerCsrf, warehouse.name, itemCode))).toBe(10_000_000);
 
-  const restored = await createResource(page, stockCsrf, "Stock Reservation", reservationDocument(itemCode, warehouse.name, source.name, 10));
+  const restored = await createResource(page, managerCsrf, "Stock Reservation", reservationDocument(itemCode, warehouse.name, source.name, 10));
   expect(restored.state).toBe("Đang giữ");
-  expect(physicalQty(await physicalStock(page, stockCsrf, warehouse.name, itemCode))).toBe(10_000_000);
+  expect(physicalQty(await physicalStock(page, managerCsrf, warehouse.name, itemCode))).toBe(10_000_000);
 
-  const noAvailability = await createResourceRaw(page, stockCsrf, "Stock Reservation", reservationDocument(itemCode, warehouse.name, source.name, 1));
+  const noAvailability = await createResourceRaw(page, managerCsrf, "Stock Reservation", reservationDocument(itemCode, warehouse.name, source.name, 1));
   expect(noAvailability.ok, noAvailability.text).toBe(false);
   expect(noAvailability.text).toContain("available_qty_micros");
   expect(noAvailability.text).toContain("0");
 
-  const doubleRelease = await releaseReservation(page, stockCsrf, reservation1.name);
+  const doubleRelease = await releaseReservation(page, managerCsrf, reservation1.name);
   expect(doubleRelease.status, doubleRelease.text).toBe(422);
   expect(doubleRelease.text).toContain("không còn ở trạng thái Đang giữ");
 
-  const terminalEdit = await updateResourceRaw(page, stockCsrf, releasedDoc, { state: "Đang giữ" });
+  const terminalEdit = await updateResourceRaw(page, managerCsrf, releasedDoc, { state: "Đang giữ" });
   expect(terminalEdit.ok, terminalEdit.text).toBe(false);
   expect([409, 417, 422]).toContain(terminalEdit.status);
 
-  const finalRelease = await releaseReservation(page, stockCsrf, restored.name);
+  const finalRelease = await releaseReservation(page, managerCsrf, restored.name);
   expect(finalRelease.status, finalRelease.text).toBe(200);
-  expect(physicalQty(await physicalStock(page, stockCsrf, warehouse.name, itemCode))).toBe(10_000_000);
+  expect(physicalQty(await physicalStock(page, managerCsrf, warehouse.name, itemCode))).toBe(10_000_000);
 });
