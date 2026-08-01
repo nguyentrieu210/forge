@@ -139,6 +139,10 @@ function parseField(value: unknown, index: number): DocFieldMeta {
   const editMode = input.editMode === undefined ? undefined : text(input.editMode, `fields[${index}].editMode`, 32);
   const surface = input.surface === undefined ? undefined : text(input.surface, `fields[${index}].surface`, 24);
   const dirtyGuard = input.dirtyGuard === undefined ? undefined : text(input.dirtyGuard, `fields[${index}].dirtyGuard`, 32);
+  if (input.required !== undefined && input.reqd !== undefined && bool(input.required, false) !== bool(input.reqd, false)) {
+    throw errors.validation(`fields[${index}] has conflicting required and reqd values`);
+  }
+  const required = input.required === undefined ? bool(input.reqd, false) : bool(input.required, false);
   if (valueSource && !VALUE_SOURCES.has(valueSource)) throw errors.validation(`fields[${index}].valueSource is not recognised: ${valueSource}`);
   if (editMode && !EDIT_MODES.has(editMode)) throw errors.validation(`fields[${index}].editMode is not recognised: ${editMode}`);
   if (surface && !FIELD_SURFACES.has(surface)) throw errors.validation(`fields[${index}].surface is not recognised: ${surface}`);
@@ -155,7 +159,7 @@ function parseField(value: unknown, index: number): DocFieldMeta {
     label,
     fieldtype,
     ...(input.options === undefined ? {} : { options: text(input.options, `fields[${index}].options`, 5000) }),
-    required: bool(input.required, false),
+    required,
     read_only: bool(input.read_only, false),
     hidden: bool(input.hidden, false),
     list_only: bool(input.list_only, false),

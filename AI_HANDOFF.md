@@ -19,7 +19,7 @@ Ngày cập nhật: **2026-08-01**.
 - Hidden/server-owned field bị runtime từ chối nếu client tự đặt hoặc sửa.
 - `User` Link đọc danh bạ tenant thay vì rơi về free-text hoặc đòi một DocType document giả.
 - Biểu đồ không còn tự suy từ workflow; chỉ chart khai trong manifest, có report, quyền, drill-down và empty fallback mới được render.
-- Canonical skill `C:\AppWeb\.claude\skills\app-factory` đã được cập nhật và commit riêng tại `35be2bf`.
+- Canonical skill `C:\AppWeb\.claude\skills\app-factory` đã được tạo tại `35be2bf` và siết đồng bộ runtime tại `9cd5774`.
 
 ## PR cleanup
 

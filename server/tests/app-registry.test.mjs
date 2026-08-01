@@ -153,6 +153,16 @@ test("doctypes inside a package are validated by the platform's own rules", () =
   }), /cannot be enforced by the server/);
 });
 
+test("Frappe reqd metadata normalises to the runtime required flag", () => {
+  const parsed = manifest({ doctypes: [doctype("Stock Request", {
+    fields: [{ fieldname: "title", label: "Title", fieldtype: "Data", reqd: true }],
+  })] });
+  assert.equal(parsed.doctypes[0].fields[0].required, true);
+  assert.throws(() => manifest({ doctypes: [doctype("Stock Request", {
+    fields: [{ fieldname: "title", label: "Title", fieldtype: "Data", reqd: true, required: false }],
+  })] }), /conflicting required and reqd/);
+});
+
 function contractedField(fieldname, overrides = {}) {
   return {
     fieldname,
