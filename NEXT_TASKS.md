@@ -4,6 +4,24 @@ Ngày cập nhật: **2026-08-02**.
 
 Đây là hàng đợi active. Không dùng file này thay cho GitHub khi cần exact branch head, PR state hoặc CI. Trước khi làm đọc `RUNBOOK.md` và `CURRENT_STATUS.md`.
 
+## DONE UI — Tiến Đạt FIFO complete operations screen
+
+- PR `#179` merged tại `e44ade8ca1ab396a66b800844b755de203be9245`.
+- Final validated head: `f8efd5bbf26a398b5a369a453cbbe02ad92ac53f`.
+- Required workflows: **6/6 PASS**.
+  - CI `30721663514`: tests/typecheck/build PASS.
+  - UI Pull Request Validation `30721663479`: frontend lint/build + MetaForge/Alumdoor/purchase browser QA + authenticated desktop/mobile Purchase/FIFO PASS.
+  - PR Validation `30721663531`: PASS.
+  - Purchase Feature CI `30721663482`: PASS.
+  - Sales Feature CI `30721663496`: PASS.
+  - Inventory and Manufacturing CI `30721663523`: PASS.
+- Màn `/x/action:nhap-nhom-fifo` hiện đủ form nhập và các khối: công nợ giao hàng, đơn còn nợ, lịch sử trừ FIFO, lịch sử hàng về và dòng phiếu nhập sẽ tạo.
+- Auth QA khóa `200 + 100`, nhận `230` → `200 + 30`, còn nợ `70`, biên giao thêm `55–85`; receipt sau submit xuất hiện lại trên lịch sử UI.
+- Link Supplier/Item/Color/Warehouse dùng search thật; decimal UI dùng locale Việt dấu phẩy; mobile không tràn ngang.
+- Không deploy production trong slice này.
+
+Không mở lại FIFO UI slice nếu không có regression cụ thể. Nếu cần thấy UI trên tenant production, phải thực hiện **release riêng** với approval/evidence; merge `main` không đồng nghĩa đã deploy.
+
 ## DONE UI — MetaForge Bulk View + ALUM master grids
 
 - PR `#190` merged tại `28eb4c4af6f88f0d1c3dc56c8f50e8d31fe2e968`.

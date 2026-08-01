@@ -8,9 +8,29 @@ Ngày cập nhật: **2026-08-02**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `main`.
-- Exact `main` sau MetaForge Bulk View: `28eb4c4af6f88f0d1c3dc56c8f50e8d31fe2e968` — merge PR `#190`.
+- Exact `main` sau Tiến Đạt FIFO complete operations UI: `e44ade8ca1ab396a66b800844b755de203be9245` — merge PR `#179`.
 - PR `#182` đã đóng, không merge; PR `#190` là branch/PR canonical thay thế cho Bulk View.
 - Branch `hotfix/alumdoor-print-list-delete` cũ không còn được dùng làm current/default branch và không được coi là chỉ dẫn thực thi.
+
+## DONE — Tiến Đạt FIFO complete operations UI
+
+- PR `#179` merged tại `e44ade8ca1ab396a66b800844b755de203be9245`.
+- Final validated PR head: `f8efd5bbf26a398b5a369a453cbbe02ad92ac53f`.
+- Required workflows trên final exact head: **6/6 PASS**.
+  - CI `30721663514`: tests + typecheck + build SUCCESS.
+  - UI Pull Request Validation `30721663479`: frontend lint/build + MetaForge workspace browser QA + Alumdoor browser QA + purchase allocation browser QA + authenticated Purchase/FIFO desktop/mobile SUCCESS.
+  - PR Validation `30721663531`: SUCCESS.
+  - Purchase Feature CI `30721663482`: SUCCESS.
+  - Sales Feature CI `30721663496`: SUCCESS.
+  - Inventory and Manufacturing CI `30721663523`: SUCCESS.
+- Màn `/x/action:nhap-nhom-fifo` là UI thao tác thật: form nhập nhà cung cấp, mã hàng, chiều dài, số cây, kg thực, đơn giá, màu, dập, kho và thông tin giao hàng.
+- Kết quả preview không còn rơi xuống JSON/key-value: có KPI **Công nợ giao hàng sau lần nhận** và các bảng **Đơn còn nợ**, **Lịch sử trừ FIFO lần này**, **Lịch sử hàng về**, **Dòng phiếu nhập sẽ tạo**.
+- Purchase Order/Purchase Receipt trong bảng bấm mở được; sau commit có thể mở thẳng phiếu nhập nháp vừa tạo.
+- Authenticated QA khóa case `200 + 100`, nhận `230` → `200 + 30`, còn nợ `70` cây, biên giao thêm hợp lệ `55–85`; submit receipt rồi preview lại thấy receipt trong lịch sử UI.
+- Link Supplier/Item/Color/Warehouse chạy bằng search thật; Warehouse QA `K36` được seed qua public resource API, không ghi tắt trực tiếp D1.
+- Locale Việt `#.###,##` được khóa bằng input `7,2` / `7,25`; bảng kết quả responsive và không làm tràn viewport mobile.
+- Một lần UI gate trên head rebase trước đó gặp Wrangler local flake làm tenant dev process chết sau khi FIFO desktop đã chạy trọn luồng; rerun cùng exact head PASS. Final head `f8efd5bb...` sau đó PASS ngay 6/6 và được merge.
+- Không deploy Cloudflare/production, không sửa secret/DNS và không mutate tenant/customer data. Production chưa có UI này cho tới release riêng được yêu cầu.
 
 ## DONE — MetaForge Bulk View + ALUM master grids
 
@@ -82,6 +102,7 @@ Ngày cập nhật: **2026-08-02**.
 - Sales-to-Production PR `#131` — merged.
 - Tiến Đạt purchase FIFO PR `#134` — merged.
 - Purchase authenticated QA PR `#137` — merged.
+- Tiến Đạt FIFO complete operations UI PR `#179` — merged, final exact-head required workflows 6/6 PASS.
 
 Không được suy từ các mục DONE này rằng toàn bộ quy trình `25.7 QUY TRÌNH.docx` đã hoàn tất.
 
