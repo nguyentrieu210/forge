@@ -6,8 +6,9 @@ Ngày cập nhật: **2026-08-01**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Current default head khi đồng bộ print epic: `d29e71c1d1cb72ea24da1ea2837d49fb50649b8d`.
+- Current default head khi chuẩn bị Cut Order: `f916d066f9b45b1c3a5238259be9d6953d6cf0f3`.
 - Latest runtime-changing default commit: `898b19d0c58c84a32f99d73dfe0bf33f9ec78dd6`.
+- Bốn commit default mới nhất từ merge-base chỉ đổi `.github/release/gateway-production.trigger` và `.github/release/production-status.trigger`; không đụng server/schema/print.
 - GitHub là nguồn sự thật cho current branch head, CI, PR và release evidence.
 
 ## In progress — Print design PR #141
@@ -19,11 +20,13 @@ Ngày cập nhật: **2026-08-01**.
 - `Đơn bán hàng ALUMDOOR` — Sales Order, A4 portrait, 13 cột = `100%`.
 - `Phiếu giao hàng / lắp đặt ALUMDOOR` — Delivery Note, A4 portrait, 11 cột = `100%`, không in giá, có checklist và ba khu vực ký.
 - `Phiếu yêu cầu sản xuất ALUMDOOR` — Production Request, A4 portrait, 14 cột = `100%`, một dòng theo bộ/vị trí, giữ rộng cắt, số lá, mô tơ/cảnh báo, phút dự toán và kho vật tư.
-- Regression renderer dùng dữ liệu dài đã có cho cả ba mẫu.
-- Exact-head checkpoint `da94600d98adbe8005742157803898c40f581f1b`: 6/6 workflow SUCCESS, gồm full tests, typecheck và build.
-- Đang đồng bộ lại default mới nhất; PR body là nơi lưu run IDs exact-head gần nhất.
-- Gate còn lại trước merge: review trực quan HTML preview/PDF dữ liệu dài và giữ PR mergeable với current default.
-- P0 tiếp theo: `Phiếu cắt nhôm` trên authoritative `Cut Order` / `Cut Order Item`; QR chưa có field/primitive authoritative nên chỉ dùng bundle ID cho truy vết cho tới khi renderer hỗ trợ QR thật.
+- `Phiếu cắt nhôm ALUMDOOR` — Cut Order, A4 portrait, 13 cột = `100%`, bám authoritative `Cut Order` / `Cut Order Item`.
+- Phiếu cắt giữ bundle lô mẹ + bundle đầu thừa, mã nhôm, kho lô mẹ, khổ cây, rộng cắt, số lá, số nhát, kerf, kg tiêu hao/cân thật, đầu thừa và phế.
+- QR chưa có field/renderer primitive authoritative nên dùng bundle ID thật để truy vết, không tạo QR giả.
+- Regression renderer dùng dữ liệu dài đã có cho Sales Order, Delivery Note, Production Request và Cut Order.
+- Exact-head checkpoint trước Cut Order `692f1a3fc2870b991f4e93d50cf2ceb94d9ea433`: 6/6 workflow SUCCESS, gồm full tests, typecheck và build.
+- Exact-head CI mới phải chạy sau khi đưa Cut Order từ staging vào PR head; run IDs ghi trong PR body.
+- Gate còn lại trước merge: exact-head CI mới, review trực quan HTML preview/PDF dữ liệu dài và giữ PR mergeable với current default.
 
 ## Đã hoàn tất trên default
 
@@ -89,10 +92,11 @@ Ngày cập nhật: **2026-08-01**.
 
 ## Business backlog còn lại
 
-1. Hoàn tất print design PR `#141`: visual review và Phiếu cắt nhôm.
-2. Daily detailed ledger snapshot/freeze/adjustment.
-3. Warranty, defects, supplier hold/offset và capacity/overtime.
-4. End-to-end acceptance xuyên Sales, Production, Inventory, Delivery, Finance và Warranty.
+1. Hoàn tất print design PR `#141`: exact-head CI mới và visual review bốn mẫu.
+2. Print P1: biên bản bàn giao/nghiệm thu, Sales Invoice, Payment Entry, Purchase Receipt.
+3. Daily detailed ledger snapshot/freeze/adjustment.
+4. Warranty, defects, supplier hold/offset và capacity/overtime.
+5. End-to-end acceptance xuyên Sales, Production, Inventory, Delivery, Finance và Warranty.
 
 ## Release boundary
 
