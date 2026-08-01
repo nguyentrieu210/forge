@@ -5,98 +5,98 @@ Ngày cập nhật: **2026-08-01**.
 ## Repository
 
 - Repository: `nguyentrieu210/forge`.
-- Default branch hiện tại: `hotfix/alumdoor-print-list-delete`.
-- Current default head khi tiếp tục nhánh in ấn: `f6420c70823b969a28b43e3f93004ebd52546adc`.
-- GitHub là nguồn sự thật cho code, CI, PR và release evidence.
+- Default branch: `hotfix/alumdoor-print-list-delete`.
+- Current default head khi đồng bộ print epic: `f1e70cfbece9b162082974b2bdc8a4feb4ddf5b8`.
+- Latest runtime-changing default commit: `e404e12ef22d5bc9f2a782820787b4f30d8dce8a`.
+- GitHub là nguồn sự thật cho current branch head, CI, PR và release evidence.
 
-## Nhánh thiết kế in ấn — PR OPEN / IN PROGRESS
+## In progress — Print design PR #141
 
 - Branch: `feat/print-design-sales-documents-20260801`.
 - PR: `#141` — `feat(print): add Alumdoor sales order print workspace`.
-- Base mới đã đồng bộ: `f6420c70823b969a28b43e3f93004ebd52546adc`.
-- Exact head xanh trước đợt Delivery Note: `c7955c345a3c497565a1f3eb7dfc6e97434ad50d`.
-- Sidecar `server/briefs/alumdoor-v2.prints.json` được ghép trước schema validation và compile.
-- Loader hỗ trợ đường dẫn chuỗi và `file:` URL; có regression cho `import.meta.url`.
-
-### Mẫu đã có
-
-1. `Đơn bán hàng ALUMDOOR` — `Sales Order`
-   - A4 portrait, 13 cột, tổng độ rộng `100%`.
-   - Giữ kích thước cửa, số bộ, số lượng, đơn giá, mô tơ/phụ kiện và ghi chú lắp đặt.
-   - Có fixture renderer cho dòng cửa và hàng thường.
-
-2. `Phiếu giao hàng / lắp đặt ALUMDOOR` — `Delivery Note`
-   - A4 portrait, 11 cột, tổng độ rộng `100%`.
-   - In khách hàng, mục đích xuất, đơn bán nguồn, ngày xuất/ngày lắp, địa chỉ, đội lắp, lái xe và biển số.
-   - Dòng hàng giữ màu, kích thước, số bộ, số lượng giao, kho xuất và khối lượng.
-   - Không in đơn giá; có checklist bàn giao/lắp đặt và ba khu vực ký.
-   - Có fixture dữ liệu dài qua renderer thật.
-
-### Exact-head evidence trước đợt Delivery Note
-
-- CI `30676447154`: SUCCESS — full tests, typecheck, build.
-- PR Validation `30676447140`: SUCCESS.
-- Purchase Feature CI `30676447126`: SUCCESS.
-- UI Pull Request Validation `30676447124`: SUCCESS.
-- Sales Feature CI `30676447116`: SUCCESS.
-- Inventory and Manufacturing CI `30676447112`: SUCCESS.
-
-Exact-head evidence mới phải được ghi lại sau commit Delivery Note. Review trực quan HTML preview/PDF bằng dữ liệu dài vẫn là gate trước merge.
-
-## PR tồn đọng cũ — CLOSED
-
-Đã đóng: `#15`, `#35`, `#36`, `#40`, `#73`, `#74`, `#79`, `#81`, `#103`, `#106`, `#109`.
-
-Không merge nguyên trạng branch stale/conflicted. Chỉ tham khảo từng file khi cần.
+- Đã đồng bộ lại trên current default `f1e70cfbece9b162082974b2bdc8a4feb4ddf5b8`; không bỏ các thay đổi Warehouse PWA và Finance đã merge.
+- Sidecar `server/briefs/alumdoor-v2.prints.json` được ghép trước schema validation và compile; loader hỗ trợ đường dẫn chuỗi và `file:` URL.
+- `Đơn bán hàng ALUMDOOR` cho Sales Order: A4 portrait, 13 cột, kích thước/số bộ/số lượng/đơn giá/mô tơ-phụ kiện/ghi chú lắp đặt.
+- `Phiếu giao hàng / lắp đặt ALUMDOOR` cho Delivery Note: A4 portrait, 11 cột, không in giá, có đơn nguồn, địa chỉ/ngày/đội lắp, lái xe, biển số, kho xuất, khối lượng, checklist và chữ ký.
+- Đã sửa regression Delivery Note chờ sai `Xường` → `Xưởng`, sửa `overflow-wrap:anywhere`, tagline `ĐỨC` và alt ảnh bị lỗi mã hóa.
+- Exact-head CI phải chạy lại sau merge-base sync trước khi gọi đợt Delivery Note hoàn tất.
+- Review trực quan HTML preview/PDF bằng dữ liệu dài vẫn là gate trước merge.
 
 ## Đã hoàn tất trên default
 
 ### Sales-to-Production
 
 - PR `#131` merge SHA: `e315007db174d70d6f73c68f2115e7956b09bf1d`.
-- Sales Order → Production Request → Work Order → Paint Job → Delivery lineage đã có.
+- Sales Order → Production Request → Work Order → Paint Job → Delivery lineage đã có trên default.
 
 ### Tiến Đạt purchase FIFO
 
 - PR `#134` merge SHA: `1d05ed97836aa7bb753f8aa50a56991201a8d10a`.
-- FIFO, lịch sử nhập, công nợ cây/mét và dung sai Tiến Đạt `5%` đã có.
-- Regression: `200 + 100`, nhận `230` → `200 + 30`, nợ `70` cây / `504 m`, khoảng thêm `55–85`.
+- Form đặt nhôm, FIFO theo ngày đơn, lịch sử nhận, công nợ cây/mét và dung sai Tiến Đạt `5%` đã có.
 
-### Purchase authenticated QA — DONE / MERGED
+### Purchase authenticated QA
 
 - PR `#137` merge SHA: `29fee0200d8118eef2d0ae9e524a3a00acfab00f`.
-- Exact PR head: `fd03d22872c2234d50f616a5d8956c8b62f26b40`.
-- CI, PR Validation, Purchase, Sales, Inventory và UI authenticated gates: SUCCESS.
-- Desktop Chrome + Pixel 7 lifecycle PASS.
+- Full CI và authenticated lifecycle desktop/mobile đã PASS.
 
-## MetaForge MISA-style UI
+### MetaForge MISA-style workspace
 
-- Công việc UI đã vào default trước khi nhánh in ấn đồng bộ base.
-- Nhánh in ấn giữ nguyên toàn bộ thay đổi MetaForge khi merge base.
-- Login/landing vẫn là backlog riêng.
+- PR `#140` merge SHA: `f6420c70823b969a28b43e3f93004ebd52546adc`.
+- Sidebar phân hệ, tab nghiệp vụ, Danh mục tập trung, Meta workspace, report builder và 13 bảng màu đã có trên default.
 
-## Chưa được phép gọi là hoàn tất toàn quy trình
+### Forge branding, account và warehouse PWA
 
-Tài liệu `25.7 QUY TRÌNH.docx` còn thiếu hoặc chưa chứng minh:
+- PR `#142` merge SHA: `8e9882a6143f4cf669724f654ec1b59949b90138`.
+- Exact validated head: `24621f221fad2de950d0f58cc39078e43c206f51`.
+- Logo chuẩn tím → hồng, chữ A trắng và ba nét cánh ngang dùng chung cho landing, login, shell, favicon và PWA.
+- Landing/login Forge dùng bố cục hai cột; mobile ưu tiên form đăng nhập.
+- Alumdoor vẫn giữ white-label landing, palette cam-xám, title và browser contract riêng.
+- Account menu sau login có avatar, đổi mật khẩu và đăng xuất các thiết bị khác.
+- App kho điện thoại là bundle riêng tại base `/mobile/warehouse/`, không co giao diện desktop thành mobile.
+- Top nav, bottom nav, nút nghiệp vụ lớn và form touch-first.
+- Nghiệp vụ: nhập kho, xuất kho, chuyển kho, kiểm kho và tra tồn.
+- PWA có manifest standalone, icon thường, icon maskable, shortcut, service worker và offline queue.
+- Service worker không cache API/auth response.
+- `apps/kho` build desktop và mobile thành hai output riêng; mobile output ở `client/apps/kho/dist-mobile`.
 
-1. Finance hoàn chỉnh: AR/AP aging, Payment Allocation, Party Statement, Debt Summary, Advance Balance và UI/report navigation.
-2. Daily detailed ledger snapshot, freeze và adjustment theo vai trò.
-3. Warranty/defect bốn nguyên nhân, supplier debt hold/offset và capacity/overtime.
-4. End-to-end acceptance từ Sales Order đến production, inventory, delivery, debt, daily ledger, adjustment và warranty.
+### Finance receivables, payables và advances
 
-## Hàng đợi canonical
+- PR `#139` merge SHA: `e404e12ef22d5bc9f2a782820787b4f30d8dce8a`.
+- Exact validated head: `0b5a629989dfa2b7972dafbda39134ad9b4bdda6`.
+- Due date và AR/AP aging đã có.
+- Payment Entry hỗ trợ partial payment, explicit unallocated amount và advance.
+- Payment Allocation dùng append-only Payment Ledger, giữ company/party/account/currency context và không tạo lại cash GL.
+- Advance Balance, Party Statement và Debt Summary đã có query/report path.
+- Migration `0030`, `0031`, `0032`, metadata, permission, worker wiring và regression tests đã có.
+- Guard advance transaction-currency và base-currency đã tách điều kiện để mã integrity không phụ thuộc thứ tự trigger SQLite.
 
-1. Print design — `PR OPEN / DELIVERY NOTE VALIDATION`.
-2. Finance clean rebuild — `NEXT BUSINESS EPIC`.
-3. Daily detailed ledger — `QUEUED`.
-4. Warranty / defects / capacity — `QUEUED`.
-5. End-to-end acceptance — `QUEUED`.
-6. Login/landing — `SEPARATE UI BACKLOG`.
+### Validation Finance PR #139
 
-## Release boundary và safety
+- Exact-head full tests: PASS.
+- Typecheck: PASS.
+- Build: PASS.
+- PR Validation: PASS.
+- Sales Feature CI: PASS.
+- Purchase Feature CI: PASS.
+- Inventory and Manufacturing CI: PASS.
+- UI Pull Request Validation: PASS.
 
-- Không deploy Cloudflare nếu chưa có yêu cầu riêng.
+## Chưa release production
+
+- Chưa map `client/apps/kho/dist-mobile` vào production route `/mobile/warehouse/`.
+- Chưa chạy authenticated backend lifecycle riêng cho bốn phiếu kho mobile trên môi trường release.
+- Chưa deploy Cloudflare và chưa sửa production secrets/DNS.
+
+## Business backlog còn lại
+
+1. Hoàn tất print design PR `#141`: exact-head CI, preview/PDF dữ liệu dài, Production Request và Aluminum Cut Sheet.
+2. Daily detailed ledger snapshot/freeze/adjustment.
+3. Warranty, defects, supplier hold/offset và capacity/overtime.
+4. End-to-end acceptance xuyên Sales, Production, Inventory, Delivery, Finance và Warranty.
+
+## Release boundary
+
+- Không deploy Cloudflare nếu chưa có lệnh riêng.
 - Không sửa production secret, DNS hoặc rollout state.
 - Không migrate hoặc mutate dữ liệu tenant production.
-- Generic FIFO production vẫn disabled.
 - Không commit `.env`, `server/work/`, `tmp`, backup, cookie, token hoặc generated evidence.

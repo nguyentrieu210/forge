@@ -7,5 +7,7 @@ packages:
   - "client"
   - "client/packages/*"
   - "client/apps/*"
+  # Warehouse mobile là bundle riêng do package client/apps/kho build; không tạo importer pnpm thứ hai.
+  - "!client/apps/warehouse-mobile"
   - "client/e2e-factory"
   - "client/e2e-forge"

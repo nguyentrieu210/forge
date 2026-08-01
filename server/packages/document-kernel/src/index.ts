@@ -1,7 +1,7 @@
 export * from "./controller.js";
 export * from "./d1-store.js";
 export * from "./document-list.js";
-export * from "./in-memory-store.js";
+export { InMemoryMutationStore } from "./finance-aware-in-memory-store.js";
 export * from "./kernel.js";
 export * from "./lifecycle.js";
 export * from "./purchase-allocation-d1-store.js";

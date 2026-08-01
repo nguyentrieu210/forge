@@ -24,6 +24,7 @@ export const STATIC_DOCTYPE_PERMISSIONS: Record<string, DoctypePermission> = {
   "Delivery Note": matrix(["Sales Manager", "Sales User", "Stock Manager", "Stock User"], ["Sales Manager", "Stock Manager"]),
   "Sales Invoice": matrix(["Sales Manager", "Sales User", "Accounts Manager", "Accounts User"], ["Accounts Manager"]),
   "Payment Entry": matrix(["Accounts Manager", "Accounts User"], ["Accounts Manager"]),
+  "Payment Allocation": matrix(["Accounts Manager", "Accounts User"], ["Accounts Manager"]),
   "Journal Entry": matrix(["Accounts Manager", "Accounts User"], ["Accounts Manager"]),
   "Purchase Order": matrix(["Purchase Manager", "Purchase User"], ["Purchase Manager"]),
   "Purchase Receipt": matrix(["Purchase Manager", "Purchase User", "Stock Manager", "Stock User"], ["Purchase Manager", "Stock Manager"]),
@@ -60,6 +61,12 @@ export const STATIC_DOCTYPE_PERMISSIONS: Record<string, DoctypePermission> = {
 
 const REPORT_PERMISSIONS: Record<string, readonly string[]> = {
   "Accounts Receivable": ["System Manager", "Accounts Manager", "Accounts User", "Sales Manager"],
+  "Accounts Receivable Aging": ["System Manager", "Accounts Manager", "Accounts User", "Sales Manager"],
+  "Accounts Payable": ["System Manager", "Accounts Manager", "Accounts User", "Purchase Manager"],
+  "Accounts Payable Aging": ["System Manager", "Accounts Manager", "Accounts User", "Purchase Manager"],
+  "Party Statement": ["System Manager", "Accounts Manager", "Accounts User"],
+  "Debt Summary": ["System Manager", "Accounts Manager", "Accounts User"],
+  "Advance Balance": ["System Manager", "Accounts Manager", "Accounts User"],
   "Stock Balance": ["System Manager", "Stock Manager", "Stock User"],
   "Stock Ledger": ["System Manager", "Stock Manager", "Stock User", "Accounts Manager"],
   "Batch Stock Balance": ["System Manager", "Stock Manager", "Stock User"],
@@ -67,7 +74,6 @@ const REPORT_PERMISSIONS: Record<string, readonly string[]> = {
   "Serial Number Status": ["System Manager", "Stock Manager", "Stock User"],
   "Work Order Progress": ["System Manager", "Manufacturing Manager", "Manufacturing User", "Stock Manager"],
   "Asset Depreciation Ledger": ["System Manager", "Asset Manager", "Asset User", "Accounts Manager", "Accounts User"],
-  "Accounts Payable": ["System Manager", "Accounts Manager", "Accounts User", "Purchase Manager"],
   "General Ledger": ["System Manager", "Accounts Manager", "Accounts User"],
   "Trial Balance": ["System Manager", "Accounts Manager", "Accounts User"],
   "Profit and Loss": ["System Manager", "Accounts Manager", "Accounts User"],
