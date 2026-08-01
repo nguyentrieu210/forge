@@ -38,6 +38,9 @@ test("renders the installable Alumdoor warehouse experience without desktop shel
   for (const label of ["Trang chủ", "Nghiệp vụ", "Tra tồn", "Tôi"]) {
     await expect(page.getByRole("button", { name: label, exact: true })).toBeVisible();
   }
+  const bottomNav = page.getByRole("navigation", { name: "Điều hướng app kho" });
+  await expect(bottomNav).toBeVisible();
+  await expect.poll(() => bottomNav.evaluate((element) => Math.round(element.closest("footer")!.getBoundingClientRect().bottom - window.innerHeight))).toBe(0);
   for (const label of ["Nhập kho", "Xuất kho", "Chuyển kho", "Kiểm kho"]) {
     await expect(page.getByRole("button", { name: new RegExp(`^${label}`) }).first()).toBeVisible();
   }
@@ -74,9 +77,14 @@ test("renders the installable Alumdoor warehouse experience without desktop shel
   await expect(page.getByText("Kho nhận", { exact: true })).toBeVisible();
   await expect(page.getByText("Số lượng", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Lưu nhập kho", exact: true })).toBeVisible();
+  await expect(bottomNav).toBeVisible();
+  await expect(page.getByRole("button", { name: "Nghiệp vụ", exact: true })).toBeVisible();
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1);
 
-  await page.getByRole("button", { name: "Quay lại", exact: true }).click();
+  await page.goBack();
+  await expect(page).toHaveURL(/\/mobile\/warehouse\//);
+  await expect(page.getByText("Hôm nay cần làm gì ở kho?", { exact: true })).toBeVisible();
+  await expect(bottomNav).toBeVisible();
   await page.getByRole("button", { name: "Tài khoản", exact: true }).click();
   await expect(page.getByText("Nguyễn Kho", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Đổi mật khẩu", exact: true })).toBeVisible();

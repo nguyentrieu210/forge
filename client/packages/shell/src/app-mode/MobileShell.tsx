@@ -34,11 +34,14 @@ export function MobileShell({ title, subtitle, onBack, right, bottomBar, childre
         {right}
       </header>
 
-      <main className="mx-auto w-full min-w-0 max-w-xl flex-1 overflow-x-hidden overflow-y-auto p-3 md:max-w-3xl md:p-5">{children}</main>
+      <main className={cn(
+        "mx-auto w-full min-w-0 max-w-xl flex-1 overflow-x-hidden overflow-y-auto p-3 md:max-w-3xl md:p-5",
+        bottomBar && "pb-[calc(5.75rem+env(safe-area-inset-bottom))] md:pb-[calc(6.25rem+env(safe-area-inset-bottom))]",
+      )}>{children}</main>
 
       {bottomBar ? (
         <footer className={cn(
-          "sticky bottom-0 z-20 w-full min-w-0 max-w-full overflow-x-hidden border-t bg-card/95 p-3 backdrop-blur supports-[backdrop-filter]:bg-card/80",
+          "fixed inset-x-0 bottom-0 z-30 w-full min-w-0 max-w-full overflow-x-hidden border-t bg-card/95 p-3 shadow-[0_-8px_24px_-20px_rgb(0_0_0/0.45)] backdrop-blur supports-[backdrop-filter]:bg-card/80",
           "pb-[max(0.75rem,env(safe-area-inset-bottom))]",
         )}>
           <div className="mx-auto w-full max-w-xl md:max-w-3xl">{bottomBar}</div>

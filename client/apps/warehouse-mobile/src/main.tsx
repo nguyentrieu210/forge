@@ -59,6 +59,13 @@ const adapter = new FrappeAdapterImpl({});
 type MobileTab = "home" | "actions" | "stock" | "account";
 type Operation = "receipt" | "issue" | "transfer" | "count";
 
+interface WarehouseHistoryState {
+  warehouseMobile: true;
+  tab: MobileTab;
+  operation: Operation | null;
+  depth: number;
+}
+
 interface StockPayload {
   operation: Operation;
   itemCode: string;
@@ -167,6 +174,42 @@ function WarehouseMobileApp({ boot, logout }: { boot: MetaForgeBootDTO; logout: 
     return () => window.removeEventListener("beforeinstallprompt", onInstallPrompt);
   }, []);
 
+  useEffect(() => {
+    const current = window.history.state as Partial<WarehouseHistoryState> | null;
+    window.history.replaceState({
+      ...current,
+      warehouseMobile: true,
+      tab,
+      operation,
+      depth: current?.warehouseMobile ? current.depth ?? 0 : 0,
+    } satisfies WarehouseHistoryState, "", window.location.href);
+
+    const restoreFromHistory = () => {
+      const url = new URL(window.location.href);
+      const nextTab = url.searchParams.get("tab") as MobileTab | null;
+      const nextOperation = url.searchParams.get("action") as Operation | null;
+      setTab(nextTab && ["home", "actions", "stock", "account"].includes(nextTab) ? nextTab : "home");
+      setOperation(nextOperation && nextOperation in OPERATION_META ? nextOperation : null);
+      window.scrollTo({ top: 0, behavior: "auto" });
+    };
+    window.addEventListener("popstate", restoreFromHistory);
+    return () => window.removeEventListener("popstate", restoreFromHistory);
+  }, []);
+
+  const pushMobileHistory = (nextTab: MobileTab, nextOperation: Operation | null) => {
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", nextTab);
+    if (nextOperation) url.searchParams.set("action", nextOperation);
+    else url.searchParams.delete("action");
+    const current = window.history.state as Partial<WarehouseHistoryState> | null;
+    window.history.pushState({
+      warehouseMobile: true,
+      tab: nextTab,
+      operation: nextOperation,
+      depth: (current?.warehouseMobile ? current.depth ?? 0 : 0) + 1,
+    } satisfies WarehouseHistoryState, "", url);
+  };
+
   const install = async () => {
     if (!installPrompt) return;
     await installPrompt.prompt();
@@ -177,28 +220,24 @@ function WarehouseMobileApp({ boot, logout }: { boot: MetaForgeBootDTO; logout: 
   const openOperation = (next: Operation) => {
     setOperation(next);
     setTab("actions");
-    const url = new URL(window.location.href);
-    url.searchParams.set("tab", "actions");
-    url.searchParams.set("action", next);
-    window.history.replaceState({}, "", url);
+    pushMobileHistory("actions", next);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const closeOperation = () => {
+    const current = window.history.state as Partial<WarehouseHistoryState> | null;
+    if (current?.warehouseMobile && (current.depth ?? 0) > 0) {
+      window.history.back();
+      return;
+    }
     setOperation(null);
-    const url = new URL(window.location.href);
-    url.searchParams.delete("action");
-    url.searchParams.set("tab", tab);
-    window.history.replaceState({}, "", url);
+    pushMobileHistory(tab, null);
   };
 
   const changeTab = (next: MobileTab) => {
     setOperation(null);
     setTab(next);
-    const url = new URL(window.location.href);
-    url.searchParams.delete("action");
-    url.searchParams.set("tab", next);
-    window.history.replaceState({}, "", url);
+    pushMobileHistory(next, null);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -217,7 +256,7 @@ function WarehouseMobileApp({ boot, logout }: { boot: MetaForgeBootDTO; logout: 
             {queue.pending.length ? <span className="absolute right-0 top-0 size-2.5 rounded-full border-2 border-card bg-amber-500" /> : null}
           </Button>
         )}
-        bottomBar={operation ? undefined : <BottomNavigation active={tab} pending={queue.pending.length} onChange={changeTab} />}
+        bottomBar={<BottomNavigation active={tab} pending={queue.pending.length} onChange={changeTab} />}
       >
         {operation ? (
           <StockOperationForm
