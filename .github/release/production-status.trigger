@@ -1,3 +1,3 @@
-reason=full-estate-release-verification
-requested_at=2026-08-01T02:31:00+07:00
-gateway_release_commit=1efac7e1bdafae32a58d4c64386e9e42d4e32cc4
+reason=alumdoor-landing-production-verification
+requested_at=2026-08-01
+gateway_release_commit=d8997dc6ea2231c5d546b24cf89b9cc14b456ff5
