@@ -2,6 +2,19 @@
 
 Ngày cập nhật: **2026-08-01**.
 
+## Active — Canonical DocType Meta và Alumdoor completeness
+
+- Branch: `feat/alumdoor-meta-completeness-20260801`.
+- PR giao diện/PWA `#150` đã merge đúng validated head `dbbca94802593f8e6541eff9390707eee7bc63dd`; merge commit `2a8b9efaa60f6faa43d978b3fefc0741f1ce5a2d`.
+- Canonical Meta đã có `kind`, `viewPolicy`, `valueSource`, `editMode`, `surface`, `serverEnforced` và `dirtyGuard`; compiler tự sinh hợp đồng đầy đủ nhưng vẫn tương thích brief cũ.
+- Form tạo nhanh chỉ render field `quick`; form đầy đủ render `expanded`; field `internal` vẫn được giữ trong schema gốc để server/default/link xử lý nhưng không lộ thành ô nhập.
+- Field do hệ thống/workflow/công thức sở hữu bị khóa ở parser, manifest gate và runtime API; field ẩn không thể bị client tự đặt hoặc đổi bằng request trực tiếp.
+- Link ra ngoài app phải khai `externalDocTypes`; `User` dùng provider danh bạ tenant, chỉ trả System User đang hoạt động. Table phải trỏ tới child DocType do app sở hữu.
+- Biểu đồ Tổng quan chỉ xuất hiện khi Meta khai rõ và phải dựa trên report thật, quyền thật, route drill-down thật; không còn tự dựng biểu đồ từ workflow. Alumdoor khai 3 biểu đồ có fallback khi chưa có dữ liệu.
+- Alumdoor package nâng lên `2.1.0`. Completeness gate hiện chốt 74 DocType, 969 field, 255 Link, 27 child table, 6 external DocType, 12 report, 3 chart; 74 hiện là lát cắt Alumdoor, không phải giới hạn của nền tảng ERPNext.
+- Local gates PASS: full 772 server unit tests, toàn bộ SQL migration tests, server/client typecheck, client lint, 89 nhóm client selfcheck, toàn bộ brief dry-run và `ALUMDOOR_META_COMPLETENESS_PASS`.
+- Chưa cài package `2.1.0` vào tenant production và chưa thay production secrets/DNS/dữ liệu khách hàng trong đợt Meta này.
+
 ## Active — Organization, HRMS và VN Accounting
 
 - Branch: `feat/company-branch-department-hrms-accounting-20260801` từ `main`.

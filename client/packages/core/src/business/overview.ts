@@ -22,6 +22,7 @@ export interface OverviewChart {
   labels: string[];
   series: OverviewChartSeries[];
   route?: string;
+  emptyFallback?: "table" | "message";
 }
 
 export interface OverviewTask {

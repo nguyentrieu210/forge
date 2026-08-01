@@ -190,6 +190,22 @@
         "$ref": "#/$defs/doctype"
       }
     },
+    "externalDocTypes": {
+      "type": "array",
+      "uniqueItems": true,
+      "description": "DocType do nền tảng/app khác sở hữu nhưng app này dùng trong Link. Khai mục này bật cổng kiểm tra Meta đầy đủ.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "kind", "app"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "kind": { "enum": ["transaction", "master", "child_table", "single", "tree", "virtual", "system"] },
+          "app": { "type": "string", "minLength": 1 },
+          "version": { "type": "string" }
+        }
+      }
+    },
     "storefront": {
       "type": "object",
       "description": "Mặt tiền CÔNG KHAI: khách không đăng nhập đọc được gì, và đặt hàng thế nào. `fields` là DANH SÁCH TRẮNG — field không liệt kê thì không bao giờ ra ngoài (giá vốn, giá đại lý, tồn kho nằm ngay cạnh giá lẻ trên cùng doctype).",
@@ -391,6 +407,32 @@
         },
         "patternProperties": {
           "^//": true
+        }
+      }
+    },
+    "charts": {
+      "type": "array",
+      "maxItems": 3,
+      "description": "Biểu đồ tổng quan khai rõ và luôn lấy dữ liệu từ một report đã khai; không tự suy từ field.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "source", "type", "dimensions", "measures", "roles"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "label": { "type": "string" },
+          "source": { "type": "string", "minLength": 1 },
+          "type": { "enum": ["Line", "Bar", "Percentage", "Pie", "Donut", "Heatmap"] },
+          "dimensions": { "type": "array", "minItems": 1, "maxItems": 1, "uniqueItems": true, "items": { "type": "string" } },
+          "measures": { "type": "array", "minItems": 1, "maxItems": 3, "uniqueItems": true, "items": { "type": "string" } },
+          "roles": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string" } },
+          "drilldown": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["route"],
+            "properties": { "route": { "type": "string", "pattern": "^/" } }
+          },
+          "emptyFallback": { "enum": ["table", "message"] }
         }
       }
     },
@@ -913,6 +955,12 @@
         "group": {
           "type": "string"
         },
+        "kind": {
+          "enum": ["transaction", "master", "child_table", "single", "tree", "virtual", "system"]
+        },
+        "single": {
+          "type": "boolean"
+        },
         "naming": {
           "type": "string"
         },
@@ -965,8 +1013,34 @@
             },
             "group": {
               "type": "string"
+            },
+            "startField": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]*$"
+            },
+            "endField": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]*$"
             }
           }
+        },
+        "kanban": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["stageField"],
+          "properties": { "stageField": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" } }
+        },
+        "gantt": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["startField", "endField"],
+          "properties": {
+            "startField": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+            "endField": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" }
+          }
+        },
+        "mobile": {
+          "type": "object"
         },
         "submittable": {
           "type": "boolean"

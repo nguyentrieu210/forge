@@ -102,6 +102,25 @@ export function applyFormProfile(meta: DocTypeMeta, profile: FormProfile | undef
 }
 
 /**
+ * Compact quick-entry is opt-in metadata, never a guess based on field type.
+ *
+ * The caller must keep using the original meta for defaults and serialisation. This
+ * function only returns the schema rendered by FormView, so expanded/internal fields
+ * can still be populated by defaults, Link fetches and server controllers.
+ */
+export function applyFormSurface(meta: DocTypeMeta, surface: "quick" | "expanded"): DocTypeMeta {
+  const declared = meta.fields.filter((field) => field.surface !== undefined);
+  if (!declared.length) return meta;
+  if (surface === "expanded") {
+    return applyFormProfile(meta, { hide: meta.fields.filter((field) => field.surface === "internal").map((field) => field.fieldname) });
+  }
+  const quick = meta.fields
+    .filter((field) => field.surface === "quick")
+    .map((field) => field.fieldname);
+  return applyFormProfile(meta, { keep: quick });
+}
+
+/**
  * Bỏ Section/Column/Tab Break rỗng. Duyệt NGƯỢC từ cuối: một thanh là "rỗng" khi giữa nó và thanh
  * kế tiếp (cùng cấp hoặc cao hơn) không còn field dữ liệu nào. Duyệt ngược cho phép quyết định
  * trong một lượt — thanh cuối cùng luôn rỗng nếu không có gì sau nó.

@@ -5,7 +5,7 @@
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { applyContextPolicy, serializeCreateDocument, type Doc, type DocField, type DocTypeMeta } from "@metaforge/core";
+import { applyContextPolicy, applyFormSurface, serializeCreateDocument, type Doc, type DocField, type DocTypeMeta } from "@metaforge/core";
 import { Button, ConfirmDialog, toast, useT } from "@metaforge/ui";
 import { FormView } from "../form/FormView.js";
 import { useMetaForge } from "./provider.js";
@@ -72,6 +72,10 @@ export function NewFormContainer(props: NewFormContainerProps) {
   const { adapter, registry, services, roles, scopeKey, businessContext, contextPolicies } = useMetaForge();
   const queryClient = useQueryClient();
   const metaQ = useFormMeta(doctype);
+  const renderedMeta = useMemo(
+    () => metaQ.data ? applyFormSurface(metaQ.data, props.presentation === "dialog" ? "quick" : "expanded") : undefined,
+    [metaQ.data, props.presentation],
+  );
   const capsQ = useCapabilities(doctype); // new-doc: doctype-level create/write (fail-closed)
   const caps = capsQ.data ?? NO_CAPS;
   const [saving, setSaving] = useState(false);
@@ -168,7 +172,7 @@ export function NewFormContainer(props: NewFormContainerProps) {
     <>
       <FormView
         key={resetSeq}
-        meta={metaQ.data}
+        meta={renderedMeta ?? metaQ.data}
         doc={doc}
         registry={registry}
         services={services}

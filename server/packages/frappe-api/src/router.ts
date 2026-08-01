@@ -1352,6 +1352,19 @@ async function transition(action: Extract<MutationAction, "submit" | "cancel">, 
 async function searchLink(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject[]> {
   const doctype = args.requireText("doctype", 160);
   const text = args.text("txt") ?? "";
+  if (doctype === "User") {
+    const needle = text.trim().toLocaleLowerCase();
+    const users = await context.users.list(context.tenantId, 1000);
+    return users
+      .filter((user) => user.enabled && user.user_type === "System User")
+      .filter((user) => !needle || `${user.user_id}\n${user.full_name}\n${user.email}`.toLocaleLowerCase().includes(needle))
+      .slice(0, clampPageLength(args.int("page_length", 10)))
+      .map((user) => ({
+        value: user.user_id,
+        label: user.full_name || user.user_id,
+        description: user.full_name && user.full_name !== user.user_id ? user.user_id : user.email,
+      }));
+  }
   const meta = await requireMeta(doctype, context);
   const titleField = meta.title_field;
 
@@ -3088,7 +3101,7 @@ async function applicationCatalog(context: FrappeRouterContext): Promise<JsonObj
 }
 
 /**
- * The overview dashboard, DERIVED from what is installed rather than configured.
+ * The overview dashboard combines bounded operational counts with EXPLICIT charts.
  *
  * Every other approach here needs a definition per domain — a file someone writes for
  * "stock", another for "hr", another for "center" — and an app generated from a brief has
@@ -3112,9 +3125,10 @@ async function overviewDashboard(args: FrappeArgs, context: FrappeRouterContext)
   // `domain` names a client-side grouping, not an app id, so it is matched loosely and
   // never used to exclude everything — an unrecognised domain shows the whole tenant
   // rather than an empty screen the user cannot explain.
-  const apps = installed.filter((app) => !requested || app.app_id === requested) .length
-    ? installed.filter((app) => !requested || app.app_id === requested)
+  const matched = requested
+    ? installed.filter((app) => app.app_id === requested || app.client?.domain === requested)
     : installed;
+  const apps = requested && matched.length ? matched : installed;
 
   const metrics: JsonObject[] = [];
   const tasks: JsonObject[] = [];
@@ -3203,11 +3217,7 @@ async function overviewDashboard(args: FrappeArgs, context: FrappeRouterContext)
     // derivation the approval inbox uses, so the number on this card and the number of
     // cards in that queue cannot disagree.
     const pending = [...new Set(workflow.transitions.map((transition) => transition.state))];
-    const labels: string[] = [];
-    const values: number[] = [];
     for (const { state, docstatus, count: stateCount } of states) {
-      labels.push(state);
-      values.push(stateCount);
       if (!pending.includes(state) || stateCount === 0) continue;
       tasks.push({
         key: `pending:${entry.key}:${state}`,
@@ -3220,15 +3230,49 @@ async function overviewDashboard(args: FrappeArgs, context: FrappeRouterContext)
         description: "Đang chờ xử lý",
       });
     }
-    if (labels.length) {
-      charts.push({
-        key: `states:${entry.key}`,
-        label: `${entry.label} theo trạng thái`,
-        type: "donut",
-        labels,
-        series: [{ name: entry.label, values }],
-        route: `/app/${encodeURIComponent(entry.key)}`,
+  }
+
+  // A workflow state is an operational queue, not automatically a meaningful chart.
+  // Overview charts are rendered only from explicit report-backed declarations.
+  const visibleCharts = apps
+    .flatMap((app) => (app.charts ?? []).map((chart) => ({ app, chart })))
+    .filter(({ chart }) => hasRequiredNavRole(context.actor, chart.roles))
+    .slice(0, 3);
+  for (const { app, chart } of visibleCharts) {
+    const report = app.reports.find((candidate) => candidate.name === chart.source);
+    if (!report) continue;
+    try {
+      await context.permissions.assert({
+        actor: context.actor,
+        tenantId: context.tenantId,
+        doctype: report.doctype,
+        action: "report",
       });
+      const answer = await context.appReports.run(report, {
+        tenant_id: context.tenantId,
+        report: report.name,
+        filters: await applicableFilters(report, [], context),
+        order_by: [],
+        limit: Math.min(report.limit, 12),
+        offset: 0,
+      });
+      const rows = Array.isArray(answer.result) ? answer.result as JsonObject[] : [];
+      const dimension = chart.dimensions[0]!;
+      const columns = new Map(report.columns.map((column) => [column.field, column]));
+      charts.push({
+        key: `chart:${app.app_id}:${chart.name}`,
+        label: chart.label,
+        type: chart.type === "Line" ? "line" : chart.type === "Donut" || chart.type === "Pie" || chart.type === "Percentage" ? "donut" : "bar",
+        labels: rows.map((row) => String(row[dimension] ?? "Chưa xác định")),
+        series: chart.measures.map((measure) => ({
+          name: columns.get(measure)?.label ?? measure,
+          values: rows.map((row) => Number(row[measure] ?? 0)),
+        })),
+        route: chart.drilldown.route,
+        emptyFallback: chart.emptyFallback,
+      });
+    } catch {
+      // Permission or a stale stored report removes the card; it must never become a false zero.
     }
   }
 

@@ -58,7 +58,8 @@
     "check:business-suite": "npm run types:check && npm run test && npm run typecheck:workers && npm run source:test && npm run report && npm run verify && npm run app:check && npm run brief:check && npm run verify:business-suite",
     "app:pack": "node scripts/pack-app.mjs",
     "app:check": "node scripts/pack-app.mjs apps-src/visits --check && node scripts/pack-app.mjs apps-src/hrm --check && node scripts/pack-app.mjs apps-src/vn-accounting --check",
-    "brief:check": "node scripts/forge-app.mjs briefs/assets.json --dry-run && node scripts/forge-app.mjs briefs/center.json --dry-run && node scripts/forge-app.mjs briefs/alumdoor.json --dry-run && node scripts/forge-app.mjs briefs/alumdoor-v2.json --dry-run && node scripts/forge-app.mjs briefs/phanbon.json --dry-run",
+    "verify:alumdoor-meta": "node scripts/verify-alumdoor-meta-completeness.mjs",
+    "brief:check": "node scripts/forge-app.mjs briefs/assets.json --dry-run && node scripts/forge-app.mjs briefs/center.json --dry-run && node scripts/forge-app.mjs briefs/alumdoor.json --dry-run && node scripts/forge-app.mjs briefs/alumdoor-v2.json --dry-run && node scripts/verify-alumdoor-meta-completeness.mjs && node scripts/forge-app.mjs briefs/phanbon.json --dry-run",
     "dev:seed": "node scripts/seed-local.mjs",
     "smoke:http": "node scripts/http-smoke.mjs"
   },
