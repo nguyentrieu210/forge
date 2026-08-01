@@ -19,8 +19,8 @@ test("AR aging compiler binds tenant and cutoff and exposes aging columns", () =
 
   assert.match(compiled.sql, /payment_ledger_entries/);
   assert.match(compiled.sql, /finance_invoice_terms/);
-  assert.match(compiled.sql, /p\.tenant_id = \?1/);
-  assert.match(compiled.sql, /date\(p\.posting_at\) <= date\(\?2\)/);
+  assert.match(compiled.sql, /p\.tenant_id\s*=\s*\?1/);
+  assert.match(compiled.sql, /date\(p\.posting_at\)\s*<=\s*date\(\?2\)/);
   assert.match(compiled.sql, /due_date_source/);
   assert.ok(!compiled.sql.includes("OR 1=1"));
   assert.deepEqual(compiled.params.slice(0, 5), [
@@ -47,8 +47,8 @@ test("AP aging compiler uses payable ledger and can filter fallback due dates", 
     ],
   });
 
-  assert.match(compiled.sql, /p\.account_type = 'Payable'/);
-  assert.match(compiled.sql, /t\.voucher_type = 'Purchase Invoice'/);
+  assert.match(compiled.sql, /p\.account_type\s*=\s*'Payable'/);
+  assert.match(compiled.sql, /t\.voucher_type\s*=\s*'Purchase Invoice'/);
   assert.equal(compiled.params[2], "Demo");
   assert.equal(compiled.params[3], "posting_date_fallback");
   assert.equal(compiled.columns[0].label, "Supplier");
