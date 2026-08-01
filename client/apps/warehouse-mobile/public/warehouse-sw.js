@@ -1,9 +1,7 @@
-const CACHE = "forge-warehouse-v1";
+const CACHE = "alumdoor-warehouse-v2";
 const APP_SHELL = [
   "/mobile/warehouse/",
   "/mobile/warehouse/manifest.webmanifest",
-  "/mobile/warehouse/forge-mark.svg",
-  "/mobile/warehouse/forge-maskable.svg",
 ];
 
 self.addEventListener("install", (event) => {
