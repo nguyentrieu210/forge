@@ -95,6 +95,14 @@ interface SnapshotRecord {
   source_fingerprint: string;
 }
 
+interface FreezeSnapshotRecord extends SnapshotRecord {
+  ledger_date: string;
+  company: string;
+  warehouse: string;
+  customer: string;
+  sales_order: string;
+}
+
 interface FreezeRecord extends SnapshotRecord {
   frozen_at: string;
 }
@@ -225,9 +233,9 @@ export class D1DailyDetailedLedgerService {
     assertAdjustmentRole(actor);
     const normalizedSnapshotId = requireText(snapshotId, "snapshot_id", 240);
     const snapshot = await this.db.prepare(
-      `SELECT snapshot_id,context_key,source_fingerprint
+      `SELECT snapshot_id,context_key,source_fingerprint,ledger_date,company,warehouse,customer,sales_order
        FROM daily_ledger_snapshots WHERE tenant_id=?1 AND snapshot_id=?2`,
-    ).bind(tenantId, normalizedSnapshotId).first<SnapshotRecord>();
+    ).bind(tenantId, normalizedSnapshotId).first<FreezeSnapshotRecord>();
     if (!snapshot) throw errors.notFound("Daily ledger snapshot not found");
 
     const existing = await this.db.prepare(
@@ -244,11 +252,80 @@ export class D1DailyDetailedLedgerService {
       return { snapshot_id: normalizedSnapshotId, context_key: snapshot.context_key, existing: true };
     }
 
-    await this.db.prepare(
-      `INSERT INTO daily_ledger_freezes(tenant_id,context_key,snapshot_id,frozen_by,frozen_at,reason)
-       VALUES(?1,?2,?3,?4,?5,?6)`,
-    ).bind(tenantId, snapshot.context_key, normalizedSnapshotId, actor.user_id, now, reason.trim()).run();
-    return { snapshot_id: normalizedSnapshotId, context_key: snapshot.context_key, existing: false };
+    // Accounting correctness boundary: compare the persisted immutable snapshot with the
+    // live source set and insert the freeze in ONE SQLite/D1 statement. A preflight
+    // fingerprint check outside this statement leaves a TOCTOU window where a source
+    // document can change after validation but before the freeze row is written.
+    const inserted = await this.db.prepare(
+      `WITH live_lines AS (
+         ${SOURCE_SQL}
+       ),
+       snapshot_lines AS (
+         SELECT line_key,domain,source_type,source_ref,metric,
+                quantity_micros,amount_minor,currency,details_json
+         FROM daily_ledger_snapshot_lines
+         WHERE tenant_id=?1 AND snapshot_id=?8
+       )
+       INSERT INTO daily_ledger_freezes(tenant_id,context_key,snapshot_id,frozen_by,frozen_at,reason)
+       SELECT ?1,?9,?8,?10,?11,?12
+       WHERE NOT EXISTS (
+         SELECT line_key,domain,source_type,source_ref,metric,
+                quantity_micros,amount_minor,currency,details_json
+         FROM live_lines
+         EXCEPT
+         SELECT line_key,domain,source_type,source_ref,metric,
+                quantity_micros,amount_minor,currency,details_json
+         FROM snapshot_lines
+       )
+       AND NOT EXISTS (
+         SELECT line_key,domain,source_type,source_ref,metric,
+                quantity_micros,amount_minor,currency,details_json
+         FROM snapshot_lines
+         EXCEPT
+         SELECT line_key,domain,source_type,source_ref,metric,
+                quantity_micros,amount_minor,currency,details_json
+         FROM live_lines
+       )
+       ON CONFLICT(tenant_id,context_key) DO NOTHING`,
+    ).bind(
+      tenantId,
+      snapshot.ledger_date,
+      snapshot.company,
+      snapshot.warehouse,
+      snapshot.customer,
+      snapshot.sales_order,
+      MAX_SOURCE_LINES + 1,
+      normalizedSnapshotId,
+      snapshot.context_key,
+      actor.user_id,
+      now,
+      reason.trim(),
+    ).run();
+
+    if (Number(inserted.meta?.changes ?? 0) > 0) {
+      return { snapshot_id: normalizedSnapshotId, context_key: snapshot.context_key, existing: false };
+    }
+
+    // The insert may lose a same-context race to another valid freezer. Resolve that
+    // deterministically after the atomic write attempt. If no freeze exists, the only
+    // reason the conditional INSERT produced no row is a live-source mismatch.
+    const afterAttempt = await this.db.prepare(
+      `SELECT s.snapshot_id,s.context_key,s.source_fingerprint,f.frozen_at
+       FROM daily_ledger_freezes f
+       JOIN daily_ledger_snapshots s
+         ON s.tenant_id=f.tenant_id AND s.snapshot_id=f.snapshot_id
+       WHERE f.tenant_id=?1 AND f.context_key=?2`,
+    ).bind(tenantId, snapshot.context_key).first<FreezeRecord>();
+    if (afterAttempt) {
+      if (afterAttempt.snapshot_id !== normalizedSnapshotId) {
+        throw errors.lifecycle("Daily ledger context is already frozen to another snapshot");
+      }
+      return { snapshot_id: normalizedSnapshotId, context_key: snapshot.context_key, existing: true };
+    }
+
+    throw errors.lifecycle(
+      "Daily ledger source changed after this snapshot; review and reconcile the current snapshot before freezing",
+    );
   }
 
   async adjust(
