@@ -211,14 +211,12 @@ test("authenticated receipt, issue, transfer and reconciliation preserve stock l
 
   const sourceWarehouse = await createResource(page, adminCsrf, "Warehouse", {
     warehouse_name: `QA Source ${suffix}`,
-    company: "ALUMDOOR",
     stock_role: "Kho chính",
     is_group: 0,
     disabled: 0,
   });
   const targetWarehouse = await createResource(page, adminCsrf, "Warehouse", {
     warehouse_name: `QA Target ${suffix}`,
-    company: "ALUMDOOR",
     stock_role: "Kho chính",
     is_group: 0,
     disabled: 0,
