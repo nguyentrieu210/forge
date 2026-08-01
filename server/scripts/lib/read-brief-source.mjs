@@ -34,6 +34,7 @@ function sourcePathOf(source) {
  * producing one ordinary brief before schema validation and compilation.
  *
  * @param {string | URL} source
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function readBriefSource(source) {
   const sourcePath = sourcePathOf(source);
