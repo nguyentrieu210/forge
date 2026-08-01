@@ -1,17 +1,9 @@
 #!/usr/bin/env node
 /**
- * Stages the generic client bundle where the gateway can deploy it.
+ * Stages the generic runtime plus the phone warehouse PWA where the Gateway can deploy
+ * both from the same origin as the API.
  *
- *   node scripts/stage-client-bundle.mjs [--source <dir>] [--check]
- *
- * The gateway's `assets.directory` has to be a real directory next to its config at
- * deploy time, and the bundle is built in another workspace entirely. Copying it here
- * rather than pointing wrangler across the repo keeps the deployable unit self-contained:
- * whatever is in `public/` is exactly what went live, and `--check` can assert that a
- * deploy is not about to ship a stale or missing UI.
- *
- * Refuses on a source that has no `index.html`, because a bundle without a shell deploys
- * successfully and then serves nothing — the worst of both outcomes.
+ *   node scripts/stage-client-bundle.mjs [--source <dir>] [--mobile-source <dir>] [--check]
  */
 import { cp, mkdir, rm, readdir, stat, readFile } from "node:fs/promises";
 import path from "node:path";
@@ -26,14 +18,20 @@ const argOf = (name, fallback) => {
 };
 
 const source = path.resolve(argOf("source", path.join(serverRoot, "..", "client", "apps", "runtime", "dist")));
+const mobileSource = path.resolve(argOf("mobile-source", path.join(serverRoot, "..", "client", "apps", "kho", "dist-mobile")));
 const target = path.join(serverRoot, "apps", "gateway-worker", "public");
+const mobileTarget = path.join(target, "mobile", "warehouse");
 const checkOnly = args.includes("--check");
 
 async function isDirectory(dir) {
   try { return (await stat(dir)).isDirectory(); } catch { return false; }
 }
 
-/** Content hash over every file, so "the deployed UI" is a value we can compare. */
+async function requireFile(file, message) {
+  try { await stat(file); } catch { fail(message); }
+}
+
+/** Content hash over every staged file, so the deployed UI is one auditable value. */
 async function hashTree(dir) {
   const hash = createHash("sha256");
   const walk = async (current, prefix) => {
@@ -51,20 +49,30 @@ async function hashTree(dir) {
 
 if (checkOnly) {
   if (!(await isDirectory(target))) fail(`no client bundle staged at ${target}\n  run: node scripts/stage-client-bundle.mjs`);
-  try { await stat(path.join(target, "index.html")); } catch { fail(`${target} has no index.html — the staged bundle would serve nothing`); }
-  console.log(`STAGED_OK ${target} hash=${await hashTree(target)}`);
+  await requireFile(path.join(target, "index.html"), `${target} has no index.html — the staged runtime would serve nothing`);
+  await requireFile(path.join(mobileTarget, "index.html"), `${mobileTarget} has no index.html — warehouse PWA is missing from the release`);
+  await requireFile(path.join(mobileTarget, "manifest.webmanifest"), `${mobileTarget} has no manifest.webmanifest`);
+  await requireFile(path.join(mobileTarget, "warehouse-sw.js"), `${mobileTarget} has no warehouse-sw.js`);
+  console.log(`STAGED_OK ${target} hash=${await hashTree(target)} mobile=/mobile/warehouse/`);
   process.exit(0);
 }
 
 if (!(await isDirectory(source))) {
-  fail(`no built bundle at ${source}\n  build it first: pnpm --filter runtime run build   (in ../client)`);
+  fail(`no built runtime at ${source}\n  build it first: pnpm --filter runtime run build   (in ../client)`);
 }
-try { await stat(path.join(source, "index.html")); } catch { fail(`${source} has no index.html — not a built client bundle`); }
+if (!(await isDirectory(mobileSource))) {
+  fail(`no built warehouse PWA at ${mobileSource}\n  build it first: pnpm --filter kho run build   (in ../client)`);
+}
+await requireFile(path.join(source, "index.html"), `${source} has no index.html — not a built runtime bundle`);
+await requireFile(path.join(mobileSource, "index.html"), `${mobileSource} has no index.html — not a built warehouse PWA`);
+await requireFile(path.join(mobileSource, "manifest.webmanifest"), `${mobileSource} has no manifest.webmanifest`);
+await requireFile(path.join(mobileSource, "warehouse-sw.js"), `${mobileSource} has no warehouse-sw.js`);
 
-// Replaced wholesale rather than merged: a leftover hashed asset from an older build is
-// dead weight that also makes the staged hash meaningless as a version.
+// Replace wholesale so stale hashed assets from previous releases cannot remain reachable.
 await rm(target, { recursive: true, force: true });
 await mkdir(target, { recursive: true });
 await cp(source, target, { recursive: true });
+await mkdir(mobileTarget, { recursive: true });
+await cp(mobileSource, mobileTarget, { recursive: true });
 
-console.log(`STAGE_PASS ${path.relative(serverRoot, target)} <- ${source} hash=${await hashTree(target)}`);
+console.log(`STAGE_PASS ${path.relative(serverRoot, target)} <- runtime + warehouse PWA hash=${await hashTree(target)}`);

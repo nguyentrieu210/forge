@@ -75,38 +75,39 @@
   background: var(--card);
 }
 
-/* Alumdoor public experience. The palette follows the supplied Alumdoor order-form
-   artwork: signature orange, technical charcoal, white paper and restrained neutrals. */
-[data-alumdoor-landing] {
+/* Alumdoor public experience follows the live alumdoor.vn visual language. */
+[data-alumdoor-landing],
+[data-alumdoor-login] {
   color-scheme: light;
-  --background: #f7f6f4;
-  --foreground: #393938;
+  --background: #f7f7f7;
+  --foreground: #202020;
   --card: #ffffff;
-  --card-foreground: #393938;
+  --card-foreground: #202020;
   --popover: #ffffff;
-  --popover-foreground: #393938;
-  --primary: #f15c2d;
-  --primary-foreground: #18181b;
-  --secondary: #f2eee9;
-  --secondary-foreground: #393938;
-  --muted: #faf8f6;
-  --muted-foreground: #716b66;
+  --popover-foreground: #202020;
+  --primary: #f45b24;
+  --primary-foreground: #ffffff;
+  --secondary: #eeeeee;
+  --secondary-foreground: #202020;
+  --muted: #f4f4f4;
+  --muted-foreground: #696969;
   --accent: #fff0e9;
   --accent-foreground: #a93614;
-  --border: #ded8d3;
-  --input: #d5cec8;
-  --ring: #f15c2d;
-  --subtle: #746e69;
-  --info: #f15c2d;
+  --border: #dedede;
+  --input: #d5d5d5;
+  --ring: #f45b24;
+  --subtle: #6f6f6f;
+  --info: #f45b24;
   --info-text: #a93614;
   --sidebar: #ffffff;
-  --sidebar-foreground: #393938;
+  --sidebar-foreground: #202020;
+  font-family: Quicksand, Montserrat, ui-sans-serif, system-ui, sans-serif;
   background:
-    linear-gradient(90deg, #f15c2d 0 31%, #393938 31% 100%) top / 100% 0.25rem no-repeat,
-    linear-gradient(180deg, #ffffff 0%, #f7f6f4 54%, #f1efec 100%);
+    linear-gradient(180deg, #ffffff 0%, #f7f7f7 54%, #eeeeee 100%);
 }
 
-[data-theme="dark"] [data-alumdoor-landing] {
+[data-theme="dark"] [data-alumdoor-landing],
+[data-theme="dark"] [data-alumdoor-login] {
   color-scheme: dark;
   --background: #1d1d1c;
   --foreground: #faf8f5;
@@ -114,8 +115,8 @@
   --card-foreground: #faf8f5;
   --popover: #282827;
   --popover-foreground: #faf8f5;
-  --primary: #f15c2d;
-  --primary-foreground: #18181b;
+  --primary: #f45b24;
+  --primary-foreground: #ffffff;
   --secondary: #343230;
   --secondary-foreground: #faf8f5;
   --muted: #242321;
@@ -131,7 +132,6 @@
   --sidebar: #232322;
   --sidebar-foreground: #faf8f5;
   background:
-    linear-gradient(90deg, #f15c2d 0 31%, #faf8f5 31% 100%) top / 100% 0.25rem no-repeat,
     linear-gradient(180deg, #222221 0%, #1d1d1c 58%, #191918 100%);
 }
 
@@ -143,39 +143,27 @@
 }
 
 [data-alumdoor-landing] header::after {
-  position: absolute;
-  right: 0;
-  bottom: -1px;
-  left: 0;
-  height: 1px;
-  background: linear-gradient(90deg, var(--primary), transparent 38%);
-  content: "";
+  content: none;
 }
 
 [data-alumdoor-landing] .mf-brand-mark {
   border: 0;
-  border-radius: 0.4rem;
-  background: linear-gradient(120deg, #f15c2d 0 53%, #393938 53% 100%);
-  color: #ffffff;
-  font-family: "Arial Narrow", "Roboto Condensed", sans-serif;
-  font-weight: 900;
-  letter-spacing: -0.08em;
-  box-shadow: 0 0.55rem 1.2rem -0.75rem rgb(57 57 56 / 58%);
+  border-radius: 0.25rem;
+  background: #ffffff;
+  box-shadow: none;
 }
 
 [data-alumdoor-landing] header .mf-brand-mark + div > p:first-child,
 [data-alumdoor-landing] .mf-login-card .mf-brand-mark + div > p:first-child {
   color: var(--foreground);
-  font-family: "Arial Narrow", "Roboto Condensed", sans-serif;
-  font-weight: 900;
-  letter-spacing: -0.035em;
+  font-family: Quicksand, Montserrat, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
   text-transform: uppercase;
 }
 
 [data-alumdoor-landing] main > section:first-child {
-  background:
-    linear-gradient(115deg, color-mix(in srgb, var(--primary) 7%, transparent), transparent 42%),
-    linear-gradient(180deg, color-mix(in srgb, var(--card) 74%, transparent), transparent 72%);
+  background-color: #242424;
 }
 
 [data-alumdoor-landing] .mf-login-card {
@@ -216,5 +204,17 @@
 
   [data-alumdoor-landing] .mf-login-card {
     border-radius: 1.35rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-alumdoor-landing] .alumdoor-hero video {
+    display: none;
+  }
+
+  [data-alumdoor-landing] .alumdoor-hero {
+    background:
+      linear-gradient(180deg, rgb(15 15 15 / 42%), rgb(15 15 15 / 72%)),
+      url("/alumdoor/category-products.png") center / cover no-repeat;
   }
 }

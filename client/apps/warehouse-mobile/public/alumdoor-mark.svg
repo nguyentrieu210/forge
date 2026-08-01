@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Alumdoor">
+  <rect width="512" height="512" rx="112" fill="#ffffff"/>
+  <path d="M0 392h512v120H0z" fill="#f45b24"/>
+  <image href="alumdoor-logo.png" x="46" y="166" width="420" height="114" preserveAspectRatio="xMidYMid meet"/>
+</svg>

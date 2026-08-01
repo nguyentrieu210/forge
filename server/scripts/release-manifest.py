@@ -22,12 +22,17 @@ excluded_prefixes = {
 verified_fields = ["format", "package", "version", "file_count", "tree_sha256"]
 
 
+def excluded_directory(part):
+    """Ignore build/cache directories, including Wrangler's numbered dry-run outputs."""
+    return part in excluded_dirs or part.startswith(".wrangler-")
+
+
 def files():
     result = []
     for path in root.rglob("*"):
         relative = path.relative_to(root)
         relative_posix = relative.as_posix()
-        if any(part in excluded_dirs for part in relative.parts):
+        if any(excluded_directory(part) for part in relative.parts):
             continue
         if any(relative_posix == prefix or relative_posix.startswith(f"{prefix}/") for prefix in excluded_prefixes):
             continue

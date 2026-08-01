@@ -1,6 +1,8 @@
 import { useId, type CSSProperties } from "react";
 import { cn } from "@metaforge/ui";
 
+export const ALUMDOOR_LOGO_URL = "/alumdoor/logo.png";
+
 export interface ForgeBrandLogoProps {
   size?: number;
   className?: string;
@@ -9,6 +11,20 @@ export interface ForgeBrandLogoProps {
   wordmark?: boolean;
   name?: string;
   subtitle?: string;
+}
+
+export function isAlumdoorSurface() {
+  if (typeof window === "undefined") return false;
+  const host = window.location.hostname.toLowerCase();
+  const params = new URLSearchParams(window.location.search);
+  return host === "alu.kairo.vn" || params.get("alumdoor") === "1" || window.location.pathname.startsWith("/mobile/warehouse/");
+}
+
+function getAlumdoorLogoUrl() {
+  if (typeof window !== "undefined" && window.location.pathname.startsWith("/mobile/warehouse/")) {
+    return "/mobile/warehouse/alumdoor-logo.png";
+  }
+  return ALUMDOOR_LOGO_URL;
 }
 
 /** Logo dùng chung cho landing, login, shell và PWA. */
@@ -23,8 +39,25 @@ export function ForgeBrandLogo({
   const id = useId().replace(/:/g, "");
   const gradientId = `forge-gradient-${id}`;
   const clipId = `forge-circle-${id}`;
-  const style = { "--forge-logo-size": `${size}px` } as CSSProperties;
 
+  if (isAlumdoorSurface()) {
+    return (
+      <span
+        data-alumdoor-logo
+        className={cn("mf-alumdoor-logo inline-flex w-full min-w-0 items-center justify-center overflow-hidden", className)}
+        style={{ height: size }}
+        title="Alumdoor"
+      >
+        <img
+          src={getAlumdoorLogoUrl()}
+          alt="Alumdoor"
+          className="mf-alumdoor-logo-image block h-full w-full object-contain"
+        />
+      </span>
+    );
+  }
+
+  const style = { "--forge-logo-size": `${size}px` } as CSSProperties;
   const mark = (
     <svg viewBox="0 0 96 96" role="img" aria-label={title} className="size-full">
       <defs>

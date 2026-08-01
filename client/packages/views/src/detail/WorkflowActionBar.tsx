@@ -85,7 +85,7 @@ export function FormActionBar({
           title={a.disabledReason === DIRTY_GUARD_REASON ? t("form.dirty_guard", a.disabledReason) : a.disabledReason}
           onClick={a.kind === "save" ? undefined : () => onAction(a.kind)}
         >
-          {a.kind === "save" && ctx.saving ? t("form.saving") : t(`form.action.${a.kind}`, a.label)}
+          {a.kind === "save" && ctx.saving ? t("form.saving") : a.kind === "print" ? a.label : t(`form.action.${a.kind}`, a.label)}
         </Button>
       ))}
       {menu.length ? (

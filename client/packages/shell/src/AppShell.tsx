@@ -34,6 +34,8 @@ export interface AppShellProps {
   brandMode?: BrandMode;
   /** Logo app (ReactNode). Không có ⇒ rơi về chữ cái đầu của `brand`. */
   brandMark?: ReactNode;
+  /** Hiển thị riêng logo ngang, không ghép thêm tên app ở cạnh. */
+  brandLogoOnly?: boolean;
   nav: NavItem[];
   activeKey: string;
   onNavigate: (key: string) => void;
@@ -119,7 +121,10 @@ function BreadcrumbTrail({ items }: { items: Breadcrumb[] }) {
 export function AppShell(props: AppShellProps) {
   const t = useT();
   // Màu thương hiệu nằm CHUNG menu với sáng/tối — cùng là "giao diện", không tách ra màn Cài đặt.
-  const [brand, setBrand] = useBrand(props.brandMode);
+  const [brand, setBrand] = useBrand(
+    props.allowBrandChange === false ? props.brandMode : undefined,
+    props.brandMode,
+  );
   const [collapsed, setCollapsed] = useState(() => { try { return localStorage.getItem("mf-sidebar-collapsed") === "1"; } catch { return false; } });
   const [mobileOpen, setMobileOpen] = useState(false);
   const [navQuery, setNavQuery] = useState("");
@@ -219,14 +224,17 @@ export function AppShell(props: AppShellProps) {
           "max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-50 max-md:w-[min(19rem,88vw)] max-md:shadow-xl",
           mobileOpen ? "max-md:translate-x-0" : "max-md:-translate-x-full",
         )} data-collapsed={collapsed ? "true" : "false"}>
-          <div className="mf-shell-brand flex h-12 items-center gap-2 px-3">
+          <div className={cn("mf-shell-brand flex items-center gap-2 px-3", props.brandLogoOnly ? "h-16" : "h-12")}>
             {/* Logo do APP cấp. Không có thì mới rơi về chữ cái đầu — chữ cái đầu là phương án
                 dự phòng cho app chưa có logo, không phải mặc định nên dùng: nó không khớp favicon
                 và làm cùng một phần mềm trông như hai thứ khác nhau giữa tab và thanh bên. */}
             {props.brandMark
-              ? <div className="mf-brand-mark grid size-7 shrink-0 place-items-center overflow-hidden rounded-md">{props.brandMark}</div>
+              ? <div className={cn(
+                  "grid shrink-0 place-items-center overflow-hidden rounded-md",
+                  props.brandLogoOnly && !collapsed ? "h-12 w-full bg-transparent px-0" : "mf-brand-mark size-7",
+                )}>{props.brandMark}</div>
               : <div className="mf-brand-mark">{(props.brand ?? "MetaForge").trim().charAt(0).toUpperCase()}</div>}
-            {!collapsed ? <span className="truncate font-semibold">{props.brand ?? "MetaForge"}</span> : null}
+            {!collapsed && !props.brandLogoOnly ? <span className="truncate font-semibold">{props.brand ?? "MetaForge"}</span> : null}
             <Button variant="ghost" size="icon-sm" className="ml-auto md:hidden" onClick={() => setMobileOpen(false)} aria-label="Đóng menu"><X className="size-4" /></Button>
           </div>
           <Separator />
@@ -348,15 +356,14 @@ export function AppShell(props: AppShellProps) {
             ) : null}
             <div className="flex-1" />
             {props.onOpenAI ? (
-              <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="hidden md:inline-flex" onClick={props.onOpenAI} aria-label="AI"><Sparkles className={cn("size-4", props.aiConfigured ? "text-primary" : "text-muted-foreground")} /></Button></TooltipTrigger><TooltipContent>{props.aiConfigured ? "Trợ lý AI" : "AI (chưa cấu hình)"}</TooltipContent></Tooltip>
+              <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="sm" className="h-8 shrink-0 gap-1.5 px-2" onClick={props.onOpenAI} aria-label="Hỏi AI"><Sparkles className={cn("size-4", props.aiConfigured === false ? "text-muted-foreground" : "text-primary")} /><span className="hidden sm:inline">Hỏi AI</span></Button></TooltipTrigger><TooltipContent>Hỏi AI về màn hình đang xem</TooltipContent></Tooltip>
             ) : null}
             <NotificationMenu {...props} />
             <DropdownMenu>
               <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="md:hidden" aria-label="Thêm thao tác"><MoreHorizontal className="size-4" /></Button></DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="max-h-[80vh] w-56 overflow-y-auto">
                 {props.onOpenPalette ? <DropdownMenuItem onClick={props.onOpenPalette}><Search className="size-4" /> {t("shell.search", "Tìm nhanh…")}</DropdownMenuItem> : null}
-                {props.onOpenAI ? <DropdownMenuItem onClick={props.onOpenAI}><Sparkles className="size-4" /> {props.aiConfigured ? "Trợ lý AI" : "AI (chưa cấu hình)"}</DropdownMenuItem> : null}
-                {(props.onOpenPalette || props.onOpenAI) ? <DropdownMenuSeparator /> : null}
+                {props.onOpenPalette ? <DropdownMenuSeparator /> : null}
                 <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">{t("shell.theme_mode")}</DropdownMenuLabel>
                 <DropdownMenuItem onClick={() => props.onThemeChange("light")}><Sun className="size-4" /><span className="flex-1">{t("shell.theme_light")}</span>{props.theme === "light" ? <Check className="size-3.5 text-primary" /> : null}</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => props.onThemeChange("dark")}><Moon className="size-4" /><span className="flex-1">{t("shell.theme_dark")}</span>{props.theme === "dark" ? <Check className="size-3.5 text-primary" /> : null}</DropdownMenuItem>

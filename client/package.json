@@ -10,7 +10,7 @@
   "scripts": {
     "verify": "tsc -b --pretty",
     "typecheck": "tsc -b --pretty",
-    "lint": "node scripts/check-native-ui.mjs && node scripts/check-hook-order.mjs",
+    "lint": "node scripts/check-native-ui.mjs && node scripts/check-hook-order.mjs && node --check ../server/scripts/stage-client-bundle.mjs",
     "scan-secrets": "node scripts/scan-secrets.mjs",
     "test": "pnpm --filter @metaforge/demo run selfcheck && pnpm --filter @metaforge/demo exec tsx ../../packages/shell/src/workspace-navigation-selfcheck.ts",
     "build": "pnpm -r run build",

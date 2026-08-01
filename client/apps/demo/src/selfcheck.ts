@@ -1399,6 +1399,8 @@ check("Form actions: metadata-driven (docstatus/perms/workflow)", () => {
   // sẽ vỡ mỗi lần thêm một hành động không cần quyền, mà không nói được là vỡ vì cái gì.
   const noPerm = resolveFormActions({ ...base, perms: {} }).map((a) => a.kind);
   assert.deepEqual(noPerm, ["print"], `không quyền → chỉ còn In, nhận được: ${noPerm.join(",")}`);
+  const print = resolveFormActions({ ...base, perms: {} }).find((a) => a.kind === "print");
+  assert.ok(print && !print.inMenu && print.label === "Xuất PDF", "Xuất PDF hiển thị trực tiếp, không nằm trong menu ba chấm");
 
   // WorkflowResolver presentation: dedupe action
   const wf = resolveWorkflowActions([

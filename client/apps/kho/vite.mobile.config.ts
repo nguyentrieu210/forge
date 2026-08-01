@@ -1,14 +1,27 @@
 import { fileURLToPath, URL } from "node:url";
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
 const here = (relative: string) => fileURLToPath(new URL(relative, import.meta.url));
 
+function alumdoorWarehouseBranding(): Plugin {
+  return {
+    name: "alumdoor-warehouse-branding",
+    enforce: "pre",
+    transform(code, id) {
+      if (!id.replaceAll("\\", "/").endsWith("/warehouse-mobile/src/main.tsx")) return null;
+      return code
+        .replaceAll("Forge Kho", "Alumdoor Kho")
+        .replaceAll("tài khoản Forge", "tài khoản Alumdoor");
+    },
+  };
+}
+
 export default defineConfig({
   root: here("../warehouse-mobile"),
   base: "/mobile/warehouse/",
-  plugins: [tailwindcss(), react()],
+  plugins: [alumdoorWarehouseBranding(), tailwindcss(), react()],
   resolve: {
     alias: {
       react: here("./node_modules/react"),

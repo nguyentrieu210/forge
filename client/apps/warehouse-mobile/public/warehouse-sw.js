@@ -1,9 +1,11 @@
-const CACHE = "forge-warehouse-v1";
+const CACHE = "alumdoor-warehouse-v5";
 const APP_SHELL = [
   "/mobile/warehouse/",
   "/mobile/warehouse/manifest.webmanifest",
-  "/mobile/warehouse/forge-mark.svg",
-  "/mobile/warehouse/forge-maskable.svg",
+  "/mobile/warehouse/alumdoor-app-192.png",
+  "/mobile/warehouse/alumdoor-app-512.png",
+  "/mobile/warehouse/alumdoor-app-maskable-512.png",
+  "/mobile/warehouse/alumdoor-logo.png",
 ];
 
 self.addEventListener("install", (event) => {
@@ -31,8 +33,14 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE).then((cache) => cache.put("/mobile/warehouse/", copy));
+          // Chỉ một HTML shell thành công mới được làm bản khởi động offline. Trước đây
+          // phản hồi JSON 401/403 của route in/API cũng có thể ghi đè shell, khiến lần mở
+          // PWA sau hiện thẳng AUTHENTICATION_REQUIRED thay vì màn đăng nhập.
+          const contentType = response.headers.get("content-type") ?? "";
+          if (response.ok && contentType.includes("text/html")) {
+            const copy = response.clone();
+            caches.open(CACHE).then((cache) => cache.put("/mobile/warehouse/", copy));
+          }
           return response;
         })
         .catch(() => caches.match("/mobile/warehouse/")),

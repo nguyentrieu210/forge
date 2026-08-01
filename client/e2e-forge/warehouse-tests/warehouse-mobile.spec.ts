@@ -28,16 +28,19 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test("renders the installable warehouse experience without desktop shell", async ({ page, request }, testInfo) => {
+test("renders the installable Alumdoor warehouse experience without desktop shell", async ({ page, request }, testInfo) => {
   await page.goto("/mobile/warehouse/");
 
-  await expect(page).toHaveTitle("Forge Kho");
-  await expect(page.getByRole("img", { name: "Forge" }).first()).toBeVisible();
+  await expect(page).toHaveTitle("Alumdoor Kho");
+  await expect(page.locator('img[alt="Alumdoor"]:visible')).toBeVisible();
   await expect(page.getByText("Hôm nay cần làm gì ở kho?", { exact: true })).toBeVisible();
 
   for (const label of ["Trang chủ", "Nghiệp vụ", "Tra tồn", "Tôi"]) {
     await expect(page.getByRole("button", { name: label, exact: true })).toBeVisible();
   }
+  const bottomNav = page.getByRole("navigation", { name: "Điều hướng app kho" });
+  await expect(bottomNav).toBeVisible();
+  await expect.poll(() => bottomNav.evaluate((element) => Math.round(element.closest("footer")!.getBoundingClientRect().bottom - window.innerHeight))).toBe(0);
   for (const label of ["Nhập kho", "Xuất kho", "Chuyển kho", "Kiểm kho"]) {
     await expect(page.getByRole("button", { name: new RegExp(`^${label}`) }).first()).toBeVisible();
   }
@@ -47,11 +50,26 @@ test("renders the installable warehouse experience without desktop shell", async
   const manifestResponse = await request.get("/mobile/warehouse/manifest.webmanifest");
   expect(manifestResponse.ok()).toBe(true);
   const manifest = await manifestResponse.json();
-  expect(manifest.name).toBe("Forge Kho");
+  expect(manifest.name).toBe("Alumdoor Kho");
   expect(manifest.start_url).toBe("/mobile/warehouse/");
+  expect(manifest.scope).toBe("/mobile/warehouse/");
   expect(manifest.display).toBe("standalone");
+  expect(manifest.theme_color).toBe("#f45b24");
+  expect(manifest.icons[0]?.src).toBe("alumdoor-app-192.png");
+  expect(manifest.icons[1]?.purpose).toBe("maskable");
+
+  const iconResponse = await request.get("/mobile/warehouse/alumdoor-app-192.png");
+  expect(iconResponse.ok()).toBe(true);
+  expect(iconResponse.headers()["content-type"]).toContain("image/png");
+  expect((await iconResponse.body()).byteLength).toBeGreaterThan(1_000);
 
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1);
+
+  await page.getByRole("button", { name: "Xem tất cả", exact: true }).click();
+  await expect(page.getByText("Chọn nghiệp vụ", { exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/tab=actions/);
+  await page.getByRole("button", { name: "Trang chủ", exact: true }).click();
+  await expect(page.getByText("Hôm nay cần làm gì ở kho?", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: /^Nhập kho/ }).first().click();
   await expect(page.getByText("Tạo phiếu nghiệp vụ", { exact: true })).toBeVisible();
@@ -59,9 +77,14 @@ test("renders the installable warehouse experience without desktop shell", async
   await expect(page.getByText("Kho nhận", { exact: true })).toBeVisible();
   await expect(page.getByText("Số lượng", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Lưu nhập kho", exact: true })).toBeVisible();
+  await expect(bottomNav).toBeVisible();
+  await expect(page.getByRole("button", { name: "Nghiệp vụ", exact: true })).toBeVisible();
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1);
 
-  await page.getByRole("button", { name: "Quay lại", exact: true }).click();
+  await page.goBack();
+  await expect(page).toHaveURL(/\/mobile\/warehouse\//);
+  await expect(page.getByText("Hôm nay cần làm gì ở kho?", { exact: true })).toBeVisible();
+  await expect(bottomNav).toBeVisible();
   await page.getByRole("button", { name: "Tài khoản", exact: true }).click();
   await expect(page.getByText("Nguyễn Kho", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Đổi mật khẩu", exact: true })).toBeVisible();

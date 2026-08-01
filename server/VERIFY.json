@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-01T16:37:51.053353+07:00",
+  "generated_at": "2026-08-01T17:20:33.165214+07:00",
   "package": "CloudForge ERPNext Business Suite RC",
   "version": "1.0.0",
   "scope": "Cloudflare-native ERP business-suite release candidate; not drop-in Frappe/ERPNext parity or statutory certification",
@@ -11,9 +11,9 @@
   "markdown_files": 247,
   "markdown_lines": 17291,
   "javascript_test_and_tool_files": 176,
-  "javascript_lines": 31580,
+  "javascript_lines": 31588,
   "python_files": 47,
-  "python_lines": 8889,
+  "python_lines": 8890,
   "node_tests": 763,
   "node_tests_passed": 763,
   "typescript_strict_build": true,

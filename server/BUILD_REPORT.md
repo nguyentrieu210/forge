@@ -30,8 +30,8 @@
 - TypeScript/TSX/MTS: **201 files / 50681 lines**
 - SQL: **248 files / 56261 lines**
 - Markdown: **247 files / 17291 lines**
-- JavaScript/MJS tests and tools: **176 files / 31580 lines**
-- Python verification tools: **47 files / 8889 lines**
+- JavaScript/MJS tests and tools: **176 files / 31588 lines**
+- Python verification tools: **47 files / 8890 lines**
 
 ## Honest boundaries
 

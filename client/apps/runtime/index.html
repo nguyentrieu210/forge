@@ -6,9 +6,20 @@
     <meta name="theme-color" content="#7c3aed" />
     <meta name="description" content="Forge — nền tảng vận hành doanh nghiệp từ văn phòng đến hiện trường." />
     <meta name="forge-release" content="%VITE_FORGE_RELEASE_SHA%" />
-    <link rel="icon" href="/forge-mark.svg" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="/forge-mark.svg" />
+    <link id="app-icon" rel="icon" href="/forge-mark.svg" type="image/svg+xml" />
+    <link id="app-touch-icon" rel="apple-touch-icon" href="/forge-mark.svg" />
     <title>Forge</title>
+    <script>
+      (() => {
+        const params = new URLSearchParams(location.search);
+        const alumdoor = location.hostname.toLowerCase() === "alu.kairo.vn" || params.get("alumdoor") === "1";
+        if (!alumdoor) return;
+        const logo = "/alumdoor/app-icon-192.png";
+        document.querySelector('meta[name="theme-color"]')?.setAttribute("content", "#f45b24");
+        document.getElementById("app-icon")?.setAttribute("href", logo);
+        document.getElementById("app-touch-icon")?.setAttribute("href", logo);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

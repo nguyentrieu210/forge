@@ -1,27 +1,27 @@
 {
   "id": "/mobile/warehouse/",
-  "name": "Forge Kho",
-  "short_name": "Forge Kho",
-  "description": "Ứng dụng kho Forge tối ưu cho điện thoại.",
+  "name": "Alumdoor Kho",
+  "short_name": "Alumdoor Kho",
+  "description": "Ứng dụng kho Alumdoor tối ưu cho điện thoại.",
   "lang": "vi",
   "start_url": "/mobile/warehouse/",
   "scope": "/mobile/warehouse/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "theme_color": "#7c3aed",
-  "background_color": "#f8fafc",
+  "theme_color": "#f45b24",
+  "background_color": "#f7f7f7",
   "categories": ["business", "productivity"],
   "icons": [
     {
-      "src": "forge-mark.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "alumdoor-app-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "forge-maskable.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "alumdoor-app-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "maskable"
     }
   ],
@@ -30,19 +30,19 @@
       "name": "Nhập kho",
       "short_name": "Nhập kho",
       "url": "/mobile/warehouse/?action=receipt",
-      "icons": [{ "src": "forge-mark.svg", "sizes": "any", "type": "image/svg+xml" }]
+      "icons": [{ "src": "alumdoor-app-192.png", "sizes": "192x192", "type": "image/png" }]
     },
     {
       "name": "Xuất kho",
       "short_name": "Xuất kho",
       "url": "/mobile/warehouse/?action=issue",
-      "icons": [{ "src": "forge-mark.svg", "sizes": "any", "type": "image/svg+xml" }]
+      "icons": [{ "src": "alumdoor-app-192.png", "sizes": "192x192", "type": "image/png" }]
     },
     {
       "name": "Tra tồn",
       "short_name": "Tra tồn",
       "url": "/mobile/warehouse/?tab=stock",
-      "icons": [{ "src": "forge-mark.svg", "sizes": "any", "type": "image/svg+xml" }]
+      "icons": [{ "src": "alumdoor-app-192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ]
 }

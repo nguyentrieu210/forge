@@ -4,89 +4,52 @@ Ngày cập nhật: **2026-08-01**.
 
 Mọi agent phải đọc `AI_HANDOFF.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md` và `DELIVERY_POLICY.md` trước khi tiếp tục.
 
-## In progress — Print design PR #141
+## ACTIVE P0 — Alumdoor PWA + official brand/media
 
-Branch: `feat/print-design-sales-documents-20260801`
-PR: `#141`
+Branch: `feat/alumdoor-pwa-real-brand-assets`.
 
-Nhánh hoàn thiện local: `fix/print-router-missing-state` (print router + empty-state + sửa false-negative QR CI).
+Đã code trên branch:
 
-### Đã làm
+1. Stage `client/apps/kho/dist-mobile` vào Gateway tại `public/mobile/warehouse` cùng runtime desktop.
+2. Kiểm bắt buộc mobile `index.html`, `manifest.webmanifest`, `warehouse-sw.js` trước deploy.
+3. Đổi PWA thành `Alumdoor Kho`, theme cam, icon thường/maskable theo logo chính thức Alumdoor.
+4. Shared shell/mobile trên host Alumdoor dùng logo chính thức từ `alumdoor.vn`, không dùng mark Forge tím-hồng.
+5. Landing dùng logo chính thức, ảnh hero VIP-ST500 thật và media website Alumdoor cho card sản phẩm.
+6. Landing có CTA `App kho điện thoại` → `/mobile/warehouse/`.
+7. Playwright kiểm logo/media landing, manifest/icon PWA, navigation/nghiệp vụ và horizontal overflow.
+8. Landing đã được chỉnh lần hai theo giao diện `alumdoor.vn` hiện hành: top bar cam, header logo trắng, navigation than đậm, hero video, nhóm dịch vụ, sản phẩm và footer.
+9. Asset logo 2026 và media sản phẩm nổi bật được lưu cùng frontend; bỏ asset logo 2022 và placeholder CSS.
+10. `Forge Kho` còn sót trong giao diện mobile đã đổi thành `Alumdoor Kho`; palette chính dùng `#f45b24`.
+11. Local gates PASS: full test, client lint, client typecheck, client build và Playwright UI `17/17` trên desktop/tablet/mobile/PWA.
 
-- Sidecar `<brief>.prints.json` nối thêm mẫu in trước schema validation/compile, không ghi đè mẫu gốc.
-- `Đơn bán hàng ALUMDOOR` — Sales Order, 13 cột.
-- `Phiếu giao hàng / lắp đặt ALUMDOOR` — Delivery Note, 11 cột, không in giá.
-- `Phiếu yêu cầu sản xuất ALUMDOOR` — Production Request, 14 cột.
-- `Phiếu cắt nhôm ALUMDOOR` — Cut Order, 13 cột, bundle lô mẹ + bundle đầu thừa, kerf, kg, đầu thừa/phế và QR chứng từ thật bằng filter `qrcode`.
-- QR Cut Order mã hóa đúng số chứng từ nội bộ thành data URL, không nhúng token hoặc URL có quyền truy cập.
-- `Biên bản bàn giao / nghiệm thu ALUMDOOR` — Delivery Note, mẫu phụ `default: false`, 11 cột, checklist/kết luận/chữ ký tại công trình.
-- Năm mẫu đã đồng bộ logo, company header, lề A4, letterhead và tiêu đề theo Purchase Order mặc định `Đơn nhập hàng ALUMDOOR`; regression khóa checksum logo dùng chung.
-- Regression renderer cho Sales Order, Delivery Note, Production Request, Cut Order, Acceptance và sidecar loader.
-- Print router tải danh sách mẫu trước khi render, hỗ trợ `?format=` cho mẫu phụ và hiện empty-state tiếng Việt khi DocType chưa có mẫu.
-- Exact-head Acceptance `c7d93e77d4a062a095cccc916e50127fcc603595`: 6/6 workflow PASS.
-- Acceptance run IDs: CI `30689143646`, PR Validation `30689143618`, UI `30689143691`, Purchase `30689143635`, Sales `30689143650`, Inventory/Manufacturing `30689143661`.
-- Current default: `f916d066f9b45b1c3a5238259be9d6953d6cf0f3`; chênh lệch sau merge-base chỉ là release trigger.
+Việc phải hoàn thành trước khi đóng epic:
 
-### Tiếp theo trên cùng epic
-
-1. Đưa staging QR Cut Order vào PR head một lần và khóa 6 workflow exact-head.
-2. Review HTML preview/PDF năm mẫu bằng dữ liệu dài: ĐÃ XONG, không tràn ngang và toàn bộ vùng ký nằm trong A4.
-3. Chuẩn hóa mẫu mặc định `Hoá đơn ALUMDOOR` hiện có; không tạo Sales Invoice default thứ hai và không thay hóa đơn điện tử pháp lý.
-4. Sau đó làm `Payment Entry` phiếu thu/chi và chuẩn hóa `Purchase Receipt`.
-5. Có thể dùng filter `qrcode` hiện có cho tem mặt hàng/lô/đầu thừa, nhưng chỉ mã hóa định danh nội bộ không nhạy cảm.
-
-### Gate trước merge
-
-- `npm run brief:check`: PASS trên exact head.
-- Focused print/Sales tests: PASS, gồm QR thật trong `alumdoor-cut-order-print.test.mjs` và acceptance renderer.
-- Frappe facade integration + client selfcheck phải PASS cho danh sách mẫu, chọn mẫu qua route và URL encoding.
-- Full tests, typecheck và build: PASS.
-- 6 workflow exact-head: PASS.
-- Preview A4 dữ liệu dài: PASS cho cả năm mẫu; logo và company header tải đủ, bảng `194mm` không tràn.
-- PR mergeable với current default.
-- Production đã deploy trực tiếp theo chỉ đạo người dùng; không đổi secrets/DNS.
-
-## Hoàn tất — Forge branding và warehouse PWA
-
-- PR `#142` merge SHA: `8e9882a6143f4cf669724f654ec1b59949b90138`.
-- Exact validated head: `24621f221fad2de950d0f58cc39078e43c206f51`.
-- Full CI, typecheck, build và browser QA desktop/tablet/mobile: PASS.
-- Warehouse PWA QA: PASS trên Pixel 7 và viewport `390 × 844`.
-- Không deploy Cloudflare, không sửa production secret/DNS và không mutate dữ liệu production.
-
-## Hoàn tất — Finance receivables, payables và advances
-
-- PR `#139` merge SHA: `e404e12ef22d5bc9f2a782820787b4f30d8dce8a`.
-- Exact validated head: `0b5a629989dfa2b7972dafbda39134ad9b4bdda6`.
-- Due date, AR/AP aging, partial/unallocated Payment Entry, Advance Balance, Payment Allocation, Party Statement và Debt Summary đã có trên default.
-- Payment Ledger tiếp tục append-only; invoice outstanding không âm; advance chỉ được phân bổ về 0.
-- Full tests, typecheck, build, PR Validation, Sales, Purchase, Inventory/Manufacturing và UI validation: PASS.
-
-## Hoàn tất — Alumdoor public landing redesign
-
-- PR `#145` merge SHA: `898b19d0c58c84a32f99d73dfe0bf33f9ec78dd6`.
-- Exact validated head: `73dc960e3c9685708ac1b1e51c7eb5d2c1a71a9a`.
-- Landing guest đã chuyển sang bố cục mới theo thương hiệu/sản phẩm công khai của Alumdoor, giữ login nội bộ.
-- Browser QA PASS desktop/tablet/mobile, gồm dark/reduced-motion, login, no horizontal overflow và link VIP-ST500.
-- Không deploy Cloudflare trong đợt này.
-
-## P0 — Release app kho, chỉ thực hiện khi có lệnh deploy riêng
-
-1. Tạo branch release riêng từ default head mới.
-2. Map output `client/apps/kho/dist-mobile` vào route `/mobile/warehouse/` của gateway/static host.
-3. Bảo đảm SPA fallback, manifest, service worker và asset base path hoạt động cùng origin với API.
-4. Chạy authenticated smoke với backend thật cho nhập kho, xuất kho, chuyển kho và kiểm kho.
-5. Kiểm tra quyền Stock User/Stock Manager, CSRF, cookie session và logout/change-password.
-6. Chụp evidence desktop landing, login mobile, home kho, form nghiệp vụ và account screen.
-7. Chỉ deploy Cloudflare hoặc thay production route khi có yêu cầu rõ ràng.
+1. Mở PR từ exact branch head và khóa head.
+2. Chờ CI, typecheck, build, PR Validation, UI browser QA, Sales/Purchase/Inventory gates terminal xanh.
+3. Merge đúng exact-head đã validate.
+4. Để protected `Release Gateway Production` build → stage → Wrangler dry-run → deploy Cloudflare `cloudforge-gateway`.
+5. Ghi run ID, exact target SHA và Cloudflare Gateway version ID.
+6. Production smoke:
+   - `https://alu.kairo.vn/` trả landing mới;
+   - `/mobile/warehouse/` trả `Alumdoor Kho`, không rơi về desktop shell;
+   - manifest scope/start URL đúng `/mobile/warehouse/`;
+   - `alumdoor-mark.svg`, maskable icon và `warehouse-sw.js` trả 200;
+   - guest boot vẫn bị chặn đúng và API/auth không bị service worker cache.
+7. Sau deploy cập nhật `CURRENT_STATUS.md` và `NEXT_TASKS.md` bằng evidence thật.
 
 ### Done condition
 
-- `/mobile/warehouse/` trả đúng bundle PWA, không rơi về desktop runtime.
-- Manifest và service worker có scope `/mobile/warehouse/`.
-- Phiếu kho tạo thành công bằng tài khoản có quyền và bị chặn đúng với tài khoản thiếu quyền.
-- Không cache API/auth response.
-- Rollback route/static asset được ghi rõ.
+- PWA nhìn thấy và mở trực tiếp từ landing production.
+- Logo Alumdoor đúng trên landing, login/shell Alumdoor và PWA.
+- Hero/card sản phẩm dùng asset thực từ website Alumdoor thay placeholder giả.
+- `/mobile/warehouse/` được Gateway production phục vụ cùng origin API.
+- Full exact-head CI + production deploy/smoke PASS.
+
+## Sau P0 — authenticated stock lifecycle
+
+- Chạy smoke có kiểm soát cho nhập kho, xuất kho, chuyển kho và kiểm kho bằng dữ liệu thử có cleanup rõ ràng.
+- Kiểm Stock User/Stock Manager, CSRF, cookie session và failure path.
+- Không mutate dữ liệu khách hàng thật chỉ để tạo evidence.
 
 ## P1 — Daily detailed ledger
 
@@ -128,5 +91,80 @@ Sales Order → production request → Work Order → material issue/consume →
 
 - Một epic, một branch, một PR.
 - Không thay head khi exact-head CI đang chạy.
-- Không deploy Cloudflare, sửa secret/DNS, bật rollout hoặc mutate dữ liệu thật nếu chưa có lệnh riêng.
+- User đã yêu cầu deploy epic hiện tại; production release chỉ chạy sau merge exact-head xanh qua workflow bảo vệ.
+- Không sửa production secret/DNS, bật rollout dữ liệu không thể đảo ngược hoặc mutate dữ liệu khách hàng.
 - Không commit `.env`, `server/work/`, `tmp`, backup, cookie, token hoặc generated evidence.
+
+## Cập nhật deploy local — 2026-08-01
+
+- Đã hoàn thành exact-head CI `6/6`, build/stage/dry-run và deploy Gateway cho SHA `f2f277eb999d213521cd40a126a01a4350aeeca5`.
+- Production Gateway version: `a995e0a0-d85b-4cf0-a7cc-16224871cca6`; landing, App kho, manifest, service worker, logo và auth-boundary smoke PASS.
+- Việc còn lại để đóng epic: merge PR `#150` mà không thay exact validated head; sau merge xác nhận workflow production không rollback/ghi đè bản `a995e0a0-d85b-4cf0-a7cc-16224871cca6` bằng một SHA khác.
+
+## P0 tiếp theo — Alumdoor Meta completeness
+
+- Inventory toàn bộc nghiệp vụ/menu/action và Link field Alumdoor hiện còn nhập tay hoặc thiếu khai báo Meta.
+- Bổ sung canonical DocType/action/report/workspace metadata từ manifest/brief; không hard-code form riêng khi Meta đã có thể sinh UI.
+- Mọi Link field phải có target DocType, query/search, permission, tenant boundary và label formatter; app tự render LinkInput/autocomplete theo Meta.
+- Thêm completeness gate liệt kê missing operations, unresolved link targets và manual-input fallback; CI fail nếu manifest Alumdoor chưa đủ.
+- Tách thành branch/PR riêng sau khi merge hotfix UI; không deploy/mutate tenant production trong lúc khách đang demo.
+
+## P0 hiện tại — hợp nhất giao diện và mẫu in
+
+1. Hoàn tất shell sau đăng nhập: Tổng quan ở đầu sidebar; module chỉ có Quy trình và các tab nghiệp vụ; tách Báo cáo/Danh mục; thêm dải tổng đơn giản trên màn danh sách.
+2. Visual QA desktop 1280/1440 và mobile 390/412, bao gồm logo ngang, theme Hồng cánh sen và app kho không tràn ngang.
+3. Ghép `origin/feat/print-design-sales-documents-20260801`, giữ thay đổi giao diện hiện tại và chạy lại test mẫu in/QR/routing.
+4. Chạy full typecheck, lint, test, build, stage check và Wrangler dry-run trên exact commit.
+5. Push branch/PR rồi deploy Gateway trực tiếp từ máy local theo yêu cầu user; ghi exact SHA và Cloudflare Version ID.
+
+### Gate mẫu in sau hợp nhất
+
+- Chạy focused test cho Sales Order, Delivery Note, Production Request, Cut Order QR, Acceptance và sidecar loader.
+- Chạy tenant facade integration để khóa danh sách mẫu, lựa chọn `?format=` và URL encoding.
+- Giữ năm mẫu A4 trong vùng `194mm`, logo/company header tải đủ và vùng ký không tràn trang.
+- Sau release kiểm tra đăng nhập hết hạn ở route in quay về trang chủ, không hiện JSON `AUTHENTICATION_REQUIRED`.
+
+### Đã hoàn thành trong release `169f1853`
+
+- [x] Hợp nhất UI/PWA mới với nhánh mẫu in PR #141.
+- [x] Tổng quan/Báo cáo/Danh mục ở sidebar; Quy trình + nghiệp vụ ở tab phân hệ; dải tổng nhanh trên danh sách.
+- [x] Logo ngang desktop, 13 theme có Hồng cánh sen tương phản cao, app kho không tràn ngang.
+- [x] Full server/client gates, stage-check, Wrangler dry-run, deploy và production guest/browser smoke.
+- [ ] Khi có tài khoản demo được phép dùng, chạy production authenticated smoke cho chuyển tab, mẫu in và hết phiên; không tạo/mutate chứng từ khách hàng chỉ để thử UI.
+
+### Hotfix giao diện tiếp theo `20b3298d`
+
+- [x] Phóng logo ngang Alumdoor khít vùng thương hiệu sidebar.
+- [x] Đưa Báo cáo và Danh mục xuống dưới các phân hệ nghiệp vụ.
+- [x] Đổi Báo cáo sang bố cục nhóm trái + hai cột báo cáo; Danh mục sang ba cột nhóm kiểu MISA.
+- [x] Làm lại sơ đồ Quy trình bằng node, số bước và đường nối.
+- [x] Lọc Experience thiếu renderer và chuyển URL cũ về Tổng quan.
+- [x] Typecheck, selfcheck, build và Playwright responsive PASS.
+- [x] Build/stage exact SHA `b44bdaa9`, Wrangler dry-run, deploy Gateway version `fe705d76-a561-4ec9-bc8a-976437d65657` và HTTP production smoke.
+- [ ] Khi có phiên demo được phép dùng, smoke chỉ đọc sau đăng nhập cho thứ tự sidebar, Báo cáo/Danh mục/Quy trình và URL Experience cũ; không tạo hoặc sửa chứng từ khách hàng.
+
+### Đã hoàn thành trong hotfix `d5bb9ac0`
+
+- [x] Sơ đồ Quy trình đúng trục MISA với nghiệp vụ trên/dưới, Báo cáo bên phải và Danh mục nhanh phía dưới.
+- [x] Xuất PDF ra ngoài menu ba chấm.
+- [x] Kích hoạt và kiểm tra luồng chuyển màn app kho trên Pixel 7 và máy 390px.
+- [x] Build/stage/dry-run/deploy Gateway version `46d87cda-27c2-4a17-8344-b042599fa995` và production guest/mobile smoke.
+- [ ] Authenticated production smoke chỉ đọc vẫn cần một phiên demo hợp lệ; không tạo, gửi hoặc sửa chứng từ khách hàng để lấy evidence.
+- [x] Follow-up `478ee789`: chọn nhóm Báo cáo không cuộn trang; `Vật tư hàng hóa` đứng đầu Danh mục; deploy Gateway version `08c08f49-ca55-4ff0-9c0b-7653b4b7bff5`.
+
+### Đã hoàn thành trong release `2a36f797`
+
+- [x] Bỏ landing marketing Alumdoor; guest mở thẳng form login trên desktop và điện thoại.
+- [x] Dùng logo ngang chính thức cỡ lớn trong form login, autofocus tài khoản và không tràn ngang ở viewport 390px.
+- [x] Đưa `Hỏi AI` lên topbar cạnh Thông báo, bỏ trigger nổi góc màn hình.
+- [x] Đổi Tổng quan sang bố cục MISA có dải số liệu và lưới biểu đồ hai cột.
+- [x] Typecheck/build, Playwright `8/8`, stage/dry-run/deploy và production browser smoke PASS; Gateway `79cf4d16-0bf5-4c18-bad8-99367dc382b5`.
+- [ ] Rebase/merge target branch để giải quyết conflict của PR `#150`, sau đó chạy lại required checks trên exact head trước khi merge GitHub.
+- [ ] Bổ sung khai báo biểu đồ theo Meta cho từng phân hệ; chỉ hiện tab `Biểu đồ` khi manifest của phân hệ có chart definition.
+### Đã hoàn thành trong release `8d8353d2`
+
+- [x] Giữ BottomNav mobile cố định, luôn hiện ở trang chủ và màn chi tiết nghiệp vụ.
+- [x] Chặn vuốt Back thoát app ngay; Back ưu tiên quay lại tab/màn nội bộ.
+- [x] Cho logo Alumdoor thích ứng theme tối, bỏ nền trắng cứng và tăng wordmark sidebar lên 40px.
+- [x] Nhập thay đổi mới nhất từ nhánh GitHub, build đúng merge head, stage/dry-run/deploy Gateway và smoke production.
+- [ ] Chạy authenticated production visual smoke cho sidebar sau khi có phiên đăng nhập demo đang mở; không tạo hoặc sửa chứng từ khách hàng chỉ để kiểm tra UI.
