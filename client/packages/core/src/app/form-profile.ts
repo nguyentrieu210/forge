@@ -102,6 +102,22 @@ export function applyFormProfile(meta: DocTypeMeta, profile: FormProfile | undef
 }
 
 /**
+ * `surface=internal` is a hard visibility boundary, stronger than a FormProfile.
+ *
+ * FormProfile deliberately keeps required/title/dependency fields visible as a safety net
+ * for legacy schemas. Canonical Meta is different: an internal value is server/default/
+ * formula-owned and must never become an input just because it is required or happens to
+ * be the title field. The value still lives on the original meta/document used for
+ * defaults, conditions and serialization; only the rendered schema loses it.
+ */
+function stripInternalSurface(meta: DocTypeMeta): DocTypeMeta {
+  return {
+    ...meta,
+    fields: pruneEmptyBreaks(meta.fields.filter((field) => field.surface !== "internal")),
+  };
+}
+
+/**
  * Compact quick-entry is opt-in metadata, never a guess based on field type.
  *
  * The caller must keep using the original meta for defaults and serialisation. This
@@ -112,12 +128,14 @@ export function applyFormSurface(meta: DocTypeMeta, surface: "quick" | "expanded
   const declared = meta.fields.filter((field) => field.surface !== undefined);
   if (!declared.length) return meta;
   if (surface === "expanded") {
-    return applyFormProfile(meta, { hide: meta.fields.filter((field) => field.surface === "internal").map((field) => field.fieldname) });
+    return stripInternalSurface(applyFormProfile(meta, {
+      hide: meta.fields.filter((field) => field.surface === "internal").map((field) => field.fieldname),
+    }));
   }
   const quick = meta.fields
     .filter((field) => field.surface === "quick")
     .map((field) => field.fieldname);
-  return applyFormProfile(meta, { keep: quick });
+  return stripInternalSurface(applyFormProfile(meta, { keep: quick }));
 }
 
 /**
