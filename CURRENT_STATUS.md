@@ -6,8 +6,8 @@ Ngày cập nhật: **2026-08-01**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Current default head: `8e9882a6143f4cf669724f654ec1b59949b90138`.
-- GitHub là nguồn sự thật cho code, CI, PR và release evidence.
+- Latest runtime-changing default commit: `8e9882a6143f4cf669724f654ec1b59949b90138`.
+- GitHub là nguồn sự thật cho current branch head, CI, PR và release evidence.
 
 ## Đã hoàn tất trên default
 
