@@ -237,7 +237,7 @@ export class D1DailyDetailedLedgerService {
     if (!snapshot) throw errors.notFound("Daily ledger snapshot not found");
 
     const existing = await this.db.prepare(
-      `SELECT snapshot_id,context_key,source_fingerprint,'' AS frozen_at
+      `SELECT s.snapshot_id,s.context_key,s.source_fingerprint,f.frozen_at
        FROM daily_ledger_freezes f
        JOIN daily_ledger_snapshots s
          ON s.tenant_id=f.tenant_id AND s.snapshot_id=f.snapshot_id
