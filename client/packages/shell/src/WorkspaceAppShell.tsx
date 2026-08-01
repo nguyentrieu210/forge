@@ -1,11 +1,14 @@
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { ArrowRight, LayoutDashboard, Workflow } from "lucide-react";
-import { Button, cn } from "@metaforge/ui";
+import { FrappeAdapterImpl } from "@metaforge/adapter-frappe";
+import { Button, cn, toast } from "@metaforge/ui";
 import {
   AppShell as BaseAppShell,
   type AppShellProps,
   type NavItem,
 } from "./AppShell.js";
+import { ChangePasswordDialog } from "./auth/ChangePasswordDialog.js";
+import { ForgeBrandLogo } from "./BrandLogo.js";
 import {
   buildWorkspaceModules,
   findWorkspaceModule,
@@ -16,6 +19,7 @@ import {
 export type { AppShellProps, NavItem, Breadcrumb, NotificationItem } from "./AppShell.js";
 
 const STORAGE_KEY = "mf-workspace-module";
+const accountAdapter = new FrappeAdapterImpl({});
 
 function loadStoredModule(): string | undefined {
   try { return localStorage.getItem(STORAGE_KEY) ?? undefined; } catch { return undefined; }
@@ -156,6 +160,7 @@ export function AppShell(props: AppShellProps) {
   const activeModule = useMemo(() => findWorkspaceModule(modules, props.activeKey), [modules, props.activeKey]);
   const [selectedLabel, setSelectedLabel] = useState<string | undefined>(() => loadStoredModule());
   const [processActive, setProcessActive] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
 
   const selectedModule = useMemo(() => {
     return modules.find((module) => module.label === selectedLabel)
@@ -170,52 +175,75 @@ export function AppShell(props: AppShellProps) {
     setProcessActive(false);
   }, [activeModule, props.activeKey]);
 
-  if (!modules.length || !selectedModule) return <BaseAppShell {...props} />;
+  const logoutOtherSessions = props.onLogoutOtherSessions ?? (() => {
+    void accountAdapter.logoutOtherSessions()
+      .then(() => toast.success("Đã đăng xuất khỏi các thiết bị khác"))
+      .catch((error) => toast.error(accountAdapter.mapError(error).message));
+  });
 
-  const moduleNav: NavItem[] = modules.map((module) => ({
-    key: module.key,
-    label: module.label,
-    icon: module.items.find((item) => item.icon)?.icon,
-    keywords: module.items.flatMap((item) => [item.label, ...(item.keywords ?? [])]),
-    disabledReason: module.items.some((item) => !item.disabledReason) ? undefined : "Chưa có màn hình khả dụng",
-  }));
-  const overviewItem = props.nav.find((item) => item.key === "__overview");
-
-  const selectModule = (key: string) => {
-    const module = modules.find((entry) => entry.key === key);
-    if (!module) return;
-    setSelectedLabel(module.label);
-    storeModule(module.label);
-    setProcessActive(true);
+  const shellProps: AppShellProps = {
+    ...props,
+    brandMark: props.brandMark ?? <ForgeBrandLogo size={28} />,
+    onChangePassword: props.onChangePassword ?? (() => setPasswordOpen(true)),
+    onLogoutOtherSessions: logoutOtherSessions,
   };
 
-  const navigate = (key: string) => {
-    setProcessActive(false);
-    props.onNavigate(key);
-  };
+  let shell: ReactNode;
+  if (!modules.length || !selectedModule) {
+    shell = <BaseAppShell {...shellProps} />;
+  } else {
+    const moduleNav: NavItem[] = modules.map((module) => ({
+      key: module.key,
+      label: module.label,
+      icon: module.items.find((item) => item.icon)?.icon,
+      keywords: module.items.flatMap((item) => [item.label, ...(item.keywords ?? [])]),
+      disabledReason: module.items.some((item) => !item.disabledReason) ? undefined : "Chưa có màn hình khả dụng",
+    }));
+    const overviewItem = props.nav.find((item) => item.key === "__overview");
+
+    const selectModule = (key: string) => {
+      const module = modules.find((entry) => entry.key === key);
+      if (!module) return;
+      setSelectedLabel(module.label);
+      storeModule(module.label);
+      setProcessActive(true);
+    };
+
+    const navigate = (key: string) => {
+      setProcessActive(false);
+      props.onNavigate(key);
+    };
+
+    shell = (
+      <BaseAppShell
+        {...shellProps}
+        nav={moduleNav}
+        activeKey={selectedModule.key}
+        onNavigate={selectModule}
+      >
+        <div className="flex h-full min-h-0 flex-col">
+          <WorkspaceTabs
+            module={selectedModule}
+            activeKey={props.activeKey}
+            processActive={processActive}
+            overviewItem={overviewItem}
+            onProcess={() => setProcessActive(true)}
+            onNavigate={navigate}
+          />
+          <div className="min-h-0 flex-1 overflow-hidden">
+            {processActive
+              ? <ProcessPanel module={selectedModule} onNavigate={navigate} />
+              : props.children as ReactNode}
+          </div>
+        </div>
+      </BaseAppShell>
+    );
+  }
 
   return (
-    <BaseAppShell
-      {...props}
-      nav={moduleNav}
-      activeKey={selectedModule.key}
-      onNavigate={selectModule}
-    >
-      <div className="flex h-full min-h-0 flex-col">
-        <WorkspaceTabs
-          module={selectedModule}
-          activeKey={props.activeKey}
-          processActive={processActive}
-          overviewItem={overviewItem}
-          onProcess={() => setProcessActive(true)}
-          onNavigate={navigate}
-        />
-        <div className="min-h-0 flex-1 overflow-hidden">
-          {processActive
-            ? <ProcessPanel module={selectedModule} onNavigate={navigate} />
-            : props.children as ReactNode}
-        </div>
-      </div>
-    </BaseAppShell>
+    <>
+      {shell}
+      <ChangePasswordDialog adapter={accountAdapter} open={passwordOpen} onOpenChange={setPasswordOpen} />
+    </>
   );
 }
