@@ -13,19 +13,21 @@ Base đồng bộ: `f1e70cfbece9b162082974b2bdc8a4feb4ddf5b8`
 ### Đã làm
 
 - Sidecar `<brief>.prints.json` và merge trước schema validation/compile.
-- `Đơn bán hàng ALUMDOOR` cho Sales Order.
-- `Phiếu giao hàng / lắp đặt ALUMDOOR` cho Delivery Note.
-- Regression renderer cho Sales Order, Delivery Note và sidecar loader.
+- `Đơn bán hàng ALUMDOOR` cho Sales Order: 13 cột.
+- `Phiếu giao hàng / lắp đặt ALUMDOOR` cho Delivery Note: 11 cột, không in giá.
+- `Phiếu yêu cầu sản xuất ALUMDOOR` cho Production Request: 14 cột, một dòng theo bộ/vị trí, có rộng cắt, số lá, mô tơ/cảnh báo, phút dự toán và kho vật tư.
+- Regression renderer cho Sales Order, Delivery Note, Production Request và sidecar loader.
 - Sửa assertion Delivery Note `Xường` → `Xưởng` và lỗi CSS/encoding của mẫu giao hàng.
 - Đồng bộ current default mà không bỏ Warehouse PWA hoặc Finance đã merge.
+- Checkpoint `fefa2a1c4fe3671856922a0e7bea7e58d04022c2`: 6 workflow PASS sau sync base.
+- Checkpoint `add76d51d20da5f24fc87cda18da513eda8b0b3a`: 6 workflow PASS cho Production Request template trước regression commit.
 
 ### Tiếp theo trên cùng epic
 
-1. Khóa 6 workflow trên exact head sau merge-base sync; ghi run IDs vào PR `#141`.
-2. Review HTML preview/PDF Sales Order và Delivery Note bằng dữ liệu dài, sửa overflow nếu có.
-3. Thêm `Phiếu yêu cầu sản xuất ALUMDOOR` từ Production Request, một dòng theo từng bộ/vị trí và lịch dự kiến.
-4. Thêm `Phiếu cắt nhôm` từ Rolling Door Work Order/Aluminum Cut Sheet với lô mẹ, số lá, chiều rộng cắt, đầu thừa và QR nội bộ sau khi xác nhận schema authoritative.
-5. Thêm `Biên bản bàn giao / nghiệm thu`; sau đó chuẩn hóa Sales Invoice, Purchase Receipt và Payment Entry theo cùng hợp đồng A4.
+1. Khóa 6 workflow trên exact head có regression Production Request và ghi run IDs vào PR `#141`.
+2. Review HTML preview/PDF của Sales Order, Delivery Note và Production Request bằng dữ liệu dài; sửa overflow nếu có.
+3. Thêm `Phiếu cắt nhôm` từ Rolling Door Work Order/Aluminum Cut Sheet với lô mẹ, số lá, chiều rộng cắt, đầu thừa và QR nội bộ sau khi xác nhận schema authoritative.
+4. Thêm `Biên bản bàn giao / nghiệm thu`; sau đó chuẩn hóa Sales Invoice, Purchase Receipt và Payment Entry theo cùng hợp đồng A4.
 
 ### Gate trước merge
 

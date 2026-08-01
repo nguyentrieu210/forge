@@ -29,12 +29,16 @@ Xây bộ mẫu in vận hành thống nhất cho Alumdoor. Mỗi mẫu lấy tr
    - Có đơn nguồn, địa chỉ, ngày lắp, đội lắp, lái xe, biển số, kho xuất và khối lượng.
    - Có checklist bàn giao/lắp đặt và chữ ký thủ kho/người giao, đội lắp, khách hàng.
 
+3. `Phiếu yêu cầu sản xuất ALUMDOOR` — Production Request
+   - 14 cột, tổng độ rộng `100%`, một dòng theo bộ/vị trí sản xuất.
+   - Có loại cửa, bộ phận, màu, rộng/cao, rộng cắt, số lá, mô tơ/cảnh báo, phút dự toán và kho vật tư.
+   - Header giữ đơn bán nguồn, khách hàng, ngày lập/ngày hẹn, trạng thái và kho nguyên vật liệu/thành phẩm.
+
 ## Hàng đợi
 
 ### P0 — dùng hằng ngày
 
-1. `Phiếu yêu cầu sản xuất` — Production Request, một dòng cho từng bộ cửa, số đo và lịch giao.
-2. `Phiếu cắt nhôm` — Cut Order, lô mẹ, rộng cắt, số lá, kerf, đầu thừa và QR chứng từ.
+1. `Phiếu cắt nhôm` — Rolling Door Work Order / Aluminum Cut Sheet, lô mẹ, rộng cắt, số lá, đầu thừa và QR chứng từ sau khi chốt schema authoritative.
 
 ### P1 — tiền, kho và nghiệm thu
 

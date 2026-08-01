@@ -18,8 +18,12 @@ Ngày cập nhật: **2026-08-01**.
 - Sidecar `server/briefs/alumdoor-v2.prints.json` được ghép trước schema validation và compile; loader hỗ trợ đường dẫn chuỗi và `file:` URL.
 - `Đơn bán hàng ALUMDOOR` cho Sales Order: A4 portrait, 13 cột, kích thước/số bộ/số lượng/đơn giá/mô tơ-phụ kiện/ghi chú lắp đặt.
 - `Phiếu giao hàng / lắp đặt ALUMDOOR` cho Delivery Note: A4 portrait, 11 cột, không in giá, có đơn nguồn, địa chỉ/ngày/đội lắp, lái xe, biển số, kho xuất, khối lượng, checklist và chữ ký.
+- `Phiếu yêu cầu sản xuất ALUMDOOR` cho Production Request: A4 portrait, 14 cột đúng `100%`, một dòng theo bộ/vị trí; giữ loại cửa, bộ phận, màu, kích thước, rộng cắt, số lá, mô tơ/cảnh báo, phút dự toán và kho vật tư.
+- Regression renderer đã có cho Sales Order, Delivery Note và Production Request; sidecar loader có unit test riêng.
 - Đã sửa regression Delivery Note chờ sai `Xường` → `Xưởng`, sửa `overflow-wrap:anywhere`, tagline `ĐỨC` và alt ảnh bị lỗi mã hóa.
-- Exact-head CI phải chạy lại sau merge-base sync trước khi gọi đợt Delivery Note hoàn tất.
+- Checkpoint `fefa2a1c4fe3671856922a0e7bea7e58d04022c2`: 6 workflow PASS sau khi sync current default.
+- Checkpoint `add76d51d20da5f24fc87cda18da513eda8b0b3a`: 6 workflow PASS cho Production Request template trước khi thêm regression test.
+- Exact-head CI mới phải chạy lại sau commit regression/handoff này.
 - Review trực quan HTML preview/PDF bằng dữ liệu dài vẫn là gate trước merge.
 
 ## Đã hoàn tất trên default
@@ -89,7 +93,7 @@ Ngày cập nhật: **2026-08-01**.
 
 ## Business backlog còn lại
 
-1. Hoàn tất print design PR `#141`: exact-head CI, preview/PDF dữ liệu dài, Production Request và Aluminum Cut Sheet.
+1. Hoàn tất print design PR `#141`: exact-head CI, preview/PDF dữ liệu dài và Aluminum Cut Sheet.
 2. Daily detailed ledger snapshot/freeze/adjustment.
 3. Warranty, defects, supplier hold/offset và capacity/overtime.
 4. End-to-end acceptance xuyên Sales, Production, Inventory, Delivery, Finance và Warranty.
