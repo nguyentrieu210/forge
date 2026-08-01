@@ -4,43 +4,32 @@ Ngày cập nhật: **2026-08-01**.
 
 Mọi agent phải đọc `AI_HANDOFF.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md` và `DELIVERY_POLICY.md` trước khi tiếp tục.
 
-## P0 — Hoàn tất PR Forge mobile/PWA `#142`
+## Hoàn tất — Forge branding và warehouse PWA
 
-### Branch và phạm vi
+- PR `#142` merge SHA: `8e9882a6143f4cf669724f654ec1b59949b90138`.
+- Exact validated head: `24621f221fad2de950d0f58cc39078e43c206f51`.
+- Full CI, typecheck, build và browser QA desktop/tablet/mobile: PASS.
+- Warehouse PWA QA: PASS trên Pixel 7 và viewport `390 × 844`.
+- Alumdoor white-label landing/login QA: PASS.
+- Không deploy Cloudflare, không sửa production secret/DNS và không mutate dữ liệu production.
 
-- Branch: `feat/mobile-pwa-brand-account-warehouse`.
-- Base: `hotfix/alumdoor-print-list-delete` tại `f6420c70823b969a28b43e3f93004ebd52546adc`.
-- Implementation head trước docs: `21534cfc9bdb76fdd9c1dca105f6d478c8ac28dc`.
-- Phạm vi gồm branding, landing/login, account menu, PWA kho và browser QA mobile.
+## P0 — Release app kho, chỉ thực hiện khi có lệnh deploy riêng
 
-### Việc tiếp theo bắt buộc
-
-1. Khóa exact PR head sau hai commit status docs; không push thêm khi CI đang chạy.
-2. Chờ full CI, PR Validation, Sales, Purchase, Inventory và UI Pull Request Validation.
-3. Xác nhận Playwright mới PASS ở `warehouse-pixel-7` và `warehouse-compact-phone`.
-4. Kiểm tra artifact ảnh `warehouse-mobile.png`, manifest, logo, bottom nav, form nhập kho và account menu.
-5. Sửa theo log thật nếu gate đỏ; không bỏ test hoặc nới assertion để che lỗi.
-6. Merge PR `#142` chỉ khi exact-head checks đều xanh.
-7. Sau merge, xác nhận default head mới và cập nhật handoff nếu có thay đổi nội dung.
+1. Tạo branch release riêng từ default head mới.
+2. Map output `client/apps/kho/dist-mobile` vào route `/mobile/warehouse/` của gateway/static host.
+3. Bảo đảm SPA fallback, manifest, service worker và asset base path hoạt động cùng origin với API.
+4. Chạy authenticated smoke với backend thật cho nhập kho, xuất kho, chuyển kho và kiểm kho.
+5. Kiểm tra quyền Stock User/Stock Manager, CSRF, cookie session và logout/change-password.
+6. Chụp evidence desktop landing, login mobile, home kho, form nghiệp vụ và account screen.
+7. Chỉ deploy Cloudflare hoặc thay production route khi có yêu cầu rõ ràng.
 
 ### Done condition
 
-- Logo chuẩn tím-hồng, chữ A trắng, ba nét cánh xuất hiện đồng nhất ở landing, login, shell, favicon và PWA.
-- Landing/login không lệch khung trên desktop và mobile.
-- Avatar, đổi mật khẩu và đăng xuất thiết bị khác hoạt động qua adapter.
-- App kho chỉ có UI touch-first, top nav, bottom nav, nút nghiệp vụ và form mobile.
-- Nhập/xuất/chuyển/kiểm kho và tra tồn có contract adapter rõ ràng.
-- Manifest standalone, icon maskable và service worker không cache API/auth.
-- Full build/typecheck và Playwright hai viewport điện thoại PASS.
-- PR `#142` merge vào default.
-
-## P0.1 — Release app kho, chỉ thực hiện khi có lệnh deploy riêng
-
-- Map output `client/apps/kho/dist-mobile` vào route `/mobile/warehouse/` của gateway/static host.
-- Bảo đảm SPA fallback, manifest, service worker và asset base path hoạt động cùng origin với API.
-- Chạy authenticated smoke với backend thật cho bốn nghiệp vụ kho.
-- Kiểm tra quyền Stock User/Stock Manager và CSRF/cookie session.
-- Không deploy Cloudflare, sửa DNS hoặc production secrets trong PR `#142`.
+- `/mobile/warehouse/` trả đúng bundle PWA, không rơi về desktop runtime.
+- Manifest và service worker có scope `/mobile/warehouse/`.
+- Phiếu kho tạo thành công bằng tài khoản có quyền và bị chặn đúng với tài khoản thiếu quyền.
+- Không cache API/auth response.
+- Rollback route/static asset được ghi rõ.
 
 ## P1 — Finance clean rebuild
 
@@ -53,7 +42,7 @@ Mọi agent phải đọc `AI_HANDOFF.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md` 
 - UI/report navigation, permission và export boundary.
 - Migration append-only, dry-run, checksum và rollback.
 
-Finance phải làm ở branch riêng sau khi PR mobile hoàn tất.
+Finance phải làm ở branch riêng, không trộn với release app kho.
 
 ## P2 — Daily detailed ledger
 
