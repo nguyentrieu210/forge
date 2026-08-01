@@ -585,6 +585,13 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     expect((await unwrap(await method("frappe.desk.doctype.tag.tag.remove_tag", { tag: "urgent", dt: "Field Visit", dn: name }))).removed).toBe(true);
   });
 
+  it("returns an empty print-format list instead of failing when the DocType has no format", async () => {
+    const formats = await unwrap(await method("metaforge.api.get_print_formats", {
+      doctype: "Field Visit", name: `${createdName}-1`,
+    }, "GET"));
+    expect(formats).toEqual([]);
+  });
+
   it("renders a print format with redacted content, returning html for the client to sandbox", async () => {
     await env.DB.prepare(
       `INSERT INTO print_formats(tenant_id,name,doc_type,is_default,disabled,revision,format_json,modified_by,modified_at)
@@ -600,6 +607,28 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     }, "GET"));
     expect(printed.html).toContain("<h1>");
     expect(printed.style).toContain("font-size");
+  });
+
+  it("lists enabled print formats and renders the format selected by the print route", async () => {
+    await env.DB.prepare(
+      `INSERT INTO print_formats(tenant_id,name,doc_type,is_default,disabled,revision,format_json,modified_by,modified_at)
+       VALUES('demo','Field Visit Acceptance','Field Visit',0,0,1,?1,'Administrator',?2)
+       ON CONFLICT(tenant_id,name) DO UPDATE SET format_json=excluded.format_json,disabled=0`,
+    ).bind(JSON.stringify({
+      name: "Field Visit Acceptance", doc_type: "Field Visit", format_type: "Standard",
+      html: "<h1>ACCEPTANCE {{ subject }}</h1>", is_default: false, disabled: false, revision: 1,
+    }), NOW).run();
+
+    const formats = await unwrap(await method("metaforge.api.get_print_formats", {
+      doctype: "Field Visit", name: `${createdName}-1`,
+    }, "GET"));
+    expect(formats.map((format: any) => format.name)).toEqual(["Field Visit Slip", "Field Visit Acceptance"]);
+    expect(formats[0].is_default).toBe(true);
+
+    const printed = await unwrap(await method("frappe.www.printview.get_html_and_style", {
+      doctype: "Field Visit", name: `${createdName}-1`, format: "Field Visit Acceptance",
+    }, "GET"));
+    expect(printed.html).toContain("ACCEPTANCE");
   });
 
   it("escapes document content in a printout, so a value cannot inject markup", async () => {
