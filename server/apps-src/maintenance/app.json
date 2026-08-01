@@ -3,6 +3,9 @@
   "name": "Yêu cầu bảo trì",
   "version": "1.0.0",
   "requires": [],
+  "externalDocTypes": [
+    { "name": "Maintenance Priority", "kind": "master", "app": "platform" }
+  ],
   "nav": [
     { "key": "Maintenance Request", "label": "Yêu cầu bảo trì", "kind": "doctype", "icon": "wrench", "group": "Bảo trì" }
   ],

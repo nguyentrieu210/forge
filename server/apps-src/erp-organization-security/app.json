@@ -2,6 +2,7 @@
   "id": "erp-organization-security",
   "name": "Tổ chức & kiểm soát nội bộ",
   "version": "1.0.0",
+  "metaContractVersion": 1,
   "requires": [
     { "id": "hrm", "version": ">=1.4.0" }
   ],
@@ -10,7 +11,7 @@
       "key": "organization-center",
       "label": "Cơ cấu tổ chức",
       "kind": "route",
-      "route": "/organization",
+      "route": "/app/Department",
       "permission_doctype": "Organization Assignment",
       "icon": "network",
       "group": "Tổ chức"
@@ -26,7 +27,7 @@
       "key": "security-center",
       "label": "Vai trò & kiểm soát",
       "kind": "route",
-      "route": "/security/roles",
+      "route": "/permissions?tab=roles",
       "permission_doctype": "Role Policy",
       "icon": "shield-check",
       "group": "Bảo mật"
@@ -63,7 +64,7 @@
       "key": "security-approvals-audit",
       "label": "Hộp duyệt & kiểm toán",
       "kind": "route",
-      "route": "/security/approvals-audit",
+      "route": "/permissions?tab=approvals",
       "permission_doctype": "Approval Policy",
       "icon": "list-checks",
       "group": "Phê duyệt"
@@ -108,7 +109,7 @@
   "client": {
     "brand": "indigo",
     "domain": "hr",
-    "home": { "route": "/organization", "doctype": "Organization Assignment" },
+    "home": { "route": "/app/Department" },
     "dimensions": ["company", "branch", "cost_center", "fiscal_year"],
     "catalog_mode": "hybrid",
     "design": { "density": "comfortable", "radius": "soft", "content_width": "wide" }

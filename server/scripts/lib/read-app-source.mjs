@@ -18,6 +18,7 @@
  */
 import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
+import { canonicalizeAppSourcePackage } from "./canonicalize-app-source.mjs";
 
 /** Every .json file in a directory. A missing directory means "none of these". */
 async function readJsonDir(directory) {
@@ -65,7 +66,7 @@ export async function readAppSource(sourceDir) {
     readJsonFile(path.join(root, "roles.json"), []),
   ]);
 
-  return {
+  return canonicalizeAppSourcePackage({
     ...header,
     roles,
     doctypes: doctypes.map(({ value }) => value),
@@ -74,7 +75,7 @@ export async function readAppSource(sourceDir) {
     // A fixture file may hold one record or a list, because a category list wants to be
     // one file while a large seed set wants several.
     fixtures: fixtureFiles.flatMap(({ value }) => (Array.isArray(value) ? value : [value])),
-  };
+  });
 }
 
 /**
