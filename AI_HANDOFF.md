@@ -22,6 +22,18 @@ Ngày cập nhật: **2026-08-02**.
 - `resolveFormRenderPolicy()` là composition point cho existing/full/quick Form.
 - `viewPolicy.*.enabled/fields` là runtime policy; `surface=internal` là hard visibility boundary.
 
+### ACTIVE — MetaForge Bulk View
+
+- Draft PR `#182`, canonical branch `feat/metaforge-bulk-view-v2-20260802`.
+- Baseline feature head `c36c8024d3aaa35574f5599a9c15ed6a86727933` đã required workflows 6/6 PASS trước final hardening/rebase.
+- Bulk View là renderer chung cho master data: paste Excel/Sheets, fill-down, multi-row edit, per-row error và optimistic concurrency.
+- Generic commit hiện chỉ `document_update`; fail closed với transaction/submittable, child/single, internal/read-only/server-owned và conditional-readonly fields.
+- ALUM bulk config ở `server/briefs/alumdoor-v2.views.json`, source metadata `2.1.2`; `Item Price` là reference đầu tiên.
+- Không mass-update stock/công nợ/BOM child/document đã submit. Những miền đó phải dùng Matrix/parent-aware/method-backed Bulk Transaction.
+- Large brief hiện transport Bulk policy qua sibling `.views.json` → `viewPolicy.mobile.bulk`; runtime resolver ưu tiên canonical `viewPolicy.bulk`. Short-brief compiler/parser first-class transport còn là hardening follow-up.
+- Sau Bulk View, primitive UI generic cần làm tiếp là Matrix View. Batch Print là action/workspace; Resource Scheduler để theo capacity P2.
+- Final rebased exact head phải được kiểm lại CI trước khi merge; baseline PASS không thay thế final-head evidence.
+
 ### Authenticated stock lifecycle
 
 - PR `#167` merged: mobile canonical contracts + authenticated stock lifecycle.
@@ -45,8 +57,6 @@ Ngày cập nhật: **2026-08-02**.
 
 ## Production checkpoint lịch sử
 
-Checkpoint production đã được ghi nhận trước đợt cleanup này:
-
 - Alumdoor production exact SHA: `b46d322831ebe7b57e29d4363d2daa005bb56e55`.
 - Full production release run `30707135053`: PASS.
 - Protected Alumdoor Meta installer run `30707517624`: PASS.
@@ -58,12 +68,11 @@ Checkpoint production đã được ghi nhận trước đợt cleanup này:
 
 Không được tuyên bố toàn bộ quy trình `25.7 QUY TRÌNH.docx` đã hoàn tất.
 
-Các miền còn cần acceptance/implementation đầy đủ gồm:
-
-1. Stock acceptance còn lại: QR/lineage end-to-end và cleanup QA không residue.
-2. Daily detailed ledger: snapshot/freeze/append-only adjustment/reconciliation.
-3. Warranty/defects/capacity/overtime.
-4. End-to-end acceptance xuyên Sales → Production → Inventory → Delivery → Finance → Daily Ledger → Warranty.
+1. MetaForge Bulk View PR `#182` cần final exact-head validation/review/merge; Matrix View là UI primitive kế tiếp.
+2. Stock acceptance còn lại: QR/lineage end-to-end và cleanup QA không residue.
+3. Daily detailed ledger: snapshot/freeze/append-only adjustment/reconciliation.
+4. Warranty/defects/capacity/overtime.
+5. End-to-end acceptance xuyên Sales → Production → Inventory → Delivery → Finance → Daily Ledger → Warranty.
 
 `NEXT_TASKS.md` mới là hàng đợi active; danh sách trên chỉ mô tả phần còn thiếu ở cấp hệ thống.
 
