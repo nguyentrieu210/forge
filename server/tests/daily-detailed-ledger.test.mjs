@@ -164,3 +164,112 @@ test("daily ledger reconciliation covers Sales, Purchase, Inventory, Manufacturi
     line_key: "Finance:GL:Sales Invoice:SI-1:AR",
   });
 });
+
+const FREEZE_ACTOR = { user_id: "chief@example.test", roles: ["Chief Accountant"] };
+const FREEZE_SNAPSHOT = {
+  snapshot_id: "DLS-ATOMIC",
+  context_key: JSON.stringify(["2026-08-02", "ALUMDOOR", "K36", "", ""]),
+  source_fingerprint: "a".repeat(64),
+  ledger_date: "2026-08-02",
+  company: "ALUMDOOR",
+  warehouse: "K36",
+  customer: "",
+  sales_order: "",
+};
+
+function atomicFreezeDb({ insertChanges = 1, frozenBefore = null, frozenAfter = null } = {}) {
+  const calls = [];
+  let freezeReads = 0;
+  return {
+    calls,
+    prepare(sql) {
+      return {
+        bind(...args) {
+          calls.push({ sql, args });
+          if (sql.includes("WITH live_lines AS") && sql.includes("INSERT INTO daily_ledger_freezes")) {
+            return { async run() { return { meta: { changes: insertChanges } }; } };
+          }
+          if (sql.includes("FROM daily_ledger_snapshots WHERE")) {
+            return { async first() { return FREEZE_SNAPSHOT; } };
+          }
+          if (sql.includes("FROM daily_ledger_freezes f")) {
+            freezeReads += 1;
+            return { async first() { return freezeReads === 1 ? frozenBefore : frozenAfter; } };
+          }
+          throw new Error(`Unexpected SQL in atomic freeze test: ${sql.slice(0, 100)}`);
+        },
+      };
+    },
+  };
+}
+
+test("direct core freeze atomically compares the live and snapshot source sets before inserting", async () => {
+  const db = atomicFreezeDb();
+  const service = new D1DailyDetailedLedgerService(db);
+  const result = await service.freeze(
+    "tenant-a",
+    FREEZE_ACTOR,
+    FREEZE_SNAPSHOT.snapshot_id,
+    "close day",
+    "2026-08-02T18:00:00.000Z",
+  );
+
+  assert.deepEqual(result, {
+    snapshot_id: FREEZE_SNAPSHOT.snapshot_id,
+    context_key: FREEZE_SNAPSHOT.context_key,
+    existing: false,
+  });
+  const atomicCall = db.calls.find((call) => call.sql.includes("WITH live_lines AS"));
+  assert.ok(atomicCall, "freeze must execute the atomic live-source INSERT");
+  assert.equal((atomicCall.sql.match(/\bEXCEPT\b/g) ?? []).length, 2);
+  assert.match(atomicCall.sql, /ON CONFLICT\(tenant_id,context_key\) DO NOTHING/);
+  assert.equal(atomicCall.args.length, 12);
+  assert.deepEqual(atomicCall.args.slice(0, 7), [
+    "tenant-a",
+    FREEZE_SNAPSHOT.ledger_date,
+    FREEZE_SNAPSHOT.company,
+    FREEZE_SNAPSHOT.warehouse,
+    FREEZE_SNAPSHOT.customer,
+    FREEZE_SNAPSHOT.sales_order,
+    5001,
+  ]);
+  assert.equal(atomicCall.args[7], FREEZE_SNAPSHOT.snapshot_id);
+  assert.equal(atomicCall.args[8], FREEZE_SNAPSHOT.context_key);
+});
+
+test("direct core freeze fails closed when the atomic source-set comparison inserts no row", async () => {
+  const db = atomicFreezeDb({ insertChanges: 0 });
+  const service = new D1DailyDetailedLedgerService(db);
+
+  await assert.rejects(
+    () => service.freeze("tenant-a", FREEZE_ACTOR, FREEZE_SNAPSHOT.snapshot_id, "close day"),
+    (error) => error?.code === "INVALID_LIFECYCLE_TRANSITION"
+      && error?.status === 409
+      && /source changed/i.test(error.message),
+  );
+  assert.equal(db.calls.filter((call) => call.sql.includes("INSERT INTO daily_ledger_freezes")).length, 1);
+});
+
+test("direct core freeze resolves a same-snapshot concurrent insert as idempotent", async () => {
+  const db = atomicFreezeDb({
+    insertChanges: 0,
+    frozenAfter: { snapshot_id: FREEZE_SNAPSHOT.snapshot_id },
+  });
+  const service = new D1DailyDetailedLedgerService(db);
+  const result = await service.freeze("tenant-a", FREEZE_ACTOR, FREEZE_SNAPSHOT.snapshot_id, "retry");
+  assert.equal(result.existing, true);
+});
+
+test("direct core freeze rejects a context already frozen to another snapshot", async () => {
+  const db = atomicFreezeDb({
+    frozenBefore: { snapshot_id: "DLS-OTHER" },
+  });
+  const service = new D1DailyDetailedLedgerService(db);
+
+  await assert.rejects(
+    () => service.freeze("tenant-a", FREEZE_ACTOR, FREEZE_SNAPSHOT.snapshot_id, "close day"),
+    (error) => error?.code === "INVALID_LIFECYCLE_TRANSITION"
+      && /another snapshot/i.test(error.message),
+  );
+  assert.equal(db.calls.some((call) => call.sql.includes("WITH live_lines AS")), false);
+});
