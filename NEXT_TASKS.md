@@ -1,8 +1,21 @@
 # NEXT TASKS
 
-Ngày cập nhật: **2026-08-01**.
+Ngày cập nhật: **2026-08-02**.
 
 Mọi agent phải đọc `AI_HANDOFF.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md` và `DELIVERY_POLICY.md` trước khi tiếp tục.
+
+## DONE — MetaForge visual polish
+
+- PR `#165` merge vào `main` tại `4afb422e8efb8bed624b96d7f3145ec3c5a6a8eb`; exact validated head `e3deef21f8db0c8506bd17088ec8a4cf5ca05d45`.
+- Tabs nghiệp vụ chuyển sang segmented/pill rõ active state; màn Quy trình có header phân hệ, thống kê nhanh, flow card, step badge, connector, Danh mục nhanh và panel Báo cáo đồng nhất semantic theme tokens.
+- Scope code chỉ `client/packages/shell/src/WorkspaceAppShell.tsx`; không đổi Meta contract, routing, dữ liệu hay permission.
+- Exact-head CI PASS: CI `30710823875`, PR Validation `30710823870`, UI Pull Request Validation `30710823866`, Sales `30710823872`, Purchase `30710823871`, Inventory/Manufacturing `30710823869`. MetaForge workspace browser QA và Alumdoor browser QA đều PASS.
+- Không deploy Cloudflare, không sửa production secret/DNS và không mutate production trong đợt này.
+
+### Việc tiếp theo cho UI
+
+- Chỉ mở thêm visual hotfix khi có lỗi cụ thể từ authenticated demo/production read-only smoke; không tiếp tục đổi layout chỉ để tăng độ trang trí.
+- Production release của merge `4afb422e` là một việc riêng, phải có lệnh deploy rõ ràng và exact-head release evidence.
 
 ## DONE — Canonical DocType Meta
 
