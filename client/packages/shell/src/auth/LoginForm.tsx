@@ -180,9 +180,12 @@ export function LoginForm({
     }
   };
 
-  const mark = alumdoor && !brandMark
-    ? <ForgeBrandLogo size={44} className="mf-brand-mark" />
-    : <span className="grid size-11 shrink-0 place-items-center overflow-hidden">{brandMark ?? <ForgeBrandLogo size={42} />}</span>;
+  const warehouseApp = typeof window !== "undefined" && window.location.pathname.startsWith("/mobile/warehouse/");
+  const mark = warehouseApp && !brandMark
+    ? <img src="/mobile/warehouse/alumdoor-app-192.png" alt="Alumdoor" className="size-11 shrink-0 rounded-lg" />
+    : alumdoor && !brandMark
+      ? <ForgeBrandLogo size={44} className="mf-brand-mark" />
+      : <span className="grid size-11 shrink-0 place-items-center overflow-hidden">{brandMark ?? <ForgeBrandLogo size={42} />}</span>;
 
   const form = (
     <form
