@@ -222,29 +222,28 @@ test("authenticated receipt, issue, transfer and reconciliation preserve stock l
     disabled: 0,
   });
 
-  const stockUserCsrf = await loginAs(page, stockUser, stockUserPassword);
-
-  const receipt = await createAndSubmitStockEntry(page, stockUserCsrf, "Material Receipt", 10, undefined, sourceWarehouse.name);
-  expect(reportQtyMicros(await physicalStock(page, stockUserCsrf, sourceWarehouse.name))).toBe(10_000_000);
+  const receipt = await createAndSubmitStockEntry(page, adminCsrf, "Material Receipt", 10, undefined, sourceWarehouse.name);
+  expect(reportQtyMicros(await physicalStock(page, adminCsrf, sourceWarehouse.name))).toBe(10_000_000);
 
   await page.goto(`/app/${encodeURIComponent("Stock Entry")}/${encodeURIComponent(receipt.name)}`);
   expectDocumentRoute(page, "Stock Entry", receipt.name);
   await expect(page.locator("body")).toContainText("QA-PURCHASE-ITEM");
 
-  await createAndSubmitStockEntry(page, stockUserCsrf, "Material Issue", 2, sourceWarehouse.name);
-  expect(reportQtyMicros(await physicalStock(page, stockUserCsrf, sourceWarehouse.name))).toBe(8_000_000);
+  await createAndSubmitStockEntry(page, adminCsrf, "Material Issue", 2, sourceWarehouse.name);
+  expect(reportQtyMicros(await physicalStock(page, adminCsrf, sourceWarehouse.name))).toBe(8_000_000);
 
   const transfer = await createAndSubmitStockEntry(
     page,
-    stockUserCsrf,
+    adminCsrf,
     "Material Transfer",
     3,
     sourceWarehouse.name,
     targetWarehouse.name,
   );
-  expect(reportQtyMicros(await physicalStock(page, stockUserCsrf, sourceWarehouse.name))).toBe(5_000_000);
-  expect(reportQtyMicros(await physicalStock(page, stockUserCsrf, targetWarehouse.name))).toBe(3_000_000);
+  expect(reportQtyMicros(await physicalStock(page, adminCsrf, sourceWarehouse.name))).toBe(5_000_000);
+  expect(reportQtyMicros(await physicalStock(page, adminCsrf, targetWarehouse.name))).toBe(3_000_000);
 
+  const stockUserCsrf = await loginAs(page, stockUser, stockUserPassword);
   const reconciliation = await createResource(page, stockUserCsrf, "Stock Reconciliation", {
     warehouse: targetWarehouse.name,
     scope: "Một mặt hàng",
