@@ -2,61 +2,95 @@
 
 Ngày cập nhật: **2026-08-02**.
 
-GitHub là nguồn sự thật cho branch head, PR, CI và release evidence.
+Đây là snapshot đã xác minh. Exact branch head, PR và CI phải được kiểm tra lại trên GitHub trước mỗi đợt làm việc theo `RUNBOOK.md`.
+
+## Repository snapshot
+
+- Repository: `nguyentrieu210/forge`.
+- Default branch: `main`.
+- `main` HEAD đã xác minh khi đồng bộ branch cleanup lần cuối: `3222beb66bd3e6b2abbab1b17a6009044a2d5358` — merge PR `#181` docs evidence sau reservation acceptance.
+- Last executable merge trước docs-only evidence: PR `#175`, merge `509db8c32625168316696fb0deb3760a434aedf9`.
+- Branch cleanup hiện tại: `chore/runbook-status-cleanup`, PR `#180`, base đã đồng bộ từ `main@3222beb6...`.
+- Branch `hotfix/alumdoor-print-list-delete` cũ không còn được dùng làm current/default branch và không được coi là chỉ dẫn thực thi.
 
 ## DONE — Authenticated reservation availability lifecycle
 
-- PR `#175` đã merge vào `main` ngày 2026-08-02.
+- PR `#175` merged tại `509db8c32625168316696fb0deb3760a434aedf9`.
 - Final validated PR head: `e839599ddf23e6cf89a325497b62f20085f62ffd`.
-- Merge commit: `509db8c32625168316696fb0deb3760a434aedf9`.
-- Final exact-head CI: **6/6 PASS**.
-  - CI `30718759652`: tests PASS, typecheck PASS, build PASS.
-  - UI Pull Request Validation `30718759696`: frontend lint/build, MetaForge browser QA, Alumdoor browser QA và authenticated cookie+CSRF reservation lifecycle PASS.
+- Exact-head required workflows: **6/6 PASS**.
+  - CI `30718759652`: tests/typecheck/build PASS.
+  - UI Pull Request Validation `30718759696`: frontend lint/build + browser QA + authenticated cookie/CSRF reservation lifecycle PASS.
   - PR Validation `30718759665`: PASS.
   - Purchase Feature CI `30718759676`: PASS.
   - Sales Feature CI `30718759661`: PASS.
   - Inventory and Manufacturing CI `30718759660`: PASS.
+- Tracked receipt 10 cây có Batch/Bundle thật; giữ 6 làm available còn 4 nhưng physical stock vẫn 10.
+- Over-reservation bị từ chối với available đúng; release phục hồi available; giữ đủ 10 đưa available về 0.
+- Double-release và terminal-state reversal bị từ chối theo Frappe 417 contract.
+- Desktop/mobile, role nghiệp vụ, cookie + CSRF thật PASS trên local D1 ephemeral.
+- Không deploy production trong slice này.
 
-### Reservation evidence đã khóa
+## Capability đã khóa bằng merged evidence
 
-1. QA tạo item theo lô, Batch thật và submitted Serial and Batch Bundle trong local D1; `Thủ kho` post tracked Material Receipt 10 cây.
-2. Physical-stock report `include_lineage=true` thấy đúng batch và quantity 10.
-3. Giữ 6 không đổi physical stock; giữ thêm 5 bị từ chối với available còn đúng 4 (`tổng 10, đã giữ 6`).
-4. Nhả reservation có lý do không đổi physical stock; sau nhả có thể giữ đủ 10.
-5. Khi giữ đủ 10, reservation tiếp theo bị từ chối với available 0.
-6. Double-release bị từ chối bằng Frappe `ValidationError` HTTP 417; reservation terminal không đổi ngược về `Đang giữ`.
-7. `Thủ kho` không được tạo Stock Reservation; `Chủ xưởng` thực hiện reservation/release theo RBAC hiện hành.
-8. Test chạy desktop + mobile bằng cookie + CSRF thật trên D1 local/ephemeral.
-9. Không deploy Cloudflare, không sửa production secrets/DNS và không mutate tenant production.
+### MetaForge / Meta boundary
 
-## DONE — Stock acceptance foundations
+- PR `#164`: canonical first-party Meta boundary — merged.
+- PR `#176`: canonical Form Renderer policy — merged, final exact-head required workflows 6/6 PASS.
+- `resolveFormRenderPolicy()` dùng chung cho existing/full/quick Form; `viewPolicy` được runtime thực thi; `surface=internal` là hard visibility boundary.
 
-- PR `#176`: MetaForge Form Renderer canonical policy 10/10, merge `a7643cee0102aee1c37d4f00afac1594d0261e68`, exact-head CI 6/6 PASS.
-- PR `#173`: physical-stock catch-weight reconciliation, merge `25df9d32217703b9c6c3f965f318b779fe028333`, exact-head CI 6/6 PASS.
-- PR `#170`: Stock Entry operational submit RBAC, merge `9b51da20902ac67dc3b4df7ce6ee77b11f886007`, exact-head CI 6/6 PASS.
-- PR `#167`: authenticated stock lifecycle + mobile canonical contracts, merge `ec80180632438680e872e5b4075f492cf1c0e8f7`, exact-head CI 6/6 PASS.
-- PR `#164`: canonical first-party Meta boundary, merge `9a1e8e9f9fbbe88e49ac0775683411aea771b69b`, exact-head CI 6/6 PASS.
+### Inventory / stock
 
-## Main và production boundary
+- PR `#167`: authenticated stock lifecycle + mobile canonical contracts — merged.
+- PR `#170`: Stock Entry operational submit RBAC — merged.
+- PR `#173`: physical-stock catch-weight reconciliation — merged.
+- PR `#175`: authenticated reservation/available-stock lifecycle — merged.
+- Receipt/issue/transfer/reconciliation/reservation đã có authenticated local D1 evidence cho quantity, weight, available stock, permission và lineage foundation.
 
-- Default branch: `main`.
-- Main executable head sau PR #175: `509db8c32625168316696fb0deb3760a434aedf9`.
-- Alumdoor production vẫn chạy exact SHA `b46d322831ebe7b57e29d4363d2daa005bb56e55`.
-- Production full release run `30707135053`: PASS.
-- Protected Alumdoor Meta installer run `30707517624`: PASS.
-- Production Alumdoor Meta vẫn là `2.1.0`; source code hiện có Alumdoor metadata `2.1.1` nhưng chưa deploy.
-- G03 Organization Security có trên main nhưng chưa có production release evidence.
+### Sales / Purchase
 
-## NEXT
+- Sales-to-Production PR `#131` — merged.
+- Tiến Đạt purchase FIFO PR `#134` — merged.
+- Purchase authenticated QA PR `#137` — merged.
 
-1. **P0:** QR/lineage end-to-end và cleanup QA không residue.
-2. **P1:** daily detailed ledger: snapshot ngày, freeze, append-only adjustment, reconciliation nhiều miền.
-3. **P2:** warranty/defects/capacity theo quy trình 25.7.
-4. **P3:** end-to-end acceptance xuyên Sales → Production → Inventory → Delivery → Finance → Daily Ledger → Warranty.
+Không được suy từ các mục DONE này rằng toàn bộ quy trình `25.7 QUY TRÌNH.docx` đã hoàn tất.
+
+## ACTIVE — PR #180 docs/runbook cleanup
+
+Mục tiêu: dọn lớp tài liệu điều phối để AI/agent không đọc snapshot cũ thành live state.
+
+Đã áp dụng trên branch:
+
+- thêm `RUNBOOK.md` làm quy tắc vận hành canonical;
+- rút gọn `AI_HANDOFF.md` về handoff kỹ thuật;
+- sửa `DELIVERY_POLICY.md`: merge và production deploy là hai authorization boundary riêng;
+- đổi `docs/ROADMAP.md` thành strategic document có nhãn `NOT LIVE STATUS`;
+- đổi `README.md` để chỉ dẫn tới runbook/status/tasks thay vì chứa live progress;
+- xoá `EPIC_STATUS.md` vì chứa default branch và epic queue đã lỗi thời;
+- đồng bộ branch lại trên current main sau khi PR #175 và PR #181 merge.
+
+Đây là docs-only cleanup; không chạm executable code, Cloudflare, production secrets/DNS hoặc tenant data.
+
+## Production boundary
+
+Checkpoint production lịch sử gần nhất được handoff ghi nhận:
+
+- Alumdoor production exact SHA `b46d322831ebe7b57e29d4363d2daa005bb56e55`.
+- Full production release run `30707135053`: PASS.
+- Protected Meta installer run `30707517624`: PASS.
+- Alumdoor Meta tại checkpoint đó: `2.1.0`.
+
+Đây là checkpoint lịch sử, không phải bằng chứng provider hiện tại. Phải xác minh lại GitHub/provider trước mọi quyết định production. Không deploy Cloudflare hoặc sửa production state nếu user chưa yêu cầu rõ.
+
+## Chưa hoàn tất toàn hệ thống
+
+1. P0 stock acceptance còn QR/lineage end-to-end và cleanup QA không residue.
+2. P1 daily detailed ledger: snapshot, freeze, append-only adjustment, reconciliation nhiều miền.
+3. P2 warranty/defects/capacity/overtime.
+4. P3 authenticated end-to-end acceptance xuyên Sales → Production → Inventory → Delivery → Finance → Daily Ledger → Warranty.
 
 ## Guardrails
 
-- Không thay branch head khi exact-head CI đang queued/in-progress.
-- Không deploy Cloudflare hoặc sửa production secret/DNS nếu user chưa yêu cầu rõ.
-- Không commit `.env`, `server/work/`, `tmp/`, backup, cookie, token hoặc generated evidence.
-- Mỗi epic một branch/PR; merge chỉ sau exact-head required checks PASS.
+- GitHub là nguồn sự thật; không dựa vào lịch sử chat để chọn branch/SHA.
+- Một epic/đợt sửa độc lập dùng một branch/PR canonical.
+- Không deploy production, sửa production secret/DNS hoặc mutate customer data nếu chưa có lệnh rõ.
+- Không commit `.env`, `server/work/`, `tmp/`, backup, credential, cookie/token hoặc generated evidence/build artifact không được quản lý.
