@@ -1,14 +1,26 @@
 import type { Fieldtype } from "./fieldtype.js";
 
+/** DocField — tập thuộc tính adapter cần để render (subset của meta thật, passthrough phần còn lại). */
 export interface DocField {
   fieldname: string;
   label?: string;
   fieldtype: Fieldtype;
+  /**
+   * Select: danh sách lựa chọn, mỗi dòng một giá trị — LUÔN là GIÁ TRỊ GỐC (tiếng Anh) đúng như
+   * lưu trong DB. TUYỆT ĐỐI không thay bằng bản dịch: giá trị chọn được ghi thẳng xuống DB, dịch
+   * ở đây nghĩa là ghi "Chuyển kho" vào chỗ ERPNext đang chờ "Material Transfer" — hỏng dữ liệu,
+   * và doc cũ (giá trị gốc) không khớp option nào nên ô hiện RỖNG dù thực tế có giá trị.
+   * Phần dịch để hiển thị nằm ở `optionLabels`.
+   *
+   * Link/Table/Dynamic Link: tên DocType đích.
+   */
   options?: string;
+  /** Select: giá_trị_gốc → nhãn đã dịch. Chỉ dùng để HIỂN THỊ, không bao giờ dùng làm giá trị. */
   optionLabels?: Record<string, string>;
   reqd?: 0 | 1;
   read_only?: 0 | 1;
   hidden?: 0 | 1;
+  /** Chỉ hiện ở BẢNG danh sách, không hiện trên form. Khác `hidden` (giấu ở mọi màn). */
   list_only?: 0 | 1;
   default?: string | null;
   depends_on?: string;
@@ -19,15 +31,25 @@ export interface DocField {
   in_standard_filter?: 0 | 1;
   permlevel?: number;
   precision?: string;
+  /**
+   * Độ rộng field trên form, tính trên lưới 3 ô.
+   * - full: 1 field / hàng
+   * - half: 2 field / hàng
+   * - third: 3 field / hàng
+   *
+   * Không khai báo thì FormView tự suy theo fieldtype và vai trò của field.
+   */
   form_width?: "full" | "half" | "third";
   valueSource?: "user" | "default" | "link" | "formula" | "system" | "workflow";
   editMode?: "editable" | "readonly" | "set_once" | "immutable_after_submit" | "hidden";
   surface?: "quick" | "expanded" | "internal";
   serverEnforced?: boolean;
   dirtyGuard?: "preserve_user_value";
+  /** cho phép meta thật mang thêm khoá — không mất dữ liệu */
   [k: string]: unknown;
 }
 
+/** DocPerm — 1 dòng phân quyền theo role + permlevel (ptype động theo doctype_ptype_map). */
 export interface DocPerm {
   role: string;
   permlevel: number;
@@ -42,6 +64,7 @@ export interface DocPerm {
   [ptype: string]: unknown;
 }
 
+/** Runtime assets nhúng trong getdoctype (__js/__list_js/…): §Q. */
 export interface RuntimeAssets {
   __js?: string;
   __list_js?: string;
@@ -56,6 +79,7 @@ export interface RuntimeAssets {
 
 export type BulkCommitStrategy = "document_update";
 
+/** Canonical policy for one renderer. Extra app-owned hints remain passthrough metadata. */
 export interface DocTypeView {
   enabled: boolean;
   fields?: string[];
@@ -63,15 +87,19 @@ export interface DocTypeView {
   stageField?: string;
   startField?: string;
   endField?: string;
+  /** Bulk Grid: fields the operator may change inline. Must be a subset of `columns`. */
   editableFields?: string[];
+  /** Bulk Grid v1 deliberately only supports optimistic-concurrency document updates. */
   commitStrategy?: BulkCommitStrategy;
   allowPaste?: boolean;
   allowFillDown?: boolean;
   pageSize?: number;
+  /** Workflow transitions that require an operator reason, e.g. backward/cancel. */
   reasonRequiredOn?: string[];
   [k: string]: unknown;
 }
 
+/** Same view contract parsed by the server; no `Record<string, unknown>` escape hatch at the boundary. */
 export interface DocTypeViewPolicy {
   list: DocTypeView;
   form: DocTypeView;
@@ -85,9 +113,11 @@ export interface DocTypeViewPolicy {
   [k: string]: unknown;
 }
 
+/** DocTypeMeta — docs[0] của getdoctype. masked_fields đến từ FormMeta (che VALUE, không che schema). */
 export interface DocTypeMeta extends RuntimeAssets {
   name: string;
   kind?: "transaction" | "master" | "child_table" | "single" | "tree" | "virtual" | "system";
+  /** nhãn đã dịch theo ngôn ngữ user; fallback name. */
   label?: string;
   module?: string;
   issingle?: 0 | 1;
@@ -101,5 +131,6 @@ export interface DocTypeMeta extends RuntimeAssets {
   fields: DocField[];
   viewPolicy?: DocTypeViewPolicy;
   permissions: DocPerm[];
+  /** field bị che giá trị theo permlevel (apply_fieldlevel_read_permissions). */
   masked_fields?: string[];
 }
