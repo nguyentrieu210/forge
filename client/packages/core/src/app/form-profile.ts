@@ -102,18 +102,25 @@ export function applyFormProfile(meta: DocTypeMeta, profile: FormProfile | undef
 }
 
 /**
- * `surface=internal` is a hard visibility boundary, stronger than a FormProfile.
+ * `surface=internal` is a hard visibility boundary for canonical Meta, stronger than a FormProfile.
  *
- * FormProfile deliberately keeps required/title/dependency fields visible as a safety net
- * for legacy schemas. Canonical Meta is different: an internal value is server/default/
- * formula-owned and must never become an input just because it is required or happens to
- * be the title field. The value still lives on the original meta/document used for
- * defaults, conditions and serialization; only the rendered schema loses it.
+ * FormProfile deliberately keeps required/title/dependency fields visible as a safety net for
+ * legacy schemas. Older metadata may already carry a `surface` hint without the canonical
+ * ownership fields. Treating that hint as the v1 boundary would silently hide required inputs.
+ * Canonical fields are distinguishable because they carry ownership/enforcement metadata.
  */
+function isCanonicalInternalField(field: DocField): boolean {
+  return field.surface === "internal" && (
+    field.valueSource !== undefined
+    || field.editMode !== undefined
+    || field.serverEnforced !== undefined
+  );
+}
+
 function stripInternalSurface(meta: DocTypeMeta): DocTypeMeta {
   return {
     ...meta,
-    fields: pruneEmptyBreaks(meta.fields.filter((field) => field.surface !== "internal")),
+    fields: pruneEmptyBreaks(meta.fields.filter((field) => !isCanonicalInternalField(field))),
   };
 }
 
