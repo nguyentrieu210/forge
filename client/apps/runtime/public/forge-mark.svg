@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Forge">
+  <defs>
+    <linearGradient id="g" x1="56" y1="56" x2="456" y2="456" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7c3aed"/>
+      <stop offset="0.52" stop-color="#d946ef"/>
+      <stop offset="1" stop-color="#fb923c"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="#ffffff"/>
+  <circle cx="256" cy="256" r="216" fill="url(#g)"/>
+  <g fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M164 352 254 150 350 352" stroke-width="48"/>
+    <path d="M210 282h92" stroke-width="40"/>
+    <path d="M112 232 166 208" stroke-width="30"/>
+    <path d="M105 290 158 266" stroke-width="30"/>
+  </g>
+</svg>
