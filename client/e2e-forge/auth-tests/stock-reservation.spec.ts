@@ -306,8 +306,6 @@ test("authenticated reservation reduces available stock without changing physica
   expect(physicalQty(beforeReservation)).toBe(10_000_000);
   expect((beforeReservation.rows ?? []).some((row) => row.batch_no === batchName)).toBe(true);
 
-  // Warehouse posting permission does not imply authority to reserve stock for another
-  // business document. Lock this boundary explicitly instead of widening RBAC for the test.
   const stockUserDenied = await createResourceRaw(
     page, stockCsrf, "Stock Reservation", reservationDocument(itemCode, warehouse.name, source.name, 6),
   );
@@ -322,8 +320,8 @@ test("authenticated reservation reduces available stock without changing physica
   const overReserved = await createResourceRaw(page, managerCsrf, "Stock Reservation", reservationDocument(itemCode, warehouse.name, source.name, 5));
   expect(overReserved.ok, overReserved.text).toBe(false);
   expect([409, 417, 422]).toContain(overReserved.status);
-  expect(overReserved.text).toContain("available_qty_micros");
-  expect(overReserved.text).toContain("4000000");
+  expect(overReserved.text).toContain("Chỉ còn 4.000000 lá khổ");
+  expect(overReserved.text).toContain("tổng 10.000000, đã giữ 6.000000");
 
   const released = await releaseReservation(page, managerCsrf, reservation1.name);
   expect(released.status, released.text).toBe(200);
@@ -338,8 +336,8 @@ test("authenticated reservation reduces available stock without changing physica
 
   const noAvailability = await createResourceRaw(page, managerCsrf, "Stock Reservation", reservationDocument(itemCode, warehouse.name, source.name, 1));
   expect(noAvailability.ok, noAvailability.text).toBe(false);
-  expect(noAvailability.text).toContain("available_qty_micros");
-  expect(noAvailability.text).toContain("0");
+  expect(noAvailability.text).toContain("Chỉ còn 0.000000 lá khổ");
+  expect(noAvailability.text).toContain("tổng 10.000000, đã giữ 10.000000");
 
   const doubleRelease = await releaseReservation(page, managerCsrf, reservation1.name);
   expect(doubleRelease.status, doubleRelease.text).toBe(422);
