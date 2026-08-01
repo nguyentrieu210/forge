@@ -7,27 +7,25 @@ Mọi agent phải đọc `AI_HANDOFF.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md` 
 ## In progress — Print design PR #141
 
 Branch: `feat/print-design-sales-documents-20260801`  
-PR: `#141`  
-Base đồng bộ: `f1e70cfbece9b162082974b2bdc8a4feb4ddf5b8`
+PR: `#141`
 
 ### Đã làm
 
-- Sidecar `<brief>.prints.json` và merge trước schema validation/compile.
-- `Đơn bán hàng ALUMDOOR` cho Sales Order: 13 cột.
-- `Phiếu giao hàng / lắp đặt ALUMDOOR` cho Delivery Note: 11 cột, không in giá.
-- `Phiếu yêu cầu sản xuất ALUMDOOR` cho Production Request: 14 cột, một dòng theo bộ/vị trí, có rộng cắt, số lá, mô tơ/cảnh báo, phút dự toán và kho vật tư.
+- Sidecar `<brief>.prints.json` nối thêm mẫu in trước schema validation/compile, không ghi đè mẫu gốc.
+- `Đơn bán hàng ALUMDOOR` — Sales Order, 13 cột.
+- `Phiếu giao hàng / lắp đặt ALUMDOOR` — Delivery Note, 11 cột, không in giá.
+- `Phiếu yêu cầu sản xuất ALUMDOOR` — Production Request, 14 cột, một dòng theo bộ/vị trí, có rộng cắt, số lá, mô tơ/cảnh báo, phút dự toán và kho vật tư.
 - Regression renderer cho Sales Order, Delivery Note, Production Request và sidecar loader.
-- Sửa assertion Delivery Note `Xường` → `Xưởng` và lỗi CSS/encoding của mẫu giao hàng.
-- Đồng bộ current default mà không bỏ Warehouse PWA hoặc Finance đã merge.
-- Checkpoint `fefa2a1c4fe3671856922a0e7bea7e58d04022c2`: 6 workflow PASS sau sync base.
-- Checkpoint `add76d51d20da5f24fc87cda18da513eda8b0b3a`: 6 workflow PASS cho Production Request template trước regression commit.
+- Checkpoint `da94600d98adbe8005742157803898c40f581f1b`: 6/6 workflow PASS, gồm full tests/typecheck/build.
+- Đã đồng bộ các thay đổi Alumdoor public landing mới nhất vào nền branch; không đè code UI mới.
 
 ### Tiếp theo trên cùng epic
 
-1. Khóa 6 workflow trên exact head có regression Production Request và ghi run IDs vào PR `#141`.
-2. Review HTML preview/PDF của Sales Order, Delivery Note và Production Request bằng dữ liệu dài; sửa overflow nếu có.
-3. Thêm `Phiếu cắt nhôm` từ Rolling Door Work Order/Aluminum Cut Sheet với lô mẹ, số lá, chiều rộng cắt, đầu thừa và QR nội bộ sau khi xác nhận schema authoritative.
-4. Thêm `Biên bản bàn giao / nghiệm thu`; sau đó chuẩn hóa Sales Invoice, Purchase Receipt và Payment Entry theo cùng hợp đồng A4.
+1. Khóa 6 workflow trên exact head sau sync current default; run IDs ghi trong PR `#141`.
+2. Review HTML preview/PDF Sales Order, Delivery Note và Production Request bằng dữ liệu dài; sửa overflow nếu có.
+3. Thêm `Phiếu cắt nhôm ALUMDOOR` cho authoritative `Cut Order` / `Cut Order Item`: lô bundle, mã nhôm, kho lô mẹ, khổ cây, rộng cắt, số lá, số nhát, kerf, kg tiêu hao/cân thật, đầu thừa và phế.
+4. QR nội bộ chỉ bổ sung khi có field/renderer primitive authoritative; trước đó dùng bundle ID để truy vết, không tạo QR giả.
+5. Sau P0: `Biên bản bàn giao / nghiệm thu`, rồi chuẩn hóa Sales Invoice, Purchase Receipt và Payment Entry theo cùng hợp đồng A4.
 
 ### Gate trước merge
 
@@ -45,7 +43,6 @@ Base đồng bộ: `f1e70cfbece9b162082974b2bdc8a4feb4ddf5b8`
 - Exact validated head: `24621f221fad2de950d0f58cc39078e43c206f51`.
 - Full CI, typecheck, build và browser QA desktop/tablet/mobile: PASS.
 - Warehouse PWA QA: PASS trên Pixel 7 và viewport `390 × 844`.
-- Alumdoor white-label landing/login QA: PASS.
 - Không deploy Cloudflare, không sửa production secret/DNS và không mutate dữ liệu production.
 
 ## Hoàn tất — Finance receivables, payables và advances
@@ -55,6 +52,14 @@ Base đồng bộ: `f1e70cfbece9b162082974b2bdc8a4feb4ddf5b8`
 - Due date, AR/AP aging, partial/unallocated Payment Entry, Advance Balance, Payment Allocation, Party Statement và Debt Summary đã có trên default.
 - Payment Ledger tiếp tục append-only; invoice outstanding không âm; advance chỉ được phân bổ về 0.
 - Full tests, typecheck, build, PR Validation, Sales, Purchase, Inventory/Manufacturing và UI validation: PASS.
+
+## Hoàn tất — Alumdoor public landing redesign
+
+- PR `#145` merge SHA: `898b19d0c58c84a32f99d73dfe0bf33f9ec78dd6`.
+- Exact validated head: `73dc960e3c9685708ac1b1e51c7eb5d2c1a71a9a`.
+- Landing guest đã chuyển sang bố cục mới theo thương hiệu/sản phẩm công khai của Alumdoor, giữ login nội bộ.
+- Browser QA PASS desktop/tablet/mobile, gồm dark/reduced-motion, login, no horizontal overflow và link VIP-ST500.
+- Không deploy Cloudflare trong đợt này.
 
 ## P0 — Release app kho, chỉ thực hiện khi có lệnh deploy riêng
 

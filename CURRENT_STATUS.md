@@ -6,25 +6,24 @@ Ngày cập nhật: **2026-08-01**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Current default head khi đồng bộ print epic: `f1e70cfbece9b162082974b2bdc8a4feb4ddf5b8`.
-- Latest runtime-changing default commit: `e404e12ef22d5bc9f2a782820787b4f30d8dce8a`.
+- Current default head khi đồng bộ print epic: `d29e71c1d1cb72ea24da1ea2837d49fb50649b8d`.
+- Latest runtime-changing default commit: `898b19d0c58c84a32f99d73dfe0bf33f9ec78dd6`.
 - GitHub là nguồn sự thật cho current branch head, CI, PR và release evidence.
 
 ## In progress — Print design PR #141
 
 - Branch: `feat/print-design-sales-documents-20260801`.
-- PR: `#141` — `feat(print): add Alumdoor sales order print workspace`.
-- Đã đồng bộ lại trên current default `f1e70cfbece9b162082974b2bdc8a4feb4ddf5b8`; không bỏ các thay đổi Warehouse PWA và Finance đã merge.
-- Sidecar `server/briefs/alumdoor-v2.prints.json` được ghép trước schema validation và compile; loader hỗ trợ đường dẫn chuỗi và `file:` URL.
-- `Đơn bán hàng ALUMDOOR` cho Sales Order: A4 portrait, 13 cột, kích thước/số bộ/số lượng/đơn giá/mô tơ-phụ kiện/ghi chú lắp đặt.
-- `Phiếu giao hàng / lắp đặt ALUMDOOR` cho Delivery Note: A4 portrait, 11 cột, không in giá, có đơn nguồn, địa chỉ/ngày/đội lắp, lái xe, biển số, kho xuất, khối lượng, checklist và chữ ký.
-- `Phiếu yêu cầu sản xuất ALUMDOOR` cho Production Request: A4 portrait, 14 cột đúng `100%`, một dòng theo bộ/vị trí; giữ loại cửa, bộ phận, màu, kích thước, rộng cắt, số lá, mô tơ/cảnh báo, phút dự toán và kho vật tư.
-- Regression renderer đã có cho Sales Order, Delivery Note và Production Request; sidecar loader có unit test riêng.
-- Đã sửa regression Delivery Note chờ sai `Xường` → `Xưởng`, sửa `overflow-wrap:anywhere`, tagline `ĐỨC` và alt ảnh bị lỗi mã hóa.
-- Checkpoint `fefa2a1c4fe3671856922a0e7bea7e58d04022c2`: 6 workflow PASS sau khi sync current default.
-- Checkpoint `add76d51d20da5f24fc87cda18da513eda8b0b3a`: 6 workflow PASS cho Production Request template trước khi thêm regression test.
-- Exact-head CI mới phải chạy lại sau commit regression/handoff này.
-- Review trực quan HTML preview/PDF bằng dữ liệu dài vẫn là gate trước merge.
+- PR: `#141` — print design workspace.
+- Sidecar `server/briefs/alumdoor-v2.prints.json` được nối với các mẫu in sẵn có trước schema validation/compile; không ghi đè mảng `prints` của brief gốc.
+- Loader hỗ trợ filesystem path và `file:` URL, có regression riêng.
+- `Đơn bán hàng ALUMDOOR` — Sales Order, A4 portrait, 13 cột = `100%`.
+- `Phiếu giao hàng / lắp đặt ALUMDOOR` — Delivery Note, A4 portrait, 11 cột = `100%`, không in giá, có checklist và ba khu vực ký.
+- `Phiếu yêu cầu sản xuất ALUMDOOR` — Production Request, A4 portrait, 14 cột = `100%`, một dòng theo bộ/vị trí, giữ rộng cắt, số lá, mô tơ/cảnh báo, phút dự toán và kho vật tư.
+- Regression renderer dùng dữ liệu dài đã có cho cả ba mẫu.
+- Exact-head checkpoint `da94600d98adbe8005742157803898c40f581f1b`: 6/6 workflow SUCCESS, gồm full tests, typecheck và build.
+- Đang đồng bộ lại default mới nhất; PR body là nơi lưu run IDs exact-head gần nhất.
+- Gate còn lại trước merge: review trực quan HTML preview/PDF dữ liệu dài và giữ PR mergeable với current default.
+- P0 tiếp theo: `Phiếu cắt nhôm` trên authoritative `Cut Order` / `Cut Order Item`; QR chưa có field/primitive authoritative nên chỉ dùng bundle ID cho truy vết cho tới khi renderer hỗ trợ QR thật.
 
 ## Đã hoàn tất trên default
 
@@ -52,9 +51,8 @@ Ngày cập nhật: **2026-08-01**.
 
 - PR `#142` merge SHA: `8e9882a6143f4cf669724f654ec1b59949b90138`.
 - Exact validated head: `24621f221fad2de950d0f58cc39078e43c206f51`.
-- Logo chuẩn tím → hồng, chữ A trắng và ba nét cánh ngang dùng chung cho landing, login, shell, favicon và PWA.
+- Logo Forge hiện tại dùng chung cho landing, login, shell, favicon và PWA.
 - Landing/login Forge dùng bố cục hai cột; mobile ưu tiên form đăng nhập.
-- Alumdoor vẫn giữ white-label landing, palette cam-xám, title và browser contract riêng.
 - Account menu sau login có avatar, đổi mật khẩu và đăng xuất các thiết bị khác.
 - App kho điện thoại là bundle riêng tại base `/mobile/warehouse/`, không co giao diện desktop thành mobile.
 - Top nav, bottom nav, nút nghiệp vụ lớn và form touch-first.
@@ -74,26 +72,24 @@ Ngày cập nhật: **2026-08-01**.
 - Migration `0030`, `0031`, `0032`, metadata, permission, worker wiring và regression tests đã có.
 - Guard advance transaction-currency và base-currency đã tách điều kiện để mã integrity không phụ thuộc thứ tự trigger SQLite.
 
-### Validation Finance PR #139
+### Alumdoor public landing redesign
 
-- Exact-head full tests: PASS.
-- Typecheck: PASS.
-- Build: PASS.
-- PR Validation: PASS.
-- Sales Feature CI: PASS.
-- Purchase Feature CI: PASS.
-- Inventory and Manufacturing CI: PASS.
-- UI Pull Request Validation: PASS.
+- PR `#145` merge SHA: `898b19d0c58c84a32f99d73dfe0bf33f9ec78dd6`.
+- Exact validated head: `73dc960e3c9685708ac1b1e51c7eb5d2c1a71a9a`.
+- Landing Alumdoor guest đã được thiết kế lại theo cấu trúc thương hiệu/sản phẩm công khai trên `alumdoor.vn`, giữ form đăng nhập nội bộ trong cùng trải nghiệm.
+- Có hero, navigation, 4 nhóm dịch vụ, phần giới thiệu, liên hệ/khu vực hỗ trợ, footer và 4 nhóm danh mục sản phẩm.
+- Browser QA PASS desktop/tablet/mobile, gồm dark/reduced-motion, login, no horizontal overflow và link VIP-ST500.
 
 ## Chưa release production
 
 - Chưa map `client/apps/kho/dist-mobile` vào production route `/mobile/warehouse/`.
 - Chưa chạy authenticated backend lifecycle riêng cho bốn phiếu kho mobile trên môi trường release.
+- Landing Alumdoor mới đã merge code nhưng chưa có lệnh release/deploy Cloudflare trong đợt này.
 - Chưa deploy Cloudflare và chưa sửa production secrets/DNS.
 
 ## Business backlog còn lại
 
-1. Hoàn tất print design PR `#141`: exact-head CI, preview/PDF dữ liệu dài và Aluminum Cut Sheet.
+1. Hoàn tất print design PR `#141`: visual review và Phiếu cắt nhôm.
 2. Daily detailed ledger snapshot/freeze/adjustment.
 3. Warranty, defects, supplier hold/offset và capacity/overtime.
 4. End-to-end acceptance xuyên Sales, Production, Inventory, Delivery, Finance và Warranty.
