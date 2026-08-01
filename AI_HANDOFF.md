@@ -11,6 +11,17 @@ Ngày cập nhật: **2026-08-02**.
 - Luôn đọc `RUNBOOK.md` → `CURRENT_STATUS.md` → `NEXT_TASKS.md` → file này.
 - Mọi branch/SHA dưới đây là checkpoint lịch sử, không phải lệnh checkout. Phải xác minh lại GitHub trước khi dùng.
 
+## Plastic ERP architecture đang triển khai
+
+- P0-A clean branch: `feat/plastic-erp-foundation-v2-20260802`, cắt từ exact `main` `e490e2ebd2e8c3cc98e004d4a7c2e394fd07812f`.
+- Foundation source nằm ở `server/apps-src/plastic-erp/`; MetaForge sinh CRUD/list/form từ canonical app metadata, không dựng runtime metadata thứ hai.
+- `Plastic Recipe Policy` là policy công nghệ bổ sung và bắt buộc tham chiếu `Bill of Materials`; BOM core vẫn là nguồn định mức chuẩn.
+- `Plastic Machine`/`Plastic Tool` mở rộng primitive `Asset`, `Workstation`, `Operation`, `Location`; không tạo resource/asset model cạnh tranh.
+- P0-A không tạo stock ledger mới. Mọi production completion ở P0-B phải reconcile với `Work Order` và submitted `Stock Entry` Manufacture; shop-floor record chỉ điều hành máy/ca/khuôn/lineage.
+- QC foundation mở rộng `Quality Inspection`; batch/lot lineage phải dùng core `Batch`/stock documents thay vì bảng tồn kho song song.
+- Mọi master/transaction doanh nghiệp phải giữ company/branch/tenant scope; controller slice sau phải fail closed với cross-company/cross-tenant link.
+- PR `#187` là generation cũ stale/diverged, không dùng làm branch merge. Blob source đã được transplant sạch sang current-main generation; exact-head CI mới là evidence hợp lệ.
+
 ## Checkpoint đã khóa
 
 ### MetaForge Form Renderer
@@ -86,12 +97,13 @@ Không được tuyên bố toàn bộ quy trình `25.7 QUY TRÌNH.docx` đã ho
 
 Các miền còn cần acceptance/implementation đầy đủ gồm:
 
-1. P0 stock acceptance: QR/lineage end-to-end + cleanup QA, hiện active ở PR `#189`.
-2. MetaForge UX V2: List Workspace V2 tích hợp Bulk, Matrix View, presentation authoring/canonical transport, document context/exception, operational workspace, mobile V2 và personalization/AI context.
-3. Bulk Transaction cho Stock Reconciliation/BOM và transaction-grid nhập nhôm nhiều mã.
-4. Daily detailed ledger: snapshot/freeze/append-only adjustment/reconciliation.
-5. Warranty/defects/capacity/overtime.
-6. End-to-end acceptance xuyên Sales → Production → Inventory → Delivery → Finance → Daily Ledger → Warranty.
+1. Plastic ERP P0-A exact-head acceptance, sau đó P0-B Production Run, QC lot gate, MRP/capacity/costing và các domain phụ thuộc.
+2. P0 stock acceptance: QR/lineage end-to-end + cleanup QA, hiện active ở PR `#189`.
+3. MetaForge UX V2: List Workspace V2 tích hợp Bulk, Matrix View, presentation authoring/canonical transport, document context/exception, operational workspace, mobile V2 và personalization/AI context.
+4. Bulk Transaction cho Stock Reconciliation/BOM và transaction-grid nhập nhôm nhiều mã.
+5. Daily detailed ledger: snapshot/freeze/append-only adjustment/reconciliation.
+6. Warranty/defects/capacity/overtime.
+7. End-to-end acceptance xuyên Sales → Production → Inventory → Delivery → Finance → Daily Ledger → Warranty.
 
 `NEXT_TASKS.md` mới là hàng đợi active; danh sách trên chỉ mô tả phần còn thiếu ở cấp hệ thống.
 
