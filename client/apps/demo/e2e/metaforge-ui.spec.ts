@@ -8,24 +8,29 @@ async function expectNoHorizontalOverflow(locator: Locator) {
   ).toBeLessThanOrEqual(1);
 }
 
-async function visibleButton(page: Page, label: string): Promise<Locator | null> {
+async function buttonInsideViewport(page: Page, label: string): Promise<Locator | null> {
+  const viewport = page.viewportSize();
   const candidates = page.getByRole("button", { name: label, exact: true });
   const count = await candidates.count();
   for (let index = 0; index < count; index += 1) {
     const candidate = candidates.nth(index);
-    if (await candidate.isVisible().catch(() => false)) return candidate;
+    if (!(await candidate.isVisible().catch(() => false))) continue;
+    const box = await candidate.boundingBox();
+    if (!box || !viewport) continue;
+    const inside = box.x >= 0 && box.y >= 0 && box.x + box.width <= viewport.width && box.y + box.height <= viewport.height;
+    if (inside) return candidate;
   }
   return null;
 }
 
 async function sidebarButton(page: Page, label: string): Promise<Locator> {
-  const existing = await visibleButton(page, label);
+  const existing = await buttonInsideViewport(page, label);
   if (existing) return existing;
 
   await page.getByRole("button", { name: "Mở menu", exact: true }).click();
-  const opened = await visibleButton(page, label);
-  if (!opened) throw new Error(`Không tìm thấy mục sidebar đang hiển thị: ${label}`);
-  await expect(opened).toBeVisible();
+  await expect.poll(async () => Boolean(await buttonInsideViewport(page, label))).toBe(true);
+  const opened = await buttonInsideViewport(page, label);
+  if (!opened) throw new Error(`Không tìm thấy mục sidebar trong viewport: ${label}`);
   return opened;
 }
 
