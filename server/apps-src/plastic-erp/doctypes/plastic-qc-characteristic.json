@@ -1,0 +1,19 @@
+{
+  "name": "Plastic QC Characteristic",
+  "module": "Plastic ERP",
+  "is_child": true,
+  "fields": [
+    { "fieldname": "characteristic", "label": "Chỉ tiêu", "fieldtype": "Data", "required": true, "in_list_view": true },
+    { "fieldname": "stage", "label": "Công đoạn", "fieldtype": "Select", "options": "Incoming\nFirst Piece\nIn Process\nFinal\nLab", "required": true, "in_list_view": true },
+    { "fieldname": "uom", "label": "Đơn vị", "fieldtype": "Data" },
+    { "fieldname": "target_value", "label": "Mục tiêu", "fieldtype": "Float" },
+    { "fieldname": "min_value", "label": "Min", "fieldtype": "Float" },
+    { "fieldname": "max_value", "label": "Max", "fieldtype": "Float" },
+    { "fieldname": "sample_size", "label": "Cỡ mẫu", "fieldtype": "Int", "default": 1 },
+    { "fieldname": "frequency", "label": "Tần suất", "fieldtype": "Data" },
+    { "fieldname": "measurement_method", "label": "Phương pháp đo", "fieldtype": "Data" },
+    { "fieldname": "reaction_plan", "label": "Phản ứng khi lỗi", "fieldtype": "Text" }
+  ],
+  "permissions": [],
+  "revision": 1
+}
