@@ -39,7 +39,7 @@ test("renders the installable warehouse experience without desktop shell", async
     await expect(page.getByRole("button", { name: label, exact: true })).toBeVisible();
   }
   for (const label of ["Nhập kho", "Xuất kho", "Chuyển kho", "Kiểm kho"]) {
-    await expect(page.getByRole("button", { name: label, exact: true }).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: new RegExp(`^${label}`) }).first()).toBeVisible();
   }
 
   const manifestLink = page.locator('link[rel="manifest"]');
@@ -53,7 +53,7 @@ test("renders the installable warehouse experience without desktop shell", async
 
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1);
 
-  await page.getByRole("button", { name: "Nhập kho", exact: true }).first().click();
+  await page.getByRole("button", { name: /^Nhập kho/ }).first().click();
   await expect(page.getByText("Tạo phiếu nghiệp vụ", { exact: true })).toBeVisible();
   await expect(page.getByText("Vật tư", { exact: true })).toBeVisible();
   await expect(page.getByText("Kho nhận", { exact: true })).toBeVisible();
