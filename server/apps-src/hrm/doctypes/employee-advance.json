@@ -8,11 +8,15 @@
   "sort_field": "posting_date",
   "sort_order": "DESC",
   "fields": [
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "in_standard_filter": true },
+    { "fieldname": "branch", "label": "Chi nhánh", "fieldtype": "Link", "options": "Branch", "required": true, "in_standard_filter": true },
     { "fieldname": "employee", "label": "Nhân viên", "fieldtype": "Link", "options": "Employee", "required": true, "in_list_view": true, "in_standard_filter": true, "search_index": true },
     { "fieldname": "posting_date", "label": "Ngày đề nghị", "fieldtype": "Date", "required": true, "in_list_view": true },
     { "fieldname": "purpose", "label": "Mục đích", "fieldtype": "Text", "required": true },
     { "fieldname": "advance_amount", "label": "Số tiền", "fieldtype": "Currency", "required": true, "in_list_view": true },
     { "fieldname": "currency", "label": "Tiền tệ", "fieldtype": "Link", "options": "Currency", "required": true },
+    { "fieldname": "advance_account", "label": "Tài khoản tạm ứng", "fieldtype": "Link", "options": "Account", "required": true },
+    { "fieldname": "payment_entry", "label": "Phiếu chi", "fieldtype": "Link", "options": "Payment Entry", "read_only": true },
     { "fieldname": "repay_from_salary", "label": "Trừ vào lương", "fieldtype": "Check" },
     { "fieldname": "repay_months", "label": "Số tháng trừ", "fieldtype": "Int", "mandatory_depends_on": "eval:doc.repay_from_salary == 1" },
     { "fieldname": "workflow_state", "label": "Trạng thái", "fieldtype": "Data", "read_only": true, "in_list_view": true, "in_standard_filter": true }
@@ -23,5 +27,5 @@
     { "role": "HR Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "print": true, "report": true, "export": true },
     { "role": "System Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "print": true, "report": true, "export": true }
   ],
-  "revision": 1
+  "revision": 2
 }

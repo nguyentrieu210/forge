@@ -1,0 +1,31 @@
+{
+  "name": "VN Accounting Period",
+  "module": "Accounts",
+  "is_submittable": true,
+  "autoname": "KYKT-.YYYY.-#####",
+  "title_field": "period_name",
+  "sort_field": "start_date",
+  "sort_order": "DESC",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "period_name", "label": "Tên kỳ", "fieldtype": "Data", "required": true, "in_list_view": true },
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "branch", "label": "Chi nhánh (để trống = toàn công ty)", "fieldtype": "Link", "options": "Branch", "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "start_date", "label": "Từ ngày", "fieldtype": "Date", "required": true, "in_list_view": true },
+    { "fieldname": "end_date", "label": "Đến ngày", "fieldtype": "Date", "required": true, "in_list_view": true },
+    { "fieldname": "close_state", "label": "Mức khóa", "fieldtype": "Select", "options": "Open\nSoft Closed\nHard Locked", "required": true, "default": "Open", "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "allow_approved_adjustments", "label": "Cho phép điều chỉnh đã duyệt khi khóa mềm", "fieldtype": "Check", "default": 0 },
+    { "fieldname": "reason", "label": "Lý do khóa/mở", "fieldtype": "Small Text", "required": true },
+    { "fieldname": "approved_by", "label": "Người phê duyệt", "fieldtype": "Data", "required": true },
+    { "fieldname": "approved_at", "label": "Thời điểm phê duyệt", "fieldtype": "Datetime", "required": true },
+    { "fieldname": "workflow_state", "label": "Trạng thái", "fieldtype": "Data", "read_only": true, "in_list_view": true, "in_standard_filter": true }
+  ],
+  "permissions": [
+    { "role": "Accounts User", "read": true, "report": true },
+    { "role": "General Accountant", "read": true, "write": true, "create": true, "report": true },
+    { "role": "Chief Accountant", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true },
+    { "role": "Accounts Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}

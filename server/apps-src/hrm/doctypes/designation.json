@@ -1,0 +1,17 @@
+{
+  "name": "Designation",
+  "module": "HR",
+  "autoname": "field:designation_name",
+  "title_field": "designation_name",
+  "fields": [
+    { "fieldname": "designation_name", "label": "Chức danh", "fieldtype": "Data", "required": true, "unique": true, "in_list_view": true },
+    { "fieldname": "job_level", "label": "Cấp bậc", "fieldtype": "Int", "required": true, "in_list_view": true },
+    { "fieldname": "disabled", "label": "Ngừng sử dụng", "fieldtype": "Check", "default": 0 }
+  ],
+  "permissions": [
+    { "role": "HR User", "read": true, "report": true },
+    { "role": "HR Manager", "read": true, "write": true, "create": true, "report": true, "export": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "report": true, "export": true }
+  ],
+  "revision": 1
+}

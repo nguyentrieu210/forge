@@ -1,0 +1,35 @@
+{
+  "name": "VN Accounting Policy",
+  "module": "Accounts",
+  "is_submittable": true,
+  "autoname": "CSKT-.YYYY.-#####",
+  "title_field": "company",
+  "sort_field": "effective_from",
+  "sort_order": "DESC",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "regime_code", "label": "Chế độ kế toán", "fieldtype": "Select", "options": "TT99\nTT133\nTT58\nTT132-legacy\nTT200-legacy\nChưa xác định", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "legal_document_no", "label": "Văn bản áp dụng", "fieldtype": "Data", "required": true },
+    { "fieldname": "fiscal_year_start", "label": "Ngày bắt đầu năm tài chính", "fieldtype": "Date", "required": true, "in_list_view": true },
+    { "fieldname": "effective_from", "label": "Hiệu lực từ", "fieldtype": "Date", "required": true },
+    { "fieldname": "effective_to", "label": "Hiệu lực đến", "fieldtype": "Date" },
+    { "fieldname": "accounting_currency", "label": "Đồng tiền kế toán", "fieldtype": "Link", "options": "Currency", "required": true },
+    { "fieldname": "legal_report_currency", "label": "Đồng tiền báo cáo pháp lý", "fieldtype": "Link", "options": "Currency", "required": true, "default": "VND" },
+    { "fieldname": "vat_method", "label": "Phương pháp VAT", "fieldtype": "Select", "options": "Khấu trừ\nTrực tiếp\nChưa xác định", "required": true },
+    { "fieldname": "branch_accounting_model", "label": "Mô hình hạch toán chi nhánh", "fieldtype": "Select", "options": "Phụ thuộc\nĐộc lập\nHỗn hợp", "required": true },
+    { "fieldname": "internal_regulation_file", "label": "Quy chế kế toán nội bộ", "fieldtype": "Attach", "required": true },
+    { "fieldname": "source_url", "label": "Nguồn pháp lý chính thức", "fieldtype": "Data", "required": true },
+    { "fieldname": "approved_by", "label": "Người phê duyệt", "fieldtype": "Data" },
+    { "fieldname": "approved_at", "label": "Thời điểm phê duyệt", "fieldtype": "Datetime" },
+    { "fieldname": "workflow_state", "label": "Trạng thái", "fieldtype": "Data", "read_only": true, "in_list_view": true, "in_standard_filter": true }
+  ],
+  "permissions": [
+    { "role": "Accounts User", "read": true, "write": true, "create": true, "report": true },
+    { "role": "General Accountant", "read": true, "write": true, "create": true, "report": true, "export": true },
+    { "role": "Chief Accountant", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true },
+    { "role": "Accounts Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}

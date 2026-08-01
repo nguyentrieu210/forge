@@ -1,0 +1,26 @@
+{
+  "id": "vn-accounting",
+  "name": "Kế toán Việt Nam",
+  "version": "1.0.0",
+  "requires": [
+    { "id": "hrm", "version": ">=1.3.0" }
+  ],
+  "nav": [
+    { "key": "VN Accounting Policy", "label": "Chính sách kế toán", "kind": "doctype", "icon": "landmark", "group": "Thiết lập kế toán" },
+    { "key": "VN Legal Rule", "label": "Văn bản & quy tắc", "kind": "doctype", "icon": "book-open-check", "group": "Thiết lập kế toán" },
+    { "key": "VN Accounting Period", "label": "Kỳ kế toán", "kind": "doctype", "icon": "calendar-lock", "group": "Kiểm soát" },
+    { "key": "Payroll Accounting Batch", "label": "Hạch toán lương", "kind": "doctype", "icon": "badge-dollar-sign", "group": "Kế toán lương" },
+    { "key": "chart-of-accounts", "label": "Hệ thống tài khoản", "kind": "route", "route": "/app/Account", "icon": "list-tree", "group": "Sổ sách", "required_roles": ["Accounts User", "Accounts Manager", "System Manager"] },
+    { "key": "journal-entry", "label": "Bút toán nhật ký", "kind": "route", "route": "/app/Journal%20Entry", "icon": "notebook-tabs", "group": "Sổ sách", "required_roles": ["Accounts User", "Accounts Manager", "System Manager"] },
+    { "key": "payment-entry", "label": "Thu chi", "kind": "route", "route": "/app/Payment%20Entry", "icon": "hand-coins", "group": "Sổ sách", "required_roles": ["Accounts User", "Accounts Manager", "System Manager"] },
+    { "key": "payroll-entry-accounting", "label": "Bảng lương nguồn", "kind": "route", "route": "/app/Payroll%20Entry", "icon": "wallet-cards", "group": "Kế toán lương", "required_roles": ["Payroll Manager", "Accounts User", "Accounts Manager", "System Manager"] }
+  ],
+  "hooks": [],
+  "client": {
+    "brand": "warm",
+    "domain": "accounts",
+    "home": { "route": "/app/VN%20Accounting%20Period", "doctype": "VN Accounting Period" },
+    "dimensions": ["company", "branch", "fiscal_year"],
+    "catalog_mode": "hybrid"
+  }
+}

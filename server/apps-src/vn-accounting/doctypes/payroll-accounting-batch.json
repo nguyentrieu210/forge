@@ -1,0 +1,38 @@
+{
+  "name": "Payroll Accounting Batch",
+  "module": "Accounts",
+  "is_submittable": true,
+  "autoname": "HTL-.YYYY.-#####",
+  "title_field": "payroll_entry",
+  "sort_field": "posting_date",
+  "sort_order": "DESC",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "payroll_entry", "label": "Bảng lương nguồn", "fieldtype": "Link", "options": "Payroll Entry", "required": true, "unique": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "branch", "label": "Chi nhánh", "fieldtype": "Link", "options": "Branch", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "department", "label": "Phòng ban", "fieldtype": "Link", "options": "Department", "in_standard_filter": true },
+    { "fieldname": "posting_date", "label": "Ngày hạch toán", "fieldtype": "Date", "required": true, "in_list_view": true },
+    { "fieldname": "expense_account", "label": "Tài khoản chi phí lương", "fieldtype": "Link", "options": "Account", "required": true },
+    { "fieldname": "payable_account", "label": "Tài khoản phải trả người lao động", "fieldtype": "Link", "options": "Account", "required": true },
+    { "fieldname": "pit_payable_account", "label": "Tài khoản PIT phải nộp", "fieldtype": "Link", "options": "Account" },
+    { "fieldname": "insurance_payable_account", "label": "Tài khoản bảo hiểm phải nộp", "fieldtype": "Link", "options": "Account" },
+    { "fieldname": "cost_center", "label": "Trung tâm chi phí", "fieldtype": "Link", "options": "Cost Center", "required": true },
+    { "fieldname": "gross_amount", "label": "Tổng thu nhập", "fieldtype": "Currency", "required": true, "in_list_view": true },
+    { "fieldname": "deduction_amount", "label": "Tổng khấu trừ", "fieldtype": "Currency", "required": true },
+    { "fieldname": "net_amount", "label": "Thực lĩnh", "fieldtype": "Currency", "required": true, "in_list_view": true },
+    { "fieldname": "journal_entry", "label": "Bút toán lương", "fieldtype": "Link", "options": "Journal Entry", "read_only": true, "in_list_view": true },
+    { "fieldname": "source_document_id", "label": "Định danh chứng từ nguồn", "fieldtype": "Data", "required": true },
+    { "fieldname": "rule_trace_json", "label": "Dấu vết quy tắc", "fieldtype": "Code", "required": true },
+    { "fieldname": "approval_trace_json", "label": "Dấu vết phê duyệt", "fieldtype": "Code", "required": true },
+    { "fieldname": "adjusts_batch", "label": "Điều chỉnh cho bảng", "fieldtype": "Link", "options": "Payroll Accounting Batch" }
+  ],
+  "permissions": [
+    { "role": "Payroll Manager", "read": true, "write": true, "create": true, "report": true },
+    { "role": "General Accountant", "read": true, "write": true, "create": true, "report": true, "export": true },
+    { "role": "Chief Accountant", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true },
+    { "role": "Accounts Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}
