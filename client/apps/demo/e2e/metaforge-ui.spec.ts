@@ -8,13 +8,25 @@ async function expectNoHorizontalOverflow(locator: Locator) {
   ).toBeLessThanOrEqual(1);
 }
 
-async function sidebarButton(page: Page, label: string): Promise<Locator> {
-  const button = page.getByRole("button", { name: label, exact: true }).first();
-  if (!(await button.isVisible().catch(() => false))) {
-    await page.getByRole("button", { name: "Mở menu", exact: true }).click();
+async function visibleButton(page: Page, label: string): Promise<Locator | null> {
+  const candidates = page.getByRole("button", { name: label, exact: true });
+  const count = await candidates.count();
+  for (let index = 0; index < count; index += 1) {
+    const candidate = candidates.nth(index);
+    if (await candidate.isVisible().catch(() => false)) return candidate;
   }
-  await expect(button).toBeVisible();
-  return button;
+  return null;
+}
+
+async function sidebarButton(page: Page, label: string): Promise<Locator> {
+  const existing = await visibleButton(page, label);
+  if (existing) return existing;
+
+  await page.getByRole("button", { name: "Mở menu", exact: true }).click();
+  const opened = await visibleButton(page, label);
+  if (!opened) throw new Error(`Không tìm thấy mục sidebar đang hiển thị: ${label}`);
+  await expect(opened).toBeVisible();
+  return opened;
 }
 
 async function openSidebarModule(page: Page, label: string) {
@@ -73,7 +85,7 @@ test.describe("MetaForge MISA-style workspace", () => {
 
     await page.getByRole("button", { name: "Chỉ tiêu", exact: true }).first().click();
     await expect(page.getByText("Chỉ tiêu 1", { exact: true })).toBeVisible();
-    await expect(page.getByDisplayValue("Chỉ tiêu 1")).toBeVisible();
+    await expect(page.locator('input[value="Chỉ tiêu 1"]')).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath("report-builder.png"), fullPage: true });
   });
 
