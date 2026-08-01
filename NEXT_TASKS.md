@@ -4,6 +4,61 @@ Ngày cập nhật: **2026-08-02**.
 
 Mọi agent phải đọc `AI_HANDOFF.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md` và `DELIVERY_POLICY.md` trước khi tiếp tục. GitHub là nguồn sự thật cho exact branch head, PR, CI và release evidence.
 
+## NEW EPIC — Plastic Factory ERP
+
+### Gate hiện tại: G1 Requirements
+
+- Branch BRD: `feat/plastic-factory-erp-brd-20260802`.
+- BRD: `docs/plastic-factory-erp/BRD.md`.
+- Không implementation sâu trên branch BRD này.
+- Cần chốt tối thiểu process profile chính của nhà máy: Injection / Extrusion / Blow / Film / Compounding / mixed.
+- Các default an toàn đã được ghi trong BRD để không phải dừng hỏi từng chi tiết.
+
+### Sau khi G1 approved — mở branch P0-A mới từ current main
+
+**P0-A Plastic master + recipe**
+
+- Bổ sung plastic material profile: polymer family, grade, color, material kind, production UOM, regrind policy.
+- Tạo Machine master và Mold/Tool master với compatibility/capacity/status.
+- Mở rộng versioned BOM thành plastic Recipe theo `process_type`, tolerance, regrind max %, target cycle/scrap.
+- Giữ immutable Work Order snapshot/checksum và stock/lot identity hiện có làm canonical.
+- Server-side validation cho machine/mold compatibility, recipe tolerance và tenant/company boundary.
+- Tests/typecheck/build và exact-head CI trước merge.
+
+**P0-B Production Run + shop-floor**
+
+- Work Order assignment machine/mold/shift.
+- Run start/pause/resume/complete.
+- Actual lot consumption, good output, scrap, regrind/by-product.
+- Concurrency/idempotency/reversal.
+- Mobile authenticated acceptance.
+
+**P0-C QC lot gate**
+
+- Incoming/In-process/Final inspection.
+- Release/Hold/Reject state.
+- Block consume/reservation/delivery khi lot bị Hold/Reject theo policy.
+- NCR + disposition lineage.
+
+**P1 Capacity + operational costing**
+
+- Shift/calendar, machine/mold overlap, capacity/load.
+- Material actual value + recovered value + machine/labor/energy/overhead.
+- Cost per run/batch/item và variance.
+
+**P2 End-to-end acceptance**
+
+Purchase raw material → Incoming QC → lot release → recipe → schedule → Work Order → issue → production run → in-process QC → finished batch → final QC → stock → sales delivery → costing/traceability.
+
+### Plastic ERP invariants
+
+- Không tạo stock ledger/costing source thứ hai.
+- Không fork core riêng cho từng công nghệ nhựa; dùng `process_type` + domain policy.
+- Lot/batch lineage là canonical identity.
+- Submitted records append-only/reversal.
+- Resource conflict và QC gate phải enforced server-side.
+- Không deploy Cloudflare, sửa production secrets/DNS hoặc mutate customer data nếu chưa có lệnh explicit phù hợp project guardrail.
+
 ## DONE — PR #175 Authenticated reservation availability lifecycle
 
 - PR `#175` merged.
