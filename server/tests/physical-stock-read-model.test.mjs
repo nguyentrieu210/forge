@@ -26,7 +26,7 @@ const base = {
   revision: 1,
 };
 
-test("physical stock read model groups identity and reconciles exact reversal", async () => {
+test("physical stock read model groups identity and reconciles exact quantity, weight and reversal", async () => {
   const { buildPhysicalStockPage, reconcilePhysicalStockPage } = await loadModule();
   const page = buildPhysicalStockPage([
     {
@@ -35,6 +35,7 @@ test("physical stock read model groups identity and reconciles exact reversal", 
       voucher_no: "STE-RECEIPT-1",
       voucher_row: "ROW-1",
       quantity_micros: 10_000_000,
+      weight_micros: 65_700_000,
       value_micros: 25_000_000,
       physical_count_micros: 10_000_000,
     },
@@ -44,6 +45,7 @@ test("physical stock read model groups identity and reconciles exact reversal", 
       voucher_no: "STE-ISSUE-1",
       voucher_row: "ROW-1",
       quantity_micros: -4_000_000,
+      weight_micros: -26_280_000,
       value_micros: -10_000_000,
       physical_count_micros: -4_000_000,
     },
@@ -53,6 +55,7 @@ test("physical stock read model groups identity and reconciles exact reversal", 
       voucher_no: "STE-ISSUE-1-CANCEL",
       voucher_row: "ROW-1",
       quantity_micros: 4_000_000,
+      weight_micros: 26_280_000,
       value_micros: 10_000_000,
       physical_count_micros: 4_000_000,
       reversal_of_voucher_type: "Stock Entry",
@@ -63,14 +66,88 @@ test("physical stock read model groups identity and reconciles exact reversal", 
 
   assert.equal(page.rows.length, 1);
   assert.equal(page.rows[0].quantity_micros, 10_000_000);
+  assert.equal(page.rows[0].weight_micros, 65_700_000);
   assert.equal(page.rows[0].value_micros, 25_000_000);
   assert.equal(page.rows[0].physical_count_micros, 10_000_000);
+  assert.equal(page.totals.weight_micros, 65_700_000);
   assert.deepEqual(page.rows[0].lineage[2].reversal_of, {
     voucher_type: "Stock Entry",
     voucher_no: "STE-ISSUE-1",
     voucher_row: "ROW-1",
   });
+  assert.equal(page.rows[0].lineage[2].weight_micros, 26_280_000);
   reconcilePhysicalStockPage(page);
+});
+
+test("physical stock weight stays unknown when a quantity movement lacks measured weight", async () => {
+  const { buildPhysicalStockPage, reconcilePhysicalStockPage } = await loadModule();
+  const page = buildPhysicalStockPage([
+    {
+      ...base,
+      posting_at: "2026-07-31T08:00:00.000Z",
+      voucher_no: "STE-WEIGHED",
+      quantity_micros: 10_000_000,
+      weight_micros: 65_700_000,
+      value_micros: 20_000_000,
+      physical_count_micros: 10_000_000,
+    },
+    {
+      ...base,
+      posting_at: "2026-07-31T09:00:00.000Z",
+      voucher_no: "STE-LEGACY-UNWEIGHED",
+      quantity_micros: -1_000_000,
+      weight_micros: null,
+      value_micros: -2_000_000,
+      physical_count_micros: -1_000_000,
+    },
+  ], { tenant_id: "alu", company: "Alumdoor" });
+
+  assert.equal(page.rows[0].quantity_micros, 9_000_000);
+  assert.equal(page.rows[0].weight_micros, null);
+  assert.equal(page.totals.weight_micros, null);
+  assert.equal(page.rows[0].lineage[1].weight_micros, null);
+  reconcilePhysicalStockPage(page);
+});
+
+test("zero-quantity unweighed valuation movement does not erase known catch weight", async () => {
+  const { buildPhysicalStockPage } = await loadModule();
+  const page = buildPhysicalStockPage([
+    {
+      ...base,
+      posting_at: "2026-07-31T08:00:00.000Z",
+      voucher_no: "STE-WEIGHED",
+      quantity_micros: 10_000_000,
+      weight_micros: 65_700_000,
+      value_micros: 20_000_000,
+      physical_count_micros: 10_000_000,
+    },
+    {
+      ...base,
+      posting_at: "2026-07-31T09:00:00.000Z",
+      voucher_no: "REVALUATION",
+      quantity_micros: 0,
+      weight_micros: null,
+      value_micros: 500_000,
+      physical_count_micros: 0,
+    },
+  ], { tenant_id: "alu", company: "Alumdoor" });
+  assert.equal(page.rows[0].weight_micros, 65_700_000);
+});
+
+test("physical stock read model rejects contradictory quantity and weight signs", async () => {
+  const { buildPhysicalStockPage } = await loadModule();
+  assert.throws(
+    () => buildPhysicalStockPage([{
+      ...base,
+      posting_at: "2026-07-31T08:00:00.000Z",
+      voucher_no: "STE-BAD-WEIGHT",
+      quantity_micros: 1_000_000,
+      weight_micros: -6_570_000,
+      value_micros: 2_000_000,
+      physical_count_micros: 1_000_000,
+    }], { tenant_id: "alu", company: "Alumdoor" }),
+    /quantity and weight signs must match/,
+  );
 });
 
 test("physical stock read model enforces tenant scope and filters identity dimensions", async () => {
@@ -82,6 +159,7 @@ test("physical stock read model enforces tenant scope and filters identity dimen
       voucher_no: "STE-1",
       voucher_row: "ROW-1",
       quantity_micros: 3_000_000,
+      weight_micros: 19_710_000,
       value_micros: 9_000_000,
       physical_count_micros: 3_000_000,
     },
@@ -92,6 +170,7 @@ test("physical stock read model enforces tenant scope and filters identity dimen
       voucher_no: "STE-OTHER",
       voucher_row: "ROW-1",
       quantity_micros: 99_000_000,
+      weight_micros: 650_430_000,
       value_micros: 99_000_000,
       physical_count_micros: 99_000_000,
     },
@@ -103,6 +182,7 @@ test("physical stock read model enforces tenant scope and filters identity dimen
       voucher_no: "STE-2",
       voucher_row: "ROW-1",
       quantity_micros: 2_000_000,
+      weight_micros: 13_140_000,
       value_micros: 6_000_000,
       physical_count_micros: 2_000_000,
     },
@@ -116,6 +196,7 @@ test("physical stock read model enforces tenant scope and filters identity dimen
   assert.equal(page.rows.length, 1);
   assert.equal(page.rows[0].color, "Xám");
   assert.equal(page.totals.quantity_micros, 3_000_000);
+  assert.equal(page.totals.weight_micros, 19_710_000);
 });
 
 test("physical stock pagination is deterministic and rejects unknown cursors", async () => {
@@ -128,6 +209,7 @@ test("physical stock pagination is deterministic and rejects unknown cursors", a
     voucher_no: `STE-${item}`,
     voucher_row: "ROW-1",
     quantity_micros: 1_000_000,
+    weight_micros: 6_570_000,
     value_micros: 1_000_000,
     physical_count_micros: 1_000_000,
   }));
@@ -156,6 +238,7 @@ test("physical stock read model excludes fully zero balances unless requested", 
       posting_at: "2026-07-31T08:00:00.000Z",
       voucher_no: "STE-IN",
       quantity_micros: 1_000_000,
+      weight_micros: 6_570_000,
       value_micros: 2_000_000,
       physical_count_micros: 1_000_000,
     },
@@ -164,6 +247,7 @@ test("physical stock read model excludes fully zero balances unless requested", 
       posting_at: "2026-07-31T09:00:00.000Z",
       voucher_no: "STE-OUT",
       quantity_micros: -1_000_000,
+      weight_micros: -6_570_000,
       value_micros: -2_000_000,
       physical_count_micros: -1_000_000,
     },

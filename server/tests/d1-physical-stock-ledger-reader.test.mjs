@@ -49,6 +49,7 @@ function ledger(overrides = {}) {
     item_code: "NHOM-AL71",
     warehouse: "KHO-NVL",
     actual_qty_micros: -4_000_000,
+    actual_weight_micros: -26_280_000,
     stock_value_difference_minor: -40_000,
     posting_at: "2026-07-31T08:00:00.000Z",
     batch_no: "LOT-1",
@@ -81,14 +82,33 @@ function child(overrides = {}) {
   };
 }
 
-test("D1 reader binds tenant/company and allocates tracked physical counts exactly", async () => {
+test("D1 reader binds tenant/company and maps exact weight while allocating tracked physical counts", async () => {
   const { D1PhysicalStockLedgerReader } = await loadModule();
   const database = new FakeDatabase({
     ledgerRows: [
       ledger(),
-      ledger({ line_key: "SRC-ROW-1-B2", actual_qty_micros: -6_000_000, stock_value_difference_minor: -60_000, batch_no: "LOT-2" }),
-      ledger({ voucher_revision: 2, line_key: "REV-SRC-ROW-1-B1", actual_qty_micros: 4_000_000, stock_value_difference_minor: 40_000 }),
-      ledger({ voucher_revision: 2, line_key: "REV-SRC-ROW-1-B2", actual_qty_micros: 6_000_000, stock_value_difference_minor: 60_000, batch_no: "LOT-2" }),
+      ledger({
+        line_key: "SRC-ROW-1-B2",
+        actual_qty_micros: -6_000_000,
+        actual_weight_micros: -39_420_000,
+        stock_value_difference_minor: -60_000,
+        batch_no: "LOT-2",
+      }),
+      ledger({
+        voucher_revision: 2,
+        line_key: "REV-SRC-ROW-1-B1",
+        actual_qty_micros: 4_000_000,
+        actual_weight_micros: 26_280_000,
+        stock_value_difference_minor: 40_000,
+      }),
+      ledger({
+        voucher_revision: 2,
+        line_key: "REV-SRC-ROW-1-B2",
+        actual_qty_micros: 6_000_000,
+        actual_weight_micros: 39_420_000,
+        stock_value_difference_minor: 60_000,
+        batch_no: "LOT-2",
+      }),
     ],
     childRows: [child()],
   });
@@ -97,6 +117,7 @@ test("D1 reader binds tenant/company and allocates tracked physical counts exact
   const rows = await reader.list({ tenant_id: "alu", company: "Alumdoor" });
 
   assert.equal(rows.length, 4);
+  assert.deepEqual(rows.map((row) => row.weight_micros), [-26_280_000, -39_420_000, 26_280_000, 39_420_000]);
   assert.deepEqual(rows.map((row) => row.physical_count_micros), [-1_200_000, -1_800_000, 1_200_000, 1_800_000]);
   assert.deepEqual(rows.map((row) => row.batch_no), ["LOT-1", "LOT-2", "LOT-1", "LOT-2"]);
   assert.equal(rows[0].physical_identity_key, "NHOM-AL71|XAM|6000000");
@@ -116,20 +137,42 @@ test("D1 reader binds tenant/company and allocates tracked physical counts exact
     ["alu", "Alumdoor", 21],
   ]);
   assert.ok(database.calls[0].sql.includes("s.tenant_id=?1"));
+  assert.ok(database.calls[0].sql.includes("s.actual_weight_micros"));
   assert.ok(database.calls[0].sql.includes("json_extract(d.payload_json,'$.company')=?2"));
+});
+
+test("D1 reader preserves null and zero weight as distinct evidence states", async () => {
+  const { D1PhysicalStockLedgerReader } = await loadModule();
+  const database = new FakeDatabase({
+    ledgerRows: [
+      ledger({ line_key: "SRC-ROW-1-NULL", actual_weight_micros: null }),
+      ledger({ line_key: "SRC-ROW-1-ZERO", actual_qty_micros: 0, actual_weight_micros: 0, stock_value_difference_minor: 0 }),
+    ],
+    childRows: [child()],
+  });
+  const rows = await new D1PhysicalStockLedgerReader(database, 20).list({ tenant_id: "alu", company: "Alumdoor" });
+  assert.equal(rows[0].weight_micros, null);
+  assert.equal(rows[1].weight_micros, 0);
 });
 
 test("D1 reader maps target and finished-good identity snapshots", async () => {
   const { D1PhysicalStockLedgerReader } = await loadModule();
   const database = new FakeDatabase({
     ledgerRows: [
-      ledger({ line_key: "TGT-ROW-1-B1", actual_qty_micros: 4_000_000, stock_value_difference_minor: 40_000, warehouse: "KHO-WIP" }),
+      ledger({
+        line_key: "TGT-ROW-1-B1",
+        actual_qty_micros: 4_000_000,
+        actual_weight_micros: 26_280_000,
+        stock_value_difference_minor: 40_000,
+        warehouse: "KHO-WIP",
+      }),
       ledger({
         voucher_no: "STE-MFG-1",
         line_key: "FINISHED-B1",
         item_code: "CUA-TP",
         warehouse: "KHO-TP",
         actual_qty_micros: 1_000_000,
+        actual_weight_micros: 12_000_000,
         stock_value_difference_minor: 120_000,
         batch_no: "FG-1",
         document_payload_json: JSON.stringify({
@@ -149,10 +192,12 @@ test("D1 reader maps target and finished-good identity snapshots", async () => {
 
   const rows = await new D1PhysicalStockLedgerReader(database, 20).list({ tenant_id: "alu", company: "Alumdoor" });
   assert.equal(rows[0].warehouse_role, "WIP");
+  assert.equal(rows[0].weight_micros, 26_280_000);
   assert.equal(rows[0].physical_count_micros, 3_000_000);
   assert.equal(rows[1].voucher_row, "FINISHED");
   assert.equal(rows[1].warehouse_role, "FINISHED_GOODS");
   assert.equal(rows[1].physical_identity_key, "CUA-TP|TRANG");
+  assert.equal(rows[1].weight_micros, 12_000_000);
   assert.equal(rows[1].physical_count_micros, 1_000_000);
 });
 
