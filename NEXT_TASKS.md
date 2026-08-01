@@ -2,91 +2,60 @@
 
 Ngày cập nhật: **2026-08-02**.
 
-Đây là hàng đợi active. Không dùng file này thay cho GitHub khi cần exact branch head, PR state hoặc CI. Trước khi làm đọc `RUNBOOK.md` và `CURRENT_STATUS.md`.
+Đây là hàng đợi active. GitHub là nguồn sự thật cho exact branch head, PR state và CI; đọc `RUNBOOK.md` và `CURRENT_STATUS.md` trước khi làm.
 
-## DONE UI — Tiến Đạt FIFO complete operations screen
+## DONE — P0 QR / lineage + cleanup QA
 
-- PR `#179` merged tại `e44ade8ca1ab396a66b800844b755de203be9245`.
-- Final validated head: `f8efd5bbf26a398b5a369a453cbbe02ad92ac53f`.
-- Required workflows: **6/6 PASS**.
-  - CI `30721663514`: tests/typecheck/build PASS.
-  - UI Pull Request Validation `30721663479`: frontend lint/build + MetaForge/Alumdoor/purchase browser QA + authenticated desktop/mobile Purchase/FIFO PASS.
-  - PR Validation `30721663531`: PASS.
-  - Purchase Feature CI `30721663482`: PASS.
-  - Sales Feature CI `30721663496`: PASS.
-  - Inventory and Manufacturing CI `30721663523`: PASS.
-- Màn `/x/action:nhap-nhom-fifo` hiện đủ form nhập và các khối: công nợ giao hàng, đơn còn nợ, lịch sử trừ FIFO, lịch sử hàng về và dòng phiếu nhập sẽ tạo.
-- Auth QA khóa `200 + 100`, nhận `230` → `200 + 30`, còn nợ `70`, biên giao thêm `55–85`; receipt sau submit xuất hiện lại trên lịch sử UI.
-- Link Supplier/Item/Color/Warehouse dùng search thật; decimal UI dùng locale Việt dấu phẩy; mobile không tràn ngang.
-- Không deploy production trong slice này.
-
-Không mở lại FIFO UI slice nếu không có regression cụ thể. Nếu cần thấy UI trên tenant production, phải thực hiện **release riêng** với approval/evidence; merge `main` không đồng nghĩa đã deploy.
-
-## DONE UI — MetaForge Bulk View + ALUM master grids
-
-- PR `#190` merged tại `28eb4c4af6f88f0d1c3dc56c8f50e8d31fe2e968`.
-- Final validated head: `bc75667d1a2078e6483c1a63a4afa1e94bde9de5`.
-- Required workflows: **6/6 PASS**.
-  - CI `30721227654`: tests/typecheck/build PASS.
-  - UI Pull Request Validation `30721227663`: frontend lint/build + MetaForge workspace browser QA + Alumdoor browser QA PASS.
-  - PR Validation `30721227676`: PASS.
-  - Purchase Feature CI `30721227715`: PASS.
-  - Sales Feature CI `30721227669`: PASS.
-  - Inventory and Manufacturing CI `30721227651`: PASS.
-- PR `#182` đã đóng, không merge; không dùng branch đó làm nguồn live state.
-- Generic Bulk v1 chỉ `document_update` trên master an toàn, fail closed cho transaction/submittable/child/single và field protected/conditional-readonly.
-- ALUM `2.1.2` source có Bulk config cho 15 master DocType; production chưa được deploy trong slice này.
-
-Không mở lại #182. Regression Bulk mới phải sửa từ current `main`.
-
-## DONE UI — MetaForge Document Experience V2 foundation
-
-- PR `#184` merged tại `df84eaec03526eaae2e2c3de3e9b8d388ae30f1a`.
-- Final validated head: `1a79c28832aed7731601bb9ea378f9a4a3cc01db`.
-- Required workflows: **6/6 PASS**.
-- Đã có presentation resolver an toàn, 7 archetype + generic fallback, document hero, semantic status, metric cards, context strip/rail và skeleton loading.
+- PR `#189` merged tại `80496b056fa0f23f18311e5822c21dc826bacd9f`.
+- Final validated head `ee396fd26b2355a4f3e1d62c92f41468be489443`.
+- Required workflows **6/6 PASS**.
+- Lineage exact voucher/batch/bundle/warehouse/item identity, two-identity isolation, Stock Reconciliation print/QR, authenticated desktop/mobile và local D1 cleanup zero-residue đã khóa.
 - Không deploy production.
 
-## ACTIVE P0 — PR #189 QR / lineage + cleanup QA
+Không mở lại P0 slice nếu không có regression cụ thể.
 
-P0 stock acceptance hiện đã có clean PR `#189` từ current-main generation của đợt này. Không mở branch P0 cạnh tranh khi #189 còn active.
+## DONE UI — Bulk View dirty guard
 
-### Done condition P0
+- PR `#195` merged tại `2e5860b90410845545df33115c6f053925b65c72`.
+- Final validated head `7e51b9955a0fca2f864df6ac0a278f61c510d5ec`.
+- Required workflows **6/6 PASS**.
+- Bulk dirty patch được propagate ra workspace, browser unload có guard, chuyển `Nhập hàng loạt -> Danh sách` cần destructive confirmation khi còn thay đổi chưa lưu.
+- PR `#192` và `#196` đã đóng, không merge; #195 là canonical implementation.
 
-- Physical-stock `include_lineage=true` truy đúng voucher type/name, voucher row, batch, bundle, warehouse và item identity.
-- Có identity thứ hai chứng minh lineage không lẫn giữa hai luồng.
-- Stock Reconciliation print render thật, QR sinh từ exact document `name` và route mở đúng document.
-- Desktop + mobile, cookie + CSRF thật, role nghiệp vụ thật.
-- Invalid session/CSRF, sai QR identity, cross-tenant lineage và immutable records fail closed.
-- Cleanup local D1 ephemeral xóa đúng QA lineage, không wildcard shared fixtures, query hậu kiểm zero residue.
-- Exact-head required workflows PASS trước merge.
-- Không deploy production trong slice P0 này nếu user chưa yêu cầu riêng.
+Không mở lại dirty-guard nếu không có regression cụ thể.
 
-## NEXT UI — MetaForge UX V2 sau Bulk
+## ACTIVE P1 — Daily Detailed Ledger authenticated acceptance
 
-Bulk dependency đã merge, nên List Workspace V2 có thể bắt đầu trên branch riêng từ exact current `main` khi không tranh chấp với task ưu tiên cao hơn.
+- PR `#197` đang mở: `test(daily-ledger): authenticate freeze and adjustment lifecycle`.
+- PR được mở từ base `80496b056fa0f23f18311e5822c21dc826bacd9f`; `main` đã tiến tới checkpoint sau #195, nên phải kiểm tra divergence và nếu cần dựng clean branch thay vì merge main vào branch cũ.
 
-### Ưu tiên UI
+### Acceptance bắt buộc
 
-1. **List Workspace V2 + Bulk integration** — summary bar, saved views, smart filters, table/card responsive và contextual quick actions; Bulk là mode/action của cùng workspace, không tạo navigation cạnh tranh.
-2. **Matrix View canonical contract + renderer** — User×Role, User×Warehouse/Department/Company, Item×Color, Item×UOM, Item×Reorder warehouse, Supplier×Item và account mapping.
-3. **Presentation authoring / canonical transport** — đưa presentation và `viewPolicy.bulk` thành authorable metadata/sidecar có compiler/parser/selfcheck first-class và backward compatibility.
-4. **Bulk Transaction strategy** — controller/method-backed grid cho Stock Reconciliation và BOM làm reference đầu tiên; tuyệt đối không mass-update ledger/submitted docs.
-5. **Nhập nhôm nhiều mã / Purchase Receipt transaction grid**.
-6. **Batch Print / QR label queue** dưới dạng action/workspace, không cần ViewKind riêng.
-7. **Document context nâng cao** — related-document graph, timeline/activity, exception cards và business progress source thật.
-8. **Operational workspace + Mobile V2** — role home/inbox/exception-first, rich list cards, context drawer/bottom sheet và action zone màn nhỏ.
-9. **Resource Scheduler** chỉ khi capacity/overtime P2 đi vào runtime.
-10. **Personalization / AI context** sau khi các surface vận hành phía trên ổn định.
+- Purchase Order thật được tạo/submit qua public Frappe API làm nguồn Purchase cho snapshot.
+- Role `Kế toán tổng hợp` đăng nhập cookie + CSRF thật trên desktop/mobile.
+- Generate snapshot lần đầu và rerun cùng input idempotent cùng snapshot.
+- Reconcile live/snapshot PASS và Purchase count > 0.
+- Read report thật, freeze snapshot; generate lại trả frozen existing.
+- Append-only adjustment sau khóa có reason/actor/timestamp/audit; rerun cùng `adjustment_id` idempotent, đổi payload cùng ID phải fail.
+- Report sau adjustment phản ánh adjustment đúng.
+- Explicit tenant selector và cross-tenant path fail closed.
+- Existing reconciliation coverage Sales/Purchase/Inventory/Manufacturing/Warranty/Finance tiếp tục PASS.
+- Exact-head required workflows PASS trên current-main generation trước merge.
 
-## P1 — Daily detailed ledger
+## NEXT UI — MetaForge UX V2
 
-- Immutable snapshot theo ngày và dimension nghiệp vụ.
-- Re-run cùng input idempotent.
-- Freeze chặn direct edit sau khóa.
-- Adjustment sau khóa append-only có reason/actor/timestamp/audit trail.
-- Reconciliation ít nhất Sales, Purchase, Inventory, Manufacturing và Finance.
-- Permission + tenant boundary có test/authenticated evidence.
+Sau khi dirty-guard đã merge, Bulk dependency đủ an toàn để tiếp tục List Workspace V2 trên branch riêng từ exact current `main`, miễn không tranh chấp với task ưu tiên cao hơn.
+
+1. **List Workspace V2 + Bulk integration** — summary bar, saved views, smart filters, responsive table/card, contextual quick actions; Bulk là mode/action của cùng workspace.
+2. **Matrix View canonical contract + renderer** — User×Role, User×Warehouse/Department/Company, Item×Color, Item×UOM, Item×Reorder warehouse, Supplier×Item, account mapping.
+3. **Presentation authoring / canonical transport** — `presentation` và `viewPolicy.bulk` thành first-class authorable metadata/sidecar với compiler/parser/selfcheck/backward compatibility.
+4. **Document context nâng cao** — related-document graph, timeline/activity, exception cards, business progress source thật.
+5. **Operational workspace + Mobile V2** — role home/inbox/exception-first, rich list cards, context drawer/bottom sheet, mobile action zone.
+6. **Bulk Transaction strategy** — controller/method-backed grids cho Stock Reconciliation/BOM; không mass-update ledger/submitted docs.
+7. **Nhập nhôm nhiều mã / Purchase Receipt transaction grid**.
+8. **Batch Print / QR label queue** dưới dạng action/workspace.
+9. **Resource Scheduler** khi capacity/overtime P2 đi vào runtime.
+10. **Personalization / AI context** sau khi các operational surfaces ổn định.
 
 ## P2 — Warranty / defects / capacity
 
@@ -103,7 +72,8 @@ Khóa hành trình authenticated xuyên miền:
 
 ## Guardrails
 
-- Mỗi epic/đợt sửa độc lập dùng branch/PR riêng từ exact current `main`.
+- Mỗi epic/slice độc lập dùng branch/PR riêng từ exact current `main`.
+- Không merge `main` vào branch diverged hoặc force-push/rewrite history để cứu branch cũ nếu chưa có yêu cầu riêng.
 - Không thay exact PR head khi required CI đang chạy nếu không có lý do kỹ thuật.
 - Không deploy Cloudflare/production hoặc sửa production secrets/DNS nếu user chưa yêu cầu rõ.
 - Không mutate customer production data.
