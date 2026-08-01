@@ -1,0 +1,30 @@
+{
+  "name": "Plastic Costing Profile",
+  "module": "Plastic ERP",
+  "autoname": "PCOST-.####",
+  "title_field": "profile_name",
+  "search_fields": ["profile_name", "company"],
+  "sort_field": "profile_name",
+  "sort_order": "ASC",
+  "fields": [
+    { "fieldname": "profile_name", "label": "Tên hồ sơ giá thành", "fieldtype": "Data", "required": true, "unique": true, "in_list_view": true },
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "currency", "label": "Tiền tệ", "fieldtype": "Link", "options": "Currency", "required": true },
+    { "fieldname": "machine_cost_basis", "label": "Cơ sở chi phí máy", "fieldtype": "Select", "options": "Machine Hour\nCycle\nOutput Quantity", "required": true, "default": "Machine Hour" },
+    { "fieldname": "labor_cost_basis", "label": "Cơ sở nhân công", "fieldtype": "Select", "options": "Labor Hour\nShift\nOutput Quantity", "required": true, "default": "Labor Hour" },
+    { "fieldname": "energy_cost_per_kwh", "label": "Chi phí điện / kWh", "fieldtype": "Currency" },
+    { "fieldname": "overhead_pct", "label": "Overhead %", "fieldtype": "Float" },
+    { "fieldname": "scrap_recovery_pct", "label": "Giá trị thu hồi phế %", "fieldtype": "Float" },
+    { "fieldname": "regrind_recovery_pct", "label": "Giá trị thu hồi hạt nghiền %", "fieldtype": "Float" },
+    { "fieldname": "include_tool_depreciation", "label": "Tính khấu hao khuôn", "fieldtype": "Check" },
+    { "fieldname": "include_setup_cost", "label": "Tính setup/changeover", "fieldtype": "Check", "default": 1 },
+    { "fieldname": "active", "label": "Đang dùng", "fieldtype": "Check", "default": 1, "in_list_view": true }
+  ],
+  "permissions": [
+    { "role": "Plastic Costing User", "read": true, "write": true, "create": true, "print": true, "report": true, "export": true },
+    { "role": "Plastic Production Manager", "read": true, "report": true },
+    { "role": "Plastic Engineering User", "read": true, "report": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "print": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}

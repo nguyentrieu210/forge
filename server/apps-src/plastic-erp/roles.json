@@ -1,0 +1,12 @@
+[
+  { "role": "Plastic Planner", "desk_access": true },
+  { "role": "Plastic Production Manager", "desk_access": true },
+  { "role": "Plastic Operator", "desk_access": true },
+  { "role": "Plastic Warehouse User", "desk_access": true },
+  { "role": "Plastic QC User", "desk_access": true },
+  { "role": "Plastic QC Manager", "desk_access": true },
+  { "role": "Plastic Engineering User", "desk_access": true },
+  { "role": "Plastic Maintenance User", "desk_access": true },
+  { "role": "Plastic Costing User", "desk_access": true },
+  { "role": "Plastic EHS User", "desk_access": true }
+]

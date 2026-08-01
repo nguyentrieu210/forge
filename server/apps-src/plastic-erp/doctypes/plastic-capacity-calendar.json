@@ -1,0 +1,30 @@
+{
+  "name": "Plastic Capacity Calendar",
+  "module": "Plastic ERP",
+  "autoname": "PCC-.YYYY.-#####",
+  "title_field": "calendar_name",
+  "search_fields": ["calendar_name", "machine"],
+  "sort_field": "valid_from",
+  "sort_order": "DESC",
+  "fields": [
+    { "fieldname": "calendar_name", "label": "Tên lịch năng lực", "fieldtype": "Data", "required": true, "in_list_view": true },
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "in_standard_filter": true },
+    { "fieldname": "branch", "label": "Nhà máy", "fieldtype": "Link", "options": "Branch", "required": true, "in_standard_filter": true },
+    { "fieldname": "machine", "label": "Máy", "fieldtype": "Link", "options": "Plastic Machine", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "shift_type", "label": "Ca", "fieldtype": "Link", "options": "Shift Type" },
+    { "fieldname": "valid_from", "label": "Từ ngày", "fieldtype": "Date", "required": true, "in_list_view": true },
+    { "fieldname": "valid_to", "label": "Đến ngày", "fieldtype": "Date" },
+    { "fieldname": "available_minutes", "label": "Phút khả dụng / ca", "fieldtype": "Int", "required": true, "default": 480 },
+    { "fieldname": "planned_maintenance_minutes", "label": "Bảo trì kế hoạch phút", "fieldtype": "Int", "default": 0 },
+    { "fieldname": "overtime_minutes", "label": "Tăng ca phút", "fieldtype": "Int", "default": 0 },
+    { "fieldname": "efficiency_pct", "label": "Hiệu suất kế hoạch %", "fieldtype": "Float", "default": 100 },
+    { "fieldname": "active", "label": "Đang dùng", "fieldtype": "Check", "default": 1, "in_list_view": true }
+  ],
+  "permissions": [
+    { "role": "Plastic Planner", "read": true, "write": true, "create": true, "report": true, "export": true },
+    { "role": "Plastic Production Manager", "read": true, "write": true, "create": true, "report": true },
+    { "role": "Plastic Maintenance User", "read": true, "report": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}

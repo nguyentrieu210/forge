@@ -1,0 +1,18 @@
+{
+  "name": "Plastic Quality Specification Approval",
+  "document_type": "Plastic Quality Specification",
+  "state_field": "approval_state",
+  "is_active": true,
+  "states": [
+    { "state": "Draft", "docstatus": 0, "allow_edit": "Plastic QC User" },
+    { "state": "Review", "docstatus": 0, "allow_edit": "Plastic QC Manager" },
+    { "state": "Active", "docstatus": 1, "allow_edit": "Plastic QC Manager" },
+    { "state": "Rejected", "docstatus": 2, "allow_edit": "Plastic QC Manager" }
+  ],
+  "transitions": [
+    { "state": "Draft", "action": "Submit for review", "next_state": "Review", "allowed_role": "Plastic QC User" },
+    { "state": "Review", "action": "Approve", "next_state": "Active", "allowed_role": "Plastic QC Manager", "allow_self_approval": false },
+    { "state": "Review", "action": "Reject", "next_state": "Rejected", "allowed_role": "Plastic QC Manager" }
+  ],
+  "revision": 1
+}
