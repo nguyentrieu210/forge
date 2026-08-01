@@ -13,6 +13,7 @@ excluded_files = {manifest_path.name, "PROMOTION_EVIDENCE.json", "BUILD_REPORT.m
 excluded_suffixes = {".log", ".pyc"}
 excluded_secret_prefixes = (".dev.vars", ".env")
 excluded_prefixes = {
+    "apps/gateway-worker/public",
     "docs/spec/source-exact/generated",
     "docs/spec/source-exact/oracle/fixtures",
     "docs/spec/source-exact/oracle/differential",
