@@ -14,27 +14,27 @@ PR: `#141`
 - Sidecar `<brief>.prints.json` nối thêm mẫu in trước schema validation/compile, không ghi đè mẫu gốc.
 - `Đơn bán hàng ALUMDOOR` — Sales Order, 13 cột.
 - `Phiếu giao hàng / lắp đặt ALUMDOOR` — Delivery Note, 11 cột, không in giá.
-- `Phiếu yêu cầu sản xuất ALUMDOOR` — Production Request, 14 cột, một dòng theo bộ/vị trí, có rộng cắt, số lá, mô tơ/cảnh báo, phút dự toán và kho vật tư.
-- `Phiếu cắt nhôm ALUMDOOR` — Cut Order, 13 cột, dùng bundle lô mẹ + bundle đầu thừa để truy vết thật.
-- Cut Order in kho lô mẹ, khổ cây, rộng cắt, số lá, số nhát, kerf, kg tiêu hao/cân thật, đầu thừa và phế; không in giá vốn.
-- QR nội bộ chưa có renderer primitive authoritative nên chưa tạo QR giả.
-- Regression renderer cho Sales Order, Delivery Note, Production Request, Cut Order và sidecar loader.
-- Checkpoint trước Cut Order `692f1a3fc2870b991f4e93d50cf2ceb94d9ea433`: 6/6 workflow PASS, gồm full tests/typecheck/build.
-- Current default khi chuẩn bị Cut Order: `f916d066f9b45b1c3a5238259be9d6953d6cf0f3`; chênh lệch sau merge-base chỉ là release trigger, không đụng server/schema/print.
+- `Phiếu yêu cầu sản xuất ALUMDOOR` — Production Request, 14 cột.
+- `Phiếu cắt nhôm ALUMDOOR` — Cut Order, 13 cột, bundle lô mẹ + bundle đầu thừa, không in giá vốn và không tạo QR giả.
+- `Biên bản bàn giao / nghiệm thu ALUMDOOR` — Delivery Note, mẫu phụ `default: false`, 11 cột, checklist/kết luận/chữ ký tại công trình.
+- Regression renderer cho Sales Order, Delivery Note, Production Request, Cut Order, Acceptance và sidecar loader.
+- Exact-head Cut Order `a291f5870b3820f2b50d7b80e3e2820183ad177d`: 6/6 workflow PASS.
+- Cut Order run IDs: CI `30688745607`, PR Validation `30688745586`, UI `30688745573`, Purchase `30688745587`, Inventory/Manufacturing `30688745588`, Sales `30688745593`.
+- Current default khi bắt đầu Acceptance: `f916d066f9b45b1c3a5238259be9d6953d6cf0f3`; chênh lệch sau merge-base chỉ là release trigger.
 
 ### Tiếp theo trên cùng epic
 
-1. Đưa staging Cut Order vào PR head và khóa 6 workflow trên exact head mới; run IDs ghi trong PR `#141`.
-2. Review HTML preview/PDF bốn mẫu bằng dữ liệu dài; sửa overflow nếu có.
-3. Nếu bốn mẫu đạt visual gate, chốt P0 Print Design và chỉ merge PR khi current default vẫn không conflict.
-4. P1 kế tiếp: `Biên bản bàn giao / nghiệm thu` từ Delivery Note + Sales Order.
-5. Sau đó chuẩn hóa Sales Invoice, Payment Entry và Purchase Receipt theo cùng hợp đồng A4.
+1. Đưa staging Acceptance vào PR head một lần và khóa 6 workflow trên exact head mới.
+2. Review HTML preview/PDF năm mẫu bằng dữ liệu dài; sửa overflow nếu có.
+3. Nếu năm mẫu đạt visual gate, chốt phần vận hành P0/P1 hiện tại và giữ PR mergeable với current default.
+4. Tiếp theo chuẩn hóa `Sales Invoice` A4; không thay hóa đơn điện tử pháp lý.
+5. Sau đó làm `Payment Entry` phiếu thu/chi và chuẩn hóa `Purchase Receipt`.
 6. QR mặt hàng/lô/đầu thừa chỉ làm khi renderer có primitive QR authoritative.
 
 ### Gate trước merge
 
 - `npm run brief:check`: PASS trên exact head.
-- Focused print/Sales tests: PASS, gồm `alumdoor-cut-order-print.test.mjs`.
+- Focused print/Sales tests: PASS, gồm `alumdoor-cut-order-print.test.mjs` và `alumdoor-handover-acceptance-print.test.mjs`.
 - Full tests, typecheck và build: PASS.
 - 6 workflow exact-head: PASS.
 - Preview/PDF dữ liệu dài: PENDING visual review.
