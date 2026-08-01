@@ -187,7 +187,7 @@ jobs:
           tenant_ready=0
           callback_ready=0
           app_ready=0
-          for attempt in $(seq 1 60); do
+          for _ in $(seq 1 60); do
             if curl --fail --silent --show-error http://127.0.0.1:8801/health > /dev/null; then tenant_ready=1; fi
             if curl --fail --silent --show-error http://127.0.0.1:8802/health > /dev/null; then callback_ready=1; fi
             if curl --silent --show-error --output /dev/null http://127.0.0.1:8803/health; then app_ready=1; fi
