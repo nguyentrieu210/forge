@@ -1,0 +1,36 @@
+{
+  "name": "Plastic Material Profile",
+  "module": "Plastic ERP",
+  "autoname": "MATP-.#####",
+  "title_field": "item",
+  "search_fields": ["item", "polymer_family", "grade", "color_code"],
+  "sort_field": "item",
+  "sort_order": "ASC",
+  "fields": [
+    { "fieldname": "item", "label": "Mặt hàng", "fieldtype": "Link", "options": "Item", "required": true, "unique": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "material_kind", "label": "Loại vật liệu", "fieldtype": "Select", "options": "Virgin Resin\nRecycled Resin\nRegrind\nMasterbatch\nAdditive\nFiller\nPigment\nPackaging\nSemi Finished\nFinished Good", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "polymer_family", "label": "Họ polymer", "fieldtype": "Select", "options": "PP\nPE\nHDPE\nLDPE\nLLDPE\nPVC\nABS\nPET\nPA\nPC\nPOM\nPS\nTPE\nTPU\nOther", "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "grade", "label": "Grade", "fieldtype": "Data", "in_list_view": true },
+    { "fieldname": "color_code", "label": "Mã màu", "fieldtype": "Data", "in_list_view": true },
+    { "fieldname": "density", "label": "Tỷ trọng", "fieldtype": "Float" },
+    { "fieldname": "mfi_mfr", "label": "MFI/MFR", "fieldtype": "Float" },
+    { "fieldname": "moisture_limit_pct", "label": "Ẩm tối đa %", "fieldtype": "Float" },
+    { "fieldname": "drying_required", "label": "Bắt buộc sấy", "fieldtype": "Check" },
+    { "fieldname": "drying_temperature_c", "label": "Nhiệt độ sấy °C", "fieldtype": "Float", "mandatory_depends_on": "eval:doc.drying_required == 1" },
+    { "fieldname": "drying_time_minutes", "label": "Thời gian sấy phút", "fieldtype": "Int", "mandatory_depends_on": "eval:doc.drying_required == 1" },
+    { "fieldname": "regrind_allowed_pct", "label": "Hạt nghiền tối đa %", "fieldtype": "Float" },
+    { "fieldname": "shelf_life_days", "label": "Hạn dùng ngày", "fieldtype": "Int" },
+    { "fieldname": "qc_required", "label": "Bắt buộc QC đầu vào", "fieldtype": "Check", "default": 1 },
+    { "fieldname": "coa_required", "label": "Bắt buộc CoA", "fieldtype": "Check" },
+    { "fieldname": "storage_note", "label": "Điều kiện bảo quản", "fieldtype": "Text" },
+    { "fieldname": "active", "label": "Đang dùng", "fieldtype": "Check", "default": 1, "in_list_view": true, "in_standard_filter": true }
+  ],
+  "permissions": [
+    { "role": "Plastic Engineering User", "read": true, "write": true, "create": true, "print": true, "report": true, "export": true },
+    { "role": "Plastic QC User", "read": true, "report": true },
+    { "role": "Plastic QC Manager", "read": true, "write": true, "report": true, "export": true },
+    { "role": "Plastic Warehouse User", "read": true, "report": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "print": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}
