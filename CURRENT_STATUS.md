@@ -2,7 +2,8 @@
 
 Ngày cập nhật: **2026-08-01**.
 
-- PR #154 và hotfix release #155 đã merge vào `main`; protected release run `30703115053` phát hành exact SHA `7f9c629b65b2f2550aec9426cf5e9115ee3db6d0` thành công. Tenant backup/migrate/deploy/smoke PASS; app bindings PASS; gateway health/root 200; HTTP và browser desktop/mobile smoke PASS.
+- Alumdoor production đang chạy exact SHA `b46d322831ebe7b57e29d4363d2daa005bb56e55`. Full production release run `30707135053` và protected metadata installer run `30707517624` đều PASS; Alumdoor Meta `2.1.0` đã cài và xác minh trên tenant `alu`.
+- GitHub `main` hiện tại là `19f949c6aba3541c7d3585ad42f8a8c42ebeea74` (G03 Organization Security, CI run `30707768323` PASS). Commit này đến sau release Alumdoor nêu trên và chưa có production-release evidence trong đợt này.
 
 ## Đã merge — Canonical DocType Meta và Alumdoor completeness
 
@@ -16,15 +17,16 @@ Ngày cập nhật: **2026-08-01**.
 - Alumdoor package nâng lên `2.1.0`. Completeness gate hiện chốt 74 DocType, 969 field, 255 Link, 27 child table, 6 external DocType, 12 report, 3 chart; 74 hiện là lát cắt Alumdoor, không phải giới hạn của nền tảng ERPNext.
 - Meta thiết kế ERP Wave 1 vừa merge cũng đã được chuẩn hóa cùng hợp đồng: 19 DocType, 157 field, 29 external DocType; không còn field thiếu `surface` hoặc `set_once` thiếu cờ Frappe tương ứng.
 - Local gates PASS: full 772 server unit tests, toàn bộ SQL migration tests, server/client typecheck, client lint, 89 nhóm client selfcheck, toàn bộ brief dry-run và `ALUMDOOR_META_COMPLETENESS_PASS`.
-- Chưa cài package `2.1.0` vào tenant production và chưa thay production secrets/DNS/dữ liệu khách hàng trong đợt Meta này.
+- Package `2.1.0` đã cài vào tenant production bằng workflow bảo vệ; không đổi DNS và không dùng dữ liệu khách hàng để smoke.
 
-## Đang thực hiện — protected installer Alumdoor Meta `2.1.0`
+## Hoàn tất — protected installer Alumdoor Meta `2.1.0`
 
 - PR `#157` đã merge tại `8786c5707ac4d225f7a63561219dd629d080584d`; workflow protected và hậu kiểm Quick/Full Form, User Link, chart/fallback/report đã ở `main`.
-- Run `30705986949` đã tạo backup production có checksum, phục hồi thành công cùng backup trên hai D1 drill độc lập và dọn cả hai drill đúng guard.
-- Bước cài dừng trước khi ghi Alumdoor vì tenant cũ thiếu 5 external DocType chuẩn: `Account`, `Company`, `Currency`, `Serial and Batch Bundle`, `Batch`. Package `2.1.0` chưa được cài bởi run thất bại này.
-- Forward-fix trên branch `fix/alumdoor-standard-meta-provision-20260801`: mở explicit System-Manager-only POST qua cookie + CSRF tới đúng `provisionStandardCatalog`, rồi trình cài mới cài Alumdoor. GET bị từ chối và cài app thường không tự phát sinh side effect này.
-- Targeted runtime integration `74/74`, server build và actionlint PASS. Cần PR/CI/merge, full production release runtime xanh, sau đó chạy lại protected installer trên exact main mới.
+- Run đầu `30705986949` đã PASS backup/checksum, hai restore drill và cleanup nhưng dừng trước khi ghi Alumdoor vì tenant cũ thiếu standard DocType. Forward-fix PR `#158` thêm explicit System-Manager-only POST qua cookie + CSRF; PR `#159` sửa actionlint; PR `#160` đồng bộ release manifest.
+- Full production release run `30707135053` khóa exact SHA `b46d322831ebe7b57e29d4363d2daa005bb56e55` và PASS. Tenant run `30707301344` → Worker version `d7d5b998-6c64-414f-952e-5224fdab3908`; app run `30707359325` → version `0e11508a-713f-42a5-b8c3-a104f133c8fc`; gateway run `30707397711` → version `ef3b4a9a-38f2-4534-86b8-1e6bda2d3ea1`. Evidence tổng hợp artifact `8820777029`.
+- Protected installer run `30707517624` PASS: backup artifact `8820790995`, SHA-256 `30c3f4b997de2e3fafbdd323eaa837c3c497b0b1b4919edca1d327f710b99bf4`; cùng backup khôi phục thành công hai lần vào D1 cô lập; guarded cleanup PASS; evidence artifact `8820857133`.
+- Installer cấp 63 standard DocType, 4 print format và 18 role, sau đó nâng Alumdoor lên `2.1.0` với 74 DocType, 1 workflow, 57 fixture. Package completeness: 969 field, 255 Link, 12 report, 3 chart, 77 nav; read-only conformance Quick/Full Form, User Link, context dimension, health 200 và guest boot 403 đều PASS.
+- Hai GitHub Environment secret dùng tạm cho installer đã xóa ngay sau run thành công; production environment chỉ còn `CLOUDFLARE_API_TOKEN`.
 
 ## Active — Organization, HRMS và VN Accounting
 
@@ -39,8 +41,8 @@ Ngày cập nhật: **2026-08-01**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `main`.
-- Current default head trước khi đồng bộ epic: `9e0a9a5634afea5ee86fe71ec69e720a995c7a61`.
-- Active epic branch: `feat/alumdoor-pwa-real-brand-assets` (PR `#150`).
+- Current default head: `19f949c6aba3541c7d3585ad42f8a8c42ebeea74`.
+- Current code-only epic trên `main`: G03 Organization Security tại `19f949c6`; production vẫn ở Alumdoor release SHA `b46d3228`.
 - GitHub là nguồn sự thật cho current branch head, CI, PR và release evidence.
 
 ## Đã hoàn tất trên default
@@ -89,11 +91,11 @@ Ngày cập nhật: **2026-08-01**.
 - PR `#148` merge SHA `d8997dc6ea2231c5d546b24cf89b9cc14b456ff5` đã kích hoạt luồng Gateway production cho landing.
 - Ops snapshot PR `#149` merge SHA `f916d066f9b45b1c3a5238259be9d6953d6cf0f3`.
 
-## Active — Alumdoor PWA + official brand/media
+## Đã hoàn tất — Alumdoor PWA + official brand/media
 
-Branch: `feat/alumdoor-pwa-real-brand-assets`; PR `#150`.
+PR `#150` đã merge; chức năng có trong exact production SHA `b46d322831ebe7b57e29d4363d2daa005bb56e55`.
 
-Đã triển khai trên branch, đang chờ exact-head CI/PR:
+Đã có trên production:
 
 - `stage-client-bundle.mjs` stage cả runtime và `client/apps/kho/dist-mobile` vào Gateway `public/mobile/warehouse`.
 - `--check` bắt buộc có mobile `index.html`, manifest và service worker.
@@ -108,14 +110,10 @@ Branch: `feat/alumdoor-pwa-real-brand-assets`; PR `#150`.
 - Giá và link nổi bật đã đồng bộ theo website tại thời điểm 2026-08-01: VIP-ST700, VIP-ST500, ALVIP50, AL50 và Alumroll.
 - App kho đổi toàn bộ nhãn `Forge Kho` còn sót sang `Alumdoor Kho`, dùng palette cam `#f45b24` và logo hiện hành.
 - Local validation: full `pnpm test` PASS; client lint/typecheck/build PASS; Playwright UI desktop/tablet/mobile và warehouse Pixel 7/compact phone `17/17` PASS.
-- Chưa merge và chưa deploy thay đổi của epic này tại thời điểm cập nhật file.
+- Full production release run `30707135053` xác nhận Gateway/UI, HTTP smoke và browser desktop/mobile đều PASS.
 
-## Chưa hoàn tất / cần evidence
+## Chưa hoàn tất / cần evidence tiếp theo
 
-- Exact-head full CI của branch active.
-- Merge PR feature.
-- Gateway production deploy exact merge SHA và Cloudflare Worker version ID.
-- Production smoke `alu.kairo.vn`, `/mobile/warehouse/`, manifest, icon và service worker.
 - Authenticated backend lifecycle riêng cho bốn phiếu kho mobile trên production vẫn chưa được chạy; không mutate dữ liệu khách hàng chỉ để smoke giao diện.
 ## Hoàn thiện quy trình 25.7 trên `main`
 

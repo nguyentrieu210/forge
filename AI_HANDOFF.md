@@ -6,8 +6,8 @@ Ngày cập nhật: **2026-08-01**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `main`; vẫn phải kiểm tra lại bằng GitHub trước khi làm, không suy từ tên branch local.
-- Current default head: `8786c5707ac4d225f7a63561219dd629d080584d`.
-- PR UI/PWA `#150`, PR Meta `#154` và hotfix release `#155` đã merge sau khi toàn bộ required checks xanh. Protected release run `30703115053` đã phát hành exact default head và PASS tenant/app/gateway cùng HTTP/browser smoke.
+- Current default head: `19f949c6aba3541c7d3585ad42f8a8c42ebeea74` (G03 Organization Security; CI run `30707768323` PASS, chưa có production-release evidence trong đợt Alumdoor Meta).
+- Alumdoor production đang chạy exact SHA `b46d322831ebe7b57e29d4363d2daa005bb56e55`; full production release run `30707135053` PASS tenant/app/gateway và HTTP/browser smoke.
 - Đọc theo thứ tự: `CURRENT_STATUS.md` → `NEXT_TASKS.md` → `DELIVERY_POLICY.md`.
 - GitHub là nguồn sự thật cho code, CI, merge và release evidence.
 
@@ -21,13 +21,14 @@ Ngày cập nhật: **2026-08-01**.
 - Biểu đồ không còn tự suy từ workflow; chỉ chart khai trong manifest, có report, quyền, drill-down và empty fallback mới được render.
 - Canonical skill `C:\AppWeb\.claude\skills\app-factory` đã được tạo tại `35be2bf` và siết đồng bộ runtime tại `9cd5774`.
 
-## Protected metadata installer — forward-fix đang chạy
+## Protected metadata installer — hoàn tất production
 
 - PR `#157` đã merge tại `8786c5707ac4d225f7a63561219dd629d080584d`.
-- Run `30705986949` PASS backup/checksum, hai restore drill độc lập và guarded cleanup; install dừng trước khi ghi vì tenant `alu` thiếu `Account`, `Company`, `Currency`, `Serial and Batch Bundle`, `Batch`.
-- Branch `fix/alumdoor-standard-meta-provision-20260801` mở explicit System-Manager-only POST tới `provisionStandardCatalog`; cookie, CSRF và GET guard đều được giữ nguyên.
-- Targeted runtime integration `74/74`, server build và actionlint PASS. Sau CI/merge phải chờ full runtime release exact SHA xanh rồi dispatch lại protected installer.
-- Chưa được kết luận `2.1.0` đã ở production cho tới khi run mới terminal xanh và smoke form/link/chart/report PASS.
+- Run đầu `30705986949` PASS backup/checksum, hai restore drill và cleanup nhưng dừng trước khi ghi vì tenant thiếu standard DocType. Forward-fix PR `#158`, actionlint fix `#159` và release manifest `#160` đã merge.
+- Full release run `30707135053` PASS tại exact SHA `b46d322831ebe7b57e29d4363d2daa005bb56e55`: tenant Worker version `d7d5b998-6c64-414f-952e-5224fdab3908`, app Worker version `0e11508a-713f-42a5-b8c3-a104f133c8fc`, gateway version `ef3b4a9a-38f2-4534-86b8-1e6bda2d3ea1`, evidence artifact `8820777029`.
+- Protected installer run `30707517624` PASS: backup artifact `8820790995`, SHA-256 `30c3f4b997de2e3fafbdd323eaa837c3c497b0b1b4919edca1d327f710b99bf4`, hai restore drill và guarded cleanup PASS, install evidence artifact `8820857133`.
+- Alumdoor Meta `2.1.0` đã cài: 74 DocType, 1 workflow, 57 fixture; completeness 969 field, 255 Link, 12 report, 3 chart, 77 nav. Quick/expanded form, User Link, context dimension, health 200 và guest boot 403 PASS.
+- Hai GitHub Environment secret tạm cho installer đã xóa; production environment chỉ còn `CLOUDFLARE_API_TOKEN`.
 
 ## PR cleanup
 
@@ -83,14 +84,14 @@ Còn thiếu hoặc chưa chứng minh:
 
 ## Việc tiếp theo
 
-Bắt đầu `P1 — Finance clean rebuild` từ exact current default mới nhất.
+Bắt đầu `P0 — authenticated stock lifecycle` từ exact current default mới nhất, nhưng không phát hành G03 kèm theo một cách ngầm định.
 
-- Dùng closed PR `#15` và backup `#40` chỉ để tham khảo từng file.
-- Phạm vi bắt buộc: due date, AR/AP aging, Payment Entry partial/unallocated, Payment Allocation, Party Statement, Debt Summary, Advance Balance, UI/report navigation và permission.
-- Migration append-only, dry-run, checksum, rollback và production-shaped evidence.
-- Merge chỉ khi full CI và Finance-specific gates xanh trên exact head.
+- Dùng QA account riêng, cookie + CSRF thật và dữ liệu thử có cleanup.
+- Chạy nhập kho, xuất kho, chuyển kho và kiểm kho trên desktop/mobile; khóa permission và failure path.
+- Đối chiếu ledger/report/QR và xóa toàn bộ chứng từ QA theo lineage.
+- Commit G03 `19f949c6` trên `main` chưa có production-release evidence; nếu phát hành phải chạy backup/migration/rollback/evidence riêng.
 
-Sau Finance: Daily ledger → Warranty/Capacity → end-to-end acceptance.
+Sau stock lifecycle: Daily ledger → Warranty/Capacity → end-to-end acceptance.
 
 ## Release boundary
 
