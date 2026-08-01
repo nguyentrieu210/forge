@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "noEmit": false,
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+    "types": ["vite/client", "node"]
+  },
+  "references": [
+    { "path": "../../packages/core" },
+    { "path": "../../packages/adapter-frappe" },
+    { "path": "../../packages/ui" },
+    { "path": "../../packages/shell" }
+  ],
+  "include": ["src/**/*"]
+}
