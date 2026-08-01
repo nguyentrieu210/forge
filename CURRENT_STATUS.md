@@ -6,7 +6,7 @@ Ngày cập nhật: **2026-08-01**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Current default head: `f6420c70823b969a28b43e3f93004ebd52546adc`.
+- Current default head: `8e9882a6143f4cf669724f654ec1b59949b90138`.
 - GitHub là nguồn sự thật cho code, CI, PR và release evidence.
 
 ## Đã hoàn tất trên default
@@ -30,43 +30,37 @@ Ngày cập nhật: **2026-08-01**.
 
 - PR `#140` merge SHA: `f6420c70823b969a28b43e3f93004ebd52546adc`.
 - Sidebar phân hệ, tab nghiệp vụ, Danh mục tập trung, Meta workspace, report builder và 13 bảng màu đã có trên default.
-- Exact-head CI, build/typecheck và Playwright desktop + Pixel 7 + iPhone-size viewport đã PASS trước merge.
 
-## Forge branding + account + warehouse PWA — ACTIVE
+### Forge branding, account và warehouse PWA
 
-- Branch: `feat/mobile-pwa-brand-account-warehouse`.
-- PR: `#142`.
-- Base: `f6420c70823b969a28b43e3f93004ebd52546adc`.
-- Implementation head trước status docs: `21534cfc9bdb76fdd9c1dca105f6d478c8ac28dc`.
-
-### Đã triển khai
-
+- PR `#142` merge SHA: `8e9882a6143f4cf669724f654ec1b59949b90138`.
+- Exact validated head: `24621f221fad2de950d0f58cc39078e43c206f51`.
 - Logo chuẩn tím → hồng, chữ A trắng và ba nét cánh ngang dùng chung cho landing, login, shell, favicon và PWA.
-- Landing/login bố cục hai cột cân đối; mobile ưu tiên form đăng nhập.
+- Landing/login Forge dùng bố cục hai cột; mobile ưu tiên form đăng nhập.
+- Alumdoor vẫn giữ white-label landing, palette cam-xám, title và browser contract riêng.
 - Account menu sau login có avatar, đổi mật khẩu và đăng xuất các thiết bị khác.
-- Bundle app kho điện thoại độc lập tại base `/mobile/warehouse/`; không co giao diện desktop thành mobile.
+- App kho điện thoại là bundle riêng tại base `/mobile/warehouse/`, không co giao diện desktop thành mobile.
 - Top nav, bottom nav, nút nghiệp vụ lớn và form touch-first.
 - Nghiệp vụ: nhập kho, xuất kho, chuyển kho, kiểm kho và tra tồn.
-- PWA manifest, icon thường, icon maskable, shortcut và service worker.
+- PWA có manifest standalone, icon thường, icon maskable, shortcut, service worker và offline queue.
 - Service worker không cache API/auth response.
-- Offline queue cho thao tác kho khi mất mạng.
 - `apps/kho` build desktop và mobile thành hai output riêng; mobile output ở `client/apps/kho/dist-mobile`.
-- Playwright gate dùng bundle build thật và kiểm hai kích thước điện thoại.
 
-### Validation hiện tại
+### Validation PR `#142`
 
-- Frozen install: PASS trên các head trước.
+- Frozen install: PASS.
 - Frontend lint: PASS.
-- TypeScript mobile: PASS.
-- Vite mobile bundle: PASS trên head `c5c9714e039b6f8bbfd599b411fdb72b970be13c`.
-- Full exact-head CI cho logo chuẩn và Playwright mobile mới: đang chạy sau status docs.
+- Test, typecheck và full build: PASS.
+- PR Validation, Sales, Purchase, Inventory và CI: PASS.
+- MetaForge workspace browser QA: PASS.
+- Alumdoor landing/login browser QA trên desktop, tablet và mobile: PASS.
+- Warehouse PWA browser QA trên Pixel 7 và viewport `390 × 844`: PASS.
 
-### Chưa hoàn tất
+## Chưa release production
 
-- Chưa merge PR `#142`.
-- Chưa có authenticated backend lifecycle riêng cho bốn phiếu kho mobile.
-- Chưa map/deploy `dist-mobile` vào production route `/mobile/warehouse/`.
-- Chưa deploy Cloudflare và chưa thay production secrets/DNS.
+- Chưa map `client/apps/kho/dist-mobile` vào production route `/mobile/warehouse/`.
+- Chưa chạy authenticated backend lifecycle riêng cho bốn phiếu kho mobile trên môi trường release.
+- Chưa deploy Cloudflare và chưa sửa production secrets/DNS.
 
 ## Business backlog còn lại
 
