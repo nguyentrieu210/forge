@@ -1,0 +1,52 @@
+{
+  "name": "Plastic Production Run",
+  "module": "Plastic ERP",
+  "is_submittable": true,
+  "autoname": "PRUN-.YYYY.-#####",
+  "title_field": "work_order",
+  "search_fields": ["work_order", "machine", "tool", "output_batch"],
+  "sort_field": "planned_start",
+  "sort_order": "DESC",
+  "track_seen": true,
+  "fields": [
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "in_standard_filter": true },
+    { "fieldname": "branch", "label": "Nhà máy", "fieldtype": "Link", "options": "Branch", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "work_order", "label": "Work Order", "fieldtype": "Link", "options": "Work Order", "required": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "recipe_policy", "label": "Recipe Policy", "fieldtype": "Link", "options": "Plastic Recipe Policy", "required": true },
+    { "fieldname": "process_profile", "label": "Công nghệ", "fieldtype": "Link", "options": "Plastic Process Profile", "required": true, "in_list_view": true },
+    { "fieldname": "machine", "label": "Máy", "fieldtype": "Link", "options": "Plastic Machine", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "tool", "label": "Khuôn / tool", "fieldtype": "Link", "options": "Plastic Tool", "in_list_view": true },
+    { "fieldname": "shift_type", "label": "Ca", "fieldtype": "Link", "options": "Shift Type", "in_list_view": true },
+    { "fieldname": "operator", "label": "Vận hành chính", "fieldtype": "Link", "options": "Employee", "in_list_view": true },
+    { "fieldname": "planned_start", "label": "Bắt đầu kế hoạch", "fieldtype": "Datetime", "required": true, "in_list_view": true },
+    { "fieldname": "planned_end", "label": "Kết thúc kế hoạch", "fieldtype": "Datetime", "required": true },
+    { "fieldname": "started_at", "label": "Bắt đầu thực tế", "fieldtype": "Datetime" },
+    { "fieldname": "ended_at", "label": "Kết thúc thực tế", "fieldtype": "Datetime" },
+    { "fieldname": "planned_qty", "label": "SL kế hoạch", "fieldtype": "Float", "required": true },
+    { "fieldname": "good_qty", "label": "SL đạt", "fieldtype": "Float", "default": 0, "in_list_view": true },
+    { "fieldname": "scrap_qty", "label": "SL phế", "fieldtype": "Float", "default": 0 },
+    { "fieldname": "regrind_qty", "label": "SL thu hồi nghiền", "fieldtype": "Float", "default": 0 },
+    { "fieldname": "actual_cycle_seconds", "label": "Cycle thực tế giây", "fieldtype": "Float" },
+    { "fieldname": "shot_count", "label": "Số shot", "fieldtype": "Int" },
+    { "fieldname": "downtime_minutes", "label": "Downtime phút", "fieldtype": "Int", "default": 0 },
+    { "fieldname": "manufacture_stock_entry", "label": "Stock Entry Manufacture", "fieldtype": "Link", "options": "Stock Entry" },
+    { "fieldname": "output_batch", "label": "Lô thành phẩm", "fieldtype": "Link", "options": "Batch" },
+    { "fieldname": "run_status", "label": "Trạng thái chạy", "fieldtype": "Select", "options": "Planned\nRunning\nPaused\nCompleted", "default": "Planned", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "pause_reason", "label": "Lý do dừng", "fieldtype": "Data", "mandatory_depends_on": "eval:doc.run_status == 'Paused'" },
+    { "fieldname": "notes", "label": "Ghi chú", "fieldtype": "Text" }
+  ],
+  "viewPolicy": {
+    "kanban": { "enabled": true, "stageField": "run_status", "reasonRequiredOn": ["backward", "cancel"] },
+    "calendar": { "enabled": true, "startField": "planned_start", "endField": "planned_end" },
+    "mobile": { "compactFields": ["work_order", "machine", "tool", "run_status", "good_qty", "scrap_qty"] }
+  },
+  "permissions": [
+    { "role": "Plastic Operator", "read": true, "write": true, "create": true, "submit": true, "print": true },
+    { "role": "Plastic Production Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "print": true, "report": true, "export": true },
+    { "role": "Plastic Planner", "read": true, "write": true, "create": true, "report": true },
+    { "role": "Plastic QC User", "read": true, "report": true },
+    { "role": "Plastic Warehouse User", "read": true, "report": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "print": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}
