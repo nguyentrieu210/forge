@@ -156,6 +156,30 @@ export interface AppReport {
   limit: number;
 }
 
+export interface AppExternalDocType {
+  name: string;
+  kind: "transaction" | "master" | "child_table" | "single" | "tree" | "virtual" | "system";
+  /** Owning platform/app package, for install-time dependency diagnostics. */
+  app: string;
+  version?: string;
+}
+
+/**
+ * A real overview chart backed by one declared, permission-checked app report.
+ * No chart is inferred from a workflow or from the presence of a numeric field.
+ */
+export interface AppChart {
+  name: string;
+  label: string;
+  source: string;
+  type: "Line" | "Bar" | "Percentage" | "Pie" | "Donut" | "Heatmap";
+  dimensions: string[];
+  measures: string[];
+  roles: string[];
+  drilldown: { route: string };
+  emptyFallback: "table" | "message";
+}
+
 /**
  * One input of an action screen. A DocField in everything but name, so the generic client
  * renders it with the SAME controls a form uses — Link autocompletes, thousands separators,
@@ -331,6 +355,8 @@ export interface AppManifest {
   id: string;
   name: string;
   version: string;
+  /** Versioned opt-in to the canonical DocType/field/view contract. */
+  metaContractVersion?: 1;
   /** Minimum Forge platform version required by this package. */
   platform_requires?: string;
   requires: AppDependency[];
@@ -378,6 +404,10 @@ export interface AppManifest {
    * already allow it to read.
    */
   reports: AppReport[];
+  /** Platform-owned DocTypes this package links to but deliberately does not redefine. */
+  externalDocTypes: AppExternalDocType[];
+  /** Explicit charts shown on Overview. Empty means no charts, never auto-generated charts. */
+  charts: AppChart[];
   /**
    * Form-driven operations backed by this app's own Worker methods.
    *
@@ -416,6 +446,9 @@ export function parseAppManifest(value: unknown): AppManifest {
   if (!ID_PATTERN.test(id)) throw errors.validation("An app id must be lowercase letters, digits and hyphens");
   const version = text(input.version, "version", 32);
   if (!VERSION_PATTERN.test(version)) throw errors.validation("An app version must be semantic (1.2.3)");
+  const metaContractVersion = input.metaContractVersion === undefined
+    ? undefined
+    : integer(input.metaContractVersion, "metaContractVersion", 1, 1) as 1;
   const platformRequires = input.platform_requires === undefined
     ? undefined
     : text(input.platform_requires, "platform_requires", 32);
@@ -499,6 +532,15 @@ export function parseAppManifest(value: unknown): AppManifest {
   const reports = array(input.reports ?? [], "reports").map((entry, index) => parseReport(entry, index, doctypeNames));
   assertUnique(reports.map((report) => report.name), "report name");
 
+  const externalDocTypes = array(input.externalDocTypes ?? [], "externalDocTypes").map((entry, index) => parseExternalDocType(entry, index));
+  assertUnique(externalDocTypes.map((entry) => entry.name), "external DocType");
+  const externalNames = new Set(externalDocTypes.map((entry) => entry.name));
+  if (metaContractVersion === 1) validateDocTypeReferences(doctypes, doctypeNames, externalNames);
+
+  const charts = array(input.charts ?? [], "charts").map((entry, index) => parseChart(entry, index, reports, nav, roleNames));
+  if (charts.length > 3) throw errors.validation("An app overview may declare at most 3 charts");
+  assertUnique(charts.map((chart) => chart.name), "chart name");
+
   // Same reasoning as validators: an action names methods, and a method with no worker to
   // serve it is a screen whose only button answers 404.
   if (actions.length && !worker) throw errors.validation(`${id} declares actions but no worker to run them`);
@@ -513,6 +555,7 @@ export function parseAppManifest(value: unknown): AppManifest {
     id,
     name: text(input.name, "name", 160),
     version,
+    ...(metaContractVersion ? { metaContractVersion } : {}),
     ...(platformRequires ? { platform_requires: platformRequires } : {}),
     requires,
     doctypes,
@@ -526,10 +569,111 @@ export function parseAppManifest(value: unknown): AppManifest {
     hooks,
     validators,
     reports,
+    externalDocTypes,
+    charts,
     actions,
     screens,
     ...(worker === undefined ? {} : { worker }),
     ...(client === undefined ? {} : { client }),
+  };
+}
+
+const EXTERNAL_DOCTYPE_KINDS = new Set<AppExternalDocType["kind"]>(["transaction", "master", "child_table", "single", "tree", "virtual", "system"]);
+const CHART_TYPES = new Set<AppChart["type"]>(["Line", "Bar", "Percentage", "Pie", "Donut", "Heatmap"]);
+
+function parseExternalDocType(value: JsonValue, index: number): AppExternalDocType {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw errors.validation(`externalDocTypes[${index}] must be an object`);
+  const entry = value as JsonObject;
+  const kind = text(entry.kind, `externalDocTypes[${index}].kind`, 32) as AppExternalDocType["kind"];
+  if (!EXTERNAL_DOCTYPE_KINDS.has(kind)) throw errors.validation(`externalDocTypes[${index}].kind is not recognised: ${kind}`);
+  const version = entry.version === undefined ? undefined : text(entry.version, `externalDocTypes[${index}].version`, 32);
+  return {
+    name: text(entry.name, `externalDocTypes[${index}].name`, 160),
+    kind,
+    app: text(entry.app, `externalDocTypes[${index}].app`, 80),
+    ...(version ? { version } : {}),
+  };
+}
+
+function validateDocTypeReferences(
+  doctypes: DocTypeMeta[],
+  ownNames: ReadonlySet<string>,
+  externalNames: ReadonlySet<string>,
+): void {
+  const byName = new Map(doctypes.map((meta) => [meta.name, meta]));
+  for (const meta of doctypes) {
+    if (!meta.kind) throw errors.validation(`${meta.name} must declare kind when externalDocTypes enables the DocType Meta contract`);
+    if (!meta.viewPolicy) throw errors.validation(`${meta.name} must declare viewPolicy when externalDocTypes enables the DocType Meta contract`);
+    for (const field of meta.fields) {
+      if ((field.fieldtype === "Table" || field.fieldtype === "Table MultiSelect") && field.options) {
+        const child = byName.get(field.options);
+        if (!child || child.kind !== "child_table" || !child.is_child) {
+          throw errors.validation(`${meta.name}.${field.fieldname} must target an owned child_table DocType; got ${field.options}`);
+        }
+      }
+      if (field.fieldtype === "Link" && field.options && !ownNames.has(field.options) && !externalNames.has(field.options)) {
+        throw errors.validation(`${meta.name}.${field.fieldname} links to undeclared external DocType ${field.options}`);
+      }
+      if (!field.valueSource || !field.editMode || !field.surface) {
+        throw errors.validation(`${meta.name}.${field.fieldname} must declare valueSource, editMode and surface`);
+      }
+      if ((field.valueSource === "system" || field.valueSource === "workflow" || field.valueSource === "formula") && !field.serverEnforced) {
+        throw errors.validation(`${meta.name}.${field.fieldname} is ${field.valueSource}-owned and must be serverEnforced`);
+      }
+      if (field.editMode === "hidden" && !field.serverEnforced) {
+        throw errors.validation(`${meta.name}.${field.fieldname} is hidden and must be serverEnforced`);
+      }
+    }
+  }
+}
+
+function parseChart(
+  value: JsonValue,
+  index: number,
+  reports: AppReport[],
+  nav: AppNavItem[],
+  roleNames: ReadonlySet<string>,
+): AppChart {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw errors.validation(`charts[${index}] must be an object`);
+  const entry = value as JsonObject;
+  const source = text(entry.source, `charts[${index}].source`, 120);
+  const report = reports.find((candidate) => candidate.name === source);
+  if (!report) throw errors.validation(`charts[${index}].source must name a declared report: ${source}`);
+  const type = text(entry.type, `charts[${index}].type`, 24) as AppChart["type"];
+  if (!CHART_TYPES.has(type)) throw errors.validation(`charts[${index}].type is not recognised: ${type}`);
+  const dimensions = array(entry.dimensions, `charts[${index}].dimensions`).map((item, position) => text(item, `charts[${index}].dimensions[${position}]`, 120));
+  const measures = array(entry.measures, `charts[${index}].measures`).map((item, position) => text(item, `charts[${index}].measures[${position}]`, 120));
+  if (dimensions.length !== 1) throw errors.validation(`charts[${index}] needs exactly one dimension`);
+  if (measures.length < 1 || measures.length > 3) throw errors.validation(`charts[${index}] needs 1 to 3 measures`);
+  assertUnique([...dimensions, ...measures], `charts[${index}] field`);
+  if (report.group_by !== dimensions[0]) throw errors.validation(`charts[${index}] dimension must match report group_by (${report.group_by ?? "none"})`);
+  const columns = new Map(report.columns.map((column) => [column.field, column]));
+  if (!columns.has(dimensions[0]!)) throw errors.validation(`charts[${index}] dimension is not a report column: ${dimensions[0]}`);
+  for (const measure of measures) {
+    const column = columns.get(measure);
+    if (!column?.aggregate) throw errors.validation(`charts[${index}] measure must be an aggregated report column: ${measure}`);
+  }
+  const roles = array(entry.roles, `charts[${index}].roles`).map((item, position) => {
+    const role = text(item, `charts[${index}].roles[${position}]`, 120);
+    if (!roleNames.has(role) && !PLATFORM_ROLES.has(role)) throw errors.validation(`charts[${index}] names undeclared role ${role}`);
+    return role;
+  });
+  if (!roles.length) throw errors.validation(`charts[${index}] needs at least one role`);
+  if (!entry.drilldown || typeof entry.drilldown !== "object" || Array.isArray(entry.drilldown)) throw errors.validation(`charts[${index}].drilldown must be an object`);
+  const route = text((entry.drilldown as JsonObject).route, `charts[${index}].drilldown.route`, 320);
+  if (!navReaches(route, nav)) throw errors.validation(`charts[${index}].drilldown.route is not reachable from nav: ${route}`);
+  const emptyFallback = text(entry.emptyFallback ?? "table", `charts[${index}].emptyFallback`, 16);
+  if (emptyFallback !== "table" && emptyFallback !== "message") throw errors.validation(`charts[${index}].emptyFallback must be table or message`);
+  return {
+    name: text(entry.name, `charts[${index}].name`, 120),
+    label: text(entry.label ?? entry.name, `charts[${index}].label`, 160),
+    source,
+    type,
+    dimensions,
+    measures,
+    roles,
+    drilldown: { route },
+    emptyFallback,
   };
 }
 

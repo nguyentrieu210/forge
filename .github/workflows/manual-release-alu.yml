@@ -15,7 +15,7 @@ on:
       - "server/RELEASE_CONTENT_MANIFEST.json"
   push:
     branches:
-      - hotfix/alumdoor-print-list-delete
+      - main
     paths:
       - ".github/workflows/manual-release-alu.yml"
       - ".github/workflows/cloudflare-preview-qa.yml"
@@ -49,7 +49,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
-      TARGET_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.event_name == 'workflow_dispatch' && inputs.target_sha || github.event_name == 'push' && contains(github.event.head_commit.message, '[release-target-self]') && github.sha || '1d05ed97836aa7bb753f8aa50a56991201a8d10a' }}
+      TARGET_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.event_name == 'workflow_dispatch' && inputs.target_sha || github.sha }}
       GATE_DIR: /tmp/alu-full-release-gate
 
     outputs:
@@ -159,7 +159,7 @@ jobs:
     environment: production
     env:
       TARGET_SHA: ${{ needs.gate.outputs.target_sha }}
-      DEFAULT_BRANCH: hotfix/alumdoor-print-list-delete
+      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
       BASE_URL: https://alu.kairo.vn
       TENANT_WORKER: cloudforge-tenant-alu
       APP_WORKER: cloudforge-app-alumdoor

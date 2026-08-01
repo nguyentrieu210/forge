@@ -27,6 +27,7 @@ import { compileBrief, BriefError } from "./lib/compile-brief.mjs";
 import { readAppSource } from "./lib/read-app-source.mjs";
 import { readBriefSource } from "./lib/read-brief-source.mjs";
 import { validateBriefSchema } from "./lib/validate-brief-schema.mjs";
+import { verifyInstalledApp } from "./lib/verify-installed-app.mjs";
 import { fail, serverRoot } from "./wrangler-cli.mjs";
 import { parseAppManifest } from "../dist/packages/app-registry/src/index.js";
 
@@ -38,12 +39,13 @@ const argOf = (name, fallback) => {
 
 const briefPath = args.find((value) => !value.startsWith("--") && !args[args.indexOf(value) - 1]?.startsWith("--"));
 const dryRun = args.includes("--dry-run");
+const provisionStandard = args.includes("--provision-standard");
 const origin = (argOf("origin", process.env.FORGE_ORIGIN) ?? "").replace(/\/$/, "");
 const adminUser = argOf("admin", process.env.FORGE_ADMIN_USER);
 const adminPassword = process.env.FORGE_ADMIN_PASSWORD;
 const outPath = argOf("out");
 
-if (!briefPath) fail("usage: node scripts/forge-app.mjs <brief.json|app-source-dir> [--origin https://…] [--admin user] [--dry-run] [--out package.json]");
+if (!briefPath) fail("usage: node scripts/forge-app.mjs <brief.json|app-source-dir> [--origin https://…] [--admin user] [--provision-standard] [--dry-run] [--out package.json]");
 
 // ---- 1. compile ------------------------------------------------------------
 /**
@@ -169,19 +171,42 @@ async function call(method, body) {
   return parsed?.message ?? parsed;
 }
 
-process.stdout.write(`3 installing  ${origin} as ${adminUser} … `);
-let result;
+process.stdout.write(`3 authenticating ${origin} as ${adminUser} … `);
 try {
   await call("login", { usr: adminUser, pwd: adminPassword });
+} catch (error) {
+  console.log("FAILED");
+  fail(String(error.message));
+}
+console.log("ok");
+
+let step = 4;
+if (provisionStandard) {
+  process.stdout.write(`${step} provisioning standard metadata … `);
+  let provisioned;
+  try {
+    provisioned = await call("forge.apps.provision_standard_metadata", {});
+  } catch (error) {
+    console.log("FAILED");
+    fail(String(error.message));
+  }
+  console.log(`ok (${provisioned.doctypes} doctypes, ${provisioned.print_formats} print formats, ${provisioned.roles} roles added)`);
+  step += 1;
+}
+
+process.stdout.write(`${step} installing  ${manifest.id}@${manifest.version} … `);
+let result;
+try {
   result = await call("forge.apps.install", { app: manifest });
 } catch (error) {
   console.log("FAILED");
   fail(String(error.message));
 }
 console.log(`${result.outcome} (${result.doctypes} doctypes, ${result.workflows} workflows, ${result.fixtures} fixtures)`);
+step += 1;
 
 // ---- 4. verify the client can boot ----------------------------------------
-process.stdout.write(`4 verifying   client manifest resolves … `);
+process.stdout.write(`${step} verifying   client manifest resolves … `);
 let clientManifest;
 try {
   clientManifest = await call("metaforge.api.get_app_manifest", { app: manifest.id });
@@ -200,6 +225,18 @@ if (!clientManifest.nav?.length) {
   fail(`installed, but ${adminUser} sees no nav entries — check the permissions map in the brief`);
 }
 console.log(`ok (${clientManifest.nav.length} nav entries, home ${homeRoute})`);
+step += 1;
+
+process.stdout.write(`${step} verifying   installed form/link/chart contract … `);
+let installedContract;
+try {
+  installedContract = await verifyInstalledApp({ manifest, clientManifest, call, adminUser });
+} catch (error) {
+  console.log("FAILED");
+  fail(`installed, but the metadata contract does not resolve: ${error.message}`);
+}
+console.log(`ok (form ${installedContract.form ?? "n/a"}, User Link ${installedContract.userLink ?? "n/a"}, ${installedContract.charts} charts, ${installedContract.reports} reports)`);
+step += 1;
 
 /**
  * Every REQUIRED context dimension must actually have options.
@@ -212,7 +249,7 @@ console.log(`ok (${clientManifest.nav.length} nav entries, home ${homeRoute})`);
  */
 const declared = clientManifest.businessContext?.dimensions ?? [];
 if (declared.length) {
-  process.stdout.write(`5 verifying   context dimensions have data … `);
+  process.stdout.write(`${step} verifying   context dimensions have data … `);
   let context;
   try {
     context = await call("metaforge.api.get_business_context", { app_id: manifest.id, dimensions: JSON.stringify(declared) });

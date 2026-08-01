@@ -3,7 +3,7 @@ name: CI
 on:
   push:
     branches:
-      - hotfix/alumdoor-print-list-delete
+      - main
   pull_request:
     branches:
       - main

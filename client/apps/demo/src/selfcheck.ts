@@ -37,6 +37,7 @@ import {
   navGroups,
   resolveNavPath,
   mergeLocale,
+  applyFormSurface,
   type AppManifest,
   type DocField,
   type DocTypeMeta,
@@ -71,6 +72,22 @@ check("theme: 13 bảng màu, gồm Sakura và 4 gradient", () => {
 
 check("43 authorable fieldtypes", () => {
   assert.equal(AUTHORABLE_FIELDTYPES.length, 43);
+});
+
+check("Meta surface: quick form chỉ hiện ô nhanh nhưng vẫn giữ field bắt buộc", () => {
+  const meta = {
+    name: "Purchase Order",
+    fields: [
+      { fieldname: "supplier", fieldtype: "Link", options: "Supplier", reqd: 1, surface: "quick" },
+      { fieldname: "note", fieldtype: "Small Text", surface: "expanded" },
+      { fieldname: "company", fieldtype: "Link", options: "Company", reqd: 1, surface: "internal" },
+    ],
+    permissions: [],
+  } satisfies DocTypeMeta;
+  const quick = applyFormSurface(meta, "quick");
+  assert.deepEqual(quick.fields.map((field) => field.fieldname), ["supplier", "company"]);
+  const expanded = applyFormSurface(meta, "expanded");
+  assert.deepEqual(expanded.fields.map((field) => field.fieldname), ["supplier", "note", "company"]);
 });
 
 // 2. Registry rỗng → thiếu đủ 43 (chưa nạp control nào).

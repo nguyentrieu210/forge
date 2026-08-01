@@ -5,10 +5,29 @@ Ngày cập nhật: **2026-08-01**.
 ## Dự án
 
 - Repository: `nguyentrieu210/forge`.
-- Default branch: `hotfix/alumdoor-print-list-delete`.
-- Current default head trước docs handoff: `29fee0200d8118eef2d0ae9e524a3a00acfab00f`.
+- Default branch: `main`; vẫn phải kiểm tra lại bằng GitHub trước khi làm, không suy từ tên branch local.
+- Current default head: `8786c5707ac4d225f7a63561219dd629d080584d`.
+- PR UI/PWA `#150`, PR Meta `#154` và hotfix release `#155` đã merge sau khi toàn bộ required checks xanh. Protected release run `30703115053` đã phát hành exact default head và PASS tenant/app/gateway cùng HTTP/browser smoke.
 - Đọc theo thứ tự: `CURRENT_STATUS.md` → `NEXT_TASKS.md` → `DELIVERY_POLICY.md`.
 - GitHub là nguồn sự thật cho code, CI, merge và release evidence.
+
+## Canonical DocType Meta đã merge
+
+- Alumdoor `2.1.0`: 74 DocType, 969 field, 255 Link, 27 child table, 12 report và 3 chart report-backed.
+- Meta contract gồm `kind`, `viewPolicy`, `valueSource`, `editMode`, `surface`, `serverEnforced`, `dirtyGuard` và external DocType closure.
+- Quick/expanded form đã chạy theo Meta; field internal vẫn giữ trong schema gốc để default/serialization/server dùng.
+- Hidden/server-owned field bị runtime từ chối nếu client tự đặt hoặc sửa.
+- `User` Link đọc danh bạ tenant thay vì rơi về free-text hoặc đòi một DocType document giả.
+- Biểu đồ không còn tự suy từ workflow; chỉ chart khai trong manifest, có report, quyền, drill-down và empty fallback mới được render.
+- Canonical skill `C:\AppWeb\.claude\skills\app-factory` đã được tạo tại `35be2bf` và siết đồng bộ runtime tại `9cd5774`.
+
+## Protected metadata installer — forward-fix đang chạy
+
+- PR `#157` đã merge tại `8786c5707ac4d225f7a63561219dd629d080584d`.
+- Run `30705986949` PASS backup/checksum, hai restore drill độc lập và guarded cleanup; install dừng trước khi ghi vì tenant `alu` thiếu `Account`, `Company`, `Currency`, `Serial and Batch Bundle`, `Batch`.
+- Branch `fix/alumdoor-standard-meta-provision-20260801` mở explicit System-Manager-only POST tới `provisionStandardCatalog`; cookie, CSRF và GET guard đều được giữ nguyên.
+- Targeted runtime integration `74/74`, server build và actionlint PASS. Sau CI/merge phải chờ full runtime release exact SHA xanh rồi dispatch lại protected installer.
+- Chưa được kết luận `2.1.0` đã ở production cho tới khi run mới terminal xanh và smoke form/link/chart/report PASS.
 
 ## PR cleanup
 

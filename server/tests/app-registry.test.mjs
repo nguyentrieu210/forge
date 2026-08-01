@@ -153,6 +153,100 @@ test("doctypes inside a package are validated by the platform's own rules", () =
   }), /cannot be enforced by the server/);
 });
 
+test("Frappe reqd metadata normalises to the runtime required flag", () => {
+  const parsed = manifest({ doctypes: [doctype("Stock Request", {
+    fields: [{ fieldname: "title", label: "Title", fieldtype: "Data", reqd: true }],
+  })] });
+  assert.equal(parsed.doctypes[0].fields[0].required, true);
+  assert.throws(() => manifest({ doctypes: [doctype("Stock Request", {
+    fields: [{ fieldname: "title", label: "Title", fieldtype: "Data", reqd: true, required: false }],
+  })] }), /conflicting required and reqd/);
+});
+
+function contractedField(fieldname, overrides = {}) {
+  return {
+    fieldname,
+    label: fieldname,
+    fieldtype: "Data",
+    valueSource: "user",
+    editMode: "editable",
+    surface: "quick",
+    ...overrides,
+  };
+}
+
+function contractedDoctype(name, fields, overrides = {}) {
+  return doctype(name, {
+    kind: "master",
+    fields,
+    viewPolicy: {
+      list: { enabled: true, columns: [] },
+      form: { enabled: true, fields: fields.map((field) => field.fieldname) },
+      quickEntry: { enabled: true, fields: fields.filter((field) => field.surface === "quick").map((field) => field.fieldname) },
+    },
+    ...overrides,
+  });
+}
+
+test("the canonical Meta contract closes Link, child-table and server-owned field gaps", () => {
+  const request = contractedDoctype("Stock Request", [
+    contractedField("company", { fieldtype: "Link", options: "Company" }),
+  ]);
+  assert.throws(() => manifest({ metaContractVersion: 1, doctypes: [request], externalDocTypes: [] }), /undeclared external DocType Company/);
+  assert.doesNotThrow(() => manifest({
+    metaContractVersion: 1,
+    doctypes: [request],
+    externalDocTypes: [{ name: "Company", kind: "master", app: "erpnext" }],
+  }));
+
+  const child = contractedDoctype("Stock Request Item", [contractedField("item")], { kind: "child_table", is_child: true });
+  const badTable = contractedDoctype("Stock Request", [contractedField("items", { fieldtype: "Table", options: "Company" })]);
+  assert.throws(() => manifest({ metaContractVersion: 1, doctypes: [badTable], externalDocTypes: [{ name: "Company", kind: "master", app: "erpnext" }] }), /owned child_table/);
+  const goodTable = contractedDoctype("Stock Request", [contractedField("items", { fieldtype: "Table", options: "Stock Request Item" })]);
+  assert.doesNotThrow(() => manifest({ metaContractVersion: 1, doctypes: [goodTable, child], externalDocTypes: [] }));
+
+  const computed = contractedDoctype("Stock Request", [contractedField("total", {
+    valueSource: "formula", editMode: "readonly", surface: "expanded", read_only: true,
+  })]);
+  assert.throws(() => manifest({ metaContractVersion: 1, doctypes: [computed], externalDocTypes: [] }), /must be serverEnforced/);
+});
+
+test("overview charts must be explicit, report-backed, permissioned and drillable", () => {
+  const request = contractedDoctype("Stock Request", [
+    contractedField("warehouse"),
+    contractedField("amount", { fieldtype: "Currency" }),
+  ]);
+  const report = {
+    name: "Stock by warehouse",
+    label: "Stock by warehouse",
+    doctype: "Stock Request",
+    columns: [
+      { field: "warehouse", label: "Warehouse", type: "Data" },
+      { field: "amount", label: "Amount", type: "Currency", aggregate: "sum" },
+    ],
+    group_by: "warehouse",
+    filters: [],
+    limit: 50,
+  };
+  const nav = [
+    { key: "Stock Request", label: "Stock Request", kind: "doctype" },
+    { key: "report:Stock by warehouse", label: "Report", kind: "route", route: "/report/Stock%20by%20warehouse", permission_doctype: "Stock Request" },
+  ];
+  const chart = {
+    name: "Stock chart",
+    source: report.name,
+    type: "Bar",
+    dimensions: ["warehouse"],
+    measures: ["amount"],
+    roles: ["Kho User"],
+    drilldown: { route: "/report/Stock%20by%20warehouse" },
+    emptyFallback: "table",
+  };
+  assert.doesNotThrow(() => manifest({ doctypes: [request], externalDocTypes: [], reports: [report], nav, charts: [chart] }));
+  assert.throws(() => manifest({ doctypes: [request], externalDocTypes: [], reports: [report], nav, charts: [{ ...chart, source: "Ghost" }] }), /declared report/);
+  assert.throws(() => manifest({ doctypes: [request], externalDocTypes: [], reports: [report], nav, charts: [{ ...chart, measures: ["name"] }] }), /aggregated report column/);
+});
+
 test("fixtures must carry a record type, name and object payload", () => {
   assert.doesNotThrow(() => manifest({ fixtures: [{ record_type: "Warehouse", name: "Stores", data: { is_group: 0 } }] }));
   assert.throws(() => manifest({ fixtures: [{ record_type: "Warehouse", name: "Stores", data: "nope" }] }), /must be an object/);

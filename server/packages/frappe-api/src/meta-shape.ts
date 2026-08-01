@@ -58,6 +58,14 @@ export function toFrappeDocField(field: DocFieldMeta): JsonObject {
   if (field.read_only_depends_on !== undefined) row.read_only_depends_on = field.read_only_depends_on;
   if (field.description !== undefined) row.description = field.description;
   if (field.form_width !== undefined) row.form_width = field.form_width;
+  // MetaForge's canonical form contract travels with the ordinary Frappe field row.
+  // Older clients ignore these extra keys; current clients use `surface` for compact
+  // quick-entry and the other keys to explain why a field cannot be edited.
+  if (field.valueSource !== undefined) row.valueSource = field.valueSource;
+  if (field.editMode !== undefined) row.editMode = field.editMode;
+  if (field.surface !== undefined) row.surface = field.surface;
+  if (field.serverEnforced !== undefined) row.serverEnforced = field.serverEnforced;
+  if (field.dirtyGuard !== undefined) row.dirtyGuard = field.dirtyGuard;
   /**
    * `link_filters` cùng loại với `depends_on` ở trên: kernel LƯU nhưng không tự dùng, client
    * mới là nơi đọc nó (`buildLinkFilters`) để thu hẹp danh sách của ô Link. Không gửi ra thì
@@ -152,6 +160,8 @@ export function toFrappeDocType(meta: DocTypeMeta, workflow: WorkflowMeta | null
     // builder needs the revision to detect a concurrent metadata edit.
     revision: meta.revision,
   };
+  if (meta.kind !== undefined) doc.kind = meta.kind;
+  if (meta.viewPolicy !== undefined) doc.viewPolicy = meta.viewPolicy as unknown as JsonObject;
   if (meta.autoname !== undefined) doc.autoname = meta.autoname;
   if (meta.title_field !== undefined) doc.title_field = meta.title_field;
   if (meta.image_field !== undefined) doc.image_field = meta.image_field;

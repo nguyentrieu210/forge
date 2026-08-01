@@ -1,17 +1,6 @@
 name: Release Alumdoor App Worker Production
 
 on:
-  push:
-    branches:
-      - hotfix/alumdoor-print-list-delete
-    paths:
-      - "server/apps-src/alumdoor-worker/**"
-      - "server/src/**"
-      - "server/package.json"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - ".github/release/alumdoor-app-production.trigger"
-      - ".github/workflows/release-alumdoor-app.yml"
   workflow_dispatch:
     inputs:
       target_sha:

@@ -4,6 +4,34 @@ Ngày cập nhật: **2026-08-01**.
 
 Mọi agent phải đọc `AI_HANDOFF.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md` và `DELIVERY_POLICY.md` trước khi tiếp tục.
 
+## DONE — Canonical DocType Meta
+
+PR `#154` merge tại `6c89e1a9227e989fd8b08d6e55b35ce2e74d87c7`; protected release qua hotfix `#155` và run `30703115053` tại exact SHA `7f9c629b65b2f2550aec9426cf5e9115ee3db6d0`.
+
+Đã hoàn thành trong code:
+
+1. Hợp đồng DocType/field/view thống nhất cho transaction, master, child table, single, tree, virtual và system.
+2. Quick form/expanded form/internal field sinh từ Meta; default và serialization vẫn dùng schema gốc.
+3. External Link và child-table closure gate; provider riêng cho `User` theo tenant.
+4. Field system/workflow/formula/hidden được server cưỡng chế, không chỉ khóa bằng giao diện.
+5. Biểu đồ Tổng quan khai tường minh, chạy qua report/permission/tenant scope, có drill-down và empty fallback.
+6. Alumdoor `2.1.0` có 3 biểu đồ thật và completeness gate cho 74 DocType hiện có; chuẩn nền tảng không giới hạn ở 74 DocType.
+7. Canonical rules/validator/fixtures đã được ghi vào skill `app-factory` để app sinh sau dùng cùng chuẩn.
+
+Việc tiếp theo duy nhất của gói Meta: merge forward-fix từ branch
+`fix/alumdoor-standard-meta-provision-20260801`, chờ runtime production ở exact merge SHA xanh, rồi dispatch lại
+workflow protected. Run đầu `30705986949` đã PASS backup + hai restore drill nhưng dừng trước khi ghi Alumdoor vì
+tenant cũ chưa có 5 external DocType ERPNext. Lần chạy lại phải cấp standard catalogue bằng explicit
+System-Manager POST qua cookie + CSRF, cài package `2.1.0`, rồi smoke chỉ đọc quick/expanded form, User Link,
+chart/fallback và drill-down report. Không sửa DNS và không dùng dữ liệu khách hàng để smoke.
+
+### Done condition
+
+- Manifest thiếu field contract, Link target, child-table ownership hoặc chart source bị CI từ chối.
+- Runtime không nhận giá trị giả cho field server-owned/hidden.
+- Alumdoor `2.1.0` compile/install được, biểu đồ chỉ hiện theo quyền và report thật.
+- Full test/typecheck/lint/build và protected release xanh trên cùng một SHA.
+
 ## ACTIVE P0 — Alumdoor PWA + official brand/media
 
 Branch: `feat/alumdoor-pwa-real-brand-assets`.

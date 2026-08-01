@@ -1,6 +1,6 @@
 {
   "//purpose": "Mẫu in mới tách khỏi brief nghiệp vụ để review bố cục, cột và giấy ký độc lập; forge-app ghép lại trước schema validation và compile.",
-  "version": "2.0.41",
+  "version": "2.1.0",
   "prints": [
     {
       "//": "Đơn bán hàng A4 dùng để khách xác nhận và bàn giao nội bộ sang kho/sản xuất. Cột kích thước giữ nguyên số đo vận hành, không chỉ in mỗi m2 tính tiền.",
