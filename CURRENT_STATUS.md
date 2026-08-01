@@ -6,7 +6,7 @@ Ngày cập nhật: **2026-08-01**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Current default head khi chuẩn bị Cut Order: `f916d066f9b45b1c3a5238259be9d6953d6cf0f3`.
+- Current default head khi tiếp tục Print Design: `f916d066f9b45b1c3a5238259be9d6953d6cf0f3`.
 - Latest runtime-changing default commit: `898b19d0c58c84a32f99d73dfe0bf33f9ec78dd6`.
 - Bốn commit default mới nhất từ merge-base chỉ đổi `.github/release/gateway-production.trigger` và `.github/release/production-status.trigger`; không đụng server/schema/print.
 - GitHub là nguồn sự thật cho current branch head, CI, PR và release evidence.
@@ -14,19 +14,19 @@ Ngày cập nhật: **2026-08-01**.
 ## In progress — Print design PR #141
 
 - Branch: `feat/print-design-sales-documents-20260801`.
-- PR: `#141` — print design workspace.
-- Sidecar `server/briefs/alumdoor-v2.prints.json` được nối với các mẫu in sẵn có trước schema validation/compile; không ghi đè mảng `prints` của brief gốc.
+- PR: `#141` — `feat(print): add Alumdoor operational print formats`.
+- Sidecar `server/briefs/alumdoor-v2.prints.json` nối với các mẫu in sẵn có trước schema validation/compile; không ghi đè mảng `prints` của brief gốc.
 - Loader hỗ trợ filesystem path và `file:` URL, có regression riêng.
 - `Đơn bán hàng ALUMDOOR` — Sales Order, A4 portrait, 13 cột = `100%`.
 - `Phiếu giao hàng / lắp đặt ALUMDOOR` — Delivery Note, A4 portrait, 11 cột = `100%`, không in giá, có checklist và ba khu vực ký.
-- `Phiếu yêu cầu sản xuất ALUMDOOR` — Production Request, A4 portrait, 14 cột = `100%`, một dòng theo bộ/vị trí, giữ rộng cắt, số lá, mô tơ/cảnh báo, phút dự toán và kho vật tư.
-- `Phiếu cắt nhôm ALUMDOOR` — Cut Order, A4 portrait, 13 cột = `100%`, bám authoritative `Cut Order` / `Cut Order Item`.
-- Phiếu cắt giữ bundle lô mẹ + bundle đầu thừa, mã nhôm, kho lô mẹ, khổ cây, rộng cắt, số lá, số nhát, kerf, kg tiêu hao/cân thật, đầu thừa và phế.
-- QR chưa có field/renderer primitive authoritative nên dùng bundle ID thật để truy vết, không tạo QR giả.
-- Regression renderer dùng dữ liệu dài đã có cho Sales Order, Delivery Note, Production Request và Cut Order.
-- Exact-head checkpoint trước Cut Order `692f1a3fc2870b991f4e93d50cf2ceb94d9ea433`: 6/6 workflow SUCCESS, gồm full tests, typecheck và build.
-- Exact-head CI mới phải chạy sau khi đưa Cut Order từ staging vào PR head; run IDs ghi trong PR body.
-- Gate còn lại trước merge: exact-head CI mới, review trực quan HTML preview/PDF dữ liệu dài và giữ PR mergeable với current default.
+- `Phiếu yêu cầu sản xuất ALUMDOOR` — Production Request, A4 portrait, 14 cột = `100%`.
+- `Phiếu cắt nhôm ALUMDOOR` — Cut Order, A4 portrait, 13 cột = `100%`, dùng bundle lô mẹ + bundle đầu thừa để truy vết thật; không tạo QR giả.
+- `Biên bản bàn giao / nghiệm thu ALUMDOOR` — Delivery Note, `default: false`, A4 portrait, 11 cột = `100%`; dùng dữ liệu giao/lắp thật và để vùng kết quả/checklist cho ký tay tại công trình.
+- Regression renderer dùng dữ liệu dài cho Sales Order, Delivery Note, Production Request, Cut Order và Biên bản nghiệm thu.
+- Exact-head Cut Order `a291f5870b3820f2b50d7b80e3e2820183ad177d`: 6/6 workflow SUCCESS.
+- Run IDs Cut Order: CI `30688745607`, PR Validation `30688745586`, UI `30688745573`, Purchase `30688745587`, Inventory/Manufacturing `30688745588`, Sales `30688745593`.
+- Acceptance đang ở staging và phải qua exact-head CI sau khi đưa vào PR branch.
+- Gate còn lại trước merge: exact-head CI với Acceptance, review trực quan HTML preview/PDF dữ liệu dài và PR mergeable với current default.
 
 ## Đã hoàn tất trên default
 
@@ -80,7 +80,6 @@ Ngày cập nhật: **2026-08-01**.
 - PR `#145` merge SHA: `898b19d0c58c84a32f99d73dfe0bf33f9ec78dd6`.
 - Exact validated head: `73dc960e3c9685708ac1b1e51c7eb5d2c1a71a9a`.
 - Landing Alumdoor guest đã được thiết kế lại theo cấu trúc thương hiệu/sản phẩm công khai trên `alumdoor.vn`, giữ form đăng nhập nội bộ trong cùng trải nghiệm.
-- Có hero, navigation, 4 nhóm dịch vụ, phần giới thiệu, liên hệ/khu vực hỗ trợ, footer và 4 nhóm danh mục sản phẩm.
 - Browser QA PASS desktop/tablet/mobile, gồm dark/reduced-motion, login, no horizontal overflow và link VIP-ST500.
 
 ## Chưa release production
@@ -92,8 +91,8 @@ Ngày cập nhật: **2026-08-01**.
 
 ## Business backlog còn lại
 
-1. Hoàn tất print design PR `#141`: exact-head CI mới và visual review bốn mẫu.
-2. Print P1: biên bản bàn giao/nghiệm thu, Sales Invoice, Payment Entry, Purchase Receipt.
+1. Hoàn tất print design PR `#141`: exact-head CI với Acceptance và visual review năm mẫu.
+2. Print P1 tiếp: Sales Invoice, Payment Entry, Purchase Receipt.
 3. Daily detailed ledger snapshot/freeze/adjustment.
 4. Warranty, defects, supplier hold/offset và capacity/overtime.
 5. End-to-end acceptance xuyên Sales, Production, Inventory, Delivery, Finance và Warranty.
