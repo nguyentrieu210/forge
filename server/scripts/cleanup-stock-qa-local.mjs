@@ -49,7 +49,7 @@ const statements = [
   documentConditions.length ? `DELETE FROM document_tags WHERE tenant_id=${quote(tenantId)} AND (${documentConditions.join(" OR ")});` : "",
   documentConditions.length ? `UPDATE files SET attached_to_doctype=NULL, attached_to_name=NULL WHERE tenant_id=${quote(tenantId)} AND (${documents.map((record) => `(attached_to_doctype=${quote(record.doctype)} AND attached_to_name=${quote(record.name)})`).join(" OR ")});` : "",
   docKeys.length ? `DELETE FROM documents WHERE tenant_id=${quote(tenantId)} AND doc_key IN (${docKeys.map(quote).join(",")});` : "",
-  users.length ? `DELETE FROM user_permissions WHERE tenant_id=${quote(tenantId)} AND user_id IN (${users.map((record) => quote(record.user_id)).join(",")});` : "",
+  users.length ? `DELETE FROM user_permissions WHERE tenant_id=${quote(tenantId)} AND user IN (${users.map((record) => quote(record.user_id)).join(",")});` : "",
   users.length ? `DELETE FROM user_roles WHERE tenant_id=${quote(tenantId)} AND user_id IN (${users.map((record) => quote(record.user_id)).join(",")});` : "",
   users.length ? `DELETE FROM rbac_audit_events WHERE tenant_id=${quote(tenantId)} AND target_user_id IN (${users.map((record) => quote(record.user_id)).join(",")});` : "",
   users.length ? `DELETE FROM users WHERE tenant_id=${quote(tenantId)} AND user_id IN (${users.map((record) => quote(record.user_id)).join(",")});` : "",
@@ -64,6 +64,8 @@ const residueChecks = [
   `SELECT 'stock_bundle_usage_entries' AS source,COUNT(*) AS residue FROM stock_bundle_usage_entries WHERE tenant_id=${quote(tenantId)} AND ((${voucherConditions.join(" OR ")})${bundleNames.length ? ` OR bundle_name IN (${bundleNames.map(quote).join(",")})` : ""})`,
   users.length ? `SELECT 'users' AS source,COUNT(*) AS residue FROM users WHERE tenant_id=${quote(tenantId)} AND user_id IN (${users.map((record) => quote(record.user_id)).join(",")})` : "",
   users.length ? `SELECT 'user_roles' AS source,COUNT(*) AS residue FROM user_roles WHERE tenant_id=${quote(tenantId)} AND user_id IN (${users.map((record) => quote(record.user_id)).join(",")})` : "",
+  users.length ? `SELECT 'user_permissions' AS source,COUNT(*) AS residue FROM user_permissions WHERE tenant_id=${quote(tenantId)} AND user IN (${users.map((record) => quote(record.user_id)).join(",")})` : "",
+  users.length ? `SELECT 'rbac_audit_events' AS source,COUNT(*) AS residue FROM rbac_audit_events WHERE tenant_id=${quote(tenantId)} AND target_user_id IN (${users.map((record) => quote(record.user_id)).join(",")})` : "",
 ].filter(Boolean).join(" UNION ALL ");
 const residue = query(`${residueChecks};`);
 const dirty = residue.filter((row) => Number(row.residue) !== 0);
