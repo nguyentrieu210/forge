@@ -1,0 +1,156 @@
+{
+  "//purpose": "Bulk View cho master data ALUM. Chỉ document_update; transaction, tree và child-table không được mass-edit trực tiếp.",
+  "version": "2.1.2",
+  "views": {
+    "UOM": {
+      "bulk": {
+        "columns": ["uom_name", "must_be_whole_number", "disabled"],
+        "editableFields": ["must_be_whole_number", "disabled"],
+        "commitStrategy": "document_update",
+        "allowPaste": true,
+        "allowFillDown": true,
+        "pageSize": 100
+      }
+    },
+    "Brand": {
+      "bulk": {
+        "columns": ["brand_name", "country", "website", "disabled"],
+        "editableFields": ["country", "website", "disabled"],
+        "commitStrategy": "document_update",
+        "allowPaste": true,
+        "allowFillDown": true,
+        "pageSize": 100
+      }
+    },
+    "Manufacturer": {
+      "bulk": {
+        "columns": ["manufacturer_name", "country", "website", "disabled"],
+        "editableFields": ["country", "website", "disabled"],
+        "commitStrategy": "document_update",
+        "allowPaste": true,
+        "allowFillDown": true,
+        "pageSize": 100
+      }
+    },
+    "Item Color": {
+      "bulk": {
+        "columns": ["color_code", "color_name", "finish", "supplier_color_code", "disabled"],
+        "editableFields": ["color_name", "finish", "supplier_color_code", "disabled"],
+        "commitStrategy": "document_update",
+        "allowPaste": true,
+        "allowFillDown": true,
+        "pageSize": 100
+      }
+    },
+    "Material Grade": {
+      "bulk": {
+        "columns": ["grade_code", "grade_name", "material_family", "density_kg_m3", "disabled"],
+        "editableFields": ["grade_name", "material_family", "density_kg_m3", "disabled"],
+        "commitStrategy": "document_update",
+        "allowPaste": true,
+        "allowFillDown": true,
+        "pageSize": 100
+      }
+    },
+    "Material Specification": {
+      "bulk": {
+        "columns": ["spec_code", "spec_name", "material_grade", "profile_system", "section_code", "theoretical_kg_per_m", "standard_length_m", "width_m", "thickness_mm", "scrap_threshold_m", "disabled"],
+        "editableFields": ["spec_name", "material_grade", "profile_system", "section_code", "theoretical_kg_per_m", "standard_length_m", "width_m", "thickness_mm", "scrap_threshold_m", "disabled"],
+        "commitStrategy": "document_update",
+        "allowPaste": true,
+        "allowFillDown": true,
+        "pageSize": 100
+      }
+    },
+    "Item Attribute": {
+      "bulk": {
+        "columns": ["attribute_name", "numeric_values", "from_value", "to_value", "increment", "disabled"],
+        "editableFields": ["numeric_values", "from_value", "to_value", "increment", "disabled"],
+        "commitStrategy": "document_update",
+        "allowPaste": true,
+        "allowFillDown": true,
+        "pageSize": 100
+      }
+    },
+    "Supplier Item": {
+      "bulk": {
+        "columns": ["supplier", "item_code", "supplier_item_code", "preferred", "minimum_order_qty", "lead_time_days", "note", "disabled"],
+        "editableFields": ["supplier_item_code", "preferred", "minimum_order_qty", "lead_time_days", "note", "disabled"],
+        "commitStrategy": "document_update",
+        "allowPaste": true,
+        "allowFillDown": true,
+        "pageSize": 100
+      }
+    },
+    "Measurement Profile": {
+      "bulk": {
+        "columns": ["profile_name", "inventory_mode", "stock_uom", "track_dimension_lot", "require_color", "require_condition", "require_length", "require_width", "require_piece_qty", "theoretical_kg_per_m", "effective_width_m", "scrap_threshold_m", "kerf_mm", "weight_tolerance_pct"],
+        "editableFields": ["track_dimension_lot", "require_color", "require_condition", "require_length", "require_width", "require_piece_qty", "theoretical_kg_per_m", "effective_width_m", "scrap_threshold_m", "kerf_mm", "weight_tolerance_pct"],
+        "commitStrategy": "document_update",
+        "allowPaste": true,
+        "allowFillDown": true,
+        "pageSize": 100
+      }
+    },
+    "Item": {
+      "bulk": {
+        "columns": ["item_code", "item_name", "item_group", "item_nature", "material_stage", "supply_type", "is_stock_item", "is_purchase_item", "is_sales_item", "include_item_in_manufacturing", "measurement_profile", "stock_uom", "brand", "manufacturer", "material_specification", "default_color", "standard_rate", "valuation_method", "disabled"],
+        "editableFields": ["item_name", "item_group", "item_nature", "material_stage", "supply_type", "is_stock_item", "is_purchase_item", "is_sales_item", "include_item_in_manufacturing", "measurement_profile", "stock_uom", "brand", "manufacturer", "material_specification", "default_color", "standard_rate", "valuation_method", "disabled"],
+        "commitStrategy": "document_update",
+        "allowPaste": true,
+        "allowFillDown": true,
+        "pageSize": 100
+      }
+    },
+    "Customer": {
+      "bulk": {
+        "columns": ["customer_name", "customer_type", "price_group", "account_manager", "phone", "email", "tax_id", "credit_limit", "payment_terms", "disabled"],
+        "editableFields": ["customer_type", "price_group", "account_manager", "phone", "email", "tax_id", "credit_limit", "payment_terms", "disabled"],
+        "commitStrategy": "document_update",
+        "allowPaste": true,
+        "allowFillDown": true,
+        "pageSize": 100
+      }
+    },
+    "Supplier": {
+      "bulk": {
+        "columns": ["supplier_name", "supplier_group", "account_manager", "contact_person", "phone", "email", "tax_id", "payment_terms", "receipt_tolerance_pct", "disabled"],
+        "editableFields": ["supplier_group", "account_manager", "contact_person", "phone", "email", "tax_id", "payment_terms", "receipt_tolerance_pct", "disabled"],
+        "commitStrategy": "document_update",
+        "allowPaste": true,
+        "allowFillDown": true,
+        "pageSize": 100
+      }
+    },
+    "Price List": {
+      "bulk": {
+        "columns": ["price_list_name", "note", "disabled"],
+        "editableFields": ["note", "disabled"],
+        "commitStrategy": "document_update",
+        "allowPaste": true,
+        "allowFillDown": true,
+        "pageSize": 100
+      }
+    },
+    "Item Price": {
+      "bulk": {
+        "columns": ["price_list", "item_code", "uom", "rate", "note", "disabled"],
+        "editableFields": ["rate", "note", "disabled"],
+        "commitStrategy": "document_update",
+        "allowPaste": true,
+        "allowFillDown": true,
+        "pageSize": 100
+      }
+    },
+    "Pricing Rule": {
+      "bulk": {
+        "columns": ["title", "price_list", "item_code", "party", "customer_group", "min_qty", "max_qty", "valid_from", "valid_upto", "rate", "discount_percentage", "priority", "disabled"],
+        "editableFields": ["min_qty", "max_qty", "valid_from", "valid_upto", "rate", "discount_percentage", "priority", "disabled"],
+        "commitStrategy": "document_update",
+        "allowPaste": true,
+        "allowFillDown": true,
+        "pageSize": 100
+      }
+    }
+  }
+}
