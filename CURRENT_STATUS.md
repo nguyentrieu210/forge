@@ -160,3 +160,27 @@ Branch: `feat/alumdoor-pwa-real-brand-assets`.
 - Gateway production đã cập nhật lên Cloudflare Version ID `fe705d76-a561-4ec9-bc8a-976437d65657`.
 - HTTP production smoke PASS: landing, App kho, manifest và service worker đều 200; landing HTML chứa đúng exact release SHA.
 - Không đổi DNS/secrets, không migrate hoặc mutate dữ liệu tenant.
+
+### MISA process + mobile/PDF hotfix — 2026-08-01
+
+- Exact code/deploy SHA: `d5bb9ac0824f9100fc48eac21e8dd8765c4dec36`.
+- Quy trình dùng đúng bố cục MISA: trục ngang giữa, node nghiệp vụ trên/dưới, cột Báo cáo bên phải và hàng Danh mục nhanh phía dưới; desktop giữ hai vùng và mobile tự xếp một cột không tràn ngang.
+- Nút `Xuất PDF` hiển thị trực tiếp cạnh Lưu/Gửi; menu ba chấm chỉ giữ thao tác phụ/nguy hiểm.
+- App kho: `Xem tất cả` mở đúng danh sách nghiệp vụ; thanh điều hướng cập nhật URL/tab; tra tồn chọn Kho bằng Link search; chuyển kho chặn kho nguồn = kho đích.
+- Typecheck shell/views/kho/runtime, 88 nhóm selfcheck, Playwright MISA `9/9`, warehouse Pixel 7 + 390px `2/2`, runtime/kho/PWA build PASS.
+- Stage hash `b8c72b454ff7587b`; 70 asset, stage-check và Wrangler dry-run PASS. Lần deploy đầu gặp Cloudflare OAuth code 10000, `wrangler whoami` làm mới phiên và lần retry thành công.
+- Gateway production Version ID `46d87cda-27c2-4a17-8344-b042599fa995`; landing/PWA/manifest/service worker đều HTTP 200, landing chứa đúng exact release SHA; production mobile 390px title/logo đúng và overflow `0`.
+- Không đổi DNS/secrets, không migrate hoặc mutate dữ liệu tenant.
+- Báo cáo follow-up exact SHA `478ee7890f85851afd7f6a0421423852989b8e9d`: nhóm bên trái đổi thành bộ lọc trạng thái, không dùng anchor nên không còn nhảy xuống cuối trang; chỉ hiển thị nội dung nhóm đang chọn. Danh mục ưu tiên `Vật tư hàng hóa` ở cột đầu.
+- Follow-up stage hash `c8d8ad65b0a09e99`, Gateway production Version ID `08c08f49-ca55-4ff0-9c0b-7653b4b7bff5`; HTTP 200 và landing chứa đúng exact SHA.
+
+### Login-only + AI topbar + Tổng quan MISA — 2026-08-01
+
+- Exact code/deploy SHA: `2a36f797ee4554f092cc336371b53654952097e0`; branch đã push lên GitHub.
+- Guest tại `alu.kairo.vn` mở thẳng form đăng nhập Alumdoor, không render landing marketing; logo ngang chính thức rộng 300px và ô tài khoản được focus ngay.
+- Nút `Hỏi AI` nằm trực tiếp trên topbar sát nút Thông báo; đã bỏ nút AI nổi ở góc, vẫn dùng nguyên panel và API trợ lý hiện có.
+- Tổng quan đổi sang bố cục MISA: dải chỉ số lớn, lưới biểu đồ hai cột, tổng chuỗi hiển thị ngay trên từng biểu đồ và các khối công việc/hoạt động đồng bộ nền trắng.
+- Typecheck shell/views/runtime, runtime + warehouse production build và Playwright login desktop/mobile `8/8` PASS.
+- Stage hash `db4ff4290972e2c0`; 70 assets, stage-check và Wrangler dry-run PASS. Gateway production Version ID `79cf4d16-0bf5-4c18-bad8-99367dc382b5`.
+- Production smoke PASS: root/PWA/manifest/logo HTTP 200; root chứa exact SHA; desktop 1440 và mobile 390 đều có login-only, logo 300px, autofocus đúng và overflow `0`.
+- PR `#150` hiện `CONFLICTING` và chưa có check cho head mới; đây là việc GitHub còn lại, không ảnh hưởng bundle production vừa kiểm chứng. Không đổi DNS/secrets, không migrate hoặc mutate dữ liệu tenant.

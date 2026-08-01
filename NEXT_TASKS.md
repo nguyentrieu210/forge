@@ -142,3 +142,22 @@ Sales Order → production request → Work Order → material issue/consume →
 - [x] Typecheck, selfcheck, build và Playwright responsive PASS.
 - [x] Build/stage exact SHA `b44bdaa9`, Wrangler dry-run, deploy Gateway version `fe705d76-a561-4ec9-bc8a-976437d65657` và HTTP production smoke.
 - [ ] Khi có phiên demo được phép dùng, smoke chỉ đọc sau đăng nhập cho thứ tự sidebar, Báo cáo/Danh mục/Quy trình và URL Experience cũ; không tạo hoặc sửa chứng từ khách hàng.
+
+### Đã hoàn thành trong hotfix `d5bb9ac0`
+
+- [x] Sơ đồ Quy trình đúng trục MISA với nghiệp vụ trên/dưới, Báo cáo bên phải và Danh mục nhanh phía dưới.
+- [x] Xuất PDF ra ngoài menu ba chấm.
+- [x] Kích hoạt và kiểm tra luồng chuyển màn app kho trên Pixel 7 và máy 390px.
+- [x] Build/stage/dry-run/deploy Gateway version `46d87cda-27c2-4a17-8344-b042599fa995` và production guest/mobile smoke.
+- [ ] Authenticated production smoke chỉ đọc vẫn cần một phiên demo hợp lệ; không tạo, gửi hoặc sửa chứng từ khách hàng để lấy evidence.
+- [x] Follow-up `478ee789`: chọn nhóm Báo cáo không cuộn trang; `Vật tư hàng hóa` đứng đầu Danh mục; deploy Gateway version `08c08f49-ca55-4ff0-9c0b-7653b4b7bff5`.
+
+### Đã hoàn thành trong release `2a36f797`
+
+- [x] Bỏ landing marketing Alumdoor; guest mở thẳng form login trên desktop và điện thoại.
+- [x] Dùng logo ngang chính thức cỡ lớn trong form login, autofocus tài khoản và không tràn ngang ở viewport 390px.
+- [x] Đưa `Hỏi AI` lên topbar cạnh Thông báo, bỏ trigger nổi góc màn hình.
+- [x] Đổi Tổng quan sang bố cục MISA có dải số liệu và lưới biểu đồ hai cột.
+- [x] Typecheck/build, Playwright `8/8`, stage/dry-run/deploy và production browser smoke PASS; Gateway `79cf4d16-0bf5-4c18-bad8-99367dc382b5`.
+- [ ] Rebase/merge target branch để giải quyết conflict của PR `#150`, sau đó chạy lại required checks trên exact head trước khi merge GitHub.
+- [ ] Bổ sung khai báo biểu đồ theo Meta cho từng phân hệ; chỉ hiện tab `Biểu đồ` khi manifest của phân hệ có chart definition.
