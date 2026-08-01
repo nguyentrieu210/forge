@@ -124,3 +124,7 @@ Branch: `feat/alumdoor-pwa-real-brand-assets`.
 - Sau khi phiên hết hạn ở route `/print/*`, đăng nhập lại quay về trang chủ thay vì phục hồi màn in của phiên cũ.
 - Runtime typecheck, build app kho desktop/mobile và 87 nhóm selfcheck PASS. Full monorepo build trước đó hoàn thành hầu hết app nhưng tiến trình Node Windows sập sau khi `kho-vn` đã build; build kho mục tiêu chạy lại riêng PASS.
 - Nhánh sẽ ghép trước release hoàn chỉnh: `feat/print-design-sales-documents-20260801` (PR `#141`). Không ghép nhánh daily ledger vào hotfix giao diện/in.
+- Shell sau đăng nhập đã tách Tổng quan, Báo cáo và Danh mục thành mục sidebar; nhóm nghiệp vụ chỉ còn tab Quy trình và các màn chứng từ.
+- Màn Quy trình đổi sang sơ đồ bước + truy cập nhanh sinh từ Meta; màn Báo cáo/Danh mục là hub riêng sinh từ group metadata.
+- Danh sách có dải tổng nhanh: tổng bản ghi, số dòng đang hiển thị và tối đa hai tổng số của trang hiện tại.
+- MetaForge MISA-style E2E PASS `9/9` trên desktop, Pixel 7 và iPhone 13; warehouse authenticated UI PASS `2/2` ở Pixel 7 và 390x844, không tràn ngang.

@@ -167,6 +167,13 @@ function buildNavigation(manifest: AppManifest, catalog: ApplicationCatalog | un
   const items: RuntimeNav[] = [
     { key: "__overview", label: "Tổng quan", group: "Điều hành", icon: resolveIcon("layout-dashboard"), route: `/overview/${manifest.domain ?? manifest.id}` },
   ];
+  const normalizeGroup = (value?: string) => (value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[đĐ]/g, "d").toLocaleLowerCase("vi").trim();
+  if (manifest.nav.some((item) => normalizeGroup(item.group) === "bao cao")) {
+    items.push({ key: "__reports", label: "Báo cáo", group: "Điều hành", icon: resolveIcon("chart-no-axes-combined"), route: "/reports" });
+  }
+  if (manifest.nav.some((item) => normalizeGroup(item.group) === "danh muc")) {
+    items.push({ key: "__master-data", label: "Danh mục", group: "Điều hành", icon: resolveIcon("library"), route: "/master-data" });
+  }
   /**
    * "Danh mục ứng dụng" chỉ có nghĩa khi có NHIỀU hơn một app.
    *
@@ -470,6 +477,8 @@ function RuntimeRoutes({ manifest, boot, logout, nav, catalogError }: ScreenProp
       <Route path="/" element={<Navigate to={home} replace />} />
       <Route path="/overview/:domain" element={<OverviewScreen {...screen} />} />
       <Route path="/process/:domain" element={<ProcessScreen {...screen} />} />
+      <Route path="/reports" element={<MetaIndexScreen {...screen} kind="reports" />} />
+      <Route path="/master-data" element={<MetaIndexScreen {...screen} kind="masters" />} />
       <Route path="/catalog" element={<CatalogScreen {...screen} error={catalogError} />} />
       <Route path="/permissions" element={<PermissionScreen {...screen} />} />
       <Route path="/workspace/:workspace" element={<WorkspaceScreen {...screen} />} />
@@ -645,7 +654,41 @@ function CatalogScreen({ error, ...props }: ScreenProps & { error?: string }) { 
 function PermissionScreen(props: ScreenProps) { return <Shell {...props} active="__permissions" breadcrumbs={[{ label: "Trung tâm phân quyền" }]}><div className="h-full overflow-auto p-4"><PermissionCenter /></div></Shell>; }
 function WorkspaceScreen(props: ScreenProps) { const navigate = useNavigate(); const { workspace = "" } = useParams(); const value = decodeURIComponent(workspace); return <Shell {...props} active={`workspace:${value}`} breadcrumbs={[{ label: "Ứng dụng", onClick: () => navigate("/catalog") }, { label: value }]}><WorkspaceContainer defaultWorkspace={value} onOpenLink={(link) => openWorkspace(navigate, link)} /></Shell>; }
 function openWorkspace(navigate: NavigateFunction, link: { type?: string; link_to?: string }) { if (!link.link_to) return; const type = (link.type ?? "DocType").toLowerCase(); if (type.includes("report")) navigate(`/report/${encodeURIComponent(link.link_to)}`); else if (type.includes("page")) navigate(`/page/${encodeURIComponent(link.link_to)}`); else if (type.includes("dashboard")) navigate(`/dashboard/${encodeURIComponent(link.link_to)}`); else navigate(`/app/${encodeURIComponent(link.link_to)}`); }
-function ReportScreen(props: ScreenProps) { const { report = "" } = useParams(); const value = decodeURIComponent(report); return <Shell {...props} active={`report:${report}`} breadcrumbs={[{ label: "Báo cáo" }, { label: value }]}><div className="h-full overflow-auto p-4"><ReportContainer report={value} /></div></Shell>; }
+function ReportScreen(props: ScreenProps) { const { report = "" } = useParams(); const value = decodeURIComponent(report); return <Shell {...props} active="__reports" breadcrumbs={[{ label: "Báo cáo", onClick: () => window.history.back() }, { label: value }]}><div className="h-full overflow-auto p-4"><ReportContainer report={value} /></div></Shell>; }
+
+function MetaIndexScreen(props: ScreenProps & { kind: "reports" | "masters" }) {
+  const navigate = useNavigate();
+  const target = props.kind === "reports" ? "bao cao" : "danh muc";
+  const active = props.kind === "reports" ? "__reports" : "__master-data";
+  const title = props.kind === "reports" ? "Báo cáo" : "Danh mục";
+  const description = props.kind === "reports"
+    ? "Tra cứu báo cáo theo dữ liệu và quyền hiện có trong Meta."
+    : "Dữ liệu nền dùng chung cho bán hàng, kho, mua hàng và sản xuất.";
+  const normalize = (value?: string) => (value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[đĐ]/g, "d").toLocaleLowerCase("vi").trim();
+  const items = props.nav.filter((item) => normalize(item.group) === target && !item.disabledReason);
+  return (
+    <Shell {...props} active={active} breadcrumbs={[{ label: title }]}>
+      <div className="h-full overflow-auto bg-muted/20 p-3 md:p-5">
+        <section className="mx-auto max-w-7xl rounded-xl border bg-card shadow-sm">
+          <div className="border-b px-5 py-4">
+            <h1 className="text-xl font-semibold">{title}</h1>
+            <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+          </div>
+          <div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-3">
+            {items.map((item) => (
+              <Button key={item.key} variant="outline" className="group h-auto min-h-20 min-w-0 justify-start gap-3 whitespace-normal rounded-lg p-4 text-left" onClick={() => navigate(item.route)}>
+                <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">{item.icon ?? resolveIcon(props.kind === "reports" ? "file-chart-column" : "database")}</span>
+                <span className="min-w-0 flex-1"><span className="block font-semibold">{item.label}</span><span className="mt-1 block text-xs font-normal text-muted-foreground">Mở {props.kind === "reports" ? "báo cáo" : "danh mục"}</span></span>
+                <span className="text-primary transition-transform group-hover:translate-x-0.5">→</span>
+              </Button>
+            ))}
+            {!items.length ? <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">Chưa có mục khả dụng theo quyền hiện tại.</div> : null}
+          </div>
+        </section>
+      </div>
+    </Shell>
+  );
+}
 /**
  * Nhập dữ liệu từ CSV/Excel — cùng trình thuật sĩ mà app demo vẫn dùng.
  *

@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useMemo, useState } from "react";
-import { ArrowRight, LayoutDashboard, Workflow } from "lucide-react";
+import { ArrowRight, CheckCircle2, Workflow } from "lucide-react";
 import { FrappeAdapterImpl } from "@metaforge/adapter-frappe";
 import { Button, cn, toast } from "@metaforge/ui";
 import {
@@ -21,6 +21,17 @@ export type { AppShellProps, NavItem, Breadcrumb, NotificationItem } from "./App
 const STORAGE_KEY = "mf-workspace-module";
 const accountAdapter = new FrappeAdapterImpl({});
 
+function normalizedGroup(label: string | undefined): string {
+  return (label ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[đĐ]/g, "d").toLocaleLowerCase("vi").trim();
+}
+
+function indexHubKey(item: NavItem | undefined): string | undefined {
+  const group = normalizedGroup(item?.group);
+  if (group === "bao cao") return "__reports";
+  if (group === "danh muc") return "__master-data";
+  return undefined;
+}
+
 function loadStoredModule(): string | undefined {
   try { return localStorage.getItem(STORAGE_KEY) ?? undefined; } catch { return undefined; }
 }
@@ -33,14 +44,12 @@ function WorkspaceTabs({
   module,
   activeKey,
   processActive,
-  overviewItem,
   onProcess,
   onNavigate,
 }: {
   module: WorkspaceModule;
   activeKey: string;
   processActive: boolean;
-  overviewItem?: NavItem;
   onProcess: () => void;
   onNavigate: (key: string) => void;
 }) {
@@ -60,26 +69,8 @@ function WorkspaceTabs({
           aria-current={processActive ? "page" : undefined}
           onClick={onProcess}
         >
-          <Workflow className="mr-1.5 size-3.5" /> Quy trình nghiệp vụ
+          <Workflow className="mr-1.5 size-3.5" /> Quy trình
         </Button>
-        {overviewItem ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            data-kind="overview"
-            className={cn(
-              "relative h-10 shrink-0 rounded-none border-x-0 border-t-0 border-b-2 border-transparent px-4 text-xs font-medium",
-              !processActive && activeKey === overviewItem.key
-                ? "border-b-primary bg-primary/10 text-primary"
-                : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
-            )}
-            aria-current={!processActive && activeKey === overviewItem.key ? "page" : undefined}
-            onClick={() => onNavigate(overviewItem.key)}
-          >
-            <LayoutDashboard className="mr-1.5 size-3.5" /> Báo cáo tổng quan
-          </Button>
-        ) : null}
         {items.map((item) => {
           const active = !processActive && activeKey === item.key;
           return (
@@ -112,39 +103,40 @@ function WorkspaceTabs({
 function ProcessPanel({ module, onNavigate }: { module: WorkspaceModule; onNavigate: (key: string) => void }) {
   const items = workspaceItemsForTabs(module).filter((item) => !item.disabledReason);
   return (
-    <div className="h-full overflow-auto bg-muted/20 p-4 md:p-6">
-      <section className="mx-auto max-w-6xl">
-        <div className="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">{module.label}</div>
-          <h1 className="mt-2 text-xl font-semibold md:text-2xl">Quy trình nghiệp vụ</h1>
-          <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-            Chọn nghiệp vụ để mở danh sách, chứng từ hoặc màn thao tác tương ứng. Các mục hiển thị ở đây lấy trực tiếp từ quyền và manifest của ứng dụng đang chạy.
-          </p>
+    <div className="h-full overflow-auto bg-muted/25 p-3 md:p-5">
+      <section className="mx-auto grid max-w-7xl gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
+        <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+          <div className="border-b px-5 py-4">
+            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">{module.label}</div>
+            <h1 className="mt-1 text-xl font-semibold">Quy trình {module.label.toLocaleLowerCase("vi")}</h1>
+            <p className="mt-1 text-sm text-muted-foreground">Các bước được sinh từ nghiệp vụ và quyền hiện có trong Meta.</p>
+          </div>
+          <div className="grid gap-y-8 p-5 sm:grid-cols-2 lg:grid-cols-3">
+            {items.map((item, index) => (
+              <div key={item.key} className="relative flex min-w-0 items-center">
+                <Button type="button" variant="ghost" className="group h-auto min-h-24 w-full min-w-0 flex-col justify-center whitespace-normal rounded-xl border bg-background px-4 py-3 text-center shadow-sm hover:border-primary/40 hover:bg-primary/5" onClick={() => onNavigate(item.key)}>
+                  <span className="grid size-10 place-items-center rounded-lg bg-primary/10 font-semibold text-primary">{item.icon ?? index + 1}</span>
+                  <span className="mt-2 block max-w-full text-sm font-semibold">{item.label}</span>
+                </Button>
+                {index < items.length - 1 ? <ArrowRight className="absolute -right-4 z-10 hidden size-4 text-primary/60 lg:block" aria-hidden="true" /> : null}
+              </div>
+            ))}
+            {!items.length ? <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">Tài khoản hiện tại chưa có nghiệp vụ khả dụng trong phân hệ này.</div> : null}
+          </div>
         </div>
-
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {items.map((item, index) => (
-            <Button
-              key={item.key}
-              type="button"
-              variant="outline"
-              className="group h-auto min-h-24 justify-start gap-3 rounded-xl bg-card p-4 text-left shadow-sm"
-              onClick={() => onNavigate(item.key)}
-            >
-              <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-sm font-semibold text-primary">{index + 1}</span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate font-semibold text-foreground">{item.label}</span>
-                <span className="mt-1 block text-xs font-normal text-muted-foreground">Mở nghiệp vụ trong phân hệ {module.label}</span>
-              </span>
-              <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
-            </Button>
-          ))}
-          {!items.length ? (
-            <div className="rounded-xl border border-dashed bg-card p-6 text-sm text-muted-foreground">
-              Tài khoản hiện tại chưa có nghiệp vụ khả dụng trong phân hệ này.
-            </div>
-          ) : null}
-        </div>
+        <aside className="rounded-xl border bg-card p-4 shadow-sm">
+          <h2 className="font-semibold">Truy cập nhanh</h2>
+          <p className="mt-1 text-xs text-muted-foreground">Mở thẳng màn nghiệp vụ, không cần đi lại quy trình.</p>
+          <div className="mt-3 divide-y">
+            {items.slice(0, 8).map((item) => (
+              <Button key={item.key} variant="ghost" className="h-auto w-full justify-start gap-2 rounded-none px-1 py-3 text-left text-sm" onClick={() => onNavigate(item.key)}>
+                <CheckCircle2 className="size-4 shrink-0 text-primary" />
+                <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                <ArrowRight className="size-3.5 shrink-0 text-muted-foreground" />
+              </Button>
+            ))}
+          </div>
+        </aside>
       </section>
     </div>
   );
@@ -152,7 +144,7 @@ function ProcessPanel({ module, onNavigate }: { module: WorkspaceModule; onNavig
 
 /**
  * Lớp điều hướng hai tầng dùng chung cho product runtime:
- * sidebar chỉ hiển thị phân hệ; vùng nội dung có tab Quy trình, Tổng quan và nghiệp vụ.
+ * sidebar hiển thị Tổng quan + phân hệ + Báo cáo/Danh mục; vùng phân hệ chỉ có Quy trình và nghiệp vụ.
  * Khi menu không khai `group`, component rơi về AppShell cũ để không phá app đơn giản.
  */
 export function AppShell(props: AppShellProps) {
@@ -169,7 +161,10 @@ export function AppShell(props: AppShellProps) {
   }, [activeModule, modules, selectedLabel]);
 
   useEffect(() => {
-    if (!activeModule || props.activeKey === "__overview") return;
+    if (!activeModule) {
+      setProcessActive(false);
+      return;
+    }
     setSelectedLabel(activeModule.label);
     storeModule(activeModule.label);
     setProcessActive(false);
@@ -200,7 +195,14 @@ export function AppShell(props: AppShellProps) {
       keywords: module.items.flatMap((item) => [item.label, ...(item.keywords ?? [])]),
       disabledReason: module.items.some((item) => !item.disabledReason) ? undefined : "Chưa có màn hình khả dụng",
     }));
-    const overviewItem = props.nav.find((item) => item.key === "__overview");
+    const moduleItemKeys = new Set(modules.flatMap((module) => module.items.map((item) => item.key)));
+    const globalNav = props.nav.filter((item) => !moduleItemKeys.has(item.key) && !indexHubKey(item));
+    const overviewItem = globalNav.find((item) => item.key === "__overview");
+    const orderedNav = [
+      ...(overviewItem ? [overviewItem] : []),
+      ...moduleNav,
+      ...globalNav.filter((item) => item.key !== "__overview"),
+    ];
 
     const selectModule = (key: string) => {
       const module = modules.find((entry) => entry.key === key);
@@ -215,19 +217,26 @@ export function AppShell(props: AppShellProps) {
       props.onNavigate(key);
     };
 
+    const navigateSidebar = (key: string) => {
+      if (key.startsWith("workspace-module:")) selectModule(key);
+      else navigate(key);
+    };
+
+    const showModule = processActive || Boolean(activeModule);
+    const activeSidebarKey = indexHubKey(props.nav.find((item) => item.key === props.activeKey)) ?? props.activeKey;
+
     shell = (
       <BaseAppShell
         {...shellProps}
-        nav={moduleNav}
-        activeKey={selectedModule.key}
-        onNavigate={selectModule}
+        nav={orderedNav}
+        activeKey={showModule ? selectedModule.key : activeSidebarKey}
+        onNavigate={navigateSidebar}
       >
-        <div className="flex h-full min-h-0 flex-col">
+        {showModule ? <div className="flex h-full min-h-0 flex-col">
           <WorkspaceTabs
             module={selectedModule}
             activeKey={props.activeKey}
             processActive={processActive}
-            overviewItem={overviewItem}
             onProcess={() => setProcessActive(true)}
             onNavigate={navigate}
           />
@@ -236,7 +245,7 @@ export function AppShell(props: AppShellProps) {
               ? <ProcessPanel module={selectedModule} onNavigate={navigate} />
               : props.children as ReactNode}
           </div>
-        </div>
+        </div> : props.children as ReactNode}
       </BaseAppShell>
     );
   }
