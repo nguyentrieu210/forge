@@ -1,0 +1,54 @@
+{
+  "//purpose": [
+    "Đơn giá sản xuất là cấu hình có hiệu lực theo ngày để Job Card biến giờ thực tế thành chi phí thực tế.",
+    "Một dòng có thể áp cho đúng công đoạn+trạm, chỉ công đoạn, chỉ trạm hoặc mặc định toàn công ty.",
+    "Controller chặn khoảng hiệu lực chồng nhau trong cùng phạm vi; Cost Sheet chọn theo thứ tự cụ thể nhất.",
+    "Sau khi Cost Sheet bị khóa, thay đổi đơn giá tương lai không sửa ngược snapshot lịch sử."
+  ],
+  "version": "2.2.0",
+  "doctypes": [
+    {
+      "name": "Manufacturing Cost Rate",
+      "label": "Đơn giá sản xuất",
+      "icon": "badge-dollar-sign",
+      "group": "Sản xuất",
+      "naming": "CP-SX-.YYYY.-####",
+      "title": "company",
+      "submittable": true,
+      "list": [
+        "company",
+        "operation",
+        "workstation",
+        "effective_from",
+        "effective_to",
+        "is_active"
+      ],
+      "search": [
+        "operation",
+        "workstation"
+      ],
+      "fields": [
+        "company:Link(Company)-!=(ALUMDOOR) Công ty",
+        "operation:Data Công đoạn (đúng tên Operation; để trống = mọi công đoạn)",
+        "workstation:Data Trạm/máy (đúng tên Workstation; để trống = mọi trạm)",
+        "effective_from:Date! Hiệu lực từ",
+        "effective_to:Date Hiệu lực đến",
+        "currency:Link(Currency)!=(VND) Tiền tệ",
+        "labor_rate_per_hour:Currency!=(0) Nhân công / giờ",
+        "machine_rate_per_hour:Currency!=(0) Máy / giờ",
+        "electricity_rate_per_hour:Currency!=(0) Điện / giờ",
+        "consumable_rate_per_hour:Currency!=(0) Vật tư phụ / giờ",
+        "overhead_rate_per_hour:Currency!=(0) Chi phí chung / giờ",
+        "is_active:Check=(1) Đang áp dụng",
+        "note:Small Text Ghi chú"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwcsxa",
+        "Kế toán": "rwcs",
+        "Kế toán tổng hợp": "rwcsxa",
+        "Kế toán trưởng": "rwcsxa",
+        "Giám đốc": "r"
+      }
+    }
+  ]
+}
