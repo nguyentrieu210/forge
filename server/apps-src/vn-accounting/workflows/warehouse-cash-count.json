@@ -1,0 +1,18 @@
+{
+  "name": "Xác nhận kiểm quỹ kho",
+  "document_type": "Warehouse Cash Count",
+  "state_field": "workflow_state",
+  "is_active": true,
+  "states": [
+    { "state": "Nháp", "docstatus": 0, "allow_edit": "Warehouse Cash User" },
+    { "state": "Chờ xác nhận", "docstatus": 0, "allow_edit": "Warehouse Cash Manager" },
+    { "state": "Đã xác nhận", "docstatus": 1, "allow_edit": "Warehouse Cash Manager" },
+    { "state": "Đã hủy", "docstatus": 2, "allow_edit": "Warehouse Cash Manager" }
+  ],
+  "transitions": [
+    { "state": "Nháp", "action": "Gửi xác nhận", "next_state": "Chờ xác nhận", "allowed_role": "Warehouse Cash User" },
+    { "state": "Chờ xác nhận", "action": "Xác nhận", "next_state": "Đã xác nhận", "allowed_role": "Warehouse Cash Manager", "allow_self_approval": false },
+    { "state": "Chờ xác nhận", "action": "Trả lại", "next_state": "Nháp", "allowed_role": "Warehouse Cash Manager" }
+  ],
+  "revision": 1
+}
