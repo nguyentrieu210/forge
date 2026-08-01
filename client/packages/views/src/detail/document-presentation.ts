@@ -302,7 +302,7 @@ export function resolveDocumentPresentation(meta: DocTypeMeta, doc: Doc): Resolv
   const statusValue = statusField ? doc[statusField] : undefined;
   const status = scalarText(statusValue);
 
-  const metricConfig = explicit?.metrics?.length
+  const metricConfig: DocumentPresentationMetricConfig[] = explicit?.metrics?.length
     ? explicit.metrics
     : uniqueExisting(METRIC_CANDIDATES[archetype], fields, 4).map((field) => ({ field }));
   const metrics = metricConfig.flatMap((metric) => {
