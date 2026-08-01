@@ -20,13 +20,14 @@ Ngày cập nhật: **2026-08-01**.
 - `Đơn bán hàng ALUMDOOR` — Sales Order, A4 portrait, 13 cột = `100%`.
 - `Phiếu giao hàng / lắp đặt ALUMDOOR` — Delivery Note, A4 portrait, 11 cột = `100%`, không in giá, có checklist và ba khu vực ký.
 - `Phiếu yêu cầu sản xuất ALUMDOOR` — Production Request, A4 portrait, 14 cột = `100%`.
-- `Phiếu cắt nhôm ALUMDOOR` — Cut Order, A4 portrait, 13 cột = `100%`, dùng bundle lô mẹ + bundle đầu thừa để truy vết thật; không tạo QR giả.
+- `Phiếu cắt nhôm ALUMDOOR` — Cut Order, A4 portrait, 13 cột = `100%`; bundle lô mẹ + bundle đầu thừa giữ nguyên để truy vết, QR chứng từ dùng filter `qrcode` authoritative của renderer.
+- QR Cut Order được regression qua renderer thật và phải ra `data:image/gif;base64,...`, không phải URL/token nhạy cảm.
 - `Biên bản bàn giao / nghiệm thu ALUMDOOR` — Delivery Note, `default: false`, A4 portrait, 11 cột = `100%`; dùng dữ liệu giao/lắp thật và để vùng kết quả/checklist cho ký tay tại công trình.
 - Regression renderer dùng dữ liệu dài cho Sales Order, Delivery Note, Production Request, Cut Order và Biên bản nghiệm thu.
-- Exact-head Cut Order `a291f5870b3820f2b50d7b80e3e2820183ad177d`: 6/6 workflow SUCCESS.
-- Run IDs Cut Order: CI `30688745607`, PR Validation `30688745586`, UI `30688745573`, Purchase `30688745587`, Inventory/Manufacturing `30688745588`, Sales `30688745593`.
-- Acceptance đang ở staging và phải qua exact-head CI sau khi đưa vào PR branch.
-- Gate còn lại trước merge: exact-head CI với Acceptance, review trực quan HTML preview/PDF dữ liệu dài và PR mergeable với current default.
+- Exact-head Acceptance `c7d93e77d4a062a095cccc916e50127fcc603595`: 6/6 workflow SUCCESS.
+- Run IDs Acceptance: CI `30689143646`, PR Validation `30689143618`, UI `30689143691`, Purchase `30689143635`, Sales `30689143650`, Inventory/Manufacturing `30689143661`.
+- QR Cut Order đang ở staging và phải qua exact-head CI sau khi đưa vào PR branch.
+- Gate còn lại trước merge: exact-head CI với QR Cut Order, review trực quan HTML preview/PDF dữ liệu dài và PR mergeable với current default.
 
 ## Đã hoàn tất trên default
 
@@ -91,8 +92,8 @@ Ngày cập nhật: **2026-08-01**.
 
 ## Business backlog còn lại
 
-1. Hoàn tất print design PR `#141`: exact-head CI với Acceptance và visual review năm mẫu.
-2. Print P1 tiếp: Sales Invoice, Payment Entry, Purchase Receipt.
+1. Hoàn tất print design PR `#141`: exact-head CI với QR Cut Order và visual review năm mẫu.
+2. Print P1 tiếp: chuẩn hóa `Hoá đơn ALUMDOOR` hiện có, sau đó Payment Entry và Purchase Receipt.
 3. Daily detailed ledger snapshot/freeze/adjustment.
 4. Warranty, defects, supplier hold/offset và capacity/overtime.
 5. End-to-end acceptance xuyên Sales, Production, Inventory, Delivery, Finance và Warranty.
