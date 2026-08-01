@@ -136,3 +136,23 @@ Branch: `feat/alumdoor-pwa-real-brand-assets`.
 - Các mẫu dùng chung logo/header Alumdoor, khổ A4 và regression dữ liệu dài; QR Cut Order là data URL từ định danh nội bộ, không chứa token hay URL nhạy cảm.
 - Runtime `/print/:doctype/:name?format=...` tải danh sách mẫu theo quyền, cho đổi mẫu và giữ lựa chọn trên URL; DocType chưa có mẫu hiển thị empty-state thay vì lỗi đỏ.
 - Nhánh in từng được release độc lập ở Gateway version `aff41705-29f2-443f-be5c-fee161061097`; bản đó chưa có UI/PWA mới. Release kế tiếp phải build exact merge head hiện tại để có cả hai phần.
+
+### Production release hoàn chỉnh — 2026-08-01
+
+- Exact code SHA đã build/deploy: `169f18536533272d73b133083e01fb46c91d03b3`; mergeable PR `#150` trỏ đúng head này tại thời điểm release.
+- Full server unit + toàn bộ SQL migration PASS; client typecheck/lint/selfcheck/full workspace build PASS; focused print/QR `15/15`, MISA UI `9/9`, warehouse authenticated responsive `2/2` PASS.
+- Runtime + PWA được stage với hash `b297bd040b76d320`; stage-check và Wrangler dry-run 70 assets PASS.
+- Cloudflare Gateway Version ID: `49093cf1-cc68-4358-9b48-bd29283c7d40`.
+- Production HTTP smoke: landing, `/mobile/warehouse/`, manifest và service worker đều 200; HTML chứa full release SHA; service worker là cache v5 có chặn JSON auth ghi đè app shell.
+- Production browser smoke: landing `scrollY=0`, overflow `0`, logo ngang rộng `350px`, 18 ảnh tải được; warehouse 390px overflow `0`, đúng một logo và quay về form đăng nhập khi chưa có phiên.
+- Không đổi secrets/DNS, không migrate hoặc mutate dữ liệu tenant production trong release giao diện này.
+
+### UI refinement sau phản hồi demo — 2026-08-01
+
+- Commit code: `20b3298d`.
+- Logo ngang Alumdoor trong sidebar dùng trọn chiều ngang và tăng chiều cao vùng thương hiệu; không còn logo nhỏ nằm giữa một khung rộng.
+- Sidebar xếp Tổng quan trước, tiếp theo là các phân hệ nghiệp vụ; Báo cáo và Danh mục nằm phía dưới các phân hệ, trước nhóm Hệ thống.
+- Báo cáo dùng cấu trúc MISA ba vùng: cột nhóm báo cáo bên trái và hai cột liên kết báo cáo bên phải. Danh mục dùng ba cột nhóm dữ liệu với liên kết gọn thay cho lưới thẻ lớn.
+- Quy trình dùng node thao tác, số bước và đường nối trực quan, tận dụng toàn bộ chiều ngang nội dung.
+- Runtime lọc mọi Experience không có renderer/action/screen tương ứng; URL Experience cũ không còn hiện màn “chưa được triển khai” mà quay về Tổng quan.
+- Typecheck shell/runtime, 88 nhóm selfcheck, runtime production build và Playwright MISA UI `9/9` PASS.

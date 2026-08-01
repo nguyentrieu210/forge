@@ -123,3 +123,21 @@ Sales Order → production request → Work Order → material issue/consume →
 - Chạy tenant facade integration để khóa danh sách mẫu, lựa chọn `?format=` và URL encoding.
 - Giữ năm mẫu A4 trong vùng `194mm`, logo/company header tải đủ và vùng ký không tràn trang.
 - Sau release kiểm tra đăng nhập hết hạn ở route in quay về trang chủ, không hiện JSON `AUTHENTICATION_REQUIRED`.
+
+### Đã hoàn thành trong release `169f1853`
+
+- [x] Hợp nhất UI/PWA mới với nhánh mẫu in PR #141.
+- [x] Tổng quan/Báo cáo/Danh mục ở sidebar; Quy trình + nghiệp vụ ở tab phân hệ; dải tổng nhanh trên danh sách.
+- [x] Logo ngang desktop, 13 theme có Hồng cánh sen tương phản cao, app kho không tràn ngang.
+- [x] Full server/client gates, stage-check, Wrangler dry-run, deploy và production guest/browser smoke.
+- [ ] Khi có tài khoản demo được phép dùng, chạy production authenticated smoke cho chuyển tab, mẫu in và hết phiên; không tạo/mutate chứng từ khách hàng chỉ để thử UI.
+
+### Hotfix giao diện tiếp theo `20b3298d`
+
+- [x] Phóng logo ngang Alumdoor khít vùng thương hiệu sidebar.
+- [x] Đưa Báo cáo và Danh mục xuống dưới các phân hệ nghiệp vụ.
+- [x] Đổi Báo cáo sang bố cục nhóm trái + hai cột báo cáo; Danh mục sang ba cột nhóm kiểu MISA.
+- [x] Làm lại sơ đồ Quy trình bằng node, số bước và đường nối.
+- [x] Lọc Experience thiếu renderer và chuyển URL cũ về Tổng quan.
+- [x] Typecheck, selfcheck, build và Playwright responsive PASS.
+- [ ] Build/stage exact SHA, Wrangler dry-run, deploy Gateway và smoke production sau đăng nhập bằng phiên demo hiện có nếu truy cập được an toàn.
