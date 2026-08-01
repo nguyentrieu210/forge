@@ -43,14 +43,14 @@ jobs:
             purchase=false
             auth=false
 
-            if grep -Eq '^(client/|server/apps/gateway-worker/|server/apps/tenant-worker/|server/apps-src/alumdoor-worker/|server/apps/purchase-qa-callback/|server/scripts/(seed-local|seed-purchase-qa-local)\.mjs$|server/packages/app-registry/|package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|\.github/workflows/ui-pr-validation\.yml$)' "$RUNNER_TEMP/changed-files.txt"; then
+            if grep -Eq '^(client/|server/apps/gateway-worker/|server/apps/tenant-worker/|server/apps-src/alumdoor-worker/|server/apps/purchase-qa-callback/|server/scripts/(seed-local|seed-purchase-qa-local|cleanup-stock-qa-local)\.mjs$|server/packages/app-registry/|package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|\.github/workflows/ui-pr-validation\.yml$)' "$RUNNER_TEMP/changed-files.txt"; then
               ui=true
             fi
             if grep -Eiq '^(client/e2e-forge/.*purchase|server/.*purchase)' "$RUNNER_TEMP/changed-files.txt"; then
               purchase=true
               auth=true
             fi
-            if grep -Eq '^(client/e2e-forge/auth-tests/|client/e2e-forge/playwright\.auth\.config\.ts$|server/apps/tenant-worker/|server/apps/purchase-qa-callback/|server/apps-src/alumdoor-worker/wrangler\.purchase-qa\.jsonc$|server/packages/app-registry/|server/scripts/(seed-local|seed-purchase-qa-local)\.mjs$)' "$RUNNER_TEMP/changed-files.txt"; then
+            if grep -Eq '^(client/e2e-forge/auth-tests/|client/e2e-forge/playwright\.auth\.config\.ts$|server/apps/tenant-worker/|server/apps/purchase-qa-callback/|server/apps-src/alumdoor-worker/wrangler\.purchase-qa\.jsonc$|server/packages/app-registry/|server/scripts/(seed-local|seed-purchase-qa-local|cleanup-stock-qa-local)\.mjs$)' "$RUNNER_TEMP/changed-files.txt"; then
               auth=true
             fi
           fi
@@ -131,6 +131,8 @@ jobs:
           auth_password="$(openssl rand -hex 24)"
           auth_session_secret="$(openssl rand -hex 32)"
           internal_auth_secret="$(openssl rand -hex 32)"
+          cleanup_manifest="$RUNNER_TEMP/forge-stock-qa-cleanup-${GITHUB_RUN_ID}.jsonl"
+          : > "$cleanup_manifest"
           echo "::add-mask::$auth_password"
           echo "::add-mask::$auth_session_secret"
           echo "::add-mask::$internal_auth_secret"
@@ -139,6 +141,8 @@ jobs:
             echo "FORGE_AUTH_PASSWORD=$auth_password"
             echo "FORGE_AUTH_SESSION_SECRET=$auth_session_secret"
             echo "FORGE_INTERNAL_AUTH_SECRET=$internal_auth_secret"
+            echo "FORGE_QA_CLEANUP_MANIFEST=$cleanup_manifest"
+            echo "FORGE_QA_TENANT_ID=demo"
           } >> "$GITHUB_ENV"
 
       - name: Prepare local tenant database
@@ -228,6 +232,32 @@ jobs:
           FORGE_AUTH_BACKEND: http://127.0.0.1:8801
         run: pnpm --filter e2e-forge exec playwright test --config playwright.auth.config.ts
 
+      - name: Stop local Purchase QA workers
+        if: steps.scope.outputs.auth == 'true' && always()
+        shell: bash
+        run: |
+          for pid_file in \
+            "$RUNNER_TEMP/forge-auth-backend.pid" \
+            "$RUNNER_TEMP/forge-callback-gateway.pid" \
+            "$RUNNER_TEMP/forge-alumdoor-worker.pid"; do
+            if [ -f "$pid_file" ]; then
+              kill "$(cat "$pid_file")" 2>/dev/null || true
+            fi
+          done
+
+      - name: Cleanup exact P0 QA lineage fixtures and verify no residue
+        if: steps.scope.outputs.auth == 'true' && always()
+        working-directory: server
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -s "$FORGE_QA_CLEANUP_MANIFEST" ]; then
+            echo "No P0 lineage fixtures were created; cleanup has nothing to remove."
+            exit 0
+          fi
+          node scripts/cleanup-stock-qa-local.mjs --manifest="$FORGE_QA_CLEANUP_MANIFEST" \
+            2>&1 | tee "$RUNNER_TEMP/stock-qa-cleanup.log"
+
       - name: Upload auth evidence
         if: steps.scope.outputs.auth == 'true' && always()
         uses: actions/upload-artifact@v4
@@ -241,18 +271,7 @@ jobs:
             ${{ runner.temp }}/forge-alumdoor-worker.log
             ${{ runner.temp }}/forge-app-install.log
             ${{ runner.temp }}/purchase-qa-seed.log
+            ${{ runner.temp }}/stock-qa-cleanup.log
+            ${{ env.FORGE_QA_CLEANUP_MANIFEST }}
           if-no-files-found: warn
           retention-days: 30
-
-      - name: Stop local Purchase QA workers
-        if: steps.scope.outputs.auth == 'true' && always()
-        shell: bash
-        run: |
-          for pid_file in \
-            "$RUNNER_TEMP/forge-auth-backend.pid" \
-            "$RUNNER_TEMP/forge-callback-gateway.pid" \
-            "$RUNNER_TEMP/forge-alumdoor-worker.pid"; do
-            if [ -f "$pid_file" ]; then
-              kill "$(cat "$pid_file")" 2>/dev/null || true
-            fi
-          done
