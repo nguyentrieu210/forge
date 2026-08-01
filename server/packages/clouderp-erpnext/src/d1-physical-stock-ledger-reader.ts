@@ -28,6 +28,7 @@ interface LedgerSqlRow {
   item_code: string;
   warehouse: string;
   actual_qty_micros: number;
+  actual_weight_micros: number | null;
   stock_value_difference_minor: number;
   posting_at: string;
   batch_no: string | null;
@@ -80,7 +81,7 @@ export class D1PhysicalStockLedgerReader implements PhysicalStockLedgerReader {
 
     const ledgerResult = await this.db.prepare(
       `SELECT s.tenant_id,s.voucher_type,s.voucher_no,s.voucher_revision,s.line_key,
-              s.item_code,s.warehouse,s.actual_qty_micros,s.stock_value_difference_minor,
+              s.item_code,s.warehouse,s.actual_qty_micros,s.actual_weight_micros,s.stock_value_difference_minor,
               s.posting_at,s.batch_no,s.serial_no,d.payload_json AS document_payload_json
        FROM stock_ledger_entries s
        JOIN documents d
@@ -134,6 +135,7 @@ function toDraft(
     : child?.data;
   const voucherRow = line.direction === "finished" ? "FINISHED" : child?.rowId;
   const quantity = safeInteger(source.actual_qty_micros, "actual_qty_micros");
+  const weight = optionalSafeInteger(source.actual_weight_micros, "actual_weight_micros");
   const value = safeInteger(source.stock_value_difference_minor, "stock_value_difference_minor");
   const role = line.direction === "source"
     ? text(snapshot?.source_warehouse_role)
@@ -150,6 +152,7 @@ function toDraft(
     voucher_no: requireText(source.voucher_no, "voucher_no", 240),
     revision: safeInteger(source.voucher_revision, "voucher_revision"),
     quantity_micros: quantity,
+    ...(weight === undefined ? {} : { weight_micros: weight }),
     value_micros: value,
     ...(voucherRow ? { voucher_row: voucherRow } : {}),
     ...(text(source.batch_no) ? { batch_no: text(source.batch_no) } : {}),
