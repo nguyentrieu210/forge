@@ -18,13 +18,22 @@
  *  3. Sau khi lọc phải DỌN các thanh phân đoạn rỗng (Section/Column/Tab Break không còn field nào
  *     bên dưới), nếu không form đầy tiêu đề mục trống — còn xấu hơn lúc chưa lọc.
  */
-import type { DocField, DocTypeMeta } from "../types/meta.js";
+import type { DocField, DocTypeMeta, DocTypeView } from "../types/meta.js";
 
 export interface FormProfile {
   /** Chỉ giữ đúng các field này (kèm field bắt buộc + phụ thuộc). Bỏ trống = giữ tất cả. */
   keep?: string[];
   /** Ẩn các field này. Áp dụng SAU `keep`. Dùng khi chỉ muốn bỏ vài field thừa. */
   hide?: string[];
+}
+
+export type FormSurface = "quick" | "expanded";
+
+export interface FormRenderPolicyResult {
+  /** false nghĩa là metadata đã tắt renderer này; caller không được tự mở renderer khác thay thế. */
+  enabled: boolean;
+  /** Schema chỉ dùng để render. Meta gốc vẫn phải dùng cho default/serialization/server contract. */
+  meta: DocTypeMeta;
 }
 
 /** Field chỉ để bố cục — không mang dữ liệu. */
@@ -125,13 +134,34 @@ function stripInternalSurface(meta: DocTypeMeta): DocTypeMeta {
 }
 
 /**
+ * `viewPolicy.*.fields` là whitelist canonical của renderer, không phải FormProfile.
+ * Vì vậy không tự kéo required/title trở lại: nếu package chủ động loại một field thì runtime phải
+ * tôn trọng package. Break + Heading/HTML được giữ để layout/nội dung mô tả quanh field còn nguyên.
+ */
+function applyViewFields(meta: DocTypeMeta, fields: string[]): DocTypeMeta {
+  const keep = new Set(fields);
+  return {
+    ...meta,
+    fields: pruneEmptyBreaks(meta.fields.filter((field) => (
+      isLayout(field)
+      || CONTENT_TYPES.has(field.fieldtype)
+      || keep.has(field.fieldname)
+    ))),
+  };
+}
+
+function viewForSurface(meta: DocTypeMeta, surface: FormSurface): DocTypeView | undefined {
+  return surface === "quick" ? meta.viewPolicy?.quickEntry : meta.viewPolicy?.form;
+}
+
+/**
  * Compact quick-entry is opt-in metadata, never a guess based on field type.
  *
  * The caller must keep using the original meta for defaults and serialisation. This
  * function only returns the schema rendered by FormView, so expanded/internal fields
  * can still be populated by defaults, Link fetches and server controllers.
  */
-export function applyFormSurface(meta: DocTypeMeta, surface: "quick" | "expanded"): DocTypeMeta {
+export function applyFormSurface(meta: DocTypeMeta, surface: FormSurface): DocTypeMeta {
   const declared = meta.fields.filter((field) => field.surface !== undefined);
   if (!declared.length) return meta;
   if (surface === "expanded") {
@@ -143,6 +173,29 @@ export function applyFormSurface(meta: DocTypeMeta, surface: "quick" | "expanded
     .filter((field) => field.surface === "quick")
     .map((field) => field.fieldname);
   return stripInternalSurface(applyFormProfile(meta, { keep: quick }));
+}
+
+/**
+ * Canonical composition point cho MỌI Form renderer.
+ *
+ * Thứ tự cố định:
+ *   app FormProfile (caller đã áp ở useFormMeta) → viewPolicy renderer → surface fallback
+ *   → canonical internal hard boundary.
+ *
+ * `enabled=false` là quyết định thật của metadata. Caller phải render trạng thái unavailable hoặc
+ * điều hướng rõ ràng, tuyệt đối không tự thay quick form bằng full form hay ngược lại.
+ */
+export function resolveFormRenderPolicy(meta: DocTypeMeta, surface: FormSurface): FormRenderPolicyResult {
+  const view = viewForSurface(meta, surface);
+  if (view?.enabled === false) {
+    return { enabled: false, meta: stripInternalSurface(applyViewFields(meta, [])) };
+  }
+
+  const rendered = Array.isArray(view?.fields)
+    ? applyViewFields(meta, view.fields)
+    : applyFormSurface(meta, surface);
+
+  return { enabled: true, meta: stripInternalSurface(rendered) };
 }
 
 /**
