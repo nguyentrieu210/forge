@@ -340,7 +340,7 @@ test("authenticated reservation reduces available stock without changing physica
   expect(noAvailability.text).toContain("tổng 10.000000, đã giữ 10.000000");
 
   const doubleRelease = await releaseReservation(page, managerCsrf, reservation1.name);
-  expect(doubleRelease.status, doubleRelease.text).toBe(422);
+  expect(doubleRelease.status, doubleRelease.text).toBe(417);
   expect(doubleRelease.text).toContain("không còn ở trạng thái Đang giữ");
 
   const terminalEdit = await updateResourceRaw(page, managerCsrf, releasedDoc, { state: "Đang giữ" });
