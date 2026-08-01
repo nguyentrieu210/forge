@@ -27,6 +27,7 @@ import { compileBrief, BriefError } from "./lib/compile-brief.mjs";
 import { readAppSource } from "./lib/read-app-source.mjs";
 import { readBriefSource } from "./lib/read-brief-source.mjs";
 import { validateBriefSchema } from "./lib/validate-brief-schema.mjs";
+import { verifyInstalledApp } from "./lib/verify-installed-app.mjs";
 import { fail, serverRoot } from "./wrangler-cli.mjs";
 import { parseAppManifest } from "../dist/packages/app-registry/src/index.js";
 
@@ -201,6 +202,16 @@ if (!clientManifest.nav?.length) {
 }
 console.log(`ok (${clientManifest.nav.length} nav entries, home ${homeRoute})`);
 
+process.stdout.write(`5 verifying   installed form/link/chart contract … `);
+let installedContract;
+try {
+  installedContract = await verifyInstalledApp({ manifest, clientManifest, call, adminUser });
+} catch (error) {
+  console.log("FAILED");
+  fail(`installed, but the metadata contract does not resolve: ${error.message}`);
+}
+console.log(`ok (form ${installedContract.form ?? "n/a"}, User Link ${installedContract.userLink ?? "n/a"}, ${installedContract.charts} charts, ${installedContract.reports} reports)`);
+
 /**
  * Every REQUIRED context dimension must actually have options.
  *
@@ -212,7 +223,7 @@ console.log(`ok (${clientManifest.nav.length} nav entries, home ${homeRoute})`);
  */
 const declared = clientManifest.businessContext?.dimensions ?? [];
 if (declared.length) {
-  process.stdout.write(`5 verifying   context dimensions have data … `);
+  process.stdout.write(`6 verifying   context dimensions have data … `);
   let context;
   try {
     context = await call("metaforge.api.get_business_context", { app_id: manifest.id, dimensions: JSON.stringify(declared) });

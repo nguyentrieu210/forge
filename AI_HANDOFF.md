@@ -6,7 +6,7 @@ Ngày cập nhật: **2026-08-01**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `main`; vẫn phải kiểm tra lại bằng GitHub trước khi làm, không suy từ tên branch local.
-- Current default head: `7f9c629b65b2f2550aec9426cf5e9115ee3db6d0`.
+- Current default head: `3481f9bfe3fdab5d1ba1f8435c2ebb9f6a2daf50`.
 - PR UI/PWA `#150`, PR Meta `#154` và hotfix release `#155` đã merge sau khi toàn bộ required checks xanh. Protected release run `30703115053` đã phát hành exact default head và PASS tenant/app/gateway cùng HTTP/browser smoke.
 - Đọc theo thứ tự: `CURRENT_STATUS.md` → `NEXT_TASKS.md` → `DELIVERY_POLICY.md`.
 - GitHub là nguồn sự thật cho code, CI, merge và release evidence.
@@ -20,6 +20,14 @@ Ngày cập nhật: **2026-08-01**.
 - `User` Link đọc danh bạ tenant thay vì rơi về free-text hoặc đòi một DocType document giả.
 - Biểu đồ không còn tự suy từ workflow; chỉ chart khai trong manifest, có report, quyền, drill-down và empty fallback mới được render.
 - Canonical skill `C:\AppWeb\.claude\skills\app-factory` đã được tạo tại `35be2bf` và siết đồng bộ runtime tại `9cd5774`.
+
+## Protected metadata installer đang chờ merge/run
+
+- Branch: `feat/alumdoor-protected-meta-install-20260801`, base exact `3481f9bfe3fdab5d1ba1f8435c2ebb9f6a2daf50`.
+- Workflow mới `.github/workflows/install-alumdoor-meta.yml` chỉ nhận exact current `main`, dùng environment `production` và cùng concurrency với release tenant.
+- Trình tự bị ép: package gate → backup mới/checksum → hai restore drill độc lập → cài cookie+CSRF → smoke chỉ đọc Quick/Full Form, User Link, chart/fallback/report → dọn đúng hai D1 drill tạm.
+- Local gate: actionlint PASS, 776 server unit, toàn bộ SQL migration, 89 nhóm client selfcheck, typecheck/lint/secret scan/full build PASS.
+- Chưa cài `2.1.0` production tại thời điểm ghi mục này; chỉ được kết luận sau khi PR merge và workflow protected terminal xanh.
 
 ## PR cleanup
 
