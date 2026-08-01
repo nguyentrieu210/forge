@@ -196,9 +196,9 @@ export function LoginForm({
       <div className="space-y-6 p-6 sm:p-8">
         <div className="flex items-center gap-3">
           {warehouseApp ? (
-            <img src="/mobile/warehouse/alumdoor-logo.png" alt="Alumdoor" className="h-12 w-auto max-w-full object-contain" />
+            <img src="/mobile/warehouse/alumdoor-logo.png" alt="Alumdoor" className="mf-alumdoor-logo-image h-12 w-auto max-w-full object-contain" />
           ) : alumdoor ? (
-            <img src="/alumdoor/logo.png" alt="Alumdoor" className="mx-auto h-auto w-full max-w-[300px] object-contain" />
+            <img src="/alumdoor/logo.png" alt="Alumdoor" className="mf-alumdoor-logo-image mx-auto h-auto w-full max-w-[300px] object-contain" />
           ) : (
             <>
               {mark}

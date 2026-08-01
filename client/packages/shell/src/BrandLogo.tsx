@@ -44,14 +44,14 @@ export function ForgeBrandLogo({
     return (
       <span
         data-alumdoor-logo
-        className={cn("inline-flex w-full min-w-0 items-center justify-center overflow-hidden bg-white", className)}
+        className={cn("mf-alumdoor-logo inline-flex w-full min-w-0 items-center justify-center overflow-hidden", className)}
         style={{ height: size }}
         title="Alumdoor"
       >
         <img
           src={getAlumdoorLogoUrl()}
           alt="Alumdoor"
-          className="block h-full w-full object-contain"
+          className="mf-alumdoor-logo-image block h-full w-full object-contain"
         />
       </span>
     );

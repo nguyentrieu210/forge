@@ -171,6 +171,8 @@ test("Alumdoor login supports keyboard, password reveal and error state", async 
   await page.evaluate(() => {
     document.documentElement.dataset.theme = "dark";
   });
+  await expect(page.locator('form img[alt="Alumdoor"]')).toHaveCSS("mix-blend-mode", "screen");
+  await expect(page.locator('form img[alt="Alumdoor"]')).not.toHaveCSS("filter", "none");
   await expectAlumdoorPalette(page, "dark");
   await saveScreenshot(page, testInfo, "alumdoor-login-error-dark");
 
