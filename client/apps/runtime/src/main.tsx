@@ -78,7 +78,7 @@ interface RuntimeNav extends NavItem { route: string; doctype?: string }
 
 function isRenderableExperience(item: AppManifest["nav"][number], manifest: AppManifest): boolean {
   if ((item.kind ?? "doctype") !== "experience") return true;
-  if (item.key === "screen:manufacturing-costing") return true;
+  if (item.key === "alumdoor-operations:manufacturing-costing") return true;
   const separator = item.key.indexOf(":");
   if (separator < 1 || separator === item.key.length - 1) return false;
   const kind = item.key.slice(0, separator);
@@ -442,7 +442,7 @@ function ExperienceScreen({ manifest, boot, logout, nav }: ScreenProps) {
   const navigate = useNavigate();
   const experienceKey = decodeURIComponent(key);
   const kind = experienceKey.split(":", 1)[0];
-  if (experienceKey === "screen:manufacturing-costing") {
+  if (experienceKey === "alumdoor-operations:manufacturing-costing") {
     return (
       <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={experienceKey} breadcrumbs={[{ label: "Giá thành sản xuất" }]}>
         <ManufacturingCosting />
