@@ -1,6 +1,6 @@
 {
   "//purpose": "Mẫu in mới tách khỏi brief nghiệp vụ để review bố cục, cột và giấy ký độc lập; forge-app ghép lại trước schema validation và compile.",
-  "version": "2.0.36",
+  "version": "2.0.37",
   "prints": [
     {
       "//": "Đơn bán hàng A4 dùng để khách xác nhận và bàn giao nội bộ sang kho/sản xuất. Cột kích thước giữ nguyên số đo vận hành, không chỉ in mỗi m2 tính tiền.",
@@ -37,6 +37,47 @@
         "</tbody><tfoot><tr><td class=\"total-label\" colspan=\"10\">Tổng tiền</td><td class=\"total-value\">{{ grand_total | money }} {{ currency }}</td><td colspan=\"2\"></td></tr></tfoot></table>",
         "<div class=\"footer-note\"><b>Ghi chú:</b>{{ note }}</div>",
         "<div class=\"sign\"><div><b>Khách hàng xác nhận</b>(ký, ghi rõ họ tên)</div><div><b>Người lập đơn</b>(ký, ghi rõ họ tên)</div><div><b>Đại diện ALUMDOOR</b>(ký, đóng dấu)</div></div>"
+      ]
+    },
+    {
+      "//": "Phiếu giao hàng kiêm lắp đặt cho Delivery Note. Không in đơn giá để tờ giao nhận dùng ngoài hiện trường; giữ số đo, số bộ, kho xuất và khối lượng để thủ kho, đội lắp và khách cùng đối chiếu.",
+      "name": "Phiếu giao hàng / lắp đặt ALUMDOOR",
+      "doctype": "Delivery Note",
+      "default": true,
+      "css": [
+        "@page{size:A4 portrait;margin:0}",
+        "*{box-sizing:border-box}html,body{margin:0;width:210mm;min-height:297mm}body{font-family:Arial,'Liberation Sans',sans-serif;font-size:9px;color:#111;padding:18mm 8mm 8mm;font-kerning:none;letter-spacing:0;word-spacing:0}",
+        ".letterhead{position:relative;width:194mm;height:20mm;overflow:hidden;border-bottom:1px solid #ddd}.brand-logo-text{position:absolute;left:0;top:2mm;font-size:24px;font-weight:800;color:#f15a24;letter-spacing:.8px}.brand-tagline{position:absolute;left:0;top:11mm;font-size:7.5pt;color:#555}.company-header-img{position:absolute;right:-13.5mm;top:0;width:114.3mm;height:auto;display:block}",
+        ".title{width:194mm;font-size:18px;line-height:1.2;font-weight:700;color:#f15a24;text-transform:uppercase;text-align:center;margin:5mm 0 4mm}",
+        ".meta{width:194mm;font-size:8px;line-height:1.4;margin-bottom:4mm;display:grid;grid-template-columns:1fr 1fr;gap:1mm 8mm}.meta-row{display:grid;grid-template-columns:27mm 1fr;min-height:2.8mm}.meta-row.wide{grid-column:1/-1;grid-template-columns:27mm 1fr}.meta-label{font-weight:700}.meta-value{white-space:pre-wrap;overflow-wrap:anywher}",
+        "table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}th,td{border:1px solid #777;padding:4pt 1.5pt;vertical-align:middle;text-align:center;line-height:1.25}",
+        "th{background:#f3f3f3;font-size:7.2pt;text-transform:uppercase;white-space:normal}td{font-size:7.8pt;white-space:normal;overflow-wrap:anywhere}.n,.c{text-align:center;font-variant-numeric:tabular-nums}.code{font-weight:700}.item-cell,.warehouse-cell{white-space:normal;overflow-wrap:anywher}.index-col,.nowrap{white-space:nowrap}",
+        ".handover{margin-top:4mm;border:1px solid #aaa;padding:3mm;font-size:8pt;line-height:1.55}.handover-title{font-weight:700;margin-bottom:1mm}.checks{display:flex;flex-wrap:wrap;gap:2mm 8mm}.footer-note{margin-top:3mm;font-size:8pt;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere}.footer-note b{display:inline-block;min-width:25mm}",
+        ".sign{display:flex;width:100%;justify-content:space-between;text-align:center;margin-top:16px}.sign div{width:31%}.sign b{display:block;margin-bottom:34px;font-size:8px}"
+      ],
+      "html": [
+        "<div class=\"letterhead\"><div class=\"brand-logo-text\">ALUMDOOR</div><div class=\"brand-tagline\">CỬA CUỐN CÔNG NGHỆ ĐỪC / ÚC</div><img class=\"company-header-img\" src=\"/alumdoor-company-header.png\" alt=\"ѡ�ng tin công ty ALUMDOOR\"></div>",
+        "<div class=\"title\">PHIẾU GIAO HÀNG / LẮP ĐẶT</div>",
+        "<div class=\"meta\">",
+        "<div class=\"meta-row\"><span class=\"meta-label\">Khách hàng:</span><span class=\"meta-value\">{{ customer }}</span></div>",
+        "<div class=\"meta-row\"><span class=\"meta-label\">Số phiếu:</span><span class=\"meta-value\">{{ name }}</span></div>",
+        "<div class=\"meta-row\"><span class=\"meta-label\">Mục đích xuất:</span><span class=\"meta-value\">{{ issue_purpose }}</span></div>",
+        "<div class=\"meta-row\"><span class=\"meta-label\">Ngày xuất:</span><span class=\"meta-value\">{{ posting_at | date }}</span></div>",
+        "<div class=\"meta-row\"><span class=\"meta-label\">Theo đơn bán:</span><span class=\"meta-value\">{{ against_sales_order }}</span></div>",
+        "<div class=\"meta-row\"><span class=\"meta-label\">Ngày lắp:</span><span class=\"meta-value\">{{ install_date | date }}</span></div>",
+        "<div class=\"meta-row\"><span class=\"meta-label\">Đội lắp:</span><span class=\"meta-value\">{{ installer }}</span></div>",
+        "<div class=\"meta-row\"><span class=\"meta-label\">Người giao / lái xe:</span><span class=\"meta-value\">{{ driver }}</span></div>",
+        "<div class=\"meta-row\"><span class=\"meta-label\">Biển số xe:</span><span class=\"meta-value\">{{ vehicle }}</span></div>",
+        "<div class=\"meta-row wide\"><span class=\"meta-label\">Giao / lắp tại:</span><span class=\"meta-value\">{{ install_address }}</span></div>",
+        "</div>",
+        "<table><colgroup><col style=\"width:3%\"><col style=\"width:9%\"><col style=\"width:17%\"><col style=\"width:7%\"><col style=\"width:6%\"><col style=\"width:6%\"><col style=\"width:6%\"><col style=\"width:8%\"><col style=\"width:5%\"><col style=\"width:18%\"><col style=\"width:15%\"></colgroup><thead><tr>",
+        "<th class=\"index-col\">STT</th><th>Mã hàng</th><th>Tên hàng</th><th>Màu sắc</th><th>Rộng (m)</th><th>Cao (m)</th><th>Số bộ</th><th>SL giao</th><th>ĐVT</th><th>Kho xuất</th><th>Khối lượng (kg)</th>",
+        "</tr></thead><tbody>",
+        "{{#each items}}<tr><td class=\"c index-col\">{{ _index }}</td><td class=\"code\">{{ item_code }}</td><td class=\"item-cell\">{{ item_name }}</td><td class=\"c\">{{ color }}</td><td class=\"n\">{{ width_m | number }}</td><td class=\"n\">{{ height_m | number }}</td><td class=\"n\">{{ set_count | number }}</td><td class=\"n\">{{ qty | number2 }}</td><td class=\"c\">{{ uom }}</td><td class=\"warehouse-cell\">{{ warehouse }}</td><td class=\"n\">{{ weight_kg | number2 }}</td></tr>{{/each}}",
+        "</tbody></table>",
+        "<div class=\"handover\"><div class=\"handover-title\">Kết quả bàn giao / lắp đặt</div><div class=\"checks\"><span>☐ Đủ số lượng</span><span>☐ Ngoại quan đạt</span><span>☐ Lắp đặt hoàn tất</span><span>☐ Vận hành thử đạt</span><span>☐ Cần xử lý bổ sung</span></div></div>",
+        "<div class=\"footer-note\"><b>Ghi chú:</b>{{ note }}</div>",
+        "<div class=\"sign\"><div><b>Thủ kho / Người giao</b>(ký, ghi rõ họ tên)</div><div><b>Đội lắp đặt</b>(ký, ghi rõ họ tên)</div><div><b>Khách hàng xác nhận</b>(ký, ghi rõ họ tên)</div></div>"
       ]
     }
   ]
