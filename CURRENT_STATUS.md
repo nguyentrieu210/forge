@@ -4,6 +4,30 @@ Ngày cập nhật: **2026-08-02**.
 
 GitHub là nguồn sự thật cho branch head, PR, CI và release evidence.
 
+## DONE — Physical stock catch-weight reconciliation
+
+- PR `#173` đã merge vào `main` ngày 2026-08-02.
+- Final validated PR head: `99e198b39998a96d21e35c11ae0bdb5bfa4633fb`.
+- Merge commit: `25df9d32217703b9c6c3f965f318b779fe028333`.
+- Final exact-head CI: **6/6 PASS**.
+  - CI `30716396423`: tests PASS, typecheck PASS, build PASS.
+  - UI Pull Request Validation `30716396394`: PASS; authenticated cookie+CSRF catch-weight stock lifecycle PASS.
+  - PR Validation `30716396428`: PASS.
+  - Sales Feature CI `30716396392`: PASS.
+  - Purchase Feature CI `30716396405`: PASS.
+  - Inventory and Manufacturing CI `30716396389`: PASS.
+
+### Catch-weight evidence đã khóa
+
+1. `D1PhysicalStockLedgerReader` đọc `actual_weight_micros` từ append-only stock ledger và giữ `NULL` khác `0`.
+2. Physical-stock lineage, balance và totals cùng reconcile `quantity_micros`, `weight_micros`, value và physical-count.
+3. Nếu có quantity movement không có bằng chứng cân, aggregate `weight_micros` trả `null`; hệ thống không cộng phần biết được rồi giả đó là tổng kg đầy đủ.
+4. Zero-quantity valuation movement không làm mất weight balance đã biết; quantity/weight trái dấu bị từ chối fail-closed.
+5. Physical-stock CSV export có `weight_micros` và vẫn giữ scope/formula-safety hiện có.
+6. Authenticated local D1 QA dùng role nghiệp vụ thật với item catch-weight riêng: nhập `10 / 65.7 kg` → xuất `2 / 13.14 kg` → chuyển `3 / 19.71 kg` → kiểm kê kho đích còn `2 / 13.14 kg`; qty + kg + lineage được đối chiếu sau từng bước.
+7. `Thủ kho` submit receipt/issue, `Chủ xưởng` submit transfer + reconciliation, `Sản xuất` submit Stock Entry vẫn nhận `403`.
+8. Không deploy Cloudflare, không sửa production secrets/DNS và không mutate tenant production.
+
 ## DONE — Stock Entry operational submit RBAC
 
 - PR `#170` đã merge vào `main` ngày 2026-08-02.
@@ -82,17 +106,17 @@ GitHub là nguồn sự thật cho branch head, PR, CI và release evidence.
 ## Main và production boundary
 
 - Default branch: `main`.
-- Main executable head sau PR #170: `9b51da20902ac67dc3b4df7ce6ee77b11f886007`.
+- Main executable head sau PR #173: `25df9d32217703b9c6c3f965f318b779fe028333`.
 - Alumdoor production vẫn chạy exact SHA `b46d322831ebe7b57e29d4363d2daa005bb56e55`.
 - Production full release run `30707135053`: PASS.
 - Protected Alumdoor Meta installer run `30707517624`: PASS.
 - Production Alumdoor Meta vẫn là `2.1.0`: 74 DocTypes, 969 fields, 255 Links, 27 child tables, 12 reports, 3 report-backed charts, 6 external DocTypes.
-- PR #170 không deploy Cloudflare, không sửa production secrets/DNS và không mutate tenant production.
+- PR #173 không deploy Cloudflare, không sửa production secrets/DNS và không mutate tenant production.
 - G03 Organization Security có trên main nhưng chưa có production release evidence; không gộp G03 deploy vào stock acceptance QA.
 
 ## NEXT
 
-1. **P0:** hoàn tất stock acceptance còn thiếu: kg thực cân, giữ chỗ/nhả giữ chỗ, QR/lineage và cleanup QA không residue.
+1. **P0:** hoàn tất stock acceptance còn thiếu: giữ chỗ/nhả giữ chỗ, QR/lineage end-to-end và cleanup QA không residue.
 2. **P1:** daily detailed ledger: snapshot ngày, freeze, append-only adjustment, reconciliation nhiều miền.
 3. **P2:** warranty/defects/capacity theo quy trình 25.7.
 4. **P3:** end-to-end acceptance xuyên Sales → Production → Inventory → Delivery → Finance → Daily Ledger → Warranty.
