@@ -243,7 +243,7 @@ test("direct core freeze fails closed when the atomic source-set comparison inse
 
   await assert.rejects(
     () => service.freeze("tenant-a", FREEZE_ACTOR, FREEZE_SNAPSHOT.snapshot_id, "close day"),
-    (error) => error?.code === "INVALID_LIFECYCLE_TRANSITION"
+    (error) => error?.code === "INVALID_LIFECYCLE"
       && error?.status === 409
       && /source changed/i.test(error.message),
   );
@@ -268,7 +268,7 @@ test("direct core freeze rejects a context already frozen to another snapshot", 
 
   await assert.rejects(
     () => service.freeze("tenant-a", FREEZE_ACTOR, FREEZE_SNAPSHOT.snapshot_id, "close day"),
-    (error) => error?.code === "INVALID_LIFECYCLE_TRANSITION"
+    (error) => error?.code === "INVALID_LIFECYCLE"
       && /another snapshot/i.test(error.message),
   );
   assert.equal(db.calls.some((call) => call.sql.includes("WITH live_lines AS")), false);
