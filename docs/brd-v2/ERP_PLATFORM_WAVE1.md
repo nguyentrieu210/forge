@@ -1,7 +1,7 @@
 # BRD — Nền tảng ERP dùng chung, Wave 1
 
 Ngày chốt phạm vi: 2026-08-01
-Trạng thái: **Cổng 2 — sẵn sàng xin duyệt**
+Trạng thái: **Cổng 2 đã duyệt — thiết kế Cổng 3 sẵn sàng xin duyệt**
 Nguồn phạm vi: gói G03, G01, G02, G11 trong `Forge_ERP_1000_Diem_Nang_Cap_2026-08-01.xlsx`
 Baseline kế thừa: `server/docs/spec/BRD.md` và các registry ERP/HR hiện có
 Nguyên tắc sản phẩm: nền tảng ERP đa ngành; không đóng khung cho xưởng nhôm
@@ -158,3 +158,16 @@ Mỗi workspace dùng generic list/form/report/print runtime cho route con của
 ## Cổng 2
 
 Tự chấm và bằng chứng nằm tại [GATE2_SCORECARD.md](erp-platform-wave1/GATE2_SCORECARD.md). Cổng 2 chỉ duyệt yêu cầu; chưa cho phép viết migration, API hay UI. Sau khi người dùng duyệt Cổng 2, Pha 3 mới tạo kiến trúc chi tiết, Field Ledger, DocType Meta, API schema, state machine và kế hoạch migration để xin Cổng 3.
+
+## Cổng 3 — hồ sơ thiết kế kỹ thuật
+
+- [Theo dõi 7 pha](erp-platform-wave1/PHASE_TRACKER.md)
+- [Thiết kế kỹ thuật tổng thể](erp-platform-wave1/technical/TECHNICAL_DESIGN.md)
+- [Quyết định kiến trúc](erp-platform-wave1/technical/ARCHITECTURE_DECISIONS.md)
+- [API và bảo mật máy chủ](erp-platform-wave1/technical/API_AND_SECURITY_DESIGN.md)
+- [Kế hoạch migration/vận hành/rollback](erp-platform-wave1/technical/MIGRATION_AND_OPERATIONS_PLAN.md)
+- [Compatibility Matrix L0–L5](erp-platform-wave1/technical/COMPATIBILITY_MATRIX.md)
+- [Scorecard Cổng 3](erp-platform-wave1/technical/GATE3_SCORECARD.md)
+- [Meta DocType kiểm máy](../meta/doctype-meta.json)
+
+Field Ledger 9 cột nằm trong thư mục [`field-ledgers/`](erp-platform-wave1/field-ledgers/). Cổng 3 chỉ duyệt thiết kế; chưa chạy migration và chưa sửa mã runtime. Sau khi chủ dự án duyệt rõ ràng, Pha 4–5 mới được bắt đầu theo thứ tự G03 → G01 → G02 → G11.

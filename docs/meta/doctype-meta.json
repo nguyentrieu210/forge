@@ -1,0 +1,436 @@
+{
+  "schemaVersion": "1.0",
+  "app": {
+    "name": "forge-erp-wave1",
+    "label": "Forge ERP Platform Wave 1",
+    "version": "1.0.0-design",
+    "namespace": "erp_platform",
+    "dependencies": ["core", "accounts", "hrm", "vn-accounting"]
+  },
+  "modules": [
+    {"name": "ERP Organization Security", "label": "Tổ chức & kiểm soát", "domain": "security", "icon": "shield-check", "order": 10, "roles": ["System Manager", "Auditor", "Owner"]},
+    {"name": "ERP VN Accounting", "label": "Kế toán Việt Nam", "domain": "accounts", "icon": "landmark", "order": 20, "roles": ["Accountant", "Chief Accountant", "Tax Specialist", "Auditor"]},
+    {"name": "ERP Reliability", "label": "Độ tin cậy & phát hành", "domain": "operations", "icon": "activity", "order": 40, "roles": ["Platform Operator", "Release Manager", "Auditor"]}
+  ],
+  "externalDocTypes": [
+    {"name": "User", "kind": "system", "app": "core"},
+    {"name": "Role", "kind": "system", "app": "core"},
+    {"name": "DocType", "kind": "system", "app": "core"},
+    {"name": "Company", "kind": "master", "app": "accounts"},
+    {"name": "Currency", "kind": "master", "app": "accounts"},
+    {"name": "Cost Center", "kind": "tree", "app": "accounts"},
+    {"name": "Account", "kind": "tree", "app": "accounts"},
+    {"name": "Journal Entry", "kind": "transaction", "app": "accounts"},
+    {"name": "GL Entry", "kind": "system", "app": "accounts"},
+    {"name": "Sales Invoice", "kind": "transaction", "app": "selling"},
+    {"name": "Branch", "kind": "master", "app": "hrm"},
+    {"name": "Department", "kind": "tree", "app": "hrm"},
+    {"name": "Employee", "kind": "master", "app": "hrm"},
+    {"name": "Employment Contract", "kind": "transaction", "app": "hrm"},
+    {"name": "Attendance", "kind": "transaction", "app": "hrm"},
+    {"name": "Leave Application", "kind": "transaction", "app": "hrm"},
+    {"name": "Leave Type", "kind": "master", "app": "hrm"},
+    {"name": "Shift Assignment", "kind": "transaction", "app": "hrm"},
+    {"name": "Shift Type", "kind": "master", "app": "hrm"},
+    {"name": "Salary Structure", "kind": "master", "app": "hrm"},
+    {"name": "Salary Structure Assignment", "kind": "transaction", "app": "hrm"},
+    {"name": "VN Payroll Rule", "kind": "master", "app": "hrm"},
+    {"name": "Payroll Entry", "kind": "transaction", "app": "hrm"},
+    {"name": "Salary Slip", "kind": "transaction", "app": "hrm"},
+    {"name": "Employee Advance", "kind": "transaction", "app": "hrm"},
+    {"name": "Payroll Accounting Batch", "kind": "transaction", "app": "vn-accounting"},
+    {"name": "VN Accounting Policy", "kind": "single", "app": "vn-accounting"},
+    {"name": "VN Legal Rule", "kind": "master", "app": "vn-accounting"},
+    {"name": "VN Accounting Period", "kind": "transaction", "app": "vn-accounting"}
+  ],
+  "doctypes": [
+    {
+      "name": "Organization Assignment", "label": "Gán phạm vi tổ chức", "kind": "transaction", "module": "ERP Organization Security",
+      "flags": {"isSubmittable": false, "quickEntry": false, "trackChanges": true, "allowImport": true},
+      "naming": {"strategy": "series", "series": "ORG-ASG-.YYYY.-.#####"}, "titleField": "assignment_code", "searchFields": ["assignment_code", "user", "company"], "timelineField": "effective_from",
+      "fields": [
+        {"fieldname": "assignment_code", "label": "Mã gán", "fieldtype": "Data", "read_only": true, "unique": true, "valueSource": "system", "editMode": "readonly", "surface": "internal", "serverEnforced": true},
+        {"fieldname": "user", "label": "Người dùng", "fieldtype": "Link", "options": "User", "reqd": true, "in_list_view": true, "in_standard_filter": true, "valueSource": "user", "editMode": "set_once", "surface": "quick", "serverEnforced": true},
+        {"fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "reqd": true, "in_list_view": true, "in_standard_filter": true, "valueSource": "user", "editMode": "set_once", "surface": "quick", "serverEnforced": true},
+        {"fieldname": "branch", "label": "Chi nhánh", "fieldtype": "Link", "options": "Branch", "valueSource": "user", "editMode": "set_once", "surface": "expanded", "serverEnforced": true},
+        {"fieldname": "department", "label": "Phòng ban", "fieldtype": "Link", "options": "Department", "valueSource": "user", "editMode": "set_once", "surface": "expanded", "serverEnforced": true},
+        {"fieldname": "effective_from", "label": "Hiệu lực từ", "fieldtype": "Date", "reqd": true, "in_list_view": true, "valueSource": "user", "editMode": "set_once", "surface": "quick", "serverEnforced": true},
+        {"fieldname": "effective_to", "label": "Hiệu lực đến", "fieldtype": "Date", "valueSource": "user", "editMode": "editable", "surface": "expanded", "serverEnforced": true},
+        {"fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Draft\nPublished\nRetired", "read_only": true, "in_list_view": true, "in_standard_filter": true, "valueSource": "workflow", "editMode": "readonly", "surface": "quick", "serverEnforced": true}
+      ],
+      "viewPolicy": {"list": {"enabled": true, "columns": ["assignment_code", "user", "company", "effective_from", "status"]}, "form": {"enabled": true}, "quickEntry": {"enabled": false}, "kanban": {"enabled": true, "stageField": "status", "reasonRequiredOn": ["backward", "cancel"]}, "calendar": {"enabled": true, "startField": "effective_from", "endField": "effective_to"}, "mobile": {"mode": "cards", "primaryAction": "new"}},
+      "permissions": [{"role": "System Manager", "read": true, "create": true, "write": true, "export": true}, {"role": "Auditor", "read": true, "report": true, "export": true}]
+    },
+    {
+      "name": "Role Policy", "label": "Chính sách vai trò", "kind": "transaction", "module": "ERP Organization Security",
+      "flags": {"quickEntry": false, "trackChanges": true, "allowImport": false}, "naming": {"strategy": "series", "series": "ROLE-POL-.#####"}, "titleField": "policy_code", "searchFields": ["policy_code", "role", "resource"],
+      "fields": [
+        {"fieldname": "policy_code", "label": "Mã policy", "fieldtype": "Data", "read_only": true, "unique": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "version_no", "label": "Phiên bản", "fieldtype": "Int", "read_only": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "role", "label": "Vai trò", "fieldtype": "Link", "options": "Role", "reqd": true, "in_list_view": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "resource", "label": "Tài nguyên", "fieldtype": "Data", "reqd": true, "in_list_view": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "actions_json", "label": "Hành động", "fieldtype": "JSON", "reqd": true, "valueSource": "user", "editMode": "editable", "serverEnforced": true},
+        {"fieldname": "row_rule_json", "label": "Điều kiện dòng", "fieldtype": "JSON", "default": {}, "valueSource": "user", "editMode": "editable", "serverEnforced": true},
+        {"fieldname": "field_rule_json", "label": "Điều kiện trường", "fieldtype": "JSON", "default": {}, "valueSource": "user", "editMode": "editable", "serverEnforced": true},
+        {"fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Draft\nReview\nPublished\nRetired", "read_only": true, "in_list_view": true, "in_standard_filter": true, "valueSource": "workflow", "editMode": "readonly", "serverEnforced": true}
+      ],
+      "viewPolicy": {"list": {"enabled": true, "columns": ["policy_code", "version_no", "role", "resource", "status"]}, "form": {"enabled": true}, "quickEntry": {"enabled": false}, "kanban": {"enabled": true, "stageField": "status", "reasonRequiredOn": ["backward", "cancel"]}, "mobile": {"mode": "cards"}},
+      "permissions": [{"role": "System Manager", "read": true, "create": true, "write": true, "export": true}, {"role": "Owner", "read": true, "write": true}, {"role": "Auditor", "read": true, "report": true, "export": true}]
+    },
+    {
+      "name": "SoD Rule", "label": "Quy tắc phân tách nhiệm vụ", "kind": "master", "module": "ERP Organization Security",
+      "flags": {"quickEntry": false, "trackChanges": true}, "naming": {"strategy": "series", "series": "SOD-.#####"}, "titleField": "rule_code", "searchFields": ["rule_code", "left_action", "right_action"],
+      "fields": [
+        {"fieldname": "rule_code", "label": "Mã rule", "fieldtype": "Data", "read_only": true, "unique": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "left_action", "label": "Hành động thứ nhất", "fieldtype": "Data", "reqd": true, "in_list_view": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "right_action", "label": "Hành động thứ hai", "fieldtype": "Data", "reqd": true, "in_list_view": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "document_type", "label": "Loại chứng từ", "fieldtype": "Link", "options": "DocType", "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "severity", "label": "Mức cưỡng chế", "fieldtype": "Select", "options": "Block\nWarn", "default": "Block", "in_list_view": true, "valueSource": "user", "editMode": "editable", "serverEnforced": true},
+        {"fieldname": "reason", "label": "Lý do", "fieldtype": "Small Text", "reqd": true, "valueSource": "user", "editMode": "editable", "serverEnforced": true},
+        {"fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Draft\nPublished\nRetired", "read_only": true, "in_list_view": true, "valueSource": "workflow", "editMode": "readonly", "serverEnforced": true}
+      ],
+      "viewPolicy": {"list": {"enabled": true, "columns": ["rule_code", "left_action", "right_action", "severity", "status"]}, "form": {"enabled": true}, "quickEntry": {"enabled": false}, "kanban": {"enabled": true, "stageField": "status", "reasonRequiredOn": ["backward", "cancel"]}},
+      "permissions": [{"role": "Auditor", "read": true, "create": true, "write": true, "report": true, "export": true}, {"role": "System Manager", "read": true, "create": true, "write": true}]
+    },
+    {
+      "name": "Approval Policy", "label": "Chính sách phê duyệt", "kind": "transaction", "module": "ERP Organization Security",
+      "flags": {"quickEntry": false, "trackChanges": true}, "naming": {"strategy": "series", "series": "APR-POL-.#####"}, "titleField": "policy_code", "searchFields": ["policy_code", "document_type"], "timelineField": "effective_from",
+      "fields": [
+        {"fieldname": "policy_code", "label": "Mã policy", "fieldtype": "Data", "read_only": true, "unique": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "document_type", "label": "Loại chứng từ", "fieldtype": "Link", "options": "DocType", "reqd": true, "in_list_view": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "condition_json", "label": "Điều kiện", "fieldtype": "JSON", "default": {}, "valueSource": "user", "editMode": "editable", "serverEnforced": true},
+        {"fieldname": "steps_json", "label": "Các cấp duyệt", "fieldtype": "JSON", "reqd": true, "valueSource": "user", "editMode": "editable", "serverEnforced": true},
+        {"fieldname": "require_sod", "label": "Bắt buộc SoD", "fieldtype": "Check", "default": true, "valueSource": "user", "editMode": "editable", "serverEnforced": true},
+        {"fieldname": "effective_from", "label": "Hiệu lực từ", "fieldtype": "Date", "reqd": true, "in_list_view": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Draft\nReview\nPublished\nRetired", "read_only": true, "in_list_view": true, "valueSource": "workflow", "editMode": "readonly", "serverEnforced": true}
+      ],
+      "viewPolicy": {"list": {"enabled": true, "columns": ["policy_code", "document_type", "effective_from", "status"]}, "form": {"enabled": true}, "quickEntry": {"enabled": false}, "kanban": {"enabled": true, "stageField": "status", "reasonRequiredOn": ["backward", "cancel"]}, "calendar": {"enabled": true, "startField": "effective_from"}},
+      "permissions": [{"role": "Owner", "read": true, "create": true, "write": true, "export": true}, {"role": "System Manager", "read": true, "create": true, "write": true}, {"role": "Auditor", "read": true, "report": true}]
+    },
+    {
+      "name": "Delegation", "label": "Ủy quyền", "kind": "transaction", "module": "ERP Organization Security",
+      "flags": {"quickEntry": false, "trackChanges": true}, "naming": {"strategy": "series", "series": "DLG-.#####"}, "titleField": "delegation_code", "searchFields": ["delegation_code", "grantor", "grantee"], "timelineField": "effective_from",
+      "fields": [
+        {"fieldname": "delegation_code", "label": "Mã ủy quyền", "fieldtype": "Data", "read_only": true, "unique": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "grantor", "label": "Người ủy quyền", "fieldtype": "Link", "options": "User", "reqd": true, "in_list_view": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "grantee", "label": "Người nhận", "fieldtype": "Link", "options": "User", "reqd": true, "in_list_view": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "action_scope_json", "label": "Phạm vi hành động", "fieldtype": "JSON", "reqd": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "organization_scope_json", "label": "Phạm vi tổ chức", "fieldtype": "JSON", "default": {}, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "effective_from", "label": "Bắt đầu", "fieldtype": "Datetime", "reqd": true, "in_list_view": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "effective_to", "label": "Kết thúc", "fieldtype": "Datetime", "reqd": true, "in_list_view": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Draft\nActive\nExpired\nRevoked", "read_only": true, "in_list_view": true, "valueSource": "workflow", "editMode": "readonly", "serverEnforced": true}
+      ],
+      "viewPolicy": {"list": {"enabled": true, "columns": ["delegation_code", "grantor", "grantee", "effective_from", "effective_to", "status"]}, "form": {"enabled": true}, "quickEntry": {"enabled": false}, "kanban": {"enabled": true, "stageField": "status", "reasonRequiredOn": ["backward", "cancel"]}, "calendar": {"enabled": true, "startField": "effective_from", "endField": "effective_to"}},
+      "permissions": [{"role": "Employee", "read": true, "create": true, "write": true, "ifOwner": true}, {"role": "System Manager", "read": true, "write": true, "export": true}, {"role": "Auditor", "read": true, "report": true}]
+    },
+    {
+      "name": "Audit Event", "label": "Sự kiện kiểm toán", "kind": "virtual", "module": "ERP Organization Security",
+      "flags": {"isVirtual": true, "quickEntry": false, "trackChanges": false}, "naming": {"strategy": "uuid"}, "titleField": "event_id", "searchFields": ["event_id", "correlation_id", "action", "entity_name"], "timelineField": "occurred_at",
+      "fields": [
+        {"fieldname": "event_id", "label": "Mã sự kiện", "fieldtype": "Data", "read_only": true, "unique": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "correlation_id", "label": "Correlation ID", "fieldtype": "Data", "read_only": true, "in_list_view": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "actor", "label": "Tác nhân", "fieldtype": "Link", "options": "User", "read_only": true, "in_list_view": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "action", "label": "Hành động", "fieldtype": "Data", "read_only": true, "in_list_view": true, "in_standard_filter": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "entity_type", "label": "Loại đối tượng", "fieldtype": "Data", "read_only": true, "in_standard_filter": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "entity_name", "label": "Bản ghi", "fieldtype": "Data", "read_only": true, "in_list_view": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "before_json", "label": "Trước", "fieldtype": "JSON", "read_only": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "after_json", "label": "Sau", "fieldtype": "JSON", "read_only": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "occurred_at", "label": "Thời điểm", "fieldtype": "Datetime", "read_only": true, "in_list_view": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true}
+      ],
+      "viewPolicy": {"list": {"enabled": true, "columns": ["occurred_at", "actor", "action", "entity_name", "correlation_id"]}, "form": {"enabled": true}, "quickEntry": {"enabled": false}, "kanban": {"enabled": false}, "calendar": {"enabled": false}},
+      "permissions": [{"role": "Auditor", "read": true, "report": true, "export": true}, {"role": "System Manager", "read": true, "report": true}]
+    },
+    {
+      "name": "TT99 Account Map", "label": "Ánh xạ tài khoản TT99", "kind": "transaction", "module": "ERP VN Accounting",
+      "flags": {"quickEntry": false, "trackChanges": true, "allowImport": true}, "naming": {"strategy": "series", "series": "TT99-ACC-.#####"}, "titleField": "map_code", "searchFields": ["map_code", "source_account", "target_account"], "timelineField": "effective_from",
+      "fields": [
+        {"fieldname": "map_code", "label": "Mã mapping", "fieldtype": "Data", "read_only": true, "unique": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "reqd": true, "in_standard_filter": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "source_regime", "label": "Chế độ nguồn", "fieldtype": "Data", "reqd": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "source_account", "label": "Tài khoản nguồn", "fieldtype": "Link", "options": "Account", "reqd": true, "in_list_view": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "target_account", "label": "Tài khoản TT99", "fieldtype": "Link", "options": "Account", "reqd": true, "in_list_view": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "effective_from", "label": "Hiệu lực từ", "fieldtype": "Date", "reqd": true, "in_list_view": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "mapping_reason", "label": "Giải thích", "fieldtype": "Small Text", "reqd": true, "valueSource": "user", "editMode": "editable", "serverEnforced": true},
+        {"fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Draft\nTested\nPublished\nRetired", "read_only": true, "in_list_view": true, "valueSource": "workflow", "editMode": "readonly", "serverEnforced": true}
+      ],
+      "viewPolicy": {"list": {"enabled": true, "columns": ["map_code", "source_account", "target_account", "effective_from", "status"]}, "form": {"enabled": true}, "quickEntry": {"enabled": false}, "kanban": {"enabled": true, "stageField": "status", "reasonRequiredOn": ["backward", "cancel"]}, "calendar": {"enabled": true, "startField": "effective_from"}},
+      "permissions": [{"role": "Chief Accountant", "read": true, "create": true, "write": true, "import": true, "export": true}, {"role": "Accountant", "read": true, "report": true}, {"role": "Auditor", "read": true, "export": true}]
+    },
+    {
+      "name": "TT99 Voucher Form", "label": "Biểu mẫu chứng từ TT99", "kind": "master", "module": "ERP VN Accounting",
+      "flags": {"quickEntry": false, "trackChanges": true}, "naming": {"strategy": "field", "field": "form_code"}, "titleField": "label", "searchFields": ["form_code", "label", "document_type"], "timelineField": "effective_from",
+      "fields": [
+        {"fieldname": "form_code", "label": "Mã mẫu", "fieldtype": "Data", "reqd": true, "unique": true, "in_list_view": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "label", "label": "Tên mẫu", "fieldtype": "Data", "reqd": true, "in_list_view": true, "valueSource": "user", "editMode": "editable", "serverEnforced": true},
+        {"fieldname": "legal_rule", "label": "Văn bản", "fieldtype": "Link", "options": "VN Legal Rule", "reqd": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "document_type", "label": "Loại chứng từ", "fieldtype": "Link", "options": "DocType", "reqd": true, "in_list_view": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "template_version", "label": "Phiên bản", "fieldtype": "Data", "reqd": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "template_json", "label": "Định nghĩa mẫu", "fieldtype": "JSON", "reqd": true, "valueSource": "user", "editMode": "editable", "serverEnforced": true},
+        {"fieldname": "effective_from", "label": "Hiệu lực từ", "fieldtype": "Date", "reqd": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Draft\nTested\nPublished\nSuperseded", "read_only": true, "in_list_view": true, "valueSource": "workflow", "editMode": "readonly", "serverEnforced": true}
+      ],
+      "viewPolicy": {"list": {"enabled": true, "columns": ["form_code", "label", "document_type", "status"]}, "form": {"enabled": true}, "quickEntry": {"enabled": false}, "kanban": {"enabled": true, "stageField": "status", "reasonRequiredOn": ["backward", "cancel"]}, "calendar": {"enabled": true, "startField": "effective_from"}},
+      "permissions": [{"role": "Chief Accountant", "read": true, "create": true, "write": true, "export": true}, {"role": "Accountant", "read": true}, {"role": "Auditor", "read": true, "export": true}]
+    },
+    {
+      "name": "TT99 Book Form", "label": "Mẫu sổ TT99", "kind": "master", "module": "ERP VN Accounting",
+      "flags": {"quickEntry": false, "trackChanges": true}, "naming": {"strategy": "field", "field": "book_code"}, "titleField": "label", "searchFields": ["book_code", "label", "source_ledger"], "timelineField": "effective_from",
+      "fields": [
+        {"fieldname": "book_code", "label": "Mã sổ", "fieldtype": "Data", "reqd": true, "unique": true, "in_list_view": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "label", "label": "Tên sổ", "fieldtype": "Data", "reqd": true, "in_list_view": true, "valueSource": "user", "editMode": "editable", "serverEnforced": true},
+        {"fieldname": "legal_rule", "label": "Văn bản", "fieldtype": "Link", "options": "VN Legal Rule", "reqd": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "source_ledger", "label": "Sổ nguồn", "fieldtype": "Select", "options": "GL\nAR\nAP\nBank\nStock\nAsset\nPayroll", "reqd": true, "in_list_view": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "columns_json", "label": "Cột sổ", "fieldtype": "JSON", "reqd": true, "valueSource": "user", "editMode": "editable", "serverEnforced": true},
+        {"fieldname": "grouping_json", "label": "Nhóm và tổng", "fieldtype": "JSON", "default": {}, "valueSource": "user", "editMode": "editable", "serverEnforced": true},
+        {"fieldname": "effective_from", "label": "Hiệu lực từ", "fieldtype": "Date", "reqd": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Draft\nTested\nPublished\nSuperseded", "read_only": true, "in_list_view": true, "valueSource": "workflow", "editMode": "readonly", "serverEnforced": true}
+      ],
+      "viewPolicy": {"list": {"enabled": true, "columns": ["book_code", "label", "source_ledger", "status"]}, "form": {"enabled": true}, "quickEntry": {"enabled": false}, "kanban": {"enabled": true, "stageField": "status", "reasonRequiredOn": ["backward", "cancel"]}, "calendar": {"enabled": true, "startField": "effective_from"}},
+      "permissions": [{"role": "Chief Accountant", "read": true, "create": true, "write": true}, {"role": "Accountant", "read": true, "report": true}, {"role": "Auditor", "read": true, "export": true}]
+    },
+    {
+      "name": "TT99 Financial Statement Template", "label": "Mẫu BCTC TT99", "kind": "master", "module": "ERP VN Accounting",
+      "flags": {"quickEntry": false, "trackChanges": true}, "naming": {"strategy": "field", "field": "statement_code"}, "titleField": "label", "searchFields": ["statement_code", "label"], "timelineField": "effective_from",
+      "fields": [
+        {"fieldname": "statement_code", "label": "Mã báo cáo", "fieldtype": "Data", "reqd": true, "unique": true, "in_list_view": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "label", "label": "Tên báo cáo", "fieldtype": "Data", "reqd": true, "in_list_view": true, "valueSource": "user", "editMode": "editable", "serverEnforced": true},
+        {"fieldname": "legal_rule", "label": "Văn bản", "fieldtype": "Link", "options": "VN Legal Rule", "reqd": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "lines_json", "label": "Chỉ tiêu", "fieldtype": "JSON", "reqd": true, "valueSource": "user", "editMode": "editable", "serverEnforced": true},
+        {"fieldname": "comparative_policy", "label": "So sánh", "fieldtype": "Select", "options": "PriorPeriod\nPriorYear\nNone", "default": "PriorPeriod", "valueSource": "user", "editMode": "editable", "serverEnforced": true},
+        {"fieldname": "currency_policy", "label": "Đơn vị tiền", "fieldtype": "Select", "options": "Company\nPresentation", "default": "Company", "valueSource": "user", "editMode": "editable", "serverEnforced": true},
+        {"fieldname": "effective_from", "label": "Hiệu lực từ", "fieldtype": "Date", "reqd": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Draft\nTested\nPublished\nSuperseded", "read_only": true, "in_list_view": true, "valueSource": "workflow", "editMode": "readonly", "serverEnforced": true}
+      ],
+      "viewPolicy": {"list": {"enabled": true, "columns": ["statement_code", "label", "effective_from", "status"]}, "form": {"enabled": true}, "quickEntry": {"enabled": false}, "kanban": {"enabled": true, "stageField": "status", "reasonRequiredOn": ["backward", "cancel"]}, "calendar": {"enabled": true, "startField": "effective_from"}},
+      "permissions": [{"role": "Chief Accountant", "read": true, "create": true, "write": true}, {"role": "Accountant", "read": true, "report": true}, {"role": "Auditor", "read": true, "export": true}]
+    },
+    {
+      "name": "TT99 Transition Map", "label": "Chuyển đổi sang TT99", "kind": "transaction", "module": "ERP VN Accounting",
+      "flags": {"quickEntry": false, "trackChanges": true}, "naming": {"strategy": "series", "series": "TT99-TR-.#####"}, "titleField": "transition_code", "searchFields": ["transition_code", "company"], "timelineField": "fiscal_year_start",
+      "fields": [
+        {"fieldname": "transition_code", "label": "Mã chuyển đổi", "fieldtype": "Data", "read_only": true, "unique": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "reqd": true, "in_list_view": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "fiscal_year_start", "label": "Bắt đầu năm tài chính", "fieldtype": "Date", "reqd": true, "in_list_view": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "source_policy", "label": "Chính sách nguồn", "fieldtype": "Link", "options": "VN Accounting Policy", "reqd": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "target_policy", "label": "Chính sách TT99", "fieldtype": "Link", "options": "VN Accounting Policy", "reqd": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "mapping_set_hash", "label": "Dấu bộ mapping", "fieldtype": "Data", "read_only": true, "valueSource": "formula", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "preview_result_json", "label": "Kết quả thử", "fieldtype": "JSON", "read_only": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Draft\nPreviewed\nApproved\nApplied\nFailed", "read_only": true, "in_list_view": true, "valueSource": "workflow", "editMode": "readonly", "serverEnforced": true}
+      ],
+      "viewPolicy": {"list": {"enabled": true, "columns": ["transition_code", "company", "fiscal_year_start", "status"]}, "form": {"enabled": true}, "quickEntry": {"enabled": false}, "kanban": {"enabled": true, "stageField": "status", "reasonRequiredOn": ["backward", "cancel"]}, "calendar": {"enabled": true, "startField": "fiscal_year_start"}},
+      "permissions": [{"role": "Chief Accountant", "read": true, "create": true, "write": true}, {"role": "Accountant", "read": true}, {"role": "Auditor", "read": true, "report": true, "export": true}]
+    },
+    {
+      "name": "Tax Ruleset", "label": "Bộ quy tắc thuế", "kind": "transaction", "module": "ERP VN Accounting",
+      "flags": {"quickEntry": false, "trackChanges": true}, "naming": {"strategy": "series", "series": "TAX-RULE-.#####"}, "titleField": "ruleset_code", "searchFields": ["ruleset_code", "rule_type"], "timelineField": "effective_from",
+      "fields": [
+        {"fieldname": "ruleset_code", "label": "Mã ruleset", "fieldtype": "Data", "read_only": true, "unique": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "rule_type", "label": "Miền luật", "fieldtype": "Select", "options": "VAT\nCIT\nPIT\nInsurance\nEInvoice\nXML", "reqd": true, "in_list_view": true, "in_standard_filter": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "legal_rule", "label": "Văn bản", "fieldtype": "Link", "options": "VN Legal Rule", "reqd": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "scope_json", "label": "Phạm vi", "fieldtype": "JSON", "default": {}, "valueSource": "user", "editMode": "editable", "serverEnforced": true},
+        {"fieldname": "expression_json", "label": "Biểu thức", "fieldtype": "JSON", "reqd": true, "valueSource": "user", "editMode": "editable", "serverEnforced": true},
+        {"fieldname": "fixtures_json", "label": "Ca kiểm thử", "fieldtype": "JSON", "default": [], "valueSource": "user", "editMode": "editable", "serverEnforced": true},
+        {"fieldname": "effective_from", "label": "Hiệu lực từ", "fieldtype": "Date", "reqd": true, "in_list_view": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Draft\nTested\nApproved\nEffective\nSuperseded", "read_only": true, "in_list_view": true, "valueSource": "workflow", "editMode": "readonly", "serverEnforced": true}
+      ],
+      "viewPolicy": {"list": {"enabled": true, "columns": ["ruleset_code", "rule_type", "effective_from", "status"]}, "form": {"enabled": true}, "quickEntry": {"enabled": false}, "kanban": {"enabled": true, "stageField": "status", "reasonRequiredOn": ["backward", "cancel"]}, "calendar": {"enabled": true, "startField": "effective_from"}},
+      "permissions": [{"role": "Tax Specialist", "read": true, "create": true, "write": true, "export": true}, {"role": "Chief Accountant", "read": true, "write": true}, {"role": "Auditor", "read": true, "report": true, "export": true}]
+    },
+    {
+      "name": "E-Invoice Document", "label": "Hóa đơn điện tử", "kind": "transaction", "module": "ERP VN Accounting",
+      "flags": {"quickEntry": false, "trackChanges": true, "queueInBackground": true}, "naming": {"strategy": "series", "series": "EINV-.YYYY.-.#####"}, "titleField": "einvoice_code", "searchFields": ["einvoice_code", "invoice_ref", "external_id"],
+      "fields": [
+        {"fieldname": "einvoice_code", "label": "Mã e-invoice", "fieldtype": "Data", "read_only": true, "unique": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "invoice_ref", "label": "Hóa đơn nguồn", "fieldtype": "Link", "options": "Sales Invoice", "reqd": true, "unique": true, "in_list_view": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "provider", "label": "Nhà cung cấp", "fieldtype": "Data", "reqd": true, "in_list_view": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "provider_event_id", "label": "Event ID", "fieldtype": "Data", "read_only": true, "unique": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "external_id", "label": "Mã ngoài", "fieldtype": "Data", "read_only": true, "in_list_view": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "xml_schema_version", "label": "Schema XML", "fieldtype": "Data", "read_only": true, "valueSource": "formula", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "xml_r2_key", "label": "Tệp XML", "fieldtype": "Attach", "read_only": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "error_json", "label": "Lỗi provider", "fieldtype": "JSON", "read_only": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Draft\nQueued\nIssued\nFailed\nAdjusted\nCancelled", "read_only": true, "in_list_view": true, "in_standard_filter": true, "valueSource": "workflow", "editMode": "readonly", "serverEnforced": true}
+      ],
+      "viewPolicy": {"list": {"enabled": true, "columns": ["einvoice_code", "invoice_ref", "provider", "external_id", "status"]}, "form": {"enabled": true}, "quickEntry": {"enabled": false}, "kanban": {"enabled": true, "stageField": "status", "reasonRequiredOn": ["backward", "cancel"]}},
+      "permissions": [{"role": "Tax Specialist", "read": true, "create": true, "write": true, "export": true}, {"role": "Chief Accountant", "read": true, "report": true}, {"role": "Auditor", "read": true, "export": true}]
+    },
+    {
+      "name": "Reconciliation Case", "label": "Hồ sơ đối soát", "kind": "transaction", "module": "ERP VN Accounting",
+      "flags": {"quickEntry": false, "trackChanges": true}, "naming": {"strategy": "series", "series": "RECON-.YYYY.-.#####"}, "titleField": "case_code", "searchFields": ["case_code", "kind", "company"], "timelineField": "as_of",
+      "fields": [
+        {"fieldname": "case_code", "label": "Mã hồ sơ", "fieldtype": "Data", "read_only": true, "unique": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "kind", "label": "Loại", "fieldtype": "Select", "options": "AR\nAP\nBank\nSubledger\nPayroll\nTax", "reqd": true, "in_list_view": true, "in_standard_filter": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "reqd": true, "in_list_view": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "as_of", "label": "Mốc đối soát", "fieldtype": "Datetime", "read_only": true, "in_list_view": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "expected_minor", "label": "Kỳ vọng", "fieldtype": "Currency", "read_only": true, "valueSource": "formula", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "actual_minor", "label": "Thực tế", "fieldtype": "Currency", "read_only": true, "valueSource": "formula", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "difference_minor", "label": "Chênh lệch", "fieldtype": "Currency", "read_only": true, "in_list_view": true, "valueSource": "formula", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "resolution_type", "label": "Cách xử lý", "fieldtype": "Select", "options": "Match\nAdjustment\nReversal\nWriteOffPolicy", "valueSource": "user", "editMode": "editable", "serverEnforced": true},
+        {"fieldname": "resolution_ref", "label": "Chứng từ xử lý", "fieldtype": "Data", "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Open\nInvestigating\nPending Approval\nResolved\nReopened", "read_only": true, "in_list_view": true, "valueSource": "workflow", "editMode": "readonly", "serverEnforced": true}
+      ],
+      "viewPolicy": {"list": {"enabled": true, "columns": ["case_code", "kind", "company", "difference_minor", "status"]}, "form": {"enabled": true}, "quickEntry": {"enabled": false}, "kanban": {"enabled": true, "stageField": "status", "reasonRequiredOn": ["backward", "cancel"]}, "calendar": {"enabled": true, "startField": "as_of"}},
+      "permissions": [{"role": "Accountant", "read": true, "create": true, "write": true, "report": true, "export": true}, {"role": "Chief Accountant", "read": true, "write": true}, {"role": "Auditor", "read": true, "report": true, "export": true}]
+    },
+    {
+      "name": "Backup Snapshot", "label": "Bản sao lưu", "kind": "system", "module": "ERP Reliability",
+      "flags": {"quickEntry": false, "trackChanges": true, "queueInBackground": true}, "naming": {"strategy": "series", "series": "BKP-.YYYYMMDD.-.#####"}, "titleField": "snapshot_code", "searchFields": ["snapshot_code", "checksum"], "timelineField": "started_at",
+      "fields": [
+        {"fieldname": "snapshot_code", "label": "Mã snapshot", "fieldtype": "Data", "read_only": true, "unique": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "customer_db_uuid", "label": "CSDL khách", "fieldtype": "Data", "read_only": true, "in_list_view": true, "mask": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "schema_version", "label": "Phiên bản schema", "fieldtype": "Data", "read_only": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "r2_key", "label": "Artifact", "fieldtype": "Data", "read_only": true, "mask": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "checksum", "label": "Checksum", "fieldtype": "Data", "read_only": true, "in_list_view": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "started_at", "label": "Bắt đầu", "fieldtype": "Datetime", "read_only": true, "in_list_view": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "completed_at", "label": "Hoàn tất", "fieldtype": "Datetime", "read_only": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "retention_until", "label": "Giữ đến", "fieldtype": "Date", "read_only": true, "valueSource": "formula", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Running\nSucceeded\nFailed\nExpired\nQuarantined", "read_only": true, "in_list_view": true, "valueSource": "workflow", "editMode": "readonly", "serverEnforced": true}
+      ],
+      "viewPolicy": {"list": {"enabled": true, "columns": ["snapshot_code", "schema_version", "checksum", "started_at", "status"]}, "form": {"enabled": true}, "quickEntry": {"enabled": false}, "kanban": {"enabled": true, "stageField": "status", "reasonRequiredOn": ["backward", "cancel"]}, "calendar": {"enabled": true, "startField": "started_at", "endField": "completed_at"}},
+      "permissions": [{"role": "Platform Operator", "read": true, "create": true, "write": true, "export": true}, {"role": "Auditor", "read": true, "report": true, "export": true}]
+    },
+    {
+      "name": "Restore Rehearsal", "label": "Diễn tập phục hồi", "kind": "transaction", "module": "ERP Reliability",
+      "flags": {"quickEntry": false, "trackChanges": true, "queueInBackground": true}, "naming": {"strategy": "series", "series": "RST-.YYYY.-.#####"}, "titleField": "rehearsal_code", "searchFields": ["rehearsal_code", "target_clone"], "timelineField": "started_at",
+      "fields": [
+        {"fieldname": "rehearsal_code", "label": "Mã diễn tập", "fieldtype": "Data", "read_only": true, "unique": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "snapshot", "label": "Snapshot", "fieldtype": "Link", "options": "Backup Snapshot", "reqd": true, "in_list_view": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "target_clone", "label": "Clone đích", "fieldtype": "Data", "read_only": true, "mask": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "started_at", "label": "Bắt đầu", "fieldtype": "Datetime", "read_only": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "rto_seconds", "label": "RTO thực tế", "fieldtype": "Int", "read_only": true, "in_list_view": true, "valueSource": "formula", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "reconciliation_json", "label": "Kết quả đối soát", "fieldtype": "JSON", "read_only": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "certified_by", "label": "Người chứng nhận", "fieldtype": "Link", "options": "User", "read_only": true, "valueSource": "workflow", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Draft\nRestoring\nVerifying\nPassed\nFailed\nCertified", "read_only": true, "in_list_view": true, "valueSource": "workflow", "editMode": "readonly", "serverEnforced": true}
+      ],
+      "viewPolicy": {"list": {"enabled": true, "columns": ["rehearsal_code", "snapshot", "rto_seconds", "certified_by", "status"]}, "form": {"enabled": true}, "quickEntry": {"enabled": false}, "kanban": {"enabled": true, "stageField": "status", "reasonRequiredOn": ["backward", "cancel"]}, "calendar": {"enabled": true, "startField": "started_at"}},
+      "permissions": [{"role": "Platform Operator", "read": true, "create": true, "write": true}, {"role": "Auditor", "read": true, "write": true, "report": true, "export": true}]
+    },
+    {
+      "name": "Verification Run", "label": "Lượt kiểm chứng", "kind": "system", "module": "ERP Reliability",
+      "flags": {"quickEntry": false, "trackChanges": false, "queueInBackground": true}, "naming": {"strategy": "series", "series": "VERIFY-.#####"}, "titleField": "run_code", "searchFields": ["run_code", "commit_sha", "suite"], "timelineField": "started_at",
+      "fields": [
+        {"fieldname": "run_code", "label": "Mã run", "fieldtype": "Data", "read_only": true, "unique": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "commit_sha", "label": "Commit SHA", "fieldtype": "Data", "reqd": true, "in_list_view": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "suite", "label": "Bộ kiểm tra", "fieldtype": "Select", "options": "Unit\nIntegration\nE2E\nOracle\nSecurity\nPerformance\nRestore", "reqd": true, "in_list_view": true, "in_standard_filter": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "started_at", "label": "Bắt đầu", "fieldtype": "Datetime", "read_only": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "completed_at", "label": "Hoàn tất", "fieldtype": "Datetime", "read_only": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "evidence_key", "label": "Bằng chứng", "fieldtype": "Data", "read_only": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "result_summary_json", "label": "Kết quả", "fieldtype": "JSON", "read_only": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Running\nPassed\nFailed\nCancelled", "read_only": true, "in_list_view": true, "valueSource": "workflow", "editMode": "readonly", "serverEnforced": true}
+      ],
+      "viewPolicy": {"list": {"enabled": true, "columns": ["run_code", "commit_sha", "suite", "started_at", "status"]}, "form": {"enabled": true}, "quickEntry": {"enabled": false}, "kanban": {"enabled": true, "stageField": "status", "reasonRequiredOn": ["backward", "cancel"]}, "calendar": {"enabled": true, "startField": "started_at", "endField": "completed_at"}},
+      "permissions": [{"role": "Release Manager", "read": true, "report": true}, {"role": "Platform Operator", "read": true, "create": true, "write": true}, {"role": "Auditor", "read": true, "export": true}]
+    },
+    {
+      "name": "Release Candidate", "label": "Ứng viên phát hành", "kind": "transaction", "module": "ERP Reliability",
+      "flags": {"quickEntry": false, "trackChanges": true}, "naming": {"strategy": "field", "field": "version"}, "titleField": "version", "searchFields": ["version", "commit_sha"],
+      "fields": [
+        {"fieldname": "version", "label": "Phiên bản", "fieldtype": "Data", "reqd": true, "unique": true, "in_list_view": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "commit_sha", "label": "Commit SHA", "fieldtype": "Data", "reqd": true, "in_list_view": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "manifest_hash", "label": "Manifest hash", "fieldtype": "Data", "read_only": true, "valueSource": "formula", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "required_suites_json", "label": "Bộ kiểm tra bắt buộc", "fieldtype": "JSON", "reqd": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "gate_summary_json", "label": "Tổng cổng", "fieldtype": "JSON", "read_only": true, "valueSource": "formula", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "backup_snapshot", "label": "Backup", "fieldtype": "Link", "options": "Backup Snapshot", "read_only": true, "valueSource": "workflow", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "canary_scope_json", "label": "Phạm vi canary", "fieldtype": "JSON", "default": {}, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Draft\nVerified\nCanary\nReleased\nRolled Back\nBlocked", "read_only": true, "in_list_view": true, "valueSource": "workflow", "editMode": "readonly", "serverEnforced": true}
+      ],
+      "viewPolicy": {"list": {"enabled": true, "columns": ["version", "commit_sha", "backup_snapshot", "status"]}, "form": {"enabled": true}, "quickEntry": {"enabled": false}, "kanban": {"enabled": true, "stageField": "status", "reasonRequiredOn": ["backward", "cancel"]}},
+      "permissions": [{"role": "Release Manager", "read": true, "create": true, "write": true, "export": true}, {"role": "Platform Operator", "read": true, "write": true}, {"role": "Auditor", "read": true, "report": true, "export": true}]
+    },
+    {
+      "name": "Incident Record", "label": "Sự cố production", "kind": "transaction", "module": "ERP Reliability",
+      "flags": {"quickEntry": false, "trackChanges": true}, "naming": {"strategy": "series", "series": "INC-.YYYY.-.#####"}, "titleField": "title", "searchFields": ["incident_code", "title", "severity"], "timelineField": "started_at",
+      "fields": [
+        {"fieldname": "incident_code", "label": "Mã sự cố", "fieldtype": "Data", "read_only": true, "unique": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "severity", "label": "Mức độ", "fieldtype": "Select", "options": "SEV1\nSEV2\nSEV3\nSEV4", "default": "SEV3", "in_list_view": true, "in_standard_filter": true, "valueSource": "user", "editMode": "editable", "serverEnforced": true},
+        {"fieldname": "title", "label": "Tiêu đề", "fieldtype": "Data", "reqd": true, "in_list_view": true, "valueSource": "user", "editMode": "editable", "serverEnforced": true},
+        {"fieldname": "started_at", "label": "Bắt đầu", "fieldtype": "Datetime", "reqd": true, "in_list_view": true, "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "affected_scope_json", "label": "Phạm vi ảnh hưởng", "fieldtype": "JSON", "default": {}, "valueSource": "user", "editMode": "editable", "serverEnforced": true},
+        {"fieldname": "release_candidate", "label": "Release", "fieldtype": "Link", "options": "Release Candidate", "valueSource": "user", "editMode": "set_once", "serverEnforced": true},
+        {"fieldname": "rollback_ref", "label": "Tham chiếu rollback", "fieldtype": "Data", "read_only": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "reconciliation_json", "label": "Đối soát", "fieldtype": "JSON", "read_only": true, "valueSource": "system", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "resolved_at", "label": "Đã xử lý lúc", "fieldtype": "Datetime", "read_only": true, "valueSource": "workflow", "editMode": "readonly", "serverEnforced": true},
+        {"fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Open\nInvestigating\nMitigated\nMonitoring\nResolved\nClosed", "read_only": true, "in_list_view": true, "valueSource": "workflow", "editMode": "readonly", "serverEnforced": true}
+      ],
+      "viewPolicy": {"list": {"enabled": true, "columns": ["incident_code", "severity", "title", "started_at", "status"]}, "form": {"enabled": true}, "quickEntry": {"enabled": false}, "kanban": {"enabled": true, "stageField": "status", "reasonRequiredOn": ["backward", "cancel"]}, "calendar": {"enabled": true, "startField": "started_at", "endField": "resolved_at"}},
+      "permissions": [{"role": "Platform Operator", "read": true, "create": true, "write": true, "export": true}, {"role": "Release Manager", "read": true}, {"role": "Auditor", "read": true, "report": true, "export": true}]
+    }
+  ],
+  "workflows": [
+    {"name": "Organization Assignment Lifecycle", "documentType": "Organization Assignment", "stateField": "status", "states": [{"state": "Draft"}, {"state": "Published"}, {"state": "Retired"}], "transitions": [{"action": "Publish", "from": "Draft", "to": "Published"}, {"action": "Retire", "from": "Published", "to": "Retired", "reasonRequired": true}]},
+    {"name": "Role Policy Lifecycle", "documentType": "Role Policy", "stateField": "status", "states": [{"state": "Draft"}, {"state": "Review"}, {"state": "Published"}, {"state": "Retired"}], "transitions": [{"action": "Submit Review", "from": "Draft", "to": "Review"}, {"action": "Publish", "from": "Review", "to": "Published"}, {"action": "Retire", "from": "Published", "to": "Retired", "reasonRequired": true}]},
+    {"name": "SoD Rule Lifecycle", "documentType": "SoD Rule", "stateField": "status", "states": [{"state": "Draft"}, {"state": "Published"}, {"state": "Retired"}], "transitions": [{"action": "Publish", "from": "Draft", "to": "Published"}, {"action": "Retire", "from": "Published", "to": "Retired", "reasonRequired": true}]},
+    {"name": "Approval Policy Lifecycle", "documentType": "Approval Policy", "stateField": "status", "states": [{"state": "Draft"}, {"state": "Review"}, {"state": "Published"}, {"state": "Retired"}], "transitions": [{"action": "Review", "from": "Draft", "to": "Review"}, {"action": "Publish", "from": "Review", "to": "Published"}, {"action": "Retire", "from": "Published", "to": "Retired"}]},
+    {"name": "Delegation Lifecycle", "documentType": "Delegation", "stateField": "status", "states": [{"state": "Draft"}, {"state": "Active"}, {"state": "Expired"}, {"state": "Revoked"}], "transitions": [{"action": "Activate", "from": "Draft", "to": "Active"}, {"action": "Expire", "from": "Active", "to": "Expired"}, {"action": "Revoke", "from": "Active", "to": "Revoked", "reasonRequired": true}]},
+    {"name": "TT99 Account Map Lifecycle", "documentType": "TT99 Account Map", "stateField": "status", "states": [{"state": "Draft"}, {"state": "Tested"}, {"state": "Published"}, {"state": "Retired"}], "transitions": [{"action": "Test", "from": "Draft", "to": "Tested"}, {"action": "Publish", "from": "Tested", "to": "Published"}, {"action": "Retire", "from": "Published", "to": "Retired"}]},
+    {"name": "TT99 Voucher Form Lifecycle", "documentType": "TT99 Voucher Form", "stateField": "status", "states": [{"state": "Draft"}, {"state": "Tested"}, {"state": "Published"}, {"state": "Superseded"}], "transitions": [{"action": "Test", "from": "Draft", "to": "Tested"}, {"action": "Publish", "from": "Tested", "to": "Published"}, {"action": "Supersede", "from": "Published", "to": "Superseded"}]},
+    {"name": "TT99 Book Form Lifecycle", "documentType": "TT99 Book Form", "stateField": "status", "states": [{"state": "Draft"}, {"state": "Tested"}, {"state": "Published"}, {"state": "Superseded"}], "transitions": [{"action": "Test", "from": "Draft", "to": "Tested"}, {"action": "Publish", "from": "Tested", "to": "Published"}, {"action": "Supersede", "from": "Published", "to": "Superseded"}]},
+    {"name": "TT99 Financial Statement Lifecycle", "documentType": "TT99 Financial Statement Template", "stateField": "status", "states": [{"state": "Draft"}, {"state": "Tested"}, {"state": "Published"}, {"state": "Superseded"}], "transitions": [{"action": "Test", "from": "Draft", "to": "Tested"}, {"action": "Publish", "from": "Tested", "to": "Published"}, {"action": "Supersede", "from": "Published", "to": "Superseded"}]},
+    {"name": "TT99 Transition Lifecycle", "documentType": "TT99 Transition Map", "stateField": "status", "states": [{"state": "Draft"}, {"state": "Previewed"}, {"state": "Approved"}, {"state": "Applied"}, {"state": "Failed"}], "transitions": [{"action": "Preview", "from": "Draft", "to": "Previewed"}, {"action": "Approve", "from": "Previewed", "to": "Approved"}, {"action": "Apply", "from": "Approved", "to": "Applied"}]},
+    {"name": "Tax Ruleset Lifecycle", "documentType": "Tax Ruleset", "stateField": "status", "states": [{"state": "Draft"}, {"state": "Tested"}, {"state": "Approved"}, {"state": "Effective"}, {"state": "Superseded"}], "transitions": [{"action": "Test", "from": "Draft", "to": "Tested"}, {"action": "Approve", "from": "Tested", "to": "Approved"}, {"action": "Activate", "from": "Approved", "to": "Effective"}, {"action": "Supersede", "from": "Effective", "to": "Superseded"}]},
+    {"name": "E-Invoice Lifecycle", "documentType": "E-Invoice Document", "stateField": "status", "states": [{"state": "Draft"}, {"state": "Queued"}, {"state": "Issued"}, {"state": "Failed"}, {"state": "Adjusted"}, {"state": "Cancelled"}], "transitions": [{"action": "Queue", "from": "Draft", "to": "Queued"}, {"action": "Issue", "from": "Queued", "to": "Issued"}, {"action": "Fail", "from": "Queued", "to": "Failed"}, {"action": "Cancel", "from": "Issued", "to": "Cancelled", "reasonRequired": true}]},
+    {"name": "Reconciliation Case Lifecycle", "documentType": "Reconciliation Case", "stateField": "status", "states": [{"state": "Open"}, {"state": "Investigating"}, {"state": "Pending Approval"}, {"state": "Resolved"}, {"state": "Reopened"}], "transitions": [{"action": "Investigate", "from": "Open", "to": "Investigating"}, {"action": "Request Approval", "from": "Investigating", "to": "Pending Approval"}, {"action": "Resolve", "from": "Pending Approval", "to": "Resolved"}, {"action": "Reopen", "from": "Resolved", "to": "Reopened", "reasonRequired": true}]},
+    {"name": "Backup Snapshot Lifecycle", "documentType": "Backup Snapshot", "stateField": "status", "states": [{"state": "Running"}, {"state": "Succeeded"}, {"state": "Failed"}, {"state": "Expired"}, {"state": "Quarantined"}], "transitions": [{"action": "Complete", "from": "Running", "to": "Succeeded"}, {"action": "Fail", "from": "Running", "to": "Failed"}, {"action": "Quarantine", "from": "Running", "to": "Quarantined"}, {"action": "Expire", "from": "Succeeded", "to": "Expired"}]},
+    {"name": "Restore Rehearsal Lifecycle", "documentType": "Restore Rehearsal", "stateField": "status", "states": [{"state": "Draft"}, {"state": "Restoring"}, {"state": "Verifying"}, {"state": "Passed"}, {"state": "Failed"}, {"state": "Certified"}], "transitions": [{"action": "Restore", "from": "Draft", "to": "Restoring"}, {"action": "Verify", "from": "Restoring", "to": "Verifying"}, {"action": "Pass", "from": "Verifying", "to": "Passed"}, {"action": "Certify", "from": "Passed", "to": "Certified"}]},
+    {"name": "Verification Run Lifecycle", "documentType": "Verification Run", "stateField": "status", "states": [{"state": "Running"}, {"state": "Passed"}, {"state": "Failed"}, {"state": "Cancelled"}], "transitions": [{"action": "Pass", "from": "Running", "to": "Passed"}, {"action": "Fail", "from": "Running", "to": "Failed"}, {"action": "Cancel", "from": "Running", "to": "Cancelled"}]},
+    {"name": "Release Candidate Lifecycle", "documentType": "Release Candidate", "stateField": "status", "states": [{"state": "Draft"}, {"state": "Verified"}, {"state": "Canary"}, {"state": "Released"}, {"state": "Rolled Back"}, {"state": "Blocked"}], "transitions": [{"action": "Verify", "from": "Draft", "to": "Verified"}, {"action": "Canary", "from": "Verified", "to": "Canary"}, {"action": "Release", "from": "Canary", "to": "Released"}, {"action": "Rollback", "from": "Canary", "to": "Rolled Back", "reasonRequired": true}]},
+    {"name": "Incident Lifecycle", "documentType": "Incident Record", "stateField": "status", "states": [{"state": "Open"}, {"state": "Investigating"}, {"state": "Mitigated"}, {"state": "Monitoring"}, {"state": "Resolved"}, {"state": "Closed"}], "transitions": [{"action": "Investigate", "from": "Open", "to": "Investigating"}, {"action": "Mitigate", "from": "Investigating", "to": "Mitigated"}, {"action": "Monitor", "from": "Mitigated", "to": "Monitoring"}, {"action": "Resolve", "from": "Monitoring", "to": "Resolved"}, {"action": "Close", "from": "Resolved", "to": "Closed"}]}
+  ],
+  "reports": [
+    {"name": "Effective Permission Evidence", "type": "Query Report", "refDocType": "Organization Assignment", "roles": ["System Manager", "Auditor"], "columns": [{"fieldname": "user"}, {"fieldname": "company"}, {"fieldname": "branch"}, {"fieldname": "status"}], "filters": [{"fieldname": "as_of"}], "handler": "erp_platform.reports.effective_permissions"},
+    {"name": "TT99 Coverage and Legal Gaps", "type": "Query Report", "refDocType": "TT99 Account Map", "roles": ["Chief Accountant", "Auditor"], "columns": [{"fieldname": "company"}, {"fieldname": "source_account"}, {"fieldname": "target_account"}, {"fieldname": "status"}], "filters": [{"fieldname": "fiscal_year_start"}], "handler": "erp_platform.reports.tt99_coverage"},
+    {"name": "Reconciliation Exceptions", "type": "Query Report", "refDocType": "Reconciliation Case", "roles": ["Accountant", "Chief Accountant", "Auditor"], "columns": [{"fieldname": "case_code"}, {"fieldname": "kind"}, {"fieldname": "difference_minor"}, {"fieldname": "status"}], "filters": [{"fieldname": "company"}, {"fieldname": "as_of"}], "handler": "erp_platform.reports.reconciliation_exceptions"},
+    {"name": "Release and Restore Evidence", "type": "Query Report", "refDocType": "Release Candidate", "roles": ["Release Manager", "Platform Operator", "Auditor"], "columns": [{"fieldname": "version"}, {"fieldname": "commit_sha"}, {"fieldname": "status"}], "filters": [{"fieldname": "status"}], "handler": "erp_platform.reports.release_evidence"}
+  ],
+  "charts": [
+    {"name": "Permission Conflicts by Severity", "source": "Effective Permission Evidence", "type": "Bar", "dimensions": ["severity"], "measures": ["count"], "roles": ["System Manager", "Auditor"], "drilldown": {"report": "Effective Permission Evidence"}, "emptyFallback": "table"},
+    {"name": "TT99 Mapping Coverage", "source": "TT99 Coverage and Legal Gaps", "type": "Percentage", "dimensions": ["status"], "measures": ["count"], "roles": ["Chief Accountant", "Auditor"], "drilldown": {"report": "TT99 Coverage and Legal Gaps"}, "emptyFallback": "table"},
+    {"name": "Reconciliation Difference by Kind", "source": "Reconciliation Exceptions", "type": "Bar", "dimensions": ["kind"], "measures": ["difference_minor"], "roles": ["Accountant", "Chief Accountant", "Auditor"], "drilldown": {"report": "Reconciliation Exceptions"}, "emptyFallback": "table"},
+    {"name": "Release Gate Status", "source": "Release and Restore Evidence", "type": "Donut", "dimensions": ["status"], "measures": ["count"], "roles": ["Release Manager", "Platform Operator", "Auditor"], "drilldown": {"report": "Release and Restore Evidence"}, "emptyFallback": "table"}
+  ],
+  "numberCards": [
+    {"name": "SoD Blocking Conflicts", "source": "Effective Permission Evidence", "function": "count_block", "roles": ["System Manager", "Auditor"], "drilldown": {"report": "Effective Permission Evidence", "filters": {"severity": "Block"}}},
+    {"name": "TT99 Unmapped Accounts", "source": "TT99 Coverage and Legal Gaps", "function": "count_unmapped", "roles": ["Chief Accountant", "Auditor"], "drilldown": {"report": "TT99 Coverage and Legal Gaps"}},
+    {"name": "Open Reconciliation Difference", "source": "Reconciliation Exceptions", "function": "sum_difference", "roles": ["Accountant", "Chief Accountant"], "drilldown": {"report": "Reconciliation Exceptions", "filters": {"status": "Open"}}},
+    {"name": "Blocked Releases", "source": "Release and Restore Evidence", "function": "count_blocked", "roles": ["Release Manager", "Platform Operator"], "drilldown": {"report": "Release and Restore Evidence", "filters": {"status": "Blocked"}}}
+  ],
+  "actions": [
+    {"name": "simulate-effective-permissions", "label": "Mô phỏng quyền", "handler": "erp_platform.api.simulate_effective_permissions", "roles": ["System Manager", "Auditor"], "idempotency": false},
+    {"name": "publish-role-policy", "label": "Publish policy", "handler": "erp_platform.api.publish_role_policy", "roles": ["Owner"], "idempotency": true, "commit": true},
+    {"name": "publish-legal-ruleset", "label": "Publish quy tắc pháp lý", "handler": "erp_platform.api.publish_legal_ruleset", "roles": ["Chief Accountant"], "idempotency": true, "commit": true},
+    {"name": "preview-tt99-transition", "label": "Thử chuyển TT99", "handler": "erp_platform.api.preview_tt99_transition", "roles": ["Chief Accountant"], "idempotency": true},
+    {"name": "transition-accounting-period", "label": "Chuyển trạng thái kỳ", "handler": "erp_platform.api.transition_accounting_period", "roles": ["Chief Accountant", "Owner", "Auditor"], "idempotency": true, "commit": true},
+    {"name": "preview-posting", "label": "Xem trước định khoản", "handler": "erp_platform.api.preview_posting", "roles": ["Accountant", "Chief Accountant"], "idempotency": true},
+    {"name": "post-journal-entry", "label": "Ghi sổ", "handler": "erp_platform.api.post_journal_entry", "roles": ["Chief Accountant"], "idempotency": true, "commit": true},
+    {"name": "reverse-journal-entry", "label": "Đảo chứng từ", "handler": "erp_platform.api.reverse_journal_entry", "roles": ["Chief Accountant"], "idempotency": true, "commit": true},
+    {"name": "run-reconciliation", "label": "Chạy đối soát", "handler": "erp_platform.api.run_reconciliation", "roles": ["Accountant", "Chief Accountant"], "idempotency": true, "commit": true},
+    {"name": "preview-payroll", "label": "Tính thử lương", "handler": "erp_platform.api.preview_payroll", "roles": ["Payroll User"], "idempotency": true, "commit": true},
+    {"name": "post-payroll-to-gl", "label": "Ghi lương vào sổ", "handler": "erp_platform.api.post_payroll_to_gl", "roles": ["Chief Accountant"], "idempotency": true, "commit": true},
+    {"name": "create-backup", "label": "Tạo backup", "handler": "erp_platform.api.create_backup", "roles": ["Platform Operator"], "idempotency": true, "commit": true},
+    {"name": "rehearse-restore", "label": "Diễn tập phục hồi", "handler": "erp_platform.api.rehearse_restore", "roles": ["Platform Operator"], "idempotency": true, "commit": true},
+    {"name": "rollout-release", "label": "Phát hành", "handler": "erp_platform.api.rollout_release", "roles": ["Platform Operator"], "idempotency": true, "commit": true},
+    {"name": "rollback-release", "label": "Rollback", "handler": "erp_platform.api.rollback_release", "roles": ["Platform Operator"], "idempotency": true, "commit": true},
+    {"name": "export-all", "label": "Xuất toàn bộ dữ liệu", "handler": "erp_platform.api.export_all", "roles": ["Owner"], "idempotency": true, "commit": true}
+  ],
+  "workspaces": [
+    {"name": "Organization Control Center", "label": "Tổ chức & kiểm soát", "module": "ERP Organization Security", "roles": ["System Manager", "Owner", "Auditor"], "shortcuts": [{"type": "DocType", "target": "Organization Assignment"}, {"type": "DocType", "target": "Role Policy"}, {"type": "DocType", "target": "SoD Rule"}, {"type": "Report", "target": "Effective Permission Evidence"}], "charts": ["Permission Conflicts by Severity"], "numberCards": ["SoD Blocking Conflicts"]},
+    {"name": "VN Accounting Control Center", "label": "Kế toán Việt Nam", "module": "ERP VN Accounting", "roles": ["Accountant", "Chief Accountant", "Tax Specialist", "Auditor"], "shortcuts": [{"type": "DocType", "target": "TT99 Account Map"}, {"type": "DocType", "target": "Tax Ruleset"}, {"type": "DocType", "target": "Reconciliation Case"}, {"type": "Report", "target": "TT99 Coverage and Legal Gaps"}], "charts": ["TT99 Mapping Coverage", "Reconciliation Difference by Kind"], "numberCards": ["TT99 Unmapped Accounts", "Open Reconciliation Difference"]},
+    {"name": "Payroll Control Center", "label": "Nhân sự & lương", "module": "ERP VN Accounting", "roles": ["Payroll User", "Payroll Manager", "Chief Accountant"], "shortcuts": [{"type": "DocType", "target": "Payroll Entry"}, {"type": "DocType", "target": "Payroll Accounting Batch"}, {"type": "Action", "target": "preview-payroll"}, {"type": "Action", "target": "post-payroll-to-gl"}]},
+    {"name": "Reliability Control Center", "label": "Độ tin cậy", "module": "ERP Reliability", "roles": ["Platform Operator", "Release Manager", "Auditor"], "shortcuts": [{"type": "DocType", "target": "Backup Snapshot"}, {"type": "DocType", "target": "Restore Rehearsal"}, {"type": "DocType", "target": "Release Candidate"}, {"type": "DocType", "target": "Incident Record"}], "charts": ["Release Gate Status"], "numberCards": ["Blocked Releases"]}
+  ],
+  "prints": [
+    {"name": "Role Policy Evidence PDF", "documentType": "Role Policy", "template": "erp_platform.prints.role_policy_evidence", "roles": ["System Manager", "Auditor"]},
+    {"name": "TT99 Mapping Evidence PDF", "documentType": "TT99 Account Map", "template": "erp_platform.prints.tt99_account_map", "roles": ["Chief Accountant", "Auditor"]},
+    {"name": "Reconciliation Evidence PDF", "documentType": "Reconciliation Case", "template": "erp_platform.prints.reconciliation_case", "roles": ["Accountant", "Chief Accountant", "Auditor"]},
+    {"name": "Restore Certificate PDF", "documentType": "Restore Rehearsal", "template": "erp_platform.prints.restore_certificate", "roles": ["Platform Operator", "Auditor"]},
+    {"name": "Incident Review PDF", "documentType": "Incident Record", "template": "erp_platform.prints.incident_review", "roles": ["Platform Operator", "Auditor"]}
+  ],
+  "notifications": [
+    {"name": "Policy Review Requested", "documentType": "Role Policy", "event": "Review", "channel": "in_app,email", "recipients": [{"role": "Owner"}]},
+    {"name": "Delegation Expiring", "documentType": "Delegation", "event": "before_effective_to", "channel": "in_app,email,Zalo", "recipients": [{"field": "grantor"}, {"field": "grantee"}]},
+    {"name": "Tax Rule Expiring", "documentType": "Tax Ruleset", "event": "before_effective_end", "channel": "in_app,email", "recipients": [{"role": "Tax Specialist"}, {"role": "Chief Accountant"}]},
+    {"name": "Reconciliation Exception Open", "documentType": "Reconciliation Case", "event": "Open", "channel": "in_app,email", "recipients": [{"role": "Accountant"}, {"role": "Chief Accountant"}]},
+    {"name": "Backup Failed", "documentType": "Backup Snapshot", "event": "Failed", "channel": "in_app,email,Zalo", "recipients": [{"role": "Platform Operator"}]},
+    {"name": "Release Blocked", "documentType": "Release Candidate", "event": "Blocked", "channel": "in_app,email,Zalo", "recipients": [{"role": "Release Manager"}, {"role": "Platform Operator"}]},
+    {"name": "SEV Incident Open", "documentType": "Incident Record", "event": "Open", "channel": "in_app,email,Zalo", "recipients": [{"role": "Platform Operator"}, {"role": "Owner"}]}
+  ]
+}
