@@ -52,7 +52,12 @@ test("renders the installable Alumdoor warehouse experience without desktop shel
   expect(manifest.scope).toBe("/mobile/warehouse/");
   expect(manifest.display).toBe("standalone");
   expect(manifest.theme_color).toBe("#ef6b2e");
-  expect(manifest.icons[0]?.src).toContain("alumdoor.vn/wp-content/uploads/");
+  expect(manifest.icons[0]?.src).toBe("alumdoor-mark.svg");
+  expect(manifest.icons[1]?.purpose).toBe("maskable");
+
+  const iconResponse = await request.get("/mobile/warehouse/alumdoor-mark.svg");
+  expect(iconResponse.ok()).toBe(true);
+  expect(await iconResponse.text()).toContain("alumdoor.vn/wp-content/uploads/2022/04/logo-am-ban-doi-alumdoor");
 
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1);
 
