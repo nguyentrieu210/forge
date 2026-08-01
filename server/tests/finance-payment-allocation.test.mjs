@@ -51,6 +51,7 @@ test("Payment Entry permits partial allocation and keeps the remainder as an adv
       received_amount: "150",
       currency: "USD",
       currency_scale: 2,
+      allow_unallocated: true,
       references: [{ row_id: "1", reference_doctype: "Sales Invoice", reference_name: "SI-FIN", allocated_amount: "40" }],
     },
   });
@@ -64,7 +65,7 @@ test("Payment Entry permits partial allocation and keeps the remainder as an adv
   assert.equal(gl.reduce((sum, row) => sum + row.credit_minor, 0), 15_000);
 });
 
-test("Payment Entry may be fully unallocated", async () => {
+test("Payment Entry may be fully unallocated after explicit advance confirmation", async () => {
   const { store, kernel } = setup();
   await createAndSubmit(kernel, {
     doctype: "Payment Entry",
@@ -81,6 +82,7 @@ test("Payment Entry may be fully unallocated", async () => {
       received_amount: "25",
       currency: "USD",
       currency_scale: 2,
+      allow_unallocated: true,
       references: [],
     },
   });
@@ -98,6 +100,7 @@ test("Payment Allocation consumes an advance and settles the target invoice with
     document: {
       company: "Demo", posting_at: now(), payment_type: "Receive", party_type: "Customer", party: "CUST-0001",
       paid_from: "Debtors", paid_to: "Bank", paid_amount: "100", received_amount: "100", currency: "USD", currency_scale: 2,
+      allow_unallocated: true,
       references: [],
     },
   });
@@ -142,6 +145,7 @@ test("Payment Allocation rejects another party and source over-allocation", asyn
     document: {
       company: "Demo", posting_at: now(), payment_type: "Receive", party_type: "Customer", party: "CUST-0001",
       paid_from: "Debtors", paid_to: "Bank", paid_amount: "30", received_amount: "30", currency: "USD", currency_scale: 2,
+      allow_unallocated: true,
       references: [],
     },
   });
