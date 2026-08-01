@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 function parseJson(text, source) {
   try {
@@ -7,6 +8,19 @@ function parseJson(text, source) {
   } catch (error) {
     throw new Error(`${source}: ${error.message}`);
   }
+}
+
+function sourcePathOf(source) {
+  if (source instanceof URL) {
+    if (source.protocol !== "file:") {
+      throw new Error(`${source}: brief source URL phải dùng giao thức file:.`);
+    }
+    return fileURLToPath(source);
+  }
+  if (typeof source !== "string") {
+    throw new TypeError("brief source phải là đường dẫn chuỗi hoặc file URL.");
+  }
+  return source;
 }
 
 /**
@@ -17,8 +31,9 @@ function parseJson(text, source) {
  * producing one ordinary brief before schema validation and compilation.
  */
 export async function readBriefSource(source) {
-  const brief = parseJson(await readFile(source, "utf8"), source);
-  const parsed = path.parse(source);
+  const sourcePath = sourcePathOf(source);
+  const brief = parseJson(await readFile(sourcePath, "utf8"), sourcePath);
+  const parsed = path.parse(sourcePath);
   const printsSource = path.join(parsed.dir, `${parsed.name}.prints.json`);
 
   let extensionText;
@@ -42,7 +57,7 @@ export async function readBriefSource(source) {
     throw new Error(`${printsSource}: prints phải là mảng không rỗng.`);
   }
   if (brief.prints !== undefined && !Array.isArray(brief.prints)) {
-    throw new Error(`${source}: prints hiện có phải là mảng trước khi ghép sidecar.`);
+    throw new Error(`${sourcePath}: prints hiện có phải là mảng trước khi ghép sidecar.`);
   }
 
   return {

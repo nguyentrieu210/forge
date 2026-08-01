@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { readBriefSource } from "../scripts/lib/read-brief-source.mjs";
 
 async function withTempBrief(run) {
@@ -20,6 +21,14 @@ test("readBriefSource returns an ordinary brief when no print sidecar exists", a
   await withTempBrief(async ({ source }) => {
     const brief = await readBriefSource(source);
     assert.equal(brief.version, "1.0.0");
+    assert.deepEqual(brief.prints.map((entry) => entry.name), ["Existing"]);
+  });
+});
+
+test("readBriefSource accepts file URLs used by import.meta.url call sites", async () => {
+  await withTempBrief(async ({ source }) => {
+    const brief = await readBriefSource(pathToFileURL(source));
+    assert.equal(brief.id, "sample");
     assert.deepEqual(brief.prints.map((entry) => entry.name), ["Existing"]);
   });
 });
