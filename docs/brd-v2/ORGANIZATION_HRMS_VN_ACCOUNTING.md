@@ -1,5 +1,7 @@
 # Công ty, Chi nhánh, Phòng ban, HRMS và Kế toán Việt Nam
 
+> Tài liệu này ghi nhận baseline đã triển khai trên PR #151. Đặc tả nâng cấp nền tảng đa ngành Wave 1 và Cổng 2 nằm tại [`ERP_PLATFORM_WAVE1.md`](ERP_PLATFORM_WAVE1.md); baseline này không được dùng để thay các yêu cầu chi tiết của Wave 1.
+
 Ngày cập nhật: 2026-08-01
 Nhánh: `feat/company-branch-department-hrms-accounting-20260801`
 
