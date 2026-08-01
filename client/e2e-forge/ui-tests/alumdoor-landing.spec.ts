@@ -15,7 +15,7 @@ async function mockGuestSession(page: Page) {
   );
 }
 
-test("renders the full Alumdoor landing catalog without horizontal overflow", async ({ page }, testInfo) => {
+test("renders the full Alumdoor landing catalog with official media and no horizontal overflow", async ({ page }, testInfo) => {
   await mockGuestSession(page);
   await page.goto("/?alumdoor=1", { waitUntil: "domcontentloaded" });
 
@@ -36,6 +36,15 @@ test("renders the full Alumdoor landing catalog without horizontal overflow", as
 
   const vip = page.getByRole("link", { name: /VIP-ST500/i });
   await expect(vip).toHaveAttribute("href", "https://alumdoor.vn/san-pham/cua-cuon-duc-vipst500/");
+
+  const officialLogo = await page.locator(".mf-brand-mark").first().evaluate((node) => getComputedStyle(node).backgroundImage);
+  expect(officialLogo).toContain("alumdoor.vn/wp-content/uploads/2022/04/logo-am-ban-doi-alumdoor");
+
+  const heroBackground = await landing.locator("main > section").first().evaluate((node) => getComputedStyle(node).backgroundImage);
+  expect(heroBackground).toContain("ALUMDOOR-PRODUCT_Artboard-24.png.webp");
+
+  const productBackground = await page.locator("#cua-duc a.group > div").first().evaluate((node) => getComputedStyle(node).backgroundImage);
+  expect(productBackground).toContain("alumdoor.vn/wp-content/uploads/");
 
   await expect(page.getByText(/0317172142/)).toBeVisible();
   await expect(page.getByText(/cskh\.alumdoor@gmail\.com/)).toBeVisible();
