@@ -18,12 +18,11 @@ PR `#154` merge tại `6c89e1a9227e989fd8b08d6e55b35ce2e74d87c7`; protected rele
 6. Alumdoor `2.1.0` có 3 biểu đồ thật và completeness gate cho 74 DocType hiện có; chuẩn nền tảng không giới hạn ở 74 DocType.
 7. Canonical rules/validator/fixtures đã được ghi vào skill `app-factory` để app sinh sau dùng cùng chuẩn.
 
-Việc tiếp theo duy nhất của gói Meta: merge forward-fix từ branch
-`fix/alumdoor-standard-meta-provision-20260801`, chờ runtime production ở exact merge SHA xanh, rồi dispatch lại
-workflow protected. Run đầu `30705986949` đã PASS backup + hai restore drill nhưng dừng trước khi ghi Alumdoor vì
-tenant cũ chưa có 5 external DocType ERPNext. Lần chạy lại phải cấp standard catalogue bằng explicit
-System-Manager POST qua cookie + CSRF, cài package `2.1.0`, rồi smoke chỉ đọc quick/expanded form, User Link,
-chart/fallback và drill-down report. Không sửa DNS và không dùng dữ liệu khách hàng để smoke.
+Gói Meta đã hoàn tất trên production. PR `#158`–`#160` đã merge; full release run
+`30707135053` PASS tại exact SHA `b46d322831ebe7b57e29d4363d2daa005bb56e55`; protected installer run
+`30707517624` PASS backup/checksum, hai restore drill, guarded cleanup và read-only conformance. Alumdoor Meta
+`2.1.0` đang ở tenant `alu`; hai installer secret tạm đã xóa. GitHub `main` đã có commit G03
+`19f949c6aba3541c7d3585ad42f8a8c42ebeea74` sau release này, CI PASS nhưng chưa có production-release evidence.
 
 ### Done condition
 
@@ -32,11 +31,19 @@ chart/fallback và drill-down report. Không sửa DNS và không dùng dữ li�
 - Alumdoor `2.1.0` compile/install được, biểu đồ chỉ hiện theo quyền và report thật.
 - Full test/typecheck/lint/build và protected release xanh trên cùng một SHA.
 
-## ACTIVE P0 — Alumdoor PWA + official brand/media
+## NEXT P0 — authenticated stock lifecycle
 
-Branch: `feat/alumdoor-pwa-real-brand-assets`.
+1. Dùng tài khoản QA riêng, cookie + CSRF thật và dữ liệu thử có tiền tố nhận diện.
+2. Chạy nhập kho → xuất kho → chuyển kho → kiểm kho trên desktop và mobile, kiểm Stock User/Stock Manager cùng failure path.
+3. Đối chiếu ledger, số lượng, kg thực cân, giữ chỗ và QR trước/sau từng bước.
+4. Cleanup toàn bộ chứng từ QA theo lineage; không dùng hoặc sửa dữ liệu khách hàng thật.
+5. Không gộp deploy commit G03 `19f949c6` vào smoke này; phát hành G03 phải là một đợt có backup/migration/rollback/evidence riêng.
 
-Đã code trên branch:
+## DONE — Alumdoor PWA + official brand/media
+
+PR `#150` đã merge; nội dung đang có trong production release SHA `b46d322831ebe7b57e29d4363d2daa005bb56e55`.
+
+Đã hoàn thành:
 
 1. Stage `client/apps/kho/dist-mobile` vào Gateway tại `public/mobile/warehouse` cùng runtime desktop.
 2. Kiểm bắt buộc mobile `index.html`, `manifest.webmanifest`, `warehouse-sw.js` trước deploy.
@@ -50,20 +57,7 @@ Branch: `feat/alumdoor-pwa-real-brand-assets`.
 10. `Forge Kho` còn sót trong giao diện mobile đã đổi thành `Alumdoor Kho`; palette chính dùng `#f45b24`.
 11. Local gates PASS: full test, client lint, client typecheck, client build và Playwright UI `17/17` trên desktop/tablet/mobile/PWA.
 
-Việc phải hoàn thành trước khi đóng epic:
-
-1. Mở PR từ exact branch head và khóa head.
-2. Chờ CI, typecheck, build, PR Validation, UI browser QA, Sales/Purchase/Inventory gates terminal xanh.
-3. Merge đúng exact-head đã validate.
-4. Để protected `Release Gateway Production` build → stage → Wrangler dry-run → deploy Cloudflare `cloudforge-gateway`.
-5. Ghi run ID, exact target SHA và Cloudflare Gateway version ID.
-6. Production smoke:
-   - `https://alu.kairo.vn/` trả landing mới;
-   - `/mobile/warehouse/` trả `Alumdoor Kho`, không rơi về desktop shell;
-   - manifest scope/start URL đúng `/mobile/warehouse/`;
-   - `alumdoor-mark.svg`, maskable icon và `warehouse-sw.js` trả 200;
-   - guest boot vẫn bị chặn đúng và API/auth không bị service worker cache.
-7. Sau deploy cập nhật `CURRENT_STATUS.md` và `NEXT_TASKS.md` bằng evidence thật.
+Production evidence: full release run `30707135053`, exact SHA `b46d322831ebe7b57e29d4363d2daa005bb56e55`, Gateway version `ef3b4a9a-38f2-4534-86b8-1e6bda2d3ea1`; HTTP và browser desktop/mobile smoke PASS.
 
 ### Done condition
 
