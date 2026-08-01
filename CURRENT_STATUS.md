@@ -8,9 +8,31 @@ Ngày cập nhật: **2026-08-02**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `main`.
-- `main` HEAD sau đợt runbook cleanup: `09bc64e1fe8d9ded171368cfc72bd2b4b18aed72` — merge PR `#180`.
-- Last executable merge trước các docs-only merge: PR `#175`, merge `509db8c32625168316696fb0deb3760a434aedf9`.
+- Exact `main` đã xác minh khi tiếp tục MetaForge Document Experience V2: `2d0d4ab871714d84ba015afcd8e4797623bad558`.
+- Last executable merge trước các docs-only merge ở checkpoint runbook: PR `#175`, merge `509db8c32625168316696fb0deb3760a434aedf9`.
 - Branch `hotfix/alumdoor-print-list-delete` cũ không còn được dùng làm current/default branch và không được coi là chỉ dẫn thực thi.
+
+## IN REVIEW — MetaForge Document Experience V2 foundation
+
+- Branch: `feat/metaforge-document-experience-v2-20260802`, tạo sạch từ exact `main@2d0d4ab871714d84ba015afcd8e4797623bad558`.
+- PR `#184` đang mở, **ready for review**, mergeable và chưa merge.
+- Bulk View PR `#182` vẫn là draft và tại lần xác minh gần nhất chưa mergeable; #184 không chạm `DoctypeWorkspace`/core meta types của #182.
+- Exact executable head đã validation sau archetype hardening: `ec90b1b4e698c03be566c4c93b2942dd2aaafcbb`.
+- Required workflows trên exact executable head: **6/6 PASS**.
+  - CI `30720247529`: tests, typecheck, build SUCCESS.
+  - UI Pull Request Validation `30720247521`: frontend lint/build, MetaForge workspace browser QA và Alumdoor browser QA SUCCESS; purchase-auth lifecycle không thuộc scope diff nên skipped.
+  - PR Validation `30720247541`: SUCCESS.
+  - Purchase Feature CI `30720247535`: SUCCESS.
+  - Sales Feature CI `30720247517`: SUCCESS.
+  - Inventory and Manufacturing CI `30720247522`: SUCCESS.
+- Document Experience V2 có 7 archetype (`master`, `transaction`, `inventory`, `production`, `approval`, `ledger`, `analysis`) + generic fallback; document hero, semantic status, metric cards, responsive context strip/rail và skeleton loading.
+- Archetype không còn chỉ khác icon/eyebrow: mỗi archetype có visual profile riêng cho accent, hero treatment, icon, metric surface và context-rail copy; root có `data-archetype` để QA/styling ổn định.
+- Regression selfcheck khóa 6 reference screens: `Sales Order`, `Purchase Order`, `Stock Entry`, `Work Order`, `Customer`, `Payment Entry`; kiểm tra archetype, metric/context selection và visual-profile differentiation.
+- Presentation resolver chỉ đọc field còn tồn tại trong Meta sau `resolveFormRenderPolicy()`, vì vậy cấu hình presentation không thể kéo field `surface=internal`/server-owned quay lại UI.
+- Permission, workflow, submit/cancel/delete/rename và server-authoritative capability vẫn do `FormContainer`/adapter hiện hữu kiểm soát; slice này chỉ thay presentation layer.
+- Lần validation đầu trên head `081033d8...` bắt lỗi fixture `Doc` thiếu `doctype` và TypeScript inference của metric fallback; đã sửa trên cùng branch rồi validation lại xanh hoàn toàn.
+- Không deploy Cloudflare/production, không sửa secret/DNS và không mutate tenant/customer data.
+- Commit status/handoff sau executable validation sẽ làm PR head đổi; final exact-head CI phải PASS lại trước mọi quyết định merge.
 
 ## DONE — Runbook / project-status cleanup
 
@@ -83,10 +105,11 @@ Checkpoint production lịch sử gần nhất được handoff ghi nhận:
 
 ## Chưa hoàn tất toàn hệ thống
 
-1. P0 stock acceptance còn QR/lineage end-to-end và cleanup QA không residue.
-2. P1 daily detailed ledger: snapshot, freeze, append-only adjustment, reconciliation nhiều miền.
-3. P2 warranty/defects/capacity/overtime.
-4. P3 authenticated end-to-end acceptance xuyên Sales → Production → Inventory → Delivery → Finance → Daily Ledger → Warranty.
+1. MetaForge UX V2 còn List Workspace/saved views/smart filters, presentation authoring/sidecar, related-document/activity/exception và các lớp operational/personalization/mobile sâu hơn; List Workspace phải phối hợp với Bulk View PR `#182` thay vì ghi đè song song.
+2. P0 stock acceptance còn QR/lineage end-to-end và cleanup QA không residue.
+3. P1 daily detailed ledger: snapshot, freeze, append-only adjustment, reconciliation nhiều miền.
+4. P2 warranty/defects/capacity/overtime.
+5. P3 authenticated end-to-end acceptance xuyên Sales → Production → Inventory → Delivery → Finance → Daily Ledger → Warranty.
 
 ## Guardrails
 

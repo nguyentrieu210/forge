@@ -11,6 +11,7 @@ import { resolveFormRenderPolicy, type Doc } from "@metaforge/core";
 import type { ListViewSnapshot } from "@metaforge/adapter-frappe";
 import { Button, ConfirmDialog, PromptDialog, toast, useT } from "@metaforge/ui";
 import { FormView } from "../form/FormView.js";
+import { DocumentExperience, DocumentExperienceSkeleton } from "../detail/DocumentExperience.js";
 import type { FormActionKind } from "../detail/formActions.js";
 import { useMetaForge } from "./provider.js";
 import { useDoc, useFormMeta, useTransitions, useCapabilities, NO_CAPS } from "./hooks.js";
@@ -75,7 +76,7 @@ export function FormContainer(props: FormContainerProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doctype, name, doc?.modified]);
 
-  if (metaQ.isLoading || docQ.isLoading) return <div className="grid h-40 place-items-center text-sm text-muted-foreground">{t("common.loading")}</div>;
+  if (metaQ.isLoading || docQ.isLoading) return <DocumentExperienceSkeleton />;
   if (metaQ.error) return <div className="p-4 text-sm text-destructive" role="alert">{adapter.mapError(metaQ.error).message}</div>;
   if (docQ.error) return <div className="p-4 text-sm text-destructive" role="alert">{adapter.mapError(docQ.error).message}</div>;
   if (!metaQ.data || !docQ.data || !doc) return <div className="p-4 text-sm text-muted-foreground">{t("common.no_data")}</div>;
@@ -266,46 +267,48 @@ export function FormContainer(props: FormContainerProps) {
 
   return (
     <>
-      <FormView
-        onClose={props.onClose}
-        headerActions={(
-          <>
-            {props.headerActions}
-            {supportsAllocationTimeline && Number(doc.docstatus ?? 0) !== 0 ? (
-              <Button
-                type="button"
-                variant="outline"
-                disabled={allocationTimelineLoading}
-                onClick={() => void openAllocationTimeline()}
-              >
-                {allocationTimelineLoading ? "Đang tải…" : "Phân bổ"}
-              </Button>
-            ) : null}
-          </>
-        )}
-        meta={renderPolicy?.meta ?? metaQ.data}
-        doc={doc}
-        registry={registry}
-        services={services}
-        roles={roles}
-        conflict={conflict}
-        onReload={async () => { setConflict(false); await docQ.refetch(); }}
-        onSave={onSave}
-        saving={saving}
-        fieldErrors={fieldErrors}
-        perms={caps}
-        // P1-PERM-01: field editability phải theo caps.write HIỆU LỰC (server has_permission — gồm
-        // if_owner/user-permission/share), KHÔNG chỉ role/permlevel tĩnh của resolveMeta. Trước đây
-        // "perms" chỉ gate NÚT (Lưu/Gửi…), field vẫn gõ được dù server sẽ từ chối lúc lưu.
-        forceReadOnly={!caps.write}
-        transitions={transQ.data?.transitions ?? []}
-        // P1-WF-01: has_workflow SERVER-AUTHORITATIVE — trước đây FormView tự suy "có workflow" từ
-        // transitions.length>0, nên user hết transition khả dụng (trạng thái cuối / không role nào
-        // khớp) bị hiện NHẦM nút Submit/Huỷ thủ công dù doctype thật sự có workflow.
-        hasWorkflow={transQ.data?.has_workflow ?? false}
-        onAction={onAction}
-        onWorkflowAction={onWorkflowAction}
-      />
+      <DocumentExperience meta={renderPolicy?.meta ?? metaQ.data} doc={doc}>
+        <FormView
+          onClose={props.onClose}
+          headerActions={(
+            <>
+              {props.headerActions}
+              {supportsAllocationTimeline && Number(doc.docstatus ?? 0) !== 0 ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={allocationTimelineLoading}
+                  onClick={() => void openAllocationTimeline()}
+                >
+                  {allocationTimelineLoading ? "Đang tải…" : "Phân bổ"}
+                </Button>
+              ) : null}
+            </>
+          )}
+          meta={renderPolicy?.meta ?? metaQ.data}
+          doc={doc}
+          registry={registry}
+          services={services}
+          roles={roles}
+          conflict={conflict}
+          onReload={async () => { setConflict(false); await docQ.refetch(); }}
+          onSave={onSave}
+          saving={saving}
+          fieldErrors={fieldErrors}
+          perms={caps}
+          // P1-PERM-01: field editability phải theo caps.write HIỆU LỰC (server has_permission — gồm
+          // if_owner/user-permission/share), KHÔNG chỉ role/permlevel tĩnh của resolveMeta. Trước đây
+          // "perms" chỉ gate NÚT (Lưu/Gửi…), field vẫn gõ được dù server sẽ từ chối lúc lưu.
+          forceReadOnly={!caps.write}
+          transitions={transQ.data?.transitions ?? []}
+          // P1-WF-01: has_workflow SERVER-AUTHORITATIVE — trước đây FormView tự suy "có workflow" từ
+          // transitions.length>0, nên user hết transition khả dụng (trạng thái cuối / không role nào
+          // khớp) bị hiện NHẦM nút Submit/Huỷ thủ công dù doctype thật sự có workflow.
+          hasWorkflow={transQ.data?.has_workflow ?? false}
+          onAction={onAction}
+          onWorkflowAction={onWorkflowAction}
+        />
+      </DocumentExperience>
       <ConfirmDialog
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
