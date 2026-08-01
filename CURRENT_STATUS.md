@@ -6,8 +6,35 @@ Ngày cập nhật: **2026-08-01**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
+- Current default head khi tiếp tục Print Design: `f916d066f9b45b1c3a5238259be9d6953d6cf0f3`.
 - Latest runtime-changing default commit: `898b19d0c58c84a32f99d73dfe0bf33f9ec78dd6`.
+- Bốn commit default mới nhất từ merge-base chỉ đổi `.github/release/gateway-production.trigger` và `.github/release/production-status.trigger`; không đụng server/schema/print.
 - GitHub là nguồn sự thật cho current branch head, CI, PR và release evidence.
+
+## In progress — Print design PR #141
+
+- Branch: `feat/print-design-sales-documents-20260801`.
+- Nhánh hoàn thiện local: `fix/print-router-missing-state`, dựng từ head print `53e664bcb376e9140de2cb70a619cc0c54c6c971`.
+- PR: `#141` — `feat(print): add Alumdoor operational print formats`.
+- Sidecar `server/briefs/alumdoor-v2.prints.json` nối với các mẫu in sẵn có trước schema validation/compile; không ghi đè mảng `prints` của brief gốc.
+- Loader hỗ trợ filesystem path và `file:` URL, có regression riêng.
+- `Đơn bán hàng ALUMDOOR` — Sales Order, A4 portrait, 13 cột = `100%`.
+- `Phiếu giao hàng / lắp đặt ALUMDOOR` — Delivery Note, A4 portrait, 11 cột = `100%`, không in giá, có checklist và ba khu vực ký.
+- `Phiếu yêu cầu sản xuất ALUMDOOR` — Production Request, A4 portrait, 14 cột = `100%`.
+- `Phiếu cắt nhôm ALUMDOOR` — Cut Order, A4 portrait, 13 cột = `100%`; bundle lô mẹ + bundle đầu thừa giữ nguyên để truy vết, QR chứng từ dùng filter `qrcode` authoritative của renderer.
+- QR Cut Order được regression qua renderer thật và phải ra `data:image/gif;base64,...`, không phải URL/token nhạy cảm.
+- `Biên bản bàn giao / nghiệm thu ALUMDOOR` — Delivery Note, `default: false`, A4 portrait, 11 cột = `100%`; dùng dữ liệu giao/lắp thật và để vùng kết quả/checklist cho ký tay tại công trình.
+- Cả năm mẫu dùng cùng brand system với Purchase Order mặc định `Đơn nhập hàng ALUMDOOR`: logo `/alumdoor-order-logo.png` giống từng byte với logo gốc nhúng, company header `/alumdoor-company-header.png`, letterhead `194mm × 17mm`, lề trên `23.7mm` và tiêu đề cam `#f15a24`.
+- Regression renderer dùng dữ liệu dài cho Sales Order, Delivery Note, Production Request, Cut Order và Biên bản nghiệm thu.
+- Runtime `/print/:doctype/:name?format=<tên mẫu>` tải danh sách mẫu theo đúng quyền trên chứng từ, cho chọn mẫu phụ và giữ lựa chọn trong URL.
+- DocType chưa có mẫu in hiện trạng thái “Chưa có mẫu in” với đường quay lại chứng từ; không còn biến trường hợp này thành khối lỗi đỏ.
+- Đã sửa false-negative làm CI PR đỏ: test QR kiểm nội dung text sau khi bỏ thẻ HTML thay vì đòi số chứng từ đứng sát nhãn `<b>` trong raw HTML.
+- Verify local: typecheck toàn repo PASS; client selfcheck `88/88`; tenant facade `72/72`; server unit `746/746` + toàn bộ SQL migration PASS; full server/client build PASS.
+- Exact-head Acceptance `c7d93e77d4a062a095cccc916e50127fcc603595`: 6/6 workflow SUCCESS.
+- Run IDs Acceptance: CI `30689143646`, PR Validation `30689143618`, UI `30689143691`, Purchase `30689143635`, Sales `30689143650`, Inventory/Manufacturing `30689143661`.
+- QR Cut Order đang ở staging và phải qua exact-head CI sau khi đưa vào PR branch.
+- Visual QA A4 năm mẫu PASS: cả hai ảnh thương hiệu tải thành công, bảng nằm trong vùng in `194mm`, vùng chữ ký thấp nhất vẫn nằm trong trang A4 và không có tràn ngang.
+- Production đã được phát hành trực tiếp theo chỉ đạo: Gateway version `aff41705-29f2-443f-be5c-fee161061097`, tenant Worker hiện hành và năm print format đã cài vào D1 sau backup; gate còn lại trước merge chỉ là exact-head CI và PR mergeable với current default.
 
 ## Đã hoàn tất trên default
 
@@ -60,35 +87,23 @@ Ngày cập nhật: **2026-08-01**.
 
 - PR `#145` merge SHA: `898b19d0c58c84a32f99d73dfe0bf33f9ec78dd6`.
 - Exact validated head: `73dc960e3c9685708ac1b1e51c7eb5d2c1a71a9a`.
-- Landing Alumdoor guest đã được thiết kế lại hoàn toàn theo cấu trúc thương hiệu/sản phẩm công khai trên `alumdoor.vn`, giữ form đăng nhập nội bộ trong cùng trải nghiệm.
-- Có hero `Cửa cuốn Alumdoor / Nâng tầm cửa Việt`, navigation, 4 nhóm dịch vụ, phần giới thiệu, liên hệ/khu vực hỗ trợ và footer.
-- Danh mục hiển thị 4 nhóm: cửa cuốn Úc, cửa cuốn Đức, cửa cuốn lưới và phụ kiện; tên sản phẩm, giá tham chiếu và link dẫn về trang Alumdoor gốc.
-- VIP-ST500 dẫn đúng trang chi tiết `https://alumdoor.vn/san-pham/cua-cuon-duc-vipst500/`.
-- Nội dung mô tả được viết lại từ thông tin công khai; không chép nguyên văn dài hoặc commit ảnh website bên thứ ba vào repository.
-
-### Validation Alumdoor PR `#145`
-
-- Exact head `73dc960e3c9685708ac1b1e51c7eb5d2c1a71a9a`.
-- CI `30687756129`: SUCCESS — tests, typecheck, build.
-- PR Validation `30687756103`: SUCCESS.
-- Sales Feature CI `30687756100`: SUCCESS.
-- Purchase Feature CI `30687756117`: SUCCESS.
-- Inventory and Manufacturing CI `30687756108`: SUCCESS.
-- UI Pull Request Validation `30687756105`: SUCCESS.
-- Alumdoor browser QA PASS trên desktop, tablet và mobile; kiểm hero, login, danh mục sản phẩm, link VIP-ST500, contact data, dark/reduced-motion contract và horizontal overflow.
+- Landing Alumdoor guest đã được thiết kế lại theo cấu trúc thương hiệu/sản phẩm công khai trên `alumdoor.vn`, giữ form đăng nhập nội bộ trong cùng trải nghiệm.
+- Browser QA PASS desktop/tablet/mobile, gồm dark/reduced-motion, login, no horizontal overflow và link VIP-ST500.
 
 ## Chưa release production
 
 - Chưa map `client/apps/kho/dist-mobile` vào production route `/mobile/warehouse/`.
 - Chưa chạy authenticated backend lifecycle riêng cho bốn phiếu kho mobile trên môi trường release.
 - Landing Alumdoor mới đã merge code nhưng chưa có lệnh release/deploy Cloudflare trong đợt này.
-- Chưa sửa production secrets/DNS.
+- Chưa deploy Cloudflare và chưa sửa production secrets/DNS.
 
 ## Business backlog còn lại
 
-1. Daily detailed ledger snapshot/freeze/adjustment.
-2. Warranty, defects, supplier hold/offset và capacity/overtime.
-3. End-to-end acceptance xuyên Sales, Production, Inventory, Delivery, Finance và Warranty.
+1. Hoàn tất print design PR `#141`: exact-head CI với QR Cut Order, print router và visual review năm mẫu.
+2. Print P1 tiếp: chuẩn hóa `Hoá đơn ALUMDOOR` hiện có, sau đó Payment Entry và Purchase Receipt.
+3. Daily detailed ledger snapshot/freeze/adjustment.
+4. Warranty, defects, supplier hold/offset và capacity/overtime.
+5. End-to-end acceptance xuyên Sales, Production, Inventory, Delivery, Finance và Warranty.
 
 ## Release boundary
 

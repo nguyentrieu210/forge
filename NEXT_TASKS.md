@@ -4,6 +4,48 @@ Ngày cập nhật: **2026-08-01**.
 
 Mọi agent phải đọc `AI_HANDOFF.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md` và `DELIVERY_POLICY.md` trước khi tiếp tục.
 
+## In progress — Print design PR #141
+
+Branch: `feat/print-design-sales-documents-20260801`  
+PR: `#141`
+
+Nhánh hoàn thiện local: `fix/print-router-missing-state` (print router + empty-state + sửa false-negative QR CI).
+
+### Đã làm
+
+- Sidecar `<brief>.prints.json` nối thêm mẫu in trước schema validation/compile, không ghi đè mẫu gốc.
+- `Đơn bán hàng ALUMDOOR` — Sales Order, 13 cột.
+- `Phiếu giao hàng / lắp đặt ALUMDOOR` — Delivery Note, 11 cột, không in giá.
+- `Phiếu yêu cầu sản xuất ALUMDOOR` — Production Request, 14 cột.
+- `Phiếu cắt nhôm ALUMDOOR` — Cut Order, 13 cột, bundle lô mẹ + bundle đầu thừa, kerf, kg, đầu thừa/phế và QR chứng từ thật bằng filter `qrcode`.
+- QR Cut Order mã hóa đúng số chứng từ nội bộ thành data URL, không nhúng token hoặc URL có quyền truy cập.
+- `Biên bản bàn giao / nghiệm thu ALUMDOOR` — Delivery Note, mẫu phụ `default: false`, 11 cột, checklist/kết luận/chữ ký tại công trình.
+- Năm mẫu đã đồng bộ logo, company header, lề A4, letterhead và tiêu đề theo Purchase Order mặc định `Đơn nhập hàng ALUMDOOR`; regression khóa checksum logo dùng chung.
+- Regression renderer cho Sales Order, Delivery Note, Production Request, Cut Order, Acceptance và sidecar loader.
+- Print router tải danh sách mẫu trước khi render, hỗ trợ `?format=` cho mẫu phụ và hiện empty-state tiếng Việt khi DocType chưa có mẫu.
+- Exact-head Acceptance `c7d93e77d4a062a095cccc916e50127fcc603595`: 6/6 workflow PASS.
+- Acceptance run IDs: CI `30689143646`, PR Validation `30689143618`, UI `30689143691`, Purchase `30689143635`, Sales `30689143650`, Inventory/Manufacturing `30689143661`.
+- Current default: `f916d066f9b45b1c3a5238259be9d6953d6cf0f3`; chênh lệch sau merge-base chỉ là release trigger.
+
+### Tiếp theo trên cùng epic
+
+1. Đưa staging QR Cut Order vào PR head một lần và khóa 6 workflow exact-head.
+2. Review HTML preview/PDF năm mẫu bằng dữ liệu dài: ĐÃ XONG, không tràn ngang và toàn bộ vùng ký nằm trong A4.
+3. Chuẩn hóa mẫu mặc định `Hoá đơn ALUMDOOR` hiện có; không tạo Sales Invoice default thứ hai và không thay hóa đơn điện tử pháp lý.
+4. Sau đó làm `Payment Entry` phiếu thu/chi và chuẩn hóa `Purchase Receipt`.
+5. Có thể dùng filter `qrcode` hiện có cho tem mặt hàng/lô/đầu thừa, nhưng chỉ mã hóa định danh nội bộ không nhạy cảm.
+
+### Gate trước merge
+
+- `npm run brief:check`: PASS trên exact head.
+- Focused print/Sales tests: PASS, gồm QR thật trong `alumdoor-cut-order-print.test.mjs` và acceptance renderer.
+- Frappe facade integration + client selfcheck phải PASS cho danh sách mẫu, chọn mẫu qua route và URL encoding.
+- Full tests, typecheck và build: PASS.
+- 6 workflow exact-head: PASS.
+- Preview A4 dữ liệu dài: PASS cho cả năm mẫu; logo và company header tải đủ, bảng `194mm` không tràn.
+- PR mergeable với current default.
+- Production đã deploy trực tiếp theo chỉ đạo người dùng; không đổi secrets/DNS.
+
 ## Hoàn tất — Forge branding và warehouse PWA
 
 - PR `#142` merge SHA: `8e9882a6143f4cf669724f654ec1b59949b90138`.
@@ -25,7 +67,6 @@ Mọi agent phải đọc `AI_HANDOFF.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md` 
 - PR `#145` merge SHA: `898b19d0c58c84a32f99d73dfe0bf33f9ec78dd6`.
 - Exact validated head: `73dc960e3c9685708ac1b1e51c7eb5d2c1a71a9a`.
 - Landing guest đã chuyển sang bố cục mới theo thương hiệu/sản phẩm công khai của Alumdoor, giữ login nội bộ.
-- Có hero, navigation, 4 dịch vụ, giới thiệu, 4 nhóm danh mục sản phẩm, giá/link tham chiếu, liên hệ, khu vực hỗ trợ và footer.
 - Browser QA PASS desktop/tablet/mobile, gồm dark/reduced-motion, login, no horizontal overflow và link VIP-ST500.
 - Không deploy Cloudflare trong đợt này.
 
