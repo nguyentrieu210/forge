@@ -15,7 +15,7 @@
  *
  * Required env: APP_DIST, BACKEND. Optional: PORT (default 4191).
  */
-import { createServer, request as httpRequest } from "node:http";
+import { createServer } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { resolve, join, extname, normalize, sep } from "node:path";
 
@@ -30,24 +30,18 @@ function requireEnv(name) {
 
 const APP_DIST = resolve(requireEnv("APP_DIST"));
 const BACKEND = requireEnv("BACKEND").replace(/\/$/, "");
-const BACKEND_URL = new URL(BACKEND);
 const PORT = Number(process.env.PORT || 4191);
 // Loopback only. This server forwards cookies and must never be reachable off-host.
 const HOST = "127.0.0.1";
-const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1"]);
-if (BACKEND_URL.protocol !== "http:" || !LOOPBACK_HOSTS.has(BACKEND_URL.hostname)) {
-  console.error(`serve-cookie-proxy: BACKEND must be loopback http, got ${BACKEND_URL.origin}`);
-  process.exit(1);
-}
 
 const PROXY_PREFIXES = ["/api/method", "/api/resource"];
 const PROXY_METHODS = new Set(["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"]);
 /**
  * Response headers that must NOT be copied through.
  *
- * `content-encoding` and `content-length` are excluded defensively. The proxy asks
- * the local backend for identity encoding and re-measures the body it writes to the
- * browser, so forwarding upstream byte metadata would be incorrect.
+ * `content-encoding` and `content-length` are the important ones: the body handed to
+ * the browser has already been decoded and re-measured, so the upstream values describe
+ * bytes that no longer exist.
  */
 const DROP_RESPONSE_HEADERS = new Set([
   "content-encoding", "content-length", "transfer-encoding", "connection", "keep-alive", "set-cookie",
@@ -72,42 +66,6 @@ function collectBody(request) {
     const chunks = [];
     request.on("data", (chunk) => chunks.push(chunk));
     request.on("end", () => done(Buffer.concat(chunks)));
-  });
-}
-
-function qaClientAddress(request) {
-  const userAgent = String(request.headers["user-agent"] || "");
-  // The entire authenticated browser suite shares one local tenant Worker. Bind the
-  // proxy's OUTBOUND socket to a distinct loopback address per device profile so
-  // Miniflare/Workers observes the same separation Cloudflare gets from real client
-  // addresses. Merely setting CF-Connecting-IP is not sufficient: the local runtime
-  // owns that header and can replace it with the socket peer address.
-  return /Android|Mobile/i.test(userAgent) ? "127.0.0.3" : "127.0.0.2";
-}
-
-function proxyToBackend(path, method, headers, body, localAddress) {
-  return new Promise((resolveRequest, rejectRequest) => {
-    const target = new URL(path, `${BACKEND}/`);
-    const upstream = httpRequest({
-      protocol: target.protocol,
-      hostname: target.hostname,
-      port: target.port || 80,
-      path: `${target.pathname}${target.search}`,
-      method,
-      headers,
-      localAddress,
-    }, (upstreamResponse) => {
-      const chunks = [];
-      upstreamResponse.on("data", (chunk) => chunks.push(chunk));
-      upstreamResponse.on("end", () => resolveRequest({
-        status: upstreamResponse.statusCode ?? 502,
-        headers: upstreamResponse.headers,
-        body: Buffer.concat(chunks),
-      }));
-    });
-    upstream.on("error", rejectRequest);
-    if (body && body.length) upstream.write(body);
-    upstream.end();
   });
 }
 
@@ -154,27 +112,28 @@ const server = createServer(async (request, response) => {
         const value = request.headers[name];
         if (value) headers[name] = String(value);
       }
-      // Identity encoding keeps byte ownership simple and makes the proxy agnostic to
-      // Wrangler's compression choices.
+      // Identity encoding requested so nothing has to be decoded on the way back.
       headers["accept-encoding"] = "identity";
 
       const body = request.method === "GET" || request.method === "HEAD" ? undefined : await collectBody(request);
-      const upstream = await proxyToBackend(url, request.method, headers, body, qaClientAddress(request));
+      const upstream = await fetch(`${BACKEND}${url}`, { method: request.method, headers, body, redirect: "manual" });
+      const buffer = Buffer.from(await upstream.arrayBuffer());
 
       const out = {};
-      for (const [name, value] of Object.entries(upstream.headers)) {
-        if (value === undefined || DROP_RESPONSE_HEADERS.has(name.toLowerCase())) continue;
-        out[name] = value;
-      }
-      const cookies = upstream.headers["set-cookie"];
-      if (cookies) {
-        const values = Array.isArray(cookies) ? cookies : [cookies];
-        // `Secure` is stripped only for this loopback test origin. The façade still
-        // emits the production cookie; this proxy merely makes it usable over local HTTP.
-        out["set-cookie"] = values.map((cookie) => cookie.replace(/;\s*Secure/gi, ""));
+      upstream.headers.forEach((value, name) => {
+        if (!DROP_RESPONSE_HEADERS.has(name.toLowerCase())) out[name] = value;
+      });
+      // getSetCookie() keeps multiple Set-Cookie headers distinct; forEach would collapse
+      // them into one string and the browser would store a single malformed cookie.
+      const cookies = typeof upstream.headers.getSetCookie === "function" ? upstream.headers.getSetCookie() : [];
+      if (cookies.length) {
+        // `Secure` is stripped only for this loopback test origin. Chrome treats
+        // 127.0.0.1 as a secure context so it would usually be honoured, but stripping
+        // removes any doubt without touching how the façade behaves in production.
+        out["set-cookie"] = cookies.map((cookie) => cookie.replace(/;\s*Secure/gi, ""));
       }
       response.writeHead(upstream.status, out);
-      response.end(upstream.body);
+      response.end(buffer);
       return;
     }
 
