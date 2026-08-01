@@ -11,10 +11,7 @@ export interface ForgeBrandLogoProps {
   subtitle?: string;
 }
 
-/**
- * Logo Forge dùng chung cho landing, login, shell và PWA.
- * SVG giữ nét rõ ở mọi kích thước, không cần duy trì nhiều bản PNG lệch màu.
- */
+/** Logo dùng chung cho landing, login, shell và PWA. */
 export function ForgeBrandLogo({
   size = 36,
   className,
@@ -25,32 +22,35 @@ export function ForgeBrandLogo({
 }: ForgeBrandLogoProps) {
   const id = useId().replace(/:/g, "");
   const gradientId = `forge-gradient-${id}`;
-  const shadowId = `forge-shadow-${id}`;
+  const clipId = `forge-circle-${id}`;
   const style = { "--forge-logo-size": `${size}px` } as CSSProperties;
 
   const mark = (
-    <svg
-      viewBox="0 0 96 96"
-      role="img"
-      aria-label={title}
-      className="size-full"
-    >
+    <svg viewBox="0 0 96 96" role="img" aria-label={title} className="size-full">
       <defs>
-        <linearGradient id={gradientId} x1="10" y1="10" x2="86" y2="86" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#7c3aed" />
-          <stop offset="0.52" stopColor="#d946ef" />
-          <stop offset="1" stopColor="#fb923c" />
+        <linearGradient id={gradientId} x1="15" y1="10" x2="82" y2="88" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#6d28d9" />
+          <stop offset="0.55" stopColor="#a21caf" />
+          <stop offset="1" stopColor="#ec4899" />
         </linearGradient>
-        <filter id={shadowId} x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="4" stdDeviation="5" floodColor="#7c3aed" floodOpacity="0.24" />
-        </filter>
+        <clipPath id={clipId}>
+          <circle cx="48" cy="48" r="43" />
+        </clipPath>
       </defs>
-      <circle cx="48" cy="48" r="43" fill={`url(#${gradientId})`} filter={`url(#${shadowId})`} />
-      <g fill="none" stroke="#fff" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M31 66 47.5 28 66 66" strokeWidth="9" />
-        <path d="M39.5 52.5h17" strokeWidth="7" />
-        <path d="M22 43.5 31.5 39" strokeWidth="5.5" />
-        <path d="M20.5 54 30 49.5" strokeWidth="5.5" />
+
+      <circle cx="48" cy="48" r="43" fill={`url(#${gradientId})`} />
+      <g
+        clipPath={`url(#${clipId})`}
+        fill="none"
+        stroke="#fff"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M10 37.5h20" strokeWidth="5.8" />
+        <path d="M7 48h21" strokeWidth="5.8" />
+        <path d="M13 58.5h13" strokeWidth="5.8" />
+        <path d="M29.5 69 48 27 68.5 69" strokeWidth="9.2" />
+        <path d="M39 53h19.5" strokeWidth="7.2" />
       </g>
     </svg>
   );
