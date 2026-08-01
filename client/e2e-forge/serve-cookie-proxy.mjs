@@ -69,6 +69,15 @@ function collectBody(request) {
   });
 }
 
+function qaClientAddress(request) {
+  const userAgent = String(request.headers["user-agent"] || "");
+  // Local Playwright runs two real device profiles through one loopback proxy. Cloudflare
+  // would give them distinct client addresses in production; without this test-only
+  // synthesis every successful login shares the backend fallback key "unknown" and the
+  // real 30-login/IP guard is tripped by the suite itself rather than by an attacker.
+  return /Android|Mobile/i.test(userAgent) ? "127.0.0.3" : "127.0.0.2";
+}
+
 async function serveStatic(response, pathname) {
   // Normalised and prefix-checked so a crafted path cannot escape the dist directory.
   const target = normalize(join(APP_DIST, pathname));
@@ -112,6 +121,10 @@ const server = createServer(async (request, response) => {
         const value = request.headers[name];
         if (value) headers[name] = String(value);
       }
+      // `CF-Connecting-IP` is synthesized only by this loopback QA proxy so desktop and
+      // mobile represent separate clients. The tenant Worker still enforces the normal
+      // production 30-login/IP window; no application limit is weakened or bypassed.
+      headers["CF-Connecting-IP"] = qaClientAddress(request);
       // Identity encoding requested so nothing has to be decoded on the way back.
       headers["accept-encoding"] = "identity";
 
