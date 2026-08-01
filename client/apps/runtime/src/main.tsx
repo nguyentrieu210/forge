@@ -693,11 +693,17 @@ function groupedIndexItems(items: RuntimeNav[], kind: "reports" | "masters") {
     current.push(item);
     groups.set(category, current);
   }
-  return [...groups.entries()].map(([label, entries], index) => ({ id: `index-group-${index}`, label, entries }));
+  const priority = kind === "masters"
+    ? ["Vật tư hàng hóa", "Đối tượng", "Kho", "Giá bán", "Sản xuất", "Tài chính và hệ thống", "Khác"]
+    : ["Báo cáo điều hành", "Bán hàng", "Kho và mua hàng", "Sản xuất", "Tài chính"];
+  return [...groups.entries()]
+    .sort(([left], [right]) => priority.indexOf(left) - priority.indexOf(right))
+    .map(([label, entries], index) => ({ id: `index-group-${index}`, label, entries }));
 }
 
 function MetaIndexScreen(props: ScreenProps & { kind: "reports" | "masters" }) {
   const navigate = useNavigate();
+  const [selectedReportGroup, setSelectedReportGroup] = useState<string | null>(null);
   const target = props.kind === "reports" ? "bao cao" : "danh muc";
   const active = props.kind === "reports" ? "__reports" : "__master-data";
   const title = props.kind === "reports" ? "Báo cáo" : "Danh mục";
@@ -707,6 +713,7 @@ function MetaIndexScreen(props: ScreenProps & { kind: "reports" | "masters" }) {
   const normalize = (value?: string) => (value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[đĐ]/g, "d").toLocaleLowerCase("vi").trim();
   const items = props.nav.filter((item) => normalize(item.group) === target && !item.disabledReason);
   const groups = groupedIndexItems(items, props.kind);
+  const activeReportGroup = groups.find((group) => group.id === selectedReportGroup) ?? groups[0];
   return (
     <Shell {...props} active={active} breadcrumbs={[{ label: title }]}>
       <div className="h-full overflow-auto bg-muted/20 p-3 md:p-4">
@@ -720,15 +727,25 @@ function MetaIndexScreen(props: ScreenProps & { kind: "reports" | "masters" }) {
               <aside className="border-b bg-muted/25 p-3 lg:border-b-0 lg:border-r">
                 <div className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Nhóm báo cáo</div>
                 <nav className="flex gap-1 overflow-x-auto lg:block" aria-label="Nhóm báo cáo">
-                  {groups.map((group, index) => <a key={group.id} href={`#${group.id}`} className={`block shrink-0 rounded px-3 py-2 text-sm hover:bg-primary/10 hover:text-primary ${index === 0 ? "bg-primary/10 font-semibold text-primary" : ""}`}>{group.label}</a>)}
+                  {groups.map((group) => (
+                    <Button
+                      key={group.id}
+                      type="button"
+                      variant="ghost"
+                      className={`h-auto w-full shrink-0 justify-start rounded px-3 py-2 text-sm font-normal lg:flex ${activeReportGroup?.id === group.id ? "bg-primary/10 font-semibold text-primary" : ""}`}
+                      onClick={() => setSelectedReportGroup(group.id)}
+                    >
+                      {group.label}
+                    </Button>
+                  ))}
                 </nav>
               </aside>
               <div className="min-w-0 p-4 md:p-5">
-                {groups.map((group) => (
-                  <section key={group.id} id={group.id} className="mb-6 scroll-mt-4">
-                    <h2 className="mb-1 border-b bg-muted/40 px-3 py-2 text-sm font-semibold">{group.label}</h2>
+                {activeReportGroup ? (
+                  <section key={activeReportGroup.id} className="mb-6">
+                    <h2 className="mb-1 border-b bg-muted/40 px-3 py-2 text-sm font-semibold">{activeReportGroup.label}</h2>
                     <div className="grid md:grid-cols-2 md:gap-x-8">
-                      {group.entries.map((item) => (
+                      {activeReportGroup.entries.map((item) => (
                         <Button key={item.key} variant="ghost" className="h-auto min-w-0 justify-start gap-2 rounded-none border-b px-2 py-3 text-left font-normal text-primary" onClick={() => navigate(item.route)}>
                           <span className="size-1.5 shrink-0 rounded-full bg-muted-foreground" />
                           <span className="min-w-0 whitespace-normal">{item.label}</span>
@@ -736,7 +753,7 @@ function MetaIndexScreen(props: ScreenProps & { kind: "reports" | "masters" }) {
                       ))}
                     </div>
                   </section>
-                ))}
+                ) : null}
               </div>
             </div>
           ) : (
