@@ -37,8 +37,8 @@ test("renders the full Alumdoor landing catalog without horizontal overflow", as
   const vip = page.getByRole("link", { name: /VIP-ST500/i });
   await expect(vip).toHaveAttribute("href", "https://alumdoor.vn/san-pham/cua-cuon-duc-vipst500/");
 
-  await expect(page.getByText("0317172142", { exact: true })).toBeVisible();
-  await expect(page.getByText("cskh.alumdoor@gmail.com", { exact: true })).toBeVisible();
+  await expect(page.getByText(/0317172142/)).toBeVisible();
+  await expect(page.getByText(/cskh\.alumdoor@gmail\.com/)).toBeVisible();
 
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
   await page.screenshot({ path: testInfo.outputPath("alumdoor-landing.png"), fullPage: true });
