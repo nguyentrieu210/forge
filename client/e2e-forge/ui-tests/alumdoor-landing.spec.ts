@@ -24,6 +24,10 @@ test("renders the full Alumdoor landing catalog with official media and no horiz
   await expect(page.getByRole("heading", { name: /Nâng tầm cửa Việt/i })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Đăng nhập Alumdoor" })).toBeVisible();
 
+  const warehousePwa = page.getByRole("link", { name: "App kho điện thoại", exact: true });
+  await expect(warehousePwa).toBeVisible();
+  await expect(warehousePwa).toHaveAttribute("href", "/mobile/warehouse/");
+
   await expect(page.getByText("Miễn phí tư vấn", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("Đo đạc kích thước", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("Lắp đặt tận nơi", { exact: true }).first()).toBeVisible();
