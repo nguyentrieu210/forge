@@ -4,6 +4,27 @@ Ngày cập nhật: **2026-08-02**.
 
 Đây là hàng đợi active. Không dùng file này thay cho GitHub khi cần exact branch head, PR state hoặc CI. Trước khi làm đọc `RUNBOOK.md` và `CURRENT_STATUS.md`.
 
+## ACTIVE P0 — Plastic ERP P0-A foundation
+
+- Branch canonical: `feat/plastic-erp-foundation-v2-20260802` từ exact `main` `e490e2ebd2e8c3cc98e004d4a7c2e394fd07812f`.
+- Foundation code commit: `b9d5f11544a88d02c732883a2e7e4f81b44db3c6`; docs commits theo sau trên cùng branch.
+- Generation cũ PR `#187` đã stale/diverged và không được merge/reopen làm source implementation.
+- Việc ngay trước mắt: mở PR clean, chạy targeted server tests + full required workflows trên exact final head, sửa lỗi nếu có cho tới khi PASS.
+- Chỉ khi P0-A PASS/merge mới rebuild P0-B Production Run từ exact current `main`; không transplant base/history stale.
+- P0-B phải giữ Stock Entry Manufacture/Work Order là nguồn sự thật tồn kho và sản lượng, chống lịch máy chồng, machine/tool mismatch, state transition sai và cross-company/tenant mismatch.
+- Sau P0-B: P0-C QC lot gate, rồi MRP/S&OP, WMS, MES, QMS/LIMS, EAM/OEE, traceability, costing/finance theo dependency.
+- Không deploy production trong các slice này nếu user chưa có lệnh riêng.
+
+### Done condition P0-A
+
+- 17 file source/test của Plastic ERP chỉ là delta so với current-main generation, không có file lạ/generated artifact/secret.
+- Canonical Meta v1, roles, external DocType closure, child DocType links và workflow hợp lệ.
+- Không có BOM/stock ledger/resource model cạnh tranh với ERP core hiện hữu.
+- Targeted `plastic-erp-app-source` và `plastic-erp-pack` PASS.
+- Server/client tests liên quan, typecheck, lint nếu workflow có, build PASS.
+- Required GitHub workflows exact-head PASS; branch không mang unresolved conflict/stale base có ý nghĩa.
+- `CURRENT_STATUS.md`, `NEXT_TASKS.md`, `AI_HANDOFF.md` phản ánh branch/PR/SHA/evidence cuối.
+
 ## DONE UI — MetaForge Bulk View + ALUM master grids
 
 - PR `#190` merged tại `28eb4c4af6f88f0d1c3dc56c8f50e8d31fe2e968`.
