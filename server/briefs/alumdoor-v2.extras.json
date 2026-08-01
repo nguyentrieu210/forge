@@ -54,7 +54,7 @@
   ],
   "experiences": [
     {
-      "key": "screen:manufacturing-costing",
+      "key": "alumdoor-operations:manufacturing-costing",
       "label": "Giá thành sản xuất",
       "permission": "Manufacturing Cost Rate",
       "roles": [
