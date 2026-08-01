@@ -8,16 +8,17 @@ GitHub là nguồn sự thật cho branch head, PR, CI và release evidence.
 
 - Canonical working branch cho session này: `feat/plastic-factory-erp-brd-20260802`.
 - Branch merge-base: `3222beb66bd3e6b2abbab1b17a6009044a2d5358`.
-- Current `main` head đã xác minh qua GitHub compare: `2d0d4ab871714d84ba015afcd8e4797623bad558`; branch hiện diverged, ahead 6 / behind 12. Không merge nguyên branch trước khi sync/review conflict sau khi G1 được duyệt.
-- Current docs head sau enterprise scope update: `c83a2d3b23f67b47aba0e0d1fe76ecca77ff0c4c` trước commit status này.
-- Combined status tại docs head `c83a2d3b...`: không có status checks; thay đổi là docs-only nên test/typecheck/build chưa chạy.
+- Current `main` head đã xác minh qua GitHub compare trong đợt này: `2d0d4ab871714d84ba015afcd8e4797623bad558`; branch đã diverged và không được merge nguyên trạng trước khi sync/review conflict sau G1.
+- Enterprise scope docs head trước commit status này: `2c09556d184fc766726bcdc3b76601594b7045ac`.
+- Docs-only branch chưa có status checks; test/typecheck/build không chạy vì chưa chạm executable code.
 - BRD draft: `docs/plastic-factory-erp/BRD.md`.
-- Enterprise scope matrix: `docs/plastic-factory-erp/ENTERPRISE_SCOPE.md`.
-- Scope đã mở rộng từ manufacturing ERP thành plant-wide ERP: 50 domain từ commercial/demand, S&OP/MRP, PLM-lite, SRM/procurement, WMS, plastic process execution, QMS, EAM, packing/recall, costing/finance, HR operational, EHS/energy, document control, BI, integrations, security/DR và multi-plant foundation.
+- Enterprise scope matrix D01-D50: `docs/plastic-factory-erp/ENTERPRISE_SCOPE.md`.
+- Advanced requirements D51-D75: `docs/plastic-factory-erp/ADVANCED_REQUIREMENTS.md`.
+- Scope hiện bao phủ 75 domain: commercial/demand, S&OP/MRP, PLM/NPI/APQP, supplier/procurement, WMS/silo/weighing, plastic MES, QMS/LIMS/SPC foundation, tooling/EAM, packing/TMS/recall, costing/finance/CAPEX, HR/competency, EHS/energy/sustainability, document/audit/compliance, EDI/IoT/OT security/data platform và multi-plant foundation.
+- Các cross-domain model đã bổ sung: effective revision graph, ownership vs custody, configurable genealogy grain, quality reaction plan, mass balance, canonical time taxonomy và cost taxonomy.
 - Product shape: internal operational ERP web/mobile trên Forge kernel; không tạo ERP thứ hai tách khỏi stock/manufacturing canonical hiện có.
-- Core mới dự kiến: plastic material/process profiles, Machine, Mold/Tool, Routing/Process Parameters, Production Run, Drying/Mixing/Changeover, QMS/NCR/CAPA, Maintenance/EAM, Packaging/Pallet genealogy, planning/MRP/capacity và plant costing extensions.
 - Core tái sử dụng: versioned BOM, immutable Work Order snapshot, stock lifecycle, lot/batch lineage, reservation, RBAC và MetaForge runtime policy.
-- Gate hiện tại: **G1 Requirements**. Chưa implementation trước khi enterprise scope được duyệt và process profile chính được chốt.
+- Gate hiện tại: **G1 Requirements**. Chưa implementation trước khi 75 domain được classify MUST/SHOULD/CONDITIONAL/LATER theo nhà máy thực tế và process profile chính được chốt.
 - Không deploy Cloudflare, không sửa production secret/DNS, không mutate tenant production.
 
 ## DONE — Authenticated reservation availability lifecycle
@@ -63,8 +64,8 @@ GitHub là nguồn sự thật cho branch head, PR, CI và release evidence.
 
 ## NEXT
 
-1. **Plastic ERP G1:** review enterprise scope 50 domain và khóa process profile/dry-mix/regrind/QC/packing/finance/multi-plant/device integration decisions.
-2. **Plastic ERP G2:** sau G1, sync từ exact current `main`, resolve docs conflict, rồi tách implementation roadmap thành dependency-ordered epics; foundation phải giữ one-stock-ledger/one-genealogy/one-document-source-of-truth.
+1. **Plastic ERP G1:** classify D01-D75 và khóa process profile, material prep, regrind, tooling, QC/LIMS, packing/logistics, finance, ownership, multi-plant và device/OT decisions.
+2. **Plastic ERP G2:** sau G1, sync từ exact current `main`, resolve docs conflict, rồi tách implementation roadmap theo dependency; foundation giữ one-stock-ledger/one-genealogy/one-document-source-of-truth.
 3. **P0:** QR/lineage end-to-end và cleanup QA không residue.
 4. **P1:** daily detailed ledger: snapshot ngày, freeze, append-only adjustment, reconciliation nhiều miền.
 5. **P2:** warranty/defects/capacity theo quy trình 25.7.
