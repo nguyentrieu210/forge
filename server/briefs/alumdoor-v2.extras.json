@@ -3,7 +3,8 @@
     "Đơn giá sản xuất là cấu hình có hiệu lực theo ngày để Job Card biến giờ thực tế thành chi phí thực tế.",
     "Một dòng có thể áp cho đúng công đoạn+trạm, chỉ công đoạn, chỉ trạm hoặc mặc định toàn công ty.",
     "Controller chặn khoảng hiệu lực chồng nhau trong cùng phạm vi; Cost Sheet chọn theo thứ tự cụ thể nhất.",
-    "Sau khi Cost Sheet bị khóa, thay đổi đơn giá tương lai không sửa ngược snapshot lịch sử."
+    "Sau khi Cost Sheet bị khóa, thay đổi đơn giá tương lai không sửa ngược snapshot lịch sử.",
+    "Màn Giá thành sản xuất chỉ đọc nguồn Work Order + Stock Ledger + Job Card, tạo snapshot bất biến rồi mới cho khóa/điều chỉnh."
   ],
   "version": "2.2.0",
   "doctypes": [
@@ -49,6 +50,22 @@
         "Kế toán trưởng": "rwcsxa",
         "Giám đốc": "r"
       }
+    }
+  ],
+  "experiences": [
+    {
+      "key": "manufacturing-costing:workbench",
+      "label": "Giá thành sản xuất",
+      "permission": "Manufacturing Cost Rate",
+      "roles": [
+        "Chủ xưởng",
+        "Kế toán",
+        "Kế toán tổng hợp",
+        "Kế toán trưởng",
+        "Giám đốc"
+      ],
+      "icon": "calculator",
+      "group": "Sản xuất"
     }
   ]
 }
