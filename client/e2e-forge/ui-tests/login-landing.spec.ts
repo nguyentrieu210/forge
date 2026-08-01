@@ -64,9 +64,9 @@ async function expectAlumdoorPalette(page: Page, mode: "light" | "dark") {
   );
   expect(brandBackground).toContain("rgb(241, 92, 45)");
   expect(brandBackground).toContain("rgb(57, 57, 56)");
-  await expect(page.getByRole("button", { name: /Vào hệ thống/i })).toHaveCSS(
+  await expect(page.locator("header").getByRole("button", { name: "Đăng nhập", exact: true })).toHaveCSS(
     "background-color",
-    "rgb(241, 92, 45)",
+    "rgb(239, 107, 46)",
   );
 }
 
@@ -90,14 +90,17 @@ test("Alumdoor guest experience presents the correct business landing", async ({
   await page.goto("/?alumdoor=1", { waitUntil: "domcontentloaded" });
 
   await expect(page.locator("[data-alumdoor-landing]")).toBeVisible();
-  await expect(page).toHaveTitle("Alumdoor — Quản trị nhôm kính");
-  await expect(page.getByRole("heading", { name: /Điều hành xưởng nhôm kính từ/i })).toBeVisible();
+  await expect(page).toHaveTitle("Alumdoor — Nâng tầm cửa Việt");
+  await expect(page.getByRole("heading", { name: /Nâng tầm cửa Việt/i })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Đăng nhập Alumdoor", exact: true })).toBeVisible();
   await expect(page.getByText("Alumdoor", { exact: true }).first()).toBeVisible();
-  await expect(page.getByText("Báo giá và đơn hàng", { exact: true })).toBeVisible();
-  await expect(page.getByText("Mua hàng và kho", { exact: true })).toBeVisible();
-  await expect(page.locator("#giai-phap").getByRole("heading", { name: "Sản xuất tại xưởng", exact: true })).toBeVisible();
-  await expect(page.getByText("Giao hàng và lắp đặt", { exact: true })).toBeVisible();
+  await expect(page.getByText("Miễn phí tư vấn", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("Đo đạc kích thước", { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Cửa cuốn nan nhôm công nghệ Đức", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: /VIP-ST500/i })).toHaveAttribute(
+    "href",
+    "https://alumdoor.vn/san-pham/cua-cuon-duc-vipst500/",
+  );
   await expect(page.locator("#mf-login-usr")).toBeVisible();
   await expect(page.locator("#mf-login-pwd")).toBeVisible();
   await expectAlumdoorPalette(page, "light");
@@ -119,7 +122,8 @@ test("Alumdoor landing remains usable in dark and reduced-motion modes", async (
 
   await expect.poll(() => page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches)).toBe(true);
   await expect(page.locator("[data-alumdoor-landing]")).toBeVisible();
-  await expect(page.getByRole("heading", { name: /Một hồ sơ đi xuyên suốt vòng đời công trình/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Nâng tầm cửa Việt/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Danh mục đang niêm yết", exact: true })).toBeVisible();
   await expectAlumdoorPalette(page, "dark");
   await expectNoHorizontalOverflow(page);
   await saveScreenshot(page, testInfo, "alumdoor-landing-dark-reduced-motion");
