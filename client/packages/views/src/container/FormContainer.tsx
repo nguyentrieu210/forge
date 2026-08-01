@@ -5,9 +5,9 @@
  *   perms ← docinfo.permissions · transitions ← get_transitions (server) ·
  *   submit/cancel/amend/delete ← adapter · workflow ← applyWorkflow → refetch doc+transitions+timeline.
  */
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import type { Doc } from "@metaforge/core";
+import { resolveFormRenderPolicy, type Doc } from "@metaforge/core";
 import type { ListViewSnapshot } from "@metaforge/adapter-frappe";
 import { Button, ConfirmDialog, PromptDialog, toast, useT } from "@metaforge/ui";
 import { FormView } from "../form/FormView.js";
@@ -41,6 +41,10 @@ export function FormContainer(props: FormContainerProps) {
   const { doctype, name } = props;
   const { adapter, registry, services, roles, scopeKey } = useMetaForge();
   const metaQ = useFormMeta(doctype);
+  const renderPolicy = useMemo(
+    () => metaQ.data ? resolveFormRenderPolicy(metaQ.data, "expanded") : undefined,
+    [metaQ.data],
+  );
   const docQ = useDoc(doctype, name);
   const doc = docQ.data?.doc;
   const transQ = useTransitions(doctype, name, doc);
@@ -75,6 +79,9 @@ export function FormContainer(props: FormContainerProps) {
   if (metaQ.error) return <div className="p-4 text-sm text-destructive" role="alert">{adapter.mapError(metaQ.error).message}</div>;
   if (docQ.error) return <div className="p-4 text-sm text-destructive" role="alert">{adapter.mapError(docQ.error).message}</div>;
   if (!metaQ.data || !docQ.data || !doc) return <div className="p-4 text-sm text-muted-foreground">{t("common.no_data")}</div>;
+  if (renderPolicy && !renderPolicy.enabled) {
+    return <div className="grid h-40 place-items-center p-4 text-sm text-muted-foreground" role="status">Biểu mẫu này đã bị tắt bởi metadata.</div>;
+  }
 
   /**
    * Mutation responses already contain the authoritative document. Publish it
@@ -276,7 +283,7 @@ export function FormContainer(props: FormContainerProps) {
             ) : null}
           </>
         )}
-        meta={metaQ.data}
+        meta={renderPolicy?.meta ?? metaQ.data}
         doc={doc}
         registry={registry}
         services={services}
