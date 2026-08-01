@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify migration 0031 advance guards, metadata and balance view."""
+"""Verify migrations 0031/0032 advance guards, metadata and balance view."""
 
 import json
 import sqlite3
@@ -7,6 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATION = ROOT / "migrations/tenant/0031_finance_payment_allocations.sql"
+EXPLICIT_ADVANCE_MIGRATION = ROOT / "migrations/tenant/0032_finance_explicit_advances.sql"
 
 
 def expect_integrity(db, sql, params, code):
@@ -83,14 +84,17 @@ db.execute(
     ("demo", "Payment Entry", "Accounts", 0, 1, 0, 1, json.dumps(payment_meta), 0, "seed", "2026-07-01"),
 )
 db.executescript(MIGRATION.read_text(encoding="utf-8"))
+db.executescript(EXPLICIT_ADVANCE_MIGRATION.read_text(encoding="utf-8"))
 
 meta = json.loads(db.execute(
     "SELECT metadata_json FROM doctype_definitions WHERE tenant_id='demo' AND doctype='Payment Entry'"
 ).fetchone()[0])
 fields = {field["fieldname"]: field for field in meta["fields"]}
 assert fields["references"]["required"] is False
-for field in ("paid_from", "paid_to", "received_amount", "unallocated_amount"):
+for field in ("paid_from", "paid_to", "received_amount", "unallocated_amount", "allow_unallocated"):
     assert field in fields
+assert fields["allow_unallocated"]["fieldtype"] == "Check"
+assert fields["allow_unallocated"]["default"] is False
 assert db.execute(
     "SELECT is_submittable FROM doctype_definitions WHERE tenant_id='demo' AND doctype='Payment Allocation'"
 ).fetchone() == (1,)
@@ -140,4 +144,4 @@ balance = db.execute(
 ).fetchone()
 assert balance == (10000, 6000, 4000, 4000.0)
 
-print("FINANCE_PAYMENT_ALLOCATION_MIGRATION_0031_PASS")
+print("FINANCE_PAYMENT_ALLOCATION_MIGRATIONS_0031_0032_PASS")
