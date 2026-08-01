@@ -36,6 +36,7 @@ async function invoice(kernel, name = "SI-FIN", amount = "100") {
 test("Payment Entry permits partial allocation and keeps the remainder as an advance", async () => {
   const { store, kernel } = setup();
   await invoice(kernel);
+  const glBefore = store.snapshot().gl_entries.length;
   await createAndSubmit(kernel, {
     doctype: "Payment Entry",
     name: "PE-ADVANCE",
@@ -60,7 +61,7 @@ test("Payment Entry permits partial allocation and keeps the remainder as an adv
   assert.equal(payment.data.unallocated_amount, "110.00");
   assert.equal(await store.getOutstandingMinor("demo", "Sales Invoice", "SI-FIN"), 6_000);
   assert.equal(await store.getOutstandingMinor("demo", "Payment Entry", "PE-ADVANCE"), -11_000);
-  const gl = store.snapshot().gl_entries.filter((row) => row.voucher_no === "PE-ADVANCE");
+  const gl = store.snapshot().gl_entries.slice(glBefore);
   assert.equal(gl.reduce((sum, row) => sum + row.debit_minor, 0), 15_000);
   assert.equal(gl.reduce((sum, row) => sum + row.credit_minor, 0), 15_000);
 });
