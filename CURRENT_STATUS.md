@@ -5,15 +5,9 @@ Ngày cập nhật: **2026-08-01**.
 ## Repository
 
 - Repository: `nguyentrieu210/forge`.
-- Default branch hiện tại: `hotfix/alumdoor-print-list-delete`.
-- Current default head: `4d86c1fd8c191f26f3961762b281fca1ad765855`.
+- Default branch: `hotfix/alumdoor-print-list-delete`.
+- Current default head: `f6420c70823b969a28b43e3f93004ebd52546adc`.
 - GitHub là nguồn sự thật cho code, CI, PR và release evidence.
-
-## PR tồn đọng cũ — CLOSED
-
-Đã đóng: `#15`, `#35`, `#36`, `#40`, `#73`, `#74`, `#79`, `#81`, `#103`, `#106`, `#109`.
-
-Không merge nguyên trạng các branch stale/conflicted. Branch vẫn được giữ làm nguồn tham khảo từng file.
 
 ## Đã hoàn tất trên default
 
@@ -26,66 +20,64 @@ Không merge nguyên trạng các branch stale/conflicted. Branch vẫn được
 
 - PR `#134` merge SHA: `1d05ed97836aa7bb753f8aa50a56991201a8d10a`.
 - Form đặt nhôm, FIFO theo ngày đơn, lịch sử nhận, công nợ cây/mét và dung sai Tiến Đạt `5%` đã có.
-- Regression khóa ví dụ `200 + 100`, nhận `230`, phân bổ `200 + 30`, nợ danh nghĩa `70` cây / `504 m`, khoảng giao thêm `55–85` cây.
 
-### Purchase authenticated QA — DONE / MERGED
+### Purchase authenticated QA
 
 - PR `#137` merge SHA: `29fee0200d8118eef2d0ae9e524a3a00acfab00f`.
-- Exact PR head: `fd03d22872c2234d50f616a5d8956c8b62f26b40`.
-- CI, PR Validation, Purchase, Sales, Inventory và UI authenticated gates: SUCCESS.
-- Desktop Chrome + Pixel 7 lifecycle PASS.
+- Full CI và authenticated lifecycle desktop/mobile đã PASS.
 
-## MetaForge MISA-style UI — IMPLEMENTED / CI PENDING
+### MetaForge MISA-style workspace
 
-- Branch: `feat/metaforge-misa-workspace-ui-clean`.
-- Base exact default head: `4d86c1fd8c191f26f3961762b281fca1ad765855`.
-- Implementation head trước status docs: `054b7e23b8e18d74ec378316de2b132fd44aa0f7`.
+- PR `#140` merge SHA: `f6420c70823b969a28b43e3f93004ebd52546adc`.
+- Sidebar phân hệ, tab nghiệp vụ, Danh mục tập trung, Meta workspace, report builder và 13 bảng màu đã có trên default.
+- Exact-head CI, build/typecheck và Playwright desktop + Pixel 7 + iPhone-size viewport đã PASS trước merge.
 
-Đã làm:
+## Forge branding + account + warehouse PWA — ACTIVE
 
-- Đưa `Tổng quan` thành mục độc lập ở sidebar; không còn lặp trong dải tab nghiệp vụ.
-- Dải tab nghiệp vụ và Meta chia đều chiều ngang, chữ nhỏ hơn và truncate nhãn dài; không dùng cuộn ngang.
-- Gom `Danh mục` về một màn tập trung theo nhóm như MISA.
-- Thay màn quy trình cũ bằng luồng gọn và các lối tắt nghiệp vụ.
-- Bổ sung workspace Meta gồm DocType, Workflow, Mẫu in và Thiết kế báo cáo.
-- Thiết kế báo cáo có ba vùng: nguồn dữ liệu/widget bên trái, canvas kéo-resize ở giữa, bố cục/thuộc tính bên phải và chế độ xem trước.
-- Khóa đúng `13` bảng màu toàn hệ thống, có light/dark; tên màu hiển thị bằng tiếng Việt.
-- Thêm Playwright coverage cho sidebar Tổng quan, tab không overflow, Danh mục, report builder và số lượng 13 theme.
+- Branch: `feat/mobile-pwa-brand-account-warehouse`.
+- PR: `#142`.
+- Base: `f6420c70823b969a28b43e3f93004ebd52546adc`.
+- Implementation head trước status docs: `21534cfc9bdb76fdd9c1dca105f6d478c8ac28dc`.
 
-Chưa được xác nhận:
+### Đã triển khai
 
-- Typecheck/build/e2e trên exact head mới.
-- Desktop/mobile authenticated journey.
-- PR canonical và exact-head CI.
+- Logo chuẩn tím → hồng, chữ A trắng và ba nét cánh ngang dùng chung cho landing, login, shell, favicon và PWA.
+- Landing/login bố cục hai cột cân đối; mobile ưu tiên form đăng nhập.
+- Account menu sau login có avatar, đổi mật khẩu và đăng xuất các thiết bị khác.
+- Bundle app kho điện thoại độc lập tại base `/mobile/warehouse/`; không co giao diện desktop thành mobile.
+- Top nav, bottom nav, nút nghiệp vụ lớn và form touch-first.
+- Nghiệp vụ: nhập kho, xuất kho, chuyển kho, kiểm kho và tra tồn.
+- PWA manifest, icon thường, icon maskable, shortcut và service worker.
+- Service worker không cache API/auth response.
+- Offline queue cho thao tác kho khi mất mạng.
+- `apps/kho` build desktop và mobile thành hai output riêng; mobile output ở `client/apps/kho/dist-mobile`.
+- Playwright gate dùng bundle build thật và kiểm hai kích thước điện thoại.
 
-Closed PR `#81/#109` chỉ được dùng để tham khảo từng file; không merge nguyên branch cũ. Login/landing không trộn vào branch này.
+### Validation hiện tại
 
-## Chưa được phép gọi là hoàn tất toàn quy trình
+- Frozen install: PASS trên các head trước.
+- Frontend lint: PASS.
+- TypeScript mobile: PASS.
+- Vite mobile bundle: PASS trên head `c5c9714e039b6f8bbfd599b411fdb72b970be13c`.
+- Full exact-head CI cho logo chuẩn và Playwright mobile mới: đang chạy sau status docs.
 
-Tài liệu `25.7 QUY TRÌNH.docx` còn yêu cầu sổ chi tiết khóa theo ngày, công nợ tổng hợp, lỗi/bảo hành, năng lực sản xuất và kiểm nhận xuyên suốt. Current default chưa đủ các phần dưới đây:
+### Chưa hoàn tất
 
-1. Finance hoàn chỉnh: AR/AP aging, Payment Allocation, Party Statement, Debt Summary, Advance Balance và UI/report navigation.
-2. Daily detailed ledger snapshot, freeze và adjustment theo vai trò.
-3. Warranty/defect bốn nguyên nhân, supplier debt hold/offset và capacity/overtime.
-4. End-to-end acceptance từ Sales Order đến production, inventory, delivery, debt, daily ledger, adjustment và warranty.
+- Chưa merge PR `#142`.
+- Chưa có authenticated backend lifecycle riêng cho bốn phiếu kho mobile.
+- Chưa map/deploy `dist-mobile` vào production route `/mobile/warehouse/`.
+- Chưa deploy Cloudflare và chưa thay production secrets/DNS.
+
+## Business backlog còn lại
+
+1. Finance hoàn chỉnh: AR/AP aging, Payment Allocation, Party Statement, Debt Summary và Advance Balance.
+2. Daily detailed ledger snapshot/freeze/adjustment.
+3. Warranty, defects, supplier hold/offset và capacity/overtime.
+4. End-to-end acceptance xuyên Sales, Production, Inventory, Delivery, Finance và Warranty.
 
 ## Release boundary
 
 - Không deploy Cloudflare nếu chưa có lệnh riêng.
 - Không sửa production secret, DNS hoặc rollout state.
 - Không migrate hoặc mutate dữ liệu tenant production.
-- Generic FIFO production vẫn disabled.
-
-## Hàng đợi canonical
-
-1. MetaForge MISA-style UI — `IMPLEMENTED / CI PENDING`.
-2. Finance clean rebuild — `NEXT BUSINESS EPIC`.
-3. Daily detailed ledger — `QUEUED`.
-4. Warranty / defects / capacity — `QUEUED`.
-5. End-to-end acceptance — `QUEUED`.
-6. Login/landing — `SEPARATE UI BACKLOG`.
-
-## Safety
-
 - Không commit `.env`, `server/work/`, `tmp`, backup, cookie, token hoặc generated evidence.
-- Không merge branch stale/conflicted chỉ để làm sạch danh sách PR.
