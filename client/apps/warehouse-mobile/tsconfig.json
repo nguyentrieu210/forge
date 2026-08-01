@@ -1,18 +1,25 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    "baseUrl": ".",
     "rootDir": "src",
-    "outDir": "dist",
-    "noEmit": false,
+    "noEmit": true,
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
     "jsx": "react-jsx",
     "jsxImportSource": "react",
-    "types": ["vite/client", "node"]
+    "typeRoots": ["../kho/node_modules/@types"],
+    "paths": {
+      "react": ["../kho/node_modules/react"],
+      "react/jsx-runtime": ["../kho/node_modules/react/jsx-runtime"],
+      "react-dom/client": ["../kho/node_modules/react-dom/client"],
+      "lucide-react": ["../kho/node_modules/lucide-react"],
+      "@metaforge/adapter-frappe": ["../kho/node_modules/@metaforge/adapter-frappe"],
+      "@metaforge/core": ["../kho/node_modules/@metaforge/core"],
+      "@metaforge/shell": ["../kho/node_modules/@metaforge/shell"],
+      "@metaforge/ui": ["../kho/node_modules/@metaforge/ui"]
+    }
   },
-  "references": [
-    { "path": "../../packages/core" },
-    { "path": "../../packages/adapter-frappe" },
-    { "path": "../../packages/ui" },
-    { "path": "../../packages/shell" }
-  ],
   "include": ["src/**/*"]
 }
