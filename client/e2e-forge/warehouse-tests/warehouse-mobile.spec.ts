@@ -28,11 +28,11 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test("renders the installable warehouse experience without desktop shell", async ({ page, request }, testInfo) => {
+test("renders the installable Alumdoor warehouse experience without desktop shell", async ({ page, request }, testInfo) => {
   await page.goto("/mobile/warehouse/");
 
-  await expect(page).toHaveTitle("Forge Kho");
-  await expect(page.getByRole("img", { name: "Forge" }).first()).toBeVisible();
+  await expect(page).toHaveTitle("Alumdoor Kho");
+  await expect(page.getByRole("img", { name: "Alumdoor" }).first()).toBeVisible();
   await expect(page.getByText("Hôm nay cần làm gì ở kho?", { exact: true })).toBeVisible();
 
   for (const label of ["Trang chủ", "Nghiệp vụ", "Tra tồn", "Tôi"]) {
@@ -47,9 +47,12 @@ test("renders the installable warehouse experience without desktop shell", async
   const manifestResponse = await request.get("/mobile/warehouse/manifest.webmanifest");
   expect(manifestResponse.ok()).toBe(true);
   const manifest = await manifestResponse.json();
-  expect(manifest.name).toBe("Forge Kho");
+  expect(manifest.name).toBe("Alumdoor Kho");
   expect(manifest.start_url).toBe("/mobile/warehouse/");
+  expect(manifest.scope).toBe("/mobile/warehouse/");
   expect(manifest.display).toBe("standalone");
+  expect(manifest.theme_color).toBe("#ef6b2e");
+  expect(manifest.icons[0]?.src).toContain("alumdoor.vn/wp-content/uploads/");
 
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1);
 
