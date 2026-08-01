@@ -1,7 +1,23 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+const JSON_HEADERS = { "content-type": "application/json; charset=utf-8" };
+
+async function mockGuestSession(page: Page) {
+  const guest = JSON.stringify({
+    exc_type: "PermissionError",
+    exception: "frappe.exceptions.PermissionError: Guest",
+  });
+  await page.route("**/api/method/metaforge.api.get_app_manifest**", (route) =>
+    route.fulfill({ status: 200, headers: JSON_HEADERS, body: JSON.stringify({ message: null }) }),
+  );
+  await page.route("**/api/method/metaforge.api.get_boot**", (route) =>
+    route.fulfill({ status: 403, headers: JSON_HEADERS, body: guest }),
+  );
+}
 
 test("renders the full Alumdoor landing catalog without horizontal overflow", async ({ page }, testInfo) => {
-  await page.goto("/?alumdoor=1");
+  await mockGuestSession(page);
+  await page.goto("/?alumdoor=1", { waitUntil: "domcontentloaded" });
 
   const landing = page.locator("[data-alumdoor-landing]");
   await expect(landing).toBeVisible();
