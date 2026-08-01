@@ -1,0 +1,19 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readAppSource } from "../scripts/lib/read-app-source.mjs";
+
+test("G03 package uses only generic runtime routes", async () => {
+  const manifest = await readAppSource("apps-src/erp-organization-security");
+  const routes = [manifest.client?.home?.route, ...manifest.nav.map((item) => item.route)].filter(Boolean);
+
+  assert.equal(manifest.metaContractVersion, 1);
+  assert.ok(routes.includes("/app/Department"));
+  assert.ok(routes.includes("/permissions?tab=roles"));
+  assert.ok(routes.includes("/permissions?tab=approvals"));
+
+  assert.ok(!routes.includes("/organization"), "G03 source must not depend on the legacy organization route");
+  assert.ok(
+    !routes.some((route) => route.startsWith("/security/")),
+    `G03 source still depends on feature-specific security routes: ${routes.filter((route) => route.startsWith("/security/")).join(", ")}`,
+  );
+});

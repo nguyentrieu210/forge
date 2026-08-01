@@ -102,6 +102,29 @@ export function applyFormProfile(meta: DocTypeMeta, profile: FormProfile | undef
 }
 
 /**
+ * `surface=internal` is a hard visibility boundary for canonical Meta, stronger than a FormProfile.
+ *
+ * FormProfile deliberately keeps required/title/dependency fields visible as a safety net for
+ * legacy schemas. Older metadata may already carry a `surface` hint without the canonical
+ * ownership fields. Treating that hint as the v1 boundary would silently hide required inputs.
+ * Canonical fields are distinguishable because they carry ownership/enforcement metadata.
+ */
+function isCanonicalInternalField(field: DocField): boolean {
+  return field.surface === "internal" && (
+    field.valueSource !== undefined
+    || field.editMode !== undefined
+    || field.serverEnforced !== undefined
+  );
+}
+
+function stripInternalSurface(meta: DocTypeMeta): DocTypeMeta {
+  return {
+    ...meta,
+    fields: pruneEmptyBreaks(meta.fields.filter((field) => !isCanonicalInternalField(field))),
+  };
+}
+
+/**
  * Compact quick-entry is opt-in metadata, never a guess based on field type.
  *
  * The caller must keep using the original meta for defaults and serialisation. This
@@ -112,12 +135,14 @@ export function applyFormSurface(meta: DocTypeMeta, surface: "quick" | "expanded
   const declared = meta.fields.filter((field) => field.surface !== undefined);
   if (!declared.length) return meta;
   if (surface === "expanded") {
-    return applyFormProfile(meta, { hide: meta.fields.filter((field) => field.surface === "internal").map((field) => field.fieldname) });
+    return stripInternalSurface(applyFormProfile(meta, {
+      hide: meta.fields.filter((field) => field.surface === "internal").map((field) => field.fieldname),
+    }));
   }
   const quick = meta.fields
     .filter((field) => field.surface === "quick")
     .map((field) => field.fieldname);
-  return applyFormProfile(meta, { keep: quick });
+  return stripInternalSurface(applyFormProfile(meta, { keep: quick }));
 }
 
 /**

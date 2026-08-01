@@ -77,6 +77,32 @@ export interface RuntimeAssets {
   [k: string]: unknown;
 }
 
+/** Canonical policy for one renderer. Extra app-owned hints remain passthrough metadata. */
+export interface DocTypeView {
+  enabled: boolean;
+  fields?: string[];
+  columns?: string[];
+  stageField?: string;
+  startField?: string;
+  endField?: string;
+  /** Workflow transitions that require an operator reason, e.g. backward/cancel. */
+  reasonRequiredOn?: string[];
+  [k: string]: unknown;
+}
+
+/** Same view contract parsed by the server; no `Record<string, unknown>` escape hatch at the boundary. */
+export interface DocTypeViewPolicy {
+  list: DocTypeView;
+  form: DocTypeView;
+  quickEntry?: DocTypeView;
+  kanban?: DocTypeView;
+  calendar?: DocTypeView;
+  gantt?: DocTypeView;
+  chart?: DocTypeView;
+  mobile?: Record<string, unknown>;
+  [k: string]: unknown;
+}
+
 /** DocTypeMeta — docs[0] của getdoctype. masked_fields đến từ FormMeta (che VALUE, không che schema). */
 export interface DocTypeMeta extends RuntimeAssets {
   name: string;
@@ -93,7 +119,7 @@ export interface DocTypeMeta extends RuntimeAssets {
   image_field?: string;
   track_changes?: 0 | 1;
   fields: DocField[];
-  viewPolicy?: Record<string, unknown>;
+  viewPolicy?: DocTypeViewPolicy;
   permissions: DocPerm[];
   /** field bị che giá trị theo permlevel (apply_fieldlevel_read_permissions). */
   masked_fields?: string[];
