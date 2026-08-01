@@ -1,0 +1,32 @@
+{
+  "name": "Warehouse Cash Fund",
+  "module": "Accounts",
+  "autoname": "field:fund_code",
+  "title_field": "fund_name",
+  "sort_field": "fund_name",
+  "sort_order": "ASC",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "fund_code", "label": "Mã quỹ", "fieldtype": "Data", "required": true, "unique": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "fund_name", "label": "Tên quỹ", "fieldtype": "Data", "required": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "warehouse", "label": "Kho", "fieldtype": "Link", "options": "Warehouse", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "cash_account", "label": "Tài khoản tiền mặt", "fieldtype": "Link", "options": "Account", "required": true, "in_list_view": true },
+    { "fieldname": "currency", "label": "Tiền tệ", "fieldtype": "Link", "options": "Currency", "required": true, "default": "VND" },
+    { "fieldname": "custodian_user", "label": "Người giữ quỹ", "fieldtype": "Link", "options": "User", "required": true, "in_list_view": true },
+    { "fieldname": "cost_center", "label": "Trung tâm chi phí", "fieldtype": "Link", "options": "Cost Center" },
+    { "fieldname": "daily_limit", "label": "Hạn mức chi trong ngày", "fieldtype": "Currency" },
+    { "fieldname": "max_balance", "label": "Số dư quỹ tối đa", "fieldtype": "Currency" },
+    { "fieldname": "disabled", "label": "Ngừng sử dụng", "fieldtype": "Check", "default": 0, "in_list_view": true },
+    { "fieldname": "note", "label": "Ghi chú", "fieldtype": "Small Text" }
+  ],
+  "permissions": [
+    { "role": "Warehouse Cash User", "read": true, "report": true },
+    { "role": "Warehouse Cash Manager", "read": true, "write": true, "create": true, "report": true, "export": true },
+    { "role": "General Accountant", "read": true, "write": true, "create": true, "report": true, "export": true },
+    { "role": "Chief Accountant", "read": true, "write": true, "create": true, "report": true, "export": true, "share": true },
+    { "role": "Accounts Manager", "read": true, "write": true, "create": true, "report": true, "export": true, "share": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}
