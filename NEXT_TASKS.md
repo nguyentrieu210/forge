@@ -4,6 +4,38 @@ Ngày cập nhật: **2026-08-02**.
 
 Đây là hàng đợi active. Không dùng file này thay cho GitHub khi cần exact branch head, PR state hoặc CI. Trước khi làm đọc `RUNBOOK.md` và `CURRENT_STATUS.md`.
 
+## ACTIVE UI — hoàn tất PR #184 Document Experience V2 foundation
+
+Branch canonical của slice này: `feat/metaforge-document-experience-v2-20260802`.
+
+Đã hoàn tất executable slice:
+
+- presentation resolver an toàn với 7 archetype + generic fallback;
+- document hero, semantic status, metric cards, responsive context strip/rail và skeleton loading;
+- existing `FormContainer` dùng Document Experience nhưng giữ nguyên canonical form policy, server-authoritative permission/workflow/action;
+- selfcheck khóa archetype, explicit presentation, internal-field boundary, progress, status tone và formatting;
+- exact executable head `48c23dd36ac8c9d2f24307a00556e46738db2f12` đã **6/6 PASS**, gồm tests/typecheck/build và MetaForge + Alumdoor browser QA.
+
+Việc còn lại của chính PR `#184`:
+
+1. Chạy lại exact-head required CI sau commit handoff docs.
+2. Giữ PR draft/không merge cho tới khi có quyết định merge riêng sau khi final exact-head xanh.
+3. Không thêm List Workspace vào PR này vì Bulk View PR `#182` đang chạm `DoctypeWorkspace` và core meta types.
+
+## NEXT UI — MetaForge UX V2 wave kế tiếp
+
+Chỉ bắt đầu trên branch mới từ exact `main` sau khi PR `#184` kết thúc và trạng thái PR `#182` được xác minh lại trên GitHub.
+
+Ưu tiên:
+
+1. **List Workspace V2**: summary bar, saved views, smart filters, table/card responsive, contextual quick actions; tích hợp Bulk View thay vì tạo navigation cạnh tranh.
+2. **Presentation authoring/canonical transport**: đưa presentation contract từ runtime extension thành authorable metadata/sidecar có compiler/parser/selfcheck rõ ràng.
+3. **Reference screens**: Sales Order, Purchase Order, Stock Entry, Work Order, Customer, Payment Entry phải thể hiện khác archetype nhưng cùng dùng engine.
+4. **Document context nâng cao**: related-document graph, activity/timeline, exception cards và nghiệp vụ progress source thật thay vì chỉ explicit status steps.
+5. **Mobile V2**: rich list cards, context drawer/bottom sheet và action zone phù hợp màn nhỏ.
+
+Không mở wave List V2 bằng cách sửa thẳng branch PR `#182`; mỗi epic/slice dùng branch/PR riêng.
+
 ## DONE — Runbook / project-status cleanup
 
 - PR `#180` merged tại `09bc64e1fe8d9ded171368cfc72bd2b4b18aed72`.
