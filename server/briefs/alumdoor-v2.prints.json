@@ -1,6 +1,6 @@
 {
   "//purpose": "Mẫu in mới tách khỏi brief nghiệp vụ để review bố cục, cột và giấy ký độc lập; forge-app ghép lại trước schema validation và compile.",
-  "version": "2.0.38",
+  "version": "2.0.39",
   "prints": [
     {
       "//": "Đơn bán hàng A4 dùng để khách xác nhận và bàn giao nội bộ sang kho/sản xuất. Cột kích thước giữ nguyên số đo vận hành, không chỉ in mỗi m2 tính tiền.",
@@ -115,6 +115,44 @@
         "</tbody></table>",
         "<div class=\"footer-note\"><b>Ghi chú:</b>{{ note }}</div>",
         "<div class=\"sign\"><div><b>Kinh doanh / Người lập</b>(ký, ghi rõ họ tên)</div><div><b>Bộ phận sản xuất nhận</b>(ký, ghi rõ họ tên)</div><div><b>Chủ xưởng duyệt</b>(ký, ghi rõ họ tên)</div></div>"
+      ]
+    },
+    {
+      "//": "Phiếu cắt nhôm nội bộ bám trực tiếp Cut Order / Cut Order Item. Dùng bundle ID thật để truy vết lô mẹ và đầu thừa; không tạo QR giả khi renderer chưa có primitive QR authoritative.",
+      "name": "Phiếu cắt nhôm ALUMDOOR",
+      "doctype": "Cut Order",
+      "default": true,
+      "css": [
+        "@page{size:A4 portrait;margin:0}",
+        "*{box-sizing:border-box}html,body{margin:0;width:210mm;min-height:297mm}body{font-family:Arial,'Liberation Sans',sans-serif;font-size:9px;color:#111;padding:18mm 8mm 8mm;font-kerning:none;letter-spacing:0;word-spacing:0}",
+        ".letterhead{position:relative;width:194mm;height:20mm;overflow:hidden;border-bottom:1px solid #ddd}.brand-logo-text{position:absolute;left:0;top:2mm;font-size:24px;font-weight:800;color:#f15a24;letter-spacing:.8px}.brand-tagline{position:absolute;left:0;top:11mm;font-size:7.5pt;color:#555}.company-header-img{position:absolute;right:-13.5mm;top:0;width:114.3mm;height:auto;display:block}",
+        ".title{width:194mm;font-size:18px;line-height:1.2;font-weight:700;color:#f15a24;text-transform:uppercase;text-align:center;margin:5mm 0 4mm}",
+        ".meta{width:194mm;font-size:8px;line-height:1.4;margin-bottom:4mm;display:grid;grid-template-columns:1fr 1fr;gap:1mm 8mm}.meta-row{display:grid;grid-template-columns:27mm 1fr;min-height:2.8mm}.meta-row.wide{grid-column:1/-1;grid-template-columns:27mm 1fr}.meta-label{font-weight:700}.meta-value{white-space:pre-wrap;overflow-wrap:anywhere}",
+        "table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}th,td{border:1px solid #777;padding:3.3pt 1.1pt;vertical-align:middle;text-align:center;line-height:1.18}",
+        "th{background:#f3f3f3;font-size:6.5pt;text-transform:uppercase;white-space:normal}td{font-size:7pt;white-space:normal;overflow-wrap:anywhere}.n,.c{text-align:center;font-variant-numeric:tabular-nums}.code{font-weight:700}.bundle-cell,.warehouse-cell{white-space:normal;overflow-wrap:anywhere}.muted{font-size:6.2pt;color:#666}.index-col{white-space:nowrap}",
+        ".trace{margin-top:3mm;border:1px solid #aaa;padding:2.5mm;font-size:7.5pt;line-height:1.4}.trace b{display:inline-block;min-width:28mm}.footer-note{margin-top:3mm;font-size:8pt;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere}.footer-note b{display:inline-block;min-width:25mm}.sign{display:flex;width:100%;justify-content:space-between;text-align:center;margin-top:16px}.sign div{width:31%}.sign b{display:block;margin-bottom:34px;font-size:8px}"
+      ],
+      "html": [
+        "<div class=\"letterhead\"><div class=\"brand-logo-text\">ALUMDOOR</div><div class=\"brand-tagline\">CỬA CUỐN CÔNG NGHỆ ĐỨC / ÚC</div><img class=\"company-header-img\" src=\"/alumdoor-company-header.png\" alt=\"Thông tin công ty ALUMDOOR\"></div>",
+        "<div class=\"title\">PHIẾU CẮT NHÔM</div>",
+        "<div class=\"meta\">",
+        "<div class=\"meta-row\"><span class=\"meta-label\">Số phiếu:</span><span class=\"meta-value\">{{ name }}</span></div>",
+        "<div class=\"meta-row\"><span class=\"meta-label\">Ngày cắt:</span><span class=\"meta-value\">{{ cut_on | date }}</span></div>",
+        "<div class=\"meta-row\"><span class=\"meta-label\">Công thức:</span><span class=\"meta-value\">{{ cutting_policy }}</span></div>",
+        "<div class=\"meta-row\"><span class=\"meta-label\">Trạng thái:</span><span class=\"meta-value\">{{ cut_state }}</span></div>",
+        "<div class=\"meta-row\"><span class=\"meta-label\">Khách hàng:</span><span class=\"meta-value\">{{ customer }}</span></div>",
+        "<div class=\"meta-row\"><span class=\"meta-label\">Theo đơn:</span><span class=\"meta-value\">{{ so_reference }}</span></div>",
+        "<div class=\"meta-row\"><span class=\"meta-label\">Work Order:</span><span class=\"meta-value\">{{ work_order }}</span></div>",
+        "<div class=\"meta-row\"><span class=\"meta-label\">Màu đích:</span><span class=\"meta-value\">{{ target_color }}</span></div>",
+        "</div>",
+        "<table><colgroup><col style=\"width:3%\"><col style=\"width:8%\"><col style=\"width:17%\"><col style=\"width:11%\"><col style=\"width:7%\"><col style=\"width:7%\"><col style=\"width:6%\"><col style=\"width:6%\"><col style=\"width:7%\"><col style=\"width:7%\"><col style=\"width:7%\"><col style=\"width:7%\"><col style=\"width:7%\"></colgroup><thead><tr>",
+        "<th class=\"index-col\">STT</th><th>Mã nhôm</th><th>Bundle lô mẹ / đầu thừa</th><th>Kho lô mẹ</th><th>Khổ cây (m)</th><th>Rộng cắt (m)</th><th>Số lá</th><th>Số nhát</th><th>Kerf (m)</th><th>Kg tiêu hao</th><th>Kg cân thật</th><th>Đầu thừa (m)</th><th>Phế (m)</th>",
+        "</tr></thead><tbody>",
+        "{{#each items}}<tr><td class=\"c index-col\">{{ _index }}</td><td class=\"code\">{{ item_code }}</td><td class=\"bundle-cell\">{{ serial_and_batch_bundle }}<br><span class=\"muted\">Đầu thừa: {{ offcut_bundle }}</span></td><td class=\"warehouse-cell\">{{ source_warehouse }}</td><td class=\"n\">{{ source_length_m | number }}</td><td class=\"n\">{{ cut_width_m | number }}</td><td class=\"n\">{{ sheets_cut | number }}</td><td class=\"n\">{{ cuts_count | number }}</td><td class=\"n\">{{ kerf_total_m | number }}</td><td class=\"n\">{{ kg_consumed | number2 }}</td><td class=\"n\">{{ kg_weighed | number2 }}</td><td class=\"n\">{{ offcut_length_m | number }}</td><td class=\"n\">{{ scrap_m | number }}</td></tr>{{/each}}",
+        "</tbody></table>",
+        "<div class=\"trace\"><b>Truy vết:</b>Bundle lô mẹ và bundle nhập đầu thừa được in trực tiếp từ chứng từ. Không dùng mã tự sinh ngoài sổ lô.</div>",
+        "<div class=\"footer-note\"><b>Lý do hoàn / trả:</b>{{ cancel_reason }}<br><b>Ghi chú:</b>{{ note }}</div>",
+        "<div class=\"sign\"><div><b>Người cắt</b>(ký, ghi rõ họ tên)</div><div><b>Thủ kho xác nhận</b>(ký, ghi rõ họ tên)</div><div><b>Quản đốc / KCS</b>(ký, ghi rõ họ tên)</div></div>"
       ]
     }
   ]
