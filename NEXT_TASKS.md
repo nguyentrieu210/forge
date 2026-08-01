@@ -4,6 +4,33 @@ Ngày cập nhật: **2026-08-02**.
 
 Mọi agent phải đọc `AI_HANDOFF.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md` và `DELIVERY_POLICY.md` trước khi tiếp tục. GitHub là nguồn sự thật cho exact branch head, PR, CI và release evidence.
 
+## REVIEW NEXT — MetaForge Form Renderer
+
+Audit tại `docs/METAFORGE_FORM_RENDER_AUDIT_20260802.md` chấm **82/100** trên branch `review/metaforge-form-render-audit-20260802`.
+
+### P0 — Một canonical form-meta pipeline cho existing + new form
+
+1. Tạo helper chung cho form rendering thay vì để `FormContainer` và `NewFormContainer` tự ghép policy khác nhau.
+2. Cả existing Form và new Full/Quick Form phải áp canonical `surface=internal` hard boundary ở bước cuối.
+3. Runtime phải thực thi `viewPolicy.form.enabled/fields` và `viewPolicy.quickEntry.enabled/fields`; `surface` giữ vai trò canonical field membership/fallback, FormProfile chỉ là legacy/app overlay.
+4. `quickEntry.enabled=false` phải không mở full form trong dialog một cách ngầm định; route/shell phải fallback sang page hoặc hành vi được khai rõ.
+5. Không thay backend permission để che lỗi UI; server vẫn fail-closed như hiện tại.
+
+### P0 — Regression cho composition boundary
+
+1. Existing `FormContainer` không render field canonical `surface=internal`, kể cả field đó required/title/dependency.
+2. Explicit `viewPolicy.form.fields` thay đổi đúng Full Form.
+3. Explicit `viewPolicy.quickEntry.fields` thay đổi đúng Quick Form.
+4. `form.enabled=false` và `quickEntry.enabled=false` được tôn trọng.
+5. Metadata legacy thiếu canonical policy vẫn render theo compatibility rule hiện hành.
+6. Chạy client selfcheck + typecheck + build và browser QA trên desktop/mobile trước khi mở PR.
+
+### P1 — Chốt layout contract
+
+- Quyết định MetaForge sẽ fidelity với Frappe `Column Break` hay coi Column Break là hint và dùng `form_width/viewPolicy` làm authoritative layout.
+- Nếu giữ layout opinionated, cập nhật mô tả/contract để không tiếp tục tuyên bố copy 1:1 ở phần bố cục.
+- Rà `FormView` width ceiling: comment nói `96rem`, code hiện `max-w-[72rem]`; khóa bằng screenshot/E2E ở 1366/1440/1920 và form có child table rộng.
+
 ## DONE — PR #170 Stock Entry operational submit RBAC
 
 - PR `#170` merged.
