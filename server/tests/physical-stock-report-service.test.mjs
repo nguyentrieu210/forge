@@ -22,6 +22,7 @@ function ledger(overrides = {}) {
     voucher_row: "ROW-1",
     revision: 1,
     quantity_micros: 3_000_000,
+    weight_micros: 19_710_000,
     value_micros: 9_000_000,
     physical_count_micros: 3_000_000,
     physical_identity_key: "NHOM-AL71|XAM|6000000",
@@ -58,6 +59,8 @@ test("report service injects authenticated tenant and applies warehouse scope", 
   assert.deepEqual(calls, [{ tenant_id: "alu", company: "Alumdoor" }]);
   assert.equal(page.rows.length, 1);
   assert.equal(page.rows[0].warehouse, "KHO-NVL");
+  assert.equal(page.rows[0].weight_micros, 19_710_000);
+  assert.equal(page.totals.weight_micros, 19_710_000);
   assert.equal(page.lineage_redacted, true);
   assert.equal("lineage" in page.rows[0], false);
 });
@@ -77,6 +80,7 @@ test("report service exposes lineage only when scope and request permit it", asy
   assert.equal(page.lineage_redacted, false);
   assert.equal(page.rows[0].lineage.length, 1);
   assert.equal(page.rows[0].lineage[0].voucher_no, "STE-1");
+  assert.equal(page.rows[0].lineage[0].weight_micros, 19_710_000);
 });
 
 test("report service rejects company scope and cross-tenant reader leakage", async () => {
@@ -152,7 +156,7 @@ test("CSV export uses one authorization and scope snapshot", async () => {
   assert.equal(exported.row_count, 1);
 });
 
-test("CSV export is scoped, BOM-safe and spreadsheet-formula safe", async () => {
+test("CSV export includes measured kg and stays scoped, BOM-safe and spreadsheet-formula safe", async () => {
   const { PhysicalStockReportService } = await loadModule();
   const service = new PhysicalStockReportService(
     { list: async () => [ledger({ item_code: "=2+2", physical_identity_key: "FORMULA", voucher_no: "STE-F" })] },
@@ -164,6 +168,8 @@ test("CSV export is scoped, BOM-safe and spreadsheet-formula safe", async () => 
   assert.equal(exported.content_type, "text/csv; charset=utf-8");
   assert.match(exported.filename, /^physical-stock-Alumdoor\.csv$/);
   assert.ok(exported.content.startsWith("\uFEFF"));
+  assert.match(exported.content, /quantity_micros,weight_micros,value_micros/);
+  assert.match(exported.content, /19_?710_?000|19710000/);
   assert.match(exported.content, /'=2\+2/);
   assert.doesNotMatch(exported.content, /STE-F/);
 });
