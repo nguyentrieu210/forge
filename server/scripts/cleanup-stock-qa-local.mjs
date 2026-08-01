@@ -51,7 +51,7 @@ const statements = [
   docKeys.length ? `DELETE FROM documents WHERE tenant_id=${quote(tenantId)} AND doc_key IN (${docKeys.map(quote).join(",")});` : "",
   users.length ? `DELETE FROM user_permissions WHERE tenant_id=${quote(tenantId)} AND user IN (${users.map((record) => quote(record.user_id)).join(",")});` : "",
   users.length ? `DELETE FROM user_roles WHERE tenant_id=${quote(tenantId)} AND user_id IN (${users.map((record) => quote(record.user_id)).join(",")});` : "",
-  users.length ? `DELETE FROM rbac_audit_events WHERE tenant_id=${quote(tenantId)} AND target_user_id IN (${users.map((record) => quote(record.user_id)).join(",")});` : "",
+  // RBAC audit is intentionally append-only. QA cleanup must not weaken that invariant.
   users.length ? `DELETE FROM users WHERE tenant_id=${quote(tenantId)} AND user_id IN (${users.map((record) => quote(record.user_id)).join(",")});` : "",
 ].filter(Boolean);
 
@@ -65,7 +65,6 @@ const residueChecks = [
   users.length ? `SELECT 'users' AS source,COUNT(*) AS residue FROM users WHERE tenant_id=${quote(tenantId)} AND user_id IN (${users.map((record) => quote(record.user_id)).join(",")})` : "",
   users.length ? `SELECT 'user_roles' AS source,COUNT(*) AS residue FROM user_roles WHERE tenant_id=${quote(tenantId)} AND user_id IN (${users.map((record) => quote(record.user_id)).join(",")})` : "",
   users.length ? `SELECT 'user_permissions' AS source,COUNT(*) AS residue FROM user_permissions WHERE tenant_id=${quote(tenantId)} AND user IN (${users.map((record) => quote(record.user_id)).join(",")})` : "",
-  users.length ? `SELECT 'rbac_audit_events' AS source,COUNT(*) AS residue FROM rbac_audit_events WHERE tenant_id=${quote(tenantId)} AND target_user_id IN (${users.map((record) => quote(record.user_id)).join(",")})` : "",
 ].filter(Boolean).join(" UNION ALL ");
 const residue = query(`${residueChecks};`);
 const dirty = residue.filter((row) => Number(row.residue) !== 0);
