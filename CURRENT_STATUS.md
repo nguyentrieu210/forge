@@ -14,6 +14,7 @@ Ngày cập nhật: **2026-08-01**.
 ## In progress — Print design PR #141
 
 - Branch: `feat/print-design-sales-documents-20260801`.
+- Nhánh hoàn thiện local: `fix/print-router-missing-state`, dựng từ head print `53e664bcb376e9140de2cb70a619cc0c54c6c971`.
 - PR: `#141` — `feat(print): add Alumdoor operational print formats`.
 - Sidecar `server/briefs/alumdoor-v2.prints.json` nối với các mẫu in sẵn có trước schema validation/compile; không ghi đè mảng `prints` của brief gốc.
 - Loader hỗ trợ filesystem path và `file:` URL, có regression riêng.
@@ -23,11 +24,17 @@ Ngày cập nhật: **2026-08-01**.
 - `Phiếu cắt nhôm ALUMDOOR` — Cut Order, A4 portrait, 13 cột = `100%`; bundle lô mẹ + bundle đầu thừa giữ nguyên để truy vết, QR chứng từ dùng filter `qrcode` authoritative của renderer.
 - QR Cut Order được regression qua renderer thật và phải ra `data:image/gif;base64,...`, không phải URL/token nhạy cảm.
 - `Biên bản bàn giao / nghiệm thu ALUMDOOR` — Delivery Note, `default: false`, A4 portrait, 11 cột = `100%`; dùng dữ liệu giao/lắp thật và để vùng kết quả/checklist cho ký tay tại công trình.
+- Cả năm mẫu dùng cùng brand system với Purchase Order mặc định `Đơn nhập hàng ALUMDOOR`: logo `/alumdoor-order-logo.png` giống từng byte với logo gốc nhúng, company header `/alumdoor-company-header.png`, letterhead `194mm × 17mm`, lề trên `23.7mm` và tiêu đề cam `#f15a24`.
 - Regression renderer dùng dữ liệu dài cho Sales Order, Delivery Note, Production Request, Cut Order và Biên bản nghiệm thu.
+- Runtime `/print/:doctype/:name?format=<tên mẫu>` tải danh sách mẫu theo đúng quyền trên chứng từ, cho chọn mẫu phụ và giữ lựa chọn trong URL.
+- DocType chưa có mẫu in hiện trạng thái “Chưa có mẫu in” với đường quay lại chứng từ; không còn biến trường hợp này thành khối lỗi đỏ.
+- Đã sửa false-negative làm CI PR đỏ: test QR kiểm nội dung text sau khi bỏ thẻ HTML thay vì đòi số chứng từ đứng sát nhãn `<b>` trong raw HTML.
+- Verify local: typecheck toàn repo PASS; client selfcheck `88/88`; tenant facade `72/72`; server unit `746/746` + toàn bộ SQL migration PASS; full server/client build PASS.
 - Exact-head Acceptance `c7d93e77d4a062a095cccc916e50127fcc603595`: 6/6 workflow SUCCESS.
 - Run IDs Acceptance: CI `30689143646`, PR Validation `30689143618`, UI `30689143691`, Purchase `30689143635`, Sales `30689143650`, Inventory/Manufacturing `30689143661`.
 - QR Cut Order đang ở staging và phải qua exact-head CI sau khi đưa vào PR branch.
-- Gate còn lại trước merge: exact-head CI với QR Cut Order, review trực quan HTML preview/PDF dữ liệu dài và PR mergeable với current default.
+- Visual QA A4 năm mẫu PASS: cả hai ảnh thương hiệu tải thành công, bảng nằm trong vùng in `194mm`, vùng chữ ký thấp nhất vẫn nằm trong trang A4 và không có tràn ngang.
+- Production đã được phát hành trực tiếp theo chỉ đạo: Gateway version `aff41705-29f2-443f-be5c-fee161061097`, tenant Worker hiện hành và năm print format đã cài vào D1 sau backup; gate còn lại trước merge chỉ là exact-head CI và PR mergeable với current default.
 
 ## Đã hoàn tất trên default
 
@@ -92,7 +99,7 @@ Ngày cập nhật: **2026-08-01**.
 
 ## Business backlog còn lại
 
-1. Hoàn tất print design PR `#141`: exact-head CI với QR Cut Order và visual review năm mẫu.
+1. Hoàn tất print design PR `#141`: exact-head CI với QR Cut Order, print router và visual review năm mẫu.
 2. Print P1 tiếp: chuẩn hóa `Hoá đơn ALUMDOOR` hiện có, sau đó Payment Entry và Purchase Receipt.
 3. Daily detailed ledger snapshot/freeze/adjustment.
 4. Warranty, defects, supplier hold/offset và capacity/overtime.

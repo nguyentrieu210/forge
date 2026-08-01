@@ -138,6 +138,7 @@ test("Alumdoor Production Request print keeps the A4 manufacturing contract", ()
   assert.match(css, /thead\{display:table-header-group\}/);
   assert.match(css, /tr\{[^}]*break-inside:avoid[^}]*page-break-inside:avoid/);
   assert.match(css, /overflow-wrap:anywhere/);
+  assert.match(html, /class="brand-logo" src="\/alumdoor-order-logo\.png"/);
   assert.match(html, /class="company-header-img" src="\/alumdoor-company-header\.png"/);
   assert.match(html, /Chủ xưởng duyệt/);
 

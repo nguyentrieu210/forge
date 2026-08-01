@@ -106,6 +106,7 @@ test("Alumdoor Sales Order print keeps the A4 structural contract", () => {
   assert.match(css, /th,td\{[^}]*text-align:center/);
   assert.match(css, /\.n,\.c\{[^}]*text-align:center/);
   assert.match(css, /\.total-value\{[^}]*text-align:center/);
+  assert.match(html, /class="brand-logo" src="\/alumdoor-order-logo\.png"/);
   assert.match(html, /class="company-header-img" src="\/alumdoor-company-header\.png"/);
   assert.ok(html.indexOf("class=\"letterhead\"") < html.indexOf("class=\"title\""));
 

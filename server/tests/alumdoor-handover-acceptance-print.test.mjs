@@ -100,6 +100,7 @@ test("Alumdoor handover acceptance keeps a non-default A4 acceptance contract", 
   assert.match(css, /thead\{display:table-header-group\}/);
   assert.match(css, /tr\{[^}]*break-inside:avoid[^}]*page-break-inside:avoid/);
   assert.match(css, /overflow-wrap:anywhere/);
+  assert.match(html, /class="brand-logo" src="\/alumdoor-order-logo\.png"/);
   assert.match(html, /class="company-header-img" src="\/alumdoor-company-header\.png"/);
   assert.match(html, /Nội dung kiểm tra và nghiệm thu/);
   assert.match(html, /Nghiệm thu có điều kiện/);

@@ -99,6 +99,7 @@ test("Alumdoor Delivery Note print keeps the A4 handover contract", () => {
   assert.match(css, /thead\{display:table-header-group\}/);
   assert.match(css, /tr\{[^}]*break-inside:avoid[^}]*page-break-inside:avoid/);
   assert.match(css, /overflow-wrap:anywhere/);
+  assert.match(html, /class="brand-logo" src="\/alumdoor-order-logo\.png"/);
   assert.match(html, /class="company-header-img" src="\/alumdoor-company-header\.png"/);
   assert.match(html, /Kết quả bàn giao \/ lắp đặt/);
   assert.match(html, /☐ Đủ số lượng/);

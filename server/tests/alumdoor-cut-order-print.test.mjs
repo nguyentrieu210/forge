@@ -105,6 +105,7 @@ test("Alumdoor Cut Order print keeps the A4 cutting contract", () => {
   assert.match(css, /tr\{[^}]*break-inside:avoid[^}]*page-break-inside:avoid/);
   assert.match(css, /overflow-wrap:anywhere/);
   assert.match(css, /\.qr\{width:20mm;height:20mm/);
+  assert.match(html, /class="brand-logo" src="\/alumdoor-order-logo\.png"/);
   assert.match(html, /class="company-header-img" src="\/alumdoor-company-header\.png"/);
   assert.match(html, /Bundle lô mẹ và bundle nhập đầu thừa/);
   assert.match(html, /src="{{ name \| qrcode }}"/, "QR phải dùng filter qrcode authoritative của renderer");
@@ -159,7 +160,7 @@ test("Alumdoor Cut Order renders traceable bundles, QR and cutting measures thro
   assert.match(rendered, /DH-2026-0001/);
   assert.match(rendered, /WO-2026-00157/);
   assert.match(rendered, /GHI SÁNG SƠN TĨNH ĐIỆN/);
-  assert.match(rendered, /QR chứng từ:\s*CN-2026-00001/);
+  assert.match(textContent(rendered), /QR chứng từ:\s*CN-2026-00001/);
   assert.match(rendered, /<img class="qr" alt="QR CN-2026-00001" src="data:image\/gif;base64,[^"]+">/,
     "renderer phải biến qrcode filter thành data URL thật");
   assert.doesNotMatch(rendered, /{{|}}/, "HTML preview/PDF không được còn placeholder chưa render");
