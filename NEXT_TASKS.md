@@ -4,6 +4,23 @@ Ngày cập nhật: **2026-08-02**.
 
 Mọi agent phải đọc `AI_HANDOFF.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md` và `DELIVERY_POLICY.md` trước khi tiếp tục. GitHub là nguồn sự thật cho exact branch head, PR, CI và release evidence.
 
+## DONE — PR #176 MetaForge Form Renderer canonical policy — 10/10
+
+- PR `#176` merged.
+- Final validated head: `acf53e12b3e59f21dde35ad6f27cc014fb624c00`.
+- Merge commit: `a7643cee0102aee1c37d4f00afac1594d0261e68`.
+- Final exact-head required workflows: **6/6 PASS**.
+  - CI `30717282793`: tests/typecheck/build PASS.
+  - UI Pull Request Validation `30717282801`: frontend lint/build + MetaForge workspace browser QA + Alumdoor browser QA PASS.
+  - PR Validation `30717282798`: PASS.
+  - Sales Feature CI `30717282809`: PASS.
+  - Purchase Feature CI `30717282807`: PASS.
+  - Inventory and Manufacturing CI `30717282796`: PASS.
+- Full/Quick/existing Form dùng chung canonical `resolveFormRenderPolicy()`.
+- `viewPolicy.*.enabled/fields` được runtime thực thi; `surface=internal` là hard visibility boundary cuối cùng.
+- FormProfile legacy compatibility vẫn giữ; selfcheck khóa policy/disabled/internal/legacy cases.
+- Không deploy Cloudflare, không đổi production secrets/DNS, không mutate tenant production.
+
 ## DONE — PR #173 Physical stock catch-weight reconciliation
 
 - PR `#173` merged.

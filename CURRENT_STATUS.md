@@ -4,6 +4,31 @@ Ngày cập nhật: **2026-08-02**.
 
 GitHub là nguồn sự thật cho branch head, PR, CI và release evidence.
 
+## DONE — MetaForge Form Renderer canonical policy — 10/10
+
+- PR `#176` đã merge vào `main` ngày 2026-08-02.
+- Final validated PR head: `acf53e12b3e59f21dde35ad6f27cc014fb624c00`.
+- Merge commit: `a7643cee0102aee1c37d4f00afac1594d0261e68`.
+- Re-audit canonical Form Renderer: **10/10** cho metadata composition boundary, permission/workflow safety, quick/full consistency và regression gate.
+- Final exact-head CI: **6/6 PASS**.
+  - CI `30717282793`: tests PASS, typecheck PASS, build PASS.
+  - UI Pull Request Validation `30717282801`: frontend lint/build + MetaForge workspace browser QA + Alumdoor browser QA PASS.
+  - PR Validation `30717282798`: PASS.
+  - Sales Feature CI `30717282809`: PASS.
+  - Purchase Feature CI `30717282807`: PASS.
+  - Inventory and Manufacturing CI `30717282796`: PASS.
+
+### Form policy đã chốt
+
+1. `resolveFormRenderPolicy()` là composition point dùng chung cho existing Form, Full New Form và Quick New Form.
+2. `viewPolicy.form/quickEntry.enabled=false` là quyết định runtime thật; Quick Form không tự rơi về Full Form trong dialog.
+3. `viewPolicy.*.fields` được thực thi như whitelist canonical của renderer.
+4. Canonical `surface=internal` luôn bị loại ở lớp cuối, kể cả field required/title; meta gốc vẫn giữ nguyên để default/serialization/server dùng.
+5. `FormProfile` tiếp tục là compatibility/app overlay trước canonical policy, nên metadata legacy không bị phá.
+6. Selfcheck khóa explicit form/quick fields, disabled renderer, internal leakage và legacy compatibility.
+7. Mô tả package đã bỏ tuyên bố layout “copy 1:1”; MetaForge tương thích hành vi Frappe/ERPNext nhưng giữ responsive form layout riêng.
+8. Không deploy Cloudflare, không sửa production secrets/DNS và không mutate tenant production.
+
 ## DONE — Physical stock catch-weight reconciliation
 
 - PR `#173` đã merge vào `main` ngày 2026-08-02.
@@ -106,12 +131,12 @@ GitHub là nguồn sự thật cho branch head, PR, CI và release evidence.
 ## Main và production boundary
 
 - Default branch: `main`.
-- Main executable head sau PR #173: `25df9d32217703b9c6c3f965f318b779fe028333`.
+- Main executable head sau PR #176: `a7643cee0102aee1c37d4f00afac1594d0261e68`.
 - Alumdoor production vẫn chạy exact SHA `b46d322831ebe7b57e29d4363d2daa005bb56e55`.
 - Production full release run `30707135053`: PASS.
 - Protected Alumdoor Meta installer run `30707517624`: PASS.
 - Production Alumdoor Meta vẫn là `2.1.0`: 74 DocTypes, 969 fields, 255 Links, 27 child tables, 12 reports, 3 report-backed charts, 6 external DocTypes.
-- PR #173 không deploy Cloudflare, không sửa production secrets/DNS và không mutate tenant production.
+- PR #176 không deploy Cloudflare, không sửa production secrets/DNS và không mutate tenant production.
 - G03 Organization Security có trên main nhưng chưa có production release evidence; không gộp G03 deploy vào stock acceptance QA.
 
 ## NEXT
