@@ -2,11 +2,12 @@ import { defineConfig, devices } from "@playwright/test";
 
 /**
  * MetaForge UI PR gate.
- * This file is JavaScript on purpose so Playwright does not traverse the app's
- * TypeScript project references while loading its runner configuration.
+ * The config is JavaScript so loading the runner does not traverse app project
+ * references. Test files are pinned to the isolated E2E tsconfig below.
  */
 export default defineConfig({
   testDir: "./e2e",
+  tsconfig: "./e2e/tsconfig.json",
   timeout: 30_000,
   expect: { timeout: 5_000 },
   fullyParallel: true,
