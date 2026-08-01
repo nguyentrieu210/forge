@@ -8,8 +8,8 @@ Mọi agent phải đọc `AI_HANDOFF.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md` 
 
 Branch: `feat/print-design-sales-documents-20260801`  
 PR: `#141`  
-Base exact SHA: `4d86c1fd8c191f26f3961762b281fca1ad765855`  
-Implementation head đã kiểm chứng: `7cb4607cf856fcef0093d2ed3a62ae449d1b2bb5`
+Base mới đã đồng bộ: `f6420c70823b969a28b43e3f93004ebd52546adc`  
+Implementation head trước khi base đổi đã kiểm chứng: `7cb4607cf856fcef0093d2ed3a62ae449d1b2bb5`
 
 ### Đã làm trong đợt này
 
@@ -19,8 +19,9 @@ Implementation head đã kiểm chứng: `7cb4607cf856fcef0093d2ed3a62ae449d1b2b
 - Thêm fixture renderer cho một dòng cửa cuốn và một dòng phụ kiện thường.
 - Hỗ trợ brief source dạng đường dẫn chuỗi và `file:` URL; có regression cho `import.meta.url`.
 - Thêm `docs/PRINT_DESIGN_ROADMAP.md`.
+- Hợp nhất base mới chứa MetaForge MISA-style UI mà không ghi đè công việc UI.
 
-Exact implementation-head evidence:
+Exact implementation-head evidence trước khi đồng bộ base:
 
 - CI `30676094630`: SUCCESS — full tests, typecheck, build.
 - PR Validation `30676094648`: SUCCESS.
@@ -31,19 +32,20 @@ Exact implementation-head evidence:
 
 ### Việc kế tiếp trên cùng epic
 
-1. Review trực quan `Đơn bán hàng ALUMDOOR` bằng HTML preview và PDF với dữ liệu dài; sửa tràn cột nếu có.
-2. `Phiếu giao hàng / lắp đặt` từ Delivery Note, có đơn nguồn, địa chỉ, đội giao/lắp, tài xế và biển số.
-3. `Phiếu yêu cầu sản xuất`, một dòng theo từng bộ cửa và ngày phải hoàn tất.
-4. `Phiếu cắt nhôm`, có lô mẹ, số lá, chiều rộng cắt, kerf, đầu thừa và QR nội bộ.
-5. `Biên bản bàn giao / nghiệm thu`, liên kết Sales Order và Delivery Note.
-6. Tem QR mặt hàng/lô/đầu thừa; không nhúng token hoặc URL nhạy cảm.
-7. Chuẩn hóa lại Sales Invoice, Purchase Receipt và Payment Entry theo cùng hợp đồng A4.
+1. Khóa exact PR head sau merge base và xác nhận 6 workflow xanh; ghi run IDs trong PR `#141`.
+2. Review trực quan `Đơn bán hàng ALUMDOOR` bằng HTML preview và PDF với dữ liệu dài; sửa tràn cột nếu có.
+3. `Phiếu giao hàng / lắp đặt` từ Delivery Note, có đơn nguồn, địa chỉ, đội giao/lắp, tài xế và biển số.
+4. `Phiếu yêu cầu sản xuất`, một dòng theo từng bộ cửa và ngày phải hoàn tất.
+5. `Phiếu cắt nhôm`, có lô mẹ, số lá, chiều rộng cắt, kerf, đầu thừa và QR nội bộ.
+6. `Biên bản bàn giao / nghiệm thu`, liên kết Sales Order và Delivery Note.
+7. Tem QR mặt hàng/lô/đầu thừa; không nhúng token hoặc URL nhạy cảm.
+8. Chuẩn hóa lại Sales Invoice, Purchase Receipt và Payment Entry theo cùng hợp đồng A4.
 
 ### Gate trước merge
 
-- `npm run brief:check`: PASS qua Sales và Inventory/Manufacturing CI.
-- Focused print tests: PASS.
-- Full tests, typecheck và build: PASS trên `7cb4607cf856fcef0093d2ed3a62ae449d1b2bb5`.
+- `npm run brief:check`: PASS trên implementation head trước base sync; phải PASS lại trên final exact head.
+- Focused print tests: PASS trên implementation head trước base sync; phải PASS lại trên final exact head.
+- Full tests, typecheck và build: PASS trên `7cb4607cf856fcef0093d2ed3a62ae449d1b2bb5`; phải PASS lại sau merge base.
 - Preview/PDF dữ liệu dài: PENDING manual visual review.
 - Không deploy Cloudflare, không đổi secrets/DNS và không mutate production.
 
@@ -52,17 +54,48 @@ Exact implementation-head evidence:
 - PR `#137` merge SHA: `29fee0200d8118eef2d0ae9e524a3a00acfab00f`.
 - Exact PR head: `fd03d22872c2234d50f616a5d8956c8b62f26b40`.
 - Full CI, PR Validation, Purchase, Sales, Inventory và UI authenticated gates: SUCCESS.
-- Desktop Chrome + Pixel 7 lifecycle PASS.
-- Tiến Đạt FIFO authenticated journey PASS: `200 + 100`, nhận `230` → `200 + 30`, lịch sử và công nợ đúng; `85` được phép, `86` bị từ chối.
 - Không deploy Cloudflare, không thay rollout state và không mutate dữ liệu production.
 
+## UI MetaForge MISA-style — IMPLEMENTED / VALIDATE NEXT
+
+### Branch
+
+- Branch: `feat/metaforge-misa-workspace-ui-clean`.
+- Base exact default head: `4d86c1fd8c191f26f3961762b281fca1ad765855`.
+- Implementation head trước docs: `054b7e23b8e18d74ec378316de2b132fd44aa0f7`.
+- Closed PR `#81/#109` chỉ dùng tham khảo từng file; không reopen hoặc merge nguyên branch cũ.
+- Login/landing từ closed PR `#36` giữ ở backlog riêng.
+
+### Đã triển khai
+
+- `Tổng quan` là mục sidebar độc lập và bị loại khỏi dải tab nghiệp vụ.
+- Tab nghiệp vụ/Meta chia đều chiều ngang, kích thước nhỏ, nhãn dài truncate, không cuộn ngang.
+- `Danh mục` được gom về một trang tập trung theo nhóm.
+- Quy trình nghiệp vụ và quy trình Meta được thiết kế lại.
+- Report builder có nguồn dữ liệu, widget, canvas kéo-resize, panel bố cục/thuộc tính và preview.
+- 13 bảng màu theme light/dark với tên tiếng Việt.
+- Playwright coverage cho navigation, tab overflow, catalog, report builder và theme count.
+
+### Việc tiếp theo bắt buộc
+
+1. Mở một PR canonical từ branch này vào `hotfix/alumdoor-print-list-delete`.
+2. Khóa exact PR head, không push thêm khi CI đang chạy.
+3. Chạy full CI, typecheck, build và UI PR validation.
+4. Chạy Playwright desktop và mobile; xác nhận không overflow và không mất route/active state.
+5. Sửa lỗi từ CI nếu có, sau đó cập nhật exact head evidence.
+6. Merge chỉ khi full CI và UI-specific gates xanh.
+7. Không deploy Cloudflare nếu chưa có lệnh riêng.
+
+### Done condition
+
+- Tổng quan chỉ nằm ở sidebar.
+- Danh mục tập trung hoạt động.
+- Tab nghiệp vụ/Meta không cần cuộn ngang ở desktop và mobile.
+- Report builder hoạt động với add/edit/delete card/chart, kéo-resize và preview.
+- 13 theme chọn được và lưu preference.
+- Full CI, typecheck, build và authenticated UI journey PASS trên exact head.
+
 ## P1 — Finance clean rebuild
-
-### Nguồn
-
-- Tạo branch mới từ exact current default sau docs merge.
-- Closed PR `#15` và backup `#40` chỉ dùng tham khảo từng file.
-- Không reopen hoặc merge nguyên branch cũ.
 
 ### Phạm vi bắt buộc
 
@@ -76,24 +109,7 @@ Exact implementation-head evidence:
 - Migration append-only, có dry-run, checksum, rollback và production-shaped evidence.
 - Không dùng floating point cho bút toán tiền; tiếp tục dùng minor/micros theo kernel.
 
-### Trình tự
-
-1. Đọc exact default head và CI hiện tại từ GitHub.
-2. Tạo một branch canonical từ default.
-3. Review từng file từ PR `#15`; chỉ mang phần còn đúng với kiến trúc hiện tại.
-4. Bổ sung phần còn thiếu thay vì chỉ merge AR/AP aging cũ.
-5. Viết focused unit/integration tests và route/report tests.
-6. Chạy migration dry-run/checksum/rollback trên local/ephemeral D1.
-7. Mở một PR canonical và khóa exact head khi CI chạy.
-8. Merge khi full CI và Finance-specific gate đều xanh.
-9. Không deploy Cloudflare nếu chưa có yêu cầu rõ.
-
-### Done condition
-
-- AR/AP, allocations, statements, debt summary và advance balance PASS.
-- Migration/backfill có bằng chứng dry-run, checksum và rollback.
-- UI/report navigation và permission PASS.
-- Exact merged SHA có CI xanh.
+Finance phải làm ở branch riêng, không trộn vào MetaForge UI hoặc Print design.
 
 ## P2 — Daily detailed ledger
 
@@ -120,9 +136,8 @@ Bắt buộc có desktop và mobile authenticated journey trên một exact head
 
 ## UI backlog riêng
 
-- MetaForge MISA-style workspace tabs từ closed PR `#81/#109`.
 - Login/landing từ closed PR `#36`.
-- Hai phần này không được trộn vào Finance hoặc nghiệp vụ ledger.
+- Không trộn login/landing vào MetaForge workspace UI, Finance hoặc nghiệp vụ ledger.
 
 ## Quy tắc bắt buộc
 

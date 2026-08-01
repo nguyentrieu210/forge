@@ -6,24 +6,24 @@ Ngày cập nhật: **2026-08-01**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch hiện tại: `hotfix/alumdoor-print-list-delete`.
-- Current default head khi mở nhánh in ấn: `4d86c1fd8c191f26f3961762b281fca1ad765855`.
+- Current default head khi đồng bộ nhánh in ấn: `f6420c70823b969a28b43e3f93004ebd52546adc`.
 - GitHub là nguồn sự thật cho code, CI, PR và release evidence.
 
-## Nhánh thiết kế in ấn — PR OPEN / CI GREEN
+## Nhánh thiết kế in ấn — PR OPEN
 
 - Branch: `feat/print-design-sales-documents-20260801`.
 - PR: `#141` — `feat(print): add Alumdoor sales order print workspace`.
-- Base exact SHA: `4d86c1fd8c191f26f3961762b281fca1ad765855`.
-- Implementation head đã kiểm chứng: `7cb4607cf856fcef0093d2ed3a62ae449d1b2bb5`.
+- Base ban đầu: `4d86c1fd8c191f26f3961762b281fca1ad765855`.
+- Base mới đã đồng bộ: `f6420c70823b969a28b43e3f93004ebd52546adc`.
+- Implementation head trước khi base đổi đã kiểm chứng: `7cb4607cf856fcef0093d2ed3a62ae449d1b2bb5`.
 - Mẫu đầu tiên: `Đơn bán hàng ALUMDOOR` cho `Sales Order`, A4 portrait, 13 cột, có kích thước cửa, số bộ, số lượng, đơn giá, mô tơ/phụ kiện và ghi chú lắp đặt.
 - Print format mới được tách vào `server/briefs/alumdoor-v2.prints.json`; `forge-app` ghép sidecar trước schema validation và compile.
 - Loader hỗ trợ cả đường dẫn chuỗi và `file:` URL; regression khóa call site dùng `import.meta.url`.
 - Có unit test cho cơ chế sidecar và regression test qua renderer thật cho Sales Order.
 - Roadmap tiếp theo: Delivery Note/giao lắp → Production Request → Cut Order → thu/chi, nghiệm thu, tem QR và bảo hành.
 - Kiểm tra cục bộ: Node syntax PASS, sidecar loader `4/4` PASS, JSON parse PASS, 13 độ rộng cột có tổng `100%`.
-- Initial head `0fe8a32c578e58051913eddc6234c0c90a6cdd96` fail CI do `path.parse()` nhận `URL`; fix ở `7cb4607cf856fcef0093d2ed3a62ae449d1b2bb5`.
 
-Exact implementation-head evidence:
+Exact implementation-head evidence trước khi đồng bộ base:
 
 - CI `30676094630`: SUCCESS — full tests, typecheck, build.
 - PR Validation `30676094648`: SUCCESS.
@@ -32,7 +32,7 @@ Exact implementation-head evidence:
 - Sales Feature CI `30676094634`: SUCCESS — build server, focused regressions, Alumdoor brief validation.
 - Inventory and Manufacturing CI `30676094629`: SUCCESS — build server, focused regressions, authoritative brief validation, catalog audit.
 
-Còn lại trước merge: review trực quan HTML preview/PDF với dữ liệu dài để xác nhận không tràn cột. Không deploy Cloudflare, không sửa production secrets và không mutate dữ liệu tenant.
+Final exact-head evidence sau khi đồng bộ base được ghi trong PR `#141`. Còn lại trước merge: review trực quan HTML preview/PDF với dữ liệu dài để xác nhận không tràn cột. Không deploy Cloudflare, không sửa production secrets và không mutate dữ liệu tenant.
 
 ## PR tồn đọng cũ — CLOSED
 
@@ -57,25 +57,33 @@ Không merge nguyên trạng các branch stale/conflicted. Branch vẫn được
 
 - PR `#137` merge SHA: `29fee0200d8118eef2d0ae9e524a3a00acfab00f`.
 - Exact PR head: `fd03d22872c2234d50f616a5d8956c8b62f26b40`.
+- CI, PR Validation, Purchase, Sales, Inventory và UI authenticated gates: SUCCESS.
+- Desktop Chrome + Pixel 7 lifecycle PASS.
 
-Exact-head evidence:
+## MetaForge MISA-style UI — IMPLEMENTED / CI PENDING
 
-- CI `30670524038`: SUCCESS — tests, typecheck, build.
-- PR Validation `30670524052`: SUCCESS.
-- Purchase Feature CI `30670524133`: SUCCESS.
-- UI Pull Request Validation `30670524072`: SUCCESS.
-- Sales Feature CI `30670524058`: SUCCESS.
-- Inventory and Manufacturing CI `30670523976`: SUCCESS.
+- Branch: `feat/metaforge-misa-workspace-ui-clean`.
+- Base exact default head: `4d86c1fd8c191f26f3961762b281fca1ad765855`.
+- Implementation head trước status docs: `054b7e23b8e18d74ec378316de2b132fd44aa0f7`.
 
-Authenticated scope đã PASS:
+Đã làm:
 
-- login/boot bằng cookie + CSRF thật;
-- authoritative Alumdoor app cài vào D1 local;
-- Item/UOM search;
-- Purchase Order create/save/submit/reopen;
-- Purchase Receipt create/save/preview/submit/cancel/reopen;
-- Desktop Chrome và Pixel 7;
-- Tiến Đạt FIFO `200 + 100`, nhận `230` phân bổ `200 + 30`, draft giữ đúng hai đơn, đọc lại lịch sử và công nợ; `85` được phép, `86` bị từ chối.
+- Đưa `Tổng quan` thành mục độc lập ở sidebar; không còn lặp trong dải tab nghiệp vụ.
+- Dải tab nghiệp vụ và Meta chia đều chiều ngang, chữ nhỏ hơn và truncate nhãn dài; không dùng cuộn ngang.
+- Gom `Danh mục` về một màn tập trung theo nhóm như MISA.
+- Thay màn quy trình cũ bằng luồng gọn và các lối tắt nghiệp vụ.
+- Bổ sung workspace Meta gồm DocType, Workflow, Mẫu in và Thiết kế báo cáo.
+- Thiết kế báo cáo có ba vùng: nguồn dữ liệu/widget bên trái, canvas kéo-resize ở giữa, bố cục/thuộc tính bên phải và chế độ xem trước.
+- Khóa đúng `13` bảng màu toàn hệ thống, có light/dark; tên màu hiển thị bằng tiếng Việt.
+- Thêm Playwright coverage cho sidebar Tổng quan, tab không overflow, Danh mục, report builder và số lượng 13 theme.
+
+Chưa được xác nhận:
+
+- Typecheck/build/e2e trên exact head mới.
+- Desktop/mobile authenticated journey.
+- PR canonical và exact-head CI.
+
+Closed PR `#81/#109` chỉ được dùng để tham khảo từng file; không merge nguyên branch cũ. Login/landing không trộn vào branch này.
 
 ## Chưa được phép gọi là hoàn tất toàn quy trình
 
@@ -88,19 +96,20 @@ Tài liệu `25.7 QUY TRÌNH.docx` còn yêu cầu sổ chi tiết khóa theo ng
 
 ## Release boundary
 
-- Không deploy Cloudflare nếu chưa có yêu cầu riêng.
+- Không deploy Cloudflare nếu chưa có lệnh riêng.
 - Không sửa production secret, DNS hoặc rollout state.
 - Không migrate hoặc mutate dữ liệu tenant production.
 - Generic FIFO production vẫn disabled.
 
 ## Hàng đợi canonical
 
-1. Finance clean rebuild — `NEXT`.
-2. Daily detailed ledger — `QUEUED`.
-3. Warranty / defects / capacity — `QUEUED`.
-4. End-to-end acceptance — `QUEUED`.
-5. UI MetaForge MISA-style và login/landing — `SEPARATE UI BACKLOG`.
-6. Print design — `SEPARATE SPECIALIST BRANCH`, không trộn vào Finance.
+1. MetaForge MISA-style UI — `IMPLEMENTED / CI PENDING`.
+2. Print design — `PR OPEN / EXACT-HEAD VALIDATION`.
+3. Finance clean rebuild — `NEXT BUSINESS EPIC`.
+4. Daily detailed ledger — `QUEUED`.
+5. Warranty / defects / capacity — `QUEUED`.
+6. End-to-end acceptance — `QUEUED`.
+7. Login/landing — `SEPARATE UI BACKLOG`.
 
 ## Safety
 
