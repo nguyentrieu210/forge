@@ -27,6 +27,11 @@ import {
   routeDailyLedgerApi,
 } from "./daily-ledger-api.js";
 import {
+  isManufacturingCostingApiPath,
+  isManufacturingCostingFrappePath,
+  routeManufacturingCostingApi,
+} from "./manufacturing-costing-api.js";
+import {
   isPhysicalStockApiPath,
   isPhysicalStockFrappePath,
   routePhysicalStockApi,
@@ -50,7 +55,8 @@ export default {
     const url = new URL(request.url);
     const physicalStock = isPhysicalStockApiPath(url.pathname);
     const dailyLedger = isDailyLedgerApiPath(url.pathname);
-    if (!physicalStock && !dailyLedger) return coreWorker.fetch(request, env);
+    const manufacturingCosting = isManufacturingCostingApiPath(url.pathname);
+    if (!physicalStock && !dailyLedger && !manufacturingCosting) return coreWorker.fetch(request, env);
 
     const traceId = request.headers.get("x-cloudforge-trace-id") ?? randomId("trace");
     try {
@@ -71,8 +77,15 @@ export default {
           permissions,
           traceId,
         });
-      } else {
+      } else if (dailyLedger) {
         response = await routeDailyLedgerApi(request, url, {
+          db: requestDb,
+          tenantId,
+          actor: authentication.actor,
+          traceId,
+        });
+      } else {
+        response = await routeManufacturingCostingApi(request, url, {
           db: requestDb,
           tenantId,
           actor: authentication.actor,
@@ -87,7 +100,9 @@ export default {
       }
       return response;
     } catch (error) {
-      return isPhysicalStockFrappePath(url.pathname) || isDailyLedgerFrappePath(url.pathname)
+      return isPhysicalStockFrappePath(url.pathname)
+        || isDailyLedgerFrappePath(url.pathname)
+        || isManufacturingCostingFrappePath(url.pathname)
         ? faultResponse(error, traceId)
         : errorResponse(error, traceId);
     }
@@ -113,7 +128,9 @@ async function authenticateInterceptedRoute(
   tenantId: string,
   traceId: string,
 ): Promise<InterceptedRouteAuthentication> {
-  if (!isPhysicalStockFrappePath(url.pathname) && !isDailyLedgerFrappePath(url.pathname)) {
+  if (!isPhysicalStockFrappePath(url.pathname)
+      && !isDailyLedgerFrappePath(url.pathname)
+      && !isManufacturingCostingFrappePath(url.pathname)) {
     return { actor: await authenticateTrustedIdentity(request, env, tenantId, traceId) };
   }
 
