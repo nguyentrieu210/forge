@@ -4,9 +4,16 @@ Ngày cập nhật: **2026-08-02**.
 
 Đây là hàng đợi active. Không dùng file này thay cho GitHub khi cần exact branch head, PR state hoặc CI. Trước khi làm đọc `RUNBOOK.md` và `CURRENT_STATUS.md`.
 
+## DONE — PR #184 MetaForge Document Experience V2 foundation
+
+- PR `#184` đã merge vào `main` tại `df84eaec03526eaae2e2c3de3e9b8d388ae30f1a`.
+- 7 archetype + generic fallback, document hero, semantic status, metric cards, responsive context strip/rail và skeleton loading đã vào default branch.
+- Canonical form policy, permission/workflow/action server-authoritative vẫn giữ nguyên.
+- Không deploy production trong slice này.
+
 ## ACTIVE — PR #182 MetaForge Bulk View
 
-Mục tiêu: hoàn tất Bulk View an toàn cho master data và cấu hình ALUM hiện có, sau đó review/merge riêng; không deploy production trong slice này.
+Mục tiêu: hoàn tất Bulk View an toàn cho master data, đồng bộ với `main` sau PR #184, chạy lại exact-head gates rồi merge; không deploy production trong slice này.
 
 ### Đã có
 
@@ -15,35 +22,38 @@ Mục tiêu: hoàn tất Bulk View an toàn cho master data và cấu hình ALUM
 - Paste Excel/Google Sheets, fill-down, search/paging, row error, discard và optimistic concurrency.
 - Generic `document_update` fail closed cho transaction/submittable, child/single, internal/read-only/server-owned và conditional-readonly field.
 - ALUM `2.1.2` bulk config cho UOM, Brand, Manufacturer, Item Color, Material Grade/Specification, Item Attribute, Supplier Item, Measurement Profile, Item, Customer, Supplier, Price List, Item Price và Pricing Rule.
-- Baseline head `c36c8024d3aaa35574f5599a9c15ed6a86727933`: required workflows 6/6 PASS trước final hardening/rebase.
+- Exact head `4b195d3500aa66b3b9da1e412e094c30027cc568` đã required workflows 6/6 PASS trước khi `main` nhận PR #184.
+- PR #184 không chạm executable Bulk files; conflict sau merge chỉ ở hai file status canonical và đã được đồng bộ trên branch #182.
 
 ### Done condition PR #182
 
-- Final rebased exact PR head required workflows 6/6 PASS.
-- Không có unresolved review finding Critical/High.
-- PR vẫn không deploy Cloudflare, không sửa production secrets/DNS, không mutate tenant production.
-- Chỉ merge sau review/approval riêng; merge không tự cấp quyền deploy.
+- Exact PR head sau sync với current `main` required workflows 6/6 PASS.
+- PR mergeable và không có unresolved review finding Critical/High.
+- Merge #182 vào `main` sau gate xanh; merge không tự cấp quyền deploy.
+- Không deploy Cloudflare, không sửa production secrets/DNS, không mutate tenant production.
 
-### Follow-up MetaForge sau Bulk View
+## NEXT UI — MetaForge UX V2 sau Bulk
 
-1. **Matrix View** — primitive chuẩn kế tiếp cho User×Role, User×Warehouse/Department/Company, Item×Color, Item×UOM, Item×Reorder warehouse, Supplier×Item và account mapping.
-2. **Bulk Transaction strategy** — method/controller-backed grid cho Stock Reconciliation và BOM làm hai reference đầu tiên; tuyệt đối không mass-update ledger/document đã submit.
-3. **Nhập nhôm nhiều mã / Purchase Receipt transaction grid**.
-4. **Batch Print / QR label queue** dưới dạng action/workspace, không cần ViewKind riêng.
-5. **Resource Scheduler** chỉ khi capacity/overtime P2 đi vào runtime; Calendar/Gantt hiện giữ nguyên.
-6. First-class short-brief compiler/parser transport cho `viewPolicy.bulk`; large brief hiện dùng `.views.json` compatibility transport và runtime resolver canonical.
+Sau khi #182 merge, tạo branch mới từ exact `main`. Không sửa tiếp trên branch Bulk.
+
+Ưu tiên theo current default branch:
+
+1. **List Workspace V2 + Bulk integration** — summary bar, saved views, smart filters, table/card responsive, contextual quick actions; Bulk là một mode/action của cùng workspace, không tạo navigation cạnh tranh.
+2. **Matrix View** — primitive chuẩn cho User×Role, User×Warehouse/Department/Company, Item×Color, Item×UOM, Item×Reorder warehouse, Supplier×Item và account mapping.
+3. **Presentation authoring/canonical transport** — đưa presentation và `viewPolicy.bulk` thành authorable metadata/sidecar có compiler/parser/selfcheck first-class.
+4. **Bulk Transaction strategy** — method/controller-backed grid cho Stock Reconciliation và BOM làm reference đầu tiên; tuyệt đối không mass-update ledger/document đã submit.
+5. **Nhập nhôm nhiều mã / Purchase Receipt transaction grid**.
+6. **Batch Print / QR label queue** dưới dạng action/workspace, không cần ViewKind riêng.
+7. **Document context nâng cao** — related-document graph, activity/timeline, exception cards và progress source nghiệp vụ thật.
+8. **Operational workspace + Mobile V2** — role home/inbox/exception-first, rich list cards, context drawer và action zone màn nhỏ.
+9. **Resource Scheduler** chỉ khi capacity/overtime P2 đi vào runtime; Calendar/Gantt hiện giữ nguyên.
 
 ## DONE — Runbook / project-status cleanup
 
 - PR `#180` merged tại `09bc64e1fe8d9ded171368cfc72bd2b4b18aed72`.
 - Final validated head: `1a631bae15637c39d06244dc8a3d8bb05eb5ecb0`.
 - Exact-head required workflows: **6/6 PASS**.
-- `RUNBOOK.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md`, `AI_HANDOFF.md` đã có vai trò rõ ràng.
-- `README.md` và `docs/ROADMAP.md` không còn là live-state source.
-- `DELIVERY_POLICY.md` không tự cấp quyền deploy production.
-- `EPIC_STATUS.md` stale đã bị xóa.
-
-Không tạo thêm status/handoff file song song nếu nội dung thuộc các file canonical này.
+- `RUNBOOK.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md`, `AI_HANDOFF.md` có vai trò canonical rõ ràng.
 
 ## DONE — PR #175 Reservation acceptance
 
@@ -52,8 +62,6 @@ Không tạo thêm status/handoff file song song nếu nội dung thuộc các f
 - Exact-head required workflows: **6/6 PASS**.
 - Reservation giảm available nhưng không thay physical stock; release phục hồi available; over-reservation và double-release fail đúng contract.
 - Không deploy production.
-
-Không mở lại reservation slice nếu không có regression cụ thể.
 
 ## NEXT P0 — QR / lineage + cleanup QA
 
