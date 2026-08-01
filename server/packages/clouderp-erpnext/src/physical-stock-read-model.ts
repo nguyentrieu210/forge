@@ -12,6 +12,8 @@ export interface PhysicalStockLedgerRow extends JsonObject {
   voucher_row?: string;
   revision?: number;
   quantity_micros: number;
+  /** Actual measured catch weight. Undefined means this movement was not weighed. */
+  weight_micros?: number;
   value_micros?: number;
   physical_count_micros?: number;
   physical_identity_key?: string;
@@ -61,6 +63,7 @@ export interface PhysicalStockLineageEvent {
   voucher_row?: string;
   revision?: number;
   quantity_micros: number;
+  weight_micros?: number;
   value_micros: number;
   physical_count_micros: number;
   reversal_of?: {
@@ -90,6 +93,8 @@ export interface PhysicalStockBalance {
   batch_no: string;
   serial_no: string;
   quantity_micros: number;
+  /** Omitted when any quantity-moving lineage row was not actually weighed. */
+  weight_micros?: number;
   value_micros: number;
   physical_count_micros: number;
   first_posting_at: string;
@@ -99,6 +104,8 @@ export interface PhysicalStockBalance {
 
 export interface PhysicalStockTotals {
   quantity_micros: number;
+  /** Omitted when any non-zero balance has incomplete measured-weight lineage. */
+  weight_micros?: number;
   value_micros: number;
   physical_count_micros: number;
 }
@@ -120,6 +127,7 @@ export function buildPhysicalStockPage(
 ): PhysicalStockPage {
   assertFilters(filters);
   const groups = new Map<string, PhysicalStockBalance>();
+  const completeWeight = new Map<string, boolean>();
 
   for (const row of ledgerRows) {
     if (!matches(row, filters)) continue;
@@ -129,11 +137,21 @@ export function buildPhysicalStockPage(
     const current = groups.get(key);
     if (!current) {
       groups.set(key, createBalance(key, row, event));
+      completeWeight.set(key, row.quantity_micros === 0 || row.weight_micros !== undefined);
       continue;
     }
     current.quantity_micros = addMicros(current.quantity_micros, row.quantity_micros);
     current.value_micros = addMicros(current.value_micros, row.value_micros ?? 0);
     current.physical_count_micros = addMicros(current.physical_count_micros, row.physical_count_micros ?? 0);
+    const wasComplete = completeWeight.get(key) !== false;
+    const rowComplete = row.quantity_micros === 0 || row.weight_micros !== undefined;
+    const remainsComplete = wasComplete && rowComplete;
+    completeWeight.set(key, remainsComplete);
+    if (!remainsComplete) {
+      delete current.weight_micros;
+    } else if (row.weight_micros !== undefined) {
+      current.weight_micros = addMicros(current.weight_micros ?? 0, row.weight_micros);
+    }
     if (row.posting_at < current.first_posting_at) current.first_posting_at = row.posting_at;
     if (row.posting_at > current.last_posting_at) current.last_posting_at = row.posting_at;
     current.lineage.push(event);
@@ -163,6 +181,7 @@ export function reconcilePhysicalStockPage(page: PhysicalStockPage): void {
     const eventTotals = sumEvents(row.lineage);
     if (
       eventTotals.quantity_micros !== row.quantity_micros
+      || eventTotals.weight_micros !== row.weight_micros
       || eventTotals.value_micros !== row.value_micros
       || eventTotals.physical_count_micros !== row.physical_count_micros
     ) {
@@ -174,6 +193,7 @@ export function reconcilePhysicalStockPage(page: PhysicalStockPage): void {
   const pageTotals = sumBalances(page.rows);
   if (
     pageTotals.quantity_micros !== page.totals.quantity_micros
+    || pageTotals.weight_micros !== page.totals.weight_micros
     || pageTotals.value_micros !== page.totals.value_micros
     || pageTotals.physical_count_micros !== page.totals.physical_count_micros
   ) {
@@ -206,6 +226,7 @@ function createBalance(
     batch_no: text(row.batch_no),
     serial_no: text(row.serial_no),
     quantity_micros: row.quantity_micros,
+    ...(row.weight_micros === undefined ? {} : { weight_micros: row.weight_micros }),
     value_micros: row.value_micros ?? 0,
     physical_count_micros: row.physical_count_micros ?? 0,
     first_posting_at: row.posting_at,
@@ -261,6 +282,7 @@ function lineageEvent(row: PhysicalStockLedgerRow): PhysicalStockLineageEvent {
     ...(row.voucher_row ? { voucher_row: row.voucher_row } : {}),
     ...(row.revision === undefined ? {} : { revision: row.revision }),
     quantity_micros: row.quantity_micros,
+    ...(row.weight_micros === undefined ? {} : { weight_micros: row.weight_micros }),
     value_micros: row.value_micros ?? 0,
     physical_count_micros: row.physical_count_micros ?? 0,
     ...(row.reversal_of_voucher_type && row.reversal_of_voucher_no ? {
@@ -310,7 +332,7 @@ function decodeCursor(cursor: string): string {
 }
 
 function sumBalances(rows: readonly PhysicalStockBalance[]): PhysicalStockTotals {
-  return rows.reduce<PhysicalStockTotals>(
+  const base = rows.reduce<PhysicalStockTotals>(
     (totals, row) => ({
       quantity_micros: addMicros(totals.quantity_micros, row.quantity_micros),
       value_micros: addMicros(totals.value_micros, row.value_micros),
@@ -318,10 +340,16 @@ function sumBalances(rows: readonly PhysicalStockBalance[]): PhysicalStockTotals
     }),
     { quantity_micros: 0, value_micros: 0, physical_count_micros: 0 },
   );
+  const measurable = rows.every((row) => row.quantity_micros === 0 || row.weight_micros !== undefined);
+  if (!measurable) return base;
+  return {
+    ...base,
+    weight_micros: rows.reduce((total, row) => addMicros(total, row.weight_micros ?? 0), 0),
+  };
 }
 
 function sumEvents(events: readonly PhysicalStockLineageEvent[]): PhysicalStockTotals {
-  return events.reduce<PhysicalStockTotals>(
+  const base = events.reduce<PhysicalStockTotals>(
     (totals, event) => ({
       quantity_micros: addMicros(totals.quantity_micros, event.quantity_micros),
       value_micros: addMicros(totals.value_micros, event.value_micros),
@@ -329,10 +357,19 @@ function sumEvents(events: readonly PhysicalStockLineageEvent[]): PhysicalStockT
     }),
     { quantity_micros: 0, value_micros: 0, physical_count_micros: 0 },
   );
+  const measurable = events.every((event) => event.quantity_micros === 0 || event.weight_micros !== undefined);
+  if (!measurable) return base;
+  return {
+    ...base,
+    weight_micros: events.reduce((total, event) => addMicros(total, event.weight_micros ?? 0), 0),
+  };
 }
 
 function isZeroBalance(row: PhysicalStockBalance): boolean {
-  return row.quantity_micros === 0 && row.value_micros === 0 && row.physical_count_micros === 0;
+  return row.quantity_micros === 0
+    && (row.weight_micros ?? 0) === 0
+    && row.value_micros === 0
+    && row.physical_count_micros === 0;
 }
 
 function assertFilters(filters: PhysicalStockFilters): void {
@@ -350,6 +387,7 @@ function assertLedgerRow(row: PhysicalStockLedgerRow): void {
   }
   for (const value of [
     row.quantity_micros,
+    row.weight_micros,
     row.value_micros ?? 0,
     row.physical_count_micros ?? 0,
     row.length_micros,
