@@ -1,19 +1,6 @@
 name: Release alu Tenant Worker Production
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "server/apps/tenant-worker/**"
-      - "server/packages/**"
-      - "server/scripts/backup-tenant.mjs"
-      - "server/scripts/migrate-tenant.mjs"
-      - "server/scripts/deploy-tenant.mjs"
-      - "server/package.json"
-      - "pnpm-lock.yaml"
-      - ".github/release/alu-tenant-production.trigger"
-      - ".github/workflows/release-alu-tenant.yml"
   workflow_dispatch:
     inputs:
       target_sha:

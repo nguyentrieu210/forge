@@ -4,9 +4,9 @@ Ngày cập nhật: **2026-08-01**.
 
 Mọi agent phải đọc `AI_HANDOFF.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md` và `DELIVERY_POLICY.md` trước khi tiếp tục.
 
-## ACTIVE P0 — Canonical DocType Meta
+## DONE — Canonical DocType Meta
 
-Branch: `feat/alumdoor-meta-completeness-20260801`.
+PR `#154` merge tại `6c89e1a9227e989fd8b08d6e55b35ce2e74d87c7`; protected release qua hotfix `#155` và run `30703115053` tại exact SHA `7f9c629b65b2f2550aec9426cf5e9115ee3db6d0`.
 
 Đã hoàn thành trong code:
 
@@ -18,12 +18,7 @@ Branch: `feat/alumdoor-meta-completeness-20260801`.
 6. Alumdoor `2.1.0` có 3 biểu đồ thật và completeness gate cho 74 DocType hiện có; chuẩn nền tảng không giới hạn ở 74 DocType.
 7. Canonical rules/validator/fixtures đã được ghi vào skill `app-factory` để app sinh sau dùng cùng chuẩn.
 
-Việc tiếp theo:
-
-1. Regenerate release manifest, commit branch và đồng bộ với merge commit mới nhất của PR `#150`.
-2. Mở PR Meta riêng, chờ full CI/browser/release gates trên exact head.
-3. Merge đúng validated head. Chỉ phát hành package Alumdoor `2.1.0` qua luồng bảo vệ; không sửa secrets/DNS và không dùng dữ liệu khách hàng để smoke.
-4. Sau release, smoke chỉ đọc: login, quick/expanded form, User Link, Tổng quan có chart/fallback và drill-down report.
+Việc tiếp theo duy nhất của gói Meta: cài package metadata Alumdoor `2.1.0` qua protected installer rồi smoke chỉ đọc login, quick/expanded form, User Link, chart/fallback và drill-down report. Không sửa secrets/DNS và không dùng dữ liệu khách hàng để smoke.
 
 ### Done condition
 

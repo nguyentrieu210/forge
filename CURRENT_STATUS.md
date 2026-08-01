@@ -2,7 +2,7 @@
 
 Ngày cập nhật: **2026-08-01**.
 
-- PR #154 đã merge hợp đồng Meta chuẩn vào `main` tại `6c89e1a9`; lượt phát hành đầu tiên dừng an toàn trước khi đổi production vì các workflow còn trỏ nhánh hotfix đã xóa. Các trigger/dispatcher đang được chuyển đồng bộ sang nhánh mặc định `main`.
+- PR #154 và hotfix release #155 đã merge vào `main`; protected release run `30703115053` phát hành exact SHA `7f9c629b65b2f2550aec9426cf5e9115ee3db6d0` thành công. Tenant backup/migrate/deploy/smoke PASS; app bindings PASS; gateway health/root 200; HTTP và browser desktop/mobile smoke PASS.
 
 ## Đã merge — Canonical DocType Meta và Alumdoor completeness
 
