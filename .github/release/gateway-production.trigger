@@ -1,7 +1,8 @@
 service=cloudforge-gateway
 environment=production
-feature=runtime-workspace-navigation
-source_merge_sha=6db933aec8f211103ee2887e0cb364d346079cb2
+feature=alumdoor-public-landing-redesign
+source_merge_sha=898b19d0c58c84a32f99d73dfe0bf33f9ec78dd6
+release_from_default_sha=d29e71c1d1cb72ea24da1ea2837d49fb50649b8d
 release_mode=build-stage-dry-run-deploy-exact-sha-smoke
-requested_at=2026-08-01T02:30:00+07:00
-reason=force-immediate-runtime-workspace-production-release
+requested_at=2026-08-01
+reason=deploy-alumdoor-public-landing-redesign
