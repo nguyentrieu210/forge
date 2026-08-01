@@ -9,8 +9,9 @@ Luồng áp dụng: **B — tính năng lớn trên app/nền tảng có sẵn**
 | Pha 2 — BRD 360° | Hoàn tất | `ERP_PLATFORM_WAVE1.md`, Entity/Flow/API catalog và 12 Screen Spec Card. |
 | Cổng 2 — duyệt BRD | Đã duyệt | PR #152 đã squash-merge vào `main`, commit `13f91492`. |
 | Pha 3 — thiết kế kỹ thuật | Hoàn tất | `technical/`, `field-ledgers/`, `docs/meta/doctype-meta.json`; Meta validator PASS, link/ledger/diff checks xanh. |
-| Cổng 3 — duyệt thiết kế | Chờ duyệt | Chỉ xin duyệt sau khi validator Meta PASS và scorecard toàn xanh. |
-| Pha 4 — chuẩn bị nhánh build | Chưa bắt đầu | Không được bắt đầu trước Cổng 3. |
+| Cổng 3 — duyệt thiết kế | Đã duyệt | Chủ dự án duyệt ngày 2026-08-01; PR #153 squash-merge vào `main`, commit `d4e89691`. |
+| Pha 4 — chuẩn bị nhánh build | Hoàn tất | Nhánh `feat/erp-platform-wave1-g03-20260801`; baseline `pnpm.cmd run verify` PASS. |
+| Cổng 4 — duyệt nhánh build | Chờ duyệt | Scorecard kỹ thuật xanh; chưa viết code tính năng. |
 | Pha 5 — build | Chưa bắt đầu | Thứ tự G03 → G01 → G02 → G11. |
 | Pha 6 — verify/QA | Chưa bắt đầu | Verify, test quyền trực tiếp API, cách ly khách, kế toán oracle, UI đa kích thước. |
 | Pha 7 — PR/release/deploy | Chưa bắt đầu | PR → CI → merge → backup → canary → Cloudflare production → smoke. |
@@ -27,6 +28,8 @@ Luồng áp dụng: **B — tính năng lớn trên app/nền tảng có sẵn**
 - [x] Compatibility Matrix L0–L5 có bằng chứng và phần thiếu rõ ràng.
 - [x] API, middleware, quyền server, audit, idempotency và optimistic lock được khóa.
 - [x] Migration/rollback/backup/reconcile được thiết kế, chưa thực thi.
-- [ ] Scorecard Cổng 3 toàn xanh và user duyệt — phần kỹ thuật đã xanh, đang chờ duyệt.
+- [x] Scorecard Cổng 3 toàn xanh và user duyệt; PR thiết kế đã merge.
+- [x] Mở nhánh build G03 từ `origin/main` sau Cổng 3.
+- [x] Chạy baseline verify trên nhánh build: PASS; chỉ có cảnh báo tooling không chặn.
 - [ ] Build theo Field Ledger + Meta, không tự thêm field ngoài thiết kế.
 - [ ] Verify đầy đủ trước PR/release; không deploy khi gate đỏ.
