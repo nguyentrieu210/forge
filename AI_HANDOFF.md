@@ -22,6 +22,19 @@ Ngày cập nhật: **2026-08-02**.
 - `resolveFormRenderPolicy()` là composition point cho existing/full/quick Form.
 - `viewPolicy.*.enabled/fields` là runtime policy; `surface=internal` là hard visibility boundary.
 
+### MetaForge Document Experience V2
+
+- PR `#184` merged tại `df84eaec03526eaae2e2c3de3e9b8d388ae30f1a`.
+- Final validated PR head: `1a79c28832aed7731601bb9ea378f9a4a3cc01db`.
+- Required workflows: 6/6 PASS.
+- Presentation Contract V2 hiện là extension presentation an toàn trên `DocTypeMeta`; metadata không khai `presentation` vẫn có fallback heuristic.
+- Có các archetype `master`, `transaction`, `inventory`, `production`, `approval`, `ledger`, `analysis` + `generic` fallback.
+- Mỗi archetype có visual profile riêng cho accent/hero/icon/metric/context rail; không hard-code quyền hoặc business state transition vào presentation layer.
+- Resolver chỉ dùng field còn tồn tại sau canonical form policy, nên `surface=internal`/server-owned field không thể bị presentation kéo ngược ra UI.
+- `FormContainer` giữ server-authoritative permission/workflow/actions; Document Experience chỉ bọc presentation.
+- Regression selfcheck tham chiếu `Sales Order`, `Purchase Order`, `Stock Entry`, `Work Order`, `Customer`, `Payment Entry`.
+- List Workspace V2 chưa triển khai; phải kiểm tra Bulk View PR `#182` trước vì PR đó đang chạm `DoctypeWorkspace` và core meta types.
+
 ### Authenticated stock lifecycle
 
 - PR `#167` merged: mobile canonical contracts + authenticated stock lifecycle.
@@ -60,10 +73,11 @@ Không được tuyên bố toàn bộ quy trình `25.7 QUY TRÌNH.docx` đã ho
 
 Các miền còn cần acceptance/implementation đầy đủ gồm:
 
-1. Stock acceptance còn lại: QR/lineage end-to-end và cleanup QA không residue.
-2. Daily detailed ledger: snapshot/freeze/append-only adjustment/reconciliation.
-3. Warranty/defects/capacity/overtime.
-4. End-to-end acceptance xuyên Sales → Production → Inventory → Delivery → Finance → Daily Ledger → Warranty.
+1. MetaForge UX V2: List Workspace, presentation authoring/canonical transport, related-document/activity/exception, operational workspace, mobile và personalization/AI context.
+2. Stock acceptance còn lại: QR/lineage end-to-end và cleanup QA không residue.
+3. Daily detailed ledger: snapshot/freeze/append-only adjustment/reconciliation.
+4. Warranty/defects/capacity/overtime.
+5. End-to-end acceptance xuyên Sales → Production → Inventory → Delivery → Finance → Daily Ledger → Warranty.
 
 `NEXT_TASKS.md` mới là hàng đợi active; danh sách trên chỉ mô tả phần còn thiếu ở cấp hệ thống.
 
