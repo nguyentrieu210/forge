@@ -5,7 +5,7 @@
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { applyContextPolicy, applyFormSurface, serializeCreateDocument, type Doc, type DocField, type DocTypeMeta } from "@metaforge/core";
+import { applyContextPolicy, resolveFormRenderPolicy, serializeCreateDocument, type Doc, type DocField, type DocTypeMeta } from "@metaforge/core";
 import { Button, ConfirmDialog, toast, useT } from "@metaforge/ui";
 import { FormView } from "../form/FormView.js";
 import { useMetaForge } from "./provider.js";
@@ -72,8 +72,10 @@ export function NewFormContainer(props: NewFormContainerProps) {
   const { adapter, registry, services, roles, scopeKey, businessContext, contextPolicies } = useMetaForge();
   const queryClient = useQueryClient();
   const metaQ = useFormMeta(doctype);
-  const renderedMeta = useMemo(
-    () => metaQ.data ? applyFormSurface(metaQ.data, props.presentation === "dialog" ? "quick" : "expanded") : undefined,
+  const renderPolicy = useMemo(
+    () => metaQ.data
+      ? resolveFormRenderPolicy(metaQ.data, props.presentation === "dialog" ? "quick" : "expanded")
+      : undefined,
     [metaQ.data, props.presentation],
   );
   const capsQ = useCapabilities(doctype); // new-doc: doctype-level create/write (fail-closed)
@@ -134,6 +136,21 @@ export function NewFormContainer(props: NewFormContainerProps) {
   if (metaQ.isLoading) return <div className="grid h-40 place-items-center text-sm text-muted-foreground">{t("common.loading")}</div>;
   if (metaQ.error) return <div className="p-4 text-sm text-destructive" role="alert">{adapter.mapError(metaQ.error).message}</div>;
   if (!metaQ.data || !doc) return <div className="p-4 text-sm text-muted-foreground">{t("common.no_data")}</div>;
+  if (renderPolicy && !renderPolicy.enabled) {
+    return (
+      <div className="grid min-h-40 place-items-center p-5 text-center" role="status">
+        <div className="space-y-3">
+          <p className="text-sm font-medium">
+            {props.presentation === "dialog" ? "Biểu mẫu tạo nhanh đã bị tắt bởi metadata." : "Biểu mẫu này đã bị tắt bởi metadata."}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {props.presentation === "dialog" ? "MetaForge sẽ không tự nhét biểu mẫu đầy đủ vào hộp thoại tạo nhanh." : "Renderer tôn trọng viewPolicy.form.enabled=false."}
+          </p>
+          {props.onCancel ? <Button type="button" variant="outline" onClick={props.onCancel}>{t("common.close")}</Button> : null}
+        </div>
+      </div>
+    );
+  }
 
   const onSave = async (changed: Record<string, unknown>) => {
     setSaving(true);
@@ -172,7 +189,7 @@ export function NewFormContainer(props: NewFormContainerProps) {
     <>
       <FormView
         key={resetSeq}
-        meta={renderedMeta ?? metaQ.data}
+        meta={renderPolicy?.meta ?? metaQ.data}
         doc={doc}
         registry={registry}
         services={services}
