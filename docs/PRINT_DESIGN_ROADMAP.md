@@ -38,7 +38,7 @@ Xây bộ mẫu in vận hành thống nhất cho Alumdoor. Mỗi mẫu lấy tr
    - 13 cột, tổng độ rộng `100%`, bám trực tiếp `Cut Order` / `Cut Order Item` authoritative.
    - Header có ngày cắt, công thức, khách hàng, đơn bán, Work Order, màu đích và trạng thái.
    - Dòng cắt giữ mã nhôm, bundle lô mẹ, bundle đầu thừa, kho lô mẹ, khổ cây, rộng cắt, số lá, số nhát, kerf, kg tiêu hao/cân thật, đầu thừa và phế.
-   - Dùng bundle ID thật để truy vết; chưa tạo QR cho tới khi renderer có primitive QR authoritative.
+   - Bundle ID in bằng chữ; QR chứng từ dùng filter `qrcode` authoritative của renderer và được regression kiểm data URL thật.
 
 5. `Biên bản bàn giao / nghiệm thu ALUMDOOR` — Delivery Note
    - Mẫu phụ `default: false`, không thay mẫu giao hàng mặc định.
@@ -50,14 +50,14 @@ Xây bộ mẫu in vận hành thống nhất cho Alumdoor. Mỗi mẫu lấy tr
 
 ### P1 — tiền và kho
 
-1. Chuẩn hóa A4 `Hoá đơn bán hàng`, không thay hóa đơn điện tử theo pháp luật.
+1. Chuẩn hóa A4 `Hoá đơn ALUMDOOR` hiện có, không tạo default Sales Invoice thứ hai và không thay hóa đơn điện tử theo pháp luật.
 2. `Phiếu thu / phiếu chi` từ Payment Entry.
 3. Nâng `Phiếu nhập kho ALUMDOOR` lên cùng letterhead và kiểm thử bố cục.
 4. `Phiếu trả hàng` và `Giấy báo Nợ NCC`.
 
 ### P2 — tem và hậu mãi
 
-1. Tem QR mặt hàng/lô nhôm khi renderer có primitive QR authoritative.
+1. Tem QR mặt hàng/lô nhôm bằng filter `qrcode` đã có, chỉ mã hóa định danh nội bộ không nhạy cảm.
 2. Tem đầu thừa, có lô cha, chiều dài, màu, kho và ngày cắt.
 3. Phiếu tiếp nhận bảo hành và biên bản đổi/trả.
 4. Phiếu KCS và biên bản kiểm tra trước giao.
