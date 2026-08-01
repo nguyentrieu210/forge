@@ -2,6 +2,15 @@
 
 Ngày cập nhật: **2026-08-01**.
 
+## Active — Organization, HRMS và VN Accounting
+
+- Branch: `feat/company-branch-department-hrms-accounting-20260801` từ `main`.
+- HRM `1.3.0`: Company route, Branch, Department, Employee mở rộng, hợp đồng, ca/phân ca, nghỉ phép, chấm công, tạm ứng và cấu trúc lương.
+- VN Accounting `1.0.0`: chính sách kế toán, legal rule versioning, kỳ Open/Soft Closed/Hard Locked và hạch toán bảng lương có source/rule/approval trace.
+- Migration `0035_organization_hrms_vn_accounting.sql` khóa trùng nhân viên/chấm công/hạch toán lương và cưỡng chế kỳ khóa tại D1.
+- Chính sách pháp lý dùng TT99/TT133/TT58/TT132-legacy/TT200-legacy theo effective date; không đóng cứng thuế/PIT/XML.
+- Tài liệu nghiệm thu: `docs/brd-v2/ORGANIZATION_HRMS_VN_ACCOUNTING.md`.
+
 ## Repository
 
 - Repository: `nguyentrieu210/forge`.

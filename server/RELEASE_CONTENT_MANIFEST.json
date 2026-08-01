@@ -2,9 +2,9 @@
   "format": 1,
   "package": "cloudforge",
   "version": "1.0.0",
-  "generated_at": "2026-08-01T09:53:30.353022+00:00",
-  "file_count": 1043,
-  "tree_sha256": "bdef7494c26ee6345b7cb0250bb138c1c739e2d1dff1581b34449155022a2ca0",
+  "generated_at": "2026-08-01T10:59:08.615474+00:00",
+  "file_count": 1062,
+  "tree_sha256": "759ef7cfa27a997933477ecc3994ebb96a29273af34276ca6a78bf4f3adca4ff",
   "excluded": [
     ".dev.vars",
     ".env",
