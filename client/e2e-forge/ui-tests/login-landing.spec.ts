@@ -41,7 +41,7 @@ async function saveScreenshot(page: Page, testInfo: TestInfo, name: string) {
 }
 
 async function expectAlumdoorPalette(page: Page, mode: "light" | "dark") {
-  const palette = await page.locator("[data-alumdoor-landing]").evaluate((element) => {
+  const palette = await page.locator("[data-alumdoor-login]").evaluate((element) => {
     const styles = getComputedStyle(element);
     const normalizeHex = (value: string) => value
       .trim()
@@ -59,8 +59,8 @@ async function expectAlumdoorPalette(page: Page, mode: "light" | "dark") {
     ? { primary: "#f45b24", background: "#1d1d1c", foreground: "#faf8f5", card: "#282827" }
     : { primary: "#f45b24", background: "#f7f7f7", foreground: "#202020", card: "#ffffff" });
 
-  await expect(page.locator('header img[alt^="Alumdoor"]')).toHaveAttribute("src", "/alumdoor/logo.png");
-  await expect(page.locator("header").getByRole("button", { name: "Đăng nhập", exact: true })).toHaveCSS(
+  await expect(page.locator('form img[alt="Alumdoor"]')).toHaveAttribute("src", "/alumdoor/logo.png");
+  await expect(page.locator('form button[type="submit"]')).toHaveCSS(
     "background-color",
     "rgb(244, 91, 36)",
   );
@@ -79,24 +79,16 @@ async function mockGuestSession(page: Page) {
   );
 }
 
-test("Alumdoor guest experience presents the correct business landing", async ({ page }, testInfo) => {
+test("Alumdoor guest experience opens the login directly", async ({ page }, testInfo) => {
   const errors = capturePageErrors(page);
   await mockGuestSession(page);
 
   await page.goto("/?alumdoor=1", { waitUntil: "domcontentloaded" });
 
-  await expect(page.locator("[data-alumdoor-landing]")).toBeVisible();
-  await expect(page).toHaveTitle("Alumdoor — Chất lượng từ tâm · Tiên phong sáng tạo");
-  await expect(page.getByRole("heading", { name: "Cửa cuốn Alumdoor", exact: true })).toBeVisible();
+  await expect(page.locator("[data-alumdoor-login]")).toBeVisible();
+  await expect(page).toHaveTitle("Alumdoor — Đăng nhập");
   await expect(page.getByRole("heading", { name: "Đăng nhập Alumdoor", exact: true })).toBeVisible();
-  await expect(page.getByText("Alumdoor", { exact: true }).first()).toBeVisible();
-  await expect(page.getByText("Miễn phí tư vấn", { exact: true }).first()).toBeVisible();
-  await expect(page.getByText("Đo đạc kích thước", { exact: true }).first()).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Cửa cuốn nan nhôm công nghệ Đức", exact: true })).toBeVisible();
-  await expect(page.getByRole("link", { name: /VIP-ST500/i })).toHaveAttribute(
-    "href",
-    "https://alumdoor.vn/san-pham/vip-st500/",
-  );
+  await expect(page.locator("[data-alumdoor-landing]")).toHaveCount(0);
   await expect(page.locator("#mf-login-usr")).toBeVisible();
   await expect(page.locator("#mf-login-pwd")).toBeVisible();
   await expectAlumdoorPalette(page, "light");
@@ -106,7 +98,7 @@ test("Alumdoor guest experience presents the correct business landing", async ({
   errors.expectClean({ allowHttpErrors: true });
 });
 
-test("Alumdoor landing remains usable in dark and reduced-motion modes", async ({ page }, testInfo) => {
+test("Alumdoor login remains usable in dark and reduced-motion modes", async ({ page }, testInfo) => {
   const errors = capturePageErrors(page);
   await mockGuestSession(page);
   await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
@@ -117,9 +109,8 @@ test("Alumdoor landing remains usable in dark and reduced-motion modes", async (
   });
 
   await expect.poll(() => page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches)).toBe(true);
-  await expect(page.locator("[data-alumdoor-landing]")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Cửa cuốn Alumdoor", exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Sản phẩm nổi bật", exact: true })).toBeVisible();
+  await expect(page.locator("[data-alumdoor-login]")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Đăng nhập Alumdoor", exact: true })).toBeVisible();
   await expectAlumdoorPalette(page, "dark");
   await expectNoHorizontalOverflow(page);
   await saveScreenshot(page, testInfo, "alumdoor-landing-dark-reduced-motion");

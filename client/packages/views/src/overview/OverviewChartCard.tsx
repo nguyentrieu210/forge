@@ -26,6 +26,10 @@ function shortNum(value: unknown): string {
 
 export function OverviewChartCard({ chart, onNavigate }: { chart: OverviewChart; onNavigate: (route: string) => void }) {
   const rows = chartRows(chart);
+  const totals = chart.series.slice(0, 3).map((series) => ({
+    name: series.name,
+    value: series.values.reduce((sum, value) => sum + Number(value || 0), 0),
+  }));
   const content = chart.type === "line" || chart.type === "area" ? (
     <LineChart data={rows}>
       <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -76,10 +80,16 @@ export function OverviewChartCard({ chart, onNavigate }: { chart: OverviewChart;
       variant="ghost"
       disabled={!chart.route}
       onClick={() => chart.route && onNavigate(chart.route)}
-      className="h-auto min-w-0 flex-col items-stretch rounded-lg border p-3 text-left font-normal transition hover:border-primary/30 hover:bg-card disabled:pointer-events-none"
+      className="h-auto min-w-0 flex-col items-stretch rounded-md border bg-card p-4 text-left font-normal shadow-sm transition hover:border-primary/30 hover:bg-card disabled:pointer-events-none"
     >
-      <div className="text-sm font-medium">{chart.label}</div>
-      <div className="mt-3 h-64 w-full">
+      <div className="flex items-center gap-3"><span className="text-base font-semibold">{chart.label}</span><span className="ml-auto text-xs text-muted-foreground">Năm nay</span></div>
+      {totals.length ? <div className="mt-4 grid grid-cols-3 gap-3">{totals.map((total, index) => (
+        <div key={total.name} className="min-w-0">
+          <div className="flex items-center gap-1.5"><span className="size-2 rounded-full" style={{ background: `var(--chart-${index % 5 + 1})` }} /><span className="truncate text-[11px] uppercase text-muted-foreground">{total.name}</span></div>
+          <div className="mt-1 text-lg font-semibold tabular-nums">{shortNum(total.value) || "0"}</div>
+        </div>
+      ))}</div> : null}
+      <div className="mt-3 h-60 w-full">
         <ResponsiveContainer width="100%" height="100%">{content}</ResponsiveContainer>
       </div>
     </Button>

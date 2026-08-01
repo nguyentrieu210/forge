@@ -356,15 +356,14 @@ export function AppShell(props: AppShellProps) {
             ) : null}
             <div className="flex-1" />
             {props.onOpenAI ? (
-              <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="hidden md:inline-flex" onClick={props.onOpenAI} aria-label="AI"><Sparkles className={cn("size-4", props.aiConfigured ? "text-primary" : "text-muted-foreground")} /></Button></TooltipTrigger><TooltipContent>{props.aiConfigured ? "Trợ lý AI" : "AI (chưa cấu hình)"}</TooltipContent></Tooltip>
+              <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="sm" className="h-8 shrink-0 gap-1.5 px-2" onClick={props.onOpenAI} aria-label="Hỏi AI"><Sparkles className={cn("size-4", props.aiConfigured === false ? "text-muted-foreground" : "text-primary")} /><span className="hidden sm:inline">Hỏi AI</span></Button></TooltipTrigger><TooltipContent>Hỏi AI về màn hình đang xem</TooltipContent></Tooltip>
             ) : null}
             <NotificationMenu {...props} />
             <DropdownMenu>
               <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="md:hidden" aria-label="Thêm thao tác"><MoreHorizontal className="size-4" /></Button></DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="max-h-[80vh] w-56 overflow-y-auto">
                 {props.onOpenPalette ? <DropdownMenuItem onClick={props.onOpenPalette}><Search className="size-4" /> {t("shell.search", "Tìm nhanh…")}</DropdownMenuItem> : null}
-                {props.onOpenAI ? <DropdownMenuItem onClick={props.onOpenAI}><Sparkles className="size-4" /> {props.aiConfigured ? "Trợ lý AI" : "AI (chưa cấu hình)"}</DropdownMenuItem> : null}
-                {(props.onOpenPalette || props.onOpenAI) ? <DropdownMenuSeparator /> : null}
+                {props.onOpenPalette ? <DropdownMenuSeparator /> : null}
                 <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">{t("shell.theme_mode")}</DropdownMenuLabel>
                 <DropdownMenuItem onClick={() => props.onThemeChange("light")}><Sun className="size-4" /><span className="flex-1">{t("shell.theme_light")}</span>{props.theme === "light" ? <Check className="size-3.5 text-primary" /> : null}</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => props.onThemeChange("dark")}><Moon className="size-4" /><span className="flex-1">{t("shell.theme_dark")}</span>{props.theme === "dark" ? <Check className="size-3.5 text-primary" /> : null}</DropdownMenuItem>

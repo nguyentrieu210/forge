@@ -23,7 +23,7 @@ test("Alumdoor LoginForm preserves a real cookie session across logout and re-lo
   page.on("pageerror", (error) => pageErrors.push(String(error)));
 
   await page.goto("/?alumdoor=1");
-  await expect(page.locator("[data-alumdoor-landing]")).toBeVisible();
+  await expect(page.locator("[data-alumdoor-login]")).toBeVisible();
   await expect(page.locator("#mf-login-usr")).toBeVisible();
 
   await login(page, `${PASSWORD}-wrong`);

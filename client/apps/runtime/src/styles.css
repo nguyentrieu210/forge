@@ -76,7 +76,8 @@
 }
 
 /* Alumdoor public experience follows the live alumdoor.vn visual language. */
-[data-alumdoor-landing] {
+[data-alumdoor-landing],
+[data-alumdoor-login] {
   color-scheme: light;
   --background: #f7f7f7;
   --foreground: #202020;
@@ -105,7 +106,8 @@
     linear-gradient(180deg, #ffffff 0%, #f7f7f7 54%, #eeeeee 100%);
 }
 
-[data-theme="dark"] [data-alumdoor-landing] {
+[data-theme="dark"] [data-alumdoor-landing],
+[data-theme="dark"] [data-alumdoor-login] {
   color-scheme: dark;
   --background: #1d1d1c;
   --foreground: #faf8f5;

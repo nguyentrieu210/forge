@@ -391,6 +391,7 @@ function Shell({ manifest, boot, logout, nav, active, breadcrumbs = [], children
   const navigate = useNavigate();
   const [theme, setTheme] = useTheme();
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(false);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -455,12 +456,19 @@ function Shell({ manifest, boot, logout, nav, active, breadcrumbs = [], children
         theme={theme}
         onThemeChange={setTheme}
         onOpenPalette={() => setPaletteOpen(true)}
+        onOpenAI={() => setAssistantOpen(true)}
+        aiConfigured
         onLogout={logout}
         businessContext={<BusinessContextBar compact />}
       >
         {children}
       </AppShell>
-      <AssistantBubble appName={`Trợ lý ${manifest.name}`} />
+      <AssistantBubble
+        appName={`Trợ lý ${manifest.name}`}
+        open={assistantOpen}
+        onOpenChange={setAssistantOpen}
+        hideTrigger
+      />
       <CommandPalette
         open={paletteOpen}
         onClose={() => setPaletteOpen(false)}
@@ -658,7 +666,7 @@ function PrintScreen(props: ScreenProps) {
     </Shell>
   );
 }
-function OverviewScreen(props: ScreenProps) { const navigate = useNavigate(); const { domain = props.manifest.domain ?? "stock" } = useParams(); return <Shell {...props} active="__overview" breadcrumbs={[{ label: "Tổng quan" }]}><div className="h-full overflow-auto p-4"><OverviewContainer domain={domain} onNavigate={navigate} /></div></Shell>; }
+function OverviewScreen(props: ScreenProps) { const navigate = useNavigate(); const { domain = props.manifest.domain ?? "stock" } = useParams(); return <Shell {...props} active="__overview" breadcrumbs={[{ label: "Tổng quan" }]}><div className="h-full overflow-auto bg-[color-mix(in_srgb,var(--primary)_10%,var(--background))] p-3 md:p-4"><OverviewContainer domain={domain} onNavigate={navigate} /></div></Shell>; }
 function ProcessScreen(props: ScreenProps) { const navigate = useNavigate(); const { domain = props.manifest.domain ?? "stock" } = useParams(); return <Shell {...props} active="__process" breadcrumbs={[{ label: "Quy trình" }]}><div className="h-full overflow-auto p-4"><ProcessContainer domain={domain} onNavigate={navigate} /></div></Shell>; }
 function CatalogScreen({ error, ...props }: ScreenProps & { error?: string }) { const navigate = useNavigate(); return <Shell {...props} active="__catalog" breadcrumbs={[{ label: "Danh mục ứng dụng" }]}><div className="h-full p-4">{error ? <div className="mb-3 rounded-lg border border-destructive/30 p-3 text-sm text-destructive">{error}</div> : null}<ApplicationCatalogContainer onNavigate={navigate} /></div></Shell>; }
 function PermissionScreen(props: ScreenProps) { return <Shell {...props} active="__permissions" breadcrumbs={[{ label: "Trung tâm phân quyền" }]}><div className="h-full overflow-auto p-4"><PermissionCenter /></div></Shell>; }

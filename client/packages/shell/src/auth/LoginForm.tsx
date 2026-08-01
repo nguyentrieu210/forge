@@ -159,7 +159,7 @@ export function LoginForm({
   useEffect(() => {
     if (embedded) return;
     const previous = document.title;
-    document.title = alumdoor ? "Alumdoor — Chất lượng từ tâm · Tiên phong sáng tạo" : `${resolvedBrand} — Đăng nhập`;
+    document.title = alumdoor ? "Alumdoor — Đăng nhập" : `${resolvedBrand} — Đăng nhập`;
     return () => { document.title = previous; };
   }, [alumdoor, embedded, resolvedBrand]);
 
@@ -197,6 +197,8 @@ export function LoginForm({
         <div className="flex items-center gap-3">
           {warehouseApp ? (
             <img src="/mobile/warehouse/alumdoor-logo.png" alt="Alumdoor" className="h-12 w-auto max-w-full object-contain" />
+          ) : alumdoor ? (
+            <img src="/alumdoor/logo.png" alt="Alumdoor" className="mx-auto h-auto w-full max-w-[300px] object-contain" />
           ) : (
             <>
               {mark}
@@ -227,7 +229,7 @@ export function LoginForm({
               onChange={(event) => setUsr(event.target.value)}
               placeholder={t("auth.username_placeholder")}
               autoComplete="username"
-              autoFocus={!embedded && !alumdoor}
+              autoFocus={!embedded}
               className="h-11 rounded-xl bg-background px-3.5"
             />
           </div>
@@ -292,7 +294,16 @@ export function LoginForm({
   );
 
   if (embedded) return form;
-  if (alumdoor) return <AlumdoorLanding form={form} />;
+  if (alumdoor) {
+    return (
+      <main
+        data-alumdoor-login
+        className="grid min-h-dvh place-items-center overflow-x-hidden bg-[radial-gradient(circle_at_top,color-mix(in_srgb,var(--primary)_12%,transparent),transparent_34rem),var(--background)] p-4 sm:p-6"
+      >
+        {form}
+      </main>
+    );
+  }
 
   const capabilities = [
     [<Warehouse key="workspace" />, "Không gian thống nhất", "Một nguồn dữ liệu cho các phân hệ nghiệp vụ."],
