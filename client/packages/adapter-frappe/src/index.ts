@@ -4,6 +4,6 @@
  */
 export * from "./dto.js";
 export * from "./adapter.js";
-export { FrappeAdapterImpl } from "./frappe-adapter.js";
+export { FrappeAdapterImpl } from "./stock-compatible-adapter.js";
 export type { FrappeAdapterOptions } from "./frappe-adapter.js";
 export { mapError } from "@metaforge/core";

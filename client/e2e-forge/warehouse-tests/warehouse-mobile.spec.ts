@@ -91,3 +91,113 @@ test("renders the installable Alumdoor warehouse experience without desktop shel
 
   await page.screenshot({ path: testInfo.outputPath("warehouse-mobile.png"), fullPage: true });
 });
+
+test("warehouse actions translate legacy mobile fields to canonical stock contracts", async ({ page }) => {
+  const stockEntries: Array<Record<string, unknown>> = [];
+  const reconciliations: Array<Record<string, unknown>> = [];
+
+  await page.route("**/api/method/frappe.desk.form.load.getdoc**", async (route) => {
+    const url = new URL(route.request().url());
+    const name = url.searchParams.get("name") ?? "K36";
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ docs: [{ doctype: "Warehouse", name, company: "ALUMDOOR" }] }),
+    });
+  });
+  await page.route("**/api/method/frappe.desk.search.search_link**", async (route) => {
+    const url = new URL(route.request().url());
+    const txt = url.searchParams.get("txt") ?? "";
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ message: txt ? [{ value: txt, description: "QA" }] : [] }),
+    });
+  });
+  await page.route(/\/api\/resource\/Warehouse\/.+$/, async (route) => {
+    const name = decodeURIComponent(new URL(route.request().url()).pathname.split("/").at(-1) ?? "");
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ data: { doctype: "Warehouse", name, company: "ALUMDOOR" } }),
+    });
+  });
+  await page.route(/\/api\/resource\/Stock(?:%20| )Entry$/, async (route) => {
+    const body = route.request().postDataJSON() as Record<string, unknown>;
+    stockEntries.push(body);
+    await route.fulfill({
+      status: 201,
+      contentType: "application/json",
+      body: JSON.stringify({ data: { ...body, doctype: "Stock Entry", name: `QA-SE-${stockEntries.length}`, docstatus: 0 } }),
+    });
+  });
+  await page.route(/\/api\/resource\/Stock(?:%20| )Reconciliation$/, async (route) => {
+    const body = route.request().postDataJSON() as Record<string, unknown>;
+    reconciliations.push(body);
+    await route.fulfill({
+      status: 201,
+      contentType: "application/json",
+      body: JSON.stringify({ data: { ...body, doctype: "Stock Reconciliation", name: "QA-SR-1", docstatus: 0 } }),
+    });
+  });
+
+  const fillCommon = async (action: "receipt" | "issue" | "transfer" | "count") => {
+    await page.goto(`/mobile/warehouse/?tab=actions&action=${action}`);
+    await page.getByPlaceholder("Quét hoặc nhập mã vật tư").fill("QA-PURCHASE-ITEM");
+    await page.getByPlaceholder("Tìm kho").first().fill("K36");
+    if (action === "transfer") await page.getByPlaceholder("Tìm kho đích").fill("K37");
+  };
+
+  await fillCommon("receipt");
+  await page.getByRole("button", { name: "Lưu nhập kho", exact: true }).click();
+  await expect.poll(() => stockEntries.length).toBe(1);
+
+  await fillCommon("issue");
+  await page.getByRole("button", { name: "Lưu xuất kho", exact: true }).click();
+  await expect.poll(() => stockEntries.length).toBe(2);
+
+  await fillCommon("transfer");
+  await page.getByRole("button", { name: "Lưu chuyển kho", exact: true }).click();
+  await expect.poll(() => stockEntries.length).toBe(3);
+
+  await fillCommon("count");
+  await page.getByRole("button", { name: "Lưu kiểm kho", exact: true }).click();
+  await expect.poll(() => reconciliations.length).toBe(1);
+
+  const [receipt, issue, transfer] = stockEntries;
+  expect(receipt).toMatchObject({ company: "ALUMDOOR", purpose: "Material Receipt" });
+  expect(String(receipt?.posting_at)).toMatch(/^\d{4}-\d{2}-\d{2} 12:00:00$/);
+  expect(receipt).not.toHaveProperty("posting_date");
+  expect(receipt).not.toHaveProperty("stock_entry_type");
+  expect((receipt?.items as Array<Record<string, unknown>>)[0]).toMatchObject({
+    item_code: "QA-PURCHASE-ITEM",
+    target_warehouse: "K36",
+  });
+  expect((receipt?.items as Array<Record<string, unknown>>)[0]).not.toHaveProperty("t_warehouse");
+
+  expect(issue).toMatchObject({ company: "ALUMDOOR", purpose: "Material Issue" });
+  expect((issue?.items as Array<Record<string, unknown>>)[0]).toMatchObject({ source_warehouse: "K36" });
+  expect((issue?.items as Array<Record<string, unknown>>)[0]).not.toHaveProperty("s_warehouse");
+
+  expect(transfer).toMatchObject({ company: "ALUMDOOR", purpose: "Material Transfer" });
+  expect((transfer?.items as Array<Record<string, unknown>>)[0]).toMatchObject({
+    source_warehouse: "K36",
+    target_warehouse: "K37",
+  });
+
+  const reconciliation = reconciliations[0]!;
+  expect(reconciliation).toMatchObject({
+    warehouse: "K36",
+    scope: "Một mặt hàng",
+    item_code: "QA-PURCHASE-ITEM",
+    counted_by: boot.user,
+  });
+  expect(String(reconciliation.snapshot_at)).toMatch(/^\d{4}-\d{2}-\d{2} 12:00:00$/);
+  expect(reconciliation).not.toHaveProperty("posting_date");
+  expect((reconciliation.items as Array<Record<string, unknown>>)[0]).toMatchObject({
+    item_code: "QA-PURCHASE-ITEM",
+    counted_qty: 1,
+    variance_reason: "Khác",
+  });
+  expect((reconciliation.items as Array<Record<string, unknown>>)[0]).not.toHaveProperty("qty");
+});
