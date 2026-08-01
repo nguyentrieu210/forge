@@ -177,6 +177,28 @@ function WarehouseMobileApp({ boot, logout }: { boot: MetaForgeBootDTO; logout: 
   const openOperation = (next: Operation) => {
     setOperation(next);
     setTab("actions");
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", "actions");
+    url.searchParams.set("action", next);
+    window.history.replaceState({}, "", url);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const closeOperation = () => {
+    setOperation(null);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("action");
+    url.searchParams.set("tab", tab);
+    window.history.replaceState({}, "", url);
+  };
+
+  const changeTab = (next: MobileTab) => {
+    setOperation(null);
+    setTab(next);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("action");
+    url.searchParams.set("tab", next);
+    window.history.replaceState({}, "", url);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -188,14 +210,14 @@ function WarehouseMobileApp({ boot, logout }: { boot: MetaForgeBootDTO; logout: 
       <MobileShell
         title={pageTitle}
         subtitle={pageSubtitle}
-        onBack={operation ? () => setOperation(null) : undefined}
+        onBack={operation ? closeOperation : undefined}
         right={(
-          <Button variant="ghost" size="icon" className="relative size-10 rounded-full" onClick={() => { setOperation(null); setTab("account"); }} aria-label="Tài khoản">
+          <Button variant="ghost" size="icon" className="relative size-10 rounded-full" onClick={() => changeTab("account")} aria-label="Tài khoản">
             <Avatar className="size-8"><AvatarFallback>{initials(boot.full_name)}</AvatarFallback></Avatar>
             {queue.pending.length ? <span className="absolute right-0 top-0 size-2.5 rounded-full border-2 border-card bg-amber-500" /> : null}
           </Button>
         )}
-        bottomBar={operation ? undefined : <BottomNavigation active={tab} pending={queue.pending.length} onChange={(next) => { setOperation(null); setTab(next); }} />}
+        bottomBar={operation ? undefined : <BottomNavigation active={tab} pending={queue.pending.length} onChange={changeTab} />}
       >
         {operation ? (
           <StockOperationForm
@@ -205,12 +227,11 @@ function WarehouseMobileApp({ boot, logout }: { boot: MetaForgeBootDTO; logout: 
               const result = await queue.enqueue(payload);
               navigator.vibrate?.(35);
               toast.success(result === "sent" ? "Đã tạo phiếu kho" : "Đã lưu ngoại tuyến, sẽ gửi khi có mạng");
-              setOperation(null);
-              setTab("home");
+              changeTab("home");
             }}
           />
         ) : tab === "home" ? (
-          <HomeScreen fullName={boot.full_name} pending={queue.pending.length} onOpen={openOperation} onStock={() => setTab("stock")} />
+          <HomeScreen fullName={boot.full_name} pending={queue.pending.length} onOpen={openOperation} onAll={() => changeTab("actions")} onStock={() => changeTab("stock")} />
         ) : tab === "actions" ? (
           <OperationScreen onOpen={openOperation} />
         ) : tab === "stock" ? (
@@ -232,10 +253,11 @@ function WarehouseMobileApp({ boot, logout }: { boot: MetaForgeBootDTO; logout: 
   );
 }
 
-function HomeScreen({ fullName, pending, onOpen, onStock }: {
+function HomeScreen({ fullName, pending, onOpen, onAll, onStock }: {
   fullName: string;
   pending: number;
   onOpen: (operation: Operation) => void;
+  onAll: () => void;
   onStock: () => void;
 }) {
   const firstName = fullName.trim().split(/\s+/).at(-1) ?? fullName;
@@ -258,7 +280,7 @@ function HomeScreen({ fullName, pending, onOpen, onStock }: {
       <section>
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold">Nghiệp vụ nhanh</h2>
-          <Button variant="ghost" size="sm" onClick={() => onOpen("transfer")}>Xem tất cả</Button>
+          <Button variant="ghost" size="sm" onClick={onAll}>Xem tất cả</Button>
         </div>
         <div className="forge-operation-grid grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
           {(Object.keys(OPERATION_META) as Operation[]).map((key) => (
@@ -333,6 +355,7 @@ function StockOperationForm({ operation, pending, onSubmit }: {
     if (!itemCode.trim()) { toast.error("Chọn vật tư"); return; }
     if (!warehouse.trim()) { toast.error(operation === "receipt" ? "Chọn kho nhận" : "Chọn kho nguồn"); return; }
     if (operation === "transfer" && !targetWarehouse.trim()) { toast.error("Chọn kho đích"); return; }
+    if (operation === "transfer" && targetWarehouse.trim() === warehouse.trim()) { toast.error("Kho nguồn và kho đích phải khác nhau"); return; }
     if (qty <= 0) { toast.error("Số lượng phải lớn hơn 0"); return; }
     setSaving(true);
     try {
@@ -496,7 +519,7 @@ function StockLookup() {
     <div className="space-y-4">
       <section className="space-y-3 rounded-2xl border bg-card p-4">
         <ScanField value={query} onChange={setQuery} placeholder="Quét hoặc nhập mã vật tư" onEnter={() => void search()} />
-        <Input value={warehouse} onChange={(event) => setWarehouse(event.target.value)} placeholder="Kho (không bắt buộc)" className="h-11" />
+        <LinkInput label="Kho" doctype="Warehouse" value={warehouse} onChange={setWarehouse} icon={<Warehouse className="size-4" />} placeholder="Chọn kho (không bắt buộc)" />
         <BigButton onClick={() => void search()} disabled={loading}>{loading ? "Đang tra…" : <><Search className="mr-2 size-4" /> Tra tồn</>}</BigButton>
       </section>
 

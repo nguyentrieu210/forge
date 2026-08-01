@@ -59,6 +59,7 @@ test.describe("MetaForge MISA-style workspace", () => {
     ]);
     await expect(operationTabs.getByRole("button", { name: "Tổng quan", exact: true })).toHaveCount(0);
     await expectNoHorizontalOverflow(operationTabs);
+    await page.screenshot({ path: testInfo.outputPath("workspace-process.png"), fullPage: true });
 
     await openSidebarModule(page, "Danh mục");
     await expect(page).toHaveURL(/\/view\/catalog$/);

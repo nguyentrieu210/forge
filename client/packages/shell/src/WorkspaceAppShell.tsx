@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useMemo, useState } from "react";
-import { ArrowRight, CheckCircle2, Workflow } from "lucide-react";
+import { CheckCircle2, Workflow } from "lucide-react";
 import { FrappeAdapterImpl } from "@metaforge/adapter-frappe";
 import { Button, cn, toast } from "@metaforge/ui";
 import {
@@ -100,43 +100,59 @@ function WorkspaceTabs({
   );
 }
 
-function ProcessPanel({ module, onNavigate }: { module: WorkspaceModule; onNavigate: (key: string) => void }) {
+function ProcessPanel({ module, reports, masters, onNavigate }: { module: WorkspaceModule; reports: NavItem[]; masters: NavItem[]; onNavigate: (key: string) => void }) {
   const items = workspaceItemsForTabs(module).filter((item) => !item.disabledReason);
+  const flowItems = items.slice(0, 8);
+  const desktopPositions = [
+    "sm:col-start-1 sm:row-start-1", "sm:col-start-1 sm:row-start-2",
+    "sm:col-start-2 sm:row-start-1", "sm:col-start-2 sm:row-start-2",
+    "sm:col-start-3 sm:row-start-1", "sm:col-start-3 sm:row-start-2",
+    "sm:col-start-4 sm:row-start-1", "sm:col-start-4 sm:row-start-2",
+  ];
   return (
-    <div className="h-full overflow-auto bg-muted/25 p-3 md:p-5">
-      <section className="grid w-full gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
-        <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
-          <div className="border-b px-5 py-4">
-            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">{module.label}</div>
-            <h1 className="mt-1 text-xl font-semibold">Quy trình {module.label.toLocaleLowerCase("vi")}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Các bước được sinh từ nghiệp vụ và quyền hiện có trong Meta.</p>
+    <div className="h-full overflow-auto bg-[color-mix(in_srgb,var(--primary)_8%,var(--background))] p-2 sm:p-4 lg:p-6">
+      <section className="mx-auto grid w-full max-w-6xl gap-3 lg:grid-cols-[minmax(0,1fr)_21rem]">
+        <div className="overflow-hidden rounded-md border bg-card shadow-sm">
+          <div className="border-b px-4 py-3 text-center">
+            <h1 className="text-base font-bold uppercase">Nghiệp vụ {module.label}</h1>
           </div>
-          <div className="grid gap-x-0 gap-y-8 p-6 sm:grid-cols-2 lg:grid-cols-4">
-            {items.map((item, index) => (
-              <div key={item.key} className="relative flex min-w-0 items-center justify-center px-3">
-                <Button type="button" variant="ghost" className="group relative z-10 h-auto min-h-28 w-full min-w-0 flex-col justify-center whitespace-normal rounded-lg px-2 py-3 text-center hover:bg-primary/5" onClick={() => onNavigate(item.key)}>
-                  <span className="absolute left-2 top-1 grid size-5 place-items-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">{index + 1}</span>
-                  <span className="grid size-12 place-items-center rounded-lg border border-primary/20 bg-primary/10 text-primary shadow-sm transition-transform group-hover:-translate-y-0.5">{item.icon ?? index + 1}</span>
-                  <span className="mt-3 block max-w-full text-sm font-semibold">{item.label}</span>
-                </Button>
-                {index < items.length - 1 ? <><span className="absolute left-[62%] right-0 top-1/2 hidden h-px bg-primary/35 lg:block" /><ArrowRight className="absolute -right-2 top-1/2 z-20 hidden size-4 -translate-y-1/2 text-primary lg:block" aria-hidden="true" /></> : null}
-              </div>
-            ))}
-            {!items.length ? <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">Tài khoản hiện tại chưa có nghiệp vụ khả dụng trong phân hệ này.</div> : null}
-          </div>
-        </div>
-        <aside className="rounded-xl border bg-card p-4 shadow-sm">
-          <h2 className="font-semibold">Truy cập nhanh</h2>
-          <p className="mt-1 text-xs text-muted-foreground">Mở thẳng màn nghiệp vụ, không cần đi lại quy trình.</p>
-          <div className="mt-3 divide-y">
-            {items.slice(0, 8).map((item) => (
-              <Button key={item.key} variant="ghost" className="h-auto w-full justify-start gap-2 rounded-none px-1 py-3 text-left text-sm" onClick={() => onNavigate(item.key)}>
-                <CheckCircle2 className="size-4 shrink-0 text-primary" />
-                <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                <ArrowRight className="size-3.5 shrink-0 text-muted-foreground" />
+          {flowItems.length ? (
+            <div className="relative grid min-h-[23rem] grid-cols-2 gap-x-4 gap-y-10 px-4 py-7 sm:grid-cols-4 sm:px-8">
+              <div className="absolute left-[10%] right-[10%] top-1/2 hidden h-0.5 -translate-y-1/2 bg-primary/30 sm:block" />
+              {flowItems.map((item, index) => {
+                const top = index % 2 === 0;
+                return (
+                  <div key={item.key} className={cn("relative z-10 flex min-w-0 justify-center", desktopPositions[index], top ? "sm:items-end sm:pb-8" : "sm:items-start sm:pt-8")}>
+                    <span className={cn("absolute left-1/2 hidden w-0.5 -translate-x-1/2 bg-primary/30 sm:block", top ? "bottom-0 h-8" : "top-0 h-8")} />
+                    <Button type="button" variant="ghost" className="group h-auto min-h-24 w-full min-w-0 flex-col justify-center whitespace-normal rounded-md px-2 py-2 text-center hover:bg-primary/5" onClick={() => onNavigate(item.key)}>
+                      <span className="grid size-12 place-items-center rounded-sm bg-primary text-primary-foreground shadow-sm transition-transform group-hover:-translate-y-0.5 [&_svg]:size-7">{item.icon ?? index + 1}</span>
+                      <span className="mt-2 block max-w-full text-sm font-medium leading-5">{item.label}</span>
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          ) : <div className="m-5 rounded-lg border border-dashed p-6 text-sm text-muted-foreground">Tài khoản hiện tại chưa có nghiệp vụ khả dụng trong phân hệ này.</div>}
+          <div className="grid border-t sm:grid-cols-5">
+            {masters.slice(0, 5).map((item) => (
+              <Button key={item.key} variant="ghost" className="h-20 min-w-0 flex-col gap-2 rounded-none border-b whitespace-normal text-xs sm:border-b-0 sm:border-r" onClick={() => onNavigate(item.key)}>
+                <span className="text-primary [&_svg]:size-5">{item.icon ?? <CheckCircle2 />}</span>
+                <span className="line-clamp-2">{item.label}</span>
               </Button>
             ))}
           </div>
+        </div>
+        <aside className="overflow-hidden rounded-md border bg-card shadow-sm">
+          <h2 className="border-b px-4 py-3 text-center text-base font-bold uppercase">Báo cáo</h2>
+          <div className="divide-y px-4">
+            {reports.slice(0, 6).map((item) => (
+              <Button key={item.key} variant="ghost" className="h-auto min-h-14 w-full justify-start gap-3 rounded-none px-0 py-3 text-left text-sm font-normal" onClick={() => onNavigate(item.key)}>
+                <span className="size-1.5 shrink-0 rounded-full bg-muted-foreground" />
+                <span className="min-w-0 whitespace-normal">{item.label}</span>
+              </Button>
+            ))}
+          </div>
+          <Button variant="ghost" className="h-12 w-full rounded-none border-t text-primary" onClick={() => onNavigate("__reports")}>Tất cả báo cáo</Button>
         </aside>
       </section>
     </div>
@@ -230,6 +246,8 @@ export function AppShell(props: AppShellProps) {
 
     const showModule = processActive || Boolean(activeModule);
     const activeSidebarKey = indexHubKey(props.nav.find((item) => item.key === props.activeKey)) ?? props.activeKey;
+    const reportItems = props.nav.filter((item) => normalizedGroup(item.group) === "bao cao" && item.key !== "__reports" && !item.disabledReason);
+    const masterItems = props.nav.filter((item) => normalizedGroup(item.group) === "danh muc" && item.key !== "__master-data" && !item.disabledReason);
 
     shell = (
       <BaseAppShell
@@ -248,7 +266,7 @@ export function AppShell(props: AppShellProps) {
           />
           <div className="min-h-0 flex-1 overflow-hidden">
             {processActive
-              ? <ProcessPanel module={selectedModule} onNavigate={navigate} />
+              ? <ProcessPanel module={selectedModule} reports={reportItems} masters={masterItems} onNavigate={navigate} />
               : props.children as ReactNode}
           </div>
         </div> : props.children as ReactNode}

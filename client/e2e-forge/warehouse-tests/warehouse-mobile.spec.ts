@@ -62,6 +62,12 @@ test("renders the installable Alumdoor warehouse experience without desktop shel
 
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1);
 
+  await page.getByRole("button", { name: "Xem tất cả", exact: true }).click();
+  await expect(page.getByText("Chọn nghiệp vụ", { exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/tab=actions/);
+  await page.getByRole("button", { name: "Trang chủ", exact: true }).click();
+  await expect(page.getByText("Hôm nay cần làm gì ở kho?", { exact: true })).toBeVisible();
+
   await page.getByRole("button", { name: /^Nhập kho/ }).first().click();
   await expect(page.getByText("Tạo phiếu nghiệp vụ", { exact: true })).toBeVisible();
   await expect(page.getByText("Vật tư", { exact: true })).toBeVisible();
