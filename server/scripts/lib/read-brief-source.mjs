@@ -106,16 +106,107 @@ function applyPermissionSidecar(brief, extension, source, briefSource) {
   };
 }
 
+const BULK_VIEW_KEYS = new Set(["enabled", "columns", "editableFields", "commitStrategy", "allowPaste", "allowFillDown", "pageSize"]);
+
+function validateBulkView(view, source, doctype) {
+  if (!view || typeof view !== "object" || Array.isArray(view)) {
+    throw new Error(`${source}: views.${doctype}.bulk phải là object.`);
+  }
+  const unsupported = Object.keys(view).filter((key) => !BULK_VIEW_KEYS.has(key) && !key.startsWith("//"));
+  if (unsupported.length) {
+    throw new Error(`${source}: views.${doctype}.bulk không nhận ${unsupported.join(", ")}.`);
+  }
+  if (view.enabled !== false) {
+    if (!Array.isArray(view.columns) || view.columns.length === 0 || !view.columns.every((value) => typeof value === "string" && value)) {
+      throw new Error(`${source}: views.${doctype}.bulk.columns phải là mảng field không rỗng.`);
+    }
+    if (!Array.isArray(view.editableFields) || view.editableFields.length === 0 || !view.editableFields.every((value) => typeof value === "string" && value)) {
+      throw new Error(`${source}: views.${doctype}.bulk.editableFields phải là mảng field không rỗng.`);
+    }
+    const columns = new Set(view.columns);
+    const outside = view.editableFields.filter((field) => !columns.has(field));
+    if (outside.length) throw new Error(`${source}: views.${doctype}.bulk.editableFields phải nằm trong columns: ${outside.join(", ")}.`);
+    if ((view.commitStrategy ?? "document_update") !== "document_update") {
+      throw new Error(`${source}: views.${doctype}.bulk.commitStrategy hiện chỉ nhận document_update.`);
+    }
+  }
+  if (view.pageSize !== undefined && (!Number.isInteger(view.pageSize) || view.pageSize < 20 || view.pageSize > 500)) {
+    throw new Error(`${source}: views.${doctype}.bulk.pageSize chỉ nhận số nguyên 20–500.`);
+  }
+  return {
+    enabled: view.enabled !== false,
+    ...(view.columns ? { columns: [...view.columns] } : {}),
+    ...(view.editableFields ? { editableFields: [...view.editableFields] } : {}),
+    commitStrategy: view.commitStrategy ?? "document_update",
+    ...(view.allowPaste === undefined ? {} : { allowPaste: Boolean(view.allowPaste) }),
+    ...(view.allowFillDown === undefined ? {} : { allowFillDown: Boolean(view.allowFillDown) }),
+    ...(view.pageSize === undefined ? {} : { pageSize: view.pageSize }),
+  };
+}
+
+/**
+ * View sidecar for large brief-built apps.
+ *
+ * The canonical installed contract is `viewPolicy.bulk`. Until the short brief compiler grows
+ * a first-class `bulk` authoring block, the loader carries the same policy through the already
+ * canonical `viewPolicy.mobile` passthrough. The shared client resolver reads both shapes, so
+ * app-source packages can use `viewPolicy.bulk` today while brief apps stay independently
+ * reviewable instead of editing a multi-thousand-line JSON file for every grid change.
+ */
+function applyViewSidecar(brief, extension, source, briefSource) {
+  assertSidecarObject(extension, source);
+  const unsupported = Object.keys(extension).filter((key) => key !== "version" && key !== "views" && !key.startsWith("//"));
+  if (unsupported.length) {
+    throw new Error(`${source}: chỉ nhận version, views và khóa ghi chú //; không nhận ${unsupported.join(", ")}.`);
+  }
+  if (!extension.views || typeof extension.views !== "object" || Array.isArray(extension.views)) {
+    throw new Error(`${source}: views phải là object theo tên DocType.`);
+  }
+  if (!Array.isArray(brief.doctypes)) {
+    throw new Error(`${briefSource}: doctypes phải là mảng trước khi ghép view sidecar.`);
+  }
+
+  const replacements = new Map();
+  for (const [doctype, declared] of Object.entries(extension.views)) {
+    if (!declared || typeof declared !== "object" || Array.isArray(declared)) {
+      throw new Error(`${source}: views.${doctype} phải là object.`);
+    }
+    const keys = Object.keys(declared).filter((key) => key !== "bulk" && !key.startsWith("//"));
+    if (keys.length) throw new Error(`${source}: views.${doctype} hiện chỉ hỗ trợ bulk; không nhận ${keys.join(", ")}.`);
+    if (!declared.bulk) throw new Error(`${source}: views.${doctype} thiếu bulk.`);
+    replacements.set(doctype, validateBulkView(declared.bulk, source, doctype));
+  }
+  if (!replacements.size) throw new Error(`${source}: views phải có ít nhất một DocType.`);
+
+  const seen = new Set();
+  const doctypes = brief.doctypes.map((doctype) => {
+    const name = typeof doctype?.name === "string" ? doctype.name : "";
+    const bulk = replacements.get(name);
+    if (!bulk) return doctype;
+    seen.add(name);
+    const mobile = doctype.mobile && typeof doctype.mobile === "object" && !Array.isArray(doctype.mobile) ? doctype.mobile : {};
+    return { ...doctype, mobile: { ...mobile, bulk } };
+  });
+  const missing = [...replacements.keys()].filter((name) => !seen.has(name));
+  if (missing.length) throw new Error(`${source}: DocType không tồn tại trong brief: ${missing.join(", ")}.`);
+
+  return {
+    ...brief,
+    ...(extension.version ? { version: extension.version } : {}),
+    doctypes,
+  };
+}
+
 /**
  * Read a brief plus optional independently reviewable sidecars.
  *
  * Accepts either a filesystem path or a file URL so CLI paths and import.meta.url-based
  * tests use the same loader contract.
  *
- * Large production briefs should not have every A4 template or high-risk permission edit
- * embedded in one giant JSON file. Sibling `<brief>.prints.json` and
- * `<brief>.permissions.json` files are merged before schema validation and compilation,
- * so the compiler and installer still receive one ordinary brief and remain authoritative.
+ * Large production briefs should not have every A4 template, high-risk permission edit or
+ * large view matrix embedded in one giant JSON file. Sibling `<brief>.prints.json`,
+ * `<brief>.permissions.json` and `<brief>.views.json` files are merged before schema validation
+ * and compilation, so the compiler and installer still receive one ordinary brief.
  *
  * Permission sidecars REPLACE the complete permission map for each named DocType. They do
  * not merge individual role strings, because leaving one stale grant behind during an RBAC
@@ -136,6 +227,10 @@ export async function readBriefSource(source) {
   const permissionsSource = path.join(parsed.dir, `${parsed.name}.permissions.json`);
   const permissions = await readOptionalJson(permissionsSource);
   if (permissions) brief = applyPermissionSidecar(brief, permissions, permissionsSource, sourcePath);
+
+  const viewsSource = path.join(parsed.dir, `${parsed.name}.views.json`);
+  const views = await readOptionalJson(viewsSource);
+  if (views) brief = applyViewSidecar(brief, views, viewsSource, sourcePath);
 
   return brief;
 }
