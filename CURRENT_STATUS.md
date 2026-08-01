@@ -6,7 +6,7 @@ Ngày cập nhật: **2026-08-01**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Latest runtime-changing default commit: `e404e12ef22d5bc9f2a782820787b4f30d8dce8a`.
+- Latest runtime-changing default commit: `898b19d0c58c84a32f99d73dfe0bf33f9ec78dd6`.
 - GitHub là nguồn sự thật cho current branch head, CI, PR và release evidence.
 
 ## Đã hoàn tất trên default
@@ -35,9 +35,8 @@ Ngày cập nhật: **2026-08-01**.
 
 - PR `#142` merge SHA: `8e9882a6143f4cf669724f654ec1b59949b90138`.
 - Exact validated head: `24621f221fad2de950d0f58cc39078e43c206f51`.
-- Logo chuẩn tím → hồng, chữ A trắng và ba nét cánh ngang dùng chung cho landing, login, shell, favicon và PWA.
+- Logo Forge hiện tại dùng chung cho landing, login, shell, favicon và PWA.
 - Landing/login Forge dùng bố cục hai cột; mobile ưu tiên form đăng nhập.
-- Alumdoor vẫn giữ white-label landing, palette cam-xám, title và browser contract riêng.
 - Account menu sau login có avatar, đổi mật khẩu và đăng xuất các thiết bị khác.
 - App kho điện thoại là bundle riêng tại base `/mobile/warehouse/`, không co giao diện desktop thành mobile.
 - Top nav, bottom nav, nút nghiệp vụ lớn và form touch-first.
@@ -57,22 +56,33 @@ Ngày cập nhật: **2026-08-01**.
 - Migration `0030`, `0031`, `0032`, metadata, permission, worker wiring và regression tests đã có.
 - Guard advance transaction-currency và base-currency đã tách điều kiện để mã integrity không phụ thuộc thứ tự trigger SQLite.
 
-### Validation Finance PR `#139`
+### Alumdoor public landing redesign
 
-- Exact-head full tests: PASS.
-- Typecheck: PASS.
-- Build: PASS.
-- PR Validation: PASS.
-- Sales Feature CI: PASS.
-- Purchase Feature CI: PASS.
-- Inventory and Manufacturing CI: PASS.
-- UI Pull Request Validation: PASS.
+- PR `#145` merge SHA: `898b19d0c58c84a32f99d73dfe0bf33f9ec78dd6`.
+- Exact validated head: `73dc960e3c9685708ac1b1e51c7eb5d2c1a71a9a`.
+- Landing Alumdoor guest đã được thiết kế lại hoàn toàn theo cấu trúc thương hiệu/sản phẩm công khai trên `alumdoor.vn`, giữ form đăng nhập nội bộ trong cùng trải nghiệm.
+- Có hero `Cửa cuốn Alumdoor / Nâng tầm cửa Việt`, navigation, 4 nhóm dịch vụ, phần giới thiệu, liên hệ/khu vực hỗ trợ và footer.
+- Danh mục hiển thị 4 nhóm: cửa cuốn Úc, cửa cuốn Đức, cửa cuốn lưới và phụ kiện; tên sản phẩm, giá tham chiếu và link dẫn về trang Alumdoor gốc.
+- VIP-ST500 dẫn đúng trang chi tiết `https://alumdoor.vn/san-pham/cua-cuon-duc-vipst500/`.
+- Nội dung mô tả được viết lại từ thông tin công khai; không chép nguyên văn dài hoặc commit ảnh website bên thứ ba vào repository.
+
+### Validation Alumdoor PR `#145`
+
+- Exact head `73dc960e3c9685708ac1b1e51c7eb5d2c1a71a9a`.
+- CI `30687756129`: SUCCESS — tests, typecheck, build.
+- PR Validation `30687756103`: SUCCESS.
+- Sales Feature CI `30687756100`: SUCCESS.
+- Purchase Feature CI `30687756117`: SUCCESS.
+- Inventory and Manufacturing CI `30687756108`: SUCCESS.
+- UI Pull Request Validation `30687756105`: SUCCESS.
+- Alumdoor browser QA PASS trên desktop, tablet và mobile; kiểm hero, login, danh mục sản phẩm, link VIP-ST500, contact data, dark/reduced-motion contract và horizontal overflow.
 
 ## Chưa release production
 
 - Chưa map `client/apps/kho/dist-mobile` vào production route `/mobile/warehouse/`.
 - Chưa chạy authenticated backend lifecycle riêng cho bốn phiếu kho mobile trên môi trường release.
-- Chưa deploy Cloudflare và chưa sửa production secrets/DNS.
+- Landing Alumdoor mới đã merge code nhưng chưa có lệnh release/deploy Cloudflare trong đợt này.
+- Chưa sửa production secrets/DNS.
 
 ## Business backlog còn lại
 

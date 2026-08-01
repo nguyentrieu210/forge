@@ -10,7 +10,6 @@ Mọi agent phải đọc `AI_HANDOFF.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md` 
 - Exact validated head: `24621f221fad2de950d0f58cc39078e43c206f51`.
 - Full CI, typecheck, build và browser QA desktop/tablet/mobile: PASS.
 - Warehouse PWA QA: PASS trên Pixel 7 và viewport `390 × 844`.
-- Alumdoor white-label landing/login QA: PASS.
 - Không deploy Cloudflare, không sửa production secret/DNS và không mutate dữ liệu production.
 
 ## Hoàn tất — Finance receivables, payables và advances
@@ -20,6 +19,15 @@ Mọi agent phải đọc `AI_HANDOFF.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md` 
 - Due date, AR/AP aging, partial/unallocated Payment Entry, Advance Balance, Payment Allocation, Party Statement và Debt Summary đã có trên default.
 - Payment Ledger tiếp tục append-only; invoice outstanding không âm; advance chỉ được phân bổ về 0.
 - Full tests, typecheck, build, PR Validation, Sales, Purchase, Inventory/Manufacturing và UI validation: PASS.
+
+## Hoàn tất — Alumdoor public landing redesign
+
+- PR `#145` merge SHA: `898b19d0c58c84a32f99d73dfe0bf33f9ec78dd6`.
+- Exact validated head: `73dc960e3c9685708ac1b1e51c7eb5d2c1a71a9a`.
+- Landing guest đã chuyển sang bố cục mới theo thương hiệu/sản phẩm công khai của Alumdoor, giữ login nội bộ.
+- Có hero, navigation, 4 dịch vụ, giới thiệu, 4 nhóm danh mục sản phẩm, giá/link tham chiếu, liên hệ, khu vực hỗ trợ và footer.
+- Browser QA PASS desktop/tablet/mobile, gồm dark/reduced-motion, login, no horizontal overflow và link VIP-ST500.
+- Không deploy Cloudflare trong đợt này.
 
 ## P0 — Release app kho, chỉ thực hiện khi có lệnh deploy riêng
 
