@@ -1,7 +1,7 @@
 import type { Actor, JsonObject } from "../../../packages/contracts/src/index.js";
 import { errors, jsonResponse, readJson } from "../../../packages/core/src/index.js";
 import {
-  D1DailyDetailedLedgerService,
+  D1GuardedDailyDetailedLedgerService,
   type DailyLedgerAdjustmentInput,
   type DailyLedgerContext,
   type DailyLedgerReconciliation,
@@ -71,7 +71,7 @@ export async function routeDailyLedgerApi(
   rejectTenantSelector(raw);
   const body = isDailyLedgerFrappePath(url.pathname) ? unwrapFrappeArgs(raw) : raw;
   rejectTenantSelector(body);
-  const service = dependencies.service ?? new D1DailyDetailedLedgerService(context.db);
+  const service = dependencies.service ?? new D1GuardedDailyDetailedLedgerService(context.db);
 
   let result: unknown;
   if (route === "generate") {
