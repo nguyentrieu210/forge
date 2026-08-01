@@ -8,30 +8,38 @@ Ngày cập nhật: **2026-08-02**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `main`.
-- Exact `main` dùng làm base rebase cho Bulk View: `2d0d4ab871714d84ba015afcd8e4797623bad558` — merge PR `#183`.
-- Last executable merge trước các docs-only merge: PR `#175`, merge `509db8c32625168316696fb0deb3760a434aedf9`.
+- Exact `main` hiện tại khi đồng bộ Bulk View: `df84eaec03526eaae2e2c3de3e9b8d388ae30f1a` — merge PR `#184` MetaForge Document Experience V2.
+- Branch Bulk View: `feat/metaforge-bulk-view-v2-20260802`, PR `#182`.
 - Branch `hotfix/alumdoor-print-list-delete` cũ không còn được dùng làm current/default branch và không được coi là chỉ dẫn thực thi.
 
-## ACTIVE — MetaForge Bulk View / ALUM master grids
+## DONE — MetaForge Document Experience V2 foundation
 
-- Draft PR `#182`: `feat(meta): add safe Bulk View and Alumdoor master grids`.
-- Canonical branch: `feat/metaforge-bulk-view-v2-20260802`.
-- Baseline feature head `c36c8024d3aaa35574f5599a9c15ed6a86727933` đã có required workflows **6/6 PASS** trước final hardening/rebase:
-  - CI `30719198125`: tests/typecheck/build PASS.
-  - UI Pull Request Validation `30719198139`: frontend lint/build + browser validation PASS.
-  - PR Validation: PASS.
-  - Purchase Feature CI `30719198155`: PASS.
-  - Sales Feature CI `30719198150`: PASS.
-  - Inventory and Manufacturing CI `30719198140`: PASS.
-- Bulk View là renderer metadata-driven dùng chung, không tạo page riêng cho từng DocType: row selection, paste vùng ô từ Excel/Google Sheets, fill-down, paging/search, discard, lỗi theo dòng và optimistic concurrency qua `modified`.
-- Generic `document_update` fail closed với transaction/submittable, child/single và field internal/read-only/server-owned; field có `read_only_depends_on` cũng không được sửa ở Bulk v1 vì grid chưa đánh giá điều kiện per-row.
+- PR `#184` đã merge vào `main` tại `df84eaec03526eaae2e2c3de3e9b8d388ae30f1a`.
+- Document Experience V2 có 7 archetype (`master`, `transaction`, `inventory`, `production`, `approval`, `ledger`, `analysis`) + generic fallback; document hero, semantic status, metric cards, responsive context strip/rail và skeleton loading.
+- Presentation resolver chỉ đọc field còn tồn tại sau canonical form policy, vì vậy `surface=internal`/server-owned field không bị kéo trở lại UI.
+- Permission, workflow, submit/cancel/delete/rename và server-authoritative capability vẫn do `FormContainer`/adapter hiện hữu kiểm soát.
+- Không deploy Cloudflare/production trong slice này.
+
+## READY / REVALIDATING — MetaForge Bulk View + ALUM master grids
+
+- PR `#182`: `feat(meta): add safe Bulk View and Alumdoor master grids`.
+- Trước khi `main` nhận PR #184, exact head `4b195d3500aa66b3b9da1e412e094c30027cc568` đã required workflows **6/6 PASS**:
+  - CI `30720437670`: tests + typecheck + build PASS.
+  - UI Pull Request Validation `30720437647`: frontend lint/build + MetaForge workspace browser QA + Alumdoor browser QA PASS.
+  - PR Validation `30720437654`: PASS.
+  - Purchase Feature CI `30720437641`: PASS.
+  - Sales Feature CI `30720437627`: PASS.
+  - Inventory and Manufacturing CI `30720437653`: PASS.
+- PR #184 chỉ tạo conflict tài liệu ở `CURRENT_STATUS.md` và `NEXT_TASKS.md`; executable Bulk code không bị chồng bởi Document Experience V2.
+- Hai file canonical status đang được đồng bộ lại với current `main`; exact PR head mới phải chạy lại required workflows trước merge.
+- Bulk View là renderer metadata-driven dùng chung: row selection, paste vùng từ Excel/Google Sheets, fill-down, paging/search, discard, lỗi theo dòng và optimistic concurrency qua `modified`.
+- Generic `document_update` fail closed với transaction/submittable, child/single và field internal/read-only/server-owned; field có `read_only_depends_on` cũng không được sửa trong Bulk v1.
 - `DoctypeWorkspace` có `Danh sách | Nhập hàng loạt` khi metadata bật Bulk View.
-- ALUM source metadata được cấu hình lên `2.1.2` qua `server/briefs/alumdoor-v2.views.json` cho các master phù hợp: UOM, Brand, Manufacturer, Item Color, Material Grade/Specification, Item Attribute, Supplier Item, Measurement Profile, Item, Customer, Supplier, Price List, Item Price và Pricing Rule.
-- `Item Price` reference chỉ cho bulk sửa `rate`, `note`, `disabled`; các khóa nhận diện `price_list/item_code/uom` chỉ đọc.
-- Không cho generic bulk sửa stock ledger, công nợ, chứng từ đã submit, BOM child rows hoặc cây kho/nhóm hàng. Các nhóm đó cần Matrix / parent-aware / method-backed Bulk Transaction riêng.
-- Large-brief authoring hiện dùng sibling `.views.json` và compatibility transport qua `viewPolicy.mobile.bulk`; runtime resolver ưu tiên canonical `viewPolicy.bulk`. First-class short-brief compiler/parser transport vẫn là hardening follow-up, không được tuyên bố đã hoàn tất trong PR này.
-- Final rebased exact head phải chạy lại required workflows trước khi review/merge.
-- Đợt này không deploy Cloudflare, không sửa production secrets/DNS và không mutate tenant production.
+- ALUM source metadata `2.1.2` cấu hình Bulk cho UOM, Brand, Manufacturer, Item Color, Material Grade/Specification, Item Attribute, Supplier Item, Measurement Profile, Item, Customer, Supplier, Price List, Item Price và Pricing Rule.
+- `Item Price` chỉ cho bulk sửa `rate`, `note`, `disabled`; `price_list/item_code/uom` là khóa nhận diện chỉ đọc.
+- Generic Bulk không sửa stock ledger, công nợ, chứng từ submit, BOM child rows hoặc cây kho/nhóm hàng.
+- Large brief hiện dùng sibling `.views.json` compatibility transport; runtime ưu tiên canonical `viewPolicy.bulk`. First-class short-brief compiler/parser transport vẫn là follow-up hardening.
+- Không deploy Cloudflare/production, không sửa production secrets/DNS và không mutate tenant production.
 
 ## DONE — Runbook / project-status cleanup
 
@@ -40,10 +48,7 @@ Ngày cập nhật: **2026-08-02**.
 - Exact-head required workflows: **6/6 PASS**.
 - `RUNBOOK.md` là operating runbook canonical.
 - `CURRENT_STATUS.md` là live snapshot canonical; `NEXT_TASKS.md` là active queue; `AI_HANDOFF.md` chỉ giữ handoff kỹ thuật.
-- `README.md` không còn tự đóng vai live status.
-- `docs/ROADMAP.md` đã gắn `NOT LIVE STATUS` và chỉ giữ hướng chiến lược.
-- `DELIVERY_POLICY.md` đã tách merge khỏi production authorization.
-- `EPIC_STATUS.md` stale đã bị xóa.
+- `README.md` và `docs/ROADMAP.md` không phải live status; `DELIVERY_POLICY.md` tách merge khỏi production authorization.
 
 ## DONE — Authenticated reservation availability lifecycle
 
@@ -52,7 +57,6 @@ Ngày cập nhật: **2026-08-02**.
 - Exact-head required workflows: **6/6 PASS**.
 - Reservation giảm available stock nhưng không thay physical stock; over-reservation trả available đúng; release phục hồi available; double-release/terminal mutation fail theo Frappe 417 contract.
 - Desktop/mobile, role nghiệp vụ, cookie + CSRF thật PASS trên local D1 ephemeral.
-- Không deploy production trong slice này.
 
 ## Capability đã khóa bằng merged evidence
 
@@ -60,8 +64,9 @@ Ngày cập nhật: **2026-08-02**.
 
 - PR `#164`: canonical first-party Meta boundary — merged.
 - PR `#176`: canonical Form Renderer policy — merged, final exact-head required workflows 6/6 PASS.
+- PR `#184`: Document Experience V2 foundation — merged.
 - `resolveFormRenderPolicy()` dùng chung cho existing/full/quick Form; `viewPolicy` được runtime thực thi; `surface=internal` là hard visibility boundary.
-- Bulk View PR `#182` đang ACTIVE/Draft; chưa được tính là merged capability cho tới khi merge thật.
+- Bulk View PR `#182` chưa được tính là merged capability cho tới khi merge thật.
 
 ### Inventory / stock
 
@@ -69,7 +74,6 @@ Ngày cập nhật: **2026-08-02**.
 - PR `#170`: Stock Entry operational submit RBAC — merged.
 - PR `#173`: physical-stock catch-weight reconciliation — merged.
 - PR `#175`: authenticated reservation/available-stock lifecycle — merged.
-- Receipt/issue/transfer/reconciliation/reservation đã có authenticated local D1 evidence cho quantity, weight, available stock, permission và lineage foundation.
 
 ### Sales / Purchase
 
@@ -92,11 +96,12 @@ Checkpoint production lịch sử gần nhất được handoff ghi nhận:
 
 ## Chưa hoàn tất toàn hệ thống
 
-1. MetaForge Bulk View PR `#182` cần final exact-head CI + review/merge; sau đó Matrix View là primitive UI kế tiếp.
-2. P0 stock acceptance còn QR/lineage end-to-end và cleanup QA không residue.
-3. P1 daily detailed ledger: snapshot, freeze, append-only adjustment, reconciliation nhiều miền.
-4. P2 warranty/defects/capacity/overtime.
-5. P3 authenticated end-to-end acceptance xuyên Sales → Production → Inventory → Delivery → Finance → Daily Ledger → Warranty.
+1. Bulk View PR `#182` cần exact-head CI sau sync với current `main`, sau đó merge khi gate xanh.
+2. MetaForge UX V2 wave kế tiếp: List Workspace V2 tích hợp Bulk View; Matrix View là primitive tiếp theo cho dữ liệu quan hệ nhiều chiều.
+3. P0 stock acceptance còn QR/lineage end-to-end và cleanup QA không residue.
+4. P1 daily detailed ledger: snapshot, freeze, append-only adjustment, reconciliation nhiều miền.
+5. P2 warranty/defects/capacity/overtime.
+6. P3 authenticated end-to-end acceptance xuyên Sales → Production → Inventory → Delivery → Finance → Daily Ledger → Warranty.
 
 ## Guardrails
 
