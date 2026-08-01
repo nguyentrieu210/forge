@@ -1,6 +1,6 @@
 # Công ty, Chi nhánh, Phòng ban, HRMS và Kế toán Việt Nam
 
-Ngày cập nhật: 2026-08-01  
+Ngày cập nhật: 2026-08-01
 Nhánh: `feat/company-branch-department-hrms-accounting-20260801`
 
 ## Phạm vi đã triển khai
