@@ -6,7 +6,7 @@ Ngày cập nhật: **2026-08-01**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `hotfix/alumdoor-print-list-delete`.
-- Latest runtime-changing default commit: `8e9882a6143f4cf669724f654ec1b59949b90138`.
+- Latest runtime-changing default commit: `e404e12ef22d5bc9f2a782820787b4f30d8dce8a`.
 - GitHub là nguồn sự thật cho current branch head, CI, PR và release evidence.
 
 ## Đã hoàn tất trên default
@@ -46,15 +46,27 @@ Ngày cập nhật: **2026-08-01**.
 - Service worker không cache API/auth response.
 - `apps/kho` build desktop và mobile thành hai output riêng; mobile output ở `client/apps/kho/dist-mobile`.
 
-### Validation PR `#142`
+### Finance receivables, payables và advances
 
-- Frozen install: PASS.
-- Frontend lint: PASS.
-- Test, typecheck và full build: PASS.
-- PR Validation, Sales, Purchase, Inventory và CI: PASS.
-- MetaForge workspace browser QA: PASS.
-- Alumdoor landing/login browser QA trên desktop, tablet và mobile: PASS.
-- Warehouse PWA browser QA trên Pixel 7 và viewport `390 × 844`: PASS.
+- PR `#139` merge SHA: `e404e12ef22d5bc9f2a782820787b4f30d8dce8a`.
+- Exact validated head: `0b5a629989dfa2b7972dafbda39134ad9b4bdda6`.
+- Due date và AR/AP aging đã có.
+- Payment Entry hỗ trợ partial payment, explicit unallocated amount và advance.
+- Payment Allocation dùng append-only Payment Ledger, giữ company/party/account/currency context và không tạo lại cash GL.
+- Advance Balance, Party Statement và Debt Summary đã có query/report path.
+- Migration `0030`, `0031`, `0032`, metadata, permission, worker wiring và regression tests đã có.
+- Guard advance transaction-currency và base-currency đã tách điều kiện để mã integrity không phụ thuộc thứ tự trigger SQLite.
+
+### Validation Finance PR `#139`
+
+- Exact-head full tests: PASS.
+- Typecheck: PASS.
+- Build: PASS.
+- PR Validation: PASS.
+- Sales Feature CI: PASS.
+- Purchase Feature CI: PASS.
+- Inventory and Manufacturing CI: PASS.
+- UI Pull Request Validation: PASS.
 
 ## Chưa release production
 
@@ -64,10 +76,9 @@ Ngày cập nhật: **2026-08-01**.
 
 ## Business backlog còn lại
 
-1. Finance hoàn chỉnh: AR/AP aging, Payment Allocation, Party Statement, Debt Summary và Advance Balance.
-2. Daily detailed ledger snapshot/freeze/adjustment.
-3. Warranty, defects, supplier hold/offset và capacity/overtime.
-4. End-to-end acceptance xuyên Sales, Production, Inventory, Delivery, Finance và Warranty.
+1. Daily detailed ledger snapshot/freeze/adjustment.
+2. Warranty, defects, supplier hold/offset và capacity/overtime.
+3. End-to-end acceptance xuyên Sales, Production, Inventory, Delivery, Finance và Warranty.
 
 ## Release boundary
 
