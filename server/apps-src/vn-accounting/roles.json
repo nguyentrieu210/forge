@@ -3,5 +3,7 @@
   { "role": "Accounts Manager", "desk_access": true },
   { "role": "General Accountant", "desk_access": true },
   { "role": "Chief Accountant", "desk_access": true },
-  { "role": "Payroll Manager", "desk_access": true }
+  { "role": "Payroll Manager", "desk_access": true },
+  { "role": "Warehouse Cash User", "desk_access": true },
+  { "role": "Warehouse Cash Manager", "desk_access": true }
 ]
