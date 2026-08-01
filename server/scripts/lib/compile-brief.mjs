@@ -55,6 +55,7 @@ const FIELD_TYPES = new Map([
 
 /** Types whose meaning depends on `options`, so an author cannot forget it. */
 const NEEDS_OPTIONS = new Set(["Link", "Select", "Table", "Table MultiSelect", "Dynamic Link"]);
+const LAYOUT_FIELD_TYPES = new Set(["Heading", "Section Break", "Column Break", "HTML", "Tab Break", "Fold", "Button"]);
 
 export class BriefError extends Error {}
 
@@ -903,8 +904,76 @@ export function compileBrief(brief) {
      */
     const isChild = doctype.child === true;
 
+    // Persist the canonical DocType contract instead of asking each client to infer it.
+    // Object-form fields may override any derived value when the business rule is more
+    // specific than these safe defaults.
+    for (const field of fields) {
+      const layout = LAYOUT_FIELD_TYPES.has(field.fieldtype);
+      field.valueSource ??= layout
+        ? "system"
+        : field.fetch_from
+          ? "link"
+          : field.read_only
+            ? (field.fieldname === (workflowBrief?.field ?? "workflow_state") ? "workflow" : "formula")
+            : field.default !== undefined
+              ? "default"
+              : "user";
+      field.editMode ??= field.hidden
+        ? "hidden"
+        : field.set_only_once
+          ? "set_once"
+          : field.read_only || layout
+            ? "readonly"
+            : submittable && field.allow_on_submit !== true
+              ? "immutable_after_submit"
+              : "editable";
+      // The runtime still consumes Frappe's legacy protection flags. Keep them in
+      // lockstep with the canonical contract so Meta cannot promise a protected field
+      // while an older API path still treats it as writable.
+      if (field.editMode === "readonly") field.read_only = true;
+      if (field.editMode === "set_once") field.set_only_once = true;
+      if (field.editMode === "hidden") field.hidden = true;
+      field.surface ??= field.hidden
+        ? "internal"
+        : !layout && field.required && field.editMode !== "readonly"
+          ? "quick"
+          : "expanded";
+      field.serverEnforced ??= ["system", "workflow", "formula"].includes(field.valueSource) || field.editMode === "readonly" || field.editMode === "hidden";
+      if (field.valueSource === "link" && field.editMode === "editable") field.dirtyGuard ??= "preserve_user_value";
+    }
+
+    const kind = doctype.kind ?? (isChild
+      ? "child_table"
+      : doctype.tree === true
+        ? "tree"
+        : doctype.single === true
+          ? "single"
+          : submittable || workflowBrief
+            ? "transaction"
+            : "master");
+    const quickFields = fields.filter((field) => field.surface === "quick").map((field) => field.fieldname);
+    const formFields = fields.filter((field) => !LAYOUT_FIELD_TYPES.has(field.fieldtype) && field.surface !== "internal").map((field) => field.fieldname);
+    const listColumns = fields.filter((field) => field.in_list_view).map((field) => field.fieldname);
+    const viewPolicy = {
+      list: { enabled: !isChild && doctype.single !== true, columns: listColumns },
+      form: { enabled: !isChild, fields: formFields },
+      quickEntry: { enabled: !isChild && quickFields.length > 0, fields: quickFields },
+      kanban: doctype.kanban
+        ? { enabled: true, stageField: doctype.kanban.stageField }
+        : { enabled: false },
+      calendar: doctype.calendar
+        ? { enabled: true, startField: doctype.calendar.startField, ...(doctype.calendar.endField ? { endField: doctype.calendar.endField } : {}) }
+        : { enabled: false },
+      gantt: doctype.gantt
+        ? { enabled: true, startField: doctype.gantt.startField, endField: doctype.gantt.endField }
+        : { enabled: false },
+      chart: { enabled: false },
+      mobile: doctype.mobile ?? {},
+    };
+
     doctypes.push({
       name: doctypeName,
+      kind,
       // Nhãn đi CÙNG metadata, không chỉ vào mục menu. Thiếu dòng này thì breadcrumb, ô
       // chọn loại chứng từ và màn phân quyền đều hiện tên kỹ thuật tiếng Anh, trong khi
       // menu bên cạnh hiện tiếng Việt — cùng một thứ, hai cách gọi.
@@ -912,6 +981,7 @@ export function compileBrief(brief) {
       module,
       is_child: isChild,
       is_tree: doctype.tree === true,
+      is_single: doctype.single === true,
       is_submittable: submittable,
       track_changes: true,
       allow_rename: doctype.allow_rename === true,
@@ -919,6 +989,7 @@ export function compileBrief(brief) {
       ...(doctype.title ? { title_field: doctype.title } : {}),
       ...(doctype.search?.length ? { search_fields: doctype.search } : {}),
       fields: fields.map((field, index) => ({ ...field, idx: index + 1 })),
+      viewPolicy,
       permissions,
       revision: 1,
     });
@@ -998,6 +1069,34 @@ export function compileBrief(brief) {
       group: declared.group ?? "Báo cáo",
     });
   }
+
+  /** Charts are explicit and backed by declared reports; no numeric field creates one. */
+  const charts = (brief.charts ?? []).map((chart, index) => {
+    const where = `charts[${index}]`;
+    if (!chart?.name || !chart.source || !chart.type) fail(`${where} needs name, source and type.`);
+    const report = reports.find((candidate) => candidate.name === chart.source);
+    if (!report) fail(`${where}.source names report "${chart.source}" which this brief does not declare.`);
+    const dimensions = chart.dimensions ?? [];
+    const measures = chart.measures ?? [];
+    if (dimensions.length !== 1) fail(`${where}.dimensions needs exactly one report field.`);
+    if (measures.length < 1 || measures.length > 3) fail(`${where}.measures needs 1 to 3 report fields.`);
+    const reportFields = new Set(report.columns.map((column) => column.field));
+    for (const field of [...dimensions, ...measures]) if (!reportFields.has(field)) fail(`${where} names field "${field}" which report ${report.name} does not return.`);
+    const route = chart.drilldown?.route ?? `/report/${encodeURIComponent(report.name)}`;
+    const target = doctypes.find((doctype) => doctype.name === report.doctype);
+    if (target?.viewPolicy?.chart) target.viewPolicy.chart.enabled = true;
+    return {
+      name: chart.name,
+      label: chart.label ?? chart.name,
+      source: chart.source,
+      type: chart.type,
+      dimensions: [...dimensions],
+      measures: [...measures],
+      roles: [...(chart.roles ?? ["System Manager"])],
+      drilldown: { route },
+      emptyFallback: chart.emptyFallback ?? "table",
+    };
+  });
 
   /**
    * Thao tác dạng form, và một mục menu cho mỗi cái.
@@ -1140,6 +1239,10 @@ export function compileBrief(brief) {
 
   return {
     id, name, version,
+    // Existing briefs remain installable until they explicitly close their external
+    // Link graph. New briefs generated by the canonical skill always declare
+    // externalDocTypes (an empty array is valid) and therefore opt into strict v1.
+    ...(brief.externalDocTypes ? { metaContractVersion: 1 } : {}),
     platform_requires: brief.platformRequires ?? "1.0.0",
     requires: brief.requires ?? [],
     roles: [...declaredRoles].map((role) => ({ role, desk_access: true })),
@@ -1167,6 +1270,8 @@ export function compileBrief(brief) {
     // hai thứ đi cùng nhau hoặc không có gì cả.
     validators: brief.worker ? compileValidators(brief.validators ?? []) : [],
     reports,
+    ...(brief.externalDocTypes ? { externalDocTypes: brief.externalDocTypes.map((entry) => ({ ...entry })) } : {}),
+    ...(charts.length ? { charts } : {}),
     actions,
     screens,
     ...(brief.worker ? { worker: brief.worker } : {}),

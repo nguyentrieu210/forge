@@ -2,7 +2,7 @@
   "$schema": "./brief.schema.json",
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "2.0.35",
+  "version": "2.1.0",
   "module": "Alumdoor",
   "domain": "alumdoor",
   "brand": "warm",
@@ -11,6 +11,14 @@
     "numberFormat": "#.###,##",
     "dateFormat": "dd/mm/yyyy"
   },
+  "externalDocTypes": [
+    { "name": "Account", "kind": "tree", "app": "erpnext" },
+    { "name": "Company", "kind": "master", "app": "erpnext" },
+    { "name": "User", "kind": "system", "app": "frappe" },
+    { "name": "Currency", "kind": "master", "app": "erpnext" },
+    { "name": "Serial and Batch Bundle", "kind": "transaction", "app": "erpnext" },
+    { "name": "Batch", "kind": "master", "app": "erpnext" }
+  ],
   "//vi-sao-khong-tu-khai-logic": [
     "Worker/validator của Alumdoor chỉ kiểm tra ràng buộc ngành và tính công thức; không trực tiếp",
     "trừ tồn kho hay lên công nợ. Hai việc đó là BẤT BIẾN TIỀN — không được phép 'kiểm rồi ghi'",
@@ -5922,6 +5930,35 @@
       ],
       "icon": "clipboard-check",
       "group": "Báo cáo"
+    }
+  ],
+  "charts": [
+    {
+      "name": "Doanh thu theo khách hàng",
+      "source": "Đơn hàng theo khách",
+      "type": "Bar",
+      "dimensions": ["customer"],
+      "measures": ["grand_total", "name"],
+      "roles": ["Chủ xưởng", "Kinh doanh"],
+      "emptyFallback": "table"
+    },
+    {
+      "name": "Mua hàng theo nhà cung cấp",
+      "source": "Mua hàng theo nhà cung cấp",
+      "type": "Bar",
+      "dimensions": ["supplier"],
+      "measures": ["grand_total", "name"],
+      "roles": ["Chủ xưởng", "Kế toán"],
+      "emptyFallback": "table"
+    },
+    {
+      "name": "Sản xuất theo mặt hàng",
+      "source": "Lệnh sản xuất theo mặt hàng",
+      "type": "Bar",
+      "dimensions": ["production_item"],
+      "measures": ["set_count", "qty"],
+      "roles": ["Chủ xưởng", "Sản xuất"],
+      "emptyFallback": "table"
     }
   ],
   "//links": [

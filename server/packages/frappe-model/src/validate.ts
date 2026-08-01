@@ -1,6 +1,6 @@
 import type { JsonObject, JsonValue } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
-import type { DocFieldMeta, DocPermissionMeta, DocTypeMeta, MetaFieldType, WorkflowMeta } from "./types.js";
+import type { DocFieldMeta, DocPermissionMeta, DocTypeKind, DocTypeMeta, DocTypeView, DocTypeViewPolicy, MetaFieldType, WorkflowMeta } from "./types.js";
 import { assertFieldConditionSupported } from "./field-condition.js";
 
 /**
@@ -51,6 +51,10 @@ const LAYOUT_FIELDS = new Set<MetaFieldType>([
  * today and reads no worse.
  */
 const SYSTEM_FIELDS = new Set(["name", "owner", "creation", "modified", "modified_by", "docstatus", "idx", "doctype", "version", "status"]);
+const DOCTYPE_KINDS = new Set<DocTypeKind>(["transaction", "master", "child_table", "single", "tree", "virtual", "system"]);
+const VALUE_SOURCES = new Set(["user", "default", "link", "formula", "system", "workflow"]);
+const EDIT_MODES = new Set(["editable", "readonly", "set_once", "immutable_after_submit", "hidden"]);
+const FIELD_SURFACES = new Set(["quick", "expanded", "internal"]);
 
 export function parseDocTypeMeta(value: unknown, expectedName?: string): DocTypeMeta {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw errors.validation("DocType metadata must be an object");
@@ -61,6 +65,8 @@ export function parseDocTypeMeta(value: unknown, expectedName?: string): DocType
   const fields = array(input.fields, "fields").map((field, index) => parseField(field, index));
   const permissions = array(input.permissions ?? [], "permissions").map((permission, index) => parsePermission(permission, index));
   const revision = safeInt(input.revision ?? 1, "revision", 1, Number.MAX_SAFE_INTEGER);
+  const kind = input.kind === undefined ? undefined : text(input.kind, "kind", 32) as DocTypeKind;
+  if (kind && !DOCTYPE_KINDS.has(kind)) throw errors.validation(`Unknown DocType kind: ${kind}`);
   assertUnique(fields.map((field) => field.fieldname), "fieldname");
   for (const field of fields) {
     if (SYSTEM_FIELDS.has(field.fieldname)) throw errors.validation(`Field name is reserved: ${field.fieldname}`);
@@ -89,6 +95,7 @@ export function parseDocTypeMeta(value: unknown, expectedName?: string): DocType
   }
   const meta: DocTypeMeta = {
     name,
+    ...(kind ? { kind } : {}),
     // Nhãn đi cùng metadata, không chỉ đi vào menu — xem `DocTypeMeta.label`.
     ...(input.label === undefined ? {} : { label: text(input.label, "label", 160) }),
     module: moduleName,
@@ -107,6 +114,7 @@ export function parseDocTypeMeta(value: unknown, expectedName?: string): DocType
     sort_order: input.sort_order === "ASC" ? "ASC" : "DESC",
     ...(searchFields ? { search_fields: searchFields } : {}),
     fields: fields.map((field, index) => ({ ...field, idx: index + 1 })),
+    ...(input.viewPolicy === undefined ? {} : { viewPolicy: parseViewPolicy(input.viewPolicy, fields) }),
     permissions,
     revision,
   };
@@ -127,12 +135,31 @@ function parseField(value: unknown, index: number): DocFieldMeta {
   if (formWidth !== undefined && !["full", "half", "third"].includes(formWidth)) {
     throw errors.validation(`fields[${index}].form_width must be full, half, or third`);
   }
+  const valueSource = input.valueSource === undefined ? undefined : text(input.valueSource, `fields[${index}].valueSource`, 24);
+  const editMode = input.editMode === undefined ? undefined : text(input.editMode, `fields[${index}].editMode`, 32);
+  const surface = input.surface === undefined ? undefined : text(input.surface, `fields[${index}].surface`, 24);
+  const dirtyGuard = input.dirtyGuard === undefined ? undefined : text(input.dirtyGuard, `fields[${index}].dirtyGuard`, 32);
+  if (input.required !== undefined && input.reqd !== undefined && bool(input.required, false) !== bool(input.reqd, false)) {
+    throw errors.validation(`fields[${index}] has conflicting required and reqd values`);
+  }
+  const required = input.required === undefined ? bool(input.reqd, false) : bool(input.required, false);
+  if (valueSource && !VALUE_SOURCES.has(valueSource)) throw errors.validation(`fields[${index}].valueSource is not recognised: ${valueSource}`);
+  if (editMode && !EDIT_MODES.has(editMode)) throw errors.validation(`fields[${index}].editMode is not recognised: ${editMode}`);
+  if (surface && !FIELD_SURFACES.has(surface)) throw errors.validation(`fields[${index}].surface is not recognised: ${surface}`);
+  if (dirtyGuard && dirtyGuard !== "preserve_user_value") throw errors.validation(`fields[${index}].dirtyGuard is not recognised: ${dirtyGuard}`);
+  if (editMode === "editable" && bool(input.read_only, false)) throw errors.validation(`fields[${index}] cannot be editable and read_only`);
+  if (editMode === "readonly" && !bool(input.read_only, false)) throw errors.validation(`fields[${index}].editMode readonly requires read_only=true`);
+  if (editMode === "set_once" && !bool(input.set_only_once, false)) throw errors.validation(`fields[${index}].editMode set_once requires set_only_once=true`);
+  if (editMode === "hidden" && !bool(input.hidden, false)) throw errors.validation(`fields[${index}].editMode hidden requires hidden=true`);
+  if (surface === "internal" && editMode === "editable") throw errors.validation(`fields[${index}] cannot be internal and editable`);
+  if (valueSource === "link" && input.fetch_from === undefined) throw errors.validation(`fields[${index}].valueSource link requires fetch_from`);
+  if (valueSource === "default" && input.default === undefined) throw errors.validation(`fields[${index}].valueSource default requires default`);
   return {
     fieldname,
     label,
     fieldtype,
     ...(input.options === undefined ? {} : { options: text(input.options, `fields[${index}].options`, 5000) }),
-    required: bool(input.required, false),
+    required,
     read_only: bool(input.read_only, false),
     hidden: bool(input.hidden, false),
     list_only: bool(input.list_only, false),
@@ -152,6 +179,11 @@ function parseField(value: unknown, index: number): DocFieldMeta {
     permlevel,
     ...(input.description === undefined ? {} : { description: text(input.description, `fields[${index}].description`, 2000) }),
     ...(formWidth === undefined ? {} : { form_width: formWidth as "full" | "half" | "third" }),
+    ...(valueSource ? { valueSource: valueSource as NonNullable<DocFieldMeta["valueSource"]> } : {}),
+    ...(editMode ? { editMode: editMode as NonNullable<DocFieldMeta["editMode"]> } : {}),
+    ...(surface ? { surface: surface as NonNullable<DocFieldMeta["surface"]> } : {}),
+    serverEnforced: bool(input.serverEnforced, false),
+    ...(dirtyGuard ? { dirtyGuard: "preserve_user_value" as const } : {}),
     // Value rules the SERVER enforces. Grouped here rather than scattered so it stays
     // obvious which properties change behaviour and which only change appearance.
     set_only_once: bool(input.set_only_once, false),
@@ -161,6 +193,62 @@ function parseField(value: unknown, index: number): DocFieldMeta {
     print_hide_if_no_value: bool(input.print_hide_if_no_value, false),
     ...presentation(input, index),
     idx: index + 1,
+  };
+}
+
+function parseViewPolicy(value: unknown, fields: DocFieldMeta[]): DocTypeViewPolicy {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw errors.validation("viewPolicy must be an object");
+  const input = value as Record<string, unknown>;
+  const known = new Set(fields.map((field) => field.fieldname));
+  const parseView = (key: string, required = false): DocTypeView | undefined => {
+    const raw = input[key];
+    if (raw === undefined) {
+      if (required) throw errors.validation(`viewPolicy.${key} is required`);
+      return undefined;
+    }
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw errors.validation(`viewPolicy.${key} must be an object`);
+    const entry = raw as Record<string, unknown>;
+    const named = (property: "fields" | "columns") => entry[property] === undefined
+      ? undefined
+      : array(entry[property], `viewPolicy.${key}.${property}`).map((item, index) => {
+          const name = text(item, `viewPolicy.${key}.${property}[${index}]`, 160);
+          if (!known.has(name)) throw errors.validation(`viewPolicy.${key}.${property} names unknown field: ${name}`);
+          return name;
+        });
+    const fieldsValue = named("fields");
+    const columnsValue = named("columns");
+    const fieldRef = (property: "stageField" | "startField" | "endField") => {
+      if (entry[property] === undefined) return undefined;
+      const name = text(entry[property], `viewPolicy.${key}.${property}`, 160);
+      if (!known.has(name)) throw errors.validation(`viewPolicy.${key}.${property} names unknown field: ${name}`);
+      return name;
+    };
+    const stageField = fieldRef("stageField");
+    const startField = fieldRef("startField");
+    const endField = fieldRef("endField");
+    return {
+      enabled: bool(entry.enabled, false),
+      ...(fieldsValue ? { fields: fieldsValue } : {}),
+      ...(columnsValue ? { columns: columnsValue } : {}),
+      ...(stageField ? { stageField } : {}),
+      ...(startField ? { startField } : {}),
+      ...(endField ? { endField } : {}),
+    };
+  };
+  const quickEntry = parseView("quickEntry");
+  const kanban = parseView("kanban");
+  const calendar = parseView("calendar");
+  const gantt = parseView("gantt");
+  const chart = parseView("chart");
+  return {
+    list: parseView("list", true)!,
+    form: parseView("form", true)!,
+    ...(quickEntry ? { quickEntry } : {}),
+    ...(kanban ? { kanban } : {}),
+    ...(calendar ? { calendar } : {}),
+    ...(gantt ? { gantt } : {}),
+    ...(chart ? { chart } : {}),
+    ...(input.mobile && typeof input.mobile === "object" && !Array.isArray(input.mobile) ? { mobile: input.mobile as JsonObject } : {}),
   };
 }
 

@@ -31,6 +31,10 @@ async function setup() {
       { fieldname: "customer", fieldtype: "Link", options: "Customer", required: true, in_standard_filter: true },
       { fieldname: "inspection_date", fieldtype: "Date", required: true },
       { fieldname: "amount", fieldtype: "Currency", precision: 2, default: "0.00" },
+      {
+        fieldname: "source_tenant", fieldtype: "Data", default: "demo", hidden: true,
+        valueSource: "system", editMode: "hidden", surface: "internal", serverEnforced: true,
+      },
       { fieldname: "items", fieldtype: "Table", options: "Inspection Request Item", required: true },
     ],
     permissions: [
@@ -95,6 +99,31 @@ test("generic metadata rejects unknown fields and invalid Link references at the
   const draft = { subject: "Missing customer", customer: "CUST-NO", inspection_date: "2026-07-25", amount: "0", workflow_state: "Draft", items: [{ check: "A", result: "Pass" }] };
   await execute(kernel, { commandId: "bad-link-create", doctype: "Inspection Request", name: "INSP-BAD", action: "create", expectedVersion: null, document: draft });
   await assert.rejects(execute(kernel, { commandId: "bad-link-submit", doctype: "Inspection Request", name: "INSP-BAD", action: "submit", expectedVersion: 1, document: { ...draft, workflow_state: "Approved" } }), (error) => error.code === "REFERENCE_VALIDATION_FAILED");
+});
+
+test("server-enforced hidden fields are derived by the runtime and cannot be forged", async () => {
+  const { store, kernel } = await setup();
+  const document = {
+    subject: "Runtime-owned metadata", customer: "CUST-001", inspection_date: "2026-07-25",
+    amount: "0", workflow_state: "Draft", items: [{ check: "A", result: "Pass" }],
+  };
+
+  await assert.rejects(execute(kernel, {
+    commandId: "hidden-forged-create", doctype: "Inspection Request", name: "INSP-FORGED", action: "create", expectedVersion: null,
+    document: { ...document, source_tenant: "another-tenant" },
+  }), (error) => error.code === "VALIDATION_ERROR" && /server-controlled/.test(error.message));
+
+  await execute(kernel, {
+    commandId: "hidden-default-create", doctype: "Inspection Request", name: "INSP-HIDDEN", action: "create", expectedVersion: null,
+    document,
+  });
+  const created = await store.getDocument("demo", "Inspection Request", "INSP-HIDDEN");
+  assert.equal(created.data.source_tenant, "demo");
+
+  await assert.rejects(execute(kernel, {
+    commandId: "hidden-change-save", doctype: "Inspection Request", name: "INSP-HIDDEN", action: "save", expectedVersion: 1,
+    document: { ...document, source_tenant: "another-tenant" },
+  }), (error) => error.code === "VALIDATION_ERROR" && /server-controlled/.test(error.message));
 });
 
 test("metadata naming, safe print rendering and CSV import preview are deterministic", async () => {

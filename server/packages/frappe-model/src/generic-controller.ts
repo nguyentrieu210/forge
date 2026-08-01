@@ -78,6 +78,23 @@ async function normalizeDocument(context: ControllerContext<JsonObject>, meta: D
     if (changed && !canWriteField(meta, field, context.command.actor, context.existing ? "save" : "create", context.existing?.owner ?? context.command.actor.user_id)) {
       throw errors.permission(`Field permission denied: ${field.fieldname}`);
     }
+    // An internal hidden value is not merely absent from the UI. When the Meta contract
+    // marks it server-enforced, direct API callers may neither invent it nor change it.
+    // A client is allowed to echo the declared default on create because blankDoc seeds
+    // defaults before serialisation; accepting only that exact value keeps old clients
+    // compatible without turning the hidden field into an input channel.
+    if (field.serverEnforced && field.editMode === "hidden") {
+      if (prior !== undefined) {
+        if (changed) throw errors.validation(`Field is server-controlled: ${field.fieldname}`);
+        output[field.fieldname] = structuredClone(prior);
+        continue;
+      }
+      if (provided !== undefined && (field.default === undefined || !sameJsonValue(provided, field.default))) {
+        throw errors.validation(`Field is server-controlled: ${field.fieldname}`);
+      }
+      if (field.default !== undefined) output[field.fieldname] = structuredClone(field.default);
+      continue;
+    }
     const readOnly = Boolean(field.read_only) || (context.existing?.docstatus === 1 && !field.allow_on_submit);
     let value: JsonValue | undefined;
     if (readOnly && prior !== undefined) value = structuredClone(prior);

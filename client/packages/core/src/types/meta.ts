@@ -40,6 +40,11 @@ export interface DocField {
    * Không khai báo thì FormView tự suy theo fieldtype và vai trò của field.
    */
   form_width?: "full" | "half" | "third";
+  valueSource?: "user" | "default" | "link" | "formula" | "system" | "workflow";
+  editMode?: "editable" | "readonly" | "set_once" | "immutable_after_submit" | "hidden";
+  surface?: "quick" | "expanded" | "internal";
+  serverEnforced?: boolean;
+  dirtyGuard?: "preserve_user_value";
   /** cho phép meta thật mang thêm khoá — không mất dữ liệu */
   [k: string]: unknown;
 }
@@ -75,6 +80,7 @@ export interface RuntimeAssets {
 /** DocTypeMeta — docs[0] của getdoctype. masked_fields đến từ FormMeta (che VALUE, không che schema). */
 export interface DocTypeMeta extends RuntimeAssets {
   name: string;
+  kind?: "transaction" | "master" | "child_table" | "single" | "tree" | "virtual" | "system";
   /** nhãn đã dịch theo ngôn ngữ user; fallback name. */
   label?: string;
   module?: string;
@@ -87,6 +93,7 @@ export interface DocTypeMeta extends RuntimeAssets {
   image_field?: string;
   track_changes?: 0 | 1;
   fields: DocField[];
+  viewPolicy?: Record<string, unknown>;
   permissions: DocPerm[];
   /** field bị che giá trị theo permlevel (apply_fieldlevel_read_permissions). */
   masked_fields?: string[];
