@@ -1,6 +1,6 @@
 # ALUMDOOR V2 — RELEASE / ROLLBACK RUNBOOK
 
-> Bản phát hành hiện hành của tài liệu: `alumdoor@2.0.4` trên tenant `alu`, ngày 2026-07-30.
+> Bản phát hành hiện hành của tài liệu: `alumdoor@2.1.0` trên tenant `alu`, ngày 2026-08-01.
 > Release đã nâng cấp từ bản thực tế đọc trực tiếp `alumdoor@1.26.2`, cùng app id `alumdoor`.
 > Tài liệu này không cấp quyền deploy. Chỉ chạy bước production sau khi có phê duyệt rõ ràng.
 
@@ -34,8 +34,8 @@ node scripts/forge-app.mjs briefs/alumdoor-v2.json --dry-run --out work/alumdoor
 
 Xác nhận package:
 
-- id `alumdoor`, version `2.0.4`;
-- 69 DocType, 1 workflow, 57 fixture;
+- id `alumdoor`, version `2.1.0`;
+- 74 DocType, 1 workflow, 57 fixture, 12 report và 3 chart khai tường minh;
 - home `report:Tồn nhôm theo khổ`;
 - không có bí mật trong package.
 
@@ -74,11 +74,32 @@ Lặp lại trên **D1 trống mới** `cloudforge-drill-alumdoor-v2-b`. Không 
 
 Hai evidence phải cùng trỏ tới SHA-256 của backup release.
 
+### 3.4 Installer bảo vệ cho metadata `2.1.0`
+
+Workflow chuẩn là `.github/workflows/install-alumdoor-meta.yml`, chỉ chạy bằng
+`workflow_dispatch` trong environment `production`. Workflow từ chối nếu `target_sha` không đúng
+HEAD hiện hành của `main` hoặc chuỗi xác nhận không phải `INSTALL_ALUMDOOR_META_2_1_0`.
+
+Workflow tự thực hiện theo thứ tự:
+
+1. Build exact SHA, chạy test Meta, completeness gate và dry-run package `alumdoor@2.1.0`.
+2. Chụp backup D1 mới, tạo checksum manifest và sao sang GitHub Actions artifact ngoài Cloudflare.
+3. Tạo hai D1 drill mới theo `github.run_id`, restore cùng một backup hai lần, kiểm checksum,
+   `quick_check`, số bảng, target độc lập và `routes_changed:false`.
+4. Cài package qua đúng đường đăng nhập cookie + CSRF của trình duyệt. Credential chỉ lấy từ hai
+   secret environment `ALU_META_ADMIN_USER` và `ALU_META_ADMIN_PASSWORD`, không ghi vào log/artifact.
+5. Smoke chỉ đọc: version client manifest, Quick Form, Full Form, User Link provider, chart theo role,
+   empty fallback, report drill-down, `/health` và guest auth boundary.
+6. Xóa hai D1 drill tạm sau khi evidence đã được tạo; tên xóa phải khớp chính xác prefix + run id.
+
+Không dùng workflow release Worker để giả lập bước cài metadata. Installer này chỉ ghi metadata của
+app cùng id `alumdoor`; không deploy Worker, không đổi DNS/secret và không tạo chứng từ smoke.
+
 ## 4. Staging/pilot
 
 1. Đóng băng ghi nghiệp vụ trong lúc chụp backup và nâng cấp.
-2. Áp migration tenant theo thứ tự tới `0026_supplier_receipt_tolerance.sql`.
-3. Cài package `alumdoor@2.0.4` như một **upgrade của cùng app id**, không cài app song song.
+2. Áp đúng migration được chốt trong exact SHA; release metadata-only `2.1.0` không thêm migration.
+3. Cài package `alumdoor@2.1.0` như một **upgrade của cùng app id**, không cài app song song.
 4. Deploy tenant Worker/platform tương thích trước khi mở UI V2.
 5. Deploy runtime client đã build.
 6. Kiểm `/health`: service OK, migration hiện hành, maintenance không failed/stale.
@@ -102,9 +123,9 @@ Chỉ thực hiện sau khi staging/pilot đạt và có phê duyệt:
 
 1. Thông báo cửa sổ bảo trì, dừng ghi.
 2. Chụp backup production cuối cùng nếu backup gate không còn sát thời điểm.
-3. Áp migration tới 0026.
+3. Áp đúng migration trong release plan; metadata-only `2.1.0` bỏ qua bước này.
 4. Deploy platform/tenant Worker tương thích.
-5. Cài `alumdoor@2.0.4`.
+5. Cài `alumdoor@2.1.0` qua installer bảo vệ ở §3.4.
 6. Deploy client.
 7. Chạy health/smoke và pilot rút gọn.
 8. Đối chiếu ledger/report; ghi thời điểm mở lại hệ thống.
