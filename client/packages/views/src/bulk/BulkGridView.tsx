@@ -45,7 +45,7 @@ function parseValue(field: DocField, value: string): unknown {
   return value;
 }
 
-export function BulkGridView(props: BulkGridViewViewProps) {
+export function BulkGridView(props: BulkGridViewProps) {
   const { rows, policy } = props;
   const allSelected = rows.length > 0 && rows.every((row) => props.selected.has(String(row.name)));
   const dirtyCount = Object.keys(props.dirty).length;
