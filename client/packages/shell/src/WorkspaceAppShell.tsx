@@ -195,7 +195,7 @@ export function AppShell(props: AppShellProps) {
 
   const shellProps: AppShellProps = {
     ...props,
-    brandMark: props.brandMark ?? <ForgeBrandLogo size={isAlumdoorSurface() ? 32 : 28} />,
+    brandMark: props.brandMark ?? <ForgeBrandLogo size={isAlumdoorSurface() ? 40 : 28} />,
     brandLogoOnly: props.brandLogoOnly ?? isAlumdoorSurface(),
     onChangePassword: props.onChangePassword ?? (() => setPasswordOpen(true)),
     onLogoutOtherSessions: logoutOtherSessions,
