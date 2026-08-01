@@ -97,6 +97,14 @@ async function submit(page: Page, csrf: string, doc: FrappeDoc) {
   }));
 }
 
+async function submitRaw(page: Page, csrf: string, doc: FrappeDoc) {
+  return browserRequest(page, "/api/method/frappe.client.submit", {
+    method: "POST",
+    csrf,
+    body: { doc: JSON.stringify(doc) },
+  });
+}
+
 async function cancelRaw(page: Page, csrf: string, doctype: string, name: string) {
   return browserRequest(page, "/api/method/frappe.client.cancel", {
     method: "POST",
@@ -118,7 +126,11 @@ async function createUser(
     body: {
       user,
       password,
-      full_name: user.startsWith("stock-manager") ? "QA Stock Manager" : "QA Stock User",
+      full_name: user.startsWith("stock-manager")
+        ? "QA Stock Manager"
+        : user.startsWith("production-user")
+          ? "QA Production User"
+          : "QA Stock User",
       email: user,
       roles: JSON.stringify(roles),
     },
@@ -160,7 +172,7 @@ function postingAt(): string {
   return `${new Date().toISOString().slice(0, 10)} 10:00:00`;
 }
 
-async function createAndSubmitStockEntry(
+async function createStockEntryDraft(
   page: Page,
   csrf: string,
   purpose: "Material Receipt" | "Material Issue" | "Material Transfer",
@@ -184,6 +196,18 @@ async function createAndSubmitStockEntry(
     }],
   });
   expect(created.docstatus).toBe(0);
+  return created;
+}
+
+async function createAndSubmitStockEntry(
+  page: Page,
+  csrf: string,
+  purpose: "Material Receipt" | "Material Issue" | "Material Transfer",
+  qty: number,
+  sourceWarehouse?: string,
+  targetWarehouse?: string,
+) {
+  const created = await createStockEntryDraft(page, csrf, purpose, qty, sourceWarehouse, targetWarehouse);
   const submitted = await submit(page, csrf, created);
   expect(submitted.docstatus).toBe(1);
   return submitted;
@@ -193,7 +217,7 @@ function expectDocumentRoute(page: Page, doctype: string, name: string) {
   expect(page.url()).toContain(`/app/${encodeURIComponent(doctype)}/${encodeURIComponent(name)}`);
 }
 
-test("authenticated receipt, issue, transfer and reconciliation preserve stock lifecycle", async ({ page }, testInfo) => {
+test("authenticated operational roles preserve stock lifecycle and submit separation", async ({ page }, testInfo) => {
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(String(error)));
 
@@ -201,13 +225,20 @@ test("authenticated receipt, issue, transfer and reconciliation preserve stock l
   const suffix = `${testInfo.project.name}-${Date.now()}`.toLowerCase().replace(/[^a-z0-9-]/g, "-");
   const stockUser = `stock-user-${suffix}@example.test`;
   const stockManager = `stock-manager-${suffix}@example.test`;
+  const productionUser = `production-user-${suffix}@example.test`;
   const stockUserPassword = `StockUser-${Date.now()}-Qa!`;
   const stockManagerPassword = `StockManager-${Date.now()}-Qa!`;
+  const productionUserPassword = `ProductionUser-${Date.now()}-Qa!`;
 
   const createdUser = await createUser(page, adminCsrf, stockUser, stockUserPassword, ["Thủ kho"]);
   expect(createdUser.user).toBe(stockUser);
+  expect(createdUser.roles).toContain("Thủ kho");
   const createdManager = await createUser(page, adminCsrf, stockManager, stockManagerPassword, ["Chủ xưởng"]);
   expect(createdManager.user).toBe(stockManager);
+  expect(createdManager.roles).toContain("Chủ xưởng");
+  const createdProductionUser = await createUser(page, adminCsrf, productionUser, productionUserPassword, ["Sản xuất"]);
+  expect(createdProductionUser.user).toBe(productionUser);
+  expect(createdProductionUser.roles).toContain("Sản xuất");
 
   const sourceWarehouse = await createResource(page, adminCsrf, "Warehouse", {
     warehouse_name: `QA Source ${suffix}`,
@@ -222,29 +253,38 @@ test("authenticated receipt, issue, transfer and reconciliation preserve stock l
     disabled: 0,
   });
 
-  const receipt = await createAndSubmitStockEntry(page, adminCsrf, "Material Receipt", 10, undefined, sourceWarehouse.name);
-  expect(reportQtyMicros(await physicalStock(page, adminCsrf, sourceWarehouse.name))).toBe(10_000_000);
+  const stockUserCsrf = await loginAs(page, stockUser, stockUserPassword);
+  const receipt = await createAndSubmitStockEntry(page, stockUserCsrf, "Material Receipt", 10, undefined, sourceWarehouse.name);
+  expect(reportQtyMicros(await physicalStock(page, stockUserCsrf, sourceWarehouse.name))).toBe(10_000_000);
 
   await page.goto(`/app/${encodeURIComponent("Stock Entry")}/${encodeURIComponent(receipt.name)}`);
   expectDocumentRoute(page, "Stock Entry", receipt.name);
   await expect(page.locator("body")).toContainText("Authenticated stock QA Material Receipt");
 
-  await createAndSubmitStockEntry(page, adminCsrf, "Material Issue", 2, sourceWarehouse.name);
-  expect(reportQtyMicros(await physicalStock(page, adminCsrf, sourceWarehouse.name))).toBe(8_000_000);
+  await createAndSubmitStockEntry(page, stockUserCsrf, "Material Issue", 2, sourceWarehouse.name);
+  expect(reportQtyMicros(await physicalStock(page, stockUserCsrf, sourceWarehouse.name))).toBe(8_000_000);
 
+  const managerCsrf = await loginAs(page, stockManager, stockManagerPassword);
   const transfer = await createAndSubmitStockEntry(
     page,
-    adminCsrf,
+    managerCsrf,
     "Material Transfer",
     3,
     sourceWarehouse.name,
     targetWarehouse.name,
   );
-  expect(reportQtyMicros(await physicalStock(page, adminCsrf, sourceWarehouse.name))).toBe(5_000_000);
-  expect(reportQtyMicros(await physicalStock(page, adminCsrf, targetWarehouse.name))).toBe(3_000_000);
+  expect(reportQtyMicros(await physicalStock(page, managerCsrf, sourceWarehouse.name))).toBe(5_000_000);
+  expect(reportQtyMicros(await physicalStock(page, managerCsrf, targetWarehouse.name))).toBe(3_000_000);
 
-  const stockUserCsrf = await loginAs(page, stockUser, stockUserPassword);
-  const reconciliation = await createResource(page, stockUserCsrf, "Stock Reconciliation", {
+  const productionCsrf = await loginAs(page, productionUser, productionUserPassword);
+  const productionDraft = await createStockEntryDraft(page, productionCsrf, "Material Issue", 1, sourceWarehouse.name);
+  const productionSubmit = await submitRaw(page, productionCsrf, productionDraft);
+  expect(productionSubmit.ok, productionSubmit.text).toBe(false);
+  expect(productionSubmit.status).toBe(403);
+  expect((await getResource(page, "Stock Entry", productionDraft.name)).docstatus).toBe(0);
+
+  const stockUserCsrfForCount = await loginAs(page, stockUser, stockUserPassword);
+  const reconciliation = await createResource(page, stockUserCsrfForCount, "Stock Reconciliation", {
     warehouse: targetWarehouse.name,
     scope: "Một mặt hàng",
     item_code: "QA-PURCHASE-ITEM",
@@ -261,25 +301,21 @@ test("authenticated receipt, issue, transfer and reconciliation preserve stock l
   });
   expect(reconciliation.docstatus).toBe(0);
 
-  const selfApprove = await browserRequest(page, "/api/method/frappe.client.submit", {
-    method: "POST",
-    csrf: stockUserCsrf,
-    body: { doc: JSON.stringify(reconciliation) },
-  });
+  const selfApprove = await submitRaw(page, stockUserCsrfForCount, reconciliation);
   expect(selfApprove.ok, selfApprove.text).toBe(false);
   expect([403, 417, 422]).toContain(selfApprove.status);
 
-  const managerCsrf = await loginAs(page, stockManager, stockManagerPassword);
+  const managerCsrfForApproval = await loginAs(page, stockManager, stockManagerPassword);
   const managerView = await getResource(page, "Stock Reconciliation", reconciliation.name);
-  const submittedReconciliation = await submit(page, managerCsrf, managerView);
+  const submittedReconciliation = await submit(page, managerCsrfForApproval, managerView);
   expect(submittedReconciliation.docstatus).toBe(1);
-  expect(reportQtyMicros(await physicalStock(page, managerCsrf, targetWarehouse.name))).toBe(2_000_000);
+  expect(reportQtyMicros(await physicalStock(page, managerCsrfForApproval, targetWarehouse.name))).toBe(2_000_000);
 
   await page.goto(`/app/${encodeURIComponent("Stock Reconciliation")}/${encodeURIComponent(submittedReconciliation.name)}`);
   expectDocumentRoute(page, "Stock Reconciliation", submittedReconciliation.name);
   await expect(page.locator("body")).toContainText(`Authenticated stock count ${suffix}`);
 
-  const immutableCancel = await cancelRaw(page, managerCsrf, "Stock Reconciliation", submittedReconciliation.name);
+  const immutableCancel = await cancelRaw(page, managerCsrfForApproval, "Stock Reconciliation", submittedReconciliation.name);
   expect(immutableCancel.ok, immutableCancel.text).toBe(false);
   expect([409, 417, 422]).toContain(immutableCancel.status);
   expect((await getResource(page, "Stock Reconciliation", submittedReconciliation.name)).docstatus).toBe(1);
