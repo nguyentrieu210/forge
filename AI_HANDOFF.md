@@ -1,105 +1,91 @@
 # AI HANDOFF
 
-Ngày cập nhật: **2026-08-01**.
+Ngày cập nhật: **2026-08-02**.
 
-## Dự án
+Đây là handoff kỹ thuật cô đọng. Quy tắc vận hành nằm ở `RUNBOOK.md`; live status nằm ở `CURRENT_STATUS.md`; công việc kế tiếp nằm ở `NEXT_TASKS.md`.
+
+## Bắt buộc trước khi làm
 
 - Repository: `nguyentrieu210/forge`.
-- Default branch: `main`; vẫn phải kiểm tra lại bằng GitHub trước khi làm, không suy từ tên branch local.
-- Current executable code head (không tính docs-only evidence merge): `19f949c6aba3541c7d3585ad42f8a8c42ebeea74` (G03 Organization Security; CI run `30707768323` PASS, chưa có production-release evidence trong đợt Alumdoor Meta). Luôn đọc GitHub để lấy SHA đầu nhánh hiện hành vì docs-only merge có thể cao hơn executable head.
-- Alumdoor production đang chạy exact SHA `b46d322831ebe7b57e29d4363d2daa005bb56e55`; full production release run `30707135053` PASS tenant/app/gateway và HTTP/browser smoke.
-- Đọc theo thứ tự: `CURRENT_STATUS.md` → `NEXT_TASKS.md` → `DELIVERY_POLICY.md`.
-- GitHub là nguồn sự thật cho code, CI, merge và release evidence.
+- GitHub là nguồn sự thật cho default branch, exact HEAD, PR, CI, merge và release evidence.
+- Luôn đọc `RUNBOOK.md` → `CURRENT_STATUS.md` → `NEXT_TASKS.md` → file này.
+- Mọi branch/SHA dưới đây là checkpoint lịch sử, không phải lệnh checkout. Phải xác minh lại GitHub trước khi dùng.
 
-## Canonical DocType Meta đã merge
+## Checkpoint đã khóa
 
-- Alumdoor `2.1.0`: 74 DocType, 969 field, 255 Link, 27 child table, 12 report và 3 chart report-backed.
-- Meta contract gồm `kind`, `viewPolicy`, `valueSource`, `editMode`, `surface`, `serverEnforced`, `dirtyGuard` và external DocType closure.
-- Quick/expanded form đã chạy theo Meta; field internal vẫn giữ trong schema gốc để default/serialization/server dùng.
-- Hidden/server-owned field bị runtime từ chối nếu client tự đặt hoặc sửa.
-- `User` Link đọc danh bạ tenant thay vì rơi về free-text hoặc đòi một DocType document giả.
-- Biểu đồ không còn tự suy từ workflow; chỉ chart khai trong manifest, có report, quyền, drill-down và empty fallback mới được render.
-- Canonical skill `C:\AppWeb\.claude\skills\app-factory` đã được tạo tại `35be2bf` và siết đồng bộ runtime tại `9cd5774`.
+### MetaForge Form Renderer
 
-## Protected metadata installer — hoàn tất production
+- PR `#176` merged.
+- Merge commit: `a7643cee0102aee1c37d4f00afac1594d0261e68`.
+- Final validated PR head: `acf53e12b3e59f21dde35ad6f27cc014fb624c00`.
+- Exact-head required workflows: 6/6 PASS.
+- `resolveFormRenderPolicy()` là composition point cho existing/full/quick Form.
+- `viewPolicy.*.enabled/fields` là runtime policy; `surface=internal` là hard visibility boundary.
 
-- PR `#157` đã merge tại `8786c5707ac4d225f7a63561219dd629d080584d`.
-- Run đầu `30705986949` PASS backup/checksum, hai restore drill và cleanup nhưng dừng trước khi ghi vì tenant thiếu standard DocType. Forward-fix PR `#158`, actionlint fix `#159` và release manifest `#160` đã merge.
-- Full release run `30707135053` PASS tại exact SHA `b46d322831ebe7b57e29d4363d2daa005bb56e55`: tenant Worker version `d7d5b998-6c64-414f-952e-5224fdab3908`, app Worker version `0e11508a-713f-42a5-b8c3-a104f133c8fc`, gateway version `ef3b4a9a-38f2-4534-86b8-1e6bda2d3ea1`, evidence artifact `8820777029`.
-- Protected installer run `30707517624` PASS: backup artifact `8820790995`, SHA-256 `30c3f4b997de2e3fafbdd323eaa837c3c497b0b1b4919edca1d327f710b99bf4`, hai restore drill và guarded cleanup PASS, install evidence artifact `8820857133`.
-- Alumdoor Meta `2.1.0` đã cài: 74 DocType, 1 workflow, 57 fixture; completeness 969 field, 255 Link, 12 report, 3 chart, 77 nav. Quick/expanded form, User Link, context dimension, health 200 và guest boot 403 PASS.
-- Hai GitHub Environment secret tạm cho installer đã xóa; production environment chỉ còn `CLOUDFLARE_API_TOKEN`.
+### ACTIVE — MetaForge Bulk View
 
-## PR cleanup
+- Draft PR `#182`, canonical branch `feat/metaforge-bulk-view-v2-20260802`.
+- Baseline feature head `c36c8024d3aaa35574f5599a9c15ed6a86727933` đã required workflows 6/6 PASS trước final hardening/status update.
+- Bulk View là renderer chung cho master data: paste Excel/Sheets, fill-down, multi-row edit, per-row error và optimistic concurrency.
+- Generic commit hiện chỉ `document_update`; fail closed với transaction/submittable, child/single, internal/read-only/server-owned và conditional-readonly fields.
+- ALUM bulk config ở `server/briefs/alumdoor-v2.views.json`, source metadata `2.1.2`; `Item Price` là reference đầu tiên.
+- Không mass-update stock/công nợ/BOM child/document đã submit. Những miền đó phải dùng Matrix/parent-aware/method-backed Bulk Transaction.
+- Large brief hiện transport Bulk policy qua sibling `.views.json` → `viewPolicy.mobile.bulk`; runtime resolver ưu tiên canonical `viewPolicy.bulk`. Short-brief compiler/parser first-class transport còn là hardening follow-up.
+- Sau Bulk View, primitive UI generic cần làm tiếp là Matrix View. Batch Print là action/workspace; Resource Scheduler để theo capacity P2.
 
-Toàn bộ PR stale trước đây đã đóng: `#15`, `#35`, `#36`, `#40`, `#73`, `#74`, `#79`, `#81`, `#103`, `#106`, `#109`.
+### Authenticated stock lifecycle
 
-Không reopen và không merge nguyên branch cũ. Branch cũ chỉ làm nguồn tham khảo từng file cho nhánh sạch từ current default.
+- PR `#167` merged: mobile canonical contracts + authenticated stock lifecycle.
+- PR `#170` merged: Stock Entry operational submit RBAC.
+- PR `#173` merged: physical stock catch-weight reconciliation.
+- PR `#175` merged tại `509db8c32625168316696fb0deb3760a434aedf9`: authenticated reservation/available-stock lifecycle; final PR head `e839599ddf23e6cf89a325497b62f20085f62ffd`, required workflows 6/6 PASS.
+- Quantity + weight + reservation + permission evidence đã được khóa trên local D1 authenticated QA. Reservation giảm available stock nhưng không thay physical stock; release phục hồi available và double-release fail theo Frappe 417 contract.
 
-## Đã merge trên default
+### Canonical first-party Meta boundary
 
-### Sales-to-Production
+- PR `#164` merged tại `9a1e8e9f9fbbe88e49ac0775683411aea771b69b`.
+- `apps-src` là authoring source; first-party app metadata đi qua canonical compiler.
+- Meta contract giữ `kind`, `viewPolicy`, `valueSource`, `editMode`, `surface`, `serverEnforced` và external DocType closure.
 
-- PR `#131` merge SHA: `e315007db174d70d6f73c68f2115e7956b09bf1d`.
+### Sales / Purchase
 
-### Tiến Đạt purchase FIFO
+- Sales-to-Production PR `#131` merged.
+- Tiến Đạt purchase FIFO PR `#134` merged.
+- Purchase authenticated QA PR `#137` merged.
+- FIFO nghiệp vụ Tiến Đạt đã có source/test; generic FIFO production không được tự bật.
 
-- PR `#134` merge SHA: `1d05ed97836aa7bb753f8aa50a56991201a8d10a`.
-- Form đặt nhôm, FIFO đơn cũ trước, lịch sử nhập, công nợ cây/mét và dung sai Tiến Đạt `5%` đã có.
-- Regression: `200 + 100`, nhận `230` → `200 + 30`, nợ `70` cây / `504 m`, khoảng thêm `55–85`.
+## Production checkpoint lịch sử
 
-### Purchase authenticated QA
+Checkpoint production đã được ghi nhận trước đợt cleanup này:
 
-- PR `#137` merge SHA: `29fee0200d8118eef2d0ae9e524a3a00acfab00f`.
-- Exact PR head: `fd03d22872c2234d50f616a5d8956c8b62f26b40`.
-- CI `30670524038`: SUCCESS.
-- PR Validation `30670524052`: SUCCESS.
-- Purchase Feature CI `30670524133`: SUCCESS.
-- UI Pull Request Validation `30670524072`: SUCCESS.
-- Sales `30670524058` và Inventory `30670523976`: SUCCESS.
+- Alumdoor production exact SHA: `b46d322831ebe7b57e29d4363d2daa005bb56e55`.
+- Full production release run `30707135053`: PASS.
+- Protected Alumdoor Meta installer run `30707517624`: PASS.
+- Production Alumdoor Meta tại checkpoint đó: `2.1.0`.
 
-Authenticated evidence đã khóa:
+Đây là snapshot lịch sử. Trước mọi quyết định production phải đọc GitHub/release evidence hiện tại. Không suy ra rằng production vẫn ở đúng SHA/version này.
 
-- cookie + CSRF thật;
-- authoritative Alumdoor app cài vào D1 local;
-- Item/UOM search;
-- Purchase Order create/save/submit/reopen;
-- Purchase Receipt create/save/preview/submit/cancel/reopen;
-- Desktop Chrome và Pixel 7;
-- Tiến Đạt `200 + 100`, nhận `230` ra `200 + 30`, lưu đúng hai `purchase_order`, đọc lại lịch sử, `85` được phép và `86` bị từ chối.
-
-QA chỉ dùng local/ephemeral. Không deploy Cloudflare, không mutate production, không bật generic FIFO rollout.
-
-## Trạng thái thật
+## Phần chưa hoàn tất toàn hệ thống
 
 Không được tuyên bố toàn bộ quy trình `25.7 QUY TRÌNH.docx` đã hoàn tất.
 
-Còn thiếu hoặc chưa chứng minh:
+Các miền còn cần acceptance/implementation đầy đủ gồm:
 
-1. Finance full scope.
-2. Daily detailed ledger snapshot/freeze/adjustment.
-3. Warranty/defects và capacity/overtime.
-4. Authenticated end-to-end acceptance.
-5. UI MetaForge MISA-style và login/landing cần rebuild riêng nếu vẫn còn yêu cầu.
+1. MetaForge Bulk View PR `#182` cần final exact-head validation/review/merge; Matrix View là UI primitive kế tiếp.
+2. Stock acceptance còn lại: QR/lineage end-to-end và cleanup QA không residue.
+3. Daily detailed ledger: snapshot/freeze/append-only adjustment/reconciliation.
+4. Warranty/defects/capacity/overtime.
+5. End-to-end acceptance xuyên Sales → Production → Inventory → Delivery → Finance → Daily Ledger → Warranty.
 
-## Việc tiếp theo
-
-Bắt đầu `P0 — authenticated stock lifecycle` từ exact current default mới nhất, nhưng không phát hành G03 kèm theo một cách ngầm định.
-
-- Dùng QA account riêng, cookie + CSRF thật và dữ liệu thử có cleanup.
-- Chạy nhập kho, xuất kho, chuyển kho và kiểm kho trên desktop/mobile; khóa permission và failure path.
-- Đối chiếu ledger/report/QR và xóa toàn bộ chứng từ QA theo lineage.
-- Commit G03 `19f949c6` trên `main` chưa có production-release evidence; nếu phát hành phải chạy backup/migration/rollback/evidence riêng.
-
-Sau stock lifecycle: Daily ledger → Warranty/Capacity → end-to-end acceptance.
+`NEXT_TASKS.md` mới là hàng đợi active; danh sách trên chỉ mô tả phần còn thiếu ở cấp hệ thống.
 
 ## Release boundary
 
-- Không deploy Cloudflare nếu chưa có lệnh riêng.
-- Không sửa production secret hoặc DNS.
-- Không thay rollout state.
+- Không deploy Cloudflare/production nếu user chưa yêu cầu rõ cho đợt hiện tại.
+- Không sửa production secret/DNS.
 - Không mutate dữ liệu khách hàng.
-- Generic FIFO production vẫn disabled.
+- Không bật generic FIFO production.
+- Merge code không đồng nghĩa được phép deploy production.
 
 ## File cấm commit
 
@@ -107,5 +93,5 @@ Sau stock lifecycle: Daily ledger → Warranty/Capacity → end-to-end acceptanc
 - `server/work/`;
 - `tmp/`;
 - backup;
-- cookie/token;
-- generated evidence.
+- cookie/token/credential;
+- generated evidence/build artifact không được repo quản lý.
