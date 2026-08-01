@@ -5,7 +5,7 @@ import {
 } from "./controllers.js";
 import {
   AssetDisposalController, AssetMaintenanceController, AssetMovementController, ExpenseClaimController,
-  IssueController, JobCardController, PosClosingEntryController, PosInvoiceController, PosOpeningEntryController,
+  IssueController, PosClosingEntryController, PosInvoiceController, PosOpeningEntryController,
   ProductionPlanController, QualityInspectionController, TimesheetController,
 } from "./suite-controllers.js";
 import {
@@ -16,6 +16,7 @@ import {
   CutOrderController, StockReconciliationController, StockReservationController,
 } from "./alumdoor-inventory.js";
 import { ManufacturingCostRateController } from "./manufacturing-costing.js";
+import { OperationAwareJobCardController } from "./manufacturing-job-card.js";
 import { VersionedBillOfMaterialsController } from "./manufacturing-lifecycle.js";
 import { StockUomSnapshotWorkOrderController } from "./manufacturing-work-order-guard.js";
 import { RolloutManufacturingStockEntryController } from "./manufacturing-rollout.js";
@@ -32,7 +33,7 @@ export function registerErpNextCoreControllers(registry: ControllerRegistry): Co
     .register(new AssetController())
     .register(new AssetDepreciationController())
     .register(new ProductionPlanController())
-    .register(new JobCardController())
+    .register(new OperationAwareJobCardController())
     .register(new AssetMovementController())
     .register(new AssetMaintenanceController())
     .register(new AssetDisposalController())
