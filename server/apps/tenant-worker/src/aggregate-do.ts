@@ -8,7 +8,7 @@ import { D1RolloutPurchaseAllocationDomainStore, DocumentKernel } from "../../..
 import { errors } from "../../../packages/core/src/index.js";
 import { D1DocumentAccessStore, D1MetadataStore, GenericMetadataController, MetadataPermissionService } from "../../../packages/frappe-model/src/index.js";
 import type { TenantEnv } from "./env.js";
-import { inventoryCoordinatorKey, isInventoryCoordinatedCommand } from "./inventory-coordinator.js";
+import { isInventoryCoordinatedCommand, resolveInventoryCoordinatorKey } from "./inventory-coordinator.js";
 import { PurchaseCommandSerialExecutor } from "./purchase-command-retry.js";
 
 interface AggregateStub extends DurableObjectStub {
@@ -25,13 +25,13 @@ const PURCHASE_EXECUTORS = new WeakMap<object, PurchaseCommandSerialExecutor>();
  * namespace:
  *
  * - document key: tenant:doctype:name for ordinary aggregates;
- * - inventory key: inventory:tenant:company for every Stock Entry and Work Order
- *   submit/cancel that can compete for stock or production limits;
+ * - inventory key: inventory:tenant:company for stock posting, cutting,
+ *   reconciliation and reservation read-check-write mutations;
  * - purchase key: purchase:tenant:company:supplier for PO/Receipt allocation.
  *
  * Company-wide inventory serialization is deliberately broader than batch-level locking:
  * one multi-row voucher has exactly one lock, so there is no lock-order deadlock and no
- * race between differently named Stock Entries consuming the same physical stock.
+ * race between differently named documents consuming or reserving the same physical stock.
  */
 export class AggregateCoordinator extends DurableObject<TenantEnv> {
   constructor(ctx: DurableObjectState, env: TenantEnv) {
@@ -40,7 +40,10 @@ export class AggregateCoordinator extends DurableObject<TenantEnv> {
 
   async mutate<T extends JsonObject>(command: MutationCommand<T>): Promise<MutationReceipt> {
     const { kernel, store } = this.commandServices();
-    const inventoryKey = await this.resolveInventoryKey(command, store);
+    const inventoryKey = await resolveInventoryCoordinatorKey(
+      command as MutationCommand<JsonObject>,
+      store,
+    );
     if (inventoryKey) {
       const stub = this.env.AGGREGATES.getByName(inventoryKey) as AggregateStub;
       return stub.mutateInventory(command);
@@ -74,7 +77,7 @@ export class AggregateCoordinator extends DurableObject<TenantEnv> {
   /** Called only by another instance in this Worker's AGGREGATES namespace. */
   async mutateInventory<T extends JsonObject>(command: MutationCommand<T>): Promise<MutationReceipt> {
     if (!isInventoryCoordinatedCommand(command as MutationCommand<JsonObject>)) {
-      throw errors.validation("mutateInventory accepts only Stock Entry/Work Order submit or cancel commands");
+      throw errors.validation("mutateInventory accepts only coordinated inventory commands");
     }
     return this.commandServices().kernel.execute(command);
   }
@@ -114,20 +117,6 @@ export class AggregateCoordinator extends DurableObject<TenantEnv> {
         new MetadataPermissionService(metadata, undefined, new D1DocumentAccessStore(this.env.DB)),
       ),
     };
-  }
-
-  private async resolveInventoryKey<T extends JsonObject>(
-    command: MutationCommand<T>,
-    store: D1RolloutPurchaseAllocationDomainStore,
-  ): Promise<string | null> {
-    const direct = inventoryCoordinatorKey(command as MutationCommand<JsonObject>);
-    if (direct || !isInventoryCoordinatedCommand(command as MutationCommand<JsonObject>)) return direct;
-    const existing = await store.getDocument<JsonObject>(
-      command.tenant_id,
-      command.aggregate.doctype,
-      command.aggregate.name,
-    );
-    return inventoryCoordinatorKey(command as MutationCommand<JsonObject>, existing?.data);
   }
 }
 
