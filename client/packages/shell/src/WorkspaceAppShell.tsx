@@ -116,7 +116,7 @@ function ProcessPanel({ module, reports, masters, onNavigate }: { module: Worksp
       <section className="mx-auto w-full max-w-7xl space-y-4">
         <header className="flex flex-col gap-3 rounded-2xl border bg-card px-4 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-5">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
+            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/[0.15]">
               <Workflow className="size-5" />
             </span>
             <div className="min-w-0">
@@ -143,12 +143,12 @@ function ProcessPanel({ module, reports, masters, onNavigate }: { module: Worksp
             </div>
             {flowItems.length ? (
               <div className="relative grid min-h-[25rem] grid-cols-2 gap-x-3 gap-y-8 px-3 py-6 sm:grid-cols-4 sm:gap-x-5 sm:px-6 sm:py-8">
-                <div className="absolute left-[9%] right-[9%] top-1/2 hidden h-px -translate-y-1/2 bg-gradient-to-r from-transparent via-primary/45 to-transparent sm:block" />
+                <div className="absolute left-[9%] right-[9%] top-1/2 hidden h-px -translate-y-1/2 bg-gradient-to-r from-transparent via-primary/[0.45] to-transparent sm:block" />
                 {flowItems.map((item, index) => {
                   const top = index % 2 === 0;
                   return (
                     <div key={item.key} className={cn("relative z-10 flex min-w-0 justify-center", desktopPositions[index], top ? "sm:items-end sm:pb-8" : "sm:items-start sm:pt-8")}>
-                      <span className={cn("absolute left-1/2 hidden w-px -translate-x-1/2 bg-gradient-to-b from-primary/10 via-primary/45 to-primary/10 sm:block", top ? "bottom-0 h-8" : "top-0 h-8")} />
+                      <span className={cn("absolute left-1/2 hidden w-px -translate-x-1/2 bg-gradient-to-b from-primary/10 via-primary/[0.45] to-primary/10 sm:block", top ? "bottom-0 h-8" : "top-0 h-8")} />
                       <Button
                         type="button"
                         variant="ghost"
@@ -185,7 +185,7 @@ function ProcessPanel({ module, reports, masters, onNavigate }: { module: Worksp
                       className="h-auto min-h-20 min-w-0 flex-col gap-2 rounded-xl border bg-card px-2 py-3 whitespace-normal text-xs shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/25 hover:bg-card hover:shadow-md"
                       onClick={() => onNavigate(item.key)}
                     >
-                      <span className="grid size-8 place-items-center rounded-lg bg-primary/8 text-primary [&_svg]:size-4">{item.icon ?? <CheckCircle2 />}</span>
+                      <span className="grid size-8 place-items-center rounded-lg bg-primary/[0.08] text-primary [&_svg]:size-4">{item.icon ?? <CheckCircle2 />}</span>
                       <span className="line-clamp-2 font-medium leading-4">{item.label}</span>
                     </Button>
                   ))}
@@ -205,12 +205,12 @@ function ProcessPanel({ module, reports, masters, onNavigate }: { module: Worksp
                 <Button
                   key={item.key}
                   variant="ghost"
-                  className="group h-auto min-h-14 w-full justify-start gap-3 rounded-xl border border-transparent px-2.5 py-2.5 text-left text-sm font-normal transition-all hover:border-border hover:bg-muted/45"
+                  className="group h-auto min-h-14 w-full justify-start gap-3 rounded-xl border border-transparent px-2.5 py-2.5 text-left text-sm font-normal transition-all hover:border-border hover:bg-muted/[0.45]"
                   onClick={() => onNavigate(item.key)}
                 >
-                  <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-primary/8 text-[10px] font-bold text-primary ring-1 ring-primary/10">{index + 1}</span>
+                  <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-primary/[0.08] text-[10px] font-bold text-primary ring-1 ring-primary/10">{index + 1}</span>
                   <span className="min-w-0 flex-1 whitespace-normal font-medium leading-5">{item.label}</span>
-                  <span className="size-1.5 shrink-0 rounded-full bg-primary/35 transition-colors group-hover:bg-primary" />
+                  <span className="size-1.5 shrink-0 rounded-full bg-primary/[0.35] transition-colors group-hover:bg-primary" />
                 </Button>
               ))}
               {!reports.length ? <div className="rounded-xl border border-dashed bg-muted/20 px-3 py-6 text-center text-xs text-muted-foreground">Chưa có báo cáo khả dụng.</div> : null}
