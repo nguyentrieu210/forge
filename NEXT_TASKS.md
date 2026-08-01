@@ -4,69 +4,62 @@ Ngày cập nhật: **2026-08-02**.
 
 Đây là hàng đợi active. Không dùng file này thay cho GitHub khi cần exact branch head, PR state hoặc CI. Trước khi làm đọc `RUNBOOK.md` và `CURRENT_STATUS.md`.
 
+## DONE UI — MetaForge Bulk View + ALUM master grids
+
+- PR `#190` merged tại `28eb4c4af6f88f0d1c3dc56c8f50e8d31fe2e968`.
+- Final validated head: `bc75667d1a2078e6483c1a63a4afa1e94bde9de5`.
+- Required workflows: **6/6 PASS**.
+  - CI `30721227654`: tests/typecheck/build PASS.
+  - UI Pull Request Validation `30721227663`: frontend lint/build + MetaForge workspace browser QA + Alumdoor browser QA PASS.
+  - PR Validation `30721227676`: PASS.
+  - Purchase Feature CI `30721227715`: PASS.
+  - Sales Feature CI `30721227669`: PASS.
+  - Inventory and Manufacturing CI `30721227651`: PASS.
+- PR `#182` đã đóng, không merge; không dùng branch đó làm nguồn live state.
+- Generic Bulk v1 chỉ `document_update` trên master an toàn, fail closed cho transaction/submittable/child/single và field protected/conditional-readonly.
+- ALUM `2.1.2` source có Bulk config cho 15 master DocType; production chưa được deploy trong slice này.
+
+Không mở lại #182. Regression Bulk mới phải sửa từ current `main`.
+
 ## DONE UI — MetaForge Document Experience V2 foundation
 
 - PR `#184` merged tại `df84eaec03526eaae2e2c3de3e9b8d388ae30f1a`.
 - Final validated head: `1a79c28832aed7731601bb9ea378f9a4a3cc01db`.
 - Required workflows: **6/6 PASS**.
-- Đã có presentation resolver an toàn, 7 archetype + generic fallback, document hero, semantic status, metric cards, context strip/rail, skeleton và visual profile riêng theo archetype.
-- Selfcheck khóa `Sales Order`, `Purchase Order`, `Stock Entry`, `Work Order`, `Customer`, `Payment Entry`.
+- Đã có presentation resolver an toàn, 7 archetype + generic fallback, document hero, semantic status, metric cards, context strip/rail và skeleton loading.
 - Không deploy production.
 
-Không mở lại PR #184 trừ khi có regression cụ thể.
+## ACTIVE P0 — PR #189 QR / lineage + cleanup QA
 
-## NEXT UI — MetaForge UX V2 wave kế tiếp
-
-Trước khi mở code mới:
-
-1. Xác minh exact current `main` sau merge #184.
-2. Xác minh PR `#182` Bulk View: head, mergeability, CI và file đang chạm.
-3. Nếu #182 chưa ổn định/mergeable, không tạo List Workspace V2 đè `DoctypeWorkspace`; ưu tiên hoàn tất dependency hoặc làm presentation authoring/context slice độc lập.
-4. Mỗi wave dùng branch/PR riêng từ exact `main`.
-
-### Ưu tiên UI
-
-1. **List Workspace V2**: summary bar, saved views, smart filters, table/card responsive, contextual quick actions; Bulk View phải là một mode tích hợp, không tạo navigation cạnh tranh.
-2. **Presentation authoring / canonical transport**: đưa `presentation` từ runtime extension thành metadata/sidecar authorable có compiler/parser/selfcheck và backward compatibility.
-3. **Document context nâng cao**: related-document graph, activity/timeline, exception cards, business progress source thật.
-4. **Operational workspace**: role home, module summary, inbox/cần xử lý, exception-first UX.
-5. **Mobile V2**: rich list cards, context drawer/bottom sheet, action zone màn nhỏ.
-6. **Personalization / AI context**: saved dashboard layout và document-aware assistant sau khi các surface vận hành phía trên ổn định.
-
-## NEXT P0 — QR / lineage + cleanup QA
-
-Engineering task kế tiếp của stock acceptance là QR/lineage + cleanup QA. Khi bắt đầu, tạo branch mới từ exact current `main` sau khi kiểm tra GitHub/CI.
-
-### QR / lineage
-
-- Dùng item theo lô, Batch và Serial and Batch Bundle thật từ authenticated lifecycle.
-- Physical-stock report `include_lineage=true` truy đúng voucher type/name, voucher row, batch, bundle, warehouse và item identity.
-- Tạo identity thứ hai để chứng minh lineage không lẫn giữa hai luồng.
-- Stock Reconciliation print render thật; QR sinh từ đúng document `name` và route mở đúng document.
-- Sai QR/document identity hoặc lineage tenant khác phải fail closed.
-
-### Cleanup QA
-
-- QA user/item/warehouse/batch/bundle/reservation/document có prefix hoặc lineage nhận diện duy nhất.
-- Cleanup theo dependency chỉ trên local D1 ephemeral.
-- Không xóa fixture catalogue dùng chung.
-- Sau cleanup xác minh không còn residue ở document, child, stock ledger/read model, reservation, batch/bundle và user/role fixture QA riêng.
-- Cleanup phải idempotent hoặc fail rõ khi chạy lần hai; không xóa wildcard quá rộng.
-
-### Acceptance
-
-- Desktop + mobile.
-- Cookie + CSRF thật.
-- Role nghiệp vụ thật; không dùng admin để thay cho stock-operation evidence.
-- Failure paths giữ invalid session/CSRF, permission denial, immutable records và over-issue/over-reservation.
+P0 stock acceptance hiện đã có clean PR `#189` từ current-main generation của đợt này. Không mở branch P0 cạnh tranh khi #189 còn active.
 
 ### Done condition P0
 
-- Quantity + kg + reservation + QR/lineage reconcile không chênh lệch.
-- Document QR/lineage truy ngược tới đúng voucher/batch/bundle và không lẫn identity.
-- QA cleanup PASS và query hậu kiểm không còn residue.
-- Desktop/mobile + role/session/CSRF failure paths PASS.
-- Không mutate customer production data và không deploy production nếu user chưa yêu cầu riêng.
+- Physical-stock `include_lineage=true` truy đúng voucher type/name, voucher row, batch, bundle, warehouse và item identity.
+- Có identity thứ hai chứng minh lineage không lẫn giữa hai luồng.
+- Stock Reconciliation print render thật, QR sinh từ exact document `name` và route mở đúng document.
+- Desktop + mobile, cookie + CSRF thật, role nghiệp vụ thật.
+- Invalid session/CSRF, sai QR identity, cross-tenant lineage và immutable records fail closed.
+- Cleanup local D1 ephemeral xóa đúng QA lineage, không wildcard shared fixtures, query hậu kiểm zero residue.
+- Exact-head required workflows PASS trước merge.
+- Không deploy production trong slice P0 này nếu user chưa yêu cầu riêng.
+
+## NEXT UI — MetaForge UX V2 sau Bulk
+
+Bulk dependency đã merge, nên List Workspace V2 có thể bắt đầu trên branch riêng từ exact current `main` khi không tranh chấp với task ưu tiên cao hơn.
+
+### Ưu tiên UI
+
+1. **List Workspace V2 + Bulk integration** — summary bar, saved views, smart filters, table/card responsive và contextual quick actions; Bulk là mode/action của cùng workspace, không tạo navigation cạnh tranh.
+2. **Matrix View canonical contract + renderer** — User×Role, User×Warehouse/Department/Company, Item×Color, Item×UOM, Item×Reorder warehouse, Supplier×Item và account mapping.
+3. **Presentation authoring / canonical transport** — đưa presentation và `viewPolicy.bulk` thành authorable metadata/sidecar có compiler/parser/selfcheck first-class và backward compatibility.
+4. **Bulk Transaction strategy** — controller/method-backed grid cho Stock Reconciliation và BOM làm reference đầu tiên; tuyệt đối không mass-update ledger/submitted docs.
+5. **Nhập nhôm nhiều mã / Purchase Receipt transaction grid**.
+6. **Batch Print / QR label queue** dưới dạng action/workspace, không cần ViewKind riêng.
+7. **Document context nâng cao** — related-document graph, timeline/activity, exception cards và business progress source thật.
+8. **Operational workspace + Mobile V2** — role home/inbox/exception-first, rich list cards, context drawer/bottom sheet và action zone màn nhỏ.
+9. **Resource Scheduler** chỉ khi capacity/overtime P2 đi vào runtime.
+10. **Personalization / AI context** sau khi các surface vận hành phía trên ổn định.
 
 ## P1 — Daily detailed ledger
 
