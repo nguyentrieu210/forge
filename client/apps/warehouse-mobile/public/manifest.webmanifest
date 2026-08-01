@@ -1,48 +1,39 @@
 {
   "id": "/mobile/warehouse/",
-  "name": "Forge Kho",
-  "short_name": "Forge Kho",
-  "description": "Ứng dụng kho Forge tối ưu cho điện thoại.",
+  "name": "Alumdoor Kho",
+  "short_name": "Alumdoor Kho",
+  "description": "Ứng dụng kho Alumdoor tối ưu cho điện thoại.",
   "lang": "vi",
   "start_url": "/mobile/warehouse/",
   "scope": "/mobile/warehouse/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "theme_color": "#7c3aed",
-  "background_color": "#f8fafc",
+  "theme_color": "#ef6b2e",
+  "background_color": "#f7f6f2",
   "categories": ["business", "productivity"],
   "icons": [
     {
-      "src": "forge-mark.svg",
+      "src": "https://alumdoor.vn/wp-content/uploads/2022/04/logo-am-ban-doi-alumdoor-1-1400x520-01-2-1400x478.png.webp",
       "sizes": "any",
-      "type": "image/svg+xml",
+      "type": "image/webp",
       "purpose": "any"
-    },
-    {
-      "src": "forge-maskable.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "maskable"
     }
   ],
   "shortcuts": [
     {
       "name": "Nhập kho",
       "short_name": "Nhập kho",
-      "url": "/mobile/warehouse/?action=receipt",
-      "icons": [{ "src": "forge-mark.svg", "sizes": "any", "type": "image/svg+xml" }]
+      "url": "/mobile/warehouse/?action=receipt"
     },
     {
       "name": "Xuất kho",
       "short_name": "Xuất kho",
-      "url": "/mobile/warehouse/?action=issue",
-      "icons": [{ "src": "forge-mark.svg", "sizes": "any", "type": "image/svg+xml" }]
+      "url": "/mobile/warehouse/?action=issue"
     },
     {
       "name": "Tra tồn",
       "short_name": "Tra tồn",
-      "url": "/mobile/warehouse/?tab=stock",
-      "icons": [{ "src": "forge-mark.svg", "sizes": "any", "type": "image/svg+xml" }]
+      "url": "/mobile/warehouse/?tab=stock"
     }
   ]
 }
