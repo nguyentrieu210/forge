@@ -77,6 +77,8 @@ export interface RuntimeAssets {
   [k: string]: unknown;
 }
 
+export type BulkCommitStrategy = "document_update";
+
 /** Canonical policy for one renderer. Extra app-owned hints remain passthrough metadata. */
 export interface DocTypeView {
   enabled: boolean;
@@ -85,6 +87,13 @@ export interface DocTypeView {
   stageField?: string;
   startField?: string;
   endField?: string;
+  /** Bulk Grid: fields the operator may change inline. Must be a subset of `columns`. */
+  editableFields?: string[];
+  /** Bulk Grid v1 deliberately only supports optimistic-concurrency document updates. */
+  commitStrategy?: BulkCommitStrategy;
+  allowPaste?: boolean;
+  allowFillDown?: boolean;
+  pageSize?: number;
   /** Workflow transitions that require an operator reason, e.g. backward/cancel. */
   reasonRequiredOn?: string[];
   [k: string]: unknown;
@@ -95,6 +104,7 @@ export interface DocTypeViewPolicy {
   list: DocTypeView;
   form: DocTypeView;
   quickEntry?: DocTypeView;
+  bulk?: DocTypeView;
   kanban?: DocTypeView;
   calendar?: DocTypeView;
   gantt?: DocTypeView;
