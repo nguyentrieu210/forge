@@ -4,6 +4,16 @@ Ngày cập nhật: **2026-08-02**.
 
 GitHub là nguồn sự thật cho branch head, PR, CI và release evidence.
 
+## IN PROGRESS — Plastic Factory ERP G1 Requirements
+
+- Branch: `feat/plastic-factory-erp-brd-20260802` từ current `main` head `3222beb66bd3e6b2abbab1b17a6009044a2d5358`.
+- BRD draft: `docs/plastic-factory-erp/BRD.md`.
+- Product shape: internal operational ERP web/mobile trên Forge kernel; không tạo ERP thứ hai tách khỏi stock/manufacturing canonical hiện có.
+- Core mới dự kiến: plastic material profile, Machine, Mold/Tool, Production Run, QC Inspection, NCR, plastic costing/capacity extensions.
+- Core tái sử dụng: versioned BOM, immutable Work Order snapshot, stock lifecycle, lot/batch lineage, reservation, RBAC.
+- Gate hiện tại: **G1 Requirements**. Chưa implementation P0-A trước khi BRD được duyệt và process profile chính được chốt.
+- Không deploy Cloudflare, không sửa production secret/DNS, không mutate tenant production.
+
 ## DONE — Authenticated reservation availability lifecycle
 
 - PR `#175` đã merge vào `main` ngày 2026-08-02.
@@ -40,6 +50,7 @@ GitHub là nguồn sự thật cho branch head, PR, CI và release evidence.
 ## Main và production boundary
 
 - Default branch: `main`.
+- Current `main` head gồm docs evidence: `3222beb66bd3e6b2abbab1b17a6009044a2d5358`.
 - Main executable head sau PR #175: `509db8c32625168316696fb0deb3760a434aedf9`.
 - Alumdoor production vẫn chạy exact SHA `b46d322831ebe7b57e29d4363d2daa005bb56e55`.
 - Production full release run `30707135053`: PASS.
@@ -49,10 +60,11 @@ GitHub là nguồn sự thật cho branch head, PR, CI và release evidence.
 
 ## NEXT
 
-1. **P0:** QR/lineage end-to-end và cleanup QA không residue.
-2. **P1:** daily detailed ledger: snapshot ngày, freeze, append-only adjustment, reconciliation nhiều miền.
-3. **P2:** warranty/defects/capacity theo quy trình 25.7.
-4. **P3:** end-to-end acceptance xuyên Sales → Production → Inventory → Delivery → Finance → Daily Ledger → Warranty.
+1. **Plastic ERP G1:** duyệt BRD và chốt process profile chính trước P0-A.
+2. **P0:** QR/lineage end-to-end và cleanup QA không residue.
+3. **P1:** daily detailed ledger: snapshot ngày, freeze, append-only adjustment, reconciliation nhiều miền.
+4. **P2:** warranty/defects/capacity theo quy trình 25.7.
+5. **P3:** end-to-end acceptance xuyên Sales → Production → Inventory → Delivery → Finance → Daily Ledger → Warranty.
 
 ## Guardrails
 
