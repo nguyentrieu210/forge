@@ -4,61 +4,34 @@ Ngày cập nhật: **2026-08-02**.
 
 Đây là hàng đợi active. Không dùng file này thay cho GitHub khi cần exact branch head, PR state hoặc CI. Trước khi làm đọc `RUNBOOK.md` và `CURRENT_STATUS.md`.
 
-## ACTIVE UI — hoàn tất PR #184 Document Experience V2 foundation
+## DONE UI — MetaForge Document Experience V2 foundation
 
-Branch canonical của slice này: `feat/metaforge-document-experience-v2-20260802`.
+- PR `#184` merged tại `df84eaec03526eaae2e2c3de3e9b8d388ae30f1a`.
+- Final validated head: `1a79c28832aed7731601bb9ea378f9a4a3cc01db`.
+- Required workflows: **6/6 PASS**.
+- Đã có presentation resolver an toàn, 7 archetype + generic fallback, document hero, semantic status, metric cards, context strip/rail, skeleton và visual profile riêng theo archetype.
+- Selfcheck khóa `Sales Order`, `Purchase Order`, `Stock Entry`, `Work Order`, `Customer`, `Payment Entry`.
+- Không deploy production.
 
-Executable slice đã hoàn tất:
-
-- presentation resolver an toàn với 7 archetype + generic fallback;
-- document hero, semantic status, metric cards, responsive context strip/rail và skeleton loading;
-- visual profile riêng theo archetype: accent, hero, icon, metric surface và context-rail copy;
-- existing `FormContainer` dùng Document Experience nhưng giữ nguyên canonical form policy, server-authoritative permission/workflow/action;
-- selfcheck khóa archetype, explicit presentation, internal-field boundary, progress, status tone, formatting và 6 reference screens (`Sales Order`, `Purchase Order`, `Stock Entry`, `Work Order`, `Customer`, `Payment Entry`);
-- exact executable head `ec90b1b4e698c03be566c4c93b2942dd2aaafcbb` đã **6/6 PASS**, gồm tests/typecheck/build và MetaForge + Alumdoor browser QA.
-
-Việc còn lại của chính PR `#184`:
-
-1. Chạy exact-head required CI sau commit `CURRENT_STATUS.md`/`NEXT_TASKS.md` mới nhất.
-2. Nếu final exact head xanh, giữ PR ready for review và chờ quyết định merge riêng; không tự merge `main`.
-3. Không thêm List Workspace vào PR này vì Bulk View PR `#182` vẫn draft và đang chạm `DoctypeWorkspace` + core meta types.
+Không mở lại PR #184 trừ khi có regression cụ thể.
 
 ## NEXT UI — MetaForge UX V2 wave kế tiếp
 
-Chỉ bắt đầu trên branch mới từ exact `main` sau khi PR `#184` kết thúc và trạng thái PR `#182` được xác minh lại trên GitHub.
+Trước khi mở code mới:
 
-Ưu tiên:
+1. Xác minh exact current `main` sau merge #184.
+2. Xác minh PR `#182` Bulk View: head, mergeability, CI và file đang chạm.
+3. Nếu #182 chưa ổn định/mergeable, không tạo List Workspace V2 đè `DoctypeWorkspace`; ưu tiên hoàn tất dependency hoặc làm presentation authoring/context slice độc lập.
+4. Mỗi wave dùng branch/PR riêng từ exact `main`.
 
-1. **List Workspace V2**: summary bar, saved views, smart filters, table/card responsive, contextual quick actions; tích hợp Bulk View thay vì tạo navigation cạnh tranh.
-2. **Presentation authoring/canonical transport**: đưa presentation contract từ runtime extension thành authorable metadata/sidecar có compiler/parser/selfcheck rõ ràng.
-3. **Document context nâng cao**: related-document graph, activity/timeline, exception cards và nghiệp vụ progress source thật thay vì chỉ explicit status steps.
+### Ưu tiên UI
+
+1. **List Workspace V2**: summary bar, saved views, smart filters, table/card responsive, contextual quick actions; Bulk View phải là một mode tích hợp, không tạo navigation cạnh tranh.
+2. **Presentation authoring / canonical transport**: đưa `presentation` từ runtime extension thành metadata/sidecar authorable có compiler/parser/selfcheck và backward compatibility.
+3. **Document context nâng cao**: related-document graph, activity/timeline, exception cards, business progress source thật.
 4. **Operational workspace**: role home, module summary, inbox/cần xử lý, exception-first UX.
-5. **Mobile V2**: rich list cards, context drawer/bottom sheet và action zone phù hợp màn nhỏ.
-6. **Personalization/AI context**: saved dashboard layout và document-aware assistant chỉ sau khi các surface vận hành phía trên ổn định.
-
-Không mở wave List V2 bằng cách sửa thẳng branch PR `#182`; mỗi epic/slice dùng branch/PR riêng.
-
-## DONE — Runbook / project-status cleanup
-
-- PR `#180` merged tại `09bc64e1fe8d9ded171368cfc72bd2b4b18aed72`.
-- Final validated head: `1a631bae15637c39d06244dc8a3d8bb05eb5ecb0`.
-- Exact-head required workflows: **6/6 PASS**.
-- `RUNBOOK.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md`, `AI_HANDOFF.md` đã có vai trò rõ ràng.
-- `README.md` và `docs/ROADMAP.md` không còn là live-state source.
-- `DELIVERY_POLICY.md` không tự cấp quyền deploy production.
-- `EPIC_STATUS.md` stale đã bị xóa.
-
-Không tạo thêm status/handoff file song song nếu nội dung thuộc các file canonical này.
-
-## DONE — PR #175 Reservation acceptance
-
-- Merged: `509db8c32625168316696fb0deb3760a434aedf9`.
-- Final validated head: `e839599ddf23e6cf89a325497b62f20085f62ffd`.
-- Exact-head required workflows: **6/6 PASS**.
-- Reservation giảm available nhưng không thay physical stock; release phục hồi available; over-reservation và double-release fail đúng contract.
-- Không deploy production.
-
-Không mở lại reservation slice nếu không có regression cụ thể.
+5. **Mobile V2**: rich list cards, context drawer/bottom sheet, action zone màn nhỏ.
+6. **Personalization / AI context**: saved dashboard layout và document-aware assistant sau khi các surface vận hành phía trên ổn định.
 
 ## NEXT P0 — QR / lineage + cleanup QA
 
