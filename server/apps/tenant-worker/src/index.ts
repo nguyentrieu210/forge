@@ -22,6 +22,11 @@ import {
 } from "../../../packages/frappe-model/src/index.js";
 import coreWorker from "./index-core.js";
 import {
+  isDailyLedgerApiPath,
+  isDailyLedgerFrappePath,
+  routeDailyLedgerApi,
+} from "./daily-ledger-api.js";
+import {
   isPhysicalStockApiPath,
   isPhysicalStockFrappePath,
   routePhysicalStockApi,
@@ -30,41 +35,50 @@ import type { TenantEnv } from "./env.js";
 
 export * from "./index-core.js";
 
-interface PhysicalStockAuthentication {
+interface InterceptedRouteAuthentication {
   actor: Actor;
   established?: EstablishedSession;
   authContext?: AuthRouteContext;
 }
 
 /**
- * Thin entrypoint wrapper for Slice D report routes.
- *
- * The original tenant Worker remains byte-for-byte in index-core.ts. Only the physical
- * stock report routes are intercepted here; every existing route and scheduled task is
- * delegated unchanged. This keeps the security-sensitive main router out of a giant
- * hand-edited patch while still sharing its trusted-identity and cookie-session rules.
+ * Thin entrypoint wrapper for bounded authenticated report/operation routes.
+ * Existing core routes and scheduled tasks remain delegated to index-core.ts.
  */
 export default {
   async fetch(request: Request, env: TenantEnv, _ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
-    if (!isPhysicalStockApiPath(url.pathname)) return coreWorker.fetch(request, env);
+    const physicalStock = isPhysicalStockApiPath(url.pathname);
+    const dailyLedger = isDailyLedgerApiPath(url.pathname);
+    if (!physicalStock && !dailyLedger) return coreWorker.fetch(request, env);
 
     const traceId = request.headers.get("x-cloudforge-trace-id") ?? randomId("trace");
     try {
       const tenantId = resolveTenant(request, env);
       if (!tenantId) throw errors.authentication("Missing tenant context");
-      const authentication = await authenticatePhysicalStock(request, url, env, tenantId, traceId);
+      const authentication = await authenticateInterceptedRoute(request, url, env, tenantId, traceId);
       const requestDb = (env.DB.withSession?.("first-primary") ?? env.DB) as D1Database;
-      const metadata = new D1MetadataStore(requestDb);
-      const access = new D1DocumentAccessStore(requestDb);
-      const permissions = new MetadataPermissionService(metadata, undefined, access);
-      const response = await routePhysicalStockApi(request, url, {
-        db: requestDb,
-        tenantId,
-        actor: authentication.actor,
-        permissions,
-        traceId,
-      });
+
+      let response: Response | null;
+      if (physicalStock) {
+        const metadata = new D1MetadataStore(requestDb);
+        const access = new D1DocumentAccessStore(requestDb);
+        const permissions = new MetadataPermissionService(metadata, undefined, access);
+        response = await routePhysicalStockApi(request, url, {
+          db: requestDb,
+          tenantId,
+          actor: authentication.actor,
+          permissions,
+          traceId,
+        });
+      } else {
+        response = await routeDailyLedgerApi(request, url, {
+          db: requestDb,
+          tenantId,
+          actor: authentication.actor,
+          traceId,
+        });
+      }
       if (!response) return coreWorker.fetch(request, env);
 
       if (authentication.established && authentication.authContext) {
@@ -73,7 +87,7 @@ export default {
       }
       return response;
     } catch (error) {
-      return isPhysicalStockFrappePath(url.pathname)
+      return isPhysicalStockFrappePath(url.pathname) || isDailyLedgerFrappePath(url.pathname)
         ? faultResponse(error, traceId)
         : errorResponse(error, traceId);
     }
@@ -92,14 +106,14 @@ function resolveTenant(request: Request, env: TenantEnv): string | null {
   return env.TENANT_ID ?? routed;
 }
 
-async function authenticatePhysicalStock(
+async function authenticateInterceptedRoute(
   request: Request,
   url: URL,
   env: TenantEnv,
   tenantId: string,
   traceId: string,
-): Promise<PhysicalStockAuthentication> {
-  if (!isPhysicalStockFrappePath(url.pathname)) {
+): Promise<InterceptedRouteAuthentication> {
+  if (!isPhysicalStockFrappePath(url.pathname) && !isDailyLedgerFrappePath(url.pathname)) {
     return { actor: await authenticateTrustedIdentity(request, env, tenantId, traceId) };
   }
 
