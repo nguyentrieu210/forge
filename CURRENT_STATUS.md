@@ -1,9 +1,18 @@
 # CURRENT STATUS
 
-Ngày cập nhật: **2026-08-01**.
+Ngày cập nhật: **2026-08-02**.
 
 - Alumdoor production đang chạy exact SHA `b46d322831ebe7b57e29d4363d2daa005bb56e55`. Full production release run `30707135053` và protected metadata installer run `30707517624` đều PASS; Alumdoor Meta `2.1.0` đã cài và xác minh trên tenant `alu`.
-- Executable code head mới nhất trên `main` là `19f949c6aba3541c7d3585ad42f8a8c42ebeea74` (G03 Organization Security, CI run `30707768323` PASS). Các merge chỉ sửa tài liệu có thể làm SHA đầu nhánh cao hơn nhưng không thay executable head hoặc production release.
+- Executable code head mới nhất trên `main` sau đợt visual polish là merge `4afb422e8efb8bed624b96d7f3145ec3c5a6a8eb`; production chưa được deploy theo merge này.
+
+## Đã merge — MetaForge visual polish
+
+- PR `#165` merge tại `4afb422e8efb8bed624b96d7f3145ec3c5a6a8eb`; exact validated head `e3deef21f8db0c8506bd17088ec8a4cf5ca05d45`.
+- File code thay đổi: `client/packages/shell/src/WorkspaceAppShell.tsx`.
+- Tabs nghiệp vụ dùng segmented/pill hierarchy; màn Quy trình có header phân hệ, thống kê nhanh, flow card, step badge/connector, Danh mục nhanh và Báo cáo theo cùng semantic theme tokens để tự thích ứng toàn bộ brand variants.
+- Không đổi Meta contract, routing, permission hoặc dữ liệu.
+- CI exact-head PASS: CI `30710823875`, PR Validation `30710823870`, UI Pull Request Validation `30710823866`, Sales `30710823872`, Purchase `30710823871`, Inventory/Manufacturing `30710823869`. MetaForge workspace browser QA và Alumdoor browser QA đều PASS.
+- Không deploy Cloudflare, không sửa production secrets/DNS và không mutate dữ liệu production trong đợt này.
 
 ## Đã merge — Canonical DocType Meta và Alumdoor completeness
 
@@ -41,8 +50,8 @@ Ngày cập nhật: **2026-08-01**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `main`.
-- Current executable code head (không tính docs-only evidence merge): `19f949c6aba3541c7d3585ad42f8a8c42ebeea74`.
-- Current code-only epic trên `main`: G03 Organization Security tại `19f949c6`; production vẫn ở Alumdoor release SHA `b46d3228`.
+- Current executable code head sau MetaForge visual polish: `4afb422e8efb8bed624b96d7f3145ec3c5a6a8eb`.
+- Production vẫn ở Alumdoor release SHA `b46d3228`; merge visual polish chưa có production-release evidence.
 - GitHub là nguồn sự thật cho current branch head, CI, PR và release evidence.
 
 ## Đã hoàn tất trên default
