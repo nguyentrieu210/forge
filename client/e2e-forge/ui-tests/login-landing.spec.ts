@@ -56,17 +56,13 @@ async function expectAlumdoorPalette(page: Page, mode: "light" | "dark") {
   });
 
   expect(palette).toEqual(mode === "dark"
-    ? { primary: "#f15c2d", background: "#1d1d1c", foreground: "#faf8f5", card: "#282827" }
-    : { primary: "#f15c2d", background: "#f7f6f4", foreground: "#393938", card: "#ffffff" });
+    ? { primary: "#f45b24", background: "#1d1d1c", foreground: "#faf8f5", card: "#282827" }
+    : { primary: "#f45b24", background: "#f7f7f7", foreground: "#202020", card: "#ffffff" });
 
-  const brandBackground = await page.locator("header .mf-brand-mark").evaluate(
-    (element) => getComputedStyle(element).backgroundImage,
-  );
-  expect(brandBackground).toContain("rgb(241, 92, 45)");
-  expect(brandBackground).toContain("rgb(57, 57, 56)");
+  await expect(page.locator('header img[alt^="Alumdoor"]')).toHaveAttribute("src", "/alumdoor/logo.png");
   await expect(page.locator("header").getByRole("button", { name: "Đăng nhập", exact: true })).toHaveCSS(
     "background-color",
-    "rgb(239, 107, 46)",
+    "rgb(244, 91, 36)",
   );
 }
 
@@ -90,8 +86,8 @@ test("Alumdoor guest experience presents the correct business landing", async ({
   await page.goto("/?alumdoor=1", { waitUntil: "domcontentloaded" });
 
   await expect(page.locator("[data-alumdoor-landing]")).toBeVisible();
-  await expect(page).toHaveTitle("Alumdoor — Nâng tầm cửa Việt");
-  await expect(page.getByRole("heading", { name: /Nâng tầm cửa Việt/i })).toBeVisible();
+  await expect(page).toHaveTitle("Alumdoor — Chất lượng từ tâm · Tiên phong sáng tạo");
+  await expect(page.getByRole("heading", { name: "Cửa cuốn Alumdoor", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Đăng nhập Alumdoor", exact: true })).toBeVisible();
   await expect(page.getByText("Alumdoor", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("Miễn phí tư vấn", { exact: true }).first()).toBeVisible();
@@ -99,7 +95,7 @@ test("Alumdoor guest experience presents the correct business landing", async ({
   await expect(page.getByRole("heading", { name: "Cửa cuốn nan nhôm công nghệ Đức", exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: /VIP-ST500/i })).toHaveAttribute(
     "href",
-    "https://alumdoor.vn/san-pham/cua-cuon-duc-vipst500/",
+    "https://alumdoor.vn/san-pham/vip-st500/",
   );
   await expect(page.locator("#mf-login-usr")).toBeVisible();
   await expect(page.locator("#mf-login-pwd")).toBeVisible();
@@ -122,8 +118,8 @@ test("Alumdoor landing remains usable in dark and reduced-motion modes", async (
 
   await expect.poll(() => page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches)).toBe(true);
   await expect(page.locator("[data-alumdoor-landing]")).toBeVisible();
-  await expect(page.getByRole("heading", { name: /Nâng tầm cửa Việt/i })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Danh mục đang niêm yết", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Cửa cuốn Alumdoor", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sản phẩm nổi bật", exact: true })).toBeVisible();
   await expectAlumdoorPalette(page, "dark");
   await expectNoHorizontalOverflow(page);
   await saveScreenshot(page, testInfo, "alumdoor-landing-dark-reduced-motion");

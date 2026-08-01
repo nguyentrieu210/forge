@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Alumdoor">
-  <rect width="512" height="512" rx="112" fill="#343433"/>
-  <rect x="36" y="146" width="440" height="220" rx="48" fill="#ef6b2e"/>
-  <image href="https://alumdoor.vn/wp-content/uploads/2022/04/logo-am-ban-doi-alumdoor-1-1400x520-01-2-1400x478.png.webp" x="66" y="190" width="380" height="130" preserveAspectRatio="xMidYMid meet"/>
+  <rect width="512" height="512" rx="112" fill="#ffffff"/>
+  <path d="M0 392h512v120H0z" fill="#f45b24"/>
+  <image href="alumdoor-logo.png" x="46" y="166" width="420" height="114" preserveAspectRatio="xMidYMid meet"/>
 </svg>

@@ -17,6 +17,10 @@ Branch: `feat/alumdoor-pwa-real-brand-assets`.
 5. Landing dùng logo chính thức, ảnh hero VIP-ST500 thật và media website Alumdoor cho card sản phẩm.
 6. Landing có CTA `App kho điện thoại` → `/mobile/warehouse/`.
 7. Playwright kiểm logo/media landing, manifest/icon PWA, navigation/nghiệp vụ và horizontal overflow.
+8. Landing đã được chỉnh lần hai theo giao diện `alumdoor.vn` hiện hành: top bar cam, header logo trắng, navigation than đậm, hero video, nhóm dịch vụ, sản phẩm và footer.
+9. Asset logo 2026 và media sản phẩm nổi bật được lưu cùng frontend; bỏ asset logo 2022 và placeholder CSS.
+10. `Forge Kho` còn sót trong giao diện mobile đã đổi thành `Alumdoor Kho`; palette chính dùng `#f45b24`.
+11. Local gates PASS: full test, client lint, client typecheck, client build và Playwright UI `17/17` trên desktop/tablet/mobile/PWA.
 
 Việc phải hoàn thành trước khi đóng epic:
 

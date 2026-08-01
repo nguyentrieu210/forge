@@ -1,7 +1,7 @@
 import { useId, type CSSProperties } from "react";
 import { cn } from "@metaforge/ui";
 
-export const ALUMDOOR_LOGO_URL = "https://alumdoor.vn/wp-content/uploads/2022/04/logo-am-ban-doi-alumdoor-1-1400x520-01-2-1400x478.png.webp";
+export const ALUMDOOR_LOGO_URL = "/alumdoor/logo.png";
 
 export interface ForgeBrandLogoProps {
   size?: number;
@@ -20,6 +20,13 @@ function isAlumdoorSurface() {
   return host === "alu.kairo.vn" || params.get("alumdoor") === "1" || window.location.pathname.startsWith("/mobile/warehouse/");
 }
 
+function getAlumdoorLogoUrl() {
+  if (typeof window !== "undefined" && window.location.pathname.startsWith("/mobile/warehouse/")) {
+    return "/mobile/warehouse/alumdoor-logo.png";
+  }
+  return ALUMDOOR_LOGO_URL;
+}
+
 /** Logo dùng chung cho landing, login, shell và PWA. */
 export function ForgeBrandLogo({
   size = 36,
@@ -36,15 +43,14 @@ export function ForgeBrandLogo({
   if (isAlumdoorSurface()) {
     return (
       <span
-        className={cn("inline-flex shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#343433] px-2", className)}
-        style={{ height: size, minWidth: Math.round(size * 2.35) }}
+        className={cn("inline-flex shrink-0 items-center justify-center overflow-hidden rounded-md bg-white", className)}
+        style={{ height: size, minWidth: Math.round(size * 2.9) }}
         title="Alumdoor"
       >
         <img
-          src={ALUMDOOR_LOGO_URL}
+          src={getAlumdoorLogoUrl()}
           alt="Alumdoor"
-          className="block h-[68%] w-auto max-w-none object-contain"
-          referrerPolicy="no-referrer"
+          className="block h-full w-auto max-w-none object-contain"
         />
       </span>
     );

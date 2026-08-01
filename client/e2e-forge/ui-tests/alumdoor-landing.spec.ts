@@ -21,7 +21,7 @@ test("renders the full Alumdoor landing catalog with official media and no horiz
 
   const landing = page.locator("[data-alumdoor-landing]");
   await expect(landing).toBeVisible();
-  await expect(page.getByRole("heading", { name: /Nâng tầm cửa Việt/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Cửa cuốn Alumdoor", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Đăng nhập Alumdoor" })).toBeVisible();
 
   const warehousePwa = page.getByRole("link", { name: "App kho điện thoại", exact: true });
@@ -39,16 +39,13 @@ test("renders the full Alumdoor landing catalog with official media and no horiz
   await expect(page.getByRole("heading", { name: "Motor, UPS và phụ kiện an toàn" })).toBeVisible();
 
   const vip = page.getByRole("link", { name: /VIP-ST500/i });
-  await expect(vip).toHaveAttribute("href", "https://alumdoor.vn/san-pham/cua-cuon-duc-vipst500/");
+  await expect(vip).toHaveAttribute("href", "https://alumdoor.vn/san-pham/vip-st500/");
 
-  const officialLogo = await page.locator(".mf-brand-mark").first().evaluate((node) => getComputedStyle(node).backgroundImage);
-  expect(officialLogo).toContain("alumdoor.vn/wp-content/uploads/2022/04/logo-am-ban-doi-alumdoor");
+  await expect(page.locator('header img[alt^="Alumdoor"]')).toHaveAttribute("src", "/alumdoor/logo.png");
 
-  const heroBackground = await landing.locator("main > section").first().evaluate((node) => getComputedStyle(node).backgroundImage);
-  expect(heroBackground).toContain("ALUMDOOR-PRODUCT_Artboard-24.png.webp");
+  await expect(landing.locator("video source")).toHaveAttribute("src", "https://alumdoor.vn/wp-content/uploads/2021/08/video-banner.mp4");
 
-  const productBackground = await page.locator("#cua-duc a.group > div").first().evaluate((node) => getComputedStyle(node).backgroundImage);
-  expect(productBackground).toContain("alumdoor.vn/wp-content/uploads/");
+  await expect(page.locator('#cua-duc img[alt="VIP-ST500"]')).toHaveAttribute("src", "/alumdoor/vip-st500.jpg");
 
   await expect(page.getByText(/0317172142/)).toBeVisible();
   await expect(page.getByText(/cskh\.alumdoor@gmail\.com/)).toBeVisible();

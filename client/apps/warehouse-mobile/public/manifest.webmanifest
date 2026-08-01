@@ -8,8 +8,8 @@
   "scope": "/mobile/warehouse/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "theme_color": "#ef6b2e",
-  "background_color": "#f7f6f2",
+  "theme_color": "#f45b24",
+  "background_color": "#f7f7f7",
   "categories": ["business", "productivity"],
   "icons": [
     {

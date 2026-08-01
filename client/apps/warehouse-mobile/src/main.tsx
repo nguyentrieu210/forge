@@ -180,7 +180,7 @@ function WarehouseMobileApp({ boot, logout }: { boot: MetaForgeBootDTO; logout: 
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const pageTitle = operation ? OPERATION_META[operation].label : tab === "stock" ? "Tra tồn kho" : tab === "account" ? "Tài khoản" : "Forge Kho";
+  const pageTitle = operation ? OPERATION_META[operation].label : tab === "stock" ? "Tra tồn kho" : tab === "account" ? "Tài khoản" : "Alumdoor Kho";
   const pageSubtitle = operation ? "Tạo phiếu nghiệp vụ" : "Ứng dụng kho trên điện thoại";
 
   return (
@@ -241,13 +241,13 @@ function HomeScreen({ fullName, pending, onOpen, onStock }: {
   const firstName = fullName.trim().split(/\s+/).at(-1) ?? fullName;
   return (
     <div className="space-y-4">
-      <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-violet-600 via-fuchsia-500 to-orange-400 p-5 text-white shadow-lg">
+      <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-[#2e2e2e] via-[#3b302c] to-[#f45b24] p-5 text-white shadow-lg">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-sm text-white/80">Xin chào {firstName}</p>
             <h1 className="mt-1 text-2xl font-bold tracking-tight">Hôm nay cần làm gì ở kho?</h1>
           </div>
-          <ForgeBrandLogo size={44} className="rounded-full bg-white/15 p-1" />
+          <ForgeBrandLogo size={44} className="rounded-md bg-white p-1" />
         </div>
         <div className="mt-5 flex items-center gap-2 rounded-2xl bg-white/12 px-3 py-2 text-xs backdrop-blur">
           {pending ? <WifiOff className="size-4" /> : <CheckCircle2 className="size-4" />}
@@ -543,14 +543,14 @@ function AccountScreen({ boot, pending, installAvailable, onInstall, onFlush, on
       </section>
 
       <section className="overflow-hidden rounded-2xl border bg-card">
-        {installAvailable ? <AccountRow icon={<Smartphone />} label="Cài Forge Kho lên điện thoại" onClick={onInstall} /> : null}
+        {installAvailable ? <AccountRow icon={<Smartphone />} label="Cài Alumdoor Kho lên điện thoại" onClick={onInstall} /> : null}
         <AccountRow icon={<Settings />} label="Đổi mật khẩu" onClick={onChangePassword} />
         <AccountRow icon={pending ? <WifiOff /> : <RefreshCw />} label={pending ? `Gửi lại ${pending} thao tác` : "Dữ liệu đã đồng bộ"} onClick={pending ? onFlush : undefined} />
         <Separator />
         <AccountRow icon={<LogOut />} label="Đăng xuất" destructive onClick={onLogout} />
       </section>
 
-      <p className="px-2 text-center text-xs leading-5 text-muted-foreground">Forge Kho chỉ giữ giao diện nghiệp vụ trên điện thoại. Báo cáo và cấu hình đầy đủ tiếp tục dùng bản desktop.</p>
+      <p className="px-2 text-center text-xs leading-5 text-muted-foreground">Alumdoor Kho tập trung nghiệp vụ hiện trường trên điện thoại. Báo cáo và cấu hình đầy đủ tiếp tục dùng bản desktop.</p>
     </div>
   );
 }
@@ -588,8 +588,8 @@ function GuestLogin({ retry }: { retry: () => void }) {
   return (
     <div className="grid min-h-dvh place-items-center bg-muted/30 p-4">
       <div className="w-full max-w-md space-y-4">
-        <div className="flex justify-center"><ForgeBrandLogo size={52} wordmark name="Forge Kho" subtitle="Ứng dụng điện thoại" /></div>
-        <LoginForm adapter={adapter} onSuccess={retry} brand="Forge Kho" title="Đăng nhập app kho" subtitle="Dùng cùng tài khoản Forge của doanh nghiệp." embedded />
+        <div className="flex justify-center"><ForgeBrandLogo size={52} wordmark name="Alumdoor Kho" subtitle="Ứng dụng điện thoại" /></div>
+        <LoginForm adapter={adapter} onSuccess={retry} brand="Alumdoor Kho" title="Đăng nhập app kho Alumdoor" subtitle="Dùng tài khoản nội bộ đã được Alumdoor cấp quyền." embedded />
       </div>
     </div>
   );

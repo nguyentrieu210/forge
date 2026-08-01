@@ -70,6 +70,11 @@ Branch: `feat/alumdoor-pwa-real-brand-assets`.
 - Landing dùng logo Alumdoor chính thức, hero dùng ảnh sản phẩm VIP-ST500 thật và card sản phẩm dùng media từ website Alumdoor thay placeholder đồ họa.
 - Landing có nút `App kho điện thoại` dẫn thẳng `/mobile/warehouse/`.
 - Playwright contract khóa logo/media chính thức, PWA manifest/icon, nghiệp vụ mobile và không tràn ngang.
+- Đợt chỉnh giao diện hiện tại đã đối chiếu trực tiếp `alumdoor.vn`: top bar cam, header trắng, navigation than đậm, hero video, ba nhóm dịch vụ, bố cục sản phẩm và footer được đưa về cùng ngôn ngữ nhận diện.
+- Logo hiện hành `Logo-Alumdoor.png` và media sản phẩm đang niêm yết được lưu cùng source frontend; landing/PWA không còn phụ thuộc asset logo 2022 hoặc placeholder CSS.
+- Giá và link nổi bật đã đồng bộ theo website tại thời điểm 2026-08-01: VIP-ST700, VIP-ST500, ALVIP50, AL50 và Alumroll.
+- App kho đổi toàn bộ nhãn `Forge Kho` còn sót sang `Alumdoor Kho`, dùng palette cam `#f45b24` và logo hiện hành.
+- Local validation: full `pnpm test` PASS; client lint/typecheck/build PASS; Playwright UI desktop/tablet/mobile và warehouse Pixel 7/compact phone `17/17` PASS.
 - Chưa merge và chưa deploy thay đổi của epic này tại thời điểm cập nhật file.
 
 ## Chưa hoàn tất / cần evidence
