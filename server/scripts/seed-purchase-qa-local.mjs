@@ -126,6 +126,11 @@ await ensureResource("Item Color", "THÔ", {
   finish: "Thô",
   disabled: 0,
 });
+await ensureResource("Warehouse", "K36", {
+  warehouse_name: "K36",
+  is_group: 0,
+  disabled: 0,
+});
 
 await ensureResource("Supplier", "QA-SUPPLIER", {
   supplier_name: "QA-SUPPLIER",
@@ -211,4 +216,4 @@ await ensureResource("Item", "AL71-QA", {
   description: "Deterministic local fixture for Tiến Đạt FIFO QA",
 });
 
-console.log(`PURCHASE_QA_SEED_PASS suppliers=QA-SUPPLIER,TIEN-DAT items=QA-PURCHASE-ITEM,AL71-QA uom=Cái,Kg color=THÔ regular_item_group=${JSON.stringify(regularItemGroup)} aluminium_item_group=${JSON.stringify(aluminiumItemGroup)} origin=loopback`);
+console.log(`PURCHASE_QA_SEED_PASS suppliers=QA-SUPPLIER,TIEN-DAT items=QA-PURCHASE-ITEM,AL71-QA uom=Cái,Kg color=THÔ warehouse=K36 regular_item_group=${JSON.stringify(regularItemGroup)} aluminium_item_group=${JSON.stringify(aluminiumItemGroup)} origin=loopback`);

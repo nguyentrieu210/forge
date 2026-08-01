@@ -107,6 +107,10 @@ function round(value: number, digits = 6): number {
   return Math.round((value + Number.EPSILON) * scale) / scale;
 }
 
+function viInput(value: number): string {
+  return String(value).replace(".", ",");
+}
+
 function aluminiumLine(lengthM: number, bars: number): JsonRecord {
   const kgPerM = 0.389;
   const baremKg = round(lengthM * kgPerM * bars);
@@ -186,7 +190,44 @@ async function callFifo(
   });
 }
 
-test("authenticated Tiến Đạt receipt allocates oldest order first and enforces cumulative tolerance", async ({ page }) => {
+const actionId = (field: string) => `#action-nhap-nhom-fifo-${field}`;
+
+async function chooseActionLink(page: Page, field: string, value: string) {
+  await page.locator(actionId(field)).click();
+  const input = page.locator("[cmdk-input]").last();
+  await expect(input).toBeVisible();
+  await input.fill(value);
+  const option = page.locator("[cmdk-item]")
+    .filter({ hasText: value })
+    .filter({ hasNotText: /Tạo mới/i })
+    .first();
+  await expect(option).toBeVisible();
+  await option.click();
+  await expect(page.locator(actionId(field))).toContainText(value);
+}
+
+async function openAndFillFifoAction(page: Page, lengthM: number, bars: number) {
+  await page.goto("/x/action%3Anhap-nhom-fifo");
+  const screen = page.locator('[data-action-screen="nhap-nhom-fifo"]');
+  await expect(screen).toBeVisible();
+  await expect(screen.getByRole("region", { name: "Thông tin thao tác" })).toBeVisible();
+
+  await chooseActionLink(page, "supplier", "Tiến Đạt");
+  await chooseActionLink(page, "item_code", "AL71-QA");
+  await page.locator(actionId("length_m")).fill(viInput(lengthM));
+  await page.locator(actionId("qty_bar")).fill(String(bars));
+  await page.locator(actionId("actual_weight_kg")).fill(viInput(round(lengthM * 0.389 * bars)));
+  await page.locator(actionId("rate")).fill("100000");
+  await chooseActionLink(page, "color", "THÔ");
+  await chooseActionLink(page, "warehouse", "K36");
+
+  // is_stamped có default "Không" từ manifest. Nếu runtime không giữ default thì test sẽ
+  // dừng ở cảnh báo required trước khi gọi backend, đúng failure path cần bắt.
+  await page.getByRole("button", { name: "Xem phân bổ FIFO", exact: true }).click();
+  await expect(page.locator("[data-action-result]")).toBeVisible();
+}
+
+test("authenticated Tiến Đạt receipt allocates oldest order first and exposes complete FIFO UI", async ({ page }) => {
   const csrf = await login(page);
   const project = test.info().project.name;
   const suffix = `${project}-${Date.now()}`;
@@ -197,6 +238,29 @@ test("authenticated Tiến Đạt receipt allocates oldest order first and enfor
   expect(firstOrder.docstatus).toBe(1);
   expect(secondOrder.docstatus).toBe(1);
 
+  // Người dùng phải nhìn thấy toàn bộ nghiệp vụ trên màn thật, không chỉ gọi API trong test.
+  await openAndFillFifoAction(page, lengthM, 230);
+  const debtSummary = page.locator('[data-action-summary="Công nợ giao hàng sau lần nhận"]');
+  await expect(debtSummary).toBeVisible();
+  await expect(debtSummary.getByText("Còn nợ danh nghĩa (cây)", { exact: true }).locator("..")).toContainText("70");
+  await expect(debtSummary.getByText("Cần giao thêm tối thiểu (cây)", { exact: true }).locator("..")).toContainText("55");
+  await expect(debtSummary.getByText("Được giao thêm tối đa (cây)", { exact: true }).locator("..")).toContainText("85");
+
+  const balancesUi = page.locator('[data-action-result-section="order_balances"]');
+  const allocationsUi = page.locator('[data-action-result-section="allocations"]');
+  const historyUi = page.locator('[data-action-result-section="receipt_history"]');
+  const itemsUi = page.locator('[data-action-result-section="items"]');
+  await expect(balancesUi.getByText("Đơn còn nợ", { exact: true })).toBeVisible();
+  await expect(balancesUi).toContainText(firstOrder.name);
+  await expect(balancesUi).toContainText(secondOrder.name);
+  await expect(allocationsUi.getByText("Lịch sử trừ FIFO lần này", { exact: true })).toBeVisible();
+  await expect(allocationsUi).toContainText(firstOrder.name);
+  await expect(allocationsUi).toContainText(secondOrder.name);
+  await expect(historyUi.getByText("Lịch sử hàng về", { exact: true })).toBeVisible();
+  await expect(itemsUi.getByText("Dòng phiếu nhập sẽ tạo", { exact: true })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+
+  // Giữ regression API authoritative bên cạnh click-UI để khóa chính xác 200 + 30.
   const previewResponse = await callFifo(page, csrf, "preview_fifo_receipt", lengthM, 230, suffix);
   expect(previewResponse.status, previewResponse.text).toBe(200);
   const preview = unwrap(previewResponse.body) as JsonRecord;
@@ -236,6 +300,13 @@ test("authenticated Tiến Đạt receipt allocates oldest order first and enfor
   expect(Number(historyDebt.ordered_bars) - Number(historyDebt.received_bars_before)).toBe(70);
   expect(Number(historyDebt.minimum_additional_bars_to_settle) + 1).toBe(55);
   expect(Number(historyDebt.maximum_additional_bars_allowed) + 1).toBe(85);
+
+  // Refresh ngay trên màn nghiệp vụ để chứng minh lịch sử hàng về đã ghi sổ xuất hiện cho người dùng.
+  await page.locator(actionId("qty_bar")).fill("1");
+  await page.locator(actionId("actual_weight_kg")).fill(viInput(round(lengthM * 0.389)));
+  await page.getByRole("button", { name: "Xem phân bổ FIFO", exact: true }).click();
+  await expect(historyUi).toContainText(receiptName);
+  await expect(historyUi).toContainText(firstOrder.name);
 
   const accepted = await callFifo(page, csrf, "preview_fifo_receipt", lengthM, 85, `${suffix}-limit`);
   expect(accepted.status, accepted.text).toBe(200);
