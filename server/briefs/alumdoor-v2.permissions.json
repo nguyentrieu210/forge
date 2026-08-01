@@ -1,0 +1,12 @@
+{
+  "//purpose": "Stock Entry là chứng từ ghi sổ kho. Thủ kho và Chủ xưởng được post; Sản xuất chỉ lập/sửa nháp để tách người chuẩn bị khỏi người ghi sổ; Kế toán chỉ đọc.",
+  "version": "2.1.1",
+  "permissions": {
+    "Stock Entry": {
+      "Chủ xưởng": "rwcs",
+      "Thủ kho": "rwcs",
+      "Sản xuất": "rwc",
+      "Kế toán": "r"
+    }
+  }
+}
