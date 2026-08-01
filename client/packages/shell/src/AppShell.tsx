@@ -231,7 +231,7 @@ export function AppShell(props: AppShellProps) {
             {props.brandMark
               ? <div className={cn(
                   "grid shrink-0 place-items-center overflow-hidden rounded-md",
-                  props.brandLogoOnly && !collapsed ? "h-12 w-full bg-white px-0" : "mf-brand-mark size-7",
+                  props.brandLogoOnly && !collapsed ? "h-12 w-full bg-transparent px-0" : "mf-brand-mark size-7",
                 )}>{props.brandMark}</div>
               : <div className="mf-brand-mark">{(props.brand ?? "MetaForge").trim().charAt(0).toUpperCase()}</div>}
             {!collapsed && !props.brandLogoOnly ? <span className="truncate font-semibold">{props.brand ?? "MetaForge"}</span> : null}
