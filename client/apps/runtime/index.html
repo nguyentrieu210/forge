@@ -6,9 +6,81 @@
     <meta name="theme-color" content="#7c3aed" />
     <meta name="description" content="Forge — nền tảng vận hành doanh nghiệp từ văn phòng đến hiện trường." />
     <meta name="forge-release" content="%VITE_FORGE_RELEASE_SHA%" />
-    <link rel="icon" href="/forge-mark.svg" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="/forge-mark.svg" />
+    <link id="app-icon" rel="icon" href="/forge-mark.svg" type="image/svg+xml" />
+    <link id="app-touch-icon" rel="apple-touch-icon" href="/forge-mark.svg" />
     <title>Forge</title>
+    <style>
+      [data-alumdoor-landing] .mf-brand-mark {
+        width: 8.75rem !important;
+        height: 2.65rem !important;
+        flex: 0 0 auto;
+        overflow: hidden;
+        border-radius: .65rem;
+        color: transparent !important;
+        font-size: 0 !important;
+        background-color: #343433 !important;
+        background-image: url("https://alumdoor.vn/wp-content/uploads/2022/04/logo-am-ban-doi-alumdoor-1-1400x520-01-2-1400x478.png.webp") !important;
+        background-repeat: no-repeat !important;
+        background-position: center !important;
+        background-size: 88% auto !important;
+      }
+
+      [data-alumdoor-landing] main > section:first-child {
+        background-color: #333433 !important;
+        background-image:
+          linear-gradient(90deg, rgba(35,35,35,.98) 0%, rgba(35,35,35,.90) 46%, rgba(35,35,35,.58) 72%, rgba(35,35,35,.82) 100%),
+          url("https://alumdoor.vn/wp-content/uploads/2022/04/ALUMDOOR-PRODUCT_Artboard-24.png.webp") !important;
+        background-repeat: no-repeat !important;
+        background-position: center, right 4% center !important;
+        background-size: cover, min(55vw, 760px) auto !important;
+      }
+
+      [data-alumdoor-landing] #san-pham section[id] a.group > div:first-child {
+        min-height: 11.5rem;
+        background-color: #343433 !important;
+        background-repeat: no-repeat !important;
+        background-position: center !important;
+        background-size: cover !important;
+      }
+      [data-alumdoor-landing] #san-pham section[id] a.group > div:first-child > div:first-child {
+        background: linear-gradient(180deg, rgba(20,20,20,.10), rgba(20,20,20,.82)) !important;
+      }
+      [data-alumdoor-landing] #cua-uc a.group > div:first-child {
+        background-image: linear-gradient(180deg, rgba(20,20,20,.04), rgba(20,20,20,.70)), url("https://alumdoor.vn/wp-content/uploads/2021/08/garage-400x400.png.webp") !important;
+      }
+      [data-alumdoor-landing] #cua-duc a.group:nth-child(odd) > div:first-child {
+        background-image: linear-gradient(180deg, rgba(20,20,20,.02), rgba(20,20,20,.72)), url("https://alumdoor.vn/wp-content/uploads/2022/04/ALUMDOOR-PRODUCT_Artboard-14.png") !important;
+      }
+      [data-alumdoor-landing] #cua-duc a.group:nth-child(even) > div:first-child {
+        background-image: linear-gradient(180deg, rgba(20,20,20,.02), rgba(20,20,20,.72)), url("https://alumdoor.vn/wp-content/uploads/2022/04/ALUMDOOR-PRODUCT_Artboard-24.png.webp") !important;
+      }
+      [data-alumdoor-landing] #cua-luoi a.group > div:first-child {
+        background-image: linear-gradient(180deg, rgba(20,20,20,.12), rgba(20,20,20,.76)), url("https://alumdoor.vn/wp-content/uploads/2021/08/535573-1-400x400.png.webp") !important;
+      }
+      [data-alumdoor-landing] #phu-kien a.group > div:first-child {
+        background-image: linear-gradient(180deg, rgba(20,20,20,.10), rgba(20,20,20,.76)), url("https://alumdoor.vn/wp-content/uploads/2021/08/customer-service-line.png") !important;
+        background-size: cover, 58% auto !important;
+        background-color: #f3f0ea !important;
+      }
+
+      @media (max-width: 1023px) {
+        [data-alumdoor-landing] main > section:first-child {
+          background-position: center, center top !important;
+          background-size: cover, 100% auto !important;
+        }
+      }
+    </style>
+    <script>
+      (() => {
+        const params = new URLSearchParams(location.search);
+        const alumdoor = location.hostname.toLowerCase() === "alu.kairo.vn" || params.get("alumdoor") === "1";
+        if (!alumdoor) return;
+        const logo = "https://alumdoor.vn/wp-content/uploads/2022/04/logo-am-ban-doi-alumdoor-1-1400x520-01-2-1400x478.png.webp";
+        document.querySelector('meta[name="theme-color"]')?.setAttribute("content", "#ef6b2e");
+        document.getElementById("app-icon")?.setAttribute("href", logo);
+        document.getElementById("app-touch-icon")?.setAttribute("href", logo);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
