@@ -15,7 +15,7 @@ async function boot(page: Page) {
 async function login(page: Page, password: string) {
   await page.locator("#mf-login-usr").fill(USER);
   await page.locator("#mf-login-pwd").fill(password);
-  await page.getByRole("button", { name: /^Đăng nhập$/ }).click();
+  await page.locator("#dang-nhap").getByRole("button", { name: /^Đăng nhập$/ }).click();
 }
 
 test("Alumdoor LoginForm preserves a real cookie session across logout and re-login", async ({ page, context }) => {

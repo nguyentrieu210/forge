@@ -55,7 +55,7 @@ async function login(page: Page): Promise<string> {
   await expect(page.locator("#mf-login-usr")).toBeVisible();
   await page.locator("#mf-login-usr").fill(USER);
   await page.locator("#mf-login-pwd").fill(PASSWORD);
-  await page.getByRole("button", { name: /^Đăng nhập$/ }).click();
+  await page.locator("#dang-nhap").getByRole("button", { name: /^Đăng nhập$/ }).click();
   await expect(page.locator("#mf-login-usr")).toBeHidden();
 
   const boot = await browserRequest(page, "/api/method/metaforge.api.get_boot");
