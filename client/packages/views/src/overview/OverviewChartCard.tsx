@@ -97,9 +97,21 @@ export function OverviewChartCard({ chart, onNavigate }: { chart: OverviewChart;
           <div className="mt-1 text-lg font-semibold tabular-nums">{shortNum(total.value) || "0"}</div>
         </div>
       ))}</div> : null}
-      <div className="mt-3 h-60 w-full">
-        <ResponsiveContainer width="100%" height="100%">{content}</ResponsiveContainer>
-      </div>
+      {rows.length ? (
+        <div className="mt-3 h-60 w-full">
+          <ResponsiveContainer width="100%" height="100%">{content}</ResponsiveContainer>
+        </div>
+      ) : chart.emptyFallback === "table" ? (
+        <div className="mt-3 min-h-60 overflow-hidden rounded-md border" role="table" aria-label={`${chart.label} chưa có dữ liệu`}>
+          <div className="grid grid-cols-[minmax(8rem,1fr)_repeat(3,minmax(5rem,auto))] gap-3 border-b bg-muted/50 px-3 py-2 text-xs font-medium text-muted-foreground" role="row">
+            <span role="columnheader">Nhóm</span>
+            {chart.series.slice(0, 3).map((series) => <span key={series.name} role="columnheader" className="text-right">{series.name}</span>)}
+          </div>
+          <div className="grid min-h-48 place-items-center px-4 text-sm text-muted-foreground" role="row">Chưa có dữ liệu để lập biểu đồ</div>
+        </div>
+      ) : (
+        <div className="mt-3 grid min-h-60 place-items-center rounded-md border border-dashed px-4 text-sm text-muted-foreground">Chưa có dữ liệu để lập biểu đồ</div>
+      )}
     </Button>
   );
 }

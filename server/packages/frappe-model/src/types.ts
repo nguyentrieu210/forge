@@ -103,6 +103,38 @@ export interface DocFieldMeta extends JsonObject {
   /** Omitted from a print format only when empty. */
   print_hide_if_no_value?: boolean;
   idx?: number;
+  /** Canonical MetaForge authoring contract: where the value comes from. */
+  valueSource?: "user" | "default" | "link" | "formula" | "system" | "workflow";
+  /** Canonical edit policy. The server remains authoritative for every readonly variant. */
+  editMode?: "editable" | "readonly" | "set_once" | "immutable_after_submit" | "hidden";
+  /** `quick` is the compact create form, `expanded` the full form, `internal` never user-authored. */
+  surface?: "quick" | "expanded" | "internal";
+  /** True when accepting a client value would violate a server-owned invariant. */
+  serverEnforced?: boolean;
+  /** Preserve a value the user has changed when a later Link fetch resolves. */
+  dirtyGuard?: "preserve_user_value";
+}
+
+export type DocTypeKind = "transaction" | "master" | "child_table" | "single" | "tree" | "virtual" | "system";
+
+export interface DocTypeView extends JsonObject {
+  enabled: boolean;
+  fields?: string[];
+  columns?: string[];
+  stageField?: string;
+  startField?: string;
+  endField?: string;
+}
+
+export interface DocTypeViewPolicy extends JsonObject {
+  list: DocTypeView;
+  form: DocTypeView;
+  quickEntry?: DocTypeView;
+  kanban?: DocTypeView;
+  calendar?: DocTypeView;
+  gantt?: DocTypeView;
+  chart?: DocTypeView;
+  mobile?: JsonObject;
 }
 
 /**
@@ -160,6 +192,8 @@ export interface WorkflowMeta extends JsonObject {
 
 export interface DocTypeMeta extends JsonObject {
   name: string;
+  /** Explicit semantic kind used by installers, generators and generic views. */
+  kind?: DocTypeKind;
   /**
    * Tên hiển thị cho người dùng. Bỏ trống thì mọi nơi rơi về `name`, tức tên kỹ thuật.
    *
@@ -186,6 +220,8 @@ export interface DocTypeMeta extends JsonObject {
   sort_order?: "ASC" | "DESC";
   search_fields?: string[];
   fields: DocFieldMeta[];
+  /** Explicitly enables views; a chart/Kanban/calendar is never inferred from a coincidental field. */
+  viewPolicy?: DocTypeViewPolicy;
   permissions: DocPermissionMeta[];
   revision: number;
   modified_at?: string;

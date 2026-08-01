@@ -5,10 +5,21 @@ Ngày cập nhật: **2026-08-01**.
 ## Dự án
 
 - Repository: `nguyentrieu210/forge`.
-- Default branch: `main`.
-- Current default head trước docs handoff: `29fee0200d8118eef2d0ae9e524a3a00acfab00f`.
+- Default branch: `main`; vẫn phải kiểm tra lại bằng GitHub trước khi làm, không suy từ tên branch local.
+- Current default head trước hotfix release: `6c89e1a9227e989fd8b08d6e55b35ce2e74d87c7`.
+- PR UI/PWA `#150` đã merge tại `2a8b9efaa60f6faa43d978b3fefc0741f1ce5a2d`; PR Meta `#154` đã merge tại `6c89e1a9227e989fd8b08d6e55b35ce2e74d87c7` sau khi toàn bộ required checks xanh.
 - Đọc theo thứ tự: `CURRENT_STATUS.md` → `NEXT_TASKS.md` → `DELIVERY_POLICY.md`.
 - GitHub là nguồn sự thật cho code, CI, merge và release evidence.
+
+## Canonical DocType Meta đã merge
+
+- Alumdoor `2.1.0`: 74 DocType, 969 field, 255 Link, 27 child table, 12 report và 3 chart report-backed.
+- Meta contract gồm `kind`, `viewPolicy`, `valueSource`, `editMode`, `surface`, `serverEnforced`, `dirtyGuard` và external DocType closure.
+- Quick/expanded form đã chạy theo Meta; field internal vẫn giữ trong schema gốc để default/serialization/server dùng.
+- Hidden/server-owned field bị runtime từ chối nếu client tự đặt hoặc sửa.
+- `User` Link đọc danh bạ tenant thay vì rơi về free-text hoặc đòi một DocType document giả.
+- Biểu đồ không còn tự suy từ workflow; chỉ chart khai trong manifest, có report, quyền, drill-down và empty fallback mới được render.
+- Canonical skill `C:\AppWeb\.claude\skills\app-factory` đã được tạo tại `35be2bf` và siết đồng bộ runtime tại `9cd5774`.
 
 ## PR cleanup
 
