@@ -5,13 +5,13 @@ Ngày cập nhật: **2026-08-01**.
 ## Dự án
 
 - Repository: `nguyentrieu210/forge`.
-- Default branch: kiểm tra lại bằng GitHub trước khi làm; không suy từ tên branch local.
-- Current Meta branch: `feat/alumdoor-meta-completeness-20260801`.
-- PR UI/PWA `#150` đã merge tại `2a8b9efaa60f6faa43d978b3fefc0741f1ce5a2d` sau khi toàn bộ required checks xanh.
+- Default branch: `main`; vẫn phải kiểm tra lại bằng GitHub trước khi làm, không suy từ tên branch local.
+- Current default head trước hotfix release: `6c89e1a9227e989fd8b08d6e55b35ce2e74d87c7`.
+- PR UI/PWA `#150` đã merge tại `2a8b9efaa60f6faa43d978b3fefc0741f1ce5a2d`; PR Meta `#154` đã merge tại `6c89e1a9227e989fd8b08d6e55b35ce2e74d87c7` sau khi toàn bộ required checks xanh.
 - Đọc theo thứ tự: `CURRENT_STATUS.md` → `NEXT_TASKS.md` → `DELIVERY_POLICY.md`.
 - GitHub là nguồn sự thật cho code, CI, merge và release evidence.
 
-## Canonical DocType Meta đang chờ PR
+## Canonical DocType Meta đã merge
 
 - Alumdoor `2.1.0`: 74 DocType, 969 field, 255 Link, 27 child table, 12 report và 3 chart report-backed.
 - Meta contract gồm `kind`, `viewPolicy`, `valueSource`, `editMode`, `surface`, `serverEnforced`, `dirtyGuard` và external DocType closure.

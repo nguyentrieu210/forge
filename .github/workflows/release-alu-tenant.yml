@@ -3,7 +3,7 @@ name: Release alu Tenant Worker Production
 on:
   push:
     branches:
-      - hotfix/alumdoor-print-list-delete
+      - main
     paths:
       - "server/apps/tenant-worker/**"
       - "server/packages/**"

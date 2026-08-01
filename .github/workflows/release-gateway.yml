@@ -3,7 +3,7 @@ name: Release Gateway Production
 on:
   push:
     branches:
-      - hotfix/alumdoor-print-list-delete
+      - main
     paths:
       - "client/**"
       - "server/apps/gateway-worker/**"

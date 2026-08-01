@@ -15,7 +15,7 @@ on:
       - "server/RELEASE_CONTENT_MANIFEST.json"
   push:
     branches:
-      - hotfix/alumdoor-print-list-delete
+      - main
     paths:
       - ".github/workflows/manual-release-alu.yml"
       - ".github/workflows/cloudflare-preview-qa.yml"
@@ -159,7 +159,7 @@ jobs:
     environment: production
     env:
       TARGET_SHA: ${{ needs.gate.outputs.target_sha }}
-      DEFAULT_BRANCH: hotfix/alumdoor-print-list-delete
+      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
       BASE_URL: https://alu.kairo.vn
       TENANT_WORKER: cloudforge-tenant-alu
       APP_WORKER: cloudforge-app-alumdoor

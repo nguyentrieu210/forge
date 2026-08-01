@@ -3,7 +3,7 @@ name: Release Alumdoor App Worker Production
 on:
   push:
     branches:
-      - hotfix/alumdoor-print-list-delete
+      - main
     paths:
       - "server/apps-src/alumdoor-worker/**"
       - "server/src/**"

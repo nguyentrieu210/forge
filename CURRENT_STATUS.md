@@ -2,9 +2,11 @@
 
 Ngày cập nhật: **2026-08-01**.
 
-## Active — Canonical DocType Meta và Alumdoor completeness
+- PR #154 đã merge hợp đồng Meta chuẩn vào `main` tại `6c89e1a9`; lượt phát hành đầu tiên dừng an toàn trước khi đổi production vì các workflow còn trỏ nhánh hotfix đã xóa. Các trigger/dispatcher đang được chuyển đồng bộ sang nhánh mặc định `main`.
 
-- Branch: `feat/alumdoor-meta-completeness-20260801`.
+## Đã merge — Canonical DocType Meta và Alumdoor completeness
+
+- PR `#154` đã merge tại `6c89e1a9227e989fd8b08d6e55b35ce2e74d87c7`.
 - PR giao diện/PWA `#150` đã merge đúng validated head `dbbca94802593f8e6541eff9390707eee7bc63dd`; merge commit `2a8b9efaa60f6faa43d978b3fefc0741f1ce5a2d`.
 - Canonical Meta đã có `kind`, `viewPolicy`, `valueSource`, `editMode`, `surface`, `serverEnforced` và `dirtyGuard`; compiler tự sinh hợp đồng đầy đủ nhưng vẫn tương thích brief cũ.
 - Form tạo nhanh chỉ render field `quick`; form đầy đủ render `expanded`; field `internal` vẫn được giữ trong schema gốc để server/default/link xử lý nhưng không lộ thành ô nhập.
