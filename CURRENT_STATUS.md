@@ -8,9 +8,27 @@ Ngày cập nhật: **2026-08-02**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `main`.
-- Exact `main` sau MetaForge Bulk View: `28eb4c4af6f88f0d1c3dc56c8f50e8d31fe2e968` — merge PR `#190`.
-- PR `#182` đã đóng, không merge; PR `#190` là branch/PR canonical thay thế cho Bulk View.
+- Exact `main` khi mở Bulk dirty-guard: `e490e2ebd2e8c3cc98e004d4a7c2e394fd07812f` — merge PR `#191` docs hậu Bulk View.
+- PR `#190` đã merge Bulk View; PR `#182` đã đóng, không merge và không còn là live source.
 - Branch `hotfix/alumdoor-print-list-delete` cũ không còn được dùng làm current/default branch và không được coi là chỉ dẫn thực thi.
+
+## IN REVIEW — MetaForge Bulk View dirty guard
+
+- Branch: `fix/metaforge-bulk-dirty-guard-20260802`, tạo sạch từ exact `main@e490e2ebd2e8c3cc98e004d4a7c2e394fd07812f`.
+- PR `#192` đang mở draft; scope đúng 2 file UI.
+- Exact executable head đã validation: `6e963cda7945567fa330b44a8c5f139c032c3c19`.
+- Required workflows trên exact executable head: **6/6 PASS**.
+  - CI `30721693001`: tests + typecheck + build SUCCESS.
+  - UI Pull Request Validation `30721692982`: frontend lint/build + MetaForge workspace browser QA + Alumdoor browser QA SUCCESS.
+  - PR Validation `30721692990`: SUCCESS.
+  - Purchase Feature CI `30721692997`: SUCCESS.
+  - Sales Feature CI `30721692984`: SUCCESS.
+  - Inventory and Manufacturing CI `30721693014`: SUCCESS.
+- Root cause: `BulkGridContainer` giữ dirty patch nội bộ nhưng `DoctypeWorkspace` không biết, nên chuyển `Nhập hàng loạt -> Danh sách` có thể unmount grid và mất thay đổi chưa lưu.
+- Fix: `BulkGridContainer` phát `onDirtyChange`, cài `beforeunload` guard khi dirty; `DoctypeWorkspace` chặn đổi mode và yêu cầu xác nhận destructive trước khi bỏ patch.
+- Save/discard đưa dirty state về false; quyền ghi và optimistic concurrency vẫn giữ nguyên contract của PR #190.
+- Không deploy Cloudflare/production, không sửa secret/DNS và không mutate tenant/customer data.
+- Handoff docs được cập nhật sau executable validation; final PR head sau docs phải chạy exact-head CI lại trước quyết định merge.
 
 ## DONE — MetaForge Bulk View + ALUM master grids
 
@@ -73,7 +91,7 @@ Ngày cập nhật: **2026-08-02**.
 
 - PR `#167`: authenticated stock lifecycle + mobile canonical contracts — merged.
 - PR `#170`: Stock Entry operational submit RBAC — merged.
-- PR `#173`: physical-stock catch-weight reconciliation — merged.
+- PR `#173`: physical stock catch-weight reconciliation — merged.
 - PR `#175`: authenticated reservation/available-stock lifecycle — merged.
 - PR `#189` hiện là clean active PR cho QR/lineage + cleanup QA P0; chưa tính DONE cho tới khi merge/evidence hoàn tất.
 
