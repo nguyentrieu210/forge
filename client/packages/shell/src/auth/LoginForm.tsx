@@ -181,9 +181,7 @@ export function LoginForm({
   };
 
   const warehouseApp = typeof window !== "undefined" && window.location.pathname.startsWith("/mobile/warehouse/");
-  const mark = warehouseApp && !brandMark
-    ? null
-    : alumdoor && !brandMark
+  const mark = alumdoor && !brandMark
       ? <ForgeBrandLogo size={44} className="mf-brand-mark" />
       : <span className="grid size-11 shrink-0 place-items-center overflow-hidden">{brandMark ?? <ForgeBrandLogo size={42} />}</span>;
 
@@ -197,13 +195,19 @@ export function LoginForm({
     >
       <div className="space-y-6 p-6 sm:p-8">
         <div className="flex items-center gap-3">
-          {mark}
-          <div className="min-w-0">
-            <p className="truncate text-lg font-bold tracking-[-0.035em]">{resolvedBrand}</p>
-            <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.17em] text-muted-foreground">
-              {warehouseApp ? "Ứng dụng kho trên điện thoại" : alumdoor ? "Hệ thống quản trị nội bộ" : "Không gian vận hành doanh nghiệp"}
-            </p>
-          </div>
+          {warehouseApp ? (
+            <img src="/mobile/warehouse/alumdoor-logo.png" alt="Alumdoor" className="h-12 w-auto max-w-full object-contain" />
+          ) : (
+            <>
+              {mark}
+              <div className="min-w-0">
+                <p className="truncate text-lg font-bold tracking-[-0.035em]">{resolvedBrand}</p>
+                <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.17em] text-muted-foreground">
+                  {alumdoor ? "Hệ thống quản trị nội bộ" : "Không gian vận hành doanh nghiệp"}
+                </p>
+              </div>
+            </>
+          )}
         </div>
 
         <div>
