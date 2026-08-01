@@ -13,27 +13,36 @@
   "categories": ["business", "productivity"],
   "icons": [
     {
-      "src": "https://alumdoor.vn/wp-content/uploads/2022/04/logo-am-ban-doi-alumdoor-1-1400x520-01-2-1400x478.png.webp",
+      "src": "alumdoor-mark.svg",
       "sizes": "any",
-      "type": "image/webp",
+      "type": "image/svg+xml",
       "purpose": "any"
+    },
+    {
+      "src": "alumdoor-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
     }
   ],
   "shortcuts": [
     {
       "name": "Nhập kho",
       "short_name": "Nhập kho",
-      "url": "/mobile/warehouse/?action=receipt"
+      "url": "/mobile/warehouse/?action=receipt",
+      "icons": [{ "src": "alumdoor-mark.svg", "sizes": "any", "type": "image/svg+xml" }]
     },
     {
       "name": "Xuất kho",
       "short_name": "Xuất kho",
-      "url": "/mobile/warehouse/?action=issue"
+      "url": "/mobile/warehouse/?action=issue",
+      "icons": [{ "src": "alumdoor-mark.svg", "sizes": "any", "type": "image/svg+xml" }]
     },
     {
       "name": "Tra tồn",
       "short_name": "Tra tồn",
-      "url": "/mobile/warehouse/?tab=stock"
+      "url": "/mobile/warehouse/?tab=stock",
+      "icons": [{ "src": "alumdoor-mark.svg", "sizes": "any", "type": "image/svg+xml" }]
     }
   ]
 }
