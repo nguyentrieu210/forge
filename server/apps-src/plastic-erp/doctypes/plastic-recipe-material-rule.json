@@ -1,0 +1,16 @@
+{
+  "name": "Plastic Recipe Material Rule",
+  "module": "Plastic ERP",
+  "is_child": true,
+  "fields": [
+    { "fieldname": "item", "label": "Nguyên liệu", "fieldtype": "Link", "options": "Item", "required": true, "in_list_view": true },
+    { "fieldname": "material_role", "label": "Vai trò", "fieldtype": "Select", "options": "Base Resin\nRegrind\nMasterbatch\nAdditive\nFiller\nPigment\nOther", "required": true, "in_list_view": true },
+    { "fieldname": "target_pct", "label": "Tỷ lệ mục tiêu %", "fieldtype": "Float", "required": true, "in_list_view": true },
+    { "fieldname": "min_pct", "label": "Tối thiểu %", "fieldtype": "Float" },
+    { "fieldname": "max_pct", "label": "Tối đa %", "fieldtype": "Float" },
+    { "fieldname": "sequence", "label": "Thứ tự phối", "fieldtype": "Int" },
+    { "fieldname": "substitution_allowed", "label": "Cho phép thay thế", "fieldtype": "Check" }
+  ],
+  "permissions": [],
+  "revision": 1
+}
