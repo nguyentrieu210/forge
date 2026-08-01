@@ -204,9 +204,9 @@ test("authenticated receipt, issue, transfer and reconciliation preserve stock l
   const stockUserPassword = `StockUser-${Date.now()}-Qa!`;
   const stockManagerPassword = `StockManager-${Date.now()}-Qa!`;
 
-  const createdUser = await createUser(page, adminCsrf, stockUser, stockUserPassword, ["Stock User", "Thủ kho"]);
+  const createdUser = await createUser(page, adminCsrf, stockUser, stockUserPassword, ["Thủ kho"]);
   expect(createdUser.user).toBe(stockUser);
-  const createdManager = await createUser(page, adminCsrf, stockManager, stockManagerPassword, ["Stock User", "Stock Manager", "Chủ xưởng"]);
+  const createdManager = await createUser(page, adminCsrf, stockManager, stockManagerPassword, ["Chủ xưởng"]);
   expect(createdManager.user).toBe(stockManager);
 
   const sourceWarehouse = await createResource(page, adminCsrf, "Warehouse", {
