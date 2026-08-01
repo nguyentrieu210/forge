@@ -677,6 +677,21 @@
     font-weight: 700;
     letter-spacing: -0.03em;
   }
+
+  /* Raster brand artwork has a white source canvas. Blend it into the active
+     surface so light/dark themes do not leave a mismatched white rectangle. */
+  .mf-alumdoor-logo {
+    background: transparent;
+  }
+
+  .mf-alumdoor-logo-image {
+    mix-blend-mode: multiply;
+  }
+
+  :is([data-theme="dark"], .dark) .mf-alumdoor-logo-image {
+    filter: invert(1) hue-rotate(180deg);
+    mix-blend-mode: screen;
+  }
   .mf-shell-nav-group-label {
     padding: 0.35rem 0.625rem 0.3rem;
     color: var(--muted-foreground);
