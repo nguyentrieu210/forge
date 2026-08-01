@@ -140,4 +140,5 @@ Sales Order → production request → Work Order → material issue/consume →
 - [x] Làm lại sơ đồ Quy trình bằng node, số bước và đường nối.
 - [x] Lọc Experience thiếu renderer và chuyển URL cũ về Tổng quan.
 - [x] Typecheck, selfcheck, build và Playwright responsive PASS.
-- [ ] Build/stage exact SHA, Wrangler dry-run, deploy Gateway và smoke production sau đăng nhập bằng phiên demo hiện có nếu truy cập được an toàn.
+- [x] Build/stage exact SHA `b44bdaa9`, Wrangler dry-run, deploy Gateway version `fe705d76-a561-4ec9-bc8a-976437d65657` và HTTP production smoke.
+- [ ] Khi có phiên demo được phép dùng, smoke chỉ đọc sau đăng nhập cho thứ tự sidebar, Báo cáo/Danh mục/Quy trình và URL Experience cũ; không tạo hoặc sửa chứng từ khách hàng.

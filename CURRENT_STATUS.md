@@ -156,3 +156,7 @@ Branch: `feat/alumdoor-pwa-real-brand-assets`.
 - Quy trình dùng node thao tác, số bước và đường nối trực quan, tận dụng toàn bộ chiều ngang nội dung.
 - Runtime lọc mọi Experience không có renderer/action/screen tương ứng; URL Experience cũ không còn hiện màn “chưa được triển khai” mà quay về Tổng quan.
 - Typecheck shell/runtime, 88 nhóm selfcheck, runtime production build và Playwright MISA UI `9/9` PASS.
+- Exact release SHA: `b44bdaa9a9619943c13f4991ba3f0d5417a98a4c`; stage hash `c1df85a58884d6a5`; 70 asset và Wrangler dry-run PASS.
+- Gateway production đã cập nhật lên Cloudflare Version ID `fe705d76-a561-4ec9-bc8a-976437d65657`.
+- HTTP production smoke PASS: landing, App kho, manifest và service worker đều 200; landing HTML chứa đúng exact release SHA.
+- Không đổi DNS/secrets, không migrate hoặc mutate dữ liệu tenant.
