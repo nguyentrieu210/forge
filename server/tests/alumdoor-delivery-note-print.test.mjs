@@ -126,7 +126,7 @@ test("Alumdoor Delivery Note renders long delivery data through the real rendere
     .map((match) => cells(match[1], "td"));
 
   assert.equal(rows.length, 2);
-  assert.ok(rows.every((row) => row.length === 11), "mọi dòng phải khớp đºx 11 cột tiêu đề");
+  assert.ok(rows.every((row) => row.length === 11), "mọi dòng phải khớp đúng 11 cột tiêu đề");
   assert.equal(rows[0][0].text, "1");
   assert.equal(rows[0][1].text, "CUA-DUC-01", "renderer phải sắp dòng theo idx");
   assert.equal(rows[0][2].text, "Bộ cửa cuốn Đức nan khe thoáng đồng bộ mô tơ, bình lưu điện và phụ kiện lắp đặt");
@@ -136,14 +136,14 @@ test("Alumdoor Delivery Note renders long delivery data through the real rendere
   assert.equal(rows[0][6].text, "1");
   assert.equal(rows[0][7].text, "11,76");
   assert.equal(rows[0][8].text, "m2");
-  assert.equal(rows[0][9].text, "Kho thành phẩm cửa cuốn - Xường 1");
+  assert.equal(rows[0][9].text, "Kho thành phẩm cửa cuốn - Xưởng 1");
   assert.equal(rows[0][10].text, "128,50");
 
   assert.equal(rows[1][0].text, "2");
   assert.equal(rows[1][1].text, "REMOTE-01");
   assert.equal(rows[1][4].text, "", "hàng thường không được bịa chiều rộng");
   assert.equal(rows[1][5].text, "", "hàng thường không được bịa chiều cao");
-  assert.equal(rows[1][6].text, "", "hàng thường không được bịa số sô");
+  assert.equal(rows[1][6].text, "", "hàng thường không được bịa số bộ");
   assert.equal(rows[1][7].text, "2,00");
   assert.equal(rows[1][8].text, "Cái");
   assert.equal(rows[1][10].text, "0,40");
