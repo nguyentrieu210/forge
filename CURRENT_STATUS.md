@@ -4,6 +4,17 @@ Ngày cập nhật: **2026-08-02**.
 
 GitHub là nguồn sự thật cho branch head, PR, CI và release evidence.
 
+## REVIEW — MetaForge Form Renderer — 82/100
+
+- Nhánh audit: `review/metaforge-form-render-audit-20260802`, base `main@2b10626bacb2f96487b24ec8ba4551ab49fa4eb0`.
+- Báo cáo chi tiết: `docs/METAFORGE_FORM_RENDER_AUDIT_20260802.md`.
+- Kết luận: runtime Form hiện mạnh ở permission fail-closed, workflow server-authoritative, conflict/dirty guard và selective reactivity, nhưng chưa thể coi canonical Meta-driven hoàn chỉnh.
+- **High 1:** `NewFormContainer` dùng `applyFormSurface`, còn existing `FormContainer` truyền `useFormMeta` thẳng vào `FormView`; canonical `surface=internal` hard visibility boundary chưa được áp đồng nhất ở existing form.
+- **High 2:** canonical compiler sinh `viewPolicy.form/quickEntry`, nhưng đường render được review hiện dùng `FormProfile + surface`; chưa có runtime enforcement rõ cho `viewPolicy.*.fields` và `enabled`.
+- **Medium:** `layoutColumns()` flatten `Column Break`, nên renderer đang opinionated hơn tuyên bố copy hành vi Frappe/ERPNext Desk; cần chốt fidelity contract.
+- **Medium:** `FormView` comment nói width ceiling `96rem` nhưng code là `max-w-[72rem]`.
+- Audit chỉ thay docs; chưa sửa runtime, chưa deploy Cloudflare, chưa sửa production secrets/DNS, chưa mutate tenant production.
+
 ## DONE — Stock Entry operational submit RBAC
 
 - PR `#170` đã merge vào `main` ngày 2026-08-02.
