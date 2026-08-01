@@ -13,7 +13,11 @@ async function withTempBrief(run) {
     await writeFile(source, JSON.stringify({
       id: "sample",
       version: "1.0.0",
-      doctypes: [{ name: "Stock Entry", permissions: { "Stock User": "rwc" } }],
+      doctypes: [{
+        name: "Stock Entry",
+        permissions: { "Stock User": "rwc" },
+        fields: ["purpose:Data! Purpose", "note:Data Note"],
+      }],
       prints: [{ name: "Existing" }],
     }), "utf8");
     await run({
@@ -21,6 +25,7 @@ async function withTempBrief(run) {
       source,
       printsSource: path.join(directory, "sample.prints.json"),
       permissionsSource: path.join(directory, "sample.permissions.json"),
+      viewsSource: path.join(directory, "sample.views.json"),
     });
   } finally {
     await rm(directory, { recursive: true, force: true });
@@ -49,9 +54,8 @@ test("readBriefSource appends sidecar prints and may advance the app version", a
     await writeFile(printsSource, JSON.stringify({
       "//purpose": "Print formats live beside the business brief.",
       version: "1.0.1",
-      prints: [{ name: "Sales Order", doctype: "Sales Order", css: [], html: [] }],
+      prints: [{ name: "Sales Order", doctype: "Stock Entry", css: [], html: [] }],
     }), "utf8");
-
     const brief = await readBriefSource(source);
     assert.equal(brief.version, "1.0.1");
     assert.deepEqual(brief.prints.map((entry) => entry.name), ["Existing", "Sales Order"]);
@@ -61,7 +65,6 @@ test("readBriefSource appends sidecar prints and may advance the app version", a
 test("readBriefSource replaces complete DocType permission maps from a sidecar", async () => {
   await withTempBrief(async ({ source, permissionsSource }) => {
     await writeFile(permissionsSource, JSON.stringify({
-      "//purpose": "RBAC changes are reviewed as a small complete role matrix.",
       version: "1.0.2",
       permissions: {
         "Stock Entry": {
@@ -72,7 +75,6 @@ test("readBriefSource replaces complete DocType permission maps from a sidecar",
         },
       },
     }), "utf8");
-
     const brief = await readBriefSource(source);
     assert.equal(brief.version, "1.0.2");
     assert.deepEqual(brief.doctypes[0].permissions, {
@@ -81,6 +83,53 @@ test("readBriefSource replaces complete DocType permission maps from a sidecar",
       "Sản xuất": "rwc",
       "Kế toán": "r",
     });
+  });
+});
+
+test("readBriefSource merges independently reviewable bulk view policy", async () => {
+  await withTempBrief(async ({ source, viewsSource }) => {
+    await writeFile(viewsSource, JSON.stringify({
+      version: "1.0.3",
+      views: {
+        "Stock Entry": {
+          bulk: {
+            columns: ["purpose", "note"],
+            editableFields: ["note"],
+            commitStrategy: "document_update",
+            allowPaste: true,
+            pageSize: 100,
+          },
+        },
+      },
+    }), "utf8");
+    const brief = await readBriefSource(source);
+    assert.equal(brief.version, "1.0.3");
+    assert.deepEqual(brief.doctypes[0].mobile.bulk, {
+      enabled: true,
+      columns: ["purpose", "note"],
+      editableFields: ["note"],
+      commitStrategy: "document_update",
+      allowPaste: true,
+      pageSize: 100,
+    });
+  });
+});
+
+test("readBriefSource rejects bulk editable fields outside columns", async () => {
+  await withTempBrief(async ({ source, viewsSource }) => {
+    await writeFile(viewsSource, JSON.stringify({
+      views: { "Stock Entry": { bulk: { columns: ["purpose"], editableFields: ["note"] } } },
+    }), "utf8");
+    await assert.rejects(() => readBriefSource(source), /editableFields phải nằm trong columns: note/);
+  });
+});
+
+test("readBriefSource rejects view overrides for missing DocTypes", async () => {
+  await withTempBrief(async ({ source, viewsSource }) => {
+    await writeFile(viewsSource, JSON.stringify({
+      views: { Missing: { bulk: { columns: ["name"], editableFields: ["name"] } } },
+    }), "utf8");
+    await assert.rejects(() => readBriefSource(source), /DocType không tồn tại trong brief: Missing/);
   });
 });
 
@@ -104,5 +153,12 @@ test("readBriefSource rejects unrelated permission sidecar keys", async () => {
   await withTempBrief(async ({ source, permissionsSource }) => {
     await writeFile(permissionsSource, JSON.stringify({ permissions: { "Stock Entry": { "Thủ kho": "rwcs" } }, fixtures: [] }), "utf8");
     await assert.rejects(() => readBriefSource(source), /chỉ nhận version, permissions/);
+  });
+});
+
+test("readBriefSource rejects unrelated view sidecar keys", async () => {
+  await withTempBrief(async ({ source, viewsSource }) => {
+    await writeFile(viewsSource, JSON.stringify({ views: { "Stock Entry": { bulk: { columns: ["note"], editableFields: ["note"] } } }, fixtures: [] }), "utf8");
+    await assert.rejects(() => readBriefSource(source), /chỉ nhận version, views/);
   });
 });
