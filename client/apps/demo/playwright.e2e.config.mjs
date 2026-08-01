@@ -26,9 +26,11 @@ export default defineConfig({
     { name: "mobile-iphone13", use: { ...devices["iPhone 13"], browserName: "chromium" } },
   ],
   webServer: {
-    command: "pnpm dev -- --host 127.0.0.1 --port 8099",
+    command: "pnpm exec vite --host 127.0.0.1 --port 8099",
     url: "http://127.0.0.1:8099",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
+    stdout: "pipe",
+    stderr: "pipe",
   },
 });
