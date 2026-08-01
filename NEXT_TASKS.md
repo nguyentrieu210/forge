@@ -8,19 +8,20 @@ Ngày cập nhật: **2026-08-02**.
 
 Branch canonical của slice này: `feat/metaforge-document-experience-v2-20260802`.
 
-Đã hoàn tất executable slice:
+Executable slice đã hoàn tất:
 
 - presentation resolver an toàn với 7 archetype + generic fallback;
 - document hero, semantic status, metric cards, responsive context strip/rail và skeleton loading;
+- visual profile riêng theo archetype: accent, hero, icon, metric surface và context-rail copy;
 - existing `FormContainer` dùng Document Experience nhưng giữ nguyên canonical form policy, server-authoritative permission/workflow/action;
-- selfcheck khóa archetype, explicit presentation, internal-field boundary, progress, status tone và formatting;
-- exact executable head `48c23dd36ac8c9d2f24307a00556e46738db2f12` đã **6/6 PASS**, gồm tests/typecheck/build và MetaForge + Alumdoor browser QA.
+- selfcheck khóa archetype, explicit presentation, internal-field boundary, progress, status tone, formatting và 6 reference screens (`Sales Order`, `Purchase Order`, `Stock Entry`, `Work Order`, `Customer`, `Payment Entry`);
+- exact executable head `ec90b1b4e698c03be566c4c93b2942dd2aaafcbb` đã **6/6 PASS**, gồm tests/typecheck/build và MetaForge + Alumdoor browser QA.
 
 Việc còn lại của chính PR `#184`:
 
-1. Chạy lại exact-head required CI sau commit handoff docs.
-2. Giữ PR draft/không merge cho tới khi có quyết định merge riêng sau khi final exact-head xanh.
-3. Không thêm List Workspace vào PR này vì Bulk View PR `#182` đang chạm `DoctypeWorkspace` và core meta types.
+1. Chạy exact-head required CI sau commit `CURRENT_STATUS.md`/`NEXT_TASKS.md` mới nhất.
+2. Nếu final exact head xanh, giữ PR ready for review và chờ quyết định merge riêng; không tự merge `main`.
+3. Không thêm List Workspace vào PR này vì Bulk View PR `#182` vẫn draft và đang chạm `DoctypeWorkspace` + core meta types.
 
 ## NEXT UI — MetaForge UX V2 wave kế tiếp
 
@@ -30,9 +31,10 @@ Chỉ bắt đầu trên branch mới từ exact `main` sau khi PR `#184` kết 
 
 1. **List Workspace V2**: summary bar, saved views, smart filters, table/card responsive, contextual quick actions; tích hợp Bulk View thay vì tạo navigation cạnh tranh.
 2. **Presentation authoring/canonical transport**: đưa presentation contract từ runtime extension thành authorable metadata/sidecar có compiler/parser/selfcheck rõ ràng.
-3. **Reference screens**: Sales Order, Purchase Order, Stock Entry, Work Order, Customer, Payment Entry phải thể hiện khác archetype nhưng cùng dùng engine.
-4. **Document context nâng cao**: related-document graph, activity/timeline, exception cards và nghiệp vụ progress source thật thay vì chỉ explicit status steps.
+3. **Document context nâng cao**: related-document graph, activity/timeline, exception cards và nghiệp vụ progress source thật thay vì chỉ explicit status steps.
+4. **Operational workspace**: role home, module summary, inbox/cần xử lý, exception-first UX.
 5. **Mobile V2**: rich list cards, context drawer/bottom sheet và action zone phù hợp màn nhỏ.
+6. **Personalization/AI context**: saved dashboard layout và document-aware assistant chỉ sau khi các surface vận hành phía trên ổn định.
 
 Không mở wave List V2 bằng cách sửa thẳng branch PR `#182`; mỗi epic/slice dùng branch/PR riêng.
 
