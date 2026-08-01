@@ -20,6 +20,7 @@ import {
   type DocumentArchetype,
   type PresentationStatusTone,
 } from "./document-presentation.js";
+import { resolveDocumentExperienceProfile } from "./document-experience-profile.js";
 
 const ARCHETYPE_ICON: Record<DocumentArchetype, typeof Package> = {
   master: UserRound,
@@ -78,23 +79,36 @@ export function DocumentExperience({
   if (!presentation) return <>{children}</>;
 
   const Icon = ARCHETYPE_ICON[presentation.archetype];
+  const profile = resolveDocumentExperienceProfile(presentation.archetype);
   const systemModified = doc.modified ? String(doc.modified) : "";
   const systemOwner = doc.owner ? String(doc.owner) : "";
 
   return (
-    <div className="mf-document-experience flex h-full min-h-0 flex-col overflow-hidden bg-muted/20">
+    <div
+      className="mf-document-experience flex h-full min-h-0 flex-col overflow-hidden bg-muted/20"
+      data-archetype={presentation.archetype}
+    >
       <section
-        className="mf-document-hero shrink-0 border-b bg-card/95 px-3 py-3 backdrop-blur sm:px-5 sm:py-4"
+        className={cn(
+          "mf-document-hero relative shrink-0 overflow-hidden border-b px-3 py-3 backdrop-blur sm:px-5 sm:py-4",
+          profile.heroClass,
+        )}
         aria-label="Tổng quan chứng từ"
       >
-        <div className="mx-auto w-full max-w-[96rem]">
+        <span className={cn("absolute inset-y-0 left-0 w-1", profile.accentClass)} aria-hidden="true" />
+        <div className="relative mx-auto w-full max-w-[96rem]">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
             <div className="flex min-w-0 items-start gap-3">
-              <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
+              <span className={cn(
+                "grid size-11 shrink-0 place-items-center rounded-xl ring-1",
+                profile.iconClass,
+              )}>
                 <Icon className="size-5" />
               </span>
               <div className="min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{presentation.eyebrow}</p>
+                <p className={cn("text-[10px] font-semibold uppercase tracking-[0.16em]", profile.kickerClass)}>
+                  {presentation.eyebrow}
+                </p>
                 <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-2">
                   <h1 className="max-w-full truncate text-xl font-semibold tracking-tight sm:text-2xl">{presentation.title}</h1>
                   {presentation.status ? (
@@ -114,7 +128,7 @@ export function DocumentExperience({
             {presentation.metrics.length ? (
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:min-w-[34rem]" aria-label="Chỉ số chứng từ">
                 {presentation.metrics.map((metric) => (
-                  <div key={metric.field} className="min-w-0 rounded-xl border bg-muted/25 px-3 py-2.5">
+                  <div key={metric.field} className={cn("min-w-0 rounded-xl border px-3 py-2.5", profile.metricClass)}>
                     <div className="truncate text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">{metric.label}</div>
                     <div className="mt-1 truncate text-sm font-semibold tabular-nums text-foreground sm:text-base">
                       {formatPresentationValue(metric.value, metric.format)}
@@ -149,7 +163,7 @@ export function DocumentExperience({
           {presentation.contextItems.length ? (
             <div className="mt-3 flex gap-2 overflow-x-auto pb-0.5 lg:hidden" aria-label="Thông tin nhanh">
               {presentation.contextItems.slice(0, 4).map((item) => (
-                <div key={item.field} className="min-w-[9rem] shrink-0 rounded-lg border bg-muted/20 px-2.5 py-2">
+                <div key={item.field} className={cn("min-w-[9rem] shrink-0 rounded-lg border px-2.5 py-2", profile.metricClass)}>
                   <div className="truncate text-[10px] text-muted-foreground">{item.label}</div>
                   <div className="mt-0.5 truncate text-xs font-medium">{formatPresentationValue(item.value, item.format)}</div>
                 </div>
@@ -163,9 +177,9 @@ export function DocumentExperience({
         <div className="min-w-0 overflow-hidden bg-card">{children}</div>
         <aside className="hidden min-h-0 flex-col overflow-auto border-l bg-card/80 lg:flex" aria-label="Ngữ cảnh chứng từ">
           <div className="border-b px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-primary">Ngữ cảnh</p>
-            <h2 className="mt-0.5 text-sm font-semibold">Thông tin nhanh</h2>
-            <p className="mt-1 text-xs leading-5 text-muted-foreground">Các dữ liệu giúp đọc chứng từ mà không phải rà từng ô trong biểu mẫu.</p>
+            <p className={cn("text-[10px] font-semibold uppercase tracking-[0.14em]", profile.kickerClass)}>Ngữ cảnh</p>
+            <h2 className="mt-0.5 text-sm font-semibold">{profile.railTitle}</h2>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">{profile.railDescription}</p>
           </div>
 
           <div className="space-y-1 p-2.5">
