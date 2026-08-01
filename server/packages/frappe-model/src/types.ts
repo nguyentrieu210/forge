@@ -116,6 +116,7 @@ export interface DocFieldMeta extends JsonObject {
 }
 
 export type DocTypeKind = "transaction" | "master" | "child_table" | "single" | "tree" | "virtual" | "system";
+export type BulkCommitStrategy = "document_update";
 
 export interface DocTypeView extends JsonObject {
   enabled: boolean;
@@ -124,12 +125,19 @@ export interface DocTypeView extends JsonObject {
   stageField?: string;
   startField?: string;
   endField?: string;
+  editableFields?: string[];
+  commitStrategy?: BulkCommitStrategy;
+  allowPaste?: boolean;
+  allowFillDown?: boolean;
+  pageSize?: number;
+  reasonRequiredOn?: string[];
 }
 
 export interface DocTypeViewPolicy extends JsonObject {
   list: DocTypeView;
   form: DocTypeView;
   quickEntry?: DocTypeView;
+  bulk?: DocTypeView;
   kanban?: DocTypeView;
   calendar?: DocTypeView;
   gantt?: DocTypeView;
@@ -199,7 +207,7 @@ export interface DocTypeMeta extends JsonObject {
    *
    * Không phải chuyện trang trí: `name` là định danh tiếng Anh không đổi được (nó nằm trong
    * URL, trong khoá ngoại, trong mọi tham chiếu), nên nếu nhãn không đi cùng metadata thì
-   * người dùng Việt Nam đọc "Aluminium Lot" ở breadcrumb, ở ô chọn loại chứng từ và ở màn
+   * người dùng Việt Nam đọc "Aluminium Lot" ở breadcrumb, ở ô chọn loại chứng từ và màn
    * phân quyền — trong khi brief đã khai "Lô nhôm tồn" và menu vẫn hiện đúng. Hai chỗ nói
    * hai kiểu về cùng một thứ.
    */
@@ -220,7 +228,7 @@ export interface DocTypeMeta extends JsonObject {
   sort_order?: "ASC" | "DESC";
   search_fields?: string[];
   fields: DocFieldMeta[];
-  /** Explicitly enables views; a chart/Kanban/calendar is never inferred from a coincidental field. */
+  /** Explicitly enables views; a chart/Kanban/calendar/bulk view is never inferred from a coincidental field. */
   viewPolicy?: DocTypeViewPolicy;
   permissions: DocPermissionMeta[];
   revision: number;

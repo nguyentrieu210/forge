@@ -12,7 +12,7 @@
     "typecheck": "tsc -b --pretty",
     "lint": "node scripts/check-native-ui.mjs && node scripts/check-hook-order.mjs && node --check ../server/scripts/stage-client-bundle.mjs",
     "scan-secrets": "node scripts/scan-secrets.mjs",
-    "test": "pnpm --filter @metaforge/demo run selfcheck && pnpm --filter @metaforge/demo exec tsx ../../packages/core/src/app/form-profile-selfcheck.ts && pnpm --filter @metaforge/demo exec tsx ../../packages/shell/src/workspace-navigation-selfcheck.ts",
+    "test": "pnpm --filter @metaforge/demo run selfcheck && pnpm --filter @metaforge/demo exec tsx ../../packages/core/src/app/form-profile-selfcheck.ts && pnpm --filter @metaforge/demo exec tsx ../../packages/core/src/app/bulk-policy-selfcheck.ts && pnpm --filter @metaforge/demo exec tsx ../../packages/shell/src/workspace-navigation-selfcheck.ts",
     "build": "pnpm -r run build",
     "e2e": "pnpm --filter @metaforge/demo run e2e",
     "verify:generator": "node scripts/verify-generator.mjs",
