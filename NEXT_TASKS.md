@@ -2,105 +2,120 @@
 
 Ngày cập nhật: **2026-08-02**.
 
-Mọi agent phải đọc `AI_HANDOFF.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md` và `DELIVERY_POLICY.md` trước khi tiếp tục. GitHub là nguồn sự thật cho exact branch head, PR, CI và release evidence.
+Đây là hàng đợi active. Không dùng file này thay cho GitHub khi cần exact branch head, PR state hoặc CI. Trước khi làm đọc `RUNBOOK.md` và `CURRENT_STATUS.md`.
 
-## DONE — PR #175 Authenticated reservation availability lifecycle
+## ACTIVE — PR #182 MetaForge Bulk View
 
-- PR `#175` merged.
+Mục tiêu: hoàn tất Bulk View an toàn cho master data và cấu hình ALUM hiện có, sau đó review/merge riêng; không deploy production trong slice này.
+
+### Đã có
+
+- Renderer chung `BulkGridView` + container metadata-driven.
+- Tab `Danh sách | Nhập hàng loạt` trong `DoctypeWorkspace` khi policy bật.
+- Paste Excel/Google Sheets, fill-down, search/paging, row error, discard và optimistic concurrency.
+- Generic `document_update` fail closed cho transaction/submittable, child/single, internal/read-only/server-owned và conditional-readonly field.
+- ALUM `2.1.2` bulk config cho UOM, Brand, Manufacturer, Item Color, Material Grade/Specification, Item Attribute, Supplier Item, Measurement Profile, Item, Customer, Supplier, Price List, Item Price và Pricing Rule.
+- Baseline head `c36c8024d3aaa35574f5599a9c15ed6a86727933`: required workflows 6/6 PASS trước final hardening/status commit.
+
+### Done condition PR #182
+
+- Final exact PR head required workflows 6/6 PASS.
+- Không có unresolved review finding Critical/High.
+- PR vẫn không deploy Cloudflare, không sửa production secrets/DNS, không mutate tenant production.
+- Chỉ merge sau review/approval riêng; merge không tự cấp quyền deploy.
+
+### Follow-up MetaForge sau Bulk View
+
+1. **Matrix View** — primitive chuẩn kế tiếp cho User×Role, User×Warehouse/Department/Company, Item×Color, Item×UOM, Item×Reorder warehouse, Supplier×Item và account mapping.
+2. **Bulk Transaction strategy** — method/controller-backed grid cho Stock Reconciliation và BOM làm hai reference đầu tiên; tuyệt đối không mass-update ledger/document đã submit.
+3. **Nhập nhôm nhiều mã / Purchase Receipt transaction grid**.
+4. **Batch Print / QR label queue** dưới dạng action/workspace, không cần ViewKind riêng.
+5. **Resource Scheduler** chỉ khi capacity/overtime P2 đi vào runtime; Calendar/Gantt hiện giữ nguyên.
+6. First-class short-brief compiler/parser transport cho `viewPolicy.bulk`; large brief hiện dùng `.views.json` compatibility transport và runtime resolver canonical.
+
+## DONE — Runbook / project-status cleanup
+
+- PR `#180` merged tại `09bc64e1fe8d9ded171368cfc72bd2b4b18aed72`.
+- Final validated head: `1a631bae15637c39d06244dc8a3d8bb05eb5ecb0`.
+- Exact-head required workflows: **6/6 PASS**.
+- `RUNBOOK.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md`, `AI_HANDOFF.md` đã có vai trò rõ ràng.
+- `README.md` và `docs/ROADMAP.md` không còn là live-state source.
+- `DELIVERY_POLICY.md` không tự cấp quyền deploy production.
+- `EPIC_STATUS.md` stale đã bị xóa.
+
+Không tạo thêm status/handoff file song song nếu nội dung thuộc các file canonical này.
+
+## DONE — PR #175 Reservation acceptance
+
+- Merged: `509db8c32625168316696fb0deb3760a434aedf9`.
 - Final validated head: `e839599ddf23e6cf89a325497b62f20085f62ffd`.
-- Merge commit: `509db8c32625168316696fb0deb3760a434aedf9`.
-- Final exact-head required workflows: **6/6 PASS**.
-  - CI `30718759652`: tests/typecheck/build PASS.
-  - UI Pull Request Validation `30718759696`: frontend lint/build + browser QA + authenticated cookie/CSRF reservation lifecycle PASS.
-  - PR Validation `30718759665`: PASS.
-  - Purchase Feature CI `30718759676`: PASS.
-  - Sales Feature CI `30718759661`: PASS.
-  - Inventory and Manufacturing CI `30718759660`: PASS.
-- Tracked receipt 10 cây có Batch/Bundle thật; giữ 6 làm available còn 4 nhưng physical stock vẫn 10.
-- Over-reservation 5 bị từ chối với số khả dụng đúng; release phục hồi available; giữ đủ 10 làm available về 0.
-- Double-release và terminal-state reversal bị từ chối.
-- Desktop/mobile, role nghiệp vụ, cookie + CSRF thật đều PASS trên local D1 ephemeral.
-- Không deploy Cloudflare, không đổi production secrets/DNS, không mutate tenant production.
+- Exact-head required workflows: **6/6 PASS**.
+- Reservation giảm available nhưng không thay physical stock; release phục hồi available; over-reservation và double-release fail đúng contract.
+- Không deploy production.
 
-## NEXT P0 — QR/lineage end-to-end + cleanup QA
+Không mở lại reservation slice nếu không có regression cụ thể.
 
-Mục tiêu: khóa nốt truy vết vật lý và chứng minh toàn bộ dữ liệu QA có thể dọn sạch không residue. Sau slice này stock acceptance mới chuyển P0 sang DONE.
+## NEXT P0 — QR / lineage + cleanup QA
 
-### 1. QR / lineage end-to-end
+Engineering task kế tiếp của stock acceptance là QR/lineage + cleanup QA. Khi bắt đầu, tạo branch mới từ exact current `main` sau khi kiểm tra GitHub/CI.
+
+### QR / lineage
 
 - Dùng item theo lô, Batch và Serial and Batch Bundle thật từ authenticated lifecycle.
-- Physical-stock report `include_lineage=true` phải truy ngược đúng:
-  - voucher type/name;
-  - voucher row;
-  - batch;
-  - bundle;
-  - warehouse và item identity.
-- Tạo một identity thứ hai để chứng minh lineage không lẫn batch/bundle/voucher giữa hai luồng.
-- Với Stock Reconciliation, render print format thật và khóa QR output sinh từ chính document `name`; không chỉ kiểm chuỗi template.
-- QR hoặc URL phải mở đúng document route và không lộ dữ liệu tenant khác.
-- Giữ quantity, kg và reservation assertions hiện có trong cùng authenticated acceptance hoặc regression suite liên quan.
-
-### 2. Cleanup QA không residue
-
-- Mọi user/item/kho/batch/bundle/reservation/chứng từ QA phải có prefix hoặc lineage nhận diện duy nhất.
-- Cleanup theo dependency chỉ trên local D1 ephemeral:
-  1. release/terminalize reservation còn hoạt động;
-  2. xóa child/index/read-model state phù hợp;
-  3. xóa documents QA theo thứ tự phụ thuộc;
-  4. xóa user/role fixture QA riêng nếu contract cho phép.
-- Không xóa fixture catalogue dùng chung như UOM, Item Group, Account hoặc metadata Alumdoor.
-- Sau cleanup chạy truy vấn xác minh không còn QA residue trong:
-  - documents và document_children;
-  - stock ledger/read model;
-  - reservation state;
-  - batch/bundle rows;
-  - user/role rows được tạo riêng cho test.
-- Cleanup phải idempotent hoặc fail rõ khi chạy lần hai; không được xóa theo wildcard quá rộng.
-
-### 3. Authenticated failure paths
-
-- Desktop + mobile, cookie + CSRF thật.
-- `Thủ kho`/`Chủ xưởng` tiếp tục làm stock operation theo RBAC đã chốt.
-- Invalid CSRF/session phải bị từ chối.
+- Physical-stock report `include_lineage=true` truy đúng voucher type/name, voucher row, batch, bundle, warehouse và item identity.
+- Tạo identity thứ hai để chứng minh lineage không lẫn giữa hai luồng.
+- Stock Reconciliation print render thật; QR sinh từ đúng document `name` và route mở đúng document.
 - Sai QR/document identity hoặc lineage tenant khác phải fail closed.
-- Immutable submitted records và reservation terminal state tiếp tục bị khóa.
+
+### Cleanup QA
+
+- QA user/item/warehouse/batch/bundle/reservation/document có prefix hoặc lineage nhận diện duy nhất.
+- Cleanup theo dependency chỉ trên local D1 ephemeral.
+- Không xóa fixture catalogue dùng chung.
+- Sau cleanup xác minh không còn residue ở document, child, stock ledger/read model, reservation, batch/bundle và user/role fixture QA riêng.
+- Cleanup phải idempotent hoặc fail rõ khi chạy lần hai; không xóa wildcard quá rộng.
+
+### Acceptance
+
+- Desktop + mobile.
+- Cookie + CSRF thật.
+- Role nghiệp vụ thật; không dùng admin để thay cho stock-operation evidence.
+- Failure paths giữ invalid session/CSRF, permission denial, immutable records và over-issue/over-reservation.
 
 ### Done condition P0
 
 - Quantity + kg + reservation + QR/lineage reconcile không chênh lệch.
-- Lineage truy ngược đúng voucher/batch/bundle và không lẫn identity.
-- Stock Reconciliation print render sinh QR từ đúng document name và route.
-- Cleanup PASS; truy vấn hậu kiểm không còn QA residue.
-- Desktop/mobile + role/CSRF/session failure paths PASS.
-- Không mutate dữ liệu khách hàng.
-- Không deploy production nếu user chưa yêu cầu riêng.
+- Document QR/lineage truy ngược tới đúng voucher/batch/bundle và không lẫn identity.
+- QA cleanup PASS và query hậu kiểm không còn residue.
+- Desktop/mobile + role/session/CSRF failure paths PASS.
+- Không mutate customer production data và không deploy production nếu user chưa yêu cầu riêng.
 
 ## P1 — Daily detailed ledger
 
-- Immutable snapshot theo ngày/company/warehouse/customer/order.
-- Re-run cùng input idempotent, không sinh snapshot trùng.
-- Freeze chặn direct edit sau khi khóa.
-- Adjustment sau khóa append-only, có reason/actor/timestamp/audit trail.
+- Immutable snapshot theo ngày và dimension nghiệp vụ.
+- Re-run cùng input idempotent.
+- Freeze chặn direct edit sau khóa.
+- Adjustment sau khóa append-only có reason/actor/timestamp/audit trail.
 - Reconciliation ít nhất Sales, Purchase, Inventory, Manufacturing và Finance.
-- Permission và tenant boundary phải được kiểm bằng test + authenticated evidence.
+- Permission + tenant boundary có test/authenticated evidence.
 
 ## P2 — Warranty / defects / capacity
 
 - Bốn nguyên nhân lỗi theo quy trình 25.7.
-- Bảo hành motor/bình lưu điện 12 tháng từ ngày giao.
-- Supplier provisional AP hold + offset có phê duyệt.
-- Customer defect cost theo công đoạn/người chịu trách nhiệm.
-- Capacity theo department/workstation calendar, 8 giờ/ngày, overtime và overload.
+- Warranty lifecycle và trách nhiệm chi phí.
+- Supplier provisional AP hold/offset có phê duyệt.
+- Capacity theo department/workstation calendar, 8 giờ/ngày, overtime/overload.
 
 ## P3 — End-to-end acceptance
 
-Sales Order → Production Request → Work Order → material issue/consume → paint → delivery → invoice/debt → daily ledger → adjustment → warranty.
+Khóa hành trình authenticated xuyên miền:
+
+`Sales Order -> Production -> material/stock -> delivery -> invoice/debt -> daily ledger -> adjustment -> warranty`
 
 ## Guardrails
 
-- Một epic, một branch, một PR.
-- Không thay head khi exact-head CI đang chạy.
-- Không deploy production chỉ để lấy UI evidence.
-- Không sửa production secrets/DNS nếu user chưa yêu cầu rõ.
-- Không commit `.env`, `server/work/`, `tmp/`, backup, cookie, token hoặc generated artifacts/evidence.
-- Production Alumdoor giữ SHA `b46d322831ebe7b57e29d4363d2daa005bb56e55` / metadata `2.1.0` cho tới release riêng có approval/evidence.
+- Mỗi epic/đợt sửa độc lập dùng branch/PR riêng từ exact current `main`.
+- Không thay exact PR head khi required CI đang chạy nếu không có lý do kỹ thuật.
+- Không deploy Cloudflare/production hoặc sửa production secrets/DNS nếu user chưa yêu cầu rõ.
+- Không mutate customer production data.
+- Không commit `.env`, `server/work/`, `tmp/`, backup, credential, cookie/token hoặc generated artifacts/evidence.
