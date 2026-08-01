@@ -2,6 +2,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, RefreshCw, Search } from "lucide-react";
 import { resolveBulkRenderPolicy, type Doc, type ListOpts } from "@metaforge/core";
+import { mapError } from "@metaforge/adapter-frappe";
 import { Button, Input, Skeleton, toast } from "@metaforge/ui";
 import { deriveColumns } from "../list/columns.js";
 import { buildServerQuery } from "../list/filters.js";
@@ -102,7 +103,7 @@ export function BulkGridContainer(props: BulkGridContainerProps) {
         await adapter.updateDoc(props.doctype, name, values as Partial<Doc>, originalModified[name] ?? "");
         saved += 1;
       } catch (error) {
-        failed[name] = adapter.mapError(error).message;
+        failed[name] = mapError(error).message;
       }
     }
     setErrors(failed);
@@ -120,7 +121,7 @@ export function BulkGridContainer(props: BulkGridContainerProps) {
   }, [adapter, dirty, dirtyCount, originalModified, props.doctype, saving, viewQ, writable]);
 
   if (metaQ.isLoading) return <div className="grid h-full gap-2 p-3"><Skeleton className="h-10" /><Skeleton className="h-96" /></div>;
-  if (metaQ.error) return <div className="p-4 text-sm text-destructive">{adapter.mapError(metaQ.error).message}</div>;
+  if (metaQ.error) return <div className="p-4 text-sm text-destructive">{mapError(metaQ.error).message}</div>;
   if (!meta || !policy?.enabled) return <div className="grid h-40 place-items-center p-4 text-sm text-muted-foreground">DocType này chưa bật Bulk View an toàn.</div>;
 
   const maxPage = Math.max(1, Math.ceil(total / policy.pageSize));
