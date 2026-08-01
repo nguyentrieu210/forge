@@ -203,6 +203,31 @@ const minimal = () => ({
   }],
 });
 
+test("a native experience is compiled with its DocType permission gate", async () => {
+  const brief = {
+    ...minimal(),
+    experiences: [{
+      key: "daily-ledger:test",
+      label: "Sổ chi tiết hằng ngày",
+      permission: "Lead",
+      roles: ["Sales"],
+      group: "Báo cáo",
+    }],
+  };
+  assert.deepEqual(await validateBriefSchema(brief), []);
+  const manifest = parseAppManifest(compileBrief(brief));
+  const entry = manifest.nav.find((item) => item.key === "daily-ledger:test");
+  assert.deepEqual(entry, {
+    key: "daily-ledger:test",
+    label: "Sổ chi tiết hằng ngày",
+    kind: "experience",
+    permission_doctype: "Lead",
+    required_roles: ["Sales"],
+    icon: "panel-top",
+    group: "Báo cáo",
+  });
+});
+
 test("a minimal brief compiles into a package the server accepts", () => {
   const pkg = compileBrief(minimal());
   // The server's own parser, so a brief that compiles cannot fail install for shape.

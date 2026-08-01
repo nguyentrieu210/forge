@@ -1,8 +1,8 @@
 # ALUMDOOR — BÀN GIAO CHO PHIÊN SAU
 
-> Cập nhật: **2026-07-30 11:01 (UTC+7)**
-> Mã nguồn release: **`C:\Forge-worktrees\platform-design`**
-> Production: **<https://alu.kairo.vn>** — app **Alumdoor 2.0.0**
+> Cập nhật: **2026-08-01 (UTC+7)**
+> Mã nguồn release: **`C:\Users\Admin\Documents\Codex\2026-08-01\c-users-admin-downloads-25-7\work\forge-review`**
+> Production: **<https://alu.kairo.vn>** — app **Alumdoor 2.0.35**
 > Tenant `alu` · D1 `cloudforge-alu` · id `6781cbc1-8635-4b6e-af46-09297c120cff`
 
 > **V2 đã go-live ngày 2026-07-30:** nhánh `feat/platform-design-screens`, commit release
@@ -13,21 +13,29 @@
 **Đọc mục 0 trước mọi mục khác.** Nó ghi những thứ vừa đổi và những quyết định đang CHỜ chủ
 xưởng — làm tiếp mà không biết chúng thì sẽ làm lại thứ vừa xong, hoặc đoán bừa chỗ cố ý bỏ ngỏ.
 
-## 0. Release hiện hành — 2.0.0
+## 0. Release hiện hành — 2.0.35
 
 Mốc release phải nhớ:
 
-- Nhánh release là `feat/platform-design-screens`, commit `f484662`; merge V2 ở `f5187ee`.
-- Gói production là `alumdoor@2.0.0`, content hash
-  `b62cb1818d0aafc28f71a8ad5735dff8e866d0ec0f37a08c7c2d2fd449e74387`.
-- 69 DocType, 1 workflow, 57 fixture; migration tenant hiện hành đạt 26/26.
-- 529/529 unit server, toàn bộ SQL, 132/132 tenant Worker, 3/3 query Worker,
-  83 nhóm selfcheck client, typecheck và production build đều đạt.
-- Backup release đã kiểm checksum và restore thành công vào hai D1 drill độc lập.
-- Gateway, tenant Worker, app Worker, metadata V2 và giao diện design đều đã lên production.
-- Hậu kiểm D1 `quick_check=ok`; HTTP health 200, shell 200, guest API 403 đúng bảo vệ.
-- Browser production đăng nhập thật, mở được home `Tồn nhôm theo khổ`, `Cắt nhôm` và
-  `Kiểm kê kho`.
+- Nguồn phát hành là nhánh local `feat/daily-detailed-ledger-20260801`, HEAD `247335c`,
+  worktree chưa commit; người vận hành yêu cầu đẩy thẳng bản local nên release dùng
+  `--allow-dirty`. Chưa commit hoặc push GitHub.
+- Gói production là `alumdoor@2.0.35`, content hash
+  `8d332caa1973880fad3030837985974c95ce0ad252a89b720fe393ec8ee15d81`.
+- 74 DocType, 1 workflow, 57 fixture, 11 role và 77 mục điều hướng; migration tenant đạt
+  38/38, mới nhất `0034_alumdoor_process_25_7.sql`.
+- Security audit, full verify/test/typecheck/build, app dry-run và ba Worker dry-run đạt.
+  Release manifest không khớp vì nguồn chưa commit; đây là ngoại lệ phát hành đã ghi nhận.
+- Backup trước migration: `alu-2026-08-01T09-14-18-088Z.sql`, 9.033.255 byte,
+  SHA-256 `5fb9d4896e667005adb22feeaee2948f3cc2fc7a18dd6c2b55c9191af0be0251`.
+- Gateway version `d71b655b-4e52-411b-ba95-1d82ea6d999e`; app Worker version
+  `cd920a34-25a6-4fab-8605-943240c97d3b`; tenant Worker đã deploy lại vào
+  `cloudforge-production` nhưng Wrangler không trả Version ID cho dispatch Worker.
+- Bundle UI hash `3c463090b4baef6d`; production tải đúng Sổ chi tiết hằng ngày và Trung tâm điều
+  hành Alumdoor. HTTP health 200, shell 200, guest API 403 đúng bảo vệ; browser desktop
+  tải landing/login đúng branding và không có lỗi console.
+- Chưa chạy smoke sau đăng nhập vì shell local không có credential quản trị. Các luồng có
+  xác thực được bảo vệ bởi full regression suite và đối chiếu trực tiếp metadata/schema D1.
 - Dữ liệu thật từ ba workbook đã được nhập vào production theo dạng master/chứng từ lịch sử:
   **3.562 hồ sơ**, gồm 1.257 lô, 439 khách hàng và 1.474 đơn hàng cũ; import chạy đúng một
   lần, không sinh stock/GL/payment ledger giả.

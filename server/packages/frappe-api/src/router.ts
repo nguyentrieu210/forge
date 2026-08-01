@@ -3271,8 +3271,9 @@ async function overviewDashboard(args: FrappeArgs, context: FrappeRouterContext)
 }
 
 /** Nav entries whose target this actor may actually open. */
-async function permittedNav<T extends { key: string; kind?: string; permission_doctype?: string }>(nav: T[], context: FrappeRouterContext): Promise<T[]> {
+async function permittedNav<T extends { key: string; kind?: string; permission_doctype?: string; required_roles?: string[] }>(nav: T[], context: FrappeRouterContext): Promise<T[]> {
   const visible = await Promise.all(nav.map(async (item) => {
+    if (!hasRequiredNavRole(context.actor, item.required_roles)) return false;
     // Data-backed experiences (approval inboxes today, richer workspaces later)
     // must be hidden by the same read gate as their underlying DocType.
     const permissionDoctype = item.permission_doctype
@@ -3290,6 +3291,12 @@ async function permittedNav<T extends { key: string; kind?: string; permission_d
     }
   }));
   return nav.filter((_, index) => visible[index]);
+}
+
+export function hasRequiredNavRole(actor: Actor, requiredRoles?: readonly string[]): boolean {
+  if (!requiredRoles?.length) return true;
+  if (actor.user_id === "Administrator" || actor.roles.includes("Administrator")) return true;
+  return requiredRoles.some((role) => actor.roles.includes(role));
 }
 
 /**

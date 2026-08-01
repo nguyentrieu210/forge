@@ -576,6 +576,29 @@
         }
       }
     },
+    "experiences": {
+      "type": "array",
+      "description": "Màn vận hành native do runtime chung cung cấp; app chỉ chọn màn và DocType chặn quyền.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key", "label", "permission", "roles"],
+        "properties": {
+          "key": { "type": "string", "pattern": "^[a-z][a-z0-9-]*:[^:]+$", "maxLength": 160 },
+          "label": { "type": "string", "minLength": 1, "maxLength": 160 },
+          "permission": { "type": "string", "minLength": 1, "maxLength": 160 },
+          "roles": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1, "maxLength": 160 }
+          },
+          "icon": { "type": "string" },
+          "group": { "type": "string" }
+        },
+        "patternProperties": { "^//": true }
+      }
+    },
     "prints": {
       "type": "array",
       "description": "Mẫu in do app khai. Lặp dòng hàng: {{#each items}} … {{/each}}. Định dạng tiền: {{ grand_total | money }}. Ngày: {{ posting_at | date }}.",

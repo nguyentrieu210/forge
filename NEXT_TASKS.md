@@ -6,7 +6,7 @@ Mọi agent phải đọc `AI_HANDOFF.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md` 
 
 ## In progress — Print design PR #141
 
-Branch: `feat/print-design-sales-documents-20260801`  
+Branch: `feat/print-design-sales-documents-20260801`
 PR: `#141`
 
 Nhánh hoàn thiện local: `fix/print-router-missing-state` (print router + empty-state + sửa false-negative QR CI).

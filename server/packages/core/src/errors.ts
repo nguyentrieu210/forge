@@ -66,6 +66,15 @@ export function asCloudForgeError(value: unknown): CloudForgeError {
   if (message.includes("PAYMENT_ADVANCE_EXCEEDED") || message.includes("PAYMENT_ADVANCE_BASE_EXCEEDED")) {
     return errors.reference("Payment allocation exceeds the remaining advance balance");
   }
+  if (message.includes("DAILY_LEDGER_FREEZE_CONTEXT_MISMATCH")) {
+    return errors.reference("Daily ledger freeze snapshot does not match the requested context");
+  }
+  if (message.includes("DAILY_LEDGER_NOT_FROZEN")) {
+    return errors.lifecycle("Daily ledger snapshot must be frozen before adjustments");
+  }
+  if (/DAILY_LEDGER_(?:IMMUTABLE|FREEZE_IMMUTABLE|ADJUSTMENT_IMMUTABLE)/.test(message)) {
+    return errors.lifecycle("Daily ledger records are append-only and cannot be updated or deleted");
+  }
   if (/REFERENCE_SOURCE_NOT_FOUND|REFERENCE_ITEM_NOT_FOUND|REFERENCE_QUANTITY_NEGATIVE|REFERENCE_QUANTITY_EXCEEDED|OUTSTANDING_EXCEEDED|BASE_OUTSTANDING_EXCEEDED|ACTIVE_FULFILLMENT_EXISTS|ACTIVE_PAYMENT_ALLOCATIONS|NEGATIVE_STOCK|STOCK_RESERVATION_EXCEEDED|BANK_TRANSACTION_NOT_SUBMITTED|BANK_RECONCILIATION_NEGATIVE|BANK_RECONCILIATION_OVER_ALLOCATED|SALARY_SLIP_ALREADY_IN_PAYROLL|E_INVOICE_ALREADY_SUBMITTED|PURCHASE_ALLOCATION_(?:WINDOW_NOT_OPEN|PO_NOT_SUBMITTED|PO_NOT_CANCELLED|PO_ROW_NOT_FOUND|RECEIPT_ROW_NOT_FOUND|REVERSAL_SOURCE_INVALID|REVERSAL_EXCEEDED|QUANTITY_NEGATIVE|QUANTITY_EXCEEDED)|PURCHASE_OBLIGATION_QUANTITY_NEGATIVE|PURCHASE_UNAPPLIED_(?:SOURCE_INVALID|QUANTITY_EXCEEDED)/.test(message)) {
     return errors.reference(message.replace(/^.*?(REFERENCE_|OUTSTANDING_|BASE_OUTSTANDING_|ACTIVE_|PURCHASE_)/, "$1"));
   }

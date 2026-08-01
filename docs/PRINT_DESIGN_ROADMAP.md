@@ -1,6 +1,6 @@
 # Print design roadmap
 
-Ngày cập nhật: 2026-08-01  
+Ngày cập nhật: 2026-08-01
 Branch: `feat/print-design-sales-documents-20260801`
 
 ## Mục tiêu

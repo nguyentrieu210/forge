@@ -92,18 +92,36 @@ Ngày cập nhật: **2026-08-01**.
 
 ## Chưa release production
 
+### PR #146 — Sổ chi tiết hằng ngày (đang trên nhánh tính năng)
+
+- Nhánh `feat/daily-detailed-ledger-20260801`, chưa merge và chưa deploy.
+- Quyền truy cập/cập nhật/khóa/điều chỉnh chỉ dành cho ba nhóm nghiệp vụ: Kế toán tổng hợp, Kế toán trưởng và Giám đốc; `Administrator` giữ quyền cứu hộ nền tảng.
+- Ảnh chụp hằng ngày bao phủ sáu miền: Bán hàng, Mua hàng, Kho, Sản xuất, Bảo hành/Lỗi và Tài chính.
+- Runtime có màn “Sổ chi tiết hằng ngày” cho desktop và mobile, gồm Cập nhật, Đối chiếu, Khóa sổ và Điều chỉnh append-only.
+- Brief Alumdoor `2.0.35` khai báo màn và một DocType quyền riêng để menu được lọc trước khi gửi xuống client.
+- Sổ ngày nhận cả dòng `ordered` của Sales Order mới, không phụ thuộc đã có Delivery Note.
+
+### Hoàn thiện quy trình 25.7 trên cùng nhánh (production 2.0.35 đã deploy 2026-08-01)
+
+- Trung tâm vận hành hợp nhất đơn/ngày giao/khách/phụ trách/nhóm hàng/tiền thu/trạng thái giao-sản xuất-lỗi và ghi chú từ chứng từ gốc.
+- Bảo hành/lỗi bắt buộc truy về Sales Order, Delivery Note đã ghi sổ, ngày giao và Item; motor/pin tính hạn 12 tháng; nguyên nhân chỉ nhận bốn nhóm chuẩn.
+- Lỗi NCC ở trạng thái chờ đổi; Kế toán tổng hợp/Kế toán trưởng xác nhận mới tạo Giấy báo Nợ nháp gắn Purchase Invoice. Khóa idempotency ngăn tạo hai giấy cho một hồ sơ.
+- Lỗi sản xuất bắt buộc người chịu trách nhiệm; lỗi do khách tính chi phí từ từng dòng công việc.
+- Định mức sản xuất hỗ trợ `m2`, `set`, `operation`, `batch`; tải ca 8 giờ, số người/ca, hiệu suất, workstation, mẻ sơn theo màu và tăng ca.
+- Giao hàng theo ngày có preview, kết quả từng đơn, khóa `ngày + Sales Order`, tạo Delivery Note nháp và trả danh sách chứng từ để in.
+- Migration `0034_alumdoor_process_25_7.sql`, Golden Order contract và tài liệu `docs/brd-v2/PROCESS_25_7_COMPLETION.md` đã có.
+
 - Chưa map `client/apps/kho/dist-mobile` vào production route `/mobile/warehouse/`.
 - Chưa chạy authenticated backend lifecycle riêng cho bốn phiếu kho mobile trên môi trường release.
-- Landing Alumdoor mới đã merge code nhưng chưa có lệnh release/deploy Cloudflare trong đợt này.
-- Chưa deploy Cloudflare và chưa sửa production secrets/DNS.
+- Gateway, tenant Worker, app Worker, metadata 2.0.35 và hai migration 0033/0034 đã deploy trực tiếp từ local; production health/browser smoke đạt.
+- Không sửa production secrets hoặc DNS.
 
 ## Business backlog còn lại
 
-1. Hoàn tất print design PR `#141`: exact-head CI với QR Cut Order, print router và visual review năm mẫu.
-2. Print P1 tiếp: chuẩn hóa `Hoá đơn ALUMDOOR` hiện có, sau đó Payment Entry và Purchase Receipt.
-3. Daily detailed ledger snapshot/freeze/adjustment.
-4. Warranty, defects, supplier hold/offset và capacity/overtime.
-5. End-to-end acceptance xuyên Sales, Production, Inventory, Delivery, Finance và Warranty.
+1. Hoàn tất merge PR `#146` sau khi CI của head đã đồng bộ với `main`.
+2. Chạy authenticated Golden Order trên tenant staging/release với dữ liệu thật và đối chiếu bản in theo máy in khách hàng.
+3. Print P1 tiếp: chuẩn hóa `Hoá đơn ALUMDOOR` hiện có, sau đó Payment Entry và Purchase Receipt.
+4. Pilot end-to-end với dữ liệu thật xuyên Sales, Production, Inventory, Delivery, Finance và Warranty.
 
 ## Release boundary
 
