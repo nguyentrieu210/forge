@@ -9,17 +9,30 @@ Ngày cập nhật: **2026-08-01**.
 - Current default head khi mở nhánh in ấn: `4d86c1fd8c191f26f3961762b281fca1ad765855`.
 - GitHub là nguồn sự thật cho code, CI, PR và release evidence.
 
-## Nhánh thiết kế in ấn — IN PROGRESS
+## Nhánh thiết kế in ấn — PR OPEN / CI GREEN
 
 - Branch: `feat/print-design-sales-documents-20260801`.
+- PR: `#141` — `feat(print): add Alumdoor sales order print workspace`.
 - Base exact SHA: `4d86c1fd8c191f26f3961762b281fca1ad765855`.
+- Implementation head đã kiểm chứng: `7cb4607cf856fcef0093d2ed3a62ae449d1b2bb5`.
 - Mẫu đầu tiên: `Đơn bán hàng ALUMDOOR` cho `Sales Order`, A4 portrait, 13 cột, có kích thước cửa, số bộ, số lượng, đơn giá, mô tơ/phụ kiện và ghi chú lắp đặt.
 - Print format mới được tách vào `server/briefs/alumdoor-v2.prints.json`; `forge-app` ghép sidecar trước schema validation và compile.
+- Loader hỗ trợ cả đường dẫn chuỗi và `file:` URL; regression khóa call site dùng `import.meta.url`.
 - Có unit test cho cơ chế sidecar và regression test qua renderer thật cho Sales Order.
 - Roadmap tiếp theo: Delivery Note/giao lắp → Production Request → Cut Order → thu/chi, nghiệm thu, tem QR và bảo hành.
-- Kiểm tra cục bộ đã chạy: Node syntax PASS, sidecar loader `3/3` PASS, JSON parse PASS, 13 độ rộng cột có tổng `100%`.
-- Full repo build/typecheck/renderer test phải lấy bằng chứng từ PR CI vì môi trường hiện tại không clone được repository qua DNS.
-- Không deploy Cloudflare, không sửa production secrets và không mutate dữ liệu tenant.
+- Kiểm tra cục bộ: Node syntax PASS, sidecar loader `4/4` PASS, JSON parse PASS, 13 độ rộng cột có tổng `100%`.
+- Initial head `0fe8a32c578e58051913eddc6234c0c90a6cdd96` fail CI do `path.parse()` nhận `URL`; fix ở `7cb4607cf856fcef0093d2ed3a62ae449d1b2bb5`.
+
+Exact implementation-head evidence:
+
+- CI `30676094630`: SUCCESS — full tests, typecheck, build.
+- PR Validation `30676094648`: SUCCESS.
+- Purchase Feature CI `30676094623`: SUCCESS.
+- UI Pull Request Validation `30676094598`: SUCCESS.
+- Sales Feature CI `30676094634`: SUCCESS — build server, focused regressions, Alumdoor brief validation.
+- Inventory and Manufacturing CI `30676094629`: SUCCESS — build server, focused regressions, authoritative brief validation, catalog audit.
+
+Còn lại trước merge: review trực quan HTML preview/PDF với dữ liệu dài để xác nhận không tràn cột. Không deploy Cloudflare, không sửa production secrets và không mutate dữ liệu tenant.
 
 ## PR tồn đọng cũ — CLOSED
 

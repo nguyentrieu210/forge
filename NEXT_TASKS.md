@@ -7,7 +7,9 @@ Mọi agent phải đọc `AI_HANDOFF.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md` 
 ## Nhánh chuyên biệt — Print design
 
 Branch: `feat/print-design-sales-documents-20260801`  
-Base exact SHA: `4d86c1fd8c191f26f3961762b281fca1ad765855`
+PR: `#141`  
+Base exact SHA: `4d86c1fd8c191f26f3961762b281fca1ad765855`  
+Implementation head đã kiểm chứng: `7cb4607cf856fcef0093d2ed3a62ae449d1b2bb5`
 
 ### Đã làm trong đợt này
 
@@ -15,24 +17,34 @@ Base exact SHA: `4d86c1fd8c191f26f3961762b281fca1ad765855`
 - Thêm `Đơn bán hàng ALUMDOOR` cho Sales Order.
 - Khóa bố cục A4: 13 cột, tổng độ rộng `100%`, lặp header, không cắt dòng.
 - Thêm fixture renderer cho một dòng cửa cuốn và một dòng phụ kiện thường.
+- Hỗ trợ brief source dạng đường dẫn chuỗi và `file:` URL; có regression cho `import.meta.url`.
 - Thêm `docs/PRINT_DESIGN_ROADMAP.md`.
+
+Exact implementation-head evidence:
+
+- CI `30676094630`: SUCCESS — full tests, typecheck, build.
+- PR Validation `30676094648`: SUCCESS.
+- Purchase Feature CI `30676094623`: SUCCESS.
+- UI Pull Request Validation `30676094598`: SUCCESS.
+- Sales Feature CI `30676094634`: SUCCESS.
+- Inventory and Manufacturing CI `30676094629`: SUCCESS.
 
 ### Việc kế tiếp trên cùng epic
 
-1. `Phiếu giao hàng / lắp đặt` từ Delivery Note, có đơn nguồn, địa chỉ, đội giao/lắp, tài xế và biển số.
-2. `Phiếu yêu cầu sản xuất`, một dòng theo từng bộ cửa và ngày phải hoàn tất.
-3. `Phiếu cắt nhôm`, có lô mẹ, số lá, chiều rộng cắt, kerf, đầu thừa và QR nội bộ.
-4. `Biên bản bàn giao / nghiệm thu`, liên kết Sales Order và Delivery Note.
-5. Tem QR mặt hàng/lô/đầu thừa; không nhúng token hoặc URL nhạy cảm.
-6. Chuẩn hóa lại Sales Invoice, Purchase Receipt và Payment Entry theo cùng hợp đồng A4.
+1. Review trực quan `Đơn bán hàng ALUMDOOR` bằng HTML preview và PDF với dữ liệu dài; sửa tràn cột nếu có.
+2. `Phiếu giao hàng / lắp đặt` từ Delivery Note, có đơn nguồn, địa chỉ, đội giao/lắp, tài xế và biển số.
+3. `Phiếu yêu cầu sản xuất`, một dòng theo từng bộ cửa và ngày phải hoàn tất.
+4. `Phiếu cắt nhôm`, có lô mẹ, số lá, chiều rộng cắt, kerf, đầu thừa và QR nội bộ.
+5. `Biên bản bàn giao / nghiệm thu`, liên kết Sales Order và Delivery Note.
+6. Tem QR mặt hàng/lô/đầu thừa; không nhúng token hoặc URL nhạy cảm.
+7. Chuẩn hóa lại Sales Invoice, Purchase Receipt và Payment Entry theo cùng hợp đồng A4.
 
 ### Gate trước merge
 
-- `npm run brief:check` PASS.
-- Focused print tests PASS.
-- `npm run build` và `npm run typecheck:web` PASS.
-- PR CI xanh trên exact head.
-- Preview/PDF thử dữ liệu dài không tràn cột.
+- `npm run brief:check`: PASS qua Sales và Inventory/Manufacturing CI.
+- Focused print tests: PASS.
+- Full tests, typecheck và build: PASS trên `7cb4607cf856fcef0093d2ed3a62ae449d1b2bb5`.
+- Preview/PDF dữ liệu dài: PENDING manual visual review.
 - Không deploy Cloudflare, không đổi secrets/DNS và không mutate production.
 
 ## Hoàn tất — Purchase authenticated QA
