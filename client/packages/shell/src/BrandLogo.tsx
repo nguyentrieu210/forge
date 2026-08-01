@@ -43,14 +43,14 @@ export function ForgeBrandLogo({
   if (isAlumdoorSurface()) {
     return (
       <span
-        className={cn("inline-flex shrink-0 items-center justify-center overflow-hidden rounded-md bg-white", className)}
-        style={{ height: size, minWidth: Math.round(size * 2.9) }}
+        className={cn("inline-flex w-full min-w-0 items-center justify-center overflow-hidden bg-white", className)}
+        style={{ height: size }}
         title="Alumdoor"
       >
         <img
           src={getAlumdoorLogoUrl()}
           alt="Alumdoor"
-          className="block h-full w-auto max-w-none object-contain"
+          className="block h-full w-full object-contain"
         />
       </span>
     );

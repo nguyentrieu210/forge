@@ -104,21 +104,22 @@ function ProcessPanel({ module, onNavigate }: { module: WorkspaceModule; onNavig
   const items = workspaceItemsForTabs(module).filter((item) => !item.disabledReason);
   return (
     <div className="h-full overflow-auto bg-muted/25 p-3 md:p-5">
-      <section className="mx-auto grid max-w-7xl gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
+      <section className="grid w-full gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
         <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
           <div className="border-b px-5 py-4">
             <div className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">{module.label}</div>
             <h1 className="mt-1 text-xl font-semibold">Quy trình {module.label.toLocaleLowerCase("vi")}</h1>
             <p className="mt-1 text-sm text-muted-foreground">Các bước được sinh từ nghiệp vụ và quyền hiện có trong Meta.</p>
           </div>
-          <div className="grid gap-y-8 p-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-x-0 gap-y-8 p-6 sm:grid-cols-2 lg:grid-cols-4">
             {items.map((item, index) => (
-              <div key={item.key} className="relative flex min-w-0 items-center">
-                <Button type="button" variant="ghost" className="group h-auto min-h-24 w-full min-w-0 flex-col justify-center whitespace-normal rounded-xl border bg-background px-4 py-3 text-center shadow-sm hover:border-primary/40 hover:bg-primary/5" onClick={() => onNavigate(item.key)}>
-                  <span className="grid size-10 place-items-center rounded-lg bg-primary/10 font-semibold text-primary">{item.icon ?? index + 1}</span>
-                  <span className="mt-2 block max-w-full text-sm font-semibold">{item.label}</span>
+              <div key={item.key} className="relative flex min-w-0 items-center justify-center px-3">
+                <Button type="button" variant="ghost" className="group relative z-10 h-auto min-h-28 w-full min-w-0 flex-col justify-center whitespace-normal rounded-lg px-2 py-3 text-center hover:bg-primary/5" onClick={() => onNavigate(item.key)}>
+                  <span className="absolute left-2 top-1 grid size-5 place-items-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">{index + 1}</span>
+                  <span className="grid size-12 place-items-center rounded-lg border border-primary/20 bg-primary/10 text-primary shadow-sm transition-transform group-hover:-translate-y-0.5">{item.icon ?? index + 1}</span>
+                  <span className="mt-3 block max-w-full text-sm font-semibold">{item.label}</span>
                 </Button>
-                {index < items.length - 1 ? <ArrowRight className="absolute -right-4 z-10 hidden size-4 text-primary/60 lg:block" aria-hidden="true" /> : null}
+                {index < items.length - 1 ? <><span className="absolute left-[62%] right-0 top-1/2 hidden h-px bg-primary/35 lg:block" /><ArrowRight className="absolute -right-2 top-1/2 z-20 hidden size-4 -translate-y-1/2 text-primary lg:block" aria-hidden="true" /></> : null}
               </div>
             ))}
             {!items.length ? <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">Tài khoản hiện tại chưa có nghiệp vụ khả dụng trong phân hệ này.</div> : null}
@@ -198,10 +199,15 @@ export function AppShell(props: AppShellProps) {
     const moduleItemKeys = new Set(modules.flatMap((module) => module.items.map((item) => item.key)));
     const globalNav = props.nav.filter((item) => !moduleItemKeys.has(item.key) && !indexHubKey(item));
     const overviewItem = globalNav.find((item) => item.key === "__overview");
+    const reportsItem = props.nav.find((item) => item.key === "__reports");
+    const masterItem = props.nav.find((item) => item.key === "__master-data");
+    const remainingGlobal = globalNav.filter((item) => item.key !== "__overview" && item.key !== "__reports" && item.key !== "__master-data");
     const orderedNav = [
       ...(overviewItem ? [overviewItem] : []),
       ...moduleNav,
-      ...globalNav.filter((item) => item.key !== "__overview"),
+      ...(reportsItem ? [reportsItem] : []),
+      ...(masterItem ? [masterItem] : []),
+      ...remainingGlobal,
     ];
 
     const selectModule = (key: string) => {

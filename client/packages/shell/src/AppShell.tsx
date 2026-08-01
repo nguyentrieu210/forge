@@ -224,14 +224,14 @@ export function AppShell(props: AppShellProps) {
           "max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-50 max-md:w-[min(19rem,88vw)] max-md:shadow-xl",
           mobileOpen ? "max-md:translate-x-0" : "max-md:-translate-x-full",
         )} data-collapsed={collapsed ? "true" : "false"}>
-          <div className="mf-shell-brand flex h-12 items-center gap-2 px-3">
+          <div className={cn("mf-shell-brand flex items-center gap-2 px-3", props.brandLogoOnly ? "h-16" : "h-12")}>
             {/* Logo do APP cấp. Không có thì mới rơi về chữ cái đầu — chữ cái đầu là phương án
                 dự phòng cho app chưa có logo, không phải mặc định nên dùng: nó không khớp favicon
                 và làm cùng một phần mềm trông như hai thứ khác nhau giữa tab và thanh bên. */}
             {props.brandMark
               ? <div className={cn(
                   "grid shrink-0 place-items-center overflow-hidden rounded-md",
-                  props.brandLogoOnly && !collapsed ? "h-9 w-[12.5rem] bg-white px-2" : "mf-brand-mark size-7",
+                  props.brandLogoOnly && !collapsed ? "h-12 w-full bg-white px-0" : "mf-brand-mark size-7",
                 )}>{props.brandMark}</div>
               : <div className="mf-brand-mark">{(props.brand ?? "MetaForge").trim().charAt(0).toUpperCase()}</div>}
             {!collapsed && !props.brandLogoOnly ? <span className="truncate font-semibold">{props.brand ?? "MetaForge"}</span> : null}
