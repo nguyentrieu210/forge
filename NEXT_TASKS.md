@@ -18,11 +18,12 @@ PR `#154` merge tại `6c89e1a9227e989fd8b08d6e55b35ce2e74d87c7`; protected rele
 6. Alumdoor `2.1.0` có 3 biểu đồ thật và completeness gate cho 74 DocType hiện có; chuẩn nền tảng không giới hạn ở 74 DocType.
 7. Canonical rules/validator/fixtures đã được ghi vào skill `app-factory` để app sinh sau dùng cùng chuẩn.
 
-Việc tiếp theo duy nhất của gói Meta: merge workflow protected từ branch
-`feat/alumdoor-protected-meta-install-20260801`, dispatch đúng merge SHA rồi chờ terminal xanh. Workflow
-tự backup/checksum, hai restore drill độc lập, cài package Alumdoor `2.1.0` và smoke chỉ đọc login,
-quick/expanded form, User Link, chart/fallback và drill-down report. Không sửa DNS và không dùng dữ liệu
-khách hàng để smoke.
+Việc tiếp theo duy nhất của gói Meta: merge forward-fix từ branch
+`fix/alumdoor-standard-meta-provision-20260801`, chờ runtime production ở exact merge SHA xanh, rồi dispatch lại
+workflow protected. Run đầu `30705986949` đã PASS backup + hai restore drill nhưng dừng trước khi ghi Alumdoor vì
+tenant cũ chưa có 5 external DocType ERPNext. Lần chạy lại phải cấp standard catalogue bằng explicit
+System-Manager POST qua cookie + CSRF, cài package `2.1.0`, rồi smoke chỉ đọc quick/expanded form, User Link,
+chart/fallback và drill-down report. Không sửa DNS và không dùng dữ liệu khách hàng để smoke.
 
 ### Done condition
 

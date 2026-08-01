@@ -174,6 +174,27 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     }
   });
 
+  it("repairs an older tenant from the standard catalogue before an app resolves ERPNext dependencies", async () => {
+    await env.DB.prepare(
+      `DELETE FROM doctype_definitions WHERE tenant_id='demo' AND doctype='Account'`,
+    ).run();
+
+    const repaired = await unwrap(await method("forge.apps.provision_standard_metadata"));
+    expect(repaired.doctypes).toBeGreaterThan(0);
+    expect(await env.DB.prepare(
+      `SELECT doctype FROM doctype_definitions WHERE tenant_id='demo' AND doctype='Account'`,
+    ).first()).not.toBeNull();
+
+    const second = await unwrap(await method("forge.apps.provision_standard_metadata"));
+    expect(second.doctypes).toBe(0);
+  });
+
+  it("does not allow standard metadata provisioning through a GET request", async () => {
+    const response = await method("forge.apps.provision_standard_metadata", {}, "GET");
+    expect(response.status).toBe(417);
+    expect(String((await response.json() as any).message)).toMatch(/requires POST/i);
+  });
+
   it("rate-limits one account across rotating addresses without storing login or IP", async () => {
     await env.DB.prepare(
       `INSERT INTO users(tenant_id,user_id,full_name,email,password_hash,created_at,modified_at)

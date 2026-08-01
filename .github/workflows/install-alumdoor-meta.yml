@@ -172,11 +172,13 @@ jobs:
           node scripts/forge-app.mjs briefs/alumdoor-v2.json \
             --origin "$FORGE_ORIGIN" \
             --admin "$FORGE_ADMIN_USER" \
+            --provision-standard \
             2>&1 | tee "$EVIDENCE_DIR/install-and-smoke.log"
           grep -q 'app=alumdoor@2.1.0' "$EVIDENCE_DIR/install-and-smoke.log"
+          grep -q 'provisioning standard metadata .* ok' "$EVIDENCE_DIR/install-and-smoke.log"
           grep -q 'installed form/link/chart contract' "$EVIDENCE_DIR/install-and-smoke.log"
           grep -q '^LIVE  https://alu.kairo.vn' "$EVIDENCE_DIR/install-and-smoke.log"
-          printf 'metadata_install=pass\ninstalled_version=2.1.0\nconformance_smoke=pass\n' >> "$EVIDENCE_DIR/state.txt"
+          printf 'standard_metadata=pass\nmetadata_install=pass\ninstalled_version=2.1.0\nconformance_smoke=pass\n' >> "$EVIDENCE_DIR/state.txt"
 
       - name: Verify public health and guest auth boundary
         shell: bash

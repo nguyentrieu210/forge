@@ -20,11 +20,11 @@ Ngày cập nhật: **2026-08-01**.
 
 ## Đang thực hiện — protected installer Alumdoor Meta `2.1.0`
 
-- Branch `feat/alumdoor-protected-meta-install-20260801` từ exact main `3481f9bfe3fdab5d1ba1f8435c2ebb9f6a2daf50`.
-- Workflow mới khóa exact current main, environment production và concurrency release tenant; tự backup/checksum, restore cùng backup trên hai D1 drill mới, rồi mới cho cài metadata.
-- `forge-app.mjs` có hậu kiểm chỉ đọc cho version, Quick/Full Form, User Link auth-directory, chart theo role, empty fallback và report drill-down.
-- Local PASS: actionlint; 48 targeted test; full 776 server test; toàn bộ SQL migration; 89 nhóm client selfcheck; server/client typecheck; lint; secret scan; full workspace build; completeness 74 DocType, 969 field, 255 Link, 27 child table, 12 report, 3 chart.
-- Production install chưa chạy; cần PR/CI xanh và merge exact head trước khi dispatch workflow.
+- PR `#157` đã merge tại `8786c5707ac4d225f7a63561219dd629d080584d`; workflow protected và hậu kiểm Quick/Full Form, User Link, chart/fallback/report đã ở `main`.
+- Run `30705986949` đã tạo backup production có checksum, phục hồi thành công cùng backup trên hai D1 drill độc lập và dọn cả hai drill đúng guard.
+- Bước cài dừng trước khi ghi Alumdoor vì tenant cũ thiếu 5 external DocType chuẩn: `Account`, `Company`, `Currency`, `Serial and Batch Bundle`, `Batch`. Package `2.1.0` chưa được cài bởi run thất bại này.
+- Forward-fix trên branch `fix/alumdoor-standard-meta-provision-20260801`: mở explicit System-Manager-only POST qua cookie + CSRF tới đúng `provisionStandardCatalog`, rồi trình cài mới cài Alumdoor. GET bị từ chối và cài app thường không tự phát sinh side effect này.
+- Targeted runtime integration `74/74`, server build và actionlint PASS. Cần PR/CI/merge, full production release runtime xanh, sau đó chạy lại protected installer trên exact main mới.
 
 ## Active — Organization, HRMS và VN Accounting
 
