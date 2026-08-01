@@ -21,6 +21,7 @@ export * from "./i18n/translate.js";
 export * from "./i18n/format.js";
 export * from "./app/manifest.js";
 export * from "./app/form-profile.js";
+export * from "./app/bulk-policy.js";
 export * from "./business/context.js";
 export * from "./business/catalog.js";
 export * from "./business/overview.js";
