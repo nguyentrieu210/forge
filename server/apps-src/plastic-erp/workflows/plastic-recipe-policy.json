@@ -1,0 +1,18 @@
+{
+  "name": "Plastic Recipe Approval",
+  "document_type": "Plastic Recipe Policy",
+  "state_field": "approval_state",
+  "is_active": true,
+  "states": [
+    { "state": "Draft", "docstatus": 0, "allow_edit": "Plastic Engineering User" },
+    { "state": "Review", "docstatus": 0, "allow_edit": "Plastic Production Manager" },
+    { "state": "Active", "docstatus": 1, "allow_edit": "Plastic Production Manager" },
+    { "state": "Rejected", "docstatus": 2, "allow_edit": "Plastic Production Manager" }
+  ],
+  "transitions": [
+    { "state": "Draft", "action": "Submit for review", "next_state": "Review", "allowed_role": "Plastic Engineering User" },
+    { "state": "Review", "action": "Approve", "next_state": "Active", "allowed_role": "Plastic Production Manager", "allow_self_approval": false },
+    { "state": "Review", "action": "Reject", "next_state": "Rejected", "allowed_role": "Plastic Production Manager" }
+  ],
+  "revision": 1
+}
