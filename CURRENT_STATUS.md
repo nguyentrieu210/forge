@@ -16,11 +16,14 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, CI, merge và relea
 - Canonical branch: `feat/tenant-website-builder-delivery-v2-20260802`.
 - Canonical PR: `#238` (draft); PR `#219` và `#220` là stale iterations, không merge.
 - Clean-transplant trực tiếp từ exact `main@18d2161de589fcd1677886f0e9136006fd60e9e5`, không merge/rebase lịch sử stale.
-- Code transplant head: `d26cfbe62843b78a13aa377920c6aefae6d1cc2a`.
+- Base implementation commit: `d26cfbe62843b78a13aa377920c6aefae6d1cc2a`.
+- Mobile navigation fix: `802ea8f96cd4afdc17815a446db218f8f6202eb1`.
 - Scope: first-party `website` app metadata, Website Settings/Web Page/Web Page Block, version-pinned templates/themes, public Website resolver, runtime renderer và public E2E.
 - Security boundary: public API chỉ allowlist `forge.website.manifest` + `forge.website.page`; Guest không có generic DocType read; mọi query bind trusted `tenantId`; draft/unpublished fail closed; block/URL/theme được allowlist.
 - Quality tier: **CRITICAL** vì thay đổi unauthenticated public routing + tenant isolation.
-- Validation còn lại: exact final head cần required CI + website server test + runtime/typecheck/build/public E2E theo ownership. Không chạy lặp gate đã PASS trên cùng SHA nếu input không đổi.
+- Validation trên head trước mobile fix `432d3df862249e9843cb4c2f79af6a5a357bad2e`: server/client tests PASS, typecheck PASS, build PASS, frontend lint PASS, MetaForge browser QA PASS; Website public E2E PASS desktop + tablet nhưng FAIL mobile vì navigation bị ẩn ở `< md` mà không có mobile nav.
+- Root cause mobile đã sửa ở `802ea8f9`: thêm navigation responsive riêng cho mobile, horizontal overflow khi nhiều mục và `aria-current`; desktop behavior giữ nguyên.
+- Validation còn lại: required CI/public browser QA phải PASS trên exact final head sau fix; không rerun thủ công gate không bị ảnh hưởng nếu GitHub đã có evidence hợp lệ.
 
 ## ACTIVE — Minimal risk-based gates
 
