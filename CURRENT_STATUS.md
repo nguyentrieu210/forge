@@ -15,33 +15,28 @@ GitHub là nguồn sự thật. Exact branch head, PR và CI phải kiểm tra l
 
 ## ACTIVE — One-click UI hotfix production lane
 
-- Canonical implementation branch: `hotfix/ui-one-click-deploy-v2-20260802`, clean-transplant từ exact `main@f5d222e916795fd31cdc82f5746a1ba0af6318fb` sau khi branch đầu tiên bị stale do `main` tiến thêm 20 commits.
+- Canonical implementation branch: `hotfix/ui-one-click-deploy-v2-20260802`, clean-transplant từ exact `main@f5d222e916795fd31cdc82f5746a1ba0af6318fb`.
 - Branch cũ `hotfix/ui-one-click-deploy-20260802` và PR `#222` là superseded evidence, không merge.
-- Mục tiêu: thay đổi giao diện nhỏ dùng branch `hotfix/ui-*` rồi bấm một workflow production duy nhất, không chạy tenant migration/app worker/full-estate rollout sai phạm vi.
-- Workflow mới `.github/workflows/hotfix-ui-one-click.yml`:
-  - chỉ nhận branch `hotfix/ui-*`;
-  - current `main` phải là ancestor của exact hotfix SHA;
-  - bắt buộc có `client/**`, ngoài client chỉ cho ba file status/handoff canonical;
-  - giới hạn tối đa 20 file và 600 dòng text;
-  - package/dependency, backend, migration, metadata và workflow ngoài fast-lane bị chặn;
-  - gọi reusable Gateway release để lint/test/typecheck/build/stage/dry-run/deploy/smoke exact SHA;
-  - best-effort tạo hoặc annotate PR reconcile về `main` sau production release.
-- `.github/workflows/release-gateway.yml` mở thêm `workflow_call` nhưng giữ một release implementation duy nhất.
-- `RUNBOOK.md` và `DELIVERY_POLICY.md` đã định nghĩa boundary của fast lane.
-- Chưa deploy production trong task tạo quy trình này.
-- Actionlint trên branch stale ban đầu đã bắt SC2221/SC2222 do glob package overlap; root cause đã sửa trước clean-transplant.
-- Cần PR/CI exact-head trên branch v2 trước khi merge và sử dụng chính thức.
+- Canonical PR hiện tại: `#223`.
+- Mục tiêu đã rút gọn: UI cực nhỏ dùng branch `hotfix/ui-*`, người dùng chỉ cần bấm **ALU UI Hotfix - One Click Deploy**.
+- Hard scope guard:
+  - current `main` phải là ancestor của hotfix SHA;
+  - bắt buộc có `client/**`;
+  - ngoài client chỉ cho `CURRENT_STATUS.md`, `NEXT_TASKS.md`, `AI_HANDOFF.md`;
+  - tối đa 10 file / 300 dòng text;
+  - cấm package/dependency, backend, migration, business metadata, workflow, secret, DNS và production data.
+- Quick production path: `build -> stage -> deploy Gateway -> exact-SHA smoke`.
+- `lint/test/typecheck/Wrangler dry-run` được bỏ khỏi quick production path và deferred sang reconciliation PR/normal CI; không được ghi PASS nếu chưa chạy.
+- `.github/workflows/release-gateway.yml` có `quick_ui_hotfix` mode để reuse cùng production implementation thay vì duplicate deploy code.
+- Workflow best-effort tạo/annotate reconciliation PR sau deploy.
+- Mục tiêu 30 giây là thời gian thao tác người dùng, không phải cam kết tổng runtime GitHub/Cloudflare.
+- Chưa deploy production trong task tạo cơ chế này.
+- Iteration đầu từng lỗi actionlint SC2221/SC2222 do glob overlap; đã sửa. PR #223 đang nhận lại exact-head CI sau khi quick mode được đơn giản hóa.
 
 ## DONE — Warehouse Petty Cash per warehouse
 
 - Canonical PR: `#214` — `feat/alumdoor-warehouse-petty-cash-v3-20260802`.
-- Final validated head: `5255dae609a7a4c30ab25ffc397f81422c2c69fc` — **6/6 required workflows PASS**:
-  - CI `30747511668`: tests + typecheck + build SUCCESS.
-  - UI Pull Request Validation `30747511724`: SUCCESS; UI-specific steps fast-pathed vì scope không đổi frontend.
-  - PR Validation `30747511689`: SUCCESS.
-  - Purchase Feature CI `30747511672`: SUCCESS.
-  - Sales Feature CI `30747511686`: SUCCESS.
-  - Inventory and Manufacturing CI `30747511661`: SUCCESS.
+- Final validated head: `5255dae609a7a4c30ab25ffc397f81422c2c69fc` — **6/6 required workflows PASS**.
 - Squash merge SHA: `da37060f3c02a6a5f9701d60edc3284575f00deb`.
 - Root cause CI đỏ trước đó là app-source metadata thiếu `externalDocTypes` cho `Purchase Receipt` và `Stock Entry`; đã sửa.
 - Warehouse Cash controller regression: **7/7 PASS**; SQL migration acceptance cho balance/daily limit/max balance/tenant isolation/reversal/immutability PASS.
@@ -72,7 +67,7 @@ Generic Bulk View vẫn chỉ dùng `document_update` cho master an toàn; trans
 
 ## Chưa hoàn tất toàn hệ thống
 
-1. Hoàn tất PR/CI và merge one-click UI hotfix lane; sau merge mới dùng workflow mới cho hotfix giao diện production.
+1. Hoàn tất exact-head CI/actionlint và merge one-click UI hotfix lane; sau merge mới dùng workflow mới chính thức.
 2. Bulk Transaction cho Stock Reconciliation.
 3. Bulk Transaction cho BOM parent + child/version.
 4. First-class AppAction input-table contract thay compatibility `BulkTransaction:<json>` trong Text options.
