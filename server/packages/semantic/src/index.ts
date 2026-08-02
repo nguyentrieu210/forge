@@ -5,6 +5,7 @@ export type SemanticFilterOperator = "=" | "!=" | ">" | ">=" | "<" | "<=" | "in"
 export type SemanticAggregation = "count" | "count_distinct" | "sum" | "avg" | "min" | "max";
 export type SemanticValueKind = "integer" | "number" | "currency" | "quantity" | "percent" | "duration";
 export type SemanticDimensionKind = "category" | "date" | "datetime" | "link" | "currency" | "uom";
+export type SemanticDocumentState = "draft" | "submitted" | "non_cancelled";
 
 export interface SemanticPermissionRequirement {
   doctype: string;
@@ -20,6 +21,8 @@ export interface SemanticViewSource {
 export interface SemanticDoctypeSource {
   kind: "doctype";
   doctype: string;
+  /** Explicitly prevents a KPI from accidentally counting draft transactions. */
+  state: SemanticDocumentState;
 }
 
 export type SemanticSource = SemanticViewSource | SemanticDoctypeSource;
@@ -137,6 +140,10 @@ const SQL_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const DOCUMENT_FIELD = /^[a-z_][a-z0-9_]*$/;
 const OPERATORS = new Set<SemanticFilterOperator>(["=", "!=", ">", ">=", "<", "<=", "in", "like", "is_null"]);
 const AGGREGATIONS = new Set<SemanticAggregation>(["count", "count_distinct", "sum", "avg", "min", "max"]);
+const VALUE_KINDS = new Set<SemanticValueKind>(["integer", "number", "currency", "quantity", "percent", "duration"]);
+const DIMENSION_KINDS = new Set<SemanticDimensionKind>(["category", "date", "datetime", "link", "currency", "uom"]);
+const ADDITIVITY = new Set(["full", "semi", "non"]);
+const DOCUMENT_STATES = new Set<SemanticDocumentState>(["draft", "submitted", "non_cancelled"]);
 const DOCUMENT_COLUMNS = new Set(["name", "owner", "status", "docstatus", "created_at", "modified_at"]);
 
 function requireModelId(value: string, field: string): void {
@@ -156,14 +163,19 @@ function requireDocumentField(value: string, field: string): void {
 }
 
 function requireNonEmpty(value: string, field: string, max = 240): void {
-  if (!value.trim() || value.length > max) throw errors.validation(`${field} is required and must be at most ${max} characters`);
+  if (typeof value !== "string" || !value.trim() || value.length > max) {
+    throw errors.validation(`${field} is required and must be at most ${max} characters`);
+  }
 }
 
 function validateValue(value: SemanticValueDefinition, metricId: string, aggregation: SemanticAggregation): void {
+  if (!VALUE_KINDS.has(value.kind)) throw errors.validation(`Metric ${metricId} value kind is unsupported`);
+  if (value.exact !== undefined && typeof value.exact !== "boolean") throw errors.validation(`Metric ${metricId} exact must be boolean`);
   if (value.scale !== undefined) {
     if (!Number.isSafeInteger(value.scale) || value.scale < 1 || value.scale > 1_000_000_000) {
       throw errors.validation(`Metric ${metricId} scale must be a positive safe integer <= 1,000,000,000`);
     }
+    if (value.exact !== true) throw errors.validation(`Metric ${metricId} with scale must declare exact=true`);
   }
   if (value.currencyDimension !== undefined) requireMemberId(value.currencyDimension, `Metric ${metricId} currencyDimension`);
   if (value.unit !== undefined) requireNonEmpty(value.unit, `Metric ${metricId} unit`, 40);
@@ -171,7 +183,7 @@ function validateValue(value: SemanticValueDefinition, metricId: string, aggrega
   // AVG over an exact scaled integer forces a fractional database result. Returning it as
   // REAL would silently abandon the exact-money invariant. A later ratio contract can carry
   // numerator+denominator explicitly; until then exact AVG is intentionally refused.
-  if (aggregation === "avg" && value.scale !== undefined && value.scale > 1 && value.exact !== false) {
+  if (aggregation === "avg" && value.scale !== undefined && value.scale > 1) {
     throw errors.validation(`Metric ${metricId} cannot AVG exact scaled integers; define an explicit ratio metric instead`);
   }
 }
@@ -191,9 +203,10 @@ function validateModel(model: SemanticModelDefinition): void {
     requireSqlIdentifier(model.source.tenantField, `Model ${model.id} tenant field`);
   } else {
     requireNonEmpty(model.source.doctype, `Model ${model.id} source doctype`, 160);
+    if (!DOCUMENT_STATES.has(model.source.state)) throw errors.validation(`Model ${model.id} doctype source state is unsupported`);
   }
 
-  if (model.dimensions.length === 0 && model.metrics.length === 0) {
+  if (!Array.isArray(model.dimensions) || !Array.isArray(model.metrics) || (model.dimensions.length === 0 && model.metrics.length === 0)) {
     throw errors.validation(`Model ${model.id} must define at least one dimension or metric`);
   }
 
@@ -203,6 +216,7 @@ function validateModel(model: SemanticModelDefinition): void {
     if (ids.has(dimension.id)) throw errors.validation(`Model ${model.id} has duplicate member id ${dimension.id}`);
     ids.add(dimension.id);
     requireNonEmpty(dimension.label, `Dimension ${dimension.id} label`, 160);
+    if (!DIMENSION_KINDS.has(dimension.kind)) throw errors.validation(`Dimension ${dimension.id} kind is unsupported`);
     if (model.source.kind === "view") requireSqlIdentifier(dimension.field, `Dimension ${dimension.id} field`);
     else requireDocumentField(dimension.field, `Dimension ${dimension.id} field`);
     if (dimension.options !== undefined) requireNonEmpty(dimension.options, `Dimension ${dimension.id} options`, 160);
@@ -214,19 +228,23 @@ function validateModel(model: SemanticModelDefinition): void {
     ids.add(metric.id);
     requireNonEmpty(metric.label, `Metric ${metric.id} label`, 160);
     if (!AGGREGATIONS.has(metric.aggregation)) throw errors.validation(`Metric ${metric.id} uses an unsupported aggregation`);
+    if (metric.aggregation === "count" && metric.field) throw errors.validation(`Metric ${metric.id} COUNT must not declare a field`);
     if (metric.aggregation !== "count" && !metric.field) throw errors.validation(`Metric ${metric.id} requires a field`);
     if (metric.field) {
       if (model.source.kind === "view") requireSqlIdentifier(metric.field, `Metric ${metric.id} field`);
       else requireDocumentField(metric.field, `Metric ${metric.id} field`);
     }
+    if (metric.additive !== undefined && !ADDITIVITY.has(metric.additive)) throw errors.validation(`Metric ${metric.id} additive is unsupported`);
     validateValue(metric.value, metric.id, metric.aggregation);
   }
 
-  const dimensionIds = new Set(model.dimensions.map((dimension) => dimension.id));
+  const dimensionsById = new Map(model.dimensions.map((dimension) => [dimension.id, dimension]));
   for (const metric of model.metrics) {
     const currencyDimension = metric.value.currencyDimension;
-    if (currencyDimension && !dimensionIds.has(currencyDimension)) {
-      throw errors.validation(`Metric ${metric.id} references unknown currency dimension ${currencyDimension}`);
+    if (currencyDimension) {
+      const dimension = dimensionsById.get(currencyDimension);
+      if (!dimension) throw errors.validation(`Metric ${metric.id} references unknown currency dimension ${currencyDimension}`);
+      if (dimension.kind !== "currency") throw errors.validation(`Metric ${metric.id} currencyDimension ${currencyDimension} must have kind=currency`);
     }
   }
 }
@@ -316,7 +334,7 @@ function metricExpression(model: SemanticModelDefinition, metric: SemanticMetric
 
 function normalizeRequestedIds(ids: string[] | undefined, field: string): string[] {
   const values = ids ?? [];
-  if (values.length > 40) throw errors.validation(`${field} has too many entries`);
+  if (!Array.isArray(values) || values.length > 40) throw errors.validation(`${field} has too many entries`);
   const seen = new Set<string>();
   for (const value of values) {
     requireMemberId(value, field);
@@ -326,11 +344,30 @@ function normalizeRequestedIds(ids: string[] | undefined, field: string): string
   return values;
 }
 
+function bindableScalar(value: JsonValue | undefined, field: string): string | number | boolean {
+  if (typeof value === "string") {
+    if (value.length > 2_000) throw errors.validation(`${field} is too long`);
+    return value;
+  }
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) throw errors.validation(`${field} must be finite`);
+    return value;
+  }
+  if (typeof value === "boolean") return value;
+  throw errors.validation(`${field} must be a string, finite number or boolean`);
+}
+
+function doctypeStatePredicate(state: SemanticDocumentState): string {
+  if (state === "draft") return "docstatus=0";
+  if (state === "submitted") return "docstatus=1";
+  return "docstatus<>2";
+}
+
 export class SemanticQueryCompiler {
   constructor(private readonly registry: SemanticModelRegistry) {}
 
   compile(request: SemanticQueryRequest): CompiledSemanticQuery {
-    if (!request.tenant_id.trim()) throw errors.validation("tenant_id is required");
+    if (typeof request.tenant_id !== "string" || !request.tenant_id.trim()) throw errors.validation("tenant_id is required");
     const model = this.registry.get(request.model);
     const dimensionIds = normalizeRequestedIds(request.dimensions, "dimensions");
     const metricIds = normalizeRequestedIds(request.metrics, "metrics");
@@ -360,17 +397,18 @@ export class SemanticQueryCompiler {
     } else {
       from = "documents";
       params.push(model.source.doctype);
-      where.push("tenant_id=?1", "doctype=?2", "docstatus<>2");
+      where.push("tenant_id=?1", "doctype=?2", doctypeStatePredicate(model.source.state));
     }
 
     const filters = request.filters ?? [];
-    if (filters.length > 20) throw errors.validation("filters must contain at most 20 entries");
+    if (!Array.isArray(filters) || filters.length > 20) throw errors.validation("filters must contain at most 20 entries");
     for (const filter of filters) {
       if (!OPERATORS.has(filter.operator)) throw errors.validation(`Unsupported semantic filter operator: ${String(filter.operator)}`);
       const dimension = dimensionsById.get(filter.dimension);
       if (!dimension) throw errors.validation(`Filters may only use declared dimensions: ${filter.dimension}`);
       const expression = sourceFieldExpression(model, dimension.field);
       if (filter.operator === "is_null") {
+        if (filter.value !== undefined) throw errors.validation(`is_null filter must omit value: ${filter.dimension}`);
         where.push(`${expression} IS NULL`);
         continue;
       }
@@ -379,14 +417,16 @@ export class SemanticQueryCompiler {
           throw errors.validation(`IN filter requires a non-empty array: ${filter.dimension}`);
         }
         if (filter.value.length > 80) throw errors.validation("IN filter exceeds the parameter budget");
-        const placeholders = filter.value.map((value) => {
-          params.push(value);
+        const placeholders = filter.value.map((value, index) => {
+          params.push(bindableScalar(value, `Filter ${filter.dimension} value[${index}]`));
           return `?${params.length}`;
         });
         where.push(`${expression} IN (${placeholders.join(",")})`);
         continue;
       }
-      params.push(filter.value ?? null);
+      const value = bindableScalar(filter.value, `Filter ${filter.dimension} value`);
+      if (filter.operator === "like" && typeof value !== "string") throw errors.validation(`LIKE filter requires a string: ${filter.dimension}`);
+      params.push(value);
       where.push(`${expression} ${filter.operator === "like" ? "LIKE" : filter.operator} ?${params.length}`);
     }
 
@@ -422,7 +462,7 @@ export class SemanticQueryCompiler {
 
     const selectedIds = new Set([...dimensionIds, ...metricIds]);
     const order = request.order_by ?? [];
-    if (order.length > 8) throw errors.validation("order_by must contain at most 8 entries");
+    if (!Array.isArray(order) || order.length > 8) throw errors.validation("order_by must contain at most 8 entries");
     const orderSql = order.length > 0
       ? ` ORDER BY ${order.map((item) => {
         if (!selectedIds.has(item.id)) throw errors.validation(`Order member must be selected: ${item.id}`);
@@ -431,9 +471,14 @@ export class SemanticQueryCompiler {
       }).join(", ")}`
       : "";
 
-    const limit = Math.max(1, Math.min(request.limit ?? 100, model.maxRows));
-    const offset = Math.max(0, request.offset ?? 0);
-    if (!Number.isSafeInteger(limit) || !Number.isSafeInteger(offset)) throw errors.validation("limit and offset must be safe integers");
+    const limit = request.limit ?? Math.min(100, model.maxRows);
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > model.maxRows) {
+      throw errors.validation(`limit must be an integer from 1 to ${model.maxRows}`);
+    }
+    const offset = request.offset ?? 0;
+    if (!Number.isSafeInteger(offset) || offset < 0 || offset > 100_000) {
+      throw errors.validation("offset must be an integer from 0 to 100000; use a feed/cursor path for larger extracts");
+    }
     params.push(limit, offset);
 
     return {
