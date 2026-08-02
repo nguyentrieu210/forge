@@ -488,7 +488,7 @@ export function FormView(props: FormViewProps) {
                   <h3 className="shrink-0 text-[13px] font-semibold text-foreground">
                     {section.label || t("form.section_general", "Thông tin chung")}
                   </h3>
-                  <span className="h-px min-w-8 flex-1 bg-border" aria-hidden="true" />
+                  <span className="h-px min-w-8 flex-1 bg-border/40" aria-hidden="true" />
                 </div>
                 {/* gap-y-2.5 thay vì 4, gap-x-5 thay vì 6 — mật độ dày kiểu ERP, đọc được cả form
                     trong 1 màn thay vì phải cuộn. */}

@@ -1455,7 +1455,7 @@ export function ChildGrid(props: ChildGridProps) {
       {/* CUỘN NGANG, không cắt. `overflow-hidden` trước đây giấu mất các cột phía sau mà
           không để lại dấu hiệu nào — bảng chỉ đơn giản là thiếu cột. Cột "#" GHIM lại bên
           trái khi cuộn, cách MISA làm, để không lạc dòng khi kéo sang phải. */}
-      <div className="overflow-x-auto rounded-md border">
+      <div className="overflow-x-auto rounded-md border [scrollbar-width:thin]">
         {/* Bảng lớn CHIA phần trong khung (`w-full`, không ép min-width) nên 12 cột vừa trọn
             màn hình; bảng gọn vẫn tràn để cuộn vì khung của nó hẹp hơn tổng các cột. */}
         <Table className={expanded ? "w-full table-fixed" : "table-fixed"} style={expanded ? undefined : { minWidth: `${minWidthRem}rem` }}>
