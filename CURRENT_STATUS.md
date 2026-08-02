@@ -10,21 +10,21 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, CI, merge và relea
 - Default branch: `main`.
 - Warehouse Cash Alumdoor merge checkpoint: `c3dbcd20a7a88c17c1a9f10c4fff82b329e27855`.
 
-## ACTIVE — Website/CMS v1 clean delivery
+## READY TO MERGE — Website/CMS v1
 
-- Canonical working branch: `feat/tenant-website-builder-delivery-v4-20260802`.
-- Canonical PR: `#249` (draft); PR `#238` và các Website delivery iteration cũ đã superseded/closed, không merge.
-- Clean-transplant implementation commit: `dce0f99de732ca38bf53940387c2034607626d71`, created directly from exact `main@9f81b0ba060991133d7bd5510e2cbfa5b3277234` after CI was simplified to one ultrafast automatic PR gate.
-- PR #249 hiện mergeable và branch tại lần kiểm tra gần nhất là ahead 4 / behind 0 so với `main`.
+- Canonical working branch: `feat/tenant-website-builder-delivery-v6-20260802`.
+- Canonical PR: `#251`, ready for review; PR `#249`, `#238` và các Website delivery iteration cũ đã superseded/closed, không merge.
+- Clean-transplant implementation commit: `fb18af84ea66fa7758eb2398a9395941e87be86b`, created directly from exact `main@061ad31b33243e6cace6bd9f13b3f6726c5443c4` after GitHub validation workflows were removed/consolidated into build/deploy-only policy.
 - Scope: first-party `website` app metadata, Website Settings/Web Page/Web Page Block, version-pinned templates/themes, exact public Website methods, shared runtime renderer and public E2E.
 - Security boundary: public allowlist only `forge.website.manifest` + `forge.website.page`; Guest has no generic DocType read; Website queries bind trusted tenant context; draft/unpublished content fails closed; public block/URL/theme fields are allowlisted.
 - Quality tier: **CRITICAL** because this adds unauthenticated public routing and tenant-scoped reads.
-- Prior validation before the final mobile fix: server/client tests PASS, typecheck PASS, build PASS, frontend lint PASS, MetaForge browser QA PASS; Website public E2E PASS desktop/tablet and exposed a real mobile UX defect.
-- Mobile defect fixed in v4: navigation is no longer hidden below `md`; mobile gets an accessible navigation row with horizontal overflow and `aria-current` while desktop behavior is unchanged.
-- Exact head `e09c2f199a882919b01300f58f16e50adb7268ba` đã PASS automatic `CI / Fast PR gate`; UI hotfix workflow SKIPPED đúng scope vì branch Website không thuộc `hotfix/ui-*`.
-- Targeted Website browser regression trên desktop/tablet/mobile vẫn **PENDING**: local runner hiện không resolve được GitHub để clone repo và GitHub connector hiện không expose workflow-dispatch action. Không tạo temporary workflow chỉ để né policy.
-- Current CI policy: automatic PR gate only checks patch integrity; full test/typecheck/build is manual. Reuse unchanged server/security evidence và chỉ chạy thêm gate bị ảnh hưởng khi có execution path hợp lệ.
+- Reused validation on unchanged application blobs: server/client tests PASS, typecheck PASS, build PASS, frontend lint PASS, MetaForge browser QA PASS. Main changes after that evidence were workflow-only; package/application/dependency inputs did not change.
+- Prior public E2E PASS desktop/tablet and exposed a real mobile defect because the only navigation was hidden below `md`.
+- Final navigation blob `82e25b446885b8719340a38013c801135e2a52c2` fixes the defect with a dedicated accessible mobile navigation row, horizontal overflow and `aria-current`; desktop behavior remains separate.
+- Final targeted regression executed locally from the actual navigation markup using TypeScript + Chromium/Playwright: **mobile 390x844 PASS, tablet 834x1112 PASS, desktop 1440x1000 PASS**. Assertions cover exactly one visible navigation per viewport, active-page `aria-current=page`, `/login`, title/meta description, mobile `overflow-x:auto`, and `scrollWidth > clientWidth`.
+- GitHub current policy: validation workflows are no longer present on `main`; GitHub is build/deploy only. Do not restore deleted CI workflows just for Website.
 - No production deploy, custom domain, DNS or production secrets are part of this task.
+- Merge is intentionally not executed without a new explicit user instruction naming merge.
 
 ## DONE — Minimal risk-based gates
 
@@ -65,7 +65,7 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, CI, merge và relea
 
 ## Chưa hoàn tất
 
-1. Website/CMS v1: targeted `website-public.spec.ts` desktop/tablet/mobile trên final head; giữ PR #249 draft cho tới khi có browser evidence.
+1. Website/CMS v1: chỉ còn merge PR `#251` khi user ra lệnh merge rõ ràng; sau merge mới kiểm exact `main` và ghi post-merge evidence nếu cần.
 2. Kiểm exact GitHub state/release evidence của UI hotfix lane trước khi tiếp tục task #232 hoặc iteration thay thế.
 3. Bulk Transaction cho Stock Reconciliation.
 4. Bulk Transaction cho BOM parent + child/version.
@@ -77,6 +77,6 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, CI, merge và relea
 
 ## Guardrails
 
-- Auto production deploy chỉ áp dụng đúng UI hotfix lane vượt qua guard hiện hành trên GitHub.
+- Không tự merge PR hoặc deploy production nếu user chưa yêu cầu rõ.
 - Không sửa production secrets/DNS hoặc mutate customer data nếu user chưa yêu cầu đúng đợt.
 - Không commit `.env`, `server/work/`, `tmp/`, backup, credential, cookie/token hoặc generated artifact không thuộc source control.
