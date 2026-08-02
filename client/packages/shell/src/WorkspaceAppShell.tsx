@@ -9,6 +9,7 @@ import {
 } from "./AppShell.js";
 import { ChangePasswordDialog } from "./auth/ChangePasswordDialog.js";
 import { ForgeBrandLogo, isAlumdoorSurface } from "./BrandLogo.js";
+import { ThemeWelcomeDialog } from "./ThemeWelcomeDialog.js";
 import {
   buildWorkspaceModules,
   findWorkspaceModule,
@@ -285,7 +286,7 @@ export function AppShell(props: AppShellProps) {
 
   const shellProps: AppShellProps = {
     ...props,
-    brandMark: props.brandMark ?? <ForgeBrandLogo size={isAlumdoorSurface() ? 40 : 28} />,
+    brandMark: props.brandMark ?? <ForgeBrandLogo size={isAlumdoorSurface() ? 44 : 28} />,
     brandLogoOnly: props.brandLogoOnly ?? isAlumdoorSurface(),
     onChangePassword: props.onChangePassword ?? (() => setPasswordOpen(true)),
     onLogoutOtherSessions: logoutOtherSessions,
@@ -367,6 +368,13 @@ export function AppShell(props: AppShellProps) {
   return (
     <>
       {shell}
+      <ThemeWelcomeDialog
+        userKey={props.userSubtitle}
+        theme={props.theme}
+        onThemeChange={props.onThemeChange}
+        brandMode={props.brandMode}
+        allowBrandChange={props.allowBrandChange}
+      />
       <ChangePasswordDialog adapter={accountAdapter} open={passwordOpen} onOpenChange={setPasswordOpen} />
     </>
   );
