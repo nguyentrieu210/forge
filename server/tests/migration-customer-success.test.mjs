@@ -81,3 +81,13 @@ test("customer success requires knowledge coverage for each required training ro
   assert.equal(result.ready, false);
   assert.deepEqual(result.missing_knowledge, ["accountant-key-user"]);
 });
+
+test("customer success rejects evidence that is not bound to the plan", () => {
+  assert.throws(() => evaluateCustomerSuccess({
+    plan,
+    training_evidence: [
+      { requirement_key: "made-up-training", completed_by: "trainer@example", completed_at: "2026-08-03T10:00:00Z", evidence_ref: "training:ghost" },
+    ],
+    adoption: [],
+  }), /unknown requirement/i);
+});
