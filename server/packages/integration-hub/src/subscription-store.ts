@@ -28,6 +28,7 @@ export class IntegrationSubscriptionService {
       if (document.tenant_id !== tenantId || document.doctype !== "Integration Subscription" || document.status !== "active") {
         throw new Error("Integration Subscription reader returned cross-scope or inactive document");
       }
+      if (document.docstatus !== 0) throw new Error("Integration Subscription reader returned invalid docstatus");
       const subscription = subscriptionFromDocument(document);
       if (subscription.status !== "active") throw new Error("Integration Subscription document status mismatch");
       subscriptions.push(subscription);
