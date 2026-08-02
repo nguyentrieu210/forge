@@ -4,6 +4,7 @@ import { EmployeeTransferController } from "../dist/packages/clouderp-erpnext/sr
 import { AttendanceRequestController } from "../dist/packages/clouderp-erpnext/src/hrm-shift-attendance-controllers.js";
 import { LeaveApplicationController } from "../dist/packages/clouderp-erpnext/src/hrm-leave-overtime-controllers.js";
 import { buildHrmSalarySlipInputs } from "../dist/packages/clouderp-erpnext/src/hrm-payroll.js";
+import { HrmSalarySlipController } from "../dist/packages/clouderp-erpnext/src/hrm-salary-slip.js";
 
 function document(name, data, docstatus = 1, version = 1) {
   return { name, docstatus, version, data };
@@ -109,6 +110,11 @@ test("salary slip input is generated from effective structure, attendance and se
     "Company:Demo": { default_currency: "USD" },
     "Currency:USD": { currency_scale: 2 },
     "Salary Component:Basic": { type: "Earning", account: "Salary Expense" },
+    "VN Payroll Rule:RULE-1": {
+      rule_code: "RULE-1", effective_from: "2026-01-01", effective_to: "2026-12-31",
+      legal_document_no: "LEGAL-2026", source_url: "https://example.test/legal-2026",
+      formula_json: "{\"version\":1}", approved_by: "payroll.manager@example.test", approved_at: "2026-01-01T00:00:00Z",
+    },
   };
   const documents = {
     "Salary Structure Assignment:SSA-1": document("SSA-1", {
@@ -142,4 +148,54 @@ test("salary slip input is generated from effective structure, attendance and se
   assert.equal(generated.earnings[0].account, "Salary Expense");
   assert.equal(generated.earnings[0].amount, "800.00");
   assert.equal(generated.input_hash.length, 64);
+  const trace = JSON.parse(generated.rule_trace_json);
+  assert.equal(trace.payroll_rule.name, "RULE-1");
+  assert.equal(trace.payroll_rule.legal_document_no, "LEGAL-2026");
+  assert.equal(trace.payroll_rule.formula_sha256.length, 64);
+});
+
+
+test("generated salary slip recomputes authoritative inputs instead of trusting stale draft earnings", async () => {
+  const masters = {
+    "Company:Demo": { default_currency: "USD" },
+    "Currency:USD": { currency_scale: 2 },
+    "Salary Component:Basic": { type: "Earning", account: "Salary Expense" },
+    "VN Payroll Rule:RULE-1": {
+      rule_code: "RULE-1", effective_from: "2026-01-01", effective_to: "2026-12-31",
+      legal_document_no: "LEGAL-2026", source_url: "https://example.test/legal-2026",
+      formula_json: "{\"version\":1}", approved_by: "payroll.manager@example.test", approved_at: "2026-01-01T00:00:00Z",
+    },
+  };
+  const documents = {
+    "Salary Structure Assignment:SSA-1": document("SSA-1", {
+      employee: "EMP-1", company: "Demo", branch: "BR-A", from_date: "2026-08-01", to_date: "2026-08-31",
+      salary_structure: "SS-1", base_salary: "1000", holiday_list: "HL-PAY", payable_account: "Payroll Payable", payroll_cost_center: "CC-A",
+    }, 1, 3),
+    "Salary Structure:SS-1": document("SS-1", {
+      company: "Demo", effective_from: "2026-01-01", payroll_rule: "RULE-1", holiday_list: "HL-PAY",
+      payroll_payable_account: "Payroll Payable", default_cost_center: "CC-A", unmarked_attendance: "Vắng",
+      components: [{ salary_component: "Basic", amount_type: "Fixed", amount: "1000", prorate_by_payment_days: 1 }],
+    }, 1, 2),
+    "Holiday List:HL-PAY": document("HL-PAY", { company: "Demo", weekly_off_days: "0,6", holidays_json: "[]" }, 1, 4),
+    "Payroll Period:PP-1": document("PP-1", { company: "Demo", branch: "BR-A", start_date: "2026-08-03", end_date: "2026-08-07", pay_date: "2026-08-10" }, 1, 1),
+    "Attendance:A-03": document("A-03", { employee: "EMP-1", attendance_date: "2026-08-03", attendance_status: "Có mặt" }),
+    "Attendance:A-04": document("A-04", { employee: "EMP-1", attendance_date: "2026-08-04", attendance_status: "Có mặt" }),
+    "Attendance:A-05": document("A-05", { employee: "EMP-1", attendance_date: "2026-08-05", attendance_status: "Có mặt" }),
+    "Attendance:A-06": document("A-06", { employee: "EMP-1", attendance_date: "2026-08-06", attendance_status: "Có mặt" }),
+    "Attendance:A-07": document("A-07", { employee: "EMP-1", attendance_date: "2026-08-07", attendance_status: "Vắng" }),
+  };
+  const reader = fakeReader({ masters, documents });
+  const staleDraft = {
+    employee: "EMP-1", company: "Demo", posting_at: "2026-08-07T12:00:00Z",
+    start_date: "2026-08-03", end_date: "2026-08-07", payroll_payable_account: "Payroll Payable",
+    salary_structure_assignment: "SSA-1", input_hash: "stale",
+    earnings: [{ row_id: "STALE", salary_component: "Basic", amount: "999.00", amount_minor: 99900, account: "Salary Expense" }],
+    deductions: [],
+  };
+  const normalized = await new HrmSalarySlipController().normalize(
+    context("Salary Slip", "SAL-STALE", staleDraft, reader, "save", ["Payroll Manager"]),
+  );
+  assert.equal(normalized.earnings[0].amount, "800.00");
+  assert.notEqual(normalized.input_hash, "stale");
+  assert.equal(normalized.payroll_period, "PP-1");
 });
