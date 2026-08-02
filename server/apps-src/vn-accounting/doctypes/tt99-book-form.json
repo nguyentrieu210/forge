@@ -1,0 +1,35 @@
+{
+  "name": "TT99 Book Form",
+  "module": "Accounts",
+  "is_submittable": true,
+  "autoname": "TT99-SO-.YYYY.-#####",
+  "title_field": "label",
+  "sort_field": "effective_from",
+  "sort_order": "DESC",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "book_code", "label": "Mã sổ", "fieldtype": "Data", "required": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "label", "label": "Tên sổ", "fieldtype": "Data", "required": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "company", "label": "Công ty (để trống = mẫu chuẩn)", "fieldtype": "Link", "options": "Company", "in_standard_filter": true },
+    { "fieldname": "legal_rule", "label": "Căn cứ pháp lý", "fieldtype": "Link", "options": "VN Legal Rule", "required": true },
+    { "fieldname": "source_ledger", "label": "Sổ nguồn", "fieldtype": "Select", "options": "GL\nAR\nAP\nBank\nCash\nStock\nAsset\nPayroll", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "template_version", "label": "Phiên bản mẫu", "fieldtype": "Data", "required": true, "in_list_view": true },
+    { "fieldname": "columns_json", "label": "Cấu hình cột", "fieldtype": "Code", "required": true, "default": "[]" },
+    { "fieldname": "grouping_json", "label": "Nhóm và tổng", "fieldtype": "Code", "required": true, "default": "{}" },
+    { "fieldname": "filter_schema_json", "label": "Bộ lọc cho phép", "fieldtype": "Code", "required": true, "default": "{}" },
+    { "fieldname": "effective_from", "label": "Hiệu lực từ", "fieldtype": "Date", "required": true, "in_list_view": true },
+    { "fieldname": "effective_to", "label": "Hiệu lực đến", "fieldtype": "Date" },
+    { "fieldname": "test_evidence_json", "label": "Bằng chứng kiểm thử", "fieldtype": "Code", "required": true, "default": "{}" },
+    { "fieldname": "approved_by", "label": "Người phê duyệt", "fieldtype": "Data", "read_only": true },
+    { "fieldname": "approved_at", "label": "Thời điểm phê duyệt", "fieldtype": "Datetime", "read_only": true },
+    { "fieldname": "workflow_state", "label": "Trạng thái", "fieldtype": "Data", "read_only": true, "in_list_view": true, "in_standard_filter": true }
+  ],
+  "permissions": [
+    { "role": "Accounts User", "read": true, "report": true },
+    { "role": "General Accountant", "read": true, "write": true, "create": true, "report": true, "export": true },
+    { "role": "Chief Accountant", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true },
+    { "role": "Accounts Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}
