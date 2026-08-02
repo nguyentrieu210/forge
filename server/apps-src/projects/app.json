@@ -1,8 +1,18 @@
 {
   "id": "projects",
   "name": "Projects & PSA",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "requires": [],
+  "worker": "cloudforge-app-ws07",
+  "validators": [
+    { "doctype": "Project Portfolio" },
+    { "doctype": "Project Template" },
+    { "doctype": "Project Capacity Plan" },
+    { "doctype": "Project" },
+    { "doctype": "Project Task" },
+    { "doctype": "Project Timesheet" },
+    { "doctype": "Project Acceptance Certificate" }
+  ],
   "reports": [
     {
       "name": "Project Task Control",
