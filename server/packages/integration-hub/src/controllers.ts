@@ -3,7 +3,13 @@ import { errors } from "../../core/src/index.js";
 import type { ControllerContext, DocumentController } from "../../document-kernel/src/index.js";
 import { domainEvent } from "../../outbox/src/index.js";
 import { assertSubscriptionStatusTransition, type SubscriptionStatusChange } from "./api-contract.js";
-import { validateWebhookSubscription, type ConnectorAuthKind, type IntegrationMappingRule, type IntegrationStatus } from "./index.js";
+import { validateWebhookSubscription, type ConnectorAuthKind, type IntegrationStatus } from "./index.js";
+
+type IntegrationMappingRuleData = JsonObject & {
+  source: string;
+  target: string;
+  required?: boolean;
+};
 
 interface IntegrationSubscriptionData extends JsonObject {
   event_pattern: string;
@@ -11,7 +17,7 @@ interface IntegrationSubscriptionData extends JsonObject {
   auth_kind: ConnectorAuthKind;
   secret_ref?: string;
   allowed_hosts: string[];
-  mapping?: IntegrationMappingRule[];
+  mapping?: IntegrationMappingRuleData[];
   max_attempts?: number;
   base_delay_seconds?: number;
   max_delay_seconds?: number;
@@ -174,7 +180,7 @@ function normalizeStringArray(value: unknown, field: string, maxItems: number, m
   return normalized;
 }
 
-function normalizeMapping(value: unknown): IntegrationMappingRule[] {
+function normalizeMapping(value: unknown): IntegrationMappingRuleData[] {
   if (!Array.isArray(value) || value.length > 128) throw errors.validation("mapping must be an array with at most 128 rules");
   return value.map((item, index) => {
     if (!item || typeof item !== "object" || Array.isArray(item)) throw errors.validation(`mapping[${index}] is invalid`);
@@ -182,7 +188,7 @@ function normalizeMapping(value: unknown): IntegrationMappingRule[] {
     const source = requireText(record.source, `mapping[${index}].source`, 128);
     const target = requireText(record.target, `mapping[${index}].target`, 128);
     if (record.required !== undefined && typeof record.required !== "boolean") throw errors.validation(`mapping[${index}].required is invalid`);
-    return { source, target, ...(record.required === undefined ? {} : { required: record.required }) };
+    return { source, target, ...(record.required === undefined ? {} : { required: record.required }) } as IntegrationMappingRuleData;
   });
 }
 
