@@ -1,14 +1,14 @@
 # WS00 — Architecture / Kernel / Tech-stack 360°
 
-Status: **REVIEW**  
+Status: **ACTIVE**  
 Owner: **ChatGPT / ws00**  
 Branch: `agent/ent-00-architecture-kernel`  
 Product baseline: **Forge 0.2.0**  
 Seed baseline: `862636e6239c91eab657c619d8c55345ed71a6d8`  
 Exact `main` at claim: `bbe3494bcfbb8a3ce09a5ff4bbb839dfcf9e47e9`  
 Claim commit: `722066400d0b8ee960f4ad408ffacc25d84a0e34`  
-Main sync: PR `#302` merged into this workstream at `b74bb6b034ce60f950ba53953deb625a269a8675`  
-Delivery PR: **#306** `fix(kernel): serialize shared inventory mutations` (Draft, not merged/deployed)  
+Main sync checkpoints: PR `#302` -> `b74bb6b034ce60f950ba53953deb625a269a8675`; PR `#324` -> `db182c9133f2f35ca39a3618fb1070214c8cb12a`  
+Delivery PR: **#306** (Draft, backend/CRITICAL, not merged/deployed)  
 Canonical board: `main:docs/agents/AGENT_BOARD.md`
 
 ## Mission / ownership
@@ -28,9 +28,7 @@ Do not absorb:
 - shared React runtime -> WS14;
 - domain accounting/stock/payroll rules -> domain owner.
 
-## Phase A audit snapshot
-
-### Authoritative mutation path
+## Authoritative mutation path
 
 ```text
 Gateway trusted tenant/user envelope
@@ -45,7 +43,7 @@ Gateway trusted tenant/user envelope
    -> lifecycle + expected-version precheck
    -> controller builds deterministic MutationPlan
    -> balanced-GL invariant
--> D1MutationStore / first-primary session
+-> D1 command store / first-primary session
    -> mutation_guard OCC/lifecycle trigger
    -> document + children + search projection
    -> immutable ledger/progress rows
@@ -55,120 +53,212 @@ Gateway trusted tenant/user envelope
    -> one D1 batch + bookmark result
 ```
 
-Executable code matches the core intent of `server/docs/spec/technical/atomic-write-protocol.md`: write, audit, ledger, outbox and receipt share one authoritative batch. The D1 guard is essential because a zero-row optimistic UPDATE does not itself fail a batch.
+The executable path matches the core intent of `server/docs/spec/technical/atomic-write-protocol.md`: authoritative document/ledger/audit/outbox/receipt state commits together. The in-transaction guard is essential because a zero-row optimistic UPDATE does not itself fail `db.batch()`.
 
-### Capability evidence
+## Capability evidence
 
-The capability map currently has no dedicated IDs for L0 document kernel/OCC/atomic mutation/DO coordination. WS00 therefore maps the nearest stable cross-cutting IDs and records the registry gap instead of inventing unofficial IDs.
+The current capability map has no dedicated IDs for document kernel/OCC/atomic mutation/DO coordination. WS00 therefore maps the nearest stable cross-cutting IDs instead of inventing unofficial coverage numbers.
 
 | Capability | Current maturity | Evidence / boundary |
 |---|---|---|
-| `I01-014` Idempotency | **RC** | payload-hash verification, tenant-scoped command receipts, exact replay, incompatible key reuse fail-closed. |
-| `G02-001` Audit trail | **RC** | `versions` snapshot with actor/action/command linkage committed atomically. |
-| `G02-002` Immutable audit evidence | **Wired/RC** | receipts, versions and append-only ledger revisions preserved; full failure-injection evidence not rerun here. |
-| `O01-011` Integrity checks | **Wired** | SQL guards, ledger invariants and regression sources exist; exact full-suite execution still required. |
-| `W01-012` Stock Ledger | **affected, WS04-owned** | WS00 changes coordination only, not stock business rules. |
-| `W01-019` Stock reservation | **affected, WS04-owned** | shared reservation read-check-write now receives full-operation serialization. |
+| `I01-014` Idempotency | **RC** | payload hash, tenant-scoped receipt, exact replay, incompatible command reuse fail-closed. |
+| `G02-001` Audit trail | **RC** | versions snapshot with actor/action/command linkage committed with mutation. |
+| `G02-002` Immutable audit evidence | **Wired/RC** | receipts + append-only ledger revisions; delete/rename maintenance path still needs unified command semantics. |
+| `O01-011` Integrity checks | **Wired/RC** | SQL guards + kernel invariants + bounded-scan fail-closed; exact failure-injection suite NOT RUN here. |
+| `W01-012` Stock Ledger | **affected, WS04-owned** | coordination hardened; stock semantics unchanged. |
+| `W01-019` Stock reservation | **affected, WS04-owned** | shared reservation read-check-write uses company coordination. |
 
-## Findings
+## Findings and disposition
 
-### WS00-F01 — CRITICAL — inventory coordinator did not serialize the full async mutation
+### WS00-F01 — CRITICAL — inventory coordinator did not serialize the complete async mutation
 
-Inventory-affecting commands were routed to one company-wide Durable Object, but `mutateInventory()` directly called `kernel.execute()`. The adjacent purchase implementation already records the Cloudflare behavior that matters: Durable Object RPC methods may interleave while awaiting database work.
+Inventory-affecting commands shared one company Durable Object key but `mutateInventory()` invoked `kernel.execute()` without an explicit full-operation queue. Durable Object JavaScript may interleave across awaited non-DO-storage I/O; per-document OCC cannot protect a shared inventory invariant across differently named vouchers.
 
-Two differently named stock/reservation documents could therefore build plans from the same pre-mutation shared state. Per-document OCC protects one document version, not a cross-document inventory invariant.
+**Disposition: FIXED on PR #306.**
 
-**Disposition: FIXED on WS00 branch / PR #306.**
-
-Implementation:
-- new generic `MutationSerialExecutor` in document-kernel;
-- export through document-kernel public surface;
-- inventory coordinator queues the complete `commandServices().kernel.execute(command)` operation;
-- failed operations release the queue instead of poisoning subsequent commands;
+- added generic `MutationSerialExecutor` in document-kernel;
+- queue wraps the complete `commandServices().kernel.execute(command)` operation;
+- a rejected mutation releases the queue;
 - no schema/migration change.
 
-### WS00-F02 — STANDARD architecture debt — domain leakage inside document-kernel
+### WS00-F02 — STANDARD — document-kernel dependency surface was a domain service locator
 
-`DomainReader` and `D1MutationStore` currently expose/implement domain-specific reads/projections for sales fulfillment, procurement, stock/batch, manufacturing, assets, projects, POS, bank reconciliation and period locks. `document-kernel/src/index.ts` also exports purchase-allocation services directly.
+`DomainReader` exposed document + finance + stock + manufacturing + asset + project + POS + bank + procurement reads as one dependency.
 
-This is not an immediate correctness defect, but it makes the kernel a dependency magnet and increases blast radius. Do not mix a broad extraction with the concurrency fix.
+**Disposition: PARTIALLY FIXED / compatibility migration started.**
 
-**Disposition: OPEN.** Next WS00 architecture slice should define narrow reader/projection ports and a staged extraction order with domain owners.
+Added narrow reader ports while retaining `DomainReader` as a source-compatible aggregate:
+- `DocumentReader`;
+- `SubmittedQuantityReader`;
+- `PaymentLedgerReader`;
+- `StockLedgerReader`;
+- `ReturnProgressReader`;
+- `ManufacturingProgressReader`;
+- `AssetProgressReader`;
+- `ProjectProgressReader`;
+- `PosProgressReader`;
+- `BankReconciliationReader`;
+- `SalesFulfillmentReader`;
+- `ProcurementProgressReader`;
+- `MasterDataReader`;
+- `PeriodLockReader`.
 
-### WS00-F03 — OCC/idempotency/atomic batch shape is sound
+Contract: new code depends on the smallest port. Domain owners migrate callers incrementally; do not fork D1 authority. Spec: `server/docs/spec/technical/kernel-domain-ports.md`.
 
-- `DocumentKernel` recomputes payload hash before write.
-- same tenant + command ID + same actor/hash returns stored receipt; incompatible reuse fails closed.
-- `mutation_guard` validates expected version/lifecycle inside D1 transaction scope.
-- document/children/search/audit/ledger/outbox/receipt are assembled into one D1 batch.
-- after D1 error, the store rechecks receipt, covering commit-before-response retry behavior.
+### WS00-F03 — KEEP/HARDEN — OCC/idempotency/atomic batch shape is sound
 
-**Disposition: KEEP/HARDEN, not redesign.**
+- `DocumentKernel` recomputes payload hash;
+- same tenant + command ID + actor/hash returns stored receipt;
+- incompatible reuse fails closed;
+- `mutation_guard` revalidates expected version/lifecycle inside transaction scope;
+- document/children/search/audit/ledger/outbox/receipt share one D1 batch;
+- after D1 error, store rechecks receipt for commit-before-response recovery.
 
-### WS00-F04 — document-local vs shared-state concurrency contract
+Do not redesign this path without evidence of a real invariant gap.
 
-Ordinary same-document interleaving is protected by D1 OCC. Shared state such as inventory or supplier allocation requires a deliberately scoped coordinator plus explicit serialization of the complete authoritative read-check-write operation.
+### WS00-F04 — shared-state concurrency contract
 
-**Contract:** routing to a common DO key is necessary but not sufficient when correctness depends on shared state observed before commit.
+**Contract:** a common Durable Object identity is necessary but not sufficient when correctness depends on shared state observed before commit. The complete asynchronous authoritative read-check-write must be serialized unless the D1 transaction itself fully enforces the invariant.
 
-## Verification for PR #306
+Current scopes:
+- same-document conflict -> D1 OCC guard;
+- inventory/reservation -> company coordinator + `MutationSerialExecutor`;
+- purchase allocation -> company/supplier coordinator + shared serial primitive + selective allocation-revision retry.
 
-Risk: **CRITICAL**.
+### WS00-F05 — CRITICAL hardening — purchase executor created command services before waiting in queue
 
-Executed in this session against the exact new primitive source in an isolated TypeScript scratch compile:
-- TypeScript 5.8.3 compile: **PASS**;
-- Node 22 regression, full async serialization: **PASS**;
-- Node 22 regression, queue recovery after rejection: **PASS**;
-- result: **2/2 PASS**.
+Purchase coordination previously captured one `DocumentKernel`/D1 session before entering the supplier serial queue. Revision retries then reused that same captured service.
 
-GitHub workflow runs on exact PR head at PR creation: **none** (repo policy is not providing development CI on this head).
+**Disposition: FIXED on PR #306.**
 
-Repository-wide `npm test`, Worker typecheck and Cloudflare Worker integration tests have **not** been executed from an exact repository checkout in this connector session. PR #306 remains Draft and must not be called Hardened from isolated evidence alone.
+`mutatePurchase()` now constructs `commandServices()` inside the queued callback. Each queue turn and selective retry therefore gets a fresh request-scoped `first-primary` session and rereads authoritative allocation state after it actually reaches the front of the queue.
+
+`PurchaseCommandSerialExecutor` now reuses `MutationSerialExecutor`; purchase keeps only its domain-specific revision retry policy.
+
+### WS00-F06 — CRITICAL — bounded controller scan could silently hide rows beyond 5,000
+
+`D1MutationStore.listDocumentsByDoctype()` is capped at 5,000. Controllers including Alumdoor stock-reservation protection use it for absence/shared-state decisions. Silent truncation on a larger tenant can turn “not returned” into “does not exist”.
+
+**Disposition: FIXED fail-closed on authoritative rollout command store; targeted-reader migration remains.**
+
+- added `CONTROLLER_DOCUMENT_SCAN_LIMIT` + `assertControllerDocumentScanCount()`;
+- `D1RolloutPurchaseAllocationDomainStore` counts the tenant/doctype first in the same primary-first session;
+- if count exceeds 5,000, mutation fails closed instead of using an incomplete scan;
+- domain owner must add a targeted indexed reader rather than raise the limit for large datasets.
+
+### WS00-F07 — architecture gap — delete/rename lifecycle maintenance bypasses MutationCommand
+
+`frappe-api` calls `D1MutationStore.deleteDraftDocument()` and `renameDocument()` directly after permission checks. These operations use D1 batches and have sensible local safety guards, but they do not share the normal command envelope/receipt/outbox/idempotency contract. Delete also removes `versions`, which makes tombstone/name-reuse semantics part of the design problem.
+
+**Disposition: OPEN contract gap; do not patch impulsively.**
+
+Before implementation, define explicit maintenance-command semantics for:
+- idempotency key + replay result;
+- rename old/new identity and reference refusal;
+- delete tombstone/name reuse;
+- immutable audit evidence;
+- event/outbox behavior;
+- permission action;
+- whether `MutationAction` should grow or maintenance commands remain a separate contract.
+
+This gap is independent of PR #306 correctness fixes and does not block them.
+
+### WS00-F08 — cross-workstream — accounting period lock writes directly through D1 store
+
+`metaforge.api.set_accounting_period_lock` calls `context.documents.setAccountingPeriodLock()`, which writes `accounting_period_locks` + event rows directly with `db.batch()` rather than a finance-owned domain command.
+
+The existing event table provides some audit evidence, but this path does not use kernel command receipt/outbox/OCC semantics.
+
+**Disposition: dependency to WS01.** WS00 must not redesign finance period/business-rule semantics from the kernel branch.
+
+### WS00-F09 — Cloudflare fit / cost / scale
+
+Current architecture fits Cloudflare when command queries remain targeted:
+- D1-per-tenant matches D1 horizontal database scaling;
+- command reads use `withSession("first-primary")`;
+- bookmark is the right read-after-write seam;
+- report/read paths may use replicas with the Sessions consistency model;
+- company inventory coordinator is an intentional correctness-first hotspot;
+- broad scans and very large `db.batch()` statement counts are the main kernel performance risks.
+
+Current external platform evidence and capacity gates are recorded in `server/docs/spec/technical/cloudflare-kernel-fit.md`.
+
+## Dependency requests
+
+### DR-WS00-01 — stable kernel capability IDs
+- Target stream: WS00 / capability registry maintenance.
+- Need: stable IDs for document kernel, OCC, atomic mutation, Durable Object coordination and receipt/outbox semantics.
+- Why generic: every domain depends on these L0 capabilities.
+- Blocking: **no** for current implementation; **yes** for precise long-term coverage accounting.
+- Temporary workaround: nearest cross-cutting IDs + explicit affected domain IDs.
+
+### DR-WS00-02 — compiler accepts business-context dimensions package parser cannot resolve
+- Target stream: **WS09 BPM/App Factory**.
+- Evidence: user CI reported `COMPILE_PRODUCED_INVALID_PACKAGE hrm: client.dimensions[2] ... department`; current compiler copies `brief.dimensions`, while app-registry supports only its canonical resolvable set and rejects `department`.
+- Need: brief/compiler validation and package parser must share one canonical business-context dimension contract.
+- Why generic: every generated app package crosses this compiler/parser seam.
+- Contract proposed: unsupported dimensions fail during brief validation/compile with a precise compiler diagnostic; package parser remains defense-in-depth. Do **not** add `department` merely to silence CI unless the server business-context resolver actually supports it.
+- Blocking: **no** for WS00.
+- Temporary workaround: generated packages declare only server-resolvable dimensions.
+
+### DR-WS00-03 — finance period-lock domain command
+- Target stream: **WS01 Finance/VN Accounting**.
+- Need: replace/retire direct generic-store period-lock write with finance-owned versioned/audited command semantics when WS01 hardens period control.
+- Why generic: period lock changes authoritative accounting behavior and must have explicit correction/audit semantics.
+- Contract proposed: tenant/company scope, actor/reason, expected/current state, idempotency, immutable event/audit, deterministic effective lock state.
+- Blocking: **no** for WS00.
+- Temporary workaround: existing period-lock + event-table path remains; WS00 does not duplicate finance logic.
 
 ## Legacy PR disposition
 
 | PR | WS00 disposition | Reason |
 |---|---|---|
-| `#278` VN accounting integrity | **REJECT as WS00 implementation source; secondary review only** | Exact changed-file set has no `document-kernel` file. Primary ownership stays WS01. This is not a global rejection of the WS01 PR. |
-| `#153` ERP platform Wave 1 design | **MERGED / reference only** | Historical architecture design already merged; no code to transplant. |
+| `#278` VN accounting integrity | **secondary review only / not WS00 implementation source** | no document-kernel files in exact changed-file set; primary owner WS01. |
+| `#153` ERP platform Wave 1 design | **MERGED / reference only** | architecture reference already in main; no code to transplant. |
+
+## Verification
+
+Risk: **CRITICAL** for shared stock/purchase coordination.
+
+Executed in this session:
+- Node **22.16.0** + TypeScript **5.8.3** isolated compile of new generic primitives: **PASS**;
+- `MutationSerialExecutor` complete async serialization: **PASS**;
+- queue recovery after rejected operation: **PASS**;
+- bounded scan at limit: **PASS**;
+- bounded scan overflow fail-closed: **PASS**;
+- narrow reader-port synthetic type-shape compile: **PASS**.
+
+Repository-wide exact checkout evidence:
+- `npm test`: **NOT RUN**;
+- Worker typecheck/integration: **NOT RUN**;
+- D1 migration replay: **N/A** (no migration in WS00 changes);
+- production deploy: **NOT RUN / prohibited before explicit approval**.
+
+Reason for NOT RUN: connector session has no exact repository checkout/dependency tree; shell DNS cannot resolve GitHub. Per autonomous execution rule this is recorded, not treated as a blocker to independent audit/implementation.
 
 ## Affected workstreams
 
-- **WS04 Inventory/WMS:** stock/reservation shared-state commands now have actual full-operation platform serialization.
-- **WS03 Procurement:** no code changed; purchase coordinator keeps its serial executor + allocation-revision retry.
-- **WS11 Security/SaaS:** permission implementation unchanged.
-- **WS12 SRE:** no release/deploy change; future load/failure-injection evidence can be coordinated here.
-
-## Dependency / follow-up
-
-### DR-WS00-01 — capability map kernel IDs
-- Target: WS00 architecture registry maintenance.
-- Need: stable IDs for document kernel, OCC, atomic mutation, Durable Object coordination and receipt/outbox semantics.
-- Why generic: these are L0 capabilities used by every business domain.
-- Blocking: no for PR #306; yes for precise long-term L0 coverage accounting.
-- Temporary workaround: nearest stable cross-cutting IDs + explicit affected domain IDs.
-
-### Next WS00 architecture slice
-
-Define narrow shared ports around the current `DomainReader`/D1 projection surface, then extract domain-specific readers/writers incrementally without changing authoritative ledger semantics. Coordinate any behavioral extraction with the corresponding domain owner.
+- **WS03 Procurement:** purchase serial primitive reused; retry semantics preserved.
+- **WS04 Inventory/WMS:** stock/reservation shared-state commands now serialize complete mutation; broad reservation scan fails closed beyond safe bound and should later get targeted reader/index.
+- **WS05 Manufacturing:** inventory-coordinated manufacturing stock mutations inherit the shared coordination contract.
+- **WS09 App Factory:** DR-WS00-02 compiler dimension contract.
+- **WS01 Finance/VN:** DR-WS00-03 period-lock command ownership.
+- **WS11:** permission implementation unchanged.
+- **WS12:** future load/failure-injection/queue-wait observability evidence.
 
 ## Migration / production impact
 
-- Migration: **none**.
+- Schema migration: **none**.
 - Customer data mutation: **none**.
+- Secrets/DNS: **none**.
 - Production deploy: **none**.
-- PR: **#306 Draft**.
-- Merge/deploy gate: backend CRITICAL, explicit user approval required.
+- Delivery PR: **#306**, still Draft while autonomous closure continues.
+- Merge/deploy gate: backend/CRITICAL; explicit user approval required.
 
-## Handoff
+## Remaining WS00 closure work
 
-Workstream: WS00  
-Branch: `agent/ent-00-architecture-kernel`  
-Status: **REVIEW**  
-PR: **#306**  
-Capabilities: `I01-014`, `G02-001`, `G02-002`, `O01-011`; affected `W01-012`, `W01-019`  
-Changed zones: `server/packages/document-kernel/src/`, `server/apps/tenant-worker/src/aggregate-do.ts`, `server/tests/`  
-Tests: isolated TypeScript + Node regression 2/2 PASS; full repo/Worker validation pending  
-Migration: none  
-Known gaps: domain leakage from `DomainReader`/`D1MutationStore`; no dedicated L0 kernel IDs  
-Recommended merge order: PR #306 before WS04/WS05 inventory-heavy changes relying on shared stock coordination.
+1. Re-sync exact latest `main` before final handoff because parallel UI branches continue to advance main.
+2. Review final PR diff for accidental ownership overlap.
+3. Update PR #306 title/body to reflect coordination + reader-boundary + scale hardening.
+4. Mark workstream `REVIEW` and PR ready when exact branch relation is clean.
+5. Do **not** merge/deploy PR #306 without explicit user approval.
