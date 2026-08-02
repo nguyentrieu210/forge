@@ -10,6 +10,7 @@ export * from "./manufacturing-bom-bulk.js";
 export * from "./manufacturing-mrp.js";
 export * from "./manufacturing-capacity.js";
 export * from "./manufacturing-genealogy.js";
+export * from "./manufacturing-costing-read.js";
 export * from "./manufacturing-stock-guard.js";
 export * from "./manufacturing-work-order-guard.js";
 export * from "./manufacturing-rollout.js";
