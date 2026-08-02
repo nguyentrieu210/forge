@@ -62,16 +62,7 @@ export interface BulkBomDraftPreview extends JsonObject {
   document: BulkBomDraftDocument;
 }
 
-/**
- * Converts one pasted BOM parent + child table into the ordinary canonical BOM
- * document shape. This helper deliberately creates Draft only: activation stays
- * on VersionedBillOfMaterialsController.submit, where overlap/circular/reference
- * guards already live.
- *
- * It owns no stock, manufacturing or accounting side effects. A bulk-input helper
- * becoming a second production engine would be an impressively efficient way to
- * make future reconciliation impossible.
- */
+/** Converts one pasted BOM parent + child table into the ordinary canonical BOM draft shape. */
 export function buildBulkBomDraftDocument(input: BulkBomDraftInput): BulkBomDraftDocument {
   const company = requiredText(input.company, "company");
   const item = requiredText(input.item, "item");
@@ -115,11 +106,56 @@ export function buildBulkBomDraftDocument(input: BulkBomDraftInput): BulkBomDraf
   };
 }
 
+export function bulkBomRevisionKey(input: BulkBomDraftInput): string {
+  const document = buildBulkBomDraftDocument(input);
+  return `${document.company}\u0000${document.item}\u0000${document.revision}`;
+}
+
 /**
- * Stable fingerprint for preview/replay coordination. The fingerprint is not a
- * substitute for kernel idempotency; it is the deterministic business key a
- * caller can bind to its command/replay record when the API seam is wired.
+ * Compares the caller's exact business input with a Draft after the ordinary BOM
+ * controller has expanded UOM defaults, rates, money scale and checksum fields.
+ * Computed fields are intentionally ignored; explicit caller fields still have to
+ * match. This is the replay guard for a lost-response retry, not a second BOM validator.
  */
+export function canonicalDraftMatchesBulkBomInput(input: BulkBomDraftInput, canonical: JsonObject): boolean {
+  const candidate = buildBulkBomDraftDocument(input);
+  if (text(canonical.company) !== candidate.company || text(canonical.item) !== candidate.item) return false;
+  if (positiveIntegerOrZero(canonical.revision) !== candidate.revision) return false;
+  if (text(canonical.bom_status) !== "Draft") return false;
+  if (text(canonical.effective_from) !== candidate.effective_from) return false;
+  if (optionalText(canonical.effective_to) !== candidate.effective_to) return false;
+  if (!sameDecimal(canonical.quantity, candidate.quantity, 6)) return false;
+  if (!sameOptionalDecimal(canonical.operating_cost, candidate.operating_cost, 6)) return false;
+  if (!matchesOptionalUomAndFactor(
+    candidate.output_uom,
+    candidate.output_conversion_factor,
+    canonical.output_uom,
+    canonical.output_stock_uom,
+    canonical.output_conversion_factor,
+  )) return false;
+
+  const existingRows = Array.isArray(canonical.items) ? canonical.items : [];
+  if (existingRows.length !== candidate.items.length) return false;
+  for (const [index, candidateRow] of candidate.items.entries()) {
+    const existing = existingRows[index];
+    if (!isObject(existing)) return false;
+    if (text(existing.item_code) !== candidateRow.item_code) return false;
+    if (!sameDecimal(existing.qty, candidateRow.qty, 6)) return false;
+    if (optionalText(existing.source_warehouse) !== optionalText(candidateRow.source_warehouse)) return false;
+    const candidateBasis = candidateRow.qty_basis ?? "Cố định";
+    if ((optionalText(existing.qty_basis) ?? "Cố định") !== candidateBasis) return false;
+    if (!matchesOptionalUomAndFactor(
+      candidateRow.uom,
+      candidateRow.conversion_factor,
+      existing.uom,
+      existing.stock_uom,
+      existing.conversion_factor,
+    )) return false;
+  }
+  return true;
+}
+
+/** Stable fingerprint for preview/audit. Kernel idempotency remains authoritative for the write itself. */
 export async function fingerprintBulkBomDraft(input: BulkBomDraftInput): Promise<string> {
   return sha256Hex(canonicalJson(buildBulkBomDraftDocument(input)));
 }
@@ -173,12 +209,58 @@ function normalizeRow(
   };
 }
 
+function matchesOptionalUomAndFactor(
+  requestedUom: unknown,
+  requestedFactor: unknown,
+  actualUom: unknown,
+  actualStockUom: unknown,
+  actualFactor: unknown,
+): boolean {
+  const requestedUomText = optionalText(requestedUom);
+  const actualUomText = optionalText(actualUom);
+  const stockUomText = optionalText(actualStockUom);
+  if (requestedUomText) {
+    if (actualUomText !== requestedUomText) return false;
+  } else if (actualUomText && stockUomText && actualUomText !== stockUomText) {
+    return false;
+  }
+
+  if (requestedFactor !== undefined) return sameDecimal(actualFactor, requestedFactor, 6);
+  return actualFactor === undefined || sameDecimal(actualFactor, "1", 6);
+}
+
+function sameOptionalDecimal(left: unknown, right: unknown, scale: number): boolean {
+  if (left === undefined || left === null || left === "") {
+    return right === undefined || right === null || right === "" || sameDecimal(right, "0", scale);
+  }
+  if (right === undefined || right === null || right === "") return sameDecimal(left, "0", scale);
+  return sameDecimal(left, right, scale);
+}
+
+function sameDecimal(left: unknown, right: unknown, scale: number): boolean {
+  if (!isDecimalInput(left) || !isDecimalInput(right)) return false;
+  try {
+    return toScaledInt(left, scale) === toScaledInt(right, scale);
+  } catch {
+    return false;
+  }
+}
+
+function isDecimalInput(value: unknown): value is string | number {
+  return typeof value === "string" || typeof value === "number";
+}
+
 function positiveInteger(value: unknown, field: string): number {
   const number = typeof value === "number" ? value : Number(value);
   if (!Number.isSafeInteger(number) || number <= 0) {
     throw errors.validation(`${field} must be a positive integer`);
   }
   return number;
+}
+
+function positiveIntegerOrZero(value: unknown): number {
+  const number = typeof value === "number" ? value : Number(value);
+  return Number.isSafeInteger(number) && number >= 0 ? number : 0;
 }
 
 function positiveMicros(value: string | number, field: string): number {
@@ -206,6 +288,10 @@ function optionalText(value: unknown): string | undefined {
   return normalized || undefined;
 }
 
+function text(value: unknown): string {
+  return optionalText(value) ?? "";
+}
+
 function validDate(value: unknown, field: string): string {
   const normalized = requiredText(value, field);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
@@ -216,6 +302,10 @@ function validDate(value: unknown, field: string): string {
     throw errors.validation(`${field} must be a valid calendar date`);
   }
   return normalized;
+}
+
+function isObject(value: unknown): value is JsonObject {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 function canonicalJson(value: unknown): string {
