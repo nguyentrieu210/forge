@@ -1,9 +1,9 @@
 import type { JsonValue } from "../../contracts/src/index.js";
 import type {
-  CompiledSemanticQuery,
   SemanticPermissionRequirement,
   SemanticQueryCompiler,
   SemanticQueryRequest,
+  SemanticReadAccessScope,
   SemanticResultColumn,
 } from "./index.js";
 import { assertSemanticQueryRuntimeInput } from "./validation.js";
@@ -15,14 +15,12 @@ export interface SemanticAccessRequest {
 }
 
 /**
- * Adapter boundary for WS11/server permission enforcement.
- *
- * The semantic package deliberately does not invent a second RBAC engine. A caller must
- * provide the existing trusted permission service through this narrow interface, and the
- * query service always awaits it before preparing SQL.
+ * Existing WS11 permission implementation is adapted through this boundary.
+ * Authorization returns the effective read scope, not a boolean, so owner/share/User
+ * Permission constraints are compiled into the semantic query instead of being forgotten.
  */
 export interface SemanticAccessController {
-  assert(request: SemanticAccessRequest): Promise<void>;
+  authorize(request: SemanticAccessRequest): Promise<SemanticReadAccessScope>;
 }
 
 export interface SemanticQueryResult {
@@ -46,11 +44,19 @@ export class D1SemanticQueryService implements SemanticQueryExecutor {
   ) {}
 
   async run(request: SemanticQueryRequest): Promise<SemanticQueryResult> {
-    // HTTP/AI callers are runtime data, not TypeScript. Reject values D1 cannot safely bind
-    // before compilation, authorization side effects, or any database preparation.
+    // HTTP/AI callers are runtime data, not TypeScript. Reject invalid values first.
     assertSemanticQueryRuntimeInput(request);
-    const compiled = this.compiler.compile(request);
-    await this.authorize(request, compiled);
+
+    // Fetch effective permission + row scope before compiling SQL. The compiler then injects
+    // owner/share/User Permission predicates and refuses a model that cannot represent them.
+    const permission = this.compiler.compile(request).permission;
+    const scope = await this.access.authorize({
+      tenantId: request.tenant_id,
+      model: request.model,
+      permission,
+    });
+    const compiled = this.compiler.compile(request, scope);
+
     const rows = await this.db.prepare(compiled.sql).bind(...compiled.params).all<Record<string, JsonValue>>();
     const result = rows.results ?? [];
     return {
@@ -60,13 +66,5 @@ export class D1SemanticQueryService implements SemanticQueryExecutor {
       result,
       row_count: result.length,
     };
-  }
-
-  private async authorize(request: SemanticQueryRequest, compiled: CompiledSemanticQuery): Promise<void> {
-    await this.access.assert({
-      tenantId: request.tenant_id,
-      model: compiled.model,
-      permission: compiled.permission,
-    });
   }
 }
