@@ -104,7 +104,7 @@ function requireText(value: JsonValue | undefined, field: string, max: number): 
 }
 
 function requireEnum<const T extends readonly string[]>(value: JsonValue | undefined, allowed: T, field: string): T[number] {
-  if (typeof value !== "string" || !allowed.includes(value)) throw new Error(`Invalid ${field}`);
+  if (typeof value !== "string" || !(allowed as readonly string[]).includes(value)) throw new Error(`Invalid ${field}`);
   return value as T[number];
 }
 
