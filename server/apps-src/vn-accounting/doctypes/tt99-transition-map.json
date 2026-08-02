@@ -1,0 +1,31 @@
+{
+  "name": "TT99 Transition Map",
+  "module": "Accounts",
+  "is_submittable": true,
+  "autoname": "TT99-TR-.YYYY.-#####",
+  "title_field": "company",
+  "sort_field": "fiscal_year_start",
+  "sort_order": "DESC",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "fiscal_year_start", "label": "Ngày bắt đầu năm tài chính", "fieldtype": "Date", "required": true, "in_list_view": true },
+    { "fieldname": "source_policy", "label": "Chính sách nguồn", "fieldtype": "Link", "options": "VN Accounting Policy", "required": true },
+    { "fieldname": "target_policy", "label": "Chính sách TT99", "fieldtype": "Link", "options": "VN Accounting Policy", "required": true },
+    { "fieldname": "mapping_set_hash", "label": "Hash bộ mapping", "fieldtype": "Data", "required": true, "read_only": true },
+    { "fieldname": "preview_result_json", "label": "Kết quả chạy thử", "fieldtype": "Code", "required": true, "default": "{}", "read_only": true },
+    { "fieldname": "balance_check_json", "label": "Đối chiếu số dư", "fieldtype": "Code", "required": true, "default": "{}", "read_only": true },
+    { "fieldname": "exception_count", "label": "Số ngoại lệ", "fieldtype": "Int", "required": true, "default": 0, "read_only": true, "in_list_view": true },
+    { "fieldname": "approved_by", "label": "Người phê duyệt", "fieldtype": "Data", "read_only": true },
+    { "fieldname": "approved_at", "label": "Thời điểm phê duyệt", "fieldtype": "Datetime", "read_only": true },
+    { "fieldname": "workflow_state", "label": "Trạng thái", "fieldtype": "Data", "read_only": true, "in_list_view": true, "in_standard_filter": true }
+  ],
+  "permissions": [
+    { "role": "Accounts User", "read": true, "report": true },
+    { "role": "General Accountant", "read": true, "write": true, "create": true, "report": true, "export": true },
+    { "role": "Chief Accountant", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true },
+    { "role": "Accounts Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}
