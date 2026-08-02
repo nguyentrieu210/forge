@@ -5,6 +5,16 @@ on:
     branches:
       - main
     types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - 'server/apps-src/alumdoor-worker/src/sales-*'
+      - 'server/apps-src/alumdoor-worker/src/door-formulas.ts'
+      - 'server/apps-src/alumdoor-worker/src/index.ts'
+      - 'server/packages/clouderp-pricing/**'
+      - 'server/briefs/alumdoor*.json'
+      - 'server/tests/sales-*'
+      - 'server/tests/door-formulas*'
+      - 'client/packages/views/src/form/ChildGrid.tsx'
+      - 'client/e2e-forge/**/sales*'
   workflow_dispatch:
 
 permissions:
@@ -26,37 +36,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Detect Sales scope
-        id: scope
-        shell: bash
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: |
-          set -euo pipefail
-          sales=true
-          if [ "$EVENT_NAME" = "pull_request" ]; then
-            git diff --name-only "$BASE_SHA" "$GITHUB_SHA" > "$RUNNER_TEMP/changed-files.txt"
-            if ! grep -Eq '^(server/apps-src/alumdoor-worker/src/(sales-|door-formulas\.ts$|index\.ts$)|server/packages/clouderp-pricing/|server/briefs/alumdoor[^/]*\.json$|server/tests/(sales-|door-formulas)|client/packages/views/src/form/ChildGrid\.tsx$|client/e2e-forge/.*sales|package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|\.github/workflows/sales-feature-ci\.yml$)' "$RUNNER_TEMP/changed-files.txt"; then
-              sales=false
-            fi
-          fi
-          cat "$RUNNER_TEMP/changed-files.txt" 2>/dev/null || true
-          echo "sales=$sales" >> "$GITHUB_OUTPUT"
-
-      - name: Unrelated fast path
-        if: steps.scope.outputs.sales != 'true'
-        run: echo "No Sales-to-Production or shared pricing files changed."
-
       - name: Install pnpm
-        if: steps.scope.outputs.sales == 'true'
         uses: pnpm/action-setup@v4
         with:
           version: 9.15.0
           run_install: false
 
       - name: Set up Node.js
-        if: steps.scope.outputs.sales == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -64,15 +50,12 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        if: steps.scope.outputs.sales == 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Build server
-        if: steps.scope.outputs.sales == 'true'
         run: pnpm --filter cloudforge run build
 
       - name: Run focused Sales regressions
-        if: steps.scope.outputs.sales == 'true'
         run: |
           node --test \
             server/tests/door-formulas.test.mjs \
@@ -80,7 +63,6 @@ jobs:
             server/tests/sales-price-unicode-normalization.test.mjs
 
       - name: Validate Alumdoor briefs
-        if: steps.scope.outputs.sales == 'true'
         run: |
           pnpm --dir server exec node scripts/forge-app.mjs briefs/alumdoor.json --dry-run
           pnpm --dir server exec node scripts/forge-app.mjs briefs/alumdoor-v2.json --dry-run
