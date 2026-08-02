@@ -2,7 +2,6 @@ import type { GeneralLedgerEntry, JsonObject, MutationPlan, StockLedgerEntry } f
 import { errors } from "../../core/src/index.js";
 import type { ControllerContext, DocumentController } from "../../document-kernel/src/index.js";
 import { fromScaledInt } from "../../money/src/index.js";
-import { stockQtyMicros } from "../../clouderp-core/src/uom.js";
 import { DeliveryNoteController } from "./controllers.js";
 import type { DeliveryNoteData } from "./types.js";
 
@@ -16,10 +15,7 @@ interface EffectiveAccountingPolicy extends JsonObject {
   stock_adjustment_account?: string;
 }
 
-/**
- * Makes stock valuation and COGS use one company-currency accounting policy.
- * Commercial document currency remains unchanged.
- */
+/** Makes stock valuation and COGS use one company-currency accounting policy. */
 export class AccountingDeliveryNoteController implements DocumentController<DeliveryNoteData> {
   readonly doctype = "Delivery Note";
   private readonly delegate = new DeliveryNoteController();
@@ -64,8 +60,6 @@ export class AccountingDeliveryNoteController implements DocumentController<Deli
     ]);
     if (stockAccount === expenseAccount) throw errors.validation("Inventory and issue expense accounts must be different");
 
-    // Existing stock history must already be in company currency. Mixing minor units
-    // from USD and VND inside FIFO/Moving Average would produce a perfectly numeric lie.
     for (const item of plan.document.data.items) {
       const history = await context.reader.getStockLedgerHistory(
         context.command.tenant_id,
@@ -106,9 +100,7 @@ export class AccountingDeliveryNoteController implements DocumentController<Deli
       issue_expense_account: expenseAccount,
       items: plan.document.data.items.map((item) => ({
         ...item,
-        ...(typeof item.valuation_rate_minor === "number"
-          ? { valuation_rate: fromScaledInt(item.valuation_rate_minor, companyScale) }
-          : {}),
+        ...(typeof item.valuation_rate_minor === "number" ? { valuation_rate: fromScaledInt(item.valuation_rate_minor, companyScale) } : {}),
       })),
     };
     return plan;
