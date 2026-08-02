@@ -2,6 +2,7 @@
 
 ## Unreleased — Price List matrix
 
+- Alumdoor metadata `2.1.1` bổ sung ngày áp dụng cho Bảng giá và định danh Item Price theo đúng ĐVT.
 - `Item Price` giữ màn Danh sách để tra cứu/xuất dữ liệu và có workspace Quản lý bảng giá riêng: Nhóm hàng → Mặt hàng → ma trận ĐVT × các Bảng giá hiện hữu.
 - Tiêu đề mỗi cột liên kết về hồ sơ Bảng giá; tạo Bảng giá mới thêm cột mới. Giá được bật/tắt và sửa theo đúng tổ hợp `Item + UOM + Price List`.
 - ĐVT và hệ số quy đổi vẫn thuộc Item nhưng có thể cập nhật tại workspace mở rộng; ĐVT tồn kho chỉ đọc và sửa đơn giá không làm thay đổi tồn kho.
