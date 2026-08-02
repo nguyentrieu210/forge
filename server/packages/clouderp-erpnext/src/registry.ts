@@ -1,7 +1,7 @@
 import type { ControllerRegistry } from "../../document-kernel/src/index.js";
 import {
   AssetController, AssetDepreciationController,
-  CreditNoteController, DebitNoteController, StockReturnController,
+  CreditNoteController, DebitNoteController,
 } from "./controllers.js";
 import {
   AssetDisposalController, AssetMaintenanceController, AssetMovementController, ExpenseClaimController,
@@ -32,11 +32,14 @@ import {
 } from "./hrm-policy-controllers.js";
 import { HrmSalarySlipController } from "./hrm-salary-slip.js";
 import {
-  CutOrderController, StockReconciliationController, StockReservationController,
+  CutOrderController,
 } from "./alumdoor-inventory.js";
+import { StockReservationIntegrityController } from "./stock-reservation-integrity.js";
+import { StockReconciliationIntegrityController } from "./stock-reconciliation-integrity.js";
+import { StockReturnIntegrityController } from "./stock-return-integrity.js";
 import { VersionedBillOfMaterialsController } from "./manufacturing-lifecycle.js";
 import { StockUomSnapshotWorkOrderController } from "./manufacturing-work-order-guard.js";
-import { RolloutManufacturingStockEntryController } from "./manufacturing-rollout.js";
+import { StockEntryIntegrityController } from "./stock-entry-integrity.js";
 import {
   WarehouseCashCountController, WarehouseCashFundController,
   WarehouseCashTransferController, WarehouseCashVoucherController,
@@ -46,10 +49,10 @@ export function registerErpNextCoreControllers(registry: ControllerRegistry): Co
   return registry
     .register(new CreditNoteController())
     .register(new DebitNoteController())
-    .register(new StockReturnController())
+    .register(new StockReturnIntegrityController())
     .register(new VersionedBillOfMaterialsController())
     .register(new StockUomSnapshotWorkOrderController())
-    .register(new RolloutManufacturingStockEntryController())
+    .register(new StockEntryIntegrityController())
     .register(new AssetController())
     .register(new AssetDepreciationController())
     .register(new ProductionPlanController())
@@ -103,6 +106,6 @@ export function registerErpNextCoreControllers(registry: ControllerRegistry): Co
     .register(new WarehouseCashTransferController())
     .register(new WarehouseCashCountController())
     .register(new CutOrderController())
-    .register(new StockReservationController())
-    .register(new StockReconciliationController());
+    .register(new StockReservationIntegrityController())
+    .register(new StockReconciliationIntegrityController());
 }
