@@ -8,7 +8,7 @@ Seed baseline: `862636e6239c91eab657c619d8c55345ed71a6d8`
 Started from branch head: `a936d8b1ca3846767be6e7cf0a0411cf9df7c257`  
 Initial sync main: `bbe3494bcfbb8a3ce09a5ff4bbb839dfcf9e47e9`  
 Checkpoint PR: **#307** (Draft)  
-Head before this handoff update: `5cb47968b39e6d24fe964a3802324ab833ab5276`  
+Head before this handoff update: `f9d3f8ec022404d449c06a572272e762fb50f6d1`  
 Canonical board: `main:docs/agents/AGENT_BOARD.md`
 
 Exact compare at the prior checkpoint showed branch behind current `main` only by WS14 client/mobile/PWA plus status-doc commits; no server stock source overlap. Recheck exact compare before final verification rather than rebasing for cosmetic drift.
@@ -58,7 +58,7 @@ Exact compare at the prior checkpoint showed branch behind current `main` only b
 Architecture decision from repo evidence: Warehouse tree remains physical location hierarchy and canonical stock movements stay Purchase Receipt / Stock Entry / Delivery Note. WMS layers plan/assign/validate; they do not own a second quantity ledger.
 
 - `W02-001 Zone` / `W02-002 Bin/rack/location`: **Foundation** via existing Warehouse hierarchy plus `resolveWarehousePath`; path validates missing parent, cycle, disabled ancestor and company drift while preserving existing Alumdoor leaf-parent convention such as K36 -> K36-DT.
-- `W02-003 Putaway rule`: **Foundation** `planPutaway` deterministically allocates to caller-approved leaf candidates by priority/capacity, ties by warehouse name for retry stability, and returns explicit unallocated quantity.
+- `W02-003 Putaway rule`: **Foundation** `planPutaway` deterministically allocates to caller-approved leaf candidates by priority/capacity, ties by warehouse name for retry stability, rejects duplicate targets, and returns explicit unallocated quantity.
 - `W02-004 Putaway task`: **Missing persistence/action contract**; depends first-class WMS task metadata/action seam.
 - `W02-005 Pick list`: **Foundation** `planPicking` allocates from already policy/permission-resolved candidates, never exceeds availability and reports shortage.
 - `W02-006 Wave picking`: **Foundation** `buildPickWaves` partitions caller-grouped demand deterministically; route/zone/customer policy remains explicit upstream input.
@@ -109,7 +109,7 @@ Architecture decision from repo evidence: Warehouse tree remains physical locati
 - `server/tests/wms-packing.test.mjs`
 - `server/tests/wms-wave-scan.test.mjs`
 
-Two attempts to create a separate `wms-putaway.test.mjs` were blocked by tool safety classification; equivalent putaway tests, including deterministic tie-break, were successfully added to `inventory-planning.test.mjs`.
+Two attempts to create a separate `wms-putaway.test.mjs` were blocked by tool safety classification; equivalent putaway tests were successfully added to `inventory-planning.test.mjs`.
 
 ## Validation status
 
