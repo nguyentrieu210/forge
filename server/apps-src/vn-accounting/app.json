@@ -1,7 +1,8 @@
 {
   "id": "vn-accounting",
   "name": "Kế toán Việt Nam",
-  "version": "1.3.1",
+  "version": "1.4.0",
+  "worker": "cloudforge-app-vn-accounting",
   "requires": [
     { "id": "hrm", "version": ">=1.3.0" }
   ],
@@ -9,6 +10,27 @@
     { "name": "Purchase Receipt", "kind": "transaction", "app": "erpnext" },
     { "name": "Stock Entry", "kind": "transaction", "app": "erpnext" },
     { "name": "E-Invoice Submission", "kind": "transaction", "app": "erpnext" }
+  ],
+  "validators": [
+    { "doctype": "VN Tax Ruleset", "actions": ["submit"] }
+  ],
+  "actions": [
+    {
+      "name": "tax-evaluate",
+      "label": "Tính thử ruleset thuế",
+      "icon": "calculator",
+      "group": "Thuế & tuân thủ",
+      "description": "Chạy ruleset đã duyệt bằng fixed-point minor units. Không ghi sổ hay nộp tờ khai.",
+      "fields": [
+        { "fieldname": "ruleset", "label": "Ruleset", "fieldtype": "Link", "options": "VN Tax Ruleset", "required": true },
+        { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true },
+        { "fieldname": "effective_at", "label": "Ngày áp dụng", "fieldtype": "Date", "required": true },
+        { "fieldname": "input_json", "label": "Đầu vào minor units (JSON)", "fieldtype": "Code", "required": true, "default": "{}" }
+      ],
+      "commit": { "method": "vn-accounting.tax.evaluate", "label": "Tính thử" },
+      "permission_doctype": "VN Tax Ruleset",
+      "permission_action": "read"
+    }
   ],
   "nav": [
     { "key": "VN Accounting Policy", "label": "Chính sách kế toán", "kind": "doctype", "icon": "landmark", "group": "Thiết lập kế toán" },
@@ -20,6 +42,7 @@
     { "key": "TT99 Book Form", "label": "Mẫu sổ TT99", "kind": "doctype", "icon": "book-open-text", "group": "TT99" },
     { "key": "TT99 Financial Statement Template", "label": "Mẫu BCTC TT99", "kind": "doctype", "icon": "file-chart-column", "group": "TT99" },
     { "key": "VN Tax Ruleset", "label": "Ruleset thuế", "kind": "doctype", "icon": "badge-percent", "group": "Thuế & tuân thủ" },
+    { "key": "tax-evaluate", "label": "Tính thử ruleset thuế", "kind": "route", "route": "/x/action:tax-evaluate", "icon": "calculator", "group": "Thuế & tuân thủ", "required_roles": ["Tax Specialist", "Chief Accountant", "Accounts Manager", "Internal Auditor", "System Manager"] },
     { "key": "e-invoice-submission", "label": "Hóa đơn điện tử", "kind": "route", "route": "/app/E-Invoice%20Submission", "icon": "receipt", "group": "Thuế & tuân thủ", "required_roles": ["Tax Specialist", "Accounts Manager", "System Manager"] },
 
     { "key": "Warehouse Cash Fund", "label": "Quỹ tiền mặt theo kho", "kind": "doctype", "icon": "landmark", "group": "Quỹ kho" },
