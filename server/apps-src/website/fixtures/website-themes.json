@@ -1,0 +1,65 @@
+[
+  {
+    "record_type": "Website Theme Preset",
+    "name": "business-blue@1",
+    "data": {
+      "preset_id": "business-blue",
+      "version": 1,
+      "label": "Xanh doanh nghiệp",
+      "tokens": {
+        "primary": "#1D4ED8",
+        "secondary": "#0F766E",
+        "background": "#F8FAFC",
+        "surface": "#FFFFFF",
+        "text": "#0F172A",
+        "muted": "#64748B",
+        "heading_font": "system",
+        "body_font": "system",
+        "radius": "soft",
+        "density": "comfortable"
+      }
+    }
+  },
+  {
+    "record_type": "Website Theme Preset",
+    "name": "industrial-dark@1",
+    "data": {
+      "preset_id": "industrial-dark",
+      "version": 1,
+      "label": "Công nghiệp tối",
+      "tokens": {
+        "primary": "#F59E0B",
+        "secondary": "#334155",
+        "background": "#0F172A",
+        "surface": "#1E293B",
+        "text": "#F8FAFC",
+        "muted": "#94A3B8",
+        "heading_font": "system",
+        "body_font": "system",
+        "radius": "square",
+        "density": "compact"
+      }
+    }
+  },
+  {
+    "record_type": "Website Theme Preset",
+    "name": "warm@1",
+    "data": {
+      "preset_id": "warm",
+      "version": 1,
+      "label": "Ấm áp",
+      "tokens": {
+        "primary": "#C2410C",
+        "secondary": "#A16207",
+        "background": "#FFF7ED",
+        "surface": "#FFFFFF",
+        "text": "#431407",
+        "muted": "#9A3412",
+        "heading_font": "serif",
+        "body_font": "system",
+        "radius": "round",
+        "density": "comfortable"
+      }
+    }
+  }
+]
