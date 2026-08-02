@@ -4,6 +4,19 @@ Ngày cập nhật: **2026-08-02**.
 
 Đây là hàng đợi active. GitHub là nguồn sự thật cho exact `main`, PR, branch và CI; trước khi làm phải đọc `RUNBOOK.md`, `CURRENT_STATUS.md`, `AI_HANDOFF.md`, `DELIVERY_POLICY.md` và kiểm tra PR đang mở.
 
+## P1 — Website/CMS v1 clean delivery
+
+- Canonical working branch: `feat/tenant-website-builder-delivery-v4-20260802`.
+- Clean-transplant implementation commit: `dce0f99de732ca38bf53940387c2034607626d71`, based on exact `main@9f81b0ba060991133d7bd5510e2cbfa5b3277234`.
+- Quality tier: **CRITICAL** due public unauthenticated routing + tenant isolation.
+- Việc còn lại:
+  1. mở canonical PR từ v4 và đóng/supersede PR #238;
+  2. pass automatic Fast PR gate trên final head;
+  3. chạy targeted `website-public.spec.ts` desktop/tablet/mobile để xác nhận mobile navigation fix; không khôi phục workflow UI dài đã bị xóa;
+  4. reuse server/security/typecheck/build evidence đã PASS nếu code/input liên quan không đổi; chỉ chạy thêm gate bị ảnh hưởng;
+  5. chỉ mark ready khi public allowlist, tenant isolation, published-only behavior và browser regression đều có evidence;
+  6. không merge `main`, deploy production, đổi DNS/custom domain/secrets nếu user chưa yêu cầu rõ.
+
 ## P1 — UI theme hotfix auto-deploy verification
 
 - Guarded auto-deploy lane đã merge qua PR `#231` tại `cd1f76dbb47432e2312c6f5577eb955b48c3a856`.
