@@ -81,7 +81,11 @@ export function baseDocuments(extra = []) {
   return documents;
 }
 
-export function makeReader({ documents = baseDocuments(), runs = [], manufactured = 10_000_000, masters = new Map() } = {}) {
+function standardMasters() {
+  return new Map([["Batch:FG-BATCH", { item_code: "FG" }]]);
+}
+
+export function makeReader({ documents = baseDocuments(), runs = [], manufactured = 10_000_000, masters = standardMasters() } = {}) {
   return {
     async getDocument(tenant, doctype, name) {
       if (tenant !== "demo") throw new Error("unexpected tenant");
