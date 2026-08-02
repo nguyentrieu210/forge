@@ -38,10 +38,7 @@ export interface SemanticDimensionDefinition {
 
 /**
  * `scale` describes exact integer storage.
- *
- * Example: VND minor units stored as 12345 with scale=100 means 123.45 for display.
- * The semantic compiler never divides or casts those integers to REAL. The exact raw
- * integer remains the query result and the scale travels with the column metadata.
+ * Example: 12345 with scale=100 means 123.45 for display.
  */
 export interface SemanticValueDefinition {
   kind: SemanticValueKind;
@@ -55,7 +52,7 @@ export interface SemanticMetricDefinition {
   id: string;
   label: string;
   aggregation: SemanticAggregation;
-  /** Not required for COUNT(*); required for every other aggregation. */
+  /** COUNT(*) has no field; every other aggregation requires one. */
   field?: string;
   value: SemanticValueDefinition;
   description?: string;
@@ -147,44 +144,50 @@ const DOCUMENT_STATES = new Set<SemanticDocumentState>(["draft", "submitted", "n
 const DOCUMENT_COLUMNS = new Set(["name", "owner", "status", "docstatus", "created_at", "modified_at"]);
 
 function requireModelId(value: string, field: string): void {
-  if (!MODEL_ID.test(value)) throw errors.validation(`${field} must be a stable semantic id`);
+  if (typeof value !== "string" || !MODEL_ID.test(value)) throw errors.validation(`${field} must be a stable semantic id`);
 }
 
 function requireMemberId(value: string, field: string): void {
-  if (!MEMBER_ID.test(value)) throw errors.validation(`${field} must use lowercase letters, numbers and underscores`);
+  if (typeof value !== "string" || !MEMBER_ID.test(value)) throw errors.validation(`${field} must use lowercase letters, numbers and underscores`);
 }
 
 function requireSqlIdentifier(value: string, field: string): void {
-  if (!SQL_IDENTIFIER.test(value)) throw errors.validation(`${field} contains an unsafe SQL identifier`);
+  if (typeof value !== "string" || !SQL_IDENTIFIER.test(value)) throw errors.validation(`${field} contains an unsafe SQL identifier`);
 }
 
 function requireDocumentField(value: string, field: string): void {
-  if (!DOCUMENT_FIELD.test(value)) throw errors.validation(`${field} contains an unsafe document field`);
+  if (typeof value !== "string" || !DOCUMENT_FIELD.test(value)) throw errors.validation(`${field} contains an unsafe document field`);
 }
 
 function requireNonEmpty(value: string, field: string, max = 240): void {
-  if (typeof value !== "string" || !value.trim() || value.length > max) {
-    throw errors.validation(`${field} is required and must be at most ${max} characters`);
-  }
+  if (typeof value !== "string" || !value.trim() || value.length > max) throw errors.validation(`${field} is required and must be at most ${max} characters`);
 }
 
 function validateValue(value: SemanticValueDefinition, metricId: string, aggregation: SemanticAggregation): void {
+  if (!value || typeof value !== "object") throw errors.validation(`Metric ${metricId} value definition is required`);
   if (!VALUE_KINDS.has(value.kind)) throw errors.validation(`Metric ${metricId} value kind is unsupported`);
   if (value.exact !== undefined && typeof value.exact !== "boolean") throw errors.validation(`Metric ${metricId} exact must be boolean`);
   if (value.scale !== undefined) {
     if (!Number.isSafeInteger(value.scale) || value.scale < 1 || value.scale > 1_000_000_000) {
-      throw errors.validation(`Metric ${metricId} scale must be a positive safe integer <= 1,000,000,000`);
+      throw errors.validation(`Metric ${metricId} scale must be a positive safe integer <= 1000000000`);
     }
     if (value.exact !== true) throw errors.validation(`Metric ${metricId} with scale must declare exact=true`);
   }
-  if (value.currencyDimension !== undefined) requireMemberId(value.currencyDimension, `Metric ${metricId} currencyDimension`);
+  if (value.currencyDimension !== undefined) {
+    requireMemberId(value.currencyDimension, `Metric ${metricId} currencyDimension`);
+    if (value.kind !== "currency") throw errors.validation(`Metric ${metricId} currencyDimension is only valid for currency metrics`);
+  }
   if (value.unit !== undefined) requireNonEmpty(value.unit, `Metric ${metricId} unit`, 40);
 
-  // AVG over an exact scaled integer forces a fractional database result. Returning it as
-  // REAL would silently abandon the exact-money invariant. A later ratio contract can carry
-  // numerator+denominator explicitly; until then exact AVG is intentionally refused.
-  if (aggregation === "avg" && value.scale !== undefined && value.scale > 1) {
-    throw errors.validation(`Metric ${metricId} cannot AVG exact scaled integers; define an explicit ratio metric instead`);
+  // Exact AVG can be fractional even when scale=1. Until ratio semantics carry numerator,
+  // denominator and rounding explicitly, any exact AVG is unsafe.
+  if (aggregation === "avg" && value.exact === true) {
+    throw errors.validation(`Metric ${metricId} cannot AVG exact values; define an explicit ratio metric instead`);
+  }
+  if (aggregation === "count" || aggregation === "count_distinct") {
+    if (value.kind !== "integer" || value.exact !== true || value.scale !== undefined || value.currencyDimension !== undefined || value.unit !== undefined) {
+      throw errors.validation(`Metric ${metricId} ${aggregation} must be an exact unscaled integer`);
+    }
   }
 }
 
@@ -192,23 +195,28 @@ function validateModel(model: SemanticModelDefinition): void {
   requireModelId(model.id, "model.id");
   requireNonEmpty(model.label, `Model ${model.id} label`, 160);
   requireNonEmpty(model.grain, `Model ${model.id} grain`, 240);
+  if (!model.permission || typeof model.permission !== "object") throw errors.validation(`Model ${model.id} permission is required`);
   requireNonEmpty(model.permission.doctype, `Model ${model.id} permission doctype`, 160);
   if (model.permission.action !== "report") throw errors.validation(`Model ${model.id} permission action must be report`);
   if (!Number.isSafeInteger(model.maxRows) || model.maxRows < 1 || model.maxRows > 10_000) {
     throw errors.validation(`Model ${model.id} maxRows must be an integer from 1 to 10000`);
   }
 
+  if (!model.source || typeof model.source !== "object") throw errors.validation(`Model ${model.id} source is required`);
   if (model.source.kind === "view") {
     requireSqlIdentifier(model.source.name, `Model ${model.id} source view`);
     requireSqlIdentifier(model.source.tenantField, `Model ${model.id} tenant field`);
-  } else {
+  } else if (model.source.kind === "doctype") {
     requireNonEmpty(model.source.doctype, `Model ${model.id} source doctype`, 160);
     if (!DOCUMENT_STATES.has(model.source.state)) throw errors.validation(`Model ${model.id} doctype source state is unsupported`);
+  } else {
+    throw errors.validation(`Model ${model.id} source kind is unsupported`);
   }
 
   if (!Array.isArray(model.dimensions) || !Array.isArray(model.metrics) || (model.dimensions.length === 0 && model.metrics.length === 0)) {
     throw errors.validation(`Model ${model.id} must define at least one dimension or metric`);
   }
+  if (model.dimensions.length > 80 || model.metrics.length > 80) throw errors.validation(`Model ${model.id} has too many semantic members`);
 
   const ids = new Set<string>();
   for (const dimension of model.dimensions) {
@@ -219,7 +227,11 @@ function validateModel(model: SemanticModelDefinition): void {
     if (!DIMENSION_KINDS.has(dimension.kind)) throw errors.validation(`Dimension ${dimension.id} kind is unsupported`);
     if (model.source.kind === "view") requireSqlIdentifier(dimension.field, `Dimension ${dimension.id} field`);
     else requireDocumentField(dimension.field, `Dimension ${dimension.id} field`);
-    if (dimension.options !== undefined) requireNonEmpty(dimension.options, `Dimension ${dimension.id} options`, 160);
+    if (dimension.kind === "link") {
+      requireNonEmpty(dimension.options ?? "", `Dimension ${dimension.id} Link options`, 160);
+    } else if (dimension.options !== undefined) {
+      throw errors.validation(`Dimension ${dimension.id} options are only valid for link dimensions`);
+    }
   }
 
   for (const metric of model.metrics) {
@@ -241,11 +253,10 @@ function validateModel(model: SemanticModelDefinition): void {
   const dimensionsById = new Map(model.dimensions.map((dimension) => [dimension.id, dimension]));
   for (const metric of model.metrics) {
     const currencyDimension = metric.value.currencyDimension;
-    if (currencyDimension) {
-      const dimension = dimensionsById.get(currencyDimension);
-      if (!dimension) throw errors.validation(`Metric ${metric.id} references unknown currency dimension ${currencyDimension}`);
-      if (dimension.kind !== "currency") throw errors.validation(`Metric ${metric.id} currencyDimension ${currencyDimension} must have kind=currency`);
-    }
+    if (!currencyDimension) continue;
+    const dimension = dimensionsById.get(currencyDimension);
+    if (!dimension) throw errors.validation(`Metric ${metric.id} references unknown currency dimension ${currencyDimension}`);
+    if (dimension.kind !== "currency") throw errors.validation(`Metric ${metric.id} currencyDimension ${currencyDimension} must have kind=currency`);
   }
 }
 
@@ -253,6 +264,7 @@ export class SemanticModelRegistry {
   private readonly models: Map<string, SemanticModelDefinition>;
 
   constructor(definitions: SemanticModelDefinition[]) {
+    if (!Array.isArray(definitions) || definitions.length > 500) throw errors.validation("Semantic model registry must contain at most 500 models");
     this.models = new Map();
     for (const definition of definitions) {
       validateModel(definition);
@@ -267,11 +279,7 @@ export class SemanticModelRegistry {
     return model;
   }
 
-  /**
-   * Safe catalog for AI/report discovery. It deliberately omits SQL view names, tenant
-   * fields and physical document fields so a model can reason about business semantics
-   * without being handed the raw schema as an invitation to bypass the semantic layer.
-   */
+  /** Safe business catalog. Physical source/field/tenant names are intentionally omitted. */
   describe(id: string): SemanticModelSummary {
     const model = this.get(id);
     return {
@@ -363,17 +371,28 @@ function doctypeStatePredicate(state: SemanticDocumentState): string {
   return "docstatus<>2";
 }
 
+function currencyScopeSatisfied(metric: SemanticMetricDefinition, selectedDimensions: Set<string>, filters: SemanticFilter[]): boolean {
+  const currency = metric.value.currencyDimension;
+  if (!currency) return true;
+  if (selectedDimensions.has(currency)) return true;
+  const values = new Set<string>();
+  for (const filter of filters) {
+    if (filter.dimension !== currency || filter.operator !== "=") continue;
+    const value = bindableScalar(filter.value, `Currency filter ${currency}`);
+    values.add(`${typeof value}:${String(value)}`);
+  }
+  return values.size === 1;
+}
+
 export class SemanticQueryCompiler {
   constructor(private readonly registry: SemanticModelRegistry) {}
 
   compile(request: SemanticQueryRequest): CompiledSemanticQuery {
-    if (typeof request.tenant_id !== "string" || !request.tenant_id.trim()) throw errors.validation("tenant_id is required");
+    if (typeof request.tenant_id !== "string" || !request.tenant_id.trim() || request.tenant_id.length > 200) throw errors.validation("tenant_id is required and must be at most 200 characters");
     const model = this.registry.get(request.model);
     const dimensionIds = normalizeRequestedIds(request.dimensions, "dimensions");
     const metricIds = normalizeRequestedIds(request.metrics, "metrics");
-    if (dimensionIds.length === 0 && metricIds.length === 0) {
-      throw errors.validation("Semantic query must select at least one dimension or metric");
-    }
+    if (dimensionIds.length === 0 && metricIds.length === 0) throw errors.validation("Semantic query must select at least one dimension or metric");
 
     const dimensionsById = new Map(model.dimensions.map((dimension) => [dimension.id, dimension]));
     const metricsById = new Map(model.metrics.map((metric) => [metric.id, metric]));
@@ -413,10 +432,9 @@ export class SemanticQueryCompiler {
         continue;
       }
       if (filter.operator === "in") {
-        if (!Array.isArray(filter.value) || filter.value.length === 0) {
-          throw errors.validation(`IN filter requires a non-empty array: ${filter.dimension}`);
+        if (!Array.isArray(filter.value) || filter.value.length === 0 || filter.value.length > 80) {
+          throw errors.validation(`IN filter requires a non-empty array up to 80 values: ${filter.dimension}`);
         }
-        if (filter.value.length > 80) throw errors.validation("IN filter exceeds the parameter budget");
         const placeholders = filter.value.map((value, index) => {
           params.push(bindableScalar(value, `Filter ${filter.dimension} value[${index}]`));
           return `?${params.length}`;
@@ -428,6 +446,13 @@ export class SemanticQueryCompiler {
       if (filter.operator === "like" && typeof value !== "string") throw errors.validation(`LIKE filter requires a string: ${filter.dimension}`);
       params.push(value);
       where.push(`${expression} ${filter.operator === "like" ? "LIKE" : filter.operator} ?${params.length}`);
+    }
+
+    const selectedDimensions = new Set(dimensionIds);
+    for (const metric of metrics) {
+      if (!currencyScopeSatisfied(metric, selectedDimensions, filters)) {
+        throw errors.validation(`Currency metric ${metric.id} requires dimension ${metric.value.currencyDimension} or exactly one equality filter on that currency`);
+      }
     }
 
     const selected: string[] = [];
@@ -472,13 +497,9 @@ export class SemanticQueryCompiler {
       : "";
 
     const limit = request.limit ?? Math.min(100, model.maxRows);
-    if (!Number.isSafeInteger(limit) || limit < 1 || limit > model.maxRows) {
-      throw errors.validation(`limit must be an integer from 1 to ${model.maxRows}`);
-    }
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > model.maxRows) throw errors.validation(`limit must be an integer from 1 to ${model.maxRows}`);
     const offset = request.offset ?? 0;
-    if (!Number.isSafeInteger(offset) || offset < 0 || offset > 100_000) {
-      throw errors.validation("offset must be an integer from 0 to 100000; use a feed/cursor path for larger extracts");
-    }
+    if (!Number.isSafeInteger(offset) || offset < 0 || offset > 100_000) throw errors.validation("offset must be an integer from 0 to 100000; use a feed/cursor path for larger extracts");
     params.push(limit, offset);
 
     return {
