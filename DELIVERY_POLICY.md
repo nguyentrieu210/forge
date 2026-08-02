@@ -4,13 +4,41 @@ Ngày cập nhật: **2026-08-02**.
 
 `RUNBOOK.md` là quy tắc vận hành canonical. File này mô tả ranh giới giao hàng và phát hành.
 
-## Luồng mặc định
+## Risk tier quyết định delivery gate
 
-Với thay đổi code sản phẩm thông thường:
+Mỗi thay đổi phải được phân loại trước khi chọn validation/release path:
 
-`branch -> code -> validation phù hợp -> PR -> required CI -> merge -> production khi được yêu cầu`
+- `FAST`: presentation/UI nhỏ, không đổi business logic, API contract, permission, tenant, data hoặc schema.
+- `STANDARD`: CRUD, API hoặc product behavior thông thường.
+- `CRITICAL`: accounting, cash, AR/AP, inventory, costing, manufacturing, auth, permission, tenant isolation, migration, destructive state hoặc production data.
 
-Merge và production deploy là hai ranh giới riêng.
+Không dùng một full pipeline cố định cho cả ba nhóm.
+
+## FAST
+
+Luồng mặc định:
+
+`branch -> sửa -> review diff -> kiểm tra tối thiểu phần bị tác động -> commit -> push -> deploy khi được yêu cầu`
+
+Không bắt buộc full test suite, full lint, full typecheck, full build hoặc chờ required CI nếu thay đổi thực tế vẫn nằm trong phạm vi `FAST`.
+
+Nếu build/install/stage là bước bắt buộc để tạo artifact deploy thì đó là packaging, không phải quality gate.
+
+## STANDARD
+
+Luồng mặc định:
+
+`branch -> code -> test liên quan -> typecheck/lint/build phù hợp -> PR -> CI phù hợp -> merge -> production khi được yêu cầu`
+
+Chỉ chạy validation có liên quan đến blast radius thực tế; không chạy module không liên quan để đủ nghi thức.
+
+## CRITICAL
+
+Luồng mặc định:
+
+`branch -> code -> regression/integration/data-integrity/security checks -> typecheck/lint/build -> PR -> required CI -> merge -> production khi được yêu cầu`
+
+Không hạ `CRITICAL` xuống `FAST` chỉ vì cần phát hành nhanh.
 
 ## UI hotfix trực tiếp
 
@@ -22,9 +50,9 @@ Luồng:
 
 Không có pre-deploy validation trong lane này. Cụ thể không chạy lint, test, typecheck, dry-run, smoke test, scope guard hoặc PR reconcile tự động.
 
-Lý do giữ `install`, `build` và `stage`: đây không phải quality gate mà là các bước tạo bundle và đóng bundle vào Gateway trước khi Cloudflare có thể deploy.
+Lý do giữ `install`, `build` và `stage`: đây là các bước tạo bundle và đóng bundle vào Gateway trước khi Cloudflare có thể deploy.
 
-Lane này chỉ dành cho UI nhỏ. Nếu thay đổi đụng backend, schema, migration, data, accounting, warehouse/inventory state, secrets, DNS hoặc business rule production thì phải dùng luồng bình thường.
+Lane này chỉ dành cho `FAST`. Nếu thay đổi đụng backend, schema, migration, data, accounting, warehouse/inventory state, auth/permission/tenant, secrets, DNS hoặc business rule production thì phải nâng lên `STANDARD` hoặc `CRITICAL`.
 
 ## Production authorization
 
@@ -34,7 +62,9 @@ Không tự sửa production secrets/DNS, xoá Cloudflare resource, chạy destr
 
 ## Evidence
 
-Với direct UI hotfix, chỉ được báo đúng những gì thực tế đã chạy. Nếu không chạy lint/test/typecheck/smoke thì ghi `NOT RUN`, không suy diễn PASS.
+Chỉ báo đúng những gì thực tế đã chạy. Gate không chạy phải ghi `NOT RUN`, không suy diễn PASS.
+
+Với `FAST`, việc một gate là `NOT RUN` không tự động đồng nghĩa task chưa hoàn thành nếu gate đó không phù hợp blast radius.
 
 ## File cấm commit
 
