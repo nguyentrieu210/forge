@@ -3,7 +3,11 @@
 Status: **READY**  
 Owner: **—**  
 Branch: `agent/ent-12-sre-release-data-safety`  
-Base: `b15378be7c036204f92a6e4c289038aa84d6f286`
+Product baseline: **Forge 0.2.0**  
+Seed baseline: `862636e6239c91eab657c619d8c55345ed71a6d8`  
+Canonical board: `main:docs/agents/AGENT_BOARD.md`
+
+Before implementation: compare exact current `main`; incorporate source-relevant changes. Operational/deploy-evidence-only head drift does not by itself redefine the product baseline.
 
 ## Mission
 
@@ -15,7 +19,7 @@ release/deploy scripts/workflows, health/release evidence, backup/restore/PITR/D
 
 ## Phase A audit
 
-Audit exact current release pipeline (đang có ALU full-sync failures), worktree/migration behavior, backup evidence, restore path, release marker, observability blind spots, D1/DO/Queue/R2 operational limits and cost.
+Audit exact current release pipeline, worktree/migration behavior, backup evidence, restore path, release marker, observability blind spots, D1/DO/Queue/R2 operational limits and cost. Main có thể tiến nhanh bởi ops/deploy-evidence commits, nên phải phân biệt source change với operational evidence. Audit substantive legacy PR trong scope và phân loại `reuse / cherry-pick / superseded / reject`.
 
 ## Phase B priority
 
@@ -31,4 +35,4 @@ Không mutate production/customer data hay secret/DNS nếu user chưa cho phép
 
 ## First commit / handoff
 
-Claim owner/head; cuối nhánh ghi failure modes, RTO/RPO assumptions, scripts/tests, release/restore evidence, cost/perf numbers, blockers, PR.
+Claim owner/head; cuối nhánh ghi failure modes, RTO/RPO assumptions, scripts/tests, release/restore evidence, cost/perf numbers, legacy PR disposition, blockers, PR.
