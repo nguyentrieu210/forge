@@ -410,6 +410,9 @@ export function ChildGrid(props: ChildGridProps) {
   const [columnSettingsOpen, setColumnSettingsOpen] = useState(false);
   const itemLoadVersion = useRef(new Map<string, number>());
   const automaticItemLoads = useRef(new Set<string>());
+  // Bản ghi con đã lưu chỉ cần hydrate policy/link metadata lúc mở form. Không được tự ghi
+  // patch trở lại form, nếu không RHF coi việc MỞ chứng từ là một lần sửa và bật nút Lưu.
+  const persistedItemHydration = useRef(new Set<string>());
   const canonicalCols = resolveChildGridColumns(childMeta, rows, parentDoc, roles);
   /** Hai chế độ dùng chung dữ liệu, nhưng có mặc định và tùy chỉnh cột riêng. */
   const baseCols = canonicalCols;
@@ -480,6 +483,8 @@ export function ChildGrid(props: ChildGridProps) {
   const formulaLoadVersion = useRef(new Map<string, number>());
   const previousFormulaGroup = useRef("");
   const previousSellingContext = useRef("");
+  const formulaGroupReady = useRef(false);
+  const sellingContextReady = useRef(false);
   const latestRows = useRef(rows);
   useEffect(() => {
     latestRows.current = rows;
@@ -737,6 +742,13 @@ export function ChildGrid(props: ChildGridProps) {
 
   const formulaCustomerGroup = String(parentDoc?.customer_group ?? "");
   useEffect(() => {
+    // Lần render đầu chỉ chụp baseline từ document đã tải. Reprice/reformula chỉ chạy khi
+    // người dùng thật sự đổi context sau đó, không chạy chỉ vì form vừa được mở.
+    if (!formulaGroupReady.current) {
+      formulaGroupReady.current = true;
+      previousFormulaGroup.current = formulaCustomerGroup;
+      return;
+    }
     if (!formulaCustomerGroup || formulaCustomerGroup === previousFormulaGroup.current) return;
     previousFormulaGroup.current = formulaCustomerGroup;
     rows.forEach((row, rowIdx) => {
@@ -752,6 +764,11 @@ export function ChildGrid(props: ChildGridProps) {
 
   const sellingContextKey = [parentDoc?.selling_price_list, parentDoc?.currency].map((value) => String(value ?? "")).join("\u0000");
   useEffect(() => {
+    if (!sellingContextReady.current) {
+      sellingContextReady.current = true;
+      previousSellingContext.current = sellingContextKey;
+      return;
+    }
     if (!isDoorSalesGrid || !sellingContextKey || sellingContextKey === previousSellingContext.current) return;
     previousSellingContext.current = sellingContextKey;
     rows.forEach((row, rowIdx) => {
@@ -987,14 +1004,18 @@ export function ChildGrid(props: ChildGridProps) {
         if (has("availability_status")) patch.availability_status = "Không đọc được tồn / giá";
       }
     }
-    // Item tạo trước khi có kiểu quản lý được coi là hàng thường — tương thích ngược.
-    if (has("inventory_mode") && !Object.hasOwn(patch, "inventory_mode")) patch.inventory_mode = "Hàng thường";
+    // Item cũ có thể chưa khai inventory_mode trên master. Nếu dòng chứng từ đã có
+    // snapshot hợp lệ thì giữ snapshot đó; chỉ fallback Hàng thường khi CẢ master lẫn dòng đều trống.
+    if (has("inventory_mode") && !Object.hasOwn(patch, "inventory_mode") && !base[rowIdx]?.inventory_mode) {
+      patch.inventory_mode = "Hàng thường";
+    }
+    const effectiveInventoryMode = String(patch.inventory_mode ?? base[rowIdx]?.inventory_mode ?? "");
 
     /**
      * Đổi từ một mã nhôm sang hàng thường phải xoá quy cách của mã cũ. Giữ lại các số này
      * sẽ tạo một dòng motor mang 51 cây × 8,5 m trong payload dù giao diện đã giấu chúng.
      */
-    if (patch.inventory_mode !== "Nhôm cây/lá") {
+    if (effectiveInventoryMode !== "Nhôm cây/lá") {
       for (const fieldname of [
         "length_m", "qty_bundle", "qty_bar", "so_no", "total_length_m", "actual_kg_per_m",
         "material_specification", "theoretical_kg_per_m", "theoretical_kg", "is_stamped",
@@ -1002,7 +1023,7 @@ export function ChildGrid(props: ChildGridProps) {
         if (has(fieldname)) patch[fieldname] = undefined;
       }
     }
-    if (patch.inventory_mode !== "Tấm/Kính" && patch.inventory_mode !== "Thành phẩm theo m2") {
+    if (effectiveInventoryMode !== "Tấm/Kính" && effectiveInventoryMode !== "Thành phẩm theo m2") {
       if (has("actual_kg_per_sqm")) patch.actual_kg_per_sqm = undefined;
     }
     return patch;
@@ -1090,6 +1111,15 @@ export function ChildGrid(props: ChildGridProps) {
       if (!itemCode || (!needsBarem && !needsColorPolicy)) return;
       const loadKey = String(row.name ?? rowIdx);
       const requestKey = `${loadKey}:${itemCode}`;
+      const persisted = typeof row.name === "string" && row.name.length > 0 && !row.name.startsWith("new-");
+      if (persisted) {
+        // Existing rows are server truth. Hydrate allowed-color/UOM policy for the picker, but
+        // deliberately discard the returned patch so opening a document never mutates it.
+        if (persistedItemHydration.current.has(requestKey)) return;
+        persistedItemHydration.current.add(requestKey);
+        void computeItemPatch(rowIdx, itemCode, rows).catch(() => undefined);
+        return;
+      }
       if (automaticItemLoads.current.has(requestKey)) return;
       automaticItemLoads.current.add(requestKey);
       const loadVersion = (itemLoadVersion.current.get(loadKey) ?? 0) + 1;
