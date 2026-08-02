@@ -12,6 +12,15 @@ Ngày cập nhật: **2026-08-02**.
 - Same-repo UI PR trigger phải được giữ vì GitHub-connector content writes không đảm bảo phát push-triggered Actions; vẫn fail-closed theo branch naming, current-main ancestry và UI-only scope.
 - Không production deploy task release-pipeline này nếu chưa có yêu cầu release rõ.
 
+## ACTIVE — VN Accounting Period Integrity Hardening
+
+- Canonical branch: `fix/vn-accounting-period-integrity-20260802-r5`, clean-transplant từ `main@a0ae5f4f00a6be7311efcaff87c4caabea60f6be`.
+- Scope: migration `0039_vn_accounting_period_hardening.sql`, accounting SQL regression và 3 file status/handoff; giữ nguyên release-evidence checkpoint mới trên main.
+- Isolated SQLite migration/trigger regression PASS cho hard/soft close, cancel, submit, scope move, overlap update, tenant isolation và duplicate source.
+- Còn thiếu trước merge: CRITICAL local gates trên canonical branch (`pnpm test` hoặc accounting SQL + backend relevant tests, typecheck, lint, build theo blast radius).
+- PR `#257` là stale/superseded do main thay đổi cùng các file status/handoff; không force-push/rewrite history.
+- Không deploy production hoặc chạy production migration.
+
 ## DONE — Website/CMS multi-tenant v1
 
 - Canonical PR `#254` đã squash-merge vào `main` tại `b25fc30b0f37d1218cafbb4dac40e37479bba0b9`.

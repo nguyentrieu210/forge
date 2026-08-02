@@ -26,6 +26,22 @@ Ngày cập nhật: **2026-08-02**.
 - UI scope guard vẫn authoritative: current `main` phải là ancestor, diff phải có `client/**`, ngoài UI chỉ cho docs vận hành allowlist.
 - Chưa coi convention này là production canonical cho tới khi branch được merge; không deploy production riêng task release-pipeline nếu chưa có yêu cầu rõ.
 
+## Active checkpoint — VN Accounting Period Integrity Hardening
+
+- Canonical branch: `fix/vn-accounting-period-integrity-20260802-r5`, clean-transplant từ `main@a0ae5f4f00a6be7311efcaff87c4caabea60f6be` và giữ nguyên release-evidence changes trên main.
+- Migration sequence trước task dừng ở `0038_warehouse_cash.sql`; `0039_vn_accounting_period_hardening.sql` là next slot, không rewrite migration đã áp dụng.
+- Database invariants của `0039`:
+  - period range bắt buộc hợp lệ;
+  - overlap bị chặn theo `tenant_id + company + branch scope`, company-wide conflict mọi branch; explicit branch khác nhau được overlap;
+  - Hard Locked chặn new submit, draft->submit, cancel và payload move vào/ra locked scope;
+  - Soft Closed chỉ cho approved adjustment khi period `allow_approved_adjustments=1` và chứng từ có `approved_adjustment`, `adjustment_reason`, `adjustment_approved_by`;
+  - guard bao phủ Journal/Invoice/Payment, Purchase Receipt, Delivery Note, Payroll, Stock và Warehouse Cash.
+- Regression cover duplicate employee/attendance/payroll source, hard/soft close, cancel, scope transitions, tenant isolation, invalid/overlap period và period update overlap.
+- Isolated SQLite replay của trigger logic PASS; edge cases move-out, move-in và period scope update overlap PASS.
+- CRITICAL full repo gates chưa chạy vì connector runtime không có repository checkout/dependencies và GitHub Actions không phải development CI. Không gọi DONE/ready/merge cho tới khi local gates theo `DELIVERY_POLICY.md` được chạy.
+- Draft PR `#257` đã stale/conflict khi main nhận release-evidence changes trên cùng status/handoff files; branch r5 supersede nó. Không force-push/rewrite history.
+- Không production deploy, production migration hoặc mutate tenant data.
+
 ## Merged checkpoint — Website/CMS multi-tenant v1
 
 - Canonical PR `#254` squash-merge tại `b25fc30b0f37d1218cafbb4dac40e37479bba0b9`.
@@ -77,6 +93,7 @@ Không tự đổi DNS/secrets hoặc thực hiện destructive operation ngoài
 ## Remaining priorities
 
 - Merge exact production release evidence hardening sau review.
+- Hoàn tất CRITICAL local gates cho VN Accounting Period Integrity Hardening.
 - Stock Reconciliation Bulk Transaction.
 - BOM parent + child/version Bulk Transaction.
 - First-class AppAction input-table transport.

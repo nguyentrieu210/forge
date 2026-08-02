@@ -19,6 +19,19 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. 
 - Targeted local synthetic staging test PASS: release marker generated with expected SHA/hash and staged bundle check passed.
 - Not merged and not production-deployed yet; release evidence becomes canonical only after this branch is reviewed/merged.
 
+## IN PROGRESS — VN Accounting Period Integrity Hardening
+
+- Canonical working branch: `fix/vn-accounting-period-integrity-20260802-r5`, clean-transplant từ exact `main` snapshot `a0ae5f4f00a6be7311efcaff87c4caabea60f6be`.
+- Migration `0039_vn_accounting_period_hardening.sql` thay trigger kỳ kế toán mà không rewrite migration đã áp dụng.
+- Hard Locked chặn submit/cancel và chặn đổi scope chứng từ đã post để đi vào/ra kỳ khóa; guard mở rộng tới Journal/Invoice/Payment, Purchase Receipt, Delivery Note, Payroll, Stock và Warehouse Cash.
+- Soft Closed chỉ nhận approved adjustment khi kỳ cho phép và chứng từ có approval + reason + approver.
+- Accounting Period validate range, chặn overlap theo tenant/company/branch scope; explicit branch khác nhau được phép overlap; tenant isolation nằm ngay trong trigger DB.
+- Regression script cover duplicate employee/attendance/payroll source, hard/soft close, cancel, draft->submit, move into/out of locked period, invalid/overlap period, period update overlap và tenant isolation.
+- Isolated SQLite replay của migration/trigger logic: PASS; edge-case move-out, move-in và period scope update overlap: PASS.
+- Full repo `pnpm test` / relevant backend tests / typecheck / lint / build: **NOT RUN** trong connector runtime vì không có repository checkout/dependencies; task chưa DONE và chưa merge cho tới khi CRITICAL local gates chạy.
+- Draft PR `#257` bị superseded vì `main` tiến tới release-evidence commit và gây conflict trên 3 file status/handoff; không force-push/rewrite history.
+- Không deploy production, không chạy production migration, không mutate tenant data.
+
 ## DONE — Website/CMS multi-tenant v1
 
 - Canonical PR `#254` đã squash-merge vào `main` tại `b25fc30b0f37d1218cafbb4dac40e37479bba0b9`.
@@ -66,13 +79,14 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. 
 ## Chưa hoàn tất
 
 1. Merge/release exact production evidence hardening sau review; sau đó `/release.json` mới là production proof canonical.
-2. Bulk Transaction cho Stock Reconciliation.
-3. Bulk Transaction cho BOM parent + child/version.
-4. First-class AppAction input-table contract.
-5. Batch Print / QR label queue.
-6. P1 Daily detailed ledger hardening/closure theo exact GitHub state.
-7. Plastic ERP các wave sau P0-A.
-8. Nếu cần dùng quỹ kho để tất toán trực tiếp Purchase/Sales Invoice, thiết kế canonical payment allocation; không dùng party dimension trên GL thay settlement.
+2. Hoàn tất CRITICAL local gates cho VN Accounting Period Integrity Hardening trên canonical branch rồi mới ready/merge PR.
+3. Bulk Transaction cho Stock Reconciliation.
+4. Bulk Transaction cho BOM parent + child/version.
+5. First-class AppAction input-table contract.
+6. Batch Print / QR label queue.
+7. P1 Daily detailed ledger hardening/closure theo exact GitHub state.
+8. Plastic ERP các wave sau P0-A.
+9. Nếu cần dùng quỹ kho để tất toán trực tiếp Purchase/Sales Invoice, thiết kế canonical payment allocation; không dùng party dimension trên GL thay settlement.
 
 ## Guardrails
 
