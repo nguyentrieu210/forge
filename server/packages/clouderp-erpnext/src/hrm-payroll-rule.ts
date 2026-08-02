@@ -127,7 +127,7 @@ export function inspectPayrollRuleFormula(
         throw errors.reference(`Payroll rule ${op} requires 1..64 args`);
       }
       const types = node.args.map(expression);
-      const first = numeric(types[0], op);
+      const first = numeric(types[0]!, op);
       if (types.some((type) => numeric(type, op) !== first)) throw errors.reference(`Payroll rule ${op} args must have the same value type`);
       return first;
     };
