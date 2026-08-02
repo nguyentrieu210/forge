@@ -93,8 +93,12 @@ export default {
 
   async queue(batch: MessageBatch<SocialQueueMessage>, env: Env): Promise<void> {
     for (const message of batch.messages) {
+      let tenantId = "unknown";
+      let eventId = "unknown";
       try {
         const body = message.body;
+        tenantId = body.tenant_id || "unknown";
+        eventId = body.event_id || "unknown";
         if (body.schema_version !== 1 || body.provider !== "facebook") throw new Error("Unsupported social message");
         const routeRaw = await env.ROUTES.get(`__tenant__:${body.tenant_id}`);
         if (!routeRaw) throw new Error("Tenant route is missing");
@@ -110,7 +114,20 @@ export default {
           throw new Error(`Tenant social ingest failed with ${response.status}`);
         }
         message.ack();
-      } catch { message.retry({ delaySeconds: Math.min(300, 2 ** Math.min(message.attempts, 8)) }); }
+      } catch (error) {
+        const delaySeconds = Math.min(300, 2 ** Math.min(message.attempts, 8));
+        console.error(JSON.stringify({
+          level: "error",
+          service: "social-ingress-worker",
+          code: "SOCIAL_EVENT_RETRY",
+          tenant_id: tenantId,
+          event_id: eventId,
+          attempts: message.attempts,
+          retry_delay_seconds: delaySeconds,
+          error_name: error instanceof Error ? error.name : "UnknownError",
+        }));
+        message.retry({ delaySeconds });
+      }
     }
   },
 };

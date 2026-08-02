@@ -18,7 +18,7 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. 
 - Parallel Agent Board/Protocol/Prompts đã merge qua PR `#293` và canonical location là `main/docs/agents/`.
 - 18 branch `agent/ent-00-*` tới `agent/ent-17-*` chia ownership architecture/kernel, ERP domains, BI/AI, BPM/App Factory, integrations, security/SaaS, SRE, frontend/mobile, migration và Alumdoor reference vertical.
 - Cleanup baseline đã đóng các PR temporary/superseded rõ ràng `#224`, `#248`, `#256`, `#257`, `#259`, `#285`; branch/history vẫn giữ để agent audit/reuse/cherry-pick khi cần.
-- Các substantive legacy PR còn mở không tự động là canonical; workstream owner phải phân loại `reuse/cherry-pick/superseded/reject` bằng exact diff + evidence.
+- Các substantive legacy PR còn mở không tự động là canonical; workstream owner phải phân loại `reuse/cherry-pick/supersede/reject` bằng exact diff + evidence.
 - Alumdoor được định vị là reference vertical chạy trên Forge, không fork core; primitive generic phải được kéo xuống platform/domain package khi chứng minh tái sử dụng.
 
 ## DONE — ALU full Alumdoor production sync
@@ -73,6 +73,17 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. 
 - Production proof vẫn bắt buộc `/health` + `/release.json` đúng SHA/hash.
 - Chưa có production run mới của fast path này; cần một UI push thực tế sau merge để chốt performance/e2e evidence.
 
+## BLOCKED — WS14 frontend runtime/mobile autonomous pass
+
+- Năm UI-only slice độc lập đã merge: shell a11y/offline truthfulness `#315`, installable PWA `#325`, mobile extension child-grid `#328`, stable pull-to-refresh `#329`, dynamic viewport + drawer focus `#331`.
+- `U01-001 Responsive PWA` và `U01-002 Installable PWA` đang ở mức **Wired**, chưa nâng RC vì full checkout/typecheck/build/browser screenshot/E2E không chạy được trong môi trường hiện tại.
+- `U01-003..007` offline cache/write queue/background sync/conflict vẫn **Missing**; cần WS00/WS11/WS12 chốt tenant/session/cache/OCC/release-freshness contract trước implementation.
+- Legacy `/page/:page` và `/dashboard/:page` vẫn dùng fallback; WS09/WS00 cần chốt compatibility contract hoặc mapping sang AppScreen/Overview trước khi WS14 viết renderer.
+- Base `ChildGrid.tsx` vẫn table-first trên mobile và chứa domain formula/pricing/item-default/OCR paths; refactor touch renderer chỉ nên làm khi full build/browser lane hoạt động, không thay mù file gần 2.000 dòng qua Contents API.
+- Runtime barrel/chunk split đã audit; PDF heavy libs đang dynamic-import đúng. Tối ưu assistant/print/subpath chỉ làm sau khi có chunk measurement.
+- Production deploy của các slice WS14 **UNPROVEN**: connector writes không cho workflow/status quan sát được và container không resolve `alu.kairo.vn`; exact `/release.json.releaseSha` + `bundleHash` vẫn là proof bắt buộc.
+- Handoff canonical: `docs/agents/workstreams/WS14-frontend-runtime-mobile.md`.
+
 ## DONE — Website/CMS multi-tenant v1
 
 - Canonical PR `#254` đã squash-merge vào `main` tại `b25fc30b0f37d1218cafbb4dac40e37479bba0b9`.
@@ -109,7 +120,7 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. 
 ## Chưa hoàn tất
 
 1. Hoàn tất exact regression/verification cho `fix/vn-accounting-period-integrity-20260803-r8` rồi mới PR/merge hoặc chuyển evidence/implementation hợp lệ sang WS01.
-2. Một UI push thực tế sau fast-path merge để đo duration và xác nhận `Deploy Gateway + /release.json` PASS.
+2. Một UI push thực tế sau fast-path merge để đo duration và xác nhận `Deploy Gateway + /release.json` PASS; WS14 cũng cần evidence này để đóng deploy cho 5 slice đã merge.
 3. HRM statutory payroll-rule evaluator nếu cần tự động PIT/BHXH theo luật; phải có schema/version/nguồn chính thức và không sửa rule đã dùng; WS06 là owner mới.
 4. Bulk Transaction cho Stock Reconciliation; WS04 phải audit PR lịch sử trước khi viết lại.
 5. Bulk Transaction cho BOM parent + child/version; WS05/WS09 phối hợp nếu cần input-table primitive chung.

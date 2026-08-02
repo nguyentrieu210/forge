@@ -1,0 +1,280 @@
+name: ALU Build and Deploy
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "client/**"
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: Deploy UI only or perform the full production release
+        required: true
+        default: ui
+        type: choice
+        options:
+          - ui
+          - full
+      confirm:
+        description: Type alu to confirm production deploy
+        required: true
+        type: string
+      target_sha:
+        description: Exact merged main SHA to build and deploy; defaults to selected ref SHA
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ (github.event_name == 'push' || inputs.scope == 'ui') && 'production-alu-ui' || 'production-alu-full' }}
+  cancel-in-progress: ${{ github.event_name == 'push' }}
+
+jobs:
+  ui-deploy:
+    name: Fast UI build and deploy after main merge
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.scope == 'ui' && inputs.confirm == 'alu')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    env:
+      TARGET_SHA: ${{ github.event_name == 'push' && github.sha || inputs.target_sha || github.sha }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      VITE_FORGE_RELEASE_SHA: ${{ github.event_name == 'push' && github.sha || inputs.target_sha || github.sha }}
+    outputs:
+      target_sha: ${{ steps.release-target.outputs.target_sha }}
+
+    steps:
+      - name: Record release target
+        id: release-target
+        shell: bash
+        run: echo "target_sha=$TARGET_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout merged UI revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require manual UI target to be merged into main
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git cat-file -e "$TARGET_SHA^{commit}"
+          git merge-base --is-ancestor "$TARGET_SHA" origin/main || {
+            echo "Refusing production UI release: $TARGET_SHA is not merged into main."
+            exit 1
+          }
+
+      - name: Guard automatic main push as UI-only
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t changed < <(jq -r '[.commits[]? | (.added[]?, .modified[]?, .removed[]?)] | unique[]' "$GITHUB_EVENT_PATH")
+          if [ "${#changed[@]}" -eq 0 ]; then
+            mapfile -t changed < <(git diff-tree --no-commit-id --name-only -r HEAD)
+          fi
+          test "${#changed[@]}" -gt 0
+
+          has_client=false
+          for file in "${changed[@]}"; do
+            case "$file" in
+              client/*) has_client=true ;;
+              RUNBOOK.md|CURRENT_STATUS.md|NEXT_TASKS.md|AI_HANDOFF.md|DELIVERY_POLICY.md|docs/agents/workstreams/*) ;;
+              *)
+                echo "Blocked non-UI file in automatic production UI deploy: $file"
+                exit 1
+                ;;
+            esac
+          done
+          test "$has_client" = true
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies from cache
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Build Gateway UI only
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm --filter runtime... run build
+          pnpm --dir client/apps/kho exec tsc -p ../warehouse-mobile/tsconfig.json
+          pnpm --dir client/apps/kho exec vite build --config vite.mobile.config.ts
+
+      - name: Stage UI bundle
+        run: node server/scripts/stage-client-bundle.mjs
+
+      - name: Deploy Gateway
+        run: pnpm --dir server exec wrangler deploy --config apps/gateway-worker/wrangler.jsonc
+
+  build-deploy:
+    name: Build and deploy full ALU release
+    if: github.event_name == 'workflow_dispatch' && inputs.scope == 'full' && inputs.confirm == 'alu'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    environment: production
+    env:
+      TARGET_SHA: ${{ inputs.target_sha || github.sha }}
+      TENANT: alu
+      APP_WORKER: cloudforge-app-alumdoor
+      DISPATCH_NAMESPACE: cloudforge-production
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      VITE_FORGE_RELEASE_SHA: ${{ inputs.target_sha || github.sha }}
+    outputs:
+      target_sha: ${{ steps.release-target.outputs.target_sha }}
+
+    steps:
+      - name: Record release target
+        id: release-target
+        shell: bash
+        run: echo "target_sha=$TARGET_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout target
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require target to be merged into main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git cat-file -e "$TARGET_SHA^{commit}"
+          git merge-base --is-ancestor "$TARGET_SHA" origin/main || {
+            echo "Refusing production full release: $TARGET_SHA is not merged into main."
+            exit 1
+          }
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build once
+        run: |
+          pnpm --filter cloudforge run build
+          pnpm --filter metaforge run build
+          node server/scripts/stage-client-bundle.mjs
+
+      - name: Plan tenant migrations
+        working-directory: server
+        run: node scripts/migrate-tenant.mjs --tenant "$TENANT"
+
+      - name: Backup and verify tenant before migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          backup_dir="$RUNNER_TEMP/alu-backup"
+          mkdir -p "$backup_dir"
+          node server/scripts/backup-tenant.mjs --tenant "$TENANT" --execute --output-dir "$backup_dir"
+          mapfile -t backups < <(find "$backup_dir" -maxdepth 1 -type f -name '*.sql' -print | sort)
+          [ "${#backups[@]}" -eq 1 ] || {
+            echo "Expected exactly one SQL backup, found ${#backups[@]}."
+            exit 1
+          }
+          node server/scripts/verify-tenant-backup.mjs \
+            --tenant "$TENANT" \
+            --file "${backups[0]}" \
+            --output "$RUNNER_TEMP/alu-backup-verification.json"
+
+      - name: Migrate tenant
+        working-directory: server
+        run: node scripts/migrate-tenant.mjs --tenant "$TENANT" --execute --confirm "$TENANT"
+
+      - name: Deploy tenant Worker
+        working-directory: server
+        run: node scripts/deploy-tenant.mjs --tenant "$TENANT" --execute --confirm "$TENANT"
+
+      - name: Deploy Alumdoor app Worker
+        working-directory: server
+        run: |
+          pnpm exec wrangler deploy \
+            --config apps-src/alumdoor-worker/wrangler.jsonc \
+            --name "$APP_WORKER" \
+            --dispatch-namespace "$DISPATCH_NAMESPACE" \
+            --strict
+
+      - name: Deploy Gateway
+        run: pnpm --dir server exec wrangler deploy --config apps/gateway-worker/wrangler.jsonc
+
+      - name: Upload backup verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alu-backup-verification-${{ github.run_id }}
+          path: ${{ runner.temp }}/alu-backup-verification.json
+          if-no-files-found: warn
+          retention-days: 30
+
+  verify-production:
+    name: Verify exact production convergence
+    needs: [ui-deploy, build-deploy]
+    if: ${{ always() && (needs.ui-deploy.result == 'success' || needs.build-deploy.result == 'success') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      TARGET_SHA: ${{ needs.ui-deploy.outputs.target_sha || needs.build-deploy.outputs.target_sha }}
+
+    steps:
+      - name: Checkout current SRE control plane
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Probe health, auth boundary and exact UI release marker
+        run: >-
+          node server/scripts/sre-health-snapshot.mjs
+          --base https://alu.kairo.vn
+          --expected-release-sha "$TARGET_SHA"
+          --allow-remote
+          --confirm-host alu.kairo.vn
+          --attempts 10
+          --delay-ms 2000
+          --output "$RUNNER_TEMP/release-health.json"
+
+      - name: Upload release health evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alu-release-health-${{ github.run_id }}
+          path: ${{ runner.temp }}/release-health.json
+          if-no-files-found: warn
+          retention-days: 30
