@@ -23,6 +23,21 @@ export const IDENTITY_SIGNATURE_HEADER = "x-cloudforge-identity-signature";
  */
 export const APP_CALLBACK_HEADER = "x-cloudforge-app-callback";
 
+/** Authentication evidence that originated at the identity provider, not token mint time. */
+export interface AuthenticationContext {
+  /** OIDC-style epoch seconds for the user's actual authentication event. */
+  auth_time: number;
+  /** Authentication methods, e.g. pwd, otp, mfa or hwk. Informational unless a policy names one. */
+  amr?: string[];
+  /** Authentication Context Class Reference from the issuer, when one exists. */
+  acr?: string;
+}
+
+/** Trusted identity plus optional issuer-authenticated evidence for privileged step-up policy. */
+export interface SecurityTrustedIdentity extends TrustedIdentity {
+  authentication?: AuthenticationContext;
+}
+
 export interface JwtVerificationOptions {
   secret: string;
   issuer?: string;
@@ -40,6 +55,10 @@ export interface JwtClaims extends JsonObject {
   aud?: string | string[];
   locale?: string;
   timezone?: string;
+  /** Authentication time is deliberately distinct from JWT iat. */
+  auth_time?: number;
+  amr?: string[];
+  acr?: string;
 }
 
 export async function verifyBearerJwt(request: Request, options: JwtVerificationOptions): Promise<JwtClaims> {
@@ -65,9 +84,43 @@ export async function verifyHs256Jwt(token: string, options: JwtVerificationOpti
   }
   if (typeof claims.exp !== "number" || claims.exp <= now) throw errors.authentication("Bearer token expired");
   if (typeof claims.nbf === "number" && claims.nbf > now + 30) throw errors.authentication("Bearer token is not active");
+  if (claims.auth_time !== undefined && (!Number.isInteger(claims.auth_time) || claims.auth_time <= 0 || claims.auth_time > now + 30)) {
+    throw errors.authentication("Bearer token authentication time is invalid");
+  }
+  if (claims.amr !== undefined && (!Array.isArray(claims.amr) || claims.amr.length > 16 || !claims.amr.every((method) => typeof method === "string" && method.length > 0 && method.length <= 64))) {
+    throw errors.authentication("Bearer token authentication methods are invalid");
+  }
+  if (claims.acr !== undefined && (typeof claims.acr !== "string" || !claims.acr || claims.acr.length > 256)) {
+    throw errors.authentication("Bearer token authentication context class is invalid");
+  }
   if (options.issuer && claims.iss !== options.issuer) throw errors.authentication("Bearer token issuer mismatch");
   if (options.audience && !audienceMatches(claims.aud, options.audience)) throw errors.authentication("Bearer token audience mismatch");
   return claims as JwtClaims;
+}
+
+export function authenticationContextFromJwtClaims(claims: JwtClaims): AuthenticationContext | undefined {
+  if (claims.auth_time === undefined) return undefined;
+  return {
+    auth_time: claims.auth_time,
+    ...(claims.amr ? { amr: [...claims.amr] } : {}),
+    ...(claims.acr ? { acr: claims.acr } : {}),
+  };
+}
+
+export function assertRecentAuthenticationContext(
+  authentication: AuthenticationContext | undefined,
+  nowSeconds: number,
+  maxAgeSeconds = 15 * 60,
+  futureClockSkewSeconds = 60,
+): void {
+  const authTime = authentication?.auth_time;
+  if (!Number.isInteger(authTime) || !authTime || authTime <= 0) {
+    throw errors.authentication("Recent authentication is required for this privileged action");
+  }
+  const ageSeconds = nowSeconds - authTime;
+  if (ageSeconds < -futureClockSkewSeconds || ageSeconds > maxAgeSeconds) {
+    throw errors.authentication("Recent authentication is required for this privileged action");
+  }
 }
 
 /** A per-tenant verification key (the derived key, not the platform master). */
@@ -113,17 +166,20 @@ export async function createTrustedIdentity(input: {
   traceId: string;
   masterSecret: string;
   keyId: string;
+  authentication?: AuthenticationContext;
   nowSeconds?: number;
   ttlSeconds?: number;
-}): Promise<{ encoded: string; signature: string; identity: TrustedIdentity }> {
+}): Promise<{ encoded: string; signature: string; identity: SecurityTrustedIdentity }> {
   const issuedAt = input.nowSeconds ?? Math.floor(Date.now() / 1000);
-  const identity: TrustedIdentity = {
+  if (input.authentication) validateAuthenticationContext(input.authentication, issuedAt);
+  const identity: SecurityTrustedIdentity = {
     tenant_id: input.tenantId,
     actor: input.actor,
     trace_id: input.traceId,
     issued_at: issuedAt,
     expires_at: issuedAt + (input.ttlSeconds ?? 60),
     key_id: input.keyId,
+    ...(input.authentication ? { authentication: cloneAuthenticationContext(input.authentication) } : {}),
   };
   const encoded = base64UrlEncode(JSON.stringify(identity));
   const signingKey = await deriveIdentityKey(input.masterSecret, input.tenantId, input.keyId);
@@ -139,14 +195,14 @@ export async function verifyTrustedIdentity(request: Request, input: {
   masterSecret?: string;
   traceId?: string;
   nowSeconds?: number;
-}): Promise<TrustedIdentity> {
+}): Promise<SecurityTrustedIdentity> {
   const encoded = request.headers.get(IDENTITY_HEADER);
   const signature = request.headers.get(IDENTITY_SIGNATURE_HEADER);
   if (!encoded || !signature) throw errors.authentication("Missing trusted identity context");
   // Read (untrusted) to select the key by id; the value is not trusted until the
   // signature is verified below, and the key is always bound to the caller-
   // supplied tenant, never to the tenant claimed inside the envelope.
-  const identity = parseJson(base64UrlDecode(encoded), "trusted identity") as Partial<TrustedIdentity>;
+  const identity = parseJson(base64UrlDecode(encoded), "trusted identity") as Partial<SecurityTrustedIdentity>;
   if (typeof identity.key_id !== "string" || !identity.key_id) throw errors.authentication("Trusted identity is missing key id");
   const verificationKey = await resolveIdentityKey(input, identity.key_id);
   if (!verificationKey) throw errors.authentication("Trusted identity key id is not recognized");
@@ -161,7 +217,28 @@ export async function verifyTrustedIdentity(request: Request, input: {
   if (!identity.actor || typeof identity.actor.user_id !== "string" || !Array.isArray(identity.actor.roles)) {
     throw errors.authentication("Trusted identity actor is invalid");
   }
-  return identity as TrustedIdentity;
+  if (identity.authentication !== undefined) validateAuthenticationContext(identity.authentication, now);
+  return identity as SecurityTrustedIdentity;
+}
+
+function validateAuthenticationContext(authentication: AuthenticationContext, nowSeconds: number): void {
+  if (!Number.isInteger(authentication.auth_time) || authentication.auth_time <= 0 || authentication.auth_time > nowSeconds + 60) {
+    throw errors.authentication("Trusted authentication time is invalid");
+  }
+  if (authentication.amr !== undefined && (!Array.isArray(authentication.amr) || authentication.amr.length > 16 || !authentication.amr.every((method) => typeof method === "string" && method.length > 0 && method.length <= 64))) {
+    throw errors.authentication("Trusted authentication methods are invalid");
+  }
+  if (authentication.acr !== undefined && (typeof authentication.acr !== "string" || !authentication.acr || authentication.acr.length > 256)) {
+    throw errors.authentication("Trusted authentication context class is invalid");
+  }
+}
+
+function cloneAuthenticationContext(authentication: AuthenticationContext): AuthenticationContext {
+  return {
+    auth_time: authentication.auth_time,
+    ...(authentication.amr ? { amr: [...authentication.amr] } : {}),
+    ...(authentication.acr ? { acr: authentication.acr } : {}),
+  };
 }
 
 async function resolveIdentityKey(
