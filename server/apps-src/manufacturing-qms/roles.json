@@ -1,0 +1,4 @@
+[
+  { "role": "Quality User", "desk_access": true },
+  { "role": "Quality Manager", "desk_access": true }
+]
