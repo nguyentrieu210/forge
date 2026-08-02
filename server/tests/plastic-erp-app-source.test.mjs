@@ -15,12 +15,14 @@ async function manifest() {
 test("plastic ERP source compiles to canonical Meta v1", async () => {
   const app = await manifest();
   assert.equal(app.id, "plastic-erp");
+  assert.equal(app.version, "0.2.0");
   assert.equal(app.metaContractVersion, 1);
-  assert.ok(app.doctypes.length >= 10);
+  assert.ok(app.doctypes.length >= 15);
   assert.ok(app.roles.some((role) => role.role === "Plastic Production Manager"));
   assert.ok(app.roles.some((role) => role.role === "Plastic QC Manager"));
-  assert.ok(app.externalDocTypes.some((entry) => entry.name === "Bill of Materials"));
-  assert.ok(app.externalDocTypes.some((entry) => entry.name === "Work Order"));
+  for (const external of ["Bill of Materials", "Work Order", "Stock Entry", "Serial and Batch Bundle"]) {
+    assert.ok(app.externalDocTypes.some((entry) => entry.name === external), `${external} must stay external`);
+  }
 
   for (const doctype of app.doctypes) {
     assert.ok(doctype.kind, `${doctype.name} must have canonical kind`);
@@ -41,7 +43,21 @@ test("plastic recipe extends canonical BOM instead of creating a competing BOM",
   assert.equal(bomField?.fieldtype, "Link");
   assert.equal(bomField?.options, "Bill of Materials");
   assert.equal(app.doctypes.some((doctype) => doctype.name === "Bill of Materials"), false);
+  assert.equal(app.doctypes.some((doctype) => doctype.name === "Stock Entry"), false);
   assert.equal(app.doctypes.some((doctype) => /stock ledger/i.test(doctype.name)), false);
+});
+
+test("Production Run is a transaction overlay on canonical manufacturing", async () => {
+  const app = await manifest();
+  const run = app.doctypes.find((doctype) => doctype.name === "Plastic Production Run");
+  assert.equal(run?.kind, "transaction");
+  assert.ok(run?.fields.some((field) => field.fieldname === "work_order" && field.options === "Work Order"));
+  assert.ok(run?.fields.some((field) => field.fieldname === "manufacture_stock_entry" && field.options === "Stock Entry"));
+  assert.ok(run?.fields.some((field) => field.fieldname === "materials" && field.options === "Plastic Production Material"));
+  assert.ok(run?.fields.some((field) => field.fieldname === "outputs" && field.options === "Plastic Production Output"));
+  assert.ok(run?.fields.some((field) => field.fieldname === "downtime_events" && field.options === "Plastic Production Downtime"));
+  assert.equal(run?.fields.find((field) => field.fieldname === "started_at")?.editMode, "readonly");
+  assert.equal(run?.fields.find((field) => field.fieldname === "good_qty")?.editMode, "readonly");
 });
 
 test("plastic recipe and QC specs are approval-controlled immutable transactions", async () => {
@@ -56,12 +72,15 @@ test("plastic recipe and QC specs are approval-controlled immutable transactions
   assert.ok(quality?.fields.some((field) => field.fieldname === "characteristics" && field.fieldtype === "Table"));
 });
 
-test("machine and tool masters expose compatibility and capacity inputs for later server guards", async () => {
+test("machine and tool masters expose compatibility and operational-state guards", async () => {
   const app = await manifest();
   const machine = app.doctypes.find((doctype) => doctype.name === "Plastic Machine");
   const tool = app.doctypes.find((doctype) => doctype.name === "Plastic Tool");
   assert.ok(machine?.fields.some((field) => field.fieldname === "process_profile"));
   assert.ok(machine?.fields.some((field) => field.fieldname === "exclusive_resource"));
+  assert.ok(machine?.fields.some((field) => field.fieldname === "operational_state"));
   assert.ok(tool?.fields.some((field) => field.fieldname === "compatible_machines" && field.options === "Plastic Tool Machine Rule"));
-  assert.ok(tool?.fields.some((field) => field.fieldname === "maintenance_cycle_count"));
+  assert.ok(tool?.fields.some((field) => field.fieldname === "operational_state"));
+  assert.equal(machine?.fields.some((field) => field.fieldname === "status"), false);
+  assert.equal(tool?.fields.some((field) => field.fieldname === "status"), false);
 });
