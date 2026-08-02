@@ -5,6 +5,7 @@ import sqlite3
 from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
+migration = (root / "migrations/tenant/0049_ws15_collaboration_integrity.sql").read_text(encoding="utf-8")
 
 
 def base_db():
@@ -80,6 +81,15 @@ def add_assignment(db, assignment_id, user, *, status="Open", tenant="demo", nam
     )
 
 
+def add_share(db, user, *, name="PO-0001"):
+    db.execute(
+        """INSERT INTO document_shares(
+          tenant_id,doctype,name,user,submitted_by,created_at
+        ) VALUES('demo','Purchase Order',?,?, 'manager@example.test','2026-08-03T00:00:00Z')""",
+        (name, user),
+    )
+
+
 def assert_integrity_error(action, expected):
     try:
         action()
@@ -94,12 +104,19 @@ preexisting = base_db()
 add_user(preexisting, "buyer@example.test")
 add_assignment(preexisting, "A-1", "buyer@example.test")
 add_assignment(preexisting, "A-2", "buyer@example.test")
-try:
-    preexisting.executescript((root / "migrations/tenant/0049_ws15_collaboration_integrity.sql").read_text(encoding="utf-8"))
-except sqlite3.IntegrityError as exc:
-    assert "UNIQUE constraint failed" in str(exc)
-else:
-    raise AssertionError("migration must fail closed when duplicate Open assignments already exist")
+assert_integrity_error(lambda: preexisting.executescript(migration), "DUPLICATE_OPEN_ASSIGNMENT")
+
+# Existing ghost live state must also block rollout. The migration validates legacy rows
+# through its no-op UPDATE preflight rather than grandfathering invalid assignments/shares.
+preexisting_ghost = base_db()
+add_user(preexisting_ghost, "buyer@example.test")
+add_assignment(preexisting_ghost, "A-GHOST", "missing@example.test")
+assert_integrity_error(lambda: preexisting_ghost.executescript(migration), "ASSIGNEE_NOT_FOUND")
+
+preexisting_share = base_db()
+add_user(preexisting_share, "buyer@example.test")
+add_share(preexisting_share, "missing@example.test")
+assert_integrity_error(lambda: preexisting_share.executescript(migration), "SHARE_USER_NOT_FOUND")
 
 # Clean tenant: apply migration and exercise guards.
 db = base_db()
@@ -107,7 +124,7 @@ add_user(db, "buyer@example.test")
 add_user(db, "disabled@example.test", enabled=0)
 add_user(db, "portal@example.test", user_type="Website User")
 add_user(db, "other-tenant@example.test", tenant="other")
-db.executescript((root / "migrations/tenant/0049_ws15_collaboration_integrity.sql").read_text(encoding="utf-8"))
+db.executescript(migration)
 
 add_assignment(db, "A-1", "buyer@example.test")
 assert_integrity_error(lambda: add_assignment(db, "A-2", "buyer@example.test"), "DUPLICATE_OPEN_ASSIGNMENT")
@@ -130,34 +147,9 @@ assert_integrity_error(
 )
 
 # Shares are current access relationships, therefore targets must be active System Users.
-db.execute(
-    """INSERT INTO document_shares(
-      tenant_id,doctype,name,user,submitted_by,created_at
-    ) VALUES('demo','Purchase Order','PO-0001','buyer@example.test','manager@example.test','2026-08-03T00:00:00Z')"""
-)
-assert_integrity_error(
-    lambda: db.execute(
-        """INSERT INTO document_shares(
-          tenant_id,doctype,name,user,submitted_by,created_at
-        ) VALUES('demo','Purchase Order','PO-0002','disabled@example.test','manager@example.test','2026-08-03T00:00:00Z')"""
-    ),
-    "SHARE_USER_NOT_ACTIVE_SYSTEM_USER",
-)
-assert_integrity_error(
-    lambda: db.execute(
-        """INSERT INTO document_shares(
-          tenant_id,doctype,name,user,submitted_by,created_at
-        ) VALUES('demo','Purchase Order','PO-0003','missing@example.test','manager@example.test','2026-08-03T00:00:00Z')"""
-    ),
-    "SHARE_USER_NOT_FOUND",
-)
-assert_integrity_error(
-    lambda: db.execute(
-        """INSERT INTO document_shares(
-          tenant_id,doctype,name,user,submitted_by,created_at
-        ) VALUES('demo','Purchase Order','PO-0004','portal@example.test','manager@example.test','2026-08-03T00:00:00Z')"""
-    ),
-    "SHARE_USER_NOT_ACTIVE_SYSTEM_USER",
-)
+add_share(db, "buyer@example.test")
+assert_integrity_error(lambda: add_share(db, "disabled@example.test", name="PO-0002"), "SHARE_USER_NOT_ACTIVE_SYSTEM_USER")
+assert_integrity_error(lambda: add_share(db, "missing@example.test", name="PO-0003"), "SHARE_USER_NOT_FOUND")
+assert_integrity_error(lambda: add_share(db, "portal@example.test", name="PO-0004"), "SHARE_USER_NOT_ACTIVE_SYSTEM_USER")
 
 print("WS15_COLLABORATION_INTEGRITY_0049_PASS")
