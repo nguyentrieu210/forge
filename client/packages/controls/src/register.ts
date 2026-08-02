@@ -29,13 +29,17 @@ import {
  * Precision trong metadata vẫn giữ nguyên cho tính toán/lưu dữ liệu; lớp control chỉ giới hạn
  * phần HIỂN THỊ ở tối đa 2 chữ số thập phân. Nhờ vậy field khai precision 6 không còn hiện
  * `22,000000`, nhưng backend không bị đổi schema hay mất độ chính xác của dữ liệu đã lưu.
+ *
+ * Field không khai precision cũng phải mặc định thành 2. API có thể trả fixed-scale string như
+ * `22.000000`; nếu để precision undefined thì GroupedNumberInput giữ nguyên chuỗi đó và UI vẫn
+ * hiện sáu số lẻ dù formatter chung đã đúng.
  */
 const TwoDecimalNumberControl: FieldControl = (props) => {
   const raw = props.field.precision;
   const parsed = raw === undefined || raw === null || raw === "" ? undefined : Number(raw);
   const displayPrecision = parsed !== undefined && Number.isFinite(parsed)
     ? String(Math.min(2, Math.max(0, Math.floor(parsed))))
-    : raw;
+    : "2";
   return NumberControl({
     ...props,
     field: { ...props.field, precision: displayPrecision },
