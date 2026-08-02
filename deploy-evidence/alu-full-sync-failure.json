@@ -1,5 +1,5 @@
 {
-  "deployedSha": "dfa284728d52fe2a7082ebfe7e5083cd5b54f207",
+  "deployedSha": "69dedd36f9314819268e02dfc923ce419055b81b",
   "failedStep": "migrate",
   "outcomes": {
     "checkout": "success",
@@ -20,5 +20,5 @@
   "hrmLogTail": null,
   "vnAccountingLogTail": null,
   "alumdoorLogTail": null,
-  "failedAt": "2026-08-02T20:26:41.199Z"
+  "failedAt": "2026-08-02T20:32:57.577Z"
 }
