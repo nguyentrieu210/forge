@@ -94,10 +94,11 @@ test("status transition requires reason and follows explicit state machine", () 
   })), /Invalid subscription status transition/);
 });
 
-test("disabled subscription may change config then reactivate with explicit reason", () => {
+test("configuration must be saved while inactive before a separate activation mutation", () => {
   const controller = new IntegrationSubscriptionController();
   const disabled = { ...baseData, status: "disabled", status_reason: "maintenance" };
-  const plan = controller.buildPlan(context({
+
+  assert.throws(() => controller.buildPlan(context({
     action: "save", existingData: disabled, existingStatus: "disabled",
     document: {
       ...disabled,
@@ -105,10 +106,24 @@ test("disabled subscription may change config then reactivate with explicit reas
       status: "active",
       status_reason: "Endpoint verified",
     },
+  })), /Save Integration Subscription configuration before activating/);
+
+  const configSaved = controller.buildPlan(context({
+    action: "save", existingData: disabled, existingStatus: "disabled",
+    document: { ...disabled, target_url: "https://hooks.example.com/v2", status_reason: "Endpoint changed" },
   }));
-  assert.equal(plan.document.status, "active");
-  assert.equal(plan.document.data.target_url, "https://hooks.example.com/v2");
-  assert.equal(plan.events[0].event_type, "integration_subscription.active");
+  assert.equal(configSaved.document.status, "disabled");
+  assert.equal(configSaved.document.data.target_url, "https://hooks.example.com/v2");
+  assert.equal(configSaved.events[0].event_type, "integration_subscription.updated");
+
+  const savedData = configSaved.document.data;
+  const activated = controller.buildPlan(context({
+    action: "save", existingData: savedData, existingStatus: "disabled",
+    document: { ...savedData, status: "active", status_reason: "Endpoint verified" },
+  }));
+  assert.equal(activated.document.status, "active");
+  assert.equal(activated.document.data.target_url, "https://hooks.example.com/v2");
+  assert.equal(activated.events[0].event_type, "integration_subscription.active");
 });
 
 test("subscription controller rejects submittable lifecycle and unsafe targets", () => {
