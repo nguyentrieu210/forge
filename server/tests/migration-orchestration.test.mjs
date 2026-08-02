@@ -38,7 +38,7 @@ test("MISA adapter detects Vietnamese headers and groups item rows by voucher", 
     ["Mẫu nhập kho MISA AMIS"],
     ["Hướng dẫn"],
     ["Ngày hạch toán", "Số chứng từ", "Mã đối tượng", "Mã hàng", "Số lượng", "Đơn giá", "Nhập tại kho"],
-    ["03/08/2026", "NK0001", "NCC01", "AL71", "1.234,5", "180.000", "Kho chính"],
+    ["03/08/2026", "NK0001", "NCC01", "AL71", "1.234,5", "180.000,00", "Kho chính"],
     ["", "", "", "AL72", "2", "90,5", "Kho chính"],
   ];
   const result = adaptMisaInventoryGrid({ kind: "nhap", rows: grid, company: "Công ty A" });
