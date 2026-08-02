@@ -1,0 +1,98 @@
+name: Patch full sync clean worktree order
+
+on:
+  push:
+    branches:
+      - fix/alumdoor-full-sync-clean-worktree-20260803
+    paths:
+      - .github/workflows/patch-full-sync-clean-worktree.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/alumdoor-full-sync-clean-worktree-20260803
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Move Gateway staging after migration and metadata
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('.github/workflows/one-time-alumdoor-full-sync.yml')
+          s = p.read_text()
+          old_build = '''      - name: Build server and Gateway UI
+                id: build
+                shell: bash
+                run: |
+                  set -euo pipefail
+                  pnpm --filter cloudforge run build
+                  pnpm --filter metaforge run build
+                  node server/scripts/stage-client-bundle.mjs
+          '''
+          new_build = '''      - name: Build server and Gateway UI
+                id: build
+                shell: bash
+                run: |
+                  set -euo pipefail
+                  pnpm --filter cloudforge run build
+                  pnpm --filter metaforge run build
+          '''
+          old_gateway = '''      - name: Deploy current Gateway UI
+                id: deploy_gateway
+                run: pnpm --dir server exec wrangler deploy --config apps/gateway-worker/wrangler.jsonc
+          '''
+          new_gateway = '''      - name: Stage current Gateway UI bundle
+                id: stage_gateway
+                run: node server/scripts/stage-client-bundle.mjs
+
+              - name: Deploy current Gateway UI
+                id: deploy_gateway
+                run: pnpm --dir server exec wrangler deploy --config apps/gateway-worker/wrangler.jsonc
+          '''
+          if old_build not in s:
+              raise SystemExit('build/stage block not found')
+          if old_gateway not in s:
+              raise SystemExit('gateway block not found')
+          s = s.replace(old_build, new_build, 1).replace(old_gateway, new_gateway, 1)
+          p.write_text(s)
+      - run: pnpm install --frozen-lockfile --prefer-offline
+      - run: pnpm --filter cloudforge run build
+      - run: pnpm --filter metaforge run build
+      - run: node server/scripts/forge-app.mjs server/apps-src/hrm --dry-run
+      - run: node server/scripts/forge-app.mjs server/apps-src/vn-accounting --dry-run
+      - run: node server/scripts/forge-app.mjs server/briefs/alumdoor-v2.json --dry-run
+      - name: Validate release ordering
+        shell: python
+        run: |
+          from pathlib import Path
+          s = Path('.github/workflows/one-time-alumdoor-full-sync.yml').read_text()
+          migrate = s.index('- name: Apply tenant migrations')
+          stage = s.index('- name: Stage current Gateway UI bundle')
+          deploy = s.index('- name: Deploy current Gateway UI')
+          if not migrate < stage < deploy:
+              raise SystemExit('Gateway staging must happen after migration and before deploy')
+          build_block = s[s.index('- name: Build server and Gateway UI'):s.index('- name: Validate all app packages')]
+          if 'stage-client-bundle.mjs' in build_block:
+              raise SystemExit('Gateway staging still dirties worktree before migration')
+      - name: Commit validated ordering fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add .github/workflows/one-time-alumdoor-full-sync.yml
+          git commit -m 'fix(release): keep worktree clean through ALU migrations'
+          git push origin HEAD:fix/alumdoor-full-sync-clean-worktree-20260803
