@@ -1,6 +1,10 @@
 import { errors } from "../../core/src/index.js";
 import type { JsonObject, JsonValue } from "../../contracts/src/index.js";
-import type { AppAction } from "./manifest.js";
+import {
+  parseAppManifest as parseBaseAppManifest,
+  type AppAction,
+  type AppManifest,
+} from "./manifest.js";
 import {
   assertActionInputNamesUnique,
   parseAppActionInputTable,
@@ -24,6 +28,10 @@ import {
 
 export type AppActionWithInputTables = AppAction & {
   input_tables?: AppActionInputTable[];
+};
+
+export type AppManifestWithInputTables = Omit<AppManifest, "actions"> & {
+  actions: AppActionWithInputTables[];
 };
 
 type RawAction = JsonObject & {
@@ -129,4 +137,24 @@ export function decorateActionInputTables(actions: AppAction[]): AppActionWithIn
     });
     return tables.length ? { ...action, input_tables: tables } : action;
   });
+}
+
+/**
+ * Server-authoritative parser view for tooling and tests during the rolling migration.
+ *
+ * The base parser remains the single validator for the canonical manifest. This helper only
+ * lowers the new repeatable-input declaration before parsing and decorates the parsed result
+ * afterwards, so callers can inspect a normalized first-class contract without teaching a
+ * second parser every AppManifest rule.
+ *
+ * IMPORTANT: the returned manifest is a READ/TOOLING VIEW and intentionally retains legacy
+ * fallback fields next to `input_tables`. Do not feed it back into `AppInstaller.install()`;
+ * install the original package value instead so the lowering bridge runs exactly once.
+ */
+export function parseAppManifestWithInputTables(value: unknown): AppManifestWithInputTables {
+  const manifest = parseBaseAppManifest(lowerActionInputTablesForInstall(value));
+  return {
+    ...manifest,
+    actions: decorateActionInputTables(manifest.actions),
+  };
 }
