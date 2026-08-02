@@ -9,11 +9,11 @@ import { BRANDS, useBrand, type BrandMode } from "./brand.js";
 const WELCOME_VERSION = "v1";
 
 export interface ThemeWelcomeDialogProps {
-  userKey?: string;
+  userKey?: string | undefined;
   theme: ThemeMode;
   onThemeChange: (mode: ThemeMode) => void;
-  brandMode?: BrandMode;
-  allowBrandChange?: boolean;
+  brandMode?: BrandMode | undefined;
+  allowBrandChange?: boolean | undefined;
 }
 
 export function ThemeWelcomeDialog(props: ThemeWelcomeDialogProps) {
