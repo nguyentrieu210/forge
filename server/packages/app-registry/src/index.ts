@@ -1,12 +1,14 @@
 export * from "./manifest.js";
 export * from "./action-input-table.js";
+export * from "./action-input-table-compat.js";
 export {
   combinedNavigation,
   type InstalledAppRecord,
   type InstallResult,
   type UninstallResult,
 } from "./installer.js";
-export { AppInstaller, canAdoptPlatformDocType } from "./platform-aware-installer.js";
+export { AppInstaller, type InstalledAppRecordWithInputTables } from "./input-table-installer.js";
+export { canAdoptPlatformDocType } from "./platform-aware-installer.js";
 export * from "./hooks.js";
 export * from "./method-dispatch.js";
 export * from "./validation.js";
