@@ -174,13 +174,18 @@ function GroupedNumberInput(p: FieldControlProps & { suffix?: string }) {
     return Number.isFinite(value) ? value : null;
   };
 
-  /** Số → chuỗi đã nhóm. Giữ nguyên phần thập phân người dùng đang gõ, không tự làm tròn. */
+  /**
+   * Số → chuỗi đã nhóm. `precision` là GIỚI HẠN thập phân, không phải yêu cầu phải hiện đủ
+   * từng chữ số 0. Ví dụ precision=6: 22 → "22", 22.5 → "22,5", 22.125 → "22,125".
+   */
   const display = (value: unknown): string => {
     if (value === null || value === undefined || value === "") return "";
     const numeric = Number(value);
-    const normalized = Number.isFinite(numeric) && Number.isInteger(precision) && precision! >= 0
-      ? numeric.toFixed(precision!)
-      : String(value);
+    let normalized = String(value);
+    if (Number.isFinite(numeric) && Number.isInteger(precision) && precision! >= 0) {
+      const fixed = numeric.toFixed(precision!);
+      normalized = fixed.includes(".") ? fixed.replace(/0+$/, "").replace(/\.$/, "") : fixed;
+    }
     const [whole, fraction] = normalized.split(".");
     const sign = whole?.startsWith("-") ? "-" : "";
     const grouped = groupDigits((whole ?? "").replace("-", ""));
