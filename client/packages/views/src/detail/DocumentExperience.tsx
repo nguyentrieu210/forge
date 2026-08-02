@@ -85,11 +85,15 @@ export function DocumentExperience({
     <div
       className="mf-document-experience relative flex h-full min-h-0 flex-col overflow-hidden bg-muted/10"
       data-archetype={presentation.archetype}
-      data-context-open={contextOpen ? "true" : "false"}
     >
       <style>{`
+        .mf-document-experience {
+          container-type: inline-size;
+        }
+
         .mf-document-experience .mf-form-header > div:first-child > div:first-child > div:first-child > span:first-child,
-        .mf-document-experience .mf-form-header > div:first-child > div:first-child > div:last-child {
+        .mf-document-experience .mf-form-header > div:first-child > div:first-child > div:last-child,
+        .mf-document-experience .mf-dirty {
           display: none;
         }
 
@@ -124,65 +128,71 @@ export function DocumentExperience({
           padding-bottom: 1rem;
         }
 
-        .mf-document-experience .mf-dirty {
-          padding: .08rem .35rem;
-          font-size: 9.5px;
-          line-height: 1rem;
-          font-weight: 500;
+        .mf-document-experience .mf-form-header {
+          position: static;
+          border-bottom: 0;
+          background: transparent;
+          backdrop-filter: none;
         }
 
-        @media (min-width: 640px) {
-          .mf-document-experience .mf-form-header {
-            position: static;
-            border-bottom: 0;
-            background: transparent;
-            backdrop-filter: none;
+        .mf-document-experience .mf-form-header > div:first-child {
+          position: absolute;
+          top: .82rem;
+          right: .65rem;
+          z-index: 40;
+          min-height: 0;
+          width: auto;
+          padding: 0;
+          gap: .2rem;
+          background: transparent;
+        }
+
+        .mf-document-experience .mf-form-header > div:first-child > div:first-child {
+          min-width: 0;
+        }
+
+        .mf-document-experience .mf-form-header > div:first-child > div:first-child > div:first-child {
+          min-height: 1.5rem;
+          align-items: center;
+        }
+
+        .mf-document-experience .mf-form-header > div:first-child > div:last-child {
+          gap: .15rem;
+          flex-wrap: nowrap;
+        }
+
+        .mf-document-experience .mf-form-header button {
+          box-shadow: none;
+        }
+
+        .mf-document-experience .mf-form-header [role="tablist"] {
+          height: 2rem;
+          padding-left: .5rem;
+          padding-right: .5rem;
+        }
+
+        .mf-document-experience .mf-form-header [role="tab"] {
+          height: 2rem;
+          padding-left: .6rem;
+          padding-right: .6rem;
+          font-size: 11px;
+        }
+
+        .mf-document-experience .mf-document-hero-main {
+          padding-right: 13.75rem;
+        }
+
+        @container (max-width: 420px) {
+          .mf-document-experience .mf-document-hero-main {
+            padding-right: 12.25rem;
+          }
+
+          .mf-document-experience .mf-document-hero-subtitle {
+            display: none;
           }
 
           .mf-document-experience .mf-form-header > div:first-child {
-            position: absolute;
-            top: .55rem;
-            right: .85rem;
-            z-index: 40;
-            min-height: 0;
-            width: auto;
-            padding: 0;
-            gap: .25rem;
-            background: transparent;
-          }
-
-          .mf-document-experience[data-context-open="true"] .mf-form-header > div:first-child {
-            right: 18.85rem;
-          }
-
-          .mf-document-experience .mf-form-header > div:first-child > div:first-child {
-            min-width: 0;
-          }
-
-          .mf-document-experience .mf-form-header > div:first-child > div:first-child > div:first-child {
-            min-height: 1.5rem;
-            align-items: center;
-          }
-
-          .mf-document-experience .mf-form-header > div:first-child > div:last-child {
-            gap: .2rem;
-          }
-
-          .mf-document-experience .mf-form-header button {
-            box-shadow: none;
-          }
-
-          .mf-document-experience .mf-form-header [role="tablist"] {
-            height: 2rem;
-            padding-left: .5rem;
-            padding-right: .5rem;
-          }
-
-          .mf-document-experience .mf-form-header [role="tab"] {
-            height: 2rem;
-            padding-left: .6rem;
-            padding-right: .6rem;
-            font-size: 11px;
+            right: .35rem;
           }
         }
       `}</style>
@@ -195,7 +205,7 @@ export function DocumentExperience({
         aria-label="Tổng quan chứng từ"
       >
         <span className={cn("absolute inset-y-0 left-0 w-0.5", profile.accentClass)} aria-hidden="true" />
-        <div className="mx-auto flex min-h-10 w-full max-w-[96rem] items-center sm:pr-[18rem]">
+        <div className="mf-document-hero-main mx-auto flex min-h-10 w-full max-w-[96rem] items-center">
           <div className="flex min-w-0 items-center gap-2">
             <span className={cn(
               "grid size-7 shrink-0 place-items-center rounded-md ring-1",
@@ -217,7 +227,7 @@ export function DocumentExperience({
                 ) : null}
               </div>
 
-              <div className="flex min-w-0 items-center gap-1.5 overflow-hidden text-[10.5px] leading-4 text-muted-foreground">
+              <div className="mf-document-hero-subtitle flex min-w-0 items-center gap-1.5 overflow-hidden text-[10.5px] leading-4 text-muted-foreground">
                 <span className="truncate">{presentation.subtitle}</span>
                 {compactMetrics.map((metric) => (
                   <span key={metric.field} className="hidden shrink-0 items-center gap-1 sm:inline-flex">
