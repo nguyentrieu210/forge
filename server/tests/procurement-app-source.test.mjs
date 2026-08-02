@@ -17,6 +17,18 @@ test("procurement first-party app is accepted by the canonical manifest parser",
     manifest.doctypes.map((doctype) => doctype.name).sort(),
     ["Supplier Contract", "Supplier Qualification", "Supplier Rating"],
   );
-  assert.ok(manifest.nav.some((entry) => entry.key === "Supplier Qualification"));
+  assert.deepEqual(manifest.roles.map((role) => role.role).sort(), ["Purchase Manager", "Purchase User"]);
+  assert.deepEqual(manifest.nav.map((entry) => entry.key).sort(), [
+    "Supplier Contract",
+    "Supplier Qualification",
+    "Supplier Rating",
+  ]);
+  assert.equal(manifest.client?.brand, "zinc");
+  assert.deepEqual(manifest.client?.dimensions, ["company"]);
+  assert.deepEqual(manifest.client?.home, { doctype: "Supplier Qualification" });
   assert.ok(manifest.externalDocTypes.some((entry) => entry.name === "Supplier"));
+  assert.ok(manifest.externalDocTypes.some((entry) => entry.name === "Purchase Order"));
+  assert.deepEqual(manifest.custom_fields.map((field) => [field.dt, field.fieldname]), [
+    ["Purchase Order", "supplier_contract"],
+  ]);
 });
