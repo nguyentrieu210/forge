@@ -17,10 +17,19 @@ function assertFourEyes(workflow, makerRole) {
   assert.equal(approve?.allow_self_approval, false);
 }
 
-test("VN accounting exposes effective-dated TT99 statutory registries", async () => {
+test("VN accounting exposes effective-dated statutory registries and deterministic tax worker", async () => {
   const parsed = parseAppManifest(await readAppSource(fileURLToPath(accountingRoot)));
   assert.equal(parsed.id, "vn-accounting");
-  assert.equal(parsed.version, "1.3.1");
+  assert.equal(parsed.version, "1.4.0");
+  assert.equal(parsed.worker, "cloudforge-app-vn-accounting");
+  assert.ok(parsed.validators.some((item) => item.doctype === "VN Tax Ruleset" && item.actions?.includes("submit")));
+
+  const evaluator = parsed.actions.find((item) => item.name === "tax-evaluate");
+  assert.ok(evaluator);
+  assert.equal(evaluator.permission_doctype, "VN Tax Ruleset");
+  assert.equal(evaluator.permission_action, "read");
+  assert.equal(evaluator.commit.method, "vn-accounting.tax.evaluate");
+  assert.ok(parsed.nav.some((item) => item.key === "tax-evaluate" && item.route === "/x/action:tax-evaluate"));
 
   for (const name of [
     "TT99 Account Map",
@@ -61,9 +70,11 @@ test("VN accounting exposes effective-dated TT99 statutory registries", async ()
 
   const tax = byName(parsed.doctypes, "VN Tax Ruleset");
   const taxFields = fields(tax);
-  for (const required of ["company", "rule_type", "taxpayer_segment", "effective_from", "expression_json", "test_vectors_json", "legal_rule", "source_hash"]) {
+  for (const required of ["company", "rule_type", "taxpayer_segment", "schema_version", "effective_from", "expression_json", "test_vectors_json", "legal_rule", "source_hash"]) {
     assert.equal(taxFields.get(required)?.required, true, `${required} must be required on VN Tax Ruleset`);
   }
+  assert.equal(taxFields.get("schema_version")?.read_only, true);
+  assert.equal(taxFields.get("schema_version")?.default, 1);
   assert.ok(tax.permissions.some((permission) => permission.role === "Tax Specialist" && permission.create));
   assert.ok(tax.permissions.some((permission) => permission.role === "Internal Auditor" && permission.read && !permission.write));
 
