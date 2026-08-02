@@ -1,0 +1,39 @@
+name: WS01 one-shot budget compile patch
+
+on:
+  push:
+    branches:
+      - agent/ent-01-finance-vn
+    paths:
+      - .github/workflows/ws01-one-shot-finance-budget-compile-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/ent-01-finance-vn
+          fetch-depth: 0
+      - name: Patch exact optional currency compile errors
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('server/packages/clouderp-erpnext/src/finance-budget.ts')
+          text = path.read_text()
+          old = 'currency: budget.data.currency,'
+          new = 'currency: requiredText(budget.data.currency, "Finance Budget currency"),'
+          count = text.count(old)
+          if count != 2:
+              raise SystemExit(f'expected exactly 2 currency assignments, found {count}')
+          path.write_text(text.replace(old, new))
+          PY
+          git rm .github/workflows/ws01-one-shot-finance-budget-compile-fix.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add server/packages/clouderp-erpnext/src/finance-budget.ts
+          git commit -m "fix(ws01): require normalized budget currency"
+          git push origin HEAD:agent/ent-01-finance-vn
