@@ -11,28 +11,29 @@ Ngày cập nhật: **2026-08-02**.
 - Exact current `main`: `866fcbd909914f01600def9ce86e3ce2347bb763` — merge PR `#198`.
 - Stock P0 QR/lineage + cleanup QA đã merge tại `80496b056fa0f23f18311e5822c21dc826bacd9f` — PR `#189`.
 - Bulk dirty-guard đã merge tại `2e5860b90410845545df33115c6f053925b65c72` — PR `#195`.
-- PR `#182` và `#192` là branch cũ đã đóng/superseded, không dùng làm live source.
+- PR `#182`, `#192` và Plastic ERP predecessor `#193` đã đóng/superseded, không dùng làm live source.
 - Branch `hotfix/alumdoor-print-list-delete` cũ không còn là current/default branch.
 
-## READY FOR REVIEW — Plastic ERP P0-A foundation
+## READY FOR MERGE — Plastic ERP P0-A foundation
 
 - Canonical PR: `#200` — `feat/plastic-erp-foundation-v3-20260802` từ exact `main` `866fcbd909914f01600def9ce86e3ce2347bb763`.
-- Executable head đã xác minh: `c212cc5e04956db08580bf4720fbde351bcfbcef`.
-- Required workflows trên executable head: **6/6 PASS**.
-  - CI `30739460336`: tests + typecheck + build SUCCESS.
-  - Sales Feature CI `30739460327`: SUCCESS.
-  - PR Validation `30739460351`: SUCCESS.
-  - Purchase Feature CI `30739460331`: SUCCESS.
-  - Inventory and Manufacturing CI `30739460337`: SUCCESS.
-  - UI Pull Request Validation `30739460356`: SUCCESS.
+- PR `#200` hiện **open + ready-for-review**, chưa merge.
+- Exact head `edcab9cae6ea6187886fdaff45f6f549b971a2e7` đã được xác minh **6/6 required workflows PASS** sau closing docs.
+  - CI `30739665768`: tests + typecheck + build SUCCESS.
+  - UI Pull Request Validation `30739665772`: SUCCESS.
+  - PR Validation `30739665784`: SUCCESS.
+  - Purchase Feature CI `30739665777`: SUCCESS.
+  - Sales Feature CI `30739665760`: SUCCESS.
+  - Inventory and Manufacturing CI `30739665792`: SUCCESS.
+- PR `#193` đã được comment superseded và đóng sau khi #200 đạt exact-head 6/6 PASS.
 - P0-A thêm canonical first-party app source cho process/material/machine/tool/recipe/QC/capacity/costing foundation và Plastic roles/workflows.
 - `Plastic Recipe Policy` mở rộng canonical `Bill of Materials`; không tạo BOM, stock ledger hay costing ledger cạnh tranh.
 - Machine/Tool liên kết core Asset/Workstation/Location; QC liên kết core Quality Inspection/Batch; Work Order và stock lifecycle vẫn là canonical authority cho các slice sau.
 - Regression source-contract + `pack-app --check` khóa Meta v1, external DocType closure, immutable approval transaction và machine/tool compatibility inputs.
-- Main CI đầu tiên fail vì `Plastic Machine.status` và `Plastic Tool.status` đụng kernel-reserved field `status`. Root cause đã sửa thành `operational_state`; không nới parser/kernel validation.
-- P0-B Production Run/shop-floor **chưa nằm trong PR #200** và phải reconcile với core Work Order + submitted Stock Entry Manufacture, không dựng ledger song song.
-- Closing docs là thay đổi non-executable; exact final PR head vẫn phải chạy lại required CI trước khi coi PR sẵn sàng merge.
-- Không deploy Cloudflare/production, không sửa secret/DNS và không mutate customer production data.
+- Main CI ban đầu fail vì `Plastic Machine.status` và `Plastic Tool.status` đụng kernel-reserved field `status`. Root cause đã sửa thành `operational_state`; không nới parser/kernel validation.
+- P0-B Production Run/shop-floor **không nằm trong PR #200** và phải reconcile với core Work Order + submitted Stock Entry Manufacture, không dựng ledger song song.
+- Commit status này chỉ đồng bộ post-validation PR state, không đổi executable Plastic ERP; exact current GitHub head vẫn phải được kiểm required CI trước khi dừng.
+- Không merge #200 nếu user chưa yêu cầu rõ. Không deploy Cloudflare/production, không sửa secret/DNS và không mutate customer production data.
 
 ## DONE — Stock P0 QR / lineage + cleanup QA
 
