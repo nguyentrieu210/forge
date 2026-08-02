@@ -1,9 +1,7 @@
 import type { Actor } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
-import {
-  D1ExactManufacturingCostingService as BaseExactManufacturingCostingService,
-  type ManufacturingCostAdjustmentInput,
-} from "./manufacturing-costing-exact-base.js";
+import { D1ExactManufacturingCostingService as BaseExactManufacturingCostingService } from "./manufacturing-costing-exact-base.js";
+import type { ManufacturingCostAdjustmentInput } from "./manufacturing-costing-base.js";
 
 export * from "./manufacturing-costing-exact-base.js";
 
