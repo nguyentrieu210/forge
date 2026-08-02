@@ -358,10 +358,11 @@ export class AppInstaller {
   private async assertExternalDocTypes(tenantId: string, manifest: AppManifest): Promise<void> {
     const missing: string[] = [];
     for (const external of manifest.externalDocTypes ?? []) {
-      // User is stored in the credential-safe auth directory, not in `documents`, so
-      // it intentionally has no ordinary DocType metadata row. It still has a typed
-      // Link provider in the Frappe API and is therefore a valid system dependency.
-      if (external.kind === "system" && external.name === "User") continue;
+      // System DocTypes are runtime providers, not ordinary tenant metadata rows.
+      // User lives in the auth directory; Role/DocType/File are platform services.
+      // Requiring any of them in doctype_definitions makes a valid system Link
+      // impossible to install on a correctly provisioned tenant.
+      if (external.kind === "system") continue;
       const installed = await this.metadata.getDocType(tenantId, external.name);
       if (!installed) missing.push(`${external.name} (${external.app})`);
     }
