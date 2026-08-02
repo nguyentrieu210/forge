@@ -10,6 +10,21 @@ Ngày cập nhật: **2026-08-02**.
 - GitHub là nguồn sự thật cho exact `main`, branch, PR, CI, merge và release evidence.
 - Đọc `RUNBOOK.md` -> `CURRENT_STATUS.md` -> `NEXT_TASKS.md` -> file này -> `DELIVERY_POLICY.md`.
 - Mọi SHA/branch dưới đây là checkpoint lịch sử; phải xác minh GitHub trước khi dùng.
+- Trước khi chọn validation phải phân loại task `FAST`, `STANDARD` hoặc `CRITICAL`; không mặc định chạy full pipeline cho mọi thay đổi.
+
+## Quality tier canonical
+
+- `FAST`: presentation/UI nhỏ, không đổi business logic/API/data/permission/tenant/schema. Review diff + kiểm tra tối thiểu theo blast radius; full test/lint/typecheck/build/CI không bắt buộc.
+- `STANDARD`: CRUD/API/product behavior thông thường. Chạy test liên quan + typecheck/lint/build/CI phù hợp.
+- `CRITICAL`: accounting/cash/AR-AP/inventory/costing/manufacturing/auth/permission/tenant/migration/production data. Chạy regression/integration/security/data-integrity gates đầy đủ.
+- Nếu scope thực tế lớn hơn dự kiến phải nâng tier; không hạ `CRITICAL` xuống `FAST` vì cần nhanh.
+- Build/install/stage chỉ để tạo artifact deploy là packaging, không tự động trở thành quality gate.
+
+## Active checkpoint — Risk-based quality gates
+
+- Canonical branch: `chore/risk-based-quality-gates-20260802`, base exact `main@cd1f76dbb47432e2312c6f5577eb955b48c3a856`.
+- `RUNBOOK.md` và `DELIVERY_POLICY.md` là source of truth cho 3 tier.
+- Task này docs/policy-only, không đổi runtime code hay production behavior.
 
 ## Active checkpoint — Auto deploy UI hotfix lane
 
@@ -25,7 +40,6 @@ Ngày cập nhật: **2026-08-02**.
   6. production path chỉ build MetaForge client -> stage bundle -> deploy Gateway;
   7. lint/test/typecheck vẫn do PR/normal CI chịu trách nhiệm, không làm chậm fast production path.
 - Sau khi lane này có trên `main`, AI sửa UI trên branch `hotfix/ui-*` và push là production deploy tự chạy, không bắt người dùng bấm GitHub Actions.
-- Theme fix PR #227 phải được replay trên branch hotfix mới từ exact main sau merge lane này để push event dùng workflow mới.
 
 ## Merged checkpoint — Warehouse Petty Cash per warehouse
 
