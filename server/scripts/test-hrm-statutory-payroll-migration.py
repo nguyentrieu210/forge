@@ -179,6 +179,28 @@ expect_rejected(
     ),
     "HR_STATUTORY_INPUT_INVALID",
 )
+expect_rejected(
+    lambda: insert_child(
+        "Salary Structure Assignment:ASSIGN-A",
+        "statutory_inputs",
+        "Payroll Rule Input Value",
+        "INPUT-A-MISSING",
+        3,
+        {"input_key": "insured"},
+    ),
+    "HR_STATUTORY_INPUT_INVALID",
+)
+expect_rejected(
+    lambda: insert_child(
+        "Salary Structure Assignment:ASSIGN-A",
+        "statutory_inputs",
+        "Payroll Rule Input Value",
+        "INPUT-A-BADKEY",
+        4,
+        {"input_key": "1 invalid key", "value": 1},
+    ),
+    "HR_STATUTORY_INPUT_INVALID",
+)
 
 insert_document("Salary Structure Assignment", "ASSIGN-B", 1, assignment_payload)
 insert_child(
@@ -225,6 +247,17 @@ assert json.loads(
 )["value"] == 5
 
 insert_document("Salary Structure", "SS-DUP", 0, {"company": "Demo", "payroll_rule": "RULE-MASTER"})
+expect_rejected(
+    lambda: insert_child(
+        "Salary Structure:SS-DUP",
+        "components",
+        "Salary Structure Component",
+        "COMP-BAD",
+        1,
+        {"salary_component": "PIT Invalid", "amount_type": "Payroll Rule Output"},
+    ),
+    "HR_PAYROLL_RULE_OUTPUT_INVALID",
+)
 insert_child(
     "Salary Structure:SS-DUP",
     "components",
