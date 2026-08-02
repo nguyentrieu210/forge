@@ -36,8 +36,35 @@ const docKeys = presentDocuments.map((row) => String(row.doc_key));
 const voucherConditions = documents.map((record) => `(voucher_type=${quote(record.doctype)} AND voucher_no=${quote(record.name)})`);
 const documentConditions = documents.map((record) => `(doctype=${quote(record.doctype)} AND name=${quote(record.name)})`);
 const bundleNames = documents.filter((record) => record.doctype === "Serial and Batch Bundle").map((record) => record.name);
+const workOrders = documents.filter((record) => record.doctype === "Work Order").map((record) => record.name);
+const workOrderList = workOrders.map(quote).join(",");
+const costSnapshotRows = workOrders.length
+  ? query(`SELECT snapshot_id FROM manufacturing_cost_snapshots WHERE tenant_id=${quote(tenantId)} AND work_order IN (${workOrderList});`)
+  : [];
+const costSnapshotIds = costSnapshotRows.map((row) => String(row.snapshot_id));
+
+// Costing snapshots/freeze/adjustments are immutable in production by design. Local browser
+// QA still has to leave zero residue, so remove ONLY exact Work Orders from the manifest.
+// The three no-delete triggers are restored in finally from the authoritative migration even
+// if an exact delete fails. This cleanup script already refuses prod/remote configs above.
+if (workOrders.length) {
+  const costingMigration = readFileSync(resolve(new URL("../migrations/tenant/0037_manufacturing_costing.sql", import.meta.url).pathname), "utf8");
+  try {
+    execute([
+      "DROP TRIGGER IF EXISTS manufacturing_cost_adjustment_no_delete;",
+      "DROP TRIGGER IF EXISTS manufacturing_cost_freeze_no_delete;",
+      "DROP TRIGGER IF EXISTS manufacturing_cost_snapshot_no_delete;",
+      `DELETE FROM manufacturing_cost_adjustments WHERE tenant_id=${quote(tenantId)} AND snapshot_id IN (SELECT snapshot_id FROM manufacturing_cost_snapshots WHERE tenant_id=${quote(tenantId)} AND work_order IN (${workOrderList}));`,
+      `DELETE FROM manufacturing_cost_freezes WHERE tenant_id=${quote(tenantId)} AND work_order IN (${workOrderList});`,
+      `DELETE FROM manufacturing_cost_snapshots WHERE tenant_id=${quote(tenantId)} AND work_order IN (${workOrderList});`,
+    ].join("\n"));
+  } finally {
+    execute(costingMigration);
+  }
+}
 
 const statements = [
+  workOrders.length ? `DELETE FROM manufacturing_progress_entries WHERE tenant_id=${quote(tenantId)} AND work_order IN (${workOrderList});` : "",
   voucherConditions.length ? `DELETE FROM stock_bundle_usage_entries WHERE tenant_id=${quote(tenantId)} AND (${voucherConditions.join(" OR ")});` : "",
   voucherConditions.length ? `DELETE FROM stock_ledger_entries WHERE tenant_id=${quote(tenantId)} AND (${voucherConditions.join(" OR ")});` : "",
   voucherConditions.length ? `DELETE FROM gl_entries WHERE tenant_id=${quote(tenantId)} AND (${voucherConditions.join(" OR ")});` : "",
@@ -61,7 +88,12 @@ const residueChecks = [
   `SELECT 'documents' AS source,COUNT(*) AS residue FROM documents WHERE tenant_id=${quote(tenantId)} AND (${documentConditions.join(" OR ")})`,
   `SELECT 'document_children' AS source,COUNT(*) AS residue FROM document_children WHERE tenant_id=${quote(tenantId)} AND parent_key IN (${docKeys.map(quote).join(",")})`,
   `SELECT 'stock_ledger_entries' AS source,COUNT(*) AS residue FROM stock_ledger_entries WHERE tenant_id=${quote(tenantId)} AND (${voucherConditions.join(" OR ")})`,
+  `SELECT 'gl_entries' AS source,COUNT(*) AS residue FROM gl_entries WHERE tenant_id=${quote(tenantId)} AND (${voucherConditions.join(" OR ")})`,
   `SELECT 'stock_bundle_usage_entries' AS source,COUNT(*) AS residue FROM stock_bundle_usage_entries WHERE tenant_id=${quote(tenantId)} AND ((${voucherConditions.join(" OR ")})${bundleNames.length ? ` OR bundle_name IN (${bundleNames.map(quote).join(",")})` : ""})`,
+  workOrders.length ? `SELECT 'manufacturing_progress_entries' AS source,COUNT(*) AS residue FROM manufacturing_progress_entries WHERE tenant_id=${quote(tenantId)} AND work_order IN (${workOrderList})` : "",
+  workOrders.length ? `SELECT 'manufacturing_cost_snapshots' AS source,COUNT(*) AS residue FROM manufacturing_cost_snapshots WHERE tenant_id=${quote(tenantId)} AND work_order IN (${workOrderList})` : "",
+  workOrders.length ? `SELECT 'manufacturing_cost_freezes' AS source,COUNT(*) AS residue FROM manufacturing_cost_freezes WHERE tenant_id=${quote(tenantId)} AND work_order IN (${workOrderList})` : "",
+  costSnapshotIds.length ? `SELECT 'manufacturing_cost_adjustments' AS source,COUNT(*) AS residue FROM manufacturing_cost_adjustments WHERE tenant_id=${quote(tenantId)} AND snapshot_id IN (${costSnapshotIds.map(quote).join(",")})` : "",
   users.length ? `SELECT 'users' AS source,COUNT(*) AS residue FROM users WHERE tenant_id=${quote(tenantId)} AND user_id IN (${users.map((record) => quote(record.user_id)).join(",")})` : "",
   users.length ? `SELECT 'user_roles' AS source,COUNT(*) AS residue FROM user_roles WHERE tenant_id=${quote(tenantId)} AND user_id IN (${users.map((record) => quote(record.user_id)).join(",")})` : "",
   users.length ? `SELECT 'user_permissions' AS source,COUNT(*) AS residue FROM user_permissions WHERE tenant_id=${quote(tenantId)} AND user IN (${users.map((record) => quote(record.user_id)).join(",")})` : "",
@@ -70,7 +102,7 @@ const residue = residueChecks.flatMap((sql) => query(`${sql};`));
 const dirty = residue.filter((row) => Number(row.residue) !== 0);
 if (dirty.length > 0) throw new Error(`QA cleanup residue remains: ${JSON.stringify(dirty)}`);
 
-console.log(JSON.stringify({ ok: true, tenant_id: tenantId, documents: documents.length, users: users.length, residue }, null, 2));
+console.log(JSON.stringify({ ok: true, tenant_id: tenantId, documents: documents.length, users: users.length, work_orders: workOrders.length, costing_snapshots: costSnapshotIds.length, residue }, null, 2));
 
 function readManifest(path) {
   const lines = readFileSync(path, "utf8").split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
