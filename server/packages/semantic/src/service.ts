@@ -6,6 +6,7 @@ import type {
   SemanticQueryRequest,
   SemanticResultColumn,
 } from "./index.js";
+import { assertSemanticQueryRuntimeInput } from "./validation.js";
 
 export interface SemanticAccessRequest {
   tenantId: string;
@@ -40,6 +41,9 @@ export class D1SemanticQueryService {
   ) {}
 
   async run(request: SemanticQueryRequest): Promise<SemanticQueryResult> {
+    // HTTP/AI callers are runtime data, not TypeScript. Reject values D1 cannot safely bind
+    // before compilation, authorization side effects, or any database preparation.
+    assertSemanticQueryRuntimeInput(request);
     const compiled = this.compiler.compile(request);
     await this.authorize(request, compiled);
     const rows = await this.db.prepare(compiled.sql).bind(...compiled.params).all<Record<string, JsonValue>>();
