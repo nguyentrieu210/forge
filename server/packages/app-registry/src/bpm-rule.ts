@@ -155,7 +155,6 @@ export function parseDecisionRuleSet(value: unknown, knownFields?: ReadonlySet<s
 function valueOf(operand: DecisionOperand, document: JsonObject): JsonValue | undefined {
   return operand.kind === "field" ? document[operand.field!] : operand.value;
 }
-
 type DecimalParts = { sign: 1 | -1; digits: bigint; scale: number };
 function decimalParts(value: JsonValue | undefined): DecimalParts | null {
   if (typeof value !== "string" && typeof value !== "number") return null;
@@ -197,7 +196,7 @@ export function evaluateDecisionExpression(expression: DecisionExpression, docum
     const exists = actual !== undefined && actual !== null && actual !== "";
     return exists === expression.exists;
   }
-  const left = valueOf(expression.left!); const right = valueOf(expression.right!);
+  const left = valueOf(expression.left!, document); const right = valueOf(expression.right!, document);
   const asDecimal = decimalMode(expression);
   if (expression.op === "eq") return equals(left, right, asDecimal);
   if (expression.op === "ne") return !equals(left, right, asDecimal);
