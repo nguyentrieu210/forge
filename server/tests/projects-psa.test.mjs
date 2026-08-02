@@ -24,12 +24,16 @@ function transition(workflow, action) {
   return found;
 }
 
-test("projects package exposes portfolio, planning, execution, capacity and acceptance controls", () => {
+test("projects package exposes portfolio, planning, execution, capacity, acceptance and validators", () => {
   const app = json("app.json");
   const roles = json("roles.json");
 
   assert.equal(app.id, "projects");
-  assert.equal(app.version, "1.2.0");
+  assert.equal(app.version, "1.3.0");
+  assert.equal(app.worker, "cloudforge-app-ws07");
+  for (const doctype of ["Project Portfolio", "Project Template", "Project Capacity Plan", "Project", "Project Task", "Project Timesheet", "Project Acceptance Certificate"]) {
+    assert.ok(app.validators.some((entry) => entry.doctype === doctype), `missing validator ${doctype}`);
+  }
   for (const key of [
     "Project Portfolio", "Project Template", "Project Capacity Plan", "Project", "Project Task",
     "Project Change Order", "Project Acceptance Certificate", "Project Timesheet",
