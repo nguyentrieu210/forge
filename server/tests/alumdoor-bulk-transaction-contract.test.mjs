@@ -31,7 +31,13 @@ test("Alumdoor 2.2.1 compiles Purchase Receipt Bulk Transaction through canonica
   assert.equal(spec.maxRows, 100);
   assert.equal(spec.allowPaste, true);
   assert.deepEqual(spec.columns.map((column) => column.fieldname), [
-    "item_code", "length_m", "qty_bar", "actual_weight_kg", "rate", "color", "is_stamped",
+    "item_code",
+    "length_m",
+    "qty_bar",
+    "actual_weight_kg",
+    "rate",
+    "color",
+    "is_stamped",
   ]);
   assert.ok(spec.columns.every((column) => column.required));
 });
