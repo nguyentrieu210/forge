@@ -60,6 +60,8 @@ CREATE INDEX IF NOT EXISTS idx_migration_rows_status
 CREATE TABLE IF NOT EXISTS migration_checkpoints (
   tenant_id TEXT NOT NULL,
   run_id TEXT NOT NULL,
+  source_id TEXT NOT NULL,
+  adapter TEXT NOT NULL,
   sequence INTEGER NOT NULL CHECK (sequence > 0),
   cursor TEXT NOT NULL,
   batch_fingerprint TEXT NOT NULL CHECK (length(batch_fingerprint)=64),
