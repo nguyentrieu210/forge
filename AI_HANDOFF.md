@@ -10,6 +10,15 @@ Tài liệu này chỉ lưu facts, checkpoints và business invariants của For
 - GitHub lưu code, branch, PR, commit và release history.
 - `CURRENT_STATUS.md` lưu trạng thái dự án; `NEXT_TASKS.md` lưu backlog.
 
+## VN Accounting Period Integrity Hardening
+
+- Canonical branch: `fix/vn-accounting-period-integrity-20260803-r8`, clean-based on `main@560c7cfc140f04e5ca555c87dfa31541c8867ec1`.
+- HRM đã dùng migration `0039-0041`; accounting hardening dùng migration append-only `0042_vn_accounting_period_hardening.sql`.
+- `0042` thay accounting-period guards cũ và bổ sung: valid/non-overlap period theo tenant/company/branch; Hard Locked chặn submit/cancel/scope move; Soft Closed chỉ cho approved adjustment khi period cho phép và có reason + approver.
+- Guard bao phủ Journal/Invoice/Payment, Purchase Receipt, Delivery Note, Payroll, Stock Reconciliation/Stock Entry và Warehouse Cash Voucher/Transfer.
+- Regression riêng `server/scripts/test-vn-accounting-period-hardening.py` replay `0035+0039+0040+0041+0042` để không sửa acceptance HRM hiện có.
+- Targeted SQLite regression của logic `0042` đã PASS trong session. Full exact regression script, Python syntax và relevant backend/typecheck/lint/build trên full checkout vẫn chưa có evidence; chưa PR/merge/deploy production.
+
 ## HRM operational 1.5
 
 - PR `#261` squash-merge tại `b3dc2cf59ec5c85a977833da6edc986ac1bfe6fb`.
