@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Acceptance regression for VN accounting integrity migrations 0043-0045."""
+"""Acceptance regression for VN accounting integrity migrations 0043-0047."""
 
 import json
 import sqlite3
@@ -9,6 +9,8 @@ ROOT = Path(__file__).resolve().parents[1]
 SQL43 = (ROOT / "migrations/tenant/0043_vn_accounting_integrity_closure.sql").read_text(encoding="utf-8")
 SQL44 = (ROOT / "migrations/tenant/0044_vn_accounting_immutable_controls.sql").read_text(encoding="utf-8")
 SQL45 = (ROOT / "migrations/tenant/0045_vn_accounting_fx_and_compatibility.sql").read_text(encoding="utf-8")
+SQL46 = (ROOT / "migrations/tenant/0046_vn_accounting_single_source_and_valuation.sql").read_text(encoding="utf-8")
+SQL47 = (ROOT / "migrations/tenant/0047_vn_accounting_base_currency_guards.sql").read_text(encoding="utf-8")
 NOW = "2026-08-03T00:00:00Z"
 
 
@@ -20,6 +22,10 @@ def base_db():
           tenant_id TEXT NOT NULL, record_type TEXT NOT NULL, name TEXT NOT NULL,
           disabled INTEGER NOT NULL DEFAULT 0, data_json TEXT NOT NULL, modified_at TEXT NOT NULL,
           PRIMARY KEY(tenant_id,record_type,name)
+        );
+        CREATE TABLE accounting_period_locks(
+          tenant_id TEXT NOT NULL, company TEXT NOT NULL, lock_date TEXT NOT NULL, modified_at TEXT NOT NULL,
+          PRIMARY KEY(tenant_id,company)
         );
         CREATE TABLE documents(
           tenant_id TEXT NOT NULL, doc_key TEXT NOT NULL, doctype TEXT NOT NULL, name TEXT NOT NULL,
@@ -77,9 +83,15 @@ def base_db():
 
 
 def migrate(db):
-    db.executescript(SQL43)
-    db.executescript(SQL44)
-    db.executescript(SQL45)
+    for sql in (SQL43, SQL44, SQL45, SQL46, SQL47):
+        db.executescript(sql)
+
+
+def insert_master(db, record_type, name, data, tenant="demo"):
+    db.execute(
+        "INSERT INTO master_records VALUES(?,?,?,?,?,?)",
+        (tenant, record_type, name, 0, json.dumps(data), NOW),
+    )
 
 
 def insert_doc(db, doctype, name, payload, docstatus=1, tenant="demo"):
@@ -91,23 +103,22 @@ def insert_doc(db, doctype, name, payload, docstatus=1, tenant="demo"):
 
 
 def insert_account(db, name, company, root_type="Asset", account_type=""):
-    db.execute(
-        "INSERT INTO master_records VALUES(?,?,?,?,?,?)",
-        ("demo", "Account", name, 0, json.dumps({"company": company, "root_type": root_type, "account_type": account_type}), NOW),
-    )
+    insert_master(db, "Account", name, {"company": company, "root_type": root_type, "account_type": account_type})
 
 
-def insert_gl(db, voucher_type, voucher_no, line_key, account, debit=0, credit=0, scale=0, revision=1, dimensions=None):
+def insert_gl(db, voucher_type, voucher_no, line_key, account, debit=0, credit=0,
+              currency="VND", scale=0, revision=1, posting="2026-06-15T08:00:00Z", dimensions=None):
     db.execute(
         "INSERT INTO gl_entries VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         ("demo", voucher_type, voucher_no, revision, line_key, account, None, None, debit, credit,
-         "VND", scale, None, json.dumps(dimensions or {}), None, "2026-06-15T08:00:00Z"),
+         currency, scale, None, json.dumps(dimensions or {}), None, posting),
     )
 
 
-def stock_row(voucher_type, voucher_no, line_key="S1", value=500, posting="2026-06-25T08:00:00Z"):
-    return ("demo", voucher_type, voucher_no, 1, line_key, "ITEM", "WH", 1_000_000,
-            value, value, 6, 0, "VND", posting, None, None, 0)
+def stock_row(voucher_type, voucher_no, line_key="S1", qty=1_000_000, rate=500, value=500,
+              currency="VND", scale=0, posting="2026-06-25T08:00:00Z"):
+    return ("demo", voucher_type, voucher_no, 1, line_key, "ITEM", "WH", qty,
+            rate, value, 6, scale, currency, posting, None, None, 0)
 
 
 def expect(marker, fn):
@@ -119,7 +130,7 @@ def expect(marker, fn):
     raise AssertionError(f"expected rejection: {marker}")
 
 
-# Historical orphan ledger stops 0043 instead of receiving guessed legal-entity scope.
+# 0043 refuses historical ledger rows that cannot be mapped to a legal entity.
 orphan = base_db()
 orphan.execute(
     "INSERT INTO gl_entries VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
@@ -130,31 +141,36 @@ expect("CHECK constraint failed", lambda: orphan.executescript(SQL43))
 db = base_db()
 migrate(db)
 
-# 0045 exposes first-class account-currency metadata without duplicating fields.
+# 0045 exposes first-class account-currency metadata exactly once.
 account_meta = json.loads(db.execute("SELECT metadata_json FROM doctype_definitions WHERE doctype='Account'").fetchone()[0])
 assert [f["fieldname"] for f in account_meta["fields"]].count("account_currency") == 1
 je_meta = json.loads(db.execute("SELECT metadata_json FROM doctype_definitions WHERE doctype='Journal Entry Account'").fetchone()[0])
 for field in ("account_currency", "exchange_rate", "debit_in_account_currency", "credit_in_account_currency"):
     assert [f["fieldname"] for f in je_meta["fields"]].count(field) == 1, field
 
+# Legal entities, currencies and accounts used by the acceptance fixture.
+for company in ("COMP-A", "COMP-B", "COMP-C"):
+    insert_master(db, "Company", company, {"default_currency": "VND"})
+insert_master(db, "Currency", "VND", {"currency_scale": 0})
+insert_master(db, "Currency", "USD", {"currency_scale": 2})
 for args in [
     ("111-A", "COMP-A", "Asset", "Cash"),
     ("111-B", "COMP-B", "Asset", "Cash"),
     ("331-A", "COMP-A", "Liability", "Payable"),
     ("156-A", "COMP-A", "Asset", "Stock"),
     ("338-A", "COMP-A", "Liability", "Stock Received But Not Billed"),
+    ("632-A", "COMP-A", "Expense", "Cost of Goods Sold"),
     ("811-A", "COMP-A", "Expense", "Stock Adjustment"),
 ]:
     insert_account(db, *args)
 
-# Company/branch scope and scale=0 reporting.
+# Company/branch scope and VND scale=0 reporting are exact.
 insert_doc(db, "Journal Entry", "JV-A", {"company": "COMP-A", "branch": "BR-A", "posting_at": "2026-06-15T08:00:00Z"})
 insert_gl(db, "Journal Entry", "JV-A", "D", "111-A", debit=1000)
 insert_gl(db, "Journal Entry", "JV-A", "C", "811-A", credit=1000)
 insert_doc(db, "Journal Entry", "JV-B", {"company": "COMP-B", "branch": "BR-B", "posting_at": "2026-06-15T08:00:00Z"})
 insert_gl(db, "Journal Entry", "JV-B", "D", "111-B", debit=2000)
 insert_gl(db, "Journal Entry", "JV-B", "C", "111-B", credit=2000)
-db.commit()
 rows = db.execute("SELECT company,branch,account,debit,credit,balance FROM trial_balance ORDER BY company,account").fetchall()
 assert ("COMP-A", "BR-A", "111-A", 1000.0, 0.0, 1000.0) in rows
 assert len(db.execute("SELECT DISTINCT company FROM general_ledger_report").fetchall()) == 2
@@ -164,7 +180,7 @@ expect("GL_ACCOUNT_COMPANY_MISMATCH", lambda: insert_gl(db, "Journal Entry", "JV
 insert_doc(db, "Journal Entry", "JV-BAD-BRANCH", {"company": "COMP-A", "branch": "BR-A", "posting_at": NOW})
 expect("GL_BRANCH_SCOPE_MISMATCH", lambda: insert_gl(db, "Journal Entry", "JV-BAD-BRANCH", "D", "111-A", debit=100, dimensions={"branch": "BR-X"}))
 
-# AR/AP cannot cross legal entities and Payment Allocation obeys period lock.
+# AR/AP cannot cross legal entities and Payment Allocation follows VN period locks.
 insert_doc(db, "Payment Allocation", "ALLOC-A", {"company": "COMP-A", "posting_at": "2026-06-20T08:00:00Z"})
 insert_doc(db, "Purchase Invoice", "PINV-B", {"company": "COMP-B", "posting_at": "2026-06-20T08:00:00Z"})
 expect("PAYMENT_REFERENCE_COMPANY_MISMATCH", lambda: db.execute(
@@ -180,47 +196,74 @@ expect("ACCOUNTING_PERIOD_HARD_LOCKED", lambda: insert_doc(db, "Payment Allocati
     "company": "COMP-A", "posting_at": "2026-07-10T08:00:00Z"
 }))
 
-# Non-VN company keeps legacy stock-only compatibility.
+# A non-VN company keeps legacy stock-only behavior.
 insert_doc(db, "Purchase Receipt", "PR-LEGACY", {"company": "COMP-C", "posting_at": "2026-06-20T08:00:00Z"})
 db.execute("INSERT INTO stock_ledger_entries VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", stock_row("Purchase Receipt", "PR-LEGACY", posting="2026-06-20T08:00:00Z"))
 
-# Approved policy activates strict stock->GL parity.
-insert_doc(db, "VN Accounting Policy", "POL-1", {
-    "company": "COMP-A", "effective_from": "2026-01-01", "effective_to": "2026-12-31",
-    "inventory_account": "156-A", "stock_adjustment_account": "811-A",
-    "stock_received_but_not_billed_account": "338-A"
-})
+# Existing legacy lock is superseded when VN policy becomes authoritative.
+db.execute("INSERT INTO accounting_period_locks VALUES(?,?,?,?)", ("demo", "COMP-A", "2026-05-31", NOW))
+policy = {
+    "company": "COMP-A", "accounting_currency": "VND",
+    "effective_from": "2026-01-01", "effective_to": "2026-12-31",
+    "inventory_account": "156-A", "cogs_account": "632-A", "stock_adjustment_account": "811-A",
+    "stock_received_but_not_billed_account": "338-A",
+}
+insert_doc(db, "VN Accounting Policy", "POL-1", policy)
+assert db.execute("SELECT COUNT(*) FROM accounting_period_locks WHERE company='COMP-A'").fetchone()[0] == 0
+expect("USE_VN_ACCOUNTING_PERIOD", lambda: db.execute(
+    "INSERT INTO accounting_period_locks VALUES(?,?,?,?)", ("demo", "COMP-A", "2026-06-30", NOW)
+))
 expect("VN_ACCOUNTING_POLICY_OVERLAP", lambda: insert_doc(db, "VN Accounting Policy", "POL-2", {
-    "company": "COMP-A", "effective_from": "2026-06-01", "effective_to": "2027-01-01"
+    **policy, "effective_from": "2026-06-01", "effective_to": "2027-01-01"
+}))
+expect("VN_ACCOUNTING_POLICY_CONTROLS_REQUIRED", lambda: insert_doc(db, "VN Accounting Policy", "POL-GAP", {
+    "company": "COMP-B", "accounting_currency": "VND", "effective_from": "2026-01-01"
 }))
 
+# Base ledgers reject any currency/scale other than Company.default_currency under policy.
+insert_doc(db, "Journal Entry", "JV-FX-BAD-GL", {"company": "COMP-A", "posting_at": "2026-06-21T08:00:00Z"})
+expect("GL_COMPANY_CURRENCY_MISMATCH", lambda: insert_gl(
+    db, "Journal Entry", "JV-FX-BAD-GL", "D", "111-A", debit=100, currency="USD", scale=2, posting="2026-06-21T08:00:00Z"
+))
+
+# Purchase Receipt requires balanced base-currency GL under active policy.
 insert_doc(db, "Purchase Receipt", "PR-1", {"company": "COMP-A", "posting_at": "2026-06-25T08:00:00Z"})
 expect("PURCHASE_RECEIPT_GL_REQUIRED", lambda: db.execute(
     "INSERT INTO stock_ledger_entries VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", stock_row("Purchase Receipt", "PR-1")
 ))
-insert_gl(db, "Purchase Receipt", "PR-1", "STOCK", "156-A", debit=500)
-insert_gl(db, "Purchase Receipt", "PR-1", "SRBNB", "338-A", credit=500)
+insert_gl(db, "Purchase Receipt", "PR-1", "STOCK", "156-A", debit=500, posting="2026-06-25T08:00:00Z")
+insert_gl(db, "Purchase Receipt", "PR-1", "SRBNB", "338-A", credit=500, posting="2026-06-25T08:00:00Z")
 db.execute("INSERT INTO stock_ledger_entries VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", stock_row("Purchase Receipt", "PR-1"))
 
 insert_doc(db, "Purchase Receipt", "PR-UNBAL", {"company": "COMP-A", "posting_at": "2026-06-26T08:00:00Z"})
-insert_gl(db, "Purchase Receipt", "PR-UNBAL", "ONLY", "156-A", debit=500)
+insert_gl(db, "Purchase Receipt", "PR-UNBAL", "ONLY", "156-A", debit=500, posting="2026-06-26T08:00:00Z")
 expect("PURCHASE_RECEIPT_GL_UNBALANCED", lambda: db.execute(
     "INSERT INTO stock_ledger_entries VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", stock_row("Purchase Receipt", "PR-UNBAL", posting="2026-06-26T08:00:00Z")
 ))
-insert_gl(db, "Purchase Receipt", "PR-UNBAL", "BALANCE", "338-A", credit=500)
+insert_gl(db, "Purchase Receipt", "PR-UNBAL", "BALANCE", "338-A", credit=500, posting="2026-06-26T08:00:00Z")
 
+# Stock Entry is equally strict; foreign base-ledger currency is rejected.
 insert_doc(db, "Stock Entry", "STE-1", {"company": "COMP-A", "purpose": "Material Receipt", "posting_at": "2026-06-27T08:00:00Z"})
 expect("STOCK_ENTRY_GL_REQUIRED", lambda: db.execute(
     "INSERT INTO stock_ledger_entries VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", stock_row("Stock Entry", "STE-1", posting="2026-06-27T08:00:00Z")
 ))
-insert_gl(db, "Stock Entry", "STE-1", "STOCK", "156-A", debit=500)
-insert_gl(db, "Stock Entry", "STE-1", "OFFSET", "811-A", credit=500)
+insert_gl(db, "Stock Entry", "STE-1", "STOCK", "156-A", debit=500, posting="2026-06-27T08:00:00Z")
+insert_gl(db, "Stock Entry", "STE-1", "OFFSET", "811-A", credit=500, posting="2026-06-27T08:00:00Z")
+expect("STOCK_COMPANY_CURRENCY_MISMATCH", lambda: db.execute(
+    "INSERT INTO stock_ledger_entries VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+    stock_row("Stock Entry", "STE-1", line_key="BAD-CUR", currency="USD", scale=2, posting="2026-06-27T08:00:00Z")
+))
 db.execute("INSERT INTO stock_ledger_entries VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", stock_row("Stock Entry", "STE-1", posting="2026-06-27T08:00:00Z"))
 
-# Missing policy accounts surface before operational failure.
-insert_doc(db, "VN Accounting Policy", "POL-GAP", {"company": "COMP-GAP", "effective_from": "2026-01-01"})
-assert db.execute("SELECT code FROM accounting_integrity_exceptions WHERE company='COMP-GAP'").fetchall() == [("VN_POLICY_STOCK_ACCOUNTS_MISSING",)]
-db.execute("DELETE FROM documents WHERE doc_key='VN Accounting Policy:POL-GAP'")
+# Delivery Note/COGS must accompany every valued stock issue under policy.
+insert_doc(db, "Delivery Note", "DN-1", {"company": "COMP-A", "issue_purpose": "Bán hàng", "posting_at": "2026-06-28T08:00:00Z"})
+issue = stock_row("Delivery Note", "DN-1", qty=-1_000_000, rate=500, value=-500, posting="2026-06-28T08:00:00Z")
+expect("DELIVERY_NOTE_GL_REQUIRED", lambda: db.execute(
+    "INSERT INTO stock_ledger_entries VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", issue
+))
+insert_gl(db, "Delivery Note", "DN-1", "COGS", "632-A", debit=500, posting="2026-06-28T08:00:00Z")
+insert_gl(db, "Delivery Note", "DN-1", "STOCK", "156-A", credit=500, posting="2026-06-28T08:00:00Z")
+db.execute("INSERT INTO stock_ledger_entries VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", issue)
 
 # Approved legal/account-map/tax versions cannot be edited or cancelled.
 for doctype, name, payload, marker in [
@@ -234,7 +277,7 @@ for doctype, name, payload, marker in [
         "UPDATE documents SET payload_json=? WHERE doc_key=?", (json.dumps({**payload, "tampered": 1}), f"{doctype}:{name}")
     ))
 
-# Resolved reconciliation evidence cannot be edited or cancelled.
+# Resolved reconciliation evidence is immutable and ties to a submitted correction.
 expect("VN_RECONCILIATION_DIFFERENCE_MISMATCH", lambda: insert_doc(db, "VN Reconciliation Case", "REC-BAD", {
     "company": "COMP-A", "expected_minor": 100, "actual_minor": 90, "difference_minor": 99
 }, docstatus=0))
@@ -244,7 +287,7 @@ insert_doc(db, "VN Reconciliation Case", "REC-1", {
 })
 expect("VN_RECONCILIATION_RESOLVED_IMMUTABLE", lambda: db.execute("UPDATE documents SET docstatus=2 WHERE doc_key='VN Reconciliation Case:REC-1'"))
 
-# Approval identity comes from authenticated version history, not client payload.
+# Approval identity comes from authenticated version history, never client payload.
 db.execute(
     "INSERT INTO versions VALUES(?,?,?,?,?,?,?,?)",
     ("demo", "VN Legal Rule:RULE-1", 1, "cmd-rule", "chief@example.test", "submit",
@@ -252,6 +295,7 @@ db.execute(
 )
 assert db.execute("SELECT approved_by,approved_at FROM accounting_approval_evidence WHERE name='RULE-1'").fetchone() == ("chief@example.test", NOW)
 
-# Accepted fixtures leave no CRITICAL integrity exception.
-assert db.execute("SELECT code FROM accounting_integrity_exceptions WHERE severity='CRITICAL'").fetchall() == []
-print("VN_ACCOUNTING_INTEGRITY_CLOSURE_0043_0045_PASS")
+# Accepted fixtures leave no critical integrity exception.
+critical = db.execute("SELECT code,voucher_type,voucher_no FROM accounting_integrity_exceptions WHERE severity='CRITICAL'").fetchall()
+assert critical == [], critical
+print("VN_ACCOUNTING_INTEGRITY_CLOSURE_0043_0047_PASS")
