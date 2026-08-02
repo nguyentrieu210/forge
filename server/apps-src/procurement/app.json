@@ -29,12 +29,25 @@
         "in_standard_filter": true
       },
       "insert_after": "supplier_quotation"
+    },
+    {
+      "name": "Purchase Order-supplier_selection",
+      "dt": "Purchase Order",
+      "fieldname": "supplier_selection",
+      "field": {
+        "label": "Quyết định chọn nhà cung cấp",
+        "fieldtype": "Link",
+        "options": "Supplier Selection",
+        "in_standard_filter": true
+      },
+      "insert_after": "supplier_contract"
     }
   ],
   "nav": [
     { "key": "Supplier Qualification", "label": "Duyệt nhà cung cấp", "kind": "doctype", "icon": "badge-check", "group": "Nhà cung cấp" },
     { "key": "Supplier Rating", "label": "Đánh giá nhà cung cấp", "kind": "doctype", "icon": "star", "group": "Nhà cung cấp" },
-    { "key": "Supplier Contract", "label": "Hợp đồng nhà cung cấp", "kind": "doctype", "icon": "file-signature", "group": "Nhà cung cấp" }
+    { "key": "Supplier Contract", "label": "Hợp đồng nhà cung cấp", "kind": "doctype", "icon": "file-signature", "group": "Nhà cung cấp" },
+    { "key": "Supplier Selection", "label": "Quyết định chọn NCC", "kind": "doctype", "icon": "list-checks", "group": "Mua hàng" }
   ],
   "hooks": [],
   "client": {
