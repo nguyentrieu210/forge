@@ -38,7 +38,7 @@ import { StockReservationIntegrityController } from "./stock-reservation-integri
 import { StockReconciliationIntegrityController } from "./stock-reconciliation-integrity.js";
 import { VersionedBillOfMaterialsController } from "./manufacturing-lifecycle.js";
 import { StockUomSnapshotWorkOrderController } from "./manufacturing-work-order-guard.js";
-import { RolloutManufacturingStockEntryController } from "./manufacturing-rollout.js";
+import { StockEntryIntegrityController } from "./stock-entry-integrity.js";
 import {
   WarehouseCashCountController, WarehouseCashFundController,
   WarehouseCashTransferController, WarehouseCashVoucherController,
@@ -51,7 +51,7 @@ export function registerErpNextCoreControllers(registry: ControllerRegistry): Co
     .register(new StockReturnController())
     .register(new VersionedBillOfMaterialsController())
     .register(new StockUomSnapshotWorkOrderController())
-    .register(new RolloutManufacturingStockEntryController())
+    .register(new StockEntryIntegrityController())
     .register(new AssetController())
     .register(new AssetDepreciationController())
     .register(new ProductionPlanController())
