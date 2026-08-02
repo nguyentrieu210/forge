@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-const EXPECTED_METADATA_VERSION = "2.1.0";
+const EXPECTED_METADATA_VERSION = "2.2.1";
 const ITEM_NATURES = new Set(["Hàng tồn kho", "Dịch vụ", "Tài sản"]);
 const MATERIAL_STAGES = new Set(["Nguyên vật liệu", "Vật tư tiêu hao", "Bán thành phẩm", "Thành phẩm", "Hàng hoá"]);
 const SUPPLY_TYPES = new Set(["Mua ngoài", "Tự sản xuất", "Mua hoặc sản xuất"]);
