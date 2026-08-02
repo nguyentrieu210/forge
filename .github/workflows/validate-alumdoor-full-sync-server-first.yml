@@ -1,0 +1,50 @@
+name: Validate Alumdoor Full Sync Server First
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/one-time-alumdoor-full-sync.yml
+      - .github/workflows/validate-alumdoor-full-sync-server-first.yml
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      VITE_FORGE_RELEASE_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile --prefer-offline
+      - run: pnpm --filter cloudforge run build
+      - run: node server/scripts/forge-app.mjs server/apps-src/hrm --dry-run
+      - run: node server/scripts/forge-app.mjs server/apps-src/vn-accounting --dry-run
+      - run: node server/scripts/forge-app.mjs server/briefs/alumdoor-v2.json --dry-run
+      - name: Assert worktree clean enough for migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { execFileSync } from "node:child_process";
+          import { meaningfulGitStatus } from "./server/scripts/git-worktree.mjs";
+          const status = execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" });
+          console.log(status || "git status clean");
+          if (meaningfulGitStatus(status)) process.exit(1);
+          NODE
+      - run: pnpm --filter metaforge run build
+      - run: node server/scripts/stage-client-bundle.mjs
+      - name: Dry-run Alumdoor Worker
+        working-directory: server
+        run: pnpm exec wrangler deploy --config apps-src/alumdoor-worker/wrangler.jsonc --name cloudforge-app-alumdoor --dispatch-namespace cloudforge-production --strict --dry-run --outdir "$RUNNER_TEMP/alumdoor-worker-dry-run"
+      - name: Dry-run Gateway
+        run: pnpm --dir server exec wrangler deploy --config apps/gateway-worker/wrangler.jsonc --dry-run --outdir "$RUNNER_TEMP/gateway-dry-run"
