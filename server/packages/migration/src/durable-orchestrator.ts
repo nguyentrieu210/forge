@@ -92,13 +92,11 @@ export async function executeDurableMigrationPlan(input: {
           ({ imported, updated, skipped, failed } = increment(outcome, imported, updated, skipped, failed));
           continue;
         }
-        // A first-primary receipt check found no commit. Converting to failed now is safe;
-        // the next prepared command must reuse the same reserved identity/command contract.
         await input.journal.recordOutcome(input.tenant_id, run.run_id, {
           row_key: row.row_key,
           fingerprint: row.fingerprint,
           status: "failed",
-          target_name: existing.target_name ?? undefined,
+          ...(existing.target_name ? { target_name: existing.target_name } : {}),
           error: existing.error ?? "Previous applying attempt has no kernel receipt",
         }, input.now());
       }
@@ -109,9 +107,7 @@ export async function executeDurableMigrationPlan(input: {
       lookup = await input.port.lookup(input.plan, row);
       if (lookup.exists && !lookup.target_name?.trim()) throw errors.validation(`Existing target requires target_name for row ${row.row_key}`);
     } catch (error) {
-      const failedRow = await input.journal.recordPreflightFailure(
-        input.tenant_id, run.run_id, row, message(error), input.now(),
-      );
+      const failedRow = await input.journal.recordPreflightFailure(input.tenant_id, run.run_id, row, message(error), input.now());
       const outcome = rowOutcome(failedRow);
       outcomes.push(outcome);
       failed += 1;
@@ -126,7 +122,7 @@ export async function executeDurableMigrationPlan(input: {
         row_key: row.row_key,
         fingerprint: row.fingerprint,
         status: "failed",
-        target_name: reserved.target_name ?? undefined,
+        ...(reserved.target_name ? { target_name: reserved.target_name } : {}),
         error: `Target already exists for migration row ${row.row_key}`,
       }, input.now());
       const outcome = rowOutcome(final);
@@ -136,12 +132,13 @@ export async function executeDurableMigrationPlan(input: {
       continue;
     }
     if (action === "skip") {
-      await input.journal.reserveRow(input.tenant_id, run.run_id, row, "skip", lookup.target_name ?? null, input.now());
+      const targetName = lookup.target_name!;
+      await input.journal.reserveRow(input.tenant_id, run.run_id, row, "skip", targetName, input.now());
       const final = await input.journal.recordOutcome(input.tenant_id, run.run_id, {
         row_key: row.row_key,
         fingerprint: row.fingerprint,
         status: "skipped",
-        target_name: lookup.target_name,
+        target_name: targetName,
       }, input.now());
       const outcome = rowOutcome(final);
       outcomes.push(outcome);
@@ -156,13 +153,9 @@ export async function executeDurableMigrationPlan(input: {
         : await input.port.prepareCreate(input.plan, row);
       validatePrepared(prepared, action === "update" ? lookup.target_name : undefined);
       await input.journal.reserveRow(input.tenant_id, run.run_id, row, action, prepared.target_name, input.now());
-      await input.journal.markApplying(
-        input.tenant_id, run.run_id, row.row_key, prepared.command_id, prepared.payload_hash, input.now(),
-      );
+      await input.journal.markApplying(input.tenant_id, run.run_id, row.row_key, prepared.command_id, prepared.payload_hash, input.now());
     } catch (error) {
-      const failedRow = await input.journal.recordPreflightFailure(
-        input.tenant_id, run.run_id, row, message(error), input.now(),
-      );
+      const failedRow = await input.journal.recordPreflightFailure(input.tenant_id, run.run_id, row, message(error), input.now());
       const outcome = rowOutcome(failedRow);
       outcomes.push(outcome);
       failed += 1;
@@ -195,8 +188,6 @@ export async function executeDurableMigrationPlan(input: {
       continue;
     }
 
-    // The write returned success. If this final journal update fails, throw instead of
-    // moving to another row: the persisted `applying` command can be recovered by receipt.
     const final = await input.journal.recordOutcome(input.tenant_id, run.run_id, {
       row_key: row.row_key,
       fingerprint: row.fingerprint,
