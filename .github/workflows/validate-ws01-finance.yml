@@ -1,0 +1,57 @@
+name: Validate WS01 Finance
+
+on:
+  push:
+    branches:
+      - agent/ent-01-finance-vn
+  pull_request:
+    branches:
+      - main
+    paths:
+      - server/apps-src/vn-accounting/**
+      - server/apps-src/vn-accounting-worker/**
+      - server/packages/clouderp-erpnext/src/finance-budget.ts
+      - server/packages/clouderp-erpnext/src/registry.ts
+      - server/migrations/tenant/0048_*.sql
+      - server/migrations/tenant/0049_*.sql
+      - server/migrations/tenant/0050_*.sql
+      - server/migrations/tenant/0051_*.sql
+      - server/migrations/tenant/0052_*.sql
+      - server/migrations/tenant/0053_*.sql
+      - server/migrations/tenant/0054_*.sql
+      - server/scripts/test-vn-*.py
+      - server/scripts/test-finance-budget-migration.py
+      - server/tests/vn-*.test.mjs
+      - server/tests/finance-budget.test.mjs
+      - server/package.json
+      - .github/workflows/validate-ws01-finance.yml
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Build server
+        run: pnpm --filter cloudforge run build
+      - name: Unit regressions
+        run: pnpm --filter cloudforge run test:unit
+      - name: SQL regressions
+        run: pnpm --filter cloudforge run test:sql
+      - name: Validate VN accounting package
+        run: pnpm --filter cloudforge run app:check
+      - name: Typecheck worker boundary
+        run: pnpm --filter cloudforge run typecheck:workers
