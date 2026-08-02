@@ -34,11 +34,12 @@ jobs:
     timeout-minutes: 20
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-      VITE_FORGE_RELEASE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      HOTFIX_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      TARGET_SHA: ${{ github.sha }}
+      VITE_FORGE_RELEASE_SHA: ${{ github.sha }}
 
     steps:
-      - name: Checkout exact hotfix SHA
+      - name: Checkout deploy tree
         uses: actions/checkout@v4
         with:
           ref: ${{ env.TARGET_SHA }}
@@ -51,12 +52,22 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$TARGET_SHA"
           git fetch origin main --no-tags
-          git merge-base --is-ancestor origin/main HEAD || {
-            echo "Hotfix branch must contain current main before production deploy."
-            exit 1
-          }
 
-          mapfile -t changed < <(git diff --name-only origin/main...HEAD)
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git merge-base --is-ancestor "$HOTFIX_SHA" HEAD || {
+              echo "PR merge tree does not contain hotfix head."
+              exit 1
+            }
+            diff_ref="$HOTFIX_SHA"
+          else
+            git merge-base --is-ancestor origin/main HEAD || {
+              echo "Hotfix branch must contain current main before push/manual production deploy."
+              exit 1
+            }
+            diff_ref="HEAD"
+          fi
+
+          mapfile -t changed < <(git diff --name-only origin/main..."$diff_ref")
           if [ "${#changed[@]}" -eq 0 ]; then
             echo "No changes relative to main."
             exit 1
@@ -80,13 +91,13 @@ jobs:
           }
 
           file_count="${#changed[@]}"
-          line_count="$(git diff --numstat origin/main...HEAD | awk '{a+=$1; d+=$2} END {print a+d+0}')"
+          line_count="$(git diff --numstat origin/main..."$diff_ref" | awk '{a+=$1; d+=$2} END {print a+d+0}')"
           if [ "$file_count" -gt 10 ] || [ "$line_count" -gt 300 ]; then
             echo "Hotfix exceeds fast-lane limit: ${file_count} files, ${line_count} changed lines."
             exit 1
           fi
 
-          printf 'Validated UI hotfix: %s files, %s changed lines\n' "$file_count" "$line_count"
+          printf 'Validated UI hotfix: %s files, %s changed lines; deploy tree %s\n' "$file_count" "$line_count" "$TARGET_SHA"
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
