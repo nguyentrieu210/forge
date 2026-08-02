@@ -1,19 +1,12 @@
 {
   "id": "hrm",
   "name": "Quản lý nhân sự",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "requires": [],
   "externalDocTypes": [
-    {
-      "name": "Salary Component",
-      "kind": "master",
-      "app": "erpnext"
-    },
-    {
-      "name": "Expense Claim",
-      "kind": "transaction",
-      "app": "erpnext"
-    }
+    {"name":"Salary Component","kind":"master","app":"erpnext"},
+    {"name":"Salary Slip","kind":"transaction","app":"erpnext"},
+    {"name":"Expense Claim","kind":"transaction","app":"erpnext"}
   ],
   "nav": [
     {"key":"company-master","label":"Công ty","kind":"route","route":"/app/Company","icon":"building-2","group":"Tổ chức","required_roles":["HR Manager","Accounts Manager","System Manager"]},
@@ -25,12 +18,14 @@
     {"key":"Job Applicant","label":"Ứng viên","kind":"doctype","icon":"contact-round","group":"Tuyển dụng"},
     {"key":"Interview","label":"Phỏng vấn","kind":"doctype","icon":"messages-square","group":"Tuyển dụng"},
     {"key":"Job Offer","label":"Thư mời nhận việc","kind":"doctype","icon":"mail-check","group":"Tuyển dụng"},
+    {"key":"Hiring Completion","label":"Hoàn tất tuyển dụng","kind":"doctype","icon":"user-check","group":"Tuyển dụng"},
     {"key":"Employee","label":"Nhân viên","kind":"doctype","icon":"users","group":"Vòng đời nhân sự"},
     {"key":"Employment Contract","label":"Hợp đồng lao động","kind":"doctype","icon":"file-signature","group":"Vòng đời nhân sự"},
     {"key":"Employee Onboarding","label":"Tiếp nhận nhân viên","kind":"doctype","icon":"user-plus","group":"Vòng đời nhân sự"},
     {"key":"Employee Transfer","label":"Điều chuyển","kind":"doctype","icon":"move-right","group":"Vòng đời nhân sự"},
     {"key":"Employee Promotion","label":"Thăng chức","kind":"doctype","icon":"trending-up","group":"Vòng đời nhân sự"},
     {"key":"Employee Separation","label":"Nghỉ việc","kind":"doctype","icon":"user-round-x","group":"Vòng đời nhân sự"},
+    {"key":"Employee Final Settlement","label":"Quyết toán nghỉ việc","kind":"doctype","icon":"circle-dollar-sign","group":"Vòng đời nhân sự"},
     {"key":"Leave Policy","label":"Chính sách nghỉ phép","kind":"doctype","icon":"calendar-range","group":"Nghỉ phép"},
     {"key":"Leave Allocation","label":"Cấp phép","kind":"doctype","icon":"calendar-plus","group":"Nghỉ phép"},
     {"key":"Leave Application","label":"Đơn nghỉ phép","kind":"doctype","icon":"calendar-off","group":"Nghỉ phép"},
@@ -42,6 +37,7 @@
     {"key":"Attendance","label":"Chấm công","kind":"doctype","icon":"clock","group":"Chấm công & ca"},
     {"key":"Attendance Request","label":"Yêu cầu điều chỉnh công","kind":"doctype","icon":"calendar-check-2","group":"Chấm công & ca"},
     {"key":"Overtime Request","label":"Đăng ký tăng ca","kind":"doctype","icon":"timer-reset","group":"Chấm công & ca"},
+    {"key":"VN Payroll Rule","label":"Bộ quy tắc lương Việt Nam","kind":"doctype","icon":"scale","group":"Lương & phúc lợi","required_roles":["Payroll Manager","Accounts Manager","System Manager"]},
     {"key":"Salary Structure","label":"Cấu trúc lương","kind":"doctype","icon":"list-checks","group":"Lương & phúc lợi"},
     {"key":"Salary Structure Assignment","label":"Gán cấu trúc lương","kind":"doctype","icon":"badge-dollar-sign","group":"Lương & phúc lợi"},
     {"key":"Payroll Period","label":"Kỳ lương","kind":"doctype","icon":"calendar-range","group":"Lương & phúc lợi"},
@@ -55,6 +51,73 @@
     {"key":"Goal","label":"Mục tiêu","kind":"doctype","icon":"target","group":"Hiệu suất & phát triển"},
     {"key":"Appraisal","label":"Đánh giá","kind":"doctype","icon":"chart-no-axes-combined","group":"Hiệu suất & phát triển"},
     {"key":"Training Event","label":"Đào tạo","kind":"doctype","icon":"graduation-cap","group":"Hiệu suất & phát triển"}
+  ],
+  "reports": [
+    {
+      "name":"hr-recruitment-pipeline",
+      "label":"Pipeline tuyển dụng",
+      "doctype":"Job Applicant",
+      "columns":[
+        {"field":"applicant_status","label":"Trạng thái","type":"Data"},
+        {"field":"name","label":"Số ứng viên","type":"Int","aggregate":"count"}
+      ],
+      "group_by":"applicant_status",
+      "order_by":{"column":"name","direction":"desc"},
+      "filters":["job_opening","applicant_status","source"],
+      "limit":100
+    },
+    {
+      "name":"hr-leave-usage",
+      "label":"Sử dụng ngày phép",
+      "doctype":"Leave Application",
+      "columns":[
+        {"field":"leave_type","label":"Loại nghỉ","type":"Link","options":"Leave Type"},
+        {"field":"total_days","label":"Tổng ngày","type":"Float","aggregate":"sum"}
+      ],
+      "group_by":"leave_type",
+      "order_by":{"column":"total_days","direction":"desc"},
+      "filters":["company","branch","department","employee","leave_type","from_date","to_date","workflow_state"],
+      "limit":100
+    },
+    {
+      "name":"hr-attendance-status",
+      "label":"Tình trạng chấm công",
+      "doctype":"Attendance",
+      "columns":[
+        {"field":"attendance_status","label":"Trạng thái","type":"Data"},
+        {"field":"name","label":"Số ngày","type":"Int","aggregate":"count"}
+      ],
+      "group_by":"attendance_status",
+      "order_by":{"column":"name","direction":"desc"},
+      "filters":["company","branch","department","employee","attendance_date","attendance_status","late_entry","early_exit","source"],
+      "limit":100
+    },
+    {
+      "name":"hr-overtime-by-employee",
+      "label":"Tăng ca theo nhân viên",
+      "doctype":"Overtime Request",
+      "columns":[
+        {"field":"employee","label":"Nhân viên","type":"Link","options":"Employee"},
+        {"field":"approved_minutes","label":"Phút tăng ca duyệt","type":"Int","aggregate":"sum"}
+      ],
+      "group_by":"employee",
+      "order_by":{"column":"approved_minutes","direction":"desc"},
+      "filters":["company","branch","employee","overtime_date","workflow_state"],
+      "limit":100
+    },
+    {
+      "name":"hr-advance-by-employee",
+      "label":"Tạm ứng theo nhân viên",
+      "doctype":"Employee Advance",
+      "columns":[
+        {"field":"employee","label":"Nhân viên","type":"Link","options":"Employee"},
+        {"field":"advance_amount","label":"Tổng tạm ứng","type":"Currency","aggregate":"sum"}
+      ],
+      "group_by":"employee",
+      "order_by":{"column":"advance_amount","direction":"desc"},
+      "filters":["company","branch","employee","posting_date","workflow_state"],
+      "limit":100
+    }
   ],
   "hooks": [],
   "client": {"brand":"blue","domain":"hr","home":{"route":"/app/Employee","doctype":"Employee"},"dimensions":["company","branch","department","fiscal_year"],"catalog_mode":"hybrid"}
