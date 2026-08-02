@@ -11,17 +11,7 @@ GitHub là nguồn sự thật cho code, branch, PR, merge và release. GitHub A
 - Không hỏi lại thứ có thể tự xác định từ GitHub.
 - Không kiểm tra lặp cùng một trạng thái nếu chưa có commit/SHA/scope thay đổi.
 
-## 2. Nguyên tắc chống lặp
-
-Một SHA chỉ cần một validation path đủ cho blast radius của nó.
-
-- Không build lại cùng SHA nếu artifact đã hợp lệ và có thể reuse.
-- Không chạy cùng test/typecheck/lint nhiều lần trên cùng SHA nếu input, dependency và config không đổi.
-- Không mở nhiều workflow riêng. GitHub Actions chỉ giữ pipeline build/deploy cần thiết.
-- Nếu một bước local fail do hạ tầng/flaky, retry đúng bước cần thiết; không chạy lại toàn bộ pipeline nếu dependency không đổi.
-- Commit mới chỉ kiểm tra lại phần bị ảnh hưởng bởi diff mới.
-
-## 3. UI AUTO DEPLOY — mặc định cho mọi sửa UI-only
+## 2. UI AUTO DEPLOY — fast path mặc định
 
 Mọi task chỉ sửa giao diện phải dùng một trong các branch:
 
@@ -30,66 +20,62 @@ Mọi task chỉ sửa giao diện phải dùng một trong các branch:
 - `feat/ui-*`
 - `refactor/ui-*`
 
-Khi push có thay đổi `client/**`, GitHub tự động:
+Khi push có `client/**`, GitHub chỉ làm đúng pipeline deploy:
 
-`checkout -> guard UI-only -> install -> build MetaForge -> stage bundle -> deploy Gateway production -> health smoke`
+`shallow checkout -> guard file của push -> restore cache/install -> build runtime + warehouse mobile -> stage -> deploy Gateway -> exact-release smoke`
 
-Không cần mở PR, không cần bấm Actions, không chạy test/lint/typecheck trên GitHub.
+Quy tắc:
 
-Guard bắt buộc:
+- Không chạy workflow trên `pull_request`; push UI branch là trigger duy nhất.
+- Không fetch toàn bộ history/branch và không bắt branch phải chứa exact current `main` chỉ để deploy UI.
+- Guard đọc chính danh sách file của push event; push có file ngoài `client/**` và docs vận hành allowlist thì fail closed.
+- Không build toàn MetaForge monorepo. Chỉ build dependency graph của `runtime` và warehouse mobile bundle mà Gateway thực sự stage.
+- Push mới trên cùng UI branch hủy run cũ đang chạy để tránh queue/deploy artifact cũ.
+- Không test/lint/typecheck riêng trên GitHub. TypeScript compile nằm trong build artifact khi package cần nó.
+- Sau deploy phải `/health` PASS và `/release.json` trả đúng `TARGET_SHA` + `bundleHash` mới được coi là lên production thật.
 
-- Branch phải chứa exact current `main`; branch stale không được deploy.
-- Diff so với `main` phải có ít nhất một file `client/**`.
-- Ngoài `client/**`, chỉ cho phép các file tài liệu vận hành: `RUNBOOK.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md`, `AI_HANDOFF.md`, `DELIVERY_POLICY.md`.
-- Nếu phát hiện backend, API, schema, migration, permission, tenant, accounting, inventory hoặc business logic thì auto-deploy UI phải fail closed và task phải chuyển khỏi UI lane.
+Ngoài `client/**`, UI push chỉ được phép kèm: `RUNBOOK.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md`, `AI_HANDOFF.md`, `DELIVERY_POLICY.md`.
 
-Đây là automation production đã được user chủ động thiết lập. Vì vậy push đúng UI lane là authorization để build và deploy UI production.
+Nếu phát hiện backend, API, schema, migration, permission, tenant, accounting, inventory hoặc business logic thì không dùng UI lane.
 
-## 4. Chọn mức xử lý
+Push đúng UI lane là production authorization do user đã chủ động thiết lập automation này.
 
-Mặc định chọn mức nhẹ nhất phù hợp blast radius.
+## 3. Chọn mức xử lý
 
 ### FAST
 
-Dùng cho CSS, text, spacing, icon, layout, print UI nhỏ hoặc thay đổi thuần hiển thị.
+CSS, text, spacing, icon, layout, print UI nhỏ hoặc thay đổi thuần hiển thị:
 
-`branch UI -> sửa -> diff local -> commit -> push -> auto deploy`
+`UI branch -> sửa -> diff local -> commit -> push -> auto deploy`
 
-Không bắt buộc PR, full test, lint, typecheck hoặc CI. Build/install/stage trong GitHub chỉ là packaging/deploy.
-
-Nếu phát hiện chạm business logic, API, data, permission, tenant hoặc schema thì nâng mức và không dùng UI auto-deploy lane.
+Không bắt buộc PR, full test, lint, typecheck hoặc CI.
 
 ### STANDARD
 
-Dùng cho CRUD, API và logic sản phẩm thông thường.
+CRUD, API và logic sản phẩm thông thường:
 
 `branch -> code -> targeted local check -> commit -> push -> merge/release theo nhu cầu`
 
-- Chỉ chạy nhóm kiểm tra trực tiếp liên quan đến phần sửa.
-- PR chỉ dùng khi review/merge thực sự cần; không dùng như nghi thức.
-- GitHub không chạy CI phát triển; chỉ build/deploy khi được kích hoạt theo release path.
-- Build local chỉ khi cần xác minh compile/bundle trước khi push.
+GitHub không chạy CI phát triển.
 
 ### CRITICAL
 
-Dùng cho accounting, tiền, công nợ, kho, giá vốn, manufacturing/costing, auth, permission, tenant isolation, migration, destructive state hoặc production data.
+Accounting, tiền, công nợ, kho, giá vốn, manufacturing/costing, auth, permission, tenant isolation, migration, destructive state hoặc production data:
 
 `branch -> code -> regression/integration/data-integrity/security local -> validation cần thiết -> PR -> merge -> explicit release`
 
-Không dùng UI auto-deploy lane cho CRITICAL và không hạ CRITICAL chỉ để làm nhanh.
+Không dùng UI auto-deploy lane cho CRITICAL.
 
-## 5. Full ALU deploy
+## 4. Full ALU deploy
 
 Full release Tenant + Alumdoor App + Gateway chỉ chạy thủ công bằng workflow `ALU Build and Deploy` với confirm `alu`.
 
-Pipeline:
-
-`checkout -> install -> build once -> backup/migrate tenant -> deploy Tenant -> deploy Alumdoor App -> deploy Gateway -> health smoke`
+`checkout -> install -> build once -> backup/migrate -> deploy Tenant -> deploy Alumdoor App -> deploy Gateway -> exact-release smoke`
 
 Không tự đổi DNS/secrets. Destructive migration hoặc production data mutation ngoài pipeline chuẩn vẫn cần yêu cầu rõ.
 
-## 6. Khi dừng
+## 5. Khi dừng
 
-Với STANDARD/CRITICAL hoặc thay đổi kỹ thuật quan trọng: cập nhật status/handoff khi có thông tin lâu dài cần lưu và báo branch, SHA, validation, rủi ro.
+STANDARD/CRITICAL hoặc quyết định kỹ thuật lâu dài: cập nhật status/handoff khi cần.
 
-Với FAST UI nhỏ: chỉ báo branch, SHA, thay đổi và deploy state; không tạo thêm nghi thức tài liệu.
+FAST UI nhỏ: báo branch, SHA, thay đổi và deploy state; không tạo thêm nghi thức tài liệu.
