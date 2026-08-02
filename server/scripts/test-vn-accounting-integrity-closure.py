@@ -103,7 +103,6 @@ def expect(marker, fn):
     raise AssertionError(f"expected rejection: {marker}")
 
 
-# Historical orphan ledger must stop migration instead of receiving guessed scope.
 orphan = base_db()
 orphan.execute(
     "INSERT INTO gl_entries VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
@@ -111,7 +110,6 @@ orphan.execute(
 )
 expect("CHECK constraint failed", lambda: orphan.executescript(SQL43))
 
-# Clean installation.
 db = base_db()
 migrate(db)
 for args in [
@@ -124,7 +122,6 @@ for args in [
 ]:
     insert_account(db, *args)
 
-# Company and branch scope are authoritative and VND scale=0 is not divided by 100.
 insert_doc(db, "Journal Entry", "JV-A", {"company": "COMP-A", "branch": "BR-A", "posting_at": "2026-06-15T08:00:00Z"})
 insert_gl(db, "Journal Entry", "JV-A", "D", "111-A", debit=1000)
 insert_gl(db, "Journal Entry", "JV-A", "C", "811-A", credit=1000)
@@ -143,7 +140,6 @@ insert_doc(db, "Journal Entry", "JV-BAD-BRANCH", {"company": "COMP-A", "branch":
 db.commit()
 expect("GL_BRANCH_SCOPE_MISMATCH", lambda: insert_gl(db, "Journal Entry", "JV-BAD-BRANCH", "D", "111-A", debit=100, dimensions={"branch": "BR-X"}))
 
-# AR/AP cannot cross legal entities.
 insert_doc(db, "Payment Allocation", "ALLOC-A", {"company": "COMP-A", "posting_at": "2026-06-20T08:00:00Z"})
 insert_doc(db, "Purchase Invoice", "PINV-B", {"company": "COMP-B", "posting_at": "2026-06-20T08:00:00Z"})
 db.commit()
@@ -153,7 +149,6 @@ expect("PAYMENT_REFERENCE_COMPANY_MISMATCH", lambda: db.execute(
      -100, -100, "VND", 0, "Purchase Invoice", "PINV-B", "2026-06-20T08:00:00Z"),
 ))
 
-# Payment Allocation obeys VN Accounting Period.
 insert_doc(db, "VN Accounting Period", "KY-07", {
     "company": "COMP-A", "start_date": "2026-07-01", "end_date": "2026-07-31",
     "close_state": "Hard Locked", "allow_approved_adjustments": 0,
@@ -163,7 +158,6 @@ expect("ACCOUNTING_PERIOD_HARD_LOCKED", lambda: insert_doc(db, "Payment Allocati
     "company": "COMP-A", "posting_at": "2026-07-10T08:00:00Z"
 }))
 
-# Purchase Receipt must have a balanced GL before stock value posts.
 insert_doc(db, "Purchase Receipt", "PR-1", {"company": "COMP-A", "posting_at": "2026-06-25T08:00:00Z"})
 db.commit()
 expect("PURCHASE_RECEIPT_GL_REQUIRED", lambda: db.execute(
@@ -180,8 +174,10 @@ db.commit()
 expect("PURCHASE_RECEIPT_GL_UNBALANCED", lambda: db.execute(
     "INSERT INTO stock_ledger_entries VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", stock_row("Purchase Receipt", "PR-UNBAL", posting="2026-06-26T08:00:00Z")
 ))
+# Restore this deliberate negative fixture to a balanced state before the final integrity sweep.
+insert_gl(db, "Purchase Receipt", "PR-UNBAL", "BALANCE", "338-A", credit=500)
+db.commit()
 
-# Effective policy is unique and activates Stock Entry -> GL parity.
 insert_doc(db, "VN Accounting Policy", "POL-1", {
     "company": "COMP-A", "effective_from": "2026-01-01", "effective_to": "2026-12-31",
     "inventory_account": "156-A", "stock_adjustment_account": "811-A",
@@ -201,7 +197,6 @@ insert_gl(db, "Stock Entry", "STE-1", "OFFSET", "811-A", credit=500)
 db.execute("INSERT INTO stock_ledger_entries VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", stock_row("Stock Entry", "STE-1", posting="2026-06-27T08:00:00Z"))
 db.commit()
 
-# Approved legal/account-map/tax versions cannot be edited or cancelled.
 for doctype, name, payload, marker in [
     ("VN Legal Rule", "RULE-1", {"rule_type": "VAT", "regime_code": "Tax-specific", "taxpayer_segment": "GENERAL", "effective_from": "2026-01-01", "effective_to": "2026-12-31"}, "VN_LEGAL_RULE_IMMUTABLE"),
     ("TT99 Account Map", "MAP-1", {"company": "COMP-A", "source_account": "111-A", "effective_from": "2026-01-01", "effective_to": "2026-12-31"}, "TT99_ACCOUNT_MAP_IMMUTABLE"),
@@ -216,7 +211,6 @@ for doctype, name, payload, marker in [
         "UPDATE documents SET payload_json=? WHERE doc_key=?", (json.dumps({**payload, "tampered": 1}), f"{doctype}:{name}")
     ))
 
-# Reconciliation arithmetic and resolution evidence are enforced.
 expect("VN_RECONCILIATION_DIFFERENCE_MISMATCH", lambda: insert_doc(db, "VN Reconciliation Case", "REC-BAD", {
     "company": "COMP-A", "expected_minor": 100, "actual_minor": 90, "difference_minor": 99
 }, docstatus=0))
@@ -230,14 +224,11 @@ expect("VN_RECONCILIATION_RESOLVED_IMMUTABLE", lambda: db.execute(
     (json.dumps({"company": "COMP-A", "expected_minor": 100, "actual_minor": 100, "difference_minor": 0}),),
 ))
 
-# Approval identity comes from authenticated version history.
 db.execute(
     "INSERT INTO versions VALUES(?,?,?,?,?,?,?,?)",
     ("demo", "VN Legal Rule:RULE-1", 1, "cmd-rule", "chief@example.test", "submit",
      json.dumps({"doctype": "VN Legal Rule", "name": "RULE-1"}), NOW),
 )
 assert db.execute("SELECT approved_by,approved_at FROM accounting_approval_evidence WHERE name='RULE-1'").fetchone() == ("chief@example.test", NOW)
-
-# Clean accepted postings leave no CRITICAL integrity exception.
 assert db.execute("SELECT code FROM accounting_integrity_exceptions WHERE severity='CRITICAL'").fetchall() == []
 print("VN_ACCOUNTING_INTEGRITY_CLOSURE_0043_0044_PASS")
