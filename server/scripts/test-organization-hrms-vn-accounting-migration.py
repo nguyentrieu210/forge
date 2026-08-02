@@ -171,6 +171,12 @@ expect_rejected(
     lambda: db.execute("DELETE FROM master_records WHERE tenant_id='demo' AND record_type='VN Payroll Rule' AND name='VN-2026-A'"),
     "HR_PAYROLL_RULE_IMMUTABLE",
 )
+expect_rejected(
+    lambda: db.execute(
+        "UPDATE master_records SET record_type='Other Rule' WHERE tenant_id='demo' AND record_type='VN Payroll Rule' AND name='VN-2026-A'"
+    ),
+    "HR_PAYROLL_RULE_IMMUTABLE",
+)
 
 # Rule trace on a submitted/cancelled Salary Slip is also authoritative evidence, even if no structure currently references the rule.
 trace_rule = {**valid_rule, "rule_code": "VN-2026-B", "legal_document_no": "LEGAL-2026-B"}
