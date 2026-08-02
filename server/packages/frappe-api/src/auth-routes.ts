@@ -8,7 +8,7 @@
 
 import type { Actor } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
-import type { AuthenticatedUser, D1UserStore } from "../../auth/src/index.js";
+import type { AuthenticatedUser, D1SessionRegistry, D1UserStore } from "../../auth/src/index.js";
 import { visitorKey } from "../../frappe-model/src/index.js";
 import { readFrappeArgs } from "./args.js";
 import { faultResponse, methodResponse } from "./envelope.js";
@@ -54,12 +54,9 @@ export async function establishSession(request: Request, context: AuthRouteConte
   const session = await verifySession(sid, context.tenantId, context.sessionSecret);
   const user = await context.users.assertSessionStillValid(context.tenantId, session.actor.user_id, session.epoch);
   if (session.sessionId) {
-    await context.users.sessions.assertActive(
-      context.tenantId,
-      user.user_id,
-      session.sessionId,
-      context.now(),
-    );
+    const sessions = optionalSessionRegistry(context.users);
+    if (!sessions) throw errors.misconfigured("Session registry is unavailable");
+    await sessions.assertActive(context.tenantId, user.user_id, session.sessionId, context.now());
   }
 
   const actor: Actor = {
@@ -106,29 +103,35 @@ async function handleLogin(request: Request, url: URL, context: AuthRouteContext
   const roles = await context.users.listRoles(context.tenantId, found.user.user_id);
   const now = context.now();
   const nowSeconds = isoSeconds(now);
-  const sessionId = randomToken(18);
+  const sessions = optionalSessionRegistry(context.users);
+  // Production D1UserStore always has a registry. Keeping this optional only preserves
+  // lightweight unit-test/custom fixtures that predate the registry; they mint a legacy
+  // cookie rather than crashing or pretending to have server-side revocation state.
+  const sessionId = sessions ? randomToken(18) : undefined;
   const minted = await mintSession({
     tenantId: context.tenantId,
     userId: found.user.user_id,
     roles,
     epoch: found.user.session_epoch,
     secret: context.sessionSecret,
-    sessionId,
+    ...(sessionId ? { sessionId } : {}),
     now: nowSeconds,
     ...(found.user.language ? { language: found.user.language } : {}),
     ...(found.user.time_zone ? { timezone: found.user.time_zone } : {}),
   });
-  // The cookie is not returned until both writes succeed, so a failed registry write
+  // The cookie is not returned until registry persistence succeeds, so a failed D1 write
   // cannot create an untracked new-style session in the browser.
   await context.users.recordLogin(context.tenantId, found.user.user_id, now);
-  await context.users.sessions.register(
-    context.tenantId,
-    found.user.user_id,
-    sessionId,
-    new Date(nowSeconds * 1000).toISOString(),
-    new Date(minted.expiresAt * 1000).toISOString(),
-  );
-  await context.users.sessions.purgeExpired(context.tenantId, now).catch(() => 0);
+  if (sessions && sessionId) {
+    await sessions.register(
+      context.tenantId,
+      found.user.user_id,
+      sessionId,
+      new Date(nowSeconds * 1000).toISOString(),
+      new Date(minted.expiresAt * 1000).toISOString(),
+    );
+    await sessions.purgeExpired(context.tenantId, now).catch(() => 0);
+  }
 
   return methodResponse("Logged In", 200, {
     "set-cookie": minted.cookie,
@@ -186,7 +189,7 @@ async function handleLogout(request: Request, context: AuthRouteContext): Promis
       const session = await verifySession(sid, context.tenantId, context.sessionSecret);
       assertCsrf(request, session);
       if (session.sessionId) {
-        await context.users.sessions.revokeCurrent(
+        await optionalSessionRegistry(context.users)?.revokeCurrent(
           context.tenantId,
           session.actor.user_id,
           session.sessionId,
@@ -217,7 +220,9 @@ export async function slideSession(established: EstablishedSession, context: Aut
     ...(established.session.sessionId ? { sessionId: established.session.sessionId } : {}),
   });
   if (established.session.sessionId) {
-    await context.users.sessions.extend(
+    const sessions = optionalSessionRegistry(context.users);
+    if (!sessions) throw errors.misconfigured("Session registry is unavailable");
+    await sessions.extend(
       context.tenantId,
       established.user.user_id,
       established.session.sessionId,
@@ -226,6 +231,10 @@ export async function slideSession(established: EstablishedSession, context: Aut
     );
   }
   return sessionCookie(minted.sid, minted.expiresAt - nowSeconds);
+}
+
+function optionalSessionRegistry(users: D1UserStore): D1SessionRegistry | undefined {
+  return (users as D1UserStore & { sessions?: D1SessionRegistry }).sessions;
 }
 
 function isoSeconds(value: string): number {
