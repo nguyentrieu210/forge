@@ -1,6 +1,6 @@
 # WS05 — Manufacturing / MRP II / QMS
 
-Status: **ACTIVE**  
+Status: **ACTIVE — WS05-A READY FOR REVIEW**  
 Owner: **ChatGPT-WS05**  
 Branch: `agent/ent-05-manufacturing-qms`  
 Product baseline: **Forge 0.2.0**  
@@ -27,11 +27,11 @@ BOM version/effective date/alternate/substitute/phantom, routing/operation/works
 
 ### Branch vs current main
 
-- Current `main` observed: `bbe3494bcfbb8a3ce09a5ff4bbb839dfcf9e47e9`.
-- WS05 claim head before this audit: `10d830dc11f2d282ae31db47523726ca495718fe`.
+- Initial audit observed `main` at `bbe3494bcfbb8a3ce09a5ff4bbb839dfcf9e47e9`.
+- Final WS05-A pre-PR check observed `main` at `27fb7273593d1bae1013aa7c8e03b02827eea40b`.
 - Merge base remains Forge 0.2.0 baseline `862636e6239c91eab657c619d8c55345ed71a6d8`.
-- Current `main` drift since baseline is coordination/status/deploy-cleanup plus a tiny Alumdoor UI role change; no Manufacturing/QMS backend/schema source changed in that drift.
-- Therefore this audit does not transplant operational/release-only commits into WS05. Before executable implementation, exact main must be checked again and source-relevant drift incorporated.
+- WS05 branch is intentionally not rebased over coordination/release/UI-only drift. Final compare shows current main drift touches workflow cleanup, status/evidence, runtime PWA/AppShell and WS14 docs; no Manufacturing/QMS backend/schema file changed since the merge base.
+- Therefore no source-relevant main transplant is required for WS05-A before review. Exact main must be checked again immediately before any approved merge.
 
 ### Canonical manufacturing evidence already on main
 
@@ -47,7 +47,7 @@ BOM version/effective date/alternate/substitute/phantom, routing/operation/works
 
 | Capability | Current maturity | Evidence / gap |
 |---|---|---|
-| `M01-001/002/004/005` BOM + child + version + effective date | **RC** | Canonical versioned BOM controller, checksum, overlap/circular guards and immutable WO snapshot. |
+| `M01-001/002/004/005` BOM + child + version + effective date | **RC** | Canonical versioned BOM controller, checksum, overlap/circular guards and immutable WO snapshot. WS05-A adds a bounded bulk Draft input seam without changing activation authority. |
 | `M01-003/006/007/008` multi-level / alternate / phantom / substitute | **Foundation/Missing** | Graph guard exists, but no canonical planning/explosion behavior for these semantics. |
 | `M01-009..012` routing / operation / workstation / calendar | **Foundation/Wired** | Masters and Job Card references exist; capacity-calendar scheduling is not closed end-to-end. |
 | `M02-001` Production Plan | **Wired** | Server-authoritative validation exists. |
@@ -61,7 +61,7 @@ BOM version/effective date/alternate/substitute/phantom, routing/operation/works
 | `Q01-003/004/005/007` inspections/readings | **Wired** | Quality Inspection controller supports Incoming/Outgoing/In Process and readings. |
 | `Q01-001/002/006/008..016` plan/template/sampling/NCR/RCA/CAPA/supplier/customer/calibration/KPI | **Missing/Foundation** | No authoritative end-to-end evidence found in current audit. |
 
-No capability is promoted to Hardened by this audit.
+No capability is promoted to Hardened by this slice.
 
 ## Legacy PR disposition
 
@@ -105,43 +105,79 @@ Candidate generic extraction: production-run state/invariants, resource-overlap 
 
 - **WS04:** stock availability/netting, valuation, WIP/repost/backdate and stock reconciliation contracts are dependencies for MRP/costing closure. WS05 will not change WS04 stock primitives directly.
 - **WS01:** actual manufacturing variance -> GL/period posting contract must be agreed before posting any valuation/cost variance. WS05 will not direct-write GL as a workaround.
+- **WS00:** authoritative read-only controller/kernel preview is still a platform seam. WS05-A preview stays structural until a canonical `DocumentKernel.preview()`-equivalent exists on main; commit remains authoritative and fail-closed.
 - **WS09:** existing `BulkTransaction:<json>` compatibility transport can be consumed, but first-class AppAction input-table/compiler contract remains WS09 ownership.
-- **WS14:** shared shop-floor/mobile renderer remains WS14; WS05 should expose metadata/API/state, not hard-code domain schema into shared React runtime.
-- **WS17:** Alumdoor/Plastic/cutting-specific process logic remains vertical; WS05 only extracts reusable invariants.
+- **WS14:** current shared `ActionScreen` clamps BulkTransaction `maxRows` to **200** while WS05-A backend accepts **500** BOM rows. Raising/generalizing that renderer limit belongs to WS09/WS14; WS05 does not patch the shared runtime from this branch.
+- **WS17:** Alumdoor/Plastic/cutting-specific process logic remains vertical; WS05 only extracts reusable invariants. Any vertical action sidecar wiring should be added by the owning app/workstream rather than hard-coded into generic manufacturing.
 
-## Next implementation slice
+## WS05-A — BOM parent + child/version Bulk Transaction
 
-### WS05-A — BOM parent + child/version Bulk Transaction
+### Implemented backend contract
 
-Reason: this is the explicit current `NEXT_TASKS.md` item for WS05 and sits before deeper MRP/costing dependencies.
+Changed files:
+- `server/packages/clouderp-erpnext/src/manufacturing-bom-bulk.ts`
+- `server/packages/clouderp-erpnext/src/index.ts`
+- `server/apps/tenant-worker/src/manufacturing-bom-bulk-api.ts`
+- `server/apps/tenant-worker/src/index.ts`
+- `server/tests/manufacturing-bom-bulk.test.mjs`
+- `server/tests/manufacturing-bom-bulk-api.test.mjs`
 
-Target contract:
-- metadata/controller-backed bulk input for BOM parent + child rows/revision fields;
-- preview validates required rows, UOM/item references and duplicate payload shape before write;
-- commit creates **Draft** canonical BOM documents only; it does not submit, consume stock, create Work Orders or post ledger;
-- exact retry must be idempotent; conflicting replay must fail closed;
-- submitted activation still flows through existing `VersionedBillOfMaterialsController`, preserving effective-date overlap, circular BOM and checksum invariants;
-- no shared `ActionScreen`/compiler modification unless WS09 accepts a dependency request;
-- no Alumdoor/Plastic-specific fields in generic contract.
+Behavior:
+- one request describes one BOM parent/revision plus a pasted child component table;
+- max **500** backend rows;
+- fixed-point decimal normalization, valid effective interval, positive quantity/revision, supported quantity basis and direct self-consumption guard happen before any write;
+- `preview_bulk_bom` is pure and returns normalized Draft shape + stable SHA-256 fingerprint; it does not create a document;
+- `create_bulk_bom_draft` requires BOM create + read permission, rejects client-selected tenant scope, and creates **Draft only**;
+- replay lookup goes through canonical Frappe BOM list/get routes, therefore User Permission/read scope is not bypassed for convenience;
+- exact sequential retry is recognized by `(company,item,revision)` plus semantic payload comparison against the controller-expanded Draft. Same payload returns the existing name with `replayed=true`; changed payload on the same revision fails closed;
+- the actual write is forwarded to ordinary `POST /api/resource/Bill of Materials`, preserving existing naming series, Frappe permission, registered BOM controller, UOM normalization, checksum and kernel command path;
+- no custom D1 insert, no alternate stock/manufacturing ledger, no submit, no Work Order creation, no stock/GL effects are introduced by the bulk seam;
+- activation remains the ordinary submit path under `VersionedBillOfMaterialsController`, where active-overlap and circular-BOM guards remain authoritative.
 
-After WS05-A, preferred functional order remains MRP explosion/material requirement -> capacity -> WIP/shop-floor closure -> actual costing/variance -> genealogy -> NCR/CAPA.
+### Known hardening debt
 
-## Risk and verification
+1. **Preview authority:** structural preview does not yet execute full controller master/reference validation. Invalid Item/UOM/Warehouse still fails at canonical create before the Draft is committed. A shared read-only kernel preview seam is preferable to duplicating controller logic in WS05.
+2. **Concurrent first-create race:** sequential lost-response retry is idempotent, but two genuinely simultaneous first requests for the same `(company,item,revision)` are not serialized by a business-key lock. Worst current outcome is duplicate **Draft** BOMs, not ledger duplication; activation overlap guards still prevent silently activating conflicting revisions. Harden before calling this path Hardened.
+3. **UI row cap:** shared BulkTransaction renderer caps at 200 rows. Backend 500-row contract is ready, but a generic 500-row Desk action needs WS09/WS14 renderer ownership.
+4. **No generic action sidecar added here:** there is no reason to inject vertical Alumdoor/Plastic metadata into generic Manufacturing. API contract is available for the owning app/metadata workstream.
 
-Risk: **CRITICAL** whenever stock/costing/production mutation is touched; BOM bulk draft creation itself is **STANDARD** only if it remains draft-only and ledger-free.
+### Verification authored
 
-Required evidence by slice:
-- targeted controller/unit regression;
-- permission/tenant isolation;
-- idempotency/conflict replay for bulk create;
-- effective-date/circular-BOM submit regression remains green;
-- no stock/GL/manufacturing ledger side effects from draft-only bulk action;
-- if schema/migration is introduced later: new migration number from exact current main + replay evidence;
-- backend/business-rule work stops before merge/deploy for user approval.
+`manufacturing-bom-bulk.test.mjs` covers:
+- Draft-only parent/child normalization;
+- stable revision key and fingerprint;
+- canonical replay matching with controller-expanded UOM defaults;
+- changed quantity/UOM conflict;
+- 500 accepted / 501 rejected;
+- direct self-consumption rejection;
+- effective interval, quantity basis and non-positive quantity rejection.
 
-## Phase B priority
+`manufacturing-bom-bulk-api.test.mjs` covers:
+- create + read permission gate;
+- pure Frappe-shaped preview;
+- exact replay without second write;
+- conflicting same-revision payload fails closed;
+- canonical Draft delegation + D1 bookmark preservation;
+- tenant selector rejected before permission/lookup.
 
-BOM/version -> MRP/material plan -> capacity -> shop-floor completion/WIP -> cost variance -> traceability -> QMS NCR/CAPA.
+**Execution note:** tests are authored but were not executed in this environment because no usable Forge checkout/dependency tree is available locally and the attempted local clone path could not reach GitHub. Repository GitHub Actions are not being repurposed as ad-hoc development CI. Full repo build/typecheck/unit suite therefore remains required review evidence before merge.
+
+## Next functional slice after WS05-A review
+
+Preferred order remains:
+1. MRP explosion + material requirement/netting;
+2. capacity requirement + scheduling;
+3. shop-floor/WIP closure;
+4. actual manufacturing cost + variance using WS01/WS04 contracts;
+5. genealogy query closure;
+6. QMS NCR/RCA/CAPA.
+
+## Risk and merge/deploy rule
+
+- WS05-A is backend/business behavior, even though it is Draft-only and ledger-free.
+- No migration/schema change.
+- No deploy performed.
+- Per project protocol: open PR, review evidence, then **STOP before merge/deploy until explicit user approval**.
 
 ## Guard
 
@@ -152,12 +188,14 @@ BOM/version -> MRP/material plan -> capacity -> shop-floor completion/WIP -> cos
 Workstream: WS05  
 Branch: `agent/ent-05-manufacturing-qms`  
 Owner: ChatGPT-WS05  
-Status: ACTIVE  
+Status: ACTIVE — WS05-A READY FOR REVIEW  
 Capabilities: `M01-M04`, `Q01`  
-Changed zones so far: workstream evidence only  
-Tests: audit only; no executable WS05 change yet  
+Changed zones: workstream evidence + clouderp-erpnext BOM bulk domain + tenant-worker bounded API + targeted tests  
+Tests: 13 targeted regression cases authored; **not executed locally**  
 Migration: none  
-Dependency requests: WS04/WS01/WS09/WS14/WS17 boundaries recorded above  
+Ledger effect: none from WS05-A; canonical BOM controller ledger is empty and bulk creates Draft only  
+Dependency requests: WS00 read-only preview; WS09/WS14 first-class/500-row BulkTransaction UI; WS04/WS01 later MRP/costing; WS17 vertical sidecar boundary  
 Legacy PR disposition: #201 selective CHERRY-PICK; #208 generic-concept CHERRY-PICK only  
-Known gaps: MRP/capacity, canonical actual costing, WIP closure, full genealogy queries, NCR/CAPA  
-Recommended merge order: respect WS00/WS04/WS01 dependencies; draft-only WS05-A may proceed independently if it does not change shared contracts.
+Known WS05-A gaps: preview reference authority, simultaneous first-create business-key lock, generic UI action wiring  
+Known broader gaps: MRP/capacity, canonical actual costing, WIP closure, full genealogy queries, NCR/CAPA  
+Merge/deploy: **not authorized yet**; PR/review only.
