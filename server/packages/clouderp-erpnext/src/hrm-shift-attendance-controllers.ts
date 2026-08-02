@@ -156,7 +156,7 @@ export class AttendanceController extends SuiteController<JsonObject> {
     if (activeAssignments.length !== 1) {
       throw errors.reference(`Exactly one active Shift Assignment is required for ${employeeName} on ${attendanceDate}`);
     }
-    const assignment = activeAssignments[0];
+    const assignment = activeAssignments[0]!;
     const shiftName = H.requiredText(assignment.data.shift_type, "Shift Assignment shift_type");
     const shift = await H.requireRecord(context, "Shift Type", shiftName);
     if (H.truthy(shift.disabled)) throw errors.reference(`Shift Type ${shiftName} is disabled`);
