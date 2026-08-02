@@ -1,0 +1,3 @@
+Purpose: force the existing UI-only delivery lane to publish the current MetaForge runtime that already contains the merged Tiến Đạt FIFO operations UI (PR #179).
+Date: 2026-08-03
+No backend, schema, permission, accounting, inventory, or tenant data change.
