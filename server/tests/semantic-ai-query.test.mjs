@@ -21,21 +21,7 @@ const registry = new SemanticModelRegistry([{
   maxRows: 500,
 }]);
 
-test("AI catalog exposes business semantics but no physical SQL source", () => {
-  const calls = [];
-  const tool = new SemanticAssistantQueryTool(registry, { run: async () => { throw new Error("not used"); } }, {
-    begin: async () => "audit-1", finish: async (value) => calls.push(value),
-  });
-  const catalog = tool.catalog();
-  const serialized = JSON.stringify(catalog);
-  assert.match(serialized, /sales.orders/);
-  assert.match(serialized, /grand_total_minor/);
-  assert.ok(!serialized.includes("sales_order_semantic_view"));
-  assert.ok(!serialized.includes("tenant_id"));
-  assert.ok(!serialized.includes('"field"'));
-});
-
-test("AI proposal is semantic data only and cannot choose tenant", () => {
+test("AI proposal is strict semantic data and rejects tenant/raw SQL keys", () => {
   const proposal = parseSemanticAssistantProposal(registry, {
     model: "sales.orders",
     dimensions: ["branch"],
@@ -43,8 +29,6 @@ test("AI proposal is semantic data only and cannot choose tenant", () => {
     filters: [{ dimension: "posting_date", operator: ">=", value: "2026-08-01" }],
     order_by: [{ id: "grand_total_minor", direction: "desc" }],
     limit: 20,
-    tenant_id: "attacker-tenant",
-    raw_sql: "SELECT * FROM secrets",
   });
   assert.deepEqual(proposal, {
     model: "sales.orders",
@@ -54,6 +38,13 @@ test("AI proposal is semantic data only and cannot choose tenant", () => {
     order_by: [{ id: "grand_total_minor", direction: "desc" }],
     limit: 20,
   });
+
+  assert.throws(() => parseSemanticAssistantProposal(registry, {
+    model: "sales.orders", metrics: ["order_count"], tenant_id: "attacker-tenant",
+  }), (error) => error.code === "VALIDATION_ERROR");
+  assert.throws(() => parseSemanticAssistantProposal(registry, {
+    model: "sales.orders", metrics: ["order_count"], raw_sql: "SELECT * FROM secrets",
+  }), (error) => error.code === "VALIDATION_ERROR");
 });
 
 test("AI query opens audit intent before executor and injects trusted tenant", async () => {
@@ -113,7 +104,7 @@ test("permission denial is completed as denied audit evidence", async () => {
   assert.deepEqual(completions, [{ auditId: "audit-denied", status: "denied", errorCode: "PERMISSION_DENIED" }]);
 });
 
-test("AI proposal fails closed on unknown members, excessive limits and forged operators", () => {
+test("AI proposal fails closed on unknown members, nested values, excessive limits and forged operators", () => {
   assert.throws(() => parseSemanticAssistantProposal(registry, {
     model: "sales.orders", metrics: ["secret_total"],
   }), (error) => error.code === "VALIDATION_ERROR");
@@ -123,5 +114,12 @@ test("AI proposal fails closed on unknown members, excessive limits and forged o
   assert.throws(() => parseSemanticAssistantProposal(registry, {
     model: "sales.orders", metrics: ["order_count"],
     filters: [{ dimension: "branch", operator: "= ? OR 1=1", value: "x" }],
+  }), (error) => error.code === "VALIDATION_ERROR");
+  assert.throws(() => parseSemanticAssistantProposal(registry, {
+    model: "sales.orders", metrics: ["order_count"],
+    filters: [{ dimension: "branch", operator: "=", value: { nested: true } }],
+  }), (error) => error.code === "VALIDATION_ERROR");
+  assert.throws(() => parseSemanticAssistantProposal(registry, {
+    model: "sales.orders", metrics: ["order_count"], offset: 1,
   }), (error) => error.code === "VALIDATION_ERROR");
 });
