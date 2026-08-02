@@ -13,17 +13,20 @@ Ngày cập nhật: **2026-08-02**.
 
 ## Checkpoint đã khóa
 
-### Plastic ERP P0-A — canonical architecture + validated executable head
+### Plastic ERP P0-A — READY FOR MERGE, user approval required
 
-- Canonical open PR: `#200`, branch `feat/plastic-erp-foundation-v3-20260802`, base exact `main` `866fcbd909914f01600def9ce86e3ce2347bb763`.
-- Executable head `c212cc5e04956db08580bf4720fbde351bcfbcef` đã **6/6 required workflows PASS** trước closing docs.
+- Canonical PR: `#200`, branch `feat/plastic-erp-foundation-v3-20260802`, base exact `main` `866fcbd909914f01600def9ce86e3ce2347bb763`.
+- PR #200 hiện open + ready-for-review; **chưa merge**.
+- Exact head `edcab9cae6ea6187886fdaff45f6f549b971a2e7` đã **6/6 required workflows PASS** sau closing docs, gồm Main CI tests/typecheck/build.
+- PR `#193` đã được comment superseded và đóng; không reopen/merge.
+- Các commit sau `edcab9ca…` chỉ đồng bộ post-validation PR state trong canonical docs; exact current head phải re-check GitHub/CI trước khi dừng hoặc merge.
 - P0-A là canonical first-party `apps-src/plastic-erp` foundation cho process/material/machine/tool/recipe/QC/capacity/costing metadata, roles và approval workflows.
 - Không tạo BOM riêng: `Plastic Recipe Policy` liên kết canonical `Bill of Materials`.
 - Không tạo stock ledger/costing ledger cạnh tranh. P0-B phải reconcile với canonical Work Order + submitted Stock Entry Manufacture và stock/lot lifecycle hiện có.
 - Machine/Tool mở rộng core Asset/Workstation/Location; QC mở rộng Quality Inspection/Batch. Plastic technology variation đi qua process profile/process type + domain policy, không fork core theo Injection/Extrusion/Blow/Film/Compounding.
 - Kernel `status` là reserved system field. Plastic Machine/Tool dùng `operational_state`; không nới kernel parser để cho business `status` đi qua.
 - `apps-src` canonicalizer tự sinh Meta v1 `kind`, `viewPolicy`, `valueSource`, `editMode`, `surface`, `serverEnforced`; regression pack/source phải tiếp tục khóa contract này.
-- PR `#193` là predecessor/superseded candidate; chỉ đóng sau khi #200 exact final documentation head xanh. Không merge #200 nếu user chưa yêu cầu rõ.
+- Không merge #200 nếu user chưa yêu cầu rõ. Merge code cũng không cho phép deploy production.
 
 ### Stock P0 acceptance — COMPLETE
 
@@ -79,7 +82,7 @@ Ngày cập nhật: **2026-08-02**.
 
 ## Task canonical kế tiếp
 
-1. Khép PR `#200`: revalidate **exact final documentation head 6/6 PASS**; sau đó có thể đóng #193 là superseded. Không merge #200 nếu user chưa yêu cầu.
+1. PR `#200` đã ready; chỉ merge khi user yêu cầu rõ và sau khi exact current head vẫn 6/6 PASS.
 2. Sau khi P0-A được merge, Plastic ERP tiếp tục **P0-B Production Run + shop-floor** trên branch mới từ exact current `main`.
 3. P0-C QC lot gate, rồi capacity/OEE/operational costing và Plastic E2E.
 4. P1 Daily detailed ledger vẫn là high-risk parallel task, nhưng không trộn vào Plastic branch/PR.
