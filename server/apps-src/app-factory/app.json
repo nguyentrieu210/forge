@@ -22,7 +22,7 @@
   "client": {
     "brand": "violet",
     "domain": "platform",
-    "home": { "route": "/app/App%20Factory%20Definition", "doctype": "App Factory Definition" },
+    "home": { "doctype": "App Factory Definition" },
     "catalog_mode": "native",
     "design": { "density": "comfortable", "radius": "soft", "content_width": "wide" }
   }
