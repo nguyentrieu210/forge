@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""SQLite regression for WS01 statutory registry migrations 0048-0049."""
+"""SQLite regression for WS01 statutory registry migrations 0048-0049, then e-invoice 0050."""
 
 import json
+import runpy
 import sqlite3
 from pathlib import Path
 
@@ -173,3 +174,7 @@ insert("TT99 Voucher Form", "VOUCHER-1", voucher, tenant="other")
 db.commit()
 
 print("VN_ACCOUNTING_STATUTORY_REGISTRY_0048_0049_PASS")
+
+# Keep the e-invoice evidence regression in the same standard SQL gate without
+# bloating package.json with another special-case command.
+runpy.run_path(str(root / "scripts/test-vn-einvoice-compliance.py"), run_name="__main__")
