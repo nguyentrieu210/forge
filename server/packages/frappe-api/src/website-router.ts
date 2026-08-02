@@ -18,6 +18,8 @@ const METHOD_PREFIX = "/api/method/";
 const RESOURCE_PREFIX = "/api/resource/";
 const ADMIN_PASSWORD_METHOD = "frappe.core.doctype.user.user.update_password";
 const SECURITY_ALERTS_PATH = "/api/method/metaforge.api.security_alerts";
+const LIST_SESSIONS_PATH = "/api/method/metaforge.api.list_sessions";
+const REVOKE_SESSION_PATH = "/api/method/metaforge.api.revoke_session";
 
 /**
  * Privileged Frappe methods that must not be authorized by a long-lived browser session.
@@ -145,16 +147,69 @@ async function securityAlertsResponse(request: Request, url: URL, context: Frapp
 }
 
 /**
+ * Browser-session inventory is deliberately self-service and cookie-only.
+ *
+ * App callbacks carry the user's actor but not their browser session; letting an app use
+ * that identity to enumerate or revoke the user's sessions would widen delegated app
+ * authority into account-security authority. `authenticatedAt` is present only for an
+ * established cookie session in this Frappe context, so it is the narrow boundary here.
+ */
+async function listSessionsResponse(request: Request, url: URL, context: FrappeRouterContext): Promise<Response> {
+  requireCookieSession(context);
+  if (request.method.toUpperCase() !== "GET") throw errors.validation("list_sessions requires GET");
+  const args = await readFrappeArgs(request, url);
+  const limitText = args.text("limit")?.trim();
+  const limit = limitText === undefined ? 100 : Number(limitText);
+  if (!Number.isInteger(limit) || limit < 1 || limit > 250) throw errors.validation("limit must be an integer from 1 to 250");
+  return methodResponse({
+    sessions: await context.users.sessions.list(
+      context.tenantId,
+      context.actor.user_id,
+      context.now(),
+      undefined,
+      limit,
+    ),
+  });
+}
+
+async function revokeSessionResponse(request: Request, url: URL, context: FrappeRouterContext): Promise<Response> {
+  requireCookieSession(context);
+  if (request.method.toUpperCase() !== "POST") throw errors.validation("revoke_session requires POST");
+  const args = await readFrappeArgs(request, url);
+  const sessionId = args.requireText("session_id", 128);
+  const reason = args.text("reason")?.trim() ?? "";
+  if (reason.length > 500) throw errors.validation("reason must be at most 500 characters");
+  const revoked = await context.users.sessions.revokeOne(
+    context.tenantId,
+    context.actor.user_id,
+    sessionId,
+    {
+      actorUserId: context.actor.user_id,
+      traceId: context.traceId,
+      source: "session-manager",
+      ...(reason ? { reason } : {}),
+    },
+    context.now(),
+  );
+  return methodResponse({ session_id: sessionId, revoked });
+}
+
+function requireCookieSession(context: FrappeRouterContext): void {
+  if (!context.authenticatedAt || context.actor.user_id === "Guest") {
+    throw errors.permission("A browser session is required for session management");
+  }
+}
+
+/**
  * Adds the tiny unauthenticated Website/CMS read surface without widening the core
  * router's generic document API. Keeping this as a wrapper also keeps the already-large
  * Frappe façade focused on Frappe compatibility while website publishing remains a
  * bounded Forge capability.
  *
- * The same edge is also the narrowest place to enforce recent-auth for IAM, metadata and
- * app-lifecycle administration before requests enter the large compatibility router. It
- * also exposes the security-alert read model derived from the immutable audit authority.
- * The core router still owns role checks and mutation semantics; this wrapper adds no
- * second write path.
+ * The same edge is the narrowest place to enforce recent-auth for IAM, metadata and
+ * app-lifecycle administration, expose security alerts derived from immutable evidence,
+ * and keep session-management methods cookie-bound. Core router ownership of business
+ * authorization and mutation semantics stays unchanged.
  */
 export async function routeFrappeApi(
   request: Request,
@@ -165,6 +220,8 @@ export async function routeFrappeApi(
     try {
       await assertSecurityStepUp(request, url, context);
       if (url.pathname === SECURITY_ALERTS_PATH) return await securityAlertsResponse(request, url, context);
+      if (url.pathname === LIST_SESSIONS_PATH) return await listSessionsResponse(request, url, context);
+      if (url.pathname === REVOKE_SESSION_PATH) return await revokeSessionResponse(request, url, context);
     } catch (error) {
       return faultResponse(error, context.traceId);
     }
