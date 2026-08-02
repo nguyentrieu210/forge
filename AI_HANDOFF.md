@@ -2,81 +2,71 @@
 
 Ngày cập nhật: **2026-08-02**.
 
-Đây là handoff kỹ thuật cô đọng. Quy tắc vận hành nằm ở `RUNBOOK.md`; live status ở `CURRENT_STATUS.md`; hàng đợi ở `NEXT_TASKS.md`; delivery gate ở `DELIVERY_POLICY.md`.
+Quy tắc vận hành nằm ở `RUNBOOK.md`; live status ở `CURRENT_STATUS.md`; hàng đợi ở `NEXT_TASKS.md`; delivery gate ở `DELIVERY_POLICY.md`.
 
 ## Bắt buộc trước khi làm
 
 - Repository: `nguyentrieu210/forge`.
 - GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release evidence.
 - Đọc `RUNBOOK.md` -> `CURRENT_STATUS.md` -> `NEXT_TASKS.md` -> file này -> `DELIVERY_POLICY.md`.
-- Mọi SHA/branch trong tài liệu là checkpoint lịch sử; phải xác minh GitHub trước khi dùng.
 
 ## Canonical execution model
 
-- Development validation chạy local theo blast radius.
+- Validation phát triển chạy local theo blast radius.
 - GitHub Actions chỉ dùng làm máy build/deploy.
 - Workflow release duy nhất: `.github/workflows/manual-release-alu.yml`, name `ALU Build and Deploy`.
 
-## Release evidence convention — branch đang chờ merge
+## Production release evidence
 
-- Canonical implementation branch: `fix/release-evidence-health-sha-v2`.
-- `stage-client-bundle.mjs` ghi public `/release.json` khi release SHA có trong env; payload chỉ có `ok`, `service`, `releaseSha`, `bundleHash` và không chứa secret.
-- UI/full ALU smoke phải đọc production `/release.json` và fail nếu `releaseSha !== TARGET_SHA`; `/health` chỉ chứng minh service sống, không chứng minh đúng revision.
-- Same-repo `pull_request` UI trigger là fallback bắt buộc cho GitHub-connector writes vì content API commits không đảm bảo emit push-triggered Actions. Job phải kiểm tra head repo cùng repository và head branch đúng `hotfix/ui-*`, `fix/ui-*`, `feat/ui-*`, `refactor/ui-*`.
-- UI scope guard vẫn authoritative: current `main` phải là ancestor, diff phải có `client/**`, ngoài UI chỉ cho docs vận hành allowlist.
-- Chưa coi convention này là production canonical cho tới khi branch được merge; không deploy production riêng task release-pipeline nếu chưa có yêu cầu rõ.
+- Canonical checkpoint: `a0ae5f4f00a6be7311efcaff87c4caabea60f6be`.
+- `stage-client-bundle.mjs` ghi public `/release.json` với `releaseSha` + `bundleHash` khi có release SHA.
+- `/health` chỉ chứng minh service sống; deploy chỉ DONE khi `/release.json.releaseSha === TARGET_SHA` và có `bundleHash`.
 
-## Merged checkpoint — Website/CMS multi-tenant v1
+## UI auto deploy fast-path invariant
 
-- Canonical PR `#254` squash-merge tại `b25fc30b0f37d1218cafbb4dac40e37479bba0b9`.
-- App-based ownership:
-  - `server/apps-src/website/**`: Website Settings/Web Page/Web Page Block, roles, version-pinned template/theme presets;
-  - `server/packages/frappe-api/src/website.ts`: tenant-scoped published-only resolver;
-  - `server/packages/frappe-api/src/website-router.ts`: exact public methods `forge.website.manifest` + `forge.website.page`;
-  - `client/apps/runtime/src/bootstrap.ts` + `client/apps/runtime/src/website/WebsiteSite.tsx`: shared public renderer;
-  - `server/tests/website-cms.test.mjs` + `client/e2e-forge/ui-tests/website-public.spec.ts`: regression coverage.
-- Security invariants: trusted tenant context precedes public routing; Guest không có generic DocType read; Website Settings/page phải enabled/published; block/URL/theme fields allowlisted; arbitrary public HTML/JS không hỗ trợ.
-- Responsive invariant: navigation phải usable trên mobile. Final WebsiteSite blob `82e25b446885b8719340a38013c801135e2a52c2` targeted Chromium regression PASS mobile/tablet/desktop, có `aria-current` và horizontal overflow trên mobile.
-- Không deploy production/DNS/custom domain/secrets trong merge Website/CMS v1.
-
-## UI auto deploy convention
-
-UI-only task phải dùng branch:
+UI-only task dùng branch:
 
 - `hotfix/ui-*`
 - `fix/ui-*`
 - `feat/ui-*`
 - `refactor/ui-*`
 
-Push có `client/**` tự động build MetaForge, stage bundle và deploy Gateway production, sau đó health smoke. Khi commit được tạo qua GitHub connector/content API, same-repo PR event là fallback quan sát được để chạy cùng guarded deploy lane.
+Canonical behavior sau fast-path merge:
 
-Fail-closed guard:
+- Trigger duy nhất là `push` có `client/**`; không deploy trên `pull_request`.
+- Checkout shallow (`fetch-depth: 2`); không fetch toàn repo history/current main.
+- Scope guard đọc file của chính push event. Ngoài `client/**`, chỉ allowlist docs vận hành.
+- Không còn current-main ancestor/stale-branch guard trong deploy workflow vì guard đó làm UI push fail khi main tiến lên sau khi branch được mở.
+- Build chỉ `runtime` dependency graph + warehouse mobile bundle cần cho Gateway; không chạy `pnpm --filter metaforge run build` toàn monorepo.
+- Push mới cùng branch cancel run cũ để tránh queue và deploy artifact cũ.
+- Pipeline: `checkout -> push guard -> cached install -> runtime/mobile build -> stage -> wrangler deploy -> health + exact release smoke`.
+- Push đúng UI lane là production authorization do user đã chủ động thiết lập.
 
-- branch phải chứa current `main`;
-- diff phải có `client/**`;
-- ngoài `client/**` chỉ cho phép `RUNBOOK.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md`, `AI_HANDOFF.md`, `DELIVERY_POLICY.md`;
-- backend/API/schema/permission/tenant/accounting/inventory/business logic không được đi UI lane.
-
-Push/PR đúng UI lane là production authorization do user đã chủ động thiết lập automation này; fork PR không được deploy.
+Nếu push có backend/API/schema/migration/permission/tenant/accounting/inventory/business logic thì fail closed và chuyển khỏi UI lane.
 
 ## Full ALU deploy
 
-Manual `workflow_dispatch` + confirm `alu` chạy:
+Manual `workflow_dispatch` + confirm `alu`:
 
-`build once -> backup/migrate alu tenant -> deploy Tenant Worker -> deploy Alumdoor App Worker -> deploy Gateway -> health + exact-release smoke`.
+`build -> backup/migrate alu -> deploy Tenant Worker -> deploy Alumdoor App Worker -> deploy Gateway -> exact-release smoke`.
 
-Không tự đổi DNS/secrets hoặc thực hiện destructive operation ngoài release path chuẩn.
+Không tự đổi DNS/secrets hoặc destructive operation ngoài release path chuẩn.
+
+## Merged checkpoint — Website/CMS v1
+
+- Canonical PR `#254` squash-merge tại `b25fc30b0f37d1218cafbb4dac40e37479bba0b9`.
+- Public API exact allowlist `forge.website.manifest` + `forge.website.page`; trusted tenant context; published-only; Guest không có generic DocType read.
 
 ## Business checkpoints
 
-- Warehouse Cash schema/controller/ledger thuộc `vn-accounting`; Alumdoor chỉ consume qua integration metadata và generic MetaForge routes.
-- `gl_entries` là money source of truth; Warehouse Cash Balance/Daily Usage chỉ là rebuildable projection.
-- Party dimension không đồng nghĩa settle AR/AP; invoice settlement phải dùng canonical Payment Entry/payment allocation.
+- Warehouse Cash schema/controller/ledger thuộc `vn-accounting`; Alumdoor consume qua integration metadata và generic routes.
+- `gl_entries` là money source of truth; projections chỉ rebuildable.
+- Party dimension không đồng nghĩa settle AR/AP; invoice settlement dùng canonical Payment Entry/payment allocation.
 - Generic Bulk View vẫn master-only; transaction/submittable/ledger fail closed.
 
 ## Remaining priorities
 
-- Merge exact production release evidence hardening sau review.
+- Acceptance run thật của UI fast path sau merge, ghi duration và Cloudflare release evidence.
 - Stock Reconciliation Bulk Transaction.
 - BOM parent + child/version Bulk Transaction.
 - First-class AppAction input-table transport.
