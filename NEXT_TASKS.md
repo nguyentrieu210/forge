@@ -4,6 +4,17 @@ Ngày cập nhật: **2026-08-02**.
 
 Đây là hàng đợi active. GitHub là nguồn sự thật cho exact `main`, PR, branch và CI; trước khi làm phải đọc `RUNBOOK.md`, `CURRENT_STATUS.md`, `AI_HANDOFF.md`, `DELIVERY_POLICY.md` và kiểm tra PR đang mở.
 
+## P1 — One-click UI hotfix production lane
+
+- Canonical branch: `hotfix/ui-one-click-deploy-v2-20260802`, clean-transplant từ exact `main@f5d222e916795fd31cdc82f5746a1ba0af6318fb`.
+- Branch/PR iteration đầu (`hotfix/ui-one-click-deploy-20260802`, PR `#222`) bị stale khi `main` tiến thêm 20 commits và phải đóng superseded; không merge.
+- Đã thêm `.github/workflows/hotfix-ui-one-click.yml` và mở `.github/workflows/release-gateway.yml` cho `workflow_call` để không duplicate deploy implementation.
+- Fast lane chỉ cho branch `hotfix/ui-*`, current main phải là ancestor, chỉ `client/**` + 3 file canonical status/handoff, tối đa 20 file/600 dòng, cấm package/dependency/backend/migration/metadata/workflow.
+- Release giữ nguyên Gateway production gate: lint/test/typecheck/build/stage/dry-run/deploy/exact-SHA smoke.
+- Sau production release workflow best-effort tạo/annotate PR reconcile về `main`.
+- Actionlint iteration đầu đã bắt glob overlap SC2221/SC2222; đã sửa thành package deny pattern không overlap trước clean-transplant.
+- Việc còn lại: mở PR canonical từ branch v2, lấy exact-head CI/actionlint evidence, review diff sạch, merge khi đủ gate. Không deploy production trong task tạo lane này.
+
 ## DONE — Warehouse Petty Cash per warehouse
 
 - Canonical PR `#214` đã squash-merge vào `main` tại `da37060f3c02a6a5f9701d60edc3284575f00deb`.
