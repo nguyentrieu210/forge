@@ -14,13 +14,13 @@ Không được tự thêm bước deploy production vào authorization mặc đ
 
 **Merge và production deploy là hai ranh giới riêng.** Yêu cầu sửa/xây code không tự động cấp quyền deploy Cloudflare, chạy migration production hoặc thay production state.
 
-## UI-only hotfix fast lane
+## UI-only hotfix one-click lane
 
-Dùng cho thay đổi giao diện nhỏ cần phát hành nhanh lên `alu.kairo.vn`, không có thay đổi backend, schema, metadata nghiệp vụ, dependency hoặc migration.
+Dùng cho thay đổi giao diện cực nhỏ cần phát hành nhanh lên `alu.kairo.vn`, không có thay đổi backend, schema, metadata nghiệp vụ, dependency hoặc migration.
 
 Luồng vận hành:
 
-`branch hotfix/ui-* -> sửa client -> bấm workflow ALU UI Hotfix - One Click Deploy -> scope guard -> Gateway lint/test/typecheck/build -> dry-run -> production deploy -> exact-SHA smoke -> tạo/ghi chú PR reconcile`
+`branch hotfix/ui-* -> sửa client -> bấm ALU UI Hotfix - One Click Deploy -> hard scope guard -> build -> stage -> production deploy -> exact-SHA smoke -> PR reconcile`
 
 Workflow canonical: `.github/workflows/hotfix-ui-one-click.yml`.
 
@@ -29,28 +29,33 @@ Fast lane chỉ chạy khi toàn bộ điều kiện sau đúng:
 - branch có prefix `hotfix/ui-`;
 - current `main` là ancestor của exact target SHA, branch stale bị chặn;
 - có ít nhất một thay đổi dưới `client/**`;
-- ngoài `client/**` chỉ cho phép ba file trạng thái canonical `CURRENT_STATUS.md`, `NEXT_TASKS.md`, `AI_HANDOFF.md`;
-- tối đa 20 file và 600 dòng text thay đổi;
+- ngoài `client/**` chỉ cho phép `CURRENT_STATUS.md`, `NEXT_TASKS.md`, `AI_HANDOFF.md`;
+- tối đa 10 file và 300 dòng text thay đổi;
 - không thay package/dependency manifest;
 - không thay `server/**`, migration, brief/app metadata, workflow, secret, DNS hoặc production data.
 
-Fast lane **chỉ phát hành Gateway/client bundle**. Không chạy tenant backup/migration, không deploy tenant Worker, không deploy Alumdoor app Worker. Gateway workflow hiện hữu vẫn giữ lint, test, typecheck, build, staged-bundle check, Wrangler dry-run, production deploy và exact-release smoke.
+Quick lane **chỉ phát hành Gateway/client bundle**. Không chạy tenant backup/migration, tenant Worker hoặc Alumdoor app Worker.
 
-Production có thể chạy exact hotfix SHA trước khi branch được merge vào `main`; workflow sẽ best-effort tạo hoặc ghi chú PR reconcile để GitHub vẫn giữ đường quay về source of truth. Hotfix chỉ được coi là closure hoàn chỉnh khi exact production SHA đã được reconcile về `main` qua PR hợp lệ. Không dùng lane này cho thay đổi nghiệp vụ, dữ liệu hoặc backend chỉ vì muốn chạy nhanh.
+Để giảm thời gian production path, quick lane chỉ bắt buộc frontend build, staged-bundle check, Gateway deploy và exact-release smoke. `lint`, `test`, `typecheck` và Wrangler `dry-run` không chạy trong quick production path; chúng được deferred sang PR reconcile/normal CI. Không được ghi các gate deferred là PASS nếu chưa có evidence.
+
+Production có thể chạy exact hotfix SHA trước khi branch được merge vào `main`; workflow best-effort tạo hoặc ghi chú PR reconcile sau deploy. Hotfix chỉ closure hoàn chỉnh khi exact production SHA đã được reconcile về `main` qua PR hợp lệ.
+
+Mục tiêu là thao tác con người dưới 30 giây. Không cam kết workflow hoàn tất trong 30 giây vì GitHub runner, dependency install, frontend build và Cloudflare có thời gian thực thi riêng.
+
+Không dùng lane này cho thay đổi nghiệp vụ, dữ liệu hoặc backend chỉ vì muốn chạy nhanh.
 
 ## Production chỉ khi có lệnh rõ
 
 Chỉ deploy production khi user yêu cầu rõ trong đợt làm việc hiện tại. Khi được yêu cầu, release vẫn phải:
 
 1. xác định đúng production target và exact SHA;
-2. có required CI phù hợp;
+2. dùng dedicated trusted production workflow;
 3. có backup/recovery trước migration hoặc thay đổi dữ liệu;
-4. dùng dedicated trusted production workflow;
-5. ghi lại run ID, target identity và deployment/version ID;
-6. smoke đúng hành trình bị ảnh hưởng;
-7. rollback hoặc forward-fix nếu smoke fail.
+4. ghi lại run ID, target identity và deployment/version ID;
+5. smoke đúng hành trình bị ảnh hưởng;
+6. rollback hoặc forward-fix nếu smoke fail.
 
-Không dùng preview/staging để giả rằng production đã được phát hành, nhưng cũng không được tự tiếp tục từ preview/staging sang production nếu chưa có authorization production.
+Quick UI lane là ngoại lệ về thứ tự validation, không phải ngoại lệ về production authorization hay scope safety.
 
 ## Hành động cần lệnh riêng
 
@@ -61,7 +66,7 @@ Không tự động:
 - đổi DNS/domain/billing/account ownership;
 - xoá Cloudflare resource;
 - chạy migration production;
-- bật FIFO/rollout production;
+- bật rollout/FIFO production;
 - mutate dữ liệu khách hàng;
 - thay production data/schema chỉ để lấy UI evidence.
 
@@ -69,7 +74,7 @@ Không tự động:
 
 - GitHub là nguồn sự thật cho code, SHA, PR và CI.
 - Chỉ kết luận PASS cho exact head có evidence tương ứng.
-- Không merge dựa trên CI đỏ, stale, cancelled, conflict hoặc chưa terminal nếu required gate chưa đạt.
+- Quick UI lane có thể deploy trước full PR CI trong giới hạn scope nêu trên; các gate deferred vẫn phải được chạy trong reconciliation PR trước khi closure.
 - Docs-only change phải ghi rõ `not run — docs-only` nếu không cần test/typecheck/build.
 - Production evidence không thay thế code CI; code CI cũng không thay thế production smoke.
 
@@ -91,7 +96,7 @@ Không dùng version tenant Worker hoặc Gateway `/health` làm bằng chứng 
 
 Frontend của `alu.kairo.vn` được build bởi package `metaforge`, stage vào `server/apps/gateway-worker/public` và phát hành qua Gateway production workflow `.github/workflows/release-gateway.yml`.
 
-Không deploy backend Worker để thay cho frontend release. Trước release UI phải xác định đúng Gateway target, production hostname, build mode và authenticated/smoke evidence phù hợp từ repository/provider hiện hành.
+Không deploy backend Worker để thay cho frontend release.
 
 ## File không được commit
 
