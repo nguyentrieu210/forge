@@ -9,51 +9,27 @@ import type { TaxRow } from "../../clouderp-selling/src/types.js";
  * `qty` thì mua 20 cây ray thành "tồn 20 mét" — sai gấp gần sáu lần, và không có gì báo.
  *
  *     stock_qty = qty × conversion_factor
- *
- * `qty` và `rate` giữ nguyên ĐƠN VỊ MUA, vì đó là thứ in trên hoá đơn NCC và là thứ người
- * mua đối chiếu. Chỉ sổ kho và hạn mức "không nhận quá số đặt" chạy theo `stock_qty`.
  */
 export interface UomLine extends JsonObject {
   item_code: string;
   qty: DecimalInput;
   qty_micros?: number;
-  /** Đơn vị GIAO DỊCH của dòng. Bỏ trống = cùng đơn vị tồn của mặt hàng. */
   uom?: string;
-  /** Bao nhiêu đơn vị tồn trong MỘT đơn vị giao dịch. Bỏ trống thì tra ở hồ sơ mặt hàng. */
   conversion_factor?: DecimalInput;
   conversion_factor_micros?: number;
   stock_uom?: string;
   stock_qty?: string;
   stock_qty_micros?: number;
-  /** Snapshot from Item. The client may display it, but the server always overwrites it. */
   inventory_mode?: string;
-  /** Snapshot from Item so later master-data edits never change an old voucher's meaning. */
   measurement_profile?: string;
-  /**
-   * ĐƠN VỊ CỦA `rate`. Bỏ trống = cùng đơn vị giao dịch của dòng (`uom`) — đường của mọi
-   * dòng đang chạy hôm nay, nên khai thêm trường này không làm lệch sổ cũ.
-   *
-   * Có trường này vì `rate` trước đây là một con số KHÔNG CÓ ĐƠN VỊ. Nhôm báo giá đ/kg mà
-   * đếm theo cây, nên `qty × rate` là nhân số cây với giá một ký: sai sáu lần, và sổ vẫn cân.
-   * Đơn vị ngầm là gốc của lỗi đó — nên nó phải được KHAI, không được đoán.
-   */
   rate_uom?: string;
-  /** Số cân THẬT của dòng (catch weight). Không suy ra được từ `qty`. */
   actual_weight_kg?: DecimalInput;
   actual_weight_micros?: number;
-  /** Snapshot từ Item; máy chủ ghi đè để client không tự bật/tắt luật cân theo kiện. */
   has_catch_weight?: boolean | number;
   weight_uom?: string;
-  /** Khối lượng xuất thực tế của dòng kho/bán; khác `actual_weight_kg` dùng ở nhánh nhập. */
   weight_kg?: DecimalInput;
   weight_micros?: number;
-  /**
-   * Số lượng quy về ĐƠN VỊ CỦA `rate` — chính là số phải nhân với `rate`.
-   *
-   * Máy chủ tự điền, client gửi lên cũng bị ghi đè. Bằng `qty` khi `rate_uom` trùng `uom`.
-   */
   priced_qty_micros?: number;
-  /** Kích thước giao dịch cho mặt hàng bán theo m² nhưng tồn theo Bộ. */
   width_m?: DecimalInput;
   height_m?: DecimalInput;
   set_count?: DecimalInput;
@@ -61,14 +37,7 @@ export interface UomLine extends JsonObject {
 
 export interface PurchaseItem extends UomLine {
   row_id: string;
-  /**
-   * Đơn mua của RIÊNG dòng này, khi một phiếu nhận hàng của nhiều đơn cùng lúc.
-   *
-   * Bỏ trống thì lấy theo đầu phiếu. Liên kết ở cấp dòng là cách ERPNext giải bài toán N–N
-   * giữa đơn mua và phiếu nhập: một đơn giao làm nhiều đợt, và một chuyến giao gộp nhiều đơn.
-   */
   purchase_order?: string;
-  /** Yêu cầu vật tư của riêng dòng này. Bỏ trống thì lấy theo đầu phiếu. */
   material_request?: string;
   rate: DecimalInput;
   rate_minor?: number;
@@ -102,9 +71,7 @@ export interface PurchaseOrderData extends JsonObject {
   schedule_date?: string;
   buying_price_list?: string;
   supplier_group?: string;
-  /** Yêu cầu vật tư mà đơn này đáp ứng. Khai thì nhân TỪ CHỐI đặt quá số đã yêu cầu. */
   material_request?: string;
-  /** Báo giá NCC đã chọn. Khai thì nhân bắt khớp NCC / công ty / tiền tệ. */
   supplier_quotation?: string;
   items: PurchaseItem[];
   taxes?: TaxRow[];
@@ -130,19 +97,9 @@ export interface PurchaseReceiptData extends JsonObject {
   currency: string;
   currency_scale?: number;
   posting_at: string;
-  /**
-   * Đơn mua mặc định cho MỌI dòng không tự khai đơn của nó.
-   *
-   * Tuỳ chọn, và đó là điều làm nên bài toán "một chuyến giao gộp nhiều đơn": khi mỗi dòng
-   * tự trỏ đơn của mình (`PurchaseItem.purchase_order`) thì đầu phiếu không còn nghĩa gì,
-   * vì không có MỘT đơn nào đại diện cho cả phiếu. Bắt buộc nó lại sẽ ép thủ kho tách một
-   * chuyến xe, một biên bản giao nhận của NCC, thành hai phiếu.
-   */
   against_purchase_order?: string;
   allow_negative_stock?: boolean;
-  /** Tài khoản tồn kho. Kèm `stock_received_but_not_billed` mới sinh bút toán — xem `ledger`. */
   stock_account?: string;
-  /** "Hàng đã nhận chưa có hoá đơn" — cầu nối giữa phiếu nhập và hoá đơn mua. */
   stock_received_but_not_billed?: string;
   items: PurchaseItem[];
 }
@@ -180,13 +137,6 @@ export interface PurchaseInvoiceData extends JsonObject {
   outstanding_amount_minor?: number;
 }
 
-/**
- * Một dòng nhu cầu: cần gì, bao nhiêu, khi nào, về kho nào.
- *
- * Không có `rate` — đây là chỗ nói CẦN GÌ, chưa phải chỗ nói GIÁ BAO NHIÊU. Giá đến ở
- * bước sau (báo giá NCC), và trộn hai việc vào một chứng từ là cách đánh mất câu hỏi
- * "cái này ai yêu cầu, và đã đặt mua đủ chưa".
- */
 export interface MaterialRequestItem extends UomLine {
   row_id: string;
   warehouse?: string;
@@ -195,7 +145,6 @@ export interface MaterialRequestItem extends UomLine {
 }
 
 export type MaterialRequestType = "Purchase" | "Material Transfer" | "Material Issue" | "Manufacture";
-
 export interface MaterialRequestData extends JsonObject {
   company: string;
   material_request_type: MaterialRequestType;
@@ -212,14 +161,6 @@ export interface RequestForQuotationSupplier extends JsonObject {
   contact?: string;
   note?: string;
 }
-
-/**
- * Hỏi giá NHIỀU nhà cung cấp CÙNG một rổ hàng.
- *
- * Đây là lý do RFQ là một chứng từ riêng chứ không phải nhiều báo giá rời: rổ hàng viết
- * MỘT lần, và mỗi NCC trả lời bằng một `Supplier Quotation` trỏ ngược về đây, nên so giá
- * là so trên cùng một danh sách chứ không phải so hai tờ giấy khác nhau.
- */
 export interface RequestForQuotationData extends JsonObject {
   company: string;
   transaction_date: string;
@@ -229,7 +170,6 @@ export interface RequestForQuotationData extends JsonObject {
   items: MaterialRequestItem[];
   note?: string;
 }
-
 export interface SupplierQuotationData extends JsonObject {
   supplier: string;
   company: string;
@@ -265,10 +205,22 @@ export interface JournalEntryLine extends JsonObject {
   account: string;
   party_type?: string;
   party?: string;
+  /** Base/company-currency amount. Kept for backward compatibility and GL posting. */
   debit: DecimalInput;
   credit: DecimalInput;
   debit_minor?: number;
   credit_minor?: number;
+  /** Server-derived currency of the account; blank Account.account_currency means company currency. */
+  account_currency?: string;
+  account_currency_scale?: number;
+  /** Server-derived account-currency -> company-currency rate, scale 6. */
+  exchange_rate?: string;
+  exchange_rate_micros?: number;
+  /** User-facing original amount in the account currency. */
+  debit_in_account_currency?: DecimalInput;
+  credit_in_account_currency?: DecimalInput;
+  debit_in_account_currency_minor?: number;
+  credit_in_account_currency_minor?: number;
   cost_center?: string;
   accounting_dimensions?: JsonObject;
   reference_type?: string;
@@ -305,7 +257,6 @@ export interface StockEntryItem extends JsonObject {
   batch_no?: string;
   serial_nos?: string[];
 }
-
 export interface StockEntryData extends JsonObject {
   company: string;
   posting_at: string;
