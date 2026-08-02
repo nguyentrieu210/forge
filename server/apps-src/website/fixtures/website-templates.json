@@ -1,0 +1,97 @@
+[
+  {
+    "record_type": "Website Template",
+    "name": "business-landing@1",
+    "data": {
+      "preset_id": "business-landing",
+      "version": 1,
+      "label": "Landing doanh nghiệp",
+      "pages": [
+        {
+          "slug": "home",
+          "title": "Trang chủ",
+          "show_in_nav": 1,
+          "nav_order": 10,
+          "blocks": [
+            { "block_type": "hero", "eyebrow": "Doanh nghiệp", "heading": "Giải pháp cho khách hàng", "body": "Giới thiệu ngắn về doanh nghiệp và giá trị nổi bật.", "button_label": "Liên hệ", "button_url": "/contact", "tone": "primary", "align": "left" },
+            { "block_type": "features", "heading": "Điểm mạnh", "body": "Nêu ba đến sáu lợi thế chính.", "columns": 3, "tone": "neutral" },
+            { "block_type": "project-gallery", "heading": "Dự án tiêu biểu", "columns": 3, "limit": 6, "tone": "muted" },
+            { "block_type": "cta", "heading": "Bắt đầu trao đổi", "button_label": "Yêu cầu tư vấn", "button_url": "/contact", "tone": "dark", "align": "center" }
+          ]
+        },
+        {
+          "slug": "contact",
+          "title": "Liên hệ",
+          "show_in_nav": 1,
+          "nav_order": 90,
+          "blocks": [
+            { "block_type": "contact", "heading": "Liên hệ với chúng tôi", "body": "Để lại thông tin để doanh nghiệp phản hồi.", "tone": "neutral" }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "record_type": "Website Template",
+    "name": "catalogue@1",
+    "data": {
+      "preset_id": "catalogue",
+      "version": 1,
+      "label": "Catalogue sản phẩm",
+      "pages": [
+        {
+          "slug": "home",
+          "title": "Trang chủ",
+          "show_in_nav": 1,
+          "nav_order": 10,
+          "blocks": [
+            { "block_type": "hero", "heading": "Danh mục sản phẩm", "body": "Giới thiệu nhóm sản phẩm chính.", "button_label": "Xem sản phẩm", "button_url": "/products", "tone": "primary" },
+            { "block_type": "product-grid", "heading": "Sản phẩm nổi bật", "source": "storefront-catalog", "columns": 4, "limit": 8, "tone": "neutral" },
+            { "block_type": "contact", "heading": "Nhận tư vấn", "tone": "muted" }
+          ]
+        },
+        {
+          "slug": "products",
+          "title": "Sản phẩm",
+          "show_in_nav": 1,
+          "nav_order": 20,
+          "blocks": [
+            { "block_type": "product-grid", "heading": "Toàn bộ sản phẩm", "source": "storefront-catalog", "columns": 4, "limit": 24, "tone": "neutral" }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "record_type": "Website Template",
+    "name": "sales@1",
+    "data": {
+      "preset_id": "sales",
+      "version": 1,
+      "label": "Website bán hàng",
+      "pages": [
+        {
+          "slug": "home",
+          "title": "Trang chủ",
+          "show_in_nav": 1,
+          "nav_order": 10,
+          "blocks": [
+            { "block_type": "hero", "heading": "Sản phẩm dành cho bạn", "body": "Khám phá sản phẩm và gửi yêu cầu đặt hàng.", "button_label": "Mua sắm", "button_url": "/shop", "tone": "primary" },
+            { "block_type": "product-grid", "heading": "Sản phẩm nổi bật", "source": "storefront-catalog", "columns": 4, "limit": 8, "tone": "neutral" },
+            { "block_type": "features", "heading": "Vì sao chọn chúng tôi", "columns": 3, "tone": "muted" },
+            { "block_type": "cta", "heading": "Cần báo giá riêng?", "button_label": "Gửi yêu cầu", "button_url": "/contact", "tone": "dark", "align": "center" }
+          ]
+        },
+        {
+          "slug": "contact",
+          "title": "Liên hệ",
+          "show_in_nav": 1,
+          "nav_order": 90,
+          "blocks": [
+            { "block_type": "contact", "heading": "Yêu cầu tư vấn hoặc báo giá", "tone": "neutral" }
+          ]
+        }
+      ]
+    }
+  }
+]
