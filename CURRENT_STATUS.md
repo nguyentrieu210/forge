@@ -31,7 +31,8 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. 
 - Soft Closed chỉ cho approved adjustment khi period bật `allow_approved_adjustments` và chứng từ có reason + approver.
 - Range guard chặn invalid date và overlap theo tenant/company/branch; company-wide period conflict với mọi branch period cùng khoảng ngày.
 - Regression script hiện ghép `0035+0039+0040+0041+0042`, giữ nguyên HRM coverage và bổ sung draft->submit, cancel, move-in/move-out, period overlap/update overlap, tenant isolation và expanded posting doctypes.
-- Connector runtime không có repository checkout/dependencies và không truy cập được GitHub qua shell, nên CRITICAL local gates chưa chạy. Task chưa DONE, chưa ready/merge, chưa production migration/deploy.
+- Targeted SQLite regression cho exact logic `0042` đã PASS trên 2026-08-03: migration replace legacy trigger names thành công; hard lock, draft->submit, cancel, move-in/move-out, tenant isolation, invalid/overlap period, update-overlap, Soft Closed allow/deny và expanded doctypes gồm Purchase Receipt, Delivery Note, Stock Reconciliation, Warehouse Cash Voucher/Transfer đều cho kết quả mong đợi.
+- Shell hiện không có DNS tới GitHub và không có full repository checkout/dependencies, nên combined acceptance `0035+0039+0040+0041+0042`, Python syntax trên exact full script và backend/typecheck/lint/build theo blast radius vẫn chưa chạy. Task chưa DONE, chưa ready/merge, chưa production migration/deploy.
 
 ## DONE — exact production release evidence
 
@@ -87,7 +88,7 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. 
 ## Chưa hoàn tất
 
 1. Một UI push thực tế sau fast-path merge để đo duration và xác nhận `Deploy Gateway + /release.json` PASS.
-2. Chạy CRITICAL local gates cho `fix/vn-accounting-period-integrity-20260803-r7`, fix mọi regression rồi mới mở/ready PR.
+2. Hoàn tất các CRITICAL gate còn thiếu cho `fix/vn-accounting-period-integrity-20260803-r7`: combined migration acceptance, Python syntax, relevant backend/accounting tests và typecheck/lint/build theo blast radius; fix mọi regression rồi mới mở/ready PR.
 3. HRM statutory payroll-rule evaluator nếu cần tự động PIT/BHXH theo luật; phải có schema/version/nguồn chính thức và không sửa rule đã dùng.
 4. Bulk Transaction cho Stock Reconciliation.
 5. Bulk Transaction cho BOM parent + child/version.
