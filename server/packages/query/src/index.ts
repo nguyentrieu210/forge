@@ -17,7 +17,6 @@ export interface ReportColumn {
   field: string;
   label: string;
   type: "Data" | "Currency" | "Float" | "Int" | "Date" | "Link";
-  /** Target doctype for Link columns, carried through to the Frappe facade. */
   options?: string;
 }
 export interface ReportDefinition {
@@ -32,54 +31,51 @@ export interface ReportDefinition {
 }
 export interface CompiledQuery { sql: string; params: unknown[]; columns: ReportColumn[]; prepared: boolean }
 
+const companyColumn: ReportColumn = { field: "company", label: "Company", type: "Link", options: "Company" };
+const branchColumn: ReportColumn = { field: "branch", label: "Branch", type: "Link", options: "Branch" };
+
 const DEFINITIONS: Record<string, ReportDefinition> = {
   "Accounts Receivable": {
-    name: "Accounts Receivable",
-    source: "receivable_outstanding",
-    tenantField: "tenant_id",
+    name: "Accounts Receivable", source: "receivable_outstanding", tenantField: "tenant_id",
     columns: [
-      { field: "party", label: "Customer", type: "Link" },
-      { field: "currency", label: "Currency", type: "Data" },
-      { field: "against_voucher_type", label: "Voucher Type", type: "Data" },
-      { field: "against_voucher_no", label: "Voucher", type: "Link" },
+      companyColumn, branchColumn,
+      { field: "party", label: "Customer", type: "Link" }, { field: "currency", label: "Currency", type: "Data" },
+      { field: "against_voucher_type", label: "Voucher Type", type: "Data" }, { field: "against_voucher_no", label: "Voucher", type: "Link" },
       { field: "outstanding_amount", label: "Outstanding", type: "Currency" },
     ],
-    allowedFilters: ["party", "currency", "against_voucher_type", "against_voucher_no", "outstanding_amount"],
-    defaultOrder: [{ field: "against_voucher_no", direction: "asc" }],
-    maxRows: 5000,
-    preparedThreshold: 1000,
+    allowedFilters: ["company","branch","party","currency","against_voucher_type","against_voucher_no","outstanding_amount"],
+    defaultOrder: [{ field: "company", direction: "asc" }, { field: "against_voucher_no", direction: "asc" }], maxRows: 5000, preparedThreshold: 1000,
   },
   "Accounts Payable": {
-    name: "Accounts Payable",
-    source: "payable_outstanding",
-    tenantField: "tenant_id",
+    name: "Accounts Payable", source: "payable_outstanding", tenantField: "tenant_id",
     columns: [
-      { field: "party", label: "Supplier", type: "Link" },
-      { field: "currency", label: "Currency", type: "Data" },
-      { field: "against_voucher_type", label: "Voucher Type", type: "Data" },
-      { field: "against_voucher_no", label: "Voucher", type: "Link" },
+      companyColumn, branchColumn,
+      { field: "party", label: "Supplier", type: "Link" }, { field: "currency", label: "Currency", type: "Data" },
+      { field: "against_voucher_type", label: "Voucher Type", type: "Data" }, { field: "against_voucher_no", label: "Voucher", type: "Link" },
       { field: "outstanding_amount", label: "Outstanding", type: "Currency" },
     ],
-    allowedFilters: ["party", "currency", "against_voucher_type", "against_voucher_no", "outstanding_amount"],
-    defaultOrder: [{ field: "against_voucher_no", direction: "asc" }], maxRows: 5000, preparedThreshold: 1000,
+    allowedFilters: ["company","branch","party","currency","against_voucher_type","against_voucher_no","outstanding_amount"],
+    defaultOrder: [{ field: "company", direction: "asc" }, { field: "against_voucher_no", direction: "asc" }], maxRows: 5000, preparedThreshold: 1000,
   },
   "General Ledger": {
     name: "General Ledger", source: "general_ledger_report", tenantField: "tenant_id",
     columns: [
+      companyColumn, branchColumn,
       { field: "posting_at", label: "Posting Date", type: "Date" }, { field: "voucher_type", label: "Voucher Type", type: "Data" },
       { field: "voucher_no", label: "Voucher", type: "Link" }, { field: "account", label: "Account", type: "Link" },
       { field: "party_type", label: "Party Type", type: "Data" }, { field: "party", label: "Party", type: "Link" },
       { field: "currency", label: "Currency", type: "Data" }, { field: "debit", label: "Debit", type: "Currency" },
       { field: "credit", label: "Credit", type: "Currency" }, { field: "cost_center", label: "Cost Center", type: "Link" },
     ],
-    allowedFilters: ["posting_at","voucher_type","voucher_no","account","party_type","party","currency","cost_center"],
-    defaultOrder: [{ field: "posting_at", direction: "asc" }, { field: "voucher_no", direction: "asc" }], maxRows: 5000, preparedThreshold: 1000,
+    allowedFilters: ["company","branch","posting_at","voucher_type","voucher_no","account","party_type","party","currency","cost_center"],
+    defaultOrder: [{ field: "company", direction: "asc" }, { field: "posting_at", direction: "asc" }, { field: "voucher_no", direction: "asc" }], maxRows: 5000, preparedThreshold: 1000,
   },
   "Trial Balance": {
     name: "Trial Balance", source: "trial_balance", tenantField: "tenant_id",
-    columns: [ { field: "account", label: "Account", type: "Link" }, { field: "currency", label: "Currency", type: "Data" },
+    columns: [ companyColumn, branchColumn, { field: "account", label: "Account", type: "Link" }, { field: "currency", label: "Currency", type: "Data" },
       { field: "debit", label: "Debit", type: "Currency" }, { field: "credit", label: "Credit", type: "Currency" }, { field: "balance", label: "Balance", type: "Currency" } ],
-    allowedFilters: ["account","currency","debit","credit","balance"], defaultOrder: [{ field: "account", direction: "asc" }], maxRows: 5000, preparedThreshold: 1000,
+    allowedFilters: ["company","branch","account","currency","debit","credit","balance"],
+    defaultOrder: [{ field: "company", direction: "asc" }, { field: "account", direction: "asc" }], maxRows: 5000, preparedThreshold: 1000,
   },
   "Stock Ledger": {
     name: "Stock Ledger", source: "stock_ledger_report", tenantField: "tenant_id",
@@ -98,34 +94,21 @@ const DEFINITIONS: Record<string, ReportDefinition> = {
     name: "Batch Stock Balance", source: "batch_stock_balance", tenantField: "tenant_id",
     columns: [ { field: "item_code", label: "Item", type: "Link" }, { field: "warehouse", label: "Warehouse", type: "Link" },
       { field: "batch_no", label: "Batch", type: "Link" }, { field: "actual_qty", label: "Actual Qty", type: "Float" },
-      { field: "actual_weight", label: "Actual Weight (kg)", type: "Float" },
-      { field: "stock_value", label: "Stock Value", type: "Currency" } ],
+      { field: "actual_weight", label: "Actual Weight (kg)", type: "Float" }, { field: "stock_value", label: "Stock Value", type: "Currency" } ],
     allowedFilters: ["item_code","warehouse","batch_no","actual_qty","actual_weight","stock_value"],
     defaultOrder: [{ field: "item_code", direction: "asc" }, { field: "batch_no", direction: "asc" }], maxRows: 5000, preparedThreshold: 1000,
   },
   "Tồn nhôm theo khổ": {
     name: "Tồn nhôm theo khổ", source: "alumdoor_available_stock_by_length", tenantField: "tenant_id",
     columns: [
-      { field: "item_code", label: "Mã nhôm", type: "Link", options: "Item" },
-      { field: "warehouse", label: "Kho chính", type: "Link", options: "Warehouse" },
-      { field: "color", label: "Màu", type: "Link", options: "Item Color" },
-      { field: "condition", label: "Tình trạng", type: "Data" },
-      { field: "min_length_m", label: "Khổ tối thiểu (m)", type: "Float" },
-      { field: "total_qty", label: "Tổng cây", type: "Float" },
-      { field: "reserved_qty", label: "Đã giữ", type: "Float" },
-      { field: "available_qty", label: "Khả dụng", type: "Float" },
+      { field: "item_code", label: "Mã nhôm", type: "Link", options: "Item" }, { field: "warehouse", label: "Kho chính", type: "Link", options: "Warehouse" },
+      { field: "color", label: "Màu", type: "Link", options: "Item Color" }, { field: "condition", label: "Tình trạng", type: "Data" },
+      { field: "min_length_m", label: "Khổ tối thiểu (m)", type: "Float" }, { field: "total_qty", label: "Tổng cây", type: "Float" },
+      { field: "reserved_qty", label: "Đã giữ", type: "Float" }, { field: "available_qty", label: "Khả dụng", type: "Float" },
     ],
-    allowedFilters: [
-      "item_code", "warehouse", "color", "condition", "min_length_m",
-      "total_qty", "reserved_qty", "available_qty",
-    ],
-    defaultOrder: [
-      { field: "item_code", direction: "asc" },
-      { field: "warehouse", direction: "asc" },
-      { field: "min_length_m", direction: "desc" },
-    ],
-    maxRows: 5000,
-    preparedThreshold: 1000,
+    allowedFilters: ["item_code","warehouse","color","condition","min_length_m","total_qty","reserved_qty","available_qty"],
+    defaultOrder: [{ field: "item_code", direction: "asc" }, { field: "warehouse", direction: "asc" }, { field: "min_length_m", direction: "desc" }],
+    maxRows: 5000, preparedThreshold: 1000,
   },
   "Serial Number Status": {
     name: "Serial Number Status", source: "serial_stock_state", tenantField: "tenant_id",
@@ -156,8 +139,7 @@ const DEFINITIONS: Record<string, ReportDefinition> = {
       { field: "posting_at", label: "Posting Date", type: "Date" }, { field: "voucher_type", label: "Voucher Type", type: "Data" },
       { field: "voucher_no", label: "Voucher", type: "Link" }, { field: "asset", label: "Asset", type: "Link" },
       { field: "kind", label: "Activity", type: "Data" }, { field: "location", label: "Location", type: "Link" },
-      { field: "custodian", label: "Custodian", type: "Link" }, { field: "amount", label: "Amount", type: "Currency" },
-      { field: "currency", label: "Currency", type: "Data" },
+      { field: "custodian", label: "Custodian", type: "Link" }, { field: "amount", label: "Amount", type: "Currency" }, { field: "currency", label: "Currency", type: "Data" },
     ],
     allowedFilters: ["posting_at","voucher_type","voucher_no","asset","kind","location","custodian","currency"],
     defaultOrder: [{ field: "posting_at", direction: "asc" }, { field: "voucher_no", direction: "asc" }], maxRows: 5000, preparedThreshold: 1000,
@@ -177,8 +159,7 @@ const DEFINITIONS: Record<string, ReportDefinition> = {
     columns: [
       { field: "opening_entry", label: "Opening Entry", type: "Link" }, { field: "pos_profile", label: "POS Profile", type: "Link" },
       { field: "currency", label: "Currency", type: "Data" }, { field: "net_total", label: "Net Total", type: "Currency" },
-      { field: "tax_total", label: "Tax Total", type: "Currency" }, { field: "grand_total", label: "Grand Total", type: "Currency" },
-      { field: "invoice_count", label: "Invoices", type: "Int" },
+      { field: "tax_total", label: "Tax Total", type: "Currency" }, { field: "grand_total", label: "Grand Total", type: "Currency" }, { field: "invoice_count", label: "Invoices", type: "Int" },
     ],
     allowedFilters: ["opening_entry","pos_profile","currency","net_total","tax_total","grand_total","invoice_count"],
     defaultOrder: [{ field: "opening_entry", direction: "asc" }], maxRows: 5000, preparedThreshold: 1000,
@@ -199,8 +180,7 @@ const DEFINITIONS: Record<string, ReportDefinition> = {
       { field: "salary_slip", label: "Salary Slip", type: "Link" }, { field: "employee", label: "Employee", type: "Link" },
       { field: "company", label: "Company", type: "Link" }, { field: "start_date", label: "Start Date", type: "Date" },
       { field: "end_date", label: "End Date", type: "Date" }, { field: "gross_pay", label: "Gross Pay", type: "Currency" },
-      { field: "total_deduction", label: "Deductions", type: "Currency" }, { field: "net_pay", label: "Net Pay", type: "Currency" },
-      { field: "status", label: "Status", type: "Data" },
+      { field: "total_deduction", label: "Deductions", type: "Currency" }, { field: "net_pay", label: "Net Pay", type: "Currency" }, { field: "status", label: "Status", type: "Data" },
     ],
     allowedFilters: ["salary_slip","employee","company","start_date","end_date","gross_pay","total_deduction","net_pay","status"],
     defaultOrder: [{ field: "start_date", direction: "desc" }, { field: "salary_slip", direction: "asc" }], maxRows: 5000, preparedThreshold: 1000,
@@ -228,47 +208,50 @@ const DEFINITIONS: Record<string, ReportDefinition> = {
   },
   "Profit and Loss": {
     name: "Profit and Loss", source: "profit_and_loss", tenantField: "tenant_id",
-    columns: [
+    columns: [ companyColumn, branchColumn,
       { field: "account", label: "Account", type: "Link" }, { field: "root_type", label: "Root Type", type: "Data" },
       { field: "currency", label: "Currency", type: "Data" }, { field: "debit", label: "Debit", type: "Currency" },
       { field: "credit", label: "Credit", type: "Currency" }, { field: "balance", label: "Balance", type: "Currency" },
     ],
-    allowedFilters: ["account","root_type","currency","debit","credit","balance"],
-    defaultOrder: [{ field: "root_type", direction: "asc" }, { field: "account", direction: "asc" }], maxRows: 5000, preparedThreshold: 1000,
+    allowedFilters: ["company","branch","account","root_type","currency","debit","credit","balance"],
+    defaultOrder: [{ field: "company", direction: "asc" }, { field: "root_type", direction: "asc" }, { field: "account", direction: "asc" }], maxRows: 5000, preparedThreshold: 1000,
   },
   "Balance Sheet": {
     name: "Balance Sheet", source: "balance_sheet", tenantField: "tenant_id",
-    columns: [
+    columns: [ companyColumn, branchColumn,
       { field: "account", label: "Account", type: "Link" }, { field: "root_type", label: "Root Type", type: "Data" },
       { field: "currency", label: "Currency", type: "Data" }, { field: "debit", label: "Debit", type: "Currency" },
       { field: "credit", label: "Credit", type: "Currency" }, { field: "balance", label: "Balance", type: "Currency" },
     ],
-    allowedFilters: ["account","root_type","currency","debit","credit","balance"],
-    defaultOrder: [{ field: "root_type", direction: "asc" }, { field: "account", direction: "asc" }], maxRows: 5000, preparedThreshold: 1000,
+    allowedFilters: ["company","branch","account","root_type","currency","debit","credit","balance"],
+    defaultOrder: [{ field: "company", direction: "asc" }, { field: "root_type", direction: "asc" }, { field: "account", direction: "asc" }], maxRows: 5000, preparedThreshold: 1000,
   },
   "Cash Flow": {
     name: "Cash Flow", source: "cash_flow", tenantField: "tenant_id",
+    columns: [ companyColumn, branchColumn, { field: "account", label: "Account", type: "Link" }, { field: "currency", label: "Currency", type: "Data" },
+      { field: "net_cash_flow", label: "Net Cash Flow", type: "Currency" } ],
+    allowedFilters: ["company","branch","account","currency","net_cash_flow"],
+    defaultOrder: [{ field: "company", direction: "asc" }, { field: "account", direction: "asc" }], maxRows: 5000, preparedThreshold: 1000,
+  },
+  "Accounting Integrity Exceptions": {
+    name: "Accounting Integrity Exceptions", source: "accounting_integrity_exceptions", tenantField: "tenant_id",
     columns: [
-      { field: "account", label: "Account", type: "Link" }, { field: "currency", label: "Currency", type: "Data" },
-      { field: "net_cash_flow", label: "Net Cash Flow", type: "Currency" },
+      { field: "severity", label: "Severity", type: "Data" }, { field: "code", label: "Code", type: "Data" }, companyColumn,
+      { field: "voucher_type", label: "Voucher Type", type: "Data" }, { field: "voucher_no", label: "Voucher", type: "Link" },
+      { field: "voucher_revision", label: "Revision", type: "Int" }, { field: "details", label: "Details", type: "Data" },
     ],
-    allowedFilters: ["account","currency","net_cash_flow"],
-    defaultOrder: [{ field: "account", direction: "asc" }], maxRows: 5000, preparedThreshold: 1000,
+    allowedFilters: ["severity","code","company","voucher_type","voucher_no","voucher_revision"],
+    defaultOrder: [{ field: "severity", direction: "asc" }, { field: "company", direction: "asc" }, { field: "voucher_no", direction: "asc" }],
+    maxRows: 5000, preparedThreshold: 1000,
   },
   "Stock Balance": {
-    name: "Stock Balance",
-    source: "stock_balance",
-    tenantField: "tenant_id",
+    name: "Stock Balance", source: "stock_balance", tenantField: "tenant_id",
     columns: [
-      { field: "item_code", label: "Item", type: "Link" },
-      { field: "warehouse", label: "Warehouse", type: "Link" },
-      { field: "actual_qty", label: "Actual Qty", type: "Float" },
-      { field: "stock_value", label: "Stock Value", type: "Currency" },
+      { field: "item_code", label: "Item", type: "Link" }, { field: "warehouse", label: "Warehouse", type: "Link" },
+      { field: "actual_qty", label: "Actual Qty", type: "Float" }, { field: "stock_value", label: "Stock Value", type: "Currency" },
     ],
-    allowedFilters: ["item_code", "warehouse", "actual_qty", "stock_value"],
-    defaultOrder: [{ field: "item_code", direction: "asc" }, { field: "warehouse", direction: "asc" }],
-    maxRows: 5000,
-    preparedThreshold: 1000,
+    allowedFilters: ["item_code","warehouse","actual_qty","stock_value"],
+    defaultOrder: [{ field: "item_code", direction: "asc" }, { field: "warehouse", direction: "asc" }], maxRows: 5000, preparedThreshold: 1000,
   },
 };
 
@@ -281,14 +264,8 @@ export function parseQueryRequest(value: unknown, tenantId: string): QueryReques
   const orderBy = orderRaw === undefined ? undefined : parseOrder(orderRaw);
   const limit = parseBoundedInteger(object.limit, "limit", 1, 5000);
   const offset = parseBoundedInteger(object.offset, "offset", 0, 1_000_000);
-  return {
-    report,
-    tenant_id: tenantId,
-    ...(filters ? { filters } : {}),
-    ...(orderBy ? { order_by: orderBy } : {}),
-    ...(limit !== undefined ? { limit } : {}),
-    ...(offset !== undefined ? { offset } : {}),
-  };
+  return { report, tenant_id: tenantId, ...(filters ? { filters } : {}), ...(orderBy ? { order_by: orderBy } : {}),
+    ...(limit !== undefined ? { limit } : {}), ...(offset !== undefined ? { offset } : {}) };
 }
 
 export class QueryCompiler {
@@ -301,19 +278,12 @@ export class QueryCompiler {
     for (const filter of request.filters ?? []) {
       if (!definition.allowedFilters.includes(filter.field)) throw errors.validation(`Filter is not allowed: ${filter.field}`);
       const field = quoteIdentifier(filter.field);
-      if (filter.operator === "is_null") {
-        where.push(`${field} IS NULL`);
-        continue;
-      }
+      if (filter.operator === "is_null") { where.push(`${field} IS NULL`); continue; }
       if (filter.operator === "in") {
         if (!Array.isArray(filter.value) || filter.value.length === 0) throw errors.validation(`IN filter requires a non-empty array: ${filter.field}`);
         if (filter.value.length > 80) throw errors.validation("IN filter exceeds the parameter budget");
-        const placeholders = filter.value.map((value) => {
-          params.push(value);
-          return `?${params.length}`;
-        });
-        where.push(`${field} IN (${placeholders.join(",")})`);
-        continue;
+        const placeholders = filter.value.map((value) => { params.push(value); return `?${params.length}`; });
+        where.push(`${field} IN (${placeholders.join(",")})`); continue;
       }
       params.push(filter.value ?? null);
       const operator = filter.operator === "like" ? "LIKE" : filter.operator;
@@ -326,9 +296,7 @@ export class QueryCompiler {
     const limit = Math.max(1, Math.min(request.limit ?? 100, definition.maxRows));
     const offset = Math.max(0, request.offset ?? 0);
     params.push(limit, offset);
-    const orderSql = order.length
-      ? ` ORDER BY ${order.map((item) => `${quoteIdentifier(item.field)} ${item.direction.toUpperCase()}`).join(", ")}`
-      : "";
+    const orderSql = order.length ? ` ORDER BY ${order.map((item) => `${quoteIdentifier(item.field)} ${item.direction.toUpperCase()}`).join(", ")}` : "";
     const sql = `SELECT ${selectedFields.join(", ")} FROM ${quoteIdentifier(definition.source)} WHERE ${where.join(" AND ")}${orderSql} LIMIT ?${params.length - 1} OFFSET ?${params.length}`;
     const prepared = !forceSynchronous && (limit > definition.preparedThreshold || (request.filters?.length ?? 0) > 8);
     return { sql, params, columns: definition.columns, prepared };
@@ -337,22 +305,13 @@ export class QueryCompiler {
 
 export class D1ReportService {
   constructor(private readonly db: D1Database, private readonly compiler = new QueryCompiler()) {}
-
   async run(request: QueryRequest, forceSynchronous = false): Promise<JsonObject> {
     const compiled = this.compiler.compile(request, forceSynchronous);
     if (compiled.prepared) return { prepared: true, report: request.report, reason: "QUERY_BUDGET" };
     const result = await this.db.prepare(compiled.sql).bind(...compiled.params).all<Record<string, JsonValue>>();
-    return {
-      prepared: false,
-      report: request.report,
-      columns: compiled.columns as unknown as JsonValue,
-      result: (result.results ?? []) as unknown as JsonValue,
-      row_count: result.results?.length ?? 0,
-      message: null,
-      chart: null,
-      report_summary: [],
-      skip_total_row: false,
-    };
+    return { prepared: false, report: request.report, columns: compiled.columns as unknown as JsonValue,
+      result: (result.results ?? []) as unknown as JsonValue, row_count: result.results?.length ?? 0,
+      message: null, chart: null, report_summary: [], skip_total_row: false };
   }
 }
 
@@ -365,11 +324,7 @@ function parseFilters(value: JsonValue | undefined): QueryFilter[] {
     if (!["=", "!=", ">", ">=", "<", "<=", "in", "like", "is_null"].includes(String(operator))) {
       throw errors.validation(`filters[${index}].operator is invalid`);
     }
-    return {
-      field,
-      operator: operator as FilterOperator,
-      ...(object.value !== undefined ? { value: object.value } : {}),
-    };
+    return { field, operator: operator as FilterOperator, ...(object.value !== undefined ? { value: object.value } : {}) };
   });
 }
 
@@ -385,9 +340,7 @@ function parseOrder(value: JsonValue | undefined): QueryOrder[] {
 
 function parseBoundedInteger(value: JsonValue | undefined, field: string, min: number, max: number): number | undefined {
   if (value === undefined) return undefined;
-  if (!Number.isSafeInteger(value) || (value as number) < min || (value as number) > max) {
-    throw errors.validation(`${field} must be an integer from ${min} to ${max}`);
-  }
+  if (!Number.isSafeInteger(value) || (value as number) < min || (value as number) > max) throw errors.validation(`${field} must be an integer from ${min} to ${max}`);
   return value as number;
 }
 
@@ -396,26 +349,6 @@ function quoteIdentifier(value: string): string {
   return `"${value}"`;
 }
 
-// ── Reports an APP declares ──────────────────────────────────────────────────
-/**
- * Compiling a report that came from an app manifest rather than from `DEFINITIONS`.
- *
- * The definitions above read purpose-built SQL views for accounting, where the shape of
- * a ledger is fixed and the platform owns it. An app's data has no such view: it lives in
- * `documents` as JSON, one row per record. So an app report is compiled against that
- * table with `json_extract`, which is the same access path the list view already uses.
- *
- * WHAT AN APP CANNOT DO HERE, and why each is closed rather than merely undocumented:
- *   · Name a table. The source is always `documents`, filtered to ONE doctype.
- *   · Reach another tenant. `tenant_id` is the first bound parameter, always.
- *   · Reach another app. The doctype is checked against the app's own at parse time, and
- *     permission is asserted by the caller before this runs.
- *   · Inject anything. Every identifier is matched against a strict pattern; every value
- *     is a bound parameter. Nothing an app or a user writes is concatenated into SQL.
- *
- * The result is that a report is data an app carries, with the same blast radius as a
- * list view — not a hole through which an app can query the database.
- */
 export interface AppReportSpec {
   name: string;
   doctype: string;
@@ -428,16 +361,10 @@ export interface AppReportSpec {
 
 const APP_REPORT_FIELD = /^[a-z_][a-z0-9_]*$/;
 const APP_REPORT_OPERATORS = new Set<FilterOperator>(["=", "!=", ">", ">=", "<", "<=", "in", "like", "is_null"]);
-/** Real columns of `documents`. Everything else lives inside `payload_json`. */
 const RECORD_COLUMNS = new Set(["name", "owner", "status", "docstatus", "created_at", "modified_at"]);
 const AGGREGATE_SQL: Record<string, (expression: string) => string> = {
-  // `count` counts ROWS, so its field is irrelevant — counting a JSON field would silently
-  // skip records where that field is absent, which is not what "how many" ever means.
-  count: () => "COUNT(*)",
-  sum: (expression) => `COALESCE(SUM(CAST(${expression} AS REAL)),0)`,
-  avg: (expression) => `AVG(CAST(${expression} AS REAL))`,
-  min: (expression) => `MIN(${expression})`,
-  max: (expression) => `MAX(${expression})`,
+  count: () => "COUNT(*)", sum: (expression) => `COALESCE(SUM(CAST(${expression} AS REAL)),0)`,
+  avg: (expression) => `AVG(CAST(${expression} AS REAL))`, min: (expression) => `MIN(${expression})`, max: (expression) => `MAX(${expression})`,
 };
 
 function fieldExpression(field: string): string {
@@ -448,10 +375,7 @@ function fieldExpression(field: string): string {
 
 export function compileAppReport(spec: AppReportSpec, request: QueryRequest): CompiledQuery {
   const params: unknown[] = [request.tenant_id, spec.doctype];
-  // `docstatus<>2` — a cancelled document is not deleted, but it must not be counted.
-  // Leaving it in makes every total quietly too big, and nothing on the screen says why.
   const where = ["tenant_id=?1", "doctype=?2", "docstatus<>2"];
-
   for (const filter of request.filters ?? []) {
     if (!spec.filters.includes(filter.field)) throw errors.validation(`Filter is not allowed: ${filter.field}`);
     if (!APP_REPORT_OPERATORS.has(filter.operator)) throw errors.validation(`Filter operator is not allowed: ${String(filter.operator)}`);
@@ -460,15 +384,11 @@ export function compileAppReport(spec: AppReportSpec, request: QueryRequest): Co
     if (filter.operator === "in") {
       if (!Array.isArray(filter.value) || filter.value.length === 0) throw errors.validation(`IN filter requires a non-empty array: ${filter.field}`);
       if (filter.value.length > 80) throw errors.validation("IN filter exceeds the parameter budget");
-      where.push(`${expression} IN (${filter.value.map((value) => { params.push(value); return `?${params.length}`; }).join(",")})`);
-      continue;
+      where.push(`${expression} IN (${filter.value.map((value) => { params.push(value); return `?${params.length}`; }).join(",")})`); continue;
     }
     params.push(filter.value ?? null);
     where.push(`${expression} ${filter.operator === "like" ? "LIKE" : filter.operator} ?${params.length}`);
   }
-
-  // Aliased so the client keys rows the same way it does everywhere else; without an
-  // alias, `COALESCE(SUM(...),0)` comes back as the column NAME and nothing matches.
   const alias = (column: AppReportSpec["columns"][number]) => (column.aggregate ? `${column.aggregate}_${column.field}` : column.field);
   const selected = spec.columns.map((column) => {
     const expression = fieldExpression(column.field);
@@ -479,40 +399,24 @@ export function compileAppReport(spec: AppReportSpec, request: QueryRequest): Co
   const groupSql = spec.group_by ? ` GROUP BY ${fieldExpression(spec.group_by)}` : "";
   const ordered = spec.order_by ? spec.columns.find((column) => column.field === spec.order_by?.column) : undefined;
   const orderSql = ordered ? ` ORDER BY "${alias(ordered)}" ${spec.order_by?.direction === "desc" ? "DESC" : "ASC"}` : "";
-
   const limit = Math.max(1, Math.min(request.limit ?? spec.limit, spec.limit));
   const offset = Math.max(0, request.offset ?? 0);
   params.push(limit, offset);
-
   return {
     sql: `SELECT ${selected.join(", ")} FROM documents WHERE ${where.join(" AND ")}${groupSql}${orderSql} LIMIT ?${params.length - 1} OFFSET ?${params.length}`,
     params,
-    columns: spec.columns.map((column) => ({
-      field: alias(column),
-      label: column.label,
-      type: column.type as ReportColumn["type"],
-      ...(column.options ? { options: column.options } : {}),
-    })),
+    columns: spec.columns.map((column) => ({ field: alias(column), label: column.label, type: column.type as ReportColumn["type"], ...(column.options ? { options: column.options } : {}) })),
     prepared: false,
   };
 }
 
 export class AppReportService {
   constructor(private readonly db: D1Database) {}
-
   async run(spec: AppReportSpec, request: QueryRequest): Promise<JsonObject> {
     const compiled = compileAppReport(spec, request);
     const result = await this.db.prepare(compiled.sql).bind(...compiled.params).all<Record<string, JsonValue>>();
-    return {
-      prepared: false,
-      report: spec.name,
-      columns: compiled.columns as unknown as JsonValue,
-      result: (result.results ?? []) as unknown as JsonValue,
-      row_count: result.results?.length ?? 0,
-      message: null,
-      chart: null,
-      report_summary: [],
-      skip_total_row: false,
-    };
+    return { prepared: false, report: spec.name, columns: compiled.columns as unknown as JsonValue,
+      result: (result.results ?? []) as unknown as JsonValue, row_count: result.results?.length ?? 0,
+      message: null, chart: null, report_summary: [], skip_total_row: false };
   }
 }
