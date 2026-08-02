@@ -1,0 +1,21 @@
+{
+  "name": "Web Page Block",
+  "module": "Website",
+  "is_child": true,
+  "fields": [
+    { "fieldname": "block_type", "label": "Loại khối", "fieldtype": "Select", "options": "hero\ntext\nfeatures\nimage-gallery\nproject-gallery\nproduct-grid\ncta\ncontact", "required": true, "in_list_view": true },
+    { "fieldname": "eyebrow", "label": "Nhãn nhỏ", "fieldtype": "Data" },
+    { "fieldname": "heading", "label": "Tiêu đề", "fieldtype": "Data", "in_list_view": true },
+    { "fieldname": "body", "label": "Nội dung", "fieldtype": "Small Text" },
+    { "fieldname": "image", "label": "Hình ảnh", "fieldtype": "Attach Image" },
+    { "fieldname": "button_label", "label": "Nhãn nút", "fieldtype": "Data" },
+    { "fieldname": "button_url", "label": "Liên kết nút", "fieldtype": "Data" },
+    { "fieldname": "tone", "label": "Sắc thái", "fieldtype": "Select", "options": "neutral\nprimary\nmuted\ndark", "default": "neutral" },
+    { "fieldname": "align", "label": "Căn nội dung", "fieldtype": "Select", "options": "left\ncenter", "default": "left" },
+    { "fieldname": "columns", "label": "Số cột", "fieldtype": "Int", "default": 3 },
+    { "fieldname": "source", "label": "Nguồn dữ liệu", "fieldtype": "Select", "options": "none\nstorefront-catalog", "default": "none" },
+    { "fieldname": "limit", "label": "Giới hạn", "fieldtype": "Int", "default": 6 }
+  ],
+  "permissions": [],
+  "revision": 1
+}
