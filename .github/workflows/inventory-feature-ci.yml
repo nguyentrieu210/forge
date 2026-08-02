@@ -51,7 +51,6 @@ on:
       - 'client/**/*batch*'
       - 'client/**/*bom*'
       - 'client/**/*work-order*'
-      - '.github/workflows/inventory-feature-ci.yml'
   workflow_dispatch:
 
 permissions:
