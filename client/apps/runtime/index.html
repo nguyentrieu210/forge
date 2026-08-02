@@ -24,6 +24,10 @@
   <body>
     <div id="root"></div>
     <script type="module">
+      // Styles are a shared entry dependency, not a side effect of whichever runtime branch
+      // wins below. Otherwise Vite may code-split the CSS behind the nested bootstrap import,
+      // leaving the dialog fixture and public Website renderer unstyled in the production build.
+      import "/src/styles.css";
       const fixture = new URLSearchParams(window.location.search).has("dialog-wheel-fixture");
       if (fixture) import("/src/dialog-wheel-fixture-main.tsx");
       else import("/src/bootstrap.ts");
