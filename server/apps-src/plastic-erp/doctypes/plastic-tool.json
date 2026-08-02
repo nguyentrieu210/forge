@@ -1,0 +1,34 @@
+{
+  "name": "Plastic Tool",
+  "module": "Plastic ERP",
+  "autoname": "PT-.####",
+  "title_field": "tool_name",
+  "search_fields": ["tool_name", "tool_code", "customer_tool_code"],
+  "sort_field": "tool_name",
+  "sort_order": "ASC",
+  "fields": [
+    { "fieldname": "tool_code", "label": "Mã khuôn / tool", "fieldtype": "Data", "required": true, "unique": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "tool_name", "label": "Tên khuôn / tool", "fieldtype": "Data", "required": true, "in_list_view": true },
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "in_standard_filter": true },
+    { "fieldname": "process_profile", "label": "Công nghệ", "fieldtype": "Link", "options": "Plastic Process Profile", "required": true, "in_list_view": true },
+    { "fieldname": "output_item", "label": "Thành phẩm chính", "fieldtype": "Link", "options": "Item", "in_list_view": true },
+    { "fieldname": "customer", "label": "Khách sở hữu", "fieldtype": "Link", "options": "Customer" },
+    { "fieldname": "customer_owned", "label": "Tool của khách", "fieldtype": "Check" },
+    { "fieldname": "customer_tool_code", "label": "Mã tool của khách", "fieldtype": "Data" },
+    { "fieldname": "cavity_count", "label": "Số cavity", "fieldtype": "Int", "required": true, "default": 1, "in_list_view": true },
+    { "fieldname": "standard_cycle_seconds", "label": "Cycle chuẩn giây", "fieldtype": "Float" },
+    { "fieldname": "shot_weight_g", "label": "Shot weight g", "fieldtype": "Float" },
+    { "fieldname": "maintenance_cycle_count", "label": "Chu kỳ bảo trì theo shot", "fieldtype": "Int" },
+    { "fieldname": "current_cycle_count", "label": "Số shot tích lũy", "fieldtype": "Int", "read_only": true },
+    { "fieldname": "compatible_machines", "label": "Máy tương thích", "fieldtype": "Table", "options": "Plastic Tool Machine Rule" },
+    { "fieldname": "operational_state", "label": "Trạng thái", "fieldtype": "Select", "options": "Available\nIn Use\nMaintenance\nTrial\nRetired", "default": "Available", "required": true, "in_list_view": true, "in_standard_filter": true }
+  ],
+  "permissions": [
+    { "role": "Plastic Engineering User", "read": true, "write": true, "create": true, "print": true, "report": true, "export": true },
+    { "role": "Plastic Production Manager", "read": true, "write": true, "report": true },
+    { "role": "Plastic Planner", "read": true, "report": true },
+    { "role": "Plastic Maintenance User", "read": true, "write": true, "report": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "print": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}
