@@ -22,6 +22,8 @@
     "dev:gateway": "npx wrangler dev --config apps/gateway-worker/wrangler.jsonc",
     "deploy:tenant": "node scripts/deploy-tenant.mjs",
     "deploy:gateway": "npx wrangler deploy --config apps/gateway-worker/wrangler.jsonc",
+    "deploy:ws07-worker": "npx wrangler deploy --config apps-src/ws07-worker/wrangler.jsonc",
+    "check:ws07-worker": "npx wrangler deploy --dry-run --config apps-src/ws07-worker/wrangler.jsonc",
     "tenant:backup": "node scripts/backup-tenant.mjs",
     "tenant:migrate": "node scripts/migrate-tenant.mjs",
     "tenant:restore-drill": "node scripts/restore-tenant-drill.mjs",
