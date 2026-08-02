@@ -1,12 +1,48 @@
 {
   "id": "projects",
   "name": "Projects & PSA",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "requires": [],
+  "reports": [
+    {
+      "name": "Project Task Control",
+      "label": "Kiểm soát công việc dự án",
+      "doctype": "Project Task",
+      "columns": [
+        { "field": "subject", "label": "Công việc", "type": "Data" },
+        { "field": "project", "label": "Dự án", "type": "Link", "options": "Project" },
+        { "field": "assignee", "label": "Người phụ trách", "type": "Link", "options": "User" },
+        { "field": "priority", "label": "Ưu tiên", "type": "Data" },
+        { "field": "planned_end", "label": "Hạn kế hoạch", "type": "Datetime" },
+        { "field": "progress_percent", "label": "Tiến độ", "type": "Percent" },
+        { "field": "workflow_state", "label": "Trạng thái", "type": "Data" }
+      ],
+      "order_by": { "column": "planned_end", "direction": "asc" },
+      "filters": ["project", "assignee", "priority", "workflow_state"],
+      "limit": 200
+    },
+    {
+      "name": "Project Timesheet Control",
+      "label": "Kiểm soát chấm giờ dự án",
+      "doctype": "Project Timesheet",
+      "columns": [
+        { "field": "employee", "label": "Nhân viên", "type": "Link", "options": "Employee" },
+        { "field": "project", "label": "Dự án", "type": "Link", "options": "Project" },
+        { "field": "period_start", "label": "Từ ngày", "type": "Date" },
+        { "field": "period_end", "label": "Đến ngày", "type": "Date" },
+        { "field": "workflow_state", "label": "Trạng thái", "type": "Data" }
+      ],
+      "order_by": { "column": "period_start", "direction": "desc" },
+      "filters": ["employee", "project", "workflow_state"],
+      "limit": 200
+    }
+  ],
   "nav": [
     { "key": "Project", "label": "Dự án", "kind": "doctype", "icon": "folder-kanban", "group": "Dự án" },
     { "key": "Project Task", "label": "Công việc dự án", "kind": "doctype", "icon": "list-checks", "group": "Dự án" },
-    { "key": "Project Timesheet", "label": "Bảng chấm giờ dự án", "kind": "doctype", "icon": "clock-3", "group": "Thời gian" }
+    { "key": "project-task-control", "label": "Kiểm soát công việc", "kind": "route", "route": "/report/Project%20Task%20Control", "permission_doctype": "Project Task", "icon": "chart-no-axes-gantt", "group": "Dự án" },
+    { "key": "Project Timesheet", "label": "Bảng chấm giờ dự án", "kind": "doctype", "icon": "clock-3", "group": "Thời gian" },
+    { "key": "project-timesheet-control", "label": "Kiểm soát chấm giờ", "kind": "route", "route": "/report/Project%20Timesheet%20Control", "permission_doctype": "Project Timesheet", "icon": "list-clock", "group": "Thời gian" }
   ],
   "hooks": []
 }
