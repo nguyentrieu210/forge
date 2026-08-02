@@ -135,6 +135,7 @@ export function AppShell(props: AppShellProps) {
   const groups = useMemo(() => groupNav(props.nav, navQuery), [props.nav, navQuery]);
   const activeRef = useRef<HTMLButtonElement | null>(null);
   const mainRef = useRef<HTMLElement | null>(null);
+  const mobileMenuTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   // Ghim nav item lên đầu sidebar (client-only) — vẫn giữ nguyên ở nhóm gốc, chỉ thêm 1 nhóm tổng
   // hợp phía trên để truy cập nhanh, giống pattern browser bookmark bar.
@@ -181,6 +182,17 @@ export function AppShell(props: AppShellProps) {
     window.addEventListener("offline", sync);
     return () => { window.removeEventListener("online", sync); window.removeEventListener("offline", sync); };
   }, []);
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      setMobileOpen(false);
+      window.requestAnimationFrame(() => mobileMenuTriggerRef.current?.focus());
+    };
+    window.addEventListener("keydown", onEscape);
+    return () => window.removeEventListener("keydown", onEscape);
+  }, [mobileOpen]);
 
   const go = (item: NavItem) => {
     if (item.disabledReason) return;
@@ -214,8 +226,8 @@ export function AppShell(props: AppShellProps) {
     <TooltipProvider delayDuration={250}>
       <a className="mf-skip-link" href="#mf-main-content">Bỏ qua menu, tới nội dung chính</a>
       <div className="mf-shell flex h-screen w-full overflow-hidden bg-background text-foreground">
-        {mobileOpen ? <div className="fixed inset-0 z-40 bg-black/50 md:hidden" onClick={() => setMobileOpen(false)} aria-hidden="true" /> : null}
-        <aside className={cn(
+        {mobileOpen ? <div className="fixed inset-0 z-40 bg-black/50 md:hidden" onClick={() => { setMobileOpen(false); window.requestAnimationFrame(() => mobileMenuTriggerRef.current?.focus()); }} aria-hidden="true" /> : null}
+        <aside id="mf-primary-navigation" role="navigation" aria-label="Điều hướng ứng dụng" className={cn(
           "mf-shell-sidebar flex shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground transition-[width,transform] duration-200",
           // 17rem, not 15.5. Vietnamese menu labels ("Trung tâm phân quyền", "Danh mục
           // ứng dụng") plus an icon, a chevron and the pin button's reserved `pr-7` do not
@@ -235,7 +247,7 @@ export function AppShell(props: AppShellProps) {
                 )}>{props.brandMark}</div>
               : <div className="mf-brand-mark">{(props.brand ?? "MetaForge").trim().charAt(0).toUpperCase()}</div>}
             {!collapsed && !props.brandLogoOnly ? <span className="truncate font-semibold">{props.brand ?? "MetaForge"}</span> : null}
-            <Button variant="ghost" size="icon-sm" className="ml-auto md:hidden" onClick={() => setMobileOpen(false)} aria-label="Đóng menu"><X className="size-4" /></Button>
+            <Button variant="ghost" size="icon-sm" className="ml-auto md:hidden" onClick={() => { setMobileOpen(false); window.requestAnimationFrame(() => mobileMenuTriggerRef.current?.focus()); }} aria-label="Đóng menu"><X className="size-4" /></Button>
           </div>
           <Separator />
 
@@ -339,10 +351,10 @@ export function AppShell(props: AppShellProps) {
 
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="mf-shell-topbar flex h-12 shrink-0 items-center gap-2 border-b px-3">
-            <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileOpen(true)} aria-label="Mở menu"><Menu className="size-4" /></Button>
+            <Button ref={mobileMenuTriggerRef} variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileOpen(true)} aria-label="Mở menu" aria-expanded={mobileOpen} aria-controls="mf-primary-navigation"><Menu className="size-4" /></Button>
             {/* Thứ tự chủ ý: điều hướng → Công ty/Kho → tìm nhanh. Công ty/Kho quyết định TOÀN BỘ dữ
                 liệu đang xem nên phải nằm ngay đầu, trước cả breadcrumb. */}
-            {props.businessContext ? <div className="flex min-w-0 shrink-0 items-center">{props.businessContext}</div> : null}
+            {props.businessContext ? <div className="hidden min-w-0 shrink-0 items-center lg:flex">{props.businessContext}</div> : null}
             <nav className="ml-1 flex min-w-0 items-center gap-1 text-sm"><BreadcrumbTrail items={props.breadcrumbs ?? []} /></nav>
 
             {/* Ô tìm nhanh CĂN GIỮA topbar: hai khoảng đệm co giãn bằng nhau ở hai bên đẩy nó về đúng
@@ -374,7 +386,7 @@ export function AppShell(props: AppShellProps) {
             <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="hidden md:inline-flex" aria-label="Giao diện">{THEME_ICON[props.theme]}</Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="max-h-[80vh] w-56 overflow-y-auto"><DropdownMenuLabel className="text-xs font-medium text-muted-foreground">{t("shell.theme_mode")}</DropdownMenuLabel><DropdownMenuItem onClick={() => props.onThemeChange("light")}><Sun className="size-4" /><span className="flex-1">{t("shell.theme_light")}</span>{props.theme === "light" ? <Check className="size-3.5 text-primary" /> : null}</DropdownMenuItem><DropdownMenuItem onClick={() => props.onThemeChange("dark")}><Moon className="size-4" /><span className="flex-1">{t("shell.theme_dark")}</span>{props.theme === "dark" ? <Check className="size-3.5 text-primary" /> : null}</DropdownMenuItem><DropdownMenuItem onClick={() => props.onThemeChange("system")}><Monitor className="size-4" /><span className="flex-1">{t("shell.theme_system")}</span>{props.theme === "system" ? <Check className="size-3.5 text-primary" /> : null}</DropdownMenuItem>{props.allowBrandChange !== false ? <><DropdownMenuSeparator /><DropdownMenuLabel className="text-xs font-medium text-muted-foreground">{t("shell.theme_brand")}</DropdownMenuLabel>{BRANDS.map((b) => (<DropdownMenuItem key={b.id} onClick={() => setBrand(b.id)}><span className="size-3.5 shrink-0 rounded-full border [background:var(--mf-brand-swatch)]" style={{ "--mf-brand-swatch": b.swatch } as React.CSSProperties} aria-hidden="true" /><span className="flex-1">{b.label}</span>{brand === b.id ? <Check className="size-3.5 text-primary" /> : null}</DropdownMenuItem>))}</> : null}</DropdownMenuContent></DropdownMenu>
             <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="rounded-full" aria-label="Tài khoản"><Avatar className="size-7"><AvatarFallback>{initials(props.fullName)}</AvatarFallback></Avatar></Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-56"><DropdownMenuLabel><div className="truncate">{props.fullName ?? "Khách"}</div>{props.userSubtitle ? <div className="truncate text-xs font-normal text-muted-foreground">{props.userSubtitle}</div> : null}</DropdownMenuLabel><DropdownMenuSeparator />{props.onChangePassword ? <DropdownMenuItem onClick={props.onChangePassword}><KeyRound className="size-4" /> {t("account.change_password")}</DropdownMenuItem> : null}{props.onLogoutOtherSessions ? <DropdownMenuItem onClick={() => setConfirmLogoutOthers(true)}><MonitorSmartphone className="size-4" /> {t("account.logout_other_sessions_menu")}</DropdownMenuItem> : null}{props.onLogout ? <DropdownMenuItem onClick={props.onLogout}><LogOut className="size-4" /> Đăng xuất</DropdownMenuItem> : null}</DropdownMenuContent></DropdownMenu>
           </header>
-          {!online ? <div className="shrink-0 border-b border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-center text-xs text-amber-700 dark:text-amber-400" role="status">Đang ngoại tuyến. Bạn vẫn có thể xem dữ liệu đã tải; các thay đổi sẽ cần gửi lại khi có mạng.</div> : null}
+          {!online ? <div className="shrink-0 border-b border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-center text-xs text-amber-700 dark:text-amber-400" role="status">Đang ngoại tuyến. Dữ liệu chưa tải và thao tác lưu cần kết nối mạng.</div> : null}
           {props.businessContext ? <div className="shrink-0 overflow-x-auto border-b bg-muted/20 px-3 py-1.5 lg:hidden">{props.businessContext}</div> : null}
           <main ref={mainRef} id="mf-main-content" tabIndex={0} className="mf-shell-content min-h-0 flex-1 overflow-auto outline-none">{props.children}</main>
         </div>
