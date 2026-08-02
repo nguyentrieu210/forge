@@ -166,6 +166,10 @@ export class AttendanceController extends SuiteController<JsonObject> {
       throw errors.validation("Attendance status is invalid");
     }
 
+    let source = H.text(input.source) || "Manual";
+    if (!["Manual", "Device", "Import", "Checkin", "Correction"].includes(source)) {
+      throw errors.validation("Attendance source is invalid");
+    }
     if (attendanceStatus === "Nghỉ phép") {
       const leaveName = H.requiredText(input.leave_application, "Leave Application");
       const leave = await H.requireSubmitted(context, "Leave Application", leaveName);
@@ -173,7 +177,7 @@ export class AttendanceController extends SuiteController<JsonObject> {
         throw errors.reference(`Leave Application ${leaveName} does not cover ${employeeName} on ${attendanceDate}`);
       }
     }
-    if (H.text(input.source) === "Correction") {
+    if (source === "Correction") {
       const requestName = H.requiredText(input.attendance_request, "Attendance Request");
       const request = await H.requireSubmitted(context, "Attendance Request", requestName);
       if (H.text(request.employee) !== employeeName || H.text(request.from_date) > attendanceDate || H.text(request.to_date) < attendanceDate) {
@@ -181,12 +185,32 @@ export class AttendanceController extends SuiteController<JsonObject> {
       }
     }
 
+    let inTime = H.text(input.in_time);
+    let outTime = H.text(input.out_time);
+    let checkinRefsJson = H.text(input.checkin_refs_json);
+    const shouldUseCheckins = source === "Checkin" || (H.truthy(shift.auto_attendance) && ["Có mặt", "Nửa ngày"].includes(attendanceStatus));
+    if (shouldUseCheckins && !inTime && !outTime) {
+      const checkins = (await context.reader.listDocumentsByDoctype<JsonObject>(context.command.tenant_id, "Employee Checkin"))
+        .filter((event) => event.docstatus === 1
+          && H.text(event.data.employee) === employeeName
+          && H.text(event.data.time).slice(0, 10) === attendanceDate)
+        .sort((left, right) => H.text(left.data.time).localeCompare(H.text(right.data.time)));
+      const firstIn = checkins.find((event) => H.text(event.data.log_type) === "IN");
+      const lastOut = [...checkins].reverse().find((event) => H.text(event.data.log_type) === "OUT");
+      if (!firstIn || !lastOut) {
+        throw errors.reference(`Auto attendance requires submitted IN and OUT check-ins for ${employeeName} on ${attendanceDate}`);
+      }
+      inTime = H.requiredDatetime(firstIn.data.time, "Employee Checkin IN time");
+      outTime = H.requiredDatetime(lastOut.data.time, "Employee Checkin OUT time");
+      const refs = firstIn.name === lastOut.name ? [firstIn.name] : [firstIn.name, lastOut.name];
+      checkinRefsJson = JSON.stringify(refs);
+      source = "Checkin";
+    }
+
     let workingMinutes = 0;
     let overtimeMinutes = 0;
     let lateEntry = false;
     let earlyExit = false;
-    const inTime = H.text(input.in_time);
-    const outTime = H.text(input.out_time);
     if ((inTime && !outTime) || (!inTime && outTime)) throw errors.validation("Attendance requires both in_time and out_time");
     if (inTime && outTime) {
       const start = H.datetimeMs(inTime, "Attendance in_time");
@@ -226,6 +250,10 @@ export class AttendanceController extends SuiteController<JsonObject> {
       department: H.requiredText(employeeState.department, "Employee department"),
       shift_type: shiftName,
       attendance_date: attendanceDate,
+      source,
+      ...(inTime ? { in_time: inTime } : {}),
+      ...(outTime ? { out_time: outTime } : {}),
+      ...(checkinRefsJson ? { checkin_refs_json: checkinRefsJson } : {}),
       working_minutes: workingMinutes,
       working_hours: workingMinutes / 60,
       overtime_minutes: overtimeMinutes,
