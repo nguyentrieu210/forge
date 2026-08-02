@@ -14,9 +14,10 @@ import {
   type EstablishedSession,
 } from "../../../packages/frappe-api/src/index.js";
 import type { Actor, JsonObject } from "../../../packages/contracts/src/index.js";
+import type { StockEntryData } from "../../../packages/clouderp-core/src/index.js";
 import { errorResponse, errors, randomId } from "../../../packages/core/src/index.js";
 import { D1MutationStore } from "../../../packages/document-kernel/src/index.js";
-import type { ProductionPlanData, VersionedBomData } from "../../../packages/clouderp-erpnext/src/index.js";
+import type { ProductionPlanData, VersionedBomData, WorkOrderData } from "../../../packages/clouderp-erpnext/src/index.js";
 import {
   D1DocumentAccessStore,
   D1MetadataStore,
@@ -33,6 +34,11 @@ import {
   isManufacturingBomBulkFrappePath,
   routeManufacturingBomBulkApi,
 } from "./manufacturing-bom-bulk-api.js";
+import {
+  isManufacturingGenealogyApiPath,
+  isManufacturingGenealogyFrappePath,
+  routeManufacturingGenealogyApi,
+} from "./manufacturing-genealogy-api.js";
 import {
   isManufacturingMrpApiPath,
   isManufacturingMrpFrappePath,
@@ -64,7 +70,10 @@ export default {
     const dailyLedger = isDailyLedgerApiPath(url.pathname);
     const manufacturingBomBulk = isManufacturingBomBulkApiPath(url.pathname);
     const manufacturingMrp = isManufacturingMrpApiPath(url.pathname);
-    if (!physicalStock && !dailyLedger && !manufacturingBomBulk && !manufacturingMrp) return coreWorker.fetch(request, env);
+    const manufacturingGenealogy = isManufacturingGenealogyApiPath(url.pathname);
+    if (!physicalStock && !dailyLedger && !manufacturingBomBulk && !manufacturingMrp && !manufacturingGenealogy) {
+      return coreWorker.fetch(request, env);
+    }
 
     const traceId = request.headers.get("x-cloudforge-trace-id") ?? randomId("trace");
     try {
@@ -132,6 +141,20 @@ export default {
           listMaterialRequests: () => documents.listDocumentsByDoctype<JsonObject>(tenantId, "Material Request"),
           createCanonicalMaterialRequest: (document) => createDocumentThroughCore(request, env, "Material Request", document),
         });
+      } else if (manufacturingGenealogy) {
+        const metadata = new D1MetadataStore(requestDb);
+        const access = new D1DocumentAccessStore(requestDb);
+        const permissions = new MetadataPermissionService(metadata, undefined, access);
+        const documents = new D1MutationStore(env.DB);
+        response = await routeManufacturingGenealogyApi(request, url, {
+          tenantId,
+          actor: authentication.actor,
+          permissions,
+          traceId,
+          loadWorkOrder: (name) => documents.getDocument<WorkOrderData>(tenantId, "Work Order", name),
+          listStockEntries: () => documents.listDocumentsByDoctype<StockEntryData>(tenantId, "Stock Entry"),
+          getVoucherStockEntries: (name, version) => documents.getVoucherStockEntries(tenantId, "Stock Entry", name, version),
+        });
       } else {
         response = await routeDailyLedgerApi(request, url, {
           db: requestDb,
@@ -152,6 +175,7 @@ export default {
         || isDailyLedgerFrappePath(url.pathname)
         || isManufacturingBomBulkFrappePath(url.pathname)
         || isManufacturingMrpFrappePath(url.pathname)
+        || isManufacturingGenealogyFrappePath(url.pathname)
         ? faultResponse(error, traceId)
         : errorResponse(error, traceId);
     }
@@ -180,7 +204,8 @@ async function authenticateInterceptedRoute(
   if (!isPhysicalStockFrappePath(url.pathname)
     && !isDailyLedgerFrappePath(url.pathname)
     && !isManufacturingBomBulkFrappePath(url.pathname)
-    && !isManufacturingMrpFrappePath(url.pathname)) {
+    && !isManufacturingMrpFrappePath(url.pathname)
+    && !isManufacturingGenealogyFrappePath(url.pathname)) {
     return { actor: await authenticateTrustedIdentity(request, env, tenantId, traceId) };
   }
 
