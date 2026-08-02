@@ -11,7 +11,7 @@ const RESERVED_ROOTS = new Set([
 
 async function boot(): Promise<void> {
   if (!shouldTryWebsite()) {
-    await import("./main.tsx");
+    await import("./main.js");
     return;
   }
 
@@ -26,7 +26,7 @@ async function boot(): Promise<void> {
       headers: { accept: "application/json" },
     });
     if (response.status === 404) {
-      await import("./main.tsx");
+      await import("./main.js");
       return;
     }
     if (!response.ok) {
