@@ -1,5 +1,5 @@
 {
-  "deployedSha": "f0216e79b96030e6b7b394386db5318460e26d2a",
+  "deployedSha": "b35108f6f72b67b0b5661780198067294dff50ac",
   "tenant": "alu",
   "origin": "https://alu.kairo.vn",
   "failedStep": "install_hrm",
@@ -19,5 +19,7 @@
     "health": "skipped",
     "success_evidence": "skipped"
   },
-  "failedAt": "2026-08-02T19:33:40.150Z"
+  "hrmLogTail": "1 compiled   app=hrm@1.5.0 doctypes=35 workflows=11 roles=7 fixtures=23 nav=39\n2 validated  through the server's own parser\n3 authenticating https://alu.kairo.vn as admin … ok\n4 installing  hrm@1.5.0 … FAILED\n\n  forge.apps.install → HTTP 417: hrm requires external DocTypes that are not installed: Leave Type (hrm)\n\n",
+  "vnAccountingLogTail": null,
+  "failedAt": "2026-08-02T19:36:42.647Z"
 }
