@@ -32,8 +32,9 @@ import {
 } from "./hrm-policy-controllers.js";
 import { HrmSalarySlipController } from "./hrm-salary-slip.js";
 import {
-  CutOrderController, StockReconciliationController, StockReservationController,
+  CutOrderController, StockReservationController,
 } from "./alumdoor-inventory.js";
+import { StockReconciliationIntegrityController } from "./stock-reconciliation-integrity.js";
 import { VersionedBillOfMaterialsController } from "./manufacturing-lifecycle.js";
 import { StockUomSnapshotWorkOrderController } from "./manufacturing-work-order-guard.js";
 import { RolloutManufacturingStockEntryController } from "./manufacturing-rollout.js";
@@ -104,5 +105,5 @@ export function registerErpNextCoreControllers(registry: ControllerRegistry): Co
     .register(new WarehouseCashCountController())
     .register(new CutOrderController())
     .register(new StockReservationController())
-    .register(new StockReconciliationController());
+    .register(new StockReconciliationIntegrityController());
 }
