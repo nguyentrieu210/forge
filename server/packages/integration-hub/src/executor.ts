@@ -14,7 +14,7 @@ import {
 export interface ResolvedWebhookCredential {
   /** Optional HMAC signing material. Never return or log this value from executor results. */
   signing_secret?: string;
-  /** Provider auth headers such as Authorization or x-api-key. */
+  /** Provider auth headers such as Authorization, x-api-key or a provider-specific token header. */
   headers?: Readonly<Record<string, string>>;
 }
 
@@ -67,11 +67,10 @@ export async function executeWebhookDelivery(input: ExecuteWebhookInput): Promis
   const envelope = await buildWebhookEnvelope(event, subscription);
   const body = stableJsonStringify(envelope);
   const credential = await resolver.resolve(subscription);
-  const headers = await buildExecutionHeaders(envelope, body, credential);
-
-  if (subscription.auth_kind !== "none" && !hasProviderAuthentication(headers)) {
+  if (subscription.auth_kind !== "none" && Object.keys(credential.headers ?? {}).length === 0) {
     throw new Error("Authenticated connector resolved no provider authentication material");
   }
+  const headers = await buildExecutionHeaders(envelope, body, credential);
 
   try {
     const response = await transport.fetch(subscription.target_url, {
@@ -162,11 +161,4 @@ export function parseRetryAfterSeconds(value: string | null, now = new Date()): 
   if (!Number.isFinite(timestamp)) return undefined;
   const seconds = Math.ceil((timestamp - now.getTime()) / 1_000);
   return seconds > 0 && seconds <= 86_400 ? seconds : undefined;
-}
-
-function hasProviderAuthentication(headers: Readonly<Record<string, string>>): boolean {
-  return Object.keys(headers).some((name) => {
-    const normalized = name.toLowerCase();
-    return normalized === "authorization" || normalized === "x-api-key" || normalized === "api-key" || normalized.endsWith("-api-key");
-  });
 }
