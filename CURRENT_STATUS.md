@@ -1,6 +1,6 @@
 # CURRENT STATUS
 
-Ngày cập nhật: **2026-08-02**.
+Ngày cập nhật: **2026-08-03**.
 
 GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. Không hardcode exact current `main` vào status dài hạn; phải đọc GitHub khi bắt đầu/tiếp tục.
 
@@ -9,6 +9,15 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `main`.
 - Warehouse Cash Alumdoor merge checkpoint: `c3dbcd20a7a88c17c1a9f10c4fff82b329e27855`.
+
+## DONE — decimal display hotfix
+
+- Branch canonical: `hotfix/ui-decimal-display-v2`, clean-based on current main tại thời điểm tạo branch.
+- Root cause: `GroupedNumberInput` dùng `toFixed(precision)` trực tiếp, nên field precision 6 hiển thị `22,000000` dù numeric value là `22`.
+- Fix: trim zero thập phân dư sau khi round theo precision; `22 -> 22`, `22.5 -> 22,5`, `22.125 -> 22,125`; payload numeric gửi form/backend không đổi.
+- File: `client/packages/controls/src/controls.tsx`.
+- Implementation commit: `77ff5a5b25bcf8222b250afd276ac6a52c2fe0eb`.
+- Validation trong phiên connector: diff scope đã kiểm tra; không có local workspace nên package typecheck/browser test chưa chạy trực tiếp.
 
 ## DONE — exact production release evidence
 
@@ -63,13 +72,14 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. 
 
 ## Chưa hoàn tất
 
-1. Một UI push thực tế sau fast-path merge để đo duration và xác nhận `Deploy Gateway + /release.json` PASS.
-2. Bulk Transaction cho Stock Reconciliation.
-3. Bulk Transaction cho BOM parent + child/version.
-4. First-class AppAction input-table contract.
-5. Batch Print / QR label queue.
-6. P1 Daily detailed ledger hardening/closure theo exact GitHub state.
-7. Plastic ERP các wave sau P0-A.
+1. Acceptance runtime cho decimal hotfix: precision 6 hiển thị gọn và nhập `.`/`,` vẫn đúng decimal.
+2. Một UI push thực tế sau fast-path merge để đo duration và xác nhận `Deploy Gateway + /release.json` PASS.
+3. Bulk Transaction cho Stock Reconciliation.
+4. Bulk Transaction cho BOM parent + child/version.
+5. First-class AppAction input-table contract.
+6. Batch Print / QR label queue.
+7. P1 Daily detailed ledger hardening/closure theo exact GitHub state.
+8. Plastic ERP các wave sau P0-A.
 
 ## Guardrails
 
