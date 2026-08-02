@@ -1,0 +1,27 @@
+{
+  "name": "Support Knowledge Article",
+  "module": "Support",
+  "autoname": "KB-.YYYY.-#####",
+  "title_field": "title",
+  "search_fields": ["title", "category", "keywords"],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "track_seen": true,
+  "fields": [
+    { "fieldname": "title", "label": "Tiêu đề", "fieldtype": "Data", "required": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "category", "label": "Phân loại", "fieldtype": "Data", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "keywords", "label": "Từ khóa", "fieldtype": "Data", "search_index": true },
+    { "fieldname": "summary", "label": "Tóm tắt", "fieldtype": "Text", "required": true },
+    { "fieldname": "content", "label": "Nội dung hướng dẫn", "fieldtype": "Text Editor", "required": true },
+    { "fieldname": "source_reference", "label": "Nguồn / tài liệu tham chiếu", "fieldtype": "Data" },
+    { "fieldname": "is_published", "label": "Đang phát hành", "fieldtype": "Check", "default": 0, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "published_at", "label": "Thời điểm phát hành", "fieldtype": "Datetime", "mandatory_depends_on": "eval:doc.is_published == 1" },
+    { "fieldname": "review_due_date", "label": "Ngày rà soát lại", "fieldtype": "Date" }
+  ],
+  "permissions": [
+    { "role": "Support User", "read": true, "report": true },
+    { "role": "Support Manager", "read": true, "write": true, "create": true, "delete": true, "print": true, "report": true, "export": true, "share": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "delete": true, "print": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}
