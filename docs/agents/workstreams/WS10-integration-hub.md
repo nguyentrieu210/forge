@@ -1,12 +1,14 @@
 # WS10 — Integration Hub / Connector Platform
 
-Status: **ACTIVE**  
+Status: **REVIEW**  
 Owner: **chatgpt-ws10**  
 Branch: `agent/ent-10-integration-hub`  
+Draft PR: **#308** `feat(ws10): establish integration delivery foundation`  
 Product baseline: **Forge 0.2.0**  
 Seed baseline: `862636e6239c91eab657c619d8c55345ed71a6d8`  
 Claimed from exact main head: `bbe3494bcfbb8a3ce09a5ff4bbb839dfcf9e47e9`  
-Implementation head before this handoff update: `1c050cf602f55495fbd6d913760f94ab24f1eb62`  
+Implementation head: `1c050cf602f55495fbd6d913760f94ab24f1eb62`  
+PR head before this status-only handoff commit: `cba0185dc1843fd1675138fc9957da6703640b9c`  
 Canonical board: `main:docs/agents/AGENT_BOARD.md`
 
 Before implementation, this branch was compared with exact current `main`, found 18 commits behind with only the seeded workstream file ahead, then clean-synced to `main@bbe3494bcfbb8a3ce09a5ff4bbb839dfcf9e47e9` before claim/implementation. GitHub exact branch/PR state remains authoritative over this snapshot.
@@ -104,7 +106,7 @@ Added `server/tests/integration-hub.test.mjs` covering:
 Validation status in this connector session:
 
 - exact GitHub diff reviewed;
-- branch was `ahead 4 / behind 0` against `main@bbe3494bcfbb8a3ce09a5ff4bbb839dfcf9e47e9` before this handoff update;
+- branch was `ahead 5 / behind 0` against `main@bbe3494bcfbb8a3ce09a5ff4bbb839dfcf9e47e9` immediately before PR creation;
 - GitHub development workflow runs for implementation head: none, consistent with the repository build/deploy-only Actions policy;
 - executable build/tests: **NOT RUN** because this environment has no repository checkout/dependency tree and direct GitHub clone/DNS is unavailable. Do not treat added tests as PASS until run on an exact checkout.
 
@@ -144,4 +146,4 @@ After dependency contracts are reviewed: persist tenant-scoped connector/subscri
 
 ## Merge / deploy boundary
 
-This is backend/platform behavior, not UI-only. Open PR for review but **do not merge or deploy without explicit user approval**.
+This is backend/platform behavior, not UI-only. Draft PR `#308` is open for review. **Do not merge or deploy without explicit user approval**.
