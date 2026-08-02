@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   ProcurementRequestForQuotationController,
-  SupplierContractController,
+  ProcurementSupplierContractController,
   SupplierQualificationController,
   SupplierRatingController,
 } from "../dist/packages/clouderp-core/src/index.js";
@@ -18,6 +18,7 @@ function seed(store) {
   store.seedMaster("Currency", "USD", tenant, { currency_scale: 2 });
   store.seedMaster("Supplier", "SUP-A", tenant, { procurement_status: "Pending" });
   store.seedMaster("Item", "ITEM-A", tenant, { stock_uom: "Kg", default_purchase_uom: "Kg" });
+  store.seedMaster("UOM", "Kg", tenant, {});
 }
 
 async function apply(controller, store, actor, action, name, document, commandId = `${name}-${action}`) {
@@ -156,7 +157,7 @@ test("supplier rating computes score and grade server-side", async () => {
 test("supplier contract normalizes fixed-point ceilings and requires manager submit", async () => {
   const store = new InMemoryRolloutPurchaseAllocationMutationStore();
   seed(store);
-  const controller = new SupplierContractController();
+  const controller = new ProcurementSupplierContractController();
   const draft = await apply(controller, store, user, "create", "CON-1", {
     supplier: "SUP-A",
     company: "ACME",
@@ -193,4 +194,38 @@ test("supplier contract normalizes fixed-point ceilings and requires manager sub
   const submitted = await apply(controller, store, manager, "submit", "CON-1", draft.data);
   assert.equal(submitted.status, "Active");
   assert.equal(submitted.data.approved_by, manager.user_id);
+});
+
+test("supplier contract rejects a quantity ceiling without UOM", async () => {
+  const store = new InMemoryRolloutPurchaseAllocationMutationStore();
+  seed(store);
+  const controller = new ProcurementSupplierContractController();
+  await assert.rejects(
+    () => controller.buildPlan({
+      command: {
+        schema_version: 1,
+        command_id: "contract-no-uom",
+        tenant_id: tenant,
+        aggregate: { doctype: controller.doctype, name: "CON-NO-UOM" },
+        action: "create",
+        expected_version: null,
+        payload_hash: "0".repeat(64),
+        actor: user,
+        document: {
+          supplier: "SUP-A",
+          company: "ACME",
+          currency: "USD",
+          contract_reference: "CONTRACT-NO-UOM",
+          valid_from: "2026-08-01",
+          valid_until: "2026-12-31",
+          maximum_qty: "100",
+        },
+      },
+      existing: null,
+      now,
+      nextVersion: 1,
+      reader: store,
+    }),
+    /quantity_uom is required/,
+  );
 });
