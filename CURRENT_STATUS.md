@@ -8,18 +8,17 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, CI, merge và relea
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `main`.
-- Exact `main` kiểm gần nhất: `f5d222e916795fd31cdc82f5746a1ba0af6318fb`.
+- Exact `main` khi clean-transplant task auto deploy: `efa2aa6df385ca0775523f1756494d2ae54ec132`.
 
-## ACTIVE — Direct UI hotfix deploy
+## ACTIVE — Auto deploy UI hotfix
 
-- Canonical branch: `hotfix/ui-one-click-deploy-v2-20260802`.
-- Canonical PR: `#223`.
-- PR `#222` là superseded iteration, không merge.
-- Workflow mới: `.github/workflows/hotfix-ui-one-click.yml`.
-- Luồng cuối cùng theo yêu cầu user: `checkout -> install -> build MetaForge bundle -> stage bundle -> wrangler deploy Gateway production`.
-- Không chạy scope guard, lint, test, typecheck, dry-run, smoke hoặc auto-reconcile trong direct hotfix workflow.
-- `.github/workflows/release-gateway.yml` đã được trả về implementation bình thường trên `main`; direct hotfix dùng workflow riêng, không sửa semantics của release chuẩn.
-- Chưa deploy production trong task tạo workflow này.
+- Canonical working branch: `fix/ui-hotfix-auto-deploy-v2-20260802`.
+- PR iteration `#230` từ stale main là superseded; không merge.
+- `.github/workflows/hotfix-ui-one-click.yml` đổi từ manual-only sang auto deploy khi push vào `hotfix/ui-*` có thay đổi `client/**`; vẫn giữ `workflow_dispatch` fallback.
+- Fail-closed scope guard chạy trước production: current `main` phải là ancestor; bắt buộc có `client/**`; ngoài client chỉ cho `CURRENT_STATUS.md`, `NEXT_TASKS.md`, `AI_HANDOFF.md`; tối đa 10 file / 300 changed lines.
+- Fast path: scope guard -> install -> build MetaForge bundle -> stage bundle -> wrangler deploy Gateway production.
+- Mục tiêu: UI hotfix hợp lệ push xong tự deploy, không cần người dùng bấm Run workflow.
+- Sau khi merge cơ chế này vào `main`, theme fix sẽ được replay lên branch `hotfix/ui-*` mới từ exact main để chính push đó kích production deploy.
 
 ## DONE — Warehouse Petty Cash
 
@@ -33,7 +32,7 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, CI, merge và relea
 
 ## Chưa hoàn tất
 
-1. Merge PR `#223` để workflow direct UI hotfix xuất hiện trên `main` và dùng được chính thức.
+1. Merge auto-deploy workflow vào `main`, replay UI theme fix trên hotfix mới và xác nhận production deploy tự chạy.
 2. Bulk Transaction cho Stock Reconciliation.
 3. Bulk Transaction cho BOM parent + child/version.
 4. First-class AppAction input-table contract.
@@ -43,5 +42,6 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, CI, merge và relea
 
 ## Guardrails
 
-- Không tự deploy production nếu user chưa yêu cầu rõ.
+- Auto production deploy chỉ áp dụng `hotfix/ui-*` vượt qua scope guard fail-closed.
+- Không sửa production secrets/DNS hoặc mutate customer data trong UI fast lane.
 - Không commit `.env`, `server/work/`, `tmp/`, backup, credential, cookie/token hoặc generated artifact không thuộc source control.
