@@ -97,8 +97,12 @@ function normalizeSubscriptionData(
   const status = normalizeStatus(input.status ?? existing?.data.status ?? "draft");
   if (!existing && status !== "draft") throw errors.validation("Integration Subscription must be created as draft");
 
-  if (existing && existing.data.status === "active" && configChanged(existing.data, input)) {
+  const configurationChanged = existing ? configChanged(existing.data, input) : false;
+  if (existing?.data.status === "active" && configurationChanged) {
     throw errors.validation("Disable Integration Subscription before changing target, auth, mapping or retry policy");
+  }
+  if (existing && existing.data.status !== status && status === "active" && configurationChanged) {
+    throw errors.validation("Save Integration Subscription configuration before activating it");
   }
 
   const reason = optionalText(input.status_reason, "status_reason", 1_000);
