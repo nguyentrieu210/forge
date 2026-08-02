@@ -3030,13 +3030,12 @@
           "fetch_from": "customer.default_price_list"
         },
         {
-          "//": "Ảnh chụp nhóm giá của khách — xem chú thích cùng trường ở Báo giá.",
+          "//": "Ảnh chụp nhóm giá của khách — tự động điền từ Customer.price_group.",
           "fieldname": "customer_group",
           "fieldtype": "Select",
           "options": "Đại lý\nLẻ",
           "label": "Nhóm giá",
           "read_only": true,
-          "hidden": true,
           "fetch_from": "customer.price_group"
         },
         {
@@ -3251,7 +3250,6 @@
           "options": "Đại lý\nLẻ",
           "label": "Nhóm giá",
           "read_only": true,
-          "hidden": true,
           "fetch_from": "customer.price_group"
         },
         {
@@ -3449,7 +3447,6 @@
           "options": "Đại lý\nLẻ",
           "label": "Nhóm giá",
           "read_only": true,
-          "hidden": true,
           "fetch_from": "customer.price_group"
         },
         "company:Link(Company)-!=(ALUMDOOR) Công ty",
