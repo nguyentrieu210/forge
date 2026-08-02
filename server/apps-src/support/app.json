@@ -1,0 +1,14 @@
+{
+  "id": "support",
+  "name": "Helpdesk & Customer Service",
+  "version": "1.0.0",
+  "requires": [],
+  "nav": [
+    { "key": "Support Ticket", "label": "Phiếu hỗ trợ", "kind": "doctype", "icon": "ticket-check", "group": "Hỗ trợ" },
+    { "key": "Support Team", "label": "Nhóm hỗ trợ", "kind": "doctype", "icon": "users", "group": "Thiết lập" },
+    { "key": "Support SLA Policy", "label": "Chính sách SLA", "kind": "doctype", "icon": "timer", "group": "Thiết lập" },
+    { "key": "Support Knowledge Article", "label": "Kho kiến thức", "kind": "doctype", "icon": "book-open", "group": "Kiến thức" },
+    { "key": "Support Canned Response", "label": "Phản hồi mẫu", "kind": "doctype", "icon": "message-square-text", "group": "Kiến thức" }
+  ],
+  "hooks": []
+}
