@@ -21,7 +21,7 @@ export class HrmSalaryStructureAssignmentController extends BaseSalaryStructureA
     const toDate = H.optionalDate(normalized.to_date, "Salary assignment to_date");
     const structureFrom = H.requiredDate(structure.effective_from, "Salary Structure effective_from");
     const structureTo = H.optionalDate(structure.effective_to, "Salary Structure effective_to");
-    if (fromDate < structureFrom || (structureTo && (toDate ?? fromDate) > structureTo)) {
+    if (fromDate < structureFrom || (structureTo && (!toDate || toDate > structureTo))) {
       throw errors.reference(`Salary Structure ${structureName} does not cover the assignment period`);
     }
     if (H.text(structure.payroll_rule) !== H.text(normalized.payroll_rule)) {
@@ -34,8 +34,9 @@ export class HrmSalaryStructureAssignmentController extends BaseSalaryStructureA
       throw errors.reference("Salary Structure Assignment payable_account must match Salary Structure");
     }
     const payrollRule = await H.requireRecord(context, "VN Payroll Rule", H.requiredText(normalized.payroll_rule, "VN Payroll Rule"));
-    if (fromDate < H.requiredDate(payrollRule.effective_from, "Payroll rule effective_from")
-      || (H.text(payrollRule.effective_to) && (toDate ?? fromDate) > H.requiredDate(payrollRule.effective_to, "Payroll rule effective_to"))) {
+    const ruleFrom = H.requiredDate(payrollRule.effective_from, "Payroll rule effective_from");
+    const ruleTo = H.optionalDate(payrollRule.effective_to, "Payroll rule effective_to");
+    if (fromDate < ruleFrom || (ruleTo && (!toDate || toDate > ruleTo))) {
       throw errors.reference(`VN Payroll Rule ${normalized.payroll_rule} is not effective for the assignment period`);
     }
     const currency = H.requiredText(structure.currency, "Salary Structure currency");
@@ -97,6 +98,11 @@ export class SalaryStructureController extends SuiteController<JsonObject> {
     const payrollRuleName = H.requiredText(input.payroll_rule, "Salary Structure payroll_rule");
     const payrollRule = await H.requireRecord(context, "VN Payroll Rule", payrollRuleName);
     if (H.truthy(payrollRule.disabled)) throw errors.reference(`VN Payroll Rule ${payrollRuleName} is disabled`);
+    const ruleFrom = H.requiredDate(payrollRule.effective_from, `VN Payroll Rule ${payrollRuleName} effective_from`);
+    const ruleTo = H.optionalDate(payrollRule.effective_to, `VN Payroll Rule ${payrollRuleName} effective_to`);
+    if (fromDate < ruleFrom || (ruleTo && (!toDate || toDate > ruleTo))) {
+      throw errors.reference(`VN Payroll Rule ${payrollRuleName} does not cover the Salary Structure period`);
+    }
     const ruleFormula = inspectPayrollRuleFormula(
       H.requiredText(payrollRule.formula_json, `VN Payroll Rule ${payrollRuleName} formula_json`),
       currency,
