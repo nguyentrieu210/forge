@@ -75,6 +75,7 @@ DMS access phải permission-aware; search không leak record; retention/archive
 ## Verification / handoff
 
 - Branch was reset to exact current baseline before claim; after claim it was `behind 0` and only WS15-owned commits ahead.
-- Exact diff after first implementation slice: `services.ts` +4/-1 plus one focused 66-line regression test and this handoff document.
-- No local test claim: repository clone/runtime was unavailable in this session, so GitHub PR CI is the executable verification authority for this slice.
+- Exact first implementation diff: `services.ts` +4/-1 plus one focused 66-line regression test and this handoff document.
+- No local test claim: repository clone/runtime was unavailable in this session. GitHub currently exposes no PR workflow/status check for this head, so the regression test and reviewed diff are authored verification evidence, not an executed test result.
+- PR #314 is currently mergeable according to GitHub, but mergeability is not a substitute for an executed test suite.
 - Do **not** merge or deploy without explicit approval because this changes backend collaboration behavior.
