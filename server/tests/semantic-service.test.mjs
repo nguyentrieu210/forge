@@ -25,6 +25,7 @@ const registry = new SemanticModelRegistry([{
 }]);
 
 const compiler = new SemanticQueryCompiler(registry);
+const allScope = { mode: "all", actor_user_id: "reader@example.com", user_permissions: [] };
 
 function fakeDb(events) {
   return {
@@ -45,11 +46,12 @@ function fakeDb(events) {
   };
 }
 
-test("semantic execution authorizes with tenant/model/permission before touching D1", async () => {
+test("semantic execution resolves permission/read scope before touching D1", async () => {
   const events = [];
   const access = {
-    async assert(request) {
+    async authorize(request) {
       events.push(["access", request]);
+      return allScope;
     },
   };
   const service = new D1SemanticQueryService(fakeDb(events), compiler, access);
@@ -83,7 +85,7 @@ test("semantic execution authorizes with tenant/model/permission before touching
 test("denied semantic access fails closed before SQL preparation", async () => {
   const events = [];
   const access = {
-    async assert(request) {
+    async authorize(request) {
       events.push(["access", request]);
       const error = new Error("denied");
       error.code = "PERMISSION_DENIED";
@@ -103,7 +105,7 @@ test("denied semantic access fails closed before SQL preparation", async () => {
 
 test("unsafe runtime filter values fail before permission or D1 side effects", async () => {
   const events = [];
-  const access = { async assert(request) { events.push(["access", request]); } };
+  const access = { async authorize(request) { events.push(["access", request]); return allScope; } };
   const service = new D1SemanticQueryService(fakeDb(events), compiler, access);
 
   await assert.rejects(() => service.run({
@@ -133,7 +135,9 @@ test("unsafe runtime filter values fail before permission or D1 side effects", a
 
 test("large offset is refused so bulk extraction must use a cursor/feed path", async () => {
   const events = [];
-  const service = new D1SemanticQueryService(fakeDb(events), compiler, { async assert(request) { events.push(["access", request]); } });
+  const service = new D1SemanticQueryService(fakeDb(events), compiler, {
+    async authorize(request) { events.push(["access", request]); return allScope; },
+  });
   await assert.rejects(() => service.run({
     model: "inventory.stock_balance",
     tenant_id: "tenant-a",
