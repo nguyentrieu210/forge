@@ -18,8 +18,9 @@ import type { StockEntryData } from "../../../packages/clouderp-core/src/index.j
 import { errorResponse, errors, randomId } from "../../../packages/core/src/index.js";
 import { D1MutationStore } from "../../../packages/document-kernel/src/index.js";
 import type {
-  CalibrationRecordData, CapaData, NonConformanceReportData, ProductionPlanData,
-  QualityPlanData, RootCauseAnalysisData, VersionedBomData, WorkOrderData,
+  CalibrationRecordData, CapaData, ManufacturingDowntimeData, ManufacturingRoutingData,
+  NonConformanceReportData, ProductionPlanData, QualityPlanData, RootCauseAnalysisData,
+  VersionedBomData, WorkOrderData, WorkstationCapacityCalendarData,
 } from "../../../packages/clouderp-erpnext/src/index.js";
 import {
   D1DocumentAccessStore,
@@ -37,6 +38,11 @@ import {
   isManufacturingBomBulkFrappePath,
   routeManufacturingBomBulkApi,
 } from "./manufacturing-bom-bulk-api.js";
+import {
+  isManufacturingCapacityApiPath,
+  isManufacturingCapacityFrappePath,
+  routeManufacturingCapacityApi,
+} from "./manufacturing-capacity-api.js";
 import {
   isManufacturingGenealogyApiPath,
   isManufacturingGenealogyFrappePath,
@@ -74,9 +80,11 @@ export default {
     const dailyLedger = isDailyLedgerApiPath(url.pathname);
     const manufacturingBomBulk = isManufacturingBomBulkApiPath(url.pathname);
     const manufacturingMrp = isManufacturingMrpApiPath(url.pathname);
+    const manufacturingCapacity = isManufacturingCapacityApiPath(url.pathname);
     const manufacturingGenealogy = isManufacturingGenealogyApiPath(url.pathname);
     const qms = isQmsApiPath(url.pathname);
-    if (!physicalStock && !dailyLedger && !manufacturingBomBulk && !manufacturingMrp && !manufacturingGenealogy && !qms) {
+    if (!physicalStock && !dailyLedger && !manufacturingBomBulk && !manufacturingMrp
+      && !manufacturingCapacity && !manufacturingGenealogy && !qms) {
       return coreWorker.fetch(request, env);
     }
 
@@ -146,6 +154,22 @@ export default {
           listMaterialRequests: () => documents.listDocumentsByDoctype<JsonObject>(tenantId, "Material Request"),
           createCanonicalMaterialRequest: (document) => createDocumentThroughCore(request, env, "Material Request", document),
         });
+      } else if (manufacturingCapacity) {
+        const metadata = new D1MetadataStore(requestDb);
+        const access = new D1DocumentAccessStore(requestDb);
+        const permissions = new MetadataPermissionService(metadata, undefined, access);
+        const documents = new D1MutationStore(env.DB);
+        response = await routeManufacturingCapacityApi(request, url, {
+          tenantId,
+          actor: authentication.actor,
+          permissions,
+          traceId,
+          loadProductionPlan: (name) => documents.getDocument<ProductionPlanData>(tenantId, "Production Plan", name),
+          listBomDocuments: () => documents.listDocumentsByDoctype<VersionedBomData>(tenantId, "Bill of Materials"),
+          listRoutings: () => documents.listDocumentsByDoctype<ManufacturingRoutingData>(tenantId, "Manufacturing Routing"),
+          listCalendars: () => documents.listDocumentsByDoctype<WorkstationCapacityCalendarData>(tenantId, "Workstation Capacity Calendar"),
+          listDowntimes: () => documents.listDocumentsByDoctype<ManufacturingDowntimeData>(tenantId, "Manufacturing Downtime"),
+        });
       } else if (manufacturingGenealogy) {
         const metadata = new D1MetadataStore(requestDb);
         const access = new D1DocumentAccessStore(requestDb);
@@ -197,6 +221,7 @@ export default {
         || isDailyLedgerFrappePath(url.pathname)
         || isManufacturingBomBulkFrappePath(url.pathname)
         || isManufacturingMrpFrappePath(url.pathname)
+        || isManufacturingCapacityFrappePath(url.pathname)
         || isManufacturingGenealogyFrappePath(url.pathname)
         || isQmsFrappePath(url.pathname)
         ? faultResponse(error, traceId)
@@ -228,6 +253,7 @@ async function authenticateInterceptedRoute(
     && !isDailyLedgerFrappePath(url.pathname)
     && !isManufacturingBomBulkFrappePath(url.pathname)
     && !isManufacturingMrpFrappePath(url.pathname)
+    && !isManufacturingCapacityFrappePath(url.pathname)
     && !isManufacturingGenealogyFrappePath(url.pathname)
     && !isQmsFrappePath(url.pathname)) {
     return { actor: await authenticateTrustedIdentity(request, env, tenantId, traceId) };
