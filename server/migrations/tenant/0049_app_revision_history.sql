@@ -5,9 +5,10 @@
 -- parsed manifest is gone. This append-only sidecar preserves every package view that became
 -- active without changing the install transaction or creating a second activation authority.
 --
--- Deliberately no `recorded_by`: `installed_apps.installed_by` is the ORIGINAL installer and
--- is not updated on upgrade. Copying it here would fabricate an audit actor. Actor attribution
--- can be added only when the installer supplies the real modifier explicitly.
+-- Deliberately no `recorded_by` on app_revisions: `installed_apps.installed_by` is the ORIGINAL
+-- installer and is not updated on upgrade. Copying it here would fabricate an audit actor.
+-- Explicit rollback activations, however, are written by the rollback service with the actor
+-- it actually received and therefore have a separate truthful audit table below.
 
 CREATE TABLE IF NOT EXISTS app_revisions (
   tenant_id TEXT NOT NULL,
@@ -23,6 +24,21 @@ CREATE TABLE IF NOT EXISTS app_revisions (
 
 CREATE INDEX IF NOT EXISTS idx_app_revisions_lookup
   ON app_revisions(tenant_id, app_id, revision_no DESC);
+
+CREATE TABLE IF NOT EXISTS app_revision_activations (
+  tenant_id TEXT NOT NULL,
+  app_id TEXT NOT NULL,
+  activation_id TEXT NOT NULL,
+  from_revision_no INTEGER NOT NULL CHECK (from_revision_no > 0),
+  to_revision_no INTEGER NOT NULL CHECK (to_revision_no > 0),
+  action TEXT NOT NULL CHECK (action IN ('rollback','restore')),
+  actor TEXT NOT NULL,
+  activated_at TEXT NOT NULL,
+  PRIMARY KEY (tenant_id, app_id, activation_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_app_revision_activations_lookup
+  ON app_revision_activations(tenant_id, app_id, activated_at DESC, activation_id DESC);
 
 -- Existing tenants already have a live package but no history. Preserve it as revision 1
 -- before the triggers start watching future changes.
