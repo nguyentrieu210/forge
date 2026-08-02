@@ -2,28 +2,28 @@
 
 Ngày cập nhật: **2026-08-02**.
 
-Đây là hàng đợi active. GitHub là nguồn sự thật cho exact `main`, PR, branch và CI; trước khi làm phải đọc `RUNBOOK.md`, `CURRENT_STATUS.md`, `AI_HANDOFF.md`, `DELIVERY_POLICY.md` và kiểm tra PR đang mở.
+Đây là hàng đợi active. GitHub là nguồn sự thật cho exact `main`, PR, branch và delivery state; trước khi làm phải đọc `RUNBOOK.md`, `CURRENT_STATUS.md`, `AI_HANDOFF.md`, `DELIVERY_POLICY.md` và kiểm tra PR đang mở.
 
-## P1 — Website/CMS v1 clean delivery
+## P1 — Website/CMS v1 ready to merge
 
-- Canonical working branch: `feat/tenant-website-builder-delivery-v4-20260802`.
-- Canonical PR: `#249` (draft); PR `#238` và các Website delivery iteration cũ đã superseded/closed.
-- Clean-transplant implementation commit: `dce0f99de732ca38bf53940387c2034607626d71`, based on exact `main@9f81b0ba060991133d7bd5510e2cbfa5b3277234`.
+- Canonical working branch: `feat/tenant-website-builder-delivery-v6-20260802`.
+- Canonical PR: `#251`, ready for review; PR `#249`, `#238` và các Website delivery iteration cũ đã superseded/closed.
+- Clean-transplant implementation commit: `fb18af84ea66fa7758eb2398a9395941e87be86b`, based on exact `main@061ad31b33243e6cace6bd9f13b3f6726c5443c4`.
 - Quality tier: **CRITICAL** due public unauthenticated routing + tenant isolation.
-- Đã xác nhận: PR mergeable, branch ahead 4 / behind 0 tại lần kiểm tra gần nhất; automatic `CI / Fast PR gate` PASS trên head `e09c2f199a882919b01300f58f16e50adb7268ba`; UI hotfix workflow SKIPPED đúng scope.
-- Việc còn lại:
-  1. chạy targeted `website-public.spec.ts` desktop/tablet/mobile để xác nhận mobile navigation fix; không khôi phục workflow UI dài đã bị xóa;
-  2. local runner hiện không resolve GitHub để clone và connector không expose workflow-dispatch, nên browser regression đang PENDING chứ không được coi là PASS;
-  3. reuse server/security/typecheck/build evidence đã PASS nếu code/input liên quan không đổi; chỉ chạy thêm gate bị ảnh hưởng;
-  4. chỉ mark PR ready khi public allowlist, tenant isolation, published-only behavior và browser regression đều có evidence;
-  5. không merge `main`, deploy production, đổi DNS/custom domain/secrets nếu user chưa yêu cầu rõ.
+- Validation evidence:
+  1. unchanged server/client application blobs previously PASS tests, typecheck, build, frontend lint and MetaForge browser QA;
+  2. public E2E previously PASS desktop/tablet and found the mobile hidden-navigation defect;
+  3. final nav blob `82e25b446885b8719340a38013c801135e2a52c2` targeted regression PASS on Chromium at mobile `390x844`, tablet `834x1112`, desktop `1440x1000`;
+  4. mobile asserts one visible accessible nav, `aria-current=page`, `/login`, title/meta, `overflow-x:auto` and actual horizontal overflow;
+  5. current `main` changes after prior full validation are GitHub workflow-only, not app/package/dependency changes.
+- GitHub validation workflows have been removed from current `main`; GitHub is build/deploy only. Do not recreate deleted validation workflows for this feature.
+- Việc còn lại: **chỉ merge PR #251 khi user ra lệnh merge rõ ràng**; sau merge kiểm exact `main`/merge SHA và cập nhật post-merge status nếu cần.
+- Không deploy production, đổi DNS/custom domain/secrets trong Website task này nếu user chưa yêu cầu rõ.
 
-## P1 — UI theme hotfix auto-deploy verification
+## P1 — UI theme hotfix/release verification
 
-- Guarded auto-deploy lane đã merge qua PR `#231` tại `cd1f76dbb47432e2312c6f5577eb955b48c3a856`.
-- PR `#230` là stale iteration, không merge.
-- Theme hotfix replay hiện ở PR `#232`, branch `hotfix/ui-document-theme-auto-20260802`.
-- Việc còn lại: kiểm exact workflow/release evidence của #232; không suy ra production deploy chỉ từ branch/PR state.
+- Trạng thái lane đã thay đổi mạnh sau commit `061ad31b33243e6cace6bd9f13b3f6726c5443c4`, nơi nhiều GitHub validation/release workflows cũ bị xóa/consolidate.
+- Không dùng checkpoint cũ của PR `#232` để suy ra release hiện tại; phải đọc exact GitHub state và workflow `manual-release-alu.yml` trước khi tiếp tục.
 
 ## DONE — Risk-based quality gates
 
@@ -70,7 +70,7 @@ Mỗi item phải là branch/PR riêng từ exact current `main`:
 
 ## Guardrails
 
-- Auto production deploy chỉ dành cho `hotfix/ui-*` vượt scope guard.
+- Không tự merge PR hoặc deploy production nếu user chưa yêu cầu rõ.
 - Không sửa production secrets/DNS, không mutate customer data nếu user chưa yêu cầu đúng đợt.
 - Không commit `.env`, `server/work/`, `tmp/`, credential, backup hoặc generated evidence không được quản lý.
 - PR stale/diverged phải clean-transplant đúng scope lên exact current `main`; không force-push/rewrite history.
