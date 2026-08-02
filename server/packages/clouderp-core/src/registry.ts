@@ -5,6 +5,7 @@ import { PurchaseAllocationOverrideController } from "./purchase-allocation-acti
 import { RolloutPurchaseReceiptController } from "./purchase-allocation-rollout-controllers.js";
 import { PurchaseSettlementLifecycleController } from "./purchase-settlement-lifecycle-controller.js";
 import { SupplierQualificationController, SupplierRatingController } from "./supplier-lifecycle-controllers.js";
+import { SupplierSelectionController } from "./supplier-selection-controller.js";
 
 export function registerErpCoreControllers(registry: ControllerRegistry): ControllerRegistry {
   return registry
@@ -12,6 +13,7 @@ export function registerErpCoreControllers(registry: ControllerRegistry): Contro
     .register(new MaterialRequestController())
     .register(new ProcurementRequestForQuotationController())
     .register(new ProcurementSupplierQuotationController())
+    .register(new SupplierSelectionController())
     .register(new ProcurementPurchaseOrderController())
     .register(new RolloutPurchaseReceiptController())
     .register(new SupplierQualificationController())
