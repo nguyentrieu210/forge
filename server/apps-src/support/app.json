@@ -1,0 +1,56 @@
+{
+  "id": "support",
+  "name": "Helpdesk & Customer Service",
+  "version": "1.2.0",
+  "requires": [],
+  "worker": "cloudforge-app-ws07",
+  "validators": [
+    { "doctype": "Support SLA Policy" },
+    { "doctype": "Support Ticket" }
+  ],
+  "reports": [
+    {
+      "name": "Support Ticket Queue",
+      "label": "Hàng đợi hỗ trợ",
+      "doctype": "Support Ticket",
+      "columns": [
+        { "field": "subject", "label": "Chủ đề", "type": "Data" },
+        { "field": "priority", "label": "Ưu tiên", "type": "Data" },
+        { "field": "team", "label": "Nhóm", "type": "Link", "options": "Support Team" },
+        { "field": "assignee", "label": "Người xử lý", "type": "Link", "options": "User" },
+        { "field": "opened_at", "label": "Mở lúc", "type": "Datetime" },
+        { "field": "workflow_state", "label": "Trạng thái", "type": "Data" },
+        { "field": "sla_state", "label": "SLA", "type": "Data" }
+      ],
+      "order_by": { "column": "opened_at", "direction": "desc" },
+      "filters": ["priority", "team", "assignee", "workflow_state", "sla_state"],
+      "limit": 200
+    },
+    {
+      "name": "Support CSAT",
+      "label": "Mức hài lòng hỗ trợ",
+      "doctype": "Support Feedback",
+      "columns": [
+        { "field": "ticket", "label": "Phiếu", "type": "Link", "options": "Support Ticket" },
+        { "field": "customer", "label": "Khách hàng", "type": "Link", "options": "Customer" },
+        { "field": "rating", "label": "Điểm", "type": "Data" },
+        { "field": "followup_required", "label": "Cần chăm sóc lại", "type": "Check" },
+        { "field": "submitted_at", "label": "Thời điểm", "type": "Datetime" }
+      ],
+      "order_by": { "column": "submitted_at", "direction": "desc" },
+      "filters": ["customer", "rating", "followup_required"],
+      "limit": 200
+    }
+  ],
+  "nav": [
+    { "key": "Support Ticket", "label": "Phiếu hỗ trợ", "kind": "doctype", "icon": "ticket-check", "group": "Hỗ trợ" },
+    { "key": "support-ticket-queue", "label": "Hàng đợi hỗ trợ", "kind": "route", "route": "/report/Support%20Ticket%20Queue", "permission_doctype": "Support Ticket", "icon": "inbox", "group": "Hỗ trợ" },
+    { "key": "Support Feedback", "label": "CSAT", "kind": "doctype", "icon": "smile", "group": "Hỗ trợ" },
+    { "key": "support-csat", "label": "Báo cáo CSAT", "kind": "route", "route": "/report/Support%20CSAT", "permission_doctype": "Support Feedback", "icon": "chart-no-axes-column", "group": "Hỗ trợ" },
+    { "key": "Support Team", "label": "Nhóm hỗ trợ", "kind": "doctype", "icon": "users", "group": "Thiết lập" },
+    { "key": "Support SLA Policy", "label": "Chính sách SLA", "kind": "doctype", "icon": "timer", "group": "Thiết lập" },
+    { "key": "Support Knowledge Article", "label": "Kho kiến thức", "kind": "doctype", "icon": "book-open", "group": "Kiến thức" },
+    { "key": "Support Canned Response", "label": "Phản hồi mẫu", "kind": "doctype", "icon": "message-square-text", "group": "Kiến thức" }
+  ],
+  "hooks": []
+}
