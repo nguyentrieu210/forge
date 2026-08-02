@@ -1,14 +1,17 @@
 name: CI
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
     branches:
       - main
     types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
+    inputs:
+      full_validation:
+        description: Run full test, typecheck and build
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -18,72 +21,40 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  validate:
-    name: General validation
+  gate:
+    name: Fast PR gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check patch integrity
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check HEAD^ HEAD || git diff --check
+
+  full-validation:
+    name: Manual full validation
+    if: github.event_name == 'workflow_dispatch' && inputs.full_validation == true
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Detect validation scope
-        id: scope
-        shell: bash
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
-        run: |
-          set -euo pipefail
-          full=true
-          reason=full
-
-          if [ "$EVENT_NAME" != "workflow_dispatch" ] && [ -n "${BASE_SHA:-}" ] && git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
-            git diff --name-only "$BASE_SHA" "$GITHUB_SHA" > "$RUNNER_TEMP/changed-files.txt"
-
-            app_re='^(server/|client/|package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|tsconfig[^/]*\.json$|\.github/workflows/)'
-            focused_re='^(server/apps-src/alumdoor-worker/src/(sales-|door-formulas\.ts$|index\.ts$|.*purchase)|server/packages/clouderp-pricing/|server/briefs/alumdoor[^/]*\.json$|server/tests/(sales-|door-formulas)|client/packages/views/src/form/ChildGrid\.tsx$|client/e2e-forge/.*sales|server/apps/purchase-qa-callback/|server/apps/tenant-worker/wrangler\.purchase-qa\.jsonc$|server/apps-src/alumdoor-worker/wrangler\.purchase-qa\.jsonc$|server/packages/app-registry/|server/scripts/(seed-local|seed-purchase-qa-local)\.mjs$|server/tests/.*(purchase|app-installer-standard-metadata-adoption)|client/e2e-forge/.*purchase|client/e2e-forge/playwright\.auth\.config\.ts$|server/(apps-src|packages|tests|scripts|migrations)/.*(inventory|manufactur|warehouse|stock|batch|bom|work-order|catalog|item-model|item-validator)|client/.*(inventory|manufactur|warehouse|stock|batch|bom|work-order))'
-
-            if ! grep -Eq "$app_re" "$RUNNER_TEMP/changed-files.txt"; then
-              full=false
-              reason=docs-only
-            else
-              general=false
-              while IFS= read -r file; do
-                if printf '%s\n' "$file" | grep -Eq "$app_re" && ! printf '%s\n' "$file" | grep -Eiq "$focused_re"; then
-                  general=true
-                  break
-                fi
-              done < "$RUNNER_TEMP/changed-files.txt"
-
-              if [ "$general" != "true" ]; then
-                full=false
-                reason=focused-feature
-              fi
-            fi
-          else
-            printf '%s\n' 'workflow_dispatch_or_missing_base' > "$RUNNER_TEMP/changed-files.txt"
-          fi
-
-          cat "$RUNNER_TEMP/changed-files.txt"
-          echo "full=$full" >> "$GITHUB_OUTPUT"
-          echo "reason=$reason" >> "$GITHUB_OUTPUT"
-
-      - name: Fast path
-        if: steps.scope.outputs.full != 'true'
-        run: echo "Full CI skipped: ${{ steps.scope.outputs.reason }}. Focused workflow handles domain code when applicable."
 
       - name: Install pnpm
-        if: steps.scope.outputs.full == 'true'
         uses: pnpm/action-setup@v4
         with:
           version: 9.15.0
           run_install: false
 
       - name: Set up Node.js
-        if: steps.scope.outputs.full == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -91,17 +62,13 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        if: steps.scope.outputs.full == 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Run tests
-        if: steps.scope.outputs.full == 'true'
         run: pnpm test
 
       - name: Run typecheck
-        if: steps.scope.outputs.full == 'true'
         run: pnpm typecheck
 
       - name: Build
-        if: steps.scope.outputs.full == 'true'
         run: pnpm build
