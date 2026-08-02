@@ -1,13 +1,14 @@
 {
   "id": "vn-accounting",
   "name": "Kế toán Việt Nam",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "requires": [
     { "id": "hrm", "version": ">=1.3.0" }
   ],
   "externalDocTypes": [
     { "name": "Purchase Receipt", "kind": "transaction", "app": "erpnext" },
-    { "name": "Stock Entry", "kind": "transaction", "app": "erpnext" }
+    { "name": "Stock Entry", "kind": "transaction", "app": "erpnext" },
+    { "name": "E-Invoice Submission", "kind": "transaction", "app": "erpnext" }
   ],
   "nav": [
     { "key": "VN Accounting Policy", "label": "Chính sách kế toán", "kind": "doctype", "icon": "landmark", "group": "Thiết lập kế toán" },
@@ -19,6 +20,7 @@
     { "key": "TT99 Book Form", "label": "Mẫu sổ TT99", "kind": "doctype", "icon": "book-open-text", "group": "TT99" },
     { "key": "TT99 Financial Statement Template", "label": "Mẫu BCTC TT99", "kind": "doctype", "icon": "file-chart-column", "group": "TT99" },
     { "key": "VN Tax Ruleset", "label": "Ruleset thuế", "kind": "doctype", "icon": "badge-percent", "group": "Thuế & tuân thủ" },
+    { "key": "e-invoice-submission", "label": "Hóa đơn điện tử", "kind": "route", "route": "/app/E-Invoice%20Submission", "icon": "receipt", "group": "Thuế & tuân thủ", "required_roles": ["Tax Specialist", "Accounts Manager", "System Manager"] },
 
     { "key": "Warehouse Cash Fund", "label": "Quỹ tiền mặt theo kho", "kind": "doctype", "icon": "landmark", "group": "Quỹ kho" },
     { "key": "Warehouse Cash Voucher", "label": "Phiếu thu chi kho", "kind": "doctype", "icon": "receipt-text", "group": "Quỹ kho" },
