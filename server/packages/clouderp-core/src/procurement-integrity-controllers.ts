@@ -6,6 +6,7 @@ import {
   compareSupplierQuotations,
   validatePurchaseOrderAgainstQuotation,
 } from "./procurement-decisions.js";
+import { resolvePurchaseDeliverySchedule } from "./procurement-schedule.js";
 import { evaluatePurchaseOrderSupplierContract } from "./supplier-contract-enforcement.js";
 import { RolloutPurchaseOrderController } from "./purchase-allocation-rollout-controllers.js";
 import {
@@ -91,15 +92,16 @@ export class ProcurementSupplierQuotationController extends SupplierQuotationCon
 }
 
 /**
- * Validates supplier eligibility, optional contract release, optional approved selection and the
- * selected quotation only after the rollout controller has built the canonical PO plan. No writes
- * have happened yet, so every mismatch fails the whole command before kernel execution.
+ * Validates supplier eligibility, delivery schedule, optional contract release, optional approved
+ * selection and the selected quotation only after the rollout controller has built the canonical PO
+ * plan. No writes have happened yet, so every mismatch fails before kernel execution.
  */
 export class ProcurementPurchaseOrderController extends RolloutPurchaseOrderController {
   override async buildPlan(context: ControllerContext<PurchaseOrderData>): Promise<MutationPlan<PurchaseOrderData>> {
     const plan = await super.buildPlan(context);
     if (context.command.action !== "submit") return plan;
     const data = plan.document.data;
+    resolvePurchaseDeliverySchedule(data);
     const qualifications = await context.reader.listDocumentsByDoctype<SupplierQualificationData>(
       context.command.tenant_id,
       "Supplier Qualification",
