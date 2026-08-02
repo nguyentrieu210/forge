@@ -1,0 +1,17 @@
+{
+  "name": "Project Template Task",
+  "module": "Projects",
+  "is_child": true,
+  "fields": [
+    { "fieldname": "task_key", "label": "Mã công việc mẫu", "fieldtype": "Data", "required": true, "in_list_view": true },
+    { "fieldname": "subject", "label": "Công việc", "fieldtype": "Data", "required": true, "in_list_view": true },
+    { "fieldname": "parent_task_key", "label": "Mã công việc cha", "fieldtype": "Data", "in_list_view": true },
+    { "fieldname": "duration_days", "label": "Thời lượng kế hoạch (ngày)", "fieldtype": "Float", "required": true, "in_list_view": true },
+    { "fieldname": "milestone", "label": "Mốc", "fieldtype": "Check", "in_list_view": true },
+    { "fieldname": "default_role", "label": "Vai trò mặc định", "fieldtype": "Data" },
+    { "fieldname": "weight_percent", "label": "Trọng số %", "fieldtype": "Percent", "in_list_view": true },
+    { "fieldname": "acceptance_criteria", "label": "Tiêu chí hoàn thành", "fieldtype": "Text" }
+  ],
+  "permissions": [],
+  "revision": 1
+}
