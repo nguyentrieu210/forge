@@ -13,8 +13,9 @@ import {
   type AuthRouteContext,
   type EstablishedSession,
 } from "../../../packages/frappe-api/src/index.js";
-import type { Actor } from "../../../packages/contracts/src/index.js";
+import type { Actor, JsonObject } from "../../../packages/contracts/src/index.js";
 import { errorResponse, errors, randomId } from "../../../packages/core/src/index.js";
+import { D1MutationStore } from "../../../packages/document-kernel/src/index.js";
 import {
   D1DocumentAccessStore,
   D1MetadataStore,
@@ -26,6 +27,11 @@ import {
   isDailyLedgerFrappePath,
   routeDailyLedgerApi,
 } from "./daily-ledger-api.js";
+import {
+  isManufacturingBomBulkApiPath,
+  isManufacturingBomBulkFrappePath,
+  routeManufacturingBomBulkApi,
+} from "./manufacturing-bom-bulk-api.js";
 import {
   isPhysicalStockApiPath,
   isPhysicalStockFrappePath,
@@ -50,7 +56,8 @@ export default {
     const url = new URL(request.url);
     const physicalStock = isPhysicalStockApiPath(url.pathname);
     const dailyLedger = isDailyLedgerApiPath(url.pathname);
-    if (!physicalStock && !dailyLedger) return coreWorker.fetch(request, env);
+    const manufacturingBomBulk = isManufacturingBomBulkApiPath(url.pathname);
+    if (!physicalStock && !dailyLedger && !manufacturingBomBulk) return coreWorker.fetch(request, env);
 
     const traceId = request.headers.get("x-cloudforge-trace-id") ?? randomId("trace");
     try {
@@ -71,6 +78,19 @@ export default {
           permissions,
           traceId,
         });
+      } else if (manufacturingBomBulk) {
+        const metadata = new D1MetadataStore(requestDb);
+        const access = new D1DocumentAccessStore(requestDb);
+        const permissions = new MetadataPermissionService(metadata, undefined, access);
+        const documents = new D1MutationStore(env.DB);
+        response = await routeManufacturingBomBulkApi(request, url, {
+          tenantId,
+          actor: authentication.actor,
+          permissions,
+          traceId,
+          listBomDocuments: () => documents.listDocumentsByDoctype<JsonObject>(tenantId, "Bill of Materials"),
+          createCanonicalDraft: (document) => createBomDraftThroughCore(request, env, document),
+        });
       } else {
         response = await routeDailyLedgerApi(request, url, {
           db: requestDb,
@@ -87,7 +107,9 @@ export default {
       }
       return response;
     } catch (error) {
-      return isPhysicalStockFrappePath(url.pathname) || isDailyLedgerFrappePath(url.pathname)
+      return isPhysicalStockFrappePath(url.pathname)
+        || isDailyLedgerFrappePath(url.pathname)
+        || isManufacturingBomBulkFrappePath(url.pathname)
         ? faultResponse(error, traceId)
         : errorResponse(error, traceId);
     }
@@ -113,7 +135,9 @@ async function authenticateInterceptedRoute(
   tenantId: string,
   traceId: string,
 ): Promise<InterceptedRouteAuthentication> {
-  if (!isPhysicalStockFrappePath(url.pathname) && !isDailyLedgerFrappePath(url.pathname)) {
+  if (!isPhysicalStockFrappePath(url.pathname)
+    && !isDailyLedgerFrappePath(url.pathname)
+    && !isManufacturingBomBulkFrappePath(url.pathname)) {
     return { actor: await authenticateTrustedIdentity(request, env, tenantId, traceId) };
   }
 
@@ -150,6 +174,25 @@ async function authenticateInterceptedRoute(
   }
 
   throw errors.permission("Login to access this resource");
+}
+
+/**
+ * Commit stays on the ordinary Frappe resource route. The bulk endpoint owns only
+ * transport/replay coordination; the existing BOM controller remains the sole write
+ * authority for naming, normalized UOM, checksums and lifecycle invariants.
+ */
+function createBomDraftThroughCore(request: Request, env: TenantEnv, document: JsonObject): Promise<Response> {
+  const url = new URL(request.url);
+  url.pathname = `/api/resource/${encodeURIComponent("Bill of Materials")}`;
+  url.search = "";
+  const headers = new Headers(request.headers);
+  headers.set("content-type", "application/json");
+  headers.delete("content-length");
+  return coreWorker.fetch(new Request(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(document),
+  }), env);
 }
 
 async function authenticateTrustedIdentity(
