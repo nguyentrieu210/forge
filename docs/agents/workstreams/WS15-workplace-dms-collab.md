@@ -156,7 +156,7 @@ Known parallel migration reservations audited: WS06 owns `0043-0047`, WS01 owns 
 | D03-012 | Amendment | **Wired+guarded** — active-contract reference + approval |
 | D03-013 | E-signature | **Dependency/Foundation** — provider/evidence transport pending |
 
-No row above is promoted to Hardened merely because a field exists.
+No row above is promoted to Hardened merely vì một field tồn tại.
 
 ## Security decisions
 
