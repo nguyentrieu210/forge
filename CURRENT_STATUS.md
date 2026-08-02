@@ -10,6 +10,15 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. 
 - Default branch: `main`.
 - Warehouse Cash Alumdoor merge checkpoint: `c3dbcd20a7a88c17c1a9f10c4fff82b329e27855`.
 
+## IN PROGRESS — exact production release evidence
+
+- Working branch: `fix/release-evidence-health-sha-v2`, clean-based on current main at branch creation.
+- `server/scripts/stage-client-bundle.mjs` writes public `release.json` when `VITE_FORGE_RELEASE_SHA`/`FORGE_RELEASE_SHA` exists; marker contains exact `releaseSha` + `bundleHash` and no secret.
+- `ALU Build and Deploy` smoke now requires both `/health` and `/release.json`, and fails if production `releaseSha` differs from `TARGET_SHA`.
+- Same-repo UI pull requests restore an observable deploy trigger because GitHub-connector content writes do not reliably emit push-triggered Actions; head branch naming and UI-only scope remain fail-closed.
+- Targeted local synthetic staging test PASS: release marker generated with expected SHA/hash and staged bundle check passed.
+- Not merged and not production-deployed yet; release evidence becomes canonical only after this branch is reviewed/merged.
+
 ## DONE — Website/CMS multi-tenant v1
 
 - Canonical PR `#254` đã squash-merge vào `main` tại `b25fc30b0f37d1218cafbb4dac40e37479bba0b9`.
@@ -40,7 +49,7 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. 
 ## DONE — Alumdoor Warehouse Cash integration
 
 - Canonical delivery PR `#233` đã squash-merge vào `main` tại `c3dbcd20a7a88c17c1a9f10c4fff82b329e27855`.
-- Final validated feature head `162bc010692d3a2997ddbc5d60`: **6/6 required workflows PASS** theo cơ chế cũ.
+- Final validated feature head `162bc010692d3a2997ddbc9bd5e9a59e11cb5d60`: **6/6 required workflows PASS** theo cơ chế cũ.
 - Alumdoor có tab `Quỹ kho` role-gated và mở 4 DocType canonical qua generic MetaForge route: `Warehouse Cash Fund`, `Warehouse Cash Voucher`, `Warehouse Cash Transfer`, `Warehouse Cash Count`.
 - Alumdoor không copy schema/controller/ledger Finance; `server/briefs/alumdoor-v2.integrations.json` khai `vn-accounting >= 1.1.0` và 4 DocType trên là `externalDocTypes`.
 
@@ -56,13 +65,14 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. 
 
 ## Chưa hoàn tất
 
-1. Bulk Transaction cho Stock Reconciliation.
-2. Bulk Transaction cho BOM parent + child/version.
-3. First-class AppAction input-table contract.
-4. Batch Print / QR label queue.
-5. P1 Daily detailed ledger hardening/closure theo exact GitHub state.
-6. Plastic ERP các wave sau P0-A.
-7. Nếu cần dùng quỹ kho để tất toán trực tiếp Purchase/Sales Invoice, thiết kế canonical payment allocation; không dùng party dimension trên GL thay settlement.
+1. Merge/release exact production evidence hardening sau review; sau đó `/release.json` mới là production proof canonical.
+2. Bulk Transaction cho Stock Reconciliation.
+3. Bulk Transaction cho BOM parent + child/version.
+4. First-class AppAction input-table contract.
+5. Batch Print / QR label queue.
+6. P1 Daily detailed ledger hardening/closure theo exact GitHub state.
+7. Plastic ERP các wave sau P0-A.
+8. Nếu cần dùng quỹ kho để tất toán trực tiếp Purchase/Sales Invoice, thiết kế canonical payment allocation; không dùng party dimension trên GL thay settlement.
 
 ## Guardrails
 
