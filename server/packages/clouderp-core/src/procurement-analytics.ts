@@ -1,4 +1,3 @@
-import type { JsonObject } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
 import { fromScaledInt, multiplyScaled, toScaledInt } from "../../money/src/index.js";
 import type { PurchaseItem, PurchaseOrderData } from "./types.js";
@@ -33,6 +32,8 @@ export interface SupplierPriceSeries {
   supplier: string;
   item_code: string;
   uom: string | null;
+  company_currency: string;
+  company_currency_scale: number;
   observations: SupplierPriceObservation[];
   latest_base_rate_minor: number;
   previous_base_rate_minor: number | null;
@@ -116,6 +117,8 @@ export function buildSupplierPriceHistory(orders: PurchaseOrderDocument[]): Supp
       supplier: latest.supplier,
       item_code: latest.item_code,
       uom: latest.uom,
+      company_currency: latest.company_currency,
+      company_currency_scale: latest.company_currency_scale,
       observations,
       latest_base_rate_minor: latest.base_rate_minor,
       previous_base_rate_minor: previous?.base_rate_minor ?? null,
@@ -161,7 +164,14 @@ export function buildSupplierSpendSummary(orders: PurchaseOrderDocument[]): Supp
 }
 
 function priceKey(observation: SupplierPriceObservation): string {
-  return [observation.company, observation.supplier, observation.item_code, observation.uom ?? ""].join("\u0000");
+  return [
+    observation.company,
+    observation.supplier,
+    observation.item_code,
+    observation.uom ?? "",
+    observation.company_currency,
+    String(observation.company_currency_scale),
+  ].join("\u0000");
 }
 
 function compareObservation(a: SupplierPriceObservation, b: SupplierPriceObservation): number {
@@ -170,9 +180,10 @@ function compareObservation(a: SupplierPriceObservation, b: SupplierPriceObserva
     || a.row_id.localeCompare(b.row_id);
 }
 
-function signedVarianceBps(actual: number, baseline: number): number {
+function signedVarianceBps(actual: number, baseline: number): number | null {
   if (actual === baseline) return 0;
-  if (baseline <= 0) return actual > 0 ? 10_000 : 0;
+  if (baseline === 0) return null;
+  if (baseline < 0) throw errors.validation("Historical price baseline must not be negative");
   const diff = BigInt(actual) - BigInt(baseline);
   const negative = diff < 0n;
   const absolute = negative ? -diff : diff;
