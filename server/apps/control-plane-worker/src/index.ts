@@ -4,6 +4,15 @@ import type { JsonObject } from "../../../packages/contracts/src/index.js";
 import { requireIdentifier, requireString } from "../../../packages/contracts/src/index.js";
 import { hashPassword } from "../../../packages/frappe-api/src/index.js";
 import { encryptCredential, hmacHex, sha256Hex } from "../../../packages/social-commerce/src/index.js";
+import {
+  assertGovernedRouteMutation,
+  nextRoutingVersion,
+  routeAuditJson,
+  ROUTE_PLANS,
+  ROUTE_STATUSES,
+  type GovernedTenantRoute,
+  type RequestedTenantRoute,
+} from "./route-governance.js";
 
 interface ControlEnv {
   CONTROL_DB: D1Database;
@@ -13,15 +22,25 @@ interface ControlEnv {
   SIGNUP_LOOKUP_SECRET?: string;
 }
 
-const ROUTE_STATUSES = ["active", "suspended", "provisioning"] as const;
-const ROUTE_PLANS = ["free", "pro", "enterprise"] as const;
-
 interface TenantRouteRow {
   tenant_id: string;
   worker_name: string;
   status: (typeof ROUTE_STATUSES)[number];
   plan: (typeof ROUTE_PLANS)[number];
   routing_version: number;
+}
+
+interface RouteAuditRow {
+  event_id: string;
+  trace_id: string;
+  actor_key: string;
+  action: string;
+  tenant_id: string;
+  route_key: string;
+  reason: string;
+  before_json: string | null;
+  after_json: string;
+  created_at: string;
 }
 
 export default {
@@ -64,6 +83,41 @@ export default {
           next_after_tenant_id: rows.length > limitValue ? selected.at(-1)?.tenant_id ?? null : null,
         });
       }
+      if (request.method === "GET" && url.pathname === "/v1/audit/routes") {
+        const tenantId = requireIdentifier(url.searchParams.get("tenant_id"), "tenant_id");
+        const limitRaw = url.searchParams.get("limit");
+        const limit = limitRaw === null ? 100 : Number(limitRaw);
+        if (!Number.isInteger(limit) || limit < 1 || limit > 250) throw errors.validation("limit must be an integer from 1 to 250");
+        const beforeRaw = url.searchParams.get("before")?.trim() ?? "";
+        if (beforeRaw && !Number.isFinite(Date.parse(beforeRaw))) throw errors.validation("before must be an ISO timestamp");
+        const page = beforeRaw
+          ? await env.CONTROL_DB.prepare(
+            `SELECT event_id,trace_id,actor_key,action,tenant_id,route_key,reason,before_json,after_json,created_at
+             FROM control_route_audit_events
+             WHERE tenant_id=?1 AND created_at<?2
+             ORDER BY created_at DESC,event_id DESC LIMIT ?3`,
+          ).bind(tenantId, beforeRaw, limit).all<RouteAuditRow>()
+          : await env.CONTROL_DB.prepare(
+            `SELECT event_id,trace_id,actor_key,action,tenant_id,route_key,reason,before_json,after_json,created_at
+             FROM control_route_audit_events
+             WHERE tenant_id=?1
+             ORDER BY created_at DESC,event_id DESC LIMIT ?2`,
+          ).bind(tenantId, limit).all<RouteAuditRow>();
+        return jsonResponse({
+          events: (page.results ?? []).map((row) => ({
+            event_id: row.event_id,
+            trace_id: row.trace_id,
+            actor_key: row.actor_key,
+            action: row.action,
+            tenant_id: row.tenant_id,
+            route_key: row.route_key,
+            reason: row.reason,
+            before: row.before_json ? JSON.parse(row.before_json) : null,
+            after: JSON.parse(row.after_json),
+            created_at: row.created_at,
+          })),
+        });
+      }
       if (request.method === "PUT" && url.pathname.startsWith("/v1/routes/")) {
         const routeKey = requireString(decodeURIComponent(url.pathname.slice("/v1/routes/".length)), "route_key", 253);
         const bodyObject = await readJson<JsonObject>(request, 16_000);
@@ -71,56 +125,64 @@ export default {
         const worker_name = requireIdentifier(bodyObject.worker_name, "worker_name");
         const status = requireString(bodyObject.status, "status", 32);
         if (!ROUTE_STATUSES.includes(status as (typeof ROUTE_STATUSES)[number])) throw errors.validation("status must be active, suspended or provisioning");
-        const plan = bodyObject.plan === undefined ? undefined : requireString(bodyObject.plan, "plan", 32);
-        if (plan !== undefined && !ROUTE_PLANS.includes(plan as (typeof ROUTE_PLANS)[number])) throw errors.validation("plan must be free, pro or enterprise");
-        const body = { tenant_id, worker_name, status, ...(plan !== undefined ? { plan } : {}) };
+        const requestedPlan = bodyObject.plan === undefined ? undefined : requireString(bodyObject.plan, "plan", 32);
+        if (requestedPlan !== undefined && !ROUTE_PLANS.includes(requestedPlan as (typeof ROUTE_PLANS)[number])) throw errors.validation("plan must be free, pro or enterprise");
+        const reason = bodyObject.reason === undefined ? "" : requireString(bodyObject.reason, "reason", 500);
         const now = new Date().toISOString();
-        const current = await env.CONTROL_DB.prepare("SELECT tenant_id, routing_version FROM tenant_routes WHERE route_key=?1")
-          .bind(routeKey).first<{ tenant_id: string; routing_version: number }>();
 
-        /**
-         * A tenant has exactly one route — `idx_tenant_routes_tenant` is UNIQUE, because
-         * the reverse index `__tenant__:<id>` is one key and two routes would make it
-         * ambiguous. So a PUT naming a route key this tenant does not currently hold is
-         * unambiguously a MOVE: the tenant is changing hostname.
-         *
-         * Handled explicitly rather than left to the constraint. The bare insert failed
-         * with `DATABASE_ERROR: Storage operation failed` — an opaque internal fault for
-         * a condition the operator can act on, and one with no way out: without this,
-         * a tenant's hostname could never be changed at all, and a wrong one would be
-         * permanent.
-         */
-        const previous = await env.CONTROL_DB.prepare("SELECT route_key FROM tenant_routes WHERE tenant_id=?1 AND route_key<>?2")
-          .bind(tenant_id, routeKey).first<{ route_key: string }>();
-        let moved: string | null = null;
-        if (previous?.route_key) {
-          await env.CONTROL_DB.prepare("DELETE FROM tenant_routes WHERE route_key=?1").bind(previous.route_key).run();
-          // The stale hostname must stop resolving to this tenant in the same breath,
-          // or the old name keeps serving the tenant it was supposedly moved off.
-          await env.ROUTES.delete(previous.route_key);
-          moved = previous.route_key;
+        const currentAtKey = await loadRouteByKey(env.CONTROL_DB, routeKey);
+        const currentForTenant = await loadRouteByTenant(env.CONTROL_DB, tenant_id);
+        const plan = (requestedPlan ?? currentForTenant?.plan ?? currentAtKey?.plan ?? "free") as (typeof ROUTE_PLANS)[number];
+        const requested: RequestedTenantRoute = {
+          route_key: routeKey,
+          tenant_id,
+          worker_name,
+          status: status as (typeof ROUTE_STATUSES)[number],
+          plan,
+        };
+        const governance = assertGovernedRouteMutation(currentAtKey, currentForTenant, requested, reason);
+        if (!governance.changed) {
+          return jsonResponse({ route_key: routeKey, routing_version: governance.baseline?.routing_version ?? 0, unchanged: true });
         }
 
-        const version = (current?.routing_version ?? 0) + 1;
-        await env.CONTROL_DB.prepare(
+        const version = nextRoutingVersion(currentAtKey, currentForTenant);
+        const movedFrom = currentForTenant && currentForTenant.route_key !== routeKey ? currentForTenant.route_key : null;
+        const statements: D1PreparedStatement[] = [];
+        if (movedFrom) {
+          statements.push(env.CONTROL_DB.prepare("DELETE FROM tenant_routes WHERE route_key=?1").bind(movedFrom));
+        }
+        statements.push(env.CONTROL_DB.prepare(
           `INSERT INTO tenant_routes(route_key, tenant_id, worker_name, status, plan, routing_version, modified_at)
            VALUES(?1,?2,?3,?4,?5,?6,?7)
            ON CONFLICT(route_key) DO UPDATE SET tenant_id=excluded.tenant_id, worker_name=excluded.worker_name,
            status=excluded.status, plan=excluded.plan, routing_version=excluded.routing_version, modified_at=excluded.modified_at`,
-        ).bind(routeKey, body.tenant_id, body.worker_name, body.status, body.plan ?? "free", version, now).run();
-        const routeRecord = JSON.stringify({ ...body, routing_version: version });
-        await env.ROUTES.put(routeKey, routeRecord);
-        // Reverse index used by the Jobs Worker: domain events carry tenant_id,
-        // while the public route key may be a hostname. Keep it in the same KV so
-        // event delivery can resolve the correct dispatch script without trusting
-        // event payload routing hints.
-        if (current?.tenant_id && current.tenant_id !== tenant_id) {
-          await env.ROUTES.delete(`__tenant__:${current.tenant_id}`);
+        ).bind(routeKey, tenant_id, worker_name, requested.status, plan, version, now));
+        statements.push(env.CONTROL_DB.prepare(
+          `INSERT INTO control_route_audit_events(
+             event_id,trace_id,actor_key,action,tenant_id,route_key,reason,before_json,after_json,created_at
+           ) VALUES(?1,?2,'control-token',?3,?4,?5,?6,?7,?8,?9)`,
+        ).bind(
+          randomId("control-audit"),
+          traceId,
+          governance.action,
+          tenant_id,
+          routeKey,
+          reason.trim(),
+          governance.baseline ? routeAuditJson(governance.baseline) : null,
+          routeAuditJson(requested, version),
+          now,
+        ));
+        await env.CONTROL_DB.batch(statements);
+
+        const routeRecord = JSON.stringify({ tenant_id, worker_name, status: requested.status, plan, routing_version: version });
+        if (movedFrom) {
+          // D1 is authoritative; KV is the routing projection. If a KV write fails after
+          // the atomic D1+audit commit, rebuild-index can repair it from the audited row.
+          await env.ROUTES.delete(movedFrom);
         }
+        await env.ROUTES.put(routeKey, routeRecord);
         await env.ROUTES.put(`__tenant__:${tenant_id}`, routeRecord);
-        // `moved_from` is reported rather than left silent: deleting a hostname is not
-        // something an operator should discover afterwards from a 404.
-        return jsonResponse({ route_key: routeKey, routing_version: version, ...(moved ? { moved_from: moved } : {}) });
+        return jsonResponse({ route_key: routeKey, routing_version: version, ...(movedFrom ? { moved_from: movedFrom } : {}) });
       }
       return jsonResponse({ error: { code: "ROUTE_NOT_FOUND" } }, 404);
     } catch (error) {
@@ -128,6 +190,20 @@ export default {
     }
   },
 };
+
+async function loadRouteByKey(db: D1Database, routeKey: string): Promise<GovernedTenantRoute | null> {
+  return db.prepare(
+    `SELECT route_key,tenant_id,worker_name,status,plan,routing_version
+     FROM tenant_routes WHERE route_key=?1`,
+  ).bind(routeKey).first<GovernedTenantRoute>();
+}
+
+async function loadRouteByTenant(db: D1Database, tenantId: string): Promise<GovernedTenantRoute | null> {
+  return db.prepare(
+    `SELECT route_key,tenant_id,worker_name,status,plan,routing_version
+     FROM tenant_routes WHERE tenant_id=?1`,
+  ).bind(tenantId).first<GovernedTenantRoute>();
+}
 
 export async function createPublicSignup(request: Request, env: ControlEnv, traceId = randomId("trace")): Promise<Response> {
   if (!env.SIGNUP_DATA_KEY || !env.SIGNUP_LOOKUP_SECRET) {
