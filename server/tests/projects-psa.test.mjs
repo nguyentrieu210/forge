@@ -24,13 +24,17 @@ function transition(workflow, action) {
   return found;
 }
 
-test("projects package exposes project task and timesheet capabilities", () => {
+test("projects package exposes project task timesheet and operational reports", () => {
   const app = json("app.json");
   const roles = json("roles.json");
 
   assert.equal(app.id, "projects");
-  assert.equal(app.version, "1.0.0");
-  assert.deepEqual(app.nav.map((entry) => entry.key), ["Project", "Project Task", "Project Timesheet"]);
+  assert.equal(app.version, "1.1.0");
+  for (const key of ["Project", "Project Task", "Project Timesheet"]) {
+    assert.ok(app.nav.some((entry) => entry.key === key), `missing nav ${key}`);
+  }
+  assert.ok(app.reports.some((entry) => entry.name === "Project Task Control"));
+  assert.ok(app.reports.some((entry) => entry.name === "Project Timesheet Control"));
   assert.ok(roles.some((entry) => entry.role === "Project User" && entry.desk_access === true));
   assert.ok(roles.some((entry) => entry.role === "Project Manager" && entry.desk_access === true));
 });
