@@ -5,7 +5,7 @@
  *
  *   node scripts/stage-client-bundle.mjs [--source <dir>] [--mobile-source <dir>] [--check]
  */
-import { cp, mkdir, rm, readdir, stat, readFile } from "node:fs/promises";
+import { cp, mkdir, rm, readdir, stat, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { createHash } from "node:crypto";
@@ -22,6 +22,7 @@ const mobileSource = path.resolve(argOf("mobile-source", path.join(serverRoot, "
 const target = path.join(serverRoot, "apps", "gateway-worker", "public");
 const mobileTarget = path.join(target, "mobile", "warehouse");
 const checkOnly = args.includes("--check");
+const releaseSha = (process.env.VITE_FORGE_RELEASE_SHA ?? process.env.FORGE_RELEASE_SHA ?? "").trim();
 
 async function isDirectory(dir) {
   try { return (await stat(dir)).isDirectory(); } catch { return false; }
@@ -75,4 +76,17 @@ await cp(source, target, { recursive: true });
 await mkdir(mobileTarget, { recursive: true });
 await cp(mobileSource, mobileTarget, { recursive: true });
 
-console.log(`STAGE_PASS ${path.relative(serverRoot, target)} <- runtime + warehouse PWA hash=${await hashTree(target)}`);
+// Hash the actual application bundle before adding the marker itself, so the hash never
+// depends on its own JSON. The marker is a public, non-secret production fact that lets
+// humans and automation prove which exact UI revision is currently being served.
+const bundleHash = await hashTree(target);
+if (releaseSha) {
+  await writeFile(path.join(target, "release.json"), `${JSON.stringify({
+    ok: true,
+    service: "gateway-ui",
+    releaseSha,
+    bundleHash,
+  }, null, 2)}\n`, "utf8");
+}
+
+console.log(`STAGE_PASS ${path.relative(serverRoot, target)} <- runtime + warehouse PWA hash=${bundleHash}${releaseSha ? ` release=${releaseSha}` : ""}`);
