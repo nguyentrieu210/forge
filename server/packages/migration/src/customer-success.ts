@@ -71,7 +71,13 @@ export function evaluateCustomerSuccess(input: {
   adoption: AdoptionCounter[];
 }): CustomerSuccessReadiness {
   const plan = normalizePlan(input.plan);
+  const requirementKeys = new Set(plan.training.map((requirement) => requirement.key));
   const evidence = normalizeTrainingEvidence(input.training_evidence);
+  for (const entry of evidence) {
+    if (!requirementKeys.has(entry.requirement_key)) {
+      throw errors.validation(`Training evidence references unknown requirement: ${entry.requirement_key}`);
+    }
+  }
   const evidenceKeys = new Set(evidence.map((entry) => entry.requirement_key));
   const trainingOpen = plan.training.filter((requirement) => requirement.required && !evidenceKeys.has(requirement.key)).map((requirement) => requirement.key);
   const knowledgeKeys = new Set(plan.knowledge.map((entry) => entry.key));
@@ -79,8 +85,6 @@ export function evaluateCustomerSuccess(input: {
     .filter((requirement) => requirement.required && !plan.knowledge.some((knowledge) => !knowledge.audience_roles?.length || knowledge.audience_roles.includes(requirement.role)))
     .map((requirement) => requirement.key);
 
-  // Keep this explicit so a future plan may refer to knowledge keys from another source
-  // without silently accepting duplicate/malformed records today.
   if (knowledgeKeys.size !== plan.knowledge.length) throw errors.validation("Duplicate knowledge reference key");
 
   const adoptionRows = normalizeAdoption(input.adoption);
