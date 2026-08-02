@@ -1,6 +1,6 @@
 # WS14 — MetaForge Frontend Runtime / Mobile / Offline / A11y
 
-Status: **CLAIMED**  
+Status: **ACTIVE**  
 Owner: **gpt-ws14**  
 Branch: `agent/ent-14-frontend-runtime-mobile`  
 Started from: `bbe3494bcfbb8a3ce09a5ff4bbb839dfcf9e47e9`  
@@ -18,35 +18,68 @@ Harden shared MetaForge runtime thay vì mỗi domain tự làm UI: form/list/re
 
 `client/apps/runtime/**`, shared `client/packages/core|ui|controls|views|shell/**` architecture, routing/renderers, generic forms/lists/tables/actions, PWA/mobile/offline contracts, accessibility/performance/design-system primitives.
 
-## Audit plan
+## Phase A exact-state audit — 2026-08-03
 
-1. Audit exact runtime/router/fallback renderers and metadata resolver on current main.
-2. Audit form/list/child-grid dirty/save/close semantics, table/mobile ergonomics and shared shell navigation.
-3. Audit PWA/offline feasibility, a11y primitives and bundle/performance hotspots.
-4. Audit substantive legacy PRs touching shared frontend and classify `reuse / cherry-pick / superseded / reject`.
-5. Map findings to capability IDs/maturity and implement the highest-value independent UI slice that does not cross WS00/WS09/WS11 ownership.
-6. Verify targeted frontend tests/build plus visual/browser evidence where available.
+### Runtime/renderers
 
-## Phase A audit
+- Generic runtime/router is already metadata-first for list/form/workspace/overview/report/action/screen/import and lazy-loads large renderer families.
+- `client/apps/runtime/src/main.tsx` still routes `/page/:page` and `/dashboard/:page` to `DeskFallback`; no generic Page/Dashboard renderer exists on current main.
+- Command palette + permission-aware global search are wired through the shared shell/adapter; no separate app-specific navigation fork is required for this slice.
 
-Audit fallback pages/renderers, metadata resolver, form/list/child-grid, dirty/save/close semantics, mobile nav, large tables, bundle/perf, accessibility, offline feasibility, collaboration surfaces and app-specific leakage into shared runtime. Audit substantive legacy/UI PR trong scope và phân loại `reuse / cherry-pick / superseded / reject`.
+### Mobile/a11y shell
 
-## Phase B priority
+- `AppShell` already has a skip link, keyboard shortcut dialog, mobile drawer, active-page semantics and main-content focus after navigation.
+- Mobile currently renders `businessContext` once inside the top bar and a second time in the dedicated `lg:hidden` context row, wasting narrow-screen space and duplicating controls.
+- Mobile drawer trigger/aside do not expose an explicit `aria-controls`/`aria-expanded` relationship and the custom drawer has no Escape close path.
 
-Eliminate critical fallback -> renderer consistency -> mobile/table ergonomics -> offline queue/sync contract where justified -> accessibility -> performance/bundle -> visual system hardening.
+### PWA/offline
 
-## Dependencies
+- `client/apps/runtime/vite.config.ts` has only React + Tailwind plugins; repository search found no web app manifest, service-worker registration, IndexedDB cache, offline write queue or background sync implementation.
+- Therefore `U01-002` through `U01-007` remain **Missing** on exact main.
+- Current offline banner says cached data remains viewable and changes can be resent later, but those guarantees are not implemented. The banner must fail honest until an offline contract exists.
 
-WS00 API/contracts, WS09 builders/metadata, WS11 permission/auth, domain agents as consumers. Domain agents request shared renderer change here instead of each patching core.
+### Capability maturity
+
+- `U01-001 Responsive PWA`: **Wired**, responsive shell exists; generic-shell targeted browser evidence still needed for RC.
+- `U01-002 Installable PWA`: **Missing**.
+- `U01-003 Offline read/cache`: **Missing**.
+- `U01-004 Offline write queue`: **Missing**.
+- `U01-005 Background sync`: **Missing**.
+- `U01-006 Conflict detection`: **Missing**.
+- `U01-007 Conflict resolution UX`: **Missing**.
+- `N03-001 Global Search`: **Wired** in shared shell + adapter.
+- `N03-008 Command Palette`: **Wired** in shared shell.
+
+## Phase B slice 1 — mobile shell/a11y/offline truthfulness
+
+Risk: **FAST / UI-only**.
+
+Fast-path sub-branch: `fix/ui-ws14-mobile-shell-a11y-20260803`.
+
+Target changes:
+1. render business context once per viewport: desktop in top bar, mobile in the dedicated context row;
+2. add explicit mobile navigation semantics (`aria-controls`, `aria-expanded`, labelled navigation) and Escape close behavior;
+3. change offline copy to state only what runtime truly guarantees: network requests/saves are unavailable until connectivity returns;
+4. add targeted source regression and run shell/runtime typecheck/build before merge.
+
+No backend/API/schema/permission/business invariant changes.
+
+## Dependencies / deferred contracts
+
+- Installable/offline PWA is not being faked in this slice. A real service-worker/cache/write-queue design must preserve auth/tenant boundaries and release freshness before `U01-002..007` can advance.
+- Shared metadata/compiler changes remain WS09; permission/auth enforcement remains WS11; no dependency request is blocking this UI slice.
+
+## Legacy PR disposition
+
+- `#269` HRM Wave 1: **REJECT for WS14 code reuse**. Exact changed-file list contains server HRM/migrations/tests only; WS14 is secondary contract reviewer, not implementation owner.
+- `#267` Bulk Stock Reconciliation: **REJECT for WS14 code reuse**. Exact changed-file list contains server/kernel/action/tests only; no shared frontend implementation to cherry-pick.
+- `#208` Plastic ERP Production Run: **REJECT for WS14 code reuse**. Exact changed-file list is server/domain-only; no shared frontend implementation.
+- `#216` Pricing matrix: **REJECT for canonical shared-runtime reuse**. It hard-codes `Item Price`, `Price List`, `Item Group`, `UOM`, VND and pricing-specific fields/behavior inside shared `client/packages/views/**`, violating WS14 metadata-first ownership. UX ideas may inform the primary domain/WS09 design, but the code must not be cherry-picked into generic runtime as-is.
 
 ## Guard
 
 UI state không trở thành source of truth cho permission/business rules. Không hard-code Alumdoor/domain schema vào generic runtime.
 
-## Legacy PR disposition
+## Handoff checklist
 
-- Pending exact diff audit: #269, #267, #216, #208 and any other substantive frontend/runtime PR discovered in GitHub.
-
-## First commit / handoff
-
-Claim owner/head; cuối nhánh ghi affected shared APIs, screenshots/E2E, a11y/perf evidence, backward compatibility, legacy PR disposition, dependency requests, PR.
+Cuối slice ghi affected shared APIs, browser/build evidence, backward compatibility, deployment evidence, dependency requests, PR/head SHA và next slice.
