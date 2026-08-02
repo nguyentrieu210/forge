@@ -1,0 +1,36 @@
+{
+  "name": "Warehouse Cash Count",
+  "module": "Accounts",
+  "is_submittable": true,
+  "autoname": "KKQ-.YYYY.-#####",
+  "title_field": "count_type",
+  "sort_field": "counted_at",
+  "sort_order": "DESC",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "fund", "label": "Quỹ kho", "fieldtype": "Link", "options": "Warehouse Cash Fund", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "count_type", "label": "Loại kiểm quỹ", "fieldtype": "Select", "options": "Chốt ngày\nBàn giao ca\nKiểm đột xuất", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "counted_at", "label": "Thời điểm kiểm", "fieldtype": "Datetime", "required": true, "in_list_view": true },
+    { "fieldname": "system_balance", "label": "Số dư hệ thống", "fieldtype": "Currency", "read_only": true, "in_list_view": true },
+    { "fieldname": "counted_balance", "label": "Tiền kiểm thực tế", "fieldtype": "Currency", "required": true, "non_negative": true, "in_list_view": true },
+    { "fieldname": "variance", "label": "Chênh lệch", "fieldtype": "Currency", "read_only": true, "in_list_view": true },
+    { "fieldname": "variance_reason", "label": "Lý do chênh lệch", "fieldtype": "Small Text" },
+    { "fieldname": "handover_from", "label": "Người giao quỹ", "fieldtype": "Link", "options": "User", "depends_on": "eval:doc.count_type == 'Bàn giao ca'" },
+    { "fieldname": "handover_to", "label": "Người nhận quỹ", "fieldtype": "Link", "options": "User", "depends_on": "eval:doc.count_type == 'Bàn giao ca'" },
+    { "fieldname": "attachment", "label": "Biên bản / ảnh kiểm quỹ", "fieldtype": "Attach" },
+    { "fieldname": "approved_by", "label": "Người xác nhận", "fieldtype": "Link", "options": "User", "read_only": true },
+    { "fieldname": "approved_on", "label": "Thời điểm xác nhận", "fieldtype": "Datetime", "read_only": true }
+  ],
+  "permissions": [
+    { "role": "Warehouse Cash User", "read": true, "write": true, "create": true, "report": true },
+    { "role": "Thủ kho", "read": true, "write": true, "create": true, "report": true },
+    { "role": "Warehouse Cash Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true },
+    { "role": "Chủ xưởng", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true },
+    { "role": "General Accountant", "read": true, "write": true, "create": true, "report": true, "export": true },
+    { "role": "Chief Accountant", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true },
+    { "role": "Kế toán trưởng", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true },
+    { "role": "Accounts Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 2
+}
