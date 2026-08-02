@@ -44,6 +44,17 @@ Canonical behavior sau fast-path merge:
 
 Nếu push có backend/API/schema/migration/permission/tenant/accounting/inventory/business logic thì fail closed và chuyển khỏi UI lane.
 
+## Active checkpoint — VN Accounting Period Integrity Hardening
+
+- Canonical branch: `fix/vn-accounting-period-integrity-20260802-r6`, clean-transplant từ exact `main@4c816fd45a1944aa90abb448b436890bb45c114b`.
+- `0039_vn_accounting_period_hardening.sql` là migration kế tiếp sau `0038_warehouse_cash.sql`, không rewrite migration đã áp dụng.
+- Invariants: valid/non-overlap period theo tenant/company/branch; Hard Locked chặn submit/cancel/scope move; Soft Closed chỉ cho approved adjustment khi period cho phép và có reason + approver; guard bao phủ Journal/Invoice/Payment, Purchase Receipt, Delivery Note, Payroll, Stock, Warehouse Cash.
+- Regression cover duplicate employee/attendance/payroll source, hard/soft close, cancel, draft->submit, scope transitions, tenant isolation, invalid/overlap period và period update overlap.
+- Isolated SQLite replay PASS, gồm edge cases move-out, move-in và period scope update-overlap.
+- CRITICAL full repo gates chưa chạy vì connector runtime không có checkout/dependencies và GitHub Actions không phải development CI. Không gọi DONE/ready/merge cho tới khi local gates theo `DELIVERY_POLICY.md` chạy.
+- PR `#259` và các accounting PR trước stale/superseded do concurrent main changes trên status/handoff files; không force-push/rewrite history.
+- Không production deploy, production migration hoặc mutate tenant data.
+
 ## Full ALU deploy
 
 Manual `workflow_dispatch` + confirm `alu`:
@@ -67,6 +78,7 @@ Không tự đổi DNS/secrets hoặc destructive operation ngoài release path 
 ## Remaining priorities
 
 - Acceptance run thật của UI fast path sau merge, ghi duration và Cloudflare release evidence.
+- Hoàn tất CRITICAL local gates cho VN Accounting Period Integrity Hardening.
 - Stock Reconciliation Bulk Transaction.
 - BOM parent + child/version Bulk Transaction.
 - First-class AppAction input-table transport.

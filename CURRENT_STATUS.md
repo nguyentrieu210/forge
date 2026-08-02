@@ -27,6 +27,18 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. 
 - Production proof vẫn bắt buộc `/health` + `/release.json` đúng SHA/hash.
 - Chưa có production run mới của fast path này; cần một UI push thực tế sau merge để chốt performance/e2e evidence.
 
+## ACTIVE — VN Accounting Period Integrity Hardening
+
+- Canonical branch: `fix/vn-accounting-period-integrity-20260802-r6`, clean-transplant từ exact `main@4c816fd45a1944aa90abb448b436890bb45c114b`.
+- `0039_vn_accounting_period_hardening.sql` harden range/overlap, Hard Locked, Soft Closed và tenant scope mà không rewrite migration đã áp dụng.
+- Hard Locked chặn submit/cancel và payload move chứng từ đã post vào/ra kỳ khóa; guard bao phủ Journal/Invoice/Payment, Purchase Receipt, Delivery Note, Payroll, Stock và Warehouse Cash.
+- Soft Closed chỉ cho approved adjustment khi period cho phép và có reason + approver.
+- Regression cover cancel, draft->submit, move into/out of locked scope, invalid/overlap period, period update overlap, tenant isolation và duplicate payroll source.
+- Isolated SQLite trigger regression: PASS, gồm 3 edge case move-out, move-in và period update-overlap.
+- Full repo `pnpm test` / relevant backend tests / typecheck / lint / build: **NOT RUN** vì connector runtime không có checkout/dependencies; task chưa DONE và chưa merge cho đến khi CRITICAL local gates chạy.
+- Draft PR `#259` và các PR accounting trước bị superseded do concurrent `main` updates trên status/handoff files; không force-push/rewrite history.
+- Không production deploy, production migration hoặc mutate tenant data.
+
 ## DONE — Website/CMS multi-tenant v1
 
 - Canonical PR `#254` đã squash-merge vào `main` tại `b25fc30b0f37d1218cafbb4dac40e37479bba0b9`.
@@ -64,12 +76,13 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. 
 ## Chưa hoàn tất
 
 1. Một UI push thực tế sau fast-path merge để đo duration và xác nhận `Deploy Gateway + /release.json` PASS.
-2. Bulk Transaction cho Stock Reconciliation.
-3. Bulk Transaction cho BOM parent + child/version.
-4. First-class AppAction input-table contract.
-5. Batch Print / QR label queue.
-6. P1 Daily detailed ledger hardening/closure theo exact GitHub state.
-7. Plastic ERP các wave sau P0-A.
+2. Hoàn tất CRITICAL local gates cho VN Accounting Period Integrity Hardening rồi mới ready/merge PR.
+3. Bulk Transaction cho Stock Reconciliation.
+4. Bulk Transaction cho BOM parent + child/version.
+5. First-class AppAction input-table contract.
+6. Batch Print / QR label queue.
+7. P1 Daily detailed ledger hardening/closure theo exact GitHub state.
+8. Plastic ERP các wave sau P0-A.
 
 ## Guardrails
 
