@@ -16,6 +16,20 @@
     { "name": "Purchase Invoice", "kind": "transaction", "app": "accounts" },
     { "name": "Payment Entry", "kind": "transaction", "app": "accounts" }
   ],
+  "custom_fields": [
+    {
+      "name": "Purchase Order-supplier_contract",
+      "dt": "Purchase Order",
+      "fieldname": "supplier_contract",
+      "field": {
+        "label": "Hợp đồng nhà cung cấp",
+        "fieldtype": "Link",
+        "options": "Supplier Contract",
+        "in_standard_filter": true
+      },
+      "insert_after": "supplier_quotation"
+    }
+  ],
   "nav": [
     { "key": "Supplier Qualification", "label": "Duyệt nhà cung cấp", "kind": "doctype", "icon": "badge-check", "group": "Nhà cung cấp" },
     { "key": "Supplier Rating", "label": "Đánh giá nhà cung cấp", "kind": "doctype", "icon": "star", "group": "Nhà cung cấp" },
