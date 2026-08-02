@@ -17,6 +17,7 @@ import {
   EmployeeTransferController, EmploymentContractController, InterviewController, JobApplicantController,
   JobOfferController, JobOpeningController,
 } from "./hrm-core-controllers.js";
+import { EmployeeFinalSettlementController, HiringCompletionController } from "./hrm-closure-controllers.js";
 import {
   AttendanceController, AttendanceRequestController, EmployeeCheckinController, ShiftAssignmentController, ShiftTypeController,
 } from "./hrm-shift-attendance-controllers.js";
@@ -70,6 +71,7 @@ export function registerErpNextCoreControllers(registry: ControllerRegistry): Co
     .register(new JobApplicantController())
     .register(new InterviewController())
     .register(new JobOfferController())
+    .register(new HiringCompletionController())
     .register(new ShiftTypeController())
     .register(new ShiftAssignmentController())
     .register(new EmployeeCheckinController())
@@ -85,6 +87,7 @@ export function registerErpNextCoreControllers(registry: ControllerRegistry): Co
     .register(new HrmPayrollPeriodController())
     .register(new AdditionalSalaryController())
     .register(new EmployeeAdvanceController())
+    .register(new EmployeeFinalSettlementController())
     .register(new TravelRequestController())
     .register(new GoalController())
     .register(new HrmAppraisalController())
