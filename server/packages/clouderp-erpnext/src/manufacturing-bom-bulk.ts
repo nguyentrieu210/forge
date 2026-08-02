@@ -4,7 +4,7 @@ import { fromScaledInt, toScaledInt } from "../../money/src/index.js";
 import type { BillOfMaterialsData, BomItem } from "./types.js";
 import type { BomQuantityBasis } from "./manufacturing-lifecycle.js";
 
-const MAX_BULK_BOM_ROWS = 500;
+export const MAX_BULK_BOM_ROWS = 500;
 const QUANTITY_BASES = new Set<BomQuantityBasis>([
   "Cố định",
   "Theo chiều cao",
@@ -43,7 +43,6 @@ export interface BulkBomDraftDocument extends BillOfMaterialsData {
   effective_to?: string;
   output_uom?: string;
   output_conversion_factor?: string;
-  bulk_input_schema: 1;
   items: Array<BomItem & {
     uom?: string;
     conversion_factor?: string;
@@ -52,6 +51,7 @@ export interface BulkBomDraftDocument extends BillOfMaterialsData {
 }
 
 export interface BulkBomDraftPreview extends JsonObject {
+  schema_version: 1;
   fingerprint: string;
   company: string;
   item: string;
@@ -111,7 +111,6 @@ export function buildBulkBomDraftDocument(input: BulkBomDraftInput): BulkBomDraf
     ...(operatingCost !== undefined ? { operating_cost: fromScaledInt(operatingCost, 6) } : {}),
     ...(outputUom ? { output_uom: outputUom } : {}),
     ...(outputConversion !== undefined ? { output_conversion_factor: fromScaledInt(outputConversion, 6) } : {}),
-    bulk_input_schema: 1,
     items: rows,
   };
 }
@@ -128,6 +127,7 @@ export async function fingerprintBulkBomDraft(input: BulkBomDraftInput): Promise
 export async function previewBulkBomDraft(input: BulkBomDraftInput): Promise<BulkBomDraftPreview> {
   const document = buildBulkBomDraftDocument(input);
   return {
+    schema_version: 1,
     fingerprint: await sha256Hex(canonicalJson(document)),
     company: document.company,
     item: document.item,
