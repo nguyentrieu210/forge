@@ -1,0 +1,80 @@
+name: Patch Clean Dirty State Once
+
+on:
+  push:
+    paths:
+      - .github/workflows/patch-clean-dirty-state-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Patch false dirty state on loaded documents
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('client/packages/views/src/form/ChildGrid.tsx')
+          s = path.read_text()
+
+          replacements = [
+            (
+              '  const itemLoadVersion = useRef(new Map<string, number>());\n  const automaticItemLoads = useRef(new Set<string>());',
+              '  const itemLoadVersion = useRef(new Map<string, number>());\n  const automaticItemLoads = useRef(new Set<string>());\n  // Bản ghi con đã lưu chỉ cần hydrate policy/link metadata lúc mở form. Không được tự ghi\n  // patch trở lại form, nếu không RHF coi việc MỞ chứng từ là một lần sửa và bật nút Lưu.\n  const persistedItemHydration = useRef(new Set<string>());'
+            ),
+            (
+              '  const previousFormulaGroup = useRef("");\n  const previousSellingContext = useRef("");',
+              '  const previousFormulaGroup = useRef("");\n  const previousSellingContext = useRef("");\n  const formulaGroupReady = useRef(false);\n  const sellingContextReady = useRef(false);'
+            ),
+            (
+              '  useEffect(() => {\n    if (!formulaCustomerGroup || formulaCustomerGroup === previousFormulaGroup.current) return;',
+              '  useEffect(() => {\n    // Lần render đầu chỉ chụp baseline từ document đã tải. Reprice/reformula chỉ chạy khi\n    // người dùng thật sự đổi context sau đó, không chạy chỉ vì form vừa được mở.\n    if (!formulaGroupReady.current) {\n      formulaGroupReady.current = true;\n      previousFormulaGroup.current = formulaCustomerGroup;\n      return;\n    }\n    if (!formulaCustomerGroup || formulaCustomerGroup === previousFormulaGroup.current) return;'
+            ),
+            (
+              '  useEffect(() => {\n    if (!isDoorSalesGrid || !sellingContextKey || sellingContextKey === previousSellingContext.current) return;',
+              '  useEffect(() => {\n    if (!sellingContextReady.current) {\n      sellingContextReady.current = true;\n      previousSellingContext.current = sellingContextKey;\n      return;\n    }\n    if (!isDoorSalesGrid || !sellingContextKey || sellingContextKey === previousSellingContext.current) return;'
+            ),
+            (
+              '    // Item tạo trước khi có kiểu quản lý được coi là hàng thường — tương thích ngược.\n    if (has("inventory_mode") && !Object.hasOwn(patch, "inventory_mode")) patch.inventory_mode = "Hàng thường";\n\n    /**\n     * Đổi từ một mã nhôm sang hàng thường phải xoá quy cách của mã cũ. Giữ lại các số này\n     * sẽ tạo một dòng motor mang 51 cây × 8,5 m trong payload dù giao diện đã giấu chúng.\n     */\n    if (patch.inventory_mode !== "Nhôm cây/lá") {',
+              '    // Item cũ có thể chưa khai inventory_mode trên master. Nếu dòng chứng từ đã có\n    // snapshot hợp lệ thì giữ snapshot đó; chỉ fallback Hàng thường khi CẢ master lẫn dòng đều trống.\n    if (has("inventory_mode") && !Object.hasOwn(patch, "inventory_mode") && !base[rowIdx]?.inventory_mode) {\n      patch.inventory_mode = "Hàng thường";\n    }\n    const effectiveInventoryMode = String(patch.inventory_mode ?? base[rowIdx]?.inventory_mode ?? "");\n\n    /**\n     * Đổi từ một mã nhôm sang hàng thường phải xoá quy cách của mã cũ. Giữ lại các số này\n     * sẽ tạo một dòng motor mang 51 cây × 8,5 m trong payload dù giao diện đã giấu chúng.\n     */\n    if (effectiveInventoryMode !== "Nhôm cây/lá") {'
+            ),
+            (
+              '    if (patch.inventory_mode !== "Tấm/Kính" && patch.inventory_mode !== "Thành phẩm theo m2") {',
+              '    if (effectiveInventoryMode !== "Tấm/Kính" && effectiveInventoryMode !== "Thành phẩm theo m2") {'
+            ),
+            (
+              '      const requestKey = `${loadKey}:${itemCode}`;\n      if (automaticItemLoads.current.has(requestKey)) return;\n      automaticItemLoads.current.add(requestKey);\n      const loadVersion = (itemLoadVersion.current.get(loadKey) ?? 0) + 1;\n      itemLoadVersion.current.set(loadKey, loadVersion);\n      void fillItemDefaults(rowIdx, itemCode, rows, loadKey, loadVersion)\n        .finally(() => automaticItemLoads.current.delete(requestKey));',
+              '      const requestKey = `${loadKey}:${itemCode}`;\n      const persisted = typeof row.name === "string" && row.name.length > 0 && !row.name.startsWith("new-");\n      if (persisted) {\n        // Existing rows are server truth. Hydrate allowed-color/UOM policy for the picker, but\n        // deliberately discard the returned patch so opening a document never mutates it.\n        if (persistedItemHydration.current.has(requestKey)) return;\n        persistedItemHydration.current.add(requestKey);\n        void computeItemPatch(rowIdx, itemCode, rows).catch(() => undefined);\n        return;\n      }\n      if (automaticItemLoads.current.has(requestKey)) return;\n      automaticItemLoads.current.add(requestKey);\n      const loadVersion = (itemLoadVersion.current.get(loadKey) ?? 0) + 1;\n      itemLoadVersion.current.set(loadKey, loadVersion);\n      void fillItemDefaults(rowIdx, itemCode, rows, loadKey, loadVersion)\n        .finally(() => automaticItemLoads.current.delete(requestKey));'
+            ),
+          ]
+
+          for old, new in replacements:
+            count = s.count(old)
+            if count != 1:
+              raise SystemExit(f'Expected exactly one match, got {count}: {old[:100]!r}')
+            s = s.replace(old, new, 1)
+
+          path.write_text(s)
+          PY
+
+          rm .github/workflows/patch-clean-dirty-state-once.yml
+          git diff --check
+          git diff -- client/packages/views/src/form/ChildGrid.tsx
+
+      - name: Commit patch and remove one-time workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add client/packages/views/src/form/ChildGrid.tsx .github/workflows/patch-clean-dirty-state-once.yml
+          git commit -m "fix(ui): keep loaded forms clean until user edits"
+          git push origin HEAD:main
