@@ -42,6 +42,7 @@ export { serializeWorkflow, validateWorkflow, workflowMasters, type WorkflowPayl
 // Enterprise staged approval / quorum / SLA authoring contract. Kept separate from the
 // Frappe Workflow serializer because the deployed workflow table does not yet persist these
 // process-instance semantics; WS11 integration consumes this payload through DR-09-02.
+export { ApprovalPlanBuilder, type ApprovalPlanBuilderProps } from "./workflow/ApprovalPlanBuilder.js";
 export {
   blankApprovalPlan,
   newApprovalStage,
