@@ -1,8 +1,8 @@
 {
-  "deployedSha": "880590ca28224d0be1aac8d317c3405e5a4c404f",
+  "deployedSha": "e082661c4f7500021c687c0f5b5b8e6b86230157",
   "tenant": "alu",
   "origin": "https://alu.kairo.vn",
-  "failedStep": "install_hrm",
+  "failedStep": "install_vn_accounting",
   "outcomes": {
     "checkout": "success",
     "credentials": "success",
@@ -14,12 +14,12 @@
     "backup": "success",
     "migrate": "success",
     "deploy_worker": "success",
-    "install_hrm": "failure",
-    "install_vn_accounting": "skipped",
+    "install_hrm": "success",
+    "install_vn_accounting": "failure",
     "health": "skipped",
     "success_evidence": "skipped"
   },
-  "hrmLogTail": "1 compiled   app=hrm@1.5.0 doctypes=36 workflows=11 roles=7 fixtures=23 nav=39\n2 validated  through the server's own parser\n3 authenticating https://alu.kairo.vn as admin … ok\n4 installing  hrm@1.5.0 … FAILED\n\n  forge.apps.install → HTTP 417: Master Record VND is already owned by app alumdoor\n\n",
-  "vnAccountingLogTail": null,
-  "failedAt": "2026-08-02T20:07:44.055Z"
+  "hrmLogTail": "1 compiled   app=hrm@1.5.0 doctypes=36 workflows=11 roles=7 fixtures=19 nav=39\n2 validated  through the server's own parser\n3 authenticating https://alu.kairo.vn as admin … ok\n4 installing  hrm@1.5.0 … installed (36 doctypes, 11 workflows, 19 fixtures)\n5 verifying   client manifest resolves … ok (39 nav entries, home /app/Employee)\n6 verifying   installed form/link/chart contract … ok (form Additional Salary, User Link Employee.user_id, 0 charts, 0 reports)\n7 verifying   context dimensions have data … ok (company:1 fiscal_year:2 branch:0)\n\nLIVE  https://alu.kairo.vn/app/Employee\n      Quản lý nhân sự — open it in a browser and sign in as admin.\n\nNo deploy happened. The app is metadata on tenant alu.kairo.vn; the client bundle was already there.\n",
+  "vnAccountingLogTail": "1 compiled   app=vn-accounting@1.1.0 doctypes=8 workflows=1 roles=10 fixtures=0 nav=12\n2 validated  through the server's own parser\n3 authenticating https://alu.kairo.vn as admin … ok\n4 installing  vn-accounting@1.1.0 … FAILED\n\n  forge.apps.install → HTTP 417: vn-accounting requires external DocTypes that are not installed: DocType (core)\n\n",
+  "failedAt": "2026-08-02T20:18:40.980Z"
 }
