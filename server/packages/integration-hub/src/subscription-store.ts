@@ -1,5 +1,4 @@
 import type { CanonicalDocument, DomainEvent, JsonObject, JsonValue } from "../../contracts/src/index.js";
-import { D1MutationStore } from "../../document-kernel/src/index.js";
 import {
   selectWebhookSubscriptions,
   validateWebhookSubscription,
@@ -9,23 +8,29 @@ import {
   type WebhookSubscription,
 } from "./index.js";
 
-export interface SubscriptionDocumentReader {
-  listDocumentsByDoctype<T extends JsonObject>(tenantId: string, doctype: string): Promise<Array<CanonicalDocument<T>>>;
+const ACTIVE_SUBSCRIPTION_SCAN_LIMIT = 5_000;
+
+export interface ActiveSubscriptionDocumentReader {
+  listActiveSubscriptionDocuments(tenantId: string): Promise<Array<CanonicalDocument<JsonObject>>>;
 }
 
 export class IntegrationSubscriptionService {
-  constructor(private readonly reader: SubscriptionDocumentReader) {}
+  constructor(private readonly reader: ActiveSubscriptionDocumentReader) {}
 
   async listActive(tenantId: string): Promise<WebhookSubscription[]> {
     assertTenant(tenantId);
-    const documents = await this.reader.listDocumentsByDoctype<JsonObject>(tenantId, "Integration Subscription");
+    const documents = await this.reader.listActiveSubscriptionDocuments(tenantId);
+    if (documents.length > ACTIVE_SUBSCRIPTION_SCAN_LIMIT) {
+      throw new Error("Integration Subscription active scan exceeds safe bound");
+    }
     const subscriptions: WebhookSubscription[] = [];
     for (const document of documents) {
-      if (document.tenant_id !== tenantId || document.doctype !== "Integration Subscription") {
-        throw new Error("Integration Subscription reader returned cross-scope document");
+      if (document.tenant_id !== tenantId || document.doctype !== "Integration Subscription" || document.status !== "active") {
+        throw new Error("Integration Subscription reader returned cross-scope or inactive document");
       }
       const subscription = subscriptionFromDocument(document);
-      if (subscription.status === "active") subscriptions.push(subscription);
+      if (subscription.status !== "active") throw new Error("Integration Subscription document status mismatch");
+      subscriptions.push(subscription);
     }
     return subscriptions;
   }
@@ -36,9 +41,62 @@ export class IntegrationSubscriptionService {
   }
 }
 
+interface SubscriptionRow {
+  tenant_id: string;
+  doctype: string;
+  name: string;
+  owner: string;
+  docstatus: number;
+  status: string;
+  version: number;
+  created_at: string;
+  modified_at: string;
+  modified_by: string | null;
+  amended_from: string | null;
+  payload_json: string;
+}
+
+class D1ActiveSubscriptionDocumentReader implements ActiveSubscriptionDocumentReader {
+  private readonly reader: D1Database | D1DatabaseSession;
+
+  constructor(db: D1Database) {
+    this.reader = db.withSession?.("first-primary") ?? db;
+  }
+
+  async listActiveSubscriptionDocuments(tenantId: string): Promise<Array<CanonicalDocument<JsonObject>>> {
+    assertTenant(tenantId);
+    const rows = await this.reader.prepare(
+      `SELECT tenant_id, doctype, name, owner, docstatus, status, version, created_at, modified_at,
+              modified_by, amended_from, payload_json
+       FROM documents
+       WHERE tenant_id=?1 AND doctype='Integration Subscription' AND status='active'
+       ORDER BY name LIMIT ?2`,
+    ).bind(tenantId, ACTIVE_SUBSCRIPTION_SCAN_LIMIT + 1).all<SubscriptionRow>();
+    const results = rows.results ?? [];
+    if (results.length > ACTIVE_SUBSCRIPTION_SCAN_LIMIT) {
+      throw new Error("Integration Subscription active scan exceeds safe bound; add a narrower indexed dispatch reader");
+    }
+    return results.map((row): CanonicalDocument<JsonObject> => ({
+      tenant_id: row.tenant_id,
+      doctype: row.doctype,
+      name: row.name,
+      owner: row.owner,
+      docstatus: row.docstatus as 0 | 1 | 2,
+      status: row.status,
+      version: row.version,
+      created_at: row.created_at,
+      modified_at: row.modified_at,
+      ...(row.modified_by ? { modified_by: row.modified_by } : {}),
+      ...(row.amended_from ? { amended_from: row.amended_from } : {}),
+      data: parsePayload(row.payload_json),
+      children: [],
+    }));
+  }
+}
+
 export class D1IntegrationSubscriptionService extends IntegrationSubscriptionService {
   constructor(db: D1Database) {
-    super(new D1MutationStore(db));
+    super(new D1ActiveSubscriptionDocumentReader(db));
   }
 }
 
@@ -67,6 +125,13 @@ export function subscriptionFromDocument(document: CanonicalDocument<JsonObject>
     },
   };
   return validateWebhookSubscription(subscription);
+}
+
+function parsePayload(value: string): JsonObject {
+  let parsed: unknown;
+  try { parsed = JSON.parse(value) as unknown; } catch { throw new Error("Integration Subscription payload is invalid JSON"); }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("Integration Subscription payload is invalid");
+  return parsed as JsonObject;
 }
 
 function requireMapping(value: JsonValue): IntegrationMappingRule[] {
