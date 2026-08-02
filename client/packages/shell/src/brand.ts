@@ -7,6 +7,7 @@ export type BrandMode =
   | "teal" | "amber" | "rose" | "aurora" | "sunset";
 
 const KEY = "metaforge-brand";
+const CHANGE_EVENT = "metaforge-brand-change";
 export const BRANDS: { id: BrandMode; label: string; swatch: string }[] = [
   { id: "zinc", label: "Than chì", swatch: "#18181b" },
   { id: "blue", label: "Xanh điện", swatch: "#1b4dff" },
@@ -48,8 +49,30 @@ export function useBrand(controlled?: BrandMode, defaultBrand: BrandMode = "blue
       localStorage.setItem(KEY, effective);
     }
   }, [controlled, userBrand]);
+
+  // Có thể có nhiều shell/hộp chọn màu cùng mount trong một runtime. Khi một nơi đổi màu,
+  // các nơi còn lại phải cập nhật dấu chọn ngay thay vì đợi reload trang.
+  useEffect(() => {
+    if (controlled !== undefined || typeof window === "undefined" || typeof localStorage === "undefined") return;
+    const sync = () => {
+      const value = localStorage.getItem(KEY);
+      if (isBrandMode(value)) setUserBrand(value);
+    };
+    const onStorage = (event: StorageEvent) => { if (event.key === KEY) sync(); };
+    window.addEventListener(CHANGE_EVENT, sync);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener(CHANGE_EVENT, sync);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, [controlled]);
+
   const set = useCallback((value: BrandMode) => {
-    if (controlled === undefined) setUserBrand(value);
+    if (controlled !== undefined) return;
+    setUserBrand(value);
+    applyBrand(value);
+    if (typeof localStorage !== "undefined") localStorage.setItem(KEY, value);
+    if (typeof window !== "undefined") window.dispatchEvent(new Event(CHANGE_EVENT));
   }, [controlled]);
   return [controlled ?? userBrand, set];
 }
