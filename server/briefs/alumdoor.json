@@ -1905,10 +1905,12 @@
       "title": "price_list_name",
       "list": [
         "price_list_name",
+        "effective_date",
         "note"
       ],
       "fields": [
         "price_list_name:Data*! Tên bảng giá",
+        "effective_date:Date! Ngày áp dụng",
         "currency:Link(Currency)-!=(VND) Tiền tệ",
         "note:Small Text Áp dụng cho ai / khi nào",
         "disabled:Check Ngừng dùng"

@@ -2230,10 +2230,12 @@
       "title": "price_list_name",
       "list": [
         "price_list_name",
+        "effective_date",
         "note"
       ],
       "fields": [
         "price_list_name:Data*! Tên bảng giá",
+        "effective_date:Date! Ngày áp dụng",
         "currency:Link(Currency)-!=(VND) Tiền tệ",
         "note:Small Text Áp dụng cho ai / khi nào",
         "disabled:Check Ngừng dùng"
@@ -2250,7 +2252,7 @@
       "label": "Đơn giá theo bảng giá",
       "icon": "circle-dollar-sign",
       "group": "Danh mục",
-      "naming": "format:{price_list}:{item_code}",
+      "naming": "format:{price_list}:{item_code}:{uom}",
       "title": "item_code",
       "list": [
         "price_list",

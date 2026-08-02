@@ -5,7 +5,7 @@
  * được thêm tab Nhập hàng loạt dùng chung renderer, không sinh page riêng theo từng nghiệp vụ.
  */
 import { useMemo, useState, type ReactNode } from "react";
-import { List, Rows3 } from "lucide-react";
+import { List, Rows3, Tags } from "lucide-react";
 import { resolveBulkRenderPolicy } from "@metaforge/core";
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, useT } from "@metaforge/ui";
 import { useMeta } from "../container/hooks.js";
@@ -48,6 +48,7 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
   const bulkPolicy = useMemo(() => titleMeta.data ? resolveBulkRenderPolicy(titleMeta.data) : undefined, [titleMeta.data]);
   const bulkEnabled = Boolean(bulkPolicy?.enabled && !isTree);
   const bulkActive = bulkEnabled && !decoded && !isNew && bridge.get("view") === "bulk";
+  const isPriceListManager = doctype === "Item Price";
 
   const modeTabs = bulkEnabled && !decoded && !isNew ? (
     <div className="flex shrink-0 items-center gap-1 border-b bg-card px-3 py-2">
@@ -71,7 +72,7 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
         className="h-8"
         onClick={() => bridge.set({ view: "bulk" })}
       >
-        <Rows3 /> Nhập hàng loạt
+        {isPriceListManager ? <Tags /> : <Rows3 />} {isPriceListManager ? "Quản lý bảng giá" : "Nhập hàng loạt"}
       </Button>
     </div>
   ) : null;
