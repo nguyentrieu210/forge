@@ -25,6 +25,23 @@ import {
   GeolocationControl,
 } from "./media.js";
 
+/**
+ * Precision trong metadata vẫn giữ nguyên cho tính toán/lưu dữ liệu; lớp control chỉ giới hạn
+ * phần HIỂN THỊ ở tối đa 2 chữ số thập phân. Nhờ vậy field khai precision 6 không còn hiện
+ * `22,000000`, nhưng backend không bị đổi schema hay mất độ chính xác của dữ liệu đã lưu.
+ */
+const TwoDecimalNumberControl: FieldControl = (props) => {
+  const raw = props.field.precision;
+  const parsed = raw === undefined || raw === null || raw === "" ? undefined : Number(raw);
+  const displayPrecision = parsed !== undefined && Number.isFinite(parsed)
+    ? Math.min(2, Math.max(0, Math.floor(parsed)))
+    : raw;
+  return NumberControl({
+    ...props,
+    field: { ...props.field, precision: displayPrecision },
+  });
+};
+
 /** Ánh xạ fieldtype → control (P0). */
 export const DEFAULT_CONTROL_MAP: Partial<Record<Fieldtype, FieldControl>> = {
   // text 1 dòng
@@ -43,10 +60,10 @@ export const DEFAULT_CONTROL_MAP: Partial<Record<Fieldtype, FieldControl>> = {
   "Text Editor": TextAreaControl,
   // số
   Int: NumberControl,
-  Float: NumberControl,
-  Currency: NumberControl,
-  Percent: NumberControl,
-  Rating: NumberControl,
+  Float: TwoDecimalNumberControl,
+  Currency: TwoDecimalNumberControl,
+  Percent: TwoDecimalNumberControl,
+  Rating: TwoDecimalNumberControl,
   Duration: DurationControl,
   // chọn
   Check: CheckControl,
