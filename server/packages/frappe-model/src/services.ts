@@ -1,7 +1,8 @@
 import type { Actor, CanonicalDocument, JsonObject, JsonValue } from "../../contracts/src/index.js";
 import { errors, randomId } from "../../core/src/index.js";
 import qrcode from "qrcode-generator";
-import type { MetadataStore } from "./store.js";
+import { D1DocumentAccessStore, MetadataPermissionService } from "./permission.js";
+import { D1MetadataStore, type MetadataStore } from "./store.js";
 import type { AssignmentRecord, CommentRecord, DocTypeMeta, FileRecord, PrintFormatMeta, ShareRecord } from "./types.js";
 
 export interface VersionSummary extends JsonObject {
@@ -12,9 +13,123 @@ export interface VersionSummary extends JsonObject {
   created_at: string;
 }
 
+export interface AssignmentAccessAuthorizer {
+  plan(input: {
+    tenantId: string;
+    actor: Actor;
+    doctype: string;
+    name: string;
+    assignedTo: string;
+  }): Promise<"none" | "read_share">;
+}
+
+interface CollaborationDocumentRow {
+  owner: string;
+  docstatus: number;
+  status: string;
+  version: number;
+  created_at: string;
+  modified_at: string;
+  payload_json: string;
+}
+
+/**
+ * Assignment access uses the SAME metadata permission authority as document reads.
+ *
+ * A task is useless if the assignee cannot open its document, and the assignment itself
+ * must never become an accidental ACL. If direct/owner/existing-share access already
+ * works, nothing is changed. Otherwise the assigner must independently hold the document
+ * `share` permission before we plan a narrow Read share.
+ */
+class D1AssignmentAccessAuthorizer implements AssignmentAccessAuthorizer {
+  private readonly db: D1Database | D1DatabaseSession;
+  private readonly permissions: MetadataPermissionService;
+
+  constructor(db: D1Database) {
+    this.db = db.withSession?.("first-primary") ?? db;
+    this.permissions = new MetadataPermissionService(
+      new D1MetadataStore(db),
+      undefined,
+      new D1DocumentAccessStore(db),
+    );
+  }
+
+  async plan(input: {
+    tenantId: string;
+    actor: Actor;
+    doctype: string;
+    name: string;
+    assignedTo: string;
+  }): Promise<"none" | "read_share"> {
+    const row = await this.db.prepare(
+      `SELECT owner,docstatus,status,version,created_at,modified_at,payload_json
+       FROM documents WHERE tenant_id=?1 AND doctype=?2 AND name=?3`,
+    ).bind(input.tenantId, input.doctype, input.name).first<CollaborationDocumentRow>();
+    if (!row) throw errors.notFound("Assigned document not found");
+
+    const user = await this.db.prepare(
+      `SELECT enabled,user_type FROM users WHERE tenant_id=?1 AND user_id=?2`,
+    ).bind(input.tenantId, input.assignedTo).first<{ enabled: number; user_type: string }>();
+    if (!user) throw errors.validation(`Assigned user ${input.assignedTo} does not exist`);
+    if (user.enabled !== 1 || user.user_type !== "System User") {
+      throw errors.validation(`Assigned user ${input.assignedTo} is not an active System User`);
+    }
+
+    const roleRows = await this.db.prepare(
+      `SELECT ur.role AS role FROM user_roles ur
+       JOIN roles r ON r.tenant_id=ur.tenant_id AND r.role=ur.role
+       WHERE ur.tenant_id=?1 AND ur.user_id=?2 AND r.disabled=0
+       ORDER BY ur.role`,
+    ).bind(input.tenantId, input.assignedTo).all<{ role: string }>();
+
+    const data = JSON.parse(row.payload_json) as JsonObject;
+    const document: CanonicalDocument = {
+      tenant_id: input.tenantId,
+      doctype: input.doctype,
+      name: input.name,
+      owner: row.owner,
+      docstatus: row.docstatus === 1 ? 1 : row.docstatus === 2 ? 2 : 0,
+      status: row.status,
+      version: row.version,
+      created_at: row.created_at,
+      modified_at: row.modified_at,
+      data,
+      children: [],
+    };
+    const recipient: Actor = {
+      user_id: input.assignedTo,
+      roles: (roleRows.results ?? []).map((entry) => entry.role),
+    };
+
+    if (await this.permissions.canReadDocument(recipient, input.tenantId, document)) return "none";
+
+    try {
+      await this.permissions.assert({
+        actor: input.actor,
+        tenantId: input.tenantId,
+        doctype: input.doctype,
+        name: input.name,
+        owner: document.owner,
+        data: document.data,
+        action: "share",
+      });
+    } catch {
+      throw errors.permission(
+        `User ${input.assignedTo} cannot read ${input.doctype} ${input.name}; share access before assigning`,
+      );
+    }
+    return "read_share";
+  }
+}
+
 export class D1CollaborationService {
   private readonly db: D1Database | D1DatabaseSession;
-  constructor(db: D1Database) { this.db = db.withSession?.("first-primary") ?? db; }
+  private readonly assignmentAccess: AssignmentAccessAuthorizer;
+
+  constructor(db: D1Database, assignmentAccess?: AssignmentAccessAuthorizer) {
+    this.db = db.withSession?.("first-primary") ?? db;
+    this.assignmentAccess = assignmentAccess ?? new D1AssignmentAccessAuthorizer(db);
+  }
 
   async listTimeline(tenantId: string, doctype: string, name: string): Promise<JsonObject> {
     const comments = await this.db.prepare(`SELECT comment_id,comment_type,content,owner,created_at FROM document_comments WHERE tenant_id=?1 AND doctype=?2 AND name=?3 ORDER BY created_at`).bind(tenantId, doctype, name).all<CommentRecord>();
@@ -37,11 +152,37 @@ export class D1CollaborationService {
   async assign(tenantId: string, actor: Actor, doctype: string, name: string, input: JsonObject, now: string): Promise<AssignmentRecord> {
     const assignedTo = typeof input.assigned_to === "string" && input.assigned_to.trim() ? input.assigned_to.trim() : (() => { throw errors.validation("assigned_to is required"); })();
     const status = input.status === "Closed" || input.status === "Cancelled" ? input.status : "Open";
+    const accessPlan = status === "Open"
+      ? await this.assignmentAccess.plan({ tenantId, actor, doctype, name, assignedTo })
+      : "none";
     const record: AssignmentRecord = { assignment_id: randomId("assign"), doctype, name, assigned_to: assignedTo, status, owner: actor.user_id, created_at: now, modified_at: now,
       ...(typeof input.description === "string" ? { description: input.description.slice(0, 4000) } : {}),
       ...(input.priority === "Low" || input.priority === "Medium" || input.priority === "High" ? { priority: input.priority } : {}),
       ...(typeof input.due_date === "string" ? { due_date: input.due_date } : {}) };
-    await this.db.prepare(`INSERT INTO assignments(tenant_id,assignment_id,doctype,name,assigned_to,description,status,priority,due_date,owner,created_at,modified_at) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12)`).bind(tenantId, record.assignment_id, doctype, name, assignedTo, record.description ?? null, status, record.priority ?? null, record.due_date ?? null, actor.user_id, now, now).run();
+
+    const assignment = this.db.prepare(
+      `INSERT INTO assignments(tenant_id,assignment_id,doctype,name,assigned_to,description,status,priority,due_date,owner,created_at,modified_at)
+       VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12)`,
+    ).bind(tenantId, record.assignment_id, doctype, name, assignedTo, record.description ?? null, status, record.priority ?? null, record.due_date ?? null, actor.user_id, now, now);
+
+    if (accessPlan === "read_share") {
+      // Share + assignment are one D1 batch. If the unique Open-assignment guard races
+      // another writer, the Read share is rolled back too instead of surviving an
+      // assignment that never existed. Existing write/share rights are never downgraded.
+      const readShare = this.db.prepare(
+        `INSERT INTO document_shares(tenant_id,doctype,name,user,can_read,can_write,can_share,submitted_by,created_at)
+         VALUES(?1,?2,?3,?4,1,0,0,?5,?6)
+         ON CONFLICT(tenant_id,doctype,name,user) DO UPDATE SET
+           can_read=1,
+           can_write=MAX(document_shares.can_write,excluded.can_write),
+           can_share=MAX(document_shares.can_share,excluded.can_share),
+           submitted_by=excluded.submitted_by,
+           created_at=excluded.created_at`,
+      ).bind(tenantId, doctype, name, assignedTo, actor.user_id, now);
+      await this.db.batch([readShare, assignment]);
+    } else {
+      await assignment.run();
+    }
     return record;
   }
 
