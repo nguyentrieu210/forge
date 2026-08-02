@@ -78,17 +78,15 @@ function normalizeLine(raw: unknown, index: number): NormalizedCountLine {
   const bundle = text(row.serial_and_batch_bundle);
   const reason = text(row.variance_reason);
   const note = text(row.variance_note);
+  const countedWeight = optionalNonNegative(row.counted_weight_kg, `Dòng ${index + 1}: Kg cân thực tế`);
+  const valuationRate = optionalNonNegative(row.valuation_rate, `Dòng ${index + 1}: Đơn giá điều chỉnh`);
   return {
     item_code: itemCode,
     ...(batchNo ? { batch_no: batchNo } : {}),
     counted_qty: nonNegative(row.counted_qty, `Dòng ${index + 1}: Số đếm thực tế`),
-    ...(optionalNonNegative(row.counted_weight_kg, `Dòng ${index + 1}: Kg cân thực tế`) === undefined
-      ? {}
-      : { counted_weight_kg: optionalNonNegative(row.counted_weight_kg, `Dòng ${index + 1}: Kg cân thực tế`)! }),
+    ...(countedWeight === undefined ? {} : { counted_weight_kg: countedWeight }),
     ...(bundle ? { serial_and_batch_bundle: bundle } : {}),
-    ...(optionalNonNegative(row.valuation_rate, `Dòng ${index + 1}: Đơn giá điều chỉnh`) === undefined
-      ? {}
-      : { valuation_rate: optionalNonNegative(row.valuation_rate, `Dòng ${index + 1}: Đơn giá điều chỉnh`)! }),
+    ...(valuationRate === undefined ? {} : { valuation_rate: valuationRate }),
     ...(reason ? { variance_reason: reason } : {}),
     ...(note ? { variance_note: note } : {}),
   };
@@ -188,11 +186,11 @@ function mergeCountLines(draft: ReconciliationDoc, lines: NormalizedCountLine[])
     return {
       ...row,
       counted_qty: input.counted_qty,
-      ...(input.counted_weight_kg === undefined ? { counted_weight_kg: undefined } : { counted_weight_kg: input.counted_weight_kg }),
-      ...(input.serial_and_batch_bundle ? { serial_and_batch_bundle: input.serial_and_batch_bundle } : { serial_and_batch_bundle: undefined }),
-      ...(input.valuation_rate === undefined ? { valuation_rate: undefined } : { valuation_rate: input.valuation_rate }),
-      ...(input.variance_reason ? { variance_reason: input.variance_reason } : { variance_reason: undefined }),
-      ...(input.variance_note ? { variance_note: input.variance_note } : { variance_note: undefined }),
+      counted_weight_kg: input.counted_weight_kg,
+      serial_and_batch_bundle: input.serial_and_batch_bundle,
+      valuation_rate: input.valuation_rate,
+      variance_reason: input.variance_reason,
+      variance_note: input.variance_note,
     };
   });
   const extra = lines.filter((line) => !existingIdentities.has(rowIdentity(line)));
@@ -285,7 +283,7 @@ export async function handleBulkStockReconciliationRequest(
     if (!draft.snapshot_at || !draft.warehouse || !draft.counted_by) {
       throw new Error(`Phiếu ${reconciliationName} chưa có snapshot kiểm kê hợp lệ.`);
     }
-    if (!["Nháp", "Đang đếm", "Chờ duyệt", ""].includes(text(draft.recon_state))) {
+    if (!["Nháp", "Đang đếm", ""].includes(text(draft.recon_state))) {
       throw new Error(`Phiếu ${reconciliationName} đang ở trạng thái ${text(draft.recon_state)}; không được nhập số đếm hàng loạt.`);
     }
 
