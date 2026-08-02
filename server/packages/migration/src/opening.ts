@@ -95,9 +95,7 @@ export function normalizeOpeningDataset(dataset: OpeningMigrationDataset): Openi
   if (!["finance", "stock", "hr"].includes(dataset.domain)) throw errors.validation(`Unknown opening migration domain: ${String(dataset.domain)}`);
   const sourceId = text(dataset.source_id, "opening source_id", 240);
   const company = text(dataset.company, "opening company", 240);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(dataset.as_of_date) || Number.isNaN(Date.parse(`${dataset.as_of_date}T00:00:00Z`))) {
-    throw errors.validation("Opening as_of_date must be YYYY-MM-DD");
-  }
+  if (!isIsoCalendarDate(dataset.as_of_date)) throw errors.validation("Opening as_of_date must be a real YYYY-MM-DD date");
   if (!dataset.records.length) throw errors.validation("Opening migration dataset cannot be empty");
   const keys = new Set<string>();
   const records = dataset.records.map((record, index) => {
@@ -132,6 +130,16 @@ function normalizeValidation(value: OpeningMigrationValidation): OpeningMigratio
     metrics[name] = text(metric, `opening metric ${name}`, 500);
   }
   return { valid: value.valid === true && errorsList.length === 0, errors: errorsList, warnings, expected_metrics: metrics };
+}
+
+function isIsoCalendarDate(value: string): boolean {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
 }
 
 function text(value: unknown, label: string, max: number): string {
