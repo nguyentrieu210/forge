@@ -37,12 +37,13 @@ export function FormGuide({ doctype, guide, className }: {
       <Button
         type="button"
         variant="ghost"
-        size="sm"
-        className={cn("h-6 gap-1 px-1.5 text-[10.5px] font-normal text-muted-foreground", className)}
+        size="icon-sm"
+        className={cn("size-6 text-muted-foreground", className)}
         onClick={() => { setHidden(doctype, false); setH(false); }}
+        aria-label="Mở hướng dẫn"
         title="Xem hướng dẫn nhập cho chứng từ này"
       >
-        <HelpCircle className="size-3" /> Hướng dẫn
+        <HelpCircle className="size-3.5" />
       </Button>
     );
   }
