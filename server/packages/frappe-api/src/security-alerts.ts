@@ -57,10 +57,11 @@ const RBAC_CLASSIFICATION: Record<string, Pick<SecurityAlert, "severity" | "cate
   "user.enable": { severity: "high", category: "identity" },
   "user.create": { severity: "high", category: "identity" },
   "session.revoke": { severity: "medium", category: "session" },
-  "user_permission.put": { severity: "high", category: "access" },
+  "user_permission.upsert": { severity: "high", category: "access" },
   "user_permission.remove": { severity: "high", category: "access" },
-  // Compatibility with older audit naming if a tenant was seeded before the current
-  // administration service settled on put/remove terminology.
+  // Compatibility aliases for pre-canonical audit fixtures/imports. Current writes use
+  // upsert/remove; keeping old labels readable costs nothing and preserves evidence.
+  "user_permission.put": { severity: "high", category: "access" },
   "user_permission.add": { severity: "high", category: "access" },
   "user_permission.delete": { severity: "high", category: "access" },
 };
