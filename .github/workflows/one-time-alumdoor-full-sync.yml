@@ -1,4 +1,4 @@
-# Retry after migration diagnostic PASS: 45/45 already applied.
+# Retry after VN Accounting duplicate Payroll Entry nav fix.
 name: One-time ALU Full Alumdoor Sync
 
 on:
@@ -68,13 +68,12 @@ jobs:
         id: dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
 
-      - name: Build server and Gateway UI
+      - name: Build server release artifacts
         id: build
         shell: bash
         run: |
           set -euo pipefail
           pnpm --filter cloudforge run build
-          pnpm --filter metaforge run build
 
       - name: Validate all app packages
         id: validate
@@ -84,6 +83,22 @@ jobs:
           node server/scripts/forge-app.mjs server/apps-src/hrm --dry-run
           node server/scripts/forge-app.mjs server/apps-src/vn-accounting --dry-run
           node server/scripts/forge-app.mjs server/briefs/alumdoor-v2.json --dry-run
+
+      - name: Verify clean worktree before migration
+        id: clean_worktree
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { execFileSync } from "node:child_process";
+          import { meaningfulGitStatus } from "./server/scripts/git-worktree.mjs";
+          const status = execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" });
+          if (meaningfulGitStatus(status)) {
+            console.error("Meaningful dirty worktree before migration:\n" + status);
+            process.exit(1);
+          }
+          console.log("worktree clean for production migration");
+          NODE
 
       - name: Backup ALU tenant
         id: backup
@@ -132,6 +147,10 @@ jobs:
           status=${PIPESTATUS[0]}
           set -e
           exit "$status"
+
+      - name: Build current Gateway UI
+        id: build_gateway
+        run: pnpm --filter metaforge run build
 
       - name: Deploy current Alumdoor app Worker
         id: deploy_app_worker
@@ -236,12 +255,14 @@ jobs:
           O_DEPENDENCIES: ${{ steps.dependencies.outcome }}
           O_BUILD: ${{ steps.build.outcome }}
           O_VALIDATE: ${{ steps.validate.outcome }}
+          O_CLEAN_WORKTREE: ${{ steps.clean_worktree.outcome }}
           O_BACKUP: ${{ steps.backup.outcome }}
           O_MIGRATE: ${{ steps.migrate.outcome }}
           O_DEPLOY_TENANT: ${{ steps.deploy_tenant.outcome }}
           O_INSTALL_HRM: ${{ steps.install_hrm.outcome }}
           O_INSTALL_VN: ${{ steps.install_vn_accounting.outcome }}
           O_INSTALL_ALUMDOOR: ${{ steps.install_alumdoor.outcome }}
+          O_BUILD_GATEWAY: ${{ steps.build_gateway.outcome }}
           O_DEPLOY_APP: ${{ steps.deploy_app_worker.outcome }}
           O_STAGE_GATEWAY: ${{ steps.stage_gateway.outcome }}
           O_DEPLOY_GATEWAY: ${{ steps.deploy_gateway.outcome }}
@@ -256,12 +277,14 @@ jobs:
               dependencies: process.env.O_DEPENDENCIES,
               build: process.env.O_BUILD,
               validate: process.env.O_VALIDATE,
+              clean_worktree: process.env.O_CLEAN_WORKTREE,
               backup: process.env.O_BACKUP,
               migrate: process.env.O_MIGRATE,
               deploy_tenant: process.env.O_DEPLOY_TENANT,
               install_hrm: process.env.O_INSTALL_HRM,
               install_vn_accounting: process.env.O_INSTALL_VN,
               install_alumdoor: process.env.O_INSTALL_ALUMDOOR,
+              build_gateway: process.env.O_BUILD_GATEWAY,
               deploy_app_worker: process.env.O_DEPLOY_APP,
               stage_gateway: process.env.O_STAGE_GATEWAY,
               deploy_gateway: process.env.O_DEPLOY_GATEWAY,

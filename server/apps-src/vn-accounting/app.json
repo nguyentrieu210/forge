@@ -20,8 +20,7 @@
     { "key": "Payroll Accounting Batch", "label": "Hạch toán lương", "kind": "doctype", "icon": "badge-dollar-sign", "group": "Kế toán lương" },
     { "key": "chart-of-accounts", "label": "Hệ thống tài khoản", "kind": "route", "route": "/app/Account", "icon": "list-tree", "group": "Sổ sách", "required_roles": ["Accounts User", "Accounts Manager", "System Manager"] },
     { "key": "journal-entry", "label": "Bút toán nhật ký", "kind": "route", "route": "/app/Journal%20Entry", "icon": "notebook-tabs", "group": "Sổ sách", "required_roles": ["Accounts User", "Accounts Manager", "System Manager"] },
-    { "key": "payment-entry", "label": "Thu chi kế toán", "kind": "route", "route": "/app/Payment%20Entry", "icon": "hand-coins", "group": "Sổ sách", "required_roles": ["Accounts User", "Accounts Manager", "System Manager"] },
-    { "key": "payroll-entry-accounting", "label": "Bảng lương nguồn", "kind": "route", "route": "/app/Payroll%20Entry", "icon": "wallet-cards", "group": "Kế toán lương", "required_roles": ["Payroll Manager", "Accounts User", "Accounts Manager", "System Manager"] }
+    { "key": "payment-entry", "label": "Thu chi kế toán", "kind": "route", "route": "/app/Payment%20Entry", "icon": "hand-coins", "group": "Sổ sách", "required_roles": ["Accounts User", "Accounts Manager", "System Manager"] }
   ],
   "hooks": [],
   "client": {
