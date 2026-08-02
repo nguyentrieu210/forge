@@ -10,50 +10,45 @@ Ngày cập nhật: **2026-08-02**.
 - GitHub là nguồn sự thật cho exact `main`, branch, PR, CI, merge và release evidence.
 - Đọc `RUNBOOK.md` -> `CURRENT_STATUS.md` -> `NEXT_TASKS.md` -> file này -> `DELIVERY_POLICY.md`.
 - Mọi SHA/branch dưới đây là checkpoint lịch sử; phải xác minh GitHub trước khi dùng.
-- Trước khi chọn validation phải phân loại task `FAST`, `STANDARD` hoặc `CRITICAL`; không mặc định chạy full pipeline cho mọi thay đổi.
+- Phân loại task `FAST`, `STANDARD` hoặc `CRITICAL`; blast radius tăng thì phải nâng tier.
 
 ## Quality tier canonical
 
-- `FAST`: presentation/UI nhỏ, không đổi business logic/API/data/permission/tenant/schema. Review diff + kiểm tra tối thiểu theo blast radius; full test/lint/typecheck/build/CI không bắt buộc.
-- `STANDARD`: CRUD/API/product behavior thông thường. Chạy test liên quan + typecheck/lint/build/CI phù hợp.
-- `CRITICAL`: accounting/cash/AR-AP/inventory/costing/manufacturing/auth/permission/tenant/migration/production data. Chạy regression/integration/security/data-integrity gates đầy đủ.
-- Nếu scope thực tế lớn hơn dự kiến phải nâng tier; không hạ `CRITICAL` xuống `FAST` vì cần nhanh.
-- Build/install/stage chỉ để tạo artifact deploy là packaging, không tự động trở thành quality gate.
+- PR `#234` đã merge tại `c453df3026095b314f82f79e338bd56af90632ca`.
+- `FAST`: presentation/UI nhỏ, không đổi business logic/API/data/permission/tenant/schema; kiểm tra tối thiểu theo blast radius.
+- `STANDARD`: CRUD/API/product behavior thông thường; chạy test và quality gates phù hợp.
+- `CRITICAL`: accounting/cash/AR-AP/inventory/costing/manufacturing/auth/permission/tenant/migration/data; giữ regression/integration/security/data-integrity gates đầy đủ.
+- `RUNBOOK.md` và `DELIVERY_POLICY.md` là source of truth cho tier policy.
 
-## Active checkpoint — Risk-based quality gates
+## Active checkpoint — UI hotfix lane
 
-- Canonical branch: `chore/risk-based-quality-gates-20260802`, base exact `main@cd1f76dbb47432e2312c6f5577eb955b48c3a856`.
-- `RUNBOOK.md` và `DELIVERY_POLICY.md` là source of truth cho 3 tier.
-- Task này docs/policy-only, không đổi runtime code hay production behavior.
+- Guarded auto-deploy lane đã merge qua PR `#231` tại `cd1f76dbb47432e2312c6f5577eb955b48c3a856`; PR `#230` là stale iteration đã đóng.
+- Theme hotfix replay hiện ở PR `#232`; phải kiểm exact GitHub release evidence trước khi kết luận trạng thái môi trường chạy thật.
 
-## Active checkpoint — Auto deploy UI hotfix lane
+## Merged checkpoint — Alumdoor Warehouse Cash integration
 
-- Canonical branch: `fix/ui-hotfix-auto-deploy-v2-20260802`, clean-transplant từ exact `main@efa2aa6df385ca0775523f1756494d2ae54ec132`.
-- PR `#230` là stale iteration; không merge.
-- `.github/workflows/hotfix-ui-one-click.yml` chuyển sang auto production deploy khi push branch `hotfix/ui-*` có `client/**`; manual `workflow_dispatch` vẫn là fallback.
-- Invariant bắt buộc trước deploy:
-  1. current `main` phải là ancestor của target SHA;
-  2. diff phải có ít nhất một `client/**` file;
-  3. ngoài `client/**` chỉ cho `CURRENT_STATUS.md`, `NEXT_TASKS.md`, `AI_HANDOFF.md`;
-  4. tối đa 10 file / 300 changed lines;
-  5. mọi server/workflow/package/migration/metadata/secret/DNS/data change đều fail closed vì nằm ngoài allowlist;
-  6. production path chỉ build MetaForge client -> stage bundle -> deploy Gateway;
-  7. lint/test/typecheck vẫn do PR/normal CI chịu trách nhiệm, không làm chậm fast production path.
-- Sau khi lane này có trên `main`, AI sửa UI trên branch `hotfix/ui-*` và push là production deploy tự chạy, không bắt người dùng bấm GitHub Actions.
-- Theme fix PR #227 phải được replay trên branch hotfix mới từ exact main sau merge lane này để push event dùng workflow mới.
+- Canonical PR `#233` squash-merge tại `c3dbcd20a7a88c17c1a9f10c4fff82b329e27855`.
+- Final validated feature head `162bc010692d3a2997ddbc9bd5e9a59e11cb5d60`: **6/6 required workflows PASS**.
+- Ownership invariant: Warehouse Cash schema/controller/ledger thuộc `vn-accounting`; Alumdoor chỉ consume qua integration metadata và generic MetaForge routes.
+- `server/briefs/alumdoor-v2.integrations.json` khai `vn-accounting >= 1.1.0` và external ownership cho `Warehouse Cash Fund`, `Warehouse Cash Voucher`, `Warehouse Cash Transfer`, `Warehouse Cash Count`.
+- `server/scripts/lib/read-brief-source.mjs` merge integration sidecar và fail closed trên unsupported key, duplicate dependency ID hoặc duplicate external DocType.
+- `server/scripts/verify-alumdoor-meta-completeness.mjs` phải đọc merged canonical brief source.
+- `AlumdoorOperationsCenter` có role-gated tab `Quỹ kho`; browser regression khóa warehouse-role visibility, canonical Voucher navigation và sales-role denial.
+- Four-eyes approval vẫn do Warehouse Cash backend authoritative; UI không tự cấp quyền.
+- Party dimension không đồng nghĩa settle AR/AP. Purchase/Sales Invoice settlement phải dùng canonical Payment Entry/payment allocation.
+- PR `#233` không đổi Warehouse Cash GL/controller/migration.
 
-## Merged checkpoint — Warehouse Petty Cash per warehouse
+## Merged checkpoint — Warehouse Petty Cash backend
 
-- Canonical PR `#214` squash-merge tại `da37060f3c02a6a5f9701d60edc3284575f00deb`.
+- PR `#214` squash-merge tại `da37060f3c02a6a5f9701d60edc3284575f00deb`.
 - Final validated head `5255dae609a7a4c30ab25ffc397f81422c2c69fc`: 6/6 required workflows PASS.
 - `gl_entries` là source of truth; Warehouse Cash Balance/Daily Usage chỉ là rebuildable projection.
-- Purchase/Sales Invoice settlement cần canonical payment allocation.
+- Correction của Cash Count phải qua adjustment voucher, không mutate balance trực tiếp.
 
 ## Checkpoint — Bulk Transaction v1 Purchase Receipt
 
-- Canonical PR `#209` merged tại `e447eca0e020da161dcee4f0b865206921718a61`.
+- PR `#209` merged tại `e447eca0e020da161dcee4f0b865206921718a61`.
 - Final validated head `70f266d9ecbc8c01c69b3deb125d1f4dc172a46a`: 6/6 required workflows PASS.
-- Bulk action tạo một Purchase Receipt nháp, reuse canonical FIFO, có idempotency/duplicate guard, same-company/currency guard và tenant guard.
 - Generic Bulk View vẫn master-only; transaction/submittable/ledger fail closed.
 
 ## Remaining Bulk Transaction
@@ -65,7 +60,6 @@ Ngày cập nhật: **2026-08-02**.
 
 ## Release boundary
 
-- Merge code không đồng nghĩa deploy production, ngoại trừ UI fast lane đã được user yêu cầu rõ: push hợp lệ vào `hotfix/ui-*` sẽ tự deploy production sau fail-closed scope guard.
+- Merge code không đồng nghĩa trạng thái release môi trường chạy thật; luôn kiểm GitHub release evidence theo đúng lane.
 - Không dùng UI fast lane cho backend/business logic/data chỉ để tiết kiệm thời gian.
-- Không đổi DNS/secrets hoặc mutate customer data nếu user chưa yêu cầu rõ.
-- Không commit `.env`, `server/work/`, `tmp/`, backup, credential, cookie/token hoặc generated evidence không được quản lý.
+- Không commit `.env`, `server/work/`, `tmp/` hoặc credential/generated evidence không thuộc source control.
