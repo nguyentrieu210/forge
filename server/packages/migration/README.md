@@ -40,7 +40,7 @@ This package does **not** create a second business write path. Authoritative doc
 | `implementation-template.ts` | scope-driven enterprise checklist template |
 | `customer-success.ts` | training/knowledge/support-handoff/adoption readiness |
 
-Tenant migration `0043_migration_run_journal.sql` owns the durable WS13 journal tables. It does not alter document/ledger storage.
+Tenant migration `0053_migration_run_journal.sql` owns the durable WS13 journal tables. It does not alter document/ledger storage. `0053` is intentionally reserved after the parallel WS06 `0043-0047`, WS01 `0048`, and WS15 `0049-0052` ranges to prevent cross-workstream migration-number collisions.
 
 ## MISA evidence
 
