@@ -12,10 +12,18 @@ export interface SemanticPermissionRequirement {
   action: "report";
 }
 
+export interface SemanticViewAccessMapping {
+  /** Required to serve actors whose read scope is owner/owner_or_shared. */
+  ownerField?: string;
+  /** Required to serve actors whose read scope is shared/owner_or_shared. */
+  nameField?: string;
+}
+
 export interface SemanticViewSource {
   kind: "view";
   name: string;
   tenantField: string;
+  access?: SemanticViewAccessMapping;
 }
 
 export interface SemanticDoctypeSource {
@@ -36,10 +44,6 @@ export interface SemanticDimensionDefinition {
   options?: string;
 }
 
-/**
- * `scale` describes exact integer storage.
- * Example: 12345 with scale=100 means 123.45 for display.
- */
 export interface SemanticValueDefinition {
   kind: SemanticValueKind;
   scale?: number;
@@ -64,7 +68,6 @@ export interface SemanticModelDefinition {
   label: string;
   description?: string;
   source: SemanticSource;
-  /** Human-readable grain, e.g. `one GL entry line` or `one submitted invoice`. */
   grain: string;
   permission: SemanticPermissionRequirement;
   dimensions: SemanticDimensionDefinition[];
@@ -92,6 +95,19 @@ export interface SemanticQueryRequest {
   order_by?: SemanticOrder[];
   limit?: number;
   offset?: number;
+}
+
+/** Mirrors Forge read-scope semantics without importing the WS11 package. */
+export interface SemanticUserPermissionConstraint {
+  allow_doctype: string;
+  fields: string[];
+  allowed_values: string[];
+}
+
+export interface SemanticReadAccessScope {
+  mode: "all" | "owner" | "shared" | "owner_or_shared";
+  actor_user_id: string;
+  user_permissions: SemanticUserPermissionConstraint[];
 }
 
 export interface SemanticResultColumn {
@@ -142,6 +158,7 @@ const DIMENSION_KINDS = new Set<SemanticDimensionKind>(["category", "date", "dat
 const ADDITIVITY = new Set(["full", "semi", "non"]);
 const DOCUMENT_STATES = new Set<SemanticDocumentState>(["draft", "submitted", "non_cancelled"]);
 const DOCUMENT_COLUMNS = new Set(["name", "owner", "status", "docstatus", "created_at", "modified_at"]);
+const SOURCE_ALIAS = "s";
 
 function requireModelId(value: string, field: string): void {
   if (typeof value !== "string" || !MODEL_ID.test(value)) throw errors.validation(`${field} must be a stable semantic id`);
@@ -168,9 +185,7 @@ function validateValue(value: SemanticValueDefinition, metricId: string, aggrega
   if (!VALUE_KINDS.has(value.kind)) throw errors.validation(`Metric ${metricId} value kind is unsupported`);
   if (value.exact !== undefined && typeof value.exact !== "boolean") throw errors.validation(`Metric ${metricId} exact must be boolean`);
   if (value.scale !== undefined) {
-    if (!Number.isSafeInteger(value.scale) || value.scale < 1 || value.scale > 1_000_000_000) {
-      throw errors.validation(`Metric ${metricId} scale must be a positive safe integer <= 1000000000`);
-    }
+    if (!Number.isSafeInteger(value.scale) || value.scale < 1 || value.scale > 1_000_000_000) throw errors.validation(`Metric ${metricId} scale must be a positive safe integer <= 1000000000`);
     if (value.exact !== true) throw errors.validation(`Metric ${metricId} with scale must declare exact=true`);
   }
   if (value.currencyDimension !== undefined) {
@@ -178,12 +193,7 @@ function validateValue(value: SemanticValueDefinition, metricId: string, aggrega
     if (value.kind !== "currency") throw errors.validation(`Metric ${metricId} currencyDimension is only valid for currency metrics`);
   }
   if (value.unit !== undefined) requireNonEmpty(value.unit, `Metric ${metricId} unit`, 40);
-
-  // Exact AVG can be fractional even when scale=1. Until ratio semantics carry numerator,
-  // denominator and rounding explicitly, any exact AVG is unsafe.
-  if (aggregation === "avg" && value.exact === true) {
-    throw errors.validation(`Metric ${metricId} cannot AVG exact values; define an explicit ratio metric instead`);
-  }
+  if (aggregation === "avg" && value.exact === true) throw errors.validation(`Metric ${metricId} cannot AVG exact values; define an explicit ratio metric instead`);
   if (aggregation === "count" || aggregation === "count_distinct") {
     if (value.kind !== "integer" || value.exact !== true || value.scale !== undefined || value.currencyDimension !== undefined || value.unit !== undefined) {
       throw errors.validation(`Metric ${metricId} ${aggregation} must be an exact unscaled integer`);
@@ -198,14 +208,14 @@ function validateModel(model: SemanticModelDefinition): void {
   if (!model.permission || typeof model.permission !== "object") throw errors.validation(`Model ${model.id} permission is required`);
   requireNonEmpty(model.permission.doctype, `Model ${model.id} permission doctype`, 160);
   if (model.permission.action !== "report") throw errors.validation(`Model ${model.id} permission action must be report`);
-  if (!Number.isSafeInteger(model.maxRows) || model.maxRows < 1 || model.maxRows > 10_000) {
-    throw errors.validation(`Model ${model.id} maxRows must be an integer from 1 to 10000`);
-  }
+  if (!Number.isSafeInteger(model.maxRows) || model.maxRows < 1 || model.maxRows > 10_000) throw errors.validation(`Model ${model.id} maxRows must be an integer from 1 to 10000`);
 
   if (!model.source || typeof model.source !== "object") throw errors.validation(`Model ${model.id} source is required`);
   if (model.source.kind === "view") {
     requireSqlIdentifier(model.source.name, `Model ${model.id} source view`);
     requireSqlIdentifier(model.source.tenantField, `Model ${model.id} tenant field`);
+    if (model.source.access?.ownerField) requireSqlIdentifier(model.source.access.ownerField, `Model ${model.id} access ownerField`);
+    if (model.source.access?.nameField) requireSqlIdentifier(model.source.access.nameField, `Model ${model.id} access nameField`);
   } else if (model.source.kind === "doctype") {
     requireNonEmpty(model.source.doctype, `Model ${model.id} source doctype`, 160);
     if (!DOCUMENT_STATES.has(model.source.state)) throw errors.validation(`Model ${model.id} doctype source state is unsupported`);
@@ -213,9 +223,7 @@ function validateModel(model: SemanticModelDefinition): void {
     throw errors.validation(`Model ${model.id} source kind is unsupported`);
   }
 
-  if (!Array.isArray(model.dimensions) || !Array.isArray(model.metrics) || (model.dimensions.length === 0 && model.metrics.length === 0)) {
-    throw errors.validation(`Model ${model.id} must define at least one dimension or metric`);
-  }
+  if (!Array.isArray(model.dimensions) || !Array.isArray(model.metrics) || (model.dimensions.length === 0 && model.metrics.length === 0)) throw errors.validation(`Model ${model.id} must define at least one dimension or metric`);
   if (model.dimensions.length > 80 || model.metrics.length > 80) throw errors.validation(`Model ${model.id} has too many semantic members`);
 
   const ids = new Set<string>();
@@ -227,11 +235,8 @@ function validateModel(model: SemanticModelDefinition): void {
     if (!DIMENSION_KINDS.has(dimension.kind)) throw errors.validation(`Dimension ${dimension.id} kind is unsupported`);
     if (model.source.kind === "view") requireSqlIdentifier(dimension.field, `Dimension ${dimension.id} field`);
     else requireDocumentField(dimension.field, `Dimension ${dimension.id} field`);
-    if (dimension.kind === "link") {
-      requireNonEmpty(dimension.options ?? "", `Dimension ${dimension.id} Link options`, 160);
-    } else if (dimension.options !== undefined) {
-      throw errors.validation(`Dimension ${dimension.id} options are only valid for link dimensions`);
-    }
+    if (dimension.kind === "link") requireNonEmpty(dimension.options ?? "", `Dimension ${dimension.id} Link options`, 160);
+    else if (dimension.options !== undefined) throw errors.validation(`Dimension ${dimension.id} options are only valid for link dimensions`);
   }
 
   for (const metric of model.metrics) {
@@ -279,7 +284,6 @@ export class SemanticModelRegistry {
     return model;
   }
 
-  /** Safe business catalog. Physical source/field/tenant names are intentionally omitted. */
   describe(id: string): SemanticModelSummary {
     const model = this.get(id);
     return {
@@ -315,14 +319,18 @@ function quoteIdentifier(value: string): string {
   return `"${value}"`;
 }
 
+function qualifiedIdentifier(field: string): string {
+  return `${SOURCE_ALIAS}.${quoteIdentifier(field)}`;
+}
+
 function documentExpression(field: string): string {
   requireDocumentField(field, "document field");
-  if (DOCUMENT_COLUMNS.has(field)) return quoteIdentifier(field);
-  return `json_extract(payload_json,'$.${field}')`;
+  if (DOCUMENT_COLUMNS.has(field)) return qualifiedIdentifier(field);
+  return `json_extract(${SOURCE_ALIAS}.payload_json,'$.${field}')`;
 }
 
 function sourceFieldExpression(model: SemanticModelDefinition, field: string): string {
-  return model.source.kind === "view" ? quoteIdentifier(field) : documentExpression(field);
+  return model.source.kind === "view" ? qualifiedIdentifier(field) : documentExpression(field);
 }
 
 function metricExpression(model: SemanticModelDefinition, metric: SemanticMetricDefinition): string {
@@ -366,9 +374,9 @@ function bindableScalar(value: JsonValue | undefined, field: string): string | n
 }
 
 function doctypeStatePredicate(state: SemanticDocumentState): string {
-  if (state === "draft") return "docstatus=0";
-  if (state === "submitted") return "docstatus=1";
-  return "docstatus<>2";
+  if (state === "draft") return `${SOURCE_ALIAS}.docstatus=0`;
+  if (state === "submitted") return `${SOURCE_ALIAS}.docstatus=1`;
+  return `${SOURCE_ALIAS}.docstatus<>2`;
 }
 
 function currencyScopeSatisfied(metric: SemanticMetricDefinition, selectedDimensions: Set<string>, filters: SemanticFilter[]): boolean {
@@ -384,10 +392,81 @@ function currencyScopeSatisfied(metric: SemanticMetricDefinition, selectedDimens
   return values.size === 1;
 }
 
+function readScopeFieldExpressions(model: SemanticModelDefinition, fields: string[]): string[] {
+  const expressions = new Set<string>();
+  for (const field of fields) {
+    for (const dimension of model.dimensions) {
+      if (dimension.field === field) expressions.add(sourceFieldExpression(model, dimension.field));
+    }
+  }
+  return [...expressions];
+}
+
+function appendReadScope(
+  model: SemanticModelDefinition,
+  scope: SemanticReadAccessScope,
+  where: string[],
+  params: unknown[],
+): void {
+  requireNonEmpty(scope.actor_user_id, "semantic access actor_user_id", 200);
+  if (!Array.isArray(scope.user_permissions)) throw errors.permission("Semantic read scope user_permissions is invalid");
+
+  const tenantExpression = model.source.kind === "view"
+    ? sourceFieldExpression(model, model.source.tenantField)
+    : `${SOURCE_ALIAS}.tenant_id`;
+  const ownerExpression = model.source.kind === "doctype"
+    ? `${SOURCE_ALIAS}.owner`
+    : model.source.access?.ownerField ? sourceFieldExpression(model, model.source.access.ownerField) : null;
+  const nameExpression = model.source.kind === "doctype"
+    ? `${SOURCE_ALIAS}.name`
+    : model.source.access?.nameField ? sourceFieldExpression(model, model.source.access.nameField) : null;
+
+  const shareClause = () => {
+    if (!nameExpression) throw errors.permission(`Semantic model ${model.id} cannot enforce shared-document scope`);
+    params.push(model.permission.doctype, scope.actor_user_id);
+    const doctypeParam = params.length - 1;
+    const userParam = params.length;
+    return `EXISTS (SELECT 1 FROM document_shares ds WHERE ds.tenant_id=${tenantExpression} AND ds.doctype=?${doctypeParam} AND ds.name=${nameExpression} AND ds.user=?${userParam} AND ds.can_read=1)`;
+  };
+
+  if (scope.mode === "owner") {
+    if (!ownerExpression) throw errors.permission(`Semantic model ${model.id} cannot enforce owner scope`);
+    params.push(scope.actor_user_id);
+    where.push(`${ownerExpression}=?${params.length}`);
+  } else if (scope.mode === "shared") {
+    where.push(shareClause());
+  } else if (scope.mode === "owner_or_shared") {
+    if (!ownerExpression) throw errors.permission(`Semantic model ${model.id} cannot enforce owner scope`);
+    params.push(scope.actor_user_id);
+    const ownerParam = params.length;
+    where.push(`(${ownerExpression}=?${ownerParam} OR ${shareClause()})`);
+  } else if (scope.mode !== "all") {
+    throw errors.permission(`Semantic read scope mode is unsupported: ${String(scope.mode)}`);
+  }
+
+  for (const restriction of scope.user_permissions) {
+    if (!restriction || !Array.isArray(restriction.fields) || !Array.isArray(restriction.allowed_values)
+      || restriction.fields.length === 0 || restriction.allowed_values.length === 0) {
+      throw errors.permission("Semantic user-permission scope is invalid");
+    }
+    if (restriction.allowed_values.length > 80) throw errors.permission("Semantic user-permission value set is too large");
+    const expressions = readScopeFieldExpressions(model, restriction.fields);
+    if (expressions.length === 0) {
+      throw errors.permission(`Semantic model ${model.id} does not expose a dimension required by ${restriction.allow_doctype} scope`);
+    }
+    const placeholders = restriction.allowed_values.map((value) => {
+      if (typeof value !== "string" || !value || value.length > 200) throw errors.permission("Semantic user-permission allowed value is invalid");
+      params.push(value);
+      return `?${params.length}`;
+    });
+    where.push(`(${expressions.map((expression) => `${expression} IN (${placeholders.join(",")})`).join(" OR ")})`);
+  }
+}
+
 export class SemanticQueryCompiler {
   constructor(private readonly registry: SemanticModelRegistry) {}
 
-  compile(request: SemanticQueryRequest): CompiledSemanticQuery {
+  compile(request: SemanticQueryRequest, scope?: SemanticReadAccessScope): CompiledSemanticQuery {
     if (typeof request.tenant_id !== "string" || !request.tenant_id.trim() || request.tenant_id.length > 200) throw errors.validation("tenant_id is required and must be at most 200 characters");
     const model = this.registry.get(request.model);
     const dimensionIds = normalizeRequestedIds(request.dimensions, "dimensions");
@@ -409,14 +488,14 @@ export class SemanticQueryCompiler {
 
     const params: unknown[] = [request.tenant_id];
     const where: string[] = [];
-    let from: string;
+    const from = model.source.kind === "view"
+      ? `${quoteIdentifier(model.source.name)} AS ${SOURCE_ALIAS}`
+      : `documents AS ${SOURCE_ALIAS}`;
     if (model.source.kind === "view") {
-      from = quoteIdentifier(model.source.name);
-      where.push(`${quoteIdentifier(model.source.tenantField)}=?1`);
+      where.push(`${sourceFieldExpression(model, model.source.tenantField)}=?1`);
     } else {
-      from = "documents";
       params.push(model.source.doctype);
-      where.push("tenant_id=?1", "doctype=?2", doctypeStatePredicate(model.source.state));
+      where.push(`${SOURCE_ALIAS}.tenant_id=?1`, `${SOURCE_ALIAS}.doctype=?2`, doctypeStatePredicate(model.source.state));
     }
 
     const filters = request.filters ?? [];
@@ -432,9 +511,7 @@ export class SemanticQueryCompiler {
         continue;
       }
       if (filter.operator === "in") {
-        if (!Array.isArray(filter.value) || filter.value.length === 0 || filter.value.length > 80) {
-          throw errors.validation(`IN filter requires a non-empty array up to 80 values: ${filter.dimension}`);
-        }
+        if (!Array.isArray(filter.value) || filter.value.length === 0 || filter.value.length > 80) throw errors.validation(`IN filter requires a non-empty array up to 80 values: ${filter.dimension}`);
         const placeholders = filter.value.map((value, index) => {
           params.push(bindableScalar(value, `Filter ${filter.dimension} value[${index}]`));
           return `?${params.length}`;
@@ -448,6 +525,8 @@ export class SemanticQueryCompiler {
       where.push(`${expression} ${filter.operator === "like" ? "LIKE" : filter.operator} ?${params.length}`);
     }
 
+    if (scope) appendReadScope(model, scope, where, params);
+
     const selectedDimensions = new Set(dimensionIds);
     for (const metric of metrics) {
       if (!currencyScopeSatisfied(metric, selectedDimensions, filters)) {
@@ -459,13 +538,7 @@ export class SemanticQueryCompiler {
     const columns: SemanticResultColumn[] = [];
     for (const dimension of dimensions) {
       selected.push(`${sourceFieldExpression(model, dimension.field)} AS ${quoteIdentifier(dimension.id)}`);
-      columns.push({
-        id: dimension.id,
-        label: dimension.label,
-        role: "dimension",
-        valueKind: dimension.kind,
-        ...(dimension.options ? { options: dimension.options } : {}),
-      });
+      columns.push({ id: dimension.id, label: dimension.label, role: "dimension", valueKind: dimension.kind, ...(dimension.options ? { options: dimension.options } : {}) });
     }
     for (const metric of metrics) {
       selected.push(`${metricExpression(model, metric)} AS ${quoteIdentifier(metric.id)}`);
@@ -484,7 +557,6 @@ export class SemanticQueryCompiler {
     const groupSql = metrics.length > 0 && dimensions.length > 0
       ? ` GROUP BY ${dimensions.map((dimension) => sourceFieldExpression(model, dimension.field)).join(", ")}`
       : "";
-
     const selectedIds = new Set([...dimensionIds, ...metricIds]);
     const order = request.order_by ?? [];
     if (!Array.isArray(order) || order.length > 8) throw errors.validation("order_by must contain at most 8 entries");
