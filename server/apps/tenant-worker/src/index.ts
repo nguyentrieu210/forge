@@ -45,7 +45,10 @@ interface InterceptedRouteAuthentication {
   authContext?: AuthRouteContext;
 }
 
-/** Thin entrypoint wrapper for bounded authenticated report/operation routes. */
+/**
+ * Thin entrypoint wrapper for bounded authenticated report/operation routes.
+ * Existing core routes and scheduled tasks remain delegated to index-core.ts.
+ */
 export default {
   async fetch(request: Request, env: TenantEnv, _ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
@@ -109,7 +112,9 @@ export default {
 
 function resolveTenant(request: Request, env: TenantEnv): string | null {
   const routed = request.headers.get("x-cloudforge-tenant");
-  if (env.TENANT_ID && routed && routed !== env.TENANT_ID) throw errors.misconfigured("Tenant binding mismatch");
+  if (env.TENANT_ID && routed && routed !== env.TENANT_ID) {
+    throw errors.misconfigured("Tenant binding mismatch");
+  }
   return env.TENANT_ID ?? routed;
 }
 
@@ -147,8 +152,15 @@ async function authenticateInterceptedRoute(
       return { actor: established.actor, established, authContext };
     }
   }
-  if (appCallback) return { actor: await authenticateTrustedIdentity(request, env, tenantId, traceId) };
-  if (!sessionSecret && env.AUTH_MODE === "development") return { actor: staticDevelopmentActor(env.DEV_ACTOR_JSON) };
+
+  if (appCallback) {
+    return { actor: await authenticateTrustedIdentity(request, env, tenantId, traceId) };
+  }
+
+  if (!sessionSecret && env.AUTH_MODE === "development") {
+    return { actor: staticDevelopmentActor(env.DEV_ACTOR_JSON) };
+  }
+
   throw errors.permission("Login to access this resource");
 }
 
@@ -170,9 +182,14 @@ async function authenticateTrustedIdentity(
 
 function trustedIdentityKeys(env: TenantEnv): TrustedIdentityKey[] {
   const keys: TrustedIdentityKey[] = [];
-  if (env.INTERNAL_AUTH_KEY_ID) keys.push({ key_id: env.INTERNAL_AUTH_KEY_ID, secret: env.INTERNAL_AUTH_SECRET });
+  if (env.INTERNAL_AUTH_KEY_ID) {
+    keys.push({ key_id: env.INTERNAL_AUTH_KEY_ID, secret: env.INTERNAL_AUTH_SECRET });
+  }
   if (env.INTERNAL_AUTH_KEY_ID_PREVIOUS && env.INTERNAL_AUTH_SECRET_PREVIOUS) {
-    keys.push({ key_id: env.INTERNAL_AUTH_KEY_ID_PREVIOUS, secret: env.INTERNAL_AUTH_SECRET_PREVIOUS });
+    keys.push({
+      key_id: env.INTERNAL_AUTH_KEY_ID_PREVIOUS,
+      secret: env.INTERNAL_AUTH_SECRET_PREVIOUS,
+    });
   }
   return keys;
 }
