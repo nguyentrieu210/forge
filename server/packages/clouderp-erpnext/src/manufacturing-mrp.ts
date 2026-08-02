@@ -13,7 +13,7 @@ interface PlanningDimensions extends JsonObject {
   leaf_count_micros?: number;
 }
 
-interface MrpSourceTrace extends JsonObject {
+export interface MrpSourceTrace extends JsonObject {
   root_row_id: string;
   root_item_code: string;
   parent_item_code: string;
@@ -68,6 +68,7 @@ interface RequirementAccumulator {
 }
 
 interface RootPlanItem extends ProductionPlanItem {
+  schedule_date?: string;
   width_m?: string | number;
   height_m?: string | number;
   leaf_count?: string | number;
@@ -112,7 +113,7 @@ export function explodeProductionPlanMrp(
     const row = raw as RootPlanItem;
     const rowId = requiredText(row.row_id || `ROW-${index + 1}`, `items[${index}].row_id`);
     const itemCode = requiredText(row.item_code, `items[${index}].item_code`);
-    const qtyMicros = positiveMicros(row.planned_qty_micros ?? row.planned_qty, `items[${index}].planned_qty`);
+    const qtyMicros = scaledOrDecimalMicros(row.planned_qty_micros, row.planned_qty, `items[${index}].planned_qty`);
     const scheduleDate = row.schedule_date ? validDate(row.schedule_date, `items[${index}].schedule_date`) : undefined;
     const warehouse = optionalText(row.warehouse);
     const dimensions = rootDimensions(row, index);
@@ -212,15 +213,17 @@ function explodeBom(input: {
 }): void {
   if (input.depth >= MAX_MRP_DEPTH) throw errors.validation(`MRP explosion exceeds maximum depth ${MAX_MRP_DEPTH}`);
   const bom = input.selected.data;
-  const outputQtyMicros = positiveMicros(
-    bom.output_stock_qty_micros ?? bom.quantity_micros ?? bom.quantity,
+  const outputQtyMicros = scaledOrDecimalMicros(
+    bom.output_stock_qty_micros ?? bom.quantity_micros,
+    bom.quantity,
     `BOM ${input.selected.name} output quantity`,
   );
 
   for (const [index, row] of bom.items.entries()) {
     const rowId = row.row_id || `ROW-${index + 1}`;
-    const baseStockMicros = positiveMicros(
-      row.stock_qty_micros ?? row.qty_micros ?? row.qty,
+    const baseStockMicros = scaledOrDecimalMicros(
+      row.stock_qty_micros ?? row.qty_micros,
+      row.qty,
       `BOM ${input.selected.name} row ${rowId} quantity`,
     );
     const basis = row.qty_basis ?? "Cố định";
@@ -401,7 +404,19 @@ function safeAdd(left: number, right: number): number {
   return value;
 }
 
-function positiveMicros(value: unknown, field: string): number {
+function scaledOrDecimalMicros(microsValue: unknown, decimalValue: unknown, field: string): number {
+  if (microsValue !== undefined && microsValue !== null) return positiveScaledInt(microsValue, `${field}_micros`);
+  return positiveDecimalMicros(decimalValue, field);
+}
+
+function positiveScaledInt(value: unknown, field: string): number {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value <= 0) {
+    throw errors.validation(`${field} must be a positive safe integer`);
+  }
+  return value;
+}
+
+function positiveDecimalMicros(value: unknown, field: string): number {
   if (typeof value !== "string" && typeof value !== "number") throw errors.validation(`${field} is required`);
   const micros = toScaledInt(value, 6, field);
   if (micros <= 0) throw errors.validation(`${field} must be positive`);
@@ -410,7 +425,7 @@ function positiveMicros(value: unknown, field: string): number {
 
 function optionalPositiveMicros(value: unknown, field: string): number | undefined {
   if (value === undefined || value === null || value === "") return undefined;
-  return positiveMicros(value, field);
+  return positiveDecimalMicros(value, field);
 }
 
 function validDate(value: unknown, field: string): string {
