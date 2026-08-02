@@ -22,7 +22,7 @@
     { "fieldname": "max_shot_weight_g", "label": "Shot tối đa g", "fieldtype": "Float" },
     { "fieldname": "power_kw", "label": "Công suất điện kW", "fieldtype": "Float" },
     { "fieldname": "hourly_machine_rate", "label": "Đơn giá giờ máy", "fieldtype": "Currency", "permlevel": 1 },
-    { "fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Active\nMaintenance\nDown\nRetired", "default": "Active", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "operational_state", "label": "Trạng thái", "fieldtype": "Select", "options": "Active\nMaintenance\nDown\nRetired", "default": "Active", "required": true, "in_list_view": true, "in_standard_filter": true },
     { "fieldname": "exclusive_resource", "label": "Không cho chạy trùng lịch", "fieldtype": "Check", "default": 1 }
   ],
   "permissions": [
