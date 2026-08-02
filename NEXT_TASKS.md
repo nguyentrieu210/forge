@@ -4,13 +4,15 @@ Ngày cập nhật: **2026-08-03**.
 
 Đây là backlog hiện tại của Forge. AI tự đánh giá cách thực hiện dựa trên code và trạng thái GitHub tại thời điểm làm.
 
-## VN Accounting Period Integrity Hardening
+## VN Accounting 100/100 technical closure
 
-- Canonical branch: `fix/vn-accounting-period-integrity-20260803-r8`, clean-based on current `main@560c7cfc140f04e5ca555c87dfa31541c8867ec1`.
-- Migration mới: `0042_vn_accounting_period_hardening.sql`; không dùng lại số `0039-0041` đã thuộc HRM.
-- Regression riêng: `server/scripts/test-vn-accounting-period-hardening.py`, replay `0035+0039+0040+0041+0042` và kiểm tra Hard/Soft lock, cancel, scope move, tenant isolation, period overlap/range và expanded posting doctypes.
-- Targeted SQLite regression của logic `0042` đã PASS trong session; còn cần chạy exact regression script trên full checkout cùng Python syntax và relevant backend/typecheck/lint/build theo blast radius trước PR/merge.
-- Không production migration/deploy khi chưa có verification đầy đủ.
+- Working branch: `feat/accounting-100-hardening-20260803`.
+- Period baseline `0042` đã merge qua PR #266. Branch hiện thêm migrations `0043-0047` cho legal-entity ledger scope, Payment Allocation period lock, policy/legal/tax immutability, TT99 mapping, reconciliation, one-source period control, stock/GL parity và company/base-currency guards.
+- Chạy exact acceptance `test-vn-accounting-period-hardening.py` + `test-vn-accounting-integrity-closure.py`, accounting unit/query regressions, relevant typecheck/build trên exact final head. DNS của shell hiện chưa resolve GitHub nên chưa có execution evidence; không tự ghi PASS.
+- Kiểm final runtime registration: Material Receipt/Issue phải đi qua `AccountingStockEntryController` từ final `RolloutManufacturingStockEntryController`; Purchase Receipt/Journal/Delivery Note dùng accounting-aware controller tương ứng.
+- `Accounting Integrity Exceptions` phải trả 0 CRITICAL trên staging/live read-only audit trước production migration.
+- Statutory go-live là gate riêng: policy/regime, VAT/CIT/PIT/insurance ruleset, TT99 mapping, official-source hashes/test vectors, e-invoice provider, chữ ký số và người phê duyệt thực tế.
+- Chỉ merge/deploy/migrate production sau lệnh riêng và CRITICAL evidence đầy đủ.
 
 ## UI deploy
 
