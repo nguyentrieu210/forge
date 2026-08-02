@@ -180,3 +180,50 @@ test("salary structure rejects mapping the same payroll rule output twice", asyn
   ] } }, reader, existing: null, nextVersion: 1, now: "2026-08-02T00:00:00Z" };
   await assert.rejects(new SalaryStructureController().normalize(ctx), /Payroll rule output tax is mapped more than once/);
 });
+
+test("salary structure period cannot outlive a finite payroll rule", async () => {
+  const masters = {
+    "Company:Demo": { default_currency: "VND" },
+    "Currency:VND": { currency_scale: 0 },
+    "VN Payroll Rule:RULE-FINITE": {
+      rule_code: "RULE-FINITE",
+      effective_from: "2026-01-01",
+      effective_to: "2026-12-31",
+      legal_document_no: "LEGAL",
+      source_url: "https://example.test/legal",
+      formula_json: JSON.stringify({ schema_version: 1, currency: "VND", outputs: { tax: { const_minor: "1000" } } }),
+      approved_by: "payroll@example.test",
+      approved_at: "2026-01-01T00:00:00Z",
+    },
+  };
+  const reader = {
+    async getDocument() { return null; },
+    async getMasterRecordData(_tenant, doctype, name) { return masters[`${doctype}:${name}`] ?? null; },
+    async listDocumentsByDoctype() { return []; },
+    async hasMasterRecord(_tenant, doctype, name) { return Boolean(masters[`${doctype}:${name}`]); },
+    async getPeriodLockDate() { return null; },
+  };
+  const ctx = {
+    command: {
+      tenant_id: "demo",
+      aggregate: { doctype: "Salary Structure", name: "SS-OPEN" },
+      action: "submit",
+      actor: { user_id: "payroll@example.test", roles: ["Payroll Manager"] },
+      document: {
+        structure_name: "SS-OPEN",
+        company: "Demo",
+        currency: "VND",
+        effective_from: "2026-01-01",
+        payroll_rule: "RULE-FINITE",
+      },
+    },
+    reader,
+    existing: null,
+    nextVersion: 1,
+    now: "2026-08-02T00:00:00Z",
+  };
+  await assert.rejects(
+    new SalaryStructureController().normalize(ctx),
+    /does not cover the Salary Structure period/,
+  );
+});
