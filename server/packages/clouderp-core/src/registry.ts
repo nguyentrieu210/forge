@@ -1,7 +1,8 @@
 import { ControllerRegistry } from "../../document-kernel/src/index.js";
-import { JournalEntryController, MaterialRequestController, PurchaseInvoiceController, RequestForQuotationController, StockEntryController, SupplierQuotationController } from "./controllers.js";
+import { JournalEntryController, MaterialRequestController, PurchaseInvoiceController, RequestForQuotationController, StockEntryController } from "./controllers.js";
+import { ProcurementPurchaseOrderController, ProcurementSupplierQuotationController } from "./procurement-integrity-controllers.js";
 import { PurchaseAllocationOverrideController } from "./purchase-allocation-action-controllers.js";
-import { RolloutPurchaseOrderController, RolloutPurchaseReceiptController } from "./purchase-allocation-rollout-controllers.js";
+import { RolloutPurchaseReceiptController } from "./purchase-allocation-rollout-controllers.js";
 import { PurchaseSettlementLifecycleController } from "./purchase-settlement-lifecycle-controller.js";
 
 export function registerErpCoreControllers(registry: ControllerRegistry): ControllerRegistry {
@@ -9,8 +10,8 @@ export function registerErpCoreControllers(registry: ControllerRegistry): Contro
     .register(new JournalEntryController())
     .register(new MaterialRequestController())
     .register(new RequestForQuotationController())
-    .register(new SupplierQuotationController())
-    .register(new RolloutPurchaseOrderController())
+    .register(new ProcurementSupplierQuotationController())
+    .register(new ProcurementPurchaseOrderController())
     .register(new RolloutPurchaseReceiptController())
     .register(new PurchaseSettlementLifecycleController())
     .register(new PurchaseAllocationOverrideController())
