@@ -5,5 +5,8 @@
   { "role": "Chief Accountant", "desk_access": true },
   { "role": "Payroll Manager", "desk_access": true },
   { "role": "Warehouse Cash User", "desk_access": true },
-  { "role": "Warehouse Cash Manager", "desk_access": true }
+  { "role": "Warehouse Cash Manager", "desk_access": true },
+  { "role": "Thủ kho", "desk_access": true },
+  { "role": "Chủ xưởng", "desk_access": true },
+  { "role": "Kế toán trưởng", "desk_access": true }
 ]
