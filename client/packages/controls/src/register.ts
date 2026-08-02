@@ -34,7 +34,7 @@ const TwoDecimalNumberControl: FieldControl = (props) => {
   const raw = props.field.precision;
   const parsed = raw === undefined || raw === null || raw === "" ? undefined : Number(raw);
   const displayPrecision = parsed !== undefined && Number.isFinite(parsed)
-    ? Math.min(2, Math.max(0, Math.floor(parsed)))
+    ? String(Math.min(2, Math.max(0, Math.floor(parsed))))
     : raw;
   return NumberControl({
     ...props,
