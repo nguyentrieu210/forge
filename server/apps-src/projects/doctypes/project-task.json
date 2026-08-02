@@ -30,9 +30,9 @@
     "mobile": { "compactFields": ["subject", "project", "assignee", "planned_end", "workflow_state"] }
   },
   "permissions": [
-    { "role": "Project User", "read": true, "write": true, "create": true, "report": true },
+    { "role": "Project User", "read": true, "write": true, "report": true },
     { "role": "Project Manager", "read": true, "write": true, "create": true, "delete": true, "print": true, "report": true, "export": true, "share": true },
     { "role": "System Manager", "read": true, "write": true, "create": true, "delete": true, "print": true, "report": true, "export": true, "share": true }
   ],
-  "revision": 1
+  "revision": 2
 }
