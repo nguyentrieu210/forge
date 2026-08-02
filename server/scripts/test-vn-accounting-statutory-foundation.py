@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SQLite regression for WS01 VN statutory foundation migration 0043."""
+"""SQLite regression for WS01 VN statutory foundation migration 0048."""
 
 import json
 import sqlite3
@@ -24,7 +24,7 @@ db.execute(
       UNIQUE(tenant_id, doctype, name)
     )"""
 )
-db.executescript((root / "migrations/tenant/0043_vn_accounting_statutory_foundation.sql").read_text(encoding="utf-8"))
+db.executescript((root / "migrations/tenant/0048_vn_accounting_statutory_foundation.sql").read_text(encoding="utf-8"))
 
 
 def insert(doctype, name, docstatus, payload, tenant="demo"):
@@ -152,4 +152,4 @@ expect_rejected("TT99_ACCOUNT_MAP_IMMUTABLE", lambda: update("TT99 Account Map",
 expect_rejected("TT99_ACCOUNT_MAP_IMMUTABLE", lambda: delete("TT99 Account Map", "MAP-642"))
 
 assert db.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
-print("VN_ACCOUNTING_STATUTORY_FOUNDATION_0043_PASS")
+print("VN_ACCOUNTING_STATUTORY_FOUNDATION_0048_PASS")
