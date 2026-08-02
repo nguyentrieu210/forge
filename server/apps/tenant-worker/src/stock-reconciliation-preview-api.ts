@@ -94,7 +94,7 @@ export async function routeStockReconciliationPreviewApi(
       stock_entries: plan.stock_entries.length,
       payment_entries: plan.payment_entries.length,
       fulfillment_entries: plan.fulfillment_entries.length,
-      stock_bundle_usages: plan.stock_bundle_usages.length,
+      stock_bundle_usages: plan.stock_bundle_usages?.length ?? 0,
     },
   }, 200, { "x-cloudforge-trace-id": context.traceId });
 }
