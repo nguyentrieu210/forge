@@ -1,17 +1,38 @@
 import type { MutationPlan } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
 import type { ControllerContext } from "../../document-kernel/src/index.js";
-import { SupplierQuotationController } from "./controllers.js";
+import { RequestForQuotationController, SupplierQuotationController } from "./controllers.js";
 import {
   compareSupplierQuotations,
   validatePurchaseOrderAgainstQuotation,
 } from "./procurement-decisions.js";
 import { RolloutPurchaseOrderController } from "./purchase-allocation-rollout-controllers.js";
+import { assertSupplierEligible } from "./supplier-policy.js";
 import type {
   PurchaseOrderData,
   RequestForQuotationData,
   SupplierQuotationData,
 } from "./types.js";
+
+/**
+ * Keeps legacy suppliers backward-compatible, but once procurement_status is configured the RFQ
+ * cannot invite a pending/suspended/rejected/expired supplier.
+ */
+export class ProcurementRequestForQuotationController extends RequestForQuotationController {
+  override async normalize(context: ControllerContext<RequestForQuotationData>): Promise<RequestForQuotationData> {
+    const normalized = await super.normalize(context);
+    if (context.command.action !== "submit") return normalized;
+    for (const row of normalized.suppliers) {
+      const master = await context.reader.getMasterRecordData(
+        context.command.tenant_id,
+        "Supplier",
+        row.supplier,
+      );
+      assertSupplierEligible(row.supplier, master, normalized.transaction_date);
+    }
+    return normalized;
+  }
+}
 
 /**
  * Adds RFQ-line integrity on top of the existing Supplier Quotation lifecycle/totals controller.
@@ -44,14 +65,22 @@ export class ProcurementSupplierQuotationController extends SupplierQuotationCon
 }
 
 /**
- * Validates the selected quotation only after the rollout controller has built the canonical PO plan.
- * No writes have happened yet, so a mismatch fails the whole command before kernel execution.
+ * Validates supplier eligibility and selected quotation only after the rollout controller has built
+ * the canonical PO plan. No writes have happened yet, so a mismatch fails the whole command.
  */
 export class ProcurementPurchaseOrderController extends RolloutPurchaseOrderController {
   override async buildPlan(context: ControllerContext<PurchaseOrderData>): Promise<MutationPlan<PurchaseOrderData>> {
     const plan = await super.buildPlan(context);
-    if (context.command.action !== "submit" || !plan.document.data.supplier_quotation) return plan;
-    const quotationName = plan.document.data.supplier_quotation;
+    if (context.command.action !== "submit") return plan;
+    const data = plan.document.data;
+    const supplier = await context.reader.getMasterRecordData(
+      context.command.tenant_id,
+      "Supplier",
+      data.supplier,
+    );
+    assertSupplierEligible(data.supplier, supplier, data.transaction_date, data.supplier_group);
+    if (!data.supplier_quotation) return plan;
+    const quotationName = data.supplier_quotation;
     const quotation = await context.reader.getDocument<SupplierQuotationData>(
       context.command.tenant_id,
       "Supplier Quotation",
@@ -60,7 +89,7 @@ export class ProcurementPurchaseOrderController extends RolloutPurchaseOrderCont
     if (!quotation || quotation.docstatus !== 1) {
       throw errors.reference(`Submitted Supplier Quotation ${quotationName} is required`);
     }
-    validatePurchaseOrderAgainstQuotation(plan.document.data, quotationName, quotation.data);
+    validatePurchaseOrderAgainstQuotation(data, quotationName, quotation.data);
     return plan;
   }
 }
