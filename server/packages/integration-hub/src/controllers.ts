@@ -97,28 +97,11 @@ function normalizeSubscriptionData(
   const status = normalizeStatus(input.status ?? existing?.data.status ?? "draft");
   if (!existing && status !== "draft") throw errors.validation("Integration Subscription must be created as draft");
 
-  const configurationChanged = existing ? configChanged(existing.data, input) : false;
-  if (existing?.data.status === "active" && configurationChanged) {
-    throw errors.validation("Disable Integration Subscription before changing target, auth, mapping or retry policy");
-  }
-  if (existing && existing.data.status !== status && status === "active" && configurationChanged) {
-    throw errors.validation("Save Integration Subscription configuration before activating it");
-  }
-
+  // MetaForge renders JSON fields with TextAreaControl, so browser form writes arrive
+  // as JSON strings. Normalize those strings here before comparing or persisting. This
+  // also means a harmless re-save of an unchanged active subscription is not mistaken
+  // for a config mutation merely because existing canonical data is already structured.
   const reason = optionalText(input.status_reason, "status_reason", 1_000);
-  if (existing && existing.data.status !== status) {
-    if (!reason) throw errors.validation("status_reason is required for Integration Subscription status changes");
-    const change: SubscriptionStatusChange = {
-      schema_version: 1,
-      subscription_id: context.command.aggregate.name,
-      expected_status: existing.data.status,
-      next_status: status,
-      reason,
-    };
-    try { assertSubscriptionStatusTransition(existing.data.status, change); }
-    catch (error) { throw errors.validation(error instanceof Error ? error.message : "Invalid Integration Subscription status transition"); }
-  }
-
   const data: IntegrationSubscriptionData = {
     event_pattern: requireText(input.event_pattern ?? existing?.data.event_pattern, "event_pattern", 160),
     target_url: requireText(input.target_url ?? existing?.data.target_url, "target_url", 2_048),
@@ -136,6 +119,27 @@ function normalizeSubscriptionData(
     ...optionalPositiveInt("max_delay_seconds", input.max_delay_seconds ?? existing?.data.max_delay_seconds),
     ...(reason ? { status_reason: reason } : existing?.data.status_reason ? { status_reason: existing.data.status_reason } : {}),
   };
+
+  const configurationChanged = existing ? configChanged(existing.data, data) : false;
+  if (existing?.data.status === "active" && configurationChanged) {
+    throw errors.validation("Disable Integration Subscription before changing target, auth, mapping or retry policy");
+  }
+  if (existing && existing.data.status !== status && status === "active" && configurationChanged) {
+    throw errors.validation("Save Integration Subscription configuration before activating it");
+  }
+
+  if (existing && existing.data.status !== status) {
+    if (!reason) throw errors.validation("status_reason is required for Integration Subscription status changes");
+    const change: SubscriptionStatusChange = {
+      schema_version: 1,
+      subscription_id: context.command.aggregate.name,
+      expected_status: existing.data.status,
+      next_status: status,
+      reason,
+    };
+    try { assertSubscriptionStatusTransition(existing.data.status, change); }
+    catch (error) { throw errors.validation(error instanceof Error ? error.message : "Invalid Integration Subscription status transition"); }
+  }
 
   try {
     validateWebhookSubscription({
@@ -160,9 +164,9 @@ function normalizeSubscriptionData(
   return data;
 }
 
-function configChanged(existing: IntegrationSubscriptionData, input: IntegrationSubscriptionData): boolean {
+function configChanged(existing: IntegrationSubscriptionData, candidate: IntegrationSubscriptionData): boolean {
   for (const field of CONFIG_FIELDS) {
-    if (input[field] !== undefined && JSON.stringify(input[field]) !== JSON.stringify(existing[field])) return true;
+    if (JSON.stringify(existing[field]) !== JSON.stringify(candidate[field])) return true;
   }
   return false;
 }
@@ -178,15 +182,17 @@ function normalizeAuth(value: unknown): ConnectorAuthKind {
 }
 
 function normalizeStringArray(value: unknown, field: string, maxItems: number, maxLength: number): string[] {
-  if (!Array.isArray(value) || value.length === 0 || value.length > maxItems) throw errors.validation(`${field} must be a non-empty array`);
-  const normalized = value.map((item, index) => requireText(item, `${field}[${index}]`, maxLength).toLowerCase());
+  const parsed = parseJsonField(value, field);
+  if (!Array.isArray(parsed) || parsed.length === 0 || parsed.length > maxItems) throw errors.validation(`${field} must be a non-empty JSON array`);
+  const normalized = parsed.map((item, index) => requireText(item, `${field}[${index}]`, maxLength).toLowerCase());
   if (new Set(normalized).size !== normalized.length) throw errors.validation(`${field} contains duplicates`);
   return normalized;
 }
 
 function normalizeMapping(value: unknown): IntegrationMappingRuleData[] {
-  if (!Array.isArray(value) || value.length > 128) throw errors.validation("mapping must be an array with at most 128 rules");
-  return value.map((item, index) => {
+  const parsed = parseJsonField(value, "mapping");
+  if (!Array.isArray(parsed) || parsed.length > 128) throw errors.validation("mapping must be a JSON array with at most 128 rules");
+  return parsed.map((item, index) => {
     if (!item || typeof item !== "object" || Array.isArray(item)) throw errors.validation(`mapping[${index}] is invalid`);
     const record = item as Record<string, unknown>;
     const source = requireText(record.source, `mapping[${index}].source`, 128);
@@ -194,6 +200,14 @@ function normalizeMapping(value: unknown): IntegrationMappingRuleData[] {
     if (record.required !== undefined && typeof record.required !== "boolean") throw errors.validation(`mapping[${index}].required is invalid`);
     return { source, target, ...(record.required === undefined ? {} : { required: record.required }) } as IntegrationMappingRuleData;
   });
+}
+
+function parseJsonField(value: unknown, field: string): unknown {
+  if (typeof value !== "string") return value;
+  const raw = value.trim();
+  if (!raw) throw errors.validation(`${field} must be valid JSON`);
+  try { return JSON.parse(raw) as unknown; }
+  catch { throw errors.validation(`${field} must be valid JSON`); }
 }
 
 function optionalPositiveInt<K extends "max_attempts" | "base_delay_seconds" | "max_delay_seconds">(key: K, value: unknown): Partial<Record<K, number>> {
