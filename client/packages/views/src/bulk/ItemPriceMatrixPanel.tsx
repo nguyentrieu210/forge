@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, type Dispatch, type ReactNode, type SetSt
 import {
   ArrowLeft, CalendarDays, Check, ChevronDown, ChevronRight, Columns3, Folder,
   Maximize2, Minimize2, Package, PanelLeftClose, PanelLeftOpen, Plus, RefreshCw,
-  Search, Settings2, Tags, Trash2,
+  Search, Settings2, Tags, X,
 } from "lucide-react";
 import type { Doc, DocField } from "@metaforge/core";
 import { mapError, type FrappeAdapter } from "@metaforge/adapter-frappe";
@@ -28,17 +28,30 @@ const smartMatch = (value: unknown, query: string) => {
   const tokens = normalize(query).replace(/[^a-z0-9]+/g, " ").trim().split(/\s+/).filter(Boolean);
   return tokens.every((token) => haystack.includes(token));
 };
+const compareGroups = (left: Doc, right: Doc) => {
+  const leftLabel = text(left.item_group_name || left.name);
+  const rightLabel = text(right.item_group_name || right.name);
+  const leftService = normalize(leftLabel) === "dich vu";
+  const rightService = normalize(rightLabel) === "dich vu";
+  if (leftService !== rightService) return leftService ? 1 : -1;
+  return leftLabel.localeCompare(rightLabel, "vi");
+};
 const priceKey = (priceList: string, uom: string) => `${priceList}\u001f${uom}`;
 const numberValue = (value: string) => Number(value.replace(/\s/g, "").replace(/,/g, "."));
 const PRICE_FIELD = { fieldname: "rate", label: "Đơn giá", fieldtype: "Currency", precision: "0" } as DocField;
-const CONVERSION_FIELD = { fieldname: "conversion_factor", label: "Hệ số quy đổi", fieldtype: "Float", precision: "6" } as DocField;
+const CONVERSION_FIELD = { fieldname: "conversion_factor", label: "Hệ số quy đổi", fieldtype: "Float", precision: "2" } as DocField;
 
 export function ItemPriceMatrixPanel({ adapter, onChanged }: ItemPriceMatrixPanelProps) {
   const { services } = useMetaForge();
   const breakpoint = useBreakpoint();
   const pricesQ = useList("Price List", { fields: ["name", "price_list_name", "effective_date", "disabled", "modified"], orderBy: "effective_date desc, modified desc", pageLength: 200 });
   const groupsQ = useList("Item Group", { fields: ["name", "item_group_name", "parent_item_group", "is_group"], orderBy: "item_group_name asc", pageLength: 500 });
-  const itemsQ = useList("Item", { fields: ["name", "item_name", "item_group", "stock_uom", "default_sales_uom", "disabled"], orderBy: "item_name asc", pageLength: 1000 });
+  // API chặn mỗi trang ở 200 dù client xin lớn hơn. Nạp nhiều trang cố định để tree/search không
+  // âm thầm mất phần cuối danh mục (Alumdoor hiện có 296 Item; các mã TRỤC nằm sau trang đầu).
+  const itemFields = ["name", "item_name", "item_group", "stock_uom", "default_sales_uom", "disabled"];
+  const itemsQ1 = useList("Item", { fields: itemFields, orderBy: "item_name asc", limitStart: 0, pageLength: 200 });
+  const itemsQ2 = useList("Item", { fields: itemFields, orderBy: "item_name asc", limitStart: 200, pageLength: 200 });
+  const itemsQ3 = useList("Item", { fields: itemFields, orderBy: "item_name asc", limitStart: 400, pageLength: 200 });
   const uomsQ = useList("UOM", { fields: ["name", "uom_name", "disabled"], orderBy: "uom_name asc", pageLength: 500 });
   const [priceSearch, setPriceSearch] = useState("");
   const [itemSearch, setItemSearch] = useState("");
@@ -67,7 +80,13 @@ export function ItemPriceMatrixPanel({ adapter, onChanged }: ItemPriceMatrixPane
 
   const prices = pricesQ.data ?? [];
   const groups = groupsQ.data ?? [];
-  const items = useMemo(() => (itemsQ.data ?? []).filter((item) => !Number(item.disabled)), [itemsQ.data]);
+  const items = useMemo(() => {
+    const unique = new Map<string, Doc>();
+    for (const item of [...(itemsQ1.data ?? []), ...(itemsQ2.data ?? []), ...(itemsQ3.data ?? [])]) {
+      if (!Number(item.disabled)) unique.set(text(item.name), item);
+    }
+    return [...unique.values()];
+  }, [itemsQ1.data, itemsQ2.data, itemsQ3.data]);
   const selectedItemQ = useDoc("Item", itemCode);
   const currentPricesQ = useList("Item Price", {
     fields: ["name", "price_list", "uom", "rate", "disabled", "modified"],
@@ -75,7 +94,7 @@ export function ItemPriceMatrixPanel({ adapter, onChanged }: ItemPriceMatrixPane
   }, Boolean(itemCode));
 
   const groupNames = useMemo(() => new Set(groups.map((row) => text(row.name))), [groups]);
-  const rootGroups = useMemo(() => groups.filter((row) => !text(row.parent_item_group) || !groupNames.has(text(row.parent_item_group))), [groupNames, groups]);
+  const rootGroups = useMemo(() => groups.filter((row) => !text(row.parent_item_group) || !groupNames.has(text(row.parent_item_group))).sort(compareGroups), [groupNames, groups]);
   const childrenByGroup = useMemo(() => {
     const map = new Map<string, Doc[]>();
     for (const row of groups) {
@@ -83,6 +102,7 @@ export function ItemPriceMatrixPanel({ adapter, onChanged }: ItemPriceMatrixPane
       const list = map.get(parent) ?? [];
       list.push(row); map.set(parent, list);
     }
+    for (const list of map.values()) list.sort(compareGroups);
     return map;
   }, [groups]);
   const itemsByGroup = useMemo(() => {
@@ -243,8 +263,8 @@ export function ItemPriceMatrixPanel({ adapter, onChanged }: ItemPriceMatrixPane
     </div>;
   };
 
-  const error = pricesQ.error || groupsQ.error || itemsQ.error || uomsQ.error;
-  const loading = pricesQ.isLoading || groupsQ.isLoading || itemsQ.isLoading || uomsQ.isLoading;
+  const error = pricesQ.error || groupsQ.error || itemsQ1.error || itemsQ2.error || itemsQ3.error || uomsQ.error;
+  const loading = pricesQ.isLoading || groupsQ.isLoading || itemsQ1.isLoading || itemsQ2.isLoading || itemsQ3.isLoading || uomsQ.isLoading;
   if (loading) return <div className="grid h-full gap-3 p-4 xl:grid-cols-[minmax(16rem,30%)_1fr]"><Skeleton className="h-full" /><Skeleton className="h-full" /></div>;
   if (error) return <div className="grid h-full place-items-center p-6 text-sm text-destructive">{mapError(error).message}</div>;
 
@@ -271,7 +291,7 @@ export function ItemPriceMatrixPanel({ adapter, onChanged }: ItemPriceMatrixPane
 
   const matrixPanel = itemCode ? <div className="flex h-full min-h-0 flex-col">
     <div className="flex shrink-0 flex-wrap items-start gap-3 border-b p-4"><div><h3 className="font-semibold">{text(itemDoc?.item_name || itemCode)}</h3><p className="text-xs text-muted-foreground">{itemCode} · ĐVT tồn kho: {stockUom || "—"}</p></div><div className="ml-auto flex flex-wrap gap-2"><Button size="sm" variant="outline" onClick={() => setColumnsOpen(true)}><Columns3 /> Cột ({shownPrices.length}/{prices.length})</Button><Button size="sm" variant="outline" onClick={() => setFocusMode((value) => !value)}>{focusMode ? <Minimize2 /> : <Maximize2 />} {focusMode ? "Thu nhỏ" : "Phóng to"}</Button><Button size="sm" variant="outline" onClick={() => setAddingUom(true)} disabled={!itemDoc || addingUom}><Settings2 /> Thêm ĐVT</Button><Button size="sm" onClick={() => void save()} disabled={saving || !itemDoc}>{saving ? <RefreshCw className="animate-spin" /> : <Check />} Lưu thay đổi</Button></div></div>
-    <div className="min-h-0 flex-1 overflow-auto"><table className="w-max min-w-full border-collapse text-sm"><thead className="sticky top-0 z-10 bg-muted/95"><tr><th className="sticky left-0 z-20 min-w-40 border-b border-r bg-muted px-3 py-2 text-left">ĐVT</th><th className="sticky left-40 z-20 min-w-52 border-b border-r bg-muted px-3 py-2 text-left">Quy đổi</th>{shownPrices.map((price) => <th key={text(price.name)} className={`min-w-48 border-b border-r px-3 py-2 text-left ${selectedPriceList === text(price.name) ? "bg-primary/10" : ""}`}><a className="font-medium text-primary hover:underline" href={`/app/Price%20List/${encodeURIComponent(text(price.name))}`}>{text(price.price_list_name || price.name)}</a><span className="mt-0.5 block text-xs font-normal text-muted-foreground"><CalendarDays className="mr-1 inline size-3" />{text(price.effective_date) || "Chưa đặt ngày"}{Number(price.disabled) ? " · Ngừng dùng" : ""}</span></th>)}</tr></thead><tbody>{addingUom ? <tr className="bg-primary/5"><td className="sticky left-0 z-[2] border-b border-r bg-card p-2"><LinkCombobox id="new-item-uom" value="" target="UOM" label="Đơn vị tính" referenceDoctype="Item" compact search={(doctype, query, options) => adapter.searchLink(doctype, query, options)} onChange={addUom} /></td><td className="border-b border-r px-3 py-2 text-xs text-muted-foreground" colSpan={shownPrices.length + 1}>Tìm và chọn ĐVT để thêm dòng, hoặc <button type="button" className="text-primary hover:underline" onClick={() => setAddingUom(false)}>hủy</button>.</td></tr> : null}{configuredUoms.map((uom) => { const uomName = text(uom.name); const isNew = addedUoms.includes(uomName); return <tr key={uomName} className={isNew ? "bg-primary/5" : ""}><td className="sticky left-0 z-[2] border-b border-r bg-card px-3 py-3 font-medium"><div className="flex items-center gap-2"><span className="min-w-0 flex-1 truncate">{text(uom.uom_name || uomName)}{uomName === stockUom ? <Badge className="ml-2" variant="secondary">Tồn</Badge> : null}{isNew ? <Badge className="ml-2">Mới</Badge> : null}</span>{uomName !== stockUom ? <Button type="button" variant="ghost" size="icon-sm" className="shrink-0 text-muted-foreground hover:text-destructive" onClick={() => removeUom(uomName)} aria-label={`Xóa dòng ${uomName}`}><Trash2 /></Button> : null}</div></td><td className="sticky left-40 z-[2] border-b border-r bg-card px-3 py-2"><div className="flex items-center gap-2"><span className="text-xs text-muted-foreground">1 {uomName} =</span><div className="w-28"><NumberControl field={CONVERSION_FIELD} value={uomName === stockUom ? 1 : (conversionDrafts[uomName] ? numberValue(conversionDrafts[uomName]) : null)} readOnly={uomName === stockUom} compact services={services} onChange={(value) => setConversionDrafts((all) => ({ ...all, [uomName]: value === null || value === undefined ? "" : String(value) }))} /></div><span className="text-xs text-muted-foreground">{stockUom}</span></div></td>{shownPrices.map((price) => { const listName = text(price.name); const draft = drafts[priceKey(listName, uomName)] ?? { rate: "", enabled: false }; return <td key={listName} className={`border-b border-r px-3 py-2 ${selectedPriceList === listName ? "bg-primary/5" : ""}`}><div className="flex items-center gap-2"><Checkbox checked={draft.enabled} onCheckedChange={(value) => setPriceDraft(listName, uomName, { enabled: value === true })} aria-label={`Áp dụng ${uomName} cho ${listName}`} /><div className="w-32"><NumberControl field={PRICE_FIELD} value={draft.rate ? numberValue(draft.rate) : null} readOnly={!draft.enabled || Number(price.disabled) === 1} compact services={services} onChange={(value) => setPriceDraft(listName, uomName, { rate: value === null || value === undefined ? "" : String(value) })} /></div><span className="text-xs text-muted-foreground">đ</span></div></td>; })}</tr>; })}</tbody></table>{!shownPrices.length ? <div className="grid h-40 place-items-center text-sm text-muted-foreground">Đang ẩn toàn bộ cột Bảng giá. Bấm Cột để hiện lại.</div> : null}</div>
+    <div className="min-h-0 flex-1 overflow-auto"><table className="w-max min-w-full border-collapse text-sm"><thead className="sticky top-0 z-10 bg-muted/95"><tr><th className="sticky left-0 z-20 min-w-40 border-b border-r bg-muted px-3 py-2 text-left">ĐVT</th><th className="sticky left-40 z-20 min-w-52 border-b border-r bg-muted px-3 py-2 text-left">Quy đổi</th>{shownPrices.map((price) => <th key={text(price.name)} className={`min-w-48 border-b border-r px-3 py-2 text-left ${selectedPriceList === text(price.name) ? "bg-primary/10" : ""}`}><a className="font-medium text-primary hover:underline" href={`/app/Price%20List/${encodeURIComponent(text(price.name))}`}>{text(price.price_list_name || price.name)}</a><span className="mt-0.5 block text-xs font-normal text-muted-foreground"><CalendarDays className="mr-1 inline size-3" />{text(price.effective_date) || "Chưa đặt ngày"}{Number(price.disabled) ? " · Ngừng dùng" : ""}</span></th>)}<th className="w-16 border-b px-2 py-2 text-center">Xóa</th></tr></thead><tbody>{addingUom ? <tr className="bg-primary/5"><td className="sticky left-0 z-[2] border-b border-r bg-card p-2"><LinkCombobox id="new-item-uom" value="" target="UOM" label="Đơn vị tính" referenceDoctype="Item" compact search={(doctype, query, options) => adapter.searchLink(doctype, query, options)} onChange={addUom} /></td><td className="border-b border-r px-3 py-2 text-xs text-muted-foreground" colSpan={shownPrices.length + 2}>Tìm và chọn ĐVT để thêm dòng, hoặc <button type="button" className="text-primary hover:underline" onClick={() => setAddingUom(false)}>hủy</button>.</td></tr> : null}{configuredUoms.map((uom) => { const uomName = text(uom.name); const isNew = addedUoms.includes(uomName); return <tr key={uomName} className={isNew ? "bg-primary/5" : ""}><td className="sticky left-0 z-[2] border-b border-r bg-card px-3 py-3 font-medium"><span className="block min-w-0 truncate">{text(uom.uom_name || uomName)}{uomName === stockUom ? <Badge className="ml-2" variant="secondary">Tồn</Badge> : null}{isNew ? <Badge className="ml-2">Mới</Badge> : null}</span></td><td className="sticky left-40 z-[2] border-b border-r bg-card px-3 py-2"><div className="flex items-center gap-2"><span className="text-xs text-muted-foreground">1 {uomName} =</span><div className="w-28"><NumberControl field={CONVERSION_FIELD} value={uomName === stockUom ? 1 : (conversionDrafts[uomName] ? numberValue(conversionDrafts[uomName]) : null)} readOnly={uomName === stockUom} compact services={services} onChange={(value) => setConversionDrafts((all) => ({ ...all, [uomName]: value === null || value === undefined ? "" : String(value) }))} /></div><span className="text-xs text-muted-foreground">{stockUom}</span></div></td>{shownPrices.map((price) => { const listName = text(price.name); const draft = drafts[priceKey(listName, uomName)] ?? { rate: "", enabled: false }; return <td key={listName} className={`border-b border-r px-3 py-2 ${selectedPriceList === listName ? "bg-primary/5" : ""}`}><div className="flex items-center gap-2"><Checkbox checked={draft.enabled} onCheckedChange={(value) => setPriceDraft(listName, uomName, { enabled: value === true })} aria-label={`Áp dụng ${uomName} cho ${listName}`} /><div className="w-32"><NumberControl field={PRICE_FIELD} value={draft.rate ? numberValue(draft.rate) : null} readOnly={!draft.enabled || Number(price.disabled) === 1} compact services={services} onChange={(value) => setPriceDraft(listName, uomName, { rate: value === null || value === undefined ? "" : String(value) })} /></div><span className="text-xs text-muted-foreground">đ</span></div></td>; })}<td className="border-b px-2 py-2 text-center">{uomName !== stockUom ? <Button type="button" variant="ghost" size="icon-sm" className="text-muted-foreground hover:text-destructive" onClick={() => removeUom(uomName)} aria-label={`Xóa dòng ${uomName}`}><X /></Button> : null}</td></tr>; })}</tbody></table>{!shownPrices.length ? <div className="grid h-40 place-items-center text-sm text-muted-foreground">Đang ẩn toàn bộ cột Bảng giá. Bấm Cột để hiện lại.</div> : null}</div>
   </div> : <div className="grid h-full place-items-center p-6 text-center text-sm text-muted-foreground">Mở một Bảng giá, mở Nhóm hàng rồi chọn Mặt hàng để nhập giá.</div>;
 
   return <section className="flex h-full min-h-0 flex-col bg-background">
