@@ -4,6 +4,9 @@ import gateway from "../dist/apps/gateway-worker/src/index.js";
 import {
   assertRecentAuthenticationContext,
   authenticationContextFromJwtClaims,
+  deriveIdentityKey,
+  IDENTITY_HEADER,
+  IDENTITY_SIGNATURE_HEADER,
   verifyHs256Jwt,
   verifyTrustedIdentity,
 } from "../dist/packages/auth/src/index.js";
@@ -106,6 +109,17 @@ test("invalid future auth_time and malformed authentication methods fail closed"
   );
 });
 
+test("JWT JSON containers must be objects rather than null or arrays", async () => {
+  const now = 1_785_710_000;
+  for (const payload of [null, []]) {
+    const token = await signJwtValue(payload);
+    await assert.rejects(
+      verifyHs256Jwt(token, { secret: JWT_SECRET, issuer: JWT_ISSUER, audience: JWT_AUDIENCE, nowSeconds: now }),
+      /JWT payload must be a JSON object/,
+    );
+  }
+});
+
 test("recent authentication policy has exact age and future-skew boundaries", () => {
   const now = 20_000;
   assert.doesNotThrow(() => assertRecentAuthenticationContext({ auth_time: now }, now));
@@ -172,7 +186,33 @@ test("gateway does not synthesize auth_time from a freshly minted JWT", async ()
   assert.equal(identity.authentication, undefined);
 });
 
+test("trusted identity rejects a signed null authentication context instead of throwing a TypeError", async () => {
+  const now = 1_785_710_000;
+  const request = await signedTrustedIdentityRequest({
+    tenant_id: "demo",
+    actor: { user_id: "admin@example.com", roles: ["System Manager"] },
+    trace_id: "trace-malformed-auth",
+    issued_at: now,
+    expires_at: now + 60,
+    key_id: "k1",
+    authentication: null,
+  });
+  await assert.rejects(
+    verifyTrustedIdentity(request, {
+      tenantId: "demo",
+      traceId: "trace-malformed-auth",
+      masterSecret: INTERNAL_SECRET,
+      nowSeconds: now,
+    }),
+    /authentication context is invalid/,
+  );
+});
+
 async function signJwt(payload) {
+  return signJwtValue(payload);
+}
+
+async function signJwtValue(payload) {
   const header = base64url(JSON.stringify({ alg: "HS256", typ: "JWT" }));
   const body = base64url(JSON.stringify(payload));
   const key = await crypto.subtle.importKey(
@@ -184,6 +224,26 @@ async function signJwt(payload) {
   );
   const signature = new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${header}.${body}`)));
   return `${header}.${body}.${base64urlBytes(signature)}`;
+}
+
+async function signedTrustedIdentityRequest(identity) {
+  const encoded = base64url(JSON.stringify(identity));
+  const derived = await deriveIdentityKey(INTERNAL_SECRET, "demo", identity.key_id);
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(derived),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signature = new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(encoded)));
+  return new Request("https://tenant.internal/api/v1/whoami", {
+    headers: {
+      [IDENTITY_HEADER]: encoded,
+      [IDENTITY_SIGNATURE_HEADER]: base64urlBytes(signature),
+      "x-cloudforge-trace-id": identity.trace_id,
+    },
+  });
 }
 
 function base64url(value) { return base64urlBytes(new TextEncoder().encode(value)); }
