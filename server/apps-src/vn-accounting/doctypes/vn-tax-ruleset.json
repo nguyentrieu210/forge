@@ -25,10 +25,10 @@
     { "role": "Accounts User", "read": true, "report": true },
     { "role": "General Accountant", "read": true, "report": true, "export": true },
     { "role": "Tax Specialist", "read": true, "write": true, "create": true, "report": true, "export": true },
-    { "role": "Chief Accountant", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true },
-    { "role": "Accounts Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true },
+    { "role": "Chief Accountant", "read": true, "write": true, "create": true, "submit": true, "report": true, "export": true, "share": true },
+    { "role": "Accounts Manager", "read": true, "write": true, "create": true, "submit": true, "report": true, "export": true, "share": true },
     { "role": "Internal Auditor", "read": true, "report": true, "export": true },
-    { "role": "System Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true }
+    { "role": "System Manager", "read": true, "write": true, "create": true, "submit": true, "report": true, "export": true, "share": true }
   ],
-  "revision": 1
+  "revision": 2
 }
