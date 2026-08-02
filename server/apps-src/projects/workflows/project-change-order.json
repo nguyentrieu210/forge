@@ -1,0 +1,21 @@
+{
+  "name": "Project Change Order Approval",
+  "document_type": "Project Change Order",
+  "state_field": "workflow_state",
+  "is_active": true,
+  "states": [
+    { "state": "Nháp", "docstatus": 0, "allow_edit": "Project User" },
+    { "state": "Chờ duyệt", "docstatus": 0, "allow_edit": "Project Manager" },
+    { "state": "Đã duyệt", "docstatus": 1, "allow_edit": "Project Manager" },
+    { "state": "Từ chối", "docstatus": 2, "allow_edit": "Project Manager" },
+    { "state": "Hủy", "docstatus": 2, "allow_edit": "Project Manager" }
+  ],
+  "transitions": [
+    { "state": "Nháp", "action": "Gửi duyệt", "next_state": "Chờ duyệt", "allowed_role": "Project User" },
+    { "state": "Chờ duyệt", "action": "Phê duyệt", "next_state": "Đã duyệt", "allowed_role": "Project Manager", "allow_self_approval": false },
+    { "state": "Chờ duyệt", "action": "Từ chối", "next_state": "Từ chối", "allowed_role": "Project Manager", "allow_self_approval": false },
+    { "state": "Nháp", "action": "Hủy", "next_state": "Hủy", "allowed_role": "Project Manager" },
+    { "state": "Chờ duyệt", "action": "Hủy", "next_state": "Hủy", "allowed_role": "Project Manager" }
+  ],
+  "revision": 1
+}
