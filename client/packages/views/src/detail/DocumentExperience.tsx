@@ -1,5 +1,5 @@
 /** @jsxImportSource react */
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import type { Doc, DocTypeMeta } from "@metaforge/core";
 import { cn } from "@metaforge/ui";
 import {
@@ -13,6 +13,8 @@ import {
   WalletCards,
   Clock3,
   CircleDot,
+  PanelRightClose,
+  PanelRightOpen,
 } from "lucide-react";
 import {
   formatPresentationValue,
@@ -76,6 +78,7 @@ export function DocumentExperience({
   children: ReactNode;
 }) {
   const presentation = resolveDocumentPresentation(meta, doc);
+  const [contextOpen, setContextOpen] = useState(false);
   if (!presentation) return <>{children}</>;
 
   const Icon = ARCHETYPE_ICON[presentation.archetype];
@@ -88,6 +91,13 @@ export function DocumentExperience({
       className="mf-document-experience flex h-full min-h-0 flex-col overflow-hidden bg-muted/20"
       data-archetype={presentation.archetype}
     >
+      <style>{`
+        .mf-document-experience .mf-form-header > div:first-child > div:first-child > div:first-child > span:first-child,
+        .mf-document-experience .mf-form-header > div:first-child > div:first-child > div:last-child {
+          display: none;
+        }
+      `}</style>
+
       <section
         className={cn(
           "mf-document-hero relative shrink-0 overflow-hidden border-b px-3 py-3 backdrop-blur sm:px-5 sm:py-4",
@@ -173,55 +183,88 @@ export function DocumentExperience({
         </div>
       </section>
 
-      <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(0,1fr)_18rem]">
+      <div className={cn(
+        "grid min-h-0 flex-1 transition-[grid-template-columns] duration-200",
+        contextOpen ? "lg:grid-cols-[minmax(0,1fr)_18rem]" : "lg:grid-cols-[minmax(0,1fr)_3rem]",
+      )}>
         <div className="min-w-0 overflow-hidden bg-card">{children}</div>
         <aside className="hidden min-h-0 flex-col overflow-auto border-l bg-card/80 lg:flex" aria-label="Ngữ cảnh chứng từ">
-          <div className="border-b px-4 py-3">
-            <p className={cn("text-[10px] font-semibold uppercase tracking-[0.14em]", profile.kickerClass)}>Ngữ cảnh</p>
-            <h2 className="mt-0.5 text-sm font-semibold">{profile.railTitle}</h2>
-            <p className="mt-1 text-xs leading-5 text-muted-foreground">{profile.railDescription}</p>
-          </div>
-
-          <div className="space-y-1 p-2.5">
-            {presentation.contextItems.length ? presentation.contextItems.map((item) => (
-              <div key={item.field} className="rounded-lg px-2.5 py-2 hover:bg-muted/45">
-                <div className="text-[10px] font-medium uppercase tracking-[0.06em] text-muted-foreground">{item.label}</div>
-                <div className="mt-0.5 break-words text-sm font-medium leading-5">{formatPresentationValue(item.value, item.format)}</div>
+          {contextOpen ? (
+            <>
+              <div className="border-b px-4 py-3">
+                <div className="flex items-start gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className={cn("text-[10px] font-semibold uppercase tracking-[0.14em]", profile.kickerClass)}>Ngữ cảnh</p>
+                    <h2 className="mt-0.5 text-sm font-semibold">{profile.railTitle}</h2>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">{profile.railDescription}</p>
+                  </div>
+                  <button
+                    type="button"
+                    className="grid size-8 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                    onClick={() => setContextOpen(false)}
+                    aria-label="Thu gọn ngữ cảnh"
+                    title="Thu gọn ngữ cảnh"
+                  >
+                    <PanelRightClose className="size-4" />
+                  </button>
+                </div>
               </div>
-            )) : (
-              <div className="rounded-lg border border-dashed bg-muted/20 px-3 py-5 text-center text-xs text-muted-foreground">Chưa có trường ngữ cảnh phù hợp.</div>
-            )}
-          </div>
 
-          <div className="mt-auto border-t p-3">
-            <div className="flex items-center gap-2 text-xs font-semibold">
-              <Clock3 className="size-3.5 text-muted-foreground" /> Hệ thống
+              <div className="space-y-1 p-2.5">
+                {presentation.contextItems.length ? presentation.contextItems.map((item) => (
+                  <div key={item.field} className="rounded-lg px-2.5 py-2 hover:bg-muted/45">
+                    <div className="text-[10px] font-medium uppercase tracking-[0.06em] text-muted-foreground">{item.label}</div>
+                    <div className="mt-0.5 break-words text-sm font-medium leading-5">{formatPresentationValue(item.value, item.format)}</div>
+                  </div>
+                )) : (
+                  <div className="rounded-lg border border-dashed bg-muted/20 px-3 py-5 text-center text-xs text-muted-foreground">Chưa có trường ngữ cảnh phù hợp.</div>
+                )}
+              </div>
+
+              <div className="mt-auto border-t p-3">
+                <div className="flex items-center gap-2 text-xs font-semibold">
+                  <Clock3 className="size-3.5 text-muted-foreground" /> Hệ thống
+                </div>
+                <dl className="mt-2 space-y-2 text-xs">
+                  <div>
+                    <dt className="text-muted-foreground">DocType</dt>
+                    <dd className="mt-0.5 break-words font-medium">{meta.label ?? meta.name}</dd>
+                  </div>
+                  {doc.name ? (
+                    <div>
+                      <dt className="text-muted-foreground">Mã chứng từ</dt>
+                      <dd className="mt-0.5 break-all font-mono text-[11px]">{String(doc.name)}</dd>
+                    </div>
+                  ) : null}
+                  {systemModified ? (
+                    <div>
+                      <dt className="text-muted-foreground">Cập nhật</dt>
+                      <dd className="mt-0.5 font-medium">{systemModified}</dd>
+                    </div>
+                  ) : null}
+                  {systemOwner ? (
+                    <div>
+                      <dt className="text-muted-foreground">Người tạo</dt>
+                      <dd className="mt-0.5 break-all font-medium">{systemOwner}</dd>
+                    </div>
+                  ) : null}
+                </dl>
+              </div>
+            </>
+          ) : (
+            <div className="flex h-full items-start justify-center pt-3">
+              <button
+                type="button"
+                className="grid size-9 place-items-center rounded-lg border bg-card text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground"
+                onClick={() => setContextOpen(true)}
+                aria-label="Mở ngữ cảnh"
+                title="Mở ngữ cảnh"
+                aria-expanded="false"
+              >
+                <PanelRightOpen className="size-4" />
+              </button>
             </div>
-            <dl className="mt-2 space-y-2 text-xs">
-              <div>
-                <dt className="text-muted-foreground">DocType</dt>
-                <dd className="mt-0.5 break-words font-medium">{meta.label ?? meta.name}</dd>
-              </div>
-              {doc.name ? (
-                <div>
-                  <dt className="text-muted-foreground">Mã chứng từ</dt>
-                  <dd className="mt-0.5 break-all font-mono text-[11px]">{String(doc.name)}</dd>
-                </div>
-              ) : null}
-              {systemModified ? (
-                <div>
-                  <dt className="text-muted-foreground">Cập nhật</dt>
-                  <dd className="mt-0.5 font-medium">{systemModified}</dd>
-                </div>
-              ) : null}
-              {systemOwner ? (
-                <div>
-                  <dt className="text-muted-foreground">Người tạo</dt>
-                  <dd className="mt-0.5 break-all font-medium">{systemOwner}</dd>
-                </div>
-              ) : null}
-            </dl>
-          </div>
+          )}
         </aside>
       </div>
     </div>
