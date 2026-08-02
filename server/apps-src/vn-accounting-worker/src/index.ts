@@ -9,6 +9,7 @@ import {
   type BankTransactionCandidateSource,
   type PaymentEntryCandidateSource,
 } from "./bank-match.js";
+import { handleVatMethod } from "./vat-service.js";
 
 interface Env {
   PLATFORM?: Fetcher;
@@ -261,6 +262,8 @@ export default {
       const body = objectJson(rawBody, "method body") as unknown as MethodBody;
       if (method === "vn-accounting.tax.evaluate") return evaluateMethod(request, env, body.args ?? {});
       if (method === "vn-accounting.bank.match_candidates") return bankMatchMethod(request, env, body.args ?? {});
+      const vatResponse = await handleVatMethod(method, request, env, body.args ?? {});
+      if (vatResponse) return vatResponse;
       return json({ message: `Unknown vn-accounting method: ${method}` }, 404);
     }
     if (request.method === "GET" && url.pathname === "/health") return json({ ok: true, app: "vn-accounting" });

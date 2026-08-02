@@ -8,28 +8,164 @@
   "sort_order": "DESC",
   "track_changes": true,
   "fields": [
-    { "fieldname": "ruleset_code", "label": "Mã ruleset", "fieldtype": "Data", "required": true, "unique": true, "in_list_view": true, "search_index": true },
-    { "fieldname": "rule_name", "label": "Tên ruleset", "fieldtype": "Data", "required": true, "in_list_view": true },
-    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "in_list_view": true, "in_standard_filter": true },
-    { "fieldname": "rule_type", "label": "Loại quy tắc", "fieldtype": "Select", "options": "VAT\nCIT\nPIT\nInsurance\nE-Invoice\nXML", "required": true, "in_list_view": true, "in_standard_filter": true },
-    { "fieldname": "taxpayer_segment", "label": "Đối tượng áp dụng", "fieldtype": "Data", "required": true, "in_standard_filter": true },
-    { "fieldname": "schema_version", "label": "Phiên bản DSL", "fieldtype": "Int", "required": true, "default": 1, "read_only": true },
-    { "fieldname": "effective_from", "label": "Hiệu lực từ", "fieldtype": "Date", "required": true, "in_list_view": true },
-    { "fieldname": "effective_to", "label": "Hiệu lực đến", "fieldtype": "Date" },
-    { "fieldname": "expression_json", "label": "Công thức máy đọc", "fieldtype": "Code", "required": true },
-    { "fieldname": "test_vectors_json", "label": "Bộ ca kiểm thử pháp lý", "fieldtype": "Code", "required": true },
-    { "fieldname": "legal_rule", "label": "Văn bản/quy tắc nguồn", "fieldtype": "Link", "options": "VN Legal Rule", "required": true },
-    { "fieldname": "source_hash", "label": "SHA-256 ruleset", "fieldtype": "Data", "required": true },
-    { "fieldname": "workflow_state", "label": "Trạng thái", "fieldtype": "Data", "read_only": true, "in_list_view": true, "in_standard_filter": true }
+    {
+      "fieldname": "ruleset_code",
+      "label": "Mã ruleset",
+      "fieldtype": "Data",
+      "required": true,
+      "unique": true,
+      "in_list_view": true,
+      "search_index": true
+    },
+    {
+      "fieldname": "rule_name",
+      "label": "Tên ruleset",
+      "fieldtype": "Data",
+      "required": true,
+      "in_list_view": true
+    },
+    {
+      "fieldname": "company",
+      "label": "Công ty",
+      "fieldtype": "Link",
+      "options": "Company",
+      "required": true,
+      "in_list_view": true,
+      "in_standard_filter": true
+    },
+    {
+      "fieldname": "rule_type",
+      "label": "Loại quy tắc",
+      "fieldtype": "Select",
+      "options": "VAT\nCIT\nPIT\nInsurance\nE-Invoice\nXML",
+      "required": true,
+      "in_list_view": true,
+      "in_standard_filter": true
+    },
+    {
+      "fieldname": "taxpayer_segment",
+      "label": "Đối tượng áp dụng",
+      "fieldtype": "Data",
+      "required": true,
+      "in_standard_filter": true
+    },
+    {
+      "fieldname": "schema_version",
+      "label": "Phiên bản DSL",
+      "fieldtype": "Int",
+      "required": true,
+      "default": 1,
+      "read_only": true
+    },
+    {
+      "fieldname": "effective_from",
+      "label": "Hiệu lực từ",
+      "fieldtype": "Date",
+      "required": true,
+      "in_list_view": true
+    },
+    {
+      "fieldname": "effective_to",
+      "label": "Hiệu lực đến",
+      "fieldtype": "Date"
+    },
+    {
+      "fieldname": "expression_json",
+      "label": "Công thức máy đọc",
+      "fieldtype": "Code",
+      "required": true
+    },
+    {
+      "fieldname": "test_vectors_json",
+      "label": "Bộ ca kiểm thử pháp lý",
+      "fieldtype": "Code",
+      "required": true
+    },
+    {
+      "fieldname": "legal_rule",
+      "label": "Văn bản/quy tắc nguồn",
+      "fieldtype": "Link",
+      "options": "VN Legal Rule",
+      "required": true
+    },
+    {
+      "fieldname": "source_hash",
+      "label": "SHA-256 ruleset",
+      "fieldtype": "Data",
+      "required": true
+    },
+    {
+      "fieldname": "tax_accounts_json",
+      "label": "VAT Account Mapping",
+      "fieldtype": "Code",
+      "description": "For VAT rulesets: {\"input_vat\":[\"...\"],\"output_vat\":[\"...\"]}",
+      "default": "{}"
+    },
+    {
+      "fieldname": "workflow_state",
+      "label": "Trạng thái",
+      "fieldtype": "Data",
+      "read_only": true,
+      "in_list_view": true,
+      "in_standard_filter": true
+    }
   ],
   "permissions": [
-    { "role": "Accounts User", "read": true, "report": true },
-    { "role": "General Accountant", "read": true, "report": true, "export": true },
-    { "role": "Tax Specialist", "read": true, "write": true, "create": true, "report": true, "export": true },
-    { "role": "Chief Accountant", "read": true, "write": true, "create": true, "submit": true, "report": true, "export": true, "share": true },
-    { "role": "Accounts Manager", "read": true, "write": true, "create": true, "submit": true, "report": true, "export": true, "share": true },
-    { "role": "Internal Auditor", "read": true, "report": true, "export": true },
-    { "role": "System Manager", "read": true, "write": true, "create": true, "submit": true, "report": true, "export": true, "share": true }
+    {
+      "role": "Accounts User",
+      "read": true,
+      "report": true
+    },
+    {
+      "role": "General Accountant",
+      "read": true,
+      "report": true,
+      "export": true
+    },
+    {
+      "role": "Tax Specialist",
+      "read": true,
+      "write": true,
+      "create": true,
+      "report": true,
+      "export": true
+    },
+    {
+      "role": "Chief Accountant",
+      "read": true,
+      "write": true,
+      "create": true,
+      "submit": true,
+      "report": true,
+      "export": true,
+      "share": true
+    },
+    {
+      "role": "Accounts Manager",
+      "read": true,
+      "write": true,
+      "create": true,
+      "submit": true,
+      "report": true,
+      "export": true,
+      "share": true
+    },
+    {
+      "role": "Internal Auditor",
+      "read": true,
+      "report": true,
+      "export": true
+    },
+    {
+      "role": "System Manager",
+      "read": true,
+      "write": true,
+      "create": true,
+      "submit": true,
+      "report": true,
+      "export": true,
+      "share": true
+    }
   ],
-  "revision": 3
+  "revision": 4
 }
