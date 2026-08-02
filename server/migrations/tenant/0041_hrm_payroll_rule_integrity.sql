@@ -14,12 +14,13 @@ AND (
   OR COALESCE(json_extract(NEW.data_json,'$.approved_by'),'')=''
   OR COALESCE(json_extract(NEW.data_json,'$.approved_at'),'')=''
   OR date(json_extract(NEW.data_json,'$.effective_from')) IS NULL
-  OR (
-    COALESCE(json_extract(NEW.data_json,'$.effective_to'),'')<>''
-    AND date(json_extract(NEW.data_json,'$.effective_to')) < date(json_extract(NEW.data_json,'$.effective_from'))
-  )
+  OR (COALESCE(json_extract(NEW.data_json,'$.effective_to'),'')<>'' AND date(json_extract(NEW.data_json,'$.effective_to')) < date(json_extract(NEW.data_json,'$.effective_from')))
   OR json_valid(json_extract(NEW.data_json,'$.formula_json'))<>1
   OR json_type(json_extract(NEW.data_json,'$.formula_json'))<>'object'
+  OR json_extract(json_extract(NEW.data_json,'$.formula_json'),'$.schema_version')<>1
+  OR COALESCE(json_extract(json_extract(NEW.data_json,'$.formula_json'),'$.currency'),'')=''
+  OR json_type(json_extract(NEW.data_json,'$.formula_json'),'$.outputs')<>'object'
+  OR NOT EXISTS (SELECT 1 FROM json_each(json_extract(json_extract(NEW.data_json,'$.formula_json'),'$.outputs')))
 )
 BEGIN SELECT RAISE(ABORT,'INVALID_LIFECYCLE_TRANSITION: HR_PAYROLL_RULE_INVALID'); END;
 
@@ -34,12 +35,13 @@ AND (
   OR COALESCE(json_extract(NEW.data_json,'$.approved_by'),'')=''
   OR COALESCE(json_extract(NEW.data_json,'$.approved_at'),'')=''
   OR date(json_extract(NEW.data_json,'$.effective_from')) IS NULL
-  OR (
-    COALESCE(json_extract(NEW.data_json,'$.effective_to'),'')<>''
-    AND date(json_extract(NEW.data_json,'$.effective_to')) < date(json_extract(NEW.data_json,'$.effective_from'))
-  )
+  OR (COALESCE(json_extract(NEW.data_json,'$.effective_to'),'')<>'' AND date(json_extract(NEW.data_json,'$.effective_to')) < date(json_extract(NEW.data_json,'$.effective_from')))
   OR json_valid(json_extract(NEW.data_json,'$.formula_json'))<>1
   OR json_type(json_extract(NEW.data_json,'$.formula_json'))<>'object'
+  OR json_extract(json_extract(NEW.data_json,'$.formula_json'),'$.schema_version')<>1
+  OR COALESCE(json_extract(json_extract(NEW.data_json,'$.formula_json'),'$.currency'),'')=''
+  OR json_type(json_extract(NEW.data_json,'$.formula_json'),'$.outputs')<>'object'
+  OR NOT EXISTS (SELECT 1 FROM json_each(json_extract(json_extract(NEW.data_json,'$.formula_json'),'$.outputs')))
 )
 BEGIN SELECT RAISE(ABORT,'INVALID_LIFECYCLE_TRANSITION: HR_PAYROLL_RULE_INVALID'); END;
 
@@ -47,20 +49,8 @@ CREATE TRIGGER IF NOT EXISTS hr_payroll_rule_immutable_update_guard
 BEFORE UPDATE OF record_type,name,data_json,disabled ON master_records
 WHEN OLD.record_type='VN Payroll Rule'
 AND (
-  EXISTS(
-    SELECT 1 FROM documents d
-    WHERE d.tenant_id=OLD.tenant_id
-      AND d.docstatus=1
-      AND d.doctype IN ('Salary Structure','Salary Structure Assignment')
-      AND json_extract(d.payload_json,'$.payroll_rule')=OLD.name
-  )
-  OR EXISTS(
-    SELECT 1 FROM documents s
-    WHERE s.tenant_id=OLD.tenant_id
-      AND s.doctype='Salary Slip'
-      AND s.docstatus IN (1,2)
-      AND json_extract(json_extract(s.payload_json,'$.rule_trace_json'),'$.payroll_rule.name')=OLD.name
-  )
+  EXISTS(SELECT 1 FROM documents d WHERE d.tenant_id=OLD.tenant_id AND d.docstatus=1 AND d.doctype IN ('Salary Structure','Salary Structure Assignment') AND json_extract(d.payload_json,'$.payroll_rule')=OLD.name)
+  OR EXISTS(SELECT 1 FROM documents s WHERE s.tenant_id=OLD.tenant_id AND s.doctype='Salary Slip' AND s.docstatus IN (1,2) AND json_extract(json_extract(s.payload_json,'$.rule_trace_json'),'$.payroll_rule.name')=OLD.name)
 )
 BEGIN SELECT RAISE(ABORT,'INVALID_LIFECYCLE_TRANSITION: HR_PAYROLL_RULE_IMMUTABLE'); END;
 
@@ -68,19 +58,7 @@ CREATE TRIGGER IF NOT EXISTS hr_payroll_rule_immutable_delete_guard
 BEFORE DELETE ON master_records
 WHEN OLD.record_type='VN Payroll Rule'
 AND (
-  EXISTS(
-    SELECT 1 FROM documents d
-    WHERE d.tenant_id=OLD.tenant_id
-      AND d.docstatus=1
-      AND d.doctype IN ('Salary Structure','Salary Structure Assignment')
-      AND json_extract(d.payload_json,'$.payroll_rule')=OLD.name
-  )
-  OR EXISTS(
-    SELECT 1 FROM documents s
-    WHERE s.tenant_id=OLD.tenant_id
-      AND s.doctype='Salary Slip'
-      AND s.docstatus IN (1,2)
-      AND json_extract(json_extract(s.payload_json,'$.rule_trace_json'),'$.payroll_rule.name')=OLD.name
-  )
+  EXISTS(SELECT 1 FROM documents d WHERE d.tenant_id=OLD.tenant_id AND d.docstatus=1 AND d.doctype IN ('Salary Structure','Salary Structure Assignment') AND json_extract(d.payload_json,'$.payroll_rule')=OLD.name)
+  OR EXISTS(SELECT 1 FROM documents s WHERE s.tenant_id=OLD.tenant_id AND s.doctype='Salary Slip' AND s.docstatus IN (1,2) AND json_extract(json_extract(s.payload_json,'$.rule_trace_json'),'$.payroll_rule.name')=OLD.name)
 )
 BEGIN SELECT RAISE(ABORT,'INVALID_LIFECYCLE_TRANSITION: HR_PAYROLL_RULE_IMMUTABLE'); END;
