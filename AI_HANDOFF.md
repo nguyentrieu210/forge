@@ -10,25 +10,25 @@ Ngày cập nhật: **2026-08-02**.
 - GitHub là nguồn sự thật cho exact `main`, branch, PR, CI, merge và release evidence.
 - Đọc `RUNBOOK.md` → `CURRENT_STATUS.md` → `NEXT_TASKS.md` → file này → `DELIVERY_POLICY.md`.
 - Mọi SHA/branch dưới đây là checkpoint lịch sử; phải xác minh GitHub trước khi dùng.
+- Trước khi chọn validation phải phân loại task `FAST`, `STANDARD` hoặc `CRITICAL`; không mặc định chạy full pipeline cho mọi thay đổi.
+
+## Quality tier canonical
+
+- `FAST`: presentation/UI nhỏ, không đổi business logic/API/data/permission/tenant/schema. Review diff + kiểm tra tối thiểu theo blast radius; full test/lint/typecheck/build/CI không bắt buộc.
+- `STANDARD`: CRUD/API/product behavior thông thường. Chạy test liên quan + typecheck/lint/build/CI phù hợp.
+- `CRITICAL`: accounting/cash/AR-AP/inventory/costing/manufacturing/auth/permission/tenant/migration/production data. Chạy regression/integration/security/data-integrity gates đầy đủ.
+- Nếu scope thực tế lớn hơn dự kiến phải nâng tier; không hạ `CRITICAL` xuống `FAST` vì cần nhanh.
 
 ## Active checkpoint — One-click UI hotfix lane
 
 - Canonical branch: `hotfix/ui-one-click-deploy-v2-20260802`, base exact `main@f5d222e916795fd31cdc82f5746a1ba0af6318fb`.
 - Canonical PR: `#223`. Iteration `#222` đã superseded do stale main.
-- `.github/workflows/hotfix-ui-one-click.yml` là one-click orchestrator; `.github/workflows/release-gateway.yml` vẫn là single Gateway production implementation và có input `quick_ui_hotfix`.
-- Quick UI invariant:
-  1. chỉ branch `hotfix/ui-*`;
-  2. current `main` phải là ancestor của target SHA;
-  3. bắt buộc có `client/**`, ngoài client chỉ cho `CURRENT_STATUS.md`, `NEXT_TASKS.md`, `AI_HANDOFF.md`;
-  4. tối đa 10 file / 300 dòng text;
-  5. package/dependency, server, migration, business metadata, workflow, secret, DNS và production data bị chặn;
-  6. production path chỉ Gateway/client bundle;
-  7. quick path chạy `build -> stage -> deploy -> exact-SHA smoke`;
-  8. `lint/test/typecheck/Wrangler dry-run` deferred sang reconciliation PR/normal CI;
-  9. sau deploy workflow best-effort tạo/annotate PR reconcile về `main`.
-- Mục tiêu dưới 30 giây là thao tác người dùng, không phải tổng runtime GitHub runner/Cloudflare.
-- Không dùng lane này cho business logic/backend/data chỉ để tiết kiệm thời gian.
-- Task tạo lane chưa deploy production.
+- `.github/workflows/hotfix-ui-one-click.yml` là direct production workflow riêng cho `FAST` UI hotfix.
+- Luồng thực tế: `checkout -> install -> build MetaForge -> stage client bundle -> wrangler deploy Gateway production`.
+- Workflow không chạy scope guard, lint, unit/integration test, typecheck, Wrangler dry-run, smoke test hoặc PR reconcile tự động.
+- `install/build/stage` là packaging bắt buộc để tạo artifact chạy được, không phải quality gate.
+- Không dùng lane này cho business logic/backend/schema/data/accounting/inventory/auth/permission/tenant/secrets/DNS.
+- Task tạo lane/policy chưa deploy production.
 
 ## Merged checkpoint — Warehouse Petty Cash per warehouse
 
@@ -54,6 +54,6 @@ Ngày cập nhật: **2026-08-02**.
 ## Release boundary
 
 - Merge code không đồng nghĩa deploy production.
-- Quick UI lane cho phép exact branch SHA deploy Gateway trước reconcile merge chỉ khi user chủ động chạy production workflow và hard scope guard PASS.
+- Direct UI hotfix chỉ chạy production khi user chủ động yêu cầu chạy workflow.
 - Không deploy Cloudflare/production, đổi DNS/secrets hoặc mutate customer data nếu user chưa yêu cầu rõ cho đúng đợt.
 - Không commit `.env`, `server/work/`, `tmp/`, backup, credential, cookie/token hoặc generated evidence không được quản lý.
