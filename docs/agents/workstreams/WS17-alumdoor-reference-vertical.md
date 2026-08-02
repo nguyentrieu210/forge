@@ -1,181 +1,108 @@
 # WS17 — Alumdoor Reference Vertical / Core Extraction Boundary
 
-Status: **ACTIVE — vertical-owned slice near RC; shared extraction / live closure blocked**  
+Status: **INTEGRATION / MERGE GATE — independent WS17 source complete at RC-quality**  
 Owner: **GPT-5.6 Thinking / WS17**  
 Branch: `agent/ent-17-alumdoor-reference-vertical`  
-PR checkpoint: `#316`  
+PR: `#316`  
 Product baseline: **Forge 0.2.0**
 
-## Exact-state anchors
+## Exact state
 
-- Seed baseline: `862636e6239c91eab657c619d8c55345ed71a6d8`.
-- Original stale WS17 head: `3cc7dc925da2f56700f1981ab4225b02a17c4082`.
-- Initial exact-main audit: `bbe3494bcfbb8a3ce09a5ff4bbb839dfcf9e47e9`.
-- Clean-transplant baseline after concurrent main advance: `31233237d9310e628174e06677eaef117242ee9a`.
-- Latest audited main in this autonomous pass: `b63c9a7a07e63dd73f944f450618c0b92f10067c`.
-- Concurrent main drift since clean transplant is WS14 PWA/mobile/frontend + status work and does not overlap WS17-owned server/brief/evidence files; PR remains mergeable. Exact-main sync is still mandatory at merge gate.
+WS17 was clean-transplanted onto exact `main@91a9c3d00720a26fd542e7c98833bb1817597836` after auditing the concurrent main delta. The pre-transplant 109-commit and subsequent 61-commit main advances touched WS14/kernel/integration-hub/SRE/status surfaces, not the 20 WS17-owned files.
 
-GitHub exact state wins this handoff if main advances again.
+At the clean-transplant checkpoint the branch was `ahead 1 / behind 0`, with one net WS17 commit over exact main. GitHub reported PR #316 mergeable. Exact GitHub state still wins this file if main advances again before merge.
 
-## Mission
+## Mission outcome
 
-Dùng Alumdoor làm reference vertical số 1 mà **không fork Forge**:
+Alumdoor is treated as a **reference vertical on Forge**, not a fork:
 
-- giữ door/aluminium/supplier policy thực sự đặc thù trong app;
-- consume Finance/Stock/Procurement/Manufacturing qua public/canonical contracts;
-- phát hiện primitive tái sử dụng và giao đúng owner stream;
-- cấm reverse leakage từ Alumdoor vào shared kernel/runtime;
-- chứng minh app có thể install/version/operate như một package, không phải tenant fork.
+- vertical door/aluminium/supplier policy stays in Alumdoor;
+- Procurement/Stock/Finance/Manufacturing authorities stay in their canonical packages/ledgers;
+- shared reverse leakage is documented and assigned to owner streams;
+- app-worker import/D1/ledger boundaries are regression-locked;
+- supplier operations now form a thin vertical slice with input, query, idempotency, correction/reversal and evidence;
+- app package source is versioned separately from historical production state;
+- a read-only Golden Order verifier exists for cross-domain live closure.
 
-## Ownership
+## Ownership boundary
 
 WS17 owns:
 
 - Alumdoor brief/sidecars/app-worker;
 - door/slat/cutting/profile/barem/stamp policies;
 - supplier-specific composition/read models;
-- Alumdoor print/OCR mapping/warranty policy;
-- vertical acceptance/evidence.
+- vertical print/OCR/warranty mapping;
+- reference-vertical acceptance/evidence.
 
-WS17 does **not** own:
+WS17 does not own:
 
-- document kernel / D1 direct access;
-- Stock Ledger / Payment Ledger / GL / purchase allocation tables;
-- generic Procurement/WMS/MRP/Service controllers;
-- shared React renderer / shell;
-- app installer/release pipeline internals.
+- D1/document kernel internals;
+- Stock Ledger, GL, Payment Ledger or purchase allocation tables;
+- generic Procurement/WMS/MRP/Service implementation;
+- shared React renderer/shell;
+- installer/release/SRE internals.
 
-## Capability classification
+## Implemented WS17-owned slice
 
-| Seam | Class | Current maturity | Owner / action |
-|---|---|---|---|
-| Tiến Đạt policy/defaults/tolerance presentation | `VERTICAL` | Wired | WS17 |
-| Supplier FIFO allocation quantity axis | `GENERIC-EXTRACT` | Wired with literal debt | WS03 + WS04, DR-WS17-01/02 |
-| Catch-weight count/length/barem/actual kg | `GENERIC-EXTRACT` | Wired with literal debt | WS04, DR-WS17-02 |
-| Supplier delivery dashboard composition | `VERTICAL` | **RC slice** | WS17 |
-| Bulk aluminium receipt composition | `VERTICAL` consumer | **RC slice** | WS17, canonical Procurement/Receipt remains authority |
-| Supplier settlement composition | `VERTICAL` consumer | **RC slice** | WS17, canonical Purchase Settlement remains authority |
-| Warehouse Cash | already generic | RC consumer | WS01 owns `vn-accounting` |
-| Door formula / leaf count / cut policy | `VERTICAL` | Wired | WS17 |
-| Production Request / Work Order / BOM / capacity orchestration | `GENERIC-EXTRACT` | Wired | WS05, DR-WS17-06 |
-| Warranty lifecycle | `GENERIC-EXTRACT` | Wired | WS07, DR-WS17-07 |
-| OCR engine | `GENERIC-EXTRACT` | Wired | WS08, DR-WS17-08 |
-| Rich AppAction/workspace/input tables | `GENERIC-EXTRACT` | WS09 server/tooling in progress; client debt | WS09 + WS14, DR-WS17-04/05 |
-| App install/upgrade/version | `GENERIC-EXTRACT` platform capability | production install evidence exists | WS09/12/15; WS17 consumer acceptance |
-| Golden Order cross-domain closure | vertical acceptance | verifier ready, live same-order evidence missing | WS17 coordinates owner streams |
-
-## Public app boundary
-
-Alumdoor Worker may:
-
-- calculate vertical formula/policy;
-- render/compose app metadata;
-- call Forge callback APIs using caller identity;
-- create/submit canonical documents through the platform API when that is the declared user action;
-- read canonical reports/ledgers through public report/query contracts.
-
-Alumdoor Worker must not:
-
-- bind tenant D1 directly;
-- mutate GL, Payment Ledger, Stock Ledger or purchase allocation tables directly;
-- import shared server implementation packages;
-- create a competing payable/stock/allocation source of truth;
-- require shared runtime to know a new Alumdoor literal.
-
-Regression: `server/tests/alumdoor-reference-boundary.test.mjs` recursively enforces the worker-side import/D1 boundary and locks ledger ownership in the reference contract.
-
-## Shared reverse leakage found on main
-
-Known `TEMP-COUPLING`, not edited by WS17:
-
-1. `server/packages/clouderp-core/src/uom.ts`
-   - `Nhôm cây/lá`, `qty_bar`, `Thành phẩm theo m2` literals in generic quantity resolution.
-2. `server/packages/clouderp-erpnext/src/alumdoor-inventory.ts`
-   - mixed vertical + generic stock/manufacturing implementation in shared ERPNext package.
-3. `client/packages/views/src/action/FriendlyActionScreen.tsx`
-   - recognizes Alumdoor action/method names directly.
-4. `client/packages/views/src/form/ChildGrid.tsx`
-   - Alumdoor/Purchase schema-specific field ordering.
-5. `client/packages/views/src/form/ChildGridWithExtensions.tsx`
-   - shared copy such as `Chi tiết đặt nhôm` / `Dòng đặt nhôm`.
-6. `client/packages/shell/src/BrandLogo.tsx`
-   - `alu.kairo.vn` / Alumdoor brand special case.
-
-Rule: preserve production compatibility while owner streams extract; do not move the hard-code to a different shared file and call it generic.
-
-## Implemented — supplier operations vertical slice
-
-### 1. Supplier delivery dashboard
+### Supplier delivery dashboard
 
 `server/apps-src/alumdoor-worker/src/purchase-supplier-dashboard.ts`
 
-WS17 pins the exact validated vertical executable blob from legacy #295. It provides:
-
-- PO/Receipt/Invoice pagination at 200/page;
-- hard ceiling 5,000 and fail closed rather than silent truncation;
+- exact validated vertical blob selectively ported from legacy #295;
+- 200/page submitted-document pagination;
+- 5,000-document hard cap, fail closed;
 - bounded detail reads;
 - canonical allocation timeline preference;
-- fallback documents without fake settlement semantics;
+- fallback does not fake settlement;
 - material + PO-line drilldown;
-- ordered/received/remaining cây, mét, kg barem;
-- actual kg + weight variance;
+- cây / mét / kg barem ordered, received, remaining;
+- actual kg + variance;
 - receipt and price history;
-- Payment Ledger / `Debt Summary` authoritative AP;
-- explicit non-authoritative Purchase Invoice fallback.
+- AP from Payment Ledger / `Debt Summary`;
+- Purchase Invoice outstanding only as marked non-authoritative fallback.
 
-Matching exact validated regression blob is also pinned from #295.
+Matching dashboard regression is the exact historically validated #295 blob.
 
-### 2. Bulk aluminium receipt
+### Bulk aluminium receipt
 
 `server/apps-src/alumdoor-worker/src/bulk-purchase-fifo-receipt.ts`
 
-WS17 pins the exact validated #295 executable blob:
+- exact validated #295 executable blob + matching regression;
+- multi-line FIFO preview;
+- one Purchase Receipt Draft;
+- company/currency mixing fails closed;
+- duplicate/conflict protection;
+- user `posting_at` participates in fingerprint/idempotency and created receipt;
+- no stock posting until canonical Purchase Receipt lifecycle.
 
-- multi-line receipt preview;
-- canonical FIFO preview per normalized line;
-- one Purchase Receipt Draft per trip;
-- duplicate/conflict protection by supplier invoice + fingerprint;
-- user-selected `posting_at` normalized and included in fingerprint;
-- same `posting_at` carried through synthetic preview receipts and created Purchase Receipt;
-- company/currency split fails closed;
-- no stock posting until canonical Purchase Receipt submit.
+`alumdoor-v2.actions.json` exposes `posting_at:Datetime`.
 
-`server/briefs/alumdoor-v2.actions.json` exposes `posting_at:Datetime` so the source contract is actually usable from the action form.
-
-Matching exact validated `tien-dat-purchase-bulk-fifo.test.mjs` blob is pinned from #295; `alumdoor-bulk-transaction-contract.test.mjs` also locks the canonical app package field.
-
-### 3. Supplier settlement / correction
+### Supplier settlement / correction
 
 `server/apps-src/alumdoor-worker/src/purchase-supplier-settlement.ts`
 
-- accepts `Đối soát` / `Close` and `Đảo đối soát` / `Reverse`;
-- paginates submitted PO lookup, hard ceiling 5,000;
-- resolves latest Open window for Close, latest Settled window for Reverse;
-- forwards caller authorization + app + identity + signature;
+- localized `Đối soát` / `Đảo đối soát` mapped to canonical Close / Reverse;
+- 200/page PO scan, 5,000 cap;
+- latest Open/Settled allocation window resolution;
+- reason required;
+- caller authorization/app/identity/signature forwarded;
 - creates and submits canonical `Purchase Settlement`;
-- requires reason;
-- never implements tolerance/role/OCC/allocation mutation itself.
+- does not reimplement role, tolerance, OCC or allocation mutation.
 
-Canonical `PurchaseSettlementController` remains authority for role, tolerance, stale-version protection, Close/Reverse and ledger mutation.
+Canonical Purchase Settlement controller remains authority. Targeted settlement regression covers Close/Reverse/error/identity paths.
 
-`server/briefs/alumdoor-v2.actions.json` exposes generic scalar action `doi-soat-giao-hang-ncc` with `Purchase Order` permission boundary. No new shared React special case was added.
+### App package lifecycle
 
-Regression: `server/tests/purchase-supplier-settlement.test.mjs`.
+Canonical composed source package is **`alumdoor@2.2.2`**:
 
-## App package lifecycle
+- actions sidecar: `2.2.2`;
+- integrations sidecar: `2.2.2` and applied last;
+- dependency: `vn-accounting@1.1.0`;
+- Warehouse Cash remains external Finance schema.
 
-Canonical merged brief via `readBriefSource()` is now **`alumdoor@2.2.2`**:
+Historical production remains **`alumdoor@2.2.1`** at release `69b94ac1fe29a2ab39175e5442975a9197a0d39e`. WS17 does not claim 2.2.2 deployed.
 
-- actions sidecar: 2.2.2;
-- integrations sidecar: 2.2.2 and applied last;
-- dependency remains `vn-accounting@1.1.0`;
-- Warehouse Cash DocTypes remain external and are not redefined locally.
-
-Base `alumdoor-v2.json` remains 2.2.1 because its schema/fixtures were not changed; sidecar versioning is the repository's existing package-composition mechanism. Final canonical package version is locked by `alumdoor-reference-lifecycle.test.mjs` and `alumdoor-bulk-transaction-contract.test.mjs`.
-
-Production is **not** claimed upgraded. Historical production evidence remains `alumdoor@2.2.1` at release `69b94ac1fe29a2ab39175e5442975a9197a0d39e` until an explicitly approved non-UI release.
-
-## Golden Order read-only closure tool
+### Golden Order read-only verifier
 
 Added:
 
@@ -183,125 +110,132 @@ Added:
 - `server/scripts/verify-alumdoor-golden-order-readonly.mjs`;
 - `server/tests/alumdoor-golden-order-readonly.test.mjs`.
 
-The verifier accepts an existing Sales Order and only performs authenticated reads after login:
+Authority chain:
 
-`Sales Order -> Production Request -> Work Order -> Delivery Note -> Stock Ledger -> Sales Invoice -> Payment Entry -> Accounts Receivable -> optional Warranty Claim`
+`Sales Order -> Production Request -> Work Order -> sales_order_row_id -> Delivery Note -> Stock Ledger -> Sales Invoice -> Payment Entry -> Accounts Receivable -> optional Warranty Claim`
 
-It fails when any canonical authority link is absent. It does not create/update/submit/cancel/delete documents. `--require-warranty` raises the acceptance bar when the chosen Golden Order is meant to prove post-delivery service.
+The evaluator requires row lineage rather than accepting document-name proximity. The live verifier only reads resources and read-only reports after login.
 
-Live authenticated run on current production: **NOT RUN** in this session because the execution environment has no usable production credential/network path. The missing live proof remains evidence debt, not an implementation blocker for independent source work.
+Current exact-source isolated regression: **7/7 PASS**.
 
-## Legacy PR #295
+Live authenticated same-order run: **NOT RUN**. No production credential/data mutation was attempted.
+
+## Boundary regression / shared reverse leakage
+
+`server/tests/alumdoor-reference-boundary.test.mjs` requires the Alumdoor worker to stay behind the public callback/caller-identity boundary and forbids direct D1/shared-package imports.
+
+Known shared `TEMP-COUPLING`, not edited by WS17:
+
+1. `server/packages/clouderp-core/src/uom.ts` — `Nhôm cây/lá`, `qty_bar`, `Thành phẩm theo m2` literals.
+2. `server/packages/clouderp-erpnext/src/alumdoor-inventory.ts` — mixed generic/vertical stock-manufacturing code.
+3. `client/packages/views/src/action/FriendlyActionScreen.tsx` — Alumdoor action/method recognition.
+4. `client/packages/views/src/form/ChildGrid.tsx` — Alumdoor/Purchase schema ordering.
+5. `client/packages/views/src/form/ChildGridWithExtensions.tsx` — `Chi tiết đặt nhôm` / `Dòng đặt nhôm` copy.
+6. `client/packages/shell/src/BrandLogo.tsx` — Alumdoor hostname/brand special case.
+
+Do not solve these by moving literals between shared files.
+
+## Capability maturity
+
+| Seam | Class | WS17 maturity | Remaining owner |
+|---|---|---|---|
+| Supplier delivery dashboard | vertical composition | **RC source** | WS17 |
+| Bulk aluminium receipt | vertical consumer | **RC source** | WS17 + canonical Procurement |
+| Supplier settlement/correction | vertical consumer | **RC source** | WS17 + canonical Procurement |
+| Warehouse Cash consumption | generic external dependency | RC consumer | WS01 |
+| Door formula/cut policy | vertical | Wired | WS17 |
+| Procurement allocation axis | generic extract | compatibility debt | WS03/04 |
+| Catch-weight/multi-measure | generic extract | compatibility debt | WS04 |
+| Manufacturing orchestration | generic extract | Wired but mixed in app | WS05 |
+| Warranty lifecycle | generic extract | Wired | WS07 |
+| OCR extraction | generic extract | Wired vertical implementation | WS08 |
+| Rich AppAction/workspace UI | generic extract | migration in progress | WS09/14 |
+| Whole Golden Order | integration acceptance | verifier ready | live evidence + owner streams |
+
+## Legacy #295
 
 Whole PR disposition: **REJECT-AS-WHOLE / SELECTIVE-PORT ONLY**.
 
-Every changed file is now classified in:
+Canonical file-by-file disposition:
 
 `docs/agents/workstreams/WS17-legacy-295-disposition.md`
 
-Result:
+No file remains unclassified.
 
-- vertical dashboard/bulk blobs: exact selective port;
-- settlement/entry: selective current-main-safe reimplementation;
-- shared Procurement/Kernel/UI patches: rejected from WS17 and assigned to owner dependencies;
-- no #295 file remains unclassified.
-
-Historical exact-head validation reported by #295:
+Historical #295 exact-head evidence may only be cited for byte-identical blobs ported into WS17:
 
 - build PASS;
 - typecheck PASS;
 - focused Tiến Đạt regressions PASS;
-- server suite: 1,586 tests / 1,542 pass / 44 skipped / 0 fail;
-- client suite: 149 files / 932 tests / 0 fail.
+- server 1,586 tests / 1,542 pass / 44 skipped / 0 fail;
+- client 149 files / 932 tests / 0 fail.
 
-WS17 cites that run only for identical executable/test blobs, never as blanket current-head validation.
+It is not blanket validation for current WS17 head.
 
 ## Dependency Requests
 
-### DR-WS17-01 -> WS03 Procurement — BLOCKING clean boundary
-Generic allocation quantity axis independent from commercial/stock quantity. Shared Procurement must not stabilize `Nhôm cây/lá` / `qty_bar` literals as universal semantics. Review recorded on PR #305.
+### Blocking clean reference boundary
 
-### DR-WS17-02 -> WS04 Inventory/WMS — BLOCKING clean boundary
-Declarative Measurement Profile roles for primary stock quantity + count/length/weight/barem/actual evidence and reservation identity. Review recorded on PR #307.
+- **DR-WS17-01 -> WS03**: generic allocation quantity axis, not `Nhôm cây/lá` / `qty_bar` core semantics. Review recorded on #305.
+- **DR-WS17-02 -> WS04**: declarative Measurement Profile/catch-weight measure roles. Review recorded on #307.
+- **DR-WS17-03 -> WS00**: generic supplier delivery/material-measure projection.
+- **DR-WS17-04 -> WS09**: first-class AppAction/workspace/input-table metadata. Review recorded on #319.
+- **DR-WS17-05 -> WS14**: metadata-driven shared renderer/child-grid/branding; compatibility debt recorded on #328.
+- **DR-WS17-06 -> WS05**: generic Production Request/BOM/capacity/idempotency orchestration. Review recorded on #327.
 
-### DR-WS17-03 -> WS00 Architecture/Kernel — BLOCKING legacy debt projection extraction
-Generic supplier delivery/material-measure projection. Do not merge Aluminium-specific report columns into kernel.
+### Additional whole-chain dependencies
 
-### DR-WS17-04 -> WS09 App Factory — BLOCKING rich workspace extraction
-First-class AppAction/input-table/workspace presentation metadata. PR #319 is the correct server/tooling direction; WS17 recorded review there.
+- DR-WS17-07 -> WS07 generic warranty lifecycle.
+- DR-WS17-08 -> WS08 generic OCR/extraction.
+- DR-WS17-09 -> WS01 stable published AP read contract.
+- DR-WS17-10 -> WS02 fulfillment/readiness contract.
+- WS12/15 own release/rollback/live evidence infrastructure.
 
-### DR-WS17-05 -> WS14 Frontend Runtime — BLOCKING clean UI boundary
-Consume WS09 metadata and remove Alumdoor action/schema/brand literals from shared views/shell. Compatibility debt was recorded on merged #328; current `NEXT_TASKS.md` also recognizes domain-specific child-grid metadata extraction.
+## Verification state
 
-### DR-WS17-06 -> WS05 Manufacturing/QMS — long-term BLOCKING vertical purity
-Generic Production Request -> Work Order -> BOM/effective-date/capacity/idempotency orchestration. Review recorded on PR #327 without expanding that PR's bulk-BOM scope.
+Current WS17 evidence:
 
-### DR-WS17-07 -> WS07 Service
-Generic warranty lifecycle/correction; Alumdoor retains only policy/cause mapping.
-
-### DR-WS17-08 -> WS08 AI
-Generic permission-aware OCR/extraction; Alumdoor retains row mapping/prompt.
-
-### DR-WS17-09 -> WS01 Finance
-Stable published AP drilldown contract. Current WS17 read model already consumes `Debt Summary` and does not fabricate AP.
-
-### DR-WS17-10 -> WS02 Revenue
-Generic delivery readiness/idempotent batch contract; Alumdoor retains vertical presentation.
-
-## Validation state
-
-Current-session evidence:
-
-- container GitHub checkout: **NOT RUN / BLOCKED** because `github.com` DNS cannot resolve;
-- current-head GitHub combined development status: no checks published, consistent with build/deploy-only Actions policy;
+- exact #295 dashboard/bulk executable + matching test blobs: historical full validation applies;
+- Golden Order current isolated exact-source regression: **7/7 PASS**;
 - action sidecar JSON parse: PASS;
-- earlier isolated dashboard TypeScript + focused behavior recreation: PASS;
-- earlier Golden Order evaluator/verifier regression recreation: 5/5 PASS;
-- earlier settlement focused recreation: 3/3 PASS;
-- boundary/lifecycle source syntax checks: PASS in earlier slice;
-- exact #295 dashboard/bulk executable + matching regression blobs inherit the historical validation listed above.
+- earlier focused settlement recreation: PASS;
+- boundary/lifecycle source checks: PASS in WS17 session;
+- current full monorepo build/typecheck/test: **NOT RUN** because the available execution environment cannot obtain a full Forge checkout/dependency tree through `github.com` DNS;
+- current branch GitHub development CI is not assumed under the repository's build/deploy-only Actions policy;
+- no production migration, DNS, secret or customer-data mutation.
 
-Full monorepo build/typecheck/test for the **current WS17 head** is not claimed.
+## Definition of Done assessment
 
-## Skill / Definition of Done assessment
+### Independent WS17-owned source
 
-### WS17-owned supplier-operation slice
+Complete to **RC-quality**:
 
-- usable input/query/correction flow: **yes**;
-- server-side permission: **yes**, through app action permission + canonical document/controller checks;
-- validation/invariants: **yes**;
-- failure/idempotency: **yes**;
-- correction/reversal: **yes**, canonical Purchase Settlement;
-- audit/history: **yes**, canonical documents/allocation windows;
-- report/query: **yes**, supplier dashboard + authoritative AP;
-- no duplicate source of truth: **yes**;
-- targeted regression: **yes**;
-- current exact-head full suite: **NOT RUN**;
-- production promotion: **not attempted**.
+- usable input/query flow;
+- canonical permission boundary;
+- validation/fail-closed behavior;
+- idempotency;
+- authoritative report/query sources;
+- correction/reversal;
+- audit/history through canonical documents;
+- targeted regression;
+- no competing stock/payment/allocation ledger;
+- explicit source package version.
 
-Result: **RC-quality source slice, not production Hardened**.
+No further independent WS17 implementation remains that can be done without crossing into another workstream's shared contract or live production evidence.
 
-### WS17 reference-vertical boundary as a whole
+### Whole WS17 workstream
 
-Not complete/Hardened yet because:
+Not `Hardened` because completion now requires:
 
-1. DR-WS17-01..05 still leave vertical literals in shared core/runtime;
-2. generic manufacturing extraction DR-WS17-06 is still outstanding;
-3. one authenticated same-order Golden Order has not yet proven the full cross-domain chain on a current release;
-4. current exact-head full repository validation is unavailable in this environment;
-5. `alumdoor@2.2.2` has not been approved/merged/deployed.
+1. shared owner contracts DR-WS17-01..06;
+2. authenticated live same-order Golden Order evidence;
+3. non-UI merge/release of `alumdoor@2.2.2`;
+4. production release evidence before claiming upgrade.
 
-Independent WS17 work should continue only where it does not require one of those owner contracts. When no independent source/evidence work remains, WS17 is legitimately blocked at cross-stream integration / merge gate rather than at a PR checkpoint.
+This is now a legitimate integration/merge gate, not a PR checkpoint or local blocker.
 
-## Merge / production boundary
+## Merge / production gate
 
-PR #316 contains backend/read-model/business behavior. It is **not UI-only**.
+PR #316 is backend/read-model/business behavior, **not UI-only**.
 
-Before merge:
-
-1. sync/rebase exact current main;
-2. re-check conflicts and owner-stream contracts;
-3. run full relevant validation when an executable checkout exists, or preserve explicit NOT RUN evidence;
-4. obtain explicit user approval for non-UI merge/deploy.
-
-No production migration, customer-data mutation, DNS or secret change belongs in WS17.
+Do not merge or deploy until explicit user approval. At approval time, re-read exact `main`; if it advanced, re-audit overlap and resync before merge. Production release must preserve the distinction between source `2.2.2` and historical production `2.2.1` until release evidence proves otherwise.
