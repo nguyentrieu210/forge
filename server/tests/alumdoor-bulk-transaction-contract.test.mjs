@@ -6,9 +6,9 @@ import { compileBrief } from "../scripts/lib/compile-brief.mjs";
 import { readBriefSource } from "../scripts/lib/read-brief-source.mjs";
 import { validateBriefSchema } from "../scripts/lib/validate-brief-schema.mjs";
 
-test("Alumdoor 2.2.0 compiles Bulk Transaction action through canonical manifest parser", async () => {
+test("Alumdoor 2.2.1 compiles Bulk Transaction action through canonical manifest parser", async () => {
   const brief = await readBriefSource(new URL("../briefs/alumdoor-v2.json", import.meta.url));
-  assert.equal(brief.version, "2.2.0");
+  assert.equal(brief.version, "2.2.1");
 
   const schemaErrors = await validateBriefSchema(brief);
   assert.deepEqual(schemaErrors, []);

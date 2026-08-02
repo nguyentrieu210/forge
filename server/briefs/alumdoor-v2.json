@@ -2,7 +2,7 @@
   "$schema": "./brief.schema.json",
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "2.1.1",
+  "version": "2.2.1",
   "module": "Alumdoor",
   "domain": "alumdoor",
   "brand": "warm",

@@ -1,5 +1,5 @@
 {
-  "version": "2.2.0",
+  "version": "2.2.1",
   "//": "Bulk Transaction v1: một bảng nhiều mã tạo đúng một Purchase Receipt nháp; không submit hay ghi ledger trong action.",
   "actions": [
     {
