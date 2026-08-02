@@ -1,43 +1,49 @@
 # NEXT TASKS
 
-Ngày cập nhật: **2026-08-03**.
+Ngày cập nhật: **2026-08-02**.
 
-Đây là backlog hiện tại của Forge. AI tự đánh giá cách thực hiện dựa trên code và trạng thái GitHub tại thời điểm làm.
+Đây là hàng đợi active. GitHub là nguồn sự thật cho exact `main`, PR và branch; trước khi làm phải đọc `RUNBOOK.md`, `CURRENT_STATUS.md`, `AI_HANDOFF.md`, `DELIVERY_POLICY.md`.
 
-## VN Accounting Period Integrity Hardening
+## NOW — fast UI deploy acceptance
 
-- Canonical branch: `fix/vn-accounting-period-integrity-20260803-r8`, clean-based on current `main@560c7cfc140f04e5ca555c87dfa31541c8867ec1`.
-- Migration mới: `0042_vn_accounting_period_hardening.sql`; không dùng lại số `0039-0041` đã thuộc HRM.
-- Regression riêng: `server/scripts/test-vn-accounting-period-hardening.py`, replay `0035+0039+0040+0041+0042` và kiểm tra Hard/Soft lock, cancel, scope move, tenant isolation, period overlap/range và expanded posting doctypes.
-- Targeted SQLite regression của logic `0042` đã PASS trong session; còn cần chạy exact regression script trên full checkout cùng Python syntax và relevant backend/typecheck/lint/build theo blast radius trước PR/merge.
-- Không production migration/deploy khi chưa có verification đầy đủ.
+- Branch implementation: `fix/ui-deploy-fastpath-20260802`.
+- Sau merge, lần sửa UI tiếp theo phải dùng UI branch và push thật để acceptance-test fast path.
+- PASS chỉ khi run đi đủ: shallow checkout -> UI push guard -> cached install -> runtime + warehouse mobile build -> stage -> Wrangler deploy -> `/health` -> `/release.json` đúng SHA/hash.
+- Ghi duration thực tế; mục tiêu gần local, không build toàn MetaForge monorepo.
+- Không thêm PR-trigger deploy hoặc stale-main guard trở lại nếu không có bằng chứng cần thiết.
 
-## ACTIVE — Stock Reconciliation Bulk Transaction
+## P1 — HRM statutory payroll rule evaluator
 
-- Canonical branch: `feat/alumdoor-stock-reconciliation-bulk-v2-20260802`; PR `#267` đang draft.
-- Flow phải reuse canonical `Stock Reconciliation` draft đã có `snapshot_at`; bulk chỉ preview + cập nhật số đếm, không submit và không ghi stock ledger.
-- Exact bulk-handler regression hiện **7/7 PASS**; handler/kernel/native-preview TypeScript transpile PASS; action sidecar parse PASS.
-- Còn cần full-checkout targeted test/typecheck/build nếu environment cho phép trước khi kết luận merge-ready.
-- Debt sau task: controller nên preserve captured book state theo `(item_code,batch_no)` thay vì child-row index; xem xét chỉ bắt `variance_reason` ở posting nếu nghiệp vụ cho phép.
+- HRM operational 1.5 đã merge qua PR `#261` tại `b3dc2cf59ec5c85a977833da6edc986ac1bfe6fb`; payroll operational, source freeze và legal-rule trace đã có.
+- `VN Payroll Rule.formula_json` hiện là versioned/audited evidence và tham gia `input_hash`; chưa execute PIT/BHXH hoặc công thức pháp lý Việt Nam.
+- Nếu nghiệp vụ yêu cầu statutory automation: thiết kế formula schema explicit, fixed-point/rounding semantics, effective-date/version selection, official legal source, approval lifecycle và regression cho từng tình huống pháp lý.
+- Không hardcode luật trong fixture/controller; rule đã dùng phải tiếp tục append-only.
 
-## UI deploy
+## DONE — exact production release evidence
 
-- Xác nhận một UI push thực tế đi hết build -> stage -> Wrangler deploy -> `/health` -> `/release.json` đúng SHA/hash.
-- Ghi duration thực tế của fast path và nguyên nhân nếu còn fail.
+- Canonical merge checkpoint: `a0ae5f4f00a6be7311efcaff87c4caabea60f6be`.
+- `/release.json` chứa `releaseSha` + `bundleHash`; smoke fail nếu production không khớp `TARGET_SHA`.
 
-## HRM statutory payroll rule evaluator
+## DONE — Website/CMS multi-tenant v1
 
-- `VN Payroll Rule.formula_json` hiện là versioned/audited evidence, chưa execute PIT/BHXH hoặc công thức pháp lý Việt Nam.
-- Nếu triển khai statutory automation cần formula schema explicit, fixed-point/rounding semantics, effective-date/version selection, official legal source, approval lifecycle và regression theo từng version pháp lý.
+- Canonical PR `#254` đã squash-merge vào `main` tại `b25fc30b0f37d1218cafbb4dac40e37479bba0b9`.
 
-## Bulk Transaction remaining
+## NEXT — Bulk Transaction remaining
 
-1. BOM parent + child/version Bulk Transaction.
-2. First-class AppAction input-table contract.
-3. Batch Print / QR label queue.
+Mỗi item phải là branch riêng từ exact current `main`:
+
+1. **Stock Reconciliation Bulk Transaction** — controller-backed grid, preview/reconciliation, permission, tenant isolation, duplicate/state guards; submit chuẩn vẫn authoritative.
+2. **BOM parent + child/version Bulk Transaction** — parent-aware/version-aware, không mass-update child rows độc lập và không phá version lineage.
+3. **First-class AppAction input-table contract** — typed schema/compiler/parser/selfcheck chính thức thay compatibility transport.
+4. **Batch Print / QR label queue** — selection, queue state, retry/idempotency và permission.
 
 ## Other active priorities
 
-- P1 Daily Detailed Ledger exact-state review.
-- Plastic ERP waves sau P0-A.
-- End-to-end closure Sales -> Production -> Inventory -> Delivery -> Finance -> Daily Ledger -> Warranty.
+- Re-check exact GitHub state của P1 Daily Detailed Ledger trước khi tiếp tục.
+- Plastic ERP wave sau P0-A phải reconcile với core Work Order + submitted Stock Entry Manufacture, không dựng stock/costing ledger cạnh tranh.
+
+## Guardrails
+
+- UI auto production deploy chỉ dành cho UI-only branch đúng naming + push scope guard.
+- Không sửa production secrets/DNS, không mutate customer data ngoài release path đã được user chủ động thiết lập.
+- Không commit `.env`, `server/work/`, `tmp/`, credential, backup hoặc generated evidence không được quản lý.
