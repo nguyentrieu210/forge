@@ -6,6 +6,7 @@ export * from "./bpm-timer.js";
 export * from "./bpm-rule.js";
 export * from "./bpm-formula.js";
 export * from "./bpm-trigger.js";
+export * from "./bpm-analytics.js";
 export * from "./app-rollback.js";
 export {
   combinedNavigation,
