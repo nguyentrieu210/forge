@@ -1,12 +1,13 @@
 /**
- * Tenant user directory: credentials, role grants and the session epoch.
+ * Tenant user directory: credentials, role grants and account-security state.
  *
  * Kept out of the generic `documents` store on purpose. A document row is served
  * to clients by the read APIs, so a credential held there would eventually be
- * handed to a browser; this table is never exposed through a document endpoint.
+ * handed to a browser; this table family is never exposed through a document endpoint.
  */
 
 import { errors } from "../../core/src/index.js";
+import { D1MfaService, type MfaKeyRing } from "./mfa.js";
 import { D1RbacAdministrationService } from "./rbac-administration.js";
 import { D1SessionRegistry } from "./session-registry.js";
 
@@ -37,6 +38,8 @@ export interface AuthenticatedUser extends UserRecord {
   roles: string[];
 }
 
+export { D1MfaService } from "./mfa.js";
+export type { MfaAuditContext, MfaConfirmation, MfaEnrollment, MfaKey, MfaKeyRing, MfaStatus } from "./mfa.js";
 export { D1SessionRegistry } from "./session-registry.js";
 export type { RegisteredUserSession, SessionAuditContext } from "./session-registry.js";
 
@@ -44,13 +47,15 @@ export class D1UserStore {
   private readonly db: D1Database | D1DatabaseSession;
   readonly administration: D1RbacAdministrationService;
   readonly sessions: D1SessionRegistry;
+  readonly mfa: D1MfaService;
 
-  constructor(db: D1Database) {
-    // Authentication must never read a stale replica: a just-revoked session or a
-    // just-changed password has to take effect immediately.
+  constructor(db: D1Database, mfaKeys?: MfaKeyRing) {
+    // Authentication must never read a stale replica: a just-revoked session, consumed
+    // TOTP timestep/recovery code or changed password has to take effect immediately.
     this.db = db.withSession?.("first-primary") ?? db;
     this.administration = new D1RbacAdministrationService(db);
     this.sessions = new D1SessionRegistry(db);
+    this.mfa = new D1MfaService(db, mfaKeys);
   }
 
   async findByLogin(tenantId: string, login: string): Promise<{ user: UserRecord; passwordHash: string } | null> {
