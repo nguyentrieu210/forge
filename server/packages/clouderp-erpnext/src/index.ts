@@ -6,6 +6,7 @@ export * from "./physical-stock-read-model.js";
 export * from "./physical-stock-report-service.js";
 export * from "./d1-physical-stock-ledger-reader.js";
 export * from "./manufacturing-lifecycle.js";
+export * from "./manufacturing-bom-bulk.js";
 export * from "./manufacturing-stock-guard.js";
 export * from "./manufacturing-work-order-guard.js";
 export * from "./manufacturing-rollout.js";
