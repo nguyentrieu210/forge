@@ -7,6 +7,10 @@ import {
   validatePurchaseOrderAgainstQuotation,
 } from "./procurement-decisions.js";
 import { RolloutPurchaseOrderController } from "./purchase-allocation-rollout-controllers.js";
+import {
+  assertSupplierQualificationEligible,
+  type SupplierQualificationData,
+} from "./supplier-lifecycle-controllers.js";
 import { assertSupplierEligible } from "./supplier-policy.js";
 import type {
   PurchaseOrderData,
@@ -15,14 +19,25 @@ import type {
 } from "./types.js";
 
 /**
- * Keeps legacy suppliers backward-compatible, but once procurement_status is configured the RFQ
- * cannot invite a pending/suspended/rejected/expired supplier.
+ * Submitted Supplier Qualification documents are authoritative. Tenants with no qualification
+ * document for a supplier/company fall back to legacy Supplier-master approval fields.
  */
 export class ProcurementRequestForQuotationController extends RequestForQuotationController {
   override async normalize(context: ControllerContext<RequestForQuotationData>): Promise<RequestForQuotationData> {
     const normalized = await super.normalize(context);
     if (context.command.action !== "submit") return normalized;
+    const qualifications = await context.reader.listDocumentsByDoctype<SupplierQualificationData>(
+      context.command.tenant_id,
+      "Supplier Qualification",
+    );
     for (const row of normalized.suppliers) {
+      const qualified = assertSupplierQualificationEligible(
+        row.supplier,
+        normalized.company,
+        qualifications,
+        normalized.transaction_date,
+      );
+      if (qualified) continue;
       const master = await context.reader.getMasterRecordData(
         context.command.tenant_id,
         "Supplier",
@@ -73,12 +88,25 @@ export class ProcurementPurchaseOrderController extends RolloutPurchaseOrderCont
     const plan = await super.buildPlan(context);
     if (context.command.action !== "submit") return plan;
     const data = plan.document.data;
-    const supplier = await context.reader.getMasterRecordData(
+    const qualifications = await context.reader.listDocumentsByDoctype<SupplierQualificationData>(
       context.command.tenant_id,
-      "Supplier",
-      data.supplier,
+      "Supplier Qualification",
     );
-    assertSupplierEligible(data.supplier, supplier, data.transaction_date, data.supplier_group);
+    const qualified = assertSupplierQualificationEligible(
+      data.supplier,
+      data.company,
+      qualifications,
+      data.transaction_date,
+      data.supplier_group,
+    );
+    if (!qualified) {
+      const supplier = await context.reader.getMasterRecordData(
+        context.command.tenant_id,
+        "Supplier",
+        data.supplier,
+      );
+      assertSupplierEligible(data.supplier, supplier, data.transaction_date, data.supplier_group);
+    }
     if (!data.supplier_quotation) return plan;
     const quotationName = data.supplier_quotation;
     const quotation = await context.reader.getDocument<SupplierQuotationData>(
