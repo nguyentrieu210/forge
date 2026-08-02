@@ -1,4 +1,5 @@
 export * from "./manifest.js";
+export * from "./action-input-table.js";
 export {
   combinedNavigation,
   type InstalledAppRecord,
