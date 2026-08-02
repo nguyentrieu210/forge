@@ -1,0 +1,54 @@
+name: Validate HRM Department Context
+
+on:
+  push:
+    branches:
+      - fix/hrm-department-context-20260803
+    paths:
+      - .github/workflows/validate-hrm-department-context.yml
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/hrm-department-context-20260803
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile --prefer-offline
+      - run: pnpm --filter cloudforge run build
+      - run: node server/scripts/forge-app.mjs server/apps-src/hrm --dry-run
+      - run: node server/scripts/forge-app.mjs server/apps-src/vn-accounting --dry-run
+      - name: Record validation evidence
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const path = 'validation-evidence/hrm-department-context.json';
+            const payload = {
+              branch: 'fix/hrm-department-context-20260803',
+              head: context.sha,
+              cloudforgeBuild: true,
+              hrmDryRun: true,
+              vnAccountingDryRun: true,
+              completedAt: new Date().toISOString(),
+            };
+            await github.rest.repos.createOrUpdateFileContents({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              path,
+              message: 'ci: record HRM department context validation',
+              content: Buffer.from(JSON.stringify(payload, null, 2) + '\n').toString('base64'),
+              branch: 'fix/hrm-department-context-20260803',
+            });
