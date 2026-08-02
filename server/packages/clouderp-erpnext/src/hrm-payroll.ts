@@ -51,6 +51,29 @@ export async function buildHrmSalarySlipInputs(
     throw errors.reference(`Salary Structure ${structureName} is not effective for the payroll period`);
   }
 
+  const payrollRuleName = requiredText(assignment.data.payroll_rule ?? structure.data.payroll_rule, "VN Payroll Rule");
+  const payrollRule = await requireRecord(context, "VN Payroll Rule", payrollRuleName);
+  if (truthy(payrollRule.disabled)) throw errors.reference(`VN Payroll Rule ${payrollRuleName} is disabled`);
+  const ruleFrom = date(payrollRule.effective_from, `VN Payroll Rule ${payrollRuleName} effective_from`);
+  const ruleTo = optionalDate(payrollRule.effective_to, `VN Payroll Rule ${payrollRuleName} effective_to`);
+  if (input.start_date < ruleFrom || (ruleTo && input.end_date > ruleTo)) {
+    throw errors.reference(`VN Payroll Rule ${payrollRuleName} does not cover the payroll period`);
+  }
+  const legalDocumentNo = requiredText(payrollRule.legal_document_no, `VN Payroll Rule ${payrollRuleName} legal_document_no`);
+  const approvedBy = requiredText(payrollRule.approved_by, `VN Payroll Rule ${payrollRuleName} approved_by`);
+  const approvedAt = requiredText(payrollRule.approved_at, `VN Payroll Rule ${payrollRuleName} approved_at`);
+  const formulaJson = requiredText(payrollRule.formula_json, `VN Payroll Rule ${payrollRuleName} formula_json`);
+  let formula: unknown;
+  try {
+    formula = JSON.parse(formulaJson);
+  } catch {
+    throw errors.reference(`VN Payroll Rule ${payrollRuleName} formula_json must be valid JSON`);
+  }
+  if (!formula || typeof formula !== "object" || Array.isArray(formula)) {
+    throw errors.reference(`VN Payroll Rule ${payrollRuleName} formula_json must be a JSON object`);
+  }
+  const formulaHash = await sha256(JSON.stringify(formula));
+
   const baseSalaryMinor = toScaledInt(assignment.data.base_salary as string | number, currencyScale, "Salary Structure Assignment base_salary");
   if (baseSalaryMinor <= 0) throw errors.reference("Salary Structure Assignment base_salary must be positive");
 
@@ -190,7 +213,15 @@ export async function buildHrmSalarySlipInputs(
     assignment: { name: assignment.name, version: assignment.version },
     structure: { name: structure.name, version: structure.version },
     payroll_period: { name: payrollPeriod.name, version: payrollPeriod.version },
-    payroll_rule: text(assignment.data.payroll_rule) || text(structure.data.payroll_rule),
+    payroll_rule: {
+      name: payrollRuleName,
+      effective_from: ruleFrom,
+      ...(ruleTo ? { effective_to: ruleTo } : {}),
+      legal_document_no: legalDocumentNo,
+      approved_by: approvedBy,
+      approved_at: approvedAt,
+      formula_sha256: formulaHash,
+    },
     holiday_list: { name: holidayList.name, version: holidayList.version },
     attendance: attendanceDocs.map((entry) => ({ name: entry.name, version: entry.version })).sort(byName),
     additional_salary: additionalDocs.map((entry) => ({ name: entry.name, version: entry.version })).sort(byName),
