@@ -7,7 +7,7 @@ Ngày cập nhật: **2026-08-02**.
 ## Bắt buộc trước khi làm
 
 - Repository: `nguyentrieu210/forge`.
-- GitHub là nguồn sự thật cho exact `main`, branch, PR, CI, merge và release evidence.
+- GitHub là nguồn sự thật cho exact `main`, branch, PR, delivery và release evidence.
 - Đọc `RUNBOOK.md` -> `CURRENT_STATUS.md` -> `NEXT_TASKS.md` -> file này -> `DELIVERY_POLICY.md`.
 - Mọi SHA/branch dưới đây là checkpoint lịch sử; phải xác minh GitHub trước khi dùng.
 - Phân loại task `FAST`, `STANDARD` hoặc `CRITICAL`; blast radius tăng thì phải nâng tier.
@@ -19,12 +19,13 @@ Ngày cập nhật: **2026-08-02**.
 - `STANDARD`: CRUD/API/product behavior thông thường; chạy test và quality gates phù hợp.
 - `CRITICAL`: accounting/cash/AR-AP/inventory/costing/manufacturing/auth/permission/tenant/migration/data; giữ regression/integration/security/data-integrity gates đầy đủ.
 - `RUNBOOK.md` và `DELIVERY_POLICY.md` là source of truth cho tier policy.
-- Current automatic PR CI is intentionally ultrafast; full test/typecheck/build is manual. Do not restore deleted long-running workflows just to validate one feature; run only gates required by the task tier and changed blast radius.
+- GitHub validation workflows đã bị xóa/consolidate tại `main@061ad31b33243e6cace6bd9f13b3f6726c5443c4`; GitHub hiện là build/deploy only. Không suy ra PASS/FAIL validation từ việc không còn CI; dùng local/provider evidence phù hợp với task tier.
 
-## Active checkpoint — Website/CMS v1
+## Ready-to-merge checkpoint — Website/CMS v1
 
-- Canonical working branch: `feat/tenant-website-builder-delivery-v4-20260802`.
-- Clean-transplant implementation commit `dce0f99de732ca38bf53940387c2034607626d71` was created directly from exact `main@9f81b0ba060991133d7bd5510e2cbfa5b3277234`, after the ultrafast CI policy landed. Prior Website delivery branches/PRs are stale and must not merge.
+- Canonical branch: `feat/tenant-website-builder-delivery-v6-20260802`.
+- Canonical PR: `#251`, non-draft/ready for review. PR `#249`, `#238` và các Website delivery iteration cũ đã superseded/closed, không merge.
+- Clean-transplant implementation commit `fb18af84ea66fa7758eb2398a9395941e87be86b` was created directly from exact `main@061ad31b33243e6cace6bd9f13b3f6726c5443c4`.
 - Canonical implementation is app-based:
   - `server/apps-src/website/**`: first-party app metadata, Website Settings/Web Page/Web Page Block, roles and versioned preset fixtures;
   - `server/packages/frappe-api/src/website.ts`: tenant-scoped published-only resolver with block/URL/theme allowlists;
@@ -38,15 +39,20 @@ Ngày cập nhật: **2026-08-02**.
   3. Website Settings requires enabled + published and page overrides require published;
   4. arbitrary HTML/JS is not a public block type; links/assets/theme tokens are sanitized/allowlisted;
   5. presets are immutable `preset_id@version` and tenant version pins do not silently upgrade.
-- Responsive invariant: public navigation must remain usable on mobile. Prior E2E passed desktop/tablet and failed mobile because the only nav was `hidden ... md:flex`; v4 adds a mobile navigation row with horizontal overflow and `aria-current` instead of weakening the test.
-- Validation ownership: unchanged server/security code may reuse exact prior PASS evidence if inputs/dependencies did not change; the mobile UI fix requires targeted Website browser regression on desktop/tablet/mobile. Automatic PR gate only proves patch integrity.
+- Validation evidence:
+  1. unchanged application blobs previously PASS server/client tests, typecheck, build, frontend lint and MetaForge browser QA;
+  2. public E2E previously PASS desktop/tablet and exposed mobile navigation hidden below `md`;
+  3. final `WebsiteSite.tsx` blob `82e25b446885b8719340a38013c801135e2a52c2` adds a dedicated mobile navigation row with horizontal overflow and `aria-current`;
+  4. final targeted Chromium/Playwright regression PASS at mobile `390x844`, tablet `834x1112`, desktop `1440x1000`; assertions cover one visible accessible nav per viewport, active-page semantics, login href, title/meta, mobile overflow behavior;
+  5. main changes after previous full validation were workflow-only, with no app/package/dependency input changes.
 - Quality tier: **CRITICAL** because public unauthenticated routing + tenant isolation are involved.
 - Production deploy, custom domain/DNS and production secrets are outside this task.
+- Do not merge PR `#251` without a new explicit user instruction naming merge.
 
-## Active checkpoint — UI hotfix lane
+## Active checkpoint — release lane
 
-- Guarded auto-deploy lane đã merge qua PR `#231` tại `cd1f76dbb47432e2312c6f5577eb955b48c3a856`; PR `#230` là stale iteration đã đóng.
-- Theme hotfix replay hiện ở PR `#232`; phải kiểm exact GitHub release evidence trước khi kết luận trạng thái môi trường chạy thật.
+- GitHub release/validation topology changed materially at `061ad31b33243e6cace6bd9f13b3f6726c5443c4`: many historical workflows were removed and `manual-release-alu.yml` was consolidated.
+- Any follow-up on old PR `#232` or previous UI auto-deploy assumptions must first inspect current exact GitHub workflows; old lane assumptions are stale.
 
 ## Merged checkpoint — Alumdoor Warehouse Cash integration
 
@@ -83,7 +89,8 @@ Ngày cập nhật: **2026-08-02**.
 
 ## Release boundary
 
-- Merge code không đồng nghĩa trạng thái release môi trường chạy thật; luôn kiểm GitHub release evidence theo đúng lane.
+- Merge code không đồng nghĩa trạng thái release môi trường chạy thật; luôn kiểm GitHub release evidence theo đúng lane hiện hành.
+- Không tự merge PR hoặc deploy production nếu user chưa yêu cầu rõ.
 - Không dùng UI fast lane cho backend/business logic/data chỉ để tiết kiệm thời gian.
 - Không đổi DNS/secrets hoặc mutate customer data nếu user chưa yêu cầu rõ.
 - Không commit `.env`, `server/work/`, `tmp/` hoặc credential/generated evidence không thuộc source control.
