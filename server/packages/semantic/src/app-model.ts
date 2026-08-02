@@ -96,13 +96,15 @@ function parseDimension(value: JsonValue, index: number, allowedFields: Set<stri
   if (!FIELD.test(physicalField) || !allowedFields.has(physicalField)) throw errors.validation(`${field}.field is not owned by the app doctype`);
   const kind = string(object.kind, `${field}.kind`, 40) as SemanticDimensionKind;
   if (!DIMENSION_KINDS.has(kind)) throw errors.validation(`${field}.kind is unsupported`);
+  const description = optionalString(object.description, `${field}.description`, 500);
+  const options = optionalString(object.options, `${field}.options`, 160);
   return {
     id,
     label: string(object.label, `${field}.label`, 160),
     field: physicalField,
     kind,
-    ...(optionalString(object.description, `${field}.description`, 500) ? { description: string(object.description, `${field}.description`, 500) } : {}),
-    ...(optionalString(object.options, `${field}.options`, 160) ? { options: string(object.options, `${field}.options`, 160) } : {}),
+    ...(description ? { description } : {}),
+    ...(options ? { options } : {}),
   };
 }
 
@@ -148,6 +150,7 @@ export function parseAppSemanticModels(value: JsonValue | undefined, context: Ap
   const doctypes = new Map<string, Set<string>>();
   for (const doctype of context.doctypes) {
     if (!doctype.name.trim() || doctype.name.length > 160) throw errors.validation("app semantic doctype name is invalid");
+    if (doctypes.has(doctype.name)) throw errors.validation(`Duplicate app semantic doctype ${doctype.name}`);
     const fields = new Set(RECORD_FIELDS);
     for (const field of doctype.fields) {
       if (!FIELD.test(field)) throw errors.validation(`App doctype ${doctype.name} has invalid field ${field}`);
@@ -185,7 +188,8 @@ export function parseAppSemanticModels(value: JsonValue | undefined, context: Ap
     };
   });
 
-  // Reuse the canonical model validator for duplicate ids, exact scaling, member collision,
-  // currency-dimension semantics and aggregation invariants.
-  return parsed.map((model) => new SemanticModelRegistry([model]).get(model.id));
+  // Validate the WHOLE set at once so duplicate model ids are rejected across one app package,
+  // in addition to the per-model member/exact/currency/aggregation invariants.
+  const registry = new SemanticModelRegistry(parsed);
+  return parsed.map((model) => registry.get(model.id));
 }
