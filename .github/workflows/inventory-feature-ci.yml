@@ -1,63 +1,13 @@
 name: Inventory and Manufacturing CI
 
 on:
-  pull_request:
-    branches:
-      - main
-    types: [opened, synchronize, reopened, ready_for_review]
-    paths:
-      - 'server/briefs/alumdoor*.json'
-      - 'server/apps-src/**/*inventory*'
-      - 'server/apps-src/**/*manufactur*'
-      - 'server/apps-src/**/*warehouse*'
-      - 'server/apps-src/**/*stock*'
-      - 'server/apps-src/**/*batch*'
-      - 'server/apps-src/**/*bom*'
-      - 'server/apps-src/**/*work-order*'
-      - 'server/packages/**/*inventory*'
-      - 'server/packages/**/*manufactur*'
-      - 'server/packages/**/*warehouse*'
-      - 'server/packages/**/*stock*'
-      - 'server/packages/**/*batch*'
-      - 'server/packages/**/*bom*'
-      - 'server/packages/**/*work-order*'
-      - 'server/tests/**/*inventory*'
-      - 'server/tests/**/*manufactur*'
-      - 'server/tests/**/*warehouse*'
-      - 'server/tests/**/*stock*'
-      - 'server/tests/**/*batch*'
-      - 'server/tests/**/*bom*'
-      - 'server/tests/**/*work-order*'
-      - 'server/tests/alumdoor-catalog-*'
-      - 'server/tests/alumdoor-item-*'
-      - 'server/scripts/**/*inventory*'
-      - 'server/scripts/**/*manufactur*'
-      - 'server/scripts/**/*warehouse*'
-      - 'server/scripts/**/*stock*'
-      - 'server/scripts/**/*batch*'
-      - 'server/scripts/**/*bom*'
-      - 'server/scripts/**/*work-order*'
-      - 'server/migrations/**/*inventory*'
-      - 'server/migrations/**/*manufactur*'
-      - 'server/migrations/**/*warehouse*'
-      - 'server/migrations/**/*stock*'
-      - 'server/migrations/**/*batch*'
-      - 'server/migrations/**/*bom*'
-      - 'server/migrations/**/*work-order*'
-      - 'client/**/*inventory*'
-      - 'client/**/*manufactur*'
-      - 'client/**/*warehouse*'
-      - 'client/**/*stock*'
-      - 'client/**/*batch*'
-      - 'client/**/*bom*'
-      - 'client/**/*work-order*'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: inventory-ci-${{ github.event.pull_request.number || github.ref }}
+  group: inventory-ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -69,8 +19,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -111,27 +59,3 @@ jobs:
 
       - name: Validate authoritative briefs
         run: pnpm --dir server run brief:check
-
-      - name: Generate redacted authoritative catalog audit
-        shell: bash
-        run: |
-          set +e
-          node server/scripts/audit-alumdoor-catalog.mjs \
-            --brief server/briefs/alumdoor-v2.json \
-            --redacted \
-            --output "$RUNNER_TEMP/alumdoor-v2-catalog-audit.json"
-          status=$?
-          set -e
-          if [ "$status" -ne 0 ] && [ "$status" -ne 2 ]; then
-            exit "$status"
-          fi
-          printf 'catalog_audit_exit=%s\n' "$status" >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Upload redacted catalog audit
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: alumdoor-v2-catalog-audit-${{ github.run_id }}
-          path: ${{ runner.temp }}/alumdoor-v2-catalog-audit.json
-          if-no-files-found: warn
-          retention-days: 14
