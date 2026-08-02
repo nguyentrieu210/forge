@@ -42,6 +42,16 @@ Order is mandatory:
 
 Do not reorder migration after code deployment. A schema-behind tenant has caused live login failure before.
 
+The deployment target and the verification control plane are intentionally separated. The release jobs build/deploy the exact target SHA; the final read-only convergence job checks out current `main` and uses the newest SRE probe. This keeps rollback to an older source revision verifiable even when that old revision predates the current SRE tooling.
+
+Repository guard:
+
+```text
+npm --prefix server run verify:release-safety
+```
+
+It locks merged-main targeting, backup-before-migration ordering, current-main convergence verification and the rule that plaintext SQL backups never enter GitHub artifacts.
+
 ## 3. Backup verification
 
 Create export:
@@ -96,11 +106,11 @@ Execution is destructive and requires all of:
 - fresh SQL export;
 - successful offline replay verification.
 
-The tool records the pre-restore bookmark as `undo_bookmark`. PITR affects D1 only; it does not revert KV, R2, queues or external systems.
+The tool validates the provider JSON response, verifies the resulting current bookmark and records the provider/preflight previous bookmark as `undo_bookmark`. PITR affects D1 only; it does not revert KV, R2, queues or external systems.
 
 ## 6. Worker rollback
 
-Read-only plan:
+Read-only plan for **regular first-party Workers**:
 
 ```text
 node server/scripts/rollback-worker.mjs --worker <worker> --version <exact-version-id>
@@ -109,6 +119,8 @@ node server/scripts/rollback-worker.mjs --worker <worker> --version <exact-versi
 Execution requires exact Worker confirmation + reason. Post-rollback deployment state must contain the requested version or the tool fails.
 
 Worker rollback restores Worker code/config version only. It must not be used to pretend a non-backward-compatible schema migration has been undone.
+
+Current `rollback-worker.mjs` intentionally covers regular Workers such as Gateway, Jobs, Control Plane, Social Ingress and Query. It does **not** claim equivalent version rollback for Workers-for-Platforms user Workers deployed into a dispatch namespace (tenant/app Workers). Until a canonical provider/source-redeploy contract is proven for those workers, full-release rollback remains partial: prefer a verified compatible forward/source redeploy and never invent a version rollback command that the platform does not expose.
 
 ## 7. Health / release evidence
 
@@ -151,7 +163,7 @@ Default p95/error budgets are **engineering smoke gates**, not contractual SLA. 
 
 ## 9. Observability
 
-All first-party platform Workers and generated tenant Workers must keep Cloudflare Workers Logs and traces enabled. Repository guard:
+All first-party **platform Workers** and generated tenant Workers must keep Cloudflare Workers Logs and traces enabled. Repository guard:
 
 ```text
 npm --prefix server run verify:observability
@@ -160,9 +172,11 @@ npm --prefix server run verify:observability
 Current source policy:
 - logs enabled, 100% head sampling for complete error evidence;
 - traces enabled, 5% sampling in committed/generated configuration;
-- Gateway 5xx and queue retry paths emit structured operational metadata without request bodies, tokens, cookies or raw exception messages.
+- Gateway 5xx and all three configured queue retry flows emit structured operational metadata without request bodies, tokens, cookies or raw external payloads.
 
 Cloudflare native Worker metrics remain the provider metric source for request success/error/invocation status. Forge should not create a second authoritative metric store merely to duplicate provider counters.
+
+App Workers under `server/apps-src/**` are separate ownership. Exact audit found current Alumdoor and Center Worker configs without the platform observability block. WS12 records this as a dependency rather than modifying vertical/app-owner configs across ownership boundaries. Do not claim full app-worker telemetry coverage until those configs converge.
 
 ## 10. Queue safety
 
@@ -172,16 +186,17 @@ Repository guard:
 npm --prefix server run verify:queue-safety
 ```
 
-Every configured consumer must have bounded retries and a distinct DLQ. This prevents exhausted retries from being silently discarded.
+Every configured consumer must have bounded retries and a distinct DLQ. This prevents exhausted retries from being silently discarded. Current source config retains failed outbox, prepared-report and social-ingress messages in distinct DLQs.
 
-A DLQ is retention, not recovery. Replay/quarantine/poison-message semantics require the canonical event contracts owned with WS10; do not blindly replay arbitrary bodies from an operator script.
+Cloudflare's queue metrics/backlog remain the provider monitoring surface; Forge adds structured attempt/delay metadata for retry diagnosis. A DLQ is retention, not recovery. Replay/quarantine/poison-message semantics require the canonical event contracts owned with WS10; do not blindly replay arbitrary bodies from an operator script.
 
 ## 11. Failure decision matrix
 
 | Failure | First action | Data action |
 |---|---|---|
 | UI bundle bad, backend/storage healthy | identify previous Gateway version; Worker rollback | none |
-| Worker code regression, schema backward-compatible | exact Worker version rollback | none |
+| Regular Worker code regression, schema backward-compatible | exact Worker version rollback | none |
+| Tenant/app user Worker regression | verified compatible source redeploy; provider rollback contract still pending | none by default |
 | Migration deploy failed before schema mutation | stop release; fix/retry | none |
 | Migration applied, code deploy failed | restore compatible code forward or verified previous compatible version | do not PITR by reflex |
 | Migration/data corruption requires state rewind | capture fresh backup + current bookmark first | authorized D1 PITR |
