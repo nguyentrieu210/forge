@@ -1,0 +1,18 @@
+{
+  "deployedSha": "69b94ac1fe29a2ab39175e5442975a9197a0d39e",
+  "tenant": "alu",
+  "origin": "https://alu.kairo.vn",
+  "apps": [
+    "hrm",
+    "vn-accounting",
+    "alumdoor"
+  ],
+  "metadata": true,
+  "tenantWorker": true,
+  "alumdoorWorker": true,
+  "gatewayUI": true,
+  "sidebarFromCurrentManifest": true,
+  "releaseSha": "69b94ac1fe29a2ab39175e5442975a9197a0d39e",
+  "bundleHash": "ed328d88ad8242f5",
+  "completedAt": "2026-08-02T21:10:08.285Z"
+}

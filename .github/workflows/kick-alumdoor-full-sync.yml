@@ -1,0 +1,36 @@
+name: Kick ALU Full Sync After Shared Role Fix
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/kick-alumdoor-full-sync.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  kick:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Update retry marker
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('.github/workflows/one-time-alumdoor-full-sync.yml')
+          lines = p.read_text().splitlines()
+          lines[0] = '# Retry after shared-role ownership platform fix.'
+          p.write_text('\n'.join(lines) + '\n')
+      - name: Commit full-sync trigger
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add .github/workflows/one-time-alumdoor-full-sync.yml
+          git commit -m 'ops: retry ALU full sync after shared-role fix'
+          git push origin HEAD:main

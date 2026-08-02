@@ -1,8 +1,11 @@
-# Implementation Status — v1.0.0
+# Implementation Status — CloudForge v1.0.0
+
+> **HISTORICAL COMPONENT SNAPSHOT, NOT CURRENT FORGE STATUS.**  
+> File này giữ promotion boundary của CloudForge component v1.0.0. Trạng thái Forge hiện hành phải đọc từ exact GitHub state + `../CURRENT_STATUS.md`; hướng hoàn thiện nằm ở `../docs/FORGE_ENTERPRISE_NORTH_STAR.md`.
 
 ## Release state
 
-**ERPNext Business Suite RC: source-ready; runtime/staging/commercial promotion not approved.**
+**ERPNext Business Suite RC: source-ready; runtime/staging/commercial promotion not approved tại snapshot v1.0.0 này.**
 
 v1.0 extends the real transaction kernel with bounded banking reconciliation, payroll accounting/grouping, subscription scheduling and provider-safe e-invoice submission records. It remains a compatibility-bounded Cloudflare ERP, not full ERPNext/Frappe parity.
 
@@ -20,7 +23,7 @@ v1.0 extends the real transaction kernel with bounded banking reconciliation, pa
 - Migration 0009 and dedicated migration rehearsal.
 - 109/109 Node/domain tests; migrations 0001–0009; SQL attack/race/source/security gates.
 
-## Promotion blockers
+## Promotion blockers tại snapshot v1.0.0
 
 1. Clean Linux `npm ci`.
 2. Current-release Workerd tenant/query suites.
@@ -33,7 +36,7 @@ v1.0 extends the real transaction kernel with bounded banking reconciliation, pa
 9. Rollback and tenant backup/restore drills.
 10. Exact-artifact promotion evidence tied to the ZIP SHA-256.
 
-## Still not full ERPNext
+## Still not full ERPNext tại snapshot v1.0.0
 
 - Complete fiscal close, consolidation, budgets and every financial report.
 - Complete bank statement connectors, fuzzy auto-matching and bank-specific integrations.

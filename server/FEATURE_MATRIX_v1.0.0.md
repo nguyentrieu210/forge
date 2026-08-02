@@ -1,5 +1,10 @@
 # Feature Matrix — CloudForge v1.0.0
 
+> **HISTORICAL SNAPSHOT, NOT CURRENT FORGE STATUS.**  
+> File này giữ scope của CloudForge component v1.0.0 để tra lịch sử. Không dùng nó để kết luận HRM/Website/Accounting/ERP maturity hiện tại.  
+> Current truth: exact GitHub state + `CURRENT_STATUS.md`.  
+> Enterprise target/coverage denominator: `../docs/FORGE_ENTERPRISE_NORTH_STAR.md` + `../docs/FORGE_ENTERPRISE_CAPABILITY_MAP.md`.
+
 Legend: **Hardened subset** = inherited commercial/source gates and mature transaction path; **RC** = implemented path with migration, invariant and regression tests but runtime/oracle/staging promotion remains open; **Foundation** = metadata/API seam without a complete transaction engine; **Missing** = no parity claim.
 
 | Area | Maturity | v1.0 scope |
