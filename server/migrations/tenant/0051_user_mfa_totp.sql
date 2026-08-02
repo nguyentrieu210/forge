@@ -14,14 +14,20 @@ CREATE TABLE IF NOT EXISTS user_mfa_factors (
   created_at TEXT NOT NULL,
   confirmed_at TEXT,
   disabled_at TEXT,
+  activation_event_id TEXT,
+  disable_event_id TEXT,
   last_used_step INTEGER,
   PRIMARY KEY (tenant_id,user_id,factor_id),
   FOREIGN KEY (tenant_id,user_id) REFERENCES users(tenant_id,user_id) ON DELETE CASCADE,
   CHECK(json_valid(secret_ciphertext)),
   CHECK(
-    (status='pending' AND confirmed_at IS NULL AND disabled_at IS NULL)
-    OR (status='enabled' AND confirmed_at IS NOT NULL AND disabled_at IS NULL)
-    OR (status='disabled' AND disabled_at IS NOT NULL)
+    (status='pending' AND confirmed_at IS NULL AND disabled_at IS NULL
+      AND activation_event_id IS NULL AND disable_event_id IS NULL)
+    OR (status='enabled' AND confirmed_at IS NOT NULL AND disabled_at IS NULL
+      AND activation_event_id IS NOT NULL AND disable_event_id IS NULL)
+    OR (status='disabled' AND disabled_at IS NOT NULL AND disable_event_id IS NOT NULL
+      AND ((confirmed_at IS NULL AND activation_event_id IS NULL)
+        OR (confirmed_at IS NOT NULL AND activation_event_id IS NOT NULL)))
   )
 );
 
@@ -67,6 +73,24 @@ WHEN NOT (
 )
 BEGIN
   SELECT RAISE(ABORT, 'MFA_STATUS_TRANSITION_INVALID');
+END;
+
+CREATE TRIGGER IF NOT EXISTS user_mfa_activation_immutable
+BEFORE UPDATE OF confirmed_at,activation_event_id ON user_mfa_factors
+WHEN OLD.confirmed_at IS NOT NULL AND (
+  NEW.confirmed_at IS NOT OLD.confirmed_at OR NEW.activation_event_id IS NOT OLD.activation_event_id
+)
+BEGIN
+  SELECT RAISE(ABORT, 'MFA_ACTIVATION_IMMUTABLE');
+END;
+
+CREATE TRIGGER IF NOT EXISTS user_mfa_disable_immutable
+BEFORE UPDATE OF disabled_at,disable_event_id ON user_mfa_factors
+WHEN OLD.disabled_at IS NOT NULL AND (
+  NEW.disabled_at IS NOT OLD.disabled_at OR NEW.disable_event_id IS NOT OLD.disable_event_id
+)
+BEGIN
+  SELECT RAISE(ABORT, 'MFA_DISABLE_IMMUTABLE');
 END;
 
 CREATE TRIGGER IF NOT EXISTS user_mfa_recovery_use_immutable
