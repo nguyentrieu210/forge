@@ -49,23 +49,23 @@ function event(overrides = {}) {
   };
 }
 
-test("subscription store reads canonical document records instead of a parallel config table", async () => {
+test("subscription service consumes only active canonical subscription documents", async () => {
   const calls = [];
   const service = new IntegrationSubscriptionService({
-    async listDocumentsByDoctype(tenantId, doctype) {
-      calls.push({ tenantId, doctype });
-      return [document("sub-active"), document("sub-disabled", { status: "disabled" })];
+    async listActiveSubscriptionDocuments(tenantId) {
+      calls.push({ tenantId });
+      return [document("sub-active")];
     },
   });
   const active = await service.listActive("demo");
-  assert.deepEqual(calls, [{ tenantId: "demo", doctype: "Integration Subscription" }]);
+  assert.deepEqual(calls, [{ tenantId: "demo" }]);
   assert.deepEqual(active.map((item) => item.subscription_id), ["sub-active"]);
   assert.equal(active[0].tenant_id, "demo");
 });
 
 test("event selection remains tenant and event scoped after document conversion", async () => {
   const service = new IntegrationSubscriptionService({
-    async listDocumentsByDoctype() {
+    async listActiveSubscriptionDocuments() {
       return [
         document("sales"),
         document("purchase", { data: { event_pattern: "purchase_order.*" } }),
@@ -75,13 +75,28 @@ test("event selection remains tenant and event scoped after document conversion"
   assert.deepEqual((await service.subscriptionsForEvent(event())).map((item) => item.subscription_id), ["sales"]);
 });
 
-test("reader fails closed if canonical query returns a cross-tenant or malformed subscription", async () => {
+test("reader fails closed if active query returns cross-tenant, inactive or malformed data", async () => {
   const crossTenant = new IntegrationSubscriptionService({
-    async listDocumentsByDoctype() { return [{ ...document("bad"), tenant_id: "other" }]; },
+    async listActiveSubscriptionDocuments() { return [{ ...document("bad"), tenant_id: "other" }]; },
   });
   await assert.rejects(() => crossTenant.listActive("demo"), /cross-scope/);
+
+  const inactive = new IntegrationSubscriptionService({
+    async listActiveSubscriptionDocuments() { return [document("disabled", { status: "disabled" })]; },
+  });
+  await assert.rejects(() => inactive.listActive("demo"), /inactive/);
 
   assert.throws(() => subscriptionFromDocument(document("bad-url", {
     data: { target_url: "https://127.0.0.1/private", allowed_hosts: ["127.0.0.1"] },
   })), /host is not allowed/);
+});
+
+test("active subscription service rejects a result set above the authoritative scan bound", async () => {
+  const service = new IntegrationSubscriptionService({
+    async listActiveSubscriptionDocuments() {
+      const one = document("sub");
+      return Array.from({ length: 5001 }, (_, index) => ({ ...one, name: `sub-${index}` }));
+    },
+  });
+  await assert.rejects(() => service.listActive("demo"), /safe bound/);
 });
