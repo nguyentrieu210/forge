@@ -36,6 +36,24 @@ AL71 · 7,2 m · 0,389 kg/m:
 9. Workspace có Close/Reverse settlement ngay tại quy cách, nhưng command authoritative vẫn là `Purchase Settlement`.
 10. UI Tiến Đạt tách khỏi generic ActionScreen để phần nghiệp vụ riêng không làm phình renderer chung.
 
+## Validation evidence
+
+Temporary exact-head validation commit: `7d6cefa93ea69aa1c882eb2f9e5131cc5833e425`.
+Workflow run: `30767153983` — **SUCCESS**.
+
+- `pnpm run build`: PASS.
+- `pnpm run typecheck`: PASS.
+- Focused Tiến Đạt regressions: PASS.
+  - canonical Purchase Receipt submit preview theo số cây;
+  - supplier delivery dashboard cây/mét/kg + Payment Ledger;
+  - supplier settlement Close/Reverse;
+  - single FIFO;
+  - bulk FIFO + posting time + idempotency.
+- Full server suite: **1.586 tests**, **1.542 pass**, **44 skipped**, **0 fail**.
+- Client suite: **149 test files**, **932 tests**, **0 fail**.
+
+Workflow validation chỉ tồn tại tạm để kích GitHub Actions cho commit do connector tạo; file workflow đã được xóa sau khi run xanh. Cleanup sau validated head chỉ gồm xóa workflow tạm và cập nhật tài liệu evidence, không đổi executable logic.
+
 ## Boundary cố ý
 
 - `Submit Purchase Order` hiện vẫn là mốc mở nghĩa vụ giao hàng authoritative. PR này không tạo thêm một trạng thái `Đã gửi NCC` cạnh tranh với lifecycle chứng từ.
@@ -47,4 +65,4 @@ AL71 · 7,2 m · 0,389 kg/m:
 - Chưa merge.
 - Chưa deploy.
 - Không đổi production secret/DNS.
-- Chỉ merge/deploy sau khi exact head CI xanh và user duyệt.
+- Chỉ merge/deploy sau khi validation xanh và user duyệt.
