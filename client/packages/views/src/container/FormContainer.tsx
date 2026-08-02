@@ -5,7 +5,7 @@
  *   perms ← docinfo.permissions · transitions ← get_transitions (server) ·
  *   submit/cancel/amend/delete ← adapter · workflow ← applyWorkflow → refetch doc+transitions+timeline.
  */
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { resolveFormRenderPolicy, type Doc } from "@metaforge/core";
 import type { ListViewSnapshot } from "@metaforge/adapter-frappe";
@@ -32,7 +32,7 @@ export interface FormContainerProps {
   onRenamed?: (newName: string) => void;
   /** Xem bản in: cha điều hướng sang route in ấn riêng (vd "/print/<doctype>/<name>"). */
   onPrint?: () => void;
-  /** đóng form, quay về danh sách (nút X sẽ lưu trước nếu form đang dirty). */
+  /** Đóng form, quay về danh sách. X không bao giờ tự lưu; nếu dirty thì hỏi bỏ thay đổi. */
   onClose?: () => void;
   headerActions?: ReactNode;
 }
@@ -56,6 +56,7 @@ export function FormContainer(props: FormContainerProps) {
   const [saving, setSaving] = useState(false);
   const [formDirty, setFormDirty] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string> | undefined>();
+  const [confirmClose, setConfirmClose] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [submitPreview, setSubmitPreview] = useState<SubmitPreview | null>(null);
@@ -63,9 +64,6 @@ export function FormContainer(props: FormContainerProps) {
   const [allocationTimeline, setAllocationTimeline] = useState<AllocationTimeline | null>(null);
   const [allocationTimelineLoading, setAllocationTimelineLoading] = useState(false);
   const [allocationTimelineError, setAllocationTimelineError] = useState<string | null>(null);
-  const formHostRef = useRef<HTMLDivElement>(null);
-  const closeAfterSaveRef = useRef(false);
-  const saveStartedRef = useRef(false);
   const supportsAllocationTimeline = doctype === "Purchase Order" || doctype === "Purchase Receipt";
 
   useEffect(() => {
@@ -127,7 +125,6 @@ export function FormContainer(props: FormContainerProps) {
   };
 
   const onSave = async (changed: Record<string, unknown>) => {
-    saveStartedRef.current = true;
     setSaving(true);
     setFieldErrors(undefined);
     try {
@@ -137,13 +134,8 @@ export function FormContainer(props: FormContainerProps) {
       setFormDirty(false);
       toast.success(t("form.saved"));
       props.onSaved?.();
-      if (closeAfterSaveRef.current) {
-        closeAfterSaveRef.current = false;
-        props.onClose?.();
-      }
       return true;
     } catch (e) {
-      closeAfterSaveRef.current = false;
       const err = adapter.mapError(e);
       if (err.kind === "conflict") setConflict(true);
       else {
@@ -152,30 +144,17 @@ export function FormContainer(props: FormContainerProps) {
       }
       return false;
     } finally {
-      saveStartedRef.current = false;
       setSaving(false);
     }
   };
 
   const onCloseRequested = () => {
-    if (!props.onClose) return;
-    if (!formDirty) {
-      props.onClose();
+    if (!props.onClose || saving) return;
+    if (formDirty) {
+      setConfirmClose(true);
       return;
     }
-    if (saving) return;
-
-    closeAfterSaveRef.current = true;
-    saveStartedRef.current = false;
-    const formElement = formHostRef.current?.querySelector("form");
-    if (!formElement) {
-      closeAfterSaveRef.current = false;
-      return;
-    }
-    formElement.requestSubmit();
-    window.setTimeout(() => {
-      if (!saveStartedRef.current && closeAfterSaveRef.current) closeAfterSaveRef.current = false;
-    }, 250);
+    props.onClose();
   };
 
   const onAction = async (kind: FormActionKind) => {
@@ -286,7 +265,7 @@ export function FormContainer(props: FormContainerProps) {
   return (
     <>
       <DocumentExperience meta={renderPolicy?.meta ?? metaQ.data} doc={doc}>
-        <div ref={formHostRef} className="h-full min-h-0">
+        <div className="h-full min-h-0">
           <FormView
             onClose={onCloseRequested}
             onDirtyChange={setFormDirty}
@@ -324,6 +303,19 @@ export function FormContainer(props: FormContainerProps) {
           />
         </div>
       </DocumentExperience>
+      <ConfirmDialog
+        open={confirmClose}
+        onOpenChange={setConfirmClose}
+        title="Bỏ thay đổi chưa lưu?"
+        description="Các thay đổi trên biểu mẫu chưa được lưu. Đóng biểu mẫu sẽ bỏ các thay đổi này."
+        confirmLabel="Bỏ thay đổi"
+        cancelLabel="Tiếp tục chỉnh"
+        destructive
+        onConfirm={() => {
+          setConfirmClose(false);
+          props.onClose?.();
+        }}
+      />
       <ConfirmDialog
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
