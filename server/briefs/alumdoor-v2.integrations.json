@@ -1,0 +1,13 @@
+{
+  "//purpose": "Alumdoor surfaces Warehouse Cash owned by vn-accounting without copying Finance schemas or ledger logic.",
+  "version": "2.2.1",
+  "requires": [
+    { "id": "vn-accounting", "version": "1.1.0" }
+  ],
+  "externalDocTypes": [
+    { "name": "Warehouse Cash Fund", "kind": "master", "app": "vn-accounting", "version": "1.1.0" },
+    { "name": "Warehouse Cash Voucher", "kind": "transaction", "app": "vn-accounting", "version": "1.1.0" },
+    { "name": "Warehouse Cash Transfer", "kind": "transaction", "app": "vn-accounting", "version": "1.1.0" },
+    { "name": "Warehouse Cash Count", "kind": "transaction", "app": "vn-accounting", "version": "1.1.0" }
+  ]
+}
