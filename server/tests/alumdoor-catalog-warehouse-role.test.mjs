@@ -32,7 +32,7 @@ function records() {
 }
 
 test("Vietnamese stock_role values map to canonical production roles", () => {
-  const report = planAlumdoorCatalogAudit({ metadataVersion: "2.1.0", records: records() });
+  const report = planAlumdoorCatalogAudit({ metadataVersion: "2.2.1", records: records() });
   assert.deepEqual(report.counts.warehouse_roles, {
     FINISHED_GOODS: 1,
     GENERAL: 1,
