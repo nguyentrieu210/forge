@@ -4,6 +4,7 @@ export * from "./action-input-table-compat.js";
 export * from "./bpm-approval.js";
 export * from "./bpm-timer.js";
 export * from "./bpm-rule.js";
+export * from "./bpm-formula.js";
 export * from "./app-rollback.js";
 export {
   combinedNavigation,
