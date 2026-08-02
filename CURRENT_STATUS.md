@@ -8,9 +8,31 @@ GitHub là nguồn sự thật. Exact branch head, PR và CI phải kiểm tra l
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `main`.
+- Exact `main` kiểm gần nhất: `e156182fd88e629420f8f3d0dabd329ce22355d1` — `fix(release): refresh production content manifest (#215)`.
 - Exact feature merge checkpoint: `e447eca0e020da161dcee4f0b865206921718a61` — merge PR `#209`.
 - PR `#203` và `#205` là các iteration Bulk Transaction đã đóng/superseded; không dùng làm live source.
-- Không deploy Cloudflare/production trong slice Bulk Transaction này.
+- Không deploy Cloudflare/production trong các slice này.
+
+## READY FOR MERGE AUTHORIZATION — Warehouse Petty Cash per warehouse
+
+- Canonical PR: `#214` — `feat/alumdoor-warehouse-petty-cash-v3-20260802`.
+- Feature commit: `b152fd85c9d930f026b568eac003d4784ea43bfc`.
+- CI root-cause fix: `e142a3ceb90179bca28080f488dfb83ebeedcdaa`.
+- Validated clean head: `4507fc72ee28cd0482a07b8463acbb6fc30067c5` — **6/6 required workflows PASS**:
+  - CI `30747317534`: tests + typecheck + build SUCCESS.
+  - UI Pull Request Validation `30747317555`: SUCCESS; UI-specific lint/browser steps fast-pathed because scope không đổi frontend.
+  - PR Validation `30747317536`: changed-file policy + validation ownership SUCCESS.
+  - Purchase Feature CI `30747317552`: SUCCESS.
+  - Sales Feature CI `30747317535`: SUCCESS.
+  - Inventory and Manufacturing CI `30747317538`: server build + focused regressions + authoritative brief audit SUCCESS.
+- Root cause của CI đỏ trước đó là app-source metadata: `Warehouse Cash Voucher.purchase_receipt` và `stock_entry` link tới DocType ngoài package nhưng `vn-accounting/app.json` chưa khai báo. Đã khai báo `Purchase Receipt` và `Stock Entry` là ERPNext transaction DocTypes.
+- Warehouse Cash controller regression: **7/7 PASS** trong unit run; SQL migration acceptance cho balance/daily limit/max balance/tenant isolation/reversal/immutability đã PASS.
+- `Warehouse Cash Voucher` và `Warehouse Cash Transfer` là chứng từ kế toán chuyên biệt, post trực tiếp balanced immutable GL; không tạo shadow `Payment Entry`/`Journal Entry`.
+- `Warehouse Cash Count` chỉ chụp số dư authoritative và chênh lệch; không tự ý thay đổi tiền. Điều chỉnh phải qua adjustment voucher riêng.
+- `gl_entries` là source of truth. `Warehouse Cash Balance` và `Warehouse Cash Daily Usage` trong `master_records` chỉ là projection rebuildable, được cập nhật cùng transaction để chống race và kiểm O(1).
+- Migration `0038_warehouse_cash.sql` chưa phát hiện collision trên `main` tại lần kiểm gần nhất.
+- Diagnostic CI artifact/workflow phục vụ điều tra đã được gỡ khỏi final code diff.
+- PR `#214` vẫn chưa merge. Merge cần authorization riêng; production deploy cần authorization riêng khác.
 
 ## DONE — Bulk Transaction v1: Purchase Receipt / nhập nhôm nhiều mã
 
@@ -67,12 +89,13 @@ Generic Bulk View vẫn chỉ dùng `document_update` cho master an toàn; trans
 
 ## Chưa hoàn tất toàn hệ thống
 
-1. Bulk Transaction cho Stock Reconciliation.
-2. Bulk Transaction cho BOM parent + child/version.
-3. First-class AppAction input-table contract thay compatibility `BulkTransaction:<json>` trong Text options.
-4. Batch Print / QR label queue.
-5. P1 Daily detailed ledger hardening/closure theo exact GitHub state.
-6. Plastic ERP các wave sau P0-A, warranty/defects/capacity/overtime và authenticated E2E xuyên miền.
+1. Merge authorization cho Warehouse Petty Cash PR `#214`; không deploy production nếu chưa có lệnh riêng.
+2. Bulk Transaction cho Stock Reconciliation.
+3. Bulk Transaction cho BOM parent + child/version.
+4. First-class AppAction input-table contract thay compatibility `BulkTransaction:<json>` trong Text options.
+5. Batch Print / QR label queue.
+6. P1 Daily detailed ledger hardening/closure theo exact GitHub state.
+7. Plastic ERP các wave sau P0-A, warranty/defects/capacity/overtime và authenticated E2E xuyên miền.
 
 ## Guardrails
 

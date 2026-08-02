@@ -1,0 +1,34 @@
+{
+  "name": "Warehouse Cash Transfer",
+  "module": "Accounts",
+  "is_submittable": true,
+  "autoname": "CQ-.YYYY.-#####",
+  "title_field": "purpose",
+  "sort_field": "posting_date",
+  "sort_order": "DESC",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "posting_date", "label": "Ngày", "fieldtype": "Date", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "from_fund", "label": "Từ quỹ", "fieldtype": "Link", "options": "Warehouse Cash Fund", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "to_fund", "label": "Đến quỹ", "fieldtype": "Link", "options": "Warehouse Cash Fund", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "amount", "label": "Số tiền", "fieldtype": "Currency", "required": true, "non_negative": true, "in_list_view": true },
+    { "fieldname": "purpose", "label": "Nội dung chuyển", "fieldtype": "Small Text", "required": true, "in_list_view": true },
+    { "fieldname": "handover_by", "label": "Người giao", "fieldtype": "Link", "options": "User", "required": true },
+    { "fieldname": "received_by", "label": "Người nhận", "fieldtype": "Link", "options": "User", "required": true },
+    { "fieldname": "attachment", "label": "Biên bản / ảnh bàn giao", "fieldtype": "Attach" },
+    { "fieldname": "approved_by", "label": "Người duyệt", "fieldtype": "Link", "options": "User", "read_only": true },
+    { "fieldname": "approved_on", "label": "Thời điểm duyệt", "fieldtype": "Datetime", "read_only": true }
+  ],
+  "permissions": [
+    { "role": "Warehouse Cash User", "read": true, "write": true, "create": true, "report": true },
+    { "role": "Thủ kho", "read": true, "write": true, "create": true, "report": true },
+    { "role": "Warehouse Cash Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true },
+    { "role": "Chủ xưởng", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true },
+    { "role": "General Accountant", "read": true, "write": true, "create": true, "report": true, "export": true },
+    { "role": "Chief Accountant", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true },
+    { "role": "Kế toán trưởng", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true },
+    { "role": "Accounts Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 2
+}

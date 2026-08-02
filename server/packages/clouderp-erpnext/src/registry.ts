@@ -18,6 +18,10 @@ import {
 import { VersionedBillOfMaterialsController } from "./manufacturing-lifecycle.js";
 import { StockUomSnapshotWorkOrderController } from "./manufacturing-work-order-guard.js";
 import { RolloutManufacturingStockEntryController } from "./manufacturing-rollout.js";
+import {
+  WarehouseCashCountController, WarehouseCashFundController,
+  WarehouseCashTransferController, WarehouseCashVoucherController,
+} from "./warehouse-cash.js";
 
 export function registerErpNextCoreControllers(registry: ControllerRegistry): ControllerRegistry {
   return registry
@@ -47,6 +51,10 @@ export function registerErpNextCoreControllers(registry: ControllerRegistry): Co
     .register(new PayrollEntryController())
     .register(new SubscriptionController())
     .register(new EInvoiceSubmissionController())
+    .register(new WarehouseCashFundController())
+    .register(new WarehouseCashVoucherController())
+    .register(new WarehouseCashTransferController())
+    .register(new WarehouseCashCountController())
     .register(new CutOrderController())
     .register(new StockReservationController())
     .register(new StockReconciliationController());
