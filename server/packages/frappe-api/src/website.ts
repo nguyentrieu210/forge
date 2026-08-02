@@ -38,7 +38,9 @@ interface WebsiteSettings {
   siteDescription: string;
   homePage: string;
   templatePreset: string;
+  templateVersion: number;
   themePreset: string;
+  themeVersion: number;
   logo: string | null;
   favicon: string | null;
   contactPhone: string;
@@ -90,8 +92,16 @@ async function resolveWebsite(context: WebsiteContext): Promise<{
   const settings = await loadSettings(context);
   if (!settings.enabled || !settings.published) throw errors.notFound("Website chưa được công khai");
 
-  const template = await loadMasterRecord(context, "Website Template", settings.templatePreset);
-  const themePreset = await loadMasterRecord(context, "Website Theme Preset", settings.themePreset);
+  const template = await loadMasterRecord(
+    context,
+    "Website Template",
+    presetRecordName(settings.templatePreset, settings.templateVersion),
+  );
+  const themePreset = await loadMasterRecord(
+    context,
+    "Website Theme Preset",
+    presetRecordName(settings.themePreset, settings.themeVersion),
+  );
   const pages = templatePages(template);
 
   for (const page of await loadPublishedOverrides(context)) pages.set(page.slug, page);
@@ -108,8 +118,8 @@ async function loadSettings(context: WebsiteContext): Promise<WebsiteSettings> {
   if (!row) throw errors.notFound("Website chưa được cấu hình");
 
   const payload = parseObject(row.payload_json, "Website Settings");
-  const templatePreset = shortText(payload.template_preset, 80) || "business-landing";
-  const themePreset = shortText(payload.theme_preset, 80) || "business-blue";
+  const templatePreset = normalizePresetId(shortText(payload.template_preset, 80) || "business-landing");
+  const themePreset = normalizePresetId(shortText(payload.theme_preset, 80) || "business-blue");
   return {
     enabled: flag(payload.enabled),
     published: flag(payload.published),
@@ -117,7 +127,9 @@ async function loadSettings(context: WebsiteContext): Promise<WebsiteSettings> {
     siteDescription: shortText(payload.site_description, 500),
     homePage: normalizeSlug(shortText(payload.home_page, 80) || "home"),
     templatePreset,
+    templateVersion: clampInteger(payload.template_version, 1, 1_000_000, 1),
     themePreset,
+    themeVersion: clampInteger(payload.theme_version, 1, 1_000_000, 1),
     logo: safeAsset(payload.logo),
     favicon: safeAsset(payload.favicon),
     contactPhone: shortText(payload.contact_phone, 80),
@@ -245,7 +257,9 @@ function publicManifest(settings: WebsiteSettings, theme: JsonObject, pages: Map
       description: settings.siteDescription,
       home_page: settings.homePage,
       template_preset: settings.templatePreset,
+      template_version: settings.templateVersion,
       theme_preset: settings.themePreset,
+      theme_version: settings.themeVersion,
       logo: settings.logo,
       favicon: settings.favicon,
       contact_phone: settings.contactPhone,
@@ -256,6 +270,16 @@ function publicManifest(settings: WebsiteSettings, theme: JsonObject, pages: Map
     theme: theme as unknown as JsonValue,
     navigation: navigation as unknown as JsonValue,
   };
+}
+
+function presetRecordName(id: string, version: number): string {
+  return `${id}@${version}`;
+}
+
+function normalizePresetId(value: string): string {
+  const id = value.trim().toLowerCase();
+  if (!/^[a-z0-9][a-z0-9-]{0,79}$/.test(id)) throw errors.validation("Website preset id không hợp lệ");
+  return id;
 }
 
 function normalizeSlug(value: string): string {
