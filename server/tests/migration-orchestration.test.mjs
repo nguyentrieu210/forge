@@ -5,7 +5,6 @@ import {
   adaptMisaInventoryGrid,
   advanceMigrationCheckpoint,
   assertImplementationStatusTransition,
-  buildImplementationReadiness,
   buildMigrationPlan,
   buildMigrationRetryPlan,
   buildMigrationTemplate,
@@ -17,9 +16,7 @@ import {
   suggestMigrationMapping,
 } from "../dist/packages/migration/src/public.js";
 
-// Keep this alias local so a future package rename does not hide a broken export.
 const readiness = evaluateImplementationReadiness;
-void buildImplementationReadiness;
 
 test("ERPNext/Frappe adapter keeps stable name and strips framework-owned fields", () => {
   const source = adaptFrappeRows({
