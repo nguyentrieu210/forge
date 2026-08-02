@@ -46,7 +46,7 @@ test("bulk BOM normalizes one parent and pasted child rows into Draft-only canon
   assert.equal(document.bom_status, "Draft");
   assert.equal(document.effective_from, "2026-08-03");
   assert.equal(document.output_conversion_factor, "1.000000");
-  assert.equal(document.bulk_input_schema, 1);
+  assert.equal("bulk_input_schema" in document, false);
   assert.equal(document.items.length, 2);
   assert.deepEqual(document.items.map((row) => row.row_id), ["ROW-1", "ROW-2"]);
   assert.equal(document.items[0].qty, "2.500000");
@@ -54,6 +54,7 @@ test("bulk BOM normalizes one parent and pasted child rows into Draft-only canon
   assert.equal(document.items[1].qty_basis, "Theo chiều rộng");
 
   const preview = await previewBulkBomDraft(input);
+  assert.equal(preview.schema_version, 1);
   assert.equal(preview.row_count, 2);
   assert.equal(preview.document.bom_status, "Draft");
   assert.match(preview.fingerprint, /^[a-f0-9]{64}$/);
