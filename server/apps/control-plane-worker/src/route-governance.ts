@@ -87,12 +87,14 @@ export function nextRoutingVersion(
 }
 
 export function routeAuditJson(route: GovernedTenantRoute | RequestedTenantRoute, routingVersion?: number): string {
+  const version = routingVersion ?? ("routing_version" in route ? route.routing_version : undefined);
+  if (version === undefined) throw errors.validation("routing version is required for route audit evidence");
   return JSON.stringify({
     route_key: route.route_key,
     tenant_id: route.tenant_id,
     worker_name: route.worker_name,
     status: route.status,
     plan: route.plan,
-    routing_version: routingVersion ?? route.routing_version,
+    routing_version: version,
   });
 }
