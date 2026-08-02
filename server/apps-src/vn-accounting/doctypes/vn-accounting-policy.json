@@ -18,18 +18,22 @@
     { "fieldname": "legal_report_currency", "label": "Đồng tiền báo cáo pháp lý", "fieldtype": "Link", "options": "Currency", "required": true, "default": "VND" },
     { "fieldname": "vat_method", "label": "Phương pháp VAT", "fieldtype": "Select", "options": "Khấu trừ\nTrực tiếp\nChưa xác định", "required": true },
     { "fieldname": "branch_accounting_model", "label": "Mô hình hạch toán chi nhánh", "fieldtype": "Select", "options": "Phụ thuộc\nĐộc lập\nHỗn hợp", "required": true },
+    { "fieldname": "inventory_account", "label": "Tài khoản hàng tồn kho mặc định", "fieldtype": "Link", "options": "Account", "required": true },
+    { "fieldname": "stock_adjustment_account", "label": "Tài khoản đối ứng điều chỉnh kho", "fieldtype": "Link", "options": "Account", "required": true },
+    { "fieldname": "stock_received_but_not_billed_account", "label": "Hàng nhận chưa có hóa đơn", "fieldtype": "Link", "options": "Account", "required": true },
     { "fieldname": "internal_regulation_file", "label": "Quy chế kế toán nội bộ", "fieldtype": "Attach", "required": true },
     { "fieldname": "source_url", "label": "Nguồn pháp lý chính thức", "fieldtype": "Data", "required": true },
-    { "fieldname": "approved_by", "label": "Người phê duyệt", "fieldtype": "Data" },
-    { "fieldname": "approved_at", "label": "Thời điểm phê duyệt", "fieldtype": "Datetime" },
+    { "fieldname": "approved_by", "label": "Người phê duyệt", "fieldtype": "Data", "read_only": true },
+    { "fieldname": "approved_at", "label": "Thời điểm phê duyệt", "fieldtype": "Datetime", "read_only": true },
     { "fieldname": "workflow_state", "label": "Trạng thái", "fieldtype": "Data", "read_only": true, "in_list_view": true, "in_standard_filter": true }
   ],
   "permissions": [
-    { "role": "Accounts User", "read": true, "write": true, "create": true, "report": true },
+    { "role": "Accounts User", "read": true, "report": true },
     { "role": "General Accountant", "read": true, "write": true, "create": true, "report": true, "export": true },
     { "role": "Chief Accountant", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true },
     { "role": "Accounts Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true },
+    { "role": "Internal Auditor", "read": true, "report": true, "export": true },
     { "role": "System Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true }
   ],
-  "revision": 1
+  "revision": 2
 }
