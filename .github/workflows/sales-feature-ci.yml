@@ -1,27 +1,13 @@
 name: Sales Feature CI
 
 on:
-  pull_request:
-    branches:
-      - main
-    types: [opened, synchronize, reopened, ready_for_review]
-    paths:
-      - 'server/apps-src/alumdoor-worker/src/sales-*'
-      - 'server/apps-src/alumdoor-worker/src/door-formulas.ts'
-      - 'server/apps-src/alumdoor-worker/src/index.ts'
-      - 'server/packages/clouderp-pricing/**'
-      - 'server/briefs/alumdoor*.json'
-      - 'server/tests/sales-*'
-      - 'server/tests/door-formulas*'
-      - 'client/packages/views/src/form/ChildGrid.tsx'
-      - 'client/e2e-forge/**/sales*'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: sales-feature-${{ github.event.pull_request.number || github.ref }}
+  group: sales-feature-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -33,8 +19,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
