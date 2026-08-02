@@ -12,21 +12,55 @@ function fieldMap(doctype) {
   return new Map(doctype.fields.map((field) => [field.fieldname, field]));
 }
 
-test("HRM package exposes company-branch-department and payroll dimensions", async () => {
+test("HRM package exposes complete operational HR, time and payroll dimensions", async () => {
   const source = await readAppSource(fileURLToPath(hrmRoot));
   const parsed = parseAppManifest(source);
 
   assert.equal(parsed.id, "hrm");
-  assert.equal(parsed.version, "1.4.0");
-  assert.ok(parsed.nav.some((item) => item.key === "Branch"));
-  assert.ok(parsed.nav.some((item) => item.key === "Department"));
+  assert.equal(parsed.version, "1.5.0");
+  for (const key of [
+    "Branch", "Department", "Job Opening", "Job Applicant", "Job Offer", "Employee", "Employment Contract",
+    "Employee Transfer", "Employee Separation", "Leave Policy", "Leave Allocation", "Leave Application", "Holiday List",
+    "Employee Checkin", "Attendance", "Overtime Request", "Salary Structure", "Salary Structure Assignment",
+    "Payroll Period", "Additional Salary", "Travel Request", "Appraisal", "Training Event",
+  ]) assert.ok(parsed.nav.some((item) => item.key === key), `${key} must be navigable`);
   assert.ok(parsed.nav.some((item) => item.key === "payroll-entry" && item.route === "/app/Payroll%20Entry"));
+
+  const requiredDoctypes = [
+    "Employment Type", "Job Opening", "Job Applicant", "Interview", "Job Offer", "Employee Onboarding",
+    "Employee Transfer", "Employee Promotion", "Employee Separation", "Leave Policy", "Leave Allocation", "Holiday List",
+    "Employee Checkin", "Attendance Request", "Overtime Request", "Salary Structure", "Salary Structure Component",
+    "Payroll Period", "Additional Salary", "Travel Request", "Goal", "Appraisal", "Training Event",
+  ];
+  for (const name of requiredDoctypes) assert.ok(parsed.doctypes.some((item) => item.name === name), `${name} must exist`);
 
   const employee = parsed.doctypes.find((item) => item.name === "Employee");
   assert.ok(employee);
   const employeeFields = fieldMap(employee);
   for (const required of ["company", "branch", "department", "employee_number", "employment_type", "cost_center"]) {
     assert.equal(employeeFields.get(required)?.required, true, `${required} must be required`);
+  }
+  assert.equal(employeeFields.get("company")?.set_only_once, true);
+  assert.equal(employeeFields.get("employee_number")?.set_only_once, true);
+  for (const sensitive of ["personal_email", "mobile", "bank_account_no", "tax_code", "social_insurance_number"]) {
+    assert.equal(employeeFields.get(sensitive)?.permlevel, 1, `${sensitive} must be protected at permlevel 1`);
+  }
+
+  const leave = parsed.doctypes.find((item) => item.name === "Leave Application");
+  const leaveFields = fieldMap(leave);
+  assert.equal(leaveFields.get("total_days")?.read_only, true, "leave total must be server-derived");
+  assert.equal(leaveFields.get("leave_allocation")?.read_only, true, "leave allocation must be server-derived");
+
+  const attendance = parsed.doctypes.find((item) => item.name === "Attendance");
+  const attendanceFields = fieldMap(attendance);
+  assert.equal(attendanceFields.get("working_minutes")?.read_only, true);
+  assert.equal(attendanceFields.get("overtime_minutes")?.read_only, true);
+  assert.equal(attendanceFields.get("late_entry")?.read_only, true);
+
+  const salaryAssignment = parsed.doctypes.find((item) => item.name === "Salary Structure Assignment");
+  const salaryFields = fieldMap(salaryAssignment);
+  for (const required of ["salary_structure", "from_date", "base_salary", "payroll_rule"]) {
+    assert.equal(salaryFields.get(required)?.required, true, `${required} must be required`);
   }
 
   const branchFixture = source.fixtures.find((item) => item.record_type === "Branch");
@@ -36,6 +70,9 @@ test("HRM package exposes company-branch-department and payroll dimensions", asy
     assert.equal(department.data.company, "Kairo");
     assert.equal(department.data.branch, "HQ");
     assert.ok(department.data.cost_center);
+  }
+  for (const leaveType of source.fixtures.filter((item) => item.record_type === "Leave Type")) {
+    assert.equal("max_days" in leaveType.data, false, "legal leave entitlement must not be hardcoded in generic fixtures");
   }
 });
 
