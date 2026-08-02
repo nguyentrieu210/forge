@@ -1,0 +1,39 @@
+{
+  "name": "Project Acceptance Certificate",
+  "module": "Projects",
+  "is_submittable": true,
+  "autoname": "PAC-.YYYY.-#####",
+  "title_field": "project",
+  "search_fields": ["project", "task", "customer_representative"],
+  "sort_field": "acceptance_date",
+  "sort_order": "DESC",
+  "track_seen": true,
+  "fields": [
+    { "fieldname": "project", "label": "Dự án", "fieldtype": "Link", "options": "Project", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "task", "label": "Công việc / mốc nghiệm thu", "fieldtype": "Link", "options": "Project Task", "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "acceptance_date", "label": "Ngày nghiệm thu", "fieldtype": "Date", "required": true, "in_list_view": true },
+    { "fieldname": "period_from", "label": "Kỳ từ", "fieldtype": "Date" },
+    { "fieldname": "period_to", "label": "Kỳ đến", "fieldtype": "Date" },
+    { "fieldname": "progress_percent", "label": "Khối lượng / tiến độ xác nhận %", "fieldtype": "Percent", "required": true, "in_list_view": true },
+    { "fieldname": "deliverables", "label": "Hạng mục / sản phẩm bàn giao", "fieldtype": "Text", "required": true },
+    { "fieldname": "acceptance_result", "label": "Kết quả nghiệm thu", "fieldtype": "Select", "options": "Chấp nhận\nChấp nhận có điều kiện\nKhông chấp nhận", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "condition_note", "label": "Điều kiện / tồn tại cần xử lý", "fieldtype": "Text", "mandatory_depends_on": "eval:doc.acceptance_result != 'Chấp nhận'" },
+    { "fieldname": "evidence", "label": "Tài liệu / ảnh bằng chứng", "fieldtype": "Attach" },
+    { "fieldname": "customer_representative", "label": "Đại diện khách hàng", "fieldtype": "Data", "required": true },
+    { "fieldname": "signed_document", "label": "Biên bản ký", "fieldtype": "Attach", "mandatory_depends_on": "eval:doc.workflow_state == 'Đã xác nhận'" },
+    { "fieldname": "commercial_reference", "label": "Tham chiếu thanh toán / giữ lại", "fieldtype": "Data", "description": "Evidence only. Invoice, retention and revenue recognition stay authoritative in WS01." },
+    { "fieldname": "rejection_reason", "label": "Lý do từ chối", "fieldtype": "Text", "mandatory_depends_on": "eval:doc.workflow_state == 'Từ chối'" },
+    { "fieldname": "cancel_reason", "label": "Lý do hủy", "fieldtype": "Text", "mandatory_depends_on": "eval:doc.workflow_state == 'Hủy'" },
+    { "fieldname": "workflow_state", "label": "Trạng thái", "fieldtype": "Data", "read_only": true, "in_list_view": true, "in_standard_filter": true }
+  ],
+  "viewPolicy": {
+    "kanban": { "enabled": true, "stageField": "workflow_state", "reasonRequiredOn": ["backward", "cancel"] },
+    "mobile": { "compactFields": ["project", "task", "acceptance_date", "progress_percent", "workflow_state"] }
+  },
+  "permissions": [
+    { "role": "Project User", "read": true, "write": true, "create": true, "print": true, "report": true, "if_owner": true },
+    { "role": "Project Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "print": true, "report": true, "export": true, "share": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "print": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 2
+}
