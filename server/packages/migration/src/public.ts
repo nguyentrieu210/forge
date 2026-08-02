@@ -7,4 +7,5 @@ export * from "./implementation-template.js";
 export * from "./manifest.js";
 export * from "./orchestrator.js";
 export * from "./reconcile.js";
+export * from "./tabular.js";
 export * from "./template.js";
