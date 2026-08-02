@@ -1,3 +1,4 @@
+export * from "./bounded-scan.js";
 export * from "./controller.js";
 export * from "./d1-store.js";
 export * from "./daily-detailed-ledger.js";
