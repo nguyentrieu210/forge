@@ -1,3 +1,5 @@
+import type { CanonicalDocument, JsonObject } from "../../contracts/src/index.js";
+import { assertControllerDocumentScanCount } from "./bounded-scan.js";
 import { D1PurchaseAllocationDomainStore } from "./purchase-allocation-domain-store.js";
 import { InMemoryPurchaseAllocationMutationStore } from "./purchase-allocation-in-memory-store.js";
 import type { PurchaseSettlementWindowState } from "./purchase-allocation-reader.js";
@@ -9,6 +11,20 @@ export class D1RolloutPurchaseAllocationDomainStore extends D1PurchaseAllocation
   constructor(db: D1Database) {
     super(db);
     this.rolloutReader = db.withSession?.("first-primary") ?? db;
+  }
+
+  override async listDocumentsByDoctype<T extends JsonObject>(
+    tenantId: string,
+    doctype: string,
+  ): Promise<Array<CanonicalDocument<T>>> {
+    // D1MutationStore intentionally caps this generic controller scan at 5,000.
+    // Count first in the same primary-first session so a large tenant fails closed
+    // instead of silently hiding documents beyond the limit from an invariant.
+    const row = await this.rolloutReader.prepare(
+      `SELECT COUNT(*) AS total FROM documents WHERE tenant_id=?1 AND doctype=?2`,
+    ).bind(tenantId, doctype).first<{ total: number }>();
+    assertControllerDocumentScanCount(Number(row?.total ?? 0), doctype);
+    return super.listDocumentsByDoctype<T>(tenantId, doctype);
   }
 
   async isPurchaseAllocationEnabled(tenantId: string): Promise<boolean> {

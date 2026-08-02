@@ -19,8 +19,12 @@ interface JobsEnv {
 export default {
   async queue(batch: MessageBatch<DomainEvent>, env: JobsEnv): Promise<void> {
     for (const message of batch.messages) {
+      let eventId = "unknown";
+      let tenantId = "unknown";
       try {
         const event = assertDomainEvent(message.body);
+        eventId = event.event_id;
+        tenantId = event.tenant_id;
         const existing = await env.JOBS_DB.prepare(
           "SELECT event_id FROM processed_events WHERE tenant_id=?1 AND event_id=?2",
         ).bind(event.tenant_id, event.event_id).first<{ event_id: string }>();
@@ -54,8 +58,19 @@ export default {
            VALUES(?1,?2,?3,?4) ON CONFLICT(tenant_id,event_id) DO NOTHING`,
         ).bind(event.tenant_id, event.event_id, event.event_type, new Date().toISOString()).run();
         message.ack();
-      } catch {
-        message.retry({ delaySeconds: Math.min(300, 2 ** Math.min(message.attempts, 8)) });
+      } catch (error) {
+        const delaySeconds = Math.min(300, 2 ** Math.min(message.attempts, 8));
+        console.error(JSON.stringify({
+          level: "error",
+          service: "jobs-worker",
+          code: "DOMAIN_EVENT_RETRY",
+          tenant_id: tenantId,
+          event_id: eventId,
+          attempts: message.attempts,
+          retry_delay_seconds: delaySeconds,
+          error_name: error instanceof Error ? error.name : "UnknownError",
+        }));
+        message.retry({ delaySeconds });
       }
     }
   },
@@ -73,7 +88,24 @@ export default {
    * bindings needed to reach every tenant: the route index in KV and the dispatcher.
    */
   async scheduled(_controller: unknown, env: JobsEnv, ctx: ExecutionContext): Promise<void> {
-    ctx.waitUntil(sweepTenantMaintenance(env));
+    ctx.waitUntil(sweepTenantMaintenance(env).then((result) => {
+      const level = result.failed > 0 ? "warn" : "info";
+      console.log(JSON.stringify({
+        level,
+        service: "jobs-worker",
+        code: "TENANT_MAINTENANCE_SWEEP",
+        swept: result.swept,
+        failed: result.failed,
+      }));
+    }).catch((error) => {
+      console.error(JSON.stringify({
+        level: "error",
+        service: "jobs-worker",
+        code: "TENANT_MAINTENANCE_SWEEP_FAILED",
+        error_name: error instanceof Error ? error.name : "UnknownError",
+      }));
+      throw error;
+    }));
   },
 };
 
