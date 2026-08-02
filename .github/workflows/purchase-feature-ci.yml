@@ -5,6 +5,19 @@ on:
     branches:
       - main
     types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - 'server/apps-src/alumdoor-worker/src/*purchase*'
+      - 'server/apps/purchase-qa-callback/**'
+      - 'server/apps/tenant-worker/wrangler.purchase-qa.jsonc'
+      - 'server/apps-src/alumdoor-worker/wrangler.purchase-qa.jsonc'
+      - 'server/packages/app-registry/**'
+      - 'server/scripts/seed-local.mjs'
+      - 'server/scripts/seed-purchase-qa-local.mjs'
+      - 'server/tests/*purchase*'
+      - 'server/tests/app-installer-standard-metadata-adoption.test.mjs'
+      - 'client/e2e-forge/**/purchase*'
+      - 'client/e2e-forge/playwright.auth.config.ts'
+      - '.github/workflows/purchase-feature-ci.yml'
   workflow_dispatch:
 
 permissions:
@@ -26,37 +39,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Detect Purchase scope
-        id: scope
-        shell: bash
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: |
-          set -euo pipefail
-          purchase=true
-          if [ "$EVENT_NAME" = "pull_request" ]; then
-            git diff --name-only "$BASE_SHA" "$GITHUB_SHA" > "$RUNNER_TEMP/changed-files.txt"
-            if ! grep -Eq '^(server/apps-src/alumdoor-worker/src/.*purchase|server/apps/purchase-qa-callback/|server/apps/tenant-worker/wrangler\.purchase-qa\.jsonc$|server/apps-src/alumdoor-worker/wrangler\.purchase-qa\.jsonc$|server/packages/app-registry/|server/scripts/(seed-local|seed-purchase-qa-local)\.mjs$|server/tests/.*(purchase|app-installer-standard-metadata-adoption)|client/e2e-forge/.*purchase|client/e2e-forge/playwright\.auth\.config\.ts$|package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|\.github/workflows/purchase-feature-ci\.yml$)' "$RUNNER_TEMP/changed-files.txt"; then
-              purchase=false
-            fi
-          fi
-          cat "$RUNNER_TEMP/changed-files.txt" 2>/dev/null || true
-          echo "purchase=$purchase" >> "$GITHUB_OUTPUT"
-
-      - name: Unrelated fast path
-        if: steps.scope.outputs.purchase != 'true'
-        run: echo "No Purchase lifecycle or Purchase QA files changed."
-
       - name: Install pnpm
-        if: steps.scope.outputs.purchase == 'true'
         uses: pnpm/action-setup@v4
         with:
           version: 9.15.0
           run_install: false
 
       - name: Set up Node.js
-        if: steps.scope.outputs.purchase == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -64,15 +53,12 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        if: steps.scope.outputs.purchase == 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Build server
-        if: steps.scope.outputs.purchase == 'true'
         run: pnpm --filter cloudforge run build
 
       - name: Run focused Purchase regressions
-        if: steps.scope.outputs.purchase == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -81,5 +67,4 @@ jobs:
           node --test "${tests[@]}"
 
       - name: Run Purchase SQL safeguards
-        if: steps.scope.outputs.purchase == 'true'
         run: pnpm --dir server run test:sql
