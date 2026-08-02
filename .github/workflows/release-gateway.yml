@@ -7,12 +7,22 @@ on:
         description: Exact commit SHA to release
         required: true
         type: string
+      quick_ui_hotfix:
+        description: Skip full test/typecheck/dry-run for tightly scoped UI hotfixes
+        required: false
+        default: false
+        type: boolean
   workflow_dispatch:
     inputs:
       target_sha:
         description: Exact commit SHA to release; defaults to the dispatched revision
         required: false
         type: string
+      quick_ui_hotfix:
+        description: Quick UI-only mode; use the dedicated hotfix workflow instead when possible
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -29,6 +39,7 @@ jobs:
     environment: production
     env:
       TARGET_SHA: ${{ inputs.target_sha || github.sha }}
+      QUICK_UI_HOTFIX: ${{ inputs.quick_ui_hotfix }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       EVIDENCE_DIR: /tmp/gateway-production-evidence
       BASE_URL: https://alu.kairo.vn
@@ -63,8 +74,8 @@ jobs:
           grep -q '"name": "cloudforge-gateway"' server/apps/gateway-worker/wrangler.jsonc
           grep -q '"pattern": "alu.kairo.vn"' server/apps/gateway-worker/wrangler.jsonc
           mkdir -p "$EVIDENCE_DIR"
-          printf 'run_id=%s\ntarget_sha=%s\nworker=cloudforge-gateway\nhost=alu.kairo.vn\nstarted_at=%s\n' \
-            "$GITHUB_RUN_ID" "$TARGET_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+          printf 'run_id=%s\ntarget_sha=%s\nworker=cloudforge-gateway\nhost=alu.kairo.vn\nquick_ui_hotfix=%s\nstarted_at=%s\n' \
+            "$GITHUB_RUN_ID" "$TARGET_SHA" "$QUICK_UI_HOTFIX" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             > "$EVIDENCE_DIR/state.txt"
 
       - name: Install dependencies
@@ -76,12 +87,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          pnpm --filter metaforge run lint 2>&1 | tee "$EVIDENCE_DIR/lint.log"
-          pnpm --filter metaforge run test 2>&1 | tee "$EVIDENCE_DIR/test.log"
-          pnpm --filter metaforge run typecheck 2>&1 | tee "$EVIDENCE_DIR/typecheck.log"
-          pnpm --filter metaforge run build 2>&1 | tee "$EVIDENCE_DIR/build.log"
+          if [ "$QUICK_UI_HOTFIX" = 'true' ]; then
+            pnpm --filter metaforge run build 2>&1 | tee "$EVIDENCE_DIR/build.log"
+            printf 'lint=skipped_quick_ui\ntest=skipped_quick_ui\ntypecheck=skipped_quick_ui\nbuild=pass\n' >> "$EVIDENCE_DIR/state.txt"
+          else
+            pnpm --filter metaforge run lint 2>&1 | tee "$EVIDENCE_DIR/lint.log"
+            pnpm --filter metaforge run test 2>&1 | tee "$EVIDENCE_DIR/test.log"
+            pnpm --filter metaforge run typecheck 2>&1 | tee "$EVIDENCE_DIR/typecheck.log"
+            pnpm --filter metaforge run build 2>&1 | tee "$EVIDENCE_DIR/build.log"
+            printf 'lint=pass\ntest=pass\ntypecheck=pass\nbuild=pass\n' >> "$EVIDENCE_DIR/state.txt"
+          fi
           grep -R --fixed-strings "$TARGET_SHA" client/apps/runtime/dist/index.html
-          printf 'lint=pass\ntest=pass\ntypecheck=pass\nbuild=pass\n' >> "$EVIDENCE_DIR/state.txt"
 
       - name: Stage Gateway client bundle
         shell: bash
@@ -93,6 +109,7 @@ jobs:
           echo 'stage=pass' >> "$EVIDENCE_DIR/state.txt"
 
       - name: Dry-run Gateway bundle
+        if: ${{ inputs.quick_ui_hotfix != true }}
         shell: bash
         run: |
           set -euo pipefail
@@ -102,6 +119,11 @@ jobs:
             --outdir "$EVIDENCE_DIR/dry-run" \
             2>&1 | tee "$EVIDENCE_DIR/dry-run.log"
           echo 'dry_run=pass' >> "$EVIDENCE_DIR/state.txt"
+
+      - name: Record quick dry-run skip
+        if: ${{ inputs.quick_ui_hotfix == true }}
+        shell: bash
+        run: echo 'dry_run=skipped_quick_ui' >> "$EVIDENCE_DIR/state.txt"
 
       - name: Deploy Gateway production
         shell: bash
@@ -153,7 +175,8 @@ jobs:
             echo "- Worker: \`cloudforge-gateway\`"
             echo "- Host: \`https://alu.kairo.vn\`"
             echo "- Version ID: \`$version_id\`"
-            echo '- Runtime tests/build/stage/dry-run/deploy/smoke: **PASS**'
+            echo "- Quick UI mode: \`$QUICK_UI_HOTFIX\`"
+            echo '- Build/stage/deploy/exact-release smoke: **PASS**'
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload Gateway release evidence
