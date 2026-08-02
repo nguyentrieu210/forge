@@ -1,7 +1,7 @@
 {
   "id": "hrm",
   "name": "Quản lý nhân sự",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "requires": [],
   "externalDocTypes": [
     {
@@ -21,6 +21,7 @@
     {"key":"Department","label":"Phòng ban","kind":"doctype","icon":"network","group":"Tổ chức"},
     {"key":"Designation","label":"Chức danh","kind":"doctype","icon":"badge","group":"Tổ chức"},
     {"key":"Employment Type","label":"Loại lao động","kind":"doctype","icon":"briefcase-business","group":"Tổ chức"},
+    {"key":"Workforce Plan","label":"Kế hoạch nhân sự","kind":"doctype","icon":"users-round","group":"Tổ chức"},
     {"key":"Job Opening","label":"Vị trí tuyển dụng","kind":"doctype","icon":"circle-plus","group":"Tuyển dụng"},
     {"key":"Job Applicant","label":"Ứng viên","kind":"doctype","icon":"contact-round","group":"Tuyển dụng"},
     {"key":"Interview","label":"Phỏng vấn","kind":"doctype","icon":"messages-square","group":"Tuyển dụng"},
@@ -46,8 +47,12 @@
     {"key":"Salary Structure Assignment","label":"Gán cấu trúc lương","kind":"doctype","icon":"badge-dollar-sign","group":"Lương & phúc lợi"},
     {"key":"Payroll Period","label":"Kỳ lương","kind":"doctype","icon":"calendar-range","group":"Lương & phúc lợi"},
     {"key":"Additional Salary","label":"Khoản lương bổ sung","kind":"doctype","icon":"badge-plus","group":"Lương & phúc lợi"},
+    {"key":"Employee Benefit Enrollment","label":"Phúc lợi nhân viên","kind":"doctype","icon":"heart-handshake","group":"Lương & phúc lợi"},
+    {"key":"Employee Loan","label":"Khoản vay nhân viên","kind":"doctype","icon":"hand-coins","group":"Lương & phúc lợi"},
+    {"key":"Employee Loan Repayment","label":"Thu hồi khoản vay","kind":"doctype","icon":"badge-dollar-sign","group":"Lương & phúc lợi"},
     {"key":"salary-slip","label":"Phiếu lương","kind":"route","route":"/app/Salary%20Slip","icon":"receipt-text","group":"Lương & phúc lợi","required_roles":["Payroll User","Payroll Manager","HR Manager","System Manager"]},
     {"key":"payroll-entry","label":"Bảng lương","kind":"route","route":"/app/Payroll%20Entry","icon":"wallet-cards","group":"Lương & phúc lợi","required_roles":["Payroll User","Payroll Manager","HR Manager","System Manager"]},
+    {"key":"Salary Bank Batch","label":"Chuyển lương ngân hàng","kind":"doctype","icon":"landmark","group":"Lương & phúc lợi"},
     {"key":"Employee Advance","label":"Tạm ứng","kind":"doctype","icon":"wallet","group":"Chi phí nhân viên"},
     {"key":"approval:Employee Advance","label":"Duyệt tạm ứng","kind":"experience","icon":"badge-check","group":"Chi phí nhân viên"},
     {"key":"expense-claim","label":"Quyết toán chi phí","kind":"route","route":"/app/Expense%20Claim","icon":"receipt","group":"Chi phí nhân viên","required_roles":["Employee","HR User","HR Manager","Accounts User","Accounts Manager","System Manager"]},
@@ -55,6 +60,67 @@
     {"key":"Goal","label":"Mục tiêu","kind":"doctype","icon":"target","group":"Hiệu suất & phát triển"},
     {"key":"Appraisal","label":"Đánh giá","kind":"doctype","icon":"chart-no-axes-combined","group":"Hiệu suất & phát triển"},
     {"key":"Training Event","label":"Đào tạo","kind":"doctype","icon":"graduation-cap","group":"Hiệu suất & phát triển"}
+  ],
+  "reports": [
+    {
+      "name": "hr-headcount-by-department",
+      "label": "Headcount theo phòng ban",
+      "doctype": "Employee",
+      "columns": [
+        {"field":"department","label":"Phòng ban","type":"Link","options":"Department"},
+        {"field":"employee_name","label":"Headcount","type":"Int","aggregate":"count"}
+      ],
+      "group_by": "department",
+      "order_by": {"column":"department","direction":"asc"},
+      "filters": ["company","branch","department","designation","employment_type","employee_status"],
+      "limit": 1000
+    },
+    {
+      "name": "hr-workforce-plan-summary",
+      "label": "Tổng hợp kế hoạch nhân sự",
+      "doctype": "Workforce Plan",
+      "columns": [
+        {"field":"plan_name","label":"Kế hoạch","type":"Data"},
+        {"field":"company","label":"Công ty","type":"Link","options":"Company"},
+        {"field":"fiscal_year","label":"Năm tài chính","type":"Link","options":"Fiscal Year"},
+        {"field":"total_planned_headcount","label":"Định biên","type":"Int"},
+        {"field":"total_monthly_budget","label":"Ngân sách tháng","type":"Currency"},
+        {"field":"total_period_budget","label":"Ngân sách kỳ","type":"Currency"}
+      ],
+      "order_by": {"column":"fiscal_year","direction":"desc"},
+      "filters": ["company","fiscal_year","from_date","to_date"],
+      "limit": 500
+    },
+    {
+      "name": "hr-employee-loan-register",
+      "label": "Sổ khoản vay nhân viên",
+      "doctype": "Employee Loan",
+      "columns": [
+        {"field":"employee","label":"Nhân viên","type":"Link","options":"Employee"},
+        {"field":"loan_date","label":"Ngày vay","type":"Date"},
+        {"field":"principal_amount","label":"Số tiền vay","type":"Currency"},
+        {"field":"installment_count","label":"Số kỳ","type":"Int"},
+        {"field":"first_repayment_date","label":"Kỳ đầu","type":"Date"}
+      ],
+      "order_by": {"column":"loan_date","direction":"desc"},
+      "filters": ["company","branch","employee","loan_date"],
+      "limit": 1000
+    },
+    {
+      "name": "hr-salary-bank-batch-register",
+      "label": "Danh sách đợt chuyển lương",
+      "doctype": "Salary Bank Batch",
+      "columns": [
+        {"field":"payroll_entry","label":"Bảng lương","type":"Link","options":"Payroll Entry"},
+        {"field":"transfer_date","label":"Ngày chuyển","type":"Date"},
+        {"field":"employee_count","label":"Số nhân viên","type":"Int"},
+        {"field":"total_amount","label":"Tổng tiền","type":"Currency"},
+        {"field":"bank_account","label":"Tài khoản chi","type":"Link","options":"Bank Account"}
+      ],
+      "order_by": {"column":"transfer_date","direction":"desc"},
+      "filters": ["company","transfer_date","payroll_entry","bank_account"],
+      "limit": 500
+    }
   ],
   "hooks": [],
   "client": {"brand":"blue","domain":"hr","home":{"route":"/app/Employee","doctype":"Employee"},"dimensions":["company","branch","fiscal_year"],"catalog_mode":"hybrid"}
