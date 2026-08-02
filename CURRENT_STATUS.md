@@ -22,6 +22,7 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. 
 ## IN PROGRESS — VN Accounting Period Integrity Hardening
 
 - Canonical working branch: `fix/vn-accounting-period-integrity-20260802-r5`, clean-transplant từ exact `main` snapshot `a0ae5f4f00a6be7311efcaff87c4caabea60f6be`.
+- Canonical code + initial status checkpoint: `e9ad207b80e1f222b530655bccea01642812709d`; Draft PR `#259`.
 - Migration `0039_vn_accounting_period_hardening.sql` thay trigger kỳ kế toán mà không rewrite migration đã áp dụng.
 - Hard Locked chặn submit/cancel và chặn đổi scope chứng từ đã post để đi vào/ra kỳ khóa; guard mở rộng tới Journal/Invoice/Payment, Purchase Receipt, Delivery Note, Payroll, Stock và Warehouse Cash.
 - Soft Closed chỉ nhận approved adjustment khi kỳ cho phép và chứng từ có approval + reason + approver.
