@@ -7,17 +7,23 @@ import {
   INPUT_TABLE_BRIEF_STUB_FIELDNAME,
   normalizeBriefActionInputTables,
 } from "./action-input-table-brief.mjs";
+import { assertBriefContextDimensions } from "./business-context-dimensions.mjs";
 
 export { BriefError };
 
 /**
  * WS09 App Factory compiler adapter.
  *
- * The established compiler still owns every existing brief rule. This layer adds only the
- * repeatable AppAction input primitive, keeping the extension isolated until the canonical
- * compiler/schema can absorb it without a rolling-compatibility concern.
+ * The established compiler still owns every existing brief rule. This layer adds the
+ * repeatable AppAction input primitive and closes authoring contracts that must match the
+ * deployed generic runtime. It is the canonical compiler used by `forge-app`.
  */
 export function compileBrief(brief) {
+  // Fail BEFORE package emission. Letting an unsupported selector through and relying on
+  // parseAppManifest to reject the compiled output mislabels an authoring error as a compiler
+  // defect; letting it install would be worse because the shell can block on an empty selector.
+  assertBriefContextDimensions(brief, BriefError);
+
   let source = brief;
   const tableOnlyActions = new Set();
 
