@@ -7,13 +7,13 @@ Ngày cập nhật: **2026-08-02**.
 ## P1 — One-click UI hotfix production lane
 
 - Canonical branch: `hotfix/ui-one-click-deploy-v2-20260802`, clean-transplant từ exact `main@f5d222e916795fd31cdc82f5746a1ba0af6318fb`.
-- Branch/PR iteration đầu (`hotfix/ui-one-click-deploy-20260802`, PR `#222`) bị stale khi `main` tiến thêm 20 commits và phải đóng superseded; không merge.
-- Đã thêm `.github/workflows/hotfix-ui-one-click.yml` và mở `.github/workflows/release-gateway.yml` cho `workflow_call` để không duplicate deploy implementation.
-- Fast lane chỉ cho branch `hotfix/ui-*`, current main phải là ancestor, chỉ `client/**` + 3 file canonical status/handoff, tối đa 20 file/600 dòng, cấm package/dependency/backend/migration/metadata/workflow.
-- Release giữ nguyên Gateway production gate: lint/test/typecheck/build/stage/dry-run/deploy/exact-SHA smoke.
-- Sau production release workflow best-effort tạo/annotate PR reconcile về `main`.
-- Actionlint iteration đầu đã bắt glob overlap SC2221/SC2222; đã sửa thành package deny pattern không overlap trước clean-transplant.
-- Việc còn lại: mở PR canonical từ branch v2, lấy exact-head CI/actionlint evidence, review diff sạch, merge khi đủ gate. Không deploy production trong task tạo lane này.
+- Canonical PR: `#223`.
+- Branch/PR iteration đầu (`hotfix/ui-one-click-deploy-20260802`, PR `#222`) là superseded; không merge.
+- Fast lane đã được rút gọn theo yêu cầu: branch `hotfix/ui-*` → một nút workflow → hard scope guard → build → stage → deploy Gateway → exact-SHA smoke → PR reconcile.
+- Scope: current main phải là ancestor; chỉ `client/**` + 3 file canonical status/handoff; tối đa 10 file/300 dòng; cấm package/dependency/backend/migration/metadata/workflow.
+- `lint/test/typecheck/Wrangler dry-run` không chạy trong quick production path; deferred sang PR reconcile/normal CI.
+- `.github/workflows/release-gateway.yml` dùng input `quick_ui_hotfix` để reuse cùng production implementation.
+- Việc còn lại: lấy exact-head actionlint/CI cho PR #223, review diff sạch, merge lane. Không deploy production trong task tạo lane này.
 
 ## DONE — Warehouse Petty Cash per warehouse
 
