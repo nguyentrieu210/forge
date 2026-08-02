@@ -79,8 +79,8 @@ test("Finance Budget derives company currency and requires four-eyes approval", 
   assert.equal(plan.document.data.currency_scale, 0);
   assert.equal(plan.document.data.budget_amount_minor, 1_000_000);
   assert.equal(plan.document.data.scope_key, "Cost Center:OPS");
-  assert.throws(
-    () => controller.buildPlan(context("Finance Budget", "BUD-SELF", "submit", budgetInput, {
+  await assert.rejects(
+    controller.buildPlan(context("Finance Budget", "BUD-SELF", "submit", budgetInput, {
       existing: canonical("Finance Budget", "BUD-SELF", budgetInput, 0, "approver@example.test"),
     })),
     /four-eyes/,
