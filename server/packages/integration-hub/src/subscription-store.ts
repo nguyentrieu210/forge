@@ -81,7 +81,7 @@ class D1ActiveSubscriptionDocumentReader implements ActiveSubscriptionDocumentRe
       doctype: row.doctype,
       name: row.name,
       owner: row.owner,
-      docstatus: row.docstatus as 0 | 1 | 2,
+      docstatus: requireDocStatus(row.docstatus),
       status: row.status,
       version: row.version,
       created_at: row.created_at,
@@ -115,7 +115,7 @@ export function subscriptionFromDocument(document: CanonicalDocument<JsonObject>
     ...(data.secret_ref === undefined || data.secret_ref === null || data.secret_ref === ""
       ? {}
       : { secret_ref: requireText(data.secret_ref, "secret_ref", 320) }),
-    ...(data.mapping === undefined || data.mapping === null
+    ...(data.mapping === undefined || data.mapping === null || data.mapping === ""
       ? {}
       : { mapping: requireMapping(data.mapping) }),
     retry_policy: {
@@ -135,21 +135,41 @@ function parsePayload(value: string): JsonObject {
 }
 
 function requireMapping(value: JsonValue): IntegrationMappingRule[] {
-  if (!Array.isArray(value) || value.length > 128) throw new Error("Invalid Integration Subscription mapping");
-  return value.map((item, index) => {
+  const parsed = parseStructuredJson(value, "mapping");
+  if (!Array.isArray(parsed) || parsed.length > 128) throw new Error("Invalid Integration Subscription mapping");
+  return parsed.map((item, index) => {
     if (!item || typeof item !== "object" || Array.isArray(item)) throw new Error(`Invalid mapping[${index}]`);
-    const source = requireText(item.source, `mapping[${index}].source`, 128);
-    const target = requireText(item.target, `mapping[${index}].target`, 128);
-    if (item.required !== undefined && typeof item.required !== "boolean") throw new Error(`Invalid mapping[${index}].required`);
-    return { source, target, ...(item.required === undefined ? {} : { required: item.required }) };
+    const record = item as JsonObject;
+    const source = requireText(record.source, `mapping[${index}].source`, 128);
+    const target = requireText(record.target, `mapping[${index}].target`, 128);
+    if (record.required !== undefined && typeof record.required !== "boolean") throw new Error(`Invalid mapping[${index}].required`);
+    return { source, target, ...(record.required === undefined ? {} : { required: record.required }) };
   });
 }
 
 function requireStringArray(value: JsonValue | undefined, field: string, maxItems: number, maxLength: number): string[] {
-  if (!Array.isArray(value) || value.length === 0 || value.length > maxItems) throw new Error(`Invalid ${field}`);
-  const result = value.map((item, index) => requireText(item, `${field}[${index}]`, maxLength).toLowerCase());
+  const parsed = parseStructuredJson(value, field);
+  if (!Array.isArray(parsed) || parsed.length === 0 || parsed.length > maxItems) throw new Error(`Invalid ${field}`);
+  const result = parsed.map((item, index) => requireText(item, `${field}[${index}]`, maxLength).toLowerCase());
   if (new Set(result).size !== result.length) throw new Error(`Duplicate ${field}`);
   return result;
+}
+
+function parseStructuredJson(value: JsonValue | undefined, field: string): JsonValue | undefined {
+  if (typeof value !== "string") return value;
+  const raw = value.trim();
+  if (!raw) throw new Error(`Invalid ${field}`);
+  let parsed: unknown;
+  try { parsed = JSON.parse(raw) as unknown; } catch { throw new Error(`Invalid ${field} JSON`); }
+  if (!isJsonValue(parsed)) throw new Error(`Invalid ${field} JSON value`);
+  return parsed;
+}
+
+function isJsonValue(value: unknown): value is JsonValue {
+  if (value === null || typeof value === "string" || typeof value === "number" || typeof value === "boolean") return true;
+  if (Array.isArray(value)) return value.every(isJsonValue);
+  if (!value || typeof value !== "object") return false;
+  return Object.values(value as Record<string, unknown>).every((item) => item === undefined || isJsonValue(item));
 }
 
 function optionalPositiveInteger<K extends "max_attempts" | "base_delay_seconds" | "max_delay_seconds">(
@@ -171,6 +191,11 @@ function requireText(value: JsonValue | undefined, field: string, max: number): 
 function requireEnum<const T extends readonly string[]>(value: JsonValue | undefined, allowed: T, field: string): T[number] {
   if (typeof value !== "string" || !(allowed as readonly string[]).includes(value)) throw new Error(`Invalid ${field}`);
   return value as T[number];
+}
+
+function requireDocStatus(value: number): 0 | 1 | 2 {
+  if (value !== 0 && value !== 1 && value !== 2) throw new Error("Integration Subscription row has invalid docstatus");
+  return value;
 }
 
 function assertTenant(value: string): void {
