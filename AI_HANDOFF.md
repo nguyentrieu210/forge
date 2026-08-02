@@ -30,6 +30,22 @@ Ngày cập nhật: **2026-08-02**.
 - Responsive invariant: navigation phải usable trên mobile. Final WebsiteSite blob `82e25b446885b8719340a38013c801135e2a52c2` targeted Chromium regression PASS mobile/tablet/desktop, có `aria-current` và horizontal overflow trên mobile.
 - Không deploy production/DNS/custom domain/secrets trong merge Website/CMS v1.
 
+## Active checkpoint — VN Accounting Period Integrity Hardening
+
+- Canonical branch: `fix/vn-accounting-period-integrity-20260802-r4`, clean-transplant từ exact `main` snapshot `47915764d705ba34299f2d7386b0b8d3fb83a9da`.
+- Migration sequence trên snapshot canonical dừng ở `0038_warehouse_cash.sql`; `0039_vn_accounting_period_hardening.sql` là next slot, không rewrite migration lịch sử.
+- Database invariants của `0039`:
+  - period range bắt buộc hợp lệ;
+  - overlap bị chặn theo `tenant_id + company + branch scope`, company-wide conflict mọi branch; explicit branch khác nhau được overlap;
+  - Hard Locked chặn new submit, draft->submit, cancel và payload move vào/ra locked scope;
+  - Soft Closed chỉ cho approved adjustment khi period `allow_approved_adjustments=1` và chứng từ có `approved_adjustment`, `adjustment_reason`, `adjustment_approved_by`;
+  - guard mở rộng tới các DocType có thể mutate GL/valuation: Journal/Invoices/Payment, Purchase Receipt, Delivery Note, Payroll, Stock, Warehouse Cash.
+- Regression script cover duplicate employee/attendance/payroll source, hard/soft close, cancel, scope transitions, tenant isolation, invalid/overlap period và period update overlap.
+- Isolated SQLite replay của exact trigger logic PASS; edge cases move-out, move-in và period scope update overlap PASS.
+- CRITICAL local repo gates chưa chạy trong connector runtime vì không có repository checkout/dependencies; GitHub Actions hiện không phải development CI. Không gọi task DONE hoặc merge cho đến khi gate local theo `DELIVERY_POLICY.md` được chạy.
+- Old Draft PR `#224` và các accounting branch transplant trước là stale/superseded. Không force-push/rewrite history.
+- Không production deploy, không production migration, không mutate tenant data trong task này.
+
 ## UI auto deploy convention
 
 UI-only task phải dùng branch:
@@ -67,6 +83,7 @@ Không tự đổi DNS/secrets hoặc thực hiện destructive operation ngoài
 
 ## Remaining priorities
 
+- Hoàn tất CRITICAL local gates cho VN Accounting Period Integrity Hardening.
 - Stock Reconciliation Bulk Transaction.
 - BOM parent + child/version Bulk Transaction.
 - First-class AppAction input-table transport.

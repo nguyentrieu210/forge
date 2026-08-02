@@ -11,6 +11,15 @@ Ngày cập nhật: **2026-08-02**.
 - Final responsive regression PASS trên mobile/tablet/desktop; public allowlist và tenant isolation evidence đã đủ cho scope v1.
 - Không có production deploy/DNS/custom-domain/secrets trong task này.
 
+## ACTIVE — VN Accounting Period Integrity Hardening
+
+- Canonical branch: `fix/vn-accounting-period-integrity-20260802-r4`, clean-transplant từ exact `main` snapshot `47915764d705ba34299f2d7386b0b8d3fb83a9da`.
+- Code scope chỉ gồm migration `0039_vn_accounting_period_hardening.sql`, regression script kế toán và 3 file handoff/status.
+- SQLite migration/trigger regression: PASS, gồm hard/soft close, cancel, scope transition, overlap, tenant isolation và duplicate source.
+- Còn thiếu trước khi merge: chạy CRITICAL local gates trên canonical branch (`pnpm test` hoặc tối thiểu accounting SQL regression + backend relevant tests, typecheck, lint, build theo blast radius), rồi cập nhật trạng thái PASS/FAIL.
+- Old Draft PR `#224` và branch accounting stale trước đó phải được coi là superseded; không force-push/rewrite history.
+- Không deploy production hoặc chạy production migration trong task này.
+
 ## DONE — UI auto deploy
 
 - GitHub Actions chỉ dùng cho build/deploy.

@@ -20,6 +20,19 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. 
 - Server/client tests, typecheck, build, frontend lint và MetaForge browser QA đã PASS trên cùng application blob set trước clean-transplant cuối; các main commit sau đó chỉ đổi release/docs policy, không đổi application/package/dependency inputs.
 - Không deploy production, đổi DNS/custom domain hoặc secrets trong task Website/CMS này.
 
+## IN PROGRESS — VN Accounting Period Integrity Hardening
+
+- Canonical working branch: `fix/vn-accounting-period-integrity-20260802-r4`, clean-transplant từ exact `main` snapshot `47915764d705ba34299f2d7386b0b8d3fb83a9da`.
+- Migration mới `0039_vn_accounting_period_hardening.sql` thay trigger kỳ kế toán mà không rewrite migration đã áp dụng.
+- Hard Locked chặn submit/cancel và chặn đổi scope của chứng từ đã post để đi vào/ra kỳ khóa; phạm vi guard bao gồm Journal/Invoice/Payment, Purchase Receipt, Delivery Note, Payroll, Stock và Warehouse Cash.
+- Soft Closed chỉ nhận approved adjustment khi kỳ cho phép và chứng từ có approval + reason + approver.
+- Accounting Period validate range, chặn overlap cùng tenant/company/scope; hai explicit branch khác nhau được phép overlap; toàn bộ query guard giữ tenant scope.
+- Regression script đã mở rộng cho cancel, draft->submit, move into/out of locked period, period update overlap, tenant isolation, soft-close toggle và duplicate payroll source.
+- Isolated SQLite replay của migration/trigger logic: PASS; 3 edge-case mới move-out, move-in và update-overlap: PASS.
+- Full repo `pnpm test` / typecheck / lint / build: **NOT RUN** trong phiên connector vì runtime không có checkout/dependencies và GitHub Actions hiện chỉ dùng build/deploy. Task chưa được gọi DONE cho đến khi CRITICAL local gates chạy trên canonical branch.
+- Old Draft PR `#224` và các branch transplant trước là stale/superseded; không force-push/rewrite history.
+- Không deploy production, không mutate dữ liệu tenant và không chạy migration production trong task này.
+
 ## DONE — GitHub build/deploy only + UI auto deploy
 
 - GitHub Actions không còn là CI phát triển; validation chạy local theo blast radius.
@@ -56,13 +69,14 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. 
 
 ## Chưa hoàn tất
 
-1. Bulk Transaction cho Stock Reconciliation.
-2. Bulk Transaction cho BOM parent + child/version.
-3. First-class AppAction input-table contract.
-4. Batch Print / QR label queue.
-5. P1 Daily detailed ledger hardening/closure theo exact GitHub state.
-6. Plastic ERP các wave sau P0-A.
-7. Nếu cần dùng quỹ kho để tất toán trực tiếp Purchase/Sales Invoice, thiết kế canonical payment allocation; không dùng party dimension trên GL thay settlement.
+1. Hoàn tất CRITICAL local gates cho VN Accounting Period Integrity Hardening và đóng/supersede PR stale.
+2. Bulk Transaction cho Stock Reconciliation.
+3. Bulk Transaction cho BOM parent + child/version.
+4. First-class AppAction input-table contract.
+5. Batch Print / QR label queue.
+6. P1 Daily detailed ledger hardening/closure theo exact GitHub state.
+7. Plastic ERP các wave sau P0-A.
+8. Nếu cần dùng quỹ kho để tất toán trực tiếp Purchase/Sales Invoice, thiết kế canonical payment allocation; không dùng party dimension trên GL thay settlement.
 
 ## Guardrails
 
