@@ -2,14 +2,16 @@
 
 > Canonical location: `main/docs/agents/AGENT_BOARD.md`
 >
-> Product baseline: **Forge 0.2.0 — Enterprise Parallel Baseline**
+> Product baseline: **Forge 0.2.0 — Enterprise Parallel Baseline**  
+> Baseline merge anchor: `862636e6239c91eab657c619d8c55345ed71a6d8`
 >
 > North Star: `docs/FORGE_ENTERPRISE_NORTH_STAR.md`  
 > Skill: `skills/forge-enterprise-completion/SKILL.md`  
 > Capability map: `docs/FORGE_ENTERPRISE_CAPABILITY_MAP.md`  
-> Protocol: `docs/agents/PARALLEL_EXECUTION_PROTOCOL.md`
+> Protocol: `docs/agents/PARALLEL_EXECUTION_PROTOCOL.md`  
+> Legacy PR inbox: `docs/agents/LEGACY_PR_INBOX.md`
 
-Board là coordination snapshot. **Exact branch/PR/code trên GitHub luôn thắng board stale.** Không hardcode một `main@SHA` lâu dài vào board vì main có thể tiến lên bởi release/evidence commits.
+Board là coordination snapshot. **Exact branch/PR/code trên GitHub luôn thắng board stale.** `main` có thể tiến lên bởi release/deploy evidence hoặc UI hotfix sau baseline; agent phải compare exact current `main` và chỉ coi source-relevant diff là implementation dependency.
 
 ## Status vocabulary
 
@@ -52,7 +54,7 @@ Worker agent không sửa trực tiếp board này. Coordinator sync board từ 
 
 ## Legacy/open PR rule
 
-Các PR có trước baseline 0.2.0 không tự động trở thành canonical chỉ vì còn mở.
+Các PR có trước baseline 0.2.0 không tự động trở thành canonical chỉ vì còn mở. Initial mapping nằm trong `docs/agents/LEGACY_PR_INBOX.md`.
 
 Mỗi workstream agent phải:
 1. tìm PR/branch lịch sử trong scope;
