@@ -103,10 +103,11 @@ expect_rejected(
     lambda: insert_doc("Hiring Completion", "HIRE-2", 1, {"job_offer": "OFFER-1", "employee": "EMP-2"}),
     "HR_HIRING_COMPLETION_DUPLICATE",
 )
-expect_rejected(
-    lambda: insert_doc("Hiring Completion", "HIRE-3", 1, {"job_offer": "OFFER-2", "employee": "EMP-1"}),
-    "HR_HIRING_COMPLETION_DUPLICATE",
-)
+# Rehire is valid: the same Employee may close another later Job Offer.
+insert_doc("Hiring Completion", "HIRE-3", 1, {"job_offer": "OFFER-2", "employee": "EMP-1"})
+assert db.execute(
+    "SELECT COUNT(*) FROM documents WHERE tenant_id='demo' AND doctype='Hiring Completion' AND json_extract(payload_json,'$.employee')='EMP-1'"
+).fetchone()[0] == 2
 
 insert_doc("Employee Final Settlement", "FSET-1", 1, {"separation": "SEP-1", "employee": "EMP-1"})
 expect_rejected(
