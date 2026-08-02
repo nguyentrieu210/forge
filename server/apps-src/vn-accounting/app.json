@@ -5,6 +5,10 @@
   "requires": [
     { "id": "hrm", "version": ">=1.3.0" }
   ],
+  "externalDocTypes": [
+    { "name": "Purchase Receipt", "kind": "transaction", "app": "erpnext" },
+    { "name": "Stock Entry", "kind": "transaction", "app": "erpnext" }
+  ],
   "nav": [
     { "key": "VN Accounting Policy", "label": "Chính sách kế toán", "kind": "doctype", "icon": "landmark", "group": "Thiết lập kế toán" },
     { "key": "VN Legal Rule", "label": "Văn bản & quy tắc", "kind": "doctype", "icon": "book-open-check", "group": "Thiết lập kế toán" },
