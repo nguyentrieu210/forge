@@ -12,6 +12,13 @@ Ngày cập nhật: **2026-08-02**.
 - Ghi duration thực tế; mục tiêu gần local, không build toàn MetaForge monorepo.
 - Không thêm PR-trigger deploy hoặc stale-main guard trở lại nếu không có bằng chứng cần thiết.
 
+## P1 — HRM statutory payroll rule evaluator
+
+- HRM operational 1.5 đã merge qua PR `#261` tại `b3dc2cf59ec5c85a977833da6edc986ac1bfe6fb`; payroll operational, source freeze và legal-rule trace đã có.
+- `VN Payroll Rule.formula_json` hiện là versioned/audited evidence và tham gia `input_hash`; chưa execute PIT/BHXH hoặc công thức pháp lý Việt Nam.
+- Nếu nghiệp vụ yêu cầu statutory automation: thiết kế formula schema explicit, fixed-point/rounding semantics, effective-date/version selection, official legal source, approval lifecycle và regression cho từng tình huống pháp lý.
+- Không hardcode luật trong fixture/controller; rule đã dùng phải tiếp tục append-only.
+
 ## DONE — exact production release evidence
 
 - Canonical merge checkpoint: `a0ae5f4f00a6be7311efcaff87c4caabea60f6be`.
