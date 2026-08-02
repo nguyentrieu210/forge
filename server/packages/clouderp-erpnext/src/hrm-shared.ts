@@ -146,7 +146,7 @@ export function requiredDatetime(value: unknown, field: string): string {
 export function requiredTime(value: unknown, field: string): string {
   const result = text(value);
   if (!/^\d{2}:\d{2}(?::\d{2})?$/.test(result)) throw errors.validation(`${field} must use HH:MM or HH:MM:SS`);
-  const [h, m, s = 0] = result.split(":").map(Number);
+  const [h = Number.NaN, m = Number.NaN, s = 0] = result.split(":").map(Number);
   if (h > 23 || m > 59 || s > 59) throw errors.validation(`${field} is invalid`);
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
@@ -159,7 +159,7 @@ export function timeRangeMinutes(fromTime: string, toTime: string): number {
 }
 
 export function secondsOfDay(time: string): number {
-  const [h, m, s = 0] = time.split(":").map(Number);
+  const [h = Number.NaN, m = Number.NaN, s = 0] = time.split(":").map(Number);
   return h * 3600 + m * 60 + s;
 }
 
