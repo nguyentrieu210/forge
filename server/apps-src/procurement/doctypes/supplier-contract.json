@@ -24,7 +24,6 @@
   "permissions": [
     { "role": "Purchase User", "read": true, "write": true, "create": true, "report": true },
     { "role": "Purchase Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "print": true, "report": true, "export": true, "share": true },
-    { "role": "Accounts Manager", "read": true, "report": true, "export": true },
     { "role": "System Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "print": true, "report": true, "export": true, "share": true }
   ],
   "revision": 1
