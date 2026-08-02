@@ -1,6 +1,6 @@
 # CURRENT STATUS
 
-Ngày cập nhật: **2026-08-02**.
+Ngày cập nhật: **2026-08-03**.
 
 GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. Không hardcode exact current `main` vào status dài hạn; phải đọc GitHub khi bắt đầu/tiếp tục.
 
@@ -21,6 +21,17 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. 
 - Validation trên application blobs đã merge: isolated TypeScript strict PASS; HRM operational regressions 4/4 PASS; migrations `0035+0039+0040+0041` acceptance PASS; Python migration syntax PASS; metadata JSON 44/44 PASS. GitHub development CI = N/A theo policy hiện hành vì Actions chỉ dùng build/deploy.
 - Không production deploy/migration trong task HRM này.
 - Boundary còn lại: `formula_json` là versioned/audited legal-rule evidence, chưa phải statutory PIT/BHXH evaluator. Nếu cần tự động hóa luật Việt Nam phải làm task CRITICAL riêng với schema công thức explicit, effective versions, nguồn chính thức và regression pháp lý.
+
+## ACTIVE — VN Accounting Period Integrity Hardening r8
+
+- Canonical branch: `fix/vn-accounting-period-integrity-20260803-r8`, clean-based on current `main@560c7cfc140f04e5ca555c87dfa31541c8867ec1` sau khi main thay đổi handoff/process docs.
+- Migration accounting dùng số kế tiếp `0042_vn_accounting_period_hardening.sql`; không đụng lại HRM migrations `0039-0041`.
+- Hard Locked chặn submit, cancel và payload scope move vào/ra kỳ khóa. Soft Closed chỉ cho approved adjustment khi period bật `allow_approved_adjustments` và chứng từ có reason + approver.
+- Accounting period chặn invalid range và overlap theo tenant/company/branch; company-wide period conflict với branch period cùng khoảng ngày.
+- Guard bao phủ Journal/Invoice/Payment, Purchase Receipt, Delivery Note, Payroll, Stock Entry/Reconciliation và Warehouse Cash Voucher/Transfer.
+- Regression riêng `server/scripts/test-vn-accounting-period-hardening.py` replay `0035+0039+0040+0041+0042`, giữ acceptance HRM hiện có độc lập.
+- Targeted SQLite regression của logic `0042` đã PASS trong session cho legacy-trigger replacement, hard/soft close, draft->submit, cancel, move-in/move-out, tenant isolation, range/overlap/update-overlap và expanded posting doctypes.
+- Full exact regression script, Python syntax và relevant backend/typecheck/lint/build trên full checkout chưa có evidence vì shell hiện không có repository checkout/dependencies và DNS tới GitHub. Chưa mở PR, chưa merge, chưa production migration/deploy.
 
 ## DONE — exact production release evidence
 
@@ -56,8 +67,7 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. 
 ## DONE — Minimal risk-based gates
 
 - Canonical PR `#234` đã merge tại `c453df3026095b314f82f79e338bd56af90632ca`.
-- Policy canonical: `FAST` / `STANDARD` / `CRITICAL` trong `RUNBOOK.md` và `DELIVERY_POLICY.md`.
-- FAST UI nhỏ không bắt buộc full pipeline; STANDARD validation targeted local; CRITICAL giữ regression/integration/security/data-integrity đầy đủ trước release.
+- Policy canonical: `FAST` / `STANDARD` / `CRITICAL` trong historical process docs trước khi main dọn process files; accounting/migration vẫn được xử lý theo mức CRITICAL trong session này.
 
 ## DONE — Alumdoor Warehouse Cash integration
 
@@ -75,17 +85,17 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. 
 
 ## Chưa hoàn tất
 
-1. Một UI push thực tế sau fast-path merge để đo duration và xác nhận `Deploy Gateway + /release.json` PASS.
-2. HRM statutory payroll-rule evaluator nếu cần tự động PIT/BHXH theo luật; phải có schema/version/nguồn chính thức và không sửa rule đã dùng.
-3. Bulk Transaction cho Stock Reconciliation.
-4. Bulk Transaction cho BOM parent + child/version.
-5. First-class AppAction input-table contract.
-6. Batch Print / QR label queue.
-7. P1 Daily detailed ledger hardening/closure theo exact GitHub state.
-8. Plastic ERP các wave sau P0-A.
+1. Hoàn tất exact regression/verification cho `fix/vn-accounting-period-integrity-20260803-r8` rồi mới PR/merge.
+2. Một UI push thực tế sau fast-path merge để đo duration và xác nhận `Deploy Gateway + /release.json` PASS.
+3. HRM statutory payroll-rule evaluator nếu cần tự động PIT/BHXH theo luật; phải có schema/version/nguồn chính thức và không sửa rule đã dùng.
+4. Bulk Transaction cho Stock Reconciliation.
+5. Bulk Transaction cho BOM parent + child/version.
+6. First-class AppAction input-table contract.
+7. Batch Print / QR label queue.
+8. P1 Daily detailed ledger hardening/closure theo exact GitHub state.
+9. Plastic ERP các wave sau P0-A.
 
 ## Guardrails
 
-- UI auto production deploy chỉ áp dụng UI-only branch đúng naming + push scope guard.
-- Không sửa production secrets/DNS hoặc mutate customer data ngoài automation/release path user đã chủ động thiết lập.
+- Không sửa production secrets/DNS hoặc mutate customer data khi chưa có yêu cầu rõ.
 - Không commit `.env`, `server/work/`, `tmp/`, backup, credential, cookie/token hoặc generated artifact không thuộc source control.
