@@ -1,0 +1,155 @@
+name: ALU UI Hotfix - One Click Deploy
+run-name: UI hotfix ${{ github.ref_name }} @ ${{ github.sha }}
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: alu-ui-hotfix-production
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate small UI-only hotfix
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      target_sha: ${{ steps.scope.outputs.target_sha }}
+
+    steps:
+      - name: Checkout selected hotfix
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Enforce UI hotfix scope
+        id: scope
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          branch="${GITHUB_REF_NAME}"
+          case "$branch" in
+            hotfix/ui-*) ;;
+            *)
+              echo "This lane only accepts hotfix/ui-* branches; got: $branch" >&2
+              exit 1
+              ;;
+          esac
+
+          git fetch --no-tags origin main
+          main_sha="$(git rev-parse origin/main)"
+          target_sha="$(git rev-parse HEAD)"
+
+          if ! git merge-base --is-ancestor "$main_sha" "$target_sha"; then
+            echo "Hotfix is stale: current main must be an ancestor of the target SHA." >&2
+            exit 1
+          fi
+
+          mapfile -t files < <(git diff --name-only "$main_sha...$target_sha")
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No changes found versus current main." >&2
+            exit 1
+          fi
+          if [ "${#files[@]}" -gt 20 ]; then
+            echo "UI hotfix lane is capped at 20 changed files; got ${#files[@]}." >&2
+            exit 1
+          fi
+
+          has_client_change=false
+          for file in "${files[@]}"; do
+            case "$file" in
+              client/*)
+                has_client_change=true
+                ;;
+              CURRENT_STATUS.md|NEXT_TASKS.md|AI_HANDOFF.md)
+                ;;
+              *)
+                echo "Out-of-scope file for UI hotfix: $file" >&2
+                exit 1
+                ;;
+            esac
+
+            case "$file" in
+              pnpm-lock.yaml|package.json|client/package.json|client/*/package.json|client/*/*/package.json)
+                echo "Dependency/package changes require the normal release lane: $file" >&2
+                exit 1
+                ;;
+            esac
+          done
+
+          if [ "$has_client_change" != true ]; then
+            echo "UI hotfix must include at least one client/** change." >&2
+            exit 1
+          fi
+
+          changed_lines="$(git diff --numstat "$main_sha...$target_sha" | awk '
+            BEGIN { total = 0 }
+            $1 ~ /^[0-9]+$/ { total += $1 }
+            $2 ~ /^[0-9]+$/ { total += $2 }
+            END { print total }
+          ')"
+          if [ "$changed_lines" -gt 600 ]; then
+            echo "UI hotfix lane is capped at 600 changed text lines; got $changed_lines." >&2
+            exit 1
+          fi
+
+          {
+            echo "target_sha=$target_sha"
+            echo "main_sha=$main_sha"
+            echo "changed_files=${#files[@]}"
+            echo "changed_lines=$changed_lines"
+          } >> "$GITHUB_STEP_SUMMARY"
+          printf '%s\n' "${files[@]}" | sed 's/^/- `/' | sed 's/$/`/' >> "$GITHUB_STEP_SUMMARY"
+          echo "target_sha=$target_sha" >> "$GITHUB_OUTPUT"
+
+  release:
+    name: Build, deploy and smoke Gateway
+    needs: validate
+    uses: ./.github/workflows/release-gateway.yml
+    with:
+      target_sha: ${{ needs.validate.outputs.target_sha }}
+    secrets: inherit
+
+  reconcile:
+    name: Keep GitHub source-of-truth visible
+    needs: [validate, release]
+    if: ${{ success() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    continue-on-error: true
+
+    steps:
+      - name: Create or annotate reconciliation PR
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ needs.validate.outputs.target_sha }}
+        run: |
+          set -euo pipefail
+          branch="${GITHUB_REF_NAME}"
+          pr_number="$(gh pr list \
+            --repo "$GITHUB_REPOSITORY" \
+            --head "$branch" \
+            --base main \
+            --state open \
+            --json number \
+            --jq '.[0].number // empty')"
+
+          if [ -z "$pr_number" ]; then
+            gh pr create \
+              --repo "$GITHUB_REPOSITORY" \
+              --base main \
+              --head "$branch" \
+              --title "hotfix(ui): reconcile ${branch#hotfix/ui-}" \
+              --body "Production UI hotfix deployed from exact SHA \`$TARGET_SHA\` by workflow run $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID. Merge this branch back to main after required repository checks pass."
+          else
+            gh pr comment "$pr_number" \
+              --repo "$GITHUB_REPOSITORY" \
+              --body "Production UI hotfix deployed from exact SHA \`$TARGET_SHA\` by workflow run $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID."
+          fi
