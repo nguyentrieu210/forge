@@ -3,6 +3,8 @@ import test from "node:test";
 
 import {
   buildBulkBomDraftDocument,
+  bulkBomRevisionKey,
+  canonicalDraftMatchesBulkBomInput,
   fingerprintBulkBomDraft,
   previewBulkBomDraft,
 } from "../dist/packages/clouderp-erpnext/src/index.js";
@@ -35,6 +37,51 @@ function baseInput() {
   };
 }
 
+function canonicalDraft() {
+  return {
+    company: "ACME",
+    item: "FG-100",
+    quantity: "1.000000",
+    revision: 2,
+    bom_status: "Draft",
+    effective_from: "2026-08-03",
+    output_uom: "Nos",
+    output_stock_uom: "Nos",
+    output_conversion_factor: "1.000000",
+    bom_checksum: "computed-by-controller",
+    operating_cost: "0.00",
+    raw_material_cost_minor: 12345,
+    total_cost_minor: 12345,
+    items: [
+      {
+        row_id: "ROW-1",
+        item_code: "RM-A",
+        qty: "2.500000",
+        qty_micros: 2500000,
+        source_warehouse: "RAW",
+        uom: "Kg",
+        stock_uom: "Kg",
+        conversion_factor: "1.000000",
+        conversion_factor_micros: 1000000,
+        qty_basis: "Cố định",
+        rate: "12.34",
+      },
+      {
+        row_id: "ROW-2",
+        item_code: "RM-B",
+        qty: "3.000000",
+        qty_micros: 3000000,
+        source_warehouse: "RAW",
+        uom: "Nos",
+        stock_uom: "Nos",
+        conversion_factor: "1.000000",
+        conversion_factor_micros: 1000000,
+        qty_basis: "Theo chiều rộng",
+      },
+    ],
+  };
+}
+
 test("bulk BOM normalizes one parent and pasted child rows into Draft-only canonical shape", async () => {
   const input = baseInput();
   const document = buildBulkBomDraftDocument(input);
@@ -58,6 +105,39 @@ test("bulk BOM normalizes one parent and pasted child rows into Draft-only canon
   assert.equal(preview.row_count, 2);
   assert.equal(preview.document.bom_status, "Draft");
   assert.match(preview.fingerprint, /^[a-f0-9]{64}$/);
+});
+
+test("bulk BOM revision key is stable and scoped by company, item and revision", () => {
+  const input = baseInput();
+  assert.equal(bulkBomRevisionKey(input), "ACME\u0000FG-100\u00002");
+  const next = baseInput();
+  next.revision = 3;
+  assert.notEqual(bulkBomRevisionKey(input), bulkBomRevisionKey(next));
+});
+
+test("bulk BOM replay matcher accepts controller-expanded defaults but rejects changed business payload", () => {
+  const input = baseInput();
+  const existing = canonicalDraft();
+  assert.equal(canonicalDraftMatchesBulkBomInput(input, existing), true);
+
+  const changedQty = baseInput();
+  changedQty.rows[0].qty = "2.6";
+  assert.equal(canonicalDraftMatchesBulkBomInput(changedQty, existing), false);
+
+  const changedUom = baseInput();
+  changedUom.rows[0].uom = "Nos";
+  assert.equal(canonicalDraftMatchesBulkBomInput(changedUom, existing), false);
+
+  const submitted = canonicalDraft();
+  submitted.bom_status = "Active";
+  assert.equal(canonicalDraftMatchesBulkBomInput(input, submitted), false);
+});
+
+test("bulk BOM replay matcher treats omitted UOM/factor as controller default stock UOM and factor one", () => {
+  const input = baseInput();
+  delete input.rows[1].uom;
+  delete input.rows[1].conversion_factor;
+  assert.equal(canonicalDraftMatchesBulkBomInput(input, canonicalDraft()), true);
 });
 
 test("bulk BOM fingerprint is stable for semantically equal decimal inputs and changes with payload", async () => {
