@@ -60,10 +60,34 @@ def assert_integrity_error(action, expected):
 
 
 # Workplace temporal and actor guards.
-insert_doc("Workplace Meeting", "MEET-1", {"start_at": "2026-08-03 08:00:00", "end_at": "2026-08-03 09:00:00"})
+insert_doc("Workplace Meeting", "MEET-1", {
+    "organizer": "user@example.test",
+    "start_at": "2026-08-03 08:00:00",
+    "end_at": "2026-08-03 09:00:00",
+})
 assert_integrity_error(
-    lambda: insert_doc("Workplace Meeting", "MEET-2", {"start_at": "2026-08-03 10:00:00", "end_at": "2026-08-03 09:00:00"}),
+    lambda: insert_doc("Workplace Meeting", "MEET-2", {
+        "organizer": "user@example.test",
+        "start_at": "2026-08-03 10:00:00",
+        "end_at": "2026-08-03 09:00:00",
+    }),
     "WORKPLACE_MEETING_END_BEFORE_START",
+)
+assert_integrity_error(
+    lambda: insert_doc("Workplace Meeting", "MEET-IMPERSONATE", {
+        "organizer": "other@example.test",
+        "start_at": "2026-08-03 08:00:00",
+        "end_at": "2026-08-03 09:00:00",
+    }),
+    "WORKPLACE_MEETING_ORGANIZER_MUST_MATCH_OWNER",
+)
+assert_integrity_error(
+    lambda: insert_doc("Workplace Meeting", "MEET-DISABLED", {
+        "organizer": "disabled@example.test",
+        "start_at": "2026-08-03 08:00:00",
+        "end_at": "2026-08-03 09:00:00",
+    }, owner="disabled@example.test"),
+    "WORKPLACE_MEETING_OWNER_INVALID",
 )
 insert_doc("Workplace Task", "TASK-1", {"start_date": "2026-08-03", "due_date": "2026-08-05", "assigned_to": "other@example.test"})
 insert_doc("Workplace Task", "TASK-UNASSIGNED", {"start_date": "2026-08-03", "due_date": "2026-08-05"})
@@ -145,9 +169,16 @@ assert_integrity_error(
 assert_integrity_error(
     lambda: db.execute(
         "UPDATE documents SET payload_json=? WHERE tenant_id='demo' AND doctype='Workplace Meeting' AND name='MEET-1'",
-        (json.dumps({"start_at": "2026-08-03 10:00:00", "end_at": "2026-08-03 09:00:00"}),),
+        (json.dumps({"organizer": "user@example.test", "start_at": "2026-08-03 10:00:00", "end_at": "2026-08-03 09:00:00"}),),
     ),
     "WORKPLACE_MEETING_END_BEFORE_START",
+)
+assert_integrity_error(
+    lambda: db.execute(
+        "UPDATE documents SET payload_json=? WHERE tenant_id='demo' AND doctype='Workplace Meeting' AND name='MEET-1'",
+        (json.dumps({"organizer": "other@example.test", "start_at": "2026-08-03 08:00:00", "end_at": "2026-08-03 09:00:00"}),),
+    ),
+    "WORKPLACE_MEETING_ORGANIZER_MUST_MATCH_OWNER",
 )
 assert_integrity_error(
     lambda: db.execute(
