@@ -1,6 +1,14 @@
 name: ALU Build and Deploy
 
 on:
+  push:
+    branches:
+      - "hotfix/ui-*"
+      - "fix/ui-*"
+      - "feat/ui-*"
+      - "refactor/ui-*"
+    paths:
+      - "client/**"
   workflow_dispatch:
     inputs:
       confirm:
@@ -20,9 +28,83 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  ui-auto-deploy:
+    name: Auto build and deploy UI
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: production
+    env:
+      TARGET_SHA: ${{ github.sha }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      VITE_FORGE_RELEASE_SHA: ${{ github.sha }}
+
+    steps:
+      - name: Checkout UI revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Guard UI-only scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --no-tags
+          git merge-base --is-ancestor origin/main HEAD || {
+            echo "UI branch must contain current main before production deploy."
+            exit 1
+          }
+
+          mapfile -t changed < <(git diff --name-only origin/main...HEAD)
+          test "${#changed[@]}" -gt 0
+
+          has_client=false
+          for file in "${changed[@]}"; do
+            case "$file" in
+              client/*) has_client=true ;;
+              RUNBOOK.md|CURRENT_STATUS.md|NEXT_TASKS.md|AI_HANDOFF.md|DELIVERY_POLICY.md) ;;
+              *)
+                echo "Blocked non-UI file in UI auto-deploy branch: $file"
+                exit 1
+                ;;
+            esac
+          done
+
+          test "$has_client" = true
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build UI
+        run: pnpm --filter metaforge run build
+
+      - name: Stage UI bundle
+        run: node server/scripts/stage-client-bundle.mjs
+
+      - name: Deploy Gateway
+        run: pnpm --dir server exec wrangler deploy --config apps/gateway-worker/wrangler.jsonc
+
+      - name: Smoke
+        run: curl --fail --silent --show-error https://alu.kairo.vn/health >/dev/null
+
   build-deploy:
     name: Build and deploy ALU
-    if: inputs.confirm == 'alu'
+    if: github.event_name == 'workflow_dispatch' && inputs.confirm == 'alu'
     runs-on: ubuntu-latest
     timeout-minutes: 120
     environment: production
@@ -86,5 +168,4 @@ jobs:
         run: pnpm --dir server exec wrangler deploy --config apps/gateway-worker/wrangler.jsonc
 
       - name: Smoke
-        run: |
-          curl --fail --silent --show-error https://alu.kairo.vn/health >/dev/null
+        run: curl --fail --silent --show-error https://alu.kairo.vn/health >/dev/null
