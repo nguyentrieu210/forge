@@ -115,12 +115,12 @@ test("semantic compiler rejects undeclared dimensions, metrics, filters and orde
   }), (error) => error.code === "VALIDATION_ERROR");
 });
 
-test("doctype semantic source is tenant/doctyped/cancel-safe and never accepts a table name from the caller", () => {
+test("doctype semantic source makes draft/submitted state explicit", () => {
   const doctypeRegistry = new SemanticModelRegistry([{
     id: "sales.invoice",
     label: "Sales invoice",
-    source: { kind: "doctype", doctype: "Sales Invoice" },
-    grain: "one non-cancelled sales invoice",
+    source: { kind: "doctype", doctype: "Sales Invoice", state: "submitted" },
+    grain: "one submitted sales invoice",
     permission: { doctype: "Sales Invoice", action: "report" },
     dimensions: [
       { id: "customer", label: "Customer", field: "customer", kind: "link", options: "Customer" },
@@ -138,12 +138,40 @@ test("doctype semantic source is tenant/doctyped/cancel-safe and never accepts a
     filters: [{ dimension: "posting_date", operator: ">=", value: "2026-08-01" }],
   });
 
-  assert.match(compiled.sql, /FROM documents WHERE tenant_id=\?1 AND doctype=\?2 AND docstatus<>2/);
+  assert.match(compiled.sql, /FROM documents WHERE tenant_id=\?1 AND doctype=\?2 AND docstatus=1/);
   assert.match(compiled.sql, /json_extract\(payload_json,'\$\.customer'\)/);
   assert.deepEqual(compiled.params.slice(0, 3), ["tenant-b", "Sales Invoice", "2026-08-01"]);
+
+  const drafts = new SemanticQueryCompiler(new SemanticModelRegistry([{
+    ...doctypeRegistry.get("sales.invoice"),
+    id: "sales.invoice_draft",
+    source: { kind: "doctype", doctype: "Sales Invoice", state: "draft" },
+  }])).compile({ model: "sales.invoice_draft", tenant_id: "tenant-b", metrics: ["invoice_count"] });
+  assert.match(drafts.sql, /docstatus=0/);
 });
 
-test("model validation refuses duplicate semantic members and exact scaled AVG", () => {
+test("compiler itself refuses non-bindable filter values even if service validation is bypassed", () => {
+  assert.throws(() => compiler.compile({
+    model: "finance.daily_ledger",
+    tenant_id: "tenant-a",
+    metrics: ["line_count"],
+    filters: [{ dimension: "account", operator: "=", value: { injected: true } }],
+  }), (error) => error.code === "VALIDATION_ERROR");
+  assert.throws(() => compiler.compile({
+    model: "finance.daily_ledger",
+    tenant_id: "tenant-a",
+    metrics: ["line_count"],
+    filters: [{ dimension: "account", operator: "in", value: ["111", { injected: true }] }],
+  }), (error) => error.code === "VALIDATION_ERROR");
+  assert.throws(() => compiler.compile({
+    model: "finance.daily_ledger",
+    tenant_id: "tenant-a",
+    metrics: ["line_count"],
+    filters: [{ dimension: "account", operator: "like", value: 123 }],
+  }), (error) => error.code === "VALIDATION_ERROR");
+});
+
+test("model validation refuses duplicate members, ambiguous scaled values and invalid runtime enums", () => {
   assert.throws(() => new SemanticModelRegistry([{
     ...financeModel,
     id: "broken.duplicate",
@@ -160,5 +188,24 @@ test("model validation refuses duplicate semantic members and exact scaled AVG",
       field: "debit_minor",
       value: { kind: "currency", scale: 100, exact: true },
     }],
+  }]), (error) => error.code === "VALIDATION_ERROR");
+
+  assert.throws(() => new SemanticModelRegistry([{
+    ...financeModel,
+    id: "broken.scaled_not_exact",
+    metrics: [{ id: "money", label: "Money", aggregation: "sum", field: "debit_minor", value: { kind: "currency", scale: 100 } }],
+  }]), (error) => error.code === "VALIDATION_ERROR");
+
+  assert.throws(() => new SemanticModelRegistry([{
+    ...financeModel,
+    id: "broken.kind",
+    dimensions: [{ id: "x", label: "X", field: "account", kind: "raw_sql" }],
+  }]), (error) => error.code === "VALIDATION_ERROR");
+
+  assert.throws(() => new SemanticModelRegistry([{
+    ...financeModel,
+    id: "broken.currency_dimension",
+    dimensions: [{ id: "branch", label: "Branch", field: "account", kind: "category" }],
+    metrics: [{ id: "money", label: "Money", aggregation: "sum", field: "debit_minor", value: { kind: "currency", scale: 100, exact: true, currencyDimension: "branch" } }],
   }]), (error) => error.code === "VALIDATION_ERROR");
 });
