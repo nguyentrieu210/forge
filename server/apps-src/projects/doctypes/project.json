@@ -1,0 +1,37 @@
+{
+  "name": "Project",
+  "module": "Projects",
+  "autoname": "PROJ-.YYYY.-#####",
+  "title_field": "project_name",
+  "search_fields": ["project_name", "customer", "company"],
+  "sort_field": "planned_start",
+  "sort_order": "DESC",
+  "track_seen": true,
+  "fields": [
+    { "fieldname": "project_name", "label": "Tên dự án", "fieldtype": "Data", "required": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "in_standard_filter": true },
+    { "fieldname": "customer", "label": "Khách hàng", "fieldtype": "Link", "options": "Customer", "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "department", "label": "Bộ phận", "fieldtype": "Link", "options": "Department", "in_standard_filter": true },
+    { "fieldname": "template", "label": "Mẫu dự án", "fieldtype": "Link", "options": "Project Template", "in_standard_filter": true },
+    { "fieldname": "priority", "label": "Ưu tiên", "fieldtype": "Select", "options": "Thấp\nTrung bình\nCao\nKhẩn", "default": "Trung bình", "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "planned_start", "label": "Bắt đầu kế hoạch", "fieldtype": "Date", "required": true, "in_list_view": true },
+    { "fieldname": "planned_end", "label": "Kết thúc kế hoạch", "fieldtype": "Date", "required": true, "in_list_view": true },
+    { "fieldname": "objective", "label": "Mục tiêu / phạm vi", "fieldtype": "Text", "required": true },
+    { "fieldname": "resources", "label": "Nguồn lực", "fieldtype": "Table", "options": "Project Resource Assignment" },
+    { "fieldname": "hold_reason", "label": "Lý do tạm dừng", "fieldtype": "Text", "mandatory_depends_on": "eval:doc.workflow_state == 'Tạm dừng'" },
+    { "fieldname": "completion_summary", "label": "Tổng kết hoàn tất", "fieldtype": "Text", "mandatory_depends_on": "eval:doc.workflow_state == 'Hoàn tất'" },
+    { "fieldname": "cancel_reason", "label": "Lý do hủy", "fieldtype": "Text", "mandatory_depends_on": "eval:doc.workflow_state == 'Hủy'" },
+    { "fieldname": "workflow_state", "label": "Trạng thái", "fieldtype": "Data", "read_only": true, "in_list_view": true, "in_standard_filter": true }
+  ],
+  "viewPolicy": {
+    "kanban": { "enabled": true, "stageField": "workflow_state", "reasonRequiredOn": ["backward", "cancel"] },
+    "gantt": { "enabled": true, "startField": "planned_start", "endField": "planned_end" },
+    "mobile": { "compactFields": ["project_name", "customer", "priority", "planned_end", "workflow_state"] }
+  },
+  "permissions": [
+    { "role": "Project User", "read": true, "report": true },
+    { "role": "Project Manager", "read": true, "write": true, "create": true, "delete": true, "print": true, "report": true, "export": true, "share": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "delete": true, "print": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 2
+}
