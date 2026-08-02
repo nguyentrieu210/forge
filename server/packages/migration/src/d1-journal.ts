@@ -66,10 +66,7 @@ interface ReceiptDbRow {
   aggregate_version: number; payload_hash: string; committed_at: string; result_json: string;
 }
 
-/**
- * Durable WS13 journal. This store never writes business documents or ledgers.
- * It records migration intent and links it to the document kernel's mutation receipt.
- */
+/** Durable WS13 journal. It records migration intent and links it to kernel receipts. */
 export class D1MigrationJournal {
   private readonly writer: D1Database | D1DatabaseSession;
 
@@ -77,32 +74,22 @@ export class D1MigrationJournal {
     this.writer = db.withSession?.("first-primary") ?? db;
   }
 
-  async ensureRun(
-    tenantId: string,
-    plan: MigrationPlan,
-    actor: string,
-    now: string,
-    manifestId?: string,
-  ): Promise<MigrationRunRecord> {
-    const existing = await this.getRunByPlanId(tenantId, plan.plan_id);
-    if (existing) {
-      assertRunMatches(existing, plan);
-      return existing;
-    }
-    const runId = plan.plan_id;
+  async ensureRun(tenantId: string, plan: MigrationPlan, actor: string, now: string, manifestId?: string): Promise<MigrationRunRecord> {
     await this.writer.prepare(
       `INSERT INTO migration_runs(
         tenant_id,run_id,plan_id,manifest_id,source_id,source_kind,source_fingerprint,target_doctype,
         duplicate_policy,key_field,mapping_json,state,started_by,created_at,modified_at,completed_at
-      ) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,'draft',?12,?13,?13,NULL)`,
+      ) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,'draft',?12,?13,?13,NULL)
+      ON CONFLICT(tenant_id,plan_id) DO NOTHING`,
     ).bind(
-      tenantId, runId, plan.plan_id, manifestId?.trim() || null, plan.source_id, plan.source_kind,
+      tenantId, plan.plan_id, plan.plan_id, manifestId?.trim() || null, plan.source_id, plan.source_kind,
       plan.source_fingerprint, plan.target_doctype, plan.duplicate_policy, plan.key_field,
       JSON.stringify(plan.mapping), actor, now,
     ).run();
-    const created = await this.getRun(tenantId, runId);
-    if (!created) throw errors.database("Migration run was not readable after insert");
-    return created;
+    const run = await this.getRunByPlanId(tenantId, plan.plan_id);
+    if (!run) throw errors.database("Migration run was not readable after ensure");
+    assertRunMatches(run, plan);
+    return run;
   }
 
   async getRun(tenantId: string, runId: string): Promise<MigrationRunRecord | null> {
@@ -138,54 +125,49 @@ export class D1MigrationJournal {
     if (["create", "update", "skip"].includes(intendedAction) && !targetName?.trim()) {
       throw errors.validation(`Migration ${intendedAction} requires stable target_name before reservation`);
     }
+    const run = await this.getRun(tenantId, runId);
+    if (!run) throw errors.notFound("Migration run not found");
     await this.writer.prepare(
       `INSERT INTO migration_row_receipts(
         tenant_id,run_id,row_key,source_row_number,row_fingerprint,target_doctype,target_name,intended_action,status,
         command_id,command_payload_hash,document_json,error_text,attempt_count,created_at,modified_at,staging_purged_at
-      ) VALUES(?1,?2,?3,?4,?5,(SELECT target_doctype FROM migration_runs WHERE tenant_id=?1 AND run_id=?2),?6,?7,'reserved',NULL,NULL,?8,NULL,0,?9,?9,NULL)
+      ) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,'reserved',NULL,NULL,?9,NULL,0,?10,?10,NULL)
       ON CONFLICT(tenant_id,run_id,row_key) DO NOTHING`,
-    ).bind(tenantId, runId, row.row_key, row.row_number, row.fingerprint, targetName?.trim() || null, intendedAction, JSON.stringify(row.document), now).run();
+    ).bind(tenantId, runId, row.row_key, row.row_number, row.fingerprint, run.target_doctype, targetName?.trim() || null, intendedAction, JSON.stringify(row.document), now).run();
     const reserved = await this.getRow(tenantId, runId, row.row_key);
     if (!reserved) throw errors.database("Migration row was not readable after reservation");
-    if (reserved.row_fingerprint !== row.fingerprint || reserved.intended_action !== intendedAction || reserved.target_name !== (targetName?.trim() || null)) {
-      throw errors.idempotency();
-    }
+    if (
+      reserved.row_fingerprint !== row.fingerprint
+      || reserved.intended_action !== intendedAction
+      || reserved.target_name !== (targetName?.trim() || null)
+      || reserved.target_doctype !== run.target_doctype
+    ) throw errors.idempotency();
     return reserved;
   }
 
-  async recordPreflightFailure(
-    tenantId: string,
-    runId: string,
-    row: MigrationPlannedRow,
-    error: string,
-    now: string,
-  ): Promise<MigrationJournalRow> {
+  async recordPreflightFailure(tenantId: string, runId: string, row: MigrationPlannedRow, error: string, now: string): Promise<MigrationJournalRow> {
     const existing = await this.getRow(tenantId, runId, row.row_key);
     if (!existing) {
+      const run = await this.getRun(tenantId, runId);
+      if (!run) throw errors.notFound("Migration run not found");
       await this.writer.prepare(
         `INSERT INTO migration_row_receipts(
           tenant_id,run_id,row_key,source_row_number,row_fingerprint,target_doctype,target_name,intended_action,status,
           command_id,command_payload_hash,document_json,error_text,attempt_count,created_at,modified_at,staging_purged_at
-        ) VALUES(?1,?2,?3,?4,?5,(SELECT target_doctype FROM migration_runs WHERE tenant_id=?1 AND run_id=?2),NULL,'error','failed',NULL,NULL,?6,?7,0,?8,?8,NULL)`,
-      ).bind(tenantId, runId, row.row_key, row.row_number, row.fingerprint, JSON.stringify(row.document), boundedError(error), now).run();
+        ) VALUES(?1,?2,?3,?4,?5,?6,NULL,'error','failed',NULL,NULL,?7,?8,0,?9,?9,NULL)`,
+      ).bind(tenantId, runId, row.row_key, row.row_number, row.fingerprint, run.target_doctype, JSON.stringify(row.document), boundedError(error), now).run();
     } else {
       if (existing.row_fingerprint !== row.fingerprint) throw errors.idempotency();
+      if (isFinal(existing.status)) return existing;
       await this.writer.prepare(
         `UPDATE migration_row_receipts SET status='failed',error_text=?4,modified_at=?5
-         WHERE tenant_id=?1 AND run_id=?2 AND row_key=?3 AND status NOT IN ('imported','updated','skipped')`,
+         WHERE tenant_id=?1 AND run_id=?2 AND row_key=?3`,
       ).bind(tenantId, runId, row.row_key, boundedError(error), now).run();
     }
     return (await this.getRow(tenantId, runId, row.row_key))!;
   }
 
-  async markApplying(
-    tenantId: string,
-    runId: string,
-    rowKey: string,
-    commandId: string,
-    payloadHash: string,
-    now: string,
-  ): Promise<MigrationJournalRow> {
+  async markApplying(tenantId: string, runId: string, rowKey: string, commandId: string, payloadHash: string, now: string): Promise<MigrationJournalRow> {
     if (!commandId.trim()) throw errors.validation("Migration command_id is required");
     if (!/^[a-f0-9]{64}$/.test(payloadHash)) throw errors.validation("Migration command payload hash must be SHA-256 hex");
     const current = await this.requireRow(tenantId, runId, rowKey);
@@ -193,12 +175,11 @@ export class D1MigrationJournal {
       if (current.command_id !== commandId || current.command_payload_hash !== payloadHash) throw errors.idempotency();
       return current;
     }
-    if (!["reserved", "failed"].includes(current.status)) {
-      throw errors.lifecycle(`Migration row cannot start applying from ${current.status}`);
-    }
+    if (!["reserved", "failed"].includes(current.status)) throw errors.lifecycle(`Migration row cannot start applying from ${current.status}`);
     if (current.intended_action !== "create" && current.intended_action !== "update") {
       throw errors.lifecycle(`Migration ${current.intended_action} row does not execute a document command`);
     }
+    if (current.command_id && current.command_id !== commandId) throw errors.idempotency();
     const result = await this.writer.prepare(
       `UPDATE migration_row_receipts
        SET status='applying',command_id=?4,command_payload_hash=?5,error_text=NULL,
@@ -209,26 +190,22 @@ export class D1MigrationJournal {
     return (await this.getRow(tenantId, runId, rowKey))!;
   }
 
-  async recordOutcome(
-    tenantId: string,
-    runId: string,
-    outcome: MigrationRowOutcome,
-    now: string,
-  ): Promise<MigrationJournalRow> {
+  async recordOutcome(tenantId: string, runId: string, outcome: MigrationRowOutcome, now: string): Promise<MigrationJournalRow> {
     const current = await this.requireRow(tenantId, runId, outcome.row_key);
     if (current.row_fingerprint !== outcome.fingerprint) throw errors.idempotency();
     if (outcome.target_name?.trim() && current.target_name && current.target_name !== outcome.target_name.trim()) throw errors.idempotency();
     const status = outcome.status;
+    if (isFinal(current.status)) {
+      if (current.status === status && (!outcome.target_name || current.target_name === outcome.target_name.trim())) return current;
+      throw errors.lifecycle(`Final migration row ${outcome.row_key} cannot change from ${current.status} to ${status}`);
+    }
     if ((status === "imported" || status === "updated") && current.status !== "applying") {
       throw errors.lifecycle(`Migration row cannot become ${status} from ${current.status}`);
     }
-    if (status === "skipped" && current.intended_action !== "skip") {
-      throw errors.lifecycle("Only a skip reservation can be recorded as skipped");
-    }
+    if (status === "skipped" && current.intended_action !== "skip") throw errors.lifecycle("Only a skip reservation can be recorded as skipped");
     const targetName = outcome.target_name?.trim() || current.target_name;
     const result = await this.writer.prepare(
-      `UPDATE migration_row_receipts
-       SET status=?4,target_name=?5,error_text=?6,modified_at=?7
+      `UPDATE migration_row_receipts SET status=?4,target_name=?5,error_text=?6,modified_at=?7
        WHERE tenant_id=?1 AND run_id=?2 AND row_key=?3`,
     ).bind(tenantId, runId, outcome.row_key, status, targetName, outcome.error ? boundedError(outcome.error) : null, now).run();
     if ((result.meta?.changes ?? 0) !== 1) throw errors.version();
@@ -253,10 +230,6 @@ export class D1MigrationJournal {
     return (result.results ?? []).map(journalRow);
   }
 
-  /**
-   * Recovers an uncertain `applying` row from the kernel receipt. No receipt means the row
-   * remains unresolved; callers must not silently convert that absence into a retry.
-   */
   async recoverApplyingRow(
     tenantId: string,
     runId: string,
@@ -281,32 +254,28 @@ export class D1MigrationJournal {
     return { recovered: true, row: recovered, receipt };
   }
 
-  async appendCheckpoint(
-    tenantId: string,
-    runId: string,
-    checkpoint: MigrationCheckpoint,
-    now: string,
-  ): Promise<MigrationCheckpoint> {
+  async appendCheckpoint(tenantId: string, runId: string, checkpoint: MigrationCheckpoint, now: string): Promise<MigrationCheckpoint> {
+    const run = await this.getRun(tenantId, runId);
+    if (!run) throw errors.notFound("Migration run not found");
+    if (checkpoint.source_id !== run.source_id) throw errors.validation("Migration checkpoint source does not match run source");
     const current = await this.latestCheckpoint(tenantId, runId);
     const next = advanceMigrationCheckpoint(current, checkpoint);
     await this.writer.prepare(
-      `INSERT INTO migration_checkpoints(tenant_id,run_id,sequence,cursor,batch_fingerprint,high_watermark,created_at)
-       VALUES(?1,?2,?3,?4,?5,?6,?7)`,
-    ).bind(tenantId, runId, next.sequence, next.cursor, next.batch_fingerprint, next.high_watermark ?? null, now).run();
+      `INSERT INTO migration_checkpoints(tenant_id,run_id,source_id,adapter,sequence,cursor,batch_fingerprint,high_watermark,created_at)
+       VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9)`,
+    ).bind(tenantId, runId, next.source_id, next.adapter, next.sequence, next.cursor, next.batch_fingerprint, next.high_watermark ?? null, now).run();
     return next;
   }
 
   async latestCheckpoint(tenantId: string, runId: string): Promise<MigrationCheckpoint | null> {
     const row = await this.writer.prepare(
-      `SELECT sequence,cursor,batch_fingerprint,high_watermark
+      `SELECT source_id,adapter,sequence,cursor,batch_fingerprint,high_watermark
        FROM migration_checkpoints WHERE tenant_id=?1 AND run_id=?2 ORDER BY sequence DESC LIMIT 1`,
-    ).bind(tenantId, runId).first<{ sequence: number; cursor: string; batch_fingerprint: string; high_watermark: string | null }>();
+    ).bind(tenantId, runId).first<{ source_id: string; adapter: string; sequence: number; cursor: string; batch_fingerprint: string; high_watermark: string | null }>();
     if (!row) return null;
-    const run = await this.getRun(tenantId, runId);
-    if (!run) throw errors.database("Migration checkpoint references missing run");
     return {
-      source_id: run.source_id,
-      adapter: run.source_kind,
+      source_id: row.source_id,
+      adapter: row.adapter,
       sequence: row.sequence,
       cursor: row.cursor,
       batch_fingerprint: row.batch_fingerprint,
@@ -314,16 +283,11 @@ export class D1MigrationJournal {
     };
   }
 
-  async recordReconciliation(
-    tenantId: string,
-    runId: string,
-    snapshotId: string,
-    metrics: readonly MigrationReconciliationMetric[],
-    now: string,
-  ): Promise<void> {
+  async recordReconciliation(tenantId: string, runId: string, snapshotId: string, metrics: readonly MigrationReconciliationMetric[], now: string): Promise<void> {
     if (!snapshotId.trim()) throw errors.validation("Migration reconciliation snapshot_id is required");
     if (!metrics.length) throw errors.validation("Migration reconciliation requires at least one metric");
-    const statements = metrics.map((metric) => this.writer.prepare(
+    if (!await this.getRun(tenantId, runId)) throw errors.notFound("Migration run not found");
+    const statements = metrics.map((metric) => this.db.prepare(
       `INSERT INTO migration_reconciliation_metrics(tenant_id,run_id,snapshot_id,metric,expected,actual,matches,created_at)
        VALUES(?1,?2,?3,?4,?5,?6,?7,?8)
        ON CONFLICT(tenant_id,run_id,snapshot_id,metric) DO UPDATE SET
@@ -335,9 +299,7 @@ export class D1MigrationJournal {
   async purgeStaging(tenantId: string, runId: string, now: string): Promise<number> {
     const run = await this.getRun(tenantId, runId);
     if (!run) throw errors.notFound("Migration run not found");
-    if (run.state !== "completed" && run.state !== "cancelled") {
-      throw errors.lifecycle("Migration staging can be purged only after completion or cancellation");
-    }
+    if (run.state !== "completed" && run.state !== "cancelled") throw errors.lifecycle("Migration staging can be purged only after completion or cancellation");
     const result = await this.writer.prepare(
       `UPDATE migration_row_receipts SET document_json=NULL,staging_purged_at=?3,modified_at=?3
        WHERE tenant_id=?1 AND run_id=?2 AND document_json IS NOT NULL`,
@@ -430,6 +392,10 @@ function journalRow(row: JournalDbRow): MigrationJournalRow {
     modified_at: row.modified_at,
     staging_purged_at: row.staging_purged_at,
   };
+}
+
+function isFinal(status: MigrationJournalRowStatus): boolean {
+  return status === "imported" || status === "updated" || status === "skipped";
 }
 
 function boundedError(value: string): string {
