@@ -1,6 +1,7 @@
 import type { JsonValue } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
 import type { PermissionAwareSemanticCatalogService } from "./catalog.js";
+import type { PermissionAwareSemanticInsightCatalogService } from "./insight-catalog.js";
 import type { SemanticFilter, SemanticFilterOperator } from "./index.js";
 import type { SemanticInsightRegistry } from "./insights.js";
 import { parseSemanticQueryBody } from "./request.js";
@@ -14,18 +15,15 @@ function object(value: JsonValue | undefined, field: string): Record<string, Jso
   if (!value || typeof value !== "object" || Array.isArray(value)) throw errors.validation(`${field} must be an object`);
   return value as Record<string, JsonValue | undefined>;
 }
-
 function onlyKeys(value: Record<string, JsonValue | undefined>, allowed: string[], field: string): void {
   const set = new Set(allowed);
   for (const key of Object.keys(value)) if (!set.has(key)) throw errors.validation(`${field} contains unsupported key ${key}`);
 }
-
 function id(value: JsonValue | undefined, field: string, member = false): string {
   const pattern = member ? MEMBER : ID;
   if (typeof value !== "string" || !pattern.test(value)) throw errors.validation(`${field} is invalid`);
   return value;
 }
-
 function scalar(value: JsonValue | undefined, field: string): string | number | boolean {
   if (typeof value === "string") {
     if (!value.trim() || value.length > 2_000) throw errors.validation(`${field} is invalid`);
@@ -38,7 +36,6 @@ function scalar(value: JsonValue | undefined, field: string): string | number | 
   if (typeof value === "boolean") return value;
   throw errors.validation(`${field} must be a string, finite number or boolean`);
 }
-
 function scopeFilters(value: JsonValue | undefined): SemanticFilter[] {
   if (value === undefined) return [];
   if (!Array.isArray(value) || value.length > 20) throw errors.validation("scope_filters must be an array with at most 20 entries");
@@ -61,7 +58,6 @@ function scopeFilters(value: JsonValue | undefined): SemanticFilter[] {
     return { dimension, operator: operator as SemanticFilterOperator, value: parsed };
   });
 }
-
 function sourceValues(value: JsonValue | undefined): Record<string, string | number | boolean> {
   const body = object(value, "source_values");
   const entries = Object.entries(body);
@@ -74,19 +70,20 @@ function sourceValues(value: JsonValue | undefined): Record<string, string | num
   return result;
 }
 
-/**
- * Router-independent read surface. Cookie/JWT parsing stays in the tenant/query worker;
- * this class accepts only trusted tenant context plus untrusted JSON body.
- */
+/** Router-independent read surface; tenant always comes from trusted caller context. */
 export class SemanticReadApi {
   constructor(
     private readonly executor: SemanticQueryExecutor,
     private readonly catalogService: PermissionAwareSemanticCatalogService,
-    private readonly insights?: SemanticInsightRegistry,
+    private readonly insightRegistry?: SemanticInsightRegistry,
+    private readonly insightCatalogService?: PermissionAwareSemanticInsightCatalogService,
   ) {}
 
-  catalog(tenantId: string) {
-    return this.catalogService.list(tenantId);
+  catalog(tenantId: string) { return this.catalogService.list(tenantId); }
+
+  insightCatalog(tenantId: string) {
+    if (!this.insightCatalogService) throw errors.validation("Semantic insight catalog is not configured");
+    return this.insightCatalogService.list(tenantId);
   }
 
   async query(tenantId: string, body: JsonValue | undefined): Promise<SemanticQueryResult> {
@@ -96,22 +93,18 @@ export class SemanticReadApi {
   }
 
   async insight(tenantId: string, body: JsonValue | undefined): Promise<SemanticQueryResult> {
-    if (!this.insights) throw errors.validation("Semantic insight registry is not configured");
+    if (!this.insightRegistry) throw errors.validation("Semantic insight registry is not configured");
     const input = object(body, "insight query");
     onlyKeys(input, ["insight", "scope_filters"], "insight query");
-    const request = this.insights.query(
-      id(input.insight, "insight query.insight"),
-      tenantId,
-      scopeFilters(input.scope_filters),
-    );
+    const request = this.insightRegistry.query(id(input.insight, "insight query.insight"), tenantId, scopeFilters(input.scope_filters));
     return this.executor.run(request);
   }
 
   async drill(tenantId: string, body: JsonValue | undefined): Promise<SemanticQueryResult> {
-    if (!this.insights) throw errors.validation("Semantic insight registry is not configured");
+    if (!this.insightRegistry) throw errors.validation("Semantic insight registry is not configured");
     const input = object(body, "drill query");
     onlyKeys(input, ["insight", "drill", "source_values"], "drill query");
-    const request = this.insights.drill({
+    const request = this.insightRegistry.drill({
       insight: id(input.insight, "drill query.insight"),
       drill: id(input.drill, "drill query.drill"),
       tenantId,
