@@ -102,7 +102,6 @@ try {
     manifest_verified: inspected.manifestVerified,
     source_created_at: inspected.manifest?.created_at ?? null,
     source_database_name: inspected.manifest?.database_name ?? null,
-    source_database_id: inspected.manifest?.database_id ?? null,
     verified_at: new Date().toISOString(),
     local_restore_duration_ms: durationMs,
     table_count: tableCount,
