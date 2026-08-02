@@ -1,19 +1,11 @@
 {
   "id": "hrm",
   "name": "Quản lý nhân sự",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "requires": [],
   "externalDocTypes": [
-    {
-      "name": "Salary Component",
-      "kind": "master",
-      "app": "erpnext"
-    },
-    {
-      "name": "Expense Claim",
-      "kind": "transaction",
-      "app": "erpnext"
-    }
+    {"name":"Salary Component","kind":"master","app":"erpnext"},
+    {"name":"Expense Claim","kind":"transaction","app":"erpnext"}
   ],
   "nav": [
     {"key":"company-master","label":"Công ty","kind":"route","route":"/app/Company","icon":"building-2","group":"Tổ chức","required_roles":["HR Manager","Accounts Manager","System Manager"]},
