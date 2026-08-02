@@ -1,7 +1,7 @@
 {
   "id": "projects",
   "name": "Projects & PSA",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "requires": [],
   "reports": [
     {
@@ -35,12 +35,52 @@
       "order_by": { "column": "period_start", "direction": "desc" },
       "filters": ["employee", "project", "workflow_state"],
       "limit": 200
+    },
+    {
+      "name": "Project Change Order Control",
+      "label": "Kiểm soát thay đổi dự án",
+      "doctype": "Project Change Order",
+      "columns": [
+        { "field": "project", "label": "Dự án", "type": "Link", "options": "Project" },
+        { "field": "title", "label": "Thay đổi", "type": "Data" },
+        { "field": "change_type", "label": "Loại", "type": "Data" },
+        { "field": "requested_by", "label": "Người đề nghị", "type": "Link", "options": "User" },
+        { "field": "requested_at", "label": "Thời điểm", "type": "Datetime" },
+        { "field": "schedule_impact_days", "label": "Ảnh hưởng ngày", "type": "Float" },
+        { "field": "workflow_state", "label": "Trạng thái", "type": "Data" }
+      ],
+      "order_by": { "column": "requested_at", "direction": "desc" },
+      "filters": ["project", "change_type", "workflow_state"],
+      "limit": 200
+    },
+    {
+      "name": "Project Acceptance Control",
+      "label": "Kiểm soát nghiệm thu dự án",
+      "doctype": "Project Acceptance Certificate",
+      "columns": [
+        { "field": "project", "label": "Dự án", "type": "Link", "options": "Project" },
+        { "field": "task", "label": "Công việc / mốc", "type": "Link", "options": "Project Task" },
+        { "field": "acceptance_date", "label": "Ngày nghiệm thu", "type": "Date" },
+        { "field": "progress_percent", "label": "Tiến độ xác nhận", "type": "Percent" },
+        { "field": "acceptance_result", "label": "Kết quả", "type": "Data" },
+        { "field": "workflow_state", "label": "Trạng thái", "type": "Data" }
+      ],
+      "order_by": { "column": "acceptance_date", "direction": "desc" },
+      "filters": ["project", "task", "acceptance_result", "workflow_state"],
+      "limit": 200
     }
   ],
   "nav": [
+    { "key": "Project Portfolio", "label": "Danh mục dự án", "kind": "doctype", "icon": "briefcase-business", "group": "Danh mục" },
+    { "key": "Project Template", "label": "Mẫu dự án", "kind": "doctype", "icon": "copy-check", "group": "Thiết lập" },
+    { "key": "Project Capacity Plan", "label": "Kế hoạch năng lực", "kind": "doctype", "icon": "gauge", "group": "Nguồn lực" },
     { "key": "Project", "label": "Dự án", "kind": "doctype", "icon": "folder-kanban", "group": "Dự án" },
     { "key": "Project Task", "label": "Công việc dự án", "kind": "doctype", "icon": "list-checks", "group": "Dự án" },
     { "key": "project-task-control", "label": "Kiểm soát công việc", "kind": "route", "route": "/report/Project%20Task%20Control", "permission_doctype": "Project Task", "icon": "chart-no-axes-gantt", "group": "Dự án" },
+    { "key": "Project Change Order", "label": "Thay đổi dự án", "kind": "doctype", "icon": "file-pen-line", "group": "Dự án" },
+    { "key": "project-change-order-control", "label": "Kiểm soát thay đổi", "kind": "route", "route": "/report/Project%20Change%20Order%20Control", "permission_doctype": "Project Change Order", "icon": "list-restart", "group": "Dự án" },
+    { "key": "Project Acceptance Certificate", "label": "Nghiệm thu dự án", "kind": "doctype", "icon": "badge-check", "group": "Dự án" },
+    { "key": "project-acceptance-control", "label": "Kiểm soát nghiệm thu", "kind": "route", "route": "/report/Project%20Acceptance%20Control", "permission_doctype": "Project Acceptance Certificate", "icon": "clipboard-check", "group": "Dự án" },
     { "key": "Project Timesheet", "label": "Bảng chấm giờ dự án", "kind": "doctype", "icon": "clock-3", "group": "Thời gian" },
     { "key": "project-timesheet-control", "label": "Kiểm soát chấm giờ", "kind": "route", "route": "/report/Project%20Timesheet%20Control", "permission_doctype": "Project Timesheet", "icon": "list-clock", "group": "Thời gian" }
   ],
