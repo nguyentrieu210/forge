@@ -17,24 +17,24 @@ Tài liệu này chỉ lưu facts, checkpoints và business invariants của For
 - `0042` thay accounting-period guards cũ và bổ sung: valid/non-overlap period theo tenant/company/branch; Hard Locked chặn submit/cancel/scope move; Soft Closed chỉ cho approved adjustment khi period cho phép và có reason + approver.
 - Guard bao phủ Journal/Invoice/Payment, Purchase Receipt, Delivery Note, Payroll, Stock Reconciliation/Stock Entry và Warehouse Cash Voucher/Transfer.
 - Regression riêng `server/scripts/test-vn-accounting-period-hardening.py` replay `0035+0039+0040+0041+0042` để không sửa acceptance HRM hiện có.
-- Targeted SQLite regression của logic `0042` đã PASS trong session. Full exact regression script, Python syntax và relevant backend/typecheck/lint/build trên full checkout vẫn chưa có evidence; chưa production migration/deploy.
+- Targeted SQLite regression của logic `0042` đã PASS trong session. Full exact regression script, Python syntax và relevant backend/typecheck/lint/build trên full checkout vẫn chưa có evidence; chưa PR/merge/deploy production.
 
-## Active checkpoint — Stock Reconciliation Bulk Transaction
+## Stock Reconciliation Bulk Transaction
 
 - Canonical branch: `feat/alumdoor-stock-reconciliation-bulk-v2-20260802`; PR `#267` đang draft.
-- Bulk không tạo reconciliation hoặc stock ledger cạnh tranh. Nó chỉ nhận một canonical `Stock Reconciliation` draft đã được `alumdoor.recon.snapshot` chốt `snapshot_at`.
-- Input phải phủ đủ mọi snapshot row; extra physical row được append nếu còn trong scope. Duplicate `(item_code,batch_no)` và aggregate+batch cùng item fail closed.
-- Existing snapshot row order phải được giữ nguyên trong bulk flow vì controller hiện preserve captured book fields theo child-row index.
-- `DocumentKernel.preview()` dùng cùng payload hash, permission, lifecycle, optimistic version, controller và invariant checks như execute nhưng không đọc mutation receipt và không execute mutation store.
-- Native preview route tenant-scoped, organization-security scoped và metadata-permission scoped; nó bắt `modified` hiện tại trước khi plan.
-- Bulk commit PUT lại đúng draft bằng original `modified`; exact retry không tạo thêm draft version.
+- Bulk chỉ nhận canonical `Stock Reconciliation` draft đã được `alumdoor.recon.snapshot` chốt `snapshot_at`; không tạo reconciliation/ledger cạnh tranh.
+- Input phải phủ đủ mọi snapshot row; extra physical row chỉ được append trong scope. Duplicate `(item_code,batch_no)` và aggregate+batch cùng item fail closed.
+- Existing snapshot row order phải giữ nguyên vì controller hiện preserve captured book fields theo child-row index.
+- `DocumentKernel.preview()` chạy cùng payload hash, permission, lifecycle, optimistic version, controller và invariant checks như execute nhưng không consume mutation receipt và không execute mutation store.
+- Native preview route tenant-scoped + organization-security + metadata-permission; commit PUT lại đúng draft bằng original `modified`; exact retry không tạo thêm version.
 - Bulk không submit. Four-eyes approval và stock ledger chỉ xảy ra ở canonical `StockReconciliationController` submit.
-- Validation hiện có: exact bulk-handler isolated regression 7/7 PASS; TypeScript transpile/syntax PASS cho handler/kernel/native preview; action sidecar parse PASS. Full checkout test/typecheck/lint/build chưa có evidence tại checkpoint này.
-- Known debt: root-fix controller để preserve book snapshot theo physical identity thay vì array index. Controller hiện yêu cầu `variance_reason` ở save lẫn submit, nên variance preview phải có reason trước khi xem plan.
+- Validation checkpoint: exact bulk-handler isolated regression 7/7 PASS; TypeScript transpile/syntax PASS cho handler/kernel/native preview; action sidecar parse PASS. Full checkout test/typecheck/lint/build chưa có evidence.
+- Known debt: core controller nên preserve book snapshot theo physical identity thay vì array index; hiện `variance_reason` bị yêu cầu ở save lẫn submit nên variance preview cần reason trước.
 
 ## HRM operational 1.5
 
 - PR `#261` squash-merge tại `b3dc2cf59ec5c85a977833da6edc986ac1bfe6fb`.
+- HRM scope: recruitment, hire-to-retire, leave, attendance/overtime, payroll inputs, employee expenses, goals/appraisal/training.
 - Salary Slip/Payroll Entry/GL là accounting source of truth; HRM cung cấp payroll inputs, không có payroll ledger cạnh tranh.
 - Submitted Salary Slip khóa các source Attendance/Leave/OT/Salary Structure Assignment/Additional Salary đã dùng; correction đi qua cancel/amend/rerun.
 - `VN Payroll Rule` có effective period, legal source, approval metadata và formula evidence; rule đã dùng là append-only.
@@ -49,8 +49,9 @@ Tài liệu này chỉ lưu facts, checkpoints và business invariants của For
 ## UI deploy implementation
 
 - Workflow: `.github/workflows/manual-release-alu.yml` (`ALU Build and Deploy`).
-- UI fast path có trigger push cho các nhánh UI và build runtime + warehouse mobile trước khi deploy Gateway.
-- Full ALU deploy tồn tại trong cùng workflow qua `workflow_dispatch`.
+- UI fast path hiện có trigger push cho các nhánh UI và build runtime + warehouse mobile trước khi deploy Gateway.
+- Full ALU deploy vẫn tồn tại trong cùng workflow qua `workflow_dispatch`.
+- Các thay đổi workflow gần đây tập trung giảm thời gian setup/build và giảm false-fail sau deploy.
 
 ## Website/CMS v1
 
