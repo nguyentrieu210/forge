@@ -1,0 +1,41 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import { parseAppManifest } from "../dist/packages/app-registry/src/index.js";
+import { compileBrief } from "../scripts/lib/compile-brief.mjs";
+import { readBriefSource } from "../scripts/lib/read-brief-source.mjs";
+import { validateBriefSchema } from "../scripts/lib/validate-brief-schema.mjs";
+
+test("Alumdoor 2.2.0 compiles Bulk Transaction action through canonical manifest parser", async () => {
+  const brief = await readBriefSource(new URL("../briefs/alumdoor-v2.json", import.meta.url));
+  assert.equal(brief.version, "2.2.0");
+
+  const schemaErrors = await validateBriefSchema(brief);
+  assert.deepEqual(schemaErrors, []);
+
+  const manifest = parseAppManifest(compileBrief(brief));
+  const action = manifest.actions.find((entry) => entry.name === "nhap-nhom-hang-loat");
+  assert.ok(action, "missing nhap-nhom-hang-loat action");
+  assert.equal(action.permission_doctype, "Purchase Receipt");
+  assert.equal(action.preview?.method, "alumdoor.purchase.preview_bulk_fifo_receipt");
+  assert.equal(action.commit.method, "alumdoor.purchase.bulk_fifo_receipt");
+
+  const field = action.fields.find((entry) => entry.fieldname === "lines");
+  assert.ok(field, "missing lines field");
+  assert.equal(field.fieldtype, "Text");
+  assert.ok(field.options?.startsWith("BulkTransaction:"));
+  const spec = JSON.parse(field.options.slice("BulkTransaction:".length));
+  assert.equal(spec.minRows, 1);
+  assert.equal(spec.maxRows, 100);
+  assert.equal(spec.allowPaste, true);
+  assert.deepEqual(spec.columns.map((column) => column.fieldname), [
+    "item_code",
+    "length_m",
+    "qty_bar",
+    "actual_weight_kg",
+    "rate",
+    "color",
+    "is_stamped",
+  ]);
+  assert.ok(spec.columns.every((column) => column.required));
+});

@@ -121,6 +121,30 @@ function applyViewSidecar(brief, extension, source, briefSource) {
   return { ...brief, ...(extension.version ? { version: extension.version } : {}), doctypes };
 }
 
+/**
+ * Large operational actions are allowed to live in a sibling file so the business brief
+ * stays reviewable. The sidecar only appends actions; the normal brief schema/compiler and
+ * server manifest parser still validate the merged result, so this is transport, not a
+ * second action contract.
+ */
+function applyActionSidecar(brief, extension, source, briefSource) {
+  assertSidecarObject(extension, source);
+  const unsupported = Object.keys(extension).filter((key) => key !== "version" && key !== "actions" && !key.startsWith("//"));
+  if (unsupported.length) throw new Error(`${source}: chỉ nhận version, actions và khóa ghi chú //; không nhận ${unsupported.join(", ")}.`);
+  if (!Array.isArray(extension.actions) || extension.actions.length === 0) throw new Error(`${source}: actions phải là mảng không rỗng.`);
+  if (brief.actions !== undefined && !Array.isArray(brief.actions)) throw new Error(`${briefSource}: actions hiện có phải là mảng trước khi ghép sidecar.`);
+  const existingNames = new Set((brief.actions ?? []).map((action) => action?.name).filter(Boolean));
+  const sidecarNames = new Set();
+  for (const action of extension.actions) {
+    if (!action || typeof action !== "object" || Array.isArray(action) || typeof action.name !== "string" || !action.name) {
+      throw new Error(`${source}: mỗi action phải là object có name.`);
+    }
+    if (existingNames.has(action.name) || sidecarNames.has(action.name)) throw new Error(`${source}: action trùng tên: ${action.name}.`);
+    sidecarNames.add(action.name);
+  }
+  return { ...brief, ...(extension.version ? { version: extension.version } : {}), actions: [...(brief.actions ?? []), ...extension.actions] };
+}
+
 export async function readBriefSource(source) {
   const sourcePath = sourcePathOf(source);
   let brief = parseJson(await readFile(sourcePath, "utf8"), sourcePath);
@@ -137,6 +161,11 @@ export async function readBriefSource(source) {
   const viewsSource = path.join(parsed.dir, `${parsed.name}.views.json`);
   const views = await readOptionalJson(viewsSource);
   if (views) brief = applyViewSidecar(brief, views, viewsSource, sourcePath);
+
+  // Action sidecar is applied last so its version represents the complete source package.
+  const actionsSource = path.join(parsed.dir, `${parsed.name}.actions.json`);
+  const actions = await readOptionalJson(actionsSource);
+  if (actions) brief = applyActionSidecar(brief, actions, actionsSource, sourcePath);
 
   return brief;
 }
