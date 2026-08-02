@@ -6,6 +6,7 @@ import {
   compareSupplierQuotations,
   validatePurchaseOrderAgainstQuotation,
 } from "./procurement-decisions.js";
+import { evaluatePurchaseOrderSupplierContract } from "./supplier-contract-enforcement.js";
 import { RolloutPurchaseOrderController } from "./purchase-allocation-rollout-controllers.js";
 import {
   assertSupplierQualificationEligible,
@@ -86,8 +87,9 @@ export class ProcurementSupplierQuotationController extends SupplierQuotationCon
 }
 
 /**
- * Validates supplier eligibility and selected quotation only after the rollout controller has built
- * the canonical PO plan. No writes have happened yet, so a mismatch fails the whole command.
+ * Validates supplier eligibility, optional contract release and selected quotation only after the
+ * rollout controller has built the canonical PO plan. No writes have happened yet, so every
+ * mismatch fails the whole command before kernel execution.
  */
 export class ProcurementPurchaseOrderController extends RolloutPurchaseOrderController {
   override async buildPlan(context: ControllerContext<PurchaseOrderData>): Promise<MutationPlan<PurchaseOrderData>> {
@@ -116,6 +118,31 @@ export class ProcurementPurchaseOrderController extends RolloutPurchaseOrderCont
       );
       assertSupplierEligible(data.supplier, supplier, data.transaction_date, data.supplier_group);
     }
+
+    const raw = data as JsonObject;
+    const contractName = typeof raw.supplier_contract === "string" ? raw.supplier_contract.trim() : "";
+    if (contractName) {
+      const contract = await context.reader.getDocument<SupplierContractData>(
+        context.command.tenant_id,
+        "Supplier Contract",
+        contractName,
+      );
+      if (!contract || contract.docstatus !== 1) {
+        throw errors.reference(`Submitted Supplier Contract ${contractName} is required`);
+      }
+      const orders = await context.reader.listDocumentsByDoctype<PurchaseOrderData>(
+        context.command.tenant_id,
+        "Purchase Order",
+      );
+      evaluatePurchaseOrderSupplierContract(
+        context.command.aggregate.name,
+        data,
+        contractName,
+        contract.data,
+        orders,
+      );
+    }
+
     if (!data.supplier_quotation) return plan;
     const quotationName = data.supplier_quotation;
     const quotation = await context.reader.getDocument<SupplierQuotationData>(
@@ -137,7 +164,7 @@ export class ProcurementSupplierContractController extends SupplierContractContr
     const normalized = await super.normalize(context);
     const raw = normalized as JsonObject;
     const uom = typeof raw.quantity_uom === "string" ? raw.quantity_uom.trim() : "";
-    if ((normalized.maximum_qty_micros ?? 0) > 0 && !uom) {
+    if (normalized.maximum_qty_micros !== undefined && !uom) {
       throw errors.validation("quantity_uom is required when maximum_qty is configured");
     }
     if (context.command.action === "submit" && uom) {
