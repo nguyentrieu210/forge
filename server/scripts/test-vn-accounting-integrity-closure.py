@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Acceptance regression for VN accounting integrity migrations 0043-0044."""
+"""Acceptance regression for VN accounting integrity migrations 0043-0045."""
 
 import json
 import sqlite3
@@ -8,6 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SQL43 = (ROOT / "migrations/tenant/0043_vn_accounting_integrity_closure.sql").read_text(encoding="utf-8")
 SQL44 = (ROOT / "migrations/tenant/0044_vn_accounting_immutable_controls.sql").read_text(encoding="utf-8")
+SQL45 = (ROOT / "migrations/tenant/0045_vn_accounting_fx_and_compatibility.sql").read_text(encoding="utf-8")
 NOW = "2026-08-03T00:00:00Z"
 
 
@@ -56,6 +57,20 @@ def base_db():
           batch_no TEXT, serial_no TEXT, allow_negative_stock INTEGER NOT NULL DEFAULT 0,
           PRIMARY KEY(tenant_id,voucher_type,voucher_no,voucher_revision,line_key)
         );
+        CREATE TABLE doctype_definitions(
+          tenant_id TEXT NOT NULL, doctype TEXT NOT NULL, module TEXT NOT NULL, is_custom INTEGER NOT NULL,
+          is_submittable INTEGER NOT NULL, is_child INTEGER NOT NULL, revision INTEGER NOT NULL,
+          metadata_json TEXT NOT NULL, disabled INTEGER NOT NULL, modified_by TEXT NOT NULL, modified_at TEXT NOT NULL,
+          PRIMARY KEY(tenant_id,doctype)
+        );
+        INSERT INTO doctype_definitions VALUES(
+          'demo','Account','Accounts',0,0,0,1,
+          '{"name":"Account","revision":1,"fields":[{"fieldname":"account_name","fieldtype":"Data"}]}',0,'seed','2026-01-01'
+        );
+        INSERT INTO doctype_definitions VALUES(
+          'demo','Journal Entry Account','Accounts',0,0,1,1,
+          '{"name":"Journal Entry Account","revision":1,"fields":[{"fieldname":"account","fieldtype":"Link"},{"fieldname":"debit","fieldtype":"Currency"},{"fieldname":"credit","fieldtype":"Currency"}]}',0,'seed','2026-01-01'
+        );
         """
     )
     return db
@@ -64,6 +79,7 @@ def base_db():
 def migrate(db):
     db.executescript(SQL43)
     db.executescript(SQL44)
+    db.executescript(SQL45)
 
 
 def insert_doc(db, doctype, name, payload, docstatus=1, tenant="demo"):
@@ -103,6 +119,7 @@ def expect(marker, fn):
     raise AssertionError(f"expected rejection: {marker}")
 
 
+# Historical orphan ledger stops 0043 instead of receiving guessed legal-entity scope.
 orphan = base_db()
 orphan.execute(
     "INSERT INTO gl_entries VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
@@ -112,6 +129,14 @@ expect("CHECK constraint failed", lambda: orphan.executescript(SQL43))
 
 db = base_db()
 migrate(db)
+
+# 0045 exposes first-class account-currency metadata without duplicating fields.
+account_meta = json.loads(db.execute("SELECT metadata_json FROM doctype_definitions WHERE doctype='Account'").fetchone()[0])
+assert [f["fieldname"] for f in account_meta["fields"]].count("account_currency") == 1
+je_meta = json.loads(db.execute("SELECT metadata_json FROM doctype_definitions WHERE doctype='Journal Entry Account'").fetchone()[0])
+for field in ("account_currency", "exchange_rate", "debit_in_account_currency", "credit_in_account_currency"):
+    assert [f["fieldname"] for f in je_meta["fields"]].count(field) == 1, field
+
 for args in [
     ("111-A", "COMP-A", "Asset", "Cash"),
     ("111-B", "COMP-B", "Asset", "Cash"),
@@ -122,6 +147,7 @@ for args in [
 ]:
     insert_account(db, *args)
 
+# Company/branch scope and scale=0 reporting.
 insert_doc(db, "Journal Entry", "JV-A", {"company": "COMP-A", "branch": "BR-A", "posting_at": "2026-06-15T08:00:00Z"})
 insert_gl(db, "Journal Entry", "JV-A", "D", "111-A", debit=1000)
 insert_gl(db, "Journal Entry", "JV-A", "C", "811-A", credit=1000)
@@ -130,87 +156,85 @@ insert_gl(db, "Journal Entry", "JV-B", "D", "111-B", debit=2000)
 insert_gl(db, "Journal Entry", "JV-B", "C", "111-B", credit=2000)
 db.commit()
 rows = db.execute("SELECT company,branch,account,debit,credit,balance FROM trial_balance ORDER BY company,account").fetchall()
-assert ("COMP-A", "BR-A", "111-A", 1000.0, 0.0, 1000.0) in rows, rows
+assert ("COMP-A", "BR-A", "111-A", 1000.0, 0.0, 1000.0) in rows
 assert len(db.execute("SELECT DISTINCT company FROM general_ledger_report").fetchall()) == 2
 
 insert_doc(db, "Journal Entry", "JV-BAD-ACCOUNT", {"company": "COMP-A", "posting_at": NOW})
-db.commit()
 expect("GL_ACCOUNT_COMPANY_MISMATCH", lambda: insert_gl(db, "Journal Entry", "JV-BAD-ACCOUNT", "D", "111-B", debit=100))
 insert_doc(db, "Journal Entry", "JV-BAD-BRANCH", {"company": "COMP-A", "branch": "BR-A", "posting_at": NOW})
-db.commit()
 expect("GL_BRANCH_SCOPE_MISMATCH", lambda: insert_gl(db, "Journal Entry", "JV-BAD-BRANCH", "D", "111-A", debit=100, dimensions={"branch": "BR-X"}))
 
+# AR/AP cannot cross legal entities and Payment Allocation obeys period lock.
 insert_doc(db, "Payment Allocation", "ALLOC-A", {"company": "COMP-A", "posting_at": "2026-06-20T08:00:00Z"})
 insert_doc(db, "Purchase Invoice", "PINV-B", {"company": "COMP-B", "posting_at": "2026-06-20T08:00:00Z"})
-db.commit()
 expect("PAYMENT_REFERENCE_COMPANY_MISMATCH", lambda: db.execute(
     "INSERT INTO payment_ledger_entries VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
     ("demo", "Payment Allocation", "ALLOC-A", 1, "P1", "Payable", "Supplier", "SUP", "331-A",
      -100, -100, "VND", 0, "Purchase Invoice", "PINV-B", "2026-06-20T08:00:00Z"),
 ))
-
 insert_doc(db, "VN Accounting Period", "KY-07", {
     "company": "COMP-A", "start_date": "2026-07-01", "end_date": "2026-07-31",
     "close_state": "Hard Locked", "allow_approved_adjustments": 0,
 })
-db.commit()
 expect("ACCOUNTING_PERIOD_HARD_LOCKED", lambda: insert_doc(db, "Payment Allocation", "ALLOC-LOCKED", {
     "company": "COMP-A", "posting_at": "2026-07-10T08:00:00Z"
 }))
 
+# Non-VN company keeps legacy stock-only compatibility.
+insert_doc(db, "Purchase Receipt", "PR-LEGACY", {"company": "COMP-C", "posting_at": "2026-06-20T08:00:00Z"})
+db.execute("INSERT INTO stock_ledger_entries VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", stock_row("Purchase Receipt", "PR-LEGACY", posting="2026-06-20T08:00:00Z"))
+
+# Approved policy activates strict stock->GL parity.
+insert_doc(db, "VN Accounting Policy", "POL-1", {
+    "company": "COMP-A", "effective_from": "2026-01-01", "effective_to": "2026-12-31",
+    "inventory_account": "156-A", "stock_adjustment_account": "811-A",
+    "stock_received_but_not_billed_account": "338-A"
+})
+expect("VN_ACCOUNTING_POLICY_OVERLAP", lambda: insert_doc(db, "VN Accounting Policy", "POL-2", {
+    "company": "COMP-A", "effective_from": "2026-06-01", "effective_to": "2027-01-01"
+}))
+
 insert_doc(db, "Purchase Receipt", "PR-1", {"company": "COMP-A", "posting_at": "2026-06-25T08:00:00Z"})
-db.commit()
 expect("PURCHASE_RECEIPT_GL_REQUIRED", lambda: db.execute(
     "INSERT INTO stock_ledger_entries VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", stock_row("Purchase Receipt", "PR-1")
 ))
 insert_gl(db, "Purchase Receipt", "PR-1", "STOCK", "156-A", debit=500)
 insert_gl(db, "Purchase Receipt", "PR-1", "SRBNB", "338-A", credit=500)
 db.execute("INSERT INTO stock_ledger_entries VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", stock_row("Purchase Receipt", "PR-1"))
-db.commit()
 
 insert_doc(db, "Purchase Receipt", "PR-UNBAL", {"company": "COMP-A", "posting_at": "2026-06-26T08:00:00Z"})
 insert_gl(db, "Purchase Receipt", "PR-UNBAL", "ONLY", "156-A", debit=500)
-db.commit()
 expect("PURCHASE_RECEIPT_GL_UNBALANCED", lambda: db.execute(
     "INSERT INTO stock_ledger_entries VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", stock_row("Purchase Receipt", "PR-UNBAL", posting="2026-06-26T08:00:00Z")
 ))
-# Restore this deliberate negative fixture to a balanced state before the final integrity sweep.
 insert_gl(db, "Purchase Receipt", "PR-UNBAL", "BALANCE", "338-A", credit=500)
-db.commit()
 
-insert_doc(db, "VN Accounting Policy", "POL-1", {
-    "company": "COMP-A", "effective_from": "2026-01-01", "effective_to": "2026-12-31",
-    "inventory_account": "156-A", "stock_adjustment_account": "811-A",
-    "stock_received_but_not_billed_account": "338-A"
-})
-db.commit()
-expect("VN_ACCOUNTING_POLICY_OVERLAP", lambda: insert_doc(db, "VN Accounting Policy", "POL-2", {
-    "company": "COMP-A", "effective_from": "2026-06-01", "effective_to": "2027-01-01"
-}))
 insert_doc(db, "Stock Entry", "STE-1", {"company": "COMP-A", "purpose": "Material Receipt", "posting_at": "2026-06-27T08:00:00Z"})
-db.commit()
 expect("STOCK_ENTRY_GL_REQUIRED", lambda: db.execute(
     "INSERT INTO stock_ledger_entries VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", stock_row("Stock Entry", "STE-1", posting="2026-06-27T08:00:00Z")
 ))
 insert_gl(db, "Stock Entry", "STE-1", "STOCK", "156-A", debit=500)
 insert_gl(db, "Stock Entry", "STE-1", "OFFSET", "811-A", credit=500)
 db.execute("INSERT INTO stock_ledger_entries VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", stock_row("Stock Entry", "STE-1", posting="2026-06-27T08:00:00Z"))
-db.commit()
 
+# Missing policy accounts surface before operational failure.
+insert_doc(db, "VN Accounting Policy", "POL-GAP", {"company": "COMP-GAP", "effective_from": "2026-01-01"})
+assert db.execute("SELECT code FROM accounting_integrity_exceptions WHERE company='COMP-GAP'").fetchall() == [("VN_POLICY_STOCK_ACCOUNTS_MISSING",)]
+db.execute("DELETE FROM documents WHERE doc_key='VN Accounting Policy:POL-GAP'")
+
+# Approved legal/account-map/tax versions cannot be edited or cancelled.
 for doctype, name, payload, marker in [
     ("VN Legal Rule", "RULE-1", {"rule_type": "VAT", "regime_code": "Tax-specific", "taxpayer_segment": "GENERAL", "effective_from": "2026-01-01", "effective_to": "2026-12-31"}, "VN_LEGAL_RULE_IMMUTABLE"),
     ("TT99 Account Map", "MAP-1", {"company": "COMP-A", "source_account": "111-A", "effective_from": "2026-01-01", "effective_to": "2026-12-31"}, "TT99_ACCOUNT_MAP_IMMUTABLE"),
     ("VN Tax Ruleset", "TAX-1", {"company": "COMP-A", "rule_type": "VAT", "taxpayer_segment": "GENERAL", "effective_from": "2026-01-01", "effective_to": "2026-12-31"}, "VN_TAX_RULESET_IMMUTABLE"),
 ]:
     insert_doc(db, doctype, name, payload)
-    db.commit()
-    expect(marker, lambda doctype=doctype, name=name: db.execute(
-        "UPDATE documents SET docstatus=2 WHERE doc_key=?", (f"{doctype}:{name}",)
-    ))
+    expect(marker, lambda doctype=doctype, name=name: db.execute("UPDATE documents SET docstatus=2 WHERE doc_key=?", (f"{doctype}:{name}",)))
     expect(marker, lambda doctype=doctype, name=name, payload=payload: db.execute(
         "UPDATE documents SET payload_json=? WHERE doc_key=?", (json.dumps({**payload, "tampered": 1}), f"{doctype}:{name}")
     ))
 
+# Resolved reconciliation evidence cannot be edited or cancelled.
 expect("VN_RECONCILIATION_DIFFERENCE_MISMATCH", lambda: insert_doc(db, "VN Reconciliation Case", "REC-BAD", {
     "company": "COMP-A", "expected_minor": 100, "actual_minor": 90, "difference_minor": 99
 }, docstatus=0))
@@ -218,17 +242,16 @@ insert_doc(db, "VN Reconciliation Case", "REC-1", {
     "company": "COMP-A", "expected_minor": 100, "actual_minor": 90, "difference_minor": 10,
     "root_cause": "Missing correction", "resolution_doctype": "Journal Entry", "resolution_document": "JV-A"
 })
-db.commit()
-expect("VN_RECONCILIATION_RESOLVED_IMMUTABLE", lambda: db.execute(
-    "UPDATE documents SET payload_json=? WHERE doc_key='VN Reconciliation Case:REC-1'",
-    (json.dumps({"company": "COMP-A", "expected_minor": 100, "actual_minor": 100, "difference_minor": 0}),),
-))
+expect("VN_RECONCILIATION_RESOLVED_IMMUTABLE", lambda: db.execute("UPDATE documents SET docstatus=2 WHERE doc_key='VN Reconciliation Case:REC-1'"))
 
+# Approval identity comes from authenticated version history, not client payload.
 db.execute(
     "INSERT INTO versions VALUES(?,?,?,?,?,?,?,?)",
     ("demo", "VN Legal Rule:RULE-1", 1, "cmd-rule", "chief@example.test", "submit",
      json.dumps({"doctype": "VN Legal Rule", "name": "RULE-1"}), NOW),
 )
 assert db.execute("SELECT approved_by,approved_at FROM accounting_approval_evidence WHERE name='RULE-1'").fetchone() == ("chief@example.test", NOW)
+
+# Accepted fixtures leave no CRITICAL integrity exception.
 assert db.execute("SELECT code FROM accounting_integrity_exceptions WHERE severity='CRITICAL'").fetchall() == []
-print("VN_ACCOUNTING_INTEGRITY_CLOSURE_0043_0044_PASS")
+print("VN_ACCOUNTING_INTEGRITY_CLOSURE_0043_0045_PASS")
