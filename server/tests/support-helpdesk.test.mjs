@@ -29,7 +29,9 @@ test("support package exposes tickets queue SLA knowledge responses and CSAT", (
   const roles = json("roles.json");
 
   assert.equal(app.id, "support");
-  assert.equal(app.version, "1.1.0");
+  assert.equal(app.version, "1.2.0");
+  assert.equal(app.worker, "cloudforge-app-ws07");
+  assert.deepEqual(app.validators.map((entry) => entry.doctype), ["Support SLA Policy", "Support Ticket"]);
   for (const key of ["Support Ticket", "Support Team", "Support SLA Policy", "Support Knowledge Article", "Support Canned Response", "Support Feedback"]) {
     assert.ok(app.nav.some((entry) => entry.key === key), `missing nav ${key}`);
   }
@@ -60,7 +62,7 @@ test("ticket lifecycle requires assignment, resolution and explicit escalation e
   assert.equal(close.allow_self_approval, false);
 });
 
-test("SLA policy stores priority targets and business hours without pretending an engine exists", () => {
+test("SLA policy stores governed targets while deadline calculation remains a separate engine", () => {
   const policy = json("doctypes/support-sla-policy.json");
   const priority = json("doctypes/support-sla-priority.json");
   const workday = json("doctypes/support-sla-workday.json");
@@ -77,9 +79,9 @@ test("SLA policy stores priority targets and business hours without pretending a
   assert.equal(field(workday, "start_time").required, true);
   assert.equal(field(workday, "end_time").required, true);
   assert.equal(field(ticket, "sla_state").read_only, true);
+  assert.equal(app.worker, "cloudforge-app-ws07");
+  assert.ok(app.validators.some((entry) => entry.doctype === "Support SLA Policy"));
   assert.deepEqual(app.hooks, []);
-  assert.equal(app.worker, undefined);
-  assert.equal(app.validators, undefined);
 });
 
 test("email chat social and portal are intake provenance labels only until connector work lands", () => {
