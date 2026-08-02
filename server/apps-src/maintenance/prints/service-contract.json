@@ -1,0 +1,9 @@
+{
+  "name": "Phiếu hợp đồng dịch vụ",
+  "doc_type": "Service Contract",
+  "format_type": "Jinja",
+  "html": "<h1>HỢP ĐỒNG / GÓI DỊCH VỤ</h1><p><strong>Số:</strong> {{ doc.name }}</p><p><strong>Tên:</strong> {{ doc.contract_title }}</p><p><strong>Khách hàng:</strong> {{ doc.customer }}</p><p><strong>Loại:</strong> {{ doc.contract_type }}</p><p><strong>Hiệu lực:</strong> {{ doc.effective_from }} - {{ doc.effective_to }}</p><p><strong>Phản hồi:</strong> {{ doc.response_hours }} giờ</p><p><strong>Xử lý:</strong> {{ doc.resolution_hours }} giờ</p><p><strong>Số lượt gồm trong gói:</strong> {{ doc.visits_included }}</p><p><strong>Bao gồm vật tư:</strong> {{ doc.parts_covered }}</p><h3>Điều khoản</h3><p>{{ doc.terms }}</p><p><strong>Trạng thái:</strong> {{ doc.workflow_state }}</p>",
+  "css": "h1 { font-size: 18px; text-align: center; margin-bottom: 14px; } h3 { font-size: 14px; margin: 12px 0 4px; } p { margin: 4px 0; line-height: 1.45; }",
+  "is_default": true,
+  "revision": 1
+}
