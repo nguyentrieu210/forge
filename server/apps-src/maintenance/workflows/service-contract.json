@@ -1,0 +1,21 @@
+{
+  "name": "Service Contract Approval",
+  "document_type": "Service Contract",
+  "state_field": "workflow_state",
+  "is_active": true,
+  "states": [
+    { "state": "Nháp", "docstatus": 0, "allow_edit": "Maintenance Manager" },
+    { "state": "Chờ duyệt", "docstatus": 0, "allow_edit": "Maintenance Manager" },
+    { "state": "Hiệu lực", "docstatus": 1, "allow_edit": "Maintenance Manager" },
+    { "state": "Hủy", "docstatus": 2, "allow_edit": "Maintenance Manager" }
+  ],
+  "transitions": [
+    { "state": "Nháp", "action": "Gửi duyệt", "next_state": "Chờ duyệt", "allowed_role": "Maintenance Manager" },
+    { "state": "Chờ duyệt", "action": "Phê duyệt", "next_state": "Hiệu lực", "allowed_role": "Maintenance Manager", "allow_self_approval": false },
+    { "state": "Chờ duyệt", "action": "Trả lại", "next_state": "Nháp", "allowed_role": "Maintenance Manager" },
+    { "state": "Nháp", "action": "Hủy", "next_state": "Hủy", "allowed_role": "Maintenance Manager" },
+    { "state": "Chờ duyệt", "action": "Hủy", "next_state": "Hủy", "allowed_role": "Maintenance Manager" },
+    { "state": "Hiệu lực", "action": "Hủy", "next_state": "Hủy", "allowed_role": "Maintenance Manager" }
+  ],
+  "revision": 1
+}
