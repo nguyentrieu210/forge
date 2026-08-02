@@ -91,7 +91,7 @@ test("executor preserves retry-after semantics and never returns credential mate
   assert.equal(JSON.stringify(result).includes("0123456789abcdef"), false);
 
   assert.equal(parseRetryAfterSeconds("30", now), 30);
-  assert.equal(parseRetryAfterSeconds("Sun, 03 Aug 2026 00:01:00 GMT", now), 60);
+  assert.equal(parseRetryAfterSeconds("Mon, 03 Aug 2026 00:01:00 GMT", now), 60);
   assert.equal(parseRetryAfterSeconds("0", now), undefined);
   assert.equal(parseRetryAfterSeconds("garbage", now), undefined);
 });
