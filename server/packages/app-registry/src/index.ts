@@ -1,6 +1,7 @@
 export * from "./manifest.js";
 export * from "./action-input-table.js";
 export * from "./action-input-table-compat.js";
+export * from "./bpm-approval.js";
 export {
   combinedNavigation,
   type InstalledAppRecord,
