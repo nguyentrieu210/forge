@@ -1,26 +1,31 @@
 {
   "id": "vn-accounting",
   "name": "Kế toán Việt Nam",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "requires": [
     { "id": "hrm", "version": ">=1.3.0" }
   ],
   "externalDocTypes": [
     { "name": "Purchase Receipt", "kind": "transaction", "app": "erpnext" },
-    { "name": "Stock Entry", "kind": "transaction", "app": "erpnext" }
+    { "name": "Stock Entry", "kind": "transaction", "app": "erpnext" },
+    { "name": "E-Invoice Submission", "kind": "transaction", "app": "erpnext" }
   ],
   "nav": [
     { "key": "VN Accounting Policy", "label": "Chính sách kế toán", "kind": "doctype", "icon": "landmark", "group": "Thiết lập kế toán" },
     { "key": "VN Legal Rule", "label": "Văn bản & quy tắc", "kind": "doctype", "icon": "book-open-check", "group": "Thiết lập kế toán" },
+    { "key": "TT99 Account Map", "label": "Ánh xạ tài khoản TT99", "kind": "doctype", "icon": "git-compare-arrows", "group": "Thiết lập kế toán" },
+    { "key": "VN Tax Ruleset", "label": "Ruleset thuế", "kind": "doctype", "icon": "scale", "group": "Thuế & tuân thủ" },
+    { "key": "e-invoice-submission", "label": "Hóa đơn điện tử", "kind": "route", "route": "/app/E-Invoice%20Submission", "icon": "file-check-2", "group": "Thuế & tuân thủ", "required_roles": ["Tax Specialist", "Chief Accountant", "Accounts Manager", "System Manager"] },
     { "key": "VN Accounting Period", "label": "Kỳ kế toán", "kind": "doctype", "icon": "calendar-lock", "group": "Kiểm soát" },
+    { "key": "VN Reconciliation Case", "label": "Đối soát & ngoại lệ", "kind": "doctype", "icon": "list-checks", "group": "Kiểm soát" },
     { "key": "Warehouse Cash Fund", "label": "Quỹ tiền mặt theo kho", "kind": "doctype", "icon": "landmark", "group": "Quỹ kho" },
     { "key": "Warehouse Cash Voucher", "label": "Phiếu thu chi kho", "kind": "doctype", "icon": "receipt-text", "group": "Quỹ kho" },
     { "key": "Warehouse Cash Transfer", "label": "Chuyển quỹ", "kind": "doctype", "icon": "arrow-left-right", "group": "Quỹ kho" },
     { "key": "Warehouse Cash Count", "label": "Kiểm quỹ & bàn giao", "kind": "doctype", "icon": "clipboard-check", "group": "Quỹ kho" },
     { "key": "Payroll Accounting Batch", "label": "Hạch toán lương", "kind": "doctype", "icon": "badge-dollar-sign", "group": "Kế toán lương" },
-    { "key": "chart-of-accounts", "label": "Hệ thống tài khoản", "kind": "route", "route": "/app/Account", "icon": "list-tree", "group": "Sổ sách", "required_roles": ["Accounts User", "Accounts Manager", "System Manager"] },
-    { "key": "journal-entry", "label": "Bút toán nhật ký", "kind": "route", "route": "/app/Journal%20Entry", "icon": "notebook-tabs", "group": "Sổ sách", "required_roles": ["Accounts User", "Accounts Manager", "System Manager"] },
-    { "key": "payment-entry", "label": "Thu chi kế toán", "kind": "route", "route": "/app/Payment%20Entry", "icon": "hand-coins", "group": "Sổ sách", "required_roles": ["Accounts User", "Accounts Manager", "System Manager"] },
+    { "key": "chart-of-accounts", "label": "Hệ thống tài khoản", "kind": "route", "route": "/app/Account", "icon": "list-tree", "group": "Sổ sách", "required_roles": ["Accounts User", "General Accountant", "Chief Accountant", "Accounts Manager", "Internal Auditor", "System Manager"] },
+    { "key": "journal-entry", "label": "Bút toán nhật ký", "kind": "route", "route": "/app/Journal%20Entry", "icon": "notebook-tabs", "group": "Sổ sách", "required_roles": ["Accounts User", "General Accountant", "Chief Accountant", "Accounts Manager", "Internal Auditor", "System Manager"] },
+    { "key": "payment-entry", "label": "Thu chi kế toán", "kind": "route", "route": "/app/Payment%20Entry", "icon": "hand-coins", "group": "Sổ sách", "required_roles": ["Accounts User", "General Accountant", "Chief Accountant", "Accounts Manager", "Internal Auditor", "System Manager"] },
     { "key": "payroll-entry-accounting", "label": "Bảng lương nguồn", "kind": "route", "route": "/app/Payroll%20Entry", "icon": "wallet-cards", "group": "Kế toán lương", "required_roles": ["Payroll Manager", "Accounts User", "Accounts Manager", "System Manager"] }
   ],
   "hooks": [],
