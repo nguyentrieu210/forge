@@ -70,6 +70,11 @@ function isoDate(value: unknown, label: string): string {
   return text;
 }
 
+function objectJson(value: unknown, label: string): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(`${label} must be an object`);
+  return value as Record<string, unknown>;
+}
+
 function validateRulesetPayload(payload: Record<string, unknown>): void {
   const schemaVersion = Number(payload.schema_version ?? 1);
   if (schemaVersion !== 1) throw new Error("VN Tax Ruleset schema_version must be 1");
@@ -79,7 +84,7 @@ function validateRulesetPayload(payload: Record<string, unknown>): void {
 }
 
 async function handleValidation(request: Request): Promise<Response> {
-  const subject = await request.json<ValidatorSubject>();
+  const subject = objectJson(await request.json(), "validator subject") as unknown as ValidatorSubject;
   if (subject.doctype !== "VN Tax Ruleset" || subject.action !== "submit") return accept();
   try {
     validateRulesetPayload(subject.payload ?? {});
@@ -92,9 +97,10 @@ async function handleValidation(request: Request): Promise<Response> {
 async function readDocument(call: PlatformCall, doctype: string, name: string): Promise<Record<string, unknown>> {
   const response = await call(`resource/${encodeURIComponent(doctype)}/${encodeURIComponent(name)}`);
   if (!response.ok) throw new Error(`${doctype} ${name} could not be read (HTTP ${response.status})`);
-  const body = await response.json<{ data?: Record<string, unknown> }>();
-  if (!body.data) throw new Error(`${doctype} ${name} was not returned by the platform`);
-  return body.data;
+  const body = objectJson(await response.json(), `${doctype} response`);
+  const data = body.data;
+  if (!data || typeof data !== "object" || Array.isArray(data)) throw new Error(`${doctype} ${name} was not returned by the platform`);
+  return data as Record<string, unknown>;
 }
 
 async function readList(
@@ -111,20 +117,24 @@ async function readList(
   });
   const response = await call(`resource/${encodeURIComponent(doctype)}?${query}`);
   if (!response.ok) throw new Error(`${doctype} list could not be read (HTTP ${response.status})`);
-  const body = await response.json<{ data?: Record<string, unknown>[] }>();
-  return body.data ?? [];
+  const body = objectJson(await response.json(), `${doctype} list response`);
+  const data = body.data;
+  if (data === undefined) return [];
+  if (!Array.isArray(data)) throw new Error(`${doctype} list response data must be an array`);
+  return data.map((row, index) => objectJson(row, `${doctype} row ${index + 1}`));
 }
 
 async function evaluateMethod(request: Request, env: Env, args: Record<string, unknown>): Promise<Response> {
   const rulesetName = String(args.ruleset ?? "").trim();
   if (!rulesetName) return refuse("ruleset is required");
   const effectiveAt = isoDate(args.effective_at, "effective_at");
-  const company = String(args.company ?? "").trim();
-  if (!company) return refuse("company is required");
   const call = platformCaller(request, env);
   const ruleset = await readDocument(call, "VN Tax Ruleset", rulesetName);
   if (Number(ruleset.docstatus) !== 1) return refuse(`VN Tax Ruleset ${rulesetName} must be submitted`);
-  if (String(ruleset.company ?? "") !== company) return refuse(`VN Tax Ruleset ${rulesetName} belongs to another company`);
+  const company = String(ruleset.company ?? "").trim();
+  if (!company) return refuse(`VN Tax Ruleset ${rulesetName} must define company`);
+  const requestedCompany = String(args.company ?? "").trim();
+  if (requestedCompany && requestedCompany !== company) return refuse(`VN Tax Ruleset ${rulesetName} belongs to another company`);
   const from = isoDate(ruleset.effective_from, "ruleset effective_from");
   const to = ruleset.effective_to ? isoDate(ruleset.effective_to, "ruleset effective_to") : "9999-12-31";
   if (effectiveAt < from || effectiveAt > to) return refuse(`VN Tax Ruleset ${rulesetName} is not effective on ${effectiveAt}`);
@@ -247,7 +257,8 @@ export default {
     if (request.method === "POST" && url.pathname === "/hooks/validate") return handleValidation(request);
     if (request.method === "POST" && url.pathname.startsWith("/api/method/")) {
       const method = decodeURIComponent(url.pathname.slice("/api/method/".length));
-      const body = await request.json<MethodBody>().catch(() => ({}));
+      const rawBody = await request.json().catch(() => ({}));
+      const body = objectJson(rawBody, "method body") as unknown as MethodBody;
       if (method === "vn-accounting.tax.evaluate") return evaluateMethod(request, env, body.args ?? {});
       if (method === "vn-accounting.bank.match_candidates") return bankMatchMethod(request, env, body.args ?? {});
       return json({ message: `Unknown vn-accounting method: ${method}` }, 404);
