@@ -30,6 +30,10 @@ import {
   GoalController, HrmAppraisalController, HrmPayrollPeriodController, HrmSalaryStructureAssignmentController,
   SalaryStructureController,
 } from "./hrm-policy-controllers.js";
+import {
+  EmployeeBenefitEnrollmentController, EmployeeLoanController, EmployeeLoanRepaymentController,
+  SalaryBankBatchController, WorkforcePlanController,
+} from "./hrm-workforce-finance-controllers.js";
 import { HrmSalarySlipController } from "./hrm-salary-slip.js";
 import {
   CutOrderController, StockReconciliationController, StockReservationController,
@@ -80,10 +84,14 @@ export function registerErpNextCoreControllers(registry: ControllerRegistry): Co
     .register(new LeaveAllocationController())
     .register(new LeaveApplicationController())
     .register(new AttendanceController())
+    .register(new WorkforcePlanController())
     .register(new SalaryStructureController())
     .register(new HrmSalaryStructureAssignmentController())
     .register(new HrmPayrollPeriodController())
     .register(new AdditionalSalaryController())
+    .register(new EmployeeBenefitEnrollmentController())
+    .register(new EmployeeLoanController())
+    .register(new EmployeeLoanRepaymentController())
     .register(new EmployeeAdvanceController())
     .register(new TravelRequestController())
     .register(new GoalController())
@@ -96,6 +104,7 @@ export function registerErpNextCoreControllers(registry: ControllerRegistry): Co
     .register(new BankReconciliationController())
     .register(new HrmSalarySlipController())
     .register(new PayrollEntryController())
+    .register(new SalaryBankBatchController())
     .register(new SubscriptionController())
     .register(new EInvoiceSubmissionController())
     .register(new WarehouseCashFundController())
