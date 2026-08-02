@@ -103,13 +103,34 @@ function WebsiteSite({ data }: { data: WebsiteSiteData }) {
           </a>
           <nav className="ml-auto hidden items-center gap-1 md:flex" aria-label="Điều hướng website">
             {data.navigation.map((item) => (
-              <a key={item.slug} href={pageHref(item.slug, data.site.home_page)} className="rounded-lg px-3 py-2 text-sm hover:bg-black/5">
+              <a
+                key={item.slug}
+                href={pageHref(item.slug, data.site.home_page)}
+                aria-current={item.slug === data.page.slug ? "page" : undefined}
+                className="rounded-lg px-3 py-2 text-sm hover:bg-black/5"
+              >
                 {item.label}
               </a>
             ))}
           </nav>
-          <a href="/login" className="rounded-lg border border-black/15 px-3 py-2 text-sm font-medium hover:bg-black/5">Đăng nhập</a>
+          <a href="/login" className="ml-auto rounded-lg border border-black/15 px-3 py-2 text-sm font-medium hover:bg-black/5 md:ml-0">Đăng nhập</a>
         </div>
+        {data.navigation.length ? (
+          <nav className="border-t border-black/10 md:hidden" aria-label="Điều hướng website">
+            <div className="mx-auto flex w-full max-w-7xl gap-1 overflow-x-auto px-4 py-2 sm:px-6">
+              {data.navigation.map((item) => (
+                <a
+                  key={item.slug}
+                  href={pageHref(item.slug, data.site.home_page)}
+                  aria-current={item.slug === data.page.slug ? "page" : undefined}
+                  className="shrink-0 rounded-lg px-3 py-2 text-sm hover:bg-black/5"
+                >
+                  {item.label}
+                </a>
+              ))}
+            </div>
+          </nav>
+        ) : null}
       </header>
 
       <main>
