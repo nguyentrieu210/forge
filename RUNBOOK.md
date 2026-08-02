@@ -40,6 +40,19 @@ Trước khi sửa code hoặc tài liệu:
 - Branch cũ/diverged chỉ dùng làm nguồn tham khảo từng thay đổi đã review; không merge nguyên branch để tiết kiệm thời gian.
 - Chỉ kết luận PASS cho exact head đã có evidence tương ứng.
 
+### Fast lane cho UI hotfix nhỏ
+
+Khi thay đổi thực sự chỉ là giao diện nhỏ của Alumdoor và không đụng backend/nghiệp vụ/data/schema/dependency:
+
+1. Tạo branch mới từ exact current `main` với tên `hotfix/ui-<mô-tả>`.
+2. Chỉ sửa `client/**`; ba file `CURRENT_STATUS.md`, `NEXT_TASKS.md`, `AI_HANDOFF.md` được phép đi kèm để giữ handoff.
+3. Không dùng fast lane nếu có thay đổi `server/**`, migration, brief/app metadata, package/dependency manifest, workflow, secret, DNS hoặc production data.
+4. Sau khi commit, vào Actions, chọn workflow **ALU UI Hotfix - One Click Deploy**, chọn đúng branch hotfix và bấm Run workflow.
+5. Workflow tự chặn branch stale, giới hạn tối đa 20 file/600 dòng, rồi tái sử dụng Gateway production workflow để lint/test/typecheck/build/stage/dry-run/deploy/smoke exact SHA.
+6. Workflow best-effort tạo hoặc cập nhật PR reconcile về `main`. Production deploy không thay thế việc reconcile source; task chỉ closure hoàn chỉnh khi exact production SHA đã về `main` qua PR hợp lệ.
+
+Không dùng fast lane như lối tắt cho business logic hoặc backend. Nếu phạm vi không còn thuần UI nhỏ, quay lại luồng branch → PR → required CI → merge → release bình thường.
+
 ## 5. Kiểm thử và bằng chứng
 
 Chạy gate phù hợp với phạm vi thay đổi. Với thay đổi code sản phẩm, ưu tiên:
@@ -66,7 +79,7 @@ Không được tự động:
 
 Các hành động trên chỉ thực hiện khi user yêu cầu rõ cho đúng đợt làm việc và vẫn phải có gate/backup/recovery phù hợp.
 
-Merge code và deploy production là hai authorization boundary riêng.
+Merge code và deploy production là hai authorization boundary riêng. UI hotfix fast lane chỉ được chạy khi user chủ động bấm production workflow; việc tồn tại workflow không tự cấp quyền deploy.
 
 ## 7. File và dữ liệu cấm commit
 
