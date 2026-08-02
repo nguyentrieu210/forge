@@ -21,7 +21,14 @@ test("completed Production Run rejects material lot mismatch", async () => {
 
 test("completed Production Run cannot reuse a Manufacture Stock Entry", async () => {
   const prior = canonical("Plastic Production Run", "PRUN-OTHER", runDocument({
-    planned_qty: "5", run_status: "Completed", manufacture_stock_entry: "MFG-1", good_qty: "4",
+    machine: "PM-2",
+    tool: undefined,
+    planned_start: "2026-08-03T08:00:00.000Z",
+    planned_end: "2026-08-03T12:00:00.000Z",
+    planned_qty: "5",
+    run_status: "Completed",
+    manufacture_stock_entry: "MFG-1",
+    good_qty: "4",
   }), 1);
   await assert.rejects(
     controller.normalize(context({
