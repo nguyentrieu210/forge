@@ -26,16 +26,16 @@ const registry = new SemanticModelRegistry([
   },
 ]);
 
-function denied(code = "PERMISSION_DENIED") {
-  return Object.assign(new Error("denied"), { code });
-}
+const allScope = { mode: "all", actor_user_id: "reader@example.com", user_permissions: [] };
+function denied(code = "PERMISSION_DENIED") { return Object.assign(new Error("denied"), { code }); }
 
-test("catalog omits models denied by the same report permission boundary", async () => {
+test("catalog omits models denied by the same permission/read-scope boundary", async () => {
   const events = [];
   const service = new PermissionAwareSemanticCatalogService(registry, {
-    async assert(request) {
+    async authorize(request) {
       events.push(request);
       if (request.permission.doctype === "Salary Slip") throw denied();
+      return allScope;
     },
   });
   const visible = await service.list("tenant-a");
@@ -48,8 +48,9 @@ test("catalog omits models denied by the same report permission boundary", async
 
 test("direct catalog get fails closed when model permission is denied", async () => {
   const service = new PermissionAwareSemanticCatalogService(registry, {
-    async assert(request) {
+    async authorize(request) {
       if (request.permission.doctype === "Salary Slip") throw denied("FORBIDDEN");
+      return allScope;
     },
   });
   await assert.rejects(() => service.get("tenant-a", "payroll.register"), (error) => error.code === "FORBIDDEN");
@@ -57,7 +58,7 @@ test("direct catalog get fails closed when model permission is denied", async ()
 
 test("catalog does not disguise infrastructure failure as empty permissions", async () => {
   const service = new PermissionAwareSemanticCatalogService(registry, {
-    async assert() { throw Object.assign(new Error("db unavailable"), { code: "D1_UNAVAILABLE" }); },
+    async authorize() { throw Object.assign(new Error("db unavailable"), { code: "D1_UNAVAILABLE" }); },
   });
   await assert.rejects(() => service.list("tenant-a"), (error) => error.code === "D1_UNAVAILABLE");
 });
