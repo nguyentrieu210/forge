@@ -3,6 +3,11 @@
   "name": "cloudforge-social-ingress",
   "main": "src/index.ts",
   "compatibility_date": "2026-07-27",
+  "observability": {
+    "enabled": true,
+    "logs": { "enabled": true, "head_sampling_rate": 1 },
+    "traces": { "enabled": true, "head_sampling_rate": 0.05 }
+  },
   "vars": {
     "PUBLIC_ORIGIN": "https://social-ingress.kairo.vn",
     "META_GRAPH_VERSION": "v23.0"
