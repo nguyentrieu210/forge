@@ -70,8 +70,8 @@ export class HiringCompletionController extends SuiteController<JsonObject> {
     if (context.command.action === "submit") {
       const completions = await context.reader.listDocumentsByDoctype<JsonObject>(context.command.tenant_id, this.doctype);
       if (completions.some((item) => item.name !== context.command.aggregate.name && item.docstatus === 1
-        && (H.text(item.data.job_offer) === offerName || H.text(item.data.employee) === employeeName))) {
-        throw errors.exists(`Hiring completion already exists for Job Offer ${offerName} or Employee ${employeeName}`);
+        && H.text(item.data.job_offer) === offerName)) {
+        throw errors.exists(`Hiring completion already exists for Job Offer ${offerName}`);
       }
     }
 
