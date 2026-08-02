@@ -28,6 +28,12 @@ function aluminiumLine(itemCode, lengthM, bars, color = "GS") {
   };
 }
 
+function callbackResourcePath(pathname) {
+  const decoded = decodeURIComponent(pathname).replace(/\/+$/, "");
+  const resourceIndex = decoded.lastIndexOf("/resource/");
+  return resourceIndex >= 0 ? decoded.slice(resourceIndex) : decoded;
+}
+
 function createPlatform({ secondCompany = "ALUMDOOR" } = {}) {
   const order1 = {
     name: "PO-DAY-1",
@@ -54,7 +60,7 @@ function createPlatform({ secondCompany = "ALUMDOOR" } = {}) {
   const platform = {
     async fetch(outbound) {
       const url = new URL(outbound.url);
-      const path = decodeURIComponent(url.pathname).replace(/^\/api/, "");
+      const path = callbackResourcePath(url.pathname);
       if (path === "/resource/Supplier/Tiến Đạt") return response({ supplier_name: "Tiến Đạt" });
       if (path === "/resource/Purchase Order") return response([{ name: order1.name }, { name: order2.name }]);
       if (path === `/resource/Purchase Order/${order1.name}`) return response(order1);
@@ -85,13 +91,13 @@ function createPlatform({ secondCompany = "ALUMDOOR" } = {}) {
   return { platform, drafts, submitted, get creates() { return creates; } };
 }
 
-function request(lines, overrides = {}) {
+function request(lines, overrides = {}, callback = "https://gateway.local/api") {
   return new Request("https://app.local/api/method/alumdoor.purchase.bulk_fifo_receipt", {
     method: "POST",
     headers: {
       "content-type": "application/json",
       "x-cloudforge-tenant": "alu",
-      "x-cloudforge-callback": "https://gateway.local/api",
+      "x-cloudforge-callback": callback,
       authorization: "Bearer qa",
       "x-cloudforge-app": "alumdoor",
       "x-cloudforge-identity": "qa-user",
@@ -137,6 +143,22 @@ test("bulk preview cộng dồn các dòng cùng quy cách nên không ăn lại
   assert.equal(body.line_summaries[1].nominal_remaining_bars, 70);
   assert.equal(body.item_count, 2);
   assert.equal(state.creates, 0, "preview must not create a draft");
+});
+
+test("bulk preview giữ FIFO tuần tự khi callback có internal path prefix", async () => {
+  const state = createPlatform();
+  const result = await handleBulkPurchaseFifoRequest(request([
+    line(200, 560.16),
+    line(30, 84.024),
+  ], {}, "https://gateway.local/internal/runtime/callback"), { PLATFORM: state.platform }, false);
+  const body = await result.json();
+  assert.equal(result.status, 200, body.message);
+  assert.deepEqual(body.allocations.map((row) => [row.input_row, row.purchase_order, row.allocated_bars]), [
+    [1, "PO-DAY-1", 200],
+    [2, "PO-DAY-2", 30],
+  ]);
+  assert.equal(body.line_summaries[1].nominal_remaining_bars, 70);
+  assert.equal(state.creates, 0);
 });
 
 test("bulk commit tạo đúng một Purchase Receipt nháp chứa toàn bộ dòng và retry idempotent", async () => {
