@@ -9,15 +9,8 @@ import { writeFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { performance } from "node:perf_hooks";
+import { assertWorkerRollbackRequest, containsString } from "./lib/worker-rollback-guard.mjs";
 import { fail, wrangler } from "./wrangler-cli.mjs";
-
-const ALLOWED_WORKERS = new Set([
-  "cloudforge-gateway",
-  "cloudforge-jobs",
-  "cloudforge-control-plane",
-  "cloudforge-social-ingress",
-  "cloudforge-query-demo",
-]);
 
 const args = process.argv.slice(2);
 const argOf = (name) => {
@@ -31,12 +24,11 @@ const confirm = argOf("confirm")?.trim();
 const reason = argOf("reason")?.trim();
 const output = argOf("output")?.trim();
 
-if (!worker || !ALLOWED_WORKERS.has(worker)) {
-  fail(`--worker must be one of: ${[...ALLOWED_WORKERS].join(", ")}`);
+try {
+  assertWorkerRollbackRequest({ worker, versionId, execute, confirm, reason });
+} catch (error) {
+  fail(error instanceof Error ? error.message : String(error));
 }
-if (!versionId || !/^[0-9a-f-]{16,64}$/i.test(versionId)) fail("--version <exact Worker version id> is required");
-if (execute && confirm !== worker) fail(`refusing rollback: add --confirm ${worker}`);
-if (execute && !reason) fail("refusing rollback without --reason <text>");
 
 const target = parseJson(wrangler(["versions", "view", versionId, "--name", worker, "--json"]));
 if (!containsString(target, versionId)) fail(`Wrangler did not return requested version ${versionId} for ${worker}`);
@@ -65,8 +57,6 @@ if (!execute) {
 }
 
 const startedAt = performance.now();
-// --message is documented to make Wrangler rollback non-interactive. The caller has
-// already supplied exact worker/version + explicit confirm + reason above.
 wrangler([
   "rollback", versionId,
   "--name", worker,
@@ -98,13 +88,6 @@ function parseJson(text) {
   } catch (error) {
     fail(`could not parse Wrangler JSON: ${error.message}`);
   }
-}
-
-function containsString(value, needle) {
-  if (typeof value === "string") return value === needle || value.includes(needle);
-  if (Array.isArray(value)) return value.some((item) => containsString(item, needle));
-  if (!value || typeof value !== "object") return false;
-  return Object.values(value).some((item) => containsString(item, needle));
 }
 
 function writeEvidence(file, value) {
