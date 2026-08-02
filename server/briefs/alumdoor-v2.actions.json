@@ -1,6 +1,6 @@
 {
   "version": "2.2.1",
-  "//": "Bulk Transaction v1: một bảng nhiều mã tạo đúng một Purchase Receipt nháp; không submit hay ghi ledger trong action.",
+  "//": "Bulk Transaction: Purchase Receipt tạo một draft mới; Stock Reconciliation chỉ cập nhật draft đã chốt snapshot và không submit/ghi ledger trong action.",
   "actions": [
     {
       "name": "nhap-nhom-hang-loat",
@@ -19,6 +19,22 @@
       ],
       "preview": "alumdoor.purchase.preview_bulk_fifo_receipt | Xem phân bổ hàng loạt",
       "commit": "alumdoor.purchase.bulk_fifo_receipt | Tạo phiếu nhập hàng loạt | Tạo một Purchase Receipt nháp cho toàn bộ dòng đã kiểm tra?",
+      "resultTable": "items"
+    },
+    {
+      "name": "kiem-ke-hang-loat",
+      "label": "Nhập kiểm kê hàng loạt",
+      "menu": true,
+      "icon": "clipboard-check",
+      "group": "Kho",
+      "description": "Dán số đếm vào một Stock Reconciliation nháp đã chốt sổ. Bảng phải có đủ mọi dòng snapshot; có thể thêm lô/mã thừa mới. Preview dùng controller chuẩn tại đúng snapshot_at; lưu xong phiếu vẫn là nháp và phải duyệt/ghi sổ theo quy trình kiểm kê chuẩn.",
+      "permission": "Stock Reconciliation",
+      "fields": [
+        "reconciliation:Link(Stock Reconciliation)! Phiếu kiểm kê nháp",
+        "lines:Text(BulkTransaction:{\"columns\":[{\"fieldname\":\"item_code\",\"label\":\"Mã hàng\",\"fieldtype\":\"Link\",\"options\":\"Item\",\"required\":true},{\"fieldname\":\"batch_no\",\"label\":\"Lô\",\"fieldtype\":\"Link\",\"options\":\"Batch\"},{\"fieldname\":\"counted_qty\",\"label\":\"Số đếm thực tế\",\"fieldtype\":\"Float\",\"required\":true},{\"fieldname\":\"counted_weight_kg\",\"label\":\"Kg cân thực tế\",\"fieldtype\":\"Float\"},{\"fieldname\":\"variance_reason\",\"label\":\"Nguyên nhân chênh lệch\",\"fieldtype\":\"Link\",\"options\":\"Nguyên nhân chênh lệch\"},{\"fieldname\":\"variance_note\",\"label\":\"Diễn giải\",\"fieldtype\":\"Data\"},{\"fieldname\":\"serial_and_batch_bundle\",\"label\":\"Bundle điều chỉnh\",\"fieldtype\":\"Link\",\"options\":\"Serial and Batch Bundle\"},{\"fieldname\":\"valuation_rate\",\"label\":\"Đơn giá điều chỉnh\",\"fieldtype\":\"Currency\"}],\"minRows\":1,\"maxRows\":500,\"allowPaste\":true})! Số đếm thực tế"
+      ],
+      "preview": "alumdoor.inventory.preview_bulk_reconciliation | Xem chênh lệch theo snapshot",
+      "commit": "alumdoor.inventory.bulk_reconciliation | Lưu số đếm vào phiếu nháp | Cập nhật toàn bộ số đếm vào phiếu kiểm kê này? Phiếu sẽ chưa ghi sổ.",
       "resultTable": "items"
     }
   ]
