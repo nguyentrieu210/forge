@@ -1,0 +1,18 @@
+{
+  "name": "Duyệt mẫu BCTC TT99",
+  "document_type": "TT99 Financial Statement Template",
+  "state_field": "workflow_state",
+  "is_active": true,
+  "states": [
+    { "state": "Nháp", "docstatus": 0, "allow_edit": "General Accountant" },
+    { "state": "Chờ duyệt", "docstatus": 0, "allow_edit": "Chief Accountant" },
+    { "state": "Đã phê duyệt", "docstatus": 1, "allow_edit": "Chief Accountant" },
+    { "state": "Đã hủy", "docstatus": 2, "allow_edit": "Chief Accountant" }
+  ],
+  "transitions": [
+    { "state": "Nháp", "action": "Gửi duyệt", "next_state": "Chờ duyệt", "allowed_role": "General Accountant" },
+    { "state": "Chờ duyệt", "action": "Phê duyệt", "next_state": "Đã phê duyệt", "allowed_role": "Chief Accountant", "allow_self_approval": false },
+    { "state": "Chờ duyệt", "action": "Từ chối", "next_state": "Đã hủy", "allowed_role": "Chief Accountant" }
+  ],
+  "revision": 1
+}
