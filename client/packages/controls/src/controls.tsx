@@ -174,12 +174,12 @@ function GroupedNumberInput(p: FieldControlProps & { suffix?: string }) {
     return Number.isFinite(value) ? value : null;
   };
 
-  /** Số → chuỗi đã nhóm. Giữ nguyên phần thập phân người dùng đang gõ, không tự làm tròn. */
+  /** Số → chuỗi đã nhóm. Precision là số chữ số tối đa; bỏ các số 0 thập phân vô nghĩa ở cuối. */
   const display = (value: unknown): string => {
     if (value === null || value === undefined || value === "") return "";
     const numeric = Number(value);
     const normalized = Number.isFinite(numeric) && Number.isInteger(precision) && precision! >= 0
-      ? numeric.toFixed(precision!)
+      ? numeric.toFixed(precision!).replace(/(\.\d*?[1-9])0+$|\.0+$/, "$1")
       : String(value);
     const [whole, fraction] = normalized.split(".");
     const sign = whole?.startsWith("-") ? "-" : "";
