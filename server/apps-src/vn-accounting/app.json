@@ -1,7 +1,7 @@
 {
   "id": "vn-accounting",
   "name": "Kế toán Việt Nam",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "requires": [
     { "id": "hrm", "version": ">=1.3.0" }
   ],
@@ -12,6 +12,7 @@
   "nav": [
     { "key": "VN Accounting Policy", "label": "Chính sách kế toán", "kind": "doctype", "icon": "landmark", "group": "Thiết lập kế toán" },
     { "key": "VN Legal Rule", "label": "Văn bản & quy tắc", "kind": "doctype", "icon": "book-open-check", "group": "Thiết lập kế toán" },
+    { "key": "TT99 Account Map", "label": "Mapping tài khoản TT99", "kind": "doctype", "icon": "git-compare-arrows", "group": "TT99" },
     { "key": "VN Accounting Period", "label": "Kỳ kế toán", "kind": "doctype", "icon": "calendar-lock", "group": "Kiểm soát" },
     { "key": "Warehouse Cash Fund", "label": "Quỹ tiền mặt theo kho", "kind": "doctype", "icon": "landmark", "group": "Quỹ kho" },
     { "key": "Warehouse Cash Voucher", "label": "Phiếu thu chi kho", "kind": "doctype", "icon": "receipt-text", "group": "Quỹ kho" },
