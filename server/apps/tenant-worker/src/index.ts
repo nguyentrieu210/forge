@@ -15,7 +15,6 @@ import {
 } from "../../../packages/frappe-api/src/index.js";
 import type { Actor, JsonObject } from "../../../packages/contracts/src/index.js";
 import { errorResponse, errors, randomId } from "../../../packages/core/src/index.js";
-import { D1MutationStore } from "../../../packages/document-kernel/src/index.js";
 import {
   D1DocumentAccessStore,
   D1MetadataStore,
@@ -82,13 +81,12 @@ export default {
         const metadata = new D1MetadataStore(requestDb);
         const access = new D1DocumentAccessStore(requestDb);
         const permissions = new MetadataPermissionService(metadata, undefined, access);
-        const documents = new D1MutationStore(env.DB);
         response = await routeManufacturingBomBulkApi(request, url, {
           tenantId,
           actor: authentication.actor,
           permissions,
           traceId,
-          listBomDocuments: () => documents.listDocumentsByDoctype<JsonObject>(tenantId, "Bill of Materials"),
+          findCanonicalRevisions: (document) => findBomRevisionsThroughCore(request, env, document),
           createCanonicalDraft: (document) => createBomDraftThroughCore(request, env, document),
         });
       } else {
@@ -177,6 +175,48 @@ async function authenticateInterceptedRoute(
 }
 
 /**
+ * Replay lookup follows the ordinary BOM list/get routes so User Permission scope and
+ * document read rules are identical to Desk. The bulk path never scans D1 behind the
+ * permission layer just because doing so would be convenient.
+ */
+async function findBomRevisionsThroughCore(request: Request, env: TenantEnv, document: JsonObject): Promise<JsonObject[]> {
+  const company = text(document.company);
+  const item = text(document.item);
+  const revision = integer(document.revision);
+  if (!company || !item || revision <= 0) throw errors.validation("Bulk BOM revision lookup requires company, item and revision");
+
+  const listUrl = new URL(request.url);
+  listUrl.pathname = `/api/resource/${encodeURIComponent("Bill of Materials")}`;
+  listUrl.search = "";
+  listUrl.searchParams.set("fields", JSON.stringify(["name", "docstatus"]));
+  listUrl.searchParams.set("filters", JSON.stringify([
+    ["company", "=", company],
+    ["item", "=", item],
+    ["revision", "=", revision],
+  ]));
+  listUrl.searchParams.set("limit_page_length", "3");
+  const listResponse = await coreWorker.fetch(new Request(listUrl, {
+    method: "GET",
+    headers: forwardedHeaders(request),
+  }), env);
+  const listPayload = await requireCoreJson(listResponse, "BOM revision lookup");
+  const rows = Array.isArray(listPayload.data) ? listPayload.data.filter(isJsonObject) : [];
+  if (rows.length !== 1) return rows;
+
+  const name = text(rows[0]!.name);
+  if (!name) throw errors.database("Canonical BOM lookup returned a row without name");
+  const docUrl = new URL(request.url);
+  docUrl.pathname = `/api/resource/${encodeURIComponent("Bill of Materials")}/${encodeURIComponent(name)}`;
+  docUrl.search = "";
+  const docResponse = await coreWorker.fetch(new Request(docUrl, {
+    method: "GET",
+    headers: forwardedHeaders(request),
+  }), env);
+  const docPayload = await requireCoreJson(docResponse, "BOM replay read");
+  return isJsonObject(docPayload.data) ? [docPayload.data] : [];
+}
+
+/**
  * Commit stays on the ordinary Frappe resource route. The bulk endpoint owns only
  * transport/replay coordination; the existing BOM controller remains the sole write
  * authority for naming, normalized UOM, checksums and lifecycle invariants.
@@ -185,14 +225,48 @@ function createBomDraftThroughCore(request: Request, env: TenantEnv, document: J
   const url = new URL(request.url);
   url.pathname = `/api/resource/${encodeURIComponent("Bill of Materials")}`;
   url.search = "";
-  const headers = new Headers(request.headers);
+  const headers = forwardedHeaders(request);
   headers.set("content-type", "application/json");
-  headers.delete("content-length");
   return coreWorker.fetch(new Request(url, {
     method: "POST",
     headers,
     body: JSON.stringify(document),
   }), env);
+}
+
+function forwardedHeaders(request: Request): Headers {
+  const headers = new Headers(request.headers);
+  headers.delete("content-length");
+  return headers;
+}
+
+async function requireCoreJson(response: Response, operation: string): Promise<JsonObject> {
+  if (!response.ok) {
+    if (response.status === 401) throw errors.authentication(`${operation} requires authentication`);
+    if (response.status === 403) throw errors.permission(`${operation} is not permitted`);
+    if (response.status === 404) return { data: [] };
+    throw errors.database(`${operation} failed through the canonical resource API`);
+  }
+  try {
+    const payload = await response.json() as unknown;
+    if (isJsonObject(payload)) return payload;
+  } catch {
+    // Stable platform error below.
+  }
+  throw errors.database(`${operation} returned an invalid response`);
+}
+
+function text(value: unknown): string {
+  return typeof value === "string" || typeof value === "number" ? String(value).trim() : "";
+}
+
+function integer(value: unknown): number {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isSafeInteger(parsed) ? parsed : 0;
+}
+
+function isJsonObject(value: unknown): value is JsonObject {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 async function authenticateTrustedIdentity(
