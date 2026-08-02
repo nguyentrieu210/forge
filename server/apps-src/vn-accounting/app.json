@@ -1,7 +1,7 @@
 {
   "id": "vn-accounting",
   "name": "Kế toán Việt Nam",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "requires": [
     { "id": "hrm", "version": ">=1.3.0" }
   ],
@@ -13,15 +13,32 @@
     { "key": "VN Accounting Policy", "label": "Chính sách kế toán", "kind": "doctype", "icon": "landmark", "group": "Thiết lập kế toán" },
     { "key": "VN Legal Rule", "label": "Văn bản & quy tắc", "kind": "doctype", "icon": "book-open-check", "group": "Thiết lập kế toán" },
     { "key": "VN Accounting Period", "label": "Kỳ kế toán", "kind": "doctype", "icon": "calendar-lock", "group": "Kiểm soát" },
+
+    { "key": "TT99 Account Map", "label": "Mapping tài khoản TT99", "kind": "doctype", "icon": "git-compare-arrows", "group": "TT99" },
+    { "key": "TT99 Voucher Form", "label": "Mẫu chứng từ TT99", "kind": "doctype", "icon": "file-check-2", "group": "TT99" },
+    { "key": "TT99 Book Form", "label": "Mẫu sổ TT99", "kind": "doctype", "icon": "book-open-text", "group": "TT99" },
+    { "key": "TT99 Financial Statement Template", "label": "Mẫu BCTC TT99", "kind": "doctype", "icon": "file-chart-column", "group": "TT99" },
+    { "key": "TT99 Transition Map", "label": "Chuyển đổi sang TT99", "kind": "doctype", "icon": "replace", "group": "TT99" },
+
+    { "key": "Tax Ruleset", "label": "Ruleset thuế", "kind": "doctype", "icon": "badge-percent", "group": "Thuế & hóa đơn" },
+    { "key": "E-Invoice Document", "label": "Hóa đơn điện tử", "kind": "doctype", "icon": "receipt", "group": "Thuế & hóa đơn" },
+
     { "key": "Warehouse Cash Fund", "label": "Quỹ tiền mặt theo kho", "kind": "doctype", "icon": "landmark", "group": "Quỹ kho" },
     { "key": "Warehouse Cash Voucher", "label": "Phiếu thu chi kho", "kind": "doctype", "icon": "receipt-text", "group": "Quỹ kho" },
     { "key": "Warehouse Cash Transfer", "label": "Chuyển quỹ", "kind": "doctype", "icon": "arrow-left-right", "group": "Quỹ kho" },
     { "key": "Warehouse Cash Count", "label": "Kiểm quỹ & bàn giao", "kind": "doctype", "icon": "clipboard-check", "group": "Quỹ kho" },
     { "key": "Payroll Accounting Batch", "label": "Hạch toán lương", "kind": "doctype", "icon": "badge-dollar-sign", "group": "Kế toán lương" },
+
     { "key": "chart-of-accounts", "label": "Hệ thống tài khoản", "kind": "route", "route": "/app/Account", "icon": "list-tree", "group": "Sổ sách", "required_roles": ["Accounts User", "Accounts Manager", "System Manager"] },
     { "key": "journal-entry", "label": "Bút toán nhật ký", "kind": "route", "route": "/app/Journal%20Entry", "icon": "notebook-tabs", "group": "Sổ sách", "required_roles": ["Accounts User", "Accounts Manager", "System Manager"] },
     { "key": "payment-entry", "label": "Thu chi kế toán", "kind": "route", "route": "/app/Payment%20Entry", "icon": "hand-coins", "group": "Sổ sách", "required_roles": ["Accounts User", "Accounts Manager", "System Manager"] },
-    { "key": "payroll-entry-accounting", "label": "Bảng lương nguồn", "kind": "route", "route": "/app/Payroll%20Entry", "icon": "wallet-cards", "group": "Kế toán lương", "required_roles": ["Payroll Manager", "Accounts User", "Accounts Manager", "System Manager"] }
+    { "key": "payroll-entry-accounting", "label": "Bảng lương nguồn", "kind": "route", "route": "/app/Payroll%20Entry", "icon": "wallet-cards", "group": "Kế toán lương", "required_roles": ["Payroll Manager", "Accounts User", "Accounts Manager", "System Manager"] },
+
+    { "key": "general-ledger", "label": "Sổ cái", "kind": "route", "route": "/app/query-report/General%20Ledger", "icon": "book-open", "group": "Báo cáo", "required_roles": ["Accounts User", "Accounts Manager", "System Manager"] },
+    { "key": "trial-balance", "label": "Bảng cân đối số phát sinh", "kind": "route", "route": "/app/query-report/Trial%20Balance", "icon": "scale", "group": "Báo cáo", "required_roles": ["Accounts User", "Accounts Manager", "System Manager"] },
+    { "key": "balance-sheet", "label": "Bảng cân đối kế toán", "kind": "route", "route": "/app/query-report/Balance%20Sheet", "icon": "table-2", "group": "Báo cáo", "required_roles": ["Accounts User", "Accounts Manager", "System Manager"] },
+    { "key": "profit-loss", "label": "Kết quả kinh doanh", "kind": "route", "route": "/app/query-report/Profit%20and%20Loss%20Statement", "icon": "chart-no-axes-combined", "group": "Báo cáo", "required_roles": ["Accounts User", "Accounts Manager", "System Manager"] },
+    { "key": "cash-flow", "label": "Lưu chuyển tiền tệ", "kind": "route", "route": "/app/query-report/Cash%20Flow", "icon": "waves", "group": "Báo cáo", "required_roles": ["Accounts User", "Accounts Manager", "System Manager"] }
   ],
   "hooks": [],
   "client": {
