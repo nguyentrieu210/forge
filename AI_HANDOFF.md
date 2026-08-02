@@ -11,6 +11,22 @@ Ngày cập nhật: **2026-08-02**.
 - Đọc `RUNBOOK.md` → `CURRENT_STATUS.md` → `NEXT_TASKS.md` → file này → `DELIVERY_POLICY.md`.
 - Mọi SHA/branch dưới đây là checkpoint lịch sử; phải xác minh GitHub trước khi dùng.
 
+## Active checkpoint — One-click UI hotfix lane
+
+- Branch implementation: `hotfix/ui-one-click-deploy-20260802`, base exact `main@4960de3443300245fcce3f69914826306a297266`.
+- `.github/workflows/hotfix-ui-one-click.yml` là orchestrator fast-lane, còn `.github/workflows/release-gateway.yml` vẫn là single production implementation cho frontend/Gateway và được mở thêm `workflow_call`.
+- Fast-lane invariant:
+  1. chỉ branch `hotfix/ui-*`;
+  2. current `main` phải là ancestor của target SHA;
+  3. bắt buộc có `client/**`, ngoài client chỉ cho `CURRENT_STATUS.md`, `NEXT_TASKS.md`, `AI_HANDOFF.md`;
+  4. tối đa 20 file / 600 dòng text;
+  5. dependency/package, server, migration, business metadata, workflow change không được đi fast lane;
+  6. production path chỉ Gateway/client bundle, không tenant migration, tenant Worker hay Alumdoor app Worker;
+  7. Gateway vẫn lint/test/typecheck/build/stage/dry-run/deploy/exact-SHA smoke;
+  8. sau deploy workflow best-effort tạo/annotate reconciliation PR về `main`.
+- Đây là production-first emergency/rapid UI lane; exact production SHA vẫn phải reconcile về `main` để closure. Không dùng lane này để lách business/backend gate.
+- Task tạo lane chưa deploy production; cần exact-head workflow/CI validation và merge trước khi dùng chính thức.
+
 ## Merged checkpoint — Warehouse Petty Cash per warehouse
 
 - Canonical PR `#214` đã squash-merge vào `main` tại `da37060f3c02a6a5f9701d60edc3284575f00deb`.
@@ -91,5 +107,6 @@ Authenticated browser QA bắt được bug mà unit test cũ không thấy: loc
 ## Release boundary
 
 - Merge code không đồng nghĩa deploy production.
+- UI-only hotfix fast lane là ngoại lệ có kiểm soát cho phép exact branch SHA deploy Gateway trước reconcile merge, nhưng chỉ khi user chủ động chạy workflow production và scope guard PASS.
 - Không deploy Cloudflare/production, đổi DNS/secrets hoặc mutate customer data nếu user chưa yêu cầu rõ cho đúng đợt.
 - Không commit `.env`, `server/work/`, `tmp/`, backup, credential, cookie/token hoặc generated evidence không được quản lý.
