@@ -1,4 +1,5 @@
 import { asCloudForgeError, errors } from "../../../packages/core/src/index.js";
+import { MutationSerialExecutor } from "../../../packages/document-kernel/src/index.js";
 
 export const PURCHASE_REVISION_RETRIES = 3;
 
@@ -35,13 +36,14 @@ export async function executePurchaseCommandWithRevisionRetry<T>(
  * full purchase mutation, including plan construction and commit, serialized for
  * one supplier coordinator instance. Failed operations release the queue so a
  * later command cannot be permanently blocked.
+ *
+ * The queue primitive is shared with inventory coordination; purchase keeps only
+ * its domain-specific revision retry policy here.
  */
 export class PurchaseCommandSerialExecutor {
-  private tail: Promise<void> = Promise.resolve();
+  private readonly serial = new MutationSerialExecutor();
 
   execute<T>(operation: () => Promise<T>): Promise<T> {
-    const run = this.tail.then(() => executePurchaseCommandWithRevisionRetry(operation));
-    this.tail = run.then(() => undefined, () => undefined);
-    return run;
+    return this.serial.execute(() => executePurchaseCommandWithRevisionRetry(operation));
   }
 }
