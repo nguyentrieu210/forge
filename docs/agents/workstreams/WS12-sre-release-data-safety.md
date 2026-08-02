@@ -6,7 +6,7 @@ Branch: `agent/ent-12-sre-release-data-safety`
 Product baseline: **Forge 0.2.0**  
 Seed baseline: `862636e6239c91eab657c619d8c55345ed71a6d8`  
 Started from: `6aae16ea994e2884fb0b5627d83f6a6bb090f0db`  
-Latest exact main incorporated: `b63c9a7a07e63dd73f944f450618c0b92f10067c` via internal sync PR `#332`; sync merge on WS12 branch `041f1a38b371852cfb5908625268fa3697740aaa`  
+Latest exact main incorporated: `3b25b50fe5bd16a3f7c86c2b73b4f8e869aaa4ad` via internal sync PR `#336`; sync merge on WS12 branch `92ab64eb028015e62d1f46ce069f0a0029fbd140`  
 Delivery PR checkpoint: `#320`  
 Canonical board: `main:docs/agents/AGENT_BOARD.md`
 
@@ -299,7 +299,7 @@ Migration: no migration files changed; no production migration executed
 Dependency requests: `DR-WS12-01..06`  
 Known gaps: see above  
 Recommended merge order: WS12 is Phase-C tier 1 with WS00/WS11; resolve conflicts against exact current main before merge  
-Delivery PR: `#320` — ready for review, mergeable at last exact check
+Delivery PR: `#320` — ready for review; self-review found no blocking issue in release/PITR/rollback/restore safety paths
 
 ## Merge / production gate
 
