@@ -15,6 +15,8 @@ Monorepo hợp nhất CloudForge backend và MetaForge frontend để xây nền
 2. [`CURRENT_STATUS.md`](CURRENT_STATUS.md) — snapshot trạng thái hiện tại đã xác minh.
 3. [`NEXT_TASKS.md`](NEXT_TASKS.md) — hàng đợi công việc active.
 4. [`AI_HANDOFF.md`](AI_HANDOFF.md) — handoff kỹ thuật cô đọng.
+5. [`docs/FORGE_ENTERPRISE_NORTH_STAR.md`](docs/FORGE_ENTERPRISE_NORTH_STAR.md) — đích hoàn thiện enterprise dài hạn, không phải live status.
+6. [`skills/forge-enterprise-completion/SKILL.md`](skills/forge-enterprise-completion/SKILL.md) — quy trình agent dùng để audit, ưu tiên và đóng capability theo North Star.
 
 GitHub là nguồn sự thật cho exact branch head, pull request, CI, merge và release evidence. Không suy trạng thái hiện tại từ bảng tiến độ cũ, lịch sử chat hoặc tên branch được ghi trong tài liệu lịch sử.
 
@@ -27,6 +29,8 @@ Tài liệu nền:
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 - [`docs/API_SURFACE.md`](docs/API_SURFACE.md)
 - [`docs/APP_FACTORY.md`](docs/APP_FACTORY.md)
+- [`docs/FORGE_ENTERPRISE_NORTH_STAR.md`](docs/FORGE_ENTERPRISE_NORTH_STAR.md) — **strategic completion target, NOT LIVE STATUS**
+- [`docs/FORGE_ENTERPRISE_CAPABILITY_MAP.md`](docs/FORGE_ENTERPRISE_CAPABILITY_MAP.md) — capability checklist dùng làm mẫu số đo coverage
 - [`docs/ROADMAP.md`](docs/ROADMAP.md) — **strategic only, NOT LIVE STATUS**
 - [`docs/VERIFICATION.md`](docs/VERIFICATION.md) — evidence theo checkpoint, không thay thế CI hiện tại
 
