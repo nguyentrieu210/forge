@@ -1,90 +1,66 @@
 # AI HANDOFF
 
-Ngày cập nhật: **2026-08-02**.
+Ngày cập nhật: **2026-08-03**.
 
-Quy tắc vận hành nằm ở `RUNBOOK.md`; live status ở `CURRENT_STATUS.md`; hàng đợi ở `NEXT_TASKS.md`; delivery gate ở `DELIVERY_POLICY.md`.
+Tài liệu này chỉ lưu facts, checkpoints và business invariants của Forge. Không định nghĩa quy trình làm việc cho AI.
 
-## Bắt buộc trước khi làm
+## Repository
 
 - Repository: `nguyentrieu210/forge`.
-- GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release evidence.
-- Đọc `RUNBOOK.md` -> `CURRENT_STATUS.md` -> `NEXT_TASKS.md` -> file này -> `DELIVERY_POLICY.md`.
+- GitHub lưu code, branch, PR, commit và release history.
+- `CURRENT_STATUS.md` lưu trạng thái dự án; `NEXT_TASKS.md` lưu backlog.
 
-## Canonical execution model
+## VN Accounting Period Integrity Hardening
 
-- Validation phát triển chạy local theo blast radius.
-- GitHub Actions chỉ dùng làm máy build/deploy.
-- Workflow release duy nhất: `.github/workflows/manual-release-alu.yml`, name `ALU Build and Deploy`.
+- Canonical branch: `fix/vn-accounting-period-integrity-20260803-r8`, clean-based on `main@560c7cfc140f04e5ca555c87dfa31541c8867ec1`.
+- HRM đã dùng migration `0039-0041`; accounting hardening dùng migration append-only `0042_vn_accounting_period_hardening.sql`.
+- `0042` thay accounting-period guards cũ và bổ sung: valid/non-overlap period theo tenant/company/branch; Hard Locked chặn submit/cancel/scope move; Soft Closed chỉ cho approved adjustment khi period cho phép và có reason + approver.
+- Guard bao phủ Journal/Invoice/Payment, Purchase Receipt, Delivery Note, Payroll, Stock Reconciliation/Stock Entry và Warehouse Cash Voucher/Transfer.
+- Regression riêng `server/scripts/test-vn-accounting-period-hardening.py` replay `0035+0039+0040+0041+0042` để không sửa acceptance HRM hiện có.
+- Targeted SQLite regression của logic `0042` đã PASS trong session. Full exact regression script, Python syntax và relevant backend/typecheck/lint/build trên full checkout vẫn chưa có evidence; chưa production migration/deploy.
 
-## Merged checkpoint — HRM operational 1.5
+## Active checkpoint — Stock Reconciliation Bulk Transaction
 
-- Canonical PR `#261` squash-merge tại `b3dc2cf59ec5c85a977833da6edc986ac1bfe6fb`; stale iteration `#253` đã đóng superseded.
-- HRM operational scope: recruitment, hire-to-retire, leave allocation/application, holiday/shift/check-in/attendance/correction/overtime, salary structure/assignment/period/additional salary, employee advance/travel, goals/appraisal/training.
-- Accounting ownership invariant: HRM chỉ tạo authoritative payroll inputs; Salary Slip/Payroll Entry/GL canonical vẫn là source of truth. Không tạo HR payroll ledger riêng.
-- Effective employee state cho branch/department/cost center/reporting phải resolve theo business date từ submitted transfer/promotion/separation, không rewrite lịch sử Employee.
-- Generated Salary Slip có `salary_structure_assignment` luôn recompute source trên save/submit; stale draft earnings không được authoritative. `input_hash` + `rule_trace_json` là evidence của input/source versions.
-- Submitted Salary Slip khóa các source Attendance/Leave/OT/Salary Structure Assignment/Additional Salary liên quan. Correction phải cancel/amend/rerun; không mutate nguồn đã dùng phía sau payroll.
-- `VN Payroll Rule` phải đúng effective period, có matching `rule_code`, legal document, source URL, approval metadata và JSON-object formula. Salary trace lưu SHA-256 công thức. Rule đã được submitted structure/assignment hoặc submitted/cancelled salary slip sử dụng là append-only; DB guard chặn update/delete/disable/đổi record type.
-- Migrations `0039-0041` là tenant-scoped/race-safe authority cho overlap, duplicates, source freeze và payroll-rule integrity; UI/controller validation không thay DB guard.
-- Validation checkpoint: isolated TypeScript strict PASS; HRM operational 4/4 PASS; migrations `0035+0039+0040+0041` acceptance PASS; Python syntax PASS; metadata JSON 44/44 PASS. GitHub development CI không áp dụng theo policy hiện tại.
-- `VN Payroll Rule.formula_json` hiện chỉ là versioned/audited legal evidence, chưa là statutory PIT/BHXH evaluator. Không tự hardcode/diễn giải luật trong controller; statutory automation phải là CRITICAL follow-up có schema, fixed-point semantics, official legal source và regression theo effective version.
-- HRM merge không đồng nghĩa production deploy; task này chưa migrate/deploy production.
+- Canonical branch: `feat/alumdoor-stock-reconciliation-bulk-v2-20260802`; PR `#267` đang draft.
+- Bulk không tạo reconciliation hoặc stock ledger cạnh tranh. Nó chỉ nhận một canonical `Stock Reconciliation` draft đã được `alumdoor.recon.snapshot` chốt `snapshot_at`.
+- Input phải phủ đủ mọi snapshot row; extra physical row được append nếu còn trong scope. Duplicate `(item_code,batch_no)` và aggregate+batch cùng item fail closed.
+- Existing snapshot row order phải được giữ nguyên trong bulk flow vì controller hiện preserve captured book fields theo child-row index.
+- `DocumentKernel.preview()` dùng cùng payload hash, permission, lifecycle, optimistic version, controller và invariant checks như execute nhưng không đọc mutation receipt và không execute mutation store.
+- Native preview route tenant-scoped, organization-security scoped và metadata-permission scoped; nó bắt `modified` hiện tại trước khi plan.
+- Bulk commit PUT lại đúng draft bằng original `modified`; exact retry không tạo thêm draft version.
+- Bulk không submit. Four-eyes approval và stock ledger chỉ xảy ra ở canonical `StockReconciliationController` submit.
+- Validation hiện có: exact bulk-handler isolated regression 7/7 PASS; TypeScript transpile/syntax PASS cho handler/kernel/native preview; action sidecar parse PASS. Full checkout test/typecheck/lint/build chưa có evidence tại checkpoint này.
+- Known debt: root-fix controller để preserve book snapshot theo physical identity thay vì array index. Controller hiện yêu cầu `variance_reason` ở save lẫn submit, nên variance preview phải có reason trước khi xem plan.
+
+## HRM operational 1.5
+
+- PR `#261` squash-merge tại `b3dc2cf59ec5c85a977833da6edc986ac1bfe6fb`.
+- Salary Slip/Payroll Entry/GL là accounting source of truth; HRM cung cấp payroll inputs, không có payroll ledger cạnh tranh.
+- Submitted Salary Slip khóa các source Attendance/Leave/OT/Salary Structure Assignment/Additional Salary đã dùng; correction đi qua cancel/amend/rerun.
+- `VN Payroll Rule` có effective period, legal source, approval metadata và formula evidence; rule đã dùng là append-only.
+- `formula_json` hiện là audited/versioned evidence, chưa phải statutory PIT/BHXH evaluator.
 
 ## Production release evidence
 
-- Canonical checkpoint: `a0ae5f4f00a6be7311efcaff87c4caabea60f6be`.
-- `stage-client-bundle.mjs` ghi public `/release.json` với `releaseSha` + `bundleHash` khi có release SHA.
-- `/health` chỉ chứng minh service sống; deploy chỉ DONE khi `/release.json.releaseSha === TARGET_SHA` và có `bundleHash`.
+- Checkpoint: `a0ae5f4f00a6be7311efcaff87c4caabea60f6be`.
+- `stage-client-bundle.mjs` có thể tạo `/release.json` chứa `releaseSha` + `bundleHash`.
+- `/health` chứng minh service sống; `/release.json` dùng đối chiếu revision UI đang phục vụ.
 
-## UI auto deploy fast-path invariant
+## UI deploy implementation
 
-UI-only task dùng branch:
+- Workflow: `.github/workflows/manual-release-alu.yml` (`ALU Build and Deploy`).
+- UI fast path có trigger push cho các nhánh UI và build runtime + warehouse mobile trước khi deploy Gateway.
+- Full ALU deploy tồn tại trong cùng workflow qua `workflow_dispatch`.
 
-- `hotfix/ui-*`
-- `fix/ui-*`
-- `feat/ui-*`
-- `refactor/ui-*`
+## Website/CMS v1
 
-Canonical behavior sau fast-path merge:
-
-- Trigger duy nhất là `push` có `client/**`; không deploy trên `pull_request`.
-- Checkout shallow (`fetch-depth: 2`); không fetch toàn repo history/current main.
-- Scope guard đọc file của chính push event. Ngoài `client/**`, chỉ allowlist docs vận hành.
-- Không còn current-main ancestor/stale-branch guard trong deploy workflow vì guard đó làm UI push fail khi main tiến lên sau khi branch được mở.
-- Build chỉ `runtime` dependency graph + warehouse mobile bundle cần cho Gateway; không chạy `pnpm --filter metaforge run build` toàn monorepo.
-- Push mới cùng branch cancel run cũ để tránh queue và deploy artifact cũ.
-- Pipeline: `checkout -> push guard -> cached install -> runtime/mobile build -> stage -> wrangler deploy -> health + exact release smoke`.
-- Push đúng UI lane là production authorization do user đã chủ động thiết lập.
-
-Nếu push có backend/API/schema/migration/permission/tenant/accounting/inventory/business logic thì fail closed và chuyển khỏi UI lane.
-
-## Full ALU deploy
-
-Manual `workflow_dispatch` + confirm `alu`:
-
-`build -> backup/migrate alu -> deploy Tenant Worker -> deploy Alumdoor App Worker -> deploy Gateway -> exact-release smoke`.
-
-Không tự đổi DNS/secrets hoặc destructive operation ngoài release path chuẩn.
-
-## Merged checkpoint — Website/CMS v1
-
-- Canonical PR `#254` squash-merge tại `b25fc30b0f37d1218cafbb4dac40e37479bba0b9`.
-- Public API exact allowlist `forge.website.manifest` + `forge.website.page`; trusted tenant context; published-only; Guest không có generic DocType read.
+- PR `#254` squash-merge tại `b25fc30b0f37d1218cafbb4dac40e37479bba0b9`.
+- Public API allowlist: `forge.website.manifest`, `forge.website.page`.
+- Public Website resolver tenant-scoped và published-only.
 
 ## Business checkpoints
 
-- Warehouse Cash schema/controller/ledger thuộc `vn-accounting`; Alumdoor consume qua integration metadata và generic routes.
-- `gl_entries` là money source of truth; projections chỉ rebuildable.
+- Warehouse Cash schema/controller/ledger thuộc `vn-accounting`; Alumdoor consume qua integration metadata/generic routes.
+- `gl_entries` là money source of truth; balance/daily usage là projections rebuildable.
 - Party dimension không đồng nghĩa settle AR/AP; invoice settlement dùng canonical Payment Entry/payment allocation.
-- Generic Bulk View vẫn master-only; transaction/submittable/ledger fail closed.
-
-## Remaining priorities
-
-- Acceptance run thật của UI fast path sau merge, ghi duration và Cloudflare release evidence.
-- HRM statutory payroll-rule evaluator nếu nghiệp vụ cần tự động PIT/BHXH theo luật.
-- Stock Reconciliation Bulk Transaction.
-- BOM parent + child/version Bulk Transaction.
-- First-class AppAction input-table transport.
-- Batch Print / QR label queue.
-- P1 Daily Detailed Ledger exact-state review.
-- Plastic ERP waves sau P0-A.
+- Generic Bulk View hiện master-only; transaction/submittable/ledger cần controller-backed flow riêng.
