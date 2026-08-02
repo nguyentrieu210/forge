@@ -1,25 +1,27 @@
 {
-  "deployedSha": "cb88470fab14716c052f3c38cd6b813bbb88af8a",
-  "failedStep": "migrate",
+  "deployedSha": "48bd8dde79b247c4e456e7b2c1020b1b11924b1a",
+  "failedStep": "install_vn_accounting",
   "outcomes": {
     "checkout": "success",
     "credentials": "success",
     "dependencies": "success",
     "build": "success",
     "validate": "success",
+    "clean_worktree": "success",
     "backup": "success",
-    "migrate": "failure",
-    "deploy_tenant": "skipped",
-    "install_hrm": "skipped",
-    "install_vn_accounting": "skipped",
+    "migrate": "success",
+    "deploy_tenant": "success",
+    "install_hrm": "success",
+    "install_vn_accounting": "failure",
     "install_alumdoor": "skipped",
+    "build_gateway": "skipped",
     "deploy_app_worker": "skipped",
     "stage_gateway": "skipped",
     "deploy_gateway": "skipped",
     "smoke": "skipped"
   },
-  "hrmLogTail": null,
-  "vnAccountingLogTail": null,
+  "hrmLogTail": "1 compiled   app=hrm@1.5.0 doctypes=36 workflows=11 roles=7 fixtures=19 nav=39\n2 validated  through the server's own parser\n3 authenticating https://alu.kairo.vn as admin … ok\n4 installing  hrm@1.5.0 … unchanged (0 doctypes, 0 workflows, 0 fixtures)\n5 verifying   client manifest resolves … ok (39 nav entries, home /app/Employee)\n6 verifying   installed form/link/chart contract … ok (form Additional Salary, User Link Employee.user_id, 0 charts, 0 reports)\n7 verifying   context dimensions have data … ok (company:1 fiscal_year:2 branch:0)\n\nLIVE  https://alu.kairo.vn/app/Employee\n      Quản lý nhân sự — open it in a browser and sign in as admin.\n\nNo deploy happened. The app is metadata on tenant alu.kairo.vn; the client bundle was already there.\n",
+  "vnAccountingLogTail": "1 compiled   app=vn-accounting@1.1.0 doctypes=8 workflows=1 roles=10 fixtures=0 nav=12\n2 validated  through the server's own parser\n3 authenticating https://alu.kairo.vn as admin … ok\n4 installing  vn-accounting@1.1.0 … FAILED\n\n  forge.apps.install → HTTP 417: Role Accounts User is already owned by app hrm\n\n",
   "alumdoorLogTail": null,
-  "failedAt": "2026-08-02T20:39:28.145Z"
+  "failedAt": "2026-08-02T20:48:41.591Z"
 }
