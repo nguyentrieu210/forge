@@ -1,15 +1,11 @@
 import type { JsonObject, MutationPlan } from "../../contracts/src/index.js";
 import type { StockEntryData } from "../../clouderp-core/src/types.js";
-import { errors } from "../../core/src/index.js";
+import { requireLeafWarehouse } from "../../clouderp-stock/src/index.js";
 import type { ControllerContext } from "../../document-kernel/src/index.js";
 import { RolloutManufacturingStockEntryController } from "./manufacturing-rollout.js";
 
 function text(value: unknown): string {
   return String(value ?? "").normalize("NFC").trim();
-}
-
-function checked(value: unknown): boolean {
-  return value === true || value === 1 || value === "1" || text(value).toLowerCase() === "true";
 }
 
 async function assertWarehouseScope(context: ControllerContext<StockEntryData>): Promise<void> {
@@ -27,19 +23,11 @@ async function assertWarehouseScope(context: ControllerContext<StockEntryData>):
 
   for (const warehouseName of names) {
     if (!warehouseName) continue;
-    const warehouse = await context.reader.getMasterRecordData(
-      context.command.tenant_id,
-      "Warehouse",
+    await requireLeafWarehouse(
+      context as unknown as ControllerContext<JsonObject>,
       warehouseName,
-    ) as JsonObject | null;
-    if (!warehouse) throw errors.reference(`Warehouse ${warehouseName} does not exist`);
-    if (checked(warehouse.disabled) || checked(warehouse.is_group)) {
-      throw errors.reference(`Warehouse ${warehouseName} is disabled or is a group`);
-    }
-    const warehouseCompany = text(warehouse.company);
-    if (warehouseCompany && warehouseCompany !== company) {
-      throw errors.reference(`Warehouse ${warehouseName} belongs to ${warehouseCompany}, not ${company}`);
-    }
+      company,
+    );
   }
 }
 
