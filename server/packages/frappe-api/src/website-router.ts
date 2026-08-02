@@ -18,19 +18,22 @@ const RESOURCE_PREFIX = "/api/resource/";
 const ADMIN_PASSWORD_METHOD = "frappe.core.doctype.user.user.update_password";
 
 /**
- * Tenant-access mutations that must not be authorized by a long-lived browser session.
+ * Privileged Frappe methods that must not be authorized by a long-lived browser session.
  *
- * These calls create or disable identities and widen/narrow roles or record scope. A
- * stolen but otherwise valid session is therefore insufficient: the administrator must
+ * This includes tenant-access administration and platform-shaping operations. A stolen
+ * but otherwise valid System Manager session is insufficient: the administrator must
  * have completed a password login recently. Reads stay outside this set so ordinary
- * access inspection does not turn into a reauthentication treadmill.
+ * inspection does not turn into a reauthentication treadmill.
  */
-const RECENT_AUTH_IAM_METHODS = new Set([
+const RECENT_AUTH_ADMIN_METHODS = new Set([
   "metaforge.api.add_user_permission",
   "metaforge.api.remove_user_permission",
   "metaforge.api.set_user_roles",
   "metaforge.api.create_user",
   "metaforge.api.set_user_enabled",
+  "frappe.custom.doctype.customize_form.customize_form.save_customization",
+  "forge.apps.install",
+  "forge.apps.uninstall",
 ]);
 
 /** Platform-shaping Frappe resources whose writes are equivalent to native admin writes. */
@@ -52,7 +55,7 @@ export function requiresRecentSecurityAuthentication(
   actorUserId: string,
   targetUser?: string,
 ): boolean {
-  if (RECENT_AUTH_IAM_METHODS.has(methodName)) return true;
+  if (RECENT_AUTH_ADMIN_METHODS.has(methodName)) return true;
   return methodName === ADMIN_PASSWORD_METHOD && Boolean(targetUser && targetUser !== actorUserId);
 }
 
@@ -126,10 +129,10 @@ async function assertSecurityStepUp(
  * Frappe façade focused on Frappe compatibility while website publishing remains a
  * bounded Forge capability.
  *
- * The same edge is also the narrowest place to enforce recent-auth for IAM and metadata
- * administration before requests enter the large compatibility router. The core router
- * still owns role checks and mutation semantics; this wrapper only adds the step-up
- * invariant.
+ * The same edge is also the narrowest place to enforce recent-auth for IAM, metadata and
+ * app-lifecycle administration before requests enter the large compatibility router. The
+ * core router still owns role checks and mutation semantics; this wrapper only adds the
+ * step-up invariant.
  */
 export async function routeFrappeApi(
   request: Request,
