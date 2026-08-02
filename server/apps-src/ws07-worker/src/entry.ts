@@ -106,6 +106,12 @@ function projectTaskActorAllowed(actor: ActorIdentity, doc: Record<string, unkno
   return null;
 }
 
+function projectTimesheetActorAllowed(actor: ActorIdentity, doc: Record<string, unknown>): string | null {
+  if (elevated(actor.roles, "Project Manager") || !actor.roles.includes("Project User")) return null;
+  if (text(doc.user) !== actor.user_id) return "Bảng chấm giờ dự án chỉ người lập tương ứng mới được cập nhật.";
+  return null;
+}
+
 function supportTicketActorAllowed(actor: ActorIdentity, doc: Record<string, unknown>): string | null {
   if (elevated(actor.roles, "Support Manager") || !actor.roles.includes("Support User")) return null;
   const assignee = text(doc.assignee);
@@ -119,13 +125,14 @@ async function scopeViolation(request: Request, env: Env, actor: ActorIdentity, 
     case "Service Order": return serviceOrderActorAllowed(request, env, actor, doc);
     case "Warranty Claim": return warrantyActorAllowed(request, env, actor, doc);
     case "Project Task": return projectTaskActorAllowed(actor, doc);
+    case "Project Timesheet": return projectTimesheetActorAllowed(actor, doc);
     case "Support Ticket": return supportTicketActorAllowed(actor, doc);
     default: return null;
   }
 }
 
 export default {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
     if (url.pathname !== "/hooks/validate" || request.method !== "POST") return baseWorker.fetch(request, env);
 
