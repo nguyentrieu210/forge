@@ -40,14 +40,39 @@ jobs:
         run: node server/scripts/stage-client-bundle.mjs
       - name: Deploy Gateway
         run: pnpm --dir server exec wrangler deploy --config apps/gateway-worker/wrangler.jsonc
-      - name: Smoke
+      - name: Smoke with convergence retries
+        shell: bash
         run: |
-          curl --fail --silent --show-error https://alu.kairo.vn/health >/dev/null
-          curl --fail --silent --show-error "https://alu.kairo.vn/release.json?sha=$TARGET_SHA" -o "$RUNNER_TEMP/release.json"
-          node - "$RUNNER_TEMP/release.json" <<'NODE'
+          set -euo pipefail
+          health_ok=false
+          for attempt in 1 2 3 4 5 6; do
+            if curl --fail --silent --show-error --max-time 10 -H 'Cache-Control: no-cache' "https://alu.kairo.vn/health?sha=$TARGET_SHA&attempt=$attempt" >/dev/null; then
+              health_ok=true
+              break
+            fi
+            sleep 2
+          done
+          [ "$health_ok" = true ] || { echo "Production health did not become ready after deploy."; exit 1; }
+
+          release_ok=false
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            if curl --fail --silent --show-error --max-time 10 -H 'Cache-Control: no-cache' "https://alu.kairo.vn/release.json?sha=$TARGET_SHA&attempt=$attempt" -o "$RUNNER_TEMP/release.json"; then
+              if node - "$RUNNER_TEMP/release.json" <<'NODE'
           const fs = require('node:fs');
           const release = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
-          if (release.releaseSha !== process.env.TARGET_SHA) throw new Error(`release mismatch: ${release.releaseSha}`);
-          if (!release.bundleHash) throw new Error('missing bundleHash');
-          console.log(`PRODUCTION_RELEASE_OK sha=${release.releaseSha}`);
+          if (release.releaseSha !== process.env.TARGET_SHA) process.exit(2);
+          if (!release.bundleHash) process.exit(3);
+          console.log(`PRODUCTION_RELEASE_OK sha=${release.releaseSha} bundle=${release.bundleHash}`);
           NODE
+              then
+                release_ok=true
+                break
+              fi
+            fi
+            sleep 2
+          done
+          [ "$release_ok" = true ] || {
+            echo "Production release marker did not converge to $TARGET_SHA after deploy."
+            cat "$RUNNER_TEMP/release.json" 2>/dev/null || true
+            exit 1
+          }
