@@ -2,6 +2,7 @@
   "id": "procurement",
   "name": "Mua hàng & Nhà cung cấp",
   "version": "0.2.0",
+  "metaContractVersion": 1,
   "requires": [],
   "externalDocTypes": [
     { "name": "User", "kind": "system", "app": "core" },
