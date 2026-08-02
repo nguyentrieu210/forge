@@ -38,6 +38,10 @@ import { VersionedBillOfMaterialsController } from "./manufacturing-lifecycle.js
 import { StockUomSnapshotWorkOrderController } from "./manufacturing-work-order-guard.js";
 import { RolloutManufacturingStockEntryController } from "./manufacturing-rollout.js";
 import {
+  CalibrationRecordController, CapaController, NonConformanceReportController,
+  QualityPlanController, RootCauseAnalysisController,
+} from "./qms-controllers.js";
+import {
   WarehouseCashCountController, WarehouseCashFundController,
   WarehouseCashTransferController, WarehouseCashVoucherController,
 } from "./warehouse-cash.js";
@@ -59,6 +63,11 @@ export function registerErpNextCoreControllers(registry: ControllerRegistry): Co
     .register(new AssetDisposalController())
     .register(new TimesheetController())
     .register(new QualityInspectionController())
+    .register(new QualityPlanController())
+    .register(new NonConformanceReportController())
+    .register(new RootCauseAnalysisController())
+    .register(new CapaController())
+    .register(new CalibrationRecordController())
     .register(new IssueController())
     .register(new ExpenseClaimController())
     .register(new EmploymentContractController())
