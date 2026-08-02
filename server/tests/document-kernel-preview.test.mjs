@@ -90,7 +90,7 @@ test("DocumentKernel.preview validates and plans without receipt or store mutati
 test("DocumentKernel.preview keeps optimistic version checks", async () => {
   const { kernel, calls } = setup();
   await assert.rejects(
-    () => kernel.preview(command({ expected_version: 0 })),
+    async () => kernel.preview(await command({ expected_version: 0 })),
     (error) => error?.code === "VERSION_CONFLICT",
   );
   assert.equal(calls.receipt, 0);
