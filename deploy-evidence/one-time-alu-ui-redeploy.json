@@ -1,0 +1,11 @@
+{
+  "deployedSha": "a2618a21e31cfe85b47c5da146f3e2312744423c",
+  "target": "https://alu.kairo.vn",
+  "scope": "gateway-ui",
+  "warehouseCashUI": true,
+  "verified": [
+    "health",
+    "release.json"
+  ],
+  "deployedAt": "2026-08-02T18:49:21.351Z"
+}
