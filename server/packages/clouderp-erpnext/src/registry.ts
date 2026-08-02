@@ -34,6 +34,9 @@ import { HrmSalarySlipController } from "./hrm-salary-slip.js";
 import {
   CutOrderController, StockReconciliationController, StockReservationController,
 } from "./alumdoor-inventory.js";
+import {
+  ManufacturingDowntimeController, ManufacturingRoutingController, WorkstationCapacityCalendarController,
+} from "./manufacturing-capacity.js";
 import { VersionedBillOfMaterialsController } from "./manufacturing-lifecycle.js";
 import { StockUomSnapshotWorkOrderController } from "./manufacturing-work-order-guard.js";
 import { RolloutManufacturingStockEntryController } from "./manufacturing-rollout.js";
@@ -55,6 +58,9 @@ export function registerErpNextCoreControllers(registry: ControllerRegistry): Co
     .register(new VersionedBillOfMaterialsController())
     .register(new StockUomSnapshotWorkOrderController())
     .register(new RolloutManufacturingStockEntryController())
+    .register(new ManufacturingRoutingController())
+    .register(new WorkstationCapacityCalendarController())
+    .register(new ManufacturingDowntimeController())
     .register(new AssetController())
     .register(new AssetDepreciationController())
     .register(new ProductionPlanController())
