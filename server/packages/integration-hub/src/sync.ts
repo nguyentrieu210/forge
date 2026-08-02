@@ -66,6 +66,7 @@ export function advanceSyncCursor(
 }
 
 export function validateSyncPage<T>(page: ExternalSyncPage<T>, maxRecords = 1_000): ExternalSyncPage<T> {
+  if (!Number.isSafeInteger(maxRecords) || maxRecords <= 0 || maxRecords > 100_000) throw new Error("Invalid external sync page limit");
   if (!Array.isArray(page.records) || page.records.length > maxRecords) throw new Error("Invalid external sync page records");
   if (page.next_cursor !== null && (typeof page.next_cursor !== "string" || !page.next_cursor || page.next_cursor.length > 4_096)) {
     throw new Error("Invalid external sync next_cursor");
@@ -79,29 +80,31 @@ export function beginSyncRun(current: ExternalSyncStatus, runId: string, now: Da
   validateSyncStatus(current);
   if (current.state === "disabled") throw new Error("Disabled external sync cannot run");
   if (current.state === "running") throw new Error("External sync is already running");
-  return {
+  const next: ExternalSyncStatus = {
     ...current,
     state: "running",
     run_id: requireToken(runId, "run_id"),
     attempts: current.attempts + 1,
     started_at: now.toISOString(),
-    completed_at: undefined,
-    next_attempt_at: undefined,
-    last_error_code: undefined,
   };
+  delete next.completed_at;
+  delete next.next_attempt_at;
+  delete next.last_error_code;
+  return next;
 }
 
 export function completeSyncRun(current: ExternalSyncStatus, now: Date): ExternalSyncStatus {
   validateSyncStatus(current);
   if (current.state !== "running" || !current.run_id) throw new Error("External sync is not running");
-  return {
+  const next: ExternalSyncStatus = {
     ...current,
     state: "succeeded",
     run_id: null,
     completed_at: now.toISOString(),
-    next_attempt_at: undefined,
-    last_error_code: undefined,
   };
+  delete next.next_attempt_at;
+  delete next.last_error_code;
+  return next;
 }
 
 export function failSyncRun(
@@ -114,14 +117,15 @@ export function failSyncRun(
   if (current.state !== "running" || !current.run_id) throw new Error("External sync is not running");
   const code = requireToken(errorCode, "error_code");
   if (retryAfterSeconds === undefined) {
-    return {
+    const failed: ExternalSyncStatus = {
       ...current,
       state: "error",
       run_id: null,
       completed_at: now.toISOString(),
-      next_attempt_at: undefined,
       last_error_code: code,
     };
+    delete failed.next_attempt_at;
+    return failed;
   }
   if (!Number.isSafeInteger(retryAfterSeconds) || retryAfterSeconds <= 0 || retryAfterSeconds > 86_400) throw new Error("Invalid sync retry delay");
   return {
