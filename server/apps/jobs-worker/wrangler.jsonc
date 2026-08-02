@@ -3,6 +3,11 @@
   "name": "cloudforge-jobs",
   "main": "src/index.ts",
   "compatibility_date": "2026-07-23",
+  "observability": {
+    "enabled": true,
+    "logs": { "enabled": true, "head_sampling_rate": 1 },
+    "traces": { "enabled": true, "head_sampling_rate": 0.05 }
+  },
   "d1_databases": [
     {
       "binding": "JOBS_DB",

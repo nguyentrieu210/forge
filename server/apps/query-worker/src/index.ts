@@ -107,12 +107,23 @@ export default {
         message.ack();
       } catch (error) {
         const normalized = asCloudForgeError(error);
+        const retryDelaySeconds = normalized.retryable && message.attempts < 5
+          ? Math.min(60, 2 ** message.attempts)
+          : null;
         console.error(JSON.stringify({
-          level: "error", scope: "prepared-report", tenant_id: job.tenant_id, job_id: job.job_id,
-          code: normalized.code, detail: error instanceof Error ? error.message : String(error),
+          level: "error",
+          service: "query-worker",
+          scope: "prepared-report",
+          tenant_id: job.tenant_id,
+          job_id: job.job_id,
+          code: normalized.code,
+          attempts: message.attempts,
+          retryable: normalized.retryable,
+          retry_delay_seconds: retryDelaySeconds,
+          error_name: error instanceof Error ? error.name : "UnknownError",
         }));
-        if (normalized.retryable && message.attempts < 5) {
-          message.retry({ delaySeconds: Math.min(60, 2 ** message.attempts) });
+        if (retryDelaySeconds !== null) {
+          message.retry({ delaySeconds: retryDelaySeconds });
           continue;
         }
         await env.DB.prepare(
