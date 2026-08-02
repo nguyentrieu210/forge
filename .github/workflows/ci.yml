@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   validate:
-    name: Test, typecheck and build
+    name: General validation
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -38,20 +38,42 @@ jobs:
         run: |
           set -euo pipefail
           full=true
+          reason=full
+
           if [ "$EVENT_NAME" != "workflow_dispatch" ] && [ -n "${BASE_SHA:-}" ] && git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
             git diff --name-only "$BASE_SHA" "$GITHUB_SHA" > "$RUNNER_TEMP/changed-files.txt"
-            if ! grep -Eq '^(server/|client/|package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|tsconfig[^/]*\.json$|\.github/workflows/)' "$RUNNER_TEMP/changed-files.txt"; then
+
+            app_re='^(server/|client/|package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|tsconfig[^/]*\.json$|\.github/workflows/)'
+            focused_re='^(server/apps-src/alumdoor-worker/src/(sales-|door-formulas\.ts$|index\.ts$|.*purchase)|server/packages/clouderp-pricing/|server/briefs/alumdoor[^/]*\.json$|server/tests/(sales-|door-formulas)|client/packages/views/src/form/ChildGrid\.tsx$|client/e2e-forge/.*sales|server/apps/purchase-qa-callback/|server/apps/tenant-worker/wrangler\.purchase-qa\.jsonc$|server/apps-src/alumdoor-worker/wrangler\.purchase-qa\.jsonc$|server/packages/app-registry/|server/scripts/(seed-local|seed-purchase-qa-local)\.mjs$|server/tests/.*(purchase|app-installer-standard-metadata-adoption)|client/e2e-forge/.*purchase|client/e2e-forge/playwright\.auth\.config\.ts$|server/(apps-src|packages|tests|scripts|migrations)/.*(inventory|manufactur|warehouse|stock|batch|bom|work-order|catalog|item-model|item-validator)|client/.*(inventory|manufactur|warehouse|stock|batch|bom|work-order))'
+
+            if ! grep -Eq "$app_re" "$RUNNER_TEMP/changed-files.txt"; then
               full=false
+              reason=docs-only
+            else
+              general=false
+              while IFS= read -r file; do
+                if printf '%s\n' "$file" | grep -Eq "$app_re" && ! printf '%s\n' "$file" | grep -Eiq "$focused_re"; then
+                  general=true
+                  break
+                fi
+              done < "$RUNNER_TEMP/changed-files.txt"
+
+              if [ "$general" != "true" ]; then
+                full=false
+                reason=focused-feature
+              fi
             fi
           else
             printf '%s\n' 'workflow_dispatch_or_missing_base' > "$RUNNER_TEMP/changed-files.txt"
           fi
+
           cat "$RUNNER_TEMP/changed-files.txt"
           echo "full=$full" >> "$GITHUB_OUTPUT"
+          echo "reason=$reason" >> "$GITHUB_OUTPUT"
 
-      - name: Docs-only fast path
+      - name: Fast path
         if: steps.scope.outputs.full != 'true'
-        run: echo "No application, package, or workflow files changed; full CI skipped."
+        run: echo "Full CI skipped: ${{ steps.scope.outputs.reason }}. Focused workflow handles domain code when applicable."
 
       - name: Install pnpm
         if: steps.scope.outputs.full == 'true'
