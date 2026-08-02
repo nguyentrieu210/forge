@@ -8,13 +8,17 @@ import { registerTableControls } from "./form/table-controls.js";
  * the rule effective even when an app or table path bypasses the default registration helper.
  * Metadata precision remains untouched for persistence/calculation; only the field passed to
  * the UI control is capped to two decimals.
+ *
+ * IMPORTANT: missing precision must become 2, not stay undefined. API values can arrive as
+ * fixed-scale strings such as "22.000000"; GroupedNumberInput preserves the raw string when
+ * precision is undefined, which is exactly why editable fields still showed six decimals.
  */
 const TwoDecimalRuntimeNumberControl: FieldControl = (props) => {
   const raw = props.field.precision;
   const parsed = raw === undefined || raw === null || raw === "" ? undefined : Number(raw);
   const displayPrecision = parsed !== undefined && Number.isFinite(parsed)
     ? String(Math.min(2, Math.max(0, Math.floor(parsed))))
-    : raw;
+    : "2";
   return NumberControl({
     ...props,
     field: { ...props.field, precision: displayPrecision },
