@@ -59,8 +59,8 @@
       "import": "./dist/system/Import.js"
     },
     "./action": {
-      "types": "./dist/action/ActionScreen.d.ts",
-      "import": "./dist/action/ActionScreen.js"
+      "types": "./dist/action/FriendlyActionScreen.d.ts",
+      "import": "./dist/action/FriendlyActionScreen.js"
     },
     "./screen": {
       "types": "./dist/screen/ScreenView.d.ts",
