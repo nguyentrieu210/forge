@@ -18,6 +18,7 @@ import {
 import { VersionedBillOfMaterialsController } from "./manufacturing-lifecycle.js";
 import { StockUomSnapshotWorkOrderController } from "./manufacturing-work-order-guard.js";
 import { RolloutManufacturingStockEntryController } from "./manufacturing-rollout.js";
+import { PlasticProductionRunController } from "./plastic-production.js";
 
 export function registerErpNextCoreControllers(registry: ControllerRegistry): ControllerRegistry {
   return registry
@@ -27,6 +28,7 @@ export function registerErpNextCoreControllers(registry: ControllerRegistry): Co
     .register(new VersionedBillOfMaterialsController())
     .register(new StockUomSnapshotWorkOrderController())
     .register(new RolloutManufacturingStockEntryController())
+    .register(new PlasticProductionRunController())
     .register(new AssetController())
     .register(new AssetDepreciationController())
     .register(new ProductionPlanController())
