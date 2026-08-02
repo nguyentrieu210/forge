@@ -5,6 +5,7 @@ export * from "./document-list.js";
 export { InMemoryMutationStore } from "./finance-aware-in-memory-store.js";
 export * from "./kernel.js";
 export * from "./lifecycle.js";
+export * from "./mutation-serial-executor.js";
 export * from "./purchase-allocation-d1-store.js";
 export * from "./purchase-allocation-domain-store.js";
 export * from "./purchase-allocation-in-memory-store.js";
