@@ -137,7 +137,7 @@ export function DocumentExperience({
 
         .mf-document-experience .mf-form-header > div:first-child {
           position: absolute;
-          top: .82rem;
+          top: -2rem;
           right: .65rem;
           z-index: 40;
           min-height: 0;
@@ -192,6 +192,7 @@ export function DocumentExperience({
           }
 
           .mf-document-experience .mf-form-header > div:first-child {
+            top: -1.9rem;
             right: .35rem;
           }
         }
