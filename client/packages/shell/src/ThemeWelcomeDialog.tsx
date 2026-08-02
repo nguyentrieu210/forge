@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { Check, Monitor, Moon, Palette, Sun } from "lucide-react";
 import {
   Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, cn,
@@ -42,7 +42,7 @@ export function ThemeWelcomeDialog(props: ThemeWelcomeDialogProps) {
     else setOpen(true);
   };
 
-  const modes: Array<{ id: ThemeMode; label: string; icon: React.ReactNode }> = [
+  const modes: Array<{ id: ThemeMode; label: string; icon: ReactNode }> = [
     { id: "light", label: "Sáng", icon: <Sun className="size-4" /> },
     { id: "dark", label: "Tối", icon: <Moon className="size-4" /> },
     { id: "system", label: "Theo máy", icon: <Monitor className="size-4" /> },
@@ -84,7 +84,7 @@ export function ThemeWelcomeDialog(props: ThemeWelcomeDialogProps) {
                   >
                     <span
                       className="size-5 shrink-0 rounded-full border border-black/10 shadow-sm [background:var(--mf-welcome-swatch)]"
-                      style={{ "--mf-welcome-swatch": item.swatch } as React.CSSProperties}
+                      style={{ "--mf-welcome-swatch": item.swatch } as CSSProperties}
                       aria-hidden="true"
                     />
                     <span className="min-w-0 flex-1 truncate text-left text-xs font-medium">{item.label}</span>
