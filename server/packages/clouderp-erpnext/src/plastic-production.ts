@@ -118,7 +118,9 @@ export class PlasticProductionRunController extends SuiteController<PlasticProdu
 
     const previousStatus = context.existing?.data.run_status as PlasticRunStatus | undefined;
     assertRunTransition(context.command.action, previousStatus, input.run_status);
-    if (previousStatus && previousStatus !== "Planned") assertAssignmentLocked(context.existing!, input, plannedQty, plannedStart, plannedEnd);
+    if (previousStatus && previousStatus !== "Planned") {
+      assertAssignmentLocked(context.existing!, input, plannedQty, plannedStart, plannedEnd);
+    }
 
     const workOrder = await requireSubmitted(context, "Work Order", input.work_order);
     if (text(workOrder.data.company) !== input.company) throw errors.reference("Production Run company does not match Work Order");
@@ -148,16 +150,7 @@ export class PlasticProductionRunController extends SuiteController<PlasticProdu
 
     const usesTool = flag(process.data.uses_tool);
     if (usesTool && !text(input.tool)) throw errors.validation("This process profile requires a tool/mold");
-    if (input.tool) {
-      const tool = await requireExisting(context, "Plastic Tool", input.tool);
-      if (text(tool.data.company) !== input.company) throw errors.reference("Tool belongs to another company");
-      if (text(tool.data.process_profile) !== input.process_profile) throw errors.reference("Tool process profile does not match Production Run");
-      if (["Maintenance", "Retired"].includes(text(tool.data.operational_state))) throw errors.reference(`Tool ${input.tool} is not available for production`);
-      const compatible = arrayOfObjects(tool.data.compatible_machines);
-      if (compatible.length === 0 || !compatible.some((row) => text(row.machine) === input.machine)) {
-        throw errors.reference(`Tool ${input.tool} is not approved for machine ${input.machine}`);
-      }
-    }
+    if (input.tool) await validateTool(context, input);
 
     if (input.operator) {
       const employee = await requireMaster(context, "Employee", input.operator);
@@ -178,8 +171,9 @@ export class PlasticProductionRunController extends SuiteController<PlasticProdu
     if (input.run_status === "Running") {
       if (previousStatus === "Planned") startedAt = context.now;
       if (previousStatus === "Paused") {
-        if (!pausedAt || !text(existingData?.pause_reason)) throw errors.validation("Paused Production Run is missing server pause state");
-        downtimeEvents.push(downtimeEvent(text(existingData?.pause_reason), pausedAt, context.now));
+        const reason = requireText(existingData?.pause_reason, "existing pause_reason");
+        if (!pausedAt) throw errors.validation("Paused Production Run is missing server pause state");
+        downtimeEvents.push(downtimeEvent(reason, pausedAt, context.now));
         pausedAt = undefined;
         pauseReason = "";
       }
@@ -194,8 +188,9 @@ export class PlasticProductionRunController extends SuiteController<PlasticProdu
       endedAt = context.now;
       if (Date.parse(endedAt) <= Date.parse(startedAt)) throw errors.validation("Production Run completion time must be after start time");
       if (previousStatus === "Paused") {
-        if (!pausedAt || !text(existingData?.pause_reason)) throw errors.validation("Paused Production Run is missing server pause state");
-        downtimeEvents.push(downtimeEvent(text(existingData?.pause_reason), pausedAt, endedAt));
+        const reason = requireText(existingData?.pause_reason, "existing pause_reason");
+        if (!pausedAt) throw errors.validation("Paused Production Run is missing server pause state");
+        downtimeEvents.push(downtimeEvent(reason, pausedAt, endedAt));
         pausedAt = undefined;
         pauseReason = "";
       }
@@ -204,14 +199,19 @@ export class PlasticProductionRunController extends SuiteController<PlasticProdu
     const materials = normalizeMaterials(input.materials ?? []);
     const outputs = normalizeOutputs(input.outputs ?? []);
     const totals = outputTotals(outputs);
-    const downtimeMinutesMicros = downtimeEvents.reduce((sum, row) => safeAdd(sum, toScaledInt(String(row.minutes), 6, "downtime.minutes")), 0);
+    const downtimeMinutesMicros = downtimeEvents.reduce(
+      (sum, row) => safeAdd(sum, toScaledInt(String(row.minutes), 6, "downtime.minutes")),
+      0,
+    );
 
     if (input.actual_cycle_seconds !== undefined && Number(input.actual_cycle_seconds) <= 0) {
       throw errors.validation("actual_cycle_seconds must be positive when provided");
     }
-    if ((input.shot_count ?? 0) < 0 || !Number.isInteger(input.shot_count ?? 0)) throw errors.validation("shot_count must be a non-negative integer");
+    if ((input.shot_count ?? 0) < 0 || !Number.isInteger(input.shot_count ?? 0)) {
+      throw errors.validation("shot_count must be a non-negative integer");
+    }
 
-    let outputBatch = text(input.output_batch) || undefined;
+    let outputBatch: string | undefined;
     if (context.command.action === "submit") {
       if (input.run_status !== "Completed") throw errors.validation("Only a Completed Production Run can be submitted");
       const stockEntryName = requireText(input.manufacture_stock_entry, "manufacture_stock_entry");
@@ -221,7 +221,7 @@ export class PlasticProductionRunController extends SuiteController<PlasticProdu
         throw errors.reference("Manufacture Stock Entry must be a submitted Manufacture voucher for the same Work Order");
       }
       await assertStockEntryNotReused(context, stockEntryName);
-      outputBatch = assertExactStockReconciliation(input, workOrder, stockEntry, materials, outputs, outputBatch);
+      outputBatch = await assertExactStockReconciliation(context, workOrder, stockEntry, materials, outputs, text(input.output_batch));
 
       const productionItem = text(workOrder.data.production_item);
       const manufactured = await context.reader.getManufacturedQuantityMicros(
@@ -247,7 +247,7 @@ export class PlasticProductionRunController extends SuiteController<PlasticProdu
       }
     }
 
-    return {
+    const result: PlasticProductionRunData = {
       ...input,
       planned_start: plannedStart,
       planned_end: plannedEnd,
@@ -260,19 +260,37 @@ export class PlasticProductionRunController extends SuiteController<PlasticProdu
       byproduct_qty: fromScaledInt(totals.byproduct, 6),
       downtime_events: downtimeEvents,
       downtime_minutes: fromScaledInt(downtimeMinutesMicros, 6),
-      ...(startedAt ? { started_at: startedAt } : { started_at: undefined }),
-      ...(pausedAt ? { paused_at: pausedAt } : { paused_at: undefined }),
-      ...(endedAt ? { ended_at: endedAt } : { ended_at: undefined }),
-      ...(pauseReason ? { pause_reason: pauseReason } : { pause_reason: undefined }),
-      ...(outputBatch ? { output_batch: outputBatch } : { output_batch: undefined }),
       shot_count: input.shot_count ?? 0,
     };
+    delete result.started_at;
+    delete result.paused_at;
+    delete result.ended_at;
+    delete result.pause_reason;
+    delete result.output_batch;
+    if (startedAt) result.started_at = startedAt;
+    if (pausedAt) result.paused_at = pausedAt;
+    if (endedAt) result.ended_at = endedAt;
+    if (pauseReason) result.pause_reason = pauseReason;
+    if (outputBatch) result.output_batch = outputBatch;
+    return result;
   }
 
   override status(context: ControllerContext<PlasticProductionRunData>, data: PlasticProductionRunData): string {
     if (context.command.action === "cancel") return "Cancelled";
     if (context.command.action === "submit") return "Completed";
     return data.run_status;
+  }
+}
+
+async function validateTool(context: ControllerContext<PlasticProductionRunData>, input: PlasticProductionRunData): Promise<void> {
+  const toolName = requireText(input.tool, "tool");
+  const tool = await requireExisting(context, "Plastic Tool", toolName);
+  if (text(tool.data.company) !== input.company) throw errors.reference("Tool belongs to another company");
+  if (text(tool.data.process_profile) !== input.process_profile) throw errors.reference("Tool process profile does not match Production Run");
+  if (["Maintenance", "Retired"].includes(text(tool.data.operational_state))) throw errors.reference(`Tool ${toolName} is not available for production`);
+  const compatible = arrayOfObjects(tool.data.compatible_machines);
+  if (compatible.length === 0 || !compatible.some((row) => text(row.machine) === input.machine)) {
+    throw errors.reference(`Tool ${toolName} is not approved for machine ${input.machine}`);
   }
 }
 
@@ -346,18 +364,22 @@ async function submittedGoodQuantity(context: ControllerContext<PlasticProductio
 
 async function assertStockEntryNotReused(context: ControllerContext<PlasticProductionRunData>, stockEntryName: string): Promise<void> {
   const runs = await context.reader.listDocumentsByDoctype<PlasticProductionRunData>(context.command.tenant_id, "Plastic Production Run");
-  const duplicate = runs.find((run) => run.name !== context.command.aggregate.name && run.docstatus !== 2 && text(run.data.manufacture_stock_entry) === stockEntryName);
+  const duplicate = runs.find(
+    (run) => run.name !== context.command.aggregate.name
+      && run.docstatus !== 2
+      && text(run.data.manufacture_stock_entry) === stockEntryName,
+  );
   if (duplicate) throw errors.reference(`Manufacture Stock Entry ${stockEntryName} is already linked to Production Run ${duplicate.name}`);
 }
 
-function assertExactStockReconciliation(
-  input: PlasticProductionRunData,
+async function assertExactStockReconciliation(
+  context: ControllerContext<PlasticProductionRunData>,
   workOrder: CanonicalDocument<JsonObject>,
   stockEntry: CanonicalDocument<ManufactureStockEntryData>,
   materials: PlasticProductionMaterial[],
   outputs: PlasticProductionOutput[],
-  requestedOutputBatch: string | undefined,
-): string | undefined {
+  requestedOutputBatch: string,
+): Promise<string | undefined> {
   const stock = stockEntry.data;
   const productionItem = text(workOrder.data.production_item);
   if (text(stock.finished_good_item) !== productionItem) throw errors.reference("Manufacture Stock Entry finished item does not match Work Order");
@@ -375,21 +397,30 @@ function assertExactStockReconciliation(
   }
 
   const stockBatch = finishedGoodBatch(stock);
-  if (good.batch_no && stockBatch && good.batch_no !== stockBatch) throw errors.reference("Good output batch does not match Manufacture Stock Entry physical lot");
-  if (requestedOutputBatch && stockBatch && requestedOutputBatch !== stockBatch) throw errors.reference("output_batch does not match Manufacture Stock Entry physical lot");
-  const outputBatch = requestedOutputBatch || text(good.batch_no) || stockBatch || undefined;
+  const claimedBatch = requestedOutputBatch || text(good.batch_no);
+  if (claimedBatch && !stockBatch) throw errors.reference("Production Run output batch is not proven by Manufacture Stock Entry physical identity");
+  if (stockBatch && claimedBatch && claimedBatch !== stockBatch) throw errors.reference("Production Run output batch does not match Manufacture Stock Entry physical lot");
+  if (stockBatch) {
+    const batch = await context.reader.getMasterRecordData(context.command.tenant_id, "Batch", stockBatch);
+    if (!batch) throw errors.reference(`Batch ${stockBatch} does not exist`);
+    const batchItem = text(batch.item_code ?? batch.item);
+    if (batchItem && batchItem !== productionItem) throw errors.reference(`Batch ${stockBatch} belongs to another Item`);
+  }
 
   const materialMap = aggregateMaterialRows(materials);
-  const stockConsumptionMap = aggregateStockRows(stock.items.filter((row) => (row.manufacturing_kind ?? "Consumption") === "Consumption"), "source");
+  const stockConsumptionMap = aggregateStockRows(
+    stock.items.filter((row) => (row.manufacturing_kind ?? "Consumption") === "Consumption"),
+    "source",
+  );
   assertQuantityMapsEqual(materialMap, stockConsumptionMap, "Production Run material lots do not exactly match Manufacture Stock Entry consumption");
 
-  const recoveryOutputs = outputs.filter((row) => row.output_type !== "Good");
-  const recoveryMap = aggregateOutputRows(recoveryOutputs);
-  const stockRecoveryMap = aggregateStockRows(stock.items.filter((row) => row.manufacturing_kind === "Scrap" || row.manufacturing_kind === "Offcut"), "target");
+  const recoveryMap = aggregateOutputRows(outputs.filter((row) => row.output_type !== "Good"));
+  const stockRecoveryMap = aggregateStockRows(
+    stock.items.filter((row) => row.manufacturing_kind === "Scrap" || row.manufacturing_kind === "Offcut"),
+    "target",
+  );
   assertQuantityMapsEqual(recoveryMap, stockRecoveryMap, "Production Run recovery outputs do not exactly match Manufacture Stock Entry recovery rows");
-
-  if (input.manufacture_stock_entry !== stockEntry.name) throw errors.reference("Manufacture Stock Entry identity changed during reconciliation");
-  return outputBatch;
+  return stockBatch || undefined;
 }
 
 function normalizeMaterials(rows: PlasticProductionMaterial[]): PlasticProductionMaterial[] {
@@ -435,13 +466,25 @@ function outputTotals(rows: PlasticProductionOutput[]): { good: number; scrap: n
 
 function aggregateMaterialRows(rows: PlasticProductionMaterial[]): Map<string, number> {
   const map = new Map<string, number>();
-  for (const row of rows) addQuantity(map, physicalKey(row.item_code, row.source_warehouse, row.serial_and_batch_bundle, row.batch_no), positiveMicros(row.consumed_qty, "material qty"));
+  for (const row of rows) {
+    addQuantity(
+      map,
+      physicalKey(row.item_code, row.source_warehouse, row.serial_and_batch_bundle, row.batch_no),
+      positiveMicros(row.consumed_qty, "material qty"),
+    );
+  }
   return map;
 }
 
 function aggregateOutputRows(rows: PlasticProductionOutput[]): Map<string, number> {
   const map = new Map<string, number>();
-  for (const row of rows) addQuantity(map, physicalKey(row.item_code, row.target_warehouse, row.serial_and_batch_bundle, row.batch_no), positiveMicros(row.qty, "output qty"));
+  for (const row of rows) {
+    addQuantity(
+      map,
+      physicalKey(row.item_code, row.target_warehouse, row.serial_and_batch_bundle, row.batch_no),
+      positiveMicros(row.qty, "output qty"),
+    );
+  }
   return map;
 }
 
@@ -451,7 +494,11 @@ function aggregateStockRows(rows: ManufacturingStockRow[], direction: "source" |
     const warehouse = direction === "source" ? text(row.source_warehouse) : text(row.target_warehouse);
     if (!warehouse) throw errors.reference(`Manufacture Stock Entry row ${row.row_id} is missing ${direction} warehouse`);
     const qty = row.qty_micros ?? positiveMicros(row.qty, `Stock Entry row ${row.row_id} qty`);
-    addQuantity(map, physicalKey(row.item_code, warehouse, row.serial_and_batch_bundle, row.batch_no || singleBatch(row.physical_lot_refs)), qty);
+    addQuantity(
+      map,
+      physicalKey(row.item_code, warehouse, row.serial_and_batch_bundle, row.batch_no || singleBatch(row.physical_lot_refs)),
+      qty,
+    );
   }
   return map;
 }
@@ -459,7 +506,13 @@ function aggregateStockRows(rows: ManufacturingStockRow[], direction: "source" |
 function assertQuantityMapsEqual(actual: Map<string, number>, posted: Map<string, number>, message: string): void {
   if (actual.size !== posted.size) throw errors.reference(message, { actual_rows: actual.size, posted_rows: posted.size });
   for (const [key, postedQty] of posted) {
-    if (actual.get(key) !== postedQty) throw errors.reference(message, { physical_key: key, actual_qty_micros: actual.get(key) ?? 0, posted_qty_micros: postedQty });
+    if (actual.get(key) !== postedQty) {
+      throw errors.reference(message, {
+        physical_key: key,
+        actual_qty_micros: actual.get(key) ?? 0,
+        posted_qty_micros: postedQty,
+      });
+    }
   }
 }
 
@@ -479,7 +532,8 @@ function singleBatch(refs: unknown): string {
 
 function finishedGoodBatch(stock: ManufactureStockEntryData): string {
   const identity = stock.finished_good_physical_identity;
-  return singleBatch(identity && typeof identity === "object" && !Array.isArray(identity) ? identity.physical_lot_refs : undefined);
+  if (!identity || typeof identity !== "object" || Array.isArray(identity)) return "";
+  return singleBatch(identity.physical_lot_refs);
 }
 
 function normalizeExistingDowntime(value: unknown): PlasticProductionDowntime[] {
@@ -490,15 +544,25 @@ function normalizeExistingDowntime(value: unknown): PlasticProductionDowntime[] 
     const reason = requireText(row.reason, `downtime_events[${index}].reason`);
     const startedAt = validTimestamp(row.started_at, `downtime_events[${index}].started_at`);
     const endedAt = validTimestamp(row.ended_at, `downtime_events[${index}].ended_at`);
-    const minutes = durationMinutesMicros(startedAt, endedAt);
-    return { ...row, reason, started_at: startedAt, ended_at: endedAt, minutes: fromScaledInt(minutes, 6) };
+    return {
+      ...row,
+      reason,
+      started_at: startedAt,
+      ended_at: endedAt,
+      minutes: fromScaledInt(durationMinutesMicros(startedAt, endedAt), 6),
+    };
   });
 }
 
 function downtimeEvent(reason: string, start: string, end: string): PlasticProductionDowntime {
   const startedAt = validTimestamp(start, "paused_at");
   const endedAt = validTimestamp(end, "resume/completion time");
-  return { reason, started_at: startedAt, ended_at: endedAt, minutes: fromScaledInt(durationMinutesMicros(startedAt, endedAt), 6) };
+  return {
+    reason,
+    started_at: startedAt,
+    ended_at: endedAt,
+    minutes: fromScaledInt(durationMinutesMicros(startedAt, endedAt), 6),
+  };
 }
 
 function durationMinutesMicros(start: string, end: string): number {
@@ -507,7 +571,13 @@ function durationMinutesMicros(start: string, end: string): number {
   return safeNumber((BigInt(delta) * 1_000_000n + 30_000n) / 60_000n);
 }
 
-function assertAssignmentLocked(existing: CanonicalDocument<PlasticProductionRunData>, input: PlasticProductionRunData, plannedQty: number, plannedStart: string, plannedEnd: string): void {
+function assertAssignmentLocked(
+  existing: CanonicalDocument<PlasticProductionRunData>,
+  input: PlasticProductionRunData,
+  plannedQty: number,
+  plannedStart: string,
+  plannedEnd: string,
+): void {
   const locked: Array<[string, unknown, unknown]> = [
     ["company", existing.data.company, input.company],
     ["branch", existing.data.branch, input.branch],
@@ -521,9 +591,12 @@ function assertAssignmentLocked(existing: CanonicalDocument<PlasticProductionRun
     ["planned_start", existing.data.planned_start, plannedStart],
     ["planned_end", existing.data.planned_end, plannedEnd],
   ];
-  for (const [field, before, after] of locked) if (text(before) !== text(after)) throw errors.validation(`${field} cannot change after Production Run starts`);
-  const existingQty = positiveMicros(existing.data.planned_qty, "existing planned_qty");
-  if (existingQty !== plannedQty) throw errors.validation("planned_qty cannot change after Production Run starts");
+  for (const [field, before, after] of locked) {
+    if (text(before) !== text(after)) throw errors.validation(`${field} cannot change after Production Run starts`);
+  }
+  if (positiveMicros(existing.data.planned_qty, "existing planned_qty") !== plannedQty) {
+    throw errors.validation("planned_qty cannot change after Production Run starts");
+  }
 }
 
 function assertRecipeEffective(recipe: CanonicalDocument<JsonObject>, plannedStart: string): void {
@@ -541,11 +614,15 @@ function workOrderQuantityMicros(workOrder: CanonicalDocument<JsonObject>): numb
 
 function assertRunTransition(action: string, previous: PlasticRunStatus | undefined, requested: PlasticRunStatus): void {
   if (action === "submit") {
-    if (!previous || !["Running", "Paused"].includes(previous)) throw errors.validation("Production Run must be Running or Paused before completion");
+    if (!previous || !["Running", "Paused"].includes(previous)) {
+      throw errors.validation("Production Run must be Running or Paused before completion");
+    }
     if (requested !== "Completed") throw errors.validation("Submit transition must end in Completed");
     return;
   }
-  if (action === "create" && !previous && requested !== "Planned") throw errors.validation("New Production Run must start in Planned state");
+  if (action === "create" && !previous && requested !== "Planned") {
+    throw errors.validation("New Production Run must start in Planned state");
+  }
   if (requested === "Completed") throw errors.validation("Use Submit to complete a Production Run");
   if (!previous) return;
   if (previous === "Completed") throw errors.validation("Completed Production Run is immutable; use cancel/amend semantics");
@@ -558,7 +635,9 @@ function assertRunTransition(action: string, previous: PlasticRunStatus | undefi
 }
 
 function validTimestamp(value: unknown, field: string): string {
-  if (typeof value !== "string" || !value.trim() || !Number.isFinite(Date.parse(value))) throw errors.validation(`${field} must be a valid timestamp`);
+  if (typeof value !== "string" || !value.trim() || !Number.isFinite(Date.parse(value))) {
+    throw errors.validation(`${field} must be a valid timestamp`);
+  }
   return new Date(value).toISOString();
 }
 
@@ -594,7 +673,9 @@ function flag(value: unknown): boolean {
 }
 
 function arrayOfObjects(value: unknown): JsonObject[] {
-  return Array.isArray(value) ? value.filter((row): row is JsonObject => Boolean(row) && typeof row === "object" && !Array.isArray(row)) : [];
+  return Array.isArray(value)
+    ? value.filter((row): row is JsonObject => Boolean(row) && typeof row === "object" && !Array.isArray(row))
+    : [];
 }
 
 function safeAdd(left: number, right: number): number {
