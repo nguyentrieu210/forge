@@ -79,7 +79,7 @@ export default {
       const callback = await resolveAppCallback(request, env, url, route.tenant_id);
 
       const principal = callback
-        ? { actor: callback.actor }
+        ? { actor: callback.actor, authentication: undefined }
         : await resolvePrincipal(request, env, url, route.tenant_id);
       const inbound = callback ? new Request(callback.url, request) : request;
       const trusted = await createTrustedIdentity({
@@ -283,7 +283,7 @@ async function resolvePrincipal(request: Request, env: GatewayEnv, url: URL, ten
   // tenant worker still decides — a private file is refused there, where the row that says
   // so lives.
   if ((isFrappePath(url.pathname) || isPublicFilePath(url.pathname)) && !request.headers.get("authorization")) {
-    return { actor: { user_id: "Guest", roles: ["Guest"] } };
+    return { actor: { user_id: "Guest", roles: ["Guest"] }, authentication: undefined };
   }
   const claims = await verifyBearerJwt(request, {
     secret: requireSecret(env.JWT_SECRET, "JWT_SECRET"),
@@ -315,4 +315,5 @@ function limitsFor(plan: TenantRoute["plan"], pathname: string): { cpuMs: number
 
 function requireSecret(value: string | undefined, name: string): string {
   if (!value) throw new Error(`${name} is not configured`);
+  return value;
 }
