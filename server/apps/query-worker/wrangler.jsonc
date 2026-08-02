@@ -22,6 +22,12 @@
   "triggers": { "crons": ["*/5 * * * *"] },
   "queues": {
     "producers": [{ "binding": "REPORT_QUEUE", "queue": "cloudforge-prepared-reports" }],
-    "consumers": [{ "queue": "cloudforge-prepared-reports", "max_batch_size": 5, "max_batch_timeout": 5, "max_retries": 3 }]
+    "consumers": [{
+      "queue": "cloudforge-prepared-reports",
+      "max_batch_size": 5,
+      "max_batch_timeout": 5,
+      "max_retries": 3,
+      "dead_letter_queue": "cloudforge-prepared-reports-dlq"
+    }]
   }
 }
