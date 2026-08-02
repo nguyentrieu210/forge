@@ -8,17 +8,21 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, CI, merge và relea
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `main`.
-- Exact `main` khi clean-transplant task auto deploy: `efa2aa6df385ca0775523f1756494d2ae54ec132`.
+- Exact `main` khi mở hotfix decimal: `cd1f76dbb47432e2312c6f5577eb955b48c3a856`.
 
-## ACTIVE — Auto deploy UI hotfix
+## ACTIVE — Global numeric display max 2 decimals
 
-- Canonical working branch: `fix/ui-hotfix-auto-deploy-v2-20260802`.
-- PR iteration `#230` từ stale main là superseded; không merge.
-- `.github/workflows/hotfix-ui-one-click.yml` đổi từ manual-only sang auto deploy khi push vào `hotfix/ui-*` có thay đổi `client/**`; vẫn giữ `workflow_dispatch` fallback.
-- Fail-closed scope guard chạy trước production: current `main` phải là ancestor; bắt buộc có `client/**`; ngoài client chỉ cho `CURRENT_STATUS.md`, `NEXT_TASKS.md`, `AI_HANDOFF.md`; tối đa 10 file / 300 changed lines.
-- Fast path: scope guard -> install -> build MetaForge bundle -> stage bundle -> wrangler deploy Gateway production.
-- Mục tiêu: UI hotfix hợp lệ push xong tự deploy, không cần người dùng bấm Run workflow.
-- Sau khi merge cơ chế này vào `main`, theme fix sẽ được replay lên branch `hotfix/ui-*` mới từ exact main để chính push đó kích production deploy.
+- Canonical branch: `hotfix/ui-global-decimal-2dp-20260802`.
+- Yêu cầu: mọi numeric presentation canonical của MetaForge tối đa 2 chữ số thập phân; ví dụ `22,000000` -> `22,00`, `10,000000 %` -> `10,00 %`.
+- `client/packages/core/src/i18n/format.ts`: canonical number/currency formatter cap presentation precision ở 2, kể cả metadata/site khai precision lớn hơn.
+- `client/packages/controls/src/register.ts`: Float/Currency/Percent/Rating default controls nhận presentation precision tối đa 2 để editable form không hiện 6 chữ số lẻ.
+- Không đổi schema, metadata nghiệp vụ, giá trị lưu DB hay độ chính xác tính toán; chỉ đổi presentation.
+- Branch thuộc `hotfix/ui-*`, nên guarded auto-deploy production tự chạy sau push theo workflow trên `main`.
+
+## DONE — Guarded auto deploy UI hotfix
+
+- PR `#231` merged vào `main` tại `cd1f76dbb47432e2312c6f5577eb955b48c3a856`.
+- Push hợp lệ vào `hotfix/ui-*` có `client/**` tự build/stage/deploy Gateway production sau fail-closed scope guard.
 
 ## DONE — Warehouse Petty Cash
 
@@ -32,7 +36,7 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, CI, merge và relea
 
 ## Chưa hoàn tất
 
-1. Merge auto-deploy workflow vào `main`, replay UI theme fix trên hotfix mới và xác nhận production deploy tự chạy.
+1. Xác nhận exact-head CI + production auto-deploy của global decimal hotfix; merge reconcile PR khi đạt gate.
 2. Bulk Transaction cho Stock Reconciliation.
 3. Bulk Transaction cho BOM parent + child/version.
 4. First-class AppAction input-table contract.
@@ -43,5 +47,6 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, CI, merge và relea
 ## Guardrails
 
 - Auto production deploy chỉ áp dụng `hotfix/ui-*` vượt qua scope guard fail-closed.
+- Decimal cap là presentation-only; không làm tròn dữ liệu backend/DB hoặc thay business calculation.
 - Không sửa production secrets/DNS hoặc mutate customer data trong UI fast lane.
 - Không commit `.env`, `server/work/`, `tmp/`, backup, credential, cookie/token hoặc generated artifact không thuộc source control.
