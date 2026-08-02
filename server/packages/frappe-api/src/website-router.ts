@@ -35,7 +35,7 @@ export async function routeFrappeApi(
     if (url.pathname === WEBSITE_MANIFEST) return methodResponse(await websiteManifest(website));
 
     const args = await readFrappeArgs(request, url);
-    return methodResponse(await websitePage(website, args.text("slug") ?? "home"));
+    return methodResponse(await websitePage(website, args.text("slug") ?? ""));
   } catch (error) {
     return faultResponse(error, context.traceId);
   }
