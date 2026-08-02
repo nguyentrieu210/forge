@@ -21,14 +21,18 @@ concurrency:
 
 jobs:
   build-deploy:
-    name: Build and deploy production
+    name: Build and deploy ALU
     if: inputs.confirm == 'alu'
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 120
     environment: production
     env:
       TARGET_SHA: ${{ inputs.target_sha || github.sha }}
+      TENANT: alu
+      APP_WORKER: cloudforge-app-alumdoor
+      DISPATCH_NAMESPACE: cloudforge-production
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      VITE_FORGE_RELEASE_SHA: ${{ inputs.target_sha || github.sha }}
 
     steps:
       - name: Checkout target
@@ -53,11 +57,34 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build server and UI
+      - name: Build once
         run: |
           pnpm --filter cloudforge run build
           pnpm --filter metaforge run build
           node server/scripts/stage-client-bundle.mjs
 
+      - name: Backup and migrate tenant
+        working-directory: server
+        run: |
+          node scripts/backup-tenant.mjs --tenant "$TENANT" --execute --output-dir "$RUNNER_TEMP/alu-backup"
+          node scripts/migrate-tenant.mjs --tenant "$TENANT" --execute --confirm "$TENANT"
+
+      - name: Deploy tenant Worker
+        working-directory: server
+        run: node scripts/deploy-tenant.mjs --tenant "$TENANT" --execute --confirm "$TENANT"
+
+      - name: Deploy Alumdoor app Worker
+        working-directory: server
+        run: |
+          pnpm exec wrangler deploy \
+            --config apps-src/alumdoor-worker/wrangler.jsonc \
+            --name "$APP_WORKER" \
+            --dispatch-namespace "$DISPATCH_NAMESPACE" \
+            --strict
+
       - name: Deploy Gateway
         run: pnpm --dir server exec wrangler deploy --config apps/gateway-worker/wrangler.jsonc
+
+      - name: Smoke
+        run: |
+          curl --fail --silent --show-error https://alu.kairo.vn/health >/dev/null
