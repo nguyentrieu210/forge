@@ -1,4 +1,7 @@
+import type { JsonObject } from "../../contracts/src/index.js";
+import { requireLeafWarehouse } from "../../clouderp-stock/src/index.js";
 import { errors } from "../../core/src/index.js";
+import type { ControllerContext } from "../../document-kernel/src/index.js";
 import { StockReconciliationController } from "./alumdoor-inventory.js";
 
 type ReconciliationContext = Parameters<StockReconciliationController["normalize"]>[0];
@@ -71,6 +74,13 @@ async function assertRowWithinScope(
 export class StockReconciliationIntegrityController extends StockReconciliationController {
   override async normalize(context: ReconciliationContext): Promise<ReconciliationData> {
     const input = context.command.document;
+    if (input.warehouse) {
+      await requireLeafWarehouse(
+        context as unknown as ControllerContext<JsonObject>,
+        input.warehouse,
+        input.company,
+      );
+    }
     assertNoDuplicateOrAmbiguousRows(input.items, "Phiếu kiểm kê");
 
     const previous = context.existing?.data;
