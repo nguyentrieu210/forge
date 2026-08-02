@@ -9,6 +9,8 @@ import {
   assertSessionCsrf,
   establishSession,
   faultResponse,
+  methodResponse,
+  readFrappeArgs,
   slideSession,
   type AuthRouteContext,
   type EstablishedSession,
@@ -39,6 +41,15 @@ import type { TenantEnv } from "./env.js";
 
 export * from "./index-core.js";
 
+const LIST_SESSIONS_PATH = "/api/method/metaforge.api.list_sessions";
+const REVOKE_SESSION_PATH = "/api/method/metaforge.api.revoke_session";
+const LOGOUT_OTHER_SESSIONS_PATH = "/api/method/metaforge.api.logout_other_sessions";
+const SESSION_MANAGEMENT_PATHS = new Set([
+  LIST_SESSIONS_PATH,
+  REVOKE_SESSION_PATH,
+  LOGOUT_OTHER_SESSIONS_PATH,
+]);
+
 interface InterceptedRouteAuthentication {
   actor: Actor;
   established?: EstablishedSession;
@@ -46,17 +57,18 @@ interface InterceptedRouteAuthentication {
 }
 
 /**
- * Thin entrypoint wrapper for bounded authenticated report/operation routes and the
- * privileged native-administration step-up boundary. Existing core route semantics and
- * scheduled tasks remain delegated to index-core.ts.
+ * Thin entrypoint wrapper for bounded authenticated report/operation routes, cookie-bound
+ * session management, and the privileged native-administration step-up boundary. Existing
+ * core route semantics and scheduled tasks remain delegated to index-core.ts.
  */
 export default {
   async fetch(request: Request, env: TenantEnv, _ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
     const physicalStock = isPhysicalStockApiPath(url.pathname);
     const dailyLedger = isDailyLedgerApiPath(url.pathname);
+    const sessionManagement = SESSION_MANAGEMENT_PATHS.has(url.pathname);
     const nativeSecurity = requiresRecentNativeSecurityAuthentication(request.method, url.pathname);
-    if (!physicalStock && !dailyLedger && !nativeSecurity) return coreWorker.fetch(request, env);
+    if (!physicalStock && !dailyLedger && !sessionManagement && !nativeSecurity) return coreWorker.fetch(request, env);
 
     const traceId = request.headers.get("x-cloudforge-trace-id") ?? randomId("trace");
     try {
@@ -68,14 +80,16 @@ export default {
         // The wrapper owns only the step-up invariant. Core still owns System Manager
         // authorization, validation and persistence, so passing step-up must not create a
         // second implementation of any native admin route.
-        if (!physicalStock && !dailyLedger) return coreWorker.fetch(request, env);
+        if (!physicalStock && !dailyLedger && !sessionManagement) return coreWorker.fetch(request, env);
       }
 
       const authentication = await authenticateInterceptedRoute(request, url, env, tenantId, traceId);
       const requestDb = (env.DB.withSession?.("first-primary") ?? env.DB) as D1Database;
 
       let response: Response | null;
-      if (physicalStock) {
+      if (sessionManagement) {
+        response = await routeSessionManagement(request, url, tenantId, traceId, authentication);
+      } else if (physicalStock) {
         const metadata = new D1MetadataStore(requestDb);
         const access = new D1DocumentAccessStore(requestDb);
         const permissions = new MetadataPermissionService(metadata, undefined, access);
@@ -102,7 +116,9 @@ export default {
       }
       return response;
     } catch (error) {
-      return isPhysicalStockFrappePath(url.pathname) || isDailyLedgerFrappePath(url.pathname)
+      return isPhysicalStockFrappePath(url.pathname)
+        || isDailyLedgerFrappePath(url.pathname)
+        || SESSION_MANAGEMENT_PATHS.has(url.pathname)
         ? faultResponse(error, traceId)
         : errorResponse(error, traceId);
     }
@@ -112,6 +128,88 @@ export default {
     await coreWorker.scheduled(controller, env, ctx);
   },
 };
+
+async function routeSessionManagement(
+  request: Request,
+  url: URL,
+  tenantId: string,
+  traceId: string,
+  authentication: InterceptedRouteAuthentication,
+): Promise<Response> {
+  const established = authentication.established;
+  const authContext = authentication.authContext;
+  if (!established || !authContext) throw errors.permission("A browser session is required for session management");
+  const sessions = authContext.users.sessions;
+  const userId = established.actor.user_id;
+  const now = authContext.now();
+
+  if (url.pathname === LIST_SESSIONS_PATH) {
+    if (request.method.toUpperCase() !== "GET") throw errors.validation("list_sessions requires GET");
+    const args = await readFrappeArgs(request, url);
+    const limitText = args.text("limit")?.trim();
+    const limit = limitText === undefined ? 100 : Number(limitText);
+    if (!Number.isInteger(limit) || limit < 1 || limit > 250) throw errors.validation("limit must be an integer from 1 to 250");
+    return methodResponse({
+      sessions: await sessions.list(tenantId, userId, now, established.session.sessionId, limit),
+    });
+  }
+
+  if (url.pathname === REVOKE_SESSION_PATH) {
+    if (request.method.toUpperCase() !== "POST") throw errors.validation("revoke_session requires POST");
+    const args = await readFrappeArgs(request, url);
+    const sessionId = args.requireText("session_id", 128);
+    const reason = args.text("reason")?.trim() ?? "";
+    if (reason.length > 500) throw errors.validation("reason must be at most 500 characters");
+    const revoked = await sessions.revokeOne(
+      tenantId,
+      userId,
+      sessionId,
+      {
+        actorUserId: userId,
+        traceId,
+        source: "session-manager",
+        ...(reason ? { reason } : {}),
+      },
+      now,
+    );
+    return methodResponse({ session_id: sessionId, revoked });
+  }
+
+  if (request.method.toUpperCase() !== "POST") throw errors.validation("logout_other_sessions requires POST");
+  if (established.session.sessionId) {
+    const revokedSessions = await sessions.revokeOthers(
+      tenantId,
+      userId,
+      established.session.sessionId,
+      {
+        actorUserId: userId,
+        traceId,
+        source: "metaforge.api.logout_other_sessions",
+        reason: "logout other sessions",
+      },
+      now,
+    );
+    return methodResponse({
+      revoked: true,
+      revoked_sessions: revokedSessions,
+      reauthenticate_required: false,
+    });
+  }
+
+  // Backward-compatible legacy session: there is no individual registry identity to keep.
+  // Preserve the old fail-safe epoch bump, which revokes every cookie including this one.
+  const epoch = await authContext.users.administration.revokeSessions(
+    tenantId,
+    userId,
+    {
+      actorUserId: userId,
+      traceId,
+      source: "metaforge.api.logout_other_sessions",
+    },
+    now,
+  );
+  return methodResponse({ revoked: true, session_epoch: epoch, reauthenticate_required: true });
+}
 
 function resolveTenant(request: Request, env: TenantEnv): string | null {
   const routed = request.headers.get("x-cloudforge-tenant");
@@ -128,7 +226,10 @@ async function authenticateInterceptedRoute(
   tenantId: string,
   traceId: string,
 ): Promise<InterceptedRouteAuthentication> {
-  if (!isPhysicalStockFrappePath(url.pathname) && !isDailyLedgerFrappePath(url.pathname)) {
+  const cookieBound = isPhysicalStockFrappePath(url.pathname)
+    || isDailyLedgerFrappePath(url.pathname)
+    || SESSION_MANAGEMENT_PATHS.has(url.pathname);
+  if (!cookieBound) {
     return { actor: await authenticateTrustedIdentity(request, env, tenantId, traceId) };
   }
 
@@ -154,6 +255,12 @@ async function authenticateInterceptedRoute(
       assertSessionCsrf(request, established);
       return { actor: established.actor, established, authContext };
     }
+  }
+
+  if (SESSION_MANAGEMENT_PATHS.has(url.pathname)) {
+    // Session administration is account-security authority. App callbacks deliberately
+    // cannot borrow the user's actor identity for it.
+    throw errors.permission("A browser session is required for session management");
   }
 
   if (appCallback) {
