@@ -9,6 +9,18 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, CI, merge và relea
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `main`.
 - Exact `main` khi mở policy task: `cd1f76dbb47432e2312c6f5577eb955b48c3a856`.
+- Exact `main` khi clean-transplant Website/CMS v1: `18d2161de589fcd1677886f0e9136006fd60e9e5`.
+
+## ACTIVE — Website/CMS v1 clean delivery
+
+- Canonical branch: `feat/tenant-website-builder-delivery-v2-20260802`.
+- Canonical PR: `#238` (draft); PR `#219` và `#220` là stale iterations, không merge.
+- Clean-transplant trực tiếp từ exact `main@18d2161de589fcd1677886f0e9136006fd60e9e5`, không merge/rebase lịch sử stale.
+- Code transplant head: `d26cfbe62843b78a13aa377920c6aefae6d1cc2a`.
+- Scope: first-party `website` app metadata, Website Settings/Web Page/Web Page Block, version-pinned templates/themes, public Website resolver, runtime renderer và public E2E.
+- Security boundary: public API chỉ allowlist `forge.website.manifest` + `forge.website.page`; Guest không có generic DocType read; mọi query bind trusted `tenantId`; draft/unpublished fail closed; block/URL/theme được allowlist.
+- Quality tier: **CRITICAL** vì thay đổi unauthenticated public routing + tenant isolation.
+- Validation còn lại: exact final head cần required CI + website server test + runtime/typecheck/build/public E2E theo ownership. Không chạy lặp gate đã PASS trên cùng SHA nếu input không đổi.
 
 ## ACTIVE — Minimal risk-based gates
 
@@ -41,14 +53,15 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, CI, merge và relea
 
 ## Chưa hoàn tất
 
-1. Merge policy risk-based gates vào `main`.
-2. Merge auto-deploy workflow vào `main`, replay UI theme fix trên hotfix mới và xác nhận production deploy tự chạy.
-3. Bulk Transaction cho Stock Reconciliation.
-4. Bulk Transaction cho BOM parent + child/version.
-5. First-class AppAction input-table contract.
-6. Batch Print / QR label queue.
-7. P1 Daily detailed ledger hardening/closure theo exact GitHub state.
-8. Plastic ERP các wave sau P0-A.
+1. Website/CMS v1: validate exact final head của PR `#238`; chỉ ready khi public/tenant/security gates xanh.
+2. Merge policy risk-based gates vào `main`.
+3. Merge auto-deploy workflow vào `main`, replay UI theme fix trên hotfix mới và xác nhận production deploy tự chạy.
+4. Bulk Transaction cho Stock Reconciliation.
+5. Bulk Transaction cho BOM parent + child/version.
+6. First-class AppAction input-table contract.
+7. Batch Print / QR label queue.
+8. P1 Daily detailed ledger hardening/closure theo exact GitHub state.
+9. Plastic ERP các wave sau P0-A.
 
 ## Guardrails
 
