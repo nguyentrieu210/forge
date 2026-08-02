@@ -13,6 +13,8 @@ type BudgetScope = "Company" | "Cost Center" | "Project" | "Branch";
 type CommitmentType = "Reserve" | "Release";
 type ControlAction = "Stop" | "Warn" | "Ignore";
 
+type BudgetDimensionFields = Partial<Pick<FinanceBudgetData, "cost_center" | "project" | "branch">>;
+
 interface FinanceBudgetData extends JsonObject {
   company: string;
   account: string;
@@ -173,8 +175,13 @@ async function normalizeBudget(context: ControllerContext<FinanceBudgetData>): P
   const controlAction = optionalText(input.control_action) || "Stop";
   if (!new Set(["Stop", "Warn", "Ignore"]).has(controlAction)) throw errors.validation("control_action must be Stop, Warn or Ignore");
 
+  const sanitizedInput: FinanceBudgetData = { ...input };
+  delete sanitizedInput.cost_center;
+  delete sanitizedInput.project;
+  delete sanitizedInput.branch;
+
   return {
-    ...input,
+    ...sanitizedInput,
     company,
     account,
     budget_against: budgetAgainst,
@@ -291,26 +298,27 @@ async function normalizeScope(
   scope: BudgetScope,
   input: FinanceBudgetData,
   company: string,
-): Promise<{ key: string; fields: Pick<FinanceBudgetData, "cost_center" | "project" | "branch"> }> {
-  if (scope === "Company") return { key: "Company:*", fields: { cost_center: undefined, project: undefined, branch: undefined } };
+): Promise<{ key: string; fields: BudgetDimensionFields }> {
+  if (scope === "Company") return { key: "Company:*", fields: {} };
   if (scope === "Cost Center") {
     const name = requiredText(input.cost_center, "cost_center");
     const data = await requireMaster(context, "Cost Center", name);
     assertCompanyReference(data, company, "Cost Center", name);
-    return { key: `Cost Center:${name}`, fields: { cost_center: name, project: undefined, branch: undefined } };
+    return { key: `Cost Center:${name}`, fields: { cost_center: name } };
   }
   if (scope === "Branch") {
     const name = requiredText(input.branch, "branch");
     const data = await requireMaster(context, "Branch", name);
     assertCompanyReference(data, company, "Branch", name);
-    return { key: `Branch:${name}`, fields: { cost_center: undefined, project: undefined, branch: name } };
+    return { key: `Branch:${name}`, fields: { branch: name } };
   }
   const name = requiredText(input.project, "project");
-  await assertReference(context, "Project", name);
-  const project = await context.reader.getDocument<JsonObject>(context.command.tenant_id, "Project", name)
-    ?? { data: await context.reader.getMasterRecordData(context.command.tenant_id, "Project", name) ?? {} } as CanonicalDocument<JsonObject>;
-  assertCompanyReference(project.data, company, "Project", name);
-  return { key: `Project:${name}`, fields: { cost_center: undefined, project: name, branch: undefined } };
+  const projectDocument = await context.reader.getDocument<JsonObject>(context.command.tenant_id, "Project", name);
+  const projectData = projectDocument?.data
+    ?? await context.reader.getMasterRecordData(context.command.tenant_id, "Project", name);
+  if (!projectData) throw errors.reference(`Project ${name} does not exist or is unavailable`);
+  assertCompanyReference(projectData, company, "Project", name);
+  return { key: `Project:${name}`, fields: { project: name } };
 }
 
 async function assertNoOverlappingBudget(context: ControllerContext<FinanceBudgetData>, data: FinanceBudgetData): Promise<void> {
@@ -326,8 +334,8 @@ async function assertNoOverlappingBudget(context: ControllerContext<FinanceBudge
   if (conflict) throw errors.validation(`Finance Budget overlaps submitted budget ${conflict.name} for the same company/account/scope`);
 }
 
-async function requireSubmittedBudget(
-  context: ControllerContext<JsonObject>,
+async function requireSubmittedBudget<T extends JsonObject>(
+  context: ControllerContext<T>,
   name: string,
 ): Promise<CanonicalDocument<FinanceBudgetData>> {
   const budget = await context.reader.getDocument<FinanceBudgetData>(context.command.tenant_id, "Finance Budget", name);
@@ -337,8 +345,8 @@ async function requireSubmittedBudget(
   return budget;
 }
 
-async function effectiveBudgetAmount(
-  context: ControllerContext<JsonObject>,
+async function effectiveBudgetAmount<T extends JsonObject>(
+  context: ControllerContext<T>,
   budget: CanonicalDocument<FinanceBudgetData>,
   excludeRevision?: string,
 ): Promise<number> {
@@ -349,8 +357,8 @@ async function effectiveBudgetAmount(
   return addMinor([safeInteger(budget.data.budget_amount_minor, "budget_amount_minor"), ...deltas], "effective budget amount");
 }
 
-async function committedAmount(
-  context: ControllerContext<JsonObject>,
+async function committedAmount<T extends JsonObject>(
+  context: ControllerContext<T>,
   budgetName: string,
   excludeCommitment?: string,
 ): Promise<number> {
@@ -360,8 +368,8 @@ async function committedAmount(
     .map((doc) => signedCommitment(doc.data)), "budget committed amount");
 }
 
-async function sourceCommittedAmount(
-  context: ControllerContext<JsonObject>,
+async function sourceCommittedAmount<T extends JsonObject>(
+  context: ControllerContext<T>,
   budgetName: string,
   sourceDoctype: string,
   sourceName: string,
@@ -383,25 +391,19 @@ function signedCommitment(data: FinanceBudgetCommitmentData): number {
   return data.commitment_type === "Release" ? -amount : amount;
 }
 
-async function listSubmitted<T extends JsonObject>(
-  context: ControllerContext<JsonObject>,
+async function listSubmitted<TDoc extends JsonObject, TContext extends JsonObject = JsonObject>(
+  context: ControllerContext<TContext>,
   doctype: string,
-): Promise<Array<CanonicalDocument<T>>> {
-  return (await context.reader.listDocumentsByDoctype<T>(context.command.tenant_id, doctype)).filter((doc) => doc.docstatus === 1);
+): Promise<Array<CanonicalDocument<TDoc>>> {
+  return (await context.reader.listDocumentsByDoctype<TDoc>(context.command.tenant_id, doctype)).filter((doc) => doc.docstatus === 1);
 }
 
-async function requireMaster(context: ControllerContext<JsonObject>, type: string, name: string): Promise<JsonObject> {
+async function requireMaster<T extends JsonObject>(context: ControllerContext<T>, type: string, name: string): Promise<JsonObject> {
   const data = await context.reader.getMasterRecordData(context.command.tenant_id, type, name);
   if (!data || !await context.reader.hasMasterRecord(context.command.tenant_id, type, name)) {
     throw errors.reference(`${type} ${name} does not exist or is disabled`);
   }
   return data;
-}
-
-async function assertReference(context: ControllerContext<JsonObject>, type: string, name: string): Promise<void> {
-  if (await context.reader.hasMasterRecord(context.command.tenant_id, type, name)) return;
-  if (await context.reader.getDocument<JsonObject>(context.command.tenant_id, type, name)) return;
-  throw errors.reference(`${type} ${name} does not exist or is unavailable`);
 }
 
 function assertCompanyReference(data: JsonObject, company: string, type: string, name: string): void {
@@ -416,7 +418,7 @@ function assertWithinBudgetPeriod(date: string, budget: CanonicalDocument<Financ
   }
 }
 
-function assertApprover(context: ControllerContext<JsonObject>, forbidSelfApproval: boolean): void {
+function assertApprover<T extends JsonObject>(context: ControllerContext<T>, forbidSelfApproval: boolean): void {
   if (!context.command.actor.roles.some((role) => BUDGET_APPROVER_ROLES.has(role))) {
     throw errors.permission("Finance Budget approval requires Accounts Manager, Chief Accountant or System Manager");
   }
