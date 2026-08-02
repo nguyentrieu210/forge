@@ -34,6 +34,14 @@ export interface BoundFormatters {
   config: LocaleConfig;
 }
 
+/** Mọi số thực trên UI chỉ HIỂN THỊ tối đa 2 chữ số lẻ; dữ liệu/tính toán không bị đổi. */
+export const MAX_DISPLAY_DECIMALS = 2;
+
+function displayPrecision(value: number | undefined, fallback: number): number {
+  const candidate = value !== undefined && Number.isFinite(value) ? value : fallback;
+  return Math.min(MAX_DISPLAY_DECIMALS, Math.max(0, Math.floor(candidate)));
+}
+
 /** makeLocaleFormat — dựng bộ formatter từ 1 LocaleConfig (thuần; provider chỉ bọc React). */
 export function makeLocaleFormat(config: LocaleConfig = {}): BoundFormatters {
   const nf = config.numberFormat;
@@ -95,13 +103,14 @@ function groupInteger(intDigits: string, sep: string, indian: boolean): string {
 
 /**
  * formatNumber — value theo number_format + precision (mặc định theo format).
- * precision override (vd field.precision) thắng precision của format.
+ * precision override (vd field.precision) thắng precision của format, nhưng presentation
+ * toàn hệ thống vẫn cap ở MAX_DISPLAY_DECIMALS.
  */
 export function formatNumber(value: number | string | null | undefined, format?: string, precision?: number): string {
   const n = typeof value === "number" ? value : Number(value);
   if (value === null || value === undefined || value === "" || !Number.isFinite(n)) return "";
   const info = getNumberFormatInfo(format);
-  const p = precision ?? info.precision;
+  const p = displayPrecision(precision, info.precision);
   const neg = n < 0;
   const fixed = Math.abs(n).toFixed(p);
   const [intPart, decPart] = fixed.split(".");
