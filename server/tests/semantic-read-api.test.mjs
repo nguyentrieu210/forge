@@ -43,6 +43,8 @@ const insights = new SemanticInsightRegistry(semantic, [
   },
 ]);
 
+const allScope = { mode: "all", actor_user_id: "reader@example.com", user_permissions: [] };
+
 function fixture() {
   const requests = [];
   const executor = {
@@ -51,7 +53,7 @@ function fixture() {
       return { model: request.model, grain: "test", columns: [], result: [], row_count: 0 };
     },
   };
-  const access = { async assert() {} };
+  const access = { async authorize() { return allScope; } };
   const catalog = new PermissionAwareSemanticCatalogService(semantic, access);
   return { requests, api: new SemanticReadApi(executor, catalog, insights) };
 }
@@ -96,8 +98,9 @@ test("catalog call uses permission-aware catalog service", async () => {
   const requests = [];
   const executor = { async run(request) { requests.push(request); throw new Error("not used"); } };
   const catalog = new PermissionAwareSemanticCatalogService(semantic, {
-    async assert(request) {
+    async authorize(request) {
       if (request.model === "sales.detail") throw Object.assign(new Error("denied"), { code: "PERMISSION_DENIED" });
+      return allScope;
     },
   });
   const api = new SemanticReadApi(executor, catalog, insights);
