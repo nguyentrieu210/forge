@@ -96,7 +96,6 @@ test("0049 seeds the active package and atomically records later package views",
     { revision_no: 2, version: "2.0.0" },
   ]);
 
-  // Unrelated installed_apps edits do not manufacture package revisions.
   db.db.prepare("UPDATE installed_apps SET app_name='Demo renamed' WHERE tenant_id='t' AND app_id='demo'").run();
   assert.equal(db.db.prepare("SELECT count(*) AS n FROM app_revisions").get().n, 2);
 });
@@ -130,10 +129,14 @@ test("AppRevisionStore lists active history, plans and activates a presentation-
   assert.deepEqual(active, { version: "1.0.0", content_hash: "a".repeat(64) });
   const audit = db.db.prepare("SELECT from_revision_no,to_revision_no,action,actor FROM app_revision_activations").get();
   assert.deepEqual(audit, { from_revision_no: 2, to_revision_no: 1, action: "rollback", actor: "admin@example.com" });
+  const activationHistory = await store.listActivations("t", "demo");
+  assert.equal(activationHistory.length, 1);
+  assert.equal(activationHistory[0].activation_id, activation.activation_id);
+  assert.equal(activationHistory[0].actor, "admin@example.com");
   assert.equal(db.db.prepare("SELECT count(*) AS n FROM app_revisions").get().n, 2, "reactivating an existing revision does not manufacture a third source revision");
 });
 
-test("presentation rollback refuses any materialized metadata drift even when the coarse planner would be permissive", async () => {
+test("rollback preview and executor both reject materialized metadata drift", async () => {
   const db = new D1Adapter();
   insertActive(db, "1.0.0", pkg("1.0.0", "Thing", {
     doctypes: [{
@@ -152,9 +155,12 @@ test("presentation rollback refuses any materialized metadata drift even when th
       }],
     })), "2026-02-01T00:00:00Z", "t", "demo");
   const store = new AppRevisionStore(db);
+  const plan = await store.planRollback("t", "demo", 1);
+  assert.equal(plan.automatable, false);
+  assert.ok(plan.issues.some((entry) => entry.code === "MATERIALIZED_METADATA_CHANGED"));
   await assert.rejects(
     () => store.rollbackPresentation("t", "demo", 1, "admin@example.com", "2026-02-02T00:00:00Z"),
-    /materialized app metadata/,
+    /MATERIALIZED_METADATA_CHANGED/,
   );
   assert.equal(db.db.prepare("SELECT version FROM installed_apps WHERE tenant_id='t' AND app_id='demo'").get().version, "2.0.0");
   assert.equal(db.db.prepare("SELECT count(*) AS n FROM app_revision_activations").get().n, 0);
