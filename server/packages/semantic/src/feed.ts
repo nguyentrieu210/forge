@@ -8,6 +8,7 @@ import type {
   SemanticResultColumn,
 } from "./index.js";
 import type { SemanticQueryExecutor } from "./service.js";
+import { assertSemanticFilterRuntimeInput } from "./validation.js";
 
 export interface SemanticSnapshotFeedDefinition {
   id: string;
@@ -46,13 +47,14 @@ function ids(values: string[], field: string, max: number): void {
   if (!Array.isArray(values) || values.length > max) throw errors.validation(`${field} has too many entries`);
   const seen = new Set<string>();
   for (const value of values) {
-    if (!MEMBER.test(value)) throw errors.validation(`${field} contains invalid member ${value}`);
+    if (typeof value !== "string" || !MEMBER.test(value)) throw errors.validation(`${field} contains invalid member ${String(value)}`);
     if (seen.has(value)) throw errors.validation(`${field} contains duplicate member ${value}`);
     seen.add(value);
   }
 }
 
 function validateFeed(definition: SemanticSnapshotFeedDefinition, registry: SemanticModelRegistry): void {
+  if (!definition || typeof definition !== "object") throw errors.validation("feed definition is required");
   if (!ID.test(definition.id)) throw errors.validation("feed.id must be a stable lowercase id");
   text(definition.label, `Feed ${definition.id} label`, 160);
   if (!ID.test(definition.model)) throw errors.validation(`Feed ${definition.id} model is invalid`);
@@ -61,8 +63,6 @@ function validateFeed(definition: SemanticSnapshotFeedDefinition, registry: Sema
   if (definition.dimensions.length === 0 && definition.metrics.length === 0) throw errors.validation(`Feed ${definition.id} must select at least one member`);
 
   const model = registry.get(definition.model);
-  // maxRows+1 is required to prove whether another row exists. Requiring one spare row in
-  // the model budget is deliberate: without it `truncated=false` would be a guess at the cap.
   if (!Number.isSafeInteger(definition.maxRows) || definition.maxRows < 1 || definition.maxRows >= model.maxRows || definition.maxRows > 2_000) {
     throw errors.validation(`Feed ${definition.id} maxRows must be 1..min(2000, model.maxRows-1) so truncation can be proven`);
   }
@@ -71,12 +71,27 @@ function validateFeed(definition: SemanticSnapshotFeedDefinition, registry: Sema
   const metrics = new Set(model.metrics.map((item) => item.id));
   for (const dimension of definition.dimensions) if (!dimensions.has(dimension)) throw errors.validation(`Feed ${definition.id} uses unknown dimension ${dimension}`);
   for (const metric of definition.metrics) if (!metrics.has(metric)) throw errors.validation(`Feed ${definition.id} uses unknown metric ${metric}`);
-  if ((definition.filters?.length ?? 0) > 20) throw errors.validation(`Feed ${definition.id} has too many filters`);
-  for (const filter of definition.filters ?? []) if (!dimensions.has(filter.dimension)) throw errors.validation(`Feed ${definition.id} filters unknown dimension ${filter.dimension}`);
 
-  if ((definition.order_by?.length ?? 0) > 8) throw errors.validation(`Feed ${definition.id} has too many order members`);
+  if (!Array.isArray(definition.filters ?? []) || (definition.filters?.length ?? 0) > 20) throw errors.validation(`Feed ${definition.id} filters must contain at most 20 entries`);
+  for (const [index, filter] of (definition.filters ?? []).entries()) {
+    if (!dimensions.has(filter.dimension)) throw errors.validation(`Feed ${definition.id} filters unknown dimension ${filter.dimension}`);
+    assertSemanticFilterRuntimeInput(filter, `Feed ${definition.id} filters[${index}]`);
+  }
+
+  if (!Array.isArray(definition.order_by ?? []) || (definition.order_by?.length ?? 0) > 40) throw errors.validation(`Feed ${definition.id} order_by is invalid`);
   const selected = new Set([...definition.dimensions, ...definition.metrics]);
-  for (const order of definition.order_by ?? []) if (!selected.has(order.id)) throw errors.validation(`Feed ${definition.id} order member must be selected: ${order.id}`);
+  const ordered = new Set<string>();
+  for (const order of definition.order_by ?? []) {
+    if (!selected.has(order.id)) throw errors.validation(`Feed ${definition.id} order member must be selected: ${order.id}`);
+    if (order.direction !== "asc" && order.direction !== "desc") throw errors.validation(`Feed ${definition.id} order direction is invalid`);
+    if (ordered.has(order.id)) throw errors.validation(`Feed ${definition.id} repeats order member ${order.id}`);
+    ordered.add(order.id);
+  }
+  // A bounded snapshot needs deterministic page boundaries. Every selected grouping dimension
+  // participates in ORDER BY; metric ordering may be added but cannot replace the tuple key.
+  for (const dimension of definition.dimensions) {
+    if (!ordered.has(dimension)) throw errors.validation(`Feed ${definition.id} must order by selected dimension ${dimension} to make truncation deterministic`);
+  }
 }
 
 function assertExactResults(columns: SemanticResultColumn[], rows: Array<Record<string, JsonValue>>): void {
@@ -85,18 +100,11 @@ function assertExactResults(columns: SemanticResultColumn[], rows: Array<Record<
     for (const [index, row] of rows.entries()) {
       const value = row[column.id];
       if (value === null || value === undefined) continue;
-      if (typeof value !== "number" || !Number.isSafeInteger(value)) {
-        throw errors.validation(`Exact feed metric ${column.id} row ${index} must be a safe integer`);
-      }
+      if (typeof value !== "number" || !Number.isSafeInteger(value)) throw errors.validation(`Exact feed metric ${column.id} row ${index} must be a safe integer`);
     }
   }
 }
 
-/**
- * Bounded semantic snapshot for BI/export adapters. The executor remains authoritative for
- * tenant + permission. This service never reads raw tables and never claims completeness if
- * the bounded batch fills up.
- */
 export class SemanticSnapshotFeedService {
   constructor(
     private readonly executor: SemanticQueryExecutor,
@@ -109,7 +117,8 @@ export class SemanticSnapshotFeedService {
     sourceVersion: string;
     definition: SemanticSnapshotFeedDefinition;
   }): Promise<SemanticSnapshotFeedBatch> {
-    if (!input.tenantId.trim()) throw errors.validation("tenantId is required");
+    if (!input || typeof input !== "object") throw errors.validation("feed export input is required");
+    text(input.tenantId, "tenantId", 200);
     text(input.sourceVersion, "sourceVersion", 200);
     validateFeed(input.definition, this.registry);
     const definition = input.definition;
