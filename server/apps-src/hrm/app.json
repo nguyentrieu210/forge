@@ -9,6 +9,7 @@
     {"name":"Expense Claim","kind":"transaction","app":"erpnext"}
   ],
   "nav": [
+    {"key":"hr-self-service","label":"Tự phục vụ nhân viên","kind":"route","route":"/x/screen:hr-self-service","permission_doctype":"Leave Application","icon":"user-round-cog","group":"Tự phục vụ","required_roles":["Employee"]},
     {"key":"company-master","label":"Công ty","kind":"route","route":"/app/Company","icon":"building-2","group":"Tổ chức","required_roles":["HR Manager","Accounts Manager","System Manager"]},
     {"key":"Branch","label":"Chi nhánh","kind":"doctype","icon":"git-branch","group":"Tổ chức"},
     {"key":"Department","label":"Phòng ban","kind":"doctype","icon":"network","group":"Tổ chức"},
@@ -42,7 +43,7 @@
     {"key":"Salary Structure Assignment","label":"Gán cấu trúc lương","kind":"doctype","icon":"badge-dollar-sign","group":"Lương & phúc lợi"},
     {"key":"Payroll Period","label":"Kỳ lương","kind":"doctype","icon":"calendar-range","group":"Lương & phúc lợi"},
     {"key":"Additional Salary","label":"Khoản lương bổ sung","kind":"doctype","icon":"badge-plus","group":"Lương & phúc lợi"},
-    {"key":"salary-slip","label":"Phiếu lương","kind":"route","route":"/app/Salary%20Slip","icon":"receipt-text","group":"Lương & phúc lợi","required_roles":["Payroll User","Payroll Manager","HR Manager","System Manager"]},
+    {"key":"salary-slip","label":"Phiếu lương","kind":"route","route":"/app/Salary%20Slip","icon":"receipt-text","group":"Lương & phúc lợi","required_roles":["Employee","Payroll User","Payroll Manager","HR Manager","System Manager"]},
     {"key":"payroll-entry","label":"Bảng lương","kind":"route","route":"/app/Payroll%20Entry","icon":"wallet-cards","group":"Lương & phúc lợi","required_roles":["Payroll User","Payroll Manager","HR Manager","System Manager"]},
     {"key":"Employee Advance","label":"Tạm ứng","kind":"doctype","icon":"wallet","group":"Chi phí nhân viên"},
     {"key":"approval:Employee Advance","label":"Duyệt tạm ứng","kind":"experience","icon":"badge-check","group":"Chi phí nhân viên"},
@@ -117,6 +118,27 @@
       "order_by":{"column":"advance_amount","direction":"desc"},
       "filters":["company","branch","employee","posting_date","workflow_state"],
       "limit":100
+    }
+  ],
+  "screens": [
+    {
+      "name":"hr-self-service",
+      "label":"Tự phục vụ nhân viên",
+      "description":"Các yêu cầu và hồ sơ cá nhân trong phạm vi chính người dùng.",
+      "icon":"user-round-cog",
+      "group":"Tự phục vụ",
+      "permission_doctype":"Leave Application",
+      "mode":"desk",
+      "columns":2,
+      "blocks":[
+        {"id":"leave","label":"Đơn nghỉ phép của tôi","type":"list","doctype":"Leave Application","fields":["name","from_date","to_date","total_days","workflow_state"],"order_by":"from_date desc","limit":10,"empty_text":"Chưa có đơn nghỉ phép."},
+        {"id":"attendance-request","label":"Điều chỉnh công của tôi","type":"list","doctype":"Attendance Request","fields":["name","from_date","to_date","request_type","workflow_state"],"order_by":"from_date desc","limit":10,"empty_text":"Chưa có yêu cầu điều chỉnh."},
+        {"id":"overtime","label":"Tăng ca của tôi","type":"list","doctype":"Overtime Request","fields":["name","overtime_date","approved_minutes","workflow_state"],"order_by":"overtime_date desc","limit":10,"empty_text":"Chưa có đăng ký tăng ca."},
+        {"id":"advance","label":"Tạm ứng của tôi","type":"list","doctype":"Employee Advance","fields":["name","posting_date","purpose","currency","workflow_state"],"order_by":"posting_date desc","limit":10,"empty_text":"Chưa có đề nghị tạm ứng."},
+        {"id":"goal","label":"Mục tiêu của tôi","type":"list","doctype":"Goal","fields":["name","goal_title","progress"],"order_by":"modified desc","limit":10,"empty_text":"Chưa có mục tiêu."},
+        {"id":"appraisal","label":"Đánh giá của tôi","type":"list","doctype":"Appraisal","fields":["name","from_date","to_date","workflow_state"],"order_by":"from_date desc","limit":10,"empty_text":"Chưa có kỳ đánh giá."},
+        {"id":"checkin","label":"Check-in gần đây","type":"list","doctype":"Employee Checkin","fields":["name","time","log_type","source"],"order_by":"time desc","limit":10,"empty_text":"Chưa có check-in cá nhân."}
+      ]
     }
   ],
   "hooks": [],
