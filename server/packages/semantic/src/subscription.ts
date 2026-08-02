@@ -54,6 +54,7 @@ function text(value: string, field: string, max: number): void {
 }
 
 export function validateSemanticSubscription(subscription: SemanticReportSubscription): void {
+  if (!subscription || typeof subscription !== "object") throw errors.validation("subscription is required");
   if (!ID.test(subscription.id)) throw errors.validation("subscription.id must be a stable lowercase id");
   text(subscription.label, `Subscription ${subscription.id} label`, 160);
   text(subscription.ownerUserId, `Subscription ${subscription.id} ownerUserId`, 200);
@@ -63,7 +64,7 @@ export function validateSemanticSubscription(subscription: SemanticReportSubscri
   if (!Array.isArray(subscription.scopeFilters ?? []) || (subscription.scopeFilters?.length ?? 0) > 20) throw errors.validation(`Subscription ${subscription.id} has too many scope filters`);
 
   const schedule = subscription.schedule;
-  if (!schedule || !["daily", "weekly", "monthly"].includes(schedule.cadence)) throw errors.validation(`Subscription ${subscription.id} cadence is unsupported`);
+  if (!schedule || typeof schedule !== "object" || !["daily", "weekly", "monthly"].includes(schedule.cadence)) throw errors.validation(`Subscription ${subscription.id} cadence is unsupported`);
   if (!TIME.test(schedule.localTime)) throw errors.validation(`Subscription ${subscription.id} localTime must be HH:mm`);
   if (!TIMEZONE.test(schedule.timezone)) throw errors.validation(`Subscription ${subscription.id} timezone is invalid`);
   try {
@@ -84,10 +85,9 @@ export function validateSemanticSubscription(subscription: SemanticReportSubscri
 }
 
 /**
- * Executes one scheduler-selected subscription. It deliberately does not decide WHEN a run
- * is due and does not enqueue delivery. WS12 can reuse its jobs/prepared-report machinery.
- * Every run creates an executor bound to the subscription owner, so stale permissions are
- * re-evaluated instead of trusting permission from subscription creation time.
+ * Executes one scheduler-selected subscription. WS12 owns deciding WHEN to run and queueing
+ * the job; this service validates the semantic insight first, then builds an executor bound
+ * to the exact owner so current permissions/read scope are re-evaluated on every run.
  */
 export class SemanticSubscriptionExecutionService {
   constructor(
@@ -101,17 +101,19 @@ export class SemanticSubscriptionExecutionService {
     runId: string;
     subscription: SemanticReportSubscription;
   }): Promise<SemanticSubscriptionRun> {
-    if (!input.tenantId.trim()) throw errors.validation("tenantId is required");
+    if (!input || typeof input !== "object") throw errors.validation("subscription execution input is required");
+    text(input.tenantId, "tenantId", 200);
     text(input.runId, "runId", 200);
     validateSemanticSubscription(input.subscription);
     if (!input.subscription.enabled) throw errors.validation(`Subscription ${input.subscription.id} is disabled`);
 
-    const executor = await this.executors.forOwner(input.tenantId, input.subscription.ownerUserId);
+    // Validate insight/scope before creating any owner-bound executor/session.
     const query = this.insights.query(
       input.subscription.insight,
       input.tenantId,
       input.subscription.scopeFilters ?? [],
     );
+    const executor = await this.executors.forOwner(input.tenantId, input.subscription.ownerUserId);
     const result = await executor.run(query);
     return {
       schemaVersion: 1,
@@ -126,7 +128,6 @@ export class SemanticSubscriptionExecutionService {
   }
 }
 
-/** Safe persistence/audit shape. Result delivery may serialize this without raw schema. */
 export function semanticSubscriptionAudit(subscription: SemanticReportSubscription): Record<string, JsonValue> {
   validateSemanticSubscription(subscription);
   return {
