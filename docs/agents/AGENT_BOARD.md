@@ -1,12 +1,15 @@
 # FORGE ENTERPRISE PARALLEL AGENT BOARD
 
-> Canonical coordination branch: `coord/enterprise-parallel-20260803`
+> Canonical location: `main/docs/agents/AGENT_BOARD.md`
 >
-> Base snapshot: `main@b15378be7c036204f92a6e4c289038aa84d6f286`
+> Product baseline: **Forge 0.2.0 — Enterprise Parallel Baseline**
 >
-> North Star: `docs/FORGE_ENTERPRISE_NORTH_STAR.md`
-> Skill: `skills/forge-enterprise-completion/SKILL.md`
-> Capability map: `docs/FORGE_ENTERPRISE_CAPABILITY_MAP.md`
+> North Star: `docs/FORGE_ENTERPRISE_NORTH_STAR.md`  
+> Skill: `skills/forge-enterprise-completion/SKILL.md`  
+> Capability map: `docs/FORGE_ENTERPRISE_CAPABILITY_MAP.md`  
+> Protocol: `docs/agents/PARALLEL_EXECUTION_PROTOCOL.md`
+
+Board là coordination snapshot. **Exact branch/PR/code trên GitHub luôn thắng board stale.** Không hardcode một `main@SHA` lâu dài vào board vì main có thể tiến lên bởi release/evidence commits.
 
 ## Status vocabulary
 
@@ -22,7 +25,7 @@
 
 Worker agent **không sửa file của workstream khác** chỉ để đi nhanh. Nếu cần primitive/shared contract thuộc nhánh khác, ghi `Dependency request` trong workstream file của mình và báo coordinator. Shared hotspot chỉ có một owner tại một thời điểm.
 
-Worker agent không sửa trực tiếp file board này. Coordinator cập nhật board bằng exact GitHub state để tránh 18 con agent cùng tranh một file Markdown, vì apparently distributed systems cần được phát minh lại ngay trong Git.
+Worker agent không sửa trực tiếp board này. Coordinator sync board từ exact GitHub state. Thế là 18 agent khỏi cùng xông vào một file Markdown rồi phát minh merge conflict như một tính năng cộng tác mới.
 
 ## Workstreams
 
@@ -47,6 +50,18 @@ Worker agent không sửa trực tiếp file board này. Coordinator cập nhậ
 | WS16 | `agent/ent-16-logistics-pos-commerce` | READY | — | STANDARD/CRITICAL | logistics, POS, retail, omnichannel/social commerce | WS00, WS04, WS01 |
 | WS17 | `agent/ent-17-alumdoor-reference-vertical` | READY | — | STANDARD/CRITICAL | Alumdoor as reference vertical, extract generic primitives, keep vertical clean | WS01, WS03, WS04, WS05, WS09 |
 
+## Legacy/open PR rule
+
+Các PR có trước baseline 0.2.0 không tự động trở thành canonical chỉ vì còn mở.
+
+Mỗi workstream agent phải:
+1. tìm PR/branch lịch sử trong scope;
+2. phân loại `reuse / cherry-pick / superseded / reject` bằng exact diff + evidence;
+3. ghi quyết định trong workstream file;
+4. không merge một branch stale chỉ để “tận dụng code” nếu contract hiện tại đã đổi.
+
+Các PR temporary/superseded đã xác định rõ được đóng trong cleanup 0.2.0; branch/history vẫn còn để tra cứu.
+
 ## Parallel execution phases
 
 ### Phase A — 360° audit, bắt đầu ngay trên tất cả nhánh
@@ -55,8 +70,9 @@ Mỗi agent phải:
 1. đọc Skill/North Star/Capability Map;
 2. audit exact code + migrations + tests trong scope;
 3. map capability IDs -> maturity + evidence;
-4. ghi architecture/gap/contract proposal trong workstream file;
-5. không tự phong `Hardened` nếu thiếu evidence.
+4. audit cả substantive legacy PR trong scope để không viết lại thứ đã tốt;
+5. ghi architecture/gap/contract proposal trong workstream file;
+6. không tự phong `Hardened` nếu thiếu evidence.
 
 Phase A được chạy đồng thời toàn bộ 18 nhánh.
 
@@ -90,6 +106,6 @@ Agent có thể code ngay trong vùng ownership riêng nếu không đổi share
 
 Mỗi lần sync board, coordinator ghi cho stream thay đổi:
 
-`status | owner | branch head | PR | blockers | dependency requests | last evidence`
+`status | owner | branch head | PR | blockers | dependency requests | legacy PR disposition | last evidence`
 
 Board không phải live truth nếu chưa sync. Exact branch/PR/code trên GitHub luôn thắng board stale.
