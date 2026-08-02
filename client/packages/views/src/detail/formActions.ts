@@ -81,9 +81,9 @@ export function resolveFormActions(ctx: FormActionCtx): FormActionDesc[] {
     out.push({ kind: "amend", label: "Sửa đổi", variant: "default", primary: true, disabled: ctx.saving, ...dirtyGuard });
   }
 
-  // PDF là thao tác phụ: vẫn luôn có trong menu nhưng không chiếm chỗ trên thanh hành động chính.
+  // PDF là thao tác thường dùng của chứng từ, giữ ngay trên cụm action chính.
   if (!ctx.isNew) {
-    out.push({ kind: "print", label: "Xuất PDF", variant: "outline", inMenu: true, disabled: ctx.saving });
+    out.push({ kind: "print", label: "Xuất PDF", variant: "outline", inMenu: false, disabled: ctx.saving });
   }
 
   // Nhân bản — đã lưu, có quyền create (tạo bản ghi mới từ dữ liệu hiện tại). Đọc bản ĐÃ LƯU trên
