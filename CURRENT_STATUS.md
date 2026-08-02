@@ -10,14 +10,14 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, CI, merge và relea
 - Default branch: `main`.
 - Exact `main` khi mở policy task: `cd1f76dbb47432e2312c6f5577eb955b48c3a856`.
 
-## ACTIVE — Risk-based quality gates
+## ACTIVE — Minimal risk-based gates
 
 - Canonical branch: `chore/risk-based-quality-gates-20260802`.
-- `RUNBOOK.md` và `DELIVERY_POLICY.md` đã chuyển từ full-pipeline mặc định sang 3 tier `FAST` / `STANDARD` / `CRITICAL`.
-- `FAST`: UI/presentation nhỏ, kiểm tra tối thiểu theo blast radius; không bắt buộc full test/lint/typecheck/build/CI.
-- `STANDARD`: test liên quan + typecheck/lint/build/CI phù hợp.
-- `CRITICAL`: accounting, inventory, costing, auth, tenant, migration, production data phải giữ regression/integration/security/data-integrity gates đầy đủ.
-- Build/install/stage chỉ để tạo artifact deploy được xem là packaging, không tự động biến task FAST thành full quality gate.
+- `FAST`: `branch -> sửa -> diff -> commit -> push`.
+- FAST không bắt buộc PR, full test/lint/typecheck/build/CI hoặc cập nhật status/handoff cho từng chỉnh sửa nhỏ.
+- `STANDARD`: test/validation/PR/CI phù hợp với logic sản phẩm.
+- `CRITICAL`: giữ regression/integration/security/data-integrity và required CI cho accounting/inventory/costing/auth/tenant/migration/production data.
+- Build/install/stage chỉ để tạo artifact deploy là packaging.
 
 ## ACTIVE — Auto deploy UI hotfix
 
