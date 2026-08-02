@@ -57,6 +57,13 @@ def update_status(doctype, name, docstatus, tenant="demo"):
     )
 
 
+def update_payload(doctype, name, payload, tenant="demo"):
+    db.execute(
+        "UPDATE documents SET payload_json=?, version=version+1 WHERE tenant_id=? AND doc_key=?",
+        (json.dumps(payload), tenant, f"{doctype}:{name}"),
+    )
+
+
 def assert_integrity_error(expected, fn, message):
     try:
         fn()
@@ -110,6 +117,25 @@ assert_integrity_error(
     "ACCOUNTING_PERIOD_HARD_LOCKED",
     lambda: update_status("Journal Entry", "JV-JULY-POSTED", 2),
     "hard-locked period allowed cancellation of a posted journal",
+)
+assert_integrity_error(
+    "ACCOUNTING_PERIOD_HARD_LOCKED",
+    lambda: update_payload(
+        "Journal Entry",
+        "JV-JULY-POSTED",
+        {"company": "ALUMDOOR", "posting_at": "2026-10-15T08:00:00Z"},
+    ),
+    "hard-locked period allowed a submitted document to move out of the locked scope",
+)
+insert("Journal Entry", "JV-OCT-POSTED", 1, {"company": "ALUMDOOR", "posting_at": "2026-10-15T08:00:00Z"})
+assert_integrity_error(
+    "ACCOUNTING_PERIOD_HARD_LOCKED",
+    lambda: update_payload(
+        "Journal Entry",
+        "JV-OCT-POSTED",
+        {"company": "ALUMDOOR", "posting_at": "2026-07-15T08:00:00Z"},
+    ),
+    "hard-locked period allowed a submitted document to move into the locked scope",
 )
 
 # Guard every Forge document that can mutate financial/valuation ledgers, not only invoices/journals.
@@ -262,6 +288,21 @@ insert(
         "end_date": "2026-11-30",
         "close_state": "Open",
     },
+)
+assert_integrity_error(
+    "ACCOUNTING_PERIOD_OVERLAP",
+    lambda: update_payload(
+        "VN Accounting Period",
+        "KY-HCM-11",
+        {
+            "company": "ALUMDOOR",
+            "branch": "HN",
+            "start_date": "2026-11-01",
+            "end_date": "2026-11-30",
+            "close_state": "Open",
+        },
+    ),
+    "accounting period update allowed a branch scope to overlap an existing period",
 )
 
 assert_integrity_error(
