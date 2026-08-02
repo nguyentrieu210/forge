@@ -209,14 +209,18 @@ BEGIN
 END;
 
 -- Statutory inputs are typed child rows, not executable expressions. Duplicate keys
--- in one assignment are rejected at the database boundary.
+-- in one assignment are rejected at the database boundary. Keep key syntax aligned
+-- with the evaluator so direct database writes cannot bypass controller validation.
 CREATE TRIGGER IF NOT EXISTS hr_statutory_input_insert_guard
 BEFORE INSERT ON document_children
 WHEN NEW.fieldname='statutory_inputs'
 AND (
   NEW.child_doctype<>'Payroll Rule Input Value'
   OR COALESCE(json_extract(NEW.payload_json,'$.input_key'),'')=''
-  OR json_type(NEW.payload_json,'$.value') NOT IN ('text','integer','real','true','false')
+  OR length(json_extract(NEW.payload_json,'$.input_key'))>64
+  OR substr(json_extract(NEW.payload_json,'$.input_key'),1,1) NOT GLOB '[A-Za-z]'
+  OR json_extract(NEW.payload_json,'$.input_key') GLOB '*[^A-Za-z0-9_]*'
+  OR COALESCE(json_type(NEW.payload_json,'$.value'),'') NOT IN ('text','integer','real','true','false')
   OR (json_type(NEW.payload_json,'$.value')='text' AND trim(json_extract(NEW.payload_json,'$.value'))='')
   OR EXISTS(
     SELECT 1 FROM document_children c
@@ -238,7 +242,10 @@ BEGIN
     WHEN NEW.fieldname<>'statutory_inputs'
       OR NEW.child_doctype<>'Payroll Rule Input Value'
       OR COALESCE(json_extract(NEW.payload_json,'$.input_key'),'')=''
-      OR json_type(NEW.payload_json,'$.value') NOT IN ('text','integer','real','true','false')
+      OR length(json_extract(NEW.payload_json,'$.input_key'))>64
+      OR substr(json_extract(NEW.payload_json,'$.input_key'),1,1) NOT GLOB '[A-Za-z]'
+      OR json_extract(NEW.payload_json,'$.input_key') GLOB '*[^A-Za-z0-9_]*'
+      OR COALESCE(json_type(NEW.payload_json,'$.value'),'') NOT IN ('text','integer','real','true','false')
       OR (json_type(NEW.payload_json,'$.value')='text' AND trim(json_extract(NEW.payload_json,'$.value'))='')
       THEN RAISE(ABORT,'REFERENCE_VALIDATION_FAILED: HR_STATUTORY_INPUT_INVALID')
     WHEN EXISTS(
@@ -322,8 +329,38 @@ BEGIN
   SELECT RAISE(ABORT,'INVALID_LIFECYCLE_TRANSITION: HR_PAYROLL_SOURCE_LOCKED');
 END;
 
--- A statutory output is one legal amount. Mapping the same output to two salary
--- components would double-count it, so enforce uniqueness below the controller too.
+-- Payroll-rule output mappings use the same key grammar as evaluator outputs. A
+-- statutory output is one legal amount, so mapping it twice would double-count it.
+CREATE TRIGGER IF NOT EXISTS hr_salary_structure_rule_output_validate_insert_guard
+BEFORE INSERT ON document_children
+WHEN NEW.fieldname='components'
+  AND NEW.child_doctype='Salary Structure Component'
+  AND json_extract(NEW.payload_json,'$.amount_type')='Payroll Rule Output'
+  AND (
+    COALESCE(json_extract(NEW.payload_json,'$.rule_output_key'),'')=''
+    OR length(json_extract(NEW.payload_json,'$.rule_output_key'))>64
+    OR substr(json_extract(NEW.payload_json,'$.rule_output_key'),1,1) NOT GLOB '[A-Za-z]'
+    OR json_extract(NEW.payload_json,'$.rule_output_key') GLOB '*[^A-Za-z0-9_]*'
+  )
+BEGIN
+  SELECT RAISE(ABORT,'REFERENCE_VALIDATION_FAILED: HR_PAYROLL_RULE_OUTPUT_INVALID');
+END;
+
+CREATE TRIGGER IF NOT EXISTS hr_salary_structure_rule_output_validate_update_guard
+BEFORE UPDATE OF parent_key,fieldname,child_doctype,payload_json ON document_children
+WHEN NEW.fieldname='components'
+  AND NEW.child_doctype='Salary Structure Component'
+  AND json_extract(NEW.payload_json,'$.amount_type')='Payroll Rule Output'
+  AND (
+    COALESCE(json_extract(NEW.payload_json,'$.rule_output_key'),'')=''
+    OR length(json_extract(NEW.payload_json,'$.rule_output_key'))>64
+    OR substr(json_extract(NEW.payload_json,'$.rule_output_key'),1,1) NOT GLOB '[A-Za-z]'
+    OR json_extract(NEW.payload_json,'$.rule_output_key') GLOB '*[^A-Za-z0-9_]*'
+  )
+BEGIN
+  SELECT RAISE(ABORT,'REFERENCE_VALIDATION_FAILED: HR_PAYROLL_RULE_OUTPUT_INVALID');
+END;
+
 CREATE TRIGGER IF NOT EXISTS hr_salary_structure_rule_output_unique_insert_guard
 BEFORE INSERT ON document_children
 WHEN NEW.fieldname='components'
