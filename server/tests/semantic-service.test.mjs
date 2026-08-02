@@ -100,3 +100,45 @@ test("denied semantic access fails closed before SQL preparation", async () => {
 
   assert.deepEqual(events.map((entry) => entry[0]), ["access"]);
 });
+
+test("unsafe runtime filter values fail before permission or D1 side effects", async () => {
+  const events = [];
+  const access = { async assert(request) { events.push(["access", request]); } };
+  const service = new D1SemanticQueryService(fakeDb(events), compiler, access);
+
+  await assert.rejects(() => service.run({
+    model: "inventory.stock_balance",
+    tenant_id: "tenant-a",
+    metrics: ["actual_qty"],
+    filters: [{ dimension: "warehouse", operator: "=", value: { injected: true } }],
+  }), (error) => error.code === "VALIDATION_ERROR");
+  assert.deepEqual(events, []);
+
+  await assert.rejects(() => service.run({
+    model: "inventory.stock_balance",
+    tenant_id: "tenant-a",
+    metrics: ["actual_qty"],
+    filters: [{ dimension: "warehouse", operator: "in", value: ["K1", { injected: true }] }],
+  }), (error) => error.code === "VALIDATION_ERROR");
+  assert.deepEqual(events, []);
+
+  await assert.rejects(() => service.run({
+    model: "inventory.stock_balance",
+    tenant_id: "tenant-a",
+    metrics: ["actual_qty"],
+    filters: [{ dimension: "warehouse", operator: "like", value: 123 }],
+  }), (error) => error.code === "VALIDATION_ERROR");
+  assert.deepEqual(events, []);
+});
+
+test("large offset is refused so bulk extraction must use a cursor/feed path", async () => {
+  const events = [];
+  const service = new D1SemanticQueryService(fakeDb(events), compiler, { async assert(request) { events.push(["access", request]); } });
+  await assert.rejects(() => service.run({
+    model: "inventory.stock_balance",
+    tenant_id: "tenant-a",
+    metrics: ["actual_qty"],
+    offset: 100_001,
+  }), (error) => error.code === "VALIDATION_ERROR");
+  assert.deepEqual(events, []);
+});
