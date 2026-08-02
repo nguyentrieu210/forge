@@ -31,6 +31,10 @@ import {
   isPhysicalStockFrappePath,
   routePhysicalStockApi,
 } from "./physical-stock-api.js";
+import {
+  isStockReconciliationPreviewApiPath,
+  routeStockReconciliationPreviewApi,
+} from "./stock-reconciliation-preview-api.js";
 import type { TenantEnv } from "./env.js";
 
 export * from "./index-core.js";
@@ -50,7 +54,8 @@ export default {
     const url = new URL(request.url);
     const physicalStock = isPhysicalStockApiPath(url.pathname);
     const dailyLedger = isDailyLedgerApiPath(url.pathname);
-    if (!physicalStock && !dailyLedger) return coreWorker.fetch(request, env);
+    const stockReconciliationPreview = isStockReconciliationPreviewApiPath(url.pathname);
+    if (!physicalStock && !dailyLedger && !stockReconciliationPreview) return coreWorker.fetch(request, env);
 
     const traceId = request.headers.get("x-cloudforge-trace-id") ?? randomId("trace");
     try {
@@ -71,8 +76,15 @@ export default {
           permissions,
           traceId,
         });
-      } else {
+      } else if (dailyLedger) {
         response = await routeDailyLedgerApi(request, url, {
+          db: requestDb,
+          tenantId,
+          actor: authentication.actor,
+          traceId,
+        });
+      } else {
+        response = await routeStockReconciliationPreviewApi(request, url, {
           db: requestDb,
           tenantId,
           actor: authentication.actor,
