@@ -27,6 +27,10 @@ import {
   routeDailyLedgerApi,
 } from "./daily-ledger-api.js";
 import {
+  assertRecentNativeSecurityAuthentication,
+  requiresRecentNativeSecurityAuthentication,
+} from "./native-security.js";
+import {
   isPhysicalStockApiPath,
   isPhysicalStockFrappePath,
   routePhysicalStockApi,
@@ -42,20 +46,31 @@ interface InterceptedRouteAuthentication {
 }
 
 /**
- * Thin entrypoint wrapper for bounded authenticated report/operation routes.
- * Existing core routes and scheduled tasks remain delegated to index-core.ts.
+ * Thin entrypoint wrapper for bounded authenticated report/operation routes and the
+ * privileged native-administration step-up boundary. Existing core route semantics and
+ * scheduled tasks remain delegated to index-core.ts.
  */
 export default {
   async fetch(request: Request, env: TenantEnv, _ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
     const physicalStock = isPhysicalStockApiPath(url.pathname);
     const dailyLedger = isDailyLedgerApiPath(url.pathname);
-    if (!physicalStock && !dailyLedger) return coreWorker.fetch(request, env);
+    const nativeSecurity = requiresRecentNativeSecurityAuthentication(request.method, url.pathname);
+    if (!physicalStock && !dailyLedger && !nativeSecurity) return coreWorker.fetch(request, env);
 
     const traceId = request.headers.get("x-cloudforge-trace-id") ?? randomId("trace");
     try {
       const tenantId = resolveTenant(request, env);
       if (!tenantId) throw errors.authentication("Missing tenant context");
+
+      if (nativeSecurity) {
+        await assertRecentNativeSecurityAuthentication(request, env, tenantId, traceId);
+        // The wrapper owns only the step-up invariant. Core still owns System Manager
+        // authorization, validation and persistence, so passing step-up must not create a
+        // second implementation of any native admin route.
+        if (!physicalStock && !dailyLedger) return coreWorker.fetch(request, env);
+      }
+
       const authentication = await authenticateInterceptedRoute(request, url, env, tenantId, traceId);
       const requestDb = (env.DB.withSession?.("first-primary") ?? env.DB) as D1Database;
 
