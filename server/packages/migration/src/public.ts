@@ -1,5 +1,6 @@
 export * from "./index.js";
 export * from "./adapters.js";
+export * from "./correction.js";
 export * from "./customer-success.js";
 export * from "./d1-journal.js";
 export * from "./durable-orchestrator.js";
