@@ -2,154 +2,80 @@
 
 Ngày cập nhật: **2026-08-02**.
 
-Đây là snapshot đã xác minh. Exact branch head, PR và CI phải được kiểm tra lại trên GitHub trước mỗi đợt làm việc theo `RUNBOOK.md`.
+GitHub là nguồn sự thật. Exact branch head, PR và CI phải kiểm tra lại trước mỗi đợt làm việc theo `RUNBOOK.md` và `DELIVERY_POLICY.md`.
 
 ## Repository snapshot
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `main`.
-- Exact current `main`: `866fcbd909914f01600def9ce86e3ce2347bb763` — merge PR `#198`.
-- Stock P0 QR/lineage + cleanup QA đã merge tại `80496b056fa0f23f18311e5822c21dc826bacd9f` — PR `#189`.
-- Bulk dirty-guard đã merge tại `2e5860b90410845545df33115c6f053925b65c72` — PR `#195`.
-- PR `#182`, `#192` và Plastic ERP predecessor `#193` đã đóng/superseded, không dùng làm live source.
-- Branch `hotfix/alumdoor-print-list-delete` cũ không còn là current/default branch.
+- Exact feature merge checkpoint: `e447eca0e020da161dcee4f0b865206921718a61` — merge PR `#209`.
+- PR `#203` và `#205` là các iteration Bulk Transaction đã đóng/superseded; không dùng làm live source.
+- Không deploy Cloudflare/production trong slice Bulk Transaction này.
 
-## READY FOR MERGE — Plastic ERP P0-A foundation
+## DONE — Bulk Transaction v1: Purchase Receipt / nhập nhôm nhiều mã
 
-- Canonical PR: `#200` — `feat/plastic-erp-foundation-v3-20260802` từ exact `main` `866fcbd909914f01600def9ce86e3ce2347bb763`.
-- PR `#200` hiện **open + ready-for-review**, chưa merge.
-- Exact head `edcab9cae6ea6187886fdaff45f6f549b971a2e7` đã được xác minh **6/6 required workflows PASS** sau closing docs.
-  - CI `30739665768`: tests + typecheck + build SUCCESS.
-  - UI Pull Request Validation `30739665772`: SUCCESS.
-  - PR Validation `30739665784`: SUCCESS.
-  - Purchase Feature CI `30739665777`: SUCCESS.
-  - Sales Feature CI `30739665760`: SUCCESS.
-  - Inventory and Manufacturing CI `30739665792`: SUCCESS.
-- PR `#193` đã được comment superseded và đóng sau khi #200 đạt exact-head 6/6 PASS.
-- P0-A thêm canonical first-party app source cho process/material/machine/tool/recipe/QC/capacity/costing foundation và Plastic roles/workflows.
-- `Plastic Recipe Policy` mở rộng canonical `Bill of Materials`; không tạo BOM, stock ledger hay costing ledger cạnh tranh.
-- Machine/Tool liên kết core Asset/Workstation/Location; QC liên kết core Quality Inspection/Batch; Work Order và stock lifecycle vẫn là canonical authority cho các slice sau.
-- Regression source-contract + `pack-app --check` khóa Meta v1, external DocType closure, immutable approval transaction và machine/tool compatibility inputs.
-- Main CI ban đầu fail vì `Plastic Machine.status` và `Plastic Tool.status` đụng kernel-reserved field `status`. Root cause đã sửa thành `operational_state`; không nới parser/kernel validation.
-- P0-B Production Run/shop-floor **không nằm trong PR #200** và phải reconcile với core Work Order + submitted Stock Entry Manufacture, không dựng ledger song song.
-- Commit status này chỉ đồng bộ post-validation PR state, không đổi executable Plastic ERP; exact current GitHub head vẫn phải được kiểm required CI trước khi dừng.
-- Không merge #200 nếu user chưa yêu cầu rõ. Không deploy Cloudflare/production, không sửa secret/DNS và không mutate customer production data.
+- Canonical PR: `#209` — `feat/bulk-transaction-purchase-receipt-final-20260802`.
+- Final validated head: `70f266d9ecbc8c01c69b3deb125d1f4dc172a46a`.
+- Merge SHA: `e447eca0e020da161dcee4f0b865206921718a61`.
+- Required workflows trên exact final head: **6/6 PASS**.
+  - CI `30742437972`: tests + typecheck + build SUCCESS.
+  - UI Pull Request Validation `30742437975`: frontend lint/build, MetaForge/Alumdoor browser QA, purchase allocation QA, authenticated desktop/mobile Purchase lifecycle và cleanup no-residue SUCCESS.
+  - PR Validation `30742437970`: SUCCESS.
+  - Purchase Feature CI `30742437971`: SUCCESS.
+  - Sales Feature CI `30742437999`: SUCCESS.
+  - Inventory and Manufacturing CI `30742437973`: SUCCESS.
 
-## DONE — Stock P0 QR / lineage + cleanup QA
+### Functional boundary
 
-- PR `#189` merged tại `80496b056fa0f23f18311e5822c21dc826bacd9f`.
-- Final validated head: `ee396fd26b2355a4f3e1d62c92f41468be489443`.
-- Required workflows trên exact head: **6/6 PASS**.
-  - CI `30721778821`: tests + typecheck + build SUCCESS.
-  - UI Pull Request Validation `30721778804`: SUCCESS.
-  - PR Validation `30721778799`: SUCCESS.
-  - Purchase Feature CI `30721778775`: SUCCESS.
-  - Sales Feature CI `30721778765`: SUCCESS.
-  - Inventory and Manufacturing CI `30721778803`: SUCCESS.
-- Physical-stock lineage mang exact item/warehouse/physical identity, voucher type/name/row, batch, serial và Serial and Batch Bundle.
-- Regression dùng hai identity riêng để chứng minh lineage không lẫn batch/bundle giữa hai luồng.
-- D1 reader giữ bundle identity từ immutable child snapshot.
-- Stock Reconciliation print render thật; QR sinh từ exact document `name` và route truy đúng document.
-- Authenticated desktop/mobile dùng role `Thủ kho`, cookie + CSRF thật; invalid session/CSRF và identity sai vẫn fail closed.
-- QA fixtures có exact manifest; cleanup local D1 theo dependency và hậu kiểm zero residue ở document/child/ledger/read-model/reservation/batch/bundle/file/search/timeline liên quan.
-- Cleanup giữ RBAC audit append-only; chỉ reset local tenant login-rate window giữa desktop/mobile cohort để test không tự rate-limit, không hạ production guard.
-- Không deploy Cloudflare/production, không sửa secret/DNS và không mutate customer production data.
+- AppAction mới `nhap-nhom-hang-loat` cho phép nhập nhiều mã nhôm bằng transaction grid metadata-driven.
+- Grid hỗ trợ thêm/xóa dòng, existing Link/Select/number controls, paste vùng Excel/Google Sheets, required-cell validation và invalidate preview/result khi input đổi.
+- Backend tái sử dụng canonical single-line FIFO preview; dòng sau trong cùng payload phải nhìn thấy allocation tạm của dòng trước.
+- Commit tạo đúng **một Purchase Receipt nháp** chứa toàn bộ dòng đã phân bổ.
+- Action không submit Purchase Receipt và không direct-write stock/accounting ledger; submit chuẩn của Purchase Receipt vẫn là authority làm thay đổi tồn kho/kế toán.
+- Tối đa 100 dòng/lần; bắt buộc `supplier_invoice_no`; tất cả target Purchase Order phải cùng company/currency.
+- Tenant/platform call guard giữ fail-closed.
+- Duplicate prevention dùng SHA-256 normalized payload fingerprint + supplier delivery note: exact retry trả lại cùng receipt; cùng delivery note nhưng payload khác bị từ chối.
 
-## DONE — Bulk View unsaved-edit guard
+### Regression đã khóa
 
-- PR `#195` merged tại `2e5860b90410845545df33115c6f053925b65c72`.
-- Final validated head: `7e51b9955a0fca2f864df6ac0a278f61c510d5ec`.
-- Required workflows trên exact head: **6/6 PASS**.
-  - CI `30722136832`: tests + typecheck + build SUCCESS.
-  - UI Pull Request Validation `30722136841`: lint/build + MetaForge workspace QA + Alumdoor browser QA SUCCESS.
-  - PR Validation `30722136845`: SUCCESS.
-  - Purchase Feature CI `30722136825`: SUCCESS.
-  - Sales Feature CI `30722136836`: SUCCESS.
-  - Inventory and Manufacturing CI `30722136849`: SUCCESS.
-- Root cause: Bulk dirty state chỉ tồn tại trong `BulkGridContainer`, nên đổi mode về `Danh sách` có thể unmount grid và mất patch chưa lưu.
-- `BulkGridContainer` giờ phát `onDirtyChange` và đăng `beforeunload` guard khi có patch dirty.
-- `DoctypeWorkspace` chặn Bulk → List khi dirty và yêu cầu xác nhận destructive trước khi bỏ thay đổi.
-- Save/discard/unmount đồng bộ dirty state về false.
-- PR `#192` đã đóng vì base/status stale; #195 transplant đúng hai executable blob lên current main, không force-push/rewrite history.
-- Không đổi Bulk permission/policy/backend/metadata và không deploy production.
+- FIFO cộng dồn giữa nhiều dòng cùng quy cách trong một payload.
+- Callback URL có internal prefix vẫn phải inject synthetic receipt đúng; không phụ thuộc callback path bắt đầu bằng `/api`.
+- One-draft aggregate create.
+- Exact retry idempotency và changed-payload conflict.
+- Cross-company fail closed.
+- Tenant / delivery-note / 100-row guards.
+- Brief action sidecar → schema → compiler → canonical manifest parser.
+- Authenticated desktop + mobile: login/cookie/CSRF thật, mở action, paste 2 dòng, preview, commit một draft, retry không tạo draft thứ hai.
 
-## DONE — Tiến Đạt FIFO complete operations UI
+### Root cause bắt được trong acceptance
 
-- PR `#179` merged tại `e44ade8ca1ab396a66b800844b755de203be9245`.
-- Final validated head: `f8efd5bbf26a398b5a369a453cbbe02ad92ac53f`.
-- Required workflows: **6/6 PASS**.
-- `/x/action:nhap-nhom-fifo` có form thao tác thật, KPI công nợ giao hàng, đơn còn nợ, lịch sử trừ FIFO, lịch sử hàng về và dòng phiếu nhập sẽ tạo; authenticated desktop/mobile PASS.
-- Không deploy production trong slice này.
+- Browser QA đầu tiên phát hiện dòng thứ hai có thể ăn lại Purchase Order cũ vì synthetic FIFO interceptor match callback pathname quá cứng theo `/api/resource/...`.
+- Fix canonical hóa callback pathname theo suffix `/resource/...`, giữ callback prefix là runtime/provider detail.
+- Có unit regression riêng cho callback prefix khác `/api`; exact final browser acceptance đã PASS sau fix.
 
-## DONE — MetaForge Bulk View + ALUM master grids
+## Merged checkpoints liên quan
 
-- PR `#190` merged tại `28eb4c4af6f88f0d1c3dc56c8f50e8d31fe2e968`.
-- Final validated head: `bc75667d1a2078e6483c1a63a4afa1e94bde9de5`.
-- Required workflows: **6/6 PASS**.
-- Generic Bulk v1 là metadata-driven `document_update` cho master an toàn; transaction/submittable/child/single/protected fields fail closed.
-- ALUM source `2.1.2` có Bulk config cho 15 master DocType; `Item Price` chỉ bulk-edit `rate`, `note`, `disabled`.
-- Runtime canonical contract là `viewPolicy.bulk`; large brief hiện có compatibility transport qua sibling `.views.json`/`mobile.bulk`. Short-brief compiler/parser first-class transport còn là follow-up.
-
-## DONE — MetaForge Document Experience V2 foundation
-
-- PR `#184` merged tại `df84eaec03526eaae2e2c3de3e9b8d388ae30f1a`.
-- Final validated head: `1a79c28832aed7731601bb9ea378f9a4a3cc01db`.
-- Required workflows: **6/6 PASS**.
-- Có 7 archetype + generic fallback; presentation không được kéo field `surface=internal`/server-owned quay lại UI.
-
-## Capability đã khóa bằng merged evidence
-
-### MetaForge / Meta
-
-- PR `#164`: canonical first-party Meta boundary — merged.
-- PR `#176`: canonical Form Renderer policy — merged.
-- PR `#184`: Document Experience V2 — merged.
-- PR `#190`: safe Bulk View — merged.
+- PR `#190`: MetaForge safe Bulk View cho master — merged.
 - PR `#195`: Bulk unsaved-edit guard — merged.
-- `resolveFormRenderPolicy()` là canonical form composition point; `resolveBulkRenderPolicy()` là canonical generic Bulk composition point.
+- PR `#179`: Tiến Đạt FIFO complete operations UI — merged.
+- PR `#189`: Stock P0 QR/lineage + cleanup QA — merged.
+- PR `#200`: Plastic ERP P0-A foundation — merged trước slice này.
+- PR `#204`: Alumdoor process workspace UI — merged trước slice này.
+- PR `#207`: Alumdoor multi-UOM Item Price matrix — merged trước PR #209.
 
-### Inventory / stock
-
-- PR `#167`: authenticated stock lifecycle + mobile contracts — merged.
-- PR `#170`: Stock Entry operational submit RBAC — merged.
-- PR `#173`: catch-weight physical-stock reconciliation — merged.
-- PR `#175`: reservation/available-stock lifecycle — merged.
-- PR `#189`: QR/lineage end-to-end + cleanup QA — merged.
-- P0 stock acceptance scope đã có authenticated evidence cho physical quantity/kg, available reservation, batch/bundle lineage, QR/document identity, permission/session/CSRF và cleanup no-residue.
-
-### Sales / Purchase
-
-- Sales-to-Production PR `#131` — merged.
-- Tiến Đạt purchase FIFO PR `#134` — merged.
-- Purchase authenticated QA PR `#137` — merged.
-- Tiến Đạt FIFO operations UI PR `#179` — merged.
-
-Không được suy từ các mục DONE này rằng toàn bộ quy trình `25.7 QUY TRÌNH.docx` đã hoàn tất.
-
-## Production boundary
-
-Checkpoint production lịch sử gần nhất được handoff ghi nhận:
-
-- Alumdoor production exact SHA `b46d322831ebe7b57e29d4363d2daa005bb56e55`.
-- Full production release run `30707135053`: PASS.
-- Protected Meta installer run `30707517624`: PASS.
-- Alumdoor Meta tại checkpoint đó: `2.1.0`.
-
-Đây là checkpoint lịch sử, không phải bằng chứng provider hiện tại. Source đã tiến xa hơn nhưng không được suy ra production đã được deploy. Không deploy Cloudflare hoặc sửa production state nếu user chưa yêu cầu rõ.
+Generic Bulk View vẫn chỉ dùng `document_update` cho master an toàn; transaction/submittable/ledger không được mass-update bằng generic Bulk.
 
 ## Chưa hoàn tất toàn hệ thống
 
-1. **Plastic ERP P0-B/P0-C**: Production Run/shop-floor + QC lot gate/release-hold-reject + NCR/disposition lineage; sau đó capacity/OEE/costing sâu và E2E.
-2. **P1 Daily detailed ledger**: immutable snapshot theo ngày, freeze, append-only adjustment và reconciliation nhiều miền.
-3. **MetaForge UX V2**: List Workspace V2 tích hợp Bulk, Matrix View, presentation authoring/canonical transport, document context/exception, operational workspace, Mobile V2, personalization/AI context.
-4. **Bulk Transaction** cho Stock Reconciliation/BOM và transaction-grid nhập nhôm nhiều mã.
-5. **P2 Warranty / defects / capacity / overtime**.
-6. **P3 authenticated end-to-end acceptance** xuyên Sales → Production → Inventory → Delivery → Finance → Daily Ledger → Warranty.
+1. Bulk Transaction cho Stock Reconciliation.
+2. Bulk Transaction cho BOM parent + child/version.
+3. First-class AppAction input-table contract thay compatibility `BulkTransaction:<json>` trong Text options.
+4. Batch Print / QR label queue.
+5. P1 Daily detailed ledger hardening/closure theo exact GitHub state.
+6. Plastic ERP các wave sau P0-A, warranty/defects/capacity/overtime và authenticated E2E xuyên miền.
 
 ## Guardrails
 
-- GitHub là nguồn sự thật; không dựa vào lịch sử chat để chọn branch/SHA.
-- Một epic/đợt sửa độc lập dùng một branch/PR canonical từ exact current `main`.
-- PR mở song song phải re-check base/head/CI/scope trước khi đụng; không force-push/rewrite lịch sử để cứu branch stale.
 - Không deploy production, sửa production secret/DNS hoặc mutate customer data nếu chưa có lệnh rõ.
 - Không commit `.env`, `server/work/`, `tmp/`, backup, credential, cookie/token hoặc generated evidence/build artifact không được quản lý.
+- Mỗi task mới mở branch riêng từ exact current `main`; PR stale phải clean-transplant nếu base đã đổi, không force-push/rewrite history để cứu evidence cũ.
