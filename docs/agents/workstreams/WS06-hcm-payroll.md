@@ -1,13 +1,17 @@
 # WS06 — HCM + Statutory Payroll VN
 
-Status: **READY**  
-Owner: **—**  
+Status: **CLAIMED**  
+Owner: **ChatGPT / WS06**  
 Branch: `agent/ent-06-hcm-payroll`  
+Claimed head: `4097d31865cb0e85d5db3a817b88474372ebb1b7`  
+Current main checked: `bbe3494bcfbb8a3ce09a5ff4bbb839dfcf9e47e9`  
 Product baseline: **Forge 0.2.0**  
 Seed baseline: `862636e6239c91eab657c619d8c55345ed71a6d8`  
 Canonical board: `main:docs/agents/AGENT_BOARD.md`
 
 Before implementation: compare exact current `main`; incorporate source-relevant changes. Operational/deploy-evidence-only head drift does not by itself redefine the product baseline.
+
+Claim note: current `main` is 18 commits ahead of the seed baseline, but the compared drift is docs/deploy-workflow evidence plus an Alumdoor UI hotfix outside WS06 ownership. WS06 therefore keeps the Forge 0.2.0 product baseline and will consume current-main coordination/legacy-PR evidence without importing unrelated source changes.
 
 ## Mission
 
