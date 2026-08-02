@@ -1,0 +1,4 @@
+[
+  { "role": "Support User", "desk_access": true },
+  { "role": "Support Manager", "desk_access": true }
+]
