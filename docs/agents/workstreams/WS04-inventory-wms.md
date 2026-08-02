@@ -8,7 +8,7 @@ Seed baseline: `862636e6239c91eab657c619d8c55345ed71a6d8`
 Started from branch head: `a936d8b1ca3846767be6e7cf0a0411cf9df7c257`  
 Initial sync main: `bbe3494bcfbb8a3ce09a5ff4bbb839dfcf9e47e9`  
 Checkpoint PR: **#307** (Draft)  
-Head before this handoff update: `57a15947d00685ae9ef3220620017bbeee7231e2`  
+Head before this handoff update: `f07a085758be9a631375abbb4fbf622a20d5ac82`  
 Canonical board: `main:docs/agents/AGENT_BOARD.md`
 
 Exact compare at the prior checkpoint showed branch behind current `main` only by WS14 client/mobile/PWA plus status-doc commits; no server stock source overlap. Recheck exact compare before final verification rather than rebasing for cosmetic drift.
