@@ -10,14 +10,22 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. 
 - Default branch: `main`.
 - Warehouse Cash Alumdoor merge checkpoint: `c3dbcd20a7a88c17c1a9f10c4fff82b329e27855`.
 
-## IN PROGRESS — exact production release evidence
+## DONE — exact production release evidence
 
-- Working branch: `fix/release-evidence-health-sha-v2`, clean-based on current main at branch creation.
-- `server/scripts/stage-client-bundle.mjs` writes public `release.json` when `VITE_FORGE_RELEASE_SHA`/`FORGE_RELEASE_SHA` exists; marker contains exact `releaseSha` + `bundleHash` and no secret.
-- `ALU Build and Deploy` smoke now requires both `/health` and `/release.json`, and fails if production `releaseSha` differs from `TARGET_SHA`.
-- Same-repo UI pull requests restore an observable deploy trigger because GitHub-connector content writes do not reliably emit push-triggered Actions; head branch naming and UI-only scope remain fail-closed.
-- Targeted local synthetic staging test PASS: release marker generated with expected SHA/hash and staged bundle check passed.
-- Not merged and not production-deployed yet; release evidence becomes canonical only after this branch is reviewed/merged.
+- `server/scripts/stage-client-bundle.mjs` ghi public `release.json` khi có release SHA; marker chứa `releaseSha` + `bundleHash`, không chứa secret.
+- `ALU Build and Deploy` smoke yêu cầu `/health` và `/release.json`; fail nếu production `releaseSha` khác `TARGET_SHA`.
+- Canonical merge checkpoint: `a0ae5f4f00a6be7311efcaff87c4caabea60f6be`.
+
+## ACTIVE — fast UI auto deploy
+
+- Working branch: `fix/ui-deploy-fastpath-20260802`, clean-based on exact `main@a0ae5f4f00a6be7311efcaff87c4caabea60f6be`.
+- UI deploy chỉ trigger trên `push` của `hotfix/ui-*`, `fix/ui-*`, `feat/ui-*`, `refactor/ui-*` khi có `client/**`; không còn `pull_request` deploy trigger.
+- Checkout dùng `fetch-depth: 2`, không fetch toàn bộ history/main.
+- Scope guard đọc file từ push event; không còn stale-main ancestor check gây fail chỉ vì `main` tiến lên sau khi branch UI được mở.
+- Build chỉ dependency graph của `runtime` + warehouse mobile bundle cần cho Gateway; không build toàn 18/19 MetaForge workspace project.
+- Push mới cùng UI branch cancel run cũ để tránh queue/deploy artifact cũ.
+- Production proof vẫn bắt buộc `/health` + `/release.json` đúng SHA/hash.
+- Chưa có production run mới của fast path này; cần một UI push thực tế sau merge để chốt performance/e2e evidence.
 
 ## DONE — Website/CMS multi-tenant v1
 
@@ -25,39 +33,29 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. 
 - First-party `website` app gồm Website Settings, Web Page, Web Page Block, roles và version-pinned template/theme presets.
 - Public API chỉ allowlist `forge.website.manifest` và `forge.website.page`; Guest không có generic DocType read; mọi Website query bind trusted tenant context; draft/unpublished fail closed.
 - Shared runtime render `/` và one-segment slug, giữ nguyên reserved Forge runtime modes; product grid reuse canonical Storefront public API.
-- Mobile navigation fix đã targeted regression bằng Chromium trên final blob `82e25b446885b8719340a38013c801135e2a52c2`: mobile 390x844 PASS, tablet 834x1112 PASS, desktop 1440x1000 PASS; `aria-current`, login link, metadata và horizontal overflow đúng.
-- Server/client tests, typecheck, build, frontend lint và MetaForge browser QA đã PASS trên cùng application blob set trước clean-transplant cuối; các main commit sau đó chỉ đổi release/docs policy, không đổi application/package/dependency inputs.
-- Không deploy production, đổi DNS/custom domain hoặc secrets trong task Website/CMS này.
+- Mobile navigation fix đã targeted regression bằng Chromium trên final blob `82e25b446885b8719340a38013c801135e2a52c2`: mobile 390x844 PASS, tablet 834x1112 PASS, desktop 1440x1000 PASS.
 
-## DONE — GitHub build/deploy only + UI auto deploy
+## DONE — GitHub build/deploy only
 
 - GitHub Actions không còn là CI phát triển; validation chạy local theo blast radius.
 - Một workflow `ALU Build and Deploy` là release pipeline duy nhất.
-- UI-only branch `hotfix/ui-*`, `fix/ui-*`, `feat/ui-*`, `refactor/ui-*` tự build/deploy Gateway khi push có `client/**`.
-- UI auto-deploy fail closed nếu branch stale so với current `main` hoặc diff có file ngoài UI/docs vận hành cho phép.
-- Full ALU release vẫn manual với confirm `alu`: build once -> backup/migrate -> Tenant -> Alumdoor App -> Gateway -> smoke.
+- Full ALU release vẫn manual với confirm `alu`: build once -> backup/migrate -> Tenant -> Alumdoor App -> Gateway -> exact-release smoke.
 
 ## DONE — Minimal risk-based gates
 
 - Canonical PR `#234` đã merge tại `c453df3026095b314f82f79e338bd56af90632ca`.
 - Policy canonical: `FAST` / `STANDARD` / `CRITICAL` trong `RUNBOOK.md` và `DELIVERY_POLICY.md`.
-- Gate đã PASS trên đúng SHA không chạy lặp nếu input/dependency/config không đổi; commit mới chỉ rerun gate bị ảnh hưởng.
-- `FAST`: presentation/UI nhỏ, kiểm tra tối thiểu theo blast radius; không bắt buộc full pipeline.
-- `STANDARD`: test/validation phù hợp logic sản phẩm, chạy local.
-- `CRITICAL`: accounting/cash/AR-AP/inventory/costing/manufacturing/auth/permission/tenant/migration/data giữ regression/integration/security/data-integrity gates đầy đủ, chạy trước explicit release.
+- FAST UI nhỏ không bắt buộc full pipeline; STANDARD validation targeted local; CRITICAL giữ regression/integration/security/data-integrity đầy đủ trước release.
 
 ## DONE — Alumdoor Warehouse Cash integration
 
 - Canonical delivery PR `#233` đã squash-merge vào `main` tại `c3dbcd20a7a88c17c1a9f10c4fff82b329e27855`.
-- Final validated feature head `162bc010692d3a2997ddbc9bd5e9a59e11cb5d60`: **6/6 required workflows PASS** theo cơ chế cũ.
-- Alumdoor có tab `Quỹ kho` role-gated và mở 4 DocType canonical qua generic MetaForge route: `Warehouse Cash Fund`, `Warehouse Cash Voucher`, `Warehouse Cash Transfer`, `Warehouse Cash Count`.
-- Alumdoor không copy schema/controller/ledger Finance; `server/briefs/alumdoor-v2.integrations.json` khai `vn-accounting >= 1.1.0` và 4 DocType trên là `externalDocTypes`.
+- Warehouse Cash schema/controller/ledger thuộc `vn-accounting`; Alumdoor consume qua integration metadata và generic routes.
 
 ## DONE — Warehouse Petty Cash backend
 
 - PR `#214` merged tại `da37060f3c02a6a5f9701d60edc3284575f00deb`.
-- `gl_entries` là money source of truth; balance/daily usage chỉ là rebuildable projection.
-- Supplier/Customer party dimension không tự settle AR/AP; invoice settlement vẫn phải qua canonical Payment Entry/payment allocation.
+- `gl_entries` là money source of truth; projections chỉ rebuildable.
 
 ## DONE — Purchase Receipt Bulk Transaction
 
@@ -65,17 +63,16 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. 
 
 ## Chưa hoàn tất
 
-1. Merge/release exact production evidence hardening sau review; sau đó `/release.json` mới là production proof canonical.
+1. Một UI push thực tế sau fast-path merge để đo duration và xác nhận `Deploy Gateway + /release.json` PASS.
 2. Bulk Transaction cho Stock Reconciliation.
 3. Bulk Transaction cho BOM parent + child/version.
 4. First-class AppAction input-table contract.
 5. Batch Print / QR label queue.
 6. P1 Daily detailed ledger hardening/closure theo exact GitHub state.
 7. Plastic ERP các wave sau P0-A.
-8. Nếu cần dùng quỹ kho để tất toán trực tiếp Purchase/Sales Invoice, thiết kế canonical payment allocation; không dùng party dimension trên GL thay settlement.
 
 ## Guardrails
 
-- UI auto production deploy chỉ áp dụng UI-only branch đúng naming + scope guard.
+- UI auto production deploy chỉ áp dụng UI-only branch đúng naming + push scope guard.
 - Không sửa production secrets/DNS hoặc mutate customer data ngoài automation/release path user đã chủ động thiết lập.
 - Không commit `.env`, `server/work/`, `tmp/`, backup, credential, cookie/token hoặc generated artifact không thuộc source control.
