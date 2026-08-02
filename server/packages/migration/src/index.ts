@@ -50,6 +50,8 @@ export interface MigrationReconciliationMetric {
   matches: boolean;
 }
 
+const SOURCE_KINDS = new Set<MigrationSourceKind>(["csv", "excel", "api", "sql", "erpnext", "misa", "odoo", "fast", "bravo", "legacy"]);
+const DUPLICATE_POLICIES = new Set<MigrationDuplicatePolicy>(["error", "skip", "update"]);
 const ALLOWED_TRANSITIONS: Readonly<Record<MigrationRunState, readonly MigrationRunState[]>> = {
   draft: ["validated", "cancelled"],
   validated: ["applying", "cancelled"],
@@ -65,7 +67,10 @@ export async function buildMigrationPlan(input: MigrationPlanInput): Promise<Mig
   const sourceId = boundedText(input.source_id, "source_id", 240);
   const targetDoctype = boundedText(input.target_doctype, "target_doctype", 160);
   const sourceKind = input.source_kind;
+  if (!SOURCE_KINDS.has(sourceKind)) throw errors.validation(`Unsupported migration source kind: ${String(sourceKind)}`);
   const duplicatePolicy = input.duplicate_policy ?? "error";
+  if (!DUPLICATE_POLICIES.has(duplicatePolicy)) throw errors.validation(`Unsupported duplicate policy: ${String(duplicatePolicy)}`);
+
   const headers = validateHeaders(input.headers);
   const targetFields = normalizeTargetFields(input.target_fields);
   const mapping = normalizeMapping(headers, targetFields, input.mapping);
@@ -163,7 +168,9 @@ function normalizeMapping(
   const mapping: Record<string, string | null> = {};
   const targets = new Set<string>();
   for (const header of headers) {
-    const rawTarget = requested && Object.prototype.hasOwnProperty.call(requested, header) ? requested[header] : header;
+    const hasRequested = Boolean(requested && Object.prototype.hasOwnProperty.call(requested, header));
+    const requestedTarget = requested?.[header];
+    const rawTarget: string | null = hasRequested ? (requestedTarget ?? null) : header;
     const target = rawTarget === null || rawTarget.trim() === "" ? null : rawTarget.trim();
     if (target && target !== "name" && !targetFields.has(target)) {
       throw errors.validation(`Unknown migration target field: ${target}`);
@@ -227,7 +234,7 @@ function boundedText(value: unknown, label: string, max: number): string {
 }
 
 function stableStringify(value: unknown): string {
-  return JSON.stringify(canonicalize(value));
+  return JSON.stringify(canonicalize(value)) ?? "null";
 }
 
 function canonicalize(value: unknown): unknown {
