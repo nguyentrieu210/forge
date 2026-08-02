@@ -1,27 +1,24 @@
 /**
  * Turning a committed domain event into in-app notifications.
  *
- * The rules themselves are pure (`notificationsFor` in frappe-model). This is the part
- * that reads them from the tenant's database and writes the results — kept separate so
- * the decision stays testable without a database, and so a delivery failure can never be
- * mistaken for a rule that did not match.
- *
- * WHY THIS FILE EXISTS AT ALL: the rules module and its migration landed first, with
- * tests, and NOTHING CALLED IT. That is the same failure this codebase already found
- * twice — `is_single` and `track_seen` were both validated, stored, and read by nobody.
- * A mechanism with no caller passes every test it has and does nothing in production.
+ * Rule matching is pure; this runner owns delivery authority. A recipient must still be
+ * an active tenant user, must be able to read the committed document, and may suppress an
+ * event through Notification Preference. A rule is never an ACL grant.
  */
 
+import { D1UserStore } from "../../auth/src/index.js";
 import type { DomainEvent, JsonObject } from "../../contracts/src/index.js";
-import { notificationsFor, type NotificationRule } from "../../frappe-model/src/index.js";
+import { D1MutationStore } from "../../document-kernel/src/index.js";
+import {
+  D1DocumentAccessStore,
+  D1MetadataStore,
+  MetadataPermissionService,
+  notificationsFor,
+  type NotificationRule,
+} from "../../frappe-model/src/index.js";
 import type { D1DeskViewStore } from "./desk-views.js";
 
-/**
- * The event suffix a rule subscribes to.
- *
- * Domain events are named `<aggregate>.<what happened>`; a rule names only the second
- * half, because a rule already says which doctype it is about.
- */
+/** The event suffix a rule subscribes to. */
 function eventSuffix(eventType: string): string {
   const separator = eventType.lastIndexOf(".");
   return separator === -1 ? eventType : eventType.slice(separator + 1);
@@ -33,12 +30,17 @@ export interface NotificationRunResult {
   skipped: number;
 }
 
+/** Injectable only so delivery authority can be tested without rebuilding D1 in every unit test. */
+export interface NotificationDeliveryAuthorizer {
+  canReceive(userId: string): Promise<boolean>;
+  allowsInApp(userId: string, eventKey: string): Promise<boolean>;
+}
+
 /**
  * Evaluates every enabled rule for this event and records the resulting alerts.
  *
- * Never throws: this runs AFTER the write is committed, so a broken rule must not make a
- * successful save look like a failure — the caller has already told the client the
- * document exists. Failures are counted and logged rather than propagated.
+ * Never throws: this runs AFTER the write is committed, so a broken rule or a stale
+ * preference must not make a successful save look like a failure.
  */
 export async function runNotificationRules(
   db: D1Database,
@@ -46,11 +48,9 @@ export async function runNotificationRules(
   tenantId: string,
   event: DomainEvent,
   now: string,
+  authorizer?: NotificationDeliveryAuthorizer,
 ): Promise<NotificationRunResult> {
   const suffix = eventSuffix(event.event_type);
-  // The rule BODY lives in `rule_json` — the shape 0004 created and nothing ever read.
-  // Reusing it beats adding a rival table: two schemas for one feature drift, and the
-  // older one is the one that stays behind in every database already deployed.
   const rows = await db.prepare(
     `SELECT name, document_type, event, rule_json, enabled
      FROM notification_rules
@@ -65,8 +65,6 @@ export async function runNotificationRules(
     try {
       body = JSON.parse(row.rule_json) as Partial<NotificationRule>;
     } catch {
-      // A rule nobody can parse cannot be honoured, and must not take the others down
-      // with it. Logged rather than thrown: the write it reacts to has already committed.
       console.error(JSON.stringify({
         level: "error", code: "NOTIFICATION_RULE_UNREADABLE", tenant_id: tenantId, rule: row.name,
       }));
@@ -86,17 +84,15 @@ export async function runNotificationRules(
   }
   if (!rules.length) return { matched: 0, delivered: 0, skipped: 0 };
 
-  // The event payload is what the rule's condition sees. It is the committed document,
-  // so a condition can never be evaluated against a state that was never stored.
   const document = (event.payload ?? {}) as JsonObject;
   const pending = notificationsFor(rules, suffix, event.aggregate.doctype, document);
+  if (!pending.length) return { matched: 0, delivered: 0, skipped: 0 };
 
+  const deliveryAuthority = authorizer ?? await d1DeliveryAuthorizer(db, tenantId, event);
   let delivered = 0;
   let skipped = 0;
   for (const notification of pending) {
     if (notification.skipped_reason) {
-      // Recorded in the log stream, not the user's inbox: the tenant asked for something
-      // this platform cannot do, and that must be visible rather than look like delivery.
       console.warn(JSON.stringify({
         level: "warn", code: "NOTIFICATION_CHANNEL_UNAVAILABLE",
         tenant_id: tenantId, rule: notification.rule, channel: notification.channel,
@@ -105,10 +101,27 @@ export async function runNotificationRules(
       skipped += 1;
       continue;
     }
+
+    // A notification carries both a subject and an exact document identifier. Delivering
+    // it to someone who cannot open that document is an information leak even if the
+    // eventual GET would return 404. The rule names recipients; it does NOT grant access.
+    if (!await deliveryAuthority.canReceive(notification.for_user)) {
+      skipped += 1;
+      console.warn(JSON.stringify({
+        level: "warn", code: "NOTIFICATION_RECIPIENT_NOT_AUTHORIZED",
+        tenant_id: tenantId, rule: notification.rule,
+      }));
+      continue;
+    }
+
+    if (!await deliveryAuthority.allowsInApp(notification.for_user, suffix)) {
+      skipped += 1;
+      continue;
+    }
+
     try {
       await deskViews.notify(tenantId, {
-        // Deterministic: a redelivered event must not produce a second copy of the same
-        // alert in someone's inbox.
+        // Deterministic: a redelivered event must not produce a second copy.
         name: `${event.event_id}:${notification.rule}:${notification.for_user}`,
         forUser: notification.for_user,
         subject: notification.subject,
@@ -118,7 +131,6 @@ export async function runNotificationRules(
       }, now);
       delivered += 1;
     } catch (error) {
-      // One rule failing must not stop the rest, and must not fail the event.
       skipped += 1;
       console.error(JSON.stringify({
         level: "error", code: "NOTIFICATION_DELIVERY_FAILED",
@@ -129,4 +141,70 @@ export async function runNotificationRules(
   }
 
   return { matched: pending.length, delivered, skipped };
+}
+
+/**
+ * Builds the default authority from the SAME user directory and permission service used
+ * by document reads. No notification-specific ACL is allowed to drift beside it.
+ */
+async function d1DeliveryAuthorizer(
+  db: D1Database,
+  tenantId: string,
+  event: DomainEvent,
+): Promise<NotificationDeliveryAuthorizer> {
+  const users = new D1UserStore(db);
+  const metadata = new D1MetadataStore(db);
+  const access = new D1DocumentAccessStore(db);
+  const permissions = new MetadataPermissionService(metadata, undefined, access);
+  const documents = new D1MutationStore(db);
+  const committed = await documents.getDocument(tenantId, event.aggregate.doctype, event.aggregate.name);
+  const accessCache = new Map<string, Promise<boolean>>();
+  const preferenceCache = new Map<string, Promise<boolean>>();
+
+  const canReceive = (userId: string): Promise<boolean> => {
+    const cached = accessCache.get(userId);
+    if (cached) return cached;
+    const pending = (async () => {
+      if (!committed) return false;
+      const user = await users.get(tenantId, userId);
+      if (!user?.enabled || user.user_type !== "System User") return false;
+      const actor = { user_id: userId, roles: await users.listRoles(tenantId, userId) };
+      return permissions.canReadDocument(actor, tenantId, committed);
+    })().catch(() => false);
+    accessCache.set(userId, pending);
+    return pending;
+  };
+
+  const allowsInApp = (userId: string, eventKey: string): Promise<boolean> => {
+    const key = `${userId}\u0000${eventKey}`;
+    const cached = preferenceCache.get(key);
+    if (cached) return cached;
+    const pending = loadInAppPreference(db, tenantId, userId, eventKey).catch(() => true);
+    preferenceCache.set(key, pending);
+    return pending;
+  };
+
+  return { canReceive, allowsInApp };
+}
+
+/** Exact event wins over the wildcard. No row means the backwards-compatible default: on. */
+async function loadInAppPreference(
+  db: D1Database,
+  tenantId: string,
+  userId: string,
+  eventKey: string,
+): Promise<boolean> {
+  const row = await db.prepare(
+    `SELECT payload_json FROM documents
+     WHERE tenant_id=?1 AND doctype='Notification Preference' AND docstatus<>2
+       AND json_extract(payload_json,'$.user_id')=?2
+       AND json_extract(payload_json,'$.event_type') IN (?3,'*')
+     ORDER BY CASE WHEN json_extract(payload_json,'$.event_type')=?3 THEN 0 ELSE 1 END, modified_at DESC
+     LIMIT 1`,
+  ).bind(tenantId, userId, eventKey).first<{ payload_json: string }>();
+  if (!row) return true;
+  const preference = JSON.parse(row.payload_json) as JsonObject;
+  if (preference.muted === true || preference.muted === 1) return false;
+  if (preference.in_app === false || preference.in_app === 0) return false;
+  return true;
 }
