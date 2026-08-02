@@ -1,0 +1,23 @@
+{
+  "name": "Service Technician",
+  "module": "Maintenance",
+  "autoname": "field:technician_name",
+  "title_field": "technician_name",
+  "search_fields": ["technician_name", "user", "service_area"],
+  "track_seen": true,
+  "fields": [
+    { "fieldname": "technician_name", "label": "Tên kỹ thuật viên", "fieldtype": "Data", "required": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "user", "label": "Tài khoản", "fieldtype": "Link", "options": "User", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "phone", "label": "Điện thoại", "fieldtype": "Data" },
+    { "fieldname": "skills", "label": "Kỹ năng / chuyên môn", "fieldtype": "Text" },
+    { "fieldname": "service_area", "label": "Khu vực phục vụ", "fieldtype": "Data", "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "is_active", "label": "Đang hoạt động", "fieldtype": "Check", "default": 1, "in_list_view": true, "in_standard_filter": true }
+  ],
+  "permissions": [
+    { "role": "Maintenance User", "read": true },
+    { "role": "Maintenance Technician", "read": true },
+    { "role": "Maintenance Manager", "read": true, "write": true, "create": true, "delete": true, "report": true, "export": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "delete": true, "report": true, "export": true }
+  ],
+  "revision": 1
+}
