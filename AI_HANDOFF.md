@@ -17,6 +17,19 @@ Ngày cập nhật: **2026-08-02**.
 - GitHub Actions chỉ dùng làm máy build/deploy.
 - Workflow release duy nhất: `.github/workflows/manual-release-alu.yml`, name `ALU Build and Deploy`.
 
+## Merged checkpoint — Website/CMS multi-tenant v1
+
+- Canonical PR `#254` squash-merge tại `b25fc30b0f37d1218cafbb4dac40e37479bba0b9`.
+- App-based ownership:
+  - `server/apps-src/website/**`: Website Settings/Web Page/Web Page Block, roles, version-pinned template/theme presets;
+  - `server/packages/frappe-api/src/website.ts`: tenant-scoped published-only resolver;
+  - `server/packages/frappe-api/src/website-router.ts`: exact public methods `forge.website.manifest` + `forge.website.page`;
+  - `client/apps/runtime/src/bootstrap.ts` + `client/apps/runtime/src/website/WebsiteSite.tsx`: shared public renderer;
+  - `server/tests/website-cms.test.mjs` + `client/e2e-forge/ui-tests/website-public.spec.ts`: regression coverage.
+- Security invariants: trusted tenant context precedes public routing; Guest không có generic DocType read; Website Settings/page phải enabled/published; block/URL/theme fields allowlisted; arbitrary public HTML/JS không hỗ trợ.
+- Responsive invariant: navigation phải usable trên mobile. Final WebsiteSite blob `82e25b446885b8719340a38013c801135e2a52c2` targeted Chromium regression PASS mobile/tablet/desktop, có `aria-current` và horizontal overflow trên mobile.
+- Không deploy production/DNS/custom domain/secrets trong merge Website/CMS v1.
+
 ## UI auto deploy convention
 
 UI-only task phải dùng branch:

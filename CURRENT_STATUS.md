@@ -10,6 +10,16 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. 
 - Default branch: `main`.
 - Warehouse Cash Alumdoor merge checkpoint: `c3dbcd20a7a88c17c1a9f10c4fff82b329e27855`.
 
+## DONE — Website/CMS multi-tenant v1
+
+- Canonical PR `#254` đã squash-merge vào `main` tại `b25fc30b0f37d1218cafbb4dac40e37479bba0b9`.
+- First-party `website` app gồm Website Settings, Web Page, Web Page Block, roles và version-pinned template/theme presets.
+- Public API chỉ allowlist `forge.website.manifest` và `forge.website.page`; Guest không có generic DocType read; mọi Website query bind trusted tenant context; draft/unpublished fail closed.
+- Shared runtime render `/` và one-segment slug, giữ nguyên reserved Forge runtime modes; product grid reuse canonical Storefront public API.
+- Mobile navigation fix đã targeted regression bằng Chromium trên final blob `82e25b446885b8719340a38013c801135e2a52c2`: mobile 390x844 PASS, tablet 834x1112 PASS, desktop 1440x1000 PASS; `aria-current`, login link, metadata và horizontal overflow đúng.
+- Server/client tests, typecheck, build, frontend lint và MetaForge browser QA đã PASS trên cùng application blob set trước clean-transplant cuối; các main commit sau đó chỉ đổi release/docs policy, không đổi application/package/dependency inputs.
+- Không deploy production, đổi DNS/custom domain hoặc secrets trong task Website/CMS này.
+
 ## DONE — GitHub build/deploy only + UI auto deploy
 
 - GitHub Actions không còn là CI phát triển; validation chạy local theo blast radius.

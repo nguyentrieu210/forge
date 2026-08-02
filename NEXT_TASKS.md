@@ -4,6 +4,13 @@ Ngày cập nhật: **2026-08-02**.
 
 Đây là hàng đợi active. GitHub là nguồn sự thật cho exact `main`, PR và branch; trước khi làm phải đọc `RUNBOOK.md`, `CURRENT_STATUS.md`, `AI_HANDOFF.md`, `DELIVERY_POLICY.md`.
 
+## DONE — Website/CMS multi-tenant v1
+
+- Canonical PR `#254` đã squash-merge vào `main` tại `b25fc30b0f37d1218cafbb4dac40e37479bba0b9`.
+- Public Website/CMS v1 đã có first-party app metadata, Website Settings/Web Page/Web Page Block, versioned presets, tenant-scoped published-only public API và shared runtime renderer.
+- Final responsive regression PASS trên mobile/tablet/desktop; public allowlist và tenant isolation evidence đã đủ cho scope v1.
+- Không có production deploy/DNS/custom-domain/secrets trong task này.
+
 ## DONE — UI auto deploy
 
 - GitHub Actions chỉ dùng cho build/deploy.
