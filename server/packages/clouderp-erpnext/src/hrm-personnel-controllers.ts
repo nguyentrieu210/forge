@@ -56,6 +56,18 @@ export class PersonnelDocumentController extends SuiteController<JsonObject> {
     const warningDays = H.integer(input.expiry_warning_days, 30);
     if (warningDays < 0 || warningDays > 3650) throw errors.validation("Personnel Document expiry_warning_days must be between 0 and 3650");
     const attachment = H.requiredText(input.attachment, "Personnel Document attachment");
+    const replacesDocument = H.text(input.replaces_document);
+    if (replacesDocument) {
+      if (replacesDocument === context.command.aggregate.name) throw errors.validation("Personnel Document cannot replace itself");
+      const previous = await H.requireSubmitted(context, "Personnel Document", replacesDocument);
+      if (H.text(previous.employee) !== employeeName || H.text(previous.document_type) !== documentType) {
+        throw errors.reference(`Personnel Document ${replacesDocument} belongs to another employee/document type`);
+      }
+      const previousIssueDate = H.optionalDate(previous.issue_date, `Personnel Document ${replacesDocument} issue_date`);
+      if (issueDate && previousIssueDate && issueDate < previousIssueDate) {
+        throw errors.validation("Renewed Personnel Document issue_date cannot precede the replaced document issue_date");
+      }
+    }
 
     if (context.command.action === "submit") {
       const documents = await context.reader.listDocumentsByDoctype<JsonObject>(context.command.tenant_id, this.doctype);
@@ -64,6 +76,10 @@ export class PersonnelDocumentController extends SuiteController<JsonObject> {
         && H.text(item.data.document_type) === documentType
         && H.text(item.data.document_no) === documentNo)) {
         throw errors.exists(`Personnel Document ${documentType}/${documentNo} already exists for ${employeeName}`);
+      }
+      if (replacesDocument && documents.some((item) => item.name !== context.command.aggregate.name && item.docstatus === 1
+        && H.text(item.data.replaces_document) === replacesDocument)) {
+        throw errors.exists(`Personnel Document ${replacesDocument} already has a submitted renewal/replacement`);
       }
     }
 
@@ -82,6 +98,7 @@ export class PersonnelDocumentController extends SuiteController<JsonObject> {
       company,
       document_type: documentType,
       document_no: documentNo,
+      ...(replacesDocument ? { replaces_document: replacesDocument } : {}),
       ...(issueDate ? { issue_date: issueDate } : {}),
       ...(expiryDate ? { expiry_date: expiryDate } : {}),
       expiry_warning_days: warningDays,
@@ -91,8 +108,6 @@ export class PersonnelDocumentController extends SuiteController<JsonObject> {
   }
 
   status(context: HrmContext): string {
-    const docStatus = nextDocStatus(context.command.action);
-    if (docStatus === 1) return H.text(context.command.document.document_status) || "Active";
-    return super.status(context, context.command.document);
+    return nextDocStatus(context.command.action) === 1 ? "Active" : super.status(context, context.command.document);
   }
 }
