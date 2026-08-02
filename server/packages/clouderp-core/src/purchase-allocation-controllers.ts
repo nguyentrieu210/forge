@@ -175,8 +175,8 @@ async function buildPurchaseOrderSubmitAllocation(
       addClaim(claims, "window", queue.window_id, queue.window_revision, context.now);
     }
     const rowId = requiredRowId(item, index);
-    const qty = stockQtyMicros(item);
-    if (qty <= 0) throw errors.validation(`Purchase Order row ${index + 1} has no positive stock quantity`);
+    const qty = purchaseAllocationQtyMicros(item, index);
+    if (qty <= 0) throw errors.validation(`Purchase Order row ${index + 1} has no positive allocation quantity`);
     obligations.push({
       entry_id: allocationId("OBL", context.command.command_id, rowId),
       queue_key: queue.queue_key,
@@ -194,9 +194,6 @@ async function buildPurchaseOrderSubmitAllocation(
       resolution: "resolved",
     });
 
-    // A newly seeded window cannot contain historical unapplied rows. Existing
-    // open windows are read once and mutated locally so multiple PO rows cannot
-    // consume the same source balance twice inside one command.
     if (queue.window_seed) continue;
     let sources = sourceCache.get(queue.window_id);
     if (!sources) {
@@ -417,7 +414,7 @@ async function buildPurchaseReceiptSubmitAllocation(
 
     for (const { item, index } of group.lines) {
       const rowId = requiredRowId(item, index);
-      const qty = stockQtyMicros(item);
+      const qty = purchaseAllocationQtyMicros(item, index);
       const baremWeight = theoreticalBaremWeightMicros(item, qty, index);
       const result = planPurchaseReceiptAllocation({
         queue_key: group.queue.queue_key,
@@ -668,14 +665,36 @@ async function canonicalMaterialOf(item: PurchaseItem) {
   });
 }
 
-function theoreticalBaremWeightMicros(item: PurchaseItem, stockQty: number, index: number): number {
+/**
+ * Procurement/accounting quantity and supplier-delivery quantity are not always the same thing.
+ * Aluminium is bought and valued in kg, while the factory obligation and FIFO are defined by the
+ * counted number of bars/leaves. Keeping this decision here means the canonical allocation ledger,
+ * submit preview, settlement and cancellation all share one quantity basis instead of delegating
+ * Tiến Đạt to a second FIFO implementation.
+ */
+function purchaseAllocationQtyMicros(item: PurchaseItem, index: number): number {
+  const data = item as JsonObject;
+  const inventoryMode = textOrEmpty(data.inventory_mode);
+  if (inventoryMode === "Nhôm cây/lá") {
+    const bars = decimalField(data.qty_bar);
+    if (bars === undefined) {
+      throw errors.validation(`Bar quantity is required for aluminium at row ${index + 1}`);
+    }
+    const qty = toScaledInt(bars, 6, `items[${index}].qty_bar`);
+    if (qty <= 0) throw errors.validation(`Bar quantity must be positive at row ${index + 1}`);
+    return qty;
+  }
+  return stockQtyMicros(item);
+}
+
+function theoreticalBaremWeightMicros(item: PurchaseItem, allocationQty: number, index: number): number {
   const data = item as JsonObject;
   const explicit = decimalField(data.theoretical_kg);
   if (explicit !== undefined) return toScaledInt(explicit, 6, `items[${index}].theoretical_kg`);
   const length = decimalField(data.length_m);
   const kgPerM = decimalField(data.theoretical_kg_per_m);
   if (length === undefined || kgPerM === undefined) return 0;
-  const metres = multiplyScaled(fromScaledInt(stockQty, 6), 6, length, 6, 6, `items[${index}].barem_metres`);
+  const metres = multiplyScaled(fromScaledInt(allocationQty, 6), 6, length, 6, 6, `items[${index}].barem_metres`);
   return multiplyScaled(fromScaledInt(metres, 6), 6, kgPerM, 6, 6, `items[${index}].barem_weight`);
 }
 
