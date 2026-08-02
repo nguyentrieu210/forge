@@ -11,6 +11,35 @@ Ngày cập nhật: **2026-08-02**.
 - Đọc `RUNBOOK.md` → `CURRENT_STATUS.md` → `NEXT_TASKS.md` → file này → `DELIVERY_POLICY.md`.
 - Mọi SHA/branch dưới đây là checkpoint lịch sử; phải xác minh GitHub trước khi dùng.
 
+## Active checkpoint — Warehouse Petty Cash per warehouse
+
+- Canonical PR `#214`: `feat/alumdoor-warehouse-petty-cash-v3-20260802`.
+- Feature commit: `b152fd85c9d930f026b568eac003d4784ea43bfc`.
+- CI metadata fix: `e142a3ceb90179bca28080f488dfb83ebeedcdaa`.
+- Main CI run `30746967088`, job `91494093839` đã PASS tests + typecheck + build sau fix.
+- Prior CI failure không phải Daily Ledger, SQL cash guard hay GL logic. Root cause là app-source Link contract: `Purchase Receipt` và `Stock Entry` chưa được khai báo trong `vn-accounting/app.json.externalDocTypes`.
+
+### Architecture invariants — Warehouse Cash
+
+1. **GL là source of truth.** `Warehouse Cash Voucher` và `Warehouse Cash Transfer` là chứng từ kế toán first-class post trực tiếp balanced immutable `gl_entries`. Không tạo shadow `Payment Entry`, `Journal Entry` hoặc cash ledger cạnh tranh.
+2. **Cash Count không tự thay đổi tiền.** `Warehouse Cash Count` snapshot system balance và counted balance; variance phải có lý do, correction tiền đi qua adjustment voucher riêng liên kết confirmed count.
+3. **Projection không phải ledger.** `Warehouse Cash Balance` và `Warehouse Cash Daily Usage` nằm trong `master_records` chỉ là materialized projection rebuildable từ GL, cập nhật cùng SQLite/D1 transaction để có O(1) check và tránh race.
+4. **DB trigger là race-safe authority.** Migration `0038_warehouse_cash.sql` guard tenant/fund availability, account, currency, warehouse, negative balance, max balance, daily outgoing limit, reversal usage; mapping fund không đổi sau history, non-zero fund không disable và fund có history không delete.
+5. **Server giữ approval boundary.** Submit/cancel yêu cầu authorized manager/accounting role; creator không tự duyệt chứng từ của mình; accounting period lock áp dụng cho posting/cancel.
+6. **Transfer không ăn hạn mức chi phí.** Inter-fund transfer thay đổi balance hai quỹ nhưng không tính vào direct-outgoing daily petty-cash expense limit.
+7. **Cancel reverse đúng revision.** Controller đọc exact original GL revision rồi `reverseGl`; không tái tính bút toán từ payload hiện tại.
+8. **Tenant isolation bắt buộc.** Fund/document/master projection/reference lookup đều dùng `tenant_id`; DB projection key cũng gồm tenant.
+9. **AR/AP chưa tự settle.** Party dimension trên counter GL line không đồng nghĩa payment allocation. Nếu yêu cầu quỹ kho tất toán Purchase/Sales Invoice thì phải tích hợp canonical payment ledger riêng, không vá bằng GL-only flag.
+10. **App-source Link trap.** Link target không thuộc package và không nằm trong `PLATFORM_EXTERNAL_DOCTYPES` phải khai rõ `externalDocTypes`; Warehouse Cash cần explicit `Purchase Receipt` + `Stock Entry` với `app: "erpnext"`, `kind: "transaction"`.
+
+### Verification notes
+
+- Warehouse Cash controller tests: 7/7 PASS trong unit run.
+- SQL migration acceptance đã cover balance/daily usage, negative/max/daily limit, account/warehouse/currency mismatch, reversal, transfer, tenant isolation, immutable mapping/history và disable guard.
+- Diagnostic workflow từng được thêm tạm để lấy CI traceback do connector không trả log, sau đó đã restore workflow gốc; không được reintroduce diagnostic artifact vào final diff.
+- Trước merge phải kiểm exact-final-head 6/6 workflows, PR mergeable và migration `0038` không collision với current `main`.
+- Merge và production deploy là hai quyền riêng biệt; không deploy nếu user chưa yêu cầu rõ.
+
 ## Checkpoint — Bulk Transaction v1 Purchase Receipt
 
 - Canonical PR `#209` merged tại `e447eca0e020da161dcee4f0b865206921718a61`.
