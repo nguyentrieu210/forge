@@ -1,0 +1,37 @@
+{
+  "name": "Project Change Order",
+  "module": "Projects",
+  "is_submittable": true,
+  "autoname": "PCO-.YYYY.-#####",
+  "title_field": "title",
+  "search_fields": ["title", "project"],
+  "sort_field": "requested_at",
+  "sort_order": "DESC",
+  "track_seen": true,
+  "fields": [
+    { "fieldname": "project", "label": "Dự án", "fieldtype": "Link", "options": "Project", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "title", "label": "Nội dung thay đổi", "fieldtype": "Data", "required": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "change_type", "label": "Loại thay đổi", "fieldtype": "Select", "options": "Phạm vi\nTiến độ\nNguồn lực\nKhác", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "requested_by", "label": "Người đề nghị", "fieldtype": "Link", "options": "User", "required": true, "in_list_view": true },
+    { "fieldname": "requested_at", "label": "Thời điểm đề nghị", "fieldtype": "Datetime", "default": "Now", "required": true, "in_list_view": true },
+    { "fieldname": "reason", "label": "Lý do thay đổi", "fieldtype": "Text", "required": true },
+    { "fieldname": "scope_change", "label": "Phạm vi thay đổi", "fieldtype": "Text", "required": true },
+    { "fieldname": "schedule_impact_days", "label": "Ảnh hưởng tiến độ (ngày)", "fieldtype": "Float", "default": 0 },
+    { "fieldname": "resource_impact", "label": "Ảnh hưởng nguồn lực", "fieldtype": "Text" },
+    { "fieldname": "commercial_reference", "label": "Tham chiếu thương mại / tài chính", "fieldtype": "Data", "description": "Evidence only. Financial impact remains authoritative in WS01 contracts." },
+    { "fieldname": "approval_note", "label": "Ghi chú phê duyệt", "fieldtype": "Text" },
+    { "fieldname": "rejection_reason", "label": "Lý do từ chối", "fieldtype": "Text", "mandatory_depends_on": "eval:doc.workflow_state == 'Từ chối'" },
+    { "fieldname": "cancel_reason", "label": "Lý do hủy", "fieldtype": "Text", "mandatory_depends_on": "eval:doc.workflow_state == 'Hủy'" },
+    { "fieldname": "workflow_state", "label": "Trạng thái", "fieldtype": "Data", "read_only": true, "in_list_view": true, "in_standard_filter": true }
+  ],
+  "viewPolicy": {
+    "kanban": { "enabled": true, "stageField": "workflow_state", "reasonRequiredOn": ["backward", "cancel"] },
+    "mobile": { "compactFields": ["project", "title", "change_type", "workflow_state"] }
+  },
+  "permissions": [
+    { "role": "Project User", "read": true, "write": true, "create": true, "print": true, "report": true },
+    { "role": "Project Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "print": true, "report": true, "export": true, "share": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "print": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}
