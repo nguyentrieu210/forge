@@ -8,34 +8,31 @@ Ngày cập nhật: **2026-08-02**.
 
 - Repository: `nguyentrieu210/forge`.
 - GitHub là nguồn sự thật cho exact `main`, branch, PR, CI, merge và release evidence.
-- Đọc `RUNBOOK.md` → `CURRENT_STATUS.md` → `NEXT_TASKS.md` → file này → `DELIVERY_POLICY.md`.
+- Đọc `RUNBOOK.md` -> `CURRENT_STATUS.md` -> `NEXT_TASKS.md` -> file này -> `DELIVERY_POLICY.md`.
 - Mọi SHA/branch dưới đây là checkpoint lịch sử; phải xác minh GitHub trước khi dùng.
 
-## Active checkpoint — One-click UI hotfix lane
+## Active checkpoint — Auto deploy UI hotfix lane
 
-- Canonical branch: `hotfix/ui-one-click-deploy-v2-20260802`, base exact `main@f5d222e916795fd31cdc82f5746a1ba0af6318fb`.
-- Canonical PR: `#223`. Iteration `#222` đã superseded do stale main.
-- `.github/workflows/hotfix-ui-one-click.yml` là one-click orchestrator; `.github/workflows/release-gateway.yml` vẫn là single Gateway production implementation và có input `quick_ui_hotfix`.
-- Quick UI invariant:
-  1. chỉ branch `hotfix/ui-*`;
-  2. current `main` phải là ancestor của target SHA;
-  3. bắt buộc có `client/**`, ngoài client chỉ cho `CURRENT_STATUS.md`, `NEXT_TASKS.md`, `AI_HANDOFF.md`;
-  4. tối đa 10 file / 300 dòng text;
-  5. package/dependency, server, migration, business metadata, workflow, secret, DNS và production data bị chặn;
-  6. production path chỉ Gateway/client bundle;
-  7. quick path chạy `build -> stage -> deploy -> exact-SHA smoke`;
-  8. `lint/test/typecheck/Wrangler dry-run` deferred sang reconciliation PR/normal CI;
-  9. sau deploy workflow best-effort tạo/annotate PR reconcile về `main`.
-- Mục tiêu dưới 30 giây là thao tác người dùng, không phải tổng runtime GitHub runner/Cloudflare.
-- Không dùng lane này cho business logic/backend/data chỉ để tiết kiệm thời gian.
-- Task tạo lane chưa deploy production.
+- Canonical branch: `fix/ui-hotfix-auto-deploy-v2-20260802`, clean-transplant từ exact `main@efa2aa6df385ca0775523f1756494d2ae54ec132`.
+- PR `#230` là stale iteration; không merge.
+- `.github/workflows/hotfix-ui-one-click.yml` chuyển sang auto production deploy khi push branch `hotfix/ui-*` có `client/**`; manual `workflow_dispatch` vẫn là fallback.
+- Invariant bắt buộc trước deploy:
+  1. current `main` phải là ancestor của target SHA;
+  2. diff phải có ít nhất một `client/**` file;
+  3. ngoài `client/**` chỉ cho `CURRENT_STATUS.md`, `NEXT_TASKS.md`, `AI_HANDOFF.md`;
+  4. tối đa 10 file / 300 changed lines;
+  5. mọi server/workflow/package/migration/metadata/secret/DNS/data change đều fail closed vì nằm ngoài allowlist;
+  6. production path chỉ build MetaForge client -> stage bundle -> deploy Gateway;
+  7. lint/test/typecheck vẫn do PR/normal CI chịu trách nhiệm, không làm chậm fast production path.
+- Sau khi lane này có trên `main`, AI sửa UI trên branch `hotfix/ui-*` và push là production deploy tự chạy, không bắt người dùng bấm GitHub Actions.
+- Theme fix PR #227 phải được replay trên branch hotfix mới từ exact main sau merge lane này để push event dùng workflow mới.
 
 ## Merged checkpoint — Warehouse Petty Cash per warehouse
 
 - Canonical PR `#214` squash-merge tại `da37060f3c02a6a5f9701d60edc3284575f00deb`.
 - Final validated head `5255dae609a7a4c30ab25ffc397f81422c2c69fc`: 6/6 required workflows PASS.
 - `gl_entries` là source of truth; Warehouse Cash Balance/Daily Usage chỉ là rebuildable projection.
-- Purchase/Sales Invoice settlement cần canonical payment allocation, không được coi GL party dimension là đã settle AR/AP.
+- Purchase/Sales Invoice settlement cần canonical payment allocation.
 
 ## Checkpoint — Bulk Transaction v1 Purchase Receipt
 
@@ -53,7 +50,7 @@ Ngày cập nhật: **2026-08-02**.
 
 ## Release boundary
 
-- Merge code không đồng nghĩa deploy production.
-- Quick UI lane cho phép exact branch SHA deploy Gateway trước reconcile merge chỉ khi user chủ động chạy production workflow và hard scope guard PASS.
-- Không deploy Cloudflare/production, đổi DNS/secrets hoặc mutate customer data nếu user chưa yêu cầu rõ cho đúng đợt.
+- Merge code không đồng nghĩa deploy production, ngoại trừ UI fast lane đã được user yêu cầu rõ: push hợp lệ vào `hotfix/ui-*` sẽ tự deploy production sau fail-closed scope guard.
+- Không dùng UI fast lane cho backend/business logic/data chỉ để tiết kiệm thời gian.
+- Không đổi DNS/secrets hoặc mutate customer data nếu user chưa yêu cầu rõ.
 - Không commit `.env`, `server/work/`, `tmp/`, backup, credential, cookie/token hoặc generated evidence không được quản lý.
