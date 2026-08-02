@@ -5,7 +5,7 @@
   "requires": [],
   "nav": [
     {"key":"Workplace Task","label":"Công việc","kind":"doctype","icon":"list-checks","group":"Cộng tác"},
-    {"key":"workplace-calendar","label":"Lịch công việc","kind":"route","route":"/calendar/Workplace%20Task","icon":"calendar-days","group":"Cộng tác","permission_doctype":"Workplace Task"},
+    {"key":"calendar:Workplace Task","label":"Lịch công việc","kind":"experience","icon":"calendar-days","group":"Cộng tác","permission_doctype":"Workplace Task"},
     {"key":"Workplace Meeting","label":"Cuộc họp","kind":"doctype","icon":"users-round","group":"Cộng tác"},
     {"key":"Internal Request","label":"Yêu cầu nội bộ","kind":"doctype","icon":"inbox","group":"Cộng tác"},
     {"key":"approval:Internal Request","label":"Duyệt yêu cầu nội bộ","kind":"experience","icon":"badge-check","group":"Cộng tác"},
@@ -24,8 +24,8 @@
   ],
   "hooks": [],
   "reports": [
-    {"name":"Công việc đang mở","label":"Công việc đang mở","doctype":"Workplace Task","columns":[{"field":"status","label":"Trạng thái","type":"Data"},{"field":"name","label":"Mã","type":"Data","aggregate":"count"}],"group_by":"status","filters":["company","assigned_to","priority","status","due_date"],"limit":100},
-    {"name":"Hợp đồng sắp hết hạn","label":"Hợp đồng sắp hết hạn","doctype":"Contract","columns":[{"field":"name","label":"Hợp đồng","type":"Data"},{"field":"contract_title","label":"Tên hợp đồng","type":"Data"},{"field":"contract_type","label":"Loại","type":"Data"},{"field":"end_date","label":"Ngày hết hạn","type":"Date"},{"field":"contract_value","label":"Giá trị","type":"Currency"}],"order_by":{"column":"end_date","direction":"asc"},"filters":["company","contract_type","end_date","workflow_state"],"limit":200},
+    {"name":"Công việc theo trạng thái","label":"Công việc theo trạng thái","doctype":"Workplace Task","columns":[{"field":"status","label":"Trạng thái","type":"Data"},{"field":"name","label":"Số lượng","type":"Data","aggregate":"count"}],"group_by":"status","filters":["company","assigned_to","priority","status","due_date"],"limit":100},
+    {"name":"Danh sách hạn hợp đồng","label":"Danh sách hạn hợp đồng","doctype":"Contract","columns":[{"field":"name","label":"Hợp đồng","type":"Data"},{"field":"contract_title","label":"Tên hợp đồng","type":"Data"},{"field":"contract_type","label":"Loại","type":"Data"},{"field":"end_date","label":"Ngày hết hạn","type":"Date"},{"field":"contract_value","label":"Giá trị","type":"Currency"}],"order_by":{"column":"end_date","direction":"asc"},"filters":["company","contract_type","end_date","workflow_state"],"limit":200},
     {"name":"Nghĩa vụ hợp đồng","label":"Nghĩa vụ hợp đồng","doctype":"Contract Obligation","columns":[{"field":"status","label":"Trạng thái","type":"Data"},{"field":"name","label":"Số lượng","type":"Data","aggregate":"count"}],"group_by":"status","filters":["contract","owner_user","due_date","status"],"limit":100}
   ],
   "client": {"brand":"indigo","domain":"workplace","home":{"route":"/app/Workplace%20Task","doctype":"Workplace Task"},"dimensions":["company","branch"],"catalog_mode":"hybrid","design":{"density":"comfortable","radius":"soft","content_width":"wide"}}
