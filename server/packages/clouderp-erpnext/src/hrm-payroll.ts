@@ -3,6 +3,7 @@ import { errors } from "../../core/src/index.js";
 import type { ControllerContext } from "../../document-kernel/src/index.js";
 import { fromScaledInt, toScaledInt } from "../../money/src/index.js";
 import type { SalarySlipComponentRow, SalarySlipData } from "./enterprise-types.js";
+import { evaluatePayrollRuleFormula, payrollRuleInputRowsToObject } from "./hrm-payroll-rule.js";
 
 interface HrmGeneratedSalaryInput {
   salary_structure_assignment: string;
@@ -66,16 +67,6 @@ export async function buildHrmSalarySlipInputs(
   const approvedBy = requiredText(payrollRule.approved_by, `VN Payroll Rule ${payrollRuleName} approved_by`);
   const approvedAt = requiredText(payrollRule.approved_at, `VN Payroll Rule ${payrollRuleName} approved_at`);
   const formulaJson = requiredText(payrollRule.formula_json, `VN Payroll Rule ${payrollRuleName} formula_json`);
-  let formula: unknown;
-  try {
-    formula = JSON.parse(formulaJson);
-  } catch {
-    throw errors.reference(`VN Payroll Rule ${payrollRuleName} formula_json must be valid JSON`);
-  }
-  if (!formula || typeof formula !== "object" || Array.isArray(formula)) {
-    throw errors.reference(`VN Payroll Rule ${payrollRuleName} formula_json must be a JSON object`);
-  }
-  const formulaHash = await sha256(JSON.stringify(formula));
 
   const baseSalaryMinor = toScaledInt(assignment.data.base_salary as string | number, currencyScale, "Salary Structure Assignment base_salary");
   if (baseSalaryMinor <= 0) throw errors.reference("Salary Structure Assignment base_salary must be positive");
@@ -138,6 +129,14 @@ export async function buildHrmSalarySlipInputs(
 
   const earnings: SalarySlipComponentRow[] = [];
   const deductions: SalarySlipComponentRow[] = [];
+  const ruleComponents: Array<{
+    index: number;
+    componentName: string;
+    componentType: string;
+    outputKey: string;
+    account: string;
+    costCenter?: string;
+  }> = [];
   for (const [index, rawValue] of rawComponents.entries()) {
     if (!rawValue || typeof rawValue !== "object" || Array.isArray(rawValue)) {
       throw errors.reference(`Salary Structure component row ${index + 1} is invalid`);
@@ -150,6 +149,15 @@ export async function buildHrmSalarySlipInputs(
       throw errors.reference(`Salary Component ${componentName} has invalid type`);
     }
     const amountType = requiredText(raw.amount_type, `Salary Structure component ${index + 1} amount_type`);
+    if (amountType === "Payroll Rule Output") {
+      const outputKey = requiredText(raw.rule_output_key, `Salary Structure component ${index + 1} rule_output_key`);
+      const account = text(raw.account) || requiredText(component.account, `Salary Component ${componentName} account`);
+      const costCenter = text(raw.cost_center)
+        || text(assignment.data.payroll_cost_center)
+        || text(structure.data.default_cost_center);
+      ruleComponents.push({ index, componentName, componentType, outputKey, account, ...(costCenter ? { costCenter } : {}) });
+      continue;
+    }
     let amountMinor: number;
     if (amountType === "Fixed") {
       amountMinor = toScaledInt(raw.amount as string | number, currencyScale, `${componentName} amount`);
@@ -204,6 +212,36 @@ export async function buildHrmSalarySlipInputs(
     (componentType === "Earning" ? earnings : deductions).push(row);
   }
 
+  const grossBeforeRuleMinor = earnings.reduce((sum, row) => safeAmountAdd(sum, row.amount_minor ?? 0), 0);
+  const deductionsBeforeRuleMinor = deductions.reduce((sum, row) => safeAmountAdd(sum, row.amount_minor ?? 0), 0);
+  const statutory = evaluatePayrollRuleFormula(formulaJson, {
+    currency,
+    currencyScale,
+    baseSalaryMinor,
+    grossEarningsMinor: grossBeforeRuleMinor,
+    preRuleDeductionsMinor: deductionsBeforeRuleMinor,
+    workingDays: workDates.length,
+    paymentHalfUnits: paymentUnits,
+    statutoryInputs: payrollRuleInputRowsToObject(assignment.data.statutory_inputs),
+  });
+  const formulaHash = await sha256(statutory.canonicalFormulaJson);
+  for (const ruleComponent of ruleComponents) {
+    const amountMinor = statutory.outputs[ruleComponent.outputKey];
+    if (amountMinor === undefined) throw errors.reference(`Payroll rule output ${ruleComponent.outputKey} does not exist`);
+    if (!Number.isSafeInteger(amountMinor) || amountMinor < 0) {
+      throw errors.reference(`Payroll rule output ${ruleComponent.outputKey} must be a non-negative minor-unit integer`);
+    }
+    const row: SalarySlipComponentRow = {
+      row_id: `RULE-${ruleComponent.index + 1}`,
+      salary_component: ruleComponent.componentName,
+      amount: fromScaledInt(amountMinor, currencyScale),
+      amount_minor: amountMinor,
+      account: ruleComponent.account,
+      ...(ruleComponent.costCenter ? { cost_center: ruleComponent.costCenter } : {}),
+    };
+    (ruleComponent.componentType === "Earning" ? earnings : deductions).push(row);
+  }
+
   if (earnings.length === 0) throw errors.reference("Salary Structure produced no earnings");
   const payrollPayableAccount = text(assignment.data.payable_account)
     || requiredText(structure.data.payroll_payable_account, "Salary Structure payroll payable account");
@@ -225,7 +263,10 @@ export async function buildHrmSalarySlipInputs(
       source_url: sourceUrl,
       approved_by: approvedBy,
       approved_at: approvedAt,
+      formula_schema_version: statutory.schemaVersion,
       formula_sha256: formulaHash,
+      statutory_inputs: statutory.inputs,
+      statutory_outputs_minor: statutory.outputs,
     },
     holiday_list: { name: holidayList.name, version: holidayList.version },
     attendance: attendanceDocs.map((entry) => ({ name: entry.name, version: entry.version })).sort(byName),
@@ -335,6 +376,12 @@ function enumerateDates(fromDate: string, toDate: string): string[] {
 
 function isWorkingDay(dateValue: string, weeklyOff: Set<number>, holidays: Set<string>): boolean {
   return !weeklyOff.has(new Date(`${dateValue}T00:00:00Z`).getUTCDay()) && !holidays.has(dateValue);
+}
+
+function safeAmountAdd(left: number, right: number): number {
+  const result = Number(BigInt(left) + BigInt(right));
+  if (!Number.isSafeInteger(result)) throw errors.validation("Payroll amount exceeds safe integer bounds");
+  return result;
 }
 
 function multiplyRatio(value: number, numerator: number, denominator: number): number {
