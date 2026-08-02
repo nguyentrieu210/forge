@@ -142,5 +142,5 @@
     }
   ],
   "hooks": [],
-  "client": {"brand":"blue","domain":"hr","home":{"route":"/app/Employee","doctype":"Employee"},"dimensions":["company","branch","department","fiscal_year"],"catalog_mode":"hybrid"}
+  "client": {"brand":"blue","domain":"hr","home":{"route":"/app/Employee","doctype":"Employee"},"dimensions":["company","branch","fiscal_year"],"catalog_mode":"hybrid"}
 }
