@@ -43,8 +43,15 @@ jobs:
       TARGET_SHA: ${{ github.event_name == 'push' && github.sha || inputs.target_sha || github.sha }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       VITE_FORGE_RELEASE_SHA: ${{ github.event_name == 'push' && github.sha || inputs.target_sha || github.sha }}
+    outputs:
+      target_sha: ${{ steps.release-target.outputs.target_sha }}
 
     steps:
+      - name: Record release target
+        id: release-target
+        shell: bash
+        run: echo "target_sha=$TARGET_SHA" >> "$GITHUB_OUTPUT"
+
       - name: Checkout merged UI revision
         uses: actions/checkout@v4
         with:
@@ -118,26 +125,6 @@ jobs:
       - name: Deploy Gateway
         run: pnpm --dir server exec wrangler deploy --config apps/gateway-worker/wrangler.jsonc
 
-      - name: Verify production convergence
-        run: >-
-          node server/scripts/sre-health-snapshot.mjs
-          --base https://alu.kairo.vn
-          --expected-release-sha "$TARGET_SHA"
-          --allow-remote
-          --confirm-host alu.kairo.vn
-          --attempts 10
-          --delay-ms 2000
-          --output "$RUNNER_TEMP/release-health.json"
-
-      - name: Upload UI release evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: alu-ui-release-evidence-${{ github.run_id }}
-          path: ${{ runner.temp }}/release-health.json
-          if-no-files-found: warn
-          retention-days: 30
-
   build-deploy:
     name: Build and deploy full ALU release
     if: github.event_name == 'workflow_dispatch' && inputs.scope == 'full' && inputs.confirm == 'alu'
@@ -151,8 +138,15 @@ jobs:
       DISPATCH_NAMESPACE: cloudforge-production
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       VITE_FORGE_RELEASE_SHA: ${{ inputs.target_sha || github.sha }}
+    outputs:
+      target_sha: ${{ steps.release-target.outputs.target_sha }}
 
     steps:
+      - name: Record release target
+        id: release-target
+        shell: bash
+        run: echo "target_sha=$TARGET_SHA" >> "$GITHUB_OUTPUT"
+
       - name: Checkout target
         uses: actions/checkout@v4
         with:
@@ -234,7 +228,38 @@ jobs:
       - name: Deploy Gateway
         run: pnpm --dir server exec wrangler deploy --config apps/gateway-worker/wrangler.jsonc
 
-      - name: Verify production convergence
+      - name: Upload backup verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alu-backup-verification-${{ github.run_id }}
+          path: ${{ runner.temp }}/alu-backup-verification.json
+          if-no-files-found: warn
+          retention-days: 30
+
+  verify-production:
+    name: Verify exact production convergence
+    needs: [ui-deploy, build-deploy]
+    if: ${{ always() && (needs.ui-deploy.result == 'success' || needs.build-deploy.result == 'success') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      TARGET_SHA: ${{ needs.ui-deploy.outputs.target_sha || needs.build-deploy.outputs.target_sha }}
+
+    steps:
+      - name: Checkout current SRE control plane
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Probe health, auth boundary and exact UI release marker
         run: >-
           node server/scripts/sre-health-snapshot.mjs
           --base https://alu.kairo.vn
@@ -245,13 +270,11 @@ jobs:
           --delay-ms 2000
           --output "$RUNNER_TEMP/release-health.json"
 
-      - name: Upload non-sensitive release evidence
+      - name: Upload release health evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: alu-release-evidence-${{ github.run_id }}
-          path: |
-            ${{ runner.temp }}/release-health.json
-            ${{ runner.temp }}/alu-backup-verification.json
+          name: alu-release-health-${{ github.run_id }}
+          path: ${{ runner.temp }}/release-health.json
           if-no-files-found: warn
           retention-days: 30
