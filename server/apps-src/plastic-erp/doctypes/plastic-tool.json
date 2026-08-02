@@ -21,7 +21,7 @@
     { "fieldname": "maintenance_cycle_count", "label": "Chu kỳ bảo trì theo shot", "fieldtype": "Int" },
     { "fieldname": "current_cycle_count", "label": "Số shot tích lũy", "fieldtype": "Int", "read_only": true },
     { "fieldname": "compatible_machines", "label": "Máy tương thích", "fieldtype": "Table", "options": "Plastic Tool Machine Rule" },
-    { "fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Available\nIn Use\nMaintenance\nTrial\nRetired", "default": "Available", "required": true, "in_list_view": true, "in_standard_filter": true }
+    { "fieldname": "operational_state", "label": "Trạng thái", "fieldtype": "Select", "options": "Available\nIn Use\nMaintenance\nTrial\nRetired", "default": "Available", "required": true, "in_list_view": true, "in_standard_filter": true }
   ],
   "permissions": [
     { "role": "Plastic Engineering User", "read": true, "write": true, "create": true, "print": true, "report": true, "export": true },
