@@ -11,9 +11,7 @@ test("stock aging preserves quantity and value across explicit buckets", () => {
     { qty_micros: 4 * Q, value_minor: 800, received_at: "2025-12-01T00:00:00.000Z" },
   ], "2026-08-03T00:00:00.000Z", [30, 90]);
   assert.deepEqual(buckets.map((x) => [x.min_age_days, x.max_age_days, x.qty_micros, x.value_minor]), [
-    [0, 30, 2 * Q, 200],
-    [31, 90, 3 * Q, 450],
-    [91, undefined, 4 * Q, 800],
+    [0, 30, 2 * Q, 200], [31, 90, 3 * Q, 450], [91, undefined, 4 * Q, 800],
   ]);
 });
 
@@ -24,7 +22,14 @@ test("ABC classification is deterministic and cutoffs are explicit", () => {
     { key: "B", annual_consumption_value_minor: 20 },
   ], 0.8, 0.95);
   assert.deepEqual(result.map((x) => [x.key, x.class]), [["A", "A"], ["B", "B"], ["C", "C"]]);
+  const dominant = classifyAbc([{ key: "BIG", annual_consumption_value_minor: 90 }, { key: "SMALL", annual_consumption_value_minor: 10 }], 0.8, 0.95);
+  assert.equal(dominant[0].class, "A");
   assert.throws(() => classifyAbc([], 0.95, 0.8), /ABC cutoffs/);
+});
+
+test("zero-consumption items are C rather than pretending to be high-value A", () => {
+  const result = classifyAbc([{ key: "A", annual_consumption_value_minor: 0 }, { key: "B", annual_consumption_value_minor: 0 }], 0.8, 0.95);
+  assert.deepEqual(result.map((x) => x.class), ["C", "C"]);
 });
 
 test("slow and dead stock classification honors configured thresholds", () => {
