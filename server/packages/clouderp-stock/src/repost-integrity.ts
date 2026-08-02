@@ -1,5 +1,8 @@
+import type { JsonObject } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
+import type { ControllerContext } from "../../document-kernel/src/index.js";
 import { RepostItemValuationController } from "./controllers.js";
+import { requireLeafWarehouse } from "./warehouse-scope.js";
 
 type RepostContext = Parameters<RepostItemValuationController["normalize"]>[0];
 type RepostData = Awaited<ReturnType<RepostItemValuationController["normalize"]>>;
@@ -31,23 +34,11 @@ export class RepostItemValuationIntegrityController extends RepostItemValuationC
     }
 
     if (input.warehouse) {
-      const warehouse = await context.reader.getMasterRecordData(
-        context.command.tenant_id,
-        "Warehouse",
+      await requireLeafWarehouse(
+        context as unknown as ControllerContext<JsonObject>,
         input.warehouse,
+        input.company,
       );
-      if (warehouse) {
-        if (warehouse.is_group === true || warehouse.is_group === 1) {
-          throw errors.validation(`Warehouse ${input.warehouse} is a group and cannot receive stock valuation postings`);
-        }
-        const warehouseCompany = text(warehouse.company);
-        const requestedCompany = text(input.company);
-        if (warehouseCompany && requestedCompany && warehouseCompany !== requestedCompany) {
-          throw errors.validation(
-            `Warehouse ${input.warehouse} belongs to ${warehouseCompany}, not valuation company ${requestedCompany}`,
-          );
-        }
-      }
     }
 
     return super.normalize(context);
