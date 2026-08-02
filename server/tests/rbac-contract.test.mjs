@@ -181,6 +181,7 @@ function routeFixture() {
     tenantId: "tenant-a",
     actor: ADMIN,
     traceId: "trace-rbac",
+    authenticatedAt: 1785456000,
     now: () => "2026-07-31T00:00:00.000Z",
     users: {
       ...userStore(),
