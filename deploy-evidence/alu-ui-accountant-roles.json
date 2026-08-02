@@ -1,0 +1,13 @@
+{
+  "deployedSha": "b9f4bca850c8dcc2d8ee219cba7a24227df7bd14",
+  "origin": "https://alu.kairo.vn",
+  "scope": "gateway-ui",
+  "roles": [
+    "Kế toán",
+    "Kế toán tổng hợp"
+  ],
+  "warehouseCashTab": true,
+  "releaseSha": "b9f4bca850c8dcc2d8ee219cba7a24227df7bd14",
+  "bundleHash": "2f9425f3d743d454",
+  "completedAt": "2026-08-02T21:24:15.807Z"
+}
