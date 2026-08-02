@@ -1,0 +1,37 @@
+{
+  "name": "Tax Ruleset",
+  "module": "Accounts",
+  "is_submittable": true,
+  "autoname": "TAX-RULE-.YYYY.-#####",
+  "title_field": "rule_name",
+  "sort_field": "effective_from",
+  "sort_order": "DESC",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "rule_name", "label": "Tên ruleset", "fieldtype": "Data", "required": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "company", "label": "Công ty (để trống = dùng chung)", "fieldtype": "Link", "options": "Company", "in_standard_filter": true },
+    { "fieldname": "rule_type", "label": "Miền thuế", "fieldtype": "Select", "options": "VAT\nCIT\nPIT\nInsurance\nE-Invoice\nXML", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "scope_key", "label": "Khóa phạm vi", "fieldtype": "Data", "required": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "legal_rule", "label": "Căn cứ pháp lý", "fieldtype": "Link", "options": "VN Legal Rule", "required": true },
+    { "fieldname": "scope_json", "label": "Phạm vi áp dụng", "fieldtype": "Code", "required": true, "default": "{}" },
+    { "fieldname": "expression_json", "label": "Công thức/DSL", "fieldtype": "Code", "required": true, "default": "{}" },
+    { "fieldname": "fixtures_json", "label": "Bộ test vàng", "fieldtype": "Code", "required": true, "default": "[]" },
+    { "fieldname": "ruleset_hash", "label": "Hash ruleset", "fieldtype": "Data", "required": true, "read_only": true },
+    { "fieldname": "effective_from", "label": "Hiệu lực từ", "fieldtype": "Date", "required": true, "in_list_view": true },
+    { "fieldname": "effective_to", "label": "Hiệu lực đến", "fieldtype": "Date" },
+    { "fieldname": "test_passed", "label": "Kiểm thử đạt", "fieldtype": "Check", "required": true, "default": 0, "read_only": true, "in_list_view": true },
+    { "fieldname": "test_evidence_json", "label": "Bằng chứng kiểm thử", "fieldtype": "Code", "required": true, "default": "{}", "read_only": true },
+    { "fieldname": "approved_by", "label": "Người phê duyệt", "fieldtype": "Data", "read_only": true },
+    { "fieldname": "approved_at", "label": "Thời điểm phê duyệt", "fieldtype": "Datetime", "read_only": true },
+    { "fieldname": "workflow_state", "label": "Trạng thái", "fieldtype": "Data", "read_only": true, "in_list_view": true, "in_standard_filter": true }
+  ],
+  "permissions": [
+    { "role": "Accounts User", "read": true, "report": true },
+    { "role": "Tax Specialist", "read": true, "write": true, "create": true, "report": true, "export": true },
+    { "role": "Chief Accountant", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true },
+    { "role": "Accounting Auditor", "read": true, "report": true, "export": true },
+    { "role": "Accounts Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}
