@@ -1,0 +1,41 @@
+{
+  "name": "E-Invoice Document",
+  "module": "Accounts",
+  "is_submittable": true,
+  "autoname": "HDĐT-.YYYY.-#####",
+  "title_field": "invoice_number",
+  "sort_field": "issued_at",
+  "sort_order": "DESC",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "sales_invoice", "label": "Hóa đơn bán hàng nguồn", "fieldtype": "Link", "options": "Sales Invoice", "required": true, "in_list_view": true },
+    { "fieldname": "provider", "label": "Nhà cung cấp HĐĐT", "fieldtype": "Data", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "invoice_form", "label": "Ký hiệu mẫu số", "fieldtype": "Data", "required": true },
+    { "fieldname": "invoice_series", "label": "Ký hiệu hóa đơn", "fieldtype": "Data", "required": true, "in_list_view": true },
+    { "fieldname": "invoice_number", "label": "Số hóa đơn", "fieldtype": "Data", "required": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "issued_at", "label": "Thời điểm lập", "fieldtype": "Datetime", "required": true, "in_list_view": true },
+    { "fieldname": "tax_authority_code", "label": "Mã cơ quan thuế", "fieldtype": "Data", "search_index": true },
+    { "fieldname": "lookup_code", "label": "Mã tra cứu", "fieldtype": "Data", "search_index": true },
+    { "fieldname": "xml_schema_version", "label": "Phiên bản schema XML", "fieldtype": "Data", "required": true },
+    { "fieldname": "xml_file", "label": "Tệp XML", "fieldtype": "Attach", "required": true },
+    { "fieldname": "xml_hash", "label": "SHA-256 XML", "fieldtype": "Data", "required": true, "read_only": true },
+    { "fieldname": "legal_rule", "label": "Căn cứ pháp lý", "fieldtype": "Link", "options": "VN Legal Rule", "required": true },
+    { "fieldname": "tax_ruleset", "label": "Ruleset hóa đơn/XML", "fieldtype": "Link", "options": "Tax Ruleset", "required": true },
+    { "fieldname": "correction_type", "label": "Loại xử lý", "fieldtype": "Select", "options": "Original\nAdjustment\nReplacement", "required": true, "default": "Original", "in_standard_filter": true },
+    { "fieldname": "original_einvoice", "label": "Hóa đơn gốc", "fieldtype": "Link", "options": "E-Invoice Document" },
+    { "fieldname": "provider_status", "label": "Trạng thái nhà cung cấp", "fieldtype": "Data", "required": true, "in_list_view": true },
+    { "fieldname": "authority_status", "label": "Trạng thái cơ quan thuế", "fieldtype": "Data", "in_list_view": true },
+    { "fieldname": "response_payload_hash", "label": "Hash phản hồi", "fieldtype": "Data", "read_only": true },
+    { "fieldname": "workflow_state", "label": "Trạng thái", "fieldtype": "Data", "read_only": true, "in_list_view": true, "in_standard_filter": true }
+  ],
+  "permissions": [
+    { "role": "Accounts User", "read": true, "report": true },
+    { "role": "Tax Specialist", "read": true, "write": true, "create": true, "report": true, "export": true },
+    { "role": "Chief Accountant", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true },
+    { "role": "Accounting Auditor", "read": true, "report": true, "export": true },
+    { "role": "Accounts Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}
