@@ -1,0 +1,118 @@
+name: One-time ALU Accountant Role UI Deploy
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/one-time-alu-ui-accountant-roles.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: alu-ui-accountant-role-hotfix
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    env:
+      TARGET_SHA: ${{ github.sha }}
+      BASE_URL: https://alu.kairo.vn
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      VITE_FORGE_RELEASE_SHA: ${{ github.sha }}
+
+    steps:
+      - name: Checkout exact UI release
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Verify release inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          grep -q '"Kế toán tổng hợp"' client/apps/runtime/src/experiences/AlumdoorOperationsCenter.tsx
+          grep -q '"Kế toán"' client/apps/runtime/src/experiences/AlumdoorOperationsCenter.tsx
+      - run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Build current Gateway UI
+        run: pnpm --filter metaforge run build
+      - name: Stage exact UI bundle
+        run: |
+          set -euo pipefail
+          node server/scripts/stage-client-bundle.mjs
+          node server/scripts/stage-client-bundle.mjs --check
+      - name: Dry-run Gateway
+        run: pnpm --dir server exec wrangler deploy --config apps/gateway-worker/wrangler.jsonc --dry-run --outdir "$RUNNER_TEMP/gateway-ui-dry-run"
+      - name: Deploy Gateway production
+        run: pnpm --dir server exec wrangler deploy --config apps/gateway-worker/wrangler.jsonc
+      - name: Verify exact production UI release
+        shell: bash
+        run: |
+          set -euo pipefail
+          health=0
+          root=0
+          release_ok=0
+          for attempt in $(seq 1 18); do
+            health="$(curl --silent --show-error --output /tmp/ui-health.json --write-out '%{http_code}' -H 'cache-control: no-cache' "$BASE_URL/health?ui=$TARGET_SHA-$attempt" || true)"
+            root="$(curl --silent --show-error --output /tmp/ui-root.html --write-out '%{http_code}' -H 'cache-control: no-cache' "$BASE_URL/?ui=$TARGET_SHA-$attempt" || true)"
+            curl --silent --show-error -H 'cache-control: no-cache' "$BASE_URL/release.json?ui=$TARGET_SHA-$attempt" > /tmp/ui-release.json || true
+            if [ "$health" = '200' ] && [ "$root" = '200' ] && node -e 'const fs=require("fs");let x={};try{x=JSON.parse(fs.readFileSync("/tmp/ui-release.json","utf8"))}catch{};process.exit(x.releaseSha===process.env.TARGET_SHA && x.bundleHash ? 0 : 1)'; then
+              release_ok=1
+              break
+            fi
+            sleep 5
+          done
+          test "$health" = '200'
+          test "$root" = '200'
+          test "$release_ok" = '1'
+          guest_boot="$(curl --silent --show-error --output /tmp/ui-guest-boot.json --write-out '%{http_code}' "$BASE_URL/api/method/metaforge.api.get_boot" || true)"
+          test "$guest_boot" = '403'
+      - name: Record UI deploy evidence
+        uses: actions/github-script@v7
+        env:
+          DEPLOYED_SHA: ${{ env.TARGET_SHA }}
+        with:
+          script: |
+            const fs = require('fs');
+            const release = JSON.parse(fs.readFileSync('/tmp/ui-release.json', 'utf8'));
+            const path = 'deploy-evidence/alu-ui-accountant-roles.json';
+            const payload = {
+              deployedSha: process.env.DEPLOYED_SHA,
+              origin: 'https://alu.kairo.vn',
+              scope: 'gateway-ui',
+              roles: ['Kế toán', 'Kế toán tổng hợp'],
+              warehouseCashTab: true,
+              releaseSha: release.releaseSha,
+              bundleHash: release.bundleHash,
+              completedAt: new Date().toISOString(),
+            };
+            let sha;
+            try {
+              const current = await github.rest.repos.getContent({ owner: context.repo.owner, repo: context.repo.repo, path, ref: 'main' });
+              if (!Array.isArray(current.data)) sha = current.data.sha;
+            } catch (error) {
+              if (error.status !== 404) throw error;
+            }
+            await github.rest.repos.createOrUpdateFileContents({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              path,
+              message: `ops: record ALU accountant-role UI deploy ${process.env.DEPLOYED_SHA.slice(0,12)}`,
+              content: Buffer.from(JSON.stringify(payload, null, 2) + '\n').toString('base64'),
+              branch: 'main',
+              ...(sha ? { sha } : {}),
+            });
