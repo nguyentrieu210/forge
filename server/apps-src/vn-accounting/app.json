@@ -20,10 +20,9 @@
       "label": "Tính thử ruleset thuế",
       "icon": "calculator",
       "group": "Thuế & tuân thủ",
-      "description": "Chạy ruleset đã duyệt bằng fixed-point minor units. Không ghi sổ hay nộp tờ khai.",
+      "description": "Chạy ruleset đã duyệt bằng fixed-point minor units. Công ty được lấy từ ruleset, không nhập lại. Không ghi sổ hay nộp tờ khai.",
       "fields": [
         { "fieldname": "ruleset", "label": "Ruleset", "fieldtype": "Link", "options": "VN Tax Ruleset", "required": true },
-        { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true },
         { "fieldname": "effective_at", "label": "Ngày áp dụng", "fieldtype": "Date", "required": true },
         { "fieldname": "input_json", "label": "Đầu vào minor units (JSON)", "fieldtype": "Code", "required": true, "default": "{}" }
       ],
