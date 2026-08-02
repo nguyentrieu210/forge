@@ -11,6 +11,7 @@ import { mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { performance } from "node:perf_hooks";
+import { assertPitrRequest, findString, requireBookmark } from "./lib/pitr-guard.mjs";
 import { fail, serverRoot, wrangler } from "./wrangler-cli.mjs";
 import { findTenantDatabaseId } from "./tenant-wrangler.mjs";
 
@@ -28,13 +29,19 @@ const reason = argOf("reason")?.trim();
 const backupDirArg = argOf("backup-dir")?.trim();
 const outputArg = argOf("output")?.trim();
 
-if (!tenant || !/^[a-z][a-z0-9-]*$/.test(tenant)) fail("--tenant <id> is required");
-if (Boolean(timestamp) === Boolean(bookmark)) fail("provide exactly one of --timestamp or --bookmark");
-if (timestamp) assertTimestamp(timestamp);
-if (bookmark && !/^[0-9A-Za-z-]{16,256}$/.test(bookmark)) fail("--bookmark has an unsafe or implausible format");
-if (execute && confirm !== tenant) fail(`refusing destructive PITR: add --confirm ${tenant}`);
-if (execute && !reason) fail("refusing destructive PITR without --reason <text>");
-if (execute && !backupDirArg) fail("refusing destructive PITR without --backup-dir <secure directory>");
+try {
+  assertPitrRequest({
+    tenant,
+    timestamp,
+    bookmark,
+    execute,
+    confirm,
+    reason,
+    backupDir: backupDirArg,
+  });
+} catch (error) {
+  fail(error instanceof Error ? error.message : String(error));
+}
 
 const databaseName = `cloudforge-${tenant}`;
 const databaseId = findTenantDatabaseId(tenant, wrangler);
@@ -47,11 +54,21 @@ if (version !== "production") {
 }
 
 const currentInfo = parseJson(wrangler(["d1", "time-travel", "info", databaseName, "--json"]));
-const currentBookmark = requireBookmark(currentInfo, "current");
+let currentBookmark;
+try {
+  currentBookmark = requireBookmark(currentInfo, "current");
+} catch (error) {
+  fail(error instanceof Error ? error.message : String(error));
+}
 const targetInfo = bookmark
   ? { bookmark }
   : parseJson(wrangler(["d1", "time-travel", "info", databaseName, "--timestamp", timestamp, "--json"]));
-const targetBookmark = requireBookmark(targetInfo, "target");
+let targetBookmark;
+try {
+  targetBookmark = requireBookmark(targetInfo, "target");
+} catch (error) {
+  fail(error instanceof Error ? error.message : String(error));
+}
 
 const baseEvidence = {
   format: "forge-d1-pitr/v1",
@@ -98,15 +115,18 @@ runNode("verify-tenant-backup.mjs", [
 ]);
 
 const startedAt = performance.now();
-// Keep Wrangler's provider confirmation in addition to Forge's explicit confirm/reason.
-// JSON output is used so success is checked from provider fields instead of CLI prose.
 const restoreResponse = parseJson(wrangler([
   "d1", "time-travel", "restore", databaseName,
   "--bookmark", targetBookmark,
   "--json",
 ], { input: "y\n" }));
 const restoreDurationMs = Math.round(performance.now() - startedAt);
-const providerBookmark = requireBookmark(restoreResponse, "restore response");
+let providerBookmark;
+try {
+  providerBookmark = requireBookmark(restoreResponse, "restore response");
+} catch (error) {
+  fail(error instanceof Error ? error.message : String(error));
+}
 const providerPreviousBookmark = findString(restoreResponse, "previous_bookmark");
 if (providerBookmark !== targetBookmark) {
   fail(`PITR provider restored ${providerBookmark}, expected target ${targetBookmark}`);
@@ -116,7 +136,12 @@ if (providerPreviousBookmark && providerPreviousBookmark !== currentBookmark) {
 }
 
 const afterInfo = parseJson(wrangler(["d1", "time-travel", "info", databaseName, "--json"]));
-const currentBookmarkAfter = requireBookmark(afterInfo, "post-restore");
+let currentBookmarkAfter;
+try {
+  currentBookmarkAfter = requireBookmark(afterInfo, "post-restore");
+} catch (error) {
+  fail(error instanceof Error ? error.message : String(error));
+}
 if (currentBookmarkAfter !== targetBookmark) {
   fail(`PITR provider returned but current bookmark ${currentBookmarkAfter} != target ${targetBookmark}`);
 }
@@ -150,20 +175,6 @@ function runNode(script, scriptArgs) {
   if (result.status !== 0) fail(`${script} exited ${result.status ?? "unknown"}`);
 }
 
-function assertTimestamp(value) {
-  if (/^\d{10,13}$/.test(value)) {
-    const numeric = Number(value);
-    const millis = value.length === 13 ? numeric : numeric * 1000;
-    if (!Number.isFinite(millis) || millis <= 0 || millis > Date.now()) fail("--timestamp must be a past Unix timestamp");
-    return;
-  }
-  if (!/(?:Z|[+-]\d{2}:\d{2})$/i.test(value)) {
-    fail("RFC3339 --timestamp must include an explicit timezone (Z or +/-HH:MM)");
-  }
-  const millis = Date.parse(value);
-  if (!Number.isFinite(millis) || millis > Date.now()) fail("--timestamp must be a valid past RFC3339 timestamp");
-}
-
 function parseJson(text) {
   const source = String(text ?? "").trim();
   const starts = [source.indexOf("{"), source.indexOf("[")].filter((index) => index >= 0);
@@ -174,29 +185,6 @@ function parseJson(text) {
   } catch (error) {
     fail(`could not parse Wrangler JSON: ${error.message}`);
   }
-}
-
-function findString(value, key) {
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      const found = findString(item, key);
-      if (found) return found;
-    }
-    return null;
-  }
-  if (!value || typeof value !== "object") return null;
-  if (typeof value[key] === "string") return value[key];
-  for (const item of Object.values(value)) {
-    const found = findString(item, key);
-    if (found) return found;
-  }
-  return null;
-}
-
-function requireBookmark(value, label) {
-  const found = findString(value, "bookmark");
-  if (!found) fail(`${label} Time Travel response has no bookmark`);
-  return found;
 }
 
 function writeEvidence(file, value) {
