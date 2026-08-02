@@ -17,7 +17,10 @@ import type { Actor, JsonObject } from "../../../packages/contracts/src/index.js
 import type { StockEntryData } from "../../../packages/clouderp-core/src/index.js";
 import { errorResponse, errors, randomId } from "../../../packages/core/src/index.js";
 import { D1MutationStore } from "../../../packages/document-kernel/src/index.js";
-import type { ProductionPlanData, VersionedBomData, WorkOrderData } from "../../../packages/clouderp-erpnext/src/index.js";
+import type {
+  CalibrationRecordData, CapaData, NonConformanceReportData, ProductionPlanData,
+  QualityPlanData, RootCauseAnalysisData, VersionedBomData, WorkOrderData,
+} from "../../../packages/clouderp-erpnext/src/index.js";
 import {
   D1DocumentAccessStore,
   D1MetadataStore,
@@ -49,6 +52,7 @@ import {
   isPhysicalStockFrappePath,
   routePhysicalStockApi,
 } from "./physical-stock-api.js";
+import { isQmsApiPath, isQmsFrappePath, routeQmsApi } from "./qms-api.js";
 import type { TenantEnv } from "./env.js";
 
 export * from "./index-core.js";
@@ -71,7 +75,8 @@ export default {
     const manufacturingBomBulk = isManufacturingBomBulkApiPath(url.pathname);
     const manufacturingMrp = isManufacturingMrpApiPath(url.pathname);
     const manufacturingGenealogy = isManufacturingGenealogyApiPath(url.pathname);
-    if (!physicalStock && !dailyLedger && !manufacturingBomBulk && !manufacturingMrp && !manufacturingGenealogy) {
+    const qms = isQmsApiPath(url.pathname);
+    if (!physicalStock && !dailyLedger && !manufacturingBomBulk && !manufacturingMrp && !manufacturingGenealogy && !qms) {
       return coreWorker.fetch(request, env);
     }
 
@@ -155,6 +160,23 @@ export default {
           listStockEntries: () => documents.listDocumentsByDoctype<StockEntryData>(tenantId, "Stock Entry"),
           getVoucherStockEntries: (name, version) => documents.getVoucherStockEntries(tenantId, "Stock Entry", name, version),
         });
+      } else if (qms) {
+        const metadata = new D1MetadataStore(requestDb);
+        const access = new D1DocumentAccessStore(requestDb);
+        const permissions = new MetadataPermissionService(metadata, undefined, access);
+        const documents = new D1MutationStore(env.DB);
+        response = await routeQmsApi(request, url, {
+          tenantId,
+          actor: authentication.actor,
+          permissions,
+          traceId,
+          now: () => new Date().toISOString(),
+          loadQualityPlan: (name) => documents.getDocument<QualityPlanData>(tenantId, "Quality Plan", name),
+          listNcr: () => documents.listDocumentsByDoctype<NonConformanceReportData>(tenantId, "Non Conformance Report"),
+          listRca: () => documents.listDocumentsByDoctype<RootCauseAnalysisData>(tenantId, "Root Cause Analysis"),
+          listCapa: () => documents.listDocumentsByDoctype<CapaData>(tenantId, "CAPA"),
+          listCalibration: () => documents.listDocumentsByDoctype<CalibrationRecordData>(tenantId, "Calibration Record"),
+        });
       } else {
         response = await routeDailyLedgerApi(request, url, {
           db: requestDb,
@@ -176,6 +198,7 @@ export default {
         || isManufacturingBomBulkFrappePath(url.pathname)
         || isManufacturingMrpFrappePath(url.pathname)
         || isManufacturingGenealogyFrappePath(url.pathname)
+        || isQmsFrappePath(url.pathname)
         ? faultResponse(error, traceId)
         : errorResponse(error, traceId);
     }
@@ -205,7 +228,8 @@ async function authenticateInterceptedRoute(
     && !isDailyLedgerFrappePath(url.pathname)
     && !isManufacturingBomBulkFrappePath(url.pathname)
     && !isManufacturingMrpFrappePath(url.pathname)
-    && !isManufacturingGenealogyFrappePath(url.pathname)) {
+    && !isManufacturingGenealogyFrappePath(url.pathname)
+    && !isQmsFrappePath(url.pathname)) {
     return { actor: await authenticateTrustedIdentity(request, env, tenantId, traceId) };
   }
 
