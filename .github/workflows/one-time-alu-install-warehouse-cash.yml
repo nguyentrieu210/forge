@@ -1,4 +1,4 @@
-# Retry marker: capture app install diagnostics after install_hrm failure.
+# Retry marker: HRM Leave Type ownership fixed in PR #284; continue full Alumdoor sync.
 name: One-time ALU Warehouse Cash Install
 
 on:
