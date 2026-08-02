@@ -102,13 +102,16 @@ export class AggregateCoordinator extends DurableObject<TenantEnv> {
       || !["submit", "cancel"].includes(command.action)) {
       throw errors.validation("mutatePurchase accepts only submitted purchase allocation commands");
     }
-    const kernel = this.commandServices().kernel;
     let executor = PURCHASE_EXECUTORS.get(this);
     if (!executor) {
       executor = new PurchaseCommandSerialExecutor();
       PURCHASE_EXECUTORS.set(this, executor);
     }
-    return executor.execute(() => kernel.execute(command));
+    // Construct request-scoped D1 services only after this mutation reaches the
+    // front of the supplier queue. The retry wrapper invokes this callback again,
+    // so a revision retry also gets a fresh first-primary session and rereads the
+    // authoritative queue state instead of reusing a service created while waiting.
+    return executor.execute(() => this.commandServices().kernel.execute(command));
   }
 
   /**
