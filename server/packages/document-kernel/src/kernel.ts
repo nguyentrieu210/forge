@@ -1,4 +1,4 @@
-import type { JsonObject, MutationCommand, MutationReceipt } from "../../contracts/src/index.js";
+import type { JsonObject, MutationCommand, MutationPlan, MutationReceipt } from "../../contracts/src/index.js";
 import { commandPayloadHash, errors } from "../../core/src/index.js";
 import { assertBalancedGl } from "../../ledger/src/index.js";
 import { PermissionService } from "../../policy/src/index.js";
@@ -18,9 +18,18 @@ export class DocumentKernel {
     private readonly clock: () => string = () => new Date().toISOString(),
   ) {}
 
+  /**
+   * Build and validate the exact mutation plan without consuming idempotency state
+   * or writing the document/ledgers. Permission, lifecycle, optimistic versioning
+   * and controller business rules are identical to execute().
+   */
+  async preview<T extends JsonObject>(command: MutationCommand<T>): Promise<MutationPlan<T>> {
+    await this.assertPayloadHash(command);
+    return this.plan(command);
+  }
+
   async execute<T extends JsonObject>(command: MutationCommand<T>): Promise<MutationReceipt> {
-    const actualHash = await commandPayloadHash(command as unknown as Record<string, unknown>);
-    if (actualHash !== command.payload_hash) throw errors.validation("payload_hash does not match command payload");
+    await this.assertPayloadHash(command);
 
     const previousReceipt = await this.store.getReceipt(command.tenant_id, command.command_id);
     if (previousReceipt) {
@@ -30,6 +39,16 @@ export class DocumentKernel {
       return previousReceipt;
     }
 
+    const plan = await this.plan(command);
+    return this.store.execute(plan);
+  }
+
+  private async assertPayloadHash<T extends JsonObject>(command: MutationCommand<T>): Promise<void> {
+    const actualHash = await commandPayloadHash(command as unknown as Record<string, unknown>);
+    if (actualHash !== command.payload_hash) throw errors.validation("payload_hash does not match command payload");
+  }
+
+  private async plan<T extends JsonObject>(command: MutationCommand<T>): Promise<MutationPlan<T>> {
     const existing = await this.store.getDocument<T>(command.tenant_id, command.aggregate.doctype, command.aggregate.name);
     await this.permissions.assert({
       actor: command.actor,
@@ -61,6 +80,6 @@ export class DocumentKernel {
       throw errors.validation("Controller changed aggregate identity");
     }
     assertBalancedGl(plan.gl_entries);
-    return this.store.execute(plan);
+    return plan;
   }
 }
