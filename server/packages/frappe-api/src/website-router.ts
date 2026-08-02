@@ -14,6 +14,7 @@ export * from "./router.js";
 export const RECENT_SECURITY_AUTH_MAX_AGE_SECONDS = 15 * 60;
 const RECENT_SECURITY_AUTH_CLOCK_SKEW_SECONDS = 60;
 const METHOD_PREFIX = "/api/method/";
+const RESOURCE_PREFIX = "/api/resource/";
 const ADMIN_PASSWORD_METHOD = "frappe.core.doctype.user.user.update_password";
 
 /**
@@ -32,6 +33,15 @@ const RECENT_AUTH_IAM_METHODS = new Set([
   "metaforge.api.set_user_enabled",
 ]);
 
+/** Platform-shaping Frappe resources whose writes are equivalent to native admin writes. */
+const RECENT_AUTH_METADATA_RESOURCES = new Set([
+  "DocType",
+  "Custom Field",
+  "Property Setter",
+  "Workflow",
+  "Print Format",
+]);
+
 function isTenantAccessAdministrator(context: FrappeRouterContext): boolean {
   const { user_id: userId, roles } = context.actor;
   return userId === "Administrator" || roles.includes("Administrator") || roles.includes("System Manager");
@@ -44,6 +54,21 @@ export function requiresRecentSecurityAuthentication(
 ): boolean {
   if (RECENT_AUTH_IAM_METHODS.has(methodName)) return true;
   return methodName === ADMIN_PASSWORD_METHOD && Boolean(targetUser && targetUser !== actorUserId);
+}
+
+export function requiresRecentSecurityAuthenticationForResource(
+  httpMethod: string,
+  pathname: string,
+): boolean {
+  const method = httpMethod.toUpperCase();
+  if (!["POST", "PUT", "DELETE"].includes(method) || !pathname.startsWith(RESOURCE_PREFIX)) return false;
+  const remainder = pathname.slice(RESOURCE_PREFIX.length);
+  const encodedDoctype = remainder.split("/", 1)[0] ?? "";
+  if (!encodedDoctype) return false;
+  let doctype: string;
+  try { doctype = decodeURIComponent(encodedDoctype); }
+  catch { return false; }
+  return RECENT_AUTH_METADATA_RESOURCES.has(doctype);
 }
 
 /**
@@ -76,7 +101,14 @@ async function assertSecurityStepUp(
   url: URL,
   context: FrappeRouterContext,
 ): Promise<void> {
-  if (!isTenantAccessAdministrator(context) || !url.pathname.startsWith(METHOD_PREFIX)) return;
+  if (!isTenantAccessAdministrator(context)) return;
+
+  if (requiresRecentSecurityAuthenticationForResource(request.method, url.pathname)) {
+    assertRecentSecurityAuthentication(context.authenticatedAt, context.now());
+    return;
+  }
+
+  if (!url.pathname.startsWith(METHOD_PREFIX)) return;
   const methodName = url.pathname.slice(METHOD_PREFIX.length);
   let targetUser: string | undefined;
   if (methodName === ADMIN_PASSWORD_METHOD) {
@@ -94,9 +126,10 @@ async function assertSecurityStepUp(
  * Frappe façade focused on Frappe compatibility while website publishing remains a
  * bounded Forge capability.
  *
- * The same edge is also the narrowest place to enforce recent-auth for IAM mutation
- * methods before they enter the large compatibility router. The core router still owns
- * role checks and mutation semantics; this wrapper only adds the step-up invariant.
+ * The same edge is also the narrowest place to enforce recent-auth for IAM and metadata
+ * administration before requests enter the large compatibility router. The core router
+ * still owns role checks and mutation semantics; this wrapper only adds the step-up
+ * invariant.
  */
 export async function routeFrappeApi(
   request: Request,
