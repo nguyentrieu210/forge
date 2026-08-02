@@ -78,6 +78,15 @@ test("MRP explodes multi-level BOM and separates manufacture from purchase requi
   assert.equal(result.purchase_requirements.find((r) => r.item_code === "RM-2").sources[0].path.join(" > "), "FG > SUB > RM-2");
 });
 
+test("MRP treats *_micros as already scaled and does not scale them a second time", () => {
+  const boms = [bom("BOM-FG", "FG", 1, [row("A", "RM", 3)])];
+  const result = explodeProductionPlanMrp("PLAN-MICROS", plan([
+    { row_id: "P", item_code: "FG", bom_no: "BOM-FG", planned_qty: "999", planned_qty_micros: 2_000_000 },
+  ]), boms);
+  assert.equal(result.planned_outputs[0].planned_qty, "2.000000");
+  assert.equal(result.purchase_requirements[0].gross_qty, "6.000000");
+});
+
 test("MRP aggregates repeated leaf requirements across roots while retaining source count", () => {
   const boms = [
     bom("BOM-A", "FG-A", 1, [row("A", "RM", 2)]),
