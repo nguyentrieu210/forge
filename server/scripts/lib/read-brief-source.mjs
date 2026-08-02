@@ -122,6 +122,56 @@ function applyViewSidecar(brief, extension, source, briefSource) {
 }
 
 /**
+ * Cross-app dependencies belong in their own reviewable sidecar. This keeps an industry
+ * brief from copying schemas owned by Finance/Stock while still making install order and
+ * external DocType ownership explicit. The normal compiler/parser remain authoritative.
+ */
+function applyIntegrationSidecar(brief, extension, source, briefSource) {
+  assertSidecarObject(extension, source);
+  const unsupported = Object.keys(extension).filter((key) => !["version", "requires", "externalDocTypes"].includes(key) && !key.startsWith("//"));
+  if (unsupported.length) throw new Error(`${source}: chỉ nhận version, requires, externalDocTypes và khóa ghi chú //; không nhận ${unsupported.join(", ")}.`);
+  if (extension.requires === undefined && extension.externalDocTypes === undefined) throw new Error(`${source}: phải khai requires hoặc externalDocTypes.`);
+
+  if (brief.requires !== undefined && !Array.isArray(brief.requires)) throw new Error(`${briefSource}: requires hiện có phải là mảng trước khi ghép integration sidecar.`);
+  if (brief.externalDocTypes !== undefined && !Array.isArray(brief.externalDocTypes)) throw new Error(`${briefSource}: externalDocTypes hiện có phải là mảng trước khi ghép integration sidecar.`);
+
+  const requires = [...(brief.requires ?? [])];
+  const dependencyIds = new Set(requires.map((entry) => entry?.id).filter(Boolean));
+  if (extension.requires !== undefined) {
+    if (!Array.isArray(extension.requires) || extension.requires.length === 0) throw new Error(`${source}: requires phải là mảng không rỗng.`);
+    for (const dependency of extension.requires) {
+      if (!dependency || typeof dependency !== "object" || Array.isArray(dependency) || typeof dependency.id !== "string" || !dependency.id || typeof dependency.version !== "string" || !dependency.version) {
+        throw new Error(`${source}: mỗi requires phải có id và version.`);
+      }
+      if (dependencyIds.has(dependency.id)) throw new Error(`${source}: dependency trùng id: ${dependency.id}.`);
+      dependencyIds.add(dependency.id);
+      requires.push(dependency);
+    }
+  }
+
+  const externalDocTypes = [...(brief.externalDocTypes ?? [])];
+  const externalNames = new Set(externalDocTypes.map((entry) => entry?.name).filter(Boolean));
+  if (extension.externalDocTypes !== undefined) {
+    if (!Array.isArray(extension.externalDocTypes) || extension.externalDocTypes.length === 0) throw new Error(`${source}: externalDocTypes phải là mảng không rỗng.`);
+    for (const doctype of extension.externalDocTypes) {
+      if (!doctype || typeof doctype !== "object" || Array.isArray(doctype) || typeof doctype.name !== "string" || !doctype.name || typeof doctype.kind !== "string" || !doctype.kind || typeof doctype.app !== "string" || !doctype.app) {
+        throw new Error(`${source}: mỗi externalDocTypes phải có name, kind và app.`);
+      }
+      if (externalNames.has(doctype.name)) throw new Error(`${source}: external DocType trùng tên: ${doctype.name}.`);
+      externalNames.add(doctype.name);
+      externalDocTypes.push(doctype);
+    }
+  }
+
+  return {
+    ...brief,
+    ...(extension.version ? { version: extension.version } : {}),
+    ...(requires.length ? { requires } : {}),
+    ...(externalDocTypes.length ? { externalDocTypes } : {}),
+  };
+}
+
+/**
  * Large operational actions are allowed to live in a sibling file so the business brief
  * stays reviewable. The sidecar only appends actions; the normal brief schema/compiler and
  * server manifest parser still validate the merged result, so this is transport, not a
@@ -162,10 +212,14 @@ export async function readBriefSource(source) {
   const views = await readOptionalJson(viewsSource);
   if (views) brief = applyViewSidecar(brief, views, viewsSource, sourcePath);
 
-  // Action sidecar is applied last so its version represents the complete source package.
   const actionsSource = path.join(parsed.dir, `${parsed.name}.actions.json`);
   const actions = await readOptionalJson(actionsSource);
   if (actions) brief = applyActionSidecar(brief, actions, actionsSource, sourcePath);
+
+  // Integration sidecar is applied last so its version represents the complete source package.
+  const integrationsSource = path.join(parsed.dir, `${parsed.name}.integrations.json`);
+  const integrations = await readOptionalJson(integrationsSource);
+  if (integrations) brief = applyIntegrationSidecar(brief, integrations, integrationsSource, sourcePath);
 
   return brief;
 }
