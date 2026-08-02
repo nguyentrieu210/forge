@@ -17,6 +17,22 @@ on:
       - server/tests/hrm-*.test.mjs
       - server/package.json
       - .github/workflows/validate-hrm-wave1.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - server/apps-src/hrm/**
+      - server/packages/clouderp-erpnext/src/hrm-*.ts
+      - server/packages/clouderp-erpnext/src/registry.ts
+      - server/migrations/tenant/0043_hrm_statutory_payroll_integrity.sql
+      - server/migrations/tenant/0044_hrm_wave1_closure.sql
+      - server/migrations/tenant/0045_hrm_employee_self_service_shares.sql
+      - server/migrations/tenant/0046_hrm_hiring_cycle_integrity.sql
+      - server/migrations/tenant/0047_hrm_payslip_self_service_permission.sql
+      - server/scripts/test-hrm-*.py
+      - server/tests/hrm-*.test.mjs
+      - server/package.json
+      - .github/workflows/validate-hrm-wave1.yml
 
 permissions:
   contents: read
