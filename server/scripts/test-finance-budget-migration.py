@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SQLite regression for Finance Budget migrations 0052-0053."""
+"""SQLite regression for Finance Budget migrations 0052-0054."""
 
 import json
 import sqlite3
@@ -43,6 +43,7 @@ db.execute(
 for migration in (
     "0052_finance_budget_commitment.sql",
     "0053_finance_budget_submission_closure.sql",
+    "0054_finance_budget_permission_alignment.sql",
 ):
     db.executescript((root / "migrations/tenant" / migration).read_text(encoding="utf-8"))
 
@@ -88,6 +89,10 @@ for doctype in ("Finance Budget", "Finance Budget Revision", "Finance Budget Com
     meta = json.loads(row[0])
     assert meta["is_submittable"] is True
     assert meta["module"] == "Accounts"
+    if doctype == "Finance Budget Commitment":
+        purchase_manager = next(permission for permission in meta["permissions"] if permission["role"] == "Purchase Manager")
+        assert purchase_manager.get("submit") is True
+        assert purchase_manager.get("cancel") is False
 
 budget = {
     "company": "Kairo", "account": "642-KAIRO", "budget_against": "Cost Center", "cost_center": "OPS",
@@ -104,7 +109,6 @@ expect_rejected("FINANCE_BUDGET_OVERLAP", lambda: insert(
     "Finance Budget", "BUD-OVERLAP", {**budget, "start_date": "2026-06-01", "budget_amount_minor": 500_000, "budget_amount": "500000"}
 ))
 
-# Reserve 800k through the real draft -> submit path.
 reserve = {
     "budget": "BUD-001", "posting_date": "2026-08-03", "commitment_type": "Reserve", "amount_minor": 800_000,
     "amount": "800000", "source_doctype": "Purchase Order", "source_name": "PO-001",
@@ -113,7 +117,6 @@ insert("Finance Budget Commitment", "COM-001", reserve, docstatus=0)
 update_submit("Finance Budget Commitment", "COM-001", reserve)
 db.commit()
 
-# A revision cannot reduce effective budget below the 800k commitment.
 revision_bad = {
     "budget": "BUD-001", "posting_date": "2026-08-03", "delta_amount_minor": -300_000, "delta_amount": "-300000",
     "reason": "Reduce",
@@ -129,7 +132,6 @@ insert("Finance Budget Revision", "REV-OK", revision_good, docstatus=0)
 update_submit("Finance Budget Revision", "REV-OK", revision_good)
 db.commit()
 
-# Effective budget 1.2m, so another 500k reserve would exceed the cap (1.3m total).
 over = {**reserve, "amount_minor": 500_000, "amount": "500000"}
 insert("Finance Budget Commitment", "COM-OVER", over, docstatus=0)
 db.commit()
@@ -137,7 +139,6 @@ expect_rejected("FINANCE_BUDGET_COMMITMENT_EXCEEDED", lambda: update_submit(
     "Finance Budget Commitment", "COM-OVER", over
 ))
 
-# Cannot release more than reserved for a source.
 release_too_much = {**reserve, "commitment_type": "Release", "amount_minor": 900_000, "amount": "900000"}
 insert("Finance Budget Commitment", "COM-REL-BAD", release_too_much, docstatus=0)
 db.commit()
@@ -145,7 +146,6 @@ expect_rejected("FINANCE_BUDGET_RELEASE_EXCEEDS_SOURCE", lambda: update_submit(
     "Finance Budget Commitment", "COM-REL-BAD", release_too_much
 ))
 
-# Cross-company source is rejected before it can consume budget.
 cross_company = {**reserve, "source_name": "PO-OTHER", "amount_minor": 1, "amount": "1"}
 insert("Finance Budget Commitment", "COM-CROSS", cross_company, docstatus=0)
 db.commit()
@@ -153,16 +153,14 @@ expect_rejected("FINANCE_BUDGET_SOURCE_COMPANY_MISMATCH", lambda: update_submit(
     "Finance Budget Commitment", "COM-CROSS", cross_company
 ))
 
-# Valid release leaves 500k committed against 1.2m budget.
 release_ok = {**reserve, "commitment_type": "Release", "amount_minor": 300_000, "amount": "300000"}
 insert("Finance Budget Commitment", "COM-REL-OK", release_ok, docstatus=0)
 update_submit("Finance Budget Commitment", "COM-REL-OK", release_ok)
 db.commit()
 
-# Submitted artifacts are immutable except explicit docstatus 1 -> 2 cancel with unchanged payload.
 expect_rejected("FINANCE_BUDGET_IMMUTABLE", lambda: update_payload("Finance Budget", "BUD-001", {**budget, "budget_amount_minor": 2_000_000}))
 expect_rejected("FINANCE_BUDGET_REVISION_IMMUTABLE", lambda: update_payload("Finance Budget Revision", "REV-OK", {**revision_good, "reason": "changed"}))
 expect_rejected("FINANCE_BUDGET_COMMITMENT_IMMUTABLE", lambda: update_payload("Finance Budget Commitment", "COM-001", {**reserve, "amount_minor": 700_000}))
 
 assert db.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
-print("FINANCE_BUDGET_0052_0053_PASS")
+print("FINANCE_BUDGET_0052_0054_PASS")
