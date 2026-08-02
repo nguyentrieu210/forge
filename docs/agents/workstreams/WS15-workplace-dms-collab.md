@@ -23,7 +23,8 @@ Phủ lớp vận hành văn phòng thường bị ERP bỏ quên: task/meeting/
   - một user chỉ có một Open assignment trên cùng document;
   - partial unique index khóa race duplicate;
   - historical Cancelled/Closed assignment vẫn được giữ khi user sau đó bị disable;
-  - migration fail-closed nếu tenant đã có duplicate Open thay vì tự ý hủy dữ liệu.
+  - no-op UPDATE preflight ép toàn bộ active assignment/share cũ đi qua guard mới, nên ghost/disabled/duplicate live state làm migration fail-closed thay vì được grandfather;
+  - không tự ý hủy/chọn một duplicate để “sửa hộ” dữ liệu nghiệp vụ.
 - Upstream Frappe `assign_to.py` được dùng làm behavior evidence: duplicate Open bị chặn và assignee cần quyền đọc. Forge hiện đã đóng duplicate/identity; auto-share/read-access cho assignee vẫn là gap riêng được ghi bên dưới.
 
 ### 2. Notification authorization + preference
@@ -219,11 +220,11 @@ Authored regressions:
 
 Execution evidence:
 
-- isolated SQLite collaboration-integrity semantics for 0049: **PASS** (`WS15_COLLABORATION_INTEGRITY_ISOLATED_PASS`);
+- latest 0049 collaboration migration semantics, including legacy duplicate/ghost/share preflight: **ISOLATED SQLITE PASS** (`WS15_COLLABORATION_INTEGRITY_LATEST_ISOLATED_PASS`);
+- latest 0050-0052 workplace/DMS/CLM temporal/reference/owner/preference semantics: **ISOLATED SQLITE PASS** (`WS15_WORKPLACE_DOMAIN_0050_0052_ISOLATED_PASS`);
 - exact repository checkout: **NOT AVAILABLE**; shell `git ls-remote https://github.com/nguyentrieu210/Forge.git HEAD` failed `Could not resolve host: github.com`;
 - full `npm test` / TypeScript build / Worker tests: **NOT RUN**;
 - exact `pack-app apps-src/workplace --check`: **NOT RUN**;
-- exact 0050-0052 regression execution: **NOT RUN**;
 - GitHub development status checks: none observed on the WS15 head under the current build/deploy-oriented Actions policy.
 
 Missing checkout/CI is recorded as `NOT RUN`, not used as a reason to stop independent implementation.
