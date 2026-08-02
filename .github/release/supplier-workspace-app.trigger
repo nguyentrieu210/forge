@@ -1,0 +1,2 @@
+target_sha=6ab9d39756112038ac3dcaa9c7cfd427e4d44c4d
+purpose=deploy cloudforge-app-alumdoor supplier delivery workspace
