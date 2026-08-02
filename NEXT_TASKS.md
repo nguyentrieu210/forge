@@ -1,8 +1,17 @@
 # NEXT TASKS
 
-Ngày cập nhật: **2026-08-02**.
+Ngày cập nhật: **2026-08-03**.
 
 Đây là hàng đợi active. GitHub là nguồn sự thật cho exact `main`, PR và branch; trước khi làm phải đọc `RUNBOOK.md`, `CURRENT_STATUS.md`, `AI_HANDOFF.md`, `DELIVERY_POLICY.md`.
+
+## NOW — VN Accounting Period Integrity Hardening r7
+
+- Canonical branch: `fix/vn-accounting-period-integrity-20260803-r7`, clean-based on exact `main@6deccaeb72a4814b3e0d0264464fcaa87cfad747`.
+- `main` đã có HRM migrations `0039-0041`; accounting hardening phải dùng `0042_vn_accounting_period_hardening.sql`, tuyệt đối không transplant lại migration `0039` từ r6.
+- Regression script đã ghép accounting hardening vào acceptance hiện tại của `0035+0039+0040+0041` thay vì thay thế HRM coverage.
+- Còn thiếu trước PR/merge: chạy CRITICAL local gates trên checkout thật, tối thiểu migration acceptance script, Python syntax, relevant backend/accounting tests, typecheck/lint/build theo blast radius.
+- Nếu có failure phải fix trên r7, giữ tenant isolation, Hard/Soft close semantics, cancel + scope transition guard và migration backward compatibility.
+- Không production deploy hoặc production migration.
 
 ## NOW — fast UI deploy acceptance
 
