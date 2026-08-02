@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Acceptance checks for organization/HRMS/accounting migrations 0035 and 0039-0041."""
+"""Acceptance checks for organization/HRMS/accounting migrations 0035 and 0039-0042."""
 
 import json
 import sqlite3
@@ -39,6 +39,7 @@ db.executescript((root / "migrations/tenant/0035_organization_hrms_vn_accounting
 db.executescript((root / "migrations/tenant/0039_hrm_operational_integrity.sql").read_text(encoding="utf-8"))
 db.executescript((root / "migrations/tenant/0040_hrm_payroll_source_integrity.sql").read_text(encoding="utf-8"))
 db.executescript((root / "migrations/tenant/0041_hrm_payroll_rule_integrity.sql").read_text(encoding="utf-8"))
+db.executescript((root / "migrations/tenant/0042_vn_accounting_period_hardening.sql").read_text(encoding="utf-8"))
 
 
 def insert(doctype, name, docstatus, payload, tenant="demo"):
@@ -46,6 +47,20 @@ def insert(doctype, name, docstatus, payload, tenant="demo"):
         "INSERT INTO documents VALUES(?,?,?,?,?,?,?,?,?,?,?)",
         (tenant, f"{doctype}:{name}", doctype, name, "qa", docstatus, "Submitted" if docstatus == 1 else "Draft", 1,
          "2026-08-01T00:00:00Z", "2026-08-01T00:00:00Z", json.dumps(payload)),
+    )
+
+
+def update_status(doctype, name, docstatus, tenant="demo"):
+    db.execute(
+        "UPDATE documents SET docstatus=?, status=?, version=version+1 WHERE tenant_id=? AND doc_key=?",
+        (docstatus, "Cancelled" if docstatus == 2 else "Submitted", tenant, f"{doctype}:{name}"),
+    )
+
+
+def update_payload(doctype, name, payload, tenant="demo"):
+    db.execute(
+        "UPDATE documents SET payload_json=?, version=version+1 WHERE tenant_id=? AND doc_key=?",
+        (json.dumps(payload), tenant, f"{doctype}:{name}"),
     )
 
 
@@ -65,30 +80,104 @@ expect_rejected(lambda: insert("Employee", "NV-2", 0, {"company": "ALUMDOOR", "e
 insert("Attendance", "CC-1", 1, {"employee": "NV-1", "attendance_date": "2026-08-01"})
 expect_rejected(lambda: insert("Attendance", "CC-2", 1, {"employee": "NV-1", "attendance_date": "2026-08-01"}))
 
+# Accounting period hardening: insert, submit, cancel and scope transitions are guarded.
+insert("Journal Entry", "JV-JULY-POSTED", 1, {"company": "ALUMDOOR", "posting_at": "2026-07-15T08:00:00Z"})
 insert("VN Accounting Period", "KY-07", 1, {
-    "company": "ALUMDOOR", "start_date": "2026-07-01", "end_date": "2026-07-31", "close_state": "Hard Locked"
+    "company": "ALUMDOOR", "start_date": "2026-07-01", "end_date": "2026-07-31",
+    "close_state": "Hard Locked", "allow_approved_adjustments": 0,
 })
 expect_rejected(
     lambda: insert("Journal Entry", "JV-LOCKED", 1, {"company": "ALUMDOOR", "posting_at": "2026-07-31T08:00:00Z"}),
     "ACCOUNTING_PERIOD_HARD_LOCKED",
 )
+insert("Journal Entry", "JV-JULY-DRAFT", 0, {"company": "ALUMDOOR", "posting_at": "2026-07-20T08:00:00Z"})
+expect_rejected(lambda: update_status("Journal Entry", "JV-JULY-DRAFT", 1), "ACCOUNTING_PERIOD_HARD_LOCKED")
+expect_rejected(lambda: update_status("Journal Entry", "JV-JULY-POSTED", 2), "ACCOUNTING_PERIOD_HARD_LOCKED")
+expect_rejected(
+    lambda: update_payload("Journal Entry", "JV-JULY-POSTED", {"company": "ALUMDOOR", "posting_at": "2026-10-15T08:00:00Z"}),
+    "ACCOUNTING_PERIOD_HARD_LOCKED",
+)
+insert("Journal Entry", "JV-OCT-POSTED", 1, {"company": "ALUMDOOR", "posting_at": "2026-10-15T08:00:00Z"})
+expect_rejected(
+    lambda: update_payload("Journal Entry", "JV-OCT-POSTED", {"company": "ALUMDOOR", "posting_at": "2026-07-15T08:00:00Z"}),
+    "ACCOUNTING_PERIOD_HARD_LOCKED",
+)
 insert("Journal Entry", "JV-OPEN", 1, {"company": "ALUMDOOR", "posting_at": "2026-08-01T08:00:00Z"})
 
+for doctype, date_field in (
+    ("Purchase Receipt", "posting_at"),
+    ("Delivery Note", "posting_at"),
+    ("Warehouse Cash Voucher", "posting_date"),
+):
+    expect_rejected(
+        lambda doctype=doctype, date_field=date_field: insert(
+            doctype, f"{doctype}-LOCKED", 1, {"company": "ALUMDOOR", date_field: "2026-07-10"}
+        ),
+        "ACCOUNTING_PERIOD_HARD_LOCKED",
+    )
+
+# Tenant scope must not leak locks across tenants.
+insert("Journal Entry", "JV-OTHER-TENANT", 1, {
+    "company": "ALUMDOOR", "posting_at": "2026-07-10T08:00:00Z"
+}, tenant="tenant-b")
+
+# Period ranges are valid, tenant-scoped and non-overlapping by company/branch scope.
+expect_rejected(
+    lambda: insert("VN Accounting Period", "KY-07-OVERLAP", 1, {
+        "company": "ALUMDOOR", "branch": "HN", "start_date": "2026-07-15", "end_date": "2026-08-05",
+        "close_state": "Open",
+    }),
+    "ACCOUNTING_PERIOD_OVERLAP",
+)
+expect_rejected(
+    lambda: insert("VN Accounting Period", "KY-BAD-RANGE", 1, {
+        "company": "ALUMDOOR", "start_date": "2026-10-31", "end_date": "2026-10-01", "close_state": "Open",
+    }),
+    "ACCOUNTING_PERIOD_INVALID_RANGE",
+)
+
+insert("Journal Entry", "JV-AUG-POSTED", 1, {"company": "ALUMDOOR", "posting_at": "2026-08-03T08:00:00Z"})
 insert("VN Accounting Period", "KY-08", 1, {
-    "company": "ALUMDOOR", "start_date": "2026-08-01", "end_date": "2026-08-31", "close_state": "Soft Closed"
+    "company": "ALUMDOOR", "start_date": "2026-08-01", "end_date": "2026-08-31",
+    "close_state": "Soft Closed", "allow_approved_adjustments": 1,
 })
 expect_rejected(
     lambda: insert("Journal Entry", "JV-SOFT-BLOCKED", 1, {"company": "ALUMDOOR", "posting_at": "2026-08-02T08:00:00Z"}),
     "ACCOUNTING_PERIOD_SOFT_CLOSED",
 )
+expect_rejected(lambda: update_status("Journal Entry", "JV-AUG-POSTED", 2), "ACCOUNTING_PERIOD_SOFT_CLOSED")
 insert("Journal Entry", "JV-ADJUSTMENT", 1, {
     "company": "ALUMDOOR", "posting_at": "2026-08-02T08:00:00Z", "approved_adjustment": 1,
     "adjustment_reason": "Điều chỉnh phân bổ lương", "adjustment_approved_by": "chief.accountant@example.test",
     "source_payroll_entry": "PAYROLL-2026-08",
 })
+insert("VN Accounting Period", "KY-09", 1, {
+    "company": "ALUMDOOR", "start_date": "2026-09-01", "end_date": "2026-09-30",
+    "close_state": "Soft Closed", "allow_approved_adjustments": 0,
+})
+expect_rejected(
+    lambda: insert("Journal Entry", "JV-ADJUSTMENT-DISABLED", 1, {
+        "company": "ALUMDOOR", "posting_at": "2026-09-02T08:00:00Z", "approved_adjustment": 1,
+        "adjustment_reason": "Không được phép theo cấu hình kỳ", "adjustment_approved_by": "chief.accountant@example.test",
+    }),
+    "ACCOUNTING_PERIOD_SOFT_CLOSED",
+)
 expect_rejected(lambda: insert("Journal Entry", "JV-DUPLICATE", 1, {
-    "company": "ALUMDOOR", "posting_at": "2026-09-01T08:00:00Z", "source_payroll_entry": "PAYROLL-2026-08",
+    "company": "ALUMDOOR", "posting_at": "2026-10-01T08:00:00Z", "source_payroll_entry": "PAYROLL-2026-08",
 }))
+
+for branch in ("HN", "HCM"):
+    insert("VN Accounting Period", f"KY-{branch}-11", 1, {
+        "company": "ALUMDOOR", "branch": branch, "start_date": "2026-11-01", "end_date": "2026-11-30",
+        "close_state": "Open",
+    })
+expect_rejected(
+    lambda: update_payload("VN Accounting Period", "KY-HCM-11", {
+        "company": "ALUMDOOR", "branch": "HN", "start_date": "2026-11-01", "end_date": "2026-11-30",
+        "close_state": "Open",
+    }),
+    "ACCOUNTING_PERIOD_OVERLAP",
+)
 
 # HR interval integrity is tenant-scoped and race-safe.
 insert("Employment Contract", "HD-1", 1, {"employee": "NV-1", "start_date": "2026-01-01", "end_date": "2026-12-31"})
@@ -145,6 +234,7 @@ def insert_master(record_type, name, data, tenant="demo", disabled=0):
         (tenant, record_type, name, disabled, json.dumps(data), "2026-08-01T00:00:00Z"),
     )
 
+
 valid_rule = {
     "rule_code": "VN-2026-A",
     "effective_from": "2026-01-01",
@@ -195,4 +285,4 @@ expect_rejected(
     "HR_PAYROLL_RULE_IMMUTABLE",
 )
 
-print("ORGANIZATION_HRMS_VN_ACCOUNTING_MIGRATIONS_0035_0041_PASS")
+print("ORGANIZATION_HRMS_VN_ACCOUNTING_MIGRATIONS_0035_0042_PASS")
