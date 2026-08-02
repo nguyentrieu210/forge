@@ -57,9 +57,16 @@ BEGIN
   END;
 END;
 
--- Race-safe invariant. If a tenant already contains duplicate active assignments this
--- migration fails instead of silently cancelling user data; the duplicates must be
--- reconciled explicitly before rollout.
+-- Validate the ACTIVE state that predates this migration by routing a no-op write through
+-- the same update trigger. Closed/Cancelled history is deliberately untouched. If an old
+-- tenant has a ghost/disabled/duplicate Open assignment, rollout stops for explicit
+-- reconciliation instead of grandfathering invalid live state.
+UPDATE assignments
+SET assigned_to=assigned_to
+WHERE status='Open';
+
+-- Race-safe invariant after the preflight above. The index prevents two concurrent
+-- writers from both observing "no duplicate" and inserting an Open assignment.
 CREATE UNIQUE INDEX IF NOT EXISTS idx_assignments_one_open_per_user_document
 ON assignments(tenant_id,doctype,name,assigned_to)
 WHERE status='Open';
@@ -95,3 +102,9 @@ BEGIN
     ) THEN RAISE(ABORT,'SHARE_USER_NOT_ACTIVE_SYSTEM_USER')
   END;
 END;
+
+-- Shares are live access grants, not historical rows, so every pre-existing share is
+-- validated. No-op update keeps the grant unchanged while making invalid legacy targets
+-- fail migration explicitly.
+UPDATE document_shares
+SET user=user;
