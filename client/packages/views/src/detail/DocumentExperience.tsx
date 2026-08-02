@@ -88,13 +88,34 @@ export function DocumentExperience({
 
   return (
     <div
-      className="mf-document-experience flex h-full min-h-0 flex-col overflow-hidden bg-muted/20"
+      className="mf-document-experience relative flex h-full min-h-0 flex-col overflow-hidden bg-muted/20"
       data-archetype={presentation.archetype}
     >
       <style>{`
         .mf-document-experience .mf-form-header > div:first-child > div:first-child > div:first-child > span:first-child,
         .mf-document-experience .mf-form-header > div:first-child > div:first-child > div:last-child {
           display: none;
+        }
+
+        @media (min-width: 640px) {
+          .mf-document-experience .mf-form-header {
+            position: static;
+            border-bottom: 0;
+            background: transparent;
+            backdrop-filter: none;
+          }
+
+          .mf-document-experience .mf-form-header > div:first-child {
+            position: absolute;
+            top: 0.85rem;
+            right: 3.75rem;
+            z-index: 40;
+            min-height: 0;
+            width: auto;
+            padding: 0;
+            gap: 0.5rem;
+            background: transparent;
+          }
         }
       `}</style>
 
