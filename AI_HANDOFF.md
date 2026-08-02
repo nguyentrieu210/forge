@@ -8,10 +8,22 @@ Ngày cập nhật: **2026-08-02**.
 
 - Repository: `nguyentrieu210/forge`.
 - GitHub là nguồn sự thật cho default branch, exact HEAD, PR, CI, merge và release evidence.
-- Luôn đọc `RUNBOOK.md` → `CURRENT_STATUS.md` → `NEXT_TASKS.md` → file này.
+- Luôn đọc `RUNBOOK.md` → `CURRENT_STATUS.md` → `NEXT_TASKS.md` → file này → `DELIVERY_POLICY.md`.
 - Mọi branch/SHA dưới đây là checkpoint lịch sử, không phải lệnh checkout. Phải xác minh lại GitHub trước khi dùng.
 
 ## Checkpoint đã khóa
+
+### Plastic ERP P0-A — canonical architecture + validated executable head
+
+- Canonical open PR: `#200`, branch `feat/plastic-erp-foundation-v3-20260802`, base exact `main` `866fcbd909914f01600def9ce86e3ce2347bb763`.
+- Executable head `c212cc5e04956db08580bf4720fbde351bcfbcef` đã **6/6 required workflows PASS** trước closing docs.
+- P0-A là canonical first-party `apps-src/plastic-erp` foundation cho process/material/machine/tool/recipe/QC/capacity/costing metadata, roles và approval workflows.
+- Không tạo BOM riêng: `Plastic Recipe Policy` liên kết canonical `Bill of Materials`.
+- Không tạo stock ledger/costing ledger cạnh tranh. P0-B phải reconcile với canonical Work Order + submitted Stock Entry Manufacture và stock/lot lifecycle hiện có.
+- Machine/Tool mở rộng core Asset/Workstation/Location; QC mở rộng Quality Inspection/Batch. Plastic technology variation đi qua process profile/process type + domain policy, không fork core theo Injection/Extrusion/Blow/Film/Compounding.
+- Kernel `status` là reserved system field. Plastic Machine/Tool dùng `operational_state`; không nới kernel parser để cho business `status` đi qua.
+- `apps-src` canonicalizer tự sinh Meta v1 `kind`, `viewPolicy`, `valueSource`, `editMode`, `surface`, `serverEnforced`; regression pack/source phải tiếp tục khóa contract này.
+- PR `#193` là predecessor/superseded candidate; chỉ đóng sau khi #200 exact final documentation head xanh. Không merge #200 nếu user chưa yêu cầu rõ.
 
 ### Stock P0 acceptance — COMPLETE
 
@@ -67,9 +79,22 @@ Ngày cập nhật: **2026-08-02**.
 
 ## Task canonical kế tiếp
 
-`NEXT_TASKS.md` hiện ưu tiên **P1 Daily detailed ledger** sau khi stock P0 đã khép.
+1. Khép PR `#200`: revalidate **exact final documentation head 6/6 PASS**; sau đó có thể đóng #193 là superseded. Không merge #200 nếu user chưa yêu cầu.
+2. Sau khi P0-A được merge, Plastic ERP tiếp tục **P0-B Production Run + shop-floor** trên branch mới từ exact current `main`.
+3. P0-C QC lot gate, rồi capacity/OEE/operational costing và Plastic E2E.
+4. P1 Daily detailed ledger vẫn là high-risk parallel task, nhưng không trộn vào Plastic branch/PR.
 
-Hard rules cho P1 ledger:
+Hard rules cho Plastic P0-B:
+
+- Work Order/Stock Entry Manufacture/stock lot lifecycle hiện có là canonical source;
+- no second stock/costing ledger;
+- start/pause/resume/complete/reverse server-authoritative và idempotent;
+- machine/tool compatibility + exclusive-resource conflict server enforce;
+- tenant/company/branch scope ở every read/write/link;
+- posted/submitted history append-only hoặc reversal;
+- authenticated desktop/mobile acceptance + negative permission/session/CSRF path.
+
+Hard rules cho P1 ledger nếu chuyển ưu tiên:
 
 - không tạo source-of-truth cạnh tranh với stock/accounting ledger hiện hữu;
 - tenant-scope ở schema/query/API/export/cache;
@@ -78,8 +103,6 @@ Hard rules cho P1 ledger:
 - rerun idempotent, duplicate prevention bằng key/transaction phù hợp;
 - reconciliation phải truy ngược được source document/ledger;
 - migration phải xử lý existing data/backward compatibility, không destructive.
-
-Trước khi mở branch P1 phải kiểm GitHub xem có PR canonical nào đã bắt đầu đúng scope này hay chưa. Các PR song song như manufacturing costing/petty cash/Plastic ERP không được trộn vào P1 ledger chỉ vì cùng chạm finance/manufacturing.
 
 ## Production checkpoint lịch sử
 
@@ -98,11 +121,12 @@ Không được tuyên bố toàn bộ quy trình `25.7 QUY TRÌNH.docx` đã ho
 
 Các miền còn cần implementation/acceptance gồm:
 
-1. P1 Daily detailed ledger: snapshot/freeze/append-only adjustment/reconciliation.
-2. MetaForge UX V2: List Workspace V2 tích hợp Bulk, Matrix View, presentation authoring/canonical transport, document context/exception, operational workspace, Mobile V2, personalization/AI context.
-3. Bulk Transaction cho Stock Reconciliation/BOM và transaction-grid nhập nhôm nhiều mã.
-4. Warranty/defects/capacity/overtime.
-5. Authenticated E2E xuyên Sales → Production → Inventory → Delivery → Finance → Daily Ledger → Warranty.
+1. Plastic ERP P0-B/P0-C, capacity/OEE/costing sâu và authenticated E2E.
+2. P1 Daily detailed ledger: snapshot/freeze/append-only adjustment/reconciliation.
+3. MetaForge UX V2: List Workspace V2 tích hợp Bulk, Matrix View, presentation authoring/canonical transport, document context/exception, operational workspace, Mobile V2, personalization/AI context.
+4. Bulk Transaction cho Stock Reconciliation/BOM và transaction-grid nhập nhôm nhiều mã.
+5. Warranty/defects/capacity/overtime.
+6. Authenticated E2E xuyên Sales → Production → Inventory → Delivery → Finance → Daily Ledger → Warranty.
 
 ## Release boundary
 
