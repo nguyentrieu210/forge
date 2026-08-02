@@ -1,0 +1,23 @@
+{
+  "deployedSha": "f0216e79b96030e6b7b394386db5318460e26d2a",
+  "tenant": "alu",
+  "origin": "https://alu.kairo.vn",
+  "failedStep": "install_hrm",
+  "outcomes": {
+    "checkout": "success",
+    "credentials": "success",
+    "setup_pnpm": "success",
+    "setup_node": "success",
+    "dependencies": "success",
+    "build": "success",
+    "validate": "success",
+    "backup": "success",
+    "migrate": "success",
+    "deploy_worker": "success",
+    "install_hrm": "failure",
+    "install_vn_accounting": "skipped",
+    "health": "skipped",
+    "success_evidence": "skipped"
+  },
+  "failedAt": "2026-08-02T19:33:40.150Z"
+}
