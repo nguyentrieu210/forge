@@ -1,0 +1,104 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {
+  assertRecentSecurityAuthentication,
+  RECENT_SECURITY_AUTH_MAX_AGE_SECONDS,
+  requiresRecentSecurityAuthentication,
+  routeFrappeApi,
+} from "../dist/packages/frappe-api/src/index.js";
+
+const NOW_ISO = "2026-08-03T00:00:00.000Z";
+const NOW = Math.floor(Date.parse(NOW_ISO) / 1000);
+const ADMIN = { user_id: "admin@example.com", roles: ["System Manager"] };
+
+function edgeContext(authenticatedAt) {
+  return {
+    tenantId: "tenant-a",
+    actor: ADMIN,
+    traceId: "trace-recent-auth",
+    authenticatedAt,
+    now: () => NOW_ISO,
+  };
+}
+
+function methodRequest(method, body = {}) {
+  const url = new URL(`https://tenant.test/api/method/${method}`);
+  const request = new Request(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return { request, url };
+}
+
+test("recent security authentication accepts the configured window and rejects stale, absent and implausibly future timestamps", () => {
+  assert.doesNotThrow(() => assertRecentSecurityAuthentication(NOW, NOW_ISO));
+  assert.doesNotThrow(() => assertRecentSecurityAuthentication(
+    NOW - RECENT_SECURITY_AUTH_MAX_AGE_SECONDS,
+    NOW_ISO,
+  ));
+
+  assert.throws(
+    () => assertRecentSecurityAuthentication(NOW - RECENT_SECURITY_AUTH_MAX_AGE_SECONDS - 1, NOW_ISO),
+    /sign in again/i,
+  );
+  assert.throws(() => assertRecentSecurityAuthentication(undefined, NOW_ISO), /sign in again/i);
+  assert.throws(() => assertRecentSecurityAuthentication(NOW + 61, NOW_ISO), /sign in again/i);
+});
+
+test("the step-up contract covers tenant IAM mutations and only admin resets for the password endpoint", () => {
+  for (const method of [
+    "metaforge.api.add_user_permission",
+    "metaforge.api.remove_user_permission",
+    "metaforge.api.set_user_roles",
+    "metaforge.api.create_user",
+    "metaforge.api.set_user_enabled",
+  ]) {
+    assert.equal(requiresRecentSecurityAuthentication(method, ADMIN.user_id), true, method);
+  }
+  assert.equal(
+    requiresRecentSecurityAuthentication(
+      "frappe.core.doctype.user.user.update_password",
+      ADMIN.user_id,
+      "worker@example.com",
+    ),
+    true,
+  );
+  assert.equal(
+    requiresRecentSecurityAuthentication(
+      "frappe.core.doctype.user.user.update_password",
+      ADMIN.user_id,
+      ADMIN.user_id,
+    ),
+    false,
+  );
+  assert.equal(requiresRecentSecurityAuthentication("metaforge.api.list_users", ADMIN.user_id), false);
+});
+
+test("a stale administrator session is rejected at the API edge before an IAM mutation reaches the core router", async () => {
+  const { request, url } = methodRequest("metaforge.api.set_user_roles", {
+    user: "worker@example.com",
+    roles: ["Stock Manager"],
+  });
+  const response = await routeFrappeApi(
+    request,
+    url,
+    edgeContext(NOW - RECENT_SECURITY_AUTH_MAX_AGE_SECONDS - 1),
+  );
+  assert.equal(response.status, 401);
+  const body = await response.json();
+  assert.equal(body.exc_type, "AuthenticationError");
+  assert.match(body.message, /sign in again/i);
+});
+
+test("an administrator reset of another user's password also requires recent password authentication", async () => {
+  const { request, url } = methodRequest("frappe.core.doctype.user.user.update_password", {
+    user: "worker@example.com",
+    new_password: "replacement-password",
+  });
+  const response = await routeFrappeApi(request, url, edgeContext(undefined));
+  assert.equal(response.status, 401);
+  const body = await response.json();
+  assert.equal(body.exc_type, "AuthenticationError");
+  assert.match(body.message, /sign in again/i);
+});
