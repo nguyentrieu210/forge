@@ -1,4 +1,5 @@
 /** @jsxImportSource react */
+import { useState } from "react";
 import { Button } from "@metaforge/ui";
 import { useMetaForge } from "../container/provider.js";
 import type { ActionScreenProps } from "./ActionScreen.js";
@@ -17,6 +18,7 @@ export interface SupplierDashboard extends Row {
   payable: Row & { authoritative: boolean; source: string; received_value: number; invoice_total: number; received_not_invoiced_hint: number; total_outstanding: number; overdue_amount: number | null; advance_balance: number | null; net_exposure: number; note: string };
 }
 
+const SETTLEMENT_METHOD = "alumdoor.purchase.supplier_delivery_settlement";
 const text = (value: unknown) => String(value ?? "").trim();
 const num = (value: unknown) => { const parsed = Number(value); return Number.isFinite(parsed) ? parsed : 0; };
 function date(value: unknown): string { const raw = text(value); if (!raw) return "—"; const parsed = new Date(raw.length === 10 ? `${raw}T00:00:00` : raw.replace(" ", "T")); return Number.isNaN(parsed.getTime()) ? raw : parsed.toLocaleDateString("vi-VN"); }
@@ -27,8 +29,31 @@ function OpenDoc({ doctype, name, onOpen }: { doctype: string; name: string; onO
 function Stack({ a, b, c, strong }: { a: string; b?: string; c?: string; strong?: boolean }) { return <div className={`tabular-nums ${strong ? "font-semibold" : ""}`}><div>{a}</div>{b ? <div className="text-[11px] text-muted-foreground">{b}</div> : null}{c ? <div className="text-[11px] text-muted-foreground">{c}</div> : null}</div>; }
 
 export function DeliveryMaterialTable({ rows }: { rows: Row[] }) {
-  const { fmt } = useMetaForge(); if (!rows.length) return <Empty>Chưa có nghĩa vụ giao hàng.</Empty>;
-  return <div className="overflow-x-auto rounded-xl border"><table className="w-full min-w-[1300px] text-sm"><thead className="bg-muted/50 text-left text-xs text-muted-foreground"><tr><th className="px-3 py-2.5">Quy cách</th><th className="px-3 py-2.5 text-right">Đặt</th><th className="px-3 py-2.5 text-right">Nhận</th><th className="px-3 py-2.5 text-right">Còn phải giao</th><th className="px-3 py-2.5 text-right">Kg thực / lệch</th><th className="px-3 py-2.5 text-right">Chưa phân bổ</th><th className="px-3 py-2.5 text-right">Dung sai</th><th className="px-3 py-2.5">PO mở cũ nhất</th><th className="px-3 py-2.5">Trạng thái</th></tr></thead><tbody>{rows.map((row, index) => <tr key={`${text(row.queue_key)}-${index}`} className="border-t align-top"><td className="px-3 py-2.5 font-medium">{text(row.material)}</td><td className="px-3 py-2.5 text-right"><Stack a={`${fmt.number(num(row.ordered_bars))} cây`} b={`${fmt.number(num(row.ordered_meters))} m`} c={`${fmt.number(num(row.ordered_barem_weight_kg))} kg barem`} /></td><td className="px-3 py-2.5 text-right"><Stack a={`${fmt.number(num(row.received_bars))} cây`} b={`${fmt.number(num(row.received_meters))} m`} c={`${fmt.number(num(row.received_barem_weight_kg))} kg barem`} /></td><td className="px-3 py-2.5 text-right"><Stack strong a={`${fmt.number(num(row.remaining_bars))} cây`} b={`${fmt.number(num(row.remaining_meters))} m`} c={`${fmt.number(num(row.remaining_barem_weight_kg))} kg barem`} /></td><td className="px-3 py-2.5 text-right"><Stack a={row.actual_weight_kg == null ? "—" : `${fmt.number(num(row.actual_weight_kg))} kg`} b={row.weight_variance_kg == null ? undefined : `${num(row.weight_variance_kg) > 0 ? "+" : ""}${fmt.number(num(row.weight_variance_kg))} kg`} c={row.weight_variance_pct == null ? undefined : `${num(row.weight_variance_pct) > 0 ? "+" : ""}${fmt.number(num(row.weight_variance_pct))}%`} /></td><td className="px-3 py-2.5 text-right">{fmt.number(num(row.unapplied_bars))} cây</td><td className="px-3 py-2.5 text-right">{text(row.tolerance) || "—"}</td><td className="px-3 py-2.5">{date(row.oldest_open_po_date)}{num(row.overdue_days) > 0 ? <div className="text-[11px] text-destructive">{fmt.number(num(row.overdue_days))} ngày</div> : null}</td><td className={`px-3 py-2.5 font-medium ${statusClass(row.status)}`}>{text(row.status)}</td></tr>)}</tbody></table></div>;
+  const { fmt, adapter } = useMetaForge();
+  const [busy, setBusy] = useState<string>();
+  const [error, setError] = useState<string>();
+  if (!rows.length) return <Empty>Chưa có nghĩa vụ giao hàng.</Empty>;
+
+  const settle = async (row: Row) => {
+    const queue = text(row.queue_key); const status = text(row.status); const operation = status === "Đã đối soát" ? "Reverse" : "Close";
+    const reason = window.prompt(operation === "Close" ? "Lý do chốt giao cuối / đối soát:" : "Lý do đảo đối soát:", operation === "Close" ? "Đối soát giao hàng thực tế" : "Điều chỉnh đối soát");
+    if (!reason?.trim()) return;
+    if (!window.confirm(operation === "Close" ? "Chốt kỳ giao hàng này theo dung sai hiện tại?" : "Đảo kỳ đối soát này?")) return;
+    setBusy(queue); setError(undefined);
+    try {
+      await adapter.callPost(SETTLEMENT_METHOD, { queue_key: queue, operation, reason: reason.trim() });
+      window.location.reload();
+    } catch (caught) {
+      setError(adapter.mapError(caught).message);
+    } finally {
+      setBusy(undefined);
+    }
+  };
+
+  return <div className="space-y-2">{error ? <div className="rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-xs text-destructive">{error}</div> : null}<div className="overflow-x-auto rounded-xl border"><table className="w-full min-w-[1420px] text-sm"><thead className="bg-muted/50 text-left text-xs text-muted-foreground"><tr><th className="px-3 py-2.5">Quy cách</th><th className="px-3 py-2.5 text-right">Đặt</th><th className="px-3 py-2.5 text-right">Nhận</th><th className="px-3 py-2.5 text-right">Còn phải giao</th><th className="px-3 py-2.5 text-right">Kg thực / lệch</th><th className="px-3 py-2.5 text-right">Chưa phân bổ</th><th className="px-3 py-2.5 text-right">Dung sai</th><th className="px-3 py-2.5">PO mở cũ nhất</th><th className="px-3 py-2.5">Trạng thái</th><th className="px-3 py-2.5">Đối soát</th></tr></thead><tbody>{rows.map((row, index) => {
+    const status = text(row.status); const canClose = status === "Còn phải giao" || status === "Đã giao đủ"; const canReverse = status === "Đã đối soát";
+    return <tr key={`${text(row.queue_key)}-${index}`} className="border-t align-top"><td className="px-3 py-2.5 font-medium">{text(row.material)}</td><td className="px-3 py-2.5 text-right"><Stack a={`${fmt.number(num(row.ordered_bars))} cây`} b={`${fmt.number(num(row.ordered_meters))} m`} c={`${fmt.number(num(row.ordered_barem_weight_kg))} kg barem`} /></td><td className="px-3 py-2.5 text-right"><Stack a={`${fmt.number(num(row.received_bars))} cây`} b={`${fmt.number(num(row.received_meters))} m`} c={`${fmt.number(num(row.received_barem_weight_kg))} kg barem`} /></td><td className="px-3 py-2.5 text-right"><Stack strong a={`${fmt.number(num(row.remaining_bars))} cây`} b={`${fmt.number(num(row.remaining_meters))} m`} c={`${fmt.number(num(row.remaining_barem_weight_kg))} kg barem`} /></td><td className="px-3 py-2.5 text-right"><Stack a={row.actual_weight_kg == null ? "—" : `${fmt.number(num(row.actual_weight_kg))} kg`} b={row.weight_variance_kg == null ? undefined : `${num(row.weight_variance_kg) > 0 ? "+" : ""}${fmt.number(num(row.weight_variance_kg))} kg`} c={row.weight_variance_pct == null ? undefined : `${num(row.weight_variance_pct) > 0 ? "+" : ""}${fmt.number(num(row.weight_variance_pct))}%`} /></td><td className="px-3 py-2.5 text-right">{fmt.number(num(row.unapplied_bars))} cây</td><td className="px-3 py-2.5 text-right">{text(row.tolerance) || "—"}</td><td className="px-3 py-2.5">{date(row.oldest_open_po_date)}{num(row.overdue_days) > 0 ? <div className="text-[11px] text-destructive">{fmt.number(num(row.overdue_days))} ngày</div> : null}</td><td className={`px-3 py-2.5 font-medium ${statusClass(row.status)}`}>{status}</td><td className="px-3 py-2.5">{canClose || canReverse ? <Button size="sm" variant={canReverse ? "outline" : "default"} disabled={busy === text(row.queue_key)} onClick={() => settle(row)}>{busy === text(row.queue_key) ? "Đang xử lý…" : canReverse ? "Đảo đối soát" : "Đối soát giao cuối"}</Button> : "—"}</td></tr>;
+  })}</tbody></table></div></div>;
 }
 
 export function DeliveryOrderTable({ rows, onOpen }: { rows: Row[]; onOpen?: ActionScreenProps["onOpen"] }) {
