@@ -16,10 +16,10 @@
   {"record_type":"Employment Type","name":"Thời vụ","data":{"employment_type_name":"Thời vụ","probation_days":0,"notice_days":0,"payroll_eligible":1,"disabled":0}},
   {"record_type":"Employment Type","name":"Cộng tác viên","data":{"employment_type_name":"Cộng tác viên","probation_days":0,"notice_days":0,"payroll_eligible":0,"disabled":0}},
   {"record_type":"Shift Type","name":"Hành chính","data":{"shift_name":"Hành chính","start_time":"08:00:00","end_time":"17:00:00","working_minutes":480,"working_hours":8,"late_grace_minutes":0,"early_exit_grace_minutes":0,"auto_attendance":0,"disabled":0}},
-  {"record_type":"Leave Type","name":"Phép năm","data":{"label":"Nghỉ phép năm","is_paid":1}},
-  {"record_type":"Leave Type","name":"Nghỉ ốm","data":{"label":"Nghỉ ốm","is_paid":1}},
-  {"record_type":"Leave Type","name":"Nghỉ không lương","data":{"label":"Nghỉ không lương","is_paid":0}},
-  {"record_type":"Leave Type","name":"Nghỉ thai sản","data":{"label":"Nghỉ thai sản","is_paid":1}},
+  {"record_type":"Leave Type","name":"Phép năm","data":{"leave_type_name":"Phép năm","is_paid":1,"disabled":0}},
+  {"record_type":"Leave Type","name":"Nghỉ ốm","data":{"leave_type_name":"Nghỉ ốm","is_paid":1,"disabled":0}},
+  {"record_type":"Leave Type","name":"Nghỉ không lương","data":{"leave_type_name":"Nghỉ không lương","is_paid":0,"disabled":0}},
+  {"record_type":"Leave Type","name":"Nghỉ thai sản","data":{"leave_type_name":"Nghỉ thai sản","is_paid":1,"disabled":0}},
   {"record_type":"Fiscal Year","name":"2026","data":{"label":"Năm tài chính 2026","year_start_date":"2026-01-01","year_end_date":"2026-12-31"}},
   {"record_type":"Fiscal Year","name":"2027","data":{"label":"Năm tài chính 2027","year_start_date":"2027-01-01","year_end_date":"2027-12-31"}}
 ]
