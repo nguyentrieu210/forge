@@ -1,0 +1,22 @@
+{
+  "name": "Support Canned Response",
+  "module": "Support",
+  "autoname": "field:response_name",
+  "title_field": "response_name",
+  "search_fields": ["response_name", "category"],
+  "track_seen": true,
+  "fields": [
+    { "fieldname": "response_name", "label": "Tên phản hồi", "fieldtype": "Data", "required": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "category", "label": "Phân loại", "fieldtype": "Data", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "subject_template", "label": "Tiêu đề mẫu", "fieldtype": "Data" },
+    { "fieldname": "body_template", "label": "Nội dung mẫu", "fieldtype": "Text Editor", "required": true },
+    { "fieldname": "usage_note", "label": "Hướng dẫn sử dụng", "fieldtype": "Text" },
+    { "fieldname": "is_active", "label": "Đang sử dụng", "fieldtype": "Check", "default": 1, "in_list_view": true, "in_standard_filter": true }
+  ],
+  "permissions": [
+    { "role": "Support User", "read": true, "report": true },
+    { "role": "Support Manager", "read": true, "write": true, "create": true, "delete": true, "report": true, "export": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "delete": true, "report": true, "export": true }
+  ],
+  "revision": 1
+}
