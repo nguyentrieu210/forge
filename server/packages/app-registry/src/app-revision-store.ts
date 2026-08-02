@@ -26,7 +26,7 @@ export interface AppRevisionActivation {
   app_id: string;
   from_revision_no: number;
   to_revision_no: number;
-  action: "rollback";
+  action: "rollback" | "restore";
   actor: string;
   activated_at: string;
 }
@@ -72,6 +72,25 @@ function presentationKernelSignature(manifestValue: unknown): string {
   return JSON.stringify(kernel);
 }
 
+function planPresentationRollback(activeManifest: unknown, targetManifest: unknown): AppRollbackPlan {
+  const plan = planAppRollback(activeManifest, targetManifest);
+  if (presentationKernelSignature(activeManifest) === presentationKernelSignature(targetManifest)) return plan;
+  if (plan.issues.some((entry) => entry.code === "MATERIALIZED_METADATA_CHANGED")) return plan;
+  return {
+    ...plan,
+    automatable: false,
+    issues: [
+      ...plan.issues,
+      {
+        severity: "review",
+        code: "MATERIALIZED_METADATA_CHANGED",
+        path: "manifest",
+        message: "Rollback target changes metadata materialized outside installed_apps; explicit reverse migration is required",
+      },
+    ],
+  };
+}
+
 /** Read-side companion to 0049_app_revision_history.sql plus the narrow safe rollback path. */
 export class AppRevisionStore {
   private readonly db: D1Database | D1DatabaseSession;
@@ -97,6 +116,17 @@ export class AppRevisionStore {
       ...row,
       active: row.content_hash === active.content_hash,
     }));
+  }
+
+  async listActivations(tenantId: string, appId: string, limit = 50): Promise<AppRevisionActivation[]> {
+    const bounded = Math.min(Math.max(Math.trunc(limit), 1), 500);
+    const result = await this.db.prepare(
+      `SELECT activation_id,app_id,from_revision_no,to_revision_no,action,actor,activated_at
+       FROM app_revision_activations
+       WHERE tenant_id=?1 AND app_id=?2
+       ORDER BY activated_at DESC,activation_id DESC LIMIT ?3`,
+    ).bind(tenantId, appId, bounded).all<AppRevisionActivation>();
+    return result.results ?? [];
   }
 
   async get(tenantId: string, appId: string, revisionNo: number): Promise<AppRevisionRecord> {
@@ -131,7 +161,7 @@ export class AppRevisionStore {
       this.get(tenantId, appId, targetRevisionNo),
     ]);
     if (target.revision_no === active.revision_no) throw errors.validation(`${appId} revision ${targetRevisionNo} is already active`);
-    const plan = planAppRollback(JSON.parse(active.manifest_json), JSON.parse(target.manifest_json));
+    const plan = planPresentationRollback(JSON.parse(active.manifest_json), JSON.parse(target.manifest_json));
     return {
       ...plan,
       target_revision_no: target.revision_no,
@@ -165,11 +195,8 @@ export class AppRevisionStore {
 
     const activeManifest = JSON.parse(active.manifest_json);
     const targetManifest = JSON.parse(target.manifest_json);
-    const plan = planAppRollback(activeManifest, targetManifest);
+    const plan = planPresentationRollback(activeManifest, targetManifest);
     assertAppRollbackAutomatable(plan);
-    if (presentationKernelSignature(activeManifest) !== presentationKernelSignature(targetManifest)) {
-      throw errors.validation("Presentation rollback would change materialized app metadata; use an explicit reverse migration instead");
-    }
     const parsedTarget = parseAppManifestWithInputTables(targetManifest);
     const activationId = randomId("apprev");
 
