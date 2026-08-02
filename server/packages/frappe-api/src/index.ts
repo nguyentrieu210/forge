@@ -8,6 +8,7 @@ export * from "./filters.js";
 export * from "./meta-shape.js";
 export * from "./password.js";
 export * from "./website-router.js";
+export * from "./security-alerts.js";
 export * from "./session.js";
 export * from "./translations.js";
 export * from "./desk-views.js";
