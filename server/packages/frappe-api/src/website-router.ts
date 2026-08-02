@@ -3,14 +3,13 @@ import { readFrappeArgs } from "./args.js";
 import { faultResponse, methodResponse } from "./envelope.js";
 import {
   routeFrappeApi as routeCoreFrappeApi,
-  isFrappePath,
-  FORGE_CONTRACT_VERSION,
   type FrappeRouterContext,
 } from "./router.js";
 import { WEBSITE_MANIFEST, WEBSITE_PAGE, websiteManifest, websitePage } from "./website.js";
 
-export { isFrappePath, FORGE_CONTRACT_VERSION };
-export type { FrappeRouterContext };
+// Preserve every existing router export for package consumers. The explicit
+// `routeFrappeApi` below shadows the star-exported name with the Website-aware wrapper.
+export * from "./router.js";
 
 /**
  * Adds the tiny unauthenticated Website/CMS read surface without widening the core
