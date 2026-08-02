@@ -1,0 +1,9 @@
+{
+  "name": "Phiếu xử lý hỗ trợ",
+  "doc_type": "Support Ticket",
+  "format_type": "Jinja",
+  "html": "<h1>PHIẾU XỬ LÝ HỖ TRỢ</h1><p><strong>Số:</strong> {{ doc.name }}</p><p><strong>Chủ đề:</strong> {{ doc.subject }}</p><p><strong>Khách hàng:</strong> {{ doc.customer }}</p><p><strong>Kênh:</strong> {{ doc.source_channel }}</p><p><strong>Ưu tiên:</strong> {{ doc.priority }}</p><p><strong>Nhóm:</strong> {{ doc.team }}</p><p><strong>Người xử lý:</strong> {{ doc.assignee }}</p><p><strong>SLA:</strong> {{ doc.sla_policy }} / {{ doc.sla_state }}</p><h3>Mô tả</h3><p>{{ doc.description }}</p><h3>Kết quả xử lý</h3><p>{{ doc.resolution }}</p><p><strong>Leo thang:</strong> {{ doc.escalation_reason }} → {{ doc.escalated_to }}</p><p><strong>Trạng thái:</strong> {{ doc.workflow_state }}</p>",
+  "css": "h1 { font-size: 18px; text-align: center; margin-bottom: 14px; } h3 { font-size: 14px; margin: 12px 0 4px; } p { margin: 4px 0; line-height: 1.45; }",
+  "is_default": true,
+  "revision": 1
+}
