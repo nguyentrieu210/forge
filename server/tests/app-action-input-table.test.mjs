@@ -3,6 +3,8 @@ import test from "node:test";
 
 import {
   assertActionInputNamesUnique,
+  decorateActionInputTables,
+  lowerActionInputTablesForInstall,
   parseAppActionInputTable,
   parseLegacyBulkTransactionField,
 } from "../dist/packages/app-registry/src/index.js";
@@ -147,4 +149,108 @@ test("scalar fields and repeatable tables cannot post to the same key", () => {
     () => assertActionInputNamesUnique(["lines"], [table]),
     /input key is declared more than once: lines/,
   );
+});
+
+test("first-class package input_tables lower to the proven compatibility field without mutating source", () => {
+  const source = {
+    id: "demo",
+    doctypes: [{ name: "Item" }],
+    externalDocTypes: [{ name: "Item Color", kind: "master", app: "core" }],
+    actions: [{
+      name: "bulk-receive",
+      fields: [{ fieldname: "warehouse", label: "Kho", fieldtype: "Data" }],
+      input_tables: [validTable()],
+    }],
+  };
+  const before = structuredClone(source);
+
+  const lowered = lowerActionInputTablesForInstall(source);
+  assert.deepEqual(source, before, "lowering must not mutate caller package");
+
+  const action = lowered.actions[0];
+  assert.equal(action.input_tables, undefined);
+  assert.equal(action.fields.length, 2);
+  assert.equal(action.fields[1].fieldname, "lines");
+  assert.equal(action.fields[1].fieldtype, "Text");
+  assert.equal(action.fields[1].required, true);
+  assert.ok(action.fields[1].options.startsWith("BulkTransaction:"));
+
+  const legacy = JSON.parse(action.fields[1].options.slice("BulkTransaction:".length));
+  assert.equal(legacy.minRows, 1);
+  assert.equal(legacy.maxRows, 100);
+  assert.equal(legacy.allowPaste, true);
+  assert.deepEqual(legacy.columns.map((column) => column.fieldname), [
+    "item_code",
+    "qty_bar",
+    "color",
+    "is_stamped",
+  ]);
+});
+
+test("first-class package input_tables accept declared external Link targets and refuse undeclared targets", () => {
+  const source = {
+    doctypes: [{ name: "Item" }],
+    externalDocTypes: [{ name: "Supplier", kind: "master", app: "erpnext" }],
+    actions: [{
+      fields: [],
+      input_tables: [validTable({
+        columns: [{ fieldname: "supplier", label: "NCC", fieldtype: "Link", options: "Supplier" }],
+      })],
+    }],
+  };
+  assert.doesNotThrow(() => lowerActionInputTablesForInstall(source));
+
+  const invalid = structuredClone(source);
+  invalid.actions[0].input_tables[0].columns[0].options = "Secret Master";
+  assert.throws(
+    () => lowerActionInputTablesForInstall(invalid),
+    /Secret Master, which is not declared/,
+  );
+});
+
+test("first-class package input_tables fail closed on scalar key collisions", () => {
+  assert.throws(
+    () => lowerActionInputTablesForInstall({
+      doctypes: [],
+      actions: [{
+        fields: [{ fieldname: "lines", label: "Dòng", fieldtype: "Text" }],
+        input_tables: [validTable({
+          columns: [{ fieldname: "qty", label: "SL", fieldtype: "Float" }],
+        })],
+      }],
+    }),
+    /input key is declared more than once: lines/,
+  );
+});
+
+test("installed legacy actions are decorated with first-class input_tables without removing fallback fields", () => {
+  const compatibility = {
+    columns: [
+      { fieldname: "item_code", label: "Mã hàng", fieldtype: "Data", required: true },
+      { fieldname: "qty", label: "SL", fieldtype: "Float", required: true },
+    ],
+    minRows: 2,
+    maxRows: 40,
+    allowPaste: false,
+  };
+  const actions = [{
+    name: "bulk-receive",
+    label: "Nhập nhanh",
+    fields: [{
+      fieldname: "lines",
+      label: "Chi tiết",
+      fieldtype: "Text",
+      options: `BulkTransaction:${JSON.stringify(compatibility)}`,
+    }],
+    commit: { method: "demo.commit", label: "Chạy" },
+    permission_doctype: "Receipt",
+  }];
+
+  const decorated = decorateActionInputTables(actions);
+  assert.equal(decorated[0].fields.length, 1, "rolling-upgrade fallback must remain available");
+  assert.equal(decorated[0].input_tables.length, 1);
+  assert.equal(decorated[0].input_tables[0].fieldname, "lines");
+  assert.equal(decorated[0].input_tables[0].min_rows, 2);
+  assert.equal(decorated[0].input_tables[0].max_rows, 40);
+  assert.equal(decorated[0].input_tables[0].allow_paste, false);
 });
