@@ -1,0 +1,15 @@
+{
+  "name": "Project Resource Assignment",
+  "module": "Projects",
+  "is_child": true,
+  "fields": [
+    { "fieldname": "user", "label": "Người dùng", "fieldtype": "Link", "options": "User", "required": true, "in_list_view": true },
+    { "fieldname": "employee", "label": "Nhân viên", "fieldtype": "Link", "options": "Employee", "in_list_view": true },
+    { "fieldname": "project_role", "label": "Vai trò dự án", "fieldtype": "Data", "required": true, "in_list_view": true },
+    { "fieldname": "allocation_percent", "label": "Tỷ lệ phân bổ %", "fieldtype": "Percent", "required": true, "in_list_view": true },
+    { "fieldname": "start_date", "label": "Từ ngày", "fieldtype": "Date" },
+    { "fieldname": "end_date", "label": "Đến ngày", "fieldtype": "Date" }
+  ],
+  "permissions": [],
+  "revision": 1
+}
