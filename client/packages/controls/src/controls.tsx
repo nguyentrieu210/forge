@@ -174,12 +174,12 @@ function GroupedNumberInput(p: FieldControlProps & { suffix?: string }) {
     return Number.isFinite(value) ? value : null;
   };
 
-  /** Số → chuỗi đã nhóm. Giữ nguyên phần thập phân người dùng đang gõ, không tự làm tròn. */
+  /** Số → chuỗi đã nhóm. Precision là giới hạn tối đa, không ép hiện các số 0 vô nghĩa ở cuối. */
   const display = (value: unknown): string => {
     if (value === null || value === undefined || value === "") return "";
     const numeric = Number(value);
     const normalized = Number.isFinite(numeric) && Number.isInteger(precision) && precision! >= 0
-      ? numeric.toFixed(precision!)
+      ? numeric.toFixed(precision!).replace(/(\.\d*?[1-9])0+$|\.0+$/, "$1")
       : String(value);
     const [whole, fraction] = normalized.split(".");
     const sign = whole?.startsWith("-") ? "-" : "";
@@ -603,7 +603,7 @@ export function LinkCombobox({
       setFailed(false);
       void search!(target, txt, { filters, referenceDoctype, pageLength: LINK_PAGE_LENGTH, signal: ac.signal })
         .then((r) => {
-          if (seq !== seqRef.current) return; // đã có request mới hơn → bỏ kết quả cũ (chống stale-overwrite)
+          if (seq !== seqRef.current) return;
           setOpts(r);
         })
         .catch(() => {
@@ -617,38 +617,21 @@ export function LinkCombobox({
     }, 220);
     return () => {
       clearTimeout(timer);
-      ac.abort(); // huỷ request đang bay khi phím mới/đóng popover
+      ac.abort();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [txt, target, open, search, filtersKey, referenceDoctype]);
 
   const atCap = opts.length >= LINK_PAGE_LENGTH;
-  // localStorage can outlive a deleted record or a permission change. Only show a recent value
-  // after the current permission-filtered server result confirms it, then de-duplicate the list.
   const optionValues = new Set(opts.map((option) => option.value));
   const visibleRecent = !txt.trim() ? recent.filter((option) => optionValues.has(option.value)) : [];
   const recentValues = new Set(visibleRecent.map((option) => option.value));
   const visibleOptions = !txt.trim() ? opts.filter((option) => !recentValues.has(option.value)) : opts;
 
-  /**
-   * Kết quả ĐẦU TIÊN luôn được tô sáng sẵn, để gõ mã rồi Enter là CHỌN được.
-   *
-   * `shouldFilter={false}` vì lọc do máy chủ làm, và cmdk chỉ tự chọn mục đầu khi chính nó
-   * lọc. Kết quả về bằng đường không đồng bộ nên danh sách thay ngay dưới chân nó, mục đang
-   * chọn trỏ vào một `value` không còn tồn tại, và cmdk bỏ chọn tất cả — Enter lúc đó không
-   * làm gì cả. Người nhập gõ đúng mã rồi Enter mà ô vẫn trống là hỏng đúng thao tác thường
-   * dùng nhất, nên mục đang chọn được điều khiển từ đây thay vì phó mặc.
-   *
-   * Không bao giờ trỏ vào "＋ Tạo mới": Enter phải chọn cái đang có, tạo mới là việc phải
-   * chủ động đi tới.
-   */
   const firstValue = visibleRecent.length ? `recent-${visibleRecent[0]!.value}` : visibleOptions[0]?.value ?? "";
   const [active, setActive] = useState("");
   useEffect(() => { setActive(firstValue); }, [firstValue]);
 
-  // Giống ERPNext "+ Create a new …" — gõ không khớp bản ghi nào có sẵn thì tạo nhanh ngay tại đây
-  // (mở form tạo thật qua services.quickCreate, KHÔNG tự bịa field) thay vì bắt người dùng thoát ra
-  // tạo riêng rồi quay lại gõ lại. Quyền tạo do chính form đó tự kiểm (fail-closed), không lặp ở đây.
   const handleCreate = async () => {
     if (!quickCreate || creating) return;
     setCreating(true);
@@ -660,7 +643,6 @@ export function LinkCombobox({
     }
   };
 
-  /** Một mục duy nhất, đặt được ở đầu hoặc ở cuối danh sách tuỳ có kết quả khớp hay không. */
   const createItem = (
     <CommandItem value={`__mf_create__${txt}`} disabled={creating} onSelect={handleCreate}>
       {creating ? <Loader2 className="mr-2 size-4 shrink-0 animate-spin" aria-hidden="true" /> : <Plus className="mr-2 size-4 shrink-0" aria-hidden="true" />}
@@ -691,13 +673,6 @@ export function LinkCombobox({
           <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      {/*
-        `collisionPadding`: Radix giữ popover cách mép khung nhìn một khoảng, thay vì dán sát đáy
-        màn hình khiến mấy mục cuối nằm ngay trên thanh tác vụ và bấm rất khó.
-
-        CommandList là vùng cuộn duy nhất. Chiều cao của nó lấy theo phần màn hình Radix báo còn
-        trống và chặn ở 22rem; ô tìm kiếm vì vậy luôn đứng yên trong khi danh sách cuộn độc lập.
-      */}
       <PopoverContent
         className="w-[--radix-popover-trigger-width] overflow-hidden p-0"
         align="start"
@@ -716,16 +691,7 @@ export function LinkCombobox({
               <div className="px-3 py-3 text-sm text-destructive" role="alert">{t("control.link_load_failed")}</div>
             ) : (
               <>
-                {/* "+ Tạo mới" ở ĐẦU khi không tìm được gì, ở CUỐI khi có kết quả.
-                    Để đầu là đúng cho trường hợp danh mục dài mà không có thứ cần: bắt cuộn hết
-                    danh sách vô ích rồi mới thấy nút tạo là ngược đời.
-                    Nhưng khi CÓ kết quả khớp thì để đầu là nguy hiểm: mục đầu danh sách được tô
-                    sáng sẵn, nên gõ đúng mã có thật rồi Enter — thao tác tự nhiên nhất của người
-                    nhập liệu — sẽ TẠO MỘT BẢN GHI TRÙNG thay vì chọn cái đang có. Thử trên tenant
-                    thật: gõ "AL548" (mã có sẵn) thì mục sáng là "＋ Tạo mới AL548". Với danh mục
-                    294 mặt hàng và người nhập gõ cả ngày, đó là cách sinh mã rác nhanh nhất. */}
                 {quickCreate && opts.length === 0 && visibleRecent.length === 0 ? createItem : null}
-                {/* Gần đây — chỉ khi ô tìm còn trống, đỡ gõ lại giá trị vừa dùng (client-only, không gọi server). */}
                 {visibleRecent.length > 0 ? (
                   <CommandGroup heading={t("control.link_recent")}>
                     {visibleRecent.map((o) => (
