@@ -11,12 +11,17 @@ Ngày cập nhật: **2026-08-02**.
 - Đọc `RUNBOOK.md` → `CURRENT_STATUS.md` → `NEXT_TASKS.md` → file này → `DELIVERY_POLICY.md`.
 - Mọi SHA/branch dưới đây là checkpoint lịch sử; phải xác minh GitHub trước khi dùng.
 
-## Active checkpoint — Warehouse Petty Cash per warehouse
+## Merged checkpoint — Warehouse Petty Cash per warehouse
 
-- Canonical PR `#214`: `feat/alumdoor-warehouse-petty-cash-v3-20260802`.
-- Feature commit: `b152fd85c9d930f026b568eac003d4784ea43bfc`.
-- CI metadata fix: `e142a3ceb90179bca28080f488dfb83ebeedcdaa`.
-- Main CI run `30746967088`, job `91494093839` đã PASS tests + typecheck + build sau fix.
+- Canonical PR `#214` đã squash-merge vào `main` tại `da37060f3c02a6a5f9701d60edc3284575f00deb`.
+- Final validated head `5255dae609a7a4c30ab25ffc397f81422c2c69fc` đạt **6/6 required workflows PASS**:
+  - CI `30747511668`;
+  - UI Pull Request Validation `30747511724`;
+  - PR Validation `30747511689`;
+  - Purchase `30747511672`;
+  - Sales `30747511686`;
+  - Inventory/Manufacturing `30747511661`.
+- PR `#210` là stale iteration và đã đóng superseded; không reopen/merge.
 - Prior CI failure không phải Daily Ledger, SQL cash guard hay GL logic. Root cause là app-source Link contract: `Purchase Receipt` và `Stock Entry` chưa được khai báo trong `vn-accounting/app.json.externalDocTypes`.
 
 ### Architecture invariants — Warehouse Cash
@@ -35,10 +40,10 @@ Ngày cập nhật: **2026-08-02**.
 ### Verification notes
 
 - Warehouse Cash controller tests: 7/7 PASS trong unit run.
-- SQL migration acceptance đã cover balance/daily usage, negative/max/daily limit, account/warehouse/currency mismatch, reversal, transfer, tenant isolation, immutable mapping/history và disable guard.
-- Diagnostic workflow từng được thêm tạm để lấy CI traceback do connector không trả log, sau đó đã restore workflow gốc; không được reintroduce diagnostic artifact vào final diff.
-- Trước merge phải kiểm exact-final-head 6/6 workflows, PR mergeable và migration `0038` không collision với current `main`.
-- Merge và production deploy là hai quyền riêng biệt; không deploy nếu user chưa yêu cầu rõ.
+- SQL migration acceptance cover balance/daily usage, negative/max/daily limit, account/warehouse/currency mismatch, reversal, transfer, tenant isolation, immutable mapping/history và disable guard.
+- Diagnostic workflow từng được thêm tạm để lấy CI traceback do connector không trả log, sau đó đã restore workflow gốc trước merge; không được reintroduce diagnostic artifact vào source.
+- Migration `0038_warehouse_cash.sql` không collision với `main` tại thời điểm merge.
+- Merge và production deploy là hai quyền riêng biệt; Warehouse Cash đã merge nhưng chưa deploy production trong đợt này.
 
 ## Checkpoint — Bulk Transaction v1 Purchase Receipt
 
