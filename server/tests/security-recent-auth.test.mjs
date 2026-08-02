@@ -4,6 +4,7 @@ import {
   assertRecentSecurityAuthentication,
   RECENT_SECURITY_AUTH_MAX_AGE_SECONDS,
   requiresRecentSecurityAuthentication,
+  requiresRecentSecurityAuthenticationForResource,
   routeFrappeApi,
 } from "../dist/packages/frappe-api/src/index.js";
 
@@ -27,6 +28,19 @@ function methodRequest(method, body = {}) {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
+  });
+  return { request, url };
+}
+
+function resourceRequest(httpMethod, doctype, name, body = {}) {
+  const suffix = name ? `/${encodeURIComponent(name)}` : "";
+  const url = new URL(`https://tenant.test/api/resource/${encodeURIComponent(doctype)}${suffix}`);
+  const request = new Request(url, {
+    method: httpMethod,
+    ...(httpMethod === "GET" ? {} : {
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    }),
   });
   return { request, url };
 }
@@ -75,10 +89,43 @@ test("the step-up contract covers tenant IAM mutations and only admin resets for
   assert.equal(requiresRecentSecurityAuthentication("metaforge.api.list_users", ADMIN.user_id), false);
 });
 
+test("the step-up contract covers every Frappe platform-metadata mutation but not metadata reads", () => {
+  for (const doctype of ["DocType", "Custom Field", "Property Setter", "Workflow", "Print Format"]) {
+    for (const method of ["POST", "PUT", "DELETE"]) {
+      assert.equal(
+        requiresRecentSecurityAuthenticationForResource(method, `/api/resource/${encodeURIComponent(doctype)}/X`),
+        true,
+        `${method} ${doctype}`,
+      );
+    }
+    assert.equal(
+      requiresRecentSecurityAuthenticationForResource("GET", `/api/resource/${encodeURIComponent(doctype)}/X`),
+      false,
+      `GET ${doctype}`,
+    );
+  }
+  assert.equal(requiresRecentSecurityAuthenticationForResource("PUT", "/api/resource/Sales%20Order/SO-1"), false);
+});
+
 test("a stale administrator session is rejected at the API edge before an IAM mutation reaches the core router", async () => {
   const { request, url } = methodRequest("metaforge.api.set_user_roles", {
     user: "worker@example.com",
     roles: ["Stock Manager"],
+  });
+  const response = await routeFrappeApi(
+    request,
+    url,
+    edgeContext(NOW - RECENT_SECURITY_AUTH_MAX_AGE_SECONDS - 1),
+  );
+  assert.equal(response.status, 401);
+  const body = await response.json();
+  assert.equal(body.exc_type, "AuthenticationError");
+  assert.match(body.message, /sign in again/i);
+});
+
+test("a stale administrator session cannot reshape platform metadata through the Frappe resource surface", async () => {
+  const { request, url } = resourceRequest("PUT", "Workflow", "Sales Order Workflow", {
+    name: "Sales Order Workflow",
   });
   const response = await routeFrappeApi(
     request,
