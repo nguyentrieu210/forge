@@ -1,0 +1,9 @@
+{
+  "name": "Biên bản nghiệm thu dự án",
+  "doc_type": "Project Acceptance Certificate",
+  "format_type": "Jinja",
+  "html": "<h1>BIÊN BẢN NGHIỆM THU DỰ ÁN</h1><p><strong>Số:</strong> {{ doc.name }}</p><p><strong>Dự án:</strong> {{ doc.project }}</p><p><strong>Công việc / mốc:</strong> {{ doc.task }}</p><p><strong>Ngày nghiệm thu:</strong> {{ doc.acceptance_date }}</p><p><strong>Kỳ:</strong> {{ doc.period_from }} - {{ doc.period_to }}</p><p><strong>Tiến độ xác nhận:</strong> {{ doc.progress_percent }}%</p><h3>Hạng mục bàn giao</h3><p>{{ doc.deliverables }}</p><p><strong>Kết quả:</strong> {{ doc.acceptance_result }}</p><p><strong>Điều kiện / tồn tại:</strong> {{ doc.condition_note }}</p><p><strong>Đại diện khách hàng:</strong> {{ doc.customer_representative }}</p><p><strong>Tham chiếu thương mại:</strong> {{ doc.commercial_reference }}</p><p><strong>Trạng thái:</strong> {{ doc.workflow_state }}</p>",
+  "css": "h1 { font-size: 18px; text-align: center; margin-bottom: 14px; } h3 { font-size: 14px; margin: 12px 0 4px; } p { margin: 4px 0; line-height: 1.45; }",
+  "is_default": true,
+  "revision": 1
+}
