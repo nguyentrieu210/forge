@@ -11,7 +11,7 @@ function document(name, overrides = {}) {
     doctype: "Integration Subscription",
     name,
     owner: "Administrator",
-    docstatus: 0,
+    docstatus: overrides.docstatus ?? 0,
     status: overrides.status ?? "active",
     version: 1,
     created_at: "2026-08-03T00:00:00.000Z",
@@ -63,6 +63,20 @@ test("subscription service consumes only active canonical subscription documents
   assert.equal(active[0].tenant_id, "demo");
 });
 
+test("stored JSON text remains readable for imported or pre-normalized metadata records", () => {
+  const converted = subscriptionFromDocument(document("json-text", {
+    data: {
+      allowed_hosts: JSON.stringify(["hooks.example.com"]),
+      mapping: JSON.stringify([{ source: "payload.customer", target: "customer", required: true }]),
+    },
+  }));
+  assert.deepEqual(converted.allowed_hosts, ["hooks.example.com"]);
+  assert.deepEqual(converted.mapping, [{ source: "payload.customer", target: "customer", required: true }]);
+  assert.throws(() => subscriptionFromDocument(document("bad-json", {
+    data: { allowed_hosts: "not-json" },
+  })), /allowed_hosts JSON/);
+});
+
 test("event selection remains tenant and event scoped after document conversion", async () => {
   const service = new IntegrationSubscriptionService({
     async listActiveSubscriptionDocuments() {
@@ -75,7 +89,7 @@ test("event selection remains tenant and event scoped after document conversion"
   assert.deepEqual((await service.subscriptionsForEvent(event())).map((item) => item.subscription_id), ["sales"]);
 });
 
-test("reader fails closed if active query returns cross-tenant, inactive or malformed data", async () => {
+test("reader fails closed if active query returns cross-tenant, inactive, submitted or malformed data", async () => {
   const crossTenant = new IntegrationSubscriptionService({
     async listActiveSubscriptionDocuments() { return [{ ...document("bad"), tenant_id: "other" }]; },
   });
@@ -85,6 +99,11 @@ test("reader fails closed if active query returns cross-tenant, inactive or malf
     async listActiveSubscriptionDocuments() { return [document("disabled", { status: "disabled" })]; },
   });
   await assert.rejects(() => inactive.listActive("demo"), /inactive/);
+
+  const submitted = new IntegrationSubscriptionService({
+    async listActiveSubscriptionDocuments() { return [document("submitted", { docstatus: 1 })]; },
+  });
+  await assert.rejects(() => submitted.listActive("demo"), /docstatus/);
 
   assert.throws(() => subscriptionFromDocument(document("bad-url", {
     data: { target_url: "https://127.0.0.1/private", allowed_hosts: ["127.0.0.1"] },
