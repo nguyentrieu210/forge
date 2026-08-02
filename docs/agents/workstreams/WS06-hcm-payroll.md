@@ -3,7 +3,11 @@
 Status: **READY**  
 Owner: **—**  
 Branch: `agent/ent-06-hcm-payroll`  
-Base: `b15378be7c036204f92a6e4c289038aa84d6f286`
+Product baseline: **Forge 0.2.0**  
+Seed baseline: `862636e6239c91eab657c619d8c55345ed71a6d8`  
+Canonical board: `main:docs/agents/AGENT_BOARD.md`
+
+Before implementation: compare exact current `main`; incorporate source-relevant changes. Operational/deploy-evidence-only head drift does not by itself redefine the product baseline.
 
 ## Mission
 
@@ -23,7 +27,7 @@ Không thay canonical Salary Slip -> Payroll Entry -> GL bằng ledger khác. Ru
 
 ## Phase A audit
 
-Bắt đầu từ evidence HRM 1.5 hiện tại; không tin Feature Matrix cũ ghi Missing. Audit gaps: headcount, career portal/CV parsing, roster/geofence, benefits/loans, statutory PIT/BHXH execution, bank salary, ESS/mobile, OKR/360/competency/LMS.
+Bắt đầu từ evidence HRM 1.5 hiện tại; không tin Feature Matrix cũ ghi Missing. Audit gaps: headcount, career portal/CV parsing, roster/geofence, benefits/loans, statutory PIT/BHXH execution, bank salary, ESS/mobile, OKR/360/competency/LMS. Audit HRM/statutory-payroll PR lịch sử và phân loại `reuse / cherry-pick / superseded / reject`.
 
 ## Phase B priority
 
@@ -35,4 +39,4 @@ WS01 accounting/statutory financial side, WS11 security/employee privacy, WS14 m
 
 ## First commit / handoff
 
-Claim owner/head; cuối nhánh ghi capability IDs, legal formulas/schema/source, migration replay, payroll regression, GL reconciliation, blockers, PR.
+Claim owner/head; cuối nhánh ghi capability IDs, legal formulas/schema/source, migration replay, payroll regression, GL reconciliation, legacy PR disposition, blockers, PR.
