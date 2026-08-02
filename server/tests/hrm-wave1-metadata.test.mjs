@@ -63,12 +63,14 @@ test("employee advances isolate requested amount from accounting settlement fiel
   assert.ok(permission(meta, "Employee", 2).some((row) => row.read && row.write && row.if_owner === true));
 });
 
-test("appraisal keeps manager results in exact document scope and self score separately writable", () => {
+test("appraisal keeps manager score HR-only while exposing read-only final result", () => {
   const meta = readJson("doctypes/appraisal.json");
   const fields = Object.fromEntries(meta.fields.map((field) => [field.fieldname, field]));
   assert.equal(fields.self_score.permlevel, 2);
-  assert.equal(fields.manager_score.permlevel ?? 0, 0);
+  assert.equal(fields.manager_score.permlevel, 1);
   assert.equal(fields.final_score.permlevel ?? 0, 0);
+  assert.equal(fields.final_score.read_only, true);
   assert.equal(permission(meta, "Employee", 1).length, 0);
   assert.ok(permission(meta, "Employee", 2).some((row) => row.read && row.write && row.if_owner === true));
+  assert.ok(permission(meta, "HR Manager", 1).some((row) => row.read && row.write));
 });
