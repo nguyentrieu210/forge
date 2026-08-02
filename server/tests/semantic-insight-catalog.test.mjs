@@ -22,11 +22,13 @@ const insights = new SemanticInsightRegistry(semantic, [
   { id: "sales.kpi", label: "Sales KPI", kind: "kpi", model: "sales.summary", metrics: ["count"], primaryMetric: "count" },
   { id: "payroll.kpi", label: "Payroll KPI", kind: "kpi", model: "payroll.summary", metrics: ["count"], primaryMetric: "count" },
 ]);
+const allScope = { mode: "all", actor_user_id: "reader@example.com", user_permissions: [] };
 
-test("insight catalog hides cards whose underlying model report permission is denied", async () => {
+test("insight catalog hides cards whose underlying model scope is denied", async () => {
   const service = new PermissionAwareSemanticInsightCatalogService(semantic, insights, {
-    async assert(request) {
+    async authorize(request) {
       if (request.permission.doctype === "Salary Slip") throw Object.assign(new Error("denied"), { code: "PERMISSION_DENIED" });
+      return allScope;
     },
   });
   const visible = await service.list("tenant-a");
@@ -36,7 +38,7 @@ test("insight catalog hides cards whose underlying model report permission is de
 
 test("insight catalog propagates infrastructure failures instead of pretending no access", async () => {
   const service = new PermissionAwareSemanticInsightCatalogService(semantic, insights, {
-    async assert() { throw Object.assign(new Error("db down"), { code: "D1_UNAVAILABLE" }); },
+    async authorize() { throw Object.assign(new Error("db down"), { code: "D1_UNAVAILABLE" }); },
   });
   await assert.rejects(() => service.list("tenant-a"), (error) => error.code === "D1_UNAVAILABLE");
 });
