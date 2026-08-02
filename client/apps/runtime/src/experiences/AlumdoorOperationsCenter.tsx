@@ -165,17 +165,18 @@ export function AlumdoorOperationsCenter() {
             <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {WAREHOUSE_CASH_SHORTCUTS.map((item) => {
                 const Icon = item.icon;
-                return <button
+                return <Button
                   key={item.doctype}
                   type="button"
-                  className="rounded-xl border bg-background p-4 text-left transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  variant="outline"
+                  className="h-auto flex-col items-start justify-start whitespace-normal rounded-xl p-4 text-left"
                   onClick={() => navigate(`/app/${encodeURIComponent(item.doctype)}`)}
                   data-testid={`warehouse-cash-${item.doctype.toLowerCase().replaceAll(" ", "-")}`}
                 >
                   <Icon className="size-5 text-primary" />
-                  <div className="mt-3 font-medium">{item.label}</div>
-                  <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>
-                </button>;
+                  <span className="mt-3 font-medium">{item.label}</span>
+                  <span className="mt-1 text-sm font-normal text-muted-foreground">{item.description}</span>
+                </Button>;
               })}
             </div>
             <div className="mt-4 rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
