@@ -522,7 +522,11 @@ export class AppInstaller {
     for (const doctype of manifest.doctypes) owned.push(["DocType", "", doctype.name]);
     for (const workflow of manifest.workflows) owned.push(["Workflow", "", workflow.name]);
     for (const format of manifest.print_formats) owned.push(["Print Format", "", format.name]);
-    for (const role of manifest.roles) owned.push(["Role", "", role.role]);
+    // Roles are shared grants, not exclusive app-owned objects. Multiple apps may
+    // declare the same role so it exists for their DocPerm/nav rules, and uninstall
+    // deliberately leaves roles in place because other apps/users may still rely on them.
+    // Treating them as exclusive ownership contradicts that lifecycle and makes valid
+    // cross-app roles (Accounts User, Payroll Manager, Thủ kho...) impossible to install.
     for (const fixture of manifest.fixtures) owned.push(["Master Record", fixture.record_type, fixture.name]);
     // Scoped by the doctype it extends, so the conflict check reads as "two apps both
     // add a field to Item" rather than as an opaque name collision.
