@@ -17,7 +17,7 @@ const numberValue = (value: string) => Number(value.replace(/\s/g, "").replace(/
 
 export function ItemPriceMatrixPanel({ adapter, onChanged }: ItemPriceMatrixPanelProps) {
   const pricesQ = useList("Price List", { fields: ["name", "price_list_name", "effective_date", "disabled", "modified"], orderBy: "effective_date desc, modified desc", pageLength: 200 });
-  const groupsQ = useList("Item Group", { fields: ["name", "item_group_name", "parent_item_group", "is_group", "lft"], orderBy: "lft asc", pageLength: 500 });
+  const groupsQ = useList("Item Group", { fields: ["name", "item_group_name", "parent_item_group", "is_group"], orderBy: "item_group_name asc", pageLength: 500 });
   const itemsQ = useList("Item", { fields: ["name", "item_name", "item_group", "stock_uom", "default_sales_uom", "disabled"], orderBy: "item_name asc", pageLength: 500 });
   const uomsQ = useList("UOM", { fields: ["name", "uom_name", "disabled"], filters: [["disabled", "=", 0]], orderBy: "uom_name asc", pageLength: 200 });
   const [group, setGroup] = useState("");
