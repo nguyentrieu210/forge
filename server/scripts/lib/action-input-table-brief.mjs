@@ -5,6 +5,15 @@ const ACTION_INPUT_FIELDTYPES = new Set([
   "Attach", "Attach Image",
 ]);
 
+/**
+ * Temporary scalar field used only while the legacy brief compiler/schema still require
+ * `actions[].fields` to contain at least one entry. The App Factory adapter removes it from
+ * the compiled package before server validation, so authors can define a genuinely table-only
+ * action without shipping a fake input to users.
+ */
+export const INPUT_TABLE_BRIEF_STUB_FIELDNAME = "app_factory_input_stub";
+export const INPUT_TABLE_BRIEF_STUB_FIELD = `${INPUT_TABLE_BRIEF_STUB_FIELDNAME}:Data App Factory Input Stub`;
+
 function isObject(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
@@ -150,6 +159,13 @@ export function prepareBriefInputTablesForSchema(brief) {
     const result = normalizeBriefActionInputTables(action.inputTables, actionIndex);
     errors.push(...result.errors);
     delete action.inputTables;
+
+    // AJV still enforces the legacy requirement that every action has at least one scalar
+    // field. A first-class table already is an input, so satisfy that old shape only in the
+    // schema clone. The compiler adapter performs the same trick and removes the stub again.
+    if (!Array.isArray(action.fields) || !action.fields.length) {
+      action.fields = [INPUT_TABLE_BRIEF_STUB_FIELD];
+    }
   });
   return { schemaBrief, errors };
 }
