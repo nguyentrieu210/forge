@@ -335,7 +335,7 @@ export async function loanRepaidMinor(
   loanName: string,
   scale: number,
   excludeRepaymentName?: string,
-  throughDate?: string,
+  throughDate = H.text(context.command.document.end_date),
 ): Promise<number> {
   let total = 0;
   const repayments = await context.reader.listDocumentsByDoctype<JsonObject>(context.command.tenant_id, "Employee Loan Repayment");
