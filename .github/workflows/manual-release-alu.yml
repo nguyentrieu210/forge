@@ -1,12 +1,6 @@
 name: ALU Build and Deploy
 
 on:
-  pull_request:
-    branches:
-      - main
-    types: [opened, synchronize, reopened, ready_for_review]
-    paths:
-      - "client/**"
   push:
     branches:
       - "hotfix/ui-*"
@@ -30,47 +24,37 @@ permissions:
   contents: read
 
 concurrency:
-  group: production-alu-build-deploy
-  cancel-in-progress: false
+  group: ${{ github.event_name == 'push' && format('ui-deploy-{0}', github.ref) || 'production-alu-build-deploy' }}
+  cancel-in-progress: ${{ github.event_name == 'push' }}
 
 jobs:
   ui-auto-deploy:
-    name: Auto build and deploy UI
-    if: >-
-      github.event_name == 'push' ||
-      (github.event_name == 'pull_request' &&
-       github.event.pull_request.head.repo.full_name == github.repository &&
-       (startsWith(github.head_ref, 'hotfix/ui-') ||
-        startsWith(github.head_ref, 'fix/ui-') ||
-        startsWith(github.head_ref, 'feat/ui-') ||
-        startsWith(github.head_ref, 'refactor/ui-')))
+    name: Fast UI build and deploy
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 10
     environment: production
     env:
-      TARGET_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+      TARGET_SHA: ${{ github.sha }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      VITE_FORGE_RELEASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+      VITE_FORGE_RELEASE_SHA: ${{ github.sha }}
 
     steps:
       - name: Checkout UI revision
         uses: actions/checkout@v4
         with:
           ref: ${{ env.TARGET_SHA }}
-          fetch-depth: 0
+          fetch-depth: 2
           persist-credentials: false
 
-      - name: Guard UI-only scope
+      - name: Guard this push as UI-only
         shell: bash
         run: |
           set -euo pipefail
-          git fetch origin main --no-tags
-          git merge-base --is-ancestor origin/main HEAD || {
-            echo "UI branch must contain current main before production deploy."
-            exit 1
-          }
-
-          mapfile -t changed < <(git diff --name-only origin/main...HEAD)
+          mapfile -t changed < <(jq -r '[.commits[]? | (.added[]?, .modified[]?, .removed[]?)] | unique[]' "$GITHUB_EVENT_PATH")
+          if [ "${#changed[@]}" -eq 0 ]; then
+            mapfile -t changed < <(git diff-tree --no-commit-id --name-only -r HEAD)
+          fi
           test "${#changed[@]}" -gt 0
 
           has_client=false
@@ -79,12 +63,11 @@ jobs:
               client/*) has_client=true ;;
               RUNBOOK.md|CURRENT_STATUS.md|NEXT_TASKS.md|AI_HANDOFF.md|DELIVERY_POLICY.md) ;;
               *)
-                echo "Blocked non-UI file in UI auto-deploy branch: $file"
+                echo "Blocked non-UI file in UI auto-deploy push: $file"
                 exit 1
                 ;;
             esac
           done
-
           test "$has_client" = true
 
       - name: Set up pnpm
@@ -100,13 +83,18 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Install dependencies from cache
+        run: pnpm install --frozen-lockfile --prefer-offline
 
-      - name: Build UI
-        run: pnpm --filter metaforge run build
+      - name: Build Gateway UI only
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm --filter runtime... run build
+          pnpm --dir client/apps/kho exec tsc -p ../warehouse-mobile/tsconfig.json
+          pnpm --dir client/apps/kho exec vite build --config vite.mobile.config.ts
 
-      - name: Stage UI bundle and release evidence
+      - name: Stage UI bundle
         run: node server/scripts/stage-client-bundle.mjs
 
       - name: Deploy Gateway
