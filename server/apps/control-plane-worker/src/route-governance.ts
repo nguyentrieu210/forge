@@ -47,7 +47,7 @@ export function assertGovernedRouteMutation(
   const baseline = currentForTenant ?? currentAtKey;
   const normalizedReason = reason.trim();
 
-  if (currentAtKey && currentAtKey.tenant_id !== requested.tenant_id && currentForTenant) {
+  if (currentAtKey && currentAtKey.tenant_id !== requested.tenant_id) {
     throw errors.validation("Cannot move a tenant onto a route key already assigned to another tenant");
   }
 
