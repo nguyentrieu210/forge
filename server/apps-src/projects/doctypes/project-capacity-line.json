@@ -1,0 +1,15 @@
+{
+  "name": "Project Capacity Line",
+  "module": "Projects",
+  "is_child": true,
+  "fields": [
+    { "fieldname": "user", "label": "Người dùng", "fieldtype": "Link", "options": "User", "required": true, "in_list_view": true },
+    { "fieldname": "employee", "label": "Nhân viên", "fieldtype": "Link", "options": "Employee", "in_list_view": true },
+    { "fieldname": "available_hours", "label": "Năng lực khả dụng (giờ)", "fieldtype": "Float", "required": true, "in_list_view": true },
+    { "fieldname": "planned_hours", "label": "Giờ đã hoạch định", "fieldtype": "Float", "required": true, "in_list_view": true },
+    { "fieldname": "target_utilization_percent", "label": "Mục tiêu sử dụng %", "fieldtype": "Percent", "in_list_view": true },
+    { "fieldname": "note", "label": "Ghi chú", "fieldtype": "Text" }
+  ],
+  "permissions": [],
+  "revision": 1
+}
