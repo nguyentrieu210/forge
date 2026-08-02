@@ -1,4 +1,7 @@
+import type { JsonObject } from "../../contracts/src/index.js";
+import { requireLeafWarehouse } from "../../clouderp-stock/src/index.js";
 import { errors } from "../../core/src/index.js";
+import type { ControllerContext } from "../../document-kernel/src/index.js";
 import { toScaledInt } from "../../money/src/index.js";
 import { StockReservationController } from "./alumdoor-inventory.js";
 
@@ -54,20 +57,30 @@ function assertActiveReservationNotZombie(context: ReservationContext, previous:
   }
 }
 
+async function assertReservationWarehouseScope(context: ReservationContext, input: ReservationData): Promise<void> {
+  if (!input.warehouse) return;
+  const source = input.source_doctype && input.source_name
+    ? await context.reader.getDocument<JsonObject>(context.command.tenant_id, input.source_doctype, input.source_name)
+    : null;
+  const sourceCompany = text(source?.data.company);
+  await requireLeafWarehouse(
+    context as unknown as ControllerContext<JsonObject>,
+    input.warehouse,
+    sourceCompany || undefined,
+  );
+}
+
 /**
  * Hardens the reservation lifecycle without creating another stock ledger.
- *
- * Reservation identity is the promise key described by the Alumdoor BRD:
- * item/color/condition/min-length/(optional warehouse) plus its source document.
- * Once created, changing that key would silently move an existing promise to a
- * different stock pool/source while preserving the same audit record. Corrections
- * therefore release the old reservation and create a new one.
+ * Reservation identity is immutable; corrections release the old promise and create a new one.
  */
 export class StockReservationIntegrityController extends StockReservationController {
   override async normalize(context: ReservationContext): Promise<ReservationData> {
     const input = context.command.document;
     const previous = context.existing?.data;
     const desiredState = stateOf(input.state ?? previous?.state);
+
+    await assertReservationWarehouseScope(context, input);
 
     if (!previous) {
       if (desiredState !== "Đang giữ") {
