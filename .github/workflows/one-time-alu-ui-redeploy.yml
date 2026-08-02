@@ -8,7 +8,7 @@ on:
       - "client/**"
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: one-time-alu-ui-redeploy
@@ -95,3 +95,28 @@ jobs:
             sleep 2
           done
           [ "$release_ok" = true ]
+
+      - name: Record successful deploy evidence
+        uses: actions/github-script@v7
+        env:
+          DEPLOYED_SHA: ${{ env.TARGET_SHA }}
+        with:
+          script: |
+            const path = 'deploy-evidence/one-time-alu-ui-redeploy.json';
+            const payload = {
+              deployedSha: process.env.DEPLOYED_SHA,
+              target: 'https://alu.kairo.vn',
+              scope: 'gateway-ui',
+              warehouseCashUI: true,
+              verified: ['health', 'release.json'],
+              deployedAt: new Date().toISOString(),
+            };
+            const content = Buffer.from(JSON.stringify(payload, null, 2) + '\n').toString('base64');
+            await github.rest.repos.createOrUpdateFileContents({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              path,
+              message: `ops: record ALU UI deploy ${process.env.DEPLOYED_SHA.slice(0, 12)}`,
+              content,
+              branch: 'fix/ui-redeploy-warehouse-cash-20260803',
+            });
