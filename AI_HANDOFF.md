@@ -16,6 +16,20 @@ Quy tắc vận hành nằm ở `RUNBOOK.md`; live status ở `CURRENT_STATUS.md
 - GitHub Actions chỉ dùng làm máy build/deploy.
 - Workflow release duy nhất: `.github/workflows/manual-release-alu.yml`, name `ALU Build and Deploy`.
 
+## Merged checkpoint — HRM operational 1.5
+
+- Canonical PR `#261` squash-merge tại `b3dc2cf59ec5c85a977833da6edc986ac1bfe6fb`; stale iteration `#253` đã đóng superseded.
+- HRM operational scope: recruitment, hire-to-retire, leave allocation/application, holiday/shift/check-in/attendance/correction/overtime, salary structure/assignment/period/additional salary, employee advance/travel, goals/appraisal/training.
+- Accounting ownership invariant: HRM chỉ tạo authoritative payroll inputs; Salary Slip/Payroll Entry/GL canonical vẫn là source of truth. Không tạo HR payroll ledger riêng.
+- Effective employee state cho branch/department/cost center/reporting phải resolve theo business date từ submitted transfer/promotion/separation, không rewrite lịch sử Employee.
+- Generated Salary Slip có `salary_structure_assignment` luôn recompute source trên save/submit; stale draft earnings không được authoritative. `input_hash` + `rule_trace_json` là evidence của input/source versions.
+- Submitted Salary Slip khóa các source Attendance/Leave/OT/Salary Structure Assignment/Additional Salary liên quan. Correction phải cancel/amend/rerun; không mutate nguồn đã dùng phía sau payroll.
+- `VN Payroll Rule` phải đúng effective period, có matching `rule_code`, legal document, source URL, approval metadata và JSON-object formula. Salary trace lưu SHA-256 công thức. Rule đã được submitted structure/assignment hoặc submitted/cancelled salary slip sử dụng là append-only; DB guard chặn update/delete/disable/đổi record type.
+- Migrations `0039-0041` là tenant-scoped/race-safe authority cho overlap, duplicates, source freeze và payroll-rule integrity; UI/controller validation không thay DB guard.
+- Validation checkpoint: isolated TypeScript strict PASS; HRM operational 4/4 PASS; migrations `0035+0039+0040+0041` acceptance PASS; Python syntax PASS; metadata JSON 44/44 PASS. GitHub development CI không áp dụng theo policy hiện tại.
+- `VN Payroll Rule.formula_json` hiện chỉ là versioned/audited legal evidence, chưa là statutory PIT/BHXH evaluator. Không tự hardcode/diễn giải luật trong controller; statutory automation phải là CRITICAL follow-up có schema, fixed-point semantics, official legal source và regression theo effective version.
+- HRM merge không đồng nghĩa production deploy; task này chưa migrate/deploy production.
+
 ## Production release evidence
 
 - Canonical checkpoint: `a0ae5f4f00a6be7311efcaff87c4caabea60f6be`.
@@ -67,6 +81,7 @@ Không tự đổi DNS/secrets hoặc destructive operation ngoài release path 
 ## Remaining priorities
 
 - Acceptance run thật của UI fast path sau merge, ghi duration và Cloudflare release evidence.
+- HRM statutory payroll-rule evaluator nếu nghiệp vụ cần tự động PIT/BHXH theo luật.
 - Stock Reconciliation Bulk Transaction.
 - BOM parent + child/version Bulk Transaction.
 - First-class AppAction input-table transport.
