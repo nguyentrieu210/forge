@@ -4,6 +4,7 @@ import type { ControllerContext } from "../../document-kernel/src/index.js";
 import { fromScaledInt, toScaledInt } from "../../money/src/index.js";
 import type { SalarySlipComponentRow, SalarySlipData } from "./enterprise-types.js";
 import { evaluatePayrollRuleFormula, payrollRuleInputRowsToObject } from "./hrm-payroll-rule.js";
+import { loanRepaidMinor } from "./hrm-workforce-finance-controllers.js";
 
 interface HrmGeneratedSalaryInput {
   salary_structure_assignment: string;
@@ -99,7 +100,7 @@ export async function buildHrmSalarySlipInputs(
       && text(entry.data.attendance_date) >= input.start_date
       && text(entry.data.attendance_date) <= input.end_date);
   const attendanceByDate = new Map(attendanceDocs.map((entry) => [text(entry.data.attendance_date), entry]));
-  let paymentUnits = 0; // half-day units to keep calculation integral.
+  let paymentUnits = 0;
   for (const workDate of workDates) {
     const attendance = attendanceByDate.get(workDate);
     if (!attendance) {
@@ -212,6 +213,34 @@ export async function buildHrmSalarySlipInputs(
     (componentType === "Earning" ? earnings : deductions).push(row);
   }
 
+  const benefitDocs = (await context.reader.listDocumentsByDoctype<JsonObject>(context.command.tenant_id, "Employee Benefit Enrollment"))
+    .filter((entry) => entry.docstatus === 1
+      && text(entry.data.employee) === input.employee
+      && text(entry.data.company) === input.company
+      && benefitApplies(entry.data, input.start_date, input.end_date));
+  for (const benefit of benefitDocs) {
+    const componentName = requiredText(benefit.data.salary_component, `Employee Benefit ${benefit.name} salary_component`);
+    const component = await requireRecord(context, "Salary Component", componentName);
+    const componentType = requiredText(component.type, `Salary Component ${componentName} type`);
+    if (!["Earning", "Deduction"].includes(componentType)) throw errors.reference(`Salary Component ${componentName} has invalid type`);
+    let amountMinor = toScaledInt(benefit.data.amount as string | number, currencyScale, `Employee Benefit ${benefit.name} amount`);
+    if (amountMinor <= 0) throw errors.reference(`Employee Benefit ${benefit.name} amount must be positive`);
+    if (truthy(benefit.data.prorate_by_payment_days)) {
+      amountMinor = multiplyRatio(amountMinor, paymentUnits, workDates.length * 2);
+    }
+    const account = requiredText(component.account, `Salary Component ${componentName} account`);
+    const costCenter = text(assignment.data.payroll_cost_center) || text(structure.data.default_cost_center);
+    const row: SalarySlipComponentRow = {
+      row_id: `BENEFIT-${benefit.name}`,
+      salary_component: componentName,
+      amount: fromScaledInt(amountMinor, currencyScale),
+      amount_minor: amountMinor,
+      account,
+      ...(costCenter ? { cost_center: costCenter } : {}),
+    };
+    (componentType === "Earning" ? earnings : deductions).push(row);
+  }
+
   const grossBeforeRuleMinor = earnings.reduce((sum, row) => safeAmountAdd(sum, row.amount_minor ?? 0), 0);
   const deductionsBeforeRuleMinor = deductions.reduce((sum, row) => safeAmountAdd(sum, row.amount_minor ?? 0), 0);
   const statutory = evaluatePayrollRuleFormula(formulaJson, {
@@ -240,6 +269,42 @@ export async function buildHrmSalarySlipInputs(
       ...(ruleComponent.costCenter ? { cost_center: ruleComponent.costCenter } : {}),
     };
     (ruleComponent.componentType === "Earning" ? earnings : deductions).push(row);
+  }
+
+  const loanTrace: Array<{ name: string; amount_minor: number; repaid_before_minor: number; scheduled_through_minor: number }> = [];
+  const loans = (await context.reader.listDocumentsByDoctype<JsonObject>(context.command.tenant_id, "Employee Loan"))
+    .filter((entry) => entry.docstatus === 1
+      && text(entry.data.employee) === input.employee
+      && text(entry.data.company) === input.company
+      && text(entry.data.first_repayment_date) <= input.end_date);
+  for (const loan of loans) {
+    const principalMinor = toScaledInt(loan.data.principal_amount as string | number, currencyScale, `Employee Loan ${loan.name} principal_amount`);
+    const scheduledThroughMinor = loanScheduledMinorThrough(loan.data, input.end_date, currencyScale);
+    const repaidBeforeMinor = await loanRepaidMinor(
+      context as unknown as Parameters<typeof loanRepaidMinor>[0],
+      loan.name,
+      currencyScale,
+    );
+    const outstandingMinor = Math.max(0, safeAmountAdd(principalMinor, -repaidBeforeMinor));
+    const pastDueMinor = Math.max(0, safeAmountAdd(scheduledThroughMinor, -repaidBeforeMinor));
+    const amountMinor = Math.min(outstandingMinor, pastDueMinor);
+    if (amountMinor <= 0) continue;
+    const componentName = requiredText(loan.data.salary_component, `Employee Loan ${loan.name} salary_component`);
+    const component = await requireRecord(context, "Salary Component", componentName);
+    if (requiredText(component.type, `Salary Component ${componentName} type`) !== "Deduction") {
+      throw errors.reference(`Salary Component ${componentName} must be a Deduction for Employee Loan`);
+    }
+    const account = requiredText(component.account, `Salary Component ${componentName} account`);
+    const costCenter = text(assignment.data.payroll_cost_center) || text(structure.data.default_cost_center);
+    deductions.push({
+      row_id: `LOAN-${loan.name}`,
+      salary_component: componentName,
+      amount: fromScaledInt(amountMinor, currencyScale),
+      amount_minor: amountMinor,
+      account,
+      ...(costCenter ? { cost_center: costCenter } : {}),
+    });
+    loanTrace.push({ name: loan.name, amount_minor: amountMinor, repaid_before_minor: repaidBeforeMinor, scheduled_through_minor: scheduledThroughMinor });
   }
 
   if (earnings.length === 0) throw errors.reference("Salary Structure produced no earnings");
@@ -271,6 +336,8 @@ export async function buildHrmSalarySlipInputs(
     holiday_list: { name: holidayList.name, version: holidayList.version },
     attendance: attendanceDocs.map((entry) => ({ name: entry.name, version: entry.version })).sort(byName),
     additional_salary: additionalDocs.map((entry) => ({ name: entry.name, version: entry.version })).sort(byName),
+    benefit_enrollments: benefitDocs.map((entry) => ({ name: entry.name, version: entry.version })).sort(byName),
+    employee_loans: loanTrace.sort((left, right) => left.name.localeCompare(right.name)),
     working_days: workDates.length,
     payment_days: paymentUnits / 2,
   };
@@ -295,6 +362,44 @@ function additionalSalaryApplies(data: JsonObject, startDate: string, endDate: s
   const fromDate = text(data.from_date) || payrollDate;
   const toDate = text(data.to_date);
   return fromDate <= endDate && (!toDate || toDate >= startDate);
+}
+
+function benefitApplies(data: JsonObject, startDate: string, endDate: string): boolean {
+  const effectiveFrom = text(data.effective_from);
+  const effectiveTo = text(data.effective_to);
+  if (effectiveFrom > endDate || (effectiveTo && effectiveTo < startDate)) return false;
+  if (text(data.frequency) === "One-time") {
+    const oneTimeDate = text(data.one_time_date);
+    return oneTimeDate >= startDate && oneTimeDate <= endDate;
+  }
+  return text(data.frequency) === "Monthly";
+}
+
+function loanScheduledMinorThrough(data: JsonObject, throughDate: string, scale: number): number {
+  const firstDate = date(data.first_repayment_date, "Employee Loan first_repayment_date");
+  if (firstDate > throughDate) return 0;
+  const installmentCount = Number(data.installment_count);
+  if (!Number.isSafeInteger(installmentCount) || installmentCount < 1 || installmentCount > 120) {
+    throw errors.reference("Employee Loan installment_count is invalid");
+  }
+  const regularMinor = toScaledInt(data.installment_amount as string | number, scale, "Employee Loan installment_amount");
+  const finalMinor = toScaledInt(data.final_installment_amount as string | number, scale, "Employee Loan final_installment_amount");
+  let total = 0;
+  for (let index = 0; index < installmentCount; index += 1) {
+    const dueDate = addMonthsClamped(firstDate, index);
+    if (dueDate > throughDate) break;
+    total = safeAmountAdd(total, index === installmentCount - 1 ? finalMinor : regularMinor);
+  }
+  return total;
+}
+
+function addMonthsClamped(value: string, months: number): string {
+  const source = new Date(`${value}T00:00:00Z`);
+  const targetYear = source.getUTCFullYear() + Math.floor((source.getUTCMonth() + months) / 12);
+  const targetMonth = (source.getUTCMonth() + months) % 12;
+  const lastDay = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate();
+  const day = Math.min(source.getUTCDate(), lastDay);
+  return new Date(Date.UTC(targetYear, targetMonth, day)).toISOString().slice(0, 10);
 }
 
 async function requireSubmitted(
