@@ -109,7 +109,7 @@ export class EmployeeFinalSettlementController extends SuiteController<JsonObjec
   async normalize(context: HrmContext): Promise<JsonObject> {
     const input = context.command.document;
     const employeeName = H.requiredText(input.employee, "Employee");
-    await H.requireRecord(context, "Employee", employeeName);
+    const employee = await H.requireRecord(context, "Employee", employeeName);
     const separationName = H.requiredText(input.separation, "Employee Separation");
     const separation = await H.requireSubmitted(context, "Employee Separation", separationName);
     if (H.text(separation.employee) !== employeeName) {
@@ -120,6 +120,8 @@ export class EmployeeFinalSettlementController extends SuiteController<JsonObjec
     }
     const company = H.requiredText(separation.company, "Employee Separation company");
     const lastWorkingDay = H.requiredDate(separation.last_working_day, "Employee Separation last_working_day");
+    const employeeState = await H.resolveEmployeeState(context, employeeName, employee, lastWorkingDay, separationName);
+    if (H.text(employeeState.company) !== company) throw errors.reference("Employee Separation company does not match employee state");
     const settlementDate = H.requiredDate(input.settlement_date, "Final settlement_date");
     if (settlementDate < lastWorkingDay) throw errors.validation("Final settlement_date must not precede last_working_day");
 
@@ -139,7 +141,12 @@ export class EmployeeFinalSettlementController extends SuiteController<JsonObjec
       && H.text(item.data.employee) === employeeName
       && Boolean(H.text(item.data.payment_entry))
       && !H.text(item.data.settlement_ref));
-    const unsettledAmount = unsettled.reduce((sum, item) => sum + H.numeric(item.data.advance_amount, 0), 0);
+    const unsettledDetails = unsettled.map((item) => ({
+      name: item.name,
+      amount: H.numeric(item.data.advance_amount, 0),
+      currency: H.text(item.data.currency),
+      payment_entry: H.text(item.data.payment_entry),
+    }));
 
     if (context.command.action === "submit" && unsettled.length > 0) {
       throw errors.reference(`Employee ${employeeName} has ${unsettled.length} paid advance(s) not yet settled`);
@@ -147,7 +154,7 @@ export class EmployeeFinalSettlementController extends SuiteController<JsonObjec
     if (context.command.action === "submit") {
       const settlements = await context.reader.listDocumentsByDoctype<JsonObject>(context.command.tenant_id, this.doctype);
       if (settlements.some((item) => item.name !== context.command.aggregate.name && item.docstatus === 1
-        && (H.text(item.data.separation) === separationName || H.text(item.data.employee) === employeeName))) {
+        && H.text(item.data.separation) === separationName)) {
         throw errors.exists(`Final settlement already exists for Employee Separation ${separationName}`);
       }
     }
@@ -157,19 +164,21 @@ export class EmployeeFinalSettlementController extends SuiteController<JsonObjec
       employee: employeeName,
       separation: separationName,
       company,
-      branch: H.text(separation.branch),
+      branch: H.text(employeeState.branch),
       last_working_day: lastWorkingDay,
       settlement_date: settlementDate,
       final_salary_slip: finalSlipName,
       unsettled_advance_count: unsettled.length,
-      unsettled_advance_amount: unsettledAmount,
+      unsettled_advances_json: JSON.stringify(unsettledDetails),
       settlement_snapshot_json: JSON.stringify({
         separation: separationName,
         employee: employeeName,
+        company,
+        branch: H.text(employeeState.branch),
         last_working_day: lastWorkingDay,
         final_salary_slip: finalSlipName,
         salary_slip_period: { start_date: slipStart, end_date: slipEnd },
-        unsettled_advances: unsettled.map((item) => item.name),
+        unsettled_advances: unsettledDetails,
       }),
     };
   }
