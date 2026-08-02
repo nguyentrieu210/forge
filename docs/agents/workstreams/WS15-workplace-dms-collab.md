@@ -182,7 +182,7 @@ WS15 regression files themselves are complete and independent.
 
 ### DR-WS15-02 -> WS00 / WS12 — scheduled domain job registration
 
-Reminder, recurring work, document expiry/retention/archive, contract expiry/renewal and obligation-overdue transitions need one shared periodic-maintenance registration seam. WS00 currently changes tenant-worker coordination and WS12 owns jobs/release safety, so WS15 does not add another scheduler path in `tenant-worker/index-core.ts`.
+Reminder, recurring work, document expiry/retention/archive, contract expiry/renewal và obligation-overdue transitions need one shared periodic-maintenance registration seam. WS00 currently changes tenant-worker coordination and WS12 owns jobs/release safety, so WS15 does not add another scheduler path in `tenant-worker/index-core.ts`.
 
 ### DR-WS15-03 -> WS08 — generic permission-safe OCR/extraction
 
