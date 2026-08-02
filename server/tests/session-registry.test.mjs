@@ -6,6 +6,7 @@ import {
   mintSession,
   routeFrappeApi,
   routeFrappeAuth,
+  routeSessionManagementApi,
   verifySession,
 } from "../dist/packages/frappe-api/src/index.js";
 
@@ -39,10 +40,14 @@ function store(user, sessionHooks = {}) {
     async revokeCurrent(...args) { calls.push(["revokeCurrent", ...args]); return sessionHooks.revokeCurrent?.(...args); },
     async list(...args) { calls.push(["list", ...args]); return sessionHooks.list?.(...args) ?? []; },
     async revokeOne(...args) { calls.push(["revokeOne", ...args]); return sessionHooks.revokeOne?.(...args) ?? false; },
+    async revokeOthers(...args) { calls.push(["revokeOthers", ...args]); return sessionHooks.revokeOthers?.(...args) ?? 0; },
   };
   return {
     calls,
     sessions,
+    administration: {
+      async revokeSessions(...args) { calls.push(["revokeSessions", ...args]); return user.session_epoch + 1; },
+    },
     async findByLogin(_tenant, login) {
       return login.toLowerCase() === user.email ? { user, passwordHash: user.password_hash } : null;
     },
@@ -190,6 +195,55 @@ test("session revoke cannot choose another user and emits an audit-context call"
     source: "session-manager",
     reason: "lost browser",
   });
+});
+
+test("logout other sessions keeps the registered current session and avoids epoch fallback", async () => {
+  const user = await userRecord();
+  const calls = [];
+  const sessions = {
+    async list() { return []; },
+    async revokeOne() { return false; },
+    async revokeOthers(...args) { calls.push(args); return 3; },
+  };
+  let fallbackCalls = 0;
+  const url = new URL("https://tenant.test/api/method/metaforge.api.logout_other_sessions");
+  const response = await routeSessionManagementApi(new Request(url, { method: "POST" }), url, {
+    tenantId: TENANT,
+    userId: user.user_id,
+    traceId: "trace-session-api",
+    now: NOW_ISO,
+    sessions,
+    currentSessionId: "session_abcdefghijklmnop",
+    revokeAllSessions: async () => { fallbackCalls += 1; return 9; },
+  });
+  assert.equal(response.status, 200);
+  assert.deepEqual((await response.json()).message, {
+    revoked: true,
+    revoked_sessions: 3,
+    reauthenticate_required: false,
+  });
+  assert.equal(calls[0][2], "session_abcdefghijklmnop");
+  assert.equal(fallbackCalls, 0);
+});
+
+test("legacy logout-others retains epoch revocation fallback", async () => {
+  const user = await userRecord();
+  let fallbackCalls = 0;
+  const url = new URL("https://tenant.test/api/method/metaforge.api.logout_other_sessions");
+  const response = await routeSessionManagementApi(new Request(url, { method: "POST" }), url, {
+    tenantId: TENANT,
+    userId: user.user_id,
+    traceId: "trace-session-api",
+    now: NOW_ISO,
+    sessions: { async list() { return []; }, async revokeOne() { return false; }, async revokeOthers() { return 0; } },
+    revokeAllSessions: async () => { fallbackCalls += 1; return 4; },
+  });
+  assert.deepEqual((await response.json()).message, {
+    revoked: true,
+    session_epoch: 4,
+    reauthenticate_required: true,
+  });
+  assert.equal(fallbackCalls, 1);
 });
 
 test("app-callback style context cannot enumerate browser sessions", async () => {
