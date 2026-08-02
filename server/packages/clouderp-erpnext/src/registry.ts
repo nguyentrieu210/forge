@@ -2,14 +2,16 @@ import type { ControllerRegistry } from "../../document-kernel/src/index.js";
 import { AssetController, AssetDepreciationController, CreditNoteController, DebitNoteController, StockReturnController } from "./controllers.js";
 import { AssetDisposalController, AssetMaintenanceController, AssetMovementController, ExpenseClaimController, IssueController, JobCardController, PosClosingEntryController, PosInvoiceController, PosOpeningEntryController, ProductionPlanController, QualityInspectionController, TimesheetController } from "./suite-controllers.js";
 import { BankReconciliationController, BankTransactionController, EInvoiceSubmissionController, PayrollEntryController, SubscriptionController } from "./enterprise-controllers.js";
-import { EmployeeOnboardingController, EmployeePromotionController, EmployeeSeparationController, EmployeeTransferController, EmploymentContractController, InterviewController, JobApplicantController, JobOfferController, JobOpeningController } from "./hrm-core-controllers.js";
+import { EmployeeOnboardingController, EmployeePromotionController, EmployeeSeparationController, EmployeeTransferController, EmploymentContractController, InterviewController, JobOfferController } from "./hrm-core-controllers.js";
 import { AttendanceController, AttendanceRequestController, ShiftAssignmentController } from "./hrm-shift-attendance-controllers.js";
 import { AttendanceGeofenceController, GeofencedEmployeeCheckinController, GeofencedShiftTypeController } from "./hrm-geofence-controllers.js";
 import { HolidayListController, LeaveAllocationController, LeaveApplicationController, LeavePolicyController, OvertimeRequestController } from "./hrm-leave-overtime-controllers.js";
 import { AdditionalSalaryController, EmployeeAdvanceController, TrainingEventController, TravelRequestController } from "./hrm-benefit-controllers.js";
 import { HrmAppraisalController, HrmPayrollPeriodController, HrmSalaryStructureAssignmentController, SalaryStructureController } from "./hrm-policy-controllers.js";
 import { EmployeeBenefitEnrollmentController, EmployeeLoanController, EmployeeLoanRepaymentController, SalaryBankBatchController, WorkforcePlanController } from "./hrm-workforce-finance-controllers.js";
-import { EmployeeFinalSettlementController, HiringCompletionController } from "./hrm-lifecycle-closure-controllers.js";
+import { EmployeeFinalSettlementController } from "./hrm-lifecycle-closure-controllers.js";
+import { AcceptedHiringCompletionController } from "./hrm-recruitment-lifecycle.js";
+import { CareerPostingController, CandidateMatchController, CandidateProfileController, ExtendedJobApplicantController, ExtendedJobOpeningController, InterviewScorecardController, JobOfferResponseController } from "./hrm-recruitment-depth-controllers.js";
 import { EmployeeDisciplineController, PersonnelDocumentController } from "./hrm-personnel-controllers.js";
 import { CompetencyAssessmentController, CompetencyController, EmployeeCertificateController, ExtendedGoalController, Review360Controller, SuccessionPlanController, TalentPoolController, TrainingAssessmentController, TrainingCourseController } from "./hrm-talent-controllers.js";
 import { HrmSalarySlipController } from "./hrm-salary-slip.js";
@@ -28,7 +30,8 @@ export function registerErpNextCoreControllers(registry: ControllerRegistry): Co
     .register(new QualityInspectionController()).register(new IssueController()).register(new ExpenseClaimController())
     .register(new EmploymentContractController()).register(new EmployeeOnboardingController()).register(new EmployeeTransferController()).register(new EmployeePromotionController()).register(new EmployeeSeparationController())
     .register(new EmployeeDisciplineController()).register(new PersonnelDocumentController())
-    .register(new JobOpeningController()).register(new JobApplicantController()).register(new InterviewController()).register(new JobOfferController()).register(new HiringCompletionController())
+    .register(new CandidateProfileController()).register(new ExtendedJobOpeningController()).register(new ExtendedJobApplicantController()).register(new CandidateMatchController())
+    .register(new InterviewController()).register(new InterviewScorecardController()).register(new JobOfferController()).register(new JobOfferResponseController()).register(new CareerPostingController()).register(new AcceptedHiringCompletionController())
     .register(new GeofencedShiftTypeController()).register(new AttendanceGeofenceController()).register(new ShiftAssignmentController()).register(new GeofencedEmployeeCheckinController()).register(new AttendanceRequestController()).register(new OvertimeRequestController())
     .register(new HolidayListController()).register(new LeavePolicyController()).register(new LeaveAllocationController()).register(new LeaveApplicationController()).register(new AttendanceController())
     .register(new WorkforcePlanController()).register(new SalaryStructureController()).register(new HrmSalaryStructureAssignmentController()).register(new HrmPayrollPeriodController())
