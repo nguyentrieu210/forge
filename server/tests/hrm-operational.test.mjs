@@ -150,7 +150,9 @@ test("salary slip input is generated from effective structure, attendance and se
   assert.equal(generated.input_hash.length, 64);
   const trace = JSON.parse(generated.rule_trace_json);
   assert.equal(trace.payroll_rule.name, "RULE-1");
+  assert.equal(trace.payroll_rule.rule_code, "RULE-1");
   assert.equal(trace.payroll_rule.legal_document_no, "LEGAL-2026");
+  assert.equal(trace.payroll_rule.source_url, "https://example.test/legal-2026");
   assert.equal(trace.payroll_rule.formula_sha256.length, 64);
 });
 
