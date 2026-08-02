@@ -6,6 +6,7 @@ import {
   type FrappeRouterContext,
 } from "./router.js";
 import { listSecurityAlerts } from "./security-alerts.js";
+import { isSessionManagementPath, routeSessionManagementApi } from "./session-manager.js";
 import { WEBSITE_MANIFEST, WEBSITE_PAGE, websiteManifest, websitePage } from "./website.js";
 
 // Preserve every existing router export for package consumers. The explicit
@@ -18,8 +19,6 @@ const METHOD_PREFIX = "/api/method/";
 const RESOURCE_PREFIX = "/api/resource/";
 const ADMIN_PASSWORD_METHOD = "frappe.core.doctype.user.user.update_password";
 const SECURITY_ALERTS_PATH = "/api/method/metaforge.api.security_alerts";
-const LIST_SESSIONS_PATH = "/api/method/metaforge.api.list_sessions";
-const REVOKE_SESSION_PATH = "/api/method/metaforge.api.revoke_session";
 
 /**
  * Privileged Frappe methods that must not be authorized by a long-lived browser session.
@@ -146,54 +145,6 @@ async function securityAlertsResponse(request: Request, url: URL, context: Frapp
   }));
 }
 
-/**
- * Browser-session inventory is deliberately self-service and cookie-only.
- *
- * App callbacks carry the user's actor but not their browser session; letting an app use
- * that identity to enumerate or revoke the user's sessions would widen delegated app
- * authority into account-security authority. `authenticatedAt` is present only for an
- * established cookie session in this Frappe context, so it is the narrow boundary here.
- */
-async function listSessionsResponse(request: Request, url: URL, context: FrappeRouterContext): Promise<Response> {
-  requireCookieSession(context);
-  if (request.method.toUpperCase() !== "GET") throw errors.validation("list_sessions requires GET");
-  const args = await readFrappeArgs(request, url);
-  const limitText = args.text("limit")?.trim();
-  const limit = limitText === undefined ? 100 : Number(limitText);
-  if (!Number.isInteger(limit) || limit < 1 || limit > 250) throw errors.validation("limit must be an integer from 1 to 250");
-  return methodResponse({
-    sessions: await context.users.sessions.list(
-      context.tenantId,
-      context.actor.user_id,
-      context.now(),
-      undefined,
-      limit,
-    ),
-  });
-}
-
-async function revokeSessionResponse(request: Request, url: URL, context: FrappeRouterContext): Promise<Response> {
-  requireCookieSession(context);
-  if (request.method.toUpperCase() !== "POST") throw errors.validation("revoke_session requires POST");
-  const args = await readFrappeArgs(request, url);
-  const sessionId = args.requireText("session_id", 128);
-  const reason = args.text("reason")?.trim() ?? "";
-  if (reason.length > 500) throw errors.validation("reason must be at most 500 characters");
-  const revoked = await context.users.sessions.revokeOne(
-    context.tenantId,
-    context.actor.user_id,
-    sessionId,
-    {
-      actorUserId: context.actor.user_id,
-      traceId: context.traceId,
-      source: "session-manager",
-      ...(reason ? { reason } : {}),
-    },
-    context.now(),
-  );
-  return methodResponse({ session_id: sessionId, revoked });
-}
-
 function requireCookieSession(context: FrappeRouterContext): void {
   if (!context.authenticatedAt || context.actor.user_id === "Guest") {
     throw errors.permission("A browser session is required for session management");
@@ -220,8 +171,26 @@ export async function routeFrappeApi(
     try {
       await assertSecurityStepUp(request, url, context);
       if (url.pathname === SECURITY_ALERTS_PATH) return await securityAlertsResponse(request, url, context);
-      if (url.pathname === LIST_SESSIONS_PATH) return await listSessionsResponse(request, url, context);
-      if (url.pathname === REVOKE_SESSION_PATH) return await revokeSessionResponse(request, url, context);
+      if (isSessionManagementPath(url.pathname)) {
+        requireCookieSession(context);
+        return await routeSessionManagementApi(request, url, {
+          tenantId: context.tenantId,
+          userId: context.actor.user_id,
+          traceId: context.traceId,
+          now: context.now(),
+          sessions: context.users.sessions,
+          revokeAllSessions: () => context.users.administration.revokeSessions(
+            context.tenantId,
+            context.actor.user_id,
+            {
+              actorUserId: context.actor.user_id,
+              traceId: context.traceId,
+              source: "metaforge.api.logout_other_sessions",
+            },
+            context.now(),
+          ),
+        });
+      }
     } catch (error) {
       return faultResponse(error, context.traceId);
     }
