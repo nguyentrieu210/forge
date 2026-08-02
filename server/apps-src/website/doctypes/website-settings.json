@@ -1,0 +1,37 @@
+{
+  "name": "Website Settings",
+  "module": "Website",
+  "is_single": true,
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "enabled", "label": "Bật website", "fieldtype": "Check", "default": 0 },
+    { "fieldname": "published", "label": "Công khai website", "fieldtype": "Check", "default": 0 },
+    { "fieldname": "site_title", "label": "Tên website", "fieldtype": "Data", "required": true, "default": "Website doanh nghiệp" },
+    { "fieldname": "site_description", "label": "Mô tả", "fieldtype": "Small Text" },
+    { "fieldname": "home_page", "label": "Trang chủ", "fieldtype": "Data", "required": true, "default": "home" },
+    { "fieldname": "template_preset", "label": "Mẫu website", "fieldtype": "Select", "options": "business-landing\ncatalogue\nsales", "required": true, "default": "business-landing" },
+    { "fieldname": "template_version", "label": "Phiên bản mẫu", "fieldtype": "Int", "required": true, "read_only": true, "default": 1 },
+    { "fieldname": "theme_preset", "label": "Phong cách", "fieldtype": "Select", "options": "business-blue\nindustrial-dark\nwarm", "required": true, "default": "business-blue" },
+    { "fieldname": "theme_version", "label": "Phiên bản phong cách", "fieldtype": "Int", "required": true, "read_only": true, "default": 1 },
+    { "fieldname": "logo", "label": "Logo", "fieldtype": "Attach Image" },
+    { "fieldname": "favicon", "label": "Favicon", "fieldtype": "Attach Image" },
+    { "fieldname": "primary_color", "label": "Màu chính", "fieldtype": "Data", "description": "Mã màu #RRGGBB; để trống để dùng preset" },
+    { "fieldname": "secondary_color", "label": "Màu phụ", "fieldtype": "Data", "description": "Mã màu #RRGGBB; để trống để dùng preset" },
+    { "fieldname": "background_color", "label": "Màu nền", "fieldtype": "Data", "description": "Mã màu #RRGGBB; để trống để dùng preset" },
+    { "fieldname": "text_color", "label": "Màu chữ", "fieldtype": "Data", "description": "Mã màu #RRGGBB; để trống để dùng preset" },
+    { "fieldname": "heading_font", "label": "Font tiêu đề", "fieldtype": "Select", "options": "system\nserif\nrounded", "default": "system" },
+    { "fieldname": "body_font", "label": "Font nội dung", "fieldtype": "Select", "options": "system\nserif\nrounded", "default": "system" },
+    { "fieldname": "radius", "label": "Bo góc", "fieldtype": "Select", "options": "square\nsoft\nround", "default": "soft" },
+    { "fieldname": "density", "label": "Mật độ", "fieldtype": "Select", "options": "compact\ncomfortable\ntouch", "default": "comfortable" },
+    { "fieldname": "contact_phone", "label": "Điện thoại", "fieldtype": "Data" },
+    { "fieldname": "contact_email", "label": "Email", "fieldtype": "Data" },
+    { "fieldname": "address", "label": "Địa chỉ", "fieldtype": "Small Text" },
+    { "fieldname": "footer_text", "label": "Chân trang", "fieldtype": "Small Text" }
+  ],
+  "permissions": [
+    { "role": "Website Editor", "read": true, "write": true, "create": true },
+    { "role": "Website Manager", "read": true, "write": true, "create": true, "report": true, "export": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}
