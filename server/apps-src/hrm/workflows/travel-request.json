@@ -1,6 +1,6 @@
 {
-  "name": "Duyệt nghỉ phép",
-  "document_type": "Leave Application",
+  "name": "Duyệt công tác",
+  "document_type": "Travel Request",
   "state_field": "workflow_state",
   "is_active": true,
   "states": [{"state":"Nháp","docstatus":0,"allow_edit":"Employee"},{"state":"Chờ duyệt","docstatus":0,"allow_edit":"HR Manager"},{"state":"Đã duyệt","docstatus":1,"allow_edit":"HR Manager"},{"state":"Từ chối","docstatus":2,"allow_edit":"HR Manager"}],

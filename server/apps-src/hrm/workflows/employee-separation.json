@@ -1,6 +1,6 @@
 {
-  "name": "Duyệt hợp đồng lao động",
-  "document_type": "Employment Contract",
+  "name": "Duyệt nghỉ việc",
+  "document_type": "Employee Separation",
   "state_field": "workflow_state",
   "is_active": true,
   "states": [{"state":"Nháp","docstatus":0,"allow_edit":"HR User"},{"state":"Chờ duyệt","docstatus":0,"allow_edit":"HR Manager"},{"state":"Đã duyệt","docstatus":1,"allow_edit":"HR Manager"},{"state":"Từ chối","docstatus":2,"allow_edit":"HR Manager"}],

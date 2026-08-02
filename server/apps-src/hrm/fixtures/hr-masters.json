@@ -1,25 +1,25 @@
 [
-  { "record_type": "Currency", "name": "VND", "data": { "currency_name": "Việt Nam đồng", "symbol": "₫", "currency_scale": 0 } },
-  { "record_type": "Company", "name": "Kairo", "data": { "company_name": "Công ty Kairo", "default_currency": "VND", "country": "Việt Nam" } },
-  { "record_type": "Cost Center", "name": "Kairo - KR", "data": { "cost_center_name": "Kairo", "company": "Kairo", "is_group": 1, "disabled": 0 } },
-  { "record_type": "Branch", "name": "HQ", "data": { "branch_code": "HQ", "branch_name": "Trụ sở chính", "company": "Kairo", "accounting_model": "Accounting Unit", "cost_center": "Kairo - KR", "address": "Cập nhật địa chỉ doanh nghiệp trước khi go-live", "is_dependent_unit": 0, "organization_status": "Active", "disabled": 0 } },
-
-  { "record_type": "Department", "name": "HR", "data": { "department_code": "HR", "department_name": "Phòng Nhân sự", "company": "Kairo", "branch": "HQ", "cost_center": "Kairo - KR", "organization_status": "Active", "disabled": 0 } },
-  { "record_type": "Department", "name": "ACC", "data": { "department_code": "ACC", "department_name": "Phòng Kế toán", "company": "Kairo", "branch": "HQ", "cost_center": "Kairo - KR", "organization_status": "Active", "disabled": 0 } },
-  { "record_type": "Department", "name": "SALES", "data": { "department_code": "SALES", "department_name": "Phòng Kinh doanh", "company": "Kairo", "branch": "HQ", "cost_center": "Kairo - KR", "organization_status": "Active", "disabled": 0 } },
-  { "record_type": "Department", "name": "TECH", "data": { "department_code": "TECH", "department_name": "Phòng Kỹ thuật", "company": "Kairo", "branch": "HQ", "cost_center": "Kairo - KR", "organization_status": "Active", "disabled": 0 } },
-
-  { "record_type": "Designation", "name": "Nhân viên", "data": { "designation_name": "Nhân viên", "job_level": 1, "disabled": 0 } },
-  { "record_type": "Designation", "name": "Trưởng nhóm", "data": { "designation_name": "Trưởng nhóm", "job_level": 2, "disabled": 0 } },
-  { "record_type": "Designation", "name": "Trưởng phòng", "data": { "designation_name": "Trưởng phòng", "job_level": 3, "disabled": 0 } },
-  { "record_type": "Designation", "name": "Giám đốc", "data": { "designation_name": "Giám đốc", "job_level": 4, "disabled": 0 } },
-  { "record_type": "Shift Type", "name": "Hành chính", "data": { "shift_name": "Hành chính", "start_time": "08:00:00", "end_time": "17:00:00", "working_hours": 8, "disabled": 0 } },
-
-  { "record_type": "Leave Type", "name": "Phép năm", "data": { "label": "Nghỉ phép năm", "max_days_per_year": 12, "is_paid": 1 } },
-  { "record_type": "Leave Type", "name": "Nghỉ ốm", "data": { "label": "Nghỉ ốm", "max_days_per_year": 30, "is_paid": 1 } },
-  { "record_type": "Leave Type", "name": "Nghỉ không lương", "data": { "label": "Nghỉ không lương", "max_days_per_year": 0, "is_paid": 0 } },
-  { "record_type": "Leave Type", "name": "Nghỉ thai sản", "data": { "label": "Nghỉ thai sản", "max_days_per_year": 180, "is_paid": 1 } },
-
-  { "record_type": "Fiscal Year", "name": "2026", "data": { "label": "Năm tài chính 2026", "year_start_date": "2026-01-01", "year_end_date": "2026-12-31" } },
-  { "record_type": "Fiscal Year", "name": "2027", "data": { "label": "Năm tài chính 2027", "year_start_date": "2027-01-01", "year_end_date": "2027-12-31" } }
+  {"record_type":"Currency","name":"VND","data":{"currency_name":"Việt Nam đồng","symbol":"₫","currency_scale":0}},
+  {"record_type":"Company","name":"Kairo","data":{"company_name":"Công ty Kairo","default_currency":"VND","country":"Việt Nam"}},
+  {"record_type":"Cost Center","name":"Kairo - KR","data":{"cost_center_name":"Kairo","company":"Kairo","is_group":1,"disabled":0}},
+  {"record_type":"Branch","name":"HQ","data":{"branch_code":"HQ","branch_name":"Trụ sở chính","company":"Kairo","accounting_model":"Accounting Unit","cost_center":"Kairo - KR","address":"Cập nhật địa chỉ doanh nghiệp trước khi go-live","is_dependent_unit":0,"organization_status":"Active","disabled":0}},
+  {"record_type":"Department","name":"HR","data":{"department_code":"HR","department_name":"Phòng Nhân sự","company":"Kairo","branch":"HQ","cost_center":"Kairo - KR","organization_status":"Active","disabled":0}},
+  {"record_type":"Department","name":"ACC","data":{"department_code":"ACC","department_name":"Phòng Kế toán","company":"Kairo","branch":"HQ","cost_center":"Kairo - KR","organization_status":"Active","disabled":0}},
+  {"record_type":"Department","name":"SALES","data":{"department_code":"SALES","department_name":"Phòng Kinh doanh","company":"Kairo","branch":"HQ","cost_center":"Kairo - KR","organization_status":"Active","disabled":0}},
+  {"record_type":"Department","name":"TECH","data":{"department_code":"TECH","department_name":"Phòng Kỹ thuật","company":"Kairo","branch":"HQ","cost_center":"Kairo - KR","organization_status":"Active","disabled":0}},
+  {"record_type":"Designation","name":"Nhân viên","data":{"designation_name":"Nhân viên","job_level":1,"disabled":0}},
+  {"record_type":"Designation","name":"Trưởng nhóm","data":{"designation_name":"Trưởng nhóm","job_level":2,"disabled":0}},
+  {"record_type":"Designation","name":"Trưởng phòng","data":{"designation_name":"Trưởng phòng","job_level":3,"disabled":0}},
+  {"record_type":"Designation","name":"Giám đốc","data":{"designation_name":"Giám đốc","job_level":4,"disabled":0}},
+  {"record_type":"Employment Type","name":"Chính thức","data":{"employment_type_name":"Chính thức","probation_days":0,"notice_days":0,"payroll_eligible":1,"disabled":0}},
+  {"record_type":"Employment Type","name":"Thử việc","data":{"employment_type_name":"Thử việc","probation_days":0,"notice_days":0,"payroll_eligible":1,"disabled":0}},
+  {"record_type":"Employment Type","name":"Thời vụ","data":{"employment_type_name":"Thời vụ","probation_days":0,"notice_days":0,"payroll_eligible":1,"disabled":0}},
+  {"record_type":"Employment Type","name":"Cộng tác viên","data":{"employment_type_name":"Cộng tác viên","probation_days":0,"notice_days":0,"payroll_eligible":0,"disabled":0}},
+  {"record_type":"Shift Type","name":"Hành chính","data":{"shift_name":"Hành chính","start_time":"08:00:00","end_time":"17:00:00","working_minutes":480,"working_hours":8,"late_grace_minutes":0,"early_exit_grace_minutes":0,"auto_attendance":0,"disabled":0}},
+  {"record_type":"Leave Type","name":"Phép năm","data":{"label":"Nghỉ phép năm","is_paid":1}},
+  {"record_type":"Leave Type","name":"Nghỉ ốm","data":{"label":"Nghỉ ốm","is_paid":1}},
+  {"record_type":"Leave Type","name":"Nghỉ không lương","data":{"label":"Nghỉ không lương","is_paid":0}},
+  {"record_type":"Leave Type","name":"Nghỉ thai sản","data":{"label":"Nghỉ thai sản","is_paid":1}},
+  {"record_type":"Fiscal Year","name":"2026","data":{"label":"Năm tài chính 2026","year_start_date":"2026-01-01","year_end_date":"2026-12-31"}},
+  {"record_type":"Fiscal Year","name":"2027","data":{"label":"Năm tài chính 2027","year_start_date":"2027-01-01","year_end_date":"2027-12-31"}}
 ]
