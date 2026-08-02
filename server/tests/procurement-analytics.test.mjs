@@ -69,6 +69,20 @@ test("supplier price history normalizes FX before comparing historical rates", (
   assert.equal(series[0].latest_change_bps, -400);
 });
 
+test("price history separates incompatible company currencies and leaves zero-baseline variance undefined", () => {
+  const split = buildSupplierPriceHistory([
+    order("PO-USD", "2026-08-01", 10, 10_000, { companyCurrency: "USD" }),
+    order("PO-VND", "2026-08-02", 250_000, 250_000, { currency: "VND", companyCurrency: "VND" }),
+  ]);
+  assert.equal(split.length, 2);
+
+  const zero = buildSupplierPriceHistory([
+    order("PO-ZERO", "2026-08-01", 0, 0),
+    order("PO-NONZERO", "2026-08-02", 10, 10_000),
+  ]);
+  assert.equal(zero[0].latest_change_bps, null);
+});
+
 test("supplier spend summary aggregates submitted POs in company currency only", () => {
   const summary = buildSupplierSpendSummary([
     order("PO-1", "2026-08-01", 10, 12_000),
