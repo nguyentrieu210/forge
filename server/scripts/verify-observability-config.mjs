@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { readJsonc, serverRoot } from "./wrangler-cli.mjs";
 import { removeTenantConfig, writeTenantConfig } from "./tenant-wrangler.mjs";
@@ -42,4 +43,31 @@ try {
   removeTenantConfig(generated.configPath);
 }
 
-console.log(`OBSERVABILITY_CONFIG_PASS workers=${WORKER_CONFIGS.length}+generated-tenant logs=100% traces=enabled`);
+const structuredContracts = [
+  {
+    file: "apps/gateway-worker/src/index.ts",
+    required: ["service: \"gateway-worker\"", "code: normalized.code", "trace_id: traceId"],
+  },
+  {
+    file: "apps/jobs-worker/src/index.ts",
+    required: ["code: \"DOMAIN_EVENT_RETRY\"", "retry_delay_seconds: delaySeconds", "attempts: message.attempts"],
+  },
+  {
+    file: "apps/query-worker/src/index.ts",
+    required: ["scope: \"prepared-report\"", "retry_delay_seconds: retryDelaySeconds", "attempts: message.attempts"],
+  },
+  {
+    file: "apps/social-ingress-worker/src/index.ts",
+    required: ["code: \"SOCIAL_EVENT_RETRY\"", "retry_delay_seconds: delaySeconds", "attempts: message.attempts"],
+  },
+];
+for (const contract of structuredContracts) {
+  const source = readFileSync(path.join(serverRoot, contract.file), "utf8");
+  for (const expected of contract.required) {
+    if (!source.includes(expected)) throw new Error(`${contract.file}: structured log invariant missing: ${expected}`);
+  }
+}
+
+console.log(
+  `OBSERVABILITY_CONFIG_PASS workers=${WORKER_CONFIGS.length}+generated-tenant logs=100% traces=enabled structured=${structuredContracts.length}`,
+);
