@@ -330,16 +330,24 @@ export class SalaryBankBatchController extends SuiteController<JsonObject> {
   }
 }
 
-export async function loanRepaidMinor(context: HrmContext, loanName: string, scale: number, excludeRepaymentName?: string): Promise<number> {
+export async function loanRepaidMinor(
+  context: HrmContext,
+  loanName: string,
+  scale: number,
+  excludeRepaymentName?: string,
+  throughDate?: string,
+): Promise<number> {
   let total = 0;
   const repayments = await context.reader.listDocumentsByDoctype<JsonObject>(context.command.tenant_id, "Employee Loan Repayment");
   for (const repayment of repayments) {
     if (repayment.docstatus !== 1 || repayment.name === excludeRepaymentName || H.text(repayment.data.employee_loan) !== loanName) continue;
+    if (throughDate && H.text(repayment.data.posting_date) > throughDate) continue;
     total = safeAdd(total, toScaledInt(repayment.data.amount as string | number, scale, `Employee Loan Repayment ${repayment.name} amount`), "Employee Loan repayment overflow");
   }
   const slips = await context.reader.listDocumentsByDoctype<JsonObject>(context.command.tenant_id, "Salary Slip");
   for (const slip of slips) {
     if (slip.docstatus !== 1) continue;
+    if (throughDate && H.text(slip.data.end_date) > throughDate) continue;
     const trace = parseTrace(H.text(slip.data.rule_trace_json));
     const rows = Array.isArray(trace.employee_loans) ? trace.employee_loans : [];
     for (const raw of rows) {
