@@ -39,6 +39,24 @@ export {
 // M18 Workflow (+ serializer #2)
 export { WorkflowBuilder, blankWorkflow, type WorkflowBuilderProps, type WorkflowModel, type WFState, type WFTransition } from "./workflow/WorkflowBuilder.js";
 export { serializeWorkflow, validateWorkflow, workflowMasters, type WorkflowPayload, type WorkflowValidationResult } from "./workflow/serialize.js";
+// Enterprise staged approval / quorum / SLA authoring contract. Kept separate from the
+// Frappe Workflow serializer because the deployed workflow table does not yet persist these
+// process-instance semantics; WS11 integration consumes this payload through DR-09-02.
+export {
+  blankApprovalPlan,
+  newApprovalStage,
+  validateApprovalPlan,
+  serializeApprovalPlan,
+  type ApprovalStageMode,
+  type ApprovalSelectorModel,
+  type ApprovalEscalationModel,
+  type ApprovalStageModel,
+  type ApprovalPlanModel,
+  type ApprovalPlanValidationIssue,
+  type ApprovalPlanValidationResult,
+  type ApprovalPlanPayload,
+  type ApprovalTimerPayload,
+} from "./workflow/approval-plan.js";
 
 // M21 Print Format (+ serializer #3)
 export { PrintFormatBuilder, printModelFromFields, type PrintFormatBuilderProps, type PrintFormatModel, type PrintBlock } from "./print/PrintFormatBuilder.js";
