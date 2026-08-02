@@ -74,19 +74,7 @@ jobs:
 
       - name: Run tests
         if: steps.scope.outputs.full == 'true'
-        shell: bash
-        run: |
-          set -o pipefail
-          pnpm test 2>&1 | tee "$RUNNER_TEMP/ci-test.log"
-
-      - name: Upload temporary test diagnostics
-        if: always() && steps.scope.outputs.full == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: ci-test-log
-          path: ${{ runner.temp }}/ci-test.log
-          if-no-files-found: ignore
-          retention-days: 1
+        run: pnpm test
 
       - name: Run typecheck
         if: steps.scope.outputs.full == 'true'
