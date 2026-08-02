@@ -177,14 +177,14 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
 
       <Dialog open={isNew} onOpenChange={(open) => { if (!open) setCloseRequest((value) => value + 1); }}>
         <DialogContent
-          className="top-8 md:top-12 flex max-h-[calc(100dvh-5rem)] w-[min(96vw,920px)] max-w-none !translate-y-0 flex-col overflow-hidden rounded-2xl border shadow-2xl p-0"
+          className="top-6 md:top-10 flex h-[calc(100dvh-4rem)] max-h-[calc(100dvh-4rem)] w-[min(96vw,920px)] max-w-none !translate-y-0 flex-col overflow-hidden rounded-2xl border shadow-2xl p-0"
           onInteractOutside={(event) => { event.preventDefault(); setCloseRequest((value) => value + 1); }}
           onEscapeKeyDown={(event) => { event.preventDefault(); setCloseRequest((value) => value + 1); }}
         >
           <DialogHeader className="shrink-0 border-b px-5 py-3">
             <DialogTitle>{t("form.create_title_prefix")} {displayTitle.toLocaleLowerCase("vi")}</DialogTitle>
           </DialogHeader>
-          <div className="min-h-0 flex-1 overflow-hidden">
+          <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
             <NewFormContainer
               doctype={doctype}
               closeRequest={closeRequest}

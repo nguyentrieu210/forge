@@ -2197,6 +2197,7 @@
           "description": "Quyết định cách đo bề rộng và giá bán. Đại lý đo phủ bì nhựa, khách lẻ đo phủ bì ray. Công trình và nhà thầu tính như khách lẻ."
         },
         "account_manager:Data Người phụ trách nội bộ",
+        "default_price_list:Link(Price List) Bảng giá mặc định",
         "phone:Data Điện thoại",
         "email:Data Email",
         "address:Small Text Địa chỉ",
@@ -2687,7 +2688,13 @@
         "contact_person:Data Người liên hệ",
         "phone:Data Điện thoại",
         "install_address:Small Text Địa chỉ công trình",
-        "selling_price_list:Link(Price List) Bảng giá áp dụng",
+        {
+          "fieldname": "selling_price_list",
+          "fieldtype": "Link",
+          "options": "Price List",
+          "label": "Bảng giá áp dụng",
+          "fetch_from": "customer.default_price_list"
+        },
         {
           "//": "Lấy TỪ HỒ SƠ KHÁCH, không để người lập chọn tay.",
           "//vi-sao": [
@@ -3015,7 +3022,13 @@
         "manual_note:Small Text- Ghi chú vận hành",
         "operational_change_reason:Small Text- Lý do đổi vận hành",
         "against_quotation:Link(Quotation)- Theo báo giá",
-        "selling_price_list:Link(Price List)! Bảng giá áp dụng",
+        {
+          "fieldname": "selling_price_list",
+          "fieldtype": "Link",
+          "options": "Price List",
+          "label": "Bảng giá áp dụng",
+          "fetch_from": "customer.default_price_list"
+        },
         {
           "//": "Ảnh chụp nhóm giá của khách — xem chú thích cùng trường ở Báo giá.",
           "fieldname": "customer_group",
