@@ -1,6 +1,7 @@
 -- HRM Wave 1 closure integrity.
--- Raw time logs remain immutable once consumed by submitted Attendance, and the
--- hire/separation closure documents remain one-to-one at the database boundary.
+-- Raw time logs remain immutable once consumed by submitted Attendance, hire/separation
+-- closure documents remain one-to-one, and submitted Salary Slips are shared read-only
+-- with the linked Employee user without widening doctype-wide payroll permissions.
 
 CREATE TRIGGER IF NOT EXISTS hr_consumed_checkin_update_guard
 BEFORE UPDATE OF doctype,name,docstatus,payload_json ON documents
@@ -106,4 +107,73 @@ AND EXISTS(
 )
 BEGIN
   SELECT RAISE(ABORT,'REFERENCE_VALIDATION_FAILED: HR_FINAL_SETTLEMENT_DUPLICATE');
+END;
+
+-- Payslip self-service is a document share, not a doctype-wide Employee grant.
+-- This preserves Payroll/HR full-list access while an Employee sees only the slips
+-- explicitly shared with their linked user account.
+CREATE TRIGGER IF NOT EXISTS hr_salary_slip_employee_share_insert
+AFTER INSERT ON documents
+WHEN NEW.doctype='Salary Slip' AND NEW.docstatus=1
+BEGIN
+  INSERT INTO document_shares(
+    tenant_id,doctype,name,user,can_read,can_write,can_share,submitted_by,created_at
+  )
+  SELECT NEW.tenant_id,'Salary Slip',NEW.name,linked.employee_user,1,0,0,'hrm:auto-share',strftime('%Y-%m-%dT%H:%M:%fZ','now')
+  FROM (
+    SELECT COALESCE(
+      (
+        SELECT NULLIF(trim(CAST(json_extract(e.payload_json,'$.user_id') AS TEXT)),'')
+        FROM documents e
+        WHERE e.tenant_id=NEW.tenant_id
+          AND e.doctype='Employee'
+          AND e.name=CAST(json_extract(NEW.payload_json,'$.employee') AS TEXT)
+          AND e.docstatus<>2
+        LIMIT 1
+      ),
+      (
+        SELECT NULLIF(trim(CAST(json_extract(m.data_json,'$.user_id') AS TEXT)),'')
+        FROM master_records m
+        WHERE m.tenant_id=NEW.tenant_id
+          AND m.record_type='Employee'
+          AND m.name=CAST(json_extract(NEW.payload_json,'$.employee') AS TEXT)
+        LIMIT 1
+      )
+    ) AS employee_user
+  ) linked
+  WHERE linked.employee_user IS NOT NULL AND linked.employee_user<>''
+  ON CONFLICT(tenant_id,doctype,name,user) DO UPDATE SET can_read=1;
+END;
+
+CREATE TRIGGER IF NOT EXISTS hr_salary_slip_employee_share_update
+AFTER UPDATE OF docstatus,payload_json ON documents
+WHEN NEW.doctype='Salary Slip' AND NEW.docstatus=1
+BEGIN
+  INSERT INTO document_shares(
+    tenant_id,doctype,name,user,can_read,can_write,can_share,submitted_by,created_at
+  )
+  SELECT NEW.tenant_id,'Salary Slip',NEW.name,linked.employee_user,1,0,0,'hrm:auto-share',strftime('%Y-%m-%dT%H:%M:%fZ','now')
+  FROM (
+    SELECT COALESCE(
+      (
+        SELECT NULLIF(trim(CAST(json_extract(e.payload_json,'$.user_id') AS TEXT)),'')
+        FROM documents e
+        WHERE e.tenant_id=NEW.tenant_id
+          AND e.doctype='Employee'
+          AND e.name=CAST(json_extract(NEW.payload_json,'$.employee') AS TEXT)
+          AND e.docstatus<>2
+        LIMIT 1
+      ),
+      (
+        SELECT NULLIF(trim(CAST(json_extract(m.data_json,'$.user_id') AS TEXT)),'')
+        FROM master_records m
+        WHERE m.tenant_id=NEW.tenant_id
+          AND m.record_type='Employee'
+          AND m.name=CAST(json_extract(NEW.payload_json,'$.employee') AS TEXT)
+        LIMIT 1
+      )
+    ) AS employee_user
+  ) linked
+  WHERE linked.employee_user IS NOT NULL AND linked.employee_user<>''
+  ON CONFLICT(tenant_id,doctype,name,user) DO UPDATE SET can_read=1;
 END;
