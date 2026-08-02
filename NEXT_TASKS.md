@@ -23,12 +23,14 @@ Ngày cập nhật: **2026-08-03**.
 
 ## Frontend/runtime — WS14
 
-- Independent UI slices đã merge: mobile shell/a11y/offline truthfulness (`#315`), installable PWA foundation (`#325`), touch-friendly extension child grid (`#328`), stable pull-to-refresh listeners (`#329`).
+- Independent UI slices đã merge: mobile shell/a11y/offline truthfulness (`#315`), installable PWA foundation (`#325`), touch-friendly extension child grid (`#328`), stable pull-to-refresh listeners (`#329`), dynamic mobile viewport + drawer focus entry (`#331`).
 - Xác nhận một UI push thực tế đi hết build -> stage -> Wrangler deploy -> `/health` -> `/release.json` đúng SHA/hash; hiện GitHub-connector writes chưa cho run/status quan sát được và container DNS không resolve production host.
-- Sau khi có browser/build lane: chạy client lint/typecheck/runtime build + targeted screenshots/E2E rồi mới promote `U01-001/002` từ Wired.
+- Sau khi có browser/build lane: chạy client lint/typecheck/runtime build + targeted screenshots/E2E cho 5 slice rồi mới promote `U01-001/002` từ Wired.
+- Base `ChildGrid.tsx` còn table-first trên mobile nhưng chứa formula/pricing/item-default/OCR paths; chỉ refactor touch renderer khi full checkout/build/E2E chạy được, không thay mù file gần 2.000 dòng qua Contents API.
 - Page/Dashboard fallback chờ WS09/WS00 chốt compatibility contract hoặc mapping sang AppScreen/Overview; WS14 không tạo client-only schema.
 - Offline read/write/background sync/conflict (`U01-003..007`) chờ WS00/WS11/WS12 chốt tenant/session/cache/OCC/release-freshness contract.
-- Domain-specific child-grid extension profile cần WS09 + WS17/domain owners đưa về metadata trước khi shared renderer được coi là generic hoàn toàn.
+- Domain-specific child-grid profiles trong shared views cần WS09 + WS17/domain owners đưa về metadata trước khi shared renderer được coi là generic hoàn toàn.
+- Runtime barrel/chunk split chỉ tối ưu sau khi có build/chunk measurement; PDF heavy libs đã dynamic import đúng điểm tải.
 - Shared React runtime/core/views/shell thuộc WS14; domain agent không tự sửa shared renderer nếu có thể giải bằng metadata.
 
 ## HCM / payroll — WS06

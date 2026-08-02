@@ -1,6 +1,6 @@
 # WS14 — MetaForge Frontend Runtime / Mobile / Offline / A11y
 
-Status: **BLOCKED — independent Phase B slices merged; shared-contract/release evidence pending**  
+Status: **BLOCKED — independent verified-safe Phase B slices merged; shared-contract/release/build evidence pending**  
 Owner: **gpt-ws14**  
 Branch: `agent/ent-14-frontend-runtime-mobile`  
 Started from: `bbe3494bcfbb8a3ce09a5ff4bbb839dfcf9e47e9`  
@@ -33,7 +33,8 @@ Harden shared MetaForge runtime instead of letting each domain fork UI: form/lis
 ### Mobile/a11y
 
 - Shared List already has mobile cards, desktop virtualization, roving keyboard focus, column preferences/pinning/resize/order and pull-to-refresh.
-- Audit found duplicated business-context rendering in the mobile shell, missing drawer Escape/focus semantics, horizontally-scroll-only extension child grids and unstable pull-to-refresh listener lifecycle. Those independent gaps are now merged below.
+- Audit found duplicated business-context rendering, missing drawer focus semantics, legacy `100vh` shell sizing, horizontally-scroll-only extension child grids and unstable pull-to-refresh listener lifecycle. Safe independent gaps are merged below.
+- Base `ChildGrid.tsx` remains table-first on narrow screens. It is nearly 2,000 lines and also contains Item defaults, pricing, sales formula, purchase barem, OCR/import and other domain-sensitive behavior. A mobile renderer refactor is not safely verifiable through whole-file Contents API replacement while checkout/build/E2E are unavailable; this is recorded as `NOT IMPLEMENTED`, not silently treated as done.
 
 ### PWA/offline
 
@@ -45,11 +46,11 @@ Harden shared MetaForge runtime instead of letting each domain fork UI: form/lis
 
 - Runtime already lazy-loads most route renderer families.
 - Print PDF correctly dynamic-imports `html2canvas` and `jspdf` only when the user requests PDF download.
-- Runtime still imports assistant/print/recent-doc utilities through the root `@metaforge/views` barrel; subpath/lazy splitting is a plausible optimization, but no exact chunk measurement/build is available in this environment. No blind `manualChunks` or import surgery is merged without build evidence.
+- Runtime still imports assistant/print/recent-doc utilities through the root `@metaforge/views` barrel; subpath/lazy splitting is plausible, but no exact chunk measurement/build is available. No blind `manualChunks` or import surgery is merged without build evidence.
 
 ## Capability maturity after autonomous pass
 
-- `U01-001 Responsive PWA`: **Wired** — responsive shell/list/child-grid paths improved; browser/deploy evidence is still insufficient for RC.
+- `U01-001 Responsive PWA`: **Wired** — shell/list/extension-child-grid paths improved; browser/deploy evidence and base-child-grid mobile closure are still insufficient for RC.
 - `U01-002 Installable PWA`: **Wired** — manifest/install metadata merged; real-browser installation evidence still missing.
 - `U01-003 Offline read/cache`: **Missing**.
 - `U01-004 Offline write queue`: **Missing**.
@@ -65,7 +66,7 @@ Risk: **FAST / UI-only**.
 
 - PR `#315`, squash merge `f2d46105ca30c368ee4e9bdcf78cdcdb85dc7162`.
 - Render business context once per viewport: desktop topbar at `lg+`, dedicated context row below `lg`.
-- Mobile navigation now has a stable controlled-region id, labelled navigation landmark, `aria-controls`, `aria-expanded`, Escape close and focus restoration.
+- Mobile navigation has a stable controlled-region id, labelled navigation landmark, `aria-controls`, `aria-expanded`, Escape close and trigger focus restoration.
 - Offline banner no longer promises cached reads or queued resend that do not exist.
 - `client/scripts/check-app-shell-mobile.mjs` is wired into client lint.
 - No public `AppShellProps`, backend/API/schema/permission/business invariant changes.
@@ -97,8 +98,19 @@ Risk: **FAST / UI-only**.
 
 - PR `#329`, squash merge `3981ee977fb6cea3e4375a92d99233010ab0b7d6`.
 - The hook previously documented a stable-listener design but its effect depended directly on `onRefresh`, causing detach/attach churn whenever parent callbacks changed identity.
-- Latest callback now lives in `onRefreshRef`; listener lifecycle depends on `enabled`, not callback identity, and gesture state resets when refresh becomes unavailable.
+- Latest callback lives in `onRefreshRef`; listener lifecycle depends on `enabled`, not callback identity, and gesture state resets when refresh becomes unavailable.
 - `client/scripts/check-pull-to-refresh.mjs` is wired into client lint.
+- Full repository typecheck/build/browser regression is **NOT RUN**.
+
+## Phase B slice 5 — dynamic mobile viewport + drawer focus entry
+
+Risk: **FAST / UI-only**.
+
+- PR `#331`, squash merge `6847e12716a432857a3e68bff812cffe3ad3fd81`.
+- Shared shell root uses `h-dvh` instead of legacy `h-screen`, preventing mobile browser chrome/address-bar changes from leaving the app taller than the visible viewport.
+- Opening mobile navigation moves keyboard focus into the drawer close button; Escape/backdrop/close still restore focus to the trigger.
+- Existing `check-app-shell-mobile.mjs` now guards dynamic viewport and focus-entry invariants.
+- Exact pre-merge compare: 2 client files, +11/-2; no API/schema/business changes.
 - Full repository typecheck/build/browser regression is **NOT RUN**.
 
 ## Legacy PR disposition
@@ -112,7 +124,7 @@ Risk: **FAST / UI-only**.
 
 ### DR-WS14-01 — observable UI release fast path -> WS12
 
-Need an observable/triggerable UI-only release path for GitHub-connector writes that returns workflow/run evidence and allows exact production verification (`/health`, `/release.json.releaseSha`, `bundleHash`). Contents-API commits/ref moves in this session produced no observable push-triggered run/status. Until this exists, production deploy is **UNPROVEN**, not DONE.
+Need an observable/triggerable UI-only release path for GitHub-connector writes that returns workflow/run evidence and allows exact production verification (`/health`, `/release.json.releaseSha`, `bundleHash`). Contents-API commits/ref moves in this session produced no observable push-triggered run/status. Container also fails DNS resolution for `alu.kairo.vn`. Until exact evidence exists, production deploy is **UNPROVEN**, not DONE.
 
 ### DR-WS14-02 — Page/Dashboard compatibility contract -> WS09 + WS00
 
@@ -129,33 +141,36 @@ Before implementing `U01-003..007`, define cacheable data classes, tenant/user/s
 
 ### DR-WS14-04 — domain extension profile -> WS09 + WS17/domain owners
 
-`ChildGridWithExtensions.tsx` still contains historical domain-specific child-DocType/field lists for sales and purchase-order extensions. Slice 3 improved only presentation and deliberately preserved behavior. Move these profiles into metadata/App Factory/vertical-owned configuration before claiming the shared child-grid architecture fully generic.
+Both `ChildGrid.tsx` and `ChildGridWithExtensions.tsx` contain historical domain-specific DocType/field profiles mixed into shared views. Slice 3 improved presentation only and deliberately preserved behavior. Move those profiles into metadata/App Factory/vertical-owned configuration before claiming the shared child-grid architecture fully generic.
 
 ## Verification boundary
 
 - GitHub exact diffs/mergeability were checked before each UI-only merge.
-- Source regression scripts for all four slices are committed and wired into normal `client` lint.
-- Full checkout/typecheck/build/E2E is **NOT RUN** in this execution environment because repository checkout cannot resolve `github.com`.
-- Existing traceability already requires screenshots + E2E before UI requirements are promoted to Done; these new slices therefore remain at **Wired** where browser evidence is absent.
-- Production `/release.json` evidence is **UNPROVEN**. Do not infer deploy success from merge alone.
+- Source regression scripts for all five slices are committed in the normal `client` lint path.
+- Full checkout/typecheck/build/E2E is **NOT RUN** because repository checkout cannot resolve `github.com` in this execution environment.
+- Existing traceability requires screenshots + E2E before UI requirements are promoted to Done; these new slices therefore remain at **Wired** where browser evidence is absent.
+- Production `/release.json` evidence is **UNPROVEN**. Direct container verification also failed with `Temporary failure in name resolution`.
+- Base ChildGrid mobile-card refactor and runtime chunk-split changes are **NOT IMPLEMENTED** without a build/browser lane because their blast radius is materially larger than the source-only slices merged above.
 
 ## Autonomous Definition of Done for this pass
 
-Completed all independent, low-risk WS14 Phase B slices that were supported by exact repo evidence without crossing another workstream's contract ownership:
+Completed all independent, low-risk WS14 Phase B slices that could be changed safely with exact repo evidence and without crossing another workstream's contract ownership:
 
 1. mobile shell accessibility/focus/offline truthfulness;
 2. installable PWA metadata foundation;
 3. extension child-grid mobile presentation;
 4. pull-to-refresh listener correctness/performance;
-5. legacy frontend PR disposition and fallback/offline/bundle audits.
+5. dynamic viewport + focus entry for mobile drawer;
+6. legacy frontend PR disposition and fallback/offline/bundle/base-child-grid audits.
 
-Remaining executable work is blocked by shared contract ownership (`DR-WS14-02..04`) or by missing browser/build/release evidence (`DR-WS14-01`). WS14 is therefore **BLOCKED**, not falsely marked DONE/Hardened.
+Remaining work now requires shared contract ownership (`DR-WS14-02..04`) or a functioning build/browser/release evidence lane (`DR-WS14-01` plus base ChildGrid/chunk measurement). WS14 is therefore **BLOCKED**, not falsely marked DONE/Hardened.
 
 ## Resume order after dependencies unblock
 
-1. Run client lint/typecheck/runtime build and targeted browser screenshots/E2E for slices 1–4.
+1. Run client lint/typecheck/runtime build and targeted browser screenshots/E2E for slices 1–5.
 2. Verify exact production release marker through WS12 fast path; promote `U01-001/002` only if evidence supports it.
-3. Implement Page/Dashboard compatibility renderer after WS09/WS00 contract lands.
-4. Implement offline read/write/sync only after DR-WS14-03 contract lands.
-5. Measure runtime chunks before any barrel/subpath/manual-chunk optimization; split assistant/print only when measurement proves value.
-6. Migrate child-grid domain extension profiles out of shared runtime after DR-WS14-04 lands.
+3. Add touch-first renderer for base `ChildGrid.tsx` with browser/build regression once full checkout is available; preserve its formula/default/pricing paths.
+4. Implement Page/Dashboard compatibility renderer after WS09/WS00 contract lands.
+5. Implement offline read/write/sync only after DR-WS14-03 contract lands.
+6. Measure runtime chunks before barrel/subpath/manual-chunk optimization; split assistant/print only when measurement proves value.
+7. Migrate child-grid domain extension profiles out of shared runtime after DR-WS14-04 lands.
