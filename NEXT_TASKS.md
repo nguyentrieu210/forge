@@ -7,10 +7,11 @@ Ngày cập nhật: **2026-08-02**.
 ## P1 — Warehouse Petty Cash per warehouse
 
 - Canonical PR: `#214` — `feat/alumdoor-warehouse-petty-cash-v3-20260802`.
-- Root cause Main CI đỏ đã xác định và sửa: `vn-accounting` thiếu `externalDocTypes` cho `Purchase Receipt` và `Stock Entry`; fix commit `e142a3ceb90179bca28080f488dfb83ebeedcdaa` đã qua tests + typecheck + build ở Main CI run `30746967088`.
-- Diagnostic workflow phục vụ lấy traceback đã được gỡ; không giữ artifact/debug change trong final diff.
-- Gate còn lại trước merge: exact-final-head 6/6 required workflows PASS, PR mergeable, không collision migration `0038`, diff không có secret/generated/debug file.
-- Không merge PR `#214` nếu chưa có lệnh merge riêng. Merge cũng không cấp quyền deploy production.
+- Root cause Main CI đỏ đã xác định và sửa: `vn-accounting` thiếu `externalDocTypes` cho `Purchase Receipt` và `Stock Entry`; fix commit `e142a3ceb90179bca28080f488dfb83ebeedcdaa`.
+- Validated clean head `4507fc72ee28cd0482a07b8463acbb6fc30067c5`: **6/6 required workflows PASS**, gồm Main CI tests + typecheck + build.
+- Diagnostic workflow phục vụ lấy traceback đã được gỡ; final PR diff không có `.github/workflows/ci.yml`, artifact/debug file hoặc generated evidence.
+- PR đã được kiểm `mergeable=true`; migration `0038_warehouse_cash.sql` chưa phát hiện collision với current `main` ở lần kiểm gần nhất.
+- Việc còn lại của slice: trước thao tác merge phải re-check exact GitHub head/current `main`; chỉ merge khi có lệnh merge riêng. Merge cũng không cấp quyền deploy production.
 - Follow-up kế toán ngoài scope hiện tại: nếu cần dùng quỹ kho để tất toán trực tiếp công nợ Purchase/Sales Invoice, phải thiết kế payment allocation canonical; không giả định party dimension trên GL đã settle AR/AP.
 
 ## DONE — Purchase Receipt Bulk Transaction / nhập nhôm nhiều mã
