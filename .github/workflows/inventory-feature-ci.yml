@@ -5,6 +5,52 @@ on:
     branches:
       - main
     types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - 'server/briefs/alumdoor*.json'
+      - 'server/apps-src/**/*inventory*'
+      - 'server/apps-src/**/*manufactur*'
+      - 'server/apps-src/**/*warehouse*'
+      - 'server/apps-src/**/*stock*'
+      - 'server/apps-src/**/*batch*'
+      - 'server/apps-src/**/*bom*'
+      - 'server/apps-src/**/*work-order*'
+      - 'server/packages/**/*inventory*'
+      - 'server/packages/**/*manufactur*'
+      - 'server/packages/**/*warehouse*'
+      - 'server/packages/**/*stock*'
+      - 'server/packages/**/*batch*'
+      - 'server/packages/**/*bom*'
+      - 'server/packages/**/*work-order*'
+      - 'server/tests/**/*inventory*'
+      - 'server/tests/**/*manufactur*'
+      - 'server/tests/**/*warehouse*'
+      - 'server/tests/**/*stock*'
+      - 'server/tests/**/*batch*'
+      - 'server/tests/**/*bom*'
+      - 'server/tests/**/*work-order*'
+      - 'server/tests/alumdoor-catalog-*'
+      - 'server/tests/alumdoor-item-*'
+      - 'server/scripts/**/*inventory*'
+      - 'server/scripts/**/*manufactur*'
+      - 'server/scripts/**/*warehouse*'
+      - 'server/scripts/**/*stock*'
+      - 'server/scripts/**/*batch*'
+      - 'server/scripts/**/*bom*'
+      - 'server/scripts/**/*work-order*'
+      - 'server/migrations/**/*inventory*'
+      - 'server/migrations/**/*manufactur*'
+      - 'server/migrations/**/*warehouse*'
+      - 'server/migrations/**/*stock*'
+      - 'server/migrations/**/*batch*'
+      - 'server/migrations/**/*bom*'
+      - 'server/migrations/**/*work-order*'
+      - 'client/**/*inventory*'
+      - 'client/**/*manufactur*'
+      - 'client/**/*warehouse*'
+      - 'client/**/*stock*'
+      - 'client/**/*batch*'
+      - 'client/**/*bom*'
+      - 'client/**/*work-order*'
   workflow_dispatch:
 
 permissions:
@@ -16,7 +62,7 @@ concurrency:
 
 jobs:
   validate:
-    name: Audit, test, typecheck and build
+    name: Inventory and Manufacturing gates
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -26,37 +72,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Detect Inventory and Manufacturing scope
-        id: scope
-        shell: bash
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: |
-          set -euo pipefail
-          inventory=true
-          if [ "$EVENT_NAME" = "pull_request" ]; then
-            git diff --name-only "$BASE_SHA" "$GITHUB_SHA" > "$RUNNER_TEMP/changed-files.txt"
-            if ! grep -Eiq '^(server/briefs/alumdoor[^/]*\.json$|server/(apps-src|packages|tests|scripts|migrations)/.*(inventory|manufactur|warehouse|stock|batch|bom|work-order|catalog|item-model|item-validator)|client/.*(inventory|manufactur|warehouse|stock|batch|bom|work-order)|package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|\.github/workflows/inventory-feature-ci\.yml$)' "$RUNNER_TEMP/changed-files.txt"; then
-              inventory=false
-            fi
-          fi
-          cat "$RUNNER_TEMP/changed-files.txt" 2>/dev/null || true
-          echo "inventory=$inventory" >> "$GITHUB_OUTPUT"
-
-      - name: Unrelated fast path
-        if: steps.scope.outputs.inventory != 'true'
-        run: echo "No Inventory or Manufacturing files changed."
-
       - name: Install pnpm
-        if: steps.scope.outputs.inventory == 'true'
         uses: pnpm/action-setup@v4
         with:
           version: 9.15.0
           run_install: false
 
       - name: Set up Node.js
-        if: steps.scope.outputs.inventory == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -64,15 +86,12 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        if: steps.scope.outputs.inventory == 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Build server
-        if: steps.scope.outputs.inventory == 'true'
         run: pnpm --filter cloudforge run build
 
       - name: Run focused Inventory and Manufacturing regressions
-        if: steps.scope.outputs.inventory == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -91,11 +110,9 @@ jobs:
           node --test "${tests[@]}"
 
       - name: Validate authoritative briefs
-        if: steps.scope.outputs.inventory == 'true'
         run: pnpm --dir server run brief:check
 
       - name: Generate redacted authoritative catalog audit
-        if: steps.scope.outputs.inventory == 'true'
         shell: bash
         run: |
           set +e
@@ -111,7 +128,7 @@ jobs:
           printf 'catalog_audit_exit=%s\n' "$status" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload redacted catalog audit
-        if: steps.scope.outputs.inventory == 'true' && always()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: alumdoor-v2-catalog-audit-${{ github.run_id }}
