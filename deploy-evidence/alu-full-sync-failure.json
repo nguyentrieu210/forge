@@ -1,0 +1,24 @@
+{
+  "deployedSha": "dfa284728d52fe2a7082ebfe7e5083cd5b54f207",
+  "failedStep": "migrate",
+  "outcomes": {
+    "checkout": "success",
+    "credentials": "success",
+    "dependencies": "success",
+    "build": "success",
+    "validate": "success",
+    "backup": "success",
+    "migrate": "failure",
+    "deploy_tenant": "skipped",
+    "install_hrm": "skipped",
+    "install_vn_accounting": "skipped",
+    "install_alumdoor": "skipped",
+    "deploy_app_worker": "skipped",
+    "deploy_gateway": "skipped",
+    "smoke": "skipped"
+  },
+  "hrmLogTail": null,
+  "vnAccountingLogTail": null,
+  "alumdoorLogTail": null,
+  "failedAt": "2026-08-02T20:26:41.199Z"
+}
