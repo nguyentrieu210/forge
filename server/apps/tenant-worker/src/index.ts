@@ -31,6 +31,10 @@ import {
   isPhysicalStockFrappePath,
   routePhysicalStockApi,
 } from "./physical-stock-api.js";
+import {
+  isStockReconciliationPreviewApiPath,
+  routeStockReconciliationPreviewApi,
+} from "./stock-reconciliation-preview-api.js";
 import type { TenantEnv } from "./env.js";
 
 export * from "./index-core.js";
@@ -41,16 +45,14 @@ interface InterceptedRouteAuthentication {
   authContext?: AuthRouteContext;
 }
 
-/**
- * Thin entrypoint wrapper for bounded authenticated report/operation routes.
- * Existing core routes and scheduled tasks remain delegated to index-core.ts.
- */
+/** Thin entrypoint wrapper for bounded authenticated report/operation routes. */
 export default {
   async fetch(request: Request, env: TenantEnv, _ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
     const physicalStock = isPhysicalStockApiPath(url.pathname);
     const dailyLedger = isDailyLedgerApiPath(url.pathname);
-    if (!physicalStock && !dailyLedger) return coreWorker.fetch(request, env);
+    const stockReconciliationPreview = isStockReconciliationPreviewApiPath(url.pathname);
+    if (!physicalStock && !dailyLedger && !stockReconciliationPreview) return coreWorker.fetch(request, env);
 
     const traceId = request.headers.get("x-cloudforge-trace-id") ?? randomId("trace");
     try {
@@ -71,8 +73,15 @@ export default {
           permissions,
           traceId,
         });
-      } else {
+      } else if (dailyLedger) {
         response = await routeDailyLedgerApi(request, url, {
+          db: requestDb,
+          tenantId,
+          actor: authentication.actor,
+          traceId,
+        });
+      } else {
+        response = await routeStockReconciliationPreviewApi(request, url, {
           db: requestDb,
           tenantId,
           actor: authentication.actor,
@@ -100,9 +109,7 @@ export default {
 
 function resolveTenant(request: Request, env: TenantEnv): string | null {
   const routed = request.headers.get("x-cloudforge-tenant");
-  if (env.TENANT_ID && routed && routed !== env.TENANT_ID) {
-    throw errors.misconfigured("Tenant binding mismatch");
-  }
+  if (env.TENANT_ID && routed && routed !== env.TENANT_ID) throw errors.misconfigured("Tenant binding mismatch");
   return env.TENANT_ID ?? routed;
 }
 
@@ -140,15 +147,8 @@ async function authenticateInterceptedRoute(
       return { actor: established.actor, established, authContext };
     }
   }
-
-  if (appCallback) {
-    return { actor: await authenticateTrustedIdentity(request, env, tenantId, traceId) };
-  }
-
-  if (!sessionSecret && env.AUTH_MODE === "development") {
-    return { actor: staticDevelopmentActor(env.DEV_ACTOR_JSON) };
-  }
-
+  if (appCallback) return { actor: await authenticateTrustedIdentity(request, env, tenantId, traceId) };
+  if (!sessionSecret && env.AUTH_MODE === "development") return { actor: staticDevelopmentActor(env.DEV_ACTOR_JSON) };
   throw errors.permission("Login to access this resource");
 }
 
@@ -170,14 +170,9 @@ async function authenticateTrustedIdentity(
 
 function trustedIdentityKeys(env: TenantEnv): TrustedIdentityKey[] {
   const keys: TrustedIdentityKey[] = [];
-  if (env.INTERNAL_AUTH_KEY_ID) {
-    keys.push({ key_id: env.INTERNAL_AUTH_KEY_ID, secret: env.INTERNAL_AUTH_SECRET });
-  }
+  if (env.INTERNAL_AUTH_KEY_ID) keys.push({ key_id: env.INTERNAL_AUTH_KEY_ID, secret: env.INTERNAL_AUTH_SECRET });
   if (env.INTERNAL_AUTH_KEY_ID_PREVIOUS && env.INTERNAL_AUTH_SECRET_PREVIOUS) {
-    keys.push({
-      key_id: env.INTERNAL_AUTH_KEY_ID_PREVIOUS,
-      secret: env.INTERNAL_AUTH_SECRET_PREVIOUS,
-    });
+    keys.push({ key_id: env.INTERNAL_AUTH_KEY_ID_PREVIOUS, secret: env.INTERNAL_AUTH_SECRET_PREVIOUS });
   }
   return keys;
 }
