@@ -16,10 +16,15 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, CI, merge và relea
 - Canonical PR: `#223`.
 - PR `#222` là superseded iteration, không merge.
 - Workflow mới: `.github/workflows/hotfix-ui-one-click.yml`.
-- Luồng cuối cùng theo yêu cầu user: `checkout -> install -> build MetaForge bundle -> stage bundle -> wrangler deploy Gateway production`.
+- Luồng direct: `checkout -> install -> build MetaForge bundle -> stage bundle -> wrangler deploy Gateway production`.
 - Không chạy scope guard, lint, test, typecheck, dry-run, smoke hoặc auto-reconcile trong direct hotfix workflow.
-- `.github/workflows/release-gateway.yml` đã được trả về implementation bình thường trên `main`; direct hotfix dùng workflow riêng, không sửa semantics của release chuẩn.
-- Chưa deploy production trong task tạo workflow này.
+- `install/build/stage` là packaging bắt buộc để tạo artifact deploy, không phải quality gate.
+- Quy tắc vận hành đã chuyển sang 3 tier: `FAST` / `STANDARD` / `CRITICAL`; không còn mặc định chạy full test/typecheck/lint/build/CI cho mọi thay đổi.
+- `FAST`: UI/presentation nhỏ, kiểm tra tối thiểu theo blast radius; không bắt buộc full CI.
+- `STANDARD`: test liên quan + typecheck/lint/build/CI phù hợp.
+- `CRITICAL`: accounting/inventory/costing/auth/tenant/migration/data phải giữ regression/integration/security/data-integrity gates đầy đủ.
+- `.github/workflows/release-gateway.yml` vẫn giữ semantics release chuẩn; direct hotfix dùng workflow riêng.
+- Chưa deploy production trong task tạo workflow/policy này.
 
 ## DONE — Warehouse Petty Cash
 
@@ -33,7 +38,7 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, CI, merge và relea
 
 ## Chưa hoàn tất
 
-1. Merge PR `#223` để workflow direct UI hotfix xuất hiện trên `main` và dùng được chính thức.
+1. Review/merge PR `#223` để direct UI hotfix lane và risk-based gate policy xuất hiện trên `main`.
 2. Bulk Transaction cho Stock Reconciliation.
 3. Bulk Transaction cho BOM parent + child/version.
 4. First-class AppAction input-table contract.
