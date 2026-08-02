@@ -8,22 +8,31 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, CI, merge và relea
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `main`.
-- Exact `main` khi clean-transplant task auto deploy: `efa2aa6df385ca0775523f1756494d2ae54ec132`.
+- Exact `main` trước docs-only closure này: `c3dbcd20a7a88c17c1a9f10c4fff82b329e27855`.
 
-## ACTIVE — Auto deploy UI hotfix
+## ACTIVE — UI theme hotfix auto-deploy validation
 
-- Canonical working branch: `fix/ui-hotfix-auto-deploy-v2-20260802`.
-- PR iteration `#230` từ stale main là superseded; không merge.
-- `.github/workflows/hotfix-ui-one-click.yml` đổi từ manual-only sang auto deploy khi push vào `hotfix/ui-*` có thay đổi `client/**`; vẫn giữ `workflow_dispatch` fallback.
-- Fail-closed scope guard chạy trước production: current `main` phải là ancestor; bắt buộc có `client/**`; ngoài client chỉ cho `CURRENT_STATUS.md`, `NEXT_TASKS.md`, `AI_HANDOFF.md`; tối đa 10 file / 300 changed lines.
-- Fast path: scope guard -> install -> build MetaForge bundle -> stage bundle -> wrangler deploy Gateway production.
-- Mục tiêu: UI hotfix hợp lệ push xong tự deploy, không cần người dùng bấm Run workflow.
-- Sau khi merge cơ chế này vào `main`, theme fix sẽ được replay lên branch `hotfix/ui-*` mới từ exact main để chính push đó kích production deploy.
+- Guarded auto-deploy lane đã merge qua PR `#231` tại `cd1f76dbb47432e2312c6f5577eb955b48c3a856`.
+- PR `#230` là stale iteration, đã đóng superseded.
+- Theme hotfix replay hiện ở PR `#232`, branch `hotfix/ui-document-theme-auto-20260802`; đây là task/release lane riêng, phải kiểm GitHub trước khi kết luận production deploy.
+- Không coi merge code hoặc Warehouse Cash task này là bằng chứng production deploy.
 
-## DONE — Warehouse Petty Cash
+## DONE — Alumdoor Warehouse Cash integration
+
+- Canonical delivery PR `#233` đã squash-merge vào `main` tại `c3dbcd20a7a88c17c1a9f10c4fff82b329e27855`.
+- Final validated feature head `162bc010692d3a2997ddbc9bd5e9a59e11cb5d60`: **6/6 required workflows PASS**.
+- Alumdoor có tab `Quỹ kho` role-gated và mở 4 DocType canonical qua generic MetaForge route: `Warehouse Cash Fund`, `Warehouse Cash Voucher`, `Warehouse Cash Transfer`, `Warehouse Cash Count`.
+- Alumdoor không copy schema/controller/ledger của Finance; `server/briefs/alumdoor-v2.integrations.json` khai `vn-accounting >= 1.1.0` và 4 DocType trên là `externalDocTypes`.
+- Canonical brief reader merge integration sidecar theo fail-closed validation; duplicate dependency/external ownership hoặc unsupported key bị từ chối.
+- Browser regression xác nhận role kho thấy Quỹ kho và mở đúng Voucher; role kinh doanh không thấy tab.
+- Không đổi Warehouse Cash GL/controller/migration trong PR `#233`; không deploy production trong task này.
+
+## DONE — Warehouse Petty Cash backend
 
 - PR `#214` merged tại `da37060f3c02a6a5f9701d60edc3284575f00deb`.
 - Final validated head `5255dae609a7a4c30ab25ffc397f81422c2c69fc`: 6/6 required workflows PASS.
+- `gl_entries` vẫn là money source of truth; balance/daily usage chỉ là rebuildable projection.
+- Supplier/Customer party dimension không tự settle AR/AP; invoice settlement vẫn phải đi qua canonical Payment Entry/payment allocation.
 
 ## DONE — Purchase Receipt Bulk Transaction
 
@@ -32,13 +41,14 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, CI, merge và relea
 
 ## Chưa hoàn tất
 
-1. Merge auto-deploy workflow vào `main`, replay UI theme fix trên hotfix mới và xác nhận production deploy tự chạy.
+1. Kiểm exact GitHub state của PR `#232` và production evidence cho UI theme hotfix auto-deploy trước khi kết luận release hoàn tất.
 2. Bulk Transaction cho Stock Reconciliation.
 3. Bulk Transaction cho BOM parent + child/version.
 4. First-class AppAction input-table contract.
 5. Batch Print / QR label queue.
 6. P1 Daily detailed ledger hardening/closure theo exact GitHub state.
 7. Plastic ERP các wave sau P0-A.
+8. Nếu cần dùng quỹ kho để tất toán trực tiếp Purchase/Sales Invoice, thiết kế canonical payment allocation; không dùng party dimension trên GL thay cho settlement.
 
 ## Guardrails
 
