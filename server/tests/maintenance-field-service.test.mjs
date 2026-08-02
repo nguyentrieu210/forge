@@ -24,11 +24,13 @@ function transition(workflow, action) {
   return found;
 }
 
-test("maintenance package exposes entitlement, warranty, field-service and control reports", () => {
+test("maintenance package exposes entitlement, warranty, field-service, reports and validators", () => {
   const app = json("app.json");
   const roles = json("roles.json");
 
-  assert.equal(app.version, "1.3.0");
+  assert.equal(app.version, "1.4.0");
+  assert.equal(app.worker, "cloudforge-app-ws07");
+  assert.deepEqual(app.validators.map((entry) => entry.doctype), ["Maintenance Request", "Service Contract", "Warranty Claim", "Service Order"]);
   for (const key of ["Maintenance Request", "Warranty Claim", "Service Order", "Service Contract", "Service Technician"]) {
     assert.ok(app.nav.some((entry) => entry.key === key), `missing nav ${key}`);
   }
