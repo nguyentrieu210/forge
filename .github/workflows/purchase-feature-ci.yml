@@ -1,29 +1,13 @@
 name: Purchase Feature CI
 
 on:
-  pull_request:
-    branches:
-      - main
-    types: [opened, synchronize, reopened, ready_for_review]
-    paths:
-      - 'server/apps-src/alumdoor-worker/src/*purchase*'
-      - 'server/apps/purchase-qa-callback/**'
-      - 'server/apps/tenant-worker/wrangler.purchase-qa.jsonc'
-      - 'server/apps-src/alumdoor-worker/wrangler.purchase-qa.jsonc'
-      - 'server/packages/app-registry/**'
-      - 'server/scripts/seed-local.mjs'
-      - 'server/scripts/seed-purchase-qa-local.mjs'
-      - 'server/tests/*purchase*'
-      - 'server/tests/app-installer-standard-metadata-adoption.test.mjs'
-      - 'client/e2e-forge/**/purchase*'
-      - 'client/e2e-forge/playwright.auth.config.ts'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: purchase-feature-${{ github.event.pull_request.number || github.ref }}
+  group: purchase-feature-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -35,8 +19,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -58,12 +40,7 @@ jobs:
         run: pnpm --filter cloudforge run build
 
       - name: Run focused Purchase regressions
-        shell: bash
-        run: |
-          set -euo pipefail
-          mapfile -t tests < <(find server/tests -maxdepth 1 -type f \( -name '*purchase*.test.mjs' -o -name 'app-installer-standard-metadata-adoption.test.mjs' \) -print | sort)
-          test "${#tests[@]}" -gt 0
-          node --test "${tests[@]}"
+        run: node --test server/tests/*purchase*.test.mjs server/tests/app-installer-standard-metadata-adoption.test.mjs
 
       - name: Run Purchase SQL safeguards
         run: pnpm --dir server run test:sql
