@@ -1,0 +1,36 @@
+{
+  "name": "Plastic Machine",
+  "module": "Plastic ERP",
+  "autoname": "PM-.####",
+  "title_field": "machine_name",
+  "search_fields": ["machine_name", "machine_code"],
+  "sort_field": "machine_name",
+  "sort_order": "ASC",
+  "fields": [
+    { "fieldname": "machine_code", "label": "Mã máy", "fieldtype": "Data", "required": true, "unique": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "machine_name", "label": "Tên máy", "fieldtype": "Data", "required": true, "in_list_view": true },
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "in_standard_filter": true },
+    { "fieldname": "branch", "label": "Nhà máy / chi nhánh", "fieldtype": "Link", "options": "Branch", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "process_profile", "label": "Công nghệ", "fieldtype": "Link", "options": "Plastic Process Profile", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "asset", "label": "Tài sản", "fieldtype": "Link", "options": "Asset" },
+    { "fieldname": "workstation", "label": "Workstation", "fieldtype": "Link", "options": "Workstation" },
+    { "fieldname": "location", "label": "Vị trí", "fieldtype": "Link", "options": "Location" },
+    { "fieldname": "capacity_min", "label": "Công suất tối thiểu", "fieldtype": "Float" },
+    { "fieldname": "capacity_max", "label": "Công suất tối đa", "fieldtype": "Float" },
+    { "fieldname": "clamp_force_ton", "label": "Lực kẹp tấn", "fieldtype": "Float" },
+    { "fieldname": "screw_diameter_mm", "label": "Đường kính trục vít mm", "fieldtype": "Float" },
+    { "fieldname": "max_shot_weight_g", "label": "Shot tối đa g", "fieldtype": "Float" },
+    { "fieldname": "power_kw", "label": "Công suất điện kW", "fieldtype": "Float" },
+    { "fieldname": "hourly_machine_rate", "label": "Đơn giá giờ máy", "fieldtype": "Currency", "permlevel": 1 },
+    { "fieldname": "operational_state", "label": "Trạng thái", "fieldtype": "Select", "options": "Active\nMaintenance\nDown\nRetired", "default": "Active", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "exclusive_resource", "label": "Không cho chạy trùng lịch", "fieldtype": "Check", "default": 1 }
+  ],
+  "permissions": [
+    { "role": "Plastic Engineering User", "read": true, "write": true, "create": true, "print": true, "report": true, "export": true },
+    { "role": "Plastic Production Manager", "read": true, "write": true, "report": true },
+    { "role": "Plastic Planner", "read": true, "report": true },
+    { "role": "Plastic Maintenance User", "read": true, "write": true, "report": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "print": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}

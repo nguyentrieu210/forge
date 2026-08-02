@@ -1,0 +1,13 @@
+{
+  "name": "Plastic Tool Machine Rule",
+  "module": "Plastic ERP",
+  "is_child": true,
+  "fields": [
+    { "fieldname": "machine", "label": "Máy", "fieldtype": "Link", "options": "Plastic Machine", "required": true, "in_list_view": true },
+    { "fieldname": "priority", "label": "Ưu tiên", "fieldtype": "Int", "default": 1, "in_list_view": true },
+    { "fieldname": "setup_minutes", "label": "Setup chuẩn phút", "fieldtype": "Int" },
+    { "fieldname": "note", "label": "Ghi chú", "fieldtype": "Data" }
+  ],
+  "permissions": [],
+  "revision": 1
+}

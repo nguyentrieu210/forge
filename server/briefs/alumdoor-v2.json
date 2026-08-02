@@ -6,6 +6,11 @@
   "module": "Alumdoor",
   "domain": "alumdoor",
   "brand": "warm",
+  "design": {
+    "density": "compact",
+    "radius": "soft",
+    "contentWidth": "wide"
+  },
   "locale": {
     "currency": "VND",
     "numberFormat": "#.###,##",

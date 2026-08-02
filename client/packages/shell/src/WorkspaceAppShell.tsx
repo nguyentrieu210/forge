@@ -112,12 +112,12 @@ function ProcessPanel({ module, reports, masters, onNavigate }: { module: Worksp
     "sm:col-start-4 sm:row-start-1", "sm:col-start-4 sm:row-start-2",
   ];
   return (
-    <div className="h-full overflow-auto bg-muted/25 p-3 sm:p-5 lg:p-7">
-      <section className="mx-auto w-full max-w-7xl space-y-4">
-        <header className="flex flex-col gap-3 rounded-2xl border bg-card px-4 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-5">
+    <div className="h-full overflow-auto bg-muted/25 p-3 sm:p-4 lg:p-5">
+      <section className="mx-auto w-full max-w-[88rem] space-y-3">
+        <header className="hidden">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/[0.15]">
-              <Workflow className="size-5" />
+            <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/[0.15]">
+              <Workflow className="size-4" />
             </span>
             <div className="min-w-0">
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Không gian nghiệp vụ</p>
@@ -130,9 +130,9 @@ function ProcessPanel({ module, reports, masters, onNavigate }: { module: Worksp
           </div>
         </header>
 
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_21rem]">
-          <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
-            <div className="border-b bg-gradient-to-r from-primary/[0.08] via-transparent to-transparent px-4 py-3.5 sm:px-5">
+        <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
+          <div className="flex flex-col overflow-hidden rounded-2xl border bg-card shadow-sm">
+            <div className="order-2 border-b bg-gradient-to-r from-primary/[0.08] via-transparent to-transparent px-3 py-3 sm:px-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h2 className="text-sm font-semibold">Luồng xử lý chính</h2>
@@ -142,7 +142,7 @@ function ProcessPanel({ module, reports, masters, onNavigate }: { module: Worksp
               </div>
             </div>
             {flowItems.length ? (
-              <div className="relative grid min-h-[25rem] grid-cols-2 gap-x-3 gap-y-8 px-3 py-6 sm:grid-cols-4 sm:gap-x-5 sm:px-6 sm:py-8">
+              <div className="order-2 relative grid min-h-0 grid-cols-2 gap-x-2 gap-y-3 px-3 py-3 sm:grid-cols-4 sm:gap-x-3 sm:px-4 sm:py-4">
                 <div className="absolute left-[9%] right-[9%] top-1/2 hidden h-px -translate-y-1/2 bg-gradient-to-r from-transparent via-primary/[0.45] to-transparent sm:block" />
                 {flowItems.map((item, index) => {
                   const top = index % 2 === 0;
@@ -152,14 +152,14 @@ function ProcessPanel({ module, reports, masters, onNavigate }: { module: Worksp
                       <Button
                         type="button"
                         variant="ghost"
-                        className="group h-auto min-h-28 w-full min-w-0 flex-col justify-center whitespace-normal rounded-xl border border-transparent px-2.5 py-3 text-center transition-all hover:-translate-y-0.5 hover:border-primary/20 hover:bg-primary/[0.045] hover:shadow-sm"
+                        className="group h-auto min-h-24 w-full min-w-0 flex-col justify-center whitespace-normal rounded-xl border border-transparent px-2 py-2 text-center transition-all hover:-translate-y-0.5 hover:border-primary/20 hover:bg-primary/[0.045] hover:shadow-sm"
                         onClick={() => onNavigate(item.key)}
                       >
-                        <span className="relative grid size-12 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm ring-4 ring-primary/10 transition-transform group-hover:scale-[1.03] [&_svg]:size-6">
+                        <span className="relative grid size-10 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm ring-4 ring-primary/10 transition-transform group-hover:scale-[1.03] [&_svg]:size-5">
                           {item.icon ?? index + 1}
                           <span className="absolute -right-1.5 -top-1.5 grid size-5 place-items-center rounded-full border-2 border-card bg-card text-[9px] font-bold text-primary shadow-sm">{index + 1}</span>
                         </span>
-                        <span className="mt-2.5 block max-w-full text-sm font-semibold leading-5">{item.label}</span>
+                        <span className="mt-1.5 block max-w-full text-xs font-semibold leading-4 sm:text-sm">{item.label}</span>
                         <span className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">Mở nghiệp vụ</span>
                       </Button>
                     </div>
@@ -169,7 +169,7 @@ function ProcessPanel({ module, reports, masters, onNavigate }: { module: Worksp
             ) : <div className="m-5 rounded-xl border border-dashed bg-muted/20 p-7 text-center text-sm text-muted-foreground">Tài khoản hiện tại chưa có nghiệp vụ khả dụng trong phân hệ này.</div>}
 
             {masters.length ? (
-              <div className="border-t bg-muted/20 p-4">
+              <div className="order-3 border-t bg-muted/20 p-3 sm:p-4">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
                     <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Danh mục nhanh</h3>
@@ -177,12 +177,12 @@ function ProcessPanel({ module, reports, masters, onNavigate }: { module: Worksp
                   </div>
                   <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-primary" onClick={() => onNavigate("__master-data")}>Tất cả danh mục</Button>
                 </div>
-                <div className="grid gap-2 sm:grid-cols-5">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-5">
                   {masters.slice(0, 5).map((item) => (
                     <Button
                       key={item.key}
                       variant="ghost"
-                      className="h-auto min-h-20 min-w-0 flex-col gap-2 rounded-xl border bg-card px-2 py-3 whitespace-normal text-xs shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/25 hover:bg-card hover:shadow-md"
+                      className="h-auto min-h-16 min-w-0 flex-row justify-start gap-2 rounded-lg border bg-card px-2.5 py-2 whitespace-normal text-left text-xs shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/25 hover:bg-card hover:shadow-md sm:flex-col sm:justify-center sm:gap-1.5 sm:px-2 sm:text-center"
                       onClick={() => onNavigate(item.key)}
                     >
                       <span className="grid size-8 place-items-center rounded-lg bg-primary/[0.08] text-primary [&_svg]:size-4">{item.icon ?? <CheckCircle2 />}</span>
@@ -195,6 +195,30 @@ function ProcessPanel({ module, reports, masters, onNavigate }: { module: Worksp
           </div>
 
           <aside className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+            {masters.length ? (
+              <div className="hidden">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Danh mục nhanh</h3>
+                    <p className="mt-0.5 text-xs text-muted-foreground">Dữ liệu nền dùng thường xuyên trong phân hệ.</p>
+                  </div>
+                  <Button variant="ghost" size="sm" className="h-7 shrink-0 px-2 text-xs text-primary" onClick={() => onNavigate("__master-data")}>Tất cả danh mục</Button>
+                </div>
+                <div className="space-y-1.5">
+                  {masters.slice(0, 5).map((item) => (
+                    <Button
+                      key={item.key}
+                      variant="ghost"
+                      className="h-auto min-h-11 w-full justify-start gap-2.5 rounded-lg border border-transparent bg-card px-2.5 py-2 text-left text-xs shadow-sm transition-all hover:border-primary/25 hover:bg-card hover:shadow-sm"
+                      onClick={() => onNavigate(item.key)}
+                    >
+                      <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-primary/[0.08] text-primary [&_svg]:size-3.5">{item.icon ?? <CheckCircle2 />}</span>
+                      <span className="line-clamp-2 min-w-0 font-medium leading-4">{item.label}</span>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
             <div className="border-b bg-gradient-to-br from-primary/[0.09] via-transparent to-transparent px-4 py-4">
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">Phân tích</p>
               <h2 className="mt-0.5 text-base font-semibold tracking-tight">Báo cáo</h2>

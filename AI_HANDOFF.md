@@ -8,61 +8,25 @@ Ngày cập nhật: **2026-08-02**.
 
 - Repository: `nguyentrieu210/forge`.
 - GitHub là nguồn sự thật cho default branch, exact HEAD, PR, CI, merge và release evidence.
-- Luôn đọc `RUNBOOK.md` → `CURRENT_STATUS.md` → `NEXT_TASKS.md` → file này.
+- Luôn đọc `RUNBOOK.md` → `CURRENT_STATUS.md` → `NEXT_TASKS.md` → file này → `DELIVERY_POLICY.md`.
 - Mọi branch/SHA dưới đây là checkpoint lịch sử, không phải lệnh checkout. Phải xác minh lại GitHub trước khi dùng.
 
-## ACTIVE checkpoint — Manufacturing Costing
-
-- Canonical PR: `#201`, branch `feat/manufacturing-costing-complete-clean-20260802`.
-- PR `#185` đã stale/diverged và được đóng `SUPERSEDED`; không reopen/merge.
-- #201 được clean-transplant từ exact main, không force-push/rewrite stale history.
-- Validated executable checkpoint: `c2e98fab3e39eaa9f38781e3c7139fb3e8ae5ce3` — required workflows **6/6 PASS**.
-- Final docs/sync head phải được CI lại riêng; không suy PASS từ executable checkpoint.
-
-### Cost source / standard snapshot
-
-- Work Order release snapshot khóa standard material rate/cost, standard operation cost và total standard cost.
-- Legacy Work Order không có snapshot dùng BOM fallback nhưng phải giữ `legacy_standard_warning`; không được gọi đó là historical standard.
-- Manufacturing Cost Rate theo effective date; priority: exact operation+workstation → operation → workstation → company default; submitted overlapping active range cùng scope bị chặn.
-- Job Card completion tính theo từng operation. Không quay lại generic logic cộng mọi operation vào một quota.
-
-### WIP semantics
-
-- **Material WIP exact** = net `stock_value_difference_minor` của Work-Order-linked submitted Stock Entry trên WIP warehouse.
-- Warehouse selection: ưu tiên `Work Order.wip_warehouse`; nếu thiếu thì suy từ positive Material Transfer `TGT-*`; target khác explicit WIP warehouse fail closed.
-- Direct material consumption không qua WIP transfer có exact material WIP = 0.
-- Material WIP âm là lineage/misconfiguration và phải fail closed.
-- **Operation WIP chỉ là estimate**: group Job Card actual cost theo operation và so completed quantity với produced quantity. Chưa có unit-level operation→finished-unit lineage nên không được gọi exact trước final.
-- Freeze bắt buộc material WIP = 0 và operation WIP = 0. Tại final completion, actual operation total/unit cost là exact theo Job Card đã ghi.
-
-### Inventory capitalization / variance decision
-
-- Forge hiện vốn hóa Manufacture theo **actual material + standard Work Order operating cost**.
-- Canonical field: `inventory_costing_policy = ACTUAL_MATERIAL_STANDARD_OPERATION`.
-- Cost Sheet vẫn đo actual operation cost và `manufacturing_cost_variance_minor`.
-- `inventory_revaluation_required=false` trong policy hiện tại.
-- Nonzero variance có `variance_posting_status = UNPOSTED_FINANCE_VARIANCE`.
-- Không retroactive revalue finished stock chỉ bằng Cost Sheet delta: thành phẩm có thể đã chuyển/bán; nếu không replay downstream valuation/COGS thì stock/COGS sẽ sai.
-- Không direct-write Stock Ledger/GL từ costing service. Manufacturing variance chỉ được post ở finance boundary khi account/source/reversal policy rõ.
-- P1 Daily Ledger PR #199 là scope finance riêng; không copy code #199 vào #201 chỉ để “khép variance”.
-
-### Snapshot / freeze / adjustment invariants
-
-- Snapshot immutable, unique `(tenant_id, work_order, source_fingerprint)`; deterministic snapshot ID + `INSERT OR IGNORE` cho concurrent generate replay.
-- Freeze immutable và một Work Order chỉ có một frozen snapshot.
-- First freeze re-read live Cost Sheet và so source fingerprint; stale snapshot fail closed.
-- Already-frozen same snapshot replay idempotent và không re-read live source; correction sau freeze phải append-only adjustment.
-- Adjustment replay cùng ID phải khớp snapshot/category/delta/reason/actor/details, khác payload trả idempotency conflict.
-- DB trigger `manufacturing_cost_adjustment_nonnegative_total_guard` chặn race hai negative adjustment cùng làm adjusted actual cost < 0; application precheck chỉ là message sớm, trigger là invariant cuối.
-- UI giữ cùng `adjustment_id` khi network retry; ID chỉ reset nếu user sửa payload hoặc request thành công.
-
-### Known trap / acceptance debt
-
-- First-freeze fingerprint recheck chưa nằm cùng serialization coordinator với mọi Stock Entry + Job Card source mutation. Cửa sổ race giữa final read và freeze insert là nhỏ nhưng có thật về lý thuyết; không gọi freeze serializable cho tới khi có shared source-version/coordination contract.
-- Chưa có dedicated authenticated Costing browser journey. API tenant-injection/Frappe contract, service permission/invariants, focused manufacturing tests và shared authenticated runtime boundary có coverage, nhưng không thay thế Costing-specific E2E.
-- Không invent GL account mapping để che hai debt trên.
-
 ## Checkpoint đã khóa
+
+### Plastic ERP P0-A — READY FOR MERGE, user approval required
+
+- Canonical PR: `#200`, branch `feat/plastic-erp-foundation-v3-20260802`, base exact `main` `866fcbd909914f01600def9ce86e3ce2347bb763`.
+- PR #200 hiện open + ready-for-review; **chưa merge**.
+- Exact head `edcab9cae6ea6187886fdaff45f6f549b971a2e7` đã **6/6 required workflows PASS** sau closing docs, gồm Main CI tests/typecheck/build.
+- PR `#193` đã được comment superseded và đóng; không reopen/merge.
+- Các commit sau `edcab9ca…` chỉ đồng bộ post-validation PR state trong canonical docs; exact current head phải re-check GitHub/CI trước khi dừng hoặc merge.
+- P0-A là canonical first-party `apps-src/plastic-erp` foundation cho process/material/machine/tool/recipe/QC/capacity/costing metadata, roles và approval workflows.
+- Không tạo BOM riêng: `Plastic Recipe Policy` liên kết canonical `Bill of Materials`.
+- Không tạo stock ledger/costing ledger cạnh tranh. P0-B phải reconcile với canonical Work Order + submitted Stock Entry Manufacture và stock/lot lifecycle hiện có.
+- Machine/Tool mở rộng core Asset/Workstation/Location; QC mở rộng Quality Inspection/Batch. Plastic technology variation đi qua process profile/process type + domain policy, không fork core theo Injection/Extrusion/Blow/Film/Compounding.
+- Kernel `status` là reserved system field. Plastic Machine/Tool dùng `operational_state`; không nới kernel parser để cho business `status` đi qua.
+- `apps-src` canonicalizer tự sinh Meta v1 `kind`, `viewPolicy`, `valueSource`, `editMode`, `surface`, `serverEnforced`; regression pack/source phải tiếp tục khóa contract này.
+- Không merge #200 nếu user chưa yêu cầu rõ. Merge code cũng không cho phép deploy production.
 
 ### Stock P0 acceptance — COMPLETE
 
@@ -116,11 +80,24 @@ Ngày cập nhật: **2026-08-02**.
 - Tiến Đạt FIFO complete operations UI PR `#179` merged tại `e44ade8ca1ab396a66b800844b755de203be9245`; final exact-head 6/6 PASS.
 - Generic FIFO production không được tự bật.
 
-## Task canonical kế tiếp / song song
+## Task canonical kế tiếp
 
-P1 Daily Detailed Ledger đã có canonical PR `#199` (`feat/daily-ledger-hardening-20260802`), open/draft/mergeable tại snapshot này.
+1. PR `#200` đã ready; chỉ merge khi user yêu cầu rõ và sau khi exact current head vẫn 6/6 PASS.
+2. Sau khi P0-A được merge, Plastic ERP tiếp tục **P0-B Production Run + shop-floor** trên branch mới từ exact current `main`.
+3. P0-C QC lot gate, rồi capacity/OEE/operational costing và Plastic E2E.
+4. P1 Daily detailed ledger vẫn là high-risk parallel task, nhưng không trộn vào Plastic branch/PR.
 
-Hard rules cho P1 ledger:
+Hard rules cho Plastic P0-B:
+
+- Work Order/Stock Entry Manufacture/stock lot lifecycle hiện có là canonical source;
+- no second stock/costing ledger;
+- start/pause/resume/complete/reverse server-authoritative và idempotent;
+- machine/tool compatibility + exclusive-resource conflict server enforce;
+- tenant/company/branch scope ở every read/write/link;
+- posted/submitted history append-only hoặc reversal;
+- authenticated desktop/mobile acceptance + negative permission/session/CSRF path.
+
+Hard rules cho P1 ledger nếu chuyển ưu tiên:
 
 - không tạo source-of-truth cạnh tranh với stock/accounting ledger hiện hữu;
 - tenant-scope ở schema/query/API/export/cache;
@@ -128,10 +105,7 @@ Hard rules cho P1 ledger:
 - adjustment sau freeze append-only, có reason/actor/timestamp/source/audit;
 - rerun idempotent, duplicate prevention bằng key/transaction phù hợp;
 - reconciliation phải truy ngược được source document/ledger;
-- migration phải xử lý existing data/backward compatibility, không destructive;
-- manufacturing variance chỉ post khi account policy rõ; không dùng retroactive stock revalue thay finance posting.
-
-Không mở branch P1 ledger cạnh tranh nếu #199 còn active. Các PR song song như manufacturing costing/petty cash/Plastic ERP không được trộn scope chỉ vì cùng chạm finance/manufacturing.
+- migration phải xử lý existing data/backward compatibility, không destructive.
 
 ## Production checkpoint lịch sử
 
@@ -150,8 +124,8 @@ Không được tuyên bố toàn bộ quy trình `25.7 QUY TRÌNH.docx` đã ho
 
 Các miền còn cần implementation/acceptance gồm:
 
-1. P1 Daily detailed ledger / finance variance posting: canonical PR #199 active.
-2. Dedicated authenticated Costing journey + stronger freeze/source serialization nếu muốn gọi costing close fully serializable.
+1. Plastic ERP P0-B/P0-C, capacity/OEE/costing sâu và authenticated E2E.
+2. P1 Daily detailed ledger: snapshot/freeze/append-only adjustment/reconciliation.
 3. MetaForge UX V2: List Workspace V2 tích hợp Bulk, Matrix View, presentation authoring/canonical transport, document context/exception, operational workspace, Mobile V2, personalization/AI context.
 4. Bulk Transaction cho Stock Reconciliation/BOM và transaction-grid nhập nhôm nhiều mã.
 5. Warranty/defects/capacity/overtime.
