@@ -4,16 +4,16 @@ Ngày cập nhật: **2026-08-02**.
 
 Đây là hàng đợi active. Không dùng file này thay cho GitHub khi cần exact branch head, PR state hoặc CI. Trước khi làm đọc `RUNBOOK.md`, `CURRENT_STATUS.md`, `AI_HANDOFF.md`, `DELIVERY_POLICY.md` và kiểm tra GitHub hiện tại.
 
-## CURRENT — Close Plastic ERP P0-A PR #200
+## CURRENT — Plastic ERP P0-A ready, merge requires explicit user instruction
 
-- Branch: `feat/plastic-erp-foundation-v3-20260802`.
+- Canonical PR: `#200`, branch `feat/plastic-erp-foundation-v3-20260802`.
 - Base exact `main`: `866fcbd909914f01600def9ce86e3ce2347bb763`.
-- Executable head `c212cc5e04956db08580bf4720fbde351bcfbcef`: **6/6 required workflows PASS**.
+- PR #200 hiện open + ready-for-review, chưa merge.
+- Exact head `edcab9cae6ea6187886fdaff45f6f549b971a2e7` đã **6/6 required workflows PASS** sau closing docs, gồm Main CI tests/typecheck/build.
 - Root-cause CI fix: đổi `Plastic Machine.status` và `Plastic Tool.status` sang `operational_state`; kernel reserved-field validation giữ nguyên fail-closed.
-- Closing docs đang được commit sau executable CI theo `DELIVERY_POLICY.md`.
-- Trước khi coi PR ready: exact final documentation head phải **6/6 PASS**.
-- Sau khi final head xanh, PR `#193` có thể được đóng/superseded bởi `#200`.
-- Không merge `#200` nếu user chưa yêu cầu rõ.
+- PR `#193` đã được comment superseded và đóng; không reopen/merge.
+- Các commit sau `edcab9ca…` chỉ đồng bộ trạng thái tài liệu; exact current GitHub head vẫn phải PASS required CI trước khi dừng.
+- **Không merge #200 nếu user chưa yêu cầu rõ.**
 
 ## NEXT P0-B — Plastic Production Run + shop-floor
 
