@@ -13,9 +13,9 @@ Ngày cập nhật: **2026-08-02**.
 
 ## Active checkpoint — Website/CMS multi-tenant v1
 
-- Canonical PR `#219`: branch `feat/tenant-website-builder`.
-- PR `#218` là bootstrap scaffold đã đóng superseded; không reopen/merge.
-- `website@1.0.0` là first-party installable app/capability với `Website Settings`, `Web Page`, `Web Page Block`, roles và template/theme fixtures.
+- Canonical delivery branch: `feat/tenant-website-builder-final-20260802`, clean-transplant từ exact `main@4960de3443300245fcce3f69914826306a297266`.
+- PR `#219` / `feat/tenant-website-builder` là implementation iteration trước; PR `#218` là bootstrap scaffold đã đóng superseded. Final delivery phải dùng clean branch để tránh stale/conflicting history.
+- `website@1.0.0` là first-party installable app/capability với `Website Settings`, `Web Page`, `Web Page Block`, roles và versioned template/theme fixtures.
 - Shared runtime thử public website trước AuthBoundary chỉ trên `/` hoặc một safe single slug; exact 404 fallback về Forge runtime cũ. Explicit runtime modes `?app=`, `?alumdoor=1`, `?landing=1` và reserved routes phải luôn giữ nguyên.
 
 ### Architecture invariants — Website/CMS
@@ -51,8 +51,15 @@ Ngày cập nhật: **2026-08-02**.
 ## Merged checkpoint — Warehouse Petty Cash per warehouse
 
 - Canonical PR `#214` đã squash-merge vào `main` tại `da37060f3c02a6a5f9701d60edc3284575f00deb`.
-- Final validated head `5255dae609a7a4c30ab25ffc397f81422c2c69fc` đạt **6/6 required workflows PASS**.
+- Final validated head `5255dae609a7a4c30ab25ffc397f81422c2c69fc` đạt **6/6 required workflows PASS**:
+  - CI `30747511668`;
+  - UI Pull Request Validation `30747511724`;
+  - PR Validation `30747511689`;
+  - Purchase `30747511672`;
+  - Sales `30747511686`;
+  - Inventory/Manufacturing `30747511661`.
 - PR `#210` là stale iteration và đã đóng superseded; không reopen/merge.
+- Prior CI failure không phải Daily Ledger, SQL cash guard hay GL logic. Root cause là app-source Link contract: `Purchase Receipt` và `Stock Entry` chưa được khai báo trong `vn-accounting/app.json.externalDocTypes`.
 
 ### Architecture invariants — Warehouse Cash
 
@@ -67,15 +74,49 @@ Ngày cập nhật: **2026-08-02**.
 9. **AR/AP chưa tự settle.** Party dimension trên counter GL line không đồng nghĩa payment allocation. Nếu yêu cầu quỹ kho tất toán Purchase/Sales Invoice thì phải tích hợp canonical payment ledger riêng, không vá bằng GL-only flag.
 10. **App-source Link trap.** Link target không thuộc package và không nằm trong `PLATFORM_EXTERNAL_DOCTYPES` phải khai rõ `externalDocTypes`; Warehouse Cash cần explicit `Purchase Receipt` + `Stock Entry` với `app: "erpnext"`, `kind: "transaction"`.
 
+### Verification notes
+
+- Warehouse Cash controller tests: 7/7 PASS trong unit run.
+- SQL migration acceptance cover balance/daily usage, negative/max/daily limit, account/warehouse/currency mismatch, reversal, transfer, tenant isolation, immutable mapping/history và disable guard.
+- Diagnostic workflow từng được thêm tạm để lấy CI traceback do connector không trả log, sau đó đã restore workflow gốc trước merge; không được reintroduce diagnostic artifact vào source.
+- Migration `0038_warehouse_cash.sql` không collision với `main` tại thời điểm merge.
+- Merge và production deploy là hai quyền riêng biệt; Warehouse Cash đã merge nhưng chưa deploy production trong đợt này.
+
 ## Checkpoint — Bulk Transaction v1 Purchase Receipt
 
 - Canonical PR `#209` merged tại `e447eca0e020da161dcee4f0b865206921718a61`.
-- Final validated head `70f266d9ecbc8c01c69b3deb125d1f4dc172a46a` đạt **6/6 required workflows PASS**.
-- Generic Bulk View vẫn master-only `document_update`; transaction/submittable/ledger fail closed.
-- Bulk Transaction là controller-backed AppAction; action chỉ tạo một Purchase Receipt nháp, canonical submit mới làm stock/accounting mutation.
-- FIFO reuse canonical single-line planner; rows cùng payload thấy synthetic allocation trước đó.
-- `supplier_invoice_no` + normalized SHA-256 fingerprint bảo vệ exact retry/changed-payload conflict.
-- AppAction grid hiện dùng compatibility transport `BulkTransaction:<json>`; follow-up là first-class typed input-table schema.
+- Final validated head `70f266d9ecbc8c01c69b3deb125d1f4dc172a46a` đạt **6/6 required workflows PASS**:
+  - CI `30742437972`;
+  - UI Pull Request Validation `30742437975`;
+  - PR Validation `30742437970`;
+  - Purchase `30742437971`;
+  - Sales `30742437999`;
+  - Inventory/Manufacturing `30742437973`.
+- PR `#203` và `#205` là superseded history; không reopen/merge.
+
+### Architecture invariants
+
+1. **Generic Bulk View không phải transaction writer.** `resolveBulkRenderPolicy()` vẫn master-only `document_update`; transaction/submittable/ledger fail closed.
+2. **Bulk Transaction là controller-backed AppAction.** UI grid chỉ thu input/preview; backend controller giữ validation/business rule/permission boundary.
+3. **Không direct-write ledger.** Bulk action chỉ tạo một Purchase Receipt nháp. Stock/accounting mutation chỉ xảy ra qua canonical Purchase Receipt submit flow.
+4. **Canonical FIFO reuse.** Bulk controller gọi chính single-line `handlePurchaseFifoRequest(..., create=false)` cho planning, không duy trì thuật toán FIFO thứ hai.
+5. **Rows trong cùng payload phải thấy allocation trước đó.** Synthetic submitted Purchase Receipt chỉ tồn tại in-memory trong planning để row sau không ăn lại debt của row trước.
+6. **Callback prefix không phải contract nghiệp vụ.** Synthetic interceptor canonical hóa pathname theo suffix `/resource/...`; không giả định callback URL bắt đầu bằng `/api`.
+7. **Idempotency/duplicate prevention.** `supplier_invoice_no` bắt buộc; fingerprint SHA-256 trên normalized supplier/warehouse/delivery note/driver/lines. Exact retry trả receipt cũ; cùng delivery note nhưng payload khác fail closed.
+8. **Document integrity.** Tối đa 100 input rows; allocations phải cùng company/currency trước khi tạo một draft.
+9. **Tenant/auth boundary.** Platform/tenant call required; authenticated desktop/mobile evidence dùng cookie + CSRF thật.
+
+### UI/meta contract
+
+- Action `nhap-nhom-hang-loat`, Alumdoor source version `2.2.0`.
+- AppAction grid dùng compatibility transport `BulkTransaction:<json>` trong `Text.options`.
+- `ActionScreen` render add/delete rows, existing controls, rectangular Excel/Sheets paste, required-cell validation và stale-preview invalidation.
+- Sidecar `alumdoor-v2.actions.json` được merge vào brief trước canonical schema/compiler/manifest parser; đây là transport, không phải nguồn contract cạnh tranh.
+- Follow-up nên tạo first-class typed AppAction input-table schema/compiler/parser/selfcheck rồi migrate khỏi compatibility string.
+
+### Acceptance trap đã khóa
+
+Authenticated browser QA bắt được bug mà unit test cũ không thấy: local callback có internal prefix khiến exact pathname matcher không inject synthetic receipt, nên row 2 ăn lại PO cũ. Fix dùng resource suffix matching và thêm regression callback-prefix. Không được quay lại exact `/api/resource/...` matching.
 
 ## Remaining Bulk Transaction
 
