@@ -2,104 +2,55 @@
 
 Ngày cập nhật: **2026-08-02**.
 
-Đây là runbook vận hành canonical của repository `nguyentrieu210/forge`.
+GitHub là nguồn sự thật cho code, branch, PR, CI, merge và release.
 
-## 1. Nguồn sự thật
+## 1. Trước khi làm
 
-GitHub là nguồn sự thật cho code, branch head, pull request, CI, merge và release evidence.
+- Đọc `CURRENT_STATUS.md`, `NEXT_TASKS.md`, `AI_HANDOFF.md` khi task có nghiệp vụ/rủi ro hoặc cần tiếp tục công việc cũ.
+- Task mới không code trực tiếp trên `main`; mở branch riêng.
+- Không hỏi lại thứ tự có thể tự xác định từ GitHub.
 
-Không lấy branch, SHA, PR hoặc CI từ lịch sử chat làm trạng thái hiện hành. Mọi SHA/branch ghi trong tài liệu chỉ là snapshot tại thời điểm cập nhật và phải được kiểm tra lại trên GitHub trước khi làm tiếp.
+## 2. Chọn mức xử lý
 
-## 2. Thứ tự đọc bắt buộc
-
-Mỗi phiên làm việc đọc theo thứ tự:
-
-1. `RUNBOOK.md`.
-2. `CURRENT_STATUS.md`.
-3. `NEXT_TASKS.md`.
-4. `AI_HANDOFF.md`.
-5. `DELIVERY_POLICY.md` khi liên quan release/deploy.
-
-## 3. Bắt đầu một đợt làm việc
-
-Trước khi sửa code hoặc tài liệu:
-
-1. Kiểm tra exact `main` hiện tại trên GitHub.
-2. Kiểm tra branch/PR liên quan còn tồn tại và đúng scope.
-3. Task mới phải mở branch riêng từ exact current `main`.
-4. Không code trực tiếp trên `main`.
-5. Phân loại thay đổi thành `FAST`, `STANDARD` hoặc `CRITICAL` trước khi chọn quality gate.
-
-## 4. Quality gate theo rủi ro
-
-Không chạy toàn bộ test/typecheck/lint/build/CI một cách máy móc cho mọi task. Chỉ chạy gate có khả năng phát hiện lỗi do thay đổi hiện tại gây ra, dựa trên blast radius thực tế.
+Mặc định chọn mức nhẹ nhất phù hợp blast radius.
 
 ### FAST
 
-Dùng cho thay đổi presentation nhỏ, không đổi contract hay business logic: CSS, spacing, text, icon, layout, print template/UI nhỏ hoặc chỉnh component thuần hiển thị.
+Dùng cho CSS, text, spacing, icon, layout, print UI nhỏ hoặc thay đổi thuần hiển thị.
 
-Mặc định:
+Luồng:
 
-`branch -> sửa -> review diff -> kiểm tra tối thiểu phần bị tác động -> commit -> push -> deploy khi được yêu cầu`
+`branch -> sửa -> xem diff -> commit -> push`
 
-Không bắt buộc full test suite, full lint, full typecheck, full build hoặc chờ required CI chỉ để hoàn tất thay đổi FAST. Nếu cần build để tạo artifact deploy thì build là bước packaging, không được coi là quality gate.
+Nếu là `hotfix/ui-*` hợp lệ thì push có thể tự deploy theo workflow hiện có.
 
-Nếu trong lúc làm phát hiện thay đổi thực tế chạm business logic, API, data, permission hoặc phạm vi lớn hơn dự kiến thì nâng lên `STANDARD` hoặc `CRITICAL` ngay.
+Không bắt buộc PR, full test, lint, typecheck, build, CI hoặc cập nhật 3 file status cho từng chỉnh sửa nhỏ. Build/install/stage nếu workflow cần để tạo artifact chỉ là packaging.
+
+Nếu phát hiện chạm business logic, API, data, permission, tenant hoặc schema thì nâng mức.
 
 ### STANDARD
 
-Dùng cho CRUD, API, frontend logic, backend logic thông thường hoặc thay đổi product behavior không thuộc nhóm high-risk.
+Dùng cho CRUD, API và logic sản phẩm thông thường.
 
-Mặc định:
+`branch -> code -> test liên quan -> kiểm tra kỹ thuật phù hợp -> PR/CI phù hợp -> merge`
 
-`branch -> code -> test liên quan -> typecheck/lint/build phù hợp -> PR -> CI phù hợp -> merge -> release khi được yêu cầu`
-
-Không cần chạy test/module không liên quan chỉ để đủ nghi thức.
+Không chạy gate không liên quan chỉ để đủ quy trình.
 
 ### CRITICAL
 
-Dùng cho accounting, thu chi, công nợ, kho, giá vốn, mua/bán hàng có ledger impact, manufacturing/costing, auth, permission, tenant isolation, migration, destructive state transition, secrets hoặc production data.
+Dùng cho accounting, tiền, công nợ, kho, giá vốn, manufacturing/costing, auth, permission, tenant isolation, migration, destructive state hoặc production data.
 
-Mặc định:
+`branch -> code -> regression/integration/data-integrity/security -> typecheck/lint/build phù hợp -> PR -> required CI -> merge`
 
-`branch -> code -> regression/integration/data-integrity/security checks -> typecheck/lint/build -> PR -> required CI -> merge -> release khi được yêu cầu`
+Không hạ CRITICAL chỉ để làm nhanh.
 
-Với `CRITICAL`, correctness và data integrity ưu tiên hơn tốc độ. Bug quan trọng phải có regression protection khi phù hợp.
+## 3. Production
 
-## 5. UI hotfix trực tiếp
+- Không tự deploy production, đổi DNS/secrets, chạy destructive migration hoặc mutate customer data nếu user chưa yêu cầu rõ, ngoại trừ automation production đã được user chủ động thiết lập cho đúng fast lane.
+- Không commit `.env`, secrets, `server/work/`, `tmp/`, backup, credential/token hoặc generated artifact không thuộc source control.
 
-Dùng cho thay đổi `FAST` ở UI khi user muốn phát hành nhanh và chấp nhận bỏ validation tự động trước deploy.
+## 4. Khi dừng
 
-Luồng duy nhất:
+Với STANDARD/CRITICAL hoặc thay đổi kỹ thuật quan trọng: cập nhật status/handoff phù hợp và báo branch, SHA, validation, rủi ro.
 
-`branch -> sửa client -> commit -> Actions -> ALU UI Hotfix - One Click Deploy -> build bundle -> stage bundle -> deploy Gateway production`
-
-Workflow: `.github/workflows/hotfix-ui-one-click.yml`.
-
-Workflow này **không chạy**:
-
-- scope guard;
-- lint;
-- unit/integration test;
-- typecheck;
-- Wrangler dry-run;
-- smoke test;
-- PR reconcile tự động.
-
-Nó chỉ làm các bước kỹ thuật bắt buộc để có artifact chạy được: checkout, cài dependency, build MetaForge UI, stage bundle vào Gateway và chạy `wrangler deploy`.
-
-Không dùng lane này nếu thay đổi có backend, schema, migration, data, accounting, warehouse, production business rule, auth/permission/tenant, secrets hoặc DNS. Các thay đổi đó phải được nâng cấp khỏi `FAST` và quay lại quality gate tương ứng.
-
-## 6. Production boundary
-
-Không tự deploy production nếu user chưa yêu cầu rõ. UI hotfix workflow tồn tại không đồng nghĩa AI được phép tự chạy production.
-
-Không tự sửa production secrets/DNS, xoá resource, chạy destructive migration hoặc mutate customer data.
-
-## 7. File cấm commit
-
-Không commit `.env`, secrets, `server/work/`, `tmp/`, backup, credential, cookie/token hoặc generated artifact không thuộc source control.
-
-## 8. Kết thúc một đợt làm việc
-
-Cập nhật `CURRENT_STATUS.md`, `NEXT_TASKS.md`, và `AI_HANDOFF.md` khi có quyết định kỹ thuật quan trọng. Báo branch, commit SHA, PR/merge SHA, file sửa, quality tier đã chọn, test/build/CI đã chạy hoặc không chạy, rủi ro còn lại, việc user cần làm và việc AI làm tiếp.
+Với FAST nhỏ: chỉ cần báo branch, SHA, thay đổi đã làm và deploy state; không tạo thêm nghi thức tài liệu nếu không có thông tin lâu dài cần handoff.
