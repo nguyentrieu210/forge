@@ -110,7 +110,11 @@ test("Vietnam accounting package versions legal rules and traces payroll posting
   const parsed = parseAppManifest(source);
 
   assert.equal(parsed.id, "vn-accounting");
+  assert.equal(parsed.version, "1.2.0");
   assert.deepEqual(parsed.requires, [{ id: "hrm", version: ">=1.3.0" }]);
+  assert.ok(parsed.nav.some((item) => item.key === "TT99 Account Map"));
+  assert.ok(parsed.roles.some((item) => item.role === "Tax Specialist"));
+  assert.ok(parsed.roles.some((item) => item.role === "Internal Auditor"));
 
   const policy = parsed.doctypes.find((item) => item.name === "VN Accounting Policy");
   const policyFields = fieldMap(policy);
@@ -119,10 +123,28 @@ test("Vietnam accounting package versions legal rules and traces payroll posting
   }
 
   const legalRule = parsed.doctypes.find((item) => item.name === "VN Legal Rule");
+  assert.ok(legalRule);
+  assert.equal(legalRule.is_submittable, true);
   const legalFields = fieldMap(legalRule);
-  for (const required of ["document_no", "effective_from", "taxpayer_segment", "source_url", "rule_json", "approved_by", "approved_at"]) {
+  for (const required of ["rule_version", "document_no", "effective_from", "taxpayer_segment", "source_url", "source_file_hash", "rule_json"]) {
     assert.equal(legalFields.get(required)?.required, true, `${required} must be required`);
   }
+  assert.equal(legalFields.get("approved_by")?.read_only, true);
+  assert.equal(legalFields.get("approved_at")?.read_only, true);
+  assert.equal(legalFields.get("workflow_state")?.read_only, true);
+
+  const tt99Map = parsed.doctypes.find((item) => item.name === "TT99 Account Map");
+  assert.ok(tt99Map);
+  assert.equal(tt99Map.is_submittable, true);
+  const mapFields = fieldMap(tt99Map);
+  for (const required of ["company", "source_account", "target_account", "effective_from", "legal_rule", "mapping_reason"]) {
+    assert.equal(mapFields.get(required)?.required, true, `${required} must be required`);
+  }
+
+  const legalWorkflow = parsed.workflows.find((item) => item.document_type === "VN Legal Rule");
+  const mapWorkflow = parsed.workflows.find((item) => item.document_type === "TT99 Account Map");
+  assert.ok(legalWorkflow?.transitions.some((item) => item.action === "Phê duyệt" && item.allow_self_approval === false));
+  assert.ok(mapWorkflow?.transitions.some((item) => item.action === "Phê duyệt" && item.allow_self_approval === false));
 
   const payrollBatch = parsed.doctypes.find((item) => item.name === "Payroll Accounting Batch");
   const payrollFields = fieldMap(payrollBatch);
