@@ -1,17 +1,32 @@
 # WS10 — Integration Hub / Connector Platform
 
-Status: **REVIEW**  
+Status: **ACTIVE**  
 Owner: **chatgpt-ws10**  
 Branch: `agent/ent-10-integration-hub`  
-Draft PR: **#308** `feat(ws10): establish integration delivery foundation`  
+Checkpoint PR: **#308** `feat(ws10): establish integration delivery foundation`  
 Product baseline: **Forge 0.2.0**  
 Seed baseline: `862636e6239c91eab657c619d8c55345ed71a6d8`  
 Claimed from exact main head: `bbe3494bcfbb8a3ce09a5ff4bbb839dfcf9e47e9`  
-Implementation head: `1c050cf602f55495fbd6d913760f94ab24f1eb62`  
-PR head before this status-only handoff commit: `cba0185dc1843fd1675138fc9957da6703640b9c`  
+Implementation head before this continuation directive: `1c050cf602f55495fbd6d913760f94ab24f1eb62`  
 Canonical board: `main:docs/agents/AGENT_BOARD.md`
 
 Before implementation, this branch was compared with exact current `main`, found 18 commits behind with only the seeded workstream file ahead, then clean-synced to `main@bbe3494bcfbb8a3ce09a5ff4bbb839dfcf9e47e9` before claim/implementation. GitHub exact branch/PR state remains authoritative over this snapshot.
+
+## Execution directive — do not stop at a checkpoint
+
+PR `#308` is a review checkpoint, **not the end of WS10**. The worker must continue every independent audit/implementation slice that stays inside WS10 ownership.
+
+Do not ask the user for ordinary technical choices. Audit repo evidence and choose the best implementation under the Skill/North Star/contracts.
+
+Only stop and ask when one of these is true:
+1. a business decision cannot be inferred from repo/docs;
+2. the remaining work requires changing a shared contract owned by another workstream and the dependency cannot be separated;
+3. a destructive/production operation is required;
+4. merge/deploy of a non-UI change is required.
+
+If one dependency blocks only part of the scope, record a Dependency Request and continue all other independent work. Opening a PR, reaching `REVIEW`, or discovering a partial blocker is not by itself a reason to stop.
+
+For WS10 specifically, continue provider-agnostic contracts/tests/audit/API design and any implementation that does not take ownership from WS00/WS11/WS12. Keep non-UI PRs unmerged until approval, but keep coding the next independent slice on the workstream branch or a clearly documented WS10 sub-branch when necessary.
 
 ## Mission
 
@@ -140,10 +155,22 @@ No migration, shared document-kernel code, auth/IAM implementation, SRE deploy c
 - **WS16**: Facebook/social provider implementation is useful evidence/consumer, but generic connector primitive stays in WS10.
 - Tenant migration slot intentionally not consumed in this slice while accounting work is active; generic subscription/delivery persistence requires exact-main migration coordination later.
 
-## Next slice
+## Independent continuation slices
 
-After dependency contracts are reviewed: persist tenant-scoped connector/subscription + delivery attempt/audit records, expose permission-enforced Integration Hub APIs, wire outbox event -> subscription -> delivery queue -> signed executor -> retry/DLQ/replay, then migrate Facebook/provider-specific seams incrementally instead of rewriting them wholesale.
+These do **not** require waiting for every dependency above and should be worked next where repo evidence permits:
+
+1. deepen connector catalog/manifest contract without owning credential storage;
+2. define permission-enforced Integration Hub API boundary using existing auth context, without changing WS11 internals;
+3. expand mapping/transformation validation, versioning and compatibility tests;
+4. add provider-adapter interface and deterministic executor abstraction with injected secret resolver/transport, without implementing a vault or production network calls;
+5. audit/import existing Facebook provider path against the generic interface and prepare adapter conformance tests;
+6. specify/persist delivery audit only after migration ownership and WS12 persistence contract are concrete;
+7. keep legacy/provider migrations as dependency requests instead of blocking all WS10 progress.
+
+## Next convergence slice
+
+After shared dependency contracts are concrete: persist tenant-scoped connector/subscription + delivery attempt/audit records, expose full permission-enforced Integration Hub APIs, wire outbox event -> subscription -> delivery queue -> signed executor -> retry/DLQ/replay, then migrate Facebook/provider-specific seams incrementally instead of rewriting them wholesale.
 
 ## Merge / deploy boundary
 
-This is backend/platform behavior, not UI-only. Draft PR `#308` is open for review. **Do not merge or deploy without explicit user approval**.
+This is backend/platform behavior, not UI-only. PR `#308` may remain open as a checkpoint while WS10 continues independent work. **Do not merge or deploy non-UI changes without explicit user approval. Do not stop merely because merge/deploy is not yet authorized.**
