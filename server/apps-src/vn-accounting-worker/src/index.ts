@@ -4,6 +4,11 @@ import {
   parseTaxTestVectors,
   validateTaxTestVectors,
 } from "./evaluator.js";
+import {
+  rankBankMatchCandidates,
+  type BankTransactionCandidateSource,
+  type PaymentEntryCandidateSource,
+} from "./bank-match.js";
 
 interface Env {
   PLATFORM?: Fetcher;
@@ -92,6 +97,24 @@ async function readDocument(call: PlatformCall, doctype: string, name: string): 
   return body.data;
 }
 
+async function readList(
+  call: PlatformCall,
+  doctype: string,
+  fields: string[],
+  filters: unknown[],
+  limit: number,
+): Promise<Record<string, unknown>[]> {
+  const query = new URLSearchParams({
+    fields: JSON.stringify(fields),
+    filters: JSON.stringify(filters),
+    limit_page_length: String(limit),
+  });
+  const response = await call(`resource/${encodeURIComponent(doctype)}?${query}`);
+  if (!response.ok) throw new Error(`${doctype} list could not be read (HTTP ${response.status})`);
+  const body = await response.json<{ data?: Record<string, unknown>[] }>();
+  return body.data ?? [];
+}
+
 async function evaluateMethod(request: Request, env: Env, args: Record<string, unknown>): Promise<Response> {
   const rulesetName = String(args.ruleset ?? "").trim();
   if (!rulesetName) return refuse("ruleset is required");
@@ -127,6 +150,97 @@ async function evaluateMethod(request: Request, env: Env, args: Record<string, u
   }
 }
 
+function dateWindow(postingAt: unknown, maxDays: number): { from: string; to: string } {
+  const raw = String(postingAt ?? "").trim();
+  const center = new Date(raw.length === 10 ? `${raw}T00:00:00Z` : raw);
+  if (Number.isNaN(center.getTime())) throw new Error("Bank Transaction posting_at is invalid");
+  const delta = maxDays * 86_400_000;
+  return {
+    from: new Date(center.getTime() - delta).toISOString().slice(0, 10),
+    to: new Date(center.getTime() + delta).toISOString().slice(0, 10),
+  };
+}
+
+async function bankMatchMethod(request: Request, env: Env, args: Record<string, unknown>): Promise<Response> {
+  const transactionName = String(args.bank_transaction ?? "").trim();
+  if (!transactionName) return refuse("bank_transaction is required");
+  const maxDays = Number(args.max_days ?? 7);
+  const resultLimit = Number(args.limit ?? 20);
+  if (!Number.isInteger(maxDays) || maxDays < 0 || maxDays > 30) return refuse("max_days must be 0-30");
+  if (!Number.isInteger(resultLimit) || resultLimit < 1 || resultLimit > 100) return refuse("limit must be 1-100");
+
+  const call = platformCaller(request, env);
+  const source = await readDocument(call, "Bank Transaction", transactionName);
+  if (Number(source.docstatus) !== 1) return refuse(`Bank Transaction ${transactionName} must be submitted`);
+  const transaction: BankTransactionCandidateSource = {
+    name: transactionName,
+    bank_account: String(source.bank_account ?? ""),
+    company: String(source.company ?? ""),
+    posting_at: String(source.posting_at ?? ""),
+    transaction_type: source.transaction_type === "Withdrawal" ? "Withdrawal" : "Deposit",
+    amount_minor: Number(source.amount_minor),
+    currency: String(source.currency ?? ""),
+    gl_account: String(source.gl_account ?? ""),
+    ...(source.reference_number ? { reference_number: String(source.reference_number) } : {}),
+    ...(source.description ? { description: String(source.description) } : {}),
+  };
+  if (!source.transaction_type || !["Deposit", "Withdrawal"].includes(String(source.transaction_type))) {
+    return refuse(`Bank Transaction ${transactionName} has invalid transaction_type`);
+  }
+  const window = dateWindow(transaction.posting_at, maxDays);
+  const paymentType = transaction.transaction_type === "Deposit" ? "Receive" : "Pay";
+  const rows = await readList(
+    call,
+    "Payment Entry",
+    [
+      "name", "docstatus", "company", "posting_at", "payment_type", "paid_from", "paid_to",
+      "received_amount_minor", "company_currency", "currency", "party", "reference_no", "reference_number", "remarks",
+    ],
+    [
+      ["company", "=", transaction.company],
+      ["payment_type", "=", paymentType],
+      ["posting_at", ">=", window.from],
+      ["posting_at", "<=", `${window.to}T23:59:59Z`],
+    ],
+    200,
+  );
+  const payments: PaymentEntryCandidateSource[] = rows.map((row) => ({
+    name: String(row.name ?? ""),
+    docstatus: Number(row.docstatus),
+    company: String(row.company ?? ""),
+    posting_at: String(row.posting_at ?? ""),
+    payment_type: row.payment_type === "Pay" ? "Pay" : "Receive",
+    paid_from: String(row.paid_from ?? ""),
+    paid_to: String(row.paid_to ?? ""),
+    received_amount_minor: Number(row.received_amount_minor),
+    ...(row.company_currency ? { company_currency: String(row.company_currency) } : {}),
+    ...(row.currency ? { currency: String(row.currency) } : {}),
+    ...(row.party ? { party: String(row.party) } : {}),
+    ...(row.reference_no ? { reference_no: String(row.reference_no) } : {}),
+    ...(row.reference_number ? { reference_number: String(row.reference_number) } : {}),
+    ...(row.remarks ? { remarks: String(row.remarks) } : {}),
+  }));
+  try {
+    const candidates = rankBankMatchCandidates(transaction, payments, maxDays, resultLimit);
+    return json({
+      message: {
+        bank_transaction: transactionName,
+        transaction_type: transaction.transaction_type,
+        company: transaction.company,
+        currency: transaction.currency,
+        amount_minor: transaction.amount_minor,
+        window,
+        scanned_payment_entries: rows.length,
+        truncated_source_scan: rows.length >= 200,
+        candidates,
+        write_path: "Submit Bank Reconciliation to apply a match; this method never writes.",
+      },
+    });
+  } catch (error) {
+    return refuse(error instanceof Error ? error.message : "Bank matching failed");
+  }
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
@@ -135,6 +249,7 @@ export default {
       const method = decodeURIComponent(url.pathname.slice("/api/method/".length));
       const body = await request.json<MethodBody>().catch(() => ({}));
       if (method === "vn-accounting.tax.evaluate") return evaluateMethod(request, env, body.args ?? {});
+      if (method === "vn-accounting.bank.match_candidates") return bankMatchMethod(request, env, body.args ?? {});
       return json({ message: `Unknown vn-accounting method: ${method}` }, 404);
     }
     if (request.method === "GET" && url.pathname === "/health") return json({ ok: true, app: "vn-accounting" });
