@@ -59,7 +59,10 @@ export async function buildHrmSalarySlipInputs(
   if (input.start_date < ruleFrom || (ruleTo && input.end_date > ruleTo)) {
     throw errors.reference(`VN Payroll Rule ${payrollRuleName} does not cover the payroll period`);
   }
+  const ruleCode = requiredText(payrollRule.rule_code, `VN Payroll Rule ${payrollRuleName} rule_code`);
+  if (ruleCode !== payrollRuleName) throw errors.reference(`VN Payroll Rule ${payrollRuleName} rule_code does not match its record name`);
   const legalDocumentNo = requiredText(payrollRule.legal_document_no, `VN Payroll Rule ${payrollRuleName} legal_document_no`);
+  const sourceUrl = requiredText(payrollRule.source_url, `VN Payroll Rule ${payrollRuleName} source_url`);
   const approvedBy = requiredText(payrollRule.approved_by, `VN Payroll Rule ${payrollRuleName} approved_by`);
   const approvedAt = requiredText(payrollRule.approved_at, `VN Payroll Rule ${payrollRuleName} approved_at`);
   const formulaJson = requiredText(payrollRule.formula_json, `VN Payroll Rule ${payrollRuleName} formula_json`);
@@ -215,9 +218,11 @@ export async function buildHrmSalarySlipInputs(
     payroll_period: { name: payrollPeriod.name, version: payrollPeriod.version },
     payroll_rule: {
       name: payrollRuleName,
+      rule_code: ruleCode,
       effective_from: ruleFrom,
       ...(ruleTo ? { effective_to: ruleTo } : {}),
       legal_document_no: legalDocumentNo,
+      source_url: sourceUrl,
       approved_by: approvedBy,
       approved_at: approvedAt,
       formula_sha256: formulaHash,
