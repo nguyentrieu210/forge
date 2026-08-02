@@ -1,3 +1,4 @@
+# Retry marker: HRM strict TypeScript build blocker fixed in PR #275.
 name: One-time ALU Warehouse Cash Install
 
 on:
@@ -82,7 +83,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ADMIN_USER="${FORGE_ADMIN_USER:-Administrator}"
+          ADMIN_USER="${FORGE_ADMIN_USER:-admin}"
           node server/scripts/forge-app.mjs server/apps-src/hrm \
             --origin "$ORIGIN" \
             --admin "$ADMIN_USER"
@@ -91,7 +92,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ADMIN_USER="${FORGE_ADMIN_USER:-Administrator}"
+          ADMIN_USER="${FORGE_ADMIN_USER:-admin}"
           node server/scripts/forge-app.mjs server/apps-src/vn-accounting \
             --origin "$ORIGIN" \
             --admin "$ADMIN_USER"
