@@ -48,8 +48,14 @@ async function boot(): Promise<void> {
 function shouldTryWebsite(): boolean {
   const host = window.location.hostname.toLowerCase();
   const params = new URLSearchParams(window.location.search);
+
+  // Query-driven runtime modes are an existing public contract. In particular the
+  // Alumdoor login QA and tenant launcher use `?alumdoor=1`, while `?app=<id>` selects
+  // one installed app. A published Website must never steal those explicit requests.
+  if (params.get("alumdoor") === "1" || params.has("app")) return false;
+
   // Preserve the dedicated Social Commerce marketing surface and its local visual fixture.
-  if (host === "chotdon.kairo.vn" || (["localhost", "127.0.0.1"].includes(host) && params.get("landing") === "1")) return false;
+  if (host === "chotdon.kairo.vn" || params.get("landing") === "1") return false;
 
   const trimmed = window.location.pathname.replace(/^\/+|\/+$/g, "");
   if (!trimmed) return true;
