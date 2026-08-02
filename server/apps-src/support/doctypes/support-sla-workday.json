@@ -1,0 +1,12 @@
+{
+  "name": "Support SLA Workday",
+  "module": "Support",
+  "is_child": true,
+  "fields": [
+    { "fieldname": "weekday", "label": "Ngày", "fieldtype": "Select", "options": "Thứ Hai\nThứ Ba\nThứ Tư\nThứ Năm\nThứ Sáu\nThứ Bảy\nChủ Nhật", "required": true, "in_list_view": true },
+    { "fieldname": "start_time", "label": "Bắt đầu", "fieldtype": "Time", "required": true, "in_list_view": true },
+    { "fieldname": "end_time", "label": "Kết thúc", "fieldtype": "Time", "required": true, "in_list_view": true }
+  ],
+  "permissions": [],
+  "revision": 1
+}
