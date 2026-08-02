@@ -14,9 +14,9 @@ concurrency:
 
 jobs:
   validate:
-    name: Validate small UI-only hotfix
+    name: Validate tiny UI-only hotfix
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     outputs:
       target_sha: ${{ steps.scope.outputs.target_sha }}
 
@@ -27,7 +27,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Enforce UI hotfix scope
+      - name: Enforce tiny UI scope
         id: scope
         shell: bash
         run: |
@@ -37,7 +37,7 @@ jobs:
           case "$branch" in
             hotfix/ui-*) ;;
             *)
-              echo "This lane only accepts hotfix/ui-* branches; got: $branch" >&2
+              echo "Only hotfix/ui-* branches can use this lane; got: $branch" >&2
               exit 1
               ;;
           esac
@@ -47,7 +47,7 @@ jobs:
           target_sha="$(git rev-parse HEAD)"
 
           if ! git merge-base --is-ancestor "$main_sha" "$target_sha"; then
-            echo "Hotfix is stale: current main must be an ancestor of the target SHA." >&2
+            echo "Hotfix is stale. Recreate it from current main." >&2
             exit 1
           fi
 
@@ -56,8 +56,8 @@ jobs:
             echo "No changes found versus current main." >&2
             exit 1
           fi
-          if [ "${#files[@]}" -gt 20 ]; then
-            echo "UI hotfix lane is capped at 20 changed files; got ${#files[@]}." >&2
+          if [ "${#files[@]}" -gt 10 ]; then
+            echo "Quick UI lane is capped at 10 changed files; got ${#files[@]}." >&2
             exit 1
           fi
 
@@ -70,21 +70,21 @@ jobs:
               CURRENT_STATUS.md|NEXT_TASKS.md|AI_HANDOFF.md)
                 ;;
               *)
-                echo "Out-of-scope file for UI hotfix: $file" >&2
+                echo "Not allowed in quick UI lane: $file" >&2
                 exit 1
                 ;;
             esac
 
             case "$file" in
               package.json|pnpm-lock.yaml|*/package.json)
-                echo "Dependency/package changes require the normal release lane: $file" >&2
+                echo "Dependency changes require normal release flow: $file" >&2
                 exit 1
                 ;;
             esac
           done
 
           if [ "$has_client_change" != true ]; then
-            echo "UI hotfix must include at least one client/** change." >&2
+            echo "Quick UI lane requires at least one client/** change." >&2
             exit 1
           fi
 
@@ -94,30 +94,30 @@ jobs:
             $2 ~ /^[0-9]+$/ { total += $2 }
             END { print total }
           ')"
-          if [ "$changed_lines" -gt 600 ]; then
-            echo "UI hotfix lane is capped at 600 changed text lines; got $changed_lines." >&2
+          if [ "$changed_lines" -gt 300 ]; then
+            echo "Quick UI lane is capped at 300 changed text lines; got $changed_lines." >&2
             exit 1
           fi
 
+          echo "target_sha=$target_sha" >> "$GITHUB_OUTPUT"
           {
             echo "target_sha=$target_sha"
             echo "main_sha=$main_sha"
             echo "changed_files=${#files[@]}"
             echo "changed_lines=$changed_lines"
           } >> "$GITHUB_STEP_SUMMARY"
-          printf '%s\n' "${files[@]}" | sed 's/^/- `/' | sed 's/$/`/' >> "$GITHUB_STEP_SUMMARY"
-          echo "target_sha=$target_sha" >> "$GITHUB_OUTPUT"
 
   release:
-    name: Build, deploy and smoke Gateway
+    name: Quick build, deploy and smoke
     needs: validate
     uses: ./.github/workflows/release-gateway.yml
     with:
       target_sha: ${{ needs.validate.outputs.target_sha }}
+      quick_ui_hotfix: true
     secrets: inherit
 
   reconcile:
-    name: Keep GitHub source-of-truth visible
+    name: Reconcile source after deploy
     needs: [validate, release]
     if: ${{ success() }}
     runs-on: ubuntu-latest
@@ -147,9 +147,9 @@ jobs:
               --base main \
               --head "$branch" \
               --title "hotfix(ui): reconcile ${branch#hotfix/ui-}" \
-              --body "Production UI hotfix deployed from exact SHA \`$TARGET_SHA\` by workflow run $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID. Merge this branch back to main after required repository checks pass."
+              --body "UI hotfix deployed from exact SHA \`$TARGET_SHA\` by $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID. Merge this branch back to main after normal repository checks pass."
           else
             gh pr comment "$pr_number" \
               --repo "$GITHUB_REPOSITORY" \
-              --body "Production UI hotfix deployed from exact SHA \`$TARGET_SHA\` by workflow run $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID."
+              --body "UI hotfix deployed from exact SHA \`$TARGET_SHA\` by $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID."
           fi
