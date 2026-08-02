@@ -4,6 +4,18 @@ Ngày cập nhật: **2026-08-02**.
 
 Đây là hàng đợi active. GitHub là nguồn sự thật cho exact `main`, PR, branch và CI; trước khi làm phải đọc `RUNBOOK.md`, `CURRENT_STATUS.md`, `AI_HANDOFF.md`, `DELIVERY_POLICY.md` và kiểm tra PR đang mở.
 
+## P1 — Website/CMS v1 clean delivery
+
+- Canonical branch: `feat/tenant-website-builder-delivery-v2-20260802`.
+- Canonical PR: `#238` (draft). PR `#219` và `#220` là stale iterations, không merge.
+- Base clean-transplant: exact `main@18d2161de589fcd1677886f0e9136006fd60e9e5`.
+- Quality tier: **CRITICAL** do public unauthenticated routing + tenant isolation.
+- Việc còn lại:
+  1. Xác nhận exact final head vẫn `behind_by=0` so với current `main` trước readiness; nếu stale/diverged thì clean-transplant lại đúng scope.
+  2. Chạy/đọc website server regression, runtime typecheck/build, public E2E và required CI theo ownership; không chạy lặp gate đã PASS cùng SHA nếu input không đổi.
+  3. Chỉ mark PR ready khi public allowlist, draft/published behavior, tenant isolation và build/runtime đều xanh.
+  4. Không merge vào `main` nếu người dùng chưa yêu cầu rõ.
+
 ## P1 — Risk-based quality gates
 
 - Canonical branch: `chore/risk-based-quality-gates-20260802`, base exact `main@cd1f76dbb47432e2312c6f5577eb955b48c3a856`.
