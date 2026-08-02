@@ -21,13 +21,14 @@
     { "fieldname": "service_address", "label": "Địa điểm dịch vụ", "fieldtype": "Text" },
     { "fieldname": "item", "label": "Sản phẩm / vật tư", "fieldtype": "Link", "options": "Item", "in_standard_filter": true },
     { "fieldname": "serial_no", "label": "Số serial", "fieldtype": "Link", "options": "Serial No", "search_index": true },
-    { "fieldname": "parts_usage_note", "label": "Vật tư đã dùng (ghi nhận)", "fieldtype": "Text" },
+    { "fieldname": "checklist", "label": "Checklist hiện trường", "fieldtype": "Table", "options": "Service Checklist Item", "required": true },
+    { "fieldname": "parts_used", "label": "Vật tư / linh kiện ghi nhận", "fieldtype": "Table", "options": "Service Part Usage" },
     { "fieldname": "actual_start", "label": "Bắt đầu thực tế", "fieldtype": "Datetime", "mandatory_depends_on": "eval:doc.workflow_state == 'Chờ xác nhận' || doc.workflow_state == 'Hoàn tất'" },
     { "fieldname": "actual_end", "label": "Kết thúc thực tế", "fieldtype": "Datetime", "mandatory_depends_on": "eval:doc.workflow_state == 'Chờ xác nhận' || doc.workflow_state == 'Hoàn tất'" },
-    { "fieldname": "checklist_result", "label": "Kết quả checklist", "fieldtype": "Select", "options": "Đạt\nKhông đạt\nKhông áp dụng", "mandatory_depends_on": "eval:doc.workflow_state == 'Chờ xác nhận' || doc.workflow_state == 'Hoàn tất'" },
+    { "fieldname": "overall_checklist_result", "label": "Kết quả checklist tổng", "fieldtype": "Select", "options": "Đạt\nKhông đạt\nKhông áp dụng", "mandatory_depends_on": "eval:doc.workflow_state == 'Chờ xác nhận' || doc.workflow_state == 'Hoàn tất'" },
     { "fieldname": "work_performed", "label": "Công việc đã thực hiện", "fieldtype": "Text", "mandatory_depends_on": "eval:doc.workflow_state == 'Chờ xác nhận' || doc.workflow_state == 'Hoàn tất'" },
     { "fieldname": "resolution", "label": "Kết luận / xử lý", "fieldtype": "Text", "mandatory_depends_on": "eval:doc.workflow_state == 'Chờ xác nhận' || doc.workflow_state == 'Hoàn tất'" },
-    { "fieldname": "photo_evidence", "label": "Ảnh hiện trường", "fieldtype": "Attach" },
+    { "fieldname": "photo_evidence", "label": "Ảnh hiện trường tổng", "fieldtype": "Attach" },
     { "fieldname": "customer_confirmed_by", "label": "Người xác nhận phía khách", "fieldtype": "Data", "mandatory_depends_on": "eval:doc.workflow_state == 'Hoàn tất'" },
     { "fieldname": "customer_signature", "label": "Chữ ký / biên nhận", "fieldtype": "Attach" },
     { "fieldname": "completion_note", "label": "Ghi chú hoàn tất", "fieldtype": "Text" },
@@ -45,5 +46,5 @@
     { "role": "Maintenance Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "print": true, "report": true, "export": true, "share": true },
     { "role": "System Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "print": true, "report": true, "export": true, "share": true }
   ],
-  "revision": 2
+  "revision": 3
 }
