@@ -7,6 +7,12 @@ on:
     paths:
       - server/apps-src/hrm/fixtures/hr-masters.json
       - .github/workflows/validate-alumdoor-shared-master-fix.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - server/apps-src/hrm/fixtures/hr-masters.json
+      - .github/workflows/validate-alumdoor-shared-master-fix.yml
 
 jobs:
   validate:
