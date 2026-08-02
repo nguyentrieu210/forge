@@ -8,6 +8,7 @@ export * from "./bpm-formula.js";
 export * from "./bpm-trigger.js";
 export * from "./bpm-analytics.js";
 export * from "./app-rollback.js";
+export * from "./app-revision-store.js";
 export {
   combinedNavigation,
   type InstalledAppRecord,
