@@ -45,6 +45,8 @@ BEGIN
   SELECT RAISE(ABORT,'INVALID_LIFECYCLE_TRANSITION: HR_CHECKIN_SOURCE_LOCKED');
 END;
 
+-- One accepted offer can close only once. The Employee itself is intentionally NOT
+-- unique here: a former employee may legitimately be rehired under a later Job Offer.
 CREATE TRIGGER IF NOT EXISTS hr_hiring_completion_unique_insert_guard
 BEFORE INSERT ON documents
 WHEN NEW.doctype='Hiring Completion' AND NEW.docstatus=1
@@ -53,10 +55,7 @@ AND EXISTS(
   WHERE d.tenant_id=NEW.tenant_id
     AND d.doctype='Hiring Completion'
     AND d.docstatus=1
-    AND (
-      json_extract(d.payload_json,'$.job_offer')=json_extract(NEW.payload_json,'$.job_offer')
-      OR json_extract(d.payload_json,'$.employee')=json_extract(NEW.payload_json,'$.employee')
-    )
+    AND json_extract(d.payload_json,'$.job_offer')=json_extract(NEW.payload_json,'$.job_offer')
 )
 BEGIN
   SELECT RAISE(ABORT,'REFERENCE_VALIDATION_FAILED: HR_HIRING_COMPLETION_DUPLICATE');
@@ -71,10 +70,7 @@ AND EXISTS(
     AND d.doctype='Hiring Completion'
     AND d.docstatus=1
     AND d.doc_key<>OLD.doc_key
-    AND (
-      json_extract(d.payload_json,'$.job_offer')=json_extract(NEW.payload_json,'$.job_offer')
-      OR json_extract(d.payload_json,'$.employee')=json_extract(NEW.payload_json,'$.employee')
-    )
+    AND json_extract(d.payload_json,'$.job_offer')=json_extract(NEW.payload_json,'$.job_offer')
 )
 BEGIN
   SELECT RAISE(ABORT,'REFERENCE_VALIDATION_FAILED: HR_HIRING_COMPLETION_DUPLICATE');
