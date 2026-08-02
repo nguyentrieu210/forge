@@ -1,4 +1,3 @@
-import type { JsonValue } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
 import type {
   SemanticFilter,
@@ -7,6 +6,7 @@ import type {
   SemanticOrder,
   SemanticQueryRequest,
 } from "./index.js";
+import { assertSemanticFilterRuntimeInput, type SemanticScalar } from "./validation.js";
 
 export type InsightKind = "kpi" | "chart" | "pivot" | "table";
 
@@ -61,16 +61,16 @@ const KINDS = new Set<InsightKind>(["kpi", "chart", "pivot", "table"]);
 
 function requireId(value: string, field: string, member = false): void {
   const pattern = member ? MEMBER_ID : STABLE_ID;
-  if (!pattern.test(value)) throw errors.validation(`${field} is not a valid stable id`);
+  if (typeof value !== "string" || !pattern.test(value)) throw errors.validation(`${field} is not a valid stable id`);
 }
 
 function requireText(value: string, field: string, max = 200): void {
-  if (!value.trim() || value.length > max) throw errors.validation(`${field} is required and must be at most ${max} characters`);
+  if (typeof value !== "string" || !value.trim() || value.length > max) throw errors.validation(`${field} is required and must be at most ${max} characters`);
 }
 
 function uniqueMembers(values: string[] | undefined, field: string, max = 40): string[] {
   const output = values ?? [];
-  if (output.length > max) throw errors.validation(`${field} has too many entries`);
+  if (!Array.isArray(output) || output.length > max) throw errors.validation(`${field} has too many entries`);
   const seen = new Set<string>();
   for (const value of output) {
     requireId(value, field, true);
@@ -90,6 +90,7 @@ function modelMembers(model: SemanticModelDefinition) {
 function validateFilter(filter: SemanticFilter, dimensions: Set<string>, field: string): void {
   requireId(filter.dimension, `${field}.dimension`, true);
   if (!dimensions.has(filter.dimension)) throw errors.validation(`${field} uses unknown dimension ${filter.dimension}`);
+  assertSemanticFilterRuntimeInput(filter, field);
 }
 
 function validateDefinition(semantic: SemanticModelRegistry, definition: SemanticInsightDefinition): void {
@@ -106,8 +107,10 @@ function validateDefinition(semantic: SemanticModelRegistry, definition: Semanti
   for (const dimension of dimensions) if (!members.dimensions.has(dimension)) throw errors.validation(`Insight ${definition.id} uses unknown dimension ${dimension}`);
   for (const metric of metrics) if (!members.metrics.has(metric)) throw errors.validation(`Insight ${definition.id} uses unknown metric ${metric}`);
 
+  if (!Array.isArray(definition.filters ?? [])) throw errors.validation(`Insight ${definition.id} filters must be an array`);
   for (const [index, filter] of (definition.filters ?? []).entries()) validateFilter(filter, members.dimensions, `Insight ${definition.id} filters[${index}]`);
   const selected = new Set([...dimensions, ...metrics]);
+  if (!Array.isArray(definition.order_by ?? [])) throw errors.validation(`Insight ${definition.id} order_by must be an array`);
   for (const order of definition.order_by ?? []) {
     if (!selected.has(order.id)) throw errors.validation(`Insight ${definition.id} order member must be selected: ${order.id}`);
     if (order.direction !== "asc" && order.direction !== "desc") throw errors.validation(`Insight ${definition.id} order direction is invalid`);
@@ -133,6 +136,7 @@ function validateDefinition(semantic: SemanticModelRegistry, definition: Semanti
     throw errors.validation(`Insight ${definition.id} primaryMetric must be selected`);
   }
 
+  if (!Array.isArray(definition.drillThrough ?? [])) throw errors.validation(`Insight ${definition.id} drillThrough must be an array`);
   const drillIds = new Set<string>();
   for (const drill of definition.drillThrough ?? []) {
     requireId(drill.id, `Insight ${definition.id} drill id`);
@@ -140,7 +144,7 @@ function validateDefinition(semantic: SemanticModelRegistry, definition: Semanti
     requireId(drill.targetInsight, `Insight ${definition.id} drill ${drill.id} targetInsight`);
     if (drillIds.has(drill.id)) throw errors.validation(`Insight ${definition.id} has duplicate drill ${drill.id}`);
     drillIds.add(drill.id);
-    if (drill.bindings.length === 0 || drill.bindings.length > 10) throw errors.validation(`Insight ${definition.id} drill ${drill.id} requires 1-10 bindings`);
+    if (!Array.isArray(drill.bindings) || drill.bindings.length === 0 || drill.bindings.length > 10) throw errors.validation(`Insight ${definition.id} drill ${drill.id} requires 1-10 bindings`);
     const bindingSources = new Set<string>();
     for (const binding of drill.bindings) {
       requireId(binding.sourceDimension, `Insight ${definition.id} drill sourceDimension`, true);
@@ -162,6 +166,7 @@ export class SemanticInsightRegistry {
   private readonly insights = new Map<string, SemanticInsightDefinition>();
 
   constructor(private readonly semantic: SemanticModelRegistry, definitions: SemanticInsightDefinition[]) {
+    if (!Array.isArray(definitions) || definitions.length > 500) throw errors.validation("Semantic insight definitions must contain at most 500 entries");
     for (const definition of definitions) {
       validateDefinition(semantic, definition);
       if (this.insights.has(definition.id)) throw errors.validation(`Duplicate insight ${definition.id}`);
@@ -212,9 +217,11 @@ export class SemanticInsightRegistry {
   query(id: string, tenantId: string, scopeFilters: SemanticFilter[] = []): SemanticQueryRequest {
     if (!tenantId.trim()) throw errors.validation("tenantId is required");
     const definition = this.get(id);
-    if (scopeFilters.length > 20) throw errors.validation(`Insight ${id} has too many runtime scope filters`);
-    for (const filter of scopeFilters) {
+    if (!Array.isArray(scopeFilters) || scopeFilters.length > 20) throw errors.validation(`Insight ${id} has too many runtime scope filters`);
+    const modelDimensions = new Set(this.semantic.get(definition.model).dimensions.map((dimension) => dimension.id));
+    for (const [index, filter] of scopeFilters.entries()) {
       if (!scopeFilterAllowed(definition, filter)) throw errors.validation(`Insight ${id} does not allow runtime scope filter ${filter.dimension}`);
+      validateFilter(filter, modelDimensions, `Insight ${id} scopeFilters[${index}]`);
     }
     return {
       model: definition.model,
@@ -231,7 +238,7 @@ export class SemanticInsightRegistry {
     insight: string;
     drill: string;
     tenantId: string;
-    sourceValues: Record<string, JsonValue>;
+    sourceValues: Record<string, SemanticScalar>;
   }): SemanticQueryRequest {
     const source = this.get(input.insight);
     const drill = (source.drillThrough ?? []).find((candidate) => candidate.id === input.drill);
@@ -240,8 +247,12 @@ export class SemanticInsightRegistry {
     const filters: SemanticFilter[] = [];
     for (const binding of drill.bindings) {
       const value = input.sourceValues[binding.sourceDimension];
-      if (value === undefined || value === null || (typeof value === "string" && !value.trim())) {
+      if (value === undefined || (typeof value === "string" && !value.trim())) {
         throw errors.validation(`Drill ${drill.id} requires source value ${binding.sourceDimension}`);
+      }
+      if (typeof value === "number" && !Number.isFinite(value)) throw errors.validation(`Drill ${drill.id} source value ${binding.sourceDimension} must be finite`);
+      if (typeof value !== "string" && typeof value !== "number" && typeof value !== "boolean") {
+        throw errors.validation(`Drill ${drill.id} source value ${binding.sourceDimension} must be scalar`);
       }
       filters.push({ dimension: binding.targetDimension, operator: "=", value });
     }
