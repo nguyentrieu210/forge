@@ -76,7 +76,7 @@ jobs:
             esac
 
             case "$file" in
-              pnpm-lock.yaml|package.json|client/package.json|client/*/package.json|client/*/*/package.json)
+              package.json|pnpm-lock.yaml|*/package.json)
                 echo "Dependency/package changes require the normal release lane: $file" >&2
                 exit 1
                 ;;
