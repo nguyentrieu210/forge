@@ -169,7 +169,7 @@ function ProcessPanel({ module, reports, masters, onNavigate }: { module: Worksp
             ) : <div className="m-5 rounded-xl border border-dashed bg-muted/20 p-7 text-center text-sm text-muted-foreground">Tài khoản hiện tại chưa có nghiệp vụ khả dụng trong phân hệ này.</div>}
 
             {masters.length ? (
-              <div className="hidden">
+              <div className="order-3 border-t bg-muted/20 p-3 sm:p-4">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
                     <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Danh mục nhanh</h3>
@@ -177,12 +177,12 @@ function ProcessPanel({ module, reports, masters, onNavigate }: { module: Worksp
                   </div>
                   <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-primary" onClick={() => onNavigate("__master-data")}>Tất cả danh mục</Button>
                 </div>
-                <div className="grid gap-2 sm:grid-cols-5">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-5">
                   {masters.slice(0, 5).map((item) => (
                     <Button
                       key={item.key}
                       variant="ghost"
-                      className="h-auto min-h-20 min-w-0 flex-col gap-2 rounded-xl border bg-card px-2 py-3 whitespace-normal text-xs shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/25 hover:bg-card hover:shadow-md"
+                      className="h-auto min-h-16 min-w-0 flex-row justify-start gap-2 rounded-lg border bg-card px-2.5 py-2 whitespace-normal text-left text-xs shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/25 hover:bg-card hover:shadow-md sm:flex-col sm:justify-center sm:gap-1.5 sm:px-2 sm:text-center"
                       onClick={() => onNavigate(item.key)}
                     >
                       <span className="grid size-8 place-items-center rounded-lg bg-primary/[0.08] text-primary [&_svg]:size-4">{item.icon ?? <CheckCircle2 />}</span>
@@ -196,7 +196,7 @@ function ProcessPanel({ module, reports, masters, onNavigate }: { module: Worksp
 
           <aside className="overflow-hidden rounded-2xl border bg-card shadow-sm">
             {masters.length ? (
-              <div className="border-b bg-muted/20 p-3 sm:p-4">
+              <div className="hidden">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
                     <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Danh mục nhanh</h3>
