@@ -81,9 +81,9 @@ export function resolveFormActions(ctx: FormActionCtx): FormActionDesc[] {
     out.push({ kind: "amend", label: "Sửa đổi", variant: "default", primary: true, disabled: ctx.saving, ...dirtyGuard });
   }
 
-  // In — đã lưu, không cần quyền riêng (đang xem = đã có read). KHÔNG khoá theo dirty (đọc bản đã lưu).
+  // PDF là thao tác phụ: vẫn luôn có trong menu nhưng không chiếm chỗ trên thanh hành động chính.
   if (!ctx.isNew) {
-    out.push({ kind: "print", label: "Xuất PDF", variant: "outline", inMenu: false, disabled: ctx.saving });
+    out.push({ kind: "print", label: "Xuất PDF", variant: "outline", inMenu: true, disabled: ctx.saving });
   }
 
   // Nhân bản — đã lưu, có quyền create (tạo bản ghi mới từ dữ liệu hiện tại). Đọc bản ĐÃ LƯU trên
