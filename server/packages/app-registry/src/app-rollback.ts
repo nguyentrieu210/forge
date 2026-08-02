@@ -47,6 +47,21 @@ function permissionSignature(permission: AppManifest["doctypes"][number]["permis
   ));
 }
 
+function jsonEqual(left: unknown, right: unknown): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function reviewDrift(
+  issues: AppRollbackIssue[],
+  current: unknown,
+  target: unknown,
+  code: string,
+  path: string,
+  message: string,
+): void {
+  if (!jsonEqual(current, target)) issue(issues, "review", code, path, message);
+}
+
 /**
  * Conservative metadata preflight for an application rollback.
  *
@@ -54,6 +69,11 @@ function permissionSignature(permission: AppManifest["doctypes"][number]["permis
  * app code, so removing a field/workflow/custom field is not "just metadata": existing documents
  * may still contain or depend on it. A future rollback executor may automate only plans with no
  * block/review issue; everything else needs an explicit migration/reconciliation strategy.
+ *
+ * Presentation-only drift (nav/report/chart/print/client copy/layout) may be automated because it
+ * does not change server write behavior or stored shape. Executable/write-policy surfaces are
+ * review-gated even when the schema is identical: a pretty rollback that calls an old method
+ * contract against a new Worker is still a broken rollback, merely with excellent typography.
  */
 export function planAppRollback(currentValue: unknown, targetValue: unknown): AppRollbackPlan {
   const current = parseAppManifestWithInputTables(currentValue);
@@ -150,6 +170,19 @@ export function planAppRollback(currentValue: unknown, targetValue: unknown): Ap
         issue(issues, "block", "WORKFLOW_DOCSTATUS_CHANGED", `workflows.${name}.states.${state.state}`, `${name}.${state.state} changes docstatus`);
       }
     }
+    reviewDrift(
+      issues,
+      workflow.transitions,
+      targetWorkflow.transitions,
+      "WORKFLOW_TRANSITIONS_CHANGED",
+      `workflows.${name}.transitions`,
+      `${name} transition policy differs in rollback target`,
+    );
+  }
+  for (const name of targetWorkflows.keys()) {
+    if (!currentWorkflows.has(name)) {
+      issue(issues, "review", "WORKFLOW_ADDED_BY_TARGET", `workflows.${name}`, `${name} exists only in rollback target`);
+    }
   }
 
   const currentCustomFields = new Map(current.custom_fields.map((entry) => [entry.name, entry]));
@@ -160,22 +193,29 @@ export function planAppRollback(currentValue: unknown, targetValue: unknown): Ap
       issue(issues, "block", "CUSTOM_FIELD_REMOVED", `custom_fields.${name}`, `${name} is absent from rollback target`);
       continue;
     }
-    if (JSON.stringify(field) !== JSON.stringify(targetField)) {
+    if (!jsonEqual(field, targetField)) {
       issue(issues, "block", "CUSTOM_FIELD_CHANGED", `custom_fields.${name}`, `${name} definition differs in rollback target`);
     }
   }
+  for (const name of targetCustomFields.keys()) {
+    if (!currentCustomFields.has(name)) {
+      issue(issues, "review", "CUSTOM_FIELD_ADDED_BY_TARGET", `custom_fields.${name}`, `${name} exists only in rollback target`);
+    }
+  }
 
-  const currentDependencies = JSON.stringify(current.requires);
-  const targetDependencies = JSON.stringify(target.requires);
-  if (currentDependencies !== targetDependencies) {
-    issue(issues, "review", "DEPENDENCIES_CHANGED", "requires", "Application dependencies differ in rollback target");
+  reviewDrift(issues, current.requires, target.requires, "DEPENDENCIES_CHANGED", "requires", "Application dependencies differ in rollback target");
+  reviewDrift(issues, current.roles, target.roles, "ROLES_CHANGED", "roles", "Application role declarations differ in rollback target");
+  reviewDrift(issues, current.fixtures, target.fixtures, "FIXTURES_CHANGED", "fixtures", "Rollback would rewrite app-owned fixture/master data");
+  reviewDrift(issues, current.externalDocTypes, target.externalDocTypes, "EXTERNAL_DEPENDENCIES_CHANGED", "externalDocTypes", "External DocType dependencies differ in rollback target");
+
+  if ((current.worker ?? null) !== (target.worker ?? null)) {
+    issue(issues, "block", "WORKER_CHANGED", "worker", "Rollback target uses a different app Worker binding");
   }
-  if (JSON.stringify(current.roles) !== JSON.stringify(target.roles)) {
-    issue(issues, "review", "ROLES_CHANGED", "roles", "Application role declarations differ in rollback target");
-  }
-  if (JSON.stringify(current.fixtures) !== JSON.stringify(target.fixtures)) {
-    issue(issues, "review", "FIXTURES_CHANGED", "fixtures", "Rollback would rewrite app-owned fixture/master data");
-  }
+  reviewDrift(issues, current.validators, target.validators, "VALIDATORS_CHANGED", "validators", "Pre-commit validation policy differs in rollback target");
+  reviewDrift(issues, current.hooks, target.hooks, "HOOKS_CHANGED", "hooks", "After-commit event subscriptions differ in rollback target");
+  reviewDrift(issues, current.actions, target.actions, "ACTIONS_CHANGED", "actions", "Callable AppAction contract differs in rollback target");
+  reviewDrift(issues, current.screens, target.screens, "SCREENS_CHANGED", "screens", "Composed screen/action contract differs in rollback target");
+  reviewDrift(issues, current.storefront ?? null, target.storefront ?? null, "STOREFRONT_CHANGED", "storefront", "Public catalog/order contract differs in rollback target");
 
   return {
     app_id: current.id,
