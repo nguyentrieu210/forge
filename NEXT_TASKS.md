@@ -2,46 +2,41 @@
 
 Ngày cập nhật: **2026-08-02**.
 
-Đây là hàng đợi active. GitHub là nguồn sự thật cho exact `main`, PR, branch và CI; trước khi làm phải đọc `RUNBOOK.md`, `CURRENT_STATUS.md`, `AI_HANDOFF.md`, `DELIVERY_POLICY.md` và kiểm tra PR đang mở.
+Đây là hàng đợi active. GitHub là nguồn sự thật cho exact `main`, PR và branch; trước khi làm phải đọc `RUNBOOK.md`, `CURRENT_STATUS.md`, `AI_HANDOFF.md`, `DELIVERY_POLICY.md`.
 
-## P1 — UI theme hotfix auto-deploy verification
+## NOW — exact production release evidence
 
-- Guarded auto-deploy lane đã merge qua PR `#231` tại `cd1f76dbb47432e2312c6f5577eb955b48c3a856`.
-- PR `#230` là stale iteration, không merge.
-- Theme hotfix replay hiện ở PR `#232`, branch `hotfix/ui-document-theme-auto-20260802`.
-- Việc còn lại: kiểm exact workflow/release evidence của #232; không suy ra production deploy chỉ từ branch/PR state.
+- Branch: `fix/release-evidence-health-sha-v2`.
+- Cần review/merge thay đổi release pipeline trước khi dùng làm production proof canonical.
+- Sau merge, mọi UI/full ALU deploy phải stage `/release.json` chứa exact `releaseSha` + `bundleHash`; smoke phải fail nếu production marker không khớp `TARGET_SHA`.
+- Same-repo UI PR trigger phải được giữ vì GitHub-connector content writes không đảm bảo phát push-triggered Actions; vẫn fail-closed theo branch naming, current-main ancestry và UI-only scope.
+- Không production deploy task release-pipeline này nếu chưa có yêu cầu release rõ.
 
-## DONE — Risk-based quality gates
+## P1 — HRM statutory payroll rule evaluator
 
-- Canonical PR `#234` đã merge tại `c453df3026095b314f82f79e338bd56af90632ca`.
-- `RUNBOOK.md` và `DELIVERY_POLICY.md` là source of truth cho `FAST` / `STANDARD` / `CRITICAL`.
-- Task phải nâng tier nếu blast radius thực tế tăng; không hạ accounting/inventory/auth/tenant/migration/data xuống FAST chỉ vì cần nhanh.
+- HRM operational 1.5 nằm ở PR `#253`; payroll operational dùng canonical Salary Slip/Payroll Entry/GL, có versioned legal-rule trace và khóa rule/source sau khi sử dụng.
+- `VN Payroll Rule.formula_json` hiện là audited/versioned evidence và tham gia `input_hash`; chưa tự execute PIT/BHXH hoặc công thức pháp lý Việt Nam.
+- Nếu cần tự động statutory payroll: thiết kế schema công thức explicit, decimal/fixed-point rules, effective-date/version selection, official source, approval/version immutability và regression theo từng tình huống pháp lý. Không hardcode luật trong fixture/controller và không cho sửa rule đã dùng.
+- Đây là follow-up riêng vì thay đổi pháp luật và payroll correctness có blast radius CRITICAL.
 
-## DONE — Alumdoor Warehouse Cash integration
+## DONE — Website/CMS multi-tenant v1
 
-- Canonical PR `#233` đã squash-merge vào `main` tại `c3dbcd20a7a88c17c1a9f10c4fff82b329e27855`.
-- Final validated feature head `162bc010692d3a2997ddbc9bd5e9a59e11cb5d60`: **6/6 required workflows PASS**.
-- Alumdoor dùng role-gated `Quỹ kho` + generic MetaForge routes tới 4 DocType Finance-owned; không copy controller/schema/ledger.
-- `alumdoor-v2.integrations.json` khai dependency `vn-accounting >= 1.1.0` và external ownership cho `Warehouse Cash Fund`, `Warehouse Cash Voucher`, `Warehouse Cash Transfer`, `Warehouse Cash Count`.
-- Canonical brief reader fail closed trên sidecar key/dependency/externalDocType trùng hoặc không hợp lệ.
-- Browser QA khóa role visibility + Voucher navigation.
-- Không deploy production trong task Warehouse Cash này.
+- Canonical PR `#254` đã squash-merge vào `main` tại `b25fc30b0f37d1218cafbb4dac40e37479bba0b9`.
+- Public Website/CMS v1 đã có first-party app metadata, Website Settings/Web Page/Web Page Block, versioned presets, tenant-scoped published-only public API và shared runtime renderer.
+- Final responsive regression PASS trên mobile/tablet/desktop; public allowlist và tenant isolation evidence đã đủ cho scope v1.
+- Không có production deploy/DNS/custom-domain/secrets trong task này.
 
-## DONE — Warehouse Petty Cash per warehouse
+## DONE — UI auto deploy
 
-- Canonical PR `#214` đã squash-merge vào `main` tại `da37060f3c02a6a5f9701d60edc3284575f00deb`.
-- Final validated head `5255dae609a7a4c30ab25ffc397f81422c2c69fc`: **6/6 required workflows PASS**.
-- `gl_entries` là money source of truth; projections chỉ rebuildable.
-- Follow-up kế toán chỉ khi nghiệp vụ yêu cầu: muốn quỹ kho settle trực tiếp Purchase/Sales Invoice thì phải thiết kế canonical Payment Entry/payment allocation; không coi GL party dimension là đã settle AR/AP.
-
-## DONE — Purchase Receipt Bulk Transaction / nhập nhôm nhiều mã
-
-- PR `#209` merged tại `e447eca0e020da161dcee4f0b865206921718a61`.
-- Final validated head `70f266d9ecbc8c01c69b3deb125d1f4dc172a46a`: **6/6 required workflows PASS**.
+- GitHub Actions chỉ dùng cho build/deploy.
+- UI-only branch `hotfix/ui-*`, `fix/ui-*`, `feat/ui-*`, `refactor/ui-*` tự build/deploy Gateway khi push có `client/**`.
+- Không cần PR hoặc bấm Actions cho UI-only lane khi push event thực sự được GitHub phát; same-repo PR fallback là đường quan sát được cho connector writes.
+- Scope guard chặn branch stale và file ngoài UI/docs vận hành.
+- Full ALU deploy vẫn chạy thủ công qua `ALU Build and Deploy` với confirm `alu`.
 
 ## NEXT — Bulk Transaction remaining
 
-Mỗi item phải là branch/PR riêng từ exact current `main`:
+Mỗi item phải là branch riêng từ exact current `main`:
 
 1. **Stock Reconciliation Bulk Transaction** — controller-backed grid, preview/reconciliation, permission, tenant isolation, duplicate/state guards; submit chuẩn vẫn authoritative.
 2. **BOM parent + child/version Bulk Transaction** — parent-aware/version-aware, không mass-update child rows độc lập và không phá version lineage.
@@ -56,7 +51,7 @@ Mỗi item phải là branch/PR riêng từ exact current `main`:
 
 ## Guardrails
 
-- Auto production deploy chỉ dành cho `hotfix/ui-*` vượt scope guard.
-- Không sửa production secrets/DNS, không mutate customer data nếu user chưa yêu cầu đúng đợt.
+- UI auto production deploy chỉ dành cho UI-only branch đúng naming + scope guard.
+- Không sửa production secrets/DNS, không mutate customer data ngoài release path đã được user chủ động thiết lập.
 - Không commit `.env`, `server/work/`, `tmp/`, credential, backup hoặc generated evidence không được quản lý.
 - PR stale/diverged phải clean-transplant đúng scope lên exact current `main`; không force-push/rewrite history.
