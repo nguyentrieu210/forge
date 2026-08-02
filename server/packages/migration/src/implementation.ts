@@ -179,7 +179,7 @@ function requireText(value: unknown, label: string, max: number): string {
 }
 
 function stableStringify(value: unknown): string {
-  return JSON.stringify(canonicalize(value));
+  return JSON.stringify(canonicalize(value)) ?? "null";
 }
 
 function canonicalize(value: unknown): unknown {
