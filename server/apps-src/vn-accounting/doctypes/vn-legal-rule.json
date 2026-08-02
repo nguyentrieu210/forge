@@ -1,6 +1,7 @@
 {
   "name": "VN Legal Rule",
   "module": "Accounts",
+  "is_submittable": true,
   "autoname": "field:rule_code",
   "title_field": "rule_name",
   "sort_field": "effective_from",
@@ -19,18 +20,20 @@
     { "fieldname": "xml_schema_version", "label": "Phiên bản XML", "fieldtype": "Data" },
     { "fieldname": "supersedes_rule_id", "label": "Thay thế quy tắc", "fieldtype": "Link", "options": "VN Legal Rule" },
     { "fieldname": "source_url", "label": "Nguồn chính thức", "fieldtype": "Data", "required": true },
-    { "fieldname": "source_file_hash", "label": "Mã băm tài liệu", "fieldtype": "Data" },
+    { "fieldname": "source_file_hash", "label": "SHA-256 tài liệu nguồn", "fieldtype": "Data", "required": true },
     { "fieldname": "rule_json", "label": "Nội dung máy đọc", "fieldtype": "Code", "required": true },
-    { "fieldname": "approved_by", "label": "Người phê duyệt", "fieldtype": "Data", "required": true },
-    { "fieldname": "approved_at", "label": "Thời điểm phê duyệt", "fieldtype": "Datetime", "required": true },
-    { "fieldname": "disabled", "label": "Ngừng áp dụng", "fieldtype": "Check", "default": 0, "in_standard_filter": true }
+    { "fieldname": "approved_by", "label": "Người phê duyệt", "fieldtype": "Data", "read_only": true },
+    { "fieldname": "approved_at", "label": "Thời điểm phê duyệt", "fieldtype": "Datetime", "read_only": true },
+    { "fieldname": "workflow_state", "label": "Trạng thái", "fieldtype": "Data", "read_only": true, "in_list_view": true, "in_standard_filter": true }
   ],
   "permissions": [
     { "role": "Accounts User", "read": true, "report": true },
-    { "role": "General Accountant", "read": true, "write": true, "create": true, "report": true, "export": true },
-    { "role": "Chief Accountant", "read": true, "write": true, "create": true, "report": true, "export": true },
-    { "role": "Accounts Manager", "read": true, "write": true, "create": true, "report": true, "export": true },
-    { "role": "System Manager", "read": true, "write": true, "create": true, "report": true, "export": true }
+    { "role": "General Accountant", "read": true, "report": true, "export": true },
+    { "role": "Tax Specialist", "read": true, "write": true, "create": true, "report": true, "export": true },
+    { "role": "Chief Accountant", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true },
+    { "role": "Accounts Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true },
+    { "role": "Internal Auditor", "read": true, "report": true, "export": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true }
   ],
-  "revision": 1
+  "revision": 2
 }
