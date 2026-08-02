@@ -179,7 +179,8 @@ test("P1 authenticated daily ledger rejects stale freeze and keeps freeze/adjust
     expect(badCsrf.status, badCsrf.text).toBe(403);
 
     const injectedTenant = await call(ledger.page, ledgerCsrf, "metaforge.accounts.daily_ledger_generate", { ...context, tenant_id: "other-tenant" });
-    expect(injectedTenant.status, injectedTenant.text).toBe(400);
+    expect(injectedTenant.status, injectedTenant.text).toBe(417);
+    expect(injectedTenant.text).toMatch(/tenant scope is controlled by the authenticated server context/i);
 
     const generated = await call(ledger.page, ledgerCsrf, "metaforge.accounts.daily_ledger_generate", context);
     expect(generated.status, generated.text).toBe(200);
