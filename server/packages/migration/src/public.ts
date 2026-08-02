@@ -9,6 +9,7 @@ export * from "./implementation.js";
 export * from "./implementation-template.js";
 export * from "./kernel-port.js";
 export * from "./manifest.js";
+export * from "./opening.js";
 export * from "./orchestrator.js";
 export * from "./reconcile.js";
 export * from "./tabular.js";
