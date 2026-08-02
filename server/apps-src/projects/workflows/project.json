@@ -1,0 +1,22 @@
+{
+  "name": "Project Lifecycle",
+  "document_type": "Project",
+  "state_field": "workflow_state",
+  "is_active": true,
+  "states": [
+    { "state": "Nháp", "docstatus": 0, "allow_edit": "Project Manager" },
+    { "state": "Đang thực hiện", "docstatus": 0, "allow_edit": "Project Manager" },
+    { "state": "Tạm dừng", "docstatus": 0, "allow_edit": "Project Manager" },
+    { "state": "Hoàn tất", "docstatus": 0, "allow_edit": "Project Manager" },
+    { "state": "Hủy", "docstatus": 0, "allow_edit": "Project Manager" }
+  ],
+  "transitions": [
+    { "state": "Nháp", "action": "Khởi động", "next_state": "Đang thực hiện", "allowed_role": "Project Manager" },
+    { "state": "Đang thực hiện", "action": "Tạm dừng", "next_state": "Tạm dừng", "allowed_role": "Project Manager" },
+    { "state": "Tạm dừng", "action": "Tiếp tục", "next_state": "Đang thực hiện", "allowed_role": "Project Manager" },
+    { "state": "Đang thực hiện", "action": "Hoàn tất", "next_state": "Hoàn tất", "allowed_role": "Project Manager" },
+    { "state": "Nháp", "action": "Hủy", "next_state": "Hủy", "allowed_role": "Project Manager" },
+    { "state": "Tạm dừng", "action": "Hủy", "next_state": "Hủy", "allowed_role": "Project Manager" }
+  ],
+  "revision": 1
+}
