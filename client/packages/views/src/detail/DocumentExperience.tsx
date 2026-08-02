@@ -46,19 +46,17 @@ const STATUS_CLASS: Record<PresentationStatusTone, string> = {
 export function DocumentExperienceSkeleton() {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-muted/20" aria-label="Đang tải chứng từ">
-      <div className="shrink-0 border-b bg-card px-4 py-4 sm:px-6">
-        <div className="mx-auto w-full max-w-[96rem] animate-pulse space-y-4">
+      <div className="shrink-0 border-b bg-card px-4 py-3 sm:px-5">
+        <div className="mx-auto w-full max-w-[96rem] animate-pulse space-y-3">
           <div className="flex items-start gap-3">
-            <div className="size-11 rounded-xl bg-muted" />
+            <div className="size-10 rounded-xl bg-muted" />
             <div className="flex-1 space-y-2">
-              <div className="h-3 w-28 rounded bg-muted" />
-              <div className="h-6 w-64 max-w-[70%] rounded bg-muted" />
-              <div className="h-3 w-44 max-w-[55%] rounded bg-muted" />
+              <div className="h-3 w-24 rounded bg-muted" />
+              <div className="h-5 w-56 max-w-[65%] rounded bg-muted" />
+              <div className="h-3 w-40 max-w-[50%] rounded bg-muted" />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {[0, 1, 2, 3].map((item) => <div key={item} className="h-16 rounded-xl bg-muted" />)}
-          </div>
+          <div className="h-9 rounded-lg bg-muted" />
         </div>
       </div>
       <div className="min-h-0 flex-1 animate-pulse p-4">
@@ -107,77 +105,95 @@ export function DocumentExperience({
 
           .mf-document-experience .mf-form-header > div:first-child {
             position: absolute;
-            top: 0.85rem;
-            right: 3.75rem;
+            top: 0.72rem;
+            right: 1.25rem;
             z-index: 40;
             min-height: 0;
             width: auto;
             padding: 0;
-            gap: 0.5rem;
+            gap: 0.45rem;
             background: transparent;
+          }
+
+          .mf-document-experience .mf-form-header > div:first-child > div:first-child {
+            min-width: 0;
+          }
+
+          .mf-document-experience .mf-form-header > div:first-child > div:first-child > div:first-child {
+            min-height: 2rem;
+            align-items: center;
           }
         }
       `}</style>
 
       <section
         className={cn(
-          "mf-document-hero relative shrink-0 overflow-hidden border-b px-3 py-3 backdrop-blur sm:px-5 sm:py-4",
+          "mf-document-hero relative shrink-0 overflow-hidden border-b px-3 py-2.5 backdrop-blur sm:px-5 sm:py-3",
           profile.heroClass,
         )}
         aria-label="Tổng quan chứng từ"
       >
         <span className={cn("absolute inset-y-0 left-0 w-1", profile.accentClass)} aria-hidden="true" />
         <div className="relative mx-auto w-full max-w-[96rem]">
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-            <div className="flex min-w-0 items-start gap-3">
+          <div className="min-w-0 sm:pr-[24rem] xl:pr-[30rem]">
+            <div className="flex min-w-0 items-center gap-3">
               <span className={cn(
-                "grid size-11 shrink-0 place-items-center rounded-xl ring-1",
+                "grid size-10 shrink-0 place-items-center rounded-xl ring-1 shadow-sm",
                 profile.iconClass,
               )}>
-                <Icon className="size-5" />
+                <Icon className="size-[18px]" />
               </span>
               <div className="min-w-0">
-                <p className={cn("text-[10px] font-semibold uppercase tracking-[0.16em]", profile.kickerClass)}>
+                <p className={cn("text-[9px] font-semibold uppercase tracking-[0.17em]", profile.kickerClass)}>
                   {presentation.eyebrow}
                 </p>
                 <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-2">
-                  <h1 className="max-w-full truncate text-xl font-semibold tracking-tight sm:text-2xl">{presentation.title}</h1>
+                  <h1 className="max-w-full truncate text-lg font-semibold tracking-tight sm:text-xl">{presentation.title}</h1>
                   {presentation.status ? (
                     <span className={cn(
-                      "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold",
+                      "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-semibold",
                       STATUS_CLASS[presentation.statusTone],
                     )}>
-                      <CircleDot className="size-3" />
+                      <CircleDot className="size-2.5" />
                       {presentation.status}
                     </span>
                   ) : null}
                 </div>
-                <p className="mt-1 max-w-3xl truncate text-xs text-muted-foreground sm:text-sm">{presentation.subtitle}</p>
+                <p className="mt-0.5 max-w-3xl truncate text-xs text-muted-foreground">{presentation.subtitle}</p>
               </div>
             </div>
-
-            {presentation.metrics.length ? (
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:min-w-[34rem]" aria-label="Chỉ số chứng từ">
-                {presentation.metrics.map((metric) => (
-                  <div key={metric.field} className={cn("min-w-0 rounded-xl border px-3 py-2.5", profile.metricClass)}>
-                    <div className="truncate text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">{metric.label}</div>
-                    <div className="mt-1 truncate text-sm font-semibold tabular-nums text-foreground sm:text-base">
-                      {formatPresentationValue(metric.value, metric.format)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : null}
           </div>
 
+          {presentation.metrics.length ? (
+            <div
+              className="mt-2.5 flex max-w-full flex-wrap items-stretch gap-x-1 rounded-xl border bg-card/55 p-1 shadow-sm backdrop-blur-sm"
+              aria-label="Chỉ số chứng từ"
+            >
+              {presentation.metrics.map((metric, index) => (
+                <div
+                  key={metric.field}
+                  className={cn(
+                    "min-w-[8.5rem] flex-1 rounded-lg px-3 py-1.5 sm:flex-none sm:min-w-[9.5rem]",
+                    index === 0 && "bg-background/55",
+                  )}
+                >
+                  <div className="truncate text-[9px] font-medium uppercase tracking-[0.08em] text-muted-foreground">{metric.label}</div>
+                  <div className="mt-0.5 truncate text-sm font-semibold tabular-nums text-foreground">
+                    {formatPresentationValue(metric.value, metric.format)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : null}
+
           {presentation.progress.length ? (
-            <div className="mt-4 overflow-x-auto pb-1" aria-label="Tiến độ nghiệp vụ">
+            <div className="mt-2.5 overflow-x-auto pb-0.5" aria-label="Tiến độ nghiệp vụ">
               <ol className="flex min-w-max items-center">
                 {presentation.progress.map((step, index) => (
                   <li key={`${step.label}-${index}`} className="flex items-center">
-                    {index > 0 ? <span className={cn("h-px w-8 sm:w-12", step.state === "todo" ? "bg-border" : "bg-primary/45")} /> : null}
+                    {index > 0 ? <span className={cn("h-px w-7 sm:w-10", step.state === "todo" ? "bg-border" : "bg-primary/45")} /> : null}
                     <span className={cn(
-                      "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium",
+                      "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-medium",
                       step.state === "done" && "border-primary/20 bg-primary/10 text-primary",
                       step.state === "active" && "border-primary/35 bg-primary text-primary-foreground shadow-sm",
                       step.state === "todo" && "border-border bg-muted/35 text-muted-foreground",
@@ -192,10 +208,10 @@ export function DocumentExperience({
           ) : null}
 
           {presentation.contextItems.length ? (
-            <div className="mt-3 flex gap-2 overflow-x-auto pb-0.5 lg:hidden" aria-label="Thông tin nhanh">
+            <div className="mt-2.5 flex gap-2 overflow-x-auto pb-0.5 lg:hidden" aria-label="Thông tin nhanh">
               {presentation.contextItems.slice(0, 4).map((item) => (
-                <div key={item.field} className={cn("min-w-[9rem] shrink-0 rounded-lg border px-2.5 py-2", profile.metricClass)}>
-                  <div className="truncate text-[10px] text-muted-foreground">{item.label}</div>
+                <div key={item.field} className={cn("min-w-[8.5rem] shrink-0 rounded-lg border px-2.5 py-1.5", profile.metricClass)}>
+                  <div className="truncate text-[9px] text-muted-foreground">{item.label}</div>
                   <div className="mt-0.5 truncate text-xs font-medium">{formatPresentationValue(item.value, item.format)}</div>
                 </div>
               ))}
@@ -205,11 +221,19 @@ export function DocumentExperience({
       </section>
 
       <div className={cn(
-        "grid min-h-0 flex-1 transition-[grid-template-columns] duration-200",
-        contextOpen ? "lg:grid-cols-[minmax(0,1fr)_18rem]" : "lg:grid-cols-[minmax(0,1fr)_3rem]",
+        "relative grid min-h-0 flex-1 transition-[grid-template-columns] duration-200",
+        contextOpen ? "lg:grid-cols-[minmax(0,1fr)_18rem]" : "lg:grid-cols-1",
       )}>
         <div className="min-w-0 overflow-hidden bg-card">{children}</div>
-        <aside className="hidden min-h-0 flex-col overflow-auto border-l bg-card/80 lg:flex" aria-label="Ngữ cảnh chứng từ">
+        <aside
+          className={cn(
+            "hidden min-h-0 flex-col lg:flex",
+            contextOpen
+              ? "overflow-auto border-l bg-card/90 shadow-[-8px_0_24px_-24px_rgba(0,0,0,0.4)]"
+              : "pointer-events-none absolute right-3 top-3 z-30 overflow-visible border-0 bg-transparent",
+          )}
+          aria-label="Ngữ cảnh chứng từ"
+        >
           {contextOpen ? (
             <>
               <div className="border-b px-4 py-3">
@@ -273,18 +297,16 @@ export function DocumentExperience({
               </div>
             </>
           ) : (
-            <div className="flex h-full items-start justify-center pt-3">
-              <button
-                type="button"
-                className="grid size-9 place-items-center rounded-lg border bg-card text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground"
-                onClick={() => setContextOpen(true)}
-                aria-label="Mở ngữ cảnh"
-                title="Mở ngữ cảnh"
-                aria-expanded="false"
-              >
-                <PanelRightOpen className="size-4" />
-              </button>
-            </div>
+            <button
+              type="button"
+              className="pointer-events-auto grid size-9 place-items-center rounded-lg border bg-card/95 text-muted-foreground shadow-md backdrop-blur transition-all hover:-translate-x-0.5 hover:bg-muted hover:text-foreground"
+              onClick={() => setContextOpen(true)}
+              aria-label="Mở ngữ cảnh"
+              title="Mở ngữ cảnh"
+              aria-expanded="false"
+            >
+              <PanelRightOpen className="size-4" />
+            </button>
           )}
         </aside>
       </div>
