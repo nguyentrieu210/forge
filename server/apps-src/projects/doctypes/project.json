@@ -12,6 +12,7 @@
     { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "in_standard_filter": true },
     { "fieldname": "customer", "label": "Khách hàng", "fieldtype": "Link", "options": "Customer", "in_list_view": true, "in_standard_filter": true },
     { "fieldname": "department", "label": "Bộ phận", "fieldtype": "Link", "options": "Department", "in_standard_filter": true },
+    { "fieldname": "template", "label": "Mẫu dự án", "fieldtype": "Link", "options": "Project Template", "in_standard_filter": true },
     { "fieldname": "priority", "label": "Ưu tiên", "fieldtype": "Select", "options": "Thấp\nTrung bình\nCao\nKhẩn", "default": "Trung bình", "in_list_view": true, "in_standard_filter": true },
     { "fieldname": "planned_start", "label": "Bắt đầu kế hoạch", "fieldtype": "Date", "required": true, "in_list_view": true },
     { "fieldname": "planned_end", "label": "Kết thúc kế hoạch", "fieldtype": "Date", "required": true, "in_list_view": true },
@@ -32,5 +33,5 @@
     { "role": "Project Manager", "read": true, "write": true, "create": true, "delete": true, "print": true, "report": true, "export": true, "share": true },
     { "role": "System Manager", "read": true, "write": true, "create": true, "delete": true, "print": true, "report": true, "export": true, "share": true }
   ],
-  "revision": 1
+  "revision": 2
 }
