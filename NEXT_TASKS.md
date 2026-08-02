@@ -2,7 +2,71 @@
 
 Ngày cập nhật: **2026-08-02**.
 
-Đây là hàng đợi active. Không dùng file này thay cho GitHub khi cần exact branch head, PR state hoặc CI. Trước khi làm đọc `RUNBOOK.md`, `CURRENT_STATUS.md`, `AI_HANDOFF.md` và kiểm tra GitHub hiện tại.
+Đây là hàng đợi active. Không dùng file này thay cho GitHub khi cần exact branch head, PR state hoặc CI. Trước khi làm đọc `RUNBOOK.md`, `CURRENT_STATUS.md`, `AI_HANDOFF.md`, `DELIVERY_POLICY.md` và kiểm tra GitHub hiện tại.
+
+## CURRENT — Close Plastic ERP P0-A PR #200
+
+- Branch: `feat/plastic-erp-foundation-v3-20260802`.
+- Base exact `main`: `866fcbd909914f01600def9ce86e3ce2347bb763`.
+- Executable head `c212cc5e04956db08580bf4720fbde351bcfbcef`: **6/6 required workflows PASS**.
+- Root-cause CI fix: đổi `Plastic Machine.status` và `Plastic Tool.status` sang `operational_state`; kernel reserved-field validation giữ nguyên fail-closed.
+- Closing docs đang được commit sau executable CI theo `DELIVERY_POLICY.md`.
+- Trước khi coi PR ready: exact final documentation head phải **6/6 PASS**.
+- Sau khi final head xanh, PR `#193` có thể được đóng/superseded bởi `#200`.
+- Không merge `#200` nếu user chưa yêu cầu rõ.
+
+## NEXT P0-B — Plastic Production Run + shop-floor
+
+**Blocker:** chỉ mở branch implementation mới từ exact current `main` sau khi P0-A đã được merge; không build P0-B trên branch P0-A và không trộn vào PR `#200`.
+
+### Main flow
+
+1. Gán Work Order vào machine + tool/mold + shift/operator theo company/branch.
+2. Run lifecycle: start → pause/resume → complete/cancel/reverse với transition server-authoritative.
+3. Ghi actual material lot consumption, good output, scrap, regrind/by-product và downtime reason.
+4. Reconcile actual production với canonical Work Order và **submitted Stock Entry Manufacture**; không tạo stock ledger thứ hai.
+5. Idempotency/concurrency: duplicate start/complete/stock posting phải fail hoặc trả cùng kết quả an toàn; không double consume/output.
+6. Tenant/company/branch scope bắt buộc ở query/write/links; chặn IDOR cross-tenant/cross-company.
+7. Machine/tool compatibility và exclusive-resource conflict phải được server enforce, không chỉ UI.
+8. Submitted/posted operation phải append-only/reversal; không rewrite stock/manufacturing history.
+
+### Shop-floor surfaces
+
+- Desktop planner/manager: run queue, assignment, status, exceptions, material availability, output/scrap/downtime.
+- Mobile operator: authenticated start/pause/resume/complete, scan Work Order/lot nếu primitive hiện có hỗ trợ, validation/error/loading/success rõ.
+- Không hard-code UI riêng cho từng plastic technology; dùng `process_type`/process profile + metadata/domain policy.
+
+### Regression / acceptance
+
+- Unit/integration cho transition, compatibility, resource overlap, tenant/company scope, idempotency và reversal.
+- Regression chứng minh complete run không double-post Stock Entry Manufacture.
+- Authenticated desktop/mobile acceptance với role thật, session/CSRF thật và negative permission path.
+- Tests/typecheck/lint/build + required workflows PASS trên exact final head.
+- Không deploy production nếu user chưa yêu cầu riêng.
+
+## NEXT P0-C — Plastic QC lot gate
+
+Sau P0-B:
+
+1. Incoming / in-process / final inspection theo lot/batch.
+2. Release / Hold / Reject server-authoritative.
+3. Hold/Reject chặn consume/reservation/delivery theo policy; không chỉ ẩn UI.
+4. NCR + defect/disposition + rework/scrap/release lineage.
+5. Numeric/text/pass-fail characteristics, tolerance/spec revision và COA-ready data model.
+6. Trace finished lot → run → raw lots và raw lot → affected runs/finished lots/customer delivery.
+
+## NEXT P1 — Plastic capacity + operational costing
+
+- Shift/calendar, machine/tool overlap, capacity/load, setup/changeover và downtime/OEE inputs.
+- Material actual value + recovered scrap/regrind + machine/labor/energy/overhead + setup/tool cost policy.
+- Cost per run/batch/item và standard-vs-actual variance.
+- Không tạo costing source cạnh tranh với canonical accounting/stock valuation; operational costing phải reconcile/bridge được.
+
+## NEXT P2 — Plastic E2E acceptance
+
+`Purchase raw material → Incoming QC → lot release → recipe/BOM → schedule → Work Order → issue → Production Run → in-process QC → finished batch → final QC → packing/warehouse → sales delivery → costing/traceability`
+
+Parallel supporting epics sau core production: maintenance/OEE, preprocessing/drying/mixing, packaging/labels/pallet, supplier quality/returns, recall, sales forecast/MRP/ATP/MTO/MTS, deeper lab QC/COA và device integration.
 
 ## DONE P0 — QR / lineage + cleanup QA
 
@@ -22,45 +86,38 @@ Không mở lại stock P0 nếu không có regression cụ thể.
 - Bulk View chặn mode switch khi có patch chưa lưu, có destructive confirmation và `beforeunload` guard.
 - PR `#192` đã đóng/superseded; không reopen.
 
-## NEXT P1 — Daily detailed ledger
+## PARALLEL P1 — Daily detailed ledger
 
-Đây là task canonical ưu tiên cao nhất sau khi stock P0 đã khép. Bắt đầu trên branch mới từ exact current `main`, trừ khi GitHub cho thấy đã có một PR canonical khác đang làm đúng cùng scope.
+Đây vẫn là high-risk canonical task quan trọng, nhưng **không trộn vào Plastic ERP PR/branch**. Mở branch riêng từ exact current `main` khi không tranh dependency với Plastic P0-B hoặc khi user chuyển ưu tiên.
 
 ### Mục tiêu nghiệp vụ
 
-- Có snapshot chi tiết theo **ngày + tenant + dimension nghiệp vụ** để đối soát xuyên Sales, Purchase, Inventory, Manufacturing và Finance.
-- Snapshot là immutable sau khi freeze; sửa sau khóa phải đi bằng adjustment append-only, không rewrite lịch sử.
-- Re-run cùng input phải idempotent, không tạo duplicate ledger hoặc double adjustment.
-- Có reconciliation tổng/chi tiết và chỉ ra chênh lệch theo nguồn.
+- Snapshot chi tiết theo ngày + tenant + dimension nghiệp vụ để đối soát xuyên Sales, Purchase, Inventory, Manufacturing và Finance.
+- Snapshot immutable sau freeze; sửa sau khóa bằng adjustment append-only, không rewrite lịch sử.
+- Re-run cùng input idempotent, không duplicate ledger/double adjustment.
+- Có reconciliation tổng/chi tiết và truy nguồn chênh lệch.
 
 ### Data integrity / high-risk gates
 
-1. Xác định canonical source cho từng miền, không tạo sổ cạnh tranh với stock ledger/accounting ledger hiện có.
-2. Snapshot key/unique/index phải chặn duplicate cùng tenant/date/dimension/version.
-3. Freeze phải chặn direct update/delete của snapshot đã khóa.
-4. Adjustment sau freeze bắt buộc reason, actor, timestamp, source reference và audit trail; append-only.
-5. Transaction/finalization phải atomic khi cùng lúc ghi snapshot + reconciliation metadata.
-6. Tenant isolation bắt buộc ở query, API, export và cache.
-7. Existing data/migration phải xử lý null/default/index/backward compatibility, không destructive migration.
-8. Reconciliation tối thiểu Sales, Purchase, Inventory, Manufacturing, Finance; chênh lệch phải truy ngược được document/ledger source.
-
-### Acceptance
-
-- Regression tests cho idempotency, duplicate prevention, freeze, append-only adjustment, tenant isolation và reconciliation mismatch.
-- Authenticated API/browser evidence nếu có UI/operator flow.
-- Unit/integration/typecheck/lint/build + required CI PASS trên exact final head.
-- Không deploy production nếu user chưa yêu cầu riêng.
+1. Canonical source từng miền, không tạo sổ cạnh tranh với stock/accounting ledger.
+2. Snapshot key/unique/index chặn duplicate tenant/date/dimension/version.
+3. Freeze chặn direct update/delete snapshot đã khóa.
+4. Adjustment sau freeze bắt buộc reason, actor, timestamp, source reference, audit trail; append-only.
+5. Finalization atomic cho snapshot + reconciliation metadata.
+6. Tenant isolation ở query/API/export/cache.
+7. Migration xử lý existing data/null/default/index/backward compatibility, không destructive.
+8. Reconciliation tối thiểu Sales, Purchase, Inventory, Manufacturing, Finance và truy được document/ledger source.
 
 ## NEXT UI — MetaForge UX V2
 
-Sau P1 ledger hoặc khi có branch riêng không tranh chấp high-risk work:
+Sau high-priority domain work hoặc trên branch riêng không tranh dependency:
 
-1. **List Workspace V2 + Bulk integration** — summary bar, saved views, smart filters, table/card responsive, contextual actions; Bulk là mode của cùng workspace.
-2. **Matrix View** — User×Role, User×Warehouse/Department/Company, Item×Color, Item×UOM, Item×Reorder warehouse, Supplier×Item, account mapping.
-3. **Presentation authoring / canonical transport** — first-class compiler/parser/selfcheck cho presentation và `viewPolicy.bulk`.
-4. **Document context nâng cao** — related-document graph, timeline/activity, exception cards, business progress source thật.
-5. **Operational workspace + Mobile V2** — role home/inbox/exception-first, rich list cards, context drawer/bottom sheet.
-6. **Personalization / AI context** sau khi operational surfaces ổn định.
+1. List Workspace V2 + Bulk integration.
+2. Matrix View.
+3. Presentation authoring / canonical transport.
+4. Document context nâng cao.
+5. Operational workspace + Mobile V2.
+6. Personalization / AI context.
 
 ## NEXT — Bulk Transaction
 
@@ -69,7 +126,7 @@ Generic Bulk tuyệt đối không mass-update ledger/submitted transaction. C�
 1. Stock Reconciliation reference.
 2. BOM parent + child/version reference.
 3. Nhập nhôm nhiều mã / Purchase Receipt transaction grid.
-4. Batch Print / QR label queue là action/workspace dùng chung, không cần ViewKind mới.
+4. Batch Print / QR label queue là action/workspace dùng chung.
 
 ## P2 — Warranty / defects / capacity
 
@@ -84,9 +141,18 @@ Khóa hành trình authenticated xuyên miền:
 
 `Sales Order -> Production -> material/stock -> delivery -> invoice/debt -> daily ledger -> adjustment -> warranty`
 
+## Plastic ERP invariants
+
+- Không tạo second stock ledger/costing source.
+- Không fork core theo Injection/Extrusion/Blow/Film/Compounding; dùng process type + domain policy.
+- Lot/batch lineage là canonical identity cho traceability.
+- Submitted/posted records append-only hoặc reversal.
+- Resource conflict + QC gate phải server enforce.
+- Không deploy/secrets/production mutation nếu chưa có lệnh rõ.
+
 ## Parallel PR guard
 
-Repository có thể có PR khác đang mở cho manufacturing costing, petty cash, Plastic ERP hoặc UI. Trước khi chạm phải đọc exact PR/base/head/CI và current docs. Không nhập scope song song vào branch P1 ledger nếu không thật sự cùng dependency.
+Repository có thể có PR khác đang mở cho manufacturing costing, petty cash, Plastic ERP hoặc UI. Trước khi chạm phải đọc exact PR/base/head/CI và current docs. Không nhập scope song song vào branch khác chỉ vì cùng chạm finance/manufacturing.
 
 ## Guardrails
 
