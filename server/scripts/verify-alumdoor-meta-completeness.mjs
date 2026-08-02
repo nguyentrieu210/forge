@@ -1,11 +1,11 @@
-import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { compileBrief } from "./lib/compile-brief.mjs";
+import { readBriefSource } from "./lib/read-brief-source.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const briefPath = path.join(here, "..", "briefs", "alumdoor-v2.json");
-const manifest = compileBrief(JSON.parse(fs.readFileSync(briefPath, "utf8")));
+const manifest = compileBrief(await readBriefSource(briefPath));
 
 const failures = [];
 const fail = (message) => failures.push(message);
@@ -51,6 +51,12 @@ for (const chart of manifest.charts) {
   const report = reports.get(chart.source);
   if (!report) fail(`${chart.name}: missing source report ${chart.source}`);
   if (!chart.drilldown?.route || !chart.emptyFallback) fail(`${chart.name}: missing drilldown/mobile fallback`);
+}
+
+const accountingDependency = manifest.requires.find((dependency) => dependency.id === "vn-accounting");
+if (!accountingDependency || accountingDependency.version !== "1.1.0") fail(`Warehouse Cash surface requires vn-accounting 1.1.0`);
+for (const doctype of ["Warehouse Cash Fund", "Warehouse Cash Voucher", "Warehouse Cash Transfer", "Warehouse Cash Count"]) {
+  if (!external.has(doctype)) fail(`Warehouse Cash external dependency missing: ${doctype}`);
 }
 
 if (failures.length) {

@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
-import { CalendarClock, Factory, Loader2, RefreshCw, ShieldCheck, Truck } from "lucide-react";
+import { ArrowLeftRight, Banknote, CalendarClock, ClipboardCheck, Factory, Landmark, Loader2, RefreshCw, ShieldCheck, Truck } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useMetaForge } from "@metaforge/views/provider";
 import {
   Badge, Button, Input, Label, Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -29,6 +30,46 @@ interface DeliveryRow {
   status: "Sẵn sàng" | "Đã tạo";
 }
 
+const WAREHOUSE_CASH_ROLES = new Set([
+  "Warehouse Cash User",
+  "Warehouse Cash Manager",
+  "Thủ kho",
+  "Chủ xưởng",
+  "General Accountant",
+  "Chief Accountant",
+  "Kế toán trưởng",
+  "Accounts Manager",
+  "System Manager",
+  "Administrator",
+]);
+
+const WAREHOUSE_CASH_SHORTCUTS = [
+  {
+    doctype: "Warehouse Cash Fund",
+    label: "Quỹ tiền mặt theo kho",
+    description: "Xem quỹ, kho, người giữ quỹ, hạn mức ngày và tài khoản tiền mặt đã map.",
+    icon: Landmark,
+  },
+  {
+    doctype: "Warehouse Cash Voucher",
+    label: "Phiếu thu / chi kho",
+    description: "Thu, chi, nạp/hoàn quỹ, tạm ứng/hoàn ứng và điều chỉnh có kiểm soát.",
+    icon: Banknote,
+  },
+  {
+    doctype: "Warehouse Cash Transfer",
+    label: "Chuyển quỹ",
+    description: "Bàn giao tiền giữa hai quỹ kho; không tính vào hạn mức chi phí trực tiếp trong ngày.",
+    icon: ArrowLeftRight,
+  },
+  {
+    doctype: "Warehouse Cash Count",
+    label: "Kiểm quỹ / bàn giao",
+    description: "Chốt ngày, bàn giao ca hoặc kiểm đột xuất theo số dư GL authoritative.",
+    icon: ClipboardCheck,
+  },
+] as const;
+
 const today = () => {
   const date = new Date();
   return new Date(date.valueOf() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
@@ -39,7 +80,9 @@ const money = (value: number | undefined) => new Intl.NumberFormat("vi-VN", {
 }).format(value ?? 0);
 
 export function AlumdoorOperationsCenter() {
-  const { adapter } = useMetaForge();
+  const { adapter, roles } = useMetaForge();
+  const navigate = useNavigate();
+  const canUseWarehouseCash = roles.some((role) => WAREHOUSE_CASH_ROLES.has(role));
   const [busy, setBusy] = useState("");
   const [rows, setRows] = useState<OperationRow[]>([]);
   const [deliveryDate, setDeliveryDate] = useState(today);
@@ -81,13 +124,14 @@ export function AlumdoorOperationsCenter() {
   return (
     <div className="h-full overflow-auto p-4 sm:p-6">
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
-        <div><h1 className="text-xl font-semibold">Trung tâm vận hành Alumdoor</h1><p className="text-sm text-muted-foreground">Theo dõi đơn, tải xưởng, giao hàng và hồ sơ lỗi từ chứng từ gốc.</p></div>
+        <div><h1 className="text-xl font-semibold">Trung tâm vận hành Alumdoor</h1><p className="text-sm text-muted-foreground">Theo dõi đơn, tải xưởng, giao hàng, quỹ kho và hồ sơ lỗi từ chứng từ gốc.</p></div>
         <Button variant="outline" onClick={loadOverview} disabled={Boolean(busy)}>{busy === "overview" ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />} Làm mới</Button>
       </div>
       <Tabs defaultValue="orders" className="space-y-4">
         <TabsList className="h-auto flex-wrap justify-start">
           <TabsTrigger value="orders"><CalendarClock className="size-4" /> Theo dõi chung</TabsTrigger>
           <TabsTrigger value="deliveries"><Truck className="size-4" /> Giao theo ngày</TabsTrigger>
+          {canUseWarehouseCash && <TabsTrigger value="warehouse-cash" data-testid="warehouse-cash-tab"><Banknote className="size-4" /> Quỹ kho</TabsTrigger>}
           <TabsTrigger value="capacity"><Factory className="size-4" /> Năng lực & tăng ca</TabsTrigger>
           <TabsTrigger value="warranty"><ShieldCheck className="size-4" /> Bảo hành/lỗi</TabsTrigger>
         </TabsList>
@@ -108,6 +152,38 @@ export function AlumdoorOperationsCenter() {
           <Table><TableHeader><TableRow><TableHead>Đơn</TableHead><TableHead>Khách</TableHead><TableHead>Khóa chống trùng</TableHead><TableHead>Trạng thái</TableHead></TableRow></TableHeader><TableBody>{deliveries.map((row) => <TableRow key={row.delivery_batch_key}><TableCell>{row.sales_order}</TableCell><TableCell>{row.customer}</TableCell><TableCell className="font-mono text-xs">{row.delivery_batch_key}</TableCell><TableCell><Badge variant="outline">{row.status}{row.existing_delivery_note ? ` · ${row.existing_delivery_note}` : ""}</Badge></TableCell></TableRow>)}</TableBody></Table>
           {printDocuments.length > 0 && <div className="rounded-lg border border-dashed p-3"><p className="text-sm font-medium">Gói in ngày {deliveryDate}</p><div className="mt-2 flex flex-wrap gap-2">{printDocuments.map((doc) => <Button key={`${doc.doctype}:${doc.name}`} size="sm" variant="outline" onClick={() => window.open(`/print/${encodeURIComponent(doc.doctype)}/${encodeURIComponent(doc.name)}`, "_blank", "noopener,noreferrer")}>In {doc.name}</Button>)}</div></div>}
         </TabsContent>
+
+        {canUseWarehouseCash && <TabsContent value="warehouse-cash" className="space-y-4" data-testid="warehouse-cash-panel">
+          <div className="rounded-xl border bg-card p-4 sm:p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="font-medium">Quỹ tiền mặt theo từng kho</h2>
+                <p className="mt-1 max-w-3xl text-sm text-muted-foreground">Thu/chi, chuyển quỹ và kiểm quỹ dùng chứng từ Warehouse Cash canonical của Kế toán Việt Nam. Bút toán đi thẳng vào GL; người tạo chứng từ không được tự duyệt.</p>
+              </div>
+              <Badge variant="outline">Finance authoritative</Badge>
+            </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {WAREHOUSE_CASH_SHORTCUTS.map((item) => {
+                const Icon = item.icon;
+                return <Button
+                  key={item.doctype}
+                  type="button"
+                  variant="outline"
+                  className="h-auto flex-col items-start justify-start whitespace-normal rounded-xl p-4 text-left"
+                  onClick={() => navigate(`/app/${encodeURIComponent(item.doctype)}`)}
+                  data-testid={`warehouse-cash-${item.doctype.toLowerCase().replaceAll(" ", "-")}`}
+                >
+                  <Icon className="size-5 text-primary" />
+                  <span className="mt-3 font-medium">{item.label}</span>
+                  <span className="mt-1 text-sm font-normal text-muted-foreground">{item.description}</span>
+                </Button>;
+              })}
+            </div>
+            <div className="mt-4 rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
+              Thanh toán trực tiếp công nợ Purchase/Sales Invoice vẫn đi qua Payment Entry. Gắn nhà cung cấp/khách hàng trên phiếu quỹ chỉ là dimension kế toán, không tự tất toán công nợ.
+            </div>
+          </div>
+        </TabsContent>}
 
         <TabsContent value="capacity" className="grid gap-4 lg:grid-cols-2">
           <div className="space-y-3 rounded-xl border bg-card p-4"><div><Label htmlFor="demands">Nhu cầu (m²/bộ/công đoạn/mẻ)</Label><Textarea id="demands" className="min-h-44 font-mono text-xs" value={demands} onChange={(event) => setDemands(event.target.value)} /></div><div><Label htmlFor="resource">Tổ/ca/trạm/tăng ca</Label><Textarea id="resource" className="min-h-28 font-mono text-xs" value={resource} onChange={(event) => setResource(event.target.value)} /></div><Button onClick={calculateCapacity} disabled={Boolean(busy)}>Tính tải và cảnh báo trễ</Button></div>
