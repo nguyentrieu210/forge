@@ -2,6 +2,7 @@ export * from "./types.js";
 export * from "./uom.js";
 export * from "./controllers.js";
 export * from "./procurement-decisions.js";
+export * from "./procurement-integrity-controllers.js";
 export * from "./purchase-allocation.js";
 export * from "./purchase-allocation-controllers.js";
 export * from "./purchase-allocation-action-controllers.js";
