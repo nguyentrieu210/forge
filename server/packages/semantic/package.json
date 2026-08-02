@@ -1,1 +1,1 @@
-{"name":"@cloudforge/semantic","version":"0.1.0","type":"module","private":true,"exports":"./src/index.ts"}
+{"name":"@cloudforge/semantic","version":"0.1.0","type":"module","private":true,"exports":{".":"./src/index.ts","./service":"./src/service.ts"}}
