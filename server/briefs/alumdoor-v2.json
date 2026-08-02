@@ -3000,7 +3000,13 @@
         "currency:Link(Currency)-!=(VND) Tiền tệ",
         "transaction_date:Date!=(Today) Ngày đặt",
         "delivery_date:Date Ngày giao dự kiến",
-        "responsible_person:Data Người phụ trách",
+        {
+          "fieldname": "responsible_person",
+          "fieldtype": "Data",
+          "label": "Người phụ trách",
+          "fetch_from": "customer.account_manager",
+          "description": "Tự lấy người phụ trách nội bộ từ hồ sơ khách hàng; vẫn có thể đổi cho riêng đơn này."
+        },
         "product_group:Data Nhóm sản phẩm chính",
         "manual_note:Small Text Ghi chú vận hành",
         "operational_change_reason:Small Text- Lý do đổi vận hành",
@@ -3015,13 +3021,19 @@
           "read_only": true,
           "fetch_from": "customer.price_group"
         },
-        "install_address:Small Text Địa chỉ giao / lắp đặt",
+        {
+          "fieldname": "install_address",
+          "fieldtype": "Small Text",
+          "label": "Địa chỉ giao / lắp đặt",
+          "fetch_from": "customer.address",
+          "description": "Tự lấy địa chỉ từ hồ sơ khách hàng; có thể sửa theo công trình thực tế."
+        },
         "items:Table(Sales Order Item)! Dòng hàng",
         "additional_discount_percentage:Percent Chiết khấu toàn đơn (%)",
-        "discount_amount:Currency~ Tiền chiết khấu",
+        "discount_amount:Currency~- Tiền chiết khấu",
         "grand_total:Currency~ Tổng tiền",
-        "delivered_percentage:Percent~ Đã giao (%)",
-        "billed_percentage:Percent~ Đã xuất hoá đơn (%)",
+        "delivered_percentage:Percent~- Đã giao (%)",
+        "billed_percentage:Percent~- Đã xuất hoá đơn (%)",
         "note:Small Text Ghi chú"
       ],
       "permissions": {

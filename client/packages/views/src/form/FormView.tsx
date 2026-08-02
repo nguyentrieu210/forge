@@ -240,7 +240,13 @@ export function FormView(props: FormViewProps) {
     const has = (name: string) => meta.fields.some((f) => f.fieldname === name);
     const table = meta.fields.find((f) => f.fieldtype === "Table" && f.fieldname === "items");
     if (!table) return null;
-    return { table: table.fieldname, sumAmount: has("grand_total"), sumQty: has("total_qty") };
+    return {
+      table: table.fieldname,
+      sumAmount: has("grand_total"),
+      sumQty: has("total_qty"),
+      orderDiscount: meta.name === "Sales Order" && has("additional_discount_percentage"),
+      discountAmount: has("discount_amount"),
+    };
   }, [meta]);
   useEffect(() => {
     if (!totalFields) return;
@@ -249,8 +255,24 @@ export function FormView(props: FormViewProps) {
       if (!Array.isArray(rows)) return;
       const round = (n: number) => Math.round(n * 1e6) / 1e6;
       if (totalFields.sumAmount) {
-        const sum = round(rows.reduce((s, r) => s + (Number((r as Doc)?.amount) || 0), 0));
-        if (Number(current.grand_total ?? 0) !== sum) form.setValue("grand_total", sum as never, { shouldDirty: false });
+        const subtotal = round(rows.reduce((sum, rawRow) => {
+          const row = rawRow as Doc;
+          const amount = Number(row.amount);
+          if (Number.isFinite(amount)) return sum + amount;
+          const qty = Number(row.qty);
+          const rate = Number(row.rate);
+          return sum + (Number.isFinite(qty) && Number.isFinite(rate) ? qty * rate : 0);
+        }, 0));
+        const rawPercentage = totalFields.orderDiscount ? Number(current.additional_discount_percentage ?? 0) : 0;
+        const percentage = Number.isFinite(rawPercentage) ? Math.min(100, Math.max(0, rawPercentage)) : 0;
+        const discount = round(subtotal * percentage / 100);
+        const grandTotal = round(subtotal - discount);
+        if (totalFields.discountAmount && Number(current.discount_amount ?? 0) !== discount) {
+          form.setValue("discount_amount", discount as never, { shouldDirty: false });
+        }
+        if (Number(current.grand_total ?? 0) !== grandTotal) {
+          form.setValue("grand_total", grandTotal as never, { shouldDirty: false });
+        }
       }
       if (totalFields.sumQty) {
         const sum = round(rows.reduce((s, r) => s + (Number((r as Doc)?.qty) || 0), 0));
@@ -259,7 +281,10 @@ export function FormView(props: FormViewProps) {
     };
     updateTotals(form.getValues());
     const subscription = form.watch((next, info) => {
-      if (!info.name || info.name === totalFields.table || info.name.startsWith(`${totalFields.table}.`)) {
+      if (!info.name
+        || info.name === totalFields.table
+        || info.name.startsWith(`${totalFields.table}.`)
+        || (totalFields.orderDiscount && info.name === "additional_discount_percentage")) {
         updateTotals(next as FieldValues);
       }
     });
