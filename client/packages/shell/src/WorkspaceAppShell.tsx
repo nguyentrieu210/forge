@@ -112,12 +112,12 @@ function ProcessPanel({ module, reports, masters, onNavigate }: { module: Worksp
     "sm:col-start-4 sm:row-start-1", "sm:col-start-4 sm:row-start-2",
   ];
   return (
-    <div className="h-full overflow-auto bg-muted/25 p-3 sm:p-5 lg:p-7">
-      <section className="mx-auto w-full max-w-7xl space-y-4">
-        <header className="flex flex-col gap-3 rounded-2xl border bg-card px-4 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-5">
+    <div className="h-full overflow-auto bg-muted/25 p-3 sm:p-4 lg:p-5">
+      <section className="mx-auto w-full max-w-[88rem] space-y-3">
+        <header className="flex min-h-9 items-center justify-between gap-3 px-1">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/[0.15]">
-              <Workflow className="size-5" />
+            <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/[0.15]">
+              <Workflow className="size-4" />
             </span>
             <div className="min-w-0">
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Không gian nghiệp vụ</p>
@@ -130,9 +130,9 @@ function ProcessPanel({ module, reports, masters, onNavigate }: { module: Worksp
           </div>
         </header>
 
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_21rem]">
-          <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
-            <div className="border-b bg-gradient-to-r from-primary/[0.08] via-transparent to-transparent px-4 py-3.5 sm:px-5">
+        <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
+          <div className="flex flex-col overflow-hidden rounded-2xl border bg-card shadow-sm">
+            <div className="order-2 border-b bg-gradient-to-r from-primary/[0.08] via-transparent to-transparent px-3 py-3 sm:px-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h2 className="text-sm font-semibold">Luồng xử lý chính</h2>
@@ -142,7 +142,7 @@ function ProcessPanel({ module, reports, masters, onNavigate }: { module: Worksp
               </div>
             </div>
             {flowItems.length ? (
-              <div className="relative grid min-h-[25rem] grid-cols-2 gap-x-3 gap-y-8 px-3 py-6 sm:grid-cols-4 sm:gap-x-5 sm:px-6 sm:py-8">
+              <div className="order-2 relative grid min-h-0 grid-cols-2 gap-x-2 gap-y-3 px-3 py-3 sm:grid-cols-4 sm:gap-x-3 sm:px-4 sm:py-4">
                 <div className="absolute left-[9%] right-[9%] top-1/2 hidden h-px -translate-y-1/2 bg-gradient-to-r from-transparent via-primary/[0.45] to-transparent sm:block" />
                 {flowItems.map((item, index) => {
                   const top = index % 2 === 0;
@@ -152,14 +152,14 @@ function ProcessPanel({ module, reports, masters, onNavigate }: { module: Worksp
                       <Button
                         type="button"
                         variant="ghost"
-                        className="group h-auto min-h-28 w-full min-w-0 flex-col justify-center whitespace-normal rounded-xl border border-transparent px-2.5 py-3 text-center transition-all hover:-translate-y-0.5 hover:border-primary/20 hover:bg-primary/[0.045] hover:shadow-sm"
+                        className="group h-auto min-h-24 w-full min-w-0 flex-col justify-center whitespace-normal rounded-xl border border-transparent px-2 py-2 text-center transition-all hover:-translate-y-0.5 hover:border-primary/20 hover:bg-primary/[0.045] hover:shadow-sm"
                         onClick={() => onNavigate(item.key)}
                       >
-                        <span className="relative grid size-12 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm ring-4 ring-primary/10 transition-transform group-hover:scale-[1.03] [&_svg]:size-6">
+                        <span className="relative grid size-10 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm ring-4 ring-primary/10 transition-transform group-hover:scale-[1.03] [&_svg]:size-5">
                           {item.icon ?? index + 1}
                           <span className="absolute -right-1.5 -top-1.5 grid size-5 place-items-center rounded-full border-2 border-card bg-card text-[9px] font-bold text-primary shadow-sm">{index + 1}</span>
                         </span>
-                        <span className="mt-2.5 block max-w-full text-sm font-semibold leading-5">{item.label}</span>
+                        <span className="mt-1.5 block max-w-full text-xs font-semibold leading-4 sm:text-sm">{item.label}</span>
                         <span className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">Mở nghiệp vụ</span>
                       </Button>
                     </div>
@@ -169,7 +169,7 @@ function ProcessPanel({ module, reports, masters, onNavigate }: { module: Worksp
             ) : <div className="m-5 rounded-xl border border-dashed bg-muted/20 p-7 text-center text-sm text-muted-foreground">Tài khoản hiện tại chưa có nghiệp vụ khả dụng trong phân hệ này.</div>}
 
             {masters.length ? (
-              <div className="border-t bg-muted/20 p-4">
+              <div className="order-1 border-t bg-muted/20 p-3 sm:p-4">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
                     <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Danh mục nhanh</h3>
