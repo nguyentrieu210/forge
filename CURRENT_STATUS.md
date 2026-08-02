@@ -10,6 +10,22 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, CI, merge và relea
 - Default branch: `main`.
 - Warehouse Cash Alumdoor merge checkpoint: `c3dbcd20a7a88c17c1a9f10c4fff82b329e27855`.
 
+## ACTIVE — Website/CMS v1 clean delivery
+
+- Canonical working branch: `feat/tenant-website-builder-delivery-v4-20260802`.
+- Canonical PR: `#249` (draft); PR `#238` và các Website delivery iteration cũ đã superseded/closed, không merge.
+- Clean-transplant implementation commit: `dce0f99de732ca38bf53940387c2034607626d71`, created directly from exact `main@9f81b0ba060991133d7bd5510e2cbfa5b3277234` after CI was simplified to one ultrafast automatic PR gate.
+- PR #249 hiện mergeable và branch tại lần kiểm tra gần nhất là ahead 4 / behind 0 so với `main`.
+- Scope: first-party `website` app metadata, Website Settings/Web Page/Web Page Block, version-pinned templates/themes, exact public Website methods, shared runtime renderer and public E2E.
+- Security boundary: public allowlist only `forge.website.manifest` + `forge.website.page`; Guest has no generic DocType read; Website queries bind trusted tenant context; draft/unpublished content fails closed; public block/URL/theme fields are allowlisted.
+- Quality tier: **CRITICAL** because this adds unauthenticated public routing and tenant-scoped reads.
+- Prior validation before the final mobile fix: server/client tests PASS, typecheck PASS, build PASS, frontend lint PASS, MetaForge browser QA PASS; Website public E2E PASS desktop/tablet and exposed a real mobile UX defect.
+- Mobile defect fixed in v4: navigation is no longer hidden below `md`; mobile gets an accessible navigation row with horizontal overflow and `aria-current` while desktop behavior is unchanged.
+- Exact head `e09c2f199a882919b01300f58f16e50adb7268ba` đã PASS automatic `CI / Fast PR gate`; UI hotfix workflow SKIPPED đúng scope vì branch Website không thuộc `hotfix/ui-*`.
+- Targeted Website browser regression trên desktop/tablet/mobile vẫn **PENDING**: local runner hiện không resolve được GitHub để clone repo và GitHub connector hiện không expose workflow-dispatch action. Không tạo temporary workflow chỉ để né policy.
+- Current CI policy: automatic PR gate only checks patch integrity; full test/typecheck/build is manual. Reuse unchanged server/security evidence và chỉ chạy thêm gate bị ảnh hưởng khi có execution path hợp lệ.
+- No production deploy, custom domain, DNS or production secrets are part of this task.
+
 ## DONE — Minimal risk-based gates
 
 - Canonical PR `#234` đã merge tại `c453df3026095b314f82f79e338bd56af90632ca`.
@@ -49,14 +65,15 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, CI, merge và relea
 
 ## Chưa hoàn tất
 
-1. Kiểm exact GitHub state/release evidence của UI hotfix lane trước khi tiếp tục task #232 hoặc iteration thay thế.
-2. Bulk Transaction cho Stock Reconciliation.
-3. Bulk Transaction cho BOM parent + child/version.
-4. First-class AppAction input-table contract.
-5. Batch Print / QR label queue.
-6. P1 Daily detailed ledger hardening/closure theo exact GitHub state.
-7. Plastic ERP các wave sau P0-A.
-8. Nếu cần dùng quỹ kho để tất toán trực tiếp Purchase/Sales Invoice, thiết kế canonical payment allocation; không dùng party dimension trên GL thay settlement.
+1. Website/CMS v1: targeted `website-public.spec.ts` desktop/tablet/mobile trên final head; giữ PR #249 draft cho tới khi có browser evidence.
+2. Kiểm exact GitHub state/release evidence của UI hotfix lane trước khi tiếp tục task #232 hoặc iteration thay thế.
+3. Bulk Transaction cho Stock Reconciliation.
+4. Bulk Transaction cho BOM parent + child/version.
+5. First-class AppAction input-table contract.
+6. Batch Print / QR label queue.
+7. P1 Daily detailed ledger hardening/closure theo exact GitHub state.
+8. Plastic ERP các wave sau P0-A.
+9. Nếu cần dùng quỹ kho để tất toán trực tiếp Purchase/Sales Invoice, thiết kế canonical payment allocation; không dùng party dimension trên GL thay settlement.
 
 ## Guardrails
 

@@ -19,6 +19,29 @@ Ngày cập nhật: **2026-08-02**.
 - `STANDARD`: CRUD/API/product behavior thông thường; chạy test và quality gates phù hợp.
 - `CRITICAL`: accounting/cash/AR-AP/inventory/costing/manufacturing/auth/permission/tenant/migration/data; giữ regression/integration/security/data-integrity gates đầy đủ.
 - `RUNBOOK.md` và `DELIVERY_POLICY.md` là source of truth cho tier policy.
+- Current automatic PR CI is intentionally ultrafast; full test/typecheck/build is manual. Do not restore deleted long-running workflows just to validate one feature; run only gates required by the task tier and changed blast radius.
+
+## Active checkpoint — Website/CMS v1
+
+- Canonical working branch: `feat/tenant-website-builder-delivery-v4-20260802`.
+- Clean-transplant implementation commit `dce0f99de732ca38bf53940387c2034607626d71` was created directly from exact `main@9f81b0ba060991133d7bd5510e2cbfa5b3277234`, after the ultrafast CI policy landed. Prior Website delivery branches/PRs are stale and must not merge.
+- Canonical implementation is app-based:
+  - `server/apps-src/website/**`: first-party app metadata, Website Settings/Web Page/Web Page Block, roles and versioned preset fixtures;
+  - `server/packages/frappe-api/src/website.ts`: tenant-scoped published-only resolver with block/URL/theme allowlists;
+  - `server/packages/frappe-api/src/website-router.ts`: exact public methods `forge.website.manifest` and `forge.website.page`;
+  - `server/packages/frappe-api/src/web-form-routes.ts`: only those Website methods are added to the unauthenticated gate; generic CRUD remains private;
+  - `client/apps/runtime/src/bootstrap.ts` + `client/apps/runtime/src/website/WebsiteSite.tsx`: shared public renderer while preserving reserved Forge runtime modes;
+  - `server/tests/website-cms.test.mjs` + `client/e2e-forge/ui-tests/website-public.spec.ts`: regression coverage.
+- Security invariants:
+  1. trusted tenant context is resolved before the public router and every Website query binds `tenant_id`;
+  2. Guest uses no generic DocType read permission;
+  3. Website Settings requires enabled + published and page overrides require published;
+  4. arbitrary HTML/JS is not a public block type; links/assets/theme tokens are sanitized/allowlisted;
+  5. presets are immutable `preset_id@version` and tenant version pins do not silently upgrade.
+- Responsive invariant: public navigation must remain usable on mobile. Prior E2E passed desktop/tablet and failed mobile because the only nav was `hidden ... md:flex`; v4 adds a mobile navigation row with horizontal overflow and `aria-current` instead of weakening the test.
+- Validation ownership: unchanged server/security code may reuse exact prior PASS evidence if inputs/dependencies did not change; the mobile UI fix requires targeted Website browser regression on desktop/tablet/mobile. Automatic PR gate only proves patch integrity.
+- Quality tier: **CRITICAL** because public unauthenticated routing + tenant isolation are involved.
+- Production deploy, custom domain/DNS and production secrets are outside this task.
 
 ## Active checkpoint — UI hotfix lane
 
@@ -62,4 +85,5 @@ Ngày cập nhật: **2026-08-02**.
 
 - Merge code không đồng nghĩa trạng thái release môi trường chạy thật; luôn kiểm GitHub release evidence theo đúng lane.
 - Không dùng UI fast lane cho backend/business logic/data chỉ để tiết kiệm thời gian.
+- Không đổi DNS/secrets hoặc mutate customer data nếu user chưa yêu cầu rõ.
 - Không commit `.env`, `server/work/`, `tmp/` hoặc credential/generated evidence không thuộc source control.
