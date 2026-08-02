@@ -14,10 +14,7 @@ function denied(error: unknown): boolean {
   return value.includes("PERMISSION") || value.includes("FORBIDDEN") || value === "HTTP_403";
 }
 
-/**
- * Permission-filtered KPI/chart/pivot/table discovery for dashboard builders and AI.
- * An insight is visible only when the caller may report on its underlying semantic model.
- */
+/** Permission + row-scope filtered KPI/chart/pivot/table discovery. */
 export class PermissionAwareSemanticInsightCatalogService {
   constructor(
     private readonly semantic: SemanticModelRegistry,
@@ -31,7 +28,7 @@ export class PermissionAwareSemanticInsightCatalogService {
     for (const insight of this.insights.list()) {
       const model = this.semantic.get(insight.model);
       try {
-        await this.access.assert({ tenantId, model: model.id, permission: model.permission });
+        await this.access.authorize({ tenantId, model: model.id, permission: model.permission });
         visible.push(insight);
       } catch (error) {
         if (denied(error)) continue;
