@@ -3,8 +3,9 @@
  * Fieldtype chưa có control chuyên biệt: FormView tự fallback (registry.resolve trả undefined
  * → dùng FallbackControl). missing() cho biết còn thiếu gì trước Cổng 6.
  */
+import { createElement } from "react";
 import type { Fieldtype } from "@metaforge/core";
-import { ControlRegistry, type FieldControl } from "./index.js";
+import { ControlRegistry, type FieldControl, type FieldControlProps } from "./index.js";
 import {
   TextControl,
   TextAreaControl,
@@ -25,6 +26,32 @@ import {
   GeolocationControl,
 } from "./media.js";
 
+/**
+ * Precision trong metadata là GIỚI HẠN nghiệp vụ, không có nghĩa UI phải đệm đủ số 0.
+ * Ví dụ qty=22 với precision=6 nên hiện "22", còn 0.389 vẫn phải giữ đủ ba số lẻ.
+ * Chỉ thu gọn precision TRÌNH BÀY; giá trị gửi về form/server không thay đổi.
+ */
+function compactDisplayPrecision(value: unknown, rawPrecision: unknown): string | number | undefined {
+  if (rawPrecision === undefined || rawPrecision === null || rawPrecision === "") return rawPrecision as undefined;
+  const precision = Number(rawPrecision);
+  const numeric = Number(value);
+  if (!Number.isInteger(precision) || precision < 0 || !Number.isFinite(numeric)) {
+    return rawPrecision as string | number | undefined;
+  }
+  if (precision === 0) return 0;
+  const fraction = Math.abs(numeric).toFixed(precision).split(".")[1]?.replace(/0+$/, "") ?? "";
+  return fraction.length;
+}
+
+const CompactNumberControl: FieldControl = (props: FieldControlProps) => {
+  const precision = compactDisplayPrecision(props.value, props.field.precision);
+  if (precision === props.field.precision) return createElement(NumberControl, props);
+  return createElement(NumberControl, {
+    ...props,
+    field: { ...props.field, precision },
+  });
+};
+
 /** Ánh xạ fieldtype → control (P0). */
 export const DEFAULT_CONTROL_MAP: Partial<Record<Fieldtype, FieldControl>> = {
   // text 1 dòng
@@ -43,10 +70,10 @@ export const DEFAULT_CONTROL_MAP: Partial<Record<Fieldtype, FieldControl>> = {
   "Text Editor": TextAreaControl,
   // số
   Int: NumberControl,
-  Float: NumberControl,
-  Currency: NumberControl,
-  Percent: NumberControl,
-  Rating: NumberControl,
+  Float: CompactNumberControl,
+  Currency: CompactNumberControl,
+  Percent: CompactNumberControl,
+  Rating: CompactNumberControl,
   Duration: DurationControl,
   // chọn
   Check: CheckControl,
