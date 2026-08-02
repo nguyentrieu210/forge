@@ -6,6 +6,7 @@ export * from "./procurement-integrity-controllers.js";
 export * from "./procurement-analytics.js";
 export * from "./supplier-policy.js";
 export * from "./supplier-lifecycle-controllers.js";
+export * from "./supplier-contract-enforcement.js";
 export * from "./purchase-allocation.js";
 export * from "./purchase-allocation-controllers.js";
 export * from "./purchase-allocation-action-controllers.js";
