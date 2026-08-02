@@ -1,8 +1,15 @@
 {
   "id": "maintenance",
   "name": "Bảo trì, Bảo hành & Dịch vụ hiện trường",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "requires": [],
+  "worker": "cloudforge-app-ws07",
+  "validators": [
+    { "doctype": "Maintenance Request" },
+    { "doctype": "Service Contract" },
+    { "doctype": "Warranty Claim" },
+    { "doctype": "Service Order" }
+  ],
   "externalDocTypes": [
     { "name": "Maintenance Priority", "kind": "master", "app": "platform" },
     { "name": "Serial No", "kind": "transaction", "app": "stock" },
