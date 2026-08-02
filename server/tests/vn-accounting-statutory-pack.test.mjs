@@ -20,7 +20,7 @@ function assertFourEyes(workflow, makerRole) {
 test("VN accounting exposes statutory registries, tax worker and finance budget operations", async () => {
   const parsed = parseAppManifest(await readAppSource(fileURLToPath(accountingRoot)));
   assert.equal(parsed.id, "vn-accounting");
-  assert.equal(parsed.version, "1.5.0");
+  assert.equal(parsed.version, "1.6.0");
   assert.equal(parsed.worker, "cloudforge-app-vn-accounting");
   assert.ok(parsed.validators.some((item) => item.doctype === "VN Tax Ruleset" && item.actions?.includes("submit")));
 
