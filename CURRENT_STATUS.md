@@ -22,16 +22,32 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. 
 - Không production deploy/migration trong task HRM này.
 - Boundary còn lại: `formula_json` là versioned/audited legal-rule evidence, chưa phải statutory PIT/BHXH evaluator. Nếu cần tự động hóa luật Việt Nam phải làm task CRITICAL riêng với schema công thức explicit, effective versions, nguồn chính thức và regression pháp lý.
 
-## ACTIVE — VN Accounting Period Integrity Hardening r8
+## DONE — VN Accounting Period Integrity Hardening
 
-- Canonical branch: `fix/vn-accounting-period-integrity-20260803-r8`, clean-based on current `main@560c7cfc140f04e5ca555c87dfa31541c8867ec1` sau khi main thay đổi handoff/process docs.
-- Migration accounting dùng số kế tiếp `0042_vn_accounting_period_hardening.sql`; không đụng lại HRM migrations `0039-0041`.
+- PR `#266` đã merge vào `main`; migration `0042_vn_accounting_period_hardening.sql` là canonical period-integrity baseline.
 - Hard Locked chặn submit, cancel và payload scope move vào/ra kỳ khóa. Soft Closed chỉ cho approved adjustment khi period bật `allow_approved_adjustments` và chứng từ có reason + approver.
 - Accounting period chặn invalid range và overlap theo tenant/company/branch; company-wide period conflict với branch period cùng khoảng ngày.
-- Guard bao phủ Journal/Invoice/Payment, Purchase Receipt, Delivery Note, Payroll, Stock Entry/Reconciliation và Warehouse Cash Voucher/Transfer.
-- Regression riêng `server/scripts/test-vn-accounting-period-hardening.py` replay `0035+0039+0040+0041+0042`, giữ acceptance HRM hiện có độc lập.
-- Targeted SQLite regression của logic `0042` đã PASS trong session cho legacy-trigger replacement, hard/soft close, draft->submit, cancel, move-in/move-out, tenant isolation, range/overlap/update-overlap và expanded posting doctypes.
-- Full exact regression script, Python syntax và relevant backend/typecheck/lint/build trên full checkout chưa có evidence vì shell hiện không có repository checkout/dependencies và DNS tới GitHub. Chưa mở PR, chưa merge, chưa production migration/deploy.
+- Guard 0042 bao phủ Journal/Invoice/Payment, Purchase Receipt, Delivery Note, Payroll, Stock Entry/Reconciliation và Warehouse Cash Voucher/Transfer.
+
+## ACTIVE — VN Accounting 100/100 technical closure
+
+- Working branch: `feat/accounting-100-hardening-20260803`.
+- `main` đã tiến thêm nhiều commit trong lúc làm; compare từ merge-base cho thấy các thay đổi mới trên `main` chỉ thuộc UI/HRM và không overlap file accounting của branch. Trước merge vẫn phải đọc lại exact GitHub state.
+- Migrations mới `0043-0047` đóng company/branch ledger scope, Payment Allocation period lock, legal/tax immutability, policy-effective ranges, TT99 mapping, reconciliation evidence, one-source period control, stock/GL parity và company/base-currency guard.
+- `accounting_ledger_scope` gắn GL/payment-ledger line với pháp nhân/chi nhánh từ chứng từ authoritative; cross-company GL account/payment allocation fail closed.
+- Financial reports AR/AP/General Ledger/Trial Balance/P&L/Balance Sheet/Cash Flow đã company/branch-scoped; thêm `Accounting Integrity Exceptions` control-tower report.
+- `VN Accounting Policy` là accounting control source cho doanh nghiệp đã opt-in: accounting currency, inventory, COGS, stock adjustment, stock-received-not-billed account; legacy `accounting_period_locks` bị supersede và không được tái dùng sau khi policy VN đã submit.
+- Purchase Receipt dưới policy VN chuyển valuation về Company.default_currency, ghi Dr Inventory / Cr Stock Received But Not Billed từ chính stock value; cancel đảo exact historical GL + stock revision.
+- Stock Entry Material Receipt/Issue dưới policy VN ghi GL theo Inventory/Stock Adjustment; runtime final `RolloutManufacturingStockEntryController` route Material Receipt/Issue qua accounting controller để không bị registry override, còn Material Transfer/Manufacture giữ manufacturing rollout.
+- Delivery Note dưới policy VN giữ valuation/COGS ở company currency; bán hàng dùng COGS/Inventory, issue phi-bán-hàng dùng Stock Adjustment/Inventory; stock-history currency mismatch fail closed.
+- Journal Entry hỗ trợ account currency snapshot, server-resolved exchange rate, original debit/credit in account currency và GL company/base currency; client-supplied rate không authoritative.
+- `VN Legal Rule`, `VN Tax Ruleset`, `TT99 Account Map` là effective-versioned/submittable và submitted version immutable; workflow tách preparer/Chief Accountant, không self-approve. Audit evidence authoritative lấy từ authenticated `versions`, không tin `approved_by` client payload.
+- `VN Reconciliation Case` ghi expected/actual/difference minor units, root cause và submitted correction evidence; resolved case immutable.
+- App `vn-accounting` tăng lên `1.2.0`, thêm Tax Specialist/Internal Auditor, TT99 Account Map, VN Tax Ruleset, VN Reconciliation Case và surface E-Invoice Submission hiện hữu, không tạo e-invoice ledger cạnh tranh.
+- Regression source đã thêm: `accounting-query-scope.test.mjs`, `accounting-journal-entry-fx.test.mjs`, `vn-accounting-migration-gates.test.mjs`, `test-vn-accounting-integrity-closure.py` replay `0043-0047` cùng existing `0042` regression.
+- Validation boundary hiện tại: exact local test/typecheck/build **chưa chạy được** vì shell session không resolve được GitHub DNS để checkout repo/dependency tree. Không được ghi PASS cho final branch cho tới khi có exact execution evidence.
+- Không production migration, tenant mutation, secret/DNS change, merge hoặc deploy trong task này.
+- “100/100 technical” nghĩa là invariants/architecture/regression target; statutory go-live vẫn phải bind đúng doanh nghiệp, regime/effective law, VAT/CIT/PIT/insurance rules, e-invoice provider, chữ ký số và test vectors được người có thẩm quyền phê duyệt. Không tự tuyên bố legal compliance chỉ từ code.
 
 ## DONE — exact production release evidence
 
@@ -85,15 +101,16 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. 
 
 ## Chưa hoàn tất
 
-1. Hoàn tất exact regression/verification cho `fix/vn-accounting-period-integrity-20260803-r8` rồi mới PR/merge.
-2. Một UI push thực tế sau fast-path merge để đo duration và xác nhận `Deploy Gateway + /release.json` PASS.
-3. HRM statutory payroll-rule evaluator nếu cần tự động PIT/BHXH theo luật; phải có schema/version/nguồn chính thức và không sửa rule đã dùng.
-4. Bulk Transaction cho Stock Reconciliation.
-5. Bulk Transaction cho BOM parent + child/version.
-6. First-class AppAction input-table contract.
-7. Batch Print / QR label queue.
-8. P1 Daily detailed ledger hardening/closure theo exact GitHub state.
-9. Plastic ERP các wave sau P0-A.
+1. Lấy exact execution evidence cho `feat/accounting-100-hardening-20260803`: migration acceptance `0042-0047`, accounting unit/query regressions, relevant typecheck/build; chỉ sau đó mới được nâng trạng thái technical closure thành DONE.
+2. Statutory go-live: nạp/duyệt rule pháp lý chính thức theo doanh nghiệp, test vectors, regime/thuế/bảo hiểm/HĐĐT/chữ ký số; đây là legal/configuration gate riêng, không được giả thành code PASS.
+3. Một UI push thực tế sau fast-path merge để đo duration và xác nhận `Deploy Gateway + /release.json` PASS.
+4. HRM statutory payroll-rule evaluator nếu cần tự động PIT/BHXH theo luật; phải có schema/version/nguồn chính thức và không sửa rule đã dùng.
+5. Bulk Transaction cho Stock Reconciliation.
+6. Bulk Transaction cho BOM parent + child/version.
+7. First-class AppAction input-table contract.
+8. Batch Print / QR label queue.
+9. P1 Daily detailed ledger hardening/closure theo exact GitHub state.
+10. Plastic ERP các wave sau P0-A.
 
 ## Guardrails
 
