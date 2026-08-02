@@ -1,7 +1,7 @@
 {
   "id": "plastic-erp",
   "name": "Forge Plastic ERP",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "metaContractVersion": 1,
   "requires": [
     { "id": "hrm", "version": ">=1.4.0" },
@@ -10,6 +10,8 @@
   "externalDocTypes": [
     { "name": "Bill of Materials", "kind": "transaction", "app": "erpnext" },
     { "name": "Work Order", "kind": "transaction", "app": "erpnext" },
+    { "name": "Stock Entry", "kind": "transaction", "app": "erpnext" },
+    { "name": "Serial and Batch Bundle", "kind": "transaction", "app": "stock" },
     { "name": "Asset", "kind": "master", "app": "erpnext" },
     { "name": "Workstation", "kind": "master", "app": "erpnext" },
     { "name": "Operation", "kind": "master", "app": "erpnext" },
@@ -21,6 +23,7 @@
     { "key": "Plastic Process Profile", "label": "Công nghệ nhựa", "kind": "doctype", "icon": "workflow", "group": "Kỹ thuật" },
     { "key": "Plastic Material Profile", "label": "Đặc tính nguyên liệu", "kind": "doctype", "icon": "package", "group": "Kỹ thuật" },
     { "key": "Plastic Recipe Policy", "label": "Công thức nhựa", "kind": "doctype", "icon": "flask-conical", "group": "Kỹ thuật" },
+    { "key": "Plastic Production Run", "label": "Production Run", "kind": "doctype", "icon": "play-circle", "group": "Sản xuất" },
     { "key": "Plastic Machine", "label": "Máy sản xuất", "kind": "doctype", "icon": "factory", "group": "Thiết bị" },
     { "key": "Plastic Tool", "label": "Khuôn / đầu đùn", "kind": "doctype", "icon": "wrench", "group": "Thiết bị" },
     { "key": "Plastic Capacity Calendar", "label": "Năng lực máy", "kind": "doctype", "icon": "calendar-clock", "group": "Kế hoạch" },
