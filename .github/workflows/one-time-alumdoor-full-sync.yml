@@ -75,7 +75,6 @@ jobs:
           set -euo pipefail
           pnpm --filter cloudforge run build
           pnpm --filter metaforge run build
-          node server/scripts/stage-client-bundle.mjs
 
       - name: Validate all app packages
         id: validate
@@ -145,6 +144,10 @@ jobs:
             --name "$APP_WORKER" \
             --dispatch-namespace "$DISPATCH_NAMESPACE" \
             --strict
+
+      - name: Stage current Gateway UI bundle
+        id: stage_gateway
+        run: node server/scripts/stage-client-bundle.mjs
 
       - name: Deploy current Gateway UI
         id: deploy_gateway
@@ -240,6 +243,7 @@ jobs:
           O_INSTALL_VN: ${{ steps.install_vn_accounting.outcome }}
           O_INSTALL_ALUMDOOR: ${{ steps.install_alumdoor.outcome }}
           O_DEPLOY_APP: ${{ steps.deploy_app_worker.outcome }}
+          O_STAGE_GATEWAY: ${{ steps.stage_gateway.outcome }}
           O_DEPLOY_GATEWAY: ${{ steps.deploy_gateway.outcome }}
           O_SMOKE: ${{ steps.smoke.outcome }}
         with:
@@ -259,6 +263,7 @@ jobs:
               install_vn_accounting: process.env.O_INSTALL_VN,
               install_alumdoor: process.env.O_INSTALL_ALUMDOOR,
               deploy_app_worker: process.env.O_DEPLOY_APP,
+              stage_gateway: process.env.O_STAGE_GATEWAY,
               deploy_gateway: process.env.O_DEPLOY_GATEWAY,
               smoke: process.env.O_SMOKE,
             };
