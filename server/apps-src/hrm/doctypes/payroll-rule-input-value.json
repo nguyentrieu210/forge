@@ -1,0 +1,1 @@
+{"name":"Payroll Rule Input Value","module":"Payroll","is_child":true,"fields":[{"fieldname":"input_key","label":"Khóa đầu vào","fieldtype":"Data","required":true,"in_list_view":true},{"fieldname":"value","label":"Giá trị","fieldtype":"Data","required":true,"in_list_view":true}],"permissions":[],"revision":1}
