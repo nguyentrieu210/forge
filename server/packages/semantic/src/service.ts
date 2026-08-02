@@ -33,7 +33,12 @@ export interface SemanticQueryResult {
   row_count: number;
 }
 
-export class D1SemanticQueryService {
+/** Common read executor contract reused by API, AI, feeds and scheduled/prepared adapters. */
+export interface SemanticQueryExecutor {
+  run(request: SemanticQueryRequest): Promise<SemanticQueryResult>;
+}
+
+export class D1SemanticQueryService implements SemanticQueryExecutor {
   constructor(
     private readonly db: D1Database,
     private readonly compiler: SemanticQueryCompiler,
