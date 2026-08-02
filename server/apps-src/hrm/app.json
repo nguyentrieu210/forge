@@ -1,19 +1,11 @@
 {
   "id": "hrm",
   "name": "Quản lý nhân sự",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "requires": [],
   "externalDocTypes": [
-    {
-      "name": "Salary Component",
-      "kind": "master",
-      "app": "erpnext"
-    },
-    {
-      "name": "Expense Claim",
-      "kind": "transaction",
-      "app": "erpnext"
-    }
+    {"name":"Salary Component","kind":"master","app":"erpnext"},
+    {"name":"Expense Claim","kind":"transaction","app":"erpnext"}
   ],
   "nav": [
     {"key":"company-master","label":"Công ty","kind":"route","route":"/app/Company","icon":"building-2","group":"Tổ chức","required_roles":["HR Manager","Accounts Manager","System Manager"]},
@@ -26,12 +18,14 @@
     {"key":"Job Applicant","label":"Ứng viên","kind":"doctype","icon":"contact-round","group":"Tuyển dụng"},
     {"key":"Interview","label":"Phỏng vấn","kind":"doctype","icon":"messages-square","group":"Tuyển dụng"},
     {"key":"Job Offer","label":"Thư mời nhận việc","kind":"doctype","icon":"mail-check","group":"Tuyển dụng"},
+    {"key":"Hiring Completion","label":"Hoàn tất tuyển dụng","kind":"doctype","icon":"badge-check","group":"Tuyển dụng"},
     {"key":"Employee","label":"Nhân viên","kind":"doctype","icon":"users","group":"Vòng đời nhân sự"},
     {"key":"Employment Contract","label":"Hợp đồng lao động","kind":"doctype","icon":"file-signature","group":"Vòng đời nhân sự"},
     {"key":"Employee Onboarding","label":"Tiếp nhận nhân viên","kind":"doctype","icon":"user-plus","group":"Vòng đời nhân sự"},
     {"key":"Employee Transfer","label":"Điều chuyển","kind":"doctype","icon":"move-right","group":"Vòng đời nhân sự"},
     {"key":"Employee Promotion","label":"Thăng chức","kind":"doctype","icon":"trending-up","group":"Vòng đời nhân sự"},
     {"key":"Employee Separation","label":"Nghỉ việc","kind":"doctype","icon":"user-round-x","group":"Vòng đời nhân sự"},
+    {"key":"Employee Final Settlement","label":"Quyết toán nghỉ việc","kind":"doctype","icon":"file-check-2","group":"Vòng đời nhân sự"},
     {"key":"Leave Policy","label":"Chính sách nghỉ phép","kind":"doctype","icon":"calendar-range","group":"Nghỉ phép"},
     {"key":"Leave Allocation","label":"Cấp phép","kind":"doctype","icon":"calendar-plus","group":"Nghỉ phép"},
     {"key":"Leave Application","label":"Đơn nghỉ phép","kind":"doctype","icon":"calendar-off","group":"Nghỉ phép"},
@@ -62,65 +56,12 @@
     {"key":"Training Event","label":"Đào tạo","kind":"doctype","icon":"graduation-cap","group":"Hiệu suất & phát triển"}
   ],
   "reports": [
-    {
-      "name": "hr-headcount-by-department",
-      "label": "Headcount theo phòng ban",
-      "doctype": "Employee",
-      "columns": [
-        {"field":"department","label":"Phòng ban","type":"Link","options":"Department"},
-        {"field":"employee_name","label":"Headcount","type":"Int","aggregate":"count"}
-      ],
-      "group_by": "department",
-      "order_by": {"column":"department","direction":"asc"},
-      "filters": ["company","branch","department","designation","employment_type","employee_status"],
-      "limit": 1000
-    },
-    {
-      "name": "hr-workforce-plan-summary",
-      "label": "Tổng hợp kế hoạch nhân sự",
-      "doctype": "Workforce Plan",
-      "columns": [
-        {"field":"plan_name","label":"Kế hoạch","type":"Data"},
-        {"field":"company","label":"Công ty","type":"Link","options":"Company"},
-        {"field":"fiscal_year","label":"Năm tài chính","type":"Link","options":"Fiscal Year"},
-        {"field":"total_planned_headcount","label":"Định biên","type":"Int"},
-        {"field":"total_monthly_budget","label":"Ngân sách tháng","type":"Currency"},
-        {"field":"total_period_budget","label":"Ngân sách kỳ","type":"Currency"}
-      ],
-      "order_by": {"column":"fiscal_year","direction":"desc"},
-      "filters": ["company","fiscal_year","from_date","to_date"],
-      "limit": 500
-    },
-    {
-      "name": "hr-employee-loan-register",
-      "label": "Sổ khoản vay nhân viên",
-      "doctype": "Employee Loan",
-      "columns": [
-        {"field":"employee","label":"Nhân viên","type":"Link","options":"Employee"},
-        {"field":"loan_date","label":"Ngày vay","type":"Date"},
-        {"field":"principal_amount","label":"Số tiền vay","type":"Currency"},
-        {"field":"installment_count","label":"Số kỳ","type":"Int"},
-        {"field":"first_repayment_date","label":"Kỳ đầu","type":"Date"}
-      ],
-      "order_by": {"column":"loan_date","direction":"desc"},
-      "filters": ["company","branch","employee","loan_date"],
-      "limit": 1000
-    },
-    {
-      "name": "hr-salary-bank-batch-register",
-      "label": "Danh sách đợt chuyển lương",
-      "doctype": "Salary Bank Batch",
-      "columns": [
-        {"field":"payroll_entry","label":"Bảng lương","type":"Link","options":"Payroll Entry"},
-        {"field":"transfer_date","label":"Ngày chuyển","type":"Date"},
-        {"field":"employee_count","label":"Số nhân viên","type":"Int"},
-        {"field":"total_amount","label":"Tổng tiền","type":"Currency"},
-        {"field":"bank_account","label":"Tài khoản chi","type":"Link","options":"Bank Account"}
-      ],
-      "order_by": {"column":"transfer_date","direction":"desc"},
-      "filters": ["company","transfer_date","payroll_entry","bank_account"],
-      "limit": 500
-    }
+    {"name":"hr-headcount-by-department","label":"Headcount theo phòng ban","doctype":"Employee","columns":[{"field":"department","label":"Phòng ban","type":"Link","options":"Department"},{"field":"employee_name","label":"Headcount","type":"Int","aggregate":"count"}],"group_by":"department","order_by":{"column":"department","direction":"asc"},"filters":["company","branch","department","designation","employment_type","employee_status"],"limit":1000},
+    {"name":"hr-workforce-plan-summary","label":"Tổng hợp kế hoạch nhân sự","doctype":"Workforce Plan","columns":[{"field":"plan_name","label":"Kế hoạch","type":"Data"},{"field":"company","label":"Công ty","type":"Link","options":"Company"},{"field":"fiscal_year","label":"Năm tài chính","type":"Link","options":"Fiscal Year"},{"field":"total_planned_headcount","label":"Định biên","type":"Int"},{"field":"total_monthly_budget","label":"Ngân sách tháng","type":"Currency"},{"field":"total_period_budget","label":"Ngân sách kỳ","type":"Currency"}],"order_by":{"column":"fiscal_year","direction":"desc"},"filters":["company","fiscal_year","from_date","to_date"],"limit":500},
+    {"name":"hr-recruitment-funnel","label":"Phễu tuyển dụng","doctype":"Job Applicant","columns":[{"field":"applicant_status","label":"Trạng thái","type":"Data"},{"field":"applicant_name","label":"Số ứng viên","type":"Int","aggregate":"count"}],"group_by":"applicant_status","order_by":{"column":"applicant_status","direction":"asc"},"filters":["job_opening","applicant_status","source"],"limit":1000},
+    {"name":"hr-employee-loan-register","label":"Sổ khoản vay nhân viên","doctype":"Employee Loan","columns":[{"field":"employee","label":"Nhân viên","type":"Link","options":"Employee"},{"field":"loan_date","label":"Ngày vay","type":"Date"},{"field":"principal_amount","label":"Số tiền vay","type":"Currency"},{"field":"installment_count","label":"Số kỳ","type":"Int"},{"field":"first_repayment_date","label":"Kỳ đầu","type":"Date"}],"order_by":{"column":"loan_date","direction":"desc"},"filters":["company","branch","employee","loan_date"],"limit":1000},
+    {"name":"hr-salary-bank-batch-register","label":"Danh sách đợt chuyển lương","doctype":"Salary Bank Batch","columns":[{"field":"payroll_entry","label":"Bảng lương","type":"Link","options":"Payroll Entry"},{"field":"transfer_date","label":"Ngày chuyển","type":"Date"},{"field":"employee_count","label":"Số nhân viên","type":"Int"},{"field":"total_amount","label":"Tổng tiền","type":"Currency"},{"field":"bank_account","label":"Tài khoản chi","type":"Link","options":"Bank Account"}],"order_by":{"column":"transfer_date","direction":"desc"},"filters":["company","transfer_date","payroll_entry","bank_account"],"limit":500},
+    {"name":"hr-final-settlement-register","label":"Quyết toán nghỉ việc","doctype":"Employee Final Settlement","columns":[{"field":"employee","label":"Nhân viên","type":"Link","options":"Employee"},{"field":"last_working_day","label":"Ngày làm việc cuối","type":"Date"},{"field":"settlement_date","label":"Ngày quyết toán","type":"Date"},{"field":"final_salary_slip","label":"Phiếu lương cuối","type":"Link","options":"Salary Slip"},{"field":"unsettled_advance_count","label":"Tạm ứng chưa tất toán","type":"Int"}],"order_by":{"column":"settlement_date","direction":"desc"},"filters":["company","branch","employee","settlement_date"],"limit":1000}
   ],
   "hooks": [],
   "client": {"brand":"blue","domain":"hr","home":{"route":"/app/Employee","doctype":"Employee"},"dimensions":["company","branch","fiscal_year"],"catalog_mode":"hybrid"}
