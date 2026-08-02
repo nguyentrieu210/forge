@@ -1,0 +1,49 @@
+{
+  "name": "Service Order",
+  "module": "Maintenance",
+  "is_submittable": true,
+  "autoname": "SO-SVC-.YYYY.-#####",
+  "title_field": "summary",
+  "search_fields": ["summary", "customer", "maintenance_request", "serial_no"],
+  "sort_field": "scheduled_start",
+  "sort_order": "ASC",
+  "track_seen": true,
+  "fields": [
+    { "fieldname": "maintenance_request", "label": "Yêu cầu nguồn", "fieldtype": "Link", "options": "Maintenance Request", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "warranty_claim", "label": "Yêu cầu bảo hành", "fieldtype": "Link", "options": "Warranty Claim", "in_standard_filter": true },
+    { "fieldname": "service_contract", "label": "Hợp đồng dịch vụ", "fieldtype": "Link", "options": "Service Contract", "in_standard_filter": true },
+    { "fieldname": "customer", "label": "Khách hàng", "fieldtype": "Link", "options": "Customer", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "summary", "label": "Nội dung công việc", "fieldtype": "Data", "required": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "priority", "label": "Mức ưu tiên", "fieldtype": "Link", "options": "Maintenance Priority", "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "technician", "label": "Kỹ thuật viên", "fieldtype": "Link", "options": "Service Technician", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "scheduled_start", "label": "Bắt đầu dự kiến", "fieldtype": "Datetime", "required": true, "in_list_view": true },
+    { "fieldname": "scheduled_end", "label": "Kết thúc dự kiến", "fieldtype": "Datetime", "required": true },
+    { "fieldname": "service_address", "label": "Địa điểm dịch vụ", "fieldtype": "Text" },
+    { "fieldname": "item", "label": "Sản phẩm / vật tư", "fieldtype": "Link", "options": "Item", "in_standard_filter": true },
+    { "fieldname": "serial_no", "label": "Số serial", "fieldtype": "Link", "options": "Serial No", "search_index": true },
+    { "fieldname": "parts_usage_note", "label": "Vật tư đã dùng (ghi nhận)", "fieldtype": "Text" },
+    { "fieldname": "actual_start", "label": "Bắt đầu thực tế", "fieldtype": "Datetime", "mandatory_depends_on": "eval:doc.workflow_state == 'Chờ xác nhận' || doc.workflow_state == 'Hoàn tất'" },
+    { "fieldname": "actual_end", "label": "Kết thúc thực tế", "fieldtype": "Datetime", "mandatory_depends_on": "eval:doc.workflow_state == 'Chờ xác nhận' || doc.workflow_state == 'Hoàn tất'" },
+    { "fieldname": "checklist_result", "label": "Kết quả checklist", "fieldtype": "Select", "options": "Đạt\nKhông đạt\nKhông áp dụng", "mandatory_depends_on": "eval:doc.workflow_state == 'Chờ xác nhận' || doc.workflow_state == 'Hoàn tất'" },
+    { "fieldname": "work_performed", "label": "Công việc đã thực hiện", "fieldtype": "Text", "mandatory_depends_on": "eval:doc.workflow_state == 'Chờ xác nhận' || doc.workflow_state == 'Hoàn tất'" },
+    { "fieldname": "resolution", "label": "Kết luận / xử lý", "fieldtype": "Text", "mandatory_depends_on": "eval:doc.workflow_state == 'Chờ xác nhận' || doc.workflow_state == 'Hoàn tất'" },
+    { "fieldname": "photo_evidence", "label": "Ảnh hiện trường", "fieldtype": "Attach" },
+    { "fieldname": "customer_confirmed_by", "label": "Người xác nhận phía khách", "fieldtype": "Data", "mandatory_depends_on": "eval:doc.workflow_state == 'Hoàn tất'" },
+    { "fieldname": "customer_signature", "label": "Chữ ký / biên nhận", "fieldtype": "Attach" },
+    { "fieldname": "completion_note", "label": "Ghi chú hoàn tất", "fieldtype": "Text" },
+    { "fieldname": "cancel_reason", "label": "Lý do hủy", "fieldtype": "Text", "mandatory_depends_on": "eval:doc.workflow_state == 'Hủy'" },
+    { "fieldname": "workflow_state", "label": "Trạng thái", "fieldtype": "Data", "read_only": true, "in_list_view": true, "in_standard_filter": true }
+  ],
+  "viewPolicy": {
+    "kanban": { "enabled": true, "stageField": "workflow_state", "reasonRequiredOn": ["backward", "cancel"] },
+    "calendar": { "enabled": true, "startField": "scheduled_start", "endField": "scheduled_end" },
+    "mobile": { "compactFields": ["customer", "technician", "scheduled_start", "summary", "workflow_state"] }
+  },
+  "permissions": [
+    { "role": "Maintenance User", "read": true, "print": true, "report": true },
+    { "role": "Maintenance Technician", "read": true, "write": true, "print": true, "report": true },
+    { "role": "Maintenance Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "print": true, "report": true, "export": true, "share": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "print": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 2
+}
