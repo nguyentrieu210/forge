@@ -1,176 +1,260 @@
 # WS10 — Integration Hub / Connector Platform
 
-Status: **ACTIVE**  
+Status: **REVIEW**  
 Owner: **chatgpt-ws10**  
 Branch: `agent/ent-10-integration-hub`  
 Checkpoint PR: **#308** `feat(ws10): establish integration delivery foundation`  
 Product baseline: **Forge 0.2.0**  
 Seed baseline: `862636e6239c91eab657c619d8c55345ed71a6d8`  
 Claimed from exact main head: `bbe3494bcfbb8a3ce09a5ff4bbb839dfcf9e47e9`  
-Implementation head before this continuation directive: `1c050cf602f55495fbd6d913760f94ab24f1eb62`  
+Latest pre-handoff compare: `main@b63c9a7a07e63dd73f944f450618c0b92f10067c`, branch ahead 71 / behind 11; audited main drift is WS14/client + coordination/status and does not overlap WS10 server source.  
 Canonical board: `main:docs/agents/AGENT_BOARD.md`
 
-Before implementation, this branch was compared with exact current `main`, found 18 commits behind with only the seeded workstream file ahead, then clean-synced to `main@bbe3494bcfbb8a3ce09a5ff4bbb839dfcf9e47e9` before claim/implementation. GitHub exact branch/PR state remains authoritative over this snapshot.
-
-## Execution directive — do not stop at a checkpoint
-
-PR `#308` is a review checkpoint, **not the end of WS10**. The worker must continue every independent audit/implementation slice that stays inside WS10 ownership.
-
-Do not ask the user for ordinary technical choices. Audit repo evidence and choose the best implementation under the Skill/North Star/contracts.
-
-Only stop and ask when one of these is true:
-1. a business decision cannot be inferred from repo/docs;
-2. the remaining work requires changing a shared contract owned by another workstream and the dependency cannot be separated;
-3. a destructive/production operation is required;
-4. merge/deploy of a non-UI change is required.
-
-If one dependency blocks only part of the scope, record a Dependency Request and continue all other independent work. Opening a PR, reaching `REVIEW`, or discovering a partial blocker is not by itself a reason to stop.
-
-For WS10 specifically, continue provider-agnostic contracts/tests/audit/API design and any implementation that does not take ownership from WS00/WS11/WS12. Keep non-UI PRs unmerged until approval, but keep coding the next independent slice on the workstream branch or a clearly documented WS10 sub-branch when necessary.
+GitHub exact branch/PR state always wins this snapshot. PR `#308` is a checkpoint, not a reason to stop implementation; WS10 continued until the remaining executable wiring was owned by WS00/WS11/WS12.
 
 ## Mission
 
 Chuẩn hóa API/event/connector platform để Forge nối bank, e-invoice, tax, BHXH, payment, shipping, email/SMS/Zalo/social/marketplace/Google/Microsoft mà không viết integration kiểu mỗi app một cục.
 
-## Own
+## Ownership boundary
 
-REST/API key/OAuth/service-account seam, webhook/event subscriptions, connector SDK, mapping/transformation, queues/retry/DLQ/idempotency, external sync cursor/status/error model và integration observability contract.
+WS10 owns connector/event/subscription/mapping/provider-adapter/delivery/retry/DLQ/idempotency/external-sync contracts and provider-facing integration seams.
 
-## Phase A audit — 2026-08-03
+WS10 does **not** own:
 
-Exact code audit found reusable foundations but no generic connector lifecycle yet:
+- document-kernel / AggregateCoordinator composition — WS00;
+- credential vault, API-key/OAuth/service-account secret lifecycle and authorization — WS11;
+- physical queue/DLQ/recovery/metrics/release operational persistence — WS12;
+- legal/accounting state for bank/e-invoice/tax — WS01;
+- Facebook/social business behavior — WS16.
 
-- `server/packages/outbox/src/publisher.ts`: tenant-scoped outbox lease/claim, publish retry state and queue handoff already exist.
-- `server/apps/jobs-worker/src/index.ts`: domain-event shape validation, tenant routing, processed-event idempotency and bounded exponential queue retry already exist.
-- `server/apps/tenant-worker/src/index-core.ts`: inbound platform events are durably deduplicated before app-hook/notification fan-out.
-- `server/apps/social-ingress-worker/src/index.ts`: Facebook-specific OAuth, signed webhook verification, tenant/page routing and queue retry are already wired.
-- `server/packages/social-commerce/src/tenant-handler.ts`: provider credentials are encrypted and Facebook event ingest is idempotent, but this is provider/domain-specific rather than a generic connector SDK.
-- BRD `server/docs/spec/brd-screens/10-integration-hub.md` requires connector catalog, credential vault, mapping, delivery log, retry/DLQ, encrypted secrets, outbound allowlist and webhook signature verification.
+## Phase A audit summary
 
-Primary gap: retry/idempotency/security patterns exist in several paths but are duplicated by use-case. Forge does not yet have one reusable external subscription/delivery contract with mapping, outbound target policy, deterministic delivery identity and shared retry/dead-letter semantics.
+Reusable Forge foundations found:
 
-## Capability snapshot
+- `server/packages/outbox/src/publisher.ts`: tenant-scoped outbox lease/claim and queue handoff.
+- `server/apps/jobs-worker/src/index.ts`: DomainEvent shape guard, processed-event idempotency, tenant routing and bounded exponential retry.
+- `server/apps/tenant-worker/src/index-core.ts`: inbound event durable dedupe before downstream fan-out.
+- `server/apps/social-ingress-worker/src/index.ts`: Facebook OAuth, signed webhook verification, tenant/page routing and queue retry.
+- `server/packages/social-commerce/src/tenant-handler.ts`: encrypted Facebook credentials and idempotent provider-event ingest.
+- `server/packages/frappe-api/src/router.ts`: existing permission-scoped import and CSV export paths; export has an explicit `export` permission check rather than inheriting ordinary read.
+- MetaForge maps `fieldtype: JSON` to `TextAreaControl`; browser JSON values therefore arrive as strings and must be parsed server-side before authoritative persistence.
+- Generic `listDocumentsByDoctype()` is intentionally not used for dispatch because its broad 5,000-row bound can truncate a large doctype scan; WS10 uses a targeted active-subscription reader instead.
 
-| Capability | Audit maturity | This slice |
+Primary gap at claim time was duplicated provider-specific retry/signature/idempotency behavior without one reusable connector lifecycle. This branch now supplies that generic seam.
+
+## Capability snapshot at handoff
+
+| Capability | Current maturity | Evidence / boundary |
 |---|---|---|
-| `I01-001` REST API | Wired | unchanged |
-| `I01-002` API key | Missing/Foundation evidence only | dependency on WS11 credential/auth contract |
-| `I01-003` OAuth | Foundation/Wired provider-specific | generic auth kind represented, credential flow not owned here yet |
-| `I01-004` Service account | Missing/Foundation evidence only | generic auth kind represented, credential flow not owned here yet |
-| `I01-005` Webhook | Foundation provider-specific | generic outbound webhook delivery contract added |
-| `I01-006` Event subscription | Foundation | generic event-pattern subscription contract added |
-| `I01-007` Connector SDK | Missing | **Foundation** via `@cloudforge/integration-hub` |
-| `I01-008` Mapping/transformation | Missing | **Foundation** with bounded dotted-path mapping |
-| `I01-009` Import API | existing platform surface, not deeply audited in this slice | unchanged |
-| `I01-010` Export API | existing platform surface, not deeply audited in this slice | unchanged |
-| `I01-011` Queue | Wired | reused conceptually, no WS12 queue ownership change |
-| `I01-012` Retry | Wired but scattered | shared deterministic retry policy added |
-| `I01-013` Dead-letter | Missing as generic lifecycle | decision semantics added; persistence/queue wiring still missing |
-| `I01-014` Idempotency | Wired in kernel/jobs/event paths | deterministic connector delivery identity added |
-| `I01-015` Connector audit | Missing | delivery/audit persistence still required |
+| `I01-001` REST API | **Wired** | existing Frappe/native API surface; unchanged |
+| `I01-002` API key | **Foundation** | connector auth kind + secret-safe connection seam; vault/auth lifecycle belongs WS11 |
+| `I01-003` OAuth | **Foundation/Wired provider-specific** | Facebook OAuth exists; generic adapter/auth contract added; shared vault lifecycle still WS11 |
+| `I01-004` Service account | **Foundation** | generic auth/connection contract only; shared credential lifecycle still WS11 |
+| `I01-005` Webhook | **Foundation** | generic outbound executor + inbound HMAC policy/verification + target policy; production queue wiring pending |
+| `I01-006` Event subscription | **Foundation** | canonical `Integration Subscription` metadata/controller/store/service; registry composition pending WS00 |
+| `I01-007` Connector SDK | **Foundation** | `@cloudforge/integration-hub` catalog, adapter, registry, connection, sync, delivery contracts |
+| `I01-008` Mapping/transformation | **Foundation** | bounded dotted-path mapping, versioned mapping spec + SHA-256 fingerprint |
+| `I01-009` Import API | **Wired** | existing permission-aware Frappe import path; no duplicate WS10 API created |
+| `I01-010` Export API | **Wired** | existing permission-aware CSV export path; explicit export permission |
+| `I01-011` Queue | **Wired** | existing Cloudflare Queue/outbox/jobs path; WS10 does not replace it |
+| `I01-012` Retry | **Wired / generic semantics added** | existing queue retry + shared delivery retry/Retry-After decision contract |
+| `I01-013` Dead-letter | **Foundation** | explicit delivery lifecycle + deterministic DLQ/replay message contract; physical quarantine/recovery belongs WS12 |
+| `I01-014` Idempotency | **Wired / connector identity added** | kernel/jobs existing idempotency + deterministic delivery/inbound IDs |
+| `I01-015` Connector audit | **Foundation** | lifecycle audit + health evidence + replay actor/reason contracts; durable operational persistence belongs WS12 |
 
-No capability is promoted to RC/Hardened by this slice. The new package is a contract/runtime foundation, not a complete Integration Hub.
+No capability is claimed RC/Hardened. RC requires exact-head executable evidence plus shared production-shaped wiring.
 
-## Phase B slice implemented
+## Implemented provider-agnostic platform primitives
 
-New package: `server/packages/integration-hub/`.
+### Core webhook/event contract
 
-Implemented primitives:
+`server/packages/integration-hub/src/index.ts`
 
-1. `WebhookSubscription` contract with tenant, event pattern, target URL, auth kind, `secret_ref`, explicit outbound host allowlist, mapping and retry policy.
-2. HTTPS-only outbound target validation; URL credentials/fragments and localhost/private targets are rejected; hostname must be explicitly allowlisted.
-3. Exact event, trailing `.*`, and all-event subscription matching.
-4. Bounded mapping/transformation from canonical `DomainEvent` using dotted paths, required-source validation and prototype-pollution path rejection.
-5. Deterministic webhook envelope and delivery ID derived from `subscription_id + event_id`.
-6. Shared bounded exponential retry semantics; transport/408/425/429/5xx retry, permanent 4xx dead-letter, attempt exhaustion dead-letter.
-7. Stable JSON serialization and HMAC-SHA256 signing headers; idempotency header is the deterministic delivery ID.
-8. Secrets remain references only. This package does not store plaintext provider credentials or invent a competing vault.
+- tenant-bound `WebhookSubscription` contract;
+- exact / trailing wildcard / all-event subscription matching;
+- HTTPS-only outbound targets;
+- explicit outbound host allowlist;
+- reject URL credentials/fragments, localhost/private targets;
+- bounded mapping with required-source checks and prototype-pollution path rejection;
+- deterministic connector delivery ID;
+- canonical stable JSON;
+- HMAC-SHA256 body signing;
+- shared bounded exponential retry/dead-letter decision semantics.
 
-## Security assumptions / guard
+### Connector catalog + provider SDK
 
-- External callback target must be HTTPS and explicitly outbound-allowlisted.
-- Connector credential material is **not** owned by WS10. `secret_ref` is the seam; encrypted storage/rotation/access policy belongs to WS11.
-- Tenant is bound in subscription + event and validated before envelope creation.
-- Delivery identity is deterministic per subscription/event so retries do not create a new logical delivery.
-- Signed body uses canonical stable JSON; future executor must sign the exact bytes it sends.
-- No external provider is called by this slice; no production secret/DNS/customer data is touched.
+- `catalog.ts`: versioned connector manifest, categories/capabilities, auth/event compatibility, same-major upgrade rules.
+- `adapter.ts`: provider adapter conformance for inbound normalization, polling/page fetch and health checks.
+- `provider-registry.ts`: exact `connector_key@version` runtime registry with compatible upgrade resolution.
+- `connection.ts`: tenant-bound connector connection contract with non-secret config + `secret_ref` only.
+- connection config recursively rejects plaintext `password`, `secret`, `client_secret`, `access_token`, `refresh_token`, `api_key`, `private_key`, `service_account_key` fields.
 
-## Retry semantics
+### Outbound execution
 
-Default policy: `max_attempts=8`, `base_delay_seconds=2`, `max_delay_seconds=300`.
+`executor.ts`
 
-- 2xx -> delivered.
-- transport error / unknown status / 408 / 425 / 429 / 5xx -> retry while attempts remain.
-- permanent non-retryable HTTP -> dead-letter decision.
-- attempt limit exhausted -> dead-letter decision.
-- provider retry-after may extend delay but is still capped by configured max.
+- injected credential resolver and transport; WS10 does not own vault storage;
+- exact canonical bytes are signed and sent;
+- provider credential headers cannot override Forge delivery/idempotency/signature headers;
+- CR/LF header injection rejected;
+- redirect mode is `manual`; any 3xx is dead-lettered so an allowlisted endpoint cannot redirect execution to localhost/private targets;
+- `credentials: omit`, `cache: no-store`;
+- bounded Retry-After parsing;
+- returned execution result contains no credential material.
 
-Persistence of delivery attempts, replay authorization and physical DLQ bindings remain follow-up work coordinated with WS12.
+### Inbound webhook contract
 
-## Tests / evidence
+`inbound.ts`
 
-Added `server/tests/integration-hub.test.mjs` covering:
+- bounded provider/endpoint/signature policy;
+- generic constant-time HMAC-SHA256 verification;
+- byte-based payload limits;
+- JSON parse fail-closed;
+- deterministic inbound identity scoped to provider + endpoint + exact raw bytes.
 
-- outbound URL allowlist/security rejection;
-- secret reference requirement;
-- event subscription matching/tenant filtering;
-- mapping + required source + prototype-pollution rejection;
-- bounded retry/dead-letter decisions;
-- deterministic delivery ID, canonical JSON and HMAC headers.
+Facebook conformance regression verifies the generic HMAC contract matches the existing provider-specific implementation without moving WS16 code into WS10.
 
-Validation status in this connector session:
+### Mapping and external sync
 
-- exact GitHub diff reviewed;
-- branch was `ahead 5 / behind 0` against `main@bbe3494bcfbb8a3ce09a5ff4bbb839dfcf9e47e9` immediately before PR creation;
-- GitHub development workflow runs for implementation head: none, consistent with the repository build/deploy-only Actions policy;
-- executable build/tests: **NOT RUN** because this environment has no repository checkout/dependency tree and direct GitHub clone/DNS is unavailable. Do not treat added tests as PASS until run on an exact checkout.
+- `mapping.ts`: versioned mapping spec, event scope, apply/fingerprint/upgrade guard.
+- `sync.ts`: optimistic external cursor checkpoint, bounded page contract, idle/running/retry/succeeded/error/disabled lifecycle, explicit retry timing.
 
-Required review evidence before merge:
+### Delivery lifecycle, queue snapshot and recovery contract
 
-- `server`: TypeScript build/typecheck for exact PR head;
-- targeted `node --test tests/integration-hub.test.mjs` after build;
-- relevant existing jobs/outbox regression to ensure no contract collision;
-- security review of outbound-target and signing semantics.
+- `delivery-planner.ts`: immutable `WebhookDeliveryTask` snapshot freezes target, allowlist, mapped envelope and retry policy at enqueue planning time; only `secret_ref` is retained so credential rotation can apply during later execution.
+- `lifecycle.ts`: queued -> in_flight -> retry_scheduled -> delivered/dead_letter state machine with attempt audit and actor/reason replay semantics.
+- `dlq.ts`: deterministic dead-letter identity, immutable quarantined task, audited replay request preserving logical delivery ID.
+- physical delivery-attempt rows, queue/DLQ bindings, replay worker/tooling and metrics remain WS12 ownership.
 
-## Changed zones
+### Connection health evidence
 
-- `server/packages/integration-hub/package.json`
-- `server/packages/integration-hub/src/index.ts`
-- `server/tests/integration-hub.test.mjs`
-- this workstream handoff file
+`health.ts`
 
-No migration, shared document-kernel code, auth/IAM implementation, SRE deploy config, client runtime or production configuration changed.
+- health evidence is bound to tenant, connection, connector/version and exact connection fingerprint;
+- stale evidence from changed config/secret reference is rejected;
+- unhealthy/expired/future evidence fails closed.
+
+This provides a deterministic activation prerequisite seam without inventing the credential vault or provider network orchestration in WS10.
+
+## Canonical subscription configuration
+
+First-party metadata app: `server/apps-src/integration-hub/`.
+
+- role: `Integration Admin` plus `System Manager`;
+- current nav surfaces canonical `Integration Subscription` only;
+- no fake delivery-log/retry-queue UI is exposed before physical WS12 persistence exists;
+- no plaintext credential field exists; metadata contains only `secret_ref`;
+- JSON form fields are normalized from MetaForge TextArea strings before validation/persistence.
+
+`IntegrationSubscriptionController` enforces:
+
+- create always starts `draft`;
+- submit/cancel lifecycle is forbidden; this is a configuration state machine, not a submittable business document;
+- active target/auth/mapping/retry config cannot be edited;
+- config changes must be saved while inactive before a separate activation mutation;
+- status transitions require explicit reason and expected-state semantics;
+- target/auth/allowlist/mapping/retry invariants are validated server-side;
+- mutation remains inside `DocumentKernel` and emits normal DomainEvent/outbox evidence.
+
+`subscription-store.ts` reads active subscriptions from canonical `documents`; it does not create a second configuration source of truth. Its D1 reader is tenant + doctype + `status='active'` scoped, reads at most 5,001 rows and fails closed above 5,000 instead of silently truncating dispatch coverage. Non-draft docstatus/cross-tenant/inactive/status-mismatched data fails closed.
+
+### Shared registry composition intentionally not taken
+
+WS10 briefly identified the required registration point in `server/apps/tenant-worker/src/aggregate-do.ts`, then reverted that source change after auditing WS00 PR `#306`, which actively owns the AggregateCoordinator/document-kernel hotspot.
+
+Dependency Request was posted to **WS00 PR #306**: compose `registerIntegrationHubControllers(...)` into the canonical registry before `GenericMetadataController` fallback after WS00 coordination lands. WS10 does not modify that hotspot in this checkpoint.
+
+## Security boundary
+
+- External targets require explicit HTTPS allowlist and manual-redirect handling.
+- Client cannot select tenant in WS10 API contracts; tenant is trusted server context.
+- `Integration Admin` / `System Manager` permission contract is server-side, not merely nav visibility.
+- Authenticated connectors require a credential reference; provider secrets are never stored in subscription/connection config.
+- Delivery/replay objects contain `secret_ref`, never secret values.
+- Replay requires actor + reason and keeps immutable delivery payload/target semantics.
+- No production secret, DNS, customer data or provider endpoint was touched.
+
+## Dependency Requests recorded
+
+### WS00 — architecture/kernel
+
+PR **#306** comment recorded. Requested only the controller-registry composition seam after WS00 lands. No kernel contract or AggregateCoordinator ownership transfer requested.
+
+### WS11 — security/IAM/SaaS
+
+PR **#317** comment recorded. Required shared contract: tenant-bound credential vault for API-key/OAuth2/service-account material with authorized create/read-for-use/rotate/revoke/audit semantics. WS10 consumes `secret_ref` / resolver only and will not create parallel storage.
+
+### WS12 — SRE/release/data safety
+
+PR **#320** comment recorded. WS10 now supplies task/lifecycle/DLQ/replay contracts. Required WS12 implementation: physical attempt persistence, queue/DLQ binding, quarantine/replay tooling, metrics/alerts and operational recovery observability.
+
+### WS01 / WS16
+
+- WS01 owns bank/e-invoice/tax legal/accounting state; WS10 provider adapters must populate those domain boundaries rather than duplicate them.
+- WS16 owns Facebook/social business flow; current Facebook implementation is conformance evidence and a future consumer of the generic adapter seam.
 
 ## Legacy PR disposition
 
-- PR `#286` — TT99 localization + tax/e-invoice controls, primary owner WS01, WS10 secondary: **REUSE as downstream domain contract; no WS10 cherry-pick**. Exact diff contains E-Invoice evidence metadata/workflow and explicitly leaves provider/tax-authority integration to a later integration path. WS01 remains owner of legal/accounting semantics; future WS10 provider adapter should populate its provider/status/hash boundary rather than duplicate the E-Invoice domain model.
-- Search of legacy PRs for generic `integration`, `webhook` and `outbox` found no substantive WS10-primary connector-platform implementation to reuse/cherry-pick.
+- PR `#286` TT99 + tax/e-invoice: **REUSE as downstream domain contract; no WS10 cherry-pick**. Its E-Invoice record is legal/accounting evidence owned by WS01 and explicitly leaves provider/tax-authority transport for integration wiring.
+- Search of generic integration/webhook/outbox legacy PRs found no substantive WS10-primary connector-platform implementation worth reusing wholesale.
 
-## Dependency requests / blockers
+## Validation / evidence
 
-- **WS00**: preserve/version the canonical `DomainEvent` contract before external subscription persistence/wiring is considered stable.
-- **WS11**: define credential reference/vault lifecycle, rotation, API-key/OAuth/service-account access contract. WS10 must not create a parallel secret store.
-- **WS12**: define generic delivery-attempt persistence/observability, queue retry/DLQ/replay ownership and metrics/recovery contract.
-- **WS01**: e-invoice/bank/tax domain owns legal state and reconciliation; WS10 supplies transport/provider seams only.
-- **WS16**: Facebook/social provider implementation is useful evidence/consumer, but generic connector primitive stays in WS10.
-- Tenant migration slot intentionally not consumed in this slice while accounting work is active; generic subscription/delivery persistence requires exact-main migration coordination later.
+Added targeted regressions under `server/tests/integration-hub*.test.mjs` covering:
 
-## Independent continuation slices
+- target allowlist / SSRF-oriented target guards / manual redirect block;
+- mapping safety/version/fingerprint;
+- deterministic delivery and inbound identity;
+- HMAC signing and Facebook signature conformance;
+- retry / Retry-After / dead-letter / replay semantics;
+- catalog/version/provider adapter conformance;
+- external sync cursor/state transitions;
+- trusted-tenant API and role boundary;
+- connection plaintext-secret rejection and health fingerprint freshness;
+- subscription controller lifecycle and separate activation;
+- MetaForge JSON TextArea string normalization;
+- targeted active-subscription read, scan bound, tenant/status/docstatus fail-closed behavior;
+- first-party app metadata and secret-field absence.
 
-These do **not** require waiting for every dependency above and should be worked next where repo evidence permits:
+`server/package.json` now includes `apps-src/integration-hub --check` in the first-party app pack gate.
 
-1. deepen connector catalog/manifest contract without owning credential storage;
-2. define permission-enforced Integration Hub API boundary using existing auth context, without changing WS11 internals;
-3. expand mapping/transformation validation, versioning and compatibility tests;
-4. add provider-adapter interface and deterministic executor abstraction with injected secret resolver/transport, without implementing a vault or production network calls;
-5. audit/import existing Facebook provider path against the generic interface and prepare adapter conformance tests;
-6. specify/persist delivery audit only after migration ownership and WS12 persistence contract are concrete;
-7. keep legacy/provider migrations as dependency requests instead of blocking all WS10 progress.
+### Executable validation boundary
 
-## Next convergence slice
+- Exact branch checkout from the connector shell was retried and still fails because `github.com` DNS cannot resolve.
+- Full `server` TypeScript build/test/app-pack and existing jobs/outbox regression: **NOT RUN** in this environment.
+- Static exact-source audit did catch and fix:
+  - `exactOptionalPropertyTypes` optional-field handling in external sync state;
+  - `JsonObject` mapping type compatibility;
+  - MetaForge JSON TextArea string-vs-array mismatch;
+  - active subscription broad-scan truncation risk;
+  - invalid docstatus cast;
+  - Retry-After HTTP-date fixture date label.
+- Do not promote RC/Hardened or merge from test existence alone.
 
-After shared dependency contracts are concrete: persist tenant-scoped connector/subscription + delivery attempt/audit records, expose full permission-enforced Integration Hub APIs, wire outbox event -> subscription -> delivery queue -> signed executor -> retry/DLQ/replay, then migrate Facebook/provider-specific seams incrementally instead of rewriting them wholesale.
+## Changed zones
+
+- `server/packages/integration-hub/**`
+- `server/apps-src/integration-hub/**`
+- `server/tests/integration-hub*.test.mjs`
+- one `server/package.json` first-party app pack-gate entry
+- this workstream handoff
+
+No migration, document-kernel source, auth/IAM implementation, WS12 operational worker/config, shared frontend runtime, production config or provider-specific business code remains changed in the final WS10 diff.
+
+## Remaining work after autonomous convergence
+
+No further meaningful independent WS10 wiring remains without taking another workstream's shared contract:
+
+1. **WS00 dependency**: controller registry composition into canonical AggregateCoordinator.
+2. **WS11 dependency**: real credential vault/resolver lifecycle for API key/OAuth/service account.
+3. **WS12 dependency**: physical delivery-attempt/audit persistence + queue/DLQ/replay/observability implementation.
+4. After 1–3 land, WS10 can wire the production-shaped path:
+   `outbox DomainEvent -> active subscription reader -> immutable delivery task -> queue -> credential resolver -> signed executor -> attempt audit -> retry/DLQ/replay`.
+5. Then migrate Facebook and future bank/e-invoice/shipping providers incrementally through the adapter contract and add end-to-end exact-head evidence.
+
+These are shared-dependency integrations, not ordinary unfinished local TODOs. The independent provider-agnostic WS10 contract/runtime scope is now handed off for review.
 
 ## Merge / deploy boundary
 
-This is backend/platform behavior, not UI-only. PR `#308` may remain open as a checkpoint while WS10 continues independent work. **Do not merge or deploy non-UI changes without explicit user approval. Do not stop merely because merge/deploy is not yet authorized.**
+Backend/platform CRITICAL. PR `#308` remains Draft/review checkpoint. **Do not merge or deploy without explicit user approval after exact-head executable validation and dependency reconciliation.**
