@@ -14,6 +14,10 @@ import {
   type SupplierContractData,
   type SupplierQualificationData,
 } from "./supplier-lifecycle-controllers.js";
+import {
+  validatePurchaseOrderSupplierSelection,
+  type SupplierSelectionData,
+} from "./supplier-selection-controller.js";
 import { assertSupplierEligible } from "./supplier-policy.js";
 import type {
   PurchaseOrderData,
@@ -87,9 +91,9 @@ export class ProcurementSupplierQuotationController extends SupplierQuotationCon
 }
 
 /**
- * Validates supplier eligibility, optional contract release and selected quotation only after the
- * rollout controller has built the canonical PO plan. No writes have happened yet, so every
- * mismatch fails the whole command before kernel execution.
+ * Validates supplier eligibility, optional contract release, optional approved selection and the
+ * selected quotation only after the rollout controller has built the canonical PO plan. No writes
+ * have happened yet, so every mismatch fails the whole command before kernel execution.
  */
 export class ProcurementPurchaseOrderController extends RolloutPurchaseOrderController {
   override async buildPlan(context: ControllerContext<PurchaseOrderData>): Promise<MutationPlan<PurchaseOrderData>> {
@@ -143,7 +147,24 @@ export class ProcurementPurchaseOrderController extends RolloutPurchaseOrderCont
       );
     }
 
-    if (!data.supplier_quotation) return plan;
+    const selectionName = typeof raw.supplier_selection === "string" ? raw.supplier_selection.trim() : "";
+    let selection: SupplierSelectionData | null = null;
+    if (selectionName) {
+      const document = await context.reader.getDocument<SupplierSelectionData>(
+        context.command.tenant_id,
+        "Supplier Selection",
+        selectionName,
+      );
+      if (!document || document.docstatus !== 1) {
+        throw errors.reference(`Submitted Supplier Selection ${selectionName} is required`);
+      }
+      selection = document.data;
+    }
+
+    if (!data.supplier_quotation) {
+      if (selectionName) throw errors.reference(`Purchase Order using Supplier Selection ${selectionName} must reference its Supplier Quotation`);
+      return plan;
+    }
     const quotationName = data.supplier_quotation;
     const quotation = await context.reader.getDocument<SupplierQuotationData>(
       context.command.tenant_id,
@@ -154,6 +175,9 @@ export class ProcurementPurchaseOrderController extends RolloutPurchaseOrderCont
       throw errors.reference(`Submitted Supplier Quotation ${quotationName} is required`);
     }
     validatePurchaseOrderAgainstQuotation(data, quotationName, quotation.data);
+    if (selectionName && selection) {
+      validatePurchaseOrderSupplierSelection(data, selectionName, selection);
+    }
     return plan;
   }
 }
