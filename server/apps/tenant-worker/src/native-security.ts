@@ -3,7 +3,6 @@ import {
   verifyTrustedIdentity,
   type TrustedIdentityKey,
 } from "../../../packages/auth/src/index.js";
-import { errors } from "../../../packages/core/src/index.js";
 import type { TenantEnv } from "./env.js";
 
 const EXACT_PRIVILEGED_NATIVE_WRITES = new Set([
@@ -49,20 +48,10 @@ export async function assertRecentNativeSecurityAuthentication(
   const identity = await verifyTrustedIdentity(request, {
     tenantId,
     traceId,
-    ...(keys.length > 0 ? { keys } : env.INTERNAL_AUTH_SECRET ? { masterSecret: env.INTERNAL_AUTH_SECRET } : {}),
+    ...(keys.length > 0 ? { keys } : { masterSecret: env.INTERNAL_AUTH_SECRET }),
     nowSeconds,
   });
   assertRecentAuthenticationContext(identity.authentication, nowSeconds);
-}
-
-export function resolveNativeSecurityTenant(request: Request, env: TenantEnv): string {
-  const routed = request.headers.get("x-cloudforge-tenant");
-  if (env.TENANT_ID && routed && routed !== env.TENANT_ID) {
-    throw errors.misconfigured("Tenant binding mismatch");
-  }
-  const tenantId = env.TENANT_ID ?? routed;
-  if (!tenantId) throw errors.authentication("Missing tenant context");
-  return tenantId;
 }
 
 function trustedIdentityKeys(env: TenantEnv): TrustedIdentityKey[] {
