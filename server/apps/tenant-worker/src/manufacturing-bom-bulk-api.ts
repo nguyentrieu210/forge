@@ -1,4 +1,4 @@
-import type { Actor, CanonicalDocument, JsonObject } from "../../../packages/contracts/src/index.js";
+import type { Actor, JsonObject } from "../../../packages/contracts/src/index.js";
 import { errors, jsonResponse, readJson } from "../../../packages/core/src/index.js";
 import {
   buildBulkBomDraftDocument,
@@ -33,7 +33,7 @@ export interface ManufacturingBomBulkApiContext {
   actor: Actor;
   permissions: Pick<MetadataPermissionService, "assert">;
   traceId: string;
-  listBomDocuments(): Promise<Array<CanonicalDocument<JsonObject>>>;
+  findCanonicalRevisions(document: JsonObject): Promise<JsonObject[]>;
   createCanonicalDraft(document: JsonObject): Promise<Response>;
 }
 
@@ -48,9 +48,9 @@ export function isManufacturingBomBulkFrappePath(pathname: string): boolean {
 /**
  * Bounded input seam for BOM spreadsheet-style entry.
  *
- * Preview is pure. Create is Draft-only and delegates the actual write to the ordinary
- * `/api/resource/Bill of Materials` path supplied by the Worker, so naming, permission,
- * controller normalization, Durable Object serialization and lifecycle stay canonical.
+ * Preview is pure. Create is Draft-only and delegates both replay reads and the actual
+ * write to the ordinary Frappe BOM resource path supplied by the Worker. That keeps
+ * naming, User Permission scope, controller normalization and lifecycle canonical.
  */
 export async function routeManufacturingBomBulkApi(
   request: Request,
@@ -68,12 +68,8 @@ export async function routeManufacturingBomBulkApi(
 
   const raw = await readJson<JsonObject>(request, MAX_BODY_BYTES);
   const input = parseBulkBomInput(unwrapFrappeArgs(raw));
-  await context.permissions.assert({
-    actor: context.actor,
-    tenantId: context.tenantId,
-    doctype: BOM_DOCTYPE,
-    action: "create",
-  });
+  await context.permissions.assert({ actor: context.actor, tenantId: context.tenantId, doctype: BOM_DOCTYPE, action: "create" });
+  await context.permissions.assert({ actor: context.actor, tenantId: context.tenantId, doctype: BOM_DOCTYPE, action: "read" });
 
   if (url.pathname === PREVIEW_PATH) {
     return jsonResponse(
@@ -85,15 +81,16 @@ export async function routeManufacturingBomBulkApi(
 
   const document = buildBulkBomDraftDocument(input);
   const fingerprint = await fingerprintBulkBomDraft(input);
-  const existing = (await context.listBomDocuments()).filter((candidate) => sameRevision(candidate, document));
+  const existing = await context.findCanonicalRevisions(document);
   if (existing.length > 1) {
     throw errors.exists(`Multiple BOM documents already use ${document.item} revision ${document.revision}`);
   }
   if (existing.length === 1) {
     const current = existing[0]!;
-    if (current.docstatus === 0 && canonicalDraftMatchesBulkBomInput(input, current.data)) {
+    const docstatus = integer(current.docstatus);
+    if (docstatus === 0 && canonicalDraftMatchesBulkBomInput(input, current)) {
       return jsonResponse(
-        { message: resultShape(current.name, current.docstatus, fingerprint, document.items.length, true) },
+        { message: resultShape(text(current.name), docstatus, fingerprint, document.items.length, true) },
         200,
         { "cache-control": "private, no-store", "x-cloudforge-trace-id": context.traceId },
       );
@@ -105,9 +102,9 @@ export async function routeManufacturingBomBulkApi(
   if (!createdResponse.ok) return createdResponse;
   const createdPayload = await readResponseJson(createdResponse);
   const created = unwrapResource(createdPayload);
-  const name = typeof created.name === "string" && created.name.trim() ? created.name.trim() : "";
+  const name = text(created.name);
   if (!name) throw errors.database("Canonical BOM create returned no document name");
-  const docstatus = Number(created.docstatus ?? 0);
+  const docstatus = integer(created.docstatus);
   const bookmark = createdResponse.headers.get("x-d1-bookmark");
 
   return jsonResponse(
@@ -133,13 +130,6 @@ function resultShape(name: string, docstatus: number, fingerprint: string, rowCo
     fingerprint,
     row_count: rowCount,
   };
-}
-
-function sameRevision(candidate: CanonicalDocument<JsonObject>, input: JsonObject): boolean {
-  return candidate.doctype === BOM_DOCTYPE
-    && text(candidate.data.company) === text(input.company)
-    && text(candidate.data.item) === text(input.item)
-    && integer(candidate.data.revision) === integer(input.revision);
 }
 
 function parseBulkBomInput(body: JsonObject): BulkBomDraftInput {
