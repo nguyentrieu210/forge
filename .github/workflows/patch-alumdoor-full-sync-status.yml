@@ -1,0 +1,41 @@
+name: Record Alumdoor full sync status
+
+on:
+  push:
+    branches:
+      - chore/alumdoor-full-sync-cleanup-20260803
+    paths:
+      - .github/workflows/patch-alumdoor-full-sync-status.yml
+
+permissions:
+  contents: write
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chore/alumdoor-full-sync-cleanup-20260803
+      - name: Add production sync checkpoint
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('CURRENT_STATUS.md')
+          s = p.read_text()
+          marker = '## DONE — HRM operational 1.5\n'
+          if marker not in s:
+              raise SystemExit('status insertion marker not found')
+          section = '''## DONE — ALU full Alumdoor production sync\n\n- Production `https://alu.kairo.vn` đã full-sync thành công từ exact release `69b94ac1fe29a2ab39175e5442975a9197a0d39e`; evidence canonical: `deploy-evidence/alu-full-sync.json`.\n- Cùng một release đã đồng bộ đủ ba lớp từng bị lệch: tenant metadata/DocTypes/nav, Alumdoor app Worker và Gateway UI.\n- App metadata đã install/verify: `hrm`, `vn-accounting`, `alumdoor`; Tenant Worker, `cloudforge-app-alumdoor` và Gateway đều deploy PASS.\n- Sidebar production lấy từ current installed manifest (`sidebarFromCurrentManifest: true`); `/release.json` khớp exact SHA và bundle hash `ed328d88ad8242f5`.\n- Alumdoor package tại release gate: `alumdoor@2.2.1`, **74 DocTypes / 57 fixtures / 78 nav**. HRM gate: **36 DocTypes / 11 workflows / 19 fixtures / 39 nav**.\n- Migration diagnostic production xác nhận **45/45 migrations đã applied**, backup/plan/execute PASS; file: `deploy-evidence/alu-migrate-diagnostic.json`.\n- Release blockers đã đóng trong đợt: HRM `Leave Type` ownership, shared platform master fixtures, system external DocType check, shared role ownership, duplicate VN Accounting `/app/Payroll Entry` nav và dirty-worktree release ordering.\n- Warehouse Cash backend + VN Accounting metadata + Alumdoor integration/sidebar/UI hiện đã nằm trong production release; Payment Entry vẫn là authority cho invoice settlement.\n- Historical failure evidence được giữ để audit; one-time rollout/diagnostic workflows được xóa sau khi release PASS.\n\n'''
+          if '## DONE — ALU full Alumdoor production sync' not in s:
+              s = s.replace(marker, section + marker, 1)
+          p.write_text(s)
+      - name: Commit status checkpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add CURRENT_STATUS.md
+          git commit -m 'docs(status): record ALU full Alumdoor production sync'
+          git push origin HEAD:chore/alumdoor-full-sync-cleanup-20260803
