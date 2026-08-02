@@ -40,7 +40,7 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. 
 ## DONE — Alumdoor Warehouse Cash integration
 
 - Canonical delivery PR `#233` đã squash-merge vào `main` tại `c3dbcd20a7a88c17c1a9f10c4fff82b329e27855`.
-- Final validated feature head `162bc010692d3a2997ddbc5d60`: **6/6 required workflows PASS** theo cơ chế cũ.
+- Final validated feature head `162bc010692d3a2997ddbc9bd5e9a59e11cb5d60`: **6/6 required workflows PASS** theo cơ chế cũ.
 - Alumdoor có tab `Quỹ kho` role-gated và mở 4 DocType canonical qua generic MetaForge route: `Warehouse Cash Fund`, `Warehouse Cash Voucher`, `Warehouse Cash Transfer`, `Warehouse Cash Count`.
 - Alumdoor không copy schema/controller/ledger Finance; `server/briefs/alumdoor-v2.integrations.json` khai `vn-accounting >= 1.1.0` và 4 DocType trên là `externalDocTypes`.
 
