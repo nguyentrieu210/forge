@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Targeted SQLite regression for tenant migration 0043 migration journal."""
+"""Targeted SQLite regression for tenant migration 0053 migration journal."""
 
 import json
 import sqlite3
@@ -9,9 +9,9 @@ root = Path(__file__).resolve().parents[1]
 db = sqlite3.connect(":memory:")
 db.execute("PRAGMA foreign_keys = ON")
 
-# 0043 only depends on the core mutation receipt table; replay the canonical core first.
+# 0053 only depends on the core mutation receipt table; replay the canonical core first.
 db.executescript((root / "migrations/tenant/0001_core.sql").read_text(encoding="utf-8"))
-db.executescript((root / "migrations/tenant/0043_migration_run_journal.sql").read_text(encoding="utf-8"))
+db.executescript((root / "migrations/tenant/0053_migration_run_journal.sql").read_text(encoding="utf-8"))
 
 NOW = "2026-08-03T12:00:00Z"
 TENANT = "demo"
