@@ -19,6 +19,7 @@
     { "fieldname": "vat_method", "label": "Phương pháp VAT", "fieldtype": "Select", "options": "Khấu trừ\nTrực tiếp\nChưa xác định", "required": true },
     { "fieldname": "branch_accounting_model", "label": "Mô hình hạch toán chi nhánh", "fieldtype": "Select", "options": "Phụ thuộc\nĐộc lập\nHỗn hợp", "required": true },
     { "fieldname": "inventory_account", "label": "Tài khoản hàng tồn kho mặc định", "fieldtype": "Link", "options": "Account", "required": true },
+    { "fieldname": "cogs_account", "label": "Tài khoản giá vốn mặc định", "fieldtype": "Link", "options": "Account", "required": true },
     { "fieldname": "stock_adjustment_account", "label": "Tài khoản đối ứng điều chỉnh kho", "fieldtype": "Link", "options": "Account", "required": true },
     { "fieldname": "stock_received_but_not_billed_account", "label": "Hàng nhận chưa có hóa đơn", "fieldtype": "Link", "options": "Account", "required": true },
     { "fieldname": "internal_regulation_file", "label": "Quy chế kế toán nội bộ", "fieldtype": "Attach", "required": true },
@@ -35,5 +36,5 @@
     { "role": "Internal Auditor", "read": true, "report": true, "export": true },
     { "role": "System Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true }
   ],
-  "revision": 2
+  "revision": 3
 }
