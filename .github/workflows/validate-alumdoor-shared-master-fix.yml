@@ -1,0 +1,30 @@
+name: Validate shared master install fix
+
+on:
+  push:
+    branches:
+      - fix/alumdoor-shared-master-install-20260803
+    paths:
+      - server/apps-src/hrm/fixtures/hr-masters.json
+      - .github/workflows/validate-alumdoor-shared-master-fix.yml
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile --prefer-offline
+      - run: pnpm --filter cloudforge run build
+      - run: node server/scripts/forge-app.mjs server/apps-src/hrm --dry-run
+      - run: node server/scripts/forge-app.mjs server/apps-src/vn-accounting --dry-run
+      - run: node server/scripts/forge-app.mjs server/briefs/alumdoor-v2.json --dry-run
