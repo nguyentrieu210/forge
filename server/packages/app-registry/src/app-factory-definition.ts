@@ -76,22 +76,14 @@ function validateDefinitionPayload(
   definition: JsonObject,
   knownFields: ReadonlySet<string>,
 ): JsonObject {
-  if (definitionKind === "Decision Rules") {
-    return parseDecisionRuleSet(definition, knownFields) as unknown as JsonObject;
-  }
-  if (definitionKind === "Formula Rules") {
-    return parseFormulaRuleSet(definition, knownFields) as unknown as JsonObject;
-  }
+  if (definitionKind === "Decision Rules") return parseDecisionRuleSet(definition, knownFields) as unknown as JsonObject;
+  if (definitionKind === "Formula Rules") return parseFormulaRuleSet(definition, knownFields) as unknown as JsonObject;
 
   const approvalValue = definition.approval_plan;
   if (approvalValue === undefined) throw errors.validation("Process definition requires approval_plan");
   const approvalPlan = parseApprovalPlan(approvalValue);
-  const timerPlan = definition.timer_plan === undefined
-    ? undefined
-    : parseApprovalTimerPlan(definition.timer_plan, approvalPlan);
-  const triggerSet = definition.trigger_set === undefined
-    ? undefined
-    : parseBpmTriggerSet(definition.trigger_set, undefined, knownFields);
+  const timerPlan = definition.timer_plan === undefined ? undefined : parseApprovalTimerPlan(definition.timer_plan, approvalPlan);
+  const triggerSet = definition.trigger_set === undefined ? undefined : parseBpmTriggerSet(definition.trigger_set, undefined, knownFields);
   const allowed = new Set(["approval_plan", "timer_plan", "trigger_set"]);
   for (const property of Object.keys(definition)) {
     if (!allowed.has(property)) throw errors.validation(`Process definition property is not supported: ${property}`);
@@ -103,15 +95,10 @@ function validateDefinitionPayload(
   };
 }
 
-function assertStatusTransition(
-  current: AppFactoryDefinitionStatus,
-  next: AppFactoryDefinitionStatus,
-  reason: string | undefined,
-): void {
+function assertStatusTransition(current: AppFactoryDefinitionStatus, next: AppFactoryDefinitionStatus, reason: string | undefined): void {
   if (current === next) return;
   if (!reason) throw errors.validation("status_reason is required when App Factory Definition status changes");
-  const allowed = current === "Draft" && next === "Active"
-    || current === "Active" && next === "Retired";
+  const allowed = current === "Draft" && next === "Active" || current === "Active" && next === "Retired";
   if (!allowed) throw errors.lifecycle(`App Factory Definition cannot change ${current} -> ${next}`);
 }
 
@@ -121,7 +108,7 @@ export class AppFactoryDefinitionController implements DocumentController<AppFac
   constructor(private readonly metadata: MetadataStore) {}
 
   async buildPlan(context: ControllerContext<AppFactoryDefinitionData>): Promise<MutationPlan<AppFactoryDefinitionData>> {
-    if (context.command.action === "submit" || context.command.action === "cancel" || context.command.action === "amend") {
+    if (context.command.action === "submit" || context.command.action === "cancel") {
       throw errors.lifecycle("App Factory Definition is lifecycle-managed, not submittable");
     }
     const existing = context.existing as CanonicalDocument<AppFactoryDefinitionData> | null;
@@ -144,9 +131,6 @@ export class AppFactoryDefinitionController implements DocumentController<AppFac
       if (definitionKey !== existing.data.definition_key) throw errors.validation("definition_key cannot change after creation");
       if (definitionKind !== existing.data.definition_kind) throw errors.validation("definition_kind cannot change after creation");
       if (targetDoctype !== existing.data.target_doctype) throw errors.validation("target_doctype cannot change after creation");
-      if (existing.data.status !== "Draft" && JSON.stringify(input.definition_json ?? existing.data.definition_json) !== JSON.stringify(existing.data.definition_json)) {
-        throw errors.validation("Retire/replace an App Factory Definition before changing its active definition_json");
-      }
     }
 
     const all = await context.reader.listDocumentsByDoctype<AppFactoryDefinitionData>(context.command.tenant_id, this.doctype);
@@ -157,7 +141,6 @@ export class AppFactoryDefinitionController implements DocumentController<AppFac
     const versionNo = existing?.data.version_no ?? (Math.max(0, ...siblings.map((document) => Number(document.data.version_no) || 0)) + 1);
     if (!Number.isSafeInteger(versionNo) || versionNo <= 0) throw errors.validation("App Factory Definition version_no is invalid");
     if (input.version_no !== undefined && Number(input.version_no) !== versionNo) throw errors.validation("version_no is server-assigned and cannot be changed");
-
     if (nextStatus === "Active" && siblings.some((document) => document.data.status === "Active")) {
       throw errors.validation(`Retire the active ${definitionKind} definition for ${definitionKey} before activating another version`);
     }
@@ -171,6 +154,9 @@ export class AppFactoryDefinitionController implements DocumentController<AppFac
     const definitionInput = parseJsonObject(input.definition_json ?? existing?.data.definition_json, "definition_json");
     const knownFields = new Set(["name", "owner", "status", "docstatus", ...targetMeta.fields.map((field) => field.fieldname)]);
     const definitionJson = validateDefinitionPayload(definitionKind, definitionInput, knownFields);
+    if (existing?.data.status !== "Draft" && JSON.stringify(definitionJson) !== JSON.stringify(existing.data.definition_json)) {
+      throw errors.validation("Retire/replace an App Factory Definition before changing its active definition_json");
+    }
 
     const data: AppFactoryDefinitionData = {
       definition_key: definitionKey,
@@ -207,10 +193,7 @@ export class AppFactoryDefinitionController implements DocumentController<AppFac
     return {
       command: context.command,
       document,
-      gl_entries: [],
-      stock_entries: [],
-      payment_entries: [],
-      fulfillment_entries: [],
+      gl_entries: [], stock_entries: [], payment_entries: [], fulfillment_entries: [],
       events: [domainEvent({
         type: eventType,
         tenantId: context.command.tenant_id,
