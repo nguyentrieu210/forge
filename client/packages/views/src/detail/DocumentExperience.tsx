@@ -85,6 +85,7 @@ export function DocumentExperience({
     <div
       className="mf-document-experience relative flex h-full min-h-0 flex-col overflow-hidden bg-muted/10"
       data-archetype={presentation.archetype}
+      data-context-open={contextOpen ? "true" : "false"}
     >
       <style>{`
         .mf-document-experience .mf-form-header > div:first-child > div:first-child > div:first-child > span:first-child,
@@ -148,6 +149,10 @@ export function DocumentExperience({
             padding: 0;
             gap: .25rem;
             background: transparent;
+          }
+
+          .mf-document-experience[data-context-open="true"] .mf-form-header > div:first-child {
+            right: 18.85rem;
           }
 
           .mf-document-experience .mf-form-header > div:first-child > div:first-child {
