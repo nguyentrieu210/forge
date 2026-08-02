@@ -1,6 +1,6 @@
 # CURRENT STATUS
 
-Ngày cập nhật: **2026-08-02**.
+Ngày cập nhật: **2026-08-03**.
 
 GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. Không hardcode exact current `main` vào status dài hạn; phải đọc GitHub khi bắt đầu/tiếp tục.
 
@@ -9,6 +9,15 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `main`.
 - Warehouse Cash Alumdoor merge checkpoint: `c3dbcd20a7a88c17c1a9f10c4fff82b329e27855`.
+
+## DONE — decimal display hotfix
+
+- Branch: `hotfix/ui-decimal-display`, clean-based on `main@4c816fd45a1944aa90abb448b436890bb45c114b`.
+- Root cause: `GroupedNumberInput` dùng `toFixed(precision)` trực tiếp, nên Float/Currency/Percent có precision 6 hiển thị `22,000000` dù giá trị thật là `22`.
+- Fix tại `client/packages/controls/src/controls.tsx`: precision chỉ là giới hạn tối đa; phần 0 thập phân dư được trim khi render, giữ nguyên rounding theo precision và không đổi numeric value gửi ra form/backend.
+- Expected display: `22 -> 22`, `22.5 -> 22,5`, `22.125 -> 22,125` với locale Việt Nam.
+- Implementation commit: `3cf1f770a610e0dd215df1b0999b76557f51469d`.
+- Validation: diff scope chỉ 1 client file trước docs; branch ahead main 1 commit, behind 0 tại thời điểm kiểm tra. Không có local workspace trong phiên connector nên chưa chạy package typecheck/browser test trực tiếp.
 
 ## DONE — exact production release evidence
 
