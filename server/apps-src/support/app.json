@@ -13,6 +13,7 @@
         { "field": "priority", "label": "Ưu tiên", "type": "Data" },
         { "field": "team", "label": "Nhóm", "type": "Link", "options": "Support Team" },
         { "field": "assignee", "label": "Người xử lý", "type": "Link", "options": "User" },
+        { "field": "opened_at", "label": "Mở lúc", "type": "Datetime" },
         { "field": "workflow_state", "label": "Trạng thái", "type": "Data" },
         { "field": "sla_state", "label": "SLA", "type": "Data" }
       ],
