@@ -1,0 +1,188 @@
+[
+  {
+    "record_type": "Website Theme Preset",
+    "name": "business-blue",
+    "data": {
+      "version": 1,
+      "label": "Doanh nghiệp xanh",
+      "tokens": {
+        "primary": "#1d4ed8",
+        "secondary": "#0f766e",
+        "background": "#ffffff",
+        "surface": "#f8fafc",
+        "text": "#0f172a",
+        "muted": "#64748b",
+        "heading_font": "system",
+        "body_font": "system",
+        "radius": "soft",
+        "density": "comfortable"
+      }
+    }
+  },
+  {
+    "record_type": "Website Theme Preset",
+    "name": "industrial-dark",
+    "data": {
+      "version": 1,
+      "label": "Công nghiệp tối",
+      "tokens": {
+        "primary": "#f59e0b",
+        "secondary": "#f8fafc",
+        "background": "#111827",
+        "surface": "#1f2937",
+        "text": "#f8fafc",
+        "muted": "#cbd5e1",
+        "heading_font": "system",
+        "body_font": "system",
+        "radius": "square",
+        "density": "compact"
+      }
+    }
+  },
+  {
+    "record_type": "Website Theme Preset",
+    "name": "warm",
+    "data": {
+      "version": 1,
+      "label": "Ấm áp",
+      "tokens": {
+        "primary": "#c2410c",
+        "secondary": "#a16207",
+        "background": "#fffbeb",
+        "surface": "#fff7ed",
+        "text": "#431407",
+        "muted": "#78716c",
+        "heading_font": "serif",
+        "body_font": "system",
+        "radius": "round",
+        "density": "comfortable"
+      }
+    }
+  },
+  {
+    "record_type": "Website Template",
+    "name": "business-landing",
+    "data": {
+      "version": 1,
+      "label": "Landing doanh nghiệp",
+      "pages": [
+        {
+          "slug": "home",
+          "title": "Trang chủ",
+          "show_in_nav": 1,
+          "nav_label": "Trang chủ",
+          "nav_order": 1,
+          "blocks": [
+            { "type": "hero", "eyebrow": "GIẢI PHÁP CHO DOANH NGHIỆP", "heading": "Xây niềm tin từ lần truy cập đầu tiên", "body": "Giới thiệu doanh nghiệp, sản phẩm và năng lực bằng một website kết nối trực tiếp với Forge.", "button_label": "Liên hệ", "button_url": "/contact", "tone": "primary", "align": "left" },
+            { "type": "features", "heading": "Năng lực nổi bật", "body": "Chất lượng ổn định\nQuy trình rõ ràng\nHỗ trợ nhanh chóng", "columns": 3 },
+            { "type": "cta", "heading": "Bắt đầu một dự án mới", "body": "Để lại thông tin để đội ngũ liên hệ.", "button_label": "Liên hệ ngay", "button_url": "/contact", "tone": "muted", "align": "center" }
+          ]
+        },
+        {
+          "slug": "about",
+          "title": "Giới thiệu",
+          "show_in_nav": 1,
+          "nav_label": "Giới thiệu",
+          "nav_order": 2,
+          "blocks": [
+            { "type": "text", "heading": "Về chúng tôi", "body": "Thay nội dung này bằng lịch sử, năng lực và cam kết của doanh nghiệp." }
+          ]
+        },
+        {
+          "slug": "contact",
+          "title": "Liên hệ",
+          "show_in_nav": 1,
+          "nav_label": "Liên hệ",
+          "nav_order": 9,
+          "blocks": [
+            { "type": "contact", "heading": "Liên hệ với chúng tôi", "body": "Thông tin liên hệ lấy từ cấu hình website.", "tone": "muted" }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "record_type": "Website Template",
+    "name": "catalogue",
+    "data": {
+      "version": 1,
+      "label": "Catalogue sản phẩm",
+      "pages": [
+        {
+          "slug": "home",
+          "title": "Trang chủ",
+          "show_in_nav": 1,
+          "nav_label": "Trang chủ",
+          "nav_order": 1,
+          "blocks": [
+            { "type": "hero", "eyebrow": "CATALOGUE", "heading": "Sản phẩm của doanh nghiệp", "body": "Danh mục public lấy từ dữ liệu đã được công bố trong Forge.", "button_label": "Xem sản phẩm", "button_url": "/products", "tone": "primary" },
+            { "type": "product-grid", "heading": "Sản phẩm nổi bật", "source": "storefront-catalog", "limit": 6, "columns": 3 }
+          ]
+        },
+        {
+          "slug": "products",
+          "title": "Sản phẩm",
+          "show_in_nav": 1,
+          "nav_label": "Sản phẩm",
+          "nav_order": 2,
+          "blocks": [
+            { "type": "product-grid", "heading": "Danh mục sản phẩm", "source": "storefront-catalog", "limit": 12, "columns": 3 }
+          ]
+        },
+        {
+          "slug": "contact",
+          "title": "Liên hệ",
+          "show_in_nav": 1,
+          "nav_label": "Liên hệ",
+          "nav_order": 9,
+          "blocks": [
+            { "type": "contact", "heading": "Cần báo giá?", "body": "Liên hệ trực tiếp với doanh nghiệp để được tư vấn.", "tone": "muted" }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "record_type": "Website Template",
+    "name": "sales",
+    "data": {
+      "version": 1,
+      "label": "Website bán hàng",
+      "pages": [
+        {
+          "slug": "home",
+          "title": "Trang chủ",
+          "show_in_nav": 1,
+          "nav_label": "Trang chủ",
+          "nav_order": 1,
+          "blocks": [
+            { "type": "hero", "eyebrow": "MUA HÀNG TRỰC TUYẾN", "heading": "Chọn sản phẩm, gửi đơn và theo dõi ngay trên Forge", "body": "Giá và đơn hàng vẫn được server kiểm soát qua Storefront canonical.", "button_label": "Mở cửa hàng", "button_url": "/shop", "tone": "primary" },
+            { "type": "product-grid", "heading": "Sản phẩm đang bán", "source": "storefront-catalog", "limit": 6, "columns": 3 },
+            { "type": "cta", "heading": "Đã đặt hàng?", "body": "Theo dõi trạng thái bằng mã đơn và số điện thoại.", "button_label": "Tra cứu đơn", "button_url": "/shop/track", "tone": "muted", "align": "center" }
+          ]
+        },
+        {
+          "slug": "products",
+          "title": "Sản phẩm",
+          "show_in_nav": 1,
+          "nav_label": "Sản phẩm",
+          "nav_order": 2,
+          "blocks": [
+            { "type": "product-grid", "heading": "Danh mục sản phẩm", "source": "storefront-catalog", "limit": 12, "columns": 3 },
+            { "type": "cta", "heading": "Mua trực tuyến", "button_label": "Đi tới cửa hàng", "button_url": "/shop", "tone": "primary", "align": "center" }
+          ]
+        },
+        {
+          "slug": "contact",
+          "title": "Liên hệ",
+          "show_in_nav": 1,
+          "nav_label": "Liên hệ",
+          "nav_order": 9,
+          "blocks": [
+            { "type": "contact", "heading": "Cần tư vấn trước khi mua?", "body": "Dùng thông tin liên hệ của doanh nghiệp bên dưới.", "tone": "muted" }
+          ]
+        }
+      ]
+    }
+  }
+]
