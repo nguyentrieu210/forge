@@ -38,6 +38,8 @@ const WAREHOUSE_CASH_ROLES = new Set([
   "General Accountant",
   "Chief Accountant",
   "Kế toán trưởng",
+  "Kế toán tổng hợp",
+  "Kế toán",
   "Accounts Manager",
   "System Manager",
   "Administrator",
