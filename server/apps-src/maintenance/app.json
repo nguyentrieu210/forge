@@ -1,17 +1,53 @@
 {
   "id": "maintenance",
   "name": "Bảo trì, Bảo hành & Dịch vụ hiện trường",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "requires": [],
   "externalDocTypes": [
     { "name": "Maintenance Priority", "kind": "master", "app": "platform" },
     { "name": "Serial No", "kind": "transaction", "app": "stock" },
     { "name": "Delivery Note", "kind": "transaction", "app": "selling" }
   ],
+  "reports": [
+    {
+      "name": "Service Order Control",
+      "label": "Kiểm soát lệnh dịch vụ",
+      "doctype": "Service Order",
+      "columns": [
+        { "field": "maintenance_request", "label": "Yêu cầu", "type": "Link", "options": "Maintenance Request" },
+        { "field": "customer", "label": "Khách hàng", "type": "Link", "options": "Customer" },
+        { "field": "technician", "label": "Kỹ thuật viên", "type": "Link", "options": "Service Technician" },
+        { "field": "scheduled_start", "label": "Bắt đầu kế hoạch", "type": "Datetime" },
+        { "field": "scheduled_end", "label": "Kết thúc kế hoạch", "type": "Datetime" },
+        { "field": "workflow_state", "label": "Trạng thái", "type": "Data" }
+      ],
+      "order_by": { "column": "scheduled_start", "direction": "asc" },
+      "filters": ["customer", "technician", "service_contract", "warranty_claim", "workflow_state"],
+      "limit": 200
+    },
+    {
+      "name": "Warranty Claim Control",
+      "label": "Kiểm soát bảo hành",
+      "doctype": "Warranty Claim",
+      "columns": [
+        { "field": "claim_date", "label": "Ngày", "type": "Date" },
+        { "field": "customer", "label": "Khách hàng", "type": "Link", "options": "Customer" },
+        { "field": "item", "label": "Sản phẩm", "type": "Link", "options": "Item" },
+        { "field": "serial_no", "label": "Serial", "type": "Link", "options": "Serial No" },
+        { "field": "eligibility_result", "label": "Quyền lợi", "type": "Data" },
+        { "field": "workflow_state", "label": "Trạng thái", "type": "Data" }
+      ],
+      "order_by": { "column": "claim_date", "direction": "desc" },
+      "filters": ["customer", "service_contract", "eligibility_result", "workflow_state"],
+      "limit": 200
+    }
+  ],
   "nav": [
     { "key": "Maintenance Request", "label": "Yêu cầu dịch vụ", "kind": "doctype", "icon": "wrench", "group": "Dịch vụ" },
     { "key": "Warranty Claim", "label": "Yêu cầu bảo hành", "kind": "doctype", "icon": "shield-check", "group": "Dịch vụ" },
+    { "key": "warranty-claim-control", "label": "Kiểm soát bảo hành", "kind": "route", "route": "/report/Warranty%20Claim%20Control", "permission_doctype": "Warranty Claim", "icon": "shield-alert", "group": "Dịch vụ" },
     { "key": "Service Order", "label": "Lệnh dịch vụ", "kind": "doctype", "icon": "clipboard-check", "group": "Dịch vụ" },
+    { "key": "service-order-control", "label": "Kiểm soát lệnh dịch vụ", "kind": "route", "route": "/report/Service%20Order%20Control", "permission_doctype": "Service Order", "icon": "list-checks", "group": "Dịch vụ" },
     { "key": "Service Contract", "label": "Hợp đồng dịch vụ", "kind": "doctype", "icon": "file-check", "group": "Thiết lập dịch vụ" },
     { "key": "Service Technician", "label": "Kỹ thuật viên", "kind": "doctype", "icon": "hard-hat", "group": "Thiết lập dịch vụ" }
   ],
