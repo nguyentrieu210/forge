@@ -1,0 +1,9 @@
+{
+  "name":"Duyệt yêu cầu nội bộ",
+  "document_type":"Internal Request",
+  "state_field":"workflow_state",
+  "is_active":true,
+  "states":[{"state":"Nháp","docstatus":0,"allow_edit":"Workplace User"},{"state":"Chờ duyệt","docstatus":0,"allow_edit":"Workplace Manager"},{"state":"Đã duyệt","docstatus":1,"allow_edit":"Workplace Manager"},{"state":"Từ chối","docstatus":2,"allow_edit":"Workplace Manager"}],
+  "transitions":[{"state":"Nháp","action":"Gửi duyệt","next_state":"Chờ duyệt","allowed_role":"Workplace User"},{"state":"Chờ duyệt","action":"Phê duyệt","next_state":"Đã duyệt","allowed_role":"Workplace Manager","allow_self_approval":false},{"state":"Chờ duyệt","action":"Từ chối","next_state":"Từ chối","allowed_role":"Workplace Manager"}],
+  "revision":1
+}
