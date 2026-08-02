@@ -23,7 +23,7 @@ const definition = {
   model: "sales.summary",
   dimensions: ["posting_date", "branch"],
   metrics: ["revenue_minor"],
-  order_by: [{ id: "posting_date", direction: "asc" }],
+  order_by: [{ id: "posting_date", direction: "asc" }, { id: "branch", direction: "asc" }],
   maxRows: 2,
 };
 
@@ -97,9 +97,16 @@ test("exact feed metrics fail closed if executor returns fractional or unsafe nu
 test("feed refuses a row cap that cannot prove whether more data exists", async () => {
   let executed = false;
   const service = new SemanticSnapshotFeedService({ async run() { executed = true; throw new Error("must not run"); } }, registry);
+  await assert.rejects(() => service.export({ tenantId: "tenant-a", sourceVersion: "v1", definition: { ...definition, maxRows: 3 } }), (error) => error.code === "VALIDATION_ERROR");
+  assert.equal(executed, false);
+});
+
+test("feed requires every selected dimension in ordering so bounded pages are deterministic", async () => {
+  let executed = false;
+  const service = new SemanticSnapshotFeedService({ async run() { executed = true; throw new Error("must not run"); } }, registry);
   await assert.rejects(() => service.export({
     tenantId: "tenant-a", sourceVersion: "v1",
-    definition: { ...definition, maxRows: 3 },
+    definition: { ...definition, order_by: [{ id: "posting_date", direction: "asc" }] },
   }), (error) => error.code === "VALIDATION_ERROR");
   assert.equal(executed, false);
 });
@@ -107,15 +114,8 @@ test("feed refuses a row cap that cannot prove whether more data exists", async 
 test("feed refuses malformed member definitions or missing source version", async () => {
   let executed = false;
   const service = new SemanticSnapshotFeedService({ async run() { executed = true; throw new Error("must not run"); } }, registry);
-  await assert.rejects(() => service.export({
-    tenantId: "tenant-a", sourceVersion: "v1",
-    definition: { ...definition, metrics: ["unknown_metric"] },
-  }), (error) => error.code === "VALIDATION_ERROR");
+  await assert.rejects(() => service.export({ tenantId: "tenant-a", sourceVersion: "v1", definition: { ...definition, metrics: ["unknown_metric"] } }), (error) => error.code === "VALIDATION_ERROR");
   assert.equal(executed, false);
-
-  await assert.rejects(() => service.export({
-    tenantId: "tenant-a", sourceVersion: "",
-    definition,
-  }), (error) => error.code === "VALIDATION_ERROR");
+  await assert.rejects(() => service.export({ tenantId: "tenant-a", sourceVersion: "", definition }), (error) => error.code === "VALIDATION_ERROR");
   assert.equal(executed, false);
 });
