@@ -44,14 +44,27 @@ jobs:
           node-version: 22
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Install
+        run: |
+          set -o pipefail
+          pnpm install --frozen-lockfile --prefer-offline 2>&1 | tail -n 80
       - name: Build server
-        run: pnpm --filter cloudforge run build
+        run: |
+          set -o pipefail
+          pnpm --filter cloudforge run build 2>&1 | tail -n 80
       - name: Unit regressions
-        run: pnpm --filter cloudforge run test:unit
+        run: |
+          set -o pipefail
+          pnpm --filter cloudforge run test:unit 2>&1 | tail -n 80
       - name: SQL regressions
-        run: pnpm --filter cloudforge run test:sql
+        run: |
+          set -o pipefail
+          pnpm --filter cloudforge run test:sql 2>&1 | tail -n 80
       - name: Validate VN accounting package
-        run: pnpm --filter cloudforge run app:check
+        run: |
+          set -o pipefail
+          pnpm --filter cloudforge run app:check 2>&1 | tail -n 80
       - name: Typecheck worker boundary
-        run: pnpm --filter cloudforge run typecheck:workers
+        run: |
+          set -o pipefail
+          pnpm --filter cloudforge run typecheck:workers 2>&1 | tail -n 80
