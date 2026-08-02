@@ -1,5 +1,7 @@
 # Forge — nền ERP tương thích Frappe chạy trên Cloudflare
 
+**Forge product baseline: `0.2.0` — Enterprise Parallel Baseline.** Xem [`docs/VERSIONING.md`](docs/VERSIONING.md) và [`CHANGELOG.md`](CHANGELOG.md). Version source không đồng nghĩa production deploy.
+
 Monorepo hợp nhất CloudForge backend và MetaForge frontend để xây nền ERP meta-driven: tương thích hành vi Frappe ở boundary cần thiết, chạy trên Cloudflare và hỗ trợ đóng gói/cài app nghiệp vụ.
 
 | Thư mục | Vai trò |
@@ -17,6 +19,8 @@ Monorepo hợp nhất CloudForge backend và MetaForge frontend để xây nền
 4. [`AI_HANDOFF.md`](AI_HANDOFF.md) — handoff kỹ thuật cô đọng.
 5. [`docs/FORGE_ENTERPRISE_NORTH_STAR.md`](docs/FORGE_ENTERPRISE_NORTH_STAR.md) — đích hoàn thiện enterprise dài hạn, không phải live status.
 6. [`skills/forge-enterprise-completion/SKILL.md`](skills/forge-enterprise-completion/SKILL.md) — quy trình agent dùng để audit, ưu tiên và đóng capability theo North Star.
+7. [`docs/agents/AGENT_BOARD.md`](docs/agents/AGENT_BOARD.md) — board điều phối 18 workstream song song; GitHub exact state vẫn thắng board stale.
+8. [`docs/agents/PARALLEL_EXECUTION_PROTOCOL.md`](docs/agents/PARALLEL_EXECUTION_PROTOCOL.md) — ownership/dependency/merge discipline cho multi-agent.
 
 GitHub là nguồn sự thật cho exact branch head, pull request, CI, merge và release evidence. Không suy trạng thái hiện tại từ bảng tiến độ cũ, lịch sử chat hoặc tên branch được ghi trong tài liệu lịch sử.
 
@@ -31,6 +35,7 @@ Tài liệu nền:
 - [`docs/APP_FACTORY.md`](docs/APP_FACTORY.md)
 - [`docs/FORGE_ENTERPRISE_NORTH_STAR.md`](docs/FORGE_ENTERPRISE_NORTH_STAR.md) — **strategic completion target, NOT LIVE STATUS**
 - [`docs/FORGE_ENTERPRISE_CAPABILITY_MAP.md`](docs/FORGE_ENTERPRISE_CAPABILITY_MAP.md) — capability checklist dùng làm mẫu số đo coverage
+- [`docs/VERSIONING.md`](docs/VERSIONING.md) — product/component version semantics và production release boundary
 - [`docs/ROADMAP.md`](docs/ROADMAP.md) — **strategic only, NOT LIVE STATUS**
 - [`docs/VERIFICATION.md`](docs/VERIFICATION.md) — evidence theo checkpoint, không thay thế CI hiện tại
 

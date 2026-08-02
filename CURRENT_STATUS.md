@@ -8,7 +8,18 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. 
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `main`.
+- Forge product/integration baseline: **0.2.0 — Enterprise Parallel Baseline**.
+- Component versioning độc lập theo `docs/VERSIONING.md`; bump root version không đồng nghĩa production deploy.
 - Warehouse Cash Alumdoor merge checkpoint: `c3dbcd20a7a88c17c1a9f10c4fff82b329e27855`.
+
+## DONE — Enterprise North Star + parallel execution baseline
+
+- Enterprise Completion Skill, North Star và capability map đã merge vào `main`; đây là chuẩn để audit/ưu tiên/đóng capability theo `Missing/Foundation/Wired/RC/Hardened`.
+- Parallel Agent Board/Protocol/Prompts đã merge qua PR `#293` và canonical location là `main/docs/agents/`.
+- 18 branch `agent/ent-00-*` tới `agent/ent-17-*` chia ownership architecture/kernel, ERP domains, BI/AI, BPM/App Factory, integrations, security/SaaS, SRE, frontend/mobile, migration và Alumdoor reference vertical.
+- Cleanup baseline đã đóng các PR temporary/superseded rõ ràng `#224`, `#248`, `#256`, `#257`, `#259`, `#285`; branch/history vẫn giữ để agent audit/reuse/cherry-pick khi cần.
+- Các substantive legacy PR còn mở không tự động là canonical; workstream owner phải phân loại `reuse/cherry-pick/superseded/reject` bằng exact diff + evidence.
+- Alumdoor được định vị là reference vertical chạy trên Forge, không fork core; primitive generic phải được kéo xuống platform/domain package khi chứng minh tái sử dụng.
 
 ## DONE — HRM operational 1.5
 
@@ -85,15 +96,16 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. 
 
 ## Chưa hoàn tất
 
-1. Hoàn tất exact regression/verification cho `fix/vn-accounting-period-integrity-20260803-r8` rồi mới PR/merge.
+1. Hoàn tất exact regression/verification cho `fix/vn-accounting-period-integrity-20260803-r8` rồi mới PR/merge hoặc chuyển evidence/implementation hợp lệ sang WS01.
 2. Một UI push thực tế sau fast-path merge để đo duration và xác nhận `Deploy Gateway + /release.json` PASS.
-3. HRM statutory payroll-rule evaluator nếu cần tự động PIT/BHXH theo luật; phải có schema/version/nguồn chính thức và không sửa rule đã dùng.
-4. Bulk Transaction cho Stock Reconciliation.
-5. Bulk Transaction cho BOM parent + child/version.
-6. First-class AppAction input-table contract.
-7. Batch Print / QR label queue.
-8. P1 Daily detailed ledger hardening/closure theo exact GitHub state.
-9. Plastic ERP các wave sau P0-A.
+3. HRM statutory payroll-rule evaluator nếu cần tự động PIT/BHXH theo luật; phải có schema/version/nguồn chính thức và không sửa rule đã dùng; WS06 là owner mới.
+4. Bulk Transaction cho Stock Reconciliation; WS04 phải audit PR lịch sử trước khi viết lại.
+5. Bulk Transaction cho BOM parent + child/version; WS05/WS09 phối hợp nếu cần input-table primitive chung.
+6. First-class AppAction input-table contract; WS09 owner.
+7. Batch Print / QR label queue; phân owner theo shared platform trước implementation.
+8. P1 Daily detailed ledger hardening/closure; WS01/WS08/WS12 phối hợp theo source-of-truth và evidence.
+9. Plastic ERP các wave sau P0-A; chỉ mở lại dưới workstream/vertical ownership rõ.
+10. Rebase 18 agent branches lên exact Forge 0.2.0 main baseline trước khi implementation nếu branch head còn dựa trên snapshot cũ.
 
 ## Guardrails
 
