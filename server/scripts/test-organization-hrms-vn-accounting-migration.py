@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Acceptance checks for organization/HRMS/accounting migrations 0035 and 0039."""
+"""Acceptance checks for organization/HRMS/accounting migrations 0035 and 0039-0041."""
 
 import json
 import sqlite3
@@ -7,6 +7,17 @@ from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
 db = sqlite3.connect(":memory:")
+db.execute(
+    """CREATE TABLE master_records(
+      tenant_id TEXT NOT NULL,
+      record_type TEXT NOT NULL,
+      name TEXT NOT NULL,
+      disabled INTEGER NOT NULL DEFAULT 0,
+      data_json TEXT NOT NULL,
+      modified_at TEXT NOT NULL,
+      PRIMARY KEY(tenant_id, record_type, name)
+    )"""
+)
 db.execute(
     """CREATE TABLE documents(
       tenant_id TEXT NOT NULL,
@@ -27,6 +38,7 @@ db.execute(
 db.executescript((root / "migrations/tenant/0035_organization_hrms_vn_accounting.sql").read_text(encoding="utf-8"))
 db.executescript((root / "migrations/tenant/0039_hrm_operational_integrity.sql").read_text(encoding="utf-8"))
 db.executescript((root / "migrations/tenant/0040_hrm_payroll_source_integrity.sql").read_text(encoding="utf-8"))
+db.executescript((root / "migrations/tenant/0041_hrm_payroll_rule_integrity.sql").read_text(encoding="utf-8"))
 
 
 def insert(doctype, name, docstatus, payload, tenant="demo"):
@@ -125,4 +137,56 @@ db.execute("UPDATE documents SET docstatus=2, status='Cancelled' WHERE tenant_id
 db.execute("UPDATE documents SET payload_json=? WHERE tenant_id='demo' AND doctype='Attendance' AND name='CC-PAY'", (json.dumps({"employee": "NV-1", "attendance_date": "2026-08-02", "working_minutes": 480}),))
 insert("Salary Slip", "SAL-08-R1", 1, {"employee": "NV-1", "company": "ALUMDOOR", "start_date": "2026-08-01", "end_date": "2026-08-31"})
 
-print("ORGANIZATION_HRMS_VN_ACCOUNTING_MIGRATIONS_0035_0039_PASS")
+
+# VN Payroll Rule must be valid JSON/config and becomes append-only once approved payroll structure uses it.
+def insert_master(record_type, name, data, tenant="demo", disabled=0):
+    db.execute(
+        "INSERT INTO master_records VALUES(?,?,?,?,?,?)",
+        (tenant, record_type, name, disabled, json.dumps(data), "2026-08-01T00:00:00Z"),
+    )
+
+valid_rule = {
+    "rule_code": "VN-2026-A",
+    "effective_from": "2026-01-01",
+    "legal_document_no": "LEGAL-2026-A",
+    "source_url": "https://example.test/legal-2026-a",
+    "formula_json": json.dumps({"version": 1}),
+    "approved_by": "payroll.manager@example.test",
+    "approved_at": "2026-01-01T00:00:00Z",
+}
+insert_master("VN Payroll Rule", "VN-2026-A", valid_rule)
+expect_rejected(
+    lambda: insert_master("VN Payroll Rule", "VN-BAD", {**valid_rule, "rule_code": "VN-BAD", "formula_json": "not-json"}),
+    "HR_PAYROLL_RULE_INVALID",
+)
+insert("Salary Structure", "SS-RULE", 1, {"company": "ALUMDOOR", "payroll_rule": "VN-2026-A"})
+expect_rejected(
+    lambda: db.execute(
+        "UPDATE master_records SET data_json=? WHERE tenant_id='demo' AND record_type='VN Payroll Rule' AND name='VN-2026-A'",
+        (json.dumps({**valid_rule, "legal_document_no": "MUTATED"}),),
+    ),
+    "HR_PAYROLL_RULE_IMMUTABLE",
+)
+expect_rejected(
+    lambda: db.execute("DELETE FROM master_records WHERE tenant_id='demo' AND record_type='VN Payroll Rule' AND name='VN-2026-A'"),
+    "HR_PAYROLL_RULE_IMMUTABLE",
+)
+
+# Rule trace on a submitted/cancelled Salary Slip is also authoritative evidence, even if no structure currently references the rule.
+trace_rule = {**valid_rule, "rule_code": "VN-2026-B", "legal_document_no": "LEGAL-2026-B"}
+insert_master("VN Payroll Rule", "VN-2026-B", trace_rule)
+insert("Salary Slip", "SAL-RULE-TRACE", 2, {
+    "employee": "NV-1",
+    "company": "ALUMDOOR",
+    "start_date": "2026-10-01",
+    "end_date": "2026-10-31",
+    "rule_trace_json": json.dumps({"payroll_rule": {"name": "VN-2026-B", "formula_sha256": "0" * 64}}),
+})
+expect_rejected(
+    lambda: db.execute(
+        "UPDATE master_records SET disabled=1 WHERE tenant_id='demo' AND record_type='VN Payroll Rule' AND name='VN-2026-B'"
+    ),
+    "HR_PAYROLL_RULE_IMMUTABLE",
+)
+
+print("ORGANIZATION_HRMS_VN_ACCOUNTING_MIGRATIONS_0035_0041_PASS")
