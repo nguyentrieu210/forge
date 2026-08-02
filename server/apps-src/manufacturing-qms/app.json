@@ -1,0 +1,20 @@
+{
+  "id": "manufacturing-qms",
+  "name": "Manufacturing QMS",
+  "version": "1.0.0",
+  "requires": [],
+  "externalDocTypes": [
+    {"name":"Quality Inspection","kind":"transaction","app":"erpnext"},
+    {"name":"Asset","kind":"transaction","app":"erpnext"}
+  ],
+  "nav": [
+    {"key":"Quality Plan","label":"Kế hoạch chất lượng","kind":"doctype","icon":"clipboard-check","group":"Chất lượng"},
+    {"key":"quality-inspection","label":"Kiểm tra chất lượng","kind":"route","route":"/app/Quality%20Inspection","icon":"scan-search","group":"Chất lượng","required_roles":["Quality User","Quality Manager","System Manager"]},
+    {"key":"Non Conformance Report","label":"NCR / Không phù hợp","kind":"doctype","icon":"triangle-alert","group":"Không phù hợp & CAPA"},
+    {"key":"Root Cause Analysis","label":"Phân tích nguyên nhân","kind":"doctype","icon":"git-fork","group":"Không phù hợp & CAPA"},
+    {"key":"CAPA","label":"CAPA","kind":"doctype","icon":"shield-check","group":"Không phù hợp & CAPA"},
+    {"key":"Calibration Record","label":"Hiệu chuẩn","kind":"doctype","icon":"gauge","group":"Đo lường & hiệu chuẩn"}
+  ],
+  "hooks": [],
+  "client": {"brand":"slate","domain":"manufacturing","home":{"route":"/app/Quality%20Plan","doctype":"Quality Plan"},"dimensions":["company"],"catalog_mode":"hybrid"}
+}
