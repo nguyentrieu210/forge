@@ -2,7 +2,7 @@
 
 Ngày cập nhật: **2026-08-02**.
 
-GitHub là nguồn sự thật cho exact `main`, branch, PR, CI, merge và release. Không hardcode exact current `main` vào status dài hạn; phải đọc GitHub khi bắt đầu/tiếp tục.
+GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. Không hardcode exact current `main` vào status dài hạn; phải đọc GitHub khi bắt đầu/tiếp tục.
 
 ## Repository snapshot
 
@@ -10,56 +10,85 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, CI, merge và relea
 - Default branch: `main`.
 - Warehouse Cash Alumdoor merge checkpoint: `c3dbcd20a7a88c17c1a9f10c4fff82b329e27855`.
 
+## HRM operational 1.5 — PR #253
+
+- Branch `fix/hrm-20260802`, PR `#253`; exact head phải kiểm GitHub trước merge/release.
+- Phạm vi đã mở rộng xuyên suốt tuyển dụng, hire-to-retire, nghỉ phép, ca/chấm công/check-in, tăng ca, payroll input, tạm ứng/công tác, mục tiêu/đánh giá và đào tạo.
+- Payroll giữ canonical `SalarySlipController -> PayrollEntryController -> GL`; HRM không tạo payroll/ledger cạnh tranh.
+- Generated Salary Slip luôn recompute authoritative input khi save/submit, không tin earnings cũ của draft; `input_hash`/`rule_trace_json` bao gồm assignment/structure/payroll period/attendance/additional salary và payroll rule hợp lệ theo kỳ.
+- `VN Payroll Rule` được validate, trace `rule_code`, văn bản pháp lý, nguồn, người/thời điểm duyệt và SHA-256 của `formula_json`; migration `0041` khóa update/delete/type-mutation sau khi rule đã được cấu trúc lương hoặc Salary Slip sử dụng.
+- Migration `0039-0041` giữ tenant-scoped/race-safe overlap, duplicate và payroll-source freeze; correction nguồn payroll chỉ đi qua cancel/amendment hợp lệ.
+- Local validation cho code hiện tại: isolated TypeScript strict PASS; HRM operational regressions 4/4 PASS; migrations `0035+0039+0040+0041` acceptance PASS; Python syntax PASS. Metadata JSON 44/44 PASS từ cùng metadata input và không đổi trong hardening cuối.
+- GitHub Actions development CI: N/A theo policy hiện hành; Actions chỉ là build/deploy. Không production deploy/migration trong task HRM này.
+- Boundary còn lại: `formula_json` hiện là versioned/audited legal-rule evidence, chưa phải statutory PIT/BHXH evaluator. Nếu tự động hóa pháp luật Việt Nam phải mở task riêng với schema công thức, effective-date, nguồn chính thức và regression pháp lý; không hardcode công thức tùy tiện.
+
+## IN PROGRESS — exact production release evidence
+
+- Working branch: `fix/release-evidence-health-sha-v2`, clean-based on current main at branch creation.
+- `server/scripts/stage-client-bundle.mjs` writes public `release.json` when `VITE_FORGE_RELEASE_SHA`/`FORGE_RELEASE_SHA` exists; marker contains exact `releaseSha` + `bundleHash` and no secret.
+- `ALU Build and Deploy` smoke now requires both `/health` and `/release.json`, and fails if production `releaseSha` differs from `TARGET_SHA`.
+- Same-repo UI pull requests restore an observable deploy trigger because GitHub-connector content writes do not reliably emit push-triggered Actions; head branch naming and UI-only scope remain fail-closed.
+- Targeted local synthetic staging test PASS: release marker generated with expected SHA/hash and staged bundle check passed.
+- Not merged and not production-deployed yet; release evidence becomes canonical only after this branch is reviewed/merged.
+
+## DONE — Website/CMS multi-tenant v1
+
+- Canonical PR `#254` đã squash-merge vào `main` tại `b25fc30b0f37d1218cafbb4dac40e37479bba0b9`.
+- First-party `website` app gồm Website Settings, Web Page, Web Page Block, roles và version-pinned template/theme presets.
+- Public API chỉ allowlist `forge.website.manifest` và `forge.website.page`; Guest không có generic DocType read; mọi Website query bind trusted tenant context; draft/unpublished fail closed.
+- Shared runtime render `/` và one-segment slug, giữ nguyên reserved Forge runtime modes; product grid reuse canonical Storefront public API.
+- Mobile navigation fix đã targeted regression bằng Chromium trên final blob `82e25b446885b8719340a38013c801135e2a52c2`: mobile 390x844 PASS, tablet 834x1112 PASS, desktop 1440x1000 PASS; `aria-current`, login link, metadata và horizontal overflow đúng.
+- Server/client tests, typecheck, build, frontend lint và MetaForge browser QA đã PASS trên cùng application blob set trước clean-transplant cuối; các main commit sau đó chỉ đổi release/docs policy, không đổi application/package/dependency inputs.
+- Không deploy production, đổi DNS/custom domain hoặc secrets trong task Website/CMS này.
+
+## DONE — GitHub build/deploy only + UI auto deploy
+
+- GitHub Actions không còn là CI phát triển; validation chạy local theo blast radius.
+- Một workflow `ALU Build and Deploy` là release pipeline duy nhất.
+- UI-only branch `hotfix/ui-*`, `fix/ui-*`, `feat/ui-*`, `refactor/ui-*` tự build/deploy Gateway khi push có `client/**`.
+- UI auto-deploy fail closed nếu branch stale so với current `main` hoặc diff có file ngoài UI/docs vận hành cho phép.
+- Full ALU release vẫn manual với confirm `alu`: build once -> backup/migrate -> Tenant -> Alumdoor App -> Gateway -> smoke.
+
 ## DONE — Minimal risk-based gates
 
 - Canonical PR `#234` đã merge tại `c453df3026095b314f82f79e338bd56af90632ca`.
 - Policy canonical: `FAST` / `STANDARD` / `CRITICAL` trong `RUNBOOK.md` và `DELIVERY_POLICY.md`.
 - Gate đã PASS trên đúng SHA không chạy lặp nếu input/dependency/config không đổi; commit mới chỉ rerun gate bị ảnh hưởng.
 - `FAST`: presentation/UI nhỏ, kiểm tra tối thiểu theo blast radius; không bắt buộc full pipeline.
-- `STANDARD`: test/validation/PR/CI phù hợp logic sản phẩm.
-- `CRITICAL`: accounting/cash/AR-AP/inventory/costing/manufacturing/auth/permission/tenant/migration/data giữ regression/integration/security/data-integrity gates đầy đủ.
-
-## ACTIVE — UI theme hotfix auto-deploy validation
-
-- Guarded auto-deploy lane đã merge qua PR `#231` tại `cd1f76dbb47432e2312c6f5577eb955b48c3a856`; PR `#230` là stale iteration đã đóng.
-- Theme hotfix replay hiện ở PR `#232`, branch `hotfix/ui-document-theme-auto-20260802` theo checkpoint gần nhất; phải kiểm GitHub trước khi tiếp tục vì lane này đang thay đổi độc lập.
-- Merge/code state không thay cho release evidence.
+- `STANDARD`: test/validation phù hợp logic sản phẩm, chạy local.
+- `CRITICAL`: accounting/cash/AR-AP/inventory/costing/manufacturing/auth/permission/tenant/migration/data giữ regression/integration/security/data-integrity gates đầy đủ, chạy trước explicit release.
 
 ## DONE — Alumdoor Warehouse Cash integration
 
 - Canonical delivery PR `#233` đã squash-merge vào `main` tại `c3dbcd20a7a88c17c1a9f10c4fff82b329e27855`.
-- Final validated feature head `162bc010692d3a2997ddbc9bd5e9a59e11cb5d60`: **6/6 required workflows PASS**.
+- Final validated feature head `162bc010692d3a2997ddbc9bd5e9a59e11cb5d60`: **6/6 required workflows PASS** theo cơ chế cũ.
 - Alumdoor có tab `Quỹ kho` role-gated và mở 4 DocType canonical qua generic MetaForge route: `Warehouse Cash Fund`, `Warehouse Cash Voucher`, `Warehouse Cash Transfer`, `Warehouse Cash Count`.
 - Alumdoor không copy schema/controller/ledger Finance; `server/briefs/alumdoor-v2.integrations.json` khai `vn-accounting >= 1.1.0` và 4 DocType trên là `externalDocTypes`.
-- Canonical brief reader merge integration sidecar theo fail-closed validation; duplicate dependency/external ownership hoặc unsupported key bị từ chối.
-- Browser regression xác nhận role kho thấy Quỹ kho và mở đúng Voucher; role kinh doanh không thấy tab.
-- Không đổi Warehouse Cash GL/controller/migration trong PR `#233`; không deploy production trong task này.
 
 ## DONE — Warehouse Petty Cash backend
 
 - PR `#214` merged tại `da37060f3c02a6a5f9701d60edc3284575f00deb`.
-- Final validated head `5255dae609a7a4c30ab25ffc397f81422c2c69fc`: 6/6 required workflows PASS.
 - `gl_entries` là money source of truth; balance/daily usage chỉ là rebuildable projection.
 - Supplier/Customer party dimension không tự settle AR/AP; invoice settlement vẫn phải qua canonical Payment Entry/payment allocation.
 
 ## DONE — Purchase Receipt Bulk Transaction
 
 - PR `#209` merged tại `e447eca0e020da161dcee4f0b865206921718a61`.
-- Final validated head `70f266d9ecbc8c01c69b3deb125d1f4dc172a46a`: 6/6 required workflows PASS.
 
 ## Chưa hoàn tất
 
-1. Kiểm exact GitHub state/release evidence của UI hotfix lane trước khi tiếp tục task #232 hoặc iteration thay thế.
-2. Bulk Transaction cho Stock Reconciliation.
-3. Bulk Transaction cho BOM parent + child/version.
-4. First-class AppAction input-table contract.
-5. Batch Print / QR label queue.
-6. P1 Daily detailed ledger hardening/closure theo exact GitHub state.
-7. Plastic ERP các wave sau P0-A.
-8. Nếu cần dùng quỹ kho để tất toán trực tiếp Purchase/Sales Invoice, thiết kế canonical payment allocation; không dùng party dimension trên GL thay settlement.
+1. Merge/release exact production evidence hardening sau review; sau đó `/release.json` mới là production proof canonical.
+2. HRM statutory payroll-rule evaluator nếu cần tự động PIT/BHXH theo luật; phải có schema/version/nguồn chính thức và không sửa rule đã dùng.
+3. Bulk Transaction cho Stock Reconciliation.
+4. Bulk Transaction cho BOM parent + child/version.
+5. First-class AppAction input-table contract.
+6. Batch Print / QR label queue.
+7. P1 Daily detailed ledger hardening/closure theo exact GitHub state.
+8. Plastic ERP các wave sau P0-A.
+9. Nếu cần dùng quỹ kho để tất toán trực tiếp Purchase/Sales Invoice, thiết kế canonical payment allocation; không dùng party dimension trên GL thay settlement.
 
 ## Guardrails
 
-- Auto production deploy chỉ áp dụng đúng UI hotfix lane vượt qua guard hiện hành trên GitHub.
-- Không sửa production secrets/DNS hoặc mutate customer data nếu user chưa yêu cầu đúng đợt.
+- UI auto production deploy chỉ áp dụng UI-only branch đúng naming + scope guard.
+- Không sửa production secrets/DNS hoặc mutate customer data ngoài automation/release path user đã chủ động thiết lập.
 - Không commit `.env`, `server/work/`, `tmp/`, backup, credential, cookie/token hoặc generated artifact không thuộc source control.
