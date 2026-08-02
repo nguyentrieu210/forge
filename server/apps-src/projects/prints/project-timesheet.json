@@ -1,0 +1,9 @@
+{
+  "name": "Phiếu chấm giờ dự án",
+  "doc_type": "Project Timesheet",
+  "format_type": "Jinja",
+  "html": "<h1>PHIẾU CHẤM GIỜ DỰ ÁN</h1><p><strong>Số:</strong> {{ doc.name }}</p><p><strong>Nhân viên:</strong> {{ doc.employee }}</p><p><strong>Dự án:</strong> {{ doc.project }}</p><p><strong>Kỳ:</strong> {{ doc.period_start }} - {{ doc.period_end }}</p><p><strong>Ghi chú:</strong> {{ doc.employee_note }}</p><p><strong>Phê duyệt:</strong> {{ doc.approval_note }}</p><p><strong>Trạng thái:</strong> {{ doc.workflow_state }}</p>",
+  "css": "h1 { font-size: 18px; text-align: center; margin-bottom: 14px; } p { margin: 4px 0; line-height: 1.45; }",
+  "is_default": true,
+  "revision": 1
+}
