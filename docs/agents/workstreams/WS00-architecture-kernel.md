@@ -1,13 +1,25 @@
 # WS00 — Architecture / Kernel / Tech-stack 360°
 
-Status: **READY**  
-Owner: **—**  
+Status: **CLAIMED**  
+Owner: **ChatGPT / ws00**  
 Branch: `agent/ent-00-architecture-kernel`  
 Product baseline: **Forge 0.2.0**  
 Seed baseline: `862636e6239c91eab657c619d8c55345ed71a6d8`  
+Exact `main` at claim: `bbe3494bcfbb8a3ce09a5ff4bbb839dfcf9e47e9`  
+Branch relation at claim: **2 commits ahead / 18 commits behind `main`**, merge-base `862636e6239c91eab657c619d8c55345ed71a6d8`  
 Canonical board: `main:docs/agents/AGENT_BOARD.md`
 
 Before implementation: compare exact current `main`; incorporate source-relevant changes. Operational/deploy-evidence-only head drift does not by itself redefine the product baseline.
+
+## Claim audit plan
+
+1. Sync current `main` into this workstream before implementation.
+2. Read North Star, capability map, execution protocol, current status/tasks/context and legacy PR inbox.
+3. Audit exact `server/packages/document-kernel/**`, write path, D1/DO/OCC/idempotency/outbox invariants, tests and migrations.
+4. Map owned platform capability IDs to maturity with evidence.
+5. Classify substantive legacy PRs/branches in WS00 scope as `reuse / cherry-pick / superseded / reject`.
+6. Record contract proposals/dependencies without modifying hotspots owned by WS09/WS11/WS12/WS14 or domain branches.
+7. Only then implement the highest-leverage shared kernel gap; backend/schema/business-rule work must stop at PR for user approval before merge/deploy.
 
 ## Mission
 
