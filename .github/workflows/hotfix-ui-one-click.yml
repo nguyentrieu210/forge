@@ -1,0 +1,53 @@
+name: ALU UI Hotfix - One Click Deploy
+run-name: UI hotfix ${{ github.ref_name }} @ ${{ github.sha }}
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: alu-ui-hotfix-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build bundle and deploy Gateway
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      VITE_FORGE_RELEASE_SHA: ${{ github.sha }}
+
+    steps:
+      - name: Checkout selected branch
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build UI bundle
+        run: pnpm --filter metaforge run build
+
+      - name: Stage bundle into Gateway
+        run: node server/scripts/stage-client-bundle.mjs
+
+      - name: Deploy Gateway production
+        run: pnpm --dir server exec wrangler deploy --config apps/gateway-worker/wrangler.jsonc

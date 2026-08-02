@@ -2,87 +2,40 @@
 
 Ngày cập nhật: **2026-08-02**.
 
-`RUNBOOK.md` là quy tắc vận hành canonical. File này chỉ mô tả ranh giới giao hàng và phát hành.
+`RUNBOOK.md` là quy tắc vận hành canonical. File này mô tả ranh giới giao hàng và phát hành.
 
-## Luồng giao hàng mặc định
+## Luồng mặc định
 
-Với thay đổi code sản phẩm, luồng mặc định là:
+Với thay đổi code sản phẩm thông thường:
 
-`branch -> code -> focused validation -> test/typecheck/build phù hợp -> pull request -> exact-head required CI -> merge khi được phép`
+`branch -> code -> validation phù hợp -> PR -> required CI -> merge -> production khi được yêu cầu`
 
-Không được tự thêm bước deploy production vào authorization mặc định.
+Merge và production deploy là hai ranh giới riêng.
 
-**Merge và production deploy là hai ranh giới riêng.** Yêu cầu sửa/xây code không tự động cấp quyền deploy Cloudflare, chạy migration production hoặc thay production state.
+## UI hotfix trực tiếp
 
-## Production chỉ khi có lệnh rõ
+Khi user yêu cầu sửa UI nhỏ và phát hành nhanh, dùng `.github/workflows/hotfix-ui-one-click.yml`.
 
-Chỉ deploy production khi user yêu cầu rõ trong đợt làm việc hiện tại. Khi được yêu cầu, release vẫn phải:
+Luồng:
 
-1. xác định đúng production target và exact SHA;
-2. có required CI phù hợp;
-3. có backup/recovery trước migration hoặc thay đổi dữ liệu;
-4. dùng dedicated trusted production workflow;
-5. ghi lại run ID, target identity và deployment/version ID;
-6. smoke đúng hành trình bị ảnh hưởng;
-7. rollback hoặc forward-fix nếu smoke fail.
+`checkout branch -> pnpm install -> build MetaForge -> stage client bundle -> wrangler deploy Gateway production`
 
-Không dùng preview/staging để giả rằng production đã được phát hành, nhưng cũng không được tự tiếp tục từ preview/staging sang production nếu chưa có authorization production.
+Không có pre-deploy validation trong lane này. Cụ thể không chạy lint, test, typecheck, dry-run, smoke test, scope guard hoặc PR reconcile tự động.
 
-## Hành động cần lệnh riêng
+Lý do giữ `install`, `build` và `stage`: đây không phải quality gate mà là các bước tạo bundle và đóng bundle vào Gateway trước khi Cloudflare có thể deploy.
 
-Không tự động:
+Lane này chỉ dành cho UI nhỏ. Nếu thay đổi đụng backend, schema, migration, data, accounting, warehouse/inventory state, secrets, DNS hoặc business rule production thì phải dùng luồng bình thường.
 
-- deploy Cloudflare/production;
-- sửa hoặc đọc giá trị production secret;
-- đổi DNS/domain/billing/account ownership;
-- xoá Cloudflare resource;
-- chạy migration production;
-- bật FIFO/rollout production;
-- mutate dữ liệu khách hàng;
-- thay production data/schema chỉ để lấy UI evidence.
+## Production authorization
 
-## CI và evidence
+Chỉ chạy workflow production khi user yêu cầu rõ. Không tự deploy chỉ vì workflow đã tồn tại.
 
-- GitHub là nguồn sự thật cho code, SHA, PR và CI.
-- Chỉ kết luận PASS cho exact head có evidence tương ứng.
-- Không merge dựa trên CI đỏ, stale, cancelled, conflict hoặc chưa terminal nếu required gate chưa đạt.
-- Docs-only change phải ghi rõ `not run — docs-only` nếu không cần test/typecheck/build.
-- Production evidence không thay thế code CI; code CI cũng không thay thế production smoke.
+Không tự sửa production secrets/DNS, xoá Cloudflare resource, chạy destructive migration hoặc mutate customer data.
 
-## Target production đã từng dùng
+## Evidence
 
-Các tên dưới đây là mapping kỹ thuật lịch sử, không phải authorization deploy:
+Với direct UI hotfix, chỉ được báo đúng những gì thực tế đã chạy. Nếu không chạy lint/test/typecheck/smoke thì ghi `NOT RUN`, không suy diễn PASS.
 
-### Alumdoor app Worker
+## File cấm commit
 
-- Source: `server/apps-src/alumdoor-worker/**` và dependency server liên quan.
-- Worker: `cloudforge-app-alumdoor`.
-- Dispatch namespace: `cloudforge-production`.
-- Workflow: `.github/workflows/release-alumdoor-app.yml`.
-- Required bindings: `PLATFORM`, `AI`.
-
-Không dùng version tenant Worker hoặc Gateway `/health` làm bằng chứng app Worker đã cập nhật.
-
-### Frontend / MetaForge UI
-
-Không deploy backend Worker để thay cho frontend release. Trước release UI phải xác định đúng Pages/Worker project, production hostname, build mode và authenticated smoke từ repository/provider hiện hành.
-
-## File không được commit
-
-- `.env` hoặc secret;
-- `server/work/`;
-- `tmp/`;
-- backup, credential, cookie, token;
-- generated evidence/build artifact không được repository quản lý.
-
-## Báo cáo sau mỗi đợt
-
-Báo rõ:
-
-1. file sửa và lý do;
-2. test/typecheck/build/CI đã chạy hoặc lý do không chạy;
-3. branch, commit SHA, PR/merge SHA nếu có;
-4. production run/target/version/smoke chỉ khi production thật sự được yêu cầu và thực hiện;
-5. lỗi/rủi ro còn lại;
-6. AI làm tiếp gì;
-7. user cần làm gì.
+Không commit `.env`, secrets, `server/work/`, `tmp/`, backup, credential, cookie/token hoặc generated artifact không thuộc source control.

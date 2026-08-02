@@ -4,6 +4,17 @@ Ngày cập nhật: **2026-08-02**.
 
 Đây là hàng đợi active. GitHub là nguồn sự thật cho exact `main`, PR, branch và CI; trước khi làm phải đọc `RUNBOOK.md`, `CURRENT_STATUS.md`, `AI_HANDOFF.md`, `DELIVERY_POLICY.md` và kiểm tra PR đang mở.
 
+## P1 — One-click UI hotfix production lane
+
+- Canonical branch: `hotfix/ui-one-click-deploy-v2-20260802`, clean-transplant từ exact `main@f5d222e916795fd31cdc82f5746a1ba0af6318fb`.
+- Canonical PR: `#223`.
+- Branch/PR iteration đầu (`hotfix/ui-one-click-deploy-20260802`, PR `#222`) là superseded; không merge.
+- Fast lane đã được rút gọn theo yêu cầu: branch `hotfix/ui-*` → một nút workflow → hard scope guard → build → stage → deploy Gateway → exact-SHA smoke → PR reconcile.
+- Scope: current main phải là ancestor; chỉ `client/**` + 3 file canonical status/handoff; tối đa 10 file/300 dòng; cấm package/dependency/backend/migration/metadata/workflow.
+- `lint/test/typecheck/Wrangler dry-run` không chạy trong quick production path; deferred sang PR reconcile/normal CI.
+- `.github/workflows/release-gateway.yml` dùng input `quick_ui_hotfix` để reuse cùng production implementation.
+- Việc còn lại: lấy exact-head actionlint/CI cho PR #223, review diff sạch, merge lane. Không deploy production trong task tạo lane này.
+
 ## DONE — Warehouse Petty Cash per warehouse
 
 - Canonical PR `#214` đã squash-merge vào `main` tại `da37060f3c02a6a5f9701d60edc3284575f00deb`.
