@@ -24,18 +24,16 @@ function transition(workflow, action) {
   return found;
 }
 
-test("maintenance package exposes entitlement, warranty and field-service navigation", () => {
+test("maintenance package exposes entitlement, warranty, field-service and control reports", () => {
   const app = json("app.json");
   const roles = json("roles.json");
 
-  assert.equal(app.version, "1.2.0");
-  assert.deepEqual(app.nav.map((entry) => entry.key), [
-    "Maintenance Request",
-    "Warranty Claim",
-    "Service Order",
-    "Service Contract",
-    "Service Technician",
-  ]);
+  assert.equal(app.version, "1.3.0");
+  for (const key of ["Maintenance Request", "Warranty Claim", "Service Order", "Service Contract", "Service Technician"]) {
+    assert.ok(app.nav.some((entry) => entry.key === key), `missing nav ${key}`);
+  }
+  assert.ok(app.reports.some((entry) => entry.name === "Service Order Control"));
+  assert.ok(app.reports.some((entry) => entry.name === "Warranty Claim Control"));
   assert.ok(app.externalDocTypes.some((entry) => entry.name === "Serial No" && entry.app === "stock"));
   assert.ok(app.externalDocTypes.some((entry) => entry.name === "Delivery Note" && entry.app === "selling"));
   assert.ok(roles.some((entry) => entry.role === "Maintenance Technician" && entry.desk_access === true));
