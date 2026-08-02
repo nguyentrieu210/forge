@@ -1,8 +1,15 @@
 # NEXT TASKS
 
-Ngày cập nhật: **2026-08-02**.
+Ngày cập nhật: **2026-08-03**.
 
 Đây là hàng đợi active. GitHub là nguồn sự thật cho exact `main`, PR và branch; trước khi làm phải đọc `RUNBOOK.md`, `CURRENT_STATUS.md`, `AI_HANDOFF.md`, `DELIVERY_POLICY.md`.
+
+## NOW — decimal display hotfix acceptance
+
+- Branch: `hotfix/ui-decimal-display`.
+- Implementation commit: `3cf1f770a610e0dd215df1b0999b76557f51469d`.
+- Cần acceptance trên runtime thật: field precision 6 phải hiển thị `22`, `22,5`, `22,125`, không còn `22,000000`; nhập `.` hoặc `,` vẫn ra đúng decimal và numeric payload không đổi.
+- Vì phiên connector không có local workspace, package typecheck/browser regression chưa chạy trực tiếp; giữ task ở acceptance cho tới khi có runtime/deploy evidence.
 
 ## NOW — fast UI deploy acceptance
 
