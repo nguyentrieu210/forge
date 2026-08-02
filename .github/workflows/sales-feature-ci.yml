@@ -15,7 +15,6 @@ on:
       - 'server/tests/door-formulas*'
       - 'client/packages/views/src/form/ChildGrid.tsx'
       - 'client/e2e-forge/**/sales*'
-      - '.github/workflows/sales-feature-ci.yml'
   workflow_dispatch:
 
 permissions:
