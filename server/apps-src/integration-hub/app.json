@@ -1,0 +1,16 @@
+{
+  "id": "integration-hub",
+  "name": "Integration Hub",
+  "version": "0.1.0",
+  "requires": [],
+  "nav": [
+    { "key": "Integration Subscription", "label": "Đăng ký sự kiện", "kind": "doctype", "icon": "webhook", "group": "Tích hợp", "required_roles": ["Integration Admin", "System Manager"] }
+  ],
+  "hooks": [],
+  "client": {
+    "brand": "neutral",
+    "domain": "platform",
+    "home": { "route": "/app/Integration%20Subscription", "doctype": "Integration Subscription" },
+    "catalog_mode": "native"
+  }
+}

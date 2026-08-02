@@ -1,0 +1,28 @@
+{
+  "name": "Integration Subscription",
+  "module": "Platform",
+  "is_submittable": false,
+  "autoname": "INT-SUB-.#####",
+  "title_field": "target_url",
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "event_pattern", "label": "Mẫu sự kiện", "fieldtype": "Data", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "target_url", "label": "Webhook URL", "fieldtype": "Data", "required": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "auth_kind", "label": "Kiểu xác thực", "fieldtype": "Select", "options": "none\napi_key\noauth2\nservice_account", "required": true, "default": "none", "in_standard_filter": true },
+    { "fieldname": "secret_ref", "label": "Tham chiếu credential", "fieldtype": "Data" },
+    { "fieldname": "allowed_hosts", "label": "Outbound allowlist", "fieldtype": "JSON", "required": true },
+    { "fieldname": "mapping", "label": "Mapping rules", "fieldtype": "JSON" },
+    { "fieldname": "max_attempts", "label": "Số lần thử tối đa", "fieldtype": "Int", "default": 8, "non_negative": true },
+    { "fieldname": "base_delay_seconds", "label": "Retry cơ sở (giây)", "fieldtype": "Int", "default": 2, "non_negative": true },
+    { "fieldname": "max_delay_seconds", "label": "Retry tối đa (giây)", "fieldtype": "Int", "default": 300, "non_negative": true },
+    { "fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "draft\nactive\ndisabled\nerror", "required": true, "default": "draft", "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "status_reason", "label": "Lý do đổi trạng thái", "fieldtype": "Small Text" }
+  ],
+  "permissions": [
+    { "role": "Integration Admin", "read": true, "write": true, "create": true, "report": true, "export": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}

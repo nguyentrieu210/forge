@@ -100,71 +100,99 @@ function ExtensionGrid(props: ChildGridProps) {
     onChange(rows.map((row, index) => index === rowIndex ? { ...row, [fieldname]: value } : row));
   };
 
+  const renderControl = (row: Doc, rowIndex: number, field: DocField) => {
+    const gridField: DocField = field.list_only ? { ...field, list_only: 0 } : field;
+    const resolved = resolveField(gridField, childMeta, {
+      doc: row,
+      parent: parentDoc,
+      roles,
+      assumeWritable: true,
+    });
+    if (!resolved.visible) {
+      return <span className="text-xs text-muted-foreground">—</span>;
+    }
+    const Control = registry.resolve(field.fieldtype) ?? FallbackControl;
+    return (
+      <Control
+        field={gridField}
+        value={row[field.fieldname]}
+        onChange={(value: unknown) => setCell(rowIndex, field.fieldname, value)}
+        readOnly={Boolean(readOnly || resolved.readOnly)}
+        masked={resolved.masked}
+        services={services}
+        docname={String(row.name ?? "")}
+        linkTarget={dynamicLinkTarget(field, row)}
+        parentDoctype={childMeta.name}
+        docValues={row}
+        roles={roles}
+        compact
+      />
+    );
+  };
+
   return (
-    <div className="mt-2 overflow-x-auto rounded-md border" data-child-grid-extensions={childMeta.name}>
+    <div className="mt-2 overflow-hidden rounded-md border" data-child-grid-extensions={childMeta.name}>
       <div className="border-b bg-muted/30 px-3 py-2 text-xs font-medium text-muted-foreground">
         {purchaseOrder ? "Chi tiết đặt nhôm" : "Trường mở rộng"}
       </div>
-      <Table className="w-full text-sm">
-        <TableHeader>
-          <TableRow className="bg-muted/20 hover:bg-muted/20">
-            <TableHead className="w-10 text-right">{purchaseOrder ? "STT" : "#"}</TableHead>
-            {purchaseOrder ? <TableHead className="min-w-28">Ngày</TableHead> : null}
-            {columns.map((field) => (
-              <TableHead key={field.fieldname} className="min-w-32">
-                {field.label || field.fieldname}{field.reqd ? <span className="ml-0.5 text-destructive">*</span> : null}
-              </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.map((row, rowIndex) => (
-            <TableRow key={String(row.name ?? rowIndex)}>
-              <TableCell className="text-right text-xs text-muted-foreground">{rowIndex + 1}</TableCell>
-              {purchaseOrder ? (
-                <TableCell className="min-w-28 text-sm text-muted-foreground">
-                  {orderDate || "—"}
-                </TableCell>
-              ) : null}
-              {columns.map((field) => {
-                const gridField: DocField = field.list_only ? { ...field, list_only: 0 } : field;
-                const resolved = resolveField(gridField, childMeta, {
-                  doc: row,
-                  parent: parentDoc,
-                  roles,
-                  assumeWritable: true,
-                });
-                if (!resolved.visible) {
-                  return (
-                    <TableCell key={field.fieldname} className="bg-muted/60 text-center text-xs text-muted-foreground">
-                      —
-                    </TableCell>
-                  );
-                }
-                const Control = registry.resolve(field.fieldtype) ?? FallbackControl;
-                return (
-                  <TableCell key={field.fieldname} className="min-w-32 align-top">
-                    <Control
-                      field={gridField}
-                      value={row[field.fieldname]}
-                      onChange={(value: unknown) => setCell(rowIndex, field.fieldname, value)}
-                      readOnly={Boolean(readOnly || resolved.readOnly)}
-                      masked={resolved.masked}
-                      services={services}
-                      docname={String(row.name ?? "")}
-                      linkTarget={dynamicLinkTarget(field, row)}
-                      parentDoctype={childMeta.name}
-                      docValues={row}
-                      roles={roles}
-                      compact
-                    />
-                  </TableCell>
-                );
-              })}
+
+      <div className="space-y-3 p-3 md:hidden">
+        {rows.map((row, rowIndex) => (
+          <section
+            key={String(row.name ?? rowIndex)}
+            className="rounded-lg border bg-card p-3 shadow-sm"
+            aria-label={`${purchaseOrder ? "Dòng đặt nhôm" : "Dòng mở rộng"} ${rowIndex + 1}`}
+          >
+            <div className="mb-3 flex items-center justify-between gap-3 border-b pb-2">
+              <span className="text-xs font-semibold text-muted-foreground">#{rowIndex + 1}</span>
+              {purchaseOrder ? <span className="text-xs text-muted-foreground">Ngày {orderDate || "—"}</span> : null}
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {columns.map((field) => (
+                <div key={field.fieldname} className="min-w-0 space-y-1.5">
+                  <div className="text-xs font-medium text-muted-foreground">
+                    {field.label || field.fieldname}{field.reqd ? <span className="ml-0.5 text-destructive">*</span> : null}
+                  </div>
+                  {renderControl(row, rowIndex, field)}
+                </div>
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
+
+      <div className="hidden overflow-x-auto md:block">
+        <Table className="w-full text-sm">
+          <TableHeader>
+            <TableRow className="bg-muted/20 hover:bg-muted/20">
+              <TableHead className="w-10 text-right">{purchaseOrder ? "STT" : "#"}</TableHead>
+              {purchaseOrder ? <TableHead className="min-w-28">Ngày</TableHead> : null}
+              {columns.map((field) => (
+                <TableHead key={field.fieldname} className="min-w-32">
+                  {field.label || field.fieldname}{field.reqd ? <span className="ml-0.5 text-destructive">*</span> : null}
+                </TableHead>
+              ))}
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {rows.map((row, rowIndex) => (
+              <TableRow key={String(row.name ?? rowIndex)}>
+                <TableCell className="text-right text-xs text-muted-foreground">{rowIndex + 1}</TableCell>
+                {purchaseOrder ? (
+                  <TableCell className="min-w-28 text-sm text-muted-foreground">
+                    {orderDate || "—"}
+                  </TableCell>
+                ) : null}
+                {columns.map((field) => (
+                  <TableCell key={field.fieldname} className="min-w-32 align-top">
+                    {renderControl(row, rowIndex, field)}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }
