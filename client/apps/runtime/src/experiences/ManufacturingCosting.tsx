@@ -69,8 +69,19 @@ interface CostSheet {
   actual_total_cost_to_date_minor: number;
   actual_cost_allocated_to_finished_minor: number;
   estimated_wip_cost_minor: number;
+  material_wip_stock_value_minor?: number;
+  material_wip_warehouses?: string[];
+  material_wip_source?: "WORK_ORDER_WIP" | "TRANSFER_TARGETS" | "DIRECT_CONSUMPTION";
+  operation_wip_estimate_minor?: number;
+  operation_wip_is_estimate?: boolean;
+  work_order_cost_exposure_minor?: number;
+  wip_cost_basis?: string;
   finished_stock_value_minor: number;
   valuation_adjustment_to_actual_minor: number;
+  manufacturing_cost_variance_minor?: number;
+  inventory_costing_policy?: string;
+  inventory_revaluation_required?: boolean;
+  variance_posting_status?: string;
   material_variance_minor: number;
   operation_variance_minor: number;
   total_variance_minor: number;
@@ -143,6 +154,7 @@ export function ManufacturingCosting() {
   const [adjustCategory, setAdjustCategory] = useState("Overhead");
   const [adjustAmount, setAdjustAmount] = useState("");
   const [adjustReason, setAdjustReason] = useState("");
+  const [adjustmentId, setAdjustmentId] = useState<string | null>(null);
 
   const run = useCallback(async (operation: string, task: () => Promise<void>) => {
     setBusy(operation);
@@ -182,27 +194,32 @@ export function ManufacturingCosting() {
   });
 
   const freeze = () => void run("freeze", async () => {
-    if (!sheet?.snapshot_id) throw new Error("Tạo Cost Sheet bất biến trước khi khóa giá thành.");
+    if (!sheet?.snapshot_id) throw new Error("Tạo Cost Sheet bất biến trước khi khóa.");
     await adapter.callPost("metaforge.manufacturing.cost_freeze", {
       snapshot_id: sheet.snapshot_id,
       reason: freezeReason.trim(),
     });
     await loadSnapshot(sheet.snapshot_id);
-    toast.success("Đã khóa giá thành. Mọi bổ sung sau khóa chỉ được ghi bằng điều chỉnh append-only.");
+    toast.success("Đã khóa Cost Sheet. Mọi bổ sung sau khóa chỉ được ghi bằng điều chỉnh append-only.");
   });
+
+  const resetAdjustmentAttempt = () => setAdjustmentId(null);
 
   const adjust = () => void run("adjust", async () => {
     if (!sheet?.snapshot_id || !sheet.frozen) throw new Error("Chỉ điều chỉnh Cost Sheet đã khóa.");
     const amount = Number(adjustAmount);
     if (!Number.isSafeInteger(amount) || amount === 0) throw new Error("Số tiền điều chỉnh phải là số nguyên khác 0 theo đơn vị tiền nhỏ nhất.");
     if (!adjustReason.trim()) throw new Error("Điều chỉnh bắt buộc phải có lý do.");
+    const id = adjustmentId ?? crypto.randomUUID();
+    setAdjustmentId(id);
     await adapter.callPost("metaforge.manufacturing.cost_adjust", {
-      adjustment_id: crypto.randomUUID(),
+      adjustment_id: id,
       snapshot_id: sheet.snapshot_id,
       category: adjustCategory,
       delta_amount_minor: amount,
       reason: adjustReason.trim(),
     });
+    setAdjustmentId(null);
     setAdjustAmount("");
     setAdjustReason("");
     await loadSnapshot(sheet.snapshot_id);
@@ -244,6 +261,9 @@ export function ManufacturingCosting() {
 
           {sheet.legacy_standard_warning ? <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">Work Order cũ chưa chụp định mức tiền tại thời điểm phát hành. Hệ thống đang dùng BOM fallback có gắn cờ; không giả đây là định mức lịch sử.</div> : null}
           {sheet.missing_rate_job_cards.length ? <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">Thiếu đơn giá hiệu lực cho Job Card: {sheet.missing_rate_job_cards.join(", ")}. Cost Sheet chưa được phép khóa.</div> : null}
+          {(sheet.material_wip_stock_value_minor ?? 0) > 0 ? <div className="rounded-lg border border-blue-300 bg-blue-50 p-3 text-sm text-blue-950">Vật tư WIP theo Stock Ledger còn {moneyMinor(sheet.material_wip_stock_value_minor, sheet.currency, sheet.currency_scale)}{sheet.material_wip_warehouses?.length ? ` tại ${sheet.material_wip_warehouses.join(", ")}` : ""}. Phải tiêu thụ/chuyển trả đúng chứng từ trước khi khóa.</div> : null}
+          {(sheet.operation_wip_estimate_minor ?? 0) > 0 ? <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">WIP công đoạn đang ước tính {moneyMinor(sheet.operation_wip_estimate_minor, sheet.currency, sheet.currency_scale)} từ tiến độ Job Card. Hệ thống chặn khóa cho tới khi WIP công đoạn về 0.</div> : null}
+          {sheet.inventory_costing_policy === "ACTUAL_MATERIAL_STANDARD_OPERATION" ? <div className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">Chính sách vốn hóa kho: vật tư thực tế + chi phí công đoạn định mức đã khóa trên Work Order. Chi phí công đoạn thực tế được theo dõi thành manufacturing variance; hệ thống không hồi tố giá tồn kho đã chuyển/bán khi chưa có valuation replay.</div> : null}
 
           <Summary sheet={sheet} />
           <MaterialTable sheet={sheet} />
@@ -251,24 +271,24 @@ export function ManufacturingCosting() {
 
           {sheet.snapshot_id ? <section className="grid gap-4 lg:grid-cols-2">
             <div className="rounded-xl border bg-card p-4">
-              <div className="flex items-center justify-between"><h2 className="font-semibold">Khóa giá thành</h2><Badge variant={sheet.frozen ? "secondary" : "outline"}>{sheet.frozen ? "Đã khóa" : "Chưa khóa"}</Badge></div>
+              <div className="flex items-center justify-between"><h2 className="font-semibold">Khóa Cost Sheet</h2><Badge variant={sheet.frozen ? "secondary" : "outline"}>{sheet.frozen ? "Đã khóa" : "Chưa khóa"}</Badge></div>
               <p className="mt-1 text-xs text-muted-foreground">Snapshot: {sheet.snapshot_id}</p>
               <Textarea className="mt-3" value={freezeReason} onChange={(event) => setFreezeReason(event.target.value)} placeholder="Lý do khóa" disabled={sheet.frozen} />
-              <Button className="mt-3" variant="outline" onClick={freeze} disabled={Boolean(busy) || Boolean(sheet.frozen) || !sheet.ready_to_finalize}><FileLock2 className="mr-2 size-4" />Khóa giá thành</Button>
+              <Button className="mt-3" variant="outline" onClick={freeze} disabled={Boolean(busy) || Boolean(sheet.frozen) || !sheet.ready_to_finalize}><FileLock2 className="mr-2 size-4" />Khóa Cost Sheet</Button>
             </div>
             <div className="rounded-xl border bg-card p-4">
               <h2 className="font-semibold">Điều chỉnh sau khóa</h2>
-              <p className="mt-1 text-xs text-muted-foreground">Ví dụ hóa đơn điện về muộn. Snapshot gốc không bị sửa.</p>
+              <p className="mt-1 text-xs text-muted-foreground">Ví dụ hóa đơn điện về muộn. Snapshot gốc không bị sửa; cùng một lần gửi lại dùng cùng idempotency ID.</p>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 <Field label="Nhóm chi phí">
-                  <Select value={adjustCategory} onValueChange={setAdjustCategory}>
+                  <Select value={adjustCategory} onValueChange={(value) => { setAdjustCategory(value); resetAdjustmentAttempt(); }}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>{ADJUSTMENT_CATEGORIES.map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent>
                   </Select>
                 </Field>
-                <Field label={`Số tiền (${sheet.currency}, minor)`}><Input type="number" step="1" value={adjustAmount} onChange={(event) => setAdjustAmount(event.target.value)} /></Field>
+                <Field label={`Số tiền (${sheet.currency}, minor)`}><Input type="number" step="1" value={adjustAmount} onChange={(event) => { setAdjustAmount(event.target.value); resetAdjustmentAttempt(); }} /></Field>
               </div>
-              <Textarea className="mt-3" value={adjustReason} onChange={(event) => setAdjustReason(event.target.value)} placeholder="Lý do điều chỉnh (bắt buộc)" />
+              <Textarea className="mt-3" value={adjustReason} onChange={(event) => { setAdjustReason(event.target.value); resetAdjustmentAttempt(); }} placeholder="Lý do điều chỉnh (bắt buộc)" />
               <Button className="mt-3" onClick={adjust} disabled={Boolean(busy) || !sheet.frozen}>Ghi điều chỉnh</Button>
             </div>
           </section> : null}
@@ -282,17 +302,20 @@ function Summary({ sheet }: { sheet: CostSheet }) {
   const actualTotal = sheet.adjusted_actual_total_cost_minor ?? sheet.actual_total_cost_to_date_minor;
   const totalVariance = sheet.adjusted_total_variance_minor ?? sheet.total_variance_minor;
   const unitCost = sheet.adjusted_actual_unit_cost_minor ?? sheet.actual_unit_cost_minor;
+  const manufacturingVariance = sheet.manufacturing_cost_variance_minor ?? sheet.valuation_adjustment_to_actual_minor;
   const cards = [
-    ["Định mức phần hoàn thành", sheet.standard_total_cost_for_completed_minor],
-    ["Thực tế đến hiện tại", actualTotal],
-    ["Phân bổ vào thành phẩm", sheet.actual_cost_allocated_to_finished_minor],
-    ["WIP ước tính", sheet.estimated_wip_cost_minor],
-    ["Giá trị thành phẩm đã ghi kho", sheet.finished_stock_value_minor],
-    ["Chênh cần tái định giá", sheet.valuation_adjustment_to_actual_minor],
-    ["Chênh lệch tổng", totalVariance],
-    ["Giá thành thực tế / đơn vị", unitCost],
+    ["Định mức phần hoàn thành", sheet.standard_total_cost_for_completed_minor, false],
+    ["Thực tế đã phát sinh", actualTotal, false],
+    ["Chi phí gắn với LSX", sheet.work_order_cost_exposure_minor ?? actualTotal, false],
+    ["Phân bổ vào thành phẩm", sheet.actual_cost_allocated_to_finished_minor, false],
+    ["Vật tư WIP theo sổ", sheet.material_wip_stock_value_minor ?? 0, false],
+    ["Công đoạn WIP ước tính", sheet.operation_wip_estimate_minor ?? 0, false],
+    ["Giá trị thành phẩm đã ghi kho", sheet.finished_stock_value_minor, false],
+    ["Manufacturing variance", manufacturingVariance, true],
+    ["Chênh lệch tổng", totalVariance, true],
+    [sheet.operation_wip_is_estimate ? "Actual / đơn vị (tạm tính)" : "Actual / đơn vị", unitCost, false],
   ] as const;
-  return <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{cards.map(([label, value]) => <div key={label} className="rounded-xl border bg-card p-4"><p className="text-xs text-muted-foreground">{label}</p><p className={`mt-1 text-lg font-semibold tabular-nums ${label.includes("Chênh") ? varianceClass(value) : ""}`}>{moneyMinor(value, sheet.currency, sheet.currency_scale)}</p></div>)}</section>;
+  return <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">{cards.map(([label, value, isVariance]) => <div key={label} className="rounded-xl border bg-card p-4"><p className="text-xs text-muted-foreground">{label}</p><p className={`mt-1 text-lg font-semibold tabular-nums ${isVariance ? varianceClass(value) : ""}`}>{moneyMinor(value, sheet.currency, sheet.currency_scale)}</p></div>)}</section>;
 }
 
 function MaterialTable({ sheet }: { sheet: CostSheet }) {

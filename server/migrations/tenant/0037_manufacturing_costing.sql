@@ -85,6 +85,29 @@ BEGIN
   END;
 END;
 
+-- Application-side checks make the common error readable, but the invariant belongs in
+-- storage as well: two concurrent negative adjustments must not both pass a stale read and
+-- drive actual production cost below zero.
+CREATE TRIGGER IF NOT EXISTS manufacturing_cost_adjustment_nonnegative_total_guard
+BEFORE INSERT ON manufacturing_cost_adjustments
+BEGIN
+  SELECT CASE
+    WHEN (
+      COALESCE((
+        SELECT s.actual_total_cost_minor
+        FROM manufacturing_cost_snapshots s
+        WHERE s.tenant_id=NEW.tenant_id AND s.snapshot_id=NEW.snapshot_id
+      ),0)
+      + COALESCE((
+        SELECT SUM(a.delta_amount_minor)
+        FROM manufacturing_cost_adjustments a
+        WHERE a.tenant_id=NEW.tenant_id AND a.snapshot_id=NEW.snapshot_id
+      ),0)
+      + NEW.delta_amount_minor
+    ) < 0 THEN RAISE(ABORT, 'MANUFACTURING_COST_NEGATIVE_TOTAL')
+  END;
+END;
+
 CREATE TRIGGER IF NOT EXISTS manufacturing_cost_snapshot_no_update
 BEFORE UPDATE ON manufacturing_cost_snapshots
 BEGIN SELECT RAISE(ABORT, 'MANUFACTURING_COST_SNAPSHOT_IMMUTABLE'); END;

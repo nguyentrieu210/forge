@@ -52,21 +52,9 @@ expect_integrity(
     (
         "demo",
         "MCS-WO1-B",
-        snapshot[2],
-        snapshot[3],
-        snapshot[4],
-        snapshot[5],
-        snapshot[6],
-        snapshot[7],
-        snapshot[8],
-        snapshot[9],
-        snapshot[10],
-        snapshot[11],
-        snapshot[12],
-        snapshot[13],
-        snapshot[14],
-        snapshot[15],
-        snapshot[16],
+        snapshot[2], snapshot[3], snapshot[4], snapshot[5], snapshot[6], snapshot[7],
+        snapshot[8], snapshot[9], snapshot[10], snapshot[11], snapshot[12], snapshot[13],
+        snapshot[14], snapshot[15], snapshot[16],
     ),
     "UNIQUE constraint failed",
 )
@@ -128,6 +116,25 @@ db.execute(
 db.execute(
     "INSERT INTO manufacturing_cost_adjustments VALUES(?,?,?,?,?,?,?,?,?)",
     adjustment,
+)
+
+# Storage, not only application pre-checks, prevents concurrent negative adjustments from
+# pushing the aggregate actual manufacturing cost below zero.
+expect_integrity(
+    db,
+    "INSERT INTO manufacturing_cost_adjustments VALUES(?,?,?,?,?,?,?,?,?)",
+    (
+        "demo",
+        "MCA-NEGATIVE",
+        "MCS-WO1-A",
+        "Other",
+        -1_700_001,
+        "Impossible correction",
+        "chief-accountant@example.com",
+        "2026-08-02T09:05:00.000Z",
+        "{}",
+    ),
+    "MANUFACTURING_COST_NEGATIVE_TOTAL",
 )
 
 row = db.execute(
