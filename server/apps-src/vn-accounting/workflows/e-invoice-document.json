@@ -1,0 +1,18 @@
+{
+  "name": "Kiểm soát hóa đơn điện tử",
+  "document_type": "E-Invoice Document",
+  "state_field": "workflow_state",
+  "is_active": true,
+  "states": [
+    { "state": "Nháp", "docstatus": 0, "allow_edit": "Tax Specialist" },
+    { "state": "Chờ đối soát", "docstatus": 0, "allow_edit": "Chief Accountant" },
+    { "state": "Đã ghi nhận", "docstatus": 1, "allow_edit": "Chief Accountant" },
+    { "state": "Đã hủy", "docstatus": 2, "allow_edit": "Chief Accountant" }
+  ],
+  "transitions": [
+    { "state": "Nháp", "action": "Gửi đối soát", "next_state": "Chờ đối soát", "allowed_role": "Tax Specialist" },
+    { "state": "Chờ đối soát", "action": "Ghi nhận", "next_state": "Đã ghi nhận", "allowed_role": "Chief Accountant", "allow_self_approval": false },
+    { "state": "Chờ đối soát", "action": "Từ chối", "next_state": "Đã hủy", "allowed_role": "Chief Accountant" }
+  ],
+  "revision": 1
+}
