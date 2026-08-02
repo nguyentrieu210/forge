@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Focused SQLite regression for HRM Wave 1 closure migration 0044."""
+"""Focused SQLite regression for HRM Wave 1 closure migrations 0044-0045."""
 
 import json
 import sqlite3
@@ -42,8 +42,6 @@ db.execute(
       PRIMARY KEY(tenant_id,doctype,name,user)
     )"""
 )
-db.executescript((root / "migrations/tenant/0044_hrm_wave1_closure.sql").read_text(encoding="utf-8"))
-
 
 def insert_doc(doctype, name, docstatus, payload, tenant="demo"):
     db.execute(
@@ -65,6 +63,32 @@ def expect_rejected(fn, marker):
         db.execute("RELEASE expected_rejection")
         raise AssertionError(f"expected database rejection: {marker}")
 
+
+db.executescript((root / "migrations/tenant/0044_hrm_wave1_closure.sql").read_text(encoding="utf-8"))
+
+# Existing tenant history before 0045 must be backfilled, not merely future-triggered.
+insert_doc("Employee", "EMP-HIST", 0, {"employee_name": "Historical Employee", "user_id": "historical@example.test"})
+for doctype, name in [
+    ("Employment Contract", "CON-HIST"),
+    ("Attendance", "ATT-HIST"),
+    ("Appraisal", "APP-HIST"),
+    ("Salary Slip", "SAL-HIST"),
+]:
+    insert_doc(doctype, name, 1, {"employee": "EMP-HIST", "company": "Demo"})
+
+db.executescript((root / "migrations/tenant/0045_hrm_employee_self_service_shares.sql").read_text(encoding="utf-8"))
+
+for doctype, name in [
+    ("Employee", "EMP-HIST"),
+    ("Employment Contract", "CON-HIST"),
+    ("Attendance", "ATT-HIST"),
+    ("Appraisal", "APP-HIST"),
+    ("Salary Slip", "SAL-HIST"),
+]:
+    assert db.execute(
+        "SELECT can_read,can_write,can_share FROM document_shares WHERE tenant_id='demo' AND doctype=? AND name=? AND user='historical@example.test'",
+        (doctype, name),
+    ).fetchone() == (1, 0, 0), (doctype, name)
 
 insert_doc("Employee Checkin", "CHK-IN", 1, {"employee": "EMP-1", "time": "2026-08-03T08:00:00Z", "log_type": "IN"})
 insert_doc("Employee Checkin", "CHK-OUT", 1, {"employee": "EMP-1", "time": "2026-08-03T17:00:00Z", "log_type": "OUT"})
@@ -115,13 +139,31 @@ expect_rejected(
     "HR_FINAL_SETTLEMENT_DUPLICATE",
 )
 
-# Payslip self-service: Employee may live in the ordinary document store.
+# New Employee profiles are exact-record shared at creation.
 insert_doc("Employee", "EMP-DOC", 0, {"employee_name": "Document Employee", "user_id": "employee.doc@example.test"})
+assert db.execute(
+    "SELECT can_read,can_write,can_share FROM document_shares WHERE tenant_id='demo' AND doctype='Employee' AND name='EMP-DOC' AND user='employee.doc@example.test'"
+).fetchone() == (1, 0, 0)
+
+# Payslip self-service for an ordinary document-backed Employee.
 insert_doc("Salary Slip", "SAL-DOC", 1, {"employee": "EMP-DOC", "company": "Demo"})
 share = db.execute(
     "SELECT user,can_read,can_write,can_share,submitted_by FROM document_shares WHERE tenant_id='demo' AND doctype='Salary Slip' AND name='SAL-DOC'"
 ).fetchone()
 assert share == ("employee.doc@example.test", 1, 0, 0, "hrm:auto-share"), share
+
+# First-party submitted employee-facing records are also shared exactly.
+for doctype, name in [
+    ("Employment Contract", "CON-DOC"),
+    ("Attendance", "ATT-DOC"),
+    ("Appraisal", "APP-DOC"),
+    ("Employee Final Settlement", "FSET-DOC"),
+]:
+    insert_doc(doctype, name, 1, {"employee": "EMP-DOC", "company": "Demo", "separation": f"SEP-{name}"})
+    assert db.execute(
+        "SELECT can_read,can_write,can_share FROM document_shares WHERE tenant_id='demo' AND doctype=? AND name=? AND user='employee.doc@example.test'",
+        (doctype, name),
+    ).fetchone() == (1, 0, 0), (doctype, name)
 
 # Seeded/imported Employee masters resolve through master_records too.
 db.execute(
@@ -157,4 +199,4 @@ assert db.execute(
 insert_doc("Hiring Completion", "HIRE-OTHER", 1, {"job_offer": "OFFER-1", "employee": "EMP-1"}, tenant="other")
 insert_doc("Employee Final Settlement", "FSET-OTHER", 1, {"separation": "SEP-1", "employee": "EMP-1"}, tenant="other")
 
-print("HRM Wave 1 closure migration regression: PASS")
+print("HRM Wave 1 closure migrations regression: PASS")
