@@ -1,0 +1,27 @@
+{
+  "name": "Web Page",
+  "module": "Website",
+  "autoname": "field:slug",
+  "title_field": "title",
+  "search_fields": ["title", "slug", "nav_label"],
+  "sort_field": "nav_order",
+  "sort_order": "ASC",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "slug", "label": "Đường dẫn", "fieldtype": "Data", "required": true, "unique": true, "in_list_view": true, "search_index": true, "description": "Không có dấu /, ví dụ home, about-us, projects" },
+    { "fieldname": "title", "label": "Tiêu đề", "fieldtype": "Data", "required": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "published", "label": "Công khai", "fieldtype": "Check", "default": 0, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "show_in_nav", "label": "Hiện trên menu", "fieldtype": "Check", "default": 1 },
+    { "fieldname": "nav_label", "label": "Nhãn menu", "fieldtype": "Data" },
+    { "fieldname": "nav_order", "label": "Thứ tự menu", "fieldtype": "Int", "default": 10, "in_list_view": true },
+    { "fieldname": "meta_title", "label": "SEO title", "fieldtype": "Data" },
+    { "fieldname": "meta_description", "label": "SEO description", "fieldtype": "Small Text" },
+    { "fieldname": "blocks", "label": "Nội dung trang", "fieldtype": "Table", "options": "Web Page Block", "required": true }
+  ],
+  "permissions": [
+    { "role": "Website Editor", "read": true, "write": true, "create": true, "report": true },
+    { "role": "Website Manager", "read": true, "write": true, "create": true, "report": true, "export": true, "share": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}

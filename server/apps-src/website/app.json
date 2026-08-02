@@ -1,0 +1,37 @@
+{
+  "id": "website",
+  "name": "Website & CMS",
+  "version": "1.0.0",
+  "requires": [],
+  "nav": [
+    {
+      "key": "Website Settings",
+      "label": "Cấu hình website",
+      "kind": "doctype",
+      "icon": "settings-2",
+      "group": "Website"
+    },
+    {
+      "key": "Web Page",
+      "label": "Trang website",
+      "kind": "doctype",
+      "icon": "panels-top-left",
+      "group": "Website"
+    }
+  ],
+  "hooks": [],
+  "client": {
+    "brand": "blue",
+    "domain": "website",
+    "home": {
+      "route": "/app/Website%20Settings",
+      "doctype": "Website Settings"
+    },
+    "catalog_mode": "manifest",
+    "design": {
+      "density": "comfortable",
+      "radius": "soft",
+      "content_width": "wide"
+    }
+  }
+}
