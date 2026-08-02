@@ -1,10 +1,16 @@
 name: ALU UI Hotfix - Auto Deploy
-run-name: UI hotfix ${{ github.ref_name }} @ ${{ github.sha }}
+run-name: UI hotfix ${{ github.event.pull_request.head.ref || github.ref_name }} @ ${{ github.event.pull_request.head.sha || github.sha }}
 
 on:
   push:
     branches:
       - "hotfix/ui-*"
+    paths:
+      - "client/**"
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
     paths:
       - "client/**"
   workflow_dispatch:
@@ -19,17 +25,23 @@ concurrency:
 jobs:
   deploy:
     name: Validate, build bundle and deploy Gateway
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+       startsWith(github.event.pull_request.head.ref, 'hotfix/ui-'))
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 20
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      VITE_FORGE_RELEASE_SHA: ${{ github.sha }}
+      TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      VITE_FORGE_RELEASE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
     steps:
-      - name: Checkout selected branch
+      - name: Checkout exact hotfix SHA
         uses: actions/checkout@v4
         with:
+          ref: ${{ env.TARGET_SHA }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -37,6 +49,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
           git fetch origin main --no-tags
           git merge-base --is-ancestor origin/main HEAD || {
             echo "Hotfix branch must contain current main before production deploy."
