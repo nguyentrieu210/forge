@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  CalibrationRecordController,
   CapaController,
+  ManufacturingCalibrationRecordController,
   NonConformanceReportController,
   QualityPlanController,
   RootCauseAnalysisController,
@@ -214,7 +214,7 @@ test("CAPA cannot close on an Ineffective verification", async () => {
 });
 
 test("Calibration requires next due date after calibration and produces Failed status when result fails", async () => {
-  const controller = new CalibrationRecordController();
+  const controller = new ManufacturingCalibrationRecordController();
   const input = {
     company: "ACME",
     instrument_id: "CALIPER-01",
@@ -229,5 +229,37 @@ test("Calibration requires next due date after calibration and produces Failed s
   await assert.rejects(
     () => controller.normalize(context({ ...input, next_due_date: "2026-08-03" })),
     /must be after calibration_date/,
+  );
+});
+
+test("Calibration validates Asset as a submitted canonical document in the same company", async () => {
+  const controller = new ManufacturingCalibrationRecordController();
+  const input = {
+    company: "ACME",
+    instrument_id: "CALIPER-02",
+    asset: "ASSET-1",
+    calibration_date: "2026-08-03",
+    next_due_date: "2027-08-03",
+    standard_reference: "Gauge blocks",
+    result: "Pass",
+    performed_by: "quality@example.com",
+  };
+  const asset = document("Asset", "ASSET-1", { company: "ACME", asset_name: "Caliper" }, 1);
+  const normalized = await controller.normalize(context(input, {
+    action: "submit",
+    docs: { "Asset:ASSET-1": asset },
+  }));
+  assert.equal(normalized.asset, "ASSET-1");
+
+  const foreignAsset = document("Asset", "ASSET-1", { company: "OTHER" }, 1);
+  await assert.rejects(
+    () => controller.normalize(context(input, { action: "submit", docs: { "Asset:ASSET-1": foreignAsset } })),
+    /belongs to another company/,
+  );
+
+  const draftAsset = document("Asset", "ASSET-1", { company: "ACME" }, 0);
+  await assert.rejects(
+    () => controller.normalize(context(input, { action: "submit", docs: { "Asset:ASSET-1": draftAsset } })),
+    /must be submitted and Active/,
   );
 });
