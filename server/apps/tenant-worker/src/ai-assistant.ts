@@ -221,11 +221,11 @@ async function readReceiptImageInner(env: TenantEnv, tenantId: string, body: Jso
 }
 
 /**
- * Hỏi đáp về dữ liệu đang mở.
+ * Hỏi đáp của trợ lý.
  *
- * Bối cảnh do CLIENT gửi lên và chỉ gồm thứ người dùng đang xem — trợ lý không tự đi quét
- * cơ sở dữ liệu. Nhờ vậy quyền xem của người dùng vẫn là ranh giới duy nhất: hỏi trợ lý
- * không moi ra được thứ mà chính họ mở màn hình lên cũng không thấy.
+ * Bối cảnh do CLIENT gửi lên vẫn chỉ là dữ liệu người dùng đang được phép xem. Nó là nguồn
+ * sự thật cho các câu hỏi về số liệu/trạng thái của tenant, nhưng không còn là cái lồng nhốt
+ * mọi câu trả lời: kiến thức chung, nghiệp vụ và cách dùng phần mềm có thể trả lời bình thường.
  */
 export async function askAssistant(
   env: TenantEnv,
@@ -249,15 +249,17 @@ async function askAssistantInner(
       {
         role: "system",
         content: [
-          "Bạn là trợ lý của một xưởng cửa cuốn nhôm ở Việt Nam, làm việc trong phần mềm quản lý của họ.",
-          "Trả lời NGẮN, bằng tiếng Việt, đi thẳng vào con số.",
-          "Chỉ dùng dữ liệu trong phần BỐI CẢNH. Bối cảnh không có thì nói thẳng là không có,",
-          "và chỉ ra người dùng nên mở màn hình nào — TUYỆT ĐỐI không suy đoán con số.",
+          "Bạn là trợ lý vận hành trong phần mềm quản lý của một doanh nghiệp Việt Nam.",
+          "Trả lời tự nhiên, hữu ích và đi thẳng vào việc; ưu tiên tiếng Việt trừ khi người dùng yêu cầu khác.",
+          "BỐI CẢNH là dữ liệu màn hình hiện tại để tham khảo khi câu hỏi liên quan, không phải giới hạn chủ đề.",
+          "Bạn được dùng kiến thức chung để giải thích nghiệp vụ, quy trình, phần mềm, phân tích và đề xuất cách làm.",
+          "Nếu người dùng hỏi một con số, trạng thái hoặc sự thật CỤ THỂ của doanh nghiệp mà BỐI CẢNH không chứa, hãy nói rõ là chưa đủ dữ liệu để xác minh và không bịa dữ liệu tenant.",
+          "Không tự nhận đã đọc, sửa hoặc thực hiện hành động trên dữ liệu nếu hệ thống không cung cấp bằng chứng đó trong BỐI CẢNH.",
         ].join(" "),
       },
-      { role: "user", content: `BỐI CẢNH:\n${context}\n\nCÂU HỎI: ${question}` },
+      { role: "user", content: `BỐI CẢNH HIỆN TẠI (có thể không liên quan câu hỏi):\n${context}\n\nCÂU HỎI: ${question}` },
     ],
-    max_tokens: 700,
+    max_tokens: 1200,
   });
 
   const answer = textOf(result).trim();
