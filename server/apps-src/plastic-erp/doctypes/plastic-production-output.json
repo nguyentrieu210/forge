@@ -1,0 +1,16 @@
+{
+  "name": "Plastic Production Output",
+  "module": "Plastic ERP",
+  "is_child": true,
+  "fields": [
+    { "fieldname": "output_type", "label": "Loại đầu ra", "fieldtype": "Select", "options": "Good\nScrap\nRegrind\nBy-product", "required": true, "in_list_view": true },
+    { "fieldname": "item_code", "label": "Mặt hàng", "fieldtype": "Link", "options": "Item", "required": true, "in_list_view": true },
+    { "fieldname": "target_warehouse", "label": "Kho nhận", "fieldtype": "Link", "options": "Warehouse", "required": true, "in_list_view": true },
+    { "fieldname": "serial_and_batch_bundle", "label": "Bundle lô/serial", "fieldtype": "Link", "options": "Serial and Batch Bundle", "in_list_view": true },
+    { "fieldname": "batch_no", "label": "Lô đầu ra", "fieldtype": "Link", "options": "Batch", "in_list_view": true },
+    { "fieldname": "qty", "label": "Số lượng", "fieldtype": "Float", "required": true, "in_list_view": true },
+    { "fieldname": "weight_kg", "label": "Khối lượng thực tế kg", "fieldtype": "Float" }
+  ],
+  "permissions": [],
+  "revision": 1
+}
