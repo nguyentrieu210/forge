@@ -92,10 +92,10 @@ export function FormActionBar({
           variant={a.variant}
           className="h-6 rounded-md px-2 text-[10.5px]"
           disabled={a.disabled}
-          title={a.disabledReason === DIRTY_GUARD_REASON ? t("form.dirty_guard", a.disabledReason) : a.disabledReason}
+          title={a.kind === "print" ? "Xuất PDF" : a.disabledReason === DIRTY_GUARD_REASON ? t("form.dirty_guard", a.disabledReason) : a.disabledReason}
           onClick={a.kind === "save" ? undefined : () => onAction(a.kind)}
         >
-          {a.kind === "save" && ctx.saving ? t("form.saving") : t(`form.action.${a.kind}`, a.label)}
+          {a.kind === "save" && ctx.saving ? t("form.saving") : a.kind === "print" ? "PDF" : t(`form.action.${a.kind}`, a.label)}
         </Button>
       ))}
       {menu.length ? (
