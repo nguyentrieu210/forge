@@ -1,0 +1,9 @@
+{
+  "name": "Biên bản xử lý bảo hành",
+  "doc_type": "Warranty Claim",
+  "format_type": "Jinja",
+  "html": "<h1>BIÊN BẢN XỬ LÝ BẢO HÀNH</h1><p><strong>Số:</strong> {{ doc.name }}</p><p><strong>Ngày tiếp nhận:</strong> {{ doc.claim_date }}</p><p><strong>Khách hàng:</strong> {{ doc.customer }}</p><p><strong>Hợp đồng:</strong> {{ doc.service_contract }}</p><p><strong>Sản phẩm:</strong> {{ doc.item }}</p><p><strong>Serial:</strong> {{ doc.serial_no }}</p><h3>Nội dung yêu cầu</h3><p>{{ doc.complaint }}</p><p><strong>Kết quả quyền lợi:</strong> {{ doc.eligibility_result }}</p><p><strong>Căn cứ:</strong> {{ doc.eligibility_reason }}</p><p><strong>Lệnh dịch vụ:</strong> {{ doc.service_order }}</p><h3>Kết quả xử lý</h3><p>{{ doc.resolution }}</p><p><strong>Người xác nhận phía khách:</strong> {{ doc.customer_confirmed_by }}</p><p><strong>Trạng thái:</strong> {{ doc.workflow_state }}</p>",
+  "css": "h1 { font-size: 18px; text-align: center; margin-bottom: 14px; } h3 { font-size: 14px; margin: 12px 0 4px; } p { margin: 4px 0; line-height: 1.45; }",
+  "is_default": true,
+  "revision": 1
+}
