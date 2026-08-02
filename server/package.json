@@ -66,7 +66,7 @@
     "check:business-suite": "npm run types:check && npm run test && npm run typecheck:workers && npm run source:test && npm run report && npm run verify && npm run app:check && npm run brief:check && npm run verify:business-suite",
     "app:pack": "node scripts/pack-app.mjs",
     "verify:first-party-meta": "node scripts/verify-first-party-meta.mjs",
-    "app:check": "npm run verify:first-party-meta && node scripts/pack-app.mjs apps-src/visits --check && node scripts/pack-app.mjs apps-src/hrm --check && node scripts/pack-app.mjs apps-src/vn-accounting --check && node scripts/pack-app.mjs apps-src/erp-organization-security --check",
+    "app:check": "npm run verify:first-party-meta && node scripts/pack-app.mjs apps-src/visits --check && node scripts/pack-app.mjs apps-src/hrm --check && node scripts/pack-app.mjs apps-src/vn-accounting --check && node scripts/pack-app.mjs apps-src/erp-organization-security --check && node scripts/pack-app.mjs apps-src/integration-hub --check",
     "verify:alumdoor-meta": "node scripts/verify-alumdoor-meta-completeness.mjs",
     "brief:check": "node scripts/forge-app.mjs briefs/assets.json --dry-run && node scripts/forge-app.mjs briefs/center.json --dry-run && node scripts/forge-app.mjs briefs/alumdoor.json --dry-run && node scripts/forge-app.mjs briefs/alumdoor-v2.json --dry-run && node scripts/verify-alumdoor-meta-completeness.mjs && node scripts/forge-app.mjs briefs/phanbon.json --dry-run",
     "dev:seed": "node scripts/seed-local.mjs",
