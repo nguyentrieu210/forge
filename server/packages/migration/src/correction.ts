@@ -34,10 +34,12 @@ export function buildMigrationCorrectionDataset(
     if (row.fingerprint !== outcome.fingerprint) throw errors.idempotency();
     if (outcome.status !== "failed") continue;
     failedRows.push({
+      ...structuredClone(row.document),
+      // Framework-owned correction metadata is written last so a source field cannot forge
+      // its original row identity or hide the failure reason.
       __source_row: row.row_number,
       __row_key: row.row_key,
       __error: outcome.error?.trim() || "Migration row failed",
-      ...structuredClone(row.document),
     });
   }
   return { plan_id: plan.plan_id, target_doctype: plan.target_doctype, failed_rows: failedRows };
