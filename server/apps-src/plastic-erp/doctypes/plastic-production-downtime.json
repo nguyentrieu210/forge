@@ -1,0 +1,14 @@
+{
+  "name": "Plastic Production Downtime",
+  "module": "Plastic ERP",
+  "is_child": true,
+  "fields": [
+    { "fieldname": "reason", "label": "Lý do dừng", "fieldtype": "Data", "required": true, "in_list_view": true },
+    { "fieldname": "started_at", "label": "Bắt đầu", "fieldtype": "Datetime", "required": true, "in_list_view": true },
+    { "fieldname": "ended_at", "label": "Kết thúc", "fieldtype": "Datetime", "required": true, "in_list_view": true },
+    { "fieldname": "minutes", "label": "Số phút", "fieldtype": "Float", "required": true, "in_list_view": true },
+    { "fieldname": "note", "label": "Ghi chú", "fieldtype": "Data" }
+  ],
+  "permissions": [],
+  "revision": 1
+}
