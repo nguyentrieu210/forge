@@ -8,11 +8,27 @@ GitHub là nguồn sự thật. Exact branch head, PR và CI phải kiểm tra l
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `main`.
-- Exact `main` kiểm gần nhất: `da37060f3c02a6a5f9701d60edc3284575f00deb` — `feat(finance): harden warehouse petty cash per warehouse (#214)`.
-- Exact feature merge checkpoint trước đó: `e447eca0e020da161dcee4f0b865206921718a61` — merge PR `#209`.
+- Exact `main` kiểm gần nhất: `4960de3443300245fcce3f69914826306a297266` — `docs(status): close warehouse cash merge checkpoint (#217)`.
+- Exact feature merge checkpoint trước đó: `da37060f3c02a6a5f9701d60edc3284575f00deb` — Warehouse Petty Cash PR `#214`.
 - PR `#210` là iteration Warehouse Cash cũ đã đóng/superseded bởi `#214`; không reopen/merge.
 - PR `#203` và `#205` là các iteration Bulk Transaction đã đóng/superseded; không dùng làm live source.
-- Không deploy Cloudflare/production trong các slice này.
+
+## ACTIVE — One-click UI hotfix production lane
+
+- Branch: `hotfix/ui-one-click-deploy-20260802`, tạo từ exact `main@4960de3443300245fcce3f69914826306a297266`.
+- Mục tiêu: thay đổi giao diện nhỏ có thể dùng branch `hotfix/ui-*` rồi bấm một workflow production duy nhất, không chạy tenant migration/app worker/full-estate rollout sai phạm vi.
+- Workflow mới `.github/workflows/hotfix-ui-one-click.yml`:
+  - chỉ nhận branch `hotfix/ui-*`;
+  - current `main` phải là ancestor của exact hotfix SHA;
+  - bắt buộc có `client/**`, ngoài client chỉ cho ba file status/handoff canonical;
+  - giới hạn tối đa 20 file và 600 dòng text;
+  - package/dependency, backend, migration, metadata, workflow ngoài fast-lane bị chặn;
+  - gọi reusable Gateway release để lint/test/typecheck/build/stage/dry-run/deploy/smoke exact SHA;
+  - best-effort tạo hoặc annotate PR reconcile về `main` sau production release.
+- `.github/workflows/release-gateway.yml` được mở thêm `workflow_call` nhưng giữ nguyên release implementation và production environment; không tạo deploy implementation thứ hai.
+- `RUNBOOK.md` và `DELIVERY_POLICY.md` đã định nghĩa boundary của fast lane.
+- Chưa deploy production trong task tạo quy trình này.
+- Cần PR/CI exact-head cho thay đổi workflow trước khi coi lane sẵn sàng sử dụng.
 
 ## DONE — Warehouse Petty Cash per warehouse
 
@@ -90,13 +106,14 @@ Generic Bulk View vẫn chỉ dùng `document_update` cho master an toàn; trans
 
 ## Chưa hoàn tất toàn hệ thống
 
-1. Bulk Transaction cho Stock Reconciliation.
-2. Bulk Transaction cho BOM parent + child/version.
-3. First-class AppAction input-table contract thay compatibility `BulkTransaction:<json>` trong Text options.
-4. Batch Print / QR label queue.
-5. P1 Daily detailed ledger hardening/closure theo exact GitHub state.
-6. Plastic ERP các wave sau P0-A, warranty/defects/capacity/overtime và authenticated E2E xuyên miền.
-7. Nếu quỹ kho cần tất toán trực tiếp Purchase/Sales Invoice thì phải tích hợp canonical payment allocation; party dimension trên GL hiện không tự settle AR/AP.
+1. Hoàn tất PR/CI và merge one-click UI hotfix lane; sau merge mới dùng workflow mới cho hotfix giao diện production.
+2. Bulk Transaction cho Stock Reconciliation.
+3. Bulk Transaction cho BOM parent + child/version.
+4. First-class AppAction input-table contract thay compatibility `BulkTransaction:<json>` trong Text options.
+5. Batch Print / QR label queue.
+6. P1 Daily detailed ledger hardening/closure theo exact GitHub state.
+7. Plastic ERP các wave sau P0-A, warranty/defects/capacity/overtime và authenticated E2E xuyên miền.
+8. Nếu quỹ kho cần tất toán trực tiếp Purchase/Sales Invoice thì phải tích hợp canonical payment allocation; party dimension trên GL hiện không tự settle AR/AP.
 
 ## Guardrails
 
