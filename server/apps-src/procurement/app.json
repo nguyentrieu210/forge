@@ -1,0 +1,37 @@
+{
+  "id": "procurement",
+  "name": "Mua hàng & Nhà cung cấp",
+  "version": "0.2.0",
+  "requires": [],
+  "externalDocTypes": [
+    { "name": "Company", "kind": "master", "app": "accounts" },
+    { "name": "Currency", "kind": "master", "app": "accounts" },
+    { "name": "UOM", "kind": "master", "app": "stock" },
+    { "name": "Supplier", "kind": "master", "app": "buying" },
+    { "name": "Request for Quotation", "kind": "transaction", "app": "buying" },
+    { "name": "Supplier Quotation", "kind": "transaction", "app": "buying" },
+    { "name": "Purchase Order", "kind": "transaction", "app": "buying" },
+    { "name": "Purchase Receipt", "kind": "transaction", "app": "stock" },
+    { "name": "Purchase Invoice", "kind": "transaction", "app": "accounts" },
+    { "name": "Payment Entry", "kind": "transaction", "app": "accounts" }
+  ],
+  "nav": [
+    { "key": "Supplier Qualification", "label": "Duyệt nhà cung cấp", "kind": "doctype", "icon": "badge-check", "group": "Nhà cung cấp" },
+    { "key": "Supplier Rating", "label": "Đánh giá nhà cung cấp", "kind": "doctype", "icon": "star", "group": "Nhà cung cấp" },
+    { "key": "Supplier Contract", "label": "Hợp đồng nhà cung cấp", "kind": "doctype", "icon": "file-signature", "group": "Nhà cung cấp" },
+    { "key": "supplier", "label": "Danh sách nhà cung cấp", "kind": "route", "route": "/app/Supplier", "icon": "building-2", "group": "Nhà cung cấp", "required_roles": ["Purchase User", "Purchase Manager", "System Manager"] },
+    { "key": "rfq", "label": "Yêu cầu báo giá", "kind": "route", "route": "/app/Request%20for%20Quotation", "icon": "send", "group": "Mua hàng", "required_roles": ["Purchase User", "Purchase Manager", "System Manager"] },
+    { "key": "supplier-quotation", "label": "Báo giá nhà cung cấp", "kind": "route", "route": "/app/Supplier%20Quotation", "icon": "notebook-tabs", "group": "Mua hàng", "required_roles": ["Purchase User", "Purchase Manager", "System Manager"] },
+    { "key": "purchase-order", "label": "Đơn mua hàng", "kind": "route", "route": "/app/Purchase%20Order", "icon": "shopping-cart", "group": "Mua hàng", "required_roles": ["Purchase User", "Purchase Manager", "System Manager"] },
+    { "key": "purchase-receipt", "label": "Phiếu nhập mua", "kind": "route", "route": "/app/Purchase%20Receipt", "icon": "package-check", "group": "Nhận hàng", "required_roles": ["Purchase User", "Purchase Manager", "Stock User", "Stock Manager", "System Manager"] },
+    { "key": "purchase-invoice", "label": "Hóa đơn mua", "kind": "route", "route": "/app/Purchase%20Invoice", "icon": "receipt-text", "group": "Đối chiếu & thanh toán", "required_roles": ["Purchase Manager", "Accounts User", "Accounts Manager", "System Manager"] }
+  ],
+  "hooks": [],
+  "client": {
+    "brand": "slate",
+    "domain": "procurement",
+    "home": { "route": "/app/Purchase%20Order", "doctype": "Purchase Order" },
+    "dimensions": ["company", "supplier"],
+    "catalog_mode": "hybrid"
+  }
+}
