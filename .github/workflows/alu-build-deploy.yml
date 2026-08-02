@@ -79,7 +79,7 @@ jobs:
           for file in "${changed[@]}"; do
             case "$file" in
               client/*) has_client=true ;;
-              RUNBOOK.md|CURRENT_STATUS.md|NEXT_TASKS.md|AI_HANDOFF.md|DELIVERY_POLICY.md) ;;
+              RUNBOOK.md|CURRENT_STATUS.md|NEXT_TASKS.md|AI_HANDOFF.md|DELIVERY_POLICY.md|docs/agents/workstreams/*) ;;
               *)
                 echo "Blocked non-UI file in automatic production UI deploy: $file"
                 exit 1
@@ -118,51 +118,25 @@ jobs:
       - name: Deploy Gateway
         run: pnpm --dir server exec wrangler deploy --config apps/gateway-worker/wrangler.jsonc
 
-      - name: Smoke exact release
-        shell: bash
-        run: |
-          set -euo pipefail
+      - name: Verify production convergence
+        run: >-
+          node server/scripts/sre-health-snapshot.mjs
+          --base https://alu.kairo.vn
+          --expected-release-sha "$TARGET_SHA"
+          --allow-remote
+          --confirm-host alu.kairo.vn
+          --attempts 10
+          --delay-ms 2000
+          --output "$RUNNER_TEMP/release-health.json"
 
-          health_ok=false
-          for attempt in 1 2 3 4 5 6; do
-            if curl --fail --silent --show-error --max-time 10 \
-              -H 'Cache-Control: no-cache' \
-              "https://alu.kairo.vn/health?sha=$TARGET_SHA&attempt=$attempt" >/dev/null; then
-              health_ok=true
-              break
-            fi
-            sleep 2
-          done
-          [ "$health_ok" = true ] || {
-            echo "Production health did not become ready after deploy."
-            exit 1
-          }
-
-          release_ok=false
-          for attempt in 1 2 3 4 5 6 7 8 9 10; do
-            if curl --fail --silent --show-error --max-time 10 \
-              -H 'Cache-Control: no-cache' \
-              "https://alu.kairo.vn/release.json?sha=$TARGET_SHA&attempt=$attempt" \
-              -o "$RUNNER_TEMP/release.json"; then
-              if node - "$RUNNER_TEMP/release.json" <<'NODE'
-          const fs = require('node:fs');
-          const release = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
-          if (release.releaseSha !== process.env.TARGET_SHA) process.exit(2);
-          if (!release.bundleHash) process.exit(3);
-          console.log(`PRODUCTION_RELEASE_OK sha=${release.releaseSha} bundle=${release.bundleHash}`);
-          NODE
-              then
-                release_ok=true
-                break
-              fi
-            fi
-            sleep 2
-          done
-          [ "$release_ok" = true ] || {
-            echo "Production release marker did not converge to $TARGET_SHA after deploy."
-            cat "$RUNNER_TEMP/release.json" 2>/dev/null || true
-            exit 1
-          }
+      - name: Upload UI release evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alu-ui-release-evidence-${{ github.run_id }}
+          path: ${{ runner.temp }}/release-health.json
+          if-no-files-found: warn
+          retention-days: 30
 
   build-deploy:
     name: Build and deploy full ALU release
@@ -260,51 +234,16 @@ jobs:
       - name: Deploy Gateway
         run: pnpm --dir server exec wrangler deploy --config apps/gateway-worker/wrangler.jsonc
 
-      - name: Smoke exact release
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          health_ok=false
-          for attempt in 1 2 3 4 5 6; do
-            if curl --fail --silent --show-error --max-time 10 \
-              -H 'Cache-Control: no-cache' \
-              "https://alu.kairo.vn/health?sha=$TARGET_SHA&attempt=$attempt" >/dev/null; then
-              health_ok=true
-              break
-            fi
-            sleep 2
-          done
-          [ "$health_ok" = true ] || {
-            echo "Production health did not become ready after full release."
-            exit 1
-          }
-
-          release_ok=false
-          for attempt in 1 2 3 4 5 6 7 8 9 10; do
-            if curl --fail --silent --show-error --max-time 10 \
-              -H 'Cache-Control: no-cache' \
-              "https://alu.kairo.vn/release.json?sha=$TARGET_SHA&attempt=$attempt" \
-              -o "$RUNNER_TEMP/release.json"; then
-              if node - "$RUNNER_TEMP/release.json" <<'NODE'
-          const fs = require('node:fs');
-          const release = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
-          if (release.releaseSha !== process.env.TARGET_SHA) process.exit(2);
-          if (!release.bundleHash) process.exit(3);
-          console.log(`PRODUCTION_RELEASE_OK sha=${release.releaseSha} bundle=${release.bundleHash}`);
-          NODE
-              then
-                release_ok=true
-                break
-              fi
-            fi
-            sleep 2
-          done
-          [ "$release_ok" = true ] || {
-            echo "Production release marker did not converge to $TARGET_SHA after full release."
-            cat "$RUNNER_TEMP/release.json" 2>/dev/null || true
-            exit 1
-          }
+      - name: Verify production convergence
+        run: >-
+          node server/scripts/sre-health-snapshot.mjs
+          --base https://alu.kairo.vn
+          --expected-release-sha "$TARGET_SHA"
+          --allow-remote
+          --confirm-host alu.kairo.vn
+          --attempts 10
+          --delay-ms 2000
+          --output "$RUNNER_TEMP/release-health.json"
 
       - name: Upload non-sensitive release evidence
         if: always()
@@ -312,7 +251,7 @@ jobs:
         with:
           name: alu-release-evidence-${{ github.run_id }}
           path: |
-            ${{ runner.temp }}/release.json
+            ${{ runner.temp }}/release-health.json
             ${{ runner.temp }}/alu-backup-verification.json
           if-no-files-found: warn
           retention-days: 30
