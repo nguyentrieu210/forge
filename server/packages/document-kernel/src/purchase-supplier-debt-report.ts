@@ -33,14 +33,25 @@ export interface PurchaseSupplierDebtReportRow {
   supplier: string;
   item_code: string;
   material: string;
+  measurement_profile: string;
+  allocation_uom: string;
+  length_m: string | null;
+  theoretical_kg_per_m: string | null;
   ordered_qty: string;
   received_qty: string;
   allocated_qty: string;
   nominal_remaining_qty: string;
   unapplied_receipt_qty: string;
+  ordered_meters: string | null;
+  received_meters: string | null;
+  nominal_remaining_meters: string | null;
+  ordered_barem_weight_kg: string | null;
+  received_barem_weight_kg: string;
+  nominal_remaining_barem_weight_kg: string | null;
   tolerance: string;
   oldest_open_po_date: string | null;
   oldest_open_po_age_days: number | null;
+  /** Compatibility alias for received barem weight. */
   barem_weight_kg: string;
   actual_weight_kg: string | null;
 }
@@ -216,6 +227,8 @@ export function buildPurchaseSupplierDebtReport(
     const unapplied = row.unapplied_qty_micros;
     const received = allocated + unapplied;
     const remaining = Math.max(row.ordered_qty_micros - allocated, 0);
+    const physical = physicalMeasures(material, row.ordered_qty_micros, received, remaining);
+    const receivedBarem = micros(row.barem_weight_micros);
     return {
       queue_key: row.queue_key,
       window_id: row.window_id,
@@ -225,15 +238,25 @@ export function buildPurchaseSupplierDebtReport(
       supplier: row.supplier,
       item_code: material.item_code,
       material: materialLabel(material),
+      measurement_profile: material.measurement_profile,
+      allocation_uom: material.measurement_profile === "Nhôm cây/lá" ? "Cây" : material.stock_uom,
+      length_m: physical?.length_m ?? null,
+      theoretical_kg_per_m: physical?.theoretical_kg_per_m ?? null,
       ordered_qty: micros(row.ordered_qty_micros),
       received_qty: micros(received),
       allocated_qty: micros(allocated),
       nominal_remaining_qty: micros(remaining),
       unapplied_receipt_qty: micros(unapplied),
+      ordered_meters: physical?.ordered_meters ?? null,
+      received_meters: physical?.received_meters ?? null,
+      nominal_remaining_meters: physical?.remaining_meters ?? null,
+      ordered_barem_weight_kg: physical?.ordered_barem_weight_kg ?? null,
+      received_barem_weight_kg: receivedBarem,
+      nominal_remaining_barem_weight_kg: physical?.remaining_barem_weight_kg ?? null,
       tolerance: `${trimDecimal(row.tolerance_bps / 100)}%`,
       oldest_open_po_date: row.oldest_open_po_date,
       oldest_open_po_age_days: ageDays(row.oldest_open_po_date, generatedAt),
-      barem_weight_kg: micros(row.barem_weight_micros),
+      barem_weight_kg: receivedBarem,
       actual_weight_kg: row.actual_weight_value_count > 0 ? micros(row.actual_weight_micros) : null,
     } satisfies PurchaseSupplierDebtReportRow;
   });
@@ -247,7 +270,7 @@ export function buildPurchaseSupplierDebtReport(
   return {
     kind: "purchase_supplier_debt_report",
     title: "Công nợ giao hàng nhà cung cấp",
-    description: "Đọc trực tiếp từ allocation ledger append-only; bảng progress cũ không được dùng làm nguồn sự thật.",
+    description: "Đọc trực tiếp từ allocation ledger append-only; nhôm tách rõ số cây FIFO, mét dài, kg barem và kg cân thực tế.",
     generated_at: generatedAt,
     csv_filename: `purchase-supplier-debt-${generatedAt.slice(0, 10)}.csv`,
     filters,
@@ -259,14 +282,18 @@ export function buildPurchaseSupplierDebtReport(
       { key: "window_status", label: "Trạng thái" },
       { key: "ordered_qty", label: "Đã đặt", align: "right" },
       { key: "received_qty", label: "Tổng đã nhận", align: "right" },
-      { key: "allocated_qty", label: "Đã phân bổ", align: "right" },
       { key: "nominal_remaining_qty", label: "Nợ danh nghĩa", align: "right" },
+      { key: "ordered_meters", label: "Mét đặt", align: "right" },
+      { key: "received_meters", label: "Mét nhận", align: "right" },
+      { key: "nominal_remaining_meters", label: "Mét còn nợ", align: "right" },
+      { key: "ordered_barem_weight_kg", label: "Kg barem đặt", align: "right" },
+      { key: "received_barem_weight_kg", label: "Kg barem nhận", align: "right" },
+      { key: "nominal_remaining_barem_weight_kg", label: "Kg barem còn nợ", align: "right" },
+      { key: "actual_weight_kg", label: "Kg cân thực tế", align: "right" },
       { key: "unapplied_receipt_qty", label: "Phiếu nhập chờ", align: "right" },
       { key: "tolerance", label: "Dung sai", align: "right" },
       { key: "oldest_open_po_date", label: "PO mở cũ nhất" },
       { key: "oldest_open_po_age_days", label: "Tuổi PO (ngày)", align: "right" },
-      { key: "barem_weight_kg", label: "Kg barem", align: "right" },
-      { key: "actual_weight_kg", label: "Kg thực tế", align: "right" },
     ],
     rows,
     summary: [
@@ -305,8 +332,10 @@ function normalizeLedgerRow(row: PurchaseSupplierDebtLedgerRow): PurchaseSupplie
 interface MaterialSnapshot {
   item_code: string;
   length_m_micros: number;
+  theoretical_kg_per_m_micros: number;
   color: string;
   is_stamped: number;
+  measurement_profile: string;
   stock_uom: string;
 }
 
@@ -324,11 +353,11 @@ function parseMaterialSnapshot(value: string): MaterialSnapshot {
     item_code: typeof record.item_code === "string" && record.item_code.trim()
       ? record.item_code.trim()
       : "Không rõ vật tư",
-    length_m_micros: Number.isFinite(Number(record.length_m_micros))
-      ? Number(record.length_m_micros)
-      : 0,
+    length_m_micros: finiteInteger(record.length_m_micros),
+    theoretical_kg_per_m_micros: finiteInteger(record.theoretical_kg_per_m_micros),
     color: typeof record.color === "string" ? record.color.trim() : "",
     is_stamped: Number(record.is_stamped) === 1 ? 1 : 0,
+    measurement_profile: typeof record.measurement_profile === "string" ? record.measurement_profile.trim() : "",
     stock_uom: typeof record.stock_uom === "string" ? record.stock_uom.trim() : "",
   };
 }
@@ -336,10 +365,55 @@ function parseMaterialSnapshot(value: string): MaterialSnapshot {
 function materialLabel(material: MaterialSnapshot): string {
   const parts = [material.item_code];
   if (material.length_m_micros > 0) parts.push(`${micros(material.length_m_micros)} m`);
+  if (material.theoretical_kg_per_m_micros > 0) parts.push(`${micros(material.theoretical_kg_per_m_micros)} kg/m`);
   if (material.color) parts.push(material.color);
-  if (material.is_stamped === 1) parts.push("Dập");
-  if (material.stock_uom) parts.push(material.stock_uom);
+  parts.push(material.is_stamped === 1 ? "Dập" : "Không dập");
   return parts.join(" · ");
+}
+
+function physicalMeasures(
+  material: MaterialSnapshot,
+  orderedQtyMicros: number,
+  receivedQtyMicros: number,
+  remainingQtyMicros: number,
+): {
+  length_m: string;
+  theoretical_kg_per_m: string;
+  ordered_meters: string;
+  received_meters: string;
+  remaining_meters: string;
+  ordered_barem_weight_kg: string;
+  remaining_barem_weight_kg: string;
+} | null {
+  if (material.measurement_profile !== "Nhôm cây/lá"
+    || material.length_m_micros <= 0
+    || material.theoretical_kg_per_m_micros <= 0) return null;
+  const orderedMeters = multiplyMicros(orderedQtyMicros, material.length_m_micros);
+  const receivedMeters = multiplyMicros(receivedQtyMicros, material.length_m_micros);
+  const remainingMeters = multiplyMicros(remainingQtyMicros, material.length_m_micros);
+  return {
+    length_m: micros(material.length_m_micros),
+    theoretical_kg_per_m: micros(material.theoretical_kg_per_m_micros),
+    ordered_meters: micros(orderedMeters),
+    received_meters: micros(receivedMeters),
+    remaining_meters: micros(remainingMeters),
+    ordered_barem_weight_kg: micros(multiplyMicros(orderedMeters, material.theoretical_kg_per_m_micros)),
+    remaining_barem_weight_kg: micros(multiplyMicros(remainingMeters, material.theoretical_kg_per_m_micros)),
+  };
+}
+
+function multiplyMicros(left: number, right: number): number {
+  if (!Number.isSafeInteger(left) || !Number.isSafeInteger(right)) {
+    throw new Error("Purchase supplier debt physical quantity exceeds safe integer range");
+  }
+  const value = Number(BigInt(left) * BigInt(right) / 1_000_000n);
+  if (!Number.isSafeInteger(value)) throw new Error("Purchase supplier debt physical quantity exceeds safe integer range");
+  return value;
+}
+
+function finiteInteger(value: unknown): number {
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) ? parsed : 0;
 }
 
 function ageDays(value: string | null, generatedAt: string): number | null {
