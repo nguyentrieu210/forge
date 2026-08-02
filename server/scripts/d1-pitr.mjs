@@ -5,12 +5,6 @@
  * Dry-run is the default and resolves both current + target bookmarks remotely without
  * mutating D1. Execute is deliberately noisy and double-guarded: exact tenant confirm,
  * mandatory reason, fresh SQL export + offline replay verification, then Time Travel.
- *
- * Examples:
- *   node scripts/d1-pitr.mjs --tenant alu --timestamp 2026-08-03T01:00:00Z
- *   node scripts/d1-pitr.mjs --tenant alu --bookmark <bookmark>
- *   node scripts/d1-pitr.mjs --tenant alu --timestamp ... --execute --confirm alu \
- *     --reason "rollback failed migration" --backup-dir /secure/alu-pitr
  */
 import { spawnSync } from "node:child_process";
 import { mkdirSync, readdirSync, writeFileSync } from "node:fs";
@@ -59,13 +53,12 @@ const targetInfo = bookmark
   : parseJson(wrangler(["d1", "time-travel", "info", databaseName, "--timestamp", timestamp, "--json"]));
 const targetBookmark = requireBookmark(targetInfo, "target");
 
-const plannedAt = new Date().toISOString();
 const baseEvidence = {
   format: "forge-d1-pitr/v1",
   tenant,
   database_name: databaseName,
   d1_version: version,
-  planned_at: plannedAt,
+  planned_at: new Date().toISOString(),
   reason: reason ?? null,
   requested_timestamp: timestamp ?? null,
   requested_bookmark: bookmark ?? null,
@@ -105,14 +98,22 @@ runNode("verify-tenant-backup.mjs", [
 ]);
 
 const startedAt = performance.now();
-// Explicit --confirm/--reason above is our first safety gate. Wrangler's own prompt is
-// answered only after the fresh backup has replay-verified, keeping an additional gate in
-// the underlying provider command rather than trying to bypass it with an undocumented flag.
-const restoreOut = wrangler([
+// Keep Wrangler's provider confirmation in addition to Forge's explicit confirm/reason.
+// JSON output is used so success is checked from provider fields instead of CLI prose.
+const restoreResponse = parseJson(wrangler([
   "d1", "time-travel", "restore", databaseName,
   "--bookmark", targetBookmark,
-], { input: "y\n" });
+  "--json",
+], { input: "y\n" }));
 const restoreDurationMs = Math.round(performance.now() - startedAt);
+const providerBookmark = requireBookmark(restoreResponse, "restore response");
+const providerPreviousBookmark = findString(restoreResponse, "previous_bookmark");
+if (providerBookmark !== targetBookmark) {
+  fail(`PITR provider restored ${providerBookmark}, expected target ${targetBookmark}`);
+}
+if (providerPreviousBookmark && providerPreviousBookmark !== currentBookmark) {
+  fail(`PITR provider previous bookmark ${providerPreviousBookmark} != preflight ${currentBookmark}`);
+}
 
 const afterInfo = parseJson(wrangler(["d1", "time-travel", "info", databaseName, "--json"]));
 const currentBookmarkAfter = requireBookmark(afterInfo, "post-restore");
@@ -120,20 +121,22 @@ if (currentBookmarkAfter !== targetBookmark) {
   fail(`PITR provider returned but current bookmark ${currentBookmarkAfter} != target ${targetBookmark}`);
 }
 
+const undoBookmark = providerPreviousBookmark ?? currentBookmark;
 const evidence = {
   ...baseEvidence,
   executed: true,
   restored_at: new Date().toISOString(),
   restore_duration_ms: restoreDurationMs,
+  provider_bookmark: providerBookmark,
+  provider_previous_bookmark: providerPreviousBookmark ?? null,
   current_bookmark_after: currentBookmarkAfter,
-  undo_bookmark: currentBookmark,
+  undo_bookmark: undoBookmark,
   pre_restore_backup_file: path.basename(backupFile),
   pre_restore_backup_verification: path.basename(backupVerifyEvidence),
-  provider_output_tail: String(restoreOut).trim().split(/\r?\n/).slice(-8),
 };
 const output = outputArg ?? path.join(backupDir, `${tenant}-${Date.now()}.pitr.json`);
 writeEvidence(output, evidence);
-console.log(`\nPITR complete. Undo bookmark: ${currentBookmark}`);
+console.log(`\nPITR complete. Undo bookmark: ${undoBookmark}`);
 console.log(`evidence    ${path.resolve(output)}`);
 
 function runNode(script, scriptArgs) {
