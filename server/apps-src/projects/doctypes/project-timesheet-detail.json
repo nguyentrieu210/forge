@@ -1,0 +1,16 @@
+{
+  "name": "Project Timesheet Detail",
+  "module": "Projects",
+  "is_child": true,
+  "fields": [
+    { "fieldname": "task", "label": "Công việc", "fieldtype": "Link", "options": "Project Task", "required": true, "in_list_view": true },
+    { "fieldname": "activity_type", "label": "Loại hoạt động", "fieldtype": "Data", "required": true, "in_list_view": true },
+    { "fieldname": "from_time", "label": "Từ", "fieldtype": "Datetime", "required": true, "in_list_view": true },
+    { "fieldname": "to_time", "label": "Đến", "fieldtype": "Datetime", "required": true, "in_list_view": true },
+    { "fieldname": "hours", "label": "Số giờ", "fieldtype": "Float", "required": true, "in_list_view": true },
+    { "fieldname": "billable", "label": "Có thể tính phí", "fieldtype": "Check", "in_list_view": true },
+    { "fieldname": "note", "label": "Mô tả công việc", "fieldtype": "Text" }
+  ],
+  "permissions": [],
+  "revision": 1
+}
