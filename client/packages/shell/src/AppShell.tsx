@@ -136,6 +136,7 @@ export function AppShell(props: AppShellProps) {
   const activeRef = useRef<HTMLButtonElement | null>(null);
   const mainRef = useRef<HTMLElement | null>(null);
   const mobileMenuTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const mobileMenuCloseRef = useRef<HTMLButtonElement | null>(null);
 
   // Ghim nav item lên đầu sidebar (client-only) — vẫn giữ nguyên ở nhóm gốc, chỉ thêm 1 nhóm tổng
   // hợp phía trên để truy cập nhanh, giống pattern browser bookmark bar.
@@ -184,6 +185,7 @@ export function AppShell(props: AppShellProps) {
   }, []);
   useEffect(() => {
     if (!mobileOpen) return;
+    window.requestAnimationFrame(() => mobileMenuCloseRef.current?.focus());
     const onEscape = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       event.preventDefault();
@@ -225,7 +227,7 @@ export function AppShell(props: AppShellProps) {
   return (
     <TooltipProvider delayDuration={250}>
       <a className="mf-skip-link" href="#mf-main-content">Bỏ qua menu, tới nội dung chính</a>
-      <div className="mf-shell flex h-screen w-full overflow-hidden bg-background text-foreground">
+      <div className="mf-shell flex h-dvh w-full overflow-hidden bg-background text-foreground">
         {mobileOpen ? <div className="fixed inset-0 z-40 bg-black/50 md:hidden" onClick={() => { setMobileOpen(false); window.requestAnimationFrame(() => mobileMenuTriggerRef.current?.focus()); }} aria-hidden="true" /> : null}
         <aside id="mf-primary-navigation" role="navigation" aria-label="Điều hướng ứng dụng" className={cn(
           "mf-shell-sidebar flex shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground transition-[width,transform] duration-200",
@@ -247,7 +249,7 @@ export function AppShell(props: AppShellProps) {
                 )}>{props.brandMark}</div>
               : <div className="mf-brand-mark">{(props.brand ?? "MetaForge").trim().charAt(0).toUpperCase()}</div>}
             {!collapsed && !props.brandLogoOnly ? <span className="truncate font-semibold">{props.brand ?? "MetaForge"}</span> : null}
-            <Button variant="ghost" size="icon-sm" className="ml-auto md:hidden" onClick={() => { setMobileOpen(false); window.requestAnimationFrame(() => mobileMenuTriggerRef.current?.focus()); }} aria-label="Đóng menu"><X className="size-4" /></Button>
+            <Button ref={mobileMenuCloseRef} variant="ghost" size="icon-sm" className="ml-auto md:hidden" onClick={() => { setMobileOpen(false); window.requestAnimationFrame(() => mobileMenuTriggerRef.current?.focus()); }} aria-label="Đóng menu"><X className="size-4" /></Button>
           </div>
           <Separator />
 

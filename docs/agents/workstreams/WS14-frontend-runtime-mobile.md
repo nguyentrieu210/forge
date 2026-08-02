@@ -1,6 +1,6 @@
 # WS14 — MetaForge Frontend Runtime / Mobile / Offline / A11y
 
-Status: **ACTIVE — slice 1 merged; deploy evidence blocked**  
+Status: **BLOCKED — independent verified-safe Phase B slices merged; shared-contract/release/build evidence pending**  
 Owner: **gpt-ws14**  
 Branch: `agent/ent-14-frontend-runtime-mobile`  
 Started from: `bbe3494bcfbb8a3ce09a5ff4bbb839dfcf9e47e9`  
@@ -8,104 +8,169 @@ Product baseline: **Forge 0.2.0**
 Seed baseline: `862636e6239c91eab657c619d8c55345ed71a6d8`  
 Canonical board: `main:docs/agents/AGENT_BOARD.md`
 
-Before implementation: compare exact current `main`; incorporate source-relevant changes, including UI fixes merged after the seed baseline. Operational/deploy-evidence-only head drift does not by itself redefine the product baseline.
+Exact GitHub state/code wins this handoff if later commits move `main`.
 
 ## Mission
 
-Harden shared MetaForge runtime thay vì mỗi domain tự làm UI: form/list/report/action/workspace consistency, mobile/offline, accessibility, performance, shared controls và UX architecture.
+Harden shared MetaForge runtime instead of letting each domain fork UI: form/list/report/action/workspace consistency, mobile/offline, accessibility, performance, shared controls and UX architecture.
 
-## Own
+## Ownership guard
 
-`client/apps/runtime/**`, shared `client/packages/core|ui|controls|views|shell/**` architecture, routing/renderers, generic forms/lists/tables/actions, PWA/mobile/offline contracts, accessibility/performance/design-system primitives.
+- Own: `client/apps/runtime/**`, shared `client/packages/core|ui|controls|views|shell/**` architecture, routing/renderers, generic forms/lists/tables/actions, PWA/mobile/offline contracts, accessibility/performance/design-system primitives.
+- UI state is never authoritative for permission/business rules.
+- Do not hard-code domain schema into generic runtime when metadata/manifest can express it.
+- Collaboration/search/notification feature ownership is WS15; WS14 only owns shared renderer primitives consumed by it.
 
 ## Phase A exact-state audit — 2026-08-03
 
 ### Runtime/renderers
 
-- Generic runtime/router is already metadata-first for list/form/workspace/overview/report/action/screen/import and lazy-loads large renderer families.
-- `client/apps/runtime/src/main.tsx` still routes `/page/:page` and `/dashboard/:page` to `DeskFallback`; no generic Page/Dashboard renderer exists on current main.
-- Command palette + permission-aware global search are wired through the shared shell/adapter; no separate app-specific navigation fork is required for this slice.
+- Generic runtime/router is metadata-first for list/form/workspace/overview/report/action/screen/import and lazy-loads the main renderer families.
+- `/page/:page` and `/dashboard/:page` still route to `DeskFallback`.
+- Client `AppManifest` and server app-registry expose metadata-driven `screen`/`action` primitives, but current app-package contract has no first-class generic Page/Dashboard payload. Implementing a client-only renderer would invent a second contract.
+- Command palette and permission-aware global search are already wired through shared shell/adapter.
 
-### Mobile/a11y shell
+### Mobile/a11y
 
-- `AppShell` already has a skip link, keyboard shortcut dialog, mobile drawer, active-page semantics and main-content focus after navigation.
-- Audit found `businessContext` rendered in both topbar and the dedicated mobile context row.
-- Audit found the custom mobile drawer missing an explicit trigger/controlled-region relationship and Escape close behavior.
+- Shared List already has mobile cards, desktop virtualization, roving keyboard focus, column preferences/pinning/resize/order and pull-to-refresh.
+- Audit found duplicated business-context rendering, missing drawer focus semantics, legacy `100vh` shell sizing, horizontally-scroll-only extension child grids and unstable pull-to-refresh listener lifecycle. Safe independent gaps are merged below.
+- Base `ChildGrid.tsx` remains table-first on narrow screens. It is nearly 2,000 lines and also contains Item defaults, pricing, sales formula, purchase barem, OCR/import and other domain-sensitive behavior. A mobile renderer refactor is not safely verifiable through whole-file Contents API replacement while checkout/build/E2E are unavailable; this is recorded as `NOT IMPLEMENTED`, not silently treated as done.
 
 ### PWA/offline
 
-- `client/apps/runtime/vite.config.ts` has only React + Tailwind plugins; repository search found no web app manifest, service-worker registration, IndexedDB cache, offline write queue or background sync implementation.
-- Therefore `U01-002` through `U01-007` remain **Missing** on the audited baseline.
-- The pre-slice offline banner claimed cached reads and later resend behavior that the runtime did not implement.
+- Audited baseline had no web app manifest, service-worker registration, IndexedDB cache, offline write queue, background sync or conflict handling.
+- Installability can be separated from offline semantics; an empty service worker is not used to fake offline maturity.
+- Real offline read/write/sync must preserve tenant/session boundaries, stale-release behavior and write-conflict semantics before `U01-003..007` can advance.
 
-### Capability maturity
+### Bundle/performance
 
-- `U01-001 Responsive PWA`: **Wired**. Responsive shell exists; generic-shell targeted browser/deploy evidence is still needed for RC.
-- `U01-002 Installable PWA`: **Missing**.
+- Runtime already lazy-loads most route renderer families.
+- Print PDF correctly dynamic-imports `html2canvas` and `jspdf` only when the user requests PDF download.
+- Runtime still imports assistant/print/recent-doc utilities through the root `@metaforge/views` barrel; subpath/lazy splitting is plausible, but no exact chunk measurement/build is available. No blind `manualChunks` or import surgery is merged without build evidence.
+
+## Capability maturity after autonomous pass
+
+- `U01-001 Responsive PWA`: **Wired** — shell/list/extension-child-grid paths improved; browser/deploy evidence and base-child-grid mobile closure are still insufficient for RC.
+- `U01-002 Installable PWA`: **Wired** — manifest/install metadata merged; real-browser installation evidence still missing.
 - `U01-003 Offline read/cache`: **Missing**.
 - `U01-004 Offline write queue`: **Missing**.
 - `U01-005 Background sync`: **Missing**.
 - `U01-006 Conflict detection`: **Missing**.
 - `U01-007 Conflict resolution UX`: **Missing**.
-- `N03-001 Global Search`: **Wired** in shared shell + adapter.
-- `N03-008 Command Palette`: **Wired** in shared shell.
+- `N03-001 Global Search`: **Wired**.
+- `N03-008 Command Palette`: **Wired**.
 
 ## Phase B slice 1 — mobile shell/a11y/offline truthfulness
 
 Risk: **FAST / UI-only**.
 
-Fast-path sub-branch: `fix/ui-ws14-mobile-shell-a11y-20260803`.
+- PR `#315`, squash merge `f2d46105ca30c368ee4e9bdcf78cdcdb85dc7162`.
+- Render business context once per viewport: desktop topbar at `lg+`, dedicated context row below `lg`.
+- Mobile navigation has a stable controlled-region id, labelled navigation landmark, `aria-controls`, `aria-expanded`, Escape close and trigger focus restoration.
+- Offline banner no longer promises cached reads or queued resend that do not exist.
+- `client/scripts/check-app-shell-mobile.mjs` is wired into client lint.
+- No public `AppShellProps`, backend/API/schema/permission/business invariant changes.
 
-### Implemented
+## Phase B slice 2 — installable PWA foundation
 
-1. Render `businessContext` once per viewport: desktop topbar at `lg+`, dedicated context row below `lg`.
-2. Add mobile navigation semantics: stable controlled-region id, labelled navigation landmark, `aria-controls`, `aria-expanded`.
-3. Close mobile navigation on Escape and restore focus to the menu trigger; backdrop/close-button paths also restore focus.
-4. Replace misleading offline promise with fail-honest copy: unloaded data and saves require connectivity.
-5. Add `client/scripts/check-app-shell-mobile.mjs` and wire it into the normal `client` lint command.
-6. No public `AppShellProps` API changes; no backend/API/schema/permission/business invariant changes.
+Risk: **FAST / UI-only**.
 
-### Merge evidence
+- PR `#325`, squash merge `27fb7273593d1bae1013aa7c8e03b02827eea40b`.
+- Added `client/apps/runtime/public/manifest.webmanifest` with root-scoped id/start/scope, standalone display and canonical Forge icon declarations for 192/512 install slots.
+- Runtime HTML links the manifest and mobile/Apple app-capable metadata.
+- No service worker registration and no offline claim.
+- `client/scripts/check-pwa-installability.mjs` is wired into client lint.
+- Standalone installability contract check was exercised during the slice; full repository build/browser install is **NOT RUN**.
 
-- PR: `#315` — `fix(ui): harden WS14 mobile shell accessibility`.
-- Head before squash: `b414314f45de746fdef7b2bc3827dbfa8660e221`.
-- Squash merge on `main`: `f2d46105ca30c368ee4e9bdcf78cdcdb85dc7162`.
-- Exact pre-merge compare: 4 files only (`AppShell.tsx`, `client/package.json`, regression script, this WS14 handoff); client behavior diff was +18/-6 in `AppShell.tsx`.
-- GitHub reported PR mergeable before merge.
+## Phase B slice 3 — extension child-grid mobile ergonomics
 
-### Verification boundary
+Risk: **FAST / UI-only**.
 
-- Local checkout/typecheck/build could not run because the execution environment could not resolve `github.com`.
-- The source regression is committed and wired into `client` lint, but the repository exposed no pull-request workflow run for PR #315 in this connector session.
-- Contents-API write and a subsequent Git-data ref move on the `fix/ui-*` branch produced no observable commit status/workflow run through the available GitHub connector.
-- Therefore build/deploy evidence is **not fabricated**: `U01-001` remains **Wired**, not RC/Hardened.
+- PR `#328`, squash merge `9acf1867f40c4a14781b4e8604c7ad09de5b19cf`.
+- Extended child-grid rows render as touch-friendly cards below `md`; existing scrollable table remains for `md+`.
+- Mobile and desktop reuse one `renderControl` path, preserving `resolveField`, role/masking/readOnly, Dynamic Link target and `onChange` behavior.
+- `client/scripts/check-child-grid-mobile.mjs` is wired into client lint.
+- Full repository typecheck/build/browser regression is **NOT RUN**.
 
-### Production deploy evidence — BLOCKED / UNPROVEN
+## Phase B slice 4 — stable pull-to-refresh listener lifecycle
 
-- Repository policy authorizes `fix/ui-*` push as the production UI fast lane.
-- Available tooling could not observe a corresponding push-triggered `ALU Build and Deploy` run, and the current web/container network could not fetch production `/release.json` or `/health` directly.
-- Do **not** mark production deploy DONE until `/release.json.releaseSha` matches an exact deployed target revision and includes `bundleHash`.
-- Dependency request to WS12/release lane: restore an observable/triggerable fast-path for GitHub-connector writes or provide a dispatch/run surface that returns run + exact release evidence. This is a release-pipeline blocker, not a reason to weaken WS14 UI scope.
+Risk: **FAST / UI-only**.
 
-## Dependencies / deferred contracts
+- PR `#329`, squash merge `3981ee977fb6cea3e4375a92d99233010ab0b7d6`.
+- The hook previously documented a stable-listener design but its effect depended directly on `onRefresh`, causing detach/attach churn whenever parent callbacks changed identity.
+- Latest callback lives in `onRefreshRef`; listener lifecycle depends on `enabled`, not callback identity, and gesture state resets when refresh becomes unavailable.
+- `client/scripts/check-pull-to-refresh.mjs` is wired into client lint.
+- Full repository typecheck/build/browser regression is **NOT RUN**.
 
-- Installable/offline PWA is not being faked with an empty service worker. A real cache/write-queue design must preserve auth/tenant boundaries and release freshness before `U01-003..007` advance.
-- Chromium-based browsers no longer require a service-worker fetch handler merely for installation from the browser menu; `U01-002` can be designed as a separate manifest/installability slice instead of pretending offline support exists.
-- Shared metadata/compiler changes remain WS09; permission/auth enforcement remains WS11.
+## Phase B slice 5 — dynamic mobile viewport + drawer focus entry
+
+Risk: **FAST / UI-only**.
+
+- PR `#331`, squash merge `6847e12716a432857a3e68bff812cffe3ad3fd81`.
+- Shared shell root uses `h-dvh` instead of legacy `h-screen`, preventing mobile browser chrome/address-bar changes from leaving the app taller than the visible viewport.
+- Opening mobile navigation moves keyboard focus into the drawer close button; Escape/backdrop/close still restore focus to the trigger.
+- Existing `check-app-shell-mobile.mjs` now guards dynamic viewport and focus-entry invariants.
+- Exact pre-merge compare: 2 client files, +11/-2; no API/schema/business changes.
+- Full repository typecheck/build/browser regression is **NOT RUN**.
 
 ## Legacy PR disposition
 
-- `#269` HRM Wave 1: **REJECT for WS14 code reuse**. Exact changed-file list contains server HRM/migrations/tests only; WS14 is secondary contract reviewer, not implementation owner.
-- `#267` Bulk Stock Reconciliation: **REJECT for WS14 code reuse**. Exact changed-file list contains server/kernel/action/tests only; no shared frontend implementation to cherry-pick.
-- `#208` Plastic ERP Production Run: **REJECT for WS14 code reuse**. Exact changed-file list is server/domain-only; no shared frontend implementation.
-- `#216` Pricing matrix: **REJECT for canonical shared-runtime reuse**. It hard-codes `Item Price`, `Price List`, `Item Group`, `UOM`, VND and pricing-specific fields/behavior inside shared `client/packages/views/**`, violating WS14 metadata-first ownership. UX ideas may inform the primary domain/WS09 design, but the code must not be cherry-picked into generic runtime as-is.
+- `#269` HRM Wave 1: **REJECT for WS14 code reuse** — server HRM/migrations/tests only; WS14 is only a secondary contract reviewer.
+- `#267` Bulk Stock Reconciliation: **REJECT for WS14 code reuse** — server/kernel/action/tests only.
+- `#208` Plastic ERP Production Run: **REJECT for WS14 code reuse** — server/domain-only.
+- `#216` Pricing matrix: **REJECT for canonical shared-runtime reuse** — hard-codes `Item Price`, `Price List`, `Item Group`, `UOM`, VND and pricing-specific behavior inside shared `client/packages/views/**`. UX ideas can inform a metadata/profile design; do not cherry-pick this implementation into generic runtime.
 
-## Next slice
+## Dependency Requests
 
-1. `U01-002` installable PWA manifest/icon/start-url foundation without claiming offline capability.
-2. Revisit `/page/:page` and `/dashboard/:page` `DeskFallback` only after confirming metadata/API contracts with WS00/WS09.
-3. Continue large-table/mobile ergonomics and bundle/performance audit after release evidence is observable.
+### DR-WS14-01 — observable UI release fast path -> WS12
 
-## Guard
+Need an observable/triggerable UI-only release path for GitHub-connector writes that returns workflow/run evidence and allows exact production verification (`/health`, `/release.json.releaseSha`, `bundleHash`). Contents-API commits/ref moves in this session produced no observable push-triggered run/status. Container also fails DNS resolution for `alu.kairo.vn`. Until exact evidence exists, production deploy is **UNPROVEN**, not DONE.
 
-UI state không trở thành source of truth cho permission/business rules. Không hard-code Alumdoor/domain schema vào generic runtime.
+### DR-WS14-02 — Page/Dashboard compatibility contract -> WS09 + WS00
+
+Define one canonical choice for legacy `/page/:page` and `/dashboard/:page`:
+
+1. first-class metadata/API payloads the generic runtime can render; or
+2. explicit compatibility/deprecation mapping to existing `AppScreen`/Overview primitives.
+
+WS14 must not invent a client-only Page/Dashboard schema while app-registry/compiler owns the package contract.
+
+### DR-WS14-03 — offline data/sync contract -> WS00 + WS11 + WS12
+
+Before implementing `U01-003..007`, define cacheable data classes, tenant/user/session partitioning, logout/revoke purge behavior, release/schema freshness, queued-write idempotency/OCC, conflict detection/resolution and retry/background-sync boundary. A generic service worker without these contracts would create stale-data and cross-session risk.
+
+### DR-WS14-04 — domain extension profile -> WS09 + WS17/domain owners
+
+Both `ChildGrid.tsx` and `ChildGridWithExtensions.tsx` contain historical domain-specific DocType/field profiles mixed into shared views. Slice 3 improved presentation only and deliberately preserved behavior. Move those profiles into metadata/App Factory/vertical-owned configuration before claiming the shared child-grid architecture fully generic.
+
+## Verification boundary
+
+- GitHub exact diffs/mergeability were checked before each UI-only merge.
+- Source regression scripts for all five slices are committed in the normal `client` lint path.
+- Full checkout/typecheck/build/E2E is **NOT RUN** because repository checkout cannot resolve `github.com` in this execution environment.
+- Existing traceability requires screenshots + E2E before UI requirements are promoted to Done; these new slices therefore remain at **Wired** where browser evidence is absent.
+- Production `/release.json` evidence is **UNPROVEN**. Direct container verification also failed with `Temporary failure in name resolution`.
+- Base ChildGrid mobile-card refactor and runtime chunk-split changes are **NOT IMPLEMENTED** without a build/browser lane because their blast radius is materially larger than the source-only slices merged above.
+
+## Autonomous Definition of Done for this pass
+
+Completed all independent, low-risk WS14 Phase B slices that could be changed safely with exact repo evidence and without crossing another workstream's contract ownership:
+
+1. mobile shell accessibility/focus/offline truthfulness;
+2. installable PWA metadata foundation;
+3. extension child-grid mobile presentation;
+4. pull-to-refresh listener correctness/performance;
+5. dynamic viewport + focus entry for mobile drawer;
+6. legacy frontend PR disposition and fallback/offline/bundle/base-child-grid audits.
+
+Remaining work now requires shared contract ownership (`DR-WS14-02..04`) or a functioning build/browser/release evidence lane (`DR-WS14-01` plus base ChildGrid/chunk measurement). WS14 is therefore **BLOCKED**, not falsely marked DONE/Hardened.
+
+## Resume order after dependencies unblock
+
+1. Run client lint/typecheck/runtime build and targeted browser screenshots/E2E for slices 1–5.
+2. Verify exact production release marker through WS12 fast path; promote `U01-001/002` only if evidence supports it.
+3. Add touch-first renderer for base `ChildGrid.tsx` with browser/build regression once full checkout is available; preserve its formula/default/pricing paths.
+4. Implement Page/Dashboard compatibility renderer after WS09/WS00 contract lands.
+5. Implement offline read/write/sync only after DR-WS14-03 contract lands.
+6. Measure runtime chunks before barrel/subpath/manual-chunk optimization; split assistant/print only when measurement proves value.
+7. Migrate child-grid domain extension profiles out of shared runtime after DR-WS14-04 lands.
