@@ -4,6 +4,14 @@ Ngày cập nhật: **2026-08-02**.
 
 Đây là hàng đợi active. GitHub là nguồn sự thật cho exact `main`, PR và branch; trước khi làm phải đọc `RUNBOOK.md`, `CURRENT_STATUS.md`, `AI_HANDOFF.md`, `DELIVERY_POLICY.md`.
 
+## NOW — exact production release evidence
+
+- Branch: `fix/release-evidence-health-sha-v2`.
+- Cần review/merge thay đổi release pipeline trước khi dùng làm production proof canonical.
+- Sau merge, mọi UI/full ALU deploy phải stage `/release.json` chứa exact `releaseSha` + `bundleHash`; smoke phải fail nếu production marker không khớp `TARGET_SHA`.
+- Same-repo UI PR trigger phải được giữ vì GitHub-connector content writes không đảm bảo phát push-triggered Actions; vẫn fail-closed theo branch naming, current-main ancestry và UI-only scope.
+- Không production deploy task release-pipeline này nếu chưa có yêu cầu release rõ.
+
 ## DONE — Website/CMS multi-tenant v1
 
 - Canonical PR `#254` đã squash-merge vào `main` tại `b25fc30b0f37d1218cafbb4dac40e37479bba0b9`.
@@ -15,7 +23,7 @@ Ngày cập nhật: **2026-08-02**.
 
 - GitHub Actions chỉ dùng cho build/deploy.
 - UI-only branch `hotfix/ui-*`, `fix/ui-*`, `feat/ui-*`, `refactor/ui-*` tự build/deploy Gateway khi push có `client/**`.
-- Không cần PR hoặc bấm Actions cho UI-only lane.
+- Không cần PR hoặc bấm Actions cho UI-only lane khi push event thực sự được GitHub phát; same-repo PR fallback là đường quan sát được cho connector writes.
 - Scope guard chặn branch stale và file ngoài UI/docs vận hành.
 - Full ALU deploy vẫn chạy thủ công qua `ALU Build and Deploy` với confirm `alu`.
 

@@ -17,6 +17,15 @@ Ngày cập nhật: **2026-08-02**.
 - GitHub Actions chỉ dùng làm máy build/deploy.
 - Workflow release duy nhất: `.github/workflows/manual-release-alu.yml`, name `ALU Build and Deploy`.
 
+## Release evidence convention — branch đang chờ merge
+
+- Canonical implementation branch: `fix/release-evidence-health-sha-v2`.
+- `stage-client-bundle.mjs` ghi public `/release.json` khi release SHA có trong env; payload chỉ có `ok`, `service`, `releaseSha`, `bundleHash` và không chứa secret.
+- UI/full ALU smoke phải đọc production `/release.json` và fail nếu `releaseSha !== TARGET_SHA`; `/health` chỉ chứng minh service sống, không chứng minh đúng revision.
+- Same-repo `pull_request` UI trigger là fallback bắt buộc cho GitHub-connector writes vì content API commits không đảm bảo emit push-triggered Actions. Job phải kiểm tra head repo cùng repository và head branch đúng `hotfix/ui-*`, `fix/ui-*`, `feat/ui-*`, `refactor/ui-*`.
+- UI scope guard vẫn authoritative: current `main` phải là ancestor, diff phải có `client/**`, ngoài UI chỉ cho docs vận hành allowlist.
+- Chưa coi convention này là production canonical cho tới khi branch được merge; không deploy production riêng task release-pipeline nếu chưa có yêu cầu rõ.
+
 ## Merged checkpoint — Website/CMS multi-tenant v1
 
 - Canonical PR `#254` squash-merge tại `b25fc30b0f37d1218cafbb4dac40e37479bba0b9`.
@@ -39,7 +48,7 @@ UI-only task phải dùng branch:
 - `feat/ui-*`
 - `refactor/ui-*`
 
-Push có `client/**` tự động build MetaForge, stage bundle và deploy Gateway production, sau đó health smoke. Không cần PR hoặc bấm Actions.
+Push có `client/**` tự động build MetaForge, stage bundle và deploy Gateway production, sau đó health smoke. Khi commit được tạo qua GitHub connector/content API, same-repo PR event là fallback quan sát được để chạy cùng guarded deploy lane.
 
 Fail-closed guard:
 
@@ -48,13 +57,13 @@ Fail-closed guard:
 - ngoài `client/**` chỉ cho phép `RUNBOOK.md`, `CURRENT_STATUS.md`, `NEXT_TASKS.md`, `AI_HANDOFF.md`, `DELIVERY_POLICY.md`;
 - backend/API/schema/permission/tenant/accounting/inventory/business logic không được đi UI lane.
 
-Push đúng UI lane là production authorization do user đã chủ động thiết lập automation này.
+Push/PR đúng UI lane là production authorization do user đã chủ động thiết lập automation này; fork PR không được deploy.
 
 ## Full ALU deploy
 
 Manual `workflow_dispatch` + confirm `alu` chạy:
 
-`build once -> backup/migrate alu tenant -> deploy Tenant Worker -> deploy Alumdoor App Worker -> deploy Gateway -> health smoke`.
+`build once -> backup/migrate alu tenant -> deploy Tenant Worker -> deploy Alumdoor App Worker -> deploy Gateway -> health + exact-release smoke`.
 
 Không tự đổi DNS/secrets hoặc thực hiện destructive operation ngoài release path chuẩn.
 
@@ -67,6 +76,7 @@ Không tự đổi DNS/secrets hoặc thực hiện destructive operation ngoài
 
 ## Remaining priorities
 
+- Merge exact production release evidence hardening sau review.
 - Stock Reconciliation Bulk Transaction.
 - BOM parent + child/version Bulk Transaction.
 - First-class AppAction input-table transport.
