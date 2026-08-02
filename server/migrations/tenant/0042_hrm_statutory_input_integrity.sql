@@ -114,3 +114,38 @@ AND EXISTS(
     AND date(json_extract(s.payload_json,'$.start_date')) <= date(COALESCE(json_extract(a.payload_json,'$.to_date'),'9999-12-31'))
 )
 BEGIN SELECT RAISE(ABORT,'INVALID_LIFECYCLE_TRANSITION: HR_PAYROLL_SOURCE_LOCKED'); END;
+
+-- A statutory rule output is monetary evidence, not a reusable coupon. Mapping the same
+-- output twice to two Salary Components would double-count one legal amount.
+CREATE TRIGGER IF NOT EXISTS hr_salary_structure_rule_output_unique_insert_guard
+BEFORE INSERT ON document_children
+WHEN NEW.fieldname='components'
+  AND NEW.child_doctype='Salary Structure Component'
+  AND json_extract(NEW.payload_json,'$.amount_type')='Payroll Rule Output'
+  AND EXISTS(
+    SELECT 1 FROM document_children c
+    WHERE c.tenant_id=NEW.tenant_id
+      AND c.parent_key=NEW.parent_key
+      AND c.fieldname='components'
+      AND c.child_doctype='Salary Structure Component'
+      AND json_extract(c.payload_json,'$.amount_type')='Payroll Rule Output'
+      AND json_extract(c.payload_json,'$.rule_output_key')=json_extract(NEW.payload_json,'$.rule_output_key')
+  )
+BEGIN SELECT RAISE(ABORT,'REFERENCE_VALIDATION_FAILED: HR_PAYROLL_RULE_OUTPUT_DUPLICATE'); END;
+
+CREATE TRIGGER IF NOT EXISTS hr_salary_structure_rule_output_unique_update_guard
+BEFORE UPDATE OF parent_key,fieldname,child_doctype,payload_json ON document_children
+WHEN NEW.fieldname='components'
+  AND NEW.child_doctype='Salary Structure Component'
+  AND json_extract(NEW.payload_json,'$.amount_type')='Payroll Rule Output'
+  AND EXISTS(
+    SELECT 1 FROM document_children c
+    WHERE c.tenant_id=NEW.tenant_id
+      AND c.parent_key=NEW.parent_key
+      AND c.fieldname='components'
+      AND c.child_doctype='Salary Structure Component'
+      AND c.row_id<>OLD.row_id
+      AND json_extract(c.payload_json,'$.amount_type')='Payroll Rule Output'
+      AND json_extract(c.payload_json,'$.rule_output_key')=json_extract(NEW.payload_json,'$.rule_output_key')
+  )
+BEGIN SELECT RAISE(ABORT,'REFERENCE_VALIDATION_FAILED: HR_PAYROLL_RULE_OUTPUT_DUPLICATE'); END;
