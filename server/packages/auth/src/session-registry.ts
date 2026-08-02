@@ -42,9 +42,9 @@ export class D1SessionRegistry {
     expiresAt: string,
   ): Promise<void> {
     assertSessionId(sessionId);
-    assertIso(issuedAt, "issued_at");
-    assertIso(expiresAt, "expires_at");
-    if (expiresAt <= issuedAt) throw errors.validation("Session expiry must be after issuance");
+    const issuedMs = assertIso(issuedAt, "issued_at");
+    const expiresMs = assertIso(expiresAt, "expires_at");
+    if (expiresMs <= issuedMs) throw errors.validation("Session expiry must be after issuance");
     await this.db.prepare(
       `INSERT INTO user_sessions(
          tenant_id,session_id,user_id,issued_at,expires_at,last_seen_at
@@ -59,7 +59,7 @@ export class D1SessionRegistry {
     now: string,
   ): Promise<void> {
     assertSessionId(sessionId);
-    assertIso(now, "now");
+    const nowMs = assertIso(now, "now");
     const row = await this.db.prepare(
       `SELECT session_id,user_id,issued_at,expires_at,last_seen_at,revoked_at
          FROM user_sessions
@@ -67,7 +67,7 @@ export class D1SessionRegistry {
     ).bind(tenantId, sessionId, userId).first<SessionRow>();
     if (!row) throw errors.authentication("Session is no longer registered");
     if (row.revoked_at) throw errors.authentication("Session has been revoked");
-    if (row.expires_at <= now) throw errors.authentication("Session has expired");
+    if (Date.parse(row.expires_at) <= nowMs) throw errors.authentication("Session has expired");
   }
 
   async extend(
@@ -117,7 +117,7 @@ export class D1SessionRegistry {
     }));
   }
 
-  /** Normal logout: revoke the exact current session without creating privileged audit noise. */
+  /** Normal logout revokes the exact current session without privileged-audit noise. */
   async revokeCurrent(
     tenantId: string,
     userId: string,
@@ -126,12 +126,12 @@ export class D1SessionRegistry {
   ): Promise<void> {
     assertSessionId(sessionId);
     assertIso(now, "now");
+    const eventId = randomId("session");
     await this.db.prepare(
       `UPDATE user_sessions
-          SET revoked_at=COALESCE(revoked_at,?4),revoked_by=COALESCE(revoked_by,?3),
-              revoke_reason=COALESCE(revoke_reason,'logout')
-        WHERE tenant_id=?1 AND session_id=?2 AND user_id=?3`,
-    ).bind(tenantId, sessionId, userId, now).run();
+          SET revoked_at=?4,revoked_by=?3,revoke_reason='logout',revocation_event_id=?5
+        WHERE tenant_id=?1 AND session_id=?2 AND user_id=?3 AND revoked_at IS NULL`,
+    ).bind(tenantId, sessionId, userId, now, eventId).run();
   }
 
   async revokeOne(
@@ -143,29 +143,37 @@ export class D1SessionRegistry {
   ): Promise<boolean> {
     assertSessionId(sessionId);
     assertIso(now, "now");
-    const target = await this.db.prepare(
-      `SELECT session_id,user_id,issued_at,expires_at,last_seen_at,revoked_at
-         FROM user_sessions
-        WHERE tenant_id=?1 AND session_id=?2 AND user_id=?3`,
-    ).bind(tenantId, sessionId, userId).first<SessionRow>();
-    if (!target || target.revoked_at) return false;
-    await this.db.batch([
+    const eventId = randomId("rbac");
+    const reason = audit.reason ?? "session manager revoke";
+    const results = await this.db.batch([
       this.db.prepare(
         `UPDATE user_sessions
-            SET revoked_at=?4,revoked_by=?5,revoke_reason=?6
+            SET revoked_at=?4,revoked_by=?5,revoke_reason=?6,revocation_event_id=?7
           WHERE tenant_id=?1 AND session_id=?2 AND user_id=?3 AND revoked_at IS NULL`,
-      ).bind(tenantId, sessionId, userId, now, audit.actorUserId, audit.reason ?? "session manager revoke"),
-      this.auditStatement(
+      ).bind(tenantId, sessionId, userId, now, audit.actorUserId, reason, eventId),
+      this.db.prepare(
+        `INSERT INTO rbac_audit_events(
+           tenant_id,event_id,event_type,actor_user_id,target_user_id,
+           before_json,after_json,reason,source,trace_id,created_at
+         )
+         SELECT ?1,?2,'session.revoke_one',?3,?4,
+                json_object('session_id',session_id,'issued_at',issued_at,'expires_at',expires_at),
+                json_object('revoked',1),?5,?6,?7,?8
+           FROM user_sessions
+          WHERE tenant_id=?1 AND session_id=?9 AND user_id=?4 AND revocation_event_id=?2`,
+      ).bind(
         tenantId,
-        "session.revoke_one",
+        eventId,
+        audit.actorUserId,
         userId,
-        { session_id: sessionId, issued_at: target.issued_at, expires_at: target.expires_at },
-        { revoked: true },
-        audit,
+        reason,
+        audit.source,
+        audit.traceId,
         now,
+        sessionId,
       ),
     ]);
-    return true;
+    return Number(results[0]?.meta?.changes ?? 0) === 1;
   }
 
   async revokeOthers(
@@ -177,39 +185,47 @@ export class D1SessionRegistry {
   ): Promise<number> {
     assertIso(now, "now");
     if (keepSessionId) assertSessionId(keepSessionId);
-    const result = keepSessionId
-      ? await this.db.prepare(
+    const eventId = randomId("rbac");
+    const reason = audit.reason ?? "logout other sessions";
+    const update = keepSessionId
+      ? this.db.prepare(
         `UPDATE user_sessions
-            SET revoked_at=?4,revoked_by=?5,revoke_reason=?6
+            SET revoked_at=?4,revoked_by=?5,revoke_reason=?6,revocation_event_id=?7
           WHERE tenant_id=?1 AND user_id=?2 AND session_id<>?3
             AND revoked_at IS NULL AND expires_at>?4`,
-      ).bind(tenantId, userId, keepSessionId, now, audit.actorUserId, audit.reason ?? "logout other sessions").run()
-      : await this.db.prepare(
+      ).bind(tenantId, userId, keepSessionId, now, audit.actorUserId, reason, eventId)
+      : this.db.prepare(
         `UPDATE user_sessions
-            SET revoked_at=?3,revoked_by=?4,revoke_reason=?5
+            SET revoked_at=?3,revoked_by=?4,revoke_reason=?5,revocation_event_id=?6
           WHERE tenant_id=?1 AND user_id=?2 AND revoked_at IS NULL AND expires_at>?3`,
-      ).bind(tenantId, userId, now, audit.actorUserId, audit.reason ?? "logout other sessions").run();
-    const revoked = Number(result.meta?.changes ?? 0);
-    if (revoked > 0) {
-      await this.db.prepare(
-        `INSERT INTO rbac_audit_events(
-           tenant_id,event_id,event_type,actor_user_id,target_user_id,
-           before_json,after_json,reason,source,trace_id,created_at
-         ) VALUES(?1,?2,'session.revoke_others',?3,?4,?5,?6,?7,?8,?9,?10)`,
-      ).bind(
-        tenantId,
-        randomId("rbac"),
-        audit.actorUserId,
-        userId,
-        JSON.stringify({ keep_session_id: keepSessionId ?? null }),
-        JSON.stringify({ revoked_sessions: revoked }),
-        audit.reason ?? null,
-        audit.source,
-        audit.traceId,
-        now,
-      ).run();
-    }
-    return revoked;
+      ).bind(tenantId, userId, now, audit.actorUserId, reason, eventId);
+    const auditInsert = this.db.prepare(
+      `INSERT INTO rbac_audit_events(
+         tenant_id,event_id,event_type,actor_user_id,target_user_id,
+         before_json,after_json,reason,source,trace_id,created_at
+       )
+       SELECT ?1,?2,'session.revoke_others',?3,?4,
+              json_object('keep_session_id',?5),
+              json_object('revoked_sessions',total),?6,?7,?8,?9
+         FROM (
+           SELECT COUNT(*) AS total
+             FROM user_sessions
+            WHERE tenant_id=?1 AND user_id=?4 AND revocation_event_id=?2
+         )
+        WHERE total>0`,
+    ).bind(
+      tenantId,
+      eventId,
+      audit.actorUserId,
+      userId,
+      keepSessionId ?? null,
+      reason,
+      audit.source,
+      audit.traceId,
+      now,
+    );
+    const results = await this.db.batch([update, auditInsert]);
+    return Number(results[0]?.meta?.changes ?? 0);
   }
 
   async purgeExpired(tenantId: string, now: string): Promise<number> {
@@ -220,41 +236,14 @@ export class D1SessionRegistry {
     ).bind(tenantId, cutoff).run();
     return Number(result.meta?.changes ?? 0);
   }
-
-  private auditStatement(
-    tenantId: string,
-    eventType: string,
-    targetUserId: string,
-    before: JsonObject | null,
-    after: JsonObject | null,
-    audit: SessionAuditContext,
-    now: string,
-  ): D1PreparedStatement {
-    return this.db.prepare(
-      `INSERT INTO rbac_audit_events(
-         tenant_id,event_id,event_type,actor_user_id,target_user_id,
-         before_json,after_json,reason,source,trace_id,created_at
-       ) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11)`,
-    ).bind(
-      tenantId,
-      randomId("rbac"),
-      eventType,
-      audit.actorUserId,
-      targetUserId,
-      JSON.stringify(before),
-      JSON.stringify(after),
-      audit.reason ?? null,
-      audit.source,
-      audit.traceId,
-      now,
-    );
-  }
 }
 
 function assertSessionId(value: string): void {
   if (!/^[A-Za-z0-9_-]{16,128}$/.test(value)) throw errors.validation("Session id is invalid");
 }
 
-function assertIso(value: string, field: string): void {
-  if (!value || !Number.isFinite(Date.parse(value))) throw errors.validation(`${field} must be an ISO timestamp`);
+function assertIso(value: string, field: string): number {
+  const parsed = Date.parse(value);
+  if (!value || !Number.isFinite(parsed)) throw errors.validation(`${field} must be an ISO timestamp`);
+  return parsed;
 }
