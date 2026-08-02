@@ -3,6 +3,7 @@
 Status: **ACTIVE**  
 Owner: **GPT-5.6 Thinking / WS09**  
 Branch: `agent/ent-09-bpm-app-factory`  
+PR: **#319 (draft)**  
 Product baseline: **Forge 0.2.0**  
 Started from: `bbe3494bcfbb8a3ce09a5ff4bbb839dfcf9e47e9`  
 Canonical board: `main:docs/agents/AGENT_BOARD.md`
@@ -43,7 +44,7 @@ Biến metadata/app-registry/builder hiện có thành moat chính: workflow/BPM
 | `B01-016` Process analytics | Missing | No generic process instance/transition timing fact model found. |
 | `B01-017` Bottleneck analysis | Missing | Depends on process analytics facts. |
 | `B01-018` Visual workflow builder | Foundation/Wired | `client/packages/builder/src/workflow/WorkflowBuilder.tsx` has state/transition editor + React Flow graph + serializer; enterprise BPM nodes remain absent. |
-| `B02-001` App manifest | Wired | Canonical `server/packages/app-registry/src/manifest.ts` validates app package shape. |
+| `B02-001` App manifest | Wired | Canonical `server/packages/app-registry/src/manifest.ts` validates app package shape; WS09 adds a compatibility parser view for first-class action tables. |
 | `B02-002` App dependency | Wired | `requires` + minimum version checks exist. |
 | `B02-003` App version | Wired | Semantic package version + platform requirement/version comparison exist. |
 | `B02-004` App install | Wired/RC | `AppInstaller.install()` validates then commits metadata activation transactionally; exact full regression still required for RC claim. |
@@ -58,7 +59,7 @@ Biến metadata/app-registry/builder hiện có thành moat chính: workflow/BPM
 | `B02-013` Workflow builder | Foundation/Wired | WorkflowBuilder + serializer exist for state/transition subset. |
 | `B02-014` Rule builder | Missing/Foundation | No canonical generic rule artifact with lifecycle/versioning found. |
 | `B02-015` Formula builder | Missing/Foundation | No canonical generic formula builder/evaluator lifecycle found. |
-| `B02-016` Action builder | Foundation | AppAction scalar fields/preview/commit exist; repeatable input-table is current hardening slice. |
+| `B02-016` Action builder | **Wired server/tooling; client pending** | First-class repeatable input contract compiles, validates and lowers through AppInstaller; WS14 renderer still consumes compatibility field. |
 | `B02-017` Report builder | Foundation | Manifest has declarative reports; visual authoring depth not yet established. |
 | `B02-018` Dashboard builder | Foundation | Declarative charts/screens exist; full dashboard authoring lifecycle not yet established. |
 | `B02-019` Print builder | Foundation | Print format metadata exists; builder maturity requires separate audit. |
@@ -67,15 +68,38 @@ Biến metadata/app-registry/builder hiện có thành moat chính: workflow/BPM
 | `B02-022` Preview/test app | Foundation | compile/parse/test seams exist; isolated preview environment lifecycle incomplete. |
 | `B02-023` Package export/import | Foundation | Package/pack tooling exists; compatibility/signing/roundtrip hardening remains. |
 
-Maturity above is audit snapshot, not a capability-map status mutation. `Hardened` is intentionally not claimed anywhere.
+Maturity above là audit snapshot, không tự ý sửa capability map. Không capability nào được claim `Hardened`.
 
 ## Active implementation slice — first-class AppAction input-table
 
 ### User outcome
 
-Một AppAction có thể khai bảng nhập lặp lại như dữ liệu first-class thay vì giấu JSON trong `Text.options`, để Purchase Receipt, Stock Reconciliation, BOM và app mới dùng chung contract mà không hard-code business vertical vào runtime.
+AppAction có thể khai bảng nhập lặp lại như dữ liệu first-class thay vì giấu JSON trong `Text.options`, để Purchase Receipt, Stock Reconciliation, BOM và app mới dùng chung contract mà không hard-code business vertical vào runtime.
 
-### Contract
+### Author-facing brief
+
+```json
+{
+  "name": "bulk-receive",
+  "permission": "Receipt",
+  "inputTables": [{
+    "fieldname": "lines",
+    "label": "Chi tiết",
+    "columns": [
+      { "fieldname": "item_code", "label": "Mã hàng", "fieldtype": "Data", "required": true },
+      { "fieldname": "qty", "label": "Số lượng", "fieldtype": "Float", "required": true }
+    ],
+    "minRows": 1,
+    "maxRows": 200,
+    "allowPaste": true
+  }],
+  "commit": "app.commit | Ghi nhận"
+}
+```
+
+Action chỉ có `inputTables` cũng hợp lệ; adapter dùng scalar stub nội bộ để đi qua compiler/schema cũ rồi loại stub trước khi package được tạo.
+
+### Package/server contract
 
 ```text
 AppAction.input_tables[]
@@ -89,23 +113,62 @@ AppAction.input_tables[]
 
 Invariants:
 - table fieldname không được đụng scalar action fieldname;
-- column fieldname unique;
-- chỉ fieldtype mà ActionScreen có control mới được nhận;
-- Link/Select phải có options;
-- contract không validate business rule của từng dòng; app controller vẫn authoritative;
-- legacy `Text` + `BulkTransaction:<json>` phải decode được trong giai đoạn chuyển tiếp, không ép flag-day trên installed package.
+- table và column fieldname unique;
+- chỉ fieldtype ActionScreen hiện có control mới được nhận;
+- Link/Select phải có options; Link target phải app-owned hoặc declared external;
+- tối đa 64 cột/table, 500 rows/table;
+- compiler/schema helper không mutate brief nguồn;
+- lowering không mutate package nguồn;
+- business validation của từng row vẫn nằm ở app controller/server authoritative;
+- legacy `Text` + `BulkTransaction:<json>` decode được trong giai đoạn chuyển tiếp, không ép flag-day trên installed package.
 
-### Code landed on branch
+### Wired path on branch
 
-- `server/packages/app-registry/src/action-input-table.ts`
-  - `AppActionInputTable` / `AppActionInputColumn`.
-  - parser fail-closed + bounds/type/link validation.
-  - legacy Bulk Transaction decoder.
-  - scalar/table input-key collision guard.
-- `server/packages/app-registry/src/index.ts` exports the contract.
-- `server/tests/app-action-input-table.test.mjs` covers normalization/defaults/failure/legacy/collision cases.
+1. `server/scripts/lib/action-input-table-brief.mjs`
+   - author-facing validation/normalization;
+   - schema compatibility adapter;
+   - table-only action support qua compiler-only stub.
+2. `server/scripts/lib/compile-brief-app-factory.mjs`
+   - giữ compiler cũ làm lõi;
+   - emit `input_tables` first-class;
+   - xóa compiler-only stub trước khi package ra ngoài.
+3. `server/scripts/forge-app.mjs`
+   - dùng App Factory compiler adapter;
+   - validate bằng `parseAppManifestWithInputTables`;
+   - `--out` ghi clean source package;
+   - install gửi `pkg` nguồn, không gửi decorated tooling view.
+4. `server/packages/app-registry/src/action-input-table.ts`
+   - `AppActionInputTable` / `AppActionInputColumn`;
+   - parser fail-closed + bounds/type/link validation;
+   - legacy Bulk Transaction decoder;
+   - scalar/table input-key collision guard.
+5. `server/packages/app-registry/src/action-input-table-compat.ts`
+   - lower first-class table thành compatibility `Text` field trước canonical parser/storage;
+   - decorate installed action/tooling view ngược lại thành `input_tables`;
+   - `parseAppManifestWithInputTables` reuse canonical manifest parser, không fork validation logic.
+6. `server/packages/app-registry/src/input-table-installer.ts`
+   - exported AppInstaller lowers package đúng một lần ở install boundary;
+   - `list()` decorate action để consumer mới đọc first-class metadata;
+   - core installer vẫn giữ authority cho transaction/dependency/ownership/versioning.
+7. `server/packages/app-registry/src/index.ts`
+   - export contract, compatibility parser view và input-table-aware AppInstaller.
 
-Current maturity of this slice: **Foundation**. It is not yet canonical `parseAppManifest()` / brief compiler / shared client renderer wiring, so it must not be presented as end-to-end complete.
+Current maturity: **Wired ở server/tooling**, chưa end-to-end UI vì shared ActionScreen thuộc WS14 vẫn render compatibility transport. Native storage/parser schema cũng chưa được đổi trực tiếp; bridge hiện tại cố ý tách riêng để rolling upgrade an toàn và có thể xóa sau.
+
+## Regression evidence added
+
+- `server/tests/app-action-input-table.test.mjs`
+  - normalize/default/bounds/type/link/collision/legacy/lowering/decorating.
+- `server/tests/app-action-input-table-manifest.test.mjs`
+  - canonical parser reuse + first-class tooling view.
+- `server/tests/app-action-input-table-brief.test.mjs`
+  - brief schema extension + compiler output + collision guard.
+- `server/tests/app-action-input-table-table-only-brief.test.mjs`
+  - table-only action + no leaked stub + no source mutation.
+- `server/tests/app-action-input-table-app-factory-contract.test.mjs`
+  - brief compiler -> package -> server-authoritative parser view.
+
+Full repository build/typecheck/test chưa được claim: connector session không có checkout/dependency tree và GitHub chưa trả CI run/status cho PR head.
 
 ## Legacy PR disposition
 
@@ -121,42 +184,42 @@ Current maturity of this slice: **Foundation**. It is not yet canonical `parseAp
 ### Dependency request DR-09-01
 - Target stream: **WS14**
 - Need: shared client/core/view support for first-class `AppAction.input_tables` while keeping legacy `BulkTransaction:<json>` fallback during transition.
-- Why generic: already evidenced by Purchase Receipt and Stock Reconciliation; BOM is queued as another consumer.
-- Contract proposed: use the WS09 `fieldname/columns/min_rows/max_rows/allow_paste` shape; `ActionScreen` posts `values[fieldname]` as array rows and reuses existing control registry/paste UX.
-- Blocking: **yes** for end-to-end first-class AppAction UX; **no** for server contract foundation.
-- Temporary workaround: current compatibility transport remains authoritative for existing Alumdoor package until WS14 consumes the new contract.
+- Why generic: Purchase Receipt + Stock Reconciliation đã là 2 consumer; BOM là consumer tiếp theo.
+- Contract: `fieldname/columns/min_rows/max_rows/allow_paste`; ActionScreen POST `values[fieldname]` là array rows, reuse control registry/paste UX.
+- Renderer mới phải ưu tiên `input_tables` và suppress compatibility field tương ứng để không render đôi.
+- Blocking: **yes** cho first-class UI end-to-end; **no** cho server/tooling slice.
+- Temporary workaround: existing installed packages/old clients tiếp tục dùng compatibility transport.
 
 ### Dependency note — WS11
 
-`permission_doctype` / server permission remains existing authority. Input-table metadata must not introduce a new client-trusted permission path. No WS11 code change requested yet.
+`permission_doctype` / server permission vẫn là authority. Input-table metadata không tạo client-trusted permission path mới. Chưa cần code WS11 ở slice này.
+
+## Main drift review
+
+Trong lúc WS09 làm, `main` tiến từ `bbe3494...` qua WS14 mobile/a11y và installable PWA tới `27fb727...`. Exact compare hiện branch diverged do các commit UI/PWA này; không file nào overlap zone WS09 (`server/packages/app-registry`, compiler/forge-app scripts). PR vẫn là integration boundary, không tự merge.
 
 ## Phase B priority
 
-1. Finish canonical server manifest + brief compiler wiring for AppAction input-table with backward compatibility.
-2. Coordinate DR-09-01 with WS14 for client types/renderer, then migrate a real consumer away from compatibility transport.
-3. Extract batch action primitive only after 2+ consumers prove the same pattern.
-4. Extend BPM contract: parallel/quorum -> matrix -> delegation -> escalation/timer -> event/scheduled actions.
+1. DR-09-01: WS14 consume `input_tables` native và giữ rolling fallback.
+2. Migrate một consumer thật (#209/#267 pattern) sang first-class declaration sau khi renderer sẵn sàng.
+3. Sau khi rollout ổn, fold bridge vào native `AppManifest`/JSON Schema rồi xóa compatibility adapter thay vì nuôi vĩnh viễn.
+4. BPM enterprise: parallel/quorum -> approval matrix -> delegation -> escalation/timer -> event/scheduled actions.
 5. Rule/formula builder lifecycle.
-6. App version/dependency/upgrade/rollback and marketplace trust contract.
+6. App rollback + marketplace trust/signing/catalog contract.
 
 ## Guard
 
 Không nhét business rule ngành vào shared compiler. Nếu pattern chỉ dùng một vertical, giữ ở vertical cho tới khi có bằng chứng tái sử dụng. Không sửa shared React runtime/core/views của WS14 từ branch này.
 
-## Verification
-
-- Branch exact compare after first implementation slice: ahead of current claim baseline, not behind at the time of audit.
-- Regression source added for new contract, but full repository build/typecheck/test has **not** been claimed yet.
-- No production deploy, migration, secret/DNS or customer-data mutation.
-
 ## Handoff
 
 Workstream: WS09  
 Branch: `agent/ent-09-bpm-app-factory`  
+PR: `#319` draft  
 Status: ACTIVE  
 Capabilities: `B01-001..018`, `B02-001..023`; active slice `B02-016`  
-Changed zones: `server/packages/app-registry/src/action-input-table.ts`, app-registry export, targeted test, this workstream file  
-Migration: none  
+Changed zones: app-registry input-table contract/bridge/installer; forge-app compiler + schema adapter; targeted regressions; workstream doc  
+Migration: none; compatibility bridge only  
 Dependency requests: DR-09-01 -> WS14  
-Known gaps: canonical manifest/compiler/client wiring; enterprise BPM primitives; app rollback  
-Recommended merge order: WS00/WS11 foundations as needed -> WS09 server contract -> WS14 renderer integration -> domain consumer migrations.
+Known gaps: client native renderer, eventual native manifest/schema fold-in, enterprise BPM primitives, app rollback  
+Merge/deploy: **blocked by policy/approval** because this is backend/shared contract, not UI-only.
