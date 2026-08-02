@@ -28,9 +28,11 @@ WS12 giữ một operational control plane mỏng, source-controlled và fail-cl
 6. **Queue safety** = bounded retry + DLQ + structured retry evidence. Replay/quarantine chỉ được làm khi canonical event contract của WS10 chốt.
 7. **Performance tools** mặc định localhost/read-only; remote phải explicit host confirmation và hard cap để test tool không biến thành outage tool.
 8. **Provider limits/cost** được ghi source-bound, tách khỏi Forge engineering guard và customer SLA.
+9. **Alert policy** định nghĩa actionable signal/severity/first-safe-action, nhưng không nhúng destination credential và không tự kích hoạt destructive recovery.
 
 Authoritative operational docs:
 - `docs/ops/SRE_RUNBOOK.md`
+- `docs/ops/SRE_ALERT_POLICY.md`
 - `docs/ops/CLOUDFLARE_OPERATIONAL_ENVELOPE.md`
 
 ## Capability maturity (`O01-001` → `O01-021`)
@@ -39,16 +41,16 @@ Authoritative operational docs:
 |---|---|---|
 | `O01-001` Health check | **Wired / RC candidate** | Gateway + tenant health already exist; `sre-health-snapshot.mjs` adds health/root/auth-boundary/release convergence evidence. Production observation still required for RC. |
 | `O01-002` Release marker | **Wired / RC candidate** | `stage-client-bundle.mjs` writes exact gateway UI `releaseSha` + `bundleHash`; release workflow gates exact convergence. |
-| `O01-003` Metrics | **Wired** | Cloudflare native Worker metrics remain provider metric source; operational envelope documents usage/cost inputs. No customer SLO/alert policy claimed. |
+| `O01-003` Metrics | **Wired** | Cloudflare native Worker metrics remain provider metric source; operational envelope documents usage/cost inputs. No customer SLO claimed. |
 | `O01-004` Structured logs | **Wired for platform + configured queues** | Gateway 5xx and Jobs/Query/Social retry paths emit structured metadata without body/token/raw external payload. Platform + generated tenant Workers have logs enabled. App Workers remain dependency. |
 | `O01-005` Trace / correlation ID | **Wired for platform + generated tenant** | Gateway trace id flows to tenant; Cloudflare traces enabled at 5% in platform/generated configs. App Worker telemetry coverage remains dependency. |
-| `O01-006` Alerts | **Foundation** | Read-only health probe exits fail-closed and provider metrics exist, but alert destination/escalation policy is not configured. WS11 dependency for destination/security ownership. |
+| `O01-006` Alerts | **Foundation / policy wired** | `SRE_ALERT_POLICY.md` defines actionable signals/severity/first response; health/release gates fail closed. Protected delivery destination/escalation credentials remain WS11 dependency. |
 | `O01-007` Error tracking | **Foundation / Wired source** | Provider logs/traces + structured 5xx/retry events exist; no separate error aggregation/notification product contract is claimed. |
-| `O01-008` Queue monitoring | **Wired provider surface / Foundation Forge ops** | All configured consumers retain DLQ; Cloudflare queue metrics/backlog are provider monitoring surface. No Forge alert/escalation policy yet. |
+| `O01-008` Queue monitoring | **Wired provider surface / Foundation Forge ops** | All configured consumers retain DLQ; Cloudflare queue metrics/backlog are provider monitoring surface. Alert policy defines DLQ/retry/backlog actions; delivery channel remains dependency. |
 | `O01-009` Retry visibility | **Wired** | Outbox, prepared-report and social queue retries expose attempts/delay + safe IDs via structured logs. |
 | `O01-010` Dead-letter recovery | **Foundation** | Distinct DLQ now required for every configured consumer, including newly added prepared-report DLQ; replay/quarantine is deliberately deferred to WS10 canonical event contract. |
-| `O01-011` Integrity checks | **Wired** | Commercial reconciliation exists; backup/restore verification adds SQLite quick-check, FK and tenant-scope checks. |
-| `O01-012` Ledger reconciliation jobs | **Foundation** | Internal commercial reconciliation path exists; no canonical scheduled ledger-reconciliation SLO/evidence added in WS12. |
+| `O01-011` Integrity checks | **Wired** | Commercial reconciliation endpoint exists; backup/restore verification adds SQLite quick-check, FK and tenant-scope checks. |
+| `O01-012` Ledger reconciliation jobs | **Foundation / dependency explicit** | Internal commercial reconciliation endpoint exists, but no safe scheduled cadence/state/idempotency/cost contract is present. Deliberately not run every minute; DR-WS12-06 targets WS01/WS08. |
 | `O01-013` Backup verification | **RC candidate** | Strict manifest/checksum + isolated replay verification + remote restore drill checks; targeted 5/5 PASS. Production/off-account retention evidence remains. |
 | `O01-014` PITR strategy | **Wired** | Guarded `d1-pitr.mjs` plans by timestamp/bookmark; execute path requires confirm/reason/fresh verified backup and verifies provider bookmarks. Destructive production rehearsal NOT RUN. |
 | `O01-015` Disaster recovery | **Foundation / Wired tooling** | Restore drill, PITR, recovery matrix and duration evidence exist. RTO/RPO, off-account retention and rehearsal cadence remain unset. |
@@ -154,6 +156,14 @@ Load tool permits GET/HEAD only, defaults localhost, requires exact host confirm
 
 Provider envelope checked 2026-08-03 covers Workers, D1, Queues and cost inputs. Engineering warning/budget values are explicitly not customer SLA.
 
+### H. Alert policy
+
+- `docs/ops/SRE_ALERT_POLICY.md`
+
+Actionable fail-closed signals now cover auth-boundary drift, exact release mismatch, backup/PITR verification failure, DLQ/retry pressure, maintenance sweep failure, Worker server faults, storage headroom and queue-retention risk.
+
+Alert policy explicitly forbids auto-PITR, blind DLQ replay, automatic production rollback, secret/DNS mutation or customer-data migration. Delivery destination/credential remains WS11-owned.
+
 ## Data/API/state/invariant contract
 
 ### Data safety contract
@@ -200,7 +210,7 @@ Repository/source guards committed and wired into `server/package.json -> verify
 - `verify:queue-safety`;
 - `verify:release-safety`.
 
-**NOT RUN:** full repository install/build/typecheck/test because the available execution container could not resolve `github.com` and did not have a usable checkout/dependency graph. This is recorded, not substituted with fabricated CI evidence.
+**NOT RUN:** full repository install/build/typecheck/test because the available execution container could not resolve `github.com` and did not have a usable checkout/dependency graph. This is recorded, not substituted with fabricated CI evidence. GitHub exposes no pull-request workflow run for current PR head under the build/deploy-only policy.
 
 **NOT RUN:** production health observation, remote load test, production backup, production restore drill, PITR, Worker rollback, migration, queue provisioning, secret/DNS change or customer-data mutation.
 
@@ -219,8 +229,8 @@ Repository/source guards committed and wired into `server/package.json -> verify
 - Need: encrypted durable off-account backup retention + key/retention ownership; alert delivery destination/secrets/escalation boundary.
 - Why generic: encryption keys, retention and alert destinations are security/governance/control-plane concerns.
 - Contract proposed: backup object encryption/retention policy separated from plaintext runner export; SRE produces evidence/health events while WS11 owns destination credentials and governance.
-- Blocking: **no** for verifier/PITR tooling; **yes** before `O01-015` Hardened and formal alerting.
-- Temporary workaround: plaintext backup remains runner-local/secure operator path and is never uploaded to GitHub artifacts.
+- Blocking: **no** for verifier/PITR tooling; **yes** before `O01-015` Hardened and full alert delivery.
+- Temporary workaround: plaintext backup remains runner-local/secure operator path and is never uploaded to GitHub artifacts; GitHub/provider failures remain visible in their native surfaces.
 
 ### Dependency request DR-WS12-03
 - Target stream: **WS10**
@@ -246,6 +256,14 @@ Repository/source guards committed and wired into `server/package.json -> verify
 - Blocking: **no** for regular Worker rollback; **yes** before `O01-016` Hardened for full ALU release.
 - Temporary workaround: verified compatible forward/source redeploy; never claim D1 state rollback from Worker redeploy.
 
+### Dependency request DR-WS12-06
+- Target stream: **WS01 + WS08**
+- Need: canonical scheduled commercial/ledger reconciliation job contract: scope, cadence, idempotency/state marker, acceptable cost/runtime and failure semantics.
+- Why generic: the authoritative reconciliation service/ledger semantics belong to Finance/BI; blindly running a potentially heavy full reconciliation every Jobs cron tick would create load without proving correctness.
+- Contract proposed: read-only deterministic reconciliation invocation with durable last-run/result evidence, tenant isolation, bounded scope and explicit cadence suitable for data volume; WS12 can then wire monitoring/alerting around it.
+- Blocking: **no** for existing on-demand integrity endpoint and WS12 recovery tooling; **yes** before `O01-012` Hardened.
+- Temporary workaround: keep `/internal/reconciliation` on-demand and do not create an unbounded every-minute scheduled scan.
+
 ## RTO / RPO / policy state
 
 - **RTO target: UNSET.** Restore/rollback tooling records duration so a future target can be evidence-based.
@@ -261,12 +279,13 @@ PR `#199` (`feat/daily-ledger-hardening-20260802`): **CHERRY-PICK evidence conce
 ## Known gaps that remain real
 
 1. Migration ledger atomicity/content checksum: DR-WS12-01.
-2. Encrypted off-account retention + alert destinations: DR-WS12-02.
+2. Encrypted off-account retention + alert delivery destinations: DR-WS12-02.
 3. DLQ replay/quarantine: DR-WS12-03.
 4. App-worker observability coverage: DR-WS12-04.
 5. Workers-for-Platforms user-worker rollback: DR-WS12-05.
-6. Production evidence is deliberately absent until an authorized production operation occurs.
-7. RTO/RPO/SLA/rehearsal cadence remain explicit policy gaps rather than invented numbers.
+6. Scheduled ledger reconciliation contract: DR-WS12-06.
+7. Production evidence is deliberately absent until an authorized production operation occurs.
+8. RTO/RPO/SLA/rehearsal cadence remain explicit policy gaps rather than invented numbers.
 
 ## Handoff
 
@@ -275,12 +294,12 @@ Branch: `agent/ent-12-sre-release-data-safety`
 Status: `REVIEW`  
 Capabilities: `O01-001..O01-021`  
 Changed zones: release workflow; SRE scripts/tests/docs; platform Worker observability configs; safe structured retry/error telemetry  
-Tests: targeted isolated `21/21 PASS`; full repository verification `NOT RUN` due unavailable checkout/dependencies/network  
+Tests: targeted isolated `21/21 PASS`; full repository verification `NOT RUN` due unavailable checkout/dependencies/network; PR workflow runs none under build/deploy-only policy  
 Migration: no migration files changed; no production migration executed  
-Dependency requests: `DR-WS12-01..05`  
+Dependency requests: `DR-WS12-01..06`  
 Known gaps: see above  
 Recommended merge order: WS12 is Phase-C tier 1 with WS00/WS11; resolve conflicts against exact current main before merge  
-Delivery PR: `#320` (checkpoint; body should be refreshed to this autonomous scope before merge)
+Delivery PR: `#320` — ready for review, mergeable at last exact check
 
 ## Merge / production gate
 
