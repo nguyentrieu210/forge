@@ -1,5 +1,5 @@
 {
-  "deployedSha": "69dedd36f9314819268e02dfc923ce419055b81b",
+  "deployedSha": "cb88470fab14716c052f3c38cd6b813bbb88af8a",
   "failedStep": "migrate",
   "outcomes": {
     "checkout": "success",
@@ -14,11 +14,12 @@
     "install_vn_accounting": "skipped",
     "install_alumdoor": "skipped",
     "deploy_app_worker": "skipped",
+    "stage_gateway": "skipped",
     "deploy_gateway": "skipped",
     "smoke": "skipped"
   },
   "hrmLogTail": null,
   "vnAccountingLogTail": null,
   "alumdoorLogTail": null,
-  "failedAt": "2026-08-02T20:32:57.577Z"
+  "failedAt": "2026-08-02T20:39:28.145Z"
 }
