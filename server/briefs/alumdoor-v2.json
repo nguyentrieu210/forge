@@ -2995,6 +2995,11 @@
         "customer"
       ],
       "fields": [
+        {
+          "fieldname": "section_order_information",
+          "fieldtype": "Section Break",
+          "label": "Thông tin đơn"
+        },
         "customer:Link(Customer)! Khách hàng",
         "company:Link(Company)-!=(ALUMDOOR) Công ty",
         "currency:Link(Currency)-!=(VND) Tiền tệ",
@@ -3004,13 +3009,12 @@
           "fieldname": "responsible_person",
           "fieldtype": "Data",
           "label": "Người phụ trách",
-          "fetch_from": "customer.account_manager",
-          "description": "Tự lấy người phụ trách nội bộ từ hồ sơ khách hàng; vẫn có thể đổi cho riêng đơn này."
+          "fetch_from": "customer.account_manager"
         },
-        "product_group:Data Nhóm sản phẩm chính",
-        "manual_note:Small Text Ghi chú vận hành",
+        "product_group:Data- Nhóm sản phẩm chính",
+        "manual_note:Small Text- Ghi chú vận hành",
         "operational_change_reason:Small Text- Lý do đổi vận hành",
-        "against_quotation:Link(Quotation) Theo báo giá",
+        "against_quotation:Link(Quotation)- Theo báo giá",
         "selling_price_list:Link(Price List)! Bảng giá áp dụng",
         {
           "//": "Ảnh chụp nhóm giá của khách — xem chú thích cùng trường ở Báo giá.",
@@ -3019,22 +3023,37 @@
           "options": "Đại lý\nLẻ",
           "label": "Nhóm giá",
           "read_only": true,
+          "hidden": true,
           "fetch_from": "customer.price_group"
+        },
+        {
+          "fieldname": "section_order_items",
+          "fieldtype": "Section Break",
+          "label": "Dòng hàng"
+        },
+        "items:Table(Sales Order Item)! Dòng hàng",
+        {
+          "fieldname": "section_order_totals",
+          "fieldtype": "Section Break",
+          "label": "Tổng kết"
+        },
+        "additional_discount_percentage:Percent Chiết khấu toàn đơn (%)",
+        "grand_total:Currency~ Tổng tiền",
+        {
+          "fieldname": "section_order_delivery",
+          "fieldtype": "Section Break",
+          "label": "Giao hàng & ghi chú"
         },
         {
           "fieldname": "install_address",
           "fieldtype": "Small Text",
           "label": "Địa chỉ giao / lắp đặt",
-          "fetch_from": "customer.address",
-          "description": "Tự lấy địa chỉ từ hồ sơ khách hàng; có thể sửa theo công trình thực tế."
+          "fetch_from": "customer.address"
         },
-        "items:Table(Sales Order Item)! Dòng hàng",
-        "additional_discount_percentage:Percent Chiết khấu toàn đơn (%)",
         "discount_amount:Currency~- Tiền chiết khấu",
-        "grand_total:Currency~ Tổng tiền",
         "delivered_percentage:Percent~- Đã giao (%)",
         "billed_percentage:Percent~- Đã xuất hoá đơn (%)",
-        "note:Small Text Ghi chú"
+        "note:Small Text Ghi chú đơn hàng"
       ],
       "permissions": {
         "Chủ xưởng": "rwc",
