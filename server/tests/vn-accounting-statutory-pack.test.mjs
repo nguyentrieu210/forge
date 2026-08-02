@@ -17,10 +17,10 @@ function assertFourEyes(workflow, makerRole) {
   assert.equal(approve?.allow_self_approval, false);
 }
 
-test("VN accounting exposes effective-dated statutory registries and deterministic tax worker", async () => {
+test("VN accounting exposes statutory registries, tax worker and finance budget operations", async () => {
   const parsed = parseAppManifest(await readAppSource(fileURLToPath(accountingRoot)));
   assert.equal(parsed.id, "vn-accounting");
-  assert.equal(parsed.version, "1.4.0");
+  assert.equal(parsed.version, "1.5.0");
   assert.equal(parsed.worker, "cloudforge-app-vn-accounting");
   assert.ok(parsed.validators.some((item) => item.doctype === "VN Tax Ruleset" && item.actions?.includes("submit")));
 
@@ -40,6 +40,14 @@ test("VN accounting exposes effective-dated statutory registries and determinist
   ]) {
     assert.ok(byName(parsed.doctypes, name), `${name} must be packaged`);
     assert.ok(parsed.nav.some((item) => item.key === name), `${name} must be navigable`);
+  }
+
+  for (const [key, route] of [
+    ["finance-budget", "/app/Finance%20Budget"],
+    ["finance-budget-revision", "/app/Finance%20Budget%20Revision"],
+    ["finance-budget-commitment", "/app/Finance%20Budget%20Commitment"],
+  ]) {
+    assert.ok(parsed.nav.some((item) => item.key === key && item.route === route), `${key} must be navigable`);
   }
 
   assert.ok(parsed.externalDocTypes.some((item) => item.name === "E-Invoice Submission" && item.app === "erpnext"));
