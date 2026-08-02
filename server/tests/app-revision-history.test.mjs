@@ -40,9 +40,21 @@ class D1Adapter {
   }
   prepare(sql) { return new StatementAdapter(this.db, sql); }
   withSession() { return this; }
+  async batch(statements) {
+    this.db.exec("BEGIN");
+    try {
+      const results = [];
+      for (const statement of statements) results.push(await statement.run());
+      this.db.exec("COMMIT");
+      return results;
+    } catch (error) {
+      this.db.exec("ROLLBACK");
+      throw error;
+    }
+  }
 }
 
-function pkg(version, label = "Thing") {
+function pkg(version, label = "Thing", overrides = {}) {
   return {
     id: "demo",
     name: "Demo",
@@ -54,6 +66,7 @@ function pkg(version, label = "Thing") {
       permissions: [{ role: "Demo User", read: true, write: true, create: true }], revision: 1,
     }],
     nav: [{ key: "Thing", label, kind: "doctype" }],
+    ...overrides,
   };
 }
 
@@ -63,10 +76,14 @@ function insertActive(db, version, manifest, hash, modifiedAt) {
   ) VALUES(?,?,?,?,?,?,?,?,?)`).run("t", "demo", "Demo", version, hash, JSON.stringify(manifest), "admin", "2026-01-01T00:00:00Z", modifiedAt);
 }
 
+function migrate(db) {
+  db.db.exec(readFileSync(new URL("../migrations/tenant/0049_app_revision_history.sql", import.meta.url), "utf8"));
+}
+
 test("0049 seeds the active package and atomically records later package views", async () => {
   const db = new D1Adapter();
   insertActive(db, "1.0.0", pkg("1.0.0"), "a".repeat(64), "2026-01-01T00:00:00Z");
-  db.db.exec(readFileSync(new URL("../migrations/tenant/0049_app_revision_history.sql", import.meta.url), "utf8"));
+  migrate(db);
 
   assert.deepEqual(db.db.prepare("SELECT revision_no,version FROM app_revisions ORDER BY revision_no").all(), [
     { revision_no: 1, version: "1.0.0" },
@@ -84,10 +101,10 @@ test("0049 seeds the active package and atomically records later package views",
   assert.equal(db.db.prepare("SELECT count(*) AS n FROM app_revisions").get().n, 2);
 });
 
-test("AppRevisionStore lists active history and plans a safe presentation-only rollback", async () => {
+test("AppRevisionStore lists active history, plans and activates a presentation-only rollback", async () => {
   const db = new D1Adapter();
   insertActive(db, "1.0.0", pkg("1.0.0"), "a".repeat(64), "2026-01-01T00:00:00Z");
-  db.db.exec(readFileSync(new URL("../migrations/tenant/0049_app_revision_history.sql", import.meta.url), "utf8"));
+  migrate(db);
   db.db.prepare(`UPDATE installed_apps SET version=?,content_hash=?,manifest_json=?,modified_at=?
     WHERE tenant_id=? AND app_id=?`).run("2.0.0", "b".repeat(64), JSON.stringify(pkg("2.0.0", "Thing v2")), "2026-02-01T00:00:00Z", "t", "demo");
 
@@ -104,12 +121,49 @@ test("AppRevisionStore lists active history and plans a safe presentation-only r
   assert.equal(plan.active_revision_no, 2);
   assert.equal(plan.target_revision_no, 1);
   assert.equal(plan.automatable, true);
+
+  const activation = await store.rollbackPresentation("t", "demo", 1, "admin@example.com", "2026-02-02T00:00:00Z");
+  assert.equal(activation.from_revision_no, 2);
+  assert.equal(activation.to_revision_no, 1);
+  assert.equal(activation.actor, "admin@example.com");
+  const active = db.db.prepare("SELECT version,content_hash FROM installed_apps WHERE tenant_id='t' AND app_id='demo'").get();
+  assert.deepEqual(active, { version: "1.0.0", content_hash: "a".repeat(64) });
+  const audit = db.db.prepare("SELECT from_revision_no,to_revision_no,action,actor FROM app_revision_activations").get();
+  assert.deepEqual(audit, { from_revision_no: 2, to_revision_no: 1, action: "rollback", actor: "admin@example.com" });
+  assert.equal(db.db.prepare("SELECT count(*) AS n FROM app_revisions").get().n, 2, "reactivating an existing revision does not manufacture a third source revision");
+});
+
+test("presentation rollback refuses any materialized metadata drift even when the coarse planner would be permissive", async () => {
+  const db = new D1Adapter();
+  insertActive(db, "1.0.0", pkg("1.0.0", "Thing", {
+    doctypes: [{
+      name: "Thing", module: "Demo",
+      fields: [{ fieldname: "title", label: "Old title", fieldtype: "Data", required: true }],
+      permissions: [{ role: "Demo User", read: true, write: true, create: true }], revision: 1,
+    }],
+  }), "a".repeat(64), "2026-01-01T00:00:00Z");
+  migrate(db);
+  db.db.prepare(`UPDATE installed_apps SET version=?,content_hash=?,manifest_json=?,modified_at=?
+    WHERE tenant_id=? AND app_id=?`).run("2.0.0", "b".repeat(64), JSON.stringify(pkg("2.0.0", "Thing", {
+      doctypes: [{
+        name: "Thing", module: "Demo",
+        fields: [{ fieldname: "title", label: "New title", fieldtype: "Data", required: true }],
+        permissions: [{ role: "Demo User", read: true, write: true, create: true }], revision: 1,
+      }],
+    })), "2026-02-01T00:00:00Z", "t", "demo");
+  const store = new AppRevisionStore(db);
+  await assert.rejects(
+    () => store.rollbackPresentation("t", "demo", 1, "admin@example.com", "2026-02-02T00:00:00Z"),
+    /materialized app metadata/,
+  );
+  assert.equal(db.db.prepare("SELECT version FROM installed_apps WHERE tenant_id='t' AND app_id='demo'").get().version, "2.0.0");
+  assert.equal(db.db.prepare("SELECT count(*) AS n FROM app_revision_activations").get().n, 0);
 });
 
 test("revision history records parser-materialization changes even at the same source hash/version", () => {
   const db = new D1Adapter();
   insertActive(db, "1.0.0", pkg("1.0.0"), "a".repeat(64), "2026-01-01T00:00:00Z");
-  db.db.exec(readFileSync(new URL("../migrations/tenant/0049_app_revision_history.sql", import.meta.url), "utf8"));
+  migrate(db);
   const reParsed = { ...pkg("1.0.0"), client: { home: { doctype: "Thing" } } };
   db.db.prepare(`UPDATE installed_apps SET manifest_json=?,modified_at=? WHERE tenant_id=? AND app_id=?`)
     .run(JSON.stringify(reParsed), "2026-01-02T00:00:00Z", "t", "demo");
