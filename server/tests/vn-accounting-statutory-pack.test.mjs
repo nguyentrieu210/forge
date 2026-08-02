@@ -20,7 +20,7 @@ function assertFourEyes(workflow, makerRole) {
 test("VN accounting exposes effective-dated TT99 statutory registries", async () => {
   const parsed = parseAppManifest(await readAppSource(fileURLToPath(accountingRoot)));
   assert.equal(parsed.id, "vn-accounting");
-  assert.equal(parsed.version, "1.3.0");
+  assert.equal(parsed.version, "1.3.1");
 
   for (const name of [
     "TT99 Account Map",
@@ -32,6 +32,9 @@ test("VN accounting exposes effective-dated TT99 statutory registries", async ()
     assert.ok(byName(parsed.doctypes, name), `${name} must be packaged`);
     assert.ok(parsed.nav.some((item) => item.key === name), `${name} must be navigable`);
   }
+
+  assert.ok(parsed.externalDocTypes.some((item) => item.name === "E-Invoice Submission" && item.app === "erpnext"));
+  assert.ok(parsed.nav.some((item) => item.key === "e-invoice-submission" && item.route === "/app/E-Invoice%20Submission"));
 
   const legal = byName(parsed.doctypes, "VN Legal Rule");
   const legalFields = fields(legal);
