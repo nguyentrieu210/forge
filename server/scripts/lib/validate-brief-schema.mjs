@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import Ajv2020 from "ajv/dist/2020.js";
 import { prepareBriefInputTablesForSchema } from "./action-input-table-brief.mjs";
+import { validateBriefContextDimensions } from "./business-context-dimensions.mjs";
 
 let compiled;
 
@@ -16,11 +17,14 @@ export async function validateBriefSchema(brief, schemaPath = path.resolve(impor
   // `additionalProperties=false`. Strip exactly `actions[].inputTables` after validating it
   // with the shared brief helper; all other unknown keys still reach AJV unchanged.
   const { schemaBrief, errors: inputTableErrors } = prepareBriefInputTablesForSchema(brief);
+  const dimensionErrors = validateBriefContextDimensions(brief);
   const schemaErrors = compiled(schemaBrief)
     ? []
     : (compiled.errors ?? []).map((error) => {
       const at = error.instancePath || "/";
       return `${at} ${error.message ?? "is invalid"}`;
     });
-  return [...inputTableErrors, ...schemaErrors];
+  // AJV may report the same unsupported dimension from the enum. Deduplicate exact messages
+  // while preserving semantic guard output, which names the runtime-supported choices.
+  return [...new Set([...inputTableErrors, ...dimensionErrors, ...schemaErrors])];
 }
