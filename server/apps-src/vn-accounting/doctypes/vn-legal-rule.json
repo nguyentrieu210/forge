@@ -11,7 +11,7 @@
     { "fieldname": "rule_code", "label": "Mã phiên bản quy tắc", "fieldtype": "Data", "required": true, "unique": true, "in_list_view": true, "search_index": true },
     { "fieldname": "rule_name", "label": "Tên quy tắc", "fieldtype": "Data", "required": true, "in_list_view": true },
     { "fieldname": "rule_version", "label": "Phiên bản", "fieldtype": "Data", "required": true, "in_list_view": true },
-    { "fieldname": "rule_type", "label": "Nhóm", "fieldtype": "Select", "options": "Accounting\nVAT\nCIT\nPIT\nE-Invoice\nXML\nPayroll", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "rule_type", "label": "Nhóm", "fieldtype": "Select", "options": "Accounting\nVAT\nCIT\nPIT\nInsurance\nE-Invoice\nXML\nPayroll", "required": true, "in_list_view": true, "in_standard_filter": true },
     { "fieldname": "document_no", "label": "Số văn bản", "fieldtype": "Data", "required": true },
     { "fieldname": "regime_code", "label": "Chế độ", "fieldtype": "Select", "options": "TT99\nTT133\nTT58\nTT132-legacy\nTT200-legacy\nTax-specific\nPayroll-specific", "required": true },
     { "fieldname": "taxpayer_segment", "label": "Đối tượng áp dụng", "fieldtype": "Data", "required": true },
@@ -36,5 +36,5 @@
     { "role": "Internal Auditor", "read": true, "report": true, "export": true },
     { "role": "System Manager", "read": true, "write": true, "create": true, "submit": true, "report": true, "export": true, "share": true }
   ],
-  "revision": 2
+  "revision": 3
 }
