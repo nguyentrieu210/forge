@@ -2,8 +2,8 @@
 --
 -- User-facing workplace records carry user ids in JSON for display/filtering, but the
 -- canonical document owner is the authenticated actor recorded by the kernel. Whenever a
--- record represents "my request" or "my notification preference", those two identities
--- must be the same or a caller could write state on somebody else's behalf.
+-- record represents "my request", "my meeting" or "my notification preference", those
+-- identities must agree or a caller could write state on somebody else's behalf.
 
 CREATE TRIGGER IF NOT EXISTS ws15_internal_request_owner_insert_guard
 BEFORE INSERT ON documents
@@ -32,6 +32,36 @@ BEGIN
       WHERE u.tenant_id=NEW.tenant_id AND u.user_id=NEW.owner
         AND u.enabled=1 AND u.user_type='System User'
     ) THEN RAISE(ABORT,'INTERNAL_REQUEST_OWNER_INVALID')
+  END;
+END;
+
+CREATE TRIGGER IF NOT EXISTS ws15_workplace_meeting_owner_insert_guard
+BEFORE INSERT ON documents
+WHEN NEW.doctype='Workplace Meeting'
+BEGIN
+  SELECT CASE
+    WHEN COALESCE(json_extract(NEW.payload_json,'$.organizer'),'')<>NEW.owner
+      THEN RAISE(ABORT,'WORKPLACE_MEETING_ORGANIZER_MUST_MATCH_OWNER')
+    WHEN NOT EXISTS(
+      SELECT 1 FROM users u
+      WHERE u.tenant_id=NEW.tenant_id AND u.user_id=NEW.owner
+        AND u.enabled=1 AND u.user_type='System User'
+    ) THEN RAISE(ABORT,'WORKPLACE_MEETING_OWNER_INVALID')
+  END;
+END;
+
+CREATE TRIGGER IF NOT EXISTS ws15_workplace_meeting_owner_update_guard
+BEFORE UPDATE OF owner,payload_json ON documents
+WHEN NEW.doctype='Workplace Meeting'
+BEGIN
+  SELECT CASE
+    WHEN COALESCE(json_extract(NEW.payload_json,'$.organizer'),'')<>NEW.owner
+      THEN RAISE(ABORT,'WORKPLACE_MEETING_ORGANIZER_MUST_MATCH_OWNER')
+    WHEN NOT EXISTS(
+      SELECT 1 FROM users u
+      WHERE u.tenant_id=NEW.tenant_id AND u.user_id=NEW.owner
+        AND u.enabled=1 AND u.user_type='System User'
+    ) THEN RAISE(ABORT,'WORKPLACE_MEETING_OWNER_INVALID')
   END;
 END;
 
