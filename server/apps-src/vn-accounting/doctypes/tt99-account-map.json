@@ -1,0 +1,35 @@
+{
+  "name": "TT99 Account Map",
+  "module": "Accounts",
+  "is_submittable": true,
+  "autoname": "TT99-MAP-.YYYY.-#####",
+  "title_field": "statutory_account_code",
+  "sort_field": "effective_from",
+  "sort_order": "DESC",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "source_regime", "label": "Chế độ nguồn", "fieldtype": "Data", "required": true, "default": "TT200/Legacy", "in_standard_filter": true },
+    { "fieldname": "source_account", "label": "Tài khoản đang dùng", "fieldtype": "Link", "options": "Account", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "statutory_account_code", "label": "Mã tài khoản TT99", "fieldtype": "Data", "required": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "statutory_account_name", "label": "Tên tài khoản TT99", "fieldtype": "Data", "required": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "target_account", "label": "Tài khoản đích trong COA", "fieldtype": "Link", "options": "Account", "required": true, "in_list_view": true },
+    { "fieldname": "mapping_kind", "label": "Kiểu mapping", "fieldtype": "Select", "options": "1-1\nN-1\n1-N\nGiữ nguyên\nTùy biến theo quy chế", "required": true, "default": "1-1", "in_standard_filter": true },
+    { "fieldname": "legal_rule", "label": "Căn cứ pháp lý", "fieldtype": "Link", "options": "VN Legal Rule", "required": true },
+    { "fieldname": "effective_from", "label": "Hiệu lực từ", "fieldtype": "Date", "required": true, "in_list_view": true },
+    { "fieldname": "effective_to", "label": "Hiệu lực đến", "fieldtype": "Date" },
+    { "fieldname": "mapping_reason", "label": "Giải trình mapping", "fieldtype": "Small Text", "required": true },
+    { "fieldname": "test_evidence_json", "label": "Bằng chứng kiểm thử", "fieldtype": "Code", "required": true, "default": "{}" },
+    { "fieldname": "approved_by", "label": "Người phê duyệt", "fieldtype": "Data", "read_only": true },
+    { "fieldname": "approved_at", "label": "Thời điểm phê duyệt", "fieldtype": "Datetime", "read_only": true },
+    { "fieldname": "workflow_state", "label": "Trạng thái", "fieldtype": "Data", "read_only": true, "in_list_view": true, "in_standard_filter": true }
+  ],
+  "permissions": [
+    { "role": "Accounts User", "read": true, "report": true },
+    { "role": "General Accountant", "read": true, "write": true, "create": true, "report": true, "export": true },
+    { "role": "Chief Accountant", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true },
+    { "role": "Accounts Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}
