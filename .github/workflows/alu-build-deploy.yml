@@ -8,6 +8,14 @@ on:
       - "client/**"
   workflow_dispatch:
     inputs:
+      scope:
+        description: Deploy UI only or perform the full production release
+        required: true
+        default: ui
+        type: choice
+        options:
+          - ui
+          - full
       confirm:
         description: Type alu to confirm production deploy
         required: true
@@ -21,30 +29,43 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.event_name == 'push' && 'production-alu-ui' || 'production-alu-full' }}
+  group: ${{ (github.event_name == 'push' || inputs.scope == 'ui') && 'production-alu-ui' || 'production-alu-full' }}
   cancel-in-progress: ${{ github.event_name == 'push' }}
 
 jobs:
-  ui-auto-deploy:
+  ui-deploy:
     name: Fast UI build and deploy after main merge
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.scope == 'ui' && inputs.confirm == 'alu')
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     environment: production
     env:
-      TARGET_SHA: ${{ github.sha }}
+      TARGET_SHA: ${{ github.event_name == 'push' && github.sha || inputs.target_sha || github.sha }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      VITE_FORGE_RELEASE_SHA: ${{ github.sha }}
+      VITE_FORGE_RELEASE_SHA: ${{ github.event_name == 'push' && github.sha || inputs.target_sha || github.sha }}
 
     steps:
       - name: Checkout merged UI revision
         uses: actions/checkout@v4
         with:
           ref: ${{ env.TARGET_SHA }}
-          fetch-depth: 2
+          fetch-depth: 0
           persist-credentials: false
 
-      - name: Guard merged push as UI-only
+      - name: Require manual UI target to be merged into main
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git cat-file -e "$TARGET_SHA^{commit}"
+          git merge-base --is-ancestor "$TARGET_SHA" origin/main || {
+            echo "Refusing production UI release: $TARGET_SHA is not merged into main."
+            exit 1
+          }
+
+      - name: Guard automatic main push as UI-only
+        if: github.event_name == 'push'
         shell: bash
         run: |
           set -euo pipefail
@@ -144,8 +165,8 @@ jobs:
           }
 
   build-deploy:
-    name: Build and deploy ALU
-    if: github.event_name == 'workflow_dispatch' && inputs.confirm == 'alu'
+    name: Build and deploy full ALU release
+    if: github.event_name == 'workflow_dispatch' && inputs.scope == 'full' && inputs.confirm == 'alu'
     runs-on: ubuntu-latest
     timeout-minutes: 120
     environment: production
