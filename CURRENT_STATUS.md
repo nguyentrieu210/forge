@@ -2,37 +2,45 @@
 
 Ngày cập nhật: **2026-08-02**.
 
-GitHub là nguồn sự thật cho exact `main`, branch, PR, CI, merge và release.
+GitHub là nguồn sự thật cho exact `main`, branch, PR, CI, merge và release. Không hardcode exact current `main` vào status dài hạn; phải đọc GitHub khi bắt đầu/tiếp tục.
 
 ## Repository snapshot
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `main`.
-- Exact `main` khi mở policy task: `cd1f76dbb47432e2312c6f5577eb955b48c3a856`.
+- Warehouse Cash Alumdoor merge checkpoint: `c3dbcd20a7a88c17c1a9f10c4fff82b329e27855`.
 
-## ACTIVE — Minimal risk-based gates
+## DONE — Minimal risk-based gates
 
-- Canonical branch: `chore/risk-based-quality-gates-20260802`.
-- `FAST`: `branch -> sửa -> diff -> commit -> push`.
-- FAST không bắt buộc PR, full test/lint/typecheck/build/CI hoặc cập nhật status/handoff cho từng chỉnh sửa nhỏ.
-- `STANDARD`: test/validation/PR/CI phù hợp với logic sản phẩm.
-- `CRITICAL`: giữ regression/integration/security/data-integrity và required CI cho accounting/inventory/costing/auth/tenant/migration/production data.
-- Build/install/stage chỉ để tạo artifact deploy là packaging.
+- Canonical PR `#234` đã merge tại `c453df3026095b314f82f79e338bd56af90632ca`.
+- Policy canonical: `FAST` / `STANDARD` / `CRITICAL` trong `RUNBOOK.md` và `DELIVERY_POLICY.md`.
+- Gate đã PASS trên đúng SHA không chạy lặp nếu input/dependency/config không đổi; commit mới chỉ rerun gate bị ảnh hưởng.
+- `FAST`: presentation/UI nhỏ, kiểm tra tối thiểu theo blast radius; không bắt buộc full pipeline.
+- `STANDARD`: test/validation/PR/CI phù hợp logic sản phẩm.
+- `CRITICAL`: accounting/cash/AR-AP/inventory/costing/manufacturing/auth/permission/tenant/migration/data giữ regression/integration/security/data-integrity gates đầy đủ.
 
-## ACTIVE — Auto deploy UI hotfix
+## ACTIVE — UI theme hotfix auto-deploy validation
 
-- Canonical working branch: `fix/ui-hotfix-auto-deploy-v2-20260802`.
-- PR iteration `#230` từ stale main là superseded; không merge.
-- `.github/workflows/hotfix-ui-one-click.yml` đổi từ manual-only sang auto deploy khi push vào `hotfix/ui-*` có thay đổi `client/**`; vẫn giữ `workflow_dispatch` fallback.
-- Fail-closed scope guard chạy trước production: current `main` phải là ancestor; bắt buộc có `client/**`; ngoài client chỉ cho `CURRENT_STATUS.md`, `NEXT_TASKS.md`, `AI_HANDOFF.md`; tối đa 10 file / 300 changed lines.
-- Fast path: scope guard -> install -> build MetaForge bundle -> stage bundle -> wrangler deploy Gateway production.
-- Mục tiêu: UI hotfix hợp lệ push xong tự deploy, không cần người dùng bấm Run workflow.
-- Sau khi merge cơ chế này vào `main`, theme fix sẽ được replay lên branch `hotfix/ui-*` mới từ exact main để chính push đó kích production deploy.
+- Guarded auto-deploy lane đã merge qua PR `#231` tại `cd1f76dbb47432e2312c6f5577eb955b48c3a856`; PR `#230` là stale iteration đã đóng.
+- Theme hotfix replay hiện ở PR `#232`, branch `hotfix/ui-document-theme-auto-20260802` theo checkpoint gần nhất; phải kiểm GitHub trước khi tiếp tục vì lane này đang thay đổi độc lập.
+- Merge/code state không thay cho release evidence.
 
-## DONE — Warehouse Petty Cash
+## DONE — Alumdoor Warehouse Cash integration
+
+- Canonical delivery PR `#233` đã squash-merge vào `main` tại `c3dbcd20a7a88c17c1a9f10c4fff82b329e27855`.
+- Final validated feature head `162bc010692d3a2997ddbc9bd5e9a59e11cb5d60`: **6/6 required workflows PASS**.
+- Alumdoor có tab `Quỹ kho` role-gated và mở 4 DocType canonical qua generic MetaForge route: `Warehouse Cash Fund`, `Warehouse Cash Voucher`, `Warehouse Cash Transfer`, `Warehouse Cash Count`.
+- Alumdoor không copy schema/controller/ledger Finance; `server/briefs/alumdoor-v2.integrations.json` khai `vn-accounting >= 1.1.0` và 4 DocType trên là `externalDocTypes`.
+- Canonical brief reader merge integration sidecar theo fail-closed validation; duplicate dependency/external ownership hoặc unsupported key bị từ chối.
+- Browser regression xác nhận role kho thấy Quỹ kho và mở đúng Voucher; role kinh doanh không thấy tab.
+- Không đổi Warehouse Cash GL/controller/migration trong PR `#233`; không deploy production trong task này.
+
+## DONE — Warehouse Petty Cash backend
 
 - PR `#214` merged tại `da37060f3c02a6a5f9701d60edc3284575f00deb`.
 - Final validated head `5255dae609a7a4c30ab25ffc397f81422c2c69fc`: 6/6 required workflows PASS.
+- `gl_entries` là money source of truth; balance/daily usage chỉ là rebuildable projection.
+- Supplier/Customer party dimension không tự settle AR/AP; invoice settlement vẫn phải qua canonical Payment Entry/payment allocation.
 
 ## DONE — Purchase Receipt Bulk Transaction
 
@@ -41,17 +49,17 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, CI, merge và relea
 
 ## Chưa hoàn tất
 
-1. Merge policy risk-based gates vào `main`.
-2. Merge auto-deploy workflow vào `main`, replay UI theme fix trên hotfix mới và xác nhận production deploy tự chạy.
-3. Bulk Transaction cho Stock Reconciliation.
-4. Bulk Transaction cho BOM parent + child/version.
-5. First-class AppAction input-table contract.
-6. Batch Print / QR label queue.
-7. P1 Daily detailed ledger hardening/closure theo exact GitHub state.
-8. Plastic ERP các wave sau P0-A.
+1. Kiểm exact GitHub state/release evidence của UI hotfix lane trước khi tiếp tục task #232 hoặc iteration thay thế.
+2. Bulk Transaction cho Stock Reconciliation.
+3. Bulk Transaction cho BOM parent + child/version.
+4. First-class AppAction input-table contract.
+5. Batch Print / QR label queue.
+6. P1 Daily detailed ledger hardening/closure theo exact GitHub state.
+7. Plastic ERP các wave sau P0-A.
+8. Nếu cần dùng quỹ kho để tất toán trực tiếp Purchase/Sales Invoice, thiết kế canonical payment allocation; không dùng party dimension trên GL thay settlement.
 
 ## Guardrails
 
-- Auto production deploy chỉ áp dụng `hotfix/ui-*` vượt qua scope guard fail-closed.
-- Không sửa production secrets/DNS hoặc mutate customer data trong UI fast lane.
+- Auto production deploy chỉ áp dụng đúng UI hotfix lane vượt qua guard hiện hành trên GitHub.
+- Không sửa production secrets/DNS hoặc mutate customer data nếu user chưa yêu cầu đúng đợt.
 - Không commit `.env`, `server/work/`, `tmp/`, backup, credential, cookie/token hoặc generated artifact không thuộc source control.
