@@ -1,0 +1,12 @@
+{
+  "id": "projects",
+  "name": "Projects & PSA",
+  "version": "1.0.0",
+  "requires": [],
+  "nav": [
+    { "key": "Project", "label": "Dự án", "kind": "doctype", "icon": "folder-kanban", "group": "Dự án" },
+    { "key": "Project Task", "label": "Công việc dự án", "kind": "doctype", "icon": "list-checks", "group": "Dự án" },
+    { "key": "Project Timesheet", "label": "Bảng chấm giờ dự án", "kind": "doctype", "icon": "clock-3", "group": "Thời gian" }
+  ],
+  "hooks": []
+}
