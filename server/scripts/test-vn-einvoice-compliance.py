@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SQLite regression for WS01 VN e-invoice compliance migration 0050."""
+"""SQLite regression for WS01 VN tax DSL + e-invoice compliance migrations 0050-0051."""
 
 import json
 import sqlite3
@@ -60,6 +60,7 @@ for migration in (
     "0048_vn_accounting_statutory_foundation.sql",
     "0049_vn_accounting_statutory_registry_integrity.sql",
     "0050_vn_einvoice_compliance_evidence.sql",
+    "0051_vn_tax_ruleset_dsl_integrity.sql",
 ):
     db.executescript((root / "migrations/tenant" / migration).read_text(encoding="utf-8"))
 
@@ -112,12 +113,23 @@ legal = {
     "source_url": "https://official.example/einvoice", "source_file_hash": sha, "rule_json": "{}",
 }
 insert("VN Legal Rule", "EINV-2026", legal)
-insert("VN Tax Ruleset", "EINV-KAIRO-2026", {
+db.commit()
+
+tax_ruleset = {
     "ruleset_code": "EINV-KAIRO-2026", "rule_name": "E-Invoice Kairo", "company": "Kairo",
-    "rule_type": "E-Invoice", "taxpayer_segment": "Enterprise", "effective_from": "2026-01-01",
-    "effective_to": "2026-12-31", "expression_json": "{\"version\":1}",
-    "test_vectors_json": "[{\"input\":1,\"expected\":1}]", "legal_rule": "EINV-2026", "source_hash": sha,
-})
+    "rule_type": "E-Invoice", "taxpayer_segment": "Enterprise", "schema_version": 1,
+    "effective_from": "2026-01-01", "effective_to": "2026-12-31",
+    "expression_json": "{\"version\":1,\"outputs\":{\"valid_minor\":{\"op\":\"const\",\"value\":0}}}",
+    "test_vectors_json": "[{\"inputs\":{},\"expected\":{\"valid_minor\":0}}]",
+    "legal_rule": "EINV-2026", "source_hash": sha,
+}
+expect_rejected("VN_TAX_RULESET_SCHEMA_VERSION_UNSUPPORTED", lambda: insert(
+    "VN Tax Ruleset", "EINV-BAD-SCHEMA", {**tax_ruleset, "ruleset_code": "EINV-BAD-SCHEMA", "schema_version": 2}
+))
+expect_rejected("VN_TAX_RULESET_EXPRESSION_VERSION_UNSUPPORTED", lambda: insert(
+    "VN Tax Ruleset", "EINV-BAD-EXPR", {**tax_ruleset, "ruleset_code": "EINV-BAD-EXPR", "expression_json": "{\"version\":2,\"outputs\":{}}"}
+))
+insert("VN Tax Ruleset", "EINV-KAIRO-2026", tax_ruleset)
 db.commit()
 
 base_submission = {
@@ -170,4 +182,4 @@ expect_rejected("VN_EINVOICE_LEGAL_RULE_REQUIRED", lambda: insert(
 ))
 
 assert db.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
-print("VN_EINVOICE_COMPLIANCE_0050_PASS")
+print("VN_TAX_DSL_0051_AND_EINVOICE_0050_PASS")
