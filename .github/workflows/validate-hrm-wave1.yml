@@ -55,8 +55,10 @@ jobs:
       - run: pnpm install --frozen-lockfile --prefer-offline
       - name: Build server
         run: pnpm --filter cloudforge run build
-      - name: HRM and SQL regressions
-        run: pnpm --filter cloudforge run test
+      - name: Unit regressions
+        run: pnpm --filter cloudforge run test:unit
+      - name: SQL regressions
+        run: pnpm --filter cloudforge run test:sql
       - name: Validate first-party HRM package
         run: pnpm --filter cloudforge run app:check
       - name: Typecheck worker boundary
