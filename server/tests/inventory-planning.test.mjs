@@ -18,6 +18,10 @@ test("putaway respects priority and reports unallocated quantity", () => {
     { warehouse: "A", priority: 1, capacity_qty_micros: Q, current_qty_micros: 0 },
   ]);
   assert.equal(stable.allocations[0].warehouse, "A");
+  assert.throws(() => planPutaway(Q, [
+    { warehouse: "A", priority: 1, capacity_qty_micros: Q, current_qty_micros: 0 },
+    { warehouse: "A", priority: 2, capacity_qty_micros: Q, current_qty_micros: 0 },
+  ]), /Duplicate putaway warehouse/);
 });
 
 test("picking never over-allocates and follows resolved sequence", () => {
