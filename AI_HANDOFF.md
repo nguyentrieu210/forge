@@ -1,6 +1,6 @@
 # AI HANDOFF
 
-Ngày cập nhật: **2026-08-02**.
+Ngày cập nhật: **2026-08-03**.
 
 Quy tắc vận hành nằm ở `RUNBOOK.md`; live status ở `CURRENT_STATUS.md`; hàng đợi ở `NEXT_TASKS.md`; delivery gate ở `DELIVERY_POLICY.md`.
 
@@ -15,6 +15,17 @@ Quy tắc vận hành nằm ở `RUNBOOK.md`; live status ở `CURRENT_STATUS.md
 - Validation phát triển chạy local theo blast radius.
 - GitHub Actions chỉ dùng làm máy build/deploy.
 - Workflow release duy nhất: `.github/workflows/manual-release-alu.yml`, name `ALU Build and Deploy`.
+
+## Active checkpoint — VN Accounting Period Integrity Hardening r7
+
+- Canonical branch: `fix/vn-accounting-period-integrity-20260803-r7`, clean-based on exact `main@6deccaeb72a4814b3e0d0264464fcaa87cfad747`.
+- r6 là superseded iteration: `main` đã merge HRM operational và chiếm migration `0039-0041`; không merge `main` vào r6, không force-push/rewrite history.
+- Accounting hardening hiện ở `0042_vn_accounting_period_hardening.sql`, chạy sau HRM migrations và giữ migration history append-only.
+- Invariants: valid/non-overlap period theo tenant/company/branch; company-wide period conflict với branch period cùng range; Hard Locked chặn submit/cancel/scope move; Soft Closed chỉ cho approved adjustment khi period cho phép và có reason + approver.
+- Guard bao phủ Journal/Invoice/Payment, Purchase Receipt, Delivery Note, Payroll, Stock và Warehouse Cash.
+- Regression script giữ toàn bộ HRM acceptance `0035+0039+0040+0041` và thêm `0042`: cancel, draft->submit, move into/out of locked scope, invalid/overlap period, period update overlap, tenant isolation, expanded posting doctypes và duplicate payroll journal source.
+- CRITICAL local gates chưa chạy vì connector runtime không có repository checkout/dependencies và shell không truy cập GitHub. Không gọi DONE/ready/merge cho tới khi local gates theo `DELIVERY_POLICY.md` chạy.
+- Không production deploy, production migration hoặc mutate tenant data.
 
 ## Merged checkpoint — HRM operational 1.5
 
@@ -80,6 +91,7 @@ Không tự đổi DNS/secrets hoặc destructive operation ngoài release path 
 
 ## Remaining priorities
 
+- Hoàn tất CRITICAL local gates cho VN Accounting Period Integrity Hardening r7.
 - Acceptance run thật của UI fast path sau merge, ghi duration và Cloudflare release evidence.
 - HRM statutory payroll-rule evaluator nếu nghiệp vụ cần tự động PIT/BHXH theo luật.
 - Stock Reconciliation Bulk Transaction.
