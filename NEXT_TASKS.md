@@ -4,14 +4,18 @@ Ngày cập nhật: **2026-08-02**.
 
 Đây là hàng đợi active. GitHub là nguồn sự thật cho exact `main`, PR, branch và CI; trước khi làm phải đọc `RUNBOOK.md`, `CURRENT_STATUS.md`, `AI_HANDOFF.md`, `DELIVERY_POLICY.md` và kiểm tra PR đang mở.
 
-## P1 — Auto deploy UI hotfix production lane
+## P1 — Global numeric display max 2 decimals
 
-- Canonical branch: `fix/ui-hotfix-auto-deploy-v2-20260802`, clean-transplant từ exact `main@efa2aa6df385ca0775523f1756494d2ae54ec132`.
-- PR `#230` là stale iteration; không merge.
-- Workflow `.github/workflows/hotfix-ui-one-click.yml` sẽ tự chạy khi push branch `hotfix/ui-*` có `client/**`; `workflow_dispatch` vẫn là fallback.
-- Fail-closed guard: current `main` phải là ancestor; bắt buộc có client change; ngoài client chỉ cho `CURRENT_STATUS.md`, `NEXT_TASKS.md`, `AI_HANDOFF.md`; tối đa 10 file/300 dòng.
-- Fast production path: validate scope -> install -> build -> stage -> deploy Gateway.
-- Việc tiếp theo: merge lane mới, tạo hotfix UI mới từ exact main, replay theme fix của PR #227, push và xác nhận auto-deploy production.
+- Canonical branch: `hotfix/ui-global-decimal-2dp-20260802`, từ exact `main@cd1f76dbb47432e2312c6f5577eb955b48c3a856`.
+- Canonical formatter cap số/tiền hiển thị tối đa 2 chữ số lẻ; default Float/Currency/Percent/Rating controls cũng dùng presentation precision tối đa 2.
+- Không đổi dữ liệu lưu, schema hay calculation precision.
+- Guarded UI auto-deploy được kích bởi push branch này.
+- Việc còn lại: lấy exact-head CI/build/deploy evidence, merge reconcile PR nếu pass, xác nhận production không còn `,000000` ở numeric controls canonical.
+
+## DONE — Guarded auto deploy UI hotfix production lane
+
+- PR `#231` merged vào `main` tại `cd1f76dbb47432e2312c6f5577eb955b48c3a856`.
+- Workflow tự chạy khi push `hotfix/ui-*` có `client/**`; fail-closed guard giữ giới hạn client-only + 3 file docs, tối đa 10 file/300 dòng.
 
 ## DONE — Warehouse Petty Cash per warehouse
 
@@ -39,6 +43,7 @@ Ngày cập nhật: **2026-08-02**.
 ## Guardrails
 
 - Auto production deploy chỉ dành cho `hotfix/ui-*` vượt scope guard.
+- Decimal display cap không được biến thành backend rounding hoặc destructive data rewrite.
 - Không sửa production secrets/DNS, không mutate customer data.
 - Không commit `.env`, `server/work/`, `tmp/`, credential, backup hoặc generated evidence không được quản lý.
 - PR stale/diverged phải clean-transplant đúng scope lên exact current `main`; không force-push/rewrite history.
