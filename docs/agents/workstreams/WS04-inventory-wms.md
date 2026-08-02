@@ -8,10 +8,10 @@ Seed baseline: `862636e6239c91eab657c619d8c55345ed71a6d8`
 Started from branch head: `a936d8b1ca3846767be6e7cf0a0411cf9df7c257`  
 Initial sync main: `bbe3494bcfbb8a3ce09a5ff4bbb839dfcf9e47e9`  
 Checkpoint PR: **#307** (Draft)  
-Head before this handoff update: `20b9a846e5ab386a8c3ad0e89817db126c0f4f16`  
+Head before this handoff update: `b0ac0e2a4c545c128ea6efc44a85dc494b83b2f6`  
 Canonical board: `main:docs/agents/AGENT_BOARD.md`
 
-Exact compare at this checkpoint: branch is behind current `main` by 11 commits, but reverse compare shows those commits touch WS14 client/mobile/PWA plus `CURRENT_STATUS.md`/`NEXT_TASKS.md`; no server stock source overlaps. Do not rebase merely for operational/UI drift. Recheck before final verification.
+Exact compare at the prior checkpoint showed branch behind current `main` only by WS14 client/mobile/PWA plus status-doc commits; no server stock source overlap. Recheck exact compare before final verification rather than rebasing for cosmetic drift.
 
 ## Mission
 
@@ -45,7 +45,7 @@ Exact compare at this checkpoint: branch is behind current `main` by 11 commits,
 - `W01-020 ATP`: Alumdoor length-threshold availability is **Wired**; generic projected stock/ATP inputs are **Foundation** through `inventoryPosition` (on-hand + inbound - outbound - reserved), including signed on-hand when negative stock policy explicitly allows it.
 - `W01-022 Valuation adjustment`: existing Repost Item Valuation path is **Wired** for stock-side replay/adjustment; WS04 adds future-date and warehouse scope guards. Finance propagation still blocks Hardened.
 - `W01-023 Backdated semantics` / `W01-024 Repost/replay`: **Foundation/Wired** replay primitives exist, but affected-future-document propagation + Stock/GL reconciliation contract is still missing. Do not promote to Hardened.
-- `W01-025 Returns`: **Wired** Stock Return exists; WS04 adds active leaf/company warehouse guard before submit.
+- `W01-025 Returns`: **Wired** Stock Return exists; WS04 adds active leaf/company warehouse guard before submit plus targeted regression source.
 - `W01-026 Aging`: **Foundation** pure fixed-point aging buckets added; policy bucket cutoffs are caller-defined.
 - `W01-027 ABC`: **Foundation** deterministic cumulative value classifier added; A/B cutoffs are explicit policy inputs, zero-consumption items become C, dominant top item remains A.
 - `W01-028 Slow/dead stock`: **Foundation** explicit slow/dead day thresholds added; no hidden constants.
@@ -100,6 +100,7 @@ Architecture decision from repo evidence: Warehouse tree remains physical locati
 - `server/tests/stock-reconciliation-integrity.test.mjs`
 - `server/tests/stock-reservation-integrity.test.mjs`
 - `server/tests/stock-entry-warehouse-scope.test.mjs`
+- `server/tests/stock-return-integrity.test.mjs`
 - `server/tests/repost-item-valuation-integrity.test.mjs`
 - `server/tests/tracked-stock-identity-integrity.test.mjs`
 - `server/tests/warehouse-location.test.mjs`
@@ -137,62 +138,49 @@ Do not convert NOT RUN into implied PASS.
 ## Dependency requests
 
 ### DR-WS04-01 -> WS00 — side-effect-free kernel preview
-
-- Need: generic `DocumentKernel` plan/preview contract with the same payload-hash, permission, lifecycle, optimistic version and controller validation as execute, but zero store/ledger/outbox mutation.
+- Need generic `DocumentKernel` plan/preview with execute-equivalent validation and zero mutation.
 - Blocking: **yes** for canonical bulk Stock Reconciliation preview from #267.
-- Workaround: none; WS04 will not clone a private kernel.
 
 ### DR-WS04-02 -> WS09 — AppAction input-table/batch contract
-
-- Need: typed table rows, limits, preview/commit envelope, validation mapping and idempotent batch semantics.
-- Blocking: **yes** before #267 becomes generic first-class bulk inventory UX; not blocking stock integrity.
+- Need typed table rows, limits, preview/commit envelope, validation mapping and idempotent batch semantics.
+- Blocking: **yes** before #267 becomes generic first-class bulk inventory UX.
 
 ### DR-WS04-03 -> WS01 — stock-to-GL repost/reconciliation contract
-
-- Need: authoritative account resolution + company/branch scope + immutable reversal/repost trace + propagation/reconciliation for affected Inventory/COGS/Stock Adjustment postings.
+- Need authoritative account resolution + company/branch scope + immutable reversal/repost trace + propagation/reconciliation for affected Inventory/COGS/Stock Adjustment postings.
 - Blocking: **yes** for `W01-024` Hardened.
 
-### DR-WS04-04 -> WS09 (runtime scheduling seam; WS12 infra review if needed) — reservation expiry mutation
-
-- Need: audited scheduled domain action that lists expired `Đang giữ` reservations and transitions them through canonical mutation as system identity.
-- Why: availability already ignores expired promises, but lifecycle/audit still needs deterministic `Hết hạn` mutation rather than stale rows forever.
-- Blocking: **yes** for `W01-019` Hardened, not for current ATP correctness.
+### DR-WS04-04 -> WS09 (WS12 infra review if needed) — reservation expiry mutation
+- Need audited scheduled domain action that transitions expired `Đang giữ` reservations through canonical mutation as system identity.
+- Blocking: **yes** for `W01-019` Hardened, not current ATP correctness.
 
 ### DR-WS04-05 -> WS05/WS02 — evidence-backed reservation consumption
-
-- Need: actual Cut/Production/Sales stock fulfillment must reduce/close the matching reservation with source evidence; `Đã dùng` must not be a free manual toggle.
-- Contract/business detail still required: full-use quantity trace and partial-consumption evidence fields.
+- Need Cut/Production/Sales fulfillment evidence to reduce/close matching reservation; `Đã dùng` must not be a free manual toggle.
 - Blocking: **yes** for terminal reservation lifecycle Hardened.
 
 ### DR-WS04-06 -> WS02 — Delivery Note warehouse scope
-
-- Need: consume WS04 `requireLeafWarehouse` before submitted outbound stock posting so Delivery Note cannot post to missing/group/disabled/cross-company warehouse.
-- Blocking: **no** for WS04 branch; required for cross-domain stock hardening.
+- Consume `requireLeafWarehouse` before submitted outbound stock posting.
+- Blocking: no for WS04; required cross-domain stock hardening.
 
 ### DR-WS04-07 -> WS03 — Purchase Receipt warehouse scope / putaway integration
-
-- Need: consume WS04 warehouse scope helper for receipt targets; future putaway plan must materialize as canonical receipt/Stock Entry target rows, not a WMS ledger.
-- Blocking: **no** for planning primitives; required for WMS inbound Wired state.
+- Consume WS04 warehouse scope helper; putaway must materialize as canonical Receipt/Stock Entry targets, not a WMS ledger.
+- Blocking: no for planners; required inbound Wired state.
 
 ### DR-WS04-08 -> WS09 — first-class WMS task metadata/action persistence
-
-- Need: generic metadata contract for Putaway Task / Pick Task / Pack Task / Warehouse Task assignment and action state, using App Factory/compiler ownership rather than hard-coding a vertical generator.
-- Blocking: **yes** for `W02-004` and `W02-013` Wired; pure planners remain usable Foundation.
+- Need generic metadata contract for Putaway/Pick/Pack/Warehouse Task assignment and action state rather than a vertical generator.
+- Blocking: **yes** for `W02-004` and `W02-013` Wired.
 
 ### DR-WS04-09 -> WS08 — inventory forecast semantic/planning integration
-
-- Need: forecast consumes permission-aware stock/demand semantics and returns forecast evidence; WS04 should not invent a separate forecasting engine.
+- Need permission-aware stock/demand semantic inputs and forecast evidence.
 - Blocking: **yes** for `W01-032` beyond Missing/Foundation.
 
 ### DR-WS04-10 -> WS14 — mobile scanner UI integration
-
-- Need: mobile scanner experience should pass normalized scan payload + actor context to permission-aware resolver/action, not resolve authority client-side.
-- Blocking: **no** for stock package; required for `W02-012` Wired UX.
+- Scanner UX passes normalized payload + actor context to permission-aware resolver/action; client is not authority.
+- Blocking: no for stock package; required for `W02-012` Wired UX.
 
 ## Architecture decisions
 
 1. **No second stock ledger.** WMS planning/task layers never own quantity/value authority.
-2. **Warehouse hierarchy is reused.** Zone/rack/bin can be modeled through Warehouse path semantics before introducing another location store; existing Alumdoor leaf-parent convention is preserved.
+2. **Warehouse hierarchy is reused.** Zone/rack/bin can be modeled through Warehouse path semantics before introducing another location store.
 3. **Cycle Count reuses Stock Reconciliation.** No duplicate count document.
 4. **Putaway/pick/pack/replenishment are plans.** Final movement remains canonical Receipt/Stock Entry/Delivery.
 5. **Policy stays explicit.** FEFO/FIFO candidate order, wave group, aging buckets, ABC cutoffs, slow/dead thresholds, min/max and safety values are inputs/config, not hidden constants.
@@ -201,10 +189,9 @@ Do not convert NOT RUN into implied PASS.
 ## Next independent work
 
 1. Audit Item/UOM/master and landed-cost touchpoints for W01 remaining IDs without entering WS03 ownership.
-2. Audit Stock Return/Delivery/Purchase cross-domain warehouse scope and leave owner DRs where appropriate.
-3. Audit backdated replay runner/spec for stock-side gaps that can be separated from WS01 finance propagation.
-4. Prepare generic WMS task data/state proposal for WS09 without editing compiler hotspot.
-5. Recheck exact main before final verification.
+2. Audit backdated replay runner/spec for stock-side gaps separable from WS01 finance propagation.
+3. Prepare generic WMS task data/state proposal for WS09 without editing compiler hotspot.
+4. Recheck exact main before final verification.
 
 ## Handoff
 
