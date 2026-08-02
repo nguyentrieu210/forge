@@ -10,7 +10,7 @@
   "scripts": {
     "verify": "tsc -b --pretty",
     "typecheck": "tsc -b --pretty",
-    "lint": "node scripts/check-native-ui.mjs && node scripts/check-hook-order.mjs && node scripts/check-app-shell-mobile.mjs && node scripts/check-pwa-installability.mjs && node scripts/check-child-grid-mobile.mjs && node --check ../server/scripts/stage-client-bundle.mjs",
+    "lint": "node scripts/check-native-ui.mjs && node scripts/check-hook-order.mjs && node scripts/check-app-shell-mobile.mjs && node scripts/check-pwa-installability.mjs && node scripts/check-child-grid-mobile.mjs && node scripts/check-pull-to-refresh.mjs && node --check ../server/scripts/stage-client-bundle.mjs",
     "scan-secrets": "node scripts/scan-secrets.mjs",
     "test": "pnpm --filter @metaforge/demo run selfcheck && pnpm --filter @metaforge/demo exec tsx ../../packages/core/src/app/form-profile-selfcheck.ts && pnpm --filter @metaforge/demo exec tsx ../../packages/core/src/app/bulk-policy-selfcheck.ts && pnpm --filter @metaforge/demo exec tsx ../../packages/shell/src/workspace-navigation-selfcheck.ts",
     "build": "pnpm -r run build",
