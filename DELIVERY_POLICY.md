@@ -14,6 +14,30 @@ Không được tự thêm bước deploy production vào authorization mặc đ
 
 **Merge và production deploy là hai ranh giới riêng.** Yêu cầu sửa/xây code không tự động cấp quyền deploy Cloudflare, chạy migration production hoặc thay production state.
 
+## UI-only hotfix fast lane
+
+Dùng cho thay đổi giao diện nhỏ cần phát hành nhanh lên `alu.kairo.vn`, không có thay đổi backend, schema, metadata nghiệp vụ, dependency hoặc migration.
+
+Luồng vận hành:
+
+`branch hotfix/ui-* -> sửa client -> bấm workflow ALU UI Hotfix - One Click Deploy -> scope guard -> Gateway lint/test/typecheck/build -> dry-run -> production deploy -> exact-SHA smoke -> tạo/ghi chú PR reconcile`
+
+Workflow canonical: `.github/workflows/hotfix-ui-one-click.yml`.
+
+Fast lane chỉ chạy khi toàn bộ điều kiện sau đúng:
+
+- branch có prefix `hotfix/ui-`;
+- current `main` là ancestor của exact target SHA, branch stale bị chặn;
+- có ít nhất một thay đổi dưới `client/**`;
+- ngoài `client/**` chỉ cho phép ba file trạng thái canonical `CURRENT_STATUS.md`, `NEXT_TASKS.md`, `AI_HANDOFF.md`;
+- tối đa 20 file và 600 dòng text thay đổi;
+- không thay package/dependency manifest;
+- không thay `server/**`, migration, brief/app metadata, workflow, secret, DNS hoặc production data.
+
+Fast lane **chỉ phát hành Gateway/client bundle**. Không chạy tenant backup/migration, không deploy tenant Worker, không deploy Alumdoor app Worker. Gateway workflow hiện hữu vẫn giữ lint, test, typecheck, build, staged-bundle check, Wrangler dry-run, production deploy và exact-release smoke.
+
+Production có thể chạy exact hotfix SHA trước khi branch được merge vào `main`; workflow sẽ best-effort tạo hoặc ghi chú PR reconcile để GitHub vẫn giữ đường quay về source of truth. Hotfix chỉ được coi là closure hoàn chỉnh khi exact production SHA đã được reconcile về `main` qua PR hợp lệ. Không dùng lane này cho thay đổi nghiệp vụ, dữ liệu hoặc backend chỉ vì muốn chạy nhanh.
+
 ## Production chỉ khi có lệnh rõ
 
 Chỉ deploy production khi user yêu cầu rõ trong đợt làm việc hiện tại. Khi được yêu cầu, release vẫn phải:
@@ -65,7 +89,9 @@ Không dùng version tenant Worker hoặc Gateway `/health` làm bằng chứng 
 
 ### Frontend / MetaForge UI
 
-Không deploy backend Worker để thay cho frontend release. Trước release UI phải xác định đúng Pages/Worker project, production hostname, build mode và authenticated smoke từ repository/provider hiện hành.
+Frontend của `alu.kairo.vn` được build bởi package `metaforge`, stage vào `server/apps/gateway-worker/public` và phát hành qua Gateway production workflow `.github/workflows/release-gateway.yml`.
+
+Không deploy backend Worker để thay cho frontend release. Trước release UI phải xác định đúng Gateway target, production hostname, build mode và authenticated/smoke evidence phù hợp từ repository/provider hiện hành.
 
 ## File không được commit
 
