@@ -1,6 +1,6 @@
 import type { CanonicalDocument, JsonObject } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
-import { fromScaledInt } from "../../money/src/index.js";
+import { fromScaledInt, toScaledInt } from "../../money/src/index.js";
 import type { VersionedBomData } from "./manufacturing-lifecycle.js";
 import type { ManufacturingGenealogyMovement, WorkOrderGenealogy } from "./manufacturing-genealogy.js";
 import type { WorkOrderData } from "./types.js";
@@ -140,10 +140,8 @@ function completionPct(produced: number, target: number): string {
 function positiveScaled(micros: unknown, decimal: unknown, field: string): number {
   if (typeof micros === "number" && Number.isSafeInteger(micros) && micros > 0) return micros;
   if (typeof decimal === "number" || typeof decimal === "string") {
-    const [whole, fraction = ""] = String(decimal).trim().split(".");
-    if (!/^\d+$/.test(whole ?? "") || !/^\d*$/.test(fraction)) throw errors.validation(`${field} must be a positive decimal`);
-    const value = Number(BigInt(whole!) * 1_000_000n + BigInt(fraction.slice(0, 6).padEnd(6, "0") || "0"));
-    if (!Number.isSafeInteger(value) || value <= 0) throw errors.validation(`${field} must be positive`);
+    const value = toScaledInt(decimal, 6, field);
+    if (value <= 0) throw errors.validation(`${field} must be positive`);
     return value;
   }
   throw errors.validation(`${field} is required`);
