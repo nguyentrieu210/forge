@@ -34,6 +34,7 @@ import {
   EmployeeBenefitEnrollmentController, EmployeeLoanController, EmployeeLoanRepaymentController,
   SalaryBankBatchController, WorkforcePlanController,
 } from "./hrm-workforce-finance-controllers.js";
+import { EmployeeFinalSettlementController, HiringCompletionController } from "./hrm-lifecycle-closure-controllers.js";
 import { HrmSalarySlipController } from "./hrm-salary-slip.js";
 import {
   CutOrderController, StockReconciliationController, StockReservationController,
@@ -74,6 +75,7 @@ export function registerErpNextCoreControllers(registry: ControllerRegistry): Co
     .register(new JobApplicantController())
     .register(new InterviewController())
     .register(new JobOfferController())
+    .register(new HiringCompletionController())
     .register(new ShiftTypeController())
     .register(new ShiftAssignmentController())
     .register(new EmployeeCheckinController())
@@ -94,6 +96,7 @@ export function registerErpNextCoreControllers(registry: ControllerRegistry): Co
     .register(new EmployeeLoanRepaymentController())
     .register(new EmployeeAdvanceController())
     .register(new TravelRequestController())
+    .register(new EmployeeFinalSettlementController())
     .register(new GoalController())
     .register(new HrmAppraisalController())
     .register(new TrainingEventController())
