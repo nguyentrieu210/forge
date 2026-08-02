@@ -1,13 +1,19 @@
 {
   "id": "maintenance",
-  "name": "Yêu cầu bảo trì",
-  "version": "1.0.0",
+  "name": "Bảo trì, Bảo hành & Dịch vụ hiện trường",
+  "version": "1.2.0",
   "requires": [],
   "externalDocTypes": [
-    { "name": "Maintenance Priority", "kind": "master", "app": "platform" }
+    { "name": "Maintenance Priority", "kind": "master", "app": "platform" },
+    { "name": "Serial No", "kind": "transaction", "app": "stock" },
+    { "name": "Delivery Note", "kind": "transaction", "app": "selling" }
   ],
   "nav": [
-    { "key": "Maintenance Request", "label": "Yêu cầu bảo trì", "kind": "doctype", "icon": "wrench", "group": "Bảo trì" }
+    { "key": "Maintenance Request", "label": "Yêu cầu dịch vụ", "kind": "doctype", "icon": "wrench", "group": "Dịch vụ" },
+    { "key": "Warranty Claim", "label": "Yêu cầu bảo hành", "kind": "doctype", "icon": "shield-check", "group": "Dịch vụ" },
+    { "key": "Service Order", "label": "Lệnh dịch vụ", "kind": "doctype", "icon": "clipboard-check", "group": "Dịch vụ" },
+    { "key": "Service Contract", "label": "Hợp đồng dịch vụ", "kind": "doctype", "icon": "file-check", "group": "Thiết lập dịch vụ" },
+    { "key": "Service Technician", "label": "Kỹ thuật viên", "kind": "doctype", "icon": "hard-hat", "group": "Thiết lập dịch vụ" }
   ],
   "hooks": []
 }
