@@ -1,7 +1,7 @@
 import type { CanonicalDocument, JsonObject, StockLedgerEntry } from "../../contracts/src/index.js";
 import type { StockEntryData, StockEntryItem } from "../../clouderp-core/src/types.js";
 import { errors } from "../../core/src/index.js";
-import { fromScaledInt } from "../../money/src/index.js";
+import { fromScaledInt, toScaledInt } from "../../money/src/index.js";
 import type { WorkOrderData } from "./types.js";
 
 const MAX_GENEALOGY_ENTRIES = 2_000;
@@ -99,7 +99,7 @@ export function buildWorkOrderGenealogy(
   const company = requiredText(data.company, "Work Order company");
   const productionItem = requiredText(data.production_item, "Work Order production_item");
   const bomNo = requiredText(data.bom_no, "Work Order bom_no");
-  const targetQtyMicros = positiveScaledOrZero(data.qty_micros, data.qty, "Work Order quantity");
+  const targetQtyMicros = positiveScaledOrDecimal(data.qty_micros, data.qty, "Work Order quantity");
   const all: ManufacturingGenealogyMovement[] = [];
   const warnings = new Set<string>();
 
@@ -256,16 +256,14 @@ function hasTrackedIdentity(row: ManufacturingGenealogyMovement): boolean {
   return Boolean(row.batch_no || row.serial_no);
 }
 
-function positiveScaledOrZero(micros: unknown, decimal: unknown, field: string): number {
+function positiveScaledOrDecimal(micros: unknown, decimal: unknown, field: string): number {
   if (typeof micros === "number") {
     if (!Number.isSafeInteger(micros) || micros <= 0) throw errors.validation(`${field}_micros must be a positive safe integer`);
     return micros;
   }
   if (typeof decimal === "string" || typeof decimal === "number") {
-    const numeric = Number(decimal);
-    if (!Number.isFinite(numeric) || numeric <= 0) throw errors.validation(`${field} must be positive`);
-    const scaled = Math.round(numeric * 1_000_000);
-    if (!Number.isSafeInteger(scaled)) throw errors.validation(`${field} exceeds safe integer range`);
+    const scaled = toScaledInt(decimal, 6, field);
+    if (scaled <= 0) throw errors.validation(`${field} must be positive`);
     return scaled;
   }
   throw errors.validation(`${field} is required`);
