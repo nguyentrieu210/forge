@@ -5,13 +5,7 @@ import { addMinor, fromScaledInt, multiplyScaled, toScaledInt } from "../../mone
 import { JournalEntryController } from "./controllers.js";
 import type { JournalEntryData, JournalEntryLine } from "./types.js";
 
-/**
- * Journal Entry with first-class account-currency snapshots.
- *
- * GL remains in company/base currency, so the kernel's one balanced-GL invariant
- * stays authoritative. Foreign amounts and the server-resolved rate live on the
- * immutable voucher snapshot for audit/revaluation.
- */
+/** Journal Entry with first-class account-currency snapshots. */
 export class AccountingJournalEntryController extends JournalEntryController {
   override async normalize(context: ControllerContext<JournalEntryData>): Promise<JournalEntryData> {
     const input = context.command.document;
@@ -40,7 +34,6 @@ export class AccountingJournalEntryController extends JournalEntryController {
       const rateMicros = accountCurrency === companyCurrency
         ? 1_000_000
         : await resolveExchangeRate(context, accountCurrency, companyCurrency, postingDate);
-
       const hasAccountCurrencyInput = source.debit_in_account_currency !== undefined || source.credit_in_account_currency !== undefined;
       let accountDebitMinor: number;
       let accountCreditMinor: number;
@@ -54,9 +47,7 @@ export class AccountingJournalEntryController extends JournalEntryController {
         debitMinor = accountDebitMinor > 0 ? convertToCompany(accountDebitMinor, accountScale, rateMicros, companyScale, index, "debit") : 0;
         creditMinor = accountCreditMinor > 0 ? convertToCompany(accountCreditMinor, accountScale, rateMicros, companyScale, index, "credit") : 0;
       } else {
-        if (accountCurrency !== companyCurrency) {
-          throw errors.validation(`Account-currency amount is required at row ${index + 1} for ${accountCurrency}`);
-        }
+        if (accountCurrency !== companyCurrency) throw errors.validation(`Account-currency amount is required at row ${index + 1} for ${accountCurrency}`);
         debitMinor = toScaledInt(source.debit ?? 0, companyScale, `accounts[${index}].debit`);
         creditMinor = toScaledInt(source.credit ?? 0, companyScale, `accounts[${index}].credit`);
         assertOneSide(debitMinor, creditMinor, index);
@@ -84,16 +75,15 @@ export class AccountingJournalEntryController extends JournalEntryController {
 
     const debit = addMinor(lines.map((line) => line.debit_minor ?? 0), "Journal Entry total debit");
     const credit = addMinor(lines.map((line) => line.credit_minor ?? 0), "Journal Entry total credit");
-    if (debit <= 0 || debit !== credit) {
-      throw errors.validation("Journal Entry debits and credits must be equal and positive", {
-        total_debit_minor: debit,
-        total_credit_minor: credit,
-      });
-    }
+    if (debit <= 0 || debit !== credit) throw errors.validation("Journal Entry debits and credits must be equal and positive", { total_debit_minor: debit, total_credit_minor: credit });
 
     if (context.command.action === "submit") {
-      const legacyLock = await context.reader.getPeriodLockDate(context.command.tenant_id, input.company);
-      if (legacyLock && postingDate <= legacyLock) throw errors.validation(`Posting date ${postingDate} is locked for ${input.company}`);
+      const policies = await context.reader.listDocumentsByDoctype<JsonObject>(context.command.tenant_id, "VN Accounting Policy");
+      const usesVnPeriod = policies.some((document) => document.docstatus === 1 && document.data.company === input.company);
+      if (!usesVnPeriod) {
+        const legacyLock = await context.reader.getPeriodLockDate(context.command.tenant_id, input.company);
+        if (legacyLock && postingDate <= legacyLock) throw errors.validation(`Posting date ${postingDate} is locked for ${input.company}`);
+      }
     }
 
     return {
@@ -110,36 +100,19 @@ export class AccountingJournalEntryController extends JournalEntryController {
 }
 
 function assertOneSide(debit: number, credit: number, index: number): void {
-  if (debit < 0 || credit < 0 || (debit > 0 && credit > 0) || (debit === 0 && credit === 0)) {
-    throw errors.validation(`Row ${index + 1} must contain either debit or credit`);
-  }
+  if (debit < 0 || credit < 0 || (debit > 0 && credit > 0) || (debit === 0 && credit === 0)) throw errors.validation(`Row ${index + 1} must contain either debit or credit`);
 }
-
 function convertToCompany(amountMinor: number, accountScale: number, rateMicros: number, companyScale: number, index: number, side: string): number {
-  return multiplyScaled(
-    fromScaledInt(amountMinor, accountScale), accountScale,
-    fromScaledInt(rateMicros, 6), 6,
-    companyScale,
-    `accounts[${index}].${side}_base`,
-  );
+  return multiplyScaled(fromScaledInt(amountMinor, accountScale), accountScale, fromScaledInt(rateMicros, 6), 6, companyScale, `accounts[${index}].${side}_base`);
 }
-
-async function currencyScale(context: ControllerContext<JsonObject>, currency: string): Promise<number> {
+async function currencyScale<T extends JsonObject>(context: ControllerContext<T>, currency: string): Promise<number> {
   const data = await context.reader.getMasterRecordData(context.command.tenant_id, "Currency", currency);
   if (!data) throw errors.reference(`Currency ${currency} does not exist or is disabled`);
   const scale = data.currency_scale;
-  if (typeof scale !== "number" || !Number.isSafeInteger(scale) || scale < 0 || scale > 6) {
-    throw errors.reference(`Currency ${currency} must define currency_scale from 0 to 6`);
-  }
+  if (typeof scale !== "number" || !Number.isSafeInteger(scale) || scale < 0 || scale > 6) throw errors.reference(`Currency ${currency} must define currency_scale from 0 to 6`);
   return scale;
 }
-
-async function resolveExchangeRate(
-  context: ControllerContext<JsonObject>,
-  fromCurrency: string,
-  toCurrency: string,
-  postingDate: string,
-): Promise<number> {
+async function resolveExchangeRate<T extends JsonObject>(context: ControllerContext<T>, fromCurrency: string, toCurrency: string, postingDate: string): Promise<number> {
   for (const name of [`${fromCurrency}:${toCurrency}:${postingDate}`, `${fromCurrency}:${toCurrency}`]) {
     const data = await context.reader.getMasterRecordData(context.command.tenant_id, "Exchange Rate", name);
     const raw = data?.rate;
@@ -150,7 +123,6 @@ async function resolveExchangeRate(
   }
   throw errors.reference(`Exchange Rate ${fromCurrency}:${toCurrency} does not exist or is disabled`);
 }
-
 function requiredText(value: unknown, field: string): string {
   if (typeof value !== "string" || !value.trim()) throw errors.reference(`${field} is required`);
   return value.trim();
