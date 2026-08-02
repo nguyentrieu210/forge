@@ -3,6 +3,7 @@ export * from "./uom.js";
 export * from "./controllers.js";
 export * from "./procurement-decisions.js";
 export * from "./procurement-integrity-controllers.js";
+export * from "./procurement-analytics.js";
 export * from "./supplier-policy.js";
 export * from "./supplier-lifecycle-controllers.js";
 export * from "./purchase-allocation.js";
