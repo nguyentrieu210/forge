@@ -17,9 +17,7 @@ const COST_CLOSE_ROLES = new Set([
   "System Manager",
 ]);
 
-interface WorkOrderRow {
-  payload_json: string;
-}
+interface WorkOrderRow { payload_json: string }
 
 export interface ManufacturingWipLedgerRow {
   warehouse: string;
@@ -28,10 +26,7 @@ export interface ManufacturingWipLedgerRow {
   purpose: string;
 }
 
-interface JobCardRow {
-  name: string;
-  payload_json: string;
-}
+interface JobCardRow { name: string; payload_json: string }
 
 interface SnapshotRow {
   snapshot_id: string;
@@ -59,6 +54,8 @@ interface AdjustmentRow {
   details_json: string;
 }
 
+interface AdjustmentTotalRow { total_minor: number }
+
 export interface OperationProgressCost {
   operation: string;
   completed_qty_micros: number;
@@ -74,19 +71,16 @@ export interface ManufacturingWipState extends JsonObject {
 /**
  * Costing facade layered over the already validated costing implementation.
  *
- * The base service remains the authority for standard/actual costing, rate selection,
- * immutable snapshot reads and adjustment math. This facade tightens three production
- * gaps without creating a competing ledger:
+ * The base service remains the authority for standards, rate selection, material
+ * consumption, immutable snapshot reads and adjustment aggregation. This facade tightens
+ * production-close semantics without introducing a second stock or accounting ledger.
  *
- * 1. material WIP is the net value actually sitting in the Work Order's WIP warehouse(s),
- *    derived from append-only Stock Ledger rows rather than completion percentage;
- * 2. operation WIP is explicitly an estimate based on operation completion progress;
- * 3. first freeze re-checks the live fingerprint so a stale snapshot cannot be frozen.
- *
- * At final completion, freeze is allowed only when both material and operation WIP are zero,
- * making the final actual unit cost exact with respect to the recorded Stock Ledger and Job
- * Card costs. Partial-operation WIP remains labelled as an estimate because Forge does not
- * currently carry unit-level lineage from each Job Card completion into each finished unit.
+ * Inventory policy is explicit: manufacture capitalization stays on Forge's existing
+ * ACTUAL_MATERIAL + STANDARD_OPERATION rule. The Cost Sheet reports ACTUAL operation cost
+ * and the resulting manufacturing variance. We intentionally do not retroactively mutate
+ * stock value here: once a finished unit has moved or been delivered, changing only its old
+ * finished-warehouse value without replaying downstream valuation/COGS is financially wrong.
+ * The Finance/Daily-Ledger layer can post the frozen variance with an explicit account policy.
  */
 export class D1ExactManufacturingCostingService {
   private readonly base: BaseManufacturingCostingService;
@@ -108,7 +102,6 @@ export class D1ExactManufacturingCostingService {
     now = new Date().toISOString(),
   ): Promise<ManufacturingCostSnapshotResult> {
     const normalizedWorkOrder = requireText(workOrder, "work_order", 240);
-    // preview performs the canonical read-role check before exposing or persisting anything.
     const sheet = await this.preview(tenantId, actor, normalizedWorkOrder);
 
     const frozen = await this.db.prepare(
@@ -203,8 +196,6 @@ export class D1ExactManufacturingCostingService {
     ).bind(tenantId, normalizedSnapshotId).first<SnapshotRow>();
     if (!snapshot) throw errors.notFound("Manufacturing cost snapshot not found");
 
-    // Idempotent replay of an already-frozen exact snapshot must not be invalidated by later
-    // source activity. Any later correction belongs in append-only adjustments.
     const existing = await this.db.prepare(
       `SELECT s.snapshot_id,s.work_order,s.source_fingerprint,f.frozen_at
        FROM manufacturing_cost_freezes f
@@ -220,9 +211,7 @@ export class D1ExactManufacturingCostingService {
     }
 
     const live = await this.preview(tenantId, actor, snapshot.work_order);
-    if (live.source_fingerprint !== snapshot.source_fingerprint) {
-      throw errors.lifecycle("Manufacturing cost sources changed after this snapshot; generate and review the current Cost Sheet before freezing");
-    }
+    assertFreezeFingerprint(snapshot.source_fingerprint, live.source_fingerprint);
     return this.base.freeze(tenantId, actor, normalizedSnapshotId, reason, now);
   }
 
@@ -232,14 +221,18 @@ export class D1ExactManufacturingCostingService {
     input: ManufacturingCostAdjustmentInput,
     now = new Date().toISOString(),
   ): Promise<{ adjustment_id: string; existing: boolean }> {
-    // The base service remains responsible for permission/category/freeze validation and the
-    // append-only insert. We add a complete replay check so actor/details cannot silently
-    // differ when an adjustment_id is reused.
+    const adjustmentId = requireText(input.adjustment_id, "adjustment_id", 240);
+    const before = await this.db.prepare(
+      `SELECT adjustment_id,snapshot_id,category,delta_amount_minor,reason,actor_user_id,details_json
+       FROM manufacturing_cost_adjustments WHERE tenant_id=?1 AND adjustment_id=?2`,
+    ).bind(tenantId, adjustmentId).first<AdjustmentRow>();
+    if (!before) await this.assertAdjustmentKeepsCostNonNegative(tenantId, input);
+
     const result = await this.base.adjust(tenantId, actor, input, now);
     const stored = await this.db.prepare(
       `SELECT adjustment_id,snapshot_id,category,delta_amount_minor,reason,actor_user_id,details_json
        FROM manufacturing_cost_adjustments WHERE tenant_id=?1 AND adjustment_id=?2`,
-    ).bind(tenantId, requireText(input.adjustment_id, "adjustment_id", 240)).first<AdjustmentRow>();
+    ).bind(tenantId, adjustmentId).first<AdjustmentRow>();
     if (!stored) throw errors.database("Manufacturing cost adjustment could not be verified after write");
     const expectedDetails = input.details ?? {};
     let storedDetails: unknown;
@@ -256,6 +249,27 @@ export class D1ExactManufacturingCostingService {
       && canonicalize(storedDetails) === canonicalize(expectedDetails);
     if (!identical) throw errors.idempotency();
     return result;
+  }
+
+  private async assertAdjustmentKeepsCostNonNegative(
+    tenantId: string,
+    input: ManufacturingCostAdjustmentInput,
+  ): Promise<void> {
+    const snapshotId = requireText(input.snapshot_id, "snapshot_id", 240);
+    const snapshot = await this.db.prepare(
+      `SELECT snapshot_id,work_order,source_fingerprint,sheet_json,generated_by,generated_at
+       FROM manufacturing_cost_snapshots WHERE tenant_id=?1 AND snapshot_id=?2`,
+    ).bind(tenantId, snapshotId).first<SnapshotRow>();
+    if (!snapshot) throw errors.notFound("Manufacturing cost snapshot not found");
+    const sheet = parseObject(snapshot.sheet_json, "manufacturing cost snapshot") as unknown as ManufacturingCostSheet;
+    const totals = await this.db.prepare(
+      `SELECT COALESCE(SUM(delta_amount_minor),0) AS total_minor
+       FROM manufacturing_cost_adjustments WHERE tenant_id=?1 AND snapshot_id=?2`,
+    ).bind(tenantId, snapshotId).first<AdjustmentTotalRow>();
+    const existingAdjustments = safeInteger(totals?.total_minor ?? 0, "adjustment_total_minor");
+    const delta = safeInteger(input.delta_amount_minor, "delta_amount_minor");
+    const prospective = safeAdd(safeAdd(sheet.actual_total_cost_to_date_minor, existingAdjustments), delta);
+    if (prospective < 0) throw errors.validation("Manufacturing cost adjustments cannot make total actual cost negative");
   }
 
   private async enhanceLiveSheet(
@@ -275,7 +289,7 @@ export class D1ExactManufacturingCostingService {
          JOIN documents d ON d.tenant_id=s.tenant_id AND d.doctype=s.voucher_type AND d.name=s.voucher_no
          WHERE s.tenant_id=?1 AND s.voucher_type='Stock Entry' AND d.docstatus=1
            AND json_extract(d.payload_json,'$.work_order')=?2
-         ORDER BY s.posting_at,s.rowid`,
+         ORDER BY s.posting_at,s.voucher_no,s.line_key`,
       ).bind(tenantId, workOrder).all<ManufacturingWipLedgerRow>(),
       this.db.prepare(
         `SELECT name,payload_json FROM documents
@@ -299,9 +313,7 @@ export class D1ExactManufacturingCostingService {
     }
     const operationProgress: OperationProgressCost[] = (sheet.operation_rows as ManufacturingOperationCostRow[]).map((row) => {
       const completed = completedByCard.get(row.job_card) ?? 0;
-      if (row.total_cost_minor > 0 && completed <= 0) {
-        throw errors.misconfigured(`Costed Job Card ${row.job_card} has no completed quantity`);
-      }
+      if (row.total_cost_minor > 0 && completed <= 0) throw errors.misconfigured(`Costed Job Card ${row.job_card} has no completed quantity`);
       return {
         operation: row.operation,
         completed_qty_micros: completed,
@@ -319,29 +331,31 @@ export class D1ExactManufacturingCostingService {
     const unitCost = sheet.produced_qty_micros > 0
       ? safeNumber(divideRounded(BigInt(allocatedFinished) * 1_000_000n, BigInt(sheet.produced_qty_micros)))
       : 0;
+    const manufacturingVariance = safeAdd(allocatedFinished, -finishedStockValue);
 
     const enhanced = {
       ...sheet,
       actual_cost_allocated_to_finished_minor: allocatedFinished,
       estimated_wip_cost_minor: estimatedWip,
-      valuation_adjustment_to_actual_minor: safeAdd(allocatedFinished, -finishedStockValue),
+      valuation_adjustment_to_actual_minor: manufacturingVariance,
       actual_unit_cost_minor: unitCost,
       material_wip_stock_value_minor: wip.material_wip_stock_value_minor,
       material_wip_warehouses: wip.material_wip_warehouses,
       material_wip_source: wip.material_wip_source,
       operation_wip_estimate_minor: operationWip,
-      operation_wip_is_estimate: true,
+      operation_wip_is_estimate: operationWip !== 0,
       work_order_cost_exposure_minor: safeAdd(sheet.actual_total_cost_to_date_minor, wip.material_wip_stock_value_minor),
       wip_cost_basis: "EXACT_MATERIAL_STOCK_FLOW_PLUS_OPERATION_PROGRESS_ESTIMATE",
+      inventory_costing_policy: "ACTUAL_MATERIAL_STANDARD_OPERATION",
+      manufacturing_cost_variance_minor: manufacturingVariance,
+      inventory_revaluation_required: false,
+      variance_posting_status: manufacturingVariance === 0 ? "NOT_REQUIRED" : "UNPOSTED_FINANCE_VARIANCE",
       ready_to_finalize: sheet.ready_to_finalize === true
         && wip.material_wip_stock_value_minor === 0
         && operationWip === 0,
     } as ManufacturingCostSheet;
     const { source_fingerprint: _baseFingerprint, ...unsigned } = enhanced;
-    return {
-      ...enhanced,
-      source_fingerprint: await sha256Hex(canonicalize(unsigned)),
-    } as ManufacturingCostSheet;
+    return { ...enhanced, source_fingerprint: await sha256Hex(canonicalize(unsigned)) } as ManufacturingCostSheet;
   }
 }
 
@@ -374,9 +388,7 @@ export function deriveMaterialWipState(
     if (!warehouses.has(row.warehouse)) continue;
     value = safeAdd(value, safeInteger(row.stock_value_difference_minor, "stock_value_difference_minor"));
   }
-  if (value < 0) {
-    throw errors.misconfigured("Work Order WIP stock value is negative; transfer/consumption lineage must be reconciled before costing");
-  }
+  if (value < 0) throw errors.misconfigured("Work Order WIP stock value is negative; transfer/consumption lineage must be reconciled before costing");
   return {
     material_wip_stock_value_minor: value,
     material_wip_warehouses: [...warehouses].sort(),
@@ -412,6 +424,12 @@ export function calculateOperationWipEstimate(
   return wip;
 }
 
+export function assertFreezeFingerprint(snapshotFingerprint: string, liveFingerprint: string): void {
+  if (snapshotFingerprint !== liveFingerprint) {
+    throw errors.lifecycle("Manufacturing cost sources changed after this snapshot; generate and review the current Cost Sheet before freezing");
+  }
+}
+
 function assertCostClose(actor: Actor): void {
   if (!actor.roles.some((role) => COST_CLOSE_ROLES.has(role)) && actor.user_id !== "Administrator") {
     throw errors.permission("Finalizing or adjusting manufacturing cost requires accounting close authority");
@@ -420,11 +438,8 @@ function assertCostClose(actor: Actor): void {
 
 function parseObject(value: string, label: string): JsonObject {
   let parsed: unknown;
-  try {
-    parsed = JSON.parse(value);
-  } catch {
-    throw errors.misconfigured(`${label} contains invalid JSON`);
-  }
+  try { parsed = JSON.parse(value); }
+  catch { throw errors.misconfigured(`${label} contains invalid JSON`); }
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw errors.misconfigured(`${label} must contain a JSON object`);
   return parsed as JsonObject;
 }
