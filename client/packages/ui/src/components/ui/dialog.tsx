@@ -36,6 +36,11 @@ export const DialogContent = React.forwardRef<
           "fixed left-1/2 top-1/2 z-50 grid max-h-[calc(100dvh-2rem)] w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto border bg-popover text-popover-foreground p-6 shadow-lg rounded-lg outline-none focus:outline-none focus-visible:outline-none",
           "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
           "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
+          // Dialog close is absolutely positioned. Reserve a small right gutter in every dialog
+          // title so title actions (for example "Lưu và quay lại" in the large child grid) never
+          // sit underneath the X. The X still closes the same Radix root, so that grid keeps the
+          // exact same live-data semantics as its explicit return button.
+          !hideClose && "[&_[data-slot=dialog-title]]:pr-12",
           className,
         )}
         {...props}
@@ -45,7 +50,7 @@ export const DialogContent = React.forwardRef<
           <DialogPrimitive.Close
             // p-1 + -m-1: nới vùng bấm quanh icon 16px mà không đẩy layout.
             className={cn(
-              "absolute right-4 top-4 -m-1 rounded-sm p-1 opacity-70 transition-opacity hover:opacity-100",
+              "absolute right-4 top-4 z-20 -m-1 rounded-sm bg-popover/90 p-1 opacity-70 transition-opacity hover:opacity-100",
               focusRing,
             )}
           >
@@ -66,7 +71,7 @@ export const DialogTitle = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Title>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>
 >(({ className, ...props }, ref) => (
-  <DialogPrimitive.Title ref={ref} className={cn("text-lg font-semibold", className)} {...props} />
+  <DialogPrimitive.Title data-slot="dialog-title" ref={ref} className={cn("text-lg font-semibold", className)} {...props} />
 ));
 DialogTitle.displayName = DialogPrimitive.Title.displayName;
 export const DialogDescription = React.forwardRef<
