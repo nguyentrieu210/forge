@@ -21,6 +21,18 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. 
 - Các substantive legacy PR còn mở không tự động là canonical; workstream owner phải phân loại `reuse/cherry-pick/superseded/reject` bằng exact diff + evidence.
 - Alumdoor được định vị là reference vertical chạy trên Forge, không fork core; primitive generic phải được kéo xuống platform/domain package khi chứng minh tái sử dụng.
 
+## DONE — ALU full Alumdoor production sync
+
+- Production `https://alu.kairo.vn` đã full-sync thành công từ exact release `69b94ac1fe29a2ab39175e5442975a9197a0d39e`; evidence canonical: `deploy-evidence/alu-full-sync.json`.
+- Cùng một release đã đồng bộ đủ ba lớp từng bị lệch: tenant metadata/DocTypes/nav, Alumdoor app Worker và Gateway UI.
+- App metadata đã install/verify: `hrm`, `vn-accounting`, `alumdoor`; Tenant Worker, `cloudforge-app-alumdoor` và Gateway đều deploy PASS.
+- Sidebar production lấy từ current installed manifest (`sidebarFromCurrentManifest: true`); `/release.json` khớp exact SHA và bundle hash `ed328d88ad8242f5`.
+- Alumdoor package tại release gate: `alumdoor@2.2.1`, **74 DocTypes / 57 fixtures / 78 nav**. HRM gate: **36 DocTypes / 11 workflows / 19 fixtures / 39 nav**.
+- Migration diagnostic production xác nhận **45/45 migrations đã applied**, backup/plan/execute PASS; file: `deploy-evidence/alu-migrate-diagnostic.json`.
+- Release blockers đã đóng trong đợt: HRM `Leave Type` ownership, shared platform master fixtures, system external DocType check, shared role ownership, duplicate VN Accounting `/app/Payroll Entry` nav và dirty-worktree release ordering.
+- Warehouse Cash backend + VN Accounting metadata + Alumdoor integration/sidebar/UI hiện đã nằm trong production release; Payment Entry vẫn là authority cho invoice settlement.
+- Historical failure evidence được giữ để audit; one-time rollout/diagnostic workflows được xóa sau khi release PASS.
+
 ## DONE — HRM operational 1.5
 
 - Canonical PR `#261` đã squash-merge vào `main` tại `b3dc2cf59ec5c85a977833da6edc986ac1bfe6fb`; PR `#253` là stale/diverged iteration đã đóng superseded.
