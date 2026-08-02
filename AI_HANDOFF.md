@@ -20,6 +20,27 @@ Ngày cập nhật: **2026-08-02**.
 - Nếu scope thực tế lớn hơn dự kiến phải nâng tier; không hạ `CRITICAL` xuống `FAST` vì cần nhanh.
 - Build/install/stage chỉ để tạo artifact deploy là packaging, không tự động trở thành quality gate.
 
+## Active checkpoint — Website/CMS v1 clean delivery
+
+- Canonical branch: `feat/tenant-website-builder-delivery-v2-20260802`.
+- Canonical PR: `#238` (draft). PR `#219` và `#220` là stale iterations, không merge.
+- Clean-transplant từ exact `main@18d2161de589fcd1677886f0e9136006fd60e9e5`; không broad-merge stale branch, không force-push/rewrite history.
+- Implementation canonical là app-based architecture hiện tại, không dùng mô tả legacy `server/websitesRoutes.js` từ handoff cũ:
+  - `server/apps-src/website/**`: first-party app metadata, DocTypes, roles, versioned template/theme fixtures.
+  - `server/packages/frappe-api/src/website.ts`: tenant-scoped public resolver, published-only content, block/URL/theme allowlists.
+  - `server/packages/frappe-api/src/website-router.ts`: exact public methods `forge.website.manifest` và `forge.website.page`.
+  - `server/packages/frappe-api/src/web-form-routes.ts`: chỉ mở hai Website path trên unauthenticated gate; generic CRUD không public.
+  - `client/apps/runtime/src/bootstrap.ts` + `website/WebsiteSite.tsx`: shared public renderer, bảo toàn reserved Forge routes/modes.
+  - `server/tests/website-cms.test.mjs` + `client/e2e-forge/ui-tests/website-public.spec.ts`: regression cho app metadata/public resolver/runtime.
+- Security invariants:
+  1. trusted tenant context được resolve trước public router; query Website luôn bind `tenant_id`;
+  2. Guest có `roles: []`, không được cấp generic DocType read;
+  3. website settings phải `enabled=1` và `published=1`; Web Page override phải published;
+  4. arbitrary HTML/JS không thuộc block allowlist; URL/asset/theme token được sanitize/allowlist;
+  5. preset identity là immutable `preset_id@version`, tenant pin version và không silent-upgrade.
+- Quality tier: **CRITICAL** vì đụng unauthenticated routing + tenant isolation. Chỉ ready khi exact final head có đủ website regression/runtime/public E2E + required CI theo ownership.
+- Production deploy, DNS/custom domain và production secrets nằm ngoài task này.
+
 ## Active checkpoint — Risk-based quality gates
 
 - Canonical branch: `chore/risk-based-quality-gates-20260802`, base exact `main@cd1f76dbb47432e2312c6f5577eb955b48c3a856`.
