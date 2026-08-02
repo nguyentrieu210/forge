@@ -1,21 +1,22 @@
 # @cloudforge/migration
 
-WS13-owned migration and implementation orchestration primitives for Forge.
+WS13-owned migration, implementation and customer-success orchestration for Forge.
 
-This package does **not** create a second write path. Authoritative document writes must still go through the existing permission + document-kernel/domain path. The package owns planning, source adaptation, duplicate/retry decisions, incremental checkpoints, reconciliation and implementation readiness.
+This package does **not** create a second business write path. Authoritative document writes still go through the existing permission + document-kernel/domain path. WS13 owns source normalization, planning, staging/journaling, duplicate/retry decisions, incremental checkpoints, reconciliation and implementation/go-live orchestration.
 
 ## Safety invariants
 
 1. Preview/dry-run is not final validation. The authoritative controller validates again on apply.
 2. Partial success is explicit. One failed row does not imply already-confirmed rows were rolled back.
-3. A missing row outcome is `unresolved`, not `failed`. Reconcile it before retrying because a write may have committed while its response was lost.
-4. Duplicate behavior is explicit: `error`, `skip` or `update`. There is no silent overwrite default.
-5. Money/quantity reconciliation uses plain decimal strings and BigInt-scaled addition, never binary-float accumulation.
-6. Source-controlled migration manifests may not contain passwords, API keys, tokens, cookies or private keys.
-7. Incremental Frappe/ERPNext paging uses the `(modified, name)` tuple so rows sharing one timestamp are not skipped at page boundaries.
-8. Generic apply is sequential. A domain may introduce safe batching only after proving rows are independent.
-9. An authoritative write must be followed by a persisted row outcome. If outcome persistence fails, execution stops and the row is treated as unresolved until reconciled.
-10. Production backup/migration/rollback evidence belongs to WS12. This package does not grant production authorization.
+3. A missing/uncertain row outcome is not blindly retried. The durable executor checks the kernel `mutation_receipts` first.
+4. Stable target identity and `command_id` are persisted **before** an authoritative create/update executes.
+5. Duplicate behavior is explicit: `error`, `skip` or `update`. There is no silent overwrite default.
+6. Money/quantity reconciliation uses plain decimal strings and BigInt-scaled addition, never binary-float accumulation.
+7. Source-controlled migration manifests may not contain passwords, API keys, tokens, cookies or private keys.
+8. Incremental Frappe/ERPNext paging uses the `(modified, name)` tuple so rows sharing one timestamp are not skipped at page boundaries.
+9. Generic apply is sequential. A domain may introduce safe batching only after proving rows are independent.
+10. Staged row documents may be purged only after the run is completed/cancelled; hashes/receipts remain as evidence.
+11. Production backup/migration/rollback evidence belongs to WS12. This package does not grant production authorization.
 
 ## Modules
 
@@ -23,14 +24,23 @@ This package does **not** create a second write path. Authoritative document wri
 |---|---|
 | `index.ts` | deterministic plan/fingerprint/state-machine core |
 | `adapters.ts` | Frappe/ERPNext row normalization and verified MISA inventory mapping |
+| `tabular.ts` | workbook-neutral CSV/Excel grid normalization |
+| `template.ts` | import template and deterministic mapping suggestions |
+| `correction.ts` | confirmed failed-row correction dataset/CSV |
 | `execution.ts` | retry quarantine, duplicate decision, incremental checkpoint contract |
 | `frappe-source.ts` | stable Frappe incremental cursor/query contract |
 | `manifest.ts` | source/target dependency manifest, phase ordering and secret guard |
-| `orchestrator.ts` | kernel-neutral partial-success apply orchestration |
 | `reconcile.ts` | exact count/distinct/decimal reconciliation metrics |
-| `template.ts` | workbook-neutral import template and deterministic mapping suggestions |
+| `orchestrator.ts` | side-effect-neutral partial-success orchestration primitive |
+| `d1-journal.ts` | durable run/row/checkpoint/reconciliation journal + kernel-receipt recovery |
+| `durable-orchestrator.ts` | journal-first executor: reserve -> command identity -> kernel write -> outcome |
+| `kernel-port.ts` | thin adapter from existing Forge command boundary to durable executor |
+| `opening.ts` | domain-owned opening-data preview/apply/reconcile contract |
 | `implementation.ts` | implementation/go-live checklist state, dependencies and evidence snapshot |
 | `implementation-template.ts` | scope-driven enterprise checklist template |
+| `customer-success.ts` | training/knowledge/support-handoff/adoption readiness |
+
+Tenant migration `0043_migration_run_journal.sql` owns the durable WS13 journal tables. It does not alter document/ledger storage.
 
 ## MISA evidence
 
@@ -52,7 +62,27 @@ Use `buildFrappeIncrementalPageRequest()` with the last confirmed cursor. Pagina
 modified ASC, name ASC
 ```
 
-and advances with the tuple `(modified, name)`, not with `modified` alone. Persist the next checkpoint only after the corresponding batch outcomes are durable.
+and advances with the tuple `(modified, name)`, not with `modified` alone. The persisted checkpoint stores the exact `source_id` and adapter name such as `erpnext-rest-v1`; it never reconstructs the adapter from the broader source kind.
+
+## Durable apply/recovery
+
+For create/update, the integration must prepare the exact kernel command without executing it. WS13 then runs:
+
+```text
+resolve target name
+  -> reserve source row -> target name
+  -> persist command_id + payload_hash (applying)
+  -> run canonical document command
+  -> persist imported/updated outcome
+```
+
+If command execution throws because the response disappeared, `D1MigrationJournal.recoverApplyingRow()` checks the existing kernel `mutation_receipts` on a first-primary session:
+
+- receipt matches reserved target + payload: recover as committed success;
+- no receipt: only then may the row become failed/retryable;
+- mismatched receipt: invariant failure, never silent retry.
+
+The kernel itself remains authoritative. WS13 does not insert business documents, GL or stock rows directly.
 
 ## Migration manifest
 
@@ -91,6 +121,24 @@ Example:
 
 `base_url_ref` is a reference name, not the URL credential itself. Secrets remain outside source control.
 
+## Opening data
+
+WS13 owns `OpeningMigrationProvider`, preview/apply sequencing and exact reconciliation. Finance/stock/HR providers own:
+
+- authoritative validation;
+- period/effective-date rules;
+- posting/ledger side effects;
+- correction/reversal semantics;
+- domain metric definitions.
+
+That boundary prevents migration code from becoming a second accounting/stock/payroll engine.
+
+## Implementation and customer success
+
+`buildEnterpriseImplementationChecklist()` derives setup/migration/training/go-live gates only from explicitly enabled domains. It does not assume every customer uses Finance, Stock, HR or Tax.
+
+Customer-success readiness links training evidence, knowledge/runbook references, a support-provider handoff and adoption counters. It points at helpdesk/service providers rather than implementing a competing ticket engine inside WS13.
+
 ## Read-only CLI
 
 Build CloudForge first, then:
@@ -102,26 +150,26 @@ node server/scripts/forge-migration.mjs reconcile --spec metrics.json --source s
 
 The CLI intentionally has no `apply` command. Production mutation remains behind the authoritative integration and production safety gates.
 
-## Integration boundaries
+## Integration boundaries / dependency requests
 
-### WS00 / shared kernel
+### Shared Frappe/API seam
 
-WS13 still needs a durable migration run + row receipt contract that records stable source identity, row fingerprint, resolved target name and command receipt. Until that lands, autonamed rows without a durable target identity cannot be called fully retry-safe.
+Durable storage no longer requires a new kernel primitive. The remaining shared integration is narrow: supply existing `lookup`, authoritative autoname resolution, `buildCommand` and `runCommand` callbacks to `KernelMigrationApplyPort`, then wire the current Data Import API to WS13 orchestration.
 
 ### Domain streams
 
-Finance, stock and HR/payroll own opening-data validation, posting/correction semantics and authoritative reconciliation metric definitions. WS13 orchestrates those providers but must not invent domain ledger rules.
+Finance, stock and HR/payroll still need concrete `OpeningMigrationProvider` implementations and authoritative reconciliation metric definitions. WS13 must not invent their ledger rules.
 
 ### WS12
 
-Production cutover requires backup/preflight/rollback/release evidence from the SRE/data-safety boundary.
+Production cutover still requires backup/preflight/rollback/release evidence from the SRE/data-safety boundary.
 
 ### WS14 / existing client import UI
 
-Existing client-specific MISA screens should consume the canonical WS13 mapping contract when a shared integration seam is available. WS13 does not patch the shared React runtime or another workstream's UI.
+Existing client-specific MISA/Data Import screens should consume the canonical WS13 mapping/preview/correction contracts through an integration seam. WS13 does not patch the shared React runtime or another workstream's UI.
 
 ## Verification
 
-Targeted WS13 tests live in `server/tests/migration-*.test.mjs`.
+Targeted WS13 tests live in `server/tests/migration-*.test.mjs` plus `server/scripts/test-migration-run-journal.py`.
 
-When a full checkout/dependency environment is unavailable, record repository build/tests as `NOT RUN`; do not convert missing evidence into a fake PASS. Isolated strict TypeScript/regression evidence may support development, but it does not replace full repository verification for merge/release.
+When a full checkout/dependency environment is unavailable, repository build/test status is `NOT RUN`; missing evidence is never relabeled PASS. Isolated strict TypeScript/regression and SQLite replay evidence may support development, but they do not replace full repository verification for merge/release.
