@@ -26,15 +26,20 @@ export function usePullToRefresh(
   const [distance, setDistance] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const startY = useRef<number | null>(null);
-  // Giữ handler mới nhất trong ref: effect chỉ gắn listener 1 lần theo element, không gắn lại mỗi
-  // lần cha render lại (onRefresh thường là arrow function tạo mới mỗi render).
+  // Giữ handler mới nhất trong ref: effect chỉ gắn listener lại khi khả năng refresh bật/tắt,
+  // không gắn lại mỗi lần cha render (onRefresh thường là arrow function mới mỗi render).
   const onRefreshRef = useRef(onRefresh);
   onRefreshRef.current = onRefresh;
   const refreshingRef = useRef(false);
+  const enabled = Boolean(onRefresh);
 
   useEffect(() => {
     const el = scrollRef.current;
-    if (!el || !onRefresh) return;
+    if (!el || !enabled) {
+      startY.current = null;
+      setDistance(0);
+      return;
+    }
 
     const onTouchStart = (e: TouchEvent) => {
       // Chỉ bắt đầu khi đang ở đỉnh danh sách; đang cuộn giữa chừng thì đây là cuộn bình thường.
@@ -83,7 +88,7 @@ export function usePullToRefresh(
       el.removeEventListener("touchend", finish);
       el.removeEventListener("touchcancel", finish);
     };
-  }, [scrollRef, onRefresh]);
+  }, [scrollRef, enabled]);
 
   return { distance, refreshing, armed: distance >= THRESHOLD };
 }
