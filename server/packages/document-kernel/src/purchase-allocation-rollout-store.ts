@@ -18,6 +18,31 @@ export class D1RolloutPurchaseAllocationDomainStore extends D1PurchaseAllocation
     return Number(row?.enabled ?? 0) === 1;
   }
 
+  /**
+   * Job Card completion is capped per operation, not across the entire Work Order.
+   *
+   * A 10-door order legitimately has 10 units cut and the same 10 units painted. The
+   * older reader summed both operations into one 20/10 bucket and rejected the second
+   * stage. Keep this indexed D1 query next to the production store so controllers do not
+   * fall back to a bounded whole-DocType scan once a tenant has thousands of Job Cards.
+   */
+  async getJobCardOperationCompletedQuantityMicros(
+    tenantId: string,
+    workOrder: string,
+    operation: string,
+    excludeName?: string,
+  ): Promise<number> {
+    const row = await this.rolloutReader.prepare(
+      `SELECT COALESCE(SUM(CAST(json_extract(payload_json,'$.completed_qty_micros') AS INTEGER)),0) AS total
+       FROM documents
+       WHERE tenant_id=?1 AND doctype='Job Card' AND docstatus=1
+         AND json_extract(payload_json,'$.work_order')=?2
+         AND json_extract(payload_json,'$.operation')=?3
+         AND (?4 IS NULL OR name<>?4)`,
+    ).bind(tenantId, workOrder, operation, excludeName ?? null).first<{ total: number }>();
+    return Number(row?.total ?? 0);
+  }
+
   override async getPurchaseSettlementWindowState(
     tenantId: string,
     queueKey: string,
@@ -71,5 +96,22 @@ export class InMemoryRolloutPurchaseAllocationMutationStore extends InMemoryPurc
 
   async isPurchaseAllocationEnabled(_tenantId: string): Promise<boolean> {
     return this.allocationEnabled;
+  }
+
+  async getJobCardOperationCompletedQuantityMicros(
+    tenantId: string,
+    workOrder: string,
+    operation: string,
+    excludeName?: string,
+  ): Promise<number> {
+    const documents = await this.listDocumentsByDoctype(tenantId, "Job Card");
+    return documents
+      .filter((document) => document.docstatus === 1
+        && document.data.work_order === workOrder
+        && document.data.operation === operation
+        && (!excludeName || document.name !== excludeName))
+      .reduce((total, document) => total + (
+        typeof document.data.completed_qty_micros === "number" ? document.data.completed_qty_micros : 0
+      ), 0);
   }
 }

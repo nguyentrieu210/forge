@@ -64,6 +64,42 @@ function applyPermissionSidecar(brief, extension, source, briefSource) {
   return { ...brief, ...(extension.version ? { version: extension.version } : {}), doctypes };
 }
 
+function applyExtrasSidecar(brief, extension, source, briefSource) {
+  assertSidecarObject(extension, source);
+  const arrayKeys = ["doctypes", "reports", "charts", "nav", "actions", "experiences"];
+  const allowed = new Set(["version", ...arrayKeys]);
+  const unsupported = Object.keys(extension).filter((key) => !allowed.has(key) && !key.startsWith("//"));
+  if (unsupported.length) throw new Error(`${source}: extras chỉ nhận version, ${arrayKeys.join(", ")} và khóa ghi chú //; không nhận ${unsupported.join(", ")}.`);
+
+  let additions = 0;
+  const output = { ...brief, ...(extension.version ? { version: extension.version } : {}) };
+  for (const key of arrayKeys) {
+    if (extension[key] === undefined) continue;
+    if (!Array.isArray(extension[key]) || extension[key].length === 0) throw new Error(`${source}: ${key} phải là mảng không rỗng khi được khai.`);
+    if (brief[key] !== undefined && !Array.isArray(brief[key])) throw new Error(`${briefSource}: ${key} hiện có phải là mảng trước khi ghép extras.`);
+    output[key] = [...(brief[key] ?? []), ...extension[key]];
+    additions += extension[key].length;
+  }
+  if (additions === 0) throw new Error(`${source}: extras phải bổ sung ít nhất một doctypes/reports/charts/nav/actions/experiences.`);
+
+  const doctypeNames = new Set();
+  for (const doctype of output.doctypes ?? []) {
+    const name = typeof doctype?.name === "string" ? doctype.name : "";
+    if (!name) continue;
+    if (doctypeNames.has(name)) throw new Error(`${source}: DocType bị trùng sau khi ghép extras: ${name}.`);
+    doctypeNames.add(name);
+  }
+
+  const experienceKeys = new Set();
+  for (const experience of output.experiences ?? []) {
+    const key = typeof experience?.key === "string" ? experience.key : "";
+    if (!key) continue;
+    if (experienceKeys.has(key)) throw new Error(`${source}: Experience bị trùng sau khi ghép extras: ${key}.`);
+    experienceKeys.add(key);
+  }
+  return output;
+}
+
 const BULK_VIEW_KEYS = new Set(["enabled", "columns", "editableFields", "commitStrategy", "allowPaste", "allowFillDown", "pageSize"]);
 
 function validateBulkView(view, source, doctype) {
@@ -121,6 +157,25 @@ function applyViewSidecar(brief, extension, source, briefSource) {
   return { ...brief, ...(extension.version ? { version: extension.version } : {}), doctypes };
 }
 
+/**
+ * Read a brief plus optional independently reviewable sidecars.
+ *
+ * Accepts either a filesystem path or a file URL so CLI paths and import.meta.url-based
+ * tests use the same loader contract.
+ *
+ * Large production briefs should not have every A4 template, high-risk permission edit,
+ * bounded business extension, or per-DocType bulk view embedded in one giant JSON file.
+ * Sibling `<brief>.prints.json`, `<brief>.permissions.json`, `<brief>.extras.json` and
+ * `<brief>.views.json` files are merged before schema validation and compilation, so the
+ * compiler and installer still receive one ordinary brief and remain authoritative.
+ *
+ * Permission sidecars REPLACE the complete permission map for each named DocType. Extras
+ * APPEND bounded arrays and reject duplicate DocType/Experience identities. View sidecars
+ * merge only the explicitly supported bulk-view policy onto existing DocTypes.
+ *
+ * @param {string | URL} source
+ * @returns {Promise<Record<string, unknown>>}
+ */
 export async function readBriefSource(source) {
   const sourcePath = sourcePathOf(source);
   let brief = parseJson(await readFile(sourcePath, "utf8"), sourcePath);
@@ -133,6 +188,10 @@ export async function readBriefSource(source) {
   const permissionsSource = path.join(parsed.dir, `${parsed.name}.permissions.json`);
   const permissions = await readOptionalJson(permissionsSource);
   if (permissions) brief = applyPermissionSidecar(brief, permissions, permissionsSource, sourcePath);
+
+  const extrasSource = path.join(parsed.dir, `${parsed.name}.extras.json`);
+  const extras = await readOptionalJson(extrasSource);
+  if (extras) brief = applyExtrasSidecar(brief, extras, extrasSource, sourcePath);
 
   const viewsSource = path.join(parsed.dir, `${parsed.name}.views.json`);
   const views = await readOptionalJson(viewsSource);
