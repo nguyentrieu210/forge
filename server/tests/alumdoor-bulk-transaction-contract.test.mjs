@@ -56,7 +56,7 @@ test("Alumdoor 2.2.1 compiles Stock Reconciliation Bulk Transaction as draft-onl
   assert.ok(reconciliation, "missing reconciliation field");
   assert.equal(reconciliation.fieldtype, "Link");
   assert.equal(reconciliation.options, "Stock Reconciliation");
-  assert.equal(reconciliation.reqd, true);
+  assert.equal(reconciliation.required, true);
 
   const field = action.fields.find((entry) => entry.fieldname === "lines");
   assert.ok(field, "missing lines field");
