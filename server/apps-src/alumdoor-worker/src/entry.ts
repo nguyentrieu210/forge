@@ -1,6 +1,7 @@
 import baseWorker from "./index.js";
 import { validateItemCatalogInvariants } from "./item-catalog-invariants.js";
 import { handlePurchaseFifoRequest } from "./purchase-fifo-receipt.js";
+import { handleBulkPurchaseFifoRequest } from "./bulk-purchase-fifo-receipt.js";
 
 type WorkerEnv = Parameters<typeof baseWorker.fetch>[1];
 type WorkerContext = Parameters<typeof baseWorker.fetch>[2];
@@ -8,8 +9,9 @@ type WorkerContext = Parameters<typeof baseWorker.fetch>[2];
 /**
  * Entrypoint triển khai của Alumdoor.
  *
- * Item đi qua cả validator lịch sử và các invariant catalog mới. Hai phép kiểm chạy song
- * song; nhập nhôm FIFO dùng bộ theo dõi công nợ Tiến Đạt; route khác chuyển nguyên vẹn.
+ * Item đi qua cả validator lịch sử và các invariant catalog mới. Nhập nhôm FIFO có hai
+ * controller: một dòng tương thích cũ và Bulk Transaction nhiều mã tạo một chứng từ nháp
+ * atomic. Mọi route khác chuyển nguyên vẹn về worker hiện hữu.
  */
 export default {
   async fetch(request: Request, env: WorkerEnv, ctx: WorkerContext): Promise<Response> {
@@ -21,6 +23,12 @@ export default {
       }
       if (method === "alumdoor.purchase.fifo_receipt") {
         return handlePurchaseFifoRequest(request, env, true);
+      }
+      if (method === "alumdoor.purchase.preview_bulk_fifo_receipt") {
+        return handleBulkPurchaseFifoRequest(request, env, false);
+      }
+      if (method === "alumdoor.purchase.bulk_fifo_receipt") {
+        return handleBulkPurchaseFifoRequest(request, env, true);
       }
     }
 

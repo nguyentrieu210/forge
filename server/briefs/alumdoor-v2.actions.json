@@ -1,0 +1,25 @@
+{
+  "version": "2.2.0",
+  "//": "Bulk Transaction v1: một bảng nhiều mã tạo đúng một Purchase Receipt nháp; không submit hay ghi ledger trong action.",
+  "actions": [
+    {
+      "name": "nhap-nhom-hang-loat",
+      "label": "Nhập nhôm hàng loạt",
+      "menu": true,
+      "icon": "table-properties",
+      "group": "Mua hàng",
+      "description": "Nhập nhiều mã nhôm trong một lần. Có thể thêm dòng hoặc dán vùng từ Excel/Google Sheets; hệ thống phân bổ FIFO theo đơn cũ, xem trước toàn bộ rồi tạo một Purchase Receipt nháp duy nhất.",
+      "permission": "Purchase Receipt",
+      "fields": [
+        "supplier:Link(Supplier)! Nhà cung cấp",
+        "warehouse:Link(Warehouse)! Kho nhập",
+        "supplier_invoice_no:Data! Số phiếu giao NCC",
+        "driver:Data Người giao",
+        "lines:Text(BulkTransaction:{\"columns\":[{\"fieldname\":\"item_code\",\"label\":\"Mã hàng\",\"fieldtype\":\"Link\",\"options\":\"Item\",\"required\":true},{\"fieldname\":\"length_m\",\"label\":\"Chiều dài (m)\",\"fieldtype\":\"Float\",\"required\":true},{\"fieldname\":\"qty_bar\",\"label\":\"Số cây\",\"fieldtype\":\"Float\",\"required\":true},{\"fieldname\":\"actual_weight_kg\",\"label\":\"Kg thực cân\",\"fieldtype\":\"Float\",\"required\":true},{\"fieldname\":\"rate\",\"label\":\"Đơn giá/kg\",\"fieldtype\":\"Currency\",\"required\":true},{\"fieldname\":\"color\",\"label\":\"Màu\",\"fieldtype\":\"Link\",\"options\":\"Item Color\",\"required\":true},{\"fieldname\":\"is_stamped\",\"label\":\"Dập\",\"fieldtype\":\"Select\",\"options\":\"Có\\nKhông\",\"required\":true,\"default\":\"Không\"}],\"minRows\":1,\"maxRows\":100,\"allowPaste\":true})! Chi tiết nhôm nhận"
+      ],
+      "preview": "alumdoor.purchase.preview_bulk_fifo_receipt | Xem phân bổ hàng loạt",
+      "commit": "alumdoor.purchase.bulk_fifo_receipt | Tạo phiếu nhập hàng loạt | Tạo một Purchase Receipt nháp cho toàn bộ dòng đã kiểm tra?",
+      "resultTable": "items"
+    }
+  ]
+}

@@ -5,8 +5,13 @@
  * Action không phải CRUD một bản ghi: người dùng nhập điều kiện, xem trước tác động rồi mới
  * chạy thật. Kết quả có thể gồm KPI, nhiều bảng lịch sử và chứng từ vừa tạo; renderer phải
  * trình bày đủ các phần đó thay vì biến object thành JSON hoặc mảng thành [object Object].
+ *
+ * Bulk Transaction v1 dùng compatibility transport trên options của field Text:
+ * `BulkTransaction:<json>`. Đây vẫn là AppAction controller-backed, không mở generic Bulk
+ * cho transaction/submitted document. Runtime chỉ biến field đó thành bảng nhập lặp lại;
+ * backend vẫn là nơi authoritative validation/permission/atomic document create diễn ra.
  */
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ClipboardEvent, type ReactNode } from "react";
 import type { AppAction, AppActionCall, AppActionField, DocField, Fieldtype } from "@metaforge/core";
 import {
   Button, Input, Label, Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -16,8 +21,25 @@ import { useMetaForge } from "../container/provider.js";
 type Values = Record<string, unknown>;
 type ResultRecord = Record<string, unknown>;
 
+type BulkTransactionColumn = Pick<AppActionField,
+  "fieldname" | "label" | "fieldtype" | "options" | "required" | "default" | "description">;
+interface BulkTransactionSpec {
+  columns: BulkTransactionColumn[];
+  minRows: number;
+  maxRows: number;
+  allowPaste: boolean;
+}
+
+const BULK_TRANSACTION_PREFIX = "BulkTransaction:";
+
 const RESULT_LABELS: Record<string, string> = {
   supplier: "Nhà cung cấp",
+  input_row: "Dòng nhập",
+  line_count: "Số dòng nhập",
+  item_count: "Số dòng phiếu",
+  total_qty_bar: "Tổng số cây",
+  total_actual_weight_kg: "Tổng kg thực cân",
+  total_barem_weight_kg: "Tổng kg barem",
   item_code: "Mã hàng",
   length_m: "Chiều dài (m)",
   theoretical_kg_per_m: "Trọng lượng định mức (kg/m)",
@@ -62,12 +84,14 @@ const RESULT_LABELS: Record<string, string> = {
   qty: "Số kg thực",
   theoretical_kg: "Kg barem",
   draft: "Trạng thái",
+  replayed: "Lặp yêu cầu",
   message: "Diễn giải",
   name: "Mã chứng từ",
   doctype: "Loại chứng từ",
 };
 
 const TABLE_TITLES: Record<string, string> = {
+  line_summaries: "Tổng hợp từng dòng nhập",
   order_balances: "Đơn còn nợ",
   allocations: "Lịch sử trừ FIFO lần này",
   receipt_history: "Lịch sử hàng về",
@@ -78,7 +102,7 @@ const OBJECT_TITLES: Record<string, string> = {
   debt: "Công nợ giao hàng sau lần nhận",
 };
 
-const FIFO_TABLE_ORDER = ["order_balances", "allocations", "receipt_history", "items"];
+const FIFO_TABLE_ORDER = ["line_summaries", "order_balances", "allocations", "receipt_history", "items"];
 const HIDDEN_KEYS = new Set(["_server_messages", "exc_type"]);
 const OPEN_LINKS: Record<string, string> = {
   purchase_order: "Purchase Order",
@@ -90,7 +114,7 @@ function labelForKey(key: string): string {
 }
 
 /** DocField tối thiểu để control chung render được — action field vốn đã là DocField trừ tên. */
-function toDocField(field: AppActionField): DocField {
+function toDocField(field: AppActionField | BulkTransactionColumn): DocField {
   return {
     fieldname: field.fieldname,
     label: field.label,
@@ -101,19 +125,104 @@ function toDocField(field: AppActionField): DocField {
   };
 }
 
+function parseBulkTransactionSpec(field: AppActionField): BulkTransactionSpec | undefined {
+  if (field.fieldtype !== "Text" || !field.options?.startsWith(BULK_TRANSACTION_PREFIX)) return undefined;
+  try {
+    const parsed = JSON.parse(field.options.slice(BULK_TRANSACTION_PREFIX.length)) as Partial<BulkTransactionSpec>;
+    if (!Array.isArray(parsed.columns) || !parsed.columns.length) return undefined;
+    const columns = parsed.columns.filter((column): column is BulkTransactionColumn => Boolean(
+      column && typeof column === "object"
+      && typeof column.fieldname === "string" && column.fieldname
+      && typeof column.label === "string" && column.label
+      && typeof column.fieldtype === "string" && column.fieldtype,
+    ));
+    if (!columns.length || new Set(columns.map((column) => column.fieldname)).size !== columns.length) return undefined;
+    const minRows = Number.isInteger(parsed.minRows) ? Math.max(1, Math.min(100, Number(parsed.minRows))) : 1;
+    const maxRows = Number.isInteger(parsed.maxRows) ? Math.max(minRows, Math.min(200, Number(parsed.maxRows))) : 100;
+    return { columns, minRows, maxRows, allowPaste: parsed.allowPaste !== false };
+  } catch {
+    return undefined;
+  }
+}
+
+function blankBulkRow(spec: BulkTransactionSpec): Values {
+  const row: Values = {};
+  for (const column of spec.columns) if (column.default != null) row[column.fieldname] = column.default;
+  return row;
+}
+
 function initialValues(action: AppAction): Values {
   const values: Values = {};
-  for (const field of action.fields) if (field.default != null) values[field.fieldname] = field.default;
+  for (const field of action.fields) {
+    const bulk = parseBulkTransactionSpec(field);
+    if (bulk) {
+      values[field.fieldname] = Array.from({ length: bulk.minRows }, () => blankBulkRow(bulk));
+    } else if (field.default != null) {
+      values[field.fieldname] = field.default;
+    }
+  }
   return values;
 }
 
-/** Ô còn thiếu — kiểm ở đây để người dùng biết TRƯỚC khi lời gọi đi rồi quay về 422. */
-function missingFields(action: AppAction, values: Values): AppActionField[] {
-  return action.fields.filter((field) => {
-    if (!field.required) return false;
-    const value = values[field.fieldname];
-    return value == null || value === "";
-  });
+function emptyValue(value: unknown): boolean {
+  return value == null || (typeof value === "string" && !value.trim());
+}
+
+/** Ô còn thiếu — kiểm ở client để người dùng biết trước khi backend từ chối authoritative. */
+function missingInputs(action: AppAction, values: Values): string[] {
+  const missing: string[] = [];
+  for (const field of action.fields) {
+    const bulk = parseBulkTransactionSpec(field);
+    if (!bulk) {
+      if (field.required && emptyValue(values[field.fieldname])) missing.push(field.label);
+      continue;
+    }
+    const rows = Array.isArray(values[field.fieldname]) ? values[field.fieldname] as Values[] : [];
+    if (rows.length < bulk.minRows) {
+      missing.push(`${field.label}: cần ít nhất ${bulk.minRows} dòng`);
+      continue;
+    }
+    rows.forEach((row, rowIndex) => {
+      for (const column of bulk.columns) {
+        if (column.required && emptyValue(row?.[column.fieldname])) {
+          missing.push(`Dòng ${rowIndex + 1} · ${column.label}`);
+        }
+      }
+    });
+  }
+  return missing;
+}
+
+function parsePastedNumber(raw: string): number | string {
+  const source = raw.trim().replace(/\s+/g, "");
+  if (!source) return "";
+  let normalized = source;
+  const comma = source.lastIndexOf(",");
+  const dot = source.lastIndexOf(".");
+  if (comma >= 0 && dot >= 0) {
+    normalized = comma > dot
+      ? source.replaceAll(".", "").replace(",", ".")
+      : source.replaceAll(",", "");
+  } else if (comma >= 0) {
+    normalized = source.replace(",", ".");
+  }
+  const value = Number(normalized);
+  return Number.isFinite(value) ? value : raw;
+}
+
+function coercePastedValue(raw: string, column: BulkTransactionColumn): unknown {
+  if (["Int", "Float", "Currency", "Percent"].includes(column.fieldtype)) return parsePastedNumber(raw);
+  if (column.fieldtype === "Check") {
+    const value = raw.trim().toLocaleLowerCase("vi");
+    return ["1", "true", "yes", "có", "co", "x"].includes(value) ? 1 : 0;
+  }
+  return raw.trim();
+}
+
+function normalizePasteMatrix(text: string): string[][] {
+  return text.replace(/\r/g, "").split("\n")
+    .filter((line, index, all) => line.length > 0 || index < all.length - 1)
+    .map((line) => line.split("\t"));
 }
 
 export interface ActionScreenProps {
@@ -129,10 +238,17 @@ export function ActionScreen({ action, onOpen }: ActionScreenProps) {
   const [result, setResult] = useState<unknown>();
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState<"preview" | "commit">();
-  const missing = useMemo(() => missingFields(action, values), [action, values]);
+  const missing = useMemo(() => missingInputs(action, values), [action, values]);
+
+  const changeValue = (fieldname: string, value: unknown) => {
+    setValues((previous) => ({ ...previous, [fieldname]: value }));
+    setPreview(undefined);
+    setResult(undefined);
+    setError(undefined);
+  };
 
   async function run(call: AppActionCall, phase: "preview" | "commit") {
-    if (missing.length) { setError(`Còn thiếu: ${missing.map((field) => field.label).join(", ")}.`); return; }
+    if (missing.length) { setError(`Còn thiếu: ${missing.slice(0, 8).join(", ")}${missing.length > 8 ? ` và ${missing.length - 8} ô khác` : ""}.`); return; }
     if (phase === "commit" && call.confirm && !window.confirm(call.confirm)) return;
     setBusy(phase);
     setError(undefined);
@@ -150,43 +266,64 @@ export function ActionScreen({ action, onOpen }: ActionScreenProps) {
   }
 
   const shown = result ?? preview;
+  const standardFields = action.fields.filter((field) => !parseBulkTransactionSpec(field));
+  const bulkFields = action.fields.flatMap((field) => {
+    const spec = parseBulkTransactionSpec(field);
+    return spec ? [{ field, spec }] : [];
+  });
+
   return (
     <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-4" data-action-screen={action.name}>
       {action.description ? <p className="text-sm text-muted-foreground">{action.description}</p> : null}
 
       <section className="rounded-xl border bg-card p-4" aria-label="Thông tin thao tác">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {action.fields.map((field) => {
-            const docField = toDocField(field);
-            const Control = registry.resolve(docField.fieldtype);
-            const id = `action-${action.name}-${field.fieldname}`;
-            return (
-              <div key={field.fieldname} className="flex min-w-0 flex-col gap-1.5">
-                <Label htmlFor={id}>
-                  {field.label}
-                  {field.required ? <span className="ml-0.5 text-destructive">*</span> : null}
-                </Label>
-                {Control
-                  ? <Control
-                      field={docField}
-                      value={values[field.fieldname] ?? ""}
-                      onChange={(next: unknown) => setValues((previous) => ({ ...previous, [field.fieldname]: next }))}
-                      id={id}
-                      required={field.required}
-                      services={services}
-                      {...(field.fieldtype === "Link" && field.options ? { linkTarget: field.options } : {})}
-                      docValues={values}
-                    />
-                  : <Input
-                      id={id}
-                      value={String(values[field.fieldname] ?? "")}
-                      onChange={(event) => setValues((previous) => ({ ...previous, [field.fieldname]: event.target.value }))}
-                    />}
-                {field.description ? <p className="text-xs text-muted-foreground">{field.description}</p> : null}
-              </div>
-            );
-          })}
-        </div>
+        {standardFields.length ? (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {standardFields.map((field) => {
+              const docField = toDocField(field);
+              const Control = registry.resolve(docField.fieldtype);
+              const id = `action-${action.name}-${field.fieldname}`;
+              return (
+                <div key={field.fieldname} className="flex min-w-0 flex-col gap-1.5">
+                  <Label htmlFor={id}>
+                    {field.label}
+                    {field.required ? <span className="ml-0.5 text-destructive">*</span> : null}
+                  </Label>
+                  {Control
+                    ? <Control
+                        field={docField}
+                        value={values[field.fieldname] ?? ""}
+                        onChange={(next: unknown) => changeValue(field.fieldname, next)}
+                        id={id}
+                        required={field.required}
+                        services={services}
+                        {...(field.fieldtype === "Link" && field.options ? { linkTarget: field.options } : {})}
+                        docValues={values}
+                      />
+                    : <Input
+                        id={id}
+                        value={String(values[field.fieldname] ?? "")}
+                        onChange={(event) => changeValue(field.fieldname, event.target.value)}
+                      />}
+                  {field.description ? <p className="text-xs text-muted-foreground">{field.description}</p> : null}
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
+
+        {bulkFields.map(({ field, spec }) => (
+          <BulkTransactionGrid
+            key={field.fieldname}
+            actionName={action.name}
+            field={field}
+            spec={spec}
+            rows={Array.isArray(values[field.fieldname]) ? values[field.fieldname] as Values[] : []}
+            onChange={(rows) => changeValue(field.fieldname, rows)}
+            registry={registry}
+            services={services}
+          />
+        ))}
 
         <div className="mt-4 flex flex-wrap items-center gap-2 border-t pt-4">
           {action.preview
@@ -198,7 +335,7 @@ export function ActionScreen({ action, onOpen }: ActionScreenProps) {
             {busy === "commit" ? "Đang chạy…" : action.commit.label}
           </Button>
           {missing.length
-            ? <span className="text-xs text-muted-foreground">Còn thiếu: {missing.map((field) => field.label).join(", ")}</span>
+            ? <span className="text-xs text-muted-foreground">Còn thiếu {missing.length} ô bắt buộc</span>
             : null}
         </div>
       </section>
@@ -214,6 +351,127 @@ export function ActionScreen({ action, onOpen }: ActionScreenProps) {
             onOpen={onOpen}
           />
         : null}
+    </div>
+  );
+}
+
+function BulkTransactionGrid({ actionName, field, spec, rows, onChange, registry, services }: {
+  actionName: string;
+  field: AppActionField;
+  spec: BulkTransactionSpec;
+  rows: Values[];
+  onChange: (rows: Values[]) => void;
+  registry: ReturnType<typeof useMetaForge>["registry"];
+  services: ReturnType<typeof useMetaForge>["services"];
+}) {
+  const effectiveRows = rows.length ? rows : Array.from({ length: spec.minRows }, () => blankBulkRow(spec));
+
+  const changeCell = (rowIndex: number, fieldname: string, value: unknown) => {
+    const next = effectiveRows.map((row, index) => index === rowIndex ? { ...row, [fieldname]: value } : row);
+    onChange(next);
+  };
+
+  const addRow = () => {
+    if (effectiveRows.length >= spec.maxRows) return;
+    onChange([...effectiveRows, blankBulkRow(spec)]);
+  };
+
+  const removeRow = (rowIndex: number) => {
+    if (effectiveRows.length <= spec.minRows) {
+      const next = effectiveRows.map((row, index) => index === rowIndex ? blankBulkRow(spec) : row);
+      onChange(next);
+      return;
+    }
+    onChange(effectiveRows.filter((_, index) => index !== rowIndex));
+  };
+
+  const paste = (event: ClipboardEvent<HTMLElement>, rowIndex: number, columnIndex: number) => {
+    if (!spec.allowPaste) return;
+    const clipboard = event.clipboardData.getData("text/plain");
+    if (!clipboard.includes("\t") && !clipboard.includes("\n") && !clipboard.includes("\r")) return;
+    event.preventDefault();
+    const matrix = normalizePasteMatrix(clipboard);
+    const requiredRows = Math.min(spec.maxRows, Math.max(effectiveRows.length, rowIndex + matrix.length));
+    const next = Array.from({ length: requiredRows }, (_, index) => ({ ...(effectiveRows[index] ?? blankBulkRow(spec)) }));
+    matrix.forEach((cells, rowOffset) => {
+      const targetRow = rowIndex + rowOffset;
+      if (targetRow >= spec.maxRows) return;
+      cells.forEach((cellValue, columnOffset) => {
+        const column = spec.columns[columnIndex + columnOffset];
+        if (!column) return;
+        next[targetRow]![column.fieldname] = coercePastedValue(cellValue, column);
+      });
+    });
+    onChange(next);
+  };
+
+  return (
+    <div className="mt-4 min-w-0 border-t pt-4" data-action-input-table={field.fieldname}>
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="text-sm font-semibold">
+            {field.label}{field.required ? <span className="ml-0.5 text-destructive">*</span> : null}
+          </div>
+          {field.description ? <p className="mt-1 text-xs text-muted-foreground">{field.description}</p> : null}
+        </div>
+        <Button type="button" variant="outline" size="sm" disabled={effectiveRows.length >= spec.maxRows} onClick={addRow}>
+          Thêm dòng
+        </Button>
+      </div>
+      <div className="overflow-x-auto rounded-lg border">
+        <Table unwrapped className="w-full min-w-max text-sm">
+          <TableHeader className="border-b bg-muted/40">
+            <TableRow>
+              <TableHead className="w-14 px-3 py-2 text-center">STT</TableHead>
+              {spec.columns.map((column) => (
+                <TableHead key={column.fieldname} className="min-w-36 whitespace-nowrap px-3 py-2 text-xs font-medium text-muted-foreground">
+                  {column.label}{column.required ? <span className="ml-0.5 text-destructive">*</span> : null}
+                </TableHead>
+              ))}
+              <TableHead className="w-20 px-3 py-2" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {effectiveRows.map((row, rowIndex) => (
+              <TableRow key={rowIndex} data-action-input-row={rowIndex + 1}>
+                <TableCell className="px-3 py-2 text-center text-xs text-muted-foreground">{rowIndex + 1}</TableCell>
+                {spec.columns.map((column, columnIndex) => {
+                  const docField = toDocField(column);
+                  const Control = registry.resolve(docField.fieldtype);
+                  const id = `action-${actionName}-${field.fieldname}-${rowIndex}-${column.fieldname}`;
+                  return (
+                    <TableCell key={column.fieldname} className="min-w-36 px-2 py-1.5 align-top" onPaste={(event) => paste(event, rowIndex, columnIndex)}>
+                      {Control
+                        ? <Control
+                            field={docField}
+                            value={row[column.fieldname] ?? ""}
+                            onChange={(next: unknown) => changeCell(rowIndex, column.fieldname, next)}
+                            id={id}
+                            required={column.required}
+                            services={services}
+                            {...(column.fieldtype === "Link" && column.options ? { linkTarget: column.options } : {})}
+                            docValues={row}
+                          />
+                        : <Input
+                            id={id}
+                            value={String(row[column.fieldname] ?? "")}
+                            onChange={(event) => changeCell(rowIndex, column.fieldname, event.target.value)}
+                          />}
+                    </TableCell>
+                  );
+                })}
+                <TableCell className="px-2 py-1.5 text-right">
+                  <Button type="button" variant="ghost" size="sm" onClick={() => removeRow(rowIndex)}>Xóa</Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+      <div className="mt-2 flex flex-wrap justify-between gap-2 text-xs text-muted-foreground">
+        <span>{effectiveRows.length}/{spec.maxRows} dòng</span>
+        {spec.allowPaste ? <span>Có thể dán trực tiếp vùng nhiều ô từ Excel/Google Sheets.</span> : null}
+      </div>
     </div>
   );
 }
