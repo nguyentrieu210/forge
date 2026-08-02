@@ -830,6 +830,8 @@ importers:
 
   server/packages/money: {}
 
+  server/packages/organization-security: {}
+
   server/packages/outbox: {}
 
   server/packages/policy: {}
