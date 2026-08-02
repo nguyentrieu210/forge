@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import { Check, Plus, RefreshCw } from "lucide-react";
 import { type Doc } from "@metaforge/core";
-import { Button, Checkbox, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, toast } from "@metaforge/ui";
+import { Button, Checkbox, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, toast } from "@metaforge/ui";
 import { mapError, type FrappeAdapter } from "@metaforge/adapter-frappe";
 import { useList } from "../container/hooks.js";
 
@@ -21,6 +21,7 @@ export function ItemPriceMatrixPanel({ adapter, onChanged }: ItemPriceMatrixPane
   const [priceList, setPriceList] = useState("");
   const [drafts, setDrafts] = useState<Record<string, PriceDraft>>({});
   const [saving, setSaving] = useState(false);
+  const [open, setOpen] = useState(false);
 
   const items = itemsQ.data ?? [];
   const priceLists = pricesQ.data ?? [];
@@ -72,6 +73,7 @@ export function ItemPriceMatrixPanel({ adapter, onChanged }: ItemPriceMatrixPane
       }
       toast.success(`Đã lưu ${saved} dòng giá theo ĐVT`);
       setDrafts({});
+      setOpen(false);
       await onChanged();
     } catch (error) {
       toast.error(mapError(error).message);
@@ -81,19 +83,19 @@ export function ItemPriceMatrixPanel({ adapter, onChanged }: ItemPriceMatrixPane
   };
 
   return (
-    <section className="rounded-lg border bg-card p-3 shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-sm font-semibold">Nhập giá nhiều ĐVT</h2>
-          <p className="mt-1 text-xs text-muted-foreground">Chọn một mặt hàng, tick nhiều đơn vị tính rồi nhập giá từng dòng.</p>
-        </div>
-        <Button size="sm" onClick={save} disabled={saving || !itemCode || !activePriceList || !selected.length}>
-          {saving ? <RefreshCw className="animate-spin" /> : <Plus />} Lưu bảng giá
-        </Button>
-      </div>
-      {!ready ? <div className="mt-3 grid gap-2 md:grid-cols-2"><Skeleton className="h-9" /><Skeleton className="h-9" /></div> : (
-        <>
-          <div className="mt-3 grid gap-3 md:grid-cols-2">
+    <>
+      <Button variant="outline" size="sm" className="h-10" onClick={() => setOpen(true)}>
+        <Plus /> Nhập giá nhiều ĐVT
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="flex max-h-[92vh] w-[min(94vw,1080px)] max-w-none flex-col overflow-hidden p-0">
+          <DialogHeader className="shrink-0 border-b px-5 py-4">
+            <DialogTitle>Nhập giá nhiều ĐVT</DialogTitle>
+            <DialogDescription>Chọn một mặt hàng, tick các đơn vị tính cần áp giá rồi nhập giá theo từng dòng.</DialogDescription>
+          </DialogHeader>
+          {!ready ? <div className="grid gap-2 p-5 md:grid-cols-2"><Skeleton className="h-9" /><Skeleton className="h-9" /></div> : (
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
+              <div className="grid gap-3 md:grid-cols-2">
             <div className="space-y-1.5">
               <Label>Mặt hàng</Label>
               <Select value={itemCode} onValueChange={setItemCode}>
@@ -109,7 +111,7 @@ export function ItemPriceMatrixPanel({ adapter, onChanged }: ItemPriceMatrixPane
               </Select>
             </div>
           </div>
-          <div className="mt-3 overflow-hidden rounded-md border">
+              <div className="overflow-hidden rounded-md border">
             <Table>
               <TableHeader><TableRow><TableHead className="w-12">Chọn</TableHead><TableHead>ĐVT</TableHead><TableHead className="w-44">Đơn giá (VND)</TableHead><TableHead>Ghi chú</TableHead></TableRow></TableHeader>
               <TableBody>{uoms.map((uom) => {
@@ -124,9 +126,17 @@ export function ItemPriceMatrixPanel({ adapter, onChanged }: ItemPriceMatrixPane
               })}</TableBody>
             </Table>
           </div>
-          <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground"><Check className="size-3.5" /> {selected.length} ĐVT được chọn · dòng trùng sẽ cập nhật, dòng mới sẽ được tạo</div>
-        </>
-      )}
-    </section>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground"><Check className="size-3.5" /> {selected.length} ĐVT được chọn · dòng trùng sẽ cập nhật, dòng mới sẽ được tạo</div>
+            </div>
+          )}
+          <div className="flex shrink-0 justify-end gap-2 border-t px-5 py-3">
+            <Button variant="outline" onClick={() => setOpen(false)} disabled={saving}>Hủy</Button>
+            <Button onClick={save} disabled={saving || !itemCode || !activePriceList || !selected.length}>
+              {saving ? <RefreshCw className="animate-spin" /> : <Plus />} Lưu bảng giá
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
