@@ -1,3 +1,4 @@
+# Retry after migration diagnostic PASS: 45/45 already applied.
 name: One-time ALU Full Alumdoor Sync
 
 on:
