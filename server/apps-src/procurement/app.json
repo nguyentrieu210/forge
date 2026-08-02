@@ -4,6 +4,7 @@
   "version": "0.2.0",
   "requires": [],
   "externalDocTypes": [
+    { "name": "User", "kind": "system", "app": "core" },
     { "name": "Company", "kind": "master", "app": "accounts" },
     { "name": "Currency", "kind": "master", "app": "accounts" },
     { "name": "UOM", "kind": "master", "app": "stock" },
