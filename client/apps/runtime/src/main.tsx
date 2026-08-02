@@ -32,7 +32,6 @@ const ApprovalInbox = lazy(() => import("./experiences/ApprovalInbox.js").then((
 const SocialCommerce = lazy(() => import("./experiences/SocialCommerce.js").then((module) => ({ default: module.SocialCommerce })));
 const DailyDetailedLedger = lazy(() => import("./experiences/DailyDetailedLedger.js").then((module) => ({ default: module.DailyDetailedLedger })));
 const AlumdoorOperationsCenter = lazy(() => import("./experiences/AlumdoorOperationsCenter.js").then((module) => ({ default: module.AlumdoorOperationsCenter })));
-const ManufacturingCosting = lazy(() => import("./experiences/ManufacturingCosting.js").then((module) => ({ default: module.ManufacturingCosting })));
 
 /**
  * The GENERIC runtime — one bundle that serves every app on the platform.
@@ -78,12 +77,11 @@ interface RuntimeNav extends NavItem { route: string; doctype?: string }
 
 function isRenderableExperience(item: AppManifest["nav"][number], manifest: AppManifest): boolean {
   if ((item.kind ?? "doctype") !== "experience") return true;
-  if (item.key === "alumdoor-operations:manufacturing-costing") return true;
   const separator = item.key.indexOf(":");
   if (separator < 1 || separator === item.key.length - 1) return false;
   const kind = item.key.slice(0, separator);
   const argument = item.key.slice(separator + 1);
-  if (kind === "approval" || kind === "calendar" || kind === "social-commerce") return true;
+  if (kind === "approval" || kind === "calendar" || kind === "social-commerce" || kind === "alumdoor-operations") return true;
   if (kind === "action") return (manifest.actions ?? []).some((action) => action.name === argument);
   if (kind === "screen") return (manifest.screens ?? []).some((screen) => screen.name === argument);
   return false;
@@ -102,10 +100,21 @@ function renderExperience(key: string, manifest: AppManifest, navigate: Navigate
   const kind = separator < 0 ? key : key.slice(0, separator);
   const argument = separator < 0 ? "" : key.slice(separator + 1);
   if (kind === "approval" && argument) {
+    // The label the app declared, not the raw DocType name. A screen titled "Asset
+    // Request" in an otherwise Vietnamese app reads as a leaked internal identifier.
     const title = manifest.nav.find((item) => item.key === key)?.label ?? argument;
+    // Back leaves App-mode for the Desk list of the same DocType, so the two are one
+    // app seen two ways rather than two apps.
     return <ApprovalInbox doctype={argument} title={title} onExit={() => navigate(`/app/${encodeURIComponent(argument)}`)} />;
   }
   if (kind === "calendar" && argument) {
+    /**
+     * `calendar:<DocType>` — lịch tuần/tháng cho bất kỳ doctype nào có field ngày.
+     *
+     * Field ngày và field giờ do CalendarContainer suy từ metadata (field Date/Time đầu
+     * tiên), nên app chỉ cần khai một dòng nav. Mở ở chế độ TUẦN: lịch dạy được đọc theo
+     * tuần, còn lưới tháng cắt mất buổi khi một ngày có nhiều ca.
+     */
     const label = manifest.nav.find((item) => item.key === key)?.label ?? argument;
     return (
       <div className="min-h-[100dvh] bg-background p-3 md:p-4">
@@ -121,6 +130,8 @@ function renderExperience(key: string, manifest: AppManifest, navigate: Navigate
       </div>
     );
   }
+  // Manifest cũ có thể còn giữ Experience viết tay không tồn tại trong generic runtime.
+  // Không đưa người dùng vào màn chết; menu mới đã lọc mục này và URL cũ quay về Tổng quan.
   return <Navigate to={`/overview/${encodeURIComponent(manifest.domain ?? manifest.id)}`} replace />;
 }
 
@@ -148,6 +159,18 @@ function manifestRoute(item: AppManifest["nav"][number]): string | null {
 }
 
 function buildNavigation(manifest: AppManifest, catalog: ApplicationCatalog | undefined, roles: string[]): RuntimeNav[] {
+  /**
+   * Only entries whose screen can actually work.
+   *
+   * "Tổng quan" and "Quy trình" were once added unconditionally, while the server answered
+   * BOTH of their methods with `404 Method is not implemented on this platform`. The menu
+   * advertised two screens that could only ever show an error — a missing feature the user
+   * cannot see is a gap, but a menu entry leading nowhere is a defect, because it costs a
+   * click to discover the same thing.
+   *
+   * `get_overview` now exists, so Tổng quan is back. `get_processes` still does not, so
+   * Quy trình stays out until it does.
+   */
   const items: RuntimeNav[] = [
     { key: "__overview", label: "Tổng quan", group: "Điều hành", icon: resolveIcon("layout-dashboard"), route: `/overview/${manifest.domain ?? manifest.id}` },
   ];
@@ -158,15 +181,33 @@ function buildNavigation(manifest: AppManifest, catalog: ApplicationCatalog | un
   if (manifest.nav.some((item) => normalizeGroup(item.group) === "danh muc")) {
     items.push({ key: "__master-data", label: "Danh mục", group: "Danh mục", icon: resolveIcon("library"), route: "/master-data" });
   }
+  /**
+   * "Danh mục ứng dụng" chỉ có nghĩa khi có NHIỀU hơn một app.
+   *
+   * Tenant một app — phần lớn khách — thì đó là một trang liệt kê đúng cái app người ta
+   * đang mở. Một mục menu dẫn tới chính chỗ mình đang đứng không phải tính năng, nó là
+   * một dòng phải đọc rồi bỏ qua, mỗi ngày.
+   */
   if ((catalog?.apps?.length ?? 0) > 1) {
     items.push({ key: "__catalog", label: "Danh mục ứng dụng", group: "Điều hành", icon: resolveIcon("grid-3x3"), route: "/catalog" });
   }
   if (roles.includes("System Manager") || roles.includes("Administrator")) {
     items.push({ key: "__permissions", label: "Trung tâm phân quyền", group: "Hệ thống", icon: resolveIcon("shield-check"), route: "/permissions" });
+    // Nhập dữ liệu ghi vào BẤT KỲ doctype nào người dùng chọn, nên nó đi cùng quyền quản
+    // trị chứ không mở cho mọi vai trò. Server vẫn kiểm quyền trên từng lệnh ghi; đây chỉ
+    // là chuyện không mời người không dùng được vào một màn sẽ từ chối họ.
     items.push({ key: "__import", label: "Nhập dữ liệu", group: "Hệ thống", icon: resolveIcon("upload"), route: "/import" });
   }
   const routes = new Set(items.map((item) => item.route));
   for (const app of catalog?.apps ?? []) {
+    /**
+     * Workspace của CHÍNH app đang mở là bản sao của menu ngay bên dưới.
+     *
+     * Catalog sinh workspace cho mọi app đã cài, kể cả app này. Kết quả là sidebar mở đầu
+     * bằng nguyên một nhóm "Ứng dụng · <tên app>" trỏ vào đúng những doctype đã có nhóm
+     * riêng ở dưới — người dùng thấy hai đường tới cùng một chỗ và phải đoán đường nào
+     * mới đúng. Workspace của app KHÁC thì vẫn giữ: đó mới là thứ họ chưa thấy.
+     */
     if (app.key === manifest.id) continue;
     for (const workspace of app.workspaces) {
       const route = `/workspace/${encodeURIComponent(workspace.key)}`;
@@ -185,6 +226,15 @@ function buildNavigation(manifest: AppManifest, catalog: ApplicationCatalog | un
   return items;
 }
 
+/**
+ * The shop, for every tenant whose installed app declares a storefront.
+ *
+ * Checked BEFORE the auth boundary, and deliberately not gated on a hostname the way the
+ * social-commerce marketing pages are: a customer's shop lives on the customer's own
+ * domain, and whether it exists is decided by what is installed, not by which host the
+ * bundle happens to be served from. If no storefront is installed the API answers 404 and
+ * the page says so — which is the honest answer, and one that needs no configuration.
+ */
 function resolveStorefrontPage(): StorefrontPage | undefined {
   const path = (window.location.pathname.replace(/\/+$/, "") || "/");
   if (path === "/shop") return "/shop";
@@ -212,6 +262,8 @@ function RootApp() {
 
 function RuntimeGuestLogin({ retry }: { retry: () => void }) {
   const onSuccess = () => {
+    // Không phục hồi route in sau khi phiên đã hết. Route này cần tài liệu và quyền của
+    // phiên cũ; giữ nguyên nó khiến đăng nhập xong bị đưa trở lại màn in lỗi.
     if (window.location.pathname.startsWith("/print/")) {
       window.history.replaceState(null, "", "/");
     }
@@ -220,6 +272,11 @@ function RuntimeGuestLogin({ retry }: { retry: () => void }) {
   return <LoginForm adapter={adapter} onSuccess={onSuccess} title="Đăng nhập" />;
 }
 
+/**
+ * Marketing is public only on the Social Commerce hostname. Other Forge tenants keep
+ * their existing root redirect, while `?landing=1` gives local visual QA a deterministic
+ * entry point without pretending every tenant is this product.
+ */
 function resolvePublicSocialPage(): PublicSocialPage | undefined {
   const path = (window.location.pathname.replace(/\/+$/, "") || "/") as PublicSocialPage;
   const allowed = new Set<PublicSocialPage>(["/", "/login", "/signup", "/features", "/pricing", "/faq", "/privacy", "/terms", "/facebook/data-deletion", "/security"]);
@@ -233,16 +290,28 @@ function Splash({ children }: { children: ReactNode }) {
   return <div className="grid h-screen place-items-center text-muted-foreground">{children}</div>;
 }
 
+/**
+ * Fetches the manifest before anything that depends on it renders.
+ *
+ * The dimensions in particular cannot be defaulted: `BusinessContextProvider` blocks the
+ * whole app until every required dimension is chosen, so mounting it with a guessed set
+ * would wedge an app on a selector it never uses — which is precisely what happened to
+ * an HR app that inherited `warehouse` from a stock template.
+ */
 function ManifestBoundary({ boot, logout }: { boot: MetaForgeBootDTO; logout: () => Promise<void> }) {
   const [manifest, setManifest] = useState<AppManifest>();
   const [error, setError] = useState<string>();
 
   useEffect(() => {
     let alive = true;
+    // Dùng lại lời gọi đã phát đi lúc bundle chạy; chỉ gọi mới khi nó hỏng (chưa có phiên).
     manifestPrefetch
       .then((prefetched) => prefetched ?? adapter.getAppManifest(REQUESTED_APP))
       .then((value) => {
         if (!alive) return;
+        // Validated even though the server built it: a manifest that fails here would
+        // otherwise fail as a redirect loop or a blank sidebar, which reads as a broken
+        // platform rather than as a bad app package.
         const check = validateManifest(value);
         if (!check.ok) {
           setError(check.issues.filter((issue) => issue.severity === "error").map((issue) => `${issue.code}: ${issue.message}`).join("\n"));
@@ -295,6 +364,10 @@ function Runtime({ manifest, boot, logout }: { manifest: AppManifest; boot: Meta
       .then((value) => { if (alive) setCatalog(value); })
       .catch((error) => { if (alive) setCatalogError(adapter.mapError(error).message); });
     return () => { alive = false; };
+    // `context.cacheSuffix` CỐ Ý không nằm trong danh sách phụ thuộc: danh mục ứng dụng
+    // là những app đã cài, không đổi theo phạm vi dữ liệu người dùng chọn. Để nó ở đây
+    // khiến catalog bị gọi lần thứ hai ngay sau khi phạm vi được xác định — đo được trên
+    // tenant thật, hai lời gọi giống hệt nhau cách nhau 326 ms.
   }, [manifest.id, manifest.catalogMode]);
 
   const nav = useMemo(() => buildNavigation(manifest, catalog, boot.roles), [manifest, catalog, boot.roles]);
@@ -332,6 +405,13 @@ function Shell({ manifest, boot, logout, nav, active, breadcrumbs = [], children
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
+  /**
+   * Tiêu đề tab lấy theo app đã cài, không đóng cứng trong index.html.
+   *
+   * Một bundle phục vụ mọi tenant, nên cái tên trong index.html là tên của tenant ĐẦU TIÊN
+   * từng dùng bundle này — Alumdoor mở ra thấy "Kairo Social Commerce". Thanh bên đã lấy
+   * đúng `manifest.name` từ lâu; chỉ mỗi thẻ <title> bị bỏ quên.
+   */
   const crumb = breadcrumbs.at(-1)?.label;
   useEffect(() => {
     document.title = crumb ? `${crumb} — ${manifest.name}` : manifest.name;
@@ -424,6 +504,9 @@ function RuntimeRoutes({ manifest, boot, logout, nav, catalogError }: ScreenProp
       <Route path="/branches/:name" element={<OrganizationEntityScreen {...screen} doctype="Branch" />} />
       <Route path="/departments/:name" element={<OrganizationEntityScreen {...screen} doctype="Department" />} />
       <Route path="/workspace/:workspace" element={<WorkspaceScreen {...screen} />} />
+      {/* Touch-first experiences may still own the viewport. Social Commerce is a
+          desktop operations center, so ExperienceScreen mounts that one inside the
+          shared Forge shell instead of growing a second navigation system. */}
       <Route path="/x/:key" element={<ExperienceScreen {...screen} />} />
       <Route path="/app/:doctype" element={<DoctypeScreen {...screen} />} />
       <Route path="/app/:doctype/:name" element={<DoctypeScreen {...screen} />} />
@@ -442,13 +525,13 @@ function ExperienceScreen({ manifest, boot, logout, nav }: ScreenProps) {
   const navigate = useNavigate();
   const experienceKey = decodeURIComponent(key);
   const kind = experienceKey.split(":", 1)[0];
-  if (experienceKey === "alumdoor-operations:manufacturing-costing") {
-    return (
-      <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={experienceKey} breadcrumbs={[{ label: "Giá thành sản xuất" }]}>
-        <ManufacturingCosting />
-      </Shell>
-    );
-  }
+  /**
+   * `screen:<tên>` — màn nghiệp vụ do app ghép từ các block an toàn trong manifest.
+   *
+   * Khác Experience React viết tay, thêm màn này là một lần cài metadata. Runtime chung
+   * dựng KPI, danh sách và action ngay lập tức, nên không có frontend riêng để lệch phiên
+   * bản với schema phía server.
+   */
   if (kind === "screen") {
     const name = experienceKey.slice("screen:".length);
     const screen = (manifest.screens ?? []).find((candidate) => candidate.name === name);
@@ -472,6 +555,12 @@ function ExperienceScreen({ manifest, boot, logout, nav }: ScreenProps) {
       </Shell>
     );
   }
+  /**
+   * `action:<tên>` — màn thao tác do APP KHAI, dựng từ manifest chứ không phải từ code.
+   *
+   * Mở trong shell chung, không chiếm cả màn: đây là một việc trong ngày làm việc (cắt
+   * nhôm, hoàn cắt), người dùng vẫn cần sidebar để đi tiếp sang đơn hàng hay kho.
+   */
   if (kind === "action") {
     const name = experienceKey.slice("action:".length);
     const action = (manifest.actions ?? []).find((candidate) => candidate.name === name);
@@ -480,6 +569,11 @@ function ExperienceScreen({ manifest, boot, logout, nav }: ScreenProps) {
         <div className="h-full overflow-auto p-4">
           {action
             ? <ActionScreen action={action} onOpen={(doctype, docname) => navigate(`/app/${encodeURIComponent(doctype)}/${encodeURIComponent(docname)}`)} />
+            /**
+             * Manifest đã lọc action theo QUYỀN trước khi gửi xuống, nên "không tìm thấy"
+             * ở đây gần như luôn là không đủ quyền, không phải app khai thiếu. Nói đúng
+             * điều đó thay vì "không tìm thấy màn" — người dùng cần biết phải hỏi ai.
+             */
             : <div className="grid h-full place-items-center"><div className="max-w-md rounded-xl border bg-card p-6 text-center">
                 <h1 className="font-semibold">Không mở được thao tác "{name}"</h1>
                 <p className="mt-2 text-sm text-muted-foreground">Tài khoản này không có quyền chạy, hoặc app chưa khai thao tác đó.</p>
@@ -518,8 +612,8 @@ function ExperienceScreen({ manifest, boot, logout, nav }: ScreenProps) {
   }
   if (kind === "alumdoor-operations") {
     return (
-      <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={experienceKey} breadcrumbs={[{ label: "Trung tâm vận hành" }]}>
-        <AlumdoorOperationsCenter />
+      <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={experienceKey} breadcrumbs={[{ label: experienceKey.endsWith(":manufacturing-costing") ? "Giá thành sản xuất" : "Trung tâm vận hành" }]}>
+        <AlumdoorOperationsCenter view={experienceKey.slice("alumdoor-operations:".length)} />
       </Shell>
     );
   }
@@ -535,13 +629,38 @@ function DoctypeScreen({ manifest, boot, logout, nav }: ScreenProps) {
   const bridge = useBridge();
   const { doctype = manifest.home.doctype ?? "ToDo", name } = useParams();
   const active = nav.find((item) => item.doctype === doctype)?.key ?? doctype;
+  /**
+   * Breadcrumb lấy nhãn từ MENU, không phải tên doctype.
+   *
+   * Menu đã hiện "Đơn hàng" trong khi breadcrumb ngay bên cạnh hiện "Sales Order" — cùng
+   * một màn, hai cái tên. Nhãn menu là thứ người dùng vừa bấm vào để tới đây, nên nó cũng
+   * là cái tên họ mong đọc lại ở đầu trang.
+   */
   const title = nav.find((item) => item.doctype === doctype)?.label ?? doctype;
+  /**
+   * Mở một dòng rồi đóng lại phải QUAY VỀ ĐÚNG DANH SÁCH VỪA TÌM.
+   *
+   * Trạng thái danh sách — từ khoá, bộ lọc, trang, cách sắp xếp — sống ở query-string. Nhưng
+   * điều hướng trong màn này gọi bằng ĐƯỜNG DẪN TRẦN (`/app/Item/AL548`), nên query bị vứt:
+   * tìm "nhom" ra ba dòng, mở một dòng xem, đóng lại thì danh sách nạp lại từ đầu với 294 mặt
+   * hàng và người dùng phải gõ lại từ khoá. Với người soát hàng chục dòng thì đó là gõ lại
+   * hàng chục lần.
+   *
+   * Chỉ giữ query khi vẫn ở TRONG cùng một doctype — sang doctype khác thì bộ lọc của doctype
+   * cũ không còn nghĩa gì, mang theo là lọc nhầm.
+   */
   const listPath = `/app/${encodeURIComponent(doctype)}`;
   const navigateKeepingListState = useCallback((path: string) => {
     const withinList = path === listPath || path.startsWith(`${listPath}/`);
     const search = window.location.search;
     navigate(withinList && search && !path.includes("?") ? `${path}${search}` : path);
   }, [navigate, listPath]);
+  /**
+   * Khai cho trợ lý biết người dùng ĐANG XEM cái gì.
+   *
+   * Chỉ tên màn hình và bản ghi đang mở — không kèm nội dung. Trợ lý trả lời được "đang ở
+   * đâu, mở cái gì" mà không biến câu hỏi thành một đường đọc dữ liệu vòng qua phân quyền.
+   */
   useEffect(() => {
     setAssistantContext({ man_hinh: title, doctype, ban_ghi: name ?? null });
   }, [title, doctype, name]);
@@ -727,6 +846,13 @@ function MetaIndexScreen(props: ScreenProps & { kind: "reports" | "masters" }) {
     </Shell>
   );
 }
+/**
+ * Nhập dữ liệu từ CSV/Excel — cùng trình thuật sĩ mà app demo vẫn dùng.
+ *
+ * Không gắn với doctype nào: người dùng chọn doctype ngay trong màn, nên MỘT mục menu
+ * phục vụ mọi bảng của mọi app. Đặt trong nhóm "Hệ thống" cạnh phân quyền vì đây là
+ * thao tác quản trị, không phải nghiệp vụ hằng ngày.
+ */
 function ImportScreen(props: ScreenProps) {
   return <Shell {...props} active="__import" breadcrumbs={[{ label: "Nhập dữ liệu" }]}><div className="h-full overflow-auto p-4"><ImportContent /></div></Shell>;
 }

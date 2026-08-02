@@ -5,6 +5,7 @@ import {
   Badge, Button, Input, Label, Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
   Tabs, TabsContent, TabsList, TabsTrigger, Textarea, toast,
 } from "@metaforge/ui";
+import { ManufacturingCosting } from "./ManufacturingCosting.js";
 
 interface OperationRow {
   sales_order: string;
@@ -38,7 +39,12 @@ const money = (value: number | undefined) => new Intl.NumberFormat("vi-VN", {
   style: "currency", currency: "VND", maximumFractionDigits: 0,
 }).format(value ?? 0);
 
-export function AlumdoorOperationsCenter() {
+export function AlumdoorOperationsCenter({ view }: { view?: string }) {
+  if (view === "manufacturing-costing") return <ManufacturingCosting />;
+  return <AlumdoorOperationsDashboard />;
+}
+
+function AlumdoorOperationsDashboard() {
   const { adapter } = useMetaForge();
   const [busy, setBusy] = useState("");
   const [rows, setRows] = useState<OperationRow[]>([]);
