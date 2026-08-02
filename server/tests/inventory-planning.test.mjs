@@ -13,6 +13,11 @@ test("putaway respects priority and reports unallocated quantity", () => {
   assert.equal(full.unallocated_qty_micros, 0);
   const short = planPutaway(8 * Q, [{ warehouse: "A", priority: 1, capacity_qty_micros: 5 * Q, current_qty_micros: 2 * Q }]);
   assert.equal(short.unallocated_qty_micros, 5 * Q);
+  const stable = planPutaway(Q, [
+    { warehouse: "Z", priority: 1, capacity_qty_micros: Q, current_qty_micros: 0 },
+    { warehouse: "A", priority: 1, capacity_qty_micros: Q, current_qty_micros: 0 },
+  ]);
+  assert.equal(stable.allocations[0].warehouse, "A");
 });
 
 test("picking never over-allocates and follows resolved sequence", () => {
