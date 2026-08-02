@@ -1,11 +1,12 @@
 # WS08 — BI Semantic Layer + Planning + AI Data
 
-Status: **CLAIMED**  
+Status: **ACTIVE**  
 Owner: **ChatGPT-WS08**  
 Branch: `agent/ent-08-bi-semantic-ai`  
 Product baseline: **Forge 0.2.0**  
 Seed baseline: `862636e6239c91eab657c619d8c55345ed71a6d8`  
 Started from: `bbe3494bcfbb8a3ce09a5ff4bbb839dfcf9e47e9`  
+Claim commit: `191e1c9de156898ea397c21b9bae5196b5b35b2a`  
 Canonical board: `main:docs/agents/AGENT_BOARD.md`
 
 Before implementation: compare exact current `main`; incorporate source-relevant changes. Operational/deploy-evidence-only head drift does not by itself redefine the product baseline.
@@ -22,14 +23,36 @@ semantic metric definitions, dimensions/measures, permission-aware query, KPI/da
 
 Audit report/query packages, current dashboards/charts, AI ask implementation/context, permission propagation, cross-module metric duplication, large-data limits. Audit substantive legacy PR trong scope và phân loại `reuse / cherry-pick / superseded / reject`.
 
-### Audit plan
+### Audit result — 2026-08-03
 
-1. Map `A01-*` and relevant `A02-*` capability IDs to exact code/tests/evidence.
-2. Inspect query/report packages, Frappe report APIs, dashboard/chart metadata and current client rendering seams.
-3. Trace permission and tenant propagation from trusted request context into report/query execution.
-4. Trace current AI ask/context/tool path and identify any raw-schema or authority bypass risk.
-5. Audit legacy PR `#199` and other BI/AI/report PRs against current main.
-6. Propose thin implementation slices and dependency requests without modifying WS00/WS09/WS11/WS14 hotspots.
+- Exact branch was rebased by ref reset onto `main@bbe3494bcfbb8a3ce09a5ff4bbb839dfcf9e47e9`; only the WS08 handoff file was branch-owned before claim.
+- `server/packages/query/src/index.ts` already has tenant-bound report compilation, server-owned SQL/view definitions, field/filter/order allowlists and prepared-report budgeting. This is report infrastructure, not yet a reusable semantic metric layer.
+- App reports are constrained to one tenant + one manifest-owned DocType and parameterized values. Current aggregate implementation uses `CAST(... AS REAL)` for `sum/avg`, so it cannot be the authoritative money/decimal semantic contract.
+- `server/packages/frappe-api/src/router.ts` asserts `action: "report"` on app-report DocTypes and applies user-permission filters before `AppReportService.run`; this permission seam should be reused rather than duplicated by WS08.
+- `client/packages/views/src/report/ReportView.tsx` is presentational and already supports locale formatting, sorting, pinning and Excel/CSV export. Shared renderer ownership remains WS14; WS08 will not edit it for the semantic slice.
+- `server/apps/tenant-worker/src/ai-assistant.ts` is read-only, context-bounded and audit-logs successful answers. It does not yet provide natural-language semantic query; AI currently receives client-supplied visible context only.
+- `A01-001..004` are the immediate foundation target. Existing report UI/export features provide partial evidence for `A01-008`, `A01-015`; they do not by themselves make the semantic layer Wired.
+- Legacy PR `#199` remains owned by WS01/WS00/WS14 surfaces. WS08 disposition: **REUSE as dependency/evidence only**, no code cherry-pick into WS08. Daily Ledger semantic definitions must consume the authoritative ledger contract after its owner resolves the PR.
+
+### Current maturity
+
+- `A01-001` Metric definition: **Missing** as reusable platform contract.
+- `A01-002` Dimension definition: **Missing** as reusable platform contract.
+- `A01-003` Measure definition: **Foundation** only inside report-specific column/aggregate metadata.
+- `A01-004` Permission-aware semantic query: **Foundation** via report permission + tenant/user filters, but no semantic model compiler yet.
+- `A01-005..020`: mixed Missing/Foundation; do not promote without capability-specific evidence.
+- `A02-004..006`, `A02-012..024`: **Missing/Foundation**; current AI is context assistant, not semantic query/tool execution.
+- `A02-025` AI audit log: **Wired** for current assistant answer path only.
+
+### Slice 1
+
+Implement a server-only semantic model/query contract under WS08 ownership:
+1. no raw SQL expressions in model definitions;
+2. explicit source/grain/dimension/metric/value-scale metadata;
+3. exact tenant binding and allowlisted dimension/metric/filter/order compilation;
+4. permission requirement carried as part of the compiled contract for the existing server permission service to enforce;
+5. scaled-integer money/quantity semantics must not be coerced through binary `REAL` aggregation;
+6. no WS00/WS09/WS11/WS14 hotspot changes in this slice.
 
 ## Phase B priority
 
@@ -44,10 +67,14 @@ Audit report/query packages, current dashboards/charts, AI ask implementation/co
 
 WS00 query/contracts, WS11 permission/security, WS09 report/dashboard builders, domain agents for authoritative metric definitions, WS14 presentation.
 
+## Dependency requests
+
+None blocking Slice 1. Wiring semantic execution into the Frappe API must reuse WS11 permission service and will be proposed after the model/compiler contract is verified.
+
 ## Guard
 
 AI không authoritative-write ledger/statutory records; action phải preview/validate/approve qua deterministic tools.
 
-## First commit / handoff
+## Handoff checklist
 
-Claim owner/head; cuối nhánh ghi capability IDs, semantic schema, permission model, query performance evidence, AI boundaries, tests, legacy PR disposition, dependency requests, PR.
+Cuối nhánh ghi capability IDs, semantic schema, permission model, query performance evidence, AI boundaries, tests, legacy PR disposition, dependency requests, PR/head SHA.
