@@ -39,6 +39,7 @@ interface FifoPreview extends Json {
 
 const MAX_BULK_LINES = 100;
 const SYNTHETIC_PREFIX = "__bulk_preview_";
+const PURCHASE_RECEIPT_RESOURCE = "/resource/Purchase Receipt";
 
 const round = (value: number, digits = 6): number => {
   const scale = 10 ** digits;
@@ -171,12 +172,24 @@ function responseJson(value: unknown, status = 200): Response {
   return new Response(JSON.stringify(value), { status, headers: { "content-type": "application/json" } });
 }
 
+/**
+ * Callback URLs are provider/runtime details. In local authenticated QA the callback carries
+ * an internal prefix before `/resource/...`; production/gateway implementations may use a
+ * different prefix again. Bulk planning must therefore match the canonical resource suffix,
+ * not assume that every callback path starts exactly with `/api`.
+ */
+function callbackResourcePath(pathname: string): string {
+  const decoded = decodeURIComponent(pathname).replace(/\/+$/, "");
+  const resourceIndex = decoded.lastIndexOf("/resource/");
+  return resourceIndex >= 0 ? decoded.slice(resourceIndex) : decoded;
+}
+
 function syntheticPlatform(baseEnv: PurchaseFifoEnv, syntheticReceipts: PurchaseDoc[]): Fetcher {
   return {
     async fetch(outbound: Request): Promise<Response> {
       const url = new URL(outbound.url);
-      const path = decodeURIComponent(url.pathname).replace(/^\/api/, "");
-      if (outbound.method === "GET" && path === "/resource/Purchase Receipt") {
+      const path = callbackResourcePath(url.pathname);
+      if (outbound.method === "GET" && path === PURCHASE_RECEIPT_RESOURCE) {
         const rawFilters = url.searchParams.get("filters") ?? "[]";
         const filters = JSON.parse(rawFilters) as unknown[];
         const submitted = filters.some((entry) => Array.isArray(entry) && entry[0] === "docstatus" && Number(entry[2]) === 1);
@@ -193,8 +206,9 @@ function syntheticPlatform(baseEnv: PurchaseFifoEnv, syntheticReceipts: Purchase
           });
         }
       }
-      if (outbound.method === "GET" && path.startsWith(`/resource/Purchase Receipt/${SYNTHETIC_PREFIX}`)) {
-        const name = path.slice("/resource/Purchase Receipt/".length);
+      const syntheticResourcePrefix = `${PURCHASE_RECEIPT_RESOURCE}/${SYNTHETIC_PREFIX}`;
+      if (outbound.method === "GET" && path.startsWith(syntheticResourcePrefix)) {
+        const name = path.slice(`${PURCHASE_RECEIPT_RESOURCE}/`.length);
         const receipt = syntheticReceipts.find((candidate) => candidate.name === name);
         if (receipt) return responseJson({ data: receipt });
       }
