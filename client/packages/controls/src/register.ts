@@ -32,11 +32,27 @@ import {
  * Chỉ thu gọn precision TRÌNH BÀY; giá trị gửi về form/server không thay đổi.
  */
 function compactDisplayPrecision(value: unknown, rawPrecision: unknown): string | undefined {
-  if (rawPrecision === undefined || rawPrecision === null || rawPrecision === "") return undefined;
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return rawPrecision === undefined || rawPrecision === null || rawPrecision === ""
+      ? undefined
+      : String(rawPrecision);
+  }
+
+  // Nhiều field Float/Percent từ ERP không khai báo precision nhưng API vẫn trả chuỗi fixed-scale
+  // như "22.000000". Nếu để precision undefined, GroupedNumberInput giữ nguyên chuỗi đó và UI
+  // phơi toàn bộ số 0 thừa. Suy ra precision HIỂN THỊ trực tiếp từ phần lẻ thực tế của giá trị.
+  if (rawPrecision === undefined || rawPrecision === null || rawPrecision === "") {
+    const raw = String(value).trim();
+    const match = raw.match(/^[+-]?\d+(?:\.(\d+))?$/);
+    if (!match) return undefined;
+    const fraction = (match[1] ?? "").replace(/0+$/, "");
+    return String(fraction.length);
+  }
+
   const original = String(rawPrecision);
   const precision = Number(original);
-  const numeric = Number(value);
-  if (!Number.isInteger(precision) || precision < 0 || !Number.isFinite(numeric)) return original;
+  if (!Number.isInteger(precision) || precision < 0) return original;
   if (precision === 0) return "0";
   const fraction = Math.abs(numeric).toFixed(precision).split(".")[1]?.replace(/0+$/, "") ?? "";
   return String(fraction.length);
