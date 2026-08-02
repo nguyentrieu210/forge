@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Acceptance checks for WS15 workplace/DMS/contract migrations 0050-0051."""
+"""Acceptance checks for WS15 workplace/DMS/contract migrations 0050-0052."""
 
 import json
 import sqlite3
@@ -31,15 +31,21 @@ db.execute(
     )"""
 )
 db.execute("INSERT INTO users VALUES('demo','user@example.test',1,'System User')")
+db.execute("INSERT INTO users VALUES('demo','other@example.test',1,'System User')")
 db.execute("INSERT INTO users VALUES('demo','disabled@example.test',0,'System User')")
-db.executescript((root / "migrations/tenant/0050_ws15_workplace_domain_integrity.sql").read_text(encoding="utf-8"))
-db.executescript((root / "migrations/tenant/0051_ws15_workplace_update_integrity.sql").read_text(encoding="utf-8"))
+db.execute("INSERT INTO users VALUES('demo','portal@example.test',1,'Website User')")
+for migration in (
+    "0050_ws15_workplace_domain_integrity.sql",
+    "0051_ws15_workplace_update_integrity.sql",
+    "0052_ws15_workplace_actor_integrity.sql",
+):
+    db.executescript((root / "migrations/tenant" / migration).read_text(encoding="utf-8"))
 
 
-def insert_doc(doctype, name, payload, *, docstatus=0, tenant="demo"):
+def insert_doc(doctype, name, payload, *, docstatus=0, tenant="demo", owner="user@example.test"):
     db.execute(
         "INSERT INTO documents VALUES(?,?,?,?,?,?,?,?,?,?,?)",
-        (tenant, f"{doctype}:{name}", doctype, name, "user@example.test", docstatus, "Draft", 1,
+        (tenant, f"{doctype}:{name}", doctype, name, owner, docstatus, "Draft", 1,
          "2026-08-03T00:00:00Z", "2026-08-03T00:00:00Z", json.dumps(payload)),
     )
 
@@ -53,21 +59,39 @@ def assert_integrity_error(action, expected):
         raise AssertionError(f"expected IntegrityError containing {expected}")
 
 
-# Workplace temporal guards.
+# Workplace temporal and actor guards.
 insert_doc("Workplace Meeting", "MEET-1", {"start_at": "2026-08-03 08:00:00", "end_at": "2026-08-03 09:00:00"})
 assert_integrity_error(
     lambda: insert_doc("Workplace Meeting", "MEET-2", {"start_at": "2026-08-03 10:00:00", "end_at": "2026-08-03 09:00:00"}),
     "WORKPLACE_MEETING_END_BEFORE_START",
 )
-insert_doc("Workplace Task", "TASK-1", {"start_date": "2026-08-03", "due_date": "2026-08-05"})
+insert_doc("Workplace Task", "TASK-1", {"start_date": "2026-08-03", "due_date": "2026-08-05", "assigned_to": "other@example.test"})
+insert_doc("Workplace Task", "TASK-UNASSIGNED", {"start_date": "2026-08-03", "due_date": "2026-08-05"})
 assert_integrity_error(
     lambda: insert_doc("Workplace Task", "TASK-2", {"start_date": "2026-08-05", "due_date": "2026-08-03"}),
     "WORKPLACE_TASK_DUE_BEFORE_START",
+)
+assert_integrity_error(
+    lambda: insert_doc("Workplace Task", "TASK-3", {"assigned_to": "disabled@example.test"}),
+    "WORKPLACE_TASK_ASSIGNEE_INVALID",
+)
+assert_integrity_error(
+    lambda: insert_doc("Workplace Task", "TASK-4", {"assigned_to": "portal@example.test"}),
+    "WORKPLACE_TASK_ASSIGNEE_INVALID",
 )
 insert_doc("Workplace Announcement", "NEWS-1", {"publish_from": "2026-08-03 08:00:00", "publish_until": "2026-08-04 08:00:00"})
 assert_integrity_error(
     lambda: insert_doc("Workplace Announcement", "NEWS-2", {"publish_from": "2026-08-04 08:00:00", "publish_until": "2026-08-03 08:00:00"}),
     "ANNOUNCEMENT_END_BEFORE_START",
+)
+insert_doc("Internal Request", "IREQ-1", {"requester": "user@example.test"})
+assert_integrity_error(
+    lambda: insert_doc("Internal Request", "IREQ-2", {"requester": "other@example.test"}),
+    "INTERNAL_REQUEST_REQUESTER_MUST_MATCH_OWNER",
+)
+assert_integrity_error(
+    lambda: insert_doc("Internal Request", "IREQ-3", {"requester": "disabled@example.test"}, owner="disabled@example.test"),
+    "INTERNAL_REQUEST_OWNER_INVALID",
 )
 
 # DMS lifecycle dates and retention bounds.
@@ -95,10 +119,14 @@ assert_integrity_error(
     lambda: insert_doc("Contract", "CTR-DATE", {"effective_date": "2026-12-31", "end_date": "2026-01-01"}),
     "CONTRACT_END_BEFORE_EFFECTIVE",
 )
-insert_doc("Contract Obligation", "OBL-1", {"contract": "CTR-1", "due_date": "2026-08-30"})
+insert_doc("Contract Obligation", "OBL-1", {"contract": "CTR-1", "due_date": "2026-08-30", "owner_user": "other@example.test"})
 assert_integrity_error(
-    lambda: insert_doc("Contract Obligation", "OBL-X", {"contract": "MISSING", "due_date": "2026-08-30"}),
+    lambda: insert_doc("Contract Obligation", "OBL-X", {"contract": "MISSING", "due_date": "2026-08-30", "owner_user": "other@example.test"}),
     "CONTRACT_OBLIGATION_CONTRACT_NOT_FOUND",
+)
+assert_integrity_error(
+    lambda: insert_doc("Contract Obligation", "OBL-BAD-OWNER", {"contract": "CTR-1", "due_date": "2026-08-30", "owner_user": "disabled@example.test"}),
+    "CONTRACT_OBLIGATION_OWNER_INVALID",
 )
 insert_doc("Contract Amendment", "AMD-1", {"contract": "CTR-1", "effective_date": "2026-09-01"})
 assert_integrity_error(
@@ -106,11 +134,11 @@ assert_integrity_error(
     "CONTRACT_AMENDMENT_REQUIRES_ACTIVE_CONTRACT",
 )
 
-# Update paths cannot bypass the same reference/temporal rules.
+# Update paths cannot bypass the same reference/temporal/actor rules.
 assert_integrity_error(
     lambda: db.execute(
         "UPDATE documents SET payload_json=? WHERE tenant_id='demo' AND doctype='Contract Obligation' AND name='OBL-1'",
-        (json.dumps({"contract": "MISSING", "due_date": "2026-08-30"}),),
+        (json.dumps({"contract": "MISSING", "due_date": "2026-08-30", "owner_user": "other@example.test"}),),
     ),
     "CONTRACT_OBLIGATION_CONTRACT_NOT_FOUND",
 )
@@ -121,16 +149,27 @@ assert_integrity_error(
     ),
     "WORKPLACE_MEETING_END_BEFORE_START",
 )
-
-# One deterministic preference row per active user/event.
-insert_doc("Notification Preference", "PREF-1", {"user_id": "user@example.test", "event_type": "Assignment"})
 assert_integrity_error(
-    lambda: insert_doc("Notification Preference", "PREF-2", {"user_id": "user@example.test", "event_type": "Assignment"}),
+    lambda: db.execute(
+        "UPDATE documents SET payload_json=? WHERE tenant_id='demo' AND doctype='Internal Request' AND name='IREQ-1'",
+        (json.dumps({"requester": "other@example.test"}),),
+    ),
+    "INTERNAL_REQUEST_REQUESTER_MUST_MATCH_OWNER",
+)
+
+# One deterministic preference row per active owner/event; nobody edits another user's preference.
+insert_doc("Notification Preference", "PREF-1", {"user_id": "user@example.test", "event_type": "submitted"})
+assert_integrity_error(
+    lambda: insert_doc("Notification Preference", "PREF-2", {"user_id": "user@example.test", "event_type": "submitted"}),
     "UNIQUE constraint failed",
 )
 assert_integrity_error(
-    lambda: insert_doc("Notification Preference", "PREF-3", {"user_id": "disabled@example.test", "event_type": "Mention"}),
+    lambda: insert_doc("Notification Preference", "PREF-3", {"user_id": "disabled@example.test", "event_type": "saved"}, owner="disabled@example.test"),
     "NOTIFICATION_PREFERENCE_USER_INVALID",
 )
+assert_integrity_error(
+    lambda: insert_doc("Notification Preference", "PREF-4", {"user_id": "other@example.test", "event_type": "saved"}),
+    "NOTIFICATION_PREFERENCE_USER_MUST_MATCH_OWNER",
+)
 
-print("WS15_WORKPLACE_DOMAIN_0050_0051_PASS")
+print("WS15_WORKPLACE_DOMAIN_0050_0052_PASS")
