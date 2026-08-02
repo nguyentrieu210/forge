@@ -5,7 +5,7 @@
  *   perms ← docinfo.permissions · transitions ← get_transitions (server) ·
  *   submit/cancel/amend/delete ← adapter · workflow ← applyWorkflow → refetch doc+transitions+timeline.
  */
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { resolveFormRenderPolicy, type Doc } from "@metaforge/core";
 import type { ListViewSnapshot } from "@metaforge/adapter-frappe";
@@ -32,7 +32,7 @@ export interface FormContainerProps {
   onRenamed?: (newName: string) => void;
   /** Xem bản in: cha điều hướng sang route in ấn riêng (vd "/print/<doctype>/<name>"). */
   onPrint?: () => void;
-  /** đóng form, quay về danh sách (hiện nút X trong header form). */
+  /** đóng form, quay về danh sách (nút X sẽ lưu trước nếu form đang dirty). */
   onClose?: () => void;
   headerActions?: ReactNode;
 }
@@ -49,13 +49,12 @@ export function FormContainer(props: FormContainerProps) {
   const docQ = useDoc(doctype, name);
   const doc = docQ.data?.doc;
   const transQ = useTransitions(doctype, name, doc);
-  // P0-05: capabilities FAIL-CLOSED từ server (has_permission) — KHÔNG optimistic.
-  // Đang tải / lỗi ⇒ NO_CAPS (mọi nút disable) cho tới khi server trả quyền thật.
   const capsQ = useCapabilities(doctype, name);
   const caps = capsQ.data ?? NO_CAPS;
   const qc = useQueryClient();
   const [conflict, setConflict] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [formDirty, setFormDirty] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string> | undefined>();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [renaming, setRenaming] = useState(false);
@@ -64,10 +63,11 @@ export function FormContainer(props: FormContainerProps) {
   const [allocationTimeline, setAllocationTimeline] = useState<AllocationTimeline | null>(null);
   const [allocationTimelineLoading, setAllocationTimelineLoading] = useState(false);
   const [allocationTimelineError, setAllocationTimelineError] = useState<string | null>(null);
+  const formHostRef = useRef<HTMLDivElement>(null);
+  const closeAfterSaveRef = useRef(false);
+  const saveStartedRef = useRef(false);
   const supportsAllocationTimeline = doctype === "Purchase Order" || doctype === "Purchase Receipt";
 
-  // "Gần đây" (CommandPalette đã có sẵn UI, trước đây không app nào cấp dữ liệu) — ghi mỗi lần mở
-  // 1 bản ghi đã lưu thành công (doc?.modified đổi ⇒ mở doc mới HOẶC vừa lưu xong đều tính là "vừa xem").
   useEffect(() => {
     if (!doc || !metaQ.data) return;
     const titleField = metaQ.data.title_field;
@@ -84,11 +84,6 @@ export function FormContainer(props: FormContainerProps) {
     return <div className="grid h-40 place-items-center p-4 text-sm text-muted-foreground" role="status">Biểu mẫu này đã bị tắt bởi metadata.</div>;
   }
 
-  /**
-   * Mutation responses already contain the authoritative document. Publish it
-   * immediately and refresh only mounted dependent queries in the background.
-   * Save must not wait for another getdoc plus every cached list/count variant.
-   */
   const publishMutation = (updated?: Doc) => {
     if (updated) {
       qc.setQueryData(
@@ -132,42 +127,65 @@ export function FormContainer(props: FormContainerProps) {
   };
 
   const onSave = async (changed: Record<string, unknown>) => {
+    saveStartedRef.current = true;
     setSaving(true);
     setFieldErrors(undefined);
     try {
       const updated = await adapter.updateDoc(doctype, name, changed, String(doc.modified ?? ""));
       publishMutation(updated);
       setConflict(false);
+      setFormDirty(false);
       toast.success(t("form.saved"));
       props.onSaved?.();
+      if (closeAfterSaveRef.current) {
+        closeAfterSaveRef.current = false;
+        props.onClose?.();
+      }
+      return true;
     } catch (e) {
+      closeAfterSaveRef.current = false;
       const err = adapter.mapError(e);
       if (err.kind === "conflict") setConflict(true);
       else {
-        if (err.fieldErrors) setFieldErrors({ ...err.fieldErrors }); // gắn vào đúng control
+        if (err.fieldErrors) setFieldErrors({ ...err.fieldErrors });
         toast.error(err.message);
       }
+      return false;
     } finally {
+      saveStartedRef.current = false;
       setSaving(false);
     }
   };
 
+  const onCloseRequested = () => {
+    if (!props.onClose) return;
+    if (!formDirty) {
+      props.onClose();
+      return;
+    }
+    if (saving) return;
+
+    closeAfterSaveRef.current = true;
+    saveStartedRef.current = false;
+    const formElement = formHostRef.current?.querySelector("form");
+    if (!formElement) {
+      closeAfterSaveRef.current = false;
+      return;
+    }
+    formElement.requestSubmit();
+    window.setTimeout(() => {
+      if (!saveStartedRef.current && closeAfterSaveRef.current) closeAfterSaveRef.current = false;
+    }, 250);
+  };
+
   const onAction = async (kind: FormActionKind) => {
-    // Xoá không thể hoàn tác — hỏi xác nhận TRƯỚC, không gọi API ngay (trước đây xoá tức thì, 0 xác
-    // nhận, kể cả window.confirm cũng không có — 1 cú click nhầm trong menu là mất dữ liệu vĩnh viễn).
     if (kind === "delete") { setConfirmDelete(true); return; }
-    // Đổi tên cần hỏi tên mới trước — mở dialog, KHÔNG gọi API ngay.
     if (kind === "rename") { setRenaming(true); return; }
-    // Nhân bản đọc bản ĐÃ LƯU (doc từ server), không phải giá trị đang gõ dở trên form — cục bộ,
-    // không gọi API, chỉ stash + để cha điều hướng.
     if (kind === "duplicate") { stashDuplicate(doctype, doc as Record<string, unknown>); props.onDuplicate?.(); return; }
     if (kind === "print") { props.onPrint?.(); return; }
     if (kind === "submit") {
       setSaving(true);
       try {
-        // Fail closed: preview is server-authoritative. A failed preview must not
-        // silently fall through to submit, because the operator would confirm one
-        // allocation while the server writes another.
         const preview = await adapter.callGet<SubmitPreview | null>(
           "metaforge.api.get_submit_preview",
           { doctype, name },
@@ -268,46 +286,43 @@ export function FormContainer(props: FormContainerProps) {
   return (
     <>
       <DocumentExperience meta={renderPolicy?.meta ?? metaQ.data} doc={doc}>
-        <FormView
-          onClose={props.onClose}
-          headerActions={(
-            <>
-              {props.headerActions}
-              {supportsAllocationTimeline && Number(doc.docstatus ?? 0) !== 0 ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={allocationTimelineLoading}
-                  onClick={() => void openAllocationTimeline()}
-                >
-                  {allocationTimelineLoading ? "Đang tải…" : "Phân bổ"}
-                </Button>
-              ) : null}
-            </>
-          )}
-          meta={renderPolicy?.meta ?? metaQ.data}
-          doc={doc}
-          registry={registry}
-          services={services}
-          roles={roles}
-          conflict={conflict}
-          onReload={async () => { setConflict(false); await docQ.refetch(); }}
-          onSave={onSave}
-          saving={saving}
-          fieldErrors={fieldErrors}
-          perms={caps}
-          // P1-PERM-01: field editability phải theo caps.write HIỆU LỰC (server has_permission — gồm
-          // if_owner/user-permission/share), KHÔNG chỉ role/permlevel tĩnh của resolveMeta. Trước đây
-          // "perms" chỉ gate NÚT (Lưu/Gửi…), field vẫn gõ được dù server sẽ từ chối lúc lưu.
-          forceReadOnly={!caps.write}
-          transitions={transQ.data?.transitions ?? []}
-          // P1-WF-01: has_workflow SERVER-AUTHORITATIVE — trước đây FormView tự suy "có workflow" từ
-          // transitions.length>0, nên user hết transition khả dụng (trạng thái cuối / không role nào
-          // khớp) bị hiện NHẦM nút Submit/Huỷ thủ công dù doctype thật sự có workflow.
-          hasWorkflow={transQ.data?.has_workflow ?? false}
-          onAction={onAction}
-          onWorkflowAction={onWorkflowAction}
-        />
+        <div ref={formHostRef} className="h-full min-h-0">
+          <FormView
+            onClose={onCloseRequested}
+            onDirtyChange={setFormDirty}
+            headerActions={(
+              <>
+                {props.headerActions}
+                {supportsAllocationTimeline && Number(doc.docstatus ?? 0) !== 0 ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={allocationTimelineLoading}
+                    onClick={() => void openAllocationTimeline()}
+                  >
+                    {allocationTimelineLoading ? "Đang tải…" : "Phân bổ"}
+                  </Button>
+                ) : null}
+              </>
+            )}
+            meta={renderPolicy?.meta ?? metaQ.data}
+            doc={doc}
+            registry={registry}
+            services={services}
+            roles={roles}
+            conflict={conflict}
+            onReload={async () => { setConflict(false); await docQ.refetch(); }}
+            onSave={onSave}
+            saving={saving}
+            fieldErrors={fieldErrors}
+            perms={caps}
+            forceReadOnly={!caps.write}
+            transitions={transQ.data?.transitions ?? []}
+            hasWorkflow={transQ.data?.has_workflow ?? false}
+            onAction={onAction}
+            onWorkflowAction={onWorkflowAction}
+          />
+        </div>
       </DocumentExperience>
       <ConfirmDialog
         open={confirmDelete}
