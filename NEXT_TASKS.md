@@ -4,6 +4,26 @@ Ngày cập nhật: **2026-08-02**.
 
 Đây là hàng đợi active. GitHub là nguồn sự thật cho exact `main`, PR, branch và CI; trước khi làm phải đọc `RUNBOOK.md`, `CURRENT_STATUS.md`, `AI_HANDOFF.md`, `DELIVERY_POLICY.md` và kiểm tra PR đang mở.
 
+## P1 — Website/CMS multi-tenant v1
+
+- Canonical PR `#219` — branch `feat/tenant-website-builder`; PR `#218` đã đóng superseded.
+- Đã có installable app `website@1.0.0`, Website Settings/Web Page/Web Page Block, roles, versioned template/theme presets, public resolver, shared runtime renderer và regression tests.
+- Preset/theme phải giữ immutable identity `${preset_id}@${version}`; tenant pin version trong Website Settings. App upgrade không được silently đổi public website.
+- Public API chỉ exact allowlist, tenant-scoped, published-only; không mở generic Guest CRUD, không arbitrary HTML/CSS/JS.
+- Product grid tái sử dụng `forge.storefront.catalog`; không dựng price/cart/order engine cạnh tranh.
+- Việc còn lại của v1: re-check exact final head sau version-pin/test/docs commits, chờ đủ required CI/UI workflow terminal, sửa mọi failure nếu có, rồi mark PR ready. Không merge nếu chưa có authorization riêng.
+- Ngoài v1, ghi follow-up P2: custom domain/DNS lifecycle; edge published snapshot/cache invalidation; richer template/block library + CRM/public form integration; optional idempotent `apply template` materialization nếu UX cần chỉnh toàn bộ preset thành tenant records; drag/drop tự do chỉ sau khi block contract ổn định.
+
+## DONE — Warehouse Petty Cash per warehouse
+
+- Canonical PR `#214` đã squash-merge vào `main` tại `da37060f3c02a6a5f9701d60edc3284575f00deb`.
+- Final validated head `5255dae609a7a4c30ab25ffc397f81422c2c69fc`: **6/6 required workflows PASS**.
+- Root cause CI đỏ đã sửa: `vn-accounting` thiếu `externalDocTypes` cho `Purchase Receipt` và `Stock Entry`.
+- Controller Warehouse Cash: 7/7 PASS; SQL migration acceptance PASS cho balance/daily limit/max balance/tenant isolation/reversal/immutability.
+- PR `#210` đã đóng superseded; không reopen/merge.
+- Không deploy production trong đợt merge này.
+- Follow-up kế toán ngoài scope hiện tại: nếu cần dùng quỹ kho để tất toán trực tiếp công nợ Purchase/Sales Invoice, phải thiết kế payment allocation canonical; không giả định party dimension trên GL đã settle AR/AP.
+
 ## DONE — Purchase Receipt Bulk Transaction / nhập nhôm nhiều mã
 
 - PR `#209` merged tại `e447eca0e020da161dcee4f0b865206921718a61`.
