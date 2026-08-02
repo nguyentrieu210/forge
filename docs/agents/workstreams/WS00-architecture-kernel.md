@@ -3,8 +3,11 @@
 Status: **READY**  
 Owner: **—**  
 Branch: `agent/ent-00-architecture-kernel`  
-Base: `b15378be7c036204f92a6e4c289038aa84d6f286`  
-Coordinator board: `coord/enterprise-parallel-20260803:docs/agents/AGENT_BOARD.md`
+Product baseline: **Forge 0.2.0**  
+Seed baseline: `862636e6239c91eab657c619d8c55345ed71a6d8`  
+Canonical board: `main:docs/agents/AGENT_BOARD.md`
+
+Before implementation: compare exact current `main`; incorporate source-relevant changes. Operational/deploy-evidence-only head drift does not by itself redefine the product baseline.
 
 ## Mission
 
