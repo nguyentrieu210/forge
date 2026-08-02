@@ -61,6 +61,39 @@ test("Integration Subscription is always created draft and emits canonical outbo
   assert.throws(() => controller.buildPlan(context({ document: { ...baseData, status: "active" } })), /created as draft/);
 });
 
+test("JSON textarea values are normalized to structured canonical data", () => {
+  const controller = new IntegrationSubscriptionController();
+  const plan = controller.buildPlan(context({
+    document: {
+      ...baseData,
+      allowed_hosts: JSON.stringify(["hooks.example.com"]),
+      mapping: JSON.stringify([{ source: "payload.customer", target: "customer", required: true }]),
+    },
+  }));
+  assert.deepEqual(plan.document.data.allowed_hosts, ["hooks.example.com"]);
+  assert.deepEqual(plan.document.data.mapping, [{ source: "payload.customer", target: "customer", required: true }]);
+  assert.throws(() => controller.buildPlan(context({
+    document: { ...baseData, allowed_hosts: "not-json" },
+  })), /allowed_hosts must be valid JSON/);
+});
+
+test("active re-save with equivalent JSON text is not misclassified as a config mutation", () => {
+  const controller = new IntegrationSubscriptionController();
+  const active = { ...baseData, status: "active", status_reason: "activated" };
+  const plan = controller.buildPlan(context({
+    action: "save",
+    existingData: active,
+    existingStatus: "active",
+    document: {
+      ...active,
+      allowed_hosts: JSON.stringify(active.allowed_hosts),
+      mapping: JSON.stringify(active.mapping),
+    },
+  }));
+  assert.equal(plan.document.status, "active");
+  assert.equal(plan.events[0].event_type, "integration_subscription.updated");
+});
+
 test("active subscription cannot mutate delivery contract until disabled", () => {
   const controller = new IntegrationSubscriptionController();
   const active = { ...baseData, status: "active", status_reason: "activated" };
