@@ -1,6 +1,21 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { SemanticSnapshotFeedService } from "../dist/packages/semantic/src/feed.js";
+import { SemanticModelRegistry } from "../dist/packages/semantic/src/index.js";
+
+const registry = new SemanticModelRegistry([{
+  id: "sales.summary",
+  label: "Sales summary",
+  source: { kind: "view", name: "sales_summary", tenantField: "tenant_id" },
+  grain: "one submitted sales order",
+  permission: { doctype: "Sales Order", action: "report" },
+  dimensions: [
+    { id: "posting_date", label: "Posting date", field: "posting_date", kind: "date" },
+    { id: "branch", label: "Branch", field: "branch", kind: "link", options: "Branch" },
+  ],
+  metrics: [{ id: "revenue_minor", label: "Revenue", aggregation: "sum", field: "revenue_minor", value: { kind: "currency", scale: 100, exact: true } }],
+  maxRows: 3,
+}]);
 
 const definition = {
   id: "sales.daily_snapshot",
@@ -18,7 +33,7 @@ const columns = [
   { id: "revenue_minor", label: "Revenue", role: "metric", valueKind: "currency", scale: 100, exact: true },
 ];
 
-test("snapshot feed injects tenant, keeps source version and reports truncation", async () => {
+test("snapshot feed injects tenant, keeps source version and proves truncation with one extra row", async () => {
   let request;
   const service = new SemanticSnapshotFeedService({
     async run(input) {
@@ -35,7 +50,7 @@ test("snapshot feed injects tenant, keeps source version and reports truncation"
         row_count: 3,
       };
     },
-  }, () => "2026-08-03T00:00:00.000Z");
+  }, registry, () => "2026-08-03T00:00:00.000Z");
 
   const batch = await service.export({ tenantId: "tenant-a", sourceVersion: "ledger-snapshot-42", definition });
   assert.equal(request.tenant_id, "tenant-a");
@@ -58,7 +73,7 @@ test("bounded feed returns complete batch when source fits", async () => {
         row_count: 1,
       };
     },
-  }, () => "2026-08-03T00:00:00.000Z");
+  }, registry, () => "2026-08-03T00:00:00.000Z");
   const batch = await service.export({ tenantId: "tenant-a", sourceVersion: "v1", definition });
   assert.equal(batch.truncated, false);
   assert.equal(batch.rowCount, 1);
@@ -75,16 +90,26 @@ test("exact feed metrics fail closed if executor returns fractional or unsafe nu
         row_count: 1,
       };
     },
-  });
+  }, registry);
   await assert.rejects(() => service.export({ tenantId: "tenant-a", sourceVersion: "v1", definition }), (error) => error.code === "VALIDATION_ERROR");
 });
 
-test("feed refuses unbounded or malformed definitions", async () => {
+test("feed refuses a row cap that cannot prove whether more data exists", async () => {
   let executed = false;
-  const service = new SemanticSnapshotFeedService({ async run() { executed = true; throw new Error("must not run"); } });
+  const service = new SemanticSnapshotFeedService({ async run() { executed = true; throw new Error("must not run"); } }, registry);
   await assert.rejects(() => service.export({
     tenantId: "tenant-a", sourceVersion: "v1",
-    definition: { ...definition, maxRows: 10000 },
+    definition: { ...definition, maxRows: 3 },
+  }), (error) => error.code === "VALIDATION_ERROR");
+  assert.equal(executed, false);
+});
+
+test("feed refuses malformed member definitions or missing source version", async () => {
+  let executed = false;
+  const service = new SemanticSnapshotFeedService({ async run() { executed = true; throw new Error("must not run"); } }, registry);
+  await assert.rejects(() => service.export({
+    tenantId: "tenant-a", sourceVersion: "v1",
+    definition: { ...definition, metrics: ["unknown_metric"] },
   }), (error) => error.code === "VALIDATION_ERROR");
   assert.equal(executed, false);
 
