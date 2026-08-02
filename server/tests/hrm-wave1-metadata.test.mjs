@@ -33,7 +33,22 @@ test("employee profile, contract and attendance do not grant broad employee read
     const employeeRead = permission(meta, "Employee").filter((row) => row.read);
     assert.ok(employeeRead.length > 0, file);
     assert.ok(employeeRead.every((row) => row.if_owner === true), `${file} must remain owner-scoped at permlevel 0`);
+    assert.equal(meta.permissions.filter((row) => row.role === "Employee" && row.read && (row.permlevel ?? 0) > 0).length, 0, `${file} must not use high permlevels as document grants`);
   }
+  const contract = readJson("doctypes/employment-contract.json");
+  const contractFields = Object.fromEntries(contract.fields.map((field) => [field.fieldname, field]));
+  assert.equal(contractFields.base_salary.permlevel ?? 0, 0);
+  assert.equal(contractFields.salary_currency.permlevel ?? 0, 0);
+});
+
+test("employee profile keeps private identity and payroll data at HR/payroll permlevel", () => {
+  const meta = readJson("doctypes/employee.json");
+  const fields = Object.fromEntries(meta.fields.map((field) => [field.fieldname, field]));
+  for (const field of ["personal_email", "mobile", "date_of_birth", "tax_code", "social_insurance_number", "bank_account_no", "bank_name"]) {
+    assert.equal(fields[field].permlevel, 1, field);
+  }
+  assert.ok(permission(meta, "HR Manager", 1).some((row) => row.read && row.write));
+  assert.ok(permission(meta, "Payroll Manager", 1).some((row) => row.read));
 });
 
 test("employee advances isolate requested amount from accounting settlement fields", () => {
@@ -48,12 +63,12 @@ test("employee advances isolate requested amount from accounting settlement fiel
   assert.ok(permission(meta, "Employee", 2).some((row) => row.read && row.write && row.if_owner === true));
 });
 
-test("appraisal keeps employee self score writable but manager score read-only", () => {
+test("appraisal keeps manager results in exact document scope and self score separately writable", () => {
   const meta = readJson("doctypes/appraisal.json");
   const fields = Object.fromEntries(meta.fields.map((field) => [field.fieldname, field]));
   assert.equal(fields.self_score.permlevel, 2);
-  assert.equal(fields.manager_score.permlevel, 1);
-  assert.equal(fields.final_score.permlevel, 1);
-  assert.ok(permission(meta, "Employee", 1).some((row) => row.read && !row.write));
+  assert.equal(fields.manager_score.permlevel ?? 0, 0);
+  assert.equal(fields.final_score.permlevel ?? 0, 0);
+  assert.equal(permission(meta, "Employee", 1).length, 0);
   assert.ok(permission(meta, "Employee", 2).some((row) => row.read && row.write && row.if_owner === true));
 });
