@@ -1,4 +1,4 @@
-import type { MutationPlan } from "../../contracts/src/index.js";
+import type { JsonObject, MutationPlan } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
 import type { ControllerContext } from "../../document-kernel/src/index.js";
 import { RequestForQuotationController, SupplierQuotationController } from "./controllers.js";
@@ -9,6 +9,8 @@ import {
 import { RolloutPurchaseOrderController } from "./purchase-allocation-rollout-controllers.js";
 import {
   assertSupplierQualificationEligible,
+  SupplierContractController,
+  type SupplierContractData,
   type SupplierQualificationData,
 } from "./supplier-lifecycle-controllers.js";
 import { assertSupplierEligible } from "./supplier-policy.js";
@@ -19,8 +21,9 @@ import type {
 } from "./types.js";
 
 /**
- * Submitted Supplier Qualification documents are authoritative. Tenants with no qualification
- * document for a supplier/company fall back to legacy Supplier-master approval fields.
+ * Submitted Supplier Qualification documents are authoritative. A cancelled prior approval still
+ * proves that the tenant adopted qualification lifecycle, so it cannot silently fall back to a
+ * permissive legacy Supplier master.
  */
 export class ProcurementRequestForQuotationController extends RequestForQuotationController {
   override async normalize(context: ControllerContext<RequestForQuotationData>): Promise<RequestForQuotationData> {
@@ -38,6 +41,9 @@ export class ProcurementRequestForQuotationController extends RequestForQuotatio
         normalized.transaction_date,
       );
       if (qualified) continue;
+      if (hasQualificationHistory(qualifications, row.supplier, normalized.company)) {
+        throw errors.reference(`Supplier ${row.supplier} has no active approved qualification`);
+      }
       const master = await context.reader.getMasterRecordData(
         context.command.tenant_id,
         "Supplier",
@@ -100,6 +106,9 @@ export class ProcurementPurchaseOrderController extends RolloutPurchaseOrderCont
       data.supplier_group,
     );
     if (!qualified) {
+      if (hasQualificationHistory(qualifications, data.supplier, data.company)) {
+        throw errors.reference(`Supplier ${data.supplier} has no active approved qualification`);
+      }
       const supplier = await context.reader.getMasterRecordData(
         context.command.tenant_id,
         "Supplier",
@@ -120,4 +129,33 @@ export class ProcurementPurchaseOrderController extends RolloutPurchaseOrderCont
     validatePurchaseOrderAgainstQuotation(data, quotationName, quotation.data);
     return plan;
   }
+}
+
+/** Quantity ceilings are meaningless without their unit, so the registered contract path rejects it. */
+export class ProcurementSupplierContractController extends SupplierContractController {
+  override async normalize(context: ControllerContext<SupplierContractData>): Promise<SupplierContractData> {
+    const normalized = await super.normalize(context);
+    const raw = normalized as JsonObject;
+    const uom = typeof raw.quantity_uom === "string" ? raw.quantity_uom.trim() : "";
+    if ((normalized.maximum_qty_micros ?? 0) > 0 && !uom) {
+      throw errors.validation("quantity_uom is required when maximum_qty is configured");
+    }
+    if (context.command.action === "submit" && uom) {
+      if (!await context.reader.hasMasterRecord(context.command.tenant_id, "UOM", uom)) {
+        throw errors.reference(`UOM ${uom} does not exist or is disabled`);
+      }
+    }
+    return normalized;
+  }
+}
+
+function hasQualificationHistory(
+  qualifications: Array<{ docstatus: number; data: SupplierQualificationData }>,
+  supplier: string,
+  company: string,
+): boolean {
+  return qualifications.some((doc) =>
+    doc.docstatus !== 0
+    && doc.data.supplier === supplier
+    && doc.data.company === company);
 }
