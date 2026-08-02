@@ -20,15 +20,29 @@ export default {
     const url = new URL(request.url);
     if (url.pathname.startsWith("/api/method/")) {
       const method = decodeURIComponent(url.pathname.slice("/api/method/".length));
-      if (method === "alumdoor.purchase.preview_fifo_receipt") return handlePurchaseFifoRequest(request, env, false);
-      if (method === "alumdoor.purchase.fifo_receipt") return handlePurchaseFifoRequest(request, env, true);
-      if (method === "alumdoor.purchase.preview_bulk_fifo_receipt") return handleBulkPurchaseFifoRequest(request, env, false);
-      if (method === "alumdoor.purchase.bulk_fifo_receipt") return handleBulkPurchaseFifoRequest(request, env, true);
-      if (method === "alumdoor.inventory.preview_bulk_reconciliation") return handleBulkStockReconciliationRequest(request, env, false);
-      if (method === "alumdoor.inventory.bulk_reconciliation") return handleBulkStockReconciliationRequest(request, env, true);
+      if (method === "alumdoor.purchase.preview_fifo_receipt") {
+        return handlePurchaseFifoRequest(request, env, false);
+      }
+      if (method === "alumdoor.purchase.fifo_receipt") {
+        return handlePurchaseFifoRequest(request, env, true);
+      }
+      if (method === "alumdoor.purchase.preview_bulk_fifo_receipt") {
+        return handleBulkPurchaseFifoRequest(request, env, false);
+      }
+      if (method === "alumdoor.purchase.bulk_fifo_receipt") {
+        return handleBulkPurchaseFifoRequest(request, env, true);
+      }
+      if (method === "alumdoor.inventory.preview_bulk_reconciliation") {
+        return handleBulkStockReconciliationRequest(request, env, false);
+      }
+      if (method === "alumdoor.inventory.bulk_reconciliation") {
+        return handleBulkStockReconciliationRequest(request, env, true);
+      }
     }
 
-    if (url.pathname !== "/hooks/validate" || request.method !== "POST") return baseWorker.fetch(request, env, ctx);
+    if (url.pathname !== "/hooks/validate" || request.method !== "POST") {
+      return baseWorker.fetch(request, env, ctx);
+    }
 
     const invariantRequest = request.clone();
     const body = await invariantRequest.clone().json().catch(() => null) as { doctype?: string } | null;
@@ -39,6 +53,9 @@ export default {
       validateItemCatalogInvariants(invariantRequest, env),
     ]);
 
+    // Preserve infrastructure/auth failures from the established validator. When both
+    // validators return a business validation response, the stricter catalog invariant
+    // is authoritative so its field-level reason is not hidden by a broader legacy error.
     if (!baseResponse.ok && baseResponse.status !== 422) return baseResponse;
     if (!invariantResponse.ok) return invariantResponse;
     return baseResponse;
