@@ -1,7 +1,12 @@
-name: ALU UI Hotfix - One Click Deploy
+name: ALU UI Hotfix - Auto Deploy
 run-name: UI hotfix ${{ github.ref_name }} @ ${{ github.sha }}
 
 on:
+  push:
+    branches:
+      - "hotfix/ui-*"
+    paths:
+      - "client/**"
   workflow_dispatch:
 
 permissions:
@@ -13,7 +18,7 @@ concurrency:
 
 jobs:
   deploy:
-    name: Build bundle and deploy Gateway
+    name: Validate, build bundle and deploy Gateway
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 20
@@ -25,7 +30,50 @@ jobs:
       - name: Checkout selected branch
         uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           persist-credentials: false
+
+      - name: Validate UI hotfix scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --no-tags
+          git merge-base --is-ancestor origin/main HEAD || {
+            echo "Hotfix branch must contain current main before production deploy."
+            exit 1
+          }
+
+          mapfile -t changed < <(git diff --name-only origin/main...HEAD)
+          if [ "${#changed[@]}" -eq 0 ]; then
+            echo "No changes relative to main."
+            exit 1
+          fi
+
+          has_client=false
+          for file in "${changed[@]}"; do
+            case "$file" in
+              client/*) has_client=true ;;
+              CURRENT_STATUS.md|NEXT_TASKS.md|AI_HANDOFF.md) ;;
+              *)
+                echo "Blocked non-UI hotfix file: $file"
+                exit 1
+                ;;
+            esac
+          done
+
+          [ "$has_client" = true ] || {
+            echo "Hotfix must contain at least one client/** change."
+            exit 1
+          }
+
+          file_count="${#changed[@]}"
+          line_count="$(git diff --numstat origin/main...HEAD | awk '{a+=$1; d+=$2} END {print a+d+0}')"
+          if [ "$file_count" -gt 10 ] || [ "$line_count" -gt 300 ]; then
+            echo "Hotfix exceeds fast-lane limit: ${file_count} files, ${line_count} changed lines."
+            exit 1
+          fi
+
+          printf 'Validated UI hotfix: %s files, %s changed lines\n' "$file_count" "$line_count"
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
