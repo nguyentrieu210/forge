@@ -8,18 +8,17 @@ import { errors } from "../../core/src/index.js";
  */
 export const CONTROLLER_DOCUMENT_SCAN_LIMIT = 5_000;
 
-export function assertCompleteBoundedScan<T>(
-  rows: T[],
+export function assertControllerDocumentScanCount(
+  count: number,
   label: string,
   limit = CONTROLLER_DOCUMENT_SCAN_LIMIT,
-): T[] {
-  if (!Number.isInteger(limit) || limit < 1) {
-    throw errors.database("Controller scan limit is misconfigured");
+): void {
+  if (!Number.isSafeInteger(count) || count < 0 || !Number.isInteger(limit) || limit < 1) {
+    throw errors.database("Controller scan bound is misconfigured");
   }
-  if (rows.length > limit) {
+  if (count > limit) {
     throw errors.database(
-      `Controller-side scan for ${label} exceeded the safe bound of ${limit}; use a targeted reader instead of a truncated scan`,
+      `Controller-side scan for ${label} contains ${count} rows and exceeds the safe bound of ${limit}; use a targeted reader instead of a truncated scan`,
     );
   }
-  return rows;
 }
