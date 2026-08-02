@@ -17,10 +17,10 @@ function seedMasters(store) {
   store.seedMaster("Currency", "VND", tenant, { currency_scale: 2 });
   store.seedMaster("Warehouse", "Main", tenant);
   store.seedMaster("Item", "AL71", tenant, {
-    stock_uom: "Cây",
+    stock_uom: "Kg",
     default_purchase_uom: "Kg",
     inventory_mode: "Nhôm cây/lá",
-    measurement_profile: "AL-BAR",
+    measurement_profile: "Nhôm cây/lá",
     has_catch_weight: true,
     weight_uom: "Kg",
   });
@@ -68,8 +68,8 @@ function purchaseOrderData(qtyBar, transactionDate, rowId = "ROW-1") {
       color: "GS",
       is_stamped: "Có",
       uom: "Kg",
-      stock_uom: "Cây",
-      conversion_factor: (qtyBar / theoreticalKg).toFixed(6),
+      stock_uom: "Kg",
+      conversion_factor: 1,
       rate: 100_000,
     }],
   };
@@ -89,21 +89,21 @@ function receiptData(qtyBar, postingAt = "2026-07-03T00:00:00.000Z") {
       qty: theoreticalKg.toFixed(3),
       qty_bar: qtyBar,
       theoretical_kg: theoreticalKg.toFixed(3),
-      actual_weight_kg: "630",
+      actual_weight_kg: theoreticalKg.toFixed(3),
       length_m: 7.2,
       theoretical_kg_per_m: 0.389,
       color: "GS",
       is_stamped: "Có",
       uom: "Kg",
-      stock_uom: "Cây",
-      conversion_factor: (qtyBar / theoreticalKg).toFixed(6),
+      stock_uom: "Kg",
+      conversion_factor: 1,
       rate: 100_000,
       valuation_rate: 100_000,
     }],
   };
 }
 
-test("submit preview uses the FIFO controller and does not mutate the store", async () => {
+test("submit preview uses bar count for aluminium FIFO while commercial quantity stays kg", async () => {
   const store = new InMemoryRolloutPurchaseAllocationMutationStore();
   store.setPurchaseAllocationEnabled(true);
   seedMasters(store);
@@ -115,6 +115,10 @@ test("submit preview uses the FIFO controller and does not mutate the store", as
   const po2 = await apply(po, store, "create", "PO-02", purchaseOrderData(100, "2026-07-02"), "PO-02-create");
   await apply(po, store, "submit", "PO-02", po2.data, "PO-02-submit");
   const draft = await apply(receipt, store, "create", "PR-PREVIEW", receiptData(230), "PR-PREVIEW-create");
+
+  assert.equal(draft.data.items[0].stock_uom, "Kg");
+  assert.equal(Number(draft.data.items[0].qty), 644.184);
+  assert.equal(Number(draft.data.items[0].qty_bar), 230);
 
   const before = structuredClone(store.snapshot());
   const preview = await previewPurchaseReceiptSubmission({
@@ -132,6 +136,7 @@ test("submit preview uses the FIFO controller and does not mutate the store", as
     { po: "PO-02", qty: "30" },
   ]);
   assert.equal(preview.summary.find((entry) => entry.label === "Tổng nhận")?.value, "230");
+  assert.equal(preview.summary.find((entry) => entry.label === "Kg barem")?.value, "644.184");
   assert.match(preview.warnings.join("\n"), /FIFO vẫn theo thứ tự commit/);
   assert.deepEqual(store.snapshot(), before);
 });
