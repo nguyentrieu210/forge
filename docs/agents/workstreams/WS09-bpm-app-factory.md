@@ -31,14 +31,14 @@ Biến metadata/app-registry/builder hiện có thành moat chính: workflow/BPM
 | `B01-003` Workflow transition | Wired | transition state/action/next_state/allowed_role/condition/self-approval contract exists and unknown-state refs fail closed. |
 | `B01-004` Sequential approval | Wired | role-gated transition model + approval experiences exist; needs broader correction/permission regression before RC. |
 | `B01-005` Parallel approval | Missing | No first-class multi-actor join/quorum state contract found. |
-| `B01-006` Approval matrix | Foundation | Roles/conditions can model simple routing, but no first-class matrix/version/effective rule contract. |
-| `B01-007` Conditional routing | Foundation/Wired | `condition` exists in transition metadata; enterprise expression/version/audit coverage remains thin. |
-| `B01-008` Delegation | Missing | No generic delegation primitive in workflow contract. |
-| `B01-009` Escalation | Missing | No generic escalation policy primitive. |
-| `B01-010` SLA/timer | Missing | No first-class timer/deadline/escalation contract in workflow model. |
+| `B01-006` Approval matrix | Foundation/Wired policy seam | `Approval Policy` is an effective-dated, condition-driven document with ordered `steps_json` and SoD enforcement. Current submit guard validates membership in the policy steps, but does not persist/advance per-step approval instances, so this is not yet a full matrix execution engine. |
+| `B01-007` Conditional routing | Foundation/Wired | workflow transition `condition` plus safe `Approval Policy.condition_json` exist; enterprise expression/version/audit coverage remains split across seams. |
+| `B01-008` Delegation | Wired | `Delegation` is a submittable security DocType with effective dates, action/org scope; `canActThroughDelegation()` is consumed by workflow transition access and approval-policy submit guards. |
+| `B01-009` Escalation | Missing | No generic escalation policy primitive found. |
+| `B01-010` SLA/timer | Missing | No first-class workflow timer/deadline/escalation contract; delegation effective dates are access validity, not process SLA. |
 | `B01-011` Scheduled action | Missing | No workflow-owned scheduler action contract found. |
 | `B01-012` Event trigger | Foundation | App hooks/event subscriptions exist, but not yet a first-class BPM trigger graph. |
-| `B01-013` Business rule | Foundation | Validators/field conditions exist as seams, not yet a generic versioned rule builder/runtime. |
+| `B01-013` Business rule | Foundation/Wired seams | App validators, safe approval conditions, SoD rules and field conditions exist, but no single generic versioned rule artifact/builder spans them yet. |
 | `B01-014` Formula rule | Foundation | Metadata fields can carry formula source semantics, but no generic audited formula builder/evaluator contract is established here. |
 | `B01-015` Webhook/external action | Foundation | Hook/worker dispatch seam exists; BPM node/action contract not yet first-class. |
 | `B01-016` Process analytics | Missing | No generic process instance/transition timing fact model found. |
@@ -69,6 +69,8 @@ Biến metadata/app-registry/builder hiện có thành moat chính: workflow/BPM
 | `B02-023` Package export/import | Foundation | Package/pack tooling exists; compatibility/signing/roundtrip hardening remains. |
 
 Maturity above là audit snapshot, không tự ý sửa capability map. Không capability nào được claim `Hardened`.
+
+Cross-package correction: workflow/BPM capability không chỉ nằm trong `frappe-model`. Exact-main audit phải tính cả `frappe-api` và `organization-security`; vì vậy delegation được nâng từ đánh giá ban đầu `Missing` lên `Wired`, còn approval matrix được giữ ở `Foundation/Wired policy seam` vì policy steps hiện chưa là persisted step-instance engine.
 
 ## Active implementation slice — first-class AppAction input-table
 
@@ -192,7 +194,7 @@ Full repository build/typecheck/test chưa được claim: connector session kh�
 
 ### Dependency note — WS11
 
-`permission_doctype` / server permission vẫn là authority. Input-table metadata không tạo client-trusted permission path mới. Chưa cần code WS11 ở slice này.
+`permission_doctype` / server permission vẫn là authority. Input-table metadata không tạo client-trusted permission path mới. Cross-package audit cho thấy WS11/organization-security đã cung cấp Delegation + Approval Policy seams mà BPM runtime đang consume; WS09 không fork các policy primitive đó.
 
 ## Main drift review
 
@@ -203,7 +205,7 @@ Trong lúc WS09 làm, `main` tiến từ `bbe3494...` qua WS14 mobile/a11y và i
 1. DR-09-01: WS14 consume `input_tables` native và giữ rolling fallback.
 2. Migrate một consumer thật (#209/#267 pattern) sang first-class declaration sau khi renderer sẵn sàng.
 3. Sau khi rollout ổn, fold bridge vào native `AppManifest`/JSON Schema rồi xóa compatibility adapter thay vì nuôi vĩnh viễn.
-4. BPM enterprise: parallel/quorum -> approval matrix -> delegation -> escalation/timer -> event/scheduled actions.
+4. BPM enterprise: parallel/quorum -> persisted approval-step instances/matrix execution -> escalation/timer -> event/scheduled actions. Reuse existing Delegation/Approval Policy/SoD seams instead of rebuilding them.
 5. Rule/formula builder lifecycle.
 6. App rollback + marketplace trust/signing/catalog contract.
 
@@ -221,5 +223,5 @@ Capabilities: `B01-001..018`, `B02-001..023`; active slice `B02-016`
 Changed zones: app-registry input-table contract/bridge/installer; forge-app compiler + schema adapter; targeted regressions; workstream doc  
 Migration: none; compatibility bridge only  
 Dependency requests: DR-09-01 -> WS14  
-Known gaps: client native renderer, eventual native manifest/schema fold-in, enterprise BPM primitives, app rollback  
+Known gaps: client native renderer, eventual native manifest/schema fold-in, parallel/quorum + persisted approval-step engine, escalation/SLA, app rollback  
 Merge/deploy: **blocked by policy/approval** because this is backend/shared contract, not UI-only.
