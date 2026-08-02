@@ -1,0 +1,10 @@
+{
+  "sha": "a055b8627c51d0551b4c7fffc5b271eb66b929cb",
+  "tenant": "alu",
+  "backup": "success",
+  "plan": "success",
+  "migrate": "success",
+  "planLogTail": "tenant    alu\ndatabase  cloudforge-alu (6781cbc1-8635-4b6e-af46-09297c120cff)\nmode      dry run\nconfig    apps/tenant-worker/wrangler.alu.generated.jsonc\n\ndatabase   cloudforge-alu (6781cbc1-8635-4b6e-af46-09297c120cff)\nmigrations migrations/tenant\nmode       dry run\n\nnothing to do — all 45 migrations are recorded as applied.\n\nDry run completed. After a fresh backup, rerun with --execute --confirm alu.\n",
+  "migrateLogTail": "tenant    alu\ndatabase  cloudforge-alu (6781cbc1-8635-4b6e-af46-09297c120cff)\nmode      APPLY REMOTE MIGRATIONS\nconfig    apps/tenant-worker/wrangler.alu.generated.jsonc\n\ndatabase   cloudforge-alu (6781cbc1-8635-4b6e-af46-09297c120cff)\nmigrations migrations/tenant\nmode       APPLY (remote)\n\nnothing to do — all 45 migrations are recorded as applied.\n\nalu migrations applied. Run deploy-tenant.mjs dry-run before the live Worker deployment.\n",
+  "recordedAt": "2026-08-02T20:28:58.739Z"
+}
