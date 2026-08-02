@@ -17,7 +17,6 @@ on:
       - 'server/tests/app-installer-standard-metadata-adoption.test.mjs'
       - 'client/e2e-forge/**/purchase*'
       - 'client/e2e-forge/playwright.auth.config.ts'
-      - '.github/workflows/purchase-feature-ci.yml'
   workflow_dispatch:
 
 permissions:
