@@ -64,3 +64,9 @@ test("opening dataset rejects duplicate source identities", () => {
     records: [dataset.records[0], dataset.records[0]],
   }), /Duplicate opening source_key/);
 });
+
+test("opening dataset rejects impossible calendar dates", () => {
+  assert.throws(() => normalizeOpeningDataset({ ...dataset, as_of_date: "2026-02-30" }), /real YYYY-MM-DD date/);
+  assert.throws(() => normalizeOpeningDataset({ ...dataset, as_of_date: "2025-02-29" }), /real YYYY-MM-DD date/);
+  assert.equal(normalizeOpeningDataset({ ...dataset, as_of_date: "2024-02-29" }).as_of_date, "2024-02-29");
+});
