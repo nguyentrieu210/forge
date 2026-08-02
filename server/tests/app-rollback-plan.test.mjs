@@ -31,9 +31,15 @@ function pkg(version, overrides = {}) {
   };
 }
 
-test("presentation-only rollback with identical data contract is automatable", () => {
-  const current = pkg("2.0.0", { nav: [{ key: "Thing", label: "Đồ vật mới", kind: "doctype" }] });
-  const target = pkg("1.0.0", { nav: [{ key: "Thing", label: "Đồ vật", kind: "doctype" }] });
+test("presentation-only rollback with identical data/write contract is automatable", () => {
+  const current = pkg("2.0.0", {
+    nav: [{ key: "Thing", label: "Đồ vật mới", kind: "doctype" }],
+    client: { home: { doctype: "Thing" }, brand: "blue" },
+  });
+  const target = pkg("1.0.0", {
+    nav: [{ key: "Thing", label: "Đồ vật", kind: "doctype" }],
+    client: { home: { doctype: "Thing" }, brand: "zinc" },
+  });
   const plan = planAppRollback(current, target);
   assert.equal(plan.automatable, true);
   assert.deepEqual(plan.issues, []);
@@ -66,7 +72,7 @@ test("rollback refuses field type/link semantics and newly-required fields", () 
   assert.ok(plan.issues.some((entry) => entry.code === "FIELD_BECOMES_REQUIRED"));
 });
 
-test("workflow state removal or docstatus change blocks rollback", () => {
+test("workflow state removal blocks and transition-policy drift requires review", () => {
   const workflow = {
     name: "Thing Workflow",
     document_type: "Thing",
@@ -80,15 +86,19 @@ test("workflow state removal or docstatus change blocks rollback", () => {
     revision: 1,
   };
   const current = pkg("2.0.0", { workflows: [workflow] });
-  const target = pkg("1.0.0", {
+  const removed = pkg("1.0.0", {
     workflows: [{
       ...workflow,
       states: [{ state: "Draft", docstatus: 0 }],
       transitions: [],
     }],
   });
-  const plan = planAppRollback(current, target);
-  assert.ok(plan.issues.some((entry) => entry.code === "WORKFLOW_STATE_REMOVED"));
+  assert.ok(planAppRollback(current, removed).issues.some((entry) => entry.code === "WORKFLOW_STATE_REMOVED"));
+
+  const rerouted = pkg("1.0.0", {
+    workflows: [{ ...workflow, transitions: [{ ...workflow.transitions[0], allow_self_approval: true }] }],
+  });
+  assert.ok(planAppRollback(current, rerouted).issues.some((entry) => entry.code === "WORKFLOW_TRANSITIONS_CHANGED" && entry.severity === "review"));
 });
 
 test("permission/dependency/fixture drift is review-gated rather than silently automated", () => {
@@ -106,6 +116,27 @@ test("permission/dependency/fixture drift is review-gated rather than silently a
   assert.ok(plan.issues.some((entry) => entry.code === "DEPENDENCIES_CHANGED" && entry.severity === "review"));
   assert.ok(plan.issues.some((entry) => entry.code === "FIXTURES_CHANGED" && entry.severity === "review"));
   assert.ok(plan.issues.some((entry) => entry.code === "PERMISSION_POLICY_CHANGED" && entry.severity === "review"));
+});
+
+test("worker/action/validator/storefront drift cannot pass as a metadata-only rollback", () => {
+  const current = pkg("2.0.0", {
+    worker: "demo-v2",
+    actions: [{ name: "run", label: "Run", fields: [{ fieldname: "x", label: "X", fieldtype: "Data" }], commit: { method: "demo.v2.run", label: "Run" }, permission_doctype: "Thing" }],
+    validators: [{ doctype: "Thing", actions: ["save"] }],
+    storefront: {
+      catalog: { doctype: "Thing", published_field: "title", slug_field: "title", fields: ["title", "amount"], search_fields: ["title"], price_field: "amount" },
+    },
+  });
+  const target = pkg("1.0.0", {
+    worker: "demo-v1",
+    actions: [{ name: "run", label: "Run", fields: [{ fieldname: "x", label: "X", fieldtype: "Data" }], commit: { method: "demo.v1.run", label: "Run" }, permission_doctype: "Thing" }],
+    validators: [{ doctype: "Thing", actions: ["submit"] }],
+  });
+  const plan = planAppRollback(current, target);
+  assert.ok(plan.issues.some((entry) => entry.code === "WORKER_CHANGED" && entry.severity === "block"));
+  assert.ok(plan.issues.some((entry) => entry.code === "ACTIONS_CHANGED" && entry.severity === "review"));
+  assert.ok(plan.issues.some((entry) => entry.code === "VALIDATORS_CHANGED" && entry.severity === "review"));
+  assert.ok(plan.issues.some((entry) => entry.code === "STOREFRONT_CHANGED" && entry.severity === "review"));
 });
 
 test("rollback cannot cross app ids or point to a newer version", () => {
