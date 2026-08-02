@@ -1,12 +1,13 @@
 # WS04 — Inventory + WMS
 
-Status: **ACTIVE**  
+Status: **REVIEW**  
 Owner: **ChatGPT-WS04**  
 Branch: `agent/ent-04-inventory-wms`  
 Product baseline: **Forge 0.2.0**  
 Seed baseline: `862636e6239c91eab657c619d8c55345ed71a6d8`  
 Started from branch head: `a936d8b1ca3846767be6e7cf0a0411cf9df7c257`  
 Synced to main: `bbe3494bcfbb8a3ce09a5ff4bbb839dfcf9e47e9`  
+PR: **#307** (Draft)  
 Canonical board: `main:docs/agents/AGENT_BOARD.md`
 
 Before implementation: compare exact current `main`; incorporate source-relevant changes. Operational/deploy-evidence-only head drift does not by itself redefine the product baseline.
@@ -117,8 +118,10 @@ Validation available in current environment:
 
 ## Handoff
 
-Current status: **ACTIVE**.  
+Current status: **REVIEW**.  
 Current slice: reconciliation snapshot identity/integrity.  
+PR: **#307** `fix(inventory): harden stock reconciliation snapshot identity` (Draft).  
+Head before this handoff update: `95b8ebb6a110d500afe9acd795a218b806bbff89`.  
 Migrations: **none**.  
 Production deploy: **none**.  
 Merge: **not authorized** for this CRITICAL backend change.  
