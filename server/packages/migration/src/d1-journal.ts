@@ -134,14 +134,30 @@ export class D1MigrationJournal {
       ) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,'reserved',NULL,NULL,?9,NULL,0,?10,?10,NULL)
       ON CONFLICT(tenant_id,run_id,row_key) DO NOTHING`,
     ).bind(tenantId, runId, row.row_key, row.row_number, row.fingerprint, run.target_doctype, targetName?.trim() || null, intendedAction, JSON.stringify(row.document), now).run();
-    const reserved = await this.getRow(tenantId, runId, row.row_key);
+    let reserved = await this.getRow(tenantId, runId, row.row_key);
     if (!reserved) throw errors.database("Migration row was not readable after reservation");
+    if (reserved.row_fingerprint !== row.fingerprint || reserved.target_doctype !== run.target_doctype) throw errors.idempotency();
+
+    // A lookup/prepare dependency may fail before a target identity exists. That failure is
+    // persisted as `failed/error/null`. Once the external dependency is repaired, the SAME
+    // source row may be promoted to a stable reservation without creating a new plan.
     if (
-      reserved.row_fingerprint !== row.fingerprint
-      || reserved.intended_action !== intendedAction
-      || reserved.target_name !== (targetName?.trim() || null)
-      || reserved.target_doctype !== run.target_doctype
-    ) throw errors.idempotency();
+      reserved.status === "failed"
+      && reserved.intended_action === "error"
+      && reserved.target_name === null
+      && reserved.command_id === null
+    ) {
+      const result = await this.writer.prepare(
+        `UPDATE migration_row_receipts
+         SET intended_action=?4,target_name=?5,status='reserved',error_text=NULL,modified_at=?6
+         WHERE tenant_id=?1 AND run_id=?2 AND row_key=?3
+           AND status='failed' AND intended_action='error' AND target_name IS NULL AND command_id IS NULL`,
+      ).bind(tenantId, runId, row.row_key, intendedAction, targetName?.trim() || null, now).run();
+      if ((result.meta?.changes ?? 0) !== 1) throw errors.version();
+      reserved = (await this.getRow(tenantId, runId, row.row_key))!;
+    }
+
+    if (reserved.intended_action !== intendedAction || reserved.target_name !== (targetName?.trim() || null)) throw errors.idempotency();
     return reserved;
   }
 
