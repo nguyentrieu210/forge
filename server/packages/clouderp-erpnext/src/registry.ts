@@ -12,6 +12,7 @@ import { EmployeeBenefitEnrollmentController, EmployeeLoanController, EmployeeLo
 import { EmployeeFinalSettlementController } from "./hrm-lifecycle-closure-controllers.js";
 import { AcceptedHiringCompletionController } from "./hrm-recruitment-lifecycle.js";
 import { CareerPostingController, CandidateMatchController, CandidateProfileController, ExtendedJobApplicantController, ExtendedJobOpeningController, InterviewScorecardController, JobOfferResponseController } from "./hrm-recruitment-depth-controllers.js";
+import { EmployeePositionAssignmentController, OrganizationPositionController } from "./hrm-organization-controllers.js";
 import { EmployeeDisciplineController, PersonnelDocumentController } from "./hrm-personnel-controllers.js";
 import { CompetencyAssessmentController, CompetencyController, EmployeeCertificateController, ExtendedGoalController, Review360Controller, SuccessionPlanController, TalentPoolController, TrainingAssessmentController, TrainingCourseController } from "./hrm-talent-controllers.js";
 import { HrmSalarySlipController } from "./hrm-salary-slip.js";
@@ -28,6 +29,7 @@ export function registerErpNextCoreControllers(registry: ControllerRegistry): Co
     .register(new AssetController()).register(new AssetDepreciationController()).register(new ProductionPlanController()).register(new JobCardController())
     .register(new AssetMovementController()).register(new AssetMaintenanceController()).register(new AssetDisposalController()).register(new TimesheetController())
     .register(new QualityInspectionController()).register(new IssueController()).register(new ExpenseClaimController())
+    .register(new OrganizationPositionController()).register(new EmployeePositionAssignmentController())
     .register(new EmploymentContractController()).register(new EmployeeOnboardingController()).register(new EmployeeTransferController()).register(new EmployeePromotionController()).register(new EmployeeSeparationController())
     .register(new EmployeeDisciplineController()).register(new PersonnelDocumentController())
     .register(new CandidateProfileController()).register(new ExtendedJobOpeningController()).register(new ExtendedJobApplicantController()).register(new CandidateMatchController())
