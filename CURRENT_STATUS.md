@@ -23,6 +23,7 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. 
 ## IN PROGRESS — VN Accounting Period Integrity Hardening
 
 - Canonical working branch: `fix/vn-accounting-period-integrity-20260802-r4`, clean-transplant từ exact `main` snapshot `47915764d705ba34299f2d7386b0b8d3fb83a9da`.
+- Canonical code + initial docs checkpoint: `e94bf885e9a57483970be58d6db0f8a0d60bc56f`; Draft PR `#257`, mergeable tại lần kiểm tra sau khi GitHub hoàn tất mergeability calculation.
 - Migration mới `0039_vn_accounting_period_hardening.sql` thay trigger kỳ kế toán mà không rewrite migration đã áp dụng.
 - Hard Locked chặn submit/cancel và chặn đổi scope của chứng từ đã post để đi vào/ra kỳ khóa; phạm vi guard bao gồm Journal/Invoice/Payment, Purchase Receipt, Delivery Note, Payroll, Stock và Warehouse Cash.
 - Soft Closed chỉ nhận approved adjustment khi kỳ cho phép và chứng từ có approval + reason + approver.
@@ -30,7 +31,7 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. 
 - Regression script đã mở rộng cho cancel, draft->submit, move into/out of locked period, period update overlap, tenant isolation, soft-close toggle và duplicate payroll source.
 - Isolated SQLite replay của migration/trigger logic: PASS; 3 edge-case mới move-out, move-in và update-overlap: PASS.
 - Full repo `pnpm test` / typecheck / lint / build: **NOT RUN** trong phiên connector vì runtime không có checkout/dependencies và GitHub Actions hiện chỉ dùng build/deploy. Task chưa được gọi DONE cho đến khi CRITICAL local gates chạy trên canonical branch.
-- Old Draft PR `#224` và các branch transplant trước là stale/superseded; không force-push/rewrite history.
+- Old Draft PR `#224` đã được comment `superseded by #257`; connector không cho phép tự đóng PR trong phiên này. Không force-push/rewrite history.
 - Không deploy production, không mutate dữ liệu tenant và không chạy migration production trong task này.
 
 ## DONE — GitHub build/deploy only + UI auto deploy
