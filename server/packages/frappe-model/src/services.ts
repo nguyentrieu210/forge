@@ -18,7 +18,10 @@ export class D1CollaborationService {
 
   async listTimeline(tenantId: string, doctype: string, name: string): Promise<JsonObject> {
     const comments = await this.db.prepare(`SELECT comment_id,comment_type,content,owner,created_at FROM document_comments WHERE tenant_id=?1 AND doctype=?2 AND name=?3 ORDER BY created_at`).bind(tenantId, doctype, name).all<CommentRecord>();
-    const assignments = await this.db.prepare(`SELECT assignment_id,assigned_to,description,status,priority,due_date,owner,created_at,modified_at FROM assignments WHERE tenant_id=?1 AND doctype=?2 AND name=?3 ORDER BY created_at`).bind(tenantId, doctype, name).all<AssignmentRecord>();
+    // `assignments` in docinfo means CURRENT responsibility, not the historical ledger.
+    // Removal deliberately keeps the row as Cancelled for audit, so returning every row
+    // here makes the assignee badge survive a successful remove + refetch.
+    const assignments = await this.db.prepare(`SELECT assignment_id,assigned_to,description,status,priority,due_date,owner,created_at,modified_at FROM assignments WHERE tenant_id=?1 AND doctype=?2 AND name=?3 AND status='Open' ORDER BY created_at`).bind(tenantId, doctype, name).all<AssignmentRecord>();
     const files = await this.db.prepare(`SELECT file_id,file_name,content_type,size_bytes,is_private,owner,created_at FROM files WHERE tenant_id=?1 AND attached_to_doctype=?2 AND attached_to_name=?3 ORDER BY created_at`).bind(tenantId, doctype, name).all<FileRecord>();
     const versions = await this.db.prepare(`SELECT version,command_id,actor,action,created_at FROM versions WHERE tenant_id=?1 AND doc_key=?2 ORDER BY version DESC LIMIT 100`).bind(tenantId, `${doctype}:${name}`).all<VersionSummary>();
     return { comments: comments.results ?? [], assignments: assignments.results ?? [], files: files.results ?? [], versions: versions.results ?? [] };
