@@ -1,6 +1,6 @@
 # CURRENT STATUS
 
-Ngày cập nhật: **2026-08-02**.
+Ngày cập nhật: **2026-08-03**.
 
 GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. Không hardcode exact current `main` vào status dài hạn; phải đọc GitHub khi bắt đầu/tiếp tục.
 
@@ -21,6 +21,17 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. 
 - Validation trên application blobs đã merge: isolated TypeScript strict PASS; HRM operational regressions 4/4 PASS; migrations `0035+0039+0040+0041` acceptance PASS; Python migration syntax PASS; metadata JSON 44/44 PASS. GitHub development CI = N/A theo policy hiện hành vì Actions chỉ dùng build/deploy.
 - Không production deploy/migration trong task HRM này.
 - Boundary còn lại: `formula_json` là versioned/audited legal-rule evidence, chưa phải statutory PIT/BHXH evaluator. Nếu cần tự động hóa luật Việt Nam phải làm task CRITICAL riêng với schema công thức explicit, effective versions, nguồn chính thức và regression pháp lý.
+
+## ACTIVE — VN Accounting Period Integrity Hardening r7
+
+- Canonical branch mới: `fix/vn-accounting-period-integrity-20260803-r7`, clean-based on exact `main@6deccaeb72a4814b3e0d0264464fcaa87cfad747`.
+- r6 bị superseded vì `main` đã merge HRM và chiếm migration `0039-0041`; không merge `main` vào r6, không rewrite history.
+- Accounting hardening được renumber thành `0042_vn_accounting_period_hardening.sql`, chạy sau HRM migrations và không rewrite migration đã áp dụng.
+- Guard bao phủ Hard Locked/Soft Closed cho submit, cancel, payload scope move; gồm Journal/Invoice/Payment, Purchase Receipt, Delivery Note, Payroll, Stock và Warehouse Cash.
+- Soft Closed chỉ cho approved adjustment khi period bật `allow_approved_adjustments` và chứng từ có reason + approver.
+- Range guard chặn invalid date và overlap theo tenant/company/branch; company-wide period conflict với mọi branch period cùng khoảng ngày.
+- Regression script hiện ghép `0035+0039+0040+0041+0042`, giữ nguyên HRM coverage và bổ sung draft->submit, cancel, move-in/move-out, period overlap/update overlap, tenant isolation và expanded posting doctypes.
+- Connector runtime không có repository checkout/dependencies và không truy cập được GitHub qua shell, nên CRITICAL local gates chưa chạy. Task chưa DONE, chưa ready/merge, chưa production migration/deploy.
 
 ## DONE — exact production release evidence
 
@@ -76,13 +87,14 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. 
 ## Chưa hoàn tất
 
 1. Một UI push thực tế sau fast-path merge để đo duration và xác nhận `Deploy Gateway + /release.json` PASS.
-2. HRM statutory payroll-rule evaluator nếu cần tự động PIT/BHXH theo luật; phải có schema/version/nguồn chính thức và không sửa rule đã dùng.
-3. Bulk Transaction cho Stock Reconciliation.
-4. Bulk Transaction cho BOM parent + child/version.
-5. First-class AppAction input-table contract.
-6. Batch Print / QR label queue.
-7. P1 Daily detailed ledger hardening/closure theo exact GitHub state.
-8. Plastic ERP các wave sau P0-A.
+2. Chạy CRITICAL local gates cho `fix/vn-accounting-period-integrity-20260803-r7`, fix mọi regression rồi mới mở/ready PR.
+3. HRM statutory payroll-rule evaluator nếu cần tự động PIT/BHXH theo luật; phải có schema/version/nguồn chính thức và không sửa rule đã dùng.
+4. Bulk Transaction cho Stock Reconciliation.
+5. Bulk Transaction cho BOM parent + child/version.
+6. First-class AppAction input-table contract.
+7. Batch Print / QR label queue.
+8. P1 Daily detailed ledger hardening/closure theo exact GitHub state.
+9. Plastic ERP các wave sau P0-A.
 
 ## Guardrails
 
