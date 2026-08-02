@@ -177,7 +177,7 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
 
       <Dialog open={isNew} onOpenChange={(open) => { if (!open) setCloseRequest((value) => value + 1); }}>
         <DialogContent
-          className="flex h-[min(92vh,900px)] w-[min(96vw,760px)] max-w-none flex-col overflow-hidden p-0"
+          className="top-4 flex h-[calc(100dvh-2rem)] w-[min(96vw,760px)] max-w-none !translate-y-0 flex-col overflow-hidden p-0 data-[state=open]:animate-none data-[state=closed]:animate-none"
           onInteractOutside={(event) => { event.preventDefault(); setCloseRequest((value) => value + 1); }}
           onEscapeKeyDown={(event) => { event.preventDefault(); setCloseRequest((value) => value + 1); }}
         >

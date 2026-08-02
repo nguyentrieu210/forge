@@ -124,14 +124,27 @@ export class SalesOrderController extends BaseController<SalesOrderData> {
     if (!input.customer) throw errors.validation("Customer is required");
     if (!input.company) throw errors.validation("Company is required");
     if (!input.currency) throw errors.validation("Currency is required");
+    // Alumdoor's approved commercial policy: every Sales Order is priced from
+    // master data. Keep the shared CloudERP controller backward-compatible for
+    // other installed apps whose contracts still allow manually priced orders.
+    const locksOrderPricing = input.company === "ALUMDOOR";
+    if (locksOrderPricing && !input.selling_price_list) throw errors.validation("Bảng giá áp dụng là bắt buộc");
+    const orderDiscountPercentage = input.additional_discount_percentage ?? 0;
+    const orderDiscountMicros = toScaledInt(orderDiscountPercentage, 6, "additional_discount_percentage");
+    const suppliedDiscountAmount = input.discount_amount === undefined
+      ? 0
+      : toScaledInt(input.discount_amount, 6, "discount_amount");
+    if (locksOrderPricing && orderDiscountMicros === 0 && suppliedDiscountAmount !== 0) {
+      throw errors.validation("Đơn hàng chỉ cho phép chiết khấu theo % toàn đơn");
+    }
     const currency = await resolveCurrencyContext(context, input.company, input.currency, input.transaction_date);
     const currencyScale = currency.transactionScale;
     const itemSnapshots = await applyUomConversion(context as unknown as ControllerContext<JsonObject>, input.items, { transactionKind: "sales" });
     const pricedItems = await applySellingPricing(context, itemSnapshots, input.selling_price_list, input.currency, input.transaction_date, input.customer, input.customer_group);
     const totals = calculateSalesTotals(pricedItems, input.taxes ?? [], currencyScale, {
-      apply_discount_on: input.apply_discount_on,
-      additional_discount_percentage: input.additional_discount_percentage,
-      discount_amount: input.discount_amount,
+      apply_discount_on: locksOrderPricing ? "Net Total" : input.apply_discount_on,
+      additional_discount_percentage: orderDiscountPercentage,
+      ...(locksOrderPricing ? {} : { discount_amount: input.discount_amount }),
     });
     // Master-data EXISTENCE is deliberately validated at submit, not while a
     // lightweight draft is being edited. The posting gate remains authoritative.

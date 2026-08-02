@@ -1545,10 +1545,15 @@ export function ChildGrid(props: ChildGridProps) {
                   // KẾ THỪA từ cha (DocType con permissions rỗng) — grid đã gate bằng readOnly field cha
                   // (H1). Vẫn tôn trọng read_only/read_only_depends_on/docstatus + masked_fields server.
                   const rf = resolveField(gridField, childMeta, { doc: row, parent: parentDoc, roles, assumeWritable: true });
-                  const cellReadOnly = Boolean(readOnly || rf.readOnly || (expanded && !rf.visible));
+                  // Sales Order prices are authoritative from Item Price (price list + item + UOM).
+                  // Keep this lock in code as well as metadata so stale tenant metadata cannot
+                  // expose a writable rate during a rolling release.
+                  const serverPricedSalesField = childMeta.name === "Sales Order Item"
+                    && (c.fieldname === "rate" || c.fieldname === "discount_percentage");
+                  const cellReadOnly = Boolean(readOnly || rf.readOnly || serverPricedSalesField || (expanded && !rf.visible));
                   const cellHint = !rf.visible
                     ? "Không áp dụng cho mặt hàng này"
-                    : rf.readOnly
+                    : (rf.readOnly || serverPricedSalesField)
                       ? "Hệ thống tự tính hoặc tự điền"
                       : "Có thể nhập";
                   /**

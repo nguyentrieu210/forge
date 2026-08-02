@@ -12,6 +12,26 @@ function setup() {
   return { store, kernel: new DocumentKernel(createO2CControllerRegistry(), store, undefined, now) };
 }
 
+test("Alumdoor Sales Order requires server pricing and only accepts order-level percentage discount", async () => {
+  const { kernel } = setup();
+  const base = { ...orderDocument(), company: "ALUMDOOR" };
+  await assert.rejects(
+    mutate(kernel, {
+      commandId: "so-alumdoor-no-price-list", doctype: "Sales Order", name: "SO-ALU-NO-PRICE",
+      action: "create", expectedVersion: null, document: base,
+    }),
+    (error) => error.code === "VALIDATION_ERROR" && /Bảng giá áp dụng là bắt buộc/.test(error.message),
+  );
+  await assert.rejects(
+    mutate(kernel, {
+      commandId: "so-alumdoor-fixed-discount", doctype: "Sales Order", name: "SO-ALU-FIXED-DISCOUNT",
+      action: "create", expectedVersion: null,
+      document: { ...base, selling_price_list: "Giá lẻ", discount_amount: "100" },
+    }),
+    (error) => error.code === "VALIDATION_ERROR" && /chỉ cho phép chiết khấu theo % toàn đơn/.test(error.message),
+  );
+});
+
 test("Order-to-Cash posts exact minor-unit GL, stock and receivable allocation", async () => {
   const { store, kernel } = setup();
   await createAndSubmit(kernel, { doctype: "Sales Order", name: "SO-0001", document: orderDocument() });
