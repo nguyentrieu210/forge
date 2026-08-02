@@ -47,6 +47,17 @@ test("personal workplace records can be created but stay owner-scoped afterwards
   }
 });
 
+test("task and meeting owners may share their own records, requests may not", async () => {
+  for (const file of ["workplace-task.json", "workplace-meeting.json"]) {
+    const meta = await json(`doctypes/${file}`);
+    const ownerRule = permissions(meta, "Workplace User").find((entry) => entry.if_owner === true);
+    assert.equal(ownerRule?.share, true, `${meta.name}: owner needs share permission for assignee/attendee access`);
+  }
+  const request = await json("doctypes/internal-request.json");
+  const requestOwner = permissions(request, "Workplace User").find((entry) => entry.if_owner === true);
+  assert.equal(requestOwner?.share, undefined, "Internal Request must not become user-broadcastable");
+});
+
 test("DMS and contract records require manager permission or an explicit share", async () => {
   for (const file of ["managed-document.json", "document-folder.json", "document-template.json"]) {
     const meta = await json(`doctypes/${file}`);
