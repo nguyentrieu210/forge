@@ -1,6 +1,12 @@
 name: ALU Build and Deploy
 
 on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - "client/**"
   push:
     branches:
       - "hotfix/ui-*"
@@ -30,14 +36,21 @@ concurrency:
 jobs:
   ui-auto-deploy:
     name: Auto build and deploy UI
-    if: github.event_name == 'push'
+    if: >-
+      github.event_name == 'push' ||
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.head.repo.full_name == github.repository &&
+       (startsWith(github.head_ref, 'hotfix/ui-') ||
+        startsWith(github.head_ref, 'fix/ui-') ||
+        startsWith(github.head_ref, 'feat/ui-') ||
+        startsWith(github.head_ref, 'refactor/ui-')))
     runs-on: ubuntu-latest
     timeout-minutes: 25
     environment: production
     env:
-      TARGET_SHA: ${{ github.sha }}
+      TARGET_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      VITE_FORGE_RELEASE_SHA: ${{ github.sha }}
+      VITE_FORGE_RELEASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
 
     steps:
       - name: Checkout UI revision
@@ -93,14 +106,27 @@ jobs:
       - name: Build UI
         run: pnpm --filter metaforge run build
 
-      - name: Stage UI bundle
+      - name: Stage UI bundle and release evidence
         run: node server/scripts/stage-client-bundle.mjs
 
       - name: Deploy Gateway
         run: pnpm --dir server exec wrangler deploy --config apps/gateway-worker/wrangler.jsonc
 
-      - name: Smoke
-        run: curl --fail --silent --show-error https://alu.kairo.vn/health >/dev/null
+      - name: Smoke exact release
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error https://alu.kairo.vn/health >/dev/null
+          curl --fail --silent --show-error "https://alu.kairo.vn/release.json?sha=$TARGET_SHA" -o "$RUNNER_TEMP/release.json"
+          node - "$RUNNER_TEMP/release.json" <<'NODE'
+          const fs = require('node:fs');
+          const release = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+          if (release.releaseSha !== process.env.TARGET_SHA) {
+            throw new Error(`Production release mismatch: expected ${process.env.TARGET_SHA}, got ${release.releaseSha ?? '<missing>'}`);
+          }
+          if (!release.bundleHash) throw new Error('Production release marker has no bundleHash');
+          console.log(`PRODUCTION_RELEASE_OK sha=${release.releaseSha} bundle=${release.bundleHash}`);
+          NODE
 
   build-deploy:
     name: Build and deploy ALU
@@ -167,5 +193,18 @@ jobs:
       - name: Deploy Gateway
         run: pnpm --dir server exec wrangler deploy --config apps/gateway-worker/wrangler.jsonc
 
-      - name: Smoke
-        run: curl --fail --silent --show-error https://alu.kairo.vn/health >/dev/null
+      - name: Smoke exact release
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error https://alu.kairo.vn/health >/dev/null
+          curl --fail --silent --show-error "https://alu.kairo.vn/release.json?sha=$TARGET_SHA" -o "$RUNNER_TEMP/release.json"
+          node - "$RUNNER_TEMP/release.json" <<'NODE'
+          const fs = require('node:fs');
+          const release = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+          if (release.releaseSha !== process.env.TARGET_SHA) {
+            throw new Error(`Production release mismatch: expected ${process.env.TARGET_SHA}, got ${release.releaseSha ?? '<missing>'}`);
+          }
+          if (!release.bundleHash) throw new Error('Production release marker has no bundleHash');
+          console.log(`PRODUCTION_RELEASE_OK sha=${release.releaseSha} bundle=${release.bundleHash}`);
+          NODE
