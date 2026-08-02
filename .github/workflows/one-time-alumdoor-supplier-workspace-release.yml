@@ -1,10 +1,9 @@
 name: One-time Alumdoor Supplier Workspace Release
 
 on:
-  push:
+  pull_request:
     branches: [main]
-    paths:
-      - ".github/workflows/one-time-alumdoor-supplier-workspace-release.yml"
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: read
@@ -16,6 +15,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: ${{ github.head_ref == 'release/execute-supplier-workspace-20260803' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: production
