@@ -4,8 +4,8 @@ import { Calculator, FileLock2, Loader2, RefreshCw, Settings2, ShieldAlert } fro
 import { mapError } from "@metaforge/core";
 import { useMetaForge } from "@metaforge/views/provider";
 import {
-  Badge, Button, Input, Label, Table, TableBody, TableCell, TableHead, TableHeader,
-  TableRow, Textarea, toast,
+  Badge, Button, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Textarea, toast,
 } from "@metaforge/ui";
 
 interface MaterialRow {
@@ -260,7 +260,12 @@ export function ManufacturingCosting() {
               <h2 className="font-semibold">Điều chỉnh sau khóa</h2>
               <p className="mt-1 text-xs text-muted-foreground">Ví dụ hóa đơn điện về muộn. Snapshot gốc không bị sửa.</p>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                <Field label="Nhóm chi phí"><select className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm" value={adjustCategory} onChange={(event) => setAdjustCategory(event.target.value)}>{ADJUSTMENT_CATEGORIES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></Field>
+                <Field label="Nhóm chi phí">
+                  <Select value={adjustCategory} onValueChange={setAdjustCategory}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>{ADJUSTMENT_CATEGORIES.map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent>
+                  </Select>
+                </Field>
                 <Field label={`Số tiền (${sheet.currency}, minor)`}><Input type="number" step="1" value={adjustAmount} onChange={(event) => setAdjustAmount(event.target.value)} /></Field>
               </div>
               <Textarea className="mt-3" value={adjustReason} onChange={(event) => setAdjustReason(event.target.value)} placeholder="Lý do điều chỉnh (bắt buộc)" />
