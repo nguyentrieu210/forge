@@ -1,8 +1,0 @@
-{
-  "branch": "fix/hrm-department-context-20260803",
-  "head": "0318c6840e819f06d33edb27fe71e1ea3d6cfce2",
-  "cloudforgeBuild": true,
-  "hrmDryRun": true,
-  "vnAccountingDryRun": true,
-  "completedAt": "2026-08-02T19:21:17.651Z"
-}
