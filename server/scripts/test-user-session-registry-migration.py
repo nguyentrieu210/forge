@@ -45,20 +45,34 @@ try:
 except sqlite3.DatabaseError as error:
     assert "SESSION_IDENTITY_IMMUTABLE" in str(error), error
 
+try:
+    connection.execute(
+        """UPDATE user_sessions
+              SET revoked_at='2026-08-03T01:00:00.000Z',revoked_by='user@example.com',revoke_reason='logout'
+            WHERE tenant_id='tenant-a' AND session_id='abcdefghijklmnopqrstuvwx'"""
+    )
+    raise AssertionError("revocation without event id unexpectedly succeeded")
+except sqlite3.IntegrityError as error:
+    assert "CHECK constraint failed" in str(error), error
+
 connection.execute(
     """UPDATE user_sessions
-          SET revoked_at='2026-08-03T01:00:00.000Z',revoked_by='user@example.com',revoke_reason='logout'
+          SET revoked_at='2026-08-03T01:00:00.000Z',revoked_by='user@example.com',
+              revoke_reason='logout',revocation_event_id='session-event-1'
         WHERE tenant_id='tenant-a' AND session_id='abcdefghijklmnopqrstuvwx'"""
 )
 connection.commit()
 
-try:
-    connection.execute(
-        "UPDATE user_sessions SET revoked_at=NULL WHERE tenant_id='tenant-a' AND session_id='abcdefghijklmnopqrstuvwx'"
-    )
-    raise AssertionError("session unrevoke unexpectedly succeeded")
-except sqlite3.DatabaseError as error:
-    assert "SESSION_REVOCATION_IMMUTABLE" in str(error), error
+for statement in [
+    "UPDATE user_sessions SET revoked_at=NULL WHERE tenant_id='tenant-a' AND session_id='abcdefghijklmnopqrstuvwx'",
+    "UPDATE user_sessions SET revoke_reason='rewritten' WHERE tenant_id='tenant-a' AND session_id='abcdefghijklmnopqrstuvwx'",
+    "UPDATE user_sessions SET revocation_event_id='session-event-2' WHERE tenant_id='tenant-a' AND session_id='abcdefghijklmnopqrstuvwx'",
+]:
+    try:
+        connection.execute(statement)
+        raise AssertionError("immutable revocation mutation unexpectedly succeeded")
+    except sqlite3.DatabaseError as error:
+        assert "SESSION_REVOCATION_IMMUTABLE" in str(error), error
 
 try:
     connection.execute(
