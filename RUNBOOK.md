@@ -28,16 +28,47 @@ Trước khi sửa code hoặc tài liệu:
 2. Kiểm tra branch/PR liên quan còn tồn tại và đúng scope.
 3. Task mới phải mở branch riêng từ exact current `main`.
 4. Không code trực tiếp trên `main`.
+5. Phân loại thay đổi thành `FAST`, `STANDARD` hoặc `CRITICAL` trước khi chọn quality gate.
 
-## 4. Luồng bình thường
+## 4. Quality gate theo rủi ro
 
-Với feature, backend, nghiệp vụ, data, migration, accounting, inventory, manufacturing hoặc thay đổi có rủi ro:
+Không chạy toàn bộ test/typecheck/lint/build/CI một cách máy móc cho mọi task. Chỉ chạy gate có khả năng phát hiện lỗi do thay đổi hiện tại gây ra, dựa trên blast radius thực tế.
 
-`branch -> code -> test/typecheck/build phù hợp -> PR -> required CI -> merge -> release khi được yêu cầu`
+### FAST
+
+Dùng cho thay đổi presentation nhỏ, không đổi contract hay business logic: CSS, spacing, text, icon, layout, print template/UI nhỏ hoặc chỉnh component thuần hiển thị.
+
+Mặc định:
+
+`branch -> sửa -> review diff -> kiểm tra tối thiểu phần bị tác động -> commit -> push -> deploy khi được yêu cầu`
+
+Không bắt buộc full test suite, full lint, full typecheck, full build hoặc chờ required CI chỉ để hoàn tất thay đổi FAST. Nếu cần build để tạo artifact deploy thì build là bước packaging, không được coi là quality gate.
+
+Nếu trong lúc làm phát hiện thay đổi thực tế chạm business logic, API, data, permission hoặc phạm vi lớn hơn dự kiến thì nâng lên `STANDARD` hoặc `CRITICAL` ngay.
+
+### STANDARD
+
+Dùng cho CRUD, API, frontend logic, backend logic thông thường hoặc thay đổi product behavior không thuộc nhóm high-risk.
+
+Mặc định:
+
+`branch -> code -> test liên quan -> typecheck/lint/build phù hợp -> PR -> CI phù hợp -> merge -> release khi được yêu cầu`
+
+Không cần chạy test/module không liên quan chỉ để đủ nghi thức.
+
+### CRITICAL
+
+Dùng cho accounting, thu chi, công nợ, kho, giá vốn, mua/bán hàng có ledger impact, manufacturing/costing, auth, permission, tenant isolation, migration, destructive state transition, secrets hoặc production data.
+
+Mặc định:
+
+`branch -> code -> regression/integration/data-integrity/security checks -> typecheck/lint/build -> PR -> required CI -> merge -> release khi được yêu cầu`
+
+Với `CRITICAL`, correctness và data integrity ưu tiên hơn tốc độ. Bug quan trọng phải có regression protection khi phù hợp.
 
 ## 5. UI hotfix trực tiếp
 
-Dùng cho thay đổi UI nhỏ khi user muốn phát hành nhanh và chấp nhận bỏ toàn bộ validation tự động trước deploy.
+Dùng cho thay đổi `FAST` ở UI khi user muốn phát hành nhanh và chấp nhận bỏ validation tự động trước deploy.
 
 Luồng duy nhất:
 
@@ -57,7 +88,7 @@ Workflow này **không chạy**:
 
 Nó chỉ làm các bước kỹ thuật bắt buộc để có artifact chạy được: checkout, cài dependency, build MetaForge UI, stage bundle vào Gateway và chạy `wrangler deploy`.
 
-Không dùng lane này nếu thay đổi có backend, schema, migration, data, accounting, warehouse, production business rule, secrets hoặc DNS. Các thay đổi đó quay lại luồng bình thường.
+Không dùng lane này nếu thay đổi có backend, schema, migration, data, accounting, warehouse, production business rule, auth/permission/tenant, secrets hoặc DNS. Các thay đổi đó phải được nâng cấp khỏi `FAST` và quay lại quality gate tương ứng.
 
 ## 6. Production boundary
 
@@ -71,4 +102,4 @@ Không commit `.env`, secrets, `server/work/`, `tmp/`, backup, credential, cooki
 
 ## 8. Kết thúc một đợt làm việc
 
-Cập nhật `CURRENT_STATUS.md`, `NEXT_TASKS.md`, và `AI_HANDOFF.md` khi có quyết định kỹ thuật quan trọng. Báo branch, commit SHA, PR/merge SHA, file sửa, test/build/CI đã chạy hoặc không chạy, rủi ro còn lại, việc user cần làm và việc AI làm tiếp.
+Cập nhật `CURRENT_STATUS.md`, `NEXT_TASKS.md`, và `AI_HANDOFF.md` khi có quyết định kỹ thuật quan trọng. Báo branch, commit SHA, PR/merge SHA, file sửa, quality tier đã chọn, test/build/CI đã chạy hoặc không chạy, rủi ro còn lại, việc user cần làm và việc AI làm tiếp.
