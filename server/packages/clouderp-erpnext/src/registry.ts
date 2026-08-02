@@ -1,7 +1,7 @@
 import type { ControllerRegistry } from "../../document-kernel/src/index.js";
 import {
   AssetController, AssetDepreciationController,
-  CreditNoteController, DebitNoteController, StockReturnController,
+  CreditNoteController, DebitNoteController,
 } from "./controllers.js";
 import {
   AssetDisposalController, AssetMaintenanceController, AssetMovementController, ExpenseClaimController,
@@ -36,6 +36,7 @@ import {
 } from "./alumdoor-inventory.js";
 import { StockReservationIntegrityController } from "./stock-reservation-integrity.js";
 import { StockReconciliationIntegrityController } from "./stock-reconciliation-integrity.js";
+import { StockReturnIntegrityController } from "./stock-return-integrity.js";
 import { VersionedBillOfMaterialsController } from "./manufacturing-lifecycle.js";
 import { StockUomSnapshotWorkOrderController } from "./manufacturing-work-order-guard.js";
 import { StockEntryIntegrityController } from "./stock-entry-integrity.js";
@@ -48,7 +49,7 @@ export function registerErpNextCoreControllers(registry: ControllerRegistry): Co
   return registry
     .register(new CreditNoteController())
     .register(new DebitNoteController())
-    .register(new StockReturnController())
+    .register(new StockReturnIntegrityController())
     .register(new VersionedBillOfMaterialsController())
     .register(new StockUomSnapshotWorkOrderController())
     .register(new StockEntryIntegrityController())
