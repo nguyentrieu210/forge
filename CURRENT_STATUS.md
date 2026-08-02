@@ -8,10 +8,39 @@ Ngày cập nhật: **2026-08-02**.
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `main`.
-- Exact `main` sau Bulk dirty-guard: `2e5860b90410845545df33115c6f053925b65c72` — merge PR `#195`.
-- Stock P0 QR/lineage + cleanup QA đã merge trước đó tại `80496b056fa0f23f18311e5822c21dc826bacd9f` — PR `#189`.
-- PR `#182` và `#192` là branch cũ đã đóng/superseded, không dùng làm live source.
+- Exact `main` quan sát tại đợt sync này: `97045f8aacd8f516dc2257df9f5219cba0558d34`.
+- Hai commit sau `866fcbd909914f01600def9ce86e3ce2347bb763` chỉ là `noop` + dọn accidental empty probe; compare không có file source thay đổi.
+- Stock P0 QR/lineage + cleanup QA đã merge tại `80496b056fa0f23f18311e5822c21dc826bacd9f` — PR `#189`.
+- Bulk dirty-guard đã merge tại `2e5860b90410845545df33115c6f053925b65c72` — PR `#195`.
 - Branch `hotfix/alumdoor-print-list-delete` cũ không còn là current/default branch.
+
+## ACTIVE / VALIDATED — Manufacturing Costing
+
+- Canonical PR: `#201` — `feat/manufacturing): complete actual production costing on current main`.
+- Canonical branch: `feat/manufacturing-costing-complete-clean-20260802`.
+- PR `#185` đã đóng `SUPERSEDED`; không reopen/merge. #201 là clean transplant từ exact main, không force-push/rewrite stale history.
+- Validated executable checkpoint: `c2e98fab3e39eaa9f38781e3c7139fb3e8ae5ce3`.
+- Required workflows trên executable checkpoint: **6/6 PASS**.
+  - CI `30740346353`: tests + typecheck + build SUCCESS.
+  - UI Pull Request Validation `30740346367`: lint/build + MetaForge/Alumdoor/browser QA + authenticated lifecycle SUCCESS.
+  - PR Validation `30740346360`: SUCCESS.
+  - Purchase Feature CI `30740346359`: SUCCESS.
+  - Sales Feature CI `30740346379`: SUCCESS.
+  - Inventory and Manufacturing CI `30740346371`: server build + focused regressions + authoritative brief validation SUCCESS.
+- Work Order release snapshot khóa standard material/operation/total cost; legacy WO fallback luôn gắn cờ, không giả standard lịch sử.
+- Manufacturing Cost Rate có effective interval, scope Operation/Workstation và chặn submitted overlap.
+- Actual material dùng Stock Ledger thật, trừ scrap/offcut recovery; actual operation dùng Job Card hours × effective rate.
+- Job Card completion được khóa theo từng operation, không cộng chéo công đoạn.
+- Material WIP là **exact net stock value** trên Work Order WIP warehouse hoặc Material Transfer target warehouse suy ra từ Stock Ledger.
+- Operation WIP vẫn là **estimate** vì chưa có unit-level lineage từ từng Job Card tới từng finished unit; Cost Sheet không gọi phần này là exact.
+- Freeze chỉ mở khi production complete, không thiếu rate, material WIP = 0 và operation WIP = 0; first freeze recheck source fingerprint để chặn snapshot stale.
+- Snapshot/freeze immutable; adjustment append-only. Storage trigger chặn concurrent adjustments làm adjusted actual cost âm; retry cùng adjustment ID kiểm cả actor/details.
+- Inventory capitalization policy hiện hành được ghi rõ: `ACTUAL_MATERIAL_STANDARD_OPERATION`. Actual operation cost được đo thành manufacturing variance.
+- **Không** retroactive revalue finished stock bằng Cost Sheet delta khi chưa có downstream valuation/COGS replay. `inventory_revaluation_required=false`; nonzero variance là `UNPOSTED_FINANCE_VARIANCE` để Finance/P1 ledger xử lý theo account policy rõ ràng.
+- Costing UI tách exact material WIP, estimated operation WIP, recorded finished stock value và manufacturing variance; adjustment retry giữ stable idempotency ID.
+- Migration `0037_manufacturing_costing.sql` là non-destructive branch migration, có unique/freeze/immutability/nonnegative-total guards.
+- Không deploy Cloudflare/production, không sửa secret/DNS và không mutate customer production data trong PR này.
+- Canonical docs được sync sau executable checkpoint; exact docs head phải có required CI riêng trước khi gọi PR merge-ready.
 
 ## DONE — Stock P0 QR / lineage + cleanup QA
 
@@ -117,11 +146,12 @@ Checkpoint production lịch sử gần nhất được handoff ghi nhận:
 
 ## Chưa hoàn tất toàn hệ thống
 
-1. **P1 Daily detailed ledger**: immutable snapshot theo ngày, freeze, append-only adjustment và reconciliation nhiều miền.
+1. **P1 Daily detailed ledger / finance variance posting**: PR canonical `#199` đang active; immutable snapshot theo ngày, stale-freeze guard, append-only adjustment, reconciliation và authenticated acceptance. Manufacturing variance chỉ được post khi account/source policy được định nghĩa ở finance boundary; costing PR không tự tạo GL song song.
 2. **MetaForge UX V2**: List Workspace V2 tích hợp Bulk, Matrix View, presentation authoring/canonical transport, document context/exception, operational workspace, Mobile V2, personalization/AI context.
 3. **Bulk Transaction** cho Stock Reconciliation/BOM và transaction-grid nhập nhôm nhiều mã.
 4. **P2 Warranty / defects / capacity / overtime**.
 5. **P3 authenticated end-to-end acceptance** xuyên Sales → Production → Inventory → Delivery → Finance → Daily Ledger → Warranty.
+6. **Costing acceptance debt**: chưa có browser/authenticated fixture dành riêng cho màn Costing; API tenant-injection/Frappe contract, permission/service guards, server regressions và shared authenticated runtime boundary đã được test nhưng không được gọi là dedicated Costing E2E.
 
 ## Guardrails
 
