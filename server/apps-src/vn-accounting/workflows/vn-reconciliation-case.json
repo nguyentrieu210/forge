@@ -1,0 +1,19 @@
+{
+  "name": "Xử lý chênh lệch đối soát kế toán",
+  "document_type": "VN Reconciliation Case",
+  "state_field": "workflow_state",
+  "is_active": true,
+  "states": [
+    { "state": "Mở", "docstatus": 0, "allow_edit": "General Accountant" },
+    { "state": "Chờ xác nhận", "docstatus": 0, "allow_edit": "Chief Accountant" },
+    { "state": "Đã xử lý", "docstatus": 1, "allow_edit": "Chief Accountant" },
+    { "state": "Đã hủy", "docstatus": 2, "allow_edit": "Chief Accountant" }
+  ],
+  "transitions": [
+    { "state": "Mở", "action": "Gửi xác nhận", "next_state": "Chờ xác nhận", "allowed_role": "General Accountant" },
+    { "state": "Chờ xác nhận", "action": "Xác nhận xử lý", "next_state": "Đã xử lý", "allowed_role": "Chief Accountant", "allow_self_approval": false },
+    { "state": "Chờ xác nhận", "action": "Trả lại", "next_state": "Mở", "allowed_role": "Chief Accountant" },
+    { "state": "Chờ xác nhận", "action": "Hủy", "next_state": "Đã hủy", "allowed_role": "Chief Accountant" }
+  ],
+  "revision": 1
+}
