@@ -1,6 +1,7 @@
-import { errors } from "../../core/src/index.js";
+import { errors, randomId } from "../../core/src/index.js";
 import type { AppRollbackPlan } from "./app-rollback.js";
-import { planAppRollback } from "./app-rollback.js";
+import { assertAppRollbackAutomatable, planAppRollback } from "./app-rollback.js";
+import { parseAppManifestWithInputTables } from "./action-input-table-compat.js";
 
 export interface AppRevisionRecord {
   app_id: string;
@@ -20,13 +21,58 @@ export interface AppRevisionSummary {
   active: boolean;
 }
 
+export interface AppRevisionActivation {
+  activation_id: string;
+  app_id: string;
+  from_revision_no: number;
+  to_revision_no: number;
+  action: "rollback";
+  actor: string;
+  activated_at: string;
+}
+
 type ActiveAppRow = {
   version: string;
   content_hash: string;
   manifest_json: string;
 };
 
-/** Read-side companion to 0049_app_revision_history.sql. It never activates a revision itself. */
+function requiredText(value: string, where: string, max = 320): string {
+  const normalized = value.trim();
+  if (!normalized || normalized.length > max) throw errors.validation(`${where} is required and must be at most ${max} characters`);
+  return normalized;
+}
+
+function isoTimestamp(value: string, where: string): string {
+  const normalized = requiredText(value, where, 64);
+  const parsed = Date.parse(normalized);
+  if (!Number.isFinite(parsed)) throw errors.validation(`${where} must be an ISO datetime`);
+  return new Date(parsed).toISOString();
+}
+
+/**
+ * A presentation rollback may mutate only values read from installed_apps itself.
+ *
+ * DocTypes, workflows, print formats, roles, fixtures and custom fields are materialized into
+ * separate tables by the installer. Reverting them would require the full install transaction
+ * and migration semantics. Keeping those fields byte-equivalent lets us safely activate an old
+ * manifest row without bypassing the core installer's intentional downgrade guard.
+ */
+function presentationKernelSignature(manifestValue: unknown): string {
+  const manifest = parseAppManifestWithInputTables(manifestValue);
+  const {
+    name: _name,
+    version: _version,
+    nav: _nav,
+    reports: _reports,
+    charts: _charts,
+    client: _client,
+    ...kernel
+  } = manifest;
+  return JSON.stringify(kernel);
+}
+
+/** Read-side companion to 0049_app_revision_history.sql plus the narrow safe rollback path. */
 export class AppRevisionStore {
   private readonly db: D1Database | D1DatabaseSession;
 
@@ -90,6 +136,95 @@ export class AppRevisionStore {
       ...plan,
       target_revision_no: target.revision_no,
       active_revision_no: active.revision_no,
+    };
+  }
+
+  /**
+   * Activate an older revision only when every materialized/write-contract surface is identical.
+   *
+   * This is intentionally narrower than a general schema rollback. The latter remains blocked by
+   * the planner until an explicit reverse migration exists. Here the only changed source of truth
+   * is installed_apps, so one optimistic UPDATE plus its audit INSERT is a complete transaction.
+   */
+  async rollbackPresentation(
+    tenantId: string,
+    appId: string,
+    targetRevisionNo: number,
+    actorValue: string,
+    nowValue: string,
+  ): Promise<AppRevisionActivation> {
+    const actor = requiredText(actorValue, "actor");
+    const now = isoTimestamp(nowValue, "now");
+    const [active, target] = await Promise.all([
+      this.active(tenantId, appId),
+      this.get(tenantId, appId, targetRevisionNo),
+    ]);
+    if (target.revision_no >= active.revision_no) {
+      throw errors.validation(`Presentation rollback target must be older than active revision ${active.revision_no}`);
+    }
+
+    const activeManifest = JSON.parse(active.manifest_json);
+    const targetManifest = JSON.parse(target.manifest_json);
+    const plan = planAppRollback(activeManifest, targetManifest);
+    assertAppRollbackAutomatable(plan);
+    if (presentationKernelSignature(activeManifest) !== presentationKernelSignature(targetManifest)) {
+      throw errors.validation("Presentation rollback would change materialized app metadata; use an explicit reverse migration instead");
+    }
+    const parsedTarget = parseAppManifestWithInputTables(targetManifest);
+    const activationId = randomId("apprev");
+
+    const results = await this.db.batch([
+      this.db.prepare(
+        `UPDATE installed_apps
+         SET app_name=?1,version=?2,content_hash=?3,manifest_json=?4,modified_at=?5
+         WHERE tenant_id=?6 AND app_id=?7 AND content_hash=?8 AND manifest_json=?9`,
+      ).bind(
+        parsedTarget.name,
+        target.version,
+        target.content_hash,
+        target.manifest_json,
+        now,
+        tenantId,
+        appId,
+        active.content_hash,
+        active.manifest_json,
+      ),
+      // Insert only if the first statement actually left the target revision active. If a
+      // concurrent update wins the optimistic predicate, this SELECT yields no row and avoids
+      // manufacturing a rollback audit event for a rollback that never happened.
+      this.db.prepare(
+        `INSERT INTO app_revision_activations(
+           tenant_id,app_id,activation_id,from_revision_no,to_revision_no,action,actor,activated_at
+         )
+         SELECT ?1,?2,?3,?4,?5,'rollback',?6,?7
+         WHERE EXISTS(
+           SELECT 1 FROM installed_apps
+           WHERE tenant_id=?1 AND app_id=?2 AND content_hash=?8 AND manifest_json=?9
+         )`,
+      ).bind(
+        tenantId,
+        appId,
+        activationId,
+        active.revision_no,
+        target.revision_no,
+        actor,
+        now,
+        target.content_hash,
+        target.manifest_json,
+      ),
+    ]);
+
+    if ((results[0]?.meta?.changes ?? 0) !== 1 || (results[1]?.meta?.changes ?? 0) !== 1) {
+      throw errors.lifecycle("App revision changed while rollback was being activated; reload revision history and retry");
+    }
+    return {
+      activation_id: activationId,
+      app_id: appId,
+      from_revision_no: active.revision_no,
+      to_revision_no: target.revision_no,
+      action: "rollback",
+      actor,
+      activated_at: now,
     };
   }
 }
