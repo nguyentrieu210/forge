@@ -40,6 +40,7 @@ Ngày cập nhật: **2026-08-02**.
   6. production path chỉ build MetaForge client -> stage bundle -> deploy Gateway;
   7. lint/test/typecheck vẫn do PR/normal CI chịu trách nhiệm, không làm chậm fast production path.
 - Sau khi lane này có trên `main`, AI sửa UI trên branch `hotfix/ui-*` và push là production deploy tự chạy, không bắt người dùng bấm GitHub Actions.
+- Theme fix PR #227 phải được replay trên branch hotfix mới từ exact main sau merge lane này để push event dùng workflow mới.
 
 ## Merged checkpoint — Warehouse Petty Cash per warehouse
 
