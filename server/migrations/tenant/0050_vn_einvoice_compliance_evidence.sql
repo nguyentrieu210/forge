@@ -94,7 +94,7 @@ BEGIN
       SELECT 1 FROM documents r
       WHERE r.tenant_id=NEW.tenant_id AND r.doctype='VN Legal Rule'
         AND r.name=json_extract(NEW.payload_json,'$.legal_rule') AND r.docstatus=1
-        AND json_extract(r.payload_json,'$.rule_type') IN ('E-Invoice','XML')
+        AND json_extract(r.payload_json,'$.rule_type')='E-Invoice'
         AND date(json_extract(r.payload_json,'$.effective_from'))<=date(json_extract(NEW.payload_json,'$.posting_at'))
         AND date(COALESCE(NULLIF(json_extract(r.payload_json,'$.effective_to'),''),'9999-12-31'))>=date(json_extract(NEW.payload_json,'$.posting_at'))
     ) THEN RAISE(ABORT,'VN_EINVOICE_LEGAL_RULE_REQUIRED')
@@ -104,6 +104,7 @@ BEGIN
         AND t.name=json_extract(NEW.payload_json,'$.tax_ruleset') AND t.docstatus=1
         AND json_extract(t.payload_json,'$.company')=json_extract(NEW.payload_json,'$.company')
         AND json_extract(t.payload_json,'$.rule_type')='E-Invoice'
+        AND json_extract(t.payload_json,'$.legal_rule')=json_extract(NEW.payload_json,'$.legal_rule')
         AND date(json_extract(t.payload_json,'$.effective_from'))<=date(json_extract(NEW.payload_json,'$.posting_at'))
         AND date(COALESCE(NULLIF(json_extract(t.payload_json,'$.effective_to'),''),'9999-12-31'))>=date(json_extract(NEW.payload_json,'$.posting_at'))
     ) THEN RAISE(ABORT,'VN_EINVOICE_RULESET_REQUIRED')
@@ -132,7 +133,7 @@ BEGIN
       SELECT 1 FROM documents r
       WHERE r.tenant_id=NEW.tenant_id AND r.doctype='VN Legal Rule'
         AND r.name=json_extract(NEW.payload_json,'$.legal_rule') AND r.docstatus=1
-        AND json_extract(r.payload_json,'$.rule_type') IN ('E-Invoice','XML')
+        AND json_extract(r.payload_json,'$.rule_type')='E-Invoice'
         AND date(json_extract(r.payload_json,'$.effective_from'))<=date(json_extract(NEW.payload_json,'$.posting_at'))
         AND date(COALESCE(NULLIF(json_extract(r.payload_json,'$.effective_to'),''),'9999-12-31'))>=date(json_extract(NEW.payload_json,'$.posting_at'))
     ) THEN RAISE(ABORT,'VN_EINVOICE_LEGAL_RULE_REQUIRED')
@@ -142,6 +143,7 @@ BEGIN
         AND t.name=json_extract(NEW.payload_json,'$.tax_ruleset') AND t.docstatus=1
         AND json_extract(t.payload_json,'$.company')=json_extract(NEW.payload_json,'$.company')
         AND json_extract(t.payload_json,'$.rule_type')='E-Invoice'
+        AND json_extract(t.payload_json,'$.legal_rule')=json_extract(NEW.payload_json,'$.legal_rule')
         AND date(json_extract(t.payload_json,'$.effective_from'))<=date(json_extract(NEW.payload_json,'$.posting_at'))
         AND date(COALESCE(NULLIF(json_extract(t.payload_json,'$.effective_to'),''),'9999-12-31'))>=date(json_extract(NEW.payload_json,'$.posting_at'))
     ) THEN RAISE(ABORT,'VN_EINVOICE_RULESET_REQUIRED')
