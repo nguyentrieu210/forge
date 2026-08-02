@@ -24,33 +24,25 @@ function body() {
 
 function existingDraft(overrides = {}) {
   return {
-    tenant_id: "tenant-a",
     doctype: "Bill of Materials",
     name: "BOM-0002",
-    owner: "qa@example.com",
     docstatus: 0,
     status: "Draft",
-    version: 1,
-    created_at: "2026-08-03T00:00:00.000Z",
-    modified_at: "2026-08-03T00:00:00.000Z",
-    children: [],
-    data: {
-      company: "ACME",
-      item: "FG-100",
-      quantity: "1.000000",
-      revision: 2,
-      bom_status: "Draft",
-      effective_from: "2026-08-03",
-      output_uom: "Nos",
-      output_stock_uom: "Nos",
-      output_conversion_factor: "1.000000",
-      operating_cost: "0.00",
-      items: [
-        { item_code: "RM-A", qty: "2.500000", uom: "Kg", stock_uom: "Kg", conversion_factor: "1.000000", source_warehouse: "RAW", qty_basis: "Cố định" },
-        { item_code: "RM-B", qty: "3.000000", uom: "Nos", stock_uom: "Nos", conversion_factor: "1.000000", source_warehouse: "RAW", qty_basis: "Theo chiều rộng" },
-      ],
-      ...overrides,
-    },
+    company: "ACME",
+    item: "FG-100",
+    quantity: "1.000000",
+    revision: 2,
+    bom_status: "Draft",
+    effective_from: "2026-08-03",
+    output_uom: "Nos",
+    output_stock_uom: "Nos",
+    output_conversion_factor: "1.000000",
+    operating_cost: "0.00",
+    items: [
+      { item_code: "RM-A", qty: "2.500000", uom: "Kg", stock_uom: "Kg", conversion_factor: "1.000000", source_warehouse: "RAW", qty_basis: "Cố định" },
+      { item_code: "RM-B", qty: "3.000000", uom: "Nos", stock_uom: "Nos", conversion_factor: "1.000000", source_warehouse: "RAW", qty_basis: "Theo chiều rộng" },
+    ],
+    ...overrides,
   };
 }
 
@@ -62,11 +54,13 @@ function request(url, payload = body()) {
   });
 }
 
-function context({ documents = [], create } = {}) {
+function context({ revisions = [], create } = {}) {
   const permissionCalls = [];
+  const lookupCalls = [];
   const createCalls = [];
   return {
     permissionCalls,
+    lookupCalls,
     createCalls,
     value: {
       tenantId: "tenant-a",
@@ -75,7 +69,10 @@ function context({ documents = [], create } = {}) {
       permissions: {
         async assert(input) { permissionCalls.push(input); },
       },
-      async listBomDocuments() { return documents; },
+      async findCanonicalRevisions(document) {
+        lookupCalls.push(document);
+        return revisions;
+      },
       async createCanonicalDraft(document) {
         createCalls.push(document);
         return create
@@ -93,7 +90,7 @@ async function json(response) {
   return response.json();
 }
 
-test("bulk BOM preview is permission checked, pure and Frappe-shaped", async () => {
+test("bulk BOM preview requires create+read permission, stays pure and is Frappe-shaped", async () => {
   const ctx = context();
   const response = await routeManufacturingBomBulkApi(request(PREVIEW), new URL(PREVIEW), ctx.value);
   assert.equal(response.status, 200);
@@ -101,27 +98,29 @@ test("bulk BOM preview is permission checked, pure and Frappe-shaped", async () 
   assert.equal(payload.message.schema_version, 1);
   assert.equal(payload.message.row_count, 2);
   assert.equal(payload.message.document.bom_status, "Draft");
-  assert.equal(ctx.permissionCalls.length, 1);
+  assert.deepEqual(ctx.permissionCalls.map((call) => call.action), ["create", "read"]);
+  assert.equal(ctx.lookupCalls.length, 0);
   assert.equal(ctx.createCalls.length, 0);
 });
 
-test("bulk BOM exact retry returns the existing canonical Draft and does not write again", async () => {
-  const ctx = context({ documents: [existingDraft()] });
+test("bulk BOM exact retry returns the canonical readable Draft and does not write again", async () => {
+  const ctx = context({ revisions: [existingDraft()] });
   const response = await routeManufacturingBomBulkApi(request(CREATE), new URL(CREATE), ctx.value);
   assert.equal(response.status, 200);
   const payload = await json(response);
   assert.equal(payload.message.name, "BOM-0002");
   assert.equal(payload.message.replayed, true);
   assert.equal(payload.message.draft, true);
+  assert.equal(ctx.lookupCalls.length, 1);
   assert.equal(ctx.createCalls.length, 0);
 });
 
-test("bulk BOM conflicting payload on the same company/item/revision fails closed", async () => {
+test("bulk BOM conflicting payload on the same readable company/item/revision fails closed", async () => {
   const changed = existingDraft({ items: [
     { item_code: "RM-A", qty: "9.000000", uom: "Kg", stock_uom: "Kg", conversion_factor: "1.000000", source_warehouse: "RAW", qty_basis: "Cố định" },
     { item_code: "RM-B", qty: "3.000000", uom: "Nos", stock_uom: "Nos", conversion_factor: "1.000000", source_warehouse: "RAW", qty_basis: "Theo chiều rộng" },
   ] });
-  const ctx = context({ documents: [changed] });
+  const ctx = context({ revisions: [changed] });
   await assert.rejects(
     () => routeManufacturingBomBulkApi(request(CREATE), new URL(CREATE), ctx.value),
     /already exists with a different payload or lifecycle state/,
@@ -137,13 +136,14 @@ test("bulk BOM create delegates only a Draft canonical BOM and preserves the D1 
   assert.equal(payload.message.name, "BOM-NEW");
   assert.equal(payload.message.replayed, false);
   assert.equal(response.headers.get("x-d1-bookmark"), "bookmark-1");
+  assert.equal(ctx.lookupCalls.length, 1);
   assert.equal(ctx.createCalls.length, 1);
   assert.equal(ctx.createCalls[0].bom_status, "Draft");
   assert.equal(ctx.createCalls[0].items.length, 2);
   assert.equal("docstatus" in ctx.createCalls[0], false);
 });
 
-test("bulk BOM rejects client-selected tenant scope", async () => {
+test("bulk BOM rejects client-selected tenant scope before permission or lookup", async () => {
   const ctx = context();
   const payload = body();
   payload.tenant_id = "other-tenant";
@@ -152,4 +152,5 @@ test("bulk BOM rejects client-selected tenant scope", async () => {
     /tenant scope is controlled by the authenticated server context/,
   );
   assert.equal(ctx.permissionCalls.length, 0);
+  assert.equal(ctx.lookupCalls.length, 0);
 });
