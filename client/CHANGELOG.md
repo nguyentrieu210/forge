@@ -7,6 +7,8 @@
 - Cây tải theo thao tác mở từng cấp, có tìm kiếm Bảng giá/Mặt hàng; panel cây kéo giãn và lưu kích thước theo chuẩn Forge.
 - Tiêu đề mỗi cột liên kết về hồ sơ Bảng giá; tạo Bảng giá mới thêm cột mới. Giá được bật/tắt và sửa theo đúng tổ hợp `Item + UOM + Price List`.
 - Bảng nhập giá có chế độ phóng to và bộ chọn ẩn/hiện cột Bảng giá. Nút Thêm ĐVT chèn dòng mới với Link UOM ngay trong bảng; hệ số quy đổi vẫn ghi về Item, ĐVT tồn kho chỉ đọc và sửa đơn giá không làm thay đổi tồn kho.
+- Dòng ĐVT ngoài ĐVT tồn kho có thể xoá; giá legacy chưa gắn UOM được ánh xạ về ĐVT bán/tồn để không biến mất. Giá và hệ số dùng NumberControl locale chung có phân tách nghìn/thập phân.
+- Hai ô tìm kiếm dùng tìm nhiều từ không dấu trên mã/tên/nhóm/ĐVT/ngày; nhánh kết quả vẫn thu gọn được và toàn bộ panel cây có nút đóng/mở.
 - Truy vấn Nhóm hàng chỉ dùng các trường nghiệp vụ được metadata cho phép, tránh lỗi 417 do yêu cầu trường cây nội bộ `lft`.
 
 ## v1.0.0-rc.1 — Product hardening
