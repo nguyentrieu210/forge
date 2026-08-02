@@ -11,21 +11,18 @@ function platformCaller(request: Request, env: PurchaseFifoEnv): PlatformCall {
   const declared = request.headers.get("x-cloudforge-callback");
   if (!declared) throw new Error("Nền tảng không cấp địa chỉ gọi ngược.");
   const base = declared.replace(/\/$/, "");
-  const forwarded = {
-    authorization: request.headers.get("authorization") ?? "",
-    "x-cloudforge-app": request.headers.get("x-cloudforge-app") ?? "",
-    "x-cloudforge-identity": request.headers.get("x-cloudforge-identity") ?? "",
-    "x-cloudforge-identity-signature": request.headers.get("x-cloudforge-identity-signature") ?? "",
-  };
+  const forwarded = { authorization: request.headers.get("authorization") ?? "", "x-cloudforge-app": request.headers.get("x-cloudforge-app") ?? "", "x-cloudforge-identity": request.headers.get("x-cloudforge-identity") ?? "", "x-cloudforge-identity-signature": request.headers.get("x-cloudforge-identity-signature") ?? "" };
   return (path: string, init: RequestInit = {}) => env.PLATFORM
     ? env.PLATFORM.fetch(new Request(`${base}/${path.replace(/^\//, "")}`, { ...init, headers: { "content-type": "application/json", ...forwarded, ...(init.headers as Record<string, string> | undefined) } }))
     : fetch(new Request(`${base}/${path.replace(/^\//, "")}`, { ...init, headers: { "content-type": "application/json", ...forwarded, ...(init.headers as Record<string, string> | undefined) } }));
 }
 
-async function listSubmittedOrderNames(call: PlatformCall, supplier: string): Promise<string[]> {
+async function listSubmittedOrderNames(call: PlatformCall, supplier?: string): Promise<string[]> {
   const names: string[] = [];
   for (let start = 0; start < 5_000; start += 200) {
-    const query = new URLSearchParams({ fields: JSON.stringify(["name"]), filters: JSON.stringify([["supplier", "=", supplier], ["docstatus", "=", 1]]), limit_start: String(start), limit_page_length: "200", order_by: "name asc" });
+    const filters: unknown[] = [["docstatus", "=", 1]];
+    if (supplier) filters.unshift(["supplier", "=", supplier]);
+    const query = new URLSearchParams({ fields: JSON.stringify(["name"]), filters: JSON.stringify(filters), limit_start: String(start), limit_page_length: "200", order_by: "name asc" });
     const response = await call(`resource/Purchase%20Order?${query}`);
     if (!response.ok) throw new Error("Không đọc được danh sách đơn mua để đối soát.");
     const page = (((await response.json()) as { data?: Array<{ name?: string }> }).data ?? []).map((row) => text(row.name)).filter(Boolean);
@@ -42,14 +39,16 @@ async function loadTimeline(call: PlatformCall, orderName: string): Promise<Time
   return ((await response.json()) as { message?: Timeline | null }).message ?? null;
 }
 
-async function resolveWindow(call: PlatformCall, supplier: string, queueKey: string, operation: "Close" | "Reverse") {
-  const names = await listSubmittedOrderNames(call, supplier);
-  const candidates = new Map<string, { window_id: string; window_sequence: number; status: string }>();
+async function resolveWindow(call: PlatformCall, requestedSupplier: string, queueKey: string, operation: "Close" | "Reverse") {
+  const names = await listSubmittedOrderNames(call, requestedSupplier || undefined);
+  const candidates = new Map<string, { window_id: string; window_sequence: number; status: string; supplier: string }>();
   for (let index = 0; index < names.length; index += 16) {
     const timelines = await Promise.all(names.slice(index, index + 16).map((name) => loadTimeline(call, name)));
     for (const timeline of timelines) for (const report of timeline?.supplier_debt_reports ?? []) for (const row of report.rows ?? []) {
       if (text(row.queue_key) !== queueKey || !text(row.window_id)) continue;
-      candidates.set(text(row.window_id), { window_id: text(row.window_id), window_sequence: numeric(row.window_sequence), status: text(row.window_status) || "Open" });
+      const supplier = text(row.supplier);
+      if (requestedSupplier && supplier && supplier !== requestedSupplier) continue;
+      candidates.set(text(row.window_id), { window_id: text(row.window_id), window_sequence: numeric(row.window_sequence), status: text(row.window_status) || "Open", supplier });
     }
   }
   const wanted = operation === "Close" ? "Open" : "Settled";
@@ -63,13 +62,13 @@ export async function handlePurchaseSupplierSettlement(request: Request, env: Pu
   try {
     if (!request.headers.get("x-cloudforge-tenant")) return answer({ message: "not a platform call" }, 403);
     const body = await request.json().catch(() => ({})) as { args?: Json }; const args = body.args ?? {};
-    const supplier = text(args.supplier); const queueKey = text(args.queue_key); const operation = text(args.operation) as "Close" | "Reverse"; const reason = text(args.reason);
-    if (!supplier) throw new Error("Cần Nhà cung cấp.");
+    const requestedSupplier = text(args.supplier); const queueKey = text(args.queue_key); const operation = text(args.operation) as "Close" | "Reverse"; const reason = text(args.reason);
     if (!queueKey) throw new Error("Thiếu mã luồng vật tư cần đối soát.");
     if (operation !== "Close" && operation !== "Reverse") throw new Error("Thao tác đối soát không hợp lệ.");
     if (reason.length < 3) throw new Error("Lý do đối soát phải có ít nhất 3 ký tự.");
 
-    const call = platformCaller(request, env); const window = await resolveWindow(call, supplier, queueKey, operation);
+    const call = platformCaller(request, env); const window = await resolveWindow(call, requestedSupplier, queueKey, operation); const supplier = window.supplier || requestedSupplier;
+    if (!supplier) throw new Error("Không xác định được nhà cung cấp của luồng vật tư.");
     const createdResponse = await call("resource/Purchase%20Settlement", { method: "POST", body: JSON.stringify({ operation, queue_key: queueKey, window_id: window.window_id, reason }) });
     if (!createdResponse.ok) throw new Error(`Không tạo được chứng từ đối soát: ${(await createdResponse.text()).slice(0, 300)}`);
     const created = ((await createdResponse.json()) as { data?: Json }).data;
