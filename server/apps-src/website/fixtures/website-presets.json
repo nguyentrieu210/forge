@@ -1,8 +1,9 @@
 [
   {
     "record_type": "Website Theme Preset",
-    "name": "business-blue",
+    "name": "business-blue@1",
     "data": {
+      "preset_id": "business-blue",
       "version": 1,
       "label": "Doanh nghiệp xanh",
       "tokens": {
@@ -21,8 +22,9 @@
   },
   {
     "record_type": "Website Theme Preset",
-    "name": "industrial-dark",
+    "name": "industrial-dark@1",
     "data": {
+      "preset_id": "industrial-dark",
       "version": 1,
       "label": "Công nghiệp tối",
       "tokens": {
@@ -41,8 +43,9 @@
   },
   {
     "record_type": "Website Theme Preset",
-    "name": "warm",
+    "name": "warm@1",
     "data": {
+      "preset_id": "warm",
       "version": 1,
       "label": "Ấm áp",
       "tokens": {
@@ -61,8 +64,9 @@
   },
   {
     "record_type": "Website Template",
-    "name": "business-landing",
+    "name": "business-landing@1",
     "data": {
+      "preset_id": "business-landing",
       "version": 1,
       "label": "Landing doanh nghiệp",
       "pages": [
@@ -103,8 +107,9 @@
   },
   {
     "record_type": "Website Template",
-    "name": "catalogue",
+    "name": "catalogue@1",
     "data": {
+      "preset_id": "catalogue",
       "version": 1,
       "label": "Catalogue sản phẩm",
       "pages": [
@@ -144,8 +149,9 @@
   },
   {
     "record_type": "Website Template",
-    "name": "sales",
+    "name": "sales@1",
     "data": {
+      "preset_id": "sales",
       "version": 1,
       "label": "Website bán hàng",
       "pages": [
