@@ -30,6 +30,11 @@ export interface ReplenishmentPlan extends InventoryPosition {
   suggested_qty_micros: number;
 }
 
+function safeInteger(value: number, field: string): number {
+  if (!Number.isSafeInteger(value)) throw errors.validation(`${field} must be a safe integer`);
+  return value;
+}
+
 function nonNegative(value: number | undefined, field: string): number {
   const normalized = value ?? 0;
   if (!Number.isSafeInteger(normalized) || normalized < 0) {
@@ -49,11 +54,11 @@ function safeAdd(values: number[]): number {
 
 /**
  * Computes an availability-oriented inventory position without reading or writing a ledger.
- * Inbound/outbound are already-approved or policy-selected open quantities supplied by the caller;
- * reservations are subtracted separately so ATP promises do not become physical stock movements.
+ * On-hand is signed because canonical stock policy may explicitly allow negative untracked stock.
+ * Inbound/outbound/reserved are absolute open quantities supplied by the caller.
  */
 export function inventoryPosition(input: InventoryPositionInput): InventoryPosition {
-  const onHand = nonNegative(input.on_hand_qty_micros, "on_hand_qty_micros");
+  const onHand = safeInteger(input.on_hand_qty_micros, "on_hand_qty_micros");
   const inbound = nonNegative(input.inbound_qty_micros, "inbound_qty_micros");
   const outbound = nonNegative(input.outbound_qty_micros, "outbound_qty_micros");
   const reserved = nonNegative(input.reserved_qty_micros, "reserved_qty_micros");
@@ -67,11 +72,7 @@ export function inventoryPosition(input: InventoryPositionInput): InventoryPosit
   };
 }
 
-/**
- * Classic min/max replenishment: trigger only when projected quantity falls below min,
- * then replenish exactly back to max. Safety stock is diagnostic evidence, not silently
- * folded into the trigger, so policy meaning stays explicit in metadata/configuration.
- */
+/** Classic min/max replenishment with safety stock kept as an explicit diagnostic. */
 export function planMinMaxReplenishment(
   input: InventoryPositionInput,
   policy: MinMaxPolicy,
@@ -84,8 +85,8 @@ export function planMinMaxReplenishment(
   if (safety > max) throw errors.validation("safety_stock_qty_micros cannot exceed max_qty_micros");
 
   const reorder = position.projected_qty_micros < min;
-  const suggested = reorder ? Math.max(0, max - position.projected_qty_micros) : 0;
-  if (!Number.isSafeInteger(suggested)) throw errors.validation("Suggested replenishment exceeds safe integer bounds");
+  const suggested = reorder ? max - position.projected_qty_micros : 0;
+  if (!Number.isSafeInteger(suggested) || suggested < 0) throw errors.validation("Suggested replenishment exceeds safe integer bounds");
 
   return {
     ...position,
