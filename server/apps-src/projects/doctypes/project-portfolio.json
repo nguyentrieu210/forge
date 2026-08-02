@@ -1,0 +1,22 @@
+{
+  "name": "Project Portfolio",
+  "module": "Projects",
+  "autoname": "field:portfolio_name",
+  "title_field": "portfolio_name",
+  "search_fields": ["portfolio_name", "company", "owner"],
+  "track_seen": true,
+  "fields": [
+    { "fieldname": "portfolio_name", "label": "Tên danh mục", "fieldtype": "Data", "required": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "owner", "label": "Chủ danh mục", "fieldtype": "Link", "options": "User", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "objective", "label": "Mục tiêu danh mục", "fieldtype": "Text", "required": true },
+    { "fieldname": "projects", "label": "Danh sách dự án", "fieldtype": "Table", "options": "Project Portfolio Item", "required": true },
+    { "fieldname": "is_active", "label": "Đang hoạt động", "fieldtype": "Check", "default": 1, "in_list_view": true, "in_standard_filter": true }
+  ],
+  "permissions": [
+    { "role": "Project User", "read": true, "report": true },
+    { "role": "Project Manager", "read": true, "write": true, "create": true, "delete": true, "report": true, "export": true, "share": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "delete": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}
