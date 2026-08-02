@@ -15,5 +15,5 @@ test("plastic ERP source passes canonical app pack check", () => {
   );
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
   assert.match(result.stdout, /PACK_CHECK_PASS/);
-  assert.match(result.stdout, /plastic-erp@0\.1\.0/);
+  assert.match(result.stdout, /plastic-erp@0\.2\.0/);
 });
