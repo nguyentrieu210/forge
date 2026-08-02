@@ -31,16 +31,15 @@ import {
  * Ví dụ qty=22 với precision=6 nên hiện "22", còn 0.389 vẫn phải giữ đủ ba số lẻ.
  * Chỉ thu gọn precision TRÌNH BÀY; giá trị gửi về form/server không thay đổi.
  */
-function compactDisplayPrecision(value: unknown, rawPrecision: unknown): string | number | undefined {
-  if (rawPrecision === undefined || rawPrecision === null || rawPrecision === "") return rawPrecision as undefined;
-  const precision = Number(rawPrecision);
+function compactDisplayPrecision(value: unknown, rawPrecision: unknown): string | undefined {
+  if (rawPrecision === undefined || rawPrecision === null || rawPrecision === "") return undefined;
+  const original = String(rawPrecision);
+  const precision = Number(original);
   const numeric = Number(value);
-  if (!Number.isInteger(precision) || precision < 0 || !Number.isFinite(numeric)) {
-    return rawPrecision as string | number | undefined;
-  }
-  if (precision === 0) return 0;
+  if (!Number.isInteger(precision) || precision < 0 || !Number.isFinite(numeric)) return original;
+  if (precision === 0) return "0";
   const fraction = Math.abs(numeric).toFixed(precision).split(".")[1]?.replace(/0+$/, "") ?? "";
-  return fraction.length;
+  return String(fraction.length);
 }
 
 const CompactNumberControl: FieldControl = (props: FieldControlProps) => {
