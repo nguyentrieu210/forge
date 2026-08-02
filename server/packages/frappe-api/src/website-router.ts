@@ -5,6 +5,7 @@ import {
   routeFrappeApi as routeCoreFrappeApi,
   type FrappeRouterContext,
 } from "./router.js";
+import { listSecurityAlerts } from "./security-alerts.js";
 import { WEBSITE_MANIFEST, WEBSITE_PAGE, websiteManifest, websitePage } from "./website.js";
 
 // Preserve every existing router export for package consumers. The explicit
@@ -16,6 +17,7 @@ const RECENT_SECURITY_AUTH_CLOCK_SKEW_SECONDS = 60;
 const METHOD_PREFIX = "/api/method/";
 const RESOURCE_PREFIX = "/api/resource/";
 const ADMIN_PASSWORD_METHOD = "frappe.core.doctype.user.user.update_password";
+const SECURITY_ALERTS_PATH = "/api/method/metaforge.api.security_alerts";
 
 /**
  * Privileged Frappe methods that must not be authorized by a long-lived browser session.
@@ -123,6 +125,25 @@ async function assertSecurityStepUp(
   assertRecentSecurityAuthentication(context.authenticatedAt, context.now());
 }
 
+async function securityAlertsResponse(request: Request, url: URL, context: FrappeRouterContext): Promise<Response> {
+  if (!context.organizationSecurity) throw errors.notFound("Security audit service is unavailable");
+  if (!["GET", "POST"].includes(request.method.toUpperCase())) throw errors.validation("security_alerts accepts GET or POST");
+  const args = await readFrappeArgs(request, url);
+  const cursor = args.text("cursor")?.trim() || undefined;
+  const limitText = args.text("limit")?.trim();
+  const limit = limitText === undefined ? undefined : Number(limitText);
+  if (limit !== undefined && (!Number.isInteger(limit) || limit < 1 || limit > 100)) {
+    throw errors.validation("limit must be an integer from 1 to 100");
+  }
+  return methodResponse(await listSecurityAlerts({
+    tenantId: context.tenantId,
+    actor: context.actor,
+    audit: context.organizationSecurity,
+    ...(cursor ? { cursor } : {}),
+    ...(limit === undefined ? {} : { limit }),
+  }));
+}
+
 /**
  * Adds the tiny unauthenticated Website/CMS read surface without widening the core
  * router's generic document API. Keeping this as a wrapper also keeps the already-large
@@ -130,9 +151,10 @@ async function assertSecurityStepUp(
  * bounded Forge capability.
  *
  * The same edge is also the narrowest place to enforce recent-auth for IAM, metadata and
- * app-lifecycle administration before requests enter the large compatibility router. The
- * core router still owns role checks and mutation semantics; this wrapper only adds the
- * step-up invariant.
+ * app-lifecycle administration before requests enter the large compatibility router. It
+ * also exposes the security-alert read model derived from the immutable audit authority.
+ * The core router still owns role checks and mutation semantics; this wrapper adds no
+ * second write path.
  */
 export async function routeFrappeApi(
   request: Request,
@@ -142,6 +164,7 @@ export async function routeFrappeApi(
   if (url.pathname !== WEBSITE_MANIFEST && url.pathname !== WEBSITE_PAGE) {
     try {
       await assertSecurityStepUp(request, url, context);
+      if (url.pathname === SECURITY_ALERTS_PATH) return await securityAlertsResponse(request, url, context);
     } catch (error) {
       return faultResponse(error, context.traceId);
     }
