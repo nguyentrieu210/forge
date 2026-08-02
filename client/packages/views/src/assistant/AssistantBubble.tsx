@@ -1,11 +1,11 @@
 /** @jsxImportSource react */
 /**
- * BÓNG TRỢ LÝ — hỏi bằng tiếng Việt về đúng thứ đang mở trên màn hình.
+ * BÓNG TRỢ LÝ — hỏi bằng tiếng Việt, có thể dùng bối cảnh màn hình hiện tại khi câu hỏi cần dữ liệu cụ thể.
  *
  * Bối cảnh gửi lên là thứ NGƯỜI DÙNG ĐANG XEM, do màn hình tự khai qua `useAssistantContext`.
  * Trợ lý không tự đi quét cơ sở dữ liệu, nên quyền xem của người dùng vẫn là ranh giới duy
- * nhất: hỏi trợ lý không moi ra được thứ mà mở màn hình lên cũng không thấy. Nếu để nó tự
- * truy vấn, mỗi câu hỏi sẽ thành một đường đọc dữ liệu đi vòng qua phân quyền.
+ * nhất đối với dữ liệu tenant. Câu hỏi kiến thức/nghiệp vụ chung vẫn được trả lời bình thường;
+ * chỉ dữ liệu cụ thể của doanh nghiệp mới phải bám vào bối cảnh đã được phép xem.
  */
 import { useEffect, useRef, useState } from "react";
 import { Bot, Loader2, Send, X } from "lucide-react";
@@ -83,7 +83,7 @@ export function AssistantBubble({ appName = "Trợ lý", open: controlledOpen, o
         onClick={() => setOpen(true)}
         className="fixed bottom-20 right-4 z-50 size-12 rounded-full shadow-lg transition hover:brightness-110"
         aria-label="Mở trợ lý"
-        title="Hỏi trợ lý về dữ liệu đang xem"
+        title="Hỏi trợ lý AI"
       >
         <Bot className="size-5" />
       </Button>
@@ -102,9 +102,8 @@ export function AssistantBubble({ appName = "Trợ lý", open: controlledOpen, o
 
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
         {messages.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Hỏi về đúng màn hình đang mở — ví dụ “tổng tiền phiếu này bao nhiêu”, “dòng nào chưa có kho”.
-            Trợ lý chỉ đọc dữ liệu đang hiện trên màn hình.
+          <p className="text-sm leading-5 text-muted-foreground">
+            Hỏi về nghiệp vụ, cách dùng phần mềm, phân tích hoặc dữ liệu đang mở. Bối cảnh màn hình hiện tại chỉ là thông tin hỗ trợ khi câu hỏi cần số liệu cụ thể.
           </p>
         ) : null}
         {messages.map((message, i) => (
@@ -126,7 +125,7 @@ export function AssistantBubble({ appName = "Trợ lý", open: controlledOpen, o
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void send(); } }}
-          placeholder="Hỏi về màn hình đang mở…"
+          placeholder="Hỏi AI bất kỳ điều gì…"
           className="min-w-0 flex-1"
         />
         <Button type="button" size="icon" onClick={() => void send()} disabled={busy || !draft.trim()} aria-label="Gửi">
