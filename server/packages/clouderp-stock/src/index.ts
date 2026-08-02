@@ -3,6 +3,7 @@ export * from "./valuation.js";
 export * from "./tracking.js";
 export * from "./tracking-integrity.js";
 export * from "./warehouse-scope.js";
+export * from "./warehouse-location.js";
 export * from "./inventory-policy.js";
 export * from "./inventory-analytics.js";
 export * from "./wms-putaway.js";
