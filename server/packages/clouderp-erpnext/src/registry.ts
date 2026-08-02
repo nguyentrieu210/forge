@@ -18,8 +18,11 @@ import {
   JobOfferController, JobOpeningController,
 } from "./hrm-core-controllers.js";
 import {
-  AttendanceController, AttendanceRequestController, EmployeeCheckinController, ShiftAssignmentController, ShiftTypeController,
+  AttendanceController, AttendanceRequestController, ShiftAssignmentController,
 } from "./hrm-shift-attendance-controllers.js";
+import {
+  AttendanceGeofenceController, GeofencedEmployeeCheckinController, GeofencedShiftTypeController,
+} from "./hrm-geofence-controllers.js";
 import {
   HolidayListController, LeaveAllocationController, LeaveApplicationController, LeavePolicyController, OvertimeRequestController,
 } from "./hrm-leave-overtime-controllers.js";
@@ -76,9 +79,10 @@ export function registerErpNextCoreControllers(registry: ControllerRegistry): Co
     .register(new InterviewController())
     .register(new JobOfferController())
     .register(new HiringCompletionController())
-    .register(new ShiftTypeController())
+    .register(new GeofencedShiftTypeController())
+    .register(new AttendanceGeofenceController())
     .register(new ShiftAssignmentController())
-    .register(new EmployeeCheckinController())
+    .register(new GeofencedEmployeeCheckinController())
     .register(new AttendanceRequestController())
     .register(new OvertimeRequestController())
     .register(new HolidayListController())
