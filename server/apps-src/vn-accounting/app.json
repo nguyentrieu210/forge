@@ -1,7 +1,7 @@
 {
   "id": "vn-accounting",
   "name": "Kế toán Việt Nam",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "worker": "cloudforge-app-vn-accounting",
   "requires": [
     { "id": "hrm", "version": ">=1.3.0" }
@@ -44,6 +44,10 @@
     { "key": "VN Tax Ruleset", "label": "Ruleset thuế", "kind": "doctype", "icon": "badge-percent", "group": "Thuế & tuân thủ" },
     { "key": "tax-evaluate", "label": "Tính thử ruleset thuế", "kind": "route", "route": "/x/action:tax-evaluate", "icon": "calculator", "group": "Thuế & tuân thủ", "required_roles": ["Tax Specialist", "Chief Accountant", "Accounts Manager", "Internal Auditor", "System Manager"] },
     { "key": "e-invoice-submission", "label": "Hóa đơn điện tử", "kind": "route", "route": "/app/E-Invoice%20Submission", "icon": "receipt", "group": "Thuế & tuân thủ", "required_roles": ["Tax Specialist", "Accounts Manager", "System Manager"] },
+
+    { "key": "finance-budget", "label": "Ngân sách", "kind": "route", "route": "/app/Finance%20Budget", "icon": "wallet-cards", "group": "Ngân sách & kiểm soát", "required_roles": ["Accounts User", "Accounts Manager", "Chief Accountant", "Internal Auditor", "System Manager"] },
+    { "key": "finance-budget-revision", "label": "Điều chỉnh ngân sách", "kind": "route", "route": "/app/Finance%20Budget%20Revision", "icon": "file-pen-line", "group": "Ngân sách & kiểm soát", "required_roles": ["Accounts User", "Accounts Manager", "Chief Accountant", "Internal Auditor", "System Manager"] },
+    { "key": "finance-budget-commitment", "label": "Cam kết ngân sách", "kind": "route", "route": "/app/Finance%20Budget%20Commitment", "icon": "shield-check", "group": "Ngân sách & kiểm soát", "required_roles": ["Accounts User", "Accounts Manager", "Chief Accountant", "Purchase Manager", "Internal Auditor", "System Manager"] },
 
     { "key": "Warehouse Cash Fund", "label": "Quỹ tiền mặt theo kho", "kind": "doctype", "icon": "landmark", "group": "Quỹ kho" },
     { "key": "Warehouse Cash Voucher", "label": "Phiếu thu chi kho", "kind": "doctype", "icon": "receipt-text", "group": "Quỹ kho" },
