@@ -24,7 +24,7 @@ AND (
 BEGIN SELECT RAISE(ABORT,'INVALID_LIFECYCLE_TRANSITION: HR_PAYROLL_RULE_INVALID'); END;
 
 CREATE TRIGGER IF NOT EXISTS hr_payroll_rule_validate_update_guard
-BEFORE UPDATE OF name,data_json ON master_records
+BEFORE UPDATE OF record_type,name,data_json ON master_records
 WHEN NEW.record_type='VN Payroll Rule'
 AND (
   COALESCE(json_extract(NEW.data_json,'$.rule_code'),'')=''
@@ -44,7 +44,7 @@ AND (
 BEGIN SELECT RAISE(ABORT,'INVALID_LIFECYCLE_TRANSITION: HR_PAYROLL_RULE_INVALID'); END;
 
 CREATE TRIGGER IF NOT EXISTS hr_payroll_rule_immutable_update_guard
-BEFORE UPDATE OF name,data_json,disabled ON master_records
+BEFORE UPDATE OF record_type,name,data_json,disabled ON master_records
 WHEN OLD.record_type='VN Payroll Rule'
 AND (
   EXISTS(
