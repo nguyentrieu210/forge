@@ -60,13 +60,16 @@ test("recent security authentication accepts the configured window and rejects s
   assert.throws(() => assertRecentSecurityAuthentication(NOW + 61, NOW_ISO), /sign in again/i);
 });
 
-test("the step-up contract covers tenant IAM mutations and only admin resets for the password endpoint", () => {
+test("the step-up contract covers tenant IAM, app lifecycle and customization mutations", () => {
   for (const method of [
     "metaforge.api.add_user_permission",
     "metaforge.api.remove_user_permission",
     "metaforge.api.set_user_roles",
     "metaforge.api.create_user",
     "metaforge.api.set_user_enabled",
+    "frappe.custom.doctype.customize_form.customize_form.save_customization",
+    "forge.apps.install",
+    "forge.apps.uninstall",
   ]) {
     assert.equal(requiresRecentSecurityAuthentication(method, ADMIN.user_id), true, method);
   }
@@ -87,6 +90,7 @@ test("the step-up contract covers tenant IAM mutations and only admin resets for
     false,
   );
   assert.equal(requiresRecentSecurityAuthentication("metaforge.api.list_users", ADMIN.user_id), false);
+  assert.equal(requiresRecentSecurityAuthentication("forge.apps.list", ADMIN.user_id), false);
 });
 
 test("the step-up contract covers every Frappe platform-metadata mutation but not metadata reads", () => {
@@ -136,6 +140,17 @@ test("a stale administrator session cannot reshape platform metadata through the
   const body = await response.json();
   assert.equal(body.exc_type, "AuthenticationError");
   assert.match(body.message, /sign in again/i);
+});
+
+test("a stale administrator session cannot install an app through the Frappe method surface", async () => {
+  const { request, url } = methodRequest("forge.apps.install", { package: {} });
+  const response = await routeFrappeApi(
+    request,
+    url,
+    edgeContext(NOW - RECENT_SECURITY_AUTH_MAX_AGE_SECONDS - 1),
+  );
+  assert.equal(response.status, 401);
+  assert.equal((await response.json()).exc_type, "AuthenticationError");
 });
 
 test("an administrator reset of another user's password also requires recent password authentication", async () => {
