@@ -15,13 +15,20 @@
 import type { Actor, JsonObject } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
 import { acceptWebFormPayload, parseWebForm, visitorKey, type WebFormDefinition } from "../../frappe-model/src/index.js";
+import { isWebsitePath } from "./website.js";
 
 export const WEB_FORM_GET = "/api/method/metaforge.api.get_web_form";
 export const WEB_FORM_ACCEPT = "/api/method/frappe.website.doctype.web_form.web_form.accept";
 
-/** Paths a visitor with no session may reach. */
+/**
+ * Paths a visitor with no session may reach.
+ *
+ * Website/CMS methods join this public gate because the tenant worker has one explicit
+ * unauthenticated allowlist. They do NOT inherit web-form permissions: the website
+ * resolver has its own published/field/block allowlist and never exposes generic CRUD.
+ */
 export function isWebFormPath(pathname: string): boolean {
-  return pathname === WEB_FORM_GET || pathname === WEB_FORM_ACCEPT;
+  return pathname === WEB_FORM_GET || pathname === WEB_FORM_ACCEPT || isWebsitePath(pathname);
 }
 
 export interface WebFormStore {
