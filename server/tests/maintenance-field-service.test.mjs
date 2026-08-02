@@ -93,8 +93,10 @@ test("warranty claim separates entitlement verification from technical execution
   assert.equal(transition(workflow, "Hoàn tất").allow_self_approval, false);
 });
 
-test("service order requires completion evidence and exposes schedule views", () => {
+test("service order requires structured checklist, part evidence and completion proof", () => {
   const order = json("doctypes/service-order.json");
+  const checklist = json("doctypes/service-checklist-item.json");
+  const parts = json("doctypes/service-part-usage.json");
   const workflow = json("workflows/service-order.json");
 
   assert.equal(field(order, "maintenance_request").options, "Maintenance Request");
@@ -102,11 +104,21 @@ test("service order requires completion evidence and exposes schedule views", ()
   assert.equal(field(order, "service_contract").options, "Service Contract");
   assert.equal(field(order, "technician").options, "Service Technician");
   assert.equal(field(order, "serial_no").options, "Serial No");
+  assert.equal(field(order, "checklist").fieldtype, "Table");
+  assert.equal(field(order, "checklist").options, "Service Checklist Item");
+  assert.equal(field(order, "parts_used").options, "Service Part Usage");
+  assert.equal(checklist.is_child, true);
+  assert.equal(field(checklist, "result").required, true);
+  assert.equal(field(checklist, "photo").fieldtype, "Attach");
+  assert.equal(parts.is_child, true);
+  assert.equal(field(parts, "item").options, "Item");
+  assert.equal(field(parts, "uom").options, "UOM");
+  assert.equal(field(parts, "stock_reference").fieldtype, "Data");
   assert.equal(order.viewPolicy.calendar.enabled, true);
   assert.equal(order.viewPolicy.calendar.startField, "scheduled_start");
   assert.equal(order.viewPolicy.calendar.endField, "scheduled_end");
 
-  for (const fieldname of ["actual_start", "actual_end", "checklist_result", "work_performed", "resolution"]) {
+  for (const fieldname of ["actual_start", "actual_end", "overall_checklist_result", "work_performed", "resolution"]) {
     assert.equal(field(order, fieldname).mandatory_depends_on.includes("Chờ xác nhận"), true);
   }
   assert.equal(field(order, "customer_confirmed_by").mandatory_depends_on, "eval:doc.workflow_state == 'Hoàn tất'");
@@ -131,7 +143,8 @@ test("service evidence prints are source-linked and package compiles through app
   assert.equal(claimPrint.doc_type, "Warranty Claim");
   assert.ok(claimPrint.html.includes("{{ doc.eligibility_result }}"));
   assert.equal(servicePrint.doc_type, "Service Order");
-  assert.ok(servicePrint.html.includes("{{ doc.warranty_claim }}"));
+  assert.ok(servicePrint.html.includes("doc.checklist"));
+  assert.ok(servicePrint.html.includes("doc.parts_used"));
   assert.ok(servicePrint.html.includes("{{ doc.resolution }}"));
 
   const result = spawnSync(process.execPath, [PACK, APP, "--check"], { encoding: "utf8" });
