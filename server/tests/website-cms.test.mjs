@@ -23,7 +23,11 @@ test("Website app is a packable safe metadata capability", async () => {
   assert.equal(settings?.is_single, true);
   const settingsFields = fieldMap(settings);
   assert.equal(settingsFields.get("template_preset")?.required, true);
+  assert.equal(settingsFields.get("template_version")?.required, true);
+  assert.equal(settingsFields.get("template_version")?.read_only, true);
   assert.equal(settingsFields.get("theme_preset")?.required, true);
+  assert.equal(settingsFields.get("theme_version")?.required, true);
+  assert.equal(settingsFields.get("theme_version")?.read_only, true);
 
   const page = parsed.doctypes.find((item) => item.name === "Web Page");
   assert.equal(fieldMap(page).get("blocks")?.options, "Web Page Block");
@@ -36,9 +40,11 @@ test("Website app is a packable safe metadata capability", async () => {
 
   const templates = source.fixtures.filter((item) => item.record_type === "Website Template");
   const themes = source.fixtures.filter((item) => item.record_type === "Website Theme Preset");
-  assert.deepEqual(templates.map((item) => item.name).sort(), ["business-landing", "catalogue", "sales"]);
-  assert.deepEqual(themes.map((item) => item.name).sort(), ["business-blue", "industrial-dark", "warm"]);
-  const sales = templates.find((item) => item.name === "sales");
+  assert.deepEqual(templates.map((item) => item.name).sort(), ["business-landing@1", "catalogue@1", "sales@1"]);
+  assert.deepEqual(themes.map((item) => item.name).sort(), ["business-blue@1", "industrial-dark@1", "warm@1"]);
+  const sales = templates.find((item) => item.name === "sales@1");
+  assert.equal(sales.data.preset_id, "sales");
+  assert.equal(sales.data.version, 1);
   assert.ok(sales.data.pages.some((candidate) => candidate.blocks.some((entry) => entry.type === "product-grid" && entry.source === "storefront-catalog")));
 });
 
@@ -60,7 +66,9 @@ test("Website resolver exposes only published tenant content and safe blocks", a
           site_description: "Public Alpha site",
           home_page: "home",
           template_preset: "business-landing",
+          template_version: 1,
           theme_preset: "business-blue",
+          theme_version: 1,
           primary_color: "#112233",
           contact_email: "hello@alpha.test",
         },
@@ -102,6 +110,8 @@ test("Website resolver exposes only published tenant content and safe blocks", a
 
   const alpha = await websitePage({ db, tenantId: "alpha" }, "about");
   assert.equal(alpha.site.title, "Alpha Window");
+  assert.equal(alpha.site.template_version, 1);
+  assert.equal(alpha.site.theme_version, 1);
   assert.equal(alpha.theme.primary, "#112233");
   assert.equal(alpha.page.title, "Alpha About");
   assert.equal(alpha.page.internal_note, undefined);
@@ -113,26 +123,68 @@ test("Website resolver exposes only published tenant content and safe blocks", a
 
   const beta = await websitePage({ db, tenantId: "beta" }, "home");
   assert.equal(beta.site.title, "Beta Plastic");
+  assert.equal(beta.site.template_version, 1, "missing legacy version field must default to v1");
+  assert.equal(beta.site.theme_version, 1, "missing legacy version field must default to v1");
   assert.equal(beta.page.blocks.some((item) => item.type === "product-grid"), true);
   assert.notEqual(beta.theme.primary, alpha.theme.primary);
 
   await assert.rejects(() => websitePage({ db, tenantId: "alpha" }, "draft"));
 });
 
+test("Website preset versions are pinned and do not silently change on app upgrade", async () => {
+  const masters = presetMasters();
+  masters["Website Template:business-landing@2"] = {
+    preset_id: "business-landing",
+    version: 2,
+    pages: [{ slug: "home", title: "V2 Home", blocks: [{ type: "hero", heading: "V2 must not leak" }] }],
+  };
+  masters["Website Theme Preset:business-blue@2"] = {
+    preset_id: "business-blue",
+    version: 2,
+    tokens: { primary: "#ff0000", secondary: "#000000", background: "#ffffff", surface: "#ffffff", text: "#000000", muted: "#666666", heading_font: "system", body_font: "system", radius: "soft", density: "comfortable" },
+  };
+  const db = fakeDb({
+    tenants: {
+      pinned: {
+        settings: {
+          enabled: 1,
+          published: 1,
+          site_title: "Pinned",
+          home_page: "home",
+          template_preset: "business-landing",
+          template_version: 1,
+          theme_preset: "business-blue",
+          theme_version: 1,
+        },
+        pages: [],
+      },
+    },
+    masters,
+  });
+
+  const page = await websitePage({ db, tenantId: "pinned" }, "home");
+  assert.equal(page.site.template_version, 1);
+  assert.equal(page.site.theme_version, 1);
+  assert.equal(page.page.title, "Home");
+  assert.equal(page.page.blocks[0].heading, "Business");
+  assert.equal(page.theme.primary, "#1d4ed8");
+});
+
 test("Website resolver fails closed for unpublished site and unsupported block", async () => {
   const masters = presetMasters();
-  masters["Website Template:unsafe"] = {
+  masters["Website Template:unsafe@1"] = {
+    preset_id: "unsafe",
     version: 1,
     pages: [{ slug: "home", title: "Unsafe", blocks: [{ type: "html", body: "<script>alert(1)</script>" }] }],
   };
   const db = fakeDb({
     tenants: {
       hidden: {
-        settings: { enabled: 1, published: 0, site_title: "Hidden", home_page: "home", template_preset: "business-landing", theme_preset: "business-blue" },
+        settings: { enabled: 1, published: 0, site_title: "Hidden", home_page: "home", template_preset: "business-landing", template_version: 1, theme_preset: "business-blue", theme_version: 1 },
         pages: [],
       },
       unsafe: {
-        settings: { enabled: 1, published: 1, site_title: "Unsafe", home_page: "home", template_preset: "unsafe", theme_preset: "business-blue" },
+        settings: { enabled: 1, published: 1, site_title: "Unsafe", home_page: "home", template_preset: "unsafe", template_version: 1, theme_preset: "business-blue", theme_version: 1 },
         pages: [],
       },
     },
@@ -145,15 +197,18 @@ test("Website resolver fails closed for unpublished site and unsupported block",
 
 function presetMasters() {
   return {
-    "Website Theme Preset:business-blue": {
+    "Website Theme Preset:business-blue@1": {
+      preset_id: "business-blue",
       version: 1,
       tokens: { primary: "#1d4ed8", secondary: "#0f766e", background: "#ffffff", surface: "#f8fafc", text: "#0f172a", muted: "#64748b", heading_font: "system", body_font: "system", radius: "soft", density: "comfortable" },
     },
-    "Website Theme Preset:warm": {
+    "Website Theme Preset:warm@1": {
+      preset_id: "warm",
       version: 1,
       tokens: { primary: "#c2410c", secondary: "#a16207", background: "#fffbeb", surface: "#fff7ed", text: "#431407", muted: "#78716c", heading_font: "serif", body_font: "system", radius: "round", density: "comfortable" },
     },
-    "Website Template:business-landing": {
+    "Website Template:business-landing@1": {
+      preset_id: "business-landing",
       version: 1,
       pages: [
         { slug: "home", title: "Home", show_in_nav: 1, nav_label: "Home", nav_order: 1, blocks: [{ type: "hero", heading: "Business", button_url: "/contact" }] },
@@ -161,7 +216,8 @@ function presetMasters() {
         { slug: "contact", title: "Contact", show_in_nav: 1, nav_label: "Contact", nav_order: 9, blocks: [{ type: "contact" }] },
       ],
     },
-    "Website Template:catalogue": {
+    "Website Template:catalogue@1": {
+      preset_id: "catalogue",
       version: 1,
       pages: [{ slug: "home", title: "Catalogue", show_in_nav: 1, nav_label: "Home", nav_order: 1, blocks: [{ type: "product-grid", source: "storefront-catalog", limit: 6 }] }],
     },
