@@ -8,7 +8,16 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, CI, merge và relea
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `main`.
-- Exact `main` khi clean-transplant task auto deploy: `efa2aa6df385ca0775523f1756494d2ae54ec132`.
+- Exact `main` khi mở policy task: `cd1f76dbb47432e2312c6f5577eb955b48c3a856`.
+
+## ACTIVE — Minimal risk-based gates
+
+- Canonical branch: `chore/risk-based-quality-gates-20260802`.
+- `FAST`: `branch -> sửa -> diff -> commit -> push`.
+- FAST không bắt buộc PR, full test/lint/typecheck/build/CI hoặc cập nhật status/handoff cho từng chỉnh sửa nhỏ.
+- `STANDARD`: test/validation/PR/CI phù hợp với logic sản phẩm.
+- `CRITICAL`: giữ regression/integration/security/data-integrity và required CI cho accounting/inventory/costing/auth/tenant/migration/production data.
+- Build/install/stage chỉ để tạo artifact deploy là packaging.
 
 ## ACTIVE — Auto deploy UI hotfix
 
@@ -32,13 +41,14 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, CI, merge và relea
 
 ## Chưa hoàn tất
 
-1. Merge auto-deploy workflow vào `main`, replay UI theme fix trên hotfix mới và xác nhận production deploy tự chạy.
-2. Bulk Transaction cho Stock Reconciliation.
-3. Bulk Transaction cho BOM parent + child/version.
-4. First-class AppAction input-table contract.
-5. Batch Print / QR label queue.
-6. P1 Daily detailed ledger hardening/closure theo exact GitHub state.
-7. Plastic ERP các wave sau P0-A.
+1. Merge policy risk-based gates vào `main`.
+2. Merge auto-deploy workflow vào `main`, replay UI theme fix trên hotfix mới và xác nhận production deploy tự chạy.
+3. Bulk Transaction cho Stock Reconciliation.
+4. Bulk Transaction cho BOM parent + child/version.
+5. First-class AppAction input-table contract.
+6. Batch Print / QR label queue.
+7. P1 Daily detailed ledger hardening/closure theo exact GitHub state.
+8. Plastic ERP các wave sau P0-A.
 
 ## Guardrails
 

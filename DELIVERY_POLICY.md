@@ -2,40 +2,36 @@
 
 Ngày cập nhật: **2026-08-02**.
 
-`RUNBOOK.md` là quy tắc vận hành canonical. File này mô tả ranh giới giao hàng và phát hành.
+## FAST
 
-## Luồng mặc định
+Dùng cho thay đổi UI/presentation nhỏ, không đụng business logic, API, permission, tenant, data hoặc schema.
 
-Với thay đổi code sản phẩm thông thường:
+`branch -> sửa -> diff -> commit -> push`
 
-`branch -> code -> validation phù hợp -> PR -> required CI -> merge -> production khi được yêu cầu`
+Không bắt buộc PR, full test, lint, typecheck, build hoặc CI. Nếu workflow cần install/build/stage để tạo artifact thì đó là packaging.
 
-Merge và production deploy là hai ranh giới riêng.
+`hotfix/ui-*` hợp lệ có thể tự deploy production theo workflow đã thiết lập.
 
-## UI hotfix trực tiếp
+## STANDARD
 
-Khi user yêu cầu sửa UI nhỏ và phát hành nhanh, dùng `.github/workflows/hotfix-ui-one-click.yml`.
+Dùng cho CRUD, API và product logic thông thường.
 
-Luồng:
+`branch -> code -> test liên quan -> validation phù hợp -> PR/CI phù hợp -> merge`
 
-`checkout branch -> pnpm install -> build MetaForge -> stage client bundle -> wrangler deploy Gateway production`
+## CRITICAL
 
-Không có pre-deploy validation trong lane này. Cụ thể không chạy lint, test, typecheck, dry-run, smoke test, scope guard hoặc PR reconcile tự động.
+Dùng cho accounting, tiền, công nợ, inventory, costing, manufacturing, auth, permission, tenant, migration hoặc production data.
 
-Lý do giữ `install`, `build` và `stage`: đây không phải quality gate mà là các bước tạo bundle và đóng bundle vào Gateway trước khi Cloudflare có thể deploy.
+`branch -> code -> regression/integration/data-integrity/security -> validation đầy đủ -> PR -> required CI -> merge`
 
-Lane này chỉ dành cho UI nhỏ. Nếu thay đổi đụng backend, schema, migration, data, accounting, warehouse/inventory state, secrets, DNS hoặc business rule production thì phải dùng luồng bình thường.
+Không hạ CRITICAL xuống FAST để tiết kiệm thời gian.
 
-## Production authorization
+## Production boundary
 
-Chỉ chạy workflow production khi user yêu cầu rõ. Không tự deploy chỉ vì workflow đã tồn tại.
-
-Không tự sửa production secrets/DNS, xoá Cloudflare resource, chạy destructive migration hoặc mutate customer data.
+Không tự đổi DNS/secrets, destructive migration hoặc customer data. Production deploy chỉ chạy khi user yêu cầu rõ hoặc qua automation fast lane mà user đã chủ động thiết lập.
 
 ## Evidence
 
-Với direct UI hotfix, chỉ được báo đúng những gì thực tế đã chạy. Nếu không chạy lint/test/typecheck/smoke thì ghi `NOT RUN`, không suy diễn PASS.
+Chỉ báo những gate thực tế đã chạy. FAST không bị coi là chưa hoàn thành chỉ vì test/lint/typecheck/build/CI là `NOT RUN`.
 
-## File cấm commit
-
-Không commit `.env`, secrets, `server/work/`, `tmp/`, backup, credential, cookie/token hoặc generated artifact không thuộc source control.
+Không commit `.env`, secrets, `server/work/`, `tmp/`, backup, credential/token hoặc generated artifact không thuộc source control.

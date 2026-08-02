@@ -2,73 +2,55 @@
 
 Ngày cập nhật: **2026-08-02**.
 
-Đây là runbook vận hành canonical của repository `nguyentrieu210/forge`.
+GitHub là nguồn sự thật cho code, branch, PR, CI, merge và release.
 
-## 1. Nguồn sự thật
+## 1. Trước khi làm
 
-GitHub là nguồn sự thật cho code, branch head, pull request, CI, merge và release evidence.
+- Đọc `CURRENT_STATUS.md`, `NEXT_TASKS.md`, `AI_HANDOFF.md` khi task có nghiệp vụ/rủi ro hoặc cần tiếp tục công việc cũ.
+- Task mới không code trực tiếp trên `main`; mở branch riêng.
+- Không hỏi lại thứ tự có thể tự xác định từ GitHub.
 
-Không lấy branch, SHA, PR hoặc CI từ lịch sử chat làm trạng thái hiện hành. Mọi SHA/branch ghi trong tài liệu chỉ là snapshot tại thời điểm cập nhật và phải được kiểm tra lại trên GitHub trước khi làm tiếp.
+## 2. Chọn mức xử lý
 
-## 2. Thứ tự đọc bắt buộc
+Mặc định chọn mức nhẹ nhất phù hợp blast radius.
 
-Mỗi phiên làm việc đọc theo thứ tự:
+### FAST
 
-1. `RUNBOOK.md`.
-2. `CURRENT_STATUS.md`.
-3. `NEXT_TASKS.md`.
-4. `AI_HANDOFF.md`.
-5. `DELIVERY_POLICY.md` khi liên quan release/deploy.
+Dùng cho CSS, text, spacing, icon, layout, print UI nhỏ hoặc thay đổi thuần hiển thị.
 
-## 3. Bắt đầu một đợt làm việc
+Luồng:
 
-Trước khi sửa code hoặc tài liệu:
+`branch -> sửa -> xem diff -> commit -> push`
 
-1. Kiểm tra exact `main` hiện tại trên GitHub.
-2. Kiểm tra branch/PR liên quan còn tồn tại và đúng scope.
-3. Task mới phải mở branch riêng từ exact current `main`.
-4. Không code trực tiếp trên `main`.
+Nếu là `hotfix/ui-*` hợp lệ thì push có thể tự deploy theo workflow hiện có.
 
-## 4. Luồng bình thường
+Không bắt buộc PR, full test, lint, typecheck, build, CI hoặc cập nhật 3 file status cho từng chỉnh sửa nhỏ. Build/install/stage nếu workflow cần để tạo artifact chỉ là packaging.
 
-Với feature, backend, nghiệp vụ, data, migration, accounting, inventory, manufacturing hoặc thay đổi có rủi ro:
+Nếu phát hiện chạm business logic, API, data, permission, tenant hoặc schema thì nâng mức.
 
-`branch -> code -> test/typecheck/build phù hợp -> PR -> required CI -> merge -> release khi được yêu cầu`
+### STANDARD
 
-## 5. UI hotfix trực tiếp
+Dùng cho CRUD, API và logic sản phẩm thông thường.
 
-Dùng cho thay đổi UI nhỏ khi user muốn phát hành nhanh và chấp nhận bỏ toàn bộ validation tự động trước deploy.
+`branch -> code -> test liên quan -> kiểm tra kỹ thuật phù hợp -> PR/CI phù hợp -> merge`
 
-Luồng duy nhất:
+Không chạy gate không liên quan chỉ để đủ quy trình.
 
-`branch -> sửa client -> commit -> Actions -> ALU UI Hotfix - One Click Deploy -> build bundle -> stage bundle -> deploy Gateway production`
+### CRITICAL
 
-Workflow: `.github/workflows/hotfix-ui-one-click.yml`.
+Dùng cho accounting, tiền, công nợ, kho, giá vốn, manufacturing/costing, auth, permission, tenant isolation, migration, destructive state hoặc production data.
 
-Workflow này **không chạy**:
+`branch -> code -> regression/integration/data-integrity/security -> typecheck/lint/build phù hợp -> PR -> required CI -> merge`
 
-- scope guard;
-- lint;
-- unit/integration test;
-- typecheck;
-- Wrangler dry-run;
-- smoke test;
-- PR reconcile tự động.
+Không hạ CRITICAL chỉ để làm nhanh.
 
-Nó chỉ làm các bước kỹ thuật bắt buộc để có artifact chạy được: checkout, cài dependency, build MetaForge UI, stage bundle vào Gateway và chạy `wrangler deploy`.
+## 3. Production
 
-Không dùng lane này nếu thay đổi có backend, schema, migration, data, accounting, warehouse, production business rule, secrets hoặc DNS. Các thay đổi đó quay lại luồng bình thường.
+- Không tự deploy production, đổi DNS/secrets, chạy destructive migration hoặc mutate customer data nếu user chưa yêu cầu rõ, ngoại trừ automation production đã được user chủ động thiết lập cho đúng fast lane.
+- Không commit `.env`, secrets, `server/work/`, `tmp/`, backup, credential/token hoặc generated artifact không thuộc source control.
 
-## 6. Production boundary
+## 4. Khi dừng
 
-Không tự deploy production nếu user chưa yêu cầu rõ. UI hotfix workflow tồn tại không đồng nghĩa AI được phép tự chạy production.
+Với STANDARD/CRITICAL hoặc thay đổi kỹ thuật quan trọng: cập nhật status/handoff phù hợp và báo branch, SHA, validation, rủi ro.
 
-Không tự sửa production secrets/DNS, xoá resource, chạy destructive migration hoặc mutate customer data.
-
-## 7. File cấm commit
-
-Không commit `.env`, secrets, `server/work/`, `tmp/`, backup, credential, cookie/token hoặc generated artifact không thuộc source control.
-
-## 8. Kết thúc một đợt làm việc
-
-Cập nhật `CURRENT_STATUS.md`, `NEXT_TASKS.md`, và `AI_HANDOFF.md` khi có quyết định kỹ thuật quan trọng. Báo branch, commit SHA, PR/merge SHA, file sửa, test/build/CI đã chạy hoặc không chạy, rủi ro còn lại, việc user cần làm và việc AI làm tiếp.
+Với FAST nhỏ: chỉ cần báo branch, SHA, thay đổi đã làm và deploy state; không tạo thêm nghi thức tài liệu nếu không có thông tin lâu dài cần handoff.

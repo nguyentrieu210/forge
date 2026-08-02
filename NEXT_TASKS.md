@@ -4,6 +4,15 @@ Ngày cập nhật: **2026-08-02**.
 
 Đây là hàng đợi active. GitHub là nguồn sự thật cho exact `main`, PR, branch và CI; trước khi làm phải đọc `RUNBOOK.md`, `CURRENT_STATUS.md`, `AI_HANDOFF.md`, `DELIVERY_POLICY.md` và kiểm tra PR đang mở.
 
+## P1 — Risk-based quality gates
+
+- Canonical branch: `chore/risk-based-quality-gates-20260802`, base exact `main@cd1f76dbb47432e2312c6f5577eb955b48c3a856`.
+- Policy canonical: `FAST` / `STANDARD` / `CRITICAL`.
+- `FAST`: UI/presentation nhỏ; review diff + kiểm tra tối thiểu theo blast radius; không bắt buộc full test/lint/typecheck/build/CI.
+- `STANDARD`: test liên quan + typecheck/lint/build/CI phù hợp.
+- `CRITICAL`: accounting/inventory/costing/auth/tenant/migration/data phải chạy regression/integration/security/data-integrity gates đầy đủ.
+- Việc còn lại: review diff docs-only, mở PR và merge policy vào `main`.
+
 ## P1 — Auto deploy UI hotfix production lane
 
 - Canonical branch: `fix/ui-hotfix-auto-deploy-v2-20260802`, clean-transplant từ exact `main@efa2aa6df385ca0775523f1756494d2ae54ec132`.
