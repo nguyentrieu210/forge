@@ -1,5 +1,5 @@
 {
-  "deployedSha": "b35108f6f72b67b0b5661780198067294dff50ac",
+  "deployedSha": "880590ca28224d0be1aac8d317c3405e5a4c404f",
   "tenant": "alu",
   "origin": "https://alu.kairo.vn",
   "failedStep": "install_hrm",
@@ -19,7 +19,7 @@
     "health": "skipped",
     "success_evidence": "skipped"
   },
-  "hrmLogTail": "1 compiled   app=hrm@1.5.0 doctypes=35 workflows=11 roles=7 fixtures=23 nav=39\n2 validated  through the server's own parser\n3 authenticating https://alu.kairo.vn as admin … ok\n4 installing  hrm@1.5.0 … FAILED\n\n  forge.apps.install → HTTP 417: hrm requires external DocTypes that are not installed: Leave Type (hrm)\n\n",
+  "hrmLogTail": "1 compiled   app=hrm@1.5.0 doctypes=36 workflows=11 roles=7 fixtures=23 nav=39\n2 validated  through the server's own parser\n3 authenticating https://alu.kairo.vn as admin … ok\n4 installing  hrm@1.5.0 … FAILED\n\n  forge.apps.install → HTTP 417: Master Record VND is already owned by app alumdoor\n\n",
   "vnAccountingLogTail": null,
-  "failedAt": "2026-08-02T19:36:42.647Z"
+  "failedAt": "2026-08-02T20:07:44.055Z"
 }
