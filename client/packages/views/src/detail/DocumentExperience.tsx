@@ -34,28 +34,28 @@ const ARCHETYPE_ICON: Record<DocumentArchetype, typeof Package> = {
   generic: Package,
 };
 
-const STATUS_CLASS: Record<PresentationStatusTone, string> = {
-  success: "bg-emerald-500 text-emerald-700 dark:text-emerald-300",
-  warning: "bg-amber-500 text-amber-700 dark:text-amber-300",
-  danger: "bg-red-500 text-red-700 dark:text-red-300",
-  info: "bg-blue-500 text-blue-700 dark:text-blue-300",
-  neutral: "bg-muted-foreground text-muted-foreground",
+const STATUS_DOT_CLASS: Record<PresentationStatusTone, string> = {
+  success: "bg-emerald-500",
+  warning: "bg-amber-500",
+  danger: "bg-red-500",
+  info: "bg-blue-500",
+  neutral: "bg-muted-foreground",
 };
 
 export function DocumentExperienceSkeleton() {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-muted/10" aria-label="Đang tải chứng từ">
-      <div className="shrink-0 border-b bg-card px-4 py-2 sm:px-5">
-        <div className="mx-auto flex h-11 w-full max-w-[96rem] animate-pulse items-center gap-2.5">
-          <div className="size-8 rounded-lg bg-muted" />
+      <div className="shrink-0 border-b bg-card px-3 py-1.5 sm:px-4">
+        <div className="mx-auto flex h-10 w-full max-w-[96rem] animate-pulse items-center gap-2">
+          <div className="size-7 rounded-md bg-muted" />
           <div className="min-w-0 flex-1 space-y-1.5">
-            <div className="h-4 w-44 rounded bg-muted" />
-            <div className="h-2.5 w-64 max-w-[45%] rounded bg-muted" />
+            <div className="h-3.5 w-40 rounded bg-muted" />
+            <div className="h-2.5 w-56 max-w-[40%] rounded bg-muted" />
           </div>
-          <div className="hidden h-7 w-40 rounded-md bg-muted sm:block" />
+          <div className="hidden h-6 w-28 rounded-md bg-muted sm:block" />
         </div>
       </div>
-      <div className="min-h-0 flex-1 animate-pulse p-3">
+      <div className="min-h-0 flex-1 animate-pulse p-2.5">
         <div className="h-full rounded-lg bg-card" />
       </div>
     </div>
@@ -92,6 +92,44 @@ export function DocumentExperience({
           display: none;
         }
 
+        .mf-document-experience .mf-form-section {
+          padding-top: .45rem;
+          padding-bottom: .45rem;
+        }
+
+        .mf-document-experience .mf-section-heading {
+          margin-bottom: .45rem;
+          gap: .5rem;
+          opacity: .78;
+        }
+
+        .mf-document-experience .mf-section-heading h3 {
+          font-size: 10.5px;
+          line-height: 1rem;
+          font-weight: 600;
+          letter-spacing: .035em;
+          text-transform: uppercase;
+        }
+
+        .mf-document-experience .mf-form-grid {
+          column-gap: .625rem;
+          row-gap: .625rem;
+        }
+
+        .mf-document-experience .mf-form-body > div:last-child {
+          max-width: 96rem;
+          padding-left: .75rem;
+          padding-right: .75rem;
+          padding-bottom: 1rem;
+        }
+
+        .mf-document-experience .mf-dirty {
+          padding: .08rem .35rem;
+          font-size: 9.5px;
+          line-height: 1rem;
+          font-weight: 500;
+        }
+
         @media (min-width: 640px) {
           .mf-document-experience .mf-form-header {
             position: static;
@@ -102,13 +140,13 @@ export function DocumentExperience({
 
           .mf-document-experience .mf-form-header > div:first-child {
             position: absolute;
-            top: 0.62rem;
-            right: 1rem;
+            top: .55rem;
+            right: .85rem;
             z-index: 40;
             min-height: 0;
             width: auto;
             padding: 0;
-            gap: 0.3rem;
+            gap: .25rem;
             background: transparent;
           }
 
@@ -117,51 +155,68 @@ export function DocumentExperience({
           }
 
           .mf-document-experience .mf-form-header > div:first-child > div:first-child > div:first-child {
-            min-height: 1.75rem;
+            min-height: 1.5rem;
             align-items: center;
+          }
+
+          .mf-document-experience .mf-form-header > div:first-child > div:last-child {
+            gap: .2rem;
           }
 
           .mf-document-experience .mf-form-header button {
             box-shadow: none;
+          }
+
+          .mf-document-experience .mf-form-header [role="tablist"] {
+            height: 2rem;
+            padding-left: .5rem;
+            padding-right: .5rem;
+          }
+
+          .mf-document-experience .mf-form-header [role="tab"] {
+            height: 2rem;
+            padding-left: .6rem;
+            padding-right: .6rem;
+            font-size: 11px;
           }
         }
       `}</style>
 
       <section
         className={cn(
-          "mf-document-hero relative shrink-0 border-b px-3 py-2 sm:px-5",
+          "mf-document-hero relative shrink-0 border-b px-3 py-1.5 sm:px-4",
           profile.heroClass,
         )}
         aria-label="Tổng quan chứng từ"
       >
         <span className={cn("absolute inset-y-0 left-0 w-0.5", profile.accentClass)} aria-hidden="true" />
-        <div className="mx-auto flex min-h-11 w-full max-w-[96rem] items-center sm:pr-[22rem]">
-          <div className="flex min-w-0 items-center gap-2.5">
+        <div className="mx-auto flex min-h-10 w-full max-w-[96rem] items-center sm:pr-[18rem]">
+          <div className="flex min-w-0 items-center gap-2">
             <span className={cn(
-              "grid size-8 shrink-0 place-items-center rounded-lg ring-1",
+              "grid size-7 shrink-0 place-items-center rounded-md ring-1",
               profile.iconClass,
             )}>
-              <Icon className="size-4" />
+              <Icon className="size-3.5" />
             </span>
 
             <div className="min-w-0">
-              <div className="flex min-w-0 items-center gap-2">
-                <h1 className="max-w-full truncate text-[15px] font-semibold leading-5 tracking-tight sm:text-base">
+              <div className="flex min-w-0 items-center gap-1.5">
+                <h1 className="max-w-full truncate text-sm font-semibold leading-5 tracking-tight sm:text-[15px]">
                   {presentation.title}
                 </h1>
                 {presentation.status ? (
-                  <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-medium text-muted-foreground">
-                    <span className={cn("size-1.5 rounded-full", STATUS_CLASS[presentation.statusTone].split(" ")[0])} />
+                  <span className="inline-flex shrink-0 items-center gap-1 text-[9.5px] font-medium text-muted-foreground">
+                    <span className={cn("size-1.5 rounded-full", STATUS_DOT_CLASS[presentation.statusTone])} />
                     {presentation.status}
                   </span>
                 ) : null}
               </div>
 
-              <div className="mt-0.5 flex min-w-0 items-center gap-1.5 overflow-hidden text-[11px] text-muted-foreground">
+              <div className="flex min-w-0 items-center gap-1.5 overflow-hidden text-[10.5px] leading-4 text-muted-foreground">
                 <span className="truncate">{presentation.subtitle}</span>
                 {compactMetrics.map((metric) => (
                   <span key={metric.field} className="hidden shrink-0 items-center gap-1 sm:inline-flex">
-                    <span className="text-border">•</span>
+                    <span className="opacity-40">•</span>
                     <span>{metric.label}</span>
                     <strong className="font-semibold tabular-nums text-foreground">
                       {formatPresentationValue(metric.value, metric.format)}
