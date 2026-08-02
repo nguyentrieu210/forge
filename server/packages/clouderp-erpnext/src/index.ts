@@ -12,6 +12,7 @@ export * from "./manufacturing-genealogy.js";
 export * from "./manufacturing-stock-guard.js";
 export * from "./manufacturing-work-order-guard.js";
 export * from "./manufacturing-rollout.js";
+export * from "./qms-controllers.js";
 export * from "./registry.js";
 export * from "./suite-controllers.js";
 export * from "./enterprise-types.js";
