@@ -9,7 +9,8 @@ Ngày cập nhật: **2026-08-03**.
 - Canonical branch: `fix/vn-accounting-period-integrity-20260803-r7`, clean-based on exact `main@6deccaeb72a4814b3e0d0264464fcaa87cfad747`.
 - `main` đã có HRM migrations `0039-0041`; accounting hardening phải dùng `0042_vn_accounting_period_hardening.sql`, tuyệt đối không transplant lại migration `0039` từ r6.
 - Regression script đã ghép accounting hardening vào acceptance hiện tại của `0035+0039+0040+0041` thay vì thay thế HRM coverage.
-- Còn thiếu trước PR/merge: chạy CRITICAL local gates trên checkout thật, tối thiểu migration acceptance script, Python syntax, relevant backend/accounting tests, typecheck/lint/build theo blast radius.
+- Targeted SQLite regression cho logic `0042` đã PASS: replace legacy trigger, Hard Locked submit/cancel/scope move, tenant isolation, invalid/overlap period, period update overlap, Soft Closed allow/deny và expanded posting doctypes gồm Stock Reconciliation/Warehouse Cash.
+- Còn thiếu trước PR/merge: combined acceptance `0035+0039+0040+0041+0042`, Python syntax trên exact full script, relevant backend/accounting tests, typecheck/lint/build theo blast radius. Shell hiện không có full checkout/dependencies và không có DNS tới GitHub.
 - Nếu có failure phải fix trên r7, giữ tenant isolation, Hard/Soft close semantics, cancel + scope transition guard và migration backward compatibility.
 - Không production deploy hoặc production migration.
 
