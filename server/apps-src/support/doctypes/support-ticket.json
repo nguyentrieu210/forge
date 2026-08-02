@@ -1,0 +1,39 @@
+{
+  "name": "Support Ticket",
+  "module": "Support",
+  "autoname": "TKT-.YYYY.-#####",
+  "title_field": "subject",
+  "search_fields": ["subject", "customer", "assignee"],
+  "sort_field": "opened_at",
+  "sort_order": "DESC",
+  "track_seen": true,
+  "fields": [
+    { "fieldname": "subject", "label": "Chủ đề", "fieldtype": "Data", "required": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "customer", "label": "Khách hàng", "fieldtype": "Link", "options": "Customer", "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "source_channel", "label": "Kênh tiếp nhận", "fieldtype": "Select", "options": "Thủ công\nEmail\nChat\nMạng xã hội\nPortal", "default": "Thủ công", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "opened_at", "label": "Mở lúc", "fieldtype": "Datetime", "default": "Now", "required": true, "in_list_view": true },
+    { "fieldname": "priority", "label": "Ưu tiên", "fieldtype": "Select", "options": "P1\nP2\nP3\nP4", "default": "P3", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "team", "label": "Nhóm hỗ trợ", "fieldtype": "Link", "options": "Support Team", "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "assignee", "label": "Người xử lý", "fieldtype": "Link", "options": "User", "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "sla_policy", "label": "Chính sách SLA", "fieldtype": "Link", "options": "Support SLA Policy", "in_standard_filter": true },
+    { "fieldname": "response_due_at", "label": "Hạn phản hồi", "fieldtype": "Datetime", "read_only": true },
+    { "fieldname": "resolution_due_at", "label": "Hạn xử lý", "fieldtype": "Datetime", "read_only": true },
+    { "fieldname": "sla_state", "label": "Trạng thái SLA", "fieldtype": "Data", "read_only": true, "in_standard_filter": true },
+    { "fieldname": "description", "label": "Mô tả", "fieldtype": "Text", "required": true },
+    { "fieldname": "escalation_reason", "label": "Lý do leo thang", "fieldtype": "Text", "mandatory_depends_on": "eval:doc.workflow_state == 'Đã leo thang'" },
+    { "fieldname": "escalated_to", "label": "Người nhận leo thang", "fieldtype": "Link", "options": "User", "mandatory_depends_on": "eval:doc.workflow_state == 'Đã leo thang'" },
+    { "fieldname": "resolution", "label": "Kết quả xử lý", "fieldtype": "Text", "mandatory_depends_on": "eval:doc.workflow_state == 'Đã xử lý' || doc.workflow_state == 'Đóng'" },
+    { "fieldname": "cancel_reason", "label": "Lý do hủy", "fieldtype": "Text", "mandatory_depends_on": "eval:doc.workflow_state == 'Hủy'" },
+    { "fieldname": "workflow_state", "label": "Trạng thái", "fieldtype": "Data", "read_only": true, "in_list_view": true, "in_standard_filter": true }
+  ],
+  "viewPolicy": {
+    "kanban": { "enabled": true, "stageField": "workflow_state", "reasonRequiredOn": ["backward", "cancel"] },
+    "mobile": { "compactFields": ["subject", "priority", "assignee", "workflow_state", "sla_state"] }
+  },
+  "permissions": [
+    { "role": "Support User", "read": true, "write": true, "create": true, "print": true, "report": true },
+    { "role": "Support Manager", "read": true, "write": true, "create": true, "delete": true, "print": true, "report": true, "export": true, "share": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "delete": true, "print": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}
