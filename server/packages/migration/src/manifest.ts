@@ -103,7 +103,7 @@ function parseTarget(value: unknown, index: number): MigrationTargetDefinition {
   const sourceId = identifier(input.source_id, `targets[${index}].source_id`, 120);
   const targetDoctype = text(input.target_doctype, `targets[${index}].target_doctype`, 160);
   const phase = text(input.phase, `targets[${index}].phase`, 24) as MigrationTargetPhase;
-  if (!(phase in PHASE_RANK)) throw errors.validation(`Unsupported migration target phase: ${phase}`);
+  if (!Object.prototype.hasOwnProperty.call(PHASE_RANK, phase)) throw errors.validation(`Unsupported migration target phase: ${phase}`);
   const duplicatePolicy = input.duplicate_policy === undefined ? "error" : text(input.duplicate_policy, `targets[${index}].duplicate_policy`, 24) as MigrationDuplicatePolicy;
   if (!DUPLICATE_POLICIES.has(duplicatePolicy)) throw errors.validation(`Unsupported duplicate policy: ${duplicatePolicy}`);
   const dependsOn = input.depends_on === undefined ? [] : array(input.depends_on, `targets[${index}].depends_on`).map((entry, dependencyIndex) => identifier(entry, `targets[${index}].depends_on[${dependencyIndex}]`, 120));
