@@ -181,8 +181,8 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
           onInteractOutside={(event) => { event.preventDefault(); setCloseRequest((value) => value + 1); }}
           onEscapeKeyDown={(event) => { event.preventDefault(); setCloseRequest((value) => value + 1); }}
         >
-          <DialogHeader className="shrink-0 border-b px-5 py-3">
-            <DialogTitle>{t("form.create_title_prefix")} {displayTitle.toLocaleLowerCase("vi")}</DialogTitle>
+          <DialogHeader className="shrink-0 border-b bg-card px-5 py-3.5">
+            <DialogTitle className="text-base font-semibold">{t("form.create_title_prefix")} {displayTitle.toLocaleLowerCase("vi")}</DialogTitle>
           </DialogHeader>
           <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
             <NewFormContainer
