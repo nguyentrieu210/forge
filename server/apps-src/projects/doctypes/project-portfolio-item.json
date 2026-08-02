@@ -1,0 +1,13 @@
+{
+  "name": "Project Portfolio Item",
+  "module": "Projects",
+  "is_child": true,
+  "fields": [
+    { "fieldname": "project", "label": "Dự án", "fieldtype": "Link", "options": "Project", "required": true, "in_list_view": true },
+    { "fieldname": "strategic_priority", "label": "Ưu tiên chiến lược", "fieldtype": "Select", "options": "Thấp\nTrung bình\nCao\nTối quan trọng", "default": "Trung bình", "required": true, "in_list_view": true },
+    { "fieldname": "portfolio_owner", "label": "Người phụ trách", "fieldtype": "Link", "options": "User", "in_list_view": true },
+    { "fieldname": "note", "label": "Ghi chú", "fieldtype": "Text" }
+  ],
+  "permissions": [],
+  "revision": 1
+}
