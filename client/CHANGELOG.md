@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — Price List matrix
+
+- `Item Price` giữ màn Danh sách để tra cứu/xuất dữ liệu và có workspace Quản lý bảng giá riêng: Nhóm hàng → Mặt hàng → ma trận ĐVT × các Bảng giá hiện hữu.
+- Tiêu đề mỗi cột liên kết về hồ sơ Bảng giá; tạo Bảng giá mới thêm cột mới. Giá được bật/tắt và sửa theo đúng tổ hợp `Item + UOM + Price List`.
+- ĐVT và hệ số quy đổi vẫn thuộc Item nhưng có thể cập nhật tại workspace mở rộng; ĐVT tồn kho chỉ đọc và sửa đơn giá không làm thay đổi tồn kho.
+
 ## v1.0.0-rc.1 — Product hardening
 
 - Closed Goal100 release blockers: role/effective-permission Business Context, contextual list/count including warehouse child tables, advanced KPI/Process route filters, selected-user permission traces, native User Permission management and native Role Profile support.

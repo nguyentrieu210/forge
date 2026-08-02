@@ -154,7 +154,7 @@ export function BulkGridContainer(props: BulkGridContainerProps) {
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-2 p-2">
-      {props.doctype === "Item Price" ? <ItemPriceMatrixPanel adapter={adapter} onChanged={viewQ.refetch} /> : null}
+      {props.doctype === "Item Price" ? <ItemPriceMatrixPanel adapter={adapter} onChanged={viewQ.refetch} /> : <>
       <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-card px-3 py-2">
         <div className="relative min-w-52 flex-1 max-w-xl">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -184,6 +184,7 @@ export function BulkGridContainer(props: BulkGridContainerProps) {
           onDiscard={discard}
         />
       </div>
+      </>}
     </div>
   );
 }
