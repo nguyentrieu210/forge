@@ -3,9 +3,10 @@
 ## Unreleased — Price List matrix
 
 - Alumdoor metadata `2.2.1` bổ sung ngày áp dụng cho Bảng giá và định danh Item Price theo đúng ĐVT.
-- `Item Price` giữ màn Danh sách để tra cứu/xuất dữ liệu và có workspace Quản lý bảng giá riêng: Nhóm hàng → Mặt hàng → ma trận ĐVT × các Bảng giá hiện hữu.
+- `Item Price` chỉ còn một workspace chuyên dụng, luôn mở trực tiếp và không phụ thuộc Bulk policy: Bảng giá theo ngày → Nhóm hàng → Mặt hàng → ma trận ĐVT × các Bảng giá hiện hữu.
+- Cây tải theo thao tác mở từng cấp, có tìm kiếm Bảng giá/Mặt hàng; panel cây kéo giãn và lưu kích thước theo chuẩn Forge.
 - Tiêu đề mỗi cột liên kết về hồ sơ Bảng giá; tạo Bảng giá mới thêm cột mới. Giá được bật/tắt và sửa theo đúng tổ hợp `Item + UOM + Price List`.
-- ĐVT và hệ số quy đổi vẫn thuộc Item nhưng có thể cập nhật tại workspace mở rộng; ĐVT tồn kho chỉ đọc và sửa đơn giá không làm thay đổi tồn kho.
+- Bảng nhập giá có chế độ phóng to và bộ chọn ẩn/hiện cột Bảng giá. Nút Thêm ĐVT chèn dòng mới với Link UOM ngay trong bảng; hệ số quy đổi vẫn ghi về Item, ĐVT tồn kho chỉ đọc và sửa đơn giá không làm thay đổi tồn kho.
 - Truy vấn Nhóm hàng chỉ dùng các trường nghiệp vụ được metadata cho phép, tránh lỗi 417 do yêu cầu trường cây nội bộ `lft`.
 
 ## v1.0.0-rc.1 — Product hardening

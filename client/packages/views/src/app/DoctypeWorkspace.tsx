@@ -5,7 +5,7 @@
  * được thêm tab Nhập hàng loạt dùng chung renderer, không sinh page riêng theo từng nghiệp vụ.
  */
 import { useMemo, useState, type ReactNode } from "react";
-import { List, Rows3, Tags } from "lucide-react";
+import { List, Rows3 } from "lucide-react";
 import { resolveBulkRenderPolicy } from "@metaforge/core";
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, useT } from "@metaforge/ui";
 import { useMeta } from "../container/hooks.js";
@@ -47,10 +47,10 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
   const isTree = titleMeta.data?.is_tree === 1;
   const bulkPolicy = useMemo(() => titleMeta.data ? resolveBulkRenderPolicy(titleMeta.data) : undefined, [titleMeta.data]);
   const bulkEnabled = Boolean(bulkPolicy?.enabled && !isTree);
-  const bulkActive = bulkEnabled && !decoded && !isNew && bridge.get("view") === "bulk";
   const isPriceListManager = doctype === "Item Price";
+  const bulkActive = !decoded && !isNew && (isPriceListManager || (bulkEnabled && bridge.get("view") === "bulk"));
 
-  const modeTabs = bulkEnabled && !decoded && !isNew ? (
+  const modeTabs = bulkEnabled && !decoded && !isNew && !isPriceListManager ? (
     <div className="flex shrink-0 items-center gap-1 border-b bg-card px-3 py-2">
       <Button
         variant={bulkActive ? "ghost" : "secondary"}
@@ -72,7 +72,7 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
         className="h-8"
         onClick={() => bridge.set({ view: "bulk" })}
       >
-        {isPriceListManager ? <Tags /> : <Rows3 />} {isPriceListManager ? "Quản lý bảng giá" : "Nhập hàng loạt"}
+        <Rows3 /> Nhập hàng loạt
       </Button>
     </div>
   ) : null;
