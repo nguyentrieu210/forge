@@ -8,8 +8,12 @@ async function json(path) {
   return JSON.parse(await readFile(new URL(path, root), "utf8"));
 }
 
+function permissions(meta, role) {
+  return (meta.permissions ?? []).filter((entry) => entry.role === role && Number(entry.permlevel ?? 0) === 0);
+}
+
 function permission(meta, role) {
-  return (meta.permissions ?? []).find((entry) => entry.role === role && Number(entry.permlevel ?? 0) === 0);
+  return permissions(meta, role)[0];
 }
 
 test("workplace app uses generic runtime experiences, not hand-written routes", async () => {
@@ -33,50 +37,50 @@ test("report labels do not claim filters the report contract does not enforce", 
   assert.ok(!names.has("Hợp đồng sắp hết hạn"));
 });
 
-test("personal workplace records are owner-scoped for ordinary users", async () => {
+test("personal workplace records can be created but stay owner-scoped afterwards", async () => {
   for (const file of ["workplace-task.json", "workplace-meeting.json", "internal-request.json"]) {
     const meta = await json(`doctypes/${file}`);
-    const ordinary = permission(meta, "Workplace User");
-    assert.equal(ordinary?.read, true, `${meta.name}: ordinary user should read own records`);
-    assert.equal(ordinary?.if_owner, true, `${meta.name}: ordinary user must not get tenant-wide read`);
+    const ordinary = permissions(meta, "Workplace User");
+    assert.ok(ordinary.some((entry) => entry.create === true && !entry.if_owner && !entry.read), `${meta.name}: needs doctype-level create permission`);
+    assert.ok(ordinary.some((entry) => entry.read === true && entry.write === true && entry.if_owner === true), `${meta.name}: stored records must be owner-scoped`);
+    assert.ok(!ordinary.some((entry) => entry.read === true && !entry.if_owner), `${meta.name}: ordinary user must not get tenant-wide read`);
   }
 });
 
 test("DMS and contract records require manager permission or an explicit share", async () => {
   for (const file of ["managed-document.json", "document-folder.json", "document-template.json"]) {
     const meta = await json(`doctypes/${file}`);
-    assert.equal(permission(meta, "Workplace User"), undefined, `${meta.name}: broad workplace read leaks DMS records`);
+    assert.equal(permissions(meta, "Workplace User").length, 0, `${meta.name}: broad workplace read leaks DMS records`);
     assert.equal(permission(meta, "Document Manager")?.share, true, `${meta.name}: manager must be able to grant explicit shares`);
   }
   for (const file of ["contract.json", "contract-obligation.json", "contract-amendment.json"]) {
     const meta = await json(`doctypes/${file}`);
-    assert.equal(permission(meta, "Workplace User"), undefined, `${meta.name}: ordinary workplace role must not read contracts`);
-    assert.equal(permission(meta, "Workplace Manager"), undefined, `${meta.name}: generic manager must not imply contract access`);
+    assert.equal(permissions(meta, "Workplace User").length, 0, `${meta.name}: ordinary workplace role must not read contracts`);
+    assert.equal(permissions(meta, "Workplace Manager").length, 0, `${meta.name}: generic manager must not imply contract access`);
     assert.equal(permission(meta, "Contract Manager")?.read, true);
   }
 });
 
 test("announcement drafts are never readable through the ordinary workplace role", async () => {
   const meta = await json("doctypes/workplace-announcement.json");
-  assert.equal(permission(meta, "Workplace User"), undefined);
+  assert.equal(permissions(meta, "Workplace User").length, 0);
   assert.equal(permission(meta, "Workplace Manager")?.share, true);
 });
 
-test("notification preferences are owned by the user, not editable by managers", async () => {
+test("notification preferences can be created but remain owner-controlled", async () => {
   const meta = await json("doctypes/notification-preference.json");
-  const ordinary = permission(meta, "Workplace User");
-  assert.equal(ordinary?.read, true);
-  assert.equal(ordinary?.write, true);
-  assert.equal(ordinary?.create, true);
-  assert.equal(ordinary?.if_owner, true);
-  assert.equal(permission(meta, "Workplace Manager"), undefined);
+  const ordinary = permissions(meta, "Workplace User");
+  assert.ok(ordinary.some((entry) => entry.create === true && !entry.if_owner && !entry.read));
+  assert.ok(ordinary.some((entry) => entry.read === true && entry.write === true && entry.if_owner === true));
+  assert.ok(!ordinary.some((entry) => entry.read === true && !entry.if_owner));
+  assert.equal(permissions(meta, "Workplace Manager").length, 0);
   assert.equal(permission(meta, "System Manager")?.write, undefined);
 });
 
 test("approval workflows prohibit self approval", async () => {
   for (const file of ["internal-request.json", "managed-document.json", "contract.json", "contract-amendment.json"]) {
     const workflow = await json(`workflows/${file}`);
-    const approvals = workflow.transitions.filter((entry) => ["Phê duyệt"].includes(entry.action));
+    const approvals = workflow.transitions.filter((entry) => entry.action === "Phê duyệt");
     assert.ok(approvals.length > 0, `${workflow.name}: approval transition is missing`);
     assert.ok(approvals.every((entry) => entry.allow_self_approval === false), `${workflow.name}: self approval must stay disabled`);
   }
