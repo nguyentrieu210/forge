@@ -4,28 +4,22 @@ Ngày cập nhật: **2026-08-02**.
 
 Đây là hàng đợi active. GitHub là nguồn sự thật cho exact `main`, PR và branch; trước khi làm phải đọc `RUNBOOK.md`, `CURRENT_STATUS.md`, `AI_HANDOFF.md`, `DELIVERY_POLICY.md`.
 
-## NOW — exact production release evidence
+## NOW — fast UI deploy acceptance
 
-- Branch: `fix/release-evidence-health-sha-v2`.
-- Cần review/merge thay đổi release pipeline trước khi dùng làm production proof canonical.
-- Sau merge, mọi UI/full ALU deploy phải stage `/release.json` chứa exact `releaseSha` + `bundleHash`; smoke phải fail nếu production marker không khớp `TARGET_SHA`.
-- Same-repo UI PR trigger phải được giữ vì GitHub-connector content writes không đảm bảo phát push-triggered Actions; vẫn fail-closed theo branch naming, current-main ancestry và UI-only scope.
-- Không production deploy task release-pipeline này nếu chưa có yêu cầu release rõ.
+- Branch implementation: `fix/ui-deploy-fastpath-20260802`.
+- Sau merge, lần sửa UI tiếp theo phải dùng UI branch và push thật để acceptance-test fast path.
+- PASS chỉ khi run đi đủ: shallow checkout -> UI push guard -> cached install -> runtime + warehouse mobile build -> stage -> Wrangler deploy -> `/health` -> `/release.json` đúng SHA/hash.
+- Ghi duration thực tế; mục tiêu gần local, không build toàn MetaForge monorepo.
+- Không thêm PR-trigger deploy hoặc stale-main guard trở lại nếu không có bằng chứng cần thiết.
+
+## DONE — exact production release evidence
+
+- Canonical merge checkpoint: `a0ae5f4f00a6be7311efcaff87c4caabea60f6be`.
+- `/release.json` chứa `releaseSha` + `bundleHash`; smoke fail nếu production không khớp `TARGET_SHA`.
 
 ## DONE — Website/CMS multi-tenant v1
 
 - Canonical PR `#254` đã squash-merge vào `main` tại `b25fc30b0f37d1218cafbb4dac40e37479bba0b9`.
-- Public Website/CMS v1 đã có first-party app metadata, Website Settings/Web Page/Web Page Block, versioned presets, tenant-scoped published-only public API và shared runtime renderer.
-- Final responsive regression PASS trên mobile/tablet/desktop; public allowlist và tenant isolation evidence đã đủ cho scope v1.
-- Không có production deploy/DNS/custom-domain/secrets trong task này.
-
-## DONE — UI auto deploy
-
-- GitHub Actions chỉ dùng cho build/deploy.
-- UI-only branch `hotfix/ui-*`, `fix/ui-*`, `feat/ui-*`, `refactor/ui-*` tự build/deploy Gateway khi push có `client/**`.
-- Không cần PR hoặc bấm Actions cho UI-only lane khi push event thực sự được GitHub phát; same-repo PR fallback là đường quan sát được cho connector writes.
-- Scope guard chặn branch stale và file ngoài UI/docs vận hành.
-- Full ALU deploy vẫn chạy thủ công qua `ALU Build and Deploy` với confirm `alu`.
 
 ## NEXT — Bulk Transaction remaining
 
@@ -40,11 +34,9 @@ Mỗi item phải là branch riêng từ exact current `main`:
 
 - Re-check exact GitHub state của P1 Daily Detailed Ledger trước khi tiếp tục.
 - Plastic ERP wave sau P0-A phải reconcile với core Work Order + submitted Stock Entry Manufacture, không dựng stock/costing ledger cạnh tranh.
-- Warranty / defects / capacity / overtime và authenticated E2E xuyên Sales -> Production -> Inventory -> Delivery -> Finance -> Daily Ledger -> Warranty vẫn chưa closure toàn hệ thống.
 
 ## Guardrails
 
-- UI auto production deploy chỉ dành cho UI-only branch đúng naming + scope guard.
+- UI auto production deploy chỉ dành cho UI-only branch đúng naming + push scope guard.
 - Không sửa production secrets/DNS, không mutate customer data ngoài release path đã được user chủ động thiết lập.
 - Không commit `.env`, `server/work/`, `tmp/`, credential, backup hoặc generated evidence không được quản lý.
-- PR stale/diverged phải clean-transplant đúng scope lên exact current `main`; không force-push/rewrite history.
