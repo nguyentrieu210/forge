@@ -21,8 +21,9 @@ Khách Forge cần một website public dùng cùng dữ liệu ERP mà không p
 5. Tenant A không thể đọc website tenant B vì mọi query bind `tenant_id` từ trusted tenant context.
 6. `/shop*` tiếp tục dùng Storefront hiện có; website `product-grid` chỉ liên kết/tái sử dụng Storefront, không tính giá hay tạo Sales Order trực tiếp.
 7. Khi không có site public, các route nội bộ Forge tiếp tục chạy AuthBoundary như trước.
-8. Preset được pin bằng id/version data; đổi preset/theme không cần build frontend.
-9. Client build/typecheck và server tests/typecheck/build liên quan phải pass trước PR ready.
+8. Preset được pin bằng `id + version`; app upgrade thêm preset version mới không được âm thầm đổi website tenant cũ.
+9. Chọn/đổi preset hoặc theme không cần build frontend.
+10. Client build/typecheck và server tests/typecheck/build liên quan phải pass trước PR ready.
 
 ## 4. Actor, dữ liệu và authority
 
@@ -42,10 +43,14 @@ Authority bảo mật nằm server. Ẩn menu hoặc block ở client không ph�
 - `enabled`, `published`
 - `site_title`, `site_description`
 - `template_preset`: `business-landing`, `catalogue`, `sales`
+- `template_version`: version đã pin, mặc định `1`
 - `theme_preset`: `business-blue`, `industrial-dark`, `warm`
+- `theme_version`: version đã pin, mặc định `1`
 - branding: `logo`, `favicon`
-- design tokens: primary/secondary/background/text, heading/body font, radius, density
+- design tokens override: primary/secondary/background/text, heading/body font, radius, density
 - contact/footer metadata
+
+`template_version` và `theme_version` là read-only ở form v1. Việc nâng preset version sau này phải đi qua action/migration có chủ đích, không thay đổi ngầm khi app package được upgrade.
 
 ### Web Page
 
@@ -68,7 +73,15 @@ App fixtures trong `master_records`:
 - `Website Template`: versioned page/block tree.
 - `Website Theme Preset`: versioned design tokens.
 
-Public resolver lấy preset đã pin, sau đó overlay tenant settings/page records. Vì vậy chọn mẫu chỉ cần thay metadata và không tạo một frontend artifact mới.
+Identity lưu theo `${preset_id}@${version}`, ví dụ `business-landing@1`, `sales@1`, `business-blue@1`. Data vẫn mang `preset_id` và `version` để self-describe và phục vụ kiểm tra/migration.
+
+Public resolver lấy đúng preset version đã pin, sau đó overlay tenant `Web Page` records theo slug. Do đó package có thể bổ sung `business-landing@2` mà tenant đang pin `business-landing@1` vẫn giữ nguyên giao diện cho tới khi có upgrade được yêu cầu rõ.
+
+### Preset resolution thay vì sinh source code
+
+V1 không tạo frontend/source code hoặc bắt buộc materialize toàn bộ preset thành hàng chục `Web Page` record khi người dùng chọn mẫu. Resolver dùng preset versioned làm base metadata, còn tenant chỉ lưu những trang cần override hoặc bổ sung.
+
+Hành vi người dùng vẫn là một lần chọn mẫu/theme thì website xuất hiện ngay. Cách này giảm dữ liệu trùng lặp và làm update an toàn hơn. Nếu UX tương lai cần "tách mẫu thành bản sao để sửa toàn bộ", action `apply template` có thể materialize các trang một cách idempotent, nhưng đó không phải điều kiện để public website v1 hoạt động.
 
 ## 6. Luồng chính
 
@@ -77,9 +90,10 @@ Public resolver lấy preset đã pin, sau đó overlay tenant settings/page rec
 1. Admin cài/full-solution đã có Website app.
 2. Người dùng mở Website Settings.
 3. Chọn template + theme, nhập brand/contact và bật `enabled`.
-4. Preview bằng public resolver.
-5. Bật `published` khi sẵn sàng.
-6. Guest vào `/` hoặc slug public và runtime render metadata đã resolve.
+4. Settings pin `template_version` và `theme_version` tương ứng.
+5. Preview bằng public resolver.
+6. Bật `published` khi sẵn sàng.
+7. Guest vào `/` hoặc slug public và runtime render metadata đã resolve.
 
 ### Tùy biến trang
 
@@ -87,6 +101,7 @@ Public resolver lấy preset đã pin, sau đó overlay tenant settings/page rec
 2. Sắp xếp child `Web Page Block` trong form MetaForge.
 3. Lưu draft không làm page public nếu `published=0`.
 4. Publish page chỉ ảnh hưởng tenant hiện tại.
+5. Override không sửa fixture/preset gốc nên tenant khác không bị ảnh hưởng.
 
 ### Bán hàng
 
@@ -98,7 +113,7 @@ Public resolver lấy preset đã pin, sau đó overlay tenant settings/page rec
 
 - Website chưa enabled/published: public API trả not found, runtime rơi về Forge login/internal routing.
 - Slug không tồn tại/unpublished: trả not found, không tiết lộ record draft.
-- Preset/theme không tồn tại: validation/fallback fail closed; không render dữ liệu tùy ý.
+- Preset/theme hoặc exact version đã pin không tồn tại: validation fail closed; không tự nhảy sang version khác.
 - Block type hoặc URL không hợp lệ: server từ chối/loại khỏi public shape.
 - Storefront chưa cài nhưng template có product-grid: website vẫn render CTA/catalogue fallback; shop API 404 trung thực.
 
@@ -110,7 +125,9 @@ Public resolver lấy preset đã pin, sau đó overlay tenant settings/page rec
 4. Website không direct-write stock/accounting/sales ledger.
 5. Ecommerce reuse Storefront canonical.
 6. Theme dùng token có kiểm soát, không arbitrary JS/CSS.
-7. App install/upgrade và production deploy là hai boundary riêng.
+7. Preset identity là immutable `id@version`; package upgrade không được overwrite hành vi tenant đã pin.
+8. Explicit Forge runtime modes như `?app=`, `?alumdoor=1`, `?landing=1` không bị Website bootstrap chiếm route.
+9. App install/upgrade và production deploy là hai boundary riêng.
 
 ## 9. Phân phối
 
