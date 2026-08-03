@@ -59,12 +59,12 @@
       "import": "./dist/system/Import.js"
     },
     "./action": {
-      "types": "./dist/action/FriendlyActionScreen.d.ts",
-      "import": "./dist/action/FriendlyActionScreen.js"
+      "types": "./dist/action/NativeActionScreen.d.ts",
+      "import": "./dist/action/NativeActionScreen.js"
     },
     "./screen": {
-      "types": "./dist/screen/ScreenView.d.ts",
-      "import": "./dist/screen/ScreenView.js"
+      "types": "./dist/screen/NativeScreenView.d.ts",
+      "import": "./dist/screen/NativeScreenView.js"
     },
     "./matrix": {
       "types": "./dist/matrix/index.d.ts",
@@ -74,7 +74,8 @@
   "scripts": {
     "typecheck": "tsc -b",
     "build": "tsc -b",
-    "test:matrix": "tsc -b && node --test tests/matrix-model.test.mjs"
+    "test:matrix": "tsc -b && node --test tests/matrix-model.test.mjs",
+    "test:action-input-table": "tsc -b && node --test tests/action-input-table.test.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
