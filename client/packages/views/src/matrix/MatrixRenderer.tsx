@@ -248,6 +248,7 @@ export function MatrixRenderer(props: MatrixRendererProps) {
           virtualRows={virtualRows}
           padTop={padTop}
           padBottom={padBottom}
+          measureRow={virtualized ? rowVirtualizer.measureElement : undefined}
           focusedCell={focusedCell}
           onFocusedCellChange={setFocusedCell}
           onCellChange={props.onCellChange}
