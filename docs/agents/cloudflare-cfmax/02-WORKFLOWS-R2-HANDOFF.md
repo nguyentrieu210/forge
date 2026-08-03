@@ -1,7 +1,7 @@
 # CF02 R2 — Cloudflare Workflows / Durable Orchestration
 
 Date: 2026-08-04
-Status: ACTIVE — source implementation complete; exact-head CI and remote Workflow proof pending
+Status: REVIEW — source implementation and exact-head CI complete; remote Workflow proof pending
 Branch: `cloudflare/cfmax-02-workflows-r2`
 Exact replay baseline: `main@cf5dd0da5b0154374a4ce371d7b122cd059a0bb2`
 Risk: CRITICAL
@@ -82,10 +82,14 @@ The workflow-worker uses a separate `WORKFLOW_TOKEN` operator secret. Calls to c
 - `CONTROL` service binding to `cloudforge-control-plane`;
 - `ROUTE_INDEX_REBUILD` Workflow binding;
 - `RouteIndexRebuildWorkflow` class;
-- 10,000-step provider limit, matching the current default Paid-plan Workflows ceiling documented by Cloudflare;
+- 10,000-step provider limit;
 - observability enabled.
 
 No Workflow resource was deployed by this branch.
+
+### Forge runtime typing
+
+The repository's own `server/types/cloudflare-runtime.d.ts` previously shadowed `cloudflare:workers` with Durable Object declarations only, so current Workflows runtime types could not compile even though Wrangler supported the feature. CF02 extends that canonical Forge runtime declaration with the minimum current Workflows contracts used by the implementation: `WorkflowEntrypoint`, `WorkflowEvent`, `WorkflowStep`, `Workflow`, instance lifecycle and status types. This is a type-surface update only; it does not create a second runtime authority.
 
 ## Contract / correctness guards
 
@@ -121,7 +125,13 @@ Focused CI gates:
 4. contract/idempotency/cursor regressions;
 5. Wrangler Workflow config dry-run.
 
-Exact-head CI: PENDING until PR run completes.
+Validation history:
+
+- run `30852510948`: **FAIL** at TypeScript because Forge's local `cloudflare:workers` declaration did not yet contain Workflows types; no later step was claimed as passed;
+- fix `a9c0b0367584ed51286fa3d1f6fb8e580e86a795`: extend canonical Forge runtime declarations from current provider contract;
+- exact-head run `30852724589`: **PASS** for locked install, focused TypeScript, focused build, Workflow regressions and Wrangler dry-run.
+
+The documentation-only completion update after that green code head must preserve the same source tree; convergence will run an integrated exact-head gate again.
 
 ## Production / provider truth
 
@@ -137,7 +147,7 @@ No DNS, secret, D1, KV, tenant, migration or production resource was mutated.
 
 ## Maturity
 
-Recommended after green exact-head CI: **Wired**.
+Current evidence supports **Wired**.
 
 RC additionally requires a remote non-production Workflow instance showing persisted page steps, retry/restart/terminate behavior and expected D1->KV convergence. Hardened additionally requires production recovery/alerting/usage evidence.
 
@@ -147,8 +157,12 @@ Owner: coordinator takeover / CF02 R2
 Original branch: `cloudflare/cfmax-02-workflows` — superseded, bootstrap-only
 R2 branch: `cloudflare/cfmax-02-workflows-r2`
 Baseline: `main@cf5dd0da5b0154374a4ce371d7b122cd059a0bb2`
-Changed zones: workflow-worker app, focused test, focused CI, this handoff
+PR: `#555` draft -> `main`
+Validated code head: `a9c0b0367584ed51286fa3d1f6fb8e580e86a795`
+Exact-head CI: run `30852724589` **PASS**
+Changed zones: workflow-worker app; canonical Cloudflare runtime type declarations; focused test; focused CI; this handoff
 Migration: none
 Production mutation: none
 Dependencies for later RC: CF03 workflow telemetry; CF08 deployed-resource/drift/cost evidence
+Remaining gap: remote non-production Workflow/recovery proof only; not required to claim source completion/Wired
 Merge boundary: do not merge to main or deploy without explicit approval
