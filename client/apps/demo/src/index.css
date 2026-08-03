@@ -1,5 +1,5 @@
-/* Demo — nạp design system của kit (tokens + Tailwind), rồi override riêng cho demo. */
-@import "@metaforge/ui/styles.css";
+/* Demo UI V3 — dùng cùng canonical foundation với runtime, rồi override riêng cho demo nếu cần. */
+@import "@metaforge/ui/v3.css";
 
 html,
 body,
