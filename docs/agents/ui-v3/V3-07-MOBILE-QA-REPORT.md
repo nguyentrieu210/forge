@@ -6,17 +6,18 @@ Role: responsive convergence, accessibility and evidence owner
 
 ## Exact-main audit
 
-Latest main observed during this execution: `64060ae1f08e8b6922828d4d27d8185073cf6697` (`feat(ui): establish Forge UI V3 foundation (#453)`).
+Latest main observed before the final V3-07 merge-candidate run: `fe0c2f1a9c490eb400e19a5d55baea9a4b60c307` (`feat(ui-v3): rebuild shell as enterprise workspace (#466)`).
 
-V3-01 Foundation is therefore integrated on current main. The remaining owner branches were audited independently rather than treated as already-converged product evidence:
+Integrated UI V3 owner slices at that point:
 
-- V3-02 Shell: handoff/spec only at the latest audit;
-- V3-03 Auth/Login: implementation exists on its owner branch but is not integrated on main;
-- V3-04 Data Surfaces: implementation exists on its owner branch but is not integrated on main;
-- V3-05 Charts/Command Center: implementation exists on its owner branch but is not integrated on main;
-- V3-06 Builder: handoff/spec only at the latest audit.
+- V3-01 Foundation: merged (`64060ae1f08e8b6922828d4d27d8185073cf6697`);
+- V3-02 Shell: merged (`fe0c2f1a9c490eb400e19a5d55baea9a4b60c307`);
+- V3-03 Auth/Login: merged (`a99af64b6509477238bc9dc848e226828531b599`) with client-only centering/release follow-up `72ed8005a2f1d7849e372f1bb7de0f12882966de`;
+- V3-04 Data Surfaces: merged (`d1263b5639878b73bf60923f25b9166de0644896`);
+- V3-06 Builder: merged (`bbf79b541ede38222544774ec8b5393f8e1bb1fe`), including the Builder TypeScript repair that unblocked the demo dependency graph;
+- V3-05 Charts / Command Center: implementation exists on its owner branch but was not integrated on main at the latest audit.
 
-Consequently this branch establishes and exercises the QA harness now, but does **not** claim final UI V3 cross-surface acceptance before those owner slices converge.
+V3-07 therefore validates the currently converged UI tree without editing owner hotspots. Final whole-program UI V3 acceptance remains gated only by V3-05 convergence plus exact release proof.
 
 ## QA-owned implementation
 
@@ -24,60 +25,65 @@ Consequently this branch establishes and exercises the QA harness now, but does 
 
 Added:
 
-- `client/apps/demo/playwright.v3-qa.config.ts`
-- `client/apps/demo/e2e/ui-v3-mobile-qa.spec.ts`
-- `@metaforge/demo` command `e2e:v3:qa`
+- `client/apps/demo/playwright.v3-qa.config.ts`;
+- `client/apps/demo/e2e/ui-v3-mobile-qa.spec.ts`;
+- `@metaforge/demo` command `e2e:v3:qa` using the isolated `e2e/tsconfig.json`.
 
 Matrix:
 
-- desktop Chromium `1440x1000`;
-- tablet Chromium `834x1112`;
-- Pixel 7;
-- compact touch viewport `360x800`;
-- dark + `prefers-reduced-motion: reduce`.
+- desktop Chromium `1440x1000` runs the existing Axe/list/workspace regression suites plus V3-07 acceptance;
+- tablet Chromium `834x1112` runs focused responsive acceptance;
+- Pixel 7 runs focused responsive acceptance;
+- compact touch viewport `360x800` runs focused responsive acceptance;
+- dark + `prefers-reduced-motion: reduce` runs focused motion acceptance.
 
-Acceptance exercised by the focused V3-07 spec plus existing a11y/list/workspace specs:
+The matrix deliberately avoids multiplying the same desktop regression suite across every device. Cross-device projects exercise only the assertions whose result actually depends on viewport/motion state.
+
+Acceptance covers:
 
 - document/body horizontal overflow;
-- list table-to-card responsive adaptation without a second mobile runtime;
+- list table-to-card adaptation without a second mobile runtime;
 - mobile navigation drawer visibility;
-- Escape behavior and focus restoration;
-- localized/long navigation reachability using the actual fixture metadata rather than hard-coded business labels;
-- list, form, dashboard and Builder representative routes;
+- Escape close and trigger-focus restoration;
+- longest localized navigation label reachability using actual fixture metadata;
+- representative list, form, dashboard and Builder routes;
+- fresh-profile appearance onboarding dismissal before viewport measurement;
 - screenshots attached per viewport;
-- existing Axe serious/critical checks and keyboard gates;
+- existing Axe serious/critical checks and keyboard gates on desktop;
 - reduced-motion computed transition/animation timing.
 
-### Runtime / login matrix
+### Runtime / auth matrix
 
 Added:
 
-- `client/e2e-forge/playwright.v3-mobile-qa.config.ts`
-- `client/e2e-forge/ui-tests/v3-mobile-qa.spec.ts`
+- `client/e2e-forge/playwright.v3-mobile-qa.config.ts`;
+- `client/e2e-forge/ui-tests/v3-mobile-qa.spec.ts`.
 
-The config intentionally starts only the runtime cookie proxy. It does not start Warehouse preview, so unrelated Warehouse build state cannot falsify MetaForge mobile QA.
+The config intentionally starts only the runtime cookie proxy. Warehouse preview is not part of this focused lane, so unrelated Warehouse state cannot falsify MetaForge auth/mobile QA.
 
-Acceptance includes:
+Acceptance covers:
 
-- generic Forge guest login;
-- Alumdoor guest login;
+- canonical Forge auth route `/login` rather than website-first `/`;
+- shared V3 auth surface `forge-auth-login`;
+- Alumdoor through the V3-03 `brand` / `brandMark` seam, not a product-specific shared-login fork;
 - no horizontal overflow;
-- mobile `44px` minimum input/action height on the representative login controls;
-- keyboard focus reachability;
-- password-reveal accessibility name;
-- compact-phone behavior;
+- nominal `44px` mobile input/action height with a `0.25px` tolerance for device-scale fractional rounding;
+- desktop keyboard focus order and password reveal accessibility name;
+- Pixel 7 and compact-phone touch behavior;
 - dark/reduced-motion mode;
 - screenshot artifacts.
 
-## Existing repo evidence consumed
+## Evidence discovered during execution
 
-V3-07 reuses rather than duplicates existing proven primitives:
+The temporary exact-merge-candidate gate caught several useful failures instead of merely proving that test files exist:
 
-- `AppShell` already implements skip-to-content, mobile drawer focus entry, Escape close and trigger-focus restoration;
-- generic list view already exposes mobile card adaptation;
-- shared UI CSS already has global `prefers-reduced-motion` handling;
-- existing demo a11y tests use Axe and cover serious/critical violations on list/form/kanban/calendar/dashboard;
-- existing UI configs already cover desktop/tablet/Pixel/warehouse mobile. V3-07 adds the missing compact and reduced-motion acceptance as a focused matrix.
+1. An inherited Builder TypeScript failure initially blocked the demo graph. V3-07 recorded it as a V3-06 dependency and continued runtime QA. V3-06 later merged `bbf79b...`, and a subsequent V3-07 merge-candidate run proved the full demo dependency graph builds successfully with `@metaforge/builder` included.
+2. The first generic auth fixture incorrectly assumed `/` was the login route. Repo authority shows `/` is website-first and `/login` is the reserved Forge auth route; the test was corrected rather than changing runtime routing.
+3. Device-scale rounding reported a nominal `44px` control as `43.99997px`; the touch invariant now allows only `0.25px` numerical tolerance rather than weakening the target.
+4. V3-03 intentionally removed hard-coded Alumdoor product behavior from shared `LoginForm`. V3-07 adapted its assertion to the preserved brand/brandMark seam instead of resurrecting a product fork.
+5. Playwright 1.62 attempted to validate the demo application project-reference tsconfig. V3-07 now explicitly uses the existing isolated `e2e/tsconfig.json`.
+
+These are QA-harness/fixture corrections or resolved owner dependencies; none required changing backend, schema, permission, session, metadata or business authority.
 
 ## Exact commands
 
@@ -95,24 +101,24 @@ pnpm --filter runtime... run build
 pnpm --filter e2e-forge exec playwright test --config playwright.v3-mobile-qa.config.ts
 ```
 
-A temporary PR-only workflow executes those commands against the exact PR head and uploads screenshots/reports. It must be removed before final merge after evidence is captured.
+A temporary PR-only workflow validates `refs/pull/473/merge`, records the PR head/base/merge-candidate SHA and uploads browser evidence. The workflow is temporary and must be removed before merge after the final evidence run.
 
 ## Dependency Requests
 
-### DR-V3-07-01 — final owner-surface convergence
+### DR-V3-07-01 — V3-05 final owner-surface convergence
 
-**Owners:** V3-02, V3-03, V3-04, V3-05, V3-06, then V3-00 convergence.  
-**Need:** integrate owner implementations before V3-07 can certify final shell/auth/data/chart/command-center/Builder appearance on one exact release tree.  
-**Blocking:** no for the QA harness and independent acceptance work; yes for the claim “UI V3 final cross-device acceptance complete”.
+**Owner:** V3-05 Charts / Command Center, then V3-00 convergence.  
+**Need:** integrate the V3-05 owner implementation before claiming one-tree acceptance of the complete UI V3 program.  
+**Blocking:** no for V3-07 QA implementation/merge; yes for the statement “all V3-01..07 visual slices are converged on one release tree”.
 
-After convergence, rerun the same V3-07 matrix without weakening assertions and assign any hotspot-specific failures back to the owning slice.
+V3-07 must not edit V3-05 chart/dashboard hotspots merely to eliminate this dependency.
 
-### DR-V3-07-02 — release proof after converged UI tree
+### DR-V3-07-02 — exact release proof
 
-**Owner:** V3-00 / release path.  
-**Need:** exact merged UI SHA, deployment/release identifier, production health evidence and post-deploy representative browser proof for the converged V3 tree.  
-**Blocking:** no for branch QA implementation; yes for any `Deployed`/production-complete claim.
+**Owner:** canonical UI release path / V3-00.  
+**Need:** exact merged UI SHA, deployment/release identifier, production health evidence and post-deploy convergence evidence.  
+**Blocking:** no for QA source merge; yes for any `Deployed`/production-complete claim.
 
 ## Maturity / acceptance statement
 
-V3-07 currently provides a deterministic cross-device QA harness and independent responsive/accessibility/reduced-motion evidence path. Final program acceptance remains **gated by owner convergence and exact release proof**. No RC/Hardened/Deployed claim is inferred merely from source presence or from historical screenshots.
+V3-07 provides a deterministic cross-device QA harness and an independent responsive/accessibility/reduced-motion evidence path. V3-01/02/03/04/06 are integrated on main as of the latest audit; V3-05 remains the only owner-slice convergence dependency. No RC/Hardened/Deployed claim is inferred merely from source presence, a merged PR, a triggered workflow or historical screenshots.
