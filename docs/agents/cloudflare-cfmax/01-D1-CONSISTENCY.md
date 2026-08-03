@@ -1,6 +1,6 @@
 # CF01 — D1 Sessions / Read Replication / Consistency
 
-Status: READY
+Status: ACTIVE
 Branch: `cloudflare/cfmax-01-d1-consistency`
 Program baseline: `3b4c5c75bce315d03989d7fc05db721ff2668a4e`
 Primary Forge authority: WS00 architecture/kernel
@@ -158,16 +158,18 @@ Do not stop for ordinary decisions. If one endpoint's contract needs another own
 
 ## Completion record
 
-Owner: —
-Started from: —
-Head: —
-Status: READY
-Canonical capabilities: —
-Changed zones: —
-Tests: —
-Production evidence: none unless explicitly added
-Dependency requests: —
-Remaining gaps: —
+Owner: CF01 execution 2026-08-04
+Started from: `cloudflare/cfmax-01-d1-consistency@d6f0e3e2227c8b9248e4109e46dd3468f03d3614`
+Implementation/test head before this handoff update: `22138416ca42e14e777959124d725a4b1bc97682`
+PR: #533 (draft) -> `cloudflare/cfmax-00-control`
+Status: ACTIVE — implementation and evidence landed; CRITICAL acceptance gates remain
+Canonical capabilities: `G01-016`, `G01-017`, `A01-008`, `O01-003`, `O01-004`, `O01-005`, `O01-018`, `O01-019`, `X01-007`; tenant rollout/config also touches `T01-002`, `T01-015`, `O01-016`, `O01-017`
+Changed zones: `server/packages/core/src/d1-session-policy.ts`; query-worker source/tests; CF01 evidence docs
+Tests: workerd+D1 bookmark round-trip tests and policy tests added; GitHub Actions has not produced a run for the CFMAX control-base draft PR, so exact-head execution is still pending
+Production evidence: none; read replication was not enabled and nothing was deployed
+Dependency requests: `DR-CF01-01` WS14 concurrent/multi-tab bookmark contract; `DR-CF01-02` WS00 permission/meta freshness split; `DR-CF01-03` CF08 production resource/config evidence
+Remaining gaps: exact typecheck/test execution; concurrent advancing-bookmark client behavior; true two-D1 foreign-bookmark integration; permission revocation freshness split; remote replica-serving metadata; APAC p50/p95 benchmark; native tenant command bookmark parity/exclusion decision
+Evidence: `docs/agents/cloudflare-cfmax/01-D1-CONSISTENCY-EVIDENCE.md`
 
 ## Startup prompt
 
