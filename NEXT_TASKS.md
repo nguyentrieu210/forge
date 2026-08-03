@@ -1,146 +1,136 @@
 # NEXT TASKS
 
-Ngày cập nhật: **2026-08-03**.
+Ngày cập nhật: **2026-08-04**.
 
 ## Trạng thái hiện tại
 
-**RC Hardening Wave 0 đã hoàn tất và hội tụ vào `main`.**
+**RC Hardening Wave 0 + Batch 1A Finance/Inventory implementation đã hội tụ vào `main`.**
 
-Đã đóng:
-- RC-01 Capability Truth: 956/956 registry + Evidence Index + validator + baseline.
-- RC-02 Release/SRE topology + stale workflow cleanup + backup/restore evidence contract.
-- RC-03 executable FAST/STANDARD/CRITICAL validation gates.
-- RC-04 Kernel/Auth failure/retry hardening.
-- RC-05 IAM/Tenant app lifecycle hardening + offline sync contract freeze.
+Canonical evidence:
 
-Không reopen PR/branch lịch sử làm canonical backlog. Task mới phải bắt đầu từ exact current `main`.
-
-## Chương trình canonical
-
-- Execution blueprint: `docs/FORGE_RC_HARDENING_PLAN_20260803.md`.
 - Capability truth: `docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md`.
-- Validation policy: `docs/VALIDATION_GATES.md` + `validation/rc-gates.json`.
-- Agent lanes/prompts Wave 0: `docs/agents/RC_AGENT_LANES_20260803.md`.
-- **Agent lanes/prompts Batch 1A Finance + Inventory: `docs/agents/RC_BATCH1A_AGENT_LANES_20260803.md`.**
+- RC blueprint: `docs/FORGE_RC_HARDENING_PLAN_20260803.md`.
+- Validation: `docs/VALIDATION_GATES.md` + `validation/rc-gates.json`.
+- Batch 1A convergence: `docs/agents/rc/RC_BATCH1A_CONVERGENCE_20260804.md`.
 
-Baseline maturity:
+Batch 1A authority checkpoints đã merge:
 
-```text
-Total: 956
-Hardened: 0
-RC: 4
-Wired: 448
-Foundation: 345
-Missing: 159
-```
+- RC-020 Finance posting/period/reversal.
+- RC-021 AR/customer settlement + reconciliation.
+- RC-022 AP/supplier settlement + reconciliation.
+- RC-023 Cash/Bank reconciliation.
+- RC-024/025 Stock reconciliation/correction + backdate/repost/valuation.
 
-## Batch tiếp theo — Finance + Inventory Authorities
+Merge không tự động đồng nghĩa RC/Hardened. Evidence owner phải promotion Capability Status riêng sau exact gates.
 
-Mở tối đa 5 worker, nhưng batch này chỉ cần các lane có dependency hợp lệ. Không mở thêm agent để trang trí GitHub.
+## Batch tiếp theo — Batch 1B ERP Core
 
-Prompt/ownership canonical của 5 worker nằm tại `docs/agents/RC_BATCH1A_AGENT_LANES_20260803.md`.
+Finance + Inventory shared authority đã freeze đủ để domain phía trên implementation song song mà không tự tạo source of truth mới.
 
-### Lane Finance
+Mở tối đa **5 worker**. Không mở thêm chỉ để GitHub trông đông vui.
 
-#### RC-020 — F01 period/posting/reversal
+### Lane 1 — Procurement RC-030 + RC-031
 
-Audit/harden:
-- posting period guard;
-- hard/soft close semantics;
-- submit/cancel/backdate;
-- reversal/correction;
-- tenant/company/branch scope;
-- immutable ledger/audit behavior.
+`RC-030` — RFQ to PO, STANDARD:
 
-Risk: **CRITICAL**.
+`Purchase Request -> RFQ -> Supplier Quote -> Compare -> Approve -> Purchase Order`
 
-#### RC-021 — F02 AR allocation/reconciliation
+`RC-031` — PO to Payment, CRITICAL:
 
-Audit/harden:
-- invoice/payment authority;
-- partial allocation;
-- over/under allocation guards;
-- credit/return/correction;
-- receivable aging and GL reconciliation.
+`PO -> partial Receipt -> QC -> Purchase Invoice -> partial Payment -> return/correction -> supplier reconciliation`
 
-Risk: **CRITICAL**.
+Phải consume:
+- RC-022 AP authority;
+- RC-024/025 stock authority;
+- RC-020 period/GL authority.
 
-#### RC-022 — F03 AP allocation/reconciliation
+Không tạo payable ledger hoặc stock state cạnh tranh.
 
-Audit/harden:
-- supplier invoice/payment authority;
-- partial payment/return/correction;
-- payable aging;
-- GL reconciliation.
+### Lane 2 — CRM / O2C RC-032 + RC-033
 
-Risk: **CRITICAL**.
+`RC-032` — CRM core, STANDARD:
 
-#### RC-023 — F04 Cash/Bank reconciliation
+`Lead -> Customer/Contact -> Opportunity -> Activity -> Quotation`
 
-Audit/harden:
-- cash/bank authority;
-- transfer/reversal;
-- reconciliation lifecycle;
-- statement/import boundaries;
-- GL consistency.
+`RC-033` — Order-to-Cash, CRITICAL:
 
-Risk: **CRITICAL**.
+`Quotation -> Sales Order -> partial Delivery -> partial Invoice -> partial Payment -> return/credit -> reconciliation`
 
-### Lane Inventory
+Phải consume RC-021 AR + RC-020 Finance + RC-024/025 inventory contracts.
 
-#### RC-024 — W01 Stock reconciliation/correction
+Không tạo customer balance/paid amount authority riêng.
 
-Audit/harden:
-- stock reconciliation authority;
-- cycle/count correction;
-- batch/serial where applicable;
-- permission/warehouse/company/tenant scope;
-- finance reconciliation when valuation changes.
+### Lane 3 — HCM / Payroll RC-034 + RC-035
 
-Risk: **CRITICAL**.
+`RC-034` — employee lifecycle/time, STANDARD:
 
-#### RC-025 — W01 backdate/repost/valuation
+`Applicant -> Offer -> Employee -> Contract -> Transfer/Promotion -> Separation`
 
-Audit/harden:
-- backdated stock mutation;
-- repost ordering;
-- valuation adjustment;
-- correction/reversal;
-- stock ledger ↔ GL reconciliation.
+`Shift/Checkin -> Attendance -> Leave -> OT -> Adjustment`
 
-Risk: **CRITICAL**.
+`RC-035` — Payroll to GL, CRITICAL:
 
-## Authority freeze gate
+`source freeze -> salary calculation -> slip -> payroll entry -> GL -> payment/export -> correction/rerun`
 
-Không mở Procurement/CRM/HCM/Manufacturing RC expansion cho tới khi Finance/Inventory shared authority contract liên quan đủ rõ để domain phía trên không tự phát minh posting/stock behavior.
+Phải giữ used-source immutability, effective legal-rule versioning và payroll↔GL reconciliation.
 
-Sau authority freeze, chạy song song:
+### Lane 4 — Manufacturing RC-036 + RC-037
 
-- `RC-030` Procurement RFQ -> PO.
-- `RC-031` PO -> Receipt -> Invoice -> Payment partial/correction.
-- `RC-032` CRM core.
-- `RC-033` O2C partial/correction.
-- `RC-034` HCM lifecycle/time.
-- `RC-035` Payroll -> GL.
-- `RC-036` BOM/MRP.
-- `RC-037` Shopfloor/cost.
-- `RC-038` QMS NCR/RCA/CAPA.
+`RC-036` — BOM/MRP, STANDARD/CRITICAL by stock impact:
 
-## Rules cho mọi RC task mới
+`BOM/version/routing -> demand -> plan/MRP -> Work Order`
 
-1. Đọc exact current `main`, Skill, North Star, Capability Status và RC Hardening Plan.
-2. Gắn capability ID cụ thể.
-3. Audit current code/tests/migrations/evidence trước khi viết mới.
-4. Branch mới dạng `rc/<wave>-<domain>-<slice>`.
-5. Historical code chỉ `reuse/cherry-pick` sau exact diff; không reopen PR cũ tự động.
-6. Maturity promotion phải theo evidence gate, không theo merge/code existence.
-7. Finance/stock/payroll/security/migration là CRITICAL khi chạm authority/invariant.
-8. Bị block cục bộ thì ghi Dependency Request và tiếp tục phần độc lập.
-9. Chỉ dừng hỏi user khi cần business decision không suy ra được, shared contract không thể tách, destructive/production operation, hoặc merge/deploy non-UI.
+`RC-037` — Shopfloor/Cost, CRITICAL:
 
-## Later waves
+`material issue/transfer -> Job Card -> FG/scrap/WIP -> actual cost -> variance -> stock/GL reconciliation`
 
-Sau ERP Core RC:
+Phải consume frozen stock/valuation/Finance authority; không tạo manufacturing stock/cost ledger cạnh tranh.
+
+### Lane 5 — QMS RC-038 + cross-domain evidence coordination
+
+`RC-038` — QMS, STANDARD:
+
+`Incoming/In-process/Final Inspection -> NCR -> RCA -> CAPA -> close/reopen evidence`
+
+QMS stock/cost side effects phải đi qua canonical controller authority.
+
+Lane 5 có thể đồng thời audit shared evidence gaps của Batch 1A nhưng không được sửa authority contract lane khác nếu tách được; ghi Dependency Request và tiếp tục.
+
+## Batch 1B exit gate
+
+Selected ERP Core flow chỉ được gọi RC khi có:
+
+- happy path;
+- partial path;
+- cancel/correction/reversal;
+- backdate khi applicable;
+- server permission + tenant/company scope;
+- retry/idempotency khi mutation;
+- import/migration path nếu cần;
+- report/query/control evidence;
+- money/stock/payroll reconciliation;
+- browser/mobile evidence nếu published actor flow có UI;
+- không duplicate source of truth;
+- không Critical unknown trong published scope.
+
+## CẤM DỪNG contract cho worker
+
+Worker không được dừng vì quyết định kỹ thuật thông thường, test unrelated, stale PR, main tiến lên, thiếu local dependency, CI không chạy, blocker cục bộ hoặc maturity chưa đạt RC.
+
+Nếu một phần bị block:
+
+1. ghi Dependency Request;
+2. xác định owner/contract;
+3. tiếp tục mọi phần độc lập.
+
+Chỉ dừng hỏi user khi:
+
+1. business decision không thể suy ra từ repo/docs;
+2. shared contract workstream khác bắt buộc đổi và không thể isolate;
+3. destructive/production operation;
+4. merge/deploy non-UI.
+
+## Sau Batch 1B
 
 - `RC-040` WMS.
 - `RC-041` Project/PSA.
@@ -149,18 +139,7 @@ Sau ERP Core RC:
 - `RC-044` Integration Foundation.
 - `RC-045` Workplace/DMS/Notifications.
 - `RC-046` App Factory builders/runtime.
-- `RC-047` AI typed tool/preview/approval path.
-- `RC-050..054` Alumdoor reference vertical current-main proof + production hardening.
+- `RC-047` AI typed tool/preview/approval.
+- `RC-050..054` Alumdoor current-main end-to-end + production hardening proof.
 
-## Canonical references
-
-- `CURRENT_STATUS.md`
-- `AI_HANDOFF.md`
-- `docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md`
-- `docs/FORGE_RC_HARDENING_PLAN_20260803.md`
-- `docs/VALIDATION_GATES.md`
-- `docs/FORGE_OFFLINE_SYNC_CONTRACT.md`
-- `docs/agents/RC_AGENT_LANES_20260803.md`
-- `docs/agents/RC_BATCH1A_AGENT_LANES_20260803.md`
-
-Không biến tài liệu lịch sử thành backlog sống lại. Repo đã chịu đủ khảo cổ trong một ngày rồi.
+Không resurrect historical PR làm canonical task. Task mới bắt đầu từ exact current `main` và audit history chỉ như evidence/reuse source.
