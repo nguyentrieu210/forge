@@ -23,4 +23,5 @@ export * from "./enterprise-types.js";
 export * from "./enterprise-controllers.js";
 export * from "./alumdoor-inventory.js";
 export * from "./stock-reconciliation-batch.js";
+export * from "./stock-reconciliation-batch-consumer.js";
 export * from "./warehouse-cash.js";
