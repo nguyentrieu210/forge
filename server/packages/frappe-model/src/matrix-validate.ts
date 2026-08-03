@@ -13,12 +13,14 @@ import type {
   MatrixRowAxisPolicy,
   MatrixRowMemberPolicy,
   MatrixSourceRef,
+  MatrixValueValidation,
   MatrixViewPolicy,
   MatrixWritePermissionAction,
   MatrixWriteRef,
 } from "./matrix-types.js";
 
 const MATRIX_EDITORS = new Set<MatrixEditor>(["Data", "Int", "Float", "Currency", "Percent", "Check", "Select", "Link"]);
+const NUMERIC_EDITORS = new Set<MatrixEditor>(["Int", "Float", "Currency", "Percent"]);
 const WRITE_PERMISSION_ACTIONS = new Set<MatrixWritePermissionAction>(["write", "create", "submit"]);
 const SYSTEM_READ_FIELDS = new Set(["name", "owner", "creation", "modified", "modified_by", "docstatus", "idx"]);
 
@@ -52,9 +54,15 @@ export function parseMatrixViewPolicy(value: unknown, context: MatrixMetaContext
   }
 
   const cell = parseCell(input.cell, "viewPolicy.matrix.cell", context);
+  if (cell.disabledColumnReadOnly && !columnAxis.disabledField) {
+    throw errors.validation("viewPolicy.matrix.cell.disabledColumnReadOnly requires columnAxis.disabledField");
+  }
   const navigator = input.navigator === undefined ? undefined : parseNavigator(input.navigator, "viewPolicy.matrix.navigator", context);
   const write = input.write === undefined ? undefined : parseWrite(input.write, "viewPolicy.matrix.write", context);
   const rowMembers = input.rowMembers === undefined ? undefined : parseRowMembers(input.rowMembers, "viewPolicy.matrix.rowMembers");
+  if (rowMembers?.primaryRemovable === false && !rowAxis.primaryField) {
+    throw errors.validation("viewPolicy.matrix.rowMembers.primaryRemovable=false requires rowAxis.primaryField");
+  }
   const columnMembers = input.columnMembers === undefined ? undefined : parseColumnMembers(input.columnMembers, "viewPolicy.matrix.columnMembers");
   const query = parseQuery(input.query, "viewPolicy.matrix.query");
   const presentation = input.presentation === undefined
@@ -112,38 +120,66 @@ function parseAxisBase(value: unknown, path: string, context: MatrixMetaContext,
 }
 
 function parseRowAxis(value: unknown, path: string, context: MatrixMetaContext): MatrixRowAxisPolicy {
-  const { input, axis } = parseAxisBase(value, path, context, ["auxiliaryFields"]);
-  if (input.auxiliaryFields === undefined) return axis;
+  const { input, axis } = parseAxisBase(value, path, context, ["primaryField", "auxiliaryFields"]);
+  const primaryField = input.primaryField === undefined ? undefined : sourceField(input.primaryField, `${path}.primaryField`, axis.source, context);
+  if (primaryField) assertCheckReadField(axis.source, primaryField, `${path}.primaryField`, context);
+  if (input.auxiliaryFields === undefined) return { ...axis, ...(primaryField ? { primaryField } : {}) };
   if (!Array.isArray(input.auxiliaryFields)) throw errors.validation(`${path}.auxiliaryFields must be an array`);
   const auxiliaryFields = input.auxiliaryFields.map((raw, index) => {
     const itemPath = `${path}.auxiliaryFields[${index}]`;
     const item = object(raw, itemPath);
-    only(item, ["field", "editor"], itemPath);
+    only(item, ["field", "label", "editor", "readOnlyWhenField", "validation"], itemPath);
     const field = sourceField(item.field, `${itemPath}.field`, axis.source, context);
-    if (item.editor === undefined) return { field };
+    const label = item.label === undefined ? undefined : text(item.label, `${itemPath}.label`, 160);
+    const readOnlyWhenField = item.readOnlyWhenField === undefined
+      ? undefined
+      : sourceField(item.readOnlyWhenField, `${itemPath}.readOnlyWhenField`, axis.source, context);
+    if (readOnlyWhenField) assertCheckReadField(axis.source, readOnlyWhenField, `${itemPath}.readOnlyWhenField`, context);
+    const validation = item.validation === undefined ? undefined : valueValidation(item.validation, `${itemPath}.validation`);
+    if (item.editor === undefined) {
+      if (readOnlyWhenField || validation) throw errors.validation(`${itemPath} needs editor when readOnlyWhenField or validation is declared`);
+      return { field, ...(label ? { label } : {}) };
+    }
     const editor = matrixEditor(item.editor, `${itemPath}.editor`);
     assertEditableTarget(axis.source, field, editor, `${itemPath}.field`, context);
-    return { field, editor };
+    if (validation && !NUMERIC_EDITORS.has(editor)) throw errors.validation(`${itemPath}.validation requires a numeric editor`);
+    return {
+      field,
+      ...(label ? { label } : {}),
+      editor,
+      ...(readOnlyWhenField ? { readOnlyWhenField } : {}),
+      ...(validation ? { validation } : {}),
+    };
   });
   unique(auxiliaryFields.map((entry) => entry.field), `${path}.auxiliaryFields`);
-  return { ...axis, auxiliaryFields };
+  return { ...axis, ...(primaryField ? { primaryField } : {}), auxiliaryFields };
 }
 
 function parseColumnAxis(value: unknown, path: string, context: MatrixMetaContext): MatrixColumnAxisPolicy {
-  const { input, axis } = parseAxisBase(value, path, context, ["subtitleField"]);
+  const { input, axis } = parseAxisBase(value, path, context, ["subtitleField", "disabledField", "selectedFirst"]);
   const subtitleField = input.subtitleField === undefined ? undefined : sourceField(input.subtitleField, `${path}.subtitleField`, axis.source, context);
-  return { ...axis, ...(subtitleField ? { subtitleField } : {}) };
+  const disabledField = input.disabledField === undefined ? undefined : sourceField(input.disabledField, `${path}.disabledField`, axis.source, context);
+  if (disabledField) assertCheckReadField(axis.source, disabledField, `${path}.disabledField`, context);
+  return {
+    ...axis,
+    ...(subtitleField ? { subtitleField } : {}),
+    ...(disabledField ? { disabledField } : {}),
+    ...(input.selectedFirst === undefined ? {} : { selectedFirst: boolean(input.selectedFirst, `${path}.selectedFirst`, false) }),
+  };
 }
 
 function parseNavigator(value: unknown, path: string, context: MatrixMetaContext): MatrixNavigatorPolicy {
-  const { input, axis } = parseAxisBase(value, path, context, ["parentField"]);
+  const { input, axis } = parseAxisBase(value, path, context, ["parentField", "secondaryLabelField"]);
   const parentField = sourceField(input.parentField, `${path}.parentField`, axis.source, context);
-  return { ...axis, parentField };
+  const secondaryLabelField = input.secondaryLabelField === undefined
+    ? undefined
+    : sourceField(input.secondaryLabelField, `${path}.secondaryLabelField`, axis.source, context);
+  return { ...axis, parentField, ...(secondaryLabelField ? { secondaryLabelField } : {}) };
 }
 
 function parseCell(value: unknown, path: string, context: MatrixMetaContext): MatrixCellPolicy {
   const input = object(value, path);
-  only(input, ["source", "identity", "valueField", "editor", "enabled"], path);
+  only(input, ["source", "identity", "valueField", "editor", "enabled", "versionField", "validation", "disabledColumnReadOnly"], path);
   const source = parseSource(input.source, `${path}.source`);
   const identityInput = object(input.identity, `${path}.identity`);
   only(identityInput, ["rowField", "columnField", "recordField"], `${path}.identity`);
@@ -156,6 +192,9 @@ function parseCell(value: unknown, path: string, context: MatrixMetaContext): Ma
   const valueField = sourceField(input.valueField, `${path}.valueField`, source, context);
   const editor = matrixEditor(input.editor, `${path}.editor`);
   assertEditableTarget(source, valueField, editor, `${path}.valueField`, context);
+  const versionField = input.versionField === undefined ? undefined : sourceField(input.versionField, `${path}.versionField`, source, context);
+  const validation = input.validation === undefined ? undefined : valueValidation(input.validation, `${path}.validation`);
+  if (validation && !NUMERIC_EDITORS.has(editor)) throw errors.validation(`${path}.validation requires a numeric editor`);
 
   let enabled;
   if (input.enabled !== undefined) {
@@ -172,6 +211,9 @@ function parseCell(value: unknown, path: string, context: MatrixMetaContext): Ma
     valueField,
     editor,
     ...(enabled ? { enabled } : {}),
+    ...(versionField ? { versionField } : {}),
+    ...(validation ? { validation } : {}),
+    ...(input.disabledColumnReadOnly === undefined ? {} : { disabledColumnReadOnly: boolean(input.disabledColumnReadOnly, `${path}.disabledColumnReadOnly`, false) }),
   };
 }
 
@@ -206,46 +248,76 @@ function parseAction(value: unknown, path: string): MatrixActionRef {
 
 function parseRowMembers(value: unknown, path: string): MatrixRowMemberPolicy {
   const input = object(value, path);
-  only(input, ["create", "remove"], path);
+  only(input, ["create", "remove", "primaryRemovable"], path);
   const create = input.create === undefined ? undefined : parseAction(input.create, `${path}.create`);
   const remove = input.remove === undefined ? undefined : parseAction(input.remove, `${path}.remove`);
-  return { ...(create ? { create } : {}), ...(remove ? { remove } : {}) };
+  return {
+    ...(create ? { create } : {}),
+    ...(remove ? { remove } : {}),
+    ...(input.primaryRemovable === undefined ? {} : { primaryRemovable: boolean(input.primaryRemovable, `${path}.primaryRemovable`, false) }),
+  };
 }
 
 function parseColumnMembers(value: unknown, path: string): MatrixColumnMemberPolicy {
   const input = object(value, path);
-  only(input, ["create", "allowHide", "allowShow"], path);
+  only(input, ["create", "allowHide", "allowHideAll", "allowShow", "allowShowAll"], path);
   const create = input.create === undefined ? undefined : parseAction(input.create, `${path}.create`);
+  const allowHide = input.allowHide === undefined ? undefined : boolean(input.allowHide, `${path}.allowHide`, false);
+  const allowHideAll = input.allowHideAll === undefined ? undefined : boolean(input.allowHideAll, `${path}.allowHideAll`, false);
+  const allowShow = input.allowShow === undefined ? undefined : boolean(input.allowShow, `${path}.allowShow`, false);
+  const allowShowAll = input.allowShowAll === undefined ? undefined : boolean(input.allowShowAll, `${path}.allowShowAll`, false);
+  if (allowHideAll && allowHide !== true) throw errors.validation(`${path}.allowHideAll requires allowHide=true`);
+  if (allowShowAll && allowShow !== true) throw errors.validation(`${path}.allowShowAll requires allowShow=true`);
   return {
     ...(create ? { create } : {}),
-    ...(input.allowHide === undefined ? {} : { allowHide: boolean(input.allowHide, `${path}.allowHide`, false) }),
-    ...(input.allowShow === undefined ? {} : { allowShow: boolean(input.allowShow, `${path}.allowShow`, false) }),
+    ...(allowHide === undefined ? {} : { allowHide }),
+    ...(allowHideAll === undefined ? {} : { allowHideAll }),
+    ...(allowShow === undefined ? {} : { allowShow }),
+    ...(allowShowAll === undefined ? {} : { allowShowAll }),
   };
 }
 
 function parseQuery(value: unknown, path: string): MatrixQueryPolicy {
   const input = object(value, path);
-  only(input, ["pageSize", "searchLimit", "minSearchChars"], path);
+  only(input, ["pageSize", "searchLimit", "minSearchChars", "searchMode", "accentInsensitive"], path);
   return {
     pageSize: integer(input.pageSize, `${path}.pageSize`, 20, 500),
     searchLimit: integer(input.searchLimit, `${path}.searchLimit`, 1, 200),
     minSearchChars: integer(input.minSearchChars, `${path}.minSearchChars`, 0, 10),
+    ...(input.searchMode === undefined ? {} : { searchMode: enumText(input.searchMode, `${path}.searchMode`, ["contains", "prefix", "token_contains"] as const) }),
+    ...(input.accentInsensitive === undefined ? {} : { accentInsensitive: boolean(input.accentInsensitive, `${path}.accentInsensitive`, false) }),
   };
 }
 
 function parsePresentation(value: unknown, path: string): MatrixPresentationPolicy {
   const input = object(value, path);
-  only(input, ["stickyRowAxis", "stickyColumnAxis", "focusMode", "mobileMode"], path);
+  only(input, [
+    "stickyRowAxis", "stickyColumnAxis", "focusMode", "mobileMode",
+    "navigatorResizable", "navigatorCollapsible", "showDirtyIndicator", "unsavedChangeGuard",
+  ], path);
   return {
     stickyRowAxis: boolean(input.stickyRowAxis, `${path}.stickyRowAxis`, false),
     stickyColumnAxis: boolean(input.stickyColumnAxis, `${path}.stickyColumnAxis`, false),
     focusMode: input.focusMode === undefined ? "inline" : enumText(input.focusMode, `${path}.focusMode`, ["inline", "toggle"] as const),
     mobileMode: input.mobileMode === undefined ? "scroll" : enumText(input.mobileMode, `${path}.mobileMode`, ["scroll", "step"] as const),
+    navigatorResizable: boolean(input.navigatorResizable, `${path}.navigatorResizable`, false),
+    navigatorCollapsible: boolean(input.navigatorCollapsible, `${path}.navigatorCollapsible`, false),
+    showDirtyIndicator: boolean(input.showDirtyIndicator, `${path}.showDirtyIndicator`, true),
+    unsavedChangeGuard: boolean(input.unsavedChangeGuard, `${path}.unsavedChangeGuard`, true),
   };
 }
 
 function defaultPresentation(): MatrixPresentationPolicy {
-  return { stickyRowAxis: false, stickyColumnAxis: false, focusMode: "inline", mobileMode: "scroll" };
+  return {
+    stickyRowAxis: false,
+    stickyColumnAxis: false,
+    focusMode: "inline",
+    mobileMode: "scroll",
+    navigatorResizable: false,
+    navigatorCollapsible: false,
+    showDirtyIndicator: true,
+    unsavedChangeGuard: true,
+  };
 }
 
 function assertEditableTarget(source: MatrixSourceRef, fieldname: string, editor: MatrixEditor, path: string, context: MatrixMetaContext): void {
@@ -259,6 +331,12 @@ function assertEditableTarget(source: MatrixSourceRef, fieldname: string, editor
   if (["readonly", "hidden", "set_once", "immutable_after_submit"].includes(field.editMode ?? "editable")) {
     throw errors.validation(`${path} targets field with unsafe editMode ${field.editMode}`);
   }
+}
+
+function assertCheckReadField(source: MatrixSourceRef, fieldname: string, path: string, context: MatrixMetaContext): void {
+  if (source.kind !== "doctype" || source.name !== context.name) return;
+  const field = context.fields.find((entry) => entry.fieldname === fieldname);
+  if (!field || field.fieldtype !== "Check") throw errors.validation(`${path} must name a Check field on ${context.name}`);
 }
 
 function sourceField(value: unknown, path: string, source: MatrixSourceRef, context: MatrixMetaContext): string {
@@ -291,6 +369,10 @@ function matrixEditor(value: unknown, path: string): MatrixEditor {
   const result = text(value, path, 32) as MatrixEditor;
   if (!MATRIX_EDITORS.has(result)) throw errors.validation(`${path} is not a supported Matrix editor: ${result}`);
   return result;
+}
+
+function valueValidation(value: unknown, path: string): MatrixValueValidation {
+  return enumText(value, path, ["positive", "non_negative"] as const);
 }
 
 function writePermission(value: unknown, path: string): MatrixWritePermissionAction {
