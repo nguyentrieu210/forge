@@ -237,19 +237,19 @@ export function LoginForm({
           <BrandMark brandMark={brandMark} size={38} />
           <div>
             <p className="text-lg font-semibold tracking-[-0.025em]">{resolvedBrand}</p>
-            <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/42">Enterprise Operating Platform</p>
+            <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/[0.42]">Enterprise Operating Platform</p>
           </div>
         </div>
 
         <div className="mf-auth-brand-reveal relative z-10 max-w-xl pb-8 xl:pb-14">
-          <div className="mb-5 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/48">
+          <div className="mb-5 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/[0.48]">
             <span className="size-1.5 rounded-full" style={{ background: "var(--forge-primary, #e52521)" }} />
             Forge Vben Next
           </div>
           <h2 className="max-w-lg text-4xl font-semibold leading-[1.04] tracking-[-0.05em] xl:text-[3.35rem]">
             Một workspace cho dữ liệu, quy trình và vận hành doanh nghiệp.
           </h2>
-          <p className="mt-5 max-w-lg text-sm leading-6 text-white/58 xl:text-[15px]">
+          <p className="mt-5 max-w-lg text-sm leading-6 text-white/[0.58] xl:text-[15px]">
             Giao diện tập trung cho công việc hằng ngày, giữ nguyên quyền hạn và dữ liệu từ hệ thống Forge phía sau.
           </p>
 
@@ -259,15 +259,15 @@ export function LoginForm({
               ["02", "Enterprise controls"],
               ["03", "Cloud execution"],
             ].map(([index, label]) => (
-              <div key={index} className="bg-black/35 px-4 py-4 backdrop-blur-sm">
-                <p className="text-[10px] font-semibold tracking-[0.18em] text-white/30">{index}</p>
-                <p className="mt-2 text-xs font-medium text-white/74">{label}</p>
+              <div key={index} className="bg-black/[0.35] px-4 py-4 backdrop-blur-sm">
+                <p className="text-[10px] font-semibold tracking-[0.18em] text-white/[0.30]">{index}</p>
+                <p className="mt-2 text-xs font-medium text-white/[0.74]">{label}</p>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="relative z-10 flex items-center justify-between border-t border-white/10 pt-5 text-[10px] uppercase tracking-[0.16em] text-white/32">
+        <div className="relative z-10 flex items-center justify-between border-t border-white/10 pt-5 text-[10px] uppercase tracking-[0.16em] text-white/[0.32]">
           <span>Forge Workspace</span>
           <span className="flex items-center gap-1.5"><Factory className="size-3" aria-hidden="true" /> Built for operations</span>
         </div>
