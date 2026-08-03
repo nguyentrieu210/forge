@@ -1,54 +1,61 @@
-# FORGE LEGACY PR INBOX
+# FORGE LEGACY PR ARCHIVE
 
-> Canonical purpose: giúp 18 workstream tận dụng code/evidence cũ mà không merge nhầm branch stale.
->
-> Exact GitHub diff/branch state luôn thắng file này. Agent phải cập nhật disposition trong workstream handoff khi đã audit.
+Ngày sync: **2026-08-03**.
 
-## Disposition vocabulary
+> Purpose: lưu dấu vết các PR/branch lịch sử để có thể audit/reuse có kiểm chứng.  
+> Exact GitHub state luôn thắng file này.
 
-- `AUDIT`: chưa quyết định, owner phải đọc exact diff/evidence.
-- `REUSE`: branch/PR còn phù hợp để tiếp tục trực tiếp sau khi sync current main.
-- `CHERRY-PICK`: chỉ lấy một phần commit/file/contract sang workstream canonical.
-- `SUPERSEDED`: implementation hiện tại hoặc workstream mới đã thay thế.
+## Current truth
+
+- **Open PR: 0**.
+- Không PR nào trong tài liệu này là active backlog.
+- Không reopen/merge PR cũ chỉ vì thấy implementation hữu ích.
+- Nếu task mới cần code cũ, compare với exact current `main`, rồi cherry-pick/rebuild phần còn đúng contract vào **branch/PR mới**.
+
+## Historical disposition vocabulary
+
+- `REFERENCE`: chỉ dùng để đọc lại ý tưởng/evidence.
+- `CHERRY-PICK`: task mới có thể lấy một phần sau khi revalidate.
+- `SUPERSEDED`: current implementation/workstream đã thay thế.
+- `MERGED`: capability đã vào main qua một PR/commit khác.
 - `REJECT`: không dùng vì sai contract/invariant/architecture.
-- `MERGED`: capability đã vào main, PR chỉ còn lịch sử.
 
-## Open substantive PR candidates at Forge 0.2.0 baseline
+Không còn trạng thái `AUDIT/REUSE` mang nghĩa “hãy tiếp tục PR đang mở”, vì review queue hiện đã được reset sạch.
 
-| PR | Scope | Primary workstream | Secondary | Initial disposition |
-|---|---|---|---|---|
-| #295 | Tiến Đạt FIFO delivery + payable operations | WS03 Procurement | WS01, WS04, WS17 | AUDIT |
-| #286 | TT99 localization + tax/e-invoice controls | WS01 Finance/VN | WS06, WS10, WS11 | AUDIT |
-| #278 | VN accounting integrity technical closure | WS01 Finance/VN | WS00, WS04, WS11 | AUDIT |
-| #269 | HRM statutory payroll + self-service | WS06 HCM/Payroll | WS01, WS11, WS14 | AUDIT |
-| #267 | Bulk Stock Reconciliation | WS04 Inventory/WMS | WS09, WS14 | AUDIT |
-| #216 | Pricing management matrix | WS02 CRM/Revenue | WS09, WS14 | AUDIT |
-| #208 | Plastic ERP Production Run/shop-floor | WS05 Manufacturing/QMS | WS04, WS14 | AUDIT |
-| #201 | Actual manufacturing costing | WS05 Manufacturing/QMS | WS01, WS04 | AUDIT |
-| #199 | Daily detailed ledger hardening | WS01 Finance/VN | WS08, WS12 | AUDIT |
+## PRs closed in repository reset — 2026-08-03
 
-## Closed during Forge 0.2.0 cleanup
+Các PR sau từng là substantive/follow-up work nhưng đã được user quyết định đóng để mọi công việc sau bắt đầu mới:
 
-Các PR sau đã được xác định rõ là temporary/stale/superseded và đã đóng, nhưng history vẫn còn để tra cứu:
+| PR | Historical scope | Current disposition |
+|---|---|---|
+| #427 | repository/workflow cleanup | REFERENCE — closed unmerged |
+| #424 | temporary Matrix validation | REFERENCE — closed unmerged |
+| #423 | Matrix member-action input contract | REFERENCE — closed unmerged |
+| #419 | Matrix named source/action bridge | REFERENCE — closed unmerged |
+| #405 | admin reset login-rate-limit fix | REFERENCE — closed unmerged |
+| #388 | Alumdoor Employee Lite private-field permissions | REFERENCE — closed unmerged |
+| #370 | MetaForge enterprise UI grammar plan | REFERENCE — closed unmerged |
+| #295 | Tiến Đạt FIFO delivery/payable operations | REFERENCE — closed unmerged |
+| #286 | TT99 localization/tax controls | REFERENCE — closed unmerged |
+| #278 | VN accounting integrity hardening | REFERENCE — closed unmerged |
+| #267 | Bulk Stock Reconciliation | REFERENCE — closed unmerged |
+| #216 | pricing matrix UI iteration | REFERENCE/SUPERSEDED by later Matrix foundation where applicable |
+| #208 | Plastic ERP Production Run/shop-floor | REFERENCE — closed unmerged |
+| #201 | manufacturing actual costing | REFERENCE — closed unmerged |
+| #199 | Daily Detailed Ledger hardening | REFERENCE — closed unmerged |
 
-- #224 accounting-period iteration cũ.
-- #248 decimal UI hotfix đã có fix canonical mới hơn.
-- #256 obsolete CURRENT_STATUS recovery.
-- #257 accounting-period iteration cũ.
-- #259 accounting-period iteration cũ.
-- #285 temporary accounting transplant/integration check.
+Các PR khác đã đóng từ trước (ví dụ `#224`, `#248`, `#256`, `#257`, `#259`, `#269`, `#285` và các convergence iterations) tiếp tục là historical evidence theo GitHub history.
 
-Không reopen/merge các PR này chỉ vì thấy code hữu ích. Nếu cần, cherry-pick ý tưởng/commit có kiểm chứng vào workstream canonical.
+## Reuse rule for future tasks
 
-## Agent rule
+Khi một task mới chạm domain đã từng có PR cũ:
 
-Khi CLAIMED một workstream:
+1. search GitHub history theo domain/PR;
+2. đọc exact diff và merge-base với current main;
+3. xác định phần nào đã có trên main và phần nào thật sự còn thiếu;
+4. không lấy migration number/version assumption cũ nếu current main đã tiến lên;
+5. chỉ cherry-pick/reimplement phần còn đúng;
+6. chạy lại tests/evidence trên current baseline;
+7. mở PR mới.
 
-1. search open + recently closed PR theo domain;
-2. đọc exact diff và current main equivalent;
-3. ghi từng PR vào workstream file với disposition;
-4. nếu chọn REUSE, sync branch với exact current main trước code;
-5. nếu chọn CHERRY-PICK, chỉ lấy phần còn đúng contract và chạy lại evidence;
-6. coordinator cập nhật `AGENT_BOARD.md` khi disposition ảnh hưởng dependency/merge order.
-
-Không để hai workstream cùng nhận một PR làm canonical owner. Secondary workstream chỉ review contract/touchpoint.
+History là thư viện tham khảo, không phải zombie backlog. Nhân loại đã phát minh version control để khỏi phải quên quá khứ, không phải để quá khứ tự giao việc cho hiện tại.
