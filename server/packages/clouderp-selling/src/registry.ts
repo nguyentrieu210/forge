@@ -8,10 +8,11 @@ import { CrmCommissionAccrualController, CrmCommissionRuleController, CrmSalesTa
 import { CrmLeadScoreRuleController, CrmLeadScoreSnapshotController } from "./crm-scoring-controllers.js";
 import { CrmSalesTeamController, CrmSalesTeamMemberController, CrmTeamAwareDealController, CrmTeamAwareLeadController } from "./crm-team-controllers.js";
 import { ArSalesInvoiceController } from "./ar-sales-invoice-controller.js";
-import { DeliveryNoteController, SalesOrderController } from "./controllers.js";
+import { DeliveryNoteController } from "./controllers.js";
 import { PaymentAllocationController } from "./finance-controllers.js";
 import { QuotationController } from "./quotation-controller.js";
 import { SafeFinancePaymentEntryController } from "./safe-finance-payment-entry.js";
+import { SalesOrderClosureController } from "./sales-order-closure-controller.js";
 
 export function createO2CControllerRegistry(): ControllerRegistry {
   return new ControllerRegistry()
@@ -38,7 +39,7 @@ export function createO2CControllerRegistry(): ControllerRegistry {
     .register(new CrmFieldCheckInController())
     .register(new CrmSellOutReportController())
     .register(new QuotationController())
-    .register(new SalesOrderController())
+    .register(new SalesOrderClosureController())
     .register(new DeliveryNoteController())
     .register(new ArSalesInvoiceController())
     .register(new SafeFinancePaymentEntryController())
