@@ -17,7 +17,6 @@
     "test": "tsc -b && node --test tests/chart-model.test.mjs"
   },
   "dependencies": {
-    "@metaforge/ui": "workspace:*",
     "echarts": "6.1.0"
   },
   "peerDependencies": {
