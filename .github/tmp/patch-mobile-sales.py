@@ -1,0 +1,103 @@
+from pathlib import Path
+
+
+def replace_once(path: str, old: str, new: str):
+    p = Path(path)
+    text = p.read_text()
+    count = text.count(old)
+    if count != 1:
+        raise SystemExit(f"{path}: expected exactly one anchor, found {count}")
+    p.write_text(text.replace(old, new, 1))
+
+
+shell = "client/packages/shell/src/app-mode/MobileShell.tsx"
+replace_once(
+    shell,
+    '    <div className="flex min-h-[100dvh] w-full min-w-0 max-w-full flex-col overflow-x-hidden bg-muted/30 text-foreground">',
+    '    <div className="flex h-[100dvh] w-full min-w-0 max-w-full flex-col overflow-hidden bg-muted/30 text-foreground">',
+)
+replace_once(
+    shell,
+    '        "mx-auto w-full min-w-0 max-w-xl flex-1 overflow-x-hidden overflow-y-auto p-3 md:max-w-3xl md:p-5",',
+    '        "mx-auto min-h-0 w-full min-w-0 max-w-xl flex-1 overflow-x-hidden overflow-y-auto overscroll-contain p-3 md:max-w-3xl md:p-5",',
+)
+
+main = "client/apps/warehouse-mobile/src/main.tsx"
+replace_once(main, 'import { PurchaseFundingScreen } from "./PurchaseFundingScreen.js";\n', 'import { CustomerReceivablesScreen, DeliveryNotesScreen } from "./SalesMobileScreens.js";\n')
+replace_once(main, 'type MobileTab = "home" | "actions" | "funding" | "stock" | "account";', 'type MobileTab = "home" | "actions" | "deliveries" | "debt" | "stock" | "account";')
+replace_once(main, '  const validTabs: MobileTab[] = ["home", "actions", "funding", "stock", "account"];', '  const validTabs: MobileTab[] = ["home", "deliveries", "debt", "stock", "account"];')
+replace_once(
+    main,
+    '    : tab === "stock" ? "Tra tồn kho"\n      : tab === "funding" ? "Đề xuất & quỹ"\n        : tab === "account" ? "Tài khoản" : "Alumdoor Kho";\n  const pageSubtitle = operation ? "Tạo phiếu nghiệp vụ" : tab === "funding" ? "Mua hàng và thu chi nội bộ" : "Ứng dụng kho trên điện thoại";',
+    '    : tab === "deliveries" ? "Phiếu xuất kho"\n      : tab === "debt" ? "Công nợ chi tiết"\n        : tab === "stock" ? "Tồn nhôm"\n          : tab === "account" ? "Tài khoản" : "Alumdoor Sale";\n  const pageSubtitle = operation ? "Nghiệp vụ kho" : "Ứng dụng sale trên điện thoại";',
+)
+replace_once(
+    main,
+    '        ) : tab === "home" ? (\n          <HomeScreen fullName={boot.full_name} pending={queue.pending.length} onOpen={openOperation} onAll={() => changeTab("actions")} onStock={() => changeTab("stock")} />\n        ) : tab === "actions" ? (\n          <OperationScreen onOpen={openOperation} />\n        ) : tab === "funding" ? (\n          <PurchaseFundingScreen adapter={adapter} boot={boot} />\n        ) : tab === "stock" ? (\n          <StockLookup />',
+    '        ) : tab === "home" ? (\n          <HomeScreen fullName={boot.full_name} pending={queue.pending.length} onDeliveries={() => changeTab("deliveries")} onDebt={() => changeTab("debt")} onStock={() => changeTab("stock")} />\n        ) : tab === "actions" ? (\n          <OperationScreen onOpen={openOperation} />\n        ) : tab === "deliveries" ? (\n          <DeliveryNotesScreen adapter={adapter} />\n        ) : tab === "debt" ? (\n          <CustomerReceivablesScreen adapter={adapter} boot={boot} />\n        ) : tab === "stock" ? (\n          <StockLookup />',
+)
+
+p = Path(main)
+text = p.read_text()
+start = text.index("function HomeScreen(")
+end = text.index("\nfunction OperationScreen(", start)
+home = r'''function HomeScreen({ fullName, pending, onDeliveries, onDebt, onStock }: {
+  fullName: string;
+  pending: number;
+  onDeliveries: () => void;
+  onDebt: () => void;
+  onStock: () => void;
+}) {
+  const firstName = fullName.trim().split(/\s+/).at(-1) ?? fullName;
+  return (
+    <div className="space-y-4">
+      <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-[#2e2e2e] via-[#3b302c] to-[#f45b24] p-5 text-white shadow-lg">
+        <div className="flex items-start justify-between gap-4">
+          <div><p className="text-sm text-white/80">Xin chào {firstName}</p><h1 className="mt-1 text-2xl font-bold tracking-tight">Công việc sale hôm nay</h1></div>
+          <ForgeBrandLogo size={44} className="rounded-md bg-white p-1" />
+        </div>
+        <div className="mt-5 flex items-center gap-2 rounded-2xl bg-white/12 px-3 py-2 text-xs backdrop-blur">
+          {pending ? <WifiOff className="size-4" /> : <CheckCircle2 className="size-4" />}
+          <span>{pending ? `${pending} thao tác cũ đang chờ gửi` : "Dữ liệu đã đồng bộ"}</span>
+        </div>
+      </section>
+      <section className="space-y-2">
+        <h2 className="px-1 text-sm font-semibold">Tra cứu nhanh</h2>
+        <TouchCard onClick={onDebt}><div className="flex items-center gap-3"><span className="grid size-11 place-items-center rounded-xl bg-primary/10 text-primary"><WalletCards className="size-5" /></span><span className="min-w-0 flex-1"><span className="block text-sm font-semibold">Công nợ khách hàng chi tiết</span><span className="mt-1 block text-xs text-muted-foreground">Từng hóa đơn, đã thu, còn nợ và quá hạn.</span></span></div></TouchCard>
+        <TouchCard onClick={onDeliveries}><div className="flex items-center gap-3"><span className="grid size-11 place-items-center rounded-xl bg-primary/10 text-primary"><ClipboardCheck className="size-5" /></span><span className="min-w-0 flex-1"><span className="block text-sm font-semibold">Phiếu xuất kho / giao hàng</span><span className="mt-1 block text-xs text-muted-foreground">Xem phiếu đã xác nhận theo khách hàng.</span></span></div></TouchCard>
+        <TouchCard onClick={onStock}><div className="flex items-center gap-3"><span className="grid size-11 place-items-center rounded-xl bg-primary/10 text-primary"><PackageSearch className="size-5" /></span><span className="min-w-0 flex-1"><span className="block text-sm font-semibold">Tồn nhôm</span><span className="mt-1 block text-xs text-muted-foreground">Tra nhanh mã nhôm và số lượng theo kho.</span></span></div></TouchCard>
+      </section>
+    </div>
+  );
+}
+'''
+p.write_text(text[:start] + home + text[end:])
+
+text = p.read_text()
+start = text.index("function BottomNavigation(")
+end = text.index("\nfunction GuestLogin(", start)
+bottom = r'''function BottomNavigation({ active, pending, onChange }: { active: MobileTab; pending: number; onChange: (tab: MobileTab) => void }) {
+  const items: Array<{ key: MobileTab; label: string; icon: ReactNode }> = [
+    { key: "home", label: "Trang chủ", icon: <Home /> },
+    { key: "deliveries", label: "Xuất kho", icon: <ClipboardCheck /> },
+    { key: "debt", label: "Công nợ", icon: <WalletCards /> },
+    { key: "stock", label: "Tồn nhôm", icon: <PackageSearch /> },
+    { key: "account", label: "Tôi", icon: <UserRound /> },
+  ];
+  return (
+    <nav className="forge-mobile-bottom grid grid-cols-5 gap-1" aria-label="Điều hướng app sale">
+      {items.map((item) => (
+        <Button key={item.key} variant="ghost" className={`relative h-14 flex-col gap-1 rounded-xl px-1 text-[10px] ${active === item.key ? "bg-primary/10 text-primary" : "text-muted-foreground"}`} onClick={() => onChange(item.key)}>
+          <span className="[&_svg]:size-5">{item.icon}</span><span>{item.label}</span>
+          {item.key === "account" && pending ? <span className="absolute right-3 top-1 size-2 rounded-full bg-amber-500" /> : null}
+        </Button>
+      ))}
+    </nav>
+  );
+}
+'''
+p.write_text(text[:start] + bottom + text[end:])
+
+replace_once(main, "Cài Alumdoor Kho lên điện thoại", "Cài Alumdoor Sale lên điện thoại")
+replace_once(main, "Alumdoor Kho tập trung nghiệp vụ hiện trường trên điện thoại. Báo cáo và cấu hình đầy đủ tiếp tục dùng bản desktop.", "Alumdoor Sale tập trung tra cứu và nghiệp vụ bán hàng trên điện thoại. Cấu hình quản trị đầy đủ tiếp tục dùng bản desktop.")
+replace_once(main, 'brand="Alumdoor Kho" title="Đăng nhập app kho Alumdoor" subtitle="Dùng tài khoản nội bộ đã được Alumdoor cấp quyền."', 'brand="Alumdoor Sale" title="Đăng nhập Alumdoor Sale" subtitle="Dùng tài khoản nội bộ đã được Alumdoor cấp quyền."')
