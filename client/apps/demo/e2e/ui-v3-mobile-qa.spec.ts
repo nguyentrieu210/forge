@@ -23,13 +23,42 @@ async function gotoSurface(page: Page, route: string) {
 }
 
 async function expectNoHorizontalOverflow(page: Page) {
-  const dimensions = await page.evaluate(() => ({
-    viewport: document.documentElement.clientWidth,
-    document: document.documentElement.scrollWidth,
-    body: document.body.scrollWidth,
-  }));
-  expect(dimensions.document, `document overflow: ${JSON.stringify(dimensions)}`).toBeLessThanOrEqual(dimensions.viewport + 1);
-  expect(dimensions.body, `body overflow: ${JSON.stringify(dimensions)}`).toBeLessThanOrEqual(dimensions.viewport + 1);
+  const result = await page.evaluate(() => {
+    const viewport = document.documentElement.clientWidth;
+    const documentWidth = document.documentElement.scrollWidth;
+    const bodyWidth = document.body.scrollWidth;
+    const overflowers = documentWidth > viewport + 1
+      ? Array.from(document.querySelectorAll<HTMLElement>("body *"))
+        .map((element) => {
+          const rect = element.getBoundingClientRect();
+          const style = getComputedStyle(element);
+          return {
+            tag: element.tagName.toLowerCase(),
+            id: element.id,
+            className: typeof element.className === "string" ? element.className.slice(0, 180) : "",
+            role: element.getAttribute("role"),
+            ariaLabel: element.getAttribute("aria-label"),
+            left: Math.round(rect.left * 10) / 10,
+            right: Math.round(rect.right * 10) / 10,
+            width: Math.round(rect.width * 10) / 10,
+            position: style.position,
+            transform: style.transform,
+            overflowX: style.overflowX,
+            visibility: style.visibility,
+          };
+        })
+        .filter((item) => item.width > 0 && (item.right > viewport + 1 || item.left < -1))
+        .sort((a, b) => Math.max(b.right - viewport, -b.left) - Math.max(a.right - viewport, -a.left))
+        .slice(0, 12)
+      : [];
+    return { viewport, document: documentWidth, body: bodyWidth, overflowers };
+  });
+
+  expect(
+    result.document,
+    `document overflow: ${JSON.stringify(result)}`,
+  ).toBeLessThanOrEqual(result.viewport + 1);
+  expect(result.body, `body overflow: ${JSON.stringify(result)}`).toBeLessThanOrEqual(result.viewport + 1);
 }
 
 async function attachViewport(page: Page, testInfo: TestInfo, name: string) {
@@ -63,7 +92,7 @@ test.describe("V3-07 mobile / responsive convergence", () => {
   for (const surface of SURFACES) {
     test(`${surface.name} keeps the document inside the viewport`, async ({ page }, testInfo) => {
       await gotoSurface(page, surface.route);
-      await expect(page.getByRole("main")).toBeVisible();
+      await expect(page.locator("#mf-main-content")).toBeVisible();
       await expectNoHorizontalOverflow(page);
       await attachViewport(page, testInfo, surface.name);
     });
@@ -91,7 +120,7 @@ test.describe("V3-07 mobile / responsive convergence", () => {
     await expectInsideViewport(page, trigger);
 
     await trigger.click();
-    const navigation = page.getByRole("navigation", { name: "Điều hướng ứng dụng" });
+    const navigation = page.getByRole("navigation", { name: /Điều hướng (ngữ cảnh|ứng dụng)/ });
     await expect(navigation).toBeVisible();
 
     await page.keyboard.press("Escape");
@@ -105,29 +134,29 @@ test.describe("V3-07 mobile / responsive convergence", () => {
     await gotoSurface(page, "/view/list");
     await page.getByRole("button", { name: "Mở menu", exact: true }).click();
 
-    const navigation = page.getByRole("navigation", { name: "Điều hướng ứng dụng" });
+    const navigation = page.getByRole("navigation", { name: /Điều hướng (ngữ cảnh|ứng dụng)/ });
     await expect(navigation).toBeVisible();
-    const navItems = navigation.locator(".mf-shell-nav-item");
-    const labels = (await navItems.allTextContents()).map((label) => label.trim()).filter(Boolean);
+    const candidates = navigation.getByRole("button").filter({ hasNot: page.locator("svg.lucide-pin") });
+    const labels = (await candidates.allTextContents()).map((label) => label.trim()).filter(Boolean);
     const longestLabel = labels.sort((a, b) => b.length - a.length)[0] ?? "";
     expect(longestLabel.length, "fixture must exercise a non-trivial localized navigation label").toBeGreaterThanOrEqual(8);
 
-    const longestItem = navItems.filter({ hasText: longestLabel }).first();
+    const longestItem = navigation.getByRole("button", { name: longestLabel, exact: true }).first();
     await expect(longestItem).toBeVisible();
     await expectInsideViewport(page, longestItem);
     await expectNoHorizontalOverflow(page);
     await attachViewport(page, testInfo, "mobile-longest-label");
   });
 
-  test("reduced motion collapses shell transition timings", async ({ page }) => {
+  test("reduced motion collapses shared control transition timings", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await gotoSurface(page, "/view/list");
 
     await expect.poll(() => page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches)).toBe(true);
 
-    const navItem = page.locator(".mf-shell-nav-item").first();
-    await expect(navItem).toBeAttached();
-    const timing = await navItem.evaluate((element) => {
+    const control = page.getByRole("textbox", { name: "Tìm menu" });
+    await expect(control).toBeVisible();
+    const timing = await control.evaluate((element) => {
       const styles = getComputedStyle(element);
       return {
         animationDuration: styles.animationDuration,
