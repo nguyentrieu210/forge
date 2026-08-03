@@ -7,7 +7,7 @@
  *
  * Four steps, all of which used to be manual and two of which did not exist:
  *
- *   1. compile   the brief into a full app package  (scripts/lib/compile-brief.mjs)
+ *   1. compile   the brief into a full app package  (scripts/lib/compile-brief-app-factory.mjs)
  *   2. validate  through the SERVER's own parser, so nothing can fail later for shape
  *   3. install   over HTTP into the tenant — a metadata write, no deploy
  *   4. verify    that the client manifest the runtime will boot from actually resolves
@@ -23,13 +23,13 @@
 import { existsSync, statSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
-import { compileBrief, BriefError } from "./lib/compile-brief.mjs";
+import { compileBrief, BriefError } from "./lib/compile-brief-app-factory.mjs";
 import { readAppSource } from "./lib/read-app-source.mjs";
 import { readBriefSource } from "./lib/read-brief-source.mjs";
 import { validateBriefSchema } from "./lib/validate-brief-schema.mjs";
 import { verifyInstalledApp } from "./lib/verify-installed-app.mjs";
 import { fail, serverRoot } from "./wrangler-cli.mjs";
-import { parseAppManifest } from "../dist/packages/app-registry/src/index.js";
+import { parseAppManifestWithInputTables } from "../dist/packages/app-registry/src/index.js";
 
 const args = process.argv.slice(2);
 const argOf = (name, fallback) => {
@@ -89,7 +89,10 @@ if (isDirectory) {
 // ---- 2. validate through the server's parser -------------------------------
 let manifest;
 try {
-  manifest = parseAppManifest(pkg);
+  // The tooling view validates through the canonical parser but decorates AppAction tables
+  // back to first-class metadata. It intentionally retains the compatibility Text field, so
+  // it is for reading/verification only. Installation below sends the original `pkg`.
+  manifest = parseAppManifestWithInputTables(pkg);
 } catch (error) {
   // A compiler bug, not an author's mistake — worth saying so, because the two have
   // different fixes and the message alone does not distinguish them.
@@ -109,7 +112,9 @@ console.log(`2 validated  through the server's own parser`);
 
 if (outPath) {
   const { writeFile } = await import("node:fs/promises");
-  await writeFile(path.resolve(outPath), `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+  // Export the clean source package rather than the decorated tooling view. Feeding the
+  // latter back into install would contain both first-class tables and compatibility fields.
+  await writeFile(path.resolve(outPath), `${JSON.stringify(pkg, null, 2)}\n`, "utf8");
   console.log(`  written    ${outPath}`);
 }
 
@@ -197,7 +202,9 @@ if (provisionStandard) {
 process.stdout.write(`${step} installing  ${manifest.id}@${manifest.version} … `);
 let result;
 try {
-  result = await call("forge.apps.install", { app: manifest });
+  // Install the source package, not the decorated tooling view. The exported AppInstaller
+  // lowers input_tables exactly once at the server boundary and remains transactional.
+  result = await call("forge.apps.install", { app: pkg });
 } catch (error) {
   console.log("FAILED");
   fail(String(error.message));
