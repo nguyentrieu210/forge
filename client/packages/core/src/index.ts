@@ -6,6 +6,7 @@
 
 export * from "./types/fieldtype.js";
 export * from "./types/meta.js";
+export * from "./types/matrix.js";
 export * from "./types/doc.js";
 export * from "./types/error.js";
 export * from "./meta/eval.js";
