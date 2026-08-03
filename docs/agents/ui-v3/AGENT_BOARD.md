@@ -24,8 +24,9 @@ This is not a theme swap. The target includes shell, login, workspace, navigatio
 | V3-05 VISUAL | `ui/v3-05-charts-command-center` | ECharts presentation layer, KPI, dashboard, DataV-inspired command surfaces |
 | V3-06 BUILDER | `ui/v3-06-builder` | Builder visual/layout overhaul using canonical runtime |
 | V3-07 MOBILE-QA | `ui/v3-07-mobile-qa` | responsive/mobile convergence, a11y, reduced motion, visual regression, performance evidence |
+| V3-08 CONVERGENCE-RELEASE | `ui/v3-08-convergence-release` | exact-main integration candidate, integrated acceptance, release evidence handoff to CONTROL |
 
-All child branches are cut from the program baseline containing the V3 technical spec and NO-STOP rule. Agents must still audit exact current `main` before implementation and classify drift.
+All child branches are cut from or synchronized with the program baseline containing the V3 technical spec and NO-STOP rule. Agents must still audit exact current `main` before implementation and classify drift.
 
 ## Dependency order
 
@@ -45,6 +46,9 @@ V3-02 SHELL       V3-03 AUTH       V3-04 DATA       V3-05 VISUAL
                                 |
                                 v
                          V3-07 MOBILE-QA
+                                |
+                                v
+                    V3-08 CONVERGENCE-RELEASE
                                 |
                                 v
                          V3-00 CONVERGENCE
@@ -102,6 +106,12 @@ A new authoritative `viewPolicy.chart` or data-query contract is **not** owned h
 - browser fixtures, screenshots, visual regression, a11y, reduced-motion and performance acceptance.
 
 If a mobile fix belongs inside another owner's hotspot, file a Dependency Request instead of racing the file.
+
+### V3-08 CONVERGENCE-RELEASE integration ownership
+
+V3-08 has no new implementation hotspot. It integrates exact owner deltas after ownership is complete, resolves convergence only with evidence, reruns the cross-surface acceptance matrix and creates the final UI-only release candidate when eligible.
+
+Do not use V3-08 to rewrite an owner's still-active hotspot or to smuggle non-UI contract changes into the release candidate.
 
 ## Coordinator responsibilities
 
