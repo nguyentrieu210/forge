@@ -171,6 +171,7 @@ export function parseAppActionBatchContract(
 export function parseLegacyBatchActionField(
   field: LegacyBulkTransactionField,
   table: AppActionInputTable,
+  hasPreview: boolean,
 ): AppActionBatchContract | undefined {
   if (field.fieldtype !== "Text" || !field.options?.startsWith(LEGACY_PREFIX)) return undefined;
   let decoded: JsonObject;
@@ -181,7 +182,10 @@ export function parseLegacyBatchActionField(
     throw error;
   }
   if (decoded.batch === undefined) return undefined;
-  return parseAppActionBatchContract(decoded.batch, [table], { where: `batch(${table.fieldname})`, hasPreview: true });
+  return parseAppActionBatchContract(decoded.batch, [table], {
+    where: `batch(${table.fieldname})`,
+    hasPreview,
+  });
 }
 
 export function normalizeBatchActionInvocation(
