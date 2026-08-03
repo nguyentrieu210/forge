@@ -1,0 +1,34 @@
+name: Temp Check ALU Release Marker
+
+on:
+  push:
+    branches:
+      - ops/check-alu-release-marker-20260803
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Read production health and release marker
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo 'ALU_PRODUCTION_RELEASE_MARKER'
+            echo 'health:'
+            curl --fail --silent --show-error --max-time 10 -H 'cache-control: no-cache' https://alu.kairo.vn/health
+            echo
+            echo 'release:'
+            curl --fail --silent --show-error --max-time 10 -H 'cache-control: no-cache' https://alu.kairo.vn/release.json
+            echo
+          } > /tmp/marker.txt
+      - name: Report marker to PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr comment 383 --body-file /tmp/marker.txt
