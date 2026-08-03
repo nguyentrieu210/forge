@@ -93,6 +93,10 @@ const AUTH_STYLES = `
     animation: mf-auth-boot-pulse 1.4s var(--forge-motion-ease-standard, cubic-bezier(.2,.8,.2,1)) infinite alternate;
   }
 
+  .mf-auth-progress {
+    animation: mf-auth-progress 1.2s var(--forge-motion-ease-standard, cubic-bezier(.2,.8,.2,1)) infinite;
+  }
+
   @keyframes mf-auth-brand-reveal {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
@@ -123,13 +127,19 @@ const AUTH_STYLES = `
     to { opacity: 1; transform: scale(1); }
   }
 
+  @keyframes mf-auth-progress {
+    from { transform: translateX(-130%) scaleX(.7); }
+    to { transform: translateX(260%) scaleX(1); }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .mf-auth-grid,
     .mf-auth-brand-reveal,
     .mf-auth-panel-enter,
     .mf-auth-error-reveal,
     .mf-auth-node,
-    .mf-auth-boot-mark {
+    .mf-auth-boot-mark,
+    .mf-auth-progress {
       animation: none !important;
       transform: none !important;
     }
@@ -171,16 +181,13 @@ export function AuthBootScreen({ label = "Đang kết nối với Forge…" }: {
         <div className="mf-auth-boot-mark grid size-14 place-items-center rounded-xl border border-white/10 bg-white/[0.04] shadow-2xl">
           <ForgeBrandLogo size={38} />
         </div>
-        <div className="mt-5 text-[11px] font-semibold uppercase tracking-[0.34em] text-white/42">Forge</div>
-        <div className="mt-5 flex items-center gap-2 text-sm font-medium text-white/74">
+        <div className="mt-5 text-[11px] font-semibold uppercase tracking-[0.34em] text-white/[0.42]">Forge</div>
+        <div className="mt-5 flex items-center gap-2 text-sm font-medium text-white/[0.74]">
           <Loader2 className="size-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />
           <span>{label}</span>
         </div>
         <div className="mt-5 h-px w-40 overflow-hidden bg-white/10">
-          <div
-            className="h-full w-1/2"
-            style={{ background: "var(--forge-primary, #e52521)", animation: "mf-auth-grid-drift 1.2s linear infinite" }}
-          />
+          <div className="mf-auth-progress h-full w-1/2" style={{ background: "var(--forge-primary, #e52521)" }} />
         </div>
       </div>
     </div>
@@ -208,9 +215,9 @@ export function AuthErrorScreen({
             <AlertTriangle className="size-5" aria-hidden="true" />
           </div>
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/46">Forge connection</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/[0.46]">Forge connection</p>
             <h1 className="mt-1.5 text-xl font-semibold tracking-[-0.025em]">Không thể hoàn tất kết nối</h1>
-            <p className="mt-2 break-words text-sm leading-6 text-white/64" role="alert" aria-live="assertive">{message}</p>
+            <p className="mt-2 break-words text-sm leading-6 text-white/[0.64]" role="alert" aria-live="assertive">{message}</p>
           </div>
         </div>
         {onRetry ? (
@@ -218,7 +225,7 @@ export function AuthErrorScreen({
             <RefreshCw className="size-4" aria-hidden="true" /> Thử lại
           </Button>
         ) : null}
-        <div className="mt-5 flex items-center gap-2 border-t border-white/10 pt-4 text-xs text-white/42">
+        <div className="mt-5 flex items-center gap-2 border-t border-white/10 pt-4 text-xs text-white/[0.42]">
           <ForgeBrandLogo size={20} />
           <span>Forge Enterprise Workspace</span>
         </div>
@@ -247,7 +254,7 @@ export function AuthNotice({ kind }: { kind: AuthNoticeKind }) {
         <div className="mt-0.5 size-2 shrink-0 rounded-full" style={{ background: expired ? "#fca5a5" : "var(--forge-primary, #e52521)" }} />
         <div>
           <p className="text-sm font-semibold">{expired ? "Phiên đăng nhập đã hết hạn" : "Đã đăng xuất"}</p>
-          <p className="mt-0.5 text-xs leading-5 text-white/66">
+          <p className="mt-0.5 text-xs leading-5 text-white/[0.66]">
             {expired ? "Đăng nhập lại để tiếp tục làm việc." : "Bạn có thể đăng nhập lại bằng tài khoản khác."}
           </p>
         </div>
@@ -258,5 +265,5 @@ export function AuthNotice({ kind }: { kind: AuthNoticeKind }) {
 
 export function HiddenAuthRender({ children }: { children?: ReactNode }) {
   if (children == null) return null;
-  return <div className="sr-only" aria-hidden="true">{children}</div>;
+  return <div hidden>{children}</div>;
 }
