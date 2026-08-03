@@ -1,5 +1,6 @@
 import { ControllerRegistry } from "../../document-kernel/src/index.js";
-import { JournalEntryController, MaterialRequestController, PurchaseInvoiceController, StockEntryController } from "./controllers.js";
+import { JournalEntryController, PurchaseInvoiceController, StockEntryController } from "./controllers.js";
+import { PurchaseFundingMaterialRequestController } from "./purchase-funding-material-request.js";
 import { ProcurementPurchaseOrderController, ProcurementRequestForQuotationController, ProcurementSupplierContractController, ProcurementSupplierQuotationController } from "./procurement-integrity-controllers.js";
 import { PurchaseAllocationOverrideController } from "./purchase-allocation-action-controllers.js";
 import { RolloutPurchaseReceiptController } from "./purchase-allocation-rollout-controllers.js";
@@ -10,7 +11,7 @@ import { SupplierSelectionController } from "./supplier-selection-controller.js"
 export function registerErpCoreControllers(registry: ControllerRegistry): ControllerRegistry {
   return registry
     .register(new JournalEntryController())
-    .register(new MaterialRequestController())
+    .register(new PurchaseFundingMaterialRequestController())
     .register(new ProcurementRequestForQuotationController())
     .register(new ProcurementSupplierQuotationController())
     .register(new SupplierSelectionController())
