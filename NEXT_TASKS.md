@@ -20,7 +20,8 @@ Không reopen PR/branch lịch sử làm canonical backlog. Task mới phải b�
 - Execution blueprint: `docs/FORGE_RC_HARDENING_PLAN_20260803.md`.
 - Capability truth: `docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md`.
 - Validation policy: `docs/VALIDATION_GATES.md` + `validation/rc-gates.json`.
-- Agent lanes/prompts: `docs/agents/RC_AGENT_LANES_20260803.md`.
+- Agent lanes/prompts Wave 0: `docs/agents/RC_AGENT_LANES_20260803.md`.
+- **Agent lanes/prompts Batch 1A Finance + Inventory: `docs/agents/RC_BATCH1A_AGENT_LANES_20260803.md`.**
 
 Baseline maturity:
 
@@ -36,6 +37,8 @@ Missing: 159
 ## Batch tiếp theo — Finance + Inventory Authorities
 
 Mở tối đa 5 worker, nhưng batch này chỉ cần các lane có dependency hợp lệ. Không mở thêm agent để trang trí GitHub.
+
+Prompt/ownership canonical của 5 worker nằm tại `docs/agents/RC_BATCH1A_AGENT_LANES_20260803.md`.
 
 ### Lane Finance
 
@@ -158,5 +161,6 @@ Sau ERP Core RC:
 - `docs/VALIDATION_GATES.md`
 - `docs/FORGE_OFFLINE_SYNC_CONTRACT.md`
 - `docs/agents/RC_AGENT_LANES_20260803.md`
+- `docs/agents/RC_BATCH1A_AGENT_LANES_20260803.md`
 
 Không biến tài liệu lịch sử thành backlog sống lại. Repo đã chịu đủ khảo cổ trong một ngày rồi.
