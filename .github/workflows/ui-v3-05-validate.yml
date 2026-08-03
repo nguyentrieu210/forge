@@ -4,24 +4,27 @@ on:
   push:
     branches:
       - ui/v3-05-charts-command-center
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: write
 
 concurrency:
-  group: ui-v3-05-${{ github.ref }}
+  group: ui-v3-05-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   validate:
-    if: ${{ !contains(github.event.head_commit.message, 'chore(ui-v3): refresh generated lockfiles') }}
+    if: ${{ github.event_name != 'push' || !contains(github.event.head_commit.message, 'chore(ui-v3): refresh generated lockfiles') }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - name: Checkout branch head
+      - name: Checkout exact validation head
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref_name }}
+          ref: ${{ github.event.pull_request.head.sha || github.ref_name }}
           fetch-depth: 0
 
       - name: Set up pnpm
@@ -61,6 +64,7 @@ jobs:
         run: pnpm --filter runtime... run build
 
       - name: Record green evidence and generated locks
+        if: ${{ github.event_name == 'push' }}
         shell: bash
         run: |
           set -euo pipefail
