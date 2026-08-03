@@ -1,8 +1,9 @@
 /** @jsxImportSource react */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { DocField, MatrixViewEnabledPolicy } from "@metaforge/core";
+import type { DocField, MatrixActionRef, MatrixViewEnabledPolicy } from "@metaforge/core";
 import { mapError } from "@metaforge/adapter-frappe";
 import { toast } from "@metaforge/ui";
+import { ActionInputDialog } from "../action/ActionInputDialog.js";
 import { useMeta } from "../container/hooks.js";
 import { useMetaForge } from "../container/provider.js";
 import { MatrixRenderer } from "./MatrixRenderer.js";
@@ -64,6 +65,8 @@ export function MatrixContainer(props: MatrixContainerProps) {
   const [snapshot, setSnapshot] = useState<GenericMatrixSnapshot | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [memberBusy, setMemberBusy] = useState(false);
+  const [memberAction, setMemberAction] = useState<MatrixActionRef | undefined>();
   const [error, setError] = useState<string | undefined>();
   const [conflict, setConflict] = useState<string | undefined>();
   const [cellDrafts, setCellDrafts] = useState<Record<string, CellDraft>>({});
@@ -177,6 +180,8 @@ export function MatrixContainer(props: MatrixContainerProps) {
     const presentation = enabledPolicy.presentation;
     const canSave = Boolean(snapshot?.capabilities?.save && action);
     const canRemoveRow = Boolean(snapshot?.capabilities?.remove_row && enabledPolicy.rowMembers?.remove);
+    const canCreateRow = Boolean(snapshot?.capabilities?.create_row && enabledPolicy.rowMembers?.create);
+    const canCreateColumn = Boolean(snapshot?.capabilities?.create_column && enabledPolicy.columnMembers?.create);
     return {
       id: `${props.doctype}:matrix`,
       title: props.title ?? metaQ.data?.label ?? props.doctype,
@@ -201,6 +206,8 @@ export function MatrixContainer(props: MatrixContainerProps) {
       cells,
       auxiliaryFields,
       capabilities: {
+        ...(canCreateRow ? { addRow: { id: "add-row", label: enabledPolicy.rowMembers!.create!.label ?? "Thêm dòng" } } : {}),
+        ...(canCreateColumn ? { createColumn: { id: "create-column", label: enabledPolicy.columnMembers!.create!.label ?? "Thêm cột" } } : {}),
         ...(canSave ? { save: { id: "save", label: "Lưu thay đổi" } } : {}),
         ...(dirty ? { discard: { id: "discard", label: "Bỏ thay đổi", variant: "ghost" } } : {}),
         reload: { id: "reload", label: "Nạp lại", variant: "outline" },
@@ -208,7 +215,7 @@ export function MatrixContainer(props: MatrixContainerProps) {
       },
       state: {
         loading,
-        saving,
+        saving: saving || memberBusy,
         dirty,
         error,
         conflict,
@@ -224,7 +231,7 @@ export function MatrixContainer(props: MatrixContainerProps) {
         searchDebounceMs: 250,
       },
     };
-  }, [action, auxiliaryFields, cells, columns, conflict, dirty, enabledPolicy, error, loading, metaQ.data?.label, props.doctype, props.title, rows, saving, snapshot]);
+  }, [action, auxiliaryFields, cells, columns, conflict, dirty, enabledPolicy, error, loading, memberBusy, metaQ.data?.label, props.doctype, props.title, rows, saving, snapshot]);
 
   const changeCell = useCallback((rowId: string, columnId: string, patch: Partial<CellDraft>) => {
     const key = matrixCellKey(rowId, columnId);
@@ -280,42 +287,80 @@ export function MatrixContainer(props: MatrixContainerProps) {
     }
   }, [action, adapter, auxDrafts, cellDrafts, dirty, load, removedRows, snapshot]);
 
+  const submitMemberAction = useCallback(async (values: Record<string, unknown>) => {
+    if (!memberAction) return;
+    setMemberBusy(true);
+    setError(undefined);
+    try {
+      await adapter.callPost("metaforge.matrix.action", {
+        action: memberAction.action,
+        input: JSON.stringify({
+          request_id: crypto.randomUUID(),
+          ...(snapshot?.subject?.id ? { subject_id: snapshot.subject.id } : {}),
+          ...(snapshot?.subject?.version === undefined ? {} : { subject_version: snapshot.subject.version }),
+          ...values,
+        }),
+      });
+      toast.success(`${memberAction.label ?? "Thao tác"} thành công`);
+      setMemberAction(undefined);
+      await load(snapshot?.subject?.id ? { selected_id: snapshot.subject.id } : {});
+    } catch (cause) {
+      const mapped = mapError(cause);
+      if (mapped.kind === "conflict") setConflict(mapped.message);
+      else setError(mapped.message);
+      toast.error(mapped.message);
+    } finally {
+      setMemberBusy(false);
+    }
+  }, [adapter, load, memberAction, snapshot]);
+
   if (metaQ.isLoading) return <div className="grid h-40 place-items-center text-sm text-muted-foreground">Đang tải ma trận…</div>;
   if (metaQ.error) return <div className="p-4 text-sm text-destructive">{mapError(metaQ.error).message}</div>;
   if (!enabledPolicy || !source || !model) return <div className="grid h-40 place-items-center p-4 text-sm text-muted-foreground">DocType này chưa khai báo Matrix View.</div>;
 
   return (
-    <MatrixRenderer
-      model={model}
-      registry={registry}
-      services={services}
-      roles={roles}
-      confirmDiscard={() => window.confirm("Bỏ các thay đổi chưa lưu?")}
-      onNavigatorSelect={(id) => { void load({ selected_id: id }); }}
-      onSearch={(query, context) => {
-        if (dirty || context.signal.aborted || !snapshot?.server_search_scopes?.includes(context.scope)) return;
-        void load({
-          ...(snapshot.subject?.id ? { selected_id: snapshot.subject.id } : {}),
-          search: { scope: context.scope, query },
-        }, true);
-      }}
-      onCellChange={({ rowId, columnId }, value) => changeCell(rowId, columnId, { value })}
-      onCellToggle={({ rowId, columnId }, enabled) => changeCell(rowId, columnId, { enabled })}
-      onAuxFieldChange={(rowId, fieldId, value) => {
-        setConflict(undefined);
-        setAuxDrafts((all) => ({ ...all, [rowId]: { ...(all[rowId] ?? {}), [fieldId]: value } }));
-      }}
-      onAction={(actionId, context) => {
-        if (actionId === "save") void save();
-        else if (actionId === "discard") { setCellDrafts({}); setAuxDrafts({}); setRemovedRows(new Set()); setConflict(undefined); }
-        else if (actionId === "reload") void load(snapshot?.subject?.id ? { selected_id: snapshot.subject.id } : {});
-        else if (actionId === "remove-row" && context.rowId) {
-          const row = rows.find((candidate) => candidate.id === context.rowId);
-          if (!row || truthy(rowValuesOf(row).is_primary)) return;
-          setRemovedRows((current) => new Set([...current, context.rowId!]));
-        }
-      }}
-    />
+    <>
+      <MatrixRenderer
+        model={model}
+        registry={registry}
+        services={services}
+        roles={roles}
+        confirmDiscard={() => window.confirm("Bỏ các thay đổi chưa lưu?")}
+        onNavigatorSelect={(id) => { void load({ selected_id: id }); }}
+        onSearch={(query, context) => {
+          if (dirty || context.signal.aborted || !snapshot?.server_search_scopes?.includes(context.scope)) return;
+          void load({
+            ...(snapshot.subject?.id ? { selected_id: snapshot.subject.id } : {}),
+            search: { scope: context.scope, query },
+          }, true);
+        }}
+        onCellChange={({ rowId, columnId }, value) => changeCell(rowId, columnId, { value })}
+        onCellToggle={({ rowId, columnId }, enabled) => changeCell(rowId, columnId, { enabled })}
+        onAuxFieldChange={(rowId, fieldId, value) => {
+          setConflict(undefined);
+          setAuxDrafts((all) => ({ ...all, [rowId]: { ...(all[rowId] ?? {}), [fieldId]: value } }));
+        }}
+        onAction={(actionId, context) => {
+          if (actionId === "save") void save();
+          else if (actionId === "discard") { setCellDrafts({}); setAuxDrafts({}); setRemovedRows(new Set()); setConflict(undefined); }
+          else if (actionId === "reload") void load(snapshot?.subject?.id ? { selected_id: snapshot.subject.id } : {});
+          else if (actionId === "add-row" && enabledPolicy.rowMembers?.create) setMemberAction(enabledPolicy.rowMembers.create);
+          else if (actionId === "create-column" && enabledPolicy.columnMembers?.create) setMemberAction(enabledPolicy.columnMembers.create);
+          else if (actionId === "remove-row" && context.rowId) {
+            const row = rows.find((candidate) => candidate.id === context.rowId);
+            if (!row || truthy(rowValuesOf(row).is_primary)) return;
+            setRemovedRows((current) => new Set([...current, context.rowId!]));
+          }
+        }}
+      />
+      <ActionInputDialog
+        open={Boolean(memberAction)}
+        action={memberAction}
+        busy={memberBusy}
+        onOpenChange={(open) => { if (!open && !memberBusy) setMemberAction(undefined); }}
+        onSubmit={submitMemberAction}
+      />
+    </>
   );
 }
 
