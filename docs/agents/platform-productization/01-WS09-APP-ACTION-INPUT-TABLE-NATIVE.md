@@ -1,11 +1,11 @@
 # Platform Productization 01 — WS09 AppAction Input Table Native Client
 
 Date: **2026-08-04**  
-Status: **IMPLEMENTED ON DELIVERY BRANCH — VALIDATION PENDING**  
+Status: **IMPLEMENTED — DELIVERY PR #542 — VALIDATION PR #543**  
 Risk: **STANDARD**  
 Execution topology: **SINGLE**  
 Branch: `platform/ws09-appaction-input-table-native-20260804`  
-Base: exact `main@d651a3c43a7841cb82cf47561cfae7a89a276b88` at branch creation  
+Base: exact `main@c10e8d9ec5da740910c4b995e03ea9529fa726b4`  
 Capability owner: **WS09 App Factory**, shared client consumer boundary coordinated with **WS14**  
 Primary capability: **B02-016 Action builder / first-class action input contract**
 
@@ -111,7 +111,8 @@ This is deliberately a **deletable presentation adapter**, not a second business
 - `client/packages/views/src/screen/NativeScreenView.tsx`
   - AppScreen action blocks receive the same normalized action path.
 - `client/packages/views/package.json`
-  - public `./action` and `./screen` subpaths point to the new boundaries.
+  - public `./action` and `./screen` subpaths point to the new boundaries;
+  - adds targeted `test:action-input-table` command.
 - `client/packages/views/src/index.ts`
   - root ScreenView export points to the new boundary.
 
@@ -135,6 +136,8 @@ Required before merge:
 5. runtime production dependency-graph build PASS;
 6. diff audit confirms no backend/schema/migration/business-authority change;
 7. exact branch head and exact main base recorded in PR evidence.
+
+Validation uses trusted-base PR **#543** so the temporary workflow is not part of delivery PR **#542**.
 
 Browser evidence is desirable but not required to prove this compatibility boundary because the grid renderer itself is existing code; this slice changes which metadata source feeds it. Any subsequent visual/grid redesign remains WS14-owned.
 
