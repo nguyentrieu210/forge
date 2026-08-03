@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "@metaforge/ui/styles.css";
+@import "@metaforge/ui/v3.css";
 @source "./";
 @source "../node_modules/@metaforge/ui/dist";
 @source "../node_modules/@metaforge/views/dist";
@@ -342,20 +342,151 @@
 .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-list-view thead th {
   background: #171b22;
   color: #ffffff;
-  border-bottom-color: #171b22;
-  box-shadow: inset 0 2px 0 #f45b24, var(--mf-sticky-edge);
+  border-bottom-color: #313844;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
-.mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-list-toolbar {
-  background: linear-gradient(180deg, #ffffff 0%, #fffaf7 100%);
+.mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-list-view tbody tr:nth-child(even) { background: #f8f9fb; }
+.mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-list-view tbody tr:hover { background: #fff1eb; }
+.mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-form-page .mf-form-header,
+.mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-list-view > header {
+  border-color: var(--border);
+  background: linear-gradient(135deg, #ffffff 0%, #fafbfc 70%, #fff4ef 100%);
+  box-shadow: 0 14px 34px -31px rgb(15 23 42 / 0.78);
 }
-.mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-form-section {
-  border-color: #d6dce5;
-  box-shadow: 0 1px 2px rgb(17 24 39 / 0.05), 0 10px 26px rgb(17 24 39 / 0.065);
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-list-view thead th {
+  background: #0a0f16;
+  border-bottom-color: #364152;
 }
-.mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-section-heading > span {
-  background: linear-gradient(90deg, rgb(244 91 36 / 0.62), #d9dee6 35%, transparent 100%);
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-list-view tbody tr:nth-child(even) { background: #111822; }
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-list-view tbody tr:hover { background: #2a1c16; }
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-form-page .mf-form-header,
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-list-view > header {
+  background: linear-gradient(135deg, #151c25 0%, #121922 70%, #2b1811 100%);
 }
-.mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-field :is(input, textarea, button[role="combobox"]):focus-visible {
+
+/* Premium authored surfaces: dashboard, workspace map and vertical workbench. */
+.mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-dashboard-page {
+  background:
+    radial-gradient(circle at top right, rgb(244 91 36 / 0.10), transparent 26rem),
+    linear-gradient(180deg, #f7f8fa 0%, #eef1f5 100%);
+}
+.mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-dashboard-card {
+  border-color: #d7dde5;
+  box-shadow: 0 18px 44px -38px rgb(15 23 42 / 0.68);
+}
+.mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-dashboard-card:hover {
+  border-color: #f0a283;
+  box-shadow: 0 22px 48px -35px rgb(244 91 36 / 0.35);
+}
+.mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-dashboard-card:nth-child(3n + 1) {
+  background: linear-gradient(145deg, #ffffff 0%, #fff5f0 100%);
+}
+.mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-dashboard-card:nth-child(3n + 2) {
+  background: linear-gradient(145deg, #ffffff 0%, #f7f9fb 100%);
+}
+.mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-dashboard-card:nth-child(3n) {
+  background: linear-gradient(145deg, #ffffff 0%, #f2f4f7 100%);
+}
+.mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-dashboard-card button {
+  color: #b84217;
+}
+.mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-dashboard-card button:hover {
+  color: #f45b24;
+  background: #fff2ec;
+}
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-dashboard-page {
+  background:
+    radial-gradient(circle at top right, rgb(244 91 36 / 0.12), transparent 26rem),
+    linear-gradient(180deg, #0d131b 0%, #0a1017 100%);
+}
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-dashboard-card {
+  border-color: #2b3746;
+  background: #141b24;
+}
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-dashboard-card:hover {
+  border-color: #8b4a30;
+}
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-dashboard-card button { color: #ffad8e; }
+
+.mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-workspace-tabs {
+  border-bottom-color: #d5dbe4;
+  background: rgb(255 255 255 / 0.96);
+  box-shadow: 0 8px 28px -28px rgb(15 23 42 / 0.95);
+}
+.mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-workspace-tabs nav {
+  border-color: #d5dbe4;
+  background: #eef1f5;
+}
+.mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-workspace-tabs button[data-kind="process"] {
+  border-color: #ffd2bf;
+  color: #b84118;
+}
+.mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-workspace-tabs button[data-kind="process"]:hover,
+.mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-workspace-tabs button[data-kind="process"][aria-current="page"] {
+  background: #f45b24;
   border-color: #f45b24;
-  box-shadow: 0 0 0 3px rgb(244 91 36 / 0.15), 0 5px 14px rgb(17 24 39 / 0.075);
+  color: #ffffff;
+}
+.mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-workspace-tabs button[data-kind="doctype"][aria-current="page"] {
+  border-color: #e7d5cd;
+  background: #ffffff;
+  color: #c64518;
+  box-shadow: inset 0 -2px 0 #f45b24;
+}
+.mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-workspace-tabs button[data-kind="doctype"]:not([aria-current="page"]):hover {
+  background: #ffffff;
+  color: #9f3d1b;
+}
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-workspace-tabs {
+  border-bottom-color: #2b3746;
+  background: rgb(20 27 36 / 0.96);
+}
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-workspace-tabs nav {
+  border-color: #303c4c;
+  background: #121923;
+}
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-workspace-tabs button[data-kind="doctype"][aria-current="page"] {
+  border-color: #5b3a2d;
+  background: #1c2430;
+  color: #ffad8e;
+}
+
+.mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-shell-content .bg-muted\/25 {
+  background:
+    radial-gradient(circle at 50% 0%, rgb(244 91 36 / 0.08), transparent 32rem),
+    #edf0f4;
+}
+.mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-shell-content .rounded-2xl.border.bg-card {
+  border-color: #d9dfe7;
+  box-shadow: 0 18px 46px -38px rgb(15 23 42 / 0.78);
+}
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-shell-content .bg-muted\/25 {
+  background:
+    radial-gradient(circle at 50% 0%, rgb(244 91 36 / 0.09), transparent 32rem),
+    #0d131b;
+}
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-shell-content .rounded-2xl.border.bg-card {
+  border-color: #2d3948;
+}
+
+/* Sidebar now owns module navigation; remove the duplicate top module strip from the desktop shell. */
+@media (min-width: 768px) {
+  .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-workspace-tabs {
+    display: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-shell-topbar {
+    min-height: 3.5rem;
+    background: #ffffff;
+    border-bottom-color: #e3e6eb;
+    box-shadow: 0 8px 24px -20px rgb(15 23 42 / 0.85);
+  }
+  [data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-shell-topbar {
+    background: #111821;
+    border-bottom-color: #2b3747;
+  }
 }
