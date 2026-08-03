@@ -1,8 +1,10 @@
 # UI01 — META
 
 Date: 2026-08-03
-Baseline: `main@55e105e7a03f6bffc70a5ddb0e52d125e5b8d270`
+Original baseline: `main@55e105e7a03f6bffc70a5ddb0e52d125e5b8d270`
+Current convergence target: `main@faec4cbe4f9c62ac565ad14dd6bb807851d65090`
 Branch: `agent/ui-01-meta`
+PR: `#387` — `feat(ui01): canonical Matrix metadata contract`
 Role: canonical UI Grammar + Matrix metadata contract
 
 ## Mission
@@ -91,17 +93,23 @@ PRICING owns Item Price semantics. If Matrix metadata needs a generic named acti
 
 ## Dependency Requests
 
-Record blockers in this file or a branch-local handoff note using:
+```text
+Dependency Request
+Owner: UI02 / RUNTIME
+Need: Consume canonical `viewPolicy.matrix` and map it to the generic Matrix renderer/view-model.
+Why: UI01 owns grammar/transport, not renderer implementation.
+Blocked scope: Runtime Matrix rendering and mobile/desktop interaction behavior.
+Can continue independently: no — UI01 contract/transport is complete; renderer is the next owner.
+```
 
 ```text
 Dependency Request
-Owner: UI02/UI03/UI04/UI05
-Need: ...
-Why: ...
-Can continue independently: yes/no
+Owner: UI03 / SERVER + UI04 / PRICING
+Need: Supply concrete projection/action implementations for each business Matrix, including OCC/version behavior.
+Why: UI01 deliberately defines generic source/action references and permission boundaries only.
+Blocked scope: Live business Matrix reads/writes such as pricing parity.
+Can continue independently: no — concrete domain methods belong to their owning workstreams.
 ```
-
-Never solve a dependency by editing another agent's hotspot without evidence that ownership changed.
 
 ## Acceptance
 
@@ -115,7 +123,62 @@ Wave A is complete when:
 - changed files and maturity are recorded;
 - branch remains unmerged/un-deployed pending convergence approval.
 
-Target maturity: `Foundation` for Matrix metadata contract, possibly `Wired` only if transport is proven end-to-end.
+## Completion record — 2026-08-03
+
+### Implemented
+
+- Added first-class typed `viewPolicy.matrix` on client and server.
+- Added generic `doctype | projection` read sources with explicit permission boundaries.
+- Added sparse cell identity/value/editor/enabled/version semantics.
+- Added row/column/navigator semantics required by the UI04 parity fixture without business nouns: primary row marker, disabled column marker, selected-first, auxiliary editor/read-only condition, positive/non-negative validation, token/accent-insensitive search, resizable/collapsible navigator, dirty/unsaved guards.
+- Added named-action write/member mutation references and restricted generic `document_update` to safe master-style Matrix metadata.
+- Added fail-closed Matrix parser validation for unknown keys, invalid sources, duplicate axes, unsafe editors, missing permission boundaries, invalid query/presentation hints and unsafe write targets.
+- Preserved canonical top-level `viewPolicy.bulk` through the server parser while retaining the existing legacy `mobile.bulk` compatibility bridge.
+- Proved Frappe/getdoctype transport preserves `viewPolicy` without a second translation layer.
+- Added an App Factory authoring stage: brief `bulk`/`matrix` blocks compile into package metadata, then immediately pass the authoritative `parseAppManifest -> parseDocTypeMeta` validation path.
+- Audited App Source canonicalization: its existing `...declared` behavior already preserves Matrix/Bulk; no extra source dialect was introduced.
+- Did not touch `client/packages/views/src/**` and did not add Alumdoor/Item Price literals to generic contract code.
+
+### Files changed
+
+- `client/packages/core/src/types/matrix.ts`
+- `client/packages/core/src/types/meta.ts`
+- `client/packages/core/src/index.ts`
+- `server/packages/frappe-model/src/matrix-types.ts`
+- `server/packages/frappe-model/src/matrix-validate.ts`
+- `server/packages/frappe-model/src/bulk-validate.ts`
+- `server/packages/frappe-model/src/types.ts`
+- `server/packages/frappe-model/src/validate.ts`
+- `server/packages/frappe-model/src/index.ts`
+- `server/scripts/lib/brief-ui-view-policy.mjs`
+- `server/scripts/lib/compile-app-brief.mjs`
+- `server/scripts/lib/compile-app-brief.d.mts`
+- `server/scripts/lib/validate-brief-schema.mjs`
+- `server/scripts/forge-app.mjs`
+- `server/tests/meta-view-policy.test.mjs`
+- `server/tests/ui01-compile-view-policy.test.mjs`
+- this handoff and the branch-local `NO-STOP-RULE.md`
+
+### Test / evidence
+
+- Added positive coverage for current-DocType Matrix and projection + named-action Matrix.
+- Added negative coverage for missing axis key, duplicate axis identity, readonly/server-owned editor target, missing action permission boundary, transaction generic write, invalid mobile hint, invalid source kind, query bounds, conditional marker dependencies and numeric validation mismatch.
+- Added Bulk canonical + legacy compatibility coverage.
+- Added brief -> UI-aware compiler -> authoritative manifest parser coverage and a proof that brief authoring cannot bypass canonical Matrix bounds.
+- Added `toFrappeDocType` transport assertion to prove Matrix metadata is not dropped.
+- `node --check` passed for the two new compiler modules during branch audit.
+- GitHub exposed no PR workflow/status checks for the feature head during implementation, so full repository build/unit execution is **not claimed**. The tests are committed as evidence but await the repository's normal validation environment.
+- Latest `main@faec4cbe...` was audited: its new Alumdoor purchase-funding/internal-cash commit does not overlap UI01-owned core/parser/compiler files.
+
+### Maturity
+
+`Wired / RC` for the **Matrix metadata contract and transport**: typed, authorable, parsed, fail-closed and preserved end-to-end through package/manifest/Frappe meta shape.
+
+This does **not** mean the overall Matrix product is live. Runtime renderer integration and concrete domain projection/action methods remain in UI02/UI03/UI04.
+
+### Merge / deploy
+
+`UNMERGED / UNDEPLOYED` by design. This branch changes shared client/server metadata contracts and App Factory compilation, therefore it is not UI-only. Per project policy it must stop before merge/deploy for explicit convergence approval.
 
 ## Prompt to start this agent
 
