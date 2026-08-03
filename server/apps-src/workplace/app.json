@@ -1,0 +1,32 @@
+{
+  "id": "workplace",
+  "name": "Văn phòng số & Hợp đồng",
+  "version": "1.0.0",
+  "requires": [],
+  "nav": [
+    {"key":"Workplace Task","label":"Công việc","kind":"doctype","icon":"list-checks","group":"Cộng tác"},
+    {"key":"calendar:Workplace Task","label":"Lịch công việc","kind":"experience","icon":"calendar-days","group":"Cộng tác","permission_doctype":"Workplace Task"},
+    {"key":"Workplace Meeting","label":"Cuộc họp","kind":"doctype","icon":"users-round","group":"Cộng tác"},
+    {"key":"Internal Request","label":"Yêu cầu nội bộ","kind":"doctype","icon":"inbox","group":"Cộng tác"},
+    {"key":"approval:Internal Request","label":"Duyệt yêu cầu nội bộ","kind":"experience","icon":"badge-check","group":"Cộng tác"},
+    {"key":"Workplace Announcement","label":"Thông báo & tin nội bộ","kind":"doctype","icon":"megaphone","group":"Cộng tác"},
+    {"key":"Document Folder","label":"Thư mục tài liệu","kind":"doctype","icon":"folder-tree","group":"Tài liệu"},
+    {"key":"Managed Document","label":"Tài liệu","kind":"doctype","icon":"files","group":"Tài liệu"},
+    {"key":"approval:Managed Document","label":"Duyệt tài liệu","kind":"experience","icon":"file-check-2","group":"Tài liệu"},
+    {"key":"Document Template","label":"Mẫu tài liệu","kind":"doctype","icon":"file-cog","group":"Tài liệu"},
+    {"key":"Retention Policy","label":"Chính sách lưu giữ","kind":"doctype","icon":"archive","group":"Tài liệu"},
+    {"key":"Contract","label":"Hợp đồng","kind":"doctype","icon":"file-signature","group":"Hợp đồng"},
+    {"key":"approval:Contract","label":"Duyệt hợp đồng","kind":"experience","icon":"badge-check","group":"Hợp đồng"},
+    {"key":"Contract Obligation","label":"Nghĩa vụ hợp đồng","kind":"doctype","icon":"clipboard-check","group":"Hợp đồng"},
+    {"key":"Contract Amendment","label":"Phụ lục / sửa đổi","kind":"doctype","icon":"file-pen-line","group":"Hợp đồng"},
+    {"key":"approval:Contract Amendment","label":"Duyệt sửa đổi","kind":"experience","icon":"badge-check","group":"Hợp đồng"},
+    {"key":"Notification Preference","label":"Tùy chọn thông báo","kind":"doctype","icon":"bell-ring","group":"Thiết lập"}
+  ],
+  "hooks": [],
+  "reports": [
+    {"name":"Công việc theo trạng thái","label":"Công việc theo trạng thái","doctype":"Workplace Task","columns":[{"field":"status","label":"Trạng thái","type":"Data"},{"field":"name","label":"Số lượng","type":"Data","aggregate":"count"}],"group_by":"status","filters":["company","assigned_to","priority","status","due_date"],"limit":100},
+    {"name":"Danh sách hạn hợp đồng","label":"Danh sách hạn hợp đồng","doctype":"Contract","columns":[{"field":"name","label":"Hợp đồng","type":"Data"},{"field":"contract_title","label":"Tên hợp đồng","type":"Data"},{"field":"contract_type","label":"Loại","type":"Data"},{"field":"end_date","label":"Ngày hết hạn","type":"Date"},{"field":"contract_value","label":"Giá trị","type":"Currency"}],"order_by":{"column":"end_date","direction":"asc"},"filters":["company","contract_type","end_date","workflow_state"],"limit":200},
+    {"name":"Nghĩa vụ hợp đồng","label":"Nghĩa vụ hợp đồng","doctype":"Contract Obligation","columns":[{"field":"status","label":"Trạng thái","type":"Data"},{"field":"name","label":"Số lượng","type":"Data","aggregate":"count"}],"group_by":"status","filters":["contract","owner_user","due_date","status"],"limit":100}
+  ],
+  "client": {"brand":"indigo","domain":"workplace","home":{"route":"/app/Workplace%20Task","doctype":"Workplace Task"},"dimensions":["company","branch"],"catalog_mode":"hybrid","design":{"density":"comfortable","radius":"soft","content_width":"wide"}}
+}
