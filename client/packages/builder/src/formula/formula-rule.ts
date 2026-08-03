@@ -63,7 +63,9 @@ function validateOperand(
   issues: FormulaBuilderIssue[],
   knownFields?: ReadonlySet<string>,
 ): void {
-  const error = (code: string, message: string) => issues.push({ severity: "error", code, path, message });
+  const error = (code: string, message: string): void => {
+    issues.push({ severity: "error", code, path, message });
+  };
   const value = operand.value.trim();
   if (!value) return error("operand_value", "Operand cần giá trị");
   if (operand.kind === "field") {
