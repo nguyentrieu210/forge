@@ -1,0 +1,40 @@
+name: WS11 temporary approved validation
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install
+        run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Build server
+        run: pnpm --filter cloudforge run build
+      - name: Security regressions
+        working-directory: server
+        run: node --test tests/security-recent-auth.test.mjs tests/authentication-context.test.mjs tests/native-security.test.mjs tests/security-alerts.test.mjs tests/session-registry.test.mjs tests/mfa-service.test.mjs tests/mfa-routes.test.mjs tests/mfa-config.test.mjs tests/login-mfa.test.mjs tests/user-session-registry-migration.test.mjs tests/user-mfa-totp-migration.test.mjs tests/network-policy.test.mjs tests/plan-entitlements.test.mjs tests/control-route-governance.test.mjs
+      - name: Security SQL regressions
+        working-directory: server
+        run: |
+          python3 scripts/test-user-session-registry-migration.py
+          python3 scripts/test-user-mfa-totp-migration.py
+          python3 scripts/test-control-route-governance-migration.py
+          python3 scripts/test-plan-entitlements-migration.py
+      - name: Worker typecheck
+        run: pnpm --filter cloudforge run typecheck:workers
