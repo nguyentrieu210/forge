@@ -2,32 +2,41 @@
 
 Date: **2026-08-04**  
 Run branch: `rc/cf2-release-confidence-20260804`  
-Exact seed: `main@d651a3c43a7841cb82cf47561cfae7a89a276b88`  
-Mode: evidence-only / no production mutation
+Original seed: `main@d651a3c43a7841cb82cf47561cfae7a89a276b88`  
+Current-main synchronized into branch: `main@cf5dd0da5b0154374a4ce371d7b122cd059a0bb2` via internal PR `#547`  
+Mode: evidence + validation tooling / no production mutation
 
 ## Executive decision
 
-- **Global Forge release confidence: BLOCKED / not truth-complete.**
-- **Enterprise Transaction Closure declared backend scope: RC-candidate evidence is strong and already merged via #519, but production deployment is not proven or authorized by the closure evidence.**
-- **No capability is promoted to Hardened by this run.**
-- Existing capability registry remains a historical baseline because it is pinned to `main@3cd2b472068838d0b2b65aa098bbd0bc1a9a8830`; current `main` has materially advanced through RC hardening, UI V3 and Transaction Closure.
-- Old open delivery/validation PRs are not release truth unless compared with current `main`; current merged `main` wins.
+- **Global Forge production release confidence: still BLOCKED.**
+- **Capability truth is materially improved:** CF2 now has an executable, evidence-whitelisted current-main rebaseline candidate instead of reusing the stale RC-01 score.
+- Candidate maturity: **Hardened 0 / RC 50 / Wired 417 / Foundation 330 / Missing 159 = 956/956**.
+- **Transaction Closure declared backend scope has high RC confidence** from exact integrated CRITICAL evidence, but its evidence explicitly does not prove or authorize production deployment.
+- **No capability is promoted to Hardened.** Exact production/failure/recovery evidence remains insufficient.
 
-## CF2 invariants applied
+Detailed rebaseline record: `docs/agents/rc/CF2-current-main-rebaseline-20260804.md`.  
+Executable validator: `server/scripts/cf2-release-confidence-rebaseline.mjs`.
 
-1. `main` stays protected; this run writes only through a branch + PR.
-2. Merge state, code presence or a green PR is not sufficient to claim RC/Hardened.
-3. Production/deploy claims require exact release evidence.
-4. Capability claims must be traceable to source, test, migration/schema, permission/tenancy, reconciliation/correction/audit, UI/browser/mobile where relevant, and production/release evidence.
-5. Historical PR/workflow evidence is accepted only after comparison with exact current `main`.
+## CF2 invariants
 
-## Capability truth baseline status
+1. `main` remains protected; CF2 writes only through its branch/PR.
+2. Merge/code presence is not maturity evidence by itself.
+3. RC promotion requires capability-ID-specific source/invariant/regression evidence.
+4. Finance/stock promotion also requires correction/reversal/reconciliation evidence in the declared scope.
+5. Hardened/deployed claims require exact production evidence.
+6. Historical PR evidence loses to exact current main.
 
-Canonical registry: `docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md`.
+## Current-main drift handling
 
-The registry is structurally complete at **956/956 IDs** on its recorded baseline, with the recorded maturity distribution:
+CF2 began from `d651a3c...`. During execution, `main` advanced through UI-only commits `c10e8d9...` and `cf5dd0da...`.
 
-| Maturity | Count |
+The drift touched shell/UI presentation only and did not overlap backend/schema/ledger/permission/capability-status files. CF2 still synchronized exact current main into the branch through internal PR `#547` before final rebaseline work. No main or production mutation was performed by that sync.
+
+## Capability truth baseline
+
+The existing canonical registry remains structurally complete at **956/956**, but its maturity labels were created from historical baseline `main@3cd2b472068838d0b2b65aa098bbd0bc1a9a8830`:
+
+| Maturity | Historical count |
 |---|---:|
 | Hardened | 0 |
 | RC | 4 |
@@ -36,60 +45,104 @@ The registry is structurally complete at **956/956 IDs** on its recorded baselin
 | Missing | 159 |
 | **Total** | **956** |
 
-However, CF2 does **not** reuse those maturity values as exact-current-main truth because the registry explicitly pins itself to the older `3cd2b472...` baseline. A re-baseline against `d651a3c...` is required before current global release confidence can be computed.
+CF2 therefore treats those labels as the input baseline, not exact-current-main truth.
 
-## Evidence ladder — current merged Transaction Closure
+## Current-main candidate rebaseline
 
-Canonical evidence: `docs/agents/transaction-closure/07-CONVERGENCE.md`, PR `#519`, merged result `main@2b1d088c353bd2c15cd6bc2a74b342c98df1dcf7`, followed by docs closeout `#523` / `main@d651a3c43a7841cb82cf47561cfae7a89a276b88`.
+CF2 promotes only IDs named by RC-020..025 evidence whose previously gated regression requirements were subsequently exercised by the canonical Transaction Closure integrated validation.
 
-| Evidence dimension | Result | Exact evidence / limitation |
-|---|---|---|
-| Source implementation | **PASS** | One converged candidate for Sales/O2C, Manufacturing, Inventory/WMS/valuation, Finance/Daily Ledger, Procurement/P2P, Warranty/Service; canonical authorities preserved. |
-| Automated tests | **PASS for declared scope** | GitHub Actions run `30847056639`, job `91797832548`; focused Node matrix **221/221 PASS** plus finance SQL/control and package gates. |
-| Migration/schema | **PASS / N/A for convergence delta** | SQL/platform schema verification PASS; convergence introduced **no new migrations**. Historical migrations remain part of owning domains. |
-| Permission / tenancy / security | **PASS for changed authority set** | Exact authority diff audit PASS; existing tenant/permission/accounting-period/idempotency/immutable-history guards preserved fail-closed. |
-| Reconciliation / correction / audit | **PASS for declared scope, with deferred boundaries** | RC-020 period/posting, RC-021 AR, RC-022 AP, RC-023 bank/cash and domain correction/reversal paths passed; broader deferred boundaries remain explicitly open. |
-| UI / browser / mobile | **N/A to Transaction Closure delta** | Closure introduced no client/UI delta; this cannot be used as UI proof for broader capabilities. |
-| Production / release | **UNPROVEN** | Closure evidence explicitly says no production deploy and does not authorize production mutation. |
+| Maturity | CF2 candidate | Share |
+|---|---:|---:|
+| Hardened | 0 | 0.00% |
+| RC | 50 | 5.23% |
+| Wired | 417 | 43.62% |
+| Foundation | 330 | 34.52% |
+| Missing | 159 | 16.63% |
+| **Total** | **956** | **100.00%** |
 
-### Deferred boundaries that block Hardened claims
+Transition:
 
-- Manufacturing rework/subcontract depth and posted labor/machine/overhead variance GL.
-- Historical COGS/expense restatement mapping after broader backdated valuation effects.
-- Payment Ledger branch/dimension granularity beyond proven company scope.
-- Inventory Warehouse Task/reservation orchestration, generic transaction preview and scanner integration.
-- Procurement authoritative landed-cost valuation application/reversal and ambiguous multi-PO allocation identity.
-- Warranty/Service automatic stock-command orchestration, billing/credit provenance and assignment-based READ row scope.
-- Repository-wide TypeScript baseline debt outside the Transaction Closure changed authority set.
+- 46 IDs move into RC;
+- 4 IDs move Foundation -> Wired;
+- no downgrade;
+- no Missing capability is promoted merely because a domain merged;
+- Hardened remains 0.
 
-## UI V3 release evidence check
+### Promoted RC slices
 
-Current main contains UI V3 release commits including `fce46e468d2f08c8044bb611dd3e509cc1f6ec61`, root-lock alignment and final release trigger `f6f1905bd18e33ed87896b94ba10670b3b2c53b3`.
+- **F01:** posting/period/report/reversal slice from RC-020.
+- **F02:** AR/customer settlement/reconciliation slice from RC-021.
+- **F03:** AP/supplier settlement/reconciliation slice from RC-022.
+- **F04:** cash/bank/reconciliation authority slice from RC-023.
+- **W01:** Stock Reconciliation, FIFO, Moving Average and valuation adjustment from RC-024/025.
 
-The available connector cannot prove the required production `/health` + `/release.json` exact-SHA/hash result for that trigger, and the commit-workflow lookup returned no observable pull-request-triggered run for `f6f1905b...`. Therefore CF2 records UI V3 production evidence as **UNKNOWN / UNPROVEN**, not PASS.
+Backdate/repost `W01-023/024` move only to Wired because historical downstream COGS/expense restatement remains deferred.
 
-Open PRs `#505` and `#508` are historical V3 delivery/validation lanes predating the merged release state. They must not be used as current release truth; exact current `main` is authoritative.
+CF2 deliberately does not blanket-promote Sales C03, Manufacturing, Procurement, Warranty/Service or UI families until their capability-ID-specific promotion evidence is normalized to the same standard.
 
-## CF2 release confidence result
+## Evidence ladder — canonical Transaction Closure
 
-### 1. Transaction Closure declared backend scope
+Canonical convergence: `docs/agents/transaction-closure/07-CONVERGENCE.md`, PR `#519`.
 
-- Source/runtime path: **High confidence**.
-- Test evidence: **High confidence**.
-- Permission/authority evidence: **High confidence for changed set**.
-- Correction/reconciliation: **High confidence for declared scope**, not global.
-- Production/release: **Low / unproven**.
-- Decision: **merged RC-candidate scope; do not claim Hardened or deployed**.
+Exact integrated evidence:
 
-### 2. Global Forge capability inventory
+- validated main: `f6f1905bd18e33ed87896b94ba10670b3b2c53b3`;
+- candidate: `9ef9944f4a28e884979d790fc359d7c2c08da497`;
+- run `30847056639`, job `91797832548`;
+- focused Node regressions: **221/221 PASS**;
+- Sales/O2C + RC-021 AR: **45/45 PASS**;
+- Manufacturing: **56/56 PASS**;
+- Inventory/WMS/valuation: **38/38 PASS**;
+- Finance Daily Ledger/cross-ledger/AP/aging: **33/33 PASS**;
+- Procurement/P2P: **30/30 PASS**;
+- Warranty/Service: **19/19 PASS**;
+- RC-020 / RC-022 / RC-023 controls: **PASS**;
+- SQL/platform schema verification: **PASS**;
+- authority diff audit: **PASS**;
+- convergence migrations: none;
+- convergence UI delta: none.
 
-- Denominator exists and historical registry is 956/956 structurally complete.
-- Exact-current-main maturity is **not truth-complete** because the registry predates substantial merged work.
-- Decision: **BLOCK global release-confidence claim until the registry is re-baselined against exact current `main` and current evidence bundles are rescored.**
+This proves the declared integrated backend scope, not production deployment and not repository-wide Hardened status.
 
-### 3. Next program
+## CF2 validator truth
 
-`NEXT_TASKS.md` now correctly advances from Transaction Closure to **Platform Productization**:
+Added `server/scripts/cf2-release-confidence-rebaseline.mjs`.
+
+It reads the canonical Capability Map and existing registry, requires the 956-ID denominator, requires the known historical baseline counts, rejects duplicate/unknown/downgrade promotions, applies only the explicit CF2 whitelist and asserts the candidate counts above.
+
+Validation actually performed in this execution environment:
+
+- exact branch script source checked with `node --check`: **PASS**;
+- maturity arithmetic independently asserted: **PASS**, total **956**;
+- repository clone/full exact-checkout execution: **BLOCKED** by sandbox DNS to `github.com`;
+- temporary branch-only GitHub Actions workflow was attempted, but no observable workflow run/status was emitted under the repository's current Actions configuration; it was removed before final branch state.
+
+Therefore CF2 does **not** claim an exact-checkout CI PASS for the new validator. Source syntax + deterministic arithmetic are proven; canonical registry/map execution remains a review/merge gate if the environment later exposes it.
+
+## Production / UI evidence
+
+Transaction Closure explicitly performed no production deploy.
+
+UI V3 had release-trigger commits on main, but CF2 still cannot prove the required production `/health` + `/release.json` exact-SHA/hash result through the available connector. Main subsequently changed UI presentation again (`#529`, then `cf5dd0d` V2 presentation restore), so old UI deployment evidence must not be projected onto exact current main.
+
+Result: **production UI state remains UNPROVEN for exact current main** in CF2.
+
+## Remaining release-confidence blockers
+
+1. Exact production release marker for current deployed SHA/hash.
+2. Tenant-scoped backup/restore/PITR/rollback/DR executable evidence before Hardened claims.
+3. Historical Stock -> downstream Finance restatement after backdated valuation changes.
+4. Provider-specific bank/e-invoice/statutory evidence where required.
+5. SaaS/IAM closure: tenant lifecycle, MFA/SSO/step-up, entitlement and privileged boundaries.
+6. Migration/onboarding dry-run/retry/idempotency/reconciliation/cutover evidence.
+7. Capability-ID-specific rebaseline of the remaining domains; no blanket promotions.
+8. WMS persisted task/reservation consumption/scanner integration.
+9. Manufacturing rework/subcontract and actual-cost/variance financial depth.
+10. Repository-wide TypeScript baseline debt outside the validated Transaction Closure authority set.
+
+## Next program
+
+Canonical backlog remains **Platform Productization**:
 
 1. WS09 — App Factory operationalization.
 2. WS11 — SaaS / IAM / Security closure.
@@ -97,29 +150,17 @@ Open PRs `#505` and `#508` are historical V3 delivery/validation lanes predating
 4. WS12 — Production hardening / SRE.
 5. WS01/WS06/VN compliance — statutory closure.
 
-CF2 rule: these lanes must promote capability IDs by evidence, not by feature-wave completion language.
-
-## Immediate blocker queue
-
-1. Re-baseline `docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md` from old `3cd2b472...` to exact current main.
-2. Re-run/confirm the 956-ID validator against the updated registry.
-3. Map Transaction Closure evidence to exact affected capability IDs before changing maturity counts.
-4. Keep `Hardened = 0` unless exact production + failure/correction/security/reconciliation evidence justifies individual promotions.
-5. Obtain exact UI production `/health` + `/release.json` evidence for `f6f1905b...` or a later canonical release before claiming deployed UI state.
-6. Preserve current-main truth over stale open UI V3 PRs/workflows.
-7. Start WS09 from current main, not stale agent snapshots, and require first-class `AppAction` input-table + generic batch primitives without vertical-schema leakage.
-8. Make WS11 tenant/session/permission/MFA/SSO/entitlement evidence explicit before WS14 offline/OCC work is promoted.
-9. Make WS13 dry-run/retry/idempotency/reconciliation/cutover evidence mandatory before migration/onboarding RC claims.
-10. Make WS12 backup/restore/PITR/rollback/DR evidence tenant-scoped and executable before any Hardened release claim.
+Each lane must move capability IDs by evidence, not by feature-wave completion language.
 
 ## Merge / deploy boundary
 
-This CF2 run is documentation/evidence only.
+CF2 is non-UI validation/documentation tooling.
 
-- **PR allowed:** yes.
-- **Merge:** not performed by this run.
-- **Production deploy / migration / tenant mutation / secret or DNS change:** **not performed and not authorized by this run**.
+- internal branch sync: done via `#547`;
+- review PR: `#527`;
+- merge to `main`: **not performed**;
+- production deploy/migration/tenant mutation/secret/DNS change: **not performed**.
 
 ## Final CF2 decision
 
-**DECISION: CONTINUE PRODUCTIZATION, BUT GLOBAL RELEASE CONFIDENCE REMAINS BLOCKED UNTIL CAPABILITY TRUTH IS RE-BASELINED TO CURRENT MAIN AND EXACT PRODUCTION EVIDENCE EXISTS FOR DEPLOYED CLAIMS.**
+**CONTINUE PLATFORM PRODUCTIZATION.** Capability truth is no longer stuck at the old `RC=4` snapshot: the conservative current-main candidate is **RC=50**. Global production release confidence remains blocked because **Hardened=0** and exact current-main production/recovery evidence is still incomplete.
