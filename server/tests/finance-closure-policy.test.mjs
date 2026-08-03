@@ -5,7 +5,7 @@ import { PermissionService } from "../dist/packages/policy/src/index.js";
 const permission = new PermissionService();
 const actor = (roles) => ({ user_id: "user@example.com", roles });
 
-test("canonical accounting roles may run the financial daily detailed ledger", () => {
+test("canonical accounting roles may run Finance Daily Detailed Ledger", () => {
   for (const role of [
     "System Manager",
     "Accounts Manager",
@@ -15,13 +15,19 @@ test("canonical accounting roles may run the financial daily detailed ledger", (
     "Kế toán tổng hợp",
     "Kế toán trưởng",
   ]) {
-    assert.doesNotThrow(() => permission.assertReport(actor([role]), "Daily Detailed Ledger"));
+    assert.doesNotThrow(() => permission.assertReport(actor([role]), "Finance Daily Detailed Ledger"));
   }
 });
 
-test("legacy director roles retain daily ledger read access", () => {
-  for (const role of ["Director", "Giám đốc"]) {
+test("legacy Daily Detailed Ledger permission contract is preserved", () => {
+  for (const role of ["General Accountant", "Chief Accountant", "Director", "Kế toán tổng hợp", "Kế toán trưởng", "Giám đốc"]) {
     assert.doesNotThrow(() => permission.assertReport(actor([role]), "Daily Detailed Ledger"));
+  }
+  for (const role of ["System Manager", "Accounts Manager", "Accounts User"]) {
+    assert.throws(
+      () => permission.assertReport(actor([role]), "Daily Detailed Ledger"),
+      (error) => error.code === "PERMISSION_DENIED",
+    );
   }
 });
 
