@@ -3,8 +3,8 @@
 Risk: **CRITICAL**  
 Branch: `rc/w2-finance-ap-reconciliation`  
 Claim base: `main@e18ffb1eb1d9a2d6146252a54094a87e6bf92e8b`  
-Latest main observed during work: `6b5b5aa8023c73e2d34b8644f2efda701c841bf2`  
-Latest-main delta after claim: only `server/migrations/tenant/0110_rc023_cash_bank_reconciliation.sql`; no AP/query/policy overlap.  
+Latest main observed before final validation: `e2d6ff28614873dccc65dc32d80e87f5d84bc9bf`  
+Latest-main delta after claim: only RC-023 cash/bank files (`server/migrations/tenant/0110_rc023_cash_bank_reconciliation.sql` and `server/scripts/test-rc023-cash-bank.py`); no AP/query/policy overlap.  
 Merge/deploy: **NOT PERFORMED**.
 
 ## Capability
@@ -123,14 +123,15 @@ It compares:
 
 Result exposes both minor-unit balances, difference and `Reconciled` / `Mismatch` status.
 
-The reconciliation remains currency-scale aware. Base Payment Ledger rows are grouped by the document's company currency/scale, so mixed transaction currencies do not split or mislabel the company-currency control balance.
+The reconciliation is currency-scale aware and remains a read model over the two existing authorities. Current vouchers use the immutable Company currency/scale snapshot already carried by Finance documents. For historical vouchers that predate that snapshot, the compiler resolves `Company.default_currency` and the matching `Currency.currency_scale` from tenant-scoped `master_records`; transaction currency/scale is only the final compatibility fallback when both snapshot and master evidence are absent. This avoids false mismatches for legacy foreign-currency documents whose Payment Ledger `base_amount_minor` is already in company currency.
 
 ### 3. Worker + permission wiring
 
 - query worker now uses `AccountsPayableQueryCompiler`, delegating every existing finance report unchanged to `FinanceQueryCompiler`;
 - `Supplier Statement`: Accounts roles + Purchase Manager;
 - `Supplier Reconciliation`: Accounts/System Manager only;
-- no new write permission and no reconciliation mutation endpoint.
+- no new write permission and no reconciliation mutation endpoint;
+- mutation authority remains unchanged: Purchase Invoice submit/cancel, Payment Entry/Allocation submit/cancel and Debit Note submit/cancel remain Accounts Manager-controlled.
 
 ## Partial payment / correction behavior
 
@@ -171,7 +172,7 @@ Existing evidence retained:
 - `server/tests/finance-aging-query.test.mjs`
 - `server/tests/finance-aging-policy.test.mjs`
 - document-kernel mutation receipt / append-only ledger constraints
-- ERPNext-core Debit Note / Stock Return controllers and tests
+- ERPNext-core Debit Note / Stock Return controller and registration/source evidence
 
 RC-022 targeted regression covers or audits:
 
@@ -190,10 +191,12 @@ RC-022 targeted regression covers or audits:
 - Supplier reconciliation to GL;
 - tenant/company isolation;
 - report permission separation;
+- AP mutation permission boundaries;
 - retry/idempotency via tenant-scoped mutation receipt and duplicate ledger-key rejection;
-- company-currency-scale-safe GL control reconciliation.
+- company-currency-scale-safe GL control reconciliation;
+- historical voucher fallback to Company/Currency masters before transaction-currency fallback.
 
-The generated Supplier Statement and Supplier Reconciliation SQL shapes were also exercised against an equivalent local SQLite fixture, including VND scale `0` and mixed transaction currencies rolling into one company-currency base balance. Repository build/unit/targeted commands remain the authoritative gate evidence and must be taken from exact PR-head CI or an exact checkout.
+The generated Supplier Statement and Supplier Reconciliation SQL shapes were exercised against an equivalent local SQLite fixture. Smoke evidence includes VND scale `0`, mixed transaction currencies rolling into one company-currency base balance, and a legacy USD transaction with no voucher company-currency snapshot resolving to a VND Company master and reconciling `25,000,000` base minor units against VND GL. Repository build/unit/targeted commands remain the authoritative gate evidence and must be taken from exact PR-head CI or an exact checkout.
 
 Recommended exact commands from `server/`:
 
@@ -204,7 +207,7 @@ python3 scripts/test-finance-ap-reconciliation.py
 python3 scripts/test-finance-payment-allocation-migration.py
 ```
 
-For CRITICAL promotion, also apply the RC validation profile policy: typecheck/build, unit, targeted integration, permission, tenant isolation, failure/retry/idempotency, correction/reversal and reconciliation must all be green. No production proof is inferred from local/CI evidence.
+For CRITICAL promotion, also apply the RC validation profile policy: typecheck/build, unit, targeted integration, permission, tenant isolation, failure/retry/idempotency, correction/reversal and reconciliation must all be green. GitHub exposed no PR-triggered workflow run or commit status context during this work, so absence of a red check is **not** recorded as a green CI gate. No production proof is inferred from local/CI evidence.
 
 ## Dependency Requests
 
