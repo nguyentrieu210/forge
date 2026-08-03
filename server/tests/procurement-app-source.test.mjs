@@ -12,7 +12,7 @@ test("procurement first-party app is accepted by the canonical manifest parser",
   const source = await readAppSource(sourceDir);
   const manifest = parseAppManifest(source);
   assert.equal(manifest.id, "procurement");
-  assert.equal(manifest.version, "0.2.0");
+  assert.equal(manifest.version, "0.2.1");
   assert.equal(manifest.metaContractVersion, 1);
   assert.deepEqual(
     manifest.doctypes.map((doctype) => doctype.name).sort(),
@@ -31,6 +31,9 @@ test("procurement first-party app is accepted by the canonical manifest parser",
   assert.ok(manifest.externalDocTypes.some((entry) => entry.name === "Supplier"));
   assert.ok(manifest.externalDocTypes.some((entry) => entry.name === "Purchase Order"));
   assert.deepEqual(manifest.custom_fields.map((field) => [field.dt, field.fieldname]).sort(), [
+    ["Purchase Order", "invoice_price_tolerance_pct"],
+    ["Purchase Order", "invoice_quantity_tolerance_pct"],
+    ["Purchase Order", "receipt_match_required"],
     ["Purchase Order", "supplier_contract"],
     ["Purchase Order", "supplier_selection"],
   ]);
