@@ -266,6 +266,62 @@ Số agent dùng **ít nhất cần thiết để ownership sạch**. Hướng d
 
 Agent count không phải KPI.
 
+### Báo cáo agent/branch bắt buộc
+
+Mỗi lần coordinator báo cáo **khởi tạo PROGRAM, tiến độ giữa chừng, blocker, convergence hoặc kết thúc**, báo cáo phải công khai topology thực tế tại thời điểm đó. Không được chỉ nói chung chung như “đã chia 5 agent” hoặc “các agent đang chạy”.
+
+Báo cáo tối thiểu phải có:
+
+1. **Worker agent count**: tổng số worker agent đang được program quản lý. Coordinator/control plane ghi riêng, không nhập nhằng vào số worker.
+2. **Active branch count**: tổng số branch worker còn active, kèm tên exact branch.
+3. **Control branch**: tên program/control branch và exact baseline/head nếu đã thay đổi.
+4. **Danh sách từng agent** dưới dạng bảng hoặc cấu trúc tương đương, bắt buộc có:
+   - Agent ID/tên;
+   - branch exact;
+   - PR nếu có;
+   - mission/ownership ngắn;
+   - status thực tế;
+   - dependency/blocker nếu có.
+5. Nếu agent đã merge/close/supersede, vẫn ghi trạng thái đó trong báo cáo convergence/final thay vì làm biến mất khỏi lịch sử program.
+6. Khi branch/head đổi sau rebase/convergence, báo cáo phải dùng trạng thái GitHub mới nhất, không lặp SHA/branch snapshot cũ.
+
+Status nên dùng vocabulary nhất quán:
+
+- `BOOTSTRAPPED`: branch/handoff đã tạo nhưng chưa có substantive implementation commit;
+- `RUNNING`: đã có implementation/audit work thực sự trên branch;
+- `BLOCKED`: có Dependency Request hoặc external blocker cụ thể;
+- `READY`: worker đã hoàn tất scope và evidence của mình, chờ convergence/review;
+- `CONVERGING`: đang được A5/coordinator tích hợp/đối chiếu;
+- `DONE`: đã được accept/merge theo boundary cho phép;
+- `SUPERSEDED/CLOSED`: branch/PR không còn là candidate hiện hành.
+
+**Không gọi agent là `RUNNING` chỉ vì branch và draft PR đã tồn tại.** Bootstrap topology phải được phân biệt với execution thực tế.
+
+Mẫu báo cáo PROGRAM tối thiểu:
+
+```text
+Execution topology: PROGRAM
+Worker agents: <N>
+Active worker branches: <N>
+Control branch: <branch>@<sha>
+
+| Agent | Branch | PR | Mission | Status | Depends/blocker |
+|---|---|---|---|---|---|
+| A1 | <branch> | #123 | <scope> | RUNNING | — |
+| A2 | <branch> | #124 | <scope> | BLOCKED | A1 contract |
+```
+
+Với `SINGLE`, báo cáo vẫn phải ghi rõ:
+
+```text
+Execution topology: SINGLE
+Worker agents: 1
+Active branch: <branch>@<sha>
+Status: <BOOTSTRAPPED/RUNNING/READY/DONE/...>
+```
+
+Mục tiêu của rule này là để user nhìn một báo cáo là biết **có bao nhiêu agent thật, agent nào đang chạy, chạy trên nhánh nào, PR nào và đang kẹt ở đâu**.
+
 ### NO-STOP mặc định
 
 Worker tự audit và quyết định kỹ thuật thông thường theo Skill/North Star/repo evidence.
@@ -424,6 +480,8 @@ Risk: FAST/STANDARD/CRITICAL
 Next slice: <một vertical slice có thể đóng>
 Evidence required: <tests/migration/E2E/reconciliation>
 ```
+
+Nếu task đang chạy theo `SINGLE` hoặc `PROGRAM`, phải nối thêm block **agent/branch reporting** ở §7A. Báo cáo domain không thay thế báo cáo execution topology.
 
 Không dùng phần trăm cảm tính nếu chưa xác định mẫu số capability.
 
