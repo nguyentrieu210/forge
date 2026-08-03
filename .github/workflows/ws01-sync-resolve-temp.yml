@@ -1,0 +1,49 @@
+name: WS01 approved exact-main sync resolver
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/ent-01-finance-vn
+          fetch-depth: 0
+      - name: Merge exact main with audited conflict resolution
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git fetch origin main
+          set +e
+          git merge --no-ff origin/main -m "chore(ws01): sync exact main before approved merge"
+          code=$?
+          set -e
+          if [ "$code" != "0" ]; then
+            unresolved="$(git diff --name-only --diff-filter=U)"
+            printf 'UNRESOLVED\n%s\n' "$unresolved"
+            allowed='server/package.json
+server/packages/clouderp-erpnext/src/registry.ts'
+            if [ "$unresolved" != "$allowed" ]; then
+              echo "Unexpected WS01 sync conflicts; refusing automated resolution"
+              exit 1
+            fi
+            # These two branch files were manually reconciled against exact main before this run:
+            # keep all current-main SRE/integration/stock gates and add only WS01 finance deltas.
+            git checkout --ours server/package.json server/packages/clouderp-erpnext/src/registry.ts
+            git add server/package.json server/packages/clouderp-erpnext/src/registry.ts
+          fi
+          git rm -f .github/workflows/ws01-sync-resolve-temp.yml
+          if git rev-parse -q --verify MERGE_HEAD >/dev/null; then
+            git commit --no-edit
+          else
+            git add -A
+            git commit -m "chore(ws01): remove temporary sync resolver"
+          fi
+          git push origin HEAD:agent/ent-01-finance-vn
