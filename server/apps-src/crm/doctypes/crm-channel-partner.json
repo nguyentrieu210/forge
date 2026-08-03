@@ -1,0 +1,26 @@
+{
+  "name": "CRM Channel Partner",
+  "module": "CRM",
+  "autoname": "CRM-PARTNER-.YYYY.-#####",
+  "title_field": "partner_name",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "partner_name", "label": "Tên đối tác", "fieldtype": "Data", "required": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "partner_type", "label": "Loại đối tác", "fieldtype": "Select", "options": "Distributor\nDealer", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "customer", "label": "Khách hàng ERP", "fieldtype": "Link", "options": "Customer", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "territory", "label": "Khu vực", "fieldtype": "Link", "options": "Territory", "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "assigned_to", "label": "Phụ trách", "fieldtype": "Link", "options": "User", "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "latitude", "label": "Vĩ độ", "fieldtype": "Float" },
+    { "fieldname": "longitude", "label": "Kinh độ", "fieldtype": "Float" },
+    { "fieldname": "checkin_radius_m", "label": "Bán kính check-in (m)", "fieldtype": "Float", "depends_on": "eval:doc.latitude!=null && doc.longitude!=null" },
+    { "fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Active\nInactive", "default": "Active", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "notes", "label": "Ghi chú", "fieldtype": "Text Editor" }
+  ],
+  "permissions": [
+    { "role": "Sales User", "read": true, "report": true },
+    { "role": "Sales Manager", "read": true, "write": true, "create": true, "report": true, "export": true, "share": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}

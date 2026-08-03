@@ -1,0 +1,24 @@
+{
+  "name": "CRM Lead Score Rule",
+  "module": "CRM",
+  "autoname": "CRM-SCORE-RULE-.YYYY.-#####",
+  "title_field": "rule_name",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "rule_name", "label": "Tên rule", "fieldtype": "Data", "required": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "fact", "label": "Tín hiệu", "fieldtype": "Select", "options": "Lead Source\nTerritory\nStatus\nSales Team\nHas Email\nHas Mobile", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "operator", "label": "Điều kiện", "fieldtype": "Select", "options": "Equals\nPresent\nAbsent", "required": true, "in_list_view": true },
+    { "fieldname": "match_value", "label": "Giá trị khớp", "fieldtype": "Data", "mandatory_depends_on": "eval:doc.operator=='Equals'", "depends_on": "eval:doc.operator=='Equals'" },
+    { "fieldname": "points", "label": "Điểm", "fieldtype": "Int", "required": true, "in_list_view": true },
+    { "fieldname": "effective_from", "label": "Hiệu lực từ", "fieldtype": "Date", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "effective_to", "label": "Hiệu lực đến", "fieldtype": "Date", "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Active\nInactive", "default": "Active", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "notes", "label": "Ghi chú", "fieldtype": "Small Text" }
+  ],
+  "permissions": [
+    { "role": "Sales Manager", "read": true, "write": true, "create": true, "report": true, "export": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "report": true, "export": true }
+  ],
+  "revision": 1
+}

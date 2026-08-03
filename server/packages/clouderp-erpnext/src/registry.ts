@@ -5,13 +5,24 @@ import {
 } from "./controllers.js";
 import {
   AssetDisposalController, AssetMaintenanceController, AssetMovementController, ExpenseClaimController,
-  IssueController, JobCardController, PosClosingEntryController, PosInvoiceController, PosOpeningEntryController,
+  IssueController, JobCardController,
   ProductionPlanController, QualityInspectionController, TimesheetController,
 } from "./suite-controllers.js";
+import {
+  HardenedPosClosingEntryController, HardenedPosOpeningEntryController,
+} from "./pos-session-hardening.js";
+import { ExactCancelPosInvoiceController } from "./pos-cancel-exact.js";
+import { DeliveryTripController, ProofOfDeliveryController } from "./logistics-controllers.js";
+import { FreightEstimateController, TransportContractController } from "./freight-controllers.js";
 import {
   BankReconciliationController, BankTransactionController, EInvoiceSubmissionController, PayrollEntryController,
   SubscriptionController,
 } from "./enterprise-controllers.js";
+import {
+  FinanceBudgetCommitmentController,
+  FinanceBudgetController,
+  FinanceBudgetRevisionController,
+} from "./finance-budget.js";
 import {
   EmployeeOnboardingController, EmployeePromotionController, EmployeeSeparationController,
   EmployeeTransferController, EmploymentContractController, InterviewController, JobApplicantController,
@@ -37,9 +48,17 @@ import {
 import { StockReservationIntegrityController } from "./stock-reservation-integrity.js";
 import { StockReconciliationIntegrityController } from "./stock-reconciliation-integrity.js";
 import { StockReturnIntegrityController } from "./stock-return-integrity.js";
+import {
+  ManufacturingDowntimeController, ManufacturingRoutingController, WorkstationCapacityCalendarController,
+} from "./manufacturing-capacity.js";
 import { VersionedBillOfMaterialsController } from "./manufacturing-lifecycle.js";
 import { StockUomSnapshotWorkOrderController } from "./manufacturing-work-order-guard.js";
 import { StockEntryIntegrityController } from "./stock-entry-integrity.js";
+import {
+  CapaController, NonConformanceReportController,
+  QualityPlanController, RootCauseAnalysisController,
+} from "./qms-controllers.js";
+import { ManufacturingCalibrationRecordController } from "./qms-calibration.js";
 import {
   WarehouseCashCountController, WarehouseCashFundController,
   WarehouseCashTransferController, WarehouseCashVoucherController,
@@ -53,6 +72,9 @@ export function registerErpNextCoreControllers(registry: ControllerRegistry): Co
     .register(new VersionedBillOfMaterialsController())
     .register(new StockUomSnapshotWorkOrderController())
     .register(new StockEntryIntegrityController())
+    .register(new ManufacturingRoutingController())
+    .register(new WorkstationCapacityCalendarController())
+    .register(new ManufacturingDowntimeController())
     .register(new AssetController())
     .register(new AssetDepreciationController())
     .register(new ProductionPlanController())
@@ -62,6 +84,11 @@ export function registerErpNextCoreControllers(registry: ControllerRegistry): Co
     .register(new AssetDisposalController())
     .register(new TimesheetController())
     .register(new QualityInspectionController())
+    .register(new QualityPlanController())
+    .register(new NonConformanceReportController())
+    .register(new RootCauseAnalysisController())
+    .register(new CapaController())
+    .register(new ManufacturingCalibrationRecordController())
     .register(new IssueController())
     .register(new ExpenseClaimController())
     .register(new EmploymentContractController())
@@ -92,11 +119,18 @@ export function registerErpNextCoreControllers(registry: ControllerRegistry): Co
     .register(new GoalController())
     .register(new HrmAppraisalController())
     .register(new TrainingEventController())
-    .register(new PosOpeningEntryController())
-    .register(new PosInvoiceController())
-    .register(new PosClosingEntryController())
+    .register(new HardenedPosOpeningEntryController())
+    .register(new ExactCancelPosInvoiceController())
+    .register(new HardenedPosClosingEntryController())
+    .register(new DeliveryTripController())
+    .register(new ProofOfDeliveryController())
+    .register(new TransportContractController())
+    .register(new FreightEstimateController())
     .register(new BankTransactionController())
     .register(new BankReconciliationController())
+    .register(new FinanceBudgetController())
+    .register(new FinanceBudgetRevisionController())
+    .register(new FinanceBudgetCommitmentController())
     .register(new HrmSalarySlipController())
     .register(new PayrollEntryController())
     .register(new SubscriptionController())

@@ -1,0 +1,25 @@
+{
+  "name": "CRM Campaign",
+  "module": "CRM",
+  "autoname": "CRM-CAMPAIGN-.YYYY.-#####",
+  "title_field": "campaign_name",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "campaign_name", "label": "Tên chiến dịch", "fieldtype": "Data", "required": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "marketing_list", "label": "Danh sách marketing", "fieldtype": "Link", "options": "CRM Marketing List", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "channel", "label": "Kênh", "fieldtype": "Select", "options": "Email\nSMS\nPhone\nSocial\nOther", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "currency", "label": "Tiền tệ", "fieldtype": "Link", "options": "Currency", "required": true, "in_list_view": true },
+    { "fieldname": "budget", "label": "Ngân sách", "fieldtype": "Currency", "default": "0", "required": true, "in_list_view": true },
+    { "fieldname": "start_date", "label": "Từ ngày", "fieldtype": "Date", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "end_date", "label": "Đến ngày", "fieldtype": "Date", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "owner_user", "label": "Phụ trách", "fieldtype": "Link", "options": "User", "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Draft\nActive\nPaused\nCompleted\nCancelled", "default": "Draft", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "notes", "label": "Ghi chú", "fieldtype": "Text Editor" }
+  ],
+  "permissions": [
+    { "role": "Sales Manager", "read": true, "write": true, "create": true, "delete": true, "report": true, "export": true, "share": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "delete": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}

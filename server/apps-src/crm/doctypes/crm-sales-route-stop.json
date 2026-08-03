@@ -1,0 +1,20 @@
+{
+  "name": "CRM Sales Route Stop",
+  "module": "CRM",
+  "autoname": "CRM-STOP-.YYYY.-#####",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "sales_route", "label": "Tuyến bán hàng", "fieldtype": "Link", "options": "CRM Sales Route", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "sequence", "label": "Thứ tự", "fieldtype": "Int", "required": true, "in_list_view": true },
+    { "fieldname": "partner", "label": "Điểm ghé", "fieldtype": "Link", "options": "CRM Channel Partner", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "planned_date", "label": "Ngày dự kiến", "fieldtype": "Date", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "notes", "label": "Ghi chú", "fieldtype": "Small Text" }
+  ],
+  "permissions": [
+    { "role": "Sales User", "read": true, "report": true },
+    { "role": "Sales Manager", "read": true, "write": true, "create": true, "report": true, "export": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "report": true, "export": true }
+  ],
+  "revision": 1
+}

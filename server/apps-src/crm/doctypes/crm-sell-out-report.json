@@ -1,0 +1,22 @@
+{
+  "name": "CRM Sell Out Report",
+  "module": "CRM",
+  "autoname": "CRM-SELLOUT-.YYYY.-#####",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "partner", "label": "Đối tác kênh", "fieldtype": "Link", "options": "CRM Channel Partner", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "report_date", "label": "Ngày sell-out", "fieldtype": "Date", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "currency", "label": "Tiền tệ", "fieldtype": "Link", "options": "Currency", "required": true, "set_only_once": true, "in_list_view": true },
+    { "fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Draft\nConfirmed\nCancelled", "default": "Draft", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "lines", "label": "Sell-out", "fieldtype": "Table", "options": "CRM Sell Out Line", "required": true },
+    { "fieldname": "total_amount", "label": "Tổng doanh số sell-out", "fieldtype": "Currency", "read_only": true, "in_list_view": true },
+    { "fieldname": "notes", "label": "Ghi chú", "fieldtype": "Text Editor" }
+  ],
+  "permissions": [
+    { "role": "Sales User", "read": true, "write": true, "create": true, "report": true },
+    { "role": "Sales Manager", "read": true, "write": true, "create": true, "report": true, "export": true, "share": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}

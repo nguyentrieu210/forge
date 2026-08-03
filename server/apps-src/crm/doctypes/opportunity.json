@@ -1,0 +1,33 @@
+{
+  "name": "CRM Deal",
+  "module": "CRM",
+  "autoname": "CRM-DEAL-.YYYY.-#####",
+  "title_field": "opportunity_name",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "opportunity_name", "label": "Tên deal", "fieldtype": "Data", "required": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "party_type", "label": "Loại đối tượng", "fieldtype": "Select", "options": "CRM Lead\nCustomer", "required": true, "in_standard_filter": true },
+    { "fieldname": "party", "label": "Khách hàng / Lead", "fieldtype": "Dynamic Link", "options": "party_type", "required": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "pipeline", "label": "Pipeline", "fieldtype": "Link", "options": "CRM Pipeline", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "sales_stage", "label": "Giai đoạn", "fieldtype": "Link", "options": "CRM Stage", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Open\nWon\nLost", "default": "Open", "read_only": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "probability", "label": "Xác suất (%)", "fieldtype": "Percent", "default": "0", "read_only": true, "in_list_view": true },
+    { "fieldname": "opportunity_amount", "label": "Giá trị deal", "fieldtype": "Currency", "required": true, "in_list_view": true },
+    { "fieldname": "weighted_value", "label": "Giá trị có trọng số", "fieldtype": "Currency", "read_only": true, "in_list_view": true },
+    { "fieldname": "currency", "label": "Tiền tệ", "fieldtype": "Link", "options": "Currency", "required": true, "in_standard_filter": true },
+    { "fieldname": "expected_close_date", "label": "Ngày dự kiến chốt", "fieldtype": "Date", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "lead_source", "label": "Nguồn khách hàng", "fieldtype": "Link", "options": "CRM Lead Source", "in_standard_filter": true },
+    { "fieldname": "territory", "label": "Khu vực", "fieldtype": "Link", "options": "Territory", "in_standard_filter": true },
+    { "fieldname": "sales_team", "label": "Nhóm bán hàng", "fieldtype": "Link", "options": "CRM Sales Team", "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "close_reason", "label": "Lý do thắng / mất", "fieldtype": "Link", "options": "CRM Deal Close Reason" },
+    { "fieldname": "assigned_to", "label": "Phụ trách", "fieldtype": "Link", "options": "User", "in_standard_filter": true },
+    { "fieldname": "notes", "label": "Ghi chú", "fieldtype": "Text Editor" }
+  ],
+  "permissions": [
+    { "role": "Sales User", "read": true, "write": true, "create": true, "print": true, "report": true },
+    { "role": "Sales Manager", "read": true, "write": true, "create": true, "delete": true, "print": true, "report": true, "export": true, "share": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "delete": true, "print": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 4
+}

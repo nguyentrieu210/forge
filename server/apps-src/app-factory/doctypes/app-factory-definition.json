@@ -1,0 +1,26 @@
+{
+  "name": "App Factory Definition",
+  "module": "Platform",
+  "is_submittable": false,
+  "autoname": "APP-DEF-.#####",
+  "title_field": "definition_key",
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "definition_key", "label": "Khoá định nghĩa", "fieldtype": "Data", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true, "search_index": true },
+    { "fieldname": "definition_kind", "label": "Loại định nghĩa", "fieldtype": "Select", "options": "Process\nDecision Rules\nFormula Rules", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "target_doctype", "label": "DocType áp dụng", "fieldtype": "Link", "options": "DocType", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "version_no", "label": "Phiên bản", "fieldtype": "Int", "read_only": true, "in_list_view": true },
+    { "fieldname": "definition_json", "label": "Định nghĩa", "fieldtype": "JSON", "required": true },
+    { "fieldname": "effective_from", "label": "Hiệu lực từ", "fieldtype": "Date", "required": true, "in_standard_filter": true },
+    { "fieldname": "effective_to", "label": "Hiệu lực đến", "fieldtype": "Date", "in_standard_filter": true },
+    { "fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Draft\nActive\nRetired", "required": true, "default": "Draft", "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "status_reason", "label": "Lý do đổi trạng thái", "fieldtype": "Small Text" }
+  ],
+  "permissions": [
+    { "role": "App Factory Manager", "read": true, "write": true, "create": true, "report": true, "export": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}

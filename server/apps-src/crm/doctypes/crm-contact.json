@@ -1,0 +1,32 @@
+{
+  "name": "CRM Contact",
+  "module": "CRM",
+  "autoname": "CRM-CONTACT-.YYYY.-#####",
+  "title_field": "full_name",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "first_name", "label": "Tên", "fieldtype": "Data", "required": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "last_name", "label": "Họ / tên đệm", "fieldtype": "Data", "in_list_view": true, "search_index": true },
+    { "fieldname": "full_name", "label": "Họ tên", "fieldtype": "Data", "read_only": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Active\nInactive\nDuplicate", "default": "Active", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "organization", "label": "Tổ chức", "fieldtype": "Link", "options": "CRM Organization", "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "job_title", "label": "Chức danh", "fieldtype": "Data", "in_list_view": true },
+    { "fieldname": "email", "label": "Email", "fieldtype": "Data", "in_list_view": true, "search_index": true },
+    { "fieldname": "phone", "label": "Điện thoại", "fieldtype": "Phone", "in_list_view": true, "search_index": true },
+    { "fieldname": "territory", "label": "Khu vực", "fieldtype": "Link", "options": "Territory", "in_standard_filter": true },
+    { "fieldname": "assigned_to", "label": "Phụ trách", "fieldtype": "Link", "options": "User", "in_standard_filter": true },
+    { "fieldname": "linked_customer", "label": "Khách hàng ERP", "fieldtype": "Link", "options": "Customer", "in_standard_filter": true },
+    { "fieldname": "consent_status", "label": "Trạng thái đồng ý liên hệ", "fieldtype": "Select", "options": "Unknown\nGranted\nWithdrawn", "default": "Unknown", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "consent_at", "label": "Thời điểm bằng chứng", "fieldtype": "Datetime", "mandatory_depends_on": "eval:doc.consent_status!='Unknown'", "depends_on": "eval:doc.consent_status!='Unknown'" },
+    { "fieldname": "consent_source", "label": "Nguồn bằng chứng", "fieldtype": "Data", "mandatory_depends_on": "eval:doc.consent_status!='Unknown'", "depends_on": "eval:doc.consent_status!='Unknown'" },
+    { "fieldname": "duplicate_of", "label": "Bản ghi chuẩn", "fieldtype": "Link", "options": "CRM Contact", "mandatory_depends_on": "eval:doc.status=='Duplicate'", "depends_on": "eval:doc.status=='Duplicate'" },
+    { "fieldname": "notes", "label": "Ghi chú", "fieldtype": "Text Editor" }
+  ],
+  "permissions": [
+    { "role": "Sales User", "read": true, "write": true, "create": true, "print": true, "report": true },
+    { "role": "Sales Manager", "read": true, "write": true, "create": true, "delete": true, "print": true, "report": true, "export": true, "share": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "delete": true, "print": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}

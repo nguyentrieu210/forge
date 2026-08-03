@@ -1,0 +1,10 @@
+[
+  { "record_type": "CRM Deal Close Reason", "name": "Best fit", "data": { "reason": "Best fit", "outcome": "Won", "disabled": false } },
+  { "record_type": "CRM Deal Close Reason", "name": "Existing relationship", "data": { "reason": "Existing relationship", "outcome": "Won", "disabled": false } },
+  { "record_type": "CRM Deal Close Reason", "name": "Product capability", "data": { "reason": "Product capability", "outcome": "Won", "disabled": false } },
+  { "record_type": "CRM Deal Close Reason", "name": "Price", "data": { "reason": "Price", "outcome": "Lost", "disabled": false } },
+  { "record_type": "CRM Deal Close Reason", "name": "Competitor", "data": { "reason": "Competitor", "outcome": "Lost", "disabled": false } },
+  { "record_type": "CRM Deal Close Reason", "name": "No budget", "data": { "reason": "No budget", "outcome": "Lost", "disabled": false } },
+  { "record_type": "CRM Deal Close Reason", "name": "No decision", "data": { "reason": "No decision", "outcome": "Lost", "disabled": false } },
+  { "record_type": "CRM Deal Close Reason", "name": "Not a fit", "data": { "reason": "Not a fit", "outcome": "Lost", "disabled": false } }
+]

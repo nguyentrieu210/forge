@@ -1,0 +1,21 @@
+{
+  "name": "CRM Segment",
+  "module": "CRM",
+  "autoname": "CRM-SEG-.YYYY.-#####",
+  "title_field": "segment_name",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "segment_name", "label": "Tên phân khúc", "fieldtype": "Data", "required": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "territory", "label": "Khu vực", "fieldtype": "Link", "options": "Territory", "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "lead_source", "label": "Nguồn lead", "fieldtype": "Link", "options": "CRM Lead Source", "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "consent_requirement", "label": "Yêu cầu đồng ý", "fieldtype": "Select", "options": "Any\nGranted", "default": "Granted", "required": true, "in_list_view": true },
+    { "fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Active\nInactive", "default": "Active", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "notes", "label": "Ghi chú", "fieldtype": "Text Editor" }
+  ],
+  "permissions": [
+    { "role": "Sales Manager", "read": true, "write": true, "create": true, "delete": true, "report": true, "export": true, "share": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "delete": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}
