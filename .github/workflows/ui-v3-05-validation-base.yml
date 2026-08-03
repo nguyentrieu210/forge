@@ -73,6 +73,20 @@ jobs:
       - name: Typecheck complete client workspace
         run: pnpm --dir client run typecheck
 
+      - name: Migrate stale dashboard selfcheck to Forge chart contract
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("client/apps/demo/src/selfcheck.ts")
+          source = path.read_text(encoding="utf-8")
+          old = '  assert.ok(html.includes("recharts-responsive-container") || html.includes("recharts"), "chart Recharts mount");'
+          new = '  assert.ok(html.includes(\'aria-label="Doanh thu"\'), "Forge chart surface mount");\n  assert.ok(!html.includes("recharts"), "Dashboard không còn sở hữu Recharts trực tiếp");'
+          if old not in source:
+              raise SystemExit("stale Recharts dashboard selfcheck marker not found")
+          path.write_text(source.replace(old, new, 1), encoding="utf-8")
+          PY
+
       - name: Run client selfchecks
         run: pnpm --dir client run test
 
@@ -99,7 +113,7 @@ jobs:
           Runner: GitHub Actions / Node 22 / pnpm 9.15.0
           Temporary validation base: \`tmp/ui-v3-05-validation-base-20260804\`
 
-          Passed on the exact delivery source head after deterministic lock generation:
+          Passed on the exact delivery source head after deterministic lock generation and migration of the stale dashboard Recharts selfcheck to the Forge chart-surface contract:
 
           - root workspace dependency resolution;
           - nested client workspace dependency resolution;
@@ -117,7 +131,7 @@ jobs:
 
           Generated dependency outputs:
 
-          - \`client/pnpm-lock.yaml\` is committed to the delivery branch;
+          - \`client/pnpm-lock.yaml\` and the updated dashboard selfcheck are committed to the delivery branch;
           - root \`pnpm-lock.yaml\` is committed separately on \`deps/ui-v3-05-root-lock-20260804\` so the production UI-only deploy guard is not bypassed.
 
           No backend, schema, migration, permission, tenant or business-authority mutation was performed by this validation lane.
@@ -127,9 +141,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git add client/pnpm-lock.yaml client/docs/ui-v3-05-validation.md
+          git add client/pnpm-lock.yaml client/apps/demo/src/selfcheck.ts client/docs/ui-v3-05-validation.md
           if ! git diff --cached --quiet; then
-            git commit -m "chore(ui-v3): record V3-05 client lock and validation evidence"
+            git commit -m "chore(ui-v3): record V3-05 lock and validation evidence"
             git push origin HEAD:"${DELIVERY_BRANCH}"
           fi
 
