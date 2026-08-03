@@ -1,0 +1,168 @@
+name: Temp UI Alumdoor Mobile Install Entry
+
+on:
+  push:
+    branches:
+      - ui/alumdoor-mobile-install-entry-20260803
+    paths:
+      - ".github/workflows/tmp-ui-alumdoor-mobile-install.yml"
+
+permissions:
+  contents: write
+  statuses: write
+
+jobs:
+  patch-build-clean:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ui/alumdoor-mobile-install-entry-20260803
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Patch UI entry points
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str):
+              p = Path(path)
+              text = p.read_text()
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{path}: expected exactly one patch anchor, found {count}")
+              p.write_text(text.replace(old, new, 1))
+
+          replace_once(
+              "client/packages/shell/src/auth/LoginForm.tsx",
+              '''        <Button type="submit" className="h-11 w-full rounded-xl font-semibold" disabled={busy || !usr || !pwd}>
+          {busy ? t("auth.submitting") : t("auth.submit")}
+          {!busy ? <ArrowRight className="size-4" /> : null}
+        </Button>
+
+        <div className="grid gap-2 text-[11px] text-muted-foreground sm:grid-cols-2">''',
+              '''        <Button type="submit" className="h-11 w-full rounded-xl font-semibold" disabled={busy || !usr || !pwd}>
+          {busy ? t("auth.submitting") : t("auth.submit")}
+          {!busy ? <ArrowRight className="size-4" /> : null}
+        </Button>
+
+        {alumdoor && !warehouseApp ? (
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11 w-full rounded-xl font-semibold"
+            onClick={() => window.location.assign("/mobile/warehouse/?tab=account")}
+          >
+            <Smartphone className="size-4" /> Tải App mobile
+          </Button>
+        ) : null}
+
+        <div className="grid gap-2 text-[11px] text-muted-foreground sm:grid-cols-2">''',
+          )
+
+          replace_once(
+              "client/packages/shell/src/AppShell.tsx",
+              '''  onOpenPalette?: () => void;
+  onOpenAI?: () => void;
+  aiConfigured?: boolean;
+  notificationCount?: number;''',
+              '''  onOpenPalette?: () => void;
+  onOpenAI?: () => void;
+  aiConfigured?: boolean;
+  /** Lối vào app mobile/PWA do runtime app cấp; shell chỉ render vị trí cạnh thông báo. */
+  mobileAppHref?: string;
+  notificationCount?: number;''',
+          )
+
+          replace_once(
+              "client/packages/shell/src/AppShell.tsx",
+              '''            ) : null}
+            <NotificationMenu {...props} />
+            <DropdownMenu>''',
+              '''            ) : null}
+            {props.mobileAppHref ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 shrink-0 gap-1.5 px-2"
+                    onClick={() => window.location.assign(props.mobileAppHref!)}
+                    aria-label="Tải App mobile"
+                  >
+                    <MonitorSmartphone className="size-4" />
+                    <span className="hidden lg:inline">Tải App</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Tải App mobile</TooltipContent>
+              </Tooltip>
+            ) : null}
+            <NotificationMenu {...props} />
+            <DropdownMenu>''',
+          )
+
+          replace_once(
+              "client/apps/runtime/src/main.tsx",
+              '''        onOpenAI={() => setAssistantOpen(true)}
+        aiConfigured
+        onLogout={logout}''',
+              '''        onOpenAI={() => setAssistantOpen(true)}
+        aiConfigured
+        mobileAppHref={manifest.id === "alumdoor" ? "/mobile/warehouse/?tab=account" : undefined}
+        onLogout={logout}''',
+          )
+
+      - name: Build runtime and mobile PWA
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm --filter runtime... run build
+          pnpm --dir client/apps/kho exec tsc -p ../warehouse-mobile/tsconfig.json
+          pnpm --dir client/apps/kho exec vite build --config vite.mobile.config.ts
+
+      - name: Commit clean UI-only diff
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/tmp-ui-alumdoor-mobile-install.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add client/packages/shell/src/auth/LoginForm.tsx client/packages/shell/src/AppShell.tsx client/apps/runtime/src/main.tsx .github/workflows/tmp-ui-alumdoor-mobile-install.yml
+          git commit -m "feat(ui): add Alumdoor mobile app entry points"
+          git push origin HEAD:ui/alumdoor-mobile-install-entry-20260803
+
+      - name: Publish validation status on clean head
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          sha=$(git rev-parse HEAD)
+          payload=$(jq -nc \
+            --arg state success \
+            --arg context "ui-alumdoor-mobile-install" \
+            --arg description "runtime + mobile PWA build passed; final diff is client-only" \
+            --arg target_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            '{state:$state,context:$context,description:$description,target_url:$target_url}')
+          curl --fail --silent --show-error \
+            -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${sha}" \
+            -d "$payload" >/dev/null
