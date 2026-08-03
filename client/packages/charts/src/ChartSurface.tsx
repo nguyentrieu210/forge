@@ -1,6 +1,6 @@
 /** @jsxImportSource react */
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import type { EChartsOption, EChartsType } from "echarts/core";
+import type { EChartsCoreOption, EChartsType } from "echarts/core";
 import type { ForgeEChartsEngine } from "./engine.js";
 import { compactMetric, resolveForgeChartTokens } from "./theme.js";
 import type { ForgeChartBaseProps, ForgeChartInteraction, ForgeChartRenderer, ForgeChartSeries, ForgeChartTheme } from "./types.js";
@@ -8,7 +8,7 @@ import type { ForgeChartBaseProps, ForgeChartInteraction, ForgeChartRenderer, Fo
 export type ForgeOptionBuilder = (context: {
   tokens: ReturnType<typeof resolveForgeChartTokens>;
   reducedMotion: boolean;
-}) => EChartsOption;
+}) => EChartsCoreOption;
 
 interface CanvasProps {
   dataKey: string;
