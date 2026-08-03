@@ -1,22 +1,15 @@
 import { errors } from "../../core/src/index.js";
-import type { DocFieldMeta, DocTypeKind, DocTypeView } from "./types.js";
-
-export interface BulkMetaContext {
-  kind?: DocTypeKind;
-  isChild: boolean;
-  isTree: boolean;
-  isSingle: boolean;
-  isSubmittable: boolean;
-}
+import type { DocFieldMeta, DocTypeView } from "./types.js";
 
 /**
  * Parse the canonical top-level `viewPolicy.bulk` contract.
  *
  * The client already understands this shape. Keeping the parser here prevents the server
  * from silently dropping it before `getdoctype` transports metadata back to the client.
- * Enabled canonical Bulk also fails closed under the same master-only rule as the client.
+ * Doctype-kind safety remains enforced by the existing client Bulk resolver; UI01 does not
+ * change legacy acceptance while adding Matrix.
  */
-export function parseBulkViewPolicy(value: unknown, fields: DocFieldMeta[], context: BulkMetaContext): DocTypeView {
+export function parseBulkViewPolicy(value: unknown, fields: DocFieldMeta[]): DocTypeView {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw errors.validation("viewPolicy.bulk must be an object");
   const input = value as Record<string, unknown>;
   const allowed = new Set(["enabled", "columns", "editableFields", "commitStrategy", "allowPaste", "allowFillDown", "pageSize"]);
@@ -43,18 +36,8 @@ export function parseBulkViewPolicy(value: unknown, fields: DocFieldMeta[], cont
     commitStrategy = "document_update" as const;
   }
 
-  const enabled = boolean(input.enabled, "viewPolicy.bulk.enabled", false);
-  if (enabled) {
-    if (commitStrategy !== "document_update") throw errors.validation("viewPolicy.bulk enabled policy requires commitStrategy=document_update");
-    if (!columns?.length) throw errors.validation("viewPolicy.bulk enabled policy requires at least one column");
-    if (!editableFields?.length) throw errors.validation("viewPolicy.bulk enabled policy requires at least one editable field");
-    if (!genericDocumentUpdateSafe(context)) {
-      throw errors.validation("viewPolicy.bulk cannot use document_update for transaction, child, tree, single, or submittable metadata");
-    }
-  }
-
   return {
-    enabled,
+    enabled: boolean(input.enabled, "viewPolicy.bulk.enabled", false),
     ...(columns ? { columns } : {}),
     ...(editableFields ? { editableFields } : {}),
     ...(commitStrategy ? { commitStrategy } : {}),
@@ -62,11 +45,6 @@ export function parseBulkViewPolicy(value: unknown, fields: DocFieldMeta[], cont
     ...(input.allowFillDown === undefined ? {} : { allowFillDown: boolean(input.allowFillDown, "viewPolicy.bulk.allowFillDown", false) }),
     ...(input.pageSize === undefined ? {} : { pageSize: integer(input.pageSize, "viewPolicy.bulk.pageSize", 20, 500) }),
   };
-}
-
-function genericDocumentUpdateSafe(context: BulkMetaContext): boolean {
-  if (context.kind && context.kind !== "master") return false;
-  return !context.isChild && !context.isTree && !context.isSingle && !context.isSubmittable;
 }
 
 function names(value: unknown, path: string, known: Map<string, DocFieldMeta>): string[] | undefined {
