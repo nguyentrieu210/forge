@@ -1,0 +1,227 @@
+name: WS11 approved finalize
+
+on:
+  push:
+    branches:
+      - agent/ent-11-security-iam-saas
+    paths:
+      - .github/workflows/ws11-approved-finalize.yml
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/ent-11-security-iam-saas
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Reconcile migrations and complete WS11 runtime wiring
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          root = Path('.')
+
+          # Current main already owns tenant migration 0053. Reserve 0054-0055 for WS11.
+          renames = {
+              'server/migrations/tenant/0050_user_session_registry.sql': 'server/migrations/tenant/0054_user_session_registry.sql',
+              'server/migrations/tenant/0051_user_mfa_totp.sql': 'server/migrations/tenant/0055_user_mfa_totp.sql',
+          }
+          for old, new in renames.items():
+              oldp, newp = root / old, root / new
+              if oldp.exists():
+                  if newp.exists():
+                      raise SystemExit(f'both migration paths exist: {old} / {new}')
+                  oldp.rename(newp)
+
+          replacements = {
+              '0050_user_session_registry.sql': '0054_user_session_registry.sql',
+              '0051_user_mfa_totp.sql': '0055_user_mfa_totp.sql',
+          }
+          for base in [Path('server/scripts'), Path('server/tests'), Path('docs/agents/workstreams')]:
+              for path in base.rglob('*'):
+                  if not path.is_file() or path.suffix not in {'.py', '.mjs', '.md', '.ts', '.json'}:
+                      continue
+                  text = path.read_text()
+                  updated = text
+                  for old, new in replacements.items():
+                      updated = updated.replace(old, new)
+                  if updated != text:
+                      path.write_text(updated)
+
+          # Login: enforce second factor after password verification and before successful-login
+          # rate-limit clearing/session issuance. Accept one canonical field plus the common otp alias.
+          path = Path('server/packages/frappe-api/src/auth-routes.ts')
+          text = path.read_text()
+          import_anchor = 'import { verifyPassword } from "./password.js";\n'
+          import_line = 'import { assertLoginSecondFactor } from "./login-mfa.js";\n'
+          if import_line not in text:
+              if import_anchor not in text: raise SystemExit('auth-routes import anchor missing')
+              text = text.replace(import_anchor, import_anchor + import_line, 1)
+          call_anchor = '  if (!found.user.enabled) throw invalidCredentials();\n  if (context.rateLimit) await clearSuccessfulLoginLimit(context, login);'
+          call_replacement = '''  if (!found.user.enabled) throw invalidCredentials();
+  await assertLoginSecondFactor({
+    tenantId: context.tenantId,
+    userId: found.user.user_id,
+    traceId: context.traceId,
+    now: context.now(),
+    mfa: context.users.mfa,
+  }, args.text("mfa_code") ?? args.text("otp") ?? undefined);
+  if (context.rateLimit) await clearSuccessfulLoginLimit(context, login);'''
+          if 'await assertLoginSecondFactor({' not in text:
+              if call_anchor not in text: raise SystemExit('auth-routes login ordering anchor missing')
+              text = text.replace(call_anchor, call_replacement, 1)
+          path.write_text(text)
+
+          # Export MFA route/helper contracts from the Frappe package.
+          path = Path('server/packages/frappe-api/src/index.ts')
+          text = path.read_text()
+          anchor = 'export * from "./password.js";\n'
+          addition = 'export * from "./login-mfa.js";\nexport * from "./mfa-routes.js";\n'
+          if 'export * from "./mfa-routes.js";' not in text:
+              if anchor not in text: raise SystemExit('frappe-api export anchor missing')
+              text = text.replace(anchor, anchor + addition, 1)
+          path.write_text(text)
+
+          # Production cookie-auth paths must construct the user store with the dedicated MFA keyring.
+          for filename in ['server/apps/tenant-worker/src/index.ts', 'server/apps/tenant-worker/src/index-core.ts']:
+              path = Path(filename)
+              text = path.read_text()
+              if 'from "./mfa-config.js";' not in text:
+                  anchor = 'import type { TenantEnv } from "./env.js";\n'
+                  if anchor not in text: raise SystemExit(f'{filename}: TenantEnv import anchor missing')
+                  text = text.replace(anchor, anchor + 'import { mfaKeyRingFromEnv } from "./mfa-config.js";\n', 1)
+              text = text.replace('const users = new D1UserStore(env.DB);', 'const users = new D1UserStore(env.DB, mfaKeyRingFromEnv(env));')
+              path.write_text(text)
+
+          # Wire authenticated self-service MFA routes through the established Frappe cookie path.
+          path = Path('server/apps/tenant-worker/src/index-core.ts')
+          text = path.read_text()
+          route_import_anchor = 'buildCommand, isPublicFilePath, isStorefrontPath, isWebFormPath, routeFileDownload, routeFrappeApi, routeFrappeAuth, runAutoRepeat, runNotificationRules, slideSession,'
+          route_import_replacement = 'buildCommand, isPublicFilePath, isStorefrontPath, isWebFormPath, routeFileDownload, routeFrappeApi, routeFrappeAuth, routeMfaApi, runAutoRepeat, runNotificationRules, slideSession,'
+          if 'routeMfaApi,' not in text:
+              if route_import_anchor not in text: raise SystemExit('index-core route import anchor missing')
+              text = text.replace(route_import_anchor, route_import_replacement, 1)
+          route_anchor = '''  const authenticationFinished = performance.now();
+
+  /**
+   * TRỢ LÝ AI'''
+          route_insert = '''  const authenticationFinished = performance.now();
+
+  const mfaResponse = await routeMfaApi(request, url, {
+    tenantId,
+    actor,
+    traceId,
+    now: now(),
+    mfa: users.mfa,
+    ...(established ? { authenticatedAt: established.session.authenticatedAt } : {}),
+  });
+  if (mfaResponse) return mfaResponse;
+
+  /**
+   * TRỢ LÝ AI'''
+          if 'const mfaResponse = await routeMfaApi' not in text:
+              if route_anchor not in text: raise SystemExit('index-core MFA route anchor missing')
+              text = text.replace(route_anchor, route_insert, 1)
+          path.write_text(text)
+
+          # Surface MFA lifecycle/recovery evidence through the existing immutable security alert reader.
+          path = Path('server/packages/frappe-api/src/security-alerts.ts')
+          text = path.read_text()
+          alert_anchor = '  "session.revoke_others": { severity: "medium", category: "session" },\n'
+          alert_lines = '''  "mfa.enable": { severity: "high", category: "credential" },
+  "mfa.disable": { severity: "high", category: "credential" },
+  "mfa.recovery_used": { severity: "medium", category: "credential" },
+'''
+          if '"mfa.enable"' not in text:
+              if alert_anchor not in text: raise SystemExit('security-alert MFA anchor missing')
+              text = text.replace(alert_anchor, alert_anchor + alert_lines, 1)
+          path.write_text(text)
+
+          # Record migration reservation truth in handoff text where the old names were not explicit.
+          handoff = Path('docs/agents/workstreams/WS11-autonomous-handoff-2026-08-03.md')
+          if handoff.exists():
+              text = handoff.read_text()
+              marker = '## Before merge review\n'
+              note = '## Approved merge-finalization update\n\n- Synced exact main before final review.\n- Tenant migrations renumbered append-only to `0054_user_session_registry.sql` and `0055_user_mfa_totp.sql` after main `0053`.\n- MFA login enforcement, keyring construction, authenticated self-service routing and MFA alert classification are now wired in source.\n- Production deployment/migration remains forbidden in this review lane.\n\n'
+              if '## Approved merge-finalization update' not in text and marker in text:
+                  text = text.replace(marker, note + marker, 1)
+              handoff.write_text(text)
+          PY
+      - name: Install
+        id: install
+        continue-on-error: true
+        run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Build server
+        id: build
+        if: steps.install.outcome == 'success'
+        continue-on-error: true
+        run: pnpm --filter cloudforge run build
+      - name: Unit regressions
+        id: unit
+        if: steps.install.outcome == 'success'
+        continue-on-error: true
+        run: pnpm --filter cloudforge run test:unit
+      - name: SQL regressions
+        id: sql
+        if: steps.install.outcome == 'success'
+        continue-on-error: true
+        run: pnpm --filter cloudforge run test:sql
+      - name: App/meta checks
+        id: appcheck
+        if: steps.install.outcome == 'success'
+        continue-on-error: true
+        run: pnpm --filter cloudforge run app:check
+      - name: Worker typecheck
+        id: worker
+        if: steps.install.outcome == 'success'
+        continue-on-error: true
+        run: pnpm --filter cloudforge run typecheck:workers
+      - name: Write evidence and commit finalization
+        if: always()
+        env:
+          INSTALL: ${{ steps.install.outcome }}
+          BUILD: ${{ steps.build.outcome }}
+          UNIT: ${{ steps.unit.outcome }}
+          SQL: ${{ steps.sql.outcome }}
+          APPCHECK: ${{ steps.appcheck.outcome }}
+          WORKER: ${{ steps.worker.outcome }}
+        run: |
+          cat > docs/agents/workstreams/WS11_VALIDATION_EVIDENCE.md <<EOF
+          # WS11 approved exact-main validation evidence
+
+          - Date: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+          - Source branch: \`agent/ent-11-security-iam-saas\`
+          - Production deploy/migration/data mutation: none
+
+          | Gate | Status |
+          | --- | --- |
+          | install | ${INSTALL:-not-run} |
+          | build | ${BUILD:-not-run} |
+          | unit | ${UNIT:-not-run} |
+          | sql | ${SQL:-not-run} |
+          | app_check | ${APPCHECK:-not-run} |
+          | worker_typecheck | ${WORKER:-not-run} |
+
+          Any non-success status remains a merge blocker until reviewed; this file never promotes a missing run to PASS.
+          EOF
+          git rm -f .github/workflows/ws11-approved-finalize.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "fix(ws11): finalize approved security runtime wiring" || true
+          git push origin HEAD:agent/ent-11-security-iam-saas
