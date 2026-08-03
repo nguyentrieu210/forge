@@ -6,9 +6,13 @@ Planning baseline: exact `main@057c5a9e0e37f7073e2a6700802a5add416bd063`.
 
 This document is a convergence-follow-up implementation plan. It follows `skills/forge-enterprise-completion/SKILL.md`, `docs/FORGE_ENTERPRISE_NORTH_STAR.md`, the capability map, exact runtime code, and the existing Bulk View architecture. It does not claim completion or production deployment.
 
+> Expanded enterprise breadth target: `docs/METAFORGE-UI-PATTERN-CATALOG-20260803.md`.
+>
+> The companion catalog supersedes the original 16-archetype breadth sketch with **52 task-oriented enterprise surface patterns**, **30+ reusable blocks**, **18 layout primitives**, **25+ interaction primitives** and **10 responsive strategies**. This document remains the architecture and Matrix extraction plan.
+
 ## 1. Outcome
 
-Move Forge from “metadata can render generic forms/lists and a few screens” to a **UI Grammar** where apps describe business intent, data bindings, layout archetype, interaction policy and visual profile; the shared runtime renders the result without app-specific React forks.
+Move Forge from “metadata can render generic forms/lists and a few screens” to a **UI Grammar** where apps describe business intent, data bindings, surface pattern, layout, interaction policy and visual profile; the shared runtime renders the result without app-specific React forks.
 
 The first reference extraction is the Alumdoor **Item Price matrix** because it is already a strong operational UI and currently proves the exact architecture debt we want to remove:
 
@@ -88,82 +92,42 @@ The current React component also performs multi-document business mutations dire
 
 ## 4. UI Grammar model
 
-Do not create 30 unrelated renderers. Standardize UI generation into five layers.
+Do not create dozens of unrelated renderers. Standardize UI generation into five layers.
 
-### Layer A — Surface archetype
+### Layer A — Task-oriented surface pattern
 
-A finite set of canonical interaction patterns. Initial target: **16 archetypes**.
+Use the canonical breadth catalog in `docs/METAFORGE-UI-PATTERN-CATALOG-20260803.md`.
 
-1. `record-list` — searchable/filterable records.
-2. `record-form` — metadata form.
-3. `master-detail` — list + selected detail.
-4. `split-context` — list/detail/context or document/timeline.
-5. `bulk-grid` — spreadsheet-like independent-record editing.
-6. `matrix` — two-dimensional relationship/value editor.
-7. `tree` — hierarchy management.
-8. `board` — status/stage Kanban.
-9. `calendar` — date/time workload.
-10. `gantt` — dependency/schedule plan.
-11. `timeline` — chronological events/history/process evidence.
-12. `cockpit` — KPI + lists + actions + alerts for an operator role.
-13. `wizard` — guided multi-step setup/transaction.
-14. `mobile-task` — touch-first single-task execution.
-15. `pos` — cart/catalog/payment operating surface.
-16. `kiosk` — constrained self-service/one-purpose flow.
+The initial enterprise target is **52 patterns across 10 families**, covering:
 
-Existing view renderers should be reused beneath these archetypes. An archetype is a composition contract, not permission to fork React per app.
+- navigation/work entry;
+- record/master-data work;
+- transaction entry/execution;
+- price/policy/rule authoring;
+- review/approval/governance;
+- planning/scheduling/operations;
+- analysis/decision support;
+- mobile/field workflows;
+- commerce/service interaction;
+- admin/setup/low-code authoring.
+
+Patterns compose shared renderer primitives. A pattern is a recipe/contract, not permission to fork React per app.
 
 ### Layer B — Layout primitives
 
-Canonical reusable layout vocabulary:
-
-- `stack`
-- `grid`
-- `split`
-- `tabs`
-- `rail`
-- `drawer`
-- `sticky-header`
-- `sticky-axis`
-- `step`
-- `focus`
+Canonical layout vocabulary is defined by the companion catalog and includes stack/grid/split/master-detail/three-pane/rail/tabs/stepper/drawer/sheet/modal/sticky/focus/full-bleed/card-flow forms.
 
 Responsive behavior belongs to runtime and metadata hints, not per-app media-query forks.
 
 ### Layer C — Block primitives
 
-Expand AppScreen’s current metric/list/action vocabulary toward:
-
-- `metric`
-- `list`
-- `form`
-- `action`
-- `chart`
-- `table`
-- `matrix`
-- `timeline`
-- `notice`
-- `content`
+Expand AppScreen’s current metric/list/action vocabulary toward the companion catalog's 30+ block targets, including form/table/matrix/timeline/chart/map/graph/checklist/document-preview/scanner/media/assistant-context blocks.
 
 Blocks must reference permission-filtered data/action contracts; they must not invent domain queries in React.
 
 ### Layer D — Interaction policy
 
-Reusable behavior flags/contracts:
-
-- search/filter/sort;
-- inline edit;
-- bulk select;
-- paste/fill-down;
-- create/remove axis member;
-- preview/confirm;
-- reason required;
-- optimistic concurrency;
-- autosave/manual save;
-- dirty guard;
-- keyboard navigation;
-- mobile step/focus mode;
-- empty/error/loading semantics.
+Reusable interaction contracts include search/filter/sort/group, inline edit, bulk selection, paste/fill-down, drag/reorder where safe, compare/preview/confirm/reason, OCC/conflict, dirty guard, scan, keyboard, touch, offline/sync state and export/print/share.
 
 ### Layer E — Design profile
 
@@ -173,11 +137,11 @@ Keep design visual, not business-specific:
 - density;
 - radius;
 - content width;
-- spacing scale;
-- surface elevation;
-- table density;
-- typography scale;
-- touch target profile.
+- spacing/elevation;
+- typography/numeric emphasis;
+- table presentation;
+- icon/touch/navigation profiles;
+- semantic status styling.
 
 The design layer must never change authoritative behavior.
 
@@ -192,7 +156,7 @@ Conceptual shape:
   "viewPolicy": {
     "matrix": {
       "enabled": true,
-      "archetype": "matrix",
+      "pattern": "price-matrix",
       "navigator": {
         "mode": "hierarchy",
         "levels": ["price-list", "item-group", "item"]
@@ -304,19 +268,21 @@ Shared runtime must no longer contain:
 if (props.doctype === "Item Price") { ... }
 ```
 
-Alumdoor/pricing metadata selects the Matrix archetype and named data/actions. The generic runtime does not know the words `Item Price`, `Price List`, `UOM`, or Alumdoor.
+Alumdoor/pricing metadata selects the Matrix pattern and named data/actions. The generic runtime does not know the words `Item Price`, `Price List`, `UOM`, or Alumdoor.
 
-## 8. Second-reference proof
+## 8. Multi-domain proof ladder
 
 Do not declare Matrix generic after only one domain-shaped implementation.
 
-After Item Price parity, validate the same renderer with a second relationship use case. Preferred order:
+Reference ladder:
 
-1. `Supplier x Item` procurement relationship; then
-2. `Item x Warehouse/Reorder` inventory relationship; then
-3. `User x Role` only after WS11 security contract review.
+1. Alumdoor Item/UOM x Price List -> Item Price.
+2. Supplier x Item procurement relationship.
+3. Item x Warehouse/Reorder inventory relationship.
+4. Item Group x Account accounting mapping.
+5. User/Role x permission scope only after WS11 review.
 
-The second reference must add metadata/domain actions only. If shared React requires business-name conditions, the abstraction is not finished.
+A shared schema addition is justified only when multiple domains need it for the same structural reason. If shared React requires business-name conditions, the abstraction is not finished.
 
 ## 9. App Factory authoring
 
@@ -325,15 +291,17 @@ WS09 should expose the UI Grammar as first-class authoring, not raw JSON surgery
 Builder flow:
 
 1. choose actor/outcome;
-2. choose archetype;
+2. choose business job/pattern;
 3. bind data source(s);
 4. bind actions;
 5. choose fields/axes/blocks;
 6. configure interaction policy;
-7. choose design profile;
-8. preview desktop/tablet/mobile;
-9. validate permission/action contracts;
-10. package/version/install.
+7. configure responsive policy;
+8. choose design profile;
+9. preview desktop/tablet/mobile;
+10. validate permission/action contracts;
+11. generate acceptance scenarios;
+12. package/version/install.
 
 The compiler must validate:
 
@@ -348,7 +316,7 @@ The compiler must validate:
 
 ## 10. AI-assisted layout generation
 
-AI should select from the grammar, not emit arbitrary React.
+AI should select from the grammar/catalog, not emit arbitrary React.
 
 Input:
 
@@ -358,14 +326,17 @@ Input:
 - capability/data metadata;
 - device context;
 - expected frequency/volume;
+- mutation risk;
 - permission/action contracts.
 
 Output:
 
-- archetype;
+- surface family/pattern;
+- data shape/source type;
 - layout primitives;
 - block/axis definitions;
 - interaction policy;
+- responsive strategy;
 - design profile;
 - explanation/evidence for deterministic validation.
 
@@ -381,7 +352,7 @@ Owns:
 
 - canonical UI Grammar metadata schema;
 - `viewPolicy.matrix` authoring contract;
-- archetype/block/interaction schema;
+- pattern/block/layout/interaction schema;
 - compiler/validator;
 - App Factory builder/preview authoring;
 - manifest/version/install semantics.
@@ -391,7 +362,7 @@ Owns:
 Owns:
 
 - generic Matrix renderer;
-- layout/archetype composition runtime;
+- layout/pattern composition runtime;
 - desktop/tablet/mobile behavior;
 - keyboard/a11y/touch;
 - shared styling/design tokens;
@@ -421,145 +392,146 @@ Owns:
 
 ### WS11 / WS12
 
-- WS11 reviews privileged matrix cases such as `User x Role`.
+- WS11 reviews privileged Matrix/permission cases.
 - WS12 supplies release/performance/production evidence, not renderer business logic.
 
-## 12. Execution phases after WS00–17 convergence
+## 12. Execution program after WS00–17 convergence
 
-### Phase 0 — Contract lock
+### Wave UI-0 — Catalog + contract lock
 
-- Re-read exact post-convergence `main`.
-- Locate/add capability IDs for Matrix/UI Grammar if absent.
-- Audit WS09/WS14 post-merge contracts.
-- Freeze Matrix v1 schema and acceptance fixtures.
-- Record Item Price parity fixture from current Alumdoor behavior.
+- re-read exact post-convergence `main`;
+- locate/add capability IDs for UI Grammar/Matrix if absent;
+- audit WS09/WS14 post-merge contracts;
+- inventory bespoke React surfaces and map them to the 52-pattern catalog;
+- freeze Matrix v1 schema and Item Price parity fixtures.
 
-Exit: schema/ownership/permission/write contract agreed by repo evidence; no runtime implementation yet.
+### Wave UI-1 — Extract proven patterns
 
-### Phase 1 — Matrix Foundation
+Priority:
 
-- Add `viewPolicy.matrix` types + validation.
-- Add compiler/manifest transport.
-- Add data-source/action references.
-- Add metadata fixtures and negative validation tests.
+1. Price Matrix from Alumdoor.
+2. Receiving Workspace from Purchase Receipt bulk UX.
+3. Entity 360 from CRM/customer contexts.
+4. Approval Review from workflows.
+5. Reconciliation from finance/migration use cases.
 
-Maturity target: `Foundation`.
+### Wave UI-2 — Generic Matrix Foundation + runtime
 
-### Phase 2 — Generic Matrix runtime
+- `viewPolicy.matrix` types/validation/compiler transport;
+- named projection/action binding;
+- renderer with sticky axes, search, column visibility, dirty guard, keyboard, mobile step and conflict states;
+- no pricing literals.
 
-- Implement Matrix renderer with axis virtualization/bounds as needed.
-- sticky axes;
-- cell editor registry reuse;
-- search/filter;
-- column visibility;
-- dirty guard;
-- keyboard navigation;
-- mobile step mode;
-- empty/loading/error/conflict states.
+### Wave UI-3 — Alumdoor extraction + multi-domain proof
 
-No pricing literals in renderer.
+- move Alumdoor Price Manager to Matrix metadata/domain actions;
+- delete shared `Item Price` branch;
+- prove Supplier x Item and Item x Warehouse/Reorder;
+- only then promote generic Matrix toward RC.
 
-Maturity target: `Wired`.
+### Wave UI-4 — Operations patterns
 
-### Phase 3 — Item Price extraction
+- Dispatch Board;
+- Resource Scheduler;
+- Inspection Checklist;
+- Mobile Task;
+- Scan Workflow;
+- Production Control Board.
 
-- Move Alumdoor/Item Price config to Matrix metadata.
-- Move pricing-specific compound read/write behavior behind pricing-domain projection/actions.
-- Preserve all 18 acceptance behaviors.
-- Delete the shared runtime `Item Price` branch after parity passes.
+### Wave UI-5 — Governance/analysis patterns
 
-Maturity target: Matrix `RC`; Item Price reference `RC`.
+- Approval Review;
+- Exception Review;
+- Reconciliation;
+- Close Period;
+- Data Quality Review;
+- Variance/Aging/Traceability surfaces.
 
-### Phase 4 — Second reference
+### Wave UI-6 — App Factory authoring
 
-- Implement `Supplier x Item` using metadata + procurement action(s).
-- Prove no shared business-name condition was added.
-- Refine schema only for demonstrably generic gaps.
+- Schema Builder;
+- Workflow Builder;
+- Screen Builder;
+- App Composer;
+- deterministic pattern planner.
 
-Maturity target: generic Matrix `RC` with multi-domain evidence.
+### Wave UI-7 — Commerce/workplace
 
-### Phase 5 — UI Grammar expansion
+- POS;
+- counter order;
+- catalog picker;
+- service desk;
+- inbox;
+- document/collaboration blocks.
 
-Prioritize archetypes by reuse/value, not novelty:
+### Wave UI-8 — AI planner
 
-1. `cockpit`
-2. `wizard`
-3. `mobile-task`
-4. `timeline`
-5. `pos`
-6. `kiosk`
+AI suggests only catalog-valid patterns after deterministic schema/planner/validator coverage is strong enough.
 
-Existing List/Form/Bulk/Kanban/Calendar/Gantt/Tree/Dashboard/Report should be composed, not rebuilt.
-
-### Phase 6 — App Factory builder + AI planner
-
-- visual archetype picker;
-- layout/block editor;
-- Matrix axis binding editor;
-- action binding;
-- responsive preview;
-- deterministic validation;
-- AI suggestion that outputs the same schema.
-
-### Phase 7 — Hardening
+### Wave UI-9 — Hardening
 
 - typecheck/build;
-- targeted metadata/compiler tests;
+- metadata/compiler tests;
 - permission/tenant tests;
 - OCC/idempotency/conflict tests;
-- browser/E2E and screenshots at mobile/tablet/desktop;
-- large-matrix performance test;
-- release marker evidence when actually deployed.
-
-Only then promote from RC toward Hardened.
+- browser/E2E/screenshots mobile/tablet/desktop;
+- large-matrix and large-list performance;
+- release evidence when actually deployed.
 
 ## 13. Performance envelopes
 
-Matrix must be designed for business-scale data rather than rendering the Cartesian product blindly.
+Matrix and other composed surfaces must be designed for business-scale data rather than rendering Cartesian products blindly.
 
-Initial engineering envelopes to validate, not customer SLA:
+Engineering envelopes to validate, not customer SLA:
 
 - bounded axis/page queries;
 - server search rather than loading entire large catalogs;
-- visible-window rendering/virtualization when cell count crosses threshold;
+- visible-window rendering/virtualization when thresholds are crossed;
 - no N x M network call pattern;
 - debounce/cancel stale searches;
-- batch commit or domain action rather than one network round-trip per visible cell;
-- clear truncation/error state rather than silently incomplete data.
+- batch/domain commit rather than one request per cell where domain semantics permit;
+- deterministic partial/truncation indication;
+- mobile memory/interaction checks.
 
-Threshold values should be derived from measured runtime/browser/Cloudflare evidence during implementation.
+## 14. Security and correctness gates
 
-## 14. Definition of Done
+- server permission is authoritative;
+- no tenant/user/role trust from client payload;
+- field masking preserved;
+- Matrix cannot expose hidden axes/cells through client-side-only filtering;
+- unsafe transactions cannot use generic document mutation;
+- finance/stock/payroll/legal/IAM actions remain domain-owned;
+- offline state must reflect real offline contracts;
+- generated metadata cannot bypass action permission contracts.
 
-This initiative is not complete because a Matrix component exists.
+## 15. Definition of Done
 
-Done requires:
+A canonical pattern reaches RC only when:
 
-- canonical metadata contract;
-- compiler validation;
-- generic renderer;
-- server-side permissions;
-- safe write/action boundary;
-- Item Price parity with no shared `Item Price` special case;
-- second-domain reference with no renderer business literals;
-- mobile/desktop accessibility;
-- failure/conflict/correction semantics;
-- tests/evidence appropriate to risk;
-- App Factory authoring path;
-- documentation/status updated after merge;
-- no duplicate pricing/stock/IAM source of truth.
+- metadata schema exists;
+- runtime composes shared primitives;
+- server permission/data/action contract is explicit;
+- desktop/mobile behavior is defined;
+- loading/empty/error/conflict states exist;
+- targeted regressions exist;
+- a real reference flow is wired;
+- generic patterns have second-domain proof where appropriate;
+- no vertical-specific switch is added to shared runtime;
+- no duplicate source of truth is introduced.
 
-## 15. Recommended implementation order
+Hardened additionally requires production/browser/performance/failure evidence appropriate to risk.
 
-1. Finish WS00–17 convergence first.
-2. Merge canonical WS09 App Factory/input-table work before changing shared App Factory schema.
-3. Re-audit exact WS14 runtime after convergence.
-4. Contract-lock Matrix/UI Grammar.
-5. Implement Matrix metadata + generic renderer.
-6. Extract Item Price as the first reference without UX regression.
-7. Prove with Supplier x Item.
-8. Expand cockpit/wizard/mobile-task/timeline/POS/kiosk archetypes.
-9. Add App Factory visual authoring and AI-assisted archetype selection.
-10. Harden with cross-device/performance/security evidence.
+## 16. Expected end state
 
-The key product decision is deliberate: **do not throw away the strong Alumdoor price UX to make it generic. Generalize the model underneath it so the same quality becomes reusable.**
+Forge should converge toward:
+
+- roughly **12-16 renderer primitives**;
+- **52 canonical task-oriented enterprise surface patterns**;
+- **30+ reusable blocks**;
+- **18 layout primitives**;
+- **25+ interaction primitives**;
+- **10 responsive strategies**;
+- constrained design profiles;
+- App Factory + AI that generate only valid combinations of the above.
+
+The result is not “52 screens”. It is a constrained enterprise UI language capable of generating thousands of valid surfaces while keeping authoritative data, permissions and business rules outside presentation code.
