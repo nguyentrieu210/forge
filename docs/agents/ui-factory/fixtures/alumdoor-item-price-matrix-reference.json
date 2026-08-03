@@ -1,0 +1,389 @@
+{
+  "fixtureVersion": "1.0.0",
+  "purpose": "Deterministic UI04 reference specimen for extracting the Alumdoor pricing workspace into a generic Matrix contract without preserving app-specific runtime knowledge.",
+  "sourceBaseline": {
+    "mainSha": "a9e3cde352dbe78c93b28097094c45fc5baad845",
+    "referenceComponent": "client/packages/views/src/bulk/ItemPriceMatrixPanel.tsx",
+    "specialCaseContainer": "client/packages/views/src/bulk/BulkGridContainer.tsx",
+    "viewSidecar": "server/briefs/alumdoor-v2.views.json"
+  },
+  "catalog": {
+    "priceLists": [
+      {
+        "key": "PL-RETAIL-2026-08",
+        "label": "Giá bán lẻ T08/2026",
+        "effectiveDate": "2026-08-01",
+        "disabled": false
+      },
+      {
+        "key": "PL-DEALER-2026-08",
+        "label": "Giá đại lý T08/2026",
+        "effectiveDate": "2026-08-01",
+        "disabled": false
+      },
+      {
+        "key": "PL-PROJECT-2026-07",
+        "label": "Giá công trình T07/2026",
+        "effectiveDate": "2026-07-15",
+        "disabled": false
+      },
+      {
+        "key": "PL-LEGACY-2025",
+        "label": "Giá cũ 2025",
+        "effectiveDate": "2025-01-01",
+        "disabled": true
+      }
+    ],
+    "groups": [
+      { "key": "G-MATERIAL", "label": "Vật tư", "parentKey": null },
+      { "key": "G-ALU", "label": "Nhôm", "parentKey": "G-MATERIAL" },
+      { "key": "G-ALU-PROFILE", "label": "Thanh nhôm", "parentKey": "G-ALU" },
+      { "key": "G-GLASS", "label": "Kính", "parentKey": "G-MATERIAL" },
+      { "key": "G-ACCESSORY", "label": "Phụ kiện", "parentKey": null },
+      { "key": "G-SERVICE", "label": "Dịch vụ", "parentKey": null }
+    ],
+    "uoms": [
+      { "key": "CAY", "label": "Cây", "disabled": false },
+      { "key": "MET", "label": "Mét", "disabled": false },
+      { "key": "KG", "label": "Kg", "disabled": false },
+      { "key": "M2", "label": "m2", "disabled": false },
+      { "key": "BO", "label": "Bộ", "disabled": false },
+      { "key": "CAI", "label": "Cái", "disabled": false },
+      { "key": "UOM-OLD", "label": "ĐVT cũ", "disabled": true }
+    ],
+    "items": [
+      {
+        "key": "ALU-PROFILE-001",
+        "label": "Nhôm Xingfa hệ 55 thanh đứng",
+        "groupKey": "G-ALU-PROFILE",
+        "stockUom": "CAY",
+        "defaultPurchaseUom": "CAY",
+        "defaultSalesUom": "MET",
+        "conversions": [
+          { "uom": "MET", "factor": 5.8 },
+          { "uom": "KG", "factor": 12.47 }
+        ]
+      },
+      {
+        "key": "ALU-PROFILE-002",
+        "label": "Nhôm Xingfa hệ 55 thanh ngang",
+        "groupKey": "G-ALU-PROFILE",
+        "stockUom": "CAY",
+        "defaultPurchaseUom": "CAY",
+        "defaultSalesUom": "CAY",
+        "conversions": [
+          { "uom": "KG", "factor": 11.92 }
+        ]
+      },
+      {
+        "key": "GLASS-8MM-001",
+        "label": "Kính cường lực 8 mm",
+        "groupKey": "G-GLASS",
+        "stockUom": "M2",
+        "defaultPurchaseUom": "M2",
+        "defaultSalesUom": "M2",
+        "conversions": []
+      },
+      {
+        "key": "ACC-HINGE-001",
+        "label": "Bản lề cửa đi",
+        "groupKey": "G-ACCESSORY",
+        "stockUom": "CAI",
+        "defaultPurchaseUom": "CAI",
+        "defaultSalesUom": "BO",
+        "conversions": [
+          { "uom": "BO", "factor": 2 }
+        ]
+      },
+      {
+        "key": "SERVICE-INSTALL-001",
+        "label": "Dịch vụ lắp đặt",
+        "groupKey": "G-SERVICE",
+        "stockUom": "BO",
+        "defaultPurchaseUom": "BO",
+        "defaultSalesUom": "BO",
+        "conversions": []
+      }
+    ],
+    "generatedCatalog": {
+      "description": "Deterministic synthetic tail used to prove the current 200-row API cap and the three-page 0/200/400 fetch assumption without storing hundreds of repetitive fixture rows.",
+      "count": 405,
+      "pageSize": 200,
+      "pageStarts": [0, 200, 400],
+      "keyPattern": "REF-{index:03d}",
+      "anchors": [
+        { "ordinal": 1, "key": "REF-001" },
+        { "ordinal": 200, "key": "REF-200" },
+        { "ordinal": 201, "key": "REF-201" },
+        { "ordinal": 400, "key": "REF-400" },
+        { "ordinal": 401, "key": "REF-401" },
+        { "ordinal": 405, "key": "REF-405" }
+      ]
+    },
+    "cells": [
+      {
+        "key": "CELL-001",
+        "itemKey": "ALU-PROFILE-001",
+        "rowKey": "CAY",
+        "columnKey": "PL-RETAIL-2026-08",
+        "value": 1850000,
+        "enabled": true,
+        "version": "v1"
+      },
+      {
+        "key": "CELL-002",
+        "itemKey": "ALU-PROFILE-001",
+        "rowKey": "KG",
+        "columnKey": "PL-DEALER-2026-08",
+        "value": 139000,
+        "enabled": true,
+        "version": "v3"
+      },
+      {
+        "key": "CELL-003",
+        "itemKey": "ALU-PROFILE-001",
+        "rowKey": "MET",
+        "columnKey": "PL-PROJECT-2026-07",
+        "value": 302000,
+        "enabled": false,
+        "version": "v2"
+      },
+      {
+        "key": "CELL-004",
+        "itemKey": "ALU-PROFILE-002",
+        "rowKey": "CAY",
+        "columnKey": "PL-RETAIL-2026-08",
+        "value": 1760000,
+        "enabled": true,
+        "version": "v4"
+      },
+      {
+        "key": "CELL-005",
+        "itemKey": "GLASS-8MM-001",
+        "rowKey": "M2",
+        "columnKey": "PL-RETAIL-2026-08",
+        "value": 720000,
+        "enabled": true,
+        "version": "v1"
+      },
+      {
+        "key": "CELL-006",
+        "itemKey": "ACC-HINGE-001",
+        "rowKey": "CAI",
+        "columnKey": "PL-DEALER-2026-08",
+        "value": 92000,
+        "enabled": true,
+        "version": "v5"
+      }
+    ]
+  },
+  "initialSelection": {
+    "columnKey": "PL-DEALER-2026-08",
+    "itemKey": "ALU-PROFILE-001",
+    "expectedRows": ["CAY", "MET", "KG"],
+    "stockRowKey": "CAY"
+  },
+  "genericMatrixMapping": {
+    "kind": "matrix",
+    "readSourceRef": "matrix.read",
+    "permissionBoundaryRef": "matrix.permission",
+    "navigator": {
+      "sourceRef": "navigator.catalog",
+      "keyPath": "key",
+      "labelPath": "label",
+      "parentKeyPath": "parentKey",
+      "secondaryLabelPath": "secondaryLabel",
+      "search": {
+        "mode": "token_contains",
+        "accentInsensitive": true,
+        "scopes": ["column", "node"]
+      }
+    },
+    "rowAxis": {
+      "sourceRef": "axis.rows",
+      "keyPath": "key",
+      "labelPath": "label",
+      "stockMarkerPath": "isPrimary",
+      "auxiliaryFields": [
+        {
+          "key": "conversionFactor",
+          "label": "Quy đổi",
+          "editor": "number",
+          "readOnlyWhen": "isPrimary",
+          "validation": "positive"
+        }
+      ],
+      "memberActions": {
+        "createRef": "row.add",
+        "removeRef": "row.remove",
+        "primaryMemberRemovable": false
+      }
+    },
+    "columnAxis": {
+      "sourceRef": "axis.columns",
+      "keyPath": "key",
+      "labelPath": "label",
+      "subtitlePath": "subtitle",
+      "disabledPath": "disabled",
+      "createActionRef": "column.create",
+      "allowHide": true,
+      "allowShowAll": true,
+      "selectedFirst": true
+    },
+    "cell": {
+      "sourceRef": "cells.sparse",
+      "rowKeyPath": "rowKey",
+      "columnKeyPath": "columnKey",
+      "valuePath": "value",
+      "enabledPath": "enabled",
+      "versionPath": "version",
+      "editor": "currency",
+      "validation": "non_negative",
+      "disabledColumnValueReadOnly": true
+    },
+    "actionRefs": {
+      "commit": "matrix.commit",
+      "createColumn": "column.create",
+      "addRowMember": "row.add",
+      "removeRowMember": "row.remove"
+    },
+    "interactionPolicy": {
+      "stickyHeader": true,
+      "stickyRowAxis": true,
+      "focusMode": true,
+      "columnVisibility": true,
+      "dirtyIndicator": true,
+      "unsavedChangeGuard": true,
+      "conflictFeedback": "structured",
+      "emptyStates": true
+    },
+    "responsivePolicy": {
+      "desktop": "split_navigator_matrix",
+      "tablet": "split_navigator_matrix",
+      "mobile": "navigator_then_matrix_steps"
+    },
+    "dataPolicy": {
+      "boundedRead": true,
+      "sparseCells": true,
+      "noPerCellFetch": true,
+      "searchCanReachAllDeclaredPages": true
+    },
+    "designHints": {
+      "navigatorResizable": true,
+      "navigatorCollapsible": true,
+      "primaryAxisWidth": "content_stable",
+      "columnWidth": "editor_comfortable"
+    }
+  },
+  "domainBindings": {
+    "matrix.read": "pricing.item_price_matrix.read",
+    "matrix.permission": "pricing.item_price_matrix",
+    "matrix.commit": "pricing.item_price_matrix.commit",
+    "column.create": "pricing.price_list.create",
+    "row.add": "pricing.item_uom.add",
+    "row.remove": "pricing.item_uom.remove",
+    "navigator.catalog": "projection.navigator",
+    "axis.rows": "projection.rows",
+    "axis.columns": "projection.columns",
+    "cells.sparse": "projection.cells"
+  },
+  "scenarios": [
+    {
+      "id": "accent-insensitive-search",
+      "input": { "query": "nhom", "scope": "node" },
+      "expected": { "containsNode": "G-ALU" }
+    },
+    {
+      "id": "selected-column-first",
+      "input": { "selectedColumn": "PL-DEALER-2026-08" },
+      "expected": { "firstVisibleColumn": "PL-DEALER-2026-08" }
+    },
+    {
+      "id": "update-existing-cell",
+      "input": { "cellKey": "CELL-001", "nextValue": 1890000 },
+      "expected": { "operation": "update", "versionRequired": "v1" }
+    },
+    {
+      "id": "create-missing-cell",
+      "input": {
+        "itemKey": "ALU-PROFILE-001",
+        "rowKey": "MET",
+        "columnKey": "PL-RETAIL-2026-08",
+        "enabled": true,
+        "value": 326000
+      },
+      "expected": { "operation": "create" }
+    },
+    {
+      "id": "remove-non-primary-row",
+      "input": { "itemKey": "ALU-PROFILE-001", "rowKey": "KG" },
+      "expected": {
+        "operation": "remove_row_member",
+        "affectedCellKeys": ["CELL-002"],
+        "primaryRowStillPresent": true
+      }
+    },
+    {
+      "id": "reject-primary-row-removal",
+      "input": { "itemKey": "ALU-PROFILE-001", "rowKey": "CAY" },
+      "expected": { "allowed": false }
+    },
+    {
+      "id": "add-row-and-cell",
+      "input": {
+        "itemKey": "ALU-PROFILE-001",
+        "rowKey": "BO",
+        "conversionFactor": 1,
+        "columnKey": "PL-PROJECT-2026-07",
+        "value": 2450000
+      },
+      "expected": { "operation": "compound_commit" }
+    },
+    {
+      "id": "disabled-column-readonly",
+      "input": { "columnKey": "PL-LEGACY-2025" },
+      "expected": { "valueEditorReadOnly": true }
+    },
+    {
+      "id": "large-catalog-last-page",
+      "input": { "query": "REF-405" },
+      "expected": { "reachable": true, "pageStart": 400 }
+    },
+    {
+      "id": "mobile-step-flow",
+      "input": { "viewport": "mobile", "selectItem": "ALU-PROFILE-001" },
+      "expected": { "steps": ["navigator", "matrix"], "backAction": true }
+    },
+    {
+      "id": "conflict-feedback",
+      "input": { "cellKey": "CELL-001", "submittedVersion": "stale" },
+      "expected": { "result": "conflict", "preserveDraft": true }
+    }
+  ],
+  "currentDebtNotToFreezeAsParity": [
+    {
+      "id": "client-compound-write",
+      "description": "The current React component orchestrates multiple authoritative document writes; target convergence moves this behind a named pricing-domain commit action."
+    },
+    {
+      "id": "partial-save-risk",
+      "description": "Current sequential writes can partially succeed before a later error; target must expose atomic or explicit partial-failure semantics."
+    },
+    {
+      "id": "no-dirty-guard",
+      "description": "Current specialist panel has no dedicated dirty indicator or beforeunload guard despite the generic Bulk editor having one."
+    },
+    {
+      "id": "no-keyboard-matrix-navigation",
+      "description": "Current specimen does not implement dedicated cell-to-cell keyboard navigation."
+    },
+    {
+      "id": "fixed-three-page-item-fetch",
+      "description": "Current catalog completeness relies on three fixed 200-row requests; target source must declare bounded paging/search rather than bake page count into the renderer."
+    },
+    {
+      "id": "disabled-column-toggle-quirk",
+      "description": "Current disabled-column value editor is read-only but the enable checkbox is not explicitly disabled; target capability should be server-derived instead of preserving this ambiguity."
+    }
+  ]
+}
