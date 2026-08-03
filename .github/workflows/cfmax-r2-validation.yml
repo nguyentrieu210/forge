@@ -15,7 +15,7 @@ jobs:
   integrated:
     if: startsWith(github.head_ref, 'cloudflare/cfmax-09-convergence-r2')
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 40
     steps:
       - name: Checkout exact PR head
         uses: actions/checkout@v4
@@ -146,6 +146,13 @@ jobs:
       - name: Cloudflare governance source/drift validation
         working-directory: server
         run: node scripts/verify-cloudflare-governance.mjs
+
+      - name: Build and stage canonical Gateway assets
+        run: |
+          pnpm --filter runtime run build
+          pnpm --filter kho run build
+          node server/scripts/stage-client-bundle.mjs
+          node server/scripts/stage-client-bundle.mjs --check
 
       - name: Bundle Gateway with usage telemetry and edge source
         working-directory: server
