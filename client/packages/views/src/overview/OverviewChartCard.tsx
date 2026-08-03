@@ -1,6 +1,7 @@
 /** @jsxImportSource react */
 import type { OverviewChart } from "@metaforge/core";
 import { ForgeAreaChart, ForgeBarChart, ForgeDonutChart, ForgeLineChart, compactMetric, type ForgeChartSeries } from "@metaforge/charts";
+import { Button } from "@metaforge/ui";
 
 const CHART_DOT_CLASSES = [
   "bg-[var(--forge-primary,var(--chart-1,#e52521))]",
@@ -57,6 +58,6 @@ export function OverviewChartCard({ chart, onNavigate }: { chart: OverviewChart;
 
   const classes = "min-w-0 rounded-lg border bg-card p-4 text-left shadow-[0_1px_0_rgba(0,0,0,.025)] transition-[border-color,box-shadow,transform] motion-reduce:transition-none";
   return chart.route ? (
-    <button type="button" onClick={() => onNavigate(chart.route!)} className={`${classes} hover:-translate-y-px hover:border-primary/35 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30`}>{content}</button>
+    <Button type="button" variant="ghost" onClick={() => onNavigate(chart.route!)} className={`h-auto w-full justify-start whitespace-normal ${classes} hover:-translate-y-px hover:border-primary/35 hover:bg-card hover:shadow-sm`}>{content}</Button>
   ) : <div className={classes}>{content}</div>;
 }
