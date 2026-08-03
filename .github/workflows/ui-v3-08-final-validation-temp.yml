@@ -8,24 +8,38 @@ on:
       - "client/**"
       - "docs/agents/ui-v3/**"
       - ".github/workflows/ui-v3-08-final-validation-temp.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "client/**"
+      - "docs/agents/ui-v3/**"
+      - ".github/workflows/ui-v3-08-final-validation-temp.yml"
 
 permissions:
   contents: read
 
 concurrency:
-  group: ui-v3-08-final-${{ github.ref }}
+  group: ui-v3-08-final-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   integrated-ui:
+    if: ${{ github.event_name == 'push' || github.head_ref == 'ui/v3-08-release-final-20260804' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - name: Checkout exact branch head
+      - name: Checkout exact validation candidate
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 1
+
+      - name: Record candidate
+        run: |
+          echo "EVENT=${{ github.event_name }}"
+          echo "HEAD=${{ github.event.pull_request.head.sha || github.sha }}"
+          echo "BASE=${{ github.event.pull_request.base.sha || 'push' }}"
 
       - name: Setup Node 22
         uses: actions/setup-node@v4
@@ -83,7 +97,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ui-v3-08-final-${{ github.sha }}
+          name: ui-v3-08-final-${{ github.event.pull_request.head.sha || github.sha }}
           if-no-files-found: warn
           path: |
             client/apps/demo/playwright-report/v3-mobile-qa/**
