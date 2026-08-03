@@ -5,6 +5,8 @@ Work branch: `ui/v3-05-charts-command-center`
 Delivery branch: `ui/v3-05-charts-command-center-delivery`
 Delivery base: `main@fe0c2f1a9c490eb400e19a5d55baea9a4b60c307`
 Delivery PR: `#505`
+Root-lock dependency PR: `#511`
+Validation PR: `#508`
 
 ## Implemented
 
@@ -18,7 +20,7 @@ A dedicated presentation package now contains:
 - reduced-motion handling;
 - lazy engine loading;
 - loading/error/empty states;
-- accessible chart description/table fallback;
+- accessible chart description/table fallback via Forge UI primitives;
 - value/compact formatter seams;
 - caller-owned click/drill-through callback;
 - pure chart-model helpers and focused model tests.
@@ -61,32 +63,47 @@ Separate command-center-only presentation primitives:
 - `CommandCenterGrid`;
 - `AlertBeacon`.
 
-These are Forge-owned CSS/SVG/React primitives with no DataV runtime dependency.
+These are Forge-owned CSS/SVG/React primitives with no DataV runtime dependency. Inline decorative background styles were removed in favor of token/Tailwind classes so V3-05 does not add native-UI debt.
 
 ### Existing surfaces migrated
 
 - `DashboardView` no longer owns Recharts rendering and instead consumes `@metaforge/charts`.
 - `OverviewChartCard` no longer owns Recharts rendering and instead consumes `@metaforge/charts`.
+- interactive KPI, overview and command-center cards use `Button` from `@metaforge/ui` rather than browser-default buttons.
 - existing route/drill-through, formatter, loading, error and empty-state behavior remains at the view boundary.
 - `CommandCenterView` was added as an explicit presentational surface; it is not silently wired into authoritative metadata or routes.
 
-## Static audit completed
+### Evidence harness
 
-- ECharts `GraphicComponent` is explicitly registered because the donut primitive uses the graphic layer for center metric text.
-- V3-05 does not change server, schema, migration, permission, tenant or business-authority code.
-- command-center motion uses reduced-motion fallbacks.
-- direct Recharts ownership in the two audited dashboard chart surfaces has been removed from implementation code.
-- the clean delivery replay was compared against `main` and contains exactly 24 changed files, all under `client/**`.
-- current `main` versions of `client/packages/views/package.json`, `DashboardView.tsx`, `OverviewChartCard.tsx` and the views barrel were checked before replay; no concurrent V3-02/V3-04/V3-06 drift was overwritten.
+An isolated demo-only surface now exists at `client/apps/demo/v3-05.html` for Playwright evidence. It renders deterministic mock presentation data only and does not create a production route or metadata contract.
+
+The evidence suite covers:
+
+- dashboard desktop/tablet/mobile breakpoints;
+- light/dark dashboard;
+- command-center fullscreen;
+- repeated resize with stable ECharts canvas count;
+- reduced-motion media behavior;
+- screenshot artifacts;
+- Axe WCAG A/AA serious/critical scan.
 
 ## Validation status
 
-Not yet claimed green.
+Core exact-head validation already passed in GitHub Actions run `30843088702`:
 
-A temporary branch-only GitHub Actions workflow was attempted and removed after confirming it could not provide PR validation: pull-request workflows are loaded from the base/default branch, while this workflow existed only on the feature branch. PR `#505` currently has no generic pull-request workflow run on either its head SHA or generated merge-ref SHA.
+- generated root/client lockfiles;
+- root/client `--frozen-lockfile` replay;
+- chart model tests;
+- `@metaforge/visual` typecheck;
+- `@metaforge/views` typecheck;
+- full client workspace typecheck;
+- client selfchecks;
+- runtime dependency-graph production build.
 
-The available execution container also cannot retrieve the ECharts package from the required registry/GitHub network path.
+The generated client lock and migrated dashboard selfcheck are already on the delivery branch. The generated root lock is isolated in PR `#511`, which changes only root `pnpm-lock.yaml` because the production UI-only deploy guard intentionally does not classify that file as UI-only.
 
-Therefore no fabricated `typecheck passed`, `tests passed`, `production deployed` or `release converged` claim is recorded here.
+A later native-UI scan exposed eight V3-05 violations plus unrelated debt already present on `main`. All eight V3-05 violations have been removed. Validation now gates V3-05 files independently while recording the repository-wide native-UI debt as baseline instead of misclassifying it as a V3-05 regression.
 
-The remaining blocker and exact completion commands are recorded in `client/docs/ui-v3-05-dependency-request.md`.
+Final responsive/fullscreen/accessibility evidence is being rerun on the current delivery head before the branch can be declared release-ready.
+
+No production deploy is claimed yet.
