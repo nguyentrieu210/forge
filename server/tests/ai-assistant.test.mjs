@@ -7,6 +7,7 @@ function environment(answer) {
   return {
     writes,
     env: {
+      TENANT_ID: "demo",
       AI: { run: async () => ({ response: answer }) },
       DB: {
         prepare(sql) {
@@ -26,7 +27,7 @@ function environment(answer) {
   };
 }
 
-test("successful AI answers are audit-logged with tenant and caller identity", async () => {
+test("successful AI answers are audit-logged with tenant, caller identity and selected model", async () => {
   const { env, writes } = environment("Còn 7 cây từ 4,5 m trở lên.");
   const response = await askAssistant(
     env,
@@ -42,6 +43,7 @@ test("successful AI answers are audit-logged with tenant and caller identity", a
   assert.equal(writes[0].params[3], "Còn bao nhiêu?");
   assert.deepEqual(JSON.parse(writes[0].params[4]), { warehouse: "K36", available_qty: 7 });
   assert.equal(writes[0].params[5], "Còn 7 cây từ 4,5 m trở lên.");
+  assert.match(writes[0].params[6], /^workers-ai:@cf\//);
 });
 
 test("empty AI answers fail and never create a misleading audit record", async () => {

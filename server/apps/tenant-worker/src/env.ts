@@ -1,4 +1,5 @@
-import type { DomainEvent, JsonObject } from "../../../packages/contracts/src/index.js";
+import type { DomainEvent } from "../../../packages/contracts/src/index.js";
+import type { ForgeAiBinding } from "../../../packages/ai-policy/src/index.js";
 
 /**
  * Structural Browser Run binding used by the tenant entrypoint.
@@ -54,11 +55,17 @@ export interface TenantEnv {
   SOCIAL_INGRESS?: Fetcher;
   SOCIAL_CREDENTIAL_KEK?: string;
   /**
-   * Workers AI — đọc ảnh chứng từ và trả lời câu hỏi về dữ liệu của tenant.
+   * Workers AI binding. Calls should pass through @cloudforge/ai-policy so model fallback,
+   * privacy, cache and AI Gateway semantics remain centralized rather than app-specific.
    *
-   * Tuỳ chọn: tenant chưa gắn binding thì các đầu API AI trả 501 kèm lời giải thích, chứ
-   * KHÔNG làm hỏng phần còn lại của worker. Một tính năng phụ vắng mặt không được phép kéo
-   * theo cả chứng từ và tồn kho.
+   * Optional: a tenant without this binding receives 501 from AI endpoints while the rest
+   * of the document/runtime path remains available.
    */
-  AI?: { run: (model: string, input: JsonObject) => Promise<unknown> };
+  AI?: ForgeAiBinding;
+  /**
+   * Optional AI Gateway id. Absence intentionally preserves the existing direct Workers AI
+   * path; setting this is a deployment/config decision, not something application code may
+   * silently create or mutate.
+   */
+  AI_GATEWAY_ID?: string;
 }
