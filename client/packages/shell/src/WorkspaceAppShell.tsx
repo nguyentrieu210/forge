@@ -27,7 +27,7 @@ function normalizedGroup(label: string | undefined): string {
 }
 
 const ALUMDOOR_SIDEBAR_GROUPS = new Set([
-  "dieu hanh", "ban hang", "kho", "mua hang", "san xuat", "cong no", "bao hanh",
+  "dieu hanh", "ban hang", "kho", "mua hang", "san xuat", "cong no", "bao hanh", "nhan su",
   "bao cao", "danh muc", "he thong", "quy kho",
 ]);
 
