@@ -1,7 +1,12 @@
--- RC-020 — company/branch report scope and reconciliation directly from canonical GL.
+-- RC-020 — canonical GL scope, period backstop and reconciliation.
 -- No shadow ledger is introduced. gl_entries remains the accounting authority;
 -- company/branch are resolved from the source document, with branch dimensions as
 -- a fallback only when the source document is company-scoped but branch-neutral.
+--
+-- The document-level period triggers from 0042/0110 deliberately fail early for
+-- known posting doctypes. This GL trigger is the authority backstop: any current or
+-- future controller that emits canonical GL must pass the same period contract,
+-- even when its doctype is not on that early-validation list.
 
 DROP TRIGGER IF EXISTS finance_gl_source_scope_guard;
 CREATE TRIGGER finance_gl_source_scope_guard
@@ -15,6 +20,7 @@ BEGIN
         AND d.name=NEW.voucher_no
         AND COALESCE(json_extract(d.payload_json,'$.company'),'')<>''
     ) THEN RAISE(ABORT,'GL_COMPANY_SCOPE_REQUIRED')
+
     WHEN EXISTS (
       SELECT 1 FROM documents d
       WHERE d.tenant_id=NEW.tenant_id
@@ -24,6 +30,90 @@ BEGIN
         AND COALESCE(json_extract(NEW.dimensions_json,'$.branch'),'')<>''
         AND json_extract(d.payload_json,'$.branch')<>json_extract(NEW.dimensions_json,'$.branch')
     ) THEN RAISE(ABORT,'GL_BRANCH_SCOPE_MISMATCH')
+
+    WHEN EXISTS (
+      SELECT 1
+      FROM documents d
+      JOIN documents p
+        ON p.tenant_id=d.tenant_id
+       AND p.doctype='VN Accounting Period'
+       AND p.docstatus=1
+      WHERE d.tenant_id=NEW.tenant_id
+        AND d.doctype=NEW.voucher_type
+        AND d.name=NEW.voucher_no
+        AND json_extract(p.payload_json,'$.close_state')='Hard Locked'
+        AND json_extract(p.payload_json,'$.company')=json_extract(d.payload_json,'$.company')
+        AND (
+          COALESCE(json_extract(p.payload_json,'$.branch'),'')=''
+          OR json_extract(p.payload_json,'$.branch')=COALESCE(
+            NULLIF(json_extract(d.payload_json,'$.branch'),''),
+            NULLIF(json_extract(NEW.dimensions_json,'$.branch'),''),
+            ''
+          )
+        )
+        AND date(NEW.posting_at) BETWEEN
+          date(json_extract(p.payload_json,'$.start_date'))
+          AND date(json_extract(p.payload_json,'$.end_date'))
+    ) THEN RAISE(ABORT,'ACCOUNTING_PERIOD_HARD_LOCKED')
+
+    WHEN EXISTS (
+      SELECT 1
+      FROM documents d
+      JOIN documents p
+        ON p.tenant_id=d.tenant_id
+       AND p.doctype='VN Accounting Period'
+       AND p.docstatus=1
+      WHERE d.tenant_id=NEW.tenant_id
+        AND d.doctype=NEW.voucher_type
+        AND d.name=NEW.voucher_no
+        AND json_extract(p.payload_json,'$.close_state')='Soft Closed'
+        AND json_extract(p.payload_json,'$.company')=json_extract(d.payload_json,'$.company')
+        AND (
+          COALESCE(json_extract(p.payload_json,'$.branch'),'')=''
+          OR json_extract(p.payload_json,'$.branch')=COALESCE(
+            NULLIF(json_extract(d.payload_json,'$.branch'),''),
+            NULLIF(json_extract(NEW.dimensions_json,'$.branch'),''),
+            ''
+          )
+        )
+        AND date(NEW.posting_at) BETWEEN
+          date(json_extract(p.payload_json,'$.start_date'))
+          AND date(json_extract(p.payload_json,'$.end_date'))
+    )
+    AND NOT EXISTS (
+      SELECT 1
+      FROM documents d
+      JOIN documents p
+        ON p.tenant_id=d.tenant_id
+       AND p.doctype='VN Accounting Period'
+       AND p.docstatus=1
+      WHERE d.tenant_id=NEW.tenant_id
+        AND d.doctype=NEW.voucher_type
+        AND d.name=NEW.voucher_no
+        AND json_extract(p.payload_json,'$.close_state')='Soft Closed'
+        AND json_extract(p.payload_json,'$.company')=json_extract(d.payload_json,'$.company')
+        AND (
+          COALESCE(json_extract(p.payload_json,'$.branch'),'')=''
+          OR json_extract(p.payload_json,'$.branch')=COALESCE(
+            NULLIF(json_extract(d.payload_json,'$.branch'),''),
+            NULLIF(json_extract(NEW.dimensions_json,'$.branch'),''),
+            ''
+          )
+        )
+        AND date(NEW.posting_at) BETWEEN
+          date(json_extract(p.payload_json,'$.start_date'))
+          AND date(json_extract(p.payload_json,'$.end_date'))
+        AND COALESCE(CAST(json_extract(p.payload_json,'$.allow_approved_adjustments') AS INTEGER),0)=1
+        AND COALESCE(CAST(json_extract(d.payload_json,'$.approved_adjustment') AS INTEGER),0)=1
+        AND COALESCE(json_extract(d.payload_json,'$.adjustment_reason'),'')<>''
+        AND COALESCE(d.modified_by,'')<>''
+        AND EXISTS (
+          SELECT 1 FROM user_roles ur
+          WHERE ur.tenant_id=d.tenant_id
+            AND ur.user_id=d.modified_by
+            AND ur.role IN ('Chief Accountant','Accounts Manager','System Manager')
+        )
+    ) THEN RAISE(ABORT,'ACCOUNTING_PERIOD_SOFT_CLOSED')
   END;
 END;
 
