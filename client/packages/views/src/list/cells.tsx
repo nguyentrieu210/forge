@@ -63,8 +63,11 @@ type Tone = "info" | "warning" | "success" | "destructive" | "subtle";
 // Bản *-text đạt WCAG AA; --info/--warning/--success thô chỉ ~3:1 trên nền card sáng mà đây là
 // chữ 12.5px (cột trạng thái của mọi danh sách).
 const TONE_CLS: Record<Tone, string> = {
-  info: "text-info-text", warning: "text-warning-text", success: "text-success-text",
-  destructive: "text-destructive-text", subtle: "text-subtle",
+  info: "border-info/25 bg-info/10 text-info-text",
+  warning: "border-warning/30 bg-warning/12 text-warning-text",
+  success: "border-success/25 bg-success/10 text-success-text",
+  destructive: "border-destructive/25 bg-destructive/10 text-destructive-text",
+  subtle: "border-border bg-muted text-subtle",
 };
 
 /** scMap prototype: Đang làm=blue · Chờ duyệt=amber · Hoàn thành=green · Quá hạn/Huỷ=red · Mở/Nháp=subtle. */
@@ -83,8 +86,8 @@ export function StatusBadge({ value, optionLabels }: { value: string; optionLabe
   // Màu sắc suy từ giá trị GỐC (statusTone khớp theo chuỗi tiếng Anh: Draft/Submitted/Cancelled…),
   // còn chữ hiện ra thì lấy bản dịch. Đảo lại sẽ mất màu trạng thái khi đổi sang tiếng Việt.
   return (
-    <span className={cn("inline-flex items-center gap-1.5 text-[12.5px] font-medium", TONE_CLS[statusTone(value)])}>
-      <span className="size-1.5 shrink-0 rounded-full bg-current" />
+    <span className={cn("inline-flex min-h-6 items-center gap-1.5 rounded-full border px-2 py-0.5 text-[12px] font-semibold leading-none shadow-[inset_0_1px_0_rgb(255_255_255_/_0.32)]", TONE_CLS[statusTone(value)])}>
+      <span className="size-1.5 shrink-0 rounded-full bg-current shadow-[0_0_0_2px_rgb(255_255_255_/_0.48)]" />
       {optionLabels?.[value] ?? value}
     </span>
   );
@@ -124,10 +127,10 @@ export function RowAvatar({ src, alt }: { src?: string; alt: string }) {
   src = src ? withAppBase(src, APP_BASE) : src;
   if (src) {
     // ảnh động → allowlist inline (kích thước cố định); không phải "browser default"
-    return <img src={src} alt={alt} className="size-7 shrink-0 rounded-md object-cover" />;
+    return <img src={src} alt={alt} className="size-8 shrink-0 rounded-lg border border-border/80 object-cover shadow-sm" />;
   }
   return (
-    <span className="grid size-7 shrink-0 place-items-center rounded-md bg-muted text-xs font-medium text-muted-foreground">
+    <span className="grid size-8 shrink-0 place-items-center rounded-lg border border-border/80 bg-muted text-xs font-semibold text-muted-foreground shadow-sm">
       {initial}
     </span>
   );

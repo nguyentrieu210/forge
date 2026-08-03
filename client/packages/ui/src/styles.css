@@ -1183,87 +1183,265 @@
   .mf-skip-link { border: 2px solid ButtonText; }
 }
 
-
-/* ── METAFORGE COMMAND CENTER · POWER VISUAL LAYER (2026-08-03) ─────────────
- * Authenticated shell only. Alumdoor/public login stays outside `.mf-shell` and is untouched.
- * Bright work surface + deep command rail + saturated states + short tactile motion.
+/* ── METAFORGE PREMIUM OPERATING SURFACE (2026-08-03) ────────────────
+ * Component-level visual system. Keeps theme/brand tokens authoritative and strengthens
+ * authenticated navigation, forms, lists, tables, cards and tactile state feedback.
  */
 @layer components {
   .mf-shell {
-    --background:#edf3fb; --foreground:#07111f; --card:#fff; --card-foreground:#07111f;
-    --popover:#fff; --popover-foreground:#07111f; --secondary:#e4ebf5; --secondary-foreground:#0b1729;
-    --muted:#f4f7fb; --muted-foreground:#40516a; --accent:color-mix(in srgb,var(--primary) 13%,#fff);
-    --accent-foreground:color-mix(in srgb,var(--primary) 82%,#07111f); --border:#c6d3e5; --input:#b9c9de;
-    --ring:var(--primary); --subtle:#53647a;
-    --mf-card-shadow:0 1px 2px rgb(5 18 40/.06),0 12px 30px rgb(5 18 40/.07);
-    --mf-soft-shadow:0 5px 18px rgb(5 18 40/.07); --mf-overlay-shadow:0 28px 70px rgb(5 18 40/.22),0 8px 24px rgb(5 18 40/.1);
-    background-color:var(--background);
-    background-image:radial-gradient(circle at 18% -8%,color-mix(in srgb,var(--primary) 15%,transparent),transparent 27rem),radial-gradient(circle at 92% 8%,color-mix(in srgb,var(--primary) 8%,transparent),transparent 24rem);
-  }
-  :root:not([data-brand]) .mf-shell,[data-brand="zinc"] .mf-shell,[data-brand="blue"] .mf-shell,.mf-shell[data-brand="zinc"],.mf-shell[data-brand="blue"] {
-    --primary:#0047ff; --primary-foreground:#fff; --ring:#0047ff; --info:#0047ff; --info-text:#0036c7;
-  }
-  [data-theme="dark"] .mf-shell,.mf-shell[data-theme="dark"] {
-    --background:#050b14; --foreground:#f5f8ff; --card:#0d1726; --card-foreground:#f5f8ff; --popover:#111d2f; --popover-foreground:#f5f8ff;
-    --secondary:#142238; --secondary-foreground:#edf4ff; --muted:#101c2e; --muted-foreground:#a7b7cc; --accent:color-mix(in srgb,var(--primary) 24%,#0d1726);
-    --accent-foreground:#f4f7ff; --border:#263a55; --input:#314968; --subtle:#8192aa;
+    --mf-card-shadow: 0 1px 2px rgb(15 23 42 / 0.07), 0 10px 26px rgb(15 23 42 / 0.07);
+    --mf-soft-shadow: 0 5px 16px rgb(15 23 42 / 0.08);
+    --mf-overlay-shadow: 0 26px 64px rgb(15 23 42 / 0.22), 0 8px 22px rgb(15 23 42 / 0.1);
+    background-color: var(--background);
+    background-image:
+      radial-gradient(circle at 86% -12%, color-mix(in srgb, var(--primary) 9%, transparent), transparent 27rem),
+      linear-gradient(180deg, color-mix(in srgb, var(--background) 94%, #ffffff), var(--background));
   }
 
   .mf-shell .mf-shell-sidebar {
-    background-color:#071427;
-    background-image:radial-gradient(circle at 28% 0%,color-mix(in srgb,var(--primary) 24%,transparent),transparent 15rem),linear-gradient(180deg,#09182d 0%,#071427 55%,#050e1c 100%);
-    border-right-color:#18304d; color:#f8fbff; box-shadow:16px 0 44px -34px rgb(0 15 42/.95);
+    background: linear-gradient(180deg, #101827 0%, #0b1321 56%, #08101c 100%);
+    border-right-color: #243249;
+    color: #f7f9fc;
+    box-shadow: 14px 0 34px -30px rgb(2 8 23 / 0.9);
   }
-  .mf-shell .mf-shell-sidebar .mf-shell-nav-group-label { color:#7890ae; font-weight:700; letter-spacing:.11em; }
-  .mf-shell .mf-shell-sidebar .mf-shell-nav-item { color:#c3d0e2; transition:transform 140ms cubic-bezier(.2,.8,.2,1),background-color 140ms ease,color 140ms ease,box-shadow 140ms ease; }
-  .mf-shell .mf-shell-sidebar .mf-shell-nav-item:hover { transform:translateX(2px); background:rgb(255 255 255/.085); color:#fff; }
+  .mf-shell .mf-shell-sidebar .mf-shell-nav-item {
+    color: #d3dbe8;
+    border-radius: 0.65rem;
+    transition: transform 125ms cubic-bezier(.2,.8,.2,1), background-color 125ms ease, color 125ms ease, box-shadow 125ms ease;
+  }
+  .mf-shell .mf-shell-sidebar .mf-shell-nav-item:hover {
+    transform: translateX(2px);
+    background: rgb(255 255 255 / 0.075);
+    color: #ffffff;
+  }
   .mf-shell .mf-shell-sidebar .mf-shell-nav-item[data-active="true"] {
-    background:linear-gradient(135deg,var(--primary),color-mix(in srgb,var(--primary) 68%,#071427));
-    box-shadow:0 10px 24px -13px color-mix(in srgb,var(--primary) 88%,transparent),inset 0 0 0 1px rgb(255 255 255/.16); font-weight:700;
+    background: linear-gradient(135deg, var(--primary), color-mix(in srgb, var(--primary) 74%, #06101f));
+    border-color: color-mix(in srgb, var(--primary) 72%, #ffffff);
+    color: var(--primary-foreground);
+    font-weight: 720;
+    box-shadow: 0 10px 24px -14px color-mix(in srgb, var(--primary) 78%, transparent), inset 0 0 0 1px rgb(255 255 255 / 0.13);
   }
-  .mf-shell .mf-brand-mark { box-shadow:0 8px 20px -10px color-mix(in srgb,var(--primary) 82%,#000); }
+  .mf-shell .mf-shell-sidebar input[aria-label="Tìm menu"] {
+    border-color: #2d3b50;
+    background: #151f2f;
+    color: #f8fafc;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.035);
+  }
+  .mf-shell .mf-shell-sidebar input[aria-label="Tìm menu"]::placeholder { color: #8fa0b8; }
 
-  .mf-shell .mf-shell-topbar { background:color-mix(in srgb,var(--card) 94%,transparent); border-bottom-color:color-mix(in srgb,var(--border) 78%,var(--foreground)); box-shadow:0 10px 28px -25px rgb(4 17 39/.8); backdrop-filter:blur(18px) saturate(1.25); }
-  .mf-shell .mf-shell-search { border-color:color-mix(in srgb,var(--input) 84%,var(--foreground)); background:color-mix(in srgb,var(--card) 91%,var(--secondary)); box-shadow:inset 0 1px 0 rgb(255 255 255/.58),0 4px 14px rgb(6 19 40/.04); transition:border-color 140ms ease,box-shadow 140ms ease,background-color 140ms ease; }
-  .mf-shell .mf-shell-search:focus-within { border-color:var(--primary); background:var(--card); box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 16%,transparent),0 8px 22px rgb(6 19 40/.08); }
-  .mf-shell .mf-shell-content { background:radial-gradient(circle at 82% 0%,color-mix(in srgb,var(--primary) 9%,transparent),transparent 26rem),linear-gradient(180deg,color-mix(in srgb,var(--background) 96%,#fff),var(--background)); }
+  .mf-shell .mf-shell-topbar {
+    border-bottom-color: color-mix(in srgb, var(--border) 80%, var(--foreground));
+    background: color-mix(in srgb, var(--card) 94%, transparent);
+    box-shadow: 0 10px 24px -24px rgb(15 23 42 / 0.9);
+    backdrop-filter: blur(18px) saturate(1.18);
+  }
+  .mf-shell .mf-shell-search {
+    border-color: color-mix(in srgb, var(--input) 78%, var(--foreground));
+    background: var(--card);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.68), 0 4px 13px rgb(15 23 42 / 0.045);
+  }
+  .mf-shell .mf-shell-search:focus-within {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent), 0 8px 20px rgb(15 23 42 / 0.08);
+  }
+  .mf-shell .mf-shell-content {
+    background:
+      radial-gradient(circle at 91% 1%, color-mix(in srgb, var(--primary) 7%, transparent), transparent 25rem),
+      linear-gradient(180deg, color-mix(in srgb, var(--background) 93%, #ffffff), var(--background));
+  }
+  .mf-shell .mf-page-header {
+    min-height: 4rem;
+    border-bottom-color: color-mix(in srgb, var(--border) 82%, var(--foreground));
+    background: linear-gradient(90deg, var(--card), color-mix(in srgb, var(--primary) 4%, var(--card)));
+    box-shadow: 0 9px 22px -25px rgb(15 23 42 / 0.85);
+  }
+  .mf-shell .mf-page-title { font-size: 1.16rem; font-weight: 760; letter-spacing: -0.03em; }
+  .mf-shell .mf-page-subtitle { color: color-mix(in srgb, var(--muted-foreground) 88%, var(--foreground)); font-weight: 520; }
 
-  .mf-shell .mf-page-header { min-height:3.9rem; border-bottom-color:color-mix(in srgb,var(--border) 82%,var(--foreground)); background:linear-gradient(90deg,var(--card),color-mix(in srgb,var(--primary) 4%,var(--card))); box-shadow:0 8px 22px -24px rgb(5 18 40/.75); }
-  .mf-shell .mf-page-title { font-size:1.12rem; font-weight:760; letter-spacing:-.028em; }
-  .mf-shell .mf-page-subtitle { color:var(--muted-foreground); font-weight:520; }
-  .mf-shell .mf-section-heading { font-size:.82rem; font-weight:740; letter-spacing:-.012em; }
+  /* Twenty-like data surface: toolbar has hierarchy; data stays dense and scannable. */
+  .mf-shell .mf-list-view {
+    background: color-mix(in srgb, var(--background) 65%, var(--card));
+  }
+  .mf-shell .mf-list-toolbar {
+    border-bottom-color: color-mix(in srgb, var(--border) 84%, var(--foreground));
+    background: linear-gradient(180deg, var(--card), color-mix(in srgb, var(--card) 95%, var(--primary)));
+    box-shadow: 0 7px 20px -21px rgb(15 23 42 / 0.9);
+  }
+  .mf-shell .mf-list-filterbar { min-height: 3.25rem; }
+  .mf-shell .mf-list-toolbar :is(input, button[role="combobox"]) {
+    border-color: color-mix(in srgb, var(--input) 78%, var(--foreground));
+    background: var(--card);
+  }
+  .mf-shell .mf-list-toolbar :is(input, button[role="combobox"]):focus-visible {
+    border-color: var(--primary);
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 14%, transparent);
+  }
+  .mf-shell .mf-list-scroll {
+    background: var(--card);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--border) 68%, transparent);
+  }
+  .mf-shell .mf-list-view tbody tr {
+    transition: background-color 100ms ease, box-shadow 100ms ease;
+  }
+  .mf-shell .mf-list-view tbody tr:nth-child(even) {
+    background: color-mix(in srgb, var(--card) 97%, var(--primary));
+  }
+  .mf-shell .mf-list-view tbody tr:hover {
+    background: color-mix(in srgb, var(--primary) 6.5%, var(--card));
+  }
+  .mf-shell .mf-list-view tbody tr[data-state="selected"] {
+    background: color-mix(in srgb, var(--primary) 11%, var(--card));
+    box-shadow: inset 3px 0 0 var(--primary);
+  }
+  .mf-shell .mf-list-view tbody td {
+    border-bottom-color: color-mix(in srgb, var(--border) 72%, transparent);
+  }
+  .mf-shell .mf-list-mobile {
+    gap: 0.55rem;
+    padding: 0.55rem;
+    background: var(--background);
+  }
+  .mf-shell .mf-list-mobile > article {
+    border: 1px solid color-mix(in srgb, var(--border) 86%, var(--foreground));
+    border-radius: 0.9rem;
+    box-shadow: var(--mf-soft-shadow);
+  }
+  .mf-shell .mf-bulk-bar {
+    background: linear-gradient(90deg, color-mix(in srgb, var(--primary) 15%, var(--card)), color-mix(in srgb, var(--primary) 7%, var(--card)));
+    box-shadow: inset 3px 0 0 var(--primary), 0 7px 17px rgb(15 23 42 / 0.06);
+  }
 
-  .mf-shell :is(.mf-surface,.mf-view-card,.mf-section-card,.mf-stat-card,.mf-workspace-shortcut,.mf-kanban-card,.mf-number-card,.mf-dash-chart) { border-color:color-mix(in srgb,var(--border) 88%,var(--foreground)); box-shadow:var(--mf-card-shadow); }
-  .mf-shell :is(.mf-workspace-shortcut,.mf-kanban-card,.mf-number-card) { transition:transform 150ms cubic-bezier(.2,.8,.2,1),border-color 150ms ease,box-shadow 150ms ease,background-color 150ms ease; }
-  .mf-shell :is(.mf-workspace-shortcut,.mf-kanban-card,.mf-number-card):hover { transform:translateY(-2px); border-color:color-mix(in srgb,var(--primary) 46%,var(--border)); box-shadow:0 16px 34px -18px color-mix(in srgb,var(--primary) 32%,rgb(5 18 40/.2)),0 7px 18px rgb(5 18 40/.08); }
-  .mf-shell .mf-number-card { position:relative; overflow:hidden; }
-  .mf-shell .mf-number-card::before { position:absolute; inset:0 auto 0 0; width:3px; background:linear-gradient(180deg,var(--primary),color-mix(in srgb,var(--primary) 42%,transparent)); content:""; }
+  /* Twenty/Cal-like form hierarchy: sections become real work surfaces instead of separators. */
+  .mf-shell .mf-form-header {
+    border-bottom-color: color-mix(in srgb, var(--border) 80%, var(--foreground));
+    background: color-mix(in srgb, var(--card) 96%, transparent);
+    box-shadow: 0 9px 24px -25px rgb(15 23 42 / 0.9);
+    backdrop-filter: blur(18px) saturate(1.15);
+  }
+  .mf-shell .mf-form-body {
+    background:
+      radial-gradient(circle at 93% 0%, color-mix(in srgb, var(--primary) 5%, transparent), transparent 20rem),
+      var(--background);
+  }
+  .mf-shell .mf-form-section {
+    margin-block: 0.8rem;
+    padding: 1rem 1.05rem 1.1rem;
+    border: 1px solid color-mix(in srgb, var(--border) 86%, var(--foreground));
+    border-radius: 0.95rem;
+    background: var(--card);
+    box-shadow: var(--mf-card-shadow);
+  }
+  .mf-shell .mf-section-heading { margin-bottom: 0.9rem; }
+  .mf-shell .mf-section-heading h3 {
+    color: var(--foreground);
+    font-size: 0.82rem;
+    font-weight: 760;
+    letter-spacing: -0.012em;
+  }
+  .mf-shell .mf-section-heading > span {
+    background: linear-gradient(90deg, color-mix(in srgb, var(--primary) 46%, var(--border)), color-mix(in srgb, var(--border) 45%, transparent));
+  }
+  .mf-shell .mf-field > label,
+  .mf-shell .mf-field label {
+    color: color-mix(in srgb, var(--foreground) 84%, var(--muted-foreground));
+    font-weight: 650;
+  }
+  .mf-shell .mf-field :is(input, textarea, button[role="combobox"]) {
+    border-color: color-mix(in srgb, var(--input) 78%, var(--foreground));
+    background: color-mix(in srgb, var(--card) 97%, var(--primary));
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.62), 0 1px 2px rgb(15 23 42 / 0.035);
+    transition: border-color 120ms ease, box-shadow 120ms ease, background-color 120ms ease;
+  }
+  .mf-shell .mf-field :is(input, textarea, button[role="combobox"]):hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--primary) 34%, var(--input));
+  }
+  .mf-shell .mf-field :is(input, textarea, button[role="combobox"]):focus-visible {
+    border-color: var(--primary);
+    outline: none;
+    background: var(--card);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent), 0 5px 14px rgb(15 23 42 / 0.075);
+  }
+  .mf-shell .mf-field-readonly :is(input, textarea, button[role="combobox"]) {
+    background: var(--muted);
+    color: var(--muted-foreground);
+    box-shadow: none;
+  }
+  .mf-shell .mf-form-footer {
+    border-top-color: color-mix(in srgb, var(--border) 82%, var(--foreground));
+    background: color-mix(in srgb, var(--card) 96%, transparent);
+    box-shadow: 0 -10px 26px -25px rgb(15 23 42 / 0.8);
+  }
 
-  .mf-shell button[class*="bg-primary"] { box-shadow:0 10px 22px -13px color-mix(in srgb,var(--primary) 82%,transparent); transition:transform 120ms cubic-bezier(.2,.8,.2,1),box-shadow 120ms ease,filter 120ms ease; }
-  .mf-shell button[class*="bg-primary"]:not(:disabled):hover { transform:translateY(-1px); filter:saturate(1.16) brightness(1.03); box-shadow:0 15px 30px -14px color-mix(in srgb,var(--primary) 82%,transparent); }
-  .mf-shell button[class*="bg-primary"]:not(:disabled):active { transform:translateY(1px) scale(.985); box-shadow:0 5px 14px -10px color-mix(in srgb,var(--primary) 72%,transparent); }
-  .mf-shell :is(input,textarea,button[role="combobox"]) { border-color:var(--input); transition:border-color 130ms ease,box-shadow 130ms ease,background-color 130ms ease; }
-  .mf-shell :is(input,textarea,button[role="combobox"]):focus-visible { border-color:var(--primary); outline:none; box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 17%,transparent),0 5px 16px rgb(5 18 40/.07); }
-  .mf-shell .mf-field label { color:color-mix(in srgb,var(--foreground) 82%,var(--muted-foreground)); font-weight:650; }
-  .mf-shell .mf-form-header { border-bottom:1px solid color-mix(in srgb,var(--border) 82%,var(--foreground)); background:color-mix(in srgb,var(--card) 94%,transparent); box-shadow:0 10px 26px -26px rgb(5 18 40/.8); backdrop-filter:blur(18px) saturate(1.2); }
-  .mf-shell .mf-form-body { background:linear-gradient(180deg,color-mix(in srgb,var(--primary) 2.5%,var(--card)),var(--card) 10rem); }
-
-  .mf-shell .mf-list-view thead,.mf-shell .mf-report thead,.mf-shell .mf-list-view thead th,.mf-shell .mf-report thead th { background:#0a1730; color:#dce8f8; }
-  .mf-shell .mf-list-view th,.mf-shell .mf-report th { height:2.55rem; color:#dce8f8; font-weight:720; letter-spacing:.055em; }
-  .mf-shell .mf-list-view tbody tr,.mf-shell .mf-report tbody tr { transition:background-color 110ms ease,box-shadow 110ms ease; }
-  .mf-shell .mf-list-view tbody tr:hover,.mf-shell .mf-report tbody tr:hover { background:color-mix(in srgb,var(--primary) 6%,var(--card)); }
-  .mf-shell .mf-list-view tbody tr[data-state="selected"] { background:color-mix(in srgb,var(--primary) 13%,var(--card)); box-shadow:inset 3px 0 0 var(--primary); }
-  .mf-shell .mf-bulk-bar { background:linear-gradient(90deg,color-mix(in srgb,var(--primary) 16%,var(--card)),color-mix(in srgb,var(--primary) 8%,var(--card))); box-shadow:inset 3px 0 0 var(--primary),0 8px 18px rgb(5 18 40/.06); }
-  .mf-shell .mf-kanban-column { border-color:color-mix(in srgb,var(--border) 85%,var(--foreground)); background:color-mix(in srgb,var(--secondary) 86%,var(--card)); box-shadow:inset 0 3px 0 color-mix(in srgb,var(--primary) 22%,transparent); }
-  .mf-shell .mf-calendar-event { border-color:color-mix(in srgb,var(--primary) 46%,transparent); background:color-mix(in srgb,var(--primary) 14%,var(--card)); font-weight:650; box-shadow:0 5px 14px -9px color-mix(in srgb,var(--primary) 45%,transparent); }
-  .mf-shell .mf-gantt-bar { box-shadow:0 5px 16px -9px color-mix(in srgb,var(--primary) 70%,transparent); }
-
-  @keyframes mf-command-rise { from { opacity:.68; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
-  .mf-shell :is(.mf-number-card,.mf-workspace-shortcut) { animation:mf-command-rise 240ms cubic-bezier(.2,.8,.2,1) both; }
+  /* Midday-style hierarchy for cards, without turning an ERP into a slot machine. */
+  .mf-shell :is(.mf-surface, .mf-view-card, .mf-section-card, .mf-stat-card, .mf-workspace-shortcut, .mf-kanban-card, .mf-number-card, .mf-dash-chart) {
+    border-color: color-mix(in srgb, var(--border) 86%, var(--foreground));
+    box-shadow: var(--mf-card-shadow);
+  }
+  .mf-shell :is(.mf-workspace-shortcut, .mf-kanban-card, .mf-number-card) {
+    transition: transform 135ms cubic-bezier(.2,.8,.2,1), border-color 135ms ease, box-shadow 135ms ease, background-color 135ms ease;
+  }
+  .mf-shell :is(.mf-workspace-shortcut, .mf-kanban-card, .mf-number-card):hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--primary) 42%, var(--border));
+    box-shadow: 0 15px 32px -18px color-mix(in srgb, var(--primary) 28%, rgb(15 23 42 / 0.18)), 0 7px 18px rgb(15 23 42 / 0.08);
+  }
+  .mf-shell .mf-number-card { position: relative; overflow: hidden; }
+  .mf-shell .mf-number-card::before {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 3px;
+    background: linear-gradient(180deg, var(--primary), color-mix(in srgb, var(--primary) 38%, transparent));
+    content: "";
+  }
+  .mf-shell button[class*="bg-primary"] {
+    box-shadow: 0 9px 21px -13px color-mix(in srgb, var(--primary) 74%, transparent);
+    transition: transform 105ms cubic-bezier(.2,.8,.2,1), box-shadow 105ms ease, filter 105ms ease;
+  }
+  .mf-shell button[class*="bg-primary"]:not(:disabled):hover {
+    transform: translateY(-1px);
+    filter: saturate(1.1) brightness(1.025);
+    box-shadow: 0 13px 26px -13px color-mix(in srgb, var(--primary) 76%, transparent);
+  }
+  .mf-shell button[class*="bg-primary"]:not(:disabled):active { transform: translateY(1px) scale(0.985); }
+  .mf-shell .mf-workspace-tabs nav {
+    border-color: color-mix(in srgb, var(--border) 84%, var(--foreground));
+    background: color-mix(in srgb, var(--muted) 78%, var(--card));
+    box-shadow: 0 4px 13px rgb(15 23 42 / 0.055);
+  }
 }
 
-/* Unlayered intentionally: Tailwind utilities live in a later cascade layer and can otherwise
- * re-color an active navigation item even when the component selector is more specific. */
+/* Critical states stay unlayered so Tailwind utilities cannot wash them back out. */
+.mf-shell .mf-shell-sidebar .mf-shell-nav-group-label {
+  color: #91a4bd;
+  font-weight: 720;
+  letter-spacing: 0.095em;
+}
+.mf-shell .mf-shell-sidebar .mf-shell-nav-group-label:hover { color: #ffffff; background: rgb(255 255 255 / 0.055); }
+.mf-shell .mf-shell-sidebar .mf-shell-nav-item:hover { background: rgb(255 255 255 / 0.075); color: #ffffff; }
 .mf-shell .mf-shell-sidebar .mf-shell-nav-item[data-active="true"],
 .mf-shell .mf-shell-sidebar .mf-shell-nav-item[data-active="true"]:hover,
-.mf-shell .mf-shell-sidebar .mf-shell-nav-item[data-active="true"] svg { color:#fff; }
+.mf-shell .mf-shell-sidebar .mf-shell-nav-item[data-active="true"] > span,
+.mf-shell .mf-shell-sidebar .mf-shell-nav-item[data-active="true"] svg { color: var(--primary-foreground); }
+.mf-shell .mf-list-view thead th {
+  background: #111827;
+  color: #f8fafc;
+  border-bottom-color: #111827;
+  font-weight: 720;
+  letter-spacing: 0.035em;
+  box-shadow: inset 0 2px 0 color-mix(in srgb, var(--primary) 78%, transparent), var(--mf-sticky-edge);
+}
+.mf-shell .mf-list-view tbody tr[data-state="selected"] { background: color-mix(in srgb, var(--primary) 11%, var(--card)); box-shadow: inset 3px 0 0 var(--primary); }
+
+[data-theme="dark"] .mf-shell .mf-form-section,
+.mf-shell[data-theme="dark"] .mf-form-section { box-shadow: 0 1px 0 rgb(255 255 255 / 0.035), 0 12px 28px rgb(0 0 0 / 0.18); }
+[data-theme="dark"] .mf-shell .mf-list-view thead th,
+.mf-shell[data-theme="dark"] .mf-list-view thead th { background: #050b14; color: #f1f5f9; border-bottom-color: #26364d; }
+
+@media (prefers-reduced-motion: reduce) {
+  .mf-shell .mf-shell-nav-item,
+  .mf-shell :is(.mf-workspace-shortcut, .mf-kanban-card, .mf-number-card),
+  .mf-shell button[class*="bg-primary"],
+  .mf-shell .mf-list-view tbody tr,
+  .mf-shell .mf-field :is(input, textarea, button[role="combobox"]) { transition: none !important; transform: none !important; }
+}
