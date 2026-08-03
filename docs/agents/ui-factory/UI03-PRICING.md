@@ -153,7 +153,7 @@ Implemented in `server/packages/clouderp-pricing/src/matrix.ts`:
 - trusted context owns `tenantId` and `actor`; renderer input cannot select a tenant or identity;
 - permission-aware record/query ports and mutation ports are explicit contracts rather than hidden client assumptions;
 - bounded/searchable item navigation and sparse Item Price cells replace one-request-per-cell designs;
-- projection returns Item/Item Price OCC versions plus server-derived capabilities;
+- projection returns Item/Item Price OCC versions plus granular server-derived capabilities for Item UOM update, Item Price update/create and Price List creation;
 - UOM conversion validation uses six-decimal fixed-point semantics;
 - price normalization uses the canonical Currency master scale and never hard-codes VND;
 - stock UOM cannot be removed or given a factor other than 1;
@@ -161,6 +161,8 @@ Implemented in `server/packages/clouderp-pricing/src/matrix.ts`:
 - disabled Price Lists cannot receive a newly enabled price;
 - duplicate active Item Price rows for the same `(price_list, item, uom)` fail closed rather than creating a second price authority;
 - existing price edits require OCC unless the exact desired state is already present, which permits safe replay after a previous partial commit;
+- mutation idempotency keys are SHA-256 derived from structured request/operation identity instead of delimiter-concatenated business names, avoiding ambiguous-key collisions;
+- Price List retries are delegated to the canonical mutation idempotency boundary before duplicate-name rejection, so the same request can replay safely;
 - writes are preflighted and then executed as ordered idempotent document-kernel operations through an adapter contract;
 - because the current kernel command/store is aggregate-scoped, this slice does **not** pretend cross-document atomicity exists. If a later operation fails after earlier writes succeeded, the action returns `PRICING_MATRIX_PARTIAL_FAILURE` as retryable and the same `requestId` safely continues from the resulting state.
 
@@ -168,7 +170,7 @@ Package export added: `@cloudforge/clouderp-pricing/matrix`.
 
 ### Targeted verification
 
-`server/tests/pricing-matrix-authority.test.mjs` covers 13 authority cases:
+`server/tests/pricing-matrix-authority.test.mjs` covers 14 authority cases:
 
 1. bounded/searchable read + sparse cells + OCC + capabilities;
 2. read permission fail-closed;
@@ -182,10 +184,11 @@ Package export added: `@cloudforge/clouderp-pricing/matrix`.
 10. explicit partial failure + same-request retry;
 11. replayed desired price is a no-op;
 12. duplicate active business cell detection;
-13. Price List creation with caller-selected currency/reference validation.
+13. Price List creation with caller-selected currency/reference validation;
+14. same-request Price List replay is served by mutation idempotency without duplicate creation.
 
 Local isolated strict-TypeScript compile using the repository compiler flags: PASS.
-Local targeted Node test run: `13/13 PASS`.
+Local targeted Node test run: `14/14 PASS`.
 
 ### Atomicity/audit boundary
 
