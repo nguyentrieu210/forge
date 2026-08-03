@@ -90,6 +90,8 @@ const setter = (field, property, propertyType, value) => setters.push({
   value: String(value),
 });
 
+// Turn required off BEFORE hiding those fields. The server validates the effective schema after
+// every Property Setter write, so this order keeps every intermediate state usable as well.
 for (const field of REQUIRED_OFF) setter(field, "reqd", "Check", "0");
 for (const field of ALL_EMPLOYEE_FIELDS) {
   if (!KEEP_FIELDS.has(field)) setter(field, "hidden", "Check", "1");
@@ -105,6 +107,8 @@ setter("mobile", "label", "Data", "Số điện thoại");
 setter("bank_account_no", "label", "Data", "Số tài khoản ngân hàng");
 setter("bank_name", "label", "Data", "Ngân hàng");
 
+// Phone/bank fields stay at permlevel=1. Giving Employee role level 1 would expose private bank
+// data to ordinary employees, so only people who already operate Employee records receive it.
 const fieldLevelRoles = ["HR User", "HR Manager", "System Manager"];
 
 function summary() {
@@ -168,6 +172,14 @@ async function request(path, { method = "GET", body } = {}) {
 }
 
 async function call(method, body = {}, httpMethod = "POST") {
+  if (httpMethod === "GET") {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(body)) {
+      if (value !== undefined && value !== null) params.set(key, String(value));
+    }
+    const suffix = params.size ? `?${params.toString()}` : "";
+    return request(`/api/method/${method}${suffix}`, { method: "GET" });
+  }
   return request(`/api/method/${method}`, { method: httpMethod, body });
 }
 
@@ -211,8 +223,6 @@ for (const record of setters) {
   await request("/api/resource/Property%20Setter", { method: "POST", body: record });
 }
 
-// Phone and bank fields intentionally remain permlevel=1 so an ordinary Employee cannot read
-// another employee's private contact/bank data. Only HR/System operators receive level-1 access.
 for (const role of fieldLevelRoles) {
   const current = await call(
     "frappe.core.page.permission_manager.permission_manager.get_permissions",
