@@ -1,6 +1,6 @@
 # CURRENT STATUS
 
-Ngày cập nhật: **2026-08-03**.
+Ngày cập nhật: **2026-08-04**.
 
 GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. Không hardcode exact current `main` vào status dài hạn; phải đọc GitHub khi bắt đầu/tiếp tục.
 
@@ -11,6 +11,20 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. 
 - Forge product/integration baseline: **0.2.0 — Enterprise Parallel Baseline**.
 - Component versioning độc lập theo `docs/VERSIONING.md`; bump root version không đồng nghĩa production deploy.
 - Warehouse Cash Alumdoor merge checkpoint: `c3dbcd20a7a88c17c1a9f10c4fff82b329e27855`.
+
+## DONE — CFMAX R2 Cloudflare-native source convergence
+
+- Canonical convergence PR `#570` đã merge vào `main` tại `88a349e3f4267aa749d791b504cb7a7c13f3e9b5` sau coordinator takeover toàn bộ 8 CFMAX lane.
+- Final exact-head candidate `4705fe6c4f22ddaf1fe397d433f7361dd953f94b` chạy GitHub Actions `30854860156` **SUCCESS** trước merge.
+- Common gate đã PASS focused CF01 D1 TypeScript, CF02 Workflow build, CF03 telemetry build, CF05 AI build, CF06 UI dependency chain, Query Worker real-workerd D1 **9/9**, combined CFMAX regressions **28/28**, CF08 governance, Gateway/Tenant/Workflow Wrangler dry-run và Query binding parse.
+- CF01 D1 Sessions/bookmark, CF02 durable route-index Workflow, CF04 edge source contract và CF06 Browser Run render/export hiện ở mức **Wired source**, không tự nâng RC/Hardened khi chưa có provider/live evidence.
+- CF03 usage telemetry đã merge nhưng Analytics Engine vẫn dormant; `O01-003` Wired và `T01-008` Foundation theo evidence hiện có.
+- CF05 AI policy/AI Gateway seam đã merge; provider resource/spend-policy/privacy evidence còn thiếu.
+- CF07 Dynamic Workers, Containers/Sandbox, Hyperdrive và Pipelines được **DEFERRED** có chủ đích vì chưa có workload đủ chứng minh lợi ích.
+- CF08 source/config governance đã merge; remote desired-vs-observed Cloudflare state vẫn `unverified` cho tới khi có read-only provider inventory thật.
+- Repository-wide server TypeScript baseline vẫn có debt ở Manufacturing/CRM/App Factory/QMS/Frappe-model ngoài CFMAX diff; debt này được ghi nhận chứ không bị sửa ké hoặc báo PASS giả.
+- Merge `#570` không deploy production, không bật D1 replica, không tạo Workflow/Analytics/AI Gateway resource, không mutate WAF/Access/Turnstile/DNS/secrets/PITR/customer data.
+- Canonical evidence: `docs/agents/cloudflare-cfmax/CFMAX_R2_CONVERGENCE_20260804.md`, `docs/agents/cloudflare-cfmax/CFMAX_R2_POST_MERGE_20260804.md`, `docs/agents/cloudflare-cfmax/AGENT_BOARD.md`.
 
 ## DONE — Enterprise North Star + parallel execution baseline
 
@@ -119,16 +133,17 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. 
 
 ## Chưa hoàn tất
 
-1. Hoàn tất exact regression/verification cho `fix/vn-accounting-period-integrity-20260803-r8` rồi mới PR/merge hoặc chuyển evidence/implementation hợp lệ sang WS01.
-2. Một UI push thực tế sau fast-path merge để đo duration và xác nhận `Deploy Gateway + /release.json` PASS; WS14 cũng cần evidence này để đóng deploy cho 5 slice đã merge.
-3. HRM statutory payroll-rule evaluator nếu cần tự động PIT/BHXH theo luật; phải có schema/version/nguồn chính thức và không sửa rule đã dùng; WS06 là owner mới.
-4. Bulk Transaction cho Stock Reconciliation; WS04 phải audit PR lịch sử trước khi viết lại.
-5. Bulk Transaction cho BOM parent + child/version; WS05/WS09 phối hợp nếu cần input-table primitive chung.
-6. First-class AppAction input-table contract; WS09 owner.
-7. Batch Print / QR label queue; phân owner theo shared platform trước implementation.
-8. P1 Daily detailed ledger hardening/closure; WS01/WS08/WS12 phối hợp theo source-of-truth và evidence.
-9. Plastic ERP các wave sau P0-A; chỉ mở lại dưới workstream/vertical ownership rõ.
-10. Rebase 18 agent branches lên exact Forge 0.2.0 main baseline trước khi implementation nếu branch head còn dựa trên snapshot cũ.
+1. CFMAX provider/non-production closure: D1 replica/APAC proof, deployed Workflow recovery proof, Analytics Engine live proof nếu adopt, WAF/Turnstile/Access provider proof, AI Gateway live policy evidence, Browser Run live proof, remote Cloudflare drift inventory và rollback/restore/PITR exercise trước RC/Hardened.
+2. Hoàn tất exact regression/verification cho `fix/vn-accounting-period-integrity-20260803-r8` rồi mới PR/merge hoặc chuyển evidence/implementation hợp lệ sang WS01.
+3. Một UI push thực tế sau fast-path merge để đo duration và xác nhận `Deploy Gateway + /release.json` PASS; WS14 cũng cần evidence này để đóng deploy cho 5 slice đã merge.
+4. HRM statutory payroll-rule evaluator nếu cần tự động PIT/BHXH theo luật; phải có schema/version/nguồn chính thức và không sửa rule đã dùng; WS06 là owner mới.
+5. Bulk Transaction cho Stock Reconciliation; WS04 phải audit PR lịch sử trước khi viết lại.
+6. Bulk Transaction cho BOM parent + child/version; WS05/WS09 phối hợp nếu cần input-table primitive chung.
+7. First-class AppAction input-table contract; WS09 owner.
+8. Batch Print / QR label queue; phân owner theo shared platform trước implementation.
+9. P1 Daily detailed ledger hardening/closure; WS01/WS08/WS12 phối hợp theo source-of-truth và evidence.
+10. Plastic ERP các wave sau P0-A; chỉ mở lại dưới workstream/vertical ownership rõ.
+11. Rebase 18 agent branches lên exact current `main` trước implementation nếu branch head còn dựa trên snapshot cũ.
 
 ## Guardrails
 
