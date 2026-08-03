@@ -1,12 +1,14 @@
-import type { JsonObject } from "../../contracts/src/index.js";
+import type { JsonObject, StockBundleUsageEntry, StockLedgerEntry } from "../../contracts/src/index.js";
 import { requireLeafWarehouse } from "../../clouderp-stock/src/index.js";
 import { errors } from "../../core/src/index.js";
 import type { ControllerContext } from "../../document-kernel/src/index.js";
+import { reverseStock } from "../../ledger/src/index.js";
 import { StockReconciliationController } from "./alumdoor-inventory.js";
 
 type ReconciliationContext = Parameters<StockReconciliationController["normalize"]>[0];
 type ReconciliationData = Awaited<ReturnType<StockReconciliationController["normalize"]>>;
 type ReconciliationRow = ReconciliationData["items"][number];
+type ReconciliationLedgers = Awaited<ReturnType<StockReconciliationController["ledger"]>>;
 
 const FROZEN_SNAPSHOT_FIELDS = ["warehouse", "scope", "item_group", "item_code", "snapshot_at", "counted_by"] as const;
 
@@ -71,6 +73,46 @@ async function assertRowWithinScope(
   }
 }
 
+function assertReversalApprover(context: ReconciliationContext, countedBy: string): void {
+  if (!context.command.actor.roles.includes("Chủ xưởng")
+    && !context.command.actor.roles.includes("System Manager")
+    && context.command.actor.user_id !== "Administrator") {
+    throw errors.permission("Chỉ Chủ xưởng được đảo phiếu kiểm kê đã ghi sổ");
+  }
+  if (context.command.actor.user_id === countedBy) {
+    throw errors.permission("Người đếm không được tự đảo phiếu kiểm kê của mình");
+  }
+}
+
+async function assertReversalPeriodOpen(context: ReconciliationContext, document: ReconciliationData): Promise<void> {
+  if (context.command.actor.roles.includes("System Manager") || context.command.actor.user_id === "Administrator") return;
+  const company = text(document.company);
+  if (!company) throw errors.validation("Phiếu kiểm kê đã ghi sổ phải có công ty để đảo sổ");
+  const lock = await context.reader.getPeriodLockDate(context.command.tenant_id, company);
+  if (lock && text(document.snapshot_at).slice(0, 10) <= lock) {
+    throw errors.validation(`Ngày ${text(document.snapshot_at).slice(0, 10)} thuộc kỳ đã khoá`, { lock_date: lock });
+  }
+}
+
+function reverseReconciliationBundleUsages(document: ReconciliationData): StockBundleUsageEntry[] {
+  const usages: StockBundleUsageEntry[] = [];
+  for (const [index, row] of document.items.entries()) {
+    const bundleName = text(row.serial_and_batch_bundle);
+    const varianceQty = row.variance_qty_micros ?? 0;
+    if (!bundleName || varianceQty === 0) continue;
+    usages.push({
+      line_key: `REV-RECON-BUNDLE-${text(row.row_id) || index + 1}`,
+      bundle_name: bundleName,
+      item_code: text(row.item_code),
+      warehouse: text(document.warehouse),
+      direction: varianceQty > 0 ? "Inward" : "Outward",
+      usage_delta: -1,
+      posting_at: text(document.snapshot_at),
+    });
+  }
+  return usages;
+}
+
 export class StockReconciliationIntegrityController extends StockReconciliationController {
   override async normalize(context: ReconciliationContext): Promise<ReconciliationData> {
     const input = context.command.document;
@@ -120,5 +162,31 @@ export class StockReconciliationIntegrityController extends StockReconciliationC
       },
     } as ReconciliationContext;
     return super.normalize(delegated);
+  }
+
+  override async ledger(context: ReconciliationContext, data: ReconciliationData): Promise<ReconciliationLedgers> {
+    if (context.command.action !== "cancel") return super.ledger(context, data);
+    if (!context.existing || context.existing.docstatus !== 1) {
+      throw errors.lifecycle("Chỉ phiếu kiểm kê đã ghi sổ mới được đảo");
+    }
+    if (!text(data.cancel_reason)) throw errors.validation("Phải nhập lý do đảo phiếu kiểm kê");
+    assertReversalApprover(context, text(data.counted_by));
+    await assertReversalPeriodOpen(context, data);
+
+    const original: StockLedgerEntry[] = await context.reader.getVoucherStockEntries(
+      context.command.tenant_id,
+      this.doctype,
+      context.command.aggregate.name,
+      context.existing.version,
+    );
+    return {
+      stock: reverseStock(original),
+      bundleUsages: reverseReconciliationBundleUsages(data),
+    };
+  }
+
+  protected override status(context: ReconciliationContext, data: ReconciliationData): string {
+    if (context.command.action === "cancel") return "Đã đảo kiểm kê";
+    return super.status(context, data);
   }
 }
