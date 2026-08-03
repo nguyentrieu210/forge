@@ -22,10 +22,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - name: Checkout exact PR head
+      - name: Checkout current PR merge result
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
       - name: Setup Node 22
         uses: actions/setup-node@v4
         with:
