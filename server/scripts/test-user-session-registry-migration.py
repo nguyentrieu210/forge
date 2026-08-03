@@ -15,7 +15,7 @@ connection.executescript(
     INSERT INTO users(tenant_id,user_id) VALUES('tenant-a','user@example.com');
     """
 )
-connection.executescript((root / "migrations/tenant/0050_user_session_registry.sql").read_text())
+connection.executescript((root / "migrations/tenant/0054_user_session_registry.sql").read_text())
 
 connection.execute(
     """INSERT INTO user_sessions(
