@@ -31,11 +31,11 @@ export function reverseStock(lines: StockLedgerEntry[]): StockLedgerEntry[] {
   return lines.map((line) => ({
     ...line,
     line_key: `REV-${line.line_key}`,
-    actual_qty_micros: -line.actual_qty_micros,
+    actual_qty_micros: negateCanonicalInteger(line.actual_qty_micros),
     ...(line.actual_weight_micros === undefined
       ? {}
-      : { actual_weight_micros: -line.actual_weight_micros }),
-    stock_value_difference_minor: -line.stock_value_difference_minor,
+      : { actual_weight_micros: negateCanonicalInteger(line.actual_weight_micros) }),
+    stock_value_difference_minor: negateCanonicalInteger(line.stock_value_difference_minor),
   }));
 }
 
@@ -46,6 +46,16 @@ export function reversePayment(lines: PaymentLedgerEntry[]): PaymentLedgerEntry[
     amount_minor: -line.amount_minor,
     base_amount_minor: -line.base_amount_minor,
   }));
+}
+
+/**
+ * JavaScript has a distinct -0 value. Ledger storage, reconciliation and audit equality do not:
+ * reversing an exact zero must remain canonical integer 0, otherwise an exact historical reversal
+ * can differ in-memory from the same D1 INTEGER value despite representing identical accounting
+ * state.
+ */
+function negateCanonicalInteger(value: number): number {
+  return value === 0 ? 0 : -value;
 }
 
 function assertSafeMinor(value: number, field: string): void {
