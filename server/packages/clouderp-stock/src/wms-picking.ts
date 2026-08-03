@@ -23,6 +23,8 @@ export interface PickPlan {
   allocations: PickAllocation[];
 }
 
+const STOCK_UNIT_MICROS = 1_000_000;
+
 function positiveSafeInteger(value: number, field: string): number {
   if (!Number.isSafeInteger(value) || value <= 0) throw errors.validation(`${field} must be a positive safe integer`);
   return value;
@@ -44,6 +46,7 @@ function key(candidate: PickCandidate): string {
  * quality status and warehouse permissions into `sequence`. This primitive only
  * guarantees that allocation never exceeds the authoritative available quantity,
  * never double-consumes the same physical candidate and reports shortage explicitly.
+ * Serial-tracked demand stays atomic at exactly one stock unit per serial identity.
  * It does not post stock or mark a reservation consumed.
  */
 export function planPicking(qtyMicros: number, candidates: PickCandidate[]): PickPlan {
@@ -58,7 +61,7 @@ export function planPicking(qtyMicros: number, candidates: PickCandidate[]): Pic
     if (!warehouse) throw errors.validation(`candidates[${index}].warehouse is required`);
     const available = nonNegativeSafeInteger(candidate.available_qty_micros, `candidates[${index}].available_qty_micros`);
     const sequence = positiveSafeInteger(candidate.sequence, `candidates[${index}].sequence`);
-    if (candidate.serial_no && available !== 1_000_000) {
+    if (candidate.serial_no && available !== STOCK_UNIT_MICROS) {
       throw errors.validation(`Serial ${candidate.serial_no} must expose exactly one unit of available quantity`);
     }
     const identity = key({ ...candidate, warehouse });
@@ -66,6 +69,16 @@ export function planPicking(qtyMicros: number, candidates: PickCandidate[]): Pic
     seen.add(identity);
     return { ...candidate, warehouse, available_qty_micros: available, sequence };
   }).sort((left, right) => left.sequence - right.sequence || key(left).localeCompare(key(right)));
+
+  const hasSerialCandidates = normalized.some((candidate) => Boolean(candidate.serial_no));
+  if (hasSerialCandidates) {
+    if (normalized.some((candidate) => !candidate.serial_no)) {
+      throw errors.validation("Serial-tracked picking cannot mix serial and non-serial candidate identities");
+    }
+    if (requested % STOCK_UNIT_MICROS !== 0) {
+      throw errors.validation("Serial-tracked picking quantity must be a whole number of stock units");
+    }
+  }
 
   let remaining = requested;
   const allocations: PickAllocation[] = [];
