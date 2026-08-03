@@ -2,6 +2,7 @@ export type MatrixSourceKind = "doctype" | "projection";
 export type MatrixReadPermissionAction = "read";
 export type MatrixWritePermissionAction = "write" | "create" | "submit";
 export type MatrixEditor = "Data" | "Int" | "Float" | "Currency" | "Percent" | "Check" | "Select" | "Link";
+export type MatrixValueValidation = "positive" | "non_negative";
 
 export interface MatrixSourceRef {
   kind: MatrixSourceKind;
@@ -20,33 +21,36 @@ export interface MatrixAxisPolicy {
 
 export interface MatrixAuxiliaryFieldPolicy {
   field: string;
-  /** Omitted means display-only. Supplying an editor declares an editable auxiliary field. */
+  label?: string;
   editor?: MatrixEditor;
+  readOnlyWhenField?: string;
+  validation?: MatrixValueValidation;
 }
 
 export interface MatrixRowAxisPolicy extends MatrixAxisPolicy {
+  primaryField?: string;
   auxiliaryFields?: MatrixAuxiliaryFieldPolicy[];
 }
 
 export interface MatrixColumnAxisPolicy extends MatrixAxisPolicy {
   subtitleField?: string;
+  disabledField?: string;
+  selectedFirst?: boolean;
 }
 
-/** Optional tree navigator. Complex multi-source navigation belongs behind a named projection. */
 export interface MatrixNavigatorPolicy extends MatrixAxisPolicy {
   parentField: string;
+  secondaryLabelField?: string;
 }
 
 export interface MatrixCellIdentityPolicy {
   rowField: string;
   columnField: string;
-  /** Stable record identity when the sparse cell source exposes one. */
   recordField?: string;
 }
 
 export interface MatrixCellEnabledPolicy {
   field: string;
-  /** `falsy` covers common `disabled=0` storage without inventing domain-specific flags. */
   when: "truthy" | "falsy";
 }
 
@@ -56,6 +60,9 @@ export interface MatrixCellPolicy {
   valueField: string;
   editor: MatrixEditor;
   enabled?: MatrixCellEnabledPolicy;
+  versionField?: string;
+  validation?: MatrixValueValidation;
+  disabledColumnReadOnly?: boolean;
 }
 
 export interface MatrixActionRef {
@@ -80,21 +87,23 @@ export type MatrixWriteRef =
 export interface MatrixRowMemberPolicy {
   create?: MatrixActionRef;
   remove?: MatrixActionRef;
+  primaryRemovable?: boolean;
 }
 
 export interface MatrixColumnMemberPolicy {
   create?: MatrixActionRef;
   allowHide?: boolean;
+  allowHideAll?: boolean;
   allowShow?: boolean;
+  allowShowAll?: boolean;
 }
 
 export interface MatrixQueryPolicy {
-  /** Bounded by the server validator to 20..500. */
   pageSize: number;
-  /** Maximum matches returned by one search, bounded to 1..200. */
   searchLimit: number;
-  /** Minimum characters before remote search, bounded to 0..10. */
   minSearchChars: number;
+  searchMode?: "contains" | "prefix" | "token_contains";
+  accentInsensitive?: boolean;
 }
 
 export interface MatrixPresentationPolicy {
@@ -102,6 +111,10 @@ export interface MatrixPresentationPolicy {
   stickyColumnAxis: boolean;
   focusMode: "inline" | "toggle";
   mobileMode: "scroll" | "step";
+  navigatorResizable?: boolean;
+  navigatorCollapsible?: boolean;
+  showDirtyIndicator?: boolean;
+  unsavedChangeGuard?: boolean;
 }
 
 export type MatrixDirtyPolicy = "warn" | "block";
@@ -117,7 +130,6 @@ export interface MatrixViewEnabledPolicy {
   rowAxis: MatrixRowAxisPolicy;
   columnAxis: MatrixColumnAxisPolicy;
   cell: MatrixCellPolicy;
-  /** Generic document update is only legal for safe master records; compound writes use actions. */
   write?: MatrixWriteRef;
   rowMembers?: MatrixRowMemberPolicy;
   columnMembers?: MatrixColumnMemberPolicy;
