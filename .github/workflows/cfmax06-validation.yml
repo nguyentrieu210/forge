@@ -52,13 +52,13 @@ jobs:
         working-directory: server
         run: pnpm exec wrangler deploy --dry-run --config apps/tenant-worker/wrangler.jsonc --outdir /tmp/cfmax06-worker
 
-      - name: Generate exact tenant binding types
+      - name: Generate exact tracked tenant binding types
         working-directory: server
         run: |
-          pnpm exec wrangler types /tmp/cfmax06-worker-configuration.d.ts --config apps/tenant-worker/wrangler.jsonc --env-interface TenantWorkerBindings --include-runtime false
-          grep -q 'BROWSER' /tmp/cfmax06-worker-configuration.d.ts
-          grep -q 'index-cf6' /tmp/cfmax06-worker-configuration.d.ts
-          cat /tmp/cfmax06-worker-configuration.d.ts
+          pnpm exec wrangler types apps/tenant-worker/worker-configuration.d.ts --config apps/tenant-worker/wrangler.jsonc --env-interface TenantWorkerBindings --include-runtime false
+          grep -q 'BROWSER: BrowserRun' apps/tenant-worker/worker-configuration.d.ts
+          grep -q 'src/index-cf6' apps/tenant-worker/worker-configuration.d.ts
+          cat apps/tenant-worker/worker-configuration.d.ts
 
       - name: Full server build baseline
         continue-on-error: true
