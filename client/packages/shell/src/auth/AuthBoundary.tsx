@@ -1,14 +1,14 @@
 /**
- * AuthBoundary — lớp auth CHUNG cho app runtime (P1-AUTH-01). Phát hiện Guest/401 từ getBoot,
- * cài CSRF token cho request ghi, và tự đưa UI về guest khi phiên hết hạn GIỮA lúc dùng (không
- * chỉ lúc tải trang) qua adapter.onSessionExpired. App sinh ra (create-metaforge-app) VÀ apps/demo
- * dùng CHUNG component này — không copy logic vào từng app.
+ * AuthBoundary — authoritative session boundary shared by every runtime app.
+ *
+ * UI V3 changes presentation only: cookie-session, getBoot dedupe, CSRF installation,
+ * logout invalidation and onSessionExpired behavior remain the same authority as before.
  */
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import type { FrappeAdapter, MetaForgeBootDTO } from "@metaforge/adapter-frappe";
+import { AuthBootScreen, AuthErrorScreen, AuthNotice, HiddenAuthRender, type AuthNoticeKind } from "./AuthPresentation.js";
 
-// dedupe theo TỪNG adapter instance — StrictMode double-invoke effect KHÔNG gọi getBoot 2 lần,
-// và nhiều AuthBoundary (hiếm) dùng adapter khác nhau không đụng cache của nhau.
+// Dedupe per adapter instance so StrictMode does not duplicate the initial boot request.
 const bootPromises = new WeakMap<FrappeAdapter, Promise<MetaForgeBootDTO>>();
 function getBootOnce(adapter: FrappeAdapter): Promise<MetaForgeBootDTO> {
   let p = bootPromises.get(adapter);
@@ -21,12 +21,8 @@ function getBootOnce(adapter: FrappeAdapter): Promise<MetaForgeBootDTO> {
   }
   return p;
 }
-// Review độc lập (checkpoint 453d322) — bug thật: cache CHỈ bị xoá khi getBoot() lỗi. Boot THÀNH
-// CÔNG thì promise nằm lại vĩnh viễn trong WeakMap theo adapter instance (1 instance sống suốt vòng
-// đời app). User A đăng nhập → boot A cache → logout → User B đăng nhập CÙNG TAB → load() gọi lại
-// getBootOnce() vẫn trả promise ĐÃ RESOLVE của A (không hề gọi mạng lại) → UI/roles/scopeKey/CSRF
-// của B đều là của A cho tới khi F5. Phải xoá cache ở MỌI điểm rời khỏi "ready": logout() chủ động
-// VÀ onSessionExpired() (hết phiên giữa lúc dùng) — không chỉ điểm gọi lại getBoot() lúc lỗi.
+
+// A successful boot must also be invalidated whenever the current authenticated session ends.
 function invalidateBoot(adapter: FrappeAdapter): void {
   bootPromises.delete(adapter);
 }
@@ -38,25 +34,28 @@ export type AuthState =
   | { status: "ready"; boot: MetaForgeBootDTO };
 
 export interface AuthedContext {
-  /** Đăng xuất: gọi adapter.logout() rồi đưa UI về guest ngay (không đợi 1 request khác fail). */
+  /** Logs out through the adapter, then immediately returns presentation to guest. */
   logout: () => Promise<void>;
 }
 
 export interface AuthBoundaryProps {
   adapter: FrappeAdapter;
-  /** Guest hoặc phiên hết hạn. Nhận `retry` để gọi lại sau khi user đăng nhập thành công
-   * (vd `<LoginForm onSuccess={retry} />`), hoặc dùng để điều hướng route riêng (`<Navigate to="/login"/>`). */
+  /** Guest or expired-session content. `retry` performs a fresh authoritative boot after login. */
   renderGuest: (retry: () => void) => ReactNode;
+  /** Kept for compatibility; V3 renders one canonical auth error chrome and mounts this result hidden. */
   renderError?: (message: string) => ReactNode;
+  /** Kept for compatibility; V3 renders one canonical boot surface and mounts this result hidden. */
   renderLoading?: () => ReactNode;
   children: (boot: MetaForgeBootDTO, ctx: AuthedContext) => ReactNode;
 }
 
 export function AuthBoundary({ adapter, renderGuest, renderError, renderLoading, children }: AuthBoundaryProps): ReactNode {
   const [state, setState] = useState<AuthState>({ status: "loading" });
+  const [notice, setNotice] = useState<AuthNoticeKind | null>(null);
   const aliveRef = useRef(true);
 
   const load = useCallback(() => {
+    setNotice(null);
     setState({ status: "loading" });
     getBootOnce(adapter)
       .then((boot) => {
@@ -67,7 +66,7 @@ export function AuthBoundary({ adapter, renderGuest, renderError, renderLoading,
       .catch((e: unknown) => {
         if (!aliveRef.current) return;
         const ae = adapter.mapError(e);
-        // getBoot tự nó fail vì permission (hiếm, vd role bị chặn whitelist) cũng coi là "chưa vào được" → guest.
+        // Authentication/permission failures still mean guest. No server/session semantics changed.
         if (ae.kind === "auth" || ae.kind === "permission") setState({ status: "guest" });
         else setState({ status: "error", message: ae.message });
       });
@@ -76,10 +75,11 @@ export function AuthBoundary({ adapter, renderGuest, renderError, renderLoading,
   useEffect(() => {
     aliveRef.current = true;
     load();
-    // Hết phiên GIỮA lúc dùng (bất kỳ call nào sau boot ban đầu) → quay lại guest ngay, không cần reload.
+    // Session expiry during use still invalidates the successful boot cache immediately.
     const unsubscribe = adapter.onSessionExpired(() => {
       if (!aliveRef.current) return;
       invalidateBoot(adapter);
+      setNotice("session-expired");
       setState({ status: "guest" });
     });
     return () => {
@@ -88,19 +88,49 @@ export function AuthBoundary({ adapter, renderGuest, renderError, renderLoading,
     };
   }, [adapter, load]);
 
+  useEffect(() => {
+    if (!notice) return;
+    const timer = window.setTimeout(() => setNotice(null), 6000);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
+
   const logout = useCallback(async () => {
     try {
       await adapter.logout();
     } finally {
-      // Xoá cache boot TRƯỚC (không đợi kết quả logout() — dù server logout lỗi, UI vẫn phải coi
-      // phiên hiện tại là hết, và lần load() kế tiếp (login khác) PHẢI gọi getBoot() thật lại).
+      // Same authority as before: even a failed server logout clears the local boot cache and UI session.
       invalidateBoot(adapter);
+      setNotice("signed-out");
       setState({ status: "guest" });
     }
   }, [adapter]);
 
-  if (state.status === "loading") return renderLoading ? renderLoading() : null;
-  if (state.status === "guest") return renderGuest(load);
-  if (state.status === "error") return renderError ? renderError(state.message) : renderGuest(load);
+  if (state.status === "loading") {
+    return (
+      <>
+        <AuthBootScreen />
+        <HiddenAuthRender>{renderLoading?.()}</HiddenAuthRender>
+      </>
+    );
+  }
+
+  if (state.status === "guest") {
+    return (
+      <>
+        {notice ? <AuthNotice kind={notice} /> : null}
+        {renderGuest(load)}
+      </>
+    );
+  }
+
+  if (state.status === "error") {
+    return (
+      <>
+        <AuthErrorScreen message={state.message} onRetry={load} />
+        <HiddenAuthRender>{renderError?.(state.message)}</HiddenAuthRender>
+      </>
+    );
+  }
+
   return children(state.boot, { logout });
 }
