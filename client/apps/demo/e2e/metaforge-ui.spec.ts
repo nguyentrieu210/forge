@@ -8,6 +8,11 @@ async function expectNoHorizontalOverflow(locator: Locator) {
   ).toBeLessThanOrEqual(1);
 }
 
+async function dismissAppearanceSetup(page: Page) {
+  const useTheme = page.getByRole("button", { name: "Dùng giao diện này", exact: true });
+  if (await useTheme.isVisible({ timeout: 2_000 }).catch(() => false)) await useTheme.click();
+}
+
 async function buttonInsideViewport(page: Page, label: string): Promise<Locator | null> {
   const viewport = page.viewportSize();
   const candidates = page.getByRole("button", { name: label, exact: true });
@@ -41,6 +46,7 @@ async function openSidebarModule(page: Page, label: string) {
 test.describe("MetaForge MISA-style workspace", () => {
   test("keeps overview in sidebar and compact nghiệp vụ tabs", async ({ page }, testInfo) => {
     await page.goto("/");
+    await dismissAppearanceSetup(page);
 
     await expect(page).toHaveURL(/\/view\/overview$/);
     await expect(page.getByRole("heading", { name: "Tổng quan điều hành" })).toBeVisible();
@@ -70,6 +76,7 @@ test.describe("MetaForge MISA-style workspace", () => {
 
   test("opens the Meta report builder with data, widget, canvas and inspector panels", async ({ page }, testInfo) => {
     await page.goto("/view/meta-process");
+    await dismissAppearanceSetup(page);
 
     const metaTabs = page.locator(".mf-workspace-tabs nav");
     await expect(metaTabs.getByRole("button")).toHaveText([
@@ -97,6 +104,7 @@ test.describe("MetaForge MISA-style workspace", () => {
 
   test("renders the v3 Meta Studio authoring surfaces", async ({ page }, testInfo) => {
     await page.goto("/view/b-doctype");
+    await dismissAppearanceSetup(page);
     await expect(page.getByRole("heading", { name: "DocType Builder", exact: true })).toBeVisible();
     await expect(page.getByText("Thư viện trường", { exact: true })).toBeVisible();
     await expect(page.getByText("Xem trước runtime", { exact: true })).toBeVisible();
