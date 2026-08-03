@@ -2,71 +2,123 @@
 
 Ngày cập nhật: **2026-08-03**.
 
-Tài liệu này lưu facts, checkpoints và business invariants của Forge. Exact GitHub state luôn thắng tài liệu nếu có thay đổi sau thời điểm này.
+Tài liệu này lưu facts, checkpoints và business invariants. Exact GitHub state luôn thắng prose nếu repo đã thay đổi sau thời điểm ghi.
 
-## Repository
+## Repository / execution state
 
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `main`.
 - WS00–WS17 convergence đã đóng ở repository level.
-- Toàn bộ PR delivery cũ còn mở tại thời điểm reset 2026-08-03 đã được đóng không merge.
-- Branch/history cũ chỉ là reference; task mới phải bắt đầu từ exact current `main`.
+- RC Hardening Wave 0 đã hội tụ vào main qua RC-01..RC-05.
+- PR/branch cũ chỉ là history/evidence; task mới bắt đầu từ exact current main.
+- Canonical execution plan: `docs/FORGE_RC_HARDENING_PLAN_20260803.md`.
+- Capability truth: `docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md`.
 
-## Enterprise maturity
+## Enterprise maturity truth
 
-- Theo `skills/forge-enterprise-completion/SKILL.md`, Forge hiện ở mức tổng thể **Wired**, với RC cục bộ ở một số capability/domain.
-- `docs/FORGE_ENTERPRISE_CAPABILITY_MAP.md` có **956 capability ID** tại thời điểm lập kế hoạch.
-- Chưa có live maturity register 956/956 trên current main; không báo phần trăm tổng cảm tính.
-- Chương trình mặc định tiếp theo: `docs/FORGE_RC_HARDENING_PLAN_20260803.md`.
-- Wave đầu phải tạo `docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md` và chấm toàn bộ capability theo `Missing / Foundation / Wired / RC / Hardened` với evidence.
+Capability denominator: **956**.
 
-## RC Hardening execution order
+```text
+Hardened: 0
+RC: 4
+Wired: 448
+Foundation: 345
+Missing: 159
+```
 
-1. Capability truth + evidence register.
-2. Platform/SRE/Security RC.
-3. ERP Core RC: Finance/VN -> Inventory/WMS -> Procurement -> CRM/O2C -> HCM/Payroll -> Manufacturing/QMS.
-4. Enterprise Depth: Project/Service, BI Semantic, Integration Hub, Workplace/DMS.
-5. App Factory + generic enterprise UI + deterministic AI tooling.
-6. Alumdoor reference vertical 95% + current production hardening/evidence.
+Overall Forge vẫn là **Wired**, đang đi vào RC hardening. Không promote từ merge/code existence hoặc test count đơn lẻ.
 
-Không mở lại PR cũ làm canonical. Nếu lịch sử có code hữu ích, audit exact current main rồi cherry-pick/rebuild phần còn đúng contract.
+## RC Wave 0 facts
+
+### Capability Truth
+
+- 956/956 capability có maturity assignment.
+- Evidence Index và completeness validator tồn tại trên main.
+- Hardened = 0 vì exact production/failure/reconciliation evidence chưa đủ.
+
+### Release/SRE
+
+- Canonical release workflow: `.github/workflows/alu-build-deploy.yml`.
+- Duplicate automatic Gateway deploy workflow và stale purchase-funding one-off đã được RC-02 loại khỏi main.
+- Production maintenance workflow nhạy cảm phải manual/exact-main guarded.
+- Merge state không phải production proof.
+
+### Validation
+
+- FAST/STANDARD/CRITICAL có executable matrix/runner.
+- Finance/stock/payroll phải CRITICAL và cần correction/reversal + reconciliation.
+- UI promotion cần browser/mobile evidence khi applicable.
+- HARDENED/DEPLOYED cần exact release evidence.
+
+### Kernel/Auth
+
+- Canonical document create/save/submit/cancel giữ OCC/idempotency/audit/outbox/receipt authority.
+- Logout valid session fail-closed khi CSRF/session registry/revoke write không hợp lệ.
+- Current browser session revoke authority là logout path; duplicate revoke_session không được mutate current session.
+- Delete/rename maintenance semantics vẫn là explicit shared-contract gap, không tự coi đã Hardened.
+
+### IAM/Tenant/App lifecycle
+
+- Permission authority vẫn server-side: Role/DocPerm/permlevel/owner/Share/User Permission/org scope/Role Policy.
+- App upgrade fail-closed nếu package làm mất materialized metadata mà chưa có reverse migration/uninstall contract.
+- Same-app concurrent upgrade OCC/serialization vẫn là hardening gap.
+
+### Offline
+
+- `docs/FORGE_OFFLINE_SYNC_CONTRACT.md` là contract freeze.
+- `U01-003..007` vẫn Missing.
+- Offline private data phải partition theo trusted tenant/user + access revision + bounded lease + schema/release identity.
+- Offline write deny-by-default; retry giữ stable command_id/expected_version/payload hash; server là OCC/conflict authority.
+- Không generic last-write-wins cho business documents.
+
+## Next execution order
+
+1. Finance `RC-020..023`.
+2. Inventory `RC-024..025`.
+3. Authority freeze.
+4. Procurement / CRM / HCM / Manufacturing `RC-030..038` theo domain song song.
+5. Enterprise Depth `RC-040..045`.
+6. App Factory + AI `RC-046..047`.
+7. Alumdoor proof `RC-050..054`.
 
 ## Core architecture invariants
 
-- CloudForge/document kernel là authoritative write path.
+- CloudForge/Document Kernel và domain authorities là authoritative write path.
 - Không bypass tenant/permission/OCC/idempotency/audit để làm nhanh UI.
-- D1/ledger/projection phải giữ source-of-truth boundary hiện hành.
-- Money/stock/payroll/legal rule phải có correction/reversal/traceability phù hợp.
+- D1 ledger/source/projection boundary phải giữ một source of truth.
 - Shared runtime không hard-code business doctype nếu metadata/manifest biểu diễn được.
-- Pattern lặp lại từ nhiều app phải được đánh giá để nâng thành platform/App Factory primitive.
+- Pattern lặp lại ở nhiều app phải được đánh giá để nâng thành shared/App Factory primitive.
 
 ## Finance / stock / payroll invariants
 
-- `gl_entries` và canonical accounting controllers là financial authority; không tạo ledger cạnh tranh.
-- Payment allocation/Payment Entry là authority cho invoice settlement.
-- Stock correction/repost/valuation phải đi qua canonical stock ledger/controller và có reconciliation với finance khi tích hợp.
-- Payroll phải dùng effective-dated/versioned legal evidence; used rule không được sửa lịch sử lặng lẽ.
+- `gl_entries` + canonical accounting controllers là financial authority.
+- Payment Entry/payment allocation là authority cho invoice settlement.
+- Stock correction/repost/valuation đi qua canonical stock ledger/controller; reconcile với finance khi valuation tích hợp GL.
+- Payroll dùng effective-dated/versioned evidence; used legal rule không được sửa lịch sử lặng lẽ.
+- Correction/reversal/backdate/reconciliation là promotion gate, không phải optional polish.
 
 ## Alumdoor invariants
 
-- Alumdoor là reference vertical chạy trên Forge, không fork core.
-- Mua/nhập nhôm và accounting stock dùng kg thực cân; physical operation có thể giữ thêm số cây/lá, mã nhôm, màu, tình trạng, khổ/chiều dài, kho/lô.
-- Bán cửa/thành phẩm tính theo đơn vị thương mại phù hợp, ví dụ m²; không ép stock authority thành “Bộ” chỉ để dễ UI.
-- Mobile Alumdoor ưu tiên sales/receivables/delivery use case.
-- Shared HRM vẫn là app đầy đủ; Alumdoor chỉ expose Employee + Attendance ở product/shell khi đó là product decision.
+- Alumdoor là reference vertical trên Forge, không fork core.
+- Nhôm mua/nhập và accounting stock dùng kg thực cân; physical operation có thể giữ thêm số cây/lá, mã, màu, trạng thái, kích thước, kho/lô.
+- Finished door có thể bán theo m²; không đổi stock authority thành “Bộ” để làm UI dễ hơn.
+- Mobile ưu tiên sales/receivables/delivery.
+- Shared HRM vẫn đầy đủ; Alumdoor shell chỉ expose Employee + Attendance theo product decision hiện hành.
+- Warehouse Cash thuộc VN Accounting backend authority, Alumdoor consume qua generic integration.
 
-## Release/workflow truth
+## Production evidence
 
-- Canonical release workflow trên main hiện là `.github/workflows/alu-build-deploy.yml`.
-- Cleanup PR #427 đã đóng không merge; vì vậy `.github/workflows/deploy-ui-once.yml` và `.github/workflows/tmp-alumdoor-purchase-funding-release.yml` vẫn phải được audit lại từ current main ở Wave 0, không được coi là đã xóa.
-- Production proof cần exact release SHA + health + release marker/evidence; merge state không phải deploy proof.
+- `/health` chỉ chứng minh service availability.
+- `/release.json`/release evidence phải khớp exact SHA + bundle marker cho deployed claim.
+- Các merge RC Wave 0 không được coi là production deployment.
+- Không production migration/restore/PITR/secret/DNS/customer-data mutation được thực hiện trong RC Wave 0 convergence.
 
-## Business decisions still requiring explicit input when encountered
+## Business decisions phải dừng khi thực sự gặp
 
 Không tự bịa policy nếu repo/tài liệu không suy ra được, ví dụ:
 
-- company policy cho outstanding Employee Loan khi separation nếu flow mới chạm tới;
-- rework/subcontract operating model khi implementation cần business semantics chưa được chốt;
-- provider/vendor cụ thể cho e-invoice, e-sign, bank/BHXH/tax nếu technical abstraction không đủ để chọn thay doanh nghiệp.
+- Employee Loan outstanding khi separation nếu flow mới chạm tới;
+- rework/subcontract operating model nếu implementation cần semantics chưa chốt;
+- provider/vendor cụ thể cho e-invoice/e-sign/bank/BHXH/tax khi abstraction kỹ thuật không đủ để quyết định thay doanh nghiệp.
 
-Nếu dependency này chỉ block một phần, ghi Dependency Request và tiếp tục phần độc lập.
+Nếu chỉ block một phần, ghi Dependency Request và tiếp tục phần độc lập.
