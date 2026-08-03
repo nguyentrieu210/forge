@@ -65,6 +65,8 @@ const REPORT_PERMISSIONS: Record<string, readonly string[]> = {
   "Accounts Payable": ["System Manager", "Accounts Manager", "Accounts User", "Purchase Manager"],
   "Accounts Payable Aging": ["System Manager", "Accounts Manager", "Accounts User", "Purchase Manager"],
   "Party Statement": ["System Manager", "Accounts Manager", "Accounts User"],
+  "Supplier Statement": ["System Manager", "Accounts Manager", "Accounts User", "Purchase Manager"],
+  "Supplier Reconciliation": ["System Manager", "Accounts Manager", "Accounts User"],
   "Debt Summary": ["System Manager", "Accounts Manager", "Accounts User"],
   "Advance Balance": ["System Manager", "Accounts Manager", "Accounts User"],
   "Daily Detailed Ledger": [
