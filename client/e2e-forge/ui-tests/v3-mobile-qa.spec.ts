@@ -53,12 +53,15 @@ test.describe("V3-07 runtime mobile acceptance", () => {
   });
 
   test("Forge login stays inside every supported viewport", async ({ page }, testInfo) => {
-    await page.goto("/", { waitUntil: "domcontentloaded" });
+    // `/` is intentionally website-first. `/login` is the reserved canonical Forge auth route.
+    await page.goto("/login", { waitUntil: "domcontentloaded" });
 
+    const auth = page.getByTestId("forge-auth-login");
     const username = page.locator("#mf-login-usr");
     const password = page.locator("#mf-login-pwd");
     const submit = page.locator('form button[type="submit"]').first();
 
+    await expect(auth).toBeVisible();
     await expect(username).toBeVisible();
     await expect(password).toBeVisible();
     await expect(submit).toBeVisible();
@@ -75,7 +78,7 @@ test.describe("V3-07 runtime mobile acceptance", () => {
 
   test("login keyboard order is stable and visible", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "desktop-chrome", "desktop keyboard acceptance");
-    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await page.goto("/login", { waitUntil: "domcontentloaded" });
 
     const username = page.locator("#mf-login-usr");
     const password = page.locator("#mf-login-pwd");
@@ -110,11 +113,12 @@ test.describe("V3-07 runtime mobile acceptance", () => {
   test("reduced motion clamps global login transition timings", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "reduced-motion-dark", "reduced-motion acceptance");
     await page.emulateMedia({ reducedMotion: "reduce" });
-    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await page.goto("/login", { waitUntil: "domcontentloaded" });
 
     await expect.poll(() => page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches)).toBe(true);
 
     const submit = page.locator('form button[type="submit"]').first();
+    await expect(submit).toBeVisible();
     const timing = await submit.evaluate((element) => {
       const styles = getComputedStyle(element);
       return {
