@@ -4,7 +4,7 @@ import { asCloudForgeError, errorResponse, errors, jsonResponse, randomId, readJ
 import { PermissionService } from "../../../packages/policy/src/index.js";
 import type { QueryRequest } from "../../../packages/query/src/index.js";
 import { D1ReportService, parseQueryRequest } from "../../../packages/query/src/index.js";
-import { AccountsPayableQueryCompiler } from "../../../packages/query/src/ap-reconciliation.js";
+import { FinanceClosureQueryCompiler } from "../../../packages/query/src/finance-closure.js";
 
 interface PreparedReportMessage {
   tenant_id: string;
@@ -40,7 +40,7 @@ export default {
       if (request.method === "POST" && url.pathname === "/api/v1/reports/run") {
         const input = parseQueryRequest(await readJson<JsonObject>(request), tenantId);
         permission.assertReport(actor, input.report);
-        const compiler = new AccountsPayableQueryCompiler();
+        const compiler = new FinanceClosureQueryCompiler();
         const compiled = compiler.compile(input);
         if (compiled.prepared) {
           if (!env.REPORT_QUEUE) throw new Error("REPORT_QUEUE binding is missing");
@@ -99,7 +99,7 @@ export default {
           `UPDATE prepared_reports SET status='running', started_at=?3
            WHERE tenant_id=?1 AND job_id=?2 AND status='queued'`,
         ).bind(job.tenant_id, job.job_id, new Date().toISOString()).run();
-        const result = await new D1ReportService(env.DB, new AccountsPayableQueryCompiler()).run(job.request, true);
+        const result = await new D1ReportService(env.DB, new FinanceClosureQueryCompiler()).run(job.request, true);
         await env.DB.prepare(
           `UPDATE prepared_reports SET status='completed', result_json=?3, completed_at=?4
            WHERE tenant_id=?1 AND job_id=?2`,
