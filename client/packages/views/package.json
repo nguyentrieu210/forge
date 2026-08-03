@@ -74,7 +74,7 @@
   "scripts": {
     "typecheck": "tsc -b",
     "build": "tsc -b",
-    "test:matrix": "tsc -b && node --test tests/matrix-model.test.mjs"
+    "test:matrix": "tsc -b && node --test tests/matrix-*.test.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
