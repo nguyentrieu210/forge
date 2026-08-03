@@ -1,0 +1,65 @@
+name: RC-021 Critical Validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "server/**"
+      - "docs/agents/rc/RC-021-finance-ar-reconciliation.md"
+      - ".github/workflows/rc021-validation.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rc021-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  rc021:
+    if: github.head_ref == 'rc/w2-finance-ar-reconciliation'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Targeted server build
+        run: pnpm run server:build
+
+      - name: Server worker typecheck
+        run: pnpm run server:typecheck
+
+      - name: Focused AR regressions
+        working-directory: server
+        run: >-
+          node --test
+          tests/finance-ar-rc021.test.mjs
+          tests/finance-ar-migration-rc021.test.mjs
+          tests/finance-aging-policy.test.mjs
+          tests/finance-aging-query.test.mjs
+          tests/o2c.test.mjs
+
+      - name: AR SQL and migration semantics
+        working-directory: server
+        run: |
+          python3 scripts/verify-sql.py
+          python3 scripts/test-finance-ar-reconciliation.py
+
+      - name: Full server unit and SQL suite
+        run: pnpm run server:test
