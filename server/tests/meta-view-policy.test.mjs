@@ -42,21 +42,31 @@ function simpleMatrix() {
       keyField: "nav_key",
       labelField: "nav_label",
       parentField: "nav_parent",
-      searchFields: ["nav_label"],
+      secondaryLabelField: "nav_secondary",
+      searchFields: ["nav_label", "nav_secondary"],
     },
     rowAxis: {
       source,
       keyField: "row_key",
       labelField: "row_label",
+      primaryField: "row_primary",
       searchFields: ["row_label"],
       filterFields: ["row_key"],
-      auxiliaryFields: [{ field: "conversion_factor", editor: "Float" }],
+      auxiliaryFields: [{
+        field: "conversion_factor",
+        label: "Conversion",
+        editor: "Float",
+        readOnlyWhenField: "row_primary",
+        validation: "positive",
+      }],
     },
     columnAxis: {
       source,
       keyField: "column_key",
       labelField: "column_label",
       subtitleField: "column_subtitle",
+      disabledField: "column_disabled",
+      selectedFirst: true,
       searchFields: ["column_label"],
     },
     cell: {
@@ -65,18 +75,38 @@ function simpleMatrix() {
       valueField: "rate",
       editor: "Currency",
       enabled: { field: "enabled", when: "truthy" },
+      versionField: "modified",
+      validation: "non_negative",
+      disabledColumnReadOnly: true,
     },
     write: {
       strategy: "document_update",
       permissionDoctype: "Matrix Cell",
       permissionAction: "write",
     },
-    query: { pageSize: 100, searchLimit: 50, minSearchChars: 1 },
+    rowMembers: { primaryRemovable: false },
+    columnMembers: {
+      allowHide: true,
+      allowHideAll: true,
+      allowShow: true,
+      allowShowAll: true,
+    },
+    query: {
+      pageSize: 100,
+      searchLimit: 50,
+      minSearchChars: 1,
+      searchMode: "token_contains",
+      accentInsensitive: true,
+    },
     presentation: {
       stickyRowAxis: true,
       stickyColumnAxis: true,
       focusMode: "toggle",
       mobileMode: "step",
+      navigatorResizable: true,
+      navigatorCollapsible: true,
+      showDirtyIndicator: true,
+      unsavedChangeGuard: true,
     },
     dirtyPolicy: "warn",
     conflictPolicy: "prompt_reload",
@@ -91,12 +121,15 @@ function definition(matrix = simpleMatrix()) {
     fields: [
       field("nav_key", "Data"),
       field("nav_label", "Data"),
+      field("nav_secondary", "Data"),
       field("nav_parent", "Data"),
       field("row_key", "Data"),
       field("row_label", "Data"),
+      field("row_primary", "Check"),
       field("column_key", "Data"),
       field("column_label", "Data"),
       field("column_subtitle", "Data"),
+      field("column_disabled", "Check"),
       field("rate", "Currency"),
       field("enabled", "Check"),
       field("conversion_factor", "Float"),
@@ -153,15 +186,22 @@ test("viewPolicy preserves reason-required workflow semantics", () => {
   assert.equal(meta.viewPolicy?.kanban?.stageField, "workflow_state");
 });
 
-test("valid simple Matrix is typed, canonical and transported by getdoctype shape", () => {
+test("valid simple Matrix preserves parity semantics through getdoctype shape", () => {
   const meta = parseDocTypeMeta(definition());
   const matrix = meta.viewPolicy?.matrix;
   assert.equal(matrix?.enabled, true);
-  assert.equal(matrix?.rowAxis.keyField, "row_key");
-  assert.equal(matrix?.columnAxis.subtitleField, "column_subtitle");
-  assert.equal(matrix?.cell.enabled?.when, "truthy");
-  assert.equal(matrix?.query.pageSize, 100);
+  assert.equal(matrix?.navigator.secondaryLabelField, "nav_secondary");
+  assert.equal(matrix?.rowAxis.primaryField, "row_primary");
+  assert.equal(matrix?.rowAxis.auxiliaryFields[0].validation, "positive");
+  assert.equal(matrix?.columnAxis.disabledField, "column_disabled");
+  assert.equal(matrix?.columnAxis.selectedFirst, true);
+  assert.equal(matrix?.cell.versionField, "modified");
+  assert.equal(matrix?.cell.validation, "non_negative");
+  assert.equal(matrix?.cell.disabledColumnReadOnly, true);
+  assert.equal(matrix?.query.searchMode, "token_contains");
+  assert.equal(matrix?.query.accentInsensitive, true);
   assert.equal(matrix?.presentation.mobileMode, "step");
+  assert.equal(matrix?.presentation.unsavedChangeGuard, true);
 
   const frappe = toFrappeDocType(meta, null);
   assert.deepEqual(frappe.viewPolicy, meta.viewPolicy, "manifest/meta transport must not drop Matrix semantics");
@@ -175,19 +215,23 @@ test("valid projection + named action Matrix preserves generic permission bounda
       keyField: "node_id",
       labelField: "label",
       parentField: "parent_id",
-      searchFields: ["label"],
+      secondaryLabelField: "secondary_label",
+      searchFields: ["label", "secondary_label"],
     },
     rowAxis: {
       source: projectionSource("catalog.matrix.rows"),
       keyField: "row_id",
       labelField: "label",
-      auxiliaryFields: [{ field: "factor", editor: "Float" }],
+      primaryField: "is_primary",
+      auxiliaryFields: [{ field: "factor", label: "Factor", editor: "Float", readOnlyWhenField: "is_primary", validation: "positive" }],
     },
     columnAxis: {
       source: projectionSource("catalog.matrix.columns"),
       keyField: "column_id",
       labelField: "label",
       subtitleField: "subtitle",
+      disabledField: "disabled",
+      selectedFirst: true,
     },
     cell: {
       source: projectionSource("catalog.matrix.cells"),
@@ -195,6 +239,9 @@ test("valid projection + named action Matrix preserves generic permission bounda
       valueField: "value",
       editor: "Currency",
       enabled: { field: "enabled", when: "truthy" },
+      versionField: "version",
+      validation: "non_negative",
+      disabledColumnReadOnly: true,
     },
     write: {
       strategy: "action",
@@ -205,13 +252,22 @@ test("valid projection + named action Matrix preserves generic permission bounda
     rowMembers: {
       create: { action: "catalog.matrix.row.create", permissionDoctype: "Matrix Cell", permissionAction: "create" },
       remove: { action: "catalog.matrix.row.remove", permissionDoctype: "Matrix Cell", permissionAction: "write" },
+      primaryRemovable: false,
     },
     columnMembers: {
       create: { action: "catalog.matrix.column.create", permissionDoctype: "Matrix Cell", permissionAction: "create" },
       allowHide: true,
+      allowHideAll: true,
       allowShow: true,
+      allowShowAll: true,
     },
-    query: { pageSize: 80, searchLimit: 40, minSearchChars: 2 },
+    query: {
+      pageSize: 80,
+      searchLimit: 40,
+      minSearchChars: 2,
+      searchMode: "token_contains",
+      accentInsensitive: true,
+    },
   };
 
   const parsed = parseDocTypeMeta(definition(matrix));
@@ -219,6 +275,8 @@ test("valid projection + named action Matrix preserves generic permission bounda
   assert.equal(parsed.viewPolicy.matrix.write.strategy, "action");
   assert.equal(parsed.viewPolicy.matrix.write.action, "catalog.matrix.commit");
   assert.equal(parsed.viewPolicy.matrix.presentation.mobileMode, "scroll", "mobile fallback is deterministic");
+  assert.equal(parsed.viewPolicy.matrix.presentation.showDirtyIndicator, true);
+  assert.equal(parsed.viewPolicy.matrix.presentation.unsavedChangeGuard, true);
   assert.equal(parsed.viewPolicy.matrix.dirtyPolicy, "warn");
   assert.equal(parsed.viewPolicy.matrix.conflictPolicy, "reject");
 });
@@ -275,6 +333,22 @@ test("Matrix query declarations are bounded", () => {
   const raw = definition();
   raw.viewPolicy.matrix.query.pageSize = 5000;
   assert.throws(() => parseDocTypeMeta(raw), /pageSize.*20 to 500/);
+});
+
+test("Matrix rejects conditional edit semantics without their required markers", () => {
+  const missingDisabledMarker = definition();
+  delete missingDisabledMarker.viewPolicy.matrix.columnAxis.disabledField;
+  assert.throws(() => parseDocTypeMeta(missingDisabledMarker), /disabledColumnReadOnly requires columnAxis\.disabledField/);
+
+  const missingPrimaryMarker = definition();
+  delete missingPrimaryMarker.viewPolicy.matrix.rowAxis.primaryField;
+  assert.throws(() => parseDocTypeMeta(missingPrimaryMarker), /primaryRemovable=false requires rowAxis\.primaryField/);
+});
+
+test("Matrix refuses nonnumeric validation semantics on nonnumeric editors", () => {
+  const raw = definition();
+  raw.viewPolicy.matrix.cell.editor = "Data";
+  assert.throws(() => parseDocTypeMeta(raw), /editor Data does not match Currency|validation requires a numeric editor/);
 });
 
 test("canonical Bulk is preserved and legacy mobile Bulk remains accepted", () => {
