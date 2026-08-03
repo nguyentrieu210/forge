@@ -15,7 +15,7 @@ connection.executescript(
     INSERT INTO users(tenant_id,user_id) VALUES('tenant-a','user@example.com');
     """
 )
-connection.executescript((root / "migrations/tenant/0051_user_mfa_totp.sql").read_text())
+connection.executescript((root / "migrations/tenant/0055_user_mfa_totp.sql").read_text())
 
 envelope = '{"version":1,"algorithm":"AES-GCM","iv":"AA==","ciphertext":"AA=="}'
 connection.execute(
