@@ -9,10 +9,17 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. 
 - Repository: `nguyentrieu210/forge`.
 - Default/canonical branch: `main`.
 - Forge baseline: **0.2.0 — Enterprise Parallel Baseline**.
-- **Open pull requests: 0** sau đợt đóng toàn bộ PR còn mở ngày 2026-08-03.
-- Không có PR/branch delivery nào được coi là công việc đang active.
+- Sau đợt reset, toàn bộ PR delivery cũ đã được đóng; hiện chỉ còn PR tài liệu/plan đang mở.
+- Không có PR/branch delivery cũ nào được coi là công việc đang active.
 - Các branch cũ vẫn được giữ làm lịch sử/audit/cherry-pick reference; **không tự tiếp tục hoặc reopen** chỉ vì branch còn tồn tại.
-- Mọi công việc mới phải bắt đầu bằng việc đọc exact current `main`, sau đó tạo **branch/PR mới** phù hợp với scope mới.
+- Mọi công việc triển khai mới phải bắt đầu bằng việc đọc exact current `main`, sau đó tạo **branch/PR mới** phù hợp với scope mới.
+
+## Overall maturity theo Enterprise Completion Skill
+
+- Forge hiện được đánh giá ở mức **Wired**, với một số capability/domain đã đạt **RC cục bộ**.
+- Không dùng phần trăm tổng cảm tính. Capability Map hiện có **956 capability ID** và chưa có live maturity register đủ 956/956 trên `main`.
+- Chương trình mặc định tiếp theo là **RC Hardening Program**: `docs/FORGE_RC_HARDENING_PLAN_20260803.md`.
+- Wave đầu của chương trình phải dựng `docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md` để chấm 956 capability theo `Missing / Foundation / Wired / RC / Hardened` và gắn evidence.
 
 ## DONE — WS00–WS17 convergence
 
@@ -35,7 +42,7 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. 
 
 ## Repository reset — 2026-08-03
 
-Theo quyết định của user, toàn bộ PR còn mở được đóng để repo trở về trạng thái sạch về mặt review queue. Batch đóng gồm các PR gần nhất như:
+Theo quyết định của user, toàn bộ PR còn mở tại thời điểm reset được đóng để repo trở về trạng thái sạch về mặt review queue. Batch đóng gồm các PR gần nhất như:
 
 - repo/workflow cleanup: `#427`;
 - Matrix follow-up/validation: `#419`, `#423`, `#424`;
@@ -52,17 +59,22 @@ Các PR trên **không được merge trong thao tác đóng**. Branch/history v
 - Vì vậy không được suy diễn rằng cleanup workflow đã vào `main`.
 - Production proof vẫn phải dựa trên exact release SHA + `/health` + `/release.json`/evidence tương ứng; merge state không tự động là deploy proof.
 
-## Active backlog
+## Active program
 
-**Không có backlog delivery nào đang active.**
+Không có feature delivery cũ nào active. Chương trình triển khai tiếp theo được định nghĩa tại:
 
-Các capability/gap cũ trong `NEXT_TASKS.md`, workstream handoff hoặc PR lịch sử chỉ là **reference/history**, không phải lệnh tiếp tục. Khi user mở một việc mới:
+- `docs/FORGE_RC_HARDENING_PLAN_20260803.md`
 
-1. đọc exact current `main`;
-2. audit code/evidence hiện tại;
-3. chỉ reuse/cherry-pick lịch sử nếu còn đúng contract;
-4. tạo branch/PR mới cho task đó;
-5. không resurrect PR cũ làm canonical chỉ vì nó từng gần hoàn tất.
+Thứ tự mặc định:
+
+1. Capability truth/evidence register.
+2. Platform/SRE/Security RC.
+3. ERP Core RC.
+4. Enterprise Depth.
+5. App Factory + AI moat.
+6. Alumdoor 95% + production hardening.
+
+Mỗi slice chỉ trở thành active task sau khi được mở từ exact current `main`; không resurrect PR cũ làm canonical.
 
 ## Guardrails
 
