@@ -45,6 +45,20 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
+      - name: Apply candidate Matrix ref fix
+        shell: python
+        run: |
+          from pathlib import Path
+          path = Path("client/packages/views/src/matrix/MatrixGrid.tsx")
+          text = path.read_text()
+          old_import = 'import type { KeyboardEvent, RefObject } from "react";'
+          old_prop = '  scrollRef: RefObject<HTMLDivElement | null>;'
+          if text.count(old_import) != 1 or text.count(old_prop) != 1:
+              raise SystemExit("Matrix ref anchors changed; refusing speculative patch")
+          text = text.replace(old_import, 'import type { KeyboardEvent, Ref } from "react";', 1)
+          text = text.replace(old_prop, '  scrollRef: Ref<HTMLDivElement>;', 1)
+          path.write_text(text)
+
       - uses: pnpm/action-setup@v4
         with:
           version: 9.15.0
@@ -94,10 +108,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           if [ "${{ steps.runtime.outcome }}" = success ]; then
-            "$RUNNER_TEMP/status.sh" success alu-ui-diag/runtime "runtime dependency build passed"
+            "$RUNNER_TEMP/status.sh" success alu-ui-diag/runtime "runtime dependency build passed with Matrix ref fix"
           else
-            "$RUNNER_TEMP/status.sh" failure alu-ui-diag/runtime "runtime dependency build failed"
-            { echo 'ALU UI deploy diagnostic: **runtime build failed**'; echo; echo '```text'; tail -120 "$RUNNER_TEMP/runtime.log"; echo '```'; } > "$RUNNER_TEMP/comment.md"
+            "$RUNNER_TEMP/status.sh" failure alu-ui-diag/runtime "runtime dependency build still failed"
+            { echo 'ALU UI deploy diagnostic after Matrix ref fix: **runtime build failed**'; echo; echo '```text'; tail -120 "$RUNNER_TEMP/runtime.log"; echo '```'; } > "$RUNNER_TEMP/comment.md"
             gh pr comment 417 --body-file "$RUNNER_TEMP/comment.md"
             exit 1
           fi
@@ -141,7 +155,7 @@ jobs:
         run: |
           if [ "${{ steps.mobile_bundle.outcome }}" = success ]; then
             "$RUNNER_TEMP/status.sh" success alu-ui-diag/mobile-bundle "warehouse mobile vite build passed"
-            gh pr comment 417 --body "ALU UI deploy diagnostic: all build stages passed."
+            gh pr comment 417 --body "ALU UI deploy diagnostic: Matrix ref fix makes runtime + mobile build stages pass."
           else
             "$RUNNER_TEMP/status.sh" failure alu-ui-diag/mobile-bundle "warehouse mobile vite build failed"
             { echo 'ALU UI deploy diagnostic: **mobile bundle failed**'; echo; echo '```text'; tail -120 "$RUNNER_TEMP/mobile-bundle.log"; echo '```'; } > "$RUNNER_TEMP/comment.md"
