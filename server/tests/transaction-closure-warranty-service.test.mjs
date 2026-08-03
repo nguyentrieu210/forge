@@ -54,7 +54,7 @@ async function message(response) {
 function warrantyRecords(overrides = {}) {
   return {
     "Maintenance Request:MR-1": {
-      customer: "CUST-1", source_delivery_note: "DN-1", item: "ITEM-1", serial_no: "SN-1",
+      customer: "CUST-1", company: "ACME", branch: "HCM", source_delivery_note: "DN-1", item: "ITEM-1", serial_no: "SN-1",
     },
     "Delivery Note:DN-1": {
       docstatus: 1, customer: "CUST-1", company: "ACME", branch: "HCM",
@@ -105,6 +105,7 @@ function completeServiceOrder(overrides = {}) {
     resolution: "Hoàn thành",
     resolution_type: "Sửa chữa",
     billing_mode: "Bao gồm hợp đồng",
+    service_contract: "SC-1",
     workflow_state: "Chờ xác nhận",
     ...overrides,
   };
@@ -112,7 +113,12 @@ function completeServiceOrder(overrides = {}) {
 
 function serviceRecords(overrides = {}) {
   return {
-    "Maintenance Request:MR-SVC": { customer: "CUST-1", item: "ITEM-1", serial_no: "SN-1" },
+    "Maintenance Request:MR-SVC": { customer: "CUST-1", company: "ACME", branch: "HCM", item: "ITEM-1", serial_no: "SN-1" },
+    "Service Contract:SC-1": {
+      docstatus: 1, workflow_state: "Hiệu lực", customer: "CUST-1", company: "ACME", branch: "HCM",
+      effective_from: "2026-01-01", effective_to: "2026-12-31",
+      covered_items: [{ item: "ITEM-1", serial_no: "SN-1", coverage_start: "2026-01-01", coverage_end: "2026-12-31" }],
+    },
     ...overrides,
   };
 }
@@ -184,6 +190,34 @@ test("duplicate claim is refused and explicit terminal correction is allowed", a
     correction_reason: "Bổ sung bằng chứng serial chính xác",
   }), { name: "WC-CORR", records: correctionRecords });
   assert.equal(correction.status, 200, await message(correction));
+});
+
+test("free service modes require the warranty or contract authority they claim", async () => {
+  const warrantyWithoutClaim = await validate("Service Order", completeServiceOrder({
+    billing_mode: "Bảo hành",
+    warranty_claim: "",
+    service_contract: "",
+    parts_used: [],
+  }), { name: "SO-WARRANTY", records: serviceRecords() });
+  assert.equal(warrantyWithoutClaim.status, 422);
+  assert.match(await message(warrantyWithoutClaim), /Warranty Claim/i);
+
+  const contractWithoutAuthority = await validate("Service Order", completeServiceOrder({
+    billing_mode: "Bao gồm hợp đồng",
+    service_contract: "SC-BAD",
+    parts_used: [],
+  }), {
+    name: "SO-CONTRACT",
+    records: serviceRecords({
+      "Service Contract:SC-BAD": {
+        docstatus: 1, workflow_state: "Hiệu lực", customer: "CUST-1", company: "OTHER", branch: "HCM",
+        effective_from: "2026-01-01", effective_to: "2026-12-31",
+        covered_items: [{ item: "ITEM-1", serial_no: "SN-1", coverage_start: "2026-01-01", coverage_end: "2026-12-31" }],
+      },
+    }),
+  });
+  assert.equal(contractWithoutAuthority.status, 422);
+  assert.match(await message(contractWithoutAuthority), /công ty khác/i);
 });
 
 test("service parts require a submitted matching canonical Stock Entry", async () => {
