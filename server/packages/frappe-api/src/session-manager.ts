@@ -65,6 +65,14 @@ export async function routeSessionManagementApi(
     const sessionId = args.requireText("session_id", 128);
     const reason = args.text("reason")?.trim() ?? "";
     if (reason.length > 500) throw errors.validation("reason must be at most 500 characters");
+    if (context.currentSessionId && sessionId === context.currentSessionId) {
+      // `logout` is the authority for the current browser session: it verifies CSRF,
+      // revokes the registry row and clears the cookie as one observable lifecycle.
+      // Revoking it here used to commit the row and then let the tenant wrapper attempt
+      // sliding renewal, so the client could receive an auth failure after a successful
+      // revoke and could not distinguish failure from commit-before-response success.
+      throw errors.validation("Use logout to revoke the current session");
+    }
     const revoked = await context.sessions.revokeOne(
       context.tenantId,
       context.userId,

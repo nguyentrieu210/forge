@@ -197,22 +197,33 @@ async function clearSuccessfulLoginLimit(context: AuthRouteContext, login: strin
 
 async function handleLogout(request: Request, context: AuthRouteContext): Promise<Response> {
   const sid = readSid(request);
-  if (sid) {
-    try {
-      const session = await verifySession(sid, context.tenantId, context.sessionSecret, isoSeconds(context.now()));
-      assertCsrf(request, session);
-      if (session.sessionId) {
-        await optionalSessionRegistry(context.users)?.revokeCurrent(
-          context.tenantId,
-          session.actor.user_id,
-          session.sessionId,
-          context.now(),
-        );
-      }
-    } catch {
-      // Logout stays idempotent even when the session is expired/revoked/malformed.
-    }
+  if (!sid) return loggedOutResponse();
+
+  let session: Session;
+  try {
+    session = await verifySession(sid, context.tenantId, context.sessionSecret, isoSeconds(context.now()));
+  } catch {
+    // Logout stays idempotent for an already-invalid, expired or malformed cookie.
+    // Once a valid signed session is established below, security-state failures must
+    // propagate instead of being disguised as a successful revocation.
+    return loggedOutResponse();
   }
+
+  assertCsrf(request, session);
+  if (session.sessionId) {
+    const sessions = optionalSessionRegistry(context.users);
+    if (!sessions) throw errors.misconfigured("Session registry is unavailable");
+    await sessions.revokeCurrent(
+      context.tenantId,
+      session.actor.user_id,
+      session.sessionId,
+      context.now(),
+    );
+  }
+  return loggedOutResponse();
+}
+
+function loggedOutResponse(): Response {
   return methodResponse("Logged Out", 200, { "set-cookie": clearedSessionCookie() });
 }
 
