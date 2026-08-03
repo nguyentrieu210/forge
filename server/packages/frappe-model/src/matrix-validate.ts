@@ -1,6 +1,9 @@
 import { errors } from "../../core/src/index.js";
 import type { DocFieldMeta, DocTypeKind } from "./types.js";
 import type {
+  MatrixActionInputField,
+  MatrixActionInputFieldtype,
+  MatrixActionInputTable,
   MatrixActionRef,
   MatrixAxisPolicy,
   MatrixCellPolicy,
@@ -23,6 +26,11 @@ const MATRIX_EDITORS = new Set<MatrixEditor>(["Data", "Int", "Float", "Currency"
 const NUMERIC_EDITORS = new Set<MatrixEditor>(["Int", "Float", "Currency", "Percent"]);
 const WRITE_PERMISSION_ACTIONS = new Set<MatrixWritePermissionAction>(["write", "create", "submit"]);
 const SYSTEM_READ_FIELDS = new Set(["name", "owner", "creation", "modified", "modified_by", "docstatus", "idx"]);
+const ACTION_INPUT_NAME = /^[a-z][a-z0-9_]*$/;
+const ACTION_INPUT_FIELDTYPES = new Set<MatrixActionInputFieldtype>([
+  "Data", "Small Text", "Text", "Int", "Float", "Currency", "Percent",
+  "Check", "Select", "Link", "Date", "Datetime", "Time", "Attach", "Attach Image",
+]);
 
 export interface MatrixMetaContext {
   name: string;
@@ -131,9 +139,7 @@ function parseRowAxis(value: unknown, path: string, context: MatrixMetaContext):
     only(item, ["field", "label", "editor", "readOnlyWhenField", "validation"], itemPath);
     const field = sourceField(item.field, `${itemPath}.field`, axis.source, context);
     const label = item.label === undefined ? undefined : text(item.label, `${itemPath}.label`, 160);
-    const readOnlyWhenField = item.readOnlyWhenField === undefined
-      ? undefined
-      : sourceField(item.readOnlyWhenField, `${itemPath}.readOnlyWhenField`, axis.source, context);
+    const readOnlyWhenField = inputTextOrUndefined(item.readOnlyWhenField, `${itemPath}.readOnlyWhenField`, 160);
     if (readOnlyWhenField) assertCheckReadField(axis.source, readOnlyWhenField, `${itemPath}.readOnlyWhenField`, context);
     const validation = item.validation === undefined ? undefined : valueValidation(item.validation, `${itemPath}.validation`);
     if (item.editor === undefined) {
@@ -238,12 +244,98 @@ function parseWrite(value: unknown, path: string, context: MatrixMetaContext): M
 
 function parseAction(value: unknown, path: string): MatrixActionRef {
   const input = object(value, path);
-  only(input, ["action", "permissionDoctype", "permissionAction"], path);
+  only(input, ["action", "permissionDoctype", "permissionAction", "label", "description", "confirm", "fields", "inputTables"], path);
+  const fields = input.fields === undefined ? undefined : parseActionFields(input.fields, `${path}.fields`);
+  const inputTables = input.inputTables === undefined ? undefined : parseActionInputTables(input.inputTables, `${path}.inputTables`);
+  assertActionInputNamesUnique(fields ?? [], inputTables ?? [], path);
   return {
     action: text(input.action, `${path}.action`, 240),
     permissionDoctype: text(input.permissionDoctype, `${path}.permissionDoctype`, 160),
     permissionAction: writePermission(input.permissionAction, `${path}.permissionAction`),
+    ...(input.label === undefined ? {} : { label: text(input.label, `${path}.label`, 160) }),
+    ...(input.description === undefined ? {} : { description: text(input.description, `${path}.description`, 500) }),
+    ...(input.confirm === undefined ? {} : { confirm: text(input.confirm, `${path}.confirm`, 320) }),
+    ...(fields?.length ? { fields } : {}),
+    ...(inputTables?.length ? { inputTables } : {}),
   };
+}
+
+function parseActionFields(value: unknown, path: string): MatrixActionInputField[] {
+  if (!Array.isArray(value)) throw errors.validation(`${path} must be an array`);
+  if (value.length > 64) throw errors.validation(`${path} may declare at most 64 fields`);
+  const fields = value.map((entry, index) => parseActionInputField(entry, `${path}[${index}]`));
+  unique(fields.map((entry) => entry.fieldname), path);
+  return fields;
+}
+
+function parseActionInputField(value: unknown, path: string): MatrixActionInputField {
+  const input = object(value, path);
+  only(input, ["fieldname", "label", "fieldtype", "options", "required", "default", "description"], path);
+  const fieldname = actionInputName(input.fieldname, `${path}.fieldname`);
+  const fieldtype = actionInputFieldtype(input.fieldtype ?? "Data", `${path}.fieldtype`);
+  const options = input.options === undefined ? undefined : text(input.options, `${path}.options`, 2000);
+  if ((fieldtype === "Link" || fieldtype === "Select") && !options) {
+    throw errors.validation(`${path} is a ${fieldtype} but names no options`);
+  }
+  return {
+    fieldname,
+    label: text(input.label, `${path}.label`, 160),
+    fieldtype,
+    ...(options ? { options } : {}),
+    ...(input.required === undefined ? {} : { required: boolean(input.required, `${path}.required`, false) }),
+    ...(input.default === undefined ? {} : { default: text(input.default, `${path}.default`, 160) }),
+    ...(input.description === undefined ? {} : { description: text(input.description, `${path}.description`, 320) }),
+  };
+}
+
+function parseActionInputTables(value: unknown, path: string): MatrixActionInputTable[] {
+  if (!Array.isArray(value)) throw errors.validation(`${path} must be an array`);
+  if (value.length > 32) throw errors.validation(`${path} may declare at most 32 tables`);
+  const tables = value.map((entry, index) => parseActionInputTable(entry, `${path}[${index}]`));
+  unique(tables.map((entry) => entry.fieldname), path);
+  return tables;
+}
+
+function parseActionInputTable(value: unknown, path: string): MatrixActionInputTable {
+  const input = object(value, path);
+  only(input, ["fieldname", "label", "description", "columns", "minRows", "maxRows", "allowPaste"], path);
+  if (!Array.isArray(input.columns)) throw errors.validation(`${path}.columns must be an array`);
+  if (input.columns.length === 0) throw errors.validation(`${path}.columns must not be empty`);
+  if (input.columns.length > 64) throw errors.validation(`${path}.columns may declare at most 64 columns`);
+  const columns = input.columns.map((entry, index) => parseActionInputField(entry, `${path}.columns[${index}]`));
+  unique(columns.map((entry) => entry.fieldname), `${path}.columns`);
+  const minRows = input.minRows === undefined ? 1 : integer(input.minRows, `${path}.minRows`, 1, 500);
+  const maxRows = input.maxRows === undefined ? 100 : integer(input.maxRows, `${path}.maxRows`, 1, 500);
+  if (maxRows < minRows) throw errors.validation(`${path}.maxRows must be greater than or equal to minRows`);
+  return {
+    fieldname: actionInputName(input.fieldname, `${path}.fieldname`),
+    label: text(input.label, `${path}.label`, 160),
+    ...(input.description === undefined ? {} : { description: text(input.description, `${path}.description`, 500) }),
+    columns,
+    minRows,
+    maxRows,
+    allowPaste: boolean(input.allowPaste, `${path}.allowPaste`, true),
+  };
+}
+
+function assertActionInputNamesUnique(fields: MatrixActionInputField[], tables: MatrixActionInputTable[], path: string): void {
+  const seen = new Set(fields.map((entry) => entry.fieldname));
+  for (const table of tables) {
+    if (seen.has(table.fieldname)) throw errors.validation(`${path} input key is declared more than once: ${table.fieldname}`);
+    seen.add(table.fieldname);
+  }
+}
+
+function actionInputName(value: unknown, path: string): string {
+  const result = text(value, path, 120);
+  if (!ACTION_INPUT_NAME.test(result)) throw errors.validation(`${path} must use lowercase letters, digits and underscore`);
+  return result;
+}
+
+function actionInputFieldtype(value: unknown, path: string): MatrixActionInputFieldtype {
+  const result = text(value, path, 32) as MatrixActionInputFieldtype;
+  if (!ACTION_INPUT_FIELDTYPES.has(result)) throw errors.validation(`${path} is not a renderable action input fieldtype: ${result}`);
+  return result;
 }
 
 function parseRowMembers(value: unknown, path: string): MatrixRowMemberPolicy {
@@ -394,6 +486,10 @@ function only(input: Record<string, unknown>, allowed: string[], path: string): 
 function text(value: unknown, path: string, max: number): string {
   if (typeof value !== "string" || !value.trim() || value.length > max) throw errors.validation(`${path} must be a non-empty string up to ${max} characters`);
   return value.trim();
+}
+
+function inputTextOrUndefined(value: unknown, path: string, max: number): string | undefined {
+  return value === undefined ? undefined : text(value, path, max);
 }
 
 function identifier(value: unknown, path: string): string {
