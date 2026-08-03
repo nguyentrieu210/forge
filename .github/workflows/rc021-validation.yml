@@ -76,6 +76,14 @@ jobs:
           JSON
           pnpm exec tsc -p tsconfig.rc021.json
 
+      - name: Focused RC-021 build
+        working-directory: server
+        run: |
+          node -e "const fs=require('node:fs'); const p=JSON.parse(fs.readFileSync('tsconfig.rc021.json','utf8')); p.compilerOptions.noEmit=false; p.compilerOptions.declaration=false; p.compilerOptions.sourceMap=false; p.compilerOptions.outDir='.rc021-dist'; fs.writeFileSync('tsconfig.rc021-build.json', JSON.stringify(p));"
+          pnpm exec tsc -p tsconfig.rc021-build.json
+          test -f .rc021-dist/packages/clouderp-selling/src/ar-sales-invoice-controller.js
+          test -f .rc021-dist/packages/query/src/finance-aging.js
+
       - name: Full worker typecheck baseline (inherited debt visible)
         continue-on-error: true
         run: pnpm run server:typecheck
@@ -88,6 +96,7 @@ jobs:
           tests/finance-ar-migration-rc021.test.mjs
           tests/finance-aging-policy.test.mjs
           tests/finance-aging-query.test.mjs
+          tests/finance-report-suite.test.mjs
           tests/o2c.test.mjs
 
       - name: AR SQL, tenant and reconciliation migration semantics
