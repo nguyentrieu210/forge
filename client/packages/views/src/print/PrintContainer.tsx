@@ -10,7 +10,6 @@ import { Printer, ArrowLeft, Minus, Plus, RotateCcw, RefreshCw, Download, Loader
 import { Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, toast, useT } from "@metaforge/ui";
 import { useMetaForge } from "../container/provider.js";
 import { PrintView } from "./PrintView.js";
-import { downloadPrintPdf } from "./downloadPdf.js";
 
 export interface PrintContainerProps {
   doctype: string;
@@ -67,10 +66,25 @@ export function PrintContainer({ doctype, name, format, onFormatChange, onBack }
   };
 
   const doDownloadPdf = async () => {
-    if (!printQ.data || downloading) return;
+    if (!selectedFormat || downloading) return;
     setDownloading(true);
     try {
-      await downloadPrintPdf(printQ.data, `${doctype}-${name}.pdf`);
+      // CFMAX-06: PDF is rendered by the trusted tenant Worker through Browser Run.
+      // The server reuses the canonical Print Format permission/redaction path; the
+      // browser no longer rasterises privileged HTML locally with html2canvas/jsPDF.
+      const pdf = await adapter.downloadPdf(doctype, name, selectedFormat);
+      const href = URL.createObjectURL(pdf);
+      try {
+        const anchor = document.createElement("a");
+        anchor.href = href;
+        anchor.download = `${doctype}-${name}.pdf`;
+        anchor.style.display = "none";
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+      } finally {
+        URL.revokeObjectURL(href);
+      }
       toast.success("Đã tạo file PDF");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Không thể tạo file PDF");
@@ -103,7 +117,7 @@ export function PrintContainer({ doctype, name, format, onFormatChange, onBack }
           <Button variant="ghost" size="sm" className="min-w-16 tabular-nums" onClick={() => setZoom(1)} aria-label="Đặt lại tỷ lệ"><RotateCcw className="size-3.5" /> {Math.round(zoom * 100)}%</Button>
           <Button variant="ghost" size="icon-sm" onClick={() => setZoom((value) => Math.min(1.5, value + 0.1))} disabled={zoom >= 1.5} aria-label="Phóng to"><Plus /></Button>
         </div>
-        <Button variant="outline" size="sm" onClick={() => void doDownloadPdf()} disabled={loading || !printQ.data || downloading}>
+        <Button variant="outline" size="sm" onClick={() => void doDownloadPdf()} disabled={loading || !selectedFormat || downloading}>
           {downloading ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
           {downloading ? "Đang tạo PDF…" : "Tải PDF"}
         </Button>

@@ -29,7 +29,7 @@ export function writeTenantConfig({ tenant, databaseId, databaseName = `cloudfor
   writeFileSync(configPath, `${JSON.stringify({
     $schema: "node_modules/wrangler/config-schema.json",
     name: tenantScriptName(tenant),
-    main: "src/index.ts",
+    main: "src/index-cf6.ts",
     compatibility_date: "2026-07-23",
     compatibility_flags: ["nodejs_compat"],
     placement: { mode: "smart" },
@@ -68,6 +68,14 @@ export function writeTenantConfig({ tenant, databaseId, databaseName = `cloudfor
      * configured" — a failure that appears only after a customer tries to add a photo.
      */
     r2_buckets: [{ binding: "FILES", bucket_name: "cloudforge-files" }],
+    /**
+     * CFMAX-06 server-side print/PDF renderer.
+     *
+     * Every provisioned tenant gets the same Browser Run binding as the checked-in demo
+     * template; otherwise local validation would pass and customer PDF download would
+     * fail only after provisioning.
+     */
+    browser: { binding: "BROWSER" },
     durable_objects: { bindings: [{ name: "AGGREGATES", class_name: "AggregateCoordinator" }] },
     migrations: [{ tag: "v1", new_sqlite_classes: ["AggregateCoordinator"] }],
     queues: { producers: [{ binding: "OUTBOX_QUEUE", queue: "cloudforge-outbox" }] },
