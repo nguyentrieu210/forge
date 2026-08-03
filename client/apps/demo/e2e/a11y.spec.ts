@@ -30,6 +30,21 @@ test.describe("a11y — bàn phím + nhãn truy cập", () => {
   for (const route of ["/view/list", "/view/form", "/view/kanban", "/view/calendar", "/view/dashboard"]) {
     test(`axe không có lỗi nghiêm trọng: ${route}`, async ({ page }) => {
       await gotoSurface(page, route);
+      if (route === "/view/list") {
+        const shellSearch = page.getByRole("textbox", { name: "Tìm menu" });
+        await expect(shellSearch).toBeVisible();
+        const computed = await shellSearch.evaluate((element) => {
+          const input = getComputedStyle(element);
+          const placeholder = getComputedStyle(element, "::placeholder");
+          return {
+            inputColor: input.color,
+            backgroundColor: input.backgroundColor,
+            placeholderColor: placeholder.color,
+            placeholderOpacity: placeholder.opacity,
+          };
+        });
+        console.log(`V3-07 shell search computed styles ${JSON.stringify(computed)}`);
+      }
       const results = await new AxeBuilder({ page }).analyze();
       const blocking = results.violations.filter((violation) => violation.impact === "critical" || violation.impact === "serious");
       const report = blocking.flatMap((violation) => violation.nodes.map((node) => ({ rule: violation.id, target: node.target.join(" "), html: node.html.slice(0, 180) })));
