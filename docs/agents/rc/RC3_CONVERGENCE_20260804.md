@@ -100,6 +100,19 @@ Historical narrow RC IDs were:
 
 RC3 does not inherit these labels by faith and does not demote them by age alone. Every retained promotion/demotion must survive exact-current evidence review.
 
+### 6.1 Exact stale-registry proof
+
+A0 compared the canonical RC-01 branch with exact RC3 seed/current main and found that the capability status registry itself has **not changed at all** despite substantial later implementation convergence:
+
+- `docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md`
+  - RC-01 branch blob SHA: `edd222b24dd9ac6870f91d326bec1c2a63cbea2a`;
+  - exact RC3 seed/current-main blob SHA: `edd222b24dd9ac6870f91d326bec1c2a63cbea2a`;
+- `server/scripts/validate-enterprise-capability-status.mjs`
+  - RC-01 branch blob SHA: `39513c8aebb4722aee6826ce740f1e55e56c9700`;
+  - exact RC3 seed/current-main blob SHA: `39513c8aebb4722aee6826ce740f1e55e56c9700`.
+
+Therefore the RC-01 registry is a reproducible historical baseline, **not a current-main maturity assessment**. RC3 must recompute maturity from exact evidence rather than assume the old counts remain correct or bulk-promote families because later work merged.
+
 ## 7. Evidence-promotion lock
 
 A0 freezes the following promotion policy for every worker input.
@@ -192,6 +205,7 @@ A0 deliberately makes **no maturity mutation in the bootstrap commit**.
 Reason:
 
 - the status registry is structurally valid historical RC-01 input;
+- exact blob comparison proves that registry and validator are still the RC-01 artifacts;
 - current main has materially advanced through later workstreams;
 - family-level reassessment belongs to A1-A4;
 - promoting from merge history before worker evidence would violate RC3's core truth rule.
