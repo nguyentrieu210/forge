@@ -141,7 +141,7 @@ async function listRecords(
       doctype,
       fields,
       ...(options.filters ? {
-        filters: Object.entries(options.filters).map(([field, value]) => ({ field, operator: "eq", value })) as unknown as JsonValue,
+        filters: Object.entries(options.filters).map(([field, value]) => ({ field, operator: "eq", value })),
       } : {}),
       ...(optionalText(options.search) ? { search: optionalText(options.search)! } : {}),
       limit,
@@ -232,7 +232,7 @@ function readInput(input: JsonObject) {
   const query = optionalText(search?.query);
   return {
     ...(optionalText(input.selected_id ?? input.item_code) ? { itemCode: optionalText(input.selected_id ?? input.item_code)! } : {}),
-    ...(query && (scope === "navigator" || scope === "rows") ? { itemSearch: query } : {}),
+    ...(query && scope === "navigator" ? { itemSearch: query } : {}),
     ...(optionalText(input.item_group) ? { itemGroup: optionalText(input.item_group)! } : {}),
     ...(input.limit !== undefined ? { itemLimit: positiveInteger(input.limit, "limit") } : {}),
     ...(optionalText(input.cursor) ? { itemCursor: optionalText(input.cursor)! } : {}),
@@ -281,6 +281,7 @@ function genericSnapshot(result: ItemPriceMatrixReadResult): JsonObject {
     contract_version: 1,
     source: PRICING_MATRIX_SOURCE,
     action: PRICING_MATRIX_COMMIT_ACTION,
+    server_search_scopes: ["navigator"],
     subject: selected ? {
       id: requiredText(selected.name, "selected item"),
       label: optionalText(selected.item_name) ?? requiredText(selected.name, "selected item"),
