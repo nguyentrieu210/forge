@@ -90,12 +90,9 @@ export function buildManufacturingCostEvidence(
   const variance = safeSubtract(finishedValue, standardTotal);
   const decomposedVariance = safeAdd(materialVariance, operationVariance);
   if (decomposedVariance !== variance) {
-    throw errors.ledger("Manufacturing cost variance decomposition does not reconcile to canonical finished-good value", {
-      material_variance_minor: materialVariance,
-      operation_variance_minor: operationVariance,
-      total_variance_minor: variance,
-      decomposed_variance_minor: decomposedVariance,
-    });
+    throw errors.ledger(
+      `Manufacturing cost variance decomposition does not reconcile to canonical finished-good value: material=${materialVariance}, operation=${operationVariance}, total=${variance}, decomposed=${decomposedVariance}`,
+    );
   }
 
   const warnings = new Set<string>();
