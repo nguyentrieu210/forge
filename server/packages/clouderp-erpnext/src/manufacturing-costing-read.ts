@@ -27,8 +27,12 @@ export interface ManufacturingCostEvidence extends JsonObject {
   standard_total_cost_minor: number;
   actual_consumption_value_minor: number;
   actual_recovery_value_minor: number;
+  actual_net_material_cost_minor: number;
   actual_finished_good_value_minor: number;
+  actual_accounted_output_value_minor: number;
   implied_operating_cost_minor: number;
+  material_variance_minor: number;
+  operation_variance_minor: number;
   total_variance_minor: number;
   material_recovery_credit_minor: number;
   actual_operation_cost_source: "IMPLIED_FROM_CANONICAL_FG_VALUATION" | "NOT_AVAILABLE";
@@ -40,8 +44,11 @@ export interface ManufacturingCostEvidence extends JsonObject {
  *
  * Standard cost comes from the exact submitted BOM checksum captured by the Work Order.
  * Actual cost comes from canonical Stock Ledger movements already projected by genealogy.
- * No Cost Sheet table and no GL posting are created here; posting/period semantics remain
- * an explicit WS01/WS04 dependency instead of becoming a second accounting authority.
+ * Scrap/offcut/recovery is a stock-value credit: net material cost is consumption less
+ * recovery and the implied operation component reconciles all canonical outputs back to
+ * that net material cost. No Cost Sheet table and no GL posting are created here;
+ * posting/period semantics remain explicit Finance/Inventory dependencies instead of
+ * becoming a second accounting authority inside Manufacturing.
  */
 export function buildManufacturingCostEvidence(
   workOrder: CanonicalDocument<WorkOrderData>,
@@ -74,11 +81,26 @@ export function buildManufacturingCostEvidence(
 
   const consumptionValue = sumAbsOutwardValue(genealogy.consumptions);
   const recoveryValue = sumInwardValue(genealogy.recoveries);
+  const netMaterialCost = safeSubtract(consumptionValue, recoveryValue);
   const finishedValue = sumInwardValue(genealogy.finished_goods);
-  const impliedOperating = producedQty > 0 ? finishedValue - consumptionValue : 0;
-  const variance = finishedValue - standardTotal;
+  const accountedOutputValue = safeAdd(finishedValue, recoveryValue);
+  const impliedOperating = producedQty > 0 ? safeSubtract(accountedOutputValue, consumptionValue) : 0;
+  const materialVariance = safeSubtract(netMaterialCost, standardMaterial);
+  const operationVariance = safeSubtract(impliedOperating, standardOperating);
+  const variance = safeSubtract(finishedValue, standardTotal);
+  const decomposedVariance = safeAdd(materialVariance, operationVariance);
+  if (decomposedVariance !== variance) {
+    throw errors.ledger("Manufacturing cost variance decomposition does not reconcile to canonical finished-good value", {
+      material_variance_minor: materialVariance,
+      operation_variance_minor: operationVariance,
+      total_variance_minor: variance,
+      decomposed_variance_minor: decomposedVariance,
+    });
+  }
+
   const warnings = new Set<string>();
   if (producedQty === 0) warnings.add("NO_FINISHED_GOOD_COST_EVIDENCE");
+  if (netMaterialCost < 0) warnings.add("RECOVERY_EXCEEDS_CONSUMPTION_VALUE");
   if (impliedOperating < 0) warnings.add("NEGATIVE_IMPLIED_OPERATING_COST");
   if (genealogy.warnings.includes("UNTRACKED_INPUT_MATERIALS_PRESENT")) warnings.add("INPUT_TRACEABILITY_INCOMPLETE");
   if (genealogy.warnings.includes("UNTRACKED_FINISHED_GOODS_PRESENT")) warnings.add("OUTPUT_TRACEABILITY_INCOMPLETE");
@@ -105,8 +127,12 @@ export function buildManufacturingCostEvidence(
     standard_total_cost_minor: standardTotal,
     actual_consumption_value_minor: consumptionValue,
     actual_recovery_value_minor: recoveryValue,
+    actual_net_material_cost_minor: netMaterialCost,
     actual_finished_good_value_minor: finishedValue,
+    actual_accounted_output_value_minor: accountedOutputValue,
     implied_operating_cost_minor: impliedOperating,
+    material_variance_minor: materialVariance,
+    operation_variance_minor: operationVariance,
     total_variance_minor: variance,
     material_recovery_credit_minor: recoveryValue,
     actual_operation_cost_source: producedQty > 0 ? "IMPLIED_FROM_CANONICAL_FG_VALUATION" : "NOT_AVAILABLE",
@@ -156,6 +182,10 @@ function safeAdd(left: number, right: number): number {
   const value = left + right;
   if (!Number.isSafeInteger(value)) throw errors.validation("Manufacturing cost arithmetic exceeds safe integer range");
   return value;
+}
+
+function safeSubtract(left: number, right: number): number {
+  return safeAdd(left, -right);
 }
 
 function divideRounded(numerator: bigint, denominator: bigint): bigint {
