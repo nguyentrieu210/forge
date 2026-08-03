@@ -12,8 +12,20 @@ function platformFetcher(records = {}) {
     async fetch(request) {
       const url = new URL(request.url);
       const parts = url.pathname.replace(/^\/+/, "").split("/");
-      if (parts[0] !== "resource" || parts.length < 3) return Response.json({ message: "not found" }, { status: 404 });
+      if (parts[0] !== "resource" || parts.length < 2) return Response.json({ message: "not found" }, { status: 404 });
       const doctype = decodeURIComponent(parts[1]);
+      if (parts.length === 2) {
+        let filters = [];
+        try { filters = JSON.parse(url.searchParams.get("filters") ?? "[]"); } catch { filters = []; }
+        const result = [];
+        for (const [key, record] of data.entries()) {
+          if (!key.startsWith(`${doctype}:`)) continue;
+          const name = key.slice(doctype.length + 1);
+          const matches = filters.every(([field, operator, expected]) => operator === "=" && String(record[field] ?? "") === String(expected ?? ""));
+          if (matches) result.push({ name, ...record });
+        }
+        return Response.json({ data: result });
+      }
       const name = decodeURIComponent(parts.slice(2).join("/"));
       const record = data.get(`${doctype}:${name}`);
       return record ? Response.json({ data: record }) : Response.json({ message: "not found" }, { status: 404 });
@@ -64,7 +76,13 @@ test("maintenance technician can mutate only assigned service order", async () =
 
 test("warranty technician scope follows linked service-order assignment", async () => {
   const records = {
-    "Warranty Claim:WC-1": { service_order: "SO-1", workflow_state: "Đang xử lý", eligibility_result: "Đủ điều kiện" },
+    "Warranty Claim:WC-1": {
+      maintenance_request: "MR-1", source_delivery_note: "DN-1", customer: "CUST-1", company: "ACME", item: "ITEM-1", serial_no: "SN-1",
+      service_order: "SO-1", workflow_state: "Đang xử lý", eligibility_result: "Đủ điều kiện", claim_date: "2026-08-03",
+    },
+    "Maintenance Request:MR-1": { customer: "CUST-1", source_delivery_note: "DN-1", item: "ITEM-1", serial_no: "SN-1" },
+    "Delivery Note:DN-1": { docstatus: 1, customer: "CUST-1", company: "ACME", items: [{ item_code: "ITEM-1", serial_nos: ["SN-1"] }] },
+    "Serial No:SN-1": { item_code: "ITEM-1", customer: "CUST-1", company: "ACME", warranty_expiry_date: "2027-08-03", reference_doctype: "Delivery Note", reference_name: "DN-1" },
     "Service Order:SO-1": { technician: "TECH-A" },
     "Service Technician:TECH-A": { user: "tech-a@example.com" },
   };
