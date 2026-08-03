@@ -74,4 +74,4 @@ Agent phải làm tới điểm xa nhất có thể trong một lượt làm vi�
 - maturity hiện tại;
 - merge/deploy status.
 
-Không kết thúc bằng lời mời mơ hồ kiểu "nếu muốn tôi có thể tiếp tục". Nếu còn việc trong scope và không thuộc 4 stop conditions, agent phải tiếp tục làm luôn.
+Không kết thúc bằng lời mời mơ hồ. Nếu còn việc trong scope và không thuộc 4 stop conditions, agent phải tiếp tục làm luôn.
