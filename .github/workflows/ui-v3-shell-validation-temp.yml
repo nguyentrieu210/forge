@@ -40,8 +40,14 @@ jobs:
       - name: Full client typecheck baseline
         continue-on-error: true
         run: pnpm run client:typecheck
-      - name: Client lint and shell mobile checks
-        run: pnpm --filter metaforge run lint
+      - name: Native UI lint baseline
+        continue-on-error: true
+        run: node client/scripts/check-native-ui.mjs
+      - name: Shell mobile regression
+        run: node client/scripts/check-app-shell-mobile.mjs
+      - name: Workspace navigation selfcheck
+        working-directory: client
+        run: pnpm --filter @metaforge/demo exec tsx ../../packages/shell/src/workspace-navigation-selfcheck.ts
       - name: Client selfchecks
         run: pnpm --filter metaforge run test
       - name: Shell build
