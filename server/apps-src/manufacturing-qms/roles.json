@@ -1,0 +1,6 @@
+[
+  { "role": "Manufacturing Planner", "desk_access": true },
+  { "role": "Manufacturing Manager", "desk_access": true },
+  { "role": "Quality User", "desk_access": true },
+  { "role": "Quality Manager", "desk_access": true }
+]
