@@ -1,4 +1,4 @@
-name: Temp ALU Purchase Funding Full Release
+name: Temp ALU Purchase Funding Backup Diagnosis
 
 on:
   push:
@@ -17,133 +17,53 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  full-release:
-    name: Full ALU release for purchase funding
+  diagnose:
+    name: Read-only ALU metadata scope diagnosis
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 20
     environment: production
     env:
-      TARGET_SHA: faec4cbe4f9c62ac565ad14dd6bb807851d65090
-      TENANT: alu
-      APP_WORKER: cloudforge-app-alumdoor
-      DISPATCH_NAMESPACE: cloudforge-production
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      VITE_FORGE_RELEASE_SHA: faec4cbe4f9c62ac565ad14dd6bb807851d65090
-
     steps:
-      - name: Checkout target
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ env.TARGET_SHA }}
-          fetch-depth: 0
-          persist-credentials: false
-
-      - name: Require target to be merged into main
-        shell: bash
-        run: |
-          set -euo pipefail
-          git fetch origin main
-          git cat-file -e "$TARGET_SHA^{commit}"
-          git merge-base --is-ancestor "$TARGET_SHA" origin/main || {
-            echo "Refusing production full release: $TARGET_SHA is not merged into main."
-            exit 1
-          }
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
         with:
           version: 9.15.0
           run_install: false
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build once
-        run: |
-          pnpm --filter cloudforge run build
-          pnpm --filter metaforge run build
-          node server/scripts/stage-client-bundle.mjs
-
-      - name: Plan tenant migrations
-        working-directory: server
-        run: node scripts/migrate-tenant.mjs --tenant "$TENANT"
-
-      - name: Backup and verify tenant before migration
+      - run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Read tenant-scope counts
         shell: bash
         run: |
           set -euo pipefail
-          backup_dir="$RUNNER_TEMP/alu-backup"
-          mkdir -p "$backup_dir"
-          node server/scripts/backup-tenant.mjs --tenant "$TENANT" --execute --output-dir "$backup_dir"
-          mapfile -t backups < <(find "$backup_dir" -maxdepth 1 -type f -name '*.sql' -print | sort)
-          [ "${#backups[@]}" -eq 1 ] || {
-            echo "Expected exactly one SQL backup, found ${#backups[@]}."
-            exit 1
+          runq() {
+            local label="$1"
+            local sql="$2"
+            echo "### $label" >> "$RUNNER_TEMP/scope.txt"
+            pnpm --dir server exec wrangler d1 execute cloudforge-alu --remote --json --command "$sql" >> "$RUNNER_TEMP/scope.txt"
+            echo >> "$RUNNER_TEMP/scope.txt"
           }
-          node server/scripts/verify-tenant-backup.mjs \
-            --tenant "$TENANT" \
-            --file "${backups[0]}" \
-            --output "$RUNNER_TEMP/alu-backup-verification.json"
-
-      - name: Migrate tenant
-        working-directory: server
-        run: node scripts/migrate-tenant.mjs --tenant "$TENANT" --execute --confirm "$TENANT"
-
-      - name: Deploy tenant Worker
-        working-directory: server
-        run: node scripts/deploy-tenant.mjs --tenant "$TENANT" --execute --confirm "$TENANT"
-
-      - name: Deploy Alumdoor app Worker
-        working-directory: server
-        run: |
-          pnpm exec wrangler deploy \
-            --config apps-src/alumdoor-worker/wrangler.jsonc \
-            --name "$APP_WORKER" \
-            --dispatch-namespace "$DISPATCH_NAMESPACE" \
-            --strict
-
-      - name: Deploy Gateway
-        run: pnpm --dir server exec wrangler deploy --config apps/gateway-worker/wrangler.jsonc
-
-      - name: Verify exact production convergence
-        run: >-
-          node server/scripts/sre-health-snapshot.mjs
-          --base https://alu.kairo.vn
-          --expected-release-sha "$TARGET_SHA"
-          --allow-remote
-          --confirm-host alu.kairo.vn
-          --attempts 10
-          --delay-ms 2000
-          --output "$RUNNER_TEMP/release-health.json"
-
-      - name: Upload backup verification evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: alu-purchase-funding-backup-${{ github.run_id }}
-          path: ${{ runner.temp }}/alu-backup-verification.json
-          if-no-files-found: warn
-          retention-days: 30
-
-      - name: Upload release health evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: alu-purchase-funding-health-${{ github.run_id }}
-          path: ${{ runner.temp }}/release-health.json
-          if-no-files-found: warn
-          retention-days: 30
-
-      - name: Report release result to PR
+          : > "$RUNNER_TEMP/scope.txt"
+          runq doctype_definitions "SELECT tenant_id, COUNT(*) AS rows FROM doctype_definitions GROUP BY tenant_id ORDER BY tenant_id"
+          runq documents "SELECT tenant_id, COUNT(*) AS rows FROM documents GROUP BY tenant_id ORDER BY tenant_id"
+          runq installed_apps "SELECT tenant_id, COUNT(*) AS rows FROM installed_apps GROUP BY tenant_id ORDER BY tenant_id"
+          runq metadata_provenance "SELECT tenant_id, modified_by, COUNT(*) AS rows FROM doctype_definitions GROUP BY tenant_id, modified_by ORDER BY tenant_id, rows DESC"
+          runq demo_vs_standard "SELECT tenant_id, COUNT(*) AS rows, COUNT(DISTINCT doctype) AS doctypes FROM doctype_definitions WHERE tenant_id IN ('demo','__standard__') GROUP BY tenant_id ORDER BY tenant_id"
+          runq foreign_metadata "SELECT tenant_id, doctype, module, modified_by FROM doctype_definitions WHERE tenant_id NOT IN ('alu','demo','__standard__') ORDER BY tenant_id, doctype LIMIT 30"
+      - name: Report diagnosis to PR
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
-          RESULT: ${{ job.status }}
-        run: gh pr comment 383 --body "ALUMDOOR_PURCHASE_FUNDING_DEPLOY result=$RESULT target_sha=$TARGET_SHA run=$GITHUB_RUN_ID"
+        shell: bash
+        run: |
+          {
+            echo 'ALU_BACKUP_SCOPE_DIAGNOSIS_PRODUCTION'
+            echo '```text'
+            cat "$RUNNER_TEMP/scope.txt" 2>/dev/null || true
+            echo '```'
+          } > "$RUNNER_TEMP/comment.txt"
+          gh pr comment 383 --body-file "$RUNNER_TEMP/comment.txt"
