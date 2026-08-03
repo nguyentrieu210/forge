@@ -1,0 +1,363 @@
+@import "./styles.css";
+
+/**
+ * Forge UI V3 canonical foundation.
+ *
+ * Rollout seam: existing apps may keep importing `@metaforge/ui/styles.css` until
+ * their V3 surface is ready. V3 consumers import `@metaforge/ui/v3.css`, which
+ * keeps the proven shared primitives and then converges them onto one Forge
+ * red/black/white authority. Legacy `data-brand` palettes are intentionally
+ * superseded inside V3; customer-specific branding can still override tokens
+ * after this stylesheet at the app boundary.
+ */
+
+:root,
+:root[data-brand] {
+  color-scheme: light;
+
+  /* shadcn/Tailwind compatibility tokens */
+  --background: #f6f7f8;
+  --foreground: #15171a;
+  --card: #ffffff;
+  --card-foreground: #15171a;
+  --popover: #ffffff;
+  --popover-foreground: #15171a;
+  --primary: #e52521;
+  --primary-foreground: #ffffff;
+  --secondary: #f0f2f4;
+  --secondary-foreground: #15171a;
+  --muted: #f6f7f8;
+  --muted-foreground: #69707d;
+  --accent: #fdeceb;
+  --accent-foreground: #b21714;
+  --destructive: #b42318;
+  --destructive-foreground: #ffffff;
+  --success: #15803d;
+  --success-text: #166534;
+  --warning: #b45309;
+  --warning-text: #92400e;
+  --destructive-text: #b42318;
+  --info: #2563eb;
+  --info-text: #1d4ed8;
+  --border: #dee2e7;
+  --input: #c9ced6;
+  --ring: #c91c18;
+  --subtle: #69707d;
+  --sidebar: #111317;
+  --sidebar-foreground: #f7f7f8;
+  --chart-1: #e52521;
+  --chart-2: #15803d;
+  --chart-3: #b45309;
+  --chart-4: #2563eb;
+  --chart-5: #7c3aed;
+
+  /* Canonical product identity */
+  --forge-bg: #f6f7f8;
+  --forge-surface: #ffffff;
+  --forge-surface-soft: #f0f2f4;
+  --forge-surface-raised: #ffffff;
+  --forge-foreground: #15171a;
+  --forge-muted: #69707d;
+  --forge-border: #dee2e7;
+  --forge-border-strong: #c9ced6;
+  --forge-black: #090909;
+  --forge-graphite: #111317;
+  --forge-graphite-soft: #181b20;
+  --forge-primary: #e52521;
+  --forge-primary-hover: #c91c18;
+  --forge-primary-active: #b21714;
+  --forge-primary-soft: #fdeceb;
+  --forge-primary-border: #f4b8b5;
+  --forge-focus: #c91c18;
+
+  /* Typography hierarchy */
+  --forge-font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --forge-font-mono: "Geist Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --forge-text-kpi: clamp(1.75rem, 2vw + 1rem, 3rem);
+  --forge-text-page-title: 1.375rem;
+  --forge-text-section-title: 0.9375rem;
+  --forge-text-body: 0.875rem;
+  --forge-text-table: 0.8125rem;
+  --forge-text-meta: 0.75rem;
+  --forge-line-body: 1.5;
+  --forge-line-dense: 1.35;
+
+  /* Geometry: tighter than consumer SaaS */
+  --radius: 0.5rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.625rem;
+  --radius-xl: 0.75rem;
+  --forge-radius-control: 0.5rem;
+  --forge-radius-panel: 0.625rem;
+  --forge-radius-overlay: 0.75rem;
+
+  /* Four deterministic surface levels */
+  --forge-surface-l0: #f6f7f8;
+  --forge-surface-l1: #ffffff;
+  --forge-surface-l2: #ffffff;
+  --forge-surface-l3: #ffffff;
+  --forge-elevation-l0: none;
+  --forge-elevation-l1: 0 1px 2px rgb(15 23 42 / 0.035);
+  --forge-elevation-l2: 0 1px 2px rgb(15 23 42 / 0.05), 0 8px 24px rgb(15 23 42 / 0.035);
+  --forge-elevation-l3: 0 20px 50px rgb(15 23 42 / 0.16), 0 4px 14px rgb(15 23 42 / 0.08);
+
+  /* Density authority: compact | standard | comfortable */
+  --forge-density-control-height: 2.375rem;
+  --forge-density-row-height: 2.5rem;
+  --forge-density-page-gap: 1rem;
+  --forge-density-block-padding: 1rem;
+
+  /* Motion authority */
+  --forge-motion-duration-instant: 80ms;
+  --forge-motion-duration-micro: 120ms;
+  --forge-motion-duration-micro-slow: 160ms;
+  --forge-motion-duration-navigation: 200ms;
+  --forge-motion-duration-workspace: 220ms;
+  --forge-motion-duration-overlay: 240ms;
+  --forge-motion-duration-data: 400ms;
+  --forge-motion-ease-standard: cubic-bezier(.2,.8,.2,1);
+  --forge-motion-ease-enter: cubic-bezier(.16,1,.3,1);
+  --forge-motion-ease-exit: cubic-bezier(.4,0,1,1);
+  --forge-motion-ease-linear-flow: linear;
+
+  /* Existing shared mf-* hooks consume the V3 authority without forking runtime code. */
+  --mf-surface: var(--forge-surface);
+  --mf-surface-2: var(--forge-surface-soft);
+  --mf-sidebar: var(--sidebar);
+  --mf-border: var(--forge-border);
+  --mf-text: var(--forge-foreground);
+  --mf-text-muted: var(--forge-muted);
+  --mf-text-subtle: var(--forge-muted);
+  --mf-primary: var(--forge-primary);
+  --mf-primary-fg: #ffffff;
+  --mf-soft: var(--forge-primary-soft);
+  --mf-soft-text: var(--forge-primary-active);
+  --mf-ring: var(--forge-focus);
+  --mf-panel-radius: var(--forge-radius-panel);
+  --mf-control-radius: var(--forge-radius-control);
+  --mf-card-shadow: var(--forge-elevation-l2);
+  --mf-soft-shadow: var(--forge-elevation-l1);
+  --mf-overlay-shadow: var(--forge-elevation-l3);
+  --mf-page-gap: var(--forge-density-page-gap);
+  --mf-block-padding: var(--forge-density-block-padding);
+  --mf-row-height: var(--forge-density-row-height);
+  --mf-shell-background-image: none;
+  --mf-sidebar-background-image: none;
+}
+
+:root[data-theme="dark"],
+:root[data-brand][data-theme="dark"] {
+  color-scheme: dark;
+
+  --background: #0b0c0e;
+  --foreground: #f7f7f8;
+  --card: #131519;
+  --card-foreground: #f7f7f8;
+  --popover: #191c21;
+  --popover-foreground: #f7f7f8;
+  --primary: #ef332d;
+  --primary-foreground: #ffffff;
+  --secondary: #191c21;
+  --secondary-foreground: #f7f7f8;
+  --muted: #17191d;
+  --muted-foreground: #9ca3af;
+  --accent: #3a1514;
+  --accent-foreground: #ffb4b0;
+  --destructive: #f97066;
+  --destructive-foreground: #2b0b09;
+  --success: #4ade80;
+  --success-text: #86efac;
+  --warning: #fbbf24;
+  --warning-text: #fcd34d;
+  --destructive-text: #fda29b;
+  --info: #60a5fa;
+  --info-text: #93c5fd;
+  --border: #292d33;
+  --input: #3a3f47;
+  --ring: #ff5a54;
+  --subtle: #9ca3af;
+  --sidebar: #090909;
+  --sidebar-foreground: #f7f7f8;
+  --chart-1: #ef332d;
+  --chart-2: #4ade80;
+  --chart-3: #fbbf24;
+  --chart-4: #60a5fa;
+  --chart-5: #a78bfa;
+
+  --forge-bg: #0b0c0e;
+  --forge-surface: #131519;
+  --forge-surface-soft: #17191d;
+  --forge-surface-raised: #191c21;
+  --forge-foreground: #f7f7f8;
+  --forge-muted: #9ca3af;
+  --forge-border: #292d33;
+  --forge-border-strong: #3a3f47;
+  --forge-primary: #ef332d;
+  --forge-primary-hover: #ff433c;
+  --forge-primary-active: #cf211c;
+  --forge-primary-soft: #3a1514;
+  --forge-primary-border: #6f2522;
+  --forge-focus: #ff5a54;
+
+  --forge-surface-l0: #0b0c0e;
+  --forge-surface-l1: #131519;
+  --forge-surface-l2: #191c21;
+  --forge-surface-l3: #202329;
+  --forge-elevation-l0: none;
+  --forge-elevation-l1: 0 1px 2px rgb(0 0 0 / 0.3);
+  --forge-elevation-l2: 0 1px 2px rgb(0 0 0 / 0.34), 0 10px 30px rgb(0 0 0 / 0.16);
+  --forge-elevation-l3: 0 20px 55px rgb(0 0 0 / 0.46), 0 4px 14px rgb(0 0 0 / 0.3);
+}
+
+[data-density="compact"] {
+  --forge-density-control-height: 2rem;
+  --forge-density-row-height: 2rem;
+  --forge-density-page-gap: 0.625rem;
+  --forge-density-block-padding: 0.75rem;
+}
+
+[data-density="standard"] {
+  --forge-density-control-height: 2.375rem;
+  --forge-density-row-height: 2.5rem;
+  --forge-density-page-gap: 1rem;
+  --forge-density-block-padding: 1rem;
+}
+
+[data-density="comfortable"],
+[data-density="touch"] {
+  --forge-density-control-height: 2.75rem;
+  --forge-density-row-height: 3rem;
+  --forge-density-page-gap: 1.25rem;
+  --forge-density-block-padding: 1.25rem;
+}
+
+@layer base {
+  body {
+    font-family: var(--forge-font-sans);
+    font-size: var(--forge-text-body);
+    line-height: var(--forge-line-body);
+  }
+
+  :focus-visible {
+    outline-color: var(--forge-focus);
+  }
+}
+
+@layer components {
+  .forge-surface-l0 { background: var(--forge-surface-l0); box-shadow: var(--forge-elevation-l0); }
+  .forge-surface-l1 { background: var(--forge-surface-l1); box-shadow: var(--forge-elevation-l1); }
+  .forge-surface-l2 { background: var(--forge-surface-l2); box-shadow: var(--forge-elevation-l2); }
+  .forge-surface-l3 { background: var(--forge-surface-l3); box-shadow: var(--forge-elevation-l3); }
+
+  .forge-kpi-value {
+    font-size: var(--forge-text-kpi);
+    font-variant-numeric: tabular-nums lining-nums;
+    font-weight: 700;
+    letter-spacing: -0.035em;
+    line-height: 1;
+  }
+
+  .forge-numeric {
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+
+  .forge-code-value {
+    font-family: var(--forge-font-mono);
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+
+  .forge-theme-transition {
+    transition:
+      background-color var(--forge-motion-duration-navigation) var(--forge-motion-ease-standard),
+      border-color var(--forge-motion-duration-navigation) var(--forge-motion-ease-standard),
+      color var(--forge-motion-duration-micro-slow) var(--forge-motion-ease-standard),
+      box-shadow var(--forge-motion-duration-navigation) var(--forge-motion-ease-standard);
+  }
+
+  .forge-motion-micro {
+    transition-duration: var(--forge-motion-duration-micro);
+    transition-timing-function: var(--forge-motion-ease-standard);
+  }
+
+  .forge-motion-navigation {
+    transition-duration: var(--forge-motion-duration-navigation);
+    transition-timing-function: var(--forge-motion-ease-standard);
+  }
+
+  .forge-motion-workspace {
+    transition-duration: var(--forge-motion-duration-workspace);
+    transition-timing-function: var(--forge-motion-ease-enter);
+  }
+
+  .forge-motion-overlay {
+    transition-duration: var(--forge-motion-duration-overlay);
+    transition-timing-function: var(--forge-motion-ease-enter);
+  }
+
+  .forge-page-fade {
+    animation: forge-v3-fade var(--forge-motion-duration-workspace) var(--forge-motion-ease-enter) both;
+  }
+
+  .forge-page-slide {
+    animation: forge-v3-slide var(--forge-motion-duration-workspace) var(--forge-motion-ease-enter) both;
+  }
+
+  .forge-page-workspace {
+    animation: forge-v3-workspace var(--forge-motion-duration-workspace) var(--forge-motion-ease-enter) both;
+  }
+
+  .forge-status-highlight {
+    animation: forge-v3-status-highlight var(--forge-motion-duration-data) var(--forge-motion-ease-standard) both;
+  }
+}
+
+@keyframes forge-v3-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes forge-v3-slide {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes forge-v3-workspace {
+  from { opacity: 0; transform: translateX(6px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes forge-v3-status-highlight {
+  0% { background-color: color-mix(in srgb, var(--forge-primary) 18%, transparent); }
+  100% { background-color: transparent; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root,
+  :root[data-brand],
+  :root[data-theme="dark"],
+  :root[data-brand][data-theme="dark"] {
+    --forge-motion-duration-instant: 1ms;
+    --forge-motion-duration-micro: 1ms;
+    --forge-motion-duration-micro-slow: 1ms;
+    --forge-motion-duration-navigation: 1ms;
+    --forge-motion-duration-workspace: 1ms;
+    --forge-motion-duration-overlay: 1ms;
+    --forge-motion-duration-data: 1ms;
+  }
+
+  .forge-page-fade,
+  .forge-page-slide,
+  .forge-page-workspace,
+  .forge-status-highlight {
+    animation-name: none !important;
+  }
+
+  .forge-theme-transition,
+  .forge-motion-micro,
+  .forge-motion-navigation,
+  .forge-motion-workspace,
+  .forge-motion-overlay {
+    transform: none !important;
+  }
+}
