@@ -142,8 +142,8 @@ function compileSupplierReconciliation(request: QueryRequest, forceSynchronous: 
   assertOrder(columns, order);
   const { limit, offset } = appendPagination(params, request);
   const whereSql = where.length ? ` WHERE ${where.join(" AND ")}` : "";
-  const companyCurrency = "COALESCE(json_extract(d.payload_json,'$.company_currency'), p.currency)";
-  const companyScale = "COALESCE(CAST(json_extract(d.payload_json,'$.company_currency_scale') AS INTEGER), p.currency_scale)";
+  const companyCurrency = "COALESCE(json_extract(d.payload_json,'$.company_currency'), json_extract(company_master.data_json,'$.default_currency'), p.currency)";
+  const companyScale = "COALESCE(CAST(json_extract(d.payload_json,'$.company_currency_scale') AS INTEGER), CAST(json_extract(currency_master.data_json,'$.currency_scale') AS INTEGER), p.currency_scale)";
   const sql = `
     WITH payment_balance AS (
       SELECT
@@ -158,6 +158,16 @@ function compileSupplierReconciliation(request: QueryRequest, forceSynchronous: 
         ON d.tenant_id=p.tenant_id
        AND d.doctype=p.voucher_type
        AND d.name=p.voucher_no
+      LEFT JOIN master_records company_master
+        ON company_master.tenant_id=p.tenant_id
+       AND company_master.record_type='Company'
+       AND company_master.name=json_extract(d.payload_json,'$.company')
+       AND company_master.disabled=0
+      LEFT JOIN master_records currency_master
+        ON currency_master.tenant_id=p.tenant_id
+       AND currency_master.record_type='Currency'
+       AND currency_master.name=${companyCurrency}
+       AND currency_master.disabled=0
       WHERE p.tenant_id=?1
         AND json_extract(d.payload_json,'$.company')=?3
         AND p.party_type='Supplier'
