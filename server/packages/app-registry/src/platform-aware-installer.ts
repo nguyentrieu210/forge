@@ -25,6 +25,7 @@ import {
   AppInstaller as CoreAppInstaller,
   type InstallResult,
 } from "./installer.js";
+import { assertAppUpgradeMaterializationCompatible } from "./app-upgrade-guard.js";
 import { parseAppManifest } from "./manifest.js";
 
 type D1Target = D1Database | D1DatabaseSession;
@@ -121,12 +122,13 @@ function platformOwnershipView(db: D1Database, state: AdoptionState): D1Database
 /**
  * Drop-in replacement exported as `AppInstaller` from the package barrel.
  *
- * The incoming manifest is parsed before delegating only to identify which declarations
- * are authoritative non-custom DocTypes. The core installer parses and validates it again
- * before any write, so this adapter does not become a second validation implementation.
+ * The incoming manifest is parsed before delegating to identify which declarations are
+ * authoritative non-custom DocTypes and to keep app upgrades fail-closed when a package
+ * drops metadata that the core installer materialized outside `installed_apps`.
  */
 export class AppInstaller extends CoreAppInstaller {
   private readonly adoptionState: AdoptionState;
+  private readonly sourceDb: D1Database;
 
   constructor(
     db: D1Database,
@@ -137,6 +139,7 @@ export class AppInstaller extends CoreAppInstaller {
     const state: AdoptionState = { adoptableDocTypes: new Set() };
     super(platformOwnershipView(db, state), metadata, users, platformVersion);
     this.adoptionState = state;
+    this.sourceDb = db;
   }
 
   override async install(
@@ -146,6 +149,14 @@ export class AppInstaller extends CoreAppInstaller {
     now: string,
   ): Promise<InstallResult> {
     const manifest = parseAppManifest(packageValue);
+    const installed = await this.sourceDb.prepare(
+      "SELECT manifest_json FROM installed_apps WHERE tenant_id=?1 AND app_id=?2",
+    ).bind(tenantId, manifest.id).first<{ manifest_json: string }>();
+    if (installed) {
+      const current = parseAppManifest(JSON.parse(installed.manifest_json));
+      assertAppUpgradeMaterializationCompatible(current, manifest);
+    }
+
     this.adoptionState.adoptableDocTypes = new Set(
       manifest.doctypes
         .filter((doctype) => doctype.custom !== true)
