@@ -385,10 +385,13 @@ test("authenticated operational roles preserve quantity, catch weight, lineage a
   expectDocumentRoute(page, "Stock Reconciliation", submittedReconciliation.name);
   await expect(page.locator("body")).toContainText(`Authenticated catch-weight count ${suffix}`);
 
-  const immutableCancel = await cancelRaw(page, managerCsrfForApproval, "Stock Reconciliation", submittedReconciliation.name);
-  expect(immutableCancel.ok, immutableCancel.text).toBe(false);
-  expect([409, 417, 422]).toContain(immutableCancel.status);
-  expect((await getResource(page, "Stock Reconciliation", submittedReconciliation.name)).docstatus).toBe(1);
+  const cancelledReconciliation = await cancelRaw(page, managerCsrfForApproval, "Stock Reconciliation", submittedReconciliation.name);
+  expect(cancelledReconciliation.ok, cancelledReconciliation.text).toBe(true);
+  expect((await getResource(page, "Stock Reconciliation", submittedReconciliation.name)).docstatus).toBe(2);
+  const afterReversal = await physicalStock(page, managerCsrfForApproval, targetWarehouse.name, itemCode);
+  expect(reportQtyMicros(afterReversal)).toBe(3_000_000);
+  expect(reportWeightMicros(afterReversal)).toBe(19_710_000);
+  expect(lineageVouchers(afterReversal)).toContain(submittedReconciliation.name);
 
   expect((await getResource(page, "Stock Entry", transfer.name)).docstatus).toBe(1);
   expect(pageErrors).toEqual([]);
